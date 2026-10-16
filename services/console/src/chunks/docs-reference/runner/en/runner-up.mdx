@@ -45,6 +45,7 @@ and jails left behind by an unclean exit are swept from it before each sandboxed
 Each jail holds a full guest root filesystem and a copy of the microVM binary,
 and a Runner runs its Jobs one at a time,
 so this directory needs real capacity for one jail.
+With `--image-cache-size` it also holds the Image cache, up to that size.
 A host runs one Runner at a time, whatever its state directory:
 a Runner started as `root` holds the lock `/run/bencher/runner.lock` for as long as it runs,
 and a second one started as `root` exits at once with an error naming that lock; a Runner that is not `root` cannot open the lock and runs without it.
@@ -119,6 +120,17 @@ Conflicts with `--no-auto-update`.
 The maximum download size in bytes for self-update binaries.
 By default, `500` MiB is used.
 Conflicts with `--no-auto-update`.
+
+### `--image-cache-size <IMAGE_CACHE_SIZE>`
+
+The maximum size in bytes of the Image blobs the Runner keeps across Jobs.
+The Runner keeps the config and layer blobs of each Image it pulls in `blobs` under its `--state-dir`,
+so a Job downloads only the blobs the Runner does not already hold,
+though it still fetches its Image manifest from the registry every time.
+Between Jobs, the Runner removes the least recently used blobs until the rest fit within this size.
+When it starts, the Runner creates the store and makes it its own, and if it cannot, it exits at once with an error naming the directory.
+By default, or set to `0`, the Runner keeps no blobs across Jobs and removes any it kept before.
+Can also be set with the `BENCHER_IMAGE_CACHE_SIZE` environment variable.
 
 ### `--max-output-size <MAX_OUTPUT_SIZE>`
 

@@ -1,17 +1,23 @@
 //! Everything the jail needs that must outlive a single job hangs off one
-//! state directory.
+//! state directory, the image blob store included, which is why it builds on
+//! every unix and not only where the jail runs.
 
 use std::fs;
-use std::os::unix::fs::{MetadataExt as _, OpenOptionsExt as _, PermissionsExt as _, fchown};
+use std::os::unix::fs::{
+    DirBuilderExt as _, MetadataExt as _, OpenOptionsExt as _, PermissionsExt as _, fchown,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
+#[cfg(target_os = "linux")]
 use slog::{Logger, info, warn};
 
 use crate::error::JailError;
+#[cfg(target_os = "linux")]
 use crate::jail::VmId;
 
 const CHROOT_BASE: &str = "jail";
 
+#[cfg(target_os = "linux")]
 const JAIL_ROOT: &str = "root";
 
 /// The jailer builds `<chroot_base>/<exec_file_name>/<id>/root`, so the
@@ -49,6 +55,16 @@ impl StateDir {
 
         let root_exists = real_dir(&self.root)?;
         let base_exists = real_dir(&chroot_base)?;
+        // Ahead of the tree's proof, since a blob is trusted when read: a store
+        // is used only where nobody but the runner could have written it.
+        if real_dir(&self.blob_store())? {
+            if !private_to_runner(&self.root)? {
+                return Err(JailError::ForeignBlobStore {
+                    path: self.root.clone(),
+                });
+            }
+            super::blob_store(&self.root).verify()?;
+        }
         // The one thing that settles it: only this runner builds this path.
         if real_dir(&jail_parent)? {
             return Ok(());
@@ -83,13 +99,19 @@ impl StateDir {
         self.chroot_base().join(EXEC_FILE_NAME)
     }
 
+    fn blob_store(&self) -> Utf8PathBuf {
+        self.root.join(super::BLOB_STORE)
+    }
+
     /// The jail directory for a VM, the tree teardown removes.
+    #[cfg(target_os = "linux")]
     #[must_use]
     pub fn jail_dir(&self, vm_id: &VmId) -> Utf8PathBuf {
         self.jail_parent().join(vm_id.as_str())
     }
 
     /// The chroot root for a VM, which becomes `/` inside the jail.
+    #[cfg(target_os = "linux")]
     #[must_use]
     pub fn jail_root(&self, vm_id: &VmId) -> Utf8PathBuf {
         self.jail_dir(vm_id).join(JAIL_ROOT)
@@ -97,7 +119,9 @@ impl StateDir {
 
     /// Each level is taken for root before the next is created, so a link
     /// planted below a taken level is never followed, and one at the root
-    /// fails the `O_NOFOLLOW` open in `make_private`.
+    /// fails the `O_NOFOLLOW` open in `make_private`. The store is made
+    /// private but never taken, so one somebody else made since the check is
+    /// refused rather than chowned into looking like the runner's.
     pub fn create(&self) -> Result<(), JailError> {
         self.check_root_is_ours()?;
         for dir in [&self.root, &self.chroot_base(), &self.jail_parent()] {
@@ -107,12 +131,22 @@ impl StateDir {
             })?;
             make_private(dir)?;
         }
-        Ok(())
+        let store = self.blob_store();
+        if let Err(source) = fs::DirBuilder::new().mode(0o700).create(&store)
+            && source.kind() != std::io::ErrorKind::AlreadyExists
+        {
+            return Err(JailError::CreateStateDir {
+                path: store,
+                source,
+            });
+        }
+        Ok(super::blob_store(&self.root).verify()?)
     }
 
     /// A `nodev` or `noexec` mount would otherwise fail only once the guest is
     /// booting, blaming something else. Checked where the chroots live, which
     /// may be a mount of its own below the root.
+    #[cfg(target_os = "linux")]
     pub fn refuse_unusable_mount(&self) -> Result<(), JailError> {
         use nix::sys::statvfs::{FsFlags, statvfs};
 
@@ -138,12 +172,14 @@ impl StateDir {
     /// Run before the job builds its own jail, so under the runner lock
     /// anything found is stale. The orphaned cgroups go first, and with them
     /// every process a chroot here could hold.
+    #[cfg(target_os = "linux")]
     pub fn sweep(&self, log: &Logger) -> Result<(), JailError> {
         self.sweep_at(log, Utf8Path::new(super::cgroup::CGROUP_ROOT))
     }
 
     /// The cgroup root is a parameter, so a test can stand a directory in for
     /// it.
+    #[cfg(target_os = "linux")]
     fn sweep_at(&self, log: &Logger, cgroup_root: &Utf8Path) -> Result<(), JailError> {
         self.sweep_with(log, || {
             // Before every sandboxed Job too, since a runner that may also run
@@ -154,6 +190,7 @@ impl StateDir {
     }
 
     /// The cgroup step is a parameter, so a test can fail it without root.
+    #[cfg(target_os = "linux")]
     fn sweep_with<C>(&self, log: &Logger, reclaim_cgroups: C) -> Result<(), JailError>
     where
         C: FnOnce() -> Result<usize, JailError>,
@@ -328,6 +365,15 @@ fn owner_only_writable(uid: u32, mode: u32) -> bool {
     uid == 0 && mode & 0o022 == 0
 }
 
+fn private_to_runner(dir: &Utf8Path) -> Result<bool, JailError> {
+    bencher_oci::private_to(dir.as_std_path(), crate::jail::current_euid()).map_err(|source| {
+        JailError::ReadStateDir {
+            path: dir.to_owned(),
+            source,
+        }
+    })
+}
+
 fn first_foreign_entry(dir: &Utf8Path, ours: &[&str]) -> Result<Option<String>, JailError> {
     let entries = match fs::read_dir(dir) {
         Ok(entries) => entries,
@@ -397,13 +443,14 @@ const BENIGN_ENTRIES: [&str; 1] = ["lost+found"];
 
 /// Never proof of ownership, only tolerated so the runner's own leftovers, such
 /// as the old lock after `rm -rf <state_dir>/jail`, cannot disown its root.
-const OUR_ROOT_ENTRIES: [&str; 2] = [CHROOT_BASE, LEGACY_LOCK_FILE];
+const OUR_ROOT_ENTRIES: [&str; 3] = [CHROOT_BASE, super::BLOB_STORE, LEGACY_LOCK_FILE];
 
 /// Left in every state directory by runners from before the runner lock.
 const LEGACY_LOCK_FILE: &str = ".lock";
 
 /// Needed because `Drop` never runs on SIGKILL, a crash, or a self-update's
 /// `exec`, and jobs run serially, so anything here is stale.
+#[cfg(target_os = "linux")]
 fn sweep_jails(log: &Logger, jail_parent: &Utf8Path) -> Result<usize, JailError> {
     sweep_jails_removing(log, jail_parent, |jail_dir: &Utf8Path| {
         fs::remove_dir_all(jail_dir)
@@ -412,6 +459,7 @@ fn sweep_jails(log: &Logger, jail_parent: &Utf8Path) -> Result<usize, JailError>
 
 /// The chroot removal is injectable because root can remove any directory a
 /// test makes, so a failing removal has to be supplied.
+#[cfg(target_os = "linux")]
 fn sweep_jails_removing<D>(
     log: &Logger,
     jail_parent: &Utf8Path,
@@ -493,6 +541,7 @@ where
 
 /// The three variants are the three columns of the table in [`crate::jail`], so
 /// a step added to [`reclaim_one`] has to pick one.
+#[cfg(target_os = "linux")]
 enum Reclamation {
     /// The chroot is gone.
     Reclaimed,
@@ -505,6 +554,7 @@ enum Reclamation {
 
 /// An entry whose kind cannot be read is an error, not `Ok(None)`, since it may
 /// be a jail.
+#[cfg(target_os = "linux")]
 fn jail_id(
     log: &Logger,
     jail_parent: &Utf8Path,
@@ -539,6 +589,7 @@ fn jail_id(
     Ok(VmId::from_chroot_name(name.to_owned()))
 }
 
+#[cfg(target_os = "linux")]
 fn reclaim_one<D>(log: &Logger, jail_dir: &Utf8Path, remove_chroot: &D) -> Reclamation
 where
     D: Fn(&Utf8Path) -> std::io::Result<()>,
@@ -556,9 +607,11 @@ where
 #[cfg(test)]
 mod tests {
     use std::os::unix::fs::symlink;
+    #[cfg(target_os = "linux")]
     use std::process::Command;
 
     use super::*;
+    #[cfg(target_os = "linux")]
     use crate::log::discard;
 
     fn temp_root() -> (tempfile::TempDir, Utf8PathBuf) {
@@ -617,7 +670,12 @@ mod tests {
         state.create().unwrap();
         state.create().unwrap();
 
-        for dir in [state.path(), &state.chroot_base(), &state.jail_parent()] {
+        for dir in [
+            state.path(),
+            &state.chroot_base(),
+            &state.jail_parent(),
+            &state.blob_store(),
+        ] {
             let mode = fs::metadata(dir).unwrap().permissions().mode();
             assert_eq!(mode & 0o777, 0o700, "{dir} should be private");
         }
@@ -657,7 +715,12 @@ mod tests {
 
         state.create().unwrap();
 
-        for dir in [state.path(), &state.chroot_base(), &state.jail_parent()] {
+        for dir in [
+            state.path(),
+            &state.chroot_base(),
+            &state.jail_parent(),
+            &state.blob_store(),
+        ] {
             let metadata = fs::metadata(dir).unwrap();
             assert_eq!(metadata.uid(), 0, "{dir} must be taken for root");
             assert_eq!(metadata.gid(), 0, "{dir} must be taken for root");
@@ -846,11 +909,187 @@ mod tests {
     }
 
     #[test]
+    fn a_root_holding_only_the_blob_store_is_ours() {
+        // Kills dropping the store from the entries the root may hold, which
+        // disowns the root of a runner whose store outlived its jail tree.
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state")).unwrap();
+        fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(state.blob_store().join("sha256"))
+            .unwrap();
+
+        state.create().unwrap();
+
+        assert!(state.jail_parent().is_dir(), "the tree is built");
+    }
+
+    #[test]
+    fn a_store_in_a_root_others_could_write_is_refused() {
+        // Kills taking a store in a root anybody could write before the runner
+        // took it, such as a fresh tmpfs at 1777, where a planted blob would be
+        // unpacked into every Job whose image names its digest.
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state")).unwrap();
+        let planted = state.blob_store().join("sha256").join("aa");
+        fs::create_dir_all(planted.parent().unwrap()).unwrap();
+        fs::write(&planted, b"planted").unwrap();
+        fs::set_permissions(state.path(), fs::Permissions::from_mode(0o1777)).unwrap();
+
+        let err = state.create().unwrap_err();
+
+        assert!(matches!(err, JailError::ForeignBlobStore { .. }), "{err}");
+        assert_eq!(fs::read(&planted).unwrap(), b"planted");
+        let mode = fs::metadata(state.path()).unwrap().permissions().mode();
+        assert_eq!(mode & 0o7777, 0o1777, "a refused root must not be chmodded");
+    }
+
+    #[test]
+    fn a_store_level_others_could_write_is_refused() {
+        // Kills checking the root alone, under which a store, or an algorithm
+        // directory in it, that somebody else made or may write is taken, and
+        // chowned into looking like the runner's.
+        let levels: [(&str, MakeLevel); 4] = [
+            (
+                "a file where an algorithm directory belongs",
+                |store, _victim| {
+                    fs::write(store.join("sha256"), b"theirs").unwrap();
+                    fs::set_permissions(store.join("sha256"), fs::Permissions::from_mode(0o600))
+                        .unwrap();
+                },
+            ),
+            ("a store others may write", |store, _victim| {
+                fs::set_permissions(store, fs::Permissions::from_mode(0o777)).unwrap();
+            }),
+            (
+                "an algorithm directory others may write",
+                |store, _victim| {
+                    fs::create_dir(store.join("sha256")).unwrap();
+                    fs::set_permissions(store.join("sha256"), fs::Permissions::from_mode(0o777))
+                        .unwrap();
+                },
+            ),
+            ("a linked algorithm directory", |store, victim| {
+                symlink(victim, store.join("sha256")).unwrap();
+            }),
+        ];
+        for (level, make) in levels {
+            let (_dir, root) = temp_root();
+            let state = StateDir::new(root.join("state")).unwrap();
+            fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(state.blob_store())
+                .unwrap();
+            let victim = root.join("victim");
+            // Private, so only the link itself, never its target, can refuse it.
+            fs::DirBuilder::new().mode(0o700).create(&victim).unwrap();
+            make(&state.blob_store(), &victim);
+            let before = modes(&state.blob_store());
+
+            let checked = state.check_root_is_ours();
+            let created = state.create();
+
+            for result in [checked, created] {
+                assert!(
+                    matches!(result, Err(JailError::BlobStore(_))),
+                    "{level}: {result:?}"
+                );
+            }
+            assert_eq!(modes(&state.blob_store()), before, "{level}");
+            assert!(!state.jail_parent().exists(), "{level}: the tree was built");
+        }
+    }
+
+    #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
+    fn a_store_level_another_user_owns_is_refused() {
+        // Kills judging a store's levels by their mode alone, under which one
+        // another user made is taken, and chowned into looking like the
+        // runner's.
+        use std::os::unix::fs::chown;
+        if crate::jail::current_euid() != 0 {
+            eprintln!("skipped a_store_level_another_user_owns_is_refused: the chown needs root");
+            return;
+        }
+        for level in ["", "sha256"] {
+            let (_dir, root) = temp_root();
+            let state = StateDir::new(root.join("state")).unwrap();
+            let theirs = state.blob_store().join(level);
+            fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(&theirs)
+                .unwrap();
+            chown(&theirs, Some(1000), Some(1000)).unwrap();
+
+            let checked = state.check_root_is_ours();
+            let created = state.create();
+
+            for result in [checked, created] {
+                assert!(
+                    matches!(result, Err(JailError::BlobStore(_))),
+                    "{theirs}: {result:?}"
+                );
+            }
+            assert_eq!(fs::metadata(&theirs).unwrap().uid(), 1000, "{theirs}");
+        }
+    }
+
+    /// Every level's mode, and whether it is a link, so a test can tell that
+    /// nothing was tightened or taken.
+    fn modes(store: &Utf8Path) -> Vec<(Utf8PathBuf, u32)> {
+        let mut levels = vec![store.to_owned()];
+        levels.extend(
+            fs::read_dir(store)
+                .unwrap()
+                .map(|entry| Utf8PathBuf::try_from(entry.unwrap().path()).unwrap()),
+        );
+        levels
+            .into_iter()
+            .map(|level| {
+                let mode = fs::symlink_metadata(&level).unwrap().mode();
+                (level, mode)
+            })
+            .collect()
+    }
+
+    #[test]
+    #[expect(clippy::print_stderr, reason = "a skipped test says why")]
+    fn a_store_in_a_root_another_user_owns_is_refused() {
+        // Kills judging the root by its mode alone, under which a directory
+        // handed over with a store its owner filled is taken as the runner's.
+        use std::os::unix::fs::chown;
+        if crate::jail::current_euid() != 0 {
+            eprintln!(
+                "skipped a_store_in_a_root_another_user_owns_is_refused: the chown needs root"
+            );
+            return;
+        }
+        let (_dir, root) = temp_root();
+        let state = StateDir::new(root.join("state")).unwrap();
+        fs::create_dir_all(state.blob_store()).unwrap();
+        fs::set_permissions(state.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        chown(state.path(), Some(1000), Some(1000)).unwrap();
+
+        let err = state.create().unwrap_err();
+
+        assert!(matches!(err, JailError::ForeignBlobStore { .. }), "{err}");
+        assert_eq!(fs::metadata(state.path()).unwrap().uid(), 1000);
+    }
+
+    #[test]
     fn a_symlinked_component_is_refused() {
         // A link at any component, under a world-writable base so the result
         // holds whatever the euid, must be refused before the chmod or the sweep
         // reaches its target.
-        for component in ["state", "state/jail", "state/jail/firecracker"] {
+        for component in [
+            "state",
+            "state/jail",
+            "state/jail/firecracker",
+            "state/blobs",
+        ] {
             let (_dir, root) = temp_root();
             fs::set_permissions(&root, fs::Permissions::from_mode(0o777)).unwrap();
             let victim = root.join("victim");
@@ -1175,8 +1414,10 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
     struct Tmpfs(Utf8PathBuf);
 
+    #[cfg(target_os = "linux")]
     impl Tmpfs {
         fn mount(at: &Utf8Path, options: &str) -> Self {
             let status = Command::new("mount")
@@ -1188,12 +1429,14 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "linux")]
     impl Drop for Tmpfs {
         fn drop(&mut self) {
             drop(Command::new("umount").arg(self.0.as_str()).status());
         }
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     #[expect(clippy::print_stderr, reason = "a skipped test says why")]
     fn a_filesystem_the_jail_cannot_run_from_is_refused_by_its_mount_option() {
@@ -1250,6 +1493,7 @@ mod tests {
         StateDir::new(Utf8PathBuf::from("/var/lib/bencher-runner")).unwrap();
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_sandboxed_job_on_a_kernel_without_cgroup_kill_fails_its_sweep() {
         // Kills a sweep that skips the kernel check, on which a runner allowed
@@ -1274,6 +1518,7 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_cgroup_that_could_not_be_emptied_leaves_every_chroot_in_place() {
         // Kills a sweep that removes chroots after its cgroup step failed,
@@ -1300,6 +1545,7 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn sweep_removes_stale_jails() {
         let (_dir, root) = temp_root();
@@ -1332,6 +1578,7 @@ mod tests {
         assert!(state.jail_parent().exists());
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn one_sweep_reclaims_every_jail_however_many_there_are() {
         // Enough jails to span several kernel batches, so a listing walked live
@@ -1355,6 +1602,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn sweep_leaves_unrelated_entries_alone() {
         let (_dir, root) = temp_root();
@@ -1375,6 +1623,7 @@ mod tests {
         assert!(note.exists(), "non-directory entries are not the sweep's");
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_chroot_that_will_not_go_away_does_not_fail_the_job() {
         // A chroot that will not go away costs disk, not fidelity, so it must
@@ -1393,6 +1642,7 @@ mod tests {
         assert_eq!(reclaimed, 0);
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn a_jail_parent_that_cannot_be_read_is_not_an_empty_one() {
         // A read the sweep could not perform must not reach the caller as a
@@ -1409,9 +1659,14 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn sweep_missing_parent_is_zero() {
         let (_dir, root) = temp_root();
         assert_eq!(sweep_jails(&discard(), &root.join("nope")).unwrap(), 0);
     }
+
+    /// Makes one level of a store in `blobs` that is not the store's own, its
+    /// victim the directory a link points at.
+    type MakeLevel = fn(&Utf8Path, &Utf8Path);
 }

@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::OciError;
 use crate::layer::LayerCompression;
 use crate::oci_arch;
+use crate::store::BlobStore;
 
 /// OCI image layout file content.
 const OCI_LAYOUT_VERSION: &str = "1.0.0";
@@ -213,7 +214,11 @@ pub fn get_manifest(image_dir: &Utf8Path, index: &ImageIndex) -> Result<ImageMan
 
 /// Parse the image configuration.
 pub fn parse_config(image_dir: &Utf8Path, config_digest: &str) -> Result<ImageConfig, OciError> {
-    let blob_path = digest_to_blob_path(image_dir, config_digest)?;
+    parse_config_in(&BlobStore::of_layout(image_dir), config_digest)
+}
+
+fn parse_config_in(store: &BlobStore, config_digest: &str) -> Result<ImageConfig, OciError> {
+    let blob_path = store.blob_path(config_digest)?;
 
     let file = File::open(&blob_path).map_err(|e| {
         OciError::MissingBlob(format!("Cannot open config blob {config_digest}: {e}"))
@@ -225,41 +230,13 @@ pub fn parse_config(image_dir: &Utf8Path, config_digest: &str) -> Result<ImageCo
     Ok(ImageConfig { config })
 }
 
-/// Convert a digest to a blob path.
-///
-/// Digest format: `algorithm:hex`
-/// Blob path: `blobs/algorithm/hex`
-///
-/// Validates that the algorithm is alphanumeric (plus `+`, `-`, `.`) per OCI spec
-/// and the hex portion contains only hexadecimal characters, preventing path traversal.
+/// Convert a digest to its blob path in the image layout at `image_dir`,
+/// `blobs/<algorithm>/<hex>`, refusing a digest that would reach outside it.
 pub fn digest_to_blob_path(
     image_dir: &Utf8Path,
     digest: &str,
 ) -> Result<camino::Utf8PathBuf, OciError> {
-    let (algorithm, hex) = digest
-        .split_once(':')
-        .ok_or_else(|| OciError::PathTraversal(format!("Invalid digest format: {digest}")))?;
-
-    // OCI digest algorithm: [a-z][a-z0-9]*([+.-_][a-z][a-z0-9]*)*
-    // We accept alphanumeric plus `+`, `-`, `.`, `_` which covers all valid algorithms.
-    if algorithm.is_empty()
-        || !algorithm
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'+' || b == b'-' || b == b'.' || b == b'_')
-    {
-        return Err(OciError::PathTraversal(format!(
-            "Invalid digest algorithm: {algorithm}"
-        )));
-    }
-
-    // Hex portion: only hexadecimal characters
-    if hex.is_empty() || !hex.bytes().all(|b| b.is_ascii_hexdigit()) {
-        return Err(OciError::PathTraversal(format!(
-            "Invalid digest hex: {hex}"
-        )));
-    }
-
-    Ok(image_dir.join("blobs").join(algorithm).join(hex))
+    BlobStore::of_layout(image_dir).blob_path(digest)
 }
 
 /// Full parsed OCI image information.
@@ -275,6 +252,12 @@ pub struct OciImage {
 impl OciImage {
     /// Parse an OCI image directory and return full image information.
     pub fn parse(image_dir: &Utf8Path) -> Result<Self, OciError> {
+        Self::parse_with_store(image_dir, &BlobStore::of_layout(image_dir))
+    }
+
+    /// Like [`Self::parse`], but the config comes from `store`, while the
+    /// index and manifests stay in `image_dir`.
+    pub fn parse_with_store(image_dir: &Utf8Path, store: &BlobStore) -> Result<Self, OciError> {
         // Validate layout
         parse_oci_layout(image_dir)?;
 
@@ -282,8 +265,7 @@ impl OciImage {
         let index = parse_index(image_dir)?;
         let manifest = get_manifest(image_dir, &index)?;
 
-        // Parse config
-        let config = parse_config(image_dir, &manifest.config_digest)?;
+        let config = parse_config_in(store, &manifest.config_digest)?;
 
         Ok(Self { manifest, config })
     }

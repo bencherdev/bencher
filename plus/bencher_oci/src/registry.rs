@@ -6,11 +6,12 @@
 //! See: <https://github.com/opencontainers/distribution-spec/blob/main/spec.md>
 
 use std::fs;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use crate::digest::DigestHasher;
 use crate::error::OciError;
 use crate::oci_arch;
+use crate::store::BlobStore;
 use camino::{Utf8Path, Utf8PathBuf};
 
 /// Media types for manifests.
@@ -135,12 +136,18 @@ impl RegistryClient {
         format!("{}://{registry}{path}", self.scheme.as_str())
     }
 
-    /// Pull an image from a registry and save it in OCI layout format.
+    /// Pull an image from a registry into an OCI layout at `output_dir`, which
+    /// keeps the index and manifests, while the config and layer blobs go to
+    /// `store`.
+    ///
+    /// The manifest always comes from the registry. A blob already in `store`
+    /// is not downloaded again, and every blob the image uses is stamped.
     pub fn pull(
         &mut self,
         image_ref: &ImageReference,
         output_dir: &Utf8Path,
-    ) -> Result<Utf8PathBuf, OciError> {
+        store: &BlobStore,
+    ) -> Result<PulledBlobs, OciError> {
         // Create output directory structure (sha256 dir always; sha512 created on demand)
         let blobs_base = output_dir.join("blobs");
         fs::create_dir_all(blobs_base.join("sha256"))?;
@@ -209,23 +216,20 @@ impl RegistryClient {
             },
         };
 
-        // Pull config blob
-        let config_digest = &image_manifest.config.digest;
-        let (_, config_bytes) = self.pull_blob(image_ref, config_digest)?;
-        let config_path = blob_path_for_digest(&blobs_base, config_digest)?;
-        fs::write(&config_path, &config_bytes)?;
-
-        // Pull layer blobs
-        for layer in &image_manifest.layers {
-            let layer_digest = &layer.digest;
-            let layer_path = blob_path_for_digest(&blobs_base, layer_digest)?;
-
-            // Skip if already downloaded
-            if layer_path.exists() {
-                continue;
+        let mut pulled = PulledBlobs::default();
+        let blobs = std::iter::once(&image_manifest.config).chain(&image_manifest.layers);
+        for digest in blobs.map(|blob| blob.digest.as_str()) {
+            let path = store.writable_path(digest)?;
+            if path
+                .symlink_metadata()
+                .is_ok_and(|metadata| metadata.is_file())
+            {
+                pulled.reused += 1;
+            } else {
+                pulled.bytes += self.download_blob(image_ref, digest, &path)?;
+                pulled.downloaded += 1;
             }
-
-            self.pull_blob_to_file(image_ref, layer_digest, &layer_path)?;
+            stamp(&path)?;
         }
 
         // Write index.json
@@ -240,7 +244,7 @@ impl RegistryClient {
         let index_path = output_dir.join("index.json");
         fs::write(&index_path, serde_json::to_string_pretty(&index)?)?;
 
-        Ok(output_dir.to_owned())
+        Ok(pulled)
     }
 
     /// Pull an image manifest.
@@ -278,7 +282,7 @@ impl RegistryClient {
             )));
         }
 
-        // Compute digest — use the algorithm from the reference when pulling by digest,
+        // Compute digest: use the algorithm from the reference when pulling by digest,
         // otherwise default to SHA-256.
         let algorithm = if image_ref.is_digest() {
             let parsed: bencher_valid::ImageDigest = image_ref
@@ -334,64 +338,15 @@ impl RegistryClient {
         Ok((computed_digest, bytes))
     }
 
-    /// Pull a blob from the registry into memory.
-    fn pull_blob(
+    /// Streams a blob to a temporary file beside `path`, and renames it into
+    /// place only once its length and digest check out, so a file at a digest
+    /// path is always the whole blob. Any failure removes the temporary file.
+    fn download_blob(
         &self,
         image_ref: &ImageReference,
         digest: &str,
-    ) -> Result<(String, Vec<u8>), OciError> {
-        let url = self.registry_url(
-            image_ref.registry(),
-            &format!("/v2/{}/blobs/{digest}", image_ref.repository()),
-        );
-
-        let mut response = self.authenticated_request(&url, "*/*")?;
-
-        let content_length = response
-            .headers()
-            .get("content-length")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.parse::<usize>().ok());
-
-        let bytes = response
-            .body_mut()
-            .read_to_vec()
-            .map_err(|e| registry_error("Failed to read blob", &e))?;
-
-        if let Some(expected_len) = content_length
-            && bytes.len() != expected_len
-        {
-            return Err(OciError::Registry(format!(
-                "Content-Length mismatch for blob {digest}: expected {expected_len}, got {}",
-                bytes.len()
-            )));
-        }
-
-        // Verify digest
-        let parsed: bencher_valid::ImageDigest = digest
-            .parse()
-            .map_err(|_err| OciError::InvalidReference(digest.to_owned()))?;
-        let computed = DigestHasher::digest(parsed.algorithm(), &bytes)?;
-
-        if computed != digest {
-            return Err(OciError::DigestMismatch {
-                expected: digest.to_owned(),
-                actual: computed,
-            });
-        }
-
-        Ok((digest.to_owned(), bytes))
-    }
-
-    /// Pull a blob from the registry and stream it directly to a file.
-    ///
-    /// This avoids loading entire layer blobs into memory.
-    fn pull_blob_to_file(
-        &self,
-        image_ref: &ImageReference,
-        digest: &str,
-        output_path: &Utf8Path,
-    ) -> Result<String, OciError> {
+        path: &Utf8Path,
+    ) -> Result<u64, OciError> {
         use std::io::{Read as _, Write as _};
 
         let url = self.registry_url(
@@ -411,7 +366,10 @@ impl RegistryClient {
             .parse()
             .map_err(|_err| OciError::InvalidReference(digest.to_owned()))?;
 
-        let mut file = fs::File::create(output_path)?;
+        let dir = path
+            .parent()
+            .ok_or_else(|| OciError::InvalidLayout(format!("No directory for blob {digest}")))?;
+        let mut file = tempfile::NamedTempFile::new_in(dir)?;
         let mut hasher = DigestHasher::from_algorithm(parsed.algorithm())?;
         let mut total_bytes: u64 = 0;
         let mut buf = vec![0u8; 64 * 1024];
@@ -448,7 +406,9 @@ impl RegistryClient {
             });
         }
 
-        Ok(computed)
+        file.as_file().sync_all()?;
+        file.persist(path).map_err(std::io::Error::from)?;
+        Ok(total_bytes)
     }
 
     /// Make an authenticated request to the registry.
@@ -493,6 +453,25 @@ impl RegistryClient {
             .checked_add(remaining.saturating_mul(2))
             .map(|_| remaining)
     }
+}
+
+/// Marks a blob used now, in its modification time, since a `relatime` mount
+/// does not keep access times.
+fn stamp(path: &Utf8Path) -> std::io::Result<()> {
+    fs::File::options()
+        .write(true)
+        .open(path)?
+        .set_modified(SystemTime::now())
+}
+
+/// The config and layer blobs of one pull: those its store already held, and
+/// those it downloaded.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct PulledBlobs {
+    pub reused: usize,
+    pub downloaded: usize,
+    /// The bytes of the blobs downloaded.
+    pub bytes: u64,
 }
 
 /// Names a timeout as one, rather than as a generic registry failure.
@@ -589,16 +568,21 @@ mod tests {
         // on a stalled registry for as long as it holds the connection open.
         let registry = FakeRegistry::start(Duration::ZERO, LayerResponse::Stalled);
         let output = tempfile::tempdir().unwrap();
+        let output = Utf8Path::from_path(output.path()).unwrap();
         let started = Instant::now();
 
         let result = RegistryClient::new()
             .unwrap()
             .with_scheme(RegistryScheme::Http)
             .with_timeout(Duration::from_secs(2))
-            .pull(&registry.image, Utf8Path::from_path(output.path()).unwrap());
+            .pull(&registry.image, output, &BlobStore::of_layout(output));
 
         let elapsed = started.elapsed();
-        assert!(registry.stop(), "the pull never reached the layer");
+        assert_eq!(
+            registry.stop().layers,
+            1,
+            "the pull never reached the layer"
+        );
         assert!(
             matches!(result, Err(OciError::PullTimeout(ureq::Timeout::Global))),
             "{result:?}"
@@ -613,12 +597,13 @@ mod tests {
         // which runs out before the first slow response.
         let registry = FakeRegistry::start(Duration::from_millis(500), LayerResponse::Whole);
         let output = tempfile::tempdir().unwrap();
+        let output = Utf8Path::from_path(output.path()).unwrap();
 
         let result = RegistryClient::new()
             .unwrap()
             .with_scheme(RegistryScheme::Http)
             .with_timeout(Duration::MAX)
-            .pull(&registry.image, Utf8Path::from_path(output.path()).unwrap());
+            .pull(&registry.image, output, &BlobStore::of_layout(output));
 
         registry.stop();
         assert!(result.is_ok(), "{result:?}");
@@ -630,12 +615,13 @@ mod tests {
         // responses that each take two of its three seconds all arrive.
         let registry = FakeRegistry::start(Duration::from_secs(2), LayerResponse::Whole);
         let output = tempfile::tempdir().unwrap();
+        let output = Utf8Path::from_path(output.path()).unwrap();
 
         let result = RegistryClient::new()
             .unwrap()
             .with_scheme(RegistryScheme::Http)
             .with_timeout(Duration::from_secs(3))
-            .pull(&registry.image, Utf8Path::from_path(output.path()).unwrap());
+            .pull(&registry.image, output, &BlobStore::of_layout(output));
 
         registry.stop();
         assert!(
@@ -644,32 +630,272 @@ mod tests {
         );
     }
 
+    #[test]
+    fn a_layer_cut_off_partway_is_downloaded_again() {
+        // Kills writing a blob in place, which leaves the cut-off layer at its
+        // digest path for the next pull to take as whole, and leaving the
+        // cut-off write behind.
+        let (_dir, store) = store();
+        let cut = FakeRegistry::start(Duration::ZERO, LayerResponse::Cut);
+
+        let result = pull(&cut, &store);
+
+        assert_eq!(cut.stop().layers, 1, "the pull never reached the layer");
+        assert!(result.is_err(), "{result:?}");
+        assert_eq!(stored(&store), [hex(CONFIG)]);
+
+        let whole = FakeRegistry::start(Duration::ZERO, LayerResponse::Whole);
+        let pulled = pull(&whole, &store).unwrap();
+
+        assert_eq!(
+            whole.stop(),
+            Served {
+                manifests: 1,
+                configs: 0,
+                layers: 1,
+            }
+        );
+        assert_eq!(
+            pulled,
+            PulledBlobs {
+                reused: 1,
+                downloaded: 1,
+                bytes: 5,
+            }
+        );
+        assert_eq!(
+            fs::read(store.blob_path(&digest(LAYER)).unwrap()).unwrap(),
+            LAYER
+        );
+    }
+
+    #[test]
+    fn a_layer_that_misses_its_digest_leaves_nothing_at_its_path() {
+        // Kills a rename ahead of the digest check, which keeps bytes under a
+        // digest they do not have for every later pull to trust, and leaving
+        // the refused write behind.
+        let (_dir, store) = store();
+        let corrupt = FakeRegistry::start(Duration::ZERO, LayerResponse::Corrupt);
+
+        let result = pull(&corrupt, &store);
+
+        assert_eq!(corrupt.stop().layers, 1, "the pull never reached the layer");
+        assert!(
+            matches!(result, Err(OciError::DigestMismatch { .. })),
+            "{result:?}"
+        );
+        assert_eq!(stored(&store), [hex(CONFIG)]);
+    }
+
+    #[test]
+    fn a_second_pull_downloads_no_blob_and_stamps_every_one() {
+        // Kills downloading a blob the store holds, and a hit left unstamped,
+        // which eviction then takes for a blob no Job has used since.
+        let (_dir, store) = store();
+        let registry = FakeRegistry::start(Duration::ZERO, LayerResponse::Whole);
+        let first = pull(&registry, &store).unwrap();
+        let blobs = [digest(CONFIG), digest(LAYER)].map(|digest| store.blob_path(&digest).unwrap());
+        for blob in &blobs {
+            stamp_at(blob, SystemTime::UNIX_EPOCH);
+        }
+
+        let second = pull(&registry, &store).unwrap();
+
+        assert_eq!(
+            registry.stop(),
+            Served {
+                manifests: 2,
+                configs: 1,
+                layers: 1,
+            }
+        );
+        assert_eq!(
+            (first, second),
+            (
+                PulledBlobs {
+                    reused: 0,
+                    downloaded: 2,
+                    bytes: u64::try_from(CONFIG.len() + LAYER.len()).unwrap(),
+                },
+                PulledBlobs {
+                    reused: 2,
+                    downloaded: 0,
+                    bytes: 0,
+                }
+            )
+        );
+        for blob in &blobs {
+            let stamp = fs::metadata(blob).unwrap().modified().unwrap();
+            assert!(stamp > SystemTime::UNIX_EPOCH, "{blob} was not stamped");
+        }
+    }
+
+    #[test]
+    fn only_a_file_at_a_digest_path_is_taken_for_its_blob() {
+        // Kills taking whatever sits at a digest path for the blob: a link,
+        // which hands every Job naming the digest the file it points at, or a
+        // directory, on which each of those Jobs fails.
+        use std::os::unix::fs::symlink;
+
+        let (dir, store) = store();
+        let layer = store.blob_path(&digest(LAYER)).unwrap();
+        fs::create_dir_all(&layer).unwrap();
+        let registry = FakeRegistry::start(Duration::ZERO, LayerResponse::Whole);
+        let result = pull(&registry, &store);
+        assert_eq!(
+            registry.stop().layers,
+            1,
+            "a directory passed for the layer: {result:?}"
+        );
+
+        fs::remove_dir(&layer).unwrap();
+        let elsewhere = Utf8Path::from_path(dir.path()).unwrap().join("elsewhere");
+        fs::write(&elsewhere, b"not the layer").unwrap();
+        symlink(&elsewhere, &layer).unwrap();
+        let registry = FakeRegistry::start(Duration::ZERO, LayerResponse::Whole);
+        pull(&registry, &store).unwrap();
+        assert_eq!(registry.stop().layers, 1, "a link passed for the layer");
+        assert!(layer.symlink_metadata().unwrap().is_file());
+        assert_eq!(fs::read(&layer).unwrap(), LAYER);
+        assert_eq!(fs::read(&elsewhere).unwrap(), b"not the layer");
+    }
+
+    #[test]
+    fn a_pull_goes_below_no_level_that_is_not_the_stores_own() {
+        // Kills a pull that writes through a link where an algorithm directory
+        // belongs, or into a level somebody else may write, either of which
+        // hands every later Job a blob somebody else could have put there.
+        use std::os::unix::fs::{
+            DirBuilderExt as _, MetadataExt as _, PermissionsExt as _, symlink,
+        };
+
+        let levels: [(&str, MakeLevel); 3] = [
+            ("a linked algorithm directory", |blobs, theirs| {
+                symlink(theirs, blobs.join("sha256")).unwrap();
+            }),
+            (
+                "an algorithm directory others may write",
+                |blobs, _theirs| {
+                    fs::create_dir(blobs.join("sha256")).unwrap();
+                    fs::set_permissions(blobs.join("sha256"), fs::Permissions::from_mode(0o777))
+                        .unwrap();
+                },
+            ),
+            ("a store others may write", |blobs, _theirs| {
+                fs::set_permissions(blobs, fs::Permissions::from_mode(0o777)).unwrap();
+            }),
+        ];
+        for (level, make) in levels {
+            let dir = tempfile::tempdir().unwrap();
+            let root = Utf8Path::from_path(dir.path()).unwrap();
+            let blobs = root.join("blobs");
+            fs::DirBuilder::new().mode(0o700).create(&blobs).unwrap();
+            let store = BlobStore::private(blobs.clone(), fs::metadata(&blobs).unwrap().uid());
+            let theirs = root.join("theirs");
+            // Private, so only the link itself, never its target, can refuse it.
+            fs::DirBuilder::new().mode(0o700).create(&theirs).unwrap();
+            make(&blobs, &theirs);
+            let registry = FakeRegistry::start(Duration::ZERO, LayerResponse::Whole);
+
+            let result = pull(&registry, &store);
+
+            let served = registry.stop();
+            assert!(
+                matches!(result, Err(OciError::ForeignBlobStore(_))),
+                "{level}: {result:?}"
+            );
+            assert_eq!((served.configs, served.layers), (0, 0), "{level}");
+            assert_eq!(fs::read_dir(&theirs).unwrap().count(), 0, "{level}");
+        }
+    }
+
+    const CONFIG: &[u8] = br#"{"architecture":"amd64","os":"linux"}"#;
+    const LAYER: &[u8] = b"layer";
+
+    fn digest(bytes: &[u8]) -> String {
+        DigestHasher::digest("sha256", bytes).unwrap()
+    }
+
+    fn hex(bytes: &[u8]) -> String {
+        digest(bytes).trim_start_matches("sha256:").to_owned()
+    }
+
+    /// A store of its own, apart from the image layout each pull writes.
+    fn store() -> (tempfile::TempDir, BlobStore) {
+        let dir = tempfile::tempdir().unwrap();
+        let store = BlobStore::new(Utf8Path::from_path(dir.path()).unwrap().join("store"));
+        (dir, store)
+    }
+
+    /// Pulls the image into a layout of its own, with its blobs in `store`.
+    #[expect(
+        clippy::unwrap_in_result,
+        reason = "the setup failing fails the test, while the pull's result is the test's"
+    )]
+    fn pull(registry: &FakeRegistry, store: &BlobStore) -> Result<PulledBlobs, OciError> {
+        let output = tempfile::tempdir().unwrap();
+        RegistryClient::new()
+            .unwrap()
+            .with_scheme(RegistryScheme::Http)
+            .with_timeout(Duration::from_secs(30))
+            .pull(
+                &registry.image,
+                Utf8Path::from_path(output.path()).unwrap(),
+                store,
+            )
+    }
+
+    /// Every file in the store's `sha256` directory, temporary or not.
+    fn stored(store: &BlobStore) -> Vec<String> {
+        let mut names: Vec<String> = fs::read_dir(store.dir().join("sha256"))
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+            .collect();
+        names.sort();
+        names
+    }
+
+    fn stamp_at(path: &Utf8Path, stamp: SystemTime) {
+        fs::File::options()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(stamp)
+            .unwrap();
+    }
+
     /// A registry on localhost serving one image.
     struct FakeRegistry {
         image: ImageReference,
         release: mpsc::SyncSender<()>,
-        server: JoinHandle<bool>,
+        server: JoinHandle<Served>,
+    }
+
+    /// What the fake registry was asked for.
+    #[derive(Debug, Default, PartialEq, Eq)]
+    struct Served {
+        manifests: usize,
+        configs: usize,
+        layers: usize,
     }
 
     impl FakeRegistry {
         /// Answers each request `late`.
         fn start(late: Duration, layer_response: LayerResponse) -> Self {
-            let config = br#"{"architecture":"amd64","os":"linux"}"#.to_vec();
-            let layer = b"layer".to_vec();
-            let config_digest = DigestHasher::digest("sha256", &config).unwrap();
-            let layer_digest = DigestHasher::digest("sha256", &layer).unwrap();
+            let config_digest = digest(CONFIG);
+            let layer_digest = digest(LAYER);
             let manifest = serde_json::to_vec(&serde_json::json!({
                 "schemaVersion": 2,
                 "mediaType": "application/vnd.oci.image.manifest.v1+json",
                 "config": {
                     "mediaType": "application/vnd.oci.image.config.v1+json",
                     "digest": config_digest,
-                    "size": config.len(),
+                    "size": CONFIG.len(),
                 },
                 "layers": [{
                     "mediaType": "application/vnd.oci.image.layer.v1.tar",
                     "digest": layer_digest,
-                    "size": layer.len(),
+                    "size": LAYER.len(),
                 }],
             }))
             .unwrap();
@@ -680,7 +906,7 @@ mod tests {
                     .unwrap();
             let (release, released) = mpsc::sync_channel(0);
             let server = std::thread::spawn(move || {
-                let mut stalled = false;
+                let mut served = Served::default();
                 while let Err(TryRecvError::Empty) = released.try_recv() {
                     let mut stream = match listener.accept() {
                         Ok((stream, _)) => stream,
@@ -696,37 +922,56 @@ mod tests {
                         .unwrap();
                     let path = request_path(&mut stream);
                     std::thread::sleep(late);
-                    let is_layer = path.ends_with(&layer_digest);
-                    if is_layer && matches!(layer_response, LayerResponse::Stalled) {
-                        write!(
-                            stream,
-                            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n",
-                            layer.len() + 1024
-                        )
-                        .unwrap();
-                        stream.write_all(&layer).unwrap();
-                        stalled = true;
-                        // Silent, with the connection open, until the test is done.
-                        released.recv().unwrap_err();
-                        continue;
-                    }
-                    let body = if is_layer {
-                        &layer
+                    let body = if path.ends_with(&layer_digest) {
+                        served.layers += 1;
+                        match layer_response {
+                            LayerResponse::Stalled => {
+                                write!(
+                                    stream,
+                                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n",
+                                    LAYER.len() + 1024
+                                )
+                                .unwrap();
+                                stream.write_all(LAYER).unwrap();
+                                // Silent, with the connection open, until the test is done.
+                                released.recv().unwrap_err();
+                                continue;
+                            },
+                            LayerResponse::Cut => {
+                                write!(
+                                    stream,
+                                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n",
+                                    LAYER.len()
+                                )
+                                .unwrap();
+                                stream.write_all(&LAYER[..2]).unwrap();
+                                // Closed, partway through the body.
+                                continue;
+                            },
+                            LayerResponse::Corrupt => {
+                                let mut layer = LAYER.to_vec();
+                                *layer.last_mut().unwrap() ^= 1;
+                                layer
+                            },
+                            LayerResponse::Whole => LAYER.to_vec(),
+                        }
                     } else if path.ends_with(&config_digest) {
-                        &config
+                        served.configs += 1;
+                        CONFIG.to_vec()
                     } else {
-                        &manifest
+                        served.manifests += 1;
+                        manifest.clone()
                     };
                     let mut response = format!(
                         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
                         body.len()
                     )
                     .into_bytes();
-                    response.extend_from_slice(body);
+                    response.extend_from_slice(&body);
                     // A client that has run out of time has already hung up.
                     drop(stream.write_all(&response));
                 }
-                stalled
+                served
             });
             Self {
                 image,
@@ -735,8 +980,8 @@ mod tests {
             }
         }
 
-        /// Shuts the registry down and returns whether it stalled a layer.
-        fn stop(self) -> bool {
+        /// Shuts the registry down and returns what it was asked for.
+        fn stop(self) -> Served {
             let Self {
                 image: _,
                 release,
@@ -751,6 +996,10 @@ mod tests {
     enum LayerResponse {
         /// A body it never finishes, on a connection it holds open.
         Stalled,
+        /// A body it closes the connection on partway through.
+        Cut,
+        /// The whole layer with one byte flipped.
+        Corrupt,
         /// The whole layer.
         Whole,
     }
@@ -766,4 +1015,8 @@ mod tests {
         let head = String::from_utf8(head).unwrap();
         head.split(' ').nth(1).unwrap().to_owned()
     }
+
+    /// Makes one level of a store in `blobs` that is not the store's own, its
+    /// victim the directory a link points at.
+    type MakeLevel = fn(&Utf8Path, &Utf8Path);
 }

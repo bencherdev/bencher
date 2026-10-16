@@ -45,6 +45,7 @@ und Jails, die durch eine unsaubere Beendigung zurückgeblieben sind, werden vor
 Jedes Jail enthält ein vollständiges Gast-Root-Dateisystem und eine Kopie der microVM-Binärdatei,
 und ein Runner führt seine Jobs nacheinander aus,
 daher braucht dieses Verzeichnis echte Kapazität für ein Jail.
+Mit `--image-cache-size` enthält es zusätzlich den Image-Cache, bis zu dieser Größe.
 Auf einem Host läuft immer nur ein Runner, unabhängig von seinem Zustandsverzeichnis:
 Ein als `root` gestarteter Runner hält die Sperre `/run/bencher/runner.lock`, solange er läuft,
 und ein zweiter, als `root` gestarteter beendet sich sofort mit einem Fehler, der diese Sperre nennt; ein Runner, der nicht als `root` läuft, kann die Sperre nicht öffnen und läuft ohne sie.
@@ -119,6 +120,17 @@ Steht im Konflikt mit `--no-auto-update`.
 Die maximale Download-Größe in Bytes für Self-Update-Binaries.
 Standardmäßig werden `500` MiB verwendet.
 Steht im Konflikt mit `--no-auto-update`.
+
+### `--image-cache-size <IMAGE_CACHE_SIZE>`
+
+Die maximale Größe in Bytes der Image-Blobs, die der Runner über Jobs hinweg behält.
+Der Runner behält die Config- und Layer-Blobs jedes Image, das er herunterlädt, in `blobs` unter seinem `--state-dir`,
+sodass ein Job nur die Blobs herunterlädt, die der Runner noch nicht hat,
+das Manifest seines Image aber trotzdem jedes Mal aus der Registry abruft.
+Zwischen Jobs entfernt der Runner die am längsten nicht verwendeten Blobs, bis der Rest in diese Größe passt.
+Beim Start legt der Runner den Speicher an und macht ihn zu seinem eigenen; kann er das nicht, beendet er sich sofort mit einem Fehler, der das Verzeichnis nennt.
+Standardmäßig, oder mit `0`, behält der Runner keine Blobs über Jobs hinweg und entfernt alle, die er zuvor behalten hat.
+Kann auch mit der Umgebungsvariable `BENCHER_IMAGE_CACHE_SIZE` gesetzt werden.
 
 ### `--max-output-size <MAX_OUTPUT_SIZE>`
 

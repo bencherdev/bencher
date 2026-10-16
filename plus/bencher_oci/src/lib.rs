@@ -10,6 +10,7 @@ mod image;
 mod layer;
 #[cfg(feature = "registry")]
 mod registry;
+mod store;
 mod unpack;
 
 pub use error::OciError;
@@ -19,8 +20,9 @@ pub use image::{
 };
 pub use layer::LayerCompression;
 #[cfg(feature = "registry")]
-pub use registry::{ImageReference, RegistryClient, RegistryScheme};
-pub use unpack::{unpack, verify_digest};
+pub use registry::{ImageReference, PulledBlobs, RegistryClient, RegistryScheme};
+pub use store::{BlobStore, Eviction, private_to};
+pub use unpack::{unpack, unpack_with_store, verify_digest};
 
 /// Map the Rust `std::env::consts::ARCH` value to the OCI architecture name.
 pub(crate) fn oci_arch() -> &'static str {

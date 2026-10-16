@@ -44,6 +44,7 @@ Runner の永続的な状態ディレクトリ。
 各 jail はゲストのルートファイルシステム全体と microVM バイナリのコピーを保持し、
 Runner は Job を一度に 1 つずつ実行するため、
 このディレクトリには jail 1 つ分の実容量が必要です。
+`--image-cache-size` を指定すると、そのサイズまで Image キャッシュも保持します。
 状態ディレクトリにかかわらず、1 つのホストで実行できる Runner は一度に 1 つだけです。
 `root` として起動した Runner は実行中ずっとロック `/run/bencher/runner.lock` を保持し、
 `root` として起動した 2 つ目の Runner はそのロックを示すエラーを出して即座に終了します。`root` 以外の Runner はロックを開けないため、ロックなしで実行されます。
@@ -118,6 +119,17 @@ Runner は Job を一度に 1 つずつ実行するため、
 自己更新バイナリの最大ダウンロードサイズ (バイト)。
 デフォルトでは `500` MiB が使用されます。
 `--no-auto-update` と競合します。
+
+### `--image-cache-size <IMAGE_CACHE_SIZE>`
+
+Runner が Job をまたいで保持する Image blob の最大サイズ (バイト)。
+Runner はプルした各 Image の config と layer の blob を `--state-dir` 配下の `blobs` に保持するため、
+Job は Runner がまだ保持していない blob だけをダウンロードしますが、
+Image のマニフェストは毎回レジストリから取得します。
+Job の合間に、Runner は残りがこのサイズに収まるまで、最も長く使われていない blob から削除します。
+Runner は起動時にこのストアを作成して自身のものにし、それができない場合はディレクトリを示すエラーとともにすぐに終了します。
+デフォルト、または `0` では、Runner は Job をまたいで blob を保持せず、以前に保持していた blob を削除します。
+環境変数 `BENCHER_IMAGE_CACHE_SIZE` でも設定できます。
 
 ### `--max-output-size <MAX_OUTPUT_SIZE>`
 

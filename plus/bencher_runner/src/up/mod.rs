@@ -1,5 +1,6 @@
 use bencher_json::RunnerResourceId;
 use bencher_json::runner::PauseReason;
+use bencher_oci::Eviction;
 use camino::Utf8Path;
 use slog::{Logger, error, info, warn};
 use url::Url;
@@ -25,6 +26,7 @@ use job::execute_job;
 use state_machine::{ChannelStateMachine, Effect, Input, LogLevel, Probe};
 
 use std::collections::VecDeque;
+use std::num::NonZeroU64;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use websocket::JobChannel;
@@ -66,6 +68,9 @@ pub struct UpConfig {
     pub update_channel: bencher_valid::UpdateChannel,
     /// Maximum download size in bytes for self-update binaries.
     pub max_download_size: Option<u64>,
+    /// The bytes of image blobs kept across Jobs in the state directory, or
+    /// none to keep no store.
+    pub image_cache_size: Option<NonZeroU64>,
     pub state_dir: camino::Utf8PathBuf,
     pub jail_user: crate::jail::JailUser,
 }
@@ -111,6 +116,15 @@ impl Up {
             warn!(log, "Job lock not taken, so host maintenance may run during a Job";
                 "path" => RUN_DIR,
             );
+        }
+
+        // With a cap, a store the runner cannot take stops it here, rather than
+        // failing every Job it claims.
+        #[cfg(unix)]
+        if self.config.image_cache_size.is_some() {
+            crate::jail::StateDir::new(self.config.state_dir.clone())
+                .and_then(|state_dir| state_dir.create())
+                .map_err(crate::RunnerError::from)?;
         }
 
         // Warn about host conditions that limit benchmark accuracy (Linux only)
@@ -289,7 +303,7 @@ fn execute_effect(
             log,
             Utf8Path::new(crate::host::SYSFS),
             Utf8Path::new(RUN_DIR),
-            config.raid_pause,
+            config,
             &mut host.turn,
             &mut host.health,
         ))),
@@ -388,7 +402,8 @@ impl Turn {
 }
 
 /// What the host says about taking a Job, read at the idle decision point;
-/// the job lock is kept only when there is no reason to pause.
+/// the job lock is kept, and the blob store evicted, only when there is no
+/// reason to pause.
 #[cfg_attr(
     not(target_os = "linux"),
     expect(unused_variables, unused_mut, reason = "the job lock is Linux only")
@@ -397,13 +412,13 @@ fn probe(
     log: &Logger,
     sysfs: &Utf8Path,
     run_dir: &Utf8Path,
-    raid_pause: bool,
+    config: &UpConfig,
     turn: &mut Turn,
     health: &mut Health,
 ) -> Probe {
     turn.release();
     let arrays = md::arrays(sysfs);
-    let mut reasons = if raid_pause {
+    let mut reasons = if config.raid_pause {
         md::raid_reasons(&arrays)
     } else {
         Vec::new()
@@ -417,11 +432,72 @@ fn probe(
         },
         Err(reason) => reasons.push(reason),
     }
+    if reasons.is_empty() {
+        evict_blob_store(log, config);
+    }
     Probe {
         reasons,
         health: Some(health.read(log, sysfs, &arrays)),
         now: bencher_json::DateTime::now(),
     }
+}
+
+/// No Job runs at a clear probe, so nothing writes to the store, and a pass
+/// that fails leaves the next clear probe to try again.
+fn evict_blob_store(log: &Logger, config: &UpConfig) {
+    let cap = config.image_cache_size.map_or(0, NonZeroU64::get);
+    match evict_blobs(&config.state_dir, cap) {
+        Ok(Eviction {
+            temporary,
+            blobs,
+            bytes,
+            total,
+            failed,
+        }) => {
+            if failed > 0 {
+                warn!(log, "Blob store entries not evicted";
+                    "failed_entries" => failed,
+                    "temporary_files" => temporary,
+                    "blobs" => blobs,
+                    "bytes" => bytes,
+                    "total_bytes" => total,
+                    "cap_bytes" => cap,
+                );
+            } else if temporary > 0 || blobs > 0 {
+                info!(log, "Blob store evicted";
+                    "temporary_files" => temporary,
+                    "blobs" => blobs,
+                    "bytes" => bytes,
+                    "total_bytes" => total,
+                    "cap_bytes" => cap,
+                );
+            }
+        },
+        Err(e) => {
+            warn!(log, "Blob store not evicted";
+                "state_dir" => config.state_dir.as_str(),
+                "error" => bencher_logger::capped(&e),
+            );
+        },
+    }
+}
+
+/// Only from a state directory proven the runner's, since the pass deletes.
+fn evict_blobs(state_dir: &Utf8Path, cap: u64) -> Result<Eviction, crate::RunnerError> {
+    let store = crate::jail::blob_store(state_dir);
+    if let Err(e) = store.dir().symlink_metadata() {
+        // A runner with no cap keeps no store, so one it cannot reach is not
+        // its own to empty.
+        if e.kind() == std::io::ErrorKind::NotFound
+            || (cap == 0 && e.kind() == std::io::ErrorKind::PermissionDenied)
+        {
+            return Ok(Eviction::default());
+        }
+        return Err(e.into());
+    }
+    #[cfg(unix)]
+    crate::jail::StateDir::new(state_dir.to_owned())?.check_root_is_ours()?;
+    Ok(store.evict(cap)?)
 }
 
 fn log_pause_began(log: &Logger, reasons: &[PauseReason]) {
@@ -828,7 +904,7 @@ mod tests {
                 &crate::log::discard(),
                 &sysfs,
                 &run_dir,
-                raid_pause,
+                &probe_config(&sysfs, raid_pause, None),
                 &mut Turn::default(),
                 &mut Health::default(),
             )
@@ -836,6 +912,139 @@ mod tests {
         assert_eq!(probe(true).reasons.len(), 1);
         assert_eq!(probe(false).reasons, []);
         drop(dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn only_a_clear_probe_evicts_the_blob_store() {
+        // Kills evicting through a pause, evicting while host maintenance may
+        // hold the host, evicting past the cap, and a clear probe that keeps a
+        // store the runner has no cap for.
+        use std::os::unix::fs::DirBuilderExt as _;
+
+        let (_dir, sysfs) = md::tests::sysfs(&[("md0", "check", "1 / 2", "100")]);
+        let run_dir = sysfs.join("run");
+        let blob = sysfs.join("state/blobs/sha256/aa");
+        // Private at every level, as the runner keeps its store.
+        std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(blob.parent().unwrap())
+            .unwrap();
+        std::fs::write(&blob, b"blob").unwrap();
+        let probe = |raid_pause, cap| {
+            probe(
+                &crate::log::discard(),
+                &sysfs,
+                &run_dir,
+                &probe_config(&sysfs, raid_pause, NonZeroU64::new(cap)),
+                &mut Turn::default(),
+                &mut Health::default(),
+            )
+        };
+
+        assert_eq!(probe(true, 0).reasons.len(), 1);
+        assert!(blob.exists(), "a paused probe evicted");
+        #[cfg(target_os = "linux")]
+        {
+            std::fs::create_dir_all(&run_dir).unwrap();
+            std::fs::write(run_dir.join("maintenance"), b"").unwrap();
+            assert_eq!(probe(false, 0).reasons.len(), 1);
+            assert!(blob.exists(), "a probe evicted while maintenance was due");
+            std::fs::remove_file(run_dir.join("maintenance")).unwrap();
+        }
+        assert_eq!(probe(false, 4).reasons, []);
+        assert!(blob.exists(), "a clear probe evicted down past its cap");
+        assert_eq!(probe(false, 0).reasons, []);
+        assert!(!blob.exists(), "a clear probe with no cap kept the store");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn eviction_leaves_a_store_it_cannot_prove_the_runners() {
+        // Kills a pass without the state root's guard, one that takes a store
+        // in a root anybody could have written before the runner took it, and
+        // one that follows a link where the store or an algorithm directory
+        // belongs, each of which deletes files the runner never wrote.
+        use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _, symlink};
+
+        let dir = tempfile::tempdir().unwrap();
+        let root = Utf8Path::from_path(dir.path()).unwrap();
+        let open = root.join("open");
+        let planted = open.join("blobs/sha256");
+        std::fs::create_dir_all(&planted).unwrap();
+        std::fs::set_permissions(&open, std::fs::Permissions::from_mode(0o1777)).unwrap();
+        let linked = root.join("linked");
+        std::fs::create_dir(&linked).unwrap();
+        std::fs::set_permissions(&linked, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let victim = root.join("victim/sha256");
+        // Link targets are private, so only the links themselves can refuse them.
+        std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(&victim)
+            .unwrap();
+        symlink(root.join("victim"), linked.join("blobs")).unwrap();
+        let walled = root.join("walled");
+        std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(walled.join("blobs"))
+            .unwrap();
+        let algorithm_victim = root.join("algorithm-victim");
+        std::fs::DirBuilder::new()
+            .mode(0o700)
+            .create(&algorithm_victim)
+            .unwrap();
+        symlink(&algorithm_victim, walled.join("blobs/sha256")).unwrap();
+        let files: Vec<_> = [&planted, &victim, &algorithm_victim]
+            .into_iter()
+            .flat_map(|dir| [dir.join("aa"), dir.join("some_config")])
+            .collect();
+        for file in &files {
+            std::fs::write(file, b"theirs").unwrap();
+        }
+
+        for state_dir in [&open, &linked, &walled] {
+            let result = evict_blobs(state_dir, 0);
+            assert!(result.is_err(), "{state_dir}: {result:?}");
+        }
+
+        for file in &files {
+            assert!(file.exists(), "{file} was deleted");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_runner_with_no_cap_is_silent_about_a_store_it_cannot_reach() {
+        // Kills warning at every clear probe, about once a minute, of a store a
+        // runner with no cap never kept, in a state directory only root may
+        // enter. Root enters any directory, so only an unprivileged run tells.
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let (_dir, sysfs) = md::tests::sysfs(&[]);
+        let shut = sysfs.join("shut");
+        std::fs::create_dir(&shut).unwrap();
+        std::fs::set_permissions(&shut, std::fs::Permissions::from_mode(0o000)).unwrap();
+        let messages = crate::log::Messages::default();
+        let config = UpConfig {
+            state_dir: shut.join("state"),
+            ..probe_config(&sysfs, false, None)
+        };
+
+        let clear = probe(
+            &messages.logger(),
+            &sysfs,
+            &sysfs.join("run"),
+            &config,
+            &mut Turn::default(),
+            &mut Health::default(),
+        );
+
+        std::fs::set_permissions(&shut, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(clear.reasons, []);
+        assert!(!messages.contains("Blob store not evicted"));
     }
 
     #[test]
@@ -848,7 +1057,7 @@ mod tests {
             &crate::log::discard(),
             &sysfs,
             &sysfs.join("run"),
-            false,
+            &probe_config(&sysfs, false, None),
             &mut Turn::default(),
             &mut Health::default(),
         );
@@ -869,16 +1078,38 @@ mod tests {
         let mut turn = Turn::default();
         let mut health = Health::default();
 
-        let paused = probe(&log, &sysfs, &run_dir, true, &mut turn, &mut health);
+        let paused = probe(
+            &log,
+            &sysfs,
+            &run_dir,
+            &probe_config(&sysfs, true, None),
+            &mut turn,
+            &mut health,
+        );
         assert_eq!(paused.reasons.len(), 1, "{:?}", paused.reasons);
         assert!(turn.lock.is_none());
 
-        let clear = probe(&log, &sysfs, &run_dir, false, &mut turn, &mut health);
+        let clear_config = probe_config(&sysfs, false, None);
+        let clear = probe(
+            &log,
+            &sysfs,
+            &run_dir,
+            &clear_config,
+            &mut turn,
+            &mut health,
+        );
         assert_eq!(clear.reasons, []);
         assert!(turn.lock.is_some());
 
         std::fs::write(run_dir.join("maintenance"), b"").unwrap();
-        let maintenance = probe(&log, &sysfs, &run_dir, false, &mut turn, &mut health);
+        let maintenance = probe(
+            &log,
+            &sysfs,
+            &run_dir,
+            &clear_config,
+            &mut turn,
+            &mut health,
+        );
         assert_eq!(
             maintenance.reasons,
             [PauseReason::Maintenance {
@@ -901,7 +1132,7 @@ mod tests {
             &crate::log::discard(),
             &sysfs,
             &run_dir,
-            false,
+            &probe_config(&sysfs, false, None),
             &mut host.turn,
             &mut host.health,
         );
@@ -965,6 +1196,21 @@ mod tests {
 
     fn host() -> Host {
         Host::default()
+    }
+
+    /// A state directory in the fixture, never the host's, since a clear probe
+    /// evicts the store in it.
+    fn probe_config(
+        sysfs: &Utf8Path,
+        raid_pause: bool,
+        image_cache_size: Option<NonZeroU64>,
+    ) -> UpConfig {
+        UpConfig {
+            raid_pause,
+            image_cache_size,
+            state_dir: sysfs.join("state"),
+            ..job::tests::test_up_config()
+        }
     }
 
     // --- drive ---

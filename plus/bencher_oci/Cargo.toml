@@ -25,6 +25,7 @@ registry = [
     "plus",
     "dep:bencher_json",
     "dep:bencher_valid",
+    "dep:tempfile",
     "dep:ureq",
 ]
 
@@ -40,6 +41,7 @@ serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 tar = { workspace = true, optional = true }
+tempfile = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
 zstd = { workspace = true, optional = true }
 

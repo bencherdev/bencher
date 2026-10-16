@@ -45,6 +45,7 @@ Runner의 영구 상태 디렉터리입니다.
 각 jail은 게스트의 전체 루트 파일 시스템과 microVM 바이너리 사본을 보관하며,
 Runner는 Job을 한 번에 하나씩 실행하므로,
 이 디렉터리에는 jail 하나만큼의 실제 용량이 필요합니다.
+`--image-cache-size`를 지정하면 그 크기까지 Image 캐시도 보관합니다.
 상태 디렉터리와 관계없이 한 호스트에서는 한 번에 하나의 Runner만 실행됩니다.
 `root`로 시작한 Runner는 실행되는 동안 잠금 `/run/bencher/runner.lock`을 보유하며,
 `root`로 시작한 두 번째 Runner는 그 잠금을 명시한 오류와 함께 즉시 종료됩니다. `root`가 아닌 Runner는 잠금을 열 수 없으므로 잠금 없이 실행됩니다.
@@ -119,6 +120,17 @@ Runner는 Job을 한 번에 하나씩 실행하므로,
 자체 업데이트 바이너리의 최대 다운로드 크기(바이트)입니다.
 기본적으로 `500` MiB가 사용됩니다.
 `--no-auto-update`와 충돌합니다.
+
+### `--image-cache-size <IMAGE_CACHE_SIZE>`
+
+Runner가 Job 간에 보관하는 Image blob의 최대 크기(바이트)입니다.
+Runner는 풀(pull)한 각 Image의 config 및 layer blob을 `--state-dir` 아래의 `blobs`에 보관하므로,
+Job은 Runner가 아직 보관하지 않은 blob만 다운로드하지만,
+Image 매니페스트는 매번 레지스트리에서 가져옵니다.
+Job 사이에 Runner는 나머지가 이 크기 안에 들어올 때까지 가장 오래전에 사용된 blob부터 제거합니다.
+Runner는 시작할 때 이 저장소를 만들어 자신의 것으로 삼으며, 그럴 수 없으면 디렉터리를 밝히는 오류와 함께 즉시 종료합니다.
+기본적으로, 또는 `0`으로 설정하면 Runner는 Job 간에 blob을 보관하지 않으며 이전에 보관한 blob을 제거합니다.
+`BENCHER_IMAGE_CACHE_SIZE` 환경 변수로도 설정할 수 있습니다.
 
 ### `--max-output-size <MAX_OUTPUT_SIZE>`
 

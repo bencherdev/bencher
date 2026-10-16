@@ -114,6 +114,14 @@ pub enum JailError {
     ForeignStateDir { path: Utf8PathBuf, entry: String },
 
     #[error(
+        "The state directory {path} holds an image cache in blobs, but the directory is not owned by the runner's user, or its group or others may write to it, so somebody else could have put a blob there, and the runner trusts every blob it reads. Remove {path}/blobs, which the runner fills again, and keep the state directory the runner's own."
+    )]
+    ForeignBlobStore { path: Utf8PathBuf },
+
+    #[error(transparent)]
+    BlobStore(#[from] bencher_oci::OciError),
+
+    #[error(
         "The state directory component {path} is a symbolic link. The runner tightens every directory of this tree to 0700 and sweeps what is under it, so following the link would apply both to a directory somebody else chose. A link is followed only at the state directory root, and only when the directory holding it is writable by nobody but root, it points directly at its final target, and that target already exists with every directory on the way to / writable by nobody but root: an extra symlink hop, a group- or other-writable directory in the target's path, or a target that does not exist yet all fail that proof. Replace the link with a real directory, or repair it to meet those conditions."
     )]
     SymlinkedStateDir { path: Utf8PathBuf },

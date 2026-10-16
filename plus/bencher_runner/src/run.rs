@@ -6,6 +6,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use slog::{Logger, info, warn};
 
 use bencher_json::Iteration;
+use bencher_oci::BlobStore;
 
 use crate::JobDeadline;
 use crate::error::RunnerError;
@@ -361,13 +362,16 @@ impl PreparedImage {
 }
 
 /// An image pulled and parsed into a temporary directory, which lives as long
-/// as the image and holds every tree unpacked from it.
+/// as the image and holds every tree unpacked from it, with its config and
+/// layer blobs in the config's blob store or, without one, beside its
+/// manifests.
 pub(crate) struct PulledImage {
     /// Held for RAII: dropping this removes the temporary directory.
     #[expect(dead_code, reason = "kept alive for RAII cleanup of temp directory")]
     temp_dir: tempfile::TempDir,
     work_dir: Utf8PathBuf,
     image_dir: Utf8PathBuf,
+    store: BlobStore,
     oci_config: ResolvedOciConfig,
 }
 
@@ -384,17 +388,23 @@ impl PulledImage {
             .ok_or(crate::error::ConfigError::NonUtf8TempDir)?
             .to_path_buf();
 
-        let image_dir = resolve_oci_image(
+        // The store is written only into a state directory the runner has taken.
+        #[cfg(unix)]
+        if config.blob_store.is_some() {
+            crate::jail::StateDir::new(config.state_dir.clone())?.create()?;
+        }
+        let (image_dir, store) = resolve_oci_image(
             log,
             &config.oci_image,
             config.token.as_ref().map(AsRef::as_ref),
             config.registry_scheme,
             deadline,
             &work_dir,
+            config.blob_store.as_ref(),
         )?;
 
         info!(log, "Parsing OCI image config");
-        let oci_image = bencher_oci::OciImage::parse(&image_dir)?;
+        let oci_image = bencher_oci::OciImage::parse_with_store(&image_dir, &store)?;
         let oci_config = resolve_oci_config(&oci_image, config)?;
         info!(log, "OCI image config";
             "command" => bencher_logger::capped(oci_config.command.join(" ")),
@@ -406,6 +416,7 @@ impl PulledImage {
             temp_dir,
             work_dir,
             image_dir,
+            store,
             oci_config,
         })
     }
@@ -413,7 +424,7 @@ impl PulledImage {
     /// Unpacks the image's layers into `tree`.
     pub(crate) fn unpack(&self, log: &Logger, tree: &Utf8Path) -> Result<(), RunnerError> {
         info!(log, "Unpacking OCI image"; "unpack_dir" => tree.as_str());
-        bencher_oci::unpack(&self.image_dir, tree)?;
+        bencher_oci::unpack_with_store(&self.image_dir, &self.store, tree)?;
         Ok(())
     }
 
@@ -427,24 +438,21 @@ impl PulledImage {
     }
 }
 
-/// Resolve an OCI image source to a local path.
+/// Resolve an OCI image source to a local path, and the store its config and
+/// layer blobs are in.
 ///
-/// If the source is a local path that exists, returns it directly.
-/// If the source looks like a registry reference, pulls from the registry
-/// into the provided `pull_dir`. Image data is not cached between runs —
-/// the caller is expected to pass a temporary directory that is cleaned up
-/// after each job.
+/// If the source is a local path that exists, returns it directly, with its
+/// own blobs. If the source looks like a registry reference, pulls from the
+/// registry into the provided `pull_dir`, with the blobs in `store` or, without
+/// one, beside the manifests in `pull_dir`.
 ///
 /// # Arguments
 ///
 /// * `oci_image` - Local path or registry reference
 /// * `token` - Optional JWT token for registry authentication
 /// * `deadline` - The Job's deadline, which the pull counts against
-/// * `pull_dir` - Directory to pull images into (temporary, not cached)
-///
-/// # Returns
-///
-/// Path to the local OCI image directory.
+/// * `pull_dir` - Directory to pull the index and manifests into
+/// * `store` - Where config and layer blobs are kept across pulls, if anywhere
 pub fn resolve_oci_image(
     log: &Logger,
     oci_image: &str,
@@ -452,13 +460,14 @@ pub fn resolve_oci_image(
     scheme: bencher_oci::RegistryScheme,
     deadline: JobDeadline,
     pull_dir: &Utf8Path,
-) -> Result<Utf8PathBuf, RunnerError> {
+    store: Option<&BlobStore>,
+) -> Result<(Utf8PathBuf, BlobStore), RunnerError> {
     let path = Utf8Path::new(oci_image);
 
     // If it's a local path that exists, use it directly
     if path.exists() {
         info!(log, "Using a local OCI image"; "image" => bencher_logger::capped(oci_image));
-        return Ok(path.to_owned());
+        return Ok((path.to_owned(), BlobStore::of_layout(path)));
     }
 
     // Otherwise, treat as a registry reference
@@ -468,6 +477,9 @@ pub fn resolve_oci_image(
 
     // Pull into the provided directory
     let image_dir = pull_dir.join("oci-image");
+    let store = store
+        .cloned()
+        .unwrap_or_else(|| BlobStore::of_layout(&image_dir));
 
     // Pull from registry
     info!(log, "Pulling from registry"; "image" => bencher_logger::capped(image_ref.full_name()));
@@ -484,10 +496,20 @@ pub fn resolve_oci_image(
     .with_scheme(scheme)
     .with_timeout(deadline.remaining());
 
-    client.pull(&image_ref, &image_dir)?;
-    info!(log, "Image pulled"; "image_dir" => image_dir.as_str());
+    let bencher_oci::PulledBlobs {
+        reused,
+        downloaded,
+        bytes,
+    } = client.pull(&image_ref, &image_dir, &store)?;
+    info!(log, "Image pulled";
+        "image_dir" => image_dir.as_str(),
+        "blob_store" => store.dir().as_str(),
+        "blobs_reused" => reused,
+        "blobs_downloaded" => downloaded,
+        "bytes_downloaded" => bytes,
+    );
 
-    Ok(image_dir)
+    Ok((image_dir, store))
 }
 
 /// Resolved OCI image configuration (entrypoint, cmd, env, working directory).

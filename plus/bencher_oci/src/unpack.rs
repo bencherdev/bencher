@@ -3,10 +3,9 @@
 use camino::Utf8Path;
 
 use crate::error::OciError;
-use crate::image::{
-    detect_layer_media_type, digest_to_blob_path, get_manifest, parse_index, parse_oci_layout,
-};
+use crate::image::{detect_layer_media_type, get_manifest, parse_index, parse_oci_layout};
 use crate::layer::extract_layer;
+use crate::store::BlobStore;
 
 /// Unpack an OCI image to a directory.
 ///
@@ -32,6 +31,16 @@ use crate::layer::extract_layer;
 /// )?;
 /// ```
 pub fn unpack(image_dir: &Utf8Path, target_dir: &Utf8Path) -> Result<(), OciError> {
+    unpack_with_store(image_dir, &BlobStore::of_layout(image_dir), target_dir)
+}
+
+/// Like [`unpack`], but the layers come from `store`, while the index and
+/// manifests stay in `image_dir`.
+pub fn unpack_with_store(
+    image_dir: &Utf8Path,
+    store: &BlobStore,
+    target_dir: &Utf8Path,
+) -> Result<(), OciError> {
     // Validate OCI layout
     parse_oci_layout(image_dir)?;
 
@@ -46,17 +55,11 @@ pub fn unpack(image_dir: &Utf8Path, target_dir: &Utf8Path) -> Result<(), OciErro
 
     // Extract layers in order
     for layer in manifest.manifest.layers() {
-        let digest = layer.digest().to_string();
-        let blob_path = digest_to_blob_path(image_dir, &digest)?;
+        let blob_path = store.blob_path(layer.digest().as_ref())?;
 
         let compression = detect_layer_media_type(layer.media_type())?;
 
-        extract_layer(
-            Utf8Path::from_path(blob_path.as_std_path())
-                .ok_or_else(|| OciError::InvalidLayout("Invalid blob path".to_owned()))?,
-            target_dir,
-            compression,
-        )?;
+        extract_layer(&blob_path, target_dir, compression)?;
     }
 
     Ok(())

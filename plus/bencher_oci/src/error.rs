@@ -41,4 +41,10 @@ pub enum OciError {
 
     #[error("Unsupported digest algorithm: {0}")]
     UnsupportedDigestAlgorithm(String),
+
+    #[error(
+        "The blob store directory {} is not a real directory owned by the store's user and closed to its group and others, so somebody else could have written a blob there, and the store's blobs are trusted when read. Remove it, and the store fills again.",
+        .0.display()
+    )]
+    ForeignBlobStore(std::path::PathBuf),
 }

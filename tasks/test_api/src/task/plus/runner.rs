@@ -207,7 +207,7 @@ impl RunnerTest {
 
         // Only the jailed runner is elevated, and the no-sandbox runner below
         // stays unprivileged, proving it needs no root in the same run.
-        let _elevated_runner = if has_kvm {
+        let elevated_runner = if has_kvm {
             Some(ElevatedRunner::start(host, runner_key.key.as_ref())?)
         } else {
             println!("Skipping Firecracker runner daemon (no KVM)");
@@ -321,11 +321,18 @@ impl RunnerTest {
             Ok(())
         };
 
-        // Always kill the no-sandbox daemon, even if the test failed; the
-        // elevated one stops when `_elevated_runner` drops.
+        // Only the elevated daemon's log is kept, to check the Job against.
+        let build_time_result = if elevated_runner.is_some() && callback_result.is_ok() {
+            run_build_time_runner_test(&self.url, &self.token, spec).map(Some)
+        } else {
+            Ok(None)
+        };
+
+        // Always kill both daemons, even if the test failed.
         let _kill = no_sandbox_child.kill();
         let _wait = no_sandbox_child.wait();
         let _join = no_sandbox_reader_handle.join();
+        let elevated_log = elevated_runner.map(ElevatedRunner::stop);
 
         unclaimed_result?;
         result?;
@@ -337,6 +344,16 @@ impl RunnerTest {
         project_key_result?;
         image_only_result?;
         callback_result?;
+        if let Some(log) = elevated_log {
+            let records: Vec<serde_json::Value> = log
+                .iter()
+                .filter_map(|line| serde_json::from_str(line).ok())
+                .collect();
+            ensure_a_pull_reused_the_store(&records)?;
+            if let Some((job, build_time)) = build_time_result? {
+                ensure_the_build_time_is_the_commands(&records, job, build_time)?;
+            }
+        }
         println!("=== Runner Daemon Test Passed ===");
         Ok(())
     }
@@ -347,10 +364,14 @@ impl RunnerTest {
 /// its process group.
 struct ElevatedRunner {
     child: std::process::Child,
+    killed: bool,
     /// `None` until the readiness wait returns, since the guard is armed before it.
-    reader: Option<std::thread::JoinHandle<()>>,
+    reader: Option<std::thread::JoinHandle<Vec<String>>>,
     state_dir: std::path::PathBuf,
 }
+
+/// The daemon keeps image blobs across its Jobs, as a production runner does.
+const IMAGE_CACHE_SIZE: &str = "4294967296";
 
 impl ElevatedRunner {
     /// Start the daemon under `sudo` and wait for it to poll for jobs.
@@ -368,9 +389,11 @@ impl ElevatedRunner {
         let state_dir = elevated_state_dir(&runner_bin);
         println!("  Runner state directory: {}", state_dir.display());
 
+        // Through the environment, as a production runner's unit sets it.
         let mut runner_child = Command::new("sudo");
         let runner_child = runner_child
-            .args(["-n", "--"])
+            .args(["-n", "--", "env"])
+            .arg(format!("BENCHER_IMAGE_CACHE_SIZE={IMAGE_CACHE_SIZE}"))
             .arg(&runner_bin)
             .args([
                 "up",
@@ -394,6 +417,7 @@ impl ElevatedRunner {
         // unguarded daemon is one nothing stops.
         let mut runner = Self {
             child: runner_child.spawn()?,
+            killed: false,
             reader: None,
             state_dir,
         };
@@ -404,15 +428,28 @@ impl ElevatedRunner {
         ));
         Ok(runner)
     }
+
+    /// Every line the daemon logged, since the kill closes its stderr, which
+    /// ends the reader.
+    fn stop(mut self) -> Vec<String> {
+        self.kill()
+    }
+
+    fn kill(&mut self) -> Vec<String> {
+        if !self.killed {
+            kill_elevated_runner(&mut self.child);
+            self.killed = true;
+        }
+        self.reader
+            .take()
+            .and_then(|reader| reader.join().ok())
+            .unwrap_or_default()
+    }
 }
 
 impl Drop for ElevatedRunner {
     fn drop(&mut self) {
-        kill_elevated_runner(&mut self.child);
-        // The kill closes the daemon's stderr, which ends the reader.
-        if let Some(reader) = self.reader.take() {
-            let _join = reader.join();
-        }
+        self.kill();
         // The cgroups first, while the jail directories that name them are
         // still there to find them by.
         remove_elevated_cgroups(&self.state_dir);
@@ -529,6 +566,61 @@ fn kill_elevated_runner(child: &mut std::process::Child) {
     let _wait = child.wait();
 }
 
+/// Some sandboxed Job ran an image whose every blob the daemon's store
+/// already held, so its pull downloaded only the manifest.
+fn ensure_a_pull_reused_the_store(records: &[serde_json::Value]) -> anyhow::Result<()> {
+    let pulls: Vec<_> = records_with(records, "Image pulled")
+        .map(|record| {
+            (
+                record["blobs_reused"].as_u64(),
+                record["blobs_downloaded"].as_u64(),
+            )
+        })
+        .collect();
+    println!("Sandboxed pulls (blobs reused, blobs downloaded): {pulls:?}");
+    anyhow::ensure!(
+        pulls
+            .iter()
+            .any(|pull| matches!(pull, (Some(reused), Some(0)) if *reused > 0)),
+        "No sandboxed Job took its image from the blob store: {pulls:?}"
+    );
+    Ok(())
+}
+
+/// The build time the report holds is the duration the daemon logged for the
+/// Job's command, not its pull, unpack, or boot.
+fn ensure_the_build_time_is_the_commands(
+    records: &[serde_json::Value],
+    job: JobUuid,
+    build_time: f64,
+) -> anyhow::Result<()> {
+    let job = job.to_string();
+    let durations: Vec<u64> = records_with(records, "Command finished")
+        .filter(|record| record["job"].as_str() == Some(job.as_str()))
+        .filter_map(|record| record["duration_ms"].as_u64())
+        .collect();
+    println!("Build time {build_time} s, command finished in {durations:?} ms");
+    let [duration_ms] = durations.as_slice() else {
+        anyhow::bail!("Expected one command for the build time Job {job}, got {durations:?}");
+    };
+    #[expect(clippy::cast_precision_loss, reason = "milliseconds of one command")]
+    let command = *duration_ms as f64 / 1000.0;
+    anyhow::ensure!(
+        (build_time - command).abs() <= 0.01,
+        "The build time {build_time} s is not the command's {duration_ms} ms"
+    );
+    Ok(())
+}
+
+fn records_with<'a>(
+    records: &'a [serde_json::Value],
+    msg: &'a str,
+) -> impl Iterator<Item = &'a serde_json::Value> {
+    records
+        .iter()
+        .filter(move |record| record["msg"].as_str() == Some(msg))
+}
+
 /// Check whether Docker is available.
 pub fn docker_available() -> bool {
     Command::new("docker")
@@ -642,6 +734,79 @@ pub fn run_runner_test(
 
     println!("Runner smoke test passed!");
     Ok(())
+}
+
+/// Run a Job that asks for its build time, and return the Job and the build
+/// time its report holds.
+fn run_build_time_runner_test(
+    url: &Url,
+    token: &Jwt,
+    spec: &str,
+) -> anyhow::Result<(JobUuid, f64)> {
+    use bencher_json::project::measure::built_in::{BuiltInMeasure as _, json::BuildTime};
+
+    let host = url.as_ref();
+
+    println!("Running build time runner smoke test against: {host}");
+
+    let image_ref = format!("{PROJECT_SLUG}:{IMAGE_TAG}");
+    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+    let args = [
+        "run",
+        HOST_ARG,
+        host,
+        TOKEN_ARG,
+        token.as_ref(),
+        "--project",
+        PROJECT_SLUG,
+        "--branch",
+        "master",
+        "--testbed",
+        "base",
+        "--image",
+        &image_ref,
+        "--spec",
+        spec,
+        "--build-time",
+        "--format",
+        "json",
+        "--quiet",
+        "--job-timeout",
+        "120",
+        "--job-poll-interval",
+        "1",
+        "--exec",
+        "mock",
+    ];
+    cmd.args(args).current_dir(CLI_DIR);
+    let output = cmd.output()?;
+    anyhow::ensure!(
+        output.status.success(),
+        "bencher run --build-time failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let json: bencher_json::JsonReport = serde_json::from_slice(&output.stdout)?;
+    let Some(job) = json.job else {
+        anyhow::bail!("Expected job UUID in build time report: {json:?}");
+    };
+    let build_times: Vec<f64> = json
+        .results
+        .iter()
+        .flatten()
+        .flatten()
+        .flat_map(|result| &result.measures)
+        .filter(|measure| AsRef::<str>::as_ref(&measure.measure.slug) == BuildTime::SLUG_STR)
+        .flat_map(|measure| &measure.metrics)
+        .map(|metric| metric.value.0)
+        .collect();
+    let [build_time] = build_times.as_slice() else {
+        anyhow::bail!("Expected one build time in the report, got {build_times:?}");
+    };
+
+    println!("Build time runner smoke test passed!");
+    Ok((job, *build_time))
 }
 
 /// Run the image-derived project runner smoke test variant.
@@ -1763,7 +1928,7 @@ fn wait_for_polling(
     child: &mut std::process::Child,
     label: &str,
     timeout: std::time::Duration,
-) -> std::thread::JoinHandle<()> {
+) -> std::thread::JoinHandle<Vec<String>> {
     use std::io::BufRead as _;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -1779,13 +1944,16 @@ fn wait_for_polling(
 
     let handle = std::thread::spawn(move || {
         let reader = std::io::BufReader::new(stderr);
+        let mut lines = Vec::new();
         for line in reader.lines() {
             let Ok(line) = line else { break };
             println!("[{thread_label}] {line}");
             if polling(&line) {
                 ready_clone.store(true, Ordering::SeqCst);
             }
+            lines.push(line);
         }
+        lines
     });
 
     let start = Instant::now();

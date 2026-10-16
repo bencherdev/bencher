@@ -1,4 +1,5 @@
 ## Pending `v0.6.14`
+- Add `--image-cache-size` to `runner up` (or `BENCHER_IMAGE_CACHE_SIZE`), the bytes of Image config and layer blobs a Bare Metal Runner keeps across Jobs in `blobs` under its `--state-dir`, so a Job downloads only the blobs the Runner does not already hold, while its manifest still comes from the registry. Between Jobs the least recently used blobs are removed until the rest fit, a Runner given a size exits at startup if it cannot make the store its own, and without one the Runner keeps none
 - A Bare Metal Job whose image cannot be pulled or prepared now fails, even with `--allow-failure`, instead of completing with no results
 - A Bare Metal build time now covers the image's command alone, timed where the command runs, and no longer includes the image pull, unpack, and boot; only an iteration whose command succeeds reports one
 - Support Hyperfine 2 JSON output in the `shell_hyperfine` adapter (Thank you [mrazauskas](https://github.com/mrazauskas))

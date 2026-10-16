@@ -44,6 +44,7 @@ Runner 的持久状态目录。
 每个 jail 都保存着完整的客户机根文件系统和一份 microVM 二进制文件副本，
 而 Runner 一次只运行一个 Job，
 因此该目录只需为一个 jail 准备真实的容量。
+设置 `--image-cache-size` 后，它还会保存 Image 缓存，最多到该大小。
 无论状态目录如何，一台主机同一时间只运行一个 Runner：
 以 `root` 身份启动的 Runner 在运行期间一直持有锁 `/run/bencher/runner.lock`，
 以 `root` 身份启动的第二个 Runner 会立即退出，并报出指明该锁的错误；不以 `root` 身份运行的 Runner 无法打开该锁，会在没有锁的情况下运行。
@@ -118,6 +119,17 @@ Runner 的持久状态目录。
 自我更新二进制文件的最大下载大小（字节）。
 默认使用 `500` MiB。
 与 `--no-auto-update` 冲突。
+
+### `--image-cache-size <IMAGE_CACHE_SIZE>`
+
+Runner 在 Job 之间保留的 Image blob 的最大大小（字节）。
+Runner 将其拉取的每个 Image 的 config 和 layer blob 保存在其 `--state-dir` 下的 `blobs` 中，
+因此 Job 只下载 Runner 尚未持有的 blob，
+但每次仍从注册表获取 Image 清单。
+在 Job 之间，Runner 会先移除最久未使用的 blob，直到其余部分不超过此大小。
+Runner 在启动时创建该存储并使其仅归自己所有，如果无法做到，则立即退出，并报错指明该目录。
+默认情况下，或设置为 `0` 时，Runner 不在 Job 之间保留 blob，并会移除之前保留的 blob。
+也可以通过 `BENCHER_IMAGE_CACHE_SIZE` 环境变量设置。
 
 ### `--max-output-size <MAX_OUTPUT_SIZE>`
 
