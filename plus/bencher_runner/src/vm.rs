@@ -37,7 +37,7 @@ pub fn vm_execute(
     state_dir.refuse_unusable_mount()?;
     refuse_cancelled(cancel_flag)?;
 
-    let workspace = prepare_oci_workspace(log, config)?;
+    let workspace = prepare_oci_workspace(log, config, deadline)?;
     let work_dir = &workspace.work_dir;
     let unpack_dir = &workspace.unpack_dir;
     let oci_config = workspace.oci_config;

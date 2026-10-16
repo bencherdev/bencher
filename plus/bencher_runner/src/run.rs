@@ -281,6 +281,7 @@ pub(crate) struct OciWorkspace {
 pub(crate) fn prepare_oci_workspace(
     log: &Logger,
     config: &crate::Config,
+    deadline: JobDeadline,
 ) -> Result<OciWorkspace, RunnerError> {
     // Create a temporary work directory
     let temp_dir = tempfile::tempdir().map_err(crate::error::ConfigError::TempDir)?;
@@ -296,6 +297,7 @@ pub(crate) fn prepare_oci_workspace(
         &config.oci_image,
         config.token.as_ref().map(AsRef::as_ref),
         config.registry_scheme,
+        deadline,
         &work_dir,
     )?;
 
@@ -334,6 +336,7 @@ pub(crate) fn prepare_oci_workspace(
 ///
 /// * `oci_image` - Local path or registry reference
 /// * `token` - Optional JWT token for registry authentication
+/// * `deadline` - The Job's deadline, which the pull counts against
 /// * `pull_dir` - Directory to pull images into (temporary, not cached)
 ///
 /// # Returns
@@ -344,6 +347,7 @@ pub fn resolve_oci_image(
     oci_image: &str,
     token: Option<&str>,
     scheme: bencher_oci::RegistryScheme,
+    deadline: JobDeadline,
     pull_dir: &Utf8Path,
 ) -> Result<Utf8PathBuf, RunnerError> {
     let path = Utf8Path::new(oci_image);
@@ -370,10 +374,12 @@ pub fn resolve_oci_image(
 
     info!(log, "Registry client"; "authenticated" => token.is_some());
     let mut client = if let Some(t) = token {
-        bencher_oci::RegistryClient::with_token(t)?.with_scheme(scheme)
+        bencher_oci::RegistryClient::with_token(t)?
     } else {
-        bencher_oci::RegistryClient::new()?.with_scheme(scheme)
-    };
+        bencher_oci::RegistryClient::new()?
+    }
+    .with_scheme(scheme)
+    .with_timeout(deadline.remaining());
 
     client.pull(&image_ref, &image_dir)?;
     info!(log, "Image pulled"; "image_dir" => image_dir.as_str());
@@ -500,5 +506,83 @@ pub fn execute_with_deadline(
             }
         },
         None => crate::local::local_execute(log, config, cancel_flag, deadline),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{self, Read as _, Write as _};
+    use std::net::TcpListener;
+    use std::sync::mpsc::{self, TryRecvError};
+    use std::time::Instant;
+
+    use super::*;
+
+    #[test]
+    fn a_stalled_image_pull_fails_the_run_at_its_deadline() {
+        // Kills a pull the Job's deadline does not reach, which leaves the
+        // runner blocked on a stalled registry rather than failing the Job.
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let config = crate::Config::new(format!("{}/bench:v1", listener.local_addr().unwrap()))
+            .with_registry_scheme(bencher_oci::RegistryScheme::Http);
+        let (release, released) = mpsc::sync_channel(0);
+        let registry = std::thread::spawn(move || stall_first_response(&listener, &released));
+        let started = Instant::now();
+
+        let result = execute_with_deadline(
+            &crate::log::discard(),
+            &config,
+            &mut crate::jail::HostPreparation::new(),
+            None,
+            JobDeadline::start(Duration::from_secs(2)),
+        );
+
+        let elapsed = started.elapsed();
+        drop(release);
+        assert!(
+            registry.join().unwrap(),
+            "the run never reached the registry"
+        );
+        assert!(
+            matches!(
+                result,
+                Err(RunnerError::Oci(bencher_oci::OciError::PullTimeout(_)))
+            ),
+            "{result:?}"
+        );
+        assert!(elapsed < Duration::from_secs(30), "{elapsed:?}");
+    }
+
+    /// Answers the first request with a body it never finishes, holding the
+    /// connection open until `released`, and returns whether a request came.
+    fn stall_first_response(listener: &TcpListener, released: &mpsc::Receiver<()>) -> bool {
+        listener.set_nonblocking(true).unwrap();
+        let mut stream = loop {
+            match listener.accept() {
+                Ok((stream, _)) => break stream,
+                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    if let Err(TryRecvError::Disconnected) = released.try_recv() {
+                        return false;
+                    }
+                    std::thread::sleep(Duration::from_millis(10));
+                },
+                Err(e) => panic!("accept failed: {e}"),
+            }
+        };
+        stream.set_nonblocking(false).unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(10)))
+            .unwrap();
+        let mut head = Vec::new();
+        let mut byte = [0];
+        while !head.ends_with(b"\r\n\r\n") {
+            stream.read_exact(&mut byte).unwrap();
+            head.extend_from_slice(&byte);
+        }
+        stream
+            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 1024\r\n\r\n{")
+            .unwrap();
+        released.recv().unwrap_err();
+        true
     }
 }

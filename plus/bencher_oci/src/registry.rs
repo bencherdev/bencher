@@ -6,6 +6,7 @@
 //! See: <https://github.com/opencontainers/distribution-spec/blob/main/spec.md>
 
 use std::fs;
+use std::time::{Duration, Instant};
 
 use crate::digest::DigestHasher;
 use crate::error::OciError;
@@ -21,6 +22,14 @@ const MANIFEST_MEDIA_TYPES: &[&str] = &[
 ];
 
 pub use bencher_valid::ImageReference;
+
+/// Bounds connecting to the registry, TLS handshake included, so a
+/// black-holed host fails fast.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Bounds the wait for a response's headers, though not its body, so a
+/// registry that never answers fails fast.
+const RESPONSE_HEADERS_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Select the best platform manifest from an index/manifest list.
 ///
@@ -67,6 +76,9 @@ pub struct RegistryClient {
 
     /// Base JWT token for authentication (provided at startup).
     base_token: Option<bencher_valid::Secret>,
+
+    /// When the pull started and how long every request it makes may take in all.
+    timeout: Option<(Instant, Duration)>,
 }
 
 impl RegistryClient {
@@ -77,6 +89,8 @@ impl RegistryClient {
         let config = ureq::Agent::config_builder()
             .user_agent("bencher-runner/1.0")
             .http_status_as_error(false)
+            .timeout_connect(Some(CONNECT_TIMEOUT))
+            .timeout_recv_response(Some(RESPONSE_HEADERS_TIMEOUT))
             .build();
         let agent = ureq::Agent::new_with_config(config);
 
@@ -84,6 +98,7 @@ impl RegistryClient {
             agent,
             scheme: RegistryScheme::Https,
             base_token: None,
+            timeout: None,
         })
     }
 
@@ -105,6 +120,13 @@ impl RegistryClient {
     #[must_use]
     pub fn with_scheme(mut self, scheme: RegistryScheme) -> Self {
         self.scheme = scheme;
+        self
+    }
+
+    /// Bound the pull, from now, by `timeout`.
+    #[must_use]
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some((Instant::now(), timeout));
         self
     }
 
@@ -245,7 +267,7 @@ impl RegistryClient {
         let bytes = response
             .body_mut()
             .read_to_vec()
-            .map_err(|e| OciError::Registry(format!("Failed to read manifest: {e}")))?;
+            .map_err(|e| registry_error("Failed to read manifest", &e))?;
 
         if let Some(expected_len) = content_length
             && bytes.len() != expected_len
@@ -296,7 +318,7 @@ impl RegistryClient {
         let bytes = response
             .body_mut()
             .read_to_vec()
-            .map_err(|e| OciError::Registry(format!("Failed to read manifest: {e}")))?;
+            .map_err(|e| registry_error("Failed to read manifest", &e))?;
 
         let parsed: bencher_valid::ImageDigest = digest
             .parse()
@@ -334,7 +356,7 @@ impl RegistryClient {
         let bytes = response
             .body_mut()
             .read_to_vec()
-            .map_err(|e| OciError::Registry(format!("Failed to read blob: {e}")))?;
+            .map_err(|e| registry_error("Failed to read blob", &e))?;
 
         if let Some(expected_len) = content_length
             && bytes.len() != expected_len
@@ -398,7 +420,7 @@ impl RegistryClient {
         loop {
             let n = reader
                 .read(&mut buf)
-                .map_err(|e| OciError::Registry(format!("Failed to read blob stream: {e}")))?;
+                .map_err(|e| registry_error("Failed to read blob stream", &e.into()))?;
             if n == 0 {
                 break;
             }
@@ -445,8 +467,11 @@ impl RegistryClient {
         }
 
         let response = request
+            .config()
+            .timeout_global(self.remaining())
+            .build()
             .call()
-            .map_err(|e| OciError::Registry(format!("Request failed: {e}")))?;
+            .map_err(|e| registry_error("Request failed", &e))?;
 
         if !response.status().is_success() {
             return Err(OciError::Registry(format!(
@@ -456,6 +481,26 @@ impl RegistryClient {
         }
 
         Ok(response)
+    }
+
+    /// What is left of the timeout, or none for one too large for ureq, which
+    /// adds it to a later `Instant` of its own and panics past the clock's
+    /// range, hence the headroom.
+    fn remaining(&self) -> Option<Duration> {
+        let (start, timeout) = self.timeout?;
+        let remaining = timeout.saturating_sub(start.elapsed());
+        Instant::now()
+            .checked_add(remaining.saturating_mul(2))
+            .map(|_| remaining)
+    }
+}
+
+/// Names a timeout as one, rather than as a generic registry failure.
+fn registry_error(context: &str, error: &ureq::Error) -> OciError {
+    if let ureq::Error::Timeout(timeout) = error {
+        OciError::PullTimeout(*timeout)
+    } else {
+        OciError::Registry(format!("{context}: {error}"))
     }
 }
 
@@ -480,6 +525,11 @@ impl RegistryScheme {
 
 #[cfg(test)]
 mod tests {
+    use std::io::{self, Read as _, Write as _};
+    use std::net::{TcpListener, TcpStream};
+    use std::sync::mpsc::{self, TryRecvError};
+    use std::thread::JoinHandle;
+
     use super::*;
 
     #[test]
@@ -531,5 +581,189 @@ mod tests {
         assert_eq!(ref_.repository(), "library/alpine");
         assert_eq!(ref_.reference(), "sha256:abc123");
         assert!(ref_.is_digest());
+    }
+
+    #[test]
+    fn a_stalled_layer_download_times_out() {
+        // Kills a layer stream the pull's timeout does not reach, which blocks
+        // on a stalled registry for as long as it holds the connection open.
+        let registry = FakeRegistry::start(Duration::ZERO, LayerResponse::Stalled);
+        let output = tempfile::tempdir().unwrap();
+        let started = Instant::now();
+
+        let result = RegistryClient::new()
+            .unwrap()
+            .with_scheme(RegistryScheme::Http)
+            .with_timeout(Duration::from_secs(2))
+            .pull(&registry.image, Utf8Path::from_path(output.path()).unwrap());
+
+        let elapsed = started.elapsed();
+        assert!(registry.stop(), "the pull never reached the layer");
+        assert!(
+            matches!(result, Err(OciError::PullTimeout(ureq::Timeout::Global))),
+            "{result:?}"
+        );
+        assert!(elapsed < Duration::from_secs(30), "{elapsed:?}");
+    }
+
+    #[test]
+    fn a_slow_pull_with_the_largest_timeout_completes() {
+        // Kills handing ureq a timeout that overflows its `Instant`, which
+        // panics, and a timeout that counts up from the start instead of down,
+        // which runs out before the first slow response.
+        let registry = FakeRegistry::start(Duration::from_millis(500), LayerResponse::Whole);
+        let output = tempfile::tempdir().unwrap();
+
+        let result = RegistryClient::new()
+            .unwrap()
+            .with_scheme(RegistryScheme::Http)
+            .with_timeout(Duration::MAX)
+            .pull(&registry.image, Utf8Path::from_path(output.path()).unwrap());
+
+        registry.stop();
+        assert!(result.is_ok(), "{result:?}");
+    }
+
+    #[test]
+    fn every_request_draws_on_one_timeout() {
+        // Kills giving each request the whole timeout, under which three
+        // responses that each take two of its three seconds all arrive.
+        let registry = FakeRegistry::start(Duration::from_secs(2), LayerResponse::Whole);
+        let output = tempfile::tempdir().unwrap();
+
+        let result = RegistryClient::new()
+            .unwrap()
+            .with_scheme(RegistryScheme::Http)
+            .with_timeout(Duration::from_secs(3))
+            .pull(&registry.image, Utf8Path::from_path(output.path()).unwrap());
+
+        registry.stop();
+        assert!(
+            matches!(result, Err(OciError::PullTimeout(ureq::Timeout::Global))),
+            "{result:?}"
+        );
+    }
+
+    /// A registry on localhost serving one image.
+    struct FakeRegistry {
+        image: ImageReference,
+        release: mpsc::SyncSender<()>,
+        server: JoinHandle<bool>,
+    }
+
+    impl FakeRegistry {
+        /// Answers each request `late`.
+        fn start(late: Duration, layer_response: LayerResponse) -> Self {
+            let config = br#"{"architecture":"amd64","os":"linux"}"#.to_vec();
+            let layer = b"layer".to_vec();
+            let config_digest = DigestHasher::digest("sha256", &config).unwrap();
+            let layer_digest = DigestHasher::digest("sha256", &layer).unwrap();
+            let manifest = serde_json::to_vec(&serde_json::json!({
+                "schemaVersion": 2,
+                "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                "config": {
+                    "mediaType": "application/vnd.oci.image.config.v1+json",
+                    "digest": config_digest,
+                    "size": config.len(),
+                },
+                "layers": [{
+                    "mediaType": "application/vnd.oci.image.layer.v1.tar",
+                    "digest": layer_digest,
+                    "size": layer.len(),
+                }],
+            }))
+            .unwrap();
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            listener.set_nonblocking(true).unwrap();
+            let image =
+                ImageReference::parse(&format!("{}/bench:v1", listener.local_addr().unwrap()))
+                    .unwrap();
+            let (release, released) = mpsc::sync_channel(0);
+            let server = std::thread::spawn(move || {
+                let mut stalled = false;
+                while let Err(TryRecvError::Empty) = released.try_recv() {
+                    let mut stream = match listener.accept() {
+                        Ok((stream, _)) => stream,
+                        Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                            std::thread::sleep(Duration::from_millis(10));
+                            continue;
+                        },
+                        Err(e) => panic!("accept failed: {e}"),
+                    };
+                    stream.set_nonblocking(false).unwrap();
+                    stream
+                        .set_read_timeout(Some(Duration::from_secs(10)))
+                        .unwrap();
+                    let path = request_path(&mut stream);
+                    std::thread::sleep(late);
+                    let is_layer = path.ends_with(&layer_digest);
+                    if is_layer && matches!(layer_response, LayerResponse::Stalled) {
+                        write!(
+                            stream,
+                            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n",
+                            layer.len() + 1024
+                        )
+                        .unwrap();
+                        stream.write_all(&layer).unwrap();
+                        stalled = true;
+                        // Silent, with the connection open, until the test is done.
+                        released.recv().unwrap_err();
+                        continue;
+                    }
+                    let body = if is_layer {
+                        &layer
+                    } else if path.ends_with(&config_digest) {
+                        &config
+                    } else {
+                        &manifest
+                    };
+                    let mut response = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    )
+                    .into_bytes();
+                    response.extend_from_slice(body);
+                    // A client that has run out of time has already hung up.
+                    drop(stream.write_all(&response));
+                }
+                stalled
+            });
+            Self {
+                image,
+                release,
+                server,
+            }
+        }
+
+        /// Shuts the registry down and returns whether it stalled a layer.
+        fn stop(self) -> bool {
+            let Self {
+                image: _,
+                release,
+                server,
+            } = self;
+            drop(release);
+            server.join().unwrap()
+        }
+    }
+
+    /// How the fake registry answers for the layer.
+    enum LayerResponse {
+        /// A body it never finishes, on a connection it holds open.
+        Stalled,
+        /// The whole layer.
+        Whole,
+    }
+
+    /// Reads a request's head and returns its path.
+    fn request_path(stream: &mut TcpStream) -> String {
+        let mut head = Vec::new();
+        let mut byte = [0];
+        while !head.ends_with(b"\r\n\r\n") {
+            stream.read_exact(&mut byte).unwrap();
+            head.extend_from_slice(&byte);
+        }
+        let head = String::from_utf8(head).unwrap();
+        head.split(' ').nth(1).unwrap().to_owned()
     }
 }

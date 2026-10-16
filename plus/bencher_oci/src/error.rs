@@ -29,6 +29,10 @@ pub enum OciError {
     #[error("Registry error: {0}")]
     Registry(String),
 
+    #[cfg(feature = "registry")]
+    #[error("Image pull timed out ({0} timeout)")]
+    PullTimeout(ureq::Timeout),
+
     #[error("Invalid image reference: {0}")]
     InvalidReference(String),
 
