@@ -14,7 +14,7 @@ server = ["bencher_context/server", "bencher_valid/server"]
 schema = ["dep:schemars", "bencher_context/schema", "ordered-float/schemars"]
 # `diesel/sqlite`: the parameter set encoder is SQLite's JSONB format,
 # so its `ToSql` and `FromSql` are written against the SQLite backend.
-db = ["dep:diesel", "diesel/sqlite", "dep:serde_yaml", "bencher_valid/db"]
+db = ["dep:diesel", "diesel/sqlite", "bencher_valid/db"]
 plus = ["dep:camino", "dep:http", "bencher_valid/plus"]
 test-clock = ["bencher_valid/test-clock"]
 
@@ -32,7 +32,6 @@ schemars = { workspace = true, optional = true, features = ["chrono", "url"] }
 serde.workspace = true
 serde_json.workspace = true
 serde_urlencoded.workspace = true
-serde_yaml = { workspace = true, optional = true }
 tabled = { workspace = true, optional = true }
 thiserror.workspace = true
 typeshare.workspace = true
