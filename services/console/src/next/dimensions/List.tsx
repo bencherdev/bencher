@@ -175,7 +175,7 @@ const List = (props: {
 			last &&
 			next() === undefined &&
 			hasMore(
-				{ reports: last.rows, total: last.total, batch: last.batch },
+				last,
 				listed().filter((row) => Boolean(row.archived) === search().archived)
 					.length,
 			) &&

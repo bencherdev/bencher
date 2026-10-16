@@ -1037,6 +1037,17 @@ export interface JsonConsoleAlerts {
 	models: JsonConsoleModel[];
 }
 
+export enum ConsoleAuthorKind {
+	User = "user",
+	Key = "key",
+}
+
+/** Who sent a report: the project key that created it, else the person. */
+export interface JsonConsoleAuthor {
+	kind: ConsoleAuthorKind;
+	name: string;
+}
+
 export interface JsonConsoleBenchmarkRow {
 	uuid: Uuid;
 	name: BenchmarkName;
@@ -1313,6 +1324,87 @@ export interface JsonConsoleReport {
 	variants: JsonConsoleVariant[];
 	measures: JsonConsoleMeasure[];
 	models: JsonConsoleModel[];
+}
+
+export interface JsonConsoleRunReport {
+	/** Its place in the run by start, from 1. */
+	order: number;
+	uuid: Uuid;
+	testbed: JsonConsoleTestbed;
+	adapter: Adapter;
+	start_time: DateTimeMillis;
+	end_time: DateTimeMillis;
+	/** The most lines any of its iterations reported. */
+	lines: number;
+	alerts: JsonReportAlertsCounts;
+	author?: JsonConsoleAuthor;
+}
+
+/**
+ * One run as the console's run page draws it: its heading's facts and one page
+ * of its reports in start order.
+ */
+export interface JsonConsoleRun {
+	/** The run's version. */
+	uuid: Uuid;
+	number: VersionNumber;
+	hash?: GitHash;
+	branch: JsonConsoleBranch;
+	/** When its first report started. */
+	start_time: DateTimeMillis;
+	/** When its last report ended. */
+	end_time: DateTimeMillis;
+	/** Every report in the run, across pages. */
+	total: number;
+	testbeds: number;
+	/** The sum of its reports' lines. */
+	lines: number;
+	alerts: JsonReportAlertsCounts;
+	reports: JsonConsoleRunReport[];
+}
+
+export interface JsonConsoleRunSummary {
+	/** The run's version. */
+	uuid: Uuid;
+	number: VersionNumber;
+	hash?: GitHash;
+	branch: JsonConsoleBranch;
+	/** When its first report started. */
+	start_time: DateTimeMillis;
+	/** When its last report ended. */
+	end_time: DateTimeMillis;
+	reports: number;
+	/**
+	 * Its testbeds in the order its reports first ran on them, at most
+	 * [`MAX_CONSOLE_RUN_NAMES`].
+	 */
+	testbeds: ResourceName[];
+	testbed_count: number;
+	/**
+	 * Its adapters in the order its reports first used them, at most
+	 * [`MAX_CONSOLE_RUN_NAMES`].
+	 */
+	adapters: Adapter[];
+	adapter_count: number;
+	/**
+	 * Who sent its reports in the order they first did, at most
+	 * [`MAX_CONSOLE_RUN_NAMES`].
+	 */
+	authors: JsonConsoleAuthor[];
+	author_count: number;
+	/** The sum of its reports' lines. */
+	lines: number;
+	alerts: JsonReportAlertsCounts;
+}
+
+/**
+ * A page of a project's runs, newest first by their first report's start. A
+ * run is every report with one version, which one branch head made.
+ */
+export interface JsonConsoleRuns {
+	/** Every run that matches, across pages. */
+	total: number;
+	runs: JsonConsoleRunSummary[];
 }
 
 export interface JsonConsoleTestbedRow {

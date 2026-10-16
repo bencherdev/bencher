@@ -7,16 +7,19 @@ import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { page } from "vitest/browser";
+import type { JsonConsoleRunSummary } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
 import { ProjectContext } from "../project";
-import { type ReportsBatch, batchKey, screenBatch } from "../reports/query";
 import { DEFAULT_SEARCH } from "../reports/search";
-import { fakeApi, reportFixture, watchFallback } from "../reports/testing";
-import Reports from "./Reports";
+import { fakeApi, watchFallback } from "../reports/testing";
+import { screenBatch } from "../reports/virtual";
+import { type RunsBatch, batchKey } from "../runs/query";
+import { runFixture } from "../runs/testing";
+import Runs from "./Runs";
 
 // Relative to the router base, as the app routes it.
-const PATH = "/hashbrown/reports";
+const PATH = "/hashbrown/runs";
 
 let dispose: (() => void) | undefined;
 
@@ -38,7 +41,7 @@ const mount = (api: Api, client: QueryClient, path = PATH) => {
 						</ProjectContext.Provider>
 					)}
 				>
-					<Route path="/:project/reports" component={Reports} />
+					<Route path="/:project/runs" component={Runs} />
 				</MemoryRouter>
 			</QueryClientProvider>
 		),
@@ -60,23 +63,28 @@ const impatient = () => {
 
 let perPage = 0;
 
-const reports = (from: number, count: number) =>
-	Array.from({ length: count }, (_, index) => reportFixture(from + index));
+const runs = (from: number, count: number) =>
+	Array.from({ length: count }, (_, index) => runFixture(from + index));
 
-const batchOf = (page: number, total: number): ReportsBatch => ({
-	reports: reports((page - 1) * perPage, perPage),
+/** What the runs endpoint answers: a page of runs and how many match. */
+const answered = (page: JsonConsoleRunSummary[], total: number) => ({
+	data: { runs: page, total },
+});
+
+const batchOf = (page: number, total: number): RunsBatch => ({
+	runs: runs((page - 1) * perPage, perPage),
 	total,
 	batch: { page, perPage },
 });
 
-const cached = (cache: QueryClient, batch: ReportsBatch, age: number) =>
+const cached = (cache: QueryClient, batch: RunsBatch, age: number) =>
 	cache.setQueryData(
 		batchKey("hashbrown", DEFAULT_SEARCH, batch.batch),
 		batch,
 		{ updatedAt: Date.now() - age },
 	);
 
-const table = () => page.getByRole("table", { name: "Reports, newest first" });
+const table = () => page.getByRole("table", { name: "Runs, newest first" });
 const drawn = () =>
 	[...document.querySelectorAll<HTMLElement>("tbody tr[aria-rowindex]")].map(
 		(row) => Number(row.getAttribute("aria-rowindex")),
@@ -107,7 +115,7 @@ test("a list never fetched draws the page, its skeleton only after a wait", asyn
 	mount(api, client());
 
 	await expect
-		.element(page.getByRole("heading", { level: 1, name: "Reports" }))
+		.element(page.getByRole("heading", { level: 1, name: "Runs" }))
 		.toBeVisible();
 	const skeleton = () =>
 		document.querySelector(".reports-skeleton .ui-skeleton") as HTMLElement;
@@ -125,19 +133,19 @@ test("a list the API did not answer shows a banner whose Retry loads it", async 
 	const { api } = fakeApi(() =>
 		fail
 			? Promise.reject(new ApiError(503, "server", "down"))
-			: { data: [reportFixture(0)], total: 1 },
+			: answered([runFixture(0)], 1),
 	);
 	mount(api, impatient());
 
 	const banner = page.getByRole("alert");
-	await expect.element(banner).toHaveTextContent("Reports did not load");
+	await expect.element(banner).toHaveTextContent("Runs did not load");
 	fail = false;
 	await banner.getByRole("button", { name: "Retry" }).click();
 
 	await expect.element(table()).toBeVisible();
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1 report");
+		.toHaveTextContent("1 run");
 	await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
 });
 
@@ -152,7 +160,7 @@ test("a list already seen paints at once while it revalidates", async () => {
 	await expect.element(table()).toBeVisible();
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1000 reports");
+		.toHaveTextContent("1000 runs");
 	expect(document.querySelector('[aria-busy="true"]')).toBeNull();
 	await expect.poll(() => requests.length).toBe(1);
 	expect(suspended()).toBe(false);
@@ -163,7 +171,7 @@ test("a list already seen paints at once while it revalidates", async () => {
 test("a revalidation that answers never takes the page out", async () => {
 	const { api } = fakeApi(async () => {
 		await wait(50);
-		return { data: reports(0, perPage), total: 1_001 };
+		return answered(runs(0, perPage), 1_001);
 	});
 	const cache = client();
 	cached(cache, batchOf(1, 1_000), 60_000);
@@ -172,10 +180,10 @@ test("a revalidation that answers never takes the page out", async () => {
 
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1000 reports");
+		.toHaveTextContent("1000 runs");
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1001 reports");
+		.toHaveTextContent("1001 runs");
 	await cache.invalidateQueries();
 	await wait(200);
 	expect(stop()).toBe(false);
@@ -210,17 +218,14 @@ test("a later batch the API refused shows a row whose Retry loads it, asked for 
 		if (batch === 2 && refuse) {
 			return Promise.reject(new ApiError(429, "client", "Too many requests"));
 		}
-		return {
-			data: reports((batch - 1) * perPage, perPage),
-			total: 2 * perPage,
-		};
+		return answered(runs((batch - 1) * perPage, perPage), 2 * perPage);
 	});
 	mount(api, client());
 	await expect.element(table()).toBeVisible();
 
 	toBottom();
 	const alert = page.getByRole("alert");
-	await expect.element(alert).toHaveTextContent("These reports did not load");
+	await expect.element(alert).toHaveTextContent("These runs did not load");
 	await wait(500);
 	expect(asked(requests, 2)).toBe(1);
 	expect(requests).toHaveLength(2);
@@ -233,14 +238,14 @@ test("a later batch the API refused shows a row whose Retry loads it, asked for 
 	await expect.element(page.getByRole("alert")).not.toBeInTheDocument();
 });
 
-// Kills a report drawn twice when a new one shifts the batches, and row
+// Kills a run drawn twice when a new one shifts the batches, and row
 // numbers with a gap where it would have been.
-test("batches that overlap show each report once, numbered without a gap", async () => {
+test("batches that overlap show each run once, numbered without a gap", async () => {
 	const { api } = fakeApi((url) => {
 		const batch = Number(url.searchParams.get("page"));
-		// A report arrived between the two requests, so the second repeats one.
+		// A run arrived between the two requests, so the second repeats one.
 		const from = batch === 1 ? 0 : perPage - 1;
-		return { data: reports(from, perPage), total: 2 * perPage - 1 };
+		return answered(runs(from, perPage), 2 * perPage - 1);
 	});
 	mount(api, client());
 	await expect.element(table()).toBeVisible();
@@ -262,12 +267,11 @@ test("batches that overlap show each report once, numbered without a gap", async
 });
 
 // Kills paging that goes on past a batch shorter than asked, which the API
-// returns when it drops a report it cannot read.
+// returns when it drops a run it cannot read.
 test("a short batch ends the list", async () => {
-	const { api, requests } = fakeApi(() => ({
-		data: reports(0, perPage - 1),
-		total: 1_000,
-	}));
+	const { api, requests } = fakeApi(() =>
+		answered(runs(0, perPage - 1), 1_000),
+	);
 	mount(api, client());
 	await expect.element(table()).toBeVisible();
 
@@ -284,12 +288,12 @@ test("filters that match nothing are named, not slugged", async () => {
 		if (url.pathname.endsWith("/branches/412-merge")) {
 			return { data: { uuid: "b", name: "412/merge", slug: "412-merge" } };
 		}
-		return { data: [], total: 0 };
+		return answered([], 0);
 	});
 	mount(api, client(), `${PATH}?branch=412-merge&window=all`);
 
 	await expect
-		.element(page.getByRole("heading", { name: "No reports" }))
+		.element(page.getByRole("heading", { name: "No runs" }))
 		.toBeVisible();
 	await expect
 		.element(page.getByRole("button", { name: "branch 412/merge" }))
@@ -300,10 +304,7 @@ test("filters that match nothing are named, not slugged", async () => {
 test("a new search starts again from one batch", async () => {
 	const { api, requests } = fakeApi((url) => {
 		const batch = Number(url.searchParams.get("page"));
-		return {
-			data: reports((batch - 1) * perPage, perPage),
-			total: 10 * perPage,
-		};
+		return answered(runs((batch - 1) * perPage, perPage), 10 * perPage);
 	});
 	mount(api, client());
 	await expect.element(table()).toBeVisible();
@@ -328,10 +329,10 @@ test("a new search starts again from one batch", async () => {
 // skeleton, rows kept but not marked busy or not dimmed, and a busy mark that
 // stays once the new list answers.
 test("a window change keeps the rows on screen, dimmed and busy, until the new list answers", async () => {
-	let answer: (value: { data: unknown; total: number }) => void = () => {};
+	let answer: (value: { data: unknown }) => void = () => {};
 	const { api } = fakeApi((url) =>
 		url.searchParams.has("start_time")
-			? { data: reports(0, perPage), total: 1_000 }
+			? answered(runs(0, perPage), 1_000)
 			: new Promise((resolve) => {
 					answer = resolve;
 				}),
@@ -339,7 +340,7 @@ test("a window change keeps the rows on screen, dimmed and busy, until the new l
 	mount(api, client());
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1000 reports");
+		.toHaveTextContent("1000 runs");
 
 	await page.getByRole("radio", { name: "All" }).click();
 	await expect.element(table()).toHaveAttribute("aria-busy", "true");
@@ -350,10 +351,10 @@ test("a window change keeps the rows on screen, dimmed and busy, until the new l
 		.toBeLessThan(1);
 	expect(document.querySelector(".reports-skeleton")).toBeNull();
 
-	answer({ data: [reportFixture(7_000)], total: 1 });
+	answer(answered([runFixture(7_000)], 1));
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1 report");
+		.toHaveTextContent("1 run");
 	await expect.element(table()).not.toHaveAttribute("aria-busy");
 	expect(Number(getComputedStyle(body()).opacity)).toBe(1);
 	expect(drawn()).toEqual([2]);
@@ -375,7 +376,7 @@ test("a picked branch or testbed is named from its option, not asked for again",
 		if (path.includes("/branches/") || path.includes("/testbeds/")) {
 			return { data: { uuid: "x", name: "asked again", slug: "x" } };
 		}
-		return { data: reports(0, perPage), total: 1_000 };
+		return answered(runs(0, perPage), 1_000);
 	});
 	mount(api, client());
 	await expect.element(table()).toBeVisible();
@@ -406,22 +407,22 @@ test("a picked branch or testbed is named from its option, not asked for again",
 // Kills a zero state kept from the last search while the next one loads,
 // which names the new search as if it had found nothing.
 test("a search after nothing was found shows no zero state while it loads", async () => {
-	let answer: (value: { data: unknown; total: number }) => void = () => {};
+	let answer: (value: { data: unknown }) => void = () => {};
 	const { api } = fakeApi((url) =>
 		url.searchParams.has("start_time")
-			? { data: [], total: 0 }
+			? answered([], 0)
 			: new Promise((resolve) => {
 					answer = resolve;
 				}),
 	);
 	mount(api, client());
-	const none = page.getByRole("heading", { name: "No reports", exact: true });
+	const none = page.getByRole("heading", { name: "No runs", exact: true });
 	await expect.element(none).toBeVisible();
 
 	await page.getByRole("button", { name: "Show all time" }).click();
 	await wait(100);
 	expect(none.elements()).toEqual([]);
 
-	answer({ data: [reportFixture(0)], total: 1 });
+	answer(answered([runFixture(0)], 1));
 	await expect.element(table()).toBeVisible();
 });

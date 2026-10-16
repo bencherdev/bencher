@@ -15,7 +15,6 @@ import {
 import type { JsonBranch, JsonTestbed } from "../../types/bencher";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
-import { nameKey } from "./query";
 import {
 	ADAPTERS,
 	type FilterNames,
@@ -481,3 +480,10 @@ const FilterOptions = (props: {
 		</Menu>
 	);
 };
+
+/** The name of a branch or a testbed, by slug. */
+export const nameKey = (
+	resource: "branches" | "testbeds",
+	slug: string,
+	value: string | undefined,
+) => ["console", resource, slug, "name", value] as const;

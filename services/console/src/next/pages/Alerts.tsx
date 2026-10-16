@@ -243,6 +243,8 @@ const Alerts = () => {
 				project === slug() &&
 				(kind === "report" ||
 					kind === "reports" ||
+					kind === "run" ||
+					kind === "runs" ||
 					kind === "threshold" ||
 					kind === "thresholds"),
 		});

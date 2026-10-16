@@ -368,12 +368,20 @@ test("a reader who only waits gets each row's Open in Explore", async ({
 // Kills row links that only the page the reader opened loads when it goes
 // idle, so a reader who moves to a report inside the console and only waits
 // never gets them.
-test("a reader who moves from Reports to a report and only waits gets each row's Open in Explore", async ({
+test("a reader who moves from Runs to a report and only waits gets each row's Open in Explore", async ({
 	page,
 }) => {
-	await page.goto(nextPath(hashbrown.slug, "reports"));
-	const reports = page.getByRole("table", { name: "Reports, newest first" });
-	await reports.getByRole("link").first().click();
+	await page.goto(nextPath(hashbrown.slug, "runs"));
+	await page
+		.getByRole("table", { name: "Runs, newest first" })
+		.getByRole("link")
+		.first()
+		.click();
+	await page
+		.getByRole("table", { name: "Reports in this run, by start" })
+		.getByRole("link")
+		.first()
+		.click();
 	await expect(page).toHaveURL(/\/reports\/[0-9a-f-]+$/);
 	await expect(
 		page.getByRole("table", { name: /^Lines in report / }),
@@ -428,8 +436,8 @@ test("an unknown report says so", async ({ page }) => {
 		"Report not found",
 	);
 	await expect(
-		page.getByRole("main").getByRole("link", { name: "Reports", exact: true }),
-	).toHaveAttribute("href", nextPath(hashbrown.slug, "reports"));
+		page.getByRole("main").getByRole("link", { name: "Runs", exact: true }),
+	).toHaveAttribute("href", nextPath(hashbrown.slug, "runs"));
 });
 
 // Kills a malformed link, such as a short hash, sent to the API, which refuses

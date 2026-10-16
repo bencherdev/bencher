@@ -1,5 +1,3 @@
-import type { JsonReport } from "../../types/bencher";
-
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
@@ -45,7 +43,7 @@ export const absoluteTime = (time: number, timeZone?: string) =>
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/** How long a run took: seconds, then minutes and seconds, then hours and minutes. */
+/** How long a report took: seconds, then minutes and seconds, then hours and minutes. */
 export const duration = (ms: number) => {
 	const seconds = Math.max(0, Math.floor(ms / SECOND));
 	if (seconds < 60) {
@@ -59,21 +57,3 @@ export const duration = (ms: number) => {
 };
 
 export const shortHash = (hash: string | undefined) => hash?.slice(0, 7);
-
-/** Who ran a report: the project key that created it, else the person. */
-export const creator = (report: JsonReport) => {
-	if (report.project_key) {
-		return { kind: "key", name: report.project_key.name } as const;
-	}
-	if (report.user) {
-		return { kind: "user", name: report.user.name } as const;
-	}
-	return undefined;
-};
-
-/** A report's lines: every iteration reports the same lines, so the most any reported. */
-export const lines = (report: JsonReport) =>
-	Math.max(
-		0,
-		...(report.counts?.results ?? []).map((iteration) => iteration.lines ?? 0),
-	);

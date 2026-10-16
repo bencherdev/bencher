@@ -499,7 +499,7 @@ const Plots = () => {
 						<p>
 							Pin a plot from{" "}
 							<a href={projectPath(slug(), "explore")}>Explore</a>, a{" "}
-							<a href={projectPath(slug(), "reports")}>report</a>, or an{" "}
+							<a href={projectPath(slug(), "runs")}>report</a>, or an{" "}
 							<a href={projectPath(slug(), "alerts")}>alert</a>.
 						</p>
 					</div>

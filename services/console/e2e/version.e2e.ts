@@ -34,7 +34,7 @@ test.describe("with no version memory", () => {
 	test("a version 0 project under /next/ lands on its classic page", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(version_zero.slug, "reports"));
+		await page.goto(nextPath(version_zero.slug, "runs"));
 		await expect(page).toHaveURL(classicReports);
 	});
 
@@ -43,7 +43,7 @@ test.describe("with no version memory", () => {
 		page,
 	}) => {
 		await page.goto(`/console/projects/${hashbrown.slug}/reports`);
-		await expect(page).toHaveURL(nextPath(hashbrown.slug, "reports"));
+		await expect(page).toHaveURL(nextPath(hashbrown.slug, "runs"));
 	});
 });
 
@@ -67,14 +67,14 @@ test.describe("with the version memory", () => {
 		});
 
 		await page.goto(`/console/projects/${hashbrown.slug}/reports`);
-		await expect(page).toHaveURL(nextPath(hashbrown.slug, "reports"));
+		await expect(page).toHaveURL(nextPath(hashbrown.slug, "runs"));
 		await expect(
-			page.getByRole("heading", { level: 1, name: "Reports" }),
+			page.getByRole("heading", { level: 1, name: "Runs" }),
 		).toBeVisible();
 
 		expect(order.slice(0, 2)).toEqual([
 			`/console/projects/${hashbrown.slug}/reports`,
-			nextPath(hashbrown.slug, "reports"),
+			nextPath(hashbrown.slug, "runs"),
 		]);
 	});
 });
@@ -101,10 +101,10 @@ test.describe("with a stale version 0 memory", () => {
 	test("the project corrects it and the reader ends on /next/", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "reports"));
+		await page.goto(nextPath(hashbrown.slug, "runs"));
 
 		await expect.poll(() => rememberedVersion(page, hashbrown.slug)).toBe(1);
-		await expect(page).toHaveURL(nextPath(hashbrown.slug, "reports"));
+		await expect(page).toHaveURL(nextPath(hashbrown.slug, "runs"));
 	});
 });
 
@@ -113,7 +113,7 @@ test.describe("with a saved response from before the move to version 1", () => {
 
 	// Kills a new console that switches on a response restored from the cache.
 	test("the reader settles on /next/", async ({ page }) => {
-		await page.goto(nextPath(hashbrown.slug, "reports"));
+		await page.goto(nextPath(hashbrown.slug, "runs"));
 		await expect
 			.poll(async () =>
 				(await cache(page))?.state.queries.some(
@@ -148,11 +148,11 @@ test.describe("with a saved response from before the move to version 1", () => {
 		});
 		const fresh = page.waitForResponse(bootstrapUrl, { timeout: 10_000 });
 		// A console that switches cuts this navigation short.
-		await page.goto(nextPath(hashbrown.slug, "reports")).catch(() => {});
+		await page.goto(nextPath(hashbrown.slug, "runs")).catch(() => {});
 		await fresh;
 		await settle(page);
 
-		expect(visited).toEqual([nextPath(hashbrown.slug, "reports")]);
+		expect(visited).toEqual([nextPath(hashbrown.slug, "runs")]);
 		expect(await rememberedVersion(page, hashbrown.slug)).toBe(1);
 	});
 });

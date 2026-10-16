@@ -241,6 +241,8 @@ const STALE = new Set([
 	"plots",
 	"report",
 	"reports",
+	"run",
+	"runs",
 	"start",
 	"threshold",
 	"thresholds",

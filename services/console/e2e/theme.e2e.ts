@@ -20,7 +20,7 @@ test("the theme toggle sets the theme, keeps it across a reload, and shares it w
 	page,
 }) => {
 	const html = page.locator("html");
-	await page.goto(nextPath(hashbrown.slug, "reports"));
+	await page.goto(nextPath(hashbrown.slug, "runs"));
 	await expect(html).toHaveAttribute("data-theme", "dark");
 	// The toggle works once the app has drawn over the first paint.
 	await expect(
@@ -44,7 +44,7 @@ test("the theme toggle sets the theme, keeps it across a reload, and shares it w
 
 // Kills contrast, naming, and landmark failures on the shell in either theme.
 test("the shell passes axe in both themes", async ({ page }) => {
-	await axeInBothThemes(page, nextPath(hashbrown.slug, "reports"), async () => {
+	await axeInBothThemes(page, nextPath(hashbrown.slug, "runs"), async () => {
 		await expect(
 			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
 		).toBeVisible();
@@ -61,7 +61,7 @@ test.describe("with the system set to light", () => {
 	}) => {
 		const html = page.locator("html");
 		const wordmark = page.getByRole("banner").locator(".brand img:visible");
-		await page.goto(nextPath(hashbrown.slug, "reports"));
+		await page.goto(nextPath(hashbrown.slug, "runs"));
 		await expect(html).toHaveAttribute("data-theme", "light");
 		await expect(wordmark).toHaveAttribute("src", "/wordmark-light.svg");
 		await expect(

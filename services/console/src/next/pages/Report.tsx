@@ -391,10 +391,10 @@ const groupsOfBatch = ({ report, group }: ReportBatch) => {
 	return groups;
 };
 
-/** The way back to Reports, and whether the reader can only read, where its arrival takes no width from the title. */
+/** The way back to Runs, and whether the reader can only read, where its arrival takes no width from the title. */
 const Crumb = (props: { slug: string; readOnly?: boolean }) => (
 	<div class="crumb-line">
-		<a href={projectPath(props.slug, "reports")}>Reports</a>
+		<a href={projectPath(props.slug, "runs")}>Runs</a>
 		<span aria-hidden="true">/</span>
 		<Show when={props.readOnly}>
 			<span class="rp-ro">
@@ -439,7 +439,7 @@ const Title = (props: { report: JsonConsoleReport | undefined }) => (
 	</div>
 );
 
-/** When, how, and what the run reported; `lines` is left out while a filter narrows them. */
+/** When, how, and what the report holds; `lines` is left out while a filter narrows them. */
 const subtitle = (
 	report: JsonConsoleReport,
 	hash: string | undefined,

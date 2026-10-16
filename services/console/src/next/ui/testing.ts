@@ -27,12 +27,12 @@ export const expectNameStartsWithText = (element: Element | null) => {
 /**
  * Asserts that a click on any drawn cell of `row` lands on its link to `href`,
  * a click just above or below the row does not, and a click on any other
- * control in it lands on that control.
+ * control or hover target in it lands on that control or target.
  */
 export const expectRowOpens = (row: Element, href: string) => {
-	const controls = [...row.querySelectorAll("a, button, input, label")].filter(
-		(control) => control.getAttribute("href") !== href,
-	);
+	const controls = [
+		...row.querySelectorAll("a, button, input, label, .rowlink-own"),
+	].filter((control) => control.getAttribute("href") !== href);
 	let cells = 0;
 	for (const cell of row.querySelectorAll("td")) {
 		if (

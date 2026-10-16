@@ -102,6 +102,12 @@ impl bencher_endpoint::Registrar for Api {
         }
         api_description.register(console::report::proj_console_report_get)?;
         if http_options {
+            api_description.register(console::runs::proj_console_runs_options)?;
+            api_description.register(console::runs::proj_console_run_options)?;
+        }
+        api_description.register(console::runs::proj_console_runs_get)?;
+        api_description.register(console::runs::proj_console_run_get)?;
+        if http_options {
             api_description.register(console::perf::proj_console_perf_options)?;
         }
         api_description.register(console::perf::proj_console_perf_get)?;

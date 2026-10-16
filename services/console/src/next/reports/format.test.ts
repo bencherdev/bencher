@@ -1,13 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { JsonReport } from "../../types/bencher";
-import {
-	absoluteTime,
-	creator,
-	duration,
-	lines,
-	relativeTime,
-	shortHash,
-} from "./format";
+import { absoluteTime, duration, relativeTime, shortHash } from "./format";
 
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
@@ -75,80 +67,4 @@ describe("duration", () => {
 test("shortHash keeps the first seven characters", () => {
 	expect(shortHash("9c1f2e4000000000000000000000000000000000")).toBe("9c1f2e4");
 	expect(shortHash(undefined)).toBeUndefined();
-});
-
-const report = (fields: Partial<JsonReport>) => fields as JsonReport;
-
-describe("creator", () => {
-	// Kills a key run named by nobody, or by the person who made the key.
-	test("a run by a project key is the key's", () => {
-		expect(
-			creator(
-				report({
-					project_key: { uuid: "k", name: "GitHub Actions" },
-				}),
-			),
-		).toEqual({ kind: "key", name: "GitHub Actions" });
-	});
-
-	test("a run by a person is theirs", () => {
-		expect(
-			creator(
-				report({
-					user: { uuid: "u", name: "Muriel Bagge", slug: "muriel-bagge" },
-				}),
-			),
-		).toEqual({ kind: "user", name: "Muriel Bagge" });
-	});
-
-	// Kills a key run named for the person behind the key when both are known.
-	test("a key is named over a person", () => {
-		expect(
-			creator(
-				report({
-					project_key: { uuid: "k", name: "GitHub Actions" },
-					user: { uuid: "u", name: "Muriel Bagge", slug: "muriel-bagge" },
-				}),
-			),
-		).toEqual({ kind: "key", name: "GitHub Actions" });
-	});
-
-	// Kills a crash on a report whose creator was deleted.
-	test("a run by no one left is nobody's", () => {
-		expect(creator(report({}))).toBeUndefined();
-	});
-});
-
-describe("lines", () => {
-	// Kills a count taken from one iteration only, or summed over every iteration.
-	test("the most lines any iteration reported", () => {
-		expect(
-			lines(
-				report({
-					counts: {
-						results: [
-							{ benchmarks: 2, measures: 1, lines: 3 },
-							{ benchmarks: 2, measures: 2, lines: 5 },
-						],
-						alerts: { total: 0, active: 0 },
-					},
-				}),
-			),
-		).toBe(5);
-	});
-
-	// Kills a count of NaN for an API that predates the line count.
-	test("no count is zero", () => {
-		expect(
-			lines(
-				report({
-					counts: {
-						results: [{ benchmarks: 2, measures: 1 }],
-						alerts: { total: 0, active: 0 },
-					},
-				}),
-			),
-		).toBe(0);
-		expect(lines(report({}))).toBe(0);
-	});
 });

@@ -217,7 +217,7 @@ const show = async (
 // Kills a page that drops its start point's name, its head, the reports'
 // total, or the thresholds on it, an Explore link for nothing, threshold links
 // named only by their testbed, a threshold's model cut to its test, a row taken
-// from the first match alone, and an All reports link that keeps the default window.
+// from the first match alone, and an All runs link that keeps the default window.
 test("a branch's page shows its start point, head, recent reports, and thresholds", async () => {
 	const { api } = branchApi(false);
 	dispose = (await show(api, "branches", "412-merge")).dispose;
@@ -259,10 +259,10 @@ test("a branch's page shows its start point, head, recent reports, and threshold
 		expectNameStartsWithText(report);
 	}
 	await expect
-		.element(page.getByRole("link", { name: "All reports on 412/merge" }))
+		.element(page.getByRole("link", { name: "All runs on 412/merge" }))
 		.toHaveAttribute(
 			"href",
-			"/next/console/projects/hashbrown/reports?branch=412-merge&window=all",
+			"/next/console/projects/hashbrown/runs?branch=412-merge&window=all",
 		);
 	await expect
 		.element(page.getByRole("link", { name: "Open in Explore" }))
@@ -358,7 +358,7 @@ test("archiving from the page shows it at once, and a refusal puts it back", asy
 });
 
 // Kills an archived branch's page that lists its active thresholds or
-// reports (none), an All reports link to a list that would show none of them,
+// reports (none), an All runs link to a list that would show none of them,
 // and an Unarchive that claims every threshold back.
 test("an archived branch reads its archived thresholds and says which come back", async () => {
 	const { api, reads } = branchApi(true);
@@ -378,10 +378,8 @@ test("an archived branch reads its archived thresholds and says which come back"
 	await expect
 		.element(page.getByRole("table", { name: "Recent reports" }))
 		.toHaveTextContent(/linux-x86-64/);
-	// The Reports page lists only active branches' reports.
-	expect(page.getByRole("link", { name: /^All reports/ }).elements()).toEqual(
-		[],
-	);
+	// Runs lists only active branches' runs.
+	expect(page.getByRole("link", { name: /^All runs/ }).elements()).toEqual([]);
 
 	await page.getByRole("button", { name: "Unarchive" }).click();
 	await expect

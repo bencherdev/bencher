@@ -43,7 +43,7 @@ describe("NextHead", () => {
 			url,
 			storage,
 		).replaced;
-	const URL_ = "https://bencher.dev/next/console/projects/hashbrown/reports";
+	const URL_ = "https://bencher.dev/next/console/projects/hashbrown/runs";
 
 	// Kills a version gate that waits for the app to load the project.
 	test("a project remembered on version 0 goes to the classic page at once", async () => {
@@ -84,7 +84,7 @@ describe("NextHead", () => {
 		const href = new URL(to ?? "", "https://bencher.dev");
 		expect(href.pathname).toBe("/auth/login");
 		expect(decodeBase64(href.searchParams.get("back"))).toBe(
-			"/next/console/projects/hashbrown/reports?page=2#top",
+			"/next/console/projects/hashbrown/runs?page=2#top",
 		);
 	});
 });
@@ -106,7 +106,7 @@ describe("ClassicGate", () => {
 		expect(
 			(await classic(`${URL_}?per_page=8#top`, versions("hashbrown", 1)))
 				.replaced,
-		).toEqual(["/next/console/projects/hashbrown/reports#top"]);
+		).toEqual(["/next/console/projects/hashbrown/runs#top"]);
 	});
 
 	// Kills a classic page that leaves for a project it should keep.

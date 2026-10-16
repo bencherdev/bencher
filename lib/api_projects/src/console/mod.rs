@@ -38,6 +38,7 @@ pub mod dimensions;
 pub mod perf;
 pub mod plots;
 pub mod report;
+pub mod runs;
 pub mod thresholds;
 
 /// The longest that three calendar months run, and so the longest window an

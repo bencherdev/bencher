@@ -46,10 +46,10 @@ export const BranchCards = (props: {
 	thresholds: ThresholdsState;
 }) => {
 	const head = () => props.branch?.head;
-	// Reports lists the reports of active branches only.
-	const reportsLink = () =>
+	// Runs lists the runs of active branches only.
+	const runsLink = () =>
 		props.branch && !props.branch.archived
-			? `${NEXT_PROJECTS}/${props.slug}/reports?branch=${encodeURIComponent(props.branch.slug)}&window=all`
+			? `${NEXT_PROJECTS}/${props.slug}/runs?branch=${encodeURIComponent(props.branch.slug)}&window=all`
 			: undefined;
 	return (
 		<>
@@ -130,10 +130,10 @@ export const BranchCards = (props: {
 						id="dm-reports"
 						title="Recent reports"
 						aside={
-							<Show when={reportsLink()}>
+							<Show when={runsLink()}>
 								{(href) => (
 									<a class="lnk" href={href()}>
-										All reports on {props.branch?.name}
+										All runs on {props.branch?.name}
 									</a>
 								)}
 							</Show>

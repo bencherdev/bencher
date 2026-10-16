@@ -109,6 +109,8 @@ export const useRowStatus = (page: RowPage) => {
 				(kind === "alerts" ||
 					kind === "report" ||
 					kind === "reports" ||
+					kind === "run" ||
+					kind === "runs" ||
 					kind === "threshold" ||
 					kind === "thresholds"),
 			refetchType: "none",

@@ -853,7 +853,7 @@ test("leaving a pin with unsaved changes asks first", async ({
 		.click();
 	await expect(page.getByText("Unsaved changes")).toBeVisible();
 
-	await tabRow(page).getByRole("link", { name: "Reports" }).click();
+	await tabRow(page).getByRole("link", { name: "Runs" }).click();
 	const dialog = page.getByRole("alertdialog", {
 		name: "Leave without saving?",
 	});
@@ -873,16 +873,16 @@ test("leaving a pin with unsaved changes asks first", async ({
 	expect(await asked).toBe("beforeunload");
 	await expect(page.getByText("Unsaved changes")).toBeVisible();
 
-	await tabRow(page).getByRole("link", { name: "Reports" }).click();
+	await tabRow(page).getByRole("link", { name: "Runs" }).click();
 	await dialog.getByRole("button", { name: "Leave without saving" }).click();
-	await expect(page).toHaveURL(/\/reports$/);
+	await expect(page).toHaveURL(/\/runs$/);
 	expect((await listPlots(request, project.slug))[0]?.x_axis).toBe("date_time");
 
 	await page.goBack();
 	await expect(page.getByText("Unsaved changes")).toBeVisible();
-	await tabRow(page).getByRole("link", { name: "Reports" }).click();
+	await tabRow(page).getByRole("link", { name: "Runs" }).click();
 	await dialog.getByRole("button", { name: "Save and leave" }).click();
-	await expect(page).toHaveURL(/\/reports$/);
+	await expect(page).toHaveURL(/\/runs$/);
 	await expect
 		.poll(async () => (await listPlots(request, project.slug))[0]?.x_axis)
 		.toBe("version");

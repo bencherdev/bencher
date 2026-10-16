@@ -19,7 +19,7 @@ test.describe("signed out", () => {
 	test("the private project sends the reader to sign in with the way back", async ({
 		page,
 	}) => {
-		const path = nextPath(seed.projects.private.slug, "reports");
+		const path = nextPath(seed.projects.private.slug, "runs");
 		await page.goto(path);
 		await expect(page).toHaveURL(signInWayBack(path));
 	});

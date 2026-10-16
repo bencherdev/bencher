@@ -26,6 +26,8 @@ import {
 const { hashbrown } = seed.projects;
 // The shell alone: a project path no page draws, so no page data rides along.
 const SHELL = nextPath(hashbrown.slug, "nowhere");
+const RUNS = nextPath(hashbrown.slug, "runs");
+// A report's page, under no tab of its own.
 const REPORTS = nextPath(hashbrown.slug, "reports");
 
 test.use({ storageState: signedIn(seed.member) });
@@ -136,30 +138,43 @@ test("a tab switch holds the speed ceilings", async ({ page }) => {
 	);
 });
 
-const reportsReady = async (page: Page) => {
+const runsReady = async (page: Page) => {
 	await expect(
 		page
-			.getByRole("table", { name: "Reports, newest first" })
+			.getByRole("table", { name: "Runs, newest first" })
 			.getByRole("link")
 			.first(),
 	).toBeVisible();
 	await ready(page);
 };
 
-// Kills a Reports page whose list waits on the shell's request or on its own
+const runReports = (page: Page) =>
+	page.getByRole("table", { name: "Reports in this run, by start" });
+
+/** The newest run, through the API. */
+const newestRun = async (request: APIRequestContext) => {
+	const response = await request.get(
+		`${seed.api_url}/v0/console/projects/${hashbrown.slug}/runs?per_page=1`,
+		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+	);
+	const { runs } = (await response.json()) as { runs: { uuid: string }[] };
+	return `${RUNS}/${runs[0]?.uuid}`;
+};
+
+// Kills a Runs page whose list waits on the shell's request or on its own
 // code arriving late, JavaScript that grows, and rows that move as they arrive.
-test("a cold load of Reports holds its speed ceilings", async ({ page }) => {
+test("a cold load of Runs holds its speed ceilings", async ({ page }) => {
 	await observeLayoutShift(page);
 	await page.route(`${seed.api_url}/**`, async (route) => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
-	await page.goto(REPORTS);
-	await reportsReady(page);
+	await page.goto(RUNS);
+	await runsReady(page);
 
 	const cost = await measure(page, seed.api_url);
-	report("reports cold load", cost);
-	const ceiling = ceilings.reportsColdLoad;
+	report("runs cold load", cost);
+	const ceiling = ceilings.runsColdLoad;
 	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
 		ceiling.apiAnswersBeforePaint,
 	);
@@ -175,43 +190,68 @@ test("a cold load of Reports holds its speed ceilings", async ({ page }) => {
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
-// Kills a switch into Reports that refetches the shell, asks for the list in
+// Kills a switch into Runs that refetches the shell, asks for the list in
 // more than one request, pulls in more than its page, or finds its code a
 // round late.
-test("a tab switch into Reports holds its speed ceilings", async ({ page }) => {
+test("a tab switch into Runs holds its speed ceilings", async ({ page }) => {
 	await page.goto(SHELL);
 	await ready(page);
 
 	await holdScripts(page);
 	const since = await mark(page);
-	await tabRow(page).getByRole("link", { name: "Reports" }).click();
-	await reportsReady(page);
+	await tabRow(page).getByRole("link", { name: "Runs" }).click();
+	await runsReady(page);
 
 	const cost = await measure(page, seed.api_url, since);
-	report("reports tab switch", cost);
-	const ceiling = ceilings.reportsTabSwitch;
+	report("runs tab switch", cost);
+	const ceiling = ceilings.runsTabSwitch;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
 });
 
-// Kills a move to a report that refetches the shell or the list, pulls in
-// more than its page, finds its code a round late, or defers more than its
-// rows' links.
-test("a move from Reports to a report holds its speed ceilings", async ({
-	page,
-}) => {
-	await page.goto(REPORTS);
-	await reportsReady(page);
+// Kills a move to a run that refetches the shell or the list, asks for the
+// run in more than one request, pulls in more than its page, or finds its code
+// a round late.
+test("a move from Runs to a run holds its speed ceilings", async ({ page }) => {
+	await page.goto(RUNS);
+	await runsReady(page);
 
 	await holdScripts(page);
 	const since = await mark(page);
 	await page
-		.getByRole("table", { name: "Reports, newest first" })
+		.getByRole("table", { name: "Runs, newest first" })
 		.getByRole("link")
 		.first()
 		.click();
+	await expect(runReports(page).getByRole("link").first()).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("run move", cost);
+	const ceiling = ceilings.runMove;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
+});
+
+// Kills a move to a report that refetches the shell or the run, pulls in more
+// than its page, finds its code a round late, or defers more than its rows'
+// links.
+test("a move from a run to a report holds its speed ceilings", async ({
+	page,
+	request,
+}) => {
+	await page.goto(await newestRun(request));
+	await expect(runReports(page).getByRole("link").first()).toBeVisible();
+	await ready(page);
+
+	await holdScripts(page);
+	const since = await mark(page);
+	await runReports(page).getByRole("link").first().click();
 	await expect(
 		page
 			.getByRole("table", { name: /^Lines in report / })
@@ -316,7 +356,7 @@ for (const [width, viewport] of [
 					).toBeVisible(),
 				ceilings.coldLoad,
 			],
-			["Reports", REPORTS, reportsReady, ceilings.reportsColdLoad],
+			["Runs", RUNS, runsReady, ceilings.runsColdLoad],
 			[
 				"General",
 				nextPath(hashbrown.slug, "settings"),
@@ -440,6 +480,35 @@ for (const [width, viewport] of [
 			);
 			report(`report cold load ${width}`, cost);
 			const ceiling = ceilings.reportColdLoad;
+			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+				ceiling.apiAnswersBeforePaint,
+			);
+			expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+			expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
+			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+			expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
+			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
+				ceiling.inlineScriptBytes,
+			);
+			expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+		});
+
+		// Kills a run whose reports wait on the shell's request or on its own code
+		// arriving late, a first batch asked for twice, a page stylesheet of its
+		// own, and a page that shifts as the run arrives.
+		test(`a cold load of a run holds its speed ceilings at ${width}`, async ({
+			page,
+			request,
+		}) => {
+			const cost = await coldLoad(page, await newestRun(request), () =>
+				expect(runReports(page).getByRole("link").first()).toBeVisible(),
+			);
+			report(`run cold load ${width}`, cost);
+			const ceiling = ceilings.runColdLoad;
 			expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
 				ceiling.apiAnswersBeforePaint,
 			);
@@ -1264,22 +1333,20 @@ test("a status switch on Alerts asks once", async ({ page }) => {
 
 // Kills a Clear that asks for more than the list's first batch, chains a
 // second round, or loads more code.
-test("a Clear on Reports asks once", async ({ page }) => {
-	await page.goto(`${REPORTS}?branch=main`);
-	await reportsReady(page);
+test("a Clear on Runs asks once", async ({ page }) => {
+	await page.goto(`${RUNS}?branch=main`);
+	await runsReady(page);
 	await ready(page);
 
 	await holdScripts(page);
 	const since = await mark(page);
 	await page.getByRole("button", { name: "Clear filters" }).click();
-	await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-		"16 reports",
-	);
+	await expect(page.getByRole("heading", { level: 1 })).toHaveText("15 runs");
 	await settle(page);
 
 	const cost = await measure(page, seed.api_url, since);
-	report("reports clear", cost);
-	const ceiling = ceilings.reportsClear;
+	report("runs clear", cost);
+	const ceiling = ceilings.runsClear;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);

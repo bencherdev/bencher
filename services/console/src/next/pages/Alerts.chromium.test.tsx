@@ -829,12 +829,12 @@ test("rows fold below 980 px, and a folded Reactivate leaves the focus on its ro
 	await expect.poll(() => document.querySelector("table.lr-narrow")).toBeNull();
 });
 
-// Kills a report or threshold page, or the Reports list, left showing a
+// Kills a report, run, or threshold page, or the Runs list, left showing a
 // status the API no longer holds, and another project's pages read again.
-test("a confirmed change has the report, Reports, and threshold pages read again", async () => {
+test("a confirmed change has the report, run, Runs, and threshold pages read again", async () => {
 	const { api, answered } = fakeApi(three);
 	const client = mount(api);
-	const kinds = ["report", "reports", "threshold", "thresholds"];
+	const kinds = ["report", "reports", "run", "runs", "threshold", "thresholds"];
 	for (const kind of kinds) {
 		client.setQueryData(["console", kind, "hashbrown", "x"], {});
 	}
@@ -850,7 +850,7 @@ test("a confirmed change has the report, Reports, and threshold pages read again
 						?.isInvalidated,
 			),
 		)
-		.toEqual([true, true, true, true]);
+		.toEqual(kinds.map(() => true));
 	expect(
 		client.getQueryState(["console", "report", "other", "x"])?.isInvalidated,
 	).toBe(false);

@@ -32,6 +32,7 @@ export interface Seed {
 		private: SeedProject;
 	};
 	last_main_hash: string;
+	split_hash: string;
 }
 
 const seedPath = process.env.BENCHER_E2E_SEED;
