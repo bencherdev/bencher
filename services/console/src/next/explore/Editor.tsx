@@ -3,7 +3,6 @@ import {
 	type Accessor,
 	For,
 	Index,
-	type JSX,
 	Show,
 	createMemo,
 	mapArray,
@@ -52,15 +51,10 @@ const Editor = (props: {
 	last?: JsonConsolePerf | undefined;
 	/** The plot query has answered for the query shown. */
 	settled: boolean;
-	blank: boolean;
 	readOnly?: boolean | undefined;
 	onQuery: (query: ExploreQuery) => void;
-	/** A benchmark picked into a query that names nothing else. */
-	onFirstBenchmark: (option: Option) => void;
 	/** The reader reached for a benchmark: the plot is likely next. */
 	onBenchmarks?: (() => void) | undefined;
-	/** Beside the last box. */
-	children?: JSX.Element;
 }) => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
@@ -95,15 +89,6 @@ const Editor = (props: {
 		};
 	const add = (dimension: Dimension, option: Option) => {
 		remember(dimension, option);
-		if (
-			dimension === "benchmarks" &&
-			props.query.branches.length === 0 &&
-			props.query.testbeds.length === 0 &&
-			props.query.measures.length === 0
-		) {
-			props.onFirstBenchmark(option);
-			return;
-		}
 		props.onQuery(withValue(props.query, dimension, option.value));
 	};
 
@@ -124,7 +109,6 @@ const Editor = (props: {
 							title={title}
 							noun={noun}
 							values={labels()}
-							start={props.blank && dimension === "benchmarks"}
 							readOnly={props.readOnly}
 							full={uuids(dimension).length >= MAX_ENTRIES}
 							onRemove={(index) =>
@@ -149,6 +133,7 @@ const Editor = (props: {
 				title="Measures"
 				noun="measure"
 				values={measureLabels()}
+				twoLine
 				hint={
 					layout().control === "none"
 						? undefined
@@ -188,7 +173,6 @@ const Editor = (props: {
 					<p class="ex-all">every metric</p>
 				</Show>
 			</Box>
-			{props.children}
 		</div>
 	);
 };

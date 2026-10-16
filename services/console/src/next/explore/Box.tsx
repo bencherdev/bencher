@@ -14,7 +14,7 @@ import {
 
 export interface BoxValue {
 	label: string;
-	/** Quiet text after the label, such as a measure's units. */
+	/** Quiet text under the label, such as a measure's units. */
 	detail?: string | undefined;
 }
 
@@ -48,8 +48,8 @@ const Box = (props: {
 	noun: string;
 	values: BoxValue[];
 	hint?: string | undefined;
-	/** Marks the box as the place to start. */
-	start?: boolean | undefined;
+	/** Each value keeps a second line for its detail, held before the detail arrives. */
+	twoLine?: boolean | undefined;
 	readOnly?: boolean | undefined;
 	/** The box holds as many values as the query reads. */
 	full?: boolean | undefined;
@@ -103,12 +103,7 @@ const Box = (props: {
 		),
 	);
 	return (
-		<fieldset
-			ref={box}
-			class="ex-box"
-			classList={{ "ex-start": props.start === true }}
-			aria-label={props.title}
-		>
+		<fieldset ref={box} class="ex-box" aria-label={props.title}>
 			<div class="ex-eh">
 				<span>{props.title}</span>
 				<Show when={props.hint}>
@@ -117,9 +112,9 @@ const Box = (props: {
 			</div>
 			<Index each={props.values}>
 				{(value, index) => (
-					<div class="ex-val">
+					<div class="ex-val" classList={{ "ex-val2": props.twoLine }}>
 						<span class="ex-ellip">{value().label}</span>
-						<Show when={value().detail}>
+						<Show when={props.twoLine}>
 							<span class="ex-k">{value().detail}</span>
 						</Show>
 						<Show when={!props.readOnly}>
@@ -142,7 +137,7 @@ const Box = (props: {
 						ref={add}
 						type="button"
 						class="ex-add"
-						classList={{ "ex-hot": props.start === true || open() }}
+						classList={{ "ex-hot": open() }}
 						aria-haspopup="menu"
 						aria-expanded={open()}
 						onClick={() => {
@@ -167,9 +162,9 @@ const Box = (props: {
 						Add {props.noun}
 					</button>
 					<Show when={open()}>
-						<AddMenu
-							noun={props.noun}
-							title={props.title}
+						<SearchMenu
+							label={`Add ${props.noun}`}
+							search={`Search ${props.title.toLowerCase()}`}
 							anchor={add}
 							options={props.options}
 							empty={props.empty}
@@ -188,9 +183,12 @@ const Box = (props: {
 
 export default Box;
 
-const AddMenu = (props: {
-	noun: string;
-	title: string;
+/** Choices under a search box that narrows them; the search takes the focus as it opens. */
+export const SearchMenu = (props: {
+	label: string;
+	/** What the search box shows before anything is typed, and its name unless `searchName` says more. */
+	search: string;
+	searchName?: string | undefined;
 	anchor: HTMLElement | undefined;
 	options: (text: () => string) => () => Option[];
 	empty?: string | undefined;
@@ -202,18 +200,17 @@ const AddMenu = (props: {
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	onCleanup(() => clearTimeout(timer));
 	const options = props.options(text);
-	const search = `Search ${props.title.toLowerCase()}`;
 	return (
 		<Menu
-			label={`Add ${props.noun}`}
+			label={props.label}
 			anchor={props.anchor}
 			onClose={props.onClose}
 			header={
 				<TextInput
 					type="search"
 					size="sm"
-					aria-label={search}
-					placeholder={search}
+					aria-label={props.searchName ?? props.search}
+					placeholder={props.search}
 					value={typed()}
 					onInput={(event) => {
 						const value = event.currentTarget.value;

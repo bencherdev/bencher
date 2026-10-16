@@ -14,7 +14,6 @@ export const chipSummary = (
 	query: ExploreQuery,
 	dimension: Dimension,
 	perf: JsonConsolePerf | undefined,
-	blank: boolean,
 ): string => {
 	if (dimension === "sets") {
 		const [only, ...rest] = query.sets;
@@ -37,7 +36,7 @@ export const chipSummary = (
 			? query[dimension].map(({ uuid }) => uuid)
 			: query[dimension];
 	if (uuids.length === 0) {
-		return blank && dimension === "benchmarks" ? "add one" : "none";
+		return "none";
 	}
 	const table: { uuid: string; name: string }[] = perf?.[dimension] ?? [];
 	const names = uuids.map(

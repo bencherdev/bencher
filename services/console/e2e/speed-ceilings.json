@@ -6,7 +6,7 @@
 		"cls": 0.00025,
 		"jsBytes": 36580,
 		"stylesheets": 1,
-		"cssBytes": 15160,
+		"cssBytes": 15350,
 		"deferredJsBytes": 105960,
 		"htmlBytes": 2460,
 		"inlineScriptBytes": 2900,
@@ -121,7 +121,7 @@
 	"plotsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 54600,
+		"jsBytes": 54570,
 		"scriptRounds": 1
 	},
 	"thresholdsColdLoad": {
@@ -153,7 +153,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 97070,
+		"jsBytes": 97710,
 		"deferredJsBytes": 105960,
 		"htmlBytes": 2590,
 		"inlineScriptBytes": 2900,
@@ -176,7 +176,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 60800,
+		"jsBytes": 61470,
 		"deferredJsBytes": 105960,
 		"lateModules": 0
 	},
@@ -232,7 +232,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 90820,
+		"jsBytes": 90790,
 		"deferredJsBytes": 105960,
 		"htmlBytes": 2560,
 		"inlineScriptBytes": 2885,
@@ -242,7 +242,7 @@
 		"cls": 0,
 		"jsBytes": 64810,
 		"deferredJsBytes": 105960,
-		"cssBytes": 10740,
+		"cssBytes": 10950,
 		"htmlBytes": 2630,
 		"inlineScriptBytes": 700
 	},

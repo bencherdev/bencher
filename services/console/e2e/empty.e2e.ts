@@ -71,7 +71,7 @@ test.describe("a project's Maintainer", () => {
 		await expect(
 			page
 				.getByRole("region", { name: "Latest reports" })
-				.getByRole("link", { name: /^main/ })
+				.getByRole("link", { name: "report", exact: true })
 				.first(),
 		).toHaveAttribute(
 			"href",

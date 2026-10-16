@@ -128,9 +128,16 @@ export const postReport = (
 	{
 		branch = "main",
 		testbed = "ubuntu-latest",
+		hash,
 		start,
 		results,
-	}: { branch?: string; testbed?: string; start: string; results: unknown },
+	}: {
+		branch?: string;
+		testbed?: string;
+		hash?: string;
+		start: string;
+		results: unknown;
+	},
 ) =>
 	send<JsonReport>(
 		request,
@@ -140,6 +147,7 @@ export const postReport = (
 		{
 			branch,
 			testbed,
+			...(hash === undefined ? {} : { hash }),
 			start_time: start,
 			end_time: new Date(Date.parse(start) + 2 * 60 * 1000).toISOString(),
 			results: [JSON.stringify(results)],
