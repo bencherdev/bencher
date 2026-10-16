@@ -3,6 +3,7 @@ import Hyperfine from "../hyperfine.mdx";
 ## ❯_️ Shell Hyperfine
 
 The Shell Hyperfine Adapter (`shell_hyperfine`) expects [Hyperfine](https://github.com/sharkdp/hyperfine) output in [JSON format (ie `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example).
+It parses both Hyperfine 2 and Hyperfine 1.x output.
 This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
 The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 

@@ -43,6 +43,8 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.RubyBenchmark:
 			return "Benchmark";
 		case Adapter.ShellHyperfine:
+		case Adapter.ShellHyperfineV1:
+		case Adapter.ShellHyperfineV2:
 			return "Hyperfine";
 	}
 };
@@ -83,6 +85,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.RubyBenchmark:
 			return `bencher run${host} "ruby benchmarks.rb"`;
 		case Adapter.ShellHyperfine:
+		case Adapter.ShellHyperfineV1:
+		case Adapter.ShellHyperfineV2:
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 		case Adapter.Json:

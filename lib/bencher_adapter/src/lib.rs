@@ -22,7 +22,10 @@ use adapters::{
         gungraun_json::AdapterRustGungraunJson, gungraun_stdout::AdapterRustGungraunStdout,
         iai::AdapterRustIai,
     },
-    shell::{AdapterShell, hyperfine::AdapterShellHyperfine},
+    shell::{
+        AdapterShell, hyperfine::AdapterShellHyperfine, hyperfine_v1::AdapterShellHyperfineV1,
+        hyperfine_v2::AdapterShellHyperfineV2,
+    },
 };
 pub use bencher_json::{BenchmarkName, JsonNewMetric};
 use bencher_json::{
@@ -82,6 +85,8 @@ impl Adaptable for Adapter {
             Self::RustGungraunJson => AdapterRustGungraunJson::parse(input, settings),
             Self::Shell => AdapterShell::parse(input, settings),
             Self::ShellHyperfine => AdapterShellHyperfine::parse(input, settings),
+            Self::ShellHyperfineV1 => AdapterShellHyperfineV1::parse(input, settings),
+            Self::ShellHyperfineV2 => AdapterShellHyperfineV2::parse(input, settings),
         }
     }
 

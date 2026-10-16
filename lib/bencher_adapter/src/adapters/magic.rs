@@ -43,7 +43,7 @@ mod test_magic {
             gungraun_json::test_rust_gungraun_json, gungraun_stdout::test_rust_gungraun_stdout,
             iai::test_rust_iai,
         },
-        shell::hyperfine::test_shell_hyperfine,
+        shell::{hyperfine_v1::test_shell_hyperfine_v1, hyperfine_v2::test_shell_hyperfine_v2},
         test_util::{convert_file_path, opt_convert_file_path},
     };
     use crate::{Adaptable as _, AdapterJson, Settings, results::adapter_results::AdapterResults};
@@ -152,6 +152,7 @@ mod test_magic {
             "./tool_output/go/bench/five.txt",
             "./tool_output/rust/bench/many.txt",
             "./tool_output/shell/hyperfine/two.json",
+            "./tool_output/shell/hyperfine/v2_two.json",
             "./tool_output/java/jmh/six.json",
         ] {
             let results = opt_convert_file_path::<AdapterMagic>(
@@ -300,8 +301,15 @@ mod test_magic {
     }
 
     #[test]
-    fn adapter_magic_shell_hyperfine() {
+    fn adapter_magic_shell_hyperfine_v1() {
         let results = convert_file_path::<AdapterMagic>("./tool_output/shell/hyperfine/two.json");
-        test_shell_hyperfine::validate_adapter_shell_hyperfine(&results);
+        test_shell_hyperfine_v1::validate_adapter_shell_hyperfine_v1(&results);
+    }
+
+    #[test]
+    fn adapter_magic_shell_hyperfine_v2() {
+        let results =
+            convert_file_path::<AdapterMagic>("./tool_output/shell/hyperfine/v2_two.json");
+        test_shell_hyperfine_v2::validate_adapter_shell_hyperfine_v2(&results);
     }
 }
