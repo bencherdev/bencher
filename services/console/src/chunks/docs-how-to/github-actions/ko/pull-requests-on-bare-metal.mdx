@@ -56,25 +56,28 @@ Bencher Bare Metal Job을 비동기적으로 기다릴 수 있게 합니다.
 13. [GitHub Actions `GITHUB_HEAD_REF` 기본 환경 변수][github default environment variables]를 사용하여 PR 브랜치 이름을 `--branch` 옵션으로 설정합니다.
     전체 개요는 [`--branch` 문서][branch option]를 참조하세요.
     (예: `--branch "$GITHUB_HEAD_REF"`)
-14. 위의 [Pull Requests][pull requests]처럼 PR 브랜치의 시작점을 설정합니다.
+14. 위의 [Pull Requests][pull requests]처럼 `--hash` 옵션을 PR 브랜치의 `git` 해시로 설정합니다.
+    전체 개요는 [`--hash` 문서][hash option]를 참조하세요.
+    (예: `--hash '${{ github.event.pull_request.head.sha }}'`)
+15. 위의 [Pull Requests][pull requests]처럼 PR 브랜치의 시작점을 설정합니다.
     전체 개요는 [`--start-point` 문서][start point]를 참조하세요.
     (예: `--start-point "$GITHUB_BASE_REF"`)
-15. `--adapter` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>이 생성하는 [Bencher Metric Format JSON (`json`)][bmf]으로 설정합니다.
+16. `--adapter` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>이 생성하는 [Bencher Metric Format JSON (`json`)][bmf]으로 설정합니다.
     전체 개요는 [벤치마크 하니스 어댑터][adapter json]를 참조하세요.
     (예: `--adapter json`)
-16. `--image` 옵션을 베어 메탈 이미지로 설정합니다.
+17. `--image` 옵션을 베어 메탈 이미지로 설정합니다.
     전체 개요는 [`--image` 문서][image option]를 참조하세요.
     (예: `--image project-abc4567-wxyz123456789:latest`)
-17. Job을 제출하자마자 종료하도록 `--detach` 플래그를 설정합니다.
+18. Job을 제출하자마자 종료하도록 `--detach` 플래그를 설정합니다.
     더 많은 세부 사항은 [`--detach` 문서][detach option]를 참조하세요.
     (예: `--detach`)
-18. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 GitHub Check를 시작할 GitHub API 인증 토큰으로 `--github-actions` 옵션을 설정합니다.
+19. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 GitHub Check를 시작할 GitHub API 인증 토큰으로 `--github-actions` 옵션을 설정합니다.
     더 많은 세부 사항은 [`--github-actions` 문서][github actions option]를 참조하세요.
     (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-19. Job이 끝났을 때 Bencher가 `repository_dispatch` 이벤트를 보낼 수 있도록 `--ci-callback-token` 옵션을 `BENCHER_CALLBACK_TOKEN` **레포지토리** 시크릿으로 설정합니다.
+20. Job이 끝났을 때 Bencher가 `repository_dispatch` 이벤트를 보낼 수 있도록 `--ci-callback-token` 옵션을 `BENCHER_CALLBACK_TOKEN` **레포지토리** 시크릿으로 설정합니다.
     더 많은 세부 사항은 [`--ci-callback-token` 문서][ci callback token option]를 참조하세요.
     (예: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-20. 이미지 안에서 실행할 벤치마크 명령을 지정합니다.
+21. 이미지 안에서 실행할 벤치마크 명령을 지정합니다.
     이미지에 엔트리포인트가 있으면 명령은 그 엔트리포인트에 전달됩니다([`--entrypoint` 옵션][entrypoint option] 참조).
     전체 개요는 [벤치마크 명령][command argument]을 참조하세요.
     (예: `bencher mock`)
@@ -142,6 +145,7 @@ Bencher Bare Metal Job을 비동기적으로 기다릴 수 있게 합니다.
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
 [key option]: /ko/docs/explanation/bencher-run/#--key-key
 [branch option]: /ko/docs/explanation/branches/#--branch-branch
+[hash option]: /ko/docs/explanation/branches/#--hash-hash
 [start point]: /ko/docs/explanation/branches/#--start-point-branch
 [bmf]: /ko/docs/reference/bencher-metric-format/
 [adapter json]: /ko/docs/explanation/adapters/#-json

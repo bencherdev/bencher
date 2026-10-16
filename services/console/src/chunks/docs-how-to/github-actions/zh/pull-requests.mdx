@@ -54,7 +54,11 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 13. 使用 [GitHub Actions `GITHUB_HEAD_REF` 默认环境变量][github default environment variables] 设置 `--branch` 选项为 PR 分支名称。
     查看 [`--branch` 文档][branch option] 以获取完整概览。
     （例如：`--branch "$GITHUB_HEAD_REF"`）
-14. 设置 PR 分支的起点：
+14. 使用 [GitHub Actions `pull_request` 事件][github action pull_request] 将 `--hash` 选项设置为 PR 分支的 `git` hash。
+    在 `pull_request` 事件中，`actions/checkout` 检出的是合并提交，而不是 PR 的某个提交。
+    查看 [`--hash` 文档][hash option] 以获取完整概览。
+    （例如：`--hash '${{ github.event.pull_request.head.sha }}'`）
+15. 设置 PR 分支的起点：
     1. 使用 [GitHub Actions `GITHUB_BASE_REF` 默认环境变量][github default environment variables] 将 `--start-point` 选项设置为 PR 分支起点。
     查看 [`--start-point` 文档][start point] 以获取完整概览。
     （例如：`--start-point "$GITHUB_BASE_REF"`）
@@ -67,19 +71,19 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
     4. 设置 `--start-point-reset` 标志以始终重置 PR 分支到起点。这将防止基准测试数据漂移。
     查看 [`--start-point-reset` 文档][start point reset] 以获取完整概览。
     （例如：`--start-point-reset`）
-15. 将 `--testbed` 选项设置为 Testbed 名称。此名称应与 `runs-on` 中选择的机器匹配。
+16. 将 `--testbed` 选项设置为 Testbed 名称。此名称应与 `runs-on` 中选择的机器匹配。
     查看 [`--tested` 文档][testbed option] 以获取更多详细信息。
     （例如：`--testbed ubuntu-latest`）
-16. 设置 `--error-on-alert` 标志以在生成警报时使命令失败。
+17. 设置 `--error-on-alert` 标志以在生成警报时使命令失败。
    查看 [`--error-on-alert` 文档][alert err] 以获取完整概览。
    （例如：`--error-on-alert`）
-17. 将 `--adapter` 选项设置为 [由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 Bencher Metric Format JSON (`json`)][bmf]。
+18. 将 `--adapter` 选项设置为 [由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 Bencher Metric Format JSON (`json`)][bmf]。
    查看 [基准测试适配器][adapter json] 以获取完整概览。
    （例如：`--adapter json`）
-18. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以便将结果作为 GitHub 检查和评论发布在拉取请求上。
+19. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以便将结果作为 GitHub 检查和评论发布在拉取请求上。
     查看 [`--github-actions` 文档][github actions option] 以获取更多详细信息。
     （例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
-19. 指定基准测试命令参数。
+20. 指定基准测试命令参数。
     查看 [基准测试命令][command argument] 以获取完整概览。
     （例如：`bencher mock`）
 
@@ -99,6 +103,7 @@ import PullRequestsClosed from "./pull-requests-closed.mdx";
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
 [key option]: /zh/docs/explanation/bencher-run/#--key-key
 [branch option]: /zh/docs/explanation/branches/#--branch-branch
+[hash option]: /zh/docs/explanation/branches/#--hash-hash
 [start point]: /zh/docs/explanation/branches/#--start-point-branch
 [start point hash]: /zh/docs/explanation/branches/#--start-point-hash-hash
 [start point clone thresholds]: /zh/docs/explanation/branches/#--start-point-clone-thresholds

@@ -55,25 +55,28 @@ GitHub ActionsがBencher Bare MetalのJobを非同期に待機できるように
 13. [`GITHUB_HEAD_REF`のGitHub Actionsデフォルト環境変数][github default environment variables]を使用して、`--branch`オプションをPRブランチ名に設定します。
     全体を把握するために[`--branch`ドキュメント][branch option]を参照してください。
     (例: `--branch "$GITHUB_HEAD_REF"`)
-14. 上記の[プルリクエスト][pull requests]と同じように、PRブランチの開始ポイントを設定します。
+14. 上記の[プルリクエスト][pull requests]と同じように、`--hash`オプションをPRブランチの`git`ハッシュに設定します。
+    全体を把握するために[`--hash`ドキュメント][hash option]を参照してください。
+    (例: `--hash '${{ github.event.pull_request.head.sha }}'`)
+15. 上記の[プルリクエスト][pull requests]と同じように、PRブランチの開始ポイントを設定します。
     全体を把握するために[`--start-point`ドキュメント][start point]を参照してください。
     (例: `--start-point "$GITHUB_BASE_REF"`)
-15. `--adapter`オプションを、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>が生成する[Bencher Metric Format JSON (`json`)][bmf]に設定します。
+16. `--adapter`オプションを、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>が生成する[Bencher Metric Format JSON (`json`)][bmf]に設定します。
     全体を把握するために[ベンチマークハーネスアダプター][adapter json]を参照してください。
     (例: `--adapter json`)
-16. `--image`オプションをベアメタル用のイメージに設定します。
+17. `--image`オプションをベアメタル用のイメージに設定します。
     全体を把握するために[`--image`ドキュメント][image option]を参照してください。
     (例: `--image project-abc4567-wxyz123456789:latest`)
-17. Jobを送信したらすぐに終了するように`--detach`フラグを設定します。
+18. Jobを送信したらすぐに終了するように`--detach`フラグを設定します。
     詳細は[`--detach`ドキュメント][detach option]を参照してください。
     (例: `--detach`)
-18. [GitHub Actionsの`GITHUB_TOKEN`環境変数][github token]を使用して、GitHubチェックを開始するためのGitHub API認証トークンを`--github-actions`オプションに設定します。
+19. [GitHub Actionsの`GITHUB_TOKEN`環境変数][github token]を使用して、GitHubチェックを開始するためのGitHub API認証トークンを`--github-actions`オプションに設定します。
     詳細は[`--github-actions`ドキュメント][github actions option]を参照してください。
     (例: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-19. Jobの終了時にBencherが`repository_dispatch`イベントを送信できるように、`--ci-callback-token`オプションを`BENCHER_CALLBACK_TOKEN` **リポジトリ**シークレットに設定します。
+20. Jobの終了時にBencherが`repository_dispatch`イベントを送信できるように、`--ci-callback-token`オプションを`BENCHER_CALLBACK_TOKEN` **リポジトリ**シークレットに設定します。
     詳細は[`--ci-callback-token`ドキュメント][ci callback token option]を参照してください。
     (例: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-20. イメージ内で実行するベンチマークコマンドを指定します。
+21. イメージ内で実行するベンチマークコマンドを指定します。
     コマンドは、イメージにエントリポイントがある場合はそのエントリポイントに渡されます（[`--entrypoint`オプション][entrypoint option]を参照）。
     全体を把握するために[ベンチマークコマンド][command argument]を参照してください。
     (例: `bencher mock`)
@@ -142,6 +145,7 @@ GitHub ActionsがBencher Bare MetalのJobを非同期に待機できるように
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
 [key option]: /ja/docs/explanation/bencher-run/#--key-key
 [branch option]: /ja/docs/explanation/branches/#--branch-branch
+[hash option]: /ja/docs/explanation/branches/#--hash-hash
 [start point]: /ja/docs/explanation/branches/#--start-point-branch
 [bmf]: /ja/docs/reference/bencher-metric-format/
 [adapter json]: /ja/docs/explanation/adapters/#-json
