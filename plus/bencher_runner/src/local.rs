@@ -40,7 +40,7 @@ pub fn local_execute(
         "timeout_secs" => config.timeout_secs,
     );
 
-    let workspace = prepare_oci_workspace(log, config)?;
+    let workspace = prepare_oci_workspace(log, config, deadline)?;
     // A cancel during the pull ends the job here rather than after a spawn.
     if cancel_flag.is_some_and(|flag| flag.load(Ordering::SeqCst)) {
         return Err(crate::error::ExecutionError::Canceled("job was canceled".to_owned()).into());
