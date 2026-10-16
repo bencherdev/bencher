@@ -1,5 +1,6 @@
 use bencher_json::{
     BranchName, BranchNameId, BranchResourceId, BranchSlug, GitHash, HeadUuid, ProjectResourceId,
+    project::branch::START_POINT_MAX_VERSIONS,
 };
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
@@ -96,7 +97,7 @@ pub struct CliStartPointCreate {
         long,
         requires = "start_point_branch",
         value_name = "COUNT",
-        default_value = "255"
+        default_value_t = START_POINT_MAX_VERSIONS
     )]
     pub start_point_max_versions: u32,
 
@@ -169,7 +170,7 @@ pub struct CliStartPointUpdate {
         long,
         requires = "start_point_branch",
         value_name = "COUNT",
-        default_value = "255"
+        default_value_t = START_POINT_MAX_VERSIONS
     )]
     pub start_point_max_versions: u32,
 
