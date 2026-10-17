@@ -8,7 +8,7 @@ interface Account {
 	/** The reader's own account as the API now has it. */
 	keepUser: (user: JsonUser) => void;
 	/** End the session and sign in again, back where the reader is. */
-	signOut: () => void;
+	signOut: (back?: boolean) => void;
 }
 
 /** The API and the signed in reader, for the account pages. */

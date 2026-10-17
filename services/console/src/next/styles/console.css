@@ -135,6 +135,47 @@
 		var(--color-avatar-end)
 	);
 }
+/* The avatar opens the account menu under it. */
+.account {
+	position: relative;
+	display: flex;
+	flex: none;
+}
+.console button.avatar {
+	padding: 0;
+	cursor: pointer;
+}
+.console button.avatar[aria-expanded="true"] {
+	box-shadow: 0 0 0 2px var(--color-stroke-accent);
+}
+.account-menu {
+	width: 288px;
+}
+.account-menu .ui-menu-item > .ui-icon {
+	color: var(--color-text-muted);
+	font-size: 16px;
+}
+.account-menu .end {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: auto;
+	color: var(--color-text-muted);
+	font-size: 12.5px;
+}
+.menu-who {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 10px 10px;
+}
+.menu-who b {
+	font-size: 14px;
+}
+.menu-who span {
+	color: var(--color-text-muted);
+	font-size: 12.5px;
+}
 .badge {
 	display: inline-flex;
 	align-items: center;
@@ -828,6 +869,16 @@
 			var(--color-avatar-start),
 			var(--color-avatar-end)
 		);
+	}
+	.console button.avatar[aria-expanded="true"] {
+		box-shadow: none;
+	}
+	.console button.avatar[aria-expanded="true"]::after {
+		box-shadow: 0 0 0 2px var(--color-stroke-accent);
+	}
+	.account-menu {
+		width: calc(100vw - 16px);
+		max-width: none;
 	}
 	.tabs {
 		gap: 0;

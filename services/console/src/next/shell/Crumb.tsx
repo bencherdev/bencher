@@ -3,24 +3,9 @@ import { QueryClientContext } from "@tanstack/solid-query";
 import { Show, createSignal, useContext } from "solid-js";
 import { ProjectContext } from "../project";
 import { consoleUserQuery } from "../queries";
+import { lazyView } from "./lazy";
 
-type View = typeof import("../switcher/Switcher").default;
-
-let loaded: View | undefined;
-let loading: Promise<View> | undefined;
-const load = () => {
-	loading ??= import("../switcher/Switcher").then(
-		({ default: view }) => {
-			loaded = view;
-			return view;
-		},
-		(error: unknown) => {
-			loading = undefined;
-			throw error;
-		},
-	);
-	return loading;
-};
+const switcher = lazyView(() => import("../switcher/Switcher"));
 
 /** The Org / Project crumb, one button that opens the project switcher. */
 const Crumb = (props: {
@@ -32,12 +17,12 @@ const Crumb = (props: {
 }) => {
 	const client = useContext(QueryClientContext);
 	const project = useContext(ProjectContext);
-	const [view, setView] = createSignal(loaded);
+	const [view, setView] = createSignal(switcher.loaded());
 	const [open, setOpen] = createSignal(false);
 	let button: HTMLButtonElement | undefined;
 	// The switcher's code and the reader's projects start together on intent.
 	const intent = () => {
-		load().catch(() => {});
+		switcher.preload();
 		if (client && project && props.reader) {
 			client()
 				.query(consoleUserQuery(project.api, props.reader))
@@ -66,7 +51,8 @@ const Crumb = (props: {
 						setOpen(false);
 						return;
 					}
-					load()
+					switcher
+						.load()
 						.then((view) => {
 							setView(() => view);
 							setOpen(true);

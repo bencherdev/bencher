@@ -45,6 +45,10 @@ const SHARED_FILES = [
 		test: /[\\/](packages[\\/]ui[\\/]src[\\/](Banner|Button|Heading|Icon|Skeleton|ThemeToggle)\.tsx|src[\\/]next[\\/](shell[\\/]Tools\.tsx|(handoff|reader|theme)\.ts))$/,
 	},
 	{
+		name: "sheet",
+		test: /[\\/]packages[\\/]ui[\\/]src[\\/](Chip|Sheet)\.tsx$/,
+	},
+	{
 		name: "memory",
 		test: /[\\/]src[\\/]next[\\/](memory|paths)\.ts$/,
 	},

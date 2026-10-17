@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
 	SHELL_KEY,
 	VERSION_KEY,
-	forgetShell,
+	forgetReader,
 	readShell,
 	recentSlugs,
 	rememberShell,
@@ -157,11 +157,17 @@ describe("shell memory", () => {
 		expect(projects).not.toContain("project-0");
 	});
 
-	// Kills a sign out that leaves names behind.
-	test("is forgotten", () => {
-		const store = storage();
+	// Kills a sign out that leaves the reader, their organization, their
+	// names, or their landing behind, or that forgets anything else.
+	test("is forgotten with the reader", () => {
+		const store = storage({
+			BENCHER_USER: "{}",
+			BENCHER_ORGANIZATION: "{}",
+			BENCHER_THEME: "dark",
+		});
 		rememberShell(store, "reader-a", "hashbrown", shell);
-		forgetShell(store);
-		expect(store.map.has(SHELL_KEY)).toBe(false);
+		rememberVersion(store, "hashbrown", 1);
+		forgetReader(store);
+		expect([...store.map.keys()]).toEqual(["BENCHER_THEME"]);
 	});
 });
