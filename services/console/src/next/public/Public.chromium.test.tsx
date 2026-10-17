@@ -174,7 +174,7 @@ const region = () => page.getByRole("region", { name: "Query, read only" });
 
 // Kills a window the API cut drawn without saying so, a cut said of a window
 // drawn whole, and a cut whose arrival moves the page.
-test("a window the API cut says so in the plot's head, and its arrival moves nothing", async () => {
+test("a window the API cut says so in the plot's axes row, and its arrival moves nothing", async () => {
 	for (const width of [1280, 390]) {
 		await page.viewport(width, 900);
 		const [answer, setAnswer] = createSignal<JsonConsolePerf>(PERF);

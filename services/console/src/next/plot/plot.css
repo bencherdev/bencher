@@ -73,24 +73,11 @@
 	white-space: nowrap;
 }
 
-/* The head: measures, the focused line's boundary, a note, and the alert count, on one line that never wraps. */
-.pl-head {
-	display: flex;
-	align-items: center;
-	gap: var(--spacing-2);
-	height: var(--spacing-11);
-	padding: 0 var(--spacing-3);
-	overflow: hidden;
-	border-bottom: var(--border-width) solid var(--color-border);
-	white-space: nowrap;
-}
-
 .pl-pill {
 	display: inline-flex;
 	flex: none;
 	align-items: center;
-	gap: 6px;
-	max-width: 60%;
+	gap: var(--spacing-1);
 	height: var(--spacing-6);
 	padding: 0 9px;
 	border: var(--border-width) solid var(--color-border-emphasized);
@@ -99,9 +86,13 @@
 	font-size: var(--font-size-xs);
 }
 
-.pl-pill.on {
-	flex: 0 1 auto;
+.pl-pill.on,
+.pl-axt {
+	flex-shrink: 1;
 	min-width: 0;
+}
+
+.pl-pill.on {
 	border-color: var(--color-border-accent);
 	background: var(--color-accent-muted);
 	color: var(--color-text-primary);
@@ -118,15 +109,10 @@
 }
 
 .pl-note {
-	flex: 0 1 auto;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	color: var(--color-text-muted);
 	font-size: var(--font-size-xs);
-}
-
-.pl-spacer {
-	flex: 1;
 }
 
 .pl-alertdot {
@@ -150,30 +136,41 @@
 .pl-panel {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: var(--spacing-1);
 	min-width: 0;
 }
 
+/* Each axis title over its axis; the first row also holds the focused line's boundary, a note, and the alert count, on one line that never wraps. */
 .pl-axes {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
 	gap: var(--spacing-2);
-	height: var(--spacing-4);
-	color: var(--color-text-secondary);
-	font-size: var(--font-size-xs);
-	font-weight: var(--font-weight-medium);
+	height: var(--spacing-8);
 	white-space: nowrap;
 }
 
-.pl-axt {
-	display: inline-flex;
+.pl[data-size="tile"] .pl-axes {
+	height: var(--spacing-6);
+}
+
+/* The room the titles and the alert count leave, for the boundary and the note: cut short, and hidden once too little is left. */
+.pl-status {
+	display: flex;
+	flex: 1;
 	align-items: center;
-	gap: 6px;
+	gap: var(--spacing-2);
+	overflow: hidden;
+	container-type: inline-size;
+}
+
+@container (width < 64px) {
+	.pl-status > * {
+		opacity: 0;
+	}
 }
 
 .pl-axglyph {
-	width: 18px;
+	width: 12px;
 	height: var(--spacing-2);
 	stroke: var(--color-text-muted);
 	stroke-width: 2;
@@ -535,8 +532,26 @@
 		font-size: 12.5px;
 	}
 
-	.pl-head {
-		padding: 0 10px;
+	.pl-pill {
+		padding: 0 6px;
+	}
+
+	/* A two-axis plot's titles take the first row, and the boundary, note, and alert count a second. */
+	.pl[data-layout="dual"]:not([data-size="tile"]) .pl-axes {
+		flex-wrap: wrap;
+		align-content: space-evenly;
+		justify-content: space-between;
+		row-gap: 0;
+		height: 56px;
+	}
+
+	.pl[data-layout="dual"]:not([data-size="tile"]) .pl-axes::before {
+		content: "";
+		flex-basis: 100%;
+	}
+
+	.pl[data-layout="dual"]:not([data-size="tile"]) .pl-axt {
+		order: -1;
 	}
 }
 
