@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@solidjs/router";
+import { useLocation } from "@solidjs/router";
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
@@ -18,7 +18,7 @@ import {
 	on,
 } from "solid-js";
 import type { JsonConsoleThresholds } from "../../types/bencher";
-import { useProject } from "../project";
+import { useProject, useProjectNavigate } from "../project";
 import { useQueryResult } from "../query";
 import { type Range, loadMore } from "../reports/rows";
 import {
@@ -47,7 +47,7 @@ type Batch = QueryObserverResult<JsonConsoleThresholds>;
 const Thresholds = () => {
 	const { api, slug } = useProject();
 	const location = useLocation();
-	const navigate = useNavigate();
+	const navigate = useProjectNavigate();
 	const search = createMemo(() =>
 		decodeSearch(new URLSearchParams(location.search)),
 	);

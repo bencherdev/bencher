@@ -3,7 +3,6 @@ import Dialog from "@bencherdev/ui/Dialog";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import TextInput from "@bencherdev/ui/TextInput";
-import { useNavigate } from "@solidjs/router";
 import { type QueryClient, useQueryClient } from "@tanstack/solid-query";
 import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
 import {
@@ -12,7 +11,7 @@ import {
 	Visibility,
 } from "../../types/bencher";
 import type { Api } from "../api";
-import { useProject } from "../project";
+import { useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { applyPatch, forgetSlug, settleProject } from "./data";
@@ -67,7 +66,7 @@ export default General;
 const ProjectForm = (props: { data: JsonConsoleProject }) => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
-	const navigate = useNavigate();
+	const navigate = useProjectNavigate();
 
 	const saved = createMemo(() => draftOf(props.data.project), undefined, {
 		equals: (a, b) => patchOf(a, b) === undefined,

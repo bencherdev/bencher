@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@solidjs/router";
+import { useLocation } from "@solidjs/router";
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Chip from "@bencherdev/ui/Chip";
@@ -62,7 +62,7 @@ import { loadPlot, loadedPlot } from "../plot/lazy";
 import { useNarrow } from "../plot/narrow";
 import EditPin from "../plots/EditPin";
 import { PLOTS_LIMIT, countPins } from "../plots/pins";
-import { useProject } from "../project";
+import { useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { exploreSearchFromClassic } from "../query/classic";
@@ -152,7 +152,7 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
 	const location = useLocation();
-	const navigate = useNavigate();
+	const navigate = useProjectNavigate();
 	const narrow = useNarrow();
 	const query = createMemo(() => decodeQuery(location.search));
 	// Router paths are relative to the console's base.

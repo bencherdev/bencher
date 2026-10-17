@@ -46,6 +46,7 @@ export const PAGES: Record<PageName, Page> = {
 	Threshold: lazy(() => import("./pages/Threshold")),
 	Settings: lazy(() => import("./pages/Settings")),
 	Dimensions: lazy(() => import("./pages/Dimensions")),
+	Profile: lazy(() => import("./pages/Profile")),
 	NotFound: lazy(() => import("./pages/NotFound")),
 };
 
@@ -82,4 +83,13 @@ export const ROUTES: RouteDefinition[] = [
 		}),
 	),
 	{ path: "/:project/*rest", component: PAGES.NotFound },
+];
+
+/** Where the project routes sit under the new console's root. */
+export const PROJECTS_ROUTE = "/projects";
+
+/** Relative to the new console's root, every path its router owns. */
+export const CONSOLE_ROUTES: RouteDefinition[] = [
+	{ path: PROJECTS_ROUTE, children: ROUTES },
+	{ path: "/users/:user/settings", component: PAGES.Profile },
 ];

@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
 import type {
+	JsonAuthUser,
 	JsonOrganization,
 	JsonPlot,
 	JsonProject,
 	JsonProjectKeyCreated,
 	JsonReport,
+	JsonUser,
+	JsonUserKeyCreated,
 } from "../src/types/bencher";
 import { seed } from "./fixtures";
 
@@ -78,6 +81,51 @@ export const createKey = (
 		seed.member.token,
 		{ name },
 	);
+
+/** A new user of nothing, signed in with a user key the admin makes for them. */
+export const createReader = async (
+	request: APIRequestContext,
+): Promise<JsonAuthUser> => {
+	const slug = `reader-${randomUUID().slice(0, 8)}`;
+	const signup = await request.post(`${seed.api_url}/v0/auth/signup`, {
+		data: {
+			name: "Courage Bagge",
+			slug,
+			email: `${slug}@nowhere.example`,
+			i_agree: true,
+		},
+	});
+	if (!signup.ok()) {
+		throw new Error(
+			`Signup answered ${signup.status()}: ${await signup.text()}`,
+		);
+	}
+	const key = await send<JsonUserKeyCreated>(
+		request,
+		"POST",
+		`/v0/users/${slug}/keys`,
+		seed.admin.token,
+		{ name: "console" },
+	);
+	return {
+		user: await readUser(request, slug, seed.admin.token),
+		token: key.key,
+		creation: key.creation,
+		expiration: key.expiration,
+	};
+};
+
+/** The user as the API has it. */
+export const readUser = async (
+	request: APIRequestContext,
+	user: string,
+	token: string,
+) => {
+	const response = await request.get(`${seed.api_url}/v0/users/${user}`, {
+		headers: { Authorization: `Bearer ${token}` },
+	});
+	return (await response.json()) as JsonUser;
+};
 
 /** The API's answer to the member reading a project. */
 export const projectStatus = async (request: APIRequestContext, slug: string) =>

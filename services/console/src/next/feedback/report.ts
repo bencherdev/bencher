@@ -28,7 +28,8 @@ export interface Form {
 /** Who sends the report, from where. */
 export interface About {
 	url: string;
-	slug: string;
+	/** The project's slug, on a project's page. */
+	slug?: string | undefined;
 	email: string;
 	build: string;
 }
@@ -44,7 +45,7 @@ export const feedbackArgs = (form: Form, about: About) => {
 		...(on("email") ? { email: about.email } : {}),
 		tags: {
 			kind: form.kind,
-			...(on("project") ? { project: about.slug } : {}),
+			...(on("project") && about.slug ? { project: about.slug } : {}),
 			...(on("build") ? { build: about.build } : {}),
 		},
 	};

@@ -4,7 +4,7 @@ import "./feedback.css";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import FeedbackDialog from "./FeedbackDialog";
+import FeedbackDialog, { type FeedbackAbout } from "./FeedbackDialog";
 import type { Form } from "./report";
 import { send } from "./send";
 
@@ -19,16 +19,16 @@ const ABOUT = {
 let dispose: (() => void) | undefined;
 let closed = 0;
 
-beforeEach(() => {
-	closed = 0;
-	vi.mocked(send).mockReset();
+const mount = (about: FeedbackAbout) => {
+	dispose?.();
+	document.body.replaceChildren();
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);
 	dispose = render(
 		() => (
 			<FeedbackDialog
-				about={ABOUT}
+				about={about}
 				onClose={() => {
 					closed += 1;
 				}}
@@ -36,6 +36,12 @@ beforeEach(() => {
 		),
 		root,
 	);
+};
+
+beforeEach(() => {
+	closed = 0;
+	vi.mocked(send).mockReset();
+	mount(ABOUT);
 });
 
 afterEach(() => {
@@ -89,6 +95,15 @@ test("each item unticked stays out of the report", async () => {
 
 	expect(sentForm().kind).toBe("bug");
 	expect(sentForm().off).toEqual(new Set(["session", "email"]));
+});
+
+// Kills a Project item offered on a page with no project, such as Profile.
+test("a page outside a project offers no Project item", async () => {
+	mount({ email: ABOUT.email });
+	await expect
+		.element(page.getByRole("checkbox", { name: /Your email/ }))
+		.toBeVisible();
+	expect(page.getByRole("checkbox", { name: /Project/ }).query()).toBeNull();
 });
 
 // Kills an image that never reaches the report, and one removed that still goes.
