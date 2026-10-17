@@ -8,6 +8,7 @@ import { useQueryResult } from "../query";
 import Announcer from "../shell/Announcer";
 import Shell from "../shell/Shell";
 import { organizationIn, organizationQuery } from "./data";
+import { organizationPageAt } from "./paths";
 
 /** The organization's bar and the page under it, for an organization's paths. */
 const OrganizationLayout = (props: { children?: JSX.Element }) => {
@@ -23,7 +24,7 @@ const OrganizationLayout = (props: { children?: JSX.Element }) => {
 	const known = () =>
 		organization().data ?? organizationIn(bootstrap().data, key());
 	const title = () =>
-		`${location.pathname.endsWith("/projects/add") ? "New project" : "General"} | ${known()?.name ?? key()} | Bencher`;
+		`${organizationPageAt(location.pathname)?.title ?? "Organization"} | ${known()?.name ?? key()} | Bencher`;
 	createEffect(() => {
 		document.title = title();
 	});

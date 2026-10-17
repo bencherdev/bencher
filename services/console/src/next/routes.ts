@@ -8,6 +8,9 @@ type Page = Component & { preload: () => Promise<unknown> };
 
 const runsPage = () => import("./pages/Runs");
 const organizationLayout = () => import("./organization/Layout");
+/** An organization's page draws under its bar, which loads with it. */
+const organizationPage = (page: () => Promise<{ default: Component }>) =>
+	lazy(async () => (await Promise.all([organizationLayout(), page()]))[1]);
 // Reading only the default export spares the bundler a namespace object.
 const alertPage = () =>
 	import("./pages/Alert").then(({ default: page }) => ({ default: page }));
@@ -56,20 +59,10 @@ export const PAGES: Record<PageName, Page> = {
 	),
 	UserKeys: lazy(() => import("./pages/UserKeys")),
 	LegacyTokens: lazy(() => import("./pages/LegacyTokens")),
-	// An organization's page draws under its bar, which loads with it.
-	OrgGeneral: lazy(
-		async () =>
-			(
-				await Promise.all([organizationLayout(), import("./pages/OrgGeneral")])
-			)[1],
-	),
+	OrgGeneral: organizationPage(() => import("./pages/OrgGeneral")),
+	OrgMembers: organizationPage(() => import("./pages/OrgMembers")),
 	Organizations: lazy(() => import("./pages/Organizations")),
-	NewProject: lazy(
-		async () =>
-			(
-				await Promise.all([organizationLayout(), import("./pages/NewProject")])
-			)[1],
-	),
+	NewProject: organizationPage(() => import("./pages/NewProject")),
 	NotFound: lazy(() => import("./pages/NotFound")),
 };
 
@@ -120,6 +113,10 @@ export const CONSOLE_ROUTES: RouteDefinition[] = [
 	{
 		path: "/organizations/:organization/settings",
 		component: PAGES.OrgGeneral,
+	},
+	{
+		path: "/organizations/:organization/members",
+		component: PAGES.OrgMembers,
 	},
 	{
 		path: "/organizations/:organization/projects/add",

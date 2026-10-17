@@ -39,7 +39,7 @@ const page = accountPage(Astro.url.pathname);
 		{modulePreloads(page?.page ?? "NotFound").map((href) => <link rel="modulepreload" href={href} />)}
 	</head>
 	<body>
-		<div id="console" class="console" data-api-url={BENCHER_API_URL}>
+		<div id="console" class="console" data-api-url={BENCHER_API_URL} data-page={page?.page}>
 			<Shell />
 			<ContentSkeleton />
 		</div>
