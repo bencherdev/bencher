@@ -1,16 +1,15 @@
 import type {
-	JsonAlert,
 	JsonConsolePerf,
 	JsonPlot,
-	JsonReport,
 	JsonVariant,
 } from "../../types/bencher";
 import type { Api } from "../api";
 import type { ExploreQuery, Parameters } from "../query/query";
 import { perfSearch, requestKey } from "./request";
 
-const project = (slug: string) => `/v0/projects/${encodeURIComponent(slug)}`;
-const consolePath = (slug: string) =>
+export const project = (slug: string) =>
+	`/v0/projects/${encodeURIComponent(slug)}`;
+export const consolePath = (slug: string) =>
 	`/v0/console/projects/${encodeURIComponent(slug)}`;
 
 /**
@@ -108,33 +107,4 @@ export const searchQuery = (
 			...(units === undefined ? {} : { units }),
 		}));
 	},
-});
-
-/** How many of each list blank Explore starts from. */
-export const START = { alerts: 3, reports: 4, plots: 3 } as const;
-
-const listQuery = <T>(api: Api, slug: string, name: string, path: string) => ({
-	queryKey: ["console", "start", slug, name],
-	queryFn: async () => (await api.get<T[]>(`${project(slug)}${path}`)).data,
-});
-
-export const startQueries = (api: Api, slug: string) => ({
-	alerts: listQuery<JsonAlert>(
-		api,
-		slug,
-		"alerts",
-		`/alerts?status=active&sort=created&direction=desc&per_page=${START.alerts}`,
-	),
-	reports: listQuery<JsonReport>(
-		api,
-		slug,
-		"reports",
-		`/reports?per_page=${START.reports}`,
-	),
-	plots: listQuery<JsonPlot>(
-		api,
-		slug,
-		"plots",
-		`/plots?per_page=${START.plots}`,
-	),
 });

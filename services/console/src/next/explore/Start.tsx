@@ -16,10 +16,10 @@ import {
 import {
 	BoundaryLimit,
 	type JsonAlert,
+	type JsonConsoleRunSummary,
 	type JsonPlot,
-	type JsonReport,
 } from "../../types/bencher";
-import { projectPath, reportPath } from "../paths";
+import { projectPath } from "../paths";
 import { formatDelta, formatWhen } from "../plot/format";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
@@ -27,26 +27,28 @@ import type { ExploreQuery } from "../query/query";
 import { exploreSearch } from "../query/selection";
 import { type Option, SearchMenu } from "./Box";
 import { plotSearch } from "./pinned";
+import { type Dimension, OPTIONS, nameQuery } from "./queries";
 import {
-	type Dimension,
-	OPTIONS,
+	RUN_REPORTS,
+	type RunReport,
 	START,
-	nameQuery,
-	startQueries,
-} from "./queries";
-import {
 	alertLine,
 	benchmarkOptions,
 	reportBenchmarkQuery,
 	reportBenchmarksQuery,
+	runHref,
+	runName,
+	runReportsQuery,
+	runTime,
+	startQueries,
 } from "./start";
 import { rollingName } from "./window";
 
-/** Three short lists blank Explore starts from, asked for in one round; a report opens to its benchmarks in place. */
+/** Three short lists blank Explore starts from, asked for in one round; a run opens to its reports in place, and a report to its benchmarks. */
 const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 	const { api, slug } = useProject();
 	const alerts = useQueryResult(() => startQueries(api, slug()).alerts);
-	const reports = useQueryResult(() => startQueries(api, slug()).reports);
+	const runs = useQueryResult(() => startQueries(api, slug()).runs);
 	const plots = useQueryResult(() => startQueries(api, slug()).plots);
 	const explore = () => projectPath(slug(), "explore");
 	const [open, setOpen] = createSignal<string>();
@@ -74,18 +76,18 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 					)}
 				</List>
 				<List
-					id="ex-reports"
-					title="Latest reports"
+					id="ex-runs"
+					title="Latest runs"
 					all={{ href: projectPath(slug(), "runs"), text: "All runs" }}
-					result={reports()}
-					rows={START.reports}
-					empty="No reports"
+					result={runs()}
+					rows={START.runs}
+					empty="No runs"
 				>
-					{(report: JsonReport) => (
-						<ReportRow
-							report={report}
-							open={open() === report.uuid}
-							onOpen={(next) => setOpen(next ? report.uuid : undefined)}
+					{(run: JsonConsoleRunSummary) => (
+						<RunRow
+							run={run}
+							open={open() === run.uuid}
+							onOpen={(next) => setOpen(next ? run.uuid : undefined)}
 							onQuery={props.onQuery}
 						/>
 					)}
@@ -189,9 +191,138 @@ const List = <T,>(props: {
 	</section>
 );
 
-/** A report that opens, anywhere on its row, to search the benchmarks it ran; its hash opens the report. */
+/** A run that opens, anywhere on its row, to its reports; its hash opens the run. */
+const RunRow = (props: {
+	run: JsonConsoleRunSummary;
+	open: boolean;
+	onOpen: (open: boolean) => void;
+	onQuery: (query: ExploreQuery) => void;
+}) => {
+	const { api, slug } = useProject();
+	const client = useQueryClient();
+	// Started as the pointer or focus arrives, so the click opens a list already read.
+	const prefetch = () =>
+		client.query(runReportsQuery(api, slug(), props.run.uuid)).catch(() => {});
+	const name = () => runName(props.run);
+	const time = () => runTime(props.run.end_time - props.run.start_time);
+	const sub = () =>
+		[
+			formatWhen(props.run.start_time),
+			props.run.reports > 1 && `${props.run.reports} reports`,
+			props.run.testbed_count > 1 && `${props.run.testbed_count} testbeds`,
+		].filter((part): part is string => typeof part === "string");
+	const panel = createUniqueId();
+	return (
+		<div>
+			<div class="ex-rhead rowlink">
+				<span class="grow">
+					<span class="ex-sline">
+						<button
+							type="button"
+							class="ex-rbtn rowlink-name"
+							// The row's other lines sit outside its button, so its name carries them.
+							aria-label={[
+								props.run.branch.name,
+								`run ${name()}`,
+								...sub(),
+								time(),
+							].join(", ")}
+							aria-expanded={props.open}
+							aria-controls={panel}
+							onPointerEnter={prefetch}
+							onFocus={prefetch}
+							onClick={() => props.onOpen(!props.open)}
+						>
+							<b class="ex-ellip">{props.run.branch.name}</b>
+						</button>
+						<a class="ex-rhash" href={runHref(slug(), props.run.uuid)}>
+							{name()}
+						</a>
+					</span>
+					<span class="ex-sub">{sub().join(" · ")}</span>
+				</span>
+				<span class="ex-n">{time()}</span>
+				<Icon name="chevron-down" class="ex-rcaret" />
+			</div>
+			<Show when={props.open}>
+				<RunReports
+					id={panel}
+					run={props.run}
+					name={name()}
+					onQuery={props.onQuery}
+				/>
+			</Show>
+		</div>
+	);
+};
+
+/** An opened run's first reports in start order, each opening to its benchmarks; its page lists the rest. */
+const RunReports = (props: {
+	id: string;
+	run: JsonConsoleRunSummary;
+	name: string;
+	onQuery: (query: ExploreQuery) => void;
+}) => {
+	const { api, slug } = useProject();
+	const result = useQueryResult(() =>
+		runReportsQuery(api, slug(), props.run.uuid),
+	);
+	const [open, setOpen] = createSignal<string>();
+	return (
+		<section
+			id={props.id}
+			class="ex-rpick"
+			aria-label={`Reports in run ${props.name}`}
+		>
+			<Switch
+				fallback={
+					<For
+						each={Array.from({
+							length: Math.min(props.run.reports, RUN_REPORTS),
+						})}
+					>
+						{() => <Skeleton size="text" class="ex-skel" />}
+					</For>
+				}
+			>
+				<Match when={result().data}>
+					{(run) => (
+						<>
+							<For each={run().reports}>
+								{(report) => (
+									<ReportRow
+										report={{ ...report, branch: run().branch }}
+										order={report.order}
+										branch={run().branch.name}
+										open={open() === report.uuid}
+										onOpen={(next) => setOpen(next ? report.uuid : undefined)}
+										onQuery={props.onQuery}
+									/>
+								)}
+							</For>
+							<Show when={run().total > run().reports.length}>
+								<div class="ex-sh">
+									<a href={runHref(slug(), props.run.uuid)}>
+										All {run().total} reports
+									</a>
+								</div>
+							</Show>
+						</>
+					)}
+				</Match>
+				<Match when={result().isError}>
+					<p class="ex-none">This list did not load</p>
+				</Match>
+			</Switch>
+		</section>
+	);
+};
+
+/** A report of an opened run, by its place in the run and its testbed, that opens to search the benchmarks it ran. */
 const ReportRow = (props: {
-	report: JsonReport;
+	report: RunReport;
+	order: number;
+	branch: string;
 	open: boolean;
 	onOpen: (open: boolean) => void;
 	onQuery: (query: ExploreQuery) => void;
@@ -203,46 +334,36 @@ const ReportRow = (props: {
 		client
 			.query(reportBenchmarksQuery(api, slug(), props.report.uuid))
 			.catch(() => {});
-	const hash = () => props.report.branch.head.version?.hash?.slice(0, 7);
 	const panel = createUniqueId();
 	let toggle: HTMLButtonElement | undefined;
 	return (
 		<div>
-			<div class="ex-rhead">
+			<div class="ex-rhead rowlink">
 				<button
 					ref={toggle}
 					type="button"
-					class="ex-rbtn"
+					class="ex-rbtn rowlink-name"
 					aria-expanded={props.open}
 					aria-controls={panel}
 					onPointerEnter={prefetch}
 					onFocus={prefetch}
 					onClick={() => props.onOpen(!props.open)}
 				>
-					<span class="grow">
-						<span class="ex-sline">
-							<b>{props.report.branch.name}</b>
-							<span class="muted">· {props.report.testbed.name}</span>
-						</span>
-						<span class="ex-sub">
-							{formatWhen(Date.parse(props.report.start_time))}
-						</span>
+					<span class="ex-sline">
+						<span class="mono muted">{props.order}</span>
+						<b class="ex-ellip">{props.branch}</b>
+						<span class="muted">· {props.report.testbed.name}</span>
 					</span>
 				</button>
-				<a class="ex-rhash" href={reportPath(slug(), props.report.uuid)}>
-					{hash() ?? "report"}
-				</a>
+				<span class="spacer" />
 				<Icon name="chevron-down" class="ex-rcaret" />
 			</div>
 			<Show when={props.open}>
 				<Picker
 					id={panel}
 					report={props.report}
-					name={
-						hash()
-							? `report ${hash()}`
-							: `the report on ${props.report.branch.name}`
-					}
+					branch={props.branch}
+					name={`report ${props.order} on ${props.report.testbed.name}`}
 					anchor={toggle}
 					onClose={() => props.onOpen(false)}
 					onQuery={props.onQuery}
@@ -255,7 +376,8 @@ const ReportRow = (props: {
 /** The benchmarks a report ran, searched as the Benchmarks box searches; a pick draws it as the report ran it. */
 const Picker = (props: {
 	id: string;
-	report: JsonReport;
+	report: RunReport;
+	branch: string;
 	/** The report, as a reader hears it. */
 	name: string;
 	anchor: HTMLElement | undefined;
@@ -284,7 +406,7 @@ const Picker = (props: {
 			return;
 		}
 		const { branch, testbed } = props.report;
-		seed("branches", branch.uuid, branch.name);
+		seed("branches", branch.uuid, props.branch);
 		seed("testbeds", testbed.uuid, testbed.name);
 		seed("benchmarks", benchmark.uuid, benchmark.name);
 		for (const measure of benchmark.measures) {

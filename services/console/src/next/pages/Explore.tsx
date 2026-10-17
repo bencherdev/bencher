@@ -41,12 +41,12 @@ import {
 	perfQuery,
 	plotKey,
 	plotQuery,
-	startQueries,
 	variantsQuery,
 } from "../explore/queries";
 import { drawable, drawsPlot, requestKey } from "../explore/request";
 import { useRequested } from "../explore/requested";
 import Start from "../explore/Start";
+import { startQueries } from "../explore/start";
 import { chipSummary } from "../explore/summary";
 import { rollingName } from "../explore/window";
 import {
@@ -92,10 +92,10 @@ const Explore = (props: { readOnly?: boolean }) => {
 			query.benchmarks.length === 0
 		);
 	});
-	// Blank Explore lists the latest reports, so their answer decides the page
+	// Blank Explore lists the latest runs, so their answer decides the page
 	// and the other lists load beside it.
 	const latest = useQueryResult(() => ({
-		...startQueries(api, slug()).reports,
+		...startQueries(api, slug()).runs,
 		enabled: opening(),
 	}));
 	createEffect(() => {
