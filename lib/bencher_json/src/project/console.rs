@@ -15,10 +15,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "plus")]
 use crate::SpecUuid;
 use crate::{
-    AlertUuid, BenchmarkSlug, BenchmarkUuid, BranchSlug, BranchUuid, HeadUuid, JsonPerfQuery,
-    MeasureSlug, MeasureUuid, ModelUuid, ParameterSet, ReportUuid, TestbedSlug, TestbedUuid,
-    ThresholdUuid, VariantUuid,
-    urlencoded::{UrlEncodedError, from_urlencoded_list},
+    AlertUuid, BenchmarkSlug, BenchmarkUuid, BranchNameId, BranchSlug, BranchUuid, HeadUuid,
+    JsonPerfQuery, MeasureSlug, MeasureUuid, ModelUuid, ParameterSet, ReportUuid, TestbedNameId,
+    TestbedSlug, TestbedUuid, ThresholdUuid, VariantUuid, VersionUuid,
+    urlencoded::{UrlEncodedError, from_urlencoded, from_urlencoded_list},
 };
 
 use super::{
@@ -27,7 +27,7 @@ use super::{
     head::{JsonVersion, VersionNumber},
     perf::{JsonPerfQueryParams, MAX_DIMENSION_ENTRIES},
     plot::{JsonPlot, PlotUuid},
-    report::{Adapter, Iteration, JsonReportAlertsCounts},
+    report::{Adapter, Iteration, JsonReportAlertsCounts, ReportAlerts},
 };
 
 /// How many lines a report page returns when the request does not say.
@@ -719,6 +719,186 @@ pub struct JsonConsolePlotTitle {
 pub struct JsonConsolePlot {
     pub plot: JsonPlot,
     pub perf: JsonConsolePerf,
+}
+
+/// How many runs, or reports of a run, a page holds when the request does not say.
+pub const DEFAULT_CONSOLE_RUNS_PER_PAGE: u8 = 32;
+
+/// The most testbeds, adapters, or authors a run in the list names; its counts
+/// say how many it has.
+pub const MAX_CONSOLE_RUN_NAMES: usize = 8;
+
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRunsQueryParams {
+    /// Only the runs on this branch, by UUID, slug, or name.
+    pub branch: Option<String>,
+    /// Only the runs with a report on this testbed, by UUID, slug, or name.
+    pub testbed: Option<String>,
+    /// Only the runs with a report from this adapter, as reports list it.
+    pub adapter: Option<Adapter>,
+    /// If set to `active`, only the runs with an active alert.
+    pub alerts: Option<ReportAlerts>,
+    /// Only the runs whose first report started at or after this time, in milliseconds.
+    pub start_time: Option<DateTimeMillis>,
+    /// Only the runs whose first report started at or before this time, in milliseconds.
+    pub end_time: Option<DateTimeMillis>,
+    /// The page of runs to return, starting at 1.
+    pub page: Option<u32>,
+    /// The number of runs per page.
+    pub per_page: Option<u8>,
+}
+
+#[derive(Debug, Clone)]
+pub struct JsonConsoleRunsQuery {
+    pub branch: Option<BranchNameId>,
+    pub testbed: Option<TestbedNameId>,
+    pub adapter: Option<Adapter>,
+    pub alerts: Option<ReportAlerts>,
+    pub start_time: Option<DateTimeMillis>,
+    pub end_time: Option<DateTimeMillis>,
+    pub page: Option<u32>,
+    pub per_page: Option<u8>,
+}
+
+impl TryFrom<JsonConsoleRunsQueryParams> for JsonConsoleRunsQuery {
+    type Error = UrlEncodedError;
+
+    fn try_from(query_params: JsonConsoleRunsQueryParams) -> Result<Self, Self::Error> {
+        let JsonConsoleRunsQueryParams {
+            branch,
+            testbed,
+            adapter,
+            alerts,
+            start_time,
+            end_time,
+            page,
+            per_page,
+        } = query_params;
+        Ok(Self {
+            branch: branch.as_deref().map(from_urlencoded).transpose()?,
+            testbed: testbed.as_deref().map(from_urlencoded).transpose()?,
+            adapter,
+            alerts,
+            start_time,
+            end_time,
+            page,
+            per_page,
+        })
+    }
+}
+
+/// A page of a project's runs, newest first by their first report's start. A
+/// run is every report with one version, which one branch head made.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRuns {
+    /// Every run that matches, across pages.
+    pub total: u32,
+    pub runs: Vec<JsonConsoleRunSummary>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRunSummary {
+    /// The run's version.
+    pub uuid: VersionUuid,
+    pub number: VersionNumber,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hash: Option<GitHash>,
+    pub branch: JsonConsoleBranch,
+    /// When its first report started.
+    pub start_time: DateTimeMillis,
+    /// When its last report ended.
+    pub end_time: DateTimeMillis,
+    pub reports: u32,
+    /// Its testbeds in the order its reports first ran on them, at most
+    /// [`MAX_CONSOLE_RUN_NAMES`].
+    pub testbeds: Vec<ResourceName>,
+    pub testbed_count: u32,
+    /// Its adapters in the order its reports first used them, at most
+    /// [`MAX_CONSOLE_RUN_NAMES`].
+    pub adapters: Vec<Adapter>,
+    pub adapter_count: u32,
+    /// Who sent its reports in the order they first did, at most
+    /// [`MAX_CONSOLE_RUN_NAMES`].
+    pub authors: Vec<JsonConsoleAuthor>,
+    pub author_count: u32,
+    /// The sum of its reports' lines.
+    pub lines: u32,
+    pub alerts: JsonReportAlertsCounts,
+}
+
+/// Who sent a report: the project key that created it, else the person.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleAuthor {
+    pub kind: ConsoleAuthorKind,
+    pub name: String,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ConsoleAuthorKind {
+    User,
+    Key,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRunQueryParams {
+    /// The page of reports to return, starting at 1.
+    pub page: Option<u32>,
+    /// The number of reports per page.
+    pub per_page: Option<u8>,
+}
+
+/// One run as the console's run page draws it: its heading's facts and one page
+/// of its reports in start order.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRun {
+    /// The run's version.
+    pub uuid: VersionUuid,
+    pub number: VersionNumber,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hash: Option<GitHash>,
+    pub branch: JsonConsoleBranch,
+    /// When its first report started.
+    pub start_time: DateTimeMillis,
+    /// When its last report ended.
+    pub end_time: DateTimeMillis,
+    /// Every report in the run, across pages.
+    pub total: u32,
+    pub testbeds: u32,
+    /// The sum of its reports' lines.
+    pub lines: u32,
+    pub alerts: JsonReportAlertsCounts,
+    pub reports: Vec<JsonConsoleRunReport>,
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRunReport {
+    /// Its place in the run by start, from 1.
+    pub order: u32,
+    pub uuid: ReportUuid,
+    pub testbed: JsonConsoleTestbed,
+    pub adapter: Adapter,
+    pub start_time: DateTimeMillis,
+    pub end_time: DateTimeMillis,
+    /// The most lines any of its iterations reported.
+    pub lines: u32,
+    pub alerts: JsonReportAlertsCounts,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<JsonConsoleAuthor>,
 }
 
 #[cfg(test)]

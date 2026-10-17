@@ -1,11 +1,11 @@
 import { expect, test } from "vitest";
 import type { Api } from "../api";
-import { type ReportsBatch, batchKey, batchQuery } from "./query";
-import { DEFAULT_SEARCH } from "./search";
+import { DEFAULT_SEARCH } from "../reports/search";
+import { type RunsBatch, batchKey, batchQuery } from "./query";
 
 const api = {} as Api;
 const BATCH = { page: 1, perPage: 20 };
-const previous: ReportsBatch = { reports: [], total: 3, batch: BATCH };
+const previous: RunsBatch = { runs: [], total: 3, batch: BATCH };
 const queryOf = (slug: string) => ({
 	queryKey: batchKey(slug, { ...DEFAULT_SEARCH, alerts: true }, BATCH),
 });

@@ -323,12 +323,12 @@ test("Per plot draws each tile at its own window, and a page window draws them a
 });
 
 // Kills an empty Plots whose places to pin from do not lead to their tabs.
-test("an empty Plots links to Explore, Reports, and Alerts to pin from", async () => {
+test("an empty Plots links to Explore, Runs, and Alerts to pin from", async () => {
 	const { api } = plotsApi(0);
 	mount(api, newClient(api, 0));
 	for (const [name, tab] of [
 		["Explore", "explore"],
-		["report", "reports"],
+		["report", "runs"],
 		["alert", "alerts"],
 	] as const) {
 		await expect

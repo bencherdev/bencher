@@ -11,7 +11,7 @@ import { centerCurrentTab } from "./scroll";
 
 let dispose: (() => void) | undefined;
 
-const mount = (tab: Tab = "reports") => {
+const mount = (tab: Tab = "runs") => {
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);
@@ -269,7 +269,7 @@ describe("wide", () => {
 			() => (
 				<Shell
 					slug="hashbrown"
-					tab="reports"
+					tab="runs"
 					organization={{ name: "Pompeii LLC ".repeat(4), uuid: "org-uuid" }}
 					project={"Hashbrown ".repeat(12)}
 					alerts={1}
@@ -318,7 +318,7 @@ test("the Alerts tab holds no room without a count, and one width with any", asy
 		root.className = "console";
 		document.body.append(root);
 		dispose = render(
-			() => <Shell slug="hashbrown" tab="reports" alerts={alerts()} />,
+			() => <Shell slug="hashbrown" tab="runs" alerts={alerts()} />,
 			root,
 		);
 		const tab = () =>
@@ -338,11 +338,11 @@ test("the Alerts tab holds no room without a count, and one width with any", asy
 			range.selectNodeContents(text);
 			return range.getBoundingClientRect();
 		};
-		/** The space from Alerts to Thresholds past the space from Reports to Alerts. */
+		/** The space from Alerts to Thresholds past the space from Runs to Alerts. */
 		const room = () =>
 			label("Thresholds").left -
 			label("Alerts").right -
-			(label("Alerts").left - label("Reports").right);
+			(label("Alerts").left - label("Runs").right);
 
 		expect(room(), `none at ${width}`).toBeCloseTo(0, 0);
 		setAlerts(0);
@@ -371,7 +371,7 @@ test("the Alerts tab draws no badge without a count, and says 99+ past 99", asyn
 	root.className = "console";
 	document.body.append(root);
 	dispose = render(
-		() => <Shell slug="hashbrown" tab="reports" alerts={alerts()} />,
+		() => <Shell slug="hashbrown" tab="runs" alerts={alerts()} />,
 		root,
 	);
 	const tab = () => root.querySelector('.tab[data-shell="alerts"]');

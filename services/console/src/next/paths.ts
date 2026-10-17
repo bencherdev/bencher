@@ -14,7 +14,7 @@ export const DIMENSIONS = [
 export type Tab =
 	| "explore"
 	| "plots"
-	| "reports"
+	| "runs"
 	| "alerts"
 	| "thresholds"
 	| "settings";
@@ -24,7 +24,7 @@ export const TABS: readonly { tab: Tab; label: string; segments: string[] }[] =
 	[
 		{ tab: "explore", label: "Explore", segments: ["explore"] },
 		{ tab: "plots", label: "Plots", segments: ["plots"] },
-		{ tab: "reports", label: "Reports", segments: ["reports"] },
+		{ tab: "runs", label: "Runs", segments: ["runs"] },
 		{ tab: "alerts", label: "Alerts", segments: ["alerts"] },
 		{ tab: "thresholds", label: "Thresholds", segments: ["thresholds"] },
 		{
@@ -38,8 +38,11 @@ export const TABS: readonly { tab: Tab; label: string; segments: string[] }[] =
 export const projectPath = (slug: string, tab?: Tab) =>
 	`${NEXT_PROJECTS}/${slug}/${tab ?? ""}`;
 
+/** A report's page, which sits outside the tab row's paths and belongs to Runs. */
+const REPORTS = "reports";
+
 export const reportPath = (slug: string, report: string) =>
-	`${projectPath(slug, "reports")}/${report}`;
+	`${NEXT_PROJECTS}/${slug}/${REPORTS}/${report}`;
 
 export const alertPath = (slug: string, alert: string) =>
 	`${projectPath(slug, "alerts")}/${alert}`;
@@ -47,7 +50,7 @@ export const alertPath = (slug: string, alert: string) =>
 const TAB_PAGES = {
 	explore: "Explore",
 	plots: "Plots",
-	reports: "Reports",
+	runs: "Runs",
 	alerts: "Alerts",
 	thresholds: "Thresholds",
 	settings: "Settings",
@@ -56,6 +59,7 @@ const TAB_PAGES = {
 /** A file under `pages/`: each draws one kind of project path. */
 export type PageName =
 	| (typeof TAB_PAGES)[Tab]
+	| "Run"
 	| "Report"
 	| "Alert"
 	| "Threshold"
@@ -64,7 +68,10 @@ export type PageName =
 
 /** The page that draws a project path, from its segments after the project. */
 export const pageName = (rest: string[]): PageName => {
-	if (rest.length === 2 && rest[0] === "reports") {
+	if (rest.length === 2 && rest[0] === "runs") {
+		return "Run";
+	}
+	if (isReport(rest)) {
 		return "Report";
 	}
 	if (rest.length === 2 && rest[0] === "thresholds") {
@@ -89,11 +96,16 @@ export interface ProjectLocation {
 export const parseNextPath = (pathname: string) =>
 	parseProjectPath(NEXT_PROJECTS, pathname);
 
-/** The project root is Explore. */
+const isReport = (rest: string[]) => rest.length === 2 && rest[0] === REPORTS;
+
+/** The project root is Explore, and a report belongs to Runs. */
 export const tabOf = (rest: string[]): Tab | undefined => {
 	const [segment] = rest;
 	if (segment === undefined) {
 		return "explore";
+	}
+	if (isReport(rest)) {
+		return "runs";
 	}
 	return TABS.find(({ segments }) => segments.includes(segment))?.tab;
 };
@@ -106,6 +118,8 @@ const CLASSIC_PERF = "perf";
 const NEXT_EXPLORE = "explore";
 // The classic keys list is Settings' Keys.
 const KEYS = "keys";
+// The classic console lists reports where the new one lists runs, and has no run page.
+const NEXT_RUNS = "runs";
 
 // A redirect between the consoles keeps the place and drops the query: each
 // console reads its own, and the classic one adds paging to its lists.
@@ -126,7 +140,8 @@ export const classicPlace = (pathname: string): ClassicPlace | undefined => {
 	if (rest.length === 0 || rest[0] === NEXT_EXPLORE) {
 		return { path: `${CLASSIC_PROJECTS}/${slug}/${CLASSIC_PERF}`, hash: false };
 	}
-	return { path: `${CLASSIC_PROJECTS}/${slug}/${rest.join("/")}`, hash: true };
+	const path = rest[0] === NEXT_RUNS ? REPORTS : rest.join("/");
+	return { path: `${CLASSIC_PROJECTS}/${slug}/${path}`, hash: true };
 };
 
 export interface ClassicPlace {
@@ -149,16 +164,14 @@ export const nextHref = ({ pathname, hash }: Place) => {
 	if (rest[0] === KEYS) {
 		return `${NEXT_PROJECTS}/${slug}/${KEYS}`;
 	}
-	if (!tabOf(rest)) {
-		return undefined;
-	}
 	// The new console creates nothing by hand, so a form lands on what it would edit.
 	const last = rest.at(-1);
 	const kept = last === "add" || last === "edit" ? rest.slice(0, -1) : rest;
-	if (kept.length < rest.length) {
-		return `${NEXT_PROJECTS}/${slug}/${kept.join("/")}`;
+	const target = kept.length === 1 && kept[0] === REPORTS ? [NEXT_RUNS] : kept;
+	if (!tabOf(target)) {
+		return undefined;
 	}
-	return `${NEXT_PROJECTS}/${slug}/${rest.join("/")}${hash}`;
+	return `${NEXT_PROJECTS}/${slug}/${target.join("/")}${kept.length < rest.length ? "" : hash}`;
 };
 
 const parseProjectPath = (

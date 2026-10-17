@@ -54,6 +54,6 @@ export const loadMore = ({
 
 /** Whether a batch follows `last`: it came back full and the rows loaded fall short of the total. */
 export const hasMore = (
-	last: { reports: unknown[]; total: number; batch: { perPage: number } },
+	last: { rows: unknown[]; total: number; batch: { perPage: number } },
 	loaded: number,
-) => loaded < last.total && last.reports.length === last.batch.perPage;
+) => loaded < last.total && last.rows.length === last.batch.perPage;

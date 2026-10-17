@@ -257,6 +257,8 @@ test("marks every view of the project's alerts stale, and nothing else", async (
 		[["console", "plots", "hashbrown", null, 8, 1], { order: [], plots: [] }],
 		[["console", "report", "hashbrown", uuid(2)], {}],
 		[["console", "reports", "hashbrown", ""], []],
+		[["console", "run", "hashbrown", uuid(5), 32, 1], {}],
+		[["console", "runs", "hashbrown", "", 32, 1], { runs: [], total: 0 }],
 		[["console", "start", "hashbrown", "alerts"], []],
 		[["console", "threshold", "hashbrown", uuid(3)], {}],
 		[["console", "thresholds", "hashbrown", ""], []],

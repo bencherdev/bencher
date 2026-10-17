@@ -17,20 +17,16 @@ import {
 	mapArray,
 	on,
 } from "solid-js";
-import type { JsonReport } from "../../types/bencher";
+import type { JsonConsoleRunSummary } from "../../types/bencher";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
-import Controls from "../reports/Controls";
-import {
-	type ReportsBatch,
-	batchQuery,
-	nameKey,
-	screenBatch,
-} from "../reports/query";
-
-export { prefetchReports as prefetch } from "../reports/query";
-import ReportsTable from "../reports/ReportsTable";
+import Controls, { nameKey } from "../reports/Controls";
 import { type Range, hasMore, loadMore } from "../reports/rows";
+import { screenBatch } from "../reports/virtual";
+import { type RunsBatch, batchQuery } from "../runs/query";
+
+export { prefetchRuns as prefetch } from "../runs/query";
+import RunsTable from "../runs/RunsTable";
 import {
 	type FilterNames,
 	type ReportsSearch,
@@ -41,9 +37,9 @@ import {
 /** Skeleton rows for a list never fetched, which show only once the wait is noticeable. */
 const SKELETON_ROWS = 8;
 
-type Batch = QueryObserverResult<ReportsBatch>;
+type Batch = QueryObserverResult<RunsBatch>;
 
-const Reports = () => {
+const Runs = () => {
 	const { api, slug } = useProject();
 	const location = useLocation();
 	const navigate = useNavigate();
@@ -53,7 +49,7 @@ const Reports = () => {
 	const setSearch = (next: ReportsSearch) => {
 		const query = encodeSearch(next);
 		// Router paths are relative to the console's base.
-		navigate(`/${slug()}/reports${query ? `?${query}` : ""}`, {
+		navigate(`/${slug()}/runs${query ? `?${query}` : ""}`, {
 			scroll: false,
 		});
 	};
@@ -86,15 +82,15 @@ const Reports = () => {
 	/** The batch after the loaded ones, while it loads or once it failed. */
 	const next = () => batches()[loaded().length];
 
-	const reports = createMemo(() => {
+	const runs = createMemo(() => {
 		const seen = new Set<string>();
-		const all: JsonReport[] = [];
-		// A report that arrives between batches shifts them by one.
+		const all: JsonConsoleRunSummary[] = [];
+		// A run that arrives between batches shifts them by one.
 		for (const batch of loaded()) {
-			for (const report of batch.data?.reports ?? []) {
-				if (!seen.has(report.uuid)) {
-					seen.add(report.uuid);
-					all.push(report);
+			for (const run of batch.data?.runs ?? []) {
+				if (!seen.has(run.uuid)) {
+					seen.add(run.uuid);
+					all.push(run);
 				}
 			}
 		}
@@ -120,8 +116,11 @@ const Reports = () => {
 			shown &&
 			last &&
 			next() === undefined &&
-			hasMore(last, reports().length) &&
-			loadMore({ end: shown.end, loaded: reports().length, batch: perPage })
+			hasMore(
+				{ rows: last.runs, total: last.total, batch: last.batch },
+				runs().length,
+			) &&
+			loadMore({ end: shown.end, loaded: runs().length, batch: perPage })
 		) {
 			setCount(batches().length + 1);
 		}
@@ -130,18 +129,18 @@ const Reports = () => {
 	return (
 		<main class="page reports">
 			<div class="pagehead">
-				<div class="crumb-line">Reports</div>
+				<div class="crumb-line">Runs</div>
 				<Heading level={1} size="xl" class="reports-count">
 					<Show
 						when={total() !== undefined}
 						fallback={
 							<>
 								<Skeleton size="text" class="reports-count-skel" />
-								<span class="sr-only">Reports</span>
+								<span class="sr-only">Runs</span>
 							</>
 						}
 					>
-						{total() === 1 ? "1 report" : `${total()} reports`}
+						{total() === 1 ? "1 run" : `${total()} runs`}
 					</Show>
 				</Heading>
 			</div>
@@ -152,14 +151,14 @@ const Reports = () => {
 				now={now()}
 			/>
 			<Switch>
-				<Match when={first() && reports().length === 0 && !busy()}>
+				<Match when={first() && runs().length === 0 && !busy()}>
 					<NothingFound search={search()} onSearch={setSearch} />
 				</Match>
-				<Match when={reports().length > 0}>
-					<ReportsTable
+				<Match when={runs().length > 0}>
+					<RunsTable
 						slug={slug()}
-						reports={reports()}
-						total={total() ?? reports().length}
+						runs={runs()}
+						total={total() ?? runs().length}
 						now={now()}
 						onRange={setRange}
 						busy={busy()}
@@ -171,7 +170,7 @@ const Reports = () => {
 				</Match>
 				<Match when={batches()[0]?.isLoadingError}>
 					<Banner status="error" role="alert" class="load-error">
-						<span class="grow">Reports did not load</span>
+						<span class="grow">Runs did not load</span>
 						<Button size="sm" onClick={() => batches()[0]?.refetch()}>
 							Retry
 						</Button>
@@ -179,7 +178,7 @@ const Reports = () => {
 				</Match>
 				<Match when={true}>
 					<div class="ui-table-scroll reports-skeleton" aria-busy="true">
-						<span class="sr-only">Loading reports</span>
+						<span class="sr-only">Loading runs</span>
 						<For each={Array.from({ length: SKELETON_ROWS })}>
 							{() => <Skeleton size="text" class="reports-skeleton-row" />}
 						</For>
@@ -216,7 +215,7 @@ const useName = (
 	return () => result().data;
 };
 
-export default Reports;
+export default Runs;
 
 const NothingFound = (props: {
 	search: ReportsSearch;
@@ -226,7 +225,7 @@ const NothingFound = (props: {
 	return (
 		<div class="ui-table-scroll reports-empty">
 			<Heading level={2} size="lg">
-				No reports
+				No runs
 			</Heading>
 			<Show when={!all()}>
 				<div class="btnrow">

@@ -60,7 +60,7 @@ export const decodeSearch = (params: URLSearchParams): AlertsSearch => {
 	return search;
 };
 
-/** The link's query, defaults left out and keys in a fixed order; the window as the Reports list writes it. */
+/** The link's query, defaults left out and keys in a fixed order; the window as the Runs list writes it. */
 export const encodeSearch = (search: AlertsSearch) => {
 	const params = new URLSearchParams();
 	if (search.status !== DEFAULT_SEARCH.status) {

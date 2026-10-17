@@ -390,8 +390,8 @@ test.describe("on a project of its own", () => {
 	});
 
 	// Kills a filter left out of the link or the request, and a status change
-	// that leaves the Reports list's cached counts behind.
-	test("a branch filter rides in the link, and a dismiss reaches the Reports list at once", async ({
+	// that leaves the Runs list's cached counts behind.
+	test("a branch filter rides in the link, and a dismiss reaches the Runs list at once", async ({
 		page,
 		request,
 	}) => {
@@ -413,20 +413,18 @@ test.describe("on a project of its own", () => {
 			"Silenced: branch head replaced",
 		);
 
-		// The Reports list is read and cached, then the page dismisses an alert it counts.
-		await tabRow(page).getByRole("link", { name: "Reports" }).click();
-		await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-			"6 reports",
-		);
+		// The Runs list is read and cached, then the page dismisses an alert it counts.
+		await tabRow(page).getByRole("link", { name: "Runs" }).click();
+		await expect(page.getByRole("heading", { level: 1 })).toHaveText("6 runs");
 		// Newest first: the newer `main` report is the fourth.
 		const newerCount = page
-			.getByRole("table", { name: "Reports, newest first" })
+			.getByRole("table", { name: "Runs, newest first" })
 			.getByRole("rowgroup")
 			.last()
 			.getByRole("row")
 			.nth(3)
 			.getByRole("cell")
-			.nth(6);
+			.nth(7);
 		await expect(newerCount).toHaveText(/^1 active\s*1 total$/);
 		await tabRow(page)
 			.getByRole("link", { name: /^Alerts/ })
@@ -434,7 +432,7 @@ test.describe("on a project of its own", () => {
 		await dismiss(row(page, line("bench-02")), line("bench-02")).click();
 		await expect(heading(page)).toHaveText("2 active");
 		await settle(page);
-		await tabRow(page).getByRole("link", { name: "Reports" }).click();
+		await tabRow(page).getByRole("link", { name: "Runs" }).click();
 		await expect(newerCount).toHaveText(/^1 total$/);
 	});
 });
@@ -501,10 +499,8 @@ test.describe("returning to the list", () => {
 		await expect(heading(page)).toHaveText("2 active");
 		await settle(page);
 
-		await tabRow(page).getByRole("link", { name: "Reports" }).click();
-		await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-			"6 reports",
-		);
+		await tabRow(page).getByRole("link", { name: "Runs" }).click();
+		await expect(page.getByRole("heading", { level: 1 })).toHaveText("6 runs");
 		const lists = await holdLists(page, project.slug);
 		await tabRow(page)
 			.getByRole("link", { name: /^Alerts/ })

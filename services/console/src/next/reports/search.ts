@@ -13,7 +13,7 @@ export type ReportsWindow =
 	| { kind: "custom"; start: number; end: number }
 	| { kind: "all" };
 
-/** What the Reports list shows, as its link carries it. */
+/** What the Runs list shows, as its link carries it. */
 export interface ReportsSearch {
 	window: ReportsWindow;
 	branch?: string;

@@ -76,7 +76,7 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 				<List
 					id="ex-reports"
 					title="Latest reports"
-					all={{ href: projectPath(slug(), "reports"), text: "All reports" }}
+					all={{ href: projectPath(slug(), "runs"), text: "All runs" }}
 					result={reports()}
 					rows={START.reports}
 					empty="No reports"

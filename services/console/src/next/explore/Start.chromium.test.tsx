@@ -54,7 +54,7 @@ for (const [width, edge] of [
 test("on a phone each list's link to all of it is a 44 px target", async () => {
 	await page.viewport(390, 844);
 	dispose = mount(() => <Start onQuery={() => {}} />, { api }).dispose;
-	for (const name of ["All alerts", "All reports", "All plots"]) {
+	for (const name of ["All alerts", "All runs", "All plots"]) {
 		const link = page.getByRole("link", { name });
 		await expect.element(link).toBeVisible();
 		expect(

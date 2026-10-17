@@ -17,7 +17,7 @@ const paint = (mount: HTMLElement) => {
 				<>
 					<Shell
 						slug="hashbrown"
-						tab="reports"
+						tab="runs"
 						organization={{ name: "Pompeii LLC", uuid: "org-uuid" }}
 						project="Hashbrown"
 						alerts={1}

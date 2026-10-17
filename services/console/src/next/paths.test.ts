@@ -49,7 +49,10 @@ describe("tabOf", () => {
 	test("maps a path to the tab it belongs to", () => {
 		expect(tabOf([])).toBe("explore");
 		expect(tabOf(["explore"])).toBe("explore");
-		expect(tabOf(["reports", "abc"])).toBe("reports");
+		expect(tabOf(["runs"])).toBe("runs");
+		expect(tabOf(["runs", "abc"])).toBe("runs");
+		expect(tabOf(["reports", "abc"])).toBe("runs");
+		expect(tabOf(["reports"])).toBeUndefined();
 		expect(tabOf(["alerts"])).toBe("alerts");
 		expect(tabOf(["thresholds", "abc"])).toBe("thresholds");
 		expect(tabOf(["plots"])).toBe("plots");
@@ -65,11 +68,24 @@ describe("classicHref", () => {
 	// place, or carries a query the other console does not read.
 	test("sends a new console path to the same place in the classic console", () => {
 		expect(
-			classicHref(place("/next/console/projects/hashbrown/reports?page=2#top")),
-		).toBe("/console/projects/hashbrown/reports#top");
+			classicHref(place("/next/console/projects/hashbrown/reports/abc#top")),
+		).toBe("/console/projects/hashbrown/reports/abc#top");
 		expect(
 			classicHref(place("/next/console/projects/hashbrown/thresholds/abc")),
 		).toBe("/console/projects/hashbrown/thresholds/abc");
+	});
+
+	// Kills Runs or a run sent to a classic page that does not exist: the
+	// classic console lists reports.
+	test("sends Runs and a run to the classic reports list", () => {
+		expect(
+			classicHref(
+				place("/next/console/projects/hashbrown/runs?window=all#top"),
+			),
+		).toBe("/console/projects/hashbrown/reports#top");
+		expect(
+			classicHref(place("/next/console/projects/hashbrown/runs/abc")),
+		).toBe("/console/projects/hashbrown/reports");
 	});
 
 	// Kills Explore sent to a classic page that does not exist.
@@ -103,11 +119,22 @@ describe("nextHref", () => {
 	// Kills a version gate that sends a reader somewhere other than the same
 	// place, or carries the classic paging into the new console.
 	test("sends a classic project path to the same place in the new console", () => {
-		expect(
-			nextHref(place("/console/projects/hashbrown/reports?page=2#top")),
-		).toBe("/next/console/projects/hashbrown/reports#top");
+		expect(nextHref(place("/console/projects/hashbrown/reports/abc#top"))).toBe(
+			"/next/console/projects/hashbrown/reports/abc#top",
+		);
 		expect(nextHref(place("/console/projects/hashbrown/branches/main"))).toBe(
 			"/next/console/projects/hashbrown/branches/main",
+		);
+	});
+
+	// Kills the classic reports list sent to a new console page that does not
+	// exist: the new console lists runs.
+	test("sends the classic reports list and its form to Runs", () => {
+		expect(
+			nextHref(place("/console/projects/hashbrown/reports?page=2#top")),
+		).toBe(`${NEXT_PROJECTS}/hashbrown/runs#top`);
+		expect(nextHref(place("/console/projects/hashbrown/reports/add"))).toBe(
+			`${NEXT_PROJECTS}/hashbrown/runs`,
 		);
 	});
 
@@ -164,9 +191,12 @@ describe("pageName", () => {
 	// one, and a tab's path drawn by another tab's page.
 	test("names the page that draws a project path", () => {
 		expect(pageName([])).toBe("Explore");
-		expect(pageName(["reports"])).toBe("Reports");
+		expect(pageName(["runs"])).toBe("Runs");
+		expect(pageName(["runs", "abc"])).toBe("Run");
+		expect(pageName(["runs", "abc", "def"])).toBe("Runs");
 		expect(pageName(["reports", "abc"])).toBe("Report");
-		expect(pageName(["reports", "abc", "def"])).toBe("Reports");
+		expect(pageName(["reports"])).toBe("NotFound");
+		expect(pageName(["reports", "abc", "def"])).toBe("NotFound");
 		expect(pageName(["thresholds", "abc"])).toBe("Threshold");
 		expect(pageName(["thresholds", "abc", "def"])).toBe("Thresholds");
 		expect(pageName(["alerts", "abc"])).toBe("Alert");
@@ -192,8 +222,8 @@ describe("pageName", () => {
 	});
 });
 
-// Kills a report link outside the project's Reports.
-test("reportPath is the report under its project's Reports", () => {
+// Kills a report link outside the project's reports.
+test("reportPath is the report under its project's reports", () => {
 	expect(reportPath("hashbrown", "abc")).toBe(
 		`${NEXT_PROJECTS}/hashbrown/reports/abc`,
 	);

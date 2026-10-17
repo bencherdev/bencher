@@ -61,6 +61,18 @@ const KEY_DURATION: i64 = 4 * 60 + 12;
 /// The short form of the newest `main` report's hash.
 const LAST_MAIN_HASH: &str = "9c1f2e4";
 
+/// A run split across reports, on `feature-simd` five weeks before the frozen
+/// clock, so only windows longer than the default four weeks count it:
+/// 2026-08-10T00:00:00Z.
+const SPLIT_RUN: i64 = NOW - 5 * 7 * 24 * 60 * 60;
+/// Each report's start, in seconds after the run's: three on [`TESTBED`] and one
+/// on [`KEY_TESTBED`].
+const SPLIT_STARTS: [(i64, &str); 4] = [(0, TESTBED), (2, TESTBED), (3, KEY_TESTBED), (4, TESTBED)];
+/// The short form of the split run's hash.
+const SPLIT_HASH: &str = "5917e00";
+/// A report with no hash, a day after the split run.
+const NO_HASH_REPORT: i64 = SPLIT_RUN + 24 * 60 * 60;
+
 /// The variant whose latency jumps in the newest `main` report.
 const ALERTING: Variant = Variant::new("blake3", KIB_64, Some(1), "avx2");
 const ALERTING_LATENCY: f64 = 20.6;
@@ -106,6 +118,7 @@ pub struct Seed {
     organization: SeedOrganization,
     projects: SeedProjects,
     last_main_hash: &'static str,
+    split_hash: &'static str,
 }
 
 /// A signed in reader as the console stores one, holding a user key where
@@ -189,6 +202,7 @@ impl Seed {
 
         report_history(&api, &hashbrown, token).await?;
         key_report(&api, &hashbrown, token).await?;
+        split_run(&api, &hashbrown, token).await?;
         check_alerts(&api, &hashbrown, token).await?;
         pins(&api, &hashbrown, token).await?;
 
@@ -211,6 +225,7 @@ impl Seed {
                 private: private.into(),
             },
             last_main_hash: LAST_MAIN_HASH,
+            split_hash: SPLIT_HASH,
         })
     }
 }
@@ -270,6 +285,25 @@ async fn report_history(api: &Api, project: &JsonProject, token: &str) -> anyhow
         let report = report_body(FEATURE, start, &hash, &results(index, |_| 1.0))?;
         let _json: serde_json::Value = api.send(Method::Post, &path, token, &report).await?;
     }
+    Ok(())
+}
+
+/// A run split across testbeds, then a report that names no commit.
+async fn split_run(api: &Api, project: &JsonProject, token: &str) -> anyhow::Result<()> {
+    let path = format!("/v0/projects/{}/reports", project.slug);
+    let hash = format!("{SPLIT_HASH}{}", "0".repeat(33));
+    for (index, (offset, testbed)) in SPLIT_STARTS.into_iter().enumerate() {
+        let mut report = report_body(FEATURE, SPLIT_RUN + offset, &hash, &results(index, |_| 1.0))?;
+        if let Some(object) = report.as_object_mut() {
+            object.insert("testbed".to_owned(), testbed.into());
+        }
+        let _json: serde_json::Value = api.send(Method::Post, &path, token, &report).await?;
+    }
+    let mut report = report_body(FEATURE, NO_HASH_REPORT, "", &results(0, |_| 1.0))?;
+    if let Some(object) = report.as_object_mut() {
+        object.remove("hash");
+    }
+    let _json: serde_json::Value = api.send(Method::Post, &path, token, &report).await?;
     Ok(())
 }
 

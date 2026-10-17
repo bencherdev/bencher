@@ -6,7 +6,7 @@ import { ProjectContext } from "./project";
 
 type Page = Component & { preload: () => Promise<unknown> };
 
-const reportsPage = () => import("./pages/Reports");
+const runsPage = () => import("./pages/Runs");
 // Reading only the default export spares the bundler a namespace object.
 const alertPage = () =>
 	import("./pages/Alert").then(({ default: page }) => ({ default: page }));
@@ -24,7 +24,11 @@ export const PAGES: Record<PageName, Page> = {
 		import("./plot/Plot").catch(() => {});
 		return import("./pages/Plots");
 	}),
-	Reports: lazy(reportsPage),
+	Runs: lazy(runsPage),
+	// Reading only the default export spares the bundler a namespace object.
+	Run: lazy<Component>(() =>
+		import("./pages/Run").then(({ default: page }) => ({ default: page })),
+	),
 	// Reading only the default export spares the bundler a namespace object,
 	// whose helper it would load from an unrelated chunk.
 	Report: lazy<Component>(() =>
@@ -45,15 +49,15 @@ export const PAGES: Record<PageName, Page> = {
 	NotFound: lazy(() => import("./pages/NotFound")),
 };
 
-// A link to Reports hovered, focused, or touched starts its first batch too.
-const reportsData: RoutePreloadFunc = ({ params, location }) => {
+// A link to Runs hovered, focused, or touched starts its first batch too.
+const runsData: RoutePreloadFunc = ({ params, location }) => {
 	const client = useQueryClient();
 	const project = useContext(ProjectContext);
 	const slug = params.project;
 	if (!(project && slug)) {
 		return;
 	}
-	reportsPage()
+	runsPage()
 		.then(({ prefetch }) =>
 			prefetch(client, project.api, slug, location.search),
 		)
@@ -63,6 +67,7 @@ const reportsData: RoutePreloadFunc = ({ params, location }) => {
 /** Relative to the router's base, the new console's project path. */
 export const ROUTES: RouteDefinition[] = [
 	{ path: "/:project", component: PAGES.Explore },
+	{ path: "/:project/runs/:run", component: PAGES.Run },
 	{ path: "/:project/reports/:report", component: PAGES.Report },
 	{ path: "/:project/thresholds/:threshold", component: PAGES.Threshold },
 	{ path: "/:project/alerts/:alert", component: PAGES.Alert },
@@ -72,7 +77,7 @@ export const ROUTES: RouteDefinition[] = [
 			return {
 				path: `/:project/${segment}/*rest`,
 				component: PAGES[page],
-				...(page === "Reports" ? { preload: reportsData } : {}),
+				...(page === "Runs" ? { preload: runsData } : {}),
 			};
 		}),
 	),

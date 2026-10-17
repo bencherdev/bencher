@@ -8,6 +8,7 @@
 "PlotUuid" = "Uuid"
 "BranchUuid" = "Uuid"
 "HeadUuid" = "Uuid"
+"VersionUuid" = "Uuid"
 "TestbedUuid" = "Uuid"
 "BenchmarkUuid" = "Uuid"
 "MeasureUuid" = "Uuid"

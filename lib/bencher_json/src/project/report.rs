@@ -276,7 +276,7 @@ const DART_INT: i32 = 110;
 const DART_BENCHMARK_HARNESS_INT: i32 = 111;
 
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]

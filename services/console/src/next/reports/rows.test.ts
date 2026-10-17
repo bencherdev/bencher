@@ -62,7 +62,7 @@ test("loadMore once the last row on screen comes within a quarter batch of the e
 // API drops a report it cannot read, so the total can overstate the rows).
 test("hasMore only after a full batch that leaves rows to load", () => {
 	const batch = (length: number, total: number) => ({
-		reports: Array.from({ length }),
+		rows: Array.from({ length }),
 		total,
 		batch: { perPage: 27 },
 	});
