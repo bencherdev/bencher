@@ -1,31 +1,13 @@
 import Icon from "@bencherdev/ui/Icon";
 import { Show, createSignal } from "solid-js";
 import type { FeedbackAbout } from "../feedback/FeedbackDialog";
+import { lazyView } from "./lazy";
 
-type View = typeof import("../feedback/FeedbackDialog").default;
-
-let loaded: View | undefined;
-let loading: Promise<View> | undefined;
-const load = () => {
-	loading ??= import("../feedback/FeedbackDialog").then(
-		({ default: view }) => {
-			loaded = view;
-			return view;
-		},
-		(error: unknown) => {
-			loading = undefined;
-			throw error;
-		},
-	);
-	return loading;
-};
-const preload = () => {
-	load().catch(() => {});
-};
+const dialog = lazyView(() => import("../feedback/FeedbackDialog"));
 
 /** The bar's Feedback control; the dialog's code loads on first intent. */
 const Feedback = (props: { about: () => FeedbackAbout }) => {
-	const [view, setView] = createSignal(loaded);
+	const [view, setView] = createSignal(dialog.loaded());
 	const [open, setOpen] = createSignal(false);
 	// A build with no Sentry DSN, as a self-hosted install is, has nowhere to send feedback.
 	return (
@@ -36,10 +18,11 @@ const Feedback = (props: { about: () => FeedbackAbout }) => {
 				aria-haspopup="dialog"
 				aria-expanded={open()}
 				aria-label="Feedback"
-				onPointerEnter={preload}
-				onFocus={preload}
+				onPointerEnter={dialog.preload}
+				onFocus={dialog.preload}
 				onClick={() =>
-					load()
+					dialog
+						.load()
 						.then((view) => {
 							setView(() => view);
 							setOpen(true);

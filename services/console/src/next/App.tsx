@@ -17,7 +17,8 @@ const App = (props: {
 	reader: JsonAuthUser;
 	versions: () => Record<string, BmfVersion>;
 	flush: () => Promise<void>;
-	signOut: () => void;
+	/** Ends the session; a sign in comes back here unless `back` is false. */
+	signOut: (back?: boolean) => void;
 	/** The API's URL. */
 	host: string;
 }) => {
@@ -43,6 +44,7 @@ const App = (props: {
 									versions={props.versions}
 									host={props.host}
 									route={PROJECTS_ROUTE}
+									signOut={props.signOut}
 								/>
 							}
 						>

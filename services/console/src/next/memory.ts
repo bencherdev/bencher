@@ -74,8 +74,17 @@ export const rememberShell = (
 	});
 };
 
-export const forgetShell = (storage: Pick<Storage, "removeItem">) =>
-	storage.removeItem(SHELL_KEY);
+/** Forget the reader and all this browser remembers for them, for whoever signs in next. */
+export const forgetReader = (storage: Pick<Storage, "removeItem">) => {
+	for (const key of [
+		"BENCHER_USER",
+		"BENCHER_ORGANIZATION",
+		SHELL_KEY,
+		VERSION_KEY,
+	]) {
+		storage.removeItem(key);
+	}
+};
 
 const RECENT_PROJECTS = 32;
 
