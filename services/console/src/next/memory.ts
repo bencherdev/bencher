@@ -1,6 +1,6 @@
 // Both memories are read by inline scripts before any module loads, so their
-// keys and shapes are a contract with `NextHead.astro`, `ShellPaint.astro`, and
-// the classic console.
+// keys and shapes are a contract with `NextHead.astro`, `ShellPaint.astro`,
+// `Landing.astro`, and the classic console.
 
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -24,6 +24,12 @@ export const rememberVersion = (
 ) => {
 	const versions = readJson(storage, VERSION_KEY) ?? {};
 	write(storage, VERSION_KEY, recent(versions, slug, version));
+};
+
+export const forgetVersion = (storage: Storage, slug: string) => {
+	const versions = readJson(storage, VERSION_KEY) ?? {};
+	delete versions[slug];
+	write(storage, VERSION_KEY, versions);
 };
 
 /** What the shell shows for a project, so a returning reader's first paint has it. */

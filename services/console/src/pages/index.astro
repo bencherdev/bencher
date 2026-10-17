@@ -4,6 +4,7 @@ export const prerender = true;
 import { IS_BENCHER_CLOUD } from "astro:env/client";
 
 import BaseLayout from "../layouts/BaseLayout.astro";
+import Landing from "../next/astro/Landing.astro";
 import AuthRedirect from "../components/auth/AuthRedirect";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import { BENCHER_DESCRIPTION, BENCHER_TITLE } from "../util/resource";
@@ -21,6 +22,7 @@ import CallToAction from "../components/landing/CallToAction.astro";
 ---
 
 <BaseLayout title={BENCHER_TITLE} description={BENCHER_DESCRIPTION}>
+  <Landing slot="head" />
   <SelfHostedRedirect
     client:only="solid-js"
     isBencherCloud={IS_BENCHER_CLOUD}
