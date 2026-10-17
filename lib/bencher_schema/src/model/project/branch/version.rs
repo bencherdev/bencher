@@ -40,7 +40,6 @@ impl QueryVersion {
     fn_get_uuid!(version, VersionId, VersionUuid);
 
     /// Read-only lookup: find an existing version by git hash for the given branch head.
-    /// Used outside the write transaction to avoid holding the write lock for read-only queries.
     pub fn find_by_hash(
         conn: &mut DbConnection,
         project_id: ProjectId,
@@ -74,6 +73,22 @@ pub struct InsertVersion {
 }
 
 impl InsertVersion {
+    /// Runs inside the report's write transaction, so reports sent at once with a new hash
+    /// find the version the first of them committed rather than each creating one.
+    pub(crate) fn find_or_increment(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        head_id: HeadId,
+        hash: Option<GitHash>,
+    ) -> QueryResult<VersionId> {
+        if let Some(hash) = hash.as_ref()
+            && let Some(version_id) = QueryVersion::find_by_hash(conn, project_id, head_id, hash)?
+        {
+            return Ok(version_id);
+        }
+        Self::increment(conn, project_id, head_id, hash)
+    }
+
     // Must be called within a transaction — uses `last_insert_rowid()`.
     pub(crate) fn increment(
         conn: &mut DbConnection,
@@ -387,6 +402,73 @@ mod tests {
         let result = QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash);
         // Should return the version with the highest number (5), not the last-inserted one (2)
         assert_eq!(result.unwrap(), Some(version_high));
+    }
+
+    /// Kills a write path that creates a version without looking again: a version that
+    /// another report committed after this report's first lookup missed is reused.
+    #[test]
+    fn find_or_increment_reuses_a_version_committed_after_the_first_lookup() {
+        use diesel::{QueryDsl as _, RunQueryDsl as _};
+
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+        let hash: bencher_json::GitHash = "1234567890abcdef1234567890abcdef12345678"
+            .parse()
+            .expect("valid hash");
+        assert_eq!(
+            QueryVersion::find_by_hash(&mut conn, base.project_id, branch.head_id, &hash).unwrap(),
+            None,
+            "the first lookup misses"
+        );
+
+        let committed = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            Some("1234567890abcdef1234567890abcdef12345678"),
+        );
+        create_head_version(&mut conn, branch.head_id, committed);
+        create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000050",
+            base.project_id,
+            branch.head_id,
+            committed,
+            testbed_id,
+        );
+
+        let version_id = conn
+            .immediate_transaction(|conn| {
+                super::InsertVersion::find_or_increment(
+                    conn,
+                    base.project_id,
+                    branch.head_id,
+                    Some(hash),
+                )
+            })
+            .expect("Failed to find or increment the version");
+        assert_eq!(version_id, committed);
+        let versions: i64 = schema::version::table
+            .count()
+            .get_result(&mut conn)
+            .expect("Failed to count versions");
+        assert_eq!(versions, 1);
     }
 
     #[test]
