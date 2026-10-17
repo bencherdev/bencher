@@ -10,7 +10,7 @@ const productionDsn = () =>
 
 // Kills a test console built with the production DSN, which sends every error
 // and trace an end-to-end run raises to production.
-test("the console under test carries no Sentry DSN", () => {
+test("the console under test carries no production Sentry DSN", () => {
 	const dsn = productionDsn();
 	expect(dsn).not.toBe("");
 	const carrying = readdirSync("dist", { recursive: true, encoding: "utf8" })

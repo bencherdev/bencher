@@ -19,8 +19,11 @@ const STARTUP_TIMEOUT: Duration = Duration::from_secs(60);
 const POLL_INTERVAL: Duration = Duration::from_millis(100);
 /// Lines of each server's log shown when the suite fails.
 const LOG_TAIL: usize = 200;
-/// Set empty for every build and server, so no end-to-end run reports to Sentry.
 const SENTRY_DSN: &str = "PUBLIC_SENTRY_DSN";
+/// A loopback address nothing listens on, so no end-to-end run reports to
+/// Sentry, while the console still draws what a Sentry build draws; the suite
+/// intercepts what it needs to see.
+const TEST_SENTRY_DSN: &str = "http://feedback@127.0.0.1:9/0";
 
 /// The console end-to-end suite, run against an API on a fresh database.
 #[derive(Debug)]
@@ -223,7 +226,10 @@ fn npm(dir: &Utf8Path, args: &[&str]) -> anyhow::Result<()> {
 
 fn npm_command(dir: &Utf8Path, args: &[&str]) -> Command {
     let mut command = Command::new("npm");
-    command.args(args).current_dir(dir).env(SENTRY_DSN, "");
+    command
+        .args(args)
+        .current_dir(dir)
+        .env(SENTRY_DSN, TEST_SENTRY_DSN);
     command
 }
 
@@ -290,7 +296,7 @@ fn console_command(console_dir: &Utf8Path, api_url: &str, port: &str) -> Command
         .env("HOST", "127.0.0.1")
         .env("PORT", port)
         .env("BENCHER_API_URL", api_url)
-        .env(SENTRY_DSN, "");
+        .env(SENTRY_DSN, TEST_SENTRY_DSN);
     command
 }
 
@@ -356,7 +362,7 @@ mod tests {
 
     use camino::Utf8Path;
 
-    use super::{SENTRY_DSN, console_command, npm_command};
+    use super::{SENTRY_DSN, TEST_SENTRY_DSN, console_command, npm_command};
 
     fn sentry_dsn(command: &Command) -> Option<&OsStr> {
         command
@@ -368,13 +374,13 @@ mod tests {
     // Kills a test build or test server that inherits a Sentry DSN, which the
     // console's committed `.env.production` sets for production.
     #[test]
-    fn console_builds_and_serves_with_an_empty_sentry_dsn() {
+    fn console_builds_and_serves_with_the_test_sentry_dsn() {
         let dir = Utf8Path::new("services/console");
-        let empty = Some(OsStr::new(""));
-        assert_eq!(sentry_dsn(&npm_command(dir, &["run", "build"])), empty);
+        let test = Some(OsStr::new(TEST_SENTRY_DSN));
+        assert_eq!(sentry_dsn(&npm_command(dir, &["run", "build"])), test);
         assert_eq!(
             sentry_dsn(&console_command(dir, "http://127.0.0.1:61016", "3000")),
-            empty
+            test
         );
     }
 }
