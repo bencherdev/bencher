@@ -5,19 +5,18 @@ import Announcer from "../shell/Announcer";
 import Shell from "../shell/Shell";
 import { useAccount } from "./context";
 
-const TITLE = "Profile | Bencher";
-
 /** The account bar and the page under it, for the reader's account paths. */
-const AccountLayout = (props: { children?: JSX.Element }) => {
+const AccountLayout = (props: { page: string; children?: JSX.Element }) => {
 	const { reader, signOut } = useAccount();
 	const location = useLocation();
+	const title = () => `${props.page} | Bencher`;
 	createEffect(() => {
-		document.title = TITLE;
+		document.title = title();
 	});
 	return (
 		<>
 			<Shell user={reader().user} signOut={signOut} />
-			<Announcer path={location.pathname} title={TITLE} />
+			<Announcer path={location.pathname} title={title()} />
 			<Suspense fallback={<ContentSkeleton />}>{props.children}</Suspense>
 		</>
 	);

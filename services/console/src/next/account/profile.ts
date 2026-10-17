@@ -74,17 +74,17 @@ export const problemsOf = (
 const FAILED = "Bencher did not save the changes";
 
 /** Why a save did not happen, in the API's words when it gave them. */
-export const failureOf = (error: unknown) => {
+export const failureOf = (error: unknown, failed = FAILED) => {
 	if (!(error instanceof ApiError) || error.status === undefined) {
-		return FAILED;
+		return failed;
 	}
 	try {
 		const message = JSON.parse(error.message)?.message;
 		if (typeof message === "string" && message) {
-			return `${FAILED}: ${message}`;
+			return `${failed}: ${message}`;
 		}
 	} catch {
 		// Not the API's JSON; its status says enough.
 	}
-	return `${FAILED}: the API answered ${error.status}`;
+	return `${failed}: the API answered ${error.status}`;
 };

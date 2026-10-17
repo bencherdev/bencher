@@ -8,6 +8,7 @@ import type { JsonConsoleUser } from "../../types/bencher";
 import { useAccount } from "../account/context";
 import { FlushContext } from "../flush";
 import { CLASSIC_ORGANIZATION, forgetVersion } from "../memory";
+import { ORGANIZATIONS_PATH } from "../paths";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { withOrganization } from "./data";
@@ -62,9 +63,7 @@ const DeleteOrganization = (props: {
 		localStorage.removeItem(CLASSIC_ORGANIZATION);
 		// Leaving the app first would keep the organization in the browser's store.
 		await flush();
-		(props.leave ?? ((href) => location.assign(href)))(
-			"/console/organizations",
-		);
+		(props.leave ?? ((href) => location.assign(href)))(ORGANIZATIONS_PATH);
 	};
 	return (
 		<Dialog

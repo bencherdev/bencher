@@ -8,9 +8,14 @@ import type { Api } from "./api";
 import { FlushContext } from "./flush";
 import Layout from "./Layout";
 import type { BmfVersion } from "./memory";
-import { NEXT_CONSOLE, accountUser, organizationOf } from "./paths";
+import { NEXT_CONSOLE, organizationOf } from "./paths";
 import { rememberReader } from "./reader";
-import { CONSOLE_ROUTES, OrganizationLayout, PROJECTS_ROUTE } from "./routes";
+import {
+	CONSOLE_ROUTES,
+	OrganizationLayout,
+	PROJECTS_ROUTE,
+	accountPage,
+} from "./routes";
 
 const App = (props: {
 	client: QueryClient;
@@ -56,8 +61,12 @@ const App = (props: {
 									/>
 								}
 							>
-								<Match when={accountUser(section.location.pathname)}>
-									<AccountLayout>{section.children}</AccountLayout>
+								<Match when={accountPage(section.location.pathname)}>
+									{(page) => (
+										<AccountLayout page={page()}>
+											{section.children}
+										</AccountLayout>
+									)}
 								</Match>
 								<Match when={organizationOf(section.location.pathname)}>
 									<Suspense>

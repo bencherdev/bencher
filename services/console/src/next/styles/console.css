@@ -760,8 +760,23 @@
 .lnk.danger {
 	color: var(--color-text-error);
 }
-.keytbl .act {
+.ui-table td.act {
 	text-align: end;
+	white-space: nowrap;
+}
+.ui-table td.act .lnk + .lnk {
+	margin-left: 16px;
+}
+.console a.namelink {
+	color: var(--color-text-primary);
+	font-weight: var(--font-weight-semibold);
+}
+.derived {
+	display: inline-flex;
+	align-items: center;
+	min-height: 36px;
+	font: 13px var(--font-family-code);
+	color: var(--color-text-secondary);
 }
 .keytbl b {
 	font-weight: var(--font-weight-semibold);

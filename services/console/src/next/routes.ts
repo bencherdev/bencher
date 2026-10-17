@@ -1,7 +1,13 @@
 import type { RouteDefinition, RoutePreloadFunc } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { type Component, lazy, useContext } from "solid-js";
-import { type PageName, TABS, pageName } from "./paths";
+import {
+	ORGANIZATIONS_PATH,
+	type PageName,
+	TABS,
+	accountUser,
+	pageName,
+} from "./paths";
 import { ProjectContext } from "./project";
 
 type Page = Component & { preload: () => Promise<unknown> };
@@ -55,6 +61,7 @@ export const PAGES: Record<PageName, Page> = {
 				await Promise.all([organizationLayout(), import("./pages/OrgGeneral")])
 			)[1],
 	),
+	Organizations: lazy(() => import("./pages/Organizations")),
 	NotFound: lazy(() => import("./pages/NotFound")),
 };
 
@@ -104,7 +111,23 @@ export const CONSOLE_ROUTES: RouteDefinition[] = [
 		path: "/organizations/:organization/settings",
 		component: PAGES.OrgGeneral,
 	},
+	{
+		path: ["/organizations", "/organizations/add"],
+		component: PAGES.Organizations,
+	},
 ];
 
 /** An organization's bar, loaded only on its pages. */
 export const OrganizationLayout = lazy(organizationLayout);
+
+/** The account page `pathname` draws, if it is one. */
+export const accountPage = (
+	pathname: string,
+): "Profile" | "Organizations" | undefined => {
+	if (accountUser(pathname)) {
+		return "Profile";
+	}
+	return [ORGANIZATIONS_PATH, `${ORGANIZATIONS_PATH}/add`].includes(pathname)
+		? "Organizations"
+		: undefined;
+};

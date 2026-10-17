@@ -587,6 +587,44 @@ test("a cold load of an organization's General holds the speed ceilings", async 
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
+// Kills an Organizations list that waits on more than the reader's bootstrap,
+// chains a second round, or shifts as it arrives.
+test("a cold load of Organizations holds the speed ceilings", async ({
+	page,
+}) => {
+	await observeLayoutShift(page);
+	await page.route(`${seed.api_url}/**`, async (route) => {
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		await route.continue();
+	});
+	await page.goto("/next/console/organizations");
+	await expect(
+		page
+			.getByRole("table", { name: "Your organizations" })
+			.getByRole("link", { name: seed.organization.name }),
+	).toBeVisible();
+	await loadedAndIdle(page);
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url);
+	report("organizations cold load", cost);
+	const ceiling = ceilings.organizationsColdLoad;
+	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+		ceiling.apiAnswersBeforePaint,
+	);
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.shellShift).toBeLessThanOrEqual(ceiling.shellShift);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
+	expect(cost.cssBytes).toBeLessThanOrEqual(ceiling.cssBytes);
+	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+	expect(cost.inlineScriptBytes).toBeLessThanOrEqual(ceiling.inlineScriptBytes);
+	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+});
+
 // Kills key lists that wait on the shell's request, a third request for the
 // other status, and a table that shifts as the keys arrive.
 test("a cold load of Keys holds the speed ceilings", async ({ page }) => {

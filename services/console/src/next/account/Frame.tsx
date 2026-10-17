@@ -1,9 +1,9 @@
 import { For, type JSX } from "solid-js";
-import { profilePath } from "../paths";
+import { ORGANIZATIONS_PATH, profilePath } from "../paths";
 
 type Section = "profile" | "keys" | "organizations";
 
-/** The account's sections, as Settings' rail; Keys and Organizations are still the classic console's. */
+/** The account's sections, as Settings' rail; Keys is still the classic console's. */
 const Frame = (props: {
 	user: string;
 	section: Section;
@@ -19,7 +19,7 @@ const Frame = (props: {
 		{
 			section: "organizations",
 			label: "Organizations",
-			href: "/console/organizations",
+			href: ORGANIZATIONS_PATH,
 		},
 	];
 	const links = () => (
