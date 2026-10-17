@@ -63,6 +63,8 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"rust_gungraun_stdout",
 	"rust_iai",
 	"shell_hyperfine",
+	"shell_hyperfine_v1",
+	"shell_hyperfine_v2",
 ];
 
 const LISTED = new Set<string>(ADAPTERS);

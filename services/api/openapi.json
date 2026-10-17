@@ -12339,6 +12339,8 @@
           "ruby_benchmark",
           "shell",
           "shell_hyperfine",
+          "shell_hyperfine_v1",
+          "shell_hyperfine_v2",
           "dart",
           "dart_benchmark_harness"
         ]

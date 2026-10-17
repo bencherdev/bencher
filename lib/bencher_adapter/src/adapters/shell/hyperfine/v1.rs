@@ -8,9 +8,9 @@ use crate::{
     results::adapter_results::AdapterResults,
 };
 
-pub struct AdapterShellHyperfine;
+pub struct AdapterShellHyperfineV1;
 
-impl Adaptable for AdapterShellHyperfine {
+impl Adaptable for AdapterShellHyperfineV1 {
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
         serde_json::from_str::<Hyperfine>(input)
             .ok()?
@@ -88,7 +88,7 @@ impl Hyperfine {
 }
 
 #[cfg(test)]
-pub(crate) mod test_shell_hyperfine {
+pub(crate) mod test_shell_hyperfine_v1 {
     use bencher_json::BmfVersion;
     use bencher_json::project::report::JsonAverage;
     use pretty_assertions::assert_eq;
@@ -100,16 +100,16 @@ pub(crate) mod test_shell_hyperfine {
         },
     };
 
-    use super::AdapterShellHyperfine;
+    use super::AdapterShellHyperfineV1;
 
-    fn convert_shell_hyperfine(suffix: &str) -> AdapterResults {
+    fn convert_shell_hyperfine_v1(suffix: &str) -> AdapterResults {
         let file_path = file_path(suffix);
-        convert_file_path::<AdapterShellHyperfine>(&file_path)
+        convert_file_path::<AdapterShellHyperfineV1>(&file_path)
     }
 
-    fn convert_shell_hyperfine_median(suffix: &str) -> AdapterResults {
+    fn convert_shell_hyperfine_v1_median(suffix: &str) -> AdapterResults {
         let file_path = file_path(suffix);
-        convert_file_path_median::<AdapterShellHyperfine>(&file_path)
+        convert_file_path_median::<AdapterShellHyperfineV1>(&file_path)
     }
 
     fn file_path(suffix: &str) -> String {
@@ -117,25 +117,25 @@ pub(crate) mod test_shell_hyperfine {
     }
 
     #[test]
-    fn adapter_shell_hyperfine_two() {
+    fn adapter_shell_hyperfine_v1_two() {
         let two = "two";
         let file_path = file_path(two);
 
-        let results = convert_shell_hyperfine(two);
-        validate_adapter_shell_hyperfine(&results);
+        let results = convert_shell_hyperfine_v1(two);
+        validate_adapter_shell_hyperfine_v1(&results);
 
-        let results = opt_convert_file_path::<AdapterShellHyperfine>(
+        let results = opt_convert_file_path::<AdapterShellHyperfineV1>(
             &file_path,
             Settings::new(Some(JsonAverage::Mean), BmfVersion::default()),
         )
         .unwrap();
-        validate_adapter_shell_hyperfine(&results);
+        validate_adapter_shell_hyperfine_v1(&results);
 
-        let results = convert_shell_hyperfine_median(two);
-        validate_adapter_shell_hyperfine_median(&results);
+        let results = convert_shell_hyperfine_v1_median(two);
+        validate_adapter_shell_hyperfine_v1_median(&results);
     }
 
-    pub fn validate_adapter_shell_hyperfine(results: &AdapterResults) {
+    pub fn validate_adapter_shell_hyperfine_v1(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("sleep 0.1").unwrap();
@@ -155,7 +155,7 @@ pub(crate) mod test_shell_hyperfine {
         );
     }
 
-    fn validate_adapter_shell_hyperfine_median(results: &AdapterResults) {
+    fn validate_adapter_shell_hyperfine_v1_median(results: &AdapterResults) {
         assert_eq!(results.inner.len(), 2);
 
         let metrics = results.get("sleep 0.1").unwrap();
@@ -176,8 +176,8 @@ pub(crate) mod test_shell_hyperfine {
     }
 
     #[test]
-    fn adapter_shell_hyperfine_one() {
-        let results = convert_shell_hyperfine("one");
+    fn adapter_shell_hyperfine_v1_one() {
+        let results = convert_shell_hyperfine_v1("one");
         assert_eq!(results.inner.len(), 1);
 
         let metrics = results.get("sleep 0.01").unwrap();
@@ -190,8 +190,8 @@ pub(crate) mod test_shell_hyperfine {
     }
 
     #[test]
-    fn adapter_shell_hyperfine_one_median() {
-        let results = convert_shell_hyperfine_median("one");
+    fn adapter_shell_hyperfine_v1_one_median() {
+        let results = convert_shell_hyperfine_v1_median("one");
         assert_eq!(results.inner.len(), 1);
 
         let metrics = results.get("sleep 0.01").unwrap();

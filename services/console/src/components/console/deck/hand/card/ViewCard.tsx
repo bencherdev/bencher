@@ -469,6 +469,8 @@ const AdapterCard = (props: Props) => {
 					case Adapter.RustGungraunJson:
 						return "-rust-gungraun";
 					case Adapter.ShellHyperfine:
+					case Adapter.ShellHyperfineV1:
+					case Adapter.ShellHyperfineV2:
 						return "_%EF%B8%8F-shell-hyperfine";
 					default:
 						return "";
@@ -522,6 +524,8 @@ const AdapterCard = (props: Props) => {
 						case Adapter.RustGungraunJson:
 							return "Rust Gungraun";
 						case Adapter.ShellHyperfine:
+						case Adapter.ShellHyperfineV1:
+						case Adapter.ShellHyperfineV2:
 							return "Shell Hyperfine";
 						default:
 							return `${props.value}`;

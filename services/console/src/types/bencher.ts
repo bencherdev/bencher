@@ -737,6 +737,8 @@ export enum Adapter {
 	RubyBenchmark = "ruby_benchmark",
 	Shell = "shell",
 	ShellHyperfine = "shell_hyperfine",
+	ShellHyperfineV1 = "shell_hyperfine_v1",
+	ShellHyperfineV2 = "shell_hyperfine_v2",
 	Dart = "dart",
 	DartBenchmarkHarness = "dart_benchmark_harness",
 }
