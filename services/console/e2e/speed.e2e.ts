@@ -542,6 +542,51 @@ test("a cold load of Profile holds the speed ceilings", async ({ page }) => {
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
+// Kills an organization's General that asks for more than the organization
+// and the reader's permissions, chains a second round, or shifts as they arrive.
+test("a cold load of an organization's General holds the speed ceilings", async ({
+	page,
+}) => {
+	await observeLayoutShift(page);
+	await page.route(`${seed.api_url}/**`, async (route) => {
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		await route.continue();
+	});
+	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
+	const answered = Promise.all([
+		page.waitForResponse(organization),
+		page.waitForResponse(`${organization}/allowed/edit`),
+		page.waitForResponse(`${organization}/allowed/delete`),
+	]);
+	await page.goto(
+		`/next/console/organizations/${seed.organization.slug}/settings`,
+	);
+	await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
+		seed.organization.name,
+	);
+	await answered;
+	await loadedAndIdle(page);
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url);
+	report("organization general cold load", cost);
+	const ceiling = ceilings.organizationGeneralColdLoad;
+	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+		ceiling.apiAnswersBeforePaint,
+	);
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+	expect(cost.shellShift).toBeLessThanOrEqual(ceiling.shellShift);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
+	expect(cost.cssBytes).toBeLessThanOrEqual(ceiling.cssBytes);
+	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+	expect(cost.inlineScriptBytes).toBeLessThanOrEqual(ceiling.inlineScriptBytes);
+	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+});
+
 // Kills key lists that wait on the shell's request, a third request for the
 // other status, and a table that shifts as the keys arrive.
 test("a cold load of Keys holds the speed ceilings", async ({ page }) => {

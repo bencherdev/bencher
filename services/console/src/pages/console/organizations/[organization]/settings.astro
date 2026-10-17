@@ -8,12 +8,15 @@ import OrgLayout from "../../../../layouts/console/OrgLayout.astro";
 import DeckPanel from "../../../../components/console/deck/DeckPanel";
 import { BencherResource } from "../../../../config/types";
 import FallbackDeckPanel from "../../../../components/console/deck/FallbackDeckPanel.astro";
+import AccountGate from "../../../../next/astro/AccountGate.astro";
+import { organizationPath } from "../../../../next/paths";
 
 const params = Astro.params;
 const title = "Organization Settings";
 ---
 
 <OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <AccountGate slot="head" next={organizationPath(params.organization ?? "")} />
   <DeckPanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}

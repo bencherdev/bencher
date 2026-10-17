@@ -1,14 +1,14 @@
 ---
 import { VERSION_KEY } from "../memory";
-import { profilePath } from "../paths";
 
 interface Props {
-	user: string;
+	/** The same page in the new console. */
+	next: string;
 }
 
-const next = profilePath(Astro.props.user);
+const { next } = Astro.props;
 
-// A reader with a version 1 project moves to the new console's Profile before
+// A reader with a version 1 project moves to the new console's page before
 // the classic page loads anything.
 ---
 

@@ -20,6 +20,7 @@ const { apiUrl, params, title, suppressNotification } = Astro.props;
   title={title}
   suppressNotification={suppressNotification}
 >
+  <slot name="head" slot="head" />
   <OrgMenu client:only="solid-js" slot="menu" apiUrl={apiUrl} params={params}>
     <OrgFallbackMenu slot="fallback" />
   </OrgMenu>

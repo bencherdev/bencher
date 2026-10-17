@@ -7,6 +7,7 @@ import { ProjectContext } from "./project";
 type Page = Component & { preload: () => Promise<unknown> };
 
 const runsPage = () => import("./pages/Runs");
+const organizationLayout = () => import("./organization/Layout");
 // Reading only the default export spares the bundler a namespace object.
 const alertPage = () =>
 	import("./pages/Alert").then(({ default: page }) => ({ default: page }));
@@ -47,6 +48,13 @@ export const PAGES: Record<PageName, Page> = {
 	Settings: lazy(() => import("./pages/Settings")),
 	Dimensions: lazy(() => import("./pages/Dimensions")),
 	Profile: lazy(() => import("./pages/Profile")),
+	// An organization's page draws under its bar, which loads with it.
+	OrgGeneral: lazy(
+		async () =>
+			(
+				await Promise.all([organizationLayout(), import("./pages/OrgGeneral")])
+			)[1],
+	),
 	NotFound: lazy(() => import("./pages/NotFound")),
 };
 
@@ -92,4 +100,11 @@ export const PROJECTS_ROUTE = "/projects";
 export const CONSOLE_ROUTES: RouteDefinition[] = [
 	{ path: PROJECTS_ROUTE, children: ROUTES },
 	{ path: "/users/:user/settings", component: PAGES.Profile },
+	{
+		path: "/organizations/:organization/settings",
+		component: PAGES.OrgGeneral,
+	},
 ];
+
+/** An organization's bar, loaded only on its pages. */
+export const OrganizationLayout = lazy(organizationLayout);

@@ -1,5 +1,6 @@
 import { type NavigateOptions, useNavigate } from "@solidjs/router";
 import { type Accessor, createContext, useContext } from "solid-js";
+import { AccountContext } from "./account/context";
 import type { Api } from "./api";
 
 interface Project {
@@ -28,6 +29,10 @@ export const useProject = () => {
 	}
 	return project;
 };
+
+/** The API, on a project's pages and on an account's or organization's. */
+export const useApi = () =>
+	useContext(ProjectContext)?.api ?? useContext(AccountContext)?.api;
 
 /** `navigate` to a project path, `/<slug>/...`, wherever the router keeps them. */
 export const useProjectNavigate = () => {

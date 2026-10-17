@@ -10,7 +10,8 @@ import {
 	onMount,
 } from "solid-js";
 import { recentSlugs, rememberVersion } from "../memory";
-import { useProject } from "../project";
+import { organizationPath } from "../paths";
+import { useApi } from "../project";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { visibleRange } from "../reports/rows";
@@ -43,7 +44,10 @@ const Switcher = (props: {
 	/** Held in a modal sheet, which is the dialog and closes it. */
 	sheet?: boolean;
 }) => {
-	const { api } = useProject();
+	const api = useApi();
+	if (!api) {
+		throw new Error("The switcher outside of the console");
+	}
 	const navigate = useNavigate();
 	const user = useQueryResult(() => consoleUserQuery(api, props.reader));
 	const rows = createMemo(() => {
@@ -320,7 +324,7 @@ const Switcher = (props: {
 							New project
 						</a>
 						<span class="spacer" />
-						<a href={`/console/organizations/${organization().uuid}/settings`}>
+						<a href={organizationPath(organization().uuid)}>
 							<Glyph d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
 							{organization().name} settings
 						</a>

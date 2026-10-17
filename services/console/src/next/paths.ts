@@ -9,11 +9,25 @@ const NEXT_USERS = `${NEXT_CONSOLE}/users`;
 
 export const profilePath = (user: string) => `${NEXT_USERS}/${user}/settings`;
 
+/** An organization's pages, under its slug or UUID. */
+const NEXT_ORGANIZATIONS = `${NEXT_CONSOLE}/organizations`;
+
+export const organizationPath = (organization: string) =>
+	`${NEXT_ORGANIZATIONS}/${organization}/settings`;
+
+/** The first segment under `base`, if `pathname` is beneath it. */
+const segmentUnder = (base: string, pathname: string) =>
+	pathname.startsWith(`${base}/`)
+		? pathname.slice(base.length + 1).split("/")[0] || undefined
+		: undefined;
+
 /** The user an account page is about, if `pathname` is one. */
 export const accountUser = (pathname: string) =>
-	pathname.startsWith(`${NEXT_USERS}/`)
-		? pathname.slice(NEXT_USERS.length + 1).split("/")[0] || undefined
-		: undefined;
+	segmentUnder(NEXT_USERS, pathname);
+
+/** The organization an organization page is about, if `pathname` is one. */
+export const organizationOf = (pathname: string) =>
+	segmentUnder(NEXT_ORGANIZATIONS, pathname);
 
 /** The dimension lists keep their classic paths, each page under its list. */
 export const DIMENSIONS = [
@@ -81,6 +95,7 @@ export type PageName =
 	| "Threshold"
 	| "Dimensions"
 	| "Profile"
+	| "OrgGeneral"
 	| "NotFound";
 
 /** The page that draws a project path, from its segments after the project. */

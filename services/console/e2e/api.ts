@@ -127,6 +127,15 @@ export const readUser = async (
 	return (await response.json()) as JsonUser;
 };
 
+/** The API's answer to the member reading an organization. */
+export const readOrganization = (
+	request: APIRequestContext,
+	organization: string,
+) =>
+	request.get(`${seed.api_url}/v0/organizations/${organization}`, {
+		headers: { Authorization: `Bearer ${seed.member.token}` },
+	});
+
 /** The API's answer to the member reading a project. */
 export const projectStatus = async (request: APIRequestContext, slug: string) =>
 	(

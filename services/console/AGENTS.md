@@ -107,10 +107,11 @@ that the classic console also reads or writes: `BENCHER_USER`, `BENCHER_THEME`,
 `BENCHER_BMF_VERSIONS`, and `BENCHER_CONSOLE_SHELL` (`src/next/memory.ts`).
 Change a key or its shape on both sides at once.
 
-Profile is served by `src/pages/next/console/users/[user]/settings.astro`. Both
-pages load the app through `src/next/astro/Main.astro`, so they share one entry,
+Profile is served by `src/pages/next/console/users/[user]/settings.astro`, and an
+organization's General by `src/pages/next/console/organizations/[organization]/settings.astro`.
+Every page loads the app through `src/next/astro/Main.astro`, so they share one entry,
 which `src/next/build/preloads.mjs` finds by that component: a page with a script
-of its own would split the entry in two. Both import the same stylesheets, so
+of its own would split the entry in two. All of them import the same stylesheets, so
 they share one sheet; a stylesheet only one of them imports is inlined in its
 head.
 

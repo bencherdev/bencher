@@ -8,8 +8,10 @@ import Feedback from "./Feedback";
 import Tools from "./Tools";
 
 interface ShellProps {
-	/** The project's slug; an account page's bar has no project. */
+	/** The project's slug; an account or organization page's bar has no project. */
 	slug?: string | undefined;
+	/** An organization's page, whose crumb is the organization alone. */
+	org?: boolean | undefined;
 	tab?: Tab | undefined;
 	/** Unknown until the project loads; the crumb holds its place until then. */
 	organization?: { name: string; uuid: string } | undefined;
@@ -49,17 +51,15 @@ const Shell = (props: ShellProps) => {
 					<img src="/wordmark-light.svg" alt="" />
 				</a>
 				<Show
-					when={props.slug}
+					when={props.slug || props.org}
 					fallback={<span class="crumbtext">Account</span>}
 				>
-					{(slug) => (
-						<Crumb
-							slug={slug()}
-							organization={props.organization}
-							project={props.project ?? slug()}
-							reader={props.reader}
-						/>
-					)}
+					<Crumb
+						slug={props.slug ?? ""}
+						organization={props.organization}
+						project={props.slug && (props.project ?? props.slug)}
+						reader={props.reader}
+					/>
 				</Show>
 				<span class="spacer" />
 				<Show when={props.slug}>

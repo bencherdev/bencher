@@ -1,31 +1,31 @@
 import Icon from "@bencherdev/ui/Icon";
 import { QueryClientContext } from "@tanstack/solid-query";
 import { Show, createSignal, useContext } from "solid-js";
-import { ProjectContext } from "../project";
+import { useApi } from "../project";
 import { consoleUserQuery } from "../queries";
 import { lazyView } from "./lazy";
 
 const switcher = lazyView(() => import("../switcher/Switcher"));
 
-/** The Org / Project crumb, one button that opens the project switcher. */
+/** The Org / Project crumb, one button that opens the project switcher; an organization's page has no project. */
 const Crumb = (props: {
 	slug: string;
 	organization: { name: string; uuid: string } | undefined;
-	project: string;
+	project?: string | undefined;
 	/** The signed in reader, unknown to the server's render. */
 	reader?: string | undefined;
 }) => {
 	const client = useContext(QueryClientContext);
-	const project = useContext(ProjectContext);
+	const api = useApi();
 	const [view, setView] = createSignal(switcher.loaded());
 	const [open, setOpen] = createSignal(false);
 	let button: HTMLButtonElement | undefined;
 	// The switcher's code and the reader's projects start together on intent.
 	const intent = () => {
 		switcher.preload();
-		if (client && project && props.reader) {
+		if (client && api && props.reader) {
 			client()
-				.query(consoleUserQuery(project.api, props.reader))
+				.query(consoleUserQuery(api, props.reader))
 				.catch(() => {});
 		}
 	};
@@ -37,7 +37,7 @@ const Crumb = (props: {
 				class="crumbbtn"
 				aria-haspopup="dialog"
 				aria-expanded={open()}
-				aria-label={`${props.organization ? `${props.organization.name} / ` : ""}${props.project}, switch project`}
+				aria-label={`${[props.organization?.name, props.project].filter(Boolean).join(" / ")}, switch project`}
 				aria-busy={props.organization ? undefined : "true"}
 				onPointerEnter={intent}
 				onFocus={intent}
@@ -72,15 +72,27 @@ const Crumb = (props: {
 					}
 				>
 					{(organization) => (
-						<span data-shell="org">{organization().name}</span>
+						<span
+							class={props.project ? undefined : "crumb-project"}
+							data-shell="org"
+						>
+							{organization().name}
+						</span>
 					)}
-				</Show>{" "}
-				<span class="sep" aria-hidden="true">
-					/
-				</span>{" "}
-				<span class="crumb-project" data-shell="project">
-					{props.project}
-				</span>
+				</Show>
+				<Show when={props.project}>
+					{(project) => (
+						<>
+							{" "}
+							<span class="sep" aria-hidden="true">
+								/
+							</span>{" "}
+							<span class="crumb-project" data-shell="project">
+								{project()}
+							</span>
+						</>
+					)}
+				</Show>
 				<Icon name="chevron-down" />
 			</button>
 			<Show when={open() && props.reader ? view() : undefined}>

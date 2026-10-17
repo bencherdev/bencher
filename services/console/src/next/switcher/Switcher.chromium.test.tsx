@@ -1,11 +1,16 @@
 import "./switcher.css";
 import "../reports/reports.css";
+import { MemoryRouter, Route } from "@solidjs/router";
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type {
+	JsonAuthUser,
 	JsonConsoleUser,
 	JsonConsoleUserProject,
 } from "../../types/bencher";
+import { AccountContext } from "../account/context";
 import { budget } from "../budget";
 import { VERSION_KEY, recentSlugs } from "../memory";
 import { fakeApi, mount } from "../settings/testing";
@@ -191,8 +196,9 @@ test("each row names its organization, its last run, and its active alerts", asy
 	);
 });
 
-// Kills a footer that drops New project or Settings, or sends either to an
-// organization other than the current project's.
+// Kills a footer that drops New project or Settings, sends either to an
+// organization other than the current project's, or sends Settings to the
+// classic page the new console replaces.
 test("the footer holds New project and the current organization's Settings", async () => {
 	await open();
 
@@ -201,7 +207,64 @@ test("the footer holds New project and the current organization's Settings", asy
 		.toHaveAttribute("href", "/console/organizations/o1/projects/add");
 	await expect
 		.element(dialog().getByRole("link", { name: "Pompeii LLC settings" }))
-		.toHaveAttribute("href", "/console/organizations/o1/settings");
+		.toHaveAttribute("href", "/next/console/organizations/o1/settings");
+});
+
+// Kills an organization's crumb that opens no switcher, one that cannot reach
+// the reader's projects without a project's page around it, and a project
+// marked current where none is.
+test("an organization's crumb opens the switcher on the reader's projects", async () => {
+	await page.viewport(1280, 800);
+	const { api } = fakeApi(undefined, () => Promise.reject(new Error("down")));
+	const client = new QueryClient();
+	client.setQueryData(["console", "user", "u"], READER);
+	const root = document.createElement("div");
+	root.className = "console";
+	document.body.append(root);
+	const dispose = render(
+		() => (
+			<QueryClientProvider client={client}>
+				<AccountContext.Provider
+					value={{
+						api,
+						reader: () => ({}) as JsonAuthUser,
+						keepUser: () => {},
+						signOut: () => {},
+					}}
+				>
+					<MemoryRouter>
+						<Route
+							path="*"
+							component={() => (
+								<Shell
+									org
+									organization={{ name: "Pompeii LLC", uuid: "o1" }}
+									reader="u"
+								/>
+							)}
+						/>
+					</MemoryRouter>
+				</AccountContext.Provider>
+			</QueryClientProvider>
+		),
+		root,
+	);
+	unmount = () => {
+		dispose();
+		root.remove();
+	};
+
+	await page
+		.getByRole("button", { name: "Pompeii LLC, switch project" })
+		.click();
+	await expect.element(search()).toHaveFocus();
+	await expect
+		.poll(names)
+		.toEqual(["Hashbrown", "Gizmo", "Cathode", "Cornbread"]);
+	expect(document.querySelector(".sw-cur")).toBeNull();
+	await expect
+		.element(dialog().getByRole("link", { name: "Pompeii LLC settings" }))
+		.toHaveAttribute("href", "/next/console/organizations/o1/settings");
 });
 
 // Kills arrows that do not move the active row, an active row the list does

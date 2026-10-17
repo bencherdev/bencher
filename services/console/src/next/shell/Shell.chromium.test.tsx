@@ -377,6 +377,64 @@ describe("an account page", () => {
 	});
 });
 
+describe("an organization page", () => {
+	const mountOrganization = (
+		organization: { name: string; uuid: string } | undefined,
+	) => {
+		vi.stubEnv("PUBLIC_SENTRY_DSN", "https://key@sentry.example/1");
+		const root = document.createElement("div");
+		root.className = "console";
+		document.body.append(root);
+		dispose = render(
+			() => (
+				<Shell
+					org
+					organization={organization}
+					user={{
+						name: "Muriel Bagge",
+						slug: "muriel-bagge",
+						email: "muriel@nowhere.example",
+					}}
+				/>
+			),
+			root,
+		);
+		return root;
+	};
+
+	// Kills an organization bar that draws a project's crumbs, bell, or tabs,
+	// a crumb that does not open the switcher, and one that names a project.
+	test("the crumb is the organization alone, with no bell or tabs", async () => {
+		await page.viewport(1280, 800);
+		const root = mountOrganization({ name: "Pompeii LLC", uuid: "o1" });
+
+		expect(held(root)).toEqual([
+			"Bencher, home",
+			"Pompeii LLC, switch project",
+			"Docs",
+			"Switch between light and dark",
+			"Feedback",
+			"Account",
+		]);
+		const crumb = page.getByRole("button", {
+			name: "Pompeii LLC, switch project",
+		});
+		await expect.element(crumb).toHaveTextContent(/^Pompeii LLC$/);
+		await expect.element(crumb).toHaveAttribute("aria-haspopup", "dialog");
+		expect(page.getByRole("navigation").query()).toBeNull();
+		expect(root.querySelector(".bell")).toBeNull();
+	});
+
+	// Kills a server render that names an organization it cannot know yet.
+	test("before the organization is known, the crumb holds its place", async () => {
+		await page.viewport(1280, 800);
+		const root = mountOrganization(undefined);
+		const crumb = root.querySelector(".crumbbtn");
+		expect(crumb?.getAttribute("aria-busy")).toBe("true");
+		expect(crumb?.querySelector(".crumb-skel")).not.toBeNull();
+	});
+});
+
 // Kills a Feedback control drawn by a build with no Sentry DSN to send to.
 test("a build with no Sentry DSN draws no Feedback control", async () => {
 	for (const width of [1280, 390]) {
