@@ -1,7 +1,7 @@
 import Icon from "@bencherdev/ui/Icon";
-import Skeleton from "@bencherdev/ui/Skeleton";
 import { For, Show } from "solid-js";
 import { TABS, type Tab, projectPath } from "../paths";
+import Crumb from "./Crumb";
 import Feedback from "./Feedback";
 import Tools from "./Tools";
 
@@ -14,6 +14,8 @@ interface ShellProps {
 	/** The active alert count, unknown until it loads. */
 	alerts?: number | undefined;
 	account?: string | undefined;
+	/** The signed in reader, whose projects the crumb's switcher lists. */
+	reader?: string | undefined;
 	/** The reader's email, which a feedback report offers to attach. */
 	email?: string | undefined;
 	tabsRef?: (tabs: HTMLElement) => void;
@@ -43,38 +45,12 @@ const Shell = (props: ShellProps) => {
 					<img src="/wordmark-dark.svg" alt="" />
 					<img src="/wordmark-light.svg" alt="" />
 				</a>
-				<nav
-					class="crumbs"
-					aria-label="Breadcrumb"
-					aria-busy={props.organization ? undefined : "true"}
-				>
-					<Show
-						when={props.organization}
-						fallback={
-							<Skeleton size="text" class="crumb-skel" data-shell="org" />
-						}
-					>
-						{(organization) => (
-							<a
-								class="crumb-org"
-								href={`/console/organizations/${organization().uuid}/projects`}
-								data-shell="org"
-							>
-								{organization().name}
-							</a>
-						)}
-					</Show>
-					<span class="sep" aria-hidden="true">
-						/
-					</span>
-					<a
-						class="projlink"
-						href={projectPath(props.slug)}
-						data-shell="project"
-					>
-						{props.project ?? props.slug}
-					</a>
-				</nav>
+				<Crumb
+					slug={props.slug}
+					organization={props.organization}
+					project={props.project ?? props.slug}
+					reader={props.reader}
+				/>
 				<span class="spacer" />
 				<a
 					class="bell"
