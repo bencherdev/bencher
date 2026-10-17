@@ -28,7 +28,7 @@ jobs:
       - name: Download Noise Results (macos)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: noise_results_macos-14
+          name: noise_results_macos-15
       - name: Download Noise Results (windows)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -68,7 +68,7 @@ jobs:
           --key '${{ secrets.BENCHER_API_KEY }}' \
           --branch ${GITHUB_REF_NAME} \
           --hash '${{ github.sha }}' \
-          --testbed macos-14 \
+          --testbed macos-15 \
           --threshold-measure noise-score \
           --threshold-test t_test \
           --threshold-max-sample-size 64 \
@@ -77,7 +77,7 @@ jobs:
           --adapter json \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
           --ci-only-on-alert \
-          --file ./noise_results_macos-14.json
+          --file ./noise_results_macos-15.json
       - name: Track Noise (windows)
         run: |
           bencher run \

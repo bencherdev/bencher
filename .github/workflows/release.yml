@@ -32,7 +32,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-          - os: macos-14
+          - os: macos-15
           - os: windows-2022
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
