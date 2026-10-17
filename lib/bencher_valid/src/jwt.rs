@@ -18,11 +18,11 @@ use crate::{ValidError, secret::SANITIZED_SECRET};
 
 #[cfg(debug_assertions)]
 // Valid until 2159-12-06T18:53:44Z
-const TEST_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjQzNjA5LCJpYXQiOjE2OTg2NzYzMTQsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJldXN0YWNlLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsfQ.xumYID-R4waqhyjhcbSlwartbiRJ2AwngVkevLUBVCA";
+const TEST_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjU5OTM2NDM2MDksImlhdCI6MTY5ODY3NjMxNCwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDozMDAwLyIsInN1YiI6ImV1c3RhY2UuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.5krKtLMI4WezKfWICdy2u6t4FoGdq6bjgObjFzyYnE8";
 
 #[cfg(debug_assertions)]
 // Valid until 2159-12-06T18:53:44Z
-const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhcGlfa2V5IiwiZXhwIjo1OTkzNjM2MDI0LCJpYXQiOjE2OTg2Njg3MjksImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.t3t23mlgKYZmUt7-PbRWLqXlCTt6Ydh8TRE8KiSGQi4";
+const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjU5OTM2MzYwMjQsImlhdCI6MTY5ODY2ODcyOSwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDozMDAwLyIsInN1YiI6Im11cmllbC5iYWdnZUBub3doZXJlLmNvbSIsIm9yZyI6bnVsbH0.wH9H44bRui5awHpj2Z0RYsp-6czbhQe6rr1vx_DPywA";
 
 #[cfg(debug_assertions)]
 #[expect(clippy::expect_used, reason = "constant test token is known valid")]

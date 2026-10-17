@@ -7,12 +7,10 @@
 //! Integration tests for organization plan endpoint.
 //!
 //! NOTE: The organization plan endpoints are registered only on Bencher Cloud
-//! (`is_bencher_cloud` in `lib.rs`), so the test harness (not configured as
-//! Cloud) returns 404 for them; the GET tests below accept that. The newer
-//! guards therefore cannot be exercised end-to-end here and are covered by
-//! inspection instead: PATCH rejects user API keys via the same
-//! `auth_user.user_key_id.is_some()` check tested in `api_users`
-//! `user_key_auth.rs`, and DELETE uses the same `AdminUser` extractor tested by
+//! (`is_bencher_cloud` in `lib.rs`), so the default test harness returns 404 for
+//! them; the GET tests below accept that. `TestServer::new_with_cloud_routes`
+//! registers them without a biller, which is enough to reach PATCH's session
+//! gate. DELETE uses the same `AdminUser` extractor tested by
 //! `organizations_hard_delete_requires_admin`.
 
 use bencher_api_tests::TestServer;
@@ -86,4 +84,75 @@ async fn plan_org_not_found() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// Fails if plan PATCH accepts a user API key or a deprecated user API token, or refuses a user session.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn plan_patch_requires_session() {
+    use bencher_api_tests::helpers::seed_token;
+    use bencher_json::JsonUserKeyCreated;
+
+    let server = TestServer::new_with_cloud_routes().await;
+    let user = server
+        .signup("Test User", "planpatchsession@example.com")
+        .await;
+    let org = server.create_org(&user, "Plan Session Org").await;
+    let api_token = seed_token(&server, &user, "Legacy Token");
+
+    let org_slug: &str = org.slug.as_ref();
+    let body = serde_json::json!({"cancel_at_period_end": true});
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/organizations/{}/plan", org_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&api_token.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+    let user_slug: &str = user.slug.as_ref();
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({"name": "plan-key"}))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let created: JsonUserKeyCreated = resp.json().await.expect("Failed to parse user key");
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/organizations/{}/plan", org_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(created.key.as_ref()),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+
+    // A user session passes the gate and reaches the missing biller.
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/organizations/{}/plan", org_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::LOCKED);
 }

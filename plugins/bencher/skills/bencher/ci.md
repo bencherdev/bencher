@@ -1,8 +1,7 @@
 # CI Integration
 
 In CI, set `BENCHER_API_KEY` to a **project** API key (`bencher_run_*`) for least
-privilege. Create one with `bencher project key create <project> --name ci` (or in the
-Console) and store it as a CI secret.
+privilege. Create one in the Console and store it as a CI secret.
 
 ## GitHub Actions (Native)
 

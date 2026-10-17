@@ -10,16 +10,17 @@
 //!
 //! These mirror `lib/api_projects/tests/project_key_auth.rs` but verify the
 //! complementary property: a user-scoped key must authenticate as the owning
-//! user across *every* endpoint a JWT can reach — organizations, projects,
-//! user mgmt, token mgmt — except credential creation: a key cannot mint more
-//! user keys (and token creation is deprecated for everyone) and can only see,
-//! update, or revoke *itself*, so a leaked key cannot outlive its own
-//! revocation, tamper with the user's other keys, or enumerate them.
+//! user across organizations, projects, and user management, except for keys:
+//! only a user session can list, view, create, update, or revoke a key, so a
+//! leaked key cannot outlive its own revocation or tamper with the user's keys.
 
-use bencher_api_tests::TestServer;
+use bencher_api_tests::{
+    TestServer,
+    helpers::{TestToken, seed_token},
+};
 use bencher_json::{
     JsonOrganization, JsonOrganizations, JsonProject, JsonUser, JsonUserKey, JsonUserKeyCreated,
-    JsonUserKeys, UserKey,
+    JsonUserKeys, UserKey, UserKeyUuid,
 };
 use http::StatusCode;
 
@@ -209,147 +210,6 @@ async fn user_key_cannot_mint_user_jwt_token() {
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
-#[tokio::test]
-async fn user_key_list_keys() {
-    let (server, user_slug, _token, key) = setup().await;
-
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
-    assert_eq!(keys.0.len(), 1);
-}
-
-#[tokio::test]
-async fn user_key_list_shows_only_itself() {
-    let (server, user_slug, token, key) = setup().await;
-    let _sibling = mint_key(&server, &user_slug, &token, "sibling-list").await;
-
-    // The JWT sees both keys.
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(
-        resp.headers()
-            .get("x-total-count")
-            .and_then(|v| v.to_str().ok()),
-        Some("2")
-    );
-    let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
-    assert_eq!(keys.0.len(), 2);
-
-    // The key sees only itself: sibling metadata (names, expirations) is
-    // credential-inventory reconnaissance for a stolen key.
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(
-        resp.headers()
-            .get("x-total-count")
-            .and_then(|v| v.to_str().ok()),
-        Some("1")
-    );
-    let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
-    assert_eq!(keys.0.len(), 1);
-    let name: &str = keys.0[0].name.as_ref();
-    assert_eq!(name, "primary-key");
-}
-
-#[tokio::test]
-async fn user_key_can_view_itself() {
-    let (server, user_slug, token, key) = setup().await;
-
-    // Discover the key's UUID via list.
-    let list_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("list failed");
-    let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
-    let key_uuid = keys.0[0].uuid;
-
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
-        .send()
-        .await
-        .expect("self-view failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let viewed: JsonUserKey = resp.json().await.expect("view parse");
-    assert_eq!(viewed.uuid, key_uuid);
-}
-
-#[tokio::test]
-async fn user_key_cannot_view_sibling_key() {
-    let (server, user_slug, token, key) = setup().await;
-    let _sibling = mint_key(&server, &user_slug, &token, "sibling-view").await;
-
-    // Discover the sibling's UUID via list.
-    let list_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("list failed");
-    let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
-    let sibling_uuid = keys
-        .0
-        .iter()
-        .find(|k| k.name.as_ref() == "sibling-view")
-        .expect("sibling key should be listed")
-        .uuid;
-
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, sibling_uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
-        .send()
-        .await
-        .expect("sibling view request failed");
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-}
-
 // --- Negative cases: malformed / unknown / revoked ---------------------------
 
 #[tokio::test]
@@ -410,7 +270,7 @@ async fn revoked_user_key_rejected() {
     let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
     let key_uuid = keys.0[0].uuid;
 
-    // Revoke via the JWT (could just as well be the key itself).
+    // Revoke with the session.
     let del_resp = server
         .client
         .delete(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
@@ -468,111 +328,49 @@ async fn second_revoke_returns_conflict() {
     }
 }
 
+// --- Key management requires a user session ---------------------------------
+
+// Fails if key POST accepts a deprecated user API token as a user session.
 #[tokio::test]
-async fn user_key_can_revoke_itself() {
-    let (server, user_slug, token, key) = setup().await;
+async fn api_token_cannot_mint_user_key() {
+    let (server, user_slug, token, _key, api_token) = setup_api_token().await;
 
-    // Discover the key's UUID via list.
-    let list_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("list failed");
-    let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
-    let key_uuid = keys.0[0].uuid;
-
-    // A key may always destroy itself: burn-after-use and in-CI incident
-    // response must work without a JWT in hand.
     let resp = server
         .client
-        .delete(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
+        .post(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
         .header(
             bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
+            bencher_json::bearer_header(&api_token.token),
         )
-        .send()
-        .await
-        .expect("self-revoke failed");
-    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
-
-    // The key no longer authenticates.
-    let resp = server
-        .client
-        .get(server.api_url("/v0/organizations"))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
+        .json(&serde_json::json!({"name": "laundered-key"}))
         .send()
         .await
         .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-}
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
-#[tokio::test]
-async fn user_key_cannot_revoke_sibling_key() {
-    let (server, user_slug, token, key) = setup().await;
-    let sibling = mint_key(&server, &user_slug, &token, "sibling-key").await;
-
-    // Discover the sibling's UUID via list.
-    let list_resp = server
+    // No key was created: the session still sees only the original key.
+    let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("list failed");
-    let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
-    let sibling_uuid = keys
-        .0
-        .iter()
-        .find(|k| k.name.as_ref() == "sibling-key")
-        .expect("sibling key should be listed")
-        .uuid;
-
-    // A key must not be able to revoke any key other than itself: a stolen key
-    // revoking the user's other keys is a denial-of-service vector with no
-    // legitimate workflow behind it.
-    let resp = server
-        .client
-        .delete(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, sibling_uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
-        .send()
-        .await
-        .expect("sibling revoke request failed");
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-
-    // The sibling key is untouched and still authenticates.
-    let resp = server
-        .client
-        .get(server.api_url("/v0/organizations"))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(sibling.as_ref()),
         )
         .send()
         .await
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK);
+    let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
+    assert_eq!(keys.0.len(), 1);
 }
 
+// Fails if key list accepts a user API key or a deprecated user API token.
 #[tokio::test]
-async fn user_key_can_rename_itself() {
-    let (server, user_slug, token, key) = setup().await;
+async fn list_user_keys_requires_session() {
+    let (server, user_slug, token, key, api_token) = setup_api_token().await;
+    let _sibling = mint_key(&server, &user_slug, &token, "sibling-key").await;
 
-    // Discover the key's UUID via list.
-    let list_resp = server
+    let resp = server
         .client
         .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
         .header(
@@ -581,70 +379,78 @@ async fn user_key_can_rename_itself() {
         )
         .send()
         .await
-        .expect("list failed");
-    let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
-    let key_uuid = keys.0[0].uuid;
-
-    let resp = server
-        .client
-        .patch(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
-        .json(&serde_json::json!({"name": "renamed-by-self"}))
-        .send()
-        .await
-        .expect("self-rename failed");
+        .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK);
-    let renamed: JsonUserKey = resp.json().await.expect("rename parse");
-    let name: &str = renamed.name.as_ref();
-    assert_eq!(name, "renamed-by-self");
+    assert_eq!(
+        resp.headers()
+            .get("x-total-count")
+            .and_then(|v| v.to_str().ok()),
+        Some("2")
+    );
+    let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
+    assert_eq!(keys.0.len(), 2);
+
+    for bearer in [key.as_ref(), api_token.token.as_ref()] {
+        let resp = server
+            .client
+            .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
 }
 
+// Fails if key view accepts a user API key, even on itself, or a deprecated user API token.
 #[tokio::test]
-async fn user_key_cannot_rename_sibling_key() {
-    let (server, user_slug, token, key) = setup().await;
-    let _sibling = mint_key(&server, &user_slug, &token, "sibling-rename").await;
+async fn view_user_key_requires_session() {
+    let (server, user_slug, token, key, api_token) = setup_api_token().await;
+    let key_uuid = only_key_uuid(&server, &user_slug, &token).await;
 
-    // Discover the sibling's UUID via list.
-    let list_resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&token),
-        )
-        .send()
-        .await
-        .expect("list failed");
-    let keys: JsonUserKeys = list_resp.json().await.expect("list parse");
-    let sibling_uuid = keys
-        .0
-        .iter()
-        .find(|k| k.name.as_ref() == "sibling-rename")
-        .expect("sibling key should be listed")
-        .uuid;
+    for bearer in [key.as_ref(), api_token.token.as_ref()] {
+        let resp = server
+            .client
+            .get(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .send()
+            .await
+            .expect("view request failed");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+}
 
-    // A key may only mutate itself: renaming siblings could be abused to
-    // obscure which key is which during an incident.
+// Fails if key PATCH accepts a user API key, even on itself, or a deprecated user API token.
+#[tokio::test]
+async fn rename_user_key_requires_session() {
+    let (server, user_slug, token, key, api_token) = setup_api_token().await;
+    let key_uuid = only_key_uuid(&server, &user_slug, &token).await;
+
+    for bearer in [key.as_ref(), api_token.token.as_ref()] {
+        let resp = server
+            .client
+            .patch(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .json(&serde_json::json!({"name": "tampered"}))
+            .send()
+            .await
+            .expect("rename request failed");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // The key's name is unchanged.
     let resp = server
         .client
-        .patch(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, sibling_uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
-        .json(&serde_json::json!({"name": "tampered"}))
-        .send()
-        .await
-        .expect("sibling rename request failed");
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-
-    // The sibling key's name is unchanged.
-    let resp = server
-        .client
-        .get(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, sibling_uuid)))
+        .get(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&token),
@@ -655,7 +461,69 @@ async fn user_key_cannot_rename_sibling_key() {
     assert_eq!(resp.status(), StatusCode::OK);
     let viewed: JsonUserKey = resp.json().await.expect("view parse");
     let name: &str = viewed.name.as_ref();
-    assert_eq!(name, "sibling-rename");
+    assert_eq!(name, "primary-key");
+}
+
+// Fails if key DELETE accepts a user API key, even on itself, or a deprecated user API token.
+#[tokio::test]
+async fn revoke_user_key_requires_session() {
+    let (server, user_slug, token, key, api_token) = setup_api_token().await;
+    let key_uuid = only_key_uuid(&server, &user_slug, &token).await;
+
+    for bearer in [key.as_ref(), api_token.token.as_ref()] {
+        let resp = server
+            .client
+            .delete(server.api_url(&format!("/v0/users/{}/keys/{}", user_slug, key_uuid)))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .send()
+            .await
+            .expect("revoke request failed");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // The key is not revoked and still authenticates.
+    let resp = server
+        .client
+        .get(server.api_url("/v0/organizations"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+async fn setup_api_token() -> (TestServer, String, String, UserKey, TestToken) {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Token User", "apitoken-setup@example.com")
+        .await;
+    let user_slug_ref: &str = user.slug.as_ref();
+    let user_slug: String = user_slug_ref.to_owned();
+    let key = mint_key(&server, &user_slug, &user.token, "primary-key").await;
+    let api_token = seed_token(&server, &user, "legacy-token");
+    (server, user_slug, user.token, key, api_token)
+}
+
+async fn only_key_uuid(server: &TestServer, user_slug: &str, token: &str) -> UserKeyUuid {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("list failed");
+    let keys: JsonUserKeys = resp.json().await.expect("list parse");
+    assert_eq!(keys.0.len(), 1);
+    keys.0.first().expect("one key").uuid
 }
 
 // --- `same_user!` enforcement ------------------------------------------------

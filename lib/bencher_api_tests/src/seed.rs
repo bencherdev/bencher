@@ -1,7 +1,7 @@
 use bencher_json::{
-    Email, JsonConfirm, JsonNewOrganization, JsonNewProject, JsonOrganization, JsonProject,
-    JsonSignup, OrganizationSlug, OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName,
-    UserName, UserSlug, UserUuid, system::auth::JsonAuthUser,
+    Email, JsonConfirm, JsonNewOrganization, JsonNewProject, JsonNewUserKey, JsonOrganization,
+    JsonProject, JsonSignup, JsonUserKeyCreated, OrganizationSlug, OrganizationUuid, ProjectSlug,
+    ProjectUuid, ResourceName, UserKey, UserName, UserSlug, UserUuid, system::auth::JsonAuthUser,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JsonProjectKeyCreated, ProjectKey};
@@ -231,6 +231,37 @@ impl TestServer {
         TestProjectKey {
             key: key_created.key,
         }
+    }
+
+    /// Create a user API key with the user's session.
+    #[expect(clippy::expect_used, reason = "test helper for user key creation")]
+    pub async fn create_user_key(&self, user: &TestUser, name: &str) -> UserKey {
+        let user_slug: &str = user.slug.as_ref();
+        let body = JsonNewUserKey {
+            name: name.parse().expect("Invalid user key name"),
+            ttl: None,
+        };
+
+        let resp = self
+            .client
+            .post(self.api_url(&format!("/v0/users/{user_slug}/keys")))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&body)
+            .send()
+            .await
+            .expect("Failed to create user key");
+
+        assert!(
+            resp.status().is_success(),
+            "Create user key failed: {}",
+            resp.text().await.unwrap_or_default()
+        );
+
+        let key_created: JsonUserKeyCreated = resp.json().await.expect("Failed to parse user key");
+        key_created.key
     }
 
     /// Create a user with a confirmed account (bypassing email confirmation).

@@ -41,11 +41,7 @@ pub struct AuthUser {
     pub organizations: Vec<OrganizationId>,
     pub projects: Vec<OrgProjectId>,
     pub rbac: RbacUser,
-    /// The `bencher_user_*` key that authenticated this request, if any.
-    /// `None` means a JWT (or an internally constructed `AuthUser`, e.g. OCI).
-    /// Used to gate credential management: a user key cannot create another
-    /// key and can only revoke itself.
-    pub user_key_id: Option<UserKeyId>,
+    pub credential: AuthCredential,
 }
 
 impl AuthUser {
@@ -62,25 +58,25 @@ impl AuthUser {
         // Check out a single connection for the entire auth flow:
         // credential resolution and RBAC hydration share one pool checkout.
         let conn = public_conn!(context);
-        let (query_user, user_key_id) = match bearer_token {
-            BearerToken::Jwt(jwt) => (Self::user_from_jwt(context, conn, &jwt)?, None),
+        let (query_user, credential) = match bearer_token {
+            BearerToken::Jwt(jwt) => Self::user_from_jwt(context, conn, &jwt)?,
             BearerToken::UserKey(key) => {
                 let (query_user, query_key) = Self::user_from_user_key(context, conn, &key)?;
-                (query_user, Some(query_key.id))
+                (query_user, AuthCredential::UserKey(query_key.id))
             },
         };
 
         #[cfg(feature = "plus")]
         context.rate_limiting.user_request(query_user.uuid)?;
 
-        Self::load_inner(conn, query_user, user_key_id)
+        Self::load_inner(conn, query_user, credential)
     }
 
     fn user_from_jwt(
         context: &ApiContext,
         conn: &mut DbConnection,
         jwt: &Jwt,
-    ) -> Result<QueryUser, HttpError> {
+    ) -> Result<(QueryUser, AuthCredential), HttpError> {
         let claims = context
             .token_key
             .validate_client(jwt)
@@ -109,7 +105,12 @@ impl AuthUser {
             ));
         }
 
-        Ok(query_user)
+        let credential = if claims.audience() == Audience::Client.as_str() {
+            AuthCredential::Session
+        } else {
+            AuthCredential::ApiToken
+        };
+        Ok((query_user, credential))
     }
 
     /// Authenticate via a `bencher_user_*` API key.
@@ -173,17 +174,18 @@ impl AuthUser {
     }
 
     pub fn reload(&self, conn: &mut DbConnection) -> Result<Self, HttpError> {
-        Self::load_inner(conn, self.user.clone(), self.user_key_id)
+        Self::load_inner(conn, self.user.clone(), self.credential)
     }
 
+    /// Load a user for an internal path, such as OCI, which is never a user session.
     pub fn load(conn: &mut DbConnection, query_user: QueryUser) -> Result<Self, HttpError> {
-        Self::load_inner(conn, query_user, None)
+        Self::load_inner(conn, query_user, AuthCredential::ApiToken)
     }
 
     fn load_inner(
         conn: &mut DbConnection,
         query_user: QueryUser,
-        user_key_id: Option<UserKeyId>,
+        credential: AuthCredential,
     ) -> Result<Self, HttpError> {
         let (org_ids, org_roles) = Self::organization_roles(conn, &query_user)?;
         let (proj_ids, proj_roles) = Self::project_roles(conn, &query_user)?;
@@ -200,7 +202,7 @@ impl AuthUser {
             organizations: org_ids,
             projects: proj_ids,
             rbac,
-            user_key_id,
+            credential,
         })
     }
 
@@ -306,6 +308,19 @@ impl AuthUser {
         rbac.is_allowed_unwrap(self, Permission::Administer, Server)
     }
 
+    /// Whether the request authenticated with a login session rather than a token or key.
+    pub fn is_session(&self) -> bool {
+        matches!(self.credential, AuthCredential::Session)
+    }
+
+    pub fn user_key_id(&self) -> Option<UserKeyId> {
+        if let AuthCredential::UserKey(user_key_id) = self.credential {
+            Some(user_key_id)
+        } else {
+            None
+        }
+    }
+
     pub fn organizations(
         &self,
         rbac: &Rbac,
@@ -363,12 +378,20 @@ impl Sanitize for AuthUser {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum AuthCredential {
+    /// A `client` audience JWT from a login.
+    Session,
+    /// A deprecated user API token, or a user loaded internally.
+    ApiToken,
+    UserKey(UserKeyId),
+}
+
 // https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/bearer.rs
 /// A bearer credential extracted from the `Authorization` header.
 ///
 /// The two shapes are distinguished by prefix: `bencher_user_*` is a user API key,
-/// anything else is parsed as a JWT. Both carry the same authority once resolved —
-/// `AuthUser::from_token` produces an identical `AuthUser` either way.
+/// anything else is parsed as a JWT.
 pub enum BearerToken {
     Jwt(Jwt),
     UserKey(UserKey),
