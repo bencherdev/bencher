@@ -6,7 +6,11 @@ import { afterEach, expect, test } from "vitest";
 import { page } from "vitest/browser";
 import type { JsonConsoleRunSummary } from "../../types/bencher";
 import type { Range } from "../reports/rows";
-import { expectNameStartsWithText, expectRowOpens } from "../ui/testing";
+import {
+	columnEdges,
+	expectNameStartsWithText,
+	expectRowOpens,
+} from "../ui/testing";
 import RunsTable from "./RunsTable";
 import { runFixture } from "./testing";
 
@@ -261,4 +265,106 @@ test("a wide row opens its run from any cell", async () => {
 		link.getAttribute("href"),
 	);
 	expect(new Set(hrefs).size).toBe(3);
+});
+
+/** Runs whose later rows hold longer names, more testbeds, and alerts, which an auto layout would widen its columns for. */
+const varied = () =>
+	Array.from({ length: 120 }, (_, index) =>
+		runFixture(
+			index,
+			index < 40
+				? {}
+				: {
+						branch: {
+							uuid: "b",
+							name: "feature/a-branch-with-a-rather-long-name",
+							slug: "b",
+							head: "h",
+						} as never,
+						testbeds: ["ubuntu-22.04-arm64-large-runner", "macos-latest"],
+						testbed_count: 5,
+						alerts: { total: 120, active: 64 },
+						lines: 123_456,
+						authors: [
+							{ kind: "key", name: "a project key with a long name" },
+						] as never,
+					},
+		),
+	);
+
+// Kills a table laid out by the rows drawn (an auto layout), whose columns
+// shift as rows of other widths scroll into view, at desktop and at 768 px.
+test("columns hold still as rows of other widths scroll into view", async () => {
+	for (const width of [1280, 768]) {
+		await page.viewport(width, 720);
+		mount(varied());
+		await expect.element(table()).toBeVisible();
+		const before = columnEdges(table().element());
+		expect(before.cells).toEqual(before.headers);
+		await expect
+			.poll(() => {
+				window.scrollTo({
+					top: document.body.scrollHeight,
+					behavior: "instant",
+				});
+				return drawn().at(-1);
+			})
+			.toBe(121);
+		const after = columnEdges(table().element());
+		expect(after.headers).toEqual(before.headers);
+		expect(after.cells).toEqual(before.headers);
+		window.scrollTo({ top: 0, behavior: "instant" });
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a table that does not fold on a phone (an auto layout there), whose
+// rows' cells follow the widest rows drawn beside them.
+test("on a phone, each row folds on its own, whatever rows are drawn beside it", async () => {
+	await page.viewport(390, 720);
+	const firstRow = async (runs: JsonConsoleRunSummary[]) => {
+		mount(runs);
+		await expect.element(table()).toBeVisible();
+		const { cells } = columnEdges(table().element());
+		dispose?.();
+		document.body.replaceChildren();
+		return cells;
+	};
+	const runs = varied();
+	expect(await firstRow([...runs.slice(0, 1), ...runs.slice(40, 60)])).toEqual(
+		await firstRow(runs.slice(0, 20)),
+	);
+});
+
+// Kills a first name that pushes its `+N` past the cell's edge, out of the
+// pointer's reach (a name that does not give way), and an Alerts column that
+// cuts off three-digit counts, at desktop and on a small laptop.
+test("a long first name gives way to its +N, and three-digit alerts fit", async () => {
+	for (const width of [1280, 1024]) {
+		await page.viewport(width, 720);
+		mount([
+			runFixture(0, {
+				testbeds: ["ubuntu-22.04-arm64-large-runner", "macos-latest"],
+				testbed_count: 5,
+				authors: [
+					{ kind: "key", name: "a project key with a rather long name" },
+					{ kind: "user", name: "Muriel Bagge" },
+				] as never,
+				author_count: 2,
+				alerts: { total: 120, active: 64 },
+			}),
+		]);
+		await expect.element(table()).toBeVisible();
+		expect(more(2)).toEqual([
+			["+4", "ubuntu-22.04-arm64-large-runner, macos-latest, and 3 more"],
+			["+1", "a project key with a rather long name, Muriel Bagge"],
+		]);
+		const alerts = document.querySelector(
+			"tr[aria-rowindex='2'] .reports-alerts",
+		)?.parentElement as HTMLElement;
+		expect(alerts.scrollWidth).toBeLessThanOrEqual(alerts.clientWidth);
+		dispose?.();
+		document.body.replaceChildren();
+	}
 });

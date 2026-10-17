@@ -6,7 +6,11 @@ import { page, userEvent } from "vitest/browser";
 import type { JsonConsoleBranchRow } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { type Sent, bootstrapOf, mount } from "../settings/testing";
-import { expectNameStartsWithText, expectRowOpens } from "../ui/testing";
+import {
+	columnEdges,
+	expectNameStartsWithText,
+	expectRowOpens,
+} from "../ui/testing";
 import List from "./List";
 
 let dispose: (() => void) | undefined;
@@ -935,4 +939,77 @@ test("a row opens its branch from anywhere on it, and Archive keeps its own clic
 		dispose?.();
 		dispose = undefined;
 	}
+});
+
+// Kills a dimension list laid out by the rows drawn (an auto layout), whose
+// columns shift as rows of other widths scroll into view, at desktop and at 768 px.
+test("columns hold still as rows of other widths scroll into view", async () => {
+	const many = Array.from({ length: 300 }, (_, index) =>
+		index < 100
+			? row(`branch-${String(index).padStart(3, "0")}`)
+			: row(`feature/a-branch-with-a-rather-long-name-${index}`, {
+					thresholds: 1_234,
+					start_point: "a-start-point-with-a-long-name",
+				}),
+	);
+	for (const width of [1280, 768]) {
+		await page.viewport(width, 720);
+		const fake = api({ lists: () => many });
+		dispose = mount(
+			() => <List dimension="branches" perPage={300} edit={true} />,
+			{ api: fake.api, path: "/hashbrown/branches" },
+		).dispose;
+		await expect.element(rowOf("branch-000")).toBeVisible();
+		const before = columnEdges(branches().element());
+		expect(before.cells).toEqual(before.headers);
+		const body = document.querySelector("tbody") as HTMLElement;
+		window.scrollTo({
+			top: body.getBoundingClientRect().top + window.scrollY + 280 * 40,
+			behavior: "instant",
+		});
+		await expect
+			.element(
+				branches().getByRole("link", {
+					name: /^feature\/a-branch-with-a-rather-long-name-280/,
+				}),
+			)
+			.toBeInTheDocument();
+		const after = columnEdges(branches().element());
+		expect(after.headers).toEqual(before.headers);
+		expect(after.cells).toEqual(before.headers);
+		window.scrollTo({ top: 0, behavior: "instant" });
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a dimension list that does not fold on a phone (an auto layout there),
+// whose rows' cells follow the widest rows drawn beside them.
+test("on a phone, each row folds on its own, whatever rows are drawn beside it", async () => {
+	await page.viewport(390, 720);
+	const firstRow = async (rows: JsonConsoleBranchRow[]) => {
+		const fake = api({ lists: () => rows });
+		dispose = mount(
+			() => <List dimension="branches" perPage={300} edit={true} />,
+			{ api: fake.api, path: "/hashbrown/branches" },
+		).dispose;
+		await expect.element(rowOf("branch-000")).toBeVisible();
+		const { cells } = columnEdges(branches().element());
+		dispose?.();
+		dispose = undefined;
+		document.body.replaceChildren();
+		return cells;
+	};
+	const short = Array.from({ length: 20 }, (_, index) =>
+		row(`branch-${String(index).padStart(3, "0")}`),
+	);
+	const long = Array.from({ length: 19 }, (_, index) =>
+		row(`feature/a-branch-with-a-rather-long-name-${index}`, {
+			thresholds: 1_234,
+			start_point: "a-start-point-with-a-long-name",
+		}),
+	);
+	expect(await firstRow([...short.slice(0, 1), ...long])).toEqual(
+		await firstRow(short),
+	);
 });

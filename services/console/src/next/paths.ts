@@ -47,6 +47,10 @@ export const reportPath = (slug: string, report: string) =>
 export const alertPath = (slug: string, alert: string) =>
 	`${projectPath(slug, "alerts")}/${alert}`;
 
+/** A run's page, under its project's Runs. */
+export const runPath = (slug: string, version: string) =>
+	`${projectPath(slug, "runs")}/${version}`;
+
 const TAB_PAGES = {
 	explore: "Explore",
 	plots: "Plots",

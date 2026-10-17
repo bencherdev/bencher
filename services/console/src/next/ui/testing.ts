@@ -63,3 +63,21 @@ const hitAt = (element: Element) => {
 		box.y + box.height / 2,
 	);
 };
+
+/**
+ * Each header cell's left edge and width, and those of the first row drawn
+ * under them, which a table whose columns never follow its rows keeps as it scrolls.
+ */
+export const columnEdges = (table: Element) => {
+	const edges = (cells: Iterable<Element>) =>
+		[...cells].map((cell) => {
+			const box = cell.getBoundingClientRect();
+			return `${Math.round(box.left)}+${Math.round(box.width)}`;
+		});
+	return {
+		headers: edges(table.querySelectorAll("thead th")),
+		cells: edges(
+			table.querySelector("tbody tr[aria-rowindex]")?.children ?? [],
+		),
+	};
+};

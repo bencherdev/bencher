@@ -109,6 +109,7 @@
 .reports-by {
 	vertical-align: middle;
 	display: inline-flex;
+	max-width: 100%;
 	align-items: center;
 	gap: 6px;
 	color: var(--color-text-secondary);
@@ -117,15 +118,30 @@
 	display: inline-flex;
 	color: var(--color-text-muted);
 }
-/* A run's testbeds, adapters, or authors past the first, which its hover lists. */
+/* A run's testbeds, adapters, or authors past the first, which its hover lists, kept whole as the first name gives way. */
 .rn-more {
+	flex: none;
 	margin-left: 6px;
 	color: var(--color-text-muted);
 	font-size: 12px;
 }
+.rn-first {
+	display: inline-flex;
+	max-width: 100%;
+}
+.rn-name {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
 .rn-titlehash {
 	font-family: var(--font-family-code);
 	color: var(--color-text-secondary);
+}
+.rn-crumbhash {
+	font-family: var(--font-family-code);
+	letter-spacing: 0;
+	text-transform: none;
 }
 .rn-ord {
 	color: var(--color-text-muted);
@@ -194,6 +210,20 @@
 .reports-sheet-filters .reports-anchor {
 	flex-direction: column;
 	align-items: flex-start;
+}
+
+/* Columns sized by their headers alone, never by the rows drawn, so they hold still as rows come and go. */
+@media (min-width: 768px) {
+	.reports-table {
+		table-layout: fixed;
+	}
+	.reports-table td {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.rn-list {
+		min-width: 900px;
+	}
 }
 
 @media (max-width: 767px) {

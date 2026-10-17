@@ -124,16 +124,23 @@ const RowTable = (props: {
 		>
 			<thead>
 				<tr aria-rowindex={1}>
+					{/* Every width but the name's is set, so the columns never follow the rows drawn; the actions hold their widest state. */}
 					<th scope="col">{kind().title}</th>
-					<th scope="col">{kind().column}</th>
-					<th scope="col">Created</th>
-					<th scope="col">Last report</th>
+					<th scope="col" style="width:16%">
+						{kind().column}
+					</th>
+					<th scope="col" style="width:13%">
+						Created
+					</th>
+					<th scope="col" style="width:16%">
+						Last report
+					</th>
 					<Show when={counts()}>
-						<th scope="col" data-align="end">
+						<th scope="col" style="width:13%" data-align="end">
 							Thresholds
 						</th>
 					</Show>
-					<th scope="col">
+					<th scope="col" style="width:216px">
 						<span class="sr-only">Actions</span>
 					</th>
 				</tr>
