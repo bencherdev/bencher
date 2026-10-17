@@ -1,7 +1,19 @@
+/** The new console, which keeps the classic console's paths under `/next`. */
+export const NEXT_CONSOLE = "/next/console";
 /** The classic console's project pages. */
 const CLASSIC_PROJECTS = "/console/projects";
 /** The new console serves BMF v1 projects here until version 0 retires. */
 export const NEXT_PROJECTS = `/next${CLASSIC_PROJECTS}`;
+/** The account pages, under the reader's slug. */
+const NEXT_USERS = `${NEXT_CONSOLE}/users`;
+
+export const profilePath = (user: string) => `${NEXT_USERS}/${user}/settings`;
+
+/** The user an account page is about, if `pathname` is one. */
+export const accountUser = (pathname: string) =>
+	pathname.startsWith(`${NEXT_USERS}/`)
+		? pathname.slice(NEXT_USERS.length + 1).split("/")[0] || undefined
+		: undefined;
 
 /** The dimension lists keep their classic paths, each page under its list. */
 export const DIMENSIONS = [
@@ -56,7 +68,7 @@ const TAB_PAGES = {
 	settings: "Settings",
 } as const satisfies Record<Tab, string>;
 
-/** A file under `pages/`: each draws one kind of project path. */
+/** A file under `pages/`: each draws one kind of path. */
 export type PageName =
 	| (typeof TAB_PAGES)[Tab]
 	| "Run"
@@ -64,6 +76,7 @@ export type PageName =
 	| "Alert"
 	| "Threshold"
 	| "Dimensions"
+	| "Profile"
 	| "NotFound";
 
 /** The page that draws a project path, from its segments after the project. */

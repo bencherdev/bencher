@@ -26,9 +26,9 @@ const KINDS: { value: Kind; label: string }[] = [
 const SENT_FOR = 3_000;
 
 export interface FeedbackAbout {
-	/** The organization and project as the crumb names them. */
-	project: string;
-	slug: string;
+	/** The organization and project as the crumb names them, on a project's page. */
+	project?: string | undefined;
+	slug?: string | undefined;
 	email: string;
 }
 
@@ -54,7 +54,15 @@ const FeedbackDialog = (props: {
 			label: "Page",
 			value: document.title.replace(/ \| Bencher$/, "").replaceAll(" | ", ", "),
 		},
-		{ id: "project", label: "Project", value: props.about.project },
+		...(props.about.project
+			? [
+					{
+						id: "project" as const,
+						label: "Project",
+						value: props.about.project,
+					},
+				]
+			: []),
 		{ id: "browser", label: "Browser", value: browserOf(navigator.userAgent) },
 		{ id: "build", label: "Console build", value: version },
 		{ id: "session", label: "Session link", value: "Sentry trace and replay" },

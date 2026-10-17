@@ -6,8 +6,9 @@ import Feedback from "./Feedback";
 import Tools from "./Tools";
 
 interface ShellProps {
-	slug: string;
-	tab: Tab | undefined;
+	/** The project's slug; an account page's bar has no project. */
+	slug?: string | undefined;
+	tab?: Tab | undefined;
 	/** Unknown until the project loads; the crumb holds its place until then. */
 	organization?: { name: string; uuid: string } | undefined;
 	project?: string | undefined;
@@ -45,27 +46,38 @@ const Shell = (props: ShellProps) => {
 					<img src="/wordmark-dark.svg" alt="" />
 					<img src="/wordmark-light.svg" alt="" />
 				</a>
-				<Crumb
-					slug={props.slug}
-					organization={props.organization}
-					project={props.project ?? props.slug}
-					reader={props.reader}
-				/>
-				<span class="spacer" />
-				<a
-					class="bell"
-					href={projectPath(props.slug, "alerts")}
-					aria-label={alertsLabel()}
-					data-shell="bell"
+				<Show
+					when={props.slug}
+					fallback={<span class="crumbtext">Account</span>}
 				>
-					<Icon name="alerts" />
-					<Show when={props.alerts}>
-						{" "}
-						<span class="badge" aria-hidden="true">
-							{count()}
-						</span>
-					</Show>
-				</a>
+					{(slug) => (
+						<Crumb
+							slug={slug()}
+							organization={props.organization}
+							project={props.project ?? slug()}
+							reader={props.reader}
+						/>
+					)}
+				</Show>
+				<span class="spacer" />
+				<Show when={props.slug}>
+					{(slug) => (
+						<a
+							class="bell"
+							href={projectPath(slug(), "alerts")}
+							aria-label={alertsLabel()}
+							data-shell="bell"
+						>
+							<Icon name="alerts" />
+							<Show when={props.alerts}>
+								{" "}
+								<span class="badge" aria-hidden="true">
+									{count()}
+								</span>
+							</Show>
+						</a>
+					)}
+				</Show>
 				<Tools>
 					<Feedback
 						about={() => ({
@@ -81,36 +93,44 @@ const Shell = (props: ShellProps) => {
 					<span class="sr-only">Account</span>
 				</a>
 			</div>
-			<nav class="tabs" aria-label="Project" ref={(el) => props.tabsRef?.(el)}>
-				<For each={TABS}>
-					{({ tab, label }) => (
-						<>
-							<Show when={tab === "settings"}>
-								<span class="tabspacer" aria-hidden="true" />
-							</Show>
-							<a
-								class="tab"
-								href={projectPath(props.slug, tab)}
-								aria-current={tab === props.tab ? "page" : undefined}
-								aria-label={
-									tab === "alerts" && props.alerts
-										? `Alerts ${count()} active`
-										: undefined
-								}
-								data-shell={tab === "alerts" ? "alerts" : undefined}
-							>
-								{label}
-								<Show when={tab === "alerts" && props.alerts}>
-									{" "}
-									<span class="badge" aria-hidden="true">
-										{count()}
-									</span>
-								</Show>
-							</a>
-						</>
-					)}
-				</For>
-			</nav>
+			<Show when={props.slug}>
+				{(slug) => (
+					<nav
+						class="tabs"
+						aria-label="Project"
+						ref={(el) => props.tabsRef?.(el)}
+					>
+						<For each={TABS}>
+							{({ tab, label }) => (
+								<>
+									<Show when={tab === "settings"}>
+										<span class="tabspacer" aria-hidden="true" />
+									</Show>
+									<a
+										class="tab"
+										href={projectPath(slug(), tab)}
+										aria-current={tab === props.tab ? "page" : undefined}
+										aria-label={
+											tab === "alerts" && props.alerts
+												? `Alerts ${count()} active`
+												: undefined
+										}
+										data-shell={tab === "alerts" ? "alerts" : undefined}
+									>
+										{label}
+										<Show when={tab === "alerts" && props.alerts}>
+											{" "}
+											<span class="badge" aria-hidden="true">
+												{count()}
+											</span>
+										</Show>
+									</a>
+								</>
+							)}
+						</For>
+					</nav>
+				)}
+			</Show>
 		</header>
 	);
 };

@@ -323,6 +323,54 @@ describe("wide", () => {
 	});
 });
 
+describe("an account page", () => {
+	const mountAccount = () => {
+		vi.stubEnv("PUBLIC_SENTRY_DSN", "https://key@sentry.example/1");
+		const root = document.createElement("div");
+		root.className = "console";
+		document.body.append(root);
+		dispose = render(
+			() => (
+				<Shell
+					account="/next/console/users/muriel-bagge/settings"
+					email="muriel@nowhere.example"
+				/>
+			),
+			root,
+		);
+		return root;
+	};
+
+	// Kills an account bar that draws a project's crumbs, bell, or tabs, or
+	// that loses Account, Feedback, or the avatar.
+	test("the bar reads Account in place of the crumbs, with no bell or tabs", async () => {
+		await page.viewport(1280, 800);
+		const root = mountAccount();
+
+		expect(held(root)).toEqual([
+			"Bencher, home",
+			"Docs",
+			"Switch between light and dark",
+			"Feedback",
+			"Account",
+		]);
+		const crumb = root.querySelector(".crumbtext");
+		expect(crumb?.textContent).toBe("Account");
+		expect(crumb?.checkVisibility()).toBe(true);
+		expect(page.getByRole("navigation").query()).toBeNull();
+
+		await page.viewport(390, 844);
+		expect(crumb?.checkVisibility()).toBe(false);
+		expect(held(root)).toEqual([
+			"Bencher, home",
+			"Feedback",
+			"Menu",
+			"Account",
+		]);
+		expect(strays(root)).toEqual([]);
+	});
+});
+
 // Kills a Feedback control drawn by a build with no Sentry DSN to send to.
 test("a build with no Sentry DSN draws no Feedback control", async () => {
 	for (const width of [1280, 390]) {

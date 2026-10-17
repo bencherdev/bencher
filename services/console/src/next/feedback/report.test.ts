@@ -56,6 +56,15 @@ describe("feedbackArgs", () => {
 		});
 	});
 
+	// Kills a page outside a project tagged with an empty project.
+	test("a page outside a project tags none", () => {
+		const { slug: _, ...account } = ABOUT;
+		expect(feedbackArgs(form(), account).params.tags).toStrictEqual({
+			kind: "bug",
+			build: "0.6.13",
+		});
+	});
+
 	// Kills an image left out of the call, or sent under another name or type.
 	test("an image goes as an attachment", () => {
 		const data = new Uint8Array([137, 80, 78, 71]);

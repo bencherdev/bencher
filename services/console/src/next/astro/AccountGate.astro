@@ -1,0 +1,22 @@
+---
+import { VERSION_KEY } from "../memory";
+import { profilePath } from "../paths";
+
+interface Props {
+	user: string;
+}
+
+const next = profilePath(Astro.props.user);
+
+// A reader with a version 1 project moves to the new console's Profile before
+// the classic page loads anything.
+---
+
+<script is:inline define:vars={{ next, VERSION_KEY }}>
+	try {
+		var versions = JSON.parse(localStorage.getItem(VERSION_KEY) || "{}");
+		if (Object.values(versions).indexOf(1) !== -1) {
+			location.replace(next);
+		}
+	} catch (_) {}
+</script>

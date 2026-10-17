@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@solidjs/router";
+import { useLocation } from "@solidjs/router";
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Dialog from "@bencherdev/ui/Dialog";
@@ -67,7 +67,7 @@ import { alertPath, projectPath, reportPath } from "../paths";
 import { formatWhen } from "../plot/format";
 import type { PlotAlerts } from "../plot/Plot";
 import { useNarrow } from "../plot/narrow";
-import { useProject } from "../project";
+import { useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import LineTable from "../report/LineTable";
@@ -85,7 +85,7 @@ const FILTERS: readonly Filter[] = ["branch", "testbed", "measure"];
 const Alerts = () => {
 	const { api, slug } = useProject();
 	const location = useLocation();
-	const navigate = useNavigate();
+	const navigate = useProjectNavigate();
 	const client = useQueryClient();
 	const narrow = useNarrow();
 	const fold = useFold();
