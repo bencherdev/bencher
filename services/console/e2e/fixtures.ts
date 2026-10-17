@@ -33,6 +33,8 @@ export interface Seed {
 		/** Runs of three iterations on one line, the newest raising an alert on its second. */
 		iterations: SeedProject;
 	};
+	/** The admin's version 1 project with the newest report, in an organization no test changes. */
+	admin_newest: SeedProject;
 	last_main_hash: string;
 	split_hash: string;
 }

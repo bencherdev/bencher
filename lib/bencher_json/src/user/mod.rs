@@ -1,3 +1,4 @@
+pub mod console_user;
 pub mod key;
 pub mod token;
 use bencher_valid::{DateTime, Email, ResourceId, UserName};

@@ -28,6 +28,9 @@ const VERSION_ZERO: &str = "Crinkle Cut";
 const EMPTY: &str = "Tater Tot";
 const PRIVATE: &str = "Home Fries";
 const ITERATIONS: &str = "Waffle Fries";
+const ADMIN_ORGANIZATION: &str = "Bagge Diner";
+const ADMIN_NEWEST: &str = "Curly Fries";
+const ADMIN_OLDER: &str = "Potato Wedges";
 
 // Debug builds of the API trust this key's public half for self-hosted licenses.
 const TEST_LICENSE_KEY: &str =
@@ -116,6 +119,10 @@ const ITERATION_SPREAD: [f64; 3] = [0.96, 1.0, 1.05];
 /// The newest run's second iteration jumps, which raises the project's one alert.
 const ITERATION_JUMP: f64 = 1.3;
 
+/// The admin's two reports, a day apart, the newer an hour before [`NOW`].
+const ADMIN_NEWEST_REPORT: i64 = NOW - 60 * 60;
+const ADMIN_OLDER_REPORT: i64 = ADMIN_NEWEST_REPORT - 24 * 60 * 60;
+
 /// What the suite reads: who to sign in as and which projects to open.
 #[derive(Debug, Serialize)]
 pub struct Seed {
@@ -127,6 +134,8 @@ pub struct Seed {
     outsider: SeedReader,
     organization: SeedOrganization,
     projects: SeedProjects,
+    /// The admin's version 1 project with the newest report, in an organization no test changes.
+    admin_newest: SeedProject,
     last_main_hash: &'static str,
     split_hash: &'static str,
 }
@@ -221,6 +230,7 @@ impl Seed {
         check_alerts(&api, &hashbrown, token).await?;
         pins(&api, &hashbrown, token).await?;
         iteration_history(&api, &iterations, token).await?;
+        let admin_newest = admin_projects(&api, admin_token).await?;
 
         Ok(Self {
             api_url: api_url.to_owned(),
@@ -241,6 +251,7 @@ impl Seed {
                 private: private.into(),
                 iterations: iterations.into(),
             },
+            admin_newest,
             last_main_hash: LAST_MAIN_HASH,
             split_hash: SPLIT_HASH,
         })
@@ -255,6 +266,48 @@ impl From<JsonProject> for SeedProject {
             slug: project.slug.to_string(),
         }
     }
+}
+
+/// Two projects of the admin's, the newer report posted first so the newest is not
+/// the last posted.
+async fn admin_projects(api: &Api, token: &str) -> anyhow::Result<SeedProject> {
+    let organization: JsonOrganization = api
+        .send(
+            Method::Post,
+            "/v0/organizations",
+            token,
+            &serde_json::json!({ "name": ADMIN_ORGANIZATION }),
+        )
+        .await?;
+    let newest =
+        admin_project(api, &organization, ADMIN_NEWEST, ADMIN_NEWEST_REPORT, token).await?;
+    admin_project(api, &organization, ADMIN_OLDER, ADMIN_OLDER_REPORT, token).await?;
+    Ok(newest)
+}
+
+/// A version 1 project with one report that starts at `start`.
+async fn admin_project(
+    api: &Api,
+    organization: &JsonOrganization,
+    name: &str,
+    start: i64,
+    token: &str,
+) -> anyhow::Result<SeedProject> {
+    let project = api.project(organization, name, "public", token).await?;
+    let path = format!("/v0/projects/{}", project.slug);
+    let project: JsonProject = api
+        .send(
+            Method::Patch,
+            &path,
+            token,
+            &serde_json::json!({ "bmf_version": 1 }),
+        )
+        .await?;
+    let report = report_body(MAIN, start, &main_hash(0), &results(0, |_| 1.0))?;
+    let _json: serde_json::Value = api
+        .send(Method::Post, &format!("{path}/reports"), token, &report)
+        .await?;
+    Ok(project.into())
 }
 
 /// A private project needs a plan, so the organization gets a self-hosted license.
