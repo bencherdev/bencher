@@ -55,38 +55,55 @@
 [data-theme="light"] .brand img + img {
 	display: block;
 }
-.crumbs {
+/* The Org / Project crumb, one button that opens the switcher below it. */
+.crumb {
+	position: relative;
 	display: flex;
-	align-items: center;
-	gap: 8px;
-	color: var(--color-text-muted);
 	min-width: 0;
 }
-.console .crumbs a.crumb-org {
+.crumbbtn {
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	height: 36px;
+	margin-left: -8px;
+	padding: 0 8px;
+	border: 0;
+	border-radius: var(--radius-element);
+	background: transparent;
 	color: var(--color-text-muted);
+	font: inherit;
+	font-weight: var(--font-weight-medium);
+	white-space: nowrap;
+	cursor: pointer;
 }
-.crumbs .sep {
+.crumbbtn:hover {
+	background: var(--color-overlay-hover);
+}
+.crumbbtn[aria-expanded="true"] {
+	background: var(--color-overlay-pressed);
+}
+.crumbbtn:focus-visible {
+	outline: 2px solid var(--color-focus);
+	outline-offset: 2px;
+}
+.crumbbtn .sep {
 	color: var(--color-text-faint);
 }
 .crumb-skel {
 	width: 96px;
 }
-.console .projlink {
-	display: inline-flex;
-	align-items: center;
-	height: 32px;
-	padding: 0 6px;
-	border-radius: var(--radius-element);
+.crumb-project {
+	overflow: hidden;
 	color: var(--color-text-primary);
 	font-weight: var(--font-weight-semibold);
-	white-space: nowrap;
-	overflow: hidden;
 	text-overflow: ellipsis;
-	min-width: 0;
 }
-.console .projlink:hover {
-	background: var(--color-overlay-hover);
-	color: var(--color-text-primary);
+.crumbbtn .ui-icon {
+	flex: none;
+	font-size: 13px;
 }
 .console .docs {
 	color: var(--color-text-muted);
@@ -743,7 +760,7 @@
 		gap: 6px;
 		padding: 0 8px;
 	}
-	.crumbs,
+	.crumb,
 	.tools {
 		display: none;
 	}

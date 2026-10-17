@@ -1,7 +1,7 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import {
 	VERSION_KEY,
-	crumbs,
+	crumb,
 	expect,
 	nextPath,
 	seed,
@@ -70,7 +70,7 @@ test("a cold load holds the speed ceilings", async ({ page }) => {
 	});
 	await page.goto(SHELL);
 	await expect(
-		crumbs(page).getByRole("link", { name: seed.organization.name }),
+		crumb(page, `${seed.organization.name} / ${hashbrown.name}`),
 	).toBeVisible();
 	await ready(page);
 
@@ -317,6 +317,31 @@ test("opening Feedback holds its speed ceilings", async ({ page }) => {
 	report("feedback open", cost);
 	const ceiling = ceilings.feedbackOpen;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
+});
+
+// Kills a switcher whose code loads in more than one round, whose projects
+// take more than one request, or that grows.
+test("opening the switcher holds its speed ceilings", async ({ page }) => {
+	await page.goto(RUNS);
+	await ready(page);
+
+	await holdScripts(page);
+	const since = await mark(page);
+	await crumb(page).click();
+	await expect(
+		page
+			.getByRole("dialog", { name: "Switch project" })
+			.getByRole("option", { name: new RegExp(`^${hashbrown.name}`) }),
+	).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("switcher open", cost);
+	const ceiling = ceilings.switcherOpen;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
 });

@@ -226,18 +226,17 @@ describe("narrow", () => {
 });
 
 describe("wide", () => {
-	// Kills a wide bar that loses the crumbs, Docs, the theme toggle, or
+	// Kills a wide bar that loses the crumb, Docs, the theme toggle, or
 	// Feedback, draws Docs and the toggle anywhere but in the bar, draws Feedback
 	// anywhere but between the toggle and the avatar, shows the bell beside the
 	// Alerts tab's count, or shows the phone's menu button.
-	test("the bar holds the wordmark, the crumbs, Docs, the theme toggle, Feedback, and the avatar", async () => {
+	test("the bar holds the wordmark, the crumb, Docs, the theme toggle, Feedback, and the avatar", async () => {
 		await page.viewport(1280, 800);
 		const root = mount();
 
 		expect(held(root)).toEqual([
 			"Bencher, home",
-			"Pompeii LLC",
-			"Hashbrown",
+			"Pompeii LLC / Hashbrown, switch project",
 			"Docs",
 			"Switch between light and dark",
 			"Feedback",
@@ -301,6 +300,15 @@ describe("wide", () => {
 		expect(box(root)).toEqual(reserved);
 		html.setAttribute("data-theme", "light");
 		expect(box(root)).toEqual(reserved);
+	});
+
+	// Kills a crumb whose name does not start with the names it shows, which
+	// voice control and the label-in-name check read as written.
+	test("the crumb's name starts with the organization and the project it shows", async () => {
+		await page.viewport(1280, 800);
+		const root = mount();
+
+		expectNameStartsWithText(root.querySelector(".crumbbtn"));
 	});
 
 	// Kills a badge run into the tab's label ("Alerts1"): voice control and the

@@ -26,6 +26,10 @@ export const rememberVersion = (
 	write(storage, VERSION_KEY, recent(versions, slug, version));
 };
 
+/** Every remembered project's slug, the most recently loaded first. */
+export const recentSlugs = (storage: Pick<Storage, "getItem">) =>
+	Object.keys(readJson(storage, VERSION_KEY) ?? {}).reverse();
+
 export const forgetVersion = (storage: Storage, slug: string) => {
 	const versions = readJson(storage, VERSION_KEY) ?? {};
 	delete versions[slug];

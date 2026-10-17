@@ -133,6 +133,7 @@ const Layout = (
 				project={data()?.project.name ?? remembered()?.name}
 				alerts={data()?.active_alerts ?? remembered()?.alerts}
 				account={`/console/users/${props.reader.user.slug}/settings`}
+				reader={reader()}
 				email={props.reader.user.email}
 				tabsRef={(el) => {
 					tabs = el;

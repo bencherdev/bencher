@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/solid-query";
 import { createSignal } from "solid-js";
-import type { JsonConsoleProject } from "../types/bencher";
+import type { JsonConsoleProject, JsonConsoleUser } from "../types/bencher";
 import type { Api } from "./api";
 import type { BmfVersion } from "./memory";
 
@@ -15,6 +15,18 @@ export const consoleProjectQuery = (api: Api, slug: string) => ({
 		(
 			await api.get<JsonConsoleProject>(
 				`/v0/console/projects/${encodeURIComponent(slug)}`,
+				signal,
+			)
+		).data,
+});
+
+/** The reader's organizations and every project in them, which the switcher lists. */
+export const consoleUserQuery = (api: Api, reader: string) => ({
+	queryKey: ["console", "user", reader],
+	queryFn: async ({ signal }: { signal: AbortSignal }) =>
+		(
+			await api.get<JsonConsoleUser>(
+				`/v0/console/users/${encodeURIComponent(reader)}`,
 				signal,
 			)
 		).data,
