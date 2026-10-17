@@ -6,8 +6,9 @@ import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
 import type { JsonAuthUser, JsonConsoleProject } from "../types/bencher";
-import type { Api } from "./api";
+import { type Api, ApiError } from "./api";
 import Layout from "./Layout";
+import { VERSION_KEY } from "./memory";
 import { NEXT_PROJECTS } from "./paths";
 import { consoleProjectQuery } from "./queries";
 import { PAGES, ROUTES } from "./routes";
@@ -148,4 +149,41 @@ describe("the layout", () => {
 		expect(skeletons).toEqual([]);
 		expect(heading().element()).toBe(shown);
 	});
+
+	// Kills a remembered project that no longer answers staying in the version
+	// memory, which would land the reader on it from bencher.dev's root every
+	// time, and a forget that drops the other projects too.
+	test.each([
+		[404, "not_found"],
+		[403, "forbidden"],
+	] as const)(
+		"a project that answers %i leaves the version memory",
+		async (status, kind) => {
+			localStorage.setItem(
+				VERSION_KEY,
+				JSON.stringify({ crinkle: 1, hashbrown: 1 }),
+			);
+			const api: Api = {
+				get: async () => {
+					throw new ApiError(status, kind, "gone");
+				},
+				send: async () => {
+					throw new Error("The layout sends no changes");
+				},
+			};
+			mount(
+				new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+				api,
+			);
+
+			await expect
+				.element(
+					page.getByRole("heading", { level: 1, name: "Project not found" }),
+				)
+				.toBeVisible();
+			expect(JSON.parse(localStorage.getItem(VERSION_KEY) ?? "null")).toEqual({
+				crinkle: 1,
+			});
+		},
+	);
 });
