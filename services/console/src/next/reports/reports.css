@@ -147,6 +147,79 @@
 	color: var(--color-text-muted);
 	font: 12px var(--font-family-code);
 }
+/* A runner job's status where its run's or report's time will land. */
+.rn-st {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 24px;
+	padding: 0 9px;
+	border: var(--border-width) solid var(--color-border-gray);
+	border-radius: var(--radius-full);
+	background: var(--color-background-gray);
+	color: var(--color-text-gray);
+	font-size: 12px;
+	font-weight: var(--font-weight-medium);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+.rn-st[data-status="running"] {
+	border-color: var(--color-border-teal);
+	background: var(--color-background-teal);
+	color: var(--color-text-teal);
+}
+.rn-st[data-status="failed"] {
+	border-color: var(--color-border-red);
+	background: var(--color-background-red);
+	color: var(--color-text-red);
+}
+.rn-st[data-status="canceled"] {
+	border-color: var(--color-border);
+	background: none;
+	color: var(--color-text-muted);
+}
+.rn-st b {
+	font-weight: var(--font-weight-semibold);
+}
+.rn-ring,
+.rn-pulse {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border: 1.5px solid;
+	border-radius: 50%;
+}
+.rn-pulse {
+	background: currentColor;
+	animation: rn-pulse 1.6s ease-in-out infinite;
+}
+@keyframes rn-pulse {
+	50% {
+		opacity: 0.35;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.rn-pulse {
+		animation: none;
+	}
+}
+.rn-dash {
+	color: var(--color-text-faint);
+}
+/* Alerting lines that landed after the table showed some, held until the reader asks. */
+.rn-held {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	margin-left: auto;
+	padding: 3px 3px 3px 12px;
+	border: var(--border-width) solid var(--color-border-accent);
+	border-radius: var(--radius-full);
+	background: var(--color-accent-muted);
+	font-size: 12.5px;
+	white-space: nowrap;
+}
 .reports-more .ui-skeleton {
 	width: 40%;
 }
@@ -221,8 +294,19 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+	/* The pill keeps its own padding, and the next column's start padding parts them. */
+	.reports-table td.rn-status {
+		padding-inline-end: 0;
+	}
+}
+
+/* Below a laptop each run list scrolls sideways: the Runs list keeps its layout on a 1024 px page, and a run's reports keep every column whole. */
+@media (min-width: 768px) and (max-width: 1023px) {
 	.rn-list {
-		min-width: 900px;
+		min-width: 974px;
+	}
+	.rn-table {
+		min-width: 880px;
 	}
 }
 
@@ -279,5 +363,8 @@
 	}
 	.reports-table.ui-table[data-fold] tbody tr.rn-row > td[data-fold="l2"] {
 		grid-area: 2 / 2 / 3 / 4;
+	}
+	.rn-held .ui-button {
+		min-height: 44px;
 	}
 }

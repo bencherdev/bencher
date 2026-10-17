@@ -6,6 +6,11 @@ use std::{
 };
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
+#[cfg(feature = "plus")]
+use bencher_json::{
+    Architecture, Cpu, Disk, Memory, OperatingSystem, SpecSlug,
+    project::console::{JsonConsoleJob, JsonConsoleSpec},
+};
 use bencher_json::{
     BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid, MeasureUuid,
     MetricName, ParameterSet, ProjectResourceId, ReportUuid, ResourceName, TestbedSlug,
@@ -43,6 +48,8 @@ use bencher_schema::{
     },
     schema,
 };
+#[cfg(feature = "plus")]
+use diesel::OptionalExtension as _;
 use diesel::{
     BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, JoinOnDsl as _,
     NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
@@ -52,6 +59,8 @@ use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+#[cfg(feature = "plus")]
+use super::runs::{JobRow, console_job};
 use super::{
     AlertRow, BenchmarkRow, Check, Limits, MeasureRow, ModelRow, PointReport, Points,
     PointsBuilder, SeriesBuilder, Tables, Thinned, VariantRow, alert_json, before,
@@ -147,6 +156,11 @@ async fn get_inner(
         branch,
         testbed,
     } = identity(conn, &project, path_params.report)?;
+    #[cfg(feature = "plus")]
+    let (job, spec) = report_job(conn, report.id)
+        .map_err(resource_not_found_err!(Job, (&project, report.uuid)))?;
+    #[cfg(not(feature = "plus"))]
+    let job = None;
 
     let requested = requested_start(&report, query_params.start_time, query_params.window)?;
     let points = history_points(query_params.points)?;
@@ -200,22 +214,18 @@ async fn get_inner(
         models,
         ..
     } = tables;
-    let QueryReport {
-        uuid,
-        adapter,
-        start_time,
-        end_time,
-        ..
-    } = report;
     Ok(JsonConsoleReport {
-        uuid,
+        uuid: report.uuid,
         branch,
         testbed,
         version,
-        start_time: start_time.into(),
-        end_time: end_time.into(),
-        adapter: adapter.normalize(),
+        start_time: report.start_time.into(),
+        end_time: report.end_time.into(),
+        adapter: report.adapter.normalize(),
         counts,
+        job,
+        #[cfg(feature = "plus")]
+        spec,
         run,
         window,
         total,
@@ -447,6 +457,64 @@ fn identity(
             spec: None,
         },
     })
+}
+
+#[cfg(feature = "plus")]
+type SpecRow = (
+    ResourceName,
+    SpecSlug,
+    OperatingSystem,
+    Architecture,
+    Cpu,
+    Memory,
+    Disk,
+);
+
+/// The report's runner job, while its results are not in, and the spec it ran on.
+#[cfg(feature = "plus")]
+fn report_job(
+    conn: &mut DbConnection,
+    report_id: ReportId,
+) -> diesel::QueryResult<(Option<JsonConsoleJob>, Option<JsonConsoleSpec>)> {
+    let Some(((_, status, created, started, completed), spec)) = schema::job::table
+        .inner_join(schema::spec::table)
+        .filter(schema::job::report_id.eq(report_id))
+        .select((
+            (
+                schema::job::report_id,
+                schema::job::status,
+                schema::job::created,
+                schema::job::started,
+                schema::job::completed,
+            ),
+            (
+                schema::spec::name,
+                schema::spec::slug,
+                schema::spec::os,
+                schema::spec::architecture,
+                schema::spec::cpu,
+                schema::spec::memory,
+                schema::spec::disk,
+            ),
+        ))
+        .first::<(JobRow, SpecRow)>(conn)
+        .optional()?
+    else {
+        return Ok((None, None));
+    };
+    let (name, slug, os, architecture, cpu, memory, disk) = spec;
+    Ok((
+        console_job(status, created, started, completed),
+        Some(JsonConsoleSpec {
+            name,
+            slug,
+            os,
+            architecture,
+            cpu,
+            memory,
+            disk,
+        }),
+    ))
 }
 
 /// The report's run as the run page lists it, or none when that page lists none of its

@@ -5,6 +5,7 @@ import type {
 	JsonConsoleReport,
 	JsonConsoleRun,
 	JsonConsoleRunReport,
+	JsonConsoleRunSummary,
 	JsonConsoleRuns,
 	JsonPlot,
 } from "../../types/bencher";
@@ -17,6 +18,7 @@ import {
 	blankQuery,
 } from "../query/query";
 import type { SelectedLine } from "../query/selection";
+import { live, unfinished } from "../runs/status";
 import { consolePath, project } from "./queries";
 
 // A threshold with no metric checks the conventional name.
@@ -56,6 +58,9 @@ export const startQueries = (api: Api, slug: string) => ({
 			);
 			return recent.length > 0 ? recent : runs();
 		},
+		...live((runs: JsonConsoleRunSummary[]) =>
+			runs.some((run) => unfinished(run.jobs)),
+		),
 	},
 	plots: listQuery<JsonPlot>(
 		api,
@@ -74,6 +79,7 @@ export const runReportsQuery = (api: Api, slug: string, run: string) => ({
 				`${consolePath(slug)}/runs/${encodeURIComponent(run)}?per_page=${RUN_REPORTS}`,
 			)
 		).data,
+	...live((run: JsonConsoleRun) => unfinished(run.jobs)),
 });
 
 /** The line an alert fired on, as Explore opens it. */

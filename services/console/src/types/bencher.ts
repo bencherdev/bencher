@@ -1109,6 +1109,30 @@ export interface JsonConsoleBranches {
 	branches: JsonConsoleBranchRow[];
 }
 
+/**
+ * Where a runner job's report stands until its results are in. A report its own
+ * CI job posted has no job.
+ */
+export enum ConsoleJobStatus {
+	/** Waiting for a runner. */
+	Queued = "queued",
+	/** On a runner, or ran and its results not yet processed. */
+	Running = "running",
+	Failed = "failed",
+	Canceled = "canceled",
+}
+
+/** A runner job whose report is not finished, with the times its status shows. */
+export interface JsonConsoleJob {
+	status: ConsoleJobStatus;
+	/** When it was submitted. */
+	created: DateTimeMillis;
+	/** When a runner started it. */
+	started?: DateTimeMillis;
+	/** When it ended. */
+	completed?: DateTimeMillis;
+}
+
 /** A group of lines and its totals, which hold whichever page is loaded. */
 export interface JsonConsoleLineGroup {
 	/** The group's benchmark or measure, an index into `benchmarks` or `measures`. */
@@ -1300,6 +1324,17 @@ export interface JsonConsoleReportCounts {
 	alerts: JsonReportAlertsCounts;
 }
 
+/** The spec a runner job ran on. */
+export interface JsonConsoleSpec {
+	name: ResourceName;
+	slug: Slug;
+	os: OperatingSystem;
+	architecture: Architecture;
+	cpu: number;
+	memory: number;
+	disk: number;
+}
+
 /** A report of a run, with what a Previous or Next control through the run shows. */
 export interface JsonConsoleRunReportLink {
 	uuid: Uuid;
@@ -1340,6 +1375,10 @@ export interface JsonConsoleReport {
 	end_time: DateTimeMillis;
 	adapter: Adapter;
 	counts: JsonConsoleReportCounts;
+	/** Its runner job, until the job's results are in. */
+	job?: JsonConsoleJob;
+	/** The spec its runner job ran on. */
+	spec?: JsonConsoleSpec;
 	/**
 	 * The run the report belongs to, on the first page only, and absent when
 	 * the runs list leaves the run out: every one of its reports is on an
@@ -1360,6 +1399,19 @@ export interface JsonConsoleReport {
 	variants: JsonConsoleVariant[];
 	measures: JsonConsoleMeasure[];
 	models: JsonConsoleModel[];
+}
+
+/** A run's reports whose runner jobs are not finished, by status. */
+export interface JsonConsoleRunJobs {
+	queued: number;
+	running: number;
+	failed: number;
+	canceled: number;
+	/**
+	 * While any is queued or running, the earliest of their starts, taking the
+	 * submission of one not yet started.
+	 */
+	since?: DateTimeMillis;
 }
 
 /** A run, with what a link to it shows: the run page's Previous or Next control. */
@@ -1383,6 +1435,8 @@ export interface JsonConsoleRunReport {
 	/** The most lines any of its iterations reported. */
 	lines: number;
 	alerts: JsonReportAlertsCounts;
+	/** Its runner job, until the job's results are in. */
+	job?: JsonConsoleJob;
 	author?: JsonConsoleAuthor;
 }
 
@@ -1398,7 +1452,7 @@ export interface JsonConsoleRun {
 	branch: JsonConsoleBranch;
 	/** When its first report started. */
 	start_time: DateTimeMillis;
-	/** When its last report ended. */
+	/** When its last report ended, a failed or canceled runner job ending with its job. */
 	end_time: DateTimeMillis;
 	/** Every report in the run, across pages. */
 	total: number;
@@ -1406,6 +1460,8 @@ export interface JsonConsoleRun {
 	/** The sum of its reports' lines. */
 	lines: number;
 	alerts: JsonReportAlertsCounts;
+	/** Its reports whose runner jobs are not finished, absent when there are none. */
+	jobs?: JsonConsoleRunJobs;
 	/**
 	 * The run before this one on its branch, as the runs list orders them, on
 	 * the first page only.
@@ -1431,7 +1487,7 @@ export interface JsonConsoleRunSummary {
 	branch: JsonConsoleBranch;
 	/** When its first report started. */
 	start_time: DateTimeMillis;
-	/** When its last report ended. */
+	/** When its last report ended, a failed or canceled runner job ending with its job. */
 	end_time: DateTimeMillis;
 	reports: number;
 	/**
@@ -1455,6 +1511,8 @@ export interface JsonConsoleRunSummary {
 	/** The sum of its reports' lines. */
 	lines: number;
 	alerts: JsonReportAlertsCounts;
+	/** Its reports whose runner jobs are not finished, absent when there are none. */
+	jobs?: JsonConsoleRunJobs;
 }
 
 /**

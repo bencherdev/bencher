@@ -6,12 +6,14 @@ import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type {
+	JsonConsoleJob,
 	JsonConsoleReport,
 	JsonConsoleReportRun,
 	JsonConsoleRunReportLink,
+	JsonConsoleSpec,
 } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
@@ -90,6 +92,7 @@ beforeEach(async () => {
 afterEach(() => {
 	dispose?.();
 	document.body.replaceChildren();
+	vi.useRealTimers();
 });
 
 // Kills lines that wait on the shell's request, which would take a second round.
@@ -996,4 +999,133 @@ test("a phone sub line leads with the place, to the second, and a report alone i
 		.element(page.getByRole("link", { name: "main 9c1f2e4", exact: true }))
 		.toBeVisible();
 	expect(subLine()).toMatch(/^Sep 1[34], \d\d:\d6:00 · json/);
+});
+
+const STARTED = Date.parse("2026-09-13T21:16:00Z");
+
+/** A runner job's report that has no lines yet, its job in `job`'s state. */
+const jobReport = (job: Partial<JsonConsoleJob>) =>
+	reportFixture([], {
+		total: 0,
+		groups: [],
+		counts: {
+			benchmarks: 0,
+			variants: 0,
+			measures: 0,
+			metrics: 0,
+			iterations: 0,
+			alerts: { total: 0, active: 0 },
+		},
+		job: { status: "queued", created: STARTED, ...job } as JsonConsoleJob,
+	});
+
+// Kills a running report's page without its status in the heading, a "No
+// lines" card while its job still runs, a sub line that counts nothing or
+// times a job not yet done, a failed report read as running or timed from its
+// submission, and a "No lines" card on a failed or canceled report, whose
+// heading already says why it has none.
+test("a runner job's report says how its job stands in its heading", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(STARTED + 48_000);
+	let report = jobReport({
+		status: "running" as JsonConsoleJob["status"],
+		started: STARTED,
+	});
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: report } : { data: bootstrapOf() },
+	);
+	const heading = () => document.querySelector(".rp-titlerow");
+	const none = page.getByRole("heading", { name: "No lines", exact: true });
+	mount(api, impatient());
+	await expect.element(page.getByText("Running 48s")).toBeVisible();
+	expect(heading()?.textContent).toContain("Running 48s");
+	expect(none.elements()).toHaveLength(0);
+	expect(subLine()).not.toMatch(/benchmark|took/);
+
+	for (const [ended, shown] of [
+		[
+			{
+				status: "failed",
+				started: STARTED + 10_000,
+				completed: STARTED + 52_000,
+			},
+			"Failed 42s",
+		],
+		[{ status: "canceled", completed: STARTED + 30_000 }, "Canceled"],
+	] as const) {
+		dispose?.();
+		document.body.replaceChildren();
+		report = jobReport(ended as Partial<JsonConsoleJob>);
+		mount(api, impatient());
+		await expect.element(page.getByText(shown, { exact: true })).toBeVisible();
+		expect(heading()?.textContent).toContain(shown);
+		expect(none.elements()).toHaveLength(0);
+	}
+});
+
+// Kills a report page whose running time stands still as its job's answers come in.
+test("a running report's time moves on with each answer", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(STARTED + 48_000);
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? {
+					data: jobReport({
+						status: "running" as JsonConsoleJob["status"],
+						started: STARTED,
+					}),
+				}
+			: { data: bootstrapOf() },
+	);
+	const client = impatient();
+	mount(api, client);
+	await expect.element(page.getByText("Running 48s")).toBeVisible();
+	vi.setSystemTime(STARTED + 3 * 60_000);
+	await client.refetchQueries();
+	await expect.element(page.getByText("Running 3m")).toBeVisible();
+});
+
+const spec = {
+	name: "Standard x86",
+	slug: "standard-x86",
+	os: "linux",
+	architecture: "x86_64",
+	cpu: 8,
+	memory: 16 * 1024 ** 3,
+	disk: 100 * 1024 ** 3,
+} as JsonConsoleSpec;
+
+// Kills a runner report without its spec in the sub line, a tooltip that
+// leaves out what the spec runs on, and a phone given a control whose tooltip
+// never shows.
+test("a runner report's sub line names its spec, with what it ran on in a tooltip", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? { data: reportFixture(undefined, { spec }) }
+			: { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	const name = page.getByRole("button", { name: "Standard x86" });
+	await expect.element(name).toBeVisible();
+	expect((document.querySelector(".rp-sub") as HTMLElement).innerText).toMatch(
+		/ · json · Standard x86 · /,
+	);
+	await userEvent.hover(name);
+	await expect
+		.element(page.getByRole("tooltip"))
+		.toHaveTextContent("OSlinuxArchitecturex86_64CPU8Memory16 GiB");
+	await expect
+		.element(name)
+		.toHaveAccessibleDescription(
+			/^OS\s*linux\s*Architecture\s*x86_64\s*CPU\s*8\s*Memory\s*16 GiB$/,
+		);
+
+	dispose?.();
+	document.body.replaceChildren();
+	await page.viewport(390, 844);
+	mount(api, impatient());
+	await expect.element(page.getByText(/Standard x86/)).toBeVisible();
+	expect(
+		page.getByRole("button", { name: "Standard x86" }).elements(),
+	).toHaveLength(0);
 });

@@ -10,13 +10,15 @@ import {
 	purgeOtherReaders,
 	restoreCache,
 } from "./cache";
+import { live } from "./runs/status";
 
 const memoryStore = () => {
 	const entries = new Map<string, Persisted>();
 	const store: CacheStore = {
 		get: async (key) => entries.get(key),
+		// IndexedDB stores a structured clone, which refuses functions.
 		set: async (key, value) => {
-			entries.set(key, value);
+			entries.set(key, structuredClone(value));
 		},
 		keys: async () => [...entries.keys()],
 		delete: async (key) => {
@@ -172,6 +174,48 @@ describe("the persisted cache", () => {
 		reports = [{ uuid: "first" }];
 		await poll();
 		await vi.waitFor(() => expect(writes()).toBe(3));
+		stop();
+	});
+
+	// Kills a live answer that schedules a save of the whole cache, a save for
+	// another reason that writes a live answer, an answer that stops being
+	// live but is never saved, and a live query's meta reaching the store, so
+	// no save ever lands.
+	test("an answer that shows something unfinished never reaches the store", async () => {
+		const { store, entries, writes } = countingStore();
+		const client = createQueryClient(() => {});
+		const { stop, flush } = persistCache(client, store, "reader-a", "v1", {
+			delay: 0,
+			now: () => NOW,
+		});
+		await vi.waitFor(() => expect(writes()).toBe(1));
+		const run = (status: string, lines: number) =>
+			client.fetchQuery({
+				queryKey: KEY,
+				queryFn: async () => ({ status, lines }),
+				staleTime: 0,
+				...live((data: { status: string }) => data.status === "running"),
+			});
+		const stored = () =>
+			entries
+				.get("reader-a")
+				?.state.queries.find((query) => query.queryKey[0] === KEY[0])?.state
+				.data;
+
+		await run("running", 0);
+		await run("running", 6);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(writes()).toBe(1);
+
+		client.setQueryData(["other"], { name: "Hashbrown" });
+		await flush();
+		expect(writes()).toBe(2);
+		expect(stored()).toBeUndefined();
+
+		await run("done", 12);
+		await vi.waitFor(() =>
+			expect(stored()).toEqual({ status: "done", lines: 12 }),
+		);
 		stop();
 	});
 

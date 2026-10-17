@@ -11,8 +11,9 @@ use bencher_json::{
     project::{
         alert::AlertStatus,
         console::{
-            ConsoleAuthorKind, DEFAULT_CONSOLE_RUNS_PER_PAGE, JsonConsoleAlerts, JsonConsoleAuthor,
-            JsonConsoleBranch, JsonConsoleRun, JsonConsoleRunLink, JsonConsoleRunQueryParams,
+            ConsoleAuthorKind, ConsoleJobStatus, DEFAULT_CONSOLE_RUNS_PER_PAGE, JsonConsoleAlerts,
+            JsonConsoleAuthor, JsonConsoleBranch, JsonConsoleJob, JsonConsoleRun,
+            JsonConsoleRunJobs, JsonConsoleRunLink, JsonConsoleRunQueryParams,
             JsonConsoleRunReport, JsonConsoleRunSummary, JsonConsoleRuns, JsonConsoleRunsQuery,
             JsonConsoleRunsQueryParams, JsonConsoleTestbed, MAX_CONSOLE_RUN_NAMES,
         },
@@ -20,6 +21,8 @@ use bencher_json::{
         report::{Adapter, Iteration, JsonReportAlertsCounts, ReportAlerts},
     },
 };
+#[cfg(feature = "plus")]
+use bencher_schema::model::runner::JobStatus;
 use bencher_schema::{
     actor_conn,
     context::{ApiContext, DbConnection},
@@ -158,6 +161,11 @@ async fn get_ls_inner(
         report_lines(conn, &page).map_err(resource_not_found_err!(Metric, (&project, &page)))?;
     let alerts =
         report_alerts(conn, &page).map_err(resource_not_found_err!(Alert, (&project, &page)))?;
+    #[cfg(feature = "plus")]
+    let jobs = report_jobs(conn, project.id, &page)
+        .map_err(resource_not_found_err!(Job, (&project, &page)))?;
+    #[cfg(not(feature = "plus"))]
+    let jobs = HashMap::new();
 
     let mut by_version = HashMap::<VersionId, Vec<ReportRow>>::new();
     for row in rows {
@@ -168,7 +176,7 @@ async fn get_ls_inner(
         .filter_map(|version_id| {
             let version = versions.get(version_id)?;
             let rows = by_version.remove(version_id)?;
-            summary(version, &rows, &lines, &alerts)
+            summary(version, &rows, &lines, &alerts, &jobs)
         })
         .collect();
     Ok(JsonConsoleRuns { total, runs })
@@ -570,6 +578,102 @@ fn report_alerts(
     Ok(alerts)
 }
 
+/// Each report's runner job that is not finished, found from the project's
+/// jobs so a version of many reports is never walked.
+#[cfg(feature = "plus")]
+fn report_jobs(
+    conn: &mut DbConnection,
+    project_id: ProjectId,
+    version_ids: &[VersionId],
+) -> diesel::QueryResult<HashMap<ReportId, JsonConsoleJob>> {
+    Ok(schema::job::table
+        .inner_join(schema::report::table.on(schema::report::id.eq(schema::job::report_id)))
+        .inner_join(schema::head::table.on(schema::head::id.eq(schema::report::head_id)))
+        .inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id)))
+        .inner_join(schema::testbed::table.on(schema::testbed::id.eq(schema::report::testbed_id)))
+        .filter(schema::job::project_id.eq(project_id))
+        .filter(schema::job::status.ne(JobStatus::Processed))
+        .filter(schema::report::version_id.eq_any(version_ids))
+        .filter(schema::branch::archived.is_null())
+        .filter(schema::testbed::archived.is_null())
+        .select((
+            schema::job::report_id,
+            schema::job::status,
+            schema::job::created,
+            schema::job::started,
+            schema::job::completed,
+        ))
+        .load::<JobRow>(conn)?
+        .into_iter()
+        .filter_map(|(report_id, status, created, started, completed)| {
+            Some((report_id, console_job(status, created, started, completed)?))
+        })
+        .collect())
+}
+
+#[cfg(feature = "plus")]
+pub(super) type JobRow = (
+    ReportId,
+    JobStatus,
+    DateTime,
+    Option<DateTime>,
+    Option<DateTime>,
+);
+
+/// A runner job as the console shows it, or none once its results are in.
+#[cfg(feature = "plus")]
+pub(super) fn console_job(
+    status: JobStatus,
+    created: DateTime,
+    started: Option<DateTime>,
+    completed: Option<DateTime>,
+) -> Option<JsonConsoleJob> {
+    let status = match status {
+        JobStatus::Pending | JobStatus::Claimed => ConsoleJobStatus::Queued,
+        // A job whose runner went quiet still takes its results until its deadline cancels it.
+        JobStatus::Running | JobStatus::Completed | JobStatus::Unknown => ConsoleJobStatus::Running,
+        JobStatus::Failed => ConsoleJobStatus::Failed,
+        JobStatus::Canceled => ConsoleJobStatus::Canceled,
+        JobStatus::Processed => return None,
+    };
+    Some(JsonConsoleJob {
+        status,
+        created: created.into(),
+        started: started.map(Into::into),
+        completed: completed.map(Into::into),
+    })
+}
+
+/// A run's reports whose runner jobs are not finished, by status, or none when every one is.
+fn run_jobs(
+    rows: &[ReportRow],
+    jobs: &HashMap<ReportId, JsonConsoleJob>,
+) -> Option<JsonConsoleRunJobs> {
+    let mut run = None::<JsonConsoleRunJobs>;
+    for job in rows.iter().filter_map(|row| jobs.get(&row.id)) {
+        let run = run.get_or_insert_default();
+        let count = match job.status {
+            ConsoleJobStatus::Queued => &mut run.queued,
+            ConsoleJobStatus::Running => &mut run.running,
+            ConsoleJobStatus::Failed => &mut run.failed,
+            ConsoleJobStatus::Canceled => &mut run.canceled,
+        };
+        *count = count.saturating_add(1);
+        if matches!(
+            job.status,
+            ConsoleJobStatus::Queued | ConsoleJobStatus::Running
+        ) {
+            let since = job.started.unwrap_or(job.created);
+            run.since = Some(
+                run.since
+                    .filter(|earliest| i64::from(*earliest) <= i64::from(since))
+                    .unwrap_or(since),
+            );
+        }
+    }
+    run
+}
+
 fn add_alerts(sum: &mut JsonReportAlertsCounts, counts: Option<&JsonReportAlertsCounts>) {
     if let Some(counts) = counts {
         sum.active = sum.active.saturating_add(counts.active);
@@ -595,9 +699,10 @@ fn summary(
     rows: &[ReportRow],
     lines: &HashMap<ReportId, u32>,
     alerts: &HashMap<ReportId, JsonReportAlertsCounts>,
+    jobs: &HashMap<ReportId, JsonConsoleJob>,
 ) -> Option<JsonConsoleRunSummary> {
     let (_, uuid, number, hash) = version.clone();
-    let facts = RunFacts::new(rows, lines, alerts)?;
+    let facts = RunFacts::new(rows, lines, alerts, jobs)?;
     let (testbeds, testbed_count) = first_seen(
         rows.iter()
             .map(|row| (row.testbed.uuid, row.testbed.name.clone())),
@@ -620,6 +725,7 @@ fn summary(
         author_count,
         lines: facts.lines,
         alerts: facts.alerts,
+        jobs: facts.jobs,
     })
 }
 
@@ -630,6 +736,7 @@ struct RunFacts {
     end_time: DateTimeMillis,
     lines: u32,
     alerts: JsonReportAlertsCounts,
+    jobs: Option<JsonConsoleRunJobs>,
 }
 
 impl RunFacts {
@@ -638,13 +745,18 @@ impl RunFacts {
         rows: &[ReportRow],
         lines: &HashMap<ReportId, u32>,
         alerts: &HashMap<ReportId, JsonReportAlertsCounts>,
+        jobs: &HashMap<ReportId, JsonConsoleJob>,
     ) -> Option<Self> {
         // The first report's branch, so a version that predates per branch versions
         // still names one branch.
         let first = rows.first()?;
+        // A job that ended without results never writes its report's end.
         let end_time = rows
             .iter()
-            .map(|row| row.end_time)
+            .flat_map(|row| {
+                let completed = jobs.get(&row.id).and_then(|job| job.completed);
+                std::iter::once(row.end_time).chain(completed.map(DateTime::from))
+            })
             .max_by_key(DateTime::timestamp)?;
         let mut sum = JsonReportAlertsCounts::default();
         let mut total_lines = 0u32;
@@ -659,6 +771,7 @@ impl RunFacts {
             end_time: end_time.into(),
             lines: total_lines,
             alerts: sum,
+            jobs: run_jobs(rows, jobs),
         })
     }
 }
@@ -763,8 +876,15 @@ async fn get_one_inner(
         Alert,
         (&project, path_params.version)
     ))?;
+    #[cfg(feature = "plus")]
+    let jobs = report_jobs(conn, project.id, &version_ids).map_err(resource_not_found_err!(
+        Job,
+        (&project, path_params.version)
+    ))?;
+    #[cfg(not(feature = "plus"))]
+    let jobs = HashMap::new();
     // A run is a version with reports.
-    let facts = RunFacts::new(&rows, &lines, &alerts).ok_or_else(|| {
+    let facts = RunFacts::new(&rows, &lines, &alerts, &jobs).ok_or_else(|| {
         resource_not_found_err!(Version, (&project, path_params.version))(
             diesel::result::Error::NotFound,
         )
@@ -805,6 +925,7 @@ async fn get_one_inner(
             end_time: row.end_time.into(),
             lines: lines.get(&row.id).copied().unwrap_or_default(),
             alerts: alerts.get(&row.id).copied().unwrap_or_default(),
+            job: jobs.get(&row.id).copied(),
             author: row.author.as_ref().map(Author::json),
         })
         .collect();
@@ -820,6 +941,7 @@ async fn get_one_inner(
         testbeds: to_u32(testbeds),
         lines: facts.lines,
         alerts: facts.alerts,
+        jobs: facts.jobs,
         previous,
         next,
         alerting,

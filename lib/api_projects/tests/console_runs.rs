@@ -3,6 +3,7 @@
     clippy::expect_used,
     clippy::indexing_slicing,
     clippy::tests_outside_test_module,
+    clippy::too_many_lines,
     reason = "integration test file"
 )]
 //! The console's runs: `/v0/console/projects/{project}/runs` and
@@ -1445,6 +1446,454 @@ async fn steps_follow_the_list(server: &TestServer, fixture: &Fixture, heads_in_
             ),
             "{}'s steps",
             order[index]
+        );
+    }
+}
+
+/// Runner jobs: a report created for one exists before its results, and its job's status
+/// shows until the results are in. No API takes a job through its states without a runner,
+/// so the jobs here are written as the runner protocol leaves them.
+#[cfg(feature = "plus")]
+mod jobs {
+    use bencher_json::{
+        JobUuid, SpecUuid,
+        project::console::{ConsoleJobStatus, JsonConsoleJob, JsonConsoleRunJobs},
+        runner::JobStatus,
+    };
+    use diesel::OptionalExtension as _;
+
+    use super::{
+        Fixture, JsonReport, NOW, Post, ReportUuid, TestServer, at, fixture, millis, post,
+        report_page, run, runs_of, schema, version_of,
+    };
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    const SPEC: &str = "standard-x86";
+
+    struct Job {
+        status: JobStatus,
+        created: &'static str,
+        started: Option<&'static str>,
+        completed: Option<&'static str>,
+    }
+
+    impl Job {
+        const fn new(status: JobStatus, created: &'static str) -> Self {
+            Self {
+                status,
+                created,
+                started: None,
+                completed: None,
+            }
+        }
+
+        const fn started(self, started: &'static str) -> Self {
+            Self {
+                started: Some(started),
+                ..self
+            }
+        }
+
+        const fn completed(self, completed: &'static str) -> Self {
+            Self {
+                completed: Some(completed),
+                ..self
+            }
+        }
+    }
+
+    /// The spec every job here runs on, made once.
+    fn spec_id(server: &TestServer) -> i32 {
+        let mut conn = server.db_conn();
+        if let Some(id) = schema::spec::table
+            .filter(schema::spec::slug.eq(SPEC))
+            .select(schema::spec::id)
+            .first::<i32>(&mut conn)
+            .optional()
+            .expect("Failed to read the spec")
+        {
+            return id;
+        }
+        let created = at(NOW);
+        diesel::insert_into(schema::spec::table)
+            .values((
+                schema::spec::uuid.eq(SpecUuid::new()),
+                schema::spec::name.eq("Standard x86"),
+                schema::spec::slug.eq(SPEC),
+                schema::spec::os.eq("linux"),
+                schema::spec::architecture.eq("x86_64"),
+                schema::spec::cpu.eq(8),
+                schema::spec::memory.eq(0x0004_0000_0000i64),
+                schema::spec::disk.eq(0x0019_0000_0000i64),
+                schema::spec::network.eq(false),
+                schema::spec::created.eq(created),
+                schema::spec::modified.eq(created),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert the spec");
+        schema::spec::table
+            .filter(schema::spec::slug.eq(SPEC))
+            .select(schema::spec::id)
+            .first(&mut conn)
+            .expect("Failed to read the spec")
+    }
+
+    /// Give a report a runner job in the given state.
+    fn give_job(server: &TestServer, report: &JsonReport, job: &Job) {
+        let spec_id = spec_id(server);
+        let mut conn = server.db_conn();
+        let (report_id, project_id, organization_id): (i32, i32, i32) = schema::report::table
+            .inner_join(schema::project::table)
+            .filter(schema::report::uuid.eq(report.uuid))
+            .select((
+                schema::report::id,
+                schema::report::project_id,
+                schema::project::organization_id,
+            ))
+            .first(&mut conn)
+            .expect("Failed to read the report");
+        let created = at(job.created);
+        diesel::insert_into(schema::job::table)
+            .values((
+                schema::job::uuid.eq(JobUuid::new()),
+                schema::job::organization_id.eq(organization_id),
+                schema::job::project_id.eq(project_id),
+                schema::job::report_id.eq(report_id),
+                schema::job::source_ip.eq("127.0.0.1"),
+                schema::job::spec_id.eq(spec_id),
+                schema::job::config.eq("{}"),
+                schema::job::timeout.eq(3600),
+                schema::job::priority.eq(0),
+                schema::job::status.eq(job.status),
+                schema::job::started.eq(job.started.map(at)),
+                schema::job::completed.eq(job.completed.map(at)),
+                schema::job::created.eq(created),
+                schema::job::modified.eq(created),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert the job");
+    }
+
+    /// A report as a runner job's starts: no results yet.
+    fn submitted(time: &'static str, hash: &'static str) -> Post {
+        Post {
+            iterations: Vec::new(),
+            ..Post::new(time, Some(hash))
+        }
+    }
+
+    fn view(
+        job: Option<&JsonConsoleJob>,
+    ) -> Option<(ConsoleJobStatus, i64, Option<i64>, Option<i64>)> {
+        job.map(|job| {
+            (
+                job.status,
+                job.created.into(),
+                job.started.map(Into::into),
+                job.completed.map(Into::into),
+            )
+        })
+    }
+
+    fn counts(jobs: Option<&JsonConsoleRunJobs>) -> Option<(u32, u32, u32, u32, Option<i64>)> {
+        jobs.map(|jobs| {
+            (
+                jobs.queued,
+                jobs.running,
+                jobs.failed,
+                jobs.canceled,
+                jobs.since.map(Into::into),
+            )
+        })
+    }
+
+    const RUN: &str = "7000000000000000000000000000000000000007";
+
+    // Kills: a job status read as another (pending or claimed not Queued; running, completed,
+    // or a runner gone quiet not Running; failed; canceled), a processed job still shown, a
+    // report posted by its own job given a status, a count per status taken from the wrong
+    // reports, a run's start of waiting that counts a finished job, takes a started job's
+    // submission, or skips one not yet started, a job's times swapped, and a job matched to
+    // the report whose id is its own.
+    #[tokio::test]
+    async fn console_run_shows_each_runner_job_status() {
+        let server = TestServer::new_at(at(NOW)).await;
+        // Another project's report comes first, so no job's id is its report's.
+        let other = fixture(&server, "jobstatus-other").await;
+        post(
+            &server,
+            &other,
+            Post::new("2024-02-20T06:00:00Z", Some(RUN)),
+        )
+        .await;
+        let fixture = fixture(&server, "jobstatus").await;
+        let jobs = [
+            Job::new(JobStatus::Pending, "2024-02-20T10:03:00Z"),
+            Job::new(JobStatus::Claimed, "2024-02-20T10:04:00Z"),
+            Job::new(JobStatus::Running, "2024-02-20T10:00:00Z").started("2024-02-20T10:05:00Z"),
+            Job::new(JobStatus::Completed, "2024-02-20T10:00:00Z")
+                .started("2024-02-20T10:06:00Z")
+                .completed("2024-02-20T10:07:00Z"),
+            Job::new(JobStatus::Unknown, "2024-02-20T10:00:00Z").started("2024-02-20T10:08:00Z"),
+            Job::new(JobStatus::Failed, "2024-02-20T09:00:00Z")
+                .started("2024-02-20T09:01:00Z")
+                .completed("2024-02-20T09:02:00Z"),
+            Job::new(JobStatus::Canceled, "2024-02-20T09:00:00Z").completed("2024-02-20T09:30:00Z"),
+            Job::new(JobStatus::Processed, "2024-02-20T08:00:00Z")
+                .started("2024-02-20T08:01:00Z")
+                .completed("2024-02-20T08:02:00Z"),
+        ];
+        let mut reports = Vec::new();
+        for (index, job) in jobs.iter().enumerate() {
+            let time = [
+                "2024-02-20T10:03:00Z",
+                "2024-02-20T10:04:00Z",
+                "2024-02-20T10:00:00Z",
+                "2024-02-20T10:00:01Z",
+                "2024-02-20T10:00:02Z",
+                "2024-02-20T09:00:00Z",
+                "2024-02-20T09:00:01Z",
+                "2024-02-20T08:01:00Z",
+            ][index];
+            let report = post(&server, &fixture, submitted(time, RUN)).await;
+            give_job(&server, &report, job);
+            reports.push(report);
+        }
+        // Posted by its own CI job.
+        let own = post(
+            &server,
+            &fixture,
+            Post::new("2024-02-20T07:00:00Z", Some(RUN)),
+        )
+        .await;
+
+        let listed = runs_of(&server, &fixture).await;
+        assert_eq!(listed.len(), 1, "one run");
+        let summary = &listed[0];
+        assert_eq!(
+            counts(summary.jobs.as_ref()),
+            Some((2, 3, 1, 1, Some(millis("2024-02-20T10:03:00Z")))),
+            "the run's jobs by status, waiting since the pending job's submission"
+        );
+
+        let page = run(&server, &fixture, version_of(&server, &own), "").await;
+        assert_eq!(
+            counts(page.jobs.as_ref()),
+            counts(summary.jobs.as_ref()),
+            "the run page's jobs"
+        );
+        let by_report = |uuid: ReportUuid| {
+            view(
+                page.reports
+                    .iter()
+                    .find(|report| report.uuid == uuid)
+                    .expect("Failed to find the report")
+                    .job
+                    .as_ref(),
+            )
+        };
+        let expected = [
+            Some((
+                ConsoleJobStatus::Queued,
+                millis("2024-02-20T10:03:00Z"),
+                None,
+                None,
+            )),
+            Some((
+                ConsoleJobStatus::Queued,
+                millis("2024-02-20T10:04:00Z"),
+                None,
+                None,
+            )),
+            Some((
+                ConsoleJobStatus::Running,
+                millis("2024-02-20T10:00:00Z"),
+                Some(millis("2024-02-20T10:05:00Z")),
+                None,
+            )),
+            Some((
+                ConsoleJobStatus::Running,
+                millis("2024-02-20T10:00:00Z"),
+                Some(millis("2024-02-20T10:06:00Z")),
+                Some(millis("2024-02-20T10:07:00Z")),
+            )),
+            Some((
+                ConsoleJobStatus::Running,
+                millis("2024-02-20T10:00:00Z"),
+                Some(millis("2024-02-20T10:08:00Z")),
+                None,
+            )),
+            Some((
+                ConsoleJobStatus::Failed,
+                millis("2024-02-20T09:00:00Z"),
+                Some(millis("2024-02-20T09:01:00Z")),
+                Some(millis("2024-02-20T09:02:00Z")),
+            )),
+            Some((
+                ConsoleJobStatus::Canceled,
+                millis("2024-02-20T09:00:00Z"),
+                None,
+                Some(millis("2024-02-20T09:30:00Z")),
+            )),
+            None,
+        ];
+        for (report, expected) in reports.iter().zip(expected) {
+            assert_eq!(
+                by_report(report.uuid),
+                expected,
+                "report at {}",
+                report.start_time
+            );
+        }
+        assert_eq!(by_report(own.uuid), None, "a report its own job posted");
+    }
+
+    // Kills: a run whose jobs all ended still reading as waiting, a finished run given jobs,
+    // and a run's end that ignores a job that ended without writing its report's end.
+    #[tokio::test]
+    async fn console_runs_mix_finished_and_ended_jobs() {
+        let server = TestServer::new_at(at(NOW)).await;
+        let fixture = fixture(&server, "jobmix").await;
+        let failed = post(&server, &fixture, submitted("2024-02-20T09:00:00Z", RUN)).await;
+        give_job(
+            &server,
+            &failed,
+            &Job::new(JobStatus::Failed, "2024-02-20T09:00:00Z")
+                .started("2024-02-20T09:01:00Z")
+                .completed("2024-02-20T09:42:00Z"),
+        );
+        let processed = post(
+            &server,
+            &fixture,
+            Post::new("2024-02-20T09:05:00Z", Some(RUN)),
+        )
+        .await;
+        give_job(
+            &server,
+            &processed,
+            &Job::new(JobStatus::Processed, "2024-02-20T09:00:00Z")
+                .started("2024-02-20T09:05:00Z")
+                .completed("2024-02-20T09:06:00Z"),
+        );
+        let own = "8000000000000000000000000000000000000008";
+        post(
+            &server,
+            &fixture,
+            Post::new("2024-02-21T09:00:00Z", Some(own)),
+        )
+        .await;
+
+        let listed = runs_of(&server, &fixture).await;
+        let ended = listed
+            .iter()
+            .find(|run| run.hash.as_ref().map(ToString::to_string).as_deref() == Some(RUN))
+            .expect("Failed to find the run with jobs");
+        assert_eq!(
+            counts(ended.jobs.as_ref()),
+            Some((0, 0, 1, 0, None)),
+            "a run whose jobs ended waits for nothing"
+        );
+        assert_eq!(
+            i64::from(ended.end_time),
+            millis("2024-02-20T09:42:00Z"),
+            "the run ends when its failed job did"
+        );
+        let finished = listed
+            .iter()
+            .find(|run| run.hash.as_ref().map(ToString::to_string).as_deref() == Some(own))
+            .expect("Failed to find the finished run");
+        assert!(finished.jobs.is_none(), "a run with no jobs carries none");
+        assert_eq!(
+            i64::from(finished.end_time),
+            millis("2024-02-21T09:01:00Z"),
+            "a finished run ends with its report"
+        );
+    }
+
+    // Kills: a report page that leaves out its job's status or times, a processed job still
+    // shown, a spec missing from a runner report, and a spec read from the testbed for a report
+    // its own job posted.
+    #[tokio::test]
+    async fn console_report_shows_its_job_and_spec() {
+        let server = TestServer::new_at(at(NOW)).await;
+        let fixture: Fixture = fixture(&server, "jobreport").await;
+        let running = post(&server, &fixture, submitted("2024-02-20T10:00:00Z", RUN)).await;
+        give_job(
+            &server,
+            &running,
+            &Job::new(JobStatus::Running, "2024-02-20T10:00:00Z").started("2024-02-20T10:02:00Z"),
+        );
+        let processed = post(
+            &server,
+            &fixture,
+            Post::new("2024-02-20T10:05:00Z", Some(RUN)),
+        )
+        .await;
+        give_job(
+            &server,
+            &processed,
+            &Job::new(JobStatus::Processed, "2024-02-20T10:00:00Z")
+                .started("2024-02-20T10:05:00Z")
+                .completed("2024-02-20T10:06:00Z"),
+        );
+        // Posted by its own job on a testbed whose runs take the spec.
+        let own = post(
+            &server,
+            &fixture,
+            Post::new("2024-02-20T11:00:00Z", Some(RUN)),
+        )
+        .await;
+        let spec_id = spec_id(&server);
+        diesel::update(schema::report::table.filter(schema::report::uuid.eq(own.uuid)))
+            .set(schema::report::spec_id.eq(spec_id))
+            .execute(&mut server.db_conn())
+            .expect("Failed to set the report's spec");
+
+        let page = report_page(&server, &fixture, &running).await;
+        assert_eq!(
+            view(page.job.as_ref()),
+            Some((
+                ConsoleJobStatus::Running,
+                millis("2024-02-20T10:00:00Z"),
+                Some(millis("2024-02-20T10:02:00Z")),
+                None,
+            )),
+            "a running job's report"
+        );
+        let spec = page.spec.expect("a runner report's spec");
+        assert_eq!(
+            (
+                spec.name.as_ref(),
+                spec.slug.as_ref(),
+                spec.os.to_string(),
+                spec.architecture.to_string(),
+                u32::from(spec.cpu),
+                u64::from(spec.memory),
+                u64::from(spec.disk),
+            ),
+            (
+                "Standard x86",
+                SPEC,
+                "linux".to_owned(),
+                "x86_64".to_owned(),
+                8,
+                0x0004_0000_0000,
+                0x0019_0000_0000,
+            ),
+            "the spec it ran on"
+        );
+
+        let page = report_page(&server, &fixture, &processed).await;
+        assert!(page.job.is_none(), "a processed job's report is finished");
+        assert!(
+            page.spec.is_some(),
+            "a processed job's report keeps its spec"
+        );
+
+        let page = report_page(&server, &fixture, &own).await;
+        assert!(
+            page.job.is_none() && page.spec.is_none(),
+            "a report its own job posted has no job and no spec"
         );
     }
 }

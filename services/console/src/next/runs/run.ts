@@ -1,6 +1,7 @@
 import type { JsonConsoleRun } from "../../types/bencher";
 import type { Api } from "../api";
 import type { Batch } from "../reports/search";
+import { live, unfinished } from "./status";
 
 /** Whether the API could name a run this way; it refuses anything else before looking. */
 export const isRunId = (id: string) => RUN_ID.test(id);
@@ -31,6 +32,12 @@ export const runBatchQuery = (
 		);
 		return data;
 	},
+	// Each ask reads the whole run, so a later batch asks again only for its own reports.
+	...live((run: JsonConsoleRun) =>
+		batch.page === 1
+			? unfinished(run.jobs)
+			: run.reports.some((report) => unfinished(report.job)),
+	),
 });
 
 const RUN_ID =

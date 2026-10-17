@@ -3,6 +3,7 @@ import type { JsonConsoleReport } from "../../types/bencher";
 import { FOLD } from "../alerts/fold";
 import type { Api } from "../api";
 import { batchSize } from "../reports/rows";
+import { live, unfinished } from "../runs/status";
 import { type ParameterSet, parameterEntries } from "./row";
 import {
 	type ReportView,
@@ -78,6 +79,7 @@ export const batchQuery = (
 		query: { queryKey: readonly unknown[] } | undefined,
 	) =>
 		batch.page === 1 && query?.queryKey[3] === report ? previous : undefined,
+	...live((batch: ReportBatch) => unfinished(batch.report.job)),
 });
 
 /** The lines a threshold would check: one measure and metric name, and the variants carrying a set. */

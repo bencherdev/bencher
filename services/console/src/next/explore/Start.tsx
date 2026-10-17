@@ -10,8 +10,10 @@ import {
 	Match,
 	Show,
 	Switch,
+	createMemo,
 	createSignal,
 	createUniqueId,
+	on,
 } from "solid-js";
 import {
 	BoundaryLimit,
@@ -25,6 +27,8 @@ import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import type { ExploreQuery } from "../query/query";
 import { exploreSearch } from "../query/selection";
+import { reportStatus, runStatus, statusText } from "../runs/status";
+import StatusPill from "../runs/StatusPill";
 import { type Option, SearchMenu } from "./Box";
 import { plotSearch } from "./pinned";
 import { type Dimension, OPTIONS, nameQuery } from "./queries";
@@ -50,6 +54,13 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 	const alerts = useQueryResult(() => startQueries(api, slug()).alerts);
 	const runs = useQueryResult(() => startQueries(api, slug()).runs);
 	const plots = useQueryResult(() => startQueries(api, slug()).plots);
+	// Every answer, a poll's too, moves the time a running job counts from now.
+	const now = createMemo(
+		on(
+			() => runs().dataUpdatedAt,
+			() => Date.now(),
+		),
+	);
 	const explore = () => projectPath(slug(), "explore");
 	const [open, setOpen] = createSignal<string>();
 	return (
@@ -86,6 +97,7 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 					{(run: JsonConsoleRunSummary) => (
 						<RunRow
 							run={run}
+							now={now()}
 							open={open() === run.uuid}
 							onOpen={(next) => setOpen(next ? run.uuid : undefined)}
 							onQuery={props.onQuery}
@@ -194,6 +206,7 @@ const List = <T,>(props: {
 /** A run that opens, anywhere on its row, to its reports; its hash opens the run. */
 const RunRow = (props: {
 	run: JsonConsoleRunSummary;
+	now: number;
 	open: boolean;
 	onOpen: (open: boolean) => void;
 	onQuery: (query: ExploreQuery) => void;
@@ -205,6 +218,7 @@ const RunRow = (props: {
 		client.query(runReportsQuery(api, slug(), props.run.uuid)).catch(() => {});
 	const name = () => runName(props.run);
 	const time = () => runTime(props.run.end_time - props.run.start_time);
+	const status = () => runStatus(props.run, props.now, runTime);
 	const sub = () =>
 		[
 			formatWhen(props.run.start_time),
@@ -225,7 +239,7 @@ const RunRow = (props: {
 								props.run.branch.name,
 								`run ${name()}`,
 								...sub(),
-								time(),
+								status().kind ? statusText(status()) : time(),
 							].join(", ")}
 							aria-expanded={props.open}
 							aria-controls={panel}
@@ -241,7 +255,12 @@ const RunRow = (props: {
 					</span>
 					<span class="ex-sub">{sub().join(" · ")}</span>
 				</span>
-				<span class="ex-n">{time()}</span>
+				<Show
+					when={status().kind}
+					fallback={<span class="ex-n">{time()}</span>}
+				>
+					<StatusPill status={status()} />
+				</Show>
 				<Icon name="chevron-down" class="ex-rcaret" />
 			</div>
 			<Show when={props.open}>
@@ -267,6 +286,12 @@ const RunReports = (props: {
 	const result = useQueryResult(() =>
 		runReportsQuery(api, slug(), props.run.uuid),
 	);
+	const now = createMemo(
+		on(
+			() => result().dataUpdatedAt,
+			() => Date.now(),
+		),
+	);
 	const [open, setOpen] = createSignal<string>();
 	return (
 		<section
@@ -290,14 +315,32 @@ const RunReports = (props: {
 						<>
 							<For each={run().reports}>
 								{(report) => (
-									<ReportRow
-										report={{ ...report, branch: run().branch }}
-										order={report.order}
-										branch={run().branch.name}
-										open={open() === report.uuid}
-										onOpen={(next) => setOpen(next ? report.uuid : undefined)}
-										onQuery={props.onQuery}
-									/>
+									// A runner job's report has no benchmarks to search until its results are in.
+									<Show
+										when={!report.job}
+										fallback={
+											<div class="ex-rhead">
+												<span class="ex-sline">
+													<span class="mono muted">{report.order}</span>
+													<b class="ex-ellip">{run().branch.name}</b>
+													<span class="muted">· {report.testbed.name}</span>
+												</span>
+												<span class="spacer" />
+												<StatusPill
+													status={reportStatus(report, now(), runTime)}
+												/>
+											</div>
+										}
+									>
+										<ReportRow
+											report={{ ...report, branch: run().branch }}
+											order={report.order}
+											branch={run().branch.name}
+											open={open() === report.uuid}
+											onOpen={(next) => setOpen(next ? report.uuid : undefined)}
+											onQuery={props.onQuery}
+										/>
+									</Show>
 								)}
 							</For>
 							<Show when={run().total > run().reports.length}>

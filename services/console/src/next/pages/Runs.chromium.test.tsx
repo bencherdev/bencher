@@ -15,7 +15,14 @@ import { DEFAULT_SEARCH } from "../reports/search";
 import { fakeApi, watchFallback } from "../reports/testing";
 import { screenBatch } from "../reports/virtual";
 import { type RunsBatch, batchKey } from "../runs/query";
-import { runFixture } from "../runs/testing";
+import {
+	cutCells,
+	cutHeaders,
+	likelyRun,
+	likelyRuns,
+	overrun,
+	runFixture,
+} from "../runs/testing";
 import Runs from "./Runs";
 
 // Relative to the router base, as the app routes it.
@@ -455,4 +462,100 @@ test("at 1024 px the Runs list fits its screen", async () => {
 	const alerts = table().element().querySelector(".reports-alerts")
 		?.parentElement as HTMLElement;
 	expect(alerts.scrollWidth).toBeLessThanOrEqual(alerts.clientWidth);
+});
+
+/** The fixed-length columns, which hold their content whole from 768 px up (rulings 409 and 410). */
+const FIXED = ["When", "Head", "Reports", "Lines", "Alerts", "Status"];
+const runRows = () => [...document.querySelectorAll("tbody tr[aria-rowindex]")];
+
+// Kills a Runs list that scrolls sideways on a small laptop, and one that cuts
+// a likely run's fixed-length cell (its time, head, counts, alerts, or status)
+// or a header there; its branch, testbed, adapter, and author take the
+// shortfall (ruling 409).
+test("at 1024 px a likely run's fixed-length cells and every header are whole", async () => {
+	await page.viewport(1024, 768);
+	const { api } = fakeApi(() => answered(likelyRuns(Date.now()), 4));
+	mount(api, client());
+	await expect.element(table()).toBeVisible();
+	await document.fonts.ready;
+	const scroll = table().element().closest(".ui-table-scroll") as HTMLElement;
+	expect(scroll.scrollWidth).toBe(scroll.clientWidth);
+	expect(runRows().flatMap((row) => cutCells(row, FIXED))).toEqual([]);
+	expect(cutHeaders(table().element())).toEqual([]);
+});
+
+// Kills a Runs list column cut below a likely run's text on a desktop, and a
+// Status column wider than its longest pill, whose room the text columns need
+// (ruling 406).
+test("at 1280 px a likely run's every cell is whole, Status no wider than its longest pill", async () => {
+	await page.viewport(1280, 768);
+	const { api } = fakeApi(() => answered(likelyRuns(Date.now()), 4));
+	mount(api, client());
+	await expect.element(table()).toBeVisible();
+	await document.fonts.ready;
+	const pills = [...document.querySelectorAll<HTMLElement>("tbody .rn-st")];
+	expect(pills.map((pill) => pill.textContent)).toEqual([
+		"Running 59m",
+		"Failed 59m 59s",
+		"Failed 25h 59m",
+	]);
+	expect(runRows().flatMap((row) => cutCells(row))).toEqual([]);
+	expect(cutHeaders(table().element())).toEqual([]);
+	const status = (pills[0] as HTMLElement).closest("td") as HTMLElement;
+	const longest = Math.max(
+		...pills.map((pill) => pill.getBoundingClientRect().width),
+	);
+	// Its start padding and a pixel to spare.
+	expect(status.getBoundingClientRect().width - longest).toBeLessThanOrEqual(
+		12,
+	);
+});
+
+// Kills a Runs list below a laptop wider or narrower than on a 1024 px page (a
+// minimum width other than that layout's), one that cuts a fixed-length cell
+// or a header there rather than scroll, and an Alerts column that cuts a
+// four-digit total there further than on that page (ruling 410).
+test("from 768 to 1023 px the Runs list keeps its 1024 px layout and scrolls sideways", async () => {
+	const measure = async (width: number) => {
+		await page.viewport(width, 768);
+		const { api } = fakeApi(() =>
+			answered(
+				[
+					...likelyRuns(Date.now()),
+					likelyRun(4, { alerts: { total: 9999, active: 999 } }),
+				],
+				5,
+			),
+		);
+		mount(api, client());
+		await expect.element(table()).toBeVisible();
+		await document.fonts.ready;
+		const rows = runRows();
+		const four = (rows.at(-1) as Element)
+			.querySelector(".reports-alerts")
+			?.closest("td") as HTMLElement;
+		const scroll = table().element().closest(".ui-table-scroll") as HTMLElement;
+		const found = {
+			width: table().element().getBoundingClientRect().width,
+			cut: [
+				...rows.slice(0, -1).flatMap((row) => cutCells(row, FIXED)),
+				...cutHeaders(table().element()),
+			],
+			four: overrun(four),
+			scrolls: scroll.scrollWidth > scroll.clientWidth,
+		};
+		dispose?.();
+		dispose = undefined;
+		document.body.replaceChildren();
+		return found;
+	};
+	const laptop = await measure(1024);
+	expect(laptop.scrolls).toBe(false);
+	for (const width of [768, 900]) {
+		const below = await measure(width);
+		expect(below.width, `at ${width} px`).toBeCloseTo(laptop.width, 0);
+		expect(below.cut, `at ${width} px`).toEqual([]);
+		expect(below.four, `at ${width} px`).toBeLessThanOrEqual(laptop.four);
+		expect(below.scrolls, `at ${width} px`).toBe(true);
+	}
 });

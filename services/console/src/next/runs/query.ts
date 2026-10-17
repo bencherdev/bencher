@@ -12,6 +12,7 @@ import {
 	encodeSearch,
 } from "../reports/search";
 import { screenBatch } from "../reports/virtual";
+import { live, unfinished } from "./status";
 
 export interface RunsBatch {
 	runs: JsonConsoleRunSummary[];
@@ -54,6 +55,7 @@ export const batchQuery = (
 		previous: RunsBatch | undefined,
 		query: { queryKey: readonly unknown[] } | undefined,
 	) => (batch.page === 1 && query?.queryKey[2] === slug ? previous : undefined),
+	...live((batch: RunsBatch) => batch.runs.some((run) => unfinished(run.jobs))),
 });
 
 /** Start the first batch for a Runs link before the page asks for it. */
