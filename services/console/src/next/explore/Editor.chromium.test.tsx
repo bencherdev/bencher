@@ -71,7 +71,7 @@ const render = (
 	api: Api,
 	initial: ExploreQuery,
 	options: {
-		perf?: JsonConsolePerf;
+		perf?: JsonConsolePerf | undefined;
 		settled?: boolean;
 		readOnly?: boolean;
 	} = {},
@@ -227,4 +227,32 @@ test("a read-only editor shows the query and nothing that changes it", async () 
 		.element(page.getByRole("group", { name: "Branches" }))
 		.toHaveTextContent("main");
 	expect(page.getByRole("button").elements()).toHaveLength(0);
+});
+
+// Kills a Parameters hint sized to its text, whose box moves when a single
+// variant project's "0 variants" becomes "1 variant" as the plot arrives.
+test("the parameters hint holds its place when its count arrives at 900 px", async () => {
+	await page.viewport(900, 900);
+	const [perf, setPerf] = createSignal<JsonConsolePerf>();
+	render(
+		reading(() => []).api,
+		{ ...QUERY, sets: [] },
+		{
+			get perf() {
+				return perf();
+			},
+		},
+	);
+	const parameters = page.getByRole("group", { name: "Parameters" });
+	const hint = parameters.getByText(/^\d+ variants?$/);
+	await expect.element(hint).toHaveTextContent("0 variants");
+	const place = () => hint.element().getBoundingClientRect().toJSON();
+	const before = place();
+	setPerf({
+		...PERF,
+		variants: PERF.variants.slice(0, 1),
+		lines: PERF.lines.slice(0, 1),
+	});
+	await expect.element(hint).toHaveTextContent("1 variant");
+	expect(place()).toEqual(before);
 });
