@@ -43,7 +43,7 @@ mod test_magic {
             gungraun_json::test_rust_gungraun_json, gungraun_stdout::test_rust_gungraun_stdout,
             iai::test_rust_iai,
         },
-        shell::{hyperfine_v1::test_shell_hyperfine_v1, hyperfine_v2::test_shell_hyperfine_v2},
+        shell::hyperfine::{v1::test_shell_hyperfine_v1, v2::test_shell_hyperfine_v2},
         test_util::{convert_file_path, opt_convert_file_path},
     };
     use crate::{Adaptable as _, AdapterJson, Settings, results::adapter_results::AdapterResults};

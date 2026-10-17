@@ -1,6 +1,9 @@
+pub mod v1;
+pub mod v2;
+
 use crate::{Adaptable, AdapterResults, Settings};
 
-use super::{hyperfine_v1::AdapterShellHyperfineV1, hyperfine_v2::AdapterShellHyperfineV2};
+use self::{v1::AdapterShellHyperfineV1, v2::AdapterShellHyperfineV2};
 
 pub struct AdapterShellHyperfine;
 
@@ -14,9 +17,9 @@ impl Adaptable for AdapterShellHyperfine {
 #[cfg(test)]
 pub(crate) mod test_shell_hyperfine {
     use crate::adapters::{
-        shell::{
-            hyperfine_v1::test_shell_hyperfine_v1::validate_adapter_shell_hyperfine_v1,
-            hyperfine_v2::test_shell_hyperfine_v2::validate_adapter_shell_hyperfine_v2,
+        shell::hyperfine::{
+            v1::test_shell_hyperfine_v1::validate_adapter_shell_hyperfine_v1,
+            v2::test_shell_hyperfine_v2::validate_adapter_shell_hyperfine_v2,
         },
         test_util::convert_file_path,
     };

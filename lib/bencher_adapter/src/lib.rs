@@ -23,8 +23,10 @@ use adapters::{
         iai::AdapterRustIai,
     },
     shell::{
-        AdapterShell, hyperfine::AdapterShellHyperfine, hyperfine_v1::AdapterShellHyperfineV1,
-        hyperfine_v2::AdapterShellHyperfineV2,
+        AdapterShell,
+        hyperfine::{
+            AdapterShellHyperfine, v1::AdapterShellHyperfineV1, v2::AdapterShellHyperfineV2,
+        },
     },
 };
 pub use bencher_json::{BenchmarkName, JsonNewMetric};

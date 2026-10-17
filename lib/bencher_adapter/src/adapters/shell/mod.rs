@@ -1,6 +1,4 @@
 pub mod hyperfine;
-pub mod hyperfine_v1;
-pub mod hyperfine_v2;
 
 use crate::{Adaptable, AdapterResults, Settings};
 use hyperfine::AdapterShellHyperfine;
@@ -17,7 +15,7 @@ impl Adaptable for AdapterShell {
 mod test_shell {
     use super::AdapterShell;
     use crate::adapters::{
-        shell::{hyperfine_v1::test_shell_hyperfine_v1, hyperfine_v2::test_shell_hyperfine_v2},
+        shell::hyperfine::{v1::test_shell_hyperfine_v1, v2::test_shell_hyperfine_v2},
         test_util::convert_file_path,
     };
 
