@@ -9,13 +9,57 @@ use crate::JobDeadline;
 use crate::error::RunnerError;
 use crate::firecracker::{ResultsDrive, refuse_cancelled};
 use crate::jail::{HostPreparation, JailDir, JailPaths, StateDir, VmId, chroot, netns, state};
-use crate::run::{RunOutput, prepare_oci_workspace};
+use crate::run::{PulledImage, RunOutput};
 
-/// Execute a single benchmark run in a jailed Firecracker microVM, which gets
-/// only what is left of `deadline`.
+/// An image unpacked once, with init and its config in place, which every
+/// iteration builds a new guest disk from. The guest writes only to its disk,
+/// so the tree stays as it was unpacked.
+pub(crate) struct GuestTree {
+    image: PulledImage,
+    rootfs: Utf8PathBuf,
+}
+
+impl GuestTree {
+    pub(crate) fn prepare(
+        log: &Logger,
+        config: &crate::Config,
+        host: &mut HostPreparation,
+        cancel_flag: Option<&AtomicBool>,
+        deadline: JobDeadline,
+    ) -> Result<Self, RunnerError> {
+        // Before the image pull, so a host that cannot jail at all fails fast.
+        prepare_state_dir(log, config, host)?;
+        refuse_cancelled(cancel_flag)?;
+
+        let image = PulledImage::pull(log, config, deadline)?;
+        let rootfs = image.work_dir().join("rootfs");
+        image.unpack(log, &rootfs)?;
+
+        let oci_config = image.oci_config();
+        info!(log, "Writing init config");
+        write_init_config(
+            &rootfs,
+            &oci_config.command,
+            &oci_config.working_dir,
+            &oci_config.env,
+            config.file_paths.as_deref(),
+            config.max_output_size,
+        )?;
+
+        info!(log, "Installing init binary");
+        install_init_binary(&rootfs)?;
+        refuse_cancelled(cancel_flag)?;
+
+        Ok(Self { image, rootfs })
+    }
+}
+
+/// Execute a single benchmark run in a jailed Firecracker microVM, booted from
+/// a new disk built from `tree`, which gets only what is left of `deadline`.
 pub fn vm_execute(
     log: &Logger,
     config: &crate::Config,
+    tree: &GuestTree,
     host: &mut HostPreparation,
     cancel_flag: Option<&AtomicBool>,
     deadline: JobDeadline,
@@ -30,36 +74,7 @@ pub fn vm_execute(
         "timeout_secs" => config.timeout_secs,
     );
 
-    let state_dir = StateDir::new(config.state_dir.clone())?;
-
-    // Before the image pull, so a host that cannot jail at all fails fast.
-    host.ensure(log, state_dir.path(), config.jail_user)?;
-    state_dir.refuse_unusable_mount()?;
-    refuse_cancelled(cancel_flag)?;
-
-    let workspace = prepare_oci_workspace(log, config, deadline)?;
-    let work_dir = &workspace.work_dir;
-    let unpack_dir = &workspace.unpack_dir;
-    let oci_config = workspace.oci_config;
-
-    let command = oci_config.command;
-    let working_dir = &oci_config.working_dir;
-    let env = oci_config.env;
-
-    // Write command config for the VM
-    info!(log, "Writing init config");
-    write_init_config(
-        unpack_dir,
-        &command,
-        working_dir,
-        &env,
-        config.file_paths.as_deref(),
-        config.max_output_size,
-    )?;
-
-    // Step 5: Install init binary
-    info!(log, "Installing init binary");
-    install_init_binary(unpack_dir)?;
+    let state_dir = prepare_state_dir(log, config, host)?;
     refuse_cancelled(cancel_flag)?;
 
     // Every job, not once per process, so a teardown this runner could not
@@ -96,7 +111,7 @@ pub fn vm_execute(
         "path" => rootfs_dest.as_str(),
         "disk_mib" => config.disk.to_mib(),
     );
-    bencher_rootfs::create_ext4_with_size(unpack_dir, rootfs_dest, config.disk.to_mib())?;
+    bencher_rootfs::create_ext4_with_size(&tree.rootfs, rootfs_dest, config.disk.to_mib())?;
 
     // The jailer does not chown what the runner placed in the chroot: the
     // rootfs is written by Firecracker so it is given away, while the kernel is
@@ -105,13 +120,31 @@ pub fn vm_execute(
     chroot::grant_jail_read(kernel_dest)?;
 
     // Step 7-8: Build Firecracker config and run the microVM
-    let fc_config =
-        build_firecracker_config(log, config, work_dir, vm_id, &state_dir, jail, netns)?;
+    let fc_config = build_firecracker_config(
+        log,
+        config,
+        tree.image.work_dir(),
+        vm_id,
+        &state_dir,
+        jail,
+        netns,
+    )?;
 
     refuse_cancelled(cancel_flag)?;
     let run_output = run_firecracker(log, &fc_config, cancel_flag, deadline)?;
 
     Ok(run_output)
+}
+
+fn prepare_state_dir(
+    log: &Logger,
+    config: &crate::Config,
+    host: &mut HostPreparation,
+) -> Result<StateDir, RunnerError> {
+    let state_dir = StateDir::new(config.state_dir.clone())?;
+    host.ensure(log, state_dir.path(), config.jail_user)?;
+    state_dir.refuse_unusable_mount()?;
+    Ok(state_dir)
 }
 
 /// Build the Firecracker job config: stage the binaries, make the results

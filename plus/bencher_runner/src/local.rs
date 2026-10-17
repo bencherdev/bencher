@@ -22,16 +22,17 @@ use crate::JobDeadline;
 use crate::error::RunnerError;
 use crate::local_isolation::LocalIsolation;
 use crate::metrics::RunMetrics;
-use crate::run::{RunOutput, prepare_oci_workspace};
+use crate::run::{PulledImage, RunOutput};
 
 /// Execute a single benchmark run locally on the host system.
 ///
-/// Pulls and unpacks the OCI image, then runs the command directly via
-/// `std::process::Command` from the unpacked rootfs, until `deadline`. No
-/// sandboxing is applied.
+/// Unpacks the pulled image into a tree of the run's own, then runs the
+/// command directly via `std::process::Command` from that tree, until
+/// `deadline`. No sandboxing is applied.
 pub fn local_execute(
     log: &Logger,
     config: &crate::Config,
+    image: &PulledImage,
     cancel_flag: Option<&AtomicBool>,
     deadline: JobDeadline,
 ) -> Result<RunOutput, RunnerError> {
@@ -40,13 +41,19 @@ pub fn local_execute(
         "timeout_secs" => config.timeout_secs,
     );
 
-    let workspace = prepare_oci_workspace(log, config, deadline)?;
-    // A cancel during the pull ends the job here rather than after a spawn.
+    // The command writes to its tree and its output files are collected from
+    // it, so no tree outlives its run and no two runs share one.
+    let tree_dir =
+        tempfile::tempdir_in(image.work_dir()).map_err(crate::error::ConfigError::TempDir)?;
+    let unpack_dir = Utf8Path::from_path(tree_dir.path())
+        .ok_or(crate::error::ConfigError::NonUtf8TempDir)?
+        .join("rootfs");
+    image.unpack(log, &unpack_dir)?;
+    // A cancel during the unpack ends the job here rather than after a spawn.
     if cancel_flag.is_some_and(|flag| flag.load(Ordering::SeqCst)) {
         return Err(crate::error::ExecutionError::Canceled("job was canceled".to_owned()).into());
     }
-    let unpack_dir = &workspace.unpack_dir;
-    let oci_config = &workspace.oci_config;
+    let oci_config = image.oci_config();
 
     // Canonicalize unpack_dir *after* unpacking so all symlinks within the
     // rootfs are materialized and we have a stable base for containment checks.

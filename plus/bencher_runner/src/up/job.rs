@@ -11,6 +11,7 @@ use slog::{Logger, error, info, o, warn};
 use super::UpConfig;
 use super::state_machine::JobFinishResult;
 use super::websocket::JobChannel;
+use crate::run::PreparedImage;
 use crate::{JobDeadline, RunnerError};
 
 // NUL bytes are invalid in file paths on all OSes (POSIX and Windows),
@@ -66,53 +67,14 @@ pub fn execute_job(
             };
         },
     };
-    let iter_count = job.config.iter.map_or(1, bencher_json::Iteration::as_usize);
-    let allow_failure = job.config.allow_failure.unwrap_or_default();
-
     let cancel_flag = Arc::new(AtomicBool::new(false));
     let stop_flag = Arc::new(AtomicBool::new(false));
     let heartbeat = spawn_heartbeat_thread(log, config, ws, &cancel_flag, &stop_flag);
     let stop_watcher = spawn_stop_watcher(log, config, &cancel_flag, &stop_flag);
 
-    let build_time = job_config.build_time;
-    let file_size = job_config.file_size;
-    let benchmark_name = if build_time {
-        match build_benchmark_name(job) {
-            Ok(name) => Some(name),
-            Err(e) => {
-                warn!(log, "No benchmark name for the build time"; "error" => bencher_logger::capped(&e));
-                None
-            },
-        }
-    } else {
-        None
-    };
-
-    // Execute benchmark iterations, passing cancel_flag so the wait for the VM
-    // can abort early when the server cancels or the runner stops.
-    let iterations = run_iterations(
-        log,
-        iter_count,
-        allow_failure,
-        deadline,
-        &cancel_flag,
-        |deadline| {
-            let output = crate::execute_with_deadline(
-                log,
-                &job_config,
-                host,
-                Some(cancel_flag.as_ref()),
-                deadline,
-            )?;
-            Ok(output_to_iteration(
-                log,
-                output,
-                build_time,
-                file_size,
-                benchmark_name.as_ref(),
-            ))
-        },
-    );
+    // Passing cancel_flag so the wait for the VM can abort early when the
+    // server cancels or the runner stops.
+    let iterations = run_job(log, job, &job_config, host, deadline, &cancel_flag);
 
     // Stop the heartbeat and stop watcher threads
     stop_flag.store(true, Ordering::SeqCst);
@@ -133,6 +95,61 @@ pub fn execute_job(
         info!(log, "Job canceled by the server");
     }
     iterations.finish(canceled)
+}
+
+/// Pulls the Job's image once, before its first iteration, and runs every
+/// iteration from it.
+fn run_job(
+    log: &Logger,
+    job: &JsonClaimedJob,
+    job_config: &crate::Config,
+    host: &mut crate::jail::HostPreparation,
+    deadline: JobDeadline,
+    cancel_flag: &AtomicBool,
+) -> Iterations {
+    let iter_count = job.config.iter.map_or(1, bencher_json::Iteration::as_usize);
+    if iter_count == 0 {
+        return Iterations::default();
+    }
+    let allow_failure = job.config.allow_failure.unwrap_or_default();
+    let benchmark_name = if job_config.build_time {
+        match build_benchmark_name(job) {
+            Ok(name) => Some(name),
+            Err(e) => {
+                warn!(log, "No benchmark name for the build time"; "error" => bencher_logger::capped(&e));
+                None
+            },
+        }
+    } else {
+        None
+    };
+
+    let image = match PreparedImage::prepare(log, job_config, host, Some(cancel_flag), deadline) {
+        Ok(image) => image,
+        Err(e) => {
+            return Iterations {
+                failure: Some(e.to_string()),
+                ..Iterations::default()
+            };
+        },
+    };
+    run_iterations(
+        log,
+        iter_count,
+        allow_failure,
+        deadline,
+        cancel_flag,
+        |deadline| {
+            let output = image.execute(log, job_config, host, Some(cancel_flag), deadline)?;
+            Ok(output_to_iteration(
+                log,
+                output,
+                job_config.build_time,
+                job_config.file_size,
+                benchmark_name.as_ref(),
+            ))
+        },
+    )
 }
 
 /// Runs the Job's iterations, each with what is left of `deadline`, until one
@@ -601,6 +618,10 @@ fn housekeeping_cores(config: &UpConfig) -> Vec<usize> {
 #[cfg(test)]
 pub(crate) mod tests {
     use std::collections::HashMap;
+    use std::io::{ErrorKind, Read as _, Write as _};
+    use std::net::{SocketAddr, TcpListener, TcpStream};
+    use std::sync::mpsc::{self, TryRecvError};
+    use std::thread::JoinHandle;
 
     use super::*;
     use camino::Utf8PathBuf;
@@ -1686,5 +1707,319 @@ pub(crate) mod tests {
         let result = output_to_iteration(&discard(), output, true, false, None);
         // No build time without a name, and an empty map, so the stdout is not parsed.
         assert_eq!(result.output, Some(BTreeMap::new()));
+    }
+
+    // --- run_job ---
+
+    #[test]
+    fn a_jobs_iterations_share_one_pull() {
+        // Kills a pull for every iteration, which downloads the image again
+        // each time the Job runs it.
+        let registry = TestRegistry::start(None);
+        let job = registry.job(3, false);
+
+        let iterations = run_test_job(&discard(), &job, &AtomicBool::new(false));
+
+        let requests = registry.stop();
+        let stdout: Vec<_> = iterations
+            .results
+            .iter()
+            .map(|output| output.stdout.as_deref())
+            .collect();
+        assert_eq!(
+            stdout,
+            [Some("ran\n"); 3],
+            "every iteration runs the image: {:?}",
+            iterations.failure
+        );
+        assert_eq!(
+            requests,
+            Requests {
+                manifests: 1,
+                blobs: 2
+            }
+        );
+    }
+
+    #[test]
+    fn a_job_with_no_iterations_pulls_nothing() {
+        // Kills a pull ahead of a loop with nothing to run, which fails a Job
+        // with no iteration to fail when its image cannot be pulled.
+        let registry = TestRegistry::start(None);
+        let job = registry.job(0, false);
+
+        let iterations = run_test_job(&discard(), &job, &AtomicBool::new(false));
+
+        assert_eq!(registry.stop(), Requests::default());
+        let outcome = iterations.finish(false);
+        assert!(
+            matches!(outcome, JobFinishResult::Completed { .. }),
+            "{outcome:?}"
+        );
+    }
+
+    #[test]
+    fn a_pull_that_fails_ends_the_job_before_any_iteration() {
+        // Kills a failed pull skipped like a failed iteration under
+        // allow_failure, which pulls again for every iteration and completes a
+        // Job that never ran.
+        let registry = TestRegistry::start(None);
+        let mut job = registry.job(2, true);
+        job.config.digest = sha256(b"not in the registry").parse().unwrap();
+
+        let iterations = run_test_job(&discard(), &job, &AtomicBool::new(false));
+
+        assert_eq!(
+            registry.stop(),
+            Requests {
+                manifests: 1,
+                blobs: 0
+            }
+        );
+        let outcome = iterations.finish(false);
+        assert!(
+            matches!(&outcome, JobFinishResult::Failed { error, results } if results.is_empty() && error.contains("404")),
+            "the pull's failure ends the Job: {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn a_cancel_during_the_pull_ends_the_job_before_any_iteration() {
+        // Kills an iteration started once the server's cancel has landed during
+        // the pull, which unpacks and spawns the benchmark of a Job the server
+        // has ended.
+        let cancel_flag = Arc::new(AtomicBool::new(false));
+        let registry = TestRegistry::start(Some(Arc::clone(&cancel_flag)));
+        let job = registry.job(2, false);
+        let messages = crate::log::Messages::default();
+
+        let iterations = run_test_job(&messages.logger(), &job, &cancel_flag);
+
+        assert_eq!(
+            registry.stop().manifests,
+            1,
+            "the cancel landed in the pull"
+        );
+        assert!(
+            !messages.contains("Starting iteration") && iterations.results.is_empty(),
+            "no iteration started: {:?}",
+            iterations.results
+        );
+    }
+
+    #[test]
+    fn a_cancel_before_the_pull_pulls_nothing() {
+        // Kills a pull for a Job canceled before its preparation starts, which
+        // downloads the whole image for a Job the server has ended.
+        let registry = TestRegistry::start(None);
+        let job = registry.job(2, false);
+
+        let iterations = run_test_job(&discard(), &job, &AtomicBool::new(true));
+
+        assert_eq!(registry.stop(), Requests::default());
+        assert!(
+            iterations.results.is_empty(),
+            "no iteration ran: {:?}",
+            iterations.results
+        );
+    }
+
+    #[test]
+    fn no_tree_outlives_its_iteration_and_no_pull_its_image() {
+        // Kills a tree an iteration leaves behind, and a pull's directory kept
+        // once its image is dropped, either of which fills the runner's disk
+        // Job after Job.
+        let registry = TestRegistry::start(None);
+        let config = host_config(&registry.job(1, false));
+        let deadline = JobDeadline::start(Duration::from_mins(1));
+        let image = crate::run::PulledImage::pull(&discard(), &config, deadline).unwrap();
+
+        for _ in 0..2 {
+            crate::local::local_execute(&discard(), &config, &image, None, deadline).unwrap();
+            let left: Vec<String> = std::fs::read_dir(image.work_dir())
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+                .collect();
+            assert_eq!(left, ["oci-image"], "only the pull outlives an iteration");
+        }
+        let work_dir = image.work_dir().to_owned();
+        drop(image);
+        registry.stop();
+        assert!(!work_dir.exists(), "{work_dir} outlived its image");
+    }
+
+    /// Runs `job` on the host, with no CPU isolation.
+    fn run_test_job(log: &Logger, job: &JsonClaimedJob, cancel_flag: &AtomicBool) -> Iterations {
+        run_job(
+            log,
+            job,
+            &host_config(job),
+            &mut crate::jail::HostPreparation::new(),
+            JobDeadline::start(Duration::from_mins(1)),
+            cancel_flag,
+        )
+    }
+
+    fn host_config(job: &JsonClaimedJob) -> crate::Config {
+        let up_config = UpConfig {
+            cpu_layout: None,
+            ..test_up_config()
+        };
+        build_config_from_job(&up_config, job).unwrap()
+    }
+
+    /// A registry on localhost serving one image, whose command prints `ran`,
+    /// that counts what it is asked for.
+    struct TestRegistry {
+        address: SocketAddr,
+        digest: String,
+        release: mpsc::SyncSender<()>,
+        server: JoinHandle<Requests>,
+    }
+
+    #[derive(Debug, Default, PartialEq, Eq)]
+    struct Requests {
+        manifests: usize,
+        blobs: usize,
+    }
+
+    impl TestRegistry {
+        /// Sets `cancel_flag`, if any, as it serves the manifest, as a cancel
+        /// that lands during the pull does.
+        fn start(cancel_flag: Option<Arc<AtomicBool>>) -> Self {
+            let layer = bench_layer();
+            let config = serde_json::to_vec(&serde_json::json!({
+                "architecture": "amd64",
+                "os": "linux",
+                "config": { "Cmd": ["/bench"] },
+                "rootfs": { "type": "layers", "diff_ids": [sha256(&layer)] },
+            }))
+            .unwrap();
+            let manifest = serde_json::to_vec(&serde_json::json!({
+                "schemaVersion": 2,
+                "mediaType": "application/vnd.oci.image.manifest.v1+json",
+                "config": {
+                    "mediaType": "application/vnd.oci.image.config.v1+json",
+                    "digest": sha256(&config),
+                    "size": config.len(),
+                },
+                "layers": [{
+                    "mediaType": "application/vnd.oci.image.layer.v1.tar",
+                    "digest": sha256(&layer),
+                    "size": layer.len(),
+                }],
+            }))
+            .unwrap();
+            let digest = sha256(&manifest);
+            let by_digest: HashMap<String, Vec<u8>> = [manifest, config, layer]
+                .into_iter()
+                .map(|bytes| (sha256(&bytes), bytes))
+                .collect();
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            listener.set_nonblocking(true).unwrap();
+            let address = listener.local_addr().unwrap();
+            let (release, released) = mpsc::sync_channel(0);
+            let server = std::thread::spawn(move || {
+                let mut requests = Requests::default();
+                while let Err(TryRecvError::Empty) = released.try_recv() {
+                    let accepted = listener.accept();
+                    if let Err(e) = &accepted
+                        && e.kind() == ErrorKind::WouldBlock
+                    {
+                        std::thread::sleep(Duration::from_millis(10));
+                        continue;
+                    }
+                    let (mut stream, _) = accepted.unwrap();
+                    stream.set_nonblocking(false).unwrap();
+                    let path = request_path(&mut stream);
+                    let (kind, digest) = path.rsplit_once('/').unwrap();
+                    if kind.ends_with("/manifests") {
+                        requests.manifests += 1;
+                        if let Some(flag) = &cancel_flag {
+                            flag.store(true, Ordering::SeqCst);
+                        }
+                    } else {
+                        requests.blobs += 1;
+                    }
+                    respond(&mut stream, by_digest.get(digest).map(Vec::as_slice));
+                }
+                requests
+            });
+            Self {
+                address,
+                digest,
+                release,
+                server,
+            }
+        }
+
+        /// A Job of `iter` iterations that runs the image.
+        fn job(&self, iter: u32, allow_failure: bool) -> JsonClaimedJob {
+            let mut job = test_job(1, mib_to_bytes(512), mib_to_bytes(1024), 60, false);
+            job.config.registry = format!("http://{}", self.address).parse().unwrap();
+            job.config.digest = self.digest.parse().unwrap();
+            job.config.iter = Some(bencher_json::Iteration(iter));
+            job.config.allow_failure = Some(allow_failure);
+            job
+        }
+
+        /// Shuts the registry down and returns what it was asked for.
+        fn stop(self) -> Requests {
+            let Self {
+                address: _,
+                digest: _,
+                release,
+                server,
+            } = self;
+            drop(release);
+            server.join().unwrap()
+        }
+    }
+
+    /// A layer holding `/bench`, a script that prints `ran`.
+    fn bench_layer() -> Vec<u8> {
+        let script = b"#!/bin/sh\necho ran\n";
+        let mut header = tar::Header::new_gnu();
+        header.set_size(u64::try_from(script.len()).unwrap());
+        header.set_mode(0o755);
+        header.set_cksum();
+        let mut layer = tar::Builder::new(Vec::new());
+        layer
+            .append_data(&mut header, "bench", script.as_slice())
+            .unwrap();
+        layer.into_inner().unwrap()
+    }
+
+    fn sha256(bytes: &[u8]) -> String {
+        use sha2::Digest as _;
+
+        format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
+    }
+
+    /// Reads a request's head and returns its path.
+    fn request_path(stream: &mut TcpStream) -> String {
+        stream
+            .set_read_timeout(Some(Duration::from_secs(10)))
+            .unwrap();
+        let mut head = Vec::new();
+        let mut byte = [0];
+        while !head.ends_with(b"\r\n\r\n") {
+            stream.read_exact(&mut byte).unwrap();
+            head.extend_from_slice(&byte);
+        }
+        let head = String::from_utf8(head).unwrap();
+        head.split(' ').nth(1).unwrap().to_owned()
+    }
+
+    /// The body with a 200, or a 404 for none.
+    fn respond(stream: &mut TcpStream, body: Option<&[u8]>) {
+        let (status, body) = body.map_or(("404 Not Found", [].as_slice()), |body| ("200 OK", body));
+        let mut response = format!(
+            "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            body.len()
+        )
+        .into_bytes();
+        response.extend_from_slice(body);
+        stream.write_all(&response).unwrap();
     }
 }

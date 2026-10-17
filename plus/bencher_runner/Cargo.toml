@@ -74,6 +74,9 @@ nix = { workspace = true, features = [
     "signal",
 ] }
 
+[dev-dependencies]
+tar.workspace = true
+
 [build-dependencies]
 flate2 = { workspace = true }
 hex.workspace = true

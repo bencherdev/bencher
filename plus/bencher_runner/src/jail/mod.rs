@@ -17,7 +17,7 @@
 //! | [`HostPreparation::ensure`]: creating the state directory | fails the job |
 //! | [`HostPreparation::ensure`]: reading `/etc/passwd`, `/etc/group` | ignored: the check is advisory and cannot see a directory service anyway |
 //! | `StateDir::refuse_unusable_mount`: the mount options cannot be read, or include `nodev` or `noexec` | fails the job |
-//! | `vm_execute` and `run_firecracker`: a cancel at a stage boundary before the VMM starts | fails the job before the next stage |
+//! | `GuestTree::prepare`, `vm_execute`, and `run_firecracker`: a cancel at a stage boundary before the VMM starts | fails the job before the next stage |
 //! | `StateDir::sweep`: a sweep that returns an error | fails the job |
 //! | `prepare_at_startup`: the runner does not hold the lock | neither checks nor sweeps: a cgroup under the base may hold a root runner's Job |
 //! | `require_cgroup_kill`, at the startup of a runner that serves only sandboxed Jobs: no `cgroup.kill` in the base, or the base cannot be made | the runner exits, naming Linux 5.14 |
