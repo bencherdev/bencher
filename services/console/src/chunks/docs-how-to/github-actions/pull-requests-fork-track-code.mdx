@@ -28,7 +28,7 @@ jobs:
           name: ${{ env.PR_EVENT }}
           run_id: ${{ github.event.workflow_run.id }}
       - name: Export PR Event Data
-        uses: actions/github-script@v6
+        uses: actions/github-script@v9
         with:
           script: |
             let fs = require('fs');
