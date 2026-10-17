@@ -31,7 +31,6 @@ const PlotFrame = (props: {
 			aria-label={plural(props.reserve.lines)}
 			aria-hidden={props.loading ? undefined : "true"}
 		>
-			<div class="pl-head" />
 			<div class="pl-body">
 				<For each={Array.from({ length: panels() })}>
 					{() => (

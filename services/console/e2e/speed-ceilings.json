@@ -6,7 +6,7 @@
 		"cls": 0.00025,
 		"jsBytes": 36700,
 		"stylesheets": 1,
-		"cssBytes": 15440,
+		"cssBytes": 15540,
 		"deferredJsBytes": 105960,
 		"htmlBytes": 2460,
 		"inlineScriptBytes": 2900,
@@ -24,7 +24,7 @@
 	},
 	"tabSwitch": {
 		"apiRequests": 0,
-		"jsBytes": 12070,
+		"jsBytes": 12080,
 		"scriptRounds": 1
 	},
 	"runsColdLoad": {
@@ -124,7 +124,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 60240,
+		"jsBytes": 60250,
 		"deferredJsBytes": 110740,
 		"stylesheets": 1,
 		"htmlBytes": 2580,
@@ -140,7 +140,7 @@
 	"plotsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 55630,
+		"jsBytes": 55600,
 		"scriptRounds": 1
 	},
 	"thresholdsColdLoad": {
@@ -172,7 +172,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 99560,
+		"jsBytes": 99530,
 		"deferredJsBytes": 105960,
 		"htmlBytes": 2590,
 		"inlineScriptBytes": 2900,
@@ -187,7 +187,7 @@
 	"exploreLinkMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 37260,
+		"jsBytes": 37230,
 		"scriptRounds": 1
 	},
 	"blankExploreColdLoad": {
@@ -207,7 +207,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 68020,
+		"jsBytes": 68010,
 		"deferredJsBytes": 110770,
 		"stylesheets": 1,
 		"htmlBytes": 2580,
@@ -219,7 +219,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 81890,
+		"jsBytes": 81870,
 		"deferredJsBytes": 108460,
 		"stylesheets": 1,
 		"htmlBytes": 2500,
@@ -229,7 +229,7 @@
 	"alertMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 38300,
+		"jsBytes": 38270,
 		"deferredJsBytes": 360,
 		"scriptRounds": 1
 	},
@@ -251,7 +251,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 91980,
+		"jsBytes": 91960,
 		"deferredJsBytes": 105960,
 		"htmlBytes": 2560,
 		"inlineScriptBytes": 2885,
@@ -259,9 +259,9 @@
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 65930,
+		"jsBytes": 65900,
 		"deferredJsBytes": 105960,
-		"cssBytes": 10950,
+		"cssBytes": 11090,
 		"htmlBytes": 2630,
 		"inlineScriptBytes": 700
 	},

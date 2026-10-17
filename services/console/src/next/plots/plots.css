@@ -112,7 +112,7 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 	.plots-tile {
-		min-height: 536px;
+		min-height: 546px;
 	}
 	.plots-dots {
 		width: 44px;
