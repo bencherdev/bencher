@@ -465,25 +465,11 @@ Do **not** specify an exact version if using Bencher _Cloud_ as there are still 
 
 ## Contributing
 
-The easiest way to contribute is to open this repo as a [Dev Container](https://containers.dev) in [VSCode](https://code.visualstudio.com/download) by simply clicking one of the buttons below.
-Everything you need will already be there!
-Once set up, both the UI and API should be built, running, and seeded at [localhost:3000](http://localhost:3000) and [localhost:6610](http://localhost:6610) respectively.
-To make any changes to the UI or API though, you will have to exit the startup process and restart the UI and API yourself.
-
-For additional information on contributing, see the [Development Getting Started](DEVELOPMENT.md) guide.
+To set up a development environment, see the [Development Getting Started](DEVELOPMENT.md) guide.
 
 #### 🐰 All pull requests should target the `devel` branch
 
 <br />
-<p align="center">
-  <a href="https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/bencherdev/bencher">
-    <img
-      src="https://img.shields.io/static/v1?label=Local%20Dev%20Container&message=Open&color=orange&logo=visualstudiocode&style=for-the-badge"
-      alt="Bencher VSCode Dev Container"
-    />
-  </a>
-</p>
-
 <p align="center">
   <a href="https://github.dev/bencherdev/bencher">
     <img
@@ -492,8 +478,6 @@ For additional information on contributing, see the [Development Getting Started
     />
   </a>
 </p>
-
-There is also a [pre-built image from CI](https://github.com/orgs/bencherdev/packages/container/package/bencher-dev-container) available for each branch: `ghcr.io/bencherdev/bencher-dev-container`
 
 ## License
 
