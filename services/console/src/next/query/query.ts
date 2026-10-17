@@ -55,7 +55,7 @@ export interface ExploreQuery {
 
 const DAY = 24 * 60 * 60;
 const WEEK = 7 * DAY;
-const DEFAULT_WINDOW = 4 * WEEK;
+export const DEFAULT_WINDOW = 4 * WEEK;
 const MAX_WINDOW = 2 ** 32 - 1;
 
 /** The perf query reads at most eight values of each box and eight sets. */

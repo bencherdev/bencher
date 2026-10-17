@@ -1,6 +1,5 @@
 import type {
 	JsonAlert,
-	JsonConsoleLatestReport,
 	JsonConsolePerf,
 	JsonPlot,
 	JsonReport,
@@ -57,16 +56,6 @@ export const variantsQuery = (api: Api, slug: string, benchmark: string) => ({
 	staleTime: 5 * 60_000,
 });
 
-export const latestQuery = (api: Api, slug: string, benchmark: string) => ({
-	queryKey: ["console", "latest", slug, benchmark],
-	queryFn: async () =>
-		(
-			await api.get<JsonConsoleLatestReport>(
-				`${consolePath(slug)}/benchmarks/${encodeURIComponent(benchmark)}/latest`,
-			)
-		).data,
-});
-
 export type Dimension = "branches" | "testbeds" | "benchmarks" | "measures";
 
 interface Named {
@@ -94,7 +83,7 @@ export const nameQuery = (
 });
 
 /** How many values an add control lists at once; its search finds the rest. */
-const OPTIONS = 32;
+export const OPTIONS = 32;
 
 /** A project's branches, testbeds, benchmarks, or measures matching `text`. */
 export const searchQuery = (

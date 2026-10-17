@@ -687,6 +687,90 @@ async fn console_report_paging_cuts_after_ordering() {
     assert!(unchecked.models.is_empty());
 }
 
+/// Each group's benchmark with the names of the measures it carries.
+fn group_measures(report: &JsonConsoleReport) -> Vec<(String, Option<Vec<String>>)> {
+    report
+        .groups
+        .iter()
+        .map(|group| {
+            let measures = group.measures.as_ref().map(|measures| {
+                measures
+                    .iter()
+                    .map(|&measure| report.measures[measure as usize].name.to_string())
+                    .collect()
+            });
+            (
+                report.benchmarks[group.key as usize].name.to_string(),
+                measures,
+            )
+        })
+        .collect()
+}
+
+// Kills: a benchmark group's measures read from the page's lines rather than all
+// of its lines, kept in drawing order rather than name order, or given to a
+// measure group.
+#[tokio::test]
+async fn console_report_benchmark_groups_name_their_measures() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let seeded = seeded(&server, "groupmeasures").await;
+
+    let first = console_report(&server, &seeded.fixture, &seeded.subject, "?per_page=1").await;
+    assert_eq!(
+        group_measures(&first),
+        vec![
+            (
+                "alpha".to_owned(),
+                Some(vec!["Latency".to_owned(), "Throughput".to_owned()])
+            ),
+            ("gamma".to_owned(), Some(vec!["Latency".to_owned()])),
+            ("beta".to_owned(), Some(vec!["Latency".to_owned()])),
+        ]
+    );
+
+    let by_measure =
+        console_report(&server, &seeded.fixture, &seeded.subject, "?group=measure").await;
+    assert!(
+        by_measure
+            .groups
+            .iter()
+            .all(|group| group.measures.is_none()),
+        "a measure group is its own measure"
+    );
+
+    // The first variant drawn reports only throughput.
+    let fixture = fixture(&server, "groupmeasureorder").await;
+    let report = post(
+        &server,
+        &fixture,
+        Post {
+            time: "2024-02-28T00:00:00Z",
+            branch: "main",
+            testbed: "localhost",
+            hash: "2000000000000000000000000000000000000001",
+            iterations: vec![alpha(&[
+                (1, serde_json::json!({ "throughput": { "value": 1.0 } })),
+                (
+                    2,
+                    serde_json::json!({ "latency": { "value": 1.0 }, "throughput": { "value": 1.0 } }),
+                ),
+            ])],
+            thresholds: None,
+            seconds: 60,
+        },
+    )
+    .await;
+    let ordered = console_report(&server, &fixture, &report, "").await;
+    assert_eq!(names(&ordered)[0], r#"alpha {"size":1} Throughput value"#);
+    assert_eq!(
+        group_measures(&ordered),
+        vec![(
+            "alpha".to_owned(),
+            Some(vec!["Latency".to_owned(), "Throughput".to_owned()])
+        )]
+    );
+}
+
 // Kills: the threshold, model, baseline, limit, or alert of the row taken from
 // anything but the boundary that checked this report's value.
 #[tokio::test]

@@ -27,7 +27,7 @@ const PERF = {
 // Kills a chip that names a parameter set by a stand-in rather than its tags.
 test("the parameters chip names a lone set by its tags, and counts several", () => {
 	const sets = (query: Partial<ExploreQuery>) =>
-		chipSummary({ ...QUERY, ...query }, "sets", PERF, false);
+		chipSummary({ ...QUERY, ...query }, "sets", PERF);
 	expect(sets({ sets: [{ input_bytes: 65536, threads: 1 }] })).toBe(
 		"input_bytes=65536 threads=1",
 	);
@@ -38,7 +38,7 @@ test("the parameters chip names a lone set by its tags, and counts several", () 
 // Kills a chip that counts values the plot has named, and one that names a
 // value the plot has not, by its UUID.
 test("a chip names its values once the plot has named them all, and counts them until then", () => {
-	expect(chipSummary(QUERY, "branches", PERF, false)).toBe("main, feature");
-	expect(chipSummary(QUERY, "testbeds", PERF, false)).toBe("1 chosen");
-	expect(chipSummary(QUERY, "benchmarks", undefined, false)).toBe("1 chosen");
+	expect(chipSummary(QUERY, "branches", PERF)).toBe("main, feature");
+	expect(chipSummary(QUERY, "testbeds", PERF)).toBe("1 chosen");
+	expect(chipSummary(QUERY, "benchmarks", undefined)).toBe("1 chosen");
 });

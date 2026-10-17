@@ -975,12 +975,15 @@ fn group_json(
     group: ConsoleLineGroup,
     lines: &[Line],
 ) -> JsonConsoleLineGroup {
-    let key = match (group, lines.first()) {
-        (ConsoleLineGroup::Benchmark, Some(line)) => tables.benchmark(&line.benchmark),
-        (ConsoleLineGroup::Measure, Some(line)) => tables.measure(&line.measure),
+    let (key, measures) = match (group, lines.first()) {
+        (ConsoleLineGroup::Benchmark, Some(line)) => (
+            tables.benchmark(&line.benchmark),
+            Some(group_measures(tables, lines)),
+        ),
+        (ConsoleLineGroup::Measure, Some(line)) => (tables.measure(&line.measure), None),
         (ConsoleLineGroup::Benchmark | ConsoleLineGroup::Measure, None) => {
             debug_assert!(false, "a group has a line");
-            0
+            (0, None)
         },
     };
     JsonConsoleLineGroup {
@@ -988,7 +991,23 @@ fn group_json(
         lines: to_u32(lines.len()),
         variants: count(lines.iter().map(|line| line.variant.0)),
         alerts: to_u32(lines.iter().filter(|line| line.alerting()).count()),
+        measures,
     }
+}
+
+/// The measures of a group's lines, in name order.
+fn group_measures(tables: &mut Tables, lines: &[Line]) -> Vec<u32> {
+    let mut seen = HashSet::new();
+    let mut measures = lines
+        .iter()
+        .map(|line| &line.measure)
+        .filter(|(id, ..)| seen.insert(*id))
+        .collect::<Vec<_>>();
+    measures.sort_by(|(_, _, a, ..), (_, _, b, ..)| a.as_ref().cmp(b.as_ref()));
+    measures
+        .into_iter()
+        .map(|measure| tables.measure(measure))
+        .collect()
 }
 
 pub(super) fn line_json(

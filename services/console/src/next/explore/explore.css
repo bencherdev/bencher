@@ -75,6 +75,12 @@
 .ex-ctl .eyebrow:not(:first-child) {
 	margin-left: 8px;
 }
+.ex-clear {
+	margin-left: auto;
+}
+.ex-clear.ex-idle {
+	visibility: hidden;
+}
 /* A fieldset is never narrower than its content unless told, so on a phone To wraps under From. */
 .ex-range {
 	display: flex;
@@ -88,10 +94,9 @@
 }
 .ex-editor {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.9fr) repeat(
-			2,
-			minmax(0, 1fr)
-		) auto;
+	grid-template-columns:
+		repeat(3, minmax(0, 1fr)) minmax(0, 1.9fr)
+		repeat(2, minmax(0, 1fr));
 	gap: 10px;
 }
 .ex-box {
@@ -104,10 +109,6 @@
 	border: var(--border-width) solid var(--color-border);
 	border-radius: 10px;
 	background: var(--color-background-card);
-}
-.ex-box.ex-start {
-	border-color: var(--color-border-accent);
-	box-shadow: inset 0 0 0 1px var(--color-border-accent);
 }
 .ex-eh {
 	display: flex;
@@ -160,11 +161,19 @@
 .ex-n {
 	margin-left: auto;
 }
-/* Units yield their room before the remove control does. */
+/* A value over its units, which run under the remove control; their line is held before they arrive. */
+.ex-val2 {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 0 8px;
+	padding-block: 4px;
+	line-height: 18px;
+}
 .ex-k {
-	flex: 0 1 auto;
-	min-width: 0;
+	grid-column: 1 / -1;
+	min-height: 16px;
 	overflow: hidden;
+	line-height: 16px;
 	text-overflow: ellipsis;
 }
 /* As wide for "0 variants" as for "12 variants", so an answer never rewraps the tags. */
@@ -333,7 +342,8 @@
 	margin-left: auto;
 	font-size: 12px;
 }
-.console a.ex-srow {
+.console a.ex-srow,
+.ex-rhead {
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -344,10 +354,12 @@
 	font-size: 13px;
 	text-decoration: none;
 }
-.console a.ex-srow:hover {
+.console a.ex-srow:hover,
+.ex-rhead:hover {
 	background: var(--color-overlay-hover);
 }
-.ex-srow .grow {
+.ex-srow .grow,
+.ex-rbtn .grow {
 	display: flex;
 	flex: 1;
 	flex-direction: column;
@@ -367,6 +379,54 @@
 	font-size: 11.5px;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+/* A report's row opens its benchmarks from anywhere on it; its hash, above that, opens the report. */
+.ex-rhead {
+	position: relative;
+}
+.ex-rbtn {
+	appearance: none;
+	display: flex;
+	flex: 1;
+	min-width: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--color-text-primary);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+.ex-rbtn::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+}
+.ex-rbtn:focus-visible {
+	outline: none;
+}
+.ex-rbtn:focus-visible::after {
+	outline: 2px solid var(--color-focus);
+	outline-offset: -2px;
+}
+.console a.ex-rhash {
+	position: relative;
+	font: 11.5px var(--font-family-code);
+}
+.ex-rcaret {
+	flex: none;
+	color: var(--color-text-muted);
+}
+.ex-rbtn[aria-expanded="true"] ~ .ex-rcaret {
+	transform: rotate(180deg);
+}
+/* The search opens in the row's flow, as in a sheet, so the list grows to hold it. */
+.ex-rpick {
+	padding: 0 12px 12px;
+}
+.ex-rpick .ui-menu {
+	position: static;
+	max-width: none;
 }
 .ex-alertdot {
 	flex: none;
@@ -408,10 +468,14 @@
 	.ex-sh {
 		padding-top: 0;
 	}
-	.ex-sh a {
+	.ex-sh a,
+	.console a.ex-rhash {
 		display: inline-flex;
 		align-items: center;
 		min-height: 44px;
+	}
+	.console a.ex-rhash {
+		padding: 0 8px;
 	}
 	/* A row of its own, held before the shell says what the reader may do. */
 	.ex-actions {
@@ -421,5 +485,18 @@
 	.ex-chips {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+.ex-val2 .ex-x {
+	grid-area: 1 / 2;
+	margin-block: -4px;
+}
+@media (max-width: 767px) {
+	.ex-val2 .ex-x {
+		grid-row: 1 / 3;
+		margin-block: 0;
+	}
+	.ex-val2 .ex-k {
+		grid-column: 1;
 	}
 }

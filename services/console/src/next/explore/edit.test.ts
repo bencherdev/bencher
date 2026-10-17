@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { type ExploreQuery, blankQuery } from "../query/query";
-import { hasValues, withValue, withoutValue, withoutValues } from "./edit";
+import { DEFAULT_WINDOW, type ExploreQuery, blankQuery } from "../query/query";
+import { clearable, hasValues, withValue, withoutValue } from "./edit";
 
 const uuid = (n: number) =>
 	`00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
@@ -58,29 +58,6 @@ describe("withoutValue", () => {
 	});
 });
 
-// Kills a Clear that leaves a box, a hidden or focused line, the report, or
-// the pin behind, or resets the window, the axes, or the layout.
-test("withoutValues empties every box and keeps the view", () => {
-	const view = {
-		xAxis: "version",
-		yScale: "log",
-		window: { start: 1_786_924_800_000, end: 1_787_011_199_999 },
-		layout: "stacked",
-	} as const;
-	const full: ExploreQuery = {
-		...QUERY,
-		...view,
-		testbeds: [{ uuid: uuid(2), spec: uuid(12) }],
-		measures: [uuid(3)],
-		hide: ["a1"],
-		only: ["b2"],
-		focus: "a1",
-		report: uuid(7),
-		plot: uuid(8),
-	};
-	expect(withoutValues(full)).toEqual({ ...blankQuery(), ...view });
-});
-
 // Kills a Clear drawn only for some boxes, such as one that needs a benchmark,
 // or for the view alone.
 test("hasValues is true for a value in any one box and false for the view alone", () => {
@@ -99,5 +76,26 @@ test("hasValues is true for a value in any one box and false for the view alone"
 		{ metrics: ["value"] },
 	]) {
 		expect(hasValues({ ...view, ...one })).toBe(true);
+	}
+});
+
+// Kills a Clear hidden while only the x axis, the y scale, the window, or the
+// layout is off its default, or one drawn for a blank query, a rolling window
+// that ends now, or one that only names the default length.
+test("clearable is true for a value or a view control off its default", () => {
+	expect(clearable(blankQuery())).toBe(false);
+	expect(
+		clearable({ ...blankQuery(), window: { seconds: DEFAULT_WINDOW } }),
+	).toBe(false);
+	for (const view of [
+		{ xAxis: "version" },
+		{ yScale: "linear" },
+		{ window: { seconds: 7 * 24 * 60 * 60 } },
+		{ window: { seconds: DEFAULT_WINDOW, end: 1_787_011_199_999 } },
+		{ window: { start: 1_786_924_800_000 } },
+		{ layout: "stacked" },
+		{ measures: [uuid(3)] },
+	] as const) {
+		expect(clearable({ ...blankQuery(), ...view })).toBe(true);
 	}
 });

@@ -85,13 +85,11 @@ const render = (
 					query={query()}
 					perf={options.perf}
 					settled={options.settled ?? true}
-					blank={false}
 					readOnly={options.readOnly}
 					onQuery={(next) => {
 						edits.push(next);
 						setQuery(next);
 					}}
-					onFirstBenchmark={() => {}}
 				/>
 			);
 		},

@@ -1,7 +1,13 @@
-import type { APIRequestContext, Locator, Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { createProject, listPlots, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
-import { dimensions, explore, plotAtEnd, twoLines } from "./explore";
+import {
+	dimensions,
+	expectNameOverUnits,
+	explore,
+	plotAtEnd,
+	twoLines,
+} from "./explore";
 import {
 	VERSION_KEY,
 	expect,
@@ -572,11 +578,9 @@ test("hidden and focused lines travel in the link", async ({
 	).toBeVisible();
 });
 
-// Kills a blank Explore without its starting points, an alert that opens more
-// than its line or names a source that does not link to that alert, and a
-// benchmark picked first that leaves the branch, the testbed, and the measures
-// for the reader.
-test("blank Explore starts from alerts, reports, and pins, and a first benchmark fills the rest", async ({
+// Kills a blank Explore without its starting points, and an alert that opens
+// more than its line or names a source that does not link to that alert.
+test("blank Explore starts from alerts, reports, and pins", async ({
 	page,
 }) => {
 	await page.goto(nextPath(hashbrown.slug));
@@ -587,7 +591,7 @@ test("blank Explore starts from alerts, reports, and pins, and a first benchmark
 		/^blake3 input_bytes=65536 simd=avx2 threads=1 Latency main · ubuntu-latest · \+\d+\.\d%$/,
 	);
 	await expect(
-		page.getByRole("region", { name: "Latest reports" }).getByRole("link", {
+		page.getByRole("region", { name: "Latest reports" }).getByRole("button", {
 			name: /main · macos-latest/,
 		}),
 	).toBeVisible();
@@ -595,41 +599,6 @@ test("blank Explore starts from alerts, reports, and pins, and a first benchmark
 		page.getByRole("region", { name: "Pinned plots" }),
 	).toBeVisible();
 
-	await box(page, "Benchmarks")
-		.getByRole("button", { name: "Add benchmark" })
-		.click();
-	// The filled values are named before the plot answers.
-	let release = () => {};
-	const held = new Promise<void>((resolve) => {
-		release = resolve;
-	});
-	const perf = `${seed.api_url}/v0/console/projects/*/perf?*`;
-	await page.route(perf, async (route) => {
-		await held;
-		await route.continue();
-	});
-	await page.getByRole("menuitem", { name: "sha256" }).click();
-	// The newest report the API took with sha256 is the last run on feature-simd.
-	await expect(
-		box(page, "Branches").getByRole("button", {
-			name: "Remove branch feature-simd",
-		}),
-	).toBeVisible();
-	await expect(
-		box(page, "Testbeds").getByRole("button", {
-			name: "Remove testbed ubuntu-latest",
-		}),
-	).toBeVisible();
-	await expect(
-		box(page, "Measures").getByRole("button", {
-			name: /^Remove measure (Latency|Throughput)$/,
-		}),
-	).toHaveCount(2);
-	release();
-	await page.unroute(perf);
-	await expect(plot(page)).toHaveAccessibleName("8 lines");
-
-	await page.goto(nextPath(hashbrown.slug));
 	await alert.click();
 	await expect(plot(page)).toHaveAccessibleName("1 line");
 	await expect(page).toHaveURL(/focus=/);
@@ -639,6 +608,111 @@ test("blank Explore starts from alerts, reports, and pins, and a first benchmark
 		new RegExp(`${nextPath(hashbrown.slug, "alerts")}/[0-9a-f-]{36}$`),
 	);
 	await expect(page.getByRole("heading", { level: 1 })).toContainText("blake3");
+});
+
+/** A project of its own whose one report ran `alpha` in two measures and `beta` in one, `days` before the seed's now. */
+const reported = async (request: APIRequestContext, days = 1) => {
+	const project = await createProject(request);
+	const report = await postReport(request, project.slug, {
+		hash: "5ab1e50000000000000000000000000000000000",
+		start: new Date(Date.parse(seed.now) - days * DAY).toISOString(),
+		results: {
+			alpha: [
+				{
+					parameters: { size: 1 },
+					measures: { latency: { value: 1 }, throughput: { value: 2 } },
+				},
+			],
+			beta: [
+				{ parameters: { size: 1 }, measures: { latency: { value: 3 } } },
+				{ parameters: { size: 2 }, measures: { latency: { value: 4 } } },
+			],
+		},
+	});
+	return { project, report };
+};
+
+// Kills a latest report that leaves blank Explore, a pick that draws another
+// benchmark, some of its variants, or every measure of the report rather than
+// its own, a pick that asks for the report again or drops the focus to the
+// page, a source line that does not name the report, and a hash that does not
+// open the report.
+test("a latest report opens to the benchmarks it ran, and a pick draws one from the report", async ({
+	page,
+	request,
+}) => {
+	const { project, report } = await reported(request);
+	const asked: string[] = [];
+	page.on("request", (sent) => {
+		if (/\/v0\/console\/projects\/[^/]+\/reports\//.test(sent.url())) {
+			asked.push(sent.url());
+		}
+	});
+	await page.goto(nextPath(project.slug));
+	const row = page
+		.getByRole("region", { name: "Latest reports" })
+		.getByRole("button", { name: /^main · ubuntu-latest/ });
+	await row.click();
+	await expect(row).toHaveAttribute("aria-expanded", "true");
+	await expect(page).toHaveURL(new RegExp(`${nextPath(project.slug)}$`));
+	const search = page.getByRole("searchbox", {
+		name: "Search benchmarks in report 5ab1e50",
+	});
+	await expect(search).toBeFocused();
+	await search.pressSequentially("bet");
+	await expect(page.getByRole("menuitem")).toHaveCount(1);
+	await page.keyboard.press("ArrowDown");
+	await page.keyboard.press("Enter");
+
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	await expect(
+		box(page, "Benchmarks").getByRole("button", { name: "Add benchmark" }),
+	).toBeFocused();
+	await expect(
+		box(page, "Measures").getByRole("button", { name: /^Remove measure / }),
+	).toHaveAccessibleName("Remove measure Latency");
+	await expect(
+		box(page, "Benchmarks").getByRole("button", { name: /^Remove / }),
+	).toHaveAccessibleName("Remove benchmark beta");
+	const query = page.getByRole("region", { name: "Query" });
+	await expect(query).toContainText("from report 5ab1e50");
+	await expect(query.getByRole("link", { name: "5ab1e50" })).toHaveAttribute(
+		"href",
+		`${nextPath(project.slug, "reports")}/${report.uuid}`,
+	);
+	expect(params(page).get("report")).toBe(report.uuid);
+	expect(asked).toHaveLength(1);
+
+	await page.goBack();
+	await page
+		.getByRole("region", { name: "Latest reports" })
+		.getByRole("link", { name: "5ab1e50" })
+		.click();
+	await expect(page).toHaveURL(
+		new RegExp(`${nextPath(project.slug, "reports")}/${report.uuid}$`),
+	);
+});
+
+// Kills a latest report older than the default window picked over a window
+// that holds none of its points, which draws nothing and loses its hash.
+test("a latest report older than the window draws over the 4 weeks ending at it", async ({
+	page,
+	request,
+}) => {
+	const { project, report } = await reported(request, 35);
+	await page.goto(nextPath(project.slug));
+	await page
+		.getByRole("region", { name: "Latest reports" })
+		.getByRole("button", { name: /^main · ubuntu-latest/ })
+		.click();
+	await page.getByRole("menuitem", { name: "beta" }).click();
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	await expect(page.getByRole("region", { name: "Query" })).toContainText(
+		"from report 5ab1e50",
+	);
+	expect(params(page).get("end_time")).toBe(
+		String(Date.parse(report.end_time)),
+	);
 });
 
 /** A project of its own, with one benchmark's two variants run on `main`. */
@@ -887,10 +961,10 @@ test("a link to a pin opens its query, and one to a deleted pin is an unsaved pl
 	await context.close();
 });
 
-// Kills a Clear that leaves a box, drops the window or the y scale, adds
+// Kills a Clear that leaves a box or a view control off its default, adds
 // more than one history entry, or drops the focus, and a Back that does not
-// draw the plot again.
-test("Clear empties every box for blank Explore, keeps the view, and Back draws the plot again", async ({
+// restore the query and its view.
+test("Clear returns Explore to its defaults in one step, and Back restores the query and its view", async ({
 	page,
 	request,
 }) => {
@@ -898,11 +972,14 @@ test("Clear empties every box for blank Explore, keeps the view, and Back draws 
 	await page.goto(
 		explore(hashbrown.slug, {
 			...query,
-			window: { seconds: 7 * 24 * 60 * 60 },
+			xAxis: "version",
 			yScale: "log",
+			window: { seconds: 7 * 24 * 60 * 60 },
+			layout: "stacked",
 		}),
 	);
 	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	const drawn = page.url();
 	const entries = await page.evaluate(() => history.length);
 	const clear = page.getByRole("button", { name: "Clear", exact: true });
 
@@ -913,15 +990,149 @@ test("Clear empties every box for blank Explore, keeps the view, and Back draws 
 	await expect(
 		page.getByRole("region", { name: "Pinned plots" }),
 	).toBeVisible();
-	expect([...params(page)]).toEqual([
-		["window", "1w"],
-		["y_axis", "log"],
-	]);
+	expect([...params(page)]).toEqual([]);
 	expect(await page.evaluate(() => history.length)).toBe(entries + 1);
 	await expect(clear).toHaveCount(0);
 
 	await page.goBack();
 	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	expect(page.url()).toBe(drawn);
+	await expect(
+		page
+			.getByRole("radiogroup", { name: "Y scale" })
+			.getByRole("radio", { name: "Log" }),
+	).toBeChecked();
+});
+
+// Kills a Clear whose arrival moves the boxes, the chips, the view controls,
+// or what sits under the query panel: at the end of the boxes' row, as it
+// was, or without its held place where it takes a line of its own.
+for (const [width, ownLine] of [
+	[1280, false],
+	[390, false],
+	[320, false],
+	[350, true],
+	[800, true],
+] as const) {
+	test(`Clear appearing moves nothing at ${width}`, async ({ page }) => {
+		await page.setViewportSize({ width, height: 900 });
+		await page.goto(nextPath(hashbrown.slug));
+		const query = page.getByRole("region", { name: "Query" });
+		const boxes =
+			width < 768
+				? query.getByRole("button", {
+						name: /^(branches|testbeds|benchmarks|parameters|measures|metrics) /,
+					})
+				: query.getByRole("group");
+		await expect(boxes).toHaveCount(6);
+		// A segmented control's own width follows its choice, so only its place counts.
+		const placed = async () => [
+			...(await boxes.evaluateAll((all) =>
+				all.map((each) => JSON.stringify(each.getBoundingClientRect())),
+			)),
+			...(await query.getByRole("radiogroup").evaluateAll((all) =>
+				all.map((each) => {
+					const { left, top } = each.getBoundingClientRect();
+					return `${left},${top}`;
+				}),
+			)),
+			JSON.stringify(await query.boundingBox()),
+			JSON.stringify(
+				await page.getByRole("region", { name: "Start from" }).boundingBox(),
+			),
+		];
+		const clear = page.getByRole("button", { name: "Clear", exact: true });
+		await expect(clear).toHaveCount(0);
+		const before = await placed();
+
+		await page
+			.getByRole("radiogroup", { name: "Y scale" })
+			.getByText("Log")
+			.click();
+		await expect(clear).toBeVisible();
+		if (ownLine) {
+			// The controls' last line has no room for it here, so only its held place keeps the page still.
+			expect(
+				await clear.evaluate((button) => {
+					const others = [...(button.parentElement?.children ?? [])].filter(
+						(each) => each !== button,
+					);
+					return (
+						button.getBoundingClientRect().top >=
+						Math.max(
+							...others.map((each) => each.getBoundingClientRect().bottom),
+						) -
+							1
+					);
+				}),
+			).toBe(true);
+		}
+		expect(await placed()).toEqual(before);
+	});
+}
+
+// Kills a Clear that stops short of the view controls row's right edge, as it
+// did when it wrapped onto a line of its own.
+for (const [width, wrapped] of [
+	[320, false],
+	[1440, true],
+] as const) {
+	test(`Clear ends the view controls row at ${width}`, async ({
+		page,
+		request,
+	}) => {
+		await page.setViewportSize({ width, height: 900 });
+		if (wrapped) {
+			const { id, query } = await twoLines(request);
+			const end = Date.parse(seed.now);
+			await page.goto(
+				explore(hashbrown.slug, {
+					...query,
+					measures: [id.measure("Latency"), id.measure("Throughput")],
+					window: { start: end - 14 * DAY, end },
+				}),
+			);
+			await expect(
+				page.getByRole("radiogroup", { name: "Measures layout" }),
+			).toBeVisible();
+		} else {
+			await page.goto(nextPath(hashbrown.slug));
+			await page
+				.getByRole("radiogroup", { name: "Y scale" })
+				.getByText("Log")
+				.click();
+		}
+		const clear = page.getByRole("button", { name: "Clear", exact: true });
+		await expect(clear).toBeVisible();
+		const [right, edge] = await clear.evaluate((button) => {
+			const row = button.parentElement as HTMLElement;
+			const style = getComputedStyle(row);
+			return [
+				button.getBoundingClientRect().right,
+				row.getBoundingClientRect().right -
+					Number.parseFloat(style.paddingRight) -
+					Number.parseFloat(style.borderRightWidth),
+			];
+		});
+		expect(Math.abs((right ?? 0) - (edge ?? 0))).toBeLessThan(1);
+	});
+}
+
+// Kills a measure's units crunched beside its name, or either cut short, on a
+// wide screen.
+test("a measure shows its name over its units at 1280", async ({
+	page,
+	request,
+}) => {
+	await page.setViewportSize({ width: 1280, height: 900 });
+	const { query } = await twoLines(request);
+	await page.goto(explore(hashbrown.slug, query));
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	await expectNameOverUnits(
+		box(page, "Measures"),
+		"Latency",
+		"nanoseconds (ns)",
+	);
 });
 
 // Kills a Clear drawn only for some boxes, such as one that needs a benchmark.
@@ -1202,56 +1413,66 @@ test.describe("narrow", () => {
 		await expect(sheet).toBeHidden();
 	});
 
-	// Kills a Clear missing from a phone's query panel or its sheet, a target
-	// under 44 px there, and a focus that falls with it.
-	test("Clear is a 44 px target beside the chips and in the sheet", async ({
+	// Kills a Clear missing from a phone's query panel, a target under 44 px
+	// there, and a focus that falls with it.
+	test("Clear is a 44 px target in the view controls", async ({
 		page,
 		request,
 	}) => {
 		const { query } = await twoLines(request);
 		await page.goto(explore(hashbrown.slug, query));
 		await expect(plot(page)).toHaveAccessibleName("2 lines");
-		const target = async (button: Locator) => {
-			const size = await button.boundingBox();
-			expect(
-				Math.min(size?.width ?? 0, size?.height ?? 0),
-			).toBeGreaterThanOrEqual(44);
-		};
-
-		await page.getByRole("button", { name: "branches main" }).click();
-		const sheet = page.getByRole("dialog", { name: "Query" });
-		const inSheet = sheet.getByRole("button", { name: "Clear", exact: true });
-		await target(inSheet);
-		await inSheet.click();
-		await expect(
-			sheet.getByRole("button", { name: "Add branch" }),
-		).toBeFocused();
-		await sheet.getByRole("button", { name: "Done" }).click();
-
-		await page.goBack();
-		await expect(plot(page)).toHaveAccessibleName("2 lines");
-		const inPanel = page.getByRole("button", { name: "Clear", exact: true });
-		await target(inPanel);
-		await inPanel.click();
+		const clear = page.getByRole("button", { name: "Clear", exact: true });
+		const size = await clear.boundingBox();
+		expect(
+			Math.min(size?.width ?? 0, size?.height ?? 0),
+		).toBeGreaterThanOrEqual(44);
+		await clear.click();
 		await expect(
 			page.getByRole("button", { name: /^branches / }),
 		).toBeFocused();
 	});
+
+	// Kills a measure's units crunched beside its name, or either cut short,
+	// in a phone's query sheet.
+	test("a measure shows its name over its units in the sheet", async ({
+		page,
+		request,
+	}) => {
+		const { query } = await twoLines(request);
+		await page.goto(explore(hashbrown.slug, query));
+		await expect(plot(page)).toHaveAccessibleName("2 lines");
+		await page.getByRole("button", { name: /^measures / }).click();
+		await expectNameOverUnits(
+			page
+				.getByRole("dialog", { name: "Query" })
+				.getByRole("group", { name: "Measures" }),
+			"Latency",
+			"nanoseconds (ns)",
+		);
+	});
 });
 
-// Kills a contrast, name, or role failure on blank Explore's starting points
-// in either theme.
+// Kills a contrast, name, or role failure on blank Explore's starting points,
+// or on a latest report opened to its benchmarks, in either theme.
 test("blank Explore passes axe in both themes", async ({ page }) => {
+	const reports = page.getByRole("region", { name: "Latest reports" });
 	await axeInBothThemes(page, nextPath(hashbrown.slug), async () => {
 		await expect(
 			page
 				.getByRole("region", { name: "Alerting now" })
 				.getByRole("link", { name: /^blake3 / }),
 		).toHaveCount(1);
-		await expect(
-			page.getByRole("region", { name: "Latest reports" }).getByRole("link"),
-		).not.toHaveCount(0);
+		await expect(reports.getByRole("link")).not.toHaveCount(0);
 	});
+	await axeInBothThemes(
+		page,
+		nextPath(hashbrown.slug),
+		async () => {
+			await expect(reports.getByRole("menuitem").first()).toBeVisible();
+		},
+		() => reports.getByRole("button", { expanded: false }).first().click(),
+	);
 });
 
 // Kills a source line, from an alert or from a report, whose link reads only

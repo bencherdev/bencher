@@ -1,10 +1,10 @@
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import {
 	type ExploreQuery,
 	blankQuery,
 	encodeQuery,
 } from "../src/next/query/query";
-import { nextPath, seed } from "./fixtures";
+import { expect, nextPath, seed } from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
@@ -76,4 +76,27 @@ export const plotAtEnd = async (page: Page) => {
 			: 0;
 		return { top: box.top, below: end - box.bottom - padding };
 	});
+};
+
+/** Asserts that a box's value shows `name` over `units`, neither cut short. */
+export const expectNameOverUnits = async (
+	box: Locator,
+	name: string,
+	units: string,
+) => {
+	const top = box.getByText(name, { exact: true });
+	const bottom = box.getByText(units, { exact: true });
+	await expect(bottom).toBeVisible();
+	for (const line of [top, bottom]) {
+		expect(
+			await line.evaluate(
+				(element) => element.scrollWidth <= element.clientWidth,
+			),
+		).toBe(true);
+	}
+	const above = await top.boundingBox();
+	const below = await bottom.boundingBox();
+	expect(below?.y ?? 0).toBeGreaterThanOrEqual(
+		(above?.y ?? 0) + (above?.height ?? 0),
+	);
 };

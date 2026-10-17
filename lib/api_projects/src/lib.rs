@@ -106,10 +106,6 @@ impl bencher_endpoint::Registrar for Api {
         }
         api_description.register(console::perf::proj_console_perf_get)?;
         if http_options {
-            api_description.register(console::latest::proj_console_latest_options)?;
-        }
-        api_description.register(console::latest::proj_console_latest_get)?;
-        if http_options {
             api_description.register(console::plots::proj_console_plots_options)?;
         }
         api_description.register(console::plots::proj_console_plots_get)?;

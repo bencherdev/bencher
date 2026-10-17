@@ -163,12 +163,7 @@ const Plotted = (props: PublicProps) => {
 										<span class="pu-pill">
 											<span class="pu-k">{label}</span>
 											<span class="ex-ellip">
-												{chipSummary(
-													props.query,
-													dimension,
-													props.answer,
-													false,
-												)}
+												{chipSummary(props.query, dimension, props.answer)}
 											</span>
 										</span>
 									)}
@@ -329,7 +324,7 @@ const Boxes = (props: {
 				</Index>
 			</Box>
 			<Box title="Measures">
-				<Values values={named("measures")} />
+				<Values values={named("measures")} twoLine />
 			</Box>
 			<Box title="Metrics">
 				<Show
@@ -357,12 +352,12 @@ const Box = (props: { title: string; children: JSX.Element }) => (
 	</fieldset>
 );
 
-const Values = (props: { values: Value[] }) => (
+const Values = (props: { values: Value[]; twoLine?: boolean }) => (
 	<For each={props.values}>
 		{(value) => (
-			<div class="ex-val">
+			<div class="ex-val" classList={{ "ex-val2": props.twoLine }}>
 				<span class="ex-ellip">{value.label}</span>
-				<Show when={value.detail}>
+				<Show when={props.twoLine}>
 					<span class="ex-k">{value.detail}</span>
 				</Show>
 			</div>

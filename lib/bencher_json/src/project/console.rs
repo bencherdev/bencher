@@ -184,7 +184,7 @@ pub struct JsonConsoleWindow {
 
 /// A group of lines and its totals, which hold whichever page is loaded.
 #[typeshare::typeshare]
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConsoleLineGroup {
     /// The group's benchmark or measure, an index into `benchmarks` or `measures`.
@@ -193,6 +193,9 @@ pub struct JsonConsoleLineGroup {
     pub variants: u32,
     /// The number of its lines that alerted.
     pub alerts: u32,
+    /// A benchmark group's measures in name order, indices into `measures`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measures: Option<Vec<u32>>,
 }
 
 /// One line of a report: one metric name of one measure of one variant.
@@ -297,21 +300,6 @@ pub struct JsonConsoleAlertPoint {
     pub uuid: AlertUuid,
     pub limit: BoundaryLimit,
     pub status: AlertStatus,
-}
-
-/// A benchmark's newest report, where Explore starts a query that names only
-/// the benchmark.
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonConsoleLatestReport {
-    pub uuid: ReportUuid,
-    pub branch: JsonConsoleBranch,
-    pub testbed: JsonConsoleTestbed,
-    pub version: JsonVersion,
-    pub start_time: DateTimeMillis,
-    /// The measures the benchmark reported in it, in name order.
-    pub measures: Vec<JsonConsoleMeasure>,
 }
 
 #[typeshare::typeshare]

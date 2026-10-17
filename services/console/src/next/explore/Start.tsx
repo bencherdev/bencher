@@ -1,6 +1,18 @@
+import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
-import type { QueryObserverResult } from "@tanstack/solid-query";
-import { For, type JSX, Match, Switch } from "solid-js";
+import {
+	type QueryObserverResult,
+	useQueryClient,
+} from "@tanstack/solid-query";
+import {
+	For,
+	type JSX,
+	Match,
+	Show,
+	Switch,
+	createSignal,
+	createUniqueId,
+} from "solid-js";
 import {
 	BoundaryLimit,
 	type JsonAlert,
@@ -11,19 +23,33 @@ import { projectPath, reportPath } from "../paths";
 import { formatDelta, formatWhen } from "../plot/format";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
+import type { ExploreQuery } from "../query/query";
 import { exploreSearch } from "../query/selection";
+import { type Option, SearchMenu } from "./Box";
 import { plotSearch } from "./pinned";
-import { START, startQueries } from "./queries";
-import { alertLine } from "./start";
+import {
+	type Dimension,
+	OPTIONS,
+	START,
+	nameQuery,
+	startQueries,
+} from "./queries";
+import {
+	alertLine,
+	benchmarkOptions,
+	reportBenchmarkQuery,
+	reportBenchmarksQuery,
+} from "./start";
 import { rollingName } from "./window";
 
-/** Three short lists blank Explore starts from in one click, asked for in one round. */
-const Start = () => {
+/** Three short lists blank Explore starts from, asked for in one round; a report opens to its benchmarks in place. */
+const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 	const { api, slug } = useProject();
 	const alerts = useQueryResult(() => startQueries(api, slug()).alerts);
 	const reports = useQueryResult(() => startQueries(api, slug()).reports);
 	const plots = useQueryResult(() => startQueries(api, slug()).plots);
 	const explore = () => projectPath(slug(), "explore");
+	const [open, setOpen] = createSignal<string>();
 	return (
 		<section class="ex-startcard" aria-labelledby="ex-start">
 			<h2 class="seclabel" id="ex-start">
@@ -56,17 +82,12 @@ const Start = () => {
 					empty="No reports"
 				>
 					{(report: JsonReport) => (
-						<a class="ex-srow" href={reportPath(slug(), report.uuid)}>
-							<span class="grow">
-								<span class="ex-sline">
-									<b>{report.branch.name}</b>
-									<span class="muted">· {report.testbed.name}</span>
-								</span>
-								<span class="ex-sub">
-									{formatWhen(Date.parse(report.start_time))}
-								</span>
-							</span>
-						</a>
+						<ReportRow
+							report={report}
+							open={open() === report.uuid}
+							onOpen={(next) => setOpen(next ? report.uuid : undefined)}
+							onQuery={props.onQuery}
+						/>
 					)}
 				</List>
 				<List
@@ -167,3 +188,130 @@ const List = <T,>(props: {
 		</Switch>
 	</section>
 );
+
+/** A report that opens, anywhere on its row, to search the benchmarks it ran; its hash opens the report. */
+const ReportRow = (props: {
+	report: JsonReport;
+	open: boolean;
+	onOpen: (open: boolean) => void;
+	onQuery: (query: ExploreQuery) => void;
+}) => {
+	const { api, slug } = useProject();
+	const client = useQueryClient();
+	// Started as the pointer or focus arrives, so the click opens a list already read.
+	const prefetch = () =>
+		client
+			.query(reportBenchmarksQuery(api, slug(), props.report.uuid))
+			.catch(() => {});
+	const hash = () => props.report.branch.head.version?.hash?.slice(0, 7);
+	const panel = createUniqueId();
+	let toggle: HTMLButtonElement | undefined;
+	return (
+		<div>
+			<div class="ex-rhead">
+				<button
+					ref={toggle}
+					type="button"
+					class="ex-rbtn"
+					aria-expanded={props.open}
+					aria-controls={panel}
+					onPointerEnter={prefetch}
+					onFocus={prefetch}
+					onClick={() => props.onOpen(!props.open)}
+				>
+					<span class="grow">
+						<span class="ex-sline">
+							<b>{props.report.branch.name}</b>
+							<span class="muted">· {props.report.testbed.name}</span>
+						</span>
+						<span class="ex-sub">
+							{formatWhen(Date.parse(props.report.start_time))}
+						</span>
+					</span>
+				</button>
+				<a class="ex-rhash" href={reportPath(slug(), props.report.uuid)}>
+					{hash() ?? "report"}
+				</a>
+				<Icon name="chevron-down" class="ex-rcaret" />
+			</div>
+			<Show when={props.open}>
+				<Picker
+					id={panel}
+					report={props.report}
+					name={
+						hash()
+							? `report ${hash()}`
+							: `the report on ${props.report.branch.name}`
+					}
+					anchor={toggle}
+					onClose={() => props.onOpen(false)}
+					onQuery={props.onQuery}
+				/>
+			</Show>
+		</div>
+	);
+};
+
+/** The benchmarks a report ran, searched as the Benchmarks box searches; a pick draws it as the report ran it. */
+const Picker = (props: {
+	id: string;
+	report: JsonReport;
+	/** The report, as a reader hears it. */
+	name: string;
+	anchor: HTMLElement | undefined;
+	onClose: () => void;
+	onQuery: (query: ExploreQuery) => void;
+}) => {
+	const { api, slug } = useProject();
+	const client = useQueryClient();
+	const result = useQueryResult(() =>
+		reportBenchmarksQuery(api, slug(), props.report.uuid),
+	);
+	// The boxes name what the pick fills before the plot answers.
+	const seed = (
+		dimension: Dimension,
+		uuid: string,
+		name: string,
+		units?: string,
+	) =>
+		client.setQueryData(nameQuery(api, slug(), dimension, uuid).queryKey, {
+			name,
+			...(units === undefined ? {} : { units }),
+		});
+	const pick = (option: Option) => {
+		const benchmark = result().data?.find(({ uuid }) => uuid === option.value);
+		if (!benchmark) {
+			return;
+		}
+		const { branch, testbed } = props.report;
+		seed("branches", branch.uuid, branch.name);
+		seed("testbeds", testbed.uuid, testbed.name);
+		seed("benchmarks", benchmark.uuid, benchmark.name);
+		for (const measure of benchmark.measures) {
+			seed("measures", measure.uuid, measure.name, measure.units);
+		}
+		props.onQuery(reportBenchmarkQuery(props.report, benchmark, Date.now()));
+	};
+	return (
+		<div id={props.id} class="ex-rpick">
+			<SearchMenu
+				label={`Benchmarks in ${props.name}`}
+				search="Search benchmarks"
+				searchName={`Search benchmarks in ${props.name}`}
+				anchor={props.anchor}
+				options={(text) => () =>
+					benchmarkOptions(result().data ?? [], text(), OPTIONS)
+				}
+				empty={
+					result().data
+						? "No benchmarks"
+						: result().isError
+							? "This list did not load"
+							: ""
+				}
+				onClose={props.onClose}
+				onPick={pick}
+			/>
+		</div>
+	);
+};

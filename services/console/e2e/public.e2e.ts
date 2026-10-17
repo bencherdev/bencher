@@ -3,7 +3,7 @@ import { decodeQuery } from "../src/next/query/query";
 import type { JsonConsolePerf } from "../src/types/bencher";
 import { createProject, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
-import { dimensions, plotAtEnd } from "./explore";
+import { dimensions, expectNameOverUnits, plotAtEnd } from "./explore";
 import {
 	VERSION_KEY,
 	expect,
@@ -78,6 +78,11 @@ test.describe("signed out", () => {
 		const query = page.getByRole("region", { name: "Query, read only" });
 		await expect(query.getByText("hash", { exact: true })).toBeVisible();
 		await query.getByRole("button", { name: "Show query" }).click();
+		await expectNameOverUnits(
+			query.getByRole("group", { name: "Measures" }),
+			"Latency",
+			"nanoseconds (ns)",
+		);
 		for (const [box, value] of [
 			["Branches", "main"],
 			["Testbeds", "ubuntu-latest"],
@@ -576,6 +581,11 @@ test.describe("narrow", () => {
 		await expect(
 			page.getByRole("group", { name: "Benchmarks" }).getByText("hash"),
 		).toBeVisible();
+		await expectNameOverUnits(
+			page.getByRole("group", { name: "Measures" }),
+			"Latency",
+			"nanoseconds (ns)",
+		);
 		await expect(
 			page.getByRole("button", { name: /^(Add|Remove)/ }),
 		).toHaveCount(0);

@@ -15,17 +15,12 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
-import type {
-	JsonConsoleLatestReport,
-	JsonConsolePerf,
-	JsonPlot,
-} from "../../types/bencher";
+import type { JsonConsolePerf, JsonPlot } from "../../types/bencher";
 import { ApiError } from "../api";
 import ContentSkeleton from "../ContentSkeleton";
-import type { Option } from "../explore/Box";
 import Controls from "../explore/Controls";
 import { plotData } from "../explore/data";
-import { BOXES, hasValues, withValue, withoutValues } from "../explore/edit";
+import { BOXES, clearable } from "../explore/edit";
 import Editor from "../explore/Editor";
 import Header, { type Confirmation } from "../explore/Header";
 import { measuresLayout } from "../explore/layout";
@@ -43,8 +38,6 @@ import {
 	unsaved,
 } from "../explore/pinned";
 import {
-	latestQuery,
-	nameQuery,
 	perfQuery,
 	plotKey,
 	plotQuery,
@@ -75,8 +68,8 @@ import { exploreSearchFromClassic } from "../query/classic";
 import { lineVisible, settleVisibility } from "../query/line";
 import {
 	type ExploreQuery,
-	MAX_ENTRIES,
 	type Parameters,
+	blankQuery,
 	decodeQuery,
 	encodeQuery,
 } from "../query/query";
@@ -477,39 +470,6 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			.then(() => setShared(true))
 			.catch(() => {});
 
-	/** A benchmark picked first fills the branch, the testbed, and the measures from its latest report. */
-	const first = async (option: Option) => {
-		const before = query();
-		let latest: JsonConsoleLatestReport;
-		try {
-			latest = await client.query(latestQuery(api, slug(), option.value));
-		} catch {
-			edit(withValue(before, "benchmarks", option.value));
-			return;
-		}
-		const { branch, testbed, measures } = latest;
-		const seed = (
-			dimension: "branches" | "testbeds" | "measures",
-			uuid: string,
-			named: { name: string; units?: string },
-		) =>
-			client.setQueryData(nameQuery(api, slug(), dimension, uuid).queryKey, {
-				name: named.name,
-				...(named.units === undefined ? {} : { units: named.units }),
-			});
-		seed("branches", branch.uuid, branch);
-		seed("testbeds", testbed.uuid, testbed);
-		for (const measure of measures) {
-			seed("measures", measure.uuid, measure);
-		}
-		edit({
-			...withValue(before, "benchmarks", option.value),
-			branches: [{ uuid: branch.uuid }],
-			testbeds: [{ uuid: testbed.uuid }],
-			measures: measures.slice(0, MAX_ENTRIES).map(({ uuid }) => uuid),
-		});
-	};
-
 	// Leaving a pin with unsaved changes for another page asks first; a link
 	// press is held before the router takes it.
 	const [leaving, setLeaving] = createSignal<string>();
@@ -605,17 +565,20 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 
 	const [sheet, setSheet] = createSignal(false);
 
+	// Clear's place is held while it has nothing to clear, so its arrival moves nothing.
 	const clear = () => (
-		<Show when={!props.readOnly && hasValues(query())}>
+		<Show when={!props.readOnly}>
 			<button
 				type="button"
-				class="lnk rp-clear"
+				class="lnk rp-clear ex-clear"
+				classList={{ "ex-idle": !clearable(query()) }}
 				onClick={(event) => {
-					// The focus moves first to the first box beside it, so it never falls with Clear.
-					event.currentTarget.parentElement
+					// The focus moves first to the first box, so it never falls with Clear.
+					event.currentTarget
+						.closest(".ex-qp")
 						?.querySelector<HTMLElement>(".ui-chip, .ex-add")
 						?.focus();
-					edit(withoutValues(query()));
+					edit(blankQuery());
 				}}
 			>
 				Clear
@@ -632,14 +595,10 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 			settled={
 				!drawable(query()) || (!busy() && (perf().isSuccess || perf().isError))
 			}
-			blank={blank()}
 			readOnly={props.readOnly}
 			onQuery={(next) => edit(next)}
-			onFirstBenchmark={first}
 			onBenchmarks={() => wantPlot()}
-		>
-			{clear()}
-		</Editor>
+		/>
 	);
 
 	const page = () => (
@@ -685,17 +644,15 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 							{([dimension, label]) => (
 								<Chip
 									label={label}
-									on={blank() && dimension === "benchmarks"}
 									aria-haspopup="dialog"
 									onClick={() => setSheet(true)}
 								>
 									<span class="ex-ellip">
-										{chipSummary(query(), dimension, answer(), blank())}
+										{chipSummary(query(), dimension, answer())}
 									</span>
 								</Chip>
 							)}
 						</For>
-						{clear()}
 					</div>
 					<Sheet open={sheet()} onClose={() => setSheet(false)} title="Query">
 						{editor()}
@@ -706,7 +663,9 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 					total={answer()?.total}
 					now={Date.now}
 					onQuery={(next) => edit(next)}
-				/>
+				>
+					{clear()}
+				</Controls>
 				<Show when={!narrow()}>{editor()}</Show>
 			</section>
 			<Show when={drawable(query())}>
@@ -768,7 +727,17 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 				</section>
 			</Show>
 			<Show when={blank() && !props.readOnly}>
-				<Start />
+				<Start
+					onQuery={(next) => {
+						// The start lists go with the pick, so the focus moves to the box it filled.
+						document
+							.querySelector<HTMLElement>(
+								'.ex-qp [aria-label="Benchmarks"] .ex-add, .ex-chips > :nth-child(3)',
+							)
+							?.focus();
+						edit(next);
+					}}
+				/>
 			</Show>
 			<EditPin
 				plot={editing()}
