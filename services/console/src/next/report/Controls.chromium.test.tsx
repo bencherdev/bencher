@@ -28,6 +28,7 @@ afterEach(() => {
 const mount = (initial: Partial<ReportView> = {}) => {
 	const writes: { view: ReportView; replace: boolean }[] = [];
 	const [view, setView] = createSignal<ReportView>({ ...VIEW, ...initial });
+	const [iterations, setIterations] = createSignal(0);
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);
@@ -35,6 +36,7 @@ const mount = (initial: Partial<ReportView> = {}) => {
 		() => (
 			<Controls
 				view={view()}
+				iterations={iterations()}
 				narrow={false}
 				onView={(next, replace = false) => {
 					writes.push({ view: next, replace });
@@ -44,7 +46,7 @@ const mount = (initial: Partial<ReportView> = {}) => {
 		),
 		root,
 	);
-	return { writes, setView };
+	return { writes, setView, setIterations };
 };
 
 const filter = () =>
@@ -89,4 +91,40 @@ test("a custom window starts from the window's length, and the days field sets i
 	await days.fill("10");
 	await userEvent.keyboard("{Tab}");
 	await expect.poll(() => writes.at(-1)?.view.window).toBe(10);
+});
+
+// Kills a combo offered before the report says it ran a second iteration, its
+// place dropped while it waits, options that skip or pass an iteration, a pick
+// the view never gets or gets counted from 0, All that keeps the iteration, and
+// a chosen iteration the report never ran shown as chosen.
+test("the iteration combo holds its place until the report ran two, then lists each and writes the pick", async () => {
+	const { writes, setIterations, setView } = mount();
+	const combo = page.getByRole("combobox", { name: "Iteration" });
+	const held = page.getByRole("combobox", {
+		name: "Iteration",
+		includeHidden: true,
+	});
+	await expect.element(held).toBeInTheDocument();
+	await expect.element(combo).not.toBeInTheDocument();
+	const place = held.element().getBoundingClientRect();
+	expect(place.width).toBeGreaterThan(0);
+
+	setIterations(3);
+	await expect.element(combo).toBeVisible();
+	expect(combo.element().getBoundingClientRect().left).toBe(place.left);
+	expect(
+		[...combo.element().querySelectorAll("option")].map(
+			(option) => option.textContent,
+		),
+	).toEqual(["All", "1", "2", "3"]);
+	await expect.element(combo).toHaveValue("all");
+
+	await userEvent.selectOptions(combo, "2");
+	expect(writes.at(-1)?.view.iteration).toBe(2);
+	await expect.element(combo).toHaveValue("2");
+	await userEvent.selectOptions(combo, "all");
+	expect(writes.at(-1)?.view.iteration).toBeUndefined();
+
+	setView({ ...VIEW, iteration: 4 });
+	await expect.element(combo).toHaveValue("all");
 });

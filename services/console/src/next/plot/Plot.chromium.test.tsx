@@ -1541,3 +1541,330 @@ describe("Plot canvas state", () => {
 		expect(shot()).toEqual(first);
 	});
 });
+
+// Three reports, the middle one run three times at 10, 30, and 20 ns; none
+// alerted, so its line runs through its last iteration.
+const RAN_THRICE: PlotData = {
+	x: [START, START + DAY, START + DAY, START + DAY, START + 2 * DAY],
+	report: [0, 1, 1, 1, 2],
+	iteration: [0, 0, 1, 2, 0],
+	reports: [0, 1, 2].map((index) => ({
+		uuid: `report-${index}`,
+		version: 100 + index,
+		hash: `${index}`.padStart(7, "a"),
+	})),
+	measures: [{ name: "Latency", units: "nanoseconds (ns)" }],
+	lines: [testLine({ id: "ran", y: [20, 10, 30, 20, 20] })],
+};
+
+// The middle report's first and third iterations both alerted.
+const TWO_ALERTS: PlotData = {
+	...RAN_THRICE,
+	lines: [
+		testLine({
+			id: "ran",
+			alerting: true,
+			y: [20, 30, 12, 31, 20],
+			upper: [25, 25, 25, 25, 25],
+			alerts: [1, 3],
+			raised: [
+				{ index: 1, uuid: "first", status: "active" },
+				{ index: 3, uuid: "third", status: "active" },
+			],
+		}),
+	],
+};
+
+// The middle report's iterations each carry their own upper limit; its line runs through the last.
+const BAND: PlotData = {
+	...RAN_THRICE,
+	lines: [
+		testLine({
+			id: "ran",
+			y: [20, 14, 18, 16, 20],
+			upper: [25, 25, 40, 32, 25],
+		}),
+	],
+};
+
+/** Down the middle report's column: its opaque marks' extent, and how many rows between them are drawn see-through. */
+const middleColumn = async () => {
+	const { canvas, box } = await plotArea();
+	const column = box.left + box.width / 2;
+	const color = series(1);
+	const marks = rowsOf(canvas, column, box.top, box.bottom, color);
+	const top = Math.min(...marks);
+	const bottom = Math.max(...marks);
+	let faint = 0;
+	for (let y = top; y <= bottom; y++) {
+		const pixel = pixelAt(canvas, column, y);
+		if (pixel.alpha > 60 && pixel.alpha < 200 && near(pixel.rgb, color)) {
+			faint++;
+		}
+	}
+	return { top, bottom, faint };
+};
+
+describe("Plot iterations", () => {
+	// Kills a report's iterations drawn as the line's own zigzag, which is
+	// opaque, and a bar left out or cut short of either end.
+	test("draws a report's iterations as a see-through bar from the lowest to the highest", async () => {
+		mount({ data: RAN_THRICE });
+		await settle();
+		const { top, bottom, faint } = await middleColumn();
+		expect(bottom - top).toBeGreaterThan(40);
+		expect(faint).toBeGreaterThan((bottom - top) * 0.6);
+	});
+
+	// Kills a readout that reads out one iteration, or emphasizes another than the one pointed at.
+	test("reads out every iteration of the report, the pointed one emphasized", async () => {
+		mount({ data: RAN_THRICE });
+		await settle();
+		const { over, box } = await plotArea();
+		const { top, bottom } = await middleColumn();
+		const status = page.getByRole("status");
+		const emphasized = () => status.element().querySelector(".pl-rrow.focused");
+
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 2, y: bottom - box.top },
+		});
+		await expect.element(status).toHaveTextContent(/iteration 1\s*10\.00 ns/);
+		await expect.element(status).toHaveTextContent(/iteration 2\s*30\.00 ns/);
+		await expect.element(status).toHaveTextContent(/iteration 3\s*20\.00 ns/);
+		await expect.poll(() => emphasized()?.textContent).toMatch(/^iteration 1/);
+
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 2, y: top - box.top },
+		});
+		await expect.poll(() => emphasized()?.textContent).toMatch(/^iteration 2/);
+	});
+
+	// Kills a click on another iteration of the pinned report that unpins
+	// instead of pinning it, and a click on the pinned iteration that keeps it.
+	test("a click pins the iteration pointed at, another moves the pin, and the same one unpins it", async () => {
+		mount({ data: RAN_THRICE });
+		await settle();
+		const { over, box } = await plotArea();
+		const { top, bottom } = await middleColumn();
+		const status = page.getByRole("status");
+		const emphasized = () => status.element().querySelector(".pl-rrow.focused");
+		const at = (y: number) => ({
+			position: { x: box.width / 2, y: y - box.top },
+		});
+
+		await page.elementLocator(over).click(at(bottom));
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await expect.poll(() => emphasized()?.textContent).toMatch(/^iteration 1/);
+
+		await page.elementLocator(over).click(at(top));
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await expect.poll(() => emphasized()?.textContent).toMatch(/^iteration 2/);
+
+		await page.elementLocator(over).click(at(top));
+		await expect.element(status).toHaveAttribute("aria-live", "off");
+	});
+
+	// Kills an iteration no report ran drawing an empty plot, and a choice that
+	// labels the points of data whose reports each ran once.
+	test("draws every iteration when no report ran the chosen one", async () => {
+		mount({ data: RAN_THRICE, iteration: 4 });
+		await settle();
+		const { top, bottom, faint } = await middleColumn();
+		expect(bottom - top).toBeGreaterThan(40);
+		expect(faint).toBeGreaterThan((bottom - top) * 0.6);
+
+		dispose?.();
+		document.body.replaceChildren();
+		mount({
+			data: testData([testLine({ id: "once", y: [10, 20, 30] })]),
+			iteration: 1,
+		});
+		await settle();
+		const { over, box } = await plotArea();
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 2, y: box.height / 2 },
+		});
+		const status = page.getByRole("status");
+		await expect.element(status).toHaveTextContent("20.00 ns");
+		await expect.element(status).not.toHaveTextContent("iteration");
+	});
+
+	// Kills a chosen iteration the plot still draws the others of, or does not name.
+	test("draws and reads out only the chosen iteration", async () => {
+		mount({ data: RAN_THRICE, iteration: 2 });
+		await settle();
+		const { over, box } = await plotArea();
+		const { faint } = await middleColumn();
+		expect(faint).toBeLessThan(4);
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 2, y: box.height / 2 },
+		});
+		const status = page.getByRole("status");
+		await expect.element(status).toHaveTextContent(/iteration 2\s*30\.00 ns/);
+		await expect.element(status).not.toHaveTextContent("iteration 1");
+	});
+
+	// Kills a pin from the page, as an alert's page sets one, on no line: with
+	// two alerts in one report it emphasizes the iteration the line runs
+	// through rather than the pinned alert, and a first click on another
+	// iteration unpins instead of moving the pin there.
+	test("a pin from the page emphasizes its own iteration, and a click on another moves it", async () => {
+		mount({
+			data: TWO_ALERTS,
+			pin: 1,
+			alerts: { status: (uuid) => (uuid === "first" ? "active" : undefined) },
+		});
+		await settle();
+		const status = page.getByRole("status");
+		const emphasized = () => status.element().querySelector(".pl-rrow.focused");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await expect.poll(() => emphasized()?.textContent).toMatch(/^iteration 1/);
+
+		const { over, box } = await plotArea();
+		const { bottom } = await middleColumn();
+		await page.elementLocator(over).click({
+			position: { x: box.width / 2, y: bottom - box.top },
+		});
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await expect.poll(() => emphasized()?.textContent).toMatch(/^iteration 2/);
+	});
+
+	// Kills a band and limits drawn through every iteration, whose run reaches
+	// the middle report at its first iteration's limit rather than the limit of
+	// the iteration the line runs through.
+	test("draws the band through the iteration the line runs through", async () => {
+		mount({ data: BAND });
+		await settle();
+		const { canvas, box } = await plotArea();
+		const color = series(1);
+		const bandTop = (column: number) => {
+			for (let y = Math.ceil(box.top); y < box.bottom; y++) {
+				const pixel = pixelAt(canvas, column, y);
+				if (pixel.alpha > 15 && pixel.alpha < 120 && near(pixel.rgb, color)) {
+					return y;
+				}
+			}
+			return Number.NaN;
+		};
+		const start = bandTop(box.left + 3);
+		const before = bandTop(box.left + box.width * 0.375);
+		expect(before).toBeLessThan(start - 4);
+	});
+
+	// Kills range bars drawn for a hidden line, or for a line another's focus dims.
+	test("draws no range bars for a hidden or dimmed line", async () => {
+		const data: PlotData = {
+			...RAN_THRICE,
+			lines: [
+				...RAN_THRICE.lines,
+				testLine({
+					id: "other",
+					benchmark: "sha256",
+					y: [25, null, null, 25, 25],
+				}),
+			],
+		};
+		const faintDown = async () => {
+			const { canvas, box } = await plotArea();
+			const column = box.left + box.width / 2;
+			let faint = 0;
+			for (let y = Math.ceil(box.top); y < box.bottom; y++) {
+				const pixel = pixelAt(canvas, column, y);
+				if (
+					pixel.alpha > 60 &&
+					pixel.alpha < 200 &&
+					near(pixel.rgb, series(1))
+				) {
+					faint++;
+				}
+			}
+			return faint;
+		};
+		mount({ data, focused: null });
+		await settle();
+		expect(await faintDown()).toBeGreaterThan(20);
+
+		dispose?.();
+		document.body.replaceChildren();
+		mount({ data, focused: "other" });
+		await settle();
+		expect(await faintDown()).toBe(0);
+
+		dispose?.();
+		document.body.replaceChildren();
+		// Nothing focused, so the hidden line is not dimmed as well.
+		mount({ data, hidden: ["ran"], focused: null });
+		await settle();
+		expect(await faintDown()).toBe(0);
+	});
+
+	// Kills marks thinned by a report's iterations: forty reports fit their
+	// marks, though their hundred and twenty points would not.
+	test("counts reports, not iterations, toward the room its marks need", async () => {
+		const reports = 40;
+		const data: PlotData = {
+			x: Array.from(
+				{ length: reports * 3 },
+				(_, at) => START + Math.floor(at / 3) * DAY,
+			),
+			report: Array.from({ length: reports * 3 }, (_, at) =>
+				Math.floor(at / 3),
+			),
+			iteration: Array.from({ length: reports * 3 }, (_, at) => at % 3),
+			reports: Array.from({ length: reports }, (_, index) => ({
+				uuid: `report-${index}`,
+				version: 100 + index,
+			})),
+			measures: [{ name: "Latency", units: "nanoseconds (ns)" }],
+			lines: [
+				testLine({
+					id: "many",
+					y: Array.from(
+						{ length: reports * 3 },
+						(_, at) => [10, 30, 20][at % 3] ?? 20,
+					),
+				}),
+			],
+		};
+		mount({ data });
+		await settle();
+		const { canvas, box } = await plotArea();
+		const rows = rowsOf(
+			canvas,
+			box.left + (box.width * 20) / (reports - 1),
+			box.top,
+			box.bottom,
+			series(1),
+		);
+		expect(Math.max(...rows) - Math.min(...rows)).toBeGreaterThan(20);
+	});
+
+	// Kills a delta read out beside every iteration rather than only the emphasized one.
+	test("reads out the delta beside the emphasized iteration alone", async () => {
+		mount({
+			data: {
+				...RAN_THRICE,
+				lines: [
+					testLine({
+						id: "ran",
+						y: [20, 10, 30, 22, 20],
+						baseline: [20, 20, 20, 20, 20],
+						upper: [40, 40, 40, 40, 40],
+					}),
+				],
+			},
+		});
+		await settle();
+		const { over } = await plotArea();
+		over.focus();
+		await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+		const status = page.getByRole("status");
+		await expect.element(status).toHaveTextContent(/iteration 3\s*22\.00 ns/);
+		const withDelta = [...status.element().querySelectorAll(".pl-rrow")].filter(
+			(row) => row.textContent?.includes("%"),
+		);
+		expect(withDelta.map((row) => row.classList.contains("focused"))).toEqual([
+			true,
+		]);
+	});
+});

@@ -27,6 +27,7 @@ const HASHBROWN: &str = "Hashbrown";
 const VERSION_ZERO: &str = "Crinkle Cut";
 const EMPTY: &str = "Tater Tot";
 const PRIVATE: &str = "Home Fries";
+const ITERATIONS: &str = "Waffle Fries";
 
 // Debug builds of the API trust this key's public half for self-hosted licenses.
 const TEST_LICENSE_KEY: &str =
@@ -106,6 +107,15 @@ const VARIANTS: [Variant; 18] = [
 /// Small run to run noise, so a threshold has a spread to compute a limit from.
 const JITTER: [f64; 8] = [0.0, 0.004, -0.003, 0.002, -0.004, 0.003, -0.002, 0.001];
 
+/// Runs of three iterations each, a day apart, the newest two hours before [`NOW`].
+const ITERATION_REPORTS: usize = 6;
+const ITERATION_INTERVAL: i64 = 24 * 60 * 60;
+const LAST_ITERATION_REPORT: i64 = NOW - 2 * 60 * 60;
+/// Each iteration's latency against its run's, so every run's range bar has a length.
+const ITERATION_SPREAD: [f64; 3] = [0.96, 1.0, 1.05];
+/// The newest run's second iteration jumps, which raises the project's one alert.
+const ITERATION_JUMP: f64 = 1.3;
+
 /// What the suite reads: who to sign in as and which projects to open.
 #[derive(Debug, Serialize)]
 pub struct Seed {
@@ -148,6 +158,8 @@ struct SeedProjects {
     empty: SeedProject,
     /// Version 1 and private.
     private: SeedProject,
+    /// Version 1, with runs of three iterations on one line and one alert on a second iteration.
+    iterations: SeedProject,
 }
 
 #[derive(Debug, Serialize)]
@@ -188,7 +200,10 @@ impl Seed {
         let private = api
             .project(&organization, PRIVATE, "private", token)
             .await?;
-        for project in [&hashbrown, &empty, &private] {
+        let iterations = api
+            .project(&organization, ITERATIONS, "public", token)
+            .await?;
+        for project in [&hashbrown, &empty, &private, &iterations] {
             let path = format!("/v0/projects/{}", project.slug);
             let _project: JsonProject = api
                 .send(
@@ -205,6 +220,7 @@ impl Seed {
         split_run(&api, &hashbrown, token).await?;
         check_alerts(&api, &hashbrown, token).await?;
         pins(&api, &hashbrown, token).await?;
+        iteration_history(&api, &iterations, token).await?;
 
         Ok(Self {
             api_url: api_url.to_owned(),
@@ -223,6 +239,7 @@ impl Seed {
                 version_zero: version_zero.into(),
                 empty: empty.into(),
                 private: private.into(),
+                iterations: iterations.into(),
             },
             last_main_hash: LAST_MAIN_HASH,
             split_hash: SPLIT_HASH,
@@ -402,6 +419,71 @@ fn main_results(index: usize) -> String {
             1.0
         }
     })
+}
+
+/// Runs of blake3 at 64 KiB, three iterations each, with a percentage threshold
+/// on latency that the newest run's second iteration crosses.
+async fn iteration_history(api: &Api, project: &JsonProject, token: &str) -> anyhow::Result<()> {
+    let path = format!("/v0/projects/{}/reports", project.slug);
+    for index in 0..ITERATION_REPORTS {
+        let start = LAST_ITERATION_REPORT
+            - ITERATION_INTERVAL * i64::try_from(ITERATION_REPORTS - 1 - index)?;
+        let noise = JITTER.get(index).copied().unwrap_or_default();
+        let results = ITERATION_SPREAD
+            .iter()
+            .enumerate()
+            .map(|(iteration, spread)| {
+                let jump = if index == ITERATION_REPORTS - 1 && iteration == 1 {
+                    ITERATION_JUMP
+                } else {
+                    1.0
+                };
+                let latency = ALERTING.latency() * spread * (1.0 + noise) * jump;
+                serde_json::json!({
+                    ALERTING.benchmark: [{
+                        "parameters": { "input_bytes": KIB_64 },
+                        "measures": {
+                            "latency": { "value": latency },
+                            "throughput": { "value": f64::from(KIB_64) / latency },
+                        },
+                    }],
+                })
+                .to_string()
+            })
+            .collect::<Vec<_>>();
+        let mut report = serde_json::json!({
+            "branch": MAIN,
+            "hash": format!("{:040x}", 0x17e0_0000u64 + u64::try_from(index)?),
+            "testbed": TESTBED,
+            "start_time": DateTime::try_from(start)?,
+            "end_time": DateTime::try_from(start + REPORT_DURATION)?,
+            "results": results,
+            "settings": { "adapter": "json" },
+        });
+        if index == 0
+            && let Some(object) = report.as_object_mut()
+        {
+            object.insert(
+                "thresholds".to_owned(),
+                serde_json::json!({
+                    "models": [{
+                        "measure": "latency",
+                        "metric": "value",
+                        "model": { "test": "percentage", "upper_boundary": 0.1 },
+                    }]
+                }),
+            );
+        }
+        let _json: serde_json::Value = api.send(Method::Post, &path, token, &report).await?;
+    }
+    let path = format!("/v0/projects/{}/alerts", project.slug);
+    let alerts: Vec<serde_json::Value> = api.get(&path, token).await?;
+    anyhow::ensure!(
+        alerts.len() == 1,
+        "Expected one alert in {ITERATIONS}, found {}",
+        alerts.len()
+    );
+    Ok(())
 }
 
 /// A version 1 payload: every variant with its latency and throughput.

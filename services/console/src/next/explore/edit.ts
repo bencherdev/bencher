@@ -72,13 +72,19 @@ export const BOXES = [
 export const hasValues = (query: ExploreQuery): boolean =>
 	BOXES.some((box) => query[box].length > 0);
 
-/** Whether Explore's Clear has something to undo: a value in a box, or an x axis, y scale, window, or layout off its default. */
+/** Whether Explore's Clear has something to undo: a value in a box, or an x axis, y scale, window, layout, or iteration off its default. */
 export const clearable = (query: ExploreQuery): boolean => {
-	const { xAxis, yScale, window, layout } = query;
+	const { xAxis, yScale, window, layout, iteration } = query;
 	const blank = blankQuery();
 	return (
 		hasValues(query) ||
-		encodeQuery({ ...blank, xAxis, yScale, window, layout }) !==
-			encodeQuery(blank)
+		encodeQuery({
+			...blank,
+			xAxis,
+			yScale,
+			window,
+			layout,
+			...(iteration === undefined ? {} : { iteration }),
+		}) !== encodeQuery(blank)
 	);
 };

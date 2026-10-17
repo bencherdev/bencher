@@ -28,6 +28,19 @@ const keys = (lines: readonly AlertLine[]) =>
 	lines.map(({ key }) => Number(key.slice(-11)));
 
 describe("alertLinesOf", () => {
+	// Kills an alert row whose history loses its points' iterations, which then draws a report's iterations as a zigzag at one x.
+	test("keeps each point's iteration", () => {
+		const batch = alertsFixture([{ report: 0, alerts: [{ alert: 1 }] }]);
+		const [group] = batch.groups;
+		const [line] = alertLinesOf({
+			...batch,
+			groups: group
+				? [{ ...group, points: { ...group.points, iteration: [0, 0, 1] } }]
+				: [],
+		});
+		expect(line?.points.iteration).toEqual([0, 0, 1]);
+	});
+
 	// Kills a reread with the same answer for an alert that resolves it anew,
 	// which draws its row anew, and one that keeps a line whose alert changed.
 	test("an alert read again unchanged keeps its line, and a changed one does not", () => {

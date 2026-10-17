@@ -40,6 +40,15 @@ export const lineLabel = (
 	};
 };
 
+/** Which iteration a row shows, of how many, when its line ran more than once. */
+export const iterationTag = (line: {
+	iteration?: number | undefined;
+	iterations?: number | undefined;
+}) =>
+	(line.iterations ?? 1) > 1
+		? `iteration ${(line.iteration ?? 0) + 1} of ${line.iterations}`
+		: undefined;
+
 interface RowLine {
 	value: number;
 	baseline?: number | null | undefined;

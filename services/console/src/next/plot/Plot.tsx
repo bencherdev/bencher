@@ -18,8 +18,9 @@ import {
 	type Panel,
 	type PanelAxis,
 } from "./chart";
-import { alignToAxis, extent, sameX } from "./columns";
+import { alignToAxis, extent } from "./columns";
 import { formatTick } from "./format";
+import { onlyIteration, withThrough } from "./iterations";
 import { constantParameters, keyOrder, lineNames } from "./key";
 import { axisFont, axisWidth } from "./labels";
 import { useNarrow } from "./narrow";
@@ -75,6 +76,8 @@ export interface PlotProps {
 	alerts?: PlotAlerts | undefined;
 	/** A point the readout pins as the plot first draws, an index into `x` on a date axis. */
 	pin?: number | undefined;
+	/** Only this iteration of every report, counting from 1; every iteration when undefined. */
+	iteration?: number | undefined;
 }
 
 export interface PlotAlerts {
@@ -115,7 +118,21 @@ const Plot = (props: PlotProps) => {
 	const narrow = useNarrow();
 	const palette = usePalette();
 
-	const data = createMemo(() => props.data && alignToAxis(props.data, xAxis()));
+	// An iteration no report ran, or a choice where every report ran once, draws every iteration.
+	const picked = createMemo(() => {
+		const { data: given, iteration } = props;
+		const only =
+			given && iteration !== undefined
+				? onlyIteration(given, iteration)
+				: undefined;
+		return only?.x.length
+			? { data: only, iteration }
+			: { data: given, iteration: undefined };
+	});
+	const data = createMemo(() => {
+		const given = picked().data;
+		return given && withThrough(alignToAxis(given, xAxis()));
+	});
 	const lines = () => data()?.lines ?? [];
 	const measures = createMemo(() => measuresOf(lines()));
 	const layout = createMemo<Layout>(() =>
@@ -270,6 +287,7 @@ const Plot = (props: PlotProps) => {
 					{ ...event, panel },
 					data()?.x ?? [],
 					touch,
+					data()?.iteration,
 				);
 				setCursor(next);
 				if (!next) {
@@ -355,6 +373,8 @@ const Plot = (props: PlotProps) => {
 			focus(),
 			units(),
 			xAxis(),
+			undefined,
+			{ line: current.line, chosen: picked().iteration },
 		);
 	});
 	const placement = createMemo(() => {
@@ -367,20 +387,10 @@ const Plot = (props: PlotProps) => {
 		const frame = panel.frame();
 		const x = offset.left + frame.left + current.x;
 		const top = offset.top + frame.top;
-		const focused = focus();
-		const aligned = data();
-		let ring: { top: number } | null = null;
-		if (focused !== null && aligned) {
-			const [start, end] = sameX(aligned.x, current.index);
-			for (let index = end - 1; index >= start; index--) {
-				const y = panel.yOf(focused, index);
-				if (y !== null) {
-					ring = { top: top + y };
-					break;
-				}
-			}
-		}
-		return { x, top: top + 4, ring };
+		// The focused line leads the readout, which knows the point it reads.
+		const row = model()?.rows[0];
+		const y = row?.focused ? panel.yOf(row.line, row.point) : null;
+		return { x, top: top + 4, ring: y === null ? null : { top: top + y } };
 	});
 	// Measured by resize observers, which report after layout, so a hover never forces one.
 	const [room, setRoom] = createSignal(0);
@@ -576,7 +586,8 @@ const Plot = (props: PlotProps) => {
 										panel.setSize(target.clientWidth, target.clientHeight);
 										place();
 										if (pin !== undefined) {
-											panel.pinAt(pin);
+											// On the focused line, so the readout emphasizes this point rather than the iteration the line runs through.
+											panel.pinAt(pin, focus());
 											pin = undefined;
 										}
 									});
@@ -804,38 +815,78 @@ const Readout = (props: ReadoutProps) => {
 				</span>
 				<For each={props.readout.rows}>
 					{(row) => {
-						const style = () => props.styles[row.line];
+						const name = () => (
+							<Show when={!props.single && props.styles[row.line]}>
+								{(current) => (
+									<>
+										<Swatch
+											slot={current().slot}
+											shape={current().shape}
+											stroke={current().axis === 1 ? "dotted" : "solid"}
+										/>
+										<span class="pl-rname">{props.names[row.line]}</span>
+									</>
+								)}
+							</Show>
+						);
+						const delta = () => (
+							<Show when={row.delta}>
+								{(delta) => (
+									<span class="pl-delta" data-tone={delta().tone ?? undefined}>
+										{delta().tone
+											? `${delta().text} ${delta().tone}`
+											: delta().text}
+									</span>
+								)}
+							</Show>
+						);
+						const limit = () => (
+							<Show when={row.limit}>
+								<span class="pl-limit">{row.limit}</span>
+							</Show>
+						);
 						return (
-							<div class="pl-rrow" classList={{ focused: row.focused }}>
-								<Show when={!props.single && style()}>
-									{(current) => (
-										<>
-											<Swatch
-												slot={current().slot}
-												shape={current().shape}
-												stroke={current().axis === 1 ? "dotted" : "solid"}
-											/>
-											<span class="pl-rname">{props.names[row.line]}</span>
-										</>
-									)}
-								</Show>
-								<b class="pl-mono">{row.value}</b>
-								<Show when={row.delta}>
-									{(delta) => (
-										<span
-											class="pl-delta"
-											data-tone={delta().tone ?? undefined}
-										>
-											{delta().tone
-												? `${delta().text} ${delta().tone}`
-												: delta().text}
-										</span>
-									)}
-								</Show>
-								<Show when={row.limit}>
-									<span class="pl-limit">{row.limit}</span>
-								</Show>
-							</div>
+							<Show
+								when={row.iterations}
+								fallback={
+									<div class="pl-rrow" classList={{ focused: row.focused }}>
+										{name()}
+										<b class="pl-mono">{row.value}</b>
+										{delta()}
+										{limit()}
+									</div>
+								}
+							>
+								{(iterations) => (
+									<>
+										<Show when={!props.single}>
+											<div class="pl-rrow">{name()}</div>
+										</Show>
+										<For each={iterations()}>
+											{(each) => (
+												<div
+													class="pl-rrow"
+													classList={{ focused: each.emphasized }}
+												>
+													<span class="pl-it">iteration {each.iteration}</span>
+													<b class="pl-mono">{each.value}</b>
+													<Show when={each.alerted}>
+														<span
+															class="pl-alertdot"
+															role="img"
+															aria-label="alerted"
+														/>
+													</Show>
+													<Show when={each.emphasized}>{delta()}</Show>
+												</div>
+											)}
+										</For>
+										<Show when={row.limit}>
+											<div class="pl-rrow">{limit()}</div>
+										</Show>
+									</>
+								)}
+							</Show>
 						);
 					}}
 				</For>

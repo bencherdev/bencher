@@ -187,6 +187,8 @@ describe("unsaved", () => {
 			false,
 		);
 		expect(unsaved({ ...opened, report: uuid(9) }, PLOT, drawn)).toBe(false);
+		// A pin keeps no iteration, so picking one leaves it as saved.
+		expect(unsaved({ ...opened, iteration: 2 }, PLOT, drawn)).toBe(false);
 	});
 
 	// Kills an edit that leaves the mark off.

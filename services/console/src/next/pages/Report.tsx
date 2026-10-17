@@ -35,6 +35,7 @@ import {
 	type GroupRow,
 	type ReportLine,
 	groupsOf,
+	lineAt,
 	linesOf,
 	plotOf,
 } from "../report/lines";
@@ -86,7 +87,8 @@ const Report = () => {
 
 	const perPage = screenBatch();
 	const linesKey = createMemo(
-		() => `${params.report}${query({ ...view(), expanded: [] })}`,
+		() =>
+			`${params.report}${query({ ...view(), expanded: [], iteration: undefined })}`,
 	);
 	// Later batches belong to the view that asked for them, so a new view drops them before they could ask again.
 	const [more, setMore] = createSignal({ key: "", count: 1 });
@@ -134,11 +136,18 @@ const Report = () => {
 			batch.data ? linesOfBatch(batch.data.report) : [],
 		),
 	);
+	// Each row keeps its object while only the batches change, so its open plot stays.
+	const rows = createMemo(
+		mapArray(lines, (line) =>
+			createMemo(() => lineAt(line, report()?.uuid ?? "", view().iteration)),
+		),
+	);
+	const shown = () => rows().map((row) => row());
 	const groups = createMemo<GroupRow[]>(() => {
 		const batch = first();
 		return batch ? groupsOfBatch(batch) : [];
 	});
-	const slots = createMemo(() => slotsOf(groups(), lines()));
+	const slots = createMemo(() => slotsOf(groups(), shown()));
 	const nearEnd = () => {
 		const last = loaded().at(-1)?.data?.report;
 		if (
@@ -273,7 +282,12 @@ const Report = () => {
 						</Show>
 					</p>
 				</div>
-				<Controls view={view()} narrow={narrow()} onView={setView} />
+				<Controls
+					view={view()}
+					iterations={report()?.counts.iterations ?? 0}
+					narrow={narrow()}
+					onView={setView}
+				/>
 				<Selection
 					count={selection().size}
 					narrow={narrow()}
@@ -320,6 +334,7 @@ const Report = () => {
 									),
 									note: `${windowLabel()}, ending at this report`,
 									reportHref: (uuid) => reportPath(slug(), uuid),
+									iteration: line.chosen,
 									kept,
 									canChange,
 								})}

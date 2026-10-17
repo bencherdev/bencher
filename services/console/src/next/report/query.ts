@@ -137,6 +137,6 @@ interface Batch {
 const reportPath = (slug: string, report: string) =>
 	`/v0/console/projects/${encodeURIComponent(slug)}/reports/${encodeURIComponent(report)}`;
 
-/** The view's lines without the rows it has open, which change no request. */
+/** The view's lines without the rows it has open or the iteration they show, which change no request. */
 const linesView = (view: ReportView) =>
-	reportViewSearch({ ...view, expanded: [] });
+	reportViewSearch({ ...view, expanded: [], iteration: undefined });

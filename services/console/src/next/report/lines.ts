@@ -8,7 +8,7 @@ import type {
 	JsonConsoleSeries,
 	JsonConsoleTestbed,
 } from "../../types/bencher";
-import type { PlotAlert, PlotData } from "../plot/types";
+import type { PlotData } from "../plot/types";
 import type { Guard } from "../plot/format";
 import { guardOf } from "./delta";
 import type { ParameterSet } from "./row";
@@ -23,7 +23,7 @@ export interface AlignedSeries {
 	/** Indices into the points of the values that alerted. */
 	alerts: readonly number[];
 	/** The alert behind each of `alerts`. */
-	raised?: readonly PlotAlert[];
+	raised?: readonly (JsonConsoleAlert & { index: number })[];
 }
 
 /** The points one batch of lines is drawn over. */
@@ -32,6 +32,8 @@ interface Points {
 	x: readonly number[];
 	/** The report of each point, an index into `reports`. */
 	report: readonly number[];
+	/** The iteration of each point, counting from 0; absent when every point is the first. */
+	iteration?: readonly number[];
 	reports: readonly JsonConsolePointReport[];
 }
 
@@ -54,6 +56,12 @@ export interface ReportLine {
 	guard: Guard | undefined;
 	history: AlignedSeries;
 	points: Points;
+	/** The iteration the row shows, counting from 0. */
+	iteration?: number;
+	/** How many iterations of its report ran the line, when more than one. */
+	iterations?: number;
+	/** The iteration the page chose, counting from 1, when the row shows it. */
+	chosen?: number;
 }
 
 export interface GroupRow {
@@ -69,6 +77,7 @@ export const linesOf = (batch: JsonConsoleReport): ReportLine[] => {
 	const points = {
 		x: batch.points.x,
 		report: batch.points.report,
+		...(batch.points.iteration && { iteration: batch.points.iteration }),
 		reports: batch.reports,
 	};
 	return batch.lines.flatMap((line) => {
@@ -105,9 +114,52 @@ export const linesOf = (batch: JsonConsoleReport): ReportLine[] => {
 				guard: guardOf(model),
 				history: alignSeries(line.history, points.x.length),
 				points,
+				...(line.iteration !== undefined && { iteration: line.iteration }),
+				...(line.iterations !== undefined && { iterations: line.iterations }),
 			},
 		];
 	});
+};
+
+/**
+ * The line as its row shows iteration `chosen` of `report`, counting from 1,
+ * read from its history; the line itself when there is no choice or it has no
+ * such iteration.
+ */
+export const lineAt = (
+	line: ReportLine,
+	report: string,
+	chosen: number | undefined,
+): ReportLine => {
+	if (chosen === undefined) {
+		return line;
+	}
+	const { points, history } = line;
+	const own = points.reports.findIndex(({ uuid }) => uuid === report);
+	const point = points.x.findIndex(
+		(_, index) =>
+			points.report[index] === own &&
+			(points.iteration?.[index] ?? 0) === chosen - 1 &&
+			history.y[index] != null,
+	);
+	if (point < 0) {
+		return line;
+	}
+	const alert = history.raised?.find(({ index }) => index === point);
+	return {
+		...line,
+		value: history.y[point] ?? line.value,
+		baseline: history.baseline?.[point] ?? undefined,
+		lower_limit: history.lower?.[point] ?? undefined,
+		upper_limit: history.upper?.[point] ?? undefined,
+		alert: alert && {
+			uuid: alert.uuid,
+			limit: alert.limit,
+			status: alert.status,
+		},
+		iteration: chosen - 1,
+		chosen,
+	};
 };
 
 /** A history over every point of its batch: a thinned one names the positions it kept. */
@@ -116,9 +168,9 @@ export const alignSeries = (
 	length: number,
 ): AlignedSeries => {
 	const { index } = series;
-	const raised = series.alerts.flatMap(({ index: at, uuid, status }) => {
+	const raised = series.alerts.flatMap(({ index: at, uuid, status, limit }) => {
 		const point = index ? index[at] : at;
-		return point === undefined ? [] : [{ index: point, uuid, status }];
+		return point === undefined ? [] : [{ index: point, uuid, status, limit }];
 	});
 	const spread = (column: readonly (number | null)[]) => {
 		if (!index) {
@@ -167,6 +219,7 @@ export const plotOf = (
 ): PlotData => ({
 	x: line.points.x,
 	report: line.points.report,
+	...(line.points.iteration && { iteration: line.points.iteration }),
 	reports: line.points.reports,
 	measures: [{ name: line.measure.name, units: line.measure.units }],
 	lines: [

@@ -953,6 +953,13 @@ export interface JsonConsoleReportLine {
 	/** The value in this report. */
 	value: number;
 	/**
+	 * The iteration the value is from: the one that alerted, and otherwise the last.
+	 * Absent when it is the first.
+	 */
+	iteration?: Iteration;
+	/** How many iterations of the report the line ran, absent when one. */
+	iterations?: number;
+	/**
 	 * The model of the threshold that checked the value, an index into `models`.
 	 * Absent when no threshold checked it.
 	 */
@@ -1289,6 +1296,8 @@ export interface JsonConsoleReportCounts {
 	measures: number;
 	/** The distinct metric names of the report's lines. */
 	metrics: number;
+	/** The most iterations any of the report's lines ran. */
+	iterations: number;
 	alerts: JsonReportAlertsCounts;
 }
 

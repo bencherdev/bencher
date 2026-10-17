@@ -12,6 +12,7 @@ const RowPlot = (props: {
 	alerts?: PlotAlerts | undefined;
 	kept?: Map<string, Settable> | undefined;
 	canChange?: (() => boolean) | undefined;
+	iteration?: number | undefined;
 }) => {
 	const [hidden, setHidden] = createSignal<string[]>([]);
 	const [focused, setFocused] = createSignal<string | null>();
@@ -30,6 +31,7 @@ const RowPlot = (props: {
 			note={props.note}
 			reportHref={props.reportHref}
 			alerts={alerts}
+			iteration={props.iteration}
 		/>
 	);
 };

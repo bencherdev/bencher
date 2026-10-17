@@ -117,6 +117,7 @@ describe("requestKey", () => {
 			{ layout: "stacked" },
 			{ xAxis: "version" },
 			{ yScale: "log" },
+			{ iteration: 2 },
 			{ report: uuid(9) },
 			{ plot: uuid(10) },
 		] as const) {

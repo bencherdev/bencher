@@ -21,7 +21,7 @@ use bencher_json::{
         boundary::BoundaryLimit,
         console::{JsonConsoleReport, JsonConsoleReportLine, MAX_CONSOLE_HISTORY_REPORTS},
         head::VersionNumber,
-        report::Adapter,
+        report::{Adapter, Iteration},
     },
 };
 use bencher_schema::schema;
@@ -1218,6 +1218,107 @@ async fn console_report_alerted_iteration_is_the_row() {
         vec![Some(200.0), Some(200.0), Some(260.0), Some(200.0)]
     );
     assert_eq!(report.total, 7, "iterations are points, not lines");
+}
+
+// Kills: a row that names the last iteration when the middle one alerted, an
+// iteration count that starts at zero or counts the report's lines, a first
+// iteration or a single one named at all, and a report count read from one line.
+#[tokio::test]
+async fn console_report_rows_name_their_iteration() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "rowiterations").await;
+    let mut single = None;
+    for (time, hash) in [
+        (
+            "2024-02-01T00:00:00Z",
+            "3100000000000000000000000000000000000001",
+        ),
+        (
+            "2024-02-10T00:00:00Z",
+            "3100000000000000000000000000000000000002",
+        ),
+    ] {
+        single = Some(post(&server, &fixture, Post::main(time, hash, STEADY)).await);
+    }
+    let mut without_gamma: serde_json::Value =
+        serde_json::from_str(&results(STEADY)).expect("Failed to parse the results");
+    without_gamma
+        .as_object_mut()
+        .expect("the results are an object")
+        .remove("gamma");
+    let subject = post(
+        &server,
+        &fixture,
+        Post {
+            iterations: vec![results(STEADY), results(SUBJECT), without_gamma.to_string()],
+            ..Post::main(
+                "2024-02-20T00:00:00Z",
+                "3100000000000000000000000000000000000003",
+                SUBJECT,
+            )
+        },
+    )
+    .await;
+
+    let report = console_report(&server, &fixture, &subject, "").await;
+
+    let alerting = line(&report, ALPHA_10_LATENCY);
+    assert!(alerting.alert.is_some());
+    assert!((alerting.value - 260.0).abs() < f64::EPSILON);
+    assert_eq!(alerting.iteration, Some(Iteration(1)));
+    assert_eq!(alerting.iterations, Some(3));
+    let steady = line(&report, r#"alpha {"size":2} Latency value"#);
+    assert!(steady.alert.is_none());
+    assert!((steady.value - 100.0).abs() < f64::EPSILON);
+    assert_eq!(steady.iteration, Some(Iteration(2)));
+    assert_eq!(steady.iterations, Some(3));
+    let gamma = line(&report, r#"gamma {"size":1} Latency value"#);
+    assert_eq!(gamma.iterations, Some(2), "the third iteration left it out");
+    assert_eq!(report.counts.iterations, 3);
+
+    let single = single.expect("the history has a report");
+    let report = console_report(&server, &fixture, &single, "").await;
+    assert_eq!(report.counts.iterations, 1);
+    assert!(
+        report
+            .lines
+            .iter()
+            .all(|line| line.iteration.is_none() && line.iterations.is_none()),
+        "a report run once names no iteration"
+    );
+}
+
+// Kills: an iteration count taken from how many iterations ran the line, which
+// names a line the middle iteration left out "iteration 3 of 2".
+#[tokio::test]
+async fn console_report_iterations_reach_the_last_one_ran() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "skippediteration").await;
+    let mut without_gamma: serde_json::Value =
+        serde_json::from_str(&results(STEADY)).expect("Failed to parse the results");
+    without_gamma
+        .as_object_mut()
+        .expect("the results are an object")
+        .remove("gamma");
+    let report = post(
+        &server,
+        &fixture,
+        Post {
+            iterations: vec![results(STEADY), without_gamma.to_string(), results(STEADY)],
+            ..Post::main(
+                "2024-02-20T00:00:00Z",
+                "3200000000000000000000000000000000000001",
+                STEADY,
+            )
+        },
+    )
+    .await;
+
+    let report = console_report(&server, &fixture, &report, "").await;
+
+    let gamma = line(&report, r#"gamma {"size":1} Latency value"#);
+    assert_eq!(gamma.iteration, Some(Iteration(2)));
+    assert_eq!(gamma.iterations, Some(3));
 }
 
 // Kills: a report looked up without its project.

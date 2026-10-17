@@ -6,6 +6,8 @@ import type { Palette } from "./theme";
 const BAND_ALPHA = 0.16;
 const LIMIT_WIDTH = 1.3;
 const MARK_STROKE = 1.5;
+const RANGE_ALPHA = 0.45;
+const RANGE_WIDTH = 3;
 
 export interface Point {
 	x: number;
@@ -69,6 +71,27 @@ export const strokeLimits = (
 		}
 		ctx.stroke();
 	}
+	ctx.restore();
+};
+
+/** Each report's iterations as a bar at its x, from its lowest value at `bottom` to its highest at `top`. */
+export const strokeRanges = (
+	ctx: CanvasRenderingContext2D,
+	bars: readonly Area[],
+	color: string,
+	ratio: number,
+): void => {
+	ctx.save();
+	ctx.globalAlpha = RANGE_ALPHA;
+	ctx.strokeStyle = color;
+	ctx.lineWidth = RANGE_WIDTH * ratio;
+	ctx.lineCap = "round";
+	ctx.beginPath();
+	for (const { x, top, bottom } of bars) {
+		ctx.moveTo(x, top);
+		ctx.lineTo(x, bottom);
+	}
+	ctx.stroke();
 	ctx.restore();
 };
 

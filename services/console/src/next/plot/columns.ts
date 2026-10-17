@@ -12,34 +12,55 @@ export const alignToAxis = (data: PlotData, axis: PlotXAxis): PlotData => {
 	const order = data.x
 		.map((_, index) => index)
 		.sort((a, b) => versionOf(a) - versionOf(b) || a - b);
-	const position = new Array<number>(order.length);
+	return { ...pickPoints(data, order), x: order.map(versionOf) };
+};
+
+/** The data on only the points `order` names, in its order. */
+export const pickPoints = (
+	data: PlotData,
+	order: readonly number[],
+): PlotData => {
+	const take = <T>(column: readonly T[]) =>
+		order.map((from) => column[from] as T);
+	return {
+		...data,
+		x: take(data.x),
+		report: take(data.report),
+		...(data.iteration && { iteration: take(data.iteration) }),
+		lines: data.lines.map((line) => pickLine(line, order)),
+	};
+};
+
+/** A line's columns on only the points `order` names, each alert moved with its point. */
+export const pickLine = <
+	L extends Pick<
+		PlotLine,
+		"y" | "baseline" | "lower" | "upper" | "alerts" | "raised"
+	>,
+>(
+	line: L,
+	order: readonly number[],
+): L => {
+	const position: (number | undefined)[] = [];
 	order.forEach((from, to) => {
 		position[from] = to;
 	});
-	const take = (column: Column): (number | null)[] =>
-		order.map((from) => column[from] ?? null);
+	const take = (column: Column) => order.map((from) => column[from] ?? null);
 	return {
-		...data,
-		x: order.map(versionOf),
-		report: order.map((from) => data.report[from] ?? 0),
-		lines: data.lines.map(
-			(line): PlotLine => ({
-				...line,
-				y: take(line.y),
-				...(line.baseline && { baseline: take(line.baseline) }),
-				...(line.lower && { lower: take(line.lower) }),
-				...(line.upper && { upper: take(line.upper) }),
-				alerts: line.alerts
-					.map((index) => position[index] ?? index)
-					.sort((a, b) => a - b),
-				...(line.raised && {
-					raised: line.raised.map((alert) => ({
-						...alert,
-						index: position[alert.index] ?? alert.index,
-					})),
-				}),
+		...line,
+		y: take(line.y),
+		...(line.baseline && { baseline: take(line.baseline) }),
+		...(line.lower && { lower: take(line.lower) }),
+		...(line.upper && { upper: take(line.upper) }),
+		alerts: line.alerts
+			.flatMap((index) => position[index] ?? [])
+			.sort((a, b) => a - b),
+		...(line.raised && {
+			raised: line.raised.flatMap((alert) => {
+				const index = position[alert.index];
+				return index === undefined ? [] : [{ ...alert, index }];
 			}),
-		),
+		}),
 	};
 };
 
@@ -78,3 +99,63 @@ export const extent = (
 	}
 	return min <= max ? [min, max] : undefined;
 };
+
+/** Calls `each` with the span `[start, end)` of each report's points, which run together. */
+export const eachReport = (
+	report: readonly number[],
+	each: (start: number, end: number) => void,
+) => {
+	let start = 0;
+	for (let end = 1; end <= report.length; end++) {
+		if (end === report.length || report[end] !== report[start]) {
+			each(start, end);
+			start = end;
+		}
+	}
+};
+
+/**
+ * The values a line runs through, one per report: the iteration that alerted,
+ * else the last, as a report's points run in iteration order. Undefined when
+ * no report ran the line twice, so it draws as `y`.
+ */
+export const throughOf = (
+	y: readonly (number | null)[],
+	alerts: readonly number[],
+	report: readonly number[],
+	iteration: readonly number[] | undefined,
+): (number | null)[] | undefined => {
+	if (!iteration) {
+		return undefined;
+	}
+	const through = y.slice();
+	let several = false;
+	eachReport(report, (start, end) => {
+		let kept: number | undefined;
+		for (let point = start; point < end; point++) {
+			if (y[point] == null) {
+				continue;
+			}
+			if (kept !== undefined) {
+				several = true;
+				if (alerts.includes(kept) && !alerts.includes(point)) {
+					through[point] = null;
+					continue;
+				}
+				through[kept] = null;
+			}
+			kept = point;
+		}
+	});
+	return several ? through : undefined;
+};
+
+/** The points of iteration `n`, counting from 1. */
+export const pointsOf = (
+	iteration: readonly number[] | undefined,
+	length: number,
+	n: number,
+) =>
+	Array.from({ length }, (_, index) => index).filter(
+		(index) => (iteration?.[index] ?? 0) === n - 1,
+	);

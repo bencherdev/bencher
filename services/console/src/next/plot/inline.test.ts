@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { INLINE_PAD, inlineGeometry } from "./inline";
+import { INLINE_PAD, inlineGeometry, inlineOf } from "./inline";
+import { DAY, RUNS, START } from "./testing";
 
 const WIDTH = 150;
 const HEIGHT = 30;
@@ -86,5 +87,33 @@ describe("inlineGeometry", () => {
 			HEIGHT,
 		);
 		expect(points[0]?.x).toBe((LEFT + RIGHT) / 2);
+	});
+});
+
+describe("inlineOf", () => {
+	const [line] = RUNS.lines;
+	const history = {
+		y: line?.y ?? [],
+		upper: line?.upper ?? [],
+		alerts: line?.alerts ?? [],
+	};
+
+	// Kills a row's inline history that zigzags through every iteration, or redraws one run once.
+	test("runs through the iteration each report shows", () => {
+		expect(inlineOf(RUNS, history, undefined)).toEqual({
+			x: RUNS.x,
+			line: { ...history, y: [10, null, null, 12, null, 13, null] },
+		});
+		const once = { x: [1, 2], report: [0, 1] };
+		const plain = { y: [1, 2], alerts: [] };
+		expect(inlineOf(once, plain, undefined).line).toBe(plain);
+	});
+
+	// Kills a chosen iteration the inline history ignores, or whose alerts stay at their old index.
+	test("draws only the chosen iteration", () => {
+		expect(inlineOf(RUNS, history, 2)).toEqual({
+			x: [START + DAY, START + 2 * DAY],
+			line: { y: [14, 13], upper: [15, 12], alerts: [1] },
+		});
 	});
 });

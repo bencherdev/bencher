@@ -10,6 +10,7 @@ import {
 	on,
 	onCleanup,
 } from "solid-js";
+import IterationSelect from "../plot/IterationSelect";
 import { type ReportView, windowDays } from "./view";
 
 const SEARCH_DELAY = 250;
@@ -41,9 +42,11 @@ interface Option<T extends string> {
 	long: string;
 }
 
-/** The window ending at the report, the grouping, the sort, and a filter over the lines. */
+/** The window ending at the report, the grouping, the sort, the iteration once the report ran two, and a filter over the lines. */
 const Controls = (props: {
 	view: ReportView;
+	/** The most iterations any of the report's lines ran, 0 until known. */
+	iterations: number;
 	narrow: boolean;
 	onView: (view: ReportView, replace?: boolean) => void;
 }) => {
@@ -124,6 +127,11 @@ const Controls = (props: {
 				value={props.view.sort}
 				narrow={props.narrow}
 				onChange={(sort) => props.onView({ ...props.view, sort })}
+			/>
+			<IterationSelect
+				count={props.iterations}
+				value={props.view.iteration}
+				onChange={(iteration) => props.onView({ ...props.view, iteration })}
 			/>
 			<TextInput
 				type="search"

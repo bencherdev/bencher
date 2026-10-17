@@ -30,6 +30,8 @@ export interface Seed {
 		version_zero: SeedProject;
 		empty: SeedProject;
 		private: SeedProject;
+		/** Runs of three iterations on one line, the newest raising an alert on its second. */
+		iterations: SeedProject;
 	};
 	last_main_hash: string;
 	split_hash: string;

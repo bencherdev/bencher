@@ -61,14 +61,15 @@ describe("batchQuery", () => {
 		expect(paths[0]?.search).toBe("?window=10&page=1&per_page=24");
 	});
 
-	// Kills a cache entry shared by two views, or one split by which rows are open.
-	test("keys a batch by the view's lines, not its open rows", () => {
+	// Kills a cache entry shared by two views, or one split by which rows are open or the iteration they show, which would ask again.
+	test("keys a batch by the view's lines, not its open rows or their iteration", () => {
 		const key = (view: ReportView) =>
 			JSON.stringify(
 				batchQuery({} as never, "p", "r", view, { page: 1, perPage: 9 })
 					.queryKey,
 			);
 		expect(key({ ...VIEW, expanded: ["a"] })).toBe(key(VIEW));
+		expect(key({ ...VIEW, iteration: 2 })).toBe(key(VIEW));
 		expect(key({ ...VIEW, sort: "delta" })).not.toBe(key(VIEW));
 		expect(key({ ...VIEW, search: "x" })).not.toBe(key(VIEW));
 	});
