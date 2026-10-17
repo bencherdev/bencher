@@ -20,6 +20,7 @@ use bencher_json::{RunnerResourceId, Secret};
 use camino::Utf8PathBuf;
 use clap::Parser as _;
 
+use crate::parser::image_cache_gib::ImageCacheGib;
 use crate::parser::server::{Server, load_server};
 use crate::parser::{TaskRunnerOps, TaskSub};
 use audit::Audit;
@@ -129,7 +130,7 @@ fn merge_ssh(
     Ok((server, ssh, user))
 }
 
-/// Merge SSH + key/host/channel fields from CLI flags and server config file.
+/// Merge SSH + key/host/channel fields from CLI flags and server config file, with the image cache size from the file alone.
 fn merge_ssh_with_extras(
     runner: RunnerResourceId,
     server: Option<String>,
@@ -144,8 +145,10 @@ fn merge_ssh_with_extras(
     RunnerResourceId,
     Secret,
     Option<bencher_json::UpdateChannel>,
+    ImageCacheGib,
 )> {
     let file = load_server(&runner)?;
+    let image_cache_gib = image_cache_gib(file.as_ref(), &runner)?;
     let (server, ssh, user) = merge_ssh(file.as_ref(), server, ssh, user)?;
     let key = key
         .or(file.as_ref().and_then(|f| f.key.clone()))
@@ -160,5 +163,43 @@ fn merge_ssh_with_extras(
         runner,
         key,
         update_channel,
+        image_cache_gib,
     ))
+}
+
+/// The runner's image cache size, which no flag sets.
+fn image_cache_gib(
+    file: Option<&Server>,
+    runner: &RunnerResourceId,
+) -> anyhow::Result<ImageCacheGib> {
+    file.and_then(|f| f.image_cache_gib)
+        .ok_or_else(|| anyhow::anyhow!("runners.json sets no image_cache_gib for {runner}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn server(json: &str) -> Server {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn the_image_cache_gib_lookup_has_no_default() {
+        // Kills a default inside the lookup, which `start` and `deploy` would
+        // write as a cap runners.json never set.
+        let runner: RunnerResourceId = "runner-a".parse().unwrap();
+        let unset = server(r#"{ "server": "runner-a.example.com" }"#);
+        let set = server(r#"{ "server": "runner-a.example.com", "image_cache_gib": 64 }"#);
+        for file in [None, Some(&unset)] {
+            assert_eq!(
+                image_cache_gib(file, &runner).unwrap_err().to_string(),
+                "runners.json sets no image_cache_gib for runner-a"
+            );
+        }
+        assert_eq!(
+            image_cache_gib(Some(&set), &runner).unwrap().bytes(),
+            64 << 30
+        );
+    }
 }

@@ -3,10 +3,12 @@ use bencher_json::{RunnerResourceId, Secret, UpdateChannel};
 use super::merge_ssh_with_extras;
 use super::ssh::{Ssh, Stdin};
 use crate::parser::TaskStart;
+use crate::parser::image_cache_gib::ImageCacheGib;
 
 const DROP_IN_DIR: &str = "/etc/systemd/system/bencher-runner.service.d";
 const KEY_DIR: &str = "/etc/bencher-runner";
 pub const KEY_FILE: &str = "/etc/bencher-runner/key.env";
+pub const IMAGE_CACHE_SIZE: &str = "BENCHER_IMAGE_CACHE_SIZE";
 
 #[derive(Debug)]
 pub struct Start {
@@ -15,6 +17,7 @@ pub struct Start {
     runner: RunnerResourceId,
     key: Secret,
     update_channel: Option<UpdateChannel>,
+    image_cache_gib: ImageCacheGib,
     danger_allow_no_sandbox: bool,
 }
 
@@ -32,7 +35,7 @@ impl TryFrom<TaskStart> for Start {
             update_channel,
             danger_allow_no_sandbox,
         } = task;
-        let (ssh, host, runner, key, update_channel) =
+        let (ssh, host, runner, key, update_channel, image_cache_gib) =
             merge_ssh_with_extras(runner, server, ssh, user, key, host, update_channel)?;
         Ok(Self {
             ssh,
@@ -40,6 +43,7 @@ impl TryFrom<TaskStart> for Start {
             runner,
             key,
             update_channel,
+            image_cache_gib,
             danger_allow_no_sandbox,
         })
     }
@@ -52,6 +56,7 @@ impl Start {
         runner: RunnerResourceId,
         key: Secret,
         update_channel: Option<UpdateChannel>,
+        image_cache_gib: ImageCacheGib,
         danger_allow_no_sandbox: bool,
     ) -> Self {
         Self {
@@ -60,6 +65,7 @@ impl Start {
             runner,
             key,
             update_channel,
+            image_cache_gib,
             danger_allow_no_sandbox,
         }
     }
@@ -71,9 +77,16 @@ impl Start {
             runner,
             key,
             update_channel,
+            image_cache_gib,
             danger_allow_no_sandbox,
         } = self;
-        let credentials = credentials_conf(&host, &runner, update_channel, danger_allow_no_sandbox);
+        let credentials = credentials_conf(
+            &host,
+            &runner,
+            update_channel,
+            image_cache_gib,
+            danger_allow_no_sandbox,
+        );
         run_steps(
             start_steps(&key, &credentials),
             |command| ssh.run(command),
@@ -183,11 +196,13 @@ fn credentials_conf(
     host: &url::Url,
     runner: &RunnerResourceId,
     update_channel: Option<UpdateChannel>,
+    image_cache_gib: ImageCacheGib,
     danger_allow_no_sandbox: bool,
 ) -> String {
     let channel_env = update_channel.map_or_else(String::new, |channel| {
         format!("Environment=BENCHER_UPDATE_CHANNEL={channel}\n")
     });
+    let image_cache_bytes = image_cache_gib.bytes();
     let no_sandbox_env = if danger_allow_no_sandbox {
         "Environment=BENCHER_DANGER_ALLOW_NO_SANDBOX=true\n"
     } else {
@@ -199,6 +214,7 @@ fn credentials_conf(
          Environment=BENCHER_RUNNER={runner}\n\
          EnvironmentFile={KEY_FILE}\n\
          {channel_env}\
+         Environment={IMAGE_CACHE_SIZE}={image_cache_bytes}\n\
          {no_sandbox_env}"
     )
 }
@@ -206,6 +222,7 @@ fn credentials_conf(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::parser::image_cache_gib::gib;
 
     fn test_host() -> url::Url {
         "https://api.example.com".parse().unwrap()
@@ -217,13 +234,25 @@ mod tests {
 
     #[test]
     fn credentials_conf_minimal() {
-        let conf = credentials_conf(&test_host(), &test_runner(), None, false);
+        // Kills a start that leaves out a cap of 0, which the audit requires.
+        let conf = credentials_conf(&test_host(), &test_runner(), None, gib(0), false);
         assert_eq!(
             conf,
             "[Service]\n\
              Environment=BENCHER_HOST=https://api.example.com/\n\
              Environment=BENCHER_RUNNER=test-runner\n\
-             EnvironmentFile=/etc/bencher-runner/key.env\n"
+             EnvironmentFile=/etc/bencher-runner/key.env\n\
+             Environment=BENCHER_IMAGE_CACHE_SIZE=0\n"
+        );
+    }
+
+    #[test]
+    fn credentials_conf_with_the_image_cache_in_bytes() {
+        // Kills a cap written in GiB, which the runner reads as bytes.
+        let conf = credentials_conf(&test_host(), &test_runner(), None, gib(64), false);
+        assert!(
+            conf.contains("Environment=BENCHER_IMAGE_CACHE_SIZE=68719476736\n"),
+            "{conf}"
         );
     }
 
@@ -233,6 +262,7 @@ mod tests {
             &test_host(),
             &test_runner(),
             Some(UpdateChannel::Canary),
+            gib(0),
             false,
         );
         assert!(conf.contains("Environment=BENCHER_UPDATE_CHANNEL=canary\n"));
@@ -240,7 +270,7 @@ mod tests {
 
     #[test]
     fn credentials_conf_with_no_sandbox() {
-        let conf = credentials_conf(&test_host(), &test_runner(), None, true);
+        let conf = credentials_conf(&test_host(), &test_runner(), None, gib(0), true);
         assert!(conf.contains("Environment=BENCHER_DANGER_ALLOW_NO_SANDBOX=true\n"));
     }
 
@@ -250,6 +280,7 @@ mod tests {
             &test_host(),
             &test_runner(),
             Some(UpdateChannel::Canary),
+            gib(0),
             true,
         );
         let mut printed = Vec::new();

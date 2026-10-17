@@ -1,3 +1,4 @@
+pub mod image_cache_gib;
 pub mod refresh_minute;
 pub mod scrub_day;
 pub mod server;
