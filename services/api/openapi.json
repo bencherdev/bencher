@@ -14989,7 +14989,7 @@
           },
           "max_versions": {
             "nullable": true,
-            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 255. Requires the `branch` field to be set.",
+            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 64. Requires the `branch` field to be set.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -19247,7 +19247,7 @@
           },
           "max_versions": {
             "nullable": true,
-            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 255. Requires the `branch` field to be set.",
+            "description": "The maximum number of historical branch versions to include. Versions beyond this number will be omitted. The default is 64. Requires the `branch` field to be set.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0

@@ -92,7 +92,7 @@ bencher run \
 Use `_` as a value to explicitly ignore a parameter (leave it unset).
 
 The `--start-point-max-versions` flag controls how much history is available
-(default: 255 versions). More history gives better statistical confidence
+(default: 64 versions). More history gives better statistical confidence
 but may include stale data from before an intentional performance change.
 
 ## Managing Thresholds via CLI

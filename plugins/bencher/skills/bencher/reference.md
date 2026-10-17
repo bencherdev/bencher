@@ -12,7 +12,7 @@
 | `--hash <hash>` | | HEAD | Git commit hash |
 | `--start-point <branch>` | | | Base branch for new branch |
 | `--start-point-hash <hash>` | | | Full git hash for start point |
-| `--start-point-max-versions <n>` | | 255 | Historical versions to include |
+| `--start-point-max-versions <n>` | | 64 | Historical versions to include |
 | `--start-point-clone-thresholds` | | | Clone thresholds from start point |
 | `--start-point-reset` | | | Reset branch head to empty |
 

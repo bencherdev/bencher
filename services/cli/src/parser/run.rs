@@ -2,7 +2,7 @@
 use bencher_json::SpecResourceId;
 use bencher_json::{
     BranchNameId, DateTime, GitHash, ProjectResourceId, Secret, TestbedNameId,
-    project::report::Iteration,
+    project::{branch::START_POINT_MAX_VERSIONS, report::Iteration},
 };
 #[cfg(feature = "plus")]
 use bencher_parser::check_env;
@@ -136,7 +136,7 @@ pub struct CliRunBranch {
 
     /// The maximum number of historical branch versions to include (requires: `--branch-start-point`).
     /// Versions beyond this number will be omitted.
-    #[clap(long, requires = "start_point", default_value = "255")]
+    #[clap(long, requires = "start_point", default_value_t = START_POINT_MAX_VERSIONS)]
     pub start_point_max_versions: u32,
 
     /// Clone thresholds from the start point branch (requires: `--branch-start-point`).

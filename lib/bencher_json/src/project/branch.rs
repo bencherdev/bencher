@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{JsonHead, ProjectUuid};
 
-pub const START_POINT_MAX_VERSIONS: u32 = 255;
+pub const START_POINT_MAX_VERSIONS: u32 = 64;
 
 pub const BRANCH_MAIN_STR: &str = "main";
 #[expect(clippy::expect_used, reason = "infallible parse of known value")]
@@ -83,7 +83,7 @@ pub struct JsonNewStartPoint {
     pub hash: Option<GitHash>,
     /// The maximum number of historical branch versions to include.
     /// Versions beyond this number will be omitted.
-    /// The default is 255.
+    /// The default is 64.
     /// Requires the `branch` field to be set.
     pub max_versions: Option<u32>,
     /// If set to `true`, the thresholds from the start point branch will be deep copied to the new branch.
@@ -155,7 +155,7 @@ pub struct JsonUpdateStartPoint {
     pub hash: Option<GitHash>,
     /// The maximum number of historical branch versions to include.
     /// Versions beyond this number will be omitted.
-    /// The default is 255.
+    /// The default is 64.
     /// Requires the `branch` field to be set.
     pub max_versions: Option<u32>,
     /// If set to `true`, the thresholds from the start point branch will be deep copied to the branch.
