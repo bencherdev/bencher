@@ -359,7 +359,7 @@
 	background: var(--color-overlay-hover);
 }
 .ex-srow .grow,
-.ex-rbtn .grow {
+.ex-rhead > .grow {
 	display: flex;
 	flex: 1;
 	flex-direction: column;
@@ -373,6 +373,10 @@
 	overflow: hidden;
 	white-space: nowrap;
 }
+/* A run's hash keeps its full target on a phone, so its line clips nothing. */
+.ex-rhead > .grow > .ex-sline {
+	overflow: visible;
+}
 .ex-sub {
 	overflow: hidden;
 	color: var(--color-text-muted);
@@ -380,14 +384,14 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
-/* A report's row opens its benchmarks from anywhere on it; its hash, above that, opens the report. */
+/* A run's or report's row opens from anywhere on it; a run's hash, above that, opens the run. */
 .ex-rhead {
 	position: relative;
 }
 .ex-rbtn {
 	appearance: none;
 	display: flex;
-	flex: 1;
+	flex: 0 1 auto;
 	min-width: 0;
 	padding: 0;
 	border: 0;
@@ -417,7 +421,7 @@
 	flex: none;
 	color: var(--color-text-muted);
 }
-.ex-rbtn[aria-expanded="true"] ~ .ex-rcaret {
+.ex-rhead:has([aria-expanded="true"]) > .ex-rcaret {
 	transform: rotate(180deg);
 }
 /* The search opens in the row's flow, as in a sheet, so the list grows to hold it. */
@@ -474,7 +478,9 @@
 		align-items: center;
 		min-height: 44px;
 	}
+	/* The hash's band reaches past its line, which keeps the text's height. */
 	.console a.ex-rhash {
+		margin-block: -10px;
 		padding: 0 8px;
 	}
 	/* A row of its own, held before the shell says what the reader may do. */
