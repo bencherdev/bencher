@@ -20,7 +20,7 @@ import {
 	rememberShell,
 	rememberVersion,
 } from "./memory";
-import { TABS, classicHref, parseNextPath, profilePath, tabOf } from "./paths";
+import { TABS, classicHref, parseNextPath, tabOf } from "./paths";
 import { ProjectContext } from "./project";
 import { consoleProjectQuery } from "./queries";
 import { useQueryResult } from "./query";
@@ -37,6 +37,7 @@ const Layout = (
 		host?: string | undefined;
 		/** Where the router keeps project paths, under its base. */
 		route?: string | undefined;
+		signOut?: (back?: boolean) => void;
 	},
 ) => {
 	const location = useLocation();
@@ -136,9 +137,9 @@ const Layout = (
 				organization={organization()}
 				project={data()?.project.name ?? remembered()?.name}
 				alerts={data()?.active_alerts ?? remembered()?.alerts}
-				account={profilePath(props.reader.user.slug)}
 				reader={reader()}
-				email={props.reader.user.email}
+				user={props.reader.user}
+				signOut={props.signOut}
 				tabsRef={(el) => {
 					tabs = el;
 				}}

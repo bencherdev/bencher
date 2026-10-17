@@ -1,8 +1,9 @@
-import type { Page, Route } from "@playwright/test";
+import type { Route } from "@playwright/test";
 import {
 	crumb,
 	expect,
 	nextPath,
+	persistedQueries,
 	seed,
 	settle,
 	signedIn,
@@ -169,30 +170,3 @@ test.describe("signed in", () => {
 		await expect(alerts.getByText("1", { exact: true })).toBeVisible();
 	});
 });
-
-/** How many queries the signed in reader has persisted. */
-const persistedQueries = (page: Page) =>
-	page.evaluate(
-		(uuid) =>
-			new Promise<number>((resolve) => {
-				const open = indexedDB.open("bencher-console");
-				open.onerror = () => resolve(0);
-				open.onsuccess = () => {
-					const db = open.result;
-					if (!db.objectStoreNames.contains("cache")) {
-						db.close();
-						return resolve(0);
-					}
-					const get = db.transaction("cache").objectStore("cache").get(uuid);
-					get.onsuccess = () => {
-						db.close();
-						resolve(get.result?.state?.queries?.length ?? 0);
-					};
-					get.onerror = () => {
-						db.close();
-						resolve(0);
-					};
-				};
-			}),
-		seed.member.user.uuid,
-	);

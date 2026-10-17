@@ -59,6 +59,8 @@ export const seed: Seed = JSON.parse(readFileSync(seedPath, "utf8"));
 export const USER_KEY = "BENCHER_USER";
 export const THEME_KEY = "BENCHER_THEME";
 export const VERSION_KEY = "BENCHER_BMF_VERSIONS";
+export const SHELL_KEY = "BENCHER_CONSOLE_SHELL";
+export const ORGANIZATION_KEY = "BENCHER_ORGANIZATION";
 
 type StorageState = {
 	cookies: [];
@@ -187,3 +189,30 @@ export const approach = async (lines: Locator) => {
 	await mouse.move(box.x + 8, top + 8);
 	await mouse.move(box.x + box.width / 2, top + 16, { steps: 4 });
 };
+
+/** How many queries the signed in reader has persisted. */
+export const persistedQueries = (page: Page) =>
+	page.evaluate(
+		(uuid) =>
+			new Promise<number>((resolve) => {
+				const open = indexedDB.open("bencher-console");
+				open.onerror = () => resolve(0);
+				open.onsuccess = () => {
+					const db = open.result;
+					if (!db.objectStoreNames.contains("cache")) {
+						db.close();
+						return resolve(0);
+					}
+					const get = db.transaction("cache").objectStore("cache").get(uuid);
+					get.onsuccess = () => {
+						db.close();
+						resolve(get.result?.state?.queries?.length ?? 0);
+					};
+					get.onerror = () => {
+						db.close();
+						resolve(0);
+					};
+				};
+			}),
+		seed.member.user.uuid,
+	);

@@ -3,7 +3,6 @@ import { Suspense, createEffect } from "solid-js";
 import type { JsonAuthUser, JsonUser } from "../../types/bencher";
 import type { Api } from "../api";
 import ContentSkeleton from "../ContentSkeleton";
-import { profilePath } from "../paths";
 import Announcer from "../shell/Announcer";
 import Shell from "../shell/Shell";
 import { AccountContext } from "./context";
@@ -16,7 +15,7 @@ const AccountLayout = (
 		api: Api;
 		reader: () => JsonAuthUser;
 		keepUser: (user: JsonUser) => void;
-		signOut: () => void;
+		signOut: (back?: boolean) => void;
 	},
 ) => {
 	const location = useLocation();
@@ -32,10 +31,7 @@ const AccountLayout = (
 				signOut: props.signOut,
 			}}
 		>
-			<Shell
-				account={profilePath(props.reader().user.slug)}
-				email={props.reader().user.email}
-			/>
+			<Shell user={props.reader().user} signOut={props.signOut} />
 			<Announcer path={location.pathname} title={TITLE} />
 			<Suspense fallback={<ContentSkeleton />}>{props.children}</Suspense>
 		</AccountContext.Provider>

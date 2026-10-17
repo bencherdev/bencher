@@ -9,7 +9,6 @@ import ContentSkeleton from "../../../../../next/ContentSkeleton";
 import Head from "../../../../../next/Head.astro";
 import Main from "../../../../../next/astro/Main.astro";
 import NextHead from "../../../../../next/astro/NextHead.astro";
-import { profilePath } from "../../../../../next/paths";
 import { modulePreloads } from "../../../../../next/preloads";
 import Shell from "../../../../../next/shell/Shell";
 import "@bencherdev/ui/styles.css";
@@ -25,8 +24,6 @@ import "../../../../../next/plots/plots.css";
 import "../../../../../next/public/public.css";
 import "../../../../../next/feedback/feedback.css";
 import "../../../../../next/switcher/switcher.css";
-
-const user = Astro.params.user ?? "";
 ---
 
 <!doctype html>
@@ -42,7 +39,7 @@ const user = Astro.params.user ?? "";
 	</head>
 	<body>
 		<div id="console" class="console" data-api-url={BENCHER_API_URL}>
-			<Shell account={profilePath(user)} />
+			<Shell />
 			<ContentSkeleton />
 		</div>
 		<Main />

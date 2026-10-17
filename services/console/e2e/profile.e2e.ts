@@ -75,16 +75,24 @@ test.describe("Profile", () => {
 		const page = await readerPage(newContext, reader);
 		await page.goto(profilePath(reader.user.slug));
 		const slug = `${reader.user.slug}-x`;
-		const avatar = page.getByRole("link", { name: "Account" });
+		/** Where the avatar's menu leads for Profile, closing it again. */
+		const profileEntry = async () => {
+			await page.getByRole("button", { name: "Account" }).click();
+			const href = await page
+				.getByRole("menuitem", { name: "Profile" })
+				.getAttribute("href");
+			await page.keyboard.press("Escape");
+			return href;
+		};
 
 		await textbox(page, "Slug").fill(slug);
 		await save(page).click();
 
 		await expect(page).toHaveURL(profilePath(slug));
-		await expect(avatar).toHaveAttribute("href", profilePath(slug));
+		expect(await profileEntry()).toBe(profilePath(slug));
 		await page.reload();
 		await expect(textbox(page, "Slug")).toHaveValue(slug);
-		await expect(avatar).toHaveAttribute("href", profilePath(slug));
+		expect(await profileEntry()).toBe(profilePath(slug));
 	});
 
 	// Kills an email change sent before the reader confirms the revocation, a
@@ -148,16 +156,19 @@ test.describe("Profile", () => {
 test.describe("from a project page", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
-	// Kills an avatar that leaves the console's app for Profile, reloading
+	// Kills an avatar menu that leaves the console's app for Profile, reloading
 	// the page.
-	test("the avatar opens Profile without a reload", async ({ page }) => {
+	test("the avatar's menu opens Profile from a project without a reload", async ({
+		page,
+	}) => {
 		await page.goto(nextPath(hashbrown.slug, "settings"));
 		await expect(textbox(page, "Name")).toHaveValue(hashbrown.name);
 		await page.evaluate(() => {
 			(window as Window & { stayed?: boolean }).stayed = true;
 		});
 
-		await page.getByRole("link", { name: "Account" }).click();
+		await page.getByRole("button", { name: "Account" }).click();
+		await page.getByRole("menuitem", { name: "Profile" }).click();
 
 		await expect(page).toHaveURL(profilePath(seed.member.user.slug));
 		await expect(textbox(page, "Name")).toHaveValue(seed.member.user.name);
