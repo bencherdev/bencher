@@ -7,12 +7,15 @@ import UserLayout from "../../../../../layouts/console/UserLayout.astro";
 import TablePanel from "../../../../../components/console/table/TablePanel";
 import { BencherResource } from "../../../../../config/types";
 import FallbackTablePanel from "../../../../../components/console/table/FallbackTablePanel.astro";
+import AccountGate from "../../../../../next/astro/AccountGate.astro";
+import { accountPath } from "../../../../../next/account/paths";
 
 const params = Astro.params;
 const title = "API Keys";
 ---
 
 <UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <AccountGate slot="head" next={accountPath(params.user ?? "", "keys")} />
   <TablePanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}

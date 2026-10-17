@@ -1,13 +1,7 @@
 import type { RouteDefinition, RoutePreloadFunc } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { type Component, lazy, useContext } from "solid-js";
-import {
-	ORGANIZATIONS_PATH,
-	type PageName,
-	TABS,
-	accountUser,
-	pageName,
-} from "./paths";
+import { type PageName, TABS, pageName } from "./paths";
 import { ProjectContext } from "./project";
 
 type Page = Component & { preload: () => Promise<unknown> };
@@ -51,9 +45,17 @@ export const PAGES: Record<PageName, Page> = {
 	}),
 	Thresholds: lazy(() => import("./pages/Thresholds")),
 	Threshold: lazy(() => import("./pages/Threshold")),
-	Settings: lazy(() => import("./pages/Settings")),
+	// Reading only the default export spares the bundler a namespace object.
+	Settings: lazy<Component>(() =>
+		import("./pages/Settings").then(({ default: page }) => ({ default: page })),
+	),
 	Dimensions: lazy(() => import("./pages/Dimensions")),
-	Profile: lazy(() => import("./pages/Profile")),
+	// Reading only the default export spares the bundler a namespace object.
+	Profile: lazy<Component>(() =>
+		import("./pages/Profile").then(({ default: page }) => ({ default: page })),
+	),
+	UserKeys: lazy(() => import("./pages/UserKeys")),
+	LegacyTokens: lazy(() => import("./pages/LegacyTokens")),
 	// An organization's page draws under its bar, which loads with it.
 	OrgGeneral: lazy(
 		async () =>
@@ -107,6 +109,8 @@ export const PROJECTS_ROUTE = "/projects";
 export const CONSOLE_ROUTES: RouteDefinition[] = [
 	{ path: PROJECTS_ROUTE, children: ROUTES },
 	{ path: "/users/:user/settings", component: PAGES.Profile },
+	{ path: "/users/:user/keys", component: PAGES.UserKeys },
+	{ path: "/users/:user/tokens", component: PAGES.LegacyTokens },
 	{
 		path: "/organizations/:organization/settings",
 		component: PAGES.OrgGeneral,
@@ -119,15 +123,3 @@ export const CONSOLE_ROUTES: RouteDefinition[] = [
 
 /** An organization's bar, loaded only on its pages. */
 export const OrganizationLayout = lazy(organizationLayout);
-
-/** The account page `pathname` draws, if it is one. */
-export const accountPage = (
-	pathname: string,
-): "Profile" | "Organizations" | undefined => {
-	if (accountUser(pathname)) {
-		return "Profile";
-	}
-	return [ORGANIZATIONS_PATH, `${ORGANIZATIONS_PATH}/add`].includes(pathname)
-		? "Organizations"
-		: undefined;
-};

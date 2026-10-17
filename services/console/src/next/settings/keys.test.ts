@@ -120,7 +120,6 @@ describe("listed", () => {
 		expect(JSON.stringify(row)).not.toContain(created.key);
 		expect(row).toEqual({
 			uuid: "u",
-			project: "p",
 			name: "release-benchmarks",
 			creation: "2026-09-13T00:00:00Z",
 			expiration: "2026-12-12T00:00:00Z",

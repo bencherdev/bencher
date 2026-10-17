@@ -5,7 +5,7 @@ const CLASSIC_PROJECTS = "/console/projects";
 /** The new console serves BMF v1 projects here until version 0 retires. */
 export const NEXT_PROJECTS = `/next${CLASSIC_PROJECTS}`;
 /** The account pages, under the reader's slug. */
-const NEXT_USERS = `${NEXT_CONSOLE}/users`;
+export const NEXT_USERS = `${NEXT_CONSOLE}/users`;
 
 export const profilePath = (user: string) => `${NEXT_USERS}/${user}/settings`;
 
@@ -20,10 +20,6 @@ const segmentUnder = (base: string, pathname: string) =>
 	pathname.startsWith(`${base}/`)
 		? pathname.slice(base.length + 1).split("/")[0] || undefined
 		: undefined;
-
-/** The user an account page is about, if `pathname` is one. */
-export const accountUser = (pathname: string) =>
-	segmentUnder(NEXT_USERS, pathname);
 
 /** The organization an organization page is about, if `pathname` is one. */
 export const organizationOf = (pathname: string) =>
@@ -95,6 +91,8 @@ export type PageName =
 	| "Threshold"
 	| "Dimensions"
 	| "Profile"
+	| "UserKeys"
+	| "LegacyTokens"
 	| "OrgGeneral"
 	| "Organizations"
 	| "NotFound";

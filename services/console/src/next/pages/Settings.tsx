@@ -1,17 +1,27 @@
 import { useLocation } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
-import { Match, Show, Switch, createComputed, createMemo } from "solid-js";
+import {
+	Match,
+	Show,
+	Switch,
+	createComputed,
+	createMemo,
+	lazy,
+} from "solid-js";
 import ContentSkeleton from "../ContentSkeleton";
 import { parseNextPath } from "../paths";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
-import { keysQuery } from "../settings/data";
+import { keysQuery, projectKeys } from "../settings/data";
 import Frame from "../settings/Frame";
 import General from "../settings/General";
 import Keys from "../settings/Keys";
 import { sectionOf } from "../settings/section";
-import NotFound from "./NotFound";
+
+// A static import would leave the account's key pages, which load this chunk,
+// reading NotFound through a namespace whose helper sits in a classic chunk.
+const NotFound = lazy(() => import("./NotFound"));
 
 /** General and Keys, with Dimensions beside them in the rail. */
 const Settings = () => {
@@ -29,8 +39,8 @@ const Settings = () => {
 			section() === "keys" &&
 			bootstrap().data?.permissions.manage !== false
 		) {
-			client.prefetchQuery(keysQuery(api, slug(), false));
-			client.prefetchQuery(keysQuery(api, slug(), true));
+			client.prefetchQuery(keysQuery(api, projectKeys(slug()), false));
+			client.prefetchQuery(keysQuery(api, projectKeys(slug()), true));
 		}
 	});
 	return (
@@ -52,3 +62,9 @@ const Settings = () => {
 };
 
 export default Settings;
+
+// The account's key pages load this chunk rather than split it.
+export { keysKey, keysQuery, revokeKey } from "../settings/data";
+export { failureOf } from "../settings/failure";
+export { KeyTable, default as KeyList, Revoke } from "../settings/KeyList";
+export { type KeyRow, newestFirst } from "../settings/keys";

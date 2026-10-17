@@ -107,7 +107,9 @@ that the classic console also reads or writes: `BENCHER_USER`, `BENCHER_THEME`,
 `BENCHER_BMF_VERSIONS`, and `BENCHER_CONSOLE_SHELL` (`src/next/memory.ts`).
 Change a key or its shape on both sides at once.
 
-Profile is served by `src/pages/next/console/users/[user]/settings.astro`, and an
+Every account page under `src/pages/next/console/users/[user]/` is served by
+`src/next/astro/AccountPage.astro`, Organizations by
+`src/pages/next/console/organizations/index.astro` and `add.astro`, and an
 organization's General by `src/pages/next/console/organizations/[organization]/settings.astro`.
 Every page loads the app through `src/next/astro/Main.astro`, so they share one entry,
 which `src/next/build/preloads.mjs` finds by that component: a page with a script

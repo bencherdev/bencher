@@ -732,7 +732,10 @@
 	flex-wrap: wrap;
 	gap: 8px;
 }
+/* A count holds a digit's width before it arrives, so nothing beside it moves. */
 .count {
+	display: inline-block;
+	min-width: 1ch;
 	font: 11px var(--font-family-code);
 	color: var(--color-text-muted);
 }

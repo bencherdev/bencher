@@ -1,7 +1,10 @@
-import type {
+import type { JsonProjectKey } from "../../types/bencher";
+
+/** A key as a list holds it: never its secret. */
+export type KeyRow = Pick<
 	JsonProjectKey,
-	JsonProjectKeyCreated,
-} from "../../types/bencher";
+	"uuid" | "name" | "creation" | "expiration" | "revoked"
+>;
 
 const DAY = 24 * 60 * 60;
 
@@ -48,7 +51,7 @@ export const formatDay = (ms: number, timeZone?: string) => {
 
 /** How an active key's end reads: a day, Never, or the day it expired. */
 export const keyEnd = (
-	key: Pick<JsonProjectKey, "creation" | "expiration">,
+	key: Pick<KeyRow, "creation" | "expiration">,
 	now: number,
 	timeZone?: string,
 ) => {
@@ -63,31 +66,31 @@ export const keyEnd = (
 };
 
 /** Keys by when they were made, newest first, so a new key leads. */
-export const newestFirst = (keys: readonly JsonProjectKey[]) =>
+export const newestFirst = (keys: readonly KeyRow[]) =>
 	[...keys].sort(
 		(a, b) =>
 			Date.parse(b.creation) - Date.parse(a.creation) ||
 			a.name.localeCompare(b.name),
 	);
 
-/** A new key as the list holds it: everything but the secret, which is shown once. */
+/** A key as the list holds it, without the secret a new key or a legacy token carries. */
 export const listed = ({
 	uuid,
-	project,
 	name,
 	creation,
 	expiration,
-}: JsonProjectKeyCreated): JsonProjectKey => ({
+	revoked,
+}: KeyRow): KeyRow => ({
 	uuid,
-	project,
 	name,
 	creation,
 	expiration,
+	...(revoked ? { revoked } : {}),
 });
 
 export interface KeyLists {
-	active: JsonProjectKey[];
-	revoked: JsonProjectKey[];
+	active: KeyRow[];
+	revoked: KeyRow[];
 }
 
 /** The lists once `uuid` is revoked at `at`. */

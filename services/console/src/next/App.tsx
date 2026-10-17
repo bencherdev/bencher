@@ -4,18 +4,14 @@ import { Match, Suspense, Switch, createSignal } from "solid-js";
 import type { JsonAuthUser, JsonUser } from "../types/bencher";
 import { AccountContext } from "./account/context";
 import AccountLayout from "./account/Layout";
+import { accountPage } from "./account/paths";
 import type { Api } from "./api";
 import { FlushContext } from "./flush";
 import Layout from "./Layout";
 import type { BmfVersion } from "./memory";
 import { NEXT_CONSOLE, organizationOf } from "./paths";
 import { rememberReader } from "./reader";
-import {
-	CONSOLE_ROUTES,
-	OrganizationLayout,
-	PROJECTS_ROUTE,
-	accountPage,
-} from "./routes";
+import { CONSOLE_ROUTES, OrganizationLayout, PROJECTS_ROUTE } from "./routes";
 
 const App = (props: {
 	client: QueryClient;
@@ -62,11 +58,7 @@ const App = (props: {
 								}
 							>
 								<Match when={accountPage(section.location.pathname)}>
-									{(page) => (
-										<AccountLayout page={page()}>
-											{section.children}
-										</AccountLayout>
-									)}
+									<AccountLayout>{section.children}</AccountLayout>
 								</Match>
 								<Match when={organizationOf(section.location.pathname)}>
 									<Suspense>
