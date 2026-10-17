@@ -2462,7 +2462,11 @@ export interface JsonUpdateUser {
 	 * Maximum length is 64 characters.
 	 */
 	slug?: Slug;
-	/** The new email for the user. */
+	/**
+	 * The new email for the user.
+	 * A user's new email for themselves takes effect once it is confirmed from a link sent to it.
+	 * A server admin's change to another user's email takes effect at once.
+	 */
 	email?: Email;
 	/**
 	 * Update whether the user is an admin.

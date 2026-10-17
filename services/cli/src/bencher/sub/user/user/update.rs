@@ -1,9 +1,10 @@
 use bencher_client::types::JsonUpdateUser;
-use bencher_json::{Email, UserName, UserResourceId, UserSlug};
+use bencher_json::{Email, JsonUser, UserName, UserResourceId, UserSlug};
 
 use crate::{
     CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
+    cli_eprintln,
     parser::user::CliUserUpdate,
 };
 
@@ -65,9 +66,9 @@ impl From<Update> for JsonUpdateUser {
 
 impl SubCmd for Update {
     async fn exec(&self) -> Result<(), CliError> {
-        let _json = self
+        let json: JsonUser = self
             .backend
-            .send(|client| async move {
+            .send_with(|client| async move {
                 client
                     .user_patch()
                     .user(self.user.clone())
@@ -76,6 +77,11 @@ impl SubCmd for Update {
                     .await
             })
             .await?;
+        if let Some(email) = &self.email
+            && *email != json.email
+        {
+            cli_eprintln!("A confirm link was sent to {email}.");
+        }
         Ok(())
     }
 }

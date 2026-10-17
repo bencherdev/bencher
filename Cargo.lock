@@ -370,6 +370,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
+ "slog",
  "tokio",
  "uuid",
 ]

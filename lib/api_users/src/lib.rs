@@ -8,6 +8,7 @@ use serde_json as _;
 #[cfg(test)]
 use tokio as _;
 
+mod email;
 mod keys;
 mod tokens;
 mod users;
@@ -28,6 +29,12 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(users::users_get)?;
         api_description.register(users::user_get)?;
         api_description.register(users::user_patch)?;
+
+        // Email
+        if http_options {
+            api_description.register(email::user_email_options)?;
+        }
+        api_description.register(email::user_email_put)?;
 
         // Keys
         if http_options {

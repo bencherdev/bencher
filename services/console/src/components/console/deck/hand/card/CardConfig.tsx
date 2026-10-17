@@ -17,6 +17,8 @@ export interface CardConfig {
 	) => boolean;
 	path: (params: Params, data: object) => string;
 	notify?: boolean;
+	/** What to tell the user when an update waits on something else, such as a confirm link. */
+	pending?: (data: object, response: object) => undefined | string;
 }
 
 export default CardConfig;

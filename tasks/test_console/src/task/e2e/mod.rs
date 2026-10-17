@@ -90,7 +90,13 @@ impl E2e {
         )?);
         wait_until_up(&format!("{api_url}/v0/server/version")).await?;
 
-        let seed = seed::Seed::new(&api_url, &console_url, &dir.join("bencher.db")).await?;
+        let seed = seed::Seed::new(
+            &api_url,
+            &console_url,
+            &dir.join("bencher.db"),
+            servers.api_log.as_str(),
+        )
+        .await?;
         let seed_path = dir.join("seed.json");
         fs::write(&seed_path, serde_json::to_string_pretty(&seed)?)?;
 

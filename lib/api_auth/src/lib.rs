@@ -10,6 +10,7 @@ use tokio as _;
 
 #[cfg(feature = "plus")]
 use bencher_json::NonEmpty;
+use bencher_schema::{AUTH_TOKEN_TTL, CLIENT_TOKEN_TTL};
 #[cfg(not(feature = "plus"))]
 use schemars as _;
 #[cfg(not(feature = "plus"))]
@@ -21,13 +22,6 @@ mod login;
 mod oauth;
 pub mod oci;
 mod signup;
-
-// TODO Custom max TTL
-// 30 minutes * 60 seconds / minute
-const AUTH_TOKEN_TTL: u32 = 30 * 60;
-// TODO Custom max TTL
-// 30 days * 24 hours / day * 60 minutes / hour * 60 seconds / minute
-const CLIENT_TOKEN_TTL: u32 = 30 * 24 * 60 * 60;
 
 #[cfg(feature = "plus")]
 const PLAN_ARG: &str = "plan";

@@ -10522,7 +10522,7 @@
           "users"
         ],
         "summary": "Update a user",
-        "description": "Update a user. Only the authenticated user themselves and server admins have access to this endpoint. Some fields can only be updated by an admin. Changing the email, admin, or locked field requires a user session, even for an admin: neither a user API key nor a deprecated user API token can change them. To manage users within your organization, use the organization members endpoints.",
+        "description": "Update a user. Only the authenticated user themselves and server admins have access to this endpoint. Some fields can only be updated by an admin. Changing the email, admin, or locked field requires a user session, even for an admin: neither a user API key nor a deprecated user API token can change them. A user's new email for themselves takes effect only once it is confirmed from a link sent to that email, so until then the response shows the current email. Any later update to the user ends that link. A server admin's change to another user's email takes effect at once. To manage users within your organization, use the organization members endpoints.",
         "operationId": "user_patch",
         "parameters": [
           {
@@ -10589,6 +10589,92 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonUser"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/users/{user}/email": {
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Confirm a new email",
+        "description": "Change a user's email to the new email that a confirm link was sent to. A user who updates their own email is sent that link at the new email, and its token lasts as long as a login link's. No credential is needed, so the link works from any device. Any later update to the user ends the link, this confirm included. The response holds a new session for the new email. An invalid or expired token is refused with `401 Unauthorized`; a token for another user, or one sent before the user's latest update, with `403 Forbidden`; and a new email that another user has taken since with `409 Conflict`.",
+        "operationId": "user_email_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user",
+            "description": "The slug or UUID for a user.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonAuthUser"
                 }
               }
             }
@@ -19305,7 +19391,7 @@
           },
           "email": {
             "nullable": true,
-            "description": "The new email for the user.",
+            "description": "The new email for the user. A user's new email for themselves takes effect once it is confirmed from a link sent to it. A server admin's change to another user's email takes effect at once.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Email"
