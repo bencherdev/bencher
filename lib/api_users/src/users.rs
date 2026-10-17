@@ -188,6 +188,8 @@ async fn get_one_inner(
 /// Update a user.
 /// Only the authenticated user themselves and server admins have access to this endpoint.
 /// Some fields can only be updated by an admin.
+/// Changing the email, admin, or locked field requires a user session, even for an admin:
+/// neither a user API key nor a deprecated user API token can change them.
 /// To manage users within your organization, use the organization members endpoints.
 #[endpoint {
     method = PATCH,
@@ -234,12 +236,35 @@ async fn patch_inner(
         return Err(admin_only_error("locked"));
     }
 
-    let update_user = UpdateUser::from(json_user.clone());
-
     let email_changed = json_user
         .email
         .as_ref()
         .is_some_and(|new_email| *new_email != query_user.email);
+    let admin_changed = json_user
+        .admin
+        .is_some_and(|new_admin| new_admin != query_user.admin);
+    let locked_changed = json_user
+        .locked
+        .is_some_and(|new_locked| new_locked != query_user.locked);
+    if !auth_user.is_session() {
+        if email_changed {
+            return Err(forbidden_error(
+                "Only a user session can change a user's email.",
+            ));
+        }
+        if admin_changed {
+            return Err(forbidden_error(
+                "Only a user session can change whether a user is an admin.",
+            ));
+        }
+        if locked_changed {
+            return Err(forbidden_error(
+                "Only a user session can lock or unlock a user.",
+            ));
+        }
+    }
+
+    let update_user = UpdateUser::from(json_user.clone());
 
     if email_changed {
         let now = context.clock.now();
