@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/astro";
 import { createMemo, createResource, onMount } from "solid-js";
-import type { JsonOrganization, JsonProject } from "../../../types/bencher";
+import type { JsonConsoleUser } from "../../../types/bencher";
 import { authUser, removeUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { removeOnboardProjectKey } from "../../../util/onboard";
@@ -24,6 +24,7 @@ import {
 	validPlanLevel,
 } from "../../../util/valid";
 import { PLAN_PARAM } from "../../auth/auth";
+import { consoleDestination } from "./destination";
 
 export interface Props {
 	apiUrl: string;
@@ -69,20 +70,16 @@ const ConsoleRedirect = (props: Props) => {
 		);
 	};
 
-	const orgsFetcher = createMemo(() => {
+	const fetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
 			token: user.token,
 		};
 	});
-	const getOrganizations = async (fetcher: {
+	const redirect = async (fetcher: {
 		bencher_valid: InitValid;
 		token: string;
 	}) => {
-		const cachedOrganization = getOrganization();
-		if (cachedOrganization) {
-			navigate(orgDestination(cachedOrganization.slug), { replace: true });
-		}
 		if (!fetcher.bencher_valid) {
 			return;
 		}
@@ -90,100 +87,60 @@ const ConsoleRedirect = (props: Props) => {
 			logout();
 			return;
 		}
-		const path = "/v0/organizations?per_page=2";
+		const path = `/v0/console/users/${user.user.uuid}`;
 		return await httpGet(props.apiUrl, path, fetcher.token)
 			.then((resp) => {
-				const orgs = resp?.data;
-				switch (orgs?.length) {
-					case 0:
-						help();
+				const reader: JsonConsoleUser = resp?.data;
+				const destination = consoleDestination(
+					reader,
+					getOrganization()?.slug,
+					validPlanLevel(searchParams[PLAN_PARAM]),
+				);
+				const only =
+					reader.organizations.length === 1
+						? reader.organizations[0]
+						: undefined;
+				if (only) {
+					setOrganization(only);
+				}
+				switch (destination.kind) {
+					case "next":
+						navigate(destination.path, { replace: true });
 						break;
-					case 1:
+					case "classic":
+						navigate(
+							forwardParams(
+								destination.path,
+								[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM],
+								null,
+							),
+							{ replace: true },
+						);
 						break;
-					default:
+					case "organization":
+						navigate(orgDestination(destination.slug), { replace: true });
+						break;
+					case "organizations":
 						navigate("/console/organizations", { replace: true });
 						break;
-				}
-				return orgs;
-			})
-			.catch((error) => {
-				console.error(error);
-				Sentry.captureException(error);
-				help();
-				return;
-			});
-	};
-	const [organizations] = createResource<
-		undefined | JsonOrganization[],
-		ReturnType<typeof orgsFetcher>
-	>(orgsFetcher, getOrganizations);
-
-	const organization = createMemo(() => {
-		const orgs = organizations();
-		if (Array.isArray(orgs) && (orgs?.length ?? 0) > 0) {
-			const org = orgs?.[0] as JsonOrganization;
-			if (orgs.length === 1) {
-				setOrganization(org);
-			}
-			return org;
-		}
-		return undefined;
-	});
-
-	const projectsFetcher = createMemo(() => {
-		return {
-			bencher_valid: bencher_valid(),
-			token: user.token,
-			organization: organization(),
-		};
-	});
-	const getProjects = async (fetcher: {
-		bencher_valid: InitValid;
-		token: string;
-		organization: undefined | JsonOrganization;
-	}) => {
-		if (!fetcher.bencher_valid) {
-			return;
-		}
-		if (!validJwt(fetcher.token)) {
-			logout();
-			return;
-		}
-		if (
-			organizations.loading ||
-			(organizations()?.length ?? 0) > 1 ||
-			fetcher.organization === undefined
-		) {
-			return;
-		}
-		const org = fetcher.organization;
-		const path = `/v0/organizations/${org.slug}/projects?per_page=1`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
-			.then((resp) => {
-				const projects = resp?.data;
-				switch (projects?.length) {
-					case 0:
+					case "onboard":
 						navigate(
 							forwardParams("/console/onboard/project", [PLAN_PARAM], []),
 							{ replace: true },
 						);
 						break;
-					default:
-						navigate(orgDestination(org.slug), { replace: true });
+					case "help":
+						help();
+						break;
 				}
-				return projects;
 			})
 			.catch((error) => {
 				console.error(error);
 				Sentry.captureException(error);
 				help();
-				return;
 			});
 	};
-	const [_projects] = createResource<
-		undefined | JsonProject[],
-		ReturnType<typeof projectsFetcher>
-	>(projectsFetcher, getProjects);
+	createResource(fetcher, redirect);
 
 	return <></>;
 };

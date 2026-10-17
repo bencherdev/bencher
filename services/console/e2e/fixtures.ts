@@ -41,6 +41,8 @@ export interface Seed {
 		/** Each with one report, a queued job's, on an archived branch: one per repeat. */
 		handover: SeedProject[];
 	};
+	/** The admin's version 1 project with the newest report, in an organization no test changes. */
+	admin_newest: SeedProject;
 	last_main_hash: string;
 	split_hash: string;
 	/** The runner project's run whose jobs run and wait, one report landed. */

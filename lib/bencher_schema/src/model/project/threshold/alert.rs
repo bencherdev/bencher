@@ -7,8 +7,9 @@ use bencher_json::{
     },
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _,
-    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, JoinOnDsl as _,
+    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableExpression,
+    SelectableHelper as _,
 };
 use dropshot::HttpError;
 
@@ -359,6 +360,32 @@ impl UpdateAlert {
             status: Some(AlertStatus::Silenced),
             modified: now,
         }
+    }
+}
+
+/// Alerts on an archived branch, testbed, or measure, or with `None` or `Some(false)`, on none.
+pub fn archived_filter<QS>(
+    archived: Option<bool>,
+) -> Box<dyn BoxableExpression<QS, diesel::sqlite::Sqlite, SqlType = diesel::sql_types::Bool>>
+where
+    schema::branch::archived: SelectableExpression<QS>,
+    schema::testbed::archived: SelectableExpression<QS>,
+    schema::measure::archived: SelectableExpression<QS>,
+{
+    if let Some(true) = archived {
+        Box::new(
+            schema::branch::archived
+                .is_not_null()
+                .or(schema::testbed::archived.is_not_null())
+                .or(schema::measure::archived.is_not_null()),
+        )
+    } else {
+        Box::new(
+            schema::branch::archived
+                .is_null()
+                .and(schema::testbed::archived.is_null())
+                .and(schema::measure::archived.is_null()),
+        )
     }
 }
 

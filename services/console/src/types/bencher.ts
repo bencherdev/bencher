@@ -1672,6 +1672,27 @@ export interface JsonConsoleThresholds {
 	measures: JsonConsoleThresholdMeasure[];
 }
 
+export interface JsonConsoleUserProject {
+	uuid: Uuid;
+	name: ResourceName;
+	slug: Slug;
+	organization: Uuid;
+	bmf_version: BmfVersion;
+	/** When its newest report ended, or null with no reports. */
+	last_report?: DateTimeMillis;
+	/** The active alerts its Alerts list shows by default. */
+	active_alerts: number;
+}
+
+export interface JsonConsoleUser {
+	uuid: Uuid;
+	name: UserName;
+	slug: Slug;
+	organizations: JsonConsoleOrganization[];
+	/** The projects of those organizations. */
+	projects: JsonConsoleUserProject[];
+}
+
 export interface JsonCustomer {
 	uuid: Uuid;
 	name: NonEmpty;
