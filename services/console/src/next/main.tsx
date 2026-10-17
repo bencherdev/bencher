@@ -14,7 +14,7 @@ import {
 import { handOff } from "./handoff";
 import { idbStore } from "./idb";
 import { forgetShell } from "./memory";
-import { pageName, parseNextPath } from "./paths";
+import { accountUser, pageName, parseNextPath } from "./paths";
 import { consoleProjectQuery, fetchedVersions } from "./queries";
 import { USER_KEY, isCurrent, readReader, signInHref } from "./reader";
 import { PAGES } from "./routes";
@@ -47,7 +47,14 @@ const boot = async (mount: HTMLElement) => {
 
 	// Each build has its own chunk name, so a new console never reads an old cache.
 	const buster = new URL(import.meta.url).pathname;
-	const page = PAGES[place ? pageName(place.rest) : "NotFound"];
+	const page =
+		PAGES[
+			place
+				? pageName(place.rest)
+				: accountUser(location.pathname)
+					? "Profile"
+					: "NotFound"
+		];
 	await within(
 		BOOT_WAIT,
 		Promise.all([
@@ -69,6 +76,7 @@ const boot = async (mount: HTMLElement) => {
 					reader={reader}
 					versions={versions}
 					flush={persister.flush}
+					signOut={() => signOut(store, client)}
 					host={host}
 				/>
 			),

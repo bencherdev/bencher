@@ -32,3 +32,23 @@ test("says the new page's title on each navigation, and only then", async () => 
 	});
 	await expect.element(status).toHaveTextContent("Plots | Hashbrown | Bencher");
 });
+
+// Kills a move between a project page and an account page, which swaps the
+// layout and its announcer, said by nothing.
+test("a later announcer, as a swapped layout mounts, says its title at once", async () => {
+	const root = document.createElement("div");
+	document.body.append(root);
+	dispose = render(
+		() => (
+			<Announcer
+				path="/users/muriel-bagge/settings"
+				title="Profile | Bencher"
+			/>
+		),
+		root,
+	);
+
+	await expect
+		.element(page.getByRole("status"))
+		.toHaveTextContent("Profile | Bencher");
+});

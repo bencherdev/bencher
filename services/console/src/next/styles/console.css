@@ -95,6 +95,10 @@
 .crumb-skel {
 	width: 96px;
 }
+.crumbtext {
+	color: var(--color-text-muted);
+	font-size: 14px;
+}
 .crumb-project {
 	overflow: hidden;
 	color: var(--color-text-primary);
@@ -322,6 +326,9 @@
 	flex-direction: column;
 	gap: 4px;
 }
+.rail .eyebrow {
+	padding: 8px 12px;
+}
 .console .rail a {
 	display: flex;
 	align-items: center;
@@ -524,6 +531,22 @@
 .mono {
 	font-family: var(--font-family-code);
 }
+.notice {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px 16px;
+	margin: 0;
+	padding: 12px 16px;
+	border: var(--border-width) solid var(--color-border);
+	border-radius: var(--radius-container);
+	background: var(--color-background-card);
+	font-size: 13.5px;
+}
+.notice > .ui-icon {
+	color: var(--color-text-muted);
+	font-size: 17px;
+}
 .set-status {
 	display: inline-flex;
 	align-items: center;
@@ -720,6 +743,11 @@
 	.railseg {
 		display: flex;
 	}
+	.console .notice a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+	}
 	.formrow {
 		grid-template-columns: minmax(0, 1fr);
 		gap: 8px;
@@ -761,6 +789,7 @@
 		padding: 0 8px;
 	}
 	.crumb,
+	.crumbtext,
 	.tools {
 		display: none;
 	}

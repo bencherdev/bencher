@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, useParams } from "@solidjs/router";
+import { useLocation, useParams } from "@solidjs/router";
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
@@ -25,7 +25,7 @@ import { useNarrow } from "../plot/narrow";
 import type { PlotAlerts } from "../plot/Plot";
 import { FIRST, useAlertBatches } from "../alerts/batches";
 import { useFold } from "../alerts/fold";
-import { useProject } from "../project";
+import { useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import LineTable from "../report/LineTable";
@@ -56,7 +56,7 @@ const Threshold = () => {
 	const { api, slug, host } = useProject();
 	const params = useParams<{ threshold: string }>();
 	const location = useLocation();
-	const navigate = useNavigate();
+	const navigate = useProjectNavigate();
 	const fold = useFold();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
 	const view = createMemo(() =>

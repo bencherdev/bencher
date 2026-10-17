@@ -4,7 +4,8 @@ import { describe, expect, test } from "vitest";
 import { decodeBase64 } from "../../util/convert";
 import { USER_KEY } from "../reader";
 import { VERSION_KEY } from "../memory";
-import { classicPlace, projectPath } from "../paths";
+import { classicPlace, profilePath, projectPath } from "../paths";
+import AccountGate from "./AccountGate.astro";
 import ClassicGate from "./ClassicGate.astro";
 import Landing from "./Landing.astro";
 import NextHead from "./NextHead.astro";
@@ -199,6 +200,37 @@ describe("ClassicGate on the public perf page", () => {
 	test("a project remembered on version 0, or not at all, stays", async () => {
 		expect(await perf(versions("hashbrown", 0))).toEqual([]);
 		expect(await perf({})).toEqual([]);
+	});
+});
+
+describe("AccountGate", () => {
+	const URL_ = "https://bencher.dev/console/users/muriel-bagge/settings#top";
+	const gate = async (storage: Record<string, string>) =>
+		run(
+			await container.renderToString(AccountGate, {
+				props: { user: "muriel-bagge" },
+				request: new Request(URL_),
+			}),
+			URL_,
+			storage,
+		).replaced;
+
+	// Kills a classic Profile that waits for its own code to leave, or that
+	// asks the version of one project rather than any.
+	test("a reader with a version 1 project goes to Profile under /next/", async () => {
+		expect(
+			await gate({
+				[VERSION_KEY]: JSON.stringify({ "crinkle-cut": 0, hashbrown: 1 }),
+			}),
+		).toEqual([profilePath("muriel-bagge")]);
+	});
+
+	// Kills a gate that moves a reader of version 0 projects only, or one
+	// that fails on a memory it cannot read.
+	test("a reader without a version 1 project stays", async () => {
+		expect(await gate(versions("crinkle-cut", 0))).toEqual([]);
+		expect(await gate({})).toEqual([]);
+		expect(await gate({ [VERSION_KEY]: "{" })).toEqual([]);
 	});
 });
 

@@ -18,6 +18,18 @@ export const readReader = (
 	}
 };
 
+/** Keep `reader` as the signed in user, as the classic console stores it. */
+export const rememberReader = (
+	storage: Pick<Storage, "setItem">,
+	reader: JsonAuthUser,
+) => {
+	try {
+		storage.setItem(USER_KEY, JSON.stringify(reader));
+	} catch {
+		// The next load reads the reader the API had at sign in.
+	}
+};
+
 export const isCurrent = (reader: JsonAuthUser, now: number) =>
 	Date.parse(reader.expiration) > now;
 
