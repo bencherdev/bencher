@@ -11,16 +11,13 @@ use bencher_schema::{
     model::{
         project::{
             QueryProject,
-            threshold::alert::{QueryAlert, UpdateAlert},
+            threshold::alert::{QueryAlert, UpdateAlert, archived_filter},
         },
         user::actor::{ApiActor, PubProjectBearerToken},
     },
     schema, write_conn,
 };
-use diesel::{
-    BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableExpression, SelectableHelper as _,
-};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _};
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use futures::stream::{FuturesOrdered, StreamExt as _};
 use schemars::JsonSchema;
@@ -281,31 +278,6 @@ fn get_ls_query<'q>(
         },
     }
     .select(QueryAlert::as_select())
-}
-
-pub(crate) fn archived_filter<QS>(
-    archived: Option<bool>,
-) -> Box<dyn BoxableExpression<QS, diesel::sqlite::Sqlite, SqlType = diesel::sql_types::Bool>>
-where
-    schema::branch::archived: SelectableExpression<QS>,
-    schema::testbed::archived: SelectableExpression<QS>,
-    schema::measure::archived: SelectableExpression<QS>,
-{
-    if let Some(true) = archived {
-        Box::new(
-            schema::branch::archived
-                .is_not_null()
-                .or(schema::testbed::archived.is_not_null())
-                .or(schema::measure::archived.is_not_null()),
-        )
-    } else {
-        Box::new(
-            schema::branch::archived
-                .is_null()
-                .and(schema::testbed::archived.is_null())
-                .and(schema::measure::archived.is_null()),
-        )
-    }
 }
 
 // TODO refactor out internal types

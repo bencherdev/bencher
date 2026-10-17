@@ -25,7 +25,7 @@ use bencher_schema::{
             branch::BranchId,
             measure::MeasureId,
             testbed::TestbedId,
-            threshold::{QueryThreshold, ThresholdId, model::QueryModel},
+            threshold::{QueryThreshold, ThresholdId, alert::archived_filter, model::QueryModel},
         },
         user::actor::{ApiActor, PubProjectBearerToken},
     },
@@ -39,8 +39,6 @@ use diesel::{
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use crate::alerts::archived_filter;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjConsoleThresholdsParams {
