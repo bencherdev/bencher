@@ -84,6 +84,9 @@ struct Scenario {
     /// The same stand-in, in place before a `runner up` that never gets a Job
     /// starts.
     occupied_at_up_start: bool,
+    /// Start a `runner up` with an image cache in a state directory holding
+    /// something the runner did not put there.
+    cache_in_a_foreign_state_dir: bool,
     /// Run the runner, then a `runner up`, in a mount namespace whose cgroup
     /// root is an empty tmpfs, as on a kernel without `cgroup.kill`.
     without_cgroup_kill: bool,
@@ -122,6 +125,7 @@ impl Default for Scenario {
             occupied_cgroup: false,
             occupied_at_start: false,
             occupied_at_up_start: false,
+            cache_in_a_foreign_state_dir: false,
             without_cgroup_kill: false,
             unusable_state_dir: false,
             nodev_state_dir: false,
@@ -753,6 +757,8 @@ fn run_and_validate(
         run_runner_stopped_at(image_path, &args, record, runner_bin)
     } else if scenario.occupied_at_up_start {
         run_runner_up_beside_occupied_cgroup(runner_bin)
+    } else if scenario.cache_in_a_foreign_state_dir {
+        run_runner_up_with_a_cache_in_a_foreign_state_dir(runner_bin)
     } else if scenario.without_cgroup_kill {
         run_runner_without_cgroup_kill(image_path, &args, scenario.sandboxed, runner_bin)
     } else if scenario.occupied_cgroup || scenario.occupied_at_start {
@@ -3012,6 +3018,28 @@ CMD ["true"]"#,
             ..Scenario::default()
         },
         Scenario {
+            name: "runner_up_refuses_an_image_cache_it_cannot_take",
+            description: "A `runner up` given an image cache in a state directory that is not its own exits at startup, naming what it found there, before it connects",
+            dockerfile: r#"FROM busybox
+CMD ["true"]"#,
+            cache_in_a_foreign_state_dir: true,
+            validate: |output| {
+                anyhow::ensure!(
+                    output.exit_code == 1
+                        && runner_error(output).is_some_and(|error| error.contains(FOREIGN_ENTRY))
+                        && records_with(&output.stderr, "Connecting to channel")
+                            .next()
+                            .is_none(),
+                    "Expected `runner up` to exit at startup naming {FOREIGN_ENTRY}, before it connects, got exit code {}.\nstdout: {}\nstderr: {}",
+                    output.exit_code,
+                    output.stdout,
+                    output.stderr
+                );
+                Ok(())
+            },
+            ..Scenario::default()
+        },
+        Scenario {
             name: "startup_refuses_a_kernel_without_cgroup_kill",
             description: "A sandboxed `runner run` or `runner up` on a kernel without cgroup.kill exits at startup, naming Linux 5.14",
             dockerfile: r#"FROM busybox
@@ -4550,6 +4578,62 @@ fn run_runner_up_beside_occupied_cgroup(runner_bin: &Utf8Path) -> Result<Scenari
         stdout,
         stderr,
         exit_code: 0,
+    })
+}
+
+/// What another program left in the state directory.
+const FOREIGN_ENTRY: &str = "dpkg";
+
+/// A `runner up` that gets past its startup tries its server until it is
+/// killed, so the wait is bounded.
+fn run_runner_up_with_a_cache_in_a_foreign_state_dir(
+    runner_bin: &Utf8Path,
+) -> Result<ScenarioOutput> {
+    let foreign = super::work_dir().join("foreign-state");
+    drop(fs::remove_dir_all(&foreign));
+    fs::create_dir_all(foreign.join(FOREIGN_ENTRY))?;
+    let mut up = Command::new(runner_bin.as_str())
+        .args([
+            "up",
+            "--host",
+            "http://127.0.0.1:9",
+            "--runner",
+            "lock-probe",
+            "--key",
+            PROBE_KEY,
+            "--no-tuning",
+            "--image-cache-size",
+            "1073741824",
+            "--state-dir",
+            foreign.as_str(),
+        ])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()?;
+    let streamed = StreamedOutput::start(&mut up);
+    let deadline = std::time::Instant::now() + UP_EXITS_WITHIN;
+    let status = loop {
+        if let Some(status) = up.try_wait()? {
+            break Some(status);
+        }
+        if std::time::Instant::now() >= deadline {
+            break None;
+        }
+        std::thread::sleep(PROBE_INTERVAL);
+    };
+    drop(up.kill());
+    up.wait()?;
+    let (stdout, stderr) = streamed.join();
+    let taken = foreign.join("blobs").exists();
+    drop(fs::remove_dir_all(&foreign));
+    anyhow::ensure!(
+        !taken,
+        "`runner up` made a store in a state directory not its own.\nstderr: {stderr}"
+    );
+    Ok(ScenarioOutput {
+        stdout,
+        stderr,
+        exit_code: status.and_then(|status| status.code()).unwrap_or(-1),
     })
 }
 

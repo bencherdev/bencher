@@ -1,3 +1,5 @@
+use std::num::NonZeroU64;
+
 use bencher_runner::up::{Up as RunnerUp, UpConfig, UpError};
 
 use crate::error::RunnerCliError;
@@ -33,6 +35,7 @@ impl TryFrom<CliUp> for Up {
                 no_auto_update: task.no_auto_update,
                 update_channel: task.update_channel,
                 max_download_size: task.max_download_size,
+                image_cache_size: task.image_cache_size.and_then(NonZeroU64::new),
                 state_dir: task.state_dir,
                 jail_user,
             },

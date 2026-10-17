@@ -96,6 +96,11 @@ pub struct CliUp {
     /// Maximum download size in bytes for self-update binaries (default: 500 MiB).
     #[arg(long, conflicts_with = "no_auto_update")]
     pub max_download_size: Option<u64>,
+
+    /// Maximum size in bytes of the image blobs kept across Jobs in the state
+    /// directory, evicted least recently used first (default: none kept).
+    #[arg(long, env = "BENCHER_IMAGE_CACHE_SIZE")]
+    pub image_cache_size: Option<u64>,
 }
 
 #[cfg(test)]

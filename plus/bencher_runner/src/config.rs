@@ -4,7 +4,7 @@ use bencher_json::{Cpu, Disk, Memory, Sandbox};
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
 
-use bencher_oci::RegistryScheme;
+use bencher_oci::{BlobStore, RegistryScheme};
 
 use crate::cpu::CpuLayout;
 use crate::log_level::SandboxLogLevel;
@@ -150,6 +150,11 @@ pub struct Config {
     #[serde(skip, default = "default_state_dir")]
     pub state_dir: Utf8PathBuf,
 
+    /// Where the image's config and layer blobs are kept across runs, or none
+    /// to keep them only for the run, beside its manifests.
+    #[serde(skip)]
+    pub blob_store: Option<BlobStore>,
+
     #[serde(skip)]
     pub jail_user: crate::jail::JailUser,
 }
@@ -259,6 +264,7 @@ impl Config {
             sandbox_log_level: SandboxLogLevel::default(),
             sandbox: None,
             state_dir: default_state_dir(),
+            blob_store: None,
             jail_user: crate::jail::JailUser::default(),
         }
     }
@@ -543,6 +549,7 @@ mod tests {
             .with_state_dir(Utf8PathBuf::from("/mnt/disk/runner"))
             .with_jail_user(crate::jail::JailUser::new(1234, 1234).unwrap());
         config.sandbox_log_level = SandboxLogLevel::Debug;
+        config.blob_store = Some(BlobStore::new(Utf8PathBuf::from("/mnt/disk/runner/blobs")));
 
         let json = serde_json::to_string(&config).unwrap();
         let parsed: Config = serde_json::from_str(&json).unwrap();
@@ -574,6 +581,7 @@ mod tests {
             sandbox_log_level,
             sandbox,
             state_dir,
+            blob_store,
             jail_user,
         } = parsed;
 
@@ -602,6 +610,7 @@ mod tests {
         assert!(cpu_layout.is_none());
         assert!(matches!(sandbox_log_level, SandboxLogLevel::Warning));
         assert_eq!(state_dir, default_state_dir());
+        assert!(blob_store.is_none());
         assert_eq!(jail_user, crate::jail::JailUser::default());
 
         // Optional None fields should not appear in JSON

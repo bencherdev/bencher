@@ -68,6 +68,16 @@
 //! | `StateDir::new`: the root is a symlink proven the operator's own choice (parent root-only-writable, single hop to an absolute canonical target, that target's whole ancestry root-only-writable) | followed: no unprivileged user influenced or can race it, and the populated check still runs on the target |
 //! | `StateDir::new`: the root is a symlink failing any of those showings | left as given, so `real_dir` refuses it as a symlink at create time |
 //! | `StateDir::create`: an interior component of the tree is a symlink | fails the job: the 0700 chmod and the sweep would land on a directory somebody else chose |
+//! | `StateDir::check_root_is_ours`: the root holds `blobs` but is not owned by the runner's user, or is writable by its group or others, or `blobs` or an entry of it is not a real directory owned by that user and closed to its group and others | fails the job, or stops a runner with an image cache at startup, and nothing is chowned or chmodded: anybody could have planted a blob there, and blobs are trusted when read |
+//! | `StateDir::create`: `blobs` appears, not the runner's own, between the check and its creation | the same: it is verified again once created, never taken |
+//! | `RegistryClient::pull`, into a private store: `blobs` or the algorithm directory is not a real directory private to the runner | fails the job before anything is read or written below it |
+//! | `Up::run`, with an image cache: `StateDir::create` fails | the runner exits, naming the path, rather than failing every Job it claims |
+//! | `PulledImage::pull`, for a Job with a blob store: `StateDir::create` fails | fails the job: the store is written only into a state directory the runner has taken |
+//! | `evict_blob_store`, at a clear probe: there is no `blobs`, or, with no cap, the runner cannot reach it | nothing to evict: a runner with no cap keeps no store, so one it cannot reach is not its own |
+//! | `evict_blob_store`: `StateDir::check_root_is_ours` refuses the root, `blobs` is a link, or the store cannot be listed | warns: the runner takes Jobs, and the next clear probe tries again |
+//! | `BlobStore::evict`: an entry of `blobs` that is not a directory, a link included | skipped, never followed |
+//! | `BlobStore::evict`: `blobs` or an algorithm directory is not a real directory private to the runner | refuses the pass, which warns |
+//! | `BlobStore::evict`: one entry that cannot be read or removed | warns, counting it: the rest of the pass goes on |
 //!
 //! And the same three columns for the reads that decide what a run measured:
 //!
@@ -111,7 +121,7 @@ pub mod chroot;
 pub mod netns;
 #[cfg(target_os = "linux")]
 pub mod paths;
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 pub mod state;
 
 #[cfg(target_os = "linux")]
@@ -126,10 +136,17 @@ pub(crate) use cgroup::{ScratchCgroup, prepare_at_startup_with};
 pub use chroot::JailDir;
 #[cfg(target_os = "linux")]
 pub use paths::{ChrootPath, HostPath, JailFile, JailPaths};
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 pub use state::StateDir;
 
 pub const DEFAULT_STATE_DIR: &str = "/var/lib/bencher-runner";
+
+/// The state directory's entry that keeps image blobs across Jobs.
+pub(crate) const BLOB_STORE: &str = "blobs";
+
+pub(crate) fn blob_store(state_dir: &camino::Utf8Path) -> bencher_oci::BlobStore {
+    bencher_oci::BlobStore::private(state_dir.join(BLOB_STORE), current_euid())
+}
 
 /// This uid sits in the unallocated gap between `systemd-homed` ids (60001-60513) and
 /// the `DynamicUser` range (61184-65519).
@@ -309,7 +326,7 @@ fn check_root(euid: u32) -> Result<(), crate::error::JailError> {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 #[expect(
     unsafe_code,
     reason = "geteuid has no std wrapper and cannot fail or touch memory"

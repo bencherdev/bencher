@@ -431,6 +431,7 @@ fn build_config_from_job(
         max_file_count,
         max_symlinks,
         sandbox_log_level,
+        image_cache_size,
         state_dir,
         jail_user,
     } = up_config;
@@ -473,6 +474,7 @@ fn build_config_from_job(
 
     runner_config = runner_config.with_state_dir(state_dir.clone());
     runner_config = runner_config.with_jail_user(*jail_user);
+    runner_config.blob_store = image_cache_size.map(|_| crate::jail::blob_store(state_dir));
 
     // Pass through CPU layout for core isolation
     if let Some(cpu_layout) = cpu_layout
@@ -620,11 +622,12 @@ pub(crate) mod tests {
     use std::collections::HashMap;
     use std::io::{ErrorKind, Read as _, Write as _};
     use std::net::{SocketAddr, TcpListener, TcpStream};
+    use std::num::NonZeroU64;
     use std::sync::mpsc::{self, TryRecvError};
     use std::thread::JoinHandle;
 
     use super::*;
-    use camino::Utf8PathBuf;
+    use camino::{Utf8Path, Utf8PathBuf};
 
     use crate::ExecutionError;
     use crate::log::discard;
@@ -694,12 +697,14 @@ pub(crate) mod tests {
                 "timeout": timeout,
                 "file_paths": file_paths,
             },
-            "oci_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+            "oci_token": OCI_TOKEN,
             "timeout": timeout,
             "created": "2025-01-01T00:00:00Z"
         });
         serde_json::from_value(json).expect("Failed to construct test JsonClaimedJob")
     }
+
+    const OCI_TOKEN: &str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ";
 
     // --- build_config_from_job ---
 
@@ -722,6 +727,7 @@ pub(crate) mod tests {
             no_auto_update: false,
             update_channel: bencher_valid::UpdateChannel::default(),
             max_download_size: None,
+            image_cache_size: None,
             state_dir: Utf8PathBuf::from(crate::jail::DEFAULT_STATE_DIR),
             jail_user: crate::jail::JailUser::default(),
         }
@@ -1848,6 +1854,112 @@ pub(crate) mod tests {
         assert!(!work_dir.exists(), "{work_dir} outlived its image");
     }
 
+    #[test]
+    fn a_second_job_downloads_no_blob_the_store_holds() {
+        // Kills a Job that pulls past the runner's store, which downloads every
+        // blob of an image the runner has run before.
+        let state_dir = tempfile::tempdir().unwrap();
+        let state_dir = Utf8Path::from_path(state_dir.path()).unwrap();
+        fill_store(state_dir);
+        let registry = TestRegistry::start(None);
+
+        let iterations = run_stored_job(&registry.job(1, false), state_dir);
+
+        assert_eq!(
+            registry.stop(),
+            Requests {
+                manifests: 1,
+                blobs: 0
+            }
+        );
+        let stdout: Vec<_> = iterations
+            .results
+            .iter()
+            .map(|output| output.stdout.as_deref())
+            .collect();
+        assert_eq!(stdout, [Some("ran\n")], "{:?}", iterations.failure);
+    }
+
+    #[test]
+    fn a_job_whose_token_is_refused_fails_with_every_blob_in_the_store() {
+        // Kills serving the manifest from the store, or skipping its request
+        // when the store holds every blob, either of which runs the image of a
+        // Job whose token the registry refuses.
+        let state_dir = tempfile::tempdir().unwrap();
+        let state_dir = Utf8Path::from_path(state_dir.path()).unwrap();
+        fill_store(state_dir);
+        let registry = TestRegistry::start(None);
+        let mut job = registry.job(1, false);
+        let (claims, _signature) = OCI_TOKEN.rsplit_once('.').unwrap();
+        job.oci_token = format!("{claims}.c2lnbmVk").parse().unwrap();
+
+        let outcome = run_stored_job(&job, state_dir).finish(false);
+
+        assert_eq!(
+            registry.stop(),
+            Requests {
+                manifests: 1,
+                blobs: 0
+            }
+        );
+        assert!(
+            matches!(&outcome, JobFinishResult::Failed { error, results } if results.is_empty() && error.contains("401")),
+            "the refused manifest ends the Job: {outcome:?}"
+        );
+    }
+
+    #[test]
+    fn a_job_keeps_no_blob_in_a_state_directory_not_its_own() {
+        // Kills writing the store without taking the state directory first,
+        // which fills a directory somebody else owns with blobs every later Job
+        // trusts.
+        let foreign = tempfile::tempdir().unwrap();
+        let foreign = Utf8Path::from_path(foreign.path()).unwrap();
+        std::fs::create_dir(foreign.join("dpkg")).unwrap();
+        let registry = TestRegistry::start(None);
+
+        let outcome = run_stored_job(&registry.job(1, false), foreign).finish(false);
+
+        assert_eq!(registry.stop(), Requests::default());
+        assert!(
+            matches!(&outcome, JobFinishResult::Failed { error, results } if results.is_empty() && error.contains("dpkg")),
+            "the foreign state directory ends the Job: {outcome:?}"
+        );
+        assert!(!foreign.join("blobs").exists());
+    }
+
+    /// Runs the image once, so the store in `state_dir` holds its every blob.
+    fn fill_store(state_dir: &Utf8Path) {
+        let registry = TestRegistry::start(None);
+        let iterations = run_stored_job(&registry.job(1, false), state_dir);
+        assert_eq!(
+            registry.stop(),
+            Requests {
+                manifests: 1,
+                blobs: 2
+            }
+        );
+        assert!(iterations.failure.is_none(), "{:?}", iterations.failure);
+    }
+
+    /// Runs `job` as the runner does with its blob store in `state_dir`.
+    fn run_stored_job(job: &JsonClaimedJob, state_dir: &Utf8Path) -> Iterations {
+        let up_config = UpConfig {
+            cpu_layout: None,
+            image_cache_size: NonZeroU64::new(1 << 30),
+            state_dir: state_dir.to_owned(),
+            ..test_up_config()
+        };
+        run_job(
+            &discard(),
+            job,
+            &build_config_from_job(&up_config, job).unwrap(),
+            &mut crate::jail::HostPreparation::new(),
+            JobDeadline::start(Duration::from_mins(1)),
+            &AtomicBool::new(false),
+        )
+    }
+
     /// Runs `job` on the host, with no CPU isolation.
     fn run_test_job(log: &Logger, job: &JsonClaimedJob, cancel_flag: &AtomicBool) -> Iterations {
         run_job(
@@ -1869,7 +1981,7 @@ pub(crate) mod tests {
     }
 
     /// A registry on localhost serving one image, whose command prints `ran`,
-    /// that counts what it is asked for.
+    /// to the test Job's token alone, that counts what it is asked for.
     struct TestRegistry {
         address: SocketAddr,
         digest: String,
@@ -1915,6 +2027,7 @@ pub(crate) mod tests {
                 .into_iter()
                 .map(|bytes| (sha256(&bytes), bytes))
                 .collect();
+            let bearer = bencher_json::bearer_header(OCI_TOKEN);
             let listener = TcpListener::bind("127.0.0.1:0").unwrap();
             listener.set_nonblocking(true).unwrap();
             let address = listener.local_addr().unwrap();
@@ -1931,7 +2044,8 @@ pub(crate) mod tests {
                     }
                     let (mut stream, _) = accepted.unwrap();
                     stream.set_nonblocking(false).unwrap();
-                    let path = request_path(&mut stream);
+                    let head = request_head(&mut stream);
+                    let path = head.split(' ').nth(1).unwrap();
                     let (kind, digest) = path.rsplit_once('/').unwrap();
                     if kind.ends_with("/manifests") {
                         requests.manifests += 1;
@@ -1941,7 +2055,17 @@ pub(crate) mod tests {
                     } else {
                         requests.blobs += 1;
                     }
-                    respond(&mut stream, by_digest.get(digest).map(Vec::as_slice));
+                    let authorized = head.lines().any(|line| {
+                        line.split_once(':').is_some_and(|(name, value)| {
+                            name.eq_ignore_ascii_case("authorization") && value.trim() == bearer
+                        })
+                    });
+                    let (status, body) = match (authorized, by_digest.get(digest)) {
+                        (false, _) => ("401 Unauthorized", [].as_slice()),
+                        (true, None) => ("404 Not Found", [].as_slice()),
+                        (true, Some(body)) => ("200 OK", body.as_slice()),
+                    };
+                    respond(&mut stream, status, body);
                 }
                 requests
             });
@@ -1996,8 +2120,7 @@ pub(crate) mod tests {
         format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
     }
 
-    /// Reads a request's head and returns its path.
-    fn request_path(stream: &mut TcpStream) -> String {
+    fn request_head(stream: &mut TcpStream) -> String {
         stream
             .set_read_timeout(Some(Duration::from_secs(10)))
             .unwrap();
@@ -2007,13 +2130,10 @@ pub(crate) mod tests {
             stream.read_exact(&mut byte).unwrap();
             head.extend_from_slice(&byte);
         }
-        let head = String::from_utf8(head).unwrap();
-        head.split(' ').nth(1).unwrap().to_owned()
+        String::from_utf8(head).unwrap()
     }
 
-    /// The body with a 200, or a 404 for none.
-    fn respond(stream: &mut TcpStream, body: Option<&[u8]>) {
-        let (status, body) = body.map_or(("404 Not Found", [].as_slice()), |body| ("200 OK", body));
+    fn respond(stream: &mut TcpStream, status: &str, body: &[u8]) {
         let mut response = format!(
             "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
             body.len()
