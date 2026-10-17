@@ -699,6 +699,27 @@ test("a cold load of Organizations holds the speed ceilings", async ({
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
+// Kills a New project that asks for more than the organization, the reader's
+// bootstrap, and the plan's answer, chains a second round, or shifts as they
+// arrive.
+test("a cold load of New project holds the speed ceilings", async ({
+	page,
+}) => {
+	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
+	const cost = await accountColdLoad(
+		page,
+		`/next/console/organizations/${seed.organization.slug}/projects/add`,
+		[
+			organization,
+			`${organization}/usage`,
+			`${seed.api_url}/v0/console/users/${seed.member.user.uuid}`,
+		],
+		() => expect(page.getByRole("radio", { name: "Private" })).toBeEnabled(),
+	);
+	report("new project cold load", cost);
+	holds(cost, ceilings.newProjectColdLoad);
+});
+
 // Kills key lists that wait on the shell's request, a third request for the
 // other status, and a table that shifts as the keys arrive.
 test("a cold load of Keys holds the speed ceilings", async ({ page }) => {

@@ -204,7 +204,7 @@ test("the footer holds New project and the current organization's Settings", asy
 
 	await expect
 		.element(dialog().getByRole("link", { name: "New project" }))
-		.toHaveAttribute("href", "/console/organizations/o1/projects/add");
+		.toHaveAttribute("href", "/next/console/organizations/o1/projects/add");
 	await expect
 		.element(dialog().getByRole("link", { name: "Pompeii LLC settings" }))
 		.toHaveAttribute("href", "/next/console/organizations/o1/settings");

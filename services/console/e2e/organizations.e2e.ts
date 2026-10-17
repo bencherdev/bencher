@@ -50,8 +50,9 @@ const readerPage = async (
 test.describe("Organizations", () => {
 	// Kills a dialog that leaves without making the organization, lands
 	// anywhere but its New project, or leaves the bootstrap the page and the
-	// switcher read without it.
-	test("New organization makes one and lands on its New project", async ({
+	// switcher read without it, and a New project that leaves the bootstrap
+	// without the project it made.
+	test("New organization makes one and lands on its New project, which makes its first project", async ({
 		newContext,
 		request,
 	}) => {
@@ -71,22 +72,29 @@ test.describe("Organizations", () => {
 			.click();
 
 		await expect(page).toHaveURL(
-			/\/console\/organizations\/([a-z0-9-]+)\/projects\/add$/,
+			/\/next\/console\/organizations\/([a-z0-9-]+)\/projects\/add$/,
 		);
-		const slug = new URL(page.url()).pathname.split("/")[3] ?? "";
+		const slug = new URL(page.url()).pathname.split("/")[4] ?? "";
 		const made = await send<JsonOrganization>(
 			request,
 			reader,
 			`/v0/organizations/${slug}`,
 		);
 		expect(made.name).toBe(name);
+		await expect(
+			page.getByRole("combobox", { name: "Organization" }),
+		).toHaveValue(made.uuid);
+
+		await page.getByRole("textbox", { name: "Name" }).fill(unique("Rosti"));
+		await page.getByRole("button", { name: "Create project" }).click();
+		await expect(page).toHaveURL(/\/console\/projects\/[a-z0-9-]+\/plots$/);
 
 		// The bootstrap never answers, so the row can come only from the cache.
 		await page.route(`${seed.api_url}/v0/console/users/**`, () => {});
 		await page.goto(ORGANIZATIONS);
 		await expect(
 			table(page).getByRole("row", { name: new RegExp(name) }),
-		).toContainText("No projects");
+		).toContainText("1 project");
 	});
 
 	// Kills a list that drops an organization, counts projects across
@@ -127,7 +135,7 @@ test.describe("Organizations", () => {
 				emptyRow.getByRole("link", { name: "New project" }),
 			).toHaveAttribute(
 				"href",
-				`/console/organizations/${empty.slug}/projects/add`,
+				`/next/console/organizations/${empty.slug}/projects/add`,
 			);
 			await expect(fullRow).toContainText("1 project");
 			await expect(

@@ -95,6 +95,7 @@ export type PageName =
 	| "LegacyTokens"
 	| "OrgGeneral"
 	| "Organizations"
+	| "NewProject"
 	| "NotFound";
 
 /** The page that draws a project path, from its segments after the project. */
