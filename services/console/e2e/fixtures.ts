@@ -142,8 +142,11 @@ export { expect };
 export const tabRow = (page: Page) =>
 	page.getByRole("navigation", { name: "Project" });
 
-export const crumbs = (page: Page) =>
-	page.getByRole("navigation", { name: "Breadcrumb" });
+/** The Org / Project crumb, which opens the switcher, by the start of its name. */
+export const crumb = (page: Page, name = "") =>
+	page
+		.getByRole("banner")
+		.getByRole("button", { name: `${name}, switch project` });
 
 /** Resolves once no request has been in flight for `quietMs`. */
 export const settle = async (page: Page, quietMs = 300) => {

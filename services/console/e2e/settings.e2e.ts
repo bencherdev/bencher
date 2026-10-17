@@ -9,7 +9,7 @@ import {
 import { axeInBothThemes } from "./axe";
 import {
 	VERSION_KEY,
-	crumbs,
+	crumb,
 	expect,
 	nextPath,
 	seed,
@@ -67,17 +67,13 @@ test.describe("General, as the project's Maintainer", () => {
 		);
 		await page.getByRole("textbox", { name: "Name" }).fill(renamed);
 		await save(page).click();
-		await expect(
-			crumbs(page).getByRole("link", { name: renamed }),
-		).toBeVisible();
+		await expect(crumb(page, `/ ${renamed}`)).toBeVisible();
 		release();
 		await expect(status(page)).toHaveText("Saved");
 		await settle(page);
 
 		await page.reload();
-		await expect(
-			crumbs(page).getByRole("link", { name: renamed }),
-		).toBeVisible();
+		await expect(crumb(page, `/ ${renamed}`)).toBeVisible();
 		await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
 			renamed,
 		);
