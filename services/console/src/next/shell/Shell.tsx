@@ -2,6 +2,7 @@ import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import { For, Show } from "solid-js";
 import { TABS, type Tab, projectPath } from "../paths";
+import Feedback from "./Feedback";
 import Tools from "./Tools";
 
 interface ShellProps {
@@ -13,6 +14,8 @@ interface ShellProps {
 	/** The active alert count, unknown until it loads. */
 	alerts?: number | undefined;
 	account?: string | undefined;
+	/** The reader's email, which a feedback report offers to attach. */
+	email?: string | undefined;
 	tabsRef?: (tabs: HTMLElement) => void;
 }
 
@@ -87,7 +90,17 @@ const Shell = (props: ShellProps) => {
 						</span>
 					</Show>
 				</a>
-				<Tools />
+				<Tools>
+					<Feedback
+						about={() => ({
+							project: props.organization
+								? `${props.organization.name} / ${props.project ?? props.slug}`
+								: (props.project ?? props.slug),
+							slug: props.slug,
+							email: props.email ?? "",
+						})}
+					/>
+				</Tools>
 				<a class="avatar" href={props.account ?? "/console"}>
 					<span class="sr-only">Account</span>
 				</a>
