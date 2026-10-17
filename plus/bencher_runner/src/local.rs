@@ -122,7 +122,8 @@ pub fn local_execute(
             return Err(e);
         },
     };
-    log_run_metrics(log, start.elapsed(), false, &isolation);
+    let duration = output.exited.duration_since(start);
+    log_run_metrics(log, duration, false, &isolation);
 
     // Collect output files from the unpacked rootfs
     let output_files = collect_output_files(
@@ -137,6 +138,7 @@ pub fn local_execute(
         stdout: output.stdout,
         stderr: output.stderr,
         output_files,
+        duration,
     })
 }
 
@@ -180,6 +182,8 @@ struct WaitOutput {
     exit_code: i32,
     stdout: String,
     stderr: String,
+    /// Taken as the wait returns, not at the next poll.
+    exited: Instant,
 }
 
 /// Wait for a child process with timeout and cancellation support.
@@ -197,7 +201,7 @@ fn wait_with_timeout(
     // on other platforms (or old kernels) it falls back to the raw PID.
     let child_handle = ChildHandle::new(&child);
 
-    let handle = std::thread::spawn(move || child.wait_with_output());
+    let handle = std::thread::spawn(move || (child.wait_with_output(), Instant::now()));
 
     // Poll for completion, timeout, or cancellation
     loop {
@@ -228,14 +232,15 @@ fn wait_with_timeout(
         std::thread::sleep(Duration::from_millis(100));
     }
 
-    let output = handle.join().map_err(|panic| {
+    let (output, exited) = handle.join().map_err(|panic| {
         let msg = panic
             .downcast_ref::<&str>()
             .copied()
             .or_else(|| panic.downcast_ref::<String>().map(String::as_str))
             .unwrap_or("unknown panic");
         std::io::Error::other(format!("child thread panicked: {msg}"))
-    })??;
+    })?;
+    let output = output?;
 
     let exit_code = output.status.code().unwrap_or_else(|| {
         #[cfg(unix)]
@@ -255,6 +260,7 @@ fn wait_with_timeout(
         exit_code,
         stdout,
         stderr,
+        exited,
     })
 }
 

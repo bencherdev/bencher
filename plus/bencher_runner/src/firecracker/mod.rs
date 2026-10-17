@@ -562,6 +562,7 @@ mod tests {
             stdout: "hello".to_owned(),
             stderr: "warnings".to_owned(),
             output_files: Some(files),
+            duration: Duration::ZERO,
         };
         assert_eq!(output.exit_code, 42);
         assert_eq!(output.stdout, "hello");

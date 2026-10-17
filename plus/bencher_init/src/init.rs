@@ -9,6 +9,7 @@ use std::os::unix::io::RawFd;
 use std::path::Path;
 use std::process::ExitCode;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 use bencher_output_protocol::results::{self, Record};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -235,6 +236,7 @@ fn run_init() -> Result<Record, InitError> {
         stdout: result.stdout,
         stderr: result.stderr,
         output_files,
+        duration: result.duration,
     })
 }
 
@@ -435,6 +437,7 @@ struct BenchmarkResult {
     stdout: Vec<u8>,
     stderr: Vec<u8>,
     exit_code: i32,
+    duration: Duration,
 }
 
 /// Run the benchmark command.
@@ -447,6 +450,7 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
     let (stdout_read, stdout_write) = pipe()?;
     let (stderr_read, stderr_write) = pipe()?;
 
+    let spawned = Instant::now();
     // SAFETY: Called in single-threaded init process before spawning threads.
     let pid = unsafe { libc::fork() };
 
@@ -556,6 +560,7 @@ fn run_benchmark(config: &Config) -> Result<BenchmarkResult, InitError> {
             // Wait for child while collecting output and reaping zombies
             Ok(wait_for_child(
                 child_pid,
+                spawned,
                 stdout_read,
                 stderr_read,
                 config.max_output_size,
@@ -615,6 +620,7 @@ fn drain_pipe(file: &mut File, buf: &mut Vec<u8>, max_output_size: usize) {
 /// Wait for child process, collecting output and reaping zombies.
 fn wait_for_child(
     child_pid: libc::pid_t,
+    spawned: Instant,
     stdout_fd: RawFd,
     stderr_fd: RawFd,
     max_output_size: usize,
@@ -690,7 +696,7 @@ fn wait_for_child(
             // Reaped some other zombie, continue
         } else if waited == 0 {
             // No children ready, sleep briefly
-            std::thread::sleep(std::time::Duration::from_millis(10));
+            std::thread::sleep(Duration::from_millis(10));
         } else {
             // waited == -1: error or no children
             // ECHILD means our child was already reaped (e.g., SIGCHLD was SIG_IGN)
@@ -702,17 +708,17 @@ fn wait_for_child(
         }
 
         // If we have exit code, do one more read to drain pipes
-        if exit_code.is_some() {
+        if let Some(exit_code) = exit_code {
+            let duration = spawned.elapsed();
             drain_pipe(&mut stdout_file, &mut stdout_buf, max_output_size);
             drain_pipe(&mut stderr_file, &mut stderr_buf, max_output_size);
-            break;
+            return BenchmarkResult {
+                stdout: stdout_buf,
+                stderr: stderr_buf,
+                exit_code,
+                duration,
+            };
         }
-    }
-
-    BenchmarkResult {
-        stdout: stdout_buf,
-        stderr: stderr_buf,
-        exit_code: exit_code.unwrap_or(1),
     }
 }
 

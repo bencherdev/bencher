@@ -70,23 +70,30 @@ impl ResultsDrive {
         max_file_count: u32,
         max_content_size: u64,
     ) -> Result<RunOutput, FirecrackerError> {
-        let record = results::read(&self.file, self.cap)
+        let results::Record {
+            exit_code,
+            stdout,
+            stderr,
+            output_files,
+            duration,
+        } = results::read(&self.file, self.cap)
             .map_err(FirecrackerError::ReadResults)?
             .ok_or(FirecrackerError::NoResults)?;
-        let output_files = if record.output_files.is_empty() {
+        let output_files = if output_files.is_empty() {
             None
         } else {
             Some(decode_output_files(
-                &record.output_files,
+                &output_files,
                 max_file_count,
                 max_content_size,
             )?)
         };
         Ok(RunOutput {
-            exit_code: record.exit_code,
-            stdout: String::from_utf8_lossy(&record.stdout).into_owned(),
-            stderr: String::from_utf8_lossy(&record.stderr).into_owned(),
+            exit_code,
+            stdout: String::from_utf8_lossy(&stdout).into_owned(),
+            stderr: String::from_utf8_lossy(&stderr).into_owned(),
             output_files,
+            duration,
         })
     }
 }
@@ -104,6 +111,7 @@ fn decode_output_files(
 mod tests {
     use std::io::Write as _;
     use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _, symlink};
+    use std::time::Duration;
 
     use bencher_output_protocol::results::Record;
 
@@ -158,8 +166,8 @@ mod tests {
 
     #[test]
     fn the_record_the_guest_wrote_is_the_run_output() {
-        // Kills stdout and stderr swapped on the way out, and output files
-        // dropped rather than decoded.
+        // Kills stdout and stderr swapped on the way out, output files dropped
+        // rather than decoded, and the command's duration left behind.
         let (_dir, path, drive) = drive_in_tmpdir();
         guest_writes(
             &path,
@@ -168,6 +176,7 @@ mod tests {
                 stdout: b"out".to_vec(),
                 stderr: b"err".to_vec(),
                 output_files: files(&["/b.json", "/a.json"]),
+                duration: Duration::new(7, 654_321),
             },
         );
 
@@ -176,6 +185,7 @@ mod tests {
         assert_eq!(output.exit_code, 42);
         assert_eq!(output.stdout, "out");
         assert_eq!(output.stderr, "err");
+        assert_eq!(output.duration, Duration::new(7, 654_321));
         assert_eq!(
             output.output_files,
             Some(vec![

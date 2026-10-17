@@ -90,9 +90,9 @@ struct Scenario {
     unusable_state_dir: bool,
     /// Point the runner at a state directory on a `nodev` tmpfs.
     nodev_state_dir: bool,
-    /// Stop the runner before its jail until its timeout is gone, then let it go
-    /// on.
-    stopped_past_timeout: bool,
+    /// Stop the runner for [`STOPPED_FOR`] once it logs this record, then let it
+    /// go on.
+    stopped_at: Option<&'static str>,
     /// A line the image must print in a plain run first, so a run that prints
     /// nothing cannot pass on a runner that boots no guest.
     control_marker: Option<&'static str>,
@@ -125,7 +125,7 @@ impl Default for Scenario {
             without_cgroup_kill: false,
             unusable_state_dir: false,
             nodev_state_dir: false,
-            stopped_past_timeout: false,
+            stopped_at: None,
             control_marker: None,
             // Most scenarios are sandboxed, so the few that are not opt out.
             sandboxed: true,
@@ -749,8 +749,8 @@ fn run_and_validate(
         run_runner_beside_runner_up(image_path, &args, runner_bin)
     } else if scenario.behind_the_job_lock {
         run_runner_behind_the_job_lock(image_path, &args, state_dir, runner_bin)
-    } else if scenario.stopped_past_timeout {
-        run_runner_stopped_past_timeout(image_path, &args, runner_bin)
+    } else if let Some(record) = scenario.stopped_at {
+        run_runner_stopped_at(image_path, &args, record, runner_bin)
     } else if scenario.occupied_at_up_start {
         run_runner_up_beside_occupied_cgroup(runner_bin)
     } else if scenario.without_cgroup_kill {
@@ -2172,6 +2172,19 @@ CMD ["sh", "-c", "sleep 13 && printf '%s_%s\\n' SPAN DONE"]"#,
             },
             ..Scenario::default()
         },
+        Scenario {
+            name: "the_command_is_timed_without_its_setup",
+            description: "The command is timed in the guest, so a runner held as its VM boots adds nothing to the command's duration",
+            dockerfile: r#"FROM busybox
+CMD ["sh", "-c", "sleep 1 && printf '%s_%s\\n' TIMED a7f3b2c9"]"#,
+            extra_args: &["--timeout", "60"],
+            // Just ahead of the VMM's start, so the hold falls inside any measure
+            // that takes in the boot; a stop that lands after the start holds
+            // only the runner, which the guest's clock never sees.
+            stopped_at: Some("Booting VM"),
+            validate: |output| assert_timed_alone(output, "TIMED_a7f3b2c9"),
+            ..Scenario::default()
+        },
     ]
 }
 
@@ -2267,6 +2280,21 @@ CMD ["sh", "-c", "sleep 5 && printf '%s_%s\\n' HOST SPAN"]"#,
                 );
                 Ok(())
             },
+            ..Scenario::default()
+        },
+        Scenario {
+            name: "nosandbox_the_command_is_timed_without_its_setup",
+            description: "Non-sandboxed: the command is timed from its spawn, so a runner held before the image is unpacked adds nothing to the command's duration",
+            // A stop after the spawn freezes the runner's wait, so the exit is
+            // seen late and reads as a hold inside the measure; the ballast
+            // keeps the spawn far behind the run's first record.
+            dockerfile: r#"FROM busybox:musl
+RUN head -c 67108864 /dev/urandom > /ballast
+CMD ["sh", "-c", "sleep 1 && printf '%s_%s\\n' HOST TIMED"]"#,
+            sandboxed: false,
+            extra_args: &["--timeout", "60"],
+            stopped_at: Some("Executing benchmark run, non-sandboxed"),
+            validate: |output| assert_timed_alone(output, "HOST_TIMED"),
             ..Scenario::default()
         },
     ]
@@ -2855,7 +2883,10 @@ fn jail_contention_scenarios() -> Vec<Scenario> {
             description: "A run whose timeout runs out before its VM boots never boots it",
             dockerfile: r#"FROM busybox
 CMD ["printf", "%s_%s\\n", "QUEUED", "a7f3b2c9"]"#,
-            stopped_past_timeout: true,
+            extra_args: &["--timeout", "3"],
+            // Once its image is unpacked, far ahead of the boot, so the run
+            // comes to the check before boot with no time left.
+            stopped_at: Some("Writing init config"),
             control_marker: Some("QUEUED_a7f3b2c9"),
             validate: |output| {
                 anyhow::ensure!(
@@ -3496,24 +3527,20 @@ fn is_record(line: &str, msg: &str) -> bool {
     record_of(line).is_some_and(|record| text(&record, "msg") == Some(msg))
 }
 
-/// How long the run is held stopped, well past its 3 s timeout.
+/// How long a run is held stopped: well past a 3 s timeout, and far longer than
+/// a 1 s command.
 const STOPPED_FOR: Duration = Duration::from_secs(5);
 
-/// Stopped once its image is unpacked, far ahead of the boot, so the run comes
-/// to the check before boot with no time left.
-fn run_runner_stopped_past_timeout(
+fn run_runner_stopped_at(
     image_path: &Utf8Path,
     args: &[&str],
+    record: &str,
     runner_bin: &Utf8Path,
 ) -> Result<ScenarioOutput> {
-    let mut child = spawn_runner(
-        image_path,
-        &[args, &["--timeout", "3"]].concat(),
-        runner_bin,
-    )?;
+    let mut child = spawn_runner(image_path, args, runner_bin)?;
     let mut streamed = StreamedOutput::start(&mut child);
-    let unpacked = streamed.wait_for_record("Writing init config");
-    if unpacked.is_ok() {
+    let reached = streamed.wait_for_record(record);
+    if reached.is_ok() {
         kill_pid(child.id(), libc::SIGSTOP);
         std::thread::sleep(STOPPED_FOR);
         kill_pid(child.id(), libc::SIGCONT);
@@ -3531,7 +3558,7 @@ fn run_runner_stopped_past_timeout(
         std::thread::sleep(PROBE_INTERVAL);
     };
     let (stdout, stderr) = streamed.join();
-    unpacked.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
+    reached.with_context(|| format!("stdout: {stdout}\nstderr: {stderr}"))?;
     let status = status.with_context(|| {
         format!(
             "The runner did not exit within {PROBE_TIMEOUT:?}.\nstdout: {stdout}\nstderr: {stderr}"
@@ -3769,6 +3796,27 @@ fn assert_job_succeeded(output: &ScenarioOutput, marker: &str) -> Result<()> {
             output.stderr
         );
     }
+    Ok(())
+}
+
+/// One command, timed at no less than its `sleep 1` and at less than the
+/// [`STOPPED_FOR`] its runner was held, so a duration that took in the hold, or
+/// lost the command on its way back, fails.
+fn assert_timed_alone(output: &ScenarioOutput, marker: &str) -> Result<()> {
+    assert_job_succeeded(output, marker)?;
+    let held = u64::try_from(STOPPED_FOR.as_millis())?;
+    let durations: Vec<Option<u64>> = records_with(&output.stderr, "Command finished")
+        .map(|record| {
+            record
+                .get("duration_ms")
+                .and_then(serde_json::Value::as_u64)
+        })
+        .collect();
+    anyhow::ensure!(
+        matches!(durations.as_slice(), [Some(ms)] if (1_000..held).contains(ms)),
+        "Expected one command timed at 1 s or more and under the {STOPPED_FOR:?} its runner was held, got {durations:?} ms.\nstderr: {}",
+        output.stderr
+    );
     Ok(())
 }
 
