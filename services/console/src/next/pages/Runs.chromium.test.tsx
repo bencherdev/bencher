@@ -426,3 +426,33 @@ test("a search after nothing was found shows no zero state while it loads", asyn
 	answer(answered([runFixture(0)], 1));
 	await expect.element(table()).toBeVisible();
 });
+
+// Kills a Runs list wider than a small laptop's screen (a minimum width past
+// it), which scrolls sideways where every column fits, and one that cuts off a
+// header or three-digit alerts there.
+test("at 1024 px the Runs list fits its screen", async () => {
+	await page.viewport(1024, 768);
+	const { api } = fakeApi(() =>
+		answered(
+			runs(0, 8).map((run) => ({
+				...run,
+				testbeds: ["ubuntu-22.04-arm64-large-runner", "macos-latest"],
+				testbed_count: 2,
+				alerts: { total: 120, active: 64 },
+			})),
+			8,
+		),
+	);
+	mount(api, client());
+	await expect.element(table()).toBeVisible();
+	const scroll = table().element().closest(".ui-table-scroll") as HTMLElement;
+	expect(scroll.scrollWidth).toBe(scroll.clientWidth);
+	for (const header of table().element().querySelectorAll("thead th")) {
+		expect(header.scrollWidth, header.textContent ?? "").toBeLessThanOrEqual(
+			header.clientWidth,
+		);
+	}
+	const alerts = table().element().querySelector(".reports-alerts")
+		?.parentElement as HTMLElement;
+	expect(alerts.scrollWidth).toBeLessThanOrEqual(alerts.clientWidth);
+});

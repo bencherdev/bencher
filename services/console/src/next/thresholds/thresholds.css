@@ -32,6 +32,13 @@
 .th-table tbody tr.th-row > td.th-model {
 	max-width: 360px;
 }
+/* Columns sized by their headers alone, so they hold still as rows come and go. */
+@media (min-width: 768px) {
+	.th-table {
+		table-layout: fixed;
+		min-width: 940px;
+	}
+}
 .th-table tbody tr.th-spacer td {
 	padding: 0;
 	border: 0;

@@ -45,6 +45,17 @@
 	padding-block: 0;
 	line-height: 20px;
 }
+/* Columns sized by their headers alone, so they hold still as rows come and go. */
+@media (min-width: 768px) {
+	.dm-table {
+		table-layout: fixed;
+		min-width: 600px;
+	}
+	.dm-table tbody tr.dm-row > td {
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+}
 .dm-table tbody tr.dm-spacer td {
 	padding: 0;
 	border: 0;

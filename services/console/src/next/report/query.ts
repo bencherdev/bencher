@@ -4,7 +4,12 @@ import { FOLD } from "../alerts/fold";
 import type { Api } from "../api";
 import { batchSize } from "../reports/rows";
 import { type ParameterSet, parameterEntries } from "./row";
-import { type ReportView, reportViewSearch, windowDays } from "./view";
+import {
+	type ReportView,
+	parseReportView,
+	reportViewSearch,
+	windowDays,
+} from "./view";
 
 /** The height a row is drawn at, wide and narrow; a batch fills the screen with them. */
 const ROW_HEIGHT = { wide: 44, narrow: 64 } as const;
@@ -124,6 +129,22 @@ export const prefetchReport = (
 	client
 		.query(batchQuery(api, slug, report, view, { page: 1, perPage }))
 		.catch(() => {});
+
+/** Start a report's first batch as a link from another page opens it: in its default view. */
+export const prefetchLinkedReport = (
+	client: QueryClient,
+	api: Api,
+	slug: string,
+	report: string,
+) =>
+	prefetchReport(
+		client,
+		api,
+		slug,
+		report,
+		parseReportView(new URLSearchParams()),
+		screenBatch(),
+	);
 
 // A UUID, hyphenated or simple, as the API parses one.
 const REPORT_ID =

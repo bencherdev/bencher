@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
@@ -8,10 +11,10 @@ use bencher_json::{
     project::{
         alert::AlertStatus,
         console::{
-            ConsoleAuthorKind, DEFAULT_CONSOLE_RUNS_PER_PAGE, JsonConsoleAuthor, JsonConsoleBranch,
-            JsonConsoleRun, JsonConsoleRunQueryParams, JsonConsoleRunReport, JsonConsoleRunSummary,
-            JsonConsoleRuns, JsonConsoleRunsQuery, JsonConsoleRunsQueryParams, JsonConsoleTestbed,
-            MAX_CONSOLE_RUN_NAMES,
+            ConsoleAuthorKind, DEFAULT_CONSOLE_RUNS_PER_PAGE, JsonConsoleAlerts, JsonConsoleAuthor,
+            JsonConsoleBranch, JsonConsoleRun, JsonConsoleRunLink, JsonConsoleRunQueryParams,
+            JsonConsoleRunReport, JsonConsoleRunSummary, JsonConsoleRuns, JsonConsoleRunsQuery,
+            JsonConsoleRunsQueryParams, JsonConsoleTestbed, MAX_CONSOLE_RUN_NAMES,
         },
         head::VersionNumber,
         report::{Adapter, Iteration, JsonReportAlertsCounts, ReportAlerts},
@@ -48,7 +51,7 @@ use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-use super::thresholds::readable_project;
+use super::{alerts::run_alerts, before, thresholds::readable_project};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjConsoleRunsParams {
@@ -349,21 +352,22 @@ fn versions(
 }
 
 /// A visible report of a run, with what its row and its run's row show.
-struct ReportRow {
-    version_id: VersionId,
-    id: ReportId,
-    uuid: ReportUuid,
-    start_time: DateTime,
-    end_time: DateTime,
-    branch: JsonConsoleBranch,
-    testbed: JsonConsoleTestbed,
-    adapter: Adapter,
-    author: Option<Author>,
+pub(super) struct ReportRow {
+    pub version_id: VersionId,
+    pub id: ReportId,
+    pub uuid: ReportUuid,
+    pub start_time: DateTime,
+    pub end_time: DateTime,
+    pub created: DateTime,
+    pub branch: JsonConsoleBranch,
+    pub testbed: JsonConsoleTestbed,
+    pub adapter: Adapter,
+    pub author: Option<Author>,
 }
 
 /// Who sent a report, by identity so two people of one name stay two.
 #[derive(Clone, PartialEq, Eq, Hash)]
-enum Author {
+pub(super) enum Author {
     User(UserId, String),
     Key(ProjectKeyId, String),
 }
@@ -384,7 +388,14 @@ impl Author {
 }
 
 type ReportRowColumns = (
-    (VersionId, ReportId, ReportUuid, DateTime, DateTime),
+    (
+        VersionId,
+        ReportId,
+        ReportUuid,
+        DateTime,
+        DateTime,
+        DateTime,
+    ),
     (BranchUuid, BranchName, BranchSlug, HeadUuid),
     (TestbedUuid, ResourceName, TestbedSlug),
     Adapter,
@@ -393,7 +404,7 @@ type ReportRowColumns = (
 );
 
 /// The visible reports of the runs, each run's in start order.
-fn report_rows(
+pub(super) fn report_rows(
     conn: &mut DbConnection,
     version_ids: &[VersionId],
 ) -> diesel::QueryResult<Vec<ReportRow>> {
@@ -422,6 +433,7 @@ fn report_rows(
                 schema::report::uuid,
                 schema::report::start_time,
                 schema::report::end_time,
+                schema::report::created,
             ),
             (
                 schema::branch::uuid,
@@ -446,7 +458,7 @@ fn report_rows(
         .into_iter()
         .map(
             |(
-                (version_id, id, uuid, start_time, end_time),
+                (version_id, id, uuid, start_time, end_time, created),
                 (branch_uuid, branch_name, branch_slug, head),
                 (testbed_uuid, testbed_name, testbed_slug),
                 adapter,
@@ -466,6 +478,7 @@ fn report_rows(
                     uuid,
                     start_time,
                     end_time,
+                    created,
                     branch: JsonConsoleBranch {
                         uuid: branch_uuid,
                         name: branch_name,
@@ -678,8 +691,10 @@ pub async fn proj_console_run_options(
 
 /// View a run for the console
 ///
-/// A run's facts and one page of its reports in start order. Reports on an
-/// archived branch or testbed are left out, as the runs list leaves them out.
+/// A run's facts and one page of its reports in start order, and on the first
+/// page the runs before and after it on its branch and the alerts its reports
+/// raised. Reports on an archived branch or testbed are left out, as the runs
+/// list leaves them out.
 /// The user must be signed in and allowed to view the project,
 /// or provide a valid project key for the project.
 #[endpoint {
@@ -759,6 +774,24 @@ async fn get_one_inner(
         .map(|row| row.testbed.uuid)
         .collect::<HashSet<_>>()
         .len();
+    // The heading's steps and the run's alerts belong to its first page.
+    let (previous, next, alerting) = if query_params.page.unwrap_or(1) <= 1 {
+        let (previous, next) = neighbors(
+            conn,
+            project.id,
+            facts.branch.uuid,
+            version.0,
+            facts.start_time.into(),
+        )
+        .map_err(resource_not_found_err!(
+            Version,
+            (&project, path_params.version)
+        ))?;
+        let alerting = alerting(conn, context, project.id, version.0, &facts, &rows)?;
+        (previous, next, alerting)
+    } else {
+        (None, None, None)
+    };
     let (offset, page) = page_of(&rows, query_params.page, query_params.per_page);
     let reports = page
         .iter()
@@ -787,6 +820,161 @@ async fn get_one_inner(
         testbeds: to_u32(testbeds),
         lines: facts.lines,
         alerts: facts.alerts,
+        previous,
+        next,
+        alerting,
         reports,
     })
 }
+
+/// The alerts a run's reports raised, read only for a run whose facts count any.
+fn alerting(
+    conn: &mut DbConnection,
+    context: &ApiContext,
+    project_id: ProjectId,
+    version_id: VersionId,
+    facts: &RunFacts,
+    rows: &[ReportRow],
+) -> Result<Option<JsonConsoleAlerts>, HttpError> {
+    if facts.alerts.total == 0 {
+        return Ok(None);
+    }
+    let in_order = rows
+        .iter()
+        .map(|row| (row.id, row.uuid))
+        .collect::<Vec<_>>();
+    run_alerts(
+        conn,
+        project_id,
+        context.clock.now().into(),
+        version_id,
+        &in_order,
+    )
+    .map(Some)
+}
+
+/// How far either side of a run's first start its Previous and Next are first looked for.
+const NEIGHBOR_WINDOW: Duration = Duration::from_hours(4 * 7 * 24);
+
+/// The runs before and after a run on its branch, in the runs list's order. The runs whose
+/// first start is within the window either side are read first, and a side reads further only
+/// when none of them falls on it.
+fn neighbors(
+    conn: &mut DbConnection,
+    project_id: ProjectId,
+    branch: BranchUuid,
+    version_id: VersionId,
+    first_start: DateTime,
+) -> diesel::QueryResult<(Option<JsonConsoleRunLink>, Option<JsonConsoleRunLink>)> {
+    let from = before(first_start, NEIGHBOR_WINDOW).unwrap_or(first_start);
+    let to = after(first_start, NEIGHBOR_WINDOW).unwrap_or(first_start);
+    let run = (version_id, first_start);
+    let near = branch_keys(conn, project_id, branch, Some(from), Some(to))?;
+    let (mut older, mut newer) = beside(&near, run);
+    older = older.filter(|(_, start)| start.timestamp() >= from.timestamp());
+    newer = newer.filter(|(_, start)| start.timestamp() <= to.timestamp());
+    if older.is_none() {
+        older = beside(&branch_keys(conn, project_id, branch, None, None)?, run).0;
+    }
+    // A run that starts after the window has a report that ends after it.
+    if newer.is_none() {
+        newer = beside(&branch_keys(conn, project_id, branch, Some(to), None)?, run).1;
+    }
+    let ids = older
+        .iter()
+        .chain(&newer)
+        .map(|(id, _)| *id)
+        .collect::<Vec<_>>();
+    let versions = versions(conn, &ids)?;
+    let link = |key: Option<RunKey>| {
+        let (id, start_time) = key?;
+        let (_, uuid, number, hash) = versions.get(&id)?.clone();
+        Some(JsonConsoleRunLink {
+            uuid,
+            number,
+            hash,
+            start_time: start_time.into(),
+        })
+    };
+    Ok((link(older), link(newer)))
+}
+
+fn after(time: DateTime, duration: Duration) -> Option<DateTime> {
+    let seconds = i64::try_from(duration.as_secs()).ok()?;
+    DateTime::try_from(time.timestamp().checked_add(seconds)?).ok()
+}
+
+/// The runs on a branch and their first report's start, of the runs with a report that ends at
+/// or after `ends_after` and starts at or before `starts_before`, each read over all of its
+/// visible reports so its first start is its own.
+fn branch_keys(
+    conn: &mut DbConnection,
+    project_id: ProjectId,
+    branch: BranchUuid,
+    ends_after: Option<DateTime>,
+    starts_before: Option<DateTime>,
+) -> diesel::QueryResult<Vec<RunKey>> {
+    let branch = branch.to_string();
+    let keys = if ends_after.is_none() && starts_before.is_none() {
+        schema::report::table
+            .inner_join(schema::head::table.on(schema::head::id.eq(schema::report::head_id)))
+            .inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id)))
+            .inner_join(
+                schema::testbed::table.on(schema::testbed::id.eq(schema::report::testbed_id)),
+            )
+            .filter(schema::branch::uuid.eq(&branch))
+            .filter(visible())
+            .group_by(schema::report::version_id)
+            .select((schema::report::version_id, min(schema::report::start_time)))
+            .load::<(VersionId, Option<DateTime>)>(conn)?
+    } else {
+        let near_report = diesel::alias!(schema::report as near_report);
+        let mut near = near_report
+            .filter(near_report.field(schema::report::project_id).eq(project_id))
+            .select(near_report.field(schema::report::version_id))
+            .into_boxed();
+        if let Some(time) = ends_after {
+            near = near.filter(near_report.field(schema::report::end_time).ge(time));
+        }
+        if let Some(time) = starts_before {
+            near = near.filter(near_report.field(schema::report::start_time).le(time));
+        }
+        // The `+ 0` reads each candidate by its version rather than every report of the branch.
+        schema::report::table
+            .inner_join(schema::head::table.on(schema::head::id.eq(schema::report::head_id + 0)))
+            .inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id)))
+            .inner_join(
+                schema::testbed::table.on(schema::testbed::id.eq(schema::report::testbed_id)),
+            )
+            .filter(schema::branch::uuid.eq(&branch))
+            .filter(visible())
+            .filter(schema::report::version_id.eq_any(near))
+            .group_by(schema::report::version_id)
+            .select((schema::report::version_id, min(schema::report::start_time)))
+            .load::<(VersionId, Option<DateTime>)>(conn)?
+    };
+    Ok(keys
+        .into_iter()
+        .filter_map(|(version_id, start_time)| Some((version_id, start_time?)))
+        .collect())
+}
+
+/// The runs either side of a run in the runs list's order, the one before and then the one
+/// after, whether or not the keys hold the run itself.
+fn beside(keys: &[RunKey], run: RunKey) -> (Option<RunKey>, Option<RunKey>) {
+    let order = |&(version_id, start_time): &RunKey| (start_time.timestamp(), version_id);
+    let own = order(&run);
+    (
+        keys.iter()
+            .filter(|key| order(key) < own)
+            .max_by_key(|key| order(key))
+            .copied(),
+        keys.iter()
+            .filter(|key| order(key) > own)
+            .min_by_key(|key| order(key))
+            .copied(),
+    )
+}
+
+/// A run's version and its first report's start, which order the runs list.
+type RunKey = (VersionId, DateTime);

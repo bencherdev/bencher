@@ -3,22 +3,33 @@ import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
 import Skeleton from "@bencherdev/ui/Skeleton";
-import type { QueryObserverResult } from "@tanstack/solid-query";
+import {
+	type QueryClient,
+	type QueryObserverResult,
+	useQueryClient,
+} from "@tanstack/solid-query";
 import {
 	For,
 	Match,
 	Show,
+	Suspense,
 	Switch,
 	createComputed,
 	createEffect,
 	createMemo,
 	createSignal,
+	lazy,
 	mapArray,
 	on,
 } from "solid-js";
-import type { JsonConsoleRun, JsonConsoleRunReport } from "../../types/bencher";
-import { ApiError } from "../api";
-import { projectPath } from "../paths";
+import type {
+	JsonConsoleAlerts,
+	JsonConsoleRun,
+	JsonConsoleRunLink,
+	JsonConsoleRunReport,
+} from "../../types/bencher";
+import { type Api, ApiError } from "../api";
+import { projectPath, runPath } from "../paths";
 import { formatWhen } from "../plot/format";
 import { useNarrow } from "../plot/narrow";
 import { useProject } from "../project";
@@ -27,8 +38,12 @@ import { absoluteTime, duration } from "../reports/format";
 import { type Range, hasMore, loadMore } from "../reports/rows";
 import { screenBatch } from "../reports/virtual";
 import { runHead } from "../runs/format";
+import Neighbor from "../runs/Neighbor";
 import { isRunId, runBatchQuery } from "../runs/run";
 import RunReports from "../runs/RunReports";
+
+/** Only a run that raised alerts draws them, so the code that draws a report's lines loads with its first alert. */
+const RunAlerts = lazy(() => import("../runs/RunAlerts"));
 
 /** Skeleton rows for a run never fetched, which show only once the wait is noticeable. */
 const SKELETON_ROWS = 8;
@@ -39,6 +54,7 @@ type Batch = QueryObserverResult<JsonConsoleRun>;
 const Run = () => {
 	const { api, slug } = useProject();
 	const params = useParams<{ run: string }>();
+	const client = useQueryClient();
 	const narrow = useNarrow();
 
 	const perPage = screenBatch();
@@ -117,6 +133,28 @@ const Run = () => {
 				: "network";
 	};
 	const missing = () => !isRunId(params.run) || failure() === "not_found";
+	/** Where a step to the run on one side leads, once the run is known. */
+	const step = (side: "previous" | "next") => {
+		const current = run();
+		const link = current?.[side];
+		return current && link
+			? {
+					href: runPath(slug(), link.uuid),
+					shown: formatWhen(link.start_time),
+					detail: `the run on ${current.branch.name}, ${runHead(link)}`,
+				}
+			: undefined;
+	};
+	const intendRun = (link: JsonConsoleRunLink | undefined) => {
+		if (link) {
+			prefetch(client, api, slug(), link.uuid);
+		}
+	};
+	// The report page's first batch comes with its code, which the move needs anyway.
+	const intendReport = (uuid: string) =>
+		import("./Report")
+			.then(({ prefetch }) => prefetch(client, api, slug(), uuid))
+			.catch(() => {});
 
 	return (
 		<Show when={!missing()} fallback={<NotFound slug={slug()} />}>
@@ -125,6 +163,18 @@ const Run = () => {
 					<div class="ph-title">
 						<Crumb slug={slug()} />
 						<Title run={run()} />
+					</div>
+					<div class="ph-actions rp-actions">
+						<Neighbor
+							side="previous"
+							link={step("previous")}
+							onIntent={() => intendRun(run()?.previous)}
+						/>
+						<Neighbor
+							side="next"
+							link={step("next")}
+							onIntent={() => intendRun(run()?.next)}
+						/>
 					</div>
 					<p class="ph-sub rp-sub">
 						<Show
@@ -151,6 +201,7 @@ const Run = () => {
 										reports={reports()}
 										total={run().total}
 										onRange={setRange}
+										onIntent={intendReport}
 										loading={next()?.isFetching ?? false}
 										onRetry={
 											next()?.isLoadingError
@@ -179,12 +230,58 @@ const Run = () => {
 						</Match>
 					</Switch>
 				</section>
+				<Show when={run()}>
+					{(shown) => (
+						<Show
+							when={
+								(shown().alerting?.total ?? 0) > 0
+									? shown().alerting
+									: undefined
+							}
+						>
+							{(alerting) => (
+								<section class="dm-section" aria-label="Alerts in this run">
+									<div class="dm-section-head">
+										<h2 class="seclabel">Alerts in this run</h2>
+										<span class="count">{alertCount(alerting())}</span>
+									</div>
+									<Suspense>
+										<RunAlerts
+											slug={slug()}
+											label={`Alerts in run ${runHead(shown())}, by report`}
+											alerting={alerting()}
+											onReportIntent={intendReport}
+										/>
+									</Suspense>
+								</section>
+							)}
+						</Show>
+					)}
+				</Show>
 			</main>
 		</Show>
 	);
 };
 
 export default Run;
+
+/** Start a run's first batch, at the size its page asks for, and the code of any alerts it raised, before the reader opens it. */
+export const prefetch = (
+	client: QueryClient,
+	api: Api,
+	slug: string,
+	version: string,
+) =>
+	client
+		.query(
+			runBatchQuery(api, slug, version, { page: 1, perPage: screenBatch() }),
+		)
+		.then((run) => {
+			if ((run.alerting?.total ?? 0) > 0) {
+				RunAlerts.preload();
+			}
+		})
+		.catch(() => {});
 
 /** The way back to Runs. */
 const Crumb = (props: { slug: string }) => (
@@ -253,6 +350,17 @@ const subtitle = (run: JsonConsoleRun, narrow: boolean) => {
 
 const plural = (count: number, noun: string) =>
 	`${count} ${count === 1 ? noun : `${noun}s`}`;
+
+/** How many alerts the run raised, and how many the section draws when that is fewer. */
+const alertCount = (alerting: JsonConsoleAlerts) => {
+	const drawn = alerting.groups.reduce(
+		(sum, group) => sum + group.alerts.length,
+		0,
+	);
+	return drawn < alerting.total
+		? `${drawn} of ${alerting.total}`
+		: String(alerting.total);
+};
 
 const NotFound = (props: { slug: string }) => (
 	<main class="page">

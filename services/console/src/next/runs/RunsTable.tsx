@@ -5,11 +5,11 @@ import type {
 	JsonConsoleRunSummary,
 } from "../../types/bencher";
 import { absoluteTime, duration, relativeTime } from "../reports/format";
+import { runPath } from "../paths";
 import type { Range } from "../reports/rows";
 import { MoreRows, Spacer } from "../reports/TableRows";
 import { useVirtualRows } from "../reports/virtual";
 import { allNames, runHead } from "./format";
-import { runPath } from "./path";
 import { Alerts, Author } from "./cells";
 
 const COLUMNS = 10;
@@ -38,7 +38,7 @@ const RunsTable = (props: {
 	});
 	return (
 		<Table
-			class="reports-table"
+			class="reports-table rn-list"
 			aria-label="Runs, newest first"
 			aria-rowcount={props.total + 1}
 			aria-busy={props.busy === true ? "true" : undefined}
@@ -46,20 +46,35 @@ const RunsTable = (props: {
 		>
 			<thead>
 				<tr aria-rowindex={1}>
-					<th scope="col">When</th>
+					{/* Every share but the branch's is set, so the columns never follow the rows drawn. */}
+					<th scope="col" style="width:7.5%">
+						When
+					</th>
 					<th scope="col">Branch</th>
-					<th scope="col">Head</th>
-					<th scope="col" data-align="end">
+					<th scope="col" style="width:8%">
+						Head
+					</th>
+					<th scope="col" style="width:7.5%" data-align="end">
 						Reports
 					</th>
-					<th scope="col">Testbed</th>
-					<th scope="col">Adapter</th>
-					<th scope="col" data-align="end">
+					<th scope="col" style="width:12.5%">
+						Testbed
+					</th>
+					<th scope="col" style="width:8.5%">
+						Adapter
+					</th>
+					<th scope="col" style="width:5.5%" data-align="end">
 						Lines
 					</th>
-					<th scope="col">Alerts</th>
-					<th scope="col">Status</th>
-					<th scope="col">By</th>
+					<th scope="col" style="width:18.5%">
+						Alerts
+					</th>
+					<th scope="col" style="width:7.5%">
+						Status
+					</th>
+					<th scope="col" style="width:13%">
+						By
+					</th>
 				</tr>
 			</thead>
 			<tbody ref={rows.body}>
@@ -98,6 +113,15 @@ const RunRow = (props: {
 }) => {
 	const head = () => runHead(props.run);
 	const absolute = () => absoluteTime(props.run.start_time);
+	// A run that raised alerts draws them with code of their own, which starts as the reader moves to it.
+	const alertsAhead = (event?: PointerEvent) => {
+		if (
+			props.run.alerts.total > 0 &&
+			(!event || event.movementX || event.movementY)
+		) {
+			import("./RunAlerts").catch(() => {});
+		}
+	};
 	// The lists the row shows as one name and a count, whole, for a reader without a pointer.
 	const label = () =>
 		[
@@ -130,6 +154,9 @@ const RunRow = (props: {
 					class="reports-link rowlink-name"
 					href={runPath(props.slug, props.run.uuid)}
 					aria-label={label()}
+					onPointerMove={alertsAhead}
+					onFocus={() => alertsAhead()}
+					onTouchStart={() => alertsAhead()}
 				>
 					{props.run.branch.name}
 				</a>
@@ -170,12 +197,12 @@ const RunRow = (props: {
 	);
 };
 
-/** The first name, and a muted count of the rest whose hover lists them all. */
+/** The first name, cut short before a muted count of the rest whose hover lists them all. */
 const First = (props: { names: readonly string[]; count: number }) => (
-	<>
-		{props.names[0]}
+	<span class="rn-first">
+		<span class="rn-name">{props.names[0]}</span>
 		<More names={props.names} count={props.count} />
-	</>
+	</span>
 );
 
 const More = (props: { names: readonly string[]; count: number }) => (

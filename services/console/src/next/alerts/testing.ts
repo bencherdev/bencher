@@ -56,6 +56,10 @@ interface GroupFields {
 	alerts: AlertFields[];
 	/** An index into the fixture's branches: main, then feature. */
 	branch?: number;
+	/** An index into the fixture's testbeds: ubuntu-latest, then macos-latest. */
+	testbed?: number;
+	/** The report's place in its run, in a run's alerts. */
+	order?: number;
 	/** How many hours before the seed's newest report it ran. */
 	hours?: number;
 	total?: number;
@@ -66,14 +70,17 @@ const groupFixture = ({
 	report,
 	alerts,
 	branch = 0,
+	testbed = 0,
+	order,
 	hours = 0,
 	total = alerts.length,
 }: GroupFields): JsonConsoleAlertGroup => {
 	const start = START - hours * 3_600_000;
 	return {
 		uuid: reportId(report),
+		order,
 		branch,
-		testbed: 0,
+		testbed,
 		version: { number: 24, hash: `9c1f2e4${"0".repeat(33)}` },
 		start_time: start,
 		end_time: start + 120_000,
@@ -119,6 +126,7 @@ export const alertsFixture = (
 		],
 		testbeds: [
 			{ uuid: "testbed-uuid", name: "ubuntu-latest", slug: "ubuntu-latest" },
+			{ uuid: "macos-uuid", name: "macos-latest", slug: "macos-latest" },
 		],
 		benchmarks: [
 			{ uuid: "blake3-uuid", name: "blake3", slug: "blake3" },

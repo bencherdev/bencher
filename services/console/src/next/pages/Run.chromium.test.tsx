@@ -3,19 +3,30 @@ import "../styles/console.css";
 import "../reports/reports.css";
 import "../report/report.css";
 import "../dimensions/dimensions.css";
+import "../plot/plot.css";
+import "../thresholds/thresholds.css";
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
+import type { JsonConsoleRunReport } from "../../types/bencher";
+import { alertId, alertsFixture, reportId } from "../alerts/testing";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
+import { NEXT_PROJECTS } from "../paths";
 import { ProjectContext } from "../project";
 import { fakeApi } from "../reports/testing";
+import { screenBatch as reportScreenBatch } from "../report/query";
 import { screenBatch } from "../reports/virtual";
 import { runPageFixture, runReportFixture } from "../runs/testing";
-import { expectRowOpens } from "../ui/testing";
+import { bootstrapOf } from "../settings/testing";
+import {
+	columnEdges,
+	expectNameStartsWithText,
+	expectRowOpens,
+} from "../ui/testing";
 import Run from "./Run";
 
 const RUN = "00000000-0000-4000-8000-000000000000";
@@ -23,17 +34,20 @@ const PATH = `/hashbrown/runs/${RUN}`;
 
 let dispose: (() => void) | undefined;
 
-const mount = (api: Api, path = PATH) => {
+const mount = (api: Api, path = PATH, base?: string) => {
 	const history = createMemoryHistory();
 	history.set({ value: path });
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);
+	// One client, since a prop read again would make another.
+	const queryClient = client();
 	dispose = render(
 		() => (
-			<QueryClientProvider client={client()}>
+			<QueryClientProvider client={queryClient}>
 				<MemoryRouter
 					history={history}
+					{...(base === undefined ? {} : { base })}
 					root={(props) => (
 						<ProjectContext.Provider value={{ api, slug: () => "hashbrown" }}>
 							<Suspense fallback={<p>Suspended</p>}>{props.children}</Suspense>
@@ -319,4 +333,518 @@ test("phone rows fold into two lines beside their number and open the report any
 	expect(document.querySelector(".rp-sub")?.textContent).toMatch(
 		/ · v248 · 1 report · 36 lines · took /,
 	);
+});
+
+const NEIGHBOR = "00000000-0000-4000-8000-0000000000aa";
+/** The run before or after this one, as its heading links it. */
+const neighbor = () => ({
+	uuid: NEIGHBOR,
+	number: 247,
+	hash: `4e02c1d${"0".repeat(33)}`,
+	start_time: Date.parse("2026-09-11T20:58:00Z"),
+});
+
+// Kills a Previous that leads to another run or names it by anything but its
+// first start, branch, and head, a Next drawn as a link while there is none,
+// and a name that does not start with what the control shows.
+test("Previous and Next step to the runs on either side on its branch", async () => {
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)], { previous: neighbor() }),
+	}));
+	mount(api);
+	const previous = page.getByRole("link", { name: /^Previous / });
+	await expect
+		.element(previous)
+		.toHaveAttribute(
+			"href",
+			`/next/console/projects/hashbrown/runs/${NEIGHBOR}`,
+		);
+	expect(previous.element().getAttribute("aria-label")).toMatch(
+		/^Previous Sep 1[01], \d\d:\d8: the run on main, 4e02c1d$/,
+	);
+	expectNameStartsWithText(previous.element());
+	await expect
+		.element(page.getByRole("button", { name: "Next" }))
+		.toBeDisabled();
+});
+
+// Kills a step to another run that is not asked for before the click, asks
+// for another batch or size than that run's page will, or asks again on the click.
+test("hovering Next starts that run's first batch, so the move asks nothing more", async () => {
+	const { api, requests } = fakeApi((url) =>
+		url.pathname.endsWith(NEIGHBOR)
+			? {
+					data: runPageFixture([runReportFixture(0)], {
+						uuid: NEIGHBOR,
+						hash: `4e02c1d${"0".repeat(33)}`,
+					}),
+				}
+			: {
+					data: runPageFixture([runReportFixture(0)], { next: neighbor() }),
+				},
+	);
+	mount(api, `${NEXT_PROJECTS}${PATH}`, NEXT_PROJECTS);
+	const next = page.getByRole("link", { name: /^Next / });
+	await next.hover();
+	const asked = () => requests.filter((url) => url.pathname.endsWith(NEIGHBOR));
+	await expect.poll(() => asked().length).toBe(1);
+	expect(asked()[0]?.searchParams.get("page")).toBe("1");
+	expect(asked()[0]?.searchParams.get("per_page")).toBe(String(perPage));
+	await next.click();
+	await expect
+		.element(page.getByRole("heading", { level: 1 }))
+		.toHaveTextContent("main · 4e02c1d");
+	expect(asked()).toHaveLength(1);
+});
+
+// Kills a report row whose page is not asked for before the click, or is
+// asked for in another view or batch size than the report's page asks.
+test("hovering a report starts its page's first batch in the default view", async () => {
+	const { api, requests } = fakeApi((url) => ({
+		data: url.pathname.includes("/reports/")
+			? {}
+			: runPageFixture([runReportFixture(0)]),
+	}));
+	mount(api);
+	await table().getByRole("link").first().hover();
+	const asked = () =>
+		requests.filter((url) => url.pathname.includes("/reports/"));
+	await expect.poll(() => asked().length).toBe(1);
+	const [report] = asked();
+	expect(report?.pathname).toBe(
+		`/v0/console/projects/hashbrown/reports/${runReportFixture(0).uuid}`,
+	);
+	expect(report?.searchParams.toString()).toBe(
+		`window=28&page=1&per_page=${reportScreenBatch()}`,
+	);
+});
+
+const alerts = () =>
+	page.getByRole("table", { name: "Alerts in run 9c1f2e4, by report" });
+
+/** A run whose second report raised an active alert and whose fifth raised one since dismissed. */
+const alerting = () =>
+	runPageFixture([runReportFixture(0)], {
+		total: 8,
+		alerts: { total: 2, active: 1 },
+		alerting: alertsFixture([
+			{ report: 2, order: 2, testbed: 1, alerts: [{ alert: 1 }] },
+			{
+				report: 5,
+				order: 5,
+				alerts: [{ alert: 2, benchmark: 1, status: "dismissed" }],
+			},
+		]),
+	});
+
+// Kills an alert row that names another report or its place in the run, a
+// report or alert link that leads elsewhere, a dismissed alert drawn as
+// alerting, a count that is not the run's, and a Report column that takes the
+// measure's place.
+test("the run's alerts draw each line with the report it came from", async () => {
+	const { api } = fakeApi(() => ({ data: alerting() }));
+	mount(api);
+	const section = page.getByRole("region", { name: "Alerts in this run" });
+	await expect.element(section).toBeVisible();
+	expect(section.element().querySelector(".dm-section-head")?.textContent).toBe(
+		"Alerts in this run2",
+	);
+	await expect.element(alerts()).toBeVisible();
+	const headers = [...alerts().element().querySelectorAll("th")].map(
+		(cell) => cell.textContent,
+	);
+	expect(headers.slice(2, 5)).toEqual(["Line", "Measure", "Report"]);
+	const report = alerts().getByRole("link", { name: /^#2 · macos-latest/ });
+	await expect
+		.element(report)
+		.toHaveAttribute(
+			"href",
+			`/next/console/projects/hashbrown/reports/${reportId(2)}`,
+		);
+	expectNameStartsWithText(report.element());
+	await expect
+		.element(alerts().getByRole("link", { name: /^#5 · ubuntu-latest/ }))
+		.toHaveAttribute(
+			"href",
+			`/next/console/projects/hashbrown/reports/${reportId(5)}`,
+		);
+	await expect
+		.element(
+			alerts()
+				.getByRole("link", { name: /open the alert$/ })
+				.first(),
+		)
+		.toHaveAttribute(
+			"href",
+			`/next/console/projects/hashbrown/alerts/${alertId(1)}`,
+		);
+	const rows = [...alerts().element().querySelectorAll("tbody tr.lr")];
+	expect(rows.map((row) => row.className)).toEqual([
+		"lr lr-alerting",
+		"lr lr-dim",
+	]);
+});
+
+// Kills a row that opens its plot anywhere but in place, and an Open in
+// Explore that leaves out the report the line came from.
+test("an alert row opens its plot in place and its line in Explore from its report", async () => {
+	const { api } = fakeApi(() => ({ data: alerting() }));
+	mount(api);
+	await alerts()
+		.getByRole("button", { name: /^Expand blake3 / })
+		.click();
+	await expect
+		.element(page.getByRole("region", { name: /^blake3 .*, full plot$/ }))
+		.toBeVisible();
+	const explore = page.getByRole("link", { name: /^Open in Explore: blake3 / });
+	await expect.element(explore).toBeVisible();
+	const href = new URL(
+		explore.element().getAttribute("href") ?? "",
+		"http://console.test",
+	);
+	expect(href.pathname).toBe("/next/console/projects/hashbrown/explore");
+	expect(href.search).toContain(reportId(2));
+});
+
+// Kills an alerts section drawn for a run that raised none.
+test("a run that raised no alerts draws no alerts section", async () => {
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)], {
+			alerting: alertsFixture([]),
+		}),
+	}));
+	mount(api);
+	await expect.element(table()).toBeVisible();
+	expect(
+		document.querySelector("[aria-label='Alerts in this run']"),
+	).toBeNull();
+});
+
+// Kills a count that claims every alert is drawn when the section holds a page of them.
+test("a run with more alerts than the section draws counts how many it draws", async () => {
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)], {
+			alerting: alertsFixture(
+				[{ report: 2, order: 2, alerts: [{ alert: 1 }] }],
+				{
+					total: 70,
+				},
+			),
+		}),
+	}));
+	mount(api);
+	const section = page.getByRole("region", { name: "Alerts in this run" });
+	await expect.element(section).toBeVisible();
+	expect(section.element().querySelector(".count")?.textContent).toBe(
+		"1 of 70",
+	);
+});
+
+// Kills a phone alert row that drops its report or its measure, one whose
+// report's testbed pushes the measure out of sight, one that grows past the
+// height the list lays its rows out by, and a report there drawn as a link too
+// small to touch.
+test("a phone alert row names its report by place, as text, beside its measure", async () => {
+	await page.viewport(390, 844);
+	const { api } = fakeApi(() => ({ data: alerting() }));
+	mount(api);
+	await expect.element(alerts()).toBeVisible();
+	const row = alerts().element().querySelector<HTMLElement>("tr.lrn");
+	const line = row?.querySelector<HTMLElement>(".lrn-l2");
+	expect(line?.textContent?.replace(/\s+/g, " ")).toMatch(
+		/^#2 · macos-latest·Latency/,
+	);
+	// The measure in sight, and its history starting beside it.
+	const end = line?.getBoundingClientRect().right ?? 0;
+	const measure = [...(line?.children ?? [])].find(
+		(child) => child.textContent === "Latency",
+	);
+	expect(measure?.getBoundingClientRect().right).toBeLessThanOrEqual(end);
+	expect(
+		measure?.nextElementSibling?.getBoundingClientRect().left,
+	).toBeLessThan(end);
+	expect(row?.getBoundingClientRect().height).toBe(64);
+	expect(
+		alerts()
+			.getByRole("link", { name: /^#2 · macos-latest/ })
+			.elements(),
+	).toHaveLength(0);
+});
+
+// Kills a phone heading whose Previous and Next fall below a touch target or
+// run off the screen.
+test("on a phone, Previous and Next are touch targets inside the screen", async () => {
+	await page.viewport(390, 844);
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)], { previous: neighbor() }),
+	}));
+	mount(api);
+	const previous = page.getByRole("link", { name: /^Previous / });
+	await expect.element(previous).toBeVisible();
+	for (const control of [
+		previous.element(),
+		page.getByRole("button", { name: "Next" }).element(),
+	]) {
+		const box = control.getBoundingClientRect();
+		expect(box.height).toBeGreaterThanOrEqual(44);
+		expect(box.right).toBeLessThanOrEqual(390);
+	}
+});
+
+// Kills an alert's Report link that waits for the click to ask for its report's first batch.
+test("moving onto an alert's report starts its page's first batch", async () => {
+	const { api, requests } = fakeApi((url) => ({
+		data: url.pathname.includes("/reports/") ? {} : alerting(),
+	}));
+	mount(api);
+	await alerts()
+		.getByRole("link", { name: /^#2 · macos-latest/ })
+		.hover();
+	await expect
+		.poll(() =>
+			requests.some((url) => url.pathname.endsWith(`/reports/${reportId(2)}`)),
+		)
+		.toBe(true);
+});
+
+// Kills a count that adds up the reports that alerted rather than the alerts drawn.
+test("the count counts the alerts drawn, several to a report", async () => {
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)], {
+			alerting: alertsFixture(
+				[
+					{
+						report: 2,
+						order: 2,
+						alerts: [{ alert: 1 }, { alert: 2, benchmark: 1 }],
+					},
+				],
+				{ total: 70 },
+			),
+		}),
+	}));
+	mount(api);
+	const section = page.getByRole("region", { name: "Alerts in this run" });
+	await expect.element(section).toBeVisible();
+	expect(section.element().querySelector(".count")?.textContent).toBe(
+		"2 of 70",
+	);
+});
+
+/** The run's alerts, read by a reader who may or may not change them. */
+const mountAlerting = (edit: boolean) => {
+	const { api } = fakeApi((url) => ({
+		data:
+			url.pathname === "/v0/console/projects/hashbrown"
+				? bootstrapOf({ edit })
+				: alerting(),
+	}));
+	mount(api);
+};
+
+/** Opens the first alert row's plot and pins its readout on the alert, the last point. */
+const pinAlert = async () => {
+	await alerts()
+		.getByRole("button", { name: /^Expand blake3 / })
+		.click();
+	const region = page.getByRole("region", { name: /^blake3 .*, full plot$/ });
+	const plot = region.getByRole("group", { name: /^1 line/ });
+	await expect.element(plot).toBeVisible();
+	(plot.element() as HTMLElement).focus();
+	await userEvent.keyboard("{End}");
+	const readout = region.getByRole("status");
+	await expect
+		.element(readout.getByRole("link", { name: /^Alert: blake3 / }))
+		.toBeVisible();
+	return readout;
+};
+
+// Kills an alert row's readout that offers a change to a reader who may not
+// make it, or none to one who may.
+test("an alert row's readout offers a change only to a reader who may make it", async () => {
+	mountAlerting(true);
+	await expect
+		.element(
+			(await pinAlert()).getByRole("button", {
+				name: /^Dismiss the alert on /,
+			}),
+		)
+		.toBeVisible();
+	dispose?.();
+	document.body.replaceChildren();
+
+	mountAlerting(false);
+	const readout = await pinAlert();
+	expect(
+		readout.getByRole("button", { name: /the alert on/ }).elements(),
+	).toHaveLength(0);
+});
+
+// Kills a row whose cells sit under another column's header, and an opened
+// plot that spans fewer columns than the row.
+test("each alert cell sits under its header, and an opened plot spans the row", async () => {
+	const { api } = fakeApi(() => ({ data: alerting() }));
+	mount(api);
+	await expect.element(alerts()).toBeVisible();
+	const headers = [...alerts().element().querySelectorAll("thead th")];
+	const cells = [
+		...(alerts().element().querySelector("tbody tr.lr")?.children ?? []),
+	];
+	expect(cells).toHaveLength(headers.length);
+	headers.forEach((header, index) => {
+		expect(
+			Math.round(cells[index]?.getBoundingClientRect().left ?? -1),
+			header.textContent ?? "",
+		).toBe(Math.round(header.getBoundingClientRect().left));
+	});
+	const under = (label: string) =>
+		cells[headers.findIndex((header) => header.textContent === label)]
+			?.textContent;
+	expect(under("Measure")).toBe("Latency");
+	expect(under("Report")).toMatch(/^#\d · /);
+	await alerts()
+		.getByRole("button", { name: /^Expand blake3 / })
+		.click();
+	await expect
+		.poll(
+			() =>
+				alerts().element().querySelector<HTMLTableCellElement>("tr.lr-exrow td")
+					?.colSpan,
+		)
+		.toBe(headers.length);
+});
+
+// Kills a Line column that the Report column squeezes on a small laptop.
+test("at 1024 px the Report column leaves the Line column its room", async () => {
+	await page.viewport(1024, 768);
+	const { api } = fakeApi(() => ({ data: alerting() }));
+	mount(api);
+	await expect.element(alerts()).toBeVisible();
+	const width = (column: number) =>
+		alerts()
+			.element()
+			.querySelector(`thead th:nth-child(${column})`)
+			?.getBoundingClientRect().width ?? 0;
+	expect(width(3)).toBeGreaterThan(width(5));
+});
+
+// Kills a step that prefetches when the page changes under a still pointer,
+// which is not the reader moving toward it.
+test("a pointer that has not moved starts no prefetch", async () => {
+	const { api, requests } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)], { next: neighbor() }),
+	}));
+	mount(api);
+	const next = page.getByRole("link", { name: /^Next / });
+	await expect.element(next).toBeVisible();
+	const asked = () => requests.filter((url) => url.pathname.endsWith(NEIGHBOR));
+	const move = (movementX: number) =>
+		next
+			.element()
+			.dispatchEvent(
+				new PointerEvent("pointermove", { bubbles: true, movementX }),
+			);
+	move(0);
+	await wait(100);
+	expect(asked()).toHaveLength(0);
+	move(4);
+	await expect.poll(() => asked().length).toBe(1);
+});
+
+/** A run's reports whose later ones run on a testbed of a longer name and alerted, which an auto layout would widen its columns for. */
+const variedReports = (from: number, count: number, longFrom = 20) =>
+	Array.from({ length: count }, (_, index) =>
+		runReportFixture(
+			from + index,
+			from + index < longFrom
+				? {}
+				: {
+						testbed: {
+							uuid: "t",
+							name: "ubuntu-22.04-arm64-large-runner",
+							slug: "t",
+						} as never,
+						adapter: "rust_criterion" as never,
+						lines: 123_456,
+						alerts: { total: 120, active: 64 },
+						author: {
+							kind: "key",
+							name: "a project key with a long name",
+						} as never,
+					},
+		),
+	);
+
+// Kills a run's reports table laid out by the rows drawn (an auto layout),
+// whose columns shift as rows of other widths scroll into view, at desktop and
+// at 768 px.
+test("the reports table's columns hold still as rows of other widths scroll into view", async () => {
+	for (const width of [1280, 768]) {
+		await page.viewport(width, 720);
+		const batch = screenBatch();
+		const { api } = fakeApi((url) => {
+			const at = Number(url.searchParams.get("page"));
+			return {
+				// The first batch alone is drawn first, so the longer rows arrive with the scroll.
+				data: runPageFixture(variedReports((at - 1) * batch, batch, batch), {
+					total: 3 * batch,
+				}),
+			};
+		});
+		mount(api);
+		await expect.element(table()).toBeVisible();
+		const before = columnEdges(table().element());
+		expect(before.cells).toEqual(before.headers);
+		await expect
+			.poll(() => {
+				toBottom();
+				return drawn().at(-1);
+			})
+			.toBe(3 * batch + 1);
+		const after = columnEdges(table().element());
+		expect(after.headers).toEqual(before.headers);
+		expect(after.cells).toEqual(before.headers);
+		window.scrollTo({ top: 0, behavior: "instant" });
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a run's reports table that does not fold on a phone (an auto layout
+// there), whose rows' cells follow the widest rows drawn beside them.
+test("on a phone, each report row folds on its own, whatever rows are drawn beside it", async () => {
+	await page.viewport(390, 720);
+	const firstRow = async (reports: JsonConsoleRunReport[]) => {
+		const { api } = fakeApi(() => ({
+			data: runPageFixture(reports, { total: reports.length }),
+		}));
+		mount(api);
+		await expect.element(table()).toBeVisible();
+		const { cells } = columnEdges(table().element());
+		dispose?.();
+		document.body.replaceChildren();
+		return cells;
+	};
+	expect(
+		await firstRow([...variedReports(0, 1), ...variedReports(20, 19)]),
+	).toEqual(await firstRow(variedReports(0, 20)));
+});
+
+// Kills a run's reports table wider than a tablet's screen (a minimum width
+// past it), which scrolls sideways where every column fits, and one that cuts
+// off a header there.
+test("at 768 px the reports table fits its screen", async () => {
+	await page.viewport(768, 1024);
+	const { api } = fakeApi(() => ({
+		data: runPageFixture(variedReports(0, 8, 4), { total: 8 }),
+	}));
+	mount(api);
+	await expect.element(table()).toBeVisible();
+	const scroll = table().element().closest(".ui-table-scroll") as HTMLElement;
+	expect(scroll.scrollWidth).toBe(scroll.clientWidth);
+	for (const header of table().element().querySelectorAll("thead th")) {
+		expect(header.scrollWidth, header.textContent ?? "").toBeLessThanOrEqual(
+			header.clientWidth,
+		);
+	}
 });
