@@ -1,5 +1,6 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import {
+	VERSION_KEY,
 	crumbs,
 	expect,
 	nextPath,
@@ -27,6 +28,8 @@ const { hashbrown } = seed.projects;
 // The shell alone: a project path no page draws, so no page data rides along.
 const SHELL = nextPath(hashbrown.slug, "nowhere");
 const RUNS = nextPath(hashbrown.slug, "runs");
+// The project root, where bencher.dev lands a reader.
+const PROJECT = nextPath(hashbrown.slug);
 // A report's page, under no tab of its own.
 const REPORTS = nextPath(hashbrown.slug, "reports");
 
@@ -188,6 +191,64 @@ test("a cold load of Runs holds its speed ceilings", async ({ page }) => {
 	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
 	expect(cost.inlineScriptBytes).toBeLessThanOrEqual(ceiling.inlineScriptBytes);
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+});
+
+test.describe("a returning reader", () => {
+	test.use({
+		storageState: signedIn(seed.member, {
+			[VERSION_KEY]: JSON.stringify({ [hashbrown.slug]: 1 }),
+		}),
+	});
+
+	// Kills a landing from bencher.dev that asks the API before it leaves the
+	// root page or before the project page's first paint, and any growth in
+	// what the project page it lands on loads.
+	test("a cold landing from bencher.dev holds its speed ceilings", async ({
+		page,
+	}) => {
+		await observeLayoutShift(page);
+		let apiRequestsBeforeLanding = 0;
+		let landed = false;
+		page.on("request", (request) => {
+			if (request.url() === new URL(PROJECT, seed.console_url).href) {
+				landed = true;
+			} else if (!landed && request.url().startsWith(seed.api_url)) {
+				apiRequestsBeforeLanding += 1;
+			}
+		});
+		await page.route(`${seed.api_url}/**`, async (route) => {
+			await new Promise((resolve) => setTimeout(resolve, 500));
+			await route.continue();
+		});
+		await page.goto("/");
+		await expect(page).toHaveURL(PROJECT);
+		await ready(page);
+
+		const cost = {
+			...(await measure(page, seed.api_url)),
+			apiRequestsBeforeLanding,
+		};
+		report("landing cold load", cost);
+		const ceiling = ceilings.landingColdLoad;
+		expect(cost.apiRequestsBeforeLanding).toBeLessThanOrEqual(
+			ceiling.apiRequestsBeforeLanding,
+		);
+		expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
+			ceiling.apiAnswersBeforePaint,
+		);
+		expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+		expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+		expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
+		expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
+		expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+		expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+		expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
+		expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+		expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
+			ceiling.inlineScriptBytes,
+		);
+		expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+	});
 });
 
 // Kills a switch into Runs that refetches the shell, asks for the list in

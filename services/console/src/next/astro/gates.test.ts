@@ -4,8 +4,9 @@ import { describe, expect, test } from "vitest";
 import { decodeBase64 } from "../../util/convert";
 import { USER_KEY } from "../reader";
 import { VERSION_KEY } from "../memory";
-import { classicPlace } from "../paths";
+import { classicPlace, projectPath } from "../paths";
 import ClassicGate from "./ClassicGate.astro";
+import Landing from "./Landing.astro";
 import NextHead from "./NextHead.astro";
 
 const container = await AstroContainer.create();
@@ -198,5 +199,55 @@ describe("ClassicGate on the public perf page", () => {
 	test("a project remembered on version 0, or not at all, stays", async () => {
 		expect(await perf(versions("hashbrown", 0))).toEqual([]);
 		expect(await perf({})).toEqual([]);
+	});
+});
+
+describe("Landing", () => {
+	const land = async (
+		storage: Record<string, string>,
+		url = "https://bencher.dev/",
+	) => run(await container.renderToString(Landing), url, storage).replaced;
+	const reader = {
+		[USER_KEY]: JSON.stringify({
+			token: "tok",
+			user: { uuid: "u" },
+			expiration: "2999-01-01T00:00:00Z",
+		}),
+	};
+
+	// Kills a root page that waits for its own code to send a signed in reader
+	// on, or a script that reads other keys than the landing's.
+	test("a signed in reader goes to the main project before the page loads", async () => {
+		expect(await land({ ...reader, ...versions("hashbrown", 1) })).toEqual([
+			projectPath("hashbrown"),
+		]);
+	});
+
+	// Kills a root page that sends a reader who is not signed in away.
+	test("a reader who is not signed in stays", async () => {
+		expect(await land(versions("hashbrown", 1))).toEqual([]);
+	});
+
+	// Kills a script that reads no query string, dropping an invite before
+	// the page can accept it.
+	test("a query string stays", async () => {
+		expect(
+			await land(
+				{ ...reader, ...versions("hashbrown", 1) },
+				"https://bencher.dev/?invite=x",
+			),
+		).toEqual([]);
+	});
+
+	// Kills a script that checks the token against any time but now.
+	test("a reader whose token has expired stays", async () => {
+		const expired = {
+			[USER_KEY]: JSON.stringify({
+				token: "tok",
+				user: { uuid: "u" },
+				expiration: new Date(Date.now() - 60_000).toISOString(),
+			}),
+		};
+		expect(await land({ ...expired, ...versions("hashbrown", 1) })).toEqual([]);
 	});
 });
