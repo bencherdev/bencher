@@ -426,45 +426,58 @@ const plotOnlyImport = async (request: APIRequestContext, link: string) => {
 	return (url: URL) => url.pathname === own;
 };
 
-// Kills a refused-query banner that wraps or grows past the plot's head row
-// onto the lines it keeps, and a Retry under 44 px, at any width.
-test("a refused edit's banner keeps to the plot's head row at every width", async ({
-	page,
-	request,
-}) => {
-	const { query } = await twoLines(request);
-	await page.goto(explore(hashbrown.slug, query));
-	await expect(plot(page)).toHaveAccessibleName("2 lines");
-	await page.route(`${seed.api_url}/v0/console/projects/*/perf?*`, (route) =>
-		route.fulfill({ status: 400, body: "{}" }),
-	);
-	await box(page, "Parameters")
-		.getByRole("button", { name: "Remove set input_bytes=65536 threads=1" })
-		.click();
-	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
-	await expect(failed).toBeVisible();
+// Kills a refused-query banner that wraps or grows past the plot's first axes
+// rows onto the lines it keeps, or stops short of the two rows a two-axis plot
+// heads with on a phone, and a Retry under 44 px, at any width.
+for (const measures of [["Latency"], ["Latency", "Throughput"]]) {
+	test(`a refused edit's banner covers the plot's axes rows at every width with ${measures.length} measures`, async ({
+		page,
+		request,
+	}) => {
+		const { id, query } = await twoLines(request);
+		await page.goto(
+			explore(hashbrown.slug, { ...query, measures: measures.map(id.measure) }),
+		);
+		const drawn = `${2 * measures.length} lines`;
+		await expect(plot(page)).toHaveAccessibleName(drawn);
+		await page.route(`${seed.api_url}/v0/console/projects/*/perf?*`, (route) =>
+			route.fulfill({ status: 400, body: "{}" }),
+		);
+		await box(page, "Parameters")
+			.getByRole("button", { name: "Remove set input_bytes=65536 threads=1" })
+			.click();
+		const failed = page
+			.getByRole("region", { name: "Plot" })
+			.getByRole("alert");
+		await expect(failed).toBeVisible();
 
-	for (const [width, settled] of [
-		[1280, box(page, "Branches")],
-		[768, box(page, "Branches")],
-		[390, page.getByRole("button", { name: "branches main" })],
-	] as const) {
-		await page.setViewportSize({ width, height: 844 });
-		await expect(settled).toBeVisible();
-		const banner = await failed.boundingBox();
-		const drawing = await plot(page).locator(".pl-body").boundingBox();
-		const retry = await failed
-			.getByRole("button", { name: "Retry" })
-			.boundingBox();
-		const overlap =
-			(banner?.y ?? 0) + (banner?.height ?? 0) - (drawing?.y ?? 0);
-		expect
-			.soft(Math.abs(overlap), `banner edge past the plot's top at ${width}`)
-			.toBeLessThanOrEqual(4);
-		expect.soft(retry?.height, `Retry at ${width}`).toBeGreaterThanOrEqual(44);
-	}
-	await expect(plot(page)).toHaveAccessibleName("2 lines");
-});
+		for (const [width, settled] of [
+			[1280, box(page, "Branches")],
+			[768, box(page, "Branches")],
+			[390, page.getByRole("button", { name: "branches main" })],
+		] as const) {
+			await page.setViewportSize({ width, height: 844 });
+			await expect(settled).toBeVisible();
+			const banner = await failed.boundingBox();
+			const drawing = await plot(page)
+				.locator(".pl-area")
+				.first()
+				.boundingBox();
+			const retry = await failed
+				.getByRole("button", { name: "Retry" })
+				.boundingBox();
+			const overlap =
+				(banner?.y ?? 0) + (banner?.height ?? 0) - (drawing?.y ?? 0);
+			expect
+				.soft(Math.abs(overlap), `banner edge off the lines' top at ${width}`)
+				.toBeLessThanOrEqual(4);
+			expect
+				.soft(retry?.height, `Retry at ${width}`)
+				.toBeGreaterThanOrEqual(44);
+		}
+		await expect(plot(page)).toHaveAccessibleName(drawn);
+	});
+}
 
 // Kills a covered set merged away or counted as adding variants, and a row
 // without its own count.

@@ -200,7 +200,7 @@
 	"exploreLinkMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 37260,
+		"jsBytes": 37230,
 		"scriptRounds": 1
 	},
 	"blankExploreColdLoad": {

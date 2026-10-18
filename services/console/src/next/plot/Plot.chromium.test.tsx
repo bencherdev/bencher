@@ -1039,9 +1039,9 @@ const ALERTED = testData([
 ]);
 const ALERT_NAME = "blake3 simd=avx2 threads=1 Latency";
 
-/** Whether the head counts an alert and the key marks a line alerting. */
+/** Whether the axes row counts an alert and the key marks a line alerting. */
 const alertMarks = () => ({
-	count: document.querySelector(".pl-head .pl-pill.alert") !== null,
+	count: document.querySelector("figure .pl-pill.alert") !== null,
 	dot: document.querySelector(".pl-key .pl-alertdot") !== null,
 });
 
@@ -1061,7 +1061,7 @@ describe("Plot alerts", () => {
 	// Kills alert controls on an unpinned readout or another point, a link to
 	// another alert, a change of the wrong alert or to the wrong status, a
 	// button that is replaced rather than relabeled (dropping the focus), and a
-	// marker, the head's alert count, or the key's alert dot that keeps its
+	// marker, the axes row's alert count, or the key's alert dot that keeps its
 	// place when the alert's status changes.
 	test("a pinned readout on an alert links to it and changes it, and its marker follows", async () => {
 		const [status, setStatus] = createSignal<"active" | "dismissed">();
@@ -1507,6 +1507,201 @@ describe("Plot axes", () => {
 		await settle();
 
 		expect((await plotArea()).box.left).toBe(before);
+	});
+});
+
+// Two measures on a dual axis, the first line guarded and alerting.
+const DUAL = testData(
+	[
+		testLine({
+			id: "lat",
+			alerting: true,
+			y: [20, 20, 40, 20, 20],
+			upper: [30, 30, 30, 30, 30],
+			alerts: [2],
+		}),
+		testLine({
+			id: "thr",
+			benchmark: "sha256",
+			measure: 1,
+			y: [3000, 3100, 3200, 3100, 3000],
+		}),
+	],
+	[
+		{ name: "Latency", units: "nanoseconds (ns)" },
+		{ name: "Throughput", units: "operations / second (ops/s)" },
+	],
+);
+// As long as the seed's titles.
+const LEFT = "Latency, ns";
+const RIGHT = "Throughput, ops/s x 1e3";
+const NOTE = "4w, ending at this report";
+const BOUNDARY = /^boundary: /;
+
+const textOf = (text: string | RegExp) =>
+	page.getByText(text, { exact: true }).element();
+const boxOf = (text: string | RegExp) => textOf(text).getBoundingClientRect();
+/** The pill around `text`, which a title and the boundary wear. */
+const pillOf = (text: string | RegExp) => {
+	const pill = textOf(text).closest(".pl-pill");
+	if (!pill) {
+		throw new Error(`${text} wears no pill`);
+	}
+	return pill;
+};
+const centerOf = (box: DOMRect) => box.top + box.height / 2;
+const areaOf = (over: HTMLElement) =>
+	(over.closest(".pl-area") as HTMLElement).getBoundingClientRect();
+
+describe("Plot axes row", () => {
+	// Kills a head band kept above the axes row, a boundary, note, or alert
+	// count off the titles' row, dual titles that swap sides or sit together,
+	// and line style glyphs on the wrong titles.
+	test("one row above a dual plot holds each axis's title over its axis, with the boundary, note, and alert count between", async () => {
+		mount({ data: DUAL, focused: "lat", note: NOTE });
+		await settle();
+		const { over } = await plotArea("2 lines, Latency and Throughput");
+		const area = areaOf(over);
+		const figure = page.getByRole("figure").element().getBoundingClientRect();
+		const left = pillOf(LEFT).getBoundingClientRect();
+		const right = pillOf(RIGHT).getBoundingClientRect();
+		const boundary = pillOf(BOUNDARY).getBoundingClientRect();
+		const note = boxOf(NOTE);
+		const alert = boxOf("1 alert");
+
+		expect(left.top - figure.top).toBeLessThanOrEqual(12);
+		for (const item of [right, boundary, note, alert]) {
+			expect(centerOf(item)).toBeCloseTo(centerOf(left), 0);
+		}
+		expect(left.bottom).toBeLessThanOrEqual(area.top);
+		expect(left.left).toBeCloseTo(area.left, 0);
+		expect(right.right).toBeCloseTo(area.right, 0);
+		expect(left.right).toBeLessThan(boundary.left);
+		expect(boundary.right).toBeLessThan(note.left);
+		expect(note.right).toBeLessThan(alert.left);
+		expect(alert.right).toBeLessThan(right.left);
+		const stroke = (text: string) =>
+			pillOf(text).querySelector("svg")?.getAttribute("data-stroke");
+		expect(stroke(LEFT)).toBeNull();
+		expect(stroke(RIGHT)).toBe("dotted");
+	});
+
+	// Kills stacked panels that repeat the boundary, note, or alert count in
+	// every row, or keep them off the first, and a boundary hidden though it
+	// has room to read.
+	test("stacked panels each head with their own title, and the first row holds the boundary, note, and alert count", async () => {
+		mount({ data: DUAL, focused: "lat", note: NOTE, layout: "stacked" });
+		await settle();
+		await plotArea("1 line, Throughput");
+		const first = centerOf(pillOf(LEFT).getBoundingClientRect());
+		const second = centerOf(pillOf(RIGHT).getBoundingClientRect());
+		expect(second).toBeGreaterThan(first);
+		for (const text of [NOTE, "1 alert", BOUNDARY]) {
+			expect(page.getByText(text, { exact: true }).elements()).toHaveLength(1);
+			expect(centerOf(boxOf(text))).toBeCloseTo(first, 0);
+		}
+		expect(getComputedStyle(pillOf(BOUNDARY)).opacity).toBe("1");
+	});
+
+	// Kills a phone's two-axis titles that share their row with the boundary,
+	// note, or alert count, or that are cut, a second row that moves the plot
+	// when the boundary appears, and items that overlap.
+	test.each([
+		[390, 362],
+		[320, 292],
+	] as const)(
+		"on a %d px phone a two-axis plot's titles keep a row of their own, whole, over a row for the rest",
+		async (screen, width) => {
+			await page.viewport(screen, 844);
+			mount({ data: DUAL, focused: null, note: NOTE }, width);
+			await settle();
+			const { over } = await plotArea("2 lines, Latency and Throughput");
+			const area = areaOf(over);
+			const left = pillOf(LEFT).getBoundingClientRect();
+			const right = pillOf(RIGHT).getBoundingClientRect();
+			const alert = boxOf("1 alert");
+			for (const text of [LEFT, RIGHT, NOTE]) {
+				const element = textOf(text);
+				expect(element.scrollWidth, text).toBeLessThanOrEqual(
+					element.clientWidth,
+				);
+			}
+			expect(centerOf(right)).toBeCloseTo(centerOf(left), 0);
+			expect(left.left).toBeCloseTo(area.left, 0);
+			expect(right.right).toBeCloseTo(area.right, 0);
+
+			await page
+				.getByRole("button", { name: "Show boundary of blake3" })
+				.click();
+			await expect.element(page.getByText(BOUNDARY)).toBeInTheDocument();
+
+			expect(areaOf(over).top).toBe(area.top);
+			expect(boxOf("1 alert").left).toBe(alert.left);
+			const second = [
+				pillOf(BOUNDARY).getBoundingClientRect(),
+				boxOf(NOTE),
+				boxOf("1 alert"),
+			];
+			second.forEach((item, index) => {
+				expect(item.top, `item ${index}`).toBeGreaterThanOrEqual(left.bottom);
+				expect(item.bottom, `item ${index}`).toBeLessThanOrEqual(area.top);
+				expect(item.left, `item ${index}`).toBeGreaterThanOrEqual(
+					second[index - 1]?.right ?? area.left,
+				);
+			});
+			expect(alert.right).toBeCloseTo(area.right, 0);
+		},
+	);
+
+	// Kills a boundary cut to a sliver where too little room is left to read it.
+	test("a phone row with too little room for the boundary shows none of it", async () => {
+		await page.viewport(320, 844);
+		const data = testData(
+			[
+				testLine({
+					id: "a",
+					alerting: true,
+					y: [3000, 3000, 4000, 3000, 3000],
+					upper: [3500, 3500, 3500, 3500, 3500],
+					alerts: [2],
+				}),
+			],
+			[{ name: "Throughput", units: "operations / second (ops/s)" }],
+		);
+		mount({ data, note: NOTE }, 292);
+		await settle();
+		await plotArea();
+		const room = textOf(NOTE).parentElement as HTMLElement;
+		expect(room.contains(textOf(BOUNDARY))).toBe(true);
+		expect(room.getBoundingClientRect().width).toBeLessThan(64);
+		expect(getComputedStyle(pillOf(BOUNDARY)).opacity).toBe("0");
+	});
+
+	// Kills a tile that draws the boundary, note, or alert count in its row.
+	test("an alerting tile's row holds its titles alone", async () => {
+		mount({ data: DUAL, focused: "lat", note: NOTE, size: "tile" }, 540);
+		await settle();
+		await plotArea("2 lines, Latency and Throughput");
+		expect(pillOf(LEFT).textContent).toBe(LEFT);
+		for (const text of [NOTE, "1 alert", BOUNDARY]) {
+			expect(page.getByText(text, { exact: true }).elements()).toHaveLength(0);
+		}
+	});
+
+	// Kills a phone's two-axis frame that gains its second row only once the data arrives.
+	test("a two-axis plot on a phone holds its frame from the reserve to the drawn plot", async () => {
+		await page.viewport(390, 844);
+		const { root, setData } = mount(
+			{ data: undefined, reserve: { lines: 2, measures: 2 }, note: NOTE },
+			362,
+		);
+		await settle();
+		const figure = root.querySelector("figure") as HTMLElement;
+		const before = figure.getBoundingClientRect().height;
+		setData(DUAL);
+		await settle();
+		await plotArea("2 lines, Latency and Throughput");
+		expect(figure.getBoundingClientRect().height).toBe(before);
 	});
 });
 

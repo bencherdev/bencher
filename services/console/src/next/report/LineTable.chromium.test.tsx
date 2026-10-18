@@ -183,26 +183,35 @@ for (const [width, narrow] of [
 	});
 }
 
-// Kills offsets that leave out an open row's plot, so the list shrinks once the row scrolls away.
-test("an open row keeps its height once it scrolls out of view", async () => {
-	mount(200);
-	await page
-		.getByRole("button", { name: "Expand bench-0 n=0 Latency" })
-		.click();
-	await expect
-		.element(
-			page.getByRole("region", { name: "bench-0 n=0 Latency, full plot" }),
-		)
-		.toBeInTheDocument();
-	const height = () =>
-		page.getByRole("table").element().getBoundingClientRect().height;
-	const open = height();
-	bottom();
-	await expect
-		.element(page.getByRole("button", { name: "Expand bench-19 n=9 Latency" }))
-		.toBeInTheDocument();
-	expect(height()).toBe(open);
-});
+// Kills offsets that leave out an open row's plot, or count it at another
+// height than it draws, so the list moves once the row scrolls away.
+for (const [width, narrow] of [
+	[1280, false],
+	[390, true],
+] as const) {
+	test(`an open row keeps its height once it scrolls out of view at ${width}`, async () => {
+		await page.viewport(width, 800);
+		mount(200, () => {}, { narrow });
+		await page
+			.getByRole("button", { name: "Expand bench-0 n=0 Latency" })
+			.click();
+		await expect
+			.element(
+				page.getByRole("region", { name: "bench-0 n=0 Latency, full plot" }),
+			)
+			.toBeInTheDocument();
+		const height = () =>
+			page.getByRole("table").element().getBoundingClientRect().height;
+		const open = height();
+		bottom();
+		await expect
+			.element(
+				page.getByRole("button", { name: "Expand bench-19 n=9 Latency" }),
+			)
+			.toBeInTheDocument();
+		expect(height()).toBe(open);
+	});
+}
 
 const median = (values: number[]) =>
 	[...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] ??

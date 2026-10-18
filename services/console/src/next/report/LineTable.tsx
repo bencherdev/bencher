@@ -25,8 +25,8 @@ const RowPlot = lazy(() => import("./RowPlot"));
 
 /** The fixed heights the list lays out by, wide and narrow; report.css draws the same. */
 export const HEIGHTS = {
-	wide: { group: 38, line: 44, plot: 342, actions: 0 },
-	narrow: { group: 44, line: 64, plot: 368, actions: 44 },
+	wide: { group: 38, line: 44, plot: 316, actions: 0 },
+	narrow: { group: 44, line: 64, plot: 342, actions: 44 },
 } as const;
 
 /** Pixels drawn above and below the screen, so a quick scroll never shows a gap. */

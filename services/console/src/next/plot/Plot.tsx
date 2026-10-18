@@ -5,7 +5,6 @@ import {
 	createSignal,
 	createUniqueId,
 	For,
-	Index,
 	on,
 	onCleanup,
 	onMount,
@@ -63,7 +62,7 @@ export interface PlotProps {
 	/** Two measures share a dual axis unless stacked; three or more always stack. */
 	layout?: PlotLayout;
 	size?: PlotSize;
-	/** Muted text in the head, such as the window. */
+	/** Muted text in the first axes row, such as the window. */
 	note?: string | undefined;
 	label?: string;
 	/** Links the readout to the report a point came from. */
@@ -425,7 +424,8 @@ const Plot = (props: PlotProps) => {
 			text: current.model ? `${text} · ${current.model}` : text,
 		};
 	};
-	const head = () => size() !== "tile";
+	/** The first panel's axes row heads the plot, which a tile does without. */
+	const lead = (panel: number) => panel === 0 && size() !== "tile";
 	const reportLink = (report: number) => {
 		const uuid = data()?.reports[report]?.uuid;
 		return uuid === undefined ? undefined : props.reportHref?.(uuid);
@@ -481,31 +481,6 @@ const Plot = (props: PlotProps) => {
 				Arrow keys step through the reports, Home and End go to the first and
 				the last, Enter pins or unpins, and Escape closes the readout.
 			</span>
-			<Show when={head()}>
-				<div class="pl-head">
-					<Index each={panelSpecs().flatMap(({ titles }) => titles)}>
-						{(title) => <span class="pl-pill">{title()}</span>}
-					</Index>
-					<Show when={boundary()}>
-						{(current) => (
-							<span class="pl-pill on">
-								<Swatch slot={current().slot} shape="circle" stroke="dashed" />
-								<span class="pl-ellipsis">{current().text}</span>
-							</span>
-						)}
-					</Show>
-					<Show when={props.note}>
-						<span class="pl-note">{props.note}</span>
-					</Show>
-					<span class="pl-spacer" />
-					<Show when={alerts() > 0}>
-						<span class="pl-pill alert">
-							<span class="pl-alertdot" aria-hidden="true" />
-							{alerts()} {alerts() === 1 ? "alert" : "alerts"}
-						</span>
-					</Show>
-				</div>
-			</Show>
 			<div class="pl-body" ref={body}>
 				<Show
 					when={data()}
@@ -605,28 +580,55 @@ const Plot = (props: PlotProps) => {
 								return (
 									<div class="pl-panel">
 										<div class="pl-axes">
-											<span class="pl-axt">
+											<span class="pl-pill pl-axt">
 												<Show when={spec.titles.length > 1}>
 													<svg
 														class="pl-axglyph"
-														viewBox="0 0 18 8"
+														viewBox="0 0 12 8"
 														aria-hidden="true"
 													>
-														<line x1="1" y1="4" x2="17" y2="4" />
+														<line x1="1" y1="4" x2="11" y2="4" />
 													</svg>
 												</Show>
-												{spec.titles[0]}
+												<span class="pl-ellipsis">{spec.titles[0]}</span>
 											</span>
+											<span class="pl-status">
+												<Show when={lead(index())}>
+													<Show when={boundary()}>
+														{(current) => (
+															<span class="pl-pill on">
+																<Swatch
+																	slot={current().slot}
+																	shape="circle"
+																	stroke="dashed"
+																/>
+																<span class="pl-ellipsis">
+																	{current().text}
+																</span>
+															</span>
+														)}
+													</Show>
+													<Show when={props.note}>
+														<span class="pl-note">{props.note}</span>
+													</Show>
+												</Show>
+											</span>
+											<Show when={lead(index()) && alerts() > 0}>
+												<span class="pl-pill alert">
+													<span class="pl-alertdot" aria-hidden="true" />
+													{alerts()} {alerts() === 1 ? "alert" : "alerts"}
+												</span>
+											</Show>
 											<Show when={spec.titles[1]}>
-												<span class="pl-axt">
-													{spec.titles[1]}
+												<span class="pl-pill pl-axt">
+													<span class="pl-ellipsis">{spec.titles[1]}</span>
 													<svg
 														class="pl-axglyph"
 														data-stroke="dotted"
-														viewBox="0 0 18 8"
+														viewBox="0 0 12 8"
 														aria-hidden="true"
 													>
-														<line x1="1" y1="4" x2="17" y2="4" />
+														<line x1="1" y1="4" x2="11" y2="4" />
 													</svg>
 												</span>
 											</Show>

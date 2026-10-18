@@ -280,7 +280,7 @@
 	position: relative;
 	min-height: calc(100vh - var(--page-end));
 }
-/* One row over the plot's head, so a failure moves nothing and hides no line. */
+/* Over the plot's first axes row, so a failure moves nothing and hides no line. */
 .ex-failed {
 	position: absolute;
 	z-index: 1;
@@ -492,6 +492,10 @@
 	.ex-chips {
 		display: grid;
 		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	/* Over both rows a two-axis plot heads with. */
+	.ex-plot:has(.pl[data-layout="dual"]) .load-error {
+		min-height: 68px;
 	}
 }
 .ex-val2 .ex-x {
