@@ -4,6 +4,7 @@ import {
 	VERSION_KEY,
 	forgetShell,
 	readShell,
+	recentSlugs,
 	rememberShell,
 	rememberVersion,
 	rememberedVersion,
@@ -41,6 +42,21 @@ describe("version memory", () => {
 		rememberVersion(store, "hashbrown", 0);
 		rememberVersion(store, "hashbrown", 1);
 		expect(rememberedVersion(store, "hashbrown")).toBe(1);
+	});
+
+	// Kills a recency read oldest first, or one a revisit does not move up.
+	test("lists the slugs most recently loaded first", () => {
+		const store = storage();
+		rememberVersion(store, "hashbrown", 1);
+		rememberVersion(store, "crinkle-cut", 0);
+		rememberVersion(store, "tater-tot", 1);
+		rememberVersion(store, "hashbrown", 1);
+		expect(recentSlugs(store)).toEqual([
+			"hashbrown",
+			"tater-tot",
+			"crinkle-cut",
+		]);
+		expect(recentSlugs(storage({ [VERSION_KEY]: "not json" }))).toEqual([]);
 	});
 
 	// Kills a memory that throws, or keeps junk, when another script wrote it.

@@ -1,6 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 import {
-	crumbs,
+	crumb,
 	expect,
 	nextPath,
 	seed,
@@ -26,7 +26,7 @@ test.describe("without JavaScript", () => {
 		await expect(
 			page.getByRole("banner").getByRole("link", { name: "Bencher, home" }),
 		).toBeVisible();
-		await expect(crumbs(page)).toContainText(hashbrown.slug);
+		await expect(crumb(page, hashbrown.slug)).toBeVisible();
 		for (const tab of TABS) {
 			await expect(
 				tabRow(page).getByRole("link", { name: tab, exact: true }),
@@ -41,18 +41,15 @@ test.describe("without JavaScript", () => {
 test.describe("signed in", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
-	// Kills crumbs drawn from the slug, and an Alerts count that is not the
+	// Kills a crumb drawn from the slug, and an Alerts count that is not the
 	// active alerts of this project (the seed also holds a dismissed one).
-	test("the crumbs name the organization and the project, and Alerts counts the active alerts", async ({
+	test("the crumb names the organization and the project, and Alerts counts the active alerts", async ({
 		page,
 	}) => {
 		await page.goto(nextPath(hashbrown.slug, "runs"));
 
 		await expect(
-			crumbs(page).getByRole("link", { name: seed.organization.name }),
-		).toBeVisible();
-		await expect(
-			crumbs(page).getByRole("link", { name: hashbrown.name }),
+			crumb(page, `${seed.organization.name} / ${hashbrown.name}`),
 		).toBeVisible();
 		await expect(
 			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
@@ -114,10 +111,7 @@ test.describe("signed in", () => {
 		await page.reload();
 
 		await expect(
-			crumbs(page).getByRole("link", { name: seed.organization.name }),
-		).toBeVisible();
-		await expect(
-			crumbs(page).getByRole("link", { name: hashbrown.name }),
+			crumb(page, `${seed.organization.name} / ${hashbrown.name}`),
 		).toBeVisible();
 		await expect(
 			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
@@ -168,10 +162,7 @@ test.describe("signed in", () => {
 		await page.reload();
 
 		await expect(
-			crumbs(page).getByRole("link", { name: seed.organization.name }),
-		).toBeVisible();
-		await expect(
-			crumbs(page).getByRole("link", { name: hashbrown.name }),
+			crumb(page, `${seed.organization.name} / ${hashbrown.name}`),
 		).toBeVisible();
 		const alerts = tabRow(page).getByRole("link", { name: "Alerts 1 active" });
 		await expect(alerts).toBeVisible();

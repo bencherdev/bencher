@@ -26,12 +26,12 @@ const { slug } = Astro.props;
 			record.projects[slug];
 		if (seen) {
 			var hole = document.querySelector('[data-shell="org"]');
-			var org = document.createElement("a");
-			org.className = "crumb-org";
+			var org = document.createElement("span");
+			var crumb = hole.closest("button");
 			org.setAttribute("data-shell", "org");
-			org.href = "/console/organizations/" + seen.organizationUuid + "/projects";
 			org.textContent = seen.organization;
-			hole.closest("nav").removeAttribute("aria-busy");
+			crumb.removeAttribute("aria-busy");
+			crumb.setAttribute("aria-label", seen.organization + " / " + seen.name + ", switch project");
 			hole.replaceWith(org);
 			document.querySelector('[data-shell="project"]').textContent = seen.name;
 			if (seen.alerts > 0) {

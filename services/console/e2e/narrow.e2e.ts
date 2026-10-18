@@ -1,5 +1,5 @@
 import {
-	crumbs,
+	crumb,
 	expect,
 	nextPath,
 	seed,
@@ -32,7 +32,7 @@ test("the narrow bar keeps the wordmark, the bell, Feedback, the menu, and the a
 	for (const control of [mark, bell, feedback, menu, avatar]) {
 		await expect(control).toBeVisible();
 	}
-	await expect(crumbs(page)).toBeHidden();
+	await expect(crumb(page)).toBeHidden();
 	await expect(bar.getByRole("link", { name: "Docs" })).toBeHidden();
 
 	const settings = tabRow(page).getByRole("link", { name: "Settings" });

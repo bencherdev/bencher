@@ -51,6 +51,11 @@ export const windowLocation = createRoot(() => {
 		window.location.toString(),
 	);
 	const interval = setInterval(() => {
+		// A test environment can tear the window down under a running interval.
+		if (typeof window === "undefined") {
+			clearInterval(interval);
+			return;
+		}
 		const location_str = window.location.toString();
 		if (location_str !== windowLocation()) {
 			setWindowLocation(location_str);
@@ -66,6 +71,10 @@ export const windowState = createRoot(() => {
 	// biome-ignore lint/suspicious/noExplicitAny: vendor solid-js
 	const [windowState, setWindowState] = createSignal<any>(window.history.state);
 	const interval = setInterval(() => {
+		if (typeof window === "undefined") {
+			clearInterval(interval);
+			return;
+		}
 		const state = window.history.state;
 		if (state !== windowState()) {
 			setWindowState(state);

@@ -1,7 +1,7 @@
 import { axeInBothThemes } from "./axe";
 import {
 	THEME_KEY,
-	crumbs,
+	crumb,
 	expect,
 	nextPath,
 	seed,
@@ -24,7 +24,7 @@ test("the theme toggle sets the theme, keeps it across a reload, and shares it w
 	await expect(html).toHaveAttribute("data-theme", "dark");
 	// The toggle works once the app has drawn over the first paint.
 	await expect(
-		crumbs(page).getByRole("link", { name: seed.organization.name }),
+		crumb(page, `${seed.organization.name} / ${hashbrown.name}`),
 	).toBeVisible();
 
 	await page
@@ -65,7 +65,7 @@ test.describe("with the system set to light", () => {
 		await expect(html).toHaveAttribute("data-theme", "light");
 		await expect(wordmark).toHaveAttribute("src", "/wordmark-light.svg");
 		await expect(
-			crumbs(page).getByRole("link", { name: seed.organization.name }),
+			crumb(page, `${seed.organization.name} / ${hashbrown.name}`),
 		).toBeVisible();
 
 		await page
