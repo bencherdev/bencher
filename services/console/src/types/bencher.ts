@@ -2278,6 +2278,11 @@ export interface JsonPlan {
 	license?: JsonLicense;
 }
 
+/** A Stripe billing portal session where the plan's customer manages their payment method. */
+export interface JsonPlanPortal {
+	url: string;
+}
+
 export interface JsonProjectKey {
 	uuid: Uuid;
 	project: Uuid;

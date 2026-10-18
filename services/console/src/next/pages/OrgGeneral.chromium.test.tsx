@@ -232,8 +232,8 @@ describe("the sections", () => {
 	const nav = (name: string) =>
 		page.getByRole("navigation", { name, exact: true });
 
-	// Kills a rail that drops a section, marks the wrong one current, sends
-	// Members anywhere but its page here, or Billing anywhere but its classic page.
+	// Kills a rail that drops a section, marks the wrong one current, or sends
+	// Members or Billing anywhere but their pages here.
 	test("a wide screen has the rail, with General current", async () => {
 		await page.viewport(1280, 800);
 		open();
@@ -254,7 +254,10 @@ describe("the sections", () => {
 			);
 		await expect
 			.element(rail.getByRole("link", { name: "Billing" }))
-			.toHaveAttribute("href", "/console/organizations/pompeii-llc/billing");
+			.toHaveAttribute(
+				"href",
+				"/next/console/organizations/pompeii-llc/billing",
+			);
 	});
 
 	// Kills a phone that keeps the rail, or whose sections are too small to tap.

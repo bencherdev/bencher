@@ -19,6 +19,7 @@ use stripe::Client as StripeClient;
 use stripe_billing::{
     BillingMeterEvent, Subscription, SubscriptionId, SubscriptionItem, SubscriptionStatus,
     billing_meter_event::CreateBillingMeterEvent,
+    billing_portal_session::CreateBillingPortalSession,
     subscription::{
         CancelSubscription, CreateSubscription, CreateSubscriptionItems, ListSubscription,
         ListSubscriptionStatus, RetrieveSubscription, UpdateSubscription,
@@ -371,6 +372,21 @@ impl Biller {
             .take()
             .ok_or(BillingError::NoSubscription(Box::new(checkout_session)))?;
         Ok(subscription.id().clone())
+    }
+
+    /// A billing portal session for the customer who pays for `plan_id`, which leads back to `return_url`.
+    pub async fn new_portal_session(
+        &self,
+        plan_id: PlanId,
+        return_url: &str,
+    ) -> Result<String, BillingError> {
+        let subscription = self.get_subscription(&plan_id.into()).await?;
+        let session = CreateBillingPortalSession::new()
+            .customer(subscription.customer.id().to_string())
+            .return_url(return_url)
+            .send(&self.client)
+            .await?;
+        Ok(session.url)
     }
 
     pub async fn get_or_create_customer(
@@ -1067,7 +1083,7 @@ mod tests {
     use std::collections::{HashMap, HashSet};
 
     use bencher_json::{
-        Entitlements, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
+        Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
         organization::plan::{
             ACTIVE_SERIES_METER_NAME, DEFAULT_PRICE_NAME, METRICS_METER_NAME,
             RUNNER_MINUTES_METER_NAME,
@@ -1347,6 +1363,8 @@ mod tests {
         // future (`clippy::large_futures`).
         let pre_cancel_invoice_id = resumed.latest_invoice.map(Expandable::into_id);
 
+        open_portal(biller, metered_plan_id).await;
+
         // DELETE path: immediate cancel. `invoice_now` generates a final invoice
         // so the usage recorded above is billed instead of discarded.
         let final_invoice_id = biller
@@ -1454,6 +1472,14 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(plan_status, PlanStatus::Canceled);
+    }
+
+    async fn open_portal(biller: &Biller, metered_plan_id: &MeteredPlanId) {
+        let portal = biller
+            .new_portal_session(metered_plan_id.clone().into(), "https://bencher.dev")
+            .await
+            .unwrap();
+        assert!(portal.starts_with("https://"));
     }
 
     async fn record_runner_usage(biller: &Biller, customer_id: &CustomerId, runner_minutes: usize) {

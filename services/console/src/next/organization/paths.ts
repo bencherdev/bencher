@@ -5,6 +5,7 @@ const ORGANIZATION_PAGES = {
 	settings: { page: "OrgGeneral", title: "General" },
 	members: { page: "OrgMembers", title: "Members" },
 	"projects/add": { page: "NewProject", title: "New project" },
+	billing: { page: "OrgBilling", title: "Billing" },
 } as const satisfies Record<string, { page: PageName; title: string }>;
 
 type OrganizationPath = keyof typeof ORGANIZATION_PAGES;

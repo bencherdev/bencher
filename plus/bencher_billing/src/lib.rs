@@ -10,5 +10,5 @@ mod biller;
 mod error;
 mod products;
 
-pub use biller::{Biller, MeteredPlanBilling};
+pub use biller::{Biller, MeteredPlanBilling, PlanId};
 pub use error::BillingError;

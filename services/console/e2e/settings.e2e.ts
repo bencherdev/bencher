@@ -168,7 +168,7 @@ test.describe("General, as the project's Maintainer", () => {
 			refusal.getByRole("link", { name: "See plans" }),
 		).toHaveAttribute(
 			"href",
-			`/console/organizations/${organization.slug}/billing`,
+			`/next/console/organizations/${organization.slug}/billing`,
 		);
 		await dialog.getByRole("button", { name: "Cancel" }).click();
 		await expect(visibility(page)).toHaveAccessibleDescription(/public/);

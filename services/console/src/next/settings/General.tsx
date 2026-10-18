@@ -11,6 +11,7 @@ import {
 	Visibility,
 } from "../../types/bencher";
 import type { Api } from "../api";
+import { ORGANIZATIONS_PATH } from "../paths";
 import { useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
@@ -404,7 +405,7 @@ const FieldError = (props: { id: string; message: string | undefined }) => (
 );
 
 const billing = (data: JsonConsoleProject) =>
-	`/console/organizations/${data.organization.slug}/billing`;
+	`${ORGANIZATIONS_PATH}/${data.organization.slug}/billing`;
 
 const Danger = (props: { data: JsonConsoleProject }) => {
 	const [changing, setChanging] = createSignal(false);

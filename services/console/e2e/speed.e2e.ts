@@ -754,6 +754,26 @@ test("a cold load of New project holds the speed ceilings", async ({
 	holds(cost, ceilings.newProjectColdLoad);
 });
 
+// Kills an organization's Billing that asks for more than the organization,
+// the reader's permission, and the usage, chains a second round, or shifts as
+// they arrive.
+test("a cold load of an organization's Billing holds the speed ceilings", async ({
+	page,
+}) => {
+	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
+	const cost = await accountColdLoad(
+		page,
+		`/next/console/organizations/${seed.organization.slug}/billing`,
+		[organization, `${organization}/allowed/manage`, `${organization}/usage`],
+		() =>
+			expect(
+				page.getByRole("textbox", { name: "License key" }),
+			).not.toHaveValue(""),
+	);
+	report("organization billing cold load", cost);
+	holds(cost, ceilings.organizationBillingColdLoad);
+});
+
 // Kills key lists that wait on the shell's request, a third request for the
 // other status, and a table that shifts as the keys arrive.
 test("a cold load of Keys holds the speed ceilings", async ({ page }) => {

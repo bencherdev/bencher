@@ -795,6 +795,33 @@
 	flex: 1 1 260px;
 }
 
+/* billing */
+.stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 16px;
+}
+.figure {
+	font-size: 22px;
+	font-weight: var(--font-weight-semibold);
+	font-variant-numeric: tabular-nums;
+}
+.figure small {
+	font-size: 13px;
+	font-weight: var(--font-weight-normal);
+}
+.meter {
+	height: 6px;
+	border-radius: 3px;
+	background: var(--color-background-muted);
+	overflow: hidden;
+}
+.meter > span {
+	display: block;
+	height: 100%;
+	background: var(--color-accent);
+}
+
 @media (max-width: 767px) {
 	.page.setwrap {
 		grid-template-columns: minmax(0, 1fr);

@@ -225,6 +225,22 @@ describe("AccountGate", () => {
 		).toEqual([profilePath("muriel-bagge")]);
 	});
 
+	// Kills a gate that drops the query, such as the pricing page's plan.
+	test("the query goes along", async () => {
+		const url =
+			"https://bencher.dev/console/users/muriel-bagge/settings?plan=pro";
+		expect(
+			run(
+				await container.renderToString(AccountGate, {
+					props: { next: profilePath("muriel-bagge") },
+					request: new Request(url),
+				}),
+				url,
+				versions("hashbrown", 1),
+			).replaced,
+		).toEqual([`${profilePath("muriel-bagge")}?plan=pro`]);
+	});
+
 	// Kills a gate that moves a reader of version 0 projects only, or one
 	// that fails on a memory it cannot read.
 	test("a reader without a version 1 project stays", async () => {

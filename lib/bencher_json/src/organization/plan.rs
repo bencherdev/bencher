@@ -67,6 +67,14 @@ pub struct JsonPlan {
     pub license: Option<JsonLicense>,
 }
 
+/// A Stripe billing portal session where the plan's customer manages their payment method.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonPlanPortal {
+    pub url: String,
+}
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

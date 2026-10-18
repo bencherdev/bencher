@@ -3,7 +3,7 @@ import { ORGANIZATIONS_PATH, organizationPath } from "../paths";
 
 type Section = "general" | "members" | "billing";
 
-/** The organization's sections, as the account's rail; Billing is still the classic console's. */
+/** The organization's sections, as the account's rail. */
 const Frame = (props: {
 	/** The organization's slug or UUID, as the path has it. */
 	organization: string;
@@ -26,7 +26,7 @@ const Frame = (props: {
 		{
 			section: "billing",
 			label: "Billing",
-			href: `/console/organizations/${props.organization}/billing`,
+			href: `${ORGANIZATIONS_PATH}/${props.organization}/billing`,
 		},
 	];
 	const links = () => (

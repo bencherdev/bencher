@@ -13,6 +13,9 @@ describe("organizationPageAt", () => {
 		expect(organizationPageAt(`${organization}/members/`)?.page).toBe(
 			"OrgMembers",
 		);
+		expect(organizationPageAt(`${organization}/billing`)?.page).toBe(
+			"OrgBilling",
+		);
 		expect(
 			organizationPageAt(
 				"/next/console/organizations/0f8c4a2e-5b1d-4c3a-9e7f-2d6b8a1c3e5f/projects/add",
