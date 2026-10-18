@@ -32,7 +32,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 53070,
+		"jsBytes": 53130,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
 		"htmlBytes": 2800,
@@ -137,7 +137,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 65350,
+		"jsBytes": 65390,
 		"deferredJsBytes": 110770,
 		"stylesheets": 1,
 		"htmlBytes": 2860,
@@ -153,7 +153,7 @@
 	"plotsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 55660,
+		"jsBytes": 55730,
 		"scriptRounds": 1
 	},
 	"thresholdsColdLoad": {
@@ -173,7 +173,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 73000,
+		"jsBytes": 73030,
 		"deferredJsBytes": 110780,
 		"stylesheets": 1,
 		"htmlBytes": 2890,
@@ -185,7 +185,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 104050,
+		"jsBytes": 105330,
 		"deferredJsBytes": 105990,
 		"htmlBytes": 2900,
 		"inlineScriptBytes": 2900,
@@ -200,7 +200,7 @@
 	"exploreLinkMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 37300,
+		"jsBytes": 37330,
 		"scriptRounds": 1
 	},
 	"blankExploreColdLoad": {
@@ -208,7 +208,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 66806,
+		"jsBytes": 68050,
 		"deferredJsBytes": 105990,
 		"lateModules": 0
 	},
@@ -264,7 +264,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 94660,
+		"jsBytes": 94850,
 		"deferredJsBytes": 105990,
 		"htmlBytes": 2850,
 		"inlineScriptBytes": 2900,
@@ -272,11 +272,19 @@
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 66440,
+		"jsBytes": 68770,
 		"deferredJsBytes": 105990,
 		"cssBytes": 11490,
 		"htmlBytes": 2800,
 		"inlineScriptBytes": 700
+	},
+	"embedColdLoad": {
+		"cls": 0,
+		"jsBytes": 60540,
+		"deferredJsBytes": 105990,
+		"cssBytes": 9940,
+		"htmlBytes": 1512,
+		"inlineScriptBytes": 390
 	},
 	"classicPerfColdLoad": {
 		"jsBytes": 263934,
@@ -295,7 +303,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 53070,
+		"jsBytes": 53130,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
 		"htmlBytes": 2740,
@@ -319,7 +327,7 @@
 		"apiRounds": 1,
 		"cls": 0,
 		"shellShift": 0,
-		"jsBytes": 43510,
+		"jsBytes": 43520,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
 		"cssBytes": 17120,
@@ -361,7 +369,7 @@
 		"apiRounds": 1,
 		"cls": 0,
 		"shellShift": 0,
-		"jsBytes": 55590,
+		"jsBytes": 55600,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
 		"cssBytes": 17120,

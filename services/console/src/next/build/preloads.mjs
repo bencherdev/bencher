@@ -15,7 +15,7 @@ const PLACEHOLDER = "@@BENCHER_NEXT_PRELOADS@@";
  * @returns {import("astro").AstroIntegration}
  */
 const nextPreloads = () => {
-	/** @type {{ entry: string[], pages: Record<string, string[]>, parts: Record<string, string[]>, perf: { entry: string[], parts: Record<string, string[]> } } | undefined} */
+	/** @type {{ entry: string[], pages: Record<string, string[]>, parts: Record<string, string[]>, perf: { entry: string[], parts: Record<string, string[]> }, embed: { entry: string[], parts: Record<string, string[]> } } | undefined} */
 	let preloads;
 	/** @type {URL | undefined} */
 	let serverDir;
@@ -75,13 +75,21 @@ const nextPreloads = () => {
 			);
 			/** @type {Set<string>} */
 			const entry = new Set();
-			// The public plot is a page of its own, with its own script.
+			// The public plot and its embed are pages of their own, each with its own script.
 			/** @type {Set<string>} */
 			const perf = new Set();
+			/** @type {Set<string>} */
+			const embed = new Set();
 			for (const chunk of chunks.values()) {
-				const page = chunk.isEntry
-					? chunk.facadeModuleId?.match(/\/src\/pages\/next\/(\w+)\//)?.[1]
-					: undefined;
+				const isEmbed =
+					chunk.isEntry &&
+					/\/src\/pages\/next\/perf\/\[project\]\/embed\.astro\?/.test(
+						chunk.facadeModuleId ?? "",
+					);
+				const page =
+					chunk.isEntry && !isEmbed
+						? chunk.facadeModuleId?.match(/\/src\/pages\/next\/(\w+)\//)?.[1]
+						: undefined;
 				// Astro's page script, which every page loads.
 				const isPageScript = chunk.isEntry && chunk.name === "page";
 				// The app's script, which every console page shares.
@@ -93,6 +101,9 @@ const nextPreloads = () => {
 				}
 				if (page === "perf" || isPageScript) {
 					closure(chunk.fileName, perf);
+				}
+				if (isEmbed || isPageScript) {
+					closure(chunk.fileName, embed);
 				}
 			}
 			/** @type {(fileName: string, loaded?: Set<string>) => string[]} */
@@ -107,6 +118,8 @@ const nextPreloads = () => {
 			const parts = {};
 			/** @type {Record<string, string[]>} */
 			const perfParts = {};
+			/** @type {Record<string, string[]>} */
+			const embedParts = {};
 			for (const chunk of chunks.values()) {
 				const module = chunk.facadeModuleId?.match(
 					/\/src\/next\/(\w+)\/(\w+)\.tsx$/,
@@ -120,6 +133,7 @@ const nextPreloads = () => {
 				} else {
 					parts[`${dir}/${name}`] = own(chunk.fileName);
 					perfParts[`${dir}/${name}`] = own(chunk.fileName, perf);
+					embedParts[`${dir}/${name}`] = own(chunk.fileName, embed);
 				}
 			}
 			preloads = {
@@ -129,6 +143,10 @@ const nextPreloads = () => {
 				perf: {
 					entry: [...perf].map((file) => `/${file}`),
 					parts: perfParts,
+				},
+				embed: {
+					entry: [...embed].map((file) => `/${file}`),
+					parts: embedParts,
 				},
 			};
 		},

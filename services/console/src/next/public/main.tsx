@@ -1,23 +1,16 @@
 import { createEffect, createSignal, on } from "solid-js";
 import { render } from "solid-js/web";
 import type { JsonConsolePerf, JsonProject } from "../../types/bencher";
+import { embedCode } from "../embed/code";
 import { drawable, perfSearch, requestKey } from "../explore/request";
+import type { Copied } from "../explore/Share";
 import { handOff } from "../handoff";
 import { rememberVersion } from "../memory";
 import { type ExploreQuery, decodeQuery, encodeQuery } from "../query/query";
 import { isCurrent, readReader, signInHref } from "../reader";
 import Public, { type PlotView } from "./Public";
 import { publicPlotPath } from "./query";
-
-/** A failed read: the status the API answered with, if it answered. */
-class Refusal extends Error {
-	readonly status: number | undefined;
-
-	constructor(status: number | undefined) {
-		super(`The API answered ${status ?? "nothing"}`);
-		this.status = status;
-	}
-}
+import { type Refusal, reads } from "./read";
 
 const boot = (mount: HTMLElement) => {
 	const { apiUrl = "", slug = "", name = slug, found } = mount.dataset;
@@ -26,20 +19,7 @@ const boot = (mount: HTMLElement) => {
 		reader && isCurrent(reader, Date.now()) ? reader.token : undefined;
 	// A project the page read without a sign in draws the same for everyone.
 	const sent = found === "public" ? undefined : token;
-	const get = async <T,>(path: string): Promise<T> => {
-		let response: Response;
-		try {
-			response = await fetch(`${apiUrl}${path}`, {
-				headers: sent ? { Authorization: `Bearer ${sent}` } : {},
-			});
-		} catch {
-			throw new Refusal(undefined);
-		}
-		if (!response.ok) {
-			throw new Refusal(response.status);
-		}
-		return response.json();
-	};
+	const get = reads(apiUrl, sent);
 	const project = `/v0/projects/${encodeURIComponent(slug)}`;
 
 	const initial = decodeQuery(location.search);
@@ -53,6 +33,7 @@ const boot = (mount: HTMLElement) => {
 	}
 
 	const [title, setTitle] = createSignal(name);
+	const [embeddable, setEmbeddable] = createSignal(found === "public");
 	// As the page painted it: a project the server could not read at all is
 	// drawn as a plot until the reader's own read says otherwise.
 	const [view, setView] = createSignal<"plot" | "locked" | "checking">(
@@ -71,6 +52,7 @@ const boot = (mount: HTMLElement) => {
 					return;
 				}
 				setTitle(read.name);
+				setEmbeddable(read.visibility === "public");
 				document.title = `${read.name} | Bencher`;
 				setView("plot");
 			},
@@ -127,9 +109,9 @@ const boot = (mount: HTMLElement) => {
 			.catch(() => {});
 	}
 
-	const [shared, setShared] = createSignal(false);
+	const [copied, setCopied] = createSignal<Copied>();
 	const edit = (next: ExploreQuery) => {
-		setShared(false);
+		setCopied(undefined);
 		setQuery(next);
 		history.replaceState(history.state, "", here());
 	};
@@ -157,13 +139,23 @@ const boot = (mount: HTMLElement) => {
 					busy={busy()}
 					refused={refused()}
 					plot={plot()}
-					shared={shared()}
+					embeddable={embeddable()}
+					copied={copied()}
 					onQuery={edit}
 					onRetry={() => ask(query())}
-					onShare={() =>
+					onCopy={(what) =>
 						navigator.clipboard
-							.writeText(location.href)
-							.then(() => setShared(true))
+							.writeText(
+								what === "link"
+									? location.href
+									: embedCode({
+											origin: location.origin,
+											slug,
+											query: query(),
+											name: title(),
+										}),
+							)
+							.then(() => setCopied(what))
 							.catch(() => {})
 					}
 				/>

@@ -157,6 +157,7 @@ test.describe("signed out", () => {
 			.context()
 			.grantPermissions(["clipboard-read", "clipboard-write"]);
 		await page.getByRole("button", { name: "Share" }).click();
+		await page.getByRole("menuitem", { name: "Copy link" }).click();
 		await expect(
 			page.getByRole("button", { name: "Link copied" }),
 		).toBeVisible();
@@ -453,7 +454,8 @@ test.describe("a signed in member", () => {
 	});
 
 	// Kills a private project's public plot refused to a reader who may read it,
-	// or painted locked before the reader's own read answers.
+	// painted locked before the reader's own read answers, or one whose Share
+	// offers an embed no one can load.
 	test("a private project's public plot opens for its member", async ({
 		page,
 	}) => {
@@ -483,6 +485,21 @@ test.describe("a signed in member", () => {
 		await expect(
 			page.getByRole("link", { name: "Open in console" }),
 		).toBeVisible();
+
+		// Its embed would load for no one, so Share copies the link at once.
+		await page
+			.context()
+			.grantPermissions(["clipboard-read", "clipboard-write"]);
+		const share = page.getByRole("button", { name: "Share" });
+		await expect(share).not.toHaveAttribute("aria-haspopup");
+		await share.click();
+		await expect(
+			page.getByRole("button", { name: "Link copied" }),
+		).toBeVisible();
+		await expect(page.getByRole("menu")).toHaveCount(0);
+		expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+			page.url(),
+		);
 	});
 });
 

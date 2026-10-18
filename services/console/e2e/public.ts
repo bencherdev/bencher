@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import { embedPath, publicPlotPath } from "../src/next/public/query";
 import { createProject, postReport } from "./api";
 import { dimensions } from "./explore";
 import { expect } from "./fixtures";
@@ -6,7 +7,10 @@ import { expect } from "./fixtures";
 export const DAY = 24 * 60 * 60 * 1000;
 
 export const publicPath = (slug: string, search = "") =>
-	`/next/perf/${slug}${search}`;
+	`${publicPlotPath(slug)}${search}`;
+
+export const embedLink = (slug: string, search = "") =>
+	`${embedPath(slug)}${search}`;
 
 /** A project of two lines that reported in the last two days: the API reaches back three months from its own clock for a reader who is not signed in. */
 export const twoRecentLines = (request: APIRequestContext) =>
