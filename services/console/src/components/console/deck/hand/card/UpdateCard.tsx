@@ -5,6 +5,8 @@ import { createStore } from "solid-js/store";
 import type { JsonAuthUser } from "../../../../../types/bencher";
 import { httpPatch } from "../../../../../util/http";
 import {
+	MAX_NOTIFY_TIMEOUT,
+	NOTIFY_TIMEOUT_PARAM,
 	NotifyKind,
 	navigateNotify,
 	pageNotify,
@@ -107,8 +109,17 @@ const UpdateCard = (props: Props) => {
 		}
 
 		httpPatch(props.apiUrl, props.path(), token, data)
-			.then((_resp) => {
+			.then((resp) => {
 				setSubmitting(false);
+				const pending = props.card?.pending?.(data, resp?.data);
+				if (pending) {
+					props.toggleUpdate();
+					props.handleRefresh();
+					pageNotify(NotifyKind.OK, pending, {
+						[NOTIFY_TIMEOUT_PARAM]: MAX_NOTIFY_TIMEOUT,
+					});
+					return;
+				}
 				const path = updatePath(data);
 				const text = `Hare's to your success! You've updated ${props.card?.field?.label?.toLowerCase()}.`;
 				if (path) {

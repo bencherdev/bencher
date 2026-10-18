@@ -82,7 +82,10 @@ const usersConfig = {
 						validate: true,
 						config: AUTH_FIELDS.email,
 					},
-					path: (_params: Params, _data: JsonUser) => "/auth/logout",
+					pending: (data: { email?: string }, user: JsonUser) =>
+						data.email && data.email.toLowerCase() !== user.email
+							? `We've sent a confirm link to ${data.email}.`
+							: undefined,
 				},
 			],
 		},

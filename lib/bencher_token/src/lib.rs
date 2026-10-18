@@ -12,8 +12,8 @@ mod key;
 
 pub use audience::Audience;
 pub use claims::{
-    AuthOciClaims, Claims, InviteClaims, OAuthClaims, OciAction, OciScopeClaims, OrgClaims,
-    PublicOciClaims, StateClaims,
+    AuthOciClaims, Claims, EmailChangeClaims, InviteClaims, OAuthClaims, OciAction, OciScopeClaims,
+    OrgClaims, PublicOciClaims, StateClaims,
 };
 #[cfg(feature = "plus")]
 pub use claims::{ProjectOciClaims, RunnerOciClaims};

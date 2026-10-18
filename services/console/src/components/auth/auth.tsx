@@ -6,6 +6,7 @@ export const PLAN_PARAM = "plan";
 export const INVITE_PARAM = "invite";
 export const EMAIL_PARAM = "email";
 export const TOKEN_PARAM = "token";
+export const USER_PARAM = "user";
 export const CLAIM_PARAM = "claim";
 
 export const planParam = (plan: undefined | PlanLevel) =>

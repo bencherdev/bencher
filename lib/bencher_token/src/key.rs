@@ -1,7 +1,10 @@
 use std::str::FromStr as _;
 use std::sync::LazyLock;
 
-use bencher_json::{Email, Jwt, OrganizationUuid, Secret, organization::member::OrganizationRole};
+use bencher_json::{
+    DateTime, Email, Jwt, OrganizationUuid, Secret, UserUuid,
+    organization::member::OrganizationRole,
+};
 use chrono::Utc;
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode,
@@ -23,8 +26,8 @@ use crate::claims::PublicOciTokenClaims;
 #[cfg(feature = "plus")]
 use crate::claims::RunnerOciTokenClaims;
 use crate::{
-    Audience, AuthOciClaims, Claims, InviteClaims, OAuthClaims, OciAction, OciScopeClaims,
-    OrgClaims, PublicOciClaims, StateClaims, TokenError,
+    Audience, AuthOciClaims, Claims, EmailChangeClaims, InviteClaims, OAuthClaims, OciAction,
+    OciScopeClaims, OrgClaims, PublicOciClaims, StateClaims, TokenError,
 };
 
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
@@ -90,6 +93,33 @@ impl TokenKey {
 
     pub fn new_oauth(&self, email: Email, ttl: u32, state: StateClaims) -> Result<Jwt, TokenError> {
         self.new_jwt(Audience::OAuth, email, ttl, None, Some(state), None)
+    }
+
+    pub fn new_email_change(
+        &self,
+        now: DateTime,
+        ttl: u32,
+        user: UserUuid,
+        modified: DateTime,
+        email: Email,
+        new_email: Email,
+    ) -> Result<Jwt, TokenError> {
+        let now = now.timestamp();
+        let claims = EmailChangeClaims {
+            aud: Audience::EmailChange.into(),
+            exp: now.checked_add(i64::from(ttl)).unwrap_or(now),
+            iat: now,
+            iss: self.issuer.clone(),
+            sub: user,
+            modified,
+            email,
+            new_email,
+        };
+        Jwt::from_str(
+            &encode(&HEADER, &claims, &self.encoding)
+                .map_err(|e| TokenError::Encode { error: e })?,
+        )
+        .map_err(TokenError::Parse)
     }
 
     pub fn new_oci_public(
@@ -231,6 +261,34 @@ impl TokenKey {
         self.validate(token, &[Audience::OAuth])?.claims.try_into()
     }
 
+    pub fn validate_email_change(
+        &self,
+        token: &Jwt,
+        now: DateTime,
+    ) -> Result<EmailChangeClaims, TokenError> {
+        let mut validation = Validation::new(ALGORITHM);
+        validation.set_audience(&[Audience::EmailChange]);
+        validation.set_issuer(&[self.issuer.as_str()]);
+        validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
+        // Expiry is checked against `now` below, so the server's clock decides it.
+        validation.validate_exp = false;
+
+        let token_data: TokenData<EmailChangeClaims> =
+            decode(token.as_ref(), &self.decoding, &validation)
+                .map_err(|error| TokenError::Decode { error })?;
+        let exp = token_data.claims.exp;
+        let now = now.timestamp();
+        if exp < now {
+            Err(TokenError::Expired {
+                exp,
+                now,
+                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
+            })
+        } else {
+            Ok(token_data.claims)
+        }
+    }
+
     pub fn validate_oci_public(&self, token: &Jwt) -> Result<PublicOciClaims, TokenError> {
         let mut validation = Validation::new(ALGORITHM);
         validation.set_audience(&[Audience::OciPublic]);
@@ -311,9 +369,14 @@ impl TokenKey {
 mod tests {
     use std::{str::FromStr as _, sync::LazyLock};
 
-    use bencher_json::{Email, Jwt, OrganizationUuid, organization::member::OrganizationRole};
+    use bencher_json::{
+        DateTime, Email, Jwt, OrganizationUuid, UserUuid, organization::member::OrganizationRole,
+    };
 
-    use crate::{Audience, Claims, DEFAULT_SECRET_KEY, OciAction, OciScopeClaims, OrgClaims};
+    use crate::{
+        Audience, Claims, DEFAULT_SECRET_KEY, EmailChangeClaims, OciAction, OciScopeClaims,
+        OrgClaims,
+    };
 
     use super::TokenKey;
 
@@ -321,6 +384,12 @@ mod tests {
     const TTL: u32 = u32::MAX;
 
     static EMAIL: LazyLock<Email> = LazyLock::new(|| "info@bencher.dev".parse().unwrap());
+    static NEW_EMAIL: LazyLock<Email> = LazyLock::new(|| "new@bencher.dev".parse().unwrap());
+
+    /// Long past, so only the `now` a validation is given can accept a token issued then.
+    const EMAIL_CHANGE_NOW: i64 = 1_789_344_000;
+    const EMAIL_CHANGE_MODIFIED: i64 = EMAIL_CHANGE_NOW - 1;
+    const EMAIL_CHANGE_TTL: u32 = 30 * 60;
 
     fn make_expired_token(
         secret_key: &TokenKey,
@@ -437,6 +506,84 @@ mod tests {
         };
         let token = make_expired_token(&secret_key, Audience::Invite, Some(org), None);
         secret_key.validate_invite(&token).unwrap_err();
+    }
+
+    // --- Email change tokens ---
+
+    // Fails if an email change token loses the user, the user's `modified`, or either email,
+    // or expires by the system clock.
+    #[test]
+    fn jwt_email_change() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let user = UserUuid::new();
+
+        let token = email_change_token(&secret_key, user);
+
+        let claims = secret_key
+            .validate_email_change(&token, at(EMAIL_CHANGE_NOW))
+            .unwrap();
+        assert_eq!(claims.aud, Audience::EmailChange.to_string());
+        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
+        assert_eq!(claims.sub, user);
+        assert_eq!(claims.modified, at(EMAIL_CHANGE_MODIFIED));
+        assert_eq!(claims.email, *EMAIL);
+        assert_eq!(claims.new_email, *NEW_EMAIL);
+    }
+
+    // Fails if an email change token expires by the system clock instead of the given time.
+    #[test]
+    fn jwt_email_change_expired() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let token = email_change_token(&secret_key, UserUuid::new());
+        let expiration = EMAIL_CHANGE_NOW + i64::from(EMAIL_CHANGE_TTL);
+
+        secret_key
+            .validate_email_change(&token, at(expiration))
+            .unwrap();
+        secret_key
+            .validate_email_change(&token, at(expiration + 1))
+            .unwrap_err();
+    }
+
+    // Fails if an email change token is accepted without its own audience.
+    #[test]
+    fn jwt_email_change_other_audience() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let claims = EmailChangeClaims {
+            aud: Audience::Auth.to_string(),
+            exp: EMAIL_CHANGE_NOW + i64::from(EMAIL_CHANGE_TTL),
+            iat: EMAIL_CHANGE_NOW,
+            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
+            sub: UserUuid::new(),
+            modified: at(EMAIL_CHANGE_MODIFIED),
+            email: EMAIL.clone(),
+            new_email: NEW_EMAIL.clone(),
+        };
+        let token = Jwt::from_str(
+            &jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap(),
+        )
+        .unwrap();
+
+        secret_key
+            .validate_email_change(&token, at(EMAIL_CHANGE_NOW))
+            .unwrap_err();
+    }
+
+    fn email_change_token(secret_key: &TokenKey, user: UserUuid) -> Jwt {
+        secret_key
+            .new_email_change(
+                at(EMAIL_CHANGE_NOW),
+                EMAIL_CHANGE_TTL,
+                user,
+                at(EMAIL_CHANGE_MODIFIED),
+                EMAIL.clone(),
+                NEW_EMAIL.clone(),
+            )
+            .unwrap()
+    }
+
+    fn at(timestamp: i64) -> DateTime {
+        DateTime::try_from(timestamp).unwrap()
     }
 
     // --- OCI Public tokens ---

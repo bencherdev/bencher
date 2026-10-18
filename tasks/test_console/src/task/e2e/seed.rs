@@ -124,6 +124,8 @@ const ITERATION_JUMP: f64 = 1.3;
 pub struct Seed {
     api_url: String,
     console_url: String,
+    /// The API's log, which holds every email it sends.
+    api_log: String,
     now: DateTime,
     admin: JsonAuthUser,
     member: JsonAuthUser,
@@ -182,7 +184,12 @@ struct SeedProject {
 }
 
 impl Seed {
-    pub async fn new(api_url: &str, console_url: &str, db: &Utf8Path) -> anyhow::Result<Self> {
+    pub async fn new(
+        api_url: &str,
+        console_url: &str,
+        db: &Utf8Path,
+        api_log: &str,
+    ) -> anyhow::Result<Self> {
         let api = Api::new(api_url);
 
         // The first user to sign up is the server admin.
@@ -238,6 +245,7 @@ impl Seed {
         Ok(Self {
             api_url: api_url.to_owned(),
             console_url: console_url.to_owned(),
+            api_log: api_log.to_owned(),
             now: DateTime::try_from(NOW)?,
             admin,
             member,

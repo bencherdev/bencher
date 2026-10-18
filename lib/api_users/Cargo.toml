@@ -21,6 +21,7 @@ diesel.workspace = true
 dropshot.workspace = true
 schemars.workspace = true
 serde.workspace = true
+slog.workspace = true
 uuid = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]

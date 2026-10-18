@@ -5,7 +5,7 @@ use bencher_json::ProjectUuid;
 #[cfg(feature = "plus")]
 use bencher_json::RunnerUuid;
 use bencher_json::{
-    DateTime, Email, Jwt, OrganizationUuid, organization::member::OrganizationRole,
+    DateTime, Email, Jwt, OrganizationUuid, UserUuid, organization::member::OrganizationRole,
 };
 use chrono::Utc;
 use jsonwebtoken::errors::ErrorKind as JsonWebTokenErrorKind;
@@ -165,6 +165,21 @@ impl TryFrom<Claims> for OAuthClaims {
             }),
         }
     }
+}
+
+/// Claims for the link that confirms a user's new email.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EmailChangeClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    pub sub: UserUuid,
+    /// The user's `modified` when the change was asked for, which any later update to the user moves
+    pub modified: DateTime,
+    /// The user's email when the change was asked for
+    pub email: Email,
+    pub new_email: Email,
 }
 
 /// Raw JWT claims for public (anonymous) OCI tokens (used for encoding/decoding).

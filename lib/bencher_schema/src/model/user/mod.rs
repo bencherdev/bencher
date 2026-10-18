@@ -18,6 +18,7 @@ use crate::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
+        sql::max,
     },
     schema::{self, user as user_table},
     write_conn,
@@ -326,7 +327,6 @@ pub struct UpdateUser {
     pub email: Option<Email>,
     pub admin: Option<bool>,
     pub locked: Option<bool>,
-    pub modified: DateTime,
 }
 
 impl From<JsonUpdateUser> for UpdateUser {
@@ -344,7 +344,13 @@ impl From<JsonUpdateUser> for UpdateUser {
             email,
             admin,
             locked,
-            modified: DateTime::now(),
         }
     }
+}
+
+/// Set `modified` for a write to a user at `now`, strictly after the last write even within
+/// one second, so an email change link bound to it ends with any later update to the user.
+#[diesel::dsl::auto_type(no_type_alias)]
+pub fn bump_modified(now: DateTime) -> _ {
+    user_table::modified.eq(max(now, user_table::modified + 1i64))
 }

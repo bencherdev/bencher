@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk, TotalCount};
 use bencher_json::{
-    JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, Sanitize as _, Search, UserName,
-    UserResourceId, user::JsonUsers,
+    DateTime, JsonDirection, JsonPagination, JsonUpdateUser, JsonUser, Sanitize as _, Search,
+    UserName, UserResourceId, user::JsonUsers,
 };
 use bencher_schema::{
     auth_conn,
@@ -11,10 +11,10 @@ use bencher_schema::{
         QueryUser, UpdateUser,
         admin::AdminUser,
         auth::{AuthUser, BearerToken},
-        same_user,
+        bump_modified, same_user,
         token::QueryToken,
     },
-    schema, write_conn, write_transaction,
+    schema, write_transaction,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -23,6 +23,9 @@ use diesel::{
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
+
+use crate::email::{check_new_email, confirm_message};
 
 pub type UsersPagination = JsonPagination<UsersSort>;
 
@@ -190,6 +193,10 @@ async fn get_one_inner(
 /// Some fields can only be updated by an admin.
 /// Changing the email, admin, or locked field requires a user session, even for an admin:
 /// neither a user API key nor a deprecated user API token can change them.
+/// A user's new email for themselves takes effect only once it is confirmed
+/// from a link sent to that email, so until then the response shows the current email.
+/// Any later update to the user ends that link.
+/// A server admin's change to another user's email takes effect at once.
 /// To manage users within your organization, use the organization members endpoints.
 #[endpoint {
     method = PATCH,
@@ -204,6 +211,7 @@ pub async fn user_patch(
 ) -> Result<ResponseOk<JsonUser>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     let json = patch_inner(
+        &rqctx.log,
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
@@ -214,6 +222,7 @@ pub async fn user_patch(
 }
 
 async fn patch_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: UserParams,
     json_user: JsonUpdateUser,
@@ -264,22 +273,35 @@ async fn patch_inner(
         }
     }
 
-    let update_user = UpdateUser::from(json_user.clone());
-
-    if email_changed {
-        let now = context.clock.now();
-        write_transaction!(context, |conn| {
-            diesel::update(schema::user::table.filter(schema::user::id.eq(query_user.id)))
-                .set(&update_user)
-                .execute(conn)?;
-            QueryToken::revoke_all(conn, query_user.id, now)
-        })
-        .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
+    let mut update_user = UpdateUser::from(json_user.clone());
+    let confirm = email_changed && auth_user.uuid() == query_user.uuid;
+    let new_email = if confirm {
+        update_user.email.take()
     } else {
+        None
+    };
+    if let Some(new_email) = &new_email {
+        check_new_email(context, &query_user, new_email).await?;
+    }
+
+    let now = context.clock.now();
+    let modified = write_transaction!(context, |conn| {
         diesel::update(schema::user::table.filter(schema::user::id.eq(query_user.id)))
-            .set(&update_user)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
+            .set((&update_user, bump_modified(now)))
+            .execute(conn)?;
+        if email_changed && !confirm {
+            QueryToken::revoke_all(conn, query_user.id, now)?;
+        }
+        schema::user::table
+            .filter(schema::user::id.eq(query_user.id))
+            .select(schema::user::modified)
+            .first::<DateTime>(conn)
+    })
+    .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
+
+    if let Some(new_email) = new_email {
+        let message = confirm_message(context, &query_user, modified, new_email)?;
+        context.messenger.send(log, message);
     }
 
     Ok(QueryUser::get(auth_conn!(context), query_user.id)?.into_json())
