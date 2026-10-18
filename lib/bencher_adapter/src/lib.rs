@@ -41,7 +41,7 @@ pub use results::{
     foldable::{FoldableResults, FoldableResultsArray},
 };
 
-use crate::adapters::rust::gungraun::AdapterRustGungraun;
+use crate::adapters::{bmf_v1, rust::gungraun::AdapterRustGungraun};
 
 pub trait Adaptable {
     fn convert(&self, input: &str, settings: Settings) -> Option<AdapterResults> {
@@ -53,47 +53,60 @@ pub trait Adaptable {
 
 impl Adaptable for Adapter {
     fn convert(&self, input: &str, settings: Settings) -> Option<AdapterResults> {
-        match self {
-            Self::Magic => AdapterMagic::parse(input, settings),
-            Self::Json => AdapterJson::parse(input, settings),
-            Self::JsonV0 => AdapterJsonV0::parse(input, settings),
-            Self::JsonV1 => AdapterJsonV1::parse(input, settings),
-            Self::CSharp => AdapterCSharp::parse(input, settings),
-            Self::CSharpDotNet => AdapterCSharpDotNet::parse(input, settings),
-            Self::Cpp => AdapterCpp::parse(input, settings),
-            Self::CppCatch2 => AdapterCppCatch2::parse(input, settings),
-            Self::CppGoogle => AdapterCppGoogle::parse(input, settings),
-            Self::Dart => AdapterDart::parse(input, settings),
-            Self::DartBenchmarkHarness => AdapterDartBenchmarkHarness::parse(input, settings),
-            Self::Go => AdapterGo::parse(input, settings),
-            Self::GoBench => AdapterGoBench::parse(input, settings),
-            Self::Java => AdapterJava::parse(input, settings),
-            Self::JavaJmh => AdapterJavaJmh::parse(input, settings),
-            Self::Js => AdapterJs::parse(input, settings),
-            Self::JsBenchmark => AdapterJsBenchmark::parse(input, settings),
-            Self::JsTime => AdapterJsTime::parse(input, settings),
-            Self::JsVitest => AdapterJsVitest::parse(input, settings),
-            Self::Python => AdapterPython::parse(input, settings),
-            Self::PythonAsv => AdapterPythonAsv::parse(input, settings),
-            Self::PythonPytest => AdapterPythonPytest::parse(input, settings),
-            Self::Ruby => AdapterRuby::parse(input, settings),
-            Self::RubyBenchmark => AdapterRubyBenchmark::parse(input, settings),
-            Self::Rust => AdapterRust::parse(input, settings),
-            Self::RustBench => AdapterRustBench::parse(input, settings),
-            Self::RustCriterion => AdapterRustCriterion::parse(input, settings),
-            Self::RustIai => AdapterRustIai::parse(input, settings),
-            Self::RustGungraun => AdapterRustGungraun::parse(input, settings),
-            Self::RustGungraunStdout => AdapterRustGungraunStdout::parse(input, settings),
-            Self::RustGungraunJson => AdapterRustGungraunJson::parse(input, settings),
-            Self::Shell => AdapterShell::parse(input, settings),
-            Self::ShellHyperfine => AdapterShellHyperfine::parse(input, settings),
-            Self::ShellHyperfineV1 => AdapterShellHyperfineV1::parse(input, settings),
-            Self::ShellHyperfineV2 => AdapterShellHyperfineV2::parse(input, settings),
+        if settings.bmf_version == BmfVersion::V1 {
+            bmf_v1::convert(*self, input, settings)
+        } else {
+            convert_v0(*self, input, settings)
         }
     }
 
     fn parse(input: &str, settings: Settings) -> Option<AdapterResults> {
-        AdapterMagic::parse(input, settings)
+        Self::Magic.convert(input, settings)
+    }
+}
+
+/// The version 0 adapter tree.
+pub(crate) fn convert_v0(
+    adapter: Adapter,
+    input: &str,
+    settings: Settings,
+) -> Option<AdapterResults> {
+    match adapter {
+        Adapter::Magic => AdapterMagic::parse(input, settings),
+        Adapter::Json => AdapterJson::parse(input, settings),
+        Adapter::JsonV0 => AdapterJsonV0::parse(input, settings),
+        Adapter::JsonV1 => AdapterJsonV1::parse(input, settings),
+        Adapter::CSharp => AdapterCSharp::parse(input, settings),
+        Adapter::CSharpDotNet => AdapterCSharpDotNet::parse(input, settings),
+        Adapter::Cpp => AdapterCpp::parse(input, settings),
+        Adapter::CppCatch2 => AdapterCppCatch2::parse(input, settings),
+        Adapter::CppGoogle => AdapterCppGoogle::parse(input, settings),
+        Adapter::Dart => AdapterDart::parse(input, settings),
+        Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarness::parse(input, settings),
+        Adapter::Go => AdapterGo::parse(input, settings),
+        Adapter::GoBench => AdapterGoBench::parse(input, settings),
+        Adapter::Java => AdapterJava::parse(input, settings),
+        Adapter::JavaJmh => AdapterJavaJmh::parse(input, settings),
+        Adapter::Js => AdapterJs::parse(input, settings),
+        Adapter::JsBenchmark => AdapterJsBenchmark::parse(input, settings),
+        Adapter::JsTime => AdapterJsTime::parse(input, settings),
+        Adapter::JsVitest => AdapterJsVitest::parse(input, settings),
+        Adapter::Python => AdapterPython::parse(input, settings),
+        Adapter::PythonAsv => AdapterPythonAsv::parse(input, settings),
+        Adapter::PythonPytest => AdapterPythonPytest::parse(input, settings),
+        Adapter::Ruby => AdapterRuby::parse(input, settings),
+        Adapter::RubyBenchmark => AdapterRubyBenchmark::parse(input, settings),
+        Adapter::Rust => AdapterRust::parse(input, settings),
+        Adapter::RustBench => AdapterRustBench::parse(input, settings),
+        Adapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
+        Adapter::RustIai => AdapterRustIai::parse(input, settings),
+        Adapter::RustGungraun => AdapterRustGungraun::parse(input, settings),
+        Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse(input, settings),
+        Adapter::RustGungraunJson => AdapterRustGungraunJson::parse(input, settings),
+        Adapter::Shell => AdapterShell::parse(input, settings),
+        Adapter::ShellHyperfine => AdapterShellHyperfine::parse(input, settings),
+        Adapter::ShellHyperfineV1 => AdapterShellHyperfineV1::parse(input, settings),
+        Adapter::ShellHyperfineV2 => AdapterShellHyperfineV2::parse(input, settings),
     }
 }
 
@@ -113,6 +126,39 @@ impl Settings {
         Self {
             average,
             bmf_version,
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_adapter {
+    use bencher_json::{BmfVersion, project::report::Adapter};
+
+    use crate::{Adaptable as _, Settings};
+
+    /// Results parsed without naming an adapter are read by `magic` in the tree of
+    /// their version.
+    ///
+    /// Kills: a parse that claims nothing, and one that claims an empty result.
+    #[test]
+    fn adapter_parse_reads_with_magic_in_the_versions_tree() {
+        for (file_path, bmf_version, resolved_adapter) in [
+            (
+                "./tool_output/json/report_v1_parameters.json",
+                BmfVersion::V1,
+                Some(Adapter::JsonV1),
+            ),
+            ("./tool_output/rust/bench/many.txt", BmfVersion::V0, None),
+        ] {
+            let input = std::fs::read_to_string(file_path).expect("Failed to read test file");
+            let results = Adapter::parse(&input, Settings::new(None, bmf_version))
+                .unwrap_or_else(|| panic!("expected magic to claim {file_path}"));
+            assert_eq!(
+                (results.version, results.resolved_adapter),
+                (bmf_version, resolved_adapter),
+                "{file_path}"
+            );
+            assert!(results.has_metrics(), "{file_path}");
         }
     }
 }

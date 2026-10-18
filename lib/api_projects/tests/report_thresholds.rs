@@ -1153,10 +1153,11 @@ async fn a_report_past_the_active_cap_warns_of_what_it_skipped() {
         })
         .collect::<Vec<_>>();
 
+    // No result for a threshold to check, so the only thresholds skipped are the two past the cap.
     let created = report(
         &server,
         &fixture,
-        Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({ "models": declared })),
+        Post::new(1, vec![v1(&[])]).thresholds(serde_json::json!({ "models": declared })),
     )
     .await;
     assert_eq!(created.warnings, Some(skipped_thresholds(2)), "POST");
@@ -1171,10 +1172,14 @@ async fn a_report_whose_thresholds_fit_under_the_active_cap_has_no_warnings() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "fitwarn").await;
 
+    let both = v1(&[entry(
+        &serde_json::json!({}),
+        &serde_json::json!({ "latency": { "first": 1.0, "second": 2.0 } }),
+    )]);
     let (status, body) = try_report(
         &server,
         &fixture,
-        Post::new(1, vec![steady(0)]).thresholds(serde_json::json!({
+        Post::new(1, vec![both]).thresholds(serde_json::json!({
             "models": [
                 { "measure": "latency", "metric": "first", "model": model() },
                 { "measure": "latency", "metric": "second", "model": model() },
@@ -1186,6 +1191,162 @@ async fn a_report_whose_thresholds_fit_under_the_active_cap_has_no_warnings() {
     let report: serde_json::Value =
         serde_json::from_str(&body).expect("Failed to parse the report");
     assert!(report.get("warnings").is_none(), "{body}");
+}
+
+// On a version 1 project a version 0 threshold still checks `value`, which a version 1 result may
+// not hold. Each threshold that checks a result's variant but finds no metric to check is counted
+// as skipped, once per result, whether it checks `value` or a named metric, and a version 0 result
+// holds `value` for the version 0 threshold.
+//
+// Kills: a skip that is not counted, one counted before the variant filter, one counted once per
+// result rather than once per threshold, one counted for a result that holds the metric, and one
+// counted only for a threshold that checks `value`.
+#[tokio::test]
+async fn a_threshold_whose_metric_a_result_lacks_is_counted_as_skipped() {
+    let server = TestServer::new().await;
+    // The first signup is the server admin, so this fixture can move its project's version.
+    let fixture = fixture(&server, "lacks").await;
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{}", fixture.project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .json(&serde_json::json!({ "bmf_version": BmfVersion::V1 }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "PATCH bmf_version");
+
+    let bare = report(
+        &server,
+        &fixture,
+        Post::new(1, vec![v0(10.0)])
+            .v0()
+            .thresholds(serde_json::json!({ "models": { "latency": model() } })),
+    )
+    .await;
+    let holding = v1(&[
+        entry(
+            &serde_json::json!({ "size_mb": 16 }),
+            &serde_json::json!({ "latency": { "value": 10.0, "p50": 9.0 } }),
+        ),
+        entry(
+            &serde_json::json!({ "size_mb": 32 }),
+            &serde_json::json!({ "latency": { "value": 100.0, "p50": 99.0 } }),
+        ),
+    ]);
+    let filtered = report(
+        &server,
+        &fixture,
+        Post::new(2, vec![holding])
+            .undeclared()
+            .thresholds(serde_json::json!({
+                "models": [
+                    {
+                        "parameters": [{ "size_mb": 16 }],
+                        "measure": "latency",
+                        "metric": "value",
+                        "model": model(),
+                    },
+                    {
+                        "parameters": [{ "size_mb": 64 }],
+                        "measure": "latency",
+                        "metric": "value",
+                        "model": model(),
+                    },
+                    { "measure": "latency", "metric": "p50", "model": model() },
+                ]
+            })),
+    )
+    .await;
+    assert_eq!(
+        (bare.warnings, filtered.warnings),
+        (None, None),
+        "every result so far holds what its thresholds check"
+    );
+    let project_id = project_id(&server, &fixture);
+    let mut conn = server.db_conn();
+    assert_eq!(
+        thresholds(&mut conn, project_id),
+        vec![
+            ("*".to_owned(), "value".to_owned(), true),
+            (r#"[{"size_mb":16}]"#.to_owned(), "value".to_owned(), true),
+            (r#"[{"size_mb":64}]"#.to_owned(), "value".to_owned(), true),
+            ("*".to_owned(), "p50".to_owned(), true),
+        ]
+    );
+    drop(conn);
+
+    // The bare and `p50` thresholds check all three variants and the first filtered one checks the
+    // first, but only the third holds `value` and `p50`: 3 skips on the first, 2 on the second.
+    let lacking = v1(&[
+        entry(
+            &serde_json::json!({ "size_mb": 16 }),
+            &serde_json::json!({ "latency": { "p99": 11.0 } }),
+        ),
+        entry(
+            &serde_json::json!({ "size_mb": 32 }),
+            &serde_json::json!({ "latency": { "p99": 101.0 } }),
+        ),
+        entry(
+            &serde_json::json!({ "size_mb": 48 }),
+            &serde_json::json!({ "latency": { "value": 50.0, "p99": 51.0, "p50": 49.0 } }),
+        ),
+    ]);
+    let created = report(&server, &fixture, Post::new(3, vec![lacking]).undeclared()).await;
+    assert_eq!(created.warnings, Some(skipped_thresholds(5)), "POST");
+    let read = get_report(&server, &fixture, created.uuid).await;
+    assert_eq!(read.warnings, Some(skipped_thresholds(5)), "GET");
+
+    let v0_report = report(&server, &fixture, Post::new(4, vec![v0(12.0)]).v0()).await;
+    assert_eq!(
+        v0_report.warnings,
+        Some(skipped_thresholds(1)),
+        "a version 0 result holds `value` for the bare threshold, but no `p50`"
+    );
+}
+
+// A version 0 project may hold a threshold that names a metric, through the thresholds API, and a
+// version 0 result holds only `value` and its bounds: the threshold checks nothing, and is counted
+// as skipped.
+//
+// Kills: a count only for a threshold that checks `value`, or only for a version 1 result.
+#[tokio::test]
+async fn a_version_0_report_counts_a_threshold_on_a_metric_it_lacks() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "v0named").await;
+    // The first report creates the branch, testbed, and measure the threshold names.
+    let first = report(&server, &fixture, Post::new(1, vec![v0(10.0)]).v0()).await;
+    assert_eq!(first.warnings, None);
+
+    let mut threshold = model();
+    let object = threshold.as_object_mut().expect("the model is an object");
+    for (key, value) in [
+        ("branch", "main"),
+        ("testbed", "localhost"),
+        ("measure", "latency"),
+        ("metric", "p99"),
+    ] {
+        object.insert(key.to_owned(), value.into());
+    }
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/thresholds", fixture.project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&fixture.token),
+        )
+        .json(&threshold)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "POST threshold");
+
+    let created = report(&server, &fixture, Post::new(2, vec![v0(11.0)]).v0()).await;
+    assert_eq!(created.bmf_version, Some(BmfVersion::V0));
+    assert_eq!(created.warnings, Some(skipped_thresholds(1)));
 }
 
 // Past the cap on active thresholds for a measure, a report creates what fits in payload order

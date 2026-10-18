@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use bencher_json::{BenchmarkNameId, BmfVersion, MeasureNameId, ParameterSet};
+use bencher_json::{
+    BenchmarkNameId, BmfVersion, MeasureNameId, ParameterSet, project::report::Adapter,
+};
 use serde::Deserialize;
 
 use super::Lenient;
@@ -85,18 +87,13 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
                     .extend(named.inner);
             }
         }
-        // The cap applies to the merged variant, so a name is counted once.
-        for metrics in benchmark_entries.values_mut() {
-            for metric in metrics.inner.values_mut() {
-                skipped.metrics += metric.truncate();
-            }
-        }
         results_map.insert(benchmark, benchmark_entries);
     }
 
     AdapterResults {
         inner: results_map,
         version: BmfVersion::V1,
+        resolved_adapter: Some(Adapter::JsonV1),
         skipped,
     }
 }
@@ -117,7 +114,7 @@ pub(crate) mod test_json_v1 {
             test_util::{convert_file_path, opt_convert_file_path},
         },
         results::{
-            adapter_metrics::{AdapterMetrics, MAX_METRIC_NAMES},
+            adapter_metrics::AdapterMetrics,
             adapter_results::{AdapterResults, Skipped},
         },
     };
@@ -362,99 +359,6 @@ pub(crate) mod test_json_v1 {
         assert_eq!(named(metrics, "latency", "p99"), Some(3.0.into()));
         assert_eq!(named(metrics, "latency", "value"), Some(1.0.into()));
         assert_eq!(results.skipped.metrics, 0);
-    }
-
-    /// The cap applies to the union rather than to either entry alone,
-    /// keeping the conventional trio and the rest lexicographically.
-    #[test]
-    fn adapter_json_v1_cap_applies_to_the_union() {
-        let results = parse_json_v1(
-            r#"{"tests::capped": [
-                {"measures": {"latency": {"a1": 1, "a2": 2, "a3": 3, "a4": 4, "a5": 5}}},
-                {"measures": {"latency": {"a6": 6, "a7": 7, "value": 8, "lower_value": 9, "upper_value": 10}}}
-            ]}"#,
-        );
-
-        let metrics = variant(&results, "tests::capped", "{}");
-        assert_eq!(
-            names(metrics, "latency"),
-            vec![
-                "a1".parse::<MetricName>().unwrap(),
-                "a2".parse().unwrap(),
-                "a3".parse().unwrap(),
-                "a4".parse().unwrap(),
-                "a5".parse().unwrap(),
-                "lower_value".parse().unwrap(),
-                "upper_value".parse().unwrap(),
-                "value".parse().unwrap(),
-            ]
-        );
-        assert_eq!(results.skipped.metrics, 2);
-    }
-
-    /// A name written by two entries is one name, never a drop: nine metrics
-    /// across two entries are eight names and nothing is counted.
-    #[test]
-    fn adapter_json_v1_overwrite_is_not_a_drop() {
-        let results = parse_json_v1(
-            r#"{"tests::overwritten": [
-                {"measures": {"latency": {"a1": 1, "a2": 2, "a3": 3, "a4": 4, "a5": 5, "value": 8}}},
-                {"measures": {"latency": {"value": 9, "lower_value": 10, "upper_value": 11}}}
-            ]}"#,
-        );
-
-        let metrics = variant(&results, "tests::overwritten", "{}");
-        assert_eq!(names(metrics, "latency").len(), MAX_METRIC_NAMES);
-        assert_eq!(named(metrics, "latency", "a1"), Some(1.0.into()));
-        assert_eq!(named(metrics, "latency", "value"), Some(9.0.into()));
-        assert_eq!(results.skipped.metrics, 0);
-    }
-
-    /// The cap keeps the three conventional names regardless of where they sort,
-    /// keeps the rest lexicographically, and reports what it dropped.
-    #[test]
-    fn adapter_json_v1_metric_cap() {
-        let results = convert_json_v1("v1_cap");
-        validate_adapter_json_v1_cap(&results);
-    }
-
-    pub fn validate_adapter_json_v1_cap(results: &AdapterResults) {
-        let metrics = variant(results, "tests::capped", "{}");
-        let names = names(metrics, "latency");
-        assert_eq!(names.len(), MAX_METRIC_NAMES);
-        assert_eq!(
-            names,
-            vec![
-                "a1".parse::<MetricName>().unwrap(),
-                "a2".parse().unwrap(),
-                "a3".parse().unwrap(),
-                "a4".parse().unwrap(),
-                "a5".parse().unwrap(),
-                "lower_value".parse().unwrap(),
-                "upper_value".parse().unwrap(),
-                "value".parse().unwrap(),
-            ]
-        );
-        assert_eq!(results.skipped.metrics, 2);
-    }
-
-    /// The survivor set is a property of the payload, not of hash iteration order.
-    #[test]
-    fn adapter_json_v1_cap_is_deterministic() {
-        let expected = convert_json_v1("v1_cap");
-        for _ in 0..64u32 {
-            assert_eq!(convert_json_v1("v1_cap"), expected);
-        }
-
-        // The same names in a different order on the wire keep the same survivors.
-        let permuted =
-            convert_file_path::<AdapterJsonV1>("./tool_output/json/report_v1_cap_permuted.json");
-        let metrics = variant(&permuted, "tests::capped", "{}");
-        assert_eq!(
-            names(metrics, "latency"),
-            names(variant(&expected, "tests::capped", "{}"), "latency")
-        );
-        assert_eq!(permuted.skipped.metrics, 2);
     }
 
     /// Explicit v1 selection rejects a v0 object payload outright.

@@ -9,8 +9,8 @@
 //! The key is a contract: the Bencher Metric Format version it declares is what
 //! the whole payload is. The `json` node parses with that version's leaf only, and
 //! a payload whose parsed version differs from its declared version is refused
-//! with a 400 that names both versions. Fold is refused for every v1 payload, the
-//! empty payload included.
+//! with a 400 that names both versions, where the expected one came from, and the
+//! fixes. Fold is refused for every v1 payload, the empty payload included.
 //!
 //! The second section is the project's `bmf_version`: the version a payload that
 //! declares none is read as. It starts at 0, only a server admin moves it, and an
@@ -227,17 +227,45 @@ async fn refused(server: &TestServer, fixture: &Fixture, post: Post<'_>) -> Stri
     body
 }
 
-/// A refusal under the contract names the parsed version and the declared one,
-/// and carries no adapter hint since the adapter is right and the key is wrong.
-fn assert_names_both_versions(body: &str, parsed: u8, declared: u8) {
-    assert!(
-        body.contains(&format!("parsed as BMF version {parsed}"))
-            && body.contains(&format!("declared version {declared}")),
-        "expected the refusal to name both versions: {body}"
-    );
+/// Where the version a refused report was read at came from.
+#[derive(Clone, Copy)]
+enum Source {
+    Declared,
+    Project,
+}
+
+/// A refusal under the contract names the parsed version, the expected one and
+/// where it came from, and only the fixes that work, and carries no adapter hint
+/// since the adapter is right and the version is wrong.
+fn assert_refusal(body: &str, parsed: u8, expected: u8, source: Source) {
+    let phrases = match source {
+        Source::Declared => vec![
+            format!("the report declared `bmf_version` {expected}"),
+            format!("Send BMF version {expected} results"),
+            format!("declare `bmf_version` {parsed}"),
+        ],
+        Source::Project => vec![
+            format!(
+                "declared no `bmf_version`, so it was read at its project's BMF version, {expected}"
+            ),
+            format!("Send BMF version {expected} results"),
+            format!("declare `bmf_version` {parsed} through the API"),
+            format!("`bencher project update --bmf-version {parsed}`"),
+        ],
+    };
+    for phrase in std::iter::once(format!("parsed as BMF version {parsed}")).chain(phrases) {
+        assert!(
+            body.contains(&phrase),
+            "expected `{phrase}` in the refusal: {body}"
+        );
+    }
     assert!(
         !body.contains("right adapter"),
         "expected no adapter hint on a version refusal: {body}"
+    );
+    assert!(
+        !body.contains("json_v0") && !body.contains("upgrade"),
+        "expected no fix this server does not ship yet: {body}"
     );
 }
 
@@ -325,13 +353,19 @@ async fn report_bmf_version_1_ingests_a_v1_payload() {
 
 /// A v1 payload declared as version 0, or with no key, is refused by name: there
 /// is no undeclared path to v1.
+///
+/// Kills: a refusal that names the declaration for a version that came from the
+/// project, or the project for a declared one.
 #[tokio::test]
 async fn report_bmf_version_0_refuses_a_v1_payload() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "v1atv0").await;
     let results = v1_results();
 
-    for bmf_version in [None, Some(serde_json::json!(0))] {
+    for (bmf_version, source) in [
+        (None, Source::Project),
+        (Some(serde_json::json!(0)), Source::Declared),
+    ] {
         let body = refused(
             &server,
             &fixture,
@@ -342,7 +376,7 @@ async fn report_bmf_version_0_refuses_a_v1_payload() {
             },
         )
         .await;
-        assert_names_both_versions(&body, 1, 0);
+        assert_refusal(&body, 1, 0, source);
     }
 
     server.close().await;
@@ -365,7 +399,7 @@ async fn report_bmf_version_1_refuses_a_v0_payload() {
         },
     )
     .await;
-    assert_names_both_versions(&body, 0, 1);
+    assert_refusal(&body, 0, 1, Source::Declared);
 
     server.close().await;
 }
@@ -448,7 +482,7 @@ async fn report_explicit_leaf_is_held_to_the_contract() {
         },
     )
     .await;
-    assert_names_both_versions(&body, 1, 0);
+    assert_refusal(&body, 1, 0, Source::Declared);
 
     let body = refused(
         &server,
@@ -461,7 +495,7 @@ async fn report_explicit_leaf_is_held_to_the_contract() {
         },
     )
     .await;
-    assert_names_both_versions(&body, 0, 1);
+    assert_refusal(&body, 0, 1, Source::Declared);
 
     server.close().await;
 }
@@ -703,7 +737,7 @@ async fn absent_bmf_version_is_the_projects_version() {
         },
     )
     .await;
-    assert_names_both_versions(&body, 0, 1);
+    assert_refusal(&body, 0, 1, Source::Project);
 
     server.close().await;
 }

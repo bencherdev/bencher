@@ -9,9 +9,9 @@ pub enum AdapterError {
     BenchmarkUnits(String),
     #[error("Failed to convert results: {0}")]
     Convert(String),
-    #[error("Results parsed as BMF version {parsed} but the payload declared version {declared}")]
+    #[error("Results parsed as BMF version {parsed} but were expected at version {expected}")]
     BmfVersion {
-        declared: BmfVersion,
+        expected: BmfVersion,
         parsed: BmfVersion,
     },
 }
