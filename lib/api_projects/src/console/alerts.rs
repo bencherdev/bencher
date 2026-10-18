@@ -42,7 +42,7 @@ use bencher_schema::{
             testbed::TestbedId,
             threshold::{
                 ThresholdId,
-                alert::{AlertId, UpdateAlert},
+                alert::{AlertId, UpdateAlert, archived_filter},
                 model::ModelId,
             },
         },
@@ -71,7 +71,7 @@ use super::{
     },
     thresholds::readable_project,
 };
-use crate::{alerts::archived_filter, perf::DEFAULT_REPORT_HISTORY};
+use crate::perf::DEFAULT_REPORT_HISTORY;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjConsoleAlertsParams {

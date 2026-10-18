@@ -2,7 +2,9 @@ import type { JsonOrganization } from "../types/bencher";
 
 export const BENCHER_ORGANIZATION_KEY = "BENCHER_ORGANIZATION";
 
-export const setOrganization = (organization: JsonOrganization) => {
+export const setOrganization = (
+	organization: Pick<JsonOrganization, "uuid" | "name" | "slug">,
+) => {
 	if (typeof localStorage !== "undefined") {
 		localStorage.setItem(
 			BENCHER_ORGANIZATION_KEY,
