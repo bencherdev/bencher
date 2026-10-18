@@ -18,7 +18,7 @@ import { ApiError } from "../api";
 import ContentSkeleton from "../ContentSkeleton";
 import Controls from "../explore/Controls";
 import { plotData } from "../explore/data";
-import { BOXES, clearable } from "../explore/edit";
+import { BOXES, clearable, settleFocus } from "../explore/edit";
 import Editor from "../explore/Editor";
 import Header, { type Confirmation } from "../explore/Header";
 import { measuresLayout } from "../explore/layout";
@@ -533,7 +533,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 				!drawable(query()) || (!busy() && (perf().isSuccess || perf().isError))
 			}
 			readOnly={props.readOnly}
-			onQuery={(next) => edit(next)}
+			onQuery={(next) => edit(settleFocus(query(), next))}
 			onBenchmarks={() => wantPlot()}
 		/>
 	);

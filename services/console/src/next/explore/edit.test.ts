@@ -1,6 +1,12 @@
 import { describe, expect, test } from "vitest";
 import { DEFAULT_WINDOW, type ExploreQuery, blankQuery } from "../query/query";
-import { clearable, hasValues, withValue, withoutValue } from "./edit";
+import {
+	clearable,
+	hasValues,
+	settleFocus,
+	withValue,
+	withoutValue,
+} from "./edit";
 
 const uuid = (n: number) =>
 	`00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
@@ -99,4 +105,47 @@ test("clearable is true for a value or a view control off its default", () => {
 	] as const) {
 		expect(clearable({ ...blankQuery(), ...view })).toBe(true);
 	}
+});
+
+describe("settleFocus", () => {
+	const focused = { ...QUERY, focus: "1gav3bmyc9r" };
+
+	// Kills keeping the focus on a line a box edit may no longer draw, or a box left out of the comparison.
+	test("drop the focus when any box changes", () => {
+		for (const change of [
+			{ branches: [{ uuid: uuid(1), head: uuid(12) }] },
+			{ testbeds: [{ uuid: uuid(2), spec: uuid(13) }] },
+			{ benchmarks: [] },
+			{ sets: [{ size: 128 }] },
+			{ measures: [uuid(3)] },
+			{ metrics: [] },
+		] as const) {
+			expect(settleFocus(focused, { ...focused, ...change }).focus).toBe(
+				undefined,
+			);
+		}
+	});
+
+	// Kills dropping the focus on an edit that draws the same lines.
+	test("keep the focus through a view change", () => {
+		for (const change of [
+			{ yScale: "log" },
+			{ window: { seconds: DEFAULT_WINDOW / 4 } },
+			{ hide: ["z"] },
+		] as const) {
+			expect(settleFocus(focused, { ...focused, ...change }).focus).toBe(
+				focused.focus,
+			);
+		}
+	});
+
+	// Kills comparing the boxes by reference, which drops the focus on every edit.
+	test("keep the focus when the boxes hold the same values", () => {
+		const current = { ...focused, sets: [{ simd: "avx2", size: 64 }] };
+		const copy = {
+			...structuredClone(current),
+			sets: [{ size: 64, simd: "avx2" }],
+		};
+		expect(settleFocus(current, copy).focus).toBe(current.focus);
+	});
 });
