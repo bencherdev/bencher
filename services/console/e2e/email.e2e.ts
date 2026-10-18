@@ -1,6 +1,14 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import type { JsonAuthUser } from "../src/types/bencher";
-import { USER_KEY, expect, seed, signedIn, signedOut, test } from "./fixtures";
+import type { JsonAuthUser, JsonUser } from "../src/types/bencher";
+import {
+	USER_KEY,
+	expect,
+	seed,
+	settle,
+	signedIn,
+	signedOut,
+	test,
+} from "./fixtures";
 import { mailedLink, signUp } from "./mail";
 
 const settings = (slug: string) => `/console/users/${slug}/settings`;
@@ -31,6 +39,7 @@ test.describe("a new email", () => {
 		const link = await mailedLink(newEmail, "Confirm Bencher Email Change");
 		expect(link.pathname).toBe("/auth/email");
 		await page.goto(link.href);
+		await page.getByRole("button", { name: "Change email" }).click();
 		await expect(
 			page.getByText(`Your email is now ${newEmail}.`),
 		).toBeVisible();
@@ -47,8 +56,40 @@ test.describe("a new email", () => {
 test.describe("a confirm link", () => {
 	test.use({ storageState: signedOut });
 
-	// Kills a confirm page that treats a reader with no stored session as another user.
-	test("opened signed out signs the reader in with the new email", async ({
+	// Kills a confirm sent on load, seconds later, or on a scanner's Enter, signed out or holding the link user's session, which another link can plant.
+	test("opened signed out or as the same user changes nothing before the press", async ({
+		page,
+		newContext,
+		request,
+	}) => {
+		const reader = await signUp(request);
+		const newEmail = `new-${reader.user.email}`;
+		const link = await askForEmail(request, reader, newEmail);
+		const context = await newContext({ storageState: signedIn(reader) });
+		const same = await context.newPage();
+		const puts = [sentPuts(page), sentPuts(same)];
+
+		for (const opened of [page, same]) {
+			await opened.goto(link.href);
+			await expect(
+				opened.getByRole("button", { name: "Change email" }),
+			).toBeVisible();
+		}
+		for (const opened of [page, same]) {
+			await opened.keyboard.press("Enter");
+		}
+		await page.waitForTimeout(5_000);
+		expect(puts).toEqual([[], []]);
+		for (const opened of [page, same]) {
+			await expect(opened.getByRole("status")).toBeEmpty();
+		}
+		expect(await apiEmail(request, reader)).toBe(reader.user.email);
+		expect((await storedUser(page)).token).toBeUndefined();
+		expect((await storedUser(same)).token).toBe(reader.token);
+	});
+
+	// Kills a button that does nothing, and a press that confirms but does not sign the reader in.
+	test("opened signed out signs the reader in with the new email after the press", async ({
 		page,
 		request,
 	}) => {
@@ -57,15 +98,17 @@ test.describe("a confirm link", () => {
 		const link = await askForEmail(request, reader, newEmail);
 
 		await page.goto(link.href);
+		await page.getByRole("button", { name: "Change email" }).click();
 		await expect(
 			page.getByText(`Your email is now ${newEmail}.`),
 		).toBeVisible();
 		await expect(page).toHaveURL(new RegExp(settings(reader.user.slug)));
 		expect((await storedUser(page)).user.email).toBe(newEmail);
+		expect(await apiEmail(request, reader)).toBe(newEmail);
 	});
 
 	// Kills a confirm page that replaces another user's stored session with the confirmed user's.
-	test("opened while another user is signed in keeps that user signed in", async ({
+	test("opened while another user is signed in keeps that user signed in after the press", async ({
 		newContext,
 		request,
 	}) => {
@@ -76,11 +119,18 @@ test.describe("a confirm link", () => {
 		const page = await context.newPage();
 
 		await page.goto(link.href);
+		const button = page.getByRole("button", { name: "Change email" });
+		await expect(button).toBeVisible();
+		await expect(page.getByRole("status")).toBeEmpty();
+		await button.click();
 		await expect(
-			page.getByRole("heading", { name: "Your email has changed" }),
+			page
+				.getByRole("status")
+				.getByRole("heading", { name: "Your email has changed" }),
 		).toBeVisible();
 		await expect(page).toHaveURL(/\/auth\/email\?/);
 		expect((await storedUser(page)).token).toBe(seed.member.token);
+		expect(await apiEmail(request, reader)).toBe(newEmail);
 	});
 
 	// Kills a confirm page that does not show a 401 answer as an expired link.
@@ -93,9 +143,34 @@ test.describe("a confirm link", () => {
 			token: seed.member.token,
 		});
 		await page.goto(`/auth/email?${params}`);
+		await page.getByRole("button", { name: "Change email" }).click();
 		await expect(
-			page.getByRole("heading", { name: "This link has expired" }),
+			page
+				.getByRole("status")
+				.getByRole("heading", { name: "This link has expired" }),
 		).toBeVisible();
+	});
+
+	// Kills a page with no invalid state, one that skips the user or token check, and one that offers the press first.
+	test("with a malformed user or token says the link is not valid", async ({
+		page,
+	}) => {
+		const puts = sentPuts(page);
+		for (const params of [
+			{ user: "nope", token: seed.member.token },
+			{ user: seed.member.user.uuid, token: "nope" },
+		]) {
+			await page.goto(`/auth/email?${new URLSearchParams(params)}`);
+			await expect(
+				page.getByRole("heading", { name: "This link is not valid" }),
+			).toBeVisible();
+			await expect(
+				page.getByRole("button", { name: "Change email" }),
+			).toHaveCount(0);
+			await expect(page.getByRole("status")).toBeEmpty();
+		}
+		await settle(page);
+		expect(puts).toEqual([]);
 	});
 });
 
@@ -114,6 +189,27 @@ const askForEmail = async (
 	);
 	expect(response.status()).toBe(200);
 	return mailedLink(newEmail, "Confirm Bencher Email Change");
+};
+
+/** Every PUT the page sends from now on, through any redirect. */
+const sentPuts = (page: Page) => {
+	const puts: string[] = [];
+	page.on("request", (sent) => {
+		if (sent.method() === "PUT") {
+			puts.push(sent.url());
+		}
+	});
+	return puts;
+};
+
+/** The reader's email as the API holds it, read as the server admin. */
+const apiEmail = async (request: APIRequestContext, reader: JsonAuthUser) => {
+	const response = await request.get(
+		`${seed.api_url}/v0/users/${reader.user.uuid}`,
+		{ headers: { Authorization: `Bearer ${seed.admin.token}` } },
+	);
+	expect(response.status()).toBe(200);
+	return ((await response.json()) as JsonUser).email;
 };
 
 const storedUser = (page: Page): Promise<JsonAuthUser> =>
