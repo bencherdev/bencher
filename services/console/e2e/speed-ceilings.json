@@ -185,7 +185,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 103930,
+		"jsBytes": 104050,
 		"deferredJsBytes": 105990,
 		"htmlBytes": 2900,
 		"inlineScriptBytes": 2900,
@@ -200,7 +200,7 @@
 	"exploreLinkMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 37260,
+		"jsBytes": 37300,
 		"scriptRounds": 1
 	},
 	"blankExploreColdLoad": {
@@ -232,7 +232,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 84610,
+		"jsBytes": 84680,
 		"deferredJsBytes": 108500,
 		"stylesheets": 1,
 		"htmlBytes": 2830,
@@ -264,7 +264,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 94590,
+		"jsBytes": 94660,
 		"deferredJsBytes": 105990,
 		"htmlBytes": 2850,
 		"inlineScriptBytes": 2900,
@@ -272,7 +272,7 @@
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 66380,
+		"jsBytes": 66440,
 		"deferredJsBytes": 105990,
 		"cssBytes": 11490,
 		"htmlBytes": 2800,

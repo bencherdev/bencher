@@ -20,15 +20,21 @@ export const axisWidth = (
 	if (isServer) {
 		return MIN_WIDTH;
 	}
-	measurer ??= document.createElement("canvas").getContext("2d");
 	let widest = 0;
-	if (measurer) {
-		measurer.font = font;
-		for (const label of labels) {
-			if (label) {
-				widest = Math.max(widest, measurer.measureText(label).width);
-			}
+	for (const label of labels) {
+		if (label) {
+			widest = Math.max(widest, labelWidth(label, font));
 		}
 	}
 	return Math.max(MIN_WIDTH, Math.ceil(widest) + PAD);
+};
+
+/** The width of `label` drawn in `font`, in the pixels the font's size is given in; in a browser only. */
+export const labelWidth = (label: string, font: string): number => {
+	measurer ??= document.createElement("canvas").getContext("2d");
+	if (!measurer) {
+		return 0;
+	}
+	measurer.font = font;
+	return measurer.measureText(label).width;
 };

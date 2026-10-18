@@ -1535,6 +1535,72 @@ describe("Plot axes", () => {
 
 		expect((await plotArea()).box.left).toBe(before);
 	});
+
+	// Kills x labels that clip at either edge of the canvas beside a narrow y axis, and minute labels that read the same across seconds.
+	test.each([
+		["one plot", 1, "dual"],
+		["a dual plot", 2, "dual"],
+		["stacked plots", 2, "stacked"],
+	] as const)(
+		"keeps every x label of %s over half a minute inside the canvas, to the second",
+		async (_, measures, layout) => {
+			const seconds = Array.from({ length: 31 }, (_, index) => index);
+			const data = testData(
+				Array.from({ length: measures }, (_, measure) =>
+					testLine({
+						id: `${measure}`,
+						measure,
+						y: seconds.map((second) => second % 3),
+					}),
+				),
+				[
+					{ name: "Latency", units: "nanoseconds (ns)" },
+					{ name: "Throughput", units: "operations (ops)" },
+				].slice(0, measures),
+			);
+			const drawn: {
+				text: string;
+				left: number;
+				right: number;
+				width: number;
+			}[] = [];
+			const fillText = CanvasRenderingContext2D.prototype.fillText;
+			CanvasRenderingContext2D.prototype.fillText = function (
+				this: CanvasRenderingContext2D,
+				...args: Parameters<typeof fillText>
+			) {
+				const [text, x] = args;
+				if (this.textAlign === "center") {
+					const half = this.measureText(text).width / 2;
+					drawn.push({
+						text,
+						left: x - half,
+						right: x + half,
+						width: this.canvas.width,
+					});
+				}
+				return fillText.apply(this, args);
+			};
+			try {
+				mount({
+					data: {
+						...data,
+						x: seconds.map((second) => START + (second - 30) * 1000),
+					},
+					layout,
+				});
+				await settle();
+			} finally {
+				CanvasRenderingContext2D.prototype.fillText = fillText;
+			}
+			expect(drawn.length).toBeGreaterThanOrEqual(2);
+			for (const { text, left, right, width } of drawn) {
+				expect(text).toMatch(/\d\d:\d\d:\d\d$/);
+				expect(left, text).toBeGreaterThanOrEqual(0);
+				expect(right, text).toBeLessThanOrEqual(width);
+			}
+		},
+	);
 });
 
 // Two measures on a dual axis, the first line guarded and alerting.
