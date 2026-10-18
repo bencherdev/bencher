@@ -6,6 +6,7 @@ import { DEFAULT_SEARCH } from "../reports/search";
 import { bootstrapOf, fakeApi, mount } from "../settings/testing";
 import { batchKey, batchQuery } from "./query";
 import Setup from "./Setup";
+import { SAMPLE_V0, runCommandV0 } from "./setupV0";
 
 let dispose: (() => void) | undefined;
 afterEach(() => {
@@ -98,4 +99,34 @@ test("a reader who is not a Maintainer gets the card without Create key", async 
 	await expect
 		.element(page.getByRole("button", { name: "Create key" }))
 		.not.toBeInTheDocument();
+});
+
+// Kills a version 0 project taught the version 1 sample and threshold flags,
+// which it refuses, and one taught the version 0 card while it is on version 1.
+test("each version gets its own sample and command", async () => {
+	const { api } = fakeApi();
+	const v0 = bootstrapOf();
+	dispose = mount(() => card(api), {
+		api,
+		bootstrap: { ...v0, project: { ...v0.project, bmf_version: 0 } },
+		cached: [NO_RUNS],
+	}).dispose;
+	await expect
+		.element(page.getByText("Hashbrown · BMF v0 · no reports yet"))
+		.toBeVisible();
+	await expect.element(page.getByText(SAMPLE_V0)).toBeInTheDocument();
+	await expect
+		.element(page.getByText(runCommandV0("hashbrown", undefined)))
+		.toBeInTheDocument();
+	await expect
+		.element(page.getByText("--threshold-metric", { exact: false }))
+		.not.toBeInTheDocument();
+	dispose();
+	dispose = mount(() => card(api), { api, cached: [NO_RUNS] }).dispose;
+	await expect
+		.element(page.getByText("Hashbrown · BMF v1 · no reports yet"))
+		.toBeVisible();
+	await expect
+		.element(page.getByText("--threshold-metric", { exact: false }))
+		.toBeInTheDocument();
 });

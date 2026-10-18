@@ -135,6 +135,22 @@ test("a narrow line no threshold checks offers the snippet instead of a limit", 
 	await expect.element(page.getByText(/^limit /)).not.toBeInTheDocument();
 });
 
+// Kills a line with no threshold to declare drawn with an empty limit, or with
+// a link that opens nothing, wide or narrow.
+test("a line no threshold checks and none can be declared for reads no threshold", async () => {
+	for (const narrow of [false, true]) {
+		mount({ line: unchecked as never, narrow });
+		await expect
+			.element(page.getByRole("row").getByText("no threshold", { exact: true }))
+			.toBeVisible();
+		await expect
+			.element(page.getByRole("button", { name: /^No threshold checks / }))
+			.not.toBeInTheDocument();
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
 // Kills a checkbox named for nothing, one that reports the old state, and one drawn without a handler.
 test("the checkbox names the line and reports what it became", async () => {
 	const onSelect = vi.fn();

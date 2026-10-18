@@ -123,6 +123,23 @@ const ITERATION_SPREAD: [f64; 3] = [0.96, 1.0, 1.05];
 /// The newest run's second iteration jumps, which raises the project's one alert.
 const ITERATION_JUMP: f64 = 1.3;
 
+/// Version 0 runs a day apart, the newest three hours before [`NOW`], each
+/// with a latency and its bounds and a throughput.
+const V0_REPORTS: usize = 6;
+const V0_INTERVAL: i64 = 24 * 60 * 60;
+const LAST_V0_REPORT: i64 = NOW - 3 * 60 * 60;
+/// The benchmark whose latency jumps in the newest version 0 run, which raises the project's one alert.
+const V0_ALERTING: &str = "blake3";
+/// Each version 0 benchmark with its steady latency.
+const V0_BENCHMARKS: [(&str, f64); 2] = [(V0_ALERTING, 19.4), ("sha256", 49.6)];
+const V0_JUMP: f64 = 1.3;
+/// Each version 0 run's hash starts with its own seven digits, counting up from these.
+const V0_HASH: u64 = 0x00c0_de00;
+/// The spread of each latency's bounds around its value.
+const V0_BOUND: f64 = 0.03;
+/// The title of the version 0 project's one pin, made as the classic console makes one.
+const V0_PIN: &str = "blake3, Latency on main";
+
 /// The admin's two reports, a day apart, the newer an hour before [`NOW`].
 const ADMIN_NEWEST_REPORT: i64 = NOW - 60 * 60;
 const ADMIN_OLDER_REPORT: i64 = ADMIN_NEWEST_REPORT - 24 * 60 * 60;
@@ -144,6 +161,8 @@ pub struct Seed {
     admin_newest: SeedProject,
     last_main_hash: &'static str,
     split_hash: &'static str,
+    /// The short form of the newest version 0 run's hash.
+    version_zero_hash: String,
     jobs_hash: &'static str,
     held_hash: &'static str,
 }
@@ -169,7 +188,8 @@ struct SeedOrganization {
 struct SeedProjects {
     /// Version 1 and public, with reports, thresholds, and one active alert.
     hashbrown: SeedProject,
-    /// Still on version 0, so it belongs to the classic console.
+    /// Still on version 0, with runs that send bounds, a bare threshold with one alert, and a
+    /// classic pin.
     version_zero: SeedProject,
     /// Version 1 with no reports.
     empty: SeedProject,
@@ -252,6 +272,8 @@ impl Seed {
         check_alerts(&api, &hashbrown, token).await?;
         pins(&api, &hashbrown, token).await?;
         iteration_history(&api, &iterations, token).await?;
+        version_zero_history(&api, &version_zero, token).await?;
+        version_zero_pin(&api, &version_zero, token).await?;
         let jobs = jobs::seed(&api, db, &organization, token, admin_token).await?;
         let admin_newest = admin_projects(&api, admin_token).await?;
 
@@ -281,6 +303,7 @@ impl Seed {
             admin_newest,
             last_main_hash: LAST_MAIN_HASH,
             split_hash: SPLIT_HASH,
+            version_zero_hash: format!("{:07x}", V0_HASH + u64::try_from(V0_REPORTS - 1)?),
             jobs_hash: jobs::JOBS_HASH,
             held_hash: jobs::HELD_HASH,
         })
@@ -661,16 +684,26 @@ async fn check_alerts(api: &Api, project: &JsonProject, token: &str) -> anyhow::
     Ok(())
 }
 
+/// The UUID of the project's dimension whose `field` is `value`.
+async fn dimension_uuid(
+    api: &Api,
+    project: &JsonProject,
+    token: &str,
+    (dimension, field, value): (&str, &str, &str),
+) -> anyhow::Result<String> {
+    let path = format!("/v0/projects/{}/{dimension}?per_page=64", project.slug);
+    let list: Vec<serde_json::Value> = api.get(&path, token).await?;
+    list.iter()
+        .find(|entry| entry.get(field).and_then(serde_json::Value::as_str) == Some(value))
+        .and_then(|entry| entry.get("uuid").and_then(serde_json::Value::as_str))
+        .map(ToOwned::to_owned)
+        .with_context(|| format!("No {dimension} with {field} {value}"))
+}
+
 /// Three pins on Plots, top first, each at its own window: the first holds the active alert.
 async fn pins(api: &Api, project: &JsonProject, token: &str) -> anyhow::Result<()> {
-    let uuid = async |dimension: &str, field: &str, value: &str| -> anyhow::Result<String> {
-        let path = format!("/v0/projects/{}/{dimension}?per_page=64", project.slug);
-        let list: Vec<serde_json::Value> = api.get(&path, token).await?;
-        list.iter()
-            .find(|entry| entry.get(field).and_then(serde_json::Value::as_str) == Some(value))
-            .and_then(|entry| entry.get("uuid").and_then(serde_json::Value::as_str))
-            .map(ToOwned::to_owned)
-            .with_context(|| format!("No {dimension} with {field} {value}"))
+    let uuid = async |dimension: &str, field: &str, value: &str| {
+        dimension_uuid(api, project, token, (dimension, field, value)).await
     };
     let branch = uuid("branches", "name", MAIN).await?;
     let testbed = uuid("testbeds", "name", TESTBED).await?;
@@ -721,6 +754,85 @@ async fn pins(api: &Api, project: &JsonProject, token: &str) -> anyhow::Result<(
         }
         let _plot: serde_json::Value = api.send(Method::Post, &path, token, &body).await?;
     }
+    Ok(())
+}
+
+/// Version 0 runs whose first declares a bare percentage threshold on latency,
+/// which the newest run's jump on blake3 crosses.
+async fn version_zero_history(api: &Api, project: &JsonProject, token: &str) -> anyhow::Result<()> {
+    let path = format!("/v0/projects/{}/reports", project.slug);
+    for index in 0..V0_REPORTS {
+        let start = LAST_V0_REPORT - V0_INTERVAL * i64::try_from(V0_REPORTS - 1 - index)?;
+        let noise = JITTER.get(index).copied().unwrap_or_default();
+        let mut benchmarks = serde_json::Map::new();
+        for (benchmark, steady) in V0_BENCHMARKS {
+            let jump = if index == V0_REPORTS - 1 && benchmark == V0_ALERTING {
+                V0_JUMP
+            } else {
+                1.0
+            };
+            let latency = steady * (1.0 + noise) * jump;
+            benchmarks.insert(
+                benchmark.to_owned(),
+                serde_json::json!({
+                    "latency": {
+                        "value": latency,
+                        "lower_value": latency * (1.0 - V0_BOUND),
+                        "upper_value": latency * (1.0 + V0_BOUND),
+                    },
+                    "throughput": { "value": f64::from(KIB_64) / latency },
+                }),
+            );
+        }
+        let hash = format!("{:07x}{}", V0_HASH + u64::try_from(index)?, "0".repeat(33));
+        let mut report = report_body(
+            MAIN,
+            start,
+            &hash,
+            &serde_json::Value::Object(benchmarks).to_string(),
+        )?;
+        if index == 0
+            && let Some(object) = report.as_object_mut()
+        {
+            object.insert(
+                "thresholds".to_owned(),
+                serde_json::json!({
+                    "models": { "latency": { "test": "percentage", "upper_boundary": 0.1 } }
+                }),
+            );
+        }
+        let _json: serde_json::Value = api.send(Method::Post, &path, token, &report).await?;
+    }
+    let path = format!("/v0/projects/{}/alerts", project.slug);
+    let alerts: Vec<serde_json::Value> = api.get(&path, token).await?;
+    anyhow::ensure!(
+        alerts.len() == 1,
+        "Expected one alert in {VERSION_ZERO}, found {}",
+        alerts.len()
+    );
+    Ok(())
+}
+
+/// A pin as the classic console makes one, with no metrics and its lower bound shown.
+async fn version_zero_pin(api: &Api, project: &JsonProject, token: &str) -> anyhow::Result<()> {
+    let uuid = async |dimension: &str, field: &str, value: &str| {
+        dimension_uuid(api, project, token, (dimension, field, value)).await
+    };
+    let body = serde_json::json!({
+        "title": V0_PIN,
+        "lower_value": true,
+        "upper_value": false,
+        "lower_boundary": false,
+        "upper_boundary": true,
+        "x_axis": "date_time",
+        "window": 28 * 24 * 60 * 60,
+        "branches": [uuid("branches", "name", MAIN).await?],
+        "testbeds": [uuid("testbeds", "name", TESTBED).await?],
+        "benchmarks": [uuid("benchmarks", "name", V0_ALERTING).await?],
+        "measures": [uuid("measures", "slug", "latency").await?],
+    });
+    let path = format!("/v0/projects/{}/plots", project.slug);
+    let _plot: serde_json::Value = api.send(Method::Post, &path, token, &body).await?;
     Ok(())
 }
 

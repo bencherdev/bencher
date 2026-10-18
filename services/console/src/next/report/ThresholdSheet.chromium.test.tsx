@@ -2,9 +2,11 @@ import "@bencherdev/ui/styles.css";
 import "../styles/console.css";
 import "./report.css";
 import { QueryClientProvider } from "@tanstack/solid-query";
+import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
+import { Adapter } from "../../types/bencher";
 import type { Api } from "../api";
 import { createQueryClient } from "../cache";
 import { ProjectContext } from "../project";
@@ -43,11 +45,13 @@ const mount = ({
 	lines = [latency, throughput],
 	host = CLOUD,
 	api = countingApi().api,
+	version = () => 1,
 }: {
 	line?: ReportLine;
 	lines?: ReportLine[];
 	host?: string;
 	api?: Api;
+	version?: () => number | undefined;
 } = {}) => {
 	const client = createQueryClient(() => {});
 	client.setDefaultOptions({
@@ -66,6 +70,8 @@ const mount = ({
 						report={REPORT}
 						branch="main"
 						testbed="ubuntu-latest"
+						adapter={Adapter.Json}
+						version={version()}
 						host={host}
 						onClose={() => {}}
 					/>
@@ -217,4 +223,21 @@ test("a threshold guards the side the project already guards for that measure", 
 		.element(exact())
 		.toHaveTextContent("--threshold-lower-boundary 0.99");
 	await expect.element(exact()).not.toHaveTextContent("--threshold-upper");
+});
+
+// Kills a sheet that teaches the version 1 flags before it knows the
+// project's version, which a version 0 project refuses.
+test("the sheet waits for the project's version, then teaches it", async () => {
+	const [version, setVersion] = createSignal<number>();
+	mount({ version });
+	const sheet = page.getByRole("dialog", {
+		name: "No threshold checks this line",
+	});
+	await expect.element(sheet).toBeVisible();
+	await expect.element(simple()).not.toBeInTheDocument();
+	expect(sheet.element().textContent).not.toContain("bencher run");
+	setVersion(0);
+	await expect.element(simple()).toHaveTextContent("--adapter json");
+	expect(sheet.element().textContent).not.toContain("--threshold-metric");
+	await expect.element(exact()).not.toBeInTheDocument();
 });

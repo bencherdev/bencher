@@ -26,7 +26,7 @@ export const chipSummary = (
 		const tags = Object.entries(only).map(
 			([name, value]) => `${name}=${String(value)}`,
 		);
-		return tags.join(" ") || "every variant";
+		return tags.join(" ");
 	}
 	if (dimension === "metrics") {
 		return query.metrics.join(", ") || "every metric";

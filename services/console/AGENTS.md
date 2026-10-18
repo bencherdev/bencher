@@ -78,7 +78,7 @@ which scales it by `BENCHER_SPEED_FACTOR` (1 when unset; the CI job sets it for 
 cargo test-console e2e
 ```
 
-Run from the repository root. It builds the API and the console (Node adapter),
+Run from the repository root. It builds the API, the CLI, and the console (Node adapter),
 starts both on free ports against a fresh SQLite database in a temporary
 directory, seeds it (`tasks/test_console/src/task/e2e/seed.rs`), and runs
 Playwright in Chromium over `e2e/*.e2e.ts`. `--skip-console-build` serves the
@@ -104,8 +104,9 @@ Every path under a project is served by
 `src/pages/next/console/projects/[project]/[...path].astro`. Its inline scripts
 (`src/next/astro/`) run before any module loads and read `localStorage` keys
 that the classic console also reads or writes: `BENCHER_USER`, `BENCHER_THEME`,
-`BENCHER_BMF_VERSIONS`, and `BENCHER_CONSOLE_SHELL` (`src/next/memory.ts`).
-Change a key or its shape on both sides at once.
+and `BENCHER_CONSOLE_SHELL` (`src/next/memory.ts`). The gates the classic pages
+and the landing render read `BENCHER_BMF_VERSIONS` the same way. Change a key or
+its shape on both sides at once.
 
 Every account page under `src/pages/next/console/users/[user]/` is served by
 `src/next/astro/AccountPage.astro`, Organizations by

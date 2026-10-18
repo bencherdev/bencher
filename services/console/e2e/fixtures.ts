@@ -29,6 +29,7 @@ export interface Seed {
 	organization: SeedProject;
 	projects: {
 		hashbrown: SeedProject;
+		/** Version 0, with runs that send bounds, a bare threshold with one alert, and a classic pin. */
 		version_zero: SeedProject;
 		empty: SeedProject;
 		private: SeedProject;
@@ -45,6 +46,8 @@ export interface Seed {
 	admin_newest: SeedProject;
 	last_main_hash: string;
 	split_hash: string;
+	/** The short form of the newest version 0 run's hash. */
+	version_zero_hash: string;
 	/** The runner project's run whose jobs run and wait, one report landed. */
 	jobs_hash: string;
 	held_hash: string;

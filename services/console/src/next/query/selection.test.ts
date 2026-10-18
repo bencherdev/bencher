@@ -101,6 +101,15 @@ describe("exploreSearch", () => {
 		expect(query.report).toBe(uuid(9));
 	});
 
+	// Kills a link that carries a line's empty parameter set, or one mixed in
+	// with tagged sets, which the API reads as every variant.
+	test("carry no sets when a line has no parameters", () => {
+		const bare = line({ benchmark: XXH3, parameters: {} });
+		for (const lines of [[bare], [FOUR_THREADS, bare, XXH3_LINE]]) {
+			expect(exploreSearch(lines)).not.toContain("parameters=");
+		}
+	});
+
 	// Kills passing more sets than the API reads, which drops selected lines from the plot.
 	test("widen to the parameters every variant shares past eight variants", () => {
 		const nine = Array.from({ length: 9 }, (_, threads) =>

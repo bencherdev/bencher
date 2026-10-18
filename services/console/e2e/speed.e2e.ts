@@ -1494,6 +1494,37 @@ for (const [width, viewport] of [
 			report(`threshold cold load ${width}`, cost);
 			holds(page, cost, ceilings.thresholdColdLoad);
 		});
+
+		// Kills a threshold page that draws its cards before the project's
+		// version says which run snippet they teach, which then pushes the
+		// alerts down; on a phone both sit below the fold.
+		test(`a cold load of a threshold, its threshold answering first, holds its speed ceilings at ${width}`, async ({
+			page,
+			request,
+		}) => {
+			test.skip(width === "390");
+			const response = await request.get(
+				`${seed.api_url}/v0/console/projects/${hashbrown.slug}/thresholds`,
+				{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+			);
+			const {
+				thresholds: [threshold],
+			} = (await response.json()) as { thresholds: { uuid: string }[] };
+			const cost = await coldLoad(
+				page,
+				`${THRESHOLDS}/${threshold?.uuid}`,
+				() =>
+					expect(
+						page.getByRole("region", { name: "Change this threshold" }),
+					).toContainText("--threshold-metric"),
+				(url) =>
+					/\/v0\/console\/projects\/[^/]+\/thresholds\//.test(url)
+						? 500
+						: 1_500,
+			);
+			report(`threshold cold load, threshold first, ${width}`, cost);
+			holds(page, cost, ceilings.thresholdColdLoad);
+		});
 	});
 }
 

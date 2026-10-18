@@ -142,6 +142,10 @@ export const distinct = <T>(
 
 export const itself = (text: string): string => text;
 
+/** The sets as the API reads them: a list holding the empty set matches every variant, as no sets do. */
+export const narrowingSets = (sets: readonly Parameters[]): Parameters[] =>
+	sets.some((set) => Object.keys(set).length === 0) ? [] : [...sets];
+
 export const encodeQuery = (query: ExploreQuery): string => {
 	const pairs: [string, string][] = [];
 	const add = (name: string, value: string) => pairs.push([name, value]);
@@ -250,10 +254,9 @@ export const decodeQuery = (search: string): ExploreQuery => {
 		branches,
 		testbeds,
 		benchmarks: uuids(BENCHMARKS),
-		sets: params
-			.getAll(PARAMETERS)
-			.flatMap(readParameters)
-			.slice(0, MAX_ENTRIES),
+		sets: narrowingSets(
+			params.getAll(PARAMETERS).flatMap(readParameters),
+		).slice(0, MAX_ENTRIES),
 		measures: uuids(MEASURES),
 		metrics: distinct(
 			params.getAll(METRICS).filter(isName),

@@ -34,7 +34,7 @@ const page = accountPage(Astro.url.pathname);
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>{page?.title ?? "Account"} | Bencher</title>
 		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
-		<NextHead slug="" classic={undefined} />
+		<NextHead />
 		<Head />
 		{modulePreloads(page?.page ?? "NotFound").map((href) => <link rel="modulepreload" href={href} />)}
 	</head>

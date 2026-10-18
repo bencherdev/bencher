@@ -59,7 +59,8 @@ impl E2e {
         let root = workspace_root();
         let console_dir = root.join("services/console");
 
-        let api_bin = build_api(&root)?;
+        let api_bin = build_bin(&root, "bencher_api", "api")?;
+        let cli_bin = build_bin(&root, "bencher_cli", "bencher")?;
         if !self.skip_console_build {
             build_console(&console_dir)?;
         }
@@ -73,7 +74,9 @@ impl E2e {
         // still drops, instead of the harness dying and leaving them running.
         let stopped = stop_signal()?;
         let suite = async {
-            let result = self.run(&mut servers, &dir, &api_bin, &console_dir).await;
+            let result = self
+                .run(&mut servers, &dir, (&api_bin, &cli_bin), &console_dir)
+                .await;
             if result.is_err() {
                 servers.print_logs();
             }
@@ -86,7 +89,7 @@ impl E2e {
         &self,
         servers: &mut Servers,
         dir: &Utf8Path,
-        api_bin: &Utf8Path,
+        (api_bin, cli_bin): (&Utf8Path, &Utf8Path),
         console_dir: &Utf8Path,
     ) -> anyhow::Result<()> {
         let api_url = format!("http://127.0.0.1:{}", free_port()?);
@@ -127,6 +130,7 @@ impl E2e {
             .args(&self.playwright)
             .current_dir(console_dir)
             .env("BENCHER_E2E_SEED", &seed_path)
+            .env("BENCHER_E2E_CLI", cli_bin)
             .kill_on_drop(true)
             .status()
             .await
@@ -187,16 +191,16 @@ fn workspace_root() -> Utf8PathBuf {
     Utf8Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-/// Build the API and return the path to its binary, as Cargo reports it.
-fn build_api(root: &Utf8Path) -> anyhow::Result<Utf8PathBuf> {
-    println!("Building the API");
+/// Build a binary and return its path, as Cargo reports it.
+fn build_bin(root: &Utf8Path, package: &str, bin: &str) -> anyhow::Result<Utf8PathBuf> {
+    println!("Building {bin}");
     let mut child = Command::new("cargo")
         .args([
             "build",
             "--package",
-            "bencher_api",
+            package,
             "--bin",
-            "api",
+            bin,
             "--message-format=json-render-diagnostics",
         ])
         .current_dir(root)
@@ -215,8 +219,8 @@ fn build_api(root: &Utf8Path) -> anyhow::Result<Utf8PathBuf> {
         }
     }
     let status = child.wait()?;
-    anyhow::ensure!(status.success(), "Failed to build the API: {status}");
-    executable.context("Cargo did not report the API binary")
+    anyhow::ensure!(status.success(), "Failed to build {bin}: {status}");
+    executable.with_context(|| format!("Cargo did not report the {bin} binary"))
 }
 
 /// Build the console with the Node adapter, leaving `astro.config.mjs` as it was.

@@ -1,6 +1,7 @@
 import Card from "@bencherdev/ui/Card";
 import { For, Show } from "solid-js";
 import type {
+	BmfVersion,
 	JsonConsoleThreshold,
 	JsonConsoleThresholdModel,
 } from "../../types/bencher";
@@ -9,6 +10,7 @@ import { archivedBy, dayText, filterSets, historySpan } from "./model";
 import { VALUE } from "./rows";
 import Sets from "./Sets";
 import { declarationSnippet } from "./snippet";
+import { declarationSnippetV0 } from "./snippetV0";
 import { modelRows, modelText } from "./text";
 import { NEXT_PROJECTS } from "../paths";
 import { runHost } from "../project";
@@ -160,31 +162,36 @@ const HistoryRow = (props: {
 	);
 };
 
-/** How to change the threshold: the run that declares it as it is. */
+/** How to change the threshold: the run that declares it as it is, in the project's BMF version. */
 export const Change = (props: {
 	slug: string;
 	threshold: JsonConsoleThreshold;
 	host: string | undefined;
+	version: BmfVersion | undefined;
 }) => {
 	const snippet = () => {
 		const model = props.threshold.model;
-		return (
-			model &&
-			declarationSnippet(
-				{
-					project: props.slug,
-					branch: props.threshold.branch.name,
-					testbed: props.threshold.testbed.name,
-					host: runHost(props.host),
-				},
-				{
-					measure: props.threshold.measure.slug,
+		if (!model || props.version === undefined) {
+			return undefined;
+		}
+		const place = {
+			project: props.slug,
+			branch: props.threshold.branch.name,
+			testbed: props.threshold.testbed.name,
+			host: runHost(props.host),
+		};
+		const measure = props.threshold.measure.slug;
+		return props.version === 0
+			? {
+					kind: "flags" as const,
+					...declarationSnippetV0(place, { measure, model }),
+				}
+			: declarationSnippet(place, {
+					measure,
 					metric: props.threshold.metric ?? VALUE,
 					parameters: props.threshold.parameters,
 					model,
-				},
-			)
-		);
+				});
 	};
 	return (
 		<Card

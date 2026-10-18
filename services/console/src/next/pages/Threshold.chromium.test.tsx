@@ -80,7 +80,19 @@ const mount = (
 	return history;
 };
 
-const client = () => createQueryClient(() => {});
+/** A client without the project's bootstrap, which the page waits for. */
+const bare = () => createQueryClient(() => {});
+
+/** A client holding the project's bootstrap, on `version`. */
+const client = (version = 1) => {
+	const cache = bare();
+	const bootstrap = bootstrapOf();
+	cache.setQueryData(["console", "project", "hashbrown"], {
+		...bootstrap,
+		project: { ...bootstrap.project, bmf_version: version },
+	});
+	return cache;
+};
 
 /** The API: the threshold, its alerts, and the bootstrap, each answered when `open` says so. */
 const api = (
@@ -1642,6 +1654,24 @@ test("an archived threshold says so, and what archived it", async () => {
 		.toHaveTextContent(/Archived Sep 8(, 2026)? with testbed ubuntu-old/);
 });
 
+// Kills cards drawn before the project's version says what Change teaches,
+// which then pushes the alerts below them down.
+test("the cards wait for the project's bootstrap", async () => {
+	const { api: answered } = api();
+	const cache = bare();
+	mount(answered, cache);
+	await expect
+		.element(page.getByRole("heading", { level: 1 }))
+		.toHaveTextContent("Latency");
+	await expect
+		.element(page.getByRole("region", { name: "Applies to" }))
+		.not.toBeInTheDocument();
+	cache.setQueryData(["console", "project", "hashbrown"], bootstrapOf());
+	await expect
+		.element(page.getByRole("region", { name: "Change this threshold" }))
+		.toHaveTextContent("--threshold-metric value");
+});
+
 // Kills Bencher Cloud's own URL printed as the run's host, and the measure
 // named by its name rather than the slug the CLI takes.
 test("the run snippet names the measure by slug, with no host on Bencher Cloud", async () => {
@@ -1660,6 +1690,24 @@ test("the run snippet names the project's self-hosted API", async () => {
 	await expect
 		.element(change)
 		.toHaveTextContent("--host http://localhost:61016");
+});
+
+// Kills a version 0 threshold taught the version 1 flags, which its project
+// refuses, or an adapter no single report on this page names, and a version 1
+// threshold taught the version 0 card.
+test("the run snippet teaches the project's version", async () => {
+	const { api: answered } = api();
+	mount(answered, client(0));
+	const change = page.getByRole("region", { name: "Change this threshold" });
+	await expect.element(change).toHaveTextContent("--threshold-measure latency");
+	expect(change.element().textContent).not.toContain("--threshold-metric");
+	expect(change.element().textContent).not.toContain("--adapter");
+	dispose?.();
+	document.body.replaceChildren();
+	mount(answered, client(1));
+	await expect
+		.element(page.getByRole("region", { name: "Change this threshold" }))
+		.toHaveTextContent("--threshold-metric value");
 });
 
 // Kills alerts that never load past their first batch, or ask again for a

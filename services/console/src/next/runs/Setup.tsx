@@ -11,6 +11,7 @@ import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import type { batchQuery } from "./query";
 import { SAMPLE, exportLine, runCommand } from "./setup";
+import { SAMPLE_V0, runCommandV0 } from "./setupV0";
 
 // The card asks again while it shows and the tab is in view, and goes once a run lands.
 const POLL = 5_000;
@@ -18,7 +19,7 @@ const KEY_NAME = "bencher run";
 // Ninety days, as Settings makes a key unless told otherwise.
 const KEY_TTL = 90 * 24 * 60 * 60;
 
-/** A version 1 project nothing has reported to yet: how to send the first report. */
+/** A project nothing has reported to yet: how to send the first report, in its BMF version. */
 const Setup = (props: { poll: () => ReturnType<typeof batchQuery> }) => {
 	const { api, slug, host } = useProject();
 	const client = useQueryClient();
@@ -63,7 +64,11 @@ const Setup = (props: { poll: () => ReturnType<typeof batchQuery> }) => {
 			{copied() === props.what ? "Copied" : "Copy"}
 		</Button>
 	);
-	const command = () => runCommand(slug(), host);
+	const v0 = () => bootstrap().data?.project.bmf_version === 0;
+	const format = () => (v0() ? "BMF v0" : "BMF v1");
+	const sample = () => (v0() ? SAMPLE_V0 : SAMPLE);
+	const command = () =>
+		v0() ? runCommandV0(slug(), host) : runCommand(slug(), host);
 	return (
 		// The reader's permissions decide the first step, so the card waits for them.
 		<Show when={bootstrap().data} fallback={<ContentSkeleton />}>
@@ -72,7 +77,7 @@ const Setup = (props: { poll: () => ReturnType<typeof batchQuery> }) => {
 					<section class="pu-setup" aria-labelledby="pu-setup">
 						<div class="pu-intro">
 							<div class="eyebrow">
-								{project().project.name} · BMF v1 · no reports yet
+								{project().project.name} · {format()} · no reports yet
 							</div>
 							<Heading level={1} size="xl" id="pu-setup">
 								Send the first report
@@ -137,7 +142,7 @@ const Setup = (props: { poll: () => ReturnType<typeof batchQuery> }) => {
 							</Switch>
 						</div>
 						<div class="pu-step">
-							<h2 class="seclabel">2 · A results file in BMF v1</h2>
+							<h2 class="seclabel">2 · A results file in {format()}</h2>
 							<div class="pu-row">
 								<span class="flab" id="pu-adapter">
 									Adapter
@@ -145,14 +150,14 @@ const Setup = (props: { poll: () => ReturnType<typeof batchQuery> }) => {
 								<Segmented
 									name="setup-adapter"
 									aria-labelledby="pu-adapter"
-									options={[{ value: "json", label: "json · BMF v1" }]}
+									options={[{ value: "json", label: `json · ${format()}` }]}
 									value="json"
 									onChange={() => {}}
 								/>
 							</div>
 							<pre class="code">
-								{SAMPLE}
-								<Copy what="the sample" text={SAMPLE} />
+								{sample()}
+								<Copy what="the sample" text={sample()} />
 							</pre>
 						</div>
 						<div class="pu-step">

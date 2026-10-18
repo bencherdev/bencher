@@ -439,8 +439,10 @@
 .lr-twist[aria-expanded="true"] svg {
 	transform: rotate(90deg);
 }
-.lnk.lr-quiet {
+.lr-quiet {
 	color: var(--color-text-muted);
+}
+.lnk.lr-quiet {
 	text-decoration: underline;
 	text-decoration-color: var(--color-border-emphasized);
 	text-underline-offset: 3px;

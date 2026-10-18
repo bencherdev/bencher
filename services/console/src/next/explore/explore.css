@@ -269,6 +269,12 @@
 	background: var(--color-accent-muted);
 	color: var(--color-text-primary);
 }
+.ex-add.ex-locked,
+.ex-add.ex-locked:hover {
+	background: transparent;
+	color: var(--color-text-muted);
+	cursor: not-allowed;
+}
 .ex-none {
 	margin: 0;
 	padding: 8px;

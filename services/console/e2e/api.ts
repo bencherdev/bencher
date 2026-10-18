@@ -38,10 +38,13 @@ const send = async <T>(
 	return (await response.json()) as T;
 };
 
-/** A version 1 project of the member's, in the seeded organization unless another is named. */
+/** A project of the member's on version 1 unless told 0, in the seeded organization unless another is named. */
 export const createProject = async (
 	request: APIRequestContext,
-	{ organization = seed.organization.slug }: { organization?: string } = {},
+	{
+		organization = seed.organization.slug,
+		version = 1,
+	}: { organization?: string; version?: 0 | 1 } = {},
 ) => {
 	const project = await send<JsonProject>(
 		request,
@@ -50,6 +53,9 @@ export const createProject = async (
 		seed.member.token,
 		{ name: unique("Rosti"), visibility: "public" },
 	);
+	if (version === 0) {
+		return project;
+	}
 	return send<JsonProject>(
 		request,
 		"PATCH",

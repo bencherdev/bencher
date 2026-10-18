@@ -50,6 +50,7 @@ import {
 
 export { prefetchLinkedReport as prefetch } from "../report/query";
 import { slotsOf } from "../report/slots";
+import { declaresThresholdV0 } from "../report/snippetV0";
 import ThresholdSheet from "../report/ThresholdSheet";
 import {
 	type ReportView,
@@ -90,6 +91,7 @@ const Report = () => {
 	// The statuses its row plots set, which outlive a row folded and opened again.
 	const kept = new Map<string, Settable>();
 	const canChange = () => bootstrap().data?.permissions.edit === true;
+	const version = () => bootstrap().data?.project.bmf_version;
 
 	const perPage = screenBatch();
 	const linesKey = createMemo(
@@ -380,6 +382,7 @@ const Report = () => {
 								selected={selectedKeys()}
 								onSelect={select}
 								onNoThreshold={setSheet}
+								declares={version() === 0 ? declaresThresholdV0 : undefined}
 								explore={explore()}
 								onExploreIntent={loadExplorer}
 								href={(line) =>
@@ -431,6 +434,8 @@ const Report = () => {
 							report={report().uuid}
 							branch={report().branch.name}
 							testbed={report().testbed.name}
+							adapter={report().adapter}
+							version={version()}
 							host={host}
 							onClose={() => setSheet()}
 						/>

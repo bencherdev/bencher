@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { decodeBase64 } from "../../util/convert";
 import { USER_KEY } from "../reader";
 import { VERSION_KEY } from "../memory";
-import { classicPlace, profilePath, projectPath } from "../paths";
+import { profilePath, projectPath } from "../paths";
 import AccountGate from "./AccountGate.astro";
 import ClassicGate from "./ClassicGate.astro";
 import Landing from "./Landing.astro";
@@ -35,59 +35,35 @@ const versions = (slug: string, version: number) => ({
 
 describe("NextHead", () => {
 	const next = async (url: string, storage: Record<string, string>) =>
-		run(
-			await container.renderToString(NextHead, {
-				props: {
-					slug: "hashbrown",
-					classic: classicPlace(new URL(url).pathname),
-				},
-			}),
-			url,
-			storage,
-		).replaced;
+		run(await container.renderToString(NextHead), url, storage).replaced;
 	const URL_ = "https://bencher.dev/next/console/projects/hashbrown/runs";
 
-	// Kills a version gate that waits for the app to load the project.
-	test("a project remembered on version 0 goes to the classic page at once", async () => {
-		expect(
-			await next(URL_, { ...SIGNED_IN, ...versions("hashbrown", 0) }),
-		).toEqual(["/console/projects/hashbrown/reports"]);
-	});
-
-	// Kills a gate that drops the place on the page, or carries one to the
-	// perf page, which reads none.
-	test("the classic page keeps the hash, except the perf page", async () => {
-		const remembered = { ...SIGNED_IN, ...versions("hashbrown", 0) };
-		expect(await next(`${URL_}#top`, remembered)).toEqual([
-			"/console/projects/hashbrown/reports#top",
-		]);
-		expect(
-			await next(
-				"https://bencher.dev/next/console/projects/hashbrown/explore#top",
-				remembered,
-			),
-		).toEqual(["/console/projects/hashbrown/perf"]);
-	});
-
-	// Kills a gate that moves a project it should keep, or reads another slug.
-	test("a project remembered on version 1, or not at all, stays", async () => {
-		expect(
-			await next(URL_, { ...SIGNED_IN, ...versions("hashbrown", 1) }),
-		).toEqual([]);
-		expect(await next(URL_, { ...SIGNED_IN, ...versions("other", 0) })).toEqual(
-			[],
-		);
+	// Kills a gate that still sends a version 0 project back to the classic
+	// console, which would keep its pages out of the new one.
+	test("a project remembered on either version stays", async () => {
+		for (const version of [0, 1]) {
+			expect(
+				await next(`${URL_}#top`, {
+					...SIGNED_IN,
+					...versions("hashbrown", version),
+				}),
+			).toEqual([]);
+		}
 		expect(await next(URL_, { ...SIGNED_IN, [VERSION_KEY]: "{" })).toEqual([]);
 	});
 
-	// Kills a reader who is not signed in left on a page that cannot load.
+	// Kills a reader who is not signed in left on a page that cannot load, and
+	// one sent to the classic console because the project was on version 0.
 	test("a reader who is not signed in goes to sign in with the way back", async () => {
-		const [to] = await next(`${URL_}?page=2#top`, {});
-		const href = new URL(to ?? "", "https://bencher.dev");
-		expect(href.pathname).toBe("/auth/login");
-		expect(decodeBase64(href.searchParams.get("back"))).toBe(
-			"/next/console/projects/hashbrown/runs?page=2#top",
-		);
+		for (const storage of [{}, versions("hashbrown", 0)]) {
+			const [to, ...rest] = await next(`${URL_}?page=2#top`, storage);
+			expect(rest).toEqual([]);
+			const href = new URL(to ?? "", "https://bencher.dev");
+			expect(href.pathname).toBe("/auth/login");
+			expect(decodeBase64(href.searchParams.get("back"))).toBe(
+				"/next/console/projects/hashbrown/runs?page=2#top",
+			);
+		}
 	});
 });
 

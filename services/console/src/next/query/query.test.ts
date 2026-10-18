@@ -17,7 +17,6 @@ const FULL: ExploreQuery = {
 	benchmarks: [uuid(5), uuid(6)],
 	sets: [
 		{ input_bytes: 65536, simd: "avx2" },
-		{},
 		{ fast: true, label: "a,b&c=d %2C+" },
 	],
 	measures: [uuid(7), uuid(8)],
@@ -203,6 +202,17 @@ describe("decodeQuery", () => {
 			metrics: ["value", "é".repeat(32)],
 			hide: ["ok"],
 		});
+	});
+
+	// Kills a set list holding the empty set read as narrowing, which the API
+	// reads as every variant: the box would draw a row that filters nothing.
+	// The empty set counts past the eight sets the box keeps.
+	test("read sets that include the empty set as no sets", () => {
+		const ninth = [...Array.from({ length: 8 }, (_, n) => `{"n":${n}}`), "{}"];
+		for (const sets of [["{}"], ['{"a":1}', "{}", '{"b":2}'], ninth]) {
+			const search = sets.map((set) => `parameters=${set}`).join("&");
+			expect(decodeQuery(search).sets).toEqual([]);
+		}
 	});
 
 	// Kills a box holding more than the API reads, which draws less than the box shows.
