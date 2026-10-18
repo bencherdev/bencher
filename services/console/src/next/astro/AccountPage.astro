@@ -1,0 +1,48 @@
+---
+// An account page answers with the account bar and a skeleton, painted before
+// any script runs. The app routes from there.
+import { BENCHER_API_URL } from "astro:env/server";
+
+import ContentSkeleton from "../ContentSkeleton";
+import Head from "../Head.astro";
+import Main from "./Main.astro";
+import NextHead from "./NextHead.astro";
+import { accountPage } from "../account/paths";
+import { modulePreloads } from "../preloads";
+import Shell from "../shell/Shell";
+import "@bencherdev/ui/styles.css";
+import "../styles/console.css";
+import "../explore/explore.css";
+import "../reports/reports.css";
+import "../plot/plot.css";
+import "../report/report.css";
+import "../thresholds/thresholds.css";
+import "../dimensions/dimensions.css";
+import "../alerts/alerts.css";
+import "../plots/plots.css";
+import "../public/public.css";
+import "../feedback/feedback.css";
+import "../switcher/switcher.css";
+
+const page = accountPage(Astro.url.pathname);
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{page?.title ?? "Account"} | Bencher</title>
+		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+		<NextHead slug="" classic={undefined} />
+		<Head />
+		{modulePreloads(page?.page ?? "NotFound").map((href) => <link rel="modulepreload" href={href} />)}
+	</head>
+	<body>
+		<div id="console" class="console" data-api-url={BENCHER_API_URL}>
+			<Shell />
+			<ContentSkeleton />
+		</div>
+		<Main />
+	</body>
+</html>

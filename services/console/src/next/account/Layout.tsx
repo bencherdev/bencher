@@ -4,12 +4,14 @@ import ContentSkeleton from "../ContentSkeleton";
 import Announcer from "../shell/Announcer";
 import Shell from "../shell/Shell";
 import { useAccount } from "./context";
+import { accountPage } from "./paths";
 
 /** The account bar and the page under it, for the reader's account paths. */
-const AccountLayout = (props: { page: string; children?: JSX.Element }) => {
+const AccountLayout = (props: { children?: JSX.Element }) => {
 	const { reader, signOut } = useAccount();
 	const location = useLocation();
-	const title = () => `${props.page} | Bencher`;
+	const title = () =>
+		`${accountPage(location.pathname)?.title ?? "Account"} | Bencher`;
 	createEffect(() => {
 		document.title = title();
 	});

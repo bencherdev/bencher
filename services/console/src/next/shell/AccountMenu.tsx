@@ -3,6 +3,7 @@ import Menu from "@bencherdev/ui/Menu";
 import Sheet from "@bencherdev/ui/Sheet";
 import { QueryClientContext } from "@tanstack/solid-query";
 import { type JSX, Show, createSignal, useContext } from "solid-js";
+import { accountPath } from "../account/paths";
 import { ORGANIZATIONS_PATH, profilePath } from "../paths";
 import { NARROW } from "../plot/narrow";
 import { ProjectContext } from "../project";
@@ -93,7 +94,10 @@ const AccountMenu = (props: AccountMenuProps) => {
 						<Icon name="user" />
 						Profile
 					</Link>
-					<Link href={`/console/users/${props.user.slug}/keys`}>
+					<Link
+						href={accountPath(props.user.slug, "keys")}
+						onClick={props.onClose}
+					>
 						<Icon name="key" />
 						Keys
 					</Link>

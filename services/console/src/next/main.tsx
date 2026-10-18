@@ -14,10 +14,11 @@ import {
 import { handOff } from "./handoff";
 import { idbStore } from "./idb";
 import { forgetReader } from "./memory";
+import { accountPage } from "./account/paths";
 import { organizationOf, pageName, parseNextPath } from "./paths";
 import { consoleProjectQuery, fetchedVersions } from "./queries";
 import { USER_KEY, isCurrent, readReader, signInHref } from "./reader";
-import { PAGES, accountPage } from "./routes";
+import { PAGES } from "./routes";
 
 /** The longest the first render waits on the cache and the page's code. */
 const BOOT_WAIT = 100;
@@ -51,7 +52,7 @@ const boot = async (mount: HTMLElement) => {
 		PAGES[
 			place
 				? pageName(place.rest)
-				: (accountPage(location.pathname) ??
+				: (accountPage(location.pathname)?.page ??
 					(organizationOf(location.pathname) ? "OrgGeneral" : "NotFound"))
 		];
 	await within(

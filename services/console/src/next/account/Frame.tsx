@@ -1,9 +1,10 @@
 import { For, type JSX } from "solid-js";
 import { ORGANIZATIONS_PATH, profilePath } from "../paths";
+import { accountPath } from "./paths";
 
 type Section = "profile" | "keys" | "organizations";
 
-/** The account's sections, as Settings' rail; Keys is still the classic console's. */
+/** The account's sections, as Settings' rail. */
 const Frame = (props: {
 	user: string;
 	section: Section;
@@ -11,11 +12,7 @@ const Frame = (props: {
 }) => {
 	const sections = (): { section: Section; label: string; href: string }[] => [
 		{ section: "profile", label: "Profile", href: profilePath(props.user) },
-		{
-			section: "keys",
-			label: "Keys",
-			href: `/console/users/${props.user}/keys`,
-		},
+		{ section: "keys", label: "Keys", href: accountPath(props.user, "keys") },
 		{
 			section: "organizations",
 			label: "Organizations",

@@ -82,6 +82,16 @@ export const createKey = (
 		{ name },
 	);
 
+/** A user key the member makes for themselves. */
+export const createUserKey = (request: APIRequestContext, name: string) =>
+	send<JsonUserKeyCreated>(
+		request,
+		"POST",
+		`/v0/users/${seed.member.user.slug}/keys`,
+		seed.member.token,
+		{ name },
+	);
+
 /** A new user of nothing, signed in with a user key the admin makes for them. */
 export const createReader = async (
 	request: APIRequestContext,

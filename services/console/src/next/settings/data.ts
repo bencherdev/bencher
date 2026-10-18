@@ -1,14 +1,9 @@
 import type { QueryClient } from "@tanstack/solid-query";
-import type {
-	JsonConsoleProject,
-	JsonProject,
-	JsonProjectKey,
-	JsonProjectKeyCreated,
-} from "../../types/bencher";
+import type { JsonConsoleProject, JsonProject } from "../../types/bencher";
 import type { Api } from "../api";
 import { SHELL_KEY, VERSION_KEY, rememberVersion } from "../memory";
 import { type Patch, patched } from "./general";
-import { listed, revoke } from "./keys";
+import { type KeyRow, listed, revoke } from "./keys";
 
 // Console query keys put the project's slug third: ["console", kind, slug, ...].
 const projectKey = (slug: string) => ["console", "project", slug];
@@ -78,8 +73,19 @@ export const forgetSlug = (
 	}
 };
 
+/** Where a list of keys lives: its API path, and its place in the cache. */
+export interface KeyHome {
+	path: string;
+	queryKey: readonly string[];
+}
+
+export const projectKeys = (slug: string): KeyHome => ({
+	path: `/v0/projects/${encodeURIComponent(slug)}/keys`,
+	queryKey: ["console", "keys", slug],
+});
+
 export interface KeyPage {
-	keys: JsonProjectKey[];
+	keys: KeyRow[];
 	/** Every key with this status, which the toggle counts. */
 	total: number;
 }
@@ -87,22 +93,20 @@ export interface KeyPage {
 // The API's largest page, in name order: past it, the first 255 keys by name.
 const PER_PAGE = 255;
 
-const keysKey = (slug: string, revoked: boolean) => [
-	"console",
-	"keys",
-	slug,
+export const keysKey = (home: KeyHome, revoked: boolean) => [
+	...home.queryKey,
 	revoked ? "revoked" : "active",
 ];
 
-export const keysQuery = (api: Api, slug: string, revoked: boolean) => ({
-	queryKey: keysKey(slug, revoked),
+export const keysQuery = (api: Api, home: KeyHome, revoked: boolean) => ({
+	queryKey: keysKey(home, revoked),
 	queryFn: async ({ signal }: { signal: AbortSignal }): Promise<KeyPage> => {
-		const { data, headers } = await api.get<JsonProjectKey[]>(
-			`/v0/projects/${encodeURIComponent(slug)}/keys?revoked=${revoked}&per_page=${PER_PAGE}`,
+		const { data, headers } = await api.get<KeyRow[]>(
+			`${home.path}?revoked=${revoked}&per_page=${PER_PAGE}`,
 			signal,
 		);
 		return {
-			keys: data,
+			keys: data.map(listed),
 			total: Number(headers.get("X-Total-Count") ?? data.length),
 		};
 	},
@@ -111,10 +115,10 @@ export const keysQuery = (api: Api, slug: string, revoked: boolean) => ({
 /** A new key leads the active list, without its secret. */
 export const addKey = (
 	client: QueryClient,
-	slug: string,
-	created: JsonProjectKeyCreated,
+	home: KeyHome,
+	created: KeyRow & { key: string },
 ) =>
-	client.setQueryData<KeyPage>(keysKey(slug, false), (page) =>
+	client.setQueryData<KeyPage>(keysKey(home, false), (page) =>
 		page
 			? {
 					keys: [listed(created), ...page.keys],
@@ -126,12 +130,12 @@ export const addKey = (
 /** Show a key revoked at `at` at once; returns the undo. */
 export const revokeKey = (
 	client: QueryClient,
-	slug: string,
+	home: KeyHome,
 	uuid: string,
 	at: string,
 ) => {
-	const activeKey = keysKey(slug, false);
-	const revokedKey = keysKey(slug, true);
+	const activeKey = keysKey(home, false);
+	const revokedKey = keysKey(home, true);
 	const active = client.getQueryData<KeyPage>(activeKey);
 	const revoked = client.getQueryData<KeyPage>(revokedKey);
 	const index = active?.keys.findIndex((key) => key.uuid === uuid) ?? -1;

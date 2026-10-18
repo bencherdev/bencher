@@ -1,4 +1,4 @@
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext, Page, Route } from "@playwright/test";
 import {
 	VERSION_KEY,
 	crumb,
@@ -500,46 +500,120 @@ test("a cold load of General holds the speed ceilings", async ({ page }) => {
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
+/**
+ * Load an account page cold, the API slower than the first paint and `answer`
+ * answering it, and measure it once it is `shown` and the API answered every
+ * URL in `waits`.
+ */
+const accountColdLoad = async (
+	page: Page,
+	path: string,
+	waits: string[],
+	shown: () => Promise<void>,
+	answer: (route: Route) => Promise<void> = (route) => route.continue(),
+) => {
+	await observeLayoutShift(page);
+	await page.route(`${seed.api_url}/**`, async (route) => {
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		await answer(route);
+	});
+	const answered = Promise.all(waits.map((url) => page.waitForResponse(url)));
+	await page.goto(path);
+	await shown();
+	await answered;
+	await loadedAndIdle(page);
+	await settle(page);
+	return measure(page, seed.api_url);
+};
+
+const holds = (cost: Cost, ceiling: Partial<Record<keyof Cost, number>>) => {
+	for (const [metric, limit] of Object.entries(ceiling)) {
+		expect(cost[metric as keyof Cost], metric).toBeLessThanOrEqual(limit);
+	}
+};
+
+const USER = `${seed.api_url}/v0/users/${seed.member.user.slug}`;
+const ACCOUNT = `/next/console/users/${seed.member.user.slug}`;
+
 // Kills a Profile that waits for the API to paint the reader's own account,
 // asks for more than the account and its legacy tokens, chains a second
 // round, or shifts as they arrive.
 test("a cold load of Profile holds the speed ceilings", async ({ page }) => {
-	await observeLayoutShift(page);
-	await page.route(`${seed.api_url}/**`, async (route) => {
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		await route.continue();
-	});
-	const user = `${seed.api_url}/v0/users/${seed.member.user.slug}`;
 	// The form paints from the stored reader, so ready is once both answers land.
-	const answered = Promise.all([
-		page.waitForResponse(user),
-		page.waitForResponse(`${user}/tokens?per_page=1`),
-	]);
-	await page.goto(`/next/console/users/${seed.member.user.slug}/settings`);
-	await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
-		seed.member.user.name,
+	const cost = await accountColdLoad(
+		page,
+		`${ACCOUNT}/settings`,
+		[USER, `${USER}/tokens?per_page=1`],
+		() =>
+			expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
+				seed.member.user.name,
+			),
 	);
-	await answered;
-	await loadedAndIdle(page);
-	await settle(page);
-
-	const cost = await measure(page, seed.api_url);
 	report("profile cold load", cost);
-	const ceiling = ceilings.profileColdLoad;
-	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
-		ceiling.apiAnswersBeforePaint,
+	holds(cost, ceilings.profileColdLoad);
+});
+
+// Kills the account's key lists chained after another answer or each other,
+// a third request, and a table that shifts as the keys arrive.
+test("a cold load of the account's Keys holds the speed ceilings", async ({
+	page,
+}) => {
+	const cost = await accountColdLoad(
+		page,
+		`${ACCOUNT}/keys`,
+		[
+			`${USER}/keys?revoked=false&per_page=255`,
+			`${USER}/keys?revoked=true&per_page=255`,
+		],
+		() =>
+			expect(page.getByRole("table", { name: "Active keys" })).toBeVisible(),
 	);
-	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
-	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
-	expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
-	expect(cost.shellShift).toBeLessThanOrEqual(ceiling.shellShift);
-	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
-	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
-	expect(cost.stylesheets).toBeLessThanOrEqual(ceiling.stylesheets);
-	expect(cost.cssBytes).toBeLessThanOrEqual(ceiling.cssBytes);
-	expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
-	expect(cost.inlineScriptBytes).toBeLessThanOrEqual(ceiling.inlineScriptBytes);
-	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
+	report("user keys cold load", cost);
+	holds(cost, ceilings.userKeysColdLoad);
+});
+
+// Kills a legacy tokens page that reads more than its one list, or shifts as
+// it arrives. No API makes a legacy token any more, so the list is the API's
+// answer rewritten.
+test("a cold load of legacy tokens holds the speed ceilings", async ({
+	page,
+}) => {
+	const list = `${USER}/tokens?revoked=false&per_page=255`;
+	const cost = await accountColdLoad(
+		page,
+		`${ACCOUNT}/tokens`,
+		[list],
+		() =>
+			expect(
+				page.getByRole("button", { name: "Revoke ci-2024" }),
+			).toBeVisible(),
+		async (route) => {
+			if (
+				route.request().url() !== list ||
+				route.request().method() !== "GET"
+			) {
+				return route.continue();
+			}
+			const response = await route.fetch();
+			const { "content-length": _, ...headers } = response.headers();
+			await route.fulfill({
+				response,
+				headers: { ...headers, "x-total-count": "1" },
+				json: [
+					{
+						uuid: "00000000-0000-4000-8000-00000000c120",
+						user: seed.member.user.uuid,
+						name: "ci-2024",
+						token: "legacy",
+						creation: "2024-03-03T00:00:00Z",
+						expiration: "2027-03-03T00:00:00Z",
+					},
+				],
+			});
+		},
+	);
+	report("legacy tokens cold load", cost);
+	holds(cost, ceilings.legacyTokensColdLoad);
 });
 
 // Kills an organization's General that asks for more than the organization

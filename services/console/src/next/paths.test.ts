@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
 	NEXT_PROJECTS,
-	accountUser,
 	alertPath,
 	classicHref,
 	nextHref,
@@ -23,20 +22,6 @@ describe("projectPath", () => {
 		expect(projectPath("hashbrown", "alerts")).toBe(
 			`${NEXT_PROJECTS}/hashbrown/alerts`,
 		);
-	});
-});
-
-describe("accountUser", () => {
-	// Kills a project path taken for an account page, a classic path taken for
-	// the new console's, and a user read from the wrong segment.
-	test("reads the user an account path is about", () => {
-		expect(accountUser("/next/console/users/muriel-bagge/settings")).toBe(
-			"muriel-bagge",
-		);
-		expect(
-			accountUser("/next/console/projects/hashbrown/settings"),
-		).toBeUndefined();
-		expect(accountUser("/console/users/muriel-bagge/settings")).toBeUndefined();
 	});
 });
 

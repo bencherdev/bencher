@@ -22,6 +22,7 @@ import {
 	problemsOf,
 	userQuery,
 } from "../account/profile";
+import { accountPath } from "../account/paths";
 import { useQueryResult } from "../query";
 
 const FIELDS: readonly Field[] = ["name", "slug", "email"];
@@ -67,9 +68,7 @@ const Profile = () => {
 				{(count) => (
 					<p class="notice">
 						<Icon name="key" />
-						<a href={`/console/users/${slug()}/tokens`}>
-							{legacyTokens(count())}
-						</a>
+						<a href={accountPath(slug(), "tokens")}>{legacyTokens(count())}</a>
 					</p>
 				)}
 			</Show>
@@ -81,7 +80,7 @@ export default Profile;
 
 // Account pages share Profile's chunk rather than splitting a module each into its own.
 export { default as Frame } from "../account/Frame";
-export { failureOf } from "../account/profile";
+export { failureOf, legacyTokensQuery } from "../account/profile";
 
 const Failed = (props: { what: string; retry: () => void }) => (
 	<Banner status="error" role="alert" class="load-error">

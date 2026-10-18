@@ -4,8 +4,10 @@ import {
 	type JsonConsoleProject,
 	type JsonProject,
 	type JsonProjectKey,
+	type JsonToken,
 	Visibility,
 } from "../../types/bencher";
+import type { Api } from "../api";
 import {
 	VERSION_KEY,
 	readShell,
@@ -17,6 +19,8 @@ import {
 	addKey,
 	applyPatch,
 	forgetSlug,
+	keysQuery,
+	projectKeys,
 	revokeKey,
 	settleProject,
 } from "./data";
@@ -168,7 +172,7 @@ describe("keys", () => {
 
 		const undo = revokeKey(
 			client,
-			"hashbrown",
+			projectKeys("hashbrown"),
 			"uuid-b",
 			"2026-09-13T00:00:00Z",
 		);
@@ -201,11 +205,16 @@ describe("keys", () => {
 
 		const undoAlpha = revokeKey(
 			client,
-			"hashbrown",
+			projectKeys("hashbrown"),
 			"uuid-alpha",
 			"2026-09-13T00:00:00Z",
 		);
-		revokeKey(client, "hashbrown", "uuid-bravo", "2026-09-13T00:01:00Z");
+		revokeKey(
+			client,
+			projectKeys("hashbrown"),
+			"uuid-bravo",
+			"2026-09-13T00:01:00Z",
+		);
 		undoAlpha();
 		expect(keys(client, "active")).toEqual({ keys: [key("alpha")], total: 1 });
 		expect(keys(client, "revoked")).toEqual({
@@ -221,9 +230,8 @@ describe("keys", () => {
 			keys: [key("a")],
 			total: 1,
 		});
-		addKey(client, "hashbrown", {
+		addKey(client, projectKeys("hashbrown"), {
 			uuid: "uuid-new",
-			project: "p",
 			name: "new",
 			key: "bencher_run_secret",
 			creation: "2026-09-13T00:00:00Z",
@@ -233,5 +241,50 @@ describe("keys", () => {
 		expect(page?.total).toBe(2);
 		expect(page?.keys.map(({ name }) => name)).toEqual(["new", "a"]);
 		expect(JSON.stringify(page)).not.toContain("bencher_run_secret");
+	});
+});
+
+describe("keysQuery", () => {
+	// Kills a list read from another path or status, a legacy token's
+	// secret, which its list returns on every row, kept in the cache, and a
+	// revoked row that loses its revoked date.
+	test("reads one status of a list, and keeps no secret", async () => {
+		const revokedAt = "2026-01-01T00:00:00Z";
+		const reads: string[] = [];
+		const token: JsonToken = {
+			uuid: "t",
+			user: "u",
+			name: "ci-2024",
+			token: "header.claims.signature",
+			creation: "2024-03-03T00:00:00Z",
+			expiration: "2027-03-03T00:00:00Z",
+		};
+		const api: Api = {
+			get: async <T>(path: string) => {
+				reads.push(path);
+				const row = path.includes("revoked=true")
+					? { ...token, revoked: revokedAt }
+					: token;
+				return {
+					data: [row] as T,
+					headers: new Headers({ "X-Total-Count": "3" }),
+				};
+			},
+			send: async () => {
+				throw new Error("no change expected");
+			},
+		};
+		const home = { path: "/v0/users/muriel-bagge/tokens", queryKey: ["t"] };
+		const signal = new AbortController().signal;
+		const page = await keysQuery(api, home, false).queryFn({ signal });
+		const revoked = await keysQuery(api, home, true).queryFn({ signal });
+		expect(reads).toEqual([
+			"/v0/users/muriel-bagge/tokens?revoked=false&per_page=255",
+			"/v0/users/muriel-bagge/tokens?revoked=true&per_page=255",
+		]);
+		expect(page.total).toBe(3);
+		expect(page.keys.map(({ name }) => name)).toEqual(["ci-2024"]);
+		expect(JSON.stringify(page)).not.toContain(token.token);
+		expect(revoked.keys.map((row) => row.revoked)).toEqual([revokedAt]);
 	});
 });
