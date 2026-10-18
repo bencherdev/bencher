@@ -1038,11 +1038,12 @@ async fn a_report_whose_start_point_clone_passes_the_active_cap_warns_of_what_it
     let (status, body) = post_report(&server, &user, &project_slug, None).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
 
-    // The seed and the inserted thresholds are four past the cap.
+    // The seed and the inserted thresholds are four past the cap, and the 63 copied thresholds that
+    // name a metric find none in the version 0 result.
     let skipped = Some(vec![JsonReportWarning {
         resource: ReportWarningResource::Threshold,
         action: ReportWarningAction::Skip,
-        count: 4,
+        count: 67,
     }]);
     let path = format!("/v0/projects/{project_slug}/reports");
     for reset in [false, true] {
