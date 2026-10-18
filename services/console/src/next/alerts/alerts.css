@@ -84,18 +84,7 @@
 	font-size: 12.5px;
 	color: var(--color-text-muted);
 }
-.al-gacts {
-	display: inline-flex;
-	flex: none;
-	align-items: center;
-	white-space: nowrap;
-}
-.al-gacts .lnk:disabled {
-	color: var(--color-text-muted);
-	cursor: default;
-}
 .lr-table.lr-narrow .al-group > td {
-	height: 88px;
 	padding: 0;
 }
 .lr-table.lr-narrow .al-ghead .lr-hit {
@@ -110,22 +99,6 @@
 .lr-table.lr-narrow .al-gmeta {
 	max-width: 100%;
 	font-size: 12px;
-}
-.al-gfoot {
-	display: flex;
-	align-items: center;
-	height: 44px;
-	padding: 0 12px 0 44px;
-}
-.al-gfoot .al-gacts {
-	flex: 1;
-	justify-content: space-between;
-}
-.al-gfoot .lnk {
-	min-height: 44px;
-}
-.al-gfoot .dotsep {
-	display: none;
 }
 
 .al-empty {

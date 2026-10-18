@@ -77,8 +77,8 @@ import { WINDOWS, windowPhrase } from "../reports/search";
 import { type FilterNames, nameQuery } from "../reports/DimensionFilters";
 
 const SKELETON_ROWS = 8;
-/** A report's header: its identity on one line when wide, with its controls on a second when narrow. */
-const GROUP_HEIGHT = { wide: 44, narrow: 88 } as const;
+/** A report's header: its checkbox and identity on one row. */
+const GROUP_HEIGHT = { wide: 44, narrow: 44 } as const;
 const FILTERS: readonly Filter[] = ["branch", "testbed", "measure"];
 
 /** A project's alerts under the reports that raised them, triaged in place. */
@@ -432,26 +432,6 @@ const Alerts = () => {
 			read && dismissAllFilter(search(), read.bounds, read.alerts.read_time)
 		);
 	};
-	const dismissGroup = (group: AlertGroup) => {
-		const filter = dismissFilter();
-		if (!filter) {
-			return;
-		}
-		const ofGroup = (line: AlertLine) => line.report.uuid === group.report.uuid;
-		const lines = changeable(shown().filter(ofGroup), "dismissed", changes());
-		const unseen = group.report.total - listed().filter(ofGroup).length;
-		change(
-			"dismissed",
-			lines,
-			{
-				status: "dismissed" as JsonUpdateAlerts["status"],
-				filter: { ...filter, reports: [group.report.uuid] },
-			},
-			{
-				guess: search().status === "active" ? -Math.max(0, unseen) : 0,
-			},
-		);
-	};
 	const [confirming, setConfirming] = createSignal(false);
 	const dismissAll = () => {
 		setConfirming(false);
@@ -556,18 +536,13 @@ const Alerts = () => {
 					group={group()}
 					index={props.index}
 					columns={props.columns}
-					narrow={fold()}
-					canEdit={canEdit()}
-					busy={busy()}
 					active={shown().some(
 						(line) =>
 							line.report.uuid === group().report.uuid &&
 							statusOf(line, changes()) === "active",
 					)}
 					state={groupState(group().keys, selected())}
-					slug={slug()}
 					onSelect={() => choose(toggleGroup(group().keys, selected()))}
-					onDismiss={() => dismissGroup(group())}
 				/>
 			)}
 		</Show>
@@ -802,21 +777,15 @@ const useNames = (search: Accessor<AlertsSearch>) => {
 	});
 };
 
-/** A report's row in the list: its checkbox, identity, and controls. */
+/** A report's row in the list: its checkbox and identity. */
 const ReportHeader = (props: {
 	group: AlertGroup;
 	index: number;
 	columns: number;
-	narrow: boolean;
-	canEdit: boolean;
-	/** The rows are the last search's while a new one loads, so Dismiss group would select by the wrong filters. */
-	busy: boolean;
 	/** Some row of it still alerts. */
 	active: boolean;
 	state: "none" | "some" | "all";
-	slug: string;
 	onSelect: () => void;
-	onDismiss: () => void;
 }) => {
 	const where = () =>
 		`${props.group.branch.name}, ${props.group.testbed.name}, ${formatWhen(props.group.report.start)}`;
@@ -835,31 +804,6 @@ const ReportHeader = (props: {
 			box.indeterminate = props.state === "some";
 		}
 	});
-	const controls = () => (
-		<span class="al-gacts">
-			<a
-				class="lnk"
-				href={reportPath(props.slug, props.group.report.uuid)}
-				aria-label={`Open report on ${where()}`}
-			>
-				Open report
-			</a>
-			<Show when={props.canEdit && props.active}>
-				<span class="dotsep" aria-hidden="true">
-					·
-				</span>
-				<button
-					type="button"
-					class="lnk"
-					disabled={props.busy}
-					aria-label={`Dismiss group on ${where()}`}
-					onClick={() => props.onDismiss()}
-				>
-					Dismiss group
-				</button>
-			</Show>
-		</span>
-	);
 	return (
 		<tr class="al-group" aria-rowindex={props.index}>
 			<td colSpan={props.columns}>
@@ -887,11 +831,7 @@ const ReportHeader = (props: {
 						</span>
 						<span class="al-gmeta">{meta()}</span>
 					</div>
-					<Show when={!props.narrow}>{controls()}</Show>
 				</div>
-				<Show when={props.narrow}>
-					<div class="al-gfoot">{controls()}</div>
-				</Show>
 			</td>
 		</tr>
 	);

@@ -1,6 +1,5 @@
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
-import Dialog from "@bencherdev/ui/Dialog";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
@@ -33,6 +32,8 @@ import {
 import { CLASSIC_ORGANIZATION } from "../memory";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
+import type SlugDialog from "../SlugDialog";
+import { lazyView } from "../shell/lazy";
 
 const FIELDS: readonly Field[] = ["name", "slug"];
 
@@ -111,6 +112,8 @@ export default OrgGeneral;
 
 type Shown = JsonOrganization | JsonConsoleOrganization;
 
+const slugDialog = lazyView(() => import("../SlugDialog"));
+
 const OrganizationForm = (props: { organization: Shown }) => {
 	const { api, reader } = useAccount();
 	const client = useQueryClient();
@@ -123,7 +126,7 @@ const OrganizationForm = (props: { organization: Shown }) => {
 	const [draft, setDraft] = createSignal<Draft>(saved());
 	const [failure, setFailure] = createSignal<string>();
 	const [justSaved, setJustSaved] = createSignal(false);
-	const [confirming, setConfirming] = createSignal(false);
+	const [confirming, setConfirming] = createSignal<typeof SlugDialog>();
 	const [saving, setSaving] = createSignal(false);
 	const [moved, setMoved] = createSignal<string>();
 
@@ -176,7 +179,8 @@ const OrganizationForm = (props: { organization: Shown }) => {
 
 	const save = async (changes: Partial<Draft>) => {
 		const from = params.organization ?? "";
-		setConfirming(false);
+		setConfirming(undefined);
+		holdFocus();
 		setSaving(true);
 		setFailure(undefined);
 		try {
@@ -211,6 +215,12 @@ const OrganizationForm = (props: { organization: Shown }) => {
 		}
 	};
 
+	// The confirmation's code loads once a save would need it.
+	const preload = () => {
+		if (patch()?.slug !== undefined) {
+			slugDialog.preload();
+		}
+	};
 	const submit = (event: SubmitEvent) => {
 		event.preventDefault();
 		const changes = patch();
@@ -218,7 +228,15 @@ const OrganizationForm = (props: { organization: Shown }) => {
 			return;
 		}
 		if (changes.slug !== undefined) {
-			setConfirming(true);
+			slugDialog
+				.load()
+				.then((view) => {
+					// A change undone while the code loaded no longer needs it.
+					if (patch()?.slug !== undefined) {
+						setConfirming(() => view);
+					}
+				})
+				.catch(() => {});
 			return;
 		}
 		holdFocus();
@@ -303,49 +321,34 @@ const OrganizationForm = (props: { organization: Shown }) => {
 							Discard
 						</Button>
 					</Show>
-					<Button type="submit" variant="primary" disabled={blocked()}>
+					<Button
+						type="submit"
+						variant="primary"
+						disabled={blocked()}
+						onPointerEnter={preload}
+						onFocus={preload}
+					>
 						Save changes
 					</Button>
 				</div>
 			</form>
 			<Show when={confirming()}>
-				<Dialog
-					role="alertdialog"
-					aria-labelledby="slug-title"
-					aria-describedby="slug-desc"
-					onDismiss={() => setConfirming(false)}
-				>
-					<div class="ui-dialog-head">
-						<h2 id="slug-title">Change the slug to {draft().slug}?</h2>
-						<Button
-							variant="ghost"
-							iconOnly
-							aria-label="Close"
-							onClick={() => setConfirming(false)}
-						>
-							<Icon name="close" />
-						</Button>
-					</div>
-					<div class="ui-dialog-body">
-						<p id="slug-desc">
-							Every existing link to this organization breaks.
-						</p>
-					</div>
-					<div class="ui-dialog-foot">
-						<Button onClick={() => setConfirming(false)}>Cancel</Button>
-						<Button
-							variant="destructive"
-							onClick={() => {
+				{(view) => {
+					const Confirm = view();
+					return (
+						<Confirm
+							slug={draft().slug}
+							noun="organization"
+							onCancel={() => setConfirming(undefined)}
+							onConfirm={() => {
 								const changes = patch();
 								if (changes) {
 									save(changes);
 								}
 							}}
-						>
-							Change slug
-						</Button>
-					</div>
-				</Dialog>
+						/>
+					);
+				}}
 			</Show>
 		</>
 	);

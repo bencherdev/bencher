@@ -79,9 +79,10 @@ test.describe("General, as the project's Maintainer", () => {
 		);
 	});
 
-	// Kills a slug change that leaves the page on a URL that no longer names a
-	// project, and a version memory left under the old slug.
-	test("a slug change moves the page to the new slug and the version memory follows", async ({
+	// Kills a slug change sent before the reader confirms, one that leaves the
+	// page on a URL that no longer names a project, and a version memory left
+	// under the old slug.
+	test("a slug change confirms, moves the page to the new slug, and the version memory follows", async ({
 		page,
 		request,
 	}) => {
@@ -92,6 +93,14 @@ test.describe("General, as the project's Maintainer", () => {
 
 		await page.getByRole("textbox", { name: "Slug" }).fill(slug);
 		await save(page).click();
+		const dialog = page.getByRole("alertdialog", {
+			name: `Change the slug to ${slug}?`,
+		});
+		await expect(dialog).toContainText(
+			"Every existing link to this project breaks.",
+		);
+		expect(await projectStatus(request, slug)).toBe(404);
+		await dialog.getByRole("button", { name: "Change slug" }).click();
 		await expect(page).toHaveURL(nextPath(slug, "settings"));
 		const versions = await page.evaluate(
 			(key) => JSON.parse(localStorage.getItem(key) ?? "{}"),
@@ -451,6 +460,23 @@ test.describe("accessibility", () => {
 			);
 		});
 	}
+
+	test("General and its slug confirmation pass axe in both themes", async ({
+		page,
+	}) => {
+		await axeInBothThemes(
+			page,
+			nextPath(hashbrown.slug, "settings"),
+			async () => {
+				await expect(general(page)).toBeVisible();
+				await page
+					.getByRole("textbox", { name: "Slug" })
+					.fill(`${hashbrown.slug}-moved`);
+				await save(page).click();
+				await expect(page.getByRole("alertdialog")).toBeVisible();
+			},
+		);
+	});
 
 	test("Keys and its new key dialog pass axe in both themes", async ({
 		page,

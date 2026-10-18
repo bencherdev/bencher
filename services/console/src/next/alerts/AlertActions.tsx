@@ -63,7 +63,7 @@ const AlertActions = (props: AlertActionsProps) => {
 							<button
 								ref={undo}
 								type="button"
-								class="lnk"
+								class="lnk lr-quiet"
 								aria-label={`Reactivate the alert on ${props.name}`}
 								onClick={() => {
 									pressed = true;

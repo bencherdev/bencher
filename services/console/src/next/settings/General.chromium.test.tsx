@@ -106,16 +106,52 @@ describe("a save", () => {
 	});
 });
 
-// Kills a slug warning shown for the saved slug, one never shown for an
-// edit, and one left once the edit is undone.
-test("the slug describes what a change breaks only while it differs from the saved one", async () => {
-	dispose = mount(() => <General />, { api: fakeApi().api }).dispose;
+/** The confirmation a slug change opens on save. */
+const slugDialog = (slug: string) =>
+	page.getByRole("alertdialog", { name: `Change the slug to ${slug}?` });
+
+// Kills a slug change sent before the reader confirms, a Cancel that sends it
+// or throws the draft away, a Change slug that sends nothing, and a warning
+// line left under the field, and the confirmation's code loaded with the page.
+test("a slug change confirms on save, and the field carries no warning", async () => {
+	const { api, sent } = fakeApi(async () => ({
+		...PROJECT,
+		slug: "hash-browns",
+	}));
+	dispose = mount(() => <General />, { api }).dispose;
 	const slug = page.getByRole("textbox", { name: "Slug" });
-	await expect.element(slug).toHaveAccessibleDescription("");
 	await slug.fill("hash-browns");
-	await expect.element(slug).toHaveAccessibleDescription();
-	await slug.fill("hashbrown");
 	await expect.element(slug).toHaveAccessibleDescription("");
+	expect(slug.element().closest(".formrow")?.textContent).toBe("Slug");
+	expect(
+		performance
+			.getEntriesByType("resource")
+			.some(({ name }) => name.includes("SlugDialog")),
+	).toBe(false);
+	await save().click();
+
+	const dialog = slugDialog("hash-browns");
+	await expect
+		.element(dialog)
+		.toHaveAccessibleDescription("Every existing link to this project breaks.");
+	expect(sent).toEqual([]);
+
+	await dialog.getByRole("button", { name: "Cancel" }).click();
+	await expect.element(dialog).not.toBeInTheDocument();
+	expect(sent).toEqual([]);
+	await expect.element(slug).toHaveValue("hash-browns");
+
+	await save().click();
+	await dialog.getByRole("button", { name: "Change slug" }).click();
+	await expect.element(dialog).not.toBeInTheDocument();
+	expect(sent).toEqual([
+		{
+			method: "PATCH",
+			path: "/v0/projects/hashbrown",
+			body: { slug: "hash-browns" },
+		},
+	]);
+	localStorage.removeItem(VERSION_KEY);
 });
 
 // Kills a slug change that leaves the old slug's cache answering for a
@@ -126,6 +162,9 @@ test("a slug change moves the page, forgets the old slug, and leaves it out of t
 	dispose = mounted.dispose;
 	await page.getByRole("textbox", { name: "Slug" }).fill("hash-browns");
 	await save().click();
+	await slugDialog("hash-browns")
+		.getByRole("button", { name: "Change slug" })
+		.click();
 	await expect.poll(() => mounted.history.get()).toBe("/hash-browns/settings");
 	await expect
 		.poll(() =>
@@ -170,6 +209,9 @@ test("a slug another project has is announced under Slug", async () => {
 	dispose = mount(() => <General />, { api }).dispose;
 	await page.getByRole("textbox", { name: "Slug" }).fill("tater-tot");
 	await save().click();
+	await slugDialog("tater-tot")
+		.getByRole("button", { name: "Change slug" })
+		.click();
 	await expect
 		.element(page.getByRole("alert"))
 		.toHaveTextContent("Another project has this slug");
@@ -312,6 +354,21 @@ describe("focus", () => {
 		await save().click();
 		await expect.element(page.getByRole("status")).toHaveTextContent("Saved");
 		expect(onBody()).toBe(false);
+		await expect
+			.element(page.getByRole("heading", { level: 2, name: "Project" }))
+			.toHaveFocus();
+	});
+
+	// Kills a confirmed slug change that drops the focus to the page once its
+	// dialog closes under a Save that waits for the API.
+	test("a slug change confirmed from the button leaves focus on the form", async () => {
+		const { api } = fakeApi(() => new Promise(() => {}));
+		dispose = mount(() => <General />, { api }).dispose;
+		await page.getByRole("textbox", { name: "Slug" }).fill("hash-browns");
+		await save().click();
+		await slugDialog("hash-browns")
+			.getByRole("button", { name: "Change slug" })
+			.click();
 		await expect
 			.element(page.getByRole("heading", { level: 2, name: "Project" }))
 			.toHaveFocus();

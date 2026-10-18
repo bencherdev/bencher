@@ -77,6 +77,22 @@ test.each([
 	},
 );
 
+// Kills a Reactivate drawn in the accent color rather than the quiet link style.
+test("Reactivate is the quiet link, not the accent one", async () => {
+	const root = mount({ status: "dismissed", onReactivate: vi.fn() });
+	const color = (token: string) => {
+		const probe = document.createElement("span");
+		probe.style.color = `var(${token})`;
+		root.append(probe);
+		return getComputedStyle(probe).color;
+	};
+	const reactivate = page
+		.getByRole("button", { name: `Reactivate the alert on ${NAME}` })
+		.element();
+	expect(getComputedStyle(reactivate).color).toBe(color("--color-text-muted"));
+	expect(color("--color-text-muted")).not.toBe(color("--color-text-accent"));
+});
+
 // Kills Reactivate drawn for a reader who cannot use it.
 test("a viewer sees a dismissed alert's status and no Reactivate", async () => {
 	const root = mount({ status: "dismissed" });
