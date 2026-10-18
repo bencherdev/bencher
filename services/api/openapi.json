@@ -13474,6 +13474,15 @@
       "JsonGitHub": {
         "type": "object",
         "properties": {
+          "app": {
+            "nullable": true,
+            "description": "The GitHub App that mints the dispatch token for a linked repository.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonGitHubApp"
+              }
+            ]
+          },
           "client_id": {
             "$ref": "#/components/schemas/NonEmpty"
           },
@@ -13484,6 +13493,26 @@
         "required": [
           "client_id",
           "client_secret"
+        ]
+      },
+      "JsonGitHubApp": {
+        "type": "object",
+        "properties": {
+          "private_key": {
+            "description": "The app's private key, in PEM.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
+          },
+          "webhook_secret": {
+            "$ref": "#/components/schemas/Secret"
+          }
+        },
+        "required": [
+          "private_key",
+          "webhook_secret"
         ]
       },
       "JsonGoogle": {
