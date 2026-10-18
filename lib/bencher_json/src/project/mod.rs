@@ -59,7 +59,7 @@ pub struct JsonNewProject {
     /// If the provided or generated slug is already in use, a unique slug will be generated.
     /// Maximum length is 64 characters.
     pub slug: Option<ProjectSlug>,
-    /// The URL for the project.
+    /// The URL for the project. It must use http or https.
     /// If the project is public, the URL will be accessible listed on its Perf Page.
     pub url: Option<Url>,
     /// ➕ Bencher Plus: Set the visibility of the project.
@@ -123,7 +123,7 @@ pub struct JsonProjectPatch {
     /// The preferred new slug for the project.
     /// Maximum length is 64 characters.
     pub slug: Option<ProjectSlug>,
-    /// The new URL of the project.
+    /// The new URL of the project. It must use http or https.
     /// Set to `null` to remove the current URL.
     pub url: Option<Url>,
     /// ➕ Bencher Plus: Set the new visibility of the project.
@@ -256,6 +256,13 @@ impl<'de> Deserialize<'de> for JsonUpdateProject {
 }
 
 impl JsonUpdateProject {
+    pub fn url(&self) -> Option<&Url> {
+        match self {
+            Self::Patch(patch) => patch.url.as_ref(),
+            Self::Null(_) => None,
+        }
+    }
+
     pub fn visibility(&self) -> Option<Visibility> {
         match self {
             Self::Patch(patch) => patch.visibility,

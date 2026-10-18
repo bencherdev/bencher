@@ -211,6 +211,10 @@ describe.skipIf(!wasmReady)("WASM validators", () => {
 		test("rejects null", () => {
 			expect(validOptionUrl(null)).toBe(false);
 		});
+
+		test("rejects a URL that is not http or https", () => {
+			expect(validOptionUrl("javascript:alert(document.domain)")).toBe(false);
+		});
 	});
 
 	describe("validUser", () => {

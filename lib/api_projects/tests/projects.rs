@@ -208,6 +208,93 @@ async fn projects_update_url() {
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
+// PATCH /v0/projects/{project} - a URL that is not http or https fails
+#[tokio::test]
+async fn projects_update_non_web_url() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "projurlbadupd@example.com")
+        .await;
+    let org = server.create_org(&user, "Bad URL Update Org").await;
+    let project = server
+        .create_project(&user, &org, "Bad URL Update Project")
+        .await;
+
+    let body = serde_json::json!({
+        "url": "javascript:alert(document.domain)"
+    });
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{}", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+// A URL stored before http and https were required still reads and does not block other updates
+#[tokio::test]
+async fn projects_stored_non_web_url() {
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    const STORED_URL: &str = "javascript:alert(document.domain)";
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "projurlstored@example.com")
+        .await;
+    let org = server.create_org(&user, "Stored URL Org").await;
+    let project = server
+        .create_project(&user, &org, "Stored URL Project")
+        .await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let mut conn = server.db_conn();
+    diesel::update(schema::project::table.filter(schema::project::slug.eq(project_slug)))
+        .set(schema::project::url.eq(STORED_URL))
+        .execute(&mut conn)
+        .expect("Failed to store URL");
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{}", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let fetched: JsonProject = resp.json().await.expect("Failed to parse response");
+    assert_eq!(fetched.url.as_ref().map(AsRef::as_ref), Some(STORED_URL));
+
+    let body = serde_json::json!({
+        "name": "Renamed Stored URL Project"
+    });
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{}", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
 // DELETE /v0/projects/{project} - delete a project
 #[tokio::test]
 async fn projects_delete() {

@@ -19,8 +19,8 @@ use crate::{
     ApiContext, auth_conn,
     context::{DbConnection, Rbac},
     error::{
-        BencherResource, ProjectAuthState, assert_parentage, forbidden_error, issue_error,
-        resource_conflict_err, resource_not_found_err, unauthorized_error,
+        BencherResource, ProjectAuthState, assert_parentage, bad_request_error, forbidden_error,
+        issue_error, resource_conflict_err, resource_not_found_err, unauthorized_error,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_uuid},
@@ -408,6 +408,15 @@ impl QueryProject {
             .ok_or(crate::error::payment_required_error(
                 "Private projects are only available with the an active Bencher Plus plan. Please upgrade your plan at: https://bencher.dev/pricing".to_owned()
             ))
+    }
+
+    pub fn is_web_url(url: Option<&Url>) -> Result<(), HttpError> {
+        if let Some(url) = url
+            && !url.is_web()
+        {
+            return Err(bad_request_error("A project URL must use http or https"));
+        }
+        Ok(())
     }
 
     pub fn is_allowed(

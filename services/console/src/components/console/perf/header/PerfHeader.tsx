@@ -19,6 +19,7 @@ import {
 } from "../../../../types/bencher";
 import { isAllowedProjectManage } from "../../../../util/auth";
 import { setPageTitle } from "../../../../util/resource";
+import { isWebUrl } from "../../../../util/url";
 import PinModal from "./PinModal";
 import ShareModal from "./ShareModal";
 import UpdateModal from "./UpdateModal";
@@ -134,20 +135,24 @@ const PerfHeader = (props: Props) => {
 				<nav class="level">
 					<div class="level-right">
 						<Show when={props.project()?.url}>
-							<div class="level-item">
-								<a
-									class="button is-fullwidth"
-									title={`View ${props.project()?.name} website`}
-									href={props.project()?.url ?? ""}
-									rel="noreferrer nofollow"
-									target="_blank"
-								>
-									<span class="icon">
-										<i class="fas fa-globe" />
-									</span>
-									<span>Website</span>
-								</a>
-							</div>
+							{(url) => (
+								<div class="level-item">
+									<Show when={isWebUrl(url())} fallback={<span>{url()}</span>}>
+										<a
+											class="button is-fullwidth"
+											title={`View ${props.project()?.name} website`}
+											href={url()}
+											rel="noopener noreferrer nofollow"
+											target="_blank"
+										>
+											<span class="icon">
+												<i class="fas fa-globe" />
+											</span>
+											<span>Website</span>
+										</a>
+									</Show>
+								</div>
+							)}
 						</Show>
 						<nav class="level is-mobile">
 							<Show when={!props.isPlotInit()}>

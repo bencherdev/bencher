@@ -118,6 +118,34 @@ async fn projects_create_with_url() {
     assert_eq!(resp.status(), StatusCode::CREATED);
 }
 
+// POST /v0/organizations/{organization}/projects - a URL that is not http or https fails
+#[tokio::test]
+async fn projects_create_with_non_web_url() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "projurlbad@example.com").await;
+    let org = server.create_org(&user, "Bad URL Project Org").await;
+
+    let body = serde_json::json!({
+        "name": "Bad URL Project",
+        "url": "javascript:alert(document.domain)"
+    });
+
+    let org_slug: &str = org.slug.as_ref();
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/organizations/{}/projects", org_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
 // POST /v0/organizations/{organization}/projects - duplicate slug fails
 #[tokio::test]
 async fn projects_create_duplicate_slug() {

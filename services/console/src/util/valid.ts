@@ -12,7 +12,7 @@ import bencher_valid_init, {
 	is_valid_plan_level,
 	is_valid_sample_size,
 	is_valid_slug,
-	is_valid_url,
+	is_valid_web_url,
 	is_valid_user_name,
 	is_valid_uuid,
 	is_valid_percentage_boundary,
@@ -109,7 +109,7 @@ export const jwtOptionalInvalid = (
 ): boolean => !!token && !!valid && !validJwt(token);
 
 export const validOptionUrl = (url: undefined | null | string): boolean =>
-	validOptionString(url, (i) => i.length === 0 || is_valid_url(i));
+	validOptionString(url, (i) => i.length === 0 || is_valid_web_url(i));
 
 export const validUser = (user: JsonAuthUser): boolean =>
 	validUuid(user.user.uuid) &&

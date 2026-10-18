@@ -322,12 +322,41 @@ export const decodePath = (fallback: string) => {
 		const [searchParams, _setSearchParams] = useSearchParams();
 		const back = searchParams[BACK_PARAM];
 		if (back) {
-			return decodeBase64(back);
+			return (
+				sameOriginUrl(decodeBase64(back), window.location.origin) ?? fallback
+			);
 		}
 		return fallback;
 	} catch (e) {
 		console.error(e);
 		Sentry.captureException(e);
 		return fallback;
+	}
+};
+
+export const sameOriginUrl = (
+	url: undefined | null | string,
+	origin: string,
+): undefined | string => {
+	if (!url) {
+		return undefined;
+	}
+	try {
+		const { href, origin: urlOrigin } = new URL(url, origin);
+		return urlOrigin === origin ? href : undefined;
+	} catch {
+		return undefined;
+	}
+};
+
+export const isWebUrl = (url: undefined | null | string): boolean => {
+	if (!url) {
+		return false;
+	}
+	try {
+		const { protocol } = new URL(url);
+		return protocol === "http:" || protocol === "https:";
+	} catch {
+		return false;
 	}
 };

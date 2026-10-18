@@ -209,6 +209,8 @@ async fn post_inner(
     #[cfg(feature = "plus")]
     InsertProject::rate_limit(context, &query_organization).await?;
 
+    QueryProject::is_web_url(json_project.url.as_ref())?;
+
     if let Some(visibility) = json_project.visibility {
         // Check project visibility
         #[cfg(not(feature = "plus"))]

@@ -14592,7 +14592,7 @@
           },
           "url": {
             "nullable": true,
-            "description": "The URL for the project. If the project is public, the URL will be accessible listed on its Perf Page.",
+            "description": "The URL for the project. It must use http or https. If the project is public, the URL will be accessible listed on its Perf Page.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Url"
@@ -16800,7 +16800,7 @@
           },
           "url": {
             "nullable": true,
-            "description": "The new URL of the project. Set to `null` to remove the current URL.",
+            "description": "The new URL of the project. It must use http or https. Set to `null` to remove the current URL.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/Url"
