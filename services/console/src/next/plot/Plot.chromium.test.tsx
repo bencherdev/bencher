@@ -273,6 +273,24 @@ describe("Plot", () => {
 		expect(focused()).toBeNull();
 	});
 
+	// Kills a click on a hidden focused line, which reads "Focus line", that clears its focus once the host shows it at once.
+	test("focusing a hidden focused line shows it and keeps it focused", async () => {
+		const data = testData([
+			testLine({ id: "one", benchmark: "blake3", y: [10, 10, 10, 10, 10] }),
+			testLine({ id: "other", benchmark: "sha256", y: [30, 30, 30, 30, 30] }),
+		]);
+		const { focused, hidden } = mount({
+			data,
+			focused: "one",
+			hidden: ["one"],
+		});
+		await settle();
+
+		await page.getByRole("button", { name: "Focus line of blake3" }).click();
+		expect(focused()).toBe("one");
+		expect(hidden()).toEqual([]);
+	});
+
 	test("a lower limit's band runs to the top", async () => {
 		const data = testData([
 			testLine({
