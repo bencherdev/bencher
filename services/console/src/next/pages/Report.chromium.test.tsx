@@ -6,9 +6,15 @@ import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type { JsonConsoleReport } from "../../types/bencher";
+import type {
+	JsonConsoleJob,
+	JsonConsoleReport,
+	JsonConsoleReportRun,
+	JsonConsoleRunReportLink,
+	JsonConsoleSpec,
+} from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
 import { NEXT_PROJECTS } from "../paths";
@@ -23,6 +29,7 @@ import {
 } from "../report/testing";
 import { decodeQuery } from "../query/query";
 import { fakeApi, watchFallback } from "../reports/testing";
+import { screenBatch as runScreenBatch } from "../reports/virtual";
 import { bootstrapOf } from "../settings/testing";
 import { expectNameStartsWithText } from "../ui/testing";
 import Report from "./Report";
@@ -85,6 +92,7 @@ beforeEach(async () => {
 afterEach(() => {
 	dispose?.();
 	document.body.replaceChildren();
+	vi.useRealTimers();
 });
 
 // Kills lines that wait on the shell's request, which would take a second round.
@@ -168,10 +176,37 @@ test("a new view keeps the rows on screen, marked busy, until it answers", async
 	expect(fallback()).toBe(false);
 });
 
+const RUN = "00000000-0000-4000-8000-0000000000f0";
+const PREVIOUS = "00000000-0000-4000-8000-000000000002";
+const NEXT = "00000000-0000-4000-8000-000000000003";
+/** The report's run: its fifth report of eight, between the fourth and sixth on macOS. */
+const run = (
+	fields: {
+		[K in keyof JsonConsoleReportRun]?: JsonConsoleReportRun[K] | undefined;
+	} = {},
+) => ({
+	uuid: RUN,
+	order: 5,
+	total: 8,
+	previous: step(PREVIOUS, 4, "2026-09-13T21:15:58Z"),
+	next: step(NEXT, 6, "2026-09-13T21:16:03Z"),
+	...fields,
+});
+/** A step through the run to a report on macOS. */
+const step = (
+	uuid: string,
+	order: number,
+	start: string,
+): JsonConsoleRunReportLink => ({
+	uuid,
+	order,
+	testbed: "macos-latest",
+	start_time: Date.parse(start),
+});
+
 // Kills a header that keeps the first report's identity after moving to
 // another, and a selection carried over from it.
 test("moving to the previous report redraws its identity and starts with nothing selected", async () => {
-	const PREVIOUS = "00000000-0000-4000-8000-000000000002";
 	const { api } = fakeApi((url) => {
 		if (!isReport(url)) {
 			return { data: bootstrapOf() };
@@ -180,29 +215,23 @@ test("moving to the previous report redraws its identity and starts with nothing
 			? {
 					data: reportFixture(undefined, {
 						uuid: PREVIOUS,
-						version: { number: 23, hash: "4e02c1d" },
-					}),
-				}
-			: {
-					data: reportFixture(undefined, {
-						previous: {
-							uuid: PREVIOUS,
-							start_time: Date.parse("2026-09-11T09:40:00Z"),
-							hash: "4e02c1d",
-							adapter: "json",
+						testbed: {
+							uuid: "macos",
+							name: "macos-latest",
+							slug: "macos-latest",
 						},
+						run: run({ order: 4 }),
 					} as never),
-				};
+				}
+			: { data: reportFixture(undefined, { run: run() } as never) };
 	});
 	mount(api, impatient());
-	const subtitle = page.getByText(/ · json · /);
-	await expect.element(subtitle).toHaveTextContent("9c1f2e4");
+	const heading = page.getByRole("heading", { level: 1 });
+	await expect.element(heading).toHaveTextContent("main · ubuntu-latest");
 	await page.getByRole("checkbox", { name: `Select ${LATENCY}` }).click();
 	await expect.element(page.getByText("1 line selected")).toBeVisible();
-	await page
-		.getByRole("link", { name: /^Previous .*: the report on main/ })
-		.click();
-	await expect.element(subtitle).toHaveTextContent("4e02c1d");
+	await page.getByRole("link", { name: /^Previous #4/ }).click();
+	await expect.element(heading).toHaveTextContent("main · macos-latest");
 	await expect.element(page.getByText("0 lines selected")).toBeVisible();
 });
 
@@ -421,14 +450,7 @@ test("Previous and Open N are named first by what they show, at either width", a
 	const { api } = fakeApi((url) =>
 		isReport(url)
 			? {
-					data: reportFixture(undefined, {
-						previous: {
-							uuid: "00000000-0000-4000-8000-000000000002",
-							start_time: Date.parse("2026-09-11T09:40:00Z"),
-							hash: "4e02c1d",
-							adapter: "json",
-						},
-					} as never),
+					data: reportFixture(undefined, { run: run() } as never),
 				}
 			: { data: bootstrapOf() },
 	);
@@ -440,7 +462,7 @@ test("Previous and Open N are named first by what they show, at either width", a
 		await expect.element(open).toBeVisible();
 		expectNameStartsWithText(open.element());
 		expectNameStartsWithText(
-			page.getByRole("link", { name: /: the report on main/ }).element(),
+			page.getByRole("link", { name: /^Previous / }).element(),
 		);
 		dispose?.();
 		document.body.replaceChildren();
@@ -492,7 +514,6 @@ test("Clear lets go of every selected line", async () => {
 // Kills a neighbor prefetch that is missing, asks for another view or batch,
 // or sizes the batch for the screen as it is at the hover rather than as the page fixed it.
 test("hovering Previous starts its first batch in this view at the page's batch size", async () => {
-	const PREVIOUS = "00000000-0000-4000-8000-000000000002";
 	const { api, requests } = fakeApi((url) => {
 		if (!isReport(url)) {
 			return { data: bootstrapOf() };
@@ -501,28 +522,17 @@ test("hovering Previous starts its first batch in this view at the page's batch 
 			? {
 					data: reportFixture(undefined, {
 						uuid: PREVIOUS,
-						version: { number: 23, hash: "4e02c1d" },
+						run: run({ order: 4 }),
 					} as never),
 				}
-			: {
-					data: reportFixture(undefined, {
-						previous: {
-							uuid: PREVIOUS,
-							start_time: Date.parse("2026-09-11T09:40:00Z"),
-							hash: "4e02c1d",
-							adapter: "json",
-						},
-					} as never),
-				};
+			: { data: reportFixture(undefined, { run: run() } as never) };
 	});
 	mount(api, impatient(), `${PATH}?sort=delta`);
 	await expect.element(table()).toBeVisible();
 	const [first] = requests.filter(isReport);
 	await page.viewport(1280, 400);
 
-	await page
-		.getByRole("link", { name: /^Previous .*: the report on main/ })
-		.hover();
+	await page.getByRole("link", { name: /^Previous #4/ }).hover();
 	const previous = () =>
 		requests.filter((url) => url.pathname.endsWith(PREVIOUS));
 	await expect.poll(() => previous().length).toBe(1);
@@ -533,12 +543,8 @@ test("hovering Previous starts its first batch in this view at the page's batch 
 	);
 	expect(prefetched?.searchParams.get("sort")).toBe("delta");
 
-	await page
-		.getByRole("link", { name: /^Previous .*: the report on main/ })
-		.click();
-	await expect
-		.element(page.getByText(/ · json · /))
-		.toHaveTextContent("4e02c1d");
+	await page.getByRole("link", { name: /^Previous #4/ }).click();
+	await expect.element(page.getByText(/^#4 of 8 · /)).toBeVisible();
 	expect(previous()).toHaveLength(1);
 });
 
@@ -852,4 +858,274 @@ test("a refused Dismiss from a row's readout puts it back, and says so there", a
 	await dismissIn(readout).click();
 	await expect.element(readout.getByRole("alert")).toBeVisible();
 	await expect.element(dismissIn(readout)).toBeVisible();
+});
+
+const crumbs = () => document.querySelector(".crumb-line");
+const subLine = () => document.querySelector(".rp-sub")?.textContent ?? "";
+
+// Kills a crumb that leads anywhere but the report's run or names it by
+// anything but its branch and head, a sub line that does not lead with the
+// report's place in its run, and a hash the sub line repeats beside the crumb's.
+test("the crumb leads back to the report's run, and the sub line leads with its place in it", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? { data: reportFixture(undefined, { run: run() } as never) }
+			: { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	const back = page.getByRole("link", { name: "main 9c1f2e4", exact: true });
+	await expect
+		.element(back)
+		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/runs/${RUN}`);
+	expect(crumbs()?.textContent).toBe("Runs/main · 9c1f2e4/");
+	expect(subLine()).toMatch(
+		/^#5 of 8 · Sep 1[34], 2026, \d\d:\d6:00 · json · /,
+	);
+	expect(subLine()).not.toContain("9c1f2e4");
+});
+
+// Kills a report on an archived testbed given a place in its run, and a run
+// left out of the runs list still linked, which would open a page not found.
+test("a report its run leaves out has no place in it, and one whose run is left out has no run", async () => {
+	let answer = reportFixture(undefined, {
+		run: run({ order: undefined, total: 7 }),
+	} as never);
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: answer } : { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	await expect
+		.element(page.getByRole("link", { name: "main 9c1f2e4", exact: true }))
+		.toBeVisible();
+	expect(subLine()).toMatch(/^Sep 1[34], 2026/);
+	await expect
+		.element(page.getByRole("link", { name: /^Previous #4/ }))
+		.toBeVisible();
+	dispose?.();
+	document.body.replaceChildren();
+
+	answer = reportFixture();
+	mount(api, impatient());
+	await expect.element(table()).toBeVisible();
+	expect(crumbs()?.textContent).toBe("Runs/");
+	expect(subLine()).toContain("9c1f2e4");
+	await expect
+		.element(page.getByRole("button", { name: "Previous" }))
+		.toBeDisabled();
+	await expect
+		.element(page.getByRole("button", { name: "Next" }))
+		.toBeDisabled();
+});
+
+// Kills Previous and Next that lead anywhere but the run's reports beside this
+// one, drop the view, name the report by anything but its place and testbed,
+// or keep the testbed on a phone where it has no room.
+test("Previous and Next walk the run's reports by place and testbed, the testbed left out on a phone", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? { data: reportFixture(undefined, { run: run() } as never) }
+			: { data: bootstrapOf() },
+	);
+	mount(api, impatient(), `${PATH}?sort=delta`);
+	const previous = page.getByRole("link", { name: /^Previous / });
+	await expect
+		.element(previous)
+		.toHaveAttribute(
+			"href",
+			`${NEXT_PROJECTS}/hashbrown/reports/${PREVIOUS}?sort=delta`,
+		);
+	await expect
+		.element(previous)
+		.toHaveTextContent("Previous #4 · macos-latest");
+	expect(previous.element().getAttribute("aria-label")).toMatch(
+		/^Previous #4 · macos-latest: report 4 of 8$/,
+	);
+	const next = page.getByRole("link", { name: /^Next / });
+	await expect
+		.element(next)
+		.toHaveAttribute(
+			"href",
+			`${NEXT_PROJECTS}/hashbrown/reports/${NEXT}?sort=delta`,
+		);
+	await expect.element(next).toHaveTextContent("Next #6 · macos-latest");
+
+	await page.viewport(390, 844);
+	await expect.element(previous).toHaveTextContent(/^Previous #4$/);
+	expect(previous.element().getAttribute("aria-label")).toMatch(
+		/^Previous #4: report 4 of 8, macos-latest$/,
+	);
+});
+
+// Kills a move back to the run that is not asked for before the click, or is
+// asked for at another batch size than the run's page asks.
+test("hovering the run's crumb starts its first batch", async () => {
+	const { api, requests } = fakeApi((url) =>
+		isReport(url)
+			? { data: reportFixture(undefined, { run: run() } as never) }
+			: { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	await page.getByRole("link", { name: "main 9c1f2e4", exact: true }).hover();
+	const asked = () => requests.filter((url) => url.pathname.endsWith(RUN));
+	await expect.poll(() => asked().length).toBe(1);
+	expect(asked()[0]?.pathname).toBe(
+		`/v0/console/projects/hashbrown/runs/${RUN}`,
+	);
+	expect(asked()[0]?.searchParams.get("page")).toBe("1");
+	expect(asked()[0]?.searchParams.get("per_page")).toBe(
+		String(runScreenBatch()),
+	);
+});
+
+// Kills a phone sub line that drops the report's place in its run or reads its
+// start to the minute, and a report alone in its run read as "#1 of 1".
+test("a phone sub line leads with the place, to the second, and a report alone in its run has none", async () => {
+	await page.viewport(390, 844);
+	let answer = reportFixture(undefined, { run: run() } as never);
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: answer } : { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	await expect.element(table()).toBeVisible();
+	expect(subLine()).toMatch(/^#5 of 8 · Sep 1[34], \d\d:\d6:00 · json/);
+	dispose?.();
+	document.body.replaceChildren();
+
+	answer = reportFixture(undefined, {
+		run: run({ order: 1, total: 1, previous: undefined, next: undefined }),
+	} as never);
+	mount(api, impatient());
+	await expect
+		.element(page.getByRole("link", { name: "main 9c1f2e4", exact: true }))
+		.toBeVisible();
+	expect(subLine()).toMatch(/^Sep 1[34], \d\d:\d6:00 · json/);
+});
+
+const STARTED = Date.parse("2026-09-13T21:16:00Z");
+
+/** A runner job's report that has no lines yet, its job in `job`'s state. */
+const jobReport = (job: Partial<JsonConsoleJob>) =>
+	reportFixture([], {
+		total: 0,
+		groups: [],
+		counts: {
+			benchmarks: 0,
+			variants: 0,
+			measures: 0,
+			metrics: 0,
+			iterations: 0,
+			alerts: { total: 0, active: 0 },
+		},
+		job: { status: "queued", created: STARTED, ...job } as JsonConsoleJob,
+	});
+
+// Kills a running report's page without its status in the heading, a "No
+// lines" card while its job still runs, a sub line that counts nothing or
+// times a job not yet done, a failed report read as running or timed from its
+// submission, and a "No lines" card on a failed or canceled report, whose
+// heading already says why it has none.
+test("a runner job's report says how its job stands in its heading", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(STARTED + 48_000);
+	let report = jobReport({
+		status: "running" as JsonConsoleJob["status"],
+		started: STARTED,
+	});
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: report } : { data: bootstrapOf() },
+	);
+	const heading = () => document.querySelector(".rp-titlerow");
+	const none = page.getByRole("heading", { name: "No lines", exact: true });
+	mount(api, impatient());
+	await expect.element(page.getByText("Running 48s")).toBeVisible();
+	expect(heading()?.textContent).toContain("Running 48s");
+	expect(none.elements()).toHaveLength(0);
+	expect(subLine()).not.toMatch(/benchmark|took/);
+
+	for (const [ended, shown] of [
+		[
+			{
+				status: "failed",
+				started: STARTED + 10_000,
+				completed: STARTED + 52_000,
+			},
+			"Failed 42s",
+		],
+		[{ status: "canceled", completed: STARTED + 30_000 }, "Canceled"],
+	] as const) {
+		dispose?.();
+		document.body.replaceChildren();
+		report = jobReport(ended as Partial<JsonConsoleJob>);
+		mount(api, impatient());
+		await expect.element(page.getByText(shown, { exact: true })).toBeVisible();
+		expect(heading()?.textContent).toContain(shown);
+		expect(none.elements()).toHaveLength(0);
+	}
+});
+
+// Kills a report page whose running time stands still as its job's answers come in.
+test("a running report's time moves on with each answer", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(STARTED + 48_000);
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? {
+					data: jobReport({
+						status: "running" as JsonConsoleJob["status"],
+						started: STARTED,
+					}),
+				}
+			: { data: bootstrapOf() },
+	);
+	const client = impatient();
+	mount(api, client);
+	await expect.element(page.getByText("Running 48s")).toBeVisible();
+	vi.setSystemTime(STARTED + 3 * 60_000);
+	await client.refetchQueries();
+	await expect.element(page.getByText("Running 3m")).toBeVisible();
+});
+
+const spec = {
+	name: "Standard x86",
+	slug: "standard-x86",
+	os: "linux",
+	architecture: "x86_64",
+	cpu: 8,
+	memory: 16 * 1024 ** 3,
+	disk: 100 * 1024 ** 3,
+} as JsonConsoleSpec;
+
+// Kills a runner report without its spec in the sub line, a tooltip that
+// leaves out what the spec runs on, and a phone given a control whose tooltip
+// never shows.
+test("a runner report's sub line names its spec, with what it ran on in a tooltip", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? { data: reportFixture(undefined, { spec }) }
+			: { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	const name = page.getByRole("button", { name: "Standard x86" });
+	await expect.element(name).toBeVisible();
+	expect((document.querySelector(".rp-sub") as HTMLElement).innerText).toMatch(
+		/ · json · Standard x86 · /,
+	);
+	await userEvent.hover(name);
+	await expect
+		.element(page.getByRole("tooltip"))
+		.toHaveTextContent("OSlinuxArchitecturex86_64CPU8Memory16 GiB");
+	await expect
+		.element(name)
+		.toHaveAccessibleDescription(
+			/^OS\s*linux\s*Architecture\s*x86_64\s*CPU\s*8\s*Memory\s*16 GiB$/,
+		);
+
+	dispose?.();
+	document.body.replaceChildren();
+	await page.viewport(390, 844);
+	mount(api, impatient());
+	await expect.element(page.getByText(/Standard x86/)).toBeVisible();
+	expect(
+		page.getByRole("button", { name: "Standard x86" }).elements(),
+	).toHaveLength(0);
 });

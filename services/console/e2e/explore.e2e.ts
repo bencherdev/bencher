@@ -593,9 +593,7 @@ test("hidden and focused lines travel in the link", async ({
 
 // Kills a blank Explore without its starting points, and an alert that opens
 // more than its line or names a source that does not link to that alert.
-test("blank Explore starts from alerts, reports, and pins", async ({
-	page,
-}) => {
+test("blank Explore starts from alerts, runs, and pins", async ({ page }) => {
 	await page.goto(nextPath(hashbrown.slug));
 	const alerting = page.getByRole("region", { name: "Alerting now" });
 	const alert = alerting.getByRole("link", { name: /^blake3 / });
@@ -604,8 +602,8 @@ test("blank Explore starts from alerts, reports, and pins", async ({
 		/^blake3 input_bytes=65536 simd=avx2 threads=1 Latency main · ubuntu-latest · \+\d+\.\d%$/,
 	);
 	await expect(
-		page.getByRole("region", { name: "Latest reports" }).getByRole("button", {
-			name: /main · macos-latest/,
+		page.getByRole("region", { name: "Latest runs" }).getByRole("button", {
+			name: new RegExp(`^main, run ${seed.last_main_hash}, `),
 		}),
 	).toBeVisible();
 	await expect(
@@ -621,6 +619,77 @@ test("blank Explore starts from alerts, reports, and pins", async ({
 		new RegExp(`${nextPath(hashbrown.slug, "alerts")}/[0-9a-f-]{36}$`),
 	);
 	await expect(page.getByRole("heading", { level: 1 })).toContainText("blake3");
+});
+
+const latestRuns = (page: Page) =>
+	page.getByRole("region", { name: "Latest runs" });
+
+// Kills a latest run that leaves blank Explore or lists its reports out of
+// start order or without their testbeds, a report search over more than that
+// report ran, a pick that draws another testbed or asks again, a source line
+// that does not name the report or link to it, and a hash that does not open
+// the run.
+test("a latest run opens to its reports, and a report to the benchmarks it ran; a pick draws one from that report", async ({
+	page,
+}) => {
+	const asked: string[] = [];
+	page.on("request", (sent) => {
+		if (
+			/\/v0\/console\/projects\/[^/]+\/(runs|reports)\/[^/?]+/.test(sent.url())
+		) {
+			asked.push(new URL(sent.url()).pathname.split("/")[5] ?? "");
+		}
+	});
+	await page.goto(nextPath(hashbrown.slug));
+	// The newest run on main sent its reports from both testbeds.
+	const row = latestRuns(page).getByRole("button", {
+		name: new RegExp(`^main, run ${seed.last_main_hash}, `),
+	});
+	await row.click();
+	await expect(row).toHaveAttribute("aria-expanded", "true");
+	await expect(page).toHaveURL(new RegExp(`${nextPath(hashbrown.slug)}$`));
+	const reports = page.getByRole("region", {
+		name: `Reports in run ${seed.last_main_hash}`,
+	});
+	await expect(reports.getByRole("button")).toHaveText([
+		/^1\s*main\s*· ubuntu-latest$/,
+		/^2\s*main\s*· macos-latest$/,
+	]);
+	await reports.getByRole("button", { name: /^2 main · macos-latest/ }).click();
+	const search = page.getByRole("searchbox", {
+		name: "Search benchmarks in report 2 on macos-latest",
+		exact: true,
+	});
+	await expect(search).toBeFocused();
+	await expect(page.getByRole("menuitem")).toHaveText(["blake3", "xxh3"]);
+	await search.pressSequentially("bla");
+	await expect(page.getByRole("menuitem")).toHaveCount(1);
+	await page.keyboard.press("ArrowDown");
+	await page.keyboard.press("Enter");
+
+	// The key report ran one variant of blake3 in both measures.
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	await expect(
+		box(page, "Testbeds").getByRole("button", { name: /^Remove testbed / }),
+	).toHaveAccessibleName("Remove testbed macos-latest");
+	const query = page.getByRole("region", { name: "Query" });
+	await expect(query).toContainText(`from report ${seed.last_main_hash}`);
+	const report = params(page).get("report");
+	await expect(
+		query.getByRole("link", { name: seed.last_main_hash, exact: true }),
+	).toHaveAttribute("href", `${nextPath(hashbrown.slug, "reports")}/${report}`);
+	expect(asked).toEqual(["runs", "reports"]);
+
+	await page.goBack();
+	await latestRuns(page)
+		.getByRole("link", { name: seed.last_main_hash, exact: true })
+		.click();
+	await expect(page).toHaveURL(
+		new RegExp(`${nextPath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
+	);
+	await expect(page.getByRole("heading", { level: 1 })).toContainText(
+		seed.last_main_hash,
+	);
 });
 
 /** A project of its own whose one report ran `alpha` in two measures and `beta` in one, `days` before the seed's now. */
@@ -645,78 +714,21 @@ const reported = async (request: APIRequestContext, days = 1) => {
 	return { project, report };
 };
 
-// Kills a latest report that leaves blank Explore, a pick that draws another
-// benchmark, some of its variants, or every measure of the report rather than
-// its own, a pick that asks for the report again or drops the focus to the
-// page, a source line that does not name the report, and a hash that does not
-// open the report.
-test("a latest report opens to the benchmarks it ran, and a pick draws one from the report", async ({
-	page,
-	request,
-}) => {
-	const { project, report } = await reported(request);
-	const asked: string[] = [];
-	page.on("request", (sent) => {
-		if (/\/v0\/console\/projects\/[^/]+\/reports\//.test(sent.url())) {
-			asked.push(sent.url());
-		}
-	});
-	await page.goto(nextPath(project.slug));
-	const row = page
-		.getByRole("region", { name: "Latest reports" })
-		.getByRole("button", { name: /^main · ubuntu-latest/ });
-	await row.click();
-	await expect(row).toHaveAttribute("aria-expanded", "true");
-	await expect(page).toHaveURL(new RegExp(`${nextPath(project.slug)}$`));
-	const search = page.getByRole("searchbox", {
-		name: "Search benchmarks in report 5ab1e50",
-	});
-	await expect(search).toBeFocused();
-	await search.pressSequentially("bet");
-	await expect(page.getByRole("menuitem")).toHaveCount(1);
-	await page.keyboard.press("ArrowDown");
-	await page.keyboard.press("Enter");
-
-	await expect(plot(page)).toHaveAccessibleName("2 lines");
-	await expect(
-		box(page, "Benchmarks").getByRole("button", { name: "Add benchmark" }),
-	).toBeFocused();
-	await expect(
-		box(page, "Measures").getByRole("button", { name: /^Remove measure / }),
-	).toHaveAccessibleName("Remove measure Latency");
-	await expect(
-		box(page, "Benchmarks").getByRole("button", { name: /^Remove / }),
-	).toHaveAccessibleName("Remove benchmark beta");
-	const query = page.getByRole("region", { name: "Query" });
-	await expect(query).toContainText("from report 5ab1e50");
-	await expect(query.getByRole("link", { name: "5ab1e50" })).toHaveAttribute(
-		"href",
-		`${nextPath(project.slug, "reports")}/${report.uuid}`,
-	);
-	expect(params(page).get("report")).toBe(report.uuid);
-	expect(asked).toHaveLength(1);
-
-	await page.goBack();
-	await page
-		.getByRole("region", { name: "Latest reports" })
-		.getByRole("link", { name: "5ab1e50" })
-		.click();
-	await expect(page).toHaveURL(
-		new RegExp(`${nextPath(project.slug, "reports")}/${report.uuid}$`),
-	);
-});
-
-// Kills a latest report older than the default window picked over a window
-// that holds none of its points, which draws nothing and loses its hash.
-test("a latest report older than the window draws over the 4 weeks ending at it", async ({
+// Kills a project whose only run predates the latest runs' window listed as
+// one that never ran, and a report older than the default window picked over
+// a window that holds none of its points, which draws nothing.
+test("a latest run older than the window still lists, and its report draws over the 4 weeks ending at it", async ({
 	page,
 	request,
 }) => {
 	const { project, report } = await reported(request, 35);
 	await page.goto(nextPath(project.slug));
+	await latestRuns(page)
+		.getByRole("button", { name: /^main, run 5ab1e50, / })
+		.click();
 	await page
-		.getByRole("region", { name: "Latest reports" })
-		.getByRole("button", { name: /^main · ubuntu-latest/ })
+		.getByRole("region", { name: "Reports in run 5ab1e50" })
+		.getByRole("button", { name: /^1 main · ubuntu-latest/ })
 		.click();
 	await page.getByRole("menuitem", { name: "beta" }).click();
 	await expect(plot(page)).toHaveAccessibleName("2 lines");
@@ -1467,24 +1479,31 @@ test.describe("narrow", () => {
 });
 
 // Kills a contrast, name, or role failure on blank Explore's starting points,
-// or on a latest report opened to its benchmarks, in either theme.
+// or on a latest run's report opened to its benchmarks, in either theme.
 test("blank Explore passes axe in both themes", async ({ page }) => {
-	const reports = page.getByRole("region", { name: "Latest reports" });
+	const runs = latestRuns(page);
 	await axeInBothThemes(page, nextPath(hashbrown.slug), async () => {
 		await expect(
 			page
 				.getByRole("region", { name: "Alerting now" })
 				.getByRole("link", { name: /^blake3 / }),
 		).toHaveCount(1);
-		await expect(reports.getByRole("link")).not.toHaveCount(0);
+		await expect(runs.getByRole("link")).not.toHaveCount(0);
 	});
 	await axeInBothThemes(
 		page,
 		nextPath(hashbrown.slug),
 		async () => {
-			await expect(reports.getByRole("menuitem").first()).toBeVisible();
+			await expect(page.getByRole("menuitem").first()).toBeVisible();
 		},
-		() => reports.getByRole("button", { expanded: false }).first().click(),
+		async () => {
+			await runs.getByRole("button", { expanded: false }).first().click();
+			await page
+				.getByRole("region", { name: /^Reports in run / })
+				.getByRole("button")
+				.first()
+				.click();
+		},
 	);
 });
 

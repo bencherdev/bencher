@@ -7,7 +7,10 @@ import { shortHash } from "../reports/format";
 /** The report that raised an alert, as its group's header names it. */
 export interface AlertReport {
 	uuid: string;
+	/** Its place in its run by start, in a run's alerts. */
+	order: number | undefined;
 	start: number;
+	end: number;
 	created: number;
 	hash: string | undefined;
 	adapter: string;
@@ -49,7 +52,9 @@ export const alertLinesOf = (batch: JsonConsoleAlerts): AlertLine[] =>
 		};
 		const report: AlertReport = {
 			uuid: group.uuid,
+			order: group.order,
 			start: group.start_time,
+			end: group.end_time,
 			created: group.created,
 			hash: shortHash(group.version.hash),
 			adapter: group.adapter,

@@ -17,10 +17,10 @@ use bencher_json::{
         },
         boundary::BoundaryLimit,
         console::{
-            ConsoleAlertStatus, DEFAULT_CONSOLE_ALERTS_PER_PAGE, JsonConsoleAlert,
-            JsonConsoleAlertDetail, JsonConsoleAlertGroup, JsonConsoleAlertLine, JsonConsoleAlerts,
-            JsonConsoleAlertsCounts, JsonConsoleAlertsQueryParams, JsonConsoleBranch,
-            JsonConsoleReportLink, JsonConsoleTestbed, JsonConsoleWindow,
+            ConsoleAlertStatus, DEFAULT_CONSOLE_ALERTS_PER_PAGE, DEFAULT_CONSOLE_HISTORY_POINTS,
+            JsonConsoleAlert, JsonConsoleAlertDetail, JsonConsoleAlertGroup, JsonConsoleAlertLine,
+            JsonConsoleAlerts, JsonConsoleAlertsCounts, JsonConsoleAlertsQueryParams,
+            JsonConsoleBranch, JsonConsoleReportLink, JsonConsoleTestbed, JsonConsoleWindow,
             MAX_CONSOLE_ALERTS_PER_PAGE, MAX_CONSOLE_HISTORY_REPORTS,
         },
         head::{JsonVersion, VersionNumber},
@@ -36,7 +36,7 @@ use bencher_schema::{
     model::{
         project::{
             ProjectId, QueryProject,
-            branch::{BranchId, head::HeadId},
+            branch::{BranchId, head::HeadId, version::VersionId},
             metric::MetricId,
             report::{QueryReport, ReportId},
             testbed::TestbedId,
@@ -177,10 +177,22 @@ async fn get_inner(
         ));
     };
     let report_ids = unique_ids(keys.iter().map(|(report_id, _)| *report_id));
-    let rows = group_rows(conn, project.id, &query, &report_ids)?;
-    let page = Page::new(rows, &report_ids, first_alert, usize::from(query.per_page));
+    let rows = group_rows(
+        conn,
+        project.id,
+        Raised::Listed {
+            query: &query,
+            report_ids: &report_ids,
+        },
+    )?;
+    let page = Page::new(
+        rows,
+        &report_ids,
+        Some(first_alert),
+        usize::from(query.per_page),
+    );
     let histories = page
-        .histories(conn, &query)
+        .histories(conn, query.window, query.points)
         .map_err(resource_not_found_err!(Metric, project.id))?;
     Ok(alerts_json(total, counts, read_time, page, histories))
 }
@@ -346,15 +358,26 @@ type GroupRow = (
     (BoundaryRow, ThresholdUuid, ModelRow, AlertRow),
 );
 
-/// Every alert that matches in the page's reports, so each report's alerts can be drawn in
-/// the order its report page draws them.
+/// The alerts a page groups by report.
+#[derive(Clone, Copy)]
+enum Raised<'a> {
+    /// Those that match the request in the page's reports.
+    Listed {
+        query: &'a AlertsQuery,
+        report_ids: &'a [ReportId],
+    },
+    /// Every one in the run's reports that the runs list shows.
+    Run(VersionId),
+}
+
+/// Every alert raised in the page's reports, so each report's alerts can be drawn in the
+/// order its report page draws them.
 fn group_rows(
     conn: &mut DbConnection,
     project_id: ProjectId,
-    query: &AlertsQuery,
-    report_ids: &[ReportId],
+    raised: Raised<'_>,
 ) -> Result<Vec<GroupRow>, HttpError> {
-    schema::alert::table
+    let rows = schema::alert::table
         .inner_join(schema::boundary::table.on(schema::boundary::id.eq(schema::alert::boundary_id)))
         .inner_join(schema::metric::table.on(schema::metric::id.eq(schema::boundary::metric_id)))
         .inner_join(
@@ -380,10 +403,6 @@ fn group_rows(
             schema::threshold::table.on(schema::threshold::id.eq(schema::boundary::threshold_id)),
         )
         .inner_join(schema::model::table.on(schema::model::id.eq(schema::boundary::model_id)))
-        // The page's reports are the project's, and reading from them spares a walk over the
-        // project's alerts by status.
-        .filter(schema::alert::report_id.eq_any(report_ids))
-        .filter(raised_alerts_with(project_id, query, ThresholdIndex::Skip)?)
         .select((
             (schema::alert::id, schema::alert::modified),
             QueryReport::as_select(),
@@ -448,8 +467,36 @@ fn group_rows(
                 ),
             ),
         ))
-        .load::<GroupRow>(conn)
-        .map_err(resource_not_found_err!(Alert, project_id))
+        .into_boxed();
+    match raised {
+        // The page's reports are the project's, and reading from them spares a walk over the
+        // project's alerts by status.
+        Raised::Listed { query, report_ids } => rows
+            .filter(schema::alert::report_id.eq_any(report_ids))
+            .filter(raised_alerts_with(project_id, query, ThresholdIndex::Skip)?),
+        Raised::Run(version_id) => rows.filter(raised_in_run(version_id)),
+    }
+    .load::<GroupRow>(conn)
+    .map_err(resource_not_found_err!(Alert, project_id))
+}
+
+/// The alerts a run's reports raised, those the runs list shows: read through each alert's own
+/// report rather than through every metric of the run.
+fn raised_in_run<QS: 'static>(version_id: VersionId) -> Selected<QS>
+where
+    schema::report::version_id: SelectableExpression<QS>,
+    schema::report::id: SelectableExpression<QS>,
+    schema::alert::report_id: SelectableExpression<QS>,
+    schema::branch::archived: SelectableExpression<QS>,
+    schema::testbed::archived: SelectableExpression<QS>,
+{
+    Box::new(
+        schema::report::version_id
+            .eq(version_id)
+            .and(schema::alert::report_id.eq(schema::report::id))
+            .and(schema::branch::archived.is_null())
+            .and(schema::testbed::archived.is_null()),
+    )
 }
 
 type Selected<QS> = Box<dyn BoxableExpression<QS, Sqlite, SqlType = Bool>>;
@@ -572,11 +619,11 @@ struct GroupAlert {
 
 impl Page {
     /// The page's slice of its reports' alerts, which start where the first key's alert sits
-    /// among its report's alerts in key order.
+    /// among its report's alerts in key order, or at the first report's first alert.
     fn new(
         rows: Vec<GroupRow>,
         report_ids: &[ReportId],
-        first_alert: AlertId,
+        first_alert: Option<AlertId>,
         per_page: usize,
     ) -> Self {
         let mut by_report: HashMap<ReportId, (PageGroup, Vec<GroupAlert>)> = HashMap::new();
@@ -643,9 +690,12 @@ impl Page {
             group.total = alerts.len();
             alerts.sort_by(|a, b| a.line.cmp_name(&b.line).then_with(|| a.id.cmp(&b.id)));
         }
-        let mut skip = ordered.first().map_or(0, |(_, alerts)| {
-            alerts.iter().filter(|alert| alert.id < first_alert).count()
-        });
+        let mut skip = ordered
+            .first()
+            .zip(first_alert)
+            .map_or(0, |((_, alerts), first_alert)| {
+                alerts.iter().filter(|alert| alert.id < first_alert).count()
+            });
 
         let mut page = Self::default();
         let mut remaining = per_page;
@@ -670,12 +720,13 @@ impl Page {
     fn histories(
         &self,
         conn: &mut DbConnection,
-        query: &AlertsQuery,
+        window: Duration,
+        points: usize,
     ) -> diesel::QueryResult<Vec<GroupHistory>> {
         let starts = self
             .groups
             .iter()
-            .map(|group| window_start(&group.report, query.window))
+            .map(|group| window_start(&group.report, window))
             .collect::<Vec<_>>();
         let reports = window_reports(conn, &self.groups, &starts)?;
         let windows = self
@@ -726,7 +777,7 @@ impl Page {
                 GroupHistory {
                     window,
                     thinned: History::new(&window_reports, lines, group_rows)
-                        .thin(group.report.id, query.points),
+                        .thin(group.report.id, points),
                 }
             })
             .collect())
@@ -937,6 +988,7 @@ fn alerts_json(
                 .collect();
             JsonConsoleAlertGroup {
                 uuid: report.uuid,
+                order: None,
                 branch: dimensions.branch(branch, report.head_id),
                 testbed: dimensions.testbed(testbed, report.testbed_id),
                 version,
@@ -971,6 +1023,56 @@ fn alerts_json(
         measures,
         models,
     }
+}
+
+/// A run's alerts as the list draws them: grouped by report in the run's order, a page of them
+/// at most, and every one counted. `reports` are the run's reports in start order.
+pub(super) fn run_alerts(
+    conn: &mut DbConnection,
+    project_id: ProjectId,
+    read_time: DateTimeMillis,
+    version_id: VersionId,
+    reports: &[(ReportId, ReportUuid)],
+) -> Result<JsonConsoleAlerts, HttpError> {
+    let rows = group_rows(conn, project_id, Raised::Run(version_id))?;
+    let mut counts = JsonConsoleAlertsCounts {
+        active: 0,
+        dismissed: 0,
+        silenced: 0,
+    };
+    for (.., (_, _, _, (_, _, status))) in &rows {
+        let count = match status {
+            AlertStatus::Active => &mut counts.active,
+            AlertStatus::Dismissed => &mut counts.dismissed,
+            AlertStatus::Silenced => &mut counts.silenced,
+        };
+        *count = count.saturating_add(1);
+    }
+    let total = to_u32(rows.len());
+    let report_ids = reports.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+    let page = Page::new(
+        rows,
+        &report_ids,
+        None,
+        usize::from(MAX_CONSOLE_ALERTS_PER_PAGE),
+    );
+    let histories = page
+        .histories(
+            conn,
+            DEFAULT_REPORT_HISTORY,
+            usize::from(DEFAULT_CONSOLE_HISTORY_POINTS),
+        )
+        .map_err(resource_not_found_err!(Metric, project_id))?;
+    let mut json = alerts_json(total, counts, read_time, page, histories);
+    let orders = reports
+        .iter()
+        .enumerate()
+        .map(|(index, (_, uuid))| (*uuid, to_u32(index + 1)))
+        .collect::<HashMap<_, _>>();
+    for group in &mut json.groups {
+        group.order = orders.get(&group.uuid).copied();
+    }
+    Ok(json)
 }
 
 /// The branches, each under the head its reports ran on, and testbeds of a page, each once.

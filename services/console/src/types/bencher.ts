@@ -743,10 +743,7 @@ export enum Adapter {
 	DartBenchmarkHarness = "dart_benchmark_harness",
 }
 
-/**
- * A report, with what a link to it shows: a neighbor's Previous or Next
- * control, or the report that raised an alert.
- */
+/** A report, with what a link to it shows: the report that raised an alert. */
 export interface JsonConsoleReportLink {
 	uuid: Uuid;
 	start_time: DateTimeMillis;
@@ -987,6 +984,8 @@ export interface JsonConsoleAlertLine {
 export interface JsonConsoleAlertGroup {
 	/** The report that raised the alerts. */
 	uuid: Uuid;
+	/** The report's place in its run by start, from 1, in a run's alerts. */
+	order?: number;
 	/** An index into `branches`. */
 	branch: number;
 	/** An index into `testbeds`. */
@@ -1108,6 +1107,30 @@ export interface JsonConsoleBranches {
 	/** Every archived branch, whatever the search. */
 	archived: number;
 	branches: JsonConsoleBranchRow[];
+}
+
+/**
+ * Where a runner job's report stands until its results are in. A report its own
+ * CI job posted has no job.
+ */
+export enum ConsoleJobStatus {
+	/** Waiting for a runner. */
+	Queued = "queued",
+	/** On a runner, or ran and its results not yet processed. */
+	Running = "running",
+	Failed = "failed",
+	Canceled = "canceled",
+}
+
+/** A runner job whose report is not finished, with the times its status shows. */
+export interface JsonConsoleJob {
+	status: ConsoleJobStatus;
+	/** When it was submitted. */
+	created: DateTimeMillis;
+	/** When a runner started it. */
+	started?: DateTimeMillis;
+	/** When it ended. */
+	completed?: DateTimeMillis;
 }
 
 /** A group of lines and its totals, which hold whichever page is loaded. */
@@ -1301,6 +1324,43 @@ export interface JsonConsoleReportCounts {
 	alerts: JsonReportAlertsCounts;
 }
 
+/** The spec a runner job ran on. */
+export interface JsonConsoleSpec {
+	name: ResourceName;
+	slug: Slug;
+	os: OperatingSystem;
+	architecture: Architecture;
+	cpu: number;
+	memory: number;
+	disk: number;
+}
+
+/** A report of a run, with what a Previous or Next control through the run shows. */
+export interface JsonConsoleRunReportLink {
+	uuid: Uuid;
+	/** Its place in the run by start, from 1. */
+	order: number;
+	testbed: ResourceName;
+	start_time: DateTimeMillis;
+}
+
+/** A report's run: the reports with its version that the run page lists. */
+export interface JsonConsoleReportRun {
+	/** The run's version. */
+	uuid: Uuid;
+	/**
+	 * The report's place in the run by start, from 1, absent when the run
+	 * leaves the report out: it is on an archived testbed.
+	 */
+	order?: number;
+	/** Every report in the run. */
+	total: number;
+	/** The run's report that started before this one. */
+	previous?: JsonConsoleRunReportLink;
+	/** The run's report that started after this one. */
+	next?: JsonConsoleRunReportLink;
+}
+
 /**
  * One report as the console's report page draws it: its identity, and one page
  * of its lines in drawing order, each with its history over the window that ends
@@ -1315,10 +1375,16 @@ export interface JsonConsoleReport {
 	end_time: DateTimeMillis;
 	adapter: Adapter;
 	counts: JsonConsoleReportCounts;
-	/** The report before this one on the same branch and testbed. */
-	previous?: JsonConsoleReportLink;
-	/** The report after this one on the same branch and testbed. */
-	next?: JsonConsoleReportLink;
+	/** Its runner job, until the job's results are in. */
+	job?: JsonConsoleJob;
+	/** The spec its runner job ran on. */
+	spec?: JsonConsoleSpec;
+	/**
+	 * The run the report belongs to, on the first page only, and absent when
+	 * the runs list leaves the run out: every one of its reports is on an
+	 * archived branch or testbed.
+	 */
+	run?: JsonConsoleReportRun;
 	/** The history window, which ends at this report. */
 	window: JsonConsoleWindow;
 	/** The number of lines in the report that match the search and filters. */
@@ -1335,6 +1401,29 @@ export interface JsonConsoleReport {
 	models: JsonConsoleModel[];
 }
 
+/** A run's reports whose runner jobs are not finished, by status. */
+export interface JsonConsoleRunJobs {
+	queued: number;
+	running: number;
+	failed: number;
+	canceled: number;
+	/**
+	 * While any is queued or running, the earliest of their starts, taking the
+	 * submission of one not yet started.
+	 */
+	since?: DateTimeMillis;
+}
+
+/** A run, with what a link to it shows: the run page's Previous or Next control. */
+export interface JsonConsoleRunLink {
+	/** The run's version. */
+	uuid: Uuid;
+	number: VersionNumber;
+	hash?: GitHash;
+	/** When its first report started. */
+	start_time: DateTimeMillis;
+}
+
 export interface JsonConsoleRunReport {
 	/** Its place in the run by start, from 1. */
 	order: number;
@@ -1346,6 +1435,8 @@ export interface JsonConsoleRunReport {
 	/** The most lines any of its iterations reported. */
 	lines: number;
 	alerts: JsonReportAlertsCounts;
+	/** Its runner job, until the job's results are in. */
+	job?: JsonConsoleJob;
 	author?: JsonConsoleAuthor;
 }
 
@@ -1361,7 +1452,7 @@ export interface JsonConsoleRun {
 	branch: JsonConsoleBranch;
 	/** When its first report started. */
 	start_time: DateTimeMillis;
-	/** When its last report ended. */
+	/** When its last report ended, a failed or canceled runner job ending with its job. */
 	end_time: DateTimeMillis;
 	/** Every report in the run, across pages. */
 	total: number;
@@ -1369,6 +1460,22 @@ export interface JsonConsoleRun {
 	/** The sum of its reports' lines. */
 	lines: number;
 	alerts: JsonReportAlertsCounts;
+	/** Its reports whose runner jobs are not finished, absent when there are none. */
+	jobs?: JsonConsoleRunJobs;
+	/**
+	 * The run before this one on its branch, as the runs list orders them, on
+	 * the first page only.
+	 */
+	previous?: JsonConsoleRunLink;
+	/** The run after this one on its branch, on the first page only. */
+	next?: JsonConsoleRunLink;
+	/**
+	 * The alerts its reports raised, grouped by report in start order, as the
+	 * alerts list draws them, on the first page of a run that raised any:
+	 * `total` counts every one, and the groups hold at most
+	 * [`MAX_CONSOLE_ALERTS_PER_PAGE`].
+	 */
+	alerting?: JsonConsoleAlerts;
 	reports: JsonConsoleRunReport[];
 }
 
@@ -1380,7 +1487,7 @@ export interface JsonConsoleRunSummary {
 	branch: JsonConsoleBranch;
 	/** When its first report started. */
 	start_time: DateTimeMillis;
-	/** When its last report ended. */
+	/** When its last report ended, a failed or canceled runner job ending with its job. */
 	end_time: DateTimeMillis;
 	reports: number;
 	/**
@@ -1404,6 +1511,8 @@ export interface JsonConsoleRunSummary {
 	/** The sum of its reports' lines. */
 	lines: number;
 	alerts: JsonReportAlertsCounts;
+	/** Its reports whose runner jobs are not finished, absent when there are none. */
+	jobs?: JsonConsoleRunJobs;
 }
 
 /**

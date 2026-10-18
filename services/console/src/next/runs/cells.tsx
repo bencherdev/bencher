@@ -35,8 +35,11 @@ export const Author = (props: {
 			<span role="img" aria-label={key() ? "Project key" : "User"}>
 				<Icon name={key() ? "key" : "user"} />
 			</span>
-			{props.author.name}
+			<span class="rn-name">{props.author.name}</span>
 			{props.children}
 		</span>
 	);
 };
+
+/** A count nothing has landed for yet. */
+export const Dash = () => <span class="rn-dash">-</span>;

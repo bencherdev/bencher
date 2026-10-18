@@ -5,12 +5,14 @@ import type {
 	JsonConsoleRunSummary,
 } from "../../types/bencher";
 import { absoluteTime, duration, relativeTime } from "../reports/format";
+import { runPath } from "../paths";
 import type { Range } from "../reports/rows";
 import { MoreRows, Spacer } from "../reports/TableRows";
 import { useVirtualRows } from "../reports/virtual";
 import { allNames, runHead } from "./format";
-import { runPath } from "./path";
-import { Alerts, Author } from "./cells";
+import { Alerts, Author, Dash } from "./cells";
+import StatusPill from "./StatusPill";
+import { landed, runStatus, statusText } from "./status";
 
 const COLUMNS = 10;
 
@@ -38,7 +40,7 @@ const RunsTable = (props: {
 	});
 	return (
 		<Table
-			class="reports-table"
+			class="reports-table rn-list"
 			aria-label="Runs, newest first"
 			aria-rowcount={props.total + 1}
 			aria-busy={props.busy === true ? "true" : undefined}
@@ -46,20 +48,35 @@ const RunsTable = (props: {
 		>
 			<thead>
 				<tr aria-rowindex={1}>
-					<th scope="col">When</th>
+					{/* Every share but the branch's is set, so the columns never follow the rows drawn. */}
+					<th scope="col" style="width:8.4%">
+						When
+					</th>
 					<th scope="col">Branch</th>
-					<th scope="col">Head</th>
-					<th scope="col" data-align="end">
+					<th scope="col" style="width:7.6%">
+						Head
+					</th>
+					<th scope="col" style="width:8%" data-align="end">
 						Reports
 					</th>
-					<th scope="col">Testbed</th>
-					<th scope="col">Adapter</th>
-					<th scope="col" data-align="end">
+					<th scope="col" style="width:9.1%">
+						Testbed
+					</th>
+					<th scope="col" style="width:8.7%">
+						Adapter
+					</th>
+					<th scope="col" style="width:5.85%" data-align="end">
 						Lines
 					</th>
-					<th scope="col">Alerts</th>
-					<th scope="col">Status</th>
-					<th scope="col">By</th>
+					<th scope="col" style="width:18%">
+						Alerts
+					</th>
+					<th scope="col" style="width:142px">
+						Status
+					</th>
+					<th scope="col" style="width:10.75%">
+						By
+					</th>
 				</tr>
 			</thead>
 			<tbody ref={rows.body}>
@@ -98,6 +115,17 @@ const RunRow = (props: {
 }) => {
 	const head = () => runHead(props.run);
 	const absolute = () => absoluteTime(props.run.start_time);
+	const status = () => runStatus(props.run, props.now, duration);
+	const counted = () => landed(props.run.reports, props.run.jobs);
+	// A run that raised alerts draws them with code of their own, which starts as the reader moves to it.
+	const alertsAhead = (event?: PointerEvent) => {
+		if (
+			props.run.alerts.total > 0 &&
+			(!event || event.movementX || event.movementY)
+		) {
+			import("./RunAlerts").catch(() => {});
+		}
+	};
 	// The lists the row shows as one name and a count, whole, for a reader without a pointer.
 	const label = () =>
 		[
@@ -112,6 +140,7 @@ const RunRow = (props: {
 					props.run.author_count,
 				)}`,
 			absolute(),
+			status().kind && statusText(status()),
 		]
 			.filter(Boolean)
 			.join(", ");
@@ -130,6 +159,9 @@ const RunRow = (props: {
 					class="reports-link rowlink-name"
 					href={runPath(props.slug, props.run.uuid)}
 					aria-label={label()}
+					onPointerMove={alertsAhead}
+					onFocus={() => alertsAhead()}
+					onTouchStart={() => alertsAhead()}
 				>
 					{props.run.branch.name}
 				</a>
@@ -155,13 +187,17 @@ const RunRow = (props: {
 				<First names={props.run.adapters} count={props.run.adapter_count} />
 			</td>
 			<td data-fold="hide" data-align="end">
-				{props.run.lines}
+				<Show when={counted()} fallback={<Dash />}>
+					{props.run.lines}
+				</Show>
 			</td>
-			<td data-fold="n1">
-				<Alerts alerts={props.run.alerts} />
+			<td data-fold={status().kind ? "hide" : "n1"}>
+				<Show when={counted()} fallback={<Dash />}>
+					<Alerts alerts={props.run.alerts} />
+				</Show>
 			</td>
-			<td data-fold="hide">
-				{duration(props.run.end_time - props.run.start_time)}
+			<td class="rn-status" data-fold={status().kind ? "n1" : "hide"}>
+				<StatusPill status={status()} />
 			</td>
 			<td data-fold="hide">
 				<By authors={props.run.authors} count={props.run.author_count} />
@@ -170,12 +206,12 @@ const RunRow = (props: {
 	);
 };
 
-/** The first name, and a muted count of the rest whose hover lists them all. */
+/** The first name, cut short before a muted count of the rest whose hover lists them all. */
 const First = (props: { names: readonly string[]; count: number }) => (
-	<>
-		{props.names[0]}
+	<span class="rn-first">
+		<span class="rn-name">{props.names[0]}</span>
 		<More names={props.names} count={props.count} />
-	</>
+	</span>
 );
 
 const More = (props: { names: readonly string[]; count: number }) => (

@@ -161,6 +161,22 @@ const newestRun = async (request: APIRequestContext) => {
 	return `${RUNS}/${runs[0]?.uuid}`;
 };
 
+/** The newest run's first report, through the API. */
+const newestRunReport = async (request: APIRequestContext) => {
+	const headers = { Authorization: `Bearer ${seed.member.token}` };
+	const listed = await request.get(
+		`${seed.api_url}/v0/console/projects/${hashbrown.slug}/runs?per_page=1`,
+		{ headers },
+	);
+	const { runs } = (await listed.json()) as { runs: { uuid: string }[] };
+	const run = await request.get(
+		`${seed.api_url}/v0/console/projects/${hashbrown.slug}/runs/${runs[0]?.uuid}?per_page=1`,
+		{ headers },
+	);
+	const { reports } = (await run.json()) as { reports: { uuid: string }[] };
+	return reports[0]?.uuid;
+};
+
 // Kills a Runs page whose list waits on the shell's request or on its own
 // code arriving late, JavaScript that grows, and rows that move as they arrive.
 test("a cold load of Runs holds its speed ceilings", async ({ page }) => {
@@ -267,6 +283,65 @@ test("a move from a run to a report holds its speed ceilings", async ({
 	const cost = await measure(page, seed.api_url, since);
 	report("report move", cost);
 	const ceiling = ceilings.reportMove;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
+});
+
+// Kills a step to the run before on the branch that refetches the shell or the
+// run it left, asks for the run in more than one request, or loads code.
+test("a move from a run to the run before it holds its speed ceilings", async ({
+	page,
+	request,
+}) => {
+	await page.goto(await newestRun(request));
+	await expect(runReports(page).getByRole("link").first()).toBeVisible();
+	await ready(page);
+	const heading = await page.getByRole("heading", { level: 1 }).textContent();
+
+	await holdScripts(page);
+	const since = await mark(page);
+	await page.getByRole("link", { name: /^Previous / }).click();
+	await expect(page.getByRole("heading", { level: 1 })).not.toHaveText(
+		heading ?? "",
+	);
+	await expect(runReports(page).getByRole("link").first()).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("run to run move", cost);
+	const ceiling = ceilings.runToRunMove;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
+});
+
+// Kills a move from a report back to its run that refetches the shell or the
+// report, asks for the run in more than one request, or finds its code a round late.
+test("a move from a report to its run holds its speed ceilings", async ({
+	page,
+	request,
+}) => {
+	await page.goto(`${REPORTS}/${await newestRunReport(request)}`);
+	const crumb = page.getByRole("link", {
+		name: `main ${seed.last_main_hash}`,
+		exact: true,
+	});
+	await expect(crumb).toBeVisible();
+	await ready(page);
+
+	await holdScripts(page);
+	const since = await mark(page);
+	await crumb.click();
+	await expect(runReports(page).getByRole("link").first()).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("report to run move", cost);
+	const ceiling = ceilings.reportToRunMove;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
 	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);

@@ -658,7 +658,7 @@ const Plot = (props: PlotProps) => {
 								single={lines().length === 1}
 								names={names().map(({ text }) => text)}
 								styles={styles()}
-								hash={data()?.reports[current().report]?.hash}
+								hash={data()?.reports[current().report]?.hash?.slice(0, 7)}
 								href={reportLink(current().report)}
 								alert={pinnedAlert()}
 								onClose={closeReadout}

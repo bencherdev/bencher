@@ -15,7 +15,11 @@ import { ProjectContext } from "../project";
 import { fakeApi } from "../reports/testing";
 import { screenBatch } from "../thresholds/query";
 import { thresholdsFixture } from "../thresholds/testing";
-import { expectNameStartsWithText, expectRowOpens } from "../ui/testing";
+import {
+	columnEdges,
+	expectNameStartsWithText,
+	expectRowOpens,
+} from "../ui/testing";
 import Thresholds from "./Thresholds";
 
 // Relative to the router base, as the app routes it.
@@ -552,4 +556,82 @@ test("under Archived, a filter menu lists archived branches too, in name order",
 		.toBeVisible();
 	expect(options()).toEqual(["Any branch", "legacy", "main"]);
 	expect(archivedAsked()).toEqual([null, "true"]);
+});
+
+// Kills a thresholds table laid out by the rows drawn (an auto layout), whose
+// columns shift as rows of other widths scroll into view, at desktop and at 768 px.
+test("columns hold still as rows of other widths scroll into view", async () => {
+	for (const width of [1280, 768]) {
+		await page.viewport(width, 720);
+		const batchSize = screenBatch();
+		const total = 3 * batchSize;
+		const { api } = fakeApi((url) => {
+			const from = (Number(url.searchParams.get("page")) - 1) * batchSize;
+			const answer = batch(from, batchSize, total);
+			// The later batches follow a metric of a longer name, so they arrive with the scroll.
+			answer.data.thresholds = answer.data.thresholds.map((row, index) =>
+				from + index < batchSize
+					? row
+					: { ...row, metric: "a-metric-with-a-rather-long-name" },
+			);
+			return answer;
+		});
+		mount(api, client());
+		await expect.element(table()).toBeVisible();
+		const before = columnEdges(table().element());
+		expect(before.cells).toEqual(before.headers);
+		await expect
+			.poll(() => {
+				toBottom();
+				return drawn().at(-1);
+			})
+			.toBe(total + 1);
+		const after = columnEdges(table().element());
+		expect(after.headers).toEqual(before.headers);
+		expect(after.cells).toEqual(before.headers);
+		window.scrollTo({ top: 0, behavior: "instant" });
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a thresholds table that does not fold on a phone (an auto layout
+// there), whose rows' cells follow the widest rows drawn beside them.
+test("on a phone, each threshold row folds on its own, whatever rows are drawn beside it", async () => {
+	await page.viewport(390, 720);
+	const firstRow = async (long: boolean) => {
+		const { api } = fakeApi(() => {
+			const answer = batch(0, 20, 20);
+			answer.data.thresholds = answer.data.thresholds.map((row, index) =>
+				long && index > 0
+					? { ...row, metric: "a-metric-with-a-rather-long-name" }
+					: row,
+			);
+			return answer;
+		});
+		mount(api, client());
+		await expect.element(table()).toBeVisible();
+		const { cells } = columnEdges(table().element());
+		dispose?.();
+		document.body.replaceChildren();
+		return cells;
+	};
+	expect(await firstRow(true)).toEqual(await firstRow(false));
+});
+
+// Kills a thresholds table wider than a small laptop's screen (a minimum width
+// past it), which scrolls sideways where every column fits, and one that cuts
+// off a header there.
+test("at 1024 px the thresholds table fits its screen", async () => {
+	await page.viewport(1024, 768);
+	const { api } = fakeApi(() => batch(0, 8, 8));
+	mount(api, client());
+	await expect.element(table()).toBeVisible();
+	const scroll = table().element().closest(".ui-table-scroll") as HTMLElement;
+	expect(scroll.scrollWidth).toBe(scroll.clientWidth);
+	for (const header of table().element().querySelectorAll("thead th")) {
+		expect(header.scrollWidth, header.textContent ?? "").toBeLessThanOrEqual(
+			header.clientWidth,
+		);
+	}
 });

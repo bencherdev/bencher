@@ -47,11 +47,9 @@ interface LineTableProps {
 	onSelect?: (line: ReportLine, selected: boolean) => void;
 	onNoThreshold?: (line: ReportLine) => void;
 	/** A column in the measure's place: its header, its width's class, and each row's cell. */
-	aside?: {
-		label: string;
-		column: string;
-		cell: (line: ReportLine) => JSX.Element;
-	};
+	aside?: Column;
+	/** A column beside the measure's, which a narrow row draws before the measure. */
+	beside?: Column;
 	/** A page's own header for each group, drawn at its own heights. */
 	group?: {
 		height: { wide: number; narrow: number };
@@ -100,7 +98,9 @@ const LineTable = (props: LineTableProps) => {
 	const columns = () =>
 		props.narrow
 			? COLUMNS.narrow
-			: COLUMNS.wide + (props.actions === undefined ? 0 : 1);
+			: COLUMNS.wide +
+				(props.actions === undefined ? 0 : 1) +
+				(props.beside === undefined ? 0 : 1);
 	const open = (slot: Slot) => !isGroup(slot) && props.expanded.has(slot.key);
 	/** Whether a line draws its controls: always in their column when wide, on a line of their own when narrow. */
 	const acts = (line: ReportLine) =>
@@ -217,6 +217,9 @@ const LineTable = (props: LineTableProps) => {
 							<col class="lr-c-twist" />
 							<col />
 							<col class={props.aside?.column ?? "lr-c-measure"} />
+							<Show when={props.beside}>
+								{(beside) => <col class={beside().column} />}
+							</Show>
 							<col class="lr-c-history" />
 							<col class="lr-c-value" />
 							<col class="lr-c-delta" />
@@ -236,6 +239,9 @@ const LineTable = (props: LineTableProps) => {
 								</th>
 								<th scope="col">Line</th>
 								<th scope="col">{props.aside?.label ?? "Measure"}</th>
+								<Show when={props.beside}>
+									{(beside) => <th scope="col">{beside().label}</th>}
+								</Show>
 								<th scope="col">{props.history}</th>
 								<th scope="col" class="lr-end">
 									Value
@@ -279,6 +285,9 @@ const LineTable = (props: LineTableProps) => {
 						const aside = isGroup(slot)
 							? undefined
 							: untrack(() => props.aside?.cell(slot));
+						const beside = isGroup(slot)
+							? undefined
+							: untrack(() => props.beside?.cell(slot));
 						const Header = props.group?.row ?? Group;
 						return isGroup(slot) ? (
 							<Header group={slot} index={index()} columns={columns()} />
@@ -298,6 +307,7 @@ const LineTable = (props: LineTableProps) => {
 								onExpand={(expanded) => props.onExpand(slot, expanded)}
 								onNoThreshold={() => props.onNoThreshold?.(slot)}
 								aside={aside}
+								beside={beside}
 								dimmed={props.dimmed?.(slot) === true}
 								actions={
 									acts(slot) ? () => props.actions?.cell(slot) : undefined
@@ -346,6 +356,13 @@ const LineTable = (props: LineTableProps) => {
 };
 
 export default LineTable;
+
+/** A column of a page's own: its header, its width's class, and each row's cell. */
+interface Column {
+	label: string;
+	column: string;
+	cell: (line: ReportLine) => JSX.Element;
+}
 
 const Spacer = (props: { height: number; columns: number }) => (
 	<Show when={props.height > 0}>

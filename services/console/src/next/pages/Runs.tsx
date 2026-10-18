@@ -101,9 +101,10 @@ const Runs = () => {
 	const busy = () => batches()[0]?.isPlaceholderData === true;
 	const total = () => first()?.total;
 	const [now, setNow] = createSignal(Date.now());
+	// Every answer, a poll's too, moves the times the rows count from now.
 	createComputed(
 		on(
-			() => batches()[0]?.dataUpdatedAt,
+			() => batches().map((batch) => batch.dataUpdatedAt),
 			() => setNow(Date.now()),
 		),
 	);

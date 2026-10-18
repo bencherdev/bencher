@@ -6,22 +6,27 @@ use std::{
 };
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
+#[cfg(feature = "plus")]
+use bencher_json::{
+    Architecture, Cpu, Disk, Memory, OperatingSystem, SpecSlug,
+    project::console::{JsonConsoleJob, JsonConsoleSpec},
+};
 use bencher_json::{
     BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid, MeasureUuid,
     MetricName, ParameterSet, ProjectResourceId, ReportUuid, ResourceName, TestbedSlug,
-    TestbedUuid, ThresholdUuid,
+    TestbedUuid, ThresholdUuid, VersionUuid,
     project::{
         alert::AlertStatus,
         console::{
             ConsoleLineGroup, ConsoleLineSort, DEFAULT_CONSOLE_HISTORY_POINTS,
             DEFAULT_CONSOLE_LINES_PER_PAGE, JsonConsoleBranch, JsonConsoleLineGroup,
             JsonConsoleReport, JsonConsoleReportCounts, JsonConsoleReportLine,
-            JsonConsoleReportLink, JsonConsoleReportQueryParams, JsonConsoleSeries,
-            JsonConsoleTestbed, JsonConsoleWindow, MAX_CONSOLE_HISTORY_POINTS,
+            JsonConsoleReportQueryParams, JsonConsoleReportRun, JsonConsoleRunReportLink,
+            JsonConsoleSeries, JsonConsoleTestbed, JsonConsoleWindow, MAX_CONSOLE_HISTORY_POINTS,
             MAX_CONSOLE_HISTORY_REPORTS, MAX_CONSOLE_WINDOW_DAYS,
         },
         head::{JsonVersion, VersionNumber},
-        report::{Adapter, Iteration, JsonReportAlertsCounts},
+        report::{Iteration, JsonReportAlertsCounts},
     },
 };
 use bencher_rbac::project::Permission;
@@ -33,7 +38,6 @@ use bencher_schema::{
         project::{
             QueryProject,
             benchmark::BenchmarkId,
-            branch::BranchId,
             measure::MeasureId,
             metric::MetricId,
             report::{QueryReport, ReportId},
@@ -44,18 +48,23 @@ use bencher_schema::{
     },
     schema,
 };
+#[cfg(feature = "plus")]
+use diesel::OptionalExtension as _;
 use diesel::{
     BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, JoinOnDsl as _,
-    NullableExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
-    SelectableHelper as _, sql_types::Bool, sqlite::Sqlite,
+    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    sql_types::Bool, sqlite::Sqlite,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+#[cfg(feature = "plus")]
+use super::runs::{JobRow, console_job};
 use super::{
     AlertRow, BenchmarkRow, Check, Limits, MeasureRow, ModelRow, PointReport, Points,
-    PointsBuilder, SeriesBuilder, Tables, Thinned, VariantRow, alert_json, before, thin, unique,
+    PointsBuilder, SeriesBuilder, Tables, Thinned, VariantRow, alert_json, before,
+    runs::report_rows, thin, unique,
 };
 use crate::perf::DEFAULT_REPORT_HISTORY;
 
@@ -84,7 +93,7 @@ pub async fn proj_console_report_options(
 /// View a report's lines for the console
 ///
 /// One page of a report's lines in drawing order, each with its history over a
-/// window that ends at the report, and the report's identity and neighbors.
+/// window that ends at the report, and the report's identity and run.
 /// The user must be authenticated, with `view` permissions for a private project,
 /// or provide a valid project key for the project.
 #[endpoint {
@@ -142,19 +151,29 @@ async fn get_inner(
 
     let Identity {
         report,
+        version_uuid,
         version,
-        branch_id,
         branch,
         testbed,
     } = identity(conn, &project, path_params.report)?;
+    #[cfg(feature = "plus")]
+    let (job, spec) = report_job(conn, report.id)
+        .map_err(resource_not_found_err!(Job, (&project, report.uuid)))?;
+    #[cfg(not(feature = "plus"))]
+    let job = None;
 
     let requested = requested_start(&report, query_params.start_time, query_params.window)?;
     let points = history_points(query_params.points)?;
     let filters = Filters::new(&query_params)?;
     let (window_reports, window) = history_window(conn, &report, requested)
         .map_err(resource_not_found_err!(Report, (&project, report.uuid)))?;
-    let (previous, next) = neighbors(conn, branch_id, &report)
-        .map_err(resource_not_found_err!(Report, (&project, report.uuid)))?;
+    // The page reads its run from its first batch alone.
+    let run = if query_params.page.unwrap_or(1) <= 1 && query_params.per_page != Some(0) {
+        report_run(conn, &report, version_uuid)
+            .map_err(resource_not_found_err!(Report, (&project, report.uuid)))?
+    } else {
+        None
+    };
 
     let rows = line_rows(conn, report.id)
         .map_err(resource_not_found_err!(Metric, (&project, report.uuid)))?;
@@ -195,24 +214,19 @@ async fn get_inner(
         models,
         ..
     } = tables;
-    let QueryReport {
-        uuid,
-        adapter,
-        start_time,
-        end_time,
-        ..
-    } = report;
     Ok(JsonConsoleReport {
-        uuid,
+        uuid: report.uuid,
         branch,
         testbed,
         version,
-        start_time: start_time.into(),
-        end_time: end_time.into(),
-        adapter: adapter.normalize(),
+        start_time: report.start_time.into(),
+        end_time: report.end_time.into(),
+        adapter: report.adapter.normalize(),
         counts,
-        previous,
-        next,
+        job,
+        #[cfg(feature = "plus")]
+        spec,
+        run,
         window,
         total,
         groups,
@@ -373,17 +387,16 @@ fn page(groups: Vec<Vec<Line>>, page: Option<u32>, per_page: Option<u8>) -> Vec<
 
 struct Identity {
     report: QueryReport,
+    version_uuid: VersionUuid,
     version: JsonVersion,
-    branch_id: BranchId,
     branch: JsonConsoleBranch,
     testbed: JsonConsoleTestbed,
 }
 
 type IdentityRow = (
     QueryReport,
-    VersionNumber,
-    Option<GitHash>,
-    (BranchId, BranchUuid, BranchName, BranchSlug, HeadUuid),
+    (VersionUuid, VersionNumber, Option<GitHash>),
+    (BranchUuid, BranchName, BranchSlug, HeadUuid),
     (TestbedUuid, ResourceName, TestbedSlug),
 );
 
@@ -394,9 +407,8 @@ fn identity(
 ) -> Result<Identity, HttpError> {
     let (
         report,
-        number,
-        hash,
-        (branch_id, branch_uuid, branch_name, branch_slug, head_uuid),
+        (version_uuid, number, hash),
+        (branch_uuid, branch_name, branch_slug, head_uuid),
         testbed,
     ) = schema::report::table
         .inner_join(schema::version::table.on(schema::version::id.eq(schema::report::version_id)))
@@ -407,10 +419,12 @@ fn identity(
         .filter(schema::report::uuid.eq(report_uuid))
         .select((
             QueryReport::as_select(),
-            schema::version::number,
-            schema::version::hash,
             (
-                schema::branch::id,
+                schema::version::uuid,
+                schema::version::number,
+                schema::version::hash,
+            ),
+            (
                 schema::branch::uuid,
                 schema::branch::name,
                 schema::branch::slug,
@@ -427,8 +441,8 @@ fn identity(
     let (testbed_uuid, testbed_name, testbed_slug) = testbed;
     Ok(Identity {
         report,
+        version_uuid,
         version: JsonVersion { number, hash },
-        branch_id,
         branch: JsonConsoleBranch {
             uuid: branch_uuid,
             name: branch_name,
@@ -445,79 +459,107 @@ fn identity(
     })
 }
 
-type Neighbors = (Option<JsonConsoleReportLink>, Option<JsonConsoleReportLink>);
+#[cfg(feature = "plus")]
+type SpecRow = (
+    ResourceName,
+    SpecSlug,
+    OperatingSystem,
+    Architecture,
+    Cpu,
+    Memory,
+    Disk,
+);
 
-fn neighbors(
+/// The report's runner job, while its results are not in, and the spec it ran on.
+#[cfg(feature = "plus")]
+fn report_job(
     conn: &mut DbConnection,
-    branch_id: BranchId,
-    report: &QueryReport,
-) -> diesel::QueryResult<Neighbors> {
+    report_id: ReportId,
+) -> diesel::QueryResult<(Option<JsonConsoleJob>, Option<JsonConsoleSpec>)> {
+    let Some(((_, status, created, started, completed), spec)) = schema::job::table
+        .inner_join(schema::spec::table)
+        .filter(schema::job::report_id.eq(report_id))
+        .select((
+            (
+                schema::job::report_id,
+                schema::job::status,
+                schema::job::created,
+                schema::job::started,
+                schema::job::completed,
+            ),
+            (
+                schema::spec::name,
+                schema::spec::slug,
+                schema::spec::os,
+                schema::spec::architecture,
+                schema::spec::cpu,
+                schema::spec::memory,
+                schema::spec::disk,
+            ),
+        ))
+        .first::<(JobRow, SpecRow)>(conn)
+        .optional()?
+    else {
+        return Ok((None, None));
+    };
+    let (name, slug, os, architecture, cpu, memory, disk) = spec;
     Ok((
-        neighbor(conn, branch_id, report, Neighbor::Previous)?,
-        neighbor(conn, branch_id, report, Neighbor::Next)?,
+        console_job(status, created, started, completed),
+        Some(JsonConsoleSpec {
+            name,
+            slug,
+            os,
+            architecture,
+            cpu,
+            memory,
+            disk,
+        }),
     ))
 }
 
-#[derive(Clone, Copy)]
-enum Neighbor {
-    Previous,
-    Next,
-}
-
-/// The closest report on the same branch, under any of its heads, and the same
-/// testbed, by when it ended.
-fn neighbor(
+/// The report's run as the run page lists it, or none when that page lists none of its
+/// reports. A report the run leaves out still steps to the reports on either side of its start.
+fn report_run(
     conn: &mut DbConnection,
-    branch_id: BranchId,
     report: &QueryReport,
-    neighbor: Neighbor,
-) -> diesel::QueryResult<Option<JsonConsoleReportLink>> {
-    let QueryReport {
-        id,
-        testbed_id,
-        end_time,
-        ..
-    } = *report;
-    let query = schema::report::table
-        .inner_join(schema::head::table.on(schema::head::id.eq(schema::report::head_id)))
-        .inner_join(schema::version::table.on(schema::version::id.eq(schema::report::version_id)))
-        .filter(schema::head::branch_id.eq(branch_id))
-        .filter(schema::report::testbed_id.eq(testbed_id))
-        .select((
-            schema::report::uuid,
-            schema::report::start_time,
-            schema::version::hash,
-            schema::report::adapter,
-        ))
-        .into_boxed();
-    // The plain bound starts the index walk at this report; the `OR` breaks the tie.
-    let query = match neighbor {
-        Neighbor::Previous => query
-            .filter(schema::report::end_time.le(end_time))
-            .filter(
-                schema::report::end_time
-                    .lt(end_time)
-                    .or(schema::report::id.lt(id)),
-            )
-            .order((schema::report::end_time.desc(), schema::report::id.desc())),
-        Neighbor::Next => query
-            .filter(schema::report::end_time.ge(end_time))
-            .filter(
-                schema::report::end_time
-                    .gt(end_time)
-                    .or(schema::report::id.gt(id)),
-            )
-            .order((schema::report::end_time.asc(), schema::report::id.asc())),
+    version: VersionUuid,
+) -> diesel::QueryResult<Option<JsonConsoleReportRun>> {
+    let rows = report_rows(conn, &[report.version_id])?;
+    if rows.is_empty() {
+        return Ok(None);
+    }
+    // The run page's order, which its rows come in.
+    let key = |start: DateTime, end: DateTime, created: DateTime, id: ReportId| {
+        (start.timestamp(), end.timestamp(), created.timestamp(), id)
     };
-    Ok(query
-        .first::<(ReportUuid, DateTime, Option<GitHash>, Adapter)>(conn)
-        .optional()?
-        .map(|(uuid, start_time, hash, adapter)| JsonConsoleReportLink {
-            uuid,
-            start_time: start_time.into(),
-            hash,
-            adapter: adapter.normalize(),
-        }))
+    let own = key(
+        report.start_time,
+        report.end_time,
+        report.created,
+        report.id,
+    );
+    let before =
+        rows.partition_point(|row| key(row.start_time, row.end_time, row.created, row.id) < own);
+    let order = rows
+        .get(before)
+        .filter(|row| row.id == report.id)
+        .map(|_| to_u32(before + 1));
+    let after = before + usize::from(order.is_some());
+    let link = |index: usize| {
+        rows.get(index).map(|row| JsonConsoleRunReportLink {
+            uuid: row.uuid,
+            order: to_u32(index + 1),
+            testbed: row.testbed.name.clone(),
+            start_time: row.start_time.into(),
+        })
+    };
+    Ok(Some(JsonConsoleReportRun {
+        uuid: version,
+        order,
+        total: to_u32(rows.len()),
+        previous: before.checked_sub(1).and_then(link),
+        next: link(after),
+    }))
 }
 
 /// The window's reports on the report's own head and testbed, up to and

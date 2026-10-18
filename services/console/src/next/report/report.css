@@ -70,6 +70,27 @@
 	font-size: 12px;
 	white-space: nowrap;
 }
+/* A runner report's spec, whose tooltip lists what it ran on. */
+.rn-specname {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-decoration: underline dotted var(--color-text-faint);
+	text-underline-offset: 3px;
+}
+.rn-spectip {
+	display: grid;
+	grid-template-columns: auto auto;
+	gap: 3px 14px;
+	color: var(--color-text-muted);
+}
+.rn-spectip b {
+	color: var(--color-text-primary);
+	font: inherit;
+	font-family: var(--font-family-code);
+}
 /* Placeholders hold the line boxes of what replaces them. */
 .ui-skeleton.rp-title-skel {
 	display: inline-block;

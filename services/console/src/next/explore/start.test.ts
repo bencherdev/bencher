@@ -1,17 +1,21 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
 	AlertStatus,
 	BoundaryLimit,
 	type JsonAlert,
 	type JsonConsoleReport,
-	type JsonReport,
 } from "../../types/bencher";
+import type { Api } from "../api";
 import { DEFAULT_WINDOW, MAX_ENTRIES, blankQuery } from "../query/query";
 import {
+	type RunReport,
+	START,
 	alertLine,
 	benchmarkOptions,
 	reportBenchmarkQuery,
 	reportBenchmarks,
+	runTime,
+	startQueries,
 } from "./start";
 
 const uuid = (n: number) =>
@@ -112,15 +116,14 @@ describe("reportBenchmarks", () => {
 const NOW = Date.UTC(2026, 9, 16);
 const DAY = 24 * 60 * 60 * 1000;
 
-/** A report that ran `days` before now, for a minute. */
-const reportAt = (days: number) =>
-	({
-		uuid: uuid(61),
-		branch: { ...named(1, "main"), head: { uuid: uuid(11) } },
-		testbed: named(3, "linux"),
-		start_time: new Date(NOW - days * DAY).toISOString(),
-		end_time: new Date(NOW - days * DAY + 60_000).toISOString(),
-	}) as unknown as JsonReport;
+/** A report of a run that ran `days` before now, for a minute. */
+const reportAt = (days: number): RunReport => ({
+	uuid: uuid(61),
+	branch: { uuid: uuid(1), head: uuid(11) },
+	testbed: named(3, "linux"),
+	start_time: NOW - days * DAY,
+	end_time: NOW - days * DAY + 60_000,
+});
 const REPORT = reportAt(1);
 
 describe("reportBenchmarkQuery", () => {
@@ -151,17 +154,23 @@ describe("reportBenchmarkQuery", () => {
 	});
 
 	// Kills a report older than the default window drawn over a window that
-	// holds none of its points, and one inside it drawn over anything else.
+	// holds none of its points, one judged by its end rather than its start, and
+	// one inside it drawn over anything else.
 	test("draw a report older than the default window over the window as long that ends at it", () => {
 		const [sha256] = reportBenchmarks(PAGE);
 		const old = reportAt(35);
 		expect(sha256 && reportBenchmarkQuery(old, sha256, NOW).window).toEqual({
 			seconds: DEFAULT_WINDOW,
-			end: Date.parse(old.end_time),
+			end: old.end_time,
 		});
 		expect(
 			sha256 && reportBenchmarkQuery(reportAt(27), sha256, NOW).window,
 		).toEqual(blankQuery().window);
+		// It started half a minute before the window and ended inside it.
+		const straddling = reportAt(28 + 0.5 / (24 * 60));
+		expect(
+			sha256 && reportBenchmarkQuery(straddling, sha256, NOW).window,
+		).toEqual({ seconds: DEFAULT_WINDOW, end: straddling.end_time });
 	});
 });
 
@@ -183,5 +192,71 @@ describe("benchmarkOptions", () => {
 			benchmarkOptions(benchmarks, "3", 32).map(({ label }) => label),
 		).toEqual(["blake3", "xxh3"]);
 		expect(benchmarkOptions(benchmarks, "", 2)).toHaveLength(2);
+	});
+});
+
+describe("runTime", () => {
+	// Kills a run's time read in the wrong unit at either boundary.
+	test("read seconds, then minutes and seconds, then hours and minutes", () => {
+		expect([59_999, 60_000, 3_599_999, 3_600_000].map(runTime)).toEqual([
+			"59s",
+			"1m 00s",
+			"59m 59s",
+			"1h 00m",
+		]);
+	});
+});
+
+describe("startQueries", () => {
+	const RECENT = { uuid: uuid(70) };
+	const OLD = { uuid: uuid(71) };
+	/** The runs list as the API answers it: `recent` inside the window, `older` before it. */
+	const listing = (recent: unknown[], older: unknown[]) => {
+		const asked: string[] = [];
+		const api: Api = {
+			get: async <T>(path: string) => {
+				asked.push(path);
+				const runs = path.includes("start_time=")
+					? recent
+					: [...recent, ...older];
+				return {
+					data: { total: runs.length, runs } as T,
+					headers: new Headers(),
+				};
+			},
+			send: async () => {
+				throw new Error("The start lists send no changes");
+			},
+		};
+		return { api, asked };
+	};
+
+	// Kills the latest runs asked for over all time first, which groups every
+	// run of a project on blank Explore's cold paint, or over another window
+	// than the Runs tab's default.
+	test("ask for the latest runs inside the Runs tab's default window", async () => {
+		vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+		try {
+			const { api, asked } = listing([RECENT], [OLD]);
+			expect(await startQueries(api, "hashbrown").runs.queryFn()).toEqual([
+				RECENT,
+			]);
+			expect(asked).toEqual([
+				`/v0/console/projects/hashbrown/runs?per_page=${START.runs}&start_time=${NOW - DEFAULT_WINDOW * 1000}`,
+			]);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	// Kills a project whose runs all predate the window read as one that never
+	// ran, which shows it the setup card.
+	test("ask again over all time when nothing ran inside the window", async () => {
+		const { api, asked } = listing([], [OLD]);
+		expect(await startQueries(api, "hashbrown").runs.queryFn()).toEqual([OLD]);
+		expect(asked).toHaveLength(2);
+		expect(asked[1]).toBe(
+			`/v0/console/projects/hashbrown/runs?per_page=${START.runs}`,
+		);
 	});
 });

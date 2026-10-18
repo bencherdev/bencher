@@ -106,13 +106,26 @@ const ThresholdsTable = (props: {
 		>
 			<thead>
 				<tr aria-rowindex={1}>
+					{/* Every share but the branch's is set, so the columns never follow the rows drawn. */}
 					<th scope="col">Branch</th>
-					<th scope="col">Testbed</th>
-					<th scope="col">Measure</th>
-					<th scope="col">Metric</th>
-					<th scope="col">Parameters</th>
-					<th scope="col">Model</th>
-					<th scope="col">Alerts in {props.windowLabel}</th>
+					<th scope="col" style="width:12%">
+						Testbed
+					</th>
+					<th scope="col" style="width:10%">
+						Measure
+					</th>
+					<th scope="col" style="width:10%">
+						Metric
+					</th>
+					<th scope="col" style="width:13%">
+						Parameters
+					</th>
+					<th scope="col" style="width:22%">
+						Model
+					</th>
+					<th scope="col" style="width:17%">
+						Alerts in {props.windowLabel}
+					</th>
 				</tr>
 			</thead>
 			<tbody ref={body}>
