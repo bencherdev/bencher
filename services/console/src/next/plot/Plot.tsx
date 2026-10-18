@@ -704,12 +704,13 @@ const Plot = (props: PlotProps) => {
 						if (id === undefined) {
 							return;
 						}
+						const clear = resolved() === line;
 						if (props.hidden.includes(id)) {
 							props.onHiddenChange(
 								props.hidden.filter((hiddenId) => hiddenId !== id),
 							);
 						}
-						props.onFocusChange(resolved() === line ? null : id);
+						props.onFocusChange(clear ? null : id);
 					}}
 					onPreview={setPreview}
 				/>
