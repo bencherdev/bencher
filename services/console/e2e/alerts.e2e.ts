@@ -66,19 +66,6 @@ const dismiss = (scope: Page | Locator, name: string) =>
 const reactivate = (scope: Page | Locator, name: string) =>
 	scope.getByRole("button", { name: `Reactivate the alert on ${name}` });
 
-/** The alert's report on the seed, by the reports list. */
-const newestMain = async (request: APIRequestContext) => {
-	const response = await request.get(
-		`${seed.api_url}/v0/projects/${hashbrown.slug}/reports?branch=main&testbed=ubuntu-latest&per_page=1`,
-		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
-	);
-	const [report] = (await response.json()) as { uuid: string }[];
-	if (!report) {
-		throw new Error("The seed has no main report");
-	}
-	return report.uuid;
-};
-
 /** The project's alerts by status, as the API holds them. */
 const apiCounts = async (request: APIRequestContext, slug: string) => {
 	const response = await request.get(
@@ -113,12 +100,11 @@ const holdLists = async (page: Page, slug: string) => {
 test.use({ storageState: signedIn(seed.member), timezoneId: "UTC" });
 
 // Kills an alert drawn outside its report's group, a group missing its
-// branch, testbed, time, hash, or count, an Open report that leads elsewhere,
-// a count that is not the active total, and an alert that is not the report
-// page's own row.
+// branch, testbed, time, hash, or count, a group's checkbox that opens other
+// alerts in Explore than its own, a count that is not the active total, and an
+// alert that is not the report page's own row.
 test("the active blake3 alert sits under report 9c1f2e4 with its value, delta, and limit", async ({
 	page,
-	request,
 }) => {
 	await page.goto(alerts(hashbrown.slug));
 
@@ -131,12 +117,16 @@ test("the active blake3 alert sits under report 9c1f2e4 with its value, delta, a
 	const group = groupRow(page, MAIN_REPORT);
 	await expect(group).toContainText("main · ubuntu-latest");
 	await expect(group).toContainText("Sep 13, 21:16 · 9c1f2e4 · json · 1 alert");
-	await expect(
-		group.getByRole("link", { name: `Open report on ${MAIN_REPORT}` }),
-	).toHaveAttribute(
-		"href",
-		`${nextPath(hashbrown.slug, "reports")}/${await newestMain(request)}`,
+	await group.getByRole("checkbox").check();
+	await expect(row(page, BLAKE3).getByRole("checkbox")).toBeChecked();
+	const open = new URL(
+		(await page
+			.getByRole("link", { name: "Open 1 in Explore" })
+			.getAttribute("href")) ?? "",
+		seed.console_url,
 	);
+	expect(open.pathname).toBe(nextPath(hashbrown.slug, "explore"));
+	expect(open.searchParams.get("only")?.split(",")).toHaveLength(1);
 	const blake3 = row(page, BLAKE3);
 	await expect(blake3).toContainText("20.60 ns");
 	await expect(blake3).toContainText("+6.2% worse");
@@ -340,9 +330,9 @@ test.describe("on a project of its own", () => {
 	});
 
 	// Kills a group checkbox that does not show a partial selection, selects
-	// beyond its group, or clears only part of it; and Dismiss group acting on
-	// rows outside its report.
-	test("a group's checkbox is tri-state, and Dismiss group dismisses only that report", async ({
+	// beyond its group, or clears only part of it; and a checked group's bulk
+	// Dismiss acting on rows outside its report.
+	test("a group's checkbox is tri-state, and its bulk Dismiss dismisses only that report", async ({
 		page,
 		request,
 	}) => {
@@ -368,8 +358,9 @@ test.describe("on a project of its own", () => {
 		await older.uncheck();
 		await expect(page.getByText("0 selected")).toBeVisible();
 
-		await groupRow(page, OLDER)
-			.getByRole("button", { name: `Dismiss group on ${OLDER}` })
+		await older.check();
+		await page
+			.getByRole("button", { name: "Dismiss 2 selected active alerts" })
 			.click();
 		await expect(row(page, line("bench-00"))).toContainText(
 			"Dismissed just now",
@@ -665,8 +656,9 @@ for (const width of [768, 1024]) {
 		await page.setViewportSize({ width, height: 900 });
 		const { project } = await createAlerts(request);
 		await page.goto(alerts(project.slug, "?status=all"));
-		await groupRow(page, OLDER)
-			.getByRole("button", { name: `Dismiss group on ${OLDER}` })
+		await groupRow(page, OLDER).getByRole("checkbox").check();
+		await page
+			.getByRole("button", { name: /^Dismiss \d+ selected active alert/ })
 			.click();
 		await expect(
 			reactivate(row(page, line("bench-01")), line("bench-01")),

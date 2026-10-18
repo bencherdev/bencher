@@ -138,6 +138,21 @@ test("a slug the API refuses as taken keeps the page and the draft", async () =>
 	await expect.element(textbox("Slug")).toHaveValue("taken");
 });
 
+// Kills a confirmed slug change that drops the focus to the page once its
+// dialog closes under a Save that waits for the API.
+test("a slug change confirmed from the button leaves focus on the form", async () => {
+	open({}, () => new Promise(() => {}));
+	await textbox("Slug").fill("pompeii");
+	await button("Save changes").click();
+	await page
+		.getByRole("alertdialog")
+		.getByRole("button", { name: "Change slug" })
+		.click();
+	await expect
+		.element(page.getByRole("heading", { level: 2, name: "Organization" }))
+		.toHaveFocus();
+});
+
 // Kills a Danger box drawn without its delete, and a delete that skips the
 // confirmation.
 test("Delete organization in the Danger box opens its confirmation", async () => {

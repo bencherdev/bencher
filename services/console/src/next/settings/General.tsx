@@ -14,6 +14,8 @@ import type { Api } from "../api";
 import { useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
+import type SlugDialog from "../SlugDialog";
+import { lazyView } from "../shell/lazy";
 import { applyPatch, forgetSlug, settleProject } from "./data";
 import DeleteProject from "./DeleteProject";
 import {
@@ -63,6 +65,8 @@ const General = () => {
 
 export default General;
 
+const slugDialog = lazyView(() => import("../SlugDialog"));
+
 const ProjectForm = (props: { data: JsonConsoleProject }) => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
@@ -77,8 +81,11 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 	const [moved, setMoved] = createSignal<string>();
 
 	const [saving, setSaving] = createSignal(false);
+	const [confirming, setConfirming] = createSignal<typeof SlugDialog>();
 	const save = async (patch: Patch) => {
 		const from = slug();
+		setConfirming(undefined);
+		holdFocus();
 		setSaving(true);
 		setRefusal(undefined);
 		try {
@@ -144,142 +151,181 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 			heading?.focus();
 		}
 	};
+	// The confirmation's code loads once a save would need it.
+	const preload = () => {
+		if (patch()?.slug !== undefined) {
+			slugDialog.preload();
+		}
+	};
 	const submit = (event: SubmitEvent) => {
 		event.preventDefault();
 		const changes = patch();
-		if (changes && !blocked()) {
-			holdFocus();
-			save(changes);
+		if (!changes || blocked()) {
+			return;
 		}
+		if (changes.slug !== undefined) {
+			slugDialog
+				.load()
+				.then((view) => {
+					// A change undone while the code loaded no longer needs it.
+					if (patch()?.slug !== undefined) {
+						setConfirming(() => view);
+					}
+				})
+				.catch(() => {});
+			return;
+		}
+		holdFocus();
+		save(changes);
 	};
 
 	return (
-		<form class="setcard" aria-labelledby="sec-project" onSubmit={submit}>
-			<div class="setcard-head">
-				<h2
-					class="seclabel"
-					id="sec-project"
-					tabindex="-1"
-					ref={(element) => {
-						heading = element;
-					}}
-				>
-					Project
-				</h2>
-			</div>
-			<div class="formrows">
-				<div class="formrow">
-					<div class="fl">
-						<label for="f-name">Name</label>
-					</div>
-					<div class="field">
-						<TextInput
-							id="f-name"
-							value={draft().name}
-							onInput={(event) => edit({ name: event.currentTarget.value })}
-							aria-describedby="e-name"
-							aria-invalid={problem("name") ? true : undefined}
-							autocomplete="off"
-						/>
-						<FieldError id="e-name" message={problem("name")} />
-					</div>
-				</div>
-
-				<div class="formrow">
-					<div class="fl">
-						<label for="f-slug">Slug</label>
-					</div>
-					<div class="field">
-						<TextInput
-							id="f-slug"
-							class="mono"
-							value={draft().slug}
-							onInput={(event) => edit({ slug: event.currentTarget.value })}
-							aria-describedby="w-slug e-slug r-slug"
-							aria-invalid={
-								problem("slug") || refused("slug") ? true : undefined
-							}
-							autocomplete="off"
-							spellcheck={false}
-						/>
-						<Show when={draft().slug !== saved().slug}>
-							<p class="fwarn" id="w-slug">
-								<Icon name="warning" />
-								<span>Breaks every link and run that names the old slug</span>
-							</p>
-						</Show>
-						<FieldError id="e-slug" message={problem("slug")} />
-						<Show when={refused("slug")}>
-							{(message) => (
-								<p class="ferror" id="r-slug" role="alert">
-									{message()}
-								</p>
-							)}
-						</Show>
-					</div>
-				</div>
-
-				<div class="formrow">
-					<div class="fl">
-						<label for="f-url">URL</label>
-					</div>
-					<div class="field">
-						<TextInput
-							id="f-url"
-							type="url"
-							value={draft().url}
-							onInput={(event) => edit({ url: event.currentTarget.value })}
-							aria-describedby="e-url"
-							aria-invalid={problem("url") ? true : undefined}
-							autocomplete="off"
-						/>
-						<FieldError id="e-url" message={problem("url")} />
-					</div>
-				</div>
-
-				<div class="formrow">
-					<div class="fl">
-						<span>BMF version</span>
-					</div>
-					<div class="fvalue mono">{props.data.project.bmf_version}</div>
-				</div>
-			</div>
-			<div
-				class="setcard-foot"
-				ref={(element) => {
-					foot = element;
-				}}
-			>
-				<span class="set-status" role="status">
-					<Show when={justSaved()}>
-						<Icon name="check" />
-						Saved
-					</Show>
-				</span>
-				<Show when={refused("form")}>
-					{(message) => (
-						<p class="ferror" role="alert">
-							{message()}
-						</p>
-					)}
-				</Show>
-				<span class="spacer" />
-				<Show when={patch()}>
-					<Button
-						onClick={() => {
-							holdFocus();
-							setDraft(saved());
-							setRefusal(undefined);
+		<>
+			<form class="setcard" aria-labelledby="sec-project" onSubmit={submit}>
+				<div class="setcard-head">
+					<h2
+						class="seclabel"
+						id="sec-project"
+						tabindex="-1"
+						ref={(element) => {
+							heading = element;
 						}}
 					>
-						Discard
+						Project
+					</h2>
+				</div>
+				<div class="formrows">
+					<div class="formrow">
+						<div class="fl">
+							<label for="f-name">Name</label>
+						</div>
+						<div class="field">
+							<TextInput
+								id="f-name"
+								value={draft().name}
+								onInput={(event) => edit({ name: event.currentTarget.value })}
+								aria-describedby="e-name"
+								aria-invalid={problem("name") ? true : undefined}
+								autocomplete="off"
+							/>
+							<FieldError id="e-name" message={problem("name")} />
+						</div>
+					</div>
+
+					<div class="formrow">
+						<div class="fl">
+							<label for="f-slug">Slug</label>
+						</div>
+						<div class="field">
+							<TextInput
+								id="f-slug"
+								class="mono"
+								value={draft().slug}
+								onInput={(event) => edit({ slug: event.currentTarget.value })}
+								aria-describedby="e-slug r-slug"
+								aria-invalid={
+									problem("slug") || refused("slug") ? true : undefined
+								}
+								autocomplete="off"
+								spellcheck={false}
+							/>
+							<FieldError id="e-slug" message={problem("slug")} />
+							<Show when={refused("slug")}>
+								{(message) => (
+									<p class="ferror" id="r-slug" role="alert">
+										{message()}
+									</p>
+								)}
+							</Show>
+						</div>
+					</div>
+
+					<div class="formrow">
+						<div class="fl">
+							<label for="f-url">URL</label>
+						</div>
+						<div class="field">
+							<TextInput
+								id="f-url"
+								type="url"
+								value={draft().url}
+								onInput={(event) => edit({ url: event.currentTarget.value })}
+								aria-describedby="e-url"
+								aria-invalid={problem("url") ? true : undefined}
+								autocomplete="off"
+							/>
+							<FieldError id="e-url" message={problem("url")} />
+						</div>
+					</div>
+
+					<div class="formrow">
+						<div class="fl">
+							<span>BMF version</span>
+						</div>
+						<div class="fvalue mono">{props.data.project.bmf_version}</div>
+					</div>
+				</div>
+				<div
+					class="setcard-foot"
+					ref={(element) => {
+						foot = element;
+					}}
+				>
+					<span class="set-status" role="status">
+						<Show when={justSaved()}>
+							<Icon name="check" />
+							Saved
+						</Show>
+					</span>
+					<Show when={refused("form")}>
+						{(message) => (
+							<p class="ferror" role="alert">
+								{message()}
+							</p>
+						)}
+					</Show>
+					<span class="spacer" />
+					<Show when={patch()}>
+						<Button
+							onClick={() => {
+								holdFocus();
+								setDraft(saved());
+								setRefusal(undefined);
+							}}
+						>
+							Discard
+						</Button>
+					</Show>
+					<Button
+						type="submit"
+						variant="primary"
+						disabled={blocked()}
+						onPointerEnter={preload}
+						onFocus={preload}
+					>
+						Save changes
 					</Button>
-				</Show>
-				<Button type="submit" variant="primary" disabled={blocked()}>
-					Save changes
-				</Button>
-			</div>
-		</form>
+				</div>
+			</form>
+			<Show when={confirming()}>
+				{(view) => {
+					const Confirm = view();
+					return (
+						<Confirm
+							slug={draft().slug}
+							noun="project"
+							onCancel={() => setConfirming(undefined)}
+							onConfirm={() => {
+								const changes = patch();
+								if (changes) {
+									save(changes);
+								}
+							}}
+						/>
+					);
+				}}
+			</Show>
+		</>
 	);
 };
 

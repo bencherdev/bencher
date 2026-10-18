@@ -321,6 +321,51 @@ test("a group's checkbox shows a partial selection and fills the group", async (
 	await expect.element(page.getByText("3 selected")).toBeVisible();
 });
 
+// Kills a group header that still draws Open report or Dismiss group beside
+// its checkbox.
+test("a group header's only control is its checkbox", async () => {
+	const { api } = fakeApi(three);
+	mount(api);
+	await expect.element(heading()).toHaveTextContent("3 active");
+	const header = page
+		.getByRole("checkbox", { name: `Select ${ALL}` })
+		.element()
+		.closest("tr");
+	expect(
+		[...(header?.querySelectorAll("a, button, input") ?? [])].map((control) =>
+			control.getAttribute("aria-label"),
+		),
+	).toEqual([`Select ${ALL}`]);
+});
+
+// Kills a checked group that selects beyond its report, and a bulk Dismiss
+// that sends other alerts than the selected ones.
+test("a checked group's bulk Dismiss sends exactly that report's alerts", async () => {
+	const { api, sent } = fakeApi(() =>
+		alertsFixture([
+			{ report: 0, alerts: [{ alert: 1 }, { alert: 2 }, { alert: 3 }] },
+			{ report: 1, hours: 1, alerts: [{ alert: 4 }] },
+		]),
+	);
+	mount(api, { ...bootstrapOf(), active_alerts: 4 });
+	await expect.element(heading()).toHaveTextContent("4 active");
+	await page.getByRole("checkbox", { name: `Select ${ALL}` }).click();
+	await page
+		.getByRole("button", { name: "Dismiss 3 selected active alerts" })
+		.click();
+	await expect.element(heading()).toHaveTextContent("1 active");
+	expect(sent).toEqual([
+		{
+			method: "PATCH",
+			path: "/v0/console/projects/hashbrown/alerts",
+			body: {
+				status: "dismissed",
+				alerts: [alertId(1), alertId(2), alertId(3)],
+			},
+		},
+	]);
+});
+
 // Kills status controls drawn for a reader who cannot use them, and
 // selection taken away with them.
 test("a viewer gets no status controls, and can still select", async () => {
@@ -443,7 +488,6 @@ test("a dismiss and its undo each redraw within a frame", async () => {
 	expect(median(undos)).toBeLessThan(budget(FRAME_MS));
 });
 
-const WHERE = "main, ubuntu-latest, Sep 13, 21:16";
 const SHA256 = "sha256 n=0 Latency";
 const status = (name: string) =>
 	page.getByRole("radiogroup", { name: "Status" }).getByRole("radio", { name });
@@ -550,9 +594,9 @@ test.each([
 	},
 );
 
-// Kills a Dismiss all or a Dismiss group that selects by the new search's
-// filters while the rows on screen are still the last search's.
-test("while a new search loads, Dismiss all and Dismiss group wait", async () => {
+// Kills a Dismiss all that selects by the new search's filters while the rows
+// on screen are still the last search's.
+test("while a new search loads, Dismiss all waits", async () => {
 	const { api } = fakeApi((url) =>
 		url.searchParams.get("status") === "all"
 			? new Promise<never>(() => {})
@@ -560,14 +604,19 @@ test("while a new search loads, Dismiss all and Dismiss group wait", async () =>
 	);
 	mount(api);
 	await expect.element(heading()).toHaveTextContent("3 active");
-	const group = page.getByRole("button", { name: `Dismiss group on ${WHERE}` });
 	const all = page.getByRole("button", { name: /^Dismiss all / });
-	await expect.element(group).toBeEnabled();
 	await expect.element(all).toBeEnabled();
 	await status("All").click();
-	await expect.element(group).toBeDisabled();
 	await expect.element(all).toBeDisabled();
 });
+
+/** Select every alert of the report `ALL` names and dismiss them from the selection bar. */
+const dismissGroup = async () => {
+	await page.getByRole("checkbox", { name: `Select ${ALL}` }).click();
+	await page
+		.getByRole("button", { name: "Dismiss 3 selected active alerts" })
+		.click();
+};
 
 // Kills a change the API made for fewer alerts than the page loaded that
 // still shows every row changed, says nothing, or never reads the list again.
@@ -575,7 +624,7 @@ test("a change the API made for fewer alerts than were loaded puts the rows back
 	const { api, lists } = fakeApi(three, async () => ({ changed: 1 }));
 	mount(api);
 	await expect.element(heading()).toHaveTextContent("3 active");
-	await page.getByRole("button", { name: `Dismiss group on ${WHERE}` }).click();
+	await dismissGroup();
 	await expect
 		.element(page.getByRole("alert"))
 		.toHaveTextContent("Some alerts did not change");
@@ -596,7 +645,7 @@ test("the project's count is read again after a short change", async () => {
 		).length;
 	await expect.element(heading()).toHaveTextContent("3 active");
 	expect(project()).toBe(0);
-	await page.getByRole("button", { name: `Dismiss group on ${WHERE}` }).click();
+	await dismissGroup();
 	await expect.poll(answered).toBe(1);
 	await expect.poll(project).toBe(1);
 });
@@ -740,19 +789,22 @@ test("after Dismiss N the focus rests on the selection count", async () => {
 	await expect.poll(focusedName).toBe("1 selected");
 });
 
-// Kills Dismiss group dropping the focus once its group has no active row,
-// and a header drawn anew on the change.
-test("after Dismiss group the focus rests on the group's checkbox", async () => {
+// Kills a checked group's Dismiss dropping the focus once the group has no
+// active row, and a header drawn anew on the change.
+test("after a checked group's Dismiss the focus rests on the count and the header stays", async () => {
 	const { api, answered } = fakeApi(three, async () => ({ changed: 3 }));
 	mount(api);
 	await expect.element(heading()).toHaveTextContent("3 active");
-	const group = page.getByRole("button", { name: `Dismiss group on ${WHERE}` });
+	const group = page.getByRole("checkbox", { name: `Select ${ALL}` });
 	const header = group.element().closest("tr");
-	await press(group);
+	await group.click();
+	await press(
+		page.getByRole("button", { name: "Dismiss 3 selected active alerts" }),
+	);
 	await expect.poll(answered).toBe(1);
 	await new Promise((resolve) => requestAnimationFrame(resolve));
-	expect(focusedName()).toBe(`Select ${ALL}`);
-	expect(document.activeElement?.closest("tr")).toBe(header);
+	expect(focusedName()).toBe("3 selected");
+	expect(group.element().closest("tr")).toBe(header);
 });
 
 // Kills Dismiss all dropping the focus with the button it disables.
@@ -829,6 +881,33 @@ test("rows fold below 980 px, and a folded Reactivate leaves the focus on its ro
 	await expect.poll(() => document.querySelector("table.lr-narrow")).toBeNull();
 });
 
+// Kills a group header laid out at another height than it is drawn, so the
+// rows below it drift from where the list puts them.
+test.each([
+	[1280, 44],
+	[900, 64],
+])(
+	"at %i px a group header is laid out at the height it is drawn",
+	async (width, line) => {
+		await page.viewport(width, 400);
+		const reports = 30;
+		const { api } = fakeApi(() =>
+			alertsFixture(
+				Array.from({ length: reports }, (_, report) => ({
+					report,
+					hours: report,
+					alerts: [{ alert: report + 1 }],
+				})),
+			),
+		);
+		mount(api, { ...bootstrapOf(), active_alerts: reports });
+		await expect.element(heading()).toHaveTextContent(`${reports} active`);
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+		const body = document.querySelector("tbody") as HTMLElement;
+		expect(body.getBoundingClientRect().height).toBe(reports * (44 + line));
+	},
+);
+
 // Kills a report, run, or threshold page, or the Runs list, left showing a
 // status the API no longer holds, and another project's pages read again.
 test("a confirmed change has the report, run, Runs, and threshold pages read again", async () => {
@@ -856,10 +935,10 @@ test("a confirmed change has the report, run, Runs, and threshold pages read aga
 	).toBe(false);
 });
 
-// Kills a Dismiss group whose count waits for the API to move the group's
-// alerts that are not loaded.
-test("Dismiss group takes the group's alerts not loaded out of the count at once", async () => {
-	const { api } = fakeApi(
+// Kills a checked group's Dismiss that reaches the report's alerts not
+// loaded, which the reader never selected, or whose count waits for the API.
+test("a checked group's Dismiss takes only its loaded alerts out of the count, at once", async () => {
+	const { api, sent } = fakeApi(
 		() =>
 			({
 				...alertsFixture([
@@ -876,8 +955,11 @@ test("Dismiss group takes the group's alerts not loaded out of the count at once
 	);
 	mount(api, { ...bootstrapOf(), active_alerts: 10 });
 	await expect.element(heading()).toHaveTextContent("10 active");
-	await page.getByRole("button", { name: `Dismiss group on ${WHERE}` }).click();
-	await expect.element(heading()).toHaveTextContent("0 active");
+	await dismissGroup();
+	await expect.element(heading()).toHaveTextContent("7 active");
+	expect(sent.map(({ body }) => body)).toEqual([
+		{ status: "dismissed", alerts: [alertId(1), alertId(2), alertId(3)] },
+	]);
 });
 
 // Kills a next batch asked while a change is out, whose offset still counts
@@ -1418,8 +1500,9 @@ test("Active offers no Reactivate N", async () => {
 		.not.toBeInTheDocument();
 });
 
-// Kills Dismiss group offered on a report none of whose rows still alert.
-test("a report with no active row offers no Dismiss group", async () => {
+// Kills a checked group's bulk Dismiss offered on a report none of whose rows
+// still alert.
+test("a checked report with no active row offers no Dismiss, only Reactivate", async () => {
 	const { api } = fakeApi(() =>
 		alertsFixture([
 			{ report: 0, alerts: [{ alert: 1, status: "dismissed" }] },
@@ -1427,16 +1510,17 @@ test("a report with no active row offers no Dismiss group", async () => {
 		]),
 	);
 	mount(api, { ...bootstrapOf(), active_alerts: 1 }, `${PATH}?status=all`);
+	await page.getByRole("checkbox", { name: `Select ${ALL}` }).click();
 	await expect
 		.element(
 			page.getByRole("button", {
-				name: "Dismiss group on main, ubuntu-latest, Sep 13, 20:16",
+				name: "Reactivate 1 selected dismissed alert",
 			}),
 		)
 		.toBeVisible();
-	expect(
-		page.getByRole("button", { name: `Dismiss group on ${WHERE}` }).elements(),
-	).toHaveLength(0);
+	await expect
+		.element(page.getByRole("button", { name: "Dismiss", exact: true }))
+		.toBeDisabled();
 });
 
 // Kills a dismissed row dimmed only once the API answers, or never.
