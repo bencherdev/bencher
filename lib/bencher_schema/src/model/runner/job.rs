@@ -125,7 +125,7 @@ impl QueryJob {
         now: DateTime,
     ) -> Result<(), HttpError> {
         // Look up the report
-        let query_report: QueryReport = schema::report::table
+        let mut query_report: QueryReport = schema::report::table
             .filter(schema::report::id.eq(self.report_id))
             .first(auth_conn!(context))
             .map_err(resource_not_found_err!(Report, self.report_id))?;
@@ -176,7 +176,8 @@ impl QueryJob {
 
         // Process results (adapter parsing, metrics, alerts, usage)
         //
-        // The job parses at the version the run declared.
+        // The job parses at its report's version, and a report created before
+        // reports recorded their version at its job config's.
         query_report
             .process_results(
                 log,
@@ -185,7 +186,10 @@ impl QueryJob {
                 &results_array,
                 query_report.adapter,
                 settings,
-                self.config.bmf_version.unwrap_or_default(),
+                query_report
+                    .bmf_version
+                    .or(self.config.bmf_version)
+                    .unwrap_or_default(),
                 ReportWarnings::default(),
                 plan_kind,
                 #[cfg(feature = "otel")]
