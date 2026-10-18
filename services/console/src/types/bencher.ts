@@ -1722,6 +1722,28 @@ export interface JsonLogin {
 	recaptcha_token?: NonEmpty;
 }
 
+export enum OrganizationRole {
+	/** The organization leader role. */
+	Leader = "leader",
+}
+
+export interface JsonMember {
+	/** The member UUID. */
+	uuid: Uuid;
+	/** The member user name. */
+	name: UserName;
+	/** The member slug. */
+	slug: string;
+	/** The member email. */
+	email: Email;
+	/** The member organization role. */
+	role: OrganizationRole;
+	/** The date time the member was created. */
+	created: string;
+	/** The date time the member was last modified. */
+	modified: string;
+}
+
 export interface JsonPerfAlert {
 	uuid: Uuid;
 	limit: BoundaryLimit;
@@ -1782,11 +1804,6 @@ export interface JsonNewCheckout {
 
 export interface JsonNewClaim {
 	empty?: undefined;
-}
-
-export enum OrganizationRole {
-	/** The organization leader role. */
-	Leader = "leader",
 }
 
 export interface JsonNewMember {

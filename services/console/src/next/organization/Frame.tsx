@@ -1,9 +1,9 @@
 import { For, type JSX } from "solid-js";
-import { organizationPath } from "../paths";
+import { ORGANIZATIONS_PATH, organizationPath } from "../paths";
 
 type Section = "general" | "members" | "billing";
 
-/** The organization's sections, as the account's rail; Members and Billing are still the classic console's. */
+/** The organization's sections, as the account's rail; Billing is still the classic console's. */
 const Frame = (props: {
 	/** The organization's slug or UUID, as the path has it. */
 	organization: string;
@@ -21,7 +21,7 @@ const Frame = (props: {
 		{
 			section: "members",
 			label: "Members",
-			href: `/console/organizations/${props.organization}/members`,
+			href: `${ORGANIZATIONS_PATH}/${props.organization}/members`,
 		},
 		{
 			section: "billing",

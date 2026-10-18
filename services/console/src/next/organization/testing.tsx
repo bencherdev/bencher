@@ -86,6 +86,7 @@ export const mount = (
 		allowed = { edit: true, delete: true },
 		bootstrap = BOOTSTRAP,
 		flush = async () => {},
+		cached = [],
 	}: {
 		api: Api;
 		path?: string;
@@ -93,6 +94,8 @@ export const mount = (
 		allowed?: Allowed | null;
 		bootstrap?: JsonConsoleUser | null;
 		flush?: () => Promise<void>;
+		/** More answers the cache already holds, by query key. */
+		cached?: [unknown[], unknown][];
 	},
 ) => {
 	const client = new QueryClient({
@@ -109,6 +112,9 @@ export const mount = (
 	}
 	if (bootstrap) {
 		client.setQueryData(consoleUserQuery(api, "u").queryKey, bootstrap);
+	}
+	for (const [queryKey, data] of cached) {
+		client.setQueryData(queryKey, data);
 	}
 	const history = createMemoryHistory();
 	history.set({ value: path, replace: true });

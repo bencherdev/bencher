@@ -143,8 +143,30 @@ test.describe("Organizations", () => {
 			).toHaveCount(0);
 			await expect(
 				fullRow.getByRole("link", { name: full.name }),
-			).toHaveAttribute("href", `/console/organizations/${full.slug}/settings`);
+			).toHaveAttribute(
+				"href",
+				`/next/console/organizations/${full.slug}/settings`,
+			);
 		}
+	});
+});
+
+test.describe("an organization's row", () => {
+	test.use({ storageState: signedIn(seed.member) });
+
+	// Kills a row that leads to the classic settings, or to another organization.
+	test("opens the organization's General", async ({ page }) => {
+		await page.goto(ORGANIZATIONS);
+		await table(page)
+			.getByRole("link", { name: seed.organization.name })
+			.click();
+
+		await expect(page).toHaveURL(
+			`${ORGANIZATIONS}/${seed.organization.slug}/settings`,
+		);
+		await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
+			seed.organization.name,
+		);
 	});
 });
 

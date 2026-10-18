@@ -790,6 +790,10 @@
 	text-align: center;
 	color: var(--color-text-muted);
 }
+/* An address field and its button share a row; a phone stacks them. */
+.inrow .ui-input {
+	flex: 1 1 260px;
+}
 
 @media (max-width: 767px) {
 	.page.setwrap {
@@ -820,6 +824,9 @@
 	}
 	.setcard-foot .ui-button {
 		flex: 1;
+	}
+	.inrow .ui-button {
+		flex: 1 1 100%;
 	}
 	.radio,
 	.lnk {

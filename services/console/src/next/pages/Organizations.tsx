@@ -17,13 +17,11 @@ import {
 	slugOf,
 } from "../account/organizations";
 import { FlushContext } from "../flush";
-import { ORGANIZATIONS_PATH } from "../paths";
+import { ORGANIZATIONS_PATH, organizationPath } from "../paths";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { Frame, failureOf } from "./Profile";
 
-const settingsHref = (slug: string) =>
-	`/console/organizations/${slug}/settings`;
 const newProjectHref = (slug: string) =>
 	`${ORGANIZATIONS_PATH}/${slug}/projects/add`;
 
@@ -109,7 +107,7 @@ const Organizations = (props: {
 										<td data-fold="l1">
 											<a
 												class="namelink rowlink-name"
-												href={settingsHref(organization.slug)}
+												href={organizationPath(organization.slug)}
 											>
 												{organization.name}
 											</a>
@@ -125,7 +123,7 @@ const Organizations = (props: {
 													New project
 												</a>
 											</Show>
-											<a class="lnk" href={settingsHref(organization.slug)}>
+											<a class="lnk" href={organizationPath(organization.slug)}>
 												Settings
 											</a>
 										</td>

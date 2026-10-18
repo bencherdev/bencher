@@ -14,8 +14,7 @@ import {
 import { handOff } from "./handoff";
 import { idbStore } from "./idb";
 import { forgetReader } from "./memory";
-import { accountPage } from "./account/paths";
-import { organizationOf, pageName, parseNextPath } from "./paths";
+import { type PageName, pageName, parseNextPath } from "./paths";
 import { consoleProjectQuery, fetchedVersions } from "./queries";
 import { USER_KEY, isCurrent, readReader, signInHref } from "./reader";
 import { PAGES } from "./routes";
@@ -48,15 +47,12 @@ const boot = async (mount: HTMLElement) => {
 
 	// Each build has its own chunk name, so a new console never reads an old cache.
 	const buster = new URL(import.meta.url).pathname;
-	const organizationPage = location.pathname.endsWith("/projects/add")
-		? "NewProject"
-		: "OrgGeneral";
+	// An account or organization document names its page, so the entry carries neither table.
 	const page =
 		PAGES[
 			place
 				? pageName(place.rest)
-				: (accountPage(location.pathname)?.page ??
-					(organizationOf(location.pathname) ? organizationPage : "NotFound"))
+				: ((mount.dataset.page as PageName | undefined) ?? "NotFound")
 		];
 	await within(
 		BOOT_WAIT,

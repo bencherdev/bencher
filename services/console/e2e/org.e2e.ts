@@ -149,7 +149,7 @@ test.describe("General", () => {
 
 test.describe("from a project page", () => {
 	// Kills a switcher footer that still leads to the classic settings, or to
-	// another organization's.
+	// another organization's, and a page titled for another section.
 	test("the switcher's footer opens the organization's General", async ({
 		page,
 	}) => {
@@ -163,6 +163,9 @@ test.describe("from a project page", () => {
 		await expect(page).toHaveURL(generalPath(seed.organization.uuid));
 		await expect(textbox(page, "Name")).toHaveValue(seed.organization.name);
 		await expect(crumb(page, seed.organization.name)).toBeVisible();
+		await expect(page).toHaveTitle(
+			`General | ${seed.organization.name} | Bencher`,
+		);
 	});
 });
 

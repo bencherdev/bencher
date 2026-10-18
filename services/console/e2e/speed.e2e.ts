@@ -661,6 +661,40 @@ test("a cold load of an organization's General holds the speed ceilings", async 
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
+// Kills Members chaining the list or the reader's permissions after the
+// organization, asking for more than those, or shifting as they arrive.
+test("a cold load of an organization's Members holds the speed ceilings", async ({
+	page,
+}) => {
+	await observeLayoutShift(page);
+	await page.route(`${seed.api_url}/**`, async (route) => {
+		await new Promise((resolve) => setTimeout(resolve, 500));
+		await route.continue();
+	});
+	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
+	const answered = Promise.all([
+		page.waitForResponse(organization),
+		page.waitForResponse(`${organization}/members?per_page=255`),
+		page.waitForResponse(`${organization}/allowed/create_role`),
+		page.waitForResponse(`${organization}/allowed/delete_role`),
+	]);
+	await page.goto(
+		`/next/console/organizations/${seed.organization.slug}/members`,
+	);
+	await expect(
+		page
+			.getByRole("table", { name: "Members" })
+			.getByRole("row", { name: seed.member.user.name }),
+	).toBeVisible();
+	await answered;
+	await loadedAndIdle(page);
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url);
+	report("organization members cold load", cost);
+	holds(cost, ceilings.organizationMembersColdLoad);
+});
+
 // Kills an Organizations list that waits on more than the reader's bootstrap,
 // chains a second round, or shifts as it arrives.
 test("a cold load of Organizations holds the speed ceilings", async ({

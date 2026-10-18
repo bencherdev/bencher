@@ -7,12 +7,15 @@ import OrgLayout from "../../../../../layouts/console/OrgLayout.astro";
 import TablePanel from "../../../../../components/console/table/TablePanel";
 import { BencherResource } from "../../../../../config/types";
 import FallbackTablePanel from "../../../../../components/console/table/FallbackTablePanel.astro";
+import AccountGate from "../../../../../next/astro/AccountGate.astro";
+import { ORGANIZATIONS_PATH } from "../../../../../next/paths";
 
 const params = Astro.params;
 const title = "Members";
 ---
 
 <OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <AccountGate slot="head" next={`${ORGANIZATIONS_PATH}/${params.organization}/members`} />
   <TablePanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}

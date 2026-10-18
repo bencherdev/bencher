@@ -94,6 +94,7 @@ export type PageName =
 	| "UserKeys"
 	| "LegacyTokens"
 	| "OrgGeneral"
+	| "OrgMembers"
 	| "Organizations"
 	| "NewProject"
 	| "NotFound";

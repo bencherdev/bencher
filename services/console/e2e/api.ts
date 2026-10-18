@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
 import type {
 	JsonAuthUser,
@@ -123,6 +123,48 @@ export const createReader = async (
 		creation: key.creation,
 		expiration: key.expiration,
 	};
+};
+
+// The harness API's debug issuer and secret, which sign every token it trusts.
+const ISSUER = "http://localhost:3000/";
+const SECRET = "DO_NOT_USE_THIS_IN_PRODUCTION";
+
+const base64url = (value: string | Buffer) =>
+	Buffer.from(value).toString("base64url");
+
+/** An invitation to `organization` for `email`, as the API would email it. */
+const inviteToken = (email: string, organization: string) => {
+	const now = Math.floor(Date.now() / 1_000);
+	const head = base64url(JSON.stringify({ typ: "JWT", alg: "HS256" }));
+	const claims = base64url(
+		JSON.stringify({
+			aud: "invite",
+			exp: now + 60 * 60,
+			iat: now,
+			iss: ISSUER,
+			sub: email,
+			org: { uuid: organization, role: "leader" },
+		}),
+	);
+	const signature = base64url(
+		createHmac("sha256", SECRET).update(`${head}.${claims}`).digest(),
+	);
+	return `${head}.${claims}.${signature}`;
+};
+
+/**
+ * A new reader who has accepted an invitation to `organization`, which the
+ * harness cannot read out of an email.
+ */
+export const createMember = async (
+	request: APIRequestContext,
+	organization: JsonOrganization,
+) => {
+	const reader = await createReader(request);
+	await send(request, "POST", "/v0/auth/accept", reader.token, {
+		invite: inviteToken(reader.user.email, organization.uuid),
+	});
+	return reader;
 };
 
 /** The user as the API has it. */

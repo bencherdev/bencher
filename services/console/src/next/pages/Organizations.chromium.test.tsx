@@ -14,6 +14,7 @@ import type {
 import { AccountContext } from "../account/context";
 import { type Api, ApiError, type Method } from "../api";
 import { FlushContext } from "../flush";
+import { organizationPath } from "../paths";
 import { consoleUserQuery } from "../queries";
 import Organizations from "./Organizations";
 
@@ -180,21 +181,17 @@ describe("the list", () => {
 		await expect.element(page.getByText("3 organizations")).toBeVisible();
 	});
 
-	// Kills an organization that leads anywhere but its settings, and a New
+	// Kills an organization that leads anywhere but its General here, and a New
 	// project for another organization.
-	test("each organization leads to its settings, and New project to its own", async () => {
+	test("each organization leads to its General, and New project to its own", async () => {
 		const { api } = consoleApi();
 		mount(api);
 
 		await expect
 			.element(page.getByRole("link", { name: "Bagge Farm" }))
 			.toBeVisible();
-		expect(href("Bagge Farm")).toBe(
-			"/console/organizations/bagge-farm/settings",
-		);
-		expect(href("Settings", 1)).toBe(
-			"/console/organizations/nowhere-labs/settings",
-		);
+		expect(href("Bagge Farm")).toBe(organizationPath("bagge-farm"));
+		expect(href("Settings", 1)).toBe(organizationPath("nowhere-labs"));
 		expect(href("New project")).toBe(
 			"/next/console/organizations/bagge-farm/projects/add",
 		);
