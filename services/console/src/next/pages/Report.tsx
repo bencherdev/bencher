@@ -23,8 +23,7 @@ import type { JsonConsoleReport } from "../../types/bencher";
 import type { Settable } from "../alerts/status";
 import { useFold } from "../alerts/fold";
 import { ApiError } from "../api";
-import { alertPath, projectPath, reportPath } from "../paths";
-import { formatWhen } from "../plot/format";
+import { alertPath, projectPath, reportPath, runPath } from "../paths";
 import { useNarrow } from "../plot/narrow";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
@@ -46,6 +45,8 @@ import {
 	prefetchReport,
 	screenBatch,
 } from "../report/query";
+
+export { prefetchLinkedReport as prefetch } from "../report/query";
 import { slotsOf } from "../report/slots";
 import ThresholdSheet from "../report/ThresholdSheet";
 import {
@@ -54,7 +55,8 @@ import {
 	reportViewSearch,
 	windowDays,
 } from "../report/view";
-import { absoluteTime, duration, shortHash } from "../reports/format";
+import { duration, shortHash } from "../reports/format";
+import Neighbor, { onMoved } from "../runs/Neighbor";
 
 const SKELETON_ROWS = 8;
 
@@ -236,8 +238,37 @@ const Report = () => {
 					)}`
 			: undefined;
 	};
-	const intent = (uuid: string) =>
-		prefetchReport(client, api, slug(), uuid, view(), perPage);
+	const step = (side: "previous" | "next") => {
+		const current = report();
+		const link = current?.run?.[side];
+		if (!(current?.run && link)) {
+			return undefined;
+		}
+		const shown = narrow()
+			? `#${link.order}`
+			: `#${link.order} · ${link.testbed}`;
+		return {
+			href: reportPath(slug(), link.uuid) + query(view()),
+			shown,
+			detail: `report ${link.order} of ${current.run.total}${narrow() ? `, ${link.testbed}` : ""}`,
+		};
+	};
+	const intent = (side: "previous" | "next") => {
+		const link = report()?.run?.[side];
+		if (link) {
+			prefetchReport(client, api, slug(), link.uuid, view(), perPage);
+		}
+	};
+	// The run page's first batch comes with its code, which the move needs anyway, and the code
+	// that draws its alerts when this report raised some.
+	const intendRun = (version: string) => {
+		if ((report()?.counts.alerts.total ?? 0) > 0) {
+			import("../runs/RunAlerts").catch(() => {});
+		}
+		import("./Run")
+			.then(({ prefetch }) => prefetch(client, api, slug(), version))
+			.catch(() => {});
+	};
 
 	return (
 		<Show when={!missing()} fallback={<NotFound slug={slug()} />}>
@@ -246,22 +277,22 @@ const Report = () => {
 					<div class="ph-title">
 						<Crumb
 							slug={slug()}
+							report={report()}
 							readOnly={bootstrap().data?.permissions.edit === false}
+							onRunIntent={intendRun}
 						/>
 						<Title report={report()} />
 					</div>
 					<div class="ph-actions rp-actions">
 						<Neighbor
 							side="previous"
-							report={report()}
-							href={(uuid) => reportPath(slug(), uuid) + query(view())}
-							onIntent={intent}
+							link={step("previous")}
+							onIntent={() => intent("previous")}
 						/>
 						<Neighbor
 							side="next"
-							report={report()}
-							href={(uuid) => reportPath(slug(), uuid) + query(view())}
-							onIntent={intent}
+							link={step("next")}
+							onIntent={() => intent("next")}
 						/>
 					</div>
 					<p class="ph-sub rp-sub">
@@ -273,7 +304,8 @@ const Report = () => {
 								<>
 									{subtitle(
 										report(),
-										hash(),
+										// The run's crumb names the hash when there is one.
+										report().run ? undefined : hash(),
 										view().search ? undefined : report().total,
 										narrow(),
 									)}
@@ -406,11 +438,39 @@ const groupsOfBatch = ({ report, group }: ReportBatch) => {
 	return groups;
 };
 
-/** The way back to Runs, and whether the reader can only read, where its arrival takes no width from the title. */
-const Crumb = (props: { slug: string; readOnly?: boolean }) => (
+/** The way back to Runs and to the report's run, and whether the reader can only read, where its arrival takes no width from the title. */
+const Crumb = (props: {
+	slug: string;
+	report?: JsonConsoleReport | undefined;
+	readOnly?: boolean;
+	onRunIntent?: (version: string) => void;
+}) => (
 	<div class="crumb-line">
 		<a href={projectPath(props.slug, "runs")}>Runs</a>
 		<span aria-hidden="true">/</span>
+		<Show when={props.report?.run && props.report}>
+			{(report) => {
+				const version = () => report().run?.uuid ?? "";
+				const intent = () => props.onRunIntent?.(version());
+				return (
+					<>
+						<a
+							href={runPath(props.slug, version())}
+							onPointerMove={onMoved(intent)}
+							onFocus={intent}
+							onTouchStart={intent}
+						>
+							{report().branch.name} <span aria-hidden="true">·</span>{" "}
+							<span class="rn-crumbhash">
+								{shortHash(report().version.hash) ??
+									`v${report().version.number}`}
+							</span>
+						</a>
+						<span aria-hidden="true">/</span>
+					</>
+				);
+			}}
+		</Show>
 		<Show when={props.readOnly}>
 			<span class="rp-ro">
 				<Icon name="read-only" />
@@ -454,7 +514,7 @@ const Title = (props: { report: JsonConsoleReport | undefined }) => (
 	</div>
 );
 
-/** When, how, and what the report holds; `lines` is left out while a filter narrows them. */
+/** Its place in its run, when, how, and what the report holds; `lines` is left out while a filter narrows them. */
 const subtitle = (
 	report: JsonConsoleReport,
 	hash: string | undefined,
@@ -462,14 +522,25 @@ const subtitle = (
 	narrow: boolean,
 ) => {
 	const total = lines === undefined ? [] : [plural(lines, "line")];
+	const run = report.run;
+	// A report alone in its run has no place to tell.
+	const place =
+		run?.order && run.total > 1 ? `#${run.order} of ${run.total}` : undefined;
 	if (narrow) {
-		return [formatWhen(report.start_time), report.adapter, hash, ...total]
+		return [
+			place,
+			startTime(report.start_time, true),
+			report.adapter,
+			hash,
+			...total,
+		]
 			.filter(Boolean)
 			.join(" · ");
 	}
 	const counts = report.counts;
 	return [
-		absoluteTime(report.start_time),
+		place,
+		startTime(report.start_time, false),
 		report.adapter,
 		hash,
 		[
@@ -488,51 +559,17 @@ const subtitle = (
 const plural = (count: number, noun: string) =>
 	`${count} ${count === 1 ? noun : `${noun}s`}`;
 
-/** A link to the branch's report on one side, or that side's control, disabled, while there is none. */
-const Neighbor = (props: {
-	side: "previous" | "next";
-	report: JsonConsoleReport | undefined;
-	href: (uuid: string) => string;
-	onIntent: (uuid: string) => void;
-}) => {
-	const text = () => (props.side === "previous" ? "Previous" : "Next");
-	const chevron = () => (
-		<svg class="rp-chevron" viewBox="0 0 24 24" aria-hidden="true">
-			<path d={props.side === "previous" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
-		</svg>
-	);
-	return (
-		<Show
-			when={props.report?.[props.side]}
-			fallback={
-				<Button size="sm" class="rp-neighbor" disabled>
-					{text()}
-				</Button>
-			}
-		>
-			{(link) => {
-				const when = () => formatWhen(link().start_time);
-				const intent = () => props.onIntent(link().uuid);
-				return (
-					<a
-						class="ui-button rp-neighbor"
-						data-variant="secondary"
-						data-size="sm"
-						href={props.href(link().uuid)}
-						aria-label={`${text()} ${when()}: the report on ${props.report?.branch.name}, ${props.report?.testbed.name}, ${shortHash(link().hash) ?? link().adapter}`}
-						onPointerEnter={intent}
-						onFocus={intent}
-						onTouchStart={intent}
-					>
-						<Show when={props.side === "previous"}>{chevron()}</Show>
-						{text()} <span class="muted">{when()}</span>
-						<Show when={props.side === "next"}>{chevron()}</Show>
-					</a>
-				);
-			}}
-		</Show>
-	);
-};
+/** When the report started, to the second, as its run's reports start close together; a narrow page leaves out the year. */
+const startTime = (time: number, narrow: boolean) =>
+	new Intl.DateTimeFormat("en-US", {
+		month: "short",
+		day: "numeric",
+		...(narrow ? {} : { year: "numeric" as const }),
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+		hourCycle: "h23",
+	}).format(time);
 
 const Selection = (props: {
 	count: number;

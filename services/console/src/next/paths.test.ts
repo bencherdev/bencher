@@ -8,6 +8,7 @@ import {
 	parseNextPath,
 	projectPath,
 	reportPath,
+	runPath,
 	tabOf,
 } from "./paths";
 
@@ -233,5 +234,12 @@ test("reportPath is the report under its project's reports", () => {
 test("alertPath is the alert under its project's Alerts", () => {
 	expect(alertPath("hashbrown", "abc")).toBe(
 		`${NEXT_PROJECTS}/hashbrown/alerts/abc`,
+	);
+});
+
+// Kills a run link outside the project's Runs.
+test("runPath is the run under its project's Runs", () => {
+	expect(runPath("hashbrown", "abc")).toBe(
+		`${NEXT_PROJECTS}/hashbrown/runs/abc`,
 	);
 });

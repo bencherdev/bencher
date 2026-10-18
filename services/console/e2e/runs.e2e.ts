@@ -319,6 +319,98 @@ test("a split run lists its reports by start, told apart to the second", async (
 	]);
 });
 
+const runReports = (page: Page) =>
+	page
+		.getByRole("table", { name: "Reports in this run, by start" })
+		.getByRole("rowgroup")
+		.last()
+		.getByRole("row");
+const subLine = (page: Page) => page.locator(".rp-sub");
+
+// Kills a move between a run and its reports, through the reports, back to the
+// run, or on to the next run on the branch that reloads the document, steps
+// out of the run or the branch, or that Back cannot walk again.
+test("a run, its reports, and the next run walk together, and Back walks it all again", async ({
+	page,
+}) => {
+	const documents: string[] = [];
+	page.on("request", (request) => {
+		if (request.resourceType() === "document") {
+			documents.push(request.url());
+		}
+	});
+	await page.goto(runs("?branch=feature-simd&window=all"));
+	const split = `feature-simd ${seed.split_hash}`;
+	await rows(page)
+		.filter({ hasText: seed.split_hash })
+		.getByRole("link")
+		.click();
+	await expect(heading(page)).toHaveText(`feature-simd · ${seed.split_hash}`);
+	await expect(page.getByRole("button", { name: "Previous" })).toBeDisabled();
+
+	await runReports(page).nth(1).getByRole("link").click();
+	await expect(heading(page)).toHaveText("feature-simd · ubuntu-latest");
+	await expect(subLine(page)).toHaveText(
+		/^#2 of 4 · Aug 10, 2026, 00:00:02 · json · /,
+	);
+	await page.getByRole("link", { name: /^Next #3 · macos-latest/ }).click();
+	await expect(heading(page)).toHaveText("feature-simd · macos-latest");
+	await expect(subLine(page)).toHaveText(/^#3 of 4 · /);
+	await page.getByRole("link", { name: /^Next #4 · ubuntu-latest/ }).click();
+	await expect(subLine(page)).toHaveText(/^#4 of 4 · /);
+	await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
+	await page.getByRole("link", { name: /^Previous #3 · macos-latest/ }).click();
+	await expect(subLine(page)).toHaveText(/^#3 of 4 · /);
+
+	await page.getByRole("link", { name: split, exact: true }).click();
+	await expect(heading(page)).toHaveText(`feature-simd · ${seed.split_hash}`);
+	await page
+		.getByRole("link", { name: /^Next .*: the run on feature-simd, v\d+$/ })
+		.click();
+	await expect(heading(page)).toHaveText(/^feature-simd · v\d+$/);
+	await expect(
+		page.getByRole("link", { name: /^Previous / }),
+	).toHaveAccessibleName(
+		new RegExp(`: the run on feature-simd, ${seed.split_hash}$`),
+	);
+
+	await page.goBack();
+	await expect(heading(page)).toHaveText(`feature-simd · ${seed.split_hash}`);
+	for (const place of ["#3", "#4", "#3", "#2"]) {
+		await page.goBack();
+		await expect(subLine(page)).toHaveText(new RegExp(`^${place} of 4 · `));
+	}
+	await page.goBack();
+	await expect(heading(page)).toHaveText(`feature-simd · ${seed.split_hash}`);
+	await page.goBack();
+	await expect(table(page)).toBeVisible();
+	expect(documents).toHaveLength(1);
+});
+
+// Kills a run's alerts that are not drawn, drawn without the report they came
+// from, or a report link, a plot, or an Explore link that leads elsewhere.
+test("the newest run's alert names its report, opens its plot in place, and opens in Explore", async ({
+	page,
+}) => {
+	await page.goto(runs());
+	await rows(page).first().getByRole("link").click();
+	const section = page.getByRole("region", { name: "Alerts in this run" });
+	await expect(section.locator(".count")).toHaveText("1");
+	const alerts = section.getByRole("table", {
+		name: `Alerts in run ${seed.last_main_hash}, by report`,
+	});
+	await alerts.getByRole("button", { name: /^Expand blake3 / }).click();
+	await expect(
+		page.getByRole("region", { name: /^blake3 .*, full plot$/ }),
+	).toBeVisible();
+	await expect(
+		alerts.getByRole("link", { name: /^Open in Explore: blake3 / }),
+	).toHaveAttribute("href", /\/explore\?.*report=/);
+	await alerts.getByRole("link", { name: /^#1 · ubuntu-latest/ }).click();
+	await expect(heading(page)).toHaveText("main · ubuntu-latest");
+	await expect(subLine(page)).toHaveText(/^#1 of 2 · /);
+});
+
 // Kills a Runs link that waits for the click to ask for its first batch, and
 // a page that asks again for what the hover already fetched.
 test("hovering the Runs tab fetches its first batch", async ({ page }) => {
@@ -428,6 +520,13 @@ test("Runs and a run pass axe in both themes", async ({ page }) => {
 			page
 				.getByRole("table", { name: "Reports in this run, by start" })
 				.getByRole("link")
+				.first(),
+		).toBeVisible();
+		// The newest run alerted, so its alerts table, which loads with code of its own, is checked too.
+		await expect(
+			page
+				.getByRole("table", { name: /^Alerts in run / })
+				.getByRole("button", { name: /^Expand / })
 				.first(),
 		).toBeVisible();
 	});

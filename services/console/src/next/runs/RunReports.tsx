@@ -8,6 +8,7 @@ import { MoreRows, Spacer } from "../reports/TableRows";
 import { useVirtualRows } from "../reports/virtual";
 import { Alerts, Author } from "./cells";
 import { secondsTime } from "./format";
+import { onMoved } from "./Neighbor";
 
 const COLUMNS = 8;
 
@@ -18,6 +19,8 @@ const RunReports = (props: {
 	/** Every report in the run, loaded or not. */
 	total: number;
 	onRange?: (range: Range) => void;
+	/** Moving onto, focusing, or touching a report's link, before the click. */
+	onIntent?: (uuid: string) => void;
 	loading?: boolean;
 	onRetry?: (() => void) | undefined;
 }) => {
@@ -27,23 +30,36 @@ const RunReports = (props: {
 	});
 	return (
 		<Table
-			class="reports-table"
+			class="reports-table rn-table"
 			aria-label="Reports in this run, by start"
 			aria-rowcount={props.total + 1}
 			data-fold=""
 		>
 			<thead>
 				<tr aria-rowindex={1}>
-					<th scope="col">#</th>
+					{/* Every share but the testbed's is set, so the columns never follow the rows drawn. */}
+					<th scope="col" style="width:6%">
+						#
+					</th>
 					<th scope="col">Testbed</th>
-					<th scope="col">Adapter</th>
-					<th scope="col">Started</th>
-					<th scope="col" data-align="end">
+					<th scope="col" style="width:13%">
+						Adapter
+					</th>
+					<th scope="col" style="width:11%">
+						Started
+					</th>
+					<th scope="col" style="width:8%" data-align="end">
 						Lines
 					</th>
-					<th scope="col">Alerts</th>
-					<th scope="col">Status</th>
-					<th scope="col">By</th>
+					<th scope="col" style="width:21%">
+						Alerts
+					</th>
+					<th scope="col" style="width:10%">
+						Status
+					</th>
+					<th scope="col" style="width:15%">
+						By
+					</th>
 				</tr>
 			</thead>
 			<tbody ref={rows.body}>
@@ -54,6 +70,7 @@ const RunReports = (props: {
 							slug={props.slug}
 							report={report}
 							index={rows.start() + index()}
+							onIntent={() => props.onIntent?.(report.uuid)}
 						/>
 					)}
 				</For>
@@ -75,6 +92,7 @@ const ReportRow = (props: {
 	slug: string;
 	report: JsonConsoleRunReport;
 	index: number;
+	onIntent: () => void;
 }) => {
 	const started = () => secondsTime(props.report.start_time);
 	return (
@@ -85,6 +103,9 @@ const ReportRow = (props: {
 					class="reports-link rowlink-name"
 					href={reportPath(props.slug, props.report.uuid)}
 					aria-label={`${props.report.testbed.name}, report ${props.report.order}, started ${started()}`}
+					onPointerMove={onMoved(() => props.onIntent())}
+					onFocus={() => props.onIntent()}
+					onTouchStart={() => props.onIntent()}
 				>
 					{props.report.testbed.name}
 				</a>
