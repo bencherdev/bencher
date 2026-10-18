@@ -7,18 +7,18 @@ import { For, type JSX, Show, createMemo, createSignal } from "solid-js";
 import type {
 	JsonBranch,
 	JsonConsoleBranchRow,
+	JsonConsoleRunSummary,
 	JsonMeasure,
 	JsonTestbed,
 	JsonThreshold,
 	JsonVariant,
 } from "../../types/bencher";
-import { NEXT_PROJECTS, reportPath } from "../paths";
+import { NEXT_PROJECTS, projectPath, runPath } from "../paths";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import { failureOf } from "../settings/failure";
 import {
-	RECENT_REPORTS,
-	type RecentReports,
+	type Detail,
 	type ThresholdsOn,
 	markVariantArchived,
 	variantsQuery,
@@ -36,260 +36,263 @@ export interface ThresholdsState {
 	retry: () => void;
 }
 
+/** What every dimension carries: its slug, UUID, and when it was made. */
+export const RecordCard = (props: { detail: Detail | undefined }) => (
+	<Card id="dm-record" title="Record">
+		<dl class="dm-kvs">
+			<Kv k="slug">
+				<span class="mono">{props.detail?.slug}</span>
+			</Kv>
+			<Kv k="uuid">
+				<span class="mono dm-uuid">{props.detail?.uuid}</span>
+			</Kv>
+			<Kv k="created">
+				{props.detail ? shortDay(props.detail.created, 0) : ""}
+			</Kv>
+		</dl>
+	</Card>
+);
+
+export interface RunsState {
+	data: JsonConsoleRunSummary[] | undefined;
+	failed: boolean;
+	retry: () => void;
+}
+
 export const BranchCards = (props: {
 	slug: string;
 	branch: JsonBranch | undefined;
 	row: JsonConsoleBranchRow | null | undefined;
-	reports: RecentReports | undefined;
-	reportsFailed: boolean;
-	reportsRetry: () => void;
+	runs: RunsState;
 	thresholds: ThresholdsState;
 }) => {
 	const head = () => props.branch?.head;
-	// Runs lists the runs of active branches only.
-	const runsLink = () =>
-		props.branch && !props.branch.archived
-			? `${NEXT_PROJECTS}/${props.slug}/runs?branch=${encodeURIComponent(props.branch.slug)}&window=all`
-			: undefined;
 	return (
 		<>
-			<Stats
-				label="On this branch"
-				stats={[
-					{ n: props.reports?.total, one: "report", many: "reports" },
-					{
-						n: props.thresholds.data?.total,
-						one: "threshold",
-						many: "thresholds",
-					},
-				]}
-			/>
-			<div class="dm-twocol">
-				<div class="dm-stack">
-					<Card
-						id="dm-head"
-						title="Head"
-						aside={
-							<Show when={head()}>
-								{(shown) => (
-									<span class="muted sm">
-										since {shortDate(shown().created)}
-									</span>
-								)}
-							</Show>
-						}
-					>
-						<dl class="dm-kvs">
-							<Kv k="version">
-								<Show
-									when={props.row?.hash ?? head()?.version?.hash}
-									fallback={<span class="muted">none yet</span>}
-								>
-									{(hash) => <span class="mono">{shortHash(hash())}</span>}
-								</Show>
-							</Kv>
-							<Kv k="start point">
-								<Show
-									when={head()?.start_point}
-									fallback={<span class="muted">none</span>}
-								>
-									{(start) => (
-										<>
-											<a
-												href={`${NEXT_PROJECTS}/${props.slug}/branches/${start().branch}`}
-											>
-												{props.row?.start_point ?? "its start point"}
-											</a>
-											<span class="muted"> at </span>
-											<span class="mono">
-												{shortHash(start().version.hash) ??
-													`number ${start().version.number}`}
-											</span>
-										</>
-									)}
-								</Show>
-							</Kv>
-						</dl>
-					</Card>
-					<Card id="dm-record" title="Record">
-						<dl class="dm-kvs">
-							<Kv k="slug">
-								<span class="mono">{props.branch?.slug}</span>
-							</Kv>
-							<Kv k="uuid">
-								<span class="mono dm-uuid">{props.branch?.uuid}</span>
-							</Kv>
-							<Kv k="created">
-								{props.branch ? shortDay(props.branch.created, 0) : ""}
-							</Kv>
-						</dl>
-					</Card>
-				</div>
-				<div class="dm-stack">
-					<Section
-						id="dm-reports"
-						title="Recent reports"
-						aside={
-							<Show when={runsLink()}>
-								{(href) => (
-									<a class="lnk" href={href()}>
-										All runs on {props.branch?.name}
+			<Card
+				id="dm-head"
+				title="Head"
+				aside={
+					<Show when={head()}>
+						{(shown) => (
+							<span class="muted sm">since {shortDate(shown().created)}</span>
+						)}
+					</Show>
+				}
+			>
+				<dl class="dm-kvs">
+					<Kv k="version">
+						<Show
+							when={props.row?.hash ?? head()?.version?.hash}
+							fallback={<span class="muted">none yet</span>}
+						>
+							{(hash) => <span class="mono">{shortHash(hash())}</span>}
+						</Show>
+					</Kv>
+					<Kv k="start point">
+						<Show
+							when={head()?.start_point}
+							fallback={<span class="muted">none</span>}
+						>
+							{(start) => (
+								<>
+									<a
+										href={`${NEXT_PROJECTS}/${props.slug}/branches/${start().branch}`}
+									>
+										{props.row?.start_point ?? "its start point"}
 									</a>
-								)}
-							</Show>
-						}
-					>
-						<RecentReportsTable
-							slug={props.slug}
-							reports={props.reports}
-							failed={props.reportsFailed}
-							retry={props.reportsRetry}
-						/>
-					</Section>
-					<ThresholdsCard
-						slug={props.slug}
-						one="branch"
-						first={{ title: "Testbed", of: (t) => t.testbed.name }}
-						second={{ title: "Measure", of: (t) => t.measure.name }}
-						state={props.thresholds}
-					/>
-				</div>
-			</div>
+									<span class="muted"> at </span>
+									<span class="mono">
+										{shortHash(start().version.hash) ??
+											`number ${start().version.number}`}
+									</span>
+								</>
+							)}
+						</Show>
+					</Kv>
+				</dl>
+			</Card>
+			<RecentRuns
+				slug={props.slug}
+				on={{ key: "branch", of: props.branch }}
+				state={props.runs}
+			/>
+			<ThresholdsCard
+				slug={props.slug}
+				one="branch"
+				first={{ title: "Testbed", of: (t) => t.testbed.name }}
+				second={{ title: "Measure", of: (t) => t.measure.name }}
+				state={props.thresholds}
+			/>
 		</>
 	);
 };
 
-const RecentReportsTable = (props: {
+/** A branch's or a testbed's newest runs, each opening its run, under a link to all of them. */
+const RecentRuns = (props: {
 	slug: string;
-	reports: RecentReports | undefined;
-	failed: boolean;
-	retry: () => void;
+	on: { key: "branch" | "testbed"; of: JsonBranch | JsonTestbed | undefined };
+	state: RunsState;
 }) => {
+	const branch = () => props.on.key === "branch";
+	// Runs lists the runs of active branches and testbeds only.
+	const all = () => {
+		const shown = props.on.of;
+		return shown && !shown.archived
+			? `${projectPath(props.slug, "runs")}?${props.on.key}=${encodeURIComponent(shown.slug)}&window=all`
+			: undefined;
+	};
 	return (
-		<Show
-			when={props.reports}
-			fallback={
-				<Show
-					when={props.failed}
-					fallback={<Skeleton size="card" class="dm-card-skel" />}
-				>
-					<Failed what="The reports" retry={props.retry} />
+		<Section
+			id="dm-runs"
+			title="Recent runs"
+			aside={
+				<Show when={all()}>
+					{(href) => (
+						<a class="lnk" href={href()}>
+							All runs on {props.on.of?.name}
+						</a>
+					)}
 				</Show>
 			}
 		>
-			{(recent) => (
-				<Show
-					when={recent().reports.length > 0}
-					fallback={<p class="dm-none">No reports</p>}
-				>
-					<Table fold class="dm-inner" aria-labelledby="dm-reports">
-						<thead>
-							<tr>
-								<th scope="col">When</th>
-								<th scope="col">Head</th>
-								<th scope="col">Testbed</th>
-								<th scope="col">Adapter</th>
-								<th scope="col" data-align="end">
-									Alerts
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							<For each={recent().reports.slice(0, RECENT_REPORTS)}>
-								{(report) => (
-									<tr class="rowlink">
-										<td data-fold="l1">
-											<a
-												class="dm-link rowlink-name"
-												href={reportPath(props.slug, report.uuid)}
-												aria-label={`${shortDate(report.start_time)}, report on ${report.branch.name}, ${report.testbed.name}`}
-											>
-												{shortDate(report.start_time)}
-											</a>
-										</td>
-										<td data-fold="hide" class="mono muted">
-											{shortHash(report.branch.head.version?.hash)}
-										</td>
-										<td data-fold="l2">{report.testbed.name}</td>
-										<td data-fold="hide" class="muted">
-											{report.adapter}
-										</td>
-										<td data-fold="n1" data-align="end">
-											<Show
-												when={report.counts?.alerts.active}
-												fallback={<span class="muted">0</span>}
-											>
-												{(active) => (
-													<span class="dm-alerts">{active()} active</span>
-												)}
+			<Show
+				when={props.state.data}
+				fallback={
+					<Show
+						when={props.state.failed}
+						fallback={<Skeleton size="card" class="dm-card-skel" />}
+					>
+						<Failed what="The runs" retry={props.state.retry} />
+					</Show>
+				}
+			>
+				{(runs) => (
+					<Show
+						when={runs().length > 0}
+						fallback={<p class="dm-none">No runs</p>}
+					>
+						<Table fold class="dm-inner" aria-labelledby="dm-runs">
+							<thead>
+								<tr>
+									<th scope="col">When</th>
+									<Show when={!branch()}>
+										<th scope="col">Branch</th>
+									</Show>
+									<th scope="col">Head</th>
+									<th scope="col" data-align="end">
+										Reports
+									</th>
+									<Show when={branch()}>
+										<th scope="col">Testbed</th>
+									</Show>
+									<th scope="col" data-align="end">
+										Alerts
+									</th>
+								</tr>
+							</thead>
+							<tbody>
+								<For each={runs()}>
+									{(run) => (
+										<tr class="rowlink">
+											<td data-fold="l1">
+												<a
+													class="dm-link rowlink-name"
+													href={runPath(props.slug, run.uuid)}
+													aria-label={`${shortDate(run.start_time)}, run ${runHead(run)} on ${run.branch.name}, ${run.reports} ${run.reports === 1 ? "report" : "reports"}`}
+												>
+													{shortDate(run.start_time)}
+												</a>
+											</td>
+											<Show when={!branch()}>
+												<td data-fold="l2">{run.branch.name}</td>
 											</Show>
-										</td>
-									</tr>
-								)}
-							</For>
-						</tbody>
-					</Table>
-				</Show>
-			)}
-		</Show>
+											<td data-fold="hide" class="mono muted">
+												{runHead(run)}
+											</td>
+											<td data-fold="hide" data-align="end">
+												{run.reports}
+											</td>
+											<Show when={branch()}>
+												<td data-fold="l2">
+													{run.testbeds[0]}
+													<Show when={run.testbed_count > 1}>
+														<span
+															class="rn-more rowlink-own"
+															title={allNames(run.testbeds, run.testbed_count)}
+														>
+															+{run.testbed_count - 1}
+														</span>
+													</Show>
+												</td>
+											</Show>
+											<td data-fold="n1" data-align="end">
+												<Show
+													when={run.alerts.active}
+													fallback={<span class="muted">0</span>}
+												>
+													{(active) => (
+														<span class="dm-alerts">{active()} active</span>
+													)}
+												</Show>
+											</td>
+										</tr>
+									)}
+								</For>
+							</tbody>
+						</Table>
+					</Show>
+				)}
+			</Show>
+		</Section>
 	);
 };
 
 export const TestbedCards = (props: {
 	slug: string;
 	testbed: JsonTestbed | undefined;
+	runs: RunsState;
 	thresholds: ThresholdsState;
 }) => {
 	const spec = () => props.testbed?.spec;
 	return (
 		<>
-			<Stats
-				label="On this testbed"
-				stats={[
-					{
-						n: props.thresholds.data?.total,
-						one: "threshold",
-						many: "thresholds",
-					},
-				]}
-			/>
-			<div class="dm-twocol">
-				<Card
-					id="dm-spec"
-					title="Spec"
-					aside={
-						<Show when={spec()}>
-							{(shown) => <b class="sm">{shown().name}</b>}
-						</Show>
-					}
+			<Card id="dm-spec" title="Spec">
+				<Show
+					when={spec()}
+					fallback={<p class="dm-none">{props.testbed ? "No spec" : ""}</p>}
 				>
-					<Show
-						when={spec()}
-						fallback={<p class="dm-none">{props.testbed ? "No spec" : ""}</p>}
-					>
-						{(shown) => (
-							<dl class="dm-kvs">
-								<Kv k="os">{shown().os}</Kv>
-								<Kv k="architecture">{shown().architecture}</Kv>
-								<Kv k="cpu">{shown().cpu} cores</Kv>
-								<Kv k="memory">{bytes(shown().memory)}</Kv>
-								<Kv k="disk">{bytes(shown().disk)}</Kv>
-								<Show when={shown().sandbox}>
-									{(sandbox) => <Kv k="sandbox">{sandbox()}</Kv>}
-								</Show>
-								<Kv k="network">{shown().network ? "on" : "off"}</Kv>
-							</dl>
-						)}
-					</Show>
-				</Card>
-				<ThresholdsCard
-					slug={props.slug}
-					one="testbed"
-					first={{ title: "Branch", of: (t) => t.branch.name }}
-					second={{ title: "Measure", of: (t) => t.measure.name }}
-					state={props.thresholds}
-				/>
-			</div>
+					{(shown) => (
+						<dl class="dm-kvs">
+							<Kv k="name">{shown().name}</Kv>
+							<Kv k="slug">
+								<span class="mono">{shown().slug}</span>
+							</Kv>
+							<Kv k="os">{shown().os}</Kv>
+							<Kv k="architecture">{shown().architecture}</Kv>
+							<Kv k="cpu">{shown().cpu} cores</Kv>
+							<Kv k="memory">{bytes(shown().memory)}</Kv>
+							<Kv k="disk">{bytes(shown().disk)}</Kv>
+							<Show when={shown().sandbox}>
+								{(sandbox) => <Kv k="sandbox">{sandbox()}</Kv>}
+							</Show>
+							<Kv k="network">{shown().network ? "on" : "off"}</Kv>
+						</dl>
+					)}
+				</Show>
+			</Card>
+			<RecentRuns
+				slug={props.slug}
+				on={{ key: "testbed", of: props.testbed }}
+				state={props.runs}
+			/>
+			<ThresholdsCard
+				slug={props.slug}
+				one="testbed"
+				first={{ title: "Branch", of: (t) => t.branch.name }}
+				second={{ title: "Measure", of: (t) => t.measure.name }}
+				state={props.thresholds}
+			/>
 		</>
 	);
 };
@@ -306,36 +309,18 @@ export const MeasureCards = (props: {
 	thresholds: ThresholdsState;
 }) => (
 	<>
-		<Stats
-			label="This measure"
-			stats={[
-				{
-					n: props.thresholds.data?.total,
-					one: "threshold",
-					many: "thresholds",
-				},
-			]}
+		<Card id="dm-units" title="Units">
+			<dl class="dm-kvs">
+				<Kv k="units">{props.measure?.units}</Kv>
+			</dl>
+		</Card>
+		<ThresholdsCard
+			slug={props.slug}
+			one="measure"
+			first={{ title: "Branch", of: (t) => t.branch.name }}
+			second={{ title: "Testbed", of: (t) => t.testbed.name }}
+			state={props.thresholds}
 		/>
-		<div class="dm-twocol">
-			<Card id="dm-units" title="Units">
-				<dl class="dm-kvs">
-					<Kv k="units">{props.measure?.units}</Kv>
-					<Kv k="slug">
-						<span class="mono">{props.measure?.slug}</span>
-					</Kv>
-					<Kv k="created">
-						{props.measure ? shortDay(props.measure.created, 0) : ""}
-					</Kv>
-				</dl>
-			</Card>
-			<ThresholdsCard
-				slug={props.slug}
-				one="measure"
-				first={{ title: "Branch", of: (t) => t.branch.name }}
-				second={{ title: "Testbed", of: (t) => t.testbed.name }}
-				state={props.thresholds}
-			/>
-		</div>
 	</>
 );
 
@@ -436,17 +421,6 @@ export const BenchmarkCards = (props: {
 	};
 	return (
 		<>
-			<Stats
-				label="This benchmark"
-				stats={[
-					{ n: activeCount(), one: "variant", many: "variants" },
-					{
-						n: active().data ? inUse().length : undefined,
-						one: "parameter key",
-						many: "parameter keys",
-					},
-				]}
-			/>
 			<Card id="dm-params" title="Parameters in use">
 				<Show
 					when={active().data}
@@ -650,27 +624,6 @@ const Section = (props: {
 	</section>
 );
 
-const Stats = (props: {
-	label: string;
-	stats: { n: number | undefined; one: string; many: string }[];
-}) => (
-	<ul class="dm-stats" aria-label={props.label}>
-		<For each={props.stats}>
-			{(stat) => (
-				<li class="dm-stat">
-					<Show
-						when={stat.n !== undefined}
-						fallback={<Skeleton size="text" class="dm-stat-skel" />}
-					>
-						<span class="dm-stat-n">{stat.n}</span>
-					</Show>
-					<span class="dm-stat-l">{stat.n === 1 ? stat.one : stat.many}</span>
-				</li>
-			)}
-		</For>
-	</ul>
-);
-
 const Kv = (props: { k: string; children: JSX.Element }) => (
 	<div class="kv">
 		<dt>{props.k}</dt>
@@ -808,3 +761,11 @@ const Failed = (props: { what: string; retry: () => void }) => (
 );
 
 const shortHash = (hash: string | undefined) => hash?.slice(0, 7);
+
+const runHead = (run: JsonConsoleRunSummary) =>
+	shortHash(run.hash) ?? `v${run.number}`;
+
+const allNames = (names: readonly string[], count: number) =>
+	count > names.length
+		? `${names.join(", ")}, and ${count - names.length} more`
+		: names.join(", ");

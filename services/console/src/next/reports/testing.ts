@@ -1,32 +1,4 @@
-import type { JsonReport } from "../../types/bencher";
 import type { Api } from "../api";
-
-const START = Date.parse("2026-09-13T21:46:00Z");
-const HOUR = 60 * 60 * 1_000;
-
-/** A report as the list endpoint returns it, the `index`th newest, with only what a row reads. */
-export const reportFixture = (
-	index: number,
-	fields: { [K in keyof JsonReport]?: JsonReport[K] | undefined } = {},
-): JsonReport =>
-	({
-		uuid: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
-		user: { uuid: "user", name: "Muriel Bagge", slug: "muriel-bagge" },
-		branch: {
-			name: "main",
-			slug: "main",
-			head: { version: { number: index, hash: `9c1f2e4${"0".repeat(33)}` } },
-		},
-		testbed: { name: "ubuntu-latest", slug: "ubuntu-latest" },
-		adapter: "json",
-		start_time: new Date(START - index * HOUR).toISOString(),
-		end_time: new Date(START - index * HOUR + 120_000).toISOString(),
-		counts: {
-			results: [{ benchmarks: 18, measures: 2, lines: 36 }],
-			alerts: { total: 0, active: 0 },
-		},
-		...fields,
-	}) as unknown as JsonReport;
 
 /** Every request a fake API answered, and a way to answer the next ones. */
 export const fakeApi = (

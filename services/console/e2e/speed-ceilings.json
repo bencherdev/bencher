@@ -6,7 +6,7 @@
 		"cls": 0.00025,
 		"jsBytes": 39460,
 		"stylesheets": 1,
-		"cssBytes": 17300,
+		"cssBytes": 17120,
 		"deferredJsBytes": 105990,
 		"htmlBytes": 2720,
 		"inlineScriptBytes": 2910,
@@ -115,7 +115,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 58200,
+		"jsBytes": 55010,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
 		"htmlBytes": 2790,
@@ -126,7 +126,7 @@
 		"apiRequests": 5,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 58200,
+		"jsBytes": 55010,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
 		"htmlBytes": 2790,
@@ -322,7 +322,7 @@
 		"jsBytes": 43400,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
-		"cssBytes": 17300,
+		"cssBytes": 17120,
 		"htmlBytes": 1870,
 		"inlineScriptBytes": 960,
 		"lateModules": 0
@@ -336,7 +336,7 @@
 		"jsBytes": 45530,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
-		"cssBytes": 17300,
+		"cssBytes": 17120,
 		"htmlBytes": 1950,
 		"inlineScriptBytes": 960,
 		"lateModules": 0
@@ -350,7 +350,7 @@
 		"jsBytes": 46170,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
-		"cssBytes": 17300,
+		"cssBytes": 17120,
 		"htmlBytes": 1860,
 		"inlineScriptBytes": 960,
 		"lateModules": 0
@@ -364,7 +364,7 @@
 		"jsBytes": 55480,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
-		"cssBytes": 17300,
+		"cssBytes": 17120,
 		"htmlBytes": 1910,
 		"inlineScriptBytes": 960,
 		"lateModules": 0
@@ -378,7 +378,7 @@
 		"jsBytes": 56560,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
-		"cssBytes": 17300,
+		"cssBytes": 17120,
 		"htmlBytes": 1940,
 		"inlineScriptBytes": 960,
 		"lateModules": 0
@@ -392,7 +392,7 @@
 		"jsBytes": 49700,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
-		"cssBytes": 17300,
+		"cssBytes": 17120,
 		"htmlBytes": 1990,
 		"inlineScriptBytes": 960,
 		"lateModules": 0
@@ -406,7 +406,7 @@
 		"jsBytes": 49030,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
-		"cssBytes": 17300,
+		"cssBytes": 17120,
 		"htmlBytes": 1980,
 		"inlineScriptBytes": 960,
 		"lateModules": 0
@@ -420,7 +420,7 @@
 		"jsBytes": 51790,
 		"deferredJsBytes": 105990,
 		"stylesheets": 1,
-		"cssBytes": 17230,
+		"cssBytes": 17120,
 		"htmlBytes": 1940,
 		"inlineScriptBytes": 960,
 		"lateModules": 0
