@@ -74,11 +74,14 @@ export const rememberShell = (
 	});
 };
 
+/** The classic console's memory of the organization the reader last chose. */
+export const CLASSIC_ORGANIZATION = "BENCHER_ORGANIZATION";
+
 /** Forget the reader and all this browser remembers for them, for whoever signs in next. */
 export const forgetReader = (storage: Pick<Storage, "removeItem">) => {
 	for (const key of [
 		"BENCHER_USER",
-		"BENCHER_ORGANIZATION",
+		CLASSIC_ORGANIZATION,
 		SHELL_KEY,
 		VERSION_KEY,
 	]) {

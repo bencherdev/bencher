@@ -5,6 +5,7 @@ import {
 	alertPath,
 	classicHref,
 	nextHref,
+	organizationOf,
 	pageName,
 	parseNextPath,
 	projectPath,
@@ -36,6 +37,26 @@ describe("accountUser", () => {
 			accountUser("/next/console/projects/hashbrown/settings"),
 		).toBeUndefined();
 		expect(accountUser("/console/users/muriel-bagge/settings")).toBeUndefined();
+	});
+});
+
+describe("organizationOf", () => {
+	// Kills a project or account path taken for an organization's page, a
+	// classic path taken for the new console's, and an organization read from
+	// the wrong segment.
+	test("reads the organization an organization path is about", () => {
+		expect(
+			organizationOf("/next/console/organizations/pompeii-llc/settings"),
+		).toBe("pompeii-llc");
+		expect(
+			organizationOf("/next/console/projects/hashbrown/settings"),
+		).toBeUndefined();
+		expect(
+			organizationOf("/next/console/users/muriel-bagge/settings"),
+		).toBeUndefined();
+		expect(
+			organizationOf("/console/organizations/pompeii-llc/settings"),
+		).toBeUndefined();
 	});
 });
 

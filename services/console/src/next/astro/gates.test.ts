@@ -208,7 +208,7 @@ describe("AccountGate", () => {
 	const gate = async (storage: Record<string, string>) =>
 		run(
 			await container.renderToString(AccountGate, {
-				props: { user: "muriel-bagge" },
+				props: { next: profilePath("muriel-bagge") },
 				request: new Request(URL_),
 			}),
 			URL_,

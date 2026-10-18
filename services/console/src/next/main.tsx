@@ -14,7 +14,7 @@ import {
 import { handOff } from "./handoff";
 import { idbStore } from "./idb";
 import { forgetReader } from "./memory";
-import { accountUser, pageName, parseNextPath } from "./paths";
+import { accountUser, organizationOf, pageName, parseNextPath } from "./paths";
 import { consoleProjectQuery, fetchedVersions } from "./queries";
 import { USER_KEY, isCurrent, readReader, signInHref } from "./reader";
 import { PAGES } from "./routes";
@@ -53,7 +53,9 @@ const boot = async (mount: HTMLElement) => {
 				? pageName(place.rest)
 				: accountUser(location.pathname)
 					? "Profile"
-					: "NotFound"
+					: organizationOf(location.pathname)
+						? "OrgGeneral"
+						: "NotFound"
 		];
 	await within(
 		BOOT_WAIT,

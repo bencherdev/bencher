@@ -1,15 +1,16 @@
 import { Router } from "@solidjs/router";
 import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
-import { Show, createSignal } from "solid-js";
+import { Match, Suspense, Switch, createSignal } from "solid-js";
 import type { JsonAuthUser, JsonUser } from "../types/bencher";
+import { AccountContext } from "./account/context";
 import AccountLayout from "./account/Layout";
 import type { Api } from "./api";
 import { FlushContext } from "./flush";
 import Layout from "./Layout";
 import type { BmfVersion } from "./memory";
-import { NEXT_CONSOLE, accountUser } from "./paths";
+import { NEXT_CONSOLE, accountUser, organizationOf } from "./paths";
 import { rememberReader } from "./reader";
-import { CONSOLE_ROUTES, PROJECTS_ROUTE } from "./routes";
+import { CONSOLE_ROUTES, OrganizationLayout, PROJECTS_ROUTE } from "./routes";
 
 const App = (props: {
 	client: QueryClient;
@@ -31,35 +32,44 @@ const App = (props: {
 	return (
 		<QueryClientProvider client={props.client}>
 			<FlushContext.Provider value={props.flush}>
-				<Router
-					base={NEXT_CONSOLE}
-					root={(section) => (
-						<Show
-							when={accountUser(section.location.pathname)}
-							fallback={
-								<Layout
-									{...section}
-									api={props.api}
-									reader={reader()}
-									versions={props.versions}
-									host={props.host}
-									route={PROJECTS_ROUTE}
-									signOut={props.signOut}
-								/>
-							}
-						>
-							<AccountLayout
-								{...section}
-								api={props.api}
-								reader={reader}
-								keepUser={keepUser}
-								signOut={props.signOut}
-							/>
-						</Show>
-					)}
+				<AccountContext.Provider
+					value={{
+						api: props.api,
+						reader,
+						keepUser,
+						signOut: props.signOut,
+					}}
 				>
-					{CONSOLE_ROUTES}
-				</Router>
+					<Router
+						base={NEXT_CONSOLE}
+						root={(section) => (
+							<Switch
+								fallback={
+									<Layout
+										{...section}
+										api={props.api}
+										reader={reader()}
+										versions={props.versions}
+										host={props.host}
+										route={PROJECTS_ROUTE}
+										signOut={props.signOut}
+									/>
+								}
+							>
+								<Match when={accountUser(section.location.pathname)}>
+									<AccountLayout>{section.children}</AccountLayout>
+								</Match>
+								<Match when={organizationOf(section.location.pathname)}>
+									<Suspense>
+										<OrganizationLayout>{section.children}</OrganizationLayout>
+									</Suspense>
+								</Match>
+							</Switch>
+						)}
+					>
+						{CONSOLE_ROUTES}
+					</Router>
+				</AccountContext.Provider>
 			</FlushContext.Provider>
 		</QueryClientProvider>
 	);
