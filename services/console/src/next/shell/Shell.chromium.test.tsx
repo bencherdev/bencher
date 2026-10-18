@@ -1,8 +1,9 @@
 import "@bencherdev/ui/styles.css";
 import "../styles/console.css";
+import "../feedback/feedback.css";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type { Tab } from "../paths";
 import { expectNameStartsWithText, shownText } from "../ui/testing";
@@ -11,7 +12,9 @@ import { centerCurrentTab } from "./scroll";
 
 let dispose: (() => void) | undefined;
 
-const mount = (tab: Tab = "runs") => {
+/** Mounts the shell as a build with this Sentry DSN draws it. */
+const mount = (tab: Tab = "runs", dsn = "https://key@sentry.example/1") => {
+	vi.stubEnv("PUBLIC_SENTRY_DSN", dsn);
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);
@@ -24,6 +27,7 @@ const mount = (tab: Tab = "runs") => {
 				project="Hashbrown"
 				alerts={1}
 				account="/console/users/muriel-bagge/settings"
+				email="muriel@nowhere.example"
 			/>
 		),
 		root,
@@ -74,6 +78,7 @@ const box = (root: HTMLElement) => {
 const html = document.documentElement;
 
 afterEach(() => {
+	vi.unstubAllEnvs();
 	dispose?.();
 	document.body.replaceChildren();
 	html.removeAttribute("data-theme");
@@ -82,14 +87,16 @@ afterEach(() => {
 
 describe("narrow", () => {
 	// Kills a phone bar that shows the project or the organization in place of
-	// Bencher, keeps Docs or the theme toggle out of the menu, or drops the bell.
-	test("the bar holds the wordmark, the bell, the menu, and the avatar", async () => {
+	// Bencher, keeps Docs or the theme toggle out of the menu, drops the bell or
+	// the Feedback control, or draws Feedback anywhere but between the bell and the menu.
+	test("the bar holds the wordmark, the bell, Feedback, the menu, and the avatar", async () => {
 		await page.viewport(390, 844);
 		const root = mount();
 
 		expect(held(root)).toEqual([
 			"Bencher, home",
 			"1 active alert",
+			"Feedback",
 			"Menu",
 			"Account",
 		]);
@@ -128,7 +135,7 @@ describe("narrow", () => {
 		const targets = [
 			...root.querySelectorAll(".bar a, .bar button, .tab"),
 		].filter((control) => control.checkVisibility());
-		expect(targets).toHaveLength(4 + 2 + 6);
+		expect(targets).toHaveLength(5 + 2 + 6);
 		for (const control of targets) {
 			const target = control.getBoundingClientRect();
 			const name = control.getAttribute("aria-label") ?? shownText(control);
@@ -219,10 +226,11 @@ describe("narrow", () => {
 });
 
 describe("wide", () => {
-	// Kills a wide bar that loses the crumbs, Docs, or the theme toggle, draws
-	// Docs and the toggle anywhere but in the bar, shows the bell beside the
+	// Kills a wide bar that loses the crumbs, Docs, the theme toggle, or
+	// Feedback, draws Docs and the toggle anywhere but in the bar, draws Feedback
+	// anywhere but between the toggle and the avatar, shows the bell beside the
 	// Alerts tab's count, or shows the phone's menu button.
-	test("the bar holds the wordmark, the crumbs, Docs, the theme toggle, and the avatar", async () => {
+	test("the bar holds the wordmark, the crumbs, Docs, the theme toggle, Feedback, and the avatar", async () => {
 		await page.viewport(1280, 800);
 		const root = mount();
 
@@ -232,6 +240,7 @@ describe("wide", () => {
 			"Hashbrown",
 			"Docs",
 			"Switch between light and dark",
+			"Feedback",
 			"Account",
 		]);
 		expect(strays(root)).toEqual([]);
@@ -304,6 +313,44 @@ describe("wide", () => {
 		expect(tab && shownText(tab)).toBe("Alerts 1");
 		expectNameStartsWithText(tab);
 	});
+});
+
+// Kills a Feedback control drawn by a build with no Sentry DSN to send to.
+test("a build with no Sentry DSN draws no Feedback control", async () => {
+	for (const width of [1280, 390]) {
+		await page.viewport(width, 800);
+		const root = mount("runs", "");
+		expect(held(root)).not.toContain("Feedback");
+		expect(root.querySelector(".fbbtn")).toBeNull();
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a control that opens nothing, a dialog that loads but never shows, a
+// button that does not report the dialog open, and a dialog that does not know
+// the project or the reader.
+test("Feedback opens the dialog, which names the project and the reader", async () => {
+	await page.viewport(1280, 800);
+	mount();
+	const control = page.getByRole("button", { name: "Feedback", exact: true });
+	await expect.element(control).toHaveAttribute("aria-expanded", "false");
+
+	await control.click();
+
+	const dialog = page.getByRole("dialog", { name: "Send feedback" });
+	await expect.element(dialog).toBeVisible();
+	await expect.element(control).toHaveAttribute("aria-expanded", "true");
+	await expect
+		.element(page.getByRole("checkbox", { name: /Pompeii LLC \/ Hashbrown/ }))
+		.toBeVisible();
+	await expect
+		.element(page.getByRole("checkbox", { name: /muriel@nowhere\.example/ }))
+		.toBeVisible();
+	await page.getByRole("button", { name: "Cancel" }).click();
+	await expect.element(dialog).not.toBeInTheDocument();
+	await expect.element(control).toHaveAttribute("aria-expanded", "false");
+	await expect.element(control).toHaveFocus();
 });
 
 // Kills room held for a count a project does not have, as an empty badge, a

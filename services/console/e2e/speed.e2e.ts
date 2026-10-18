@@ -315,6 +315,28 @@ test("a move from Runs to a run holds its speed ceilings", async ({ page }) => {
 	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
 });
 
+// Kills a Feedback dialog whose code loads in more than one round, asks the
+// API for anything, or grows.
+test("opening Feedback holds its speed ceilings", async ({ page }) => {
+	await page.goto(RUNS);
+	await ready(page);
+
+	await holdScripts(page);
+	const since = await mark(page);
+	await page.getByRole("button", { name: "Feedback", exact: true }).click();
+	await expect(
+		page.getByRole("dialog", { name: "Send feedback" }),
+	).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("feedback open", cost);
+	const ceiling = ceilings.feedbackOpen;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
+});
+
 // Kills a move to a report that refetches the shell or the run, pulls in more
 // than its page, finds its code a round late, or defers more than its rows'
 // links.
