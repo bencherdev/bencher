@@ -454,7 +454,7 @@ const Danger = (props: { organization: Shown }) => {
 	);
 };
 
-// Members loads this chunk rather than split a shared one.
+// Members and Billing load this chunk rather than split a shared one.
 export { default as Frame } from "../organization/Frame";
 export { organizationIn, organizationQuery } from "../organization/data";
 export { failureOf } from "../organization/general";

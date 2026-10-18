@@ -9,14 +9,14 @@ interface Props {
 const { next } = Astro.props;
 
 // A reader with a version 1 project moves to the new console's page before
-// the classic page loads anything.
+// the classic page loads anything, with the query the page reads.
 ---
 
 <script is:inline define:vars={{ next, VERSION_KEY }}>
 	try {
 		var versions = JSON.parse(localStorage.getItem(VERSION_KEY) || "{}");
 		if (Object.values(versions).indexOf(1) !== -1) {
-			location.replace(next);
+			location.replace(next + location.search);
 		}
 	} catch (_) {}
 </script>

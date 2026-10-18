@@ -78,6 +78,11 @@ impl bencher_endpoint::Registrar for Api {
                 api_description.register(plan::org_plan_post)?;
                 api_description.register(plan::org_plan_patch)?;
                 api_description.register(plan::org_plan_delete)?;
+
+                if http_options {
+                    api_description.register(plan::org_plan_portal_options)?;
+                }
+                api_description.register(plan::org_plan_portal_post)?;
             }
 
             // Organization Usage

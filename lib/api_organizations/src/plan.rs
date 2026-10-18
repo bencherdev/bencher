@@ -1,12 +1,12 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::Biller;
+use bencher_billing::{Biller, PlanId as SubscriptionPlanId};
 use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
 use bencher_json::{
     OrganizationResourceId, PlanStatus,
-    organization::plan::{JsonNewPlan, JsonPlan, JsonUpdatePlan},
+    organization::plan::{JsonNewPlan, JsonPlan, JsonPlanPortal, JsonUpdatePlan},
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
@@ -317,6 +317,100 @@ async fn post_inner(
           "Failed to find metered plan after creating it"
             )})
     }
+}
+
+#[endpoint {
+    method = OPTIONS,
+    path =  "/v0/organizations/{organization}/plan/portal",
+    tags = ["organizations", "plan"]
+}]
+pub async fn org_plan_portal_options(
+    _rqctx: RequestContext<ApiContext>,
+    _path_params: Path<OrgPlanParams>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Post.into()]))
+}
+
+/// Open an organization's billing portal
+///
+/// Create a Stripe billing portal session where the customer paying for the organization's
+/// plan manages their payment method, returning to the organization's billing page.
+/// Available to organization managers and requires a user session:
+/// a user API key or a deprecated user API token is refused.
+#[endpoint {
+    method = POST,
+    path =  "/v0/organizations/{organization}/plan/portal",
+    tags = ["organizations", "plan"]
+}]
+pub async fn org_plan_portal_post(
+    rqctx: RequestContext<ApiContext>,
+    bearer_token: BearerToken,
+    path_params: Path<OrgPlanParams>,
+) -> Result<ResponseCreated<JsonPlanPortal>, HttpError> {
+    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    if !auth_user.is_session() {
+        return Err(forbidden_error(
+            "Only a user session can open the billing portal.",
+        ));
+    }
+    let json = portal_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    Ok(Post::auth_response_created(json))
+}
+
+async fn portal_inner(
+    context: &ApiContext,
+    path_params: OrgPlanParams,
+    auth_user: &AuthUser,
+) -> Result<JsonPlanPortal, HttpError> {
+    let query_organization =
+        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
+    context
+        .rbac
+        .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
+        .map_err(forbidden_error)?;
+    let query_plan = QueryPlan::belonging_to(&query_organization)
+        .first::<QueryPlan>(auth_conn!(context))
+        .map_err(resource_not_found_err!(Plan, query_organization))?;
+    let biller = context.biller()?;
+
+    let Some(plan_id) = query_plan
+        .metered_plan
+        .clone()
+        .map(SubscriptionPlanId::from)
+        .or_else(|| {
+            query_plan
+                .licensed_plan
+                .clone()
+                .map(SubscriptionPlanId::from)
+        })
+    else {
+        return Err(issue_error(
+            "Failed to find subscription for billing portal",
+            &format!(
+                "Failed to find plan (metered or licensed) for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
+            ),
+            "Failed to find subscription for billing portal",
+        ));
+    };
+    let return_url = context
+        .console_url
+        .clone()
+        .join(&format!(
+            "/next/console/organizations/{}/billing",
+            query_organization.slug
+        ))
+        .unwrap_or_else(|_| context.console_url.clone());
+    let url = biller
+        .new_portal_session(plan_id, return_url.as_ref())
+        .await
+        .map_err(|e| {
+            issue_error(
+                "Failed to create billing portal session",
+                &format!("Failed to create billing portal session for plan ({query_plan:?})."),
+                e,
+            )
+        })?;
+    Ok(JsonPlanPortal { url })
 }
 
 /// Block plan creation when the organization still has a plan that is active, trialing,

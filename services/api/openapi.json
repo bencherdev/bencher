@@ -2290,6 +2290,83 @@
         }
       }
     },
+    "/v0/organizations/{organization}/plan/portal": {
+      "post": {
+        "tags": [
+          "organizations",
+          "plan"
+        ],
+        "summary": "Open an organization's billing portal",
+        "description": "Create a Stripe billing portal session where the customer paying for the organization's plan manages their payment method, returning to the organization's billing page. Available to organization managers and requires a user session: a user API key or a deprecated user API token is refused.",
+        "operationId": "org_plan_portal_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "description": "The slug or UUID for an organization.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "successful creation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonPlanPortal"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/organizations/{organization}/projects": {
       "get": {
         "tags": [
@@ -15961,6 +16038,18 @@
           "organization",
           "status",
           "unit_amount"
+        ]
+      },
+      "JsonPlanPortal": {
+        "description": "A Stripe billing portal session where the plan's customer manages their payment method.",
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
         ]
       },
       "JsonPlot": {
