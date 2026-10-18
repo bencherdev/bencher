@@ -1,0 +1,10 @@
+---
+import { landing } from "../landing";
+import { VERSION_KEY } from "../memory";
+import { USER_KEY } from "../reader";
+
+// Runs before the first paint and before any module loads.
+const script = `try{var to=(${landing})(localStorage.getItem(${JSON.stringify(USER_KEY)}),localStorage.getItem(${JSON.stringify(VERSION_KEY)}),location.search,Date.now());if(to){location.replace(to)}}catch(_){}`;
+---
+
+<script is:inline set:html={script} />

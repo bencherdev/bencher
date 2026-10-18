@@ -15,6 +15,7 @@ import { type Api, ApiError } from "./api";
 import ContentSkeleton from "./ContentSkeleton";
 import {
 	type BmfVersion,
+	forgetVersion,
 	readShell,
 	rememberShell,
 	rememberVersion,
@@ -115,6 +116,14 @@ const Layout = (
 				: "network";
 	};
 
+	const gone = () => failure() === "not_found" || failure() === "forbidden";
+	// A project that no longer answers must not stay the reader's landing.
+	createEffect(() => {
+		if (gone()) {
+			forgetVersion(localStorage, slug());
+		}
+	});
+
 	return (
 		<ProjectContext.Provider value={{ api: props.api, slug, host: props.host }}>
 			<Shell
@@ -134,7 +143,7 @@ const Layout = (
 					<Suspense fallback={<ContentSkeleton />}>{props.children}</Suspense>
 				}
 			>
-				<Match when={failure() === "not_found" || failure() === "forbidden"}>
+				<Match when={gone()}>
 					<ProjectNotFound />
 				</Match>
 				<Match when={failure()}>
