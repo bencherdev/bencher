@@ -13,13 +13,16 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "plus")]
-use crate::SpecUuid;
+use bencher_valid::{Architecture, Cpu, Disk, Memory, OperatingSystem};
+
 use crate::{
     AlertUuid, BenchmarkSlug, BenchmarkUuid, BranchNameId, BranchSlug, BranchUuid, HeadUuid,
     JsonPerfQuery, MeasureSlug, MeasureUuid, ModelUuid, ParameterSet, ReportUuid, TestbedNameId,
     TestbedSlug, TestbedUuid, ThresholdUuid, VariantUuid, VersionUuid,
     urlencoded::{UrlEncodedError, from_urlencoded, from_urlencoded_list},
 };
+#[cfg(feature = "plus")]
+use crate::{SpecSlug, SpecUuid};
 
 use super::{
     alert::AlertStatus,
@@ -122,12 +125,18 @@ pub struct JsonConsoleReport {
     pub end_time: DateTimeMillis,
     pub adapter: Adapter,
     pub counts: JsonConsoleReportCounts,
-    /// The report before this one on the same branch and testbed.
+    /// Its runner job, until the job's results are in.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub previous: Option<JsonConsoleReportLink>,
-    /// The report after this one on the same branch and testbed.
+    pub job: Option<JsonConsoleJob>,
+    /// The spec its runner job ran on.
+    #[cfg(feature = "plus")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub next: Option<JsonConsoleReportLink>,
+    pub spec: Option<JsonConsoleSpec>,
+    /// The run the report belongs to, on the first page only, and absent when
+    /// the runs list leaves the run out: every one of its reports is on an
+    /// archived branch or testbed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run: Option<JsonConsoleReportRun>,
     /// The history window, which ends at this report.
     pub window: JsonConsoleWindow,
     /// The number of lines in the report that match the search and filters.
@@ -158,8 +167,101 @@ pub struct JsonConsoleReportCounts {
     pub alerts: JsonReportAlertsCounts,
 }
 
-/// A report, with what a link to it shows: a neighbor's Previous or Next
-/// control, or the report that raised an alert.
+/// Where a runner job's report stands until its results are in. A report its own
+/// CI job posted has no job.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ConsoleJobStatus {
+    /// Waiting for a runner.
+    Queued,
+    /// On a runner, or ran and its results not yet processed.
+    Running,
+    Failed,
+    Canceled,
+}
+
+/// A runner job whose report is not finished, with the times its status shows.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleJob {
+    pub status: ConsoleJobStatus,
+    /// When it was submitted.
+    pub created: DateTimeMillis,
+    /// When a runner started it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started: Option<DateTimeMillis>,
+    /// When it ended.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub completed: Option<DateTimeMillis>,
+}
+
+/// A run's reports whose runner jobs are not finished, by status.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRunJobs {
+    pub queued: u32,
+    pub running: u32,
+    pub failed: u32,
+    pub canceled: u32,
+    /// While any is queued or running, the earliest of their starts, taking the
+    /// submission of one not yet started.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub since: Option<DateTimeMillis>,
+}
+
+/// The spec a runner job ran on.
+#[cfg(feature = "plus")]
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleSpec {
+    pub name: ResourceName,
+    pub slug: SpecSlug,
+    pub os: OperatingSystem,
+    pub architecture: Architecture,
+    pub cpu: Cpu,
+    pub memory: Memory,
+    pub disk: Disk,
+}
+
+/// A report's run: the reports with its version that the run page lists.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleReportRun {
+    /// The run's version.
+    pub uuid: VersionUuid,
+    /// The report's place in the run by start, from 1, absent when the run
+    /// leaves the report out: it is on an archived testbed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<u32>,
+    /// Every report in the run.
+    pub total: u32,
+    /// The run's report that started before this one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous: Option<JsonConsoleRunReportLink>,
+    /// The run's report that started after this one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next: Option<JsonConsoleRunReportLink>,
+}
+
+/// A report of a run, with what a Previous or Next control through the run shows.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRunReportLink {
+    pub uuid: ReportUuid,
+    /// Its place in the run by start, from 1.
+    pub order: u32,
+    pub testbed: ResourceName,
+    pub start_time: DateTimeMillis,
+}
+
+/// A report, with what a link to it shows: the report that raised an alert.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -479,6 +581,9 @@ pub struct JsonConsoleAlertsCounts {
 pub struct JsonConsoleAlertGroup {
     /// The report that raised the alerts.
     pub uuid: ReportUuid,
+    /// The report's place in its run by start, from 1, in a run's alerts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<u32>,
     /// An index into `branches`.
     pub branch: u32,
     /// An index into `testbeds`.
@@ -820,7 +925,7 @@ pub struct JsonConsoleRunSummary {
     pub branch: JsonConsoleBranch,
     /// When its first report started.
     pub start_time: DateTimeMillis,
-    /// When its last report ended.
+    /// When its last report ended, a failed or canceled runner job ending with its job.
     pub end_time: DateTimeMillis,
     pub reports: u32,
     /// Its testbeds in the order its reports first ran on them, at most
@@ -838,6 +943,9 @@ pub struct JsonConsoleRunSummary {
     /// The sum of its reports' lines.
     pub lines: u32,
     pub alerts: JsonReportAlertsCounts,
+    /// Its reports whose runner jobs are not finished, absent when there are none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub jobs: Option<JsonConsoleRunJobs>,
 }
 
 /// Who sent a report: the project key that created it, else the person.
@@ -881,7 +989,7 @@ pub struct JsonConsoleRun {
     pub branch: JsonConsoleBranch,
     /// When its first report started.
     pub start_time: DateTimeMillis,
-    /// When its last report ended.
+    /// When its last report ended, a failed or canceled runner job ending with its job.
     pub end_time: DateTimeMillis,
     /// Every report in the run, across pages.
     pub total: u32,
@@ -889,7 +997,37 @@ pub struct JsonConsoleRun {
     /// The sum of its reports' lines.
     pub lines: u32,
     pub alerts: JsonReportAlertsCounts,
+    /// Its reports whose runner jobs are not finished, absent when there are none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub jobs: Option<JsonConsoleRunJobs>,
+    /// The run before this one on its branch, as the runs list orders them, on
+    /// the first page only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub previous: Option<JsonConsoleRunLink>,
+    /// The run after this one on its branch, on the first page only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next: Option<JsonConsoleRunLink>,
+    /// The alerts its reports raised, grouped by report in start order, as the
+    /// alerts list draws them, on the first page of a run that raised any:
+    /// `total` counts every one, and the groups hold at most
+    /// [`MAX_CONSOLE_ALERTS_PER_PAGE`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alerting: Option<JsonConsoleAlerts>,
     pub reports: Vec<JsonConsoleRunReport>,
+}
+
+/// A run, with what a link to it shows: the run page's Previous or Next control.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRunLink {
+    /// The run's version.
+    pub uuid: VersionUuid,
+    pub number: VersionNumber,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hash: Option<GitHash>,
+    /// When its first report started.
+    pub start_time: DateTimeMillis,
 }
 
 #[typeshare::typeshare]
@@ -906,6 +1044,9 @@ pub struct JsonConsoleRunReport {
     /// The most lines any of its iterations reported.
     pub lines: u32,
     pub alerts: JsonReportAlertsCounts,
+    /// Its runner job, until the job's results are in.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job: Option<JsonConsoleJob>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author: Option<JsonConsoleAuthor>,
 }

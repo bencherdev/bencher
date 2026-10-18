@@ -58,6 +58,8 @@ interface LineRowProps {
 	onIntent?: () => void;
 	/** What the row shows in the measure's place, such as the report an alert came from. */
 	aside?: JSX.Element;
+	/** What the row shows beside the measure, in a column of its own. */
+	beside?: JSX.Element;
 	/** No longer alerting, as a dismissed alert: drawn in the muted color, never faded. */
 	dimmed?: boolean;
 	/** Draws the row's own controls: a last cell when wide, after the Explore link, and a third line when narrow. */
@@ -98,8 +100,11 @@ const LineRow = (props: LineRowProps) => {
 	const region = () => `lr-ex-${props.line.key}`;
 	const alerting = () => props.line.alert !== undefined && !props.dimmed;
 	const columns = () =>
-		(props.narrow ? COLUMNS.narrow : COLUMNS.wide) +
-		(props.actions === undefined || props.narrow ? 0 : 1);
+		props.narrow
+			? COLUMNS.narrow
+			: COLUMNS.wide +
+				(props.actions === undefined ? 0 : 1) +
+				(props.beside === undefined ? 0 : 1);
 
 	const select = () => (
 		<Show when={props.onSelect}>
@@ -261,6 +266,7 @@ const LineRow = (props: LineRowProps) => {
 							</div>
 						</td>
 						<td>{props.aside ?? props.line.measure.name}</td>
+						<Show when={props.beside}>{(beside) => <td>{beside()}</td>}</Show>
 						<td>{history()}</td>
 						<td class="lr-end lr-num">{numbers().value}</td>
 						<td class="lr-num">{delta()}</td>
@@ -292,6 +298,14 @@ const LineRow = (props: LineRowProps) => {
 							<div class="lrn-lines" title={label().name}>
 								<div class="lrn-l1">{name()}</div>
 								<div class="lrn-l2">
+									<Show when={props.beside}>
+										{(beside) => (
+											<>
+												{beside()}
+												<span aria-hidden="true">·</span>
+											</>
+										)}
+									</Show>
 									<span>{props.aside ?? props.line.measure.name}</span>
 									{history()}
 									<Show when={props.line.guard} fallback={noThreshold()}>

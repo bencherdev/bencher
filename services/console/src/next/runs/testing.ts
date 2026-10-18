@@ -1,7 +1,9 @@
-import type {
-	JsonConsoleRun,
-	JsonConsoleRunReport,
-	JsonConsoleRunSummary,
+import {
+	Adapter,
+	type JsonConsoleRun,
+	type JsonConsoleRunJobs,
+	type JsonConsoleRunReport,
+	type JsonConsoleRunSummary,
 } from "../../types/bencher";
 
 const START = Date.parse("2026-09-13T21:16:00Z");
@@ -81,3 +83,95 @@ export const runPageFixture = (
 
 /** Some of a response's fields, an optional one left out by `undefined`. */
 type Fields<T> = { [K in keyof T]?: T[K] | undefined };
+
+/** A run as wide as a likely one reads: a long branch, adapter, and author, and three-digit alerts. */
+export const likelyRun = (
+	index: number,
+	fields: Fields<JsonConsoleRunSummary> = {},
+) =>
+	runFixture(index, {
+		branch: { ...branch, name: "feature-simd", slug: "feature-simd" },
+		adapters: [Adapter.RustCriterion],
+		alerts: { total: 456, active: 123 },
+		...fields,
+	});
+
+/** Likely runs at `now`: one finished 11 months ago, the widest time a row shows, then the longest Running and Failed pills. */
+export const likelyRuns = (now: number) => {
+	const jobs = (fields: Partial<JsonConsoleRunJobs>) =>
+		({
+			queued: 0,
+			running: 0,
+			failed: 0,
+			canceled: 0,
+			...fields,
+		}) as JsonConsoleRunJobs;
+	const start_time = now - 30 * HOUR;
+	const failed = (index: number, took: number) =>
+		likelyRun(index, {
+			reports: 2,
+			start_time,
+			end_time: start_time + took,
+			jobs: jobs({ failed: 2 }),
+		});
+	const old = now - 335 * 24 * HOUR;
+	return [
+		likelyRun(0, { start_time: old, end_time: old + 120_000 }),
+		likelyRun(1, {
+			reports: 2,
+			jobs: jobs({ running: 2, since: now - 59 * 60_000 }),
+		}),
+		failed(2, 59 * 60_000 + 59_000),
+		failed(3, 25 * HOUR + 59 * 60_000),
+	];
+};
+
+/** A run's report as wide as a likely one reads: a long adapter and three-digit alerts. */
+export const likelyReport = (
+	index: number,
+	fields: Fields<JsonConsoleRunReport> = {},
+) =>
+	runReportFixture(index, {
+		adapter: Adapter.RustCriterion,
+		alerts: { total: 456, active: 123 },
+		...fields,
+	});
+
+/** How far `cell`'s content, or anything in it, runs past its box. */
+export const overrun = (cell: Element) =>
+	Math.max(
+		0,
+		...[cell, ...cell.querySelectorAll("*")].map(
+			(element) => element.scrollWidth - element.clientWidth,
+		),
+	);
+
+/** The text of each of `row`'s cells, in `columns` (by header) if given, that the reader sees cut off. */
+export const cutCells = (row: Element, columns?: readonly string[]) => {
+	const headers = [
+		...(row.closest("table")?.querySelectorAll("thead th") ?? []),
+	].map((th) => th.textContent?.trim() ?? "");
+	return [...row.querySelectorAll("td")]
+		.filter(
+			(cell, index) =>
+				(!columns || columns.includes(headers[index] ?? "")) &&
+				overrun(cell) > 0.5,
+		)
+		.map((cell) => `${headers[cell.cellIndex]}: ${cell.textContent?.trim()}`);
+};
+
+/** Each header of `table` whose text and padding are wider than its box, which a header's own scrollWidth never shows. */
+export const cutHeaders = (table: Element) =>
+	[...table.querySelectorAll<HTMLElement>("thead th")]
+		.filter((th) => {
+			const text = document.createRange();
+			text.selectNodeContents(th);
+			const style = getComputedStyle(th);
+			return (
+				text.getBoundingClientRect().width +
+					Number.parseFloat(style.paddingLeft) +
+					Number.parseFloat(style.paddingRight) >
+				th.getBoundingClientRect().width + 0.5
+			);
+		})
+		.map((th) => th.textContent?.trim());

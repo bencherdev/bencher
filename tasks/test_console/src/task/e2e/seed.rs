@@ -10,7 +10,10 @@ use bencher_json::{
     JsonUser, JsonUserKeyCreated, Jwt, PlanLevel, Secret,
 };
 use bencher_license::Licensor;
+use camino::Utf8Path;
 use serde::Serialize;
+
+use super::jobs;
 
 // The test tokens are signed for these two emails.
 const ADMIN: (&str, &str, &str) = (
@@ -35,7 +38,7 @@ const TEST_LICENSE_KEY: &str =
 const TEST_LICENSE_ENTITLEMENTS: u32 = 1_000_000;
 
 /// The time the browser clock is frozen at: 2026-09-14T00:00:00Z.
-const NOW: i64 = 1_789_344_000;
+pub(super) const NOW: i64 = 1_789_344_000;
 /// The newest report on `main`, which raises the one active alert: 2026-09-13T21:16:00Z.
 const LAST_MAIN_REPORT: i64 = 1_789_334_160;
 const MAIN_REPORTS: usize = 24;
@@ -43,14 +46,14 @@ const MAIN_REPORTS: usize = 24;
 const MAIN_INTERVAL: i64 = 56 * 60 * 60;
 const FEATURE_REPORTS: usize = 3;
 const FEATURE_INTERVAL: i64 = 20 * 60 * 60;
-const REPORT_DURATION: i64 = 2 * 60;
+pub(super) const REPORT_DURATION: i64 = 2 * 60;
 
-const KIB_1: u32 = 1 << 10;
-const KIB_64: u32 = 1 << 16;
+pub(super) const KIB_1: u32 = 1 << 10;
+pub(super) const KIB_64: u32 = 1 << 16;
 
-const MAIN: &str = "main";
+pub(super) const MAIN: &str = "main";
 const FEATURE: &str = "feature-simd";
-const TESTBED: &str = "ubuntu-latest";
+pub(super) const TESTBED: &str = "ubuntu-latest";
 
 /// The project key that runs the newest report, on its own testbed so no threshold checks it.
 const KEY: &str = "GitHub Actions";
@@ -129,6 +132,8 @@ pub struct Seed {
     projects: SeedProjects,
     last_main_hash: &'static str,
     split_hash: &'static str,
+    jobs_hash: &'static str,
+    held_hash: &'static str,
 }
 
 /// A signed in reader as the console stores one, holding a user key where
@@ -160,6 +165,13 @@ struct SeedProjects {
     private: SeedProject,
     /// Version 1, with runs of three iterations on one line and one alert on a second iteration.
     iterations: SeedProject,
+    /// Version 1, with runner jobs that wait, run, failed, and were canceled.
+    runner: SeedProject,
+    /// Version 1, each with one run that alerted and still runs, which the suite adds alerting
+    /// reports to: one for each repeat.
+    held: Vec<SeedProject>,
+    /// Version 1, each with one report, a queued job's, on an archived branch: one for each repeat.
+    handover: Vec<SeedProject>,
 }
 
 #[derive(Debug, Serialize)]
@@ -170,7 +182,7 @@ struct SeedProject {
 }
 
 impl Seed {
-    pub async fn new(api_url: &str, console_url: &str) -> anyhow::Result<Self> {
+    pub async fn new(api_url: &str, console_url: &str, db: &Utf8Path) -> anyhow::Result<Self> {
         let api = Api::new(api_url);
 
         // The first user to sign up is the server admin.
@@ -221,6 +233,7 @@ impl Seed {
         check_alerts(&api, &hashbrown, token).await?;
         pins(&api, &hashbrown, token).await?;
         iteration_history(&api, &iterations, token).await?;
+        let jobs = jobs::seed(&api, db, &organization, token, admin_token).await?;
 
         Ok(Self {
             api_url: api_url.to_owned(),
@@ -240,9 +253,14 @@ impl Seed {
                 empty: empty.into(),
                 private: private.into(),
                 iterations: iterations.into(),
+                runner: jobs.runner.into(),
+                held: jobs.held.into_iter().map(Into::into).collect(),
+                handover: jobs.handover.into_iter().map(Into::into).collect(),
             },
             last_main_hash: LAST_MAIN_HASH,
             split_hash: SPLIT_HASH,
+            jobs_hash: jobs::JOBS_HASH,
+            held_hash: jobs::HELD_HASH,
         })
     }
 }
@@ -692,13 +710,13 @@ impl Variant {
 }
 
 /// A thin JSON client for the API under test.
-struct Api {
+pub(super) struct Api {
     client: reqwest::Client,
     url: String,
 }
 
 #[derive(Clone, Copy)]
-enum Method {
+pub(super) enum Method {
     Post,
     Patch,
 }
@@ -762,7 +780,7 @@ impl Api {
         })
     }
 
-    async fn project(
+    pub(super) async fn project(
         &self,
         organization: &JsonOrganization,
         name: &str,
@@ -786,7 +804,7 @@ impl Api {
         read(request, path).await
     }
 
-    async fn send<T: serde::de::DeserializeOwned>(
+    pub(super) async fn send<T: serde::de::DeserializeOwned>(
         &self,
         method: Method,
         path: &str,

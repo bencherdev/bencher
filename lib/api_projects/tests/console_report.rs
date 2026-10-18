@@ -239,7 +239,6 @@ struct Seeded {
     feb_10: JsonReport,
     feb_20: JsonReport,
     subject: JsonReport,
-    next: JsonReport,
 }
 
 /// A steady history on `main` and `localhost`, interleaved with a report on
@@ -347,7 +346,7 @@ async fn seeded(server: &TestServer, label: &str) -> Seeded {
         ),
     )
     .await;
-    let next = post(
+    post(
         server,
         &fixture,
         Post::main(
@@ -365,7 +364,6 @@ async fn seeded(server: &TestServer, label: &str) -> Seeded {
         feb_10,
         feb_20,
         subject,
-        next,
     }
 }
 
@@ -453,10 +451,11 @@ fn x(report: &JsonConsoleReport) -> Vec<i64> {
 const ALPHA_10_LATENCY: &str = r#"alpha {"size":10} Latency value"#;
 const BETA_P99: &str = r#"beta {"size":1} Latency p99"#;
 
-// Kills: neighbors read without the branch or testbed filter, or with the order
-// reversed, and counts taken from the page instead of the report.
+// Kills: a report alone in its run stepping to the reports before and after it
+// on its branch and testbed, and counts taken from the page instead of the
+// report.
 #[tokio::test]
-async fn console_report_identity_and_neighbors() {
+async fn console_report_identity_and_run() {
     let server = TestServer::new_at(at(NOW)).await;
     let seeded = seeded(&server, "identity").await;
 
@@ -492,27 +491,11 @@ async fn console_report_identity_and_neighbors() {
     assert_eq!(report.total, 7);
     assert_eq!(report.lines.len(), 1);
 
-    let previous = report.previous.expect("the subject has a previous report");
-    assert_eq!(previous.uuid, seeded.feb_20.uuid);
-    assert_eq!(
-        i64::from(previous.start_time),
-        millis("2024-02-20T00:00:00Z")
-    );
-    assert_eq!(
-        previous.hash.as_ref().map(AsRef::as_ref),
-        Some("1000000000000000000000000000000000000005")
-    );
-    assert!(matches!(previous.adapter, Adapter::Json));
-    let next = report.next.expect("the subject has a next report");
-    assert_eq!(next.uuid, seeded.next.uuid);
-    assert_eq!(i64::from(next.start_time), millis("2024-02-27T00:00:00Z"));
-
-    let first = console_report(&server, &seeded.fixture, &seeded.first, "?per_page=1").await;
-    assert!(first.previous.is_none(), "the first report has no previous");
-    assert_eq!(
-        first.next.map(|next| next.uuid),
-        Some(seeded.jan_20.uuid),
-        "the report on another branch or testbed is never a neighbor"
+    let run = report.run.expect("the subject is in a run");
+    assert_eq!((run.order, run.total), (Some(1), 1));
+    assert!(
+        run.previous.is_none() && run.next.is_none(),
+        "the reports before and after it are other runs"
     );
 }
 
@@ -1658,66 +1641,58 @@ async fn console_report_delta_against_a_negative_baseline() {
     );
 }
 
-// Kills: neighbors that skip a report ending at the same moment.
+// Kills: Previous and Next through a run that skip a report starting and
+// ending with another, or that place the two by anything but which came first.
 #[tokio::test]
-async fn console_report_neighbors_break_ties_by_creation() {
+async fn console_report_steps_break_ties_by_creation() {
+    const HASH: &str = "b000000000000000000000000000000000000001";
     let server = TestServer::new_at(at(NOW)).await;
     let fixture = fixture(&server, "ties").await;
     let first = post(
         &server,
         &fixture,
-        Post::main(
-            "2024-02-01T00:00:00Z",
-            "b000000000000000000000000000000000000001",
-            STEADY,
-        ),
+        Post::main("2024-02-10T00:00:00Z", HASH, STEADY),
     )
     .await;
-    // Two runs that end together, the longer one posted first.
-    let long = post(
-        &server,
-        &fixture,
-        Post {
-            seconds: 7_200,
-            ..Post::main(
-                "2024-02-10T00:00:00Z",
-                "b000000000000000000000000000000000000002",
-                STEADY,
+    // Two reports of the run that start and end together.
+    let mut twins = Vec::new();
+    for _ in 0..2 {
+        twins.push(
+            post(
+                &server,
+                &fixture,
+                Post {
+                    seconds: 3_600,
+                    ..Post::main("2024-02-10T01:00:00Z", HASH, STEADY)
+                },
             )
-        },
-    )
-    .await;
-    let short = post(
-        &server,
-        &fixture,
-        Post {
-            seconds: 3_600,
-            ..Post::main(
-                "2024-02-10T01:00:00Z",
-                "b000000000000000000000000000000000000003",
-                STEADY,
-            )
-        },
-    )
-    .await;
+            .await,
+        );
+    }
     let last = post(
         &server,
         &fixture,
-        Post::main(
-            "2024-02-20T00:00:00Z",
-            "b000000000000000000000000000000000000004",
-            STEADY,
-        ),
+        Post::main("2024-02-10T03:00:00Z", HASH, STEADY),
     )
     .await;
 
-    let long_page = console_report(&server, &fixture, &long, "?per_page=1").await;
-    let short_page = console_report(&server, &fixture, &short, "?per_page=1").await;
-
-    assert_eq!(long_page.previous.map(|link| link.uuid), Some(first.uuid));
-    assert_eq!(long_page.next.map(|link| link.uuid), Some(short.uuid));
-    assert_eq!(short_page.previous.map(|link| link.uuid), Some(long.uuid));
-    assert_eq!(short_page.next.map(|link| link.uuid), Some(last.uuid));
+    let steps = |report: JsonConsoleReport| {
+        let run = report.run.expect("the report is in a run");
+        (
+            run.order,
+            run.previous.map(|link| link.uuid),
+            run.next.map(|link| link.uuid),
+        )
+    };
+    let (early, late) = (&twins[0], &twins[1]);
+    assert_eq!(
+        steps(console_report(&server, &fixture, early, "?per_page=1").await),
+        (Some(2), Some(first.uuid), Some(late.uuid))
+    );
+    assert_eq!(
+        steps(console_report(&server, &fixture, late, "?per_page=1").await),
+        (Some(3), Some(early.uuid), Some(last.uuid))
+    );
 }
 
 // Kills: an active count that counts every alert, and dismissed or silenced

@@ -1,10 +1,16 @@
 import type {
 	JsonAlert,
+	JsonConsoleBranch,
 	JsonConsoleMeasure,
 	JsonConsoleReport,
-	JsonReport,
+	JsonConsoleRun,
+	JsonConsoleRunReport,
+	JsonConsoleRunSummary,
+	JsonConsoleRuns,
+	JsonPlot,
 } from "../../types/bencher";
 import type { Api } from "../api";
+import { projectPath } from "../paths";
 import {
 	DEFAULT_WINDOW,
 	type ExploreQuery,
@@ -12,9 +18,69 @@ import {
 	blankQuery,
 } from "../query/query";
 import type { SelectedLine } from "../query/selection";
+import { live, unfinished } from "../runs/status";
+import { consolePath, project } from "./queries";
 
 // A threshold with no metric checks the conventional name.
 const VALUE = "value";
+
+/** How many of each list blank Explore starts from. */
+export const START = { alerts: 3, runs: 4, plots: 3 } as const;
+
+/** How many of a run's reports an opened run lists; its page lists the rest. */
+export const RUN_REPORTS = 8;
+
+const listQuery = <T>(api: Api, slug: string, name: string, path: string) => ({
+	queryKey: ["console", "start", slug, name],
+	queryFn: async () => (await api.get<T[]>(`${project(slug)}${path}`)).data,
+});
+
+export const startQueries = (api: Api, slug: string) => ({
+	alerts: listQuery<JsonAlert>(
+		api,
+		slug,
+		"alerts",
+		`/alerts?status=active&sort=created&direction=desc&per_page=${START.alerts}`,
+	),
+	runs: {
+		queryKey: ["console", "start", slug, "runs"],
+		// The Runs tab's default window, so the landing tab never groups every
+		// run; all time only when nothing ran in it.
+		queryFn: async () => {
+			const runs = async (since = "") =>
+				(
+					await api.get<JsonConsoleRuns>(
+						`${consolePath(slug)}/runs?per_page=${START.runs}${since}`,
+					)
+				).data.runs;
+			const recent = await runs(
+				`&start_time=${Date.now() - DEFAULT_WINDOW * 1000}`,
+			);
+			return recent.length > 0 ? recent : runs();
+		},
+		...live((runs: JsonConsoleRunSummary[]) =>
+			runs.some((run) => unfinished(run.jobs)),
+		),
+	},
+	plots: listQuery<JsonPlot>(
+		api,
+		slug,
+		"plots",
+		`/plots?per_page=${START.plots}`,
+	),
+});
+
+/** The first of a run's reports in start order, as an opened run lists them. */
+export const runReportsQuery = (api: Api, slug: string, run: string) => ({
+	queryKey: ["console", "run-reports", slug, run],
+	queryFn: async () =>
+		(
+			await api.get<JsonConsoleRun>(
+				`${consolePath(slug)}/runs/${encodeURIComponent(run)}?per_page=${RUN_REPORTS}`,
+			)
+		).data,
+	...live((run: JsonConsoleRun) => unfinished(run.jobs)),
+});
 
 /** The line an alert fired on, as Explore opens it. */
 export const alertLine = ({
@@ -30,6 +96,32 @@ export const alertLine = ({
 	metric: threshold.metric ?? VALUE,
 	alerting: true,
 });
+
+// Explore names a run and how long it took itself: importing the Runs pages'
+// helpers splits a chunk off them that every page's entry then names.
+
+/** A run's page. */
+export const runHref = (slug: string, run: string) =>
+	`${projectPath(slug, "runs")}/${run}`;
+
+/** A run as its link reads: its short hash, else its version number. */
+export const runName = (run: { hash?: string | undefined; number: number }) =>
+	run.hash?.slice(0, 7) ?? `v${run.number}`;
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** How long a run took, as the Runs list reads it: seconds, then minutes and seconds, then hours and minutes. */
+export const runTime = (ms: number) => {
+	const seconds = Math.max(0, Math.floor(ms / 1000));
+	if (seconds < 60) {
+		return `${seconds}s`;
+	}
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) {
+		return `${minutes}m ${pad(seconds % 60)}s`;
+	}
+	return `${Math.floor(minutes / 60)}h ${pad(minutes % 60)}m`;
+};
 
 /** A benchmark a report ran, with the measures it reported there. */
 export interface ReportBenchmark {
@@ -49,7 +141,7 @@ export const reportBenchmarksQuery = (
 		reportBenchmarks(
 			(
 				await api.get<JsonConsoleReport>(
-					`/v0/console/projects/${encodeURIComponent(slug)}/reports/${encodeURIComponent(report)}?per_page=1&window=1&points=2`,
+					`${consolePath(slug)}/reports/${encodeURIComponent(report)}?per_page=1&window=1&points=2`,
 				)
 			).data,
 		),
@@ -77,21 +169,27 @@ export const reportBenchmarks = ({
 				];
 	});
 
+/** A report of a run, with its run's branch. */
+export type RunReport = Pick<
+	JsonConsoleRunReport,
+	"uuid" | "testbed" | "start_time" | "end_time"
+> & { branch: Pick<JsonConsoleBranch, "uuid" | "head"> };
+
 /**
  * Explore's query for one benchmark of a report: every variant of it on the
  * report's head and testbed, in the measures it reported, over the default
  * window, or one as long ending at the report when it ran before that window.
  */
 export const reportBenchmarkQuery = (
-	report: JsonReport,
+	report: RunReport,
 	benchmark: ReportBenchmark,
 	now: number,
 ): ExploreQuery => ({
 	...blankQuery(),
-	...(Date.parse(report.start_time) < now - DEFAULT_WINDOW * 1000
-		? { window: { seconds: DEFAULT_WINDOW, end: Date.parse(report.end_time) } }
+	...(report.start_time < now - DEFAULT_WINDOW * 1000
+		? { window: { seconds: DEFAULT_WINDOW, end: report.end_time } }
 		: {}),
-	branches: [{ uuid: report.branch.uuid, head: report.branch.head.uuid }],
+	branches: [{ uuid: report.branch.uuid, head: report.branch.head }],
 	testbeds: [{ uuid: report.testbed.uuid }],
 	benchmarks: [benchmark.uuid],
 	measures: benchmark.measures.slice(0, MAX_ENTRIES).map(({ uuid }) => uuid),

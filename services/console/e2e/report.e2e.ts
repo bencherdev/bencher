@@ -83,7 +83,7 @@ test("the alerting line leads its group with its value, delta, and limit", async
 	);
 	await expect(
 		page.getByText(
-			"Sep 13, 2026, 21:16 · json · 9c1f2e4 · 4 benchmarks, 18 variants, 2 measures, 36 lines · took 2m 00s",
+			"#1 of 2 · Sep 13, 2026, 21:16:00 · json · 4 benchmarks, 18 variants, 2 measures, 36 lines · took 2m 00s",
 			{ exact: true },
 		),
 	).toBeVisible();
@@ -268,33 +268,34 @@ test("a row toggles its plot from anywhere on it but its checkbox, and not from 
 	await expect(plot).toHaveCount(0);
 });
 
-// Kills neighbors that are not the branch's and testbed's, links that lose the
-// view, and a Next on the newest report.
-test("Previous and Next walk the branch's reports", async ({
-	page,
-	request,
-}) => {
+// Kills steps that leave the report's run for the branch's other reports, links
+// that lose the view, and a Previous on the run's first report.
+test("Previous and Next walk the run's reports", async ({ page, request }) => {
 	const newest = await newestMain(request);
 	await page.goto(reportPath(hashbrown.slug, newest, "?group=measure"));
+	await expect(
+		page.getByText(/^#1 of 2 · Sep 13, 2026, 21:16:00 · json/),
+	).toBeVisible();
+	await expect(page.getByRole("button", { name: "Previous" })).toBeDisabled();
+
+	await page
+		.getByRole("link", {
+			name: /^Next #2 · macos-latest: report 2 of 2$/,
+		})
+		.click();
+	await expect(
+		page.getByText(/^#2 of 2 · Sep 13, 2026, 21:46:00 · magic/),
+	).toBeVisible();
+	await expect(page).toHaveURL(/[?&]group=measure(&|$)/);
 	await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
 
 	await page
-		.getByRole("link", {
-			name: "Previous Sep 11, 13:16: the report on main, ubuntu-latest, 0000000",
-		})
-		.click();
-	await expect(page.getByText(/^Sep 11, 2026, 13:16 · json/)).toBeVisible();
-	await expect(page).toHaveURL(/[?&]group=measure(&|$)/);
-
-	await page
-		.getByRole("link", {
-			name: /^Next Sep 13, 21:16: the report on main, ubuntu-latest, 9c1f2e4$/,
-		})
+		.getByRole("link", { name: /^Previous #1 · ubuntu-latest/ })
 		.click();
 	await expect(page).toHaveURL(
 		new RegExp(`/reports/${newest}\\?group=measure$`),
 	);
-	await expect(page.getByText(/^Sep 13, 2026, 21:16 · json/)).toBeVisible();
+	await expect(page.getByText(/^#1 of 2 · /)).toBeVisible();
 });
 
 // Kills a selection that opens more or fewer lines than chosen, loses the
@@ -506,7 +507,7 @@ test.describe("on a phone", () => {
 				name: "window 4w, 4 weeks",
 			}),
 		).toBeVisible();
-		await expect(page.getByRole("link", { name: /^Previous / })).toBeVisible();
+		await expect(page.getByRole("link", { name: /^Next / })).toBeVisible();
 
 		const select = row.getByRole("checkbox", { name: `Select ${ALERTING}` });
 		const expand = row.getByRole("button", { name: `Expand ${ALERTING}` });

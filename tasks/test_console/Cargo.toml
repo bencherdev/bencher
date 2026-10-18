@@ -14,7 +14,9 @@ plus = [
     "dep:base64",
     "dep:bencher_license",
     "dep:camino",
+    "dep:diesel",
     "dep:futures-concurrency",
+    "dep:libsqlite3-sys",
     "dep:tempfile",
     "tokio/process",
     "tokio/signal",
@@ -27,7 +29,9 @@ anyhow.workspace = true
 base64 = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 clap.workspace = true
+diesel = { workspace = true, optional = true, features = ["sqlite"] }
 futures-concurrency = { workspace = true, optional = true }
+libsqlite3-sys = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
 rustls.workspace = true
 serde.workspace = true

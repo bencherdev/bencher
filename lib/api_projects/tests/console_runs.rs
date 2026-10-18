@@ -1,20 +1,29 @@
 #![expect(
     unused_crate_dependencies,
     clippy::expect_used,
+    clippy::indexing_slicing,
     clippy::tests_outside_test_module,
+    clippy::too_many_lines,
     reason = "integration test file"
 )]
 //! The console's runs: `/v0/console/projects/{project}/runs` and
-//! `/v0/console/projects/{project}/runs/{version}`.
+//! `/v0/console/projects/{project}/runs/{version}`, and a report's run on
+//! `/v0/console/projects/{project}/reports/{report}`.
 //!
 //! A run is every report with one version, which one branch head made. Every
 //! report here is posted through the API with a fixed time.
 
 use bencher_api_tests::TestServer;
 use bencher_json::{
-    DateTime, DateTimeMillis, JsonProjectKeyCreated, JsonReport, ProjectSlug, VersionUuid,
+    DateTime, DateTimeMillis, JsonProjectKeyCreated, JsonReport, ProjectSlug, ReportUuid,
+    VersionUuid,
     project::{
-        console::{ConsoleAuthorKind, JsonConsoleRun, JsonConsoleRunSummary, JsonConsoleRuns},
+        alert::AlertStatus,
+        console::{
+            ConsoleAuthorKind, JsonConsoleAlerts, JsonConsoleReport, JsonConsoleRun,
+            JsonConsoleRunLink, JsonConsoleRunReportLink, JsonConsoleRunSummary, JsonConsoleRuns,
+            MAX_CONSOLE_ALERTS_PER_PAGE,
+        },
         report::Adapter,
     },
 };
@@ -94,6 +103,19 @@ fn one_line() -> String {
         }],
     })
     .to_string()
+}
+
+/// One more `gamma` latency line than a page of alerts holds.
+fn many(latency: f64) -> String {
+    let variants = (1..=u32::from(MAX_CONSOLE_ALERTS_PER_PAGE) + 1)
+        .map(|size| {
+            serde_json::json!({
+                "parameters": { "size": size },
+                "measures": { "latency": { "value": latency } },
+            })
+        })
+        .collect::<Vec<_>>();
+    serde_json::json!({ "gamma": variants }).to_string()
 }
 
 const STEADY: f64 = 200.0;
@@ -889,6 +911,989 @@ async fn console_run_not_found_and_signed_out() {
         assert!(
             matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN),
             "{path}: {status}"
+        );
+    }
+}
+
+/// A run's Previous or Next as its hash, or its version number when it has none.
+fn link_head(link: &JsonConsoleRunLink) -> String {
+    link.hash
+        .as_ref()
+        .map_or_else(|| format!("v{}", link.number), ToString::to_string)
+}
+
+/// The run page's Previous and Next for the report's run.
+async fn steps(
+    server: &TestServer,
+    fixture: &Fixture,
+    report: &JsonReport,
+) -> (Option<String>, Option<String>) {
+    let run = run(server, fixture, version_of(server, report), "").await;
+    (
+        run.previous.as_ref().map(link_head),
+        run.next.as_ref().map(link_head),
+    )
+}
+
+const STEP: [&str; 7] = [
+    "a000000000000000000000000000000000000001",
+    "a000000000000000000000000000000000000002",
+    "a000000000000000000000000000000000000003",
+    "a000000000000000000000000000000000000004",
+    "a000000000000000000000000000000000000005",
+    "a000000000000000000000000000000000000006",
+    "a000000000000000000000000000000000000007",
+];
+
+fn stepped(index: usize) -> Option<String> {
+    STEP.get(index).map(|hash| (*hash).to_owned())
+}
+
+// Kills: Previous and Next taken from another branch's runs, from a run whose
+// every report is archived, by a run's last report rather than its first, by
+// start alone where two runs start together, past either end of the branch,
+// and a link that names another run or its start.
+#[tokio::test]
+async fn console_run_previous_and_next_on_its_branch() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "steps").await;
+    let first = post(
+        &server,
+        &fixture,
+        Post::new("2024-02-01T00:00:00Z", Some(STEP[0])),
+    )
+    .await;
+    // Starts second and ends last.
+    let late = post(
+        &server,
+        &fixture,
+        Post::new("2024-02-03T00:00:00Z", Some(STEP[1])),
+    )
+    .await;
+    let tied_low = post(
+        &server,
+        &fixture,
+        Post::new("2024-02-05T00:00:00Z", Some(STEP[2])),
+    )
+    .await;
+    let tied_high = post(
+        &server,
+        &fixture,
+        Post::new("2024-02-05T00:00:00Z", Some(STEP[3])),
+    )
+    .await;
+    post(
+        &server,
+        &fixture,
+        Post {
+            branch: "feature",
+            thresholds: false,
+            ..Post::new("2024-02-06T00:00:00Z", Some(STEP[4]))
+        },
+    )
+    .await;
+    post(
+        &server,
+        &fixture,
+        Post {
+            testbed: "retired",
+            thresholds: false,
+            ..Post::new("2024-02-07T00:00:00Z", Some(STEP[5]))
+        },
+    )
+    .await;
+    let last = post(
+        &server,
+        &fixture,
+        Post::new("2024-02-10T00:00:00Z", Some(STEP[6])),
+    )
+    .await;
+    post(
+        &server,
+        &fixture,
+        Post::new("2024-02-12T00:00:00Z", Some(STEP[1])),
+    )
+    .await;
+    archive_testbed(&server, &fixture, "retired").await;
+
+    assert_eq!(steps(&server, &fixture, &first).await, (None, stepped(1)));
+    assert_eq!(
+        steps(&server, &fixture, &late).await,
+        (stepped(0), stepped(2))
+    );
+    assert_eq!(
+        steps(&server, &fixture, &tied_low).await,
+        (stepped(1), stepped(3))
+    );
+    assert_eq!(
+        steps(&server, &fixture, &tied_high).await,
+        (stepped(2), stepped(6))
+    );
+    assert_eq!(steps(&server, &fixture, &last).await, (stepped(3), None));
+
+    let run = run(&server, &fixture, version_of(&server, &last), "").await;
+    assert!(
+        run.alerting.is_none(),
+        "a run that raised no alerts reads none"
+    );
+    let previous = run.previous.expect("the last run has a previous run");
+    assert_eq!(previous.uuid, version_of(&server, &tied_high));
+    assert_eq!(
+        Some(previous.number),
+        tied_high
+            .branch
+            .head
+            .version
+            .as_ref()
+            .map(|version| version.number)
+    );
+    assert_eq!(
+        i64::from(previous.start_time),
+        millis("2024-02-05T00:00:00Z")
+    );
+}
+
+async fn report_page(
+    server: &TestServer,
+    fixture: &Fixture,
+    report: &JsonReport,
+) -> JsonConsoleReport {
+    report_page_with(server, fixture, report, "?per_page=1").await
+}
+
+async fn report_page_with(
+    server: &TestServer,
+    fixture: &Fixture,
+    report: &JsonReport,
+    query: &str,
+) -> JsonConsoleReport {
+    let (status, text) = get(
+        server,
+        Some(&fixture.token),
+        &format!(
+            "/v0/console/projects/{}/reports/{}{query}",
+            fixture.slug, report.uuid
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "GET report: {text}");
+    serde_json::from_str(&text).expect("Failed to parse the report")
+}
+
+/// A step through a run: the report's place, the report, and its testbed.
+fn step(link: Option<&JsonConsoleRunReportLink>) -> Option<(u32, ReportUuid, String)> {
+    link.map(|link| (link.order, link.uuid, link.testbed.to_string()))
+}
+
+// Kills: Previous and Next that step by branch and testbed rather than through
+// the run, a place in the run that differs from the run page's, a count taken
+// from anything but the run's reports, and a step that names another report's
+// start.
+#[tokio::test]
+async fn console_report_steps_through_its_run() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let seeded = seeded(&server, "reportrun").await;
+    let fixture = &seeded.fixture;
+    let version = version_of(&server, &seeded.split[0]);
+    let [one, two, three] = &seeded.split;
+    let localhost = || "localhost".to_owned();
+    let elsewhere = || "elsewhere".to_owned();
+    for (report, order, previous, next) in [
+        (one, 1, None, Some((2, two.uuid, elsewhere()))),
+        (
+            two,
+            2,
+            Some((1, one.uuid, localhost())),
+            Some((3, three.uuid, localhost())),
+        ),
+        (three, 3, Some((2, two.uuid, elsewhere())), None),
+    ] {
+        let page = report_page(&server, fixture, report).await;
+        let run = page.run.expect("the report is in a run");
+        assert_eq!(run.uuid, version);
+        assert_eq!(run.order, Some(order));
+        assert_eq!(run.total, 3);
+        assert_eq!(step(run.previous.as_ref()), previous, "#{order}'s previous");
+        assert_eq!(step(run.next.as_ref()), next, "#{order}'s next");
+    }
+    let middle = report_page(&server, fixture, two).await;
+    let next = middle
+        .run
+        .and_then(|run| run.next)
+        .expect("the second report has a next");
+    assert_eq!(i64::from(next.start_time), millis("2024-02-20T00:00:10Z"));
+    for query in ["?per_page=1&page=2", "?per_page=0"] {
+        let page = report_page_with(&server, fixture, two, query).await;
+        assert!(page.run.is_none(), "{query} reads no run");
+    }
+}
+
+// Kills: a run's reports that start together placed by anything before their
+// end, on the run page or on the report's.
+#[tokio::test]
+async fn console_report_places_reports_that_start_together_by_end() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "startedtogether").await;
+    let long = post(
+        &server,
+        &fixture,
+        Post {
+            seconds: 600,
+            ..Post::new("2024-02-20T00:00:00Z", Some(SPLIT))
+        },
+    )
+    .await;
+    let short = post(
+        &server,
+        &fixture,
+        Post::new("2024-02-20T00:00:00Z", Some(SPLIT)),
+    )
+    .await;
+
+    let run_page = run(&server, &fixture, version_of(&server, &long), "").await;
+    let order = run_page
+        .reports
+        .iter()
+        .map(|report| (report.order, report.uuid))
+        .collect::<Vec<_>>();
+    assert_eq!(order, [(1, short.uuid), (2, long.uuid)]);
+    let long_page = report_page(&server, &fixture, &long).await;
+    let long_run = long_page.run.expect("the long report is in a run");
+    assert_eq!(long_run.order, Some(2));
+    assert_eq!(long_run.previous.map(|link| link.uuid), Some(short.uuid));
+}
+
+// Kills: a report on an archived testbed numbered in its run or counted in it,
+// steps that stop at it or skip past its neighbors, and a run named for a
+// report the runs list leaves out with its whole run.
+#[tokio::test]
+async fn console_report_run_leaves_out_archived_reports() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let seeded = seeded(&server, "reportarchived").await;
+    let fixture = &seeded.fixture;
+    let [one, two, three] = &seeded.split;
+    archive_testbed(&server, fixture, "elsewhere").await;
+
+    let hidden = report_page(&server, fixture, two).await;
+    let run = hidden.run.expect("the run still lists its other reports");
+    assert_eq!(run.order, None);
+    assert_eq!(run.total, 2);
+    assert_eq!(
+        step(run.previous.as_ref()),
+        Some((1, one.uuid, "localhost".to_owned()))
+    );
+    assert_eq!(
+        step(run.next.as_ref()),
+        Some((2, three.uuid, "localhost".to_owned()))
+    );
+    let after = report_page(&server, fixture, three).await;
+    let run = after.run.expect("the third report is in its run");
+    assert_eq!(run.order, Some(2));
+    assert_eq!(
+        step(run.previous.as_ref()),
+        Some((1, one.uuid, "localhost".to_owned()))
+    );
+
+    archive(&server, fixture, "branches", "feature").await;
+    let feature = report_page(&server, fixture, &seeded.feature).await;
+    assert!(feature.run.is_none(), "the runs list leaves its run out");
+}
+
+/// Each group's place in the run and report, with its alerts' lines by name.
+fn alert_groups(alerting: &JsonConsoleAlerts) -> Vec<(Option<u32>, ReportUuid, Vec<String>)> {
+    alerting
+        .groups
+        .iter()
+        .map(|group| {
+            let lines = group
+                .alerts
+                .iter()
+                .map(|alert| {
+                    let line = &alert.line;
+                    let benchmark = &alerting.benchmarks[line.benchmark as usize];
+                    let variant = &alerting.variants[line.variant as usize];
+                    let measure = &alerting.measures[line.measure as usize];
+                    format!(
+                        "{} {} {}",
+                        benchmark.name,
+                        variant.parameters.tags().collect::<Vec<_>>().join(" "),
+                        measure.name
+                    )
+                })
+                .collect();
+            (group.order, group.uuid, lines)
+        })
+        .collect()
+}
+
+// Kills: alerts from another run or from a report the run leaves out, groups
+// out of start order or numbered by anything but the run's order, a dismissed
+// alert dropped or counted as active, and a history read off another testbed.
+#[tokio::test]
+async fn console_run_alerts_across_its_reports() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "runalerts").await;
+    for (time, hash) in [("2024-02-01T00:00:00Z", H1), ("2024-02-05T00:00:00Z", H2)] {
+        for testbed in ["localhost", "elsewhere"] {
+            post(
+                &server,
+                &fixture,
+                Post {
+                    testbed,
+                    ..Post::new(time, Some(hash))
+                },
+            )
+            .await;
+        }
+    }
+    let first = post(
+        &server,
+        &fixture,
+        Post {
+            iterations: vec![results(JUMP)],
+            ..Post::new("2024-02-20T00:00:00Z", Some(SPLIT))
+        },
+    )
+    .await;
+    post(
+        &server,
+        &fixture,
+        Post {
+            testbed: "elsewhere",
+            ..Post::new("2024-02-20T00:00:02Z", Some(SPLIT))
+        },
+    )
+    .await;
+    let third = post(
+        &server,
+        &fixture,
+        Post {
+            testbed: "elsewhere",
+            iterations: vec![results(JUMP)],
+            ..Post::new("2024-02-20T00:00:05Z", Some(SPLIT))
+        },
+    )
+    .await;
+    let later = post(
+        &server,
+        &fixture,
+        Post {
+            iterations: vec![results(2.0 * JUMP)],
+            ..Post::new("2024-02-25T00:00:00Z", Some(RETIRED))
+        },
+    )
+    .await;
+    assert!(
+        later
+            .alerts
+            .as_ref()
+            .is_some_and(|alerts| !alerts.is_empty()),
+        "the later run alerts too"
+    );
+    let version = version_of(&server, &first);
+    let line = || vec!["alpha size=10 Latency".to_owned()];
+
+    let alerting = run(&server, &fixture, version, "")
+        .await
+        .alerting
+        .expect("the first page holds the run's alerts");
+    assert_eq!((alerting.total, alerting.counts.active), (2, 2));
+    assert_eq!(
+        alert_groups(&alerting),
+        [(Some(1), first.uuid, line()), (Some(3), third.uuid, line()),]
+    );
+    let second = run(&server, &fixture, version, "?per_page=2&page=2").await;
+    assert!(
+        second.previous.is_none() && second.next.is_none() && second.alerting.is_none(),
+        "only the first page carries the run's steps and alerts"
+    );
+    // Each history runs over its own testbed, the run's other report on it included.
+    let points = alerting
+        .groups
+        .iter()
+        .map(|group| group.points.x.len())
+        .collect::<Vec<_>>();
+    assert_eq!(points, [3, 4]);
+
+    dismiss(&server, &fixture, &first).await;
+    let alerting = run(&server, &fixture, version, "")
+        .await
+        .alerting
+        .expect("the first page holds the run's alerts");
+    assert_eq!(alerting.total, 2);
+    assert_eq!((alerting.counts.active, alerting.counts.dismissed), (1, 1));
+    let dismissed = alerting.groups[0].alerts[0]
+        .line
+        .alert
+        .expect("the line follows its alert");
+    assert_eq!(dismissed.status, AlertStatus::Dismissed);
+
+    archive_testbed(&server, &fixture, "elsewhere").await;
+    let alerting = run(&server, &fixture, version, "")
+        .await
+        .alerting
+        .expect("the first page holds the run's alerts");
+    assert_eq!(alerting.total, 1);
+    assert_eq!(alert_groups(&alerting), [(Some(1), first.uuid, line())]);
+}
+
+// Kills: a run's alerts drawn past the alerts list's page, and a total that
+// counts only the alerts drawn.
+#[tokio::test]
+async fn console_run_alerts_hold_at_most_a_page() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "manyalerts").await;
+    for (time, hash) in [("2024-02-01T00:00:00Z", H1), ("2024-02-05T00:00:00Z", H2)] {
+        post(
+            &server,
+            &fixture,
+            Post {
+                iterations: vec![many(STEADY)],
+                ..Post::new(time, Some(hash))
+            },
+        )
+        .await;
+    }
+    let jumped = post(
+        &server,
+        &fixture,
+        Post {
+            iterations: vec![many(JUMP)],
+            ..Post::new("2024-02-20T00:00:00Z", Some(SPLIT))
+        },
+    )
+    .await;
+
+    let alerting = run(&server, &fixture, version_of(&server, &jumped), "")
+        .await
+        .alerting
+        .expect("the first page holds the run's alerts");
+    assert_eq!(alerting.total, u32::from(MAX_CONSOLE_ALERTS_PER_PAGE) + 1);
+    let drawn = alerting
+        .groups
+        .iter()
+        .map(|group| group.alerts.len())
+        .sum::<usize>();
+    assert_eq!(drawn, usize::from(MAX_CONSOLE_ALERTS_PER_PAGE));
+}
+
+// Kills Previous and Next that never read past the window, that take the
+// nearest run the window's read finds whatever its first start, or that keep a
+// run whose report reaches the window though its first start is far before it;
+// checked against the runs list's own order.
+#[tokio::test]
+async fn console_run_steps_read_past_the_window() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "farsteps").await;
+    for (time, hash) in [
+        ("2023-11-01T00:00:00Z", STEP[0]),
+        ("2023-11-10T00:00:00Z", STEP[1]),
+        // The first run's second report reaches the third run's window.
+        ("2024-01-10T00:00:00Z", STEP[0]),
+        ("2024-01-15T00:00:00Z", STEP[2]),
+        ("2024-02-25T00:00:00Z", STEP[3]),
+    ] {
+        post(&server, &fixture, Post::new(time, Some(hash))).await;
+    }
+    steps_follow_the_list(&server, &fixture, &[STEP[3], STEP[2], STEP[1], STEP[0]]).await;
+}
+
+// Kills a Next that keeps the run the window finds by a report on an archived
+// testbed, though the run's first visible start is past the window and a
+// nearer run starts before it.
+#[tokio::test]
+async fn console_run_next_skips_a_run_found_by_an_archived_report() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "archivedsteps").await;
+    for (time, testbed, hash) in [
+        ("2024-01-01T00:00:00Z", "localhost", STEP[0]),
+        ("2024-01-20T00:00:00Z", "elsewhere", STEP[2]),
+        ("2024-02-10T00:00:00Z", "localhost", STEP[1]),
+        ("2024-02-20T00:00:00Z", "localhost", STEP[2]),
+    ] {
+        post(
+            &server,
+            &fixture,
+            Post {
+                testbed,
+                ..Post::new(time, Some(hash))
+            },
+        )
+        .await;
+    }
+    archive_testbed(&server, &fixture, "elsewhere").await;
+    steps_follow_the_list(&server, &fixture, &[STEP[2], STEP[1], STEP[0]]).await;
+}
+
+/// The runs on `main` list newest first as `heads`, and each one's Previous and Next are the
+/// runs beside it in that list.
+async fn steps_follow_the_list(server: &TestServer, fixture: &Fixture, heads_in_order: &[&str]) {
+    let listed = runs(server, fixture, "?branch=main").await;
+    let order = heads(&listed);
+    assert_eq!(order, heads_in_order, "the runs list's order");
+    for (index, summary) in listed.runs.iter().enumerate() {
+        let run = run(server, fixture, summary.uuid, "").await;
+        assert_eq!(
+            (
+                run.previous.as_ref().map(link_head),
+                run.next.as_ref().map(link_head)
+            ),
+            (
+                order.get(index + 1).cloned(),
+                index
+                    .checked_sub(1)
+                    .and_then(|newer| order.get(newer).cloned())
+            ),
+            "{}'s steps",
+            order[index]
+        );
+    }
+}
+
+/// Runner jobs: a report created for one exists before its results, and its job's status
+/// shows until the results are in. No API takes a job through its states without a runner,
+/// so the jobs here are written as the runner protocol leaves them.
+#[cfg(feature = "plus")]
+mod jobs {
+    use bencher_json::{
+        JobUuid, SpecUuid,
+        project::console::{ConsoleJobStatus, JsonConsoleJob, JsonConsoleRunJobs},
+        runner::JobStatus,
+    };
+    use diesel::OptionalExtension as _;
+
+    use super::{
+        Fixture, JsonReport, NOW, Post, ReportUuid, TestServer, at, fixture, millis, post,
+        report_page, run, runs_of, schema, version_of,
+    };
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    const SPEC: &str = "standard-x86";
+
+    struct Job {
+        status: JobStatus,
+        created: &'static str,
+        started: Option<&'static str>,
+        completed: Option<&'static str>,
+    }
+
+    impl Job {
+        const fn new(status: JobStatus, created: &'static str) -> Self {
+            Self {
+                status,
+                created,
+                started: None,
+                completed: None,
+            }
+        }
+
+        const fn started(self, started: &'static str) -> Self {
+            Self {
+                started: Some(started),
+                ..self
+            }
+        }
+
+        const fn completed(self, completed: &'static str) -> Self {
+            Self {
+                completed: Some(completed),
+                ..self
+            }
+        }
+    }
+
+    /// The spec every job here runs on, made once.
+    fn spec_id(server: &TestServer) -> i32 {
+        let mut conn = server.db_conn();
+        if let Some(id) = schema::spec::table
+            .filter(schema::spec::slug.eq(SPEC))
+            .select(schema::spec::id)
+            .first::<i32>(&mut conn)
+            .optional()
+            .expect("Failed to read the spec")
+        {
+            return id;
+        }
+        let created = at(NOW);
+        diesel::insert_into(schema::spec::table)
+            .values((
+                schema::spec::uuid.eq(SpecUuid::new()),
+                schema::spec::name.eq("Standard x86"),
+                schema::spec::slug.eq(SPEC),
+                schema::spec::os.eq("linux"),
+                schema::spec::architecture.eq("x86_64"),
+                schema::spec::cpu.eq(8),
+                schema::spec::memory.eq(0x0004_0000_0000i64),
+                schema::spec::disk.eq(0x0019_0000_0000i64),
+                schema::spec::network.eq(false),
+                schema::spec::created.eq(created),
+                schema::spec::modified.eq(created),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert the spec");
+        schema::spec::table
+            .filter(schema::spec::slug.eq(SPEC))
+            .select(schema::spec::id)
+            .first(&mut conn)
+            .expect("Failed to read the spec")
+    }
+
+    /// Give a report a runner job in the given state.
+    fn give_job(server: &TestServer, report: &JsonReport, job: &Job) {
+        let spec_id = spec_id(server);
+        let mut conn = server.db_conn();
+        let (report_id, project_id, organization_id): (i32, i32, i32) = schema::report::table
+            .inner_join(schema::project::table)
+            .filter(schema::report::uuid.eq(report.uuid))
+            .select((
+                schema::report::id,
+                schema::report::project_id,
+                schema::project::organization_id,
+            ))
+            .first(&mut conn)
+            .expect("Failed to read the report");
+        let created = at(job.created);
+        diesel::insert_into(schema::job::table)
+            .values((
+                schema::job::uuid.eq(JobUuid::new()),
+                schema::job::organization_id.eq(organization_id),
+                schema::job::project_id.eq(project_id),
+                schema::job::report_id.eq(report_id),
+                schema::job::source_ip.eq("127.0.0.1"),
+                schema::job::spec_id.eq(spec_id),
+                schema::job::config.eq("{}"),
+                schema::job::timeout.eq(3600),
+                schema::job::priority.eq(0),
+                schema::job::status.eq(job.status),
+                schema::job::started.eq(job.started.map(at)),
+                schema::job::completed.eq(job.completed.map(at)),
+                schema::job::created.eq(created),
+                schema::job::modified.eq(created),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert the job");
+    }
+
+    /// A report as a runner job's starts: no results yet.
+    fn submitted(time: &'static str, hash: &'static str) -> Post {
+        Post {
+            iterations: Vec::new(),
+            ..Post::new(time, Some(hash))
+        }
+    }
+
+    fn view(
+        job: Option<&JsonConsoleJob>,
+    ) -> Option<(ConsoleJobStatus, i64, Option<i64>, Option<i64>)> {
+        job.map(|job| {
+            (
+                job.status,
+                job.created.into(),
+                job.started.map(Into::into),
+                job.completed.map(Into::into),
+            )
+        })
+    }
+
+    fn counts(jobs: Option<&JsonConsoleRunJobs>) -> Option<(u32, u32, u32, u32, Option<i64>)> {
+        jobs.map(|jobs| {
+            (
+                jobs.queued,
+                jobs.running,
+                jobs.failed,
+                jobs.canceled,
+                jobs.since.map(Into::into),
+            )
+        })
+    }
+
+    const RUN: &str = "7000000000000000000000000000000000000007";
+
+    // Kills: a job status read as another (pending or claimed not Queued; running, completed,
+    // or a runner gone quiet not Running; failed; canceled), a processed job still shown, a
+    // report posted by its own job given a status, a count per status taken from the wrong
+    // reports, a run's start of waiting that counts a finished job, takes a started job's
+    // submission, or skips one not yet started, a job's times swapped, and a job matched to
+    // the report whose id is its own.
+    #[tokio::test]
+    async fn console_run_shows_each_runner_job_status() {
+        let server = TestServer::new_at(at(NOW)).await;
+        // Another project's report comes first, so no job's id is its report's.
+        let other = fixture(&server, "jobstatus-other").await;
+        post(
+            &server,
+            &other,
+            Post::new("2024-02-20T06:00:00Z", Some(RUN)),
+        )
+        .await;
+        let fixture = fixture(&server, "jobstatus").await;
+        let jobs = [
+            Job::new(JobStatus::Pending, "2024-02-20T10:03:00Z"),
+            Job::new(JobStatus::Claimed, "2024-02-20T10:04:00Z"),
+            Job::new(JobStatus::Running, "2024-02-20T10:00:00Z").started("2024-02-20T10:05:00Z"),
+            Job::new(JobStatus::Completed, "2024-02-20T10:00:00Z")
+                .started("2024-02-20T10:06:00Z")
+                .completed("2024-02-20T10:07:00Z"),
+            Job::new(JobStatus::Unknown, "2024-02-20T10:00:00Z").started("2024-02-20T10:08:00Z"),
+            Job::new(JobStatus::Failed, "2024-02-20T09:00:00Z")
+                .started("2024-02-20T09:01:00Z")
+                .completed("2024-02-20T09:02:00Z"),
+            Job::new(JobStatus::Canceled, "2024-02-20T09:00:00Z").completed("2024-02-20T09:30:00Z"),
+            Job::new(JobStatus::Processed, "2024-02-20T08:00:00Z")
+                .started("2024-02-20T08:01:00Z")
+                .completed("2024-02-20T08:02:00Z"),
+        ];
+        let mut reports = Vec::new();
+        for (index, job) in jobs.iter().enumerate() {
+            let time = [
+                "2024-02-20T10:03:00Z",
+                "2024-02-20T10:04:00Z",
+                "2024-02-20T10:00:00Z",
+                "2024-02-20T10:00:01Z",
+                "2024-02-20T10:00:02Z",
+                "2024-02-20T09:00:00Z",
+                "2024-02-20T09:00:01Z",
+                "2024-02-20T08:01:00Z",
+            ][index];
+            let report = post(&server, &fixture, submitted(time, RUN)).await;
+            give_job(&server, &report, job);
+            reports.push(report);
+        }
+        // Posted by its own CI job.
+        let own = post(
+            &server,
+            &fixture,
+            Post::new("2024-02-20T07:00:00Z", Some(RUN)),
+        )
+        .await;
+
+        let listed = runs_of(&server, &fixture).await;
+        assert_eq!(listed.len(), 1, "one run");
+        let summary = &listed[0];
+        assert_eq!(
+            counts(summary.jobs.as_ref()),
+            Some((2, 3, 1, 1, Some(millis("2024-02-20T10:03:00Z")))),
+            "the run's jobs by status, waiting since the pending job's submission"
+        );
+
+        let page = run(&server, &fixture, version_of(&server, &own), "").await;
+        assert_eq!(
+            counts(page.jobs.as_ref()),
+            counts(summary.jobs.as_ref()),
+            "the run page's jobs"
+        );
+        let by_report = |uuid: ReportUuid| {
+            view(
+                page.reports
+                    .iter()
+                    .find(|report| report.uuid == uuid)
+                    .expect("Failed to find the report")
+                    .job
+                    .as_ref(),
+            )
+        };
+        let expected = [
+            Some((
+                ConsoleJobStatus::Queued,
+                millis("2024-02-20T10:03:00Z"),
+                None,
+                None,
+            )),
+            Some((
+                ConsoleJobStatus::Queued,
+                millis("2024-02-20T10:04:00Z"),
+                None,
+                None,
+            )),
+            Some((
+                ConsoleJobStatus::Running,
+                millis("2024-02-20T10:00:00Z"),
+                Some(millis("2024-02-20T10:05:00Z")),
+                None,
+            )),
+            Some((
+                ConsoleJobStatus::Running,
+                millis("2024-02-20T10:00:00Z"),
+                Some(millis("2024-02-20T10:06:00Z")),
+                Some(millis("2024-02-20T10:07:00Z")),
+            )),
+            Some((
+                ConsoleJobStatus::Running,
+                millis("2024-02-20T10:00:00Z"),
+                Some(millis("2024-02-20T10:08:00Z")),
+                None,
+            )),
+            Some((
+                ConsoleJobStatus::Failed,
+                millis("2024-02-20T09:00:00Z"),
+                Some(millis("2024-02-20T09:01:00Z")),
+                Some(millis("2024-02-20T09:02:00Z")),
+            )),
+            Some((
+                ConsoleJobStatus::Canceled,
+                millis("2024-02-20T09:00:00Z"),
+                None,
+                Some(millis("2024-02-20T09:30:00Z")),
+            )),
+            None,
+        ];
+        for (report, expected) in reports.iter().zip(expected) {
+            assert_eq!(
+                by_report(report.uuid),
+                expected,
+                "report at {}",
+                report.start_time
+            );
+        }
+        assert_eq!(by_report(own.uuid), None, "a report its own job posted");
+    }
+
+    // Kills: a run whose jobs all ended still reading as waiting, a finished run given jobs,
+    // and a run's end that ignores a job that ended without writing its report's end.
+    #[tokio::test]
+    async fn console_runs_mix_finished_and_ended_jobs() {
+        let server = TestServer::new_at(at(NOW)).await;
+        let fixture = fixture(&server, "jobmix").await;
+        let failed = post(&server, &fixture, submitted("2024-02-20T09:00:00Z", RUN)).await;
+        give_job(
+            &server,
+            &failed,
+            &Job::new(JobStatus::Failed, "2024-02-20T09:00:00Z")
+                .started("2024-02-20T09:01:00Z")
+                .completed("2024-02-20T09:42:00Z"),
+        );
+        let processed = post(
+            &server,
+            &fixture,
+            Post::new("2024-02-20T09:05:00Z", Some(RUN)),
+        )
+        .await;
+        give_job(
+            &server,
+            &processed,
+            &Job::new(JobStatus::Processed, "2024-02-20T09:00:00Z")
+                .started("2024-02-20T09:05:00Z")
+                .completed("2024-02-20T09:06:00Z"),
+        );
+        let own = "8000000000000000000000000000000000000008";
+        post(
+            &server,
+            &fixture,
+            Post::new("2024-02-21T09:00:00Z", Some(own)),
+        )
+        .await;
+
+        let listed = runs_of(&server, &fixture).await;
+        let ended = listed
+            .iter()
+            .find(|run| run.hash.as_ref().map(ToString::to_string).as_deref() == Some(RUN))
+            .expect("Failed to find the run with jobs");
+        assert_eq!(
+            counts(ended.jobs.as_ref()),
+            Some((0, 0, 1, 0, None)),
+            "a run whose jobs ended waits for nothing"
+        );
+        assert_eq!(
+            i64::from(ended.end_time),
+            millis("2024-02-20T09:42:00Z"),
+            "the run ends when its failed job did"
+        );
+        let finished = listed
+            .iter()
+            .find(|run| run.hash.as_ref().map(ToString::to_string).as_deref() == Some(own))
+            .expect("Failed to find the finished run");
+        assert!(finished.jobs.is_none(), "a run with no jobs carries none");
+        assert_eq!(
+            i64::from(finished.end_time),
+            millis("2024-02-21T09:01:00Z"),
+            "a finished run ends with its report"
+        );
+    }
+
+    // Kills: a report page that leaves out its job's status or times, a processed job still
+    // shown, a spec missing from a runner report, and a spec read from the testbed for a report
+    // its own job posted.
+    #[tokio::test]
+    async fn console_report_shows_its_job_and_spec() {
+        let server = TestServer::new_at(at(NOW)).await;
+        let fixture: Fixture = fixture(&server, "jobreport").await;
+        let running = post(&server, &fixture, submitted("2024-02-20T10:00:00Z", RUN)).await;
+        give_job(
+            &server,
+            &running,
+            &Job::new(JobStatus::Running, "2024-02-20T10:00:00Z").started("2024-02-20T10:02:00Z"),
+        );
+        let processed = post(
+            &server,
+            &fixture,
+            Post::new("2024-02-20T10:05:00Z", Some(RUN)),
+        )
+        .await;
+        give_job(
+            &server,
+            &processed,
+            &Job::new(JobStatus::Processed, "2024-02-20T10:00:00Z")
+                .started("2024-02-20T10:05:00Z")
+                .completed("2024-02-20T10:06:00Z"),
+        );
+        // Posted by its own job on a testbed whose runs take the spec.
+        let own = post(
+            &server,
+            &fixture,
+            Post::new("2024-02-20T11:00:00Z", Some(RUN)),
+        )
+        .await;
+        let spec_id = spec_id(&server);
+        diesel::update(schema::report::table.filter(schema::report::uuid.eq(own.uuid)))
+            .set(schema::report::spec_id.eq(spec_id))
+            .execute(&mut server.db_conn())
+            .expect("Failed to set the report's spec");
+
+        let page = report_page(&server, &fixture, &running).await;
+        assert_eq!(
+            view(page.job.as_ref()),
+            Some((
+                ConsoleJobStatus::Running,
+                millis("2024-02-20T10:00:00Z"),
+                Some(millis("2024-02-20T10:02:00Z")),
+                None,
+            )),
+            "a running job's report"
+        );
+        let spec = page.spec.expect("a runner report's spec");
+        assert_eq!(
+            (
+                spec.name.as_ref(),
+                spec.slug.as_ref(),
+                spec.os.to_string(),
+                spec.architecture.to_string(),
+                u32::from(spec.cpu),
+                u64::from(spec.memory),
+                u64::from(spec.disk),
+            ),
+            (
+                "Standard x86",
+                SPEC,
+                "linux".to_owned(),
+                "x86_64".to_owned(),
+                8,
+                0x0004_0000_0000,
+                0x0019_0000_0000,
+            ),
+            "the spec it ran on"
+        );
+
+        let page = report_page(&server, &fixture, &processed).await;
+        assert!(page.job.is_none(), "a processed job's report is finished");
+        assert!(
+            page.spec.is_some(),
+            "a processed job's report keeps its spec"
+        );
+
+        let page = report_page(&server, &fixture, &own).await;
+        assert!(
+            page.job.is_none() && page.spec.is_none(),
+            "a report its own job posted has no job and no spec"
         );
     }
 }

@@ -32,9 +32,18 @@ export interface Seed {
 		private: SeedProject;
 		/** Runs of three iterations on one line, the newest raising an alert on its second. */
 		iterations: SeedProject;
+		/** Runner jobs that wait, run, failed, and were canceled, and one finished run. */
+		runner: SeedProject;
+		/** Each with one run that alerted and still runs, which tests add alerting reports to: one per repeat. */
+		held: SeedProject[];
+		/** Each with one report, a queued job's, on an archived branch: one per repeat. */
+		handover: SeedProject[];
 	};
 	last_main_hash: string;
 	split_hash: string;
+	/** The runner project's run whose jobs run and wait, one report landed. */
+	jobs_hash: string;
+	held_hash: string;
 }
 
 const seedPath = process.env.BENCHER_E2E_SEED;

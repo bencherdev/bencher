@@ -12,6 +12,7 @@ use futures_concurrency::future::Race as _;
 
 use crate::parser::TaskE2e;
 
+mod jobs;
 mod seed;
 
 /// How long a server gets to answer its first request.
@@ -89,7 +90,7 @@ impl E2e {
         )?);
         wait_until_up(&format!("{api_url}/v0/server/version")).await?;
 
-        let seed = seed::Seed::new(&api_url, &console_url).await?;
+        let seed = seed::Seed::new(&api_url, &console_url, &dir.join("bencher.db")).await?;
         let seed_path = dir.join("seed.json");
         fs::write(&seed_path, serde_json::to_string_pretty(&seed)?)?;
 

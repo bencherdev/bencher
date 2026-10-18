@@ -1,7 +1,9 @@
 import {
 	type DehydratedState,
+	type Query,
 	QueryCache,
 	QueryClient,
+	defaultShouldDehydrateQuery,
 	dehydrate,
 	hydrate,
 } from "@tanstack/solid-query";
@@ -26,7 +28,6 @@ export interface Persisted {
 export const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 const SAVE_DELAY = 1000;
 const RETRIES = 2;
-
 export const createQueryClient = (onUnauthorized: () => void) =>
 	new QueryClient({
 		queryCache: new QueryCache({
@@ -90,8 +91,20 @@ export const persistCache = (
 				.getAll()
 				.map(({ queryHash, state }) => [queryHash, state.data]),
 		);
+		const state = dehydrate(client, {
+			shouldDehydrateQuery: (query) =>
+				defaultShouldDehydrateQuery(query) && !isLive(query),
+		});
 		saving = store
-			.set(reader, { buster, savedAt: now(), state: dehydrate(client) })
+			.set(reader, {
+				buster,
+				savedAt: now(),
+				// A query's meta holds code (see `live`), which the store cannot clone.
+				state: {
+					...state,
+					queries: state.queries.map(({ meta, ...query }) => query),
+				},
+			})
 			.catch(() => {});
 		return saving;
 	};
@@ -112,6 +125,7 @@ export const persistCache = (
 		} else if (
 			event.type === "updated" &&
 			event.action.type === "success" &&
+			!isLive(event.query) &&
 			saved.get(event.query.queryHash) !== event.query.state.data
 		) {
 			// setQueryData marks the app's own writes manual; only answers wait.
@@ -130,6 +144,12 @@ export const persistCache = (
 		},
 	};
 };
+
+/** A live query's answer while it shows something unfinished (see `live` in runs/status). */
+const isLive = (query: Query) =>
+	(query.meta?.unfinished as ((data: unknown) => boolean) | undefined)?.(
+		query.state.data,
+	) === true;
 
 export const purgeOtherReaders = async (store: CacheStore, reader: string) => {
 	for (const key of await store.keys()) {
