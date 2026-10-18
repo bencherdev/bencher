@@ -22,7 +22,8 @@ const OrganizationLayout = (props: { children?: JSX.Element }) => {
 	}));
 	const known = () =>
 		organization().data ?? organizationIn(bootstrap().data, key());
-	const title = () => `General | ${known()?.name ?? key()} | Bencher`;
+	const title = () =>
+		`${location.pathname.endsWith("/projects/add") ? "New project" : "General"} | ${known()?.name ?? key()} | Bencher`;
 	createEffect(() => {
 		document.title = title();
 	});

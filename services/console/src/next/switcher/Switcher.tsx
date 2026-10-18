@@ -10,7 +10,7 @@ import {
 	onMount,
 } from "solid-js";
 import { recentSlugs, rememberVersion } from "../memory";
-import { organizationPath } from "../paths";
+import { ORGANIZATIONS_PATH, organizationPath } from "../paths";
 import { useApi } from "../project";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
@@ -318,7 +318,7 @@ const Switcher = (props: {
 				{(organization) => (
 					<div class="sw-foot">
 						<a
-							href={`/console/organizations/${organization().uuid}/projects/add`}
+							href={`${ORGANIZATIONS_PATH}/${organization().uuid}/projects/add`}
 						>
 							<Glyph d="M12 5v14M5 12h14" />
 							New project

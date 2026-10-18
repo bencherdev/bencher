@@ -48,12 +48,15 @@ const boot = async (mount: HTMLElement) => {
 
 	// Each build has its own chunk name, so a new console never reads an old cache.
 	const buster = new URL(import.meta.url).pathname;
+	const organizationPage = location.pathname.endsWith("/projects/add")
+		? "NewProject"
+		: "OrgGeneral";
 	const page =
 		PAGES[
 			place
 				? pageName(place.rest)
 				: (accountPage(location.pathname)?.page ??
-					(organizationOf(location.pathname) ? "OrgGeneral" : "NotFound"))
+					(organizationOf(location.pathname) ? organizationPage : "NotFound"))
 		];
 	await within(
 		BOOT_WAIT,

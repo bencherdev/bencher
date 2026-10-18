@@ -64,6 +64,12 @@ export const PAGES: Record<PageName, Page> = {
 			)[1],
 	),
 	Organizations: lazy(() => import("./pages/Organizations")),
+	NewProject: lazy(
+		async () =>
+			(
+				await Promise.all([organizationLayout(), import("./pages/NewProject")])
+			)[1],
+	),
 	NotFound: lazy(() => import("./pages/NotFound")),
 };
 
@@ -114,6 +120,10 @@ export const CONSOLE_ROUTES: RouteDefinition[] = [
 	{
 		path: "/organizations/:organization/settings",
 		component: PAGES.OrgGeneral,
+	},
+	{
+		path: "/organizations/:organization/projects/add",
+		component: PAGES.NewProject,
 	},
 	{
 		path: ["/organizations", "/organizations/add"],

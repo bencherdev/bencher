@@ -17,6 +17,7 @@ import {
 	slugOf,
 } from "../account/organizations";
 import { FlushContext } from "../flush";
+import { ORGANIZATIONS_PATH } from "../paths";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { Frame, failureOf } from "./Profile";
@@ -24,7 +25,7 @@ import { Frame, failureOf } from "./Profile";
 const settingsHref = (slug: string) =>
 	`/console/organizations/${slug}/settings`;
 const newProjectHref = (slug: string) =>
-	`/console/organizations/${slug}/projects/add`;
+	`${ORGANIZATIONS_PATH}/${slug}/projects/add`;
 
 const counted = (count: number, one: string, many: string) =>
 	`${count} ${count === 1 ? one : many}`;
@@ -138,7 +139,7 @@ const Organizations = (props: {
 			<Show when={opened() || adding()}>
 				<NewOrganization
 					onDismiss={close}
-					leave={props.leave ?? ((href) => location.assign(href))}
+					leave={props.leave ?? ((href) => navigate(href, { resolve: false }))}
 				/>
 			</Show>
 		</Frame>
@@ -146,6 +147,8 @@ const Organizations = (props: {
 };
 
 export default Organizations;
+
+export { nameProblem, slugOf } from "../account/organizations";
 
 const NewOrganization = (props: {
 	onDismiss: () => void;

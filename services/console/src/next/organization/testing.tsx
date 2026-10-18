@@ -11,6 +11,7 @@ import type {
 } from "../../types/bencher";
 import { AccountContext } from "../account/context";
 import type { Api } from "../api";
+import { FlushContext } from "../flush";
 import { consoleUserQuery } from "../queries";
 import { type Allowed, allowedQuery, organizationQuery } from "./data";
 
@@ -84,12 +85,14 @@ export const mount = (
 		organization = ORGANIZATION,
 		allowed = { edit: true, delete: true },
 		bootstrap = BOOTSTRAP,
+		flush = async () => {},
 	}: {
 		api: Api;
 		path?: string;
 		organization?: JsonOrganization | null;
 		allowed?: Allowed | null;
 		bootstrap?: JsonConsoleUser | null;
+		flush?: () => Promise<void>;
 	},
 ) => {
 	const client = new QueryClient({
@@ -115,23 +118,25 @@ export const mount = (
 	const dispose = render(
 		() => (
 			<QueryClientProvider client={client}>
-				<AccountContext.Provider
-					value={{
-						api,
-						reader: () => READER,
-						keepUser: () => {},
-						signOut: () => {},
-					}}
-				>
-					<MemoryRouter history={history}>
-						<Route
-							path="/organizations/:organization/*"
-							component={() => (
-								<Suspense fallback={<p>Suspended</p>}>{part()}</Suspense>
-							)}
-						/>
-					</MemoryRouter>
-				</AccountContext.Provider>
+				<FlushContext.Provider value={flush}>
+					<AccountContext.Provider
+						value={{
+							api,
+							reader: () => READER,
+							keepUser: () => {},
+							signOut: () => {},
+						}}
+					>
+						<MemoryRouter history={history}>
+							<Route
+								path="/organizations/:organization/*"
+								component={() => (
+									<Suspense fallback={<p>Suspended</p>}>{part()}</Suspense>
+								)}
+							/>
+						</MemoryRouter>
+					</AccountContext.Provider>
+				</FlushContext.Provider>
 			</QueryClientProvider>
 		),
 		root,
