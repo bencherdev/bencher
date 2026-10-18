@@ -1361,6 +1361,43 @@ describe("Plot readout room", () => {
 		expect(readoutBox().bottom).toBeLessThanOrEqual(box.bottom);
 	});
 
+	// Kills the readout's whole report hash, which widens an alert page's pinned
+	// readout on a phone over the alert's own marker at the plot's newest point.
+	test("keeps a phone's pinned readout off the alert's marker", async () => {
+		await page.viewport(390, 844);
+		const data = testData([
+			testLine({
+				id: "alerted",
+				benchmark: "blake3",
+				alerting: true,
+				y: [10_000, 10_000, 10_000, 10_000, 30_000],
+				upper: [12_000, 12_000, 12_000, 12_000, 12_000],
+				alerts: [4],
+				raised: [{ index: 4, uuid: "alert-4", status: "active" }],
+			}),
+		]);
+		mount(
+			{
+				data: {
+					...data,
+					reports: data.reports.map((report, index) => ({
+						...report,
+						hash: `${index}`.padStart(40, "a"),
+					})),
+				},
+				pin: 4,
+			},
+			358,
+		);
+		await settle();
+		await expect
+			.element(page.getByRole("status"))
+			.toHaveTextContent("30.00 µs");
+		const { box } = await plotArea();
+		// The marker's radius on a phone.
+		expect(readoutBox().right).toBeLessThanOrEqual(box.right - 6.5);
+	});
+
 	test("keeps a hovered readout inside a 400 px tile", async () => {
 		mount({ data: WIDE, size: "tile" }, 400);
 		await settle();
