@@ -79,6 +79,10 @@ const Profile = () => {
 
 export default Profile;
 
+// Account pages share Profile's chunk rather than splitting a module each into its own.
+export { default as Frame } from "../account/Frame";
+export { failureOf } from "../account/profile";
+
 const Failed = (props: { what: string; retry: () => void }) => (
 	<Banner status="error" role="alert" class="load-error">
 		<span class="grow">{props.what} did not load</span>

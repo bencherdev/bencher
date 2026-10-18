@@ -83,8 +83,8 @@ const items = () =>
 	);
 
 describe("wide", () => {
-	// Kills an entry dropped or led to the wrong place, Profile left outside the
-	// new console or Keys and Organizations moved into it before their pages,
+	// Kills an entry dropped or led to the wrong place, Profile or Organizations
+	// left outside the new console or Keys moved into it before its page,
 	// and Switch project offered where the crumb already is.
 	test("the avatar's menu leads to Profile, Keys, Organizations, and Help", async () => {
 		await open(1280);
@@ -102,7 +102,7 @@ describe("wide", () => {
 			(item(name).element() as HTMLAnchorElement).getAttribute("href");
 		expect(href("Profile")).toBe("/next/console/users/muriel-bagge/settings");
 		expect(href("Keys")).toBe("/console/users/muriel-bagge/keys");
-		expect(href("Organizations")).toBe("/console/organizations");
+		expect(href("Organizations")).toBe("/next/console/organizations");
 		expect(href("Help")).toBe("/help/");
 	});
 
@@ -238,6 +238,17 @@ describe("phone", () => {
 		await avatar().click();
 
 		await item("Profile").click();
+
+		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
+	// Kills an Organizations entry that leaves its menu open when the page
+	// under it stays.
+	test("Organizations closes the menu", async () => {
+		await open(390, { project: false });
+		await avatar().click();
+
+		await item("Organizations").click();
 
 		await expect.element(menu()).not.toBeInTheDocument();
 	});

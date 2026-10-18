@@ -9,11 +9,11 @@ const NEXT_USERS = `${NEXT_CONSOLE}/users`;
 
 export const profilePath = (user: string) => `${NEXT_USERS}/${user}/settings`;
 
-/** An organization's pages, under its slug or UUID. */
-const NEXT_ORGANIZATIONS = `${NEXT_CONSOLE}/organizations`;
+/** The reader's organizations, with each one's pages under its slug or UUID. */
+export const ORGANIZATIONS_PATH = `${NEXT_CONSOLE}/organizations`;
 
 export const organizationPath = (organization: string) =>
-	`${NEXT_ORGANIZATIONS}/${organization}/settings`;
+	`${ORGANIZATIONS_PATH}/${organization}/settings`;
 
 /** The first segment under `base`, if `pathname` is beneath it. */
 const segmentUnder = (base: string, pathname: string) =>
@@ -27,7 +27,7 @@ export const accountUser = (pathname: string) =>
 
 /** The organization an organization page is about, if `pathname` is one. */
 export const organizationOf = (pathname: string) =>
-	segmentUnder(NEXT_ORGANIZATIONS, pathname);
+	segmentUnder(ORGANIZATIONS_PATH, pathname);
 
 /** The dimension lists keep their classic paths, each page under its list. */
 export const DIMENSIONS = [
@@ -96,6 +96,7 @@ export type PageName =
 	| "Dimensions"
 	| "Profile"
 	| "OrgGeneral"
+	| "Organizations"
 	| "NotFound";
 
 /** The page that draws a project path, from its segments after the project. */

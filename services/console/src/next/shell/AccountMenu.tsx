@@ -3,7 +3,7 @@ import Menu from "@bencherdev/ui/Menu";
 import Sheet from "@bencherdev/ui/Sheet";
 import { QueryClientContext } from "@tanstack/solid-query";
 import { type JSX, Show, createSignal, useContext } from "solid-js";
-import { profilePath } from "../paths";
+import { ORGANIZATIONS_PATH, profilePath } from "../paths";
 import { NARROW } from "../plot/narrow";
 import { ProjectContext } from "../project";
 import { consoleUserQuery } from "../queries";
@@ -97,7 +97,7 @@ const AccountMenu = (props: AccountMenuProps) => {
 						<Icon name="key" />
 						Keys
 					</Link>
-					<Link href="/console/organizations">
+					<Link href={ORGANIZATIONS_PATH} onClick={props.onClose}>
 						<Glyph d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1" />
 						Organizations
 					</Link>

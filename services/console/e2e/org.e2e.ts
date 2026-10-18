@@ -122,7 +122,7 @@ test.describe("General", () => {
 			.fill(organization.slug);
 		await confirm.click();
 
-		await expect(page).toHaveURL("/console/organizations");
+		await expect(page).toHaveURL("/next/console/organizations");
 		expect((await readOrganization(request, organization.slug)).status()).toBe(
 			404,
 		);
