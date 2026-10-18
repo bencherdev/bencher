@@ -20,7 +20,7 @@ import {
 	rememberShell,
 	rememberVersion,
 } from "./memory";
-import { TABS, classicHref, parseNextPath, tabOf } from "./paths";
+import { TABS, classicHref, parseNextPath, profilePath, tabOf } from "./paths";
 import { ProjectContext } from "./project";
 import { consoleProjectQuery } from "./queries";
 import { useQueryResult } from "./query";
@@ -35,6 +35,8 @@ const Layout = (
 		reader: JsonAuthUser;
 		versions: () => Record<string, BmfVersion>;
 		host?: string | undefined;
+		/** Where the router keeps project paths, under its base. */
+		route?: string | undefined;
 	},
 ) => {
 	const location = useLocation();
@@ -125,14 +127,16 @@ const Layout = (
 	});
 
 	return (
-		<ProjectContext.Provider value={{ api: props.api, slug, host: props.host }}>
+		<ProjectContext.Provider
+			value={{ api: props.api, slug, host: props.host, route: props.route }}
+		>
 			<Shell
 				slug={slug()}
 				tab={tab()}
 				organization={organization()}
 				project={data()?.project.name ?? remembered()?.name}
 				alerts={data()?.active_alerts ?? remembered()?.alerts}
-				account={`/console/users/${props.reader.user.slug}/settings`}
+				account={profilePath(props.reader.user.slug)}
 				reader={reader()}
 				email={props.reader.user.email}
 				tabsRef={(el) => {

@@ -8,12 +8,14 @@ import UserLayout from "../../../../layouts/console/UserLayout.astro";
 import DeckPanel from "../../../../components/console/deck/DeckPanel";
 import { BencherResource } from "../../../../config/types";
 import FallbackDeckPanel from "../../../../components/console/deck/FallbackDeckPanel.astro";
+import AccountGate from "../../../../next/astro/AccountGate.astro";
 
 const params = Astro.params;
 const title = "View Token";
 ---
 
 <UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
+  <AccountGate slot="head" user={params.user ?? ""} />
   <DeckPanel
     client:only="solid-js"
     apiUrl={BENCHER_API_URL}

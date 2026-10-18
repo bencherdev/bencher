@@ -84,7 +84,11 @@ const nextPreloads = () => {
 					: undefined;
 				// Astro's page script, which every page loads.
 				const isPageScript = chunk.isEntry && chunk.name === "page";
-				if (page === "console" || isPageScript) {
+				// The app's script, which every console page shares.
+				const isApp =
+					chunk.isEntry &&
+					/\/src\/next\/astro\/Main\.astro\?/.test(chunk.facadeModuleId ?? "");
+				if (isApp || isPageScript) {
 					closure(chunk.fileName, entry);
 				}
 				if (page === "perf" || isPageScript) {

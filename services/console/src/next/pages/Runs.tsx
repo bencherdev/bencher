@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@solidjs/router";
+import { useLocation } from "@solidjs/router";
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
@@ -18,7 +18,7 @@ import {
 	on,
 } from "solid-js";
 import type { JsonConsoleRunSummary } from "../../types/bencher";
-import { useProject } from "../project";
+import { useProject, useProjectNavigate } from "../project";
 import { useQueryResult } from "../query";
 import Controls, { nameKey } from "../reports/Controls";
 import { type Range, hasMore, loadMore } from "../reports/rows";
@@ -42,7 +42,7 @@ type Batch = QueryObserverResult<RunsBatch>;
 const Runs = () => {
 	const { api, slug } = useProject();
 	const location = useLocation();
-	const navigate = useNavigate();
+	const navigate = useProjectNavigate();
 	const search = createMemo(() =>
 		decodeSearch(new URLSearchParams(location.search)),
 	);

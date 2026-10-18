@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "@solidjs/router";
+import { useLocation } from "@solidjs/router";
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Icon from "@bencherdev/ui/Icon";
@@ -24,7 +24,7 @@ import {
 	untrack,
 } from "solid-js";
 import { DIMENSIONS, NEXT_PROJECTS } from "../paths";
-import { useProject } from "../project";
+import { useProject, useProjectNavigate } from "../project";
 import { useQueryResult } from "../query";
 import { failureOf } from "../settings/failure";
 import { hasMore, loadMore } from "../reports/rows";
@@ -76,7 +76,7 @@ const List = (props: {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
 	const location = useLocation();
-	const navigate = useNavigate();
+	const navigate = useProjectNavigate();
 	const kind = () => KINDS[props.dimension];
 	const search = createMemo(() =>
 		decodeSearch(new URLSearchParams(location.search)),

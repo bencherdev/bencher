@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, useParams } from "@solidjs/router";
+import { useLocation, useParams } from "@solidjs/router";
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
@@ -27,7 +27,7 @@ import { useFold } from "../alerts/fold";
 import { ApiError } from "../api";
 import { alertPath, projectPath, reportPath, runPath } from "../paths";
 import { useNarrow } from "../plot/narrow";
-import { useProject } from "../project";
+import { useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import Controls from "../report/Controls";
@@ -69,7 +69,7 @@ const Report = () => {
 	const { api, slug, host } = useProject();
 	const params = useParams<{ report: string }>();
 	const location = useLocation();
-	const navigate = useNavigate();
+	const navigate = useProjectNavigate();
 	const client = useQueryClient();
 	const narrow = useNarrow();
 	const fold = useFold();
