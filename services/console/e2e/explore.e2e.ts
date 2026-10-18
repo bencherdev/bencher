@@ -574,7 +574,7 @@ test("hidden and focused lines travel in the link", async ({
 		.getByRole("button", { name: /^blake3 simd=sse4\.2.*: hide its line$/ })
 		.click();
 	await page
-		.getByRole("button", { name: /^Show boundary of blake3 simd=avx2/ })
+		.getByRole("button", { name: /^Focus line of blake3 simd=avx2/ })
 		.click();
 	await expect(page).toHaveURL(/hide=/);
 	await expect(page).toHaveURL(/focus=/);
@@ -587,7 +587,7 @@ test("hidden and focused lines travel in the link", async ({
 		}),
 	).toBeVisible();
 	await expect(
-		other.getByRole("button", { name: /^Hide boundary of blake3 simd=avx2/ }),
+		other.getByRole("button", { name: /^Clear focus of blake3 simd=avx2/ }),
 	).toBeVisible();
 });
 

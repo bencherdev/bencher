@@ -126,12 +126,6 @@ test("a tile draws its plot only as it nears the screen", async () => {
 // pin saved.
 test("a tile hides and focuses the lines its pin saved", async () => {
 	const tile = testTile({ lines: 3 });
-	// Each line has limits, so each key entry has a boundary button.
-	for (const line of tile.perf.lines) {
-		line.series.upper = line.series.y.map((value) =>
-			value === null ? null : value + 5,
-		);
-	}
 	const [first, second] = drawingOf(tile).lines;
 	tile.plot.hidden = [first?.id ?? ""];
 	tile.plot.focus = second?.id ?? "";
@@ -144,10 +138,10 @@ test("a tile hides and focuses the lines its pin saved", async () => {
 		.element(key.getByRole("button", { name: /size=2.*: hide its line$/ }))
 		.toBeInTheDocument();
 	await expect
-		.element(key.getByRole("button", { name: /^Hide boundary of .*size=2/ }))
+		.element(key.getByRole("button", { name: /^Clear focus of .*size=2/ }))
 		.toBeInTheDocument();
 	await expect
-		.element(key.getByRole("button", { name: /^Show boundary of .*size=3/ }))
+		.element(key.getByRole("button", { name: /^Focus line of .*size=3/ }))
 		.toBeInTheDocument();
 });
 

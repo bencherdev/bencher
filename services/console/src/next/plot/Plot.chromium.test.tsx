@@ -210,7 +210,7 @@ describe("Plot", () => {
 		await expect.element(page.getByText("1 hidden")).toBeInTheDocument();
 	});
 
-	// Kills a band on the wrong side, a band for the wrong line, or no dimming, a boundary button that keeps its name once its boundary shows or that cannot hide it, and one on a line with no threshold, which has no boundary to show.
+	// Kills a band on the wrong side, a band for the wrong line, or no dimming, and a focus button that keeps its name once its line is focused or that cannot clear it.
 	test("focusing a line draws its band on the guarded side and dims the rest", async () => {
 		const data = testData([
 			testLine({
@@ -236,7 +236,7 @@ describe("Plot", () => {
 			[0, 1, 2, 3, 4, 5].filter((offset) => isBand(from + offset)).length;
 		expect(bandRows(box.bottom - 7)).toBe(0);
 
-		await page.getByRole("button", { name: "Show boundary of blake3" }).click();
+		await page.getByRole("button", { name: "Focus line of blake3" }).click();
 		await settle();
 
 		expect(focused()).toBe("guarded");
@@ -246,18 +246,31 @@ describe("Plot", () => {
 		expect(rowsOf(canvas, column, box.top, box.bottom, dim, 100)).not.toEqual(
 			[],
 		);
-		const hide = page.getByRole("button", { name: "Hide boundary of blake3" });
-		await expect
-			.element(page.getByRole("button", { name: /boundary of sha256/ }))
-			.not.toBeInTheDocument();
 		await expect
 			.element(page.getByRole("button", { name: "sha256: hide its line" }))
 			.toBeInTheDocument();
-		await hide.click();
+		await page.getByRole("button", { name: "Clear focus of blake3" }).click();
 		expect(focused()).toBeNull();
 		await expect
-			.element(page.getByRole("button", { name: "Show boundary of blake3" }))
+			.element(page.getByRole("button", { name: "Focus line of blake3" }))
 			.toBeInTheDocument();
+	});
+
+	// Kills a focus target only on lines with a boundary, which leaves a line focused by a link with no way to clear it.
+	test("a line with no boundary can be focused and cleared from its key entry", async () => {
+		const data = testData([
+			testLine({ id: "one", benchmark: "blake3", y: [10, 10, 10, 10, 10] }),
+			testLine({ id: "other", benchmark: "sha256", y: [30, 30, 30, 30, 30] }),
+		]);
+		const { focused } = mount({ data, focused: null });
+		await settle();
+		const focus = page.getByRole("button", { name: "Focus line of sha256" });
+		expect(focus.query()).not.toBeNull();
+
+		await focus.click();
+		expect(focused()).toBe("other");
+		await page.getByRole("button", { name: "Clear focus of sha256" }).click();
+		expect(focused()).toBeNull();
 	});
 
 	test("a lower limit's band runs to the top", async () => {
@@ -282,9 +295,6 @@ describe("Plot", () => {
 		);
 		expect(top.length).toBeGreaterThanOrEqual(3);
 		expect(bottom).toEqual([]);
-		await expect
-			.element(page.getByRole("button", { name: /boundary of blake3/ }))
-			.toBeInTheDocument();
 	});
 
 	// Kills a hover focus that never reaches the band: the key entry's line draws its boundary while hovered.
@@ -936,7 +946,6 @@ describe("Plot", () => {
 				id: "one",
 				parameters: { simd: "avx2", threads: 1 },
 				y: [1, 2],
-				upper: [3, 3],
 			}),
 			testLine({
 				id: "two",
@@ -948,7 +957,7 @@ describe("Plot", () => {
 		await settle();
 		const controls = [
 			page.getByRole("button", { name: "blake3 threads=1: hide its line" }),
-			page.getByRole("button", { name: "Show boundary of blake3 threads=1" }),
+			page.getByRole("button", { name: "Focus line of blake3 threads=1" }),
 		];
 		for (const control of controls) {
 			await expect.element(control).toHaveAccessibleDescription(/\S/);
@@ -1630,9 +1639,7 @@ describe("Plot axes row", () => {
 			expect(left.left).toBeCloseTo(area.left, 0);
 			expect(right.right).toBeCloseTo(area.right, 0);
 
-			await page
-				.getByRole("button", { name: "Show boundary of blake3" })
-				.click();
+			await page.getByRole("button", { name: "Focus line of blake3" }).click();
 			await expect.element(page.getByText(BOUNDARY)).toBeInTheDocument();
 
 			expect(areaOf(over).top).toBe(area.top);
