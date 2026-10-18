@@ -1,15 +1,12 @@
 import { QueryClient } from "@tanstack/solid-query";
 import { describe, expect, test } from "vitest";
 import type { JsonConsoleBranchRow, JsonVariant } from "../../types/bencher";
-import { DIMENSIONS } from "../paths";
-import { decodeQuery } from "../query/query";
 import { fakeApi } from "../reports/testing";
 import {
 	type Row,
 	type RowBatch,
 	type Variants,
 	afterArchive,
-	explorePath,
 	listQuery,
 	markArchived,
 	markVariantArchived,
@@ -156,29 +153,6 @@ test("afterArchive marks the rest of the project stale and refetches only what i
 	expect(stale(list)).toBe(true);
 	expect(stale(other)).toBe(false);
 });
-
-// Kills an Explore link that opens a dimension in another dimension's box.
-test.each(DIMENSIONS)(
-	"explorePath opens Explore with one of %s in its own box",
-	(dimension) => {
-		const uuid = "00000000-0000-4000-8000-000000000001";
-		const [path, search] = explorePath("hashbrown", dimension, uuid).split("?");
-		expect(path).toBe("/next/console/projects/hashbrown/explore");
-		const query = decodeQuery(search ?? "");
-		expect({
-			branches: query.branches.map((entry) => entry.uuid),
-			testbeds: query.testbeds.map((entry) => entry.uuid),
-			benchmarks: query.benchmarks,
-			measures: query.measures,
-		}).toEqual({
-			branches: [],
-			testbeds: [],
-			benchmarks: [],
-			measures: [],
-			[dimension]: [uuid],
-		});
-	},
-);
 
 describe("queries", () => {
 	// Kills a row taken from a looser match than its own slug.

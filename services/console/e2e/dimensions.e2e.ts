@@ -1,5 +1,4 @@
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
-import { decodeQuery } from "../src/next/query/query";
 import type { JsonBranch, JsonProject } from "../src/types/bencher";
 import { createProject } from "./api";
 import { axeInBothThemes } from "./axe";
@@ -433,13 +432,12 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 			.toEqual([4]);
 	});
 
-	// Kills an inspect page that drops the head, its start point, the recent
-	// reports, or the thresholds, and an Explore link for another branch.
-	test("a branch's page shows its head, recent reports, and thresholds", async ({
+	// Kills an inspect page that drops the head, the recent runs, or the
+	// thresholds, a run row that opens anything but its run, and an All runs
+	// link that lands anywhere but Runs filtered to the branch over all time.
+	test("a branch's page shows its head, recent runs, and thresholds, and All runs opens them on Runs", async ({
 		page,
-		request,
 	}) => {
-		const main = await branch(request, hashbrown.slug, "main");
 		await page.goto(nextPath(hashbrown.slug, "branches/main"));
 		await expect(
 			page.getByRole("heading", { level: 1, name: "main" }),
@@ -454,10 +452,13 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		await expect(page.getByRole("region", { name: "Head" })).toContainText(
 			seed.last_main_hash,
 		);
-		const reports = page.getByRole("table", { name: "Recent reports" });
-		await expect(reports.getByRole("row").nth(1)).toContainText("macos-latest");
-		await expect(reports.getByRole("row").nth(2)).toContainText(
-			"ubuntu-latest",
+		const runs = page.getByRole("table", { name: "Recent runs" });
+		const newest = runs.getByRole("row").nth(1);
+		await expect(newest).toContainText(seed.last_main_hash);
+		await expect(newest).toContainText("ubuntu-latest+1");
+		await expect(newest.getByRole("link")).toHaveAttribute(
+			"href",
+			new RegExp(`^${nextPath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
 		);
 		const thresholds = page.getByRole("table", { name: "Thresholds" });
 		await expect(thresholds.getByRole("row")).toHaveCount(2);
@@ -466,17 +467,27 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		);
 		await expect(thresholds.getByRole("row").nth(1)).toContainText("Latency");
 
-		const explore = page.getByRole("link", { name: "Open in Explore" });
-		const href = new URL(
-			(await explore.getAttribute("href")) ?? "",
-			seed.console_url,
+		await page.getByRole("link", { name: "All runs on main" }).click();
+		await expect(page).toHaveURL(
+			`${nextPath(hashbrown.slug, "runs")}?branch=main&window=all`,
 		);
-		expect(href.pathname).toBe(nextPath(hashbrown.slug, "explore"));
-		expect(decodeQuery(href.search).branches).toEqual([{ uuid: main.uuid }]);
+		await expect(
+			page.getByRole("button", { name: "branch main" }),
+		).toBeVisible();
+		await expect(page.getByRole("radio", { name: "All" })).toBeChecked();
+		await expect(
+			page
+				.getByRole("table", { name: "Runs, newest first" })
+				.getByRole("rowgroup")
+				.last()
+				.getByRole("row")
+				.first(),
+		).toContainText(seed.last_main_hash);
 	});
 
-	// Kills a testbed or measure page without its thresholds, and a measure
-	// page without its units.
+	// Kills a testbed or measure page without its thresholds, a testbed page
+	// without its recent runs, an All runs link that lands anywhere but Runs
+	// filtered to the testbed, and a measure page without its units.
 	test("a testbed's and a measure's pages show their thresholds", async ({
 		page,
 	}) => {
@@ -487,6 +498,16 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		await expect(
 			page.getByRole("table", { name: "Thresholds" }).getByRole("row").nth(1),
 		).toContainText("main");
+		await expect(
+			page.getByRole("table", { name: "Recent runs" }).getByRole("row").nth(1),
+		).toContainText(seed.last_main_hash);
+		await page.getByRole("link", { name: "All runs on ubuntu-latest" }).click();
+		await expect(page).toHaveURL(
+			`${nextPath(hashbrown.slug, "runs")}?testbed=ubuntu-latest&window=all`,
+		);
+		await expect(
+			page.getByRole("button", { name: "testbed ubuntu-latest" }),
+		).toBeVisible();
 
 		await page.goto(nextPath(hashbrown.slug, "measures/latency"));
 		await expect(
@@ -518,7 +539,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 	});
 
 	// Kills contrast, names, and roles that fail axe in either theme.
-	test("a list, a branch's page, and a benchmark's page pass axe in both themes", async ({
+	test("a list, a branch's page, a testbed's page, and a benchmark's page pass axe in both themes", async ({
 		page,
 	}) => {
 		await axeInBothThemes(
@@ -540,6 +561,18 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 						.getByRole("table", { name: "Thresholds" })
 						.getByRole("link", { name: /, threshold for / }),
 				).toHaveCount(1);
+				await settle(page);
+			},
+		);
+		await axeInBothThemes(
+			page,
+			nextPath(hashbrown.slug, "testbeds/ubuntu-latest"),
+			async () => {
+				await expect(
+					page
+						.getByRole("table", { name: "Recent runs" })
+						.getByRole("link", { name: /, run / }),
+				).toHaveCount(5);
 				await settle(page);
 			},
 		);
@@ -588,8 +621,9 @@ test.describe("narrow", () => {
 	});
 
 	// Kills a list that keeps its desktop columns on a phone, targets under
-	// 44 px, and an inspect page that puts its counts below the cards.
-	test("rows fold to two lines, targets are 44 px, and a page leads with its counts", async ({
+	// 44 px, and an inspect page that leads with anything but its Record or
+	// squeezes its sections.
+	test("rows fold to two lines, targets are 44 px, and a page leads with its Record", async ({
 		page,
 	}) => {
 		await page.goto(nextPath(hashbrown.slug, "branches"));
@@ -619,12 +653,12 @@ test.describe("narrow", () => {
 		}
 
 		await page.goto(nextPath(hashbrown.slug, "branches/main"));
-		const counts = page.getByRole("list", { name: "On this branch" });
+		const record = page.getByRole("region", { name: "Record" });
 		const head = page.getByRole("region", { name: "Head" });
 		await expect(head).toBeVisible();
-		const countsBox = await counts.boundingBox();
+		const recordBox = await record.boundingBox();
 		const headBox = await head.boundingBox();
-		expect(countsBox?.y ?? 0).toBeLessThan(headBox?.y ?? 0);
+		expect(recordBox?.y ?? 0).toBeLessThan(headBox?.y ?? 0);
 		expect(headBox?.width).toBeGreaterThan(300);
 	});
 });

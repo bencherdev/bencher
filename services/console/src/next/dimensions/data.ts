@@ -5,17 +5,15 @@ import type {
 	JsonConsoleBenchmarkRow,
 	JsonConsoleBranchRow,
 	JsonConsoleMeasureRow,
+	JsonConsoleRuns,
 	JsonConsoleTestbedRow,
 	JsonMeasure,
-	JsonReport,
 	JsonTestbed,
 	JsonThreshold,
 	JsonVariant,
 } from "../../types/bencher";
 import type { Api } from "../api";
-import { projectPath } from "../paths";
 import { NARROW } from "../plot/narrow";
-import { blankQuery, encodeQuery } from "../query/query";
 import { batchSize } from "../reports/rows";
 import { type Dimension, KINDS } from "./dimension";
 import { type ListSearch, apiParams, encodeSearch } from "./search";
@@ -231,22 +229,6 @@ export const withKept = (
 export const archivePath = (slug: string, dimension: Dimension, uuid: string) =>
 	`${project(slug)}/${dimension}/${uuid}`;
 
-/** Explore with one branch, testbed, benchmark, or measure in its box. */
-export const explorePath = (
-	slug: string,
-	dimension: Dimension,
-	uuid: string,
-) => {
-	const query = blankQuery();
-	const boxes = {
-		branches: { ...query, branches: [{ uuid }] },
-		testbeds: { ...query, testbeds: [{ uuid }] },
-		benchmarks: { ...query, benchmarks: [uuid] },
-		measures: { ...query, measures: [uuid] },
-	};
-	return `${projectPath(slug, "explore")}${encodeQuery(boxes[dimension])}`;
-};
-
 export type Detail = JsonBranch | JsonTestbed | JsonBenchmark | JsonMeasure;
 
 const detailKey = (dimension: Dimension, slug: string, ref: string) => [
@@ -372,36 +354,26 @@ const totalOf = (headers: Headers, data: unknown[]) => {
 		: data.length;
 };
 
-export interface RecentReports {
-	reports: JsonReport[];
-	total: number;
-}
+const RECENT_RUNS = 5;
 
-export const RECENT_REPORTS = 5;
-
-/** A branch's newest reports, and how many it has. */
-export const recentReportsQuery = (
+/** A branch's or a testbed's newest runs, whenever they ran. */
+export const recentRunsQuery = (
 	api: Api,
 	slug: string,
+	dimension: "branches" | "testbeds",
 	ref: string,
-	archived: boolean,
 ) => ({
-	queryKey: ["console", "reports", slug, "recent", ref, archived],
-	queryFn: async ({
-		signal,
-	}: {
-		signal: AbortSignal;
-	}): Promise<RecentReports> => {
+	queryKey: ["console", "runs", slug, "recent", dimension, ref],
+	queryFn: async ({ signal }: { signal: AbortSignal }) => {
 		const search = new URLSearchParams({
-			branch: ref,
-			archived: String(archived),
-			per_page: String(RECENT_REPORTS),
+			[dimension === "branches" ? "branch" : "testbed"]: ref,
+			per_page: String(RECENT_RUNS),
 		});
-		const { data, headers } = await api.get<JsonReport[]>(
-			`${project(slug)}/reports?${search}`,
+		const { data } = await api.get<JsonConsoleRuns>(
+			`${consolePath(slug)}/runs?${search}`,
 			signal,
 		);
-		return { reports: data, total: totalOf(headers, data) };
+		return data.runs;
 	},
 	placeholderData: keepPrevious,
 });

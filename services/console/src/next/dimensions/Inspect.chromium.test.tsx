@@ -7,11 +7,13 @@ import type {
 	JsonBenchmark,
 	JsonBranch,
 	JsonConsoleBranchRow,
+	JsonMeasure,
+	JsonTestbed,
 	JsonThreshold,
 	JsonVariant,
 } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
-import { reportFixture } from "../reports/testing";
+import { runFixture } from "../runs/testing";
 import { type Sent, bootstrapOf, mount } from "../settings/testing";
 import type { Dimension } from "./dimension";
 import Inspect from "./Inspect";
@@ -63,6 +65,19 @@ const threshold = (testbed: string): JsonThreshold =>
 		measure: { name: "Latency" },
 		model: { test: "t_test", upper_boundary: 0.99, max_sample_size: 64 },
 	}) as unknown as JsonThreshold;
+
+const RUN = runFixture(0, {
+	branch: {
+		uuid: "branch-uuid",
+		name: "412/merge",
+		slug: "412-merge",
+		head: "head-uuid",
+	},
+	reports: 2,
+	testbeds: ["linux-x86-64", "macos-arm64"],
+	testbed_count: 3,
+	alerts: { total: 1, active: 1 },
+});
 
 const variant = (uuid: string, parameters: JsonVariant["parameters"]) =>
 	({ uuid, benchmark: "b", parameters }) as unknown as JsonVariant;
@@ -157,17 +172,9 @@ const branchApi = (
 						}
 					: { data: [], total: 0 };
 			}
-			if (path === "/v0/projects/hashbrown/reports") {
-				return archivedRows === archived
-					? {
-							data: [
-								reportFixture(0, {
-									testbed: { name: "linux-x86-64", slug: "l" } as never,
-								}),
-							],
-							total: 3,
-						}
-					: { data: [], total: 0 };
+			if (path === "/v0/console/projects/hashbrown/runs") {
+				// Runs leaves out an archived branch's runs.
+				return { data: { total: 3, runs: archived ? [] : [RUN] } };
 			}
 			return new ApiError(404, "not_found", "{}");
 		},
@@ -214,12 +221,14 @@ const show = async (
 	);
 };
 
-// Kills a page that drops its start point's name, its head, the reports'
-// total, or the thresholds on it, an Explore link for nothing, threshold links
-// named only by their testbed, a threshold's model cut to its test, a row taken
-// from the first match alone, and an All runs link that keeps the default window.
-test("a branch's page shows its start point, head, recent reports, and thresholds", async () => {
-	const { api } = branchApi(false);
+// Kills a page that drops its start point's name, its head, or the thresholds
+// on it, threshold links named only by their testbed, a threshold's model cut
+// to its test, a row taken from the first match alone, a recent run that opens
+// anything but its run or reads another run's head, testbeds, or alerts, a
+// testbed count whose hover leaves out the rest, and an All runs link that
+// keeps the default window.
+test("a branch's page shows its start point, head, recent runs, and thresholds", async () => {
+	const { api, reads } = branchApi(false);
 	dispose = (await show(api, "branches", "412-merge")).dispose;
 	await expect
 		.element(page.getByRole("heading", { level: 1, name: "412/merge" }))
@@ -234,9 +243,6 @@ test("a branch's page shows its start point, head, recent reports, and threshold
 			"href",
 			"/next/console/projects/hashbrown/branches/main-uuid",
 		);
-	await expect
-		.element(page.getByRole("list", { name: "On this branch" }))
-		.toHaveTextContent(/3\s*reports\s*2\s*thresholds/);
 	const thresholds = page.getByRole("table", { name: "Thresholds" });
 	const link = thresholds.getByRole("link", {
 		name: "macos-arm64, threshold for Latency on 412/merge, macos-arm64",
@@ -251,30 +257,167 @@ test("a branch's page shows its start point, head, recent reports, and threshold
 	await expect
 		.element(thresholds.getByRole("row").nth(1))
 		.toHaveTextContent("t_test · upper_boundary 0.99 · max_sample_size 64");
-	const recent = page.getByRole("table", { name: "Recent reports" });
-	await expect.element(recent).toHaveTextContent(/linux-x86-64/);
-	const reports = recent.getByRole("link").elements();
-	expect(reports.length).toBeGreaterThan(0);
-	for (const report of reports) {
-		expectNameStartsWithText(report);
-	}
+	const recent = page.getByRole("table", { name: "Recent runs" });
+	const run = recent.getByRole("link", {
+		name: /, run 9c1f2e4 on 412\/merge, 2 reports$/,
+	});
+	await expect
+		.element(run)
+		.toHaveAttribute(
+			"href",
+			`/next/console/projects/hashbrown/runs/${RUN.uuid}`,
+		);
+	expectNameStartsWithText(run.element());
+	await expect
+		.element(recent.getByRole("row").nth(1))
+		.toHaveTextContent(/9c1f2e4\s*2\s*linux-x86-64\s*\+2\s*1 active/);
+	await expect
+		.element(recent.getByText("+2"))
+		.toHaveAttribute("title", "linux-x86-64, macos-arm64, and 1 more");
+	expect(
+		reads
+			.filter(({ pathname }) => pathname.endsWith("/runs"))
+			.map(({ searchParams }) => searchParams.get("branch")),
+	).toEqual(["412-merge"]);
 	await expect
 		.element(page.getByRole("link", { name: "All runs on 412/merge" }))
 		.toHaveAttribute(
 			"href",
 			"/next/console/projects/hashbrown/runs?branch=412-merge&window=all",
 		);
+});
+
+const GIB = 1024 ** 3;
+
+/** One page of each dimension, each carrying a threshold, a run, or variants. */
+const layoutApi = () =>
+	fakeApi((url) => {
+		const path = url.pathname;
+		const details: Record<string, unknown> = {
+			"/v0/projects/hashbrown/branches/412-merge": BRANCH,
+			"/v0/projects/hashbrown/testbeds/ubuntu-latest": {
+				uuid: "testbed-uuid",
+				name: "ubuntu-latest",
+				slug: "ubuntu-latest",
+				spec: {
+					uuid: "spec-uuid",
+					name: "Standard x86",
+					slug: "standard-x86",
+					os: "linux",
+					architecture: "x86_64",
+					cpu: 8,
+					memory: 16 * GIB,
+					disk: 75 * GIB,
+					network: false,
+				},
+				created: "2026-09-12T10:00:00Z",
+			} as JsonTestbed,
+			"/v0/projects/hashbrown/measures/latency": {
+				uuid: "measure-uuid",
+				name: "Latency",
+				slug: "latency",
+				units: "nanoseconds (ns)",
+				created: "2026-09-12T10:00:00Z",
+			} as JsonMeasure,
+			"/v0/projects/hashbrown/benchmarks/blake3": {
+				uuid: "blake3-uuid",
+				name: "blake3",
+				slug: "blake3",
+				created: "2026-09-12T10:00:00Z",
+			} as JsonBenchmark,
+		};
+		if (path in details) {
+			return { data: details[path] };
+		}
+		if (path === "/v0/projects/hashbrown/thresholds") {
+			return { data: [threshold("linux-x86-64")], total: 1 };
+		}
+		if (path === "/v0/console/projects/hashbrown/runs") {
+			return { data: { total: 1, runs: [RUN] } };
+		}
+		if (path.endsWith("/variants")) {
+			return { data: VARIANTS, total: VARIANTS.length };
+		}
+		return { data: {} };
+	});
+
+// Kills a page whose sections leave the ruled order or sit in two columns
+// read out of it, the count boxes left at the top, and Open in Explore kept.
+test.each([
+	["branches", "412-merge", ["Record", "Head", "Recent runs", "Thresholds"]],
+	[
+		"testbeds",
+		"ubuntu-latest",
+		["Record", "Spec", "Recent runs", "Thresholds"],
+	],
+	["benchmarks", "blake3", ["Record", "Parameters in use", "Variants"]],
+	["measures", "latency", ["Record", "Units", "Thresholds"]],
+] as const)(
+	"a page of %s stacks its sections in order",
+	async (dimension, entry, sections) => {
+		const { api } = layoutApi();
+		dispose = (await show(api, dimension, entry)).dispose;
+		await expect.element(page.getByRole("heading", { level: 1 })).toBeVisible();
+		const headings = page.getByRole("heading", { level: 2 }).elements();
+		expect(headings.map((heading) => heading.textContent)).toEqual(sections);
+		const boxes = headings.map((heading) =>
+			heading.closest("section")?.getBoundingClientRect(),
+		);
+		expect(new Set(boxes.map((box) => box?.left)).size).toBe(1);
+		const tops = boxes.map((box) => box?.top ?? 0);
+		expect(tops).toEqual([...tops].sort((a, b) => a - b));
+		expect(page.getByRole("list").elements()).toEqual([]);
+		expect(page.getByRole("link", { name: /Explore/ }).elements()).toEqual([]);
+		await expect
+			.element(page.getByRole("region", { name: "Record" }))
+			.toHaveTextContent(new RegExp(`^Record\\s*slug\\s*${entry}\\s*uuid`));
+	},
+);
+
+// Kills a spec that drops its name or slug or moves them below its machine,
+// a testbed's runs read by branch rather than by testbed, a run row that opens
+// anything but its run, and an All runs link that filters by branch.
+test("a testbed's page leads its spec with its name and slug and lists its recent runs", async () => {
+	const { api, reads } = layoutApi();
+	dispose = (await show(api, "testbeds", "ubuntu-latest")).dispose;
 	await expect
-		.element(page.getByRole("link", { name: "Open in Explore" }))
+		.element(page.getByRole("region", { name: "Spec" }))
+		.toHaveTextContent(
+			/^Spec\s*name\s*Standard x86\s*slug\s*standard-x86\s*os\s*linux/,
+		);
+	expect(
+		reads
+			.filter(({ pathname }) => pathname.endsWith("/runs"))
+			.map(({ searchParams }) => [
+				searchParams.get("testbed"),
+				searchParams.get("branch"),
+			]),
+	).toEqual([["ubuntu-latest", null]]);
+	const recent = page.getByRole("table", { name: "Recent runs" });
+	await expect
+		.element(recent.getByRole("row").nth(1))
+		.toHaveTextContent(/412\/merge\s*9c1f2e4\s*2\s*1 active/);
+	await expect
+		.element(
+			recent.getByRole("link", {
+				name: /, run 9c1f2e4 on 412\/merge, 2 reports$/,
+			}),
+		)
 		.toHaveAttribute(
 			"href",
-			"/next/console/projects/hashbrown/explore?branches=branch-uuid",
+			`/next/console/projects/hashbrown/runs/${RUN.uuid}`,
+		);
+	await expect
+		.element(page.getByRole("link", { name: "All runs on ubuntu-latest" }))
+		.toHaveAttribute(
+			"href",
+			"/next/console/projects/hashbrown/runs?testbed=ubuntu-latest&window=all",
 		);
 });
 
-// Kills a recent report or threshold row only its first cell opens, and one
+// Kills a recent run or threshold row only its first cell opens, and one
 // whose link covers the rows around it, wide or folded on a phone.
-test("a branch's recent reports and thresholds open from anywhere on their rows", async () => {
+test("a branch's recent runs and thresholds open from anywhere on their rows", async () => {
 	for (const [width, height] of [
 		[1280, 720],
 		[390, 844],
@@ -285,7 +428,7 @@ test("a branch's recent reports and thresholds open from anywhere on their rows"
 		const rows = () =>
 			[
 				...page
-					.getByRole("table", { name: "Recent reports" })
+					.getByRole("table", { name: "Recent runs" })
 					.getByRole("row")
 					.elements(),
 				...page
@@ -357,9 +500,10 @@ test("archiving from the page shows it at once, and a refusal puts it back", asy
 	expect(page.getByText("Archived", { exact: true }).elements()).toEqual([]);
 });
 
-// Kills an archived branch's page that lists its active thresholds or
-// reports (none), an All runs link to a list that would show none of them,
-// and an Unarchive that claims every threshold back.
+// Kills an archived branch's page that lists its active thresholds (none),
+// recent runs left loading when Runs lists none of an archived branch's, an
+// All runs link to a list that would show none of them, and an Unarchive that
+// claims every threshold back.
 test("an archived branch reads its archived thresholds and says which come back", async () => {
 	const { api, reads } = branchApi(true);
 	dispose = (await show(api, "branches", "412-merge")).dispose;
@@ -376,9 +520,8 @@ test("an archived branch reads its archived thresholds and says which come back"
 			.map(({ searchParams }) => searchParams.get("archived")),
 	).toContain("true");
 	await expect
-		.element(page.getByRole("table", { name: "Recent reports" }))
-		.toHaveTextContent(/linux-x86-64/);
-	// Runs lists only active branches' runs.
+		.element(page.getByRole("region", { name: "Recent runs" }))
+		.toHaveTextContent(/No runs$/);
 	expect(page.getByRole("link", { name: /^All runs/ }).elements()).toEqual([]);
 
 	await page.getByRole("button", { name: "Unarchive" }).click();
@@ -419,6 +562,7 @@ test("a benchmark's variant archives at once from its row", async () => {
 						uuid: "blake3-uuid",
 						name: "blake3",
 						slug: "blake3",
+						created: "2026-09-12T10:00:00Z",
 					} as JsonBenchmark,
 				};
 			}
@@ -515,7 +659,7 @@ test("the page paints once its row answers too", async () => {
 	const { api, reads } = branchApi(false, undefined, { row: () => waiting });
 	dispose = (await show(api, "branches", "412-merge")).dispose;
 	await expect
-		.poll(() => reads.some(({ pathname }) => pathname.endsWith("/reports")))
+		.poll(() => reads.some(({ pathname }) => pathname.endsWith("/runs")))
 		.toBe(true);
 	await new Promise((resolve) => setTimeout(resolve, 100));
 	expect(page.getByRole("heading", { level: 1 }).elements()).toEqual([]);
@@ -745,6 +889,7 @@ const benchmarkApi = (
 						uuid: "blake3-uuid",
 						name: "blake3",
 						slug: "blake3",
+						created: "2026-09-12T10:00:00Z",
 					} as JsonBenchmark,
 				};
 			}
@@ -790,36 +935,25 @@ const archiveVariant = async (tag: string) => {
 		.click();
 };
 
-/** The variant toggle's counts and the stat of variants, as the page reads them. */
-const variantCounts = () => ({
-	toggle: page
+/** The variant toggle's counts, as the page reads them. */
+const variantCounts = () =>
+	page
 		.getByRole("radio")
 		.elements()
-		.map((radio) => radio.closest("label")?.textContent?.replace(/\s+/g, " ")),
-	stat: page
-		.getByRole("list", { name: "This benchmark" })
-		.element()
-		.textContent?.match(/(\d+)\s*variants?/)?.[1],
-});
+		.map((radio) => radio.closest("label")?.textContent?.replace(/\s+/g, " "));
 
-// Kills counts that include the empty variant the table hides, and a stat
-// that keeps counting a variant archived on screen.
+// Kills counts that include the empty variant the table hides, and counts
+// that keep a variant archived on screen in Active.
 test("a benchmark's counts are the variants its table shows, each in its shown state", async () => {
 	const { api } = benchmarkApi();
 	dispose = (await show(api, "benchmarks", "blake3")).dispose;
 	await expect.element(variantsTable().getByText("threads=4")).toBeVisible();
-	expect(variantCounts()).toEqual({
-		toggle: ["Active 2", "Archived 0"],
-		stat: "2",
-	});
+	expect(variantCounts()).toEqual(["Active 2", "Archived 0"]);
 	await archiveVariant("threads=4");
 	await expect
 		.element(variantRow("threads=4"))
 		.toHaveTextContent(/Archived just now/);
-	expect(variantCounts()).toEqual({
-		toggle: ["Active 1", "Archived 1"],
-		stat: "1",
-	});
+	expect(variantCounts()).toEqual(["Active 1", "Archived 1"]);
 });
 
 // Kills a variant change that refetches the list on screen once it lands,
@@ -871,10 +1005,7 @@ test("a variant's Undo before its archive lands is sent after it, and a refused 
 		.toEqual([{ archived: true }, { archived: false }]);
 	pending[1]?.resolve();
 	await new Promise((resolve) => setTimeout(resolve, 50));
-	expect(variantCounts()).toEqual({
-		toggle: ["Active 2", "Archived 0"],
-		stat: "2",
-	});
+	expect(variantCounts()).toEqual(["Active 2", "Archived 0"]);
 	await expect
 		.element(
 			variantRow("threads=4").getByRole("button", {
@@ -906,9 +1037,7 @@ test("a refused variant archive leaves the variant to the later changes queued o
 	await expect
 		.element(variantRow("threads=4"))
 		.toHaveTextContent(/Archived just now/);
-	await expect
-		.poll(variantCounts)
-		.toEqual({ toggle: ["Active 1", "Archived 1"], stat: "1" });
+	await expect.poll(variantCounts).toEqual(["Active 1", "Archived 1"]);
 });
 
 // Kills a refused variant Undo that puts the variant back as it was before
@@ -934,10 +1063,7 @@ test("a refused variant Undo after the archive landed shows it archived again", 
 	await expect
 		.element(variantRow("threads=4"))
 		.toHaveTextContent(/Archived just now/);
-	expect(variantCounts()).toEqual({
-		toggle: ["Active 1", "Archived 1"],
-		stat: "1",
-	});
+	expect(variantCounts()).toEqual(["Active 1", "Archived 1"]);
 });
 
 // Kills a refused variant archive left showing as archived.
@@ -958,10 +1084,7 @@ test("a refused variant archive puts the variant and its counts back", async () 
 			}),
 		)
 		.toBeVisible();
-	expect(variantCounts()).toEqual({
-		toggle: ["Active 2", "Archived 0"],
-		stat: "2",
-	});
+	expect(variantCounts()).toEqual(["Active 2", "Archived 0"]);
 });
 
 // Kills a variant confirm, Undo, Cancel, or Escape that drops the focus with

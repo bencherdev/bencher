@@ -25,7 +25,7 @@ import type {
 } from "../../types/bencher";
 import type { Api } from "../api";
 import { ApiError } from "../api";
-import { NEXT_PROJECTS, projectPath } from "../paths";
+import { NEXT_PROJECTS } from "../paths";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import { failureOf } from "../settings/failure";
@@ -33,6 +33,8 @@ import {
 	BenchmarkCards,
 	BranchCards,
 	MeasureCards,
+	RecordCard,
+	type RunsState,
 	TestbedCards,
 	type ThresholdsState,
 } from "./Cards";
@@ -41,11 +43,10 @@ import {
 	afterArchive,
 	archivePath,
 	detailQuery,
-	explorePath,
 	heldOf,
 	markArchived,
 	markDetailArchived,
-	recentReportsQuery,
+	recentRunsQuery,
 	rowQuery,
 	thresholdsOf,
 	thresholdsQuery,
@@ -77,8 +78,8 @@ export const prefetchInspect = (
 					variantsQuery(api, slug, ref, false),
 					variantsQuery(api, slug, ref, true),
 				]),
-		...(dimension === "branches"
-			? [recentReportsQuery(api, slug, ref, archived)]
+		...(dimension === "branches" || dimension === "testbeds"
+			? [recentRunsQuery(api, slug, dimension, ref)]
 			: []),
 	];
 	for (const query of queries) {
@@ -110,9 +111,14 @@ const Inspect = (props: {
 		...thresholdsQuery(api, slug(), props.dimension, props.entry, archived()),
 		enabled: kind().threshold !== undefined,
 	}));
-	const reports = useQueryResult(() => ({
-		...recentReportsQuery(api, slug(), props.entry, archived()),
-		enabled: props.dimension === "branches",
+	const runs = useQueryResult(() => ({
+		...recentRunsQuery(
+			api,
+			slug(),
+			props.dimension === "testbeds" ? "testbeds" : "branches",
+			props.entry,
+		),
+		enabled: props.dimension === "branches" || props.dimension === "testbeds",
 	}));
 	const variants = [false, true].map((listed) =>
 		useQueryResult(() => ({
@@ -131,12 +137,9 @@ const Inspect = (props: {
 		if (
 			detail().isLoadingError ||
 			(settled(detail()) &&
-				[
-					row(),
-					thresholds(),
-					reports(),
-					...variants.map((each) => each()),
-				].every(settled))
+				[row(), thresholds(), runs(), ...variants.map((each) => each())].every(
+					settled,
+				))
 		) {
 			setPainted(true);
 		}
@@ -238,17 +241,16 @@ const Inspect = (props: {
 		queue = sent;
 	};
 
-	const explore = () => {
-		const uuid = detail().data?.uuid;
-		return uuid
-			? explorePath(slug(), props.dimension, uuid)
-			: projectPath(slug(), "explore");
-	};
 	const list = () => `${NEXT_PROJECTS}/${slug()}/${props.dimension}`;
 	const thresholdsState = (): ThresholdsState => ({
 		data: thresholds().data,
 		failed: thresholds().isLoadingError,
 		retry: () => thresholds().refetch(),
+	});
+	const runsState = (): RunsState => ({
+		data: runs().data,
+		failed: runs().isLoadingError,
+		retry: () => runs().refetch(),
 	});
 
 	return (
@@ -319,14 +321,6 @@ const Inspect = (props: {
 						</p>
 					</div>
 					<div class="ph-actions dm-actions">
-						<a
-							class="ui-button"
-							data-variant="secondary"
-							data-size="md"
-							href={explore()}
-						>
-							Open in Explore
-						</a>
 						<Show
 							when={props.edit}
 							fallback={
@@ -403,15 +397,14 @@ const Inspect = (props: {
 						{failure()}
 					</p>
 				</Show>
+				<RecordCard detail={detail().data} />
 				<Switch>
 					<Match when={props.dimension === "branches"}>
 						<BranchCards
 							slug={slug()}
 							branch={detail().data as JsonBranch | undefined}
 							row={row().data as JsonConsoleBranchRow | null | undefined}
-							reports={reports().data}
-							reportsFailed={reports().isLoadingError}
-							reportsRetry={() => reports().refetch()}
+							runs={runsState()}
 							thresholds={thresholdsState()}
 						/>
 					</Match>
@@ -419,6 +412,7 @@ const Inspect = (props: {
 						<TestbedCards
 							slug={slug()}
 							testbed={detail().data as JsonTestbed | undefined}
+							runs={runsState()}
 							thresholds={thresholdsState()}
 						/>
 					</Match>
