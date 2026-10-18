@@ -507,12 +507,15 @@ test("Clear asks once for every run in the window, and Back brings the filter ba
 	await expect(clear).toBeVisible();
 });
 
-// Kills names, roles, and contrast that fail in either theme.
-test("Runs and a run pass axe in both themes", async ({ page }) => {
-	await axeInBothThemes(page, runs(), async () => {
+// Kills names, roles, and contrast that fail in either theme, at the project
+// root where a reader lands.
+test("Runs at the project root and a run pass axe in both themes", async ({
+	page,
+}) => {
+	await axeInBothThemes(page, nextPath(hashbrown.slug), async () => {
 		await expect(rows(page).first()).toBeVisible();
 	});
-	await page.goto(runs());
+	await page.goto(nextPath(hashbrown.slug));
 	await rows(page).first().getByRole("link").click();
 	await expect(page).toHaveURL(/\/runs\/[0-9a-f-]{36}$/);
 	await axeInBothThemes(page, page.url(), async () => {

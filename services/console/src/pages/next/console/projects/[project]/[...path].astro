@@ -18,6 +18,7 @@ import {
 	tabOf,
 } from "../../../../../next/paths";
 import { modulePreloads } from "../../../../../next/preloads";
+import { readsOnlyRuns } from "../../../../../next/reports/search";
 import { exploreSearchFromClassic } from "../../../../../next/query/classic";
 import { decodeQuery } from "../../../../../next/query/query";
 import Shell from "../../../../../next/shell/Shell";
@@ -37,6 +38,11 @@ import "../../../../../next/switcher/switcher.css";
 
 const slug = Astro.params.project ?? "";
 const place = parseNextPath(Astro.url.pathname);
+if (place?.rest.length === 0 && !readsOnlyRuns(Astro.url.searchParams)) {
+	return Astro.redirect(
+		`${Astro.url.pathname.replace(/\/?$/, "/explore")}${Astro.url.search}`,
+	);
+}
 const tab = place && tabOf(place.rest);
 const classic = classicPlace(Astro.url.pathname);
 const page = place ? pageName(place.rest) : "NotFound";

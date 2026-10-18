@@ -12,28 +12,35 @@ const card = (page: import("@playwright/test").Page) =>
 test.describe("a project's Maintainer", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
-	// Kills a project with no reports opened on an empty Explore, or on one
-	// drawn before the card replaces it, a key shown again or never, and a
-	// card that never notices the first report or does not give way to Explore
-	// with that report first.
-	test("an empty project opens on the setup card, a key shows once, and the first report gives way to Explore", async ({
+	// Kills a project with no reports opened at its root on an empty Runs
+	// list, or on "No runs" drawn before the card replaces it, a key shown
+	// again or never, and a card that never notices the first report or does
+	// not give way to the Runs list with that run first.
+	test("an empty project's root opens on the setup card, a key shows once, and the first report gives way to Runs", async ({
 		page,
 		request,
 	}) => {
 		const project = await createProject(request);
 		await page.addInitScript(() => {
-			const holder = window as Window & { __queryDrawn?: boolean };
+			const holder = window as Window & { __noRuns?: boolean };
 			new MutationObserver(() => {
-				holder.__queryDrawn ||=
-					document.querySelector('[aria-label="Query"]') !== null;
+				holder.__noRuns ||=
+					[...document.querySelectorAll("h2")].some(
+						(heading) => heading.textContent === "No runs",
+					) ||
+					[...document.querySelectorAll("h1")].some((heading) =>
+						heading.textContent?.includes("0 runs"),
+					);
 			}).observe(document, { childList: true, subtree: true });
 		});
 		await page.goto(nextPath(project.slug));
 		await expect(card(page)).toBeVisible();
-		await expect(page.getByRole("region", { name: "Query" })).toHaveCount(0);
+		await expect(
+			tabRow(page).getByRole("link", { name: "Runs" }),
+		).toHaveAttribute("aria-current", "page");
 		expect(
 			await page.evaluate(
-				() => (window as Window & { __queryDrawn?: boolean }).__queryDrawn,
+				() => (window as Window & { __noRuns?: boolean }).__noRuns,
 			),
 		).toBeFalsy();
 		await expect(
@@ -59,7 +66,7 @@ test.describe("a project's Maintainer", () => {
 		await expect(card(page)).toBeVisible();
 		await expect(card(page).getByText(key)).toHaveCount(0);
 
-		const report = await postReport(request, project.slug, {
+		await postReport(request, project.slug, {
 			start: "2026-09-10T00:00:00Z",
 			results: {
 				my_benchmark: [
@@ -68,15 +75,12 @@ test.describe("a project's Maintainer", () => {
 			},
 		});
 		await expect(card(page)).toHaveCount(0, { timeout: 15_000 });
-		await expect(
-			page
-				.getByRole("region", { name: "Latest runs" })
-				.getByRole("link", {
-					name: `v${report.branch.head.version?.number}`,
-					exact: true,
-				})
-				.first(),
-		).toHaveAttribute(
+		const rows = page
+			.getByRole("table", { name: "Runs, newest first" })
+			.getByRole("row")
+			.filter({ has: page.getByRole("link") });
+		await expect(rows).toHaveCount(1);
+		await expect(rows.getByRole("link").first()).toHaveAttribute(
 			"href",
 			new RegExp(`^${nextPath(project.slug, "runs")}/[0-9a-f-]{36}$`),
 		);
@@ -109,10 +113,10 @@ test.describe("a project's Maintainer", () => {
 		let polls = 0;
 		page.on("request", (sent) => {
 			const url = new URL(sent.url());
-			// Each poll asks inside the Runs tab's window first, then over all time.
+			// Each poll asks for the Runs list's first batch.
 			if (
 				url.pathname === `/v0/console/projects/${project.slug}/runs` &&
-				url.searchParams.get("per_page") === "4" &&
+				url.searchParams.get("page") === "1" &&
 				url.searchParams.has("start_time")
 			) {
 				polls += 1;

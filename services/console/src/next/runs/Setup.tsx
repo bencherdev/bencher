@@ -9,24 +9,21 @@ import ContentSkeleton from "../ContentSkeleton";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
-import { startQueries } from "./start";
+import type { batchQuery } from "./query";
 import { SAMPLE, exportLine, runCommand } from "./setup";
 
-// The card asks again while it shows and the tab is in view, and goes once a report lands.
+// The card asks again while it shows and the tab is in view, and goes once a run lands.
 const POLL = 5_000;
 const KEY_NAME = "bencher run";
 // Ninety days, as Settings makes a key unless told otherwise.
 const KEY_TTL = 90 * 24 * 60 * 60;
 
 /** A version 1 project nothing has reported to yet: how to send the first report. */
-const Setup = () => {
+const Setup = (props: { poll: () => ReturnType<typeof batchQuery> }) => {
 	const { api, slug, host } = useProject();
 	const client = useQueryClient();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
-	useQueryResult(() => ({
-		...startQueries(api, slug()).runs,
-		refetchInterval: POLL,
-	}));
+	useQueryResult(() => ({ ...props.poll(), refetchInterval: POLL }));
 	// Only a Maintainer may make a key.
 	const manage = () => bootstrap().data?.permissions.manage === true;
 	// The secret lives here only, never in the cache: it shows once.

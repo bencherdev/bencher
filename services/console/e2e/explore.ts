@@ -38,7 +38,7 @@ export const dimensions = async (
 };
 
 export const explore = (project: string, query?: Partial<ExploreQuery>) =>
-	`${nextPath(project)}${query ? encodeQuery({ ...blankQuery(), ...query }) : ""}`;
+	`${nextPath(project, "explore")}${query ? encodeQuery({ ...blankQuery(), ...query }) : ""}`;
 
 /** The seed's alerting variant and the one beside it: blake3 at 64 KiB on one thread. */
 export const twoLines = async (request: APIRequestContext) => {

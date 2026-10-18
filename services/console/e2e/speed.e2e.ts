@@ -28,8 +28,9 @@ const { hashbrown } = seed.projects;
 // The shell alone: a project path no page draws, so no page data rides along.
 const SHELL = nextPath(hashbrown.slug, "nowhere");
 const RUNS = nextPath(hashbrown.slug, "runs");
-// The project root, where bencher.dev lands a reader.
+// The project root, which is Runs, where bencher.dev lands a reader.
 const PROJECT = nextPath(hashbrown.slug);
+const EXPLORE = nextPath(hashbrown.slug, "explore");
 // A report's page, under no tab of its own.
 const REPORTS = nextPath(hashbrown.slug, "reports");
 
@@ -182,13 +183,15 @@ const newestRunReport = async (request: APIRequestContext) => {
 
 // Kills a Runs page whose list waits on the shell's request or on its own
 // code arriving late, JavaScript that grows, and rows that move as they arrive.
-test("a cold load of Runs holds its speed ceilings", async ({ page }) => {
+test("a cold load of Runs at the project root holds its speed ceilings", async ({
+	page,
+}) => {
 	await observeLayoutShift(page);
 	await page.route(`${seed.api_url}/**`, async (route) => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
-	await page.goto(RUNS);
+	await page.goto(PROJECT);
 	await runsReady(page);
 
 	const cost = await measure(page, seed.api_url);
@@ -238,7 +241,7 @@ test.describe("a returning reader", () => {
 		});
 		await page.goto("/");
 		await expect(page).toHaveURL(PROJECT);
-		await ready(page);
+		await runsReady(page);
 
 		const cost = {
 			...(await measure(page, seed.api_url)),
@@ -1134,7 +1137,7 @@ for (const [width, viewport] of [
 		test(`a cold blank Explore holds its speed ceilings at ${width}`, async ({
 			page,
 		}) => {
-			const cost = await coldLoad(page, nextPath(hashbrown.slug), () =>
+			const cost = await coldLoad(page, EXPLORE, () =>
 				expect(
 					page
 						.getByRole("region", { name: "Alerting now" })
@@ -1180,7 +1183,7 @@ for (const viewport of [
 			expect(pin).toBeDefined();
 			const cost = await coldLoad(
 				page,
-				`${nextPath(hashbrown.slug)}?plot=${pin?.uuid}`,
+				`${EXPLORE}?plot=${pin?.uuid}`,
 				async () => {
 					await expect(
 						page.getByRole("heading", { level: 1, name: PINNED }),
@@ -1214,7 +1217,7 @@ test("an Explore link names its plot's code in its document; blank Explore loads
 				)
 				.map((url) => url.pathname),
 		);
-	await page.goto(nextPath(hashbrown.slug));
+	await page.goto(EXPLORE);
 	await expect(
 		page
 			.getByRole("region", { name: "Alerting now" })
@@ -1291,7 +1294,7 @@ test("a move from blank Explore to an Explore link holds its speed ceilings", as
 		.getByRole("region", { name: "Alerting now" })
 		.getByRole("link", { name: /^blake3 / })
 		.first();
-	await page.goto(nextPath(hashbrown.slug));
+	await page.goto(EXPLORE);
 	await expect(alerting).toBeVisible();
 	await ready(page);
 

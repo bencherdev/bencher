@@ -15,6 +15,7 @@ import { DEFAULT_SEARCH } from "../reports/search";
 import { fakeApi, watchFallback } from "../reports/testing";
 import { screenBatch } from "../reports/virtual";
 import { type RunsBatch, batchKey } from "../runs/query";
+import { bootstrapOf } from "../settings/testing";
 import {
 	cutCells,
 	cutHeaders,
@@ -29,10 +30,12 @@ import Runs from "./Runs";
 const PATH = "/hashbrown/runs";
 
 let dispose: (() => void) | undefined;
+let mounted: ReturnType<typeof createMemoryHistory> | undefined;
 
-/** The page under a Suspense boundary, as it sits under the layout's. */
+/** The page under a Suspense boundary, as it sits under the layout's, at the project root and under Runs. */
 const mount = (api: Api, client: QueryClient, path = PATH) => {
 	const history = createMemoryHistory();
+	mounted = history;
 	history.set({ value: path });
 	const root = document.createElement("div");
 	root.className = "console";
@@ -48,6 +51,7 @@ const mount = (api: Api, client: QueryClient, path = PATH) => {
 						</ProjectContext.Provider>
 					)}
 				>
+					<Route path="/:project" component={Runs} />
 					<Route path="/:project/runs" component={Runs} />
 				</MemoryRouter>
 			</QueryClientProvider>
@@ -422,7 +426,7 @@ test("a search after nothing was found shows no zero state while it loads", asyn
 					answer = resolve;
 				}),
 	);
-	mount(api, client());
+	mount(api, client(), `${PATH}?window=1w`);
 	const none = page.getByRole("heading", { name: "No runs", exact: true });
 	await expect.element(none).toBeVisible();
 
@@ -558,4 +562,123 @@ test("from 768 to 1023 px the Runs list keeps its 1024 px layout and scrolls sid
 		expect(below.four, `at ${width} px`).toBeLessThanOrEqual(laptop.four);
 		expect(below.scrolls, `at ${width} px`).toBe(true);
 	}
+});
+
+const card = () => page.getByRole("region", { name: "Send the first report" });
+const BOOTSTRAP = "/v0/console/projects/hashbrown";
+
+/** Watch for the zero state or a zero count; the returned call says whether either was ever drawn. */
+const watchNoRuns = () => {
+	let drawn = false;
+	const watcher = new MutationObserver(() => {
+		drawn ||=
+			[...document.querySelectorAll("h2")].some(
+				(heading) => heading.textContent === "No runs",
+			) ||
+			[...document.querySelectorAll("h1")].some((heading) =>
+				heading.textContent?.includes("0 runs"),
+			);
+	});
+	watcher.observe(document.body, { childList: true, subtree: true });
+	return () => {
+		watcher.disconnect();
+		return drawn;
+	};
+};
+
+// Kills a project that never ran drawn as an empty list, or as "No runs" while
+// Runs asks whether it ever ran, a card that never notices the first run, and
+// a card that gives way to anything but the list with that run on top.
+test("a project that never ran draws the setup card at the root, which gives way to the list once a run lands", async () => {
+	let ran = false;
+	const { api } = fakeApi((url) => {
+		if (url.pathname === BOOTSTRAP) {
+			return { data: bootstrapOf() };
+		}
+		return ran ? answered([runFixture(0)], 1) : answered([], 0);
+	});
+	const noRuns = watchNoRuns();
+	mount(api, client(), "/hashbrown");
+	await expect.element(card()).toBeVisible();
+	expect(table().query()).toBeNull();
+
+	ran = true;
+	await expect.element(table(), { timeout: 8_000 }).toBeVisible();
+	expect(card().query()).toBeNull();
+	expect(drawn()).toEqual([2]);
+	expect(
+		table().getByRole("link").first().element().getAttribute("href"),
+	).toContain(runFixture(0).uuid);
+	expect(noRuns()).toBe(false);
+});
+
+// Kills the setup card drawn for a project whose runs all predate the
+// window, and a Show all time that asks again for what the check already read.
+test("a project whose runs predate the window says No runs, and Show all time lists them from the check", async () => {
+	const { api, requests } = fakeApi((url) =>
+		url.searchParams.has("start_time")
+			? answered([], 0)
+			: answered([runFixture(0)], 1),
+	);
+	mount(api, client(), "/hashbrown");
+	await expect
+		.element(page.getByRole("heading", { name: "No runs", exact: true }))
+		.toBeVisible();
+	expect(card().query()).toBeNull();
+	const asked = requests.length;
+	await page.getByRole("button", { name: "Show all time" }).click();
+	await expect.element(table()).toBeVisible();
+	expect(requests.length).toBe(asked);
+});
+
+// Kills a page held on its skeleton for good when the check for whether the
+// project ever ran fails.
+test("a failed check for whether the project ever ran says No runs", async () => {
+	const { api } = fakeApi((url) => {
+		if (!url.searchParams.has("start_time")) {
+			return Promise.reject(new ApiError(503, "server", "down"));
+		}
+		return answered([], 0);
+	});
+	mount(api, impatient(), "/hashbrown");
+	await expect
+		.element(page.getByRole("heading", { name: "No runs", exact: true }))
+		.toBeVisible();
+	expect(card().query()).toBeNull();
+});
+
+// Kills a filtered search that matches nothing drawn as the setup card.
+test("a search that matches nothing in a project that never ran says No runs", async () => {
+	const { api, requests } = fakeApi(() => answered([], 0));
+	mount(api, client(), "/hashbrown?alerts=active");
+	await expect
+		.element(page.getByRole("heading", { name: "No runs", exact: true }))
+		.toBeVisible();
+	expect(card().query()).toBeNull();
+	expect(requests.length).toBe(1);
+});
+
+// Kills a search at the project root that moves the reader to the Runs path,
+// which mounts the page again and drops the rows on screen.
+test("a search at the project root stays at the root and keeps its rows on screen", async () => {
+	let answer: (value: { data: unknown }) => void = () => {};
+	const { api } = fakeApi((url) =>
+		url.searchParams.has("start_time")
+			? answered(runs(0, perPage), 1_000)
+			: new Promise((resolve) => {
+					answer = resolve;
+				}),
+	);
+	mount(api, client(), "/hashbrown");
+	await expect.element(table()).toBeVisible();
+	const shown = table().element();
+
+	await page.getByRole("radio", { name: "All" }).click();
+	await expect.poll(() => mounted?.get()).toBe("/hashbrown?window=all");
+	await expect.element(table()).toHaveAttribute("aria-busy", "true");
+	expect(table().element()).toBe(shown);
+	answer(answered([runFixture(7_000)], 1));
+	await expect
+		.element(page.getByRole("heading", { level: 1 }))
+		.toHaveTextContent("1 run");
 });

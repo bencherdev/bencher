@@ -45,10 +45,10 @@ export type Tab =
 export const TABS: readonly { tab: Tab; label: string; segments: string[] }[] =
 	[
 		{ tab: "explore", label: "Explore", segments: ["explore"] },
-		{ tab: "plots", label: "Plots", segments: ["plots"] },
 		{ tab: "runs", label: "Runs", segments: ["runs"] },
 		{ tab: "alerts", label: "Alerts", segments: ["alerts"] },
 		{ tab: "thresholds", label: "Thresholds", segments: ["thresholds"] },
+		{ tab: "plots", label: "Plots", segments: ["plots"] },
 		{
 			tab: "settings",
 			label: "Settings",
@@ -132,11 +132,11 @@ export const parseNextPath = (pathname: string) =>
 
 const isReport = (rest: string[]) => rest.length === 2 && rest[0] === REPORTS;
 
-/** The project root is Explore, and a report belongs to Runs. */
+/** The project root is Runs, and a report belongs to Runs. */
 export const tabOf = (rest: string[]): Tab | undefined => {
 	const [segment] = rest;
 	if (segment === undefined) {
-		return "explore";
+		return "runs";
 	}
 	if (isReport(rest)) {
 		return "runs";
@@ -171,10 +171,11 @@ export const classicPlace = (pathname: string): ClassicPlace | undefined => {
 		return undefined;
 	}
 	const { slug, rest } = place;
-	if (rest.length === 0 || rest[0] === NEXT_EXPLORE) {
+	if (rest[0] === NEXT_EXPLORE) {
 		return { path: `${CLASSIC_PROJECTS}/${slug}/${CLASSIC_PERF}`, hash: false };
 	}
-	const path = rest[0] === NEXT_RUNS ? REPORTS : rest.join("/");
+	const path =
+		rest.length === 0 || rest[0] === NEXT_RUNS ? REPORTS : rest.join("/");
 	return { path: `${CLASSIC_PROJECTS}/${slug}/${path}`, hash: true };
 };
 
