@@ -19,13 +19,17 @@ const RunAlerts = (props: {
 	slug: string;
 	label: string;
 	alerting: JsonConsoleAlerts;
+	/** The alerts whose lines show; the rest wait for the reader. */
+	shown: ReadonlySet<string>;
 	onReportIntent: (uuid: string) => void;
 }) => {
 	const { api } = useProject();
 	const narrow = useFold();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, props.slug));
 	const canChange = () => bootstrap().data?.permissions.edit === true;
-	const lines = createMemo(() => alertLinesOf(props.alerting));
+	const lines = createMemo(() =>
+		alertLinesOf(props.alerting).filter((line) => props.shown.has(line.key)),
+	);
 	const metrics = createMemo(
 		() => new Set(lines().map((line) => line.metric)).size > 1,
 	);

@@ -6,9 +6,11 @@ import { absoluteTime, duration } from "../reports/format";
 import type { Range } from "../reports/rows";
 import { MoreRows, Spacer } from "../reports/TableRows";
 import { useVirtualRows } from "../reports/virtual";
-import { Alerts, Author } from "./cells";
+import { Alerts, Author, Dash } from "./cells";
+import StatusPill from "./StatusPill";
 import { secondsTime } from "./format";
 import { onMoved } from "./Neighbor";
+import { reportStatus, statusText } from "./status";
 
 const COLUMNS = 8;
 
@@ -18,6 +20,7 @@ const RunReports = (props: {
 	reports: JsonConsoleRunReport[];
 	/** Every report in the run, loaded or not. */
 	total: number;
+	now: number;
 	onRange?: (range: Range) => void;
 	/** Moving onto, focusing, or touching a report's link, before the click. */
 	onIntent?: (uuid: string) => void;
@@ -38,23 +41,23 @@ const RunReports = (props: {
 			<thead>
 				<tr aria-rowindex={1}>
 					{/* Every share but the testbed's is set, so the columns never follow the rows drawn. */}
-					<th scope="col" style="width:6%">
+					<th scope="col" style="width:4%">
 						#
 					</th>
 					<th scope="col">Testbed</th>
 					<th scope="col" style="width:13%">
 						Adapter
 					</th>
-					<th scope="col" style="width:11%">
+					<th scope="col" style="width:10%">
 						Started
 					</th>
-					<th scope="col" style="width:8%" data-align="end">
+					<th scope="col" style="width:7%" data-align="end">
 						Lines
 					</th>
 					<th scope="col" style="width:21%">
 						Alerts
 					</th>
-					<th scope="col" style="width:10%">
+					<th scope="col" style="width:142px">
 						Status
 					</th>
 					<th scope="col" style="width:15%">
@@ -69,6 +72,7 @@ const RunReports = (props: {
 						<ReportRow
 							slug={props.slug}
 							report={report}
+							now={props.now}
 							index={rows.start() + index()}
 							onIntent={() => props.onIntent?.(report.uuid)}
 						/>
@@ -91,10 +95,16 @@ export default RunReports;
 const ReportRow = (props: {
 	slug: string;
 	report: JsonConsoleRunReport;
+	now: number;
 	index: number;
 	onIntent: () => void;
 }) => {
-	const started = () => secondsTime(props.report.start_time);
+	const status = () => reportStatus(props.report, props.now, duration);
+	// A job a runner has not taken has not started.
+	const started = () =>
+		props.report.job && props.report.job.started === undefined
+			? undefined
+			: secondsTime(props.report.start_time);
 	return (
 		<tr class="reports-row rn-row rowlink" aria-rowindex={props.index + 2}>
 			<td class="rn-ord">{props.report.order}</td>
@@ -102,7 +112,14 @@ const ReportRow = (props: {
 				<a
 					class="reports-link rowlink-name"
 					href={reportPath(props.slug, props.report.uuid)}
-					aria-label={`${props.report.testbed.name}, report ${props.report.order}, started ${started()}`}
+					aria-label={[
+						props.report.testbed.name,
+						`report ${props.report.order}`,
+						started() && `started ${started()}`,
+						status().kind && statusText(status()),
+					]
+						.filter(Boolean)
+						.join(", ")}
 					onPointerMove={onMoved(() => props.onIntent())}
 					onFocus={() => props.onIntent()}
 					onTouchStart={() => props.onIntent()}
@@ -112,24 +129,32 @@ const ReportRow = (props: {
 			</td>
 			<td data-fold="hide">{props.report.adapter}</td>
 			<td data-fold="l2">
-				<time
-					datetime={new Date(props.report.start_time).toISOString()}
-					title={absoluteTime(props.report.start_time)}
-				>
-					{started()}
-				</time>
+				<Show when={started()}>
+					{(started) => (
+						<time
+							datetime={new Date(props.report.start_time).toISOString()}
+							title={absoluteTime(props.report.start_time)}
+						>
+							{started()}
+						</time>
+					)}
+				</Show>
 			</td>
-			<td data-fold="n2" data-align="end">
-				{props.report.lines}
-				<span class="ui-fold-label">
-					{props.report.lines === 1 ? " line" : " lines"}
-				</span>
+			<td data-fold={props.report.job ? "hide" : "n2"} data-align="end">
+				<Show when={!props.report.job} fallback={<Dash />}>
+					{props.report.lines}
+					<span class="ui-fold-label">
+						{props.report.lines === 1 ? " line" : " lines"}
+					</span>
+				</Show>
 			</td>
-			<td data-fold="n1">
-				<Alerts alerts={props.report.alerts} />
+			<td data-fold={props.report.job ? "hide" : "n1"}>
+				<Show when={!props.report.job} fallback={<Dash />}>
+					<Alerts alerts={props.report.alerts} />
+				</Show>
 			</td>
-			<td data-fold="hide">
-				{duration(props.report.end_time - props.report.start_time)}
+			<td class="rn-status" data-fold={props.report.job ? "n1" : "hide"}>
+				<StatusPill status={status()} />
 			</td>
 			<td data-fold="hide">
 				<Show when={props.report.author}>

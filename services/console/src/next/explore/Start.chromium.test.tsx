@@ -2,7 +2,7 @@ import "@bencherdev/ui/styles.css";
 import "../styles/console.css";
 import "../reports/reports.css";
 import "./explore.css";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type {
 	JsonConsoleReport,
@@ -21,6 +21,7 @@ let dispose: (() => void) | undefined;
 afterEach(() => {
 	dispose?.();
 	dispose = undefined;
+	vi.useRealTimers();
 });
 
 const api: Api = {
@@ -683,3 +684,169 @@ for (const [width, height] of [
 		await expect.element(macos()).toHaveFocus();
 	});
 }
+
+/** RUN while its macos shard has run 48 s by `now` and its last linux shard waits for a runner. */
+const running = (now: number) => {
+	const jobs = {
+		queued: 1,
+		running: 1,
+		failed: 0,
+		canceled: 0,
+		since: now - 48_000,
+	};
+	return {
+		run: { ...RUN, jobs } as unknown as JsonConsoleRunSummary,
+		reports: {
+			...RUN_REPORTS,
+			jobs,
+			reports: [
+				report(1, 61, 3, "linux"),
+				{
+					...report(2, 62, 4, "macos"),
+					job: { status: "running", created: STARTED, started: now - 48_000 },
+				},
+				{
+					...report(3, 63, 3, "linux"),
+					job: { status: "queued", created: STARTED },
+				},
+			],
+		} as unknown as JsonConsoleRun,
+	};
+};
+
+// Kills a pending run row that shows its time rather than its status, a run
+// button whose name leaves the status out, a report a runner has not finished
+// offered as a benchmark search with nothing to search, and a finished report
+// of the same run that loses its search.
+test("a run with jobs not done shows its status, and its unfinished reports show theirs in place of a search", async () => {
+	await page.viewport(1280, 844);
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(STARTED + 60 * MINUTE);
+	const shown = running(Date.now());
+	const { api: reading } = withRuns(
+		() => LINUX_PAGE,
+		() => shown.reports,
+		[shown.run],
+	);
+	dispose = mount(() => <Start onQuery={() => {}} />, {
+		api: reading,
+		path: "/hashbrown",
+	}).dispose;
+	const toggle = latest().getByRole("button", {
+		name: /^main, run 9c1f2e4, .*, Running 48s$/,
+	});
+	await expect.element(toggle).toBeVisible();
+	expect(latest().element().querySelector(".ex-n")).toBeNull();
+	await toggle.click();
+	await expect
+		.element(reports().getByRole("button", { name: /^1 main · linux/ }))
+		.toBeVisible();
+	expect(
+		reports()
+			.getByRole("button", { name: /^(2|3) main/ })
+			.elements(),
+	).toHaveLength(0);
+	expect(
+		[...reports().element().querySelectorAll(".rn-st")].map(
+			(pill) => pill.textContent,
+		),
+	).toEqual(["Running 48s", "Queued"]);
+});
+
+// Kills an opened run's unfinished report row whose order, branch, testbed, and
+// status stack rather than share its one line, a status that does not end the
+// row as a finished row's caret does, and a row taller than a finished one.
+for (const width of [1280, 390] as const) {
+	test(`an opened run's unfinished report rows hold one line, as tall as a finished one, at ${width} px`, async () => {
+		await page.viewport(width, 844);
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(STARTED + 60 * MINUTE);
+		const shown = running(Date.now());
+		const { api: reading } = withRuns(
+			() => LINUX_PAGE,
+			() => shown.reports,
+			[shown.run],
+		);
+		dispose = mount(() => <Start onQuery={() => {}} />, {
+			api: reading,
+			path: "/hashbrown",
+		}).dispose;
+		await latest()
+			.getByRole("button", { name: /^main, run 9c1f2e4/ })
+			.click();
+		await expect.element(reports().getByText("Queued")).toBeVisible();
+		const finished = reports()
+			.getByRole("button", { name: /^1 main · linux/ })
+			.element()
+			.closest(".ex-rhead") as HTMLElement;
+		const rows = [...reports().element().querySelectorAll(".rn-st")].map(
+			(pill) => pill.closest(".ex-rhead") as HTMLElement,
+		);
+		expect(rows).toHaveLength(2);
+		for (const row of rows) {
+			const parts = [
+				...row.querySelectorAll(".ex-sline > *"),
+				row.querySelector(".rn-st"),
+			].map((part) => (part as Element).getBoundingClientRect());
+			expect(parts).toHaveLength(4);
+			const top = Math.max(...parts.map((box) => box.top));
+			const bottom = Math.min(...parts.map((box) => box.bottom));
+			expect(top).toBeLessThan(bottom);
+			const pill = parts[3] as DOMRect;
+			expect(
+				row.getBoundingClientRect().right - pill.right,
+			).toBeLessThanOrEqual(
+				finished.getBoundingClientRect().right -
+					(finished.lastElementChild as Element).getBoundingClientRect().right +
+					1,
+			);
+			expect(row.getBoundingClientRect().height).toBeCloseTo(
+				finished.getBoundingClientRect().height,
+				0,
+			);
+		}
+	});
+}
+
+/** RUN running in blank Explore, mounted with its client, at the hour after it started. */
+const mountRunning = async () => {
+	await page.viewport(1280, 844);
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(STARTED + 60 * MINUTE);
+	const shown = running(Date.now());
+	const { api: reading } = withRuns(
+		() => LINUX_PAGE,
+		() => shown.reports,
+		[shown.run],
+	);
+	const mounted = mount(() => <Start onQuery={() => {}} />, {
+		api: reading,
+		path: "/hashbrown",
+	});
+	dispose = mounted.dispose;
+	return mounted.client;
+};
+
+const runningToggle = () =>
+	latest().getByRole("button", { name: /^main, run 9c1f2e4/ });
+
+// Kills blank Explore's latest runs whose running time stands still as their
+// answers come in.
+test("a latest run's running time moves on with each answer", async () => {
+	const client = await mountRunning();
+	await expect.element(runningToggle()).toHaveAccessibleName(/, Running 48s$/);
+	vi.setSystemTime(STARTED + 63 * MINUTE);
+	await client.refetchQueries();
+	await expect.element(runningToggle()).toHaveAccessibleName(/, Running 3m$/);
+});
+
+// Kills an opened run's report rows whose running time stands still as their
+// answers come in.
+test("an opened run's running report moves its time on with each answer", async () => {
+	const client = await mountRunning();
+	await runningToggle().click();
+	await expect.element(reports().getByText("Running 48s")).toBeVisible();
+	vi.setSystemTime(STARTED + 63 * MINUTE);
+	await client.refetchQueries();
+	await expect.element(reports().getByText("Running 3m")).toBeVisible();
+});

@@ -9,9 +9,13 @@ import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type { JsonConsoleRunReport } from "../../types/bencher";
+import type {
+	JsonConsoleJob,
+	JsonConsoleRunJobs,
+	JsonConsoleRunReport,
+} from "../../types/bencher";
 import { alertId, alertsFixture, reportId } from "../alerts/testing";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
@@ -20,19 +24,28 @@ import { ProjectContext } from "../project";
 import { fakeApi } from "../reports/testing";
 import { screenBatch as reportScreenBatch } from "../report/query";
 import { screenBatch } from "../reports/virtual";
-import { runPageFixture, runReportFixture } from "../runs/testing";
+import {
+	cutCells,
+	cutHeaders,
+	likelyReport,
+	overrun,
+	runPageFixture,
+	runReportFixture,
+} from "../runs/testing";
 import { bootstrapOf } from "../settings/testing";
 import {
 	columnEdges,
 	expectNameStartsWithText,
 	expectRowOpens,
 } from "../ui/testing";
+import RunReports from "../runs/RunReports";
 import Run from "./Run";
 
 const RUN = "00000000-0000-4000-8000-000000000000";
 const PATH = `/hashbrown/runs/${RUN}`;
 
 let dispose: (() => void) | undefined;
+let queryClient: QueryClient;
 
 const mount = (api: Api, path = PATH, base?: string) => {
 	const history = createMemoryHistory();
@@ -41,7 +54,7 @@ const mount = (api: Api, path = PATH, base?: string) => {
 	root.className = "console";
 	document.body.append(root);
 	// One client, since a prop read again would make another.
-	const queryClient = client();
+	queryClient = client();
 	dispose = render(
 		() => (
 			<QueryClientProvider client={queryClient}>
@@ -98,6 +111,7 @@ afterEach(() => {
 	dispose?.();
 	document.body.replaceChildren();
 	window.scrollTo({ top: 0, behavior: "instant" });
+	vi.useRealTimers();
 });
 
 // Kills a heading that names the run by anything but its branch and head, an
@@ -830,21 +844,342 @@ test("on a phone, each report row folds on its own, whatever rows are drawn besi
 	).toEqual(await firstRow(variedReports(0, 20)));
 });
 
-// Kills a run's reports table wider than a tablet's screen (a minimum width
-// past it), which scrolls sideways where every column fits, and one that cuts
-// off a header there.
-test("at 768 px the reports table fits its screen", async () => {
-	await page.viewport(768, 1024);
+// Kills a run's reports table that needs more room than its columns do (a
+// minimum width past a likely report's), which scrolls sideways below a
+// laptop where every column fits, and one that cuts off a header at a
+// tablet's 768 px, where it scrolls rather than cut text (ruling 407).
+test("below a laptop the reports table scrolls only where its columns need the room", async () => {
+	for (const width of [768, 960]) {
+		await page.viewport(width, 1024);
+		const { api } = fakeApi(() => ({
+			data: runPageFixture(variedReports(0, 8, 4), { total: 8 }),
+		}));
+		mount(api);
+		await expect.element(table()).toBeVisible();
+		await document.fonts.ready;
+		expect(cutHeaders(table().element()), `at ${width} px`).toEqual([]);
+		const scroll = table().element().closest(".ui-table-scroll") as HTMLElement;
+		if (width === 960) {
+			expect(scroll.scrollWidth).toBe(scroll.clientWidth);
+		}
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+const START = runReportFixture(0).start_time;
+const job = (fields: Partial<JsonConsoleJob>) =>
+	({ status: "queued", created: START, ...fields }) as JsonConsoleJob;
+
+// Kills a report's status read from anything but its job, a count drawn where
+// nothing landed, a start shown for a job no runner took, a link that leaves
+// its job's status out of its name, and a heading without the run's status or
+// with a time its jobs have not reached.
+test("a run's reports read their jobs' statuses where their counts will land", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(START + 60_000);
 	const { api } = fakeApi(() => ({
-		data: runPageFixture(variedReports(0, 8, 4), { total: 8 }),
+		data: runPageFixture(
+			[
+				runReportFixture(0),
+				runReportFixture(1, { job: job({}) }),
+				runReportFixture(2, {
+					job: job({
+						status: "running" as JsonConsoleJob["status"],
+						started: START + 12_000,
+					}),
+				}),
+				runReportFixture(3, {
+					job: job({
+						status: "failed" as JsonConsoleJob["status"],
+						started: START + 3_000,
+						completed: START + 3_000 + 42_000,
+					}),
+				}),
+				runReportFixture(4, {
+					job: job({
+						status: "canceled" as JsonConsoleJob["status"],
+						completed: START + 30_000,
+					}),
+				}),
+			],
+			{
+				jobs: {
+					queued: 1,
+					running: 1,
+					failed: 1,
+					canceled: 1,
+					since: START + 1_000,
+				} as JsonConsoleRunJobs,
+			},
+		),
 	}));
 	mount(api);
 	await expect.element(table()).toBeVisible();
-	const scroll = table().element().closest(".ui-table-scroll") as HTMLElement;
-	expect(scroll.scrollWidth).toBe(scroll.clientWidth);
-	for (const header of table().element().querySelectorAll("thead th")) {
-		expect(header.scrollWidth, header.textContent ?? "").toBeLessThanOrEqual(
-			header.clientWidth,
-		);
+	expect(cells(2).slice(3, 7)).toEqual(["21:16:00", "36 lines", "0", "2m 00s"]);
+	expect(cells(3).slice(3, 7)).toEqual(["", "-", "-", "Queued"]);
+	expect(cells(4).slice(3, 7)).toEqual(["21:16:02", "-", "-", "Running 48s"]);
+	expect(cells(5).slice(6, 7)).toEqual(["Failed 42s"]);
+	expect(cells(6).slice(6, 7)).toEqual(["Canceled"]);
+	await expect
+		.element(
+			table().getByRole("link", { name: "ubuntu-latest, report 2, Queued" }),
+		)
+		.toBeVisible();
+	const title = document.querySelector(".rp-titlerow")?.textContent;
+	expect(title).toContain("Running 59s");
+	expect(document.querySelector(".rp-sub")?.textContent).not.toContain("took");
+});
+
+/** A running run whose first report raised `count` alerts so far. */
+const alertingSoFar = (count: number) =>
+	runPageFixture([runReportFixture(0)], {
+		total: 2,
+		alerts: { total: count, active: count },
+		jobs: {
+			queued: 0,
+			running: 1,
+			failed: 0,
+			canceled: 0,
+			since: START,
+		} as JsonConsoleRunJobs,
+		...(count > 0 && {
+			alerting: alertsFixture([
+				{
+					report: 2,
+					order: 1,
+					alerts: Array.from({ length: count }, (_, index) => ({
+						alert: index + 1,
+						benchmark: index % 2,
+					})),
+				},
+			]),
+		}),
+	});
+
+// Kills lines that land in a table already showing some and push its rows
+// about, a Show that leaves them held, and an empty table that holds its first
+// lines rather than filling.
+test("a run still taking results holds new alerting lines behind Show once its table shows lines", async () => {
+	let count = 1;
+	const { api } = fakeApi(() => ({ data: alertingSoFar(count) }));
+	mount(api);
+	await expect.element(alerts()).toBeVisible();
+	const rows = () => alerts().element().querySelectorAll("tbody tr.lr").length;
+	expect(rows()).toBe(1);
+
+	count = 2;
+	await queryClient.refetchQueries();
+	const held = page.getByRole("status").filter({ hasText: "new line" });
+	await expect.element(held).toHaveTextContent("1 new lineShow");
+	expect(rows()).toBe(1);
+	await held.getByRole("button", { name: "Show" }).click();
+	await expect.element(held).not.toBeInTheDocument();
+	expect(rows()).toBe(2);
+});
+
+// Kills an empty table that holds the first lines to land behind Show.
+test("a run's first alerting lines fill its table directly", async () => {
+	let count = 0;
+	const { api } = fakeApi(() => ({ data: alertingSoFar(count) }));
+	mount(api);
+	await expect.element(table()).toBeVisible();
+	count = 2;
+	await queryClient.refetchQueries();
+	await expect.element(alerts()).toBeVisible();
+	await expect
+		.poll(() => alerts().element().querySelectorAll("tbody tr.lr").length)
+		.toBe(2);
+	expect(page.getByRole("button", { name: "Show" }).elements()).toHaveLength(0);
+});
+
+// Kills a Status column too narrow for its longest pills or given back its end
+// padding, any other column's share cut below what a likely report shows, and
+// a minimum width below a laptop too small for one, which cuts its text rather
+// than scroll, on the real page from 768 px up (ruling 407).
+test("a likely report's every cell is whole, with the longest Running and Failed pills, from 768 px up", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(START + 59 * 60_000);
+	const failed = (index: number, took: number) =>
+		likelyReport(index, {
+			job: job({
+				status: "failed" as JsonConsoleJob["status"],
+				started: START,
+				completed: START + took,
+			}),
+		});
+	for (const width of [768, 1024, 1280]) {
+		await page.viewport(width, 1024);
+		const { api } = fakeApi(() => ({
+			data: runPageFixture([
+				likelyReport(0),
+				likelyReport(1, {
+					job: job({
+						status: "running" as JsonConsoleJob["status"],
+						started: START,
+					}),
+				}),
+				failed(2, 59 * 60_000 + 59_000),
+				failed(3, 25 * 3_600_000 + 59 * 60_000),
+			]),
+		}));
+		mount(api);
+		await expect.element(table()).toBeVisible();
+		await document.fonts.ready;
+		expect(
+			[...document.querySelectorAll(".rn-row .rn-st")].map(
+				(pill) => pill.textContent,
+			),
+		).toEqual(["Running 59m", "Failed 59m 59s", "Failed 25h 59m"]);
+		expect(
+			[...document.querySelectorAll(".rn-row")].flatMap((row) => cutCells(row)),
+			`at ${width} px`,
+		).toEqual([]);
+		expect(cutHeaders(table().element()), `at ${width} px`).toEqual([]);
+		dispose?.();
+		document.body.replaceChildren();
 	}
+});
+
+// Kills an Alerts column that cuts a four-digit total at 768 px further than
+// it did before the Status column held its pills.
+test("at 768 px a report's four-digit alerts total is cut no further than before", async () => {
+	await page.viewport(768, 1024);
+	const root = document.createElement("div");
+	root.className = "console";
+	document.body.append(root);
+	dispose = render(
+		() => (
+			<RunReports
+				slug="hashbrown"
+				reports={[likelyReport(0, { alerts: { total: 9999, active: 999 } })]}
+				total={1}
+				now={START}
+			/>
+		),
+		root,
+	);
+	await expect.element(table()).toBeVisible();
+	await document.fonts.ready;
+	const alerts = document
+		.querySelector(".rn-row .reports-alerts")
+		?.closest("td") as HTMLElement;
+	// Before Status held its pills, Alerts cut it by 32 px here.
+	expect(overrun(alerts)).toBeLessThanOrEqual(32);
+});
+
+/** A running run of two reports whose first raised the alerts numbered `alerts`, with `fields` over it. */
+const alertingRun = (
+	alerts: number[],
+	fields: Parameters<typeof runPageFixture>[1] = {},
+) =>
+	runPageFixture([runReportFixture(0)], {
+		total: 2,
+		alerts: { total: alerts.length, active: alerts.length },
+		alerting: alertsFixture([
+			{
+				report: 2,
+				order: 1,
+				alerts: alerts.map((alert, index) => ({
+					alert,
+					benchmark: index % 2,
+				})),
+			},
+		]),
+		...fields,
+	});
+
+// Kills a move to another run that keeps the last run's shown lines, so every
+// alerting line of the new run waits behind Show.
+test("moving to another run that alerted draws its lines at once", async () => {
+	const { api } = fakeApi((url) => ({
+		data: url.pathname.endsWith(NEIGHBOR)
+			? alertingRun([11, 12], {
+					uuid: NEIGHBOR,
+					hash: `4e02c1d${"0".repeat(33)}`,
+				})
+			: alertingRun([1], { next: neighbor() }),
+	}));
+	mount(api, `${NEXT_PROJECTS}${PATH}`, NEXT_PROJECTS);
+	await expect.element(alerts()).toBeVisible();
+	await page.getByRole("link", { name: /^Next / }).click();
+	const moved = page.getByRole("table", {
+		name: "Alerts in run 4e02c1d, by report",
+	});
+	await expect.element(moved).toBeVisible();
+	await expect
+		.poll(() => moved.element().querySelectorAll("tbody tr.lr").length)
+		.toBe(2);
+	expect(
+		page.getByRole("status").filter({ hasText: "new line" }).elements(),
+	).toHaveLength(0);
+});
+
+// Kills a run page whose running times stand still as its answers come in.
+test("a running run's times move on with each answer", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(START + 60_000);
+	const { api } = fakeApi(() => ({
+		data: runPageFixture(
+			[
+				runReportFixture(0, {
+					job: job({
+						status: "running" as JsonConsoleJob["status"],
+						started: START + 12_000,
+					}),
+				}),
+			],
+			{
+				jobs: {
+					queued: 0,
+					running: 1,
+					failed: 0,
+					canceled: 0,
+					since: START + 12_000,
+				} as JsonConsoleRunJobs,
+			},
+		),
+	}));
+	mount(api);
+	await expect.element(table()).toBeVisible();
+	const title = () => document.querySelector(".rp-titlerow")?.textContent;
+	expect(title()).toContain("Running 48s");
+	expect(cells(2)[6]).toBe("Running 48s");
+	vi.setSystemTime(START + 3 * 60_000 + 12_000);
+	await queryClient.refetchQueries();
+	await expect.poll(title).toContain("Running 3m");
+	expect(cells(2)[6]).toBe("Running 3m");
+});
+
+// Kills a run's sub line that counts its lines before any have landed.
+test("a run with nothing landed counts no lines in its sub line", async () => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(START + 60_000);
+	const { api } = fakeApi(() => ({
+		data: runPageFixture(
+			[
+				runReportFixture(0, { job: job({}) }),
+				runReportFixture(1, {
+					job: job({
+						status: "running" as JsonConsoleJob["status"],
+						started: START,
+					}),
+				}),
+			],
+			{
+				jobs: {
+					queued: 1,
+					running: 1,
+					failed: 0,
+					canceled: 0,
+					since: START,
+				} as JsonConsoleRunJobs,
+			},
+		),
+	}));
+	mount(api);
+	await expect.element(table()).toBeVisible();
+	const sub = document.querySelector(".rp-sub")?.textContent ?? "";
+	expect(sub).toContain("2 reports");
+	expect(sub).not.toMatch(/\bline/);
 });

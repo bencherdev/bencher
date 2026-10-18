@@ -3,6 +3,10 @@
 mod parser;
 mod task;
 
+// The end-to-end seed writes runner jobs with the bundled SQLite the API uses.
+#[cfg(feature = "plus")]
+use libsqlite3_sys as _;
+
 use task::Task;
 
 const API_VERSION: &str = env!("CARGO_PKG_VERSION");

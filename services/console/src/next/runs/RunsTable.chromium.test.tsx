@@ -4,7 +4,10 @@ import "../reports/reports.css";
 import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
 import { page } from "vitest/browser";
-import type { JsonConsoleRunSummary } from "../../types/bencher";
+import type {
+	JsonConsoleRunJobs,
+	JsonConsoleRunSummary,
+} from "../../types/bencher";
 import type { Range } from "../reports/rows";
 import {
 	columnEdges,
@@ -12,7 +15,7 @@ import {
 	expectRowOpens,
 } from "../ui/testing";
 import RunsTable from "./RunsTable";
-import { runFixture } from "./testing";
+import { cutCells, cutHeaders, likelyRuns, runFixture } from "./testing";
 
 const NOW = Date.parse("2026-09-14T00:00:00Z");
 const RUN =
@@ -367,4 +370,154 @@ test("a long first name gives way to its +N, and three-digit alerts fit", async 
 		dispose?.();
 		document.body.replaceChildren();
 	}
+});
+
+const jobs = (fields: Partial<JsonConsoleRunJobs>) =>
+	({
+		queued: 0,
+		running: 0,
+		failed: 0,
+		canceled: 0,
+		...fields,
+	}) as JsonConsoleRunJobs;
+
+/** A run of two reports, both runner jobs in the states `fields` counts. */
+const pending = (index: number, fields: Partial<JsonConsoleRunJobs>) =>
+	runFixture(index, { reports: 2, jobs: jobs(fields) });
+
+// Kills a run's status read from anything but its jobs, a time on a queued or
+// canceled run or none on a running or failed one, a count drawn for a run
+// nothing has landed for and a dash for one something has, and a link whose
+// name leaves out a pending run's status.
+test("a run's status column reads its jobs, its counts a dash until something lands", async () => {
+	await page.viewport(1280, 720);
+	mount([
+		pending(0, { running: 2, since: NOW - 48_000 }),
+		pending(1, { queued: 2, since: NOW - 5_000 }),
+		pending(2, { failed: 1, canceled: 1 }),
+		pending(3, { canceled: 2 }),
+		runFixture(4, {
+			reports: 3,
+			jobs: jobs({ running: 1, since: NOW - 125_000 }),
+		}),
+		runFixture(5),
+	]);
+	await expect.element(table()).toBeVisible();
+	const tail = (row: number) => cells(row).slice(6, 9);
+	expect(tail(2)).toEqual(["-", "-", "Running 48s"]);
+	expect(tail(3)).toEqual(["-", "-", "Queued"]);
+	expect(tail(4)).toEqual(["-", "-", "Failed 2m 00s"]);
+	expect(tail(5)).toEqual(["-", "-", "Canceled"]);
+	expect(tail(6)).toEqual(["36", "0", "Running 2m"]);
+	expect(tail(7)).toEqual(["36", "0", "2m 00s"]);
+	await expect
+		.element(table().getByRole("link", { name: /, Running 48s$/ }))
+		.toBeVisible();
+	expect(
+		document
+			.querySelector("tr[aria-rowindex='7'] a")
+			?.getAttribute("aria-label"),
+	).not.toMatch(/2m 00s/);
+});
+
+// Kills a queued pill without its open ring, a running dot that holds still,
+// a failed pill drawn like the alert pill, and a canceled pill filled like the
+// others.
+test("each status draws its own mark and fill", async () => {
+	await page.viewport(1280, 720);
+	mount([
+		pending(0, { queued: 2, since: NOW }),
+		pending(1, { running: 2, since: NOW }),
+		pending(2, { failed: 2 }),
+		pending(3, { canceled: 2 }),
+		runFixture(4, { alerts: { total: 1, active: 1 } }),
+	]);
+	await expect.element(table()).toBeVisible();
+	const pill = (status: string) =>
+		document.querySelector(`.rn-st[data-status="${status}"]`) as HTMLElement;
+	const style = (element: Element | null) =>
+		getComputedStyle(element as Element);
+	const ring = style(pill("queued").querySelector(".rn-ring"));
+	expect(ring.borderTopWidth).not.toBe("0px");
+	expect(ring.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+	expect(style(pill("running").querySelector(".rn-pulse")).animationName).toBe(
+		"rn-pulse",
+	);
+	expect(pill("failed").querySelector("svg")).not.toBeNull();
+	const alert = style(document.querySelector(".reports-active"));
+	const failed = style(pill("failed"));
+	expect(failed.backgroundColor).not.toBe(alert.backgroundColor);
+	expect(failed.color).not.toBe(alert.color);
+	expect(style(pill("canceled")).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+	expect(pill("canceled").querySelector("svg")).not.toBeNull();
+});
+
+// Kills a phone row that hides a pending run's status, or shows a finished
+// run's time in place of its alerts.
+test("on a phone a pending run shows its status where a finished run shows its alerts", async () => {
+	await page.viewport(390, 844);
+	mount([
+		pending(0, { running: 2, since: NOW - 48_000 }),
+		runFixture(1, { alerts: { total: 2, active: 1 } }),
+	]);
+	await expect.element(table()).toBeVisible();
+	const shown = (row: number, selector: string) =>
+		(
+			document.querySelector(
+				`tr[aria-rowindex="${row}"] ${selector}`,
+			) as HTMLElement
+		).checkVisibility();
+	expect(shown(2, ".rn-st")).toBe(true);
+	expect(shown(3, ".reports-alerts")).toBe(true);
+	expect(shown(3, "td:nth-child(9)")).toBe(false);
+});
+
+/** The fixed-length columns, which hold their content whole from 768 px up (rulings 409 and 410). */
+const FIXED = ["When", "Head", "Reports", "Lines", "Alerts", "Status"];
+const statuses = () =>
+	[...document.querySelectorAll("tbody .rn-st")].map(
+		(pill) => pill.textContent,
+	);
+const runRows = () => [...document.querySelectorAll("tbody tr[aria-rowindex]")];
+
+// Kills a list below a laptop that cuts a fixed-length cell (its time, head,
+// counts, alerts, or status) or a header rather than scroll, and a Status
+// column too narrow for its longest pills or given back its end padding
+// (ruling 410: from 768 to 1024 px the list keeps one layout).
+test("at 768 px the list scrolls sideways, its fixed-length cells and headers whole", async () => {
+	await page.viewport(768, 720);
+	mount(likelyRuns(NOW));
+	await expect.element(table()).toBeVisible();
+	await document.fonts.ready;
+	expect(table().element().getBoundingClientRect().width).toBeGreaterThan(
+		document.documentElement.clientWidth,
+	);
+	expect(statuses()).toEqual([
+		"Running 59m",
+		"Failed 59m 59s",
+		"Failed 25h 59m",
+	]);
+	expect(runRows().flatMap((row) => cutCells(row, FIXED))).toEqual([]);
+	expect(cutHeaders(table().element())).toEqual([]);
+});
+
+// Kills a list that scrolls sideways on a small laptop, and one that cuts a
+// fixed-length cell (its time, head, counts, alerts, or status) or a header
+// there; the branch, testbed, adapter, and author take the shortfall (ruling
+// 409).
+test("at 1024 px the list fits, its fixed-length cells and headers whole", async () => {
+	await page.viewport(1024, 720);
+	mount(likelyRuns(NOW));
+	await expect.element(table()).toBeVisible();
+	await document.fonts.ready;
+	expect(table().element().getBoundingClientRect().width).toBeLessThanOrEqual(
+		document.documentElement.clientWidth,
+	);
+	expect(statuses()).toEqual([
+		"Running 59m",
+		"Failed 59m 59s",
+		"Failed 25h 59m",
+	]);
+	expect(runRows().flatMap((row) => cutCells(row, FIXED))).toEqual([]);
+	expect(cutHeaders(table().element())).toEqual([]);
 });

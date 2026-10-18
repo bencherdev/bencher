@@ -40,3 +40,6 @@ export const Author = (props: {
 		</span>
 	);
 };
+
+/** A count nothing has landed for yet. */
+export const Dash = () => <span class="rn-dash">-</span>;

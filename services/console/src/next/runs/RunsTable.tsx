@@ -10,7 +10,9 @@ import type { Range } from "../reports/rows";
 import { MoreRows, Spacer } from "../reports/TableRows";
 import { useVirtualRows } from "../reports/virtual";
 import { allNames, runHead } from "./format";
-import { Alerts, Author } from "./cells";
+import { Alerts, Author, Dash } from "./cells";
+import StatusPill from "./StatusPill";
+import { landed, runStatus, statusText } from "./status";
 
 const COLUMNS = 10;
 
@@ -47,32 +49,32 @@ const RunsTable = (props: {
 			<thead>
 				<tr aria-rowindex={1}>
 					{/* Every share but the branch's is set, so the columns never follow the rows drawn. */}
-					<th scope="col" style="width:7.5%">
+					<th scope="col" style="width:8.4%">
 						When
 					</th>
 					<th scope="col">Branch</th>
-					<th scope="col" style="width:8%">
+					<th scope="col" style="width:7.6%">
 						Head
 					</th>
-					<th scope="col" style="width:7.5%" data-align="end">
+					<th scope="col" style="width:8%" data-align="end">
 						Reports
 					</th>
-					<th scope="col" style="width:12.5%">
+					<th scope="col" style="width:9.1%">
 						Testbed
 					</th>
-					<th scope="col" style="width:8.5%">
+					<th scope="col" style="width:8.7%">
 						Adapter
 					</th>
-					<th scope="col" style="width:5.5%" data-align="end">
+					<th scope="col" style="width:5.85%" data-align="end">
 						Lines
 					</th>
-					<th scope="col" style="width:18.5%">
+					<th scope="col" style="width:18%">
 						Alerts
 					</th>
-					<th scope="col" style="width:7.5%">
+					<th scope="col" style="width:142px">
 						Status
 					</th>
-					<th scope="col" style="width:13%">
+					<th scope="col" style="width:10.75%">
 						By
 					</th>
 				</tr>
@@ -113,6 +115,8 @@ const RunRow = (props: {
 }) => {
 	const head = () => runHead(props.run);
 	const absolute = () => absoluteTime(props.run.start_time);
+	const status = () => runStatus(props.run, props.now, duration);
+	const counted = () => landed(props.run.reports, props.run.jobs);
 	// A run that raised alerts draws them with code of their own, which starts as the reader moves to it.
 	const alertsAhead = (event?: PointerEvent) => {
 		if (
@@ -136,6 +140,7 @@ const RunRow = (props: {
 					props.run.author_count,
 				)}`,
 			absolute(),
+			status().kind && statusText(status()),
 		]
 			.filter(Boolean)
 			.join(", ");
@@ -182,13 +187,17 @@ const RunRow = (props: {
 				<First names={props.run.adapters} count={props.run.adapter_count} />
 			</td>
 			<td data-fold="hide" data-align="end">
-				{props.run.lines}
+				<Show when={counted()} fallback={<Dash />}>
+					{props.run.lines}
+				</Show>
 			</td>
-			<td data-fold="n1">
-				<Alerts alerts={props.run.alerts} />
+			<td data-fold={status().kind ? "hide" : "n1"}>
+				<Show when={counted()} fallback={<Dash />}>
+					<Alerts alerts={props.run.alerts} />
+				</Show>
 			</td>
-			<td data-fold="hide">
-				{duration(props.run.end_time - props.run.start_time)}
+			<td class="rn-status" data-fold={status().kind ? "n1" : "hide"}>
+				<StatusPill status={status()} />
 			</td>
 			<td data-fold="hide">
 				<By authors={props.run.authors} count={props.run.author_count} />

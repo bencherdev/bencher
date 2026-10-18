@@ -12,14 +12,16 @@ import {
 	For,
 	Match,
 	Show,
+	Suspense,
 	Switch,
 	createComputed,
 	createMemo,
 	createSignal,
+	lazy,
 	mapArray,
 	on,
 } from "solid-js";
-import type { JsonConsoleReport } from "../../types/bencher";
+import type { JsonConsoleReport, JsonConsoleSpec } from "../../types/bencher";
 import type { Settable } from "../alerts/status";
 import { useFold } from "../alerts/fold";
 import { ApiError } from "../api";
@@ -57,6 +59,8 @@ import {
 } from "../report/view";
 import { duration, shortHash } from "../reports/format";
 import Neighbor, { onMoved } from "../runs/Neighbor";
+import { reportStatus } from "../runs/status";
+import StatusPill from "../runs/StatusPill";
 
 const SKELETON_ROWS = 8;
 
@@ -132,6 +136,14 @@ const Report = () => {
 	const report = () => first()?.report;
 	/** The rows on screen are the last view's, until the new one answers. */
 	const busy = () => batches()[0]?.isPlaceholderData === true;
+	const [now, setNow] = createSignal(Date.now());
+	// Every answer, a poll's too, moves the time a running job counts from now.
+	createComputed(
+		on(
+			() => batches()[0]?.dataUpdatedAt,
+			() => setNow(Date.now()),
+		),
+	);
 
 	const lines = createMemo(() =>
 		loaded().flatMap((batch) =>
@@ -281,7 +293,7 @@ const Report = () => {
 							readOnly={bootstrap().data?.permissions.edit === false}
 							onRunIntent={intendRun}
 						/>
-						<Title report={report()} />
+						<Title report={report()} now={now()} />
 					</div>
 					<div class="ph-actions rp-actions">
 						<Neighbor
@@ -301,15 +313,26 @@ const Report = () => {
 							fallback={<Skeleton size="text" class="rp-sub-skel" />}
 						>
 							{(report) => (
-								<>
-									{subtitle(
+								<For
+									each={subtitle(
 										report(),
 										// The run's crumb names the hash when there is one.
 										report().run ? undefined : hash(),
 										view().search ? undefined : report().total,
 										narrow(),
 									)}
-								</>
+								>
+									{(part, index) => (
+										<>
+											{index() > 0 && " · "}
+											{part === SPEC ? (
+												<Spec spec={report().spec} narrow={narrow()} />
+											) : (
+												part
+											)}
+										</>
+									)}
+								</For>
 							)}
 						</Show>
 					</p>
@@ -327,6 +350,10 @@ const Report = () => {
 					onClear={() => setSelection(new Map())}
 				/>
 				<Switch>
+					{/* Until a runner job's report is finished, its heading says why it has no lines. */}
+					<Match when={report()?.total === 0 && report()?.job !== undefined}>
+						{null}
+					</Match>
 					<Match when={report()?.total === 0 && !busy()}>
 						<div class="card soft rp-empty">
 							<Heading level={2} size="lg">
@@ -484,7 +511,10 @@ const Crumb = (props: {
  * The branch and testbed, and the report's alerts; before they arrive, a
  * placeholder of the same line box, so what arrives later moves nothing.
  */
-const Title = (props: { report: JsonConsoleReport | undefined }) => (
+const Title = (props: {
+	report: JsonConsoleReport | undefined;
+	now: number;
+}) => (
 	<div class="rp-titlerow">
 		<Heading level={1} size="xl">
 			<Show
@@ -511,7 +541,40 @@ const Title = (props: { report: JsonConsoleReport | undefined }) => (
 				{plural(props.report?.counts.alerts.total ?? 0, "alert")}
 			</span>
 		</Show>
+		<Show when={props.report?.job && props.report}>
+			{(report) => (
+				<StatusPill status={reportStatus(report(), props.now, duration)} />
+			)}
+		</Show>
 	</div>
+);
+
+/** Where the sub line names the spec a runner report ran on. */
+const SPEC = Symbol("spec");
+
+/** The spec's tooltip loads only for a runner report; until it arrives its name holds the same box. */
+const SpecTip = lazy(() => import("../report/SpecTip"));
+
+/** A runner report's spec by name, its OS, architecture, CPU, and memory in a tooltip; a phone, which shows no tooltip, reads its name. */
+const Spec = (props: {
+	spec: JsonConsoleSpec | undefined;
+	narrow: boolean;
+}) => (
+	<Show when={props.spec}>
+		{(spec) => (
+			<Show when={!props.narrow} fallback={spec().name}>
+				<Suspense
+					fallback={
+						<button type="button" class="rn-specname">
+							{spec().name}
+						</button>
+					}
+				>
+					<SpecTip spec={spec()} />
+				</Suspense>
+			</Show>
+		)}
+	</Show>
 );
 
 /** Its place in its run, when, how, and what the report holds; `lines` is left out while a filter narrows them. */
@@ -521,39 +584,42 @@ const subtitle = (
 	lines: number | undefined,
 	narrow: boolean,
 ) => {
-	const total = lines === undefined ? [] : [plural(lines, "line")];
+	// A runner job's report holds nothing until its results are in, and its status carries its time.
+	const job = report.job !== undefined;
+	const total = lines === undefined || job ? [] : [plural(lines, "line")];
 	const run = report.run;
 	// A report alone in its run has no place to tell.
 	const place =
 		run?.order && run.total > 1 ? `#${run.order} of ${run.total}` : undefined;
+	const spec = report.spec && SPEC;
 	if (narrow) {
 		return [
 			place,
 			startTime(report.start_time, true),
 			report.adapter,
+			spec,
 			hash,
 			...total,
-		]
-			.filter(Boolean)
-			.join(" · ");
+		].filter((part): part is string | typeof SPEC => part !== undefined);
 	}
 	const counts = report.counts;
 	return [
 		place,
 		startTime(report.start_time, false),
 		report.adapter,
+		spec,
 		hash,
-		[
-			plural(counts.benchmarks, "benchmark"),
-			plural(counts.variants, "variant"),
-			plural(counts.measures, "measure"),
-			...(counts.metrics > 1 ? [plural(counts.metrics, "metric")] : []),
-			...total,
-		].join(", "),
-		`took ${duration(report.end_time - report.start_time)}`,
-	]
-		.filter(Boolean)
-		.join(" · ");
+		job
+			? undefined
+			: [
+					plural(counts.benchmarks, "benchmark"),
+					plural(counts.variants, "variant"),
+					plural(counts.measures, "measure"),
+					...(counts.metrics > 1 ? [plural(counts.metrics, "metric")] : []),
+					...total,
+				].join(", "),
+		job ? undefined : `took ${duration(report.end_time - report.start_time)}`,
+	].filter((part): part is string | typeof SPEC => part !== undefined);
 };
 
 const plural = (count: number, noun: string) =>

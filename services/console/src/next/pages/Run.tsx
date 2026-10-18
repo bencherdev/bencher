@@ -41,6 +41,8 @@ import { runHead } from "../runs/format";
 import Neighbor from "../runs/Neighbor";
 import { isRunId, runBatchQuery } from "../runs/run";
 import RunReports from "../runs/RunReports";
+import StatusPill from "../runs/StatusPill";
+import { landed, runStatus } from "../runs/status";
 
 /** Only a run that raised alerts draws them, so the code that draws a report's lines loads with its first alert. */
 const RunAlerts = lazy(() => import("../runs/RunAlerts"));
@@ -105,6 +107,31 @@ const Run = () => {
 		return all;
 	});
 
+	const [now, setNow] = createSignal(Date.now());
+	// Every answer, a poll's too, moves the times the page counts from now.
+	createComputed(
+		on(
+			() => batches().map((batch) => batch.dataUpdatedAt),
+			() => setNow(Date.now()),
+		),
+	);
+
+	// The alerting lines on screen: once the table shows some, lines that land later wait for the reader.
+	const alertKeys = createMemo(() =>
+		(run()?.alerting?.groups ?? []).flatMap((group) =>
+			group.alerts.flatMap((entry) => entry.line.alert?.uuid ?? []),
+		),
+	);
+	const [shown, setShown] = createSignal<ReadonlySet<string>>(new Set());
+	createComputed(
+		on([() => params.run, alertKeys], ([current, keys], previous) => {
+			if (previous?.[0] !== current || shown().size === 0) {
+				setShown(new Set(keys));
+			}
+		}),
+	);
+	const held = () => alertKeys().filter((key) => !shown().has(key)).length;
+
 	const [range, setRange] = createSignal<Range>();
 	createEffect(() => {
 		const shown = range();
@@ -162,7 +189,7 @@ const Run = () => {
 				<div class="pagehead rp-head">
 					<div class="ph-title">
 						<Crumb slug={slug()} />
-						<Title run={run()} />
+						<Title run={run()} now={now()} />
 					</div>
 					<div class="ph-actions rp-actions">
 						<Neighbor
@@ -181,7 +208,7 @@ const Run = () => {
 							when={run()}
 							fallback={<Skeleton size="text" class="rp-sub-skel" />}
 						>
-							{(run) => subtitle(run(), narrow())}
+							{(run) => subtitle(run(), narrow(), now())}
 						</Show>
 					</p>
 				</div>
@@ -200,6 +227,7 @@ const Run = () => {
 										slug={slug()}
 										reports={reports()}
 										total={run().total}
+										now={now()}
 										onRange={setRange}
 										onIntent={intendReport}
 										loading={next()?.isFetching ?? false}
@@ -231,12 +259,10 @@ const Run = () => {
 					</Switch>
 				</section>
 				<Show when={run()}>
-					{(shown) => (
+					{(run) => (
 						<Show
 							when={
-								(shown().alerting?.total ?? 0) > 0
-									? shown().alerting
-									: undefined
+								(run().alerting?.total ?? 0) > 0 ? run().alerting : undefined
 							}
 						>
 							{(alerting) => (
@@ -244,12 +270,29 @@ const Run = () => {
 									<div class="dm-section-head">
 										<h2 class="seclabel">Alerts in this run</h2>
 										<span class="count">{alertCount(alerting())}</span>
+										<Show when={held()}>
+											{(count) => (
+												<span class="rn-held" role="status">
+													<span>
+														<b>{count()}</b> new{" "}
+														{count() === 1 ? "line" : "lines"}
+													</span>
+													<Button
+														size="sm"
+														onClick={() => setShown(new Set(alertKeys()))}
+													>
+														Show
+													</Button>
+												</span>
+											)}
+										</Show>
 									</div>
 									<Suspense>
 										<RunAlerts
 											slug={slug()}
-											label={`Alerts in run ${runHead(shown())}, by report`}
+											label={`Alerts in run ${runHead(run())}, by report`}
 											alerting={alerting()}
+											shown={shown()}
 											onReportIntent={intendReport}
 										/>
 									</Suspense>
@@ -295,7 +338,7 @@ const Crumb = (props: { slug: string }) => (
  * The branch and the run's head, and its alerts; before they arrive, a
  * placeholder of the same line box, so what arrives later moves nothing.
  */
-const Title = (props: { run: JsonConsoleRun | undefined }) => (
+const Title = (props: { run: JsonConsoleRun | undefined; now: number }) => (
 	<div class="rp-titlerow">
 		<Heading level={1} size="xl">
 			<Show
@@ -323,13 +366,27 @@ const Title = (props: { run: JsonConsoleRun | undefined }) => (
 				{plural(props.run?.alerts.total ?? 0, "alert")}
 			</span>
 		</Show>
+		<Show
+			when={
+				props.run && runStatus(props.run, props.now, duration).kind
+					? props.run
+					: undefined
+			}
+		>
+			{(run) => <StatusPill status={runStatus(run(), props.now, duration)} />}
+		</Show>
 	</div>
 );
 
-/** When, which version, its counts, and how long it took. */
-const subtitle = (run: JsonConsoleRun, narrow: boolean) => {
-	const took = `took ${duration(run.end_time - run.start_time)}`;
-	const lines = plural(run.lines, "line");
+/** When, which version, its counts so far, and how long it took once its jobs are done. */
+const subtitle = (run: JsonConsoleRun, narrow: boolean, now: number) => {
+	// The heading's status carries a run's time until its jobs are done.
+	const took = runStatus(run, now, duration).kind
+		? undefined
+		: `took ${duration(run.end_time - run.start_time)}`;
+	const lines = landed(run.total, run.jobs)
+		? plural(run.lines, "line")
+		: undefined;
 	if (narrow) {
 		return [
 			formatWhen(run.start_time),
@@ -337,7 +394,9 @@ const subtitle = (run: JsonConsoleRun, narrow: boolean) => {
 			plural(run.total, "report"),
 			lines,
 			took,
-		].join(" · ");
+		]
+			.filter(Boolean)
+			.join(" · ");
 	}
 	return [
 		absoluteTime(run.start_time),
@@ -345,7 +404,9 @@ const subtitle = (run: JsonConsoleRun, narrow: boolean) => {
 		`${plural(run.total, "report")}, ${plural(run.testbeds, "testbed")}`,
 		lines,
 		took,
-	].join(" · ");
+	]
+		.filter(Boolean)
+		.join(" · ");
 };
 
 const plural = (count: number, noun: string) =>
