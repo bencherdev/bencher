@@ -88,3 +88,26 @@ export const clearable = (query: ExploreQuery): boolean => {
 		}) !== encodeQuery(blank)
 	);
 };
+
+/** The next query, without its focus when a box changed. */
+export const settleFocus = (
+	current: ExploreQuery,
+	next: ExploreQuery,
+): ExploreQuery => {
+	if (next.focus === undefined || boxesKey(next) === boxesKey(current)) {
+		return next;
+	}
+	const { focus: _focus, ...rest } = next;
+	return rest;
+};
+
+const boxesKey = (query: ExploreQuery): string =>
+	encodeQuery({
+		...blankQuery(),
+		branches: query.branches,
+		testbeds: query.testbeds,
+		benchmarks: query.benchmarks,
+		sets: query.sets,
+		measures: query.measures,
+		metrics: query.metrics,
+	});
