@@ -70,12 +70,15 @@ test.describe("a project's Maintainer", () => {
 		await expect(card(page)).toHaveCount(0, { timeout: 15_000 });
 		await expect(
 			page
-				.getByRole("region", { name: "Latest reports" })
-				.getByRole("link", { name: "report", exact: true })
+				.getByRole("region", { name: "Latest runs" })
+				.getByRole("link", {
+					name: `v${report.branch.head.version?.number}`,
+					exact: true,
+				})
 				.first(),
 		).toHaveAttribute(
 			"href",
-			`${nextPath(project.slug, "reports")}/${report.uuid}`,
+			new RegExp(`^${nextPath(project.slug, "runs")}/[0-9a-f-]{36}$`),
 		);
 	});
 
@@ -106,9 +109,11 @@ test.describe("a project's Maintainer", () => {
 		let polls = 0;
 		page.on("request", (sent) => {
 			const url = new URL(sent.url());
+			// Each poll asks inside the Runs tab's window first, then over all time.
 			if (
-				url.pathname === `/v0/projects/${project.slug}/reports` &&
-				url.searchParams.get("per_page") === "4"
+				url.pathname === `/v0/console/projects/${project.slug}/runs` &&
+				url.searchParams.get("per_page") === "4" &&
+				url.searchParams.has("start_time")
 			) {
 				polls += 1;
 			}
@@ -176,7 +181,7 @@ test.describe("a project's Maintainer", () => {
 		});
 		await tabRow(page).getByRole("link", { name: "Explore" }).click();
 		await expect(
-			page.getByRole("region", { name: "Latest reports" }),
+			page.getByRole("region", { name: "Latest runs" }),
 		).toBeVisible();
 		expect(await panel?.evaluate((element) => element.isConnected)).toBe(true);
 		expect(
@@ -186,12 +191,12 @@ test.describe("a project's Maintainer", () => {
 		).toBeFalsy();
 	});
 
-	// Kills blank Explore held on its skeleton for good when its latest reports
+	// Kills blank Explore held on its skeleton for good when its latest runs
 	// do not load.
-	test("blank Explore draws when its latest reports fail", async ({ page }) => {
+	test("blank Explore draws when its latest runs fail", async ({ page }) => {
 		await page.route(
 			(url) =>
-				url.pathname === `/v0/projects/${hashbrown.slug}/reports` &&
+				url.pathname === `/v0/console/projects/${hashbrown.slug}/runs` &&
 				url.searchParams.get("per_page") === "4",
 			(route) => route.fulfill({ status: 500, json: {} }),
 		);

@@ -9,7 +9,7 @@ import ContentSkeleton from "../ContentSkeleton";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
-import { startQueries } from "./queries";
+import { startQueries } from "./start";
 import { SAMPLE, exportLine, runCommand } from "./setup";
 
 // The card asks again while it shows and the tab is in view, and goes once a report lands.
@@ -24,7 +24,7 @@ const Setup = () => {
 	const client = useQueryClient();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
 	useQueryResult(() => ({
-		...startQueries(api, slug()).reports,
+		...startQueries(api, slug()).runs,
 		refetchInterval: POLL,
 	}));
 	// Only a Maintainer may make a key.
