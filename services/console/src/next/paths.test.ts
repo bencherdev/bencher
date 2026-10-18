@@ -69,7 +69,7 @@ describe("parseNextPath", () => {
 describe("tabOf", () => {
 	// Kills a tab row that marks the wrong tab, or none, for a deep path.
 	test("maps a path to the tab it belongs to", () => {
-		expect(tabOf([])).toBe("explore");
+		expect(tabOf([])).toBe("runs");
 		expect(tabOf(["explore"])).toBe("explore");
 		expect(tabOf(["runs"])).toBe("runs");
 		expect(tabOf(["runs", "abc"])).toBe("runs");
@@ -110,15 +110,18 @@ describe("classicHref", () => {
 		).toBe("/console/projects/hashbrown/reports");
 	});
 
-	// Kills Explore sent to a classic page that does not exist.
-	test("sends Explore and the project root to the classic perf page", () => {
+	// Kills Explore sent to a classic page that does not exist, and the
+	// project root, which is Runs, sent to the classic perf page.
+	test("sends Explore to the classic perf page and the project root to the classic reports list", () => {
+		expect(
+			classicHref(place("/next/console/projects/hashbrown/explore?x=1")),
+		).toBe("/console/projects/hashbrown/perf");
 		for (const pathname of [
 			"/next/console/projects/hashbrown",
 			"/next/console/projects/hashbrown/",
-			"/next/console/projects/hashbrown/explore",
 		]) {
-			expect(classicHref(place(`${pathname}?x=1`))).toBe(
-				"/console/projects/hashbrown/perf",
+			expect(classicHref(place(`${pathname}#top`))).toBe(
+				"/console/projects/hashbrown/reports#top",
 			);
 		}
 	});
@@ -212,7 +215,8 @@ describe("pageName", () => {
 	// Kills a report or an alert opened on its list, a deeper path taken for
 	// one, and a tab's path drawn by another tab's page.
 	test("names the page that draws a project path", () => {
-		expect(pageName([])).toBe("Explore");
+		expect(pageName([])).toBe("Runs");
+		expect(pageName(["explore"])).toBe("Explore");
 		expect(pageName(["runs"])).toBe("Runs");
 		expect(pageName(["runs", "abc"])).toBe("Run");
 		expect(pageName(["runs", "abc", "def"])).toBe("Runs");

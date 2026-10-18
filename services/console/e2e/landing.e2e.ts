@@ -65,8 +65,8 @@ test.describe("a signed in reader with a remembered version 1 project", () => {
 
 	// Kills a root page that renders at all, asks the API, or lets
 	// its own redirect to the classic console overtake the landing while the
-	// project page is slow to answer.
-	test("lands on the project's root with the root page never rendering or asking the API", async ({
+	// project page is slow to answer, and a landing on anything but Runs.
+	test("lands on Runs at the project's root with the root page never rendering or asking the API", async ({
 		page,
 	}) => {
 		await watchRootRendering(page);
@@ -93,6 +93,9 @@ test.describe("a signed in reader with a remembered version 1 project", () => {
 		await expect(page).toHaveURL(nextPath(hashbrown.slug));
 		await expect(
 			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
+		).toBeVisible();
+		await expect(
+			page.getByRole("table", { name: "Runs, newest first" }),
 		).toBeVisible();
 		expect(order.slice(0, 2)).toEqual(["/", nextPath(hashbrown.slug)]);
 		expect(await rootRendering(page)).toEqual({});

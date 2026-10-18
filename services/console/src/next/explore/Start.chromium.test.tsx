@@ -40,10 +40,10 @@ for (const [width, edge] of [
 	[1280, "left"],
 	[390, "top"],
 ] as const) {
-	test(`the starting points run Pinned plots, Latest runs, Alerting now at ${width} px`, async () => {
+	test(`the starting points run Latest runs, Alerting now, Pinned plots at ${width} px`, async () => {
 		await page.viewport(width, 844);
 		dispose = mount(() => <Start onQuery={() => {}} />, { api }).dispose;
-		const lists = ["Pinned plots", "Latest runs", "Alerting now"].map((name) =>
+		const lists = ["Latest runs", "Alerting now", "Pinned plots"].map((name) =>
 			page.getByRole("region", { name }).element(),
 		);
 		for (const [at, list] of lists.entries()) {

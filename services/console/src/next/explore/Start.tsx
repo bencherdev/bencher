@@ -70,23 +70,6 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 			</h2>
 			<div class="ex-cols">
 				<List
-					id="ex-plots"
-					title="Pinned plots"
-					all={{ href: projectPath(slug(), "plots"), text: "All plots" }}
-					result={plots()}
-					rows={START.plots}
-					empty="No pinned plots"
-				>
-					{(plot: JsonPlot) => (
-						<a class="ex-srow" href={`${explore()}${plotSearch(plot)}`}>
-							<span class="grow">
-								<b class="ex-ellip">{plot.title ?? "Untitled plot"}</b>
-								<span class="ex-sub">{rollingName(plot.window)}</span>
-							</span>
-						</a>
-					)}
-				</List>
-				<List
 					id="ex-runs"
 					title="Latest runs"
 					all={{ href: projectPath(slug(), "runs"), text: "All runs" }}
@@ -157,6 +140,23 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 							</a>
 						);
 					}}
+				</List>
+				<List
+					id="ex-plots"
+					title="Pinned plots"
+					all={{ href: projectPath(slug(), "plots"), text: "All plots" }}
+					result={plots()}
+					rows={START.plots}
+					empty="No pinned plots"
+				>
+					{(plot: JsonPlot) => (
+						<a class="ex-srow" href={`${explore()}${plotSearch(plot)}`}>
+							<span class="grow">
+								<b class="ex-ellip">{plot.title ?? "Untitled plot"}</b>
+								<span class="ex-sub">{rollingName(plot.window)}</span>
+							</span>
+						</a>
+					)}
 				</List>
 			</div>
 		</section>

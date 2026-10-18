@@ -418,7 +418,7 @@ const plotOnlyImport = async (request: APIRequestContext, link: string) => {
 				/<link\b[^>]*\bhref="([^"]+\.js)"/g,
 			),
 		].map(([, href]) => href ?? "");
-	const blank = new Set(await named(nextPath(hashbrown.slug)));
+	const blank = new Set(await named(nextPath(hashbrown.slug, "explore")));
 	const [own] = (await named(link)).filter(
 		(href) => !(blank.has(href) || PLOT_CHUNK.test(href)),
 	);
@@ -591,10 +591,23 @@ test("hidden and focused lines travel in the link", async ({
 	).toBeVisible();
 });
 
+// Kills an Explore link from when Explore was the project root drawn as Runs,
+// which drops its query, or moved to Explore without its query.
+test("an Explore link at the project root opens Explore with its query", async ({
+	page,
+	request,
+}) => {
+	const link = explore(hashbrown.slug, (await twoLines(request)).query);
+	const { search } = new URL(link, seed.console_url);
+	await page.goto(`${nextPath(hashbrown.slug)}${search}`);
+	await expect(page).toHaveURL(link);
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+});
+
 // Kills a blank Explore without its starting points, and an alert that opens
 // more than its line or names a source that does not link to that alert.
 test("blank Explore starts from alerts, runs, and pins", async ({ page }) => {
-	await page.goto(nextPath(hashbrown.slug));
+	await page.goto(nextPath(hashbrown.slug, "explore"));
 	const alerting = page.getByRole("region", { name: "Alerting now" });
 	const alert = alerting.getByRole("link", { name: /^blake3 / });
 	await expect(alert).toHaveCount(1);
@@ -640,14 +653,16 @@ test("a latest run opens to its reports, and a report to the benchmarks it ran; 
 			asked.push(new URL(sent.url()).pathname.split("/")[5] ?? "");
 		}
 	});
-	await page.goto(nextPath(hashbrown.slug));
+	await page.goto(nextPath(hashbrown.slug, "explore"));
 	// The newest run on main sent its reports from both testbeds.
 	const row = latestRuns(page).getByRole("button", {
 		name: new RegExp(`^main, run ${seed.last_main_hash}, `),
 	});
 	await row.click();
 	await expect(row).toHaveAttribute("aria-expanded", "true");
-	await expect(page).toHaveURL(new RegExp(`${nextPath(hashbrown.slug)}$`));
+	await expect(page).toHaveURL(
+		new RegExp(`${nextPath(hashbrown.slug, "explore")}$`),
+	);
 	const reports = page.getByRole("region", {
 		name: `Reports in run ${seed.last_main_hash}`,
 	});
@@ -722,7 +737,7 @@ test("a latest run older than the window still lists, and its report draws over 
 	request,
 }) => {
 	const { project, report } = await reported(request, 35);
-	await page.goto(nextPath(project.slug));
+	await page.goto(nextPath(project.slug, "explore"));
 	await latestRuns(page)
 		.getByRole("button", { name: /^main, run 5ab1e50, / })
 		.click();
@@ -815,7 +830,7 @@ test("an edited pin shows the unsaved mark until Save, which writes it", async (
 	await page.getByRole("button", { name: "Pin to Plots" }).click();
 	await expect(page.getByRole("button", { name: "Save as new" })).toBeVisible();
 
-	await page.goto(nextPath(project.slug));
+	await page.goto(nextPath(project.slug, "explore"));
 	const pins = page.getByRole("region", { name: "Pinned plots" });
 	const pin = pins.getByRole("link").filter({ hasText: "Latency on main" });
 	await expect(pin).toHaveText([/hash size=1, Latency on main/]);
@@ -900,14 +915,14 @@ test("leaving a pin with unsaved changes asks first", async ({
 
 	await tabRow(page).getByRole("link", { name: "Runs" }).click();
 	await dialog.getByRole("button", { name: "Leave without saving" }).click();
-	await expect(page).toHaveURL(/\/runs$/);
+	await expect(page).toHaveURL(new RegExp(`${nextPath(project.slug)}$`));
 	expect((await listPlots(request, project.slug))[0]?.x_axis).toBe("date_time");
 
 	await page.goBack();
 	await expect(page.getByText("Unsaved changes")).toBeVisible();
 	await tabRow(page).getByRole("link", { name: "Runs" }).click();
 	await dialog.getByRole("button", { name: "Save and leave" }).click();
-	await expect(page).toHaveURL(/\/runs$/);
+	await expect(page).toHaveURL(new RegExp(`${nextPath(project.slug)}$`));
 	await expect
 		.poll(async () => (await listPlots(request, project.slug))[0]?.x_axis)
 		.toBe("version");
@@ -1041,7 +1056,7 @@ for (const [width, ownLine] of [
 ] as const) {
 	test(`Clear appearing moves nothing at ${width}`, async ({ page }) => {
 		await page.setViewportSize({ width, height: 900 });
-		await page.goto(nextPath(hashbrown.slug));
+		await page.goto(nextPath(hashbrown.slug, "explore"));
 		const query = page.getByRole("region", { name: "Query" });
 		const boxes =
 			width < 768
@@ -1121,7 +1136,7 @@ for (const [width, wrapped] of [
 				page.getByRole("radiogroup", { name: "Measures layout" }),
 			).toBeVisible();
 		} else {
-			await page.goto(nextPath(hashbrown.slug));
+			await page.goto(nextPath(hashbrown.slug, "explore"));
 			await page
 				.getByRole("radiogroup", { name: "Y scale" })
 				.getByText("Log")
@@ -1482,7 +1497,7 @@ test.describe("narrow", () => {
 // or on a latest run's report opened to its benchmarks, in either theme.
 test("blank Explore passes axe in both themes", async ({ page }) => {
 	const runs = latestRuns(page);
-	await axeInBothThemes(page, nextPath(hashbrown.slug), async () => {
+	await axeInBothThemes(page, nextPath(hashbrown.slug, "explore"), async () => {
 		await expect(
 			page
 				.getByRole("region", { name: "Alerting now" })
@@ -1492,7 +1507,7 @@ test("blank Explore passes axe in both themes", async ({ page }) => {
 	});
 	await axeInBothThemes(
 		page,
-		nextPath(hashbrown.slug),
+		nextPath(hashbrown.slug, "explore"),
 		async () => {
 			await expect(page.getByRole("menuitem").first()).toBeVisible();
 		},
@@ -1515,7 +1530,7 @@ test("Explore opened from an alert or a report passes axe in both themes", async
 }) => {
 	await axeInBothThemes(
 		page,
-		nextPath(hashbrown.slug),
+		nextPath(hashbrown.slug, "explore"),
 		async () => {
 			await expect(
 				page.getByRole("link", { name: "alert", exact: true }),

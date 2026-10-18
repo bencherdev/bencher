@@ -108,7 +108,7 @@ const Shell = (props: ShellProps) => {
 									</Show>
 									<a
 										class="tab"
-										href={projectPath(slug(), tab)}
+										href={projectPath(slug(), tab === "runs" ? undefined : tab)}
 										aria-current={tab === props.tab ? "page" : undefined}
 										aria-label={
 											tab === "alerts" && props.alerts

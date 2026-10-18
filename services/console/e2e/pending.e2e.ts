@@ -186,7 +186,7 @@ test("a running report says so in its heading and names its spec", async ({
 test("blank Explore's latest runs show their jobs, and an opened run's unfinished reports show theirs", async ({
 	page,
 }) => {
-	await page.goto(nextPath(runner.slug));
+	await page.goto(nextPath(runner.slug, "explore"));
 	const run = latest(page).getByRole("button", {
 		name: new RegExp(`^main, run ${seed.jobs_hash}, .*Running 48s$`),
 	});
@@ -253,8 +253,8 @@ const unarchive = (request: APIRequestContext, slug: string) =>
 		data: { archived: false },
 	});
 
-// Kills a setup card that does not give way to a job's report, or a latest
-// runs list that shows that run without its status.
+// Kills a setup card that does not give way to a job's report, or a Runs
+// list that shows that run without its status.
 test("the setup card gives way to a queued job's run, which shows its status", async ({
 	page,
 	request,
@@ -266,8 +266,11 @@ test("the setup card gives way to a queued job's run, which shows its status", a
 	expect((await unarchive(request, handover.slug)).ok()).toBe(true);
 	await expect(card).toHaveCount(0, { timeout: 15_000 });
 	await expect(
-		latest(page).getByRole("button", { name: /^main, run 9a7e3f2, .*Queued$/ }),
-	).toBeVisible();
+		page
+			.getByRole("table", { name: "Runs, newest first" })
+			.getByRole("row")
+			.filter({ hasText: "9a7e3f2" }),
+	).toContainText("Queued");
 });
 
 test.describe("with motion reduced, so the running pulse rests", () => {
@@ -332,7 +335,7 @@ test.describe("with motion reduced, so the running pulse rests", () => {
 	}) => {
 		await axeInBothThemes(
 			page,
-			nextPath(runner.slug),
+			nextPath(runner.slug, "explore"),
 			() =>
 				expect(
 					page.getByRole("region", {

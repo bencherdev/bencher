@@ -84,7 +84,7 @@ const runsData: RoutePreloadFunc = ({ params, location }) => {
 
 /** Relative to the router's base, the new console's project path. */
 export const ROUTES: RouteDefinition[] = [
-	{ path: "/:project", component: PAGES.Explore },
+	{ path: "/:project", component: PAGES.Runs, preload: runsData },
 	{ path: "/:project/runs/:run", component: PAGES.Run },
 	{ path: "/:project/reports/:report", component: PAGES.Report },
 	{ path: "/:project/thresholds/:threshold", component: PAGES.Threshold },

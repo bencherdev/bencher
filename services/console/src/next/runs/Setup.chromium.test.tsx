@@ -1,7 +1,10 @@
 import "../public/public.css";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import type { Api } from "../api";
+import { DEFAULT_SEARCH } from "../reports/search";
 import { bootstrapOf, fakeApi, mount } from "../settings/testing";
+import { batchKey, batchQuery } from "./query";
 import Setup from "./Setup";
 
 let dispose: (() => void) | undefined;
@@ -19,14 +22,23 @@ const CREATED = {
 	key: "bencher_run_secret",
 };
 const ACTIVE = ["console", "keys", "hashbrown", "active"];
+const BATCH = { page: 1, perPage: 8 };
+/** The card, polling the Runs list's first batch, which holds no run. */
+const card = (api: Api) => (
+	<Setup poll={() => batchQuery(api, "hashbrown", DEFAULT_SEARCH, BATCH)} />
+);
+const NO_RUNS: [unknown[], unknown] = [
+	[...batchKey("hashbrown", DEFAULT_SEARCH, BATCH)],
+	{ runs: [], total: 0, batch: BATCH },
+];
 
 // Kills a key made with another name or no expiry, a secret kept in the cache
 // or shown with Create key still offered, and a Keys list left without the key.
 test("Create key makes a key, shows it once with its export line, and lists it", async () => {
 	const { api, sent } = fakeApi(async () => CREATED);
-	const mounted = mount(() => <Setup />, {
+	const mounted = mount(() => card(api), {
 		api,
-		cached: [[ACTIVE, { keys: [], total: 0 }]],
+		cached: [[ACTIVE, { keys: [], total: 0 }], NO_RUNS],
 	});
 	dispose = mounted.dispose;
 	await userEvent.click(page.getByRole("button", { name: "Create key" }));
@@ -62,7 +74,7 @@ test("a refused key says so and Create key stays", async () => {
 	const { api } = fakeApi(async () => {
 		throw new Error("refused");
 	});
-	dispose = mount(() => <Setup />, { api }).dispose;
+	dispose = mount(() => card(api), { api, cached: [NO_RUNS] }).dispose;
 	await userEvent.click(page.getByRole("button", { name: "Create key" }));
 	await expect
 		.element(page.getByRole("alert"))
@@ -75,9 +87,10 @@ test("a refused key says so and Create key stays", async () => {
 // Kills Create key offered to a reader the API refuses it to.
 test("a reader who is not a Maintainer gets the card without Create key", async () => {
 	const { api } = fakeApi();
-	dispose = mount(() => <Setup />, {
+	dispose = mount(() => card(api), {
 		api,
 		bootstrap: bootstrapOf({ manage: false }),
+		cached: [NO_RUNS],
 	}).dispose;
 	await expect
 		.element(page.getByText("Read only", { exact: true }))

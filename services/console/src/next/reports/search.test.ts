@@ -10,6 +10,7 @@ import {
 	decodeSearch,
 	encodeSearch,
 	filterCount,
+	readsOnlyRuns,
 	windowPhrase,
 	withoutFilters,
 } from "./search";
@@ -259,4 +260,19 @@ test("ADAPTERS is every adapter the API lists, a language adapter aside", () => 
 			.filter((adapter) => !languages.includes(adapter))
 			.sort(),
 	);
+});
+
+// Kills an Explore link from when Explore was the project root drawn as Runs,
+// which drops its query, and a Runs link sent away from Runs.
+test("readsOnlyRuns holds for a Runs link and not for an Explore link", () => {
+	const reads = (query: string) => readsOnlyRuns(new URLSearchParams(query));
+	expect(reads("")).toBe(true);
+	expect(
+		reads(
+			"branch=main&testbed=ubuntu&adapter=json&alerts=active&window=2w&start_time=1&end_time=2",
+		),
+	).toBe(true);
+	for (const key of ["benchmarks", "plot", "branches", "measures", "x_axis"]) {
+		expect(reads(`window=2w&${key}=x`), key).toBe(false);
+	}
 });

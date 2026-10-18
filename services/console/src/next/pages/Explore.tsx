@@ -6,9 +6,7 @@ import Sheet from "@bencherdev/ui/Sheet";
 import { useQueryClient } from "@tanstack/solid-query";
 import {
 	For,
-	Match,
 	Show,
-	Switch,
 	createEffect,
 	createMemo,
 	createSignal,
@@ -46,7 +44,6 @@ import {
 import { drawable, drawsPlot, requestKey } from "../explore/request";
 import { useRequested } from "../explore/requested";
 import Start from "../explore/Start";
-import { startQueries } from "../explore/start";
 import { chipSummary } from "../explore/summary";
 import { rollingName } from "../explore/window";
 import {
@@ -79,76 +76,8 @@ const DIMENSIONS = BOXES.map(
 	(box) => [box, box === "sets" ? "parameters" : box] as const,
 );
 
-/** Explore, or for a project nothing has reported to yet, how to send the first report. */
-const Explore = (props: { readOnly?: boolean }) => {
-	const { api, slug } = useProject();
-	const client = useQueryClient();
-	const location = useLocation();
-	const opening = createMemo(() => {
-		const query = decodeQuery(location.search);
-		return (
-			!props.readOnly &&
-			query.plot === undefined &&
-			query.benchmarks.length === 0
-		);
-	});
-	// Blank Explore lists the latest runs, so their answer decides the page
-	// and the other lists load beside it.
-	const latest = useQueryResult(() => ({
-		...startQueries(api, slug()).runs,
-		enabled: opening(),
-	}));
-	createEffect(() => {
-		if (opening()) {
-			const { alerts, plots } = startQueries(api, slug());
-			void client.prefetchQuery(alerts);
-			void client.prefetchQuery(plots);
-		}
-	});
-	const empty = () => opening() && latest().data?.length === 0;
-	// A read that failed once decides for the editor: mounting it asks again,
-	// and a skeleton on every retry would never let it stay.
-	const deciding = () =>
-		opening() && latest().data === undefined && latest().errorUpdatedAt === 0;
-	// Once the editor shows for this project it stays while blank Explore
-	// decides, so only a cold load waits on the skeleton.
-	const [shownFor, setShownFor] = createSignal<string>();
-	createEffect(() => {
-		if (!(deciding() || empty())) {
-			setShownFor(slug());
-		}
-	});
-	const [Setup, setSetup] = createSignal<SetupView>();
-	createEffect(() => {
-		if (empty() && !Setup()) {
-			import("../explore/Setup")
-				.then(({ default: view }) => setSetup(() => view))
-				.catch(() => {});
-		}
-	});
-	return (
-		<Switch fallback={<Exploring readOnly={props.readOnly} />}>
-			<Match when={deciding() && shownFor() !== slug()}>
-				<ContentSkeleton />
-			</Match>
-			<Match when={empty()}>
-				<Show when={Setup()} fallback={<ContentSkeleton />}>
-					{(View) => {
-						const Loaded = View();
-						return <Loaded />;
-					}}
-				</Show>
-			</Match>
-		</Switch>
-	);
-};
-
-export default Explore;
-
-type SetupView = typeof import("../explore/Setup").default;
-
-/** The editor for an unsaved plot, and for a pinned one; the query is the URL. */
-const Exploring = (props: { readOnly?: boolean | undefined }) => {
+/** Explore: the editor for an unsaved plot, and for a pinned one; the query is the URL. */
+const Explore = (props: { readOnly?: boolean | undefined }) => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
 	const location = useLocation();
@@ -784,3 +713,5 @@ const Exploring = (props: { readOnly?: boolean | undefined }) => {
 		</Show>
 	);
 };
+
+export default Explore;

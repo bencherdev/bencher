@@ -195,16 +195,16 @@ describe("narrow", () => {
 		const root = mount();
 		root.style.width = "200px";
 		const tabs = root.querySelector<HTMLElement>(".tabs");
-		const plots = page.getByRole("link", { name: "Plots" }).element();
+		const runs = page.getByRole("link", { name: "Runs" }).element();
 		if (!tabs) {
 			throw new Error("no tab row");
 		}
 		tabs.scrollLeft = tabs.scrollWidth;
 
-		plots.scrollIntoView({ inline: "nearest", block: "nearest" });
+		runs.scrollIntoView({ inline: "nearest", block: "nearest" });
 
 		const gap =
-			plots.getBoundingClientRect().left - tabs.getBoundingClientRect().left;
+			runs.getBoundingClientRect().left - tabs.getBoundingClientRect().left;
 		expect(gap).toBeCloseTo(16, 0);
 	});
 
@@ -212,7 +212,8 @@ describe("narrow", () => {
 	// centered against the page instead of the row.
 	test("centering brings the current tab to the middle of the row", async () => {
 		await page.viewport(390, 844);
-		const root = mount("alerts");
+		const root = mount("thresholds");
+		root.style.width = "300px";
 		root.style.paddingLeft = "40px";
 		const tabs = root.querySelector<HTMLElement>(".tabs");
 		expect(tabs && tabs.scrollWidth > tabs.clientWidth).toBe(true);
@@ -433,6 +434,32 @@ describe("an organization page", () => {
 		expect(crumb?.getAttribute("aria-busy")).toBe("true");
 		expect(crumb?.querySelector(".crumb-skel")).not.toBeNull();
 	});
+});
+
+// Kills a tab row in the old order, a Runs tab that leads anywhere but the
+// project root, and an Explore tab still at the root.
+test("the tab row reads Explore, Runs, Alerts, Thresholds, Plots, Settings, with Runs at the project root", async () => {
+	const root = mount("runs");
+	const tabs = page.elementLocator(root).getByRole("navigation", {
+		name: "Project",
+	});
+	const links = [...tabs.element().querySelectorAll<HTMLAnchorElement>("a")];
+	expect(
+		links.map((link) => [
+			shownText(link).split(" ")[0],
+			link.getAttribute("href"),
+		]),
+	).toEqual([
+		["Explore", "/next/console/projects/hashbrown/explore"],
+		["Runs", "/next/console/projects/hashbrown/"],
+		["Alerts", "/next/console/projects/hashbrown/alerts"],
+		["Thresholds", "/next/console/projects/hashbrown/thresholds"],
+		["Plots", "/next/console/projects/hashbrown/plots"],
+		["Settings", "/next/console/projects/hashbrown/settings"],
+	]);
+	expect(tabs.getByRole("link", { name: "Runs" }).element().ariaCurrent).toBe(
+		"page",
+	);
 });
 
 // Kills a Feedback control drawn by a build with no Sentry DSN to send to.

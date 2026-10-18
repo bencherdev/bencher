@@ -18,6 +18,8 @@ import {
 	on,
 } from "solid-js";
 import type { JsonConsoleRunSummary } from "../../types/bencher";
+import ContentSkeleton from "../ContentSkeleton";
+import { NEXT_PROJECTS } from "../paths";
 import { useProject, useProjectNavigate } from "../project";
 import { useQueryResult } from "../query";
 import Controls, { nameKey } from "../reports/Controls";
@@ -48,10 +50,11 @@ const Runs = () => {
 	);
 	const setSearch = (next: ReportsSearch) => {
 		const query = encodeSearch(next);
-		// Router paths are relative to the console's base.
-		navigate(`/${slug()}/runs${query ? `?${query}` : ""}`, {
-			scroll: false,
-		});
+		// Router paths are relative to the console's base, and the project root is Runs too.
+		navigate(
+			`${location.pathname.slice(NEXT_PROJECTS.length)}${query ? `?${query}` : ""}`,
+			{ scroll: false },
+		);
 	};
 	const names = useNames(search);
 
@@ -100,6 +103,30 @@ const Runs = () => {
 	/** The rows on screen are the last search's, until the new one answers. */
 	const busy = () => batches()[0]?.isPlaceholderData === true;
 	const total = () => first()?.total;
+
+	// A project that never ran gets the setup card, which polls the first batch
+	// until a run lands; only the unfiltered list asks whether it ever ran.
+	const quiet = () => !busy() && total() === 0 && encodeSearch(search()) === "";
+	const ever = useQueryResult(() => ({
+		...batchQuery(
+			api,
+			slug(),
+			{ ...search(), window: { kind: "all" } },
+			{ page: 1, perPage },
+		),
+		enabled: quiet(),
+	}));
+	const deciding = () =>
+		quiet() && ever().data === undefined && ever().errorUpdatedAt === 0;
+	const empty = () => quiet() && ever().data?.total === 0;
+	const [Setup, setSetup] = createSignal<SetupView>();
+	createEffect(() => {
+		if (quiet() && !Setup()) {
+			import("../runs/Setup")
+				.then(({ default: view }) => setSetup(() => view))
+				.catch(() => {});
+		}
+	});
 	const [now, setNow] = createSignal(Date.now());
 	// Every answer, a poll's too, moves the times the rows count from now.
 	createComputed(
@@ -128,67 +155,89 @@ const Runs = () => {
 	});
 
 	return (
-		<main class="page reports">
-			<div class="pagehead">
-				<div class="crumb-line">Runs</div>
-				<Heading level={1} size="xl" class="reports-count">
-					<Show
-						when={total() !== undefined}
-						fallback={
-							<>
-								<Skeleton size="text" class="reports-count-skel" />
-								<span class="sr-only">Runs</span>
-							</>
-						}
+		<Show
+			when={!empty()}
+			fallback={
+				<Show when={Setup()} fallback={<ContentSkeleton />}>
+					{(View) => {
+						const Loaded = View();
+						return (
+							<Loaded
+								poll={() =>
+									batchQuery(api, slug(), search(), { page: 1, perPage })
+								}
+							/>
+						);
+					}}
+				</Show>
+			}
+		>
+			<main class="page reports">
+				<div class="pagehead">
+					<div class="crumb-line">Runs</div>
+					<Heading level={1} size="xl" class="reports-count">
+						<Show
+							when={total() !== undefined && !deciding()}
+							fallback={
+								<>
+									<Skeleton size="text" class="reports-count-skel" />
+									<span class="sr-only">Runs</span>
+								</>
+							}
+						>
+							{total() === 1 ? "1 run" : `${total()} runs`}
+						</Show>
+					</Heading>
+				</div>
+				<Controls
+					search={search()}
+					names={names()}
+					onSearch={setSearch}
+					now={now()}
+				/>
+				<Switch>
+					<Match
+						when={first() && runs().length === 0 && !busy() && !deciding()}
 					>
-						{total() === 1 ? "1 run" : `${total()} runs`}
-					</Show>
-				</Heading>
-			</div>
-			<Controls
-				search={search()}
-				names={names()}
-				onSearch={setSearch}
-				now={now()}
-			/>
-			<Switch>
-				<Match when={first() && runs().length === 0 && !busy()}>
-					<NothingFound search={search()} onSearch={setSearch} />
-				</Match>
-				<Match when={runs().length > 0}>
-					<RunsTable
-						slug={slug()}
-						runs={runs()}
-						total={total() ?? runs().length}
-						now={now()}
-						onRange={setRange}
-						busy={busy()}
-						loading={next()?.isFetching ?? false}
-						onRetry={
-							next()?.isLoadingError ? () => next()?.refetch() : undefined
-						}
-					/>
-				</Match>
-				<Match when={batches()[0]?.isLoadingError}>
-					<Banner status="error" role="alert" class="load-error">
-						<span class="grow">Runs did not load</span>
-						<Button size="sm" onClick={() => batches()[0]?.refetch()}>
-							Retry
-						</Button>
-					</Banner>
-				</Match>
-				<Match when={true}>
-					<div class="ui-table-scroll reports-skeleton" aria-busy="true">
-						<span class="sr-only">Loading runs</span>
-						<For each={Array.from({ length: SKELETON_ROWS })}>
-							{() => <Skeleton size="text" class="reports-skeleton-row" />}
-						</For>
-					</div>
-				</Match>
-			</Switch>
-		</main>
+						<NothingFound search={search()} onSearch={setSearch} />
+					</Match>
+					<Match when={runs().length > 0}>
+						<RunsTable
+							slug={slug()}
+							runs={runs()}
+							total={total() ?? runs().length}
+							now={now()}
+							onRange={setRange}
+							busy={busy()}
+							loading={next()?.isFetching ?? false}
+							onRetry={
+								next()?.isLoadingError ? () => next()?.refetch() : undefined
+							}
+						/>
+					</Match>
+					<Match when={batches()[0]?.isLoadingError}>
+						<Banner status="error" role="alert" class="load-error">
+							<span class="grow">Runs did not load</span>
+							<Button size="sm" onClick={() => batches()[0]?.refetch()}>
+								Retry
+							</Button>
+						</Banner>
+					</Match>
+					<Match when={true}>
+						<div class="ui-table-scroll reports-skeleton" aria-busy="true">
+							<span class="sr-only">Loading runs</span>
+							<For each={Array.from({ length: SKELETON_ROWS })}>
+								{() => <Skeleton size="text" class="reports-skeleton-row" />}
+							</For>
+						</div>
+					</Match>
+				</Switch>
+			</main>
+		</Show>
 	);
 };
+
+type SetupView = typeof import("../runs/Setup").default;
 
 /** The names of the branch and the testbed the search filters by, by slug. */
 const useNames = (search: Accessor<ReportsSearch>): Accessor<FilterNames> => {

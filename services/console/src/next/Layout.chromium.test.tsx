@@ -50,10 +50,14 @@ const heldApi = () => {
 
 let dispose: (() => void) | undefined;
 
-const mount = (client: QueryClient, api: Api) => {
+// A path no page draws, so the page reads nothing but the shell's answer.
+const mount = (
+	client: QueryClient,
+	api: Api,
+	path = `${NEXT_PROJECTS}/hashbrown/nowhere`,
+) => {
 	const history = createMemoryHistory();
-	// A path no page draws, so the page reads nothing but the shell's answer.
-	history.set({ value: `${NEXT_PROJECTS}/hashbrown/nowhere` });
+	history.set({ value: path });
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);
@@ -92,6 +96,52 @@ afterEach(() => {
 });
 
 describe("the layout", () => {
+	// Kills a project root drawn by Explore or by no page, Explore lost from
+	// its own path, and a tab or title that names another tab than the page.
+	test("the project root draws Runs, and Explore draws at its own path", async () => {
+		await Promise.all([PAGES.Runs.preload(), PAGES.Explore.preload()]);
+		const api: Api = {
+			get: () => new Promise(() => {}),
+			send: async () => {
+				throw new Error("The layout sends no changes");
+			},
+		};
+		const seeded = () => {
+			const client = new QueryClient({
+				defaultOptions: { queries: { staleTime: Number.POSITIVE_INFINITY } },
+			});
+			client.setQueryData(
+				consoleProjectQuery(api, "hashbrown").queryKey,
+				bootstrap(1),
+			);
+			return client;
+		};
+		const current = () =>
+			document.querySelector('nav[aria-label="Project"] [aria-current="page"]')
+				?.textContent;
+
+		mount(seeded(), api, `${NEXT_PROJECTS}/hashbrown`);
+		await expect
+			.element(page.getByRole("heading", { level: 1, name: "Runs" }))
+			.toBeVisible();
+		await expect.poll(current).toBe("Runs");
+		expect(
+			page.getByRole("heading", { name: "Start from" }).query(),
+		).toBeNull();
+		await expect.poll(() => document.title).toBe("Runs | Hashbrown | Bencher");
+		dispose?.();
+		document.body.replaceChildren();
+
+		mount(seeded(), api, `${NEXT_PROJECTS}/hashbrown/explore`);
+		await expect
+			.element(page.getByRole("heading", { name: "Start from" }))
+			.toBeVisible();
+		await expect.poll(current).toBe("Explore");
+		expect(
+			page.getByRole("heading", { level: 1, name: "Runs" }).query(),
+		).toBeNull();
+	});
+
 	// Kills a page that paints before the shell's answer says what the reader may do.
 	test("a project never seen shows the skeleton until the shell answers", async () => {
 		await PAGES.NotFound.preload();
