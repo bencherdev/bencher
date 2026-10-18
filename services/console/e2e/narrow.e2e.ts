@@ -28,7 +28,7 @@ test("the narrow bar keeps the wordmark, the bell, Feedback, the menu, and the a
 	const bell = bar.getByRole("link", { name: "1 active alert" });
 	const feedback = bar.getByRole("button", { name: "Feedback", exact: true });
 	const menu = bar.getByRole("button", { name: "Menu" });
-	const avatar = bar.getByRole("link", { name: "Account" });
+	const avatar = bar.getByRole("button", { name: "Account" });
 	for (const control of [mark, bell, feedback, menu, avatar]) {
 		await expect(control).toBeVisible();
 	}

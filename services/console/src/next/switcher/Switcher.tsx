@@ -21,6 +21,8 @@ import {
 	switcherRows,
 } from "./model";
 
+/** In a sheet, the sheet is the dialog. */
+const DIALOG = { role: "dialog", "aria-label": "Switch project" } as const;
 /** Each row's height and the gap under it, which the virtual list steps by. */
 const STEP = 55;
 /** The list's most height, the rows it can show at once. */
@@ -38,6 +40,8 @@ const Switcher = (props: {
 	crumb: HTMLElement | undefined;
 	/** Closes it, giving the focus back to the crumb when `refocus`. */
 	onClose: (refocus: boolean) => void;
+	/** Held in a modal sheet, which is the dialog and closes it. */
+	sheet?: boolean;
 }) => {
 	const { api } = useProject();
 	const navigate = useNavigate();
@@ -117,6 +121,9 @@ const Switcher = (props: {
 
 	onMount(() => {
 		input?.focus();
+		if (props.sheet) {
+			return;
+		}
 		// A press anywhere else, or the focus moving on, closes it in place.
 		const away = (event: Event) => {
 			const target = event.target as Node | null;
@@ -136,8 +143,7 @@ const Switcher = (props: {
 		<div
 			ref={panel}
 			class="pop sw"
-			role="dialog"
-			aria-label="Switch project"
+			{...(props.sheet ? {} : DIALOG)}
 			onKeyDown={(event) => {
 				if (event.key === "Escape") {
 					event.preventDefault();

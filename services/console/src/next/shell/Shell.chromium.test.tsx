@@ -26,8 +26,11 @@ const mount = (tab: Tab = "runs", dsn = "https://key@sentry.example/1") => {
 				organization={{ name: "Pompeii LLC", uuid: "org-uuid" }}
 				project="Hashbrown"
 				alerts={1}
-				account="/console/users/muriel-bagge/settings"
-				email="muriel@nowhere.example"
+				user={{
+					name: "Muriel Bagge",
+					slug: "muriel-bagge",
+					email: "muriel@nowhere.example",
+				}}
 			/>
 		),
 		root,
@@ -332,8 +335,11 @@ describe("an account page", () => {
 		dispose = render(
 			() => (
 				<Shell
-					account="/next/console/users/muriel-bagge/settings"
-					email="muriel@nowhere.example"
+					user={{
+						name: "Muriel Bagge",
+						slug: "muriel-bagge",
+						email: "muriel@nowhere.example",
+					}}
 				/>
 			),
 			root,

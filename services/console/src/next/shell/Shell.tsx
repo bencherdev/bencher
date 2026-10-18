@@ -1,6 +1,8 @@
 import Icon from "@bencherdev/ui/Icon";
 import { For, Show } from "solid-js";
 import { TABS, type Tab, projectPath } from "../paths";
+import type { AccountMenuProps } from "./AccountMenu";
+import Avatar from "./Avatar";
 import Crumb from "./Crumb";
 import Feedback from "./Feedback";
 import Tools from "./Tools";
@@ -14,11 +16,11 @@ interface ShellProps {
 	project?: string | undefined;
 	/** The active alert count, unknown until it loads. */
 	alerts?: number | undefined;
-	account?: string | undefined;
 	/** The signed in reader, whose projects the crumb's switcher lists. */
 	reader?: string | undefined;
-	/** The reader's email, which a feedback report offers to attach. */
-	email?: string | undefined;
+	/** The reader's account, unknown to the server's render. */
+	user?: AccountMenuProps["user"] | undefined;
+	signOut?: ((back?: boolean) => void) | undefined;
 	tabsRef?: (tabs: HTMLElement) => void;
 }
 
@@ -85,13 +87,11 @@ const Shell = (props: ShellProps) => {
 								? `${props.organization.name} / ${props.project ?? props.slug}`
 								: (props.project ?? props.slug),
 							slug: props.slug,
-							email: props.email ?? "",
+							email: props.user?.email ?? "",
 						})}
 					/>
 				</Tools>
-				<a class="avatar" href={props.account ?? "/console"}>
-					<span class="sr-only">Account</span>
-				</a>
+				<Avatar {...props} />
 			</div>
 			<Show when={props.slug}>
 				{(slug) => (

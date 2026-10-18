@@ -13,7 +13,7 @@ import {
 } from "./cache";
 import { handOff } from "./handoff";
 import { idbStore } from "./idb";
-import { forgetShell } from "./memory";
+import { forgetReader } from "./memory";
 import { accountUser, pageName, parseNextPath } from "./paths";
 import { consoleProjectQuery, fetchedVersions } from "./queries";
 import { USER_KEY, isCurrent, readReader, signInHref } from "./reader";
@@ -76,7 +76,7 @@ const boot = async (mount: HTMLElement) => {
 					reader={reader}
 					versions={versions}
 					flush={persister.flush}
-					signOut={() => signOut(store, client)}
+					signOut={(back) => signOut(store, client, back)}
 					host={host}
 				/>
 			),
@@ -89,18 +89,23 @@ const boot = async (mount: HTMLElement) => {
 let stopSaving = () => {};
 let signingOut = false;
 
-/** Forget the reader and everything they saw, then sign in and come back here. */
-const signOut = async (store: CacheStore, client?: QueryClient) => {
+/** Forget the reader and everything they saw, then sign in, coming back here when `back`. */
+const signOut = async (
+	store: CacheStore,
+	client?: QueryClient,
+	back = true,
+) => {
 	if (signingOut) {
 		return;
 	}
 	signingOut = true;
 	stopSaving();
-	localStorage.removeItem(USER_KEY);
-	forgetShell(localStorage);
+	forgetReader(localStorage);
 	await within(BOOT_WAIT, client ? clearCache(client, store) : store.clear());
 	location.replace(
-		signInHref(`${location.pathname}${location.search}${location.hash}`),
+		back
+			? signInHref(`${location.pathname}${location.search}${location.hash}`)
+			: "/auth/login",
 	);
 };
 
