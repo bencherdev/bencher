@@ -59,6 +59,7 @@ api_specs = { path = "plus/api_specs" }
 bencher_billing = { path = "plus/bencher_billing" }
 bencher_bing_index = { path = "plus/bencher_bing_index" }
 bencher_callback = { path = "plus/bencher_callback" }
+bencher_egress = { path = "plus/bencher_egress" }
 bencher_github_client = { path = "plus/bencher_github_client" }
 bencher_google_client = { path = "plus/bencher_google_client" }
 bencher_google_index = { path = "plus/bencher_google_index" }
