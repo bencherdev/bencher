@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "通过托管的 MCP 服务器将 AI 代理和助手连接到 Bencher，以查询基准测试数据并提交结果"
 heading: "如何使用 Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-18T01:00:00Z"
+modified: "2026-10-19T07:00:00Z"
 sortOrder: 11
 ---
 
@@ -20,13 +20,20 @@ Bencher MCP 是一个托管的 [Model Context Protocol](https://modelcontextprot
 
 ## 连接
 
+Bencher 已收录在 [Claude 连接器目录](https://claude.ai/directory/bencher) 中，该目录服务于 claude.ai、Claude Desktop、Claude Mobile 和 Claude Code。
+添加 Bencher 连接器，并在 Claude 提示时使用您的 Bencher 账户登录。
+当 Claude Code 使用 claude.ai 订阅登录时，它会使用您在 claude.ai 中添加的连接器。
+该连接器仅连接到 Bencher Cloud。
+
+对于 ChatGPT 和其他 MCP 客户端、未使用 claude.ai 订阅登录的 Claude Code、Bencher Self-Hosted 以及 CI，请改用 URL：
+
 | 部署方式 | URL |
 | :--- | :--- |
 | Bencher Cloud | `https://mcp.bencher.dev/mcp` |
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
 将该 URL 添加到您的 MCP 客户端，并在客户端提示时使用您的 Bencher 账户登录。
-ChatGPT、claude.ai 自定义连接器和 Claude Code 都通过 OAuth 登录。
+ChatGPT 和 Claude Code 通过 OAuth 登录；将 Bencher Self-Hosted 服务器添加为 claude.ai 自定义连接器时，claude.ai 也通过 OAuth 登录。
 例如，从 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 连接：
 
 <McpClaudeCode />

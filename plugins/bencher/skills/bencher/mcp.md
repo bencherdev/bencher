@@ -12,6 +12,16 @@ tool output instead of shell parsing, or from MCP clients other than a shell.
 
 ## Connecting
 
+Bencher is in the Claude connectors directory
+(https://claude.ai/directory/bencher), which serves claude.ai, Claude Desktop,
+Claude Mobile, and Claude Code. Claude users add the Bencher connector and
+sign in with their Bencher account. Claude Code uses the connectors added in
+claude.ai when it is logged in with a claude.ai subscription. The connector
+reaches Bencher Cloud only.
+
+Use the URL instead with ChatGPT and other MCP clients, with Claude Code
+without a claude.ai subscription login, with a self-hosted server, and in CI:
+
 | Deployment | URL |
 |------------|-----|
 | Bencher Cloud | `https://mcp.bencher.dev/mcp` |
@@ -19,8 +29,9 @@ tool output instead of shell parsing, or from MCP clients other than a shell.
 
 There are three ways to call it:
 
-- **OAuth sign-in**: clients with MCP OAuth support (ChatGPT, claude.ai custom
-  connectors, Claude Code) connect with no credential and sign in when asked.
+- **OAuth sign-in**: clients with MCP OAuth support (ChatGPT, Claude Code, and
+  claude.ai with a self-hosted server added as a custom connector) connect with
+  no credential and sign in when asked.
   The client opens Bencher's consent page in a browser, where the user logs in
   (or pastes a `bencher_user_*` key) and approves the app. A self-hosted server
   offers this only once its `plus.oauth` config section is set.
@@ -28,8 +39,8 @@ There are three ways to call it:
   project API key (`bencher_run_*`) or a user API key (`bencher_user_*`).
 - **Anonymous**: public projects can be read without any credential.
 
-Claude Code, signing in with OAuth (run `/mcp` in Claude Code to sign in when
-a tool asks):
+Claude Code without the connector, signing in with OAuth (run `/mcp` in
+Claude Code to sign in when a tool asks):
 ```bash
 claude mcp add --transport http bencher https://mcp.bencher.dev/mcp
 ```
