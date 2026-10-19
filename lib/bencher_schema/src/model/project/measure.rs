@@ -1,11 +1,11 @@
 use bencher_json::{
-    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, MeasureSlug, NameId, ResourceName,
+    DateTime, JsonMeasure, JsonNewMeasure, MeasureNameId, MeasureSlug, NameId, ResourceName, Slug,
     project::measure::{
         JsonUpdateMeasure, MeasureUuid,
         built_in::{self, BuiltInMeasure},
     },
 };
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{
@@ -76,7 +76,6 @@ impl QueryMeasure {
         Ok(query_measure.id)
     }
 
-    #[expect(clippy::too_many_lines, reason = "many built-in measure variants")]
     async fn get_or_create_inner(
         context: &ApiContext,
         project_id: ProjectId,
@@ -89,105 +88,8 @@ impl QueryMeasure {
             Err(e) => e,
         };
 
-        // Dynamically create adapter specific measures
-        // Or recreate default measures if they were previously deleted
-        let measure_str = &measure.to_string();
-
-        let json_measure = if let Some(measure) = built_in::default::Latency::from_str(measure_str)
-            .or_else(|| built_in::default::Throughput::from_str(measure_str))
-            .or_else(|| built_in::json::BuildTime::from_str(measure_str))
-            .or_else(|| built_in::json::FileSize::from_str(measure_str))
-            .or_else(|| built_in::iai::Instructions::from_str(measure_str))
-            .or_else(|| built_in::iai::L1Accesses::from_str(measure_str))
-            .or_else(|| built_in::iai::L2Accesses::from_str(measure_str))
-            .or_else(|| built_in::iai::RamAccesses::from_str(measure_str))
-            .or_else(|| built_in::iai::EstimatedCycles::from_str(measure_str))
-            // noise
-            .or_else(|| built_in::noise::ComputeJitter::from_str(measure_str))
-            .or_else(|| built_in::noise::CacheJitter::from_str(measure_str))
-            .or_else(|| built_in::noise::IoJitter::from_str(measure_str))
-            .or_else(|| built_in::noise::CpuSteal::from_str(measure_str))
-            .or_else(|| built_in::noise::NoiseScore::from_str(measure_str))
-            // Gungraun:
-            // callgrind/cachegrind
-            .or_else(|| built_in::gungraun::Instructions::from_str(measure_str))
-            .or_else(|| built_in::gungraun::L1Hits::from_str(measure_str))
-            .or_else(|| built_in::gungraun::L2Hits::from_str(measure_str))
-            .or_else(|| built_in::gungraun::LLHits::from_str(measure_str))
-            .or_else(|| built_in::gungraun::RamHits::from_str(measure_str))
-            .or_else(|| built_in::gungraun::TotalReadWrite::from_str(measure_str))
-            .or_else(|| built_in::gungraun::EstimatedCycles::from_str(measure_str))
-            .or_else(|| built_in::gungraun::GlobalBusEvents::from_str(measure_str))
-            .or_else(|| built_in::gungraun::Dr::from_str(measure_str))
-            .or_else(|| built_in::gungraun::Dw::from_str(measure_str))
-            .or_else(|| built_in::gungraun::I1mr::from_str(measure_str))
-            .or_else(|| built_in::gungraun::D1mr::from_str(measure_str))
-            .or_else(|| built_in::gungraun::D1mw::from_str(measure_str))
-            .or_else(|| built_in::gungraun::ILmr::from_str(measure_str))
-            .or_else(|| built_in::gungraun::DLmr::from_str(measure_str))
-            .or_else(|| built_in::gungraun::DLmw::from_str(measure_str))
-            .or_else(|| built_in::gungraun::I1MissRate::from_str(measure_str))
-            .or_else(|| built_in::gungraun::LLiMissRate::from_str(measure_str))
-            .or_else(|| built_in::gungraun::D1MissRate::from_str(measure_str))
-            .or_else(|| built_in::gungraun::LLdMissRate::from_str(measure_str))
-            .or_else(|| built_in::gungraun::LLMissRate::from_str(measure_str))
-            .or_else(|| built_in::gungraun::L1HitRate::from_str(measure_str))
-            .or_else(|| built_in::gungraun::LLHitRate::from_str(measure_str))
-            .or_else(|| built_in::gungraun::RamHitRate::from_str(measure_str))
-            .or_else(|| built_in::gungraun::SysCount::from_str(measure_str))
-            .or_else(|| built_in::gungraun::SysTime::from_str(measure_str))
-            .or_else(|| built_in::gungraun::SysCpuTime::from_str(measure_str))
-            .or_else(|| built_in::gungraun::Bc::from_str(measure_str))
-            .or_else(|| built_in::gungraun::Bcm::from_str(measure_str))
-            .or_else(|| built_in::gungraun::Bi::from_str(measure_str))
-            .or_else(|| built_in::gungraun::Bim::from_str(measure_str))
-            .or_else(|| built_in::gungraun::ILdmr::from_str(measure_str))
-            .or_else(|| built_in::gungraun::DLdmr::from_str(measure_str))
-            .or_else(|| built_in::gungraun::DLdmw::from_str(measure_str))
-            .or_else(|| built_in::gungraun::AcCost1::from_str(measure_str))
-            .or_else(|| built_in::gungraun::AcCost2::from_str(measure_str))
-            .or_else(|| built_in::gungraun::SpLoss1::from_str(measure_str))
-            .or_else(|| built_in::gungraun::SpLoss2::from_str(measure_str))
-            // dhat
-            .or_else(|| built_in::gungraun::TotalBytes::from_str(measure_str))
-            .or_else(|| built_in::gungraun::TotalBlocks::from_str(measure_str))
-            .or_else(|| built_in::gungraun::AtTGmaxBytes::from_str(measure_str))
-            .or_else(|| built_in::gungraun::AtTGmaxBlocks::from_str(measure_str))
-            .or_else(|| built_in::gungraun::AtTEndBytes::from_str(measure_str))
-            .or_else(|| built_in::gungraun::AtTEndBlocks::from_str(measure_str))
-            .or_else(|| built_in::gungraun::ReadsBytes::from_str(measure_str))
-            .or_else(|| built_in::gungraun::WritesBytes::from_str(measure_str))
-            // memcheck
-            .or_else(|| built_in::gungraun::MemcheckErrors::from_str(measure_str))
-            .or_else(|| built_in::gungraun::MemcheckContexts::from_str(measure_str))
-            .or_else(|| built_in::gungraun::MemcheckSuppressedErrors::from_str(measure_str))
-            .or_else(|| built_in::gungraun::MemcheckSuppressedContexts::from_str(measure_str))
-            // helgrind
-            .or_else(|| built_in::gungraun::HelgrindErrors::from_str(measure_str))
-            .or_else(|| built_in::gungraun::HelgrindContexts::from_str(measure_str))
-            .or_else(|| built_in::gungraun::HelgrindSuppressedErrors::from_str(measure_str))
-            .or_else(|| built_in::gungraun::HelgrindSuppressedContexts::from_str(measure_str))
-            // drd
-            .or_else(|| built_in::gungraun::DrdErrors::from_str(measure_str))
-            .or_else(|| built_in::gungraun::DrdContexts::from_str(measure_str))
-            .or_else(|| built_in::gungraun::DrdSuppressedErrors::from_str(measure_str))
-            .or_else(|| built_in::gungraun::DrdSuppressedContexts::from_str(measure_str))
-        {
-            measure
-        } else {
-            match measure.clone() {
-                NameId::Uuid(_) => return Err(http_error),
-                NameId::Slug(slug) => JsonNewMeasure {
-                    name: slug.clone().into(),
-                    slug: Some(slug),
-                    units: JsonNewMeasure::generic_unit(),
-                },
-                NameId::Name(name) => JsonNewMeasure {
-                    name,
-                    slug: None,
-                    units: JsonNewMeasure::generic_unit(),
-                },
-            }
+        let Some(json_measure) = new_measure(measure) else {
+            return Err(http_error);
         };
 
         match Self::create(context, project_id, json_measure).await {
@@ -251,6 +153,147 @@ impl QueryMeasure {
             archived,
         }
     }
+
+    /// What `measure` names in the project, resolved as [`Self::get_or_create`] resolves it
+    /// but without creating anything, or `None` for a UUID the project does not hold.
+    pub fn identity(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        measure: &MeasureNameId,
+    ) -> diesel::QueryResult<Option<MeasureIdentity>> {
+        let measure_id = schema::measure::table
+            .filter(schema::measure::project_id.eq(project_id))
+            .filter(Self::eq_name_id(measure))
+            .select(schema::measure::id)
+            .first::<MeasureId>(conn)
+            .optional()?;
+        if let Some(measure_id) = measure_id {
+            return Ok(Some(MeasureIdentity::Existing(measure_id)));
+        }
+        let Some(JsonNewMeasure { name, slug, .. }) = new_measure(measure) else {
+            return Ok(None);
+        };
+        Ok(Some(
+            match slug.or_else(|| Slug::new(&name).map(Into::into)) {
+                Some(slug) => MeasureIdentity::New(slug),
+                None => MeasureIdentity::Unslugged(name),
+            },
+        ))
+    }
+}
+
+/// What a measure name resolves to in a project: a measure it holds, or the measure it
+/// would create, by its slug, or by its name when the name makes no slug.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum MeasureIdentity {
+    Existing(MeasureId),
+    New(MeasureSlug),
+    Unslugged(ResourceName),
+}
+
+/// The measure a name that the project does not hold creates, or `None` for a UUID.
+///
+/// A built-in measure is created whole, which also recreates a deleted default measure.
+fn new_measure(measure: &MeasureNameId) -> Option<JsonNewMeasure> {
+    if let Some(built_in) = built_in_measure(&measure.to_string()) {
+        return Some(built_in);
+    }
+    match measure.clone() {
+        NameId::Uuid(_) => None,
+        NameId::Slug(slug) => Some(JsonNewMeasure {
+            name: slug.clone().into(),
+            slug: Some(slug),
+            units: JsonNewMeasure::generic_unit(),
+        }),
+        NameId::Name(name) => Some(JsonNewMeasure {
+            name,
+            slug: None,
+            units: JsonNewMeasure::generic_unit(),
+        }),
+    }
+}
+
+/// The built-in measure a measure name or slug names, if any.
+fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
+    built_in::default::Latency::from_str(measure_str)
+        .or_else(|| built_in::default::Throughput::from_str(measure_str))
+        .or_else(|| built_in::json::BuildTime::from_str(measure_str))
+        .or_else(|| built_in::json::FileSize::from_str(measure_str))
+        .or_else(|| built_in::iai::Instructions::from_str(measure_str))
+        .or_else(|| built_in::iai::L1Accesses::from_str(measure_str))
+        .or_else(|| built_in::iai::L2Accesses::from_str(measure_str))
+        .or_else(|| built_in::iai::RamAccesses::from_str(measure_str))
+        .or_else(|| built_in::iai::EstimatedCycles::from_str(measure_str))
+        // noise
+        .or_else(|| built_in::noise::ComputeJitter::from_str(measure_str))
+        .or_else(|| built_in::noise::CacheJitter::from_str(measure_str))
+        .or_else(|| built_in::noise::IoJitter::from_str(measure_str))
+        .or_else(|| built_in::noise::CpuSteal::from_str(measure_str))
+        .or_else(|| built_in::noise::NoiseScore::from_str(measure_str))
+        // Gungraun:
+        // callgrind/cachegrind
+        .or_else(|| built_in::gungraun::Instructions::from_str(measure_str))
+        .or_else(|| built_in::gungraun::L1Hits::from_str(measure_str))
+        .or_else(|| built_in::gungraun::L2Hits::from_str(measure_str))
+        .or_else(|| built_in::gungraun::LLHits::from_str(measure_str))
+        .or_else(|| built_in::gungraun::RamHits::from_str(measure_str))
+        .or_else(|| built_in::gungraun::TotalReadWrite::from_str(measure_str))
+        .or_else(|| built_in::gungraun::EstimatedCycles::from_str(measure_str))
+        .or_else(|| built_in::gungraun::GlobalBusEvents::from_str(measure_str))
+        .or_else(|| built_in::gungraun::Dr::from_str(measure_str))
+        .or_else(|| built_in::gungraun::Dw::from_str(measure_str))
+        .or_else(|| built_in::gungraun::I1mr::from_str(measure_str))
+        .or_else(|| built_in::gungraun::D1mr::from_str(measure_str))
+        .or_else(|| built_in::gungraun::D1mw::from_str(measure_str))
+        .or_else(|| built_in::gungraun::ILmr::from_str(measure_str))
+        .or_else(|| built_in::gungraun::DLmr::from_str(measure_str))
+        .or_else(|| built_in::gungraun::DLmw::from_str(measure_str))
+        .or_else(|| built_in::gungraun::I1MissRate::from_str(measure_str))
+        .or_else(|| built_in::gungraun::LLiMissRate::from_str(measure_str))
+        .or_else(|| built_in::gungraun::D1MissRate::from_str(measure_str))
+        .or_else(|| built_in::gungraun::LLdMissRate::from_str(measure_str))
+        .or_else(|| built_in::gungraun::LLMissRate::from_str(measure_str))
+        .or_else(|| built_in::gungraun::L1HitRate::from_str(measure_str))
+        .or_else(|| built_in::gungraun::LLHitRate::from_str(measure_str))
+        .or_else(|| built_in::gungraun::RamHitRate::from_str(measure_str))
+        .or_else(|| built_in::gungraun::SysCount::from_str(measure_str))
+        .or_else(|| built_in::gungraun::SysTime::from_str(measure_str))
+        .or_else(|| built_in::gungraun::SysCpuTime::from_str(measure_str))
+        .or_else(|| built_in::gungraun::Bc::from_str(measure_str))
+        .or_else(|| built_in::gungraun::Bcm::from_str(measure_str))
+        .or_else(|| built_in::gungraun::Bi::from_str(measure_str))
+        .or_else(|| built_in::gungraun::Bim::from_str(measure_str))
+        .or_else(|| built_in::gungraun::ILdmr::from_str(measure_str))
+        .or_else(|| built_in::gungraun::DLdmr::from_str(measure_str))
+        .or_else(|| built_in::gungraun::DLdmw::from_str(measure_str))
+        .or_else(|| built_in::gungraun::AcCost1::from_str(measure_str))
+        .or_else(|| built_in::gungraun::AcCost2::from_str(measure_str))
+        .or_else(|| built_in::gungraun::SpLoss1::from_str(measure_str))
+        .or_else(|| built_in::gungraun::SpLoss2::from_str(measure_str))
+        // dhat
+        .or_else(|| built_in::gungraun::TotalBytes::from_str(measure_str))
+        .or_else(|| built_in::gungraun::TotalBlocks::from_str(measure_str))
+        .or_else(|| built_in::gungraun::AtTGmaxBytes::from_str(measure_str))
+        .or_else(|| built_in::gungraun::AtTGmaxBlocks::from_str(measure_str))
+        .or_else(|| built_in::gungraun::AtTEndBytes::from_str(measure_str))
+        .or_else(|| built_in::gungraun::AtTEndBlocks::from_str(measure_str))
+        .or_else(|| built_in::gungraun::ReadsBytes::from_str(measure_str))
+        .or_else(|| built_in::gungraun::WritesBytes::from_str(measure_str))
+        // memcheck
+        .or_else(|| built_in::gungraun::MemcheckErrors::from_str(measure_str))
+        .or_else(|| built_in::gungraun::MemcheckContexts::from_str(measure_str))
+        .or_else(|| built_in::gungraun::MemcheckSuppressedErrors::from_str(measure_str))
+        .or_else(|| built_in::gungraun::MemcheckSuppressedContexts::from_str(measure_str))
+        // helgrind
+        .or_else(|| built_in::gungraun::HelgrindErrors::from_str(measure_str))
+        .or_else(|| built_in::gungraun::HelgrindContexts::from_str(measure_str))
+        .or_else(|| built_in::gungraun::HelgrindSuppressedErrors::from_str(measure_str))
+        .or_else(|| built_in::gungraun::HelgrindSuppressedContexts::from_str(measure_str))
+        // drd
+        .or_else(|| built_in::gungraun::DrdErrors::from_str(measure_str))
+        .or_else(|| built_in::gungraun::DrdContexts::from_str(measure_str))
+        .or_else(|| built_in::gungraun::DrdSuppressedErrors::from_str(measure_str))
+        .or_else(|| built_in::gungraun::DrdSuppressedContexts::from_str(measure_str))
 }
 
 #[derive(Debug, diesel::Insertable)]

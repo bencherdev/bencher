@@ -1,4 +1,6 @@
-use bencher_json::{BmfVersion, project::report::Adapter};
+use std::collections::BTreeSet;
+
+use bencher_json::{BmfVersion, MeasureNameId, project::report::Adapter};
 
 use crate::{
     Adaptable as _, AdapterError, Settings,
@@ -92,6 +94,25 @@ impl AdapterResultsArray {
         self.inner.iter().any(AdapterResults::has_metrics)
     }
 
+    /// Every measure any iteration holds, once each.
+    pub fn measures(&self) -> BTreeSet<&MeasureNameId> {
+        self.inner
+            .iter()
+            .flat_map(AdapterResults::measures)
+            .collect()
+    }
+
+    /// Keep only the measures `keep` holds to, and drop each variant and benchmark that held
+    /// measures and holds none once they are gone.
+    pub fn retain_measures<F>(&mut self, keep: F)
+    where
+        F: Fn(&MeasureNameId) -> bool,
+    {
+        for results in &mut self.inner {
+            results.retain_measures(&keep);
+        }
+    }
+
     pub fn skipped(&self) -> Skipped {
         self.inner
             .iter()
@@ -132,6 +153,8 @@ pub(crate) enum CombinedKind {
 
 #[cfg(test)]
 mod test_results_array {
+    use std::collections::BTreeMap;
+
     use bencher_json::{
         BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet,
         project::report::Adapter,
@@ -293,6 +316,90 @@ mod test_results_array {
             .unwrap_or_else(|e| panic!("expected {results} to parse: {e}"));
             assert_eq!(array.has_metrics(), has_metrics, "{results}");
         }
+    }
+
+    /// A drop keeps the listed measures, drops each variant and benchmark it empties, and
+    /// leaves a variant or benchmark that held no measure before it as it was.
+    ///
+    /// Kills: a retain that keeps an unlisted measure, leaves an emptied variant or benchmark
+    /// behind to write its row, or drops a variant or benchmark that was already empty.
+    #[test]
+    fn results_array_retains_the_kept_measures() {
+        let v0 = r#"{
+            "kept": {"latency": {"value": 1.0}, "throughput": {"value": 2.0}},
+            "dropped": {"throughput": {"value": 3.0}},
+            "empty": {}
+        }"#;
+        let v1 = r#"{
+            "kept": [
+                {"measures": {"latency": {"value": 1.0}, "throughput": {"value": 2.0}}},
+                {"parameters": {"size": 1}, "measures": {"throughput": {"value": 3.0}}},
+                {"parameters": {"size": 2}, "measures": {}}
+            ],
+            "dropped": [{"measures": {"throughput": {"value": 4.0}}}],
+            "empty": []
+        }"#;
+        let empty_variant = |parameters: &str| {
+            (
+                serde_json::from_str::<ParameterSet>(parameters)
+                    .unwrap()
+                    .canonical(),
+                Vec::new(),
+            )
+        };
+        let latency = "latency".parse::<MeasureNameId>().unwrap();
+        for (results, bmf_version, extra) in [
+            (v0, BmfVersion::V0, None),
+            (v1, BmfVersion::V1, Some(empty_variant(r#"{"size": 2}"#))),
+        ] {
+            let mut array = AdapterResultsArray::new(
+                &[results],
+                Adapter::Json,
+                Settings::new(None, bmf_version),
+            )
+            .unwrap_or_else(|e| panic!("expected {results} to parse: {e}"));
+            let before = shape(&array);
+            array.retain_measures(|measure| *measure == latency);
+
+            let kept = std::iter::once(("{}".to_owned(), vec!["latency".to_owned()]))
+                .chain(extra)
+                .collect();
+            let expected = [
+                ("empty".to_owned(), before["empty"].clone()),
+                ("kept".to_owned(), kept),
+            ]
+            .into_iter()
+            .collect::<Shape>();
+            assert_eq!(shape(&array), expected, "{bmf_version}");
+        }
+    }
+
+    /// Each benchmark's variants, by canonical parameters, with their measures.
+    type Shape = BTreeMap<String, BTreeMap<String, Vec<String>>>;
+
+    fn shape(array: &AdapterResultsArray) -> Shape {
+        let [results] = array.inner.as_slice() else {
+            panic!("expected one iteration");
+        };
+        results
+            .inner
+            .iter()
+            .map(|(benchmark, entries)| {
+                let variants = entries
+                    .iter()
+                    .map(|(parameters, metrics)| {
+                        let mut measures = metrics
+                            .inner
+                            .keys()
+                            .map(ToString::to_string)
+                            .collect::<Vec<_>>();
+                        measures.sort();
+                        (parameters.canonical(), measures)
+                    })
+                    .collect();
+                (benchmark.to_string(), variants)
+            })
+            .collect()
     }
 
     fn resolved<const N: usize>(adapters: [Option<Adapter>; N]) -> AdapterResultsArray {
