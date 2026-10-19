@@ -1,0 +1,10 @@
+fib 15                  time:   [3964.8711 cycles 3987.4034 cycles 4012.8278 cycles]
+Found 7 outliers among 100 measurements (7.00%)
+  7 (7.00%) high mild
+
+checksum/fold           time:   [822.8865 cycles 839.0482 cycles 858.0281 cycles]
+                        thrpt:  [0.2095 cpb 0.2048 cpb 0.2009 cpb]
+Found 8 outliers among 100 measurements (8.00%)
+  3 (3.00%) high mild
+  5 (5.00%) high severe
+

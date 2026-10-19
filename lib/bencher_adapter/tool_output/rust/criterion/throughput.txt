@@ -1,0 +1,63 @@
+fib 15                  time:   [972.23 ns 979.82 ns 988.69 ns]
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe
+
+checksum/fold/1024      time:   [44.124 ns 45.500 ns 47.693 ns]
+                        thrpt:  [19.996 GiB/s 20.960 GiB/s 21.614 GiB/s]
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) high mild
+  2 (2.00%) high severe
+checksum/fold/16384     time:   [772.39 ns 780.27 ns 789.00 ns]
+                        thrpt:  [19.339 GiB/s 19.556 GiB/s 19.755 GiB/s]
+Found 17 outliers among 100 measurements (17.00%)
+  3 (3.00%) high mild
+  14 (14.00%) high severe
+checksum/sort/elements  time:   [1.0285 µs 1.0351 µs 1.0440 µs]
+                        thrpt:  [3.9233 Gelem/s 3.9571 Gelem/s 3.9827 Gelem/s]
+Found 7 outliers among 100 measurements (7.00%)
+  3 (3.00%) high mild
+  4 (4.00%) high severe
+checksum/decimal        time:   [50.461 ns 51.480 ns 52.459 ns]
+                        thrpt:  [19.063 GB/s 19.425 GB/s 19.817 GB/s]
+checksum/bits           time:   [49.149 ns 49.751 ns 50.316 ns]
+                        thrpt:  [158.99 Gb/s 160.80 Gb/s 162.77 Gb/s]
+
+slow/fib 30             time:   [1.3560 ms 1.3902 ms 1.4592 ms]
+
+rate/elements           time:   [2.1026 ms 2.2222 ms 2.3055 ms]
+                        thrpt:  [433.75  elem/s 450.01  elem/s 475.60  elem/s]
+rate/kilo_elements      time:   [1.8908 ms 1.9259 ms 1.9694 ms]
+                        thrpt:  [50.776 Kelem/s 51.923 Kelem/s 52.887 Kelem/s]
+rate/mega_elements      time:   [1.9097 µs 1.9315 µs 1.9640 µs]
+                        thrpt:  [50.916 Melem/s 51.773 Melem/s 52.365 Melem/s]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+rate/bytes              time:   [1.8735 ms 1.9075 ms 1.9325 ms]
+                        thrpt:  [517.47   B/s 524.25   B/s 533.76   B/s]
+rate/kibibytes          time:   [1.9396 ms 2.0692 ms 2.1685 ms]
+                        thrpt:  [450.35 KiB/s 471.96 KiB/s 503.49 KiB/s]
+rate/mebibytes          time:   [1.8892 µs 1.9451 µs 2.0166 µs]
+                        thrpt:  [47.291 MiB/s 49.029 MiB/s 50.482 MiB/s]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+rate/kilobytes          time:   [1.9595 ms 1.9919 ms 2.0464 ms]
+                        thrpt:  [488.65 KB/s 502.02 KB/s 510.33 KB/s]
+rate/megabytes          time:   [1.9590 µs 2.0318 µs 2.1554 µs]
+                        thrpt:  [46.395 MB/s 49.217 MB/s 51.045 MB/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+rate/bits               time:   [1.9501 ms 2.0338 ms 2.1201 ms]
+                        thrpt:  [471.67   b/s 491.68   b/s 512.79   b/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+rate/kilobits           time:   [2.1792 ms 2.3324 ms 2.4925 ms]
+                        thrpt:  [40.120 Kb/s 42.875 Kb/s 45.889 Kb/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low severe
+rate/megabits           time:   [1.9783 µs 2.0608 µs 2.1394 µs]
+                        thrpt:  [46.742 Mb/s 48.525 Mb/s 50.549 Mb/s]
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+
