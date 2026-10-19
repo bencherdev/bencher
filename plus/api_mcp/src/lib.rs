@@ -29,6 +29,8 @@
 //! Authentication accepts the same `Authorization: Bearer` credentials as
 //! the REST API (project key, user key, or token) by reusing the REST
 //! endpoint handlers; anonymous requests may read public projects.
+//! Once `plus.oauth` is configured, an OAuth access token is accepted too,
+//! acting as its user within the token's scopes.
 //!
 //! These endpoints are `unpublished`: they speak JSON-RPC, not REST,
 //! so they are intentionally excluded from the `OpenAPI` spec.
@@ -37,6 +39,7 @@
 
 mod challenge;
 mod endpoint;
+mod principal;
 mod server;
 mod tools;
 

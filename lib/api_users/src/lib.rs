@@ -11,6 +11,8 @@ use tokio as _;
 mod console_user;
 mod email;
 mod keys;
+#[cfg(feature = "plus")]
+mod oauth;
 mod tokens;
 mod users;
 
@@ -53,6 +55,18 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(keys::user_key_get)?;
         api_description.register(keys::user_key_patch)?;
         api_description.register(keys::user_key_delete)?;
+
+        // OAuth grants
+        #[cfg(feature = "plus")]
+        {
+            if http_options {
+                api_description.register(oauth::user_oauth_grants_options)?;
+                api_description.register(oauth::user_oauth_grant_options)?;
+            }
+            api_description.register(oauth::user_oauth_grants_get)?;
+            api_description.register(oauth::user_oauth_grant_get)?;
+            api_description.register(oauth::user_oauth_grant_delete)?;
+        }
 
         // Tokens
         if http_options {

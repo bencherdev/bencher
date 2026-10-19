@@ -13,6 +13,7 @@ mod last_four;
 mod memory;
 mod month;
 mod number;
+mod oauth;
 mod operating_system;
 mod plan_id;
 mod plan_level;
@@ -41,6 +42,10 @@ pub use last_four::LastFour;
 pub use memory::Memory;
 pub use month::ExpirationMonth;
 pub use number::CardNumber;
+pub use oauth::{
+    OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeHash, OAuthIssuer, OAuthRefreshToken,
+    OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash,
+};
 pub use operating_system::OperatingSystem;
 pub use plan_id::{LicensedPlanId, MeteredPlanId};
 pub use plan_level::PlanLevel;

@@ -4,11 +4,20 @@
 
 use bencher_json::{
     BranchName, BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid,
-    ParameterSet, PlanLevel, ReportUuid, ResourceName, TestbedUuid, TokenUuid, VariantUuid,
-    VersionUuid,
+    OAuthAccessToken, OAuthGrantUuid, OAuthRefreshToken, OAuthResource, OAuthScopes,
+    OAuthTokenHash, ParameterSet, PlanLevel, ReportUuid, ResourceName, TestbedUuid, TokenUuid,
+    UserKeyUuid, VariantUuid, VersionUuid, system::config::JsonOAuthServer,
 };
 use bencher_rbac::project::Role;
-use bencher_schema::{context::DbConnection, model::user::UserId, schema};
+use bencher_schema::{
+    context::{DbConnection, OAuthServer},
+    model::user::{
+        UserId,
+        key::UserKeyId,
+        oauth::{OAuthGrantId, OAuthTokenKind},
+    },
+    schema,
+};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
@@ -266,6 +275,117 @@ pub fn seed_token(server: &TestServer, user: &TestUser, name: &str) -> TestToken
         .expect("Failed to insert token");
 
     TestToken { uuid, token: jwt }
+}
+
+/// The issuer of the OAuth server that tests configure.
+pub const OAUTH_ISSUER: &str = "https://api.example.com";
+
+/// An OAuth server for [`OAUTH_ISSUER`], serving only its default resource.
+#[expect(clippy::expect_used, reason = "test helper parsing a fixed config")]
+pub fn oauth_server() -> OAuthServer {
+    serde_json::from_value::<JsonOAuthServer>(serde_json::json!({ "issuer": OAUTH_ISSUER }))
+        .expect("Invalid OAuth config")
+        .into()
+}
+
+/// The resource [`oauth_server`] serves: the issuer's MCP endpoint.
+#[expect(clippy::expect_used, reason = "test helper parsing a fixed URL")]
+pub fn oauth_resource() -> OAuthResource {
+    format!("{OAUTH_ISSUER}/mcp")
+        .parse()
+        .expect("Invalid OAuth resource")
+}
+
+/// An OAuth grant seeded directly into the database, as the token endpoint leaves one.
+pub struct TestOAuthGrant {
+    pub uuid: OAuthGrantUuid,
+    pub access_token: OAuthAccessToken,
+    pub refresh_token: OAuthRefreshToken,
+}
+
+/// Seed an OAuth grant for `user`, issued at `now` with an access and a refresh token,
+/// and approved with `user_key` when one is given.
+#[expect(clippy::expect_used, reason = "test helper inserting an OAuth grant")]
+pub fn seed_oauth_grant(
+    server: &TestServer,
+    user: &TestUser,
+    scopes: &OAuthScopes,
+    resource: &OAuthResource,
+    user_key: Option<UserKeyUuid>,
+    now: DateTime,
+) -> TestOAuthGrant {
+    const HOUR: i64 = 60 * 60;
+    const DAY: i64 = 24 * HOUR;
+    let later =
+        |seconds: i64| DateTime::try_from(now.timestamp() + seconds).expect("Invalid expiration");
+
+    let mut conn = server.db_conn();
+    let user_id: UserId = schema::user::table
+        .filter(schema::user::uuid.eq(&user.uuid))
+        .select(schema::user::id)
+        .first(&mut conn)
+        .expect("Failed to get user ID");
+    let user_key_id: Option<UserKeyId> = user_key.map(|uuid| {
+        schema::user_key::table
+            .filter(schema::user_key::uuid.eq(uuid))
+            .select(schema::user_key::id)
+            .first(&mut conn)
+            .expect("Failed to get user key ID")
+    });
+
+    let uuid = OAuthGrantUuid::new();
+    diesel::insert_into(schema::oauth_grant::table)
+        .values((
+            schema::oauth_grant::uuid.eq(uuid),
+            schema::oauth_grant::user_id.eq(user_id),
+            schema::oauth_grant::user_key_id.eq(user_key_id),
+            schema::oauth_grant::client_id.eq("https://client.example/oauth/client.json"),
+            schema::oauth_grant::client_name.eq("Example Client"),
+            schema::oauth_grant::scope.eq(scopes),
+            schema::oauth_grant::resource.eq(resource),
+            schema::oauth_grant::created.eq(now),
+            schema::oauth_grant::modified.eq(now),
+            schema::oauth_grant::expiration.eq(later(365 * DAY)),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert OAuth grant");
+    let grant_id: OAuthGrantId = schema::oauth_grant::table
+        .filter(schema::oauth_grant::uuid.eq(uuid))
+        .select(schema::oauth_grant::id)
+        .first(&mut conn)
+        .expect("Failed to get OAuth grant ID");
+
+    let access_token = OAuthAccessToken::generate();
+    let refresh_token = OAuthRefreshToken::generate();
+    for (kind, token_hash, expiration) in [
+        (
+            OAuthTokenKind::Access,
+            OAuthTokenHash::from(&access_token),
+            later(HOUR),
+        ),
+        (
+            OAuthTokenKind::Refresh,
+            OAuthTokenHash::from(&refresh_token),
+            later(30 * DAY),
+        ),
+    ] {
+        diesel::insert_into(schema::oauth_token::table)
+            .values((
+                schema::oauth_token::grant_id.eq(grant_id),
+                schema::oauth_token::kind.eq(kind),
+                schema::oauth_token::token_hash.eq(token_hash),
+                schema::oauth_token::created.eq(now),
+                schema::oauth_token::expiration.eq(expiration),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to insert OAuth token");
+    }
+
+    TestOAuthGrant {
+        uuid,
+        access_token,
+        refresh_token,
+    }
 }
 
 /// Give a user a role on a project directly in the database, since the API stores only the
