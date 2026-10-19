@@ -96,7 +96,7 @@ const ProfileForm = (props: {
 	/** Unknown until the count arrives, which an email change waits for. */
 	tokens: number | undefined;
 }) => {
-	const { api, reader, keepUser, signOut } = useAccount();
+	const { api, reader, keepUser } = useAccount();
 	const client = useQueryClient();
 	const navigate = useNavigate();
 
@@ -106,6 +106,8 @@ const ProfileForm = (props: {
 	const [draft, setDraft] = createSignal<Draft>(saved());
 	const [failure, setFailure] = createSignal<string>();
 	const [justSaved, setJustSaved] = createSignal(false);
+	/** The email a confirm link went to, for a change that waits on it. */
+	const [linkSent, setLinkSent] = createSignal<string>();
 	const [confirming, setConfirming] = createSignal(false);
 	const [saving, setSaving] = createSignal(false);
 
@@ -128,6 +130,7 @@ const ProfileForm = (props: {
 	const edit = (change: Partial<Draft>) => {
 		setDraft((current) => ({ ...current, ...change }));
 		setJustSaved(false);
+		setLinkSent(undefined);
 		setFailure(undefined);
 	};
 	// Only a field the reader changed can hold them back.
@@ -160,11 +163,11 @@ const ProfileForm = (props: {
 				changes,
 			);
 			const own = user.uuid === reader().user.uuid;
-			// The reader's session is signed for the email it replaced.
-			if (own && changes.email !== undefined) {
-				signOut();
-				return;
-			}
+			// The reader's own new email takes effect from the confirm link the API mails it.
+			const waiting =
+				own &&
+				changes.email !== undefined &&
+				!sameEmail(user.email, changes.email);
 			client.setQueryData(userQuery(api, user.slug).queryKey, user);
 			client.setQueryData(
 				legacyTokensQuery(api, user.slug).queryKey,
@@ -174,7 +177,8 @@ const ProfileForm = (props: {
 				keepUser(user);
 			}
 			setDraft(draftOf(user));
-			setJustSaved(true);
+			setJustSaved(!waiting);
+			setLinkSent(waiting ? changes.email : undefined);
 			if (user.slug !== props.user.slug) {
 				// Relative to the router's base.
 				navigate(`/users/${user.slug}/settings`, { replace: true });
@@ -192,7 +196,12 @@ const ProfileForm = (props: {
 		if (!changes || blocked()) {
 			return;
 		}
-		if (changes.email !== undefined && props.tokens) {
+		// Emails differ by more than case before any legacy token is at stake.
+		if (
+			changes.email !== undefined &&
+			!sameEmail(changes.email, saved().email) &&
+			props.tokens
+		) {
 			setConfirming(true);
 			return;
 		}
@@ -263,6 +272,9 @@ const ProfileForm = (props: {
 							<Icon name="check" />
 							Saved
 						</Show>
+						<Show when={linkSent()}>
+							{(email) => <>Confirm link sent to {email()}</>}
+						</Show>
 					</span>
 					<Show when={failure()}>
 						{(message) => (
@@ -330,3 +342,5 @@ const ProfileForm = (props: {
 		</>
 	);
 };
+
+const sameEmail = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
