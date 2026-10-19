@@ -3098,6 +3098,98 @@ async fn reprocess_completed_job_stores_its_warnings_on_its_report() {
     );
 }
 
+/// A job keeps only the measures its run listed, and ignores its run's average at version 1 with
+/// a warning on its report.
+///
+/// Kills: a job config that loses the kept measures or the average, and a job processed without
+/// them.
+#[tokio::test]
+async fn reprocess_completed_job_keeps_the_listed_measures_and_ignores_the_average() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "reprocess-keep@example.com").await;
+    let org = server.create_org(&admin, "Reprocess Keep Org").await;
+    let project = server.create_project(&admin, &org, "Reprocess keep").await;
+
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let (_, spec_id) = insert_test_spec(&server);
+    let job_uuid =
+        insert_test_job_with_bmf_version(&server, report_id, project.uuid, spec_id, Some(1));
+    let mut config: serde_json::Value = serde_json::from_str(
+        &schema::job::table
+            .filter(schema::job::uuid.eq(job_uuid))
+            .select(schema::job::config)
+            .first::<String>(&mut server.db_conn())
+            .expect("Failed to load the job config"),
+    )
+    .expect("Failed to parse the job config");
+    let object = config.as_object_mut().expect("The job config is an object");
+    object.insert("average".to_owned(), serde_json::json!("median"));
+    object.insert("measures".to_owned(), serde_json::json!(["Latency"]));
+    diesel::update(schema::job::table.filter(schema::job::uuid.eq(job_uuid)))
+        .set(schema::job::config.eq(config.to_string()))
+        .execute(&mut server.db_conn())
+        .expect("Failed to set the job config");
+    set_job_status(&server, job_uuid, JobStatus::Completed);
+
+    let results = serde_json::json!({
+        "bench": [{ "measures": {
+            "latency": { "value": 1.0 },
+            "throughput": { "value": 2.0 },
+        } }],
+    });
+    let output = bencher_json::runner::JsonJobOutput {
+        results: vec![bencher_json::runner::JsonIterationOutput {
+            exit_code: 0,
+            stdout: Some(results.to_string()),
+            stderr: None,
+            output: None,
+        }],
+        error: None,
+    };
+    server
+        .context()
+        .oci_storage()
+        .job_output()
+        .put(project.uuid, job_uuid, &output)
+        .await
+        .expect("Failed to store job output");
+
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    reprocess_completed_jobs(&log, server.context()).await;
+    assert_eq!(get_status(&server, job_uuid), JobStatus::Processed);
+
+    let measures: Vec<String> = schema::metric::table
+        .inner_join(schema::report_benchmark::table)
+        .inner_join(schema::measure::table)
+        .filter(schema::report_benchmark::report_id.eq(report_id))
+        .select(schema::measure::slug)
+        .load::<bencher_json::Slug>(&mut server.db_conn())
+        .expect("Failed to load the measures")
+        .into_iter()
+        .map(|slug| slug.to_string())
+        .collect();
+    assert_eq!(measures, vec!["latency".to_owned()]);
+    let warnings: Vec<(ReportWarningResource, ReportWarningAction, i32)> =
+        schema::report_warning::table
+            .filter(schema::report_warning::report_id.eq(report_id))
+            .select((
+                schema::report_warning::resource,
+                schema::report_warning::action,
+                schema::report_warning::count,
+            ))
+            .load(&mut server.db_conn())
+            .expect("Failed to load the warnings");
+    assert_eq!(
+        warnings,
+        vec![(
+            ReportWarningResource::Average,
+            ReportWarningAction::Ignore,
+            1
+        )]
+    );
+}
+
 /// A job declared at version 1 parses its v1 output under the contract.
 #[tokio::test]
 async fn reprocess_completed_job_declared_v1_ingests_v1_output() {
