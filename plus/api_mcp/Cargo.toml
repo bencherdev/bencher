@@ -18,6 +18,7 @@ plus = [
     "bencher_endpoint/plus",
     "dep:bencher_json",
     "bencher_json/plus",
+    "bencher_otel?/plus",
     "dep:bencher_schema",
     "bencher_schema/plus",
     "dep:bytes",
@@ -32,12 +33,14 @@ plus = [
     "dep:slog",
     "dep:strum",
 ]
+otel = ["dep:bencher_otel"]
 
 [dependencies]
 api_projects = { workspace = true, optional = true }
 api_run = { workspace = true, optional = true }
 bencher_endpoint = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema"], optional = true }
+bencher_otel = { workspace = true, optional = true }
 bencher_schema = { workspace = true, optional = true }
 
 base64 = { workspace = true, optional = true }

@@ -5,24 +5,25 @@ use std::{
 };
 
 use bencher_schema::context::ApiContext;
+use dropshot::{Body, ClientErrorStatusCode, HttpError};
 use futures::FutureExt as _;
-use http::StatusCode;
+use http::Response;
 use rmcp::{
     ErrorData, RoleServer, ServerHandler,
     model::{
         CallToolRequestParams, CallToolResponse, CallToolResult, CompleteRequestMethod,
-        CompleteRequestParams, CompleteResult, ContentBlock, Implementation,
-        ListPromptsRequestMethod, ListPromptsResult, ListResourceTemplatesRequestMethod,
-        ListResourceTemplatesResult, ListResourcesRequestMethod, ListResourcesResult,
-        ListToolsResult, PaginatedRequestParams, ProtocolVersion, ServerCapabilities, ServerConfig,
+        CompleteRequestParams, CompleteResult, Implementation, ListPromptsRequestMethod,
+        ListPromptsResult, ListResourceTemplatesRequestMethod, ListResourceTemplatesResult,
+        ListResourcesRequestMethod, ListResourcesResult, ListToolsResult, PaginatedRequestParams,
+        ProtocolVersion, RequestMetaObject, ServerCapabilities, ServerConfig,
     },
     service::{MaybeSendFuture, RequestContext},
 };
 use slog::Logger;
 
 use crate::{
-    principal::{Challenge, McpPrincipal},
-    tools::McpTool,
+    principal::{Caller, Challenge, ClientStyle, McpPrincipal, SignInReason, resource_metadata},
+    tools::{McpTool, error_result},
 };
 
 const SERVER_NAME: &str = "bencher";
@@ -32,6 +33,8 @@ Authenticate with an `Authorization: Bearer` header using a project API key (`be
 or a user API key (`bencher_user_`); public projects can be read without authentication. \
 List tools return an object with the items under `data` and the total number of results under `total_count`. \
 To run benchmarks and submit results from a local checkout, prefer the `bencher` CLI (`bencher run`).";
+const SIGN_IN_INSTRUCTIONS: &str = "Clients that support OAuth can sign in instead of using a key, \
+and a tool that needs a signed-in caller asks for it.";
 
 /// The Streamable HTTP transport was introduced in 2025-03-26.
 const SUPPORTED_PROTOCOL_VERSIONS: &[ProtocolVersion] = &[
@@ -41,37 +44,84 @@ const SUPPORTED_PROTOCOL_VERSIONS: &[ProtocolVersion] = &[
     ProtocolVersion::V_2026_07_28,
 ];
 
-/// Serves a single MCP request with the credentials the endpoint resolved for it.
+/// Serves a single MCP request as the caller the endpoint resolved for it.
 pub struct BencherMcp {
     rqctx: Arc<dropshot::RequestContext<ApiContext>>,
-    /// Only resolved for a call to a known tool.
-    principal: Option<McpPrincipal>,
+    caller: Caller,
     /// Set when the endpoint must answer with a challenge in place of the SDK's response.
     challenge: OnceLock<Challenge>,
 }
 
 impl BencherMcp {
-    pub fn new(
-        rqctx: dropshot::RequestContext<ApiContext>,
-        principal: Option<McpPrincipal>,
-    ) -> Self {
+    pub fn new(rqctx: dropshot::RequestContext<ApiContext>, caller: Caller) -> Self {
         Self {
             rqctx: Arc::new(rqctx),
-            principal,
+            caller,
             challenge: OnceLock::new(),
         }
     }
 
-    pub fn challenge(&self) -> Option<Challenge> {
-        self.challenge.get().copied()
+    /// The response to answer in place of the SDK's, once a tool call raised a challenge.
+    pub fn challenge_response(&self) -> Option<Result<Response<Body>, HttpError>> {
+        let challenge = self.challenge.get()?;
+        let oauth = self.rqctx.context().oauth.as_ref()?;
+        Some(challenge.into_response(&resource_metadata(oauth, &self.rqctx)))
+    }
+
+    /// Ask the client to sign in where it looks for the request:
+    /// `ChatGPT` in the tool result, every other client in the HTTP response.
+    fn challenge(&self, challenge: Challenge, meta: &RequestMetaObject) -> CallToolResult {
+        let style = ClientStyle::of(meta, self.rqctx.request.headers());
+        #[cfg(feature = "otel")]
+        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::McpChallenge(
+            challenge.kind(),
+            style.into(),
+        ));
+        if matches!(style, ClientStyle::ChatGpt)
+            && let Some(oauth) = &self.rqctx.context().oauth
+        {
+            return challenge.into_result(&resource_metadata(oauth, &self.rqctx));
+        }
+        self.challenge
+            .get_or_init(|| challenge)
+            .into_status_result()
+    }
+
+    /// An anonymous caller is asked to sign in on a `404` as well as a `401`, with text that never
+    /// carries the tool's error, so a private project and a missing one answer alike.
+    fn tool_error(
+        &self,
+        tool: McpTool,
+        principal: &McpPrincipal,
+        error: HttpError,
+        meta: &RequestMetaObject,
+    ) -> CallToolResult {
+        if principal.is_anonymous()
+            && self.rqctx.context().oauth.is_some()
+            && (error.status_code == ClientErrorStatusCode::UNAUTHORIZED
+                || error.status_code == ClientErrorStatusCode::NOT_FOUND)
+        {
+            let challenge = Challenge::SignIn {
+                access: tool.access(),
+                reason: SignInReason::Required,
+            };
+            self.challenge(challenge, meta)
+        } else {
+            error_result(error)
+        }
     }
 }
 
 impl ServerHandler for BencherMcp {
     fn get_info(&self) -> ServerConfig {
+        let instructions = if self.rqctx.context().oauth.is_some() {
+            format!("{SERVER_INSTRUCTIONS} {SIGN_IN_INSTRUCTIONS}")
+        } else {
+            SERVER_INSTRUCTIONS.to_owned()
+        };
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new(SERVER_NAME, env!("CARGO_PKG_VERSION")))
-            .with_instructions(SERVER_INSTRUCTIONS)
+            .with_instructions(instructions)
     }
 
     fn supported_protocol_versions(&self) -> Cow<'static, [ProtocolVersion]> {
@@ -83,13 +133,18 @@ impl ServerHandler for BencherMcp {
         _request: Option<PaginatedRequestParams>,
         _context: RequestContext<RoleServer>,
     ) -> impl Future<Output = Result<ListToolsResult, ErrorData>> + MaybeSendFuture + '_ {
-        std::future::ready(Ok(McpTool::list()))
+        let list = if self.rqctx.context().oauth.is_some() {
+            McpTool::list_with_security_schemes()
+        } else {
+            McpTool::list()
+        };
+        std::future::ready(Ok(list))
     }
 
     async fn call_tool(
         &self,
         request: CallToolRequestParams,
-        _context: RequestContext<RoleServer>,
+        context: RequestContext<RoleServer>,
     ) -> Result<CallToolResponse, ErrorData> {
         let CallToolRequestParams {
             name, arguments, ..
@@ -100,17 +155,20 @@ impl ServerHandler for BencherMcp {
                 None,
             ));
         };
-        let Some(principal) = &self.principal else {
-            return Err(ErrorData::invalid_request("Malformed tool call", None));
+        let principal = match &self.caller {
+            Caller::Principal(principal) => principal,
+            Caller::OverLimit => {
+                let challenge = Challenge::SignIn {
+                    access: tool.access(),
+                    reason: SignInReason::OverLimit,
+                };
+                return Ok(self.challenge(challenge, &context.meta).into());
+            },
         };
         if !principal.permits(tool.access()) {
-            let challenge = self.challenge.get_or_init(|| Challenge::InsufficientScope);
-            return Ok(CallToolResult::error(vec![ContentBlock::text(format!(
-                "{status}: {description}",
-                status = StatusCode::FORBIDDEN.as_u16(),
-                description = challenge.description(),
-            ))])
-            .into());
+            return Ok(self
+                .challenge(Challenge::InsufficientScope, &context.meta)
+                .into());
         }
 
         let arguments = serde_json::Value::Object(arguments.unwrap_or_default());
@@ -121,9 +179,10 @@ impl ServerHandler for BencherMcp {
             self.rqctx.request.headers(),
             arguments,
         );
-        catch_tool_panic(&self.rqctx.log, tool, call)
-            .await
-            .map(Into::into)
+        let result = catch_tool_panic(&self.rqctx.log, tool, call)
+            .await?
+            .unwrap_or_else(|error| self.tool_error(tool, principal, error, &context.meta));
+        Ok(result.into())
     }
 
     // Only the tools capability is advertised, but the SDK answers these with empty results
@@ -169,13 +228,9 @@ impl ServerHandler for BencherMcp {
 
 /// The SDK runs the handler on a task of its own,
 /// where a panic would leave the request waiting forever for a response.
-async fn catch_tool_panic<F>(
-    log: &Logger,
-    tool: McpTool,
-    call: F,
-) -> Result<CallToolResult, ErrorData>
+async fn catch_tool_panic<F, T>(log: &Logger, tool: McpTool, call: F) -> Result<T, ErrorData>
 where
-    F: Future<Output = CallToolResult>,
+    F: Future<Output = T>,
 {
     AssertUnwindSafe(call)
         .catch_unwind()
