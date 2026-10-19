@@ -6,16 +6,13 @@ use std::{
     time::Duration,
 };
 
-#[cfg(feature = "plus")]
-use bencher_json::SpecUuid;
 use bencher_json::{
-    AlertUuid, BenchmarkSlug, BranchSlug, HeadUuid, JsonAlert, JsonBenchmark, JsonBoundary,
-    JsonMeasure, JsonPerfQuery, JsonReport, MeasureSlug, ModelUuid, ProjectSlug, ReportUuid,
-    ResourceName, TestbedSlug, ThresholdUuid, Units,
+    AlertUuid, BenchmarkSlug, BranchSlug, JsonAlert, JsonBenchmark, JsonMeasure, JsonPerfQuery,
+    JsonReport, MeasureSlug, MetricName, ProjectSlug, ReportUuid, ResourceName, TestbedSlug,
+    ThresholdUuid, Units,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
-        plot::{LOWER_BOUNDARY, UPPER_BOUNDARY},
         report::{JsonReportIteration, JsonReportMeasure, JsonReportResult},
     },
 };
@@ -131,11 +128,7 @@ impl ReportComment {
                         "\n- {benchmark} ({measure}): {console_url}",
                         benchmark = result.benchmark.name,
                         measure = report_measure.measure.name,
-                        console_url = self.perf_url(
-                            &result.benchmark,
-                            &report_measure.measure,
-                            report_measure.boundary.map(Into::into)
-                        )
+                        console_url = self.perf_url(&result.benchmark, &report_measure.measure)
                     ));
                 }
             }
@@ -228,19 +221,12 @@ impl ReportComment {
             (
                 "Branch",
                 self.json_report.branch.name.to_string(),
-                self.resource_url(Resource::Branch {
-                    slug: self.json_report.branch.slug.clone(),
-                    head: self.json_report.branch.head.uuid,
-                }),
+                self.resource_url(Resource::Branch(self.json_report.branch.slug.clone())),
             ),
             (
                 "Testbed",
                 self.json_report.testbed.name.to_string(),
-                self.resource_url(Resource::Testbed {
-                    slug: self.json_report.testbed.slug.clone(),
-                    #[cfg(feature = "plus")]
-                    spec: self.json_report.testbed.spec.as_ref().map(|s| s.uuid),
-                }),
+                self.resource_url(Resource::Testbed(self.json_report.testbed.slug.clone())),
             ),
         ] {
             html.push_str(&format!(
@@ -288,7 +274,10 @@ impl ReportComment {
             }
             html.push_str("</ul>");
 
-            html.push_str(&format!("<p><a href=\"{console_url}console/projects/{project}/thresholds/add{utm}\">Click here to create a new Threshold</a><br />", console_url = self.console_url, project = self.project_slug, utm = self.utm_query()));
+            html.push_str(&format!(
+                "<p><a href=\"{url}\">Click here to create a new Threshold</a><br />",
+                url = self.resource_url(Resource::Report(self.json_report.uuid)),
+            ));
             html.push_str(&format!("For more information, see <a href=\"https://bencher.dev/docs/explanation/thresholds/{utm}\">the Threshold documentation</a>.<br />", utm = self.utm_query()));
             html.push_str(&format!("To only post results if a Threshold exists, set <a href=\"https://bencher.dev/docs/explanation/bencher-run/{utm}#--ci-only-thresholds\">the <code lang=\"rust\">--ci-only-thresholds</code> flag</a>.</p>", utm = self.utm_query()));
         }
@@ -415,10 +404,7 @@ impl ReportComment {
         html.push_str("<br />");
         html.push_str(&format!(
             "🚷 <a href=\"{url}\">threshold</a>",
-            url = self.resource_url(Resource::Threshold {
-                uuid: alert.threshold.uuid,
-                model: alert.threshold.model.as_ref().map(|m| m.uuid),
-            }),
+            url = self.resource_url(Resource::Threshold(alert.threshold.uuid)),
         ));
         html.push_str("<br />");
         html.push_str(&format!(
@@ -543,13 +529,7 @@ impl ReportComment {
                 let alert = report_measure.and_then(|m| self.find_alert(result, m));
 
                 if let Some(report_measure) = report_measure {
-                    self.html_iteration_table_view_cell(
-                        html,
-                        result,
-                        report_measure,
-                        *boundary_limits,
-                        alert,
-                    );
+                    self.html_iteration_table_view_cell(html, result, report_measure, alert);
                 } else {
                     html.push_str(EMPTY_CELL);
                 }
@@ -604,26 +584,18 @@ impl ReportComment {
         html: &mut String,
         result: &JsonReportResult,
         report_measure: &JsonReportMeasure,
-        boundary_limits: BoundaryLimits,
         alert: Option<&JsonAlert>,
     ) {
         html.push_str("<td>");
         html.push_str(&format!(
             "📈 <a href=\"{url}\">view plot</a>",
-            url = self.perf_url(
-                &result.benchmark,
-                &report_measure.measure,
-                Some(boundary_limits)
-            )
+            url = self.perf_url(&result.benchmark, &report_measure.measure)
         ));
         if let Some(threshold) = &report_measure.threshold {
             html.push_str("<br />");
             html.push_str(&format!(
                 "🚷 <a href=\"{url}\">view threshold</a>",
-                url = self.resource_url(Resource::Threshold {
-                    uuid: threshold.uuid,
-                    model: Some(threshold.model.uuid),
-                }),
+                url = self.resource_url(Resource::Threshold(threshold.uuid)),
             ));
         } else {
             html.push_str("<br />");
@@ -738,20 +710,11 @@ impl ReportComment {
 
     fn resource_url_inner(&self, resource: Resource, utm: bool) -> Url {
         let url = self.console_url.clone();
-        let query_param = resource.query_param();
-        let mut path = if self.public_links {
-            format!("/perf/{project}", project = self.project_slug)
-        } else {
-            format!("/console/projects/{project}", project = self.project_slug)
-        };
+        let mut path = format!("/console/projects/{project}", project = self.project_slug);
         if let Some((resource_name, id)) = resource.into_suffix() {
             path.push_str(&format!("/{resource_name}/{id}"));
         }
         let mut url = url.join(&path).unwrap_or(url);
-
-        if let Some((key, value)) = query_param {
-            url.query_pairs_mut().append_pair(key, &value);
-        }
 
         if utm && self.is_bencher_cloud() {
             url.query_pairs_mut()
@@ -777,30 +740,34 @@ impl ReportComment {
         }
     }
 
+    /// The plot of the line that alerted.
     fn alert_perf_url(&self, alert: &JsonAlert) -> Url {
-        self.perf_url(
-            &alert.benchmark,
-            &alert.threshold.measure,
-            Some(BoundaryLimits {
-                lower: alert.limit == BoundaryLimit::Lower,
-                upper: alert.limit == BoundaryLimit::Upper,
-                ..Default::default()
-            }),
-        )
+        let mut url = self.perf_url(&alert.benchmark, &alert.threshold.measure);
+        {
+            let mut query = url.query_pairs_mut();
+            // A threshold that names no metric checks `value`.
+            let metric = alert
+                .threshold
+                .metric
+                .clone()
+                .unwrap_or_else(MetricName::value);
+            query.append_pair("metrics", metric.as_ref());
+            // Explore reads one set to each pair, not the perf query's comma separated list.
+            if !alert.variant.parameters.is_empty() {
+                query.append_pair("parameters", &alert.variant.parameters.canonical());
+            }
+        }
+        url
     }
 
-    fn perf_url(
-        &self,
-        benchmark: &JsonBenchmark,
-        measure: &JsonMeasure,
-        boundary_limits: Option<BoundaryLimits>,
-    ) -> Url {
+    /// The public plot on a public project, or else Explore.
+    fn perf_url(&self, benchmark: &JsonBenchmark, measure: &JsonMeasure) -> Url {
         let mut url = self.console_url.clone();
 
         let path = if self.public_links {
             format!("/perf/{}", self.project_slug)
         } else {
-            format!("/console/projects/{}/perf", self.project_slug)
+            format!("/console/projects/{}/explore", self.project_slug)
         };
         url.set_path(&path);
 
@@ -809,7 +776,13 @@ impl ReportComment {
             heads: vec![Some(self.json_report.branch.head.uuid)],
             testbeds: vec![self.json_report.testbed.uuid],
             #[cfg(feature = "plus")]
-            specs: vec![self.json_report.testbed.spec.as_ref().map(|s| s.uuid)],
+            specs: self
+                .json_report
+                .testbed
+                .spec
+                .as_ref()
+                .map(|spec| vec![Some(spec.uuid)])
+                .unwrap_or_default(),
             benchmarks: vec![benchmark.uuid],
             // No filter, so the link plots every variant of the benchmark.
             parameters: None,
@@ -819,13 +792,7 @@ impl ReportComment {
             ),
             end_time: Some(self.json_report.end_time),
         };
-        let mut query_string = vec![("report", Some(self.json_report.uuid.to_string()))];
-        if boundary_limits.is_some_and(|bl| bl.lower) {
-            query_string.push((LOWER_BOUNDARY, Some(true.to_string())));
-        }
-        if boundary_limits.is_some_and(|bl| bl.upper) {
-            query_string.push((UPPER_BOUNDARY, Some(true.to_string())));
-        }
+        let query_string = [("report", Some(self.json_report.uuid.to_string()))];
         url.set_query(Some(
             &json_perf_query
                 .to_query_string(&query_string)
@@ -839,21 +806,11 @@ impl ReportComment {
 enum Resource {
     Project,
     Report(ReportUuid),
-    Branch {
-        slug: BranchSlug,
-        head: HeadUuid,
-    },
-    Testbed {
-        slug: TestbedSlug,
-        #[cfg(feature = "plus")]
-        spec: Option<SpecUuid>,
-    },
+    Branch(BranchSlug),
+    Testbed(TestbedSlug),
     Benchmark(BenchmarkSlug),
     Measure(MeasureSlug),
-    Threshold {
-        uuid: ThresholdUuid,
-        model: Option<ModelUuid>,
-    },
+    Threshold(ThresholdUuid),
     Alert(AlertUuid),
 }
 
@@ -862,32 +819,12 @@ impl Resource {
         match self {
             Self::Project => None,
             Self::Report(uuid) => Some(("reports", uuid.to_string())),
-            Self::Branch { slug, .. } => Some(("branches", slug.to_string())),
-            Self::Testbed { slug, .. } => Some(("testbeds", slug.to_string())),
+            Self::Branch(slug) => Some(("branches", slug.to_string())),
+            Self::Testbed(slug) => Some(("testbeds", slug.to_string())),
             Self::Benchmark(slug) => Some(("benchmarks", slug.to_string())),
             Self::Measure(slug) => Some(("measures", slug.to_string())),
-            Self::Threshold { uuid, .. } => Some(("thresholds", uuid.to_string())),
+            Self::Threshold(uuid) => Some(("thresholds", uuid.to_string())),
             Self::Alert(uuid) => Some(("alerts", uuid.to_string())),
-        }
-    }
-
-    fn query_param(&self) -> Option<(&'static str, String)> {
-        match self {
-            Self::Branch { head, .. } => Some(("head", head.to_string())),
-            #[cfg(feature = "plus")]
-            Self::Testbed {
-                spec: Some(spec), ..
-            } => Some(("spec", spec.to_string())),
-            Self::Threshold {
-                model: Some(model), ..
-            } => Some(("model", model.to_string())),
-            Self::Project
-            | Self::Report(_)
-            | Self::Testbed { .. }
-            | Self::Benchmark(_)
-            | Self::Measure(_)
-            | Self::Threshold { model: None, .. }
-            | Self::Alert(_) => None,
         }
     }
 }
@@ -1104,26 +1041,6 @@ pub struct BoundaryLimits {
     upper: bool,
 }
 
-impl Default for BoundaryLimits {
-    fn default() -> Self {
-        Self {
-            min: 1.0.into(),
-            lower: false,
-            upper: false,
-        }
-    }
-}
-
-impl From<JsonBoundary> for BoundaryLimits {
-    fn from(json_boundary: JsonBoundary) -> Self {
-        Self {
-            lower: json_boundary.lower_limit.is_some(),
-            upper: json_boundary.upper_limit.is_some(),
-            ..Default::default()
-        }
-    }
-}
-
 impl BitOr for BoundaryLimits {
     type Output = Self;
 
@@ -1206,6 +1123,7 @@ mod tests {
         },
     };
     use ordered_float::OrderedFloat;
+    use url::Url;
 
     use crate::{ReportComment, SubAdapter, percent_difference, percent_of, value_cell};
 
@@ -1647,12 +1565,30 @@ mod tests {
         assert!(!html.contains("Results pending"), "{html}");
     }
 
+    // A public project's report table opens the console, and the branch row drops its head.
     #[test]
     fn report_table_public_project() {
         let html = report_comment(Visibility::Public).html(false, None);
-        let project = r#"<tr><td>Project</td><td><a href="https://bencher.example.com/perf/my-project">My Project</a></td></tr>"#;
-        let branch = r#"<tr><td>Branch</td><td><a href="https://bencher.example.com/perf/my-project/branches/main?head=44444444-4444-4444-4444-444444444444">main</a></td></tr>"#;
-        let testbed = r#"<tr><td>Testbed</td><td><a href="https://bencher.example.com/perf/my-project/testbeds/localhost">localhost</a></td></tr>"#;
+        let project = r#"<tr><td>Project</td><td><a href="https://bencher.example.com/console/projects/my-project">My Project</a></td></tr>"#;
+        let branch = r#"<tr><td>Branch</td><td><a href="https://bencher.example.com/console/projects/my-project/branches/main">main</a></td></tr>"#;
+        let testbed = r#"<tr><td>Testbed</td><td><a href="https://bencher.example.com/console/projects/my-project/testbeds/localhost">localhost</a></td></tr>"#;
+        let project_pos = html.find(project).expect("missing project row");
+        let branch_pos = html.find(branch).expect("missing branch row");
+        let testbed_pos = html.find(testbed).expect("missing testbed row");
+        assert!(project_pos < branch_pos);
+        assert!(branch_pos < testbed_pos);
+    }
+
+    // A private project's report table opens the console, and the testbed row drops its spec.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn report_table_private_project() {
+        let mut report = json_report(Visibility::Private);
+        report.testbed.spec = Some(json_spec());
+        let html = report_comment_for(report).html(false, None);
+        let project = r#"<tr><td>Project</td><td><a href="https://bencher.example.com/console/projects/my-project">My Project</a></td></tr>"#;
+        let branch = r#"<tr><td>Branch</td><td><a href="https://bencher.example.com/console/projects/my-project/branches/main">main</a></td></tr>"#;
+        let testbed = r#"<tr><td>Testbed</td><td><a href="https://bencher.example.com/console/projects/my-project/testbeds/localhost">localhost</a></td></tr>"#;
         let project_pos = html.find(project).expect("missing project row");
         let branch_pos = html.find(branch).expect("missing branch row");
         let testbed_pos = html.find(testbed).expect("missing testbed row");
@@ -1661,17 +1597,326 @@ mod tests {
     }
 
     #[cfg(feature = "plus")]
+    fn json_spec() -> bencher_json::JsonSpec {
+        let date = serde_json::to_value(DateTime::TEST).unwrap();
+        serde_json::from_value(serde_json::json!({
+            "uuid": "abababab-abab-abab-abab-abababababab",
+            "name": "Spec",
+            "slug": "spec",
+            "os": "linux",
+            "architecture": "x86_64",
+            "sandbox": null,
+            "cpu": 2,
+            "memory": 0x0001_0000_0000i64,
+            "disk": 0x0002_8000_0000i64,
+            "network": false,
+            "fallback": null,
+            "created": date,
+            "modified": date,
+            "archived": null,
+        }))
+        .unwrap()
+    }
+
+    /// Every link in the HTML, in order.
+    fn hrefs(html: &str) -> Vec<Url> {
+        html.split("href=\"")
+            .skip(1)
+            .filter_map(|rest| rest.split('"').next())
+            .map(|href| href.parse().unwrap())
+            .collect()
+    }
+
+    fn query_keys(url: &Url) -> Vec<String> {
+        url.query_pairs().map(|(key, _)| key.into_owned()).collect()
+    }
+
+    /// The keys every plot link carries, without the line an alert's link adds.
+    fn plot_query_keys(url: &Url) -> Vec<String> {
+        query_keys(url)
+            .into_iter()
+            .filter(|key| key != "metrics" && key != "parameters")
+            .collect()
+    }
+
+    fn query_values(url: &Url, key: &str) -> Vec<String> {
+        url.query_pairs()
+            .filter(|(name, _)| name == key)
+            .map(|(_, value)| value.into_owned())
+            .collect()
+    }
+
+    /// The alert's plot links: the alerts table's, then the run output's.
+    fn alert_plot_links(report: JsonReport) -> Vec<Url> {
+        let comment = report_comment_for(report);
+        let html = comment.html(false, None);
+        let (alerts_table, _) = html
+            .split_once("Click to view all benchmark results")
+            .expect("the comment carries the benchmark table");
+        let mut links = hrefs(alerts_table)
+            .into_iter()
+            .filter(|url| url.path() == "/perf/my-project")
+            .collect::<Vec<_>>();
+        let human = comment.human();
+        let (_, alerts) = human.split_once("View alerts:").expect(&human);
+        links.extend(
+            alerts
+                .lines()
+                .filter_map(|line| line.strip_prefix("- bench (Latency): "))
+                .map(|link| link.parse::<Url>().unwrap()),
+        );
+        assert_eq!(links.len(), 2, "{links:#?}");
+        links
+    }
+
+    fn report_with_alert(edit: impl FnOnce(&mut serde_json::Value)) -> JsonReport {
+        let mut report = named_alert_report();
+        let mut alerts = named_alert_alerts(&report.branch, &report.testbed);
+        edit(&mut alerts[0]);
+        report.alerts = Some(serde_json::from_value(alerts).unwrap());
+        report
+    }
+
+    // An alert's plot links open on the line that alerted: its threshold's metric and
+    // its variant's parameter set, as Explore reads them. The benchmark table's link
+    // covers every line of its row, so it carries neither, even on the row that alerted.
     #[test]
-    fn report_table_private_project() {
-        let html = report_comment(Visibility::Private).html(false, None);
-        let project = r#"<tr><td>Project</td><td><a href="https://bencher.example.com/console/projects/my-project">My Project</a></td></tr>"#;
-        let branch = r#"<tr><td>Branch</td><td><a href="https://bencher.example.com/console/projects/my-project/branches/main?head=44444444-4444-4444-4444-444444444444">main</a></td></tr>"#;
-        let testbed = r#"<tr><td>Testbed</td><td><a href="https://bencher.example.com/console/projects/my-project/testbeds/localhost">localhost</a></td></tr>"#;
-        let project_pos = html.find(project).expect("missing project row");
-        let branch_pos = html.find(branch).expect("missing branch row");
-        let testbed_pos = html.find(testbed).expect("missing testbed row");
-        assert!(project_pos < branch_pos);
-        assert!(branch_pos < testbed_pos);
+    fn alert_plot_links_open_the_alerted_line() {
+        let report = report_with_alert(|alert| {
+            alert["variant"]["parameters"] = serde_json::json!({"size_mb": 16, "op": "read"});
+            alert["threshold"]["uuid"] = serde_json::json!(NAMED_ALERT_BARE);
+        });
+        let html = report_comment_for(report.clone()).html(false, None);
+        for link in alert_plot_links(report) {
+            assert_eq!(query_values(&link, "metrics"), ["p99"], "{link}");
+            assert_eq!(
+                query_values(&link, "parameters"),
+                [r#"{"op":"read","size_mb":16}"#],
+                "{link}"
+            );
+        }
+
+        let (_, benchmark_table) = html
+            .split_once("Click to view all benchmark results")
+            .expect("the comment carries the benchmark table");
+        let plots = hrefs(benchmark_table)
+            .into_iter()
+            .filter(|url| url.path() == "/perf/my-project")
+            .collect::<Vec<_>>();
+        assert_eq!(plots.len(), 1, "{plots:#?}");
+        for plot in plots {
+            assert_eq!(query_keys(&plot), PLOT_QUERY_KEYS, "{plot}");
+        }
+        assert!(
+            benchmark_table.contains("/alerts/"),
+            "the row draws its alert: {benchmark_table}"
+        );
+    }
+
+    // A variant with no parameters adds no set, and a threshold that names no metric
+    // checks `value`.
+    #[test]
+    fn alert_plot_links_leave_out_what_the_line_lacks() {
+        for link in alert_plot_links(named_alert_report()) {
+            assert_eq!(query_values(&link, "metrics"), ["p99"], "{link}");
+            assert!(query_values(&link, "parameters").is_empty(), "{link}");
+        }
+
+        let report = report_with_alert(|alert| {
+            alert["threshold"]["metric"] = serde_json::Value::Null;
+        });
+        for link in alert_plot_links(report) {
+            assert_eq!(query_values(&link, "metrics"), ["value"], "{link}");
+            assert!(query_values(&link, "parameters").is_empty(), "{link}");
+        }
+    }
+
+    fn visibilities() -> Vec<Visibility> {
+        vec![
+            Visibility::Public,
+            #[cfg(feature = "plus")]
+            Visibility::Private,
+        ]
+    }
+
+    const PLOT_QUERY_KEYS: [&str; 8] = [
+        "branches",
+        "heads",
+        "testbeds",
+        "benchmarks",
+        "measures",
+        "start_time",
+        "end_time",
+        "report",
+    ];
+
+    // Report, benchmark, measure, threshold, and alert links open their console pages
+    // at either visibility, and a threshold link drops its model.
+    #[test]
+    fn resource_links_open_the_console() {
+        for visibility in visibilities() {
+            let mut report = named_alert_report();
+            report.project.visibility = visibility;
+            let links = hrefs(&report_comment_for(report).html(false, None))
+                .into_iter()
+                .map(String::from)
+                .collect::<Vec<_>>();
+            for expected in [
+                "https://bencher.example.com/console/projects/my-project/reports/00000000-0000-0000-0000-000000000000",
+                "https://bencher.example.com/console/projects/my-project/benchmarks/bench",
+                "https://bencher.example.com/console/projects/my-project/measures/latency",
+                // The alert's threshold, from the alerts table.
+                "https://bencher.example.com/console/projects/my-project/thresholds/dddddddd-dddd-dddd-dddd-dddddddddddd",
+                // The bare threshold, which has a model, from the benchmark table.
+                "https://bencher.example.com/console/projects/my-project/thresholds/cccccccc-cccc-cccc-cccc-cccccccccccc",
+                "https://bencher.example.com/console/projects/my-project/alerts/ffffffff-ffff-ffff-ffff-ffffffffffff",
+            ] {
+                assert!(
+                    links.iter().any(|link| link == expected),
+                    "{visibility:?} missing {expected}: {links:#?}"
+                );
+            }
+        }
+    }
+
+    // A public project's plot links, from the benchmark table and the alerts table,
+    // open the public plot with the query and no boundary flags.
+    #[test]
+    fn plot_links_public_project() {
+        let html = report_comment_for(named_alert_report()).html(false, None);
+        let plots = hrefs(&html)
+            .into_iter()
+            .filter(|url| !url.path().starts_with("/console/"))
+            .collect::<Vec<_>>();
+        assert_eq!(plots.len(), 2, "{plots:#?}");
+        for plot in plots {
+            assert_eq!(plot.path(), "/perf/my-project", "{plot}");
+            assert_eq!(plot_query_keys(&plot), PLOT_QUERY_KEYS, "{plot}");
+        }
+    }
+
+    // A private project's plot links open Explore with the query and no boundary flags.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn plot_links_private_project() {
+        let mut report = named_alert_report();
+        report.project.visibility = Visibility::Private;
+        let html = report_comment_for(report).html(false, None);
+        let plots = hrefs(&html)
+            .into_iter()
+            .filter(|url| url.path().ends_with("/explore"))
+            .collect::<Vec<_>>();
+        assert_eq!(plots.len(), 2, "{plots:#?}");
+        for plot in plots {
+            assert_eq!(
+                plot.path(),
+                "/console/projects/my-project/explore",
+                "{plot}"
+            );
+            assert_eq!(plot_query_keys(&plot), PLOT_QUERY_KEYS, "{plot}");
+        }
+    }
+
+    // A testbed with a spec puts it in the plot's query, where Explore reads it.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn plot_link_carries_the_testbed_spec() {
+        let mut report = named_alert_report();
+        report.testbed.spec = Some(json_spec());
+        let human = report_comment_for(report).human();
+        assert!(
+            human.contains("&specs=abababab-abab-abab-abab-abababababab&"),
+            "{human}"
+        );
+    }
+
+    // Create a new Threshold opens the report page, where each line no threshold checks offers its flags.
+    #[test]
+    fn create_threshold_opens_the_report() {
+        for visibility in visibilities() {
+            let mut report = json_report(visibility);
+            report.results = Some(value_less_results());
+            let html = report_comment_for(report).html(false, None);
+            assert!(
+                html.contains(r#"<a href="https://bencher.example.com/console/projects/my-project/reports/00000000-0000-0000-0000-000000000000">Click here to create a new Threshold</a>"#),
+                "{visibility:?}: {html}"
+            );
+        }
+    }
+
+    // `bencher run`'s output: the report opens in the console, and the results and
+    // alerts open the public plot.
+    #[test]
+    fn run_output_public_project() {
+        let human = report_comment_for(named_alert_report()).human();
+        let lines = human.lines().collect::<Vec<_>>();
+        assert_eq!(
+            lines.first().copied(),
+            Some(
+                "View report: https://bencher.example.com/console/projects/my-project/reports/00000000-0000-0000-0000-000000000000"
+            ),
+            "{human}"
+        );
+        assert_run_output_plots(&human, "/perf/my-project");
+    }
+
+    // `bencher run`'s output for a private project: the results and alerts open Explore.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn run_output_private_project() {
+        let mut report = named_alert_report();
+        report.project.visibility = Visibility::Private;
+        let human = report_comment_for(report).human();
+        assert!(
+            human.starts_with("View report: https://bencher.example.com/console/projects/my-project/reports/00000000-0000-0000-0000-000000000000\n"),
+            "{human}"
+        );
+        assert_run_output_plots(&human, "/console/projects/my-project/explore");
+    }
+
+    fn assert_run_output_plots(human: &str, path: &str) {
+        let (_, results) = human.split_once("View results:").expect(human);
+        let (results, alerts) = results.split_once("View alerts:").expect(human);
+        for section in [results, alerts] {
+            let link = section
+                .lines()
+                .find_map(|line| line.strip_prefix("- bench (Latency): "))
+                .unwrap_or_else(|| panic!("no plot link: {human}"));
+            let url: Url = link.parse().unwrap();
+            assert_eq!(url.path(), path, "{human}");
+            assert_eq!(plot_query_keys(&url), PLOT_QUERY_KEYS, "{human}");
+        }
+    }
+
+    // Bencher Cloud links keep their `utm_*` parameters.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn cloud_links_keep_utm() {
+        let mut report = json_report(Visibility::Public);
+        report.results = Some(value_less_results());
+        let html = ReportComment::new(
+            "https://bencher.dev".parse().unwrap(),
+            report,
+            SubAdapter {
+                build_time: false,
+                file_size: false,
+            },
+            "cli".to_owned(),
+        )
+        .html(false, None);
+        let utm = "?utm_medium=referral&utm_source=cli&utm_content=comment&utm_campaign=pr%2Bcomments&utm_term=my-project";
+        assert!(
+            html.contains(&format!(
+                r#"<a href="https://bencher.dev/console/projects/my-project/reports/00000000-0000-0000-0000-000000000000{utm}">Click here to create a new Threshold</a>"#
+            )),
+            "{html}"
+        );
+        assert!(
+            html.contains(&format!(
+                r#"<a href="https://bencher.dev/console/projects/my-project/branches/main{utm}">main</a>"#
+            )),
+            "{html}"
+        );
     }
 
     #[test]
