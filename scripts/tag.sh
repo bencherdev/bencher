@@ -11,6 +11,8 @@ git add ./README.md
 
 sed -i '' "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$VERSION\"/" ./plugins/bencher/.claude-plugin/plugin.json
 git add ./plugins/bencher/.claude-plugin/plugin.json
+sed -i '' "s/\"version\": \"[0-9]*\.[0-9]*\.[0-9]*\"/\"version\": \"$VERSION\"/" ./plugins/bencher/plugin.json
+git add ./plugins/bencher/plugin.json
 
 # Generate the API docs from the server and the types for the UI
 cargo gen-types

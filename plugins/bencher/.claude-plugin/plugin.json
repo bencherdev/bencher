@@ -10,5 +10,6 @@
   "supportUrl": "https://bencher.dev/help/",
   "privacyPolicyUrl": "https://bencher.dev/legal/privacy/",
   "termsOfServiceUrl": "https://bencher.dev/legal/terms-of-use/",
+  "icon": "./assets/icon.png",
   "keywords": ["benchmarking", "continuous-benchmarking", "performance", "regression-detection", "ci", "bencher"]
 }
