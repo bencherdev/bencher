@@ -13,14 +13,17 @@ use url::Url;
 
 mod api;
 mod app;
-#[cfg(test)]
-mod test_server;
+#[cfg(any(test, feature = "test-base-url"))]
+pub mod test_server;
+mod webhook;
 
 #[cfg(any(test, feature = "test-base-url"))]
 use api::join_path;
 use api::{GITHUB_API_URL, GitHubApi};
-pub use api::{GitHubApiError, GitHubInstallationPermission, GitHubRepository};
+pub use api::{GitHubApiError, GitHubRepository};
 pub use app::{GitHubApp, GitHubAppError, GitHubInstallationToken};
+pub use bencher_valid::GitHubInstallationPermission;
+pub use webhook::{GitHubInstallationChange, GitHubWebhookError};
 
 #[expect(
     clippy::expect_used,
@@ -119,7 +122,24 @@ impl GitHubClient {
     }
 
     pub async fn oauth_user(&self, code: Secret) -> Result<(UserName, Email), GitHubClientError> {
-        let token = self.exchange(code, None).await?;
+        self.user(code, None).await
+    }
+
+    /// The user, from an exchange that repeats the `redirect_url` the authorize URL named.
+    pub async fn oauth_user_with_redirect(
+        &self,
+        code: Secret,
+        redirect_url: Url,
+    ) -> Result<(UserName, Email), GitHubClientError> {
+        self.user(code, Some(redirect_url)).await
+    }
+
+    async fn user(
+        &self,
+        code: Secret,
+        redirect_url: Option<Url>,
+    ) -> Result<(UserName, Email), GitHubClientError> {
+        let token = self.exchange(code, redirect_url).await?;
 
         let oauth = octocrab::auth::OAuth {
             access_token: token.access_token().secret().clone().into(),
@@ -310,7 +330,7 @@ mod tests {
             exchanged(),
             (
                 200,
-                r#"{"total_count": 1, "installations": [{"id": 11, "suspended_at": null, "permissions": {"contents": "write"}}]}"#
+                r#"{"total_count": 1, "installations": [{"id": 11, "html_url": "https://github.com/settings/installations/11", "suspended_at": null, "permissions": {"contents": "write"}}]}"#
                     .to_owned(),
             ),
             (
@@ -331,6 +351,9 @@ mod tests {
             repositories,
             [GitHubRepository {
                 installation: GitHubInstallationId::try_from(11).unwrap(),
+                installation_url: "https://github.com/settings/installations/11"
+                    .parse()
+                    .unwrap(),
                 permission: GitHubInstallationPermission::Granted,
                 id: GitHubRepositoryId::try_from(1).unwrap(),
                 full_name: "octo-cat/repo".parse().unwrap(),

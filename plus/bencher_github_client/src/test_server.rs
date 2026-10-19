@@ -1,3 +1,11 @@
+//! A stand-in for GitHub, for this crate's tests and, behind `test-base-url`, for the API's.
+#![expect(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    reason = "test support, where any error fails the test"
+)]
+
 use std::{collections::HashMap, time::Duration};
 
 use rustls::crypto::aws_lc_rs;

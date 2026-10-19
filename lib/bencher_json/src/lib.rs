@@ -11,12 +11,13 @@ pub use bencher_valid::{
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
-    GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, GracePeriod, ImageDigest,
-    ImageReference, LastFour, LicensedPlanId, Memory, MeteredPlanId, OAuthAccessToken,
-    OAuthClientId, OAuthCode, OAuthCodeChallenge, OAuthCodeHash, OAuthCodeVerifier, OAuthIssuer,
-    OAuthMaxAge, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource,
-    OAuthScope, OAuthScopes, OAuthTokenHash, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
-    RecaptchaScore, RunnerKey, RunnerKeyHash, Timeout,
+    GitHubAppSlug, GitHubInstallationId, GitHubInstallationPermission, GitHubRepositoryId,
+    GitHubRepositoryName, GracePeriod, ImageDigest, ImageReference, LastFour, LicensedPlanId,
+    Memory, MeteredPlanId, OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge,
+    OAuthCodeHash, OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce, OAuthRedirectUri,
+    OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash,
+    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash,
+    Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;

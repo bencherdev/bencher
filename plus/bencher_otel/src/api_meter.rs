@@ -205,6 +205,9 @@ pub enum ApiCounter {
     CallbackSkip(PlanKind),
     CallbackAttempt(CallbackAttemptClass),
 
+    // GitHub App metrics
+    GitHubWebhookRefused,
+
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
     SelfHostedServerStats(Uuid),
@@ -245,7 +248,9 @@ impl ApiCounter {
 
             Self::UserSignup(_) => "{signup}",
             Self::UserLogin(_) => "{login}",
-            Self::UserRecaptchaFailure | Self::RunnerSelfUpdateCheckFailed(_) => "{failure}",
+            Self::UserRecaptchaFailure
+            | Self::RunnerSelfUpdateCheckFailed(_)
+            | Self::GitHubWebhookRefused => "{failure}",
             Self::UserInvite | Self::UserInviteMax(_) => "{invite}",
             Self::UserAccept(_) => "{accept}",
             Self::UserConfirm => "{confirmation}",
@@ -409,6 +414,9 @@ impl ApiCounter {
             Self::CallbackSubmit(_) => "callback.submit",
             Self::CallbackSkip(_) => "callback.skip",
             Self::CallbackAttempt(_) => "callback.attempt",
+
+            // GitHub App metrics
+            Self::GitHubWebhookRefused => "github.webhook_refused",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -586,6 +594,11 @@ impl ApiCounter {
             Self::CallbackSkip(_) => "Counts the number of callbacks skipped",
             Self::CallbackAttempt(_) => "Counts the number of callback delivery attempts",
 
+            // GitHub App metrics
+            Self::GitHubWebhookRefused => {
+                "Counts the number of GitHub webhook deliveries refused for their signature"
+            },
+
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
             Self::SelfHostedServerStats(_) => "Counts the number of self-hosted server stats sent",
@@ -607,6 +620,7 @@ impl ApiCounter {
             | Self::UserIp
             | Self::UserIpNotFound
             | Self::UserRecaptchaFailure
+            | Self::GitHubWebhookRefused
             | Self::UserInvite
             | Self::UserClaim
             | Self::UserCheckout

@@ -16,6 +16,7 @@ plus = [
     "dep:http",
     "dep:serde_json",
     "dep:serde_urlencoded",
+    "dep:url",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_otel?/plus",
@@ -41,6 +42,7 @@ serde.workspace = true
 serde_json = { workspace = true, optional = true }
 serde_urlencoded = { workspace = true, optional = true }
 slog.workspace = true
+url = { workspace = true, optional = true }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true

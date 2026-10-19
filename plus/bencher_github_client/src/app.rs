@@ -1,14 +1,18 @@
 use std::fmt;
 
 use bencher_valid::{
-    DateTime, GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, NonEmpty, Secret,
-    ValidError,
+    DateTime, GitHubAppSlug, GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, Jwt,
+    NonEmpty, Secret, ValidError,
 };
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::api::{GITHUB_API_URL, GitHubApi, GitHubApiError, JsonOwner};
+use crate::{
+    AUTH_URL, GitHubInstallationChange, GitHubWebhookError,
+    api::{GITHUB_API_URL, GitHubApi, GitHubApiError, JsonOwner},
+    webhook,
+};
 
 /// Issued this far in the past, so a GitHub clock behind ours still accepts the JWT.
 const JWT_DRIFT_SECS: i64 = 60;
@@ -18,6 +22,7 @@ const JWT_TTL_SECS: i64 = 9 * 60;
 /// The GitHub App that mints the dispatch token for a linked repository.
 pub struct GitHubApp {
     client_id: NonEmpty,
+    slug: GitHubAppSlug,
     key: EncodingKey,
     webhook_secret: Secret,
     api: GitHubApi,
@@ -46,6 +51,7 @@ impl GitHubApp {
     /// The app is the one that `client_id` names, which GitHub accepts as the JWT issuer.
     pub fn new(
         client_id: NonEmpty,
+        slug: GitHubAppSlug,
         private_key: &Secret,
         webhook_secret: Secret,
     ) -> Result<Self, GitHubAppError> {
@@ -54,6 +60,7 @@ impl GitHubApp {
         let api = GitHubApi::new(GITHUB_API_URL.clone()).map_err(GitHubAppError::Reqwest)?;
         let app = Self {
             client_id,
+            slug,
             key,
             webhook_secret,
             api,
@@ -74,6 +81,30 @@ impl GitHubApp {
 
     pub fn webhook_secret(&self) -> &Secret {
         &self.webhook_secret
+    }
+
+    /// The change a webhook delivery makes, once its signature proves that the app's webhook
+    /// secret signed its body. Any other event or action makes none.
+    pub fn webhook(
+        &self,
+        signature: Option<&str>,
+        event: Option<&str>,
+        body: &[u8],
+    ) -> Result<Option<GitHubInstallationChange>, GitHubWebhookError> {
+        webhook::delivery(&self.webhook_secret, signature, event, body)
+    }
+
+    /// Where a user installs the app, with `state` to carry back to the app's first callback URL.
+    pub fn install_url(&self, state: &Jwt) -> Url {
+        // GitHub serves the install page on the authorize page's origin.
+        let mut url = AUTH_URL.url().clone();
+        if let Ok(mut segments) = url.path_segments_mut() {
+            segments
+                .clear()
+                .extend(["apps", self.slug.as_ref(), "installations", "new"]);
+        }
+        url.query_pairs_mut().append_pair("state", state.as_ref());
+        url
     }
 
     /// Mints a token that can write the contents of the one repository and nothing else.
@@ -145,6 +176,7 @@ impl fmt::Debug for GitHubApp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("GitHubApp")
             .field("client_id", &self.client_id)
+            .field("slug", &self.slug)
             .finish_non_exhaustive()
     }
 }
@@ -202,7 +234,7 @@ mod tests {
         signature::KeyPair as _,
     };
     use base64::{Engine as _, engine::general_purpose::STANDARD};
-    use bencher_valid::{DateTime, GitHubInstallationId, GitHubRepositoryId, Secret};
+    use bencher_valid::{DateTime, GitHubInstallationId, GitHubRepositoryId, Jwt, Secret};
     use jsonwebtoken::{Algorithm, DecodingKey, Validation};
     use serde::Deserialize;
 
@@ -214,6 +246,7 @@ mod tests {
     };
 
     const CLIENT_ID: &str = "Iv1.0123456789abcdef";
+    const SLUG: &str = "bencher-test";
     const INSTALLATION_ID: u64 = 2048;
     const REPOSITORY_ID: u64 = 4096;
     const OTHER_REPOSITORY_ID: u64 = 8192;
@@ -246,6 +279,7 @@ mod tests {
         install_crypto_provider();
         let app = GitHubApp::new(
             CLIENT_ID.parse().unwrap(),
+            SLUG.parse().unwrap(),
             private_key,
             WEBHOOK_SECRET.parse().unwrap(),
         )
@@ -324,6 +358,7 @@ mod tests {
 
         let error = GitHubApp::new(
             CLIENT_ID.parse().unwrap(),
+            SLUG.parse().unwrap(),
             &public_key.parse().unwrap(),
             WEBHOOK_SECRET.parse().unwrap(),
         )
@@ -395,6 +430,20 @@ mod tests {
                 "{base}"
             );
         }
+    }
+
+    // Kills an install page on any other host or under any other app, and dropping the state.
+    #[test]
+    fn the_install_url_carries_the_state() {
+        let (private_key, _public) = key_pair();
+        let state = Jwt::test_token();
+
+        let url = app(&private_key, None).install_url(&state);
+
+        assert_eq!(
+            url.as_str(),
+            format!("https://github.com/apps/{SLUG}/installations/new?state={state}")
+        );
     }
 
     // Kills accepting a token for no repository, for another repository, or for more than one.

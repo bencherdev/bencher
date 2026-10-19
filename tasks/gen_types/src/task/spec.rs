@@ -70,6 +70,7 @@ impl Spec {
                 "runners" => TagDetails { description: Some("Runners".into()), external_docs: None},
                 "specs" => TagDetails { description: Some("Specs".into()), external_docs: None},
                 "jobs" => TagDetails { description: Some("Jobs".into()), external_docs: None},
+                "github" => TagDetails { description: Some("GitHub".into()), external_docs: None},
         }})
             .openapi(bencher_config::API_NAME, api_version)
             .write(&mut spec_file)

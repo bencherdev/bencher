@@ -8,12 +8,20 @@ publish = false
 
 [features]
 default = []
-plus = ["bencher_endpoint/plus", "bencher_json/plus", "bencher_otel?/plus", "bencher_schema/plus"]
+plus = [
+    "dep:bencher_github_client",
+    "dep:url",
+    "bencher_endpoint/plus",
+    "bencher_json/plus",
+    "bencher_otel?/plus",
+    "bencher_schema/plus",
+]
 sentry = ["dep:sentry", "bencher_schema/sentry"]
 otel = ["dep:bencher_otel", "bencher_endpoint/otel", "bencher_schema/otel"]
 
 [dependencies]
 bencher_endpoint.workspace = true
+bencher_github_client = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_otel = { workspace = true, optional = true }
 bencher_plot.workspace = true
@@ -27,6 +35,7 @@ schemars.workspace = true
 sentry = { workspace = true, optional = true }
 serde.workspace = true
 slog.workspace = true
+url = { workspace = true, optional = true }
 
 [dev-dependencies]
 bencher_api_tests.workspace = true
@@ -34,6 +43,7 @@ bencher_json = { workspace = true, features = ["server", "schema", "plus"] }
 bencher_schema.workspace = true
 diesel.workspace = true
 diesel_migrations.workspace = true
+reqwest = { workspace = true, features = ["json"] }
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 uuid.workspace = true
