@@ -932,6 +932,9 @@
 		width: calc(100vw - 16px);
 		max-width: none;
 	}
+	.account-menu .ui-menu-list {
+		max-height: none;
+	}
 	.tabs {
 		gap: 0;
 		padding: 0 6px;

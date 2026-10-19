@@ -28,9 +28,9 @@ import {
 	pastedKey,
 	refusal,
 	refusalText,
-	scopeText,
 } from "./consent";
 import { signInPath } from "./path";
+import { scopeText } from "./scope";
 
 export interface Props {
 	apiUrl: string;
