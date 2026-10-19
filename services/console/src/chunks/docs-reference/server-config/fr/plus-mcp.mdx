@@ -1,0 +1,8 @@
+### `plus.mcp`
+
+Cette section configure le [serveur MCP de Bencher](/fr/docs/how-to/mcp/).
+La totalité de la section est optionnelle.
+
+|          Nom          |             Exemple              | Par défaut | Requis |                                                                                                Description                                                                                                 |
+| :-------------------: | :------------------------------: | :--------: | :----: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| openai_apps_challenge | a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6 |    ---     |  Non   | Le jeton de vérification de domaine qu'OpenAI émet lorsque vous soumettez une application qui utilise ce serveur MCP. Le serveur d'API le sert en texte brut à `/.well-known/openai-apps-challenge`. S'il n'est pas spécifié, cette route renvoie `404 Not Found`. |
