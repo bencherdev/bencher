@@ -221,7 +221,7 @@ export const Change = (props: {
 					</fieldset>
 				)}
 			</Show>
-			<a class="lnk" href="https://bencher.dev/docs/explanation/thresholds/">
+			<a class="lnk" href="/docs/explanation/thresholds/">
 				How thresholds work
 			</a>
 		</Card>

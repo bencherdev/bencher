@@ -4,6 +4,7 @@ import {
 	blankQuery,
 	decodeQuery,
 	encodeQuery,
+	readsExplore,
 } from "./query";
 
 const uuid = (n: number) =>
@@ -307,5 +308,45 @@ describe("decodeQuery", () => {
 			seconds: 28 * DAY,
 			end: 2000,
 		});
+	});
+});
+
+describe("readsExplore", () => {
+	const reads = (search: string) => readsExplore(new URLSearchParams(search));
+	const UTM =
+		"utm_medium=referral&utm_source=github&utm_content=comment&utm_campaign=pr+comments&utm_term=hashbrown";
+
+	// Kills a key Explore reads that a link at the project root would not take to Explore.
+	test("holds for each name Explore writes but the window's", () => {
+		const full = encodeQuery({ ...FULL, window: { start: 1, end: 2 } });
+		const names = [...new URLSearchParams(full).keys()].filter(
+			(name) => name !== "start_time" && name !== "end_time",
+		);
+		expect(names.length).toBeGreaterThan(0);
+		for (const name of new Set([...names, "range"])) {
+			expect(reads(`${name}=x`), name).toBe(true);
+		}
+	});
+
+	// Kills a Runs link, a pull request comment's tracking, or any other name
+	// Explore does not read sent from Runs to Explore.
+	test("does not hold for the window, Runs' names, or a comment's tracking", () => {
+		expect(reads("")).toBe(false);
+		expect(reads(UTM)).toBe(false);
+		expect(
+			reads(
+				`branch=main&testbed=ubuntu&adapter=json&alerts=active&window=2w&start_time=1&end_time=2&${UTM}`,
+			),
+		).toBe(false);
+		expect(reads("lower_boundary=true&clear=true&tab=benchmarks")).toBe(false);
+	});
+
+	// Kills an Explore link that a comment's tracking keeps from Explore.
+	test("holds for a comment's perf link with its tracking", () => {
+		expect(
+			reads(
+				`branches=${uuid(1)}&heads=${uuid(11)}&testbeds=${uuid(3)}&benchmarks=${uuid(5)}&measures=${uuid(7)}&start_time=1&end_time=2&report=${uuid(9)}&${UTM}`,
+			),
+		).toBe(true);
 	});
 });

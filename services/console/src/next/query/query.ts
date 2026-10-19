@@ -90,6 +90,32 @@ const HIDE = "hide";
 const ONLY = "only";
 const FOCUS = "focus";
 
+// Every name Explore reads but the window's, which Runs reads too.
+const EXPLORE_KEYS: ReadonlySet<string> = new Set([
+	BRANCHES,
+	HEADS,
+	TESTBEDS,
+	SPECS,
+	BENCHMARKS,
+	PARAMETERS,
+	MEASURES,
+	METRICS,
+	X_AXIS,
+	Y_AXIS,
+	RANGE,
+	LAYOUT,
+	ITERATION,
+	HIDE,
+	ONLY,
+	FOCUS,
+	REPORT,
+	PLOT,
+]);
+
+/** Whether a link names anything Explore reads beyond the window: at the project root, an Explore link from before Runs moved there. */
+export const readsExplore = (params: URLSearchParams): boolean =>
+	[...params.keys()].some((key) => EXPLORE_KEYS.has(key));
+
 const X_AXES = new Map<string | null, XAxis>([
 	["date_time", "date"],
 	["version", "version"],

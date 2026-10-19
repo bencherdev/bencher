@@ -97,20 +97,6 @@ const decodeWindow = (params: URLSearchParams): ReportsWindow => {
 	return DEFAULT_SEARCH.window;
 };
 
-const KEYS = new Set([
-	"window",
-	"start_time",
-	"end_time",
-	"alerts",
-	"branch",
-	"testbed",
-	"adapter",
-]);
-
-/** Whether a link's query names only what Runs reads; any other name at the project root is an Explore link from before Runs moved there. */
-export const readsOnlyRuns = (params: URLSearchParams) =>
-	[...params.keys()].every((key) => KEYS.has(key));
-
 /** Read a link; anything hand edited that does not parse falls back to the default. */
 export const decodeSearch = (params: URLSearchParams): ReportsSearch => {
 	const search: ReportsSearch = {

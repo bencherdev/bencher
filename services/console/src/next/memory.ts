@@ -113,7 +113,7 @@ const write = (
 	}
 };
 
-const readJson = (
+export const readJson = (
 	storage: Pick<Storage, "getItem">,
 	key: string,
 ): Record<string, unknown> | undefined => {

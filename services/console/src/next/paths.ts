@@ -89,6 +89,7 @@ export type PageName =
 	| "Report"
 	| "Alert"
 	| "Threshold"
+	| "Metric"
 	| "Dimensions"
 	| "Profile"
 	| "UserKeys"
@@ -113,6 +114,10 @@ export const pageName = (rest: string[]): PageName => {
 	}
 	if (rest.length === 2 && rest[0] === "alerts") {
 		return "Alert";
+	}
+	// A metric's landing, which opens Explore on its line.
+	if (rest.length === 2 && rest[0] === "metrics") {
+		return "Metric";
 	}
 	if (DIMENSIONS.some((dimension) => dimension === rest[0])) {
 		return "Dimensions";

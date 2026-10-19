@@ -1,7 +1,13 @@
 import type { QueryClient } from "@tanstack/solid-query";
-import type { JsonConsoleProject, JsonProject } from "../../types/bencher";
+import type {
+	JsonConsoleProject,
+	JsonConsoleUserProject,
+	JsonProject,
+} from "../../types/bencher";
 import type { Api } from "../api";
+import { projectAt } from "../home";
 import { SHELL_KEY, VERSION_KEY, rememberVersion } from "../memory";
+import { ORGANIZATIONS_PATH } from "../paths";
 import { type Patch, patched } from "./general";
 import { type KeyRow, listed, revoke } from "./keys";
 
@@ -71,6 +77,18 @@ export const forgetSlug = (
 			// A memory the browser refuses, or cannot read, stays as it is.
 		}
 	}
+};
+
+/** The reader's project with the newest run, as the switcher orders them, where it opens; Organizations with none. */
+export const newestHome = (projects: readonly JsonConsoleUserProject[]) => {
+	const [newest] = [...projects].sort(
+		(a, b) =>
+			(b.last_report ?? 0) - (a.last_report ?? 0) ||
+			a.name.localeCompare(b.name),
+	);
+	return (
+		(newest && projectAt(newest.slug, newest.bmf_version)) ?? ORGANIZATIONS_PATH
+	);
 };
 
 /** Where a list of keys lives: its API path, and its place in the cache. */

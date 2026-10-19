@@ -30,6 +30,16 @@ const save = (page: Page) => page.getByRole("button", { name: "Save changes" });
 /** The page's own status line; the shell has one for page changes. */
 const status = (page: Page) => page.getByRole("main").getByRole("status");
 
+/** Remember `slug` on version 1 as the oldest project this browser has loaded. */
+const rememberOldest = (page: Page, slug: string) =>
+	page.evaluate(
+		([key, oldest]) => {
+			const versions = JSON.parse(localStorage.getItem(key) ?? "{}");
+			localStorage.setItem(key, JSON.stringify({ [oldest]: 1, ...versions }));
+		},
+		[VERSION_KEY, slug] as const,
+	);
+
 /** Hold every request matching `method` and `url` until the returned release is called. */
 const hold = async (page: Page, method: string, url: string) => {
 	let release = () => {};
@@ -177,9 +187,10 @@ test.describe("General, as the project's Maintainer", () => {
 		await expect(visibility(page)).toHaveAccessibleDescription(/public/);
 	});
 
-	// Kills a Danger section drawn from the wrong permission, and a delete that
-	// is not held until the slug is typed exactly.
-	test("Delete stays off until the slug matches, then deletes and lands on the organization's projects", async ({
+	// Kills a Danger section drawn from the wrong permission, a delete that is
+	// not held until the slug is typed exactly, and one that lands anywhere but
+	// the reader's main project, or leaves the app to get there.
+	test("Delete stays off until the slug matches, then deletes and lands on the reader's main project", async ({
 		page,
 		request,
 	}) => {
@@ -188,6 +199,7 @@ test.describe("General, as the project's Maintainer", () => {
 		await expect(
 			page.getByRole("heading", { level: 2, name: "Danger" }),
 		).toBeVisible();
+		await rememberOldest(page, hashbrown.slug);
 
 		await page.getByRole("button", { name: "Delete project" }).click();
 		const dialog = page.getByRole("alertdialog", {
@@ -205,12 +217,18 @@ test.describe("General, as the project's Maintainer", () => {
 		await expect(confirm).toBeDisabled();
 		await typed.fill(project.slug);
 		await expect(confirm).toBeEnabled();
+		await page.evaluate(() => {
+			(window as unknown as { stayed: boolean }).stayed = true;
+		});
 
 		await confirm.click();
-		await expect(page).toHaveURL(
-			`/console/organizations/${seed.organization.uuid}/projects`,
-		);
+		await expect(page).toHaveURL(nextPath(hashbrown.slug));
 		expect(await projectStatus(request, project.slug)).toBe(404);
+		expect(
+			await page.evaluate(
+				() => (window as unknown as { stayed?: boolean }).stayed,
+			),
+		).toBe(true);
 	});
 
 	// Kills a delete that leaves the app before the cache has written the
@@ -227,6 +245,7 @@ test.describe("General, as the project's Maintainer", () => {
 		await expect
 			.poll(() => storedQueries(page, project.slug), { timeout: 5_000 })
 			.not.toEqual([]);
+		await rememberOldest(page, hashbrown.slug);
 
 		await page.getByRole("button", { name: "Delete project" }).click();
 		const dialog = page.getByRole("alertdialog", {
@@ -236,9 +255,7 @@ test.describe("General, as the project's Maintainer", () => {
 			.getByRole("textbox", { name: `Type ${project.slug} to confirm` })
 			.fill(project.slug);
 		await dialog.getByRole("button", { name: "Delete project" }).click();
-		await expect(page).toHaveURL(
-			`/console/organizations/${seed.organization.uuid}/projects`,
-		);
+		await expect(page).toHaveURL(nextPath(hashbrown.slug));
 		expect(await storedQueries(page, project.slug)).toEqual([]);
 	});
 

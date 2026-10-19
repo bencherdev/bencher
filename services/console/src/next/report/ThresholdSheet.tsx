@@ -124,7 +124,7 @@ const Snippets = (props: ThresholdSheetProps & { line: ReportLine }) => {
 					code={snippets().simple.code}
 				/>
 			</section>
-			<a class="lnk" href="https://bencher.dev/docs/explanation/thresholds/">
+			<a class="lnk" href="/docs/explanation/thresholds/">
 				How thresholds work
 			</a>
 		</>

@@ -13,9 +13,8 @@ import ShellPaint from "../../../../../next/astro/ShellPaint.astro";
 import { drawsPlot } from "../../../../../next/explore/request";
 import { pageName, parseNextPath, tabOf } from "../../../../../next/paths";
 import { modulePreloads } from "../../../../../next/preloads";
-import { readsOnlyRuns } from "../../../../../next/reports/search";
 import { exploreSearchFromClassic } from "../../../../../next/query/classic";
-import { decodeQuery } from "../../../../../next/query/query";
+import { decodeQuery, readsExplore } from "../../../../../next/query/query";
 import Shell from "../../../../../next/shell/Shell";
 import "@bencherdev/ui/styles.css";
 import "../../../../../next/styles/console.css";
@@ -33,7 +32,7 @@ import "../../../../../next/switcher/switcher.css";
 
 const slug = Astro.params.project ?? "";
 const place = parseNextPath(Astro.url.pathname);
-if (place?.rest.length === 0 && !readsOnlyRuns(Astro.url.searchParams)) {
+if (place?.rest.length === 0 && readsExplore(Astro.url.searchParams)) {
 	return Astro.redirect(
 		`${Astro.url.pathname.replace(/\/?$/, "/explore")}${Astro.url.search}`,
 	);
@@ -46,6 +45,16 @@ const plot =
 	page === "Alert" ||
 	(page === "Explore" &&
 		drawsPlot(decodeQuery(exploreSearchFromClassic(Astro.url.search))));
+// A metric's landing replaces itself with Explore on its line, whose code it asks for too.
+const preloads =
+	page === "Metric"
+		? [
+				...new Set([
+					...modulePreloads(page),
+					...modulePreloads("Explore", ["plot/Plot", "metric/explore"]),
+				]),
+			]
+		: modulePreloads(page, plot ? ["plot/Plot"] : []);
 ---
 
 <!doctype html>
@@ -57,7 +66,7 @@ const plot =
 		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
 		<NextHead />
 		<Head />
-		{modulePreloads(page, plot ? ["plot/Plot"] : []).map((href) => <link rel="modulepreload" href={href} />)}
+		{preloads.map((href) => <link rel="modulepreload" href={href} />)}
 	</head>
 	<body>
 		<div id="console" class="console" data-api-url={BENCHER_API_URL}>

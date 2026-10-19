@@ -1,6 +1,8 @@
 import Icon from "@bencherdev/ui/Icon";
-import { For, Show } from "solid-js";
-import { TABS, type Tab, projectPath } from "../paths";
+import { For, Show, createSignal } from "solid-js";
+import { isServer } from "solid-js/web";
+import { rememberedHome } from "../home";
+import { ORGANIZATIONS_PATH, TABS, type Tab, projectPath } from "../paths";
 import type { AccountMenuProps } from "./AccountMenu";
 import Avatar from "./Avatar";
 import Crumb from "./Crumb";
@@ -26,6 +28,10 @@ interface ShellProps {
 	tabsRef?: (tabs: HTMLElement) => void;
 }
 
+/** The reader's main project as the browser remembers it, as the site root lands, else Organizations. */
+const home = () =>
+	(!isServer && rememberedHome(localStorage)) || ORGANIZATIONS_PATH;
+
 /**
  * The breadcrumb bar and the tab row. Astro renders it with nothing loaded for
  * the first paint, and the app renders it again with what it knows; the
@@ -35,6 +41,9 @@ interface ShellProps {
  * name does.
  */
 const Shell = (props: ShellProps) => {
+	// Read again as the reader heads for it, since the memory moves as they browse.
+	const [href, setHref] = createSignal(home());
+	const refresh = () => setHref(home());
 	/** The count a badge shows, two digits at most. */
 	const count = () =>
 		props.alerts ? (props.alerts > 99 ? "99+" : String(props.alerts)) : "";
@@ -46,7 +55,13 @@ const Shell = (props: ShellProps) => {
 	return (
 		<header class="shell">
 			<div class="bar">
-				<a class="brand" href="/console" aria-label="Bencher, home">
+				<a
+					class="brand"
+					href={href()}
+					onPointerEnter={refresh}
+					onFocus={refresh}
+					aria-label="Bencher, home"
+				>
 					<img src="/wordmark-dark.svg" alt="" />
 					<img src="/wordmark-light.svg" alt="" />
 				</a>

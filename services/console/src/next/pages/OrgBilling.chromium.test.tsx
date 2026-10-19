@@ -470,6 +470,89 @@ describe("the Free plan", () => {
 	});
 });
 
+describe("Stripe's return", () => {
+	const RETURN = "/organizations/pompeii-llc/billing?checkout=cs_x&level=pro";
+	const USAGE = "/v0/organizations/pompeii-llc/usage";
+	const enrolled = () => page.getByRole("status").getByText("Enrolled in Pro");
+
+	// Kills "Enrolled" drawn over the plan from before the checkout, with its
+	// Start trial still live, before the usage read after the plan answers.
+	test("says Enrolled only with the usage read after the plan is recorded", async () => {
+		// The usage read once the plan is posted waits for the test.
+		const held: ((usage: JsonUsage) => void)[] = [];
+		const { sent, history } = open(FREE, {
+			path: RETURN,
+			read: async (path) => {
+				expect(path).toBe(USAGE);
+				return sent.length === 0
+					? answered(FREE)
+					: new Promise((resolve) =>
+							held.push((usage) => resolve(answered(usage))),
+						);
+			},
+		});
+
+		await expect.poll(() => held.length).toBeGreaterThan(0);
+		expect(sent.map(({ path }) => path)).toEqual([
+			"/v0/organizations/pompeii-llc/plan",
+		]);
+		expect(history.get()).toBe("/organizations/pompeii-llc/billing");
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(enrolled().query()).toBeNull();
+		expect(button("Start 1-month free trial").query()).toBeNull();
+
+		for (const release of held) {
+			release(PRO);
+		}
+		await expect.element(enrolled()).toBeVisible();
+		await expect.element(region("Pro Plan")).toBeVisible();
+	});
+
+	// Kills a replayed return, whose plan the API already holds, shown as a failure.
+	test("a return whose plan is already recorded says Enrolled", async () => {
+		open(FREE, {
+			path: RETURN,
+			read: async () => answered(PRO),
+			answer: async () => {
+				throw refused(
+					"Plan ((QueryOrganization { .. }, QueryPlan { .. })) has conflict: Organization already has a plan",
+				);
+			},
+		});
+
+		await expect.element(enrolled()).toBeVisible();
+		await expect.element(region("Pro Plan")).toBeVisible();
+		expect(page.getByRole("alert").query()).toBeNull();
+	});
+
+	// Kills a refusal that says nothing, any other conflict taken for a recorded
+	// plan, and a failure that starts the checkout again by itself.
+	test("a refused return says why and starts no checkout", async () => {
+		const { sent, history } = open(FREE, {
+			path: RETURN,
+			read: async () => answered(FREE),
+			answer: async ({ path }) => {
+				if (path.endsWith("/plan")) {
+					throw refused("Plan (..) has conflict: UNIQUE constraint failed");
+				}
+				return { session: "cs_y", url: "https://checkout.stripe.com/y" };
+			},
+		});
+
+		await expect
+			.element(page.getByRole("alert"))
+			.toHaveTextContent(
+				"Bencher did not record the Pro plan: Plan (..) has conflict: UNIQUE constraint failed",
+			);
+		await expect.element(button("Start 1-month free trial")).toBeEnabled();
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(sent.map(({ path }) => path)).toEqual([
+			"/v0/organizations/pompeii-llc/plan",
+		]);
+		expect(history.get()).toBe("/organizations/pompeii-llc/billing");
+	});
+});
+
 describe("self-hosted", () => {
 	const rowLabels = () =>
 		[

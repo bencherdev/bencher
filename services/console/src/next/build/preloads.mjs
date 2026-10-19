@@ -122,7 +122,7 @@ const nextPreloads = () => {
 			const embedParts = {};
 			for (const chunk of chunks.values()) {
 				const module = chunk.facadeModuleId?.match(
-					/\/src\/next\/(\w+)\/(\w+)\.tsx$/,
+					/\/src\/next\/(\w+)\/(\w+)\.tsx?$/,
 				);
 				if (!(chunk.isDynamicEntry && module)) {
 					continue;

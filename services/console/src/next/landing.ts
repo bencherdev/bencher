@@ -1,9 +1,12 @@
-// The root page inlines this function's source, so it reads nothing outside itself.
+import type { projectAt } from "./home";
+
+/** The reader's main project as the browser remembers it, for a signed in reader; the root page inlines its source, so it reads nothing outside itself. */
 export const landing = (
 	user: string | null,
 	versions: string | null,
 	search: string,
 	now: number,
+	at: typeof projectAt,
 ): string | undefined => {
 	if (search) {
 		return undefined;
@@ -19,11 +22,9 @@ export const landing = (
 		}
 		const remembered = Object.entries(JSON.parse(versions ?? "null") ?? {});
 		for (const [slug, version] of remembered.reverse()) {
-			if (version === 1) {
-				return `/next/console/projects/${slug}/`;
-			}
-			if (version === 0) {
-				return `/console/projects/${slug}/plots`;
+			const to = at(slug, version);
+			if (to) {
+				return to;
 			}
 		}
 		return undefined;

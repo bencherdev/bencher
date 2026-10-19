@@ -46,6 +46,7 @@ import {
 	usd,
 	withoutPayer,
 } from "../organization/billing";
+import type { Enrollment } from "../organization/checkout";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
 import {
@@ -77,6 +78,7 @@ const OrgBilling = () => {
 	}));
 	const name = () =>
 		organization().data?.name ?? organizationIn(bootstrap().data, key())?.name;
+	const enrollment = useCheckoutReturn(key);
 	// An expired or invalid license answers 402, and its key still needs replacing.
 	const unlicensed = () => {
 		const error = usage().error;
@@ -94,7 +96,23 @@ const OrgBilling = () => {
 					</Heading>
 				</div>
 			</div>
+			<Show when={enrollment()?.status === "enrolled"}>
+				<Banner status="success" role="status">
+					Enrolled in {levelName(enrollment()?.level ?? "")}
+				</Banner>
+			</Show>
+			<Show when={enrollment()?.status === "failed"}>
+				<Banner status="error" role="alert">
+					{failureOf(
+						enrollment()?.error,
+						`Bencher did not record the ${levelName(enrollment()?.level ?? "")} plan`,
+					)}
+				</Banner>
+			</Show>
 			<Switch fallback={<Skeleton size="card" />}>
+				<Match when={enrollment()?.status === "enrolling"}>
+					<Skeleton size="card" />
+				</Match>
 				<Match when={manage().data === false}>{null}</Match>
 				<Match when={manage().data && usage().data}>
 					{(shown) => <UsageView usage={shown()} name={name() ?? key()} />}
@@ -128,6 +146,44 @@ const OrgBilling = () => {
 };
 
 export default OrgBilling;
+
+/** Stripe's return: its handler loads only with one, records the plan once, and says how that went. */
+const useCheckoutReturn = (organization: () => string) => {
+	const { api } = useAccount();
+	const client = useQueryClient();
+	const location = useLocation();
+	const navigate = useNavigate();
+	const search = location.search;
+	const level = new URLSearchParams(search).get("level") ?? "";
+	const [enrollment, setEnrollment] = createSignal<Enrollment | undefined>(
+		new URLSearchParams(search).has("checkout")
+			? { status: "enrolling", level }
+			: undefined,
+	);
+	onMount(() => {
+		if (!enrollment()) {
+			return;
+		}
+		// Off the link first, so a reload does not record the plan again; relative to the router's base.
+		navigate(`/organizations/${organization()}/billing`, { replace: true });
+		// Reading only its export spares the bundler a namespace object, whose helper it would load from an unrelated chunk.
+		import("../organization/checkout")
+			.then(({ recordCheckout }) =>
+				recordCheckout(
+					api,
+					organization(),
+					search,
+					() =>
+						client.invalidateQueries({
+							queryKey: usageQuery(api, organization()).queryKey,
+						}),
+					setEnrollment,
+				),
+			)
+			.catch((error) => setEnrollment({ status: "failed", level, error }));
+	});
+	return enrollment;
+};
 
 const UsageView = (props: { usage: Usage; name: string }) => {
 	// Compared as text, so the generated enums stay out of the page.

@@ -464,7 +464,6 @@ const Danger = (props: { data: JsonConsoleProject }) => {
 			<Show when={deleting()}>
 				<DeleteProject
 					project={props.data.project}
-					organization={props.data.organization.uuid}
 					onDismiss={() => setDeleting(false)}
 				/>
 			</Show>
