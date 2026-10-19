@@ -1,0 +1,10 @@
+
+running 5 tests
+test a_test ... ignored
+test checksum_64_kib ... bench:       3,562.86 ns/iter (+/- 230.89) = 18398 MB/s
+test copy_4_kib      ... bench:          62.50 ns/iter (+/- 1.22) = 66064 MB/s
+test fib_10          ... bench:          92.99 ns/iter (+/- 9.81)
+test ignored_bench   ... ignored
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 3 measured; 0 filtered out; finished in 1.27s
+

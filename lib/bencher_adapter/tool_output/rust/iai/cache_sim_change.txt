@@ -1,0 +1,14 @@
+fib_short
+  Instructions:                1777 (-2.308961%)
+  L1 Accesses:                 2538 (-2.384615%)
+  L2 Accesses:                    1 (No change)
+  RAM Accesses:                   2 (No change)
+  Estimated Cycles:            2613 (-2.317757%)
+
+fib_long
+  Instructions:              221480 (-0.018960%)
+  L1 Accesses:               315800 (-0.019629%)
+  L2 Accesses:                    7 (+16.66667%)
+  RAM Accesses:                   3 (-25.00000%)
+  Estimated Cycles:          315940 (-0.029111%)
+

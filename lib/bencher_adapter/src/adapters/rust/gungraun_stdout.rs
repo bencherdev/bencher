@@ -21,7 +21,7 @@ use nom::{
 use crate::{
     Adaptable, Settings,
     adapters::util::parse_f64,
-    results::adapter_results::{AdapterResults, GungraunMeasure},
+    results::adapter_results::{AdapterResults, GungraunMeasure, GungraunTool, PerfStatistic},
 };
 
 pub struct AdapterRustGungraunStdout;
@@ -35,27 +35,42 @@ impl Adaptable for AdapterRustGungraunStdout {
             },
         }
 
-        // Clean up the input by removing ANSI escape codes:
-        let input = strip_ansi_escapes::strip_str(input);
-
-        let benchmarks = match multiple_benchmarks().parse(&*input) {
-            Err(error) => {
-                debug_assert!(false, "Error parsing input:\n{error:#?}");
-                return None;
-            },
-            Ok((remainder, benchmarks)) => {
-                debug_assert_eq!(remainder.len(), 0, "Unparsed trailing input:\n{remainder}");
-                benchmarks
-            },
-        };
-
+        let benchmarks = parse_stdout(input)?
+            .into_iter()
+            .map(|(benchmark_name, sections)| {
+                let measures = sections
+                    .into_iter()
+                    .flat_map(|(_, measures)| measures)
+                    .collect();
+                (benchmark_name, measures)
+            })
+            .collect();
         AdapterResults::new_gungraun(benchmarks)
     }
 }
 
+/// A tool's section of a benchmark.
+pub(crate) type Section = (GungraunTool, Vec<GungraunMeasure>);
+
+/// Every benchmark in gungraun's terminal output, with its sections.
+pub(crate) fn parse_stdout(input: &str) -> Option<Vec<(BenchmarkName, Vec<Section>)>> {
+    // Clean up the input by removing ANSI escape codes:
+    let input = strip_ansi_escapes::strip_str(input);
+
+    match multiple_benchmarks().parse(&*input) {
+        Err(error) => {
+            debug_assert!(false, "Error parsing input:\n{error:#?}");
+            None
+        },
+        Ok((remainder, benchmarks)) => {
+            debug_assert_eq!(remainder.len(), 0, "Unparsed trailing input:\n{remainder}");
+            Some(benchmarks)
+        },
+    }
+}
+
 fn multiple_benchmarks<'a>()
--> impl Parser<&'a str, Output = Vec<(BenchmarkName, Vec<GungraunMeasure>)>, Error = Error<&'a str>>
-{
+-> impl Parser<&'a str, Output = Vec<(BenchmarkName, Vec<Section>)>, Error = Error<&'a str>> {
     map(
         many0(alt((
             // Try to parse a single benchmark:
@@ -71,8 +86,7 @@ fn multiple_benchmarks<'a>()
 }
 
 fn single_benchmark<'a>()
--> impl Parser<&'a str, Output = Option<(BenchmarkName, Vec<GungraunMeasure>)>, Error = Error<&'a str>>
-{
+-> impl Parser<&'a str, Output = Option<(BenchmarkName, Vec<Section>)>, Error = Error<&'a str>> {
     map(
         (
             terminated(
@@ -89,34 +103,43 @@ fn single_benchmark<'a>()
                 // Callgrind tool if it was enabled:
                 callgrind_tool_measures(),
                 // Cachegrind tool if it was enabled:
-                cachegrind_tool_measures(),
+                tool(GungraunTool::Cachegrind, cachegrind_tool_measures()),
                 // Add DHAT tool measures if it was enabled:
-                dhat_tool_measures(),
+                tool(GungraunTool::Dhat, dhat_tool_measures()),
                 // Add Memcheck tool measures if it was enabled:
-                memcheck_tool_measures(),
+                tool(GungraunTool::Memcheck, memcheck_tool_measures()),
                 // Add Helgrind tool measures if it was enabled:
-                helgrind_tool_measures(),
+                tool(GungraunTool::Helgrind, helgrind_tool_measures()),
                 // Add Drd tool measures if it was enabled:
-                drd_tool_measures(),
+                tool(GungraunTool::Drd, drd_tool_measures()),
+                // Add perf events if perf was enabled:
+                tool(GungraunTool::Perf, perf_tool_measures()),
             ))),
         ),
-        |(benchmark_name, measures)| {
+        |(benchmark_name, sections)| {
             // trim here to avoid loose `\r` chars at the end of the string because of the
             // `not_benchmark_name_end` parser. It's maybe not a bad idea anyways.
             let benchmark_name = benchmark_name.trim().parse().ok()?;
-            let measures = measures.into_iter().flatten().collect();
 
-            Some((benchmark_name, measures))
+            Some((benchmark_name, sections))
         },
     )
 }
 
-fn callgrind_tool_measures<'a>()
--> impl Parser<&'a str, Output = Vec<GungraunMeasure>, Error = Error<&'a str>> {
+/// A section that always opens with its tool's header.
+fn tool<'a>(
+    tool: GungraunTool,
+    measures: impl Parser<&'a str, Output = Vec<GungraunMeasure>, Error = Error<&'a str>>,
+) -> impl Parser<&'a str, Output = Section, Error = Error<&'a str>> {
+    map(measures, move |measures| (tool, measures))
+}
+
+/// callgrind's section, whose header gungraun leaves out when callgrind runs alone.
+fn callgrind_tool_measures<'a>() -> impl Parser<&'a str, Output = Section, Error = Error<&'a str>> {
     map(
         preceded(opt(tool_name_line("CALLGRIND")), many1(metric_line())),
         |metrics| {
-            metrics
+            let measures = metrics
                 .into_iter()
                 .map(|(metric_name, json)| match metric_name.as_str() {
                     gungraun::Instructions::NAME_STR => GungraunMeasure::Instructions(json),
@@ -161,7 +184,8 @@ fn callgrind_tool_measures<'a>()
                     gungraun::SpLoss2::NAME_STR => GungraunMeasure::LLBadSpatialLocality(json),
                     _ => GungraunMeasure::Unknown,
                 })
-                .collect()
+                .collect();
+            (GungraunTool::Callgrind, measures)
         },
     )
 }
@@ -299,6 +323,43 @@ fn drd_tool_measures<'a>()
                 .collect()
         },
     )
+}
+
+fn perf_tool_measures<'a>()
+-> impl Parser<&'a str, Output = Vec<GungraunMeasure>, Error = Error<&'a str>> {
+    map(
+        preceded(
+            (
+                tool_name_line("PERF"),
+                opt((space1, tag(">>"), not_line_ending(), line_ending())),
+            ),
+            many1((
+                metric_line(),
+                opt(perf_detail_line("rse%")),
+                opt(perf_detail_line("samples")),
+            )),
+        ),
+        |metrics| {
+            metrics
+                .into_iter()
+                .map(|((label, json), _, samples)| {
+                    let statistic = if samples.is_some() {
+                        PerfStatistic::Mean
+                    } else {
+                        PerfStatistic::Value
+                    };
+                    GungraunMeasure::Perf(label, json, statistic)
+                })
+                .collect()
+        },
+    )
+}
+
+/// A line gungraun prints under a sampled perf event, such as its sample count.
+fn perf_detail_line<'a>(
+    name: &'static str,
+) -> impl Parser<&'a str, Output = &'a str, Error = Error<&'a str>> {
+    recognize((space1, tag(name), not_line_ending(), line_ending()))
 }
 
 fn tool_name_line<'a>(

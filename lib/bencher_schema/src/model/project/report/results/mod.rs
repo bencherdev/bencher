@@ -4,12 +4,12 @@ use bencher_adapter::{
     AdapterError, AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
     results::{
         adapter_metrics::{AdapterMetrics, NamedMap},
-        adapter_results::Skipped,
+        adapter_results::{MeasureUnits, Skipped},
     },
 };
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BmfVersion, DateTime, MeasureNameId, MetricName, ParameterSet,
-    Slug,
+    ResourceName, Slug,
     project::report::{
         Adapter, Iteration, JsonAverage, JsonReportSettings, MeasureFilter, ParseOutcome,
         ReportWarningResource,
@@ -230,6 +230,7 @@ impl ReportResults {
         warnings: &mut ReportWarnings,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
+        let units = results.units;
         // Phase 1: Pre-compute all data using read connections.
         // Resolve IDs (get_or_create), fetch historical data, compute boundaries.
         let mut prepared_variants = Vec::with_capacity(results.inner.len());
@@ -266,6 +267,7 @@ impl ReportResults {
                         ignore_benchmark,
                         parameters,
                         metrics,
+                        &units,
                         warnings,
                     )
                     .await?
@@ -365,7 +367,7 @@ impl ReportResults {
     /// or `None` if the creation ceiling refused the variant.
     #[expect(
         clippy::too_many_arguments,
-        reason = "a variant is a benchmark, its parameters, and its metrics"
+        reason = "a variant is a benchmark, its parameters, and its metrics with their units"
     )]
     async fn prepare_variant(
         &mut self,
@@ -376,6 +378,7 @@ impl ReportResults {
         ignore_benchmark: bool,
         parameters: ParameterSet,
         metrics: AdapterMetrics,
+        units: &MeasureUnits,
         warnings: &mut ReportWarnings,
     ) -> Result<Option<PreparedVariant>, HttpError> {
         // Resolved here in Phase 1, alongside the benchmark and the measures, so the
@@ -393,7 +396,8 @@ impl ReportResults {
 
         let mut prepared_measures = Vec::with_capacity(metrics.inner.len());
         for (measure_key, metric) in metrics.inner {
-            let Some(measure_id) = self.measure_id(log, context, measure_key).await? else {
+            let units = units.get(&measure_key);
+            let Some(measure_id) = self.measure_id(log, context, measure_key, units).await? else {
                 warnings.skip(ReportWarningResource::Measure);
                 continue;
             };
@@ -514,13 +518,15 @@ impl ReportResults {
         log: &Logger,
         context: &ApiContext,
         measure: MeasureNameId,
+        units: Option<&ResourceName>,
     ) -> Result<Option<MeasureId>, HttpError> {
         Ok(if let Some(id) = self.measure_cache.get(&measure) {
             *id
         } else {
             let measure_id = past_the_ceiling(
                 log,
-                QueryMeasure::get_or_create(context, self.project_id, &measure).await,
+                QueryMeasure::get_or_create_with_units(context, self.project_id, &measure, units)
+                    .await,
             )?;
             self.measure_cache.insert(measure, measure_id);
             measure_id

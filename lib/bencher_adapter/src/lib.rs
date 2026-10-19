@@ -97,8 +97,12 @@ pub(crate) fn convert_v0(
         Adapter::Ruby => AdapterRuby::parse(input, settings),
         Adapter::RubyBenchmark => AdapterRubyBenchmark::parse(input, settings),
         Adapter::Rust => AdapterRust::parse(input, settings),
-        Adapter::RustBench => AdapterRustBench::parse(input, settings),
-        Adapter::RustCriterion => AdapterRustCriterion::parse(input, settings),
+        Adapter::RustBench | Adapter::RustBenchText => AdapterRustBench::parse(input, settings),
+        Adapter::RustCriterion | Adapter::RustCriterionText => {
+            AdapterRustCriterion::parse(input, settings)
+        },
+        // The version 0 tree reads no structured Rust output.
+        Adapter::RustBenchJson | Adapter::RustCriterionJson => None,
         Adapter::RustIai => AdapterRustIai::parse(input, settings),
         Adapter::RustGungraun => AdapterRustGungraun::parse(input, settings),
         Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse(input, settings),

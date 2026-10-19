@@ -49,7 +49,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"jsBytes": 19400,
-		"deferredJsBytes": 4830,
+		"deferredJsBytes": 4886,
 		"scriptRounds": 1
 	},
 	"runColdLoad": {

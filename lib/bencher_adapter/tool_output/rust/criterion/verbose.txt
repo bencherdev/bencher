@@ -1,0 +1,72 @@
+fib 15                  time:   [1.0476 µs 1.0716 µs 1.0985 µs]
+                        change: [+9.9869% +11.523% +13.234%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 21 outliers among 100 measurements (21.00%)
+  16 (16.00%) low severe
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+slope  [1.0476 µs 1.0985 µs] R^2            [0.3514767 0.3477355]
+mean   [1.1058 µs 1.1359 µs] std. dev.      [63.439 ns 88.528 ns]
+median [1.1315 µs 1.1485 µs] med. abs. dev. [20.023 ns 45.178 ns]
+
+checksum/fold/1024      time:   [43.380 ns 43.933 ns 44.518 ns]
+                        thrpt:  [21.422 GiB/s 21.707 GiB/s 21.984 GiB/s]
+                 change:
+                        time:   [−1.5544% −0.6007% +0.3610%] (p = 0.22 > 0.05)
+                        thrpt:  [−0.3597% +0.6044% +1.5790%]
+                        No change in performance detected.
+Found 16 outliers among 100 measurements (16.00%)
+  4 (4.00%) high mild
+  12 (12.00%) high severe
+slope  [43.380 ns 44.518 ns] R^2            [0.7579010 0.7564513]
+mean   [43.011 ns 43.632 ns] std. dev.      [1.0730 ns 2.0231 ns]
+median [42.579 ns 42.711 ns] med. abs. dev. [165.21 ps 354.25 ps]
+checksum/fold/16384     time:   [812.24 ns 818.76 ns 825.03 ns]
+                        thrpt:  [18.495 GiB/s 18.636 GiB/s 18.786 GiB/s]
+                 change:
+                        time:   [+6.4178% +6.9970% +7.5620%] (p = 0.00 < 0.05)
+                        thrpt:  [−7.0303% −6.5395% −6.0307%]
+                        Performance has regressed.
+Found 10 outliers among 100 measurements (10.00%)
+  2 (2.00%) low severe
+  1 (1.00%) low mild
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+slope  [812.24 ns 825.03 ns] R^2            [0.8778355 0.8785452]
+mean   [818.47 ns 824.75 ns] std. dev.      [11.604 ns 20.062 ns]
+median [816.59 ns 821.47 ns] med. abs. dev. [5.2250 ns 10.357 ns]
+checksum/sort/elements  time:   [1.1210 µs 1.1430 µs 1.1618 µs]
+                        thrpt:  [3.5256 Gelem/s 3.5835 Gelem/s 3.6539 Gelem/s]
+                 change:
+                        time:   [+4.8193% +6.3121% +8.1951%] (p = 0.00 < 0.05)
+                        thrpt:  [−7.5743% −5.9374% −4.5978%]
+                        Performance has regressed.
+slope  [1.1210 µs 1.1618 µs] R^2            [0.5858769 0.5898913]
+mean   [1.0669 µs 1.1002 µs] std. dev.      [74.511 ns 93.030 ns]
+median [1.0253 µs 1.0581 µs] med. abs. dev. [21.449 ns 67.541 ns]
+checksum/decimal        time:   [49.090 ns 49.635 ns 50.191 ns]
+                        thrpt:  [19.924 GB/s 20.147 GB/s 20.371 GB/s]
+                 change:
+                        time:   [−4.6916% −2.9159% −1.0622%] (p = 0.00 < 0.05)
+                        thrpt:  [+1.0736% +3.0035% +4.9226%]
+                        Performance has improved.
+slope  [49.090 ns 50.191 ns] R^2            [0.7545195 0.7540735]
+mean   [48.855 ns 49.642 ns] std. dev.      [1.8495 ns 2.1870 ns]
+median [47.379 ns 50.337 ns] med. abs. dev. [629.11 ps 3.4087 ns]
+checksum/bits           time:   [49.200 ns 49.691 ns 50.168 ns]
+                        thrpt:  [159.46 Gb/s 161.00 Gb/s 162.60 Gb/s]
+                 change:
+                        time:   [−0.7317% +0.4170% +1.5569%] (p = 0.48 > 0.05)
+                        thrpt:  [−1.5330% −0.4153% +0.7371%]
+                        No change in performance detected.
+slope  [49.200 ns 50.168 ns] R^2            [0.7764926 0.7770659]
+mean   [48.798 ns 49.612 ns] std. dev.      [1.9071 ns 2.2293 ns]
+median [47.641 ns 50.281 ns] med. abs. dev. [1.1149 ns 3.4120 ns]
+
+slow/fib 30             time:   [1.3734 ms 1.4056 ms 1.4783 ms]
+                        change: [−4.7633% −0.5966% +3.5369%] (p = 0.79 > 0.05)
+                        No change in performance detected.
+slope  [1.3734 ms 1.4783 ms] R^2            [0.9492067 0.9074827]
+mean   [1.4097 ms 1.4830 ms] std. dev.      [19.542 µs 72.523 µs]
+median [1.3648 ms 1.4984 ms] med. abs. dev. [5.3845 µs 88.490 µs]
+

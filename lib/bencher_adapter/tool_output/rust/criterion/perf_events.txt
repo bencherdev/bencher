@@ -1,0 +1,12 @@
+fib 15                  time:   [19980.2220 cycles 19980.2987 cycles 19980.3803 cycles]
+Found 8 outliers among 100 measurements (8.00%)
+  1 (1.00%) low mild
+  7 (7.00%) high mild
+
+fib 15 branches         time:   [3948.9916 cycles 3948.9971 cycles 3949.0024 cycles]
+Found 8 outliers among 100 measurements (8.00%)
+  1 (1.00%) low severe
+  2 (2.00%) low mild
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+
