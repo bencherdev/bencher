@@ -184,6 +184,8 @@ impl TestServer {
             cloud_routes,
             openai_apps_challenge: None,
             oauth: None,
+            github_client: None,
+            google_client: None,
         })
         .await
     }
@@ -207,6 +209,8 @@ impl TestServer {
             cloud_routes,
             openai_apps_challenge,
             oauth,
+            github_client,
+            google_client,
         } = options;
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
@@ -266,8 +270,8 @@ impl TestServer {
             ),
             // The test server never spawns the periodic prune, so the slot stays empty.
             rate_limiting_prune: bencher_schema::context::RateLimitingPruneTask::default(),
-            github_client: None,
-            google_client: None,
+            github_client,
+            google_client,
             indexer: None,
             stats: bencher_schema::context::StatsSettings::default(),
             biller: None,
@@ -492,6 +496,8 @@ pub struct TestServerOptions {
     pub cloud_routes: bool,
     pub openai_apps_challenge: Option<bencher_json::NonEmpty>,
     pub oauth: Option<bencher_schema::context::OAuthServer>,
+    pub github_client: Option<bencher_github_client::GitHubClient>,
+    pub google_client: Option<bencher_google_client::GoogleClient>,
 }
 
 /// Waits out a lock instead of failing at once, as the server's own pools do.

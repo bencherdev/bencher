@@ -8,7 +8,15 @@ import AuthForm from "../../components/auth/AuthForm";
 import LoginForm from "../../components/auth/LoginForm";
 import AuthRedirect from "../../components/auth/AuthRedirect";
 import OAuthForm from "../../components/auth/OAuthFrom";
+import {
+	AUTHORIZATION_PARAM,
+	signInPath,
+} from "../../components/auth/authorize/path";
 
+const switchPath = signInPath(
+	"/auth/signup",
+	Astro.url.searchParams.get(AUTHORIZATION_PARAM),
+);
 const newUser = false;
 const title = "Log in";
 const description =
@@ -44,7 +52,7 @@ const description =
 
   <p class="has-text-centered">
     <small>
-      switch to <a href="/auth/signup">sign up</a>
+      switch to <a href={switchPath}>sign up</a>
     </small>
   </p>
 </AuthLayout>

@@ -2,11 +2,13 @@
 //!
 //! These helpers are used by both `api_projects` and `api_runners` integration tests.
 
+use bencher_github_client::GitHubClient;
+use bencher_google_client::GoogleClient;
 use bencher_json::{
     BranchName, BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid,
-    OAuthAccessToken, OAuthGrantUuid, OAuthRefreshToken, OAuthResource, OAuthScopes,
-    OAuthTokenHash, ParameterSet, PlanLevel, ReportUuid, ResourceName, TestbedUuid, TokenUuid,
-    UserKeyUuid, VariantUuid, VersionUuid, system::config::JsonOAuthServer,
+    OAuthAccessToken, OAuthAuthorizationUuid, OAuthGrantUuid, OAuthRefreshToken, OAuthResource,
+    OAuthScopes, OAuthTokenHash, ParameterSet, PlanLevel, ReportUuid, ResourceName, TestbedUuid,
+    TokenUuid, UserKeyUuid, VariantUuid, VersionUuid, system::config::JsonOAuthServer,
 };
 use bencher_rbac::project::Role;
 use bencher_schema::{
@@ -15,6 +17,7 @@ use bencher_schema::{
         UserId,
         key::UserKeyId,
         oauth::{OAuthGrantId, OAuthTokenKind},
+        oauth_authorization::NewOAuthAuthorization,
     },
     schema,
 };
@@ -294,6 +297,55 @@ pub fn oauth_resource() -> OAuthResource {
     format!("{OAUTH_ISSUER}/mcp")
         .parse()
         .expect("Invalid OAuth resource")
+}
+
+/// An app's request to connect, seeded directly into the database as `/oauth/authorize` leaves
+/// one, pending from `now`.
+#[expect(
+    clippy::expect_used,
+    reason = "test helper inserting an OAuth authorization"
+)]
+pub fn seed_oauth_authorization(server: &TestServer, now: DateTime) -> OAuthAuthorizationUuid {
+    NewOAuthAuthorization {
+        client_id: "https://client.example/oauth/client.json"
+            .parse()
+            .expect("Invalid client ID"),
+        client_name: "Example Client".parse().expect("Invalid client name"),
+        redirect_uri: "https://client.example/callback"
+            .parse()
+            .expect("Invalid redirect URI"),
+        scope: "projects:read".parse().expect("Invalid scope"),
+        resource: oauth_resource(),
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+            .parse()
+            .expect("Invalid code challenge"),
+        state: None,
+        nonce: None,
+        refresh: false,
+    }
+    .insert(&mut server.db_conn(), now)
+    .expect("Failed to insert OAuth authorization")
+}
+
+/// A GitHub sign-in client with test credentials: it builds sign-in URLs, never calling GitHub.
+#[expect(clippy::expect_used, reason = "test helper parsing fixed credentials")]
+pub fn github_client() -> GitHubClient {
+    GitHubClient::new(
+        "test-client".parse().expect("Invalid client ID"),
+        "test-secret".parse().expect("Invalid client secret"),
+    )
+}
+
+/// A Google sign-in client with test credentials: it builds sign-in URLs, never calling Google.
+#[expect(clippy::expect_used, reason = "test helper parsing fixed credentials")]
+pub fn google_client() -> GoogleClient {
+    GoogleClient::new(
+        "test-client".parse().expect("Invalid client ID"),
+        "test-secret".parse().expect("Invalid client secret"),
+        "http://localhost:3000/auth/google"
+            .parse()
+            .expect("Invalid redirect URL"),
+    )
 }
 
 /// An OAuth grant seeded directly into the database, as the token endpoint leaves one.

@@ -1,0 +1,39 @@
+---
+export const prerender = false;
+
+import { BENCHER_API_URL } from "astro:env/server";
+
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { BENCHER_SITE_URL } from "../../util/ext";
+import Authorize from "../../components/auth/authorize/Authorize";
+import { consentRequest } from "../../components/auth/authorize/consent";
+
+// Never framed, so no click on Approve can be tricked out of a user; and since its
+// URL is all it takes to answer the request, never cached or sent as a referrer.
+Astro.response.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+Astro.response.headers.set("Referrer-Policy", "no-referrer");
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const request = consentRequest(Astro.url.searchParams);
+const title = "Connect an app";
+const description = "Approve or deny an app's request to connect to Bencher";
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  analytics={false}
+  url={`${BENCHER_SITE_URL}${Astro.url.pathname}`}
+>
+  <div slot="navbar"></div>
+  <section class="section">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-half">
+          <Authorize client:only="solid-js" apiUrl={BENCHER_API_URL} request={request} />
+        </div>
+      </div>
+    </div>
+  </section>
+  <div slot="footer"></div>
+</BaseLayout>

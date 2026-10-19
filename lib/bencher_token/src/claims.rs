@@ -1,4 +1,6 @@
 #[cfg(feature = "plus")]
+use bencher_json::OAuthAuthorizationUuid;
+#[cfg(feature = "plus")]
 use bencher_json::PlanLevel;
 #[cfg(feature = "plus")]
 use bencher_json::ProjectUuid;
@@ -10,6 +12,7 @@ use bencher_json::{
 use chrono::Utc;
 use jsonwebtoken::errors::ErrorKind as JsonWebTokenErrorKind;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use super::{TokenError, audience::Audience};
 
@@ -23,6 +26,9 @@ pub struct Claims {
     pub org: Option<OrgClaims>,      // Organization (for invitation)
     pub state: Option<StateClaims>,  // State (for OAuth)
     pub oci: Option<OciScopeClaims>, // OCI scope (for registry access)
+    // JWT ID, set only on an OAuth state so that no two states are alike.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jti: Option<Uuid>,
 }
 
 /// OCI registry action
@@ -55,6 +61,10 @@ pub struct StateClaims {
     pub claim: Option<OrganizationUuid>,
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
+    // Left out when absent, so a state without it is the token it always was.
+    #[cfg(feature = "plus")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authorization: Option<OAuthAuthorizationUuid>,
 }
 
 impl Claims {
@@ -77,6 +87,7 @@ impl Claims {
             org,
             state,
             oci,
+            jti: None,
         }
     }
 

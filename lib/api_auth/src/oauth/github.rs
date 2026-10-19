@@ -6,6 +6,7 @@ use bencher_schema::{
     error::{payment_required_error, unauthorized_error},
 };
 use dropshot::{HttpError, Query, RequestContext, TypedBody, endpoint};
+use http::{HeaderValue, header::CACHE_CONTROL};
 use slog::Logger;
 
 use crate::oauth::{OAuthProvider, oauth_state::OAuthState};
@@ -39,7 +40,12 @@ pub async fn auth_github_get(
         query_params.into_inner(),
     )
     .await?;
-    Ok(Get::pub_response_ok(json))
+    let mut response = Get::pub_response_ok(json);
+    // Every start mints a state of its own, so no cache may answer one start with another's.
+    response
+        .headers_mut()
+        .insert(CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok(response)
 }
 
 async fn get_inner(
@@ -60,6 +66,10 @@ async fn get_inner(
         context.rate_limiting.public_auth_attempt(remote_ip)?;
     }
 
+    let oauth_state = OAuthState {
+        authorization: crate::pending_authorization(context, oauth_state.authorization).await?,
+        ..oauth_state
+    };
     let state = oauth_state.encode(log, &context.token_key)?;
     let url = github_client.auth_url(state);
 

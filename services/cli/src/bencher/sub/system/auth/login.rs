@@ -58,6 +58,7 @@ impl From<Login> for JsonLogin {
             // todo(epompeii): Bencher Plus logins will now fail due to the reCAPTCHA token missing here
             // Add a secure way to login from the CLI
             recaptcha_token: None,
+            authorization: None,
         }
     }
 }

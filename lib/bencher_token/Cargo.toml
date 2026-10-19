@@ -16,7 +16,7 @@ chrono.workspace = true
 jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
 serde.workspace = true
 thiserror.workspace = true
-uuid = { workspace = true, features = ["v4"] }
+uuid = { workspace = true, features = ["serde", "v4"] }
 
 [lints]
 workspace = true

@@ -29,6 +29,8 @@ import {
 	INVITE_PARAM,
 	PLAN_PARAM,
 } from "./auth";
+import { AUTHORIZATION_PARAM, requestUuid } from "./authorize/path";
+import { startSignIn } from "./signIn";
 
 export interface Props {
 	apiUrl: string;
@@ -48,6 +50,7 @@ const AuthForm = (props: Props) => {
 	const plan = () => searchParams[PLAN_PARAM]?.trim() as PlanLevel;
 	const invite = () => searchParams[INVITE_PARAM]?.trim() as Jwt;
 	const claim = () => searchParams[CLAIM_PARAM]?.trim() as Uuid;
+	const authorization = () => requestUuid(searchParams[AUTHORIZATION_PARAM]);
 	const [form, setForm] = createStore(initForm());
 	const [submitting, setSubmitting] = createSignal(false);
 	const [valid, setValid] = createSignal(false);
@@ -119,12 +122,17 @@ const AuthForm = (props: Props) => {
 		if (invite_token) {
 			authForm.invite = invite_token;
 		}
+		const authorization_uuid = authorization();
+		if (authorization_uuid) {
+			authForm.authorization = authorization_uuid;
+		}
 
 		const recaptcha_token = await getRecaptchaToken(recaptcha_action);
 		if (recaptcha_token) {
 			authForm.recaptcha_token = recaptcha_token;
 		}
 
+		startSignIn(authForm.email.toLowerCase());
 		httpPost(
 			apiUrl(),
 			`/v0/auth/${props.newUser ? "signup" : "login"}`,
@@ -139,7 +147,7 @@ const AuthForm = (props: Props) => {
 						props.newUser ? "signup" : "login"
 					}! Please confirm token.`,
 					"/auth/confirm",
-					[PLAN_PARAM],
+					[PLAN_PARAM, AUTHORIZATION_PARAM],
 					[[EMAIL_PARAM, authForm.email]],
 				);
 			})

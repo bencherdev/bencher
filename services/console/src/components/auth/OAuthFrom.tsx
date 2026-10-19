@@ -2,6 +2,8 @@ import { Show } from "solid-js";
 import { httpGet } from "../../util/http";
 import { useNavigate, useSearchParams } from "../../util/url";
 import { CLAIM_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
+import { AUTHORIZATION_PARAM, requestUuid } from "./authorize/path";
+import { startSignIn } from "./signIn";
 
 interface Props {
 	apiUrl: string;
@@ -65,10 +67,17 @@ const authPath = async (
 	} else if (plan) {
 		path += `?plan=${plan}`;
 	}
+	const authorization = requestUuid(searchParams[AUTHORIZATION_PARAM]);
+	if (authorization) {
+		path += `${path.includes("?") ? "&" : "?"}${AUTHORIZATION_PARAM}=${authorization}`;
+	}
 	await httpGet(apiUrl, path, null)
 		.then((resp) => {
 			const navigate = useNavigate();
-			console.log(resp.data.url);
+			const state = new URL(resp.data.url).searchParams.get("state");
+			if (state) {
+				startSignIn(state);
+			}
 			navigate(resp.data.url);
 		})
 		.catch((error) => {

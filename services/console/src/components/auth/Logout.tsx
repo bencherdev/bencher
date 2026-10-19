@@ -1,10 +1,8 @@
-import { deleteCache } from "../../next/idb";
-import { forgetReader } from "../../next/memory";
 import { NotifyKind, navigateNotify } from "../../util/notify";
+import { signOut } from "./signOut";
 
 const Logout = () => {
-	forgetReader(localStorage);
-	deleteCache();
+	signOut();
 	navigateNotify(
 		NotifyKind.OK,
 		"Lettuce meet again!",

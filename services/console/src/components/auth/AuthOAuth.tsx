@@ -1,12 +1,19 @@
 import * as Sentry from "@sentry/astro";
-import { createMemo, createResource } from "solid-js";
-import type { JsonAuthUser, JsonOAuth } from "../../types/bencher";
+import { Show, createMemo, createResource, createSignal } from "solid-js";
+import type {
+	JsonAuthUser,
+	JsonOAuth,
+	JsonOAuthUser,
+} from "../../types/bencher";
 import { authUser, setUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
-import { useNavigate, useSearchParams } from "../../util/url";
+import { hiddenRedirect, useNavigate, useSearchParams } from "../../util/url";
 import { type InitValid, init_valid } from "../../util/valid";
+import SignInAs from "./SignInAs";
 import { PLAN_PARAM } from "./auth";
+import { consentPath, signInPath } from "./authorize/path";
+import { takeSignIn } from "./signIn";
 
 const CODE_PARAM = "code";
 const STATE_PARAM = "state";
@@ -22,6 +29,34 @@ const AuthOAuth = (props: Props) => {
 	const [searchParams, _setSearchParams] = useSearchParams();
 	const user = authUser();
 	const navigate = useNavigate();
+	// Signed in with the provider, but not by the sign in this tab started, so not signed in until asked.
+	const [pending, setPending] = createSignal<JsonOAuthUser>();
+
+	const signIn = (oauthUser: JsonOAuthUser) => {
+		if (!setUser(oauthUser?.user)) {
+			navigateNotify(
+				NotifyKind.ERROR,
+				"Invalid user. Please, try again.",
+				"/auth/login",
+				null,
+				null,
+			);
+			return;
+		}
+		const consent = consentPath(oauthUser.authorization);
+		const plan = oauthUser.plan;
+		if (consent) {
+			hiddenRedirect(consent);
+		} else {
+			navigateNotify(
+				NotifyKind.OK,
+				"Hoppy to git to see you!",
+				"/console",
+				null,
+				plan ? [[PLAN_PARAM, plan]] : null,
+			);
+		}
+	};
 
 	const fetcher = createMemo(() => {
 		return {
@@ -49,24 +84,10 @@ const AuthOAuth = (props: Props) => {
 		} as JsonOAuth;
 		return await httpPost(props.apiUrl, props.pathname, null, json)
 			.then((resp) => {
-				const user = resp.data?.user;
-				if (setUser(user)) {
-					const plan = resp.data?.plan;
-					navigateNotify(
-						NotifyKind.OK,
-						"Hoppy to git to see you!",
-						"/console",
-						null,
-						plan ? [[PLAN_PARAM, plan]] : null,
-					);
+				if (takeSignIn(fetcher.state)) {
+					signIn(resp.data);
 				} else {
-					navigateNotify(
-						NotifyKind.ERROR,
-						"Invalid user. Please, try again.",
-						"/auth/login",
-						null,
-						null,
-					);
+					setPending(resp.data);
 				}
 			})
 			.catch((error) => {
@@ -87,7 +108,25 @@ const AuthOAuth = (props: Props) => {
 		ReturnType<typeof fetcher>
 	>(fetcher, getAuthUser);
 
-	return <></>;
+	return (
+		<Show when={pending()}>
+			{(oauthUser) => (
+				<section class="section">
+					<div class="container">
+						<div class="columns is-centered">
+							<div class="column is-half">
+								<SignInAs
+									user={oauthUser().user}
+									cancel={signInPath("/auth/login", oauthUser().authorization)}
+									onSignIn={() => signIn(oauthUser())}
+								/>
+							</div>
+						</div>
+					</div>
+				</section>
+			)}
+		</Show>
+	);
 };
 
 export default AuthOAuth;

@@ -4,9 +4,10 @@ import type { JsonAccept, JsonAuthUser } from "../../types/bencher";
 import { authUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
-import { useSearchParams } from "../../util/url";
+import { hiddenRedirect, useSearchParams } from "../../util/url";
 import Redirect from "../site/Redirect";
 import { CLAIM_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
+import { AUTHORIZATION_PARAM, consentPath } from "./authorize/path";
 
 const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 	const [searchParams, _setSearchParams] = useSearchParams();
@@ -110,7 +111,15 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 				!searchParams[CLAIM_PARAM]
 			}
 		>
-			<Redirect path={props.path} />
+			<Show
+				when={consentPath(searchParams[AUTHORIZATION_PARAM])}
+				fallback={<Redirect path={props.path} />}
+			>
+				{(consent) => {
+					hiddenRedirect(consent());
+					return null;
+				}}
+			</Show>
 		</Show>
 	);
 };

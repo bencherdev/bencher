@@ -67,6 +67,8 @@ async fn confirm_success() {
         i_agree: true,
         #[cfg(feature = "plus")]
         recaptcha_token: None,
+        #[cfg(feature = "plus")]
+        authorization: None,
     };
 
     let resp = server
