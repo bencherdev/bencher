@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Conecte agentes e assistentes de IA ao Bencher com o servidor MCP hospedado para consultar dados de benchmark e enviar resultados"
 heading: "Como usar o Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-18T01:00:00Z"
+modified: "2026-10-19T07:00:00Z"
 sortOrder: 11
 ---
 
@@ -20,13 +20,20 @@ Use o Bencher MCP quando a CLI não estiver instalada ou quando o seu cliente MC
 
 ## Conectar
 
+O Bencher está no [diretório de conectores do Claude](https://claude.ai/directory/bencher), que atende o claude.ai, o Claude Desktop, o Claude Mobile e o Claude Code.
+Adicione o conector do Bencher e entre com a sua conta do Bencher quando o Claude pedir.
+O Claude Code usa os conectores que você adiciona no claude.ai quando entrou com uma assinatura do claude.ai.
+O conector se conecta apenas ao Bencher Cloud.
+
+Em vez disso, use a URL com o ChatGPT e outros clientes MCP, com o Claude Code sem entrar com uma assinatura do claude.ai, com o Bencher Self-Hosted e em CI:
+
 | Implantação | URL |
 | :--- | :--- |
 | Bencher Cloud | `https://mcp.bencher.dev/mcp` |
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
 Adicione a URL ao seu cliente MCP e entre com a sua conta do Bencher quando o cliente pedir.
-O ChatGPT, os conectores personalizados do claude.ai e o Claude Code entram com OAuth.
+O ChatGPT e o Claude Code entram com OAuth, assim como o claude.ai quando você adiciona um servidor do Bencher Self-Hosted como conector personalizado.
 Por exemplo, conecte-se pelo [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
 
 <McpClaudeCode />
