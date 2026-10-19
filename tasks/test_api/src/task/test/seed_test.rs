@@ -211,24 +211,6 @@ impl SeedTest {
         let _json: bencher_json::JsonAuthAck =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- project ls --host http://localhost:6610
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["project", "ls", HOST_ARG, host])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let projects: bencher_json::JsonProjects =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(projects.0.len(), 0);
-
-        // cargo run -- project ls --host http://localhost:6610 --token $BENCHER_API_TOKEN
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["project", "ls", HOST_ARG, host, TOKEN_ARG, token])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let projects: bencher_json::JsonProjects =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(projects.0.len(), 0);
-
         // cargo run -- project ls --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args(["project", "ls", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
@@ -257,24 +239,6 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let _json: bencher_json::JsonProject =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
-        // cargo run -- project ls --host http://localhost:6610
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["project", "ls", HOST_ARG, host])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let projects: bencher_json::JsonProjects =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(projects.0.len(), 1);
-
-        // cargo run -- project ls --host http://localhost:6610 --token $BENCHER_API_TOKEN
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["project", "ls", HOST_ARG, host, TOKEN_ARG, token])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let projects: bencher_json::JsonProjects =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(projects.0.len(), 1);
 
         // cargo run -- project ls --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;

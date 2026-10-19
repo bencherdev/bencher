@@ -108,6 +108,7 @@ Bencher MCP は Bencher API と同じ `Authorization: Bearer` 認証情報も受
 
 - プライベートプロジェクトの読み取り。存在しないプロジェクトにも同じ応答が返るため、プロジェクトや ID を打ち間違えた場合も、パブリックプロジェクト内であっても、サインインを求められます。
 - 書き込みを行うツールの呼び出し。ただし [`unclaimed` プロジェクト](/ja/docs/how-to/claim/#unclaimed-プロジェクト)への `submit_run` は除きます。
+- `list_projects` による組織のプロジェクト一覧の取得。
 - 匿名のレート制限の超過。
 
 ## ツール

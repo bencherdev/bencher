@@ -44,10 +44,8 @@ impl bencher_endpoint::Registrar for Api {
         // Projects
         // All of a projects's GET APIs are public if the project is public
         if http_options {
-            api_description.register(projects::projects_options)?;
             api_description.register(projects::project_options)?;
         }
-        api_description.register(projects::projects_get)?;
         api_description.register(projects::project_get)?;
         api_description.register(projects::project_patch)?;
         api_description.register(projects::project_delete)?;

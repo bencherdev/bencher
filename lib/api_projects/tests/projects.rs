@@ -11,74 +11,31 @@ use bencher_json::{JsonNewProject, JsonProject, JsonProjects, ParameterFilter, P
 use bencher_rbac::project::Role;
 use http::StatusCode;
 
-// GET /v0/projects - list all public projects
+// GET /v0/projects - the list of every project is gone, signed in or not;
+// an organization lists its own projects instead
 #[tokio::test]
-async fn projects_list_public() {
+async fn projects_list_is_gone() {
     let server = TestServer::new().await;
-
-    let resp = server
-        .client
-        .get(server.api_url("/v0/projects"))
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let _projects: JsonProjects = resp.json().await.expect("Failed to parse response");
-}
-
-// GET /v0/projects - list with auth header
-#[tokio::test]
-async fn projects_list_authenticated() {
-    let server = TestServer::new().await;
-    let user = server.signup("Test User", "projlistauth@example.com").await;
-
-    let resp = server
-        .client
-        .get(server.api_url("/v0/projects"))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-}
-
-// GET /v0/projects - kills a u32 offset multiply, which wraps page 33554433 to page 1
-#[tokio::test]
-async fn projects_list_page_offset_does_not_wrap() {
-    let server = TestServer::new().await;
-    let user = server
-        .signup("Test User", "projpageoffset@example.com")
-        .await;
-    let org = server.create_org(&user, "Page Offset Org").await;
+    let user = server.signup("Test User", "projlistgone@example.com").await;
+    let org = server.create_org(&user, "List Gone Org").await;
     server
-        .create_project(&user, &org, "Page Offset Project")
+        .create_project(&user, &org, "List Gone Project")
         .await;
 
-    let resp = server
-        .client
-        .get(server.api_url("/v0/projects?per_page=128&page=1"))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let projects: JsonProjects = resp.json().await.expect("Failed to parse response");
-    assert!(!projects.0.is_empty(), "First page should list the project");
-
-    // (33554433 - 1) * 128 = 2^32
-    let resp = server
-        .client
-        .get(server.api_url("/v0/projects?per_page=128&page=33554433"))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let projects: JsonProjects = resp.json().await.expect("Failed to parse response");
-    assert!(projects.0.is_empty(), "Page past the end should be empty");
+    for bearer in [None, Some(&user.token)] {
+        let mut request = server.client.get(server.api_url("/v0/projects"));
+        if let Some(token) = bearer {
+            request = request.header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(token),
+            );
+        }
+        let status = request.send().await.expect("Request failed").status();
+        assert!(
+            status == StatusCode::NOT_FOUND || status == StatusCode::METHOD_NOT_ALLOWED,
+            "{bearer:?}: {status}"
+        );
+    }
 }
 
 // GET /v0/projects/{project} - get a project
@@ -424,9 +381,10 @@ async fn projects_soft_delete_not_in_list() {
     assert_eq!(resp.status(), StatusCode::NO_CONTENT);
 
     // Verify absent from list
+    let org_slug: &str = org.slug.as_ref();
     let list_resp = server
         .client
-        .get(server.api_url("/v0/projects"))
+        .get(server.api_url(&format!("/v0/organizations/{org_slug}/projects")))
         .header(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),

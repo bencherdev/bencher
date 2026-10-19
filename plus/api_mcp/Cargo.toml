@@ -9,6 +9,8 @@ publish = false
 [features]
 default = []
 plus = [
+    "dep:api_organizations",
+    "api_organizations/plus",
     "dep:api_projects",
     "api_projects/plus",
     "dep:api_run",
@@ -36,6 +38,7 @@ plus = [
 otel = ["dep:bencher_otel"]
 
 [dependencies]
+api_organizations = { workspace = true, optional = true }
 api_projects = { workspace = true, optional = true }
 api_run = { workspace = true, optional = true }
 bencher_endpoint = { workspace = true, optional = true }

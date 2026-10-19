@@ -60,6 +60,65 @@ async fn projects_list_with_project() {
     assert_eq!(projects.0.len(), 1);
 }
 
+// GET /v0/organizations/{organization}/projects - a project key does not list its organization
+#[tokio::test]
+async fn projects_list_refuses_a_project_key() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "projlistkey@example.com").await;
+    let org = server.create_org(&user, "Project Key Org").await;
+    let project = server
+        .create_project(&user, &org, "Project Key Project")
+        .await;
+    let key = server.create_project_key(&user, &project, "list-key").await;
+
+    let org_slug: &str = org.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/organizations/{org_slug}/projects")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_ne!(resp.status(), StatusCode::OK);
+}
+
+// GET /v0/organizations/{organization}/projects - kills a u32 offset multiply, which wraps
+// page 33554433 to page 1
+#[tokio::test]
+async fn projects_list_page_offset_does_not_wrap() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "projpageoffset@example.com")
+        .await;
+    let org = server.create_org(&user, "Page Offset Org").await;
+    server
+        .create_project(&user, &org, "Page Offset Project")
+        .await;
+
+    let org_slug: &str = org.slug.as_ref();
+    // (33554433 - 1) * 128 = 2^32
+    for (page, listed) in [("1", true), ("33554433", false)] {
+        let resp = server
+            .client
+            .get(server.api_url(&format!(
+                "/v0/organizations/{org_slug}/projects?per_page=128&page={page}"
+            )))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::OK);
+        let projects: JsonProjects = resp.json().await.expect("Failed to parse response");
+        assert_eq!(!projects.0.is_empty(), listed, "page {page}");
+    }
+}
+
 // POST /v0/organizations/{organization}/projects - create project
 #[tokio::test]
 async fn projects_create() {

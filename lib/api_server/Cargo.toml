@@ -9,7 +9,6 @@ publish = false
 [features]
 default = []
 plus = [
-    "dep:diesel",
     "dep:schemars",
     "dep:serde",
     "dep:serde_json",
@@ -33,7 +32,7 @@ bencher_config.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_otel = { workspace = true, optional = true }
 bencher_schema.workspace = true
-diesel = { workspace = true, optional = true }
+diesel.workspace = true
 dropshot.workspace = true
 schemars = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }

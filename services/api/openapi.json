@@ -3039,127 +3039,6 @@
         }
       }
     },
-    "/v0/projects": {
-      "get": {
-        "tags": [
-          "projects"
-        ],
-        "summary": "List projects",
-        "description": "List all projects. If the user is not authenticated, then only public projects are returned. If the user is authenticated, then all public projects and any private project where the user has `view` permissions are returned. If a project key is provided, then only the key's project is returned. By default, the projects are sorted in alphabetical order by name. The HTTP response header `X-Total-Count` contains the total number of projects.",
-        "operationId": "projects_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "direction",
-            "description": "The direction to sort by. If not specified, the default sort direction is used.",
-            "schema": {
-              "$ref": "#/components/schemas/JsonDirection"
-            }
-          },
-          {
-            "in": "query",
-            "name": "page",
-            "description": "The page number to return. If not specified, the first page is returned.",
-            "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 0
-            }
-          },
-          {
-            "in": "query",
-            "name": "per_page",
-            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
-            "schema": {
-              "nullable": true,
-              "type": "integer",
-              "format": "uint8",
-              "minimum": 0
-            }
-          },
-          {
-            "in": "query",
-            "name": "sort",
-            "description": "The field to sort by. If not specified, the default sort field is used.",
-            "schema": {
-              "$ref": "#/components/schemas/ProjectsSort"
-            }
-          },
-          {
-            "in": "query",
-            "name": "name",
-            "description": "Filter by project name, exact match.",
-            "schema": {
-              "$ref": "#/components/schemas/ResourceName"
-            }
-          },
-          {
-            "in": "query",
-            "name": "search",
-            "description": "Search by project name, slug, or UUID.",
-            "schema": {
-              "$ref": "#/components/schemas/Search"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "successful operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonProjects"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/projects/{project}": {
       "get": {
         "tags": [
@@ -9607,6 +9486,75 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonConsole"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/server/health": {
+      "get": {
+        "tags": [
+          "server"
+        ],
+        "summary": "Check server health",
+        "description": "Check that the API server is running and reaches its database.",
+        "operationId": "server_health_get",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Null",
+                  "type": "string",
+                  "enum": [
+                    null
+                  ]
                 }
               }
             }
@@ -21371,17 +21319,6 @@
             "type": "string",
             "enum": [
               "domain"
-            ]
-          }
-        ]
-      },
-      "ProjectsSort": {
-        "oneOf": [
-          {
-            "description": "Sort by project name.",
-            "type": "string",
-            "enum": [
-              "name"
             ]
           }
         ]

@@ -108,6 +108,7 @@ Bencher MCP는 Bencher API와 동일한 `Authorization: Bearer` 자격 증명도
 
 - 비공개 프로젝트를 읽을 때. 존재하지 않는 프로젝트도 같은 응답을 받으므로, 공개 프로젝트 안에서라도 프로젝트나 ID를 잘못 입력하면 로그인을 요청받습니다.
 - 쓰기 도구를 호출할 때. 단, [`unclaimed` 프로젝트](/ko/docs/how-to/claim/#unclaimed-프로젝트)에 대한 `submit_run`은 제외됩니다.
+- `list_projects`로 조직의 프로젝트를 나열할 때.
 - 익명 요청 제한을 초과할 때.
 
 ## 도구

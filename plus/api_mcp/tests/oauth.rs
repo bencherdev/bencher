@@ -55,7 +55,7 @@ async fn oauth_access_token_lists_projects() {
                 &server,
                 grant.access_token.as_ref(),
                 "list_projects",
-                &json!({}),
+                &json!({"organization": org.slug}),
             )
             .await,
         )
@@ -194,7 +194,7 @@ async fn oauth_refresh_token_is_not_a_bearer() {
         .await;
     let grant = grant(&server, &user, "projects:read");
 
-    assert_accepted(&server, grant.access_token.as_ref()).await;
+    assert_accepted(&server, &user, grant.access_token.as_ref()).await;
     assert_refused(&server, grant.refresh_token.as_ref()).await;
 }
 
@@ -206,7 +206,7 @@ async fn oauth_expired_access_token() {
         .signup("OAuth Expired", "oauth-expired@example.com")
         .await;
     let grant = grant(&server, &user, "projects:read");
-    assert_accepted(&server, grant.access_token.as_ref()).await;
+    assert_accepted(&server, &user, grant.access_token.as_ref()).await;
 
     let mut conn = server.db_conn();
     let grant_id = grant_id(&mut conn, &grant);
@@ -310,7 +310,7 @@ async fn oauth_revoked_grant() {
         .signup("OAuth Revoked", "oauth-revoked@example.com")
         .await;
     let grant = grant(&server, &user, "projects:read");
-    assert_accepted(&server, grant.access_token.as_ref()).await;
+    assert_accepted(&server, &user, grant.access_token.as_ref()).await;
 
     let mut conn = server.db_conn();
     diesel::update(schema::oauth_grant::table.filter(schema::oauth_grant::uuid.eq(grant.uuid)))
@@ -329,7 +329,7 @@ async fn oauth_expired_grant() {
         .signup("OAuth Lapsed", "oauth-lapsed@example.com")
         .await;
     let grant = grant(&server, &user, "projects:read");
-    assert_accepted(&server, grant.access_token.as_ref()).await;
+    assert_accepted(&server, &user, grant.access_token.as_ref()).await;
 
     let mut conn = server.db_conn();
     diesel::update(schema::oauth_grant::table.filter(schema::oauth_grant::uuid.eq(grant.uuid)))
@@ -370,7 +370,7 @@ async fn oauth_locked_user() {
         .signup("OAuth Locked", "oauth-locked@example.com")
         .await;
     let grant = grant(&server, &user, "projects:read");
-    assert_accepted(&server, grant.access_token.as_ref()).await;
+    assert_accepted(&server, &user, grant.access_token.as_ref()).await;
 
     let mut conn = server.db_conn();
     diesel::update(schema::user::table.filter(schema::user::uuid.eq(user.uuid)))
@@ -390,7 +390,7 @@ async fn oauth_bound_key_revoked() {
         .await;
     let key = create_user_key(&server, &user).await;
     let grant = keyed_grant(&server, &user, key);
-    assert_accepted(&server, grant.access_token.as_ref()).await;
+    assert_accepted(&server, &user, grant.access_token.as_ref()).await;
 
     let user_slug: &str = user.slug.as_ref();
     let resp = server
@@ -417,7 +417,7 @@ async fn oauth_bound_key_expired() {
         .await;
     let key = create_user_key(&server, &user).await;
     let grant = keyed_grant(&server, &user, key);
-    assert_accepted(&server, grant.access_token.as_ref()).await;
+    assert_accepted(&server, &user, grant.access_token.as_ref()).await;
 
     let mut conn = server.db_conn();
     diesel::update(schema::user_key::table.filter(schema::user_key::uuid.eq(key)))
@@ -967,8 +967,10 @@ fn tools_list() -> Value {
     json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
 }
 
-async fn assert_accepted(server: &TestServer, token: &str) {
-    tool_content(call_tool(server, token, "list_projects", &json!({})).await).await;
+/// Signup gives every user an organization of their own, with their UUID.
+async fn assert_accepted(server: &TestServer, user: &TestUser, token: &str) {
+    let list_projects = json!({"organization": user.uuid});
+    tool_content(call_tool(server, token, "list_projects", &list_projects).await).await;
 }
 
 /// Assert a `401` that challenges a client for a new access token, readable by a browser,

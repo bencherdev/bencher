@@ -909,7 +909,7 @@ async fn advertised_flow_calls_a_tool() {
     let refresh_token = string(&tokens, "refresh_token");
     assert!(access_token.starts_with("bencher_oauth_"), "{access_token}");
     assert!(
-        project_slugs(harness.list_projects(&access_token).await)
+        project_slugs(harness.list_projects(&org.slug, &access_token).await)
             .await
             .contains(&slug.to_owned())
     );
@@ -923,7 +923,7 @@ async fn advertised_flow_calls_a_tool() {
     let access_token = string(&tokens, "access_token");
     let refresh_token = string(&tokens, "refresh_token");
     assert!(
-        project_slugs(harness.list_projects(&access_token).await)
+        project_slugs(harness.list_projects(&org.slug, &access_token).await)
             .await
             .contains(&slug.to_owned())
     );
@@ -938,7 +938,10 @@ async fn advertised_flow_calls_a_tool() {
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(header(&resp, "cache-control"), "no-store");
     assert_eq!(
-        harness.list_projects(&access_token).await.status(),
+        harness
+            .list_projects(user.uuid, &access_token)
+            .await
+            .status(),
         StatusCode::UNAUTHORIZED
     );
 }
@@ -972,12 +975,15 @@ async fn reused_code_revokes_its_grant() {
     let tokens = token_body(harness.token(&exchange(&code)).await).await;
     let access_token = string(&tokens, "access_token");
     let refresh_token = string(&tokens, "refresh_token");
-    project_slugs(harness.list_projects(&access_token).await).await;
+    project_slugs(harness.list_projects(user.uuid, &access_token).await).await;
 
     let resp = harness.token(&exchange(&code)).await;
     assert_oauth_error(resp, StatusCode::BAD_REQUEST, "invalid_grant").await;
     assert_eq!(
-        harness.list_projects(&access_token).await.status(),
+        harness
+            .list_projects(user.uuid, &access_token)
+            .await
+            .status(),
         StatusCode::UNAUTHORIZED
     );
     let resp = harness.token(&refresh(&refresh_token)).await;
@@ -1058,7 +1064,7 @@ async fn refresh_token_only_when_registered() {
     assert!(tokens.get("refresh_token").is_none(), "{tokens}");
     project_slugs(
         harness
-            .list_projects(&string(&tokens, "access_token"))
+            .list_projects(user.uuid, &string(&tokens, "access_token"))
             .await,
     )
     .await;
@@ -1135,12 +1141,15 @@ async fn reused_refresh_token_revokes_its_grant() {
     let access_token = string(&tokens, "access_token");
     let rotated = string(&tokens, "refresh_token");
     assert_ne!(rotated, refresh_token);
-    project_slugs(harness.list_projects(&access_token).await).await;
+    project_slugs(harness.list_projects(user.uuid, &access_token).await).await;
 
     let resp = harness.token(&refresh(&refresh_token)).await;
     assert_oauth_error(resp, StatusCode::BAD_REQUEST, "invalid_grant").await;
     assert_eq!(
-        harness.list_projects(&access_token).await.status(),
+        harness
+            .list_projects(user.uuid, &access_token)
+            .await
+            .status(),
         StatusCode::UNAUTHORIZED
     );
     let resp = harness.token(&refresh(&rotated)).await;
@@ -1170,7 +1179,7 @@ async fn access_token_does_not_refresh() {
     let (access_token, refresh_token) = harness.tokens(&user).await;
     let resp = harness.token(&refresh(&access_token)).await;
     assert_oauth_error(resp, StatusCode::BAD_REQUEST, "invalid_grant").await;
-    project_slugs(harness.list_projects(&access_token).await).await;
+    project_slugs(harness.list_projects(user.uuid, &access_token).await).await;
     token_body(harness.token(&refresh(&refresh_token)).await).await;
 }
 
@@ -1467,7 +1476,10 @@ async fn revoke_tokens() {
     assert_eq!(header(&resp, "access-control-allow-origin"), "*");
     assert_eq!(resp.text().await.expect("Invalid body"), "");
     assert_eq!(
-        harness.list_projects(&access_token).await.status(),
+        harness
+            .list_projects(user.uuid, &access_token)
+            .await
+            .status(),
         StatusCode::UNAUTHORIZED
     );
     let tokens = token_body(harness.token(&refresh(&refresh_token)).await).await;
@@ -1485,7 +1497,7 @@ async fn revoke_tokens() {
             .await;
         assert_eq!(resp.status(), StatusCode::OK, "{token}");
     }
-    project_slugs(harness.list_projects(&access_token).await).await;
+    project_slugs(harness.list_projects(user.uuid, &access_token).await).await;
 
     let resp = harness
         .revoke(&params(&[
@@ -1496,7 +1508,10 @@ async fn revoke_tokens() {
         .await;
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(
-        harness.list_projects(&access_token).await.status(),
+        harness
+            .list_projects(user.uuid, &access_token)
+            .await
+            .status(),
         StatusCode::UNAUTHORIZED
     );
     let resp = harness.token(&refresh(&refresh_token)).await;
@@ -1596,7 +1611,10 @@ async fn only_unknown_credentials_are_charged_per_address() {
     let resp = harness.token(&refresh(&live)).await;
     assert_oauth_error(resp, StatusCode::BAD_REQUEST, "invalid_grant").await;
     assert_eq!(
-        harness.list_projects(&access_token).await.status(),
+        harness
+            .list_projects(user.uuid, &access_token)
+            .await
+            .status(),
         StatusCode::UNAUTHORIZED
     );
     let resp = harness
@@ -1773,7 +1791,10 @@ async fn unlisted_client_is_disconnected() {
         .await;
     assert_oauth_error(resp, StatusCode::BAD_REQUEST, "invalid_grant").await;
     assert_eq!(
-        harness.list_projects(&access_token).await.status(),
+        harness
+            .list_projects(user.uuid, &access_token)
+            .await
+            .status(),
         StatusCode::UNAUTHORIZED
     );
 }
@@ -2329,9 +2350,14 @@ impl Harness {
             .expect("Request failed")
     }
 
-    /// A call to the MCP server's `list_projects` tool with an access token.
+    /// A call to the MCP server's `list_projects` tool for an organization with an access token.
+    /// Signup gives every user an organization of their own, with their UUID.
     #[expect(clippy::expect_used, reason = "test helper")]
-    async fn list_projects(&self, access_token: &str) -> reqwest::Response {
+    async fn list_projects(
+        &self,
+        organization: impl std::fmt::Display,
+        access_token: &str,
+    ) -> reqwest::Response {
         self.client
             .post(self.server.api_url("/mcp"))
             .header(
@@ -2342,7 +2368,10 @@ impl Harness {
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "tools/call",
-                "params": {"name": "list_projects", "arguments": {}},
+                "params": {
+                    "name": "list_projects",
+                    "arguments": {"organization": organization.to_string()},
+                },
             }))
             .send()
             .await

@@ -7,6 +7,7 @@ use http as _;
 use tokio as _;
 
 mod config;
+mod health;
 mod root;
 mod spec;
 #[cfg(feature = "plus")]
@@ -32,11 +33,13 @@ impl bencher_endpoint::Registrar for Api {
         // Server
         if http_options {
             api_description.register(version::server_version_options)?;
+            api_description.register(health::server_health_options)?;
             api_description.register(spec::server_spec_options)?;
             api_description.register(config::server_config_options)?;
             api_description.register(config::server_config_console_options)?;
         }
         api_description.register(version::server_version_get)?;
+        api_description.register(health::server_health_get)?;
         api_description.register(spec::server_spec_get)?;
         api_description.register(config::server_config_get)?;
         api_description.register(config::server_config_console_get)?;

@@ -1,4 +1,4 @@
-use bencher_client::types::{JsonDirection, OrgProjectsSort, ProjectsSort};
+use bencher_client::types::{JsonDirection, OrgProjectsSort};
 use bencher_json::{OrganizationResourceId, ResourceName};
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct List {
-    pub organization: Option<OrganizationResourceId>,
+    pub organization: OrganizationResourceId,
     pub name: Option<ResourceName>,
     pub search: Option<String>,
     pub pagination: Pagination,
@@ -21,8 +21,7 @@ pub struct List {
 
 #[derive(Debug)]
 pub struct Pagination {
-    pub org_projects_sort: Option<OrgProjectsSort>,
-    pub projects_sort: Option<ProjectsSort>,
+    pub sort: Option<OrgProjectsSort>,
     pub direction: Option<JsonDirection>,
     pub per_page: Option<u8>,
     pub page: Option<u32>,
@@ -58,11 +57,8 @@ impl From<CliPagination<CliProjectsSort>> for Pagination {
             page,
         } = pagination;
         Self {
-            org_projects_sort: sort.map(|sort| match sort {
+            sort: sort.map(|sort| match sort {
                 CliProjectsSort::Name => OrgProjectsSort::Name,
-            }),
-            projects_sort: sort.map(|sort| match sort {
-                CliProjectsSort::Name => ProjectsSort::Name,
             }),
             direction: direction.map(Into::into),
             page,
@@ -76,49 +72,28 @@ impl SubCmd for List {
         let _json = self
             .backend
             .send(|client| async move {
-                if let Some(organization) = self.organization.clone() {
-                    let mut client = client.org_projects_get().organization(organization);
-                    if let Some(name) = self.name.clone() {
-                        client = client.name(name);
-                    }
-                    if let Some(search) = self.search.clone() {
-                        client = client.search(search);
-                    }
-                    if let Some(sort) = self.pagination.org_projects_sort {
-                        client = client.sort(sort);
-                    }
-                    if let Some(direction) = self.pagination.direction {
-                        client = client.direction(direction);
-                    }
-                    if let Some(per_page) = self.pagination.per_page {
-                        client = client.per_page(per_page);
-                    }
-                    if let Some(page) = self.pagination.page {
-                        client = client.page(page);
-                    }
-                    client.send().await
-                } else {
-                    let mut client = client.projects_get();
-                    if let Some(name) = self.name.clone() {
-                        client = client.name(name);
-                    }
-                    if let Some(search) = self.search.clone() {
-                        client = client.search(search);
-                    }
-                    if let Some(sort) = self.pagination.projects_sort {
-                        client = client.sort(sort);
-                    }
-                    if let Some(direction) = self.pagination.direction {
-                        client = client.direction(direction);
-                    }
-                    if let Some(per_page) = self.pagination.per_page {
-                        client = client.per_page(per_page);
-                    }
-                    if let Some(page) = self.pagination.page {
-                        client = client.page(page);
-                    }
-                    client.send().await
+                let mut client = client
+                    .org_projects_get()
+                    .organization(self.organization.clone());
+                if let Some(name) = self.name.clone() {
+                    client = client.name(name);
                 }
+                if let Some(search) = self.search.clone() {
+                    client = client.search(search);
+                }
+                if let Some(sort) = self.pagination.sort {
+                    client = client.sort(sort);
+                }
+                if let Some(direction) = self.pagination.direction {
+                    client = client.direction(direction);
+                }
+                if let Some(per_page) = self.pagination.per_page {
+                    client = client.per_page(per_page);
+                }
+                if let Some(page) = self.pagination.page {
+                    client = client.page(page);
+                }
+                client.send().await
             })
             .await?;
         Ok(())

@@ -47,7 +47,7 @@ pub enum CliProject {
 #[derive(Parser, Debug)]
 pub struct CliProjectList {
     /// Organization slug or UUID
-    pub organization: Option<OrganizationResourceId>,
+    pub organization: OrganizationResourceId,
 
     /// Project name
     #[clap(long)]
@@ -183,4 +183,27 @@ pub enum CliProjectPermission {
     CreateRole,
     EditRole,
     DeleteRole,
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::OrganizationResourceId;
+    use clap::Parser as _;
+
+    use crate::parser::{CliBencher, CliSub};
+
+    use super::CliProject;
+
+    // `bencher project list` lists the organization it is given.
+    #[test]
+    fn project_list_takes_the_organization() {
+        let cli = CliBencher::try_parse_from(["bencher", "project", "list", "my-org"]).unwrap();
+        let CliSub::Project(CliProject::List(list)) = cli.sub else {
+            panic!("not a project list");
+        };
+        assert_eq!(
+            list.organization,
+            "my-org".parse::<OrganizationResourceId>().unwrap()
+        );
+    }
 }
