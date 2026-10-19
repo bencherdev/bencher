@@ -34,32 +34,32 @@
         "test_cases": {
           "positive": [
             {
-              "description": "Find a public project by name",
-              "prompt": "Find the public project named Bencher on Bencher.",
-              "tools_triggered": "list_projects",
-              "expected_behavior": "Return the matching public projects, including Bencher (slug bencher)."
+              "description": "Show a bare metal run",
+              "prompt": "Show the results of the latest bare metal run in the example project on Bencher.",
+              "tools_triggered": "list_jobs, view_report",
+              "expected_behavior": "Find the newest bare metal job, then show its report with the branch, testbed, and results of each benchmark."
             },
             {
               "description": "View a project",
-              "prompt": "Show the details of the bencher project on Bencher.",
+              "prompt": "Show the details of the example project on Bencher.",
               "tools_triggered": "view_project",
-              "expected_behavior": "Return the Bencher project: name Bencher, slug bencher, public visibility, and its repository URL https://github.com/bencherdev/bencher."
+              "expected_behavior": "Return the Example project: name Example, slug example, public visibility, and its repository URL https://github.com/bencherdev/example."
             },
             {
-              "description": "List recent alerts",
-              "prompt": "Show the latest alerts for the bencher project on Bencher.",
-              "tools_triggered": "list_alerts",
-              "expected_behavior": "List the project's most recent alerts with the benchmark, status, and the threshold limit each one crossed."
+              "description": "List recent reports",
+              "prompt": "Show the latest reports for the example project on Bencher.",
+              "tools_triggered": "list_reports",
+              "expected_behavior": "List the project's most recent reports with the branch, testbed, and time of each one."
             },
             {
               "description": "Query performance history",
-              "prompt": "Show the Latency of the Adapter::Json benchmark on the devel branch and intel-v1 testbed of the bencher project on Bencher over the last 30 days.",
+              "prompt": "Show the Latency of the bencher::mock_0 benchmark on the main branch and ubuntu-latest testbed of the example project on Bencher over the last 30 days.",
               "tools_triggered": "list_branches, list_testbeds, list_benchmarks, list_measures, query_perf",
               "expected_behavior": "Look up the branch, testbed, benchmark, and measure, then return the Latency value of each run in the last 30 days with its date."
             },
             {
               "description": "Render a performance plot",
-              "prompt": "Plot the Latency of the Adapter::Json benchmark on the devel branch and intel-v1 testbed of the bencher project on Bencher over the last 30 days.",
+              "prompt": "Plot the Latency of the bencher::mock_0 benchmark on the main branch and ubuntu-latest testbed of the example project on Bencher over the last 30 days.",
               "tools_triggered": "list_branches, list_testbeds, list_benchmarks, list_measures, perf_image",
               "expected_behavior": "Look up the branch, testbed, benchmark, and measure, then show a plot image of the Latency values over the last 30 days."
             }
@@ -71,11 +71,11 @@
             },
             {
               "description": "Unsupported deletion",
-              "prompt": "Delete the bencher project on Bencher."
+              "prompt": "Delete the example project on Bencher."
             },
             {
               "description": "Write to a project the signed-in account is not a member of",
-              "prompt": "Create a branch named review-test in the bencher project on Bencher."
+              "prompt": "Create a branch named review-test in the example project on Bencher."
             }
           ]
         }
