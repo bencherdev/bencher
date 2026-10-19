@@ -49,6 +49,8 @@ pub enum BencherResource {
     Sso,
     #[cfg(feature = "plus")]
     Server,
+    #[cfg(feature = "plus")]
+    LinkedRepository,
 }
 
 impl fmt::Display for BencherResource {
@@ -97,6 +99,8 @@ impl fmt::Display for BencherResource {
                 Self::Sso => "SSO",
                 #[cfg(feature = "plus")]
                 Self::Server => "Server",
+                #[cfg(feature = "plus")]
+                Self::LinkedRepository => "Linked Repository",
             }
         )
     }

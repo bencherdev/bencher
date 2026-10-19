@@ -164,6 +164,24 @@ impl TestServer {
         .await
     }
 
+    /// Create a new test server with the GitHub App, whose every GitHub request goes to `base`,
+    /// with an injectable clock that logs to `log`.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_github(
+        base: url::Url,
+        clock: bencher_json::Clock,
+        log: slog::Logger,
+    ) -> Self {
+        Self::new_with_options(TestServerOptions {
+            clock: Some(clock),
+            log: Some(log),
+            github_client: Some(crate::helpers::github_client().with_base_url(base.clone())),
+            github_app: Some(Arc::new(crate::github::app(base))),
+            ..TestServerOptions::default()
+        })
+        .await
+    }
+
     #[cfg(feature = "plus")]
     async fn build(
         upload_timeout: Option<u64>,
@@ -185,6 +203,7 @@ impl TestServer {
             openai_apps_challenge: None,
             oauth: None,
             github_client: None,
+            github_app: None,
             google_client: None,
         })
         .await
@@ -210,6 +229,7 @@ impl TestServer {
             openai_apps_challenge,
             oauth,
             github_client,
+            github_app,
             google_client,
         } = options;
         // Create logger early so it can be used for OCI storage
@@ -271,7 +291,7 @@ impl TestServer {
             // The test server never spawns the periodic prune, so the slot stays empty.
             rate_limiting_prune: bencher_schema::context::RateLimitingPruneTask::default(),
             github_client,
-            github_app: None,
+            github_app,
             google_client,
             indexer: None,
             stats: bencher_schema::context::StatsSettings::default(),
@@ -498,6 +518,7 @@ pub struct TestServerOptions {
     pub openai_apps_challenge: Option<bencher_json::NonEmpty>,
     pub oauth: Option<bencher_schema::context::OAuthServer>,
     pub github_client: Option<bencher_github_client::GitHubClient>,
+    pub github_app: Option<Arc<bencher_github_client::GitHubApp>>,
     pub google_client: Option<bencher_google_client::GoogleClient>,
 }
 

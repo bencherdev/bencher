@@ -3,7 +3,7 @@ use bencher_json::{JsonOAuthUrl, JsonOAuthUser, system::auth::JsonOAuth};
 use bencher_schema::{
     HeaderMap,
     context::ApiContext,
-    error::{payment_required_error, unauthorized_error},
+    error::{issue_error, payment_required_error, unauthorized_error},
 };
 use dropshot::{HttpError, Query, RequestContext, TypedBody, endpoint};
 use http::{HeaderValue, header::CACHE_CONTROL};
@@ -12,6 +12,9 @@ use slog::Logger;
 use crate::oauth::{OAuthProvider, oauth_state::OAuthState};
 
 use super::{handle_oauth_user, is_allowed_oauth};
+
+/// The console's sign-in page that GitHub sends the user back to.
+const SIGN_IN_PATH: &str = "/auth/github";
 
 #[endpoint {
     method = OPTIONS,
@@ -71,7 +74,7 @@ async fn get_inner(
         ..oauth_state
     };
     let state = oauth_state.encode(log, &context.token_key)?;
-    let url = github_client.auth_url(state);
+    let url = github_client.auth_url_with_redirect(state, sign_in_url(context)?);
 
     Ok(JsonOAuthUrl { url })
 }
@@ -104,7 +107,7 @@ async fn post_inner(
     let oauth_state = OAuthState::decode(log, &context.token_key, &json_oauth.state)?;
 
     let (name, email) = github_client
-        .oauth_user(json_oauth.code.clone())
+        .oauth_user_with_redirect(json_oauth.code.clone(), sign_in_url(context)?)
         .await
         .map_err(unauthorized_error)?;
 
@@ -117,4 +120,18 @@ async fn post_inner(
         OAuthProvider::GitHub,
     )
     .await
+}
+
+/// Sign-in names its page, so the app's first callback URL is free for another page.
+fn sign_in_url(context: &ApiContext) -> Result<url::Url, HttpError> {
+    context.console_url.join(SIGN_IN_PATH).map_err(|e| {
+        issue_error(
+            "Failed to build the GitHub sign-in URL",
+            &format!(
+                "Failed to build the GitHub sign-in URL from ({}).",
+                context.console_url
+            ),
+            e,
+        )
+    })
 }

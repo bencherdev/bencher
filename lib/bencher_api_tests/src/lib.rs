@@ -39,6 +39,8 @@ use bencher_config as _;
 mod callbacks;
 mod context;
 #[cfg(feature = "plus")]
+pub mod github;
+#[cfg(feature = "plus")]
 pub mod helpers;
 #[cfg(feature = "plus")]
 mod license;

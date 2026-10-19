@@ -15,7 +15,7 @@ pub use claims::{
     OrgClaims, PublicOciClaims, StateClaims,
 };
 #[cfg(feature = "plus")]
-pub use claims::{ProjectOciClaims, RunnerOciClaims};
+pub use claims::{GitHubGrantClaims, GitHubStateClaims, ProjectOciClaims, RunnerOciClaims};
 pub use error::TokenError;
 pub use key::TokenKey;
 #[cfg(feature = "plus")]

@@ -41,6 +41,8 @@ use super::organization::OrganizationId;
 pub mod benchmark;
 pub mod branch;
 pub mod key;
+#[cfg(feature = "plus")]
+pub mod linked_repository;
 pub mod measure;
 pub mod metric;
 pub mod plot;

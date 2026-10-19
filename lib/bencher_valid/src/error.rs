@@ -109,6 +109,9 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Invalid GitHub repository name: {0}")]
     GitHubRepositoryName(String),
+    #[cfg(feature = "plus")]
+    #[error("Invalid GitHub App slug: {0}")]
+    GitHubAppSlug(String),
 
     #[cfg(feature = "plus")]
     #[error("Failed to validate architecture: {0}")]
