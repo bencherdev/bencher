@@ -2,7 +2,9 @@ use std::{future::Future, pin::Pin};
 
 #[cfg(feature = "plus")]
 use bencher_client::types::JsonNewRunJob;
-use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings};
+use bencher_client::types::{
+    Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings, MeasureFilter,
+};
 use bencher_comment::ReportComment;
 use bencher_json::{
     DateTime, JsonProject, JsonReport, ProjectResourceId, ProjectSlug, ReportUuid, RunContext,
@@ -46,7 +48,7 @@ use sub_adapter::SubAdapter;
 
 use crate::bencher::SubCmd;
 
-use super::project::report::Thresholds;
+use super::project::report::{Thresholds, measure_filter};
 
 #[derive(Debug)]
 #[expect(
@@ -64,6 +66,7 @@ pub struct Run {
     average: Option<JsonAverage>,
     iter: Iteration,
     fold: Option<JsonFold>,
+    measures: Option<MeasureFilter>,
     backdate: Option<DateTime>,
     allow_failure: bool,
     thresholds: Thresholds,
@@ -96,6 +99,7 @@ impl TryFrom<CliRun> for Run {
             average,
             iter,
             fold,
+            measure,
             backdate,
             allow_failure,
             thresholds,
@@ -175,6 +179,7 @@ impl TryFrom<CliRun> for Run {
             average: average.map(Into::into),
             iter,
             fold: fold.map(Into::into),
+            measures: measure_filter(measure),
             backdate,
             allow_failure,
             thresholds: thresholds.try_into().map_err(RunError::Thresholds)?,
@@ -445,6 +450,7 @@ impl Run {
                 adapter: Some(self.adapter),
                 average: self.average,
                 fold: self.fold,
+                measures: self.measures.clone(),
             }),
             context: Some(RunContext::current().into()),
             job: None,
@@ -480,6 +486,7 @@ impl Run {
                 adapter: Some(self.adapter),
                 average: self.average,
                 fold: self.fold,
+                measures: self.measures.clone(),
             }),
             context: Some(RunContext::current().into()),
             job: Some(JsonNewRunJob {
@@ -1172,6 +1179,53 @@ mod tests {
             )
             .unwrap();
             assert_eq!(callback, expected);
+        }
+    }
+
+    mod measures {
+        use clap::Parser as _;
+
+        use super::super::Run;
+        use crate::parser::run::CliRun;
+
+        /// Kills: a `--measure` list that the parse discards, and a local run whose request
+        /// sends no list.
+        #[tokio::test]
+        async fn local_run_sends_the_listed_measures() {
+            assert_eq!(
+                sent_measures(&["--file", "Cargo.toml"]).await,
+                serde_json::json!(["latency", "Wall Clock"])
+            );
+        }
+
+        /// Kills: a `--measure` list that the parse discards, and a remote run whose request
+        /// sends no list.
+        #[cfg(feature = "plus")]
+        #[tokio::test]
+        async fn image_run_sends_the_listed_measures() {
+            assert_eq!(
+                sent_measures(&["--image", "alpine:3.18"]).await,
+                serde_json::json!(["latency", "Wall Clock"])
+            );
+        }
+
+        /// The measures the request of a run with `args` lists to keep.
+        async fn sent_measures(args: &[&str]) -> serde_json::Value {
+            let args = [
+                "run",
+                "--project",
+                "my-project",
+                "--measure",
+                "latency",
+                "--measure",
+                "Wall Clock",
+            ]
+            .iter()
+            .chain(args)
+            .copied();
+            let run = Run::try_from(CliRun::try_parse_from(args).unwrap()).unwrap();
+            let json_new_run = run.generate_report().await.unwrap().unwrap();
+            serde_json::to_value(json_new_run).unwrap()["settings"]["measures"].clone()
         }
     }
 }
