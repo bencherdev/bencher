@@ -2089,6 +2089,42 @@ export interface JsonOAuth {
 	code: Secret;
 }
 
+/** The app asking to connect. */
+export interface JsonOAuthAuthorizationClient {
+	/** The URL of the app's metadata document. */
+	id: OAuthClientId;
+	/** The host serving the app's metadata document, which is who the app is. */
+	host: string;
+	/** The name the app gives itself. It is not verified. */
+	name: NonEmpty;
+	/** Whether the app is one this server knows by its host. */
+	verified: boolean;
+}
+
+/** Where the app receives the user's answer. */
+export interface JsonOAuthAuthorizationRedirect {
+	host: string;
+	/** Whether the answer goes to a program on the user's own computer. */
+	loopback: boolean;
+}
+
+/** An OAuth scope: what a client may do on the user's behalf. */
+export enum OAuthScope {
+	/** Read the projects the user can read. */
+	ProjectsRead = "projects:read",
+	/** Read and write the projects the user can write. */
+	ProjectsWrite = "projects:write",
+}
+
+/** An app's pending request to connect to a user's account through OAuth. */
+export interface JsonOAuthAuthorization {
+	uuid: Uuid;
+	client: JsonOAuthAuthorizationClient;
+	redirect: JsonOAuthAuthorizationRedirect;
+	scopes: OAuthScope[];
+	expiration: string;
+}
+
 /** The app an OAuth grant was given to. */
 export interface JsonOAuthClient {
 	/** The URL of the app's metadata document. */
@@ -2099,12 +2135,9 @@ export interface JsonOAuthClient {
 	name: NonEmpty;
 }
 
-/** An OAuth scope: what a client may do on the user's behalf. */
-export enum OAuthScope {
-	/** Read the projects the user can read. */
-	ProjectsRead = "projects:read",
-	/** Read and write the projects the user can write. */
-	ProjectsWrite = "projects:write",
+/** A user's answer to an app's request to connect. */
+export interface JsonOAuthDecision {
+	approve: boolean;
 }
 
 /** The user API key an OAuth grant was approved with. */
@@ -2127,6 +2160,11 @@ export interface JsonOAuthGrant {
 	/** The last time the app renewed its access. */
 	modified: string;
 	expiration: string;
+}
+
+/** Where to send the user's browser with the answer. */
+export interface JsonOAuthRedirect {
+	url: Url;
 }
 
 export interface JsonOAuthUrl {

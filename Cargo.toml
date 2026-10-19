@@ -52,6 +52,7 @@ api_server = { path = "lib/api_server" }
 api_users = { path = "lib/api_users" }
 # plus API endpoints
 api_mcp = { path = "plus/api_mcp" }
+api_oauth = { path = "plus/api_oauth" }
 api_oci = { path = "plus/api_oci" }
 # plus
 api_runners = { path = "plus/api_runners" }
@@ -59,6 +60,7 @@ api_specs = { path = "plus/api_specs" }
 bencher_billing = { path = "plus/bencher_billing" }
 bencher_bing_index = { path = "plus/bencher_bing_index" }
 bencher_callback = { path = "plus/bencher_callback" }
+bencher_cimd = { path = "plus/bencher_cimd" }
 bencher_egress = { path = "plus/bencher_egress" }
 bencher_github_client = { path = "plus/bencher_github_client" }
 bencher_google_client = { path = "plus/bencher_google_client" }

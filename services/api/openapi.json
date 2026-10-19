@@ -15788,6 +15788,62 @@
           "name"
         ]
       },
+      "JsonOAuthClientMetadata": {
+        "description": "An OAuth client's metadata document, published at its client ID.",
+        "type": "object",
+        "properties": {
+          "client_id": {
+            "description": "Must be the URL the document is published at.",
+            "type": "string"
+          },
+          "client_name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "client_secret": {
+            "nullable": true,
+            "description": "A client with a secret is refused: every client is public."
+          },
+          "client_secret_expires_at": {
+            "nullable": true
+          },
+          "grant_types": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "redirect_uris": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "response_types": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "token_endpoint_auth_method": {
+            "nullable": true,
+            "type": "string"
+          },
+          "token_endpoint_auth_methods_supported": {
+            "nullable": true,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "client_id",
+          "redirect_uris"
+        ]
+      },
       "JsonOAuthGrant": {
         "description": "An app connected to a user's account through OAuth.",
         "type": "object",
@@ -15863,6 +15919,14 @@
         "description": "OAuth authorization server configuration, for MCP clients to sign in with",
         "type": "object",
         "properties": {
+          "clients": {
+            "nullable": true,
+            "description": "The only clients that may sign in. Defaults to any client that publishes a valid metadata document.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonOAuthServerClient"
+            }
+          },
           "issuer": {
             "description": "The issuer identifier: the public origin of this API server, `https`, or `http` only for a loopback host. Without a URL listed in `resources`, the default resource follows it, so changing it disconnects the clients on the old default until it is changed back; with one listed, changing it disconnects nothing while the old origin still reaches this server.",
             "allOf": [
@@ -15882,6 +15946,32 @@
         },
         "required": [
           "issuer"
+        ]
+      },
+      "JsonOAuthServerClient": {
+        "description": "A client that may sign in.",
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The client ID: the URL of the client's metadata document.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthClientId"
+              }
+            ]
+          },
+          "metadata": {
+            "nullable": true,
+            "description": "The client's metadata document, used instead of fetching it.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonOAuthClientMetadata"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id"
         ]
       },
       "JsonOAuthUrl": {

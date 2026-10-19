@@ -211,6 +211,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "api_oauth"
+version = "0.6.13"
+dependencies = [
+ "async-trait",
+ "bencher_api_tests",
+ "bencher_cimd",
+ "bencher_egress",
+ "bencher_endpoint",
+ "bencher_json",
+ "bencher_otel",
+ "bencher_schema",
+ "diesel",
+ "dropshot",
+ "http",
+ "reqwest",
+ "rustls",
+ "schemars 0.8.22",
+ "serde",
+ "serde_json",
+ "slog",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "api_oci"
 version = "0.6.13"
 dependencies = [
@@ -794,6 +819,7 @@ dependencies = [
  "api_auth",
  "api_checkout",
  "api_mcp",
+ "api_oauth",
  "api_oci",
  "api_organizations",
  "api_projects",
@@ -914,6 +940,21 @@ dependencies = [
  "tokio-rustls",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "bencher_cimd"
+version = "0.6.13"
+dependencies = [
+ "async-trait",
+ "bencher_egress",
+ "bencher_json",
+ "futures",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-rustls",
+ "url",
 ]
 
 [[package]]
@@ -1363,6 +1404,8 @@ dependencies = [
  "bencher_bing_index",
  "bencher_boundary",
  "bencher_callback",
+ "bencher_cimd",
+ "bencher_egress",
  "bencher_github_client",
  "bencher_google_client",
  "bencher_google_index",

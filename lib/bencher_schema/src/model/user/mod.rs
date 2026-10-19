@@ -30,6 +30,8 @@ pub mod auth;
 pub mod key;
 #[cfg(feature = "plus")]
 pub mod oauth;
+#[cfg(feature = "plus")]
+pub mod oauth_authorization;
 pub mod public;
 pub mod token;
 
