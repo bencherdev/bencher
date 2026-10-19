@@ -2,7 +2,7 @@ import { For, type JSX } from "solid-js";
 import { ORGANIZATIONS_PATH, profilePath } from "../paths";
 import { accountPath } from "./paths";
 
-type Section = "profile" | "keys" | "organizations";
+type Section = "profile" | "keys" | "apps" | "organizations";
 
 /** The account's sections, as Settings' rail. */
 const Frame = (props: {
@@ -13,6 +13,11 @@ const Frame = (props: {
 	const sections = (): { section: Section; label: string; href: string }[] => [
 		{ section: "profile", label: "Profile", href: profilePath(props.user) },
 		{ section: "keys", label: "Keys", href: accountPath(props.user, "keys") },
+		{
+			section: "apps",
+			label: "Connected Apps",
+			href: accountPath(props.user, "apps"),
+		},
 		{
 			section: "organizations",
 			label: "Organizations",

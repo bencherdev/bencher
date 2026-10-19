@@ -4,10 +4,13 @@ import { NEXT_CONSOLE, NEXT_USERS, type PageName } from "../paths";
 const ACCOUNT_PAGES = {
 	"users/settings": { page: "Profile", title: "Profile" },
 	"users/keys": { page: "UserKeys", title: "Keys" },
+	"users/apps": { page: "ConnectedApps", title: "Connected Apps" },
 	"users/tokens": { page: "LegacyTokens", title: "Legacy tokens" },
 	organizations: { page: "Organizations", title: "Organizations" },
 	"organizations/add": { page: "Organizations", title: "Organizations" },
 } as const satisfies Record<string, { page: PageName; title: string }>;
+
+const SHORTCUT = "users/apps";
 
 type AccountPath = keyof typeof ACCOUNT_PAGES;
 type UserSegment<P> = P extends `users/${infer S}` ? S : never;
@@ -24,7 +27,8 @@ export const accountPage = (pathname: string) => {
 		.slice(NEXT_CONSOLE.length + 1)
 		.split("/")
 		.filter((part) => part.length > 0);
-	if (parts[0] === "users") {
+	// The shortcut names no user: it is the reader's own page.
+	if (parts[0] === "users" && parts.join("/") !== SHORTCUT) {
 		parts.splice(1, 1);
 	}
 	const path = parts.join("/");

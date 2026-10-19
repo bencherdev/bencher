@@ -101,12 +101,12 @@ const AccountMenu = (props: AccountMenuProps) => {
 						<Icon name="key" />
 						Keys
 					</Link>
-					<Link href={`/console/users/${props.user.slug}/apps`}>
+					<Link
+						href={accountPath(props.user.slug, "apps")}
+						onClick={props.onClose}
+					>
 						<Glyph d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8z" />
 						Connected Apps
-						<span class="end">
-							<Glyph d="M7 17L17 7M8 7h9v9" />
-						</span>
 					</Link>
 					<Link href={ORGANIZATIONS_PATH} onClick={props.onClose}>
 						<Glyph d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1" />

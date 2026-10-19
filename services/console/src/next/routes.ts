@@ -59,6 +59,7 @@ export const PAGES: Record<PageName, Page> = {
 		import("./pages/Profile").then(({ default: page }) => ({ default: page })),
 	),
 	UserKeys: lazy(() => import("./pages/UserKeys")),
+	ConnectedApps: lazy(() => import("./pages/ConnectedApps")),
 	LegacyTokens: lazy(() => import("./pages/LegacyTokens")),
 	OrgGeneral: organizationPage(() => import("./pages/OrgGeneral")),
 	OrgMembers: organizationPage(() => import("./pages/OrgMembers")),
@@ -112,6 +113,7 @@ export const CONSOLE_ROUTES: RouteDefinition[] = [
 	{ path: PROJECTS_ROUTE, children: ROUTES },
 	{ path: "/users/:user/settings", component: PAGES.Profile },
 	{ path: "/users/:user/keys", component: PAGES.UserKeys },
+	{ path: "/users/:user?/apps", component: PAGES.ConnectedApps },
 	{ path: "/users/:user/tokens", component: PAGES.LegacyTokens },
 	{
 		path: "/organizations/:organization/settings",

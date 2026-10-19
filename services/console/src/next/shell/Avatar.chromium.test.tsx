@@ -83,8 +83,8 @@ const items = () =>
 	);
 
 describe("wide", () => {
-	// Kills an entry dropped or led to the wrong place, Profile, Keys, or
-	// Organizations left outside the new console,
+	// Kills an entry dropped or led to the wrong place, Profile, Keys,
+	// Connected Apps, or Organizations left outside the new console,
 	// and Switch project offered where the crumb already is.
 	test("the avatar's menu leads to Profile, Keys, Connected Apps, Organizations, and Help", async () => {
 		await open(1280);
@@ -103,7 +103,9 @@ describe("wide", () => {
 			(item(name).element() as HTMLAnchorElement).getAttribute("href");
 		expect(href("Profile")).toBe("/next/console/users/muriel-bagge/settings");
 		expect(href("Keys")).toBe("/next/console/users/muriel-bagge/keys");
-		expect(href("Connected Apps")).toBe("/console/users/muriel-bagge/apps");
+		expect(href("Connected Apps")).toBe(
+			"/next/console/users/muriel-bagge/apps",
+		);
 		expect(href("Organizations")).toBe("/next/console/organizations");
 		expect(href("Help")).toBe("/help/");
 	});
@@ -233,9 +235,9 @@ describe("phone", () => {
 		expect(asked).toEqual(["/v0/console/users/u"]);
 	});
 
-	// Kills a Profile or Keys entry that leaves its menu open when the page
-	// under it stays, as the account's own pages do.
-	for (const entry of ["Profile", "Keys"]) {
+	// Kills a Profile, Keys, or Connected Apps entry that leaves its menu open
+	// when the page under it stays, as the account's own pages do.
+	for (const entry of ["Profile", "Keys", "Connected Apps"]) {
 		test(`${entry} closes the menu`, async () => {
 			await open(390, { project: false });
 			await avatar().click();
