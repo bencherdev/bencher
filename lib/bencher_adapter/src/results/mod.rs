@@ -237,17 +237,17 @@ mod test_results_array {
         assert_contract(&error, BmfVersion::V1, BmfVersion::V0);
     }
 
-    /// A non-BMF adapter parses as version 0, so its output at version 1 breaks
-    /// the contract.
+    /// A harness adapter the version 1 tree does not hold yet parses as version 0,
+    /// so its output at version 1 breaks the contract.
     #[test]
     fn results_array_non_bmf_adapter_refuses_version_1() {
-        let results = std::fs::read_to_string("./tool_output/rust/bench/many.txt")
+        let results = std::fs::read_to_string("./tool_output/go/bench/five.txt")
             .expect("Failed to read test file");
-        let error = new_at(&results, Adapter::RustBench, BmfVersion::V1);
+        let error = new_at(&results, Adapter::GoBench, BmfVersion::V1);
         assert_contract(&error, BmfVersion::V1, BmfVersion::V0);
         AdapterResultsArray::new(
             &[&results],
-            Adapter::RustBench,
+            Adapter::GoBench,
             Settings::new(None, BmfVersion::V0),
         )
         .expect("a non-BMF adapter parses at version 0");

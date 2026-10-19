@@ -1,0 +1,10 @@
+test fib 15 ... bench:       1,122 ns/iter (+/- 100)
+
+test checksum/fold/1024 ... bench:          42 ns/iter (+/- 33)
+test checksum/fold/16384 ... bench:         761 ns/iter (+/- 3)
+test checksum/sort/elements ... bench:       1,015 ns/iter (+/- 14)
+test checksum/decimal ... bench:          50 ns/iter (+/- 2)
+test checksum/bits ... bench:          49 ns/iter (+/- 2)
+
+test slow/fib 30 ... bench:   1,424,781 ns/iter (+/- 61,630)
+
