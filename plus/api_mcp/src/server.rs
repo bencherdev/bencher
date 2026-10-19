@@ -27,14 +27,14 @@ use crate::{
 };
 
 const SERVER_NAME: &str = "bencher";
-const SERVER_INSTRUCTIONS: &str = "Bencher tracks benchmark results over time and catches performance regressions. \
-Most tools take a `project` argument that accepts either a project slug or UUID. \
-Authenticate with an `Authorization: Bearer` header using a project API key (`bencher_run_`) \
-or a user API key (`bencher_user_`); public projects can be read without authentication. \
-List tools return an object with the items under `data` and the total number of results under `total_count`. \
+const INSTRUCTIONS_HEAD: &str = "Bencher tracks benchmark results over time and catches performance regressions. \
+Most tools take a `project` argument that accepts either a project slug or UUID.";
+const API_KEY_INSTRUCTIONS: &str = "Authenticate with an `Authorization: Bearer` header using a project API key (`bencher_run_`) \
+or a user API key (`bencher_user_`); public projects can be read without authentication.";
+const SIGN_IN_INSTRUCTIONS: &str = "Public projects can be read without signing in. \
+A tool that needs a signed-in caller asks the user to sign in with OAuth.";
+const INSTRUCTIONS_TAIL: &str = "List tools return an object with the items under `data` and the total number of results under `total_count`. \
 To run benchmarks and submit results from a local checkout, prefer the `bencher` CLI (`bencher run`).";
-const SIGN_IN_INSTRUCTIONS: &str = "Clients that support OAuth can sign in instead of using a key, \
-and a tool that needs a signed-in caller asks for it.";
 
 /// The Streamable HTTP transport was introduced in 2025-03-26.
 const SUPPORTED_PROTOCOL_VERSIONS: &[ProtocolVersion] = &[
@@ -114,14 +114,14 @@ impl BencherMcp {
 
 impl ServerHandler for BencherMcp {
     fn get_info(&self) -> ServerConfig {
-        let instructions = if self.rqctx.context().oauth.is_some() {
-            format!("{SERVER_INSTRUCTIONS} {SIGN_IN_INSTRUCTIONS}")
+        let auth = if self.rqctx.context().oauth.is_some() {
+            SIGN_IN_INSTRUCTIONS
         } else {
-            SERVER_INSTRUCTIONS.to_owned()
+            API_KEY_INSTRUCTIONS
         };
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new(SERVER_NAME, env!("CARGO_PKG_VERSION")))
-            .with_instructions(instructions)
+            .with_instructions(format!("{INSTRUCTIONS_HEAD} {auth} {INSTRUCTIONS_TAIL}"))
     }
 
     fn supported_protocol_versions(&self) -> Cow<'static, [ProtocolVersion]> {
