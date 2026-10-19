@@ -142,6 +142,8 @@ export interface JsonJobConfig {
 	iter?: Iteration;
 	/** Fold operation for combining multiple iteration results */
 	fold?: JsonFold;
+	/** The measures to keep from the results */
+	measures?: MeasureNameId[];
 	/** The Bencher Metric Format (BMF) version the run's results are read as */
 	bmf_version?: BmfVersion;
 	/** Allow benchmark failure without short-circuiting iterations */
@@ -2470,6 +2472,7 @@ export enum ReportWarningResource {
 	Metric = "metric",
 	Threshold = "threshold",
 	Adapter = "adapter",
+	Average = "average",
 }
 
 /** What a report did with the resources a warning counts. */
