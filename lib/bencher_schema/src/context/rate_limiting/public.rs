@@ -30,11 +30,7 @@ pub(super) struct PublicRateLimiter {
 
 impl Default for PublicRateLimiter {
     fn default() -> Self {
-        let requests = RateLimits {
-            minute: DEFAULT_REQUESTS_PER_MINUTE_LIMIT,
-            hour: DEFAULT_REQUESTS_PER_HOUR_LIMIT,
-            day: DEFAULT_REQUESTS_PER_DAY_LIMIT,
-        };
+        let requests = request_limits(None);
 
         let attempts = RateLimits {
             minute: DEFAULT_ATTEMPTS_PER_MINUTE_LIMIT,
@@ -54,23 +50,12 @@ impl Default for PublicRateLimiter {
 
 impl From<JsonPublicRateLimiter> for PublicRateLimiter {
     fn from(json: JsonPublicRateLimiter) -> Self {
+        let requests = request_limits(Some(json));
         let JsonPublicRateLimiter {
-            requests,
+            requests: _,
             attempts,
             runs,
         } = json;
-
-        let requests = RateLimits {
-            minute: requests
-                .and_then(|r| r.minute)
-                .unwrap_or(DEFAULT_REQUESTS_PER_MINUTE_LIMIT),
-            hour: requests
-                .and_then(|r| r.hour)
-                .unwrap_or(DEFAULT_REQUESTS_PER_HOUR_LIMIT),
-            day: requests
-                .and_then(|r| r.day)
-                .unwrap_or(DEFAULT_REQUESTS_PER_DAY_LIMIT),
-        };
 
         let attempts = RateLimits {
             minute: attempts
@@ -182,5 +167,21 @@ impl PublicRateLimiter {
         } else {
             Ok(())
         }
+    }
+}
+
+/// The limits on requests from one address, as configured.
+pub(super) fn request_limits(public: Option<JsonPublicRateLimiter>) -> RateLimits {
+    let requests = public.and_then(|public| public.requests);
+    RateLimits {
+        minute: requests
+            .and_then(|r| r.minute)
+            .unwrap_or(DEFAULT_REQUESTS_PER_MINUTE_LIMIT),
+        hour: requests
+            .and_then(|r| r.hour)
+            .unwrap_or(DEFAULT_REQUESTS_PER_HOUR_LIMIT),
+        day: requests
+            .and_then(|r| r.day)
+            .unwrap_or(DEFAULT_REQUESTS_PER_DAY_LIMIT),
     }
 }

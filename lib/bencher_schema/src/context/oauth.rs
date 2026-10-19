@@ -1,6 +1,9 @@
+use std::iter;
+
 use bencher_cimd::OAuthClients;
 use bencher_egress::EgressClient;
 use bencher_json::{OAuthIssuer, OAuthResource, system::config::JsonOAuthServer};
+use http::{HeaderMap, Uri, header::HOST, uri::Authority};
 
 /// Bencher as an OAuth authorization server for its MCP server,
 /// present only when `plus.oauth` is configured.
@@ -69,6 +72,21 @@ impl OAuthServer {
         *resource == self.canonical_resource || self.other_resources.contains(resource)
     }
 
+    /// The resource a request reached, chosen among the resources served by its `Host` header,
+    /// or without one by the authority of its URI (HTTP/2), else the canonical resource.
+    pub fn resource_at(&self, headers: &HeaderMap, uri: &Uri) -> &OAuthResource {
+        headers
+            .get(HOST)
+            .and_then(|host| host.to_str().ok())
+            .or_else(|| uri.authority().map(Authority::as_str))
+            .and_then(|host| {
+                iter::once(&self.canonical_resource)
+                    .chain(&self.other_resources)
+                    .find(|resource| resource.is_served_at(host))
+            })
+            .unwrap_or(&self.canonical_resource)
+    }
+
     pub fn clients(&self) -> &OAuthClients {
         &self.clients
     }
@@ -77,6 +95,7 @@ impl OAuthServer {
 #[cfg(test)]
 mod tests {
     use bencher_json::system::config::JsonOAuthServer;
+    use http::{HeaderMap, HeaderValue, Uri, header::HOST};
     use pretty_assertions::assert_eq;
 
     use super::OAuthServer;
@@ -112,5 +131,24 @@ mod tests {
             oauth.canonical_resource().as_ref(),
             "https://mcp.example.com/mcp"
         );
+    }
+
+    #[test]
+    fn resource_at_the_host_or_else_the_uri_authority() {
+        let oauth = server(serde_json::json!({
+            "issuer": "https://api.example.com",
+            "resources": ["https://api.example.com/mcp", "https://mcp.example.com/mcp"]
+        }));
+        let mut headers = HeaderMap::new();
+        headers.insert(HOST, HeaderValue::from_static("mcp.example.com"));
+        let path: Uri = "/mcp".parse().unwrap();
+        let absolute: Uri = "https://mcp.example.com/mcp".parse().unwrap();
+        for (headers, uri, resource) in [
+            (&headers, &path, "https://mcp.example.com/mcp"),
+            (&HeaderMap::new(), &absolute, "https://mcp.example.com/mcp"),
+            (&HeaderMap::new(), &path, "https://api.example.com/mcp"),
+        ] {
+            assert_eq!(oauth.resource_at(headers, uri).as_ref(), resource, "{uri}");
+        }
     }
 }

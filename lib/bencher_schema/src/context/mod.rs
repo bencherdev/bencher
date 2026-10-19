@@ -53,7 +53,9 @@ pub use messenger::{RunnerStatusBody, ServerStatsBody};
 #[cfg(feature = "plus")]
 pub use oauth::OAuthServer;
 #[cfg(feature = "plus")]
-pub use rate_limiting::{HeaderMap, RateLimiting, RateLimitingError, RateLimitingPruneTask};
+pub use rate_limiting::{
+    HeaderMap, OAuthCredential, RateLimiting, RateLimitingError, RateLimitingPruneTask,
+};
 pub use rbac::{Rbac, RbacError};
 #[cfg(feature = "plus")]
 pub use runner_update::RunnerUpdate;

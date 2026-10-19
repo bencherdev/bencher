@@ -12,10 +12,10 @@ pub use bencher_valid::{
 pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
     GracePeriod, ImageDigest, ImageReference, LastFour, LicensedPlanId, Memory, MeteredPlanId,
-    OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge, OAuthCodeHash, OAuthIssuer,
-    OAuthNonce, OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope,
-    OAuthScopes, OAuthTokenHash, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
-    RecaptchaScore, RunnerKey, RunnerKeyHash, Timeout,
+    OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge, OAuthCodeHash,
+    OAuthCodeVerifier, OAuthIssuer, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken,
+    OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash, PlanLevel,
+    PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash, Timeout,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;

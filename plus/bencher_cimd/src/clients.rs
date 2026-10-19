@@ -88,6 +88,14 @@ impl OAuthClients {
         self.documents.get(client_id.url(), clock, charge).await
     }
 
+    /// Whether `client_id` may use its codes and tokens: any client, unless this server was
+    /// configured with the only clients that may sign in.
+    pub fn allows(&self, client_id: &OAuthClientId) -> bool {
+        self.configured
+            .as_ref()
+            .is_none_or(|configured| configured.contains_key(client_id))
+    }
+
     /// Whether the consent page vouches for a client answered at `redirect_uri`: one this server was
     /// configured with, or one on a well-known host that also receives the answer there or on the
     /// user's own computer, since any path on that host could serve a metadata document.

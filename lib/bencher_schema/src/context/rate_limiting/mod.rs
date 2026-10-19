@@ -10,12 +10,13 @@ use std::{
 use camino::{Utf8Path, Utf8PathBuf};
 
 use bencher_json::{
-    DateTime, OrganizationUuid, PlanLevel, ProjectUuid, RunnerUuid, UserUuid,
-    system::config::JsonRateLimiting,
+    DateTime, OAuthAuthorizationUuid, OAuthGrantUuid, OrganizationUuid, PlanLevel, ProjectUuid,
+    RunnerUuid, UserUuid, system::config::JsonRateLimiting,
 };
 use bencher_license::Licensor;
 #[cfg(feature = "otel")]
 use bencher_otel::AuthorizationKind;
+use bencher_rate_limiter::{RateLimiter, RateLimits};
 use dropshot::HttpError;
 pub use http::HeaderMap;
 use slog::Logger;
@@ -68,6 +69,8 @@ pub struct RateLimiting {
     project: ProjectRateLimiter,
     runner: RunnerRateLimiter,
     bandwidth: BandwidthRateLimiter,
+    /// Refusals of a known OAuth credential, with the public request limits.
+    oauth_refusals: RateLimiter<OAuthCredential>,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -148,6 +151,9 @@ pub enum RateLimitingError {
     UserOrganizations(bencher_rate_limiter::Interval),
     #[error("Too many invitation emails for user per {0}. Please, try again later.")]
     UserInvites(bencher_rate_limiter::Interval),
+
+    #[error("Too many refused requests for OAuth credential per {0}. Please, try again later.")]
+    OAuthRefusals(bencher_rate_limiter::Interval),
 }
 
 impl Default for RateLimiting {
@@ -162,6 +168,7 @@ impl Default for RateLimiting {
             project: ProjectRateLimiter::default(),
             runner: RunnerRateLimiter::default(),
             bandwidth: BandwidthRateLimiter::default(),
+            oauth_refusals: RateLimiter::new(public::request_limits(None)),
         }
     }
 }
@@ -191,6 +198,7 @@ impl From<JsonRateLimiting> for RateLimiting {
             project: project.map_or_else(ProjectRateLimiter::default, Into::into),
             runner: runner.map_or_else(RunnerRateLimiter::default, Into::into),
             bandwidth: oci_bandwidth.map_or_else(BandwidthRateLimiter::default, Into::into),
+            oauth_refusals: RateLimiter::new(public::request_limits(public)),
         }
     }
 }
@@ -249,6 +257,11 @@ impl RateLimiting {
             project: ProjectRateLimiter::max(),
             runner: RunnerRateLimiter::max(),
             bandwidth: BandwidthRateLimiter::max(),
+            oauth_refusals: RateLimiter::new(RateLimits {
+                minute: usize::MAX,
+                hour: usize::MAX,
+                day: usize::MAX,
+            }),
         }
     }
 
@@ -283,6 +296,7 @@ impl RateLimiting {
             + self.project.prune()
             + self.runner.prune()
             + self.bandwidth.prune()
+            + self.oauth_refusals.prune()
     }
 
     pub fn window(&self) -> (DateTime, DateTime) {
@@ -450,6 +464,18 @@ impl RateLimiting {
         self.runner.check_request(runner_uuid)
     }
 
+    /// Charge a refusal of a known OAuth credential to that credential alone, never to its user,
+    /// so that whoever holds a dead credential cannot spend its user's limits.
+    pub fn oauth_refusal(&self, credential: OAuthCredential) -> Result<(), HttpError> {
+        if let Some(interval) = self.oauth_refusals.check(credential) {
+            Err(too_many_requests(RateLimitingError::OAuthRefusals(
+                interval,
+            )))
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn check_oci_bandwidth(
         &self,
         org_uuid: OrganizationUuid,
@@ -594,6 +620,14 @@ impl RateLimiting {
         let parent = db_path.parent().unwrap_or(Utf8Path::new("."));
         Ok(parent.join("rate_limiting.json"))
     }
+}
+
+/// A known OAuth credential, by what it belongs to: a grant for its tokens, or a pending
+/// authorization for its code.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum OAuthCredential {
+    Grant(OAuthGrantUuid),
+    Authorization(OAuthAuthorizationUuid),
 }
 
 #[derive(Debug, thiserror::Error)]
