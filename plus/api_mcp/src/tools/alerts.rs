@@ -2,7 +2,7 @@ use api_projects::alerts::{
     ProjAlertParams, ProjAlertsPagination, ProjAlertsParams, ProjAlertsQuery, get_ls_inner,
     get_one_inner, patch_inner,
 };
-use bencher_json::project::alert::JsonUpdateAlert;
+use bencher_json::{JsonAlert, JsonAlerts, project::alert::JsonUpdateAlert};
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
 use rmcp::model::{CallToolResult, Tool};
@@ -10,7 +10,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{input_schema, json_result, list_result, parse_input};
+use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ListAlertsInput {
@@ -40,8 +40,9 @@ pub fn list_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "List performance alerts for a project, generated when a threshold boundary is exceeded.",
-        input_schema::<ListAlertsInput>(),
+        json_schema::<ListAlertsInput>(),
     )
+    .with_raw_output_schema(json_schema::<ListOutput<JsonAlerts>>())
 }
 
 pub async fn list(
@@ -55,15 +56,16 @@ pub async fn list(
         query,
     } = parse_input(arguments)?;
     let (json, total_count) = get_ls_inner(context, api_actor, path, pagination, query).await?;
-    list_result(&json, total_count)
+    list_result(json, total_count)
 }
 
 pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "View an alert, including the boundary that was exceeded. The `alert` argument is an alert UUID.",
-        input_schema::<ViewAlertInput>(),
+        json_schema::<ViewAlertInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonAlert>())
 }
 
 pub async fn view(
@@ -81,8 +83,9 @@ pub fn update_tool(name: &'static str) -> Tool {
         name,
         "Update an alert. Project API keys (`bencher_run_`) can only update the alert status \
          (e.g. acknowledge or dismiss).",
-        input_schema::<UpdateAlertInput>(),
+        json_schema::<UpdateAlertInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonAlert>())
 }
 
 pub async fn update(

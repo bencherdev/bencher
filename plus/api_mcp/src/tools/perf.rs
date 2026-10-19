@@ -1,7 +1,7 @@
 use api_projects::perf::{self, ProjPerfParams, img};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use bencher_json::{
-    JsonPerfQuery,
+    JsonPerf, JsonPerfQuery,
     project::perf::{JsonPerfImgQueryParams, JsonPerfQueryParams},
 };
 use bencher_schema::{context::ApiContext, error::bad_request_error, model::user::actor::ApiActor};
@@ -12,7 +12,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use slog::Logger;
 
-use super::{input_schema, json_result, parse_input};
+use super::{json_result, json_schema, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct QueryPerfInput {
@@ -38,8 +38,9 @@ pub fn query_tool(name: &'static str) -> Tool {
          `branches`, `testbeds`, `benchmarks`, and `measures` are comma-separated lists of UUIDs; \
          use the corresponding list tools to find them. \
          `start_time` and `end_time` bound the results in milliseconds since epoch.",
-        input_schema::<QueryPerfInput>(),
+        json_schema::<QueryPerfInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonPerf>())
 }
 
 pub async fn query(
@@ -59,7 +60,7 @@ pub fn image_tool(name: &'static str) -> Tool {
         name,
         "Render a perf plot image (JPEG) for a project. \
          Takes the same query arguments as `query_perf`, plus an optional `title`.",
-        input_schema::<PerfImageInput>(),
+        json_schema::<PerfImageInput>(),
     )
 }
 

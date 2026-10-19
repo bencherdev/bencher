@@ -1,6 +1,7 @@
 use api_projects::projects::{
     ProjectParams, ProjectsPagination, ProjectsQuery, get_ls_inner, get_one_inner,
 };
+use bencher_json::{JsonProject, JsonProjects};
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
 use rmcp::model::{CallToolResult, Tool};
@@ -8,7 +9,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{input_schema, json_result, list_result, parse_input};
+use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ListProjectsInput {
@@ -30,8 +31,9 @@ pub fn list_tool(name: &'static str) -> Tool {
         "List projects. \
          With a project API key (`bencher_run_`), only that project is returned; \
          with a user API key, all projects visible to the user are returned.",
-        input_schema::<ListProjectsInput>(),
+        json_schema::<ListProjectsInput>(),
     )
+    .with_raw_output_schema(json_schema::<ListOutput<JsonProjects>>())
 }
 
 pub async fn list(
@@ -41,15 +43,16 @@ pub async fn list(
 ) -> Result<CallToolResult, HttpError> {
     let ListProjectsInput { pagination, query } = parse_input(arguments)?;
     let (json, total_count) = get_ls_inner(context, pagination, query, api_actor).await?;
-    list_result(&json, total_count)
+    list_result(json, total_count)
 }
 
 pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "View a project. The `project` argument accepts a project slug or UUID.",
-        input_schema::<ViewProjectInput>(),
+        json_schema::<ViewProjectInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonProject>())
 }
 
 pub async fn view(

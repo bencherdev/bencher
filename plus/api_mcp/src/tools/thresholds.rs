@@ -3,7 +3,7 @@ use api_projects::thresholds::{
     get_ls_inner, get_one_inner, post_inner, put_inner,
 };
 use bencher_json::{
-    JsonNewThreshold,
+    JsonNewThreshold, JsonThreshold, JsonThresholds,
     project::threshold::{JsonThresholdQuery, JsonThresholdQueryParams, JsonUpdateThreshold},
 };
 use bencher_schema::{context::ApiContext, error::bad_request_error, model::user::actor::ApiActor};
@@ -13,7 +13,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{input_schema, json_result, list_result, parse_input};
+use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ListThresholdsInput {
@@ -55,8 +55,9 @@ pub fn list_tool(name: &'static str) -> Tool {
         "List thresholds for a project. \
          A threshold is a branch, testbed, and measure with a statistical model, checking a \
          filter over the benchmark's variants and one metric name.",
-        input_schema::<ListThresholdsInput>(),
+        json_schema::<ListThresholdsInput>(),
     )
+    .with_raw_output_schema(json_schema::<ListOutput<JsonThresholds>>())
 }
 
 pub async fn list(
@@ -71,7 +72,7 @@ pub async fn list(
     } = parse_input(arguments)?;
     let query: JsonThresholdQuery = query.try_into().map_err(bad_request_error)?;
     let (json, total_count) = get_ls_inner(context, path, pagination, query, api_actor).await?;
-    list_result(&json, total_count)
+    list_result(json, total_count)
 }
 
 pub fn create_tool(name: &'static str) -> Tool {
@@ -84,8 +85,9 @@ pub fn create_tool(name: &'static str) -> Tool {
          `metric` names the metric the threshold checks and defaults to `value`. \
          Every threshold that matches a metric row runs, so a row may earn several boundaries \
          and several alerts.",
-        input_schema::<CreateThresholdInput>(),
+        json_schema::<CreateThresholdInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonThreshold>())
 }
 
 pub async fn create(
@@ -102,8 +104,9 @@ pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "View a threshold. The `threshold` argument is a threshold UUID.",
-        input_schema::<ViewThresholdInput>(),
+        json_schema::<ViewThresholdInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonThreshold>())
 }
 
 pub async fn view(
@@ -120,8 +123,9 @@ pub fn update_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Update a threshold's statistical model, or remove the model by setting it to null.",
-        input_schema::<UpdateThresholdInput>(),
+        json_schema::<UpdateThresholdInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonThreshold>())
 }
 
 pub async fn update(

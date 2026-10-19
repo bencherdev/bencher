@@ -2,7 +2,9 @@ use api_projects::measures::{
     ProjMeasureParams, ProjMeasuresPagination, ProjMeasuresParams, ProjMeasuresQuery, get_ls_inner,
     get_one_inner, patch_inner, post_inner,
 };
-use bencher_json::{JsonNewMeasure, project::measure::JsonUpdateMeasure};
+use bencher_json::{
+    JsonMeasure, JsonMeasures, JsonNewMeasure, project::measure::JsonUpdateMeasure,
+};
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
 use rmcp::model::{CallToolResult, Tool};
@@ -10,7 +12,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{input_schema, json_result, list_result, parse_input};
+use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 
 #[derive(Deserialize, JsonSchema)]
 struct ListMeasuresInput {
@@ -48,8 +50,9 @@ pub fn list_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "List measures for a project (e.g. latency, throughput).",
-        input_schema::<ListMeasuresInput>(),
+        json_schema::<ListMeasuresInput>(),
     )
+    .with_raw_output_schema(json_schema::<ListOutput<JsonMeasures>>())
 }
 
 pub async fn list(
@@ -63,15 +66,16 @@ pub async fn list(
         query,
     } = parse_input(arguments)?;
     let (json, total_count) = get_ls_inner(context, api_actor, path, pagination, query).await?;
-    list_result(&json, total_count)
+    list_result(json, total_count)
 }
 
 pub fn create_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Create a measure for a project.",
-        input_schema::<CreateMeasureInput>(),
+        json_schema::<CreateMeasureInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonMeasure>())
 }
 
 pub async fn create(
@@ -88,8 +92,9 @@ pub fn view_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "View a measure. The `measure` argument accepts a measure slug or UUID.",
-        input_schema::<ViewMeasureInput>(),
+        json_schema::<ViewMeasureInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonMeasure>())
 }
 
 pub async fn view(
@@ -106,8 +111,9 @@ pub fn update_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
         "Update a measure. Project API keys (`bencher_run_`) cannot rename measures.",
-        input_schema::<UpdateMeasureInput>(),
+        json_schema::<UpdateMeasureInput>(),
     )
+    .with_raw_output_schema(json_schema::<JsonMeasure>())
 }
 
 pub async fn update(
