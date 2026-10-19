@@ -1,14 +1,11 @@
 ---
 import { BENCHER_NAVBAR_BURGER_ID, BENCHER_NAVBAR_MENU_ID } from "./id";
 import ThemeToggle from "./theme/ThemeToggle.astro";
-import NavbarProjects from "./NavbarProjects";
 import NavbarDropdown from "./NavbarDropdown";
 import NavbarHelp from "./NavbarHelp";
 import FallbackNavbarHelp from "./NavbarHelp.astro";
 import Wordmark from "./Wordmark";
 import { BENCHER_WORDMARK_ID } from "../../util/ext";
-
-const { apiUrl, params } = Astro.props;
 ---
 
 <nav class="navbar" role="navigation" aria-label="main navigation">
@@ -38,20 +35,6 @@ const { apiUrl, params } = Astro.props;
 	<div class="navbar-menu" id={BENCHER_NAVBAR_MENU_ID}>
 		<div class="navbar-start">
 			<a class="navbar-item" href="/docs/">Docs</a>
-
-			{
-				params?.project && (
-					<NavbarProjects
-						client:only="solid-js"
-						apiUrl={apiUrl}
-						params={params}
-					>
-						<a slot="fallback" class="navbar-item" href="/console/">
-							Projects
-						</a>
-					</NavbarProjects>
-				)
-			}
 		</div>
 
 		<div class="navbar-end">

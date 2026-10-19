@@ -8,7 +8,10 @@ const THEME_FILE = "packages/ui/src/styles/theme.css";
 const ROOTS = [
 	"packages/ui/src",
 	"services/console/src/next",
-	"services/console/src/pages/next",
+	"services/console/src/pages/console/projects",
+	"services/console/src/pages/console/organizations",
+	"services/console/src/pages/console/users",
+	"services/console/src/pages/perf",
 ];
 
 test("no color is written outside the theme", () => {

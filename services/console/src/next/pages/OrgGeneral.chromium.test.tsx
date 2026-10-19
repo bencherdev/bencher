@@ -248,16 +248,10 @@ describe("the sections", () => {
 			.toHaveAttribute("href", organizationPath("pompeii-llc"));
 		await expect
 			.element(rail.getByRole("link", { name: "Members" }))
-			.toHaveAttribute(
-				"href",
-				"/next/console/organizations/pompeii-llc/members",
-			);
+			.toHaveAttribute("href", "/console/organizations/pompeii-llc/members");
 		await expect
 			.element(rail.getByRole("link", { name: "Billing" }))
-			.toHaveAttribute(
-				"href",
-				"/next/console/organizations/pompeii-llc/billing",
-			);
+			.toHaveAttribute("href", "/console/organizations/pompeii-llc/billing");
 	});
 
 	// Kills a phone that keeps the rail, or whose sections are too small to tap.

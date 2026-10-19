@@ -36,6 +36,7 @@
 - **BREAKING CHANGE** Security fix for URL validation: a project URL must now use `http` or `https`, an existing project URL that does not is shown as plain text, and the Console no longer links to a URL with any other scheme
 - Security fix for the Console's embed snippet: it now escapes the project name and title
 - Add Bencher to the [Claude connectors directory](https://claude.ai/directory/bencher)
+- Every Project, at either BMF version, now opens in the new Console at the Console's own paths: the classic Console's Project, Organization, and account pages are removed and their links redirect, and the public projects list is removed, with `/perf` redirecting to `/explore`
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects

@@ -134,7 +134,7 @@ test("each app shows who it is, what it can do, and how it was approved", async 
 		.toHaveTextContent(/approved\s*with key muriel-laptop/);
 	await expect
 		.element(second.getByRole("link", { name: "muriel-laptop" }))
-		.toHaveAttribute("href", "/next/console/users/muriel-bagge/keys");
+		.toHaveAttribute("href", "/console/users/muriel-bagge/keys");
 });
 
 // Kills an empty list drawn as nothing, or still waiting.

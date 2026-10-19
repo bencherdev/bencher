@@ -9,7 +9,7 @@ import {
 	lazy,
 } from "solid-js";
 import ContentSkeleton from "../ContentSkeleton";
-import { parseNextPath } from "../paths";
+import { parseConsolePath } from "../paths";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
@@ -29,7 +29,7 @@ const Settings = () => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
 	const section = createMemo(() =>
-		sectionOf(parseNextPath(location.pathname)?.rest ?? []),
+		sectionOf(parseConsolePath(location.pathname)?.rest ?? []),
 	);
 	// A section paints once the shell's answer says what the reader may do.
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));

@@ -4,17 +4,17 @@ import { createOwnProject, createProject, createReader } from "./api";
 import {
 	VERSION_KEY,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	signedIn,
 	test,
 } from "./fixtures";
 
 const { hashbrown } = seed.projects;
-const ORGANIZATIONS = "/next/console/organizations";
+const ORGANIZATIONS = "/console/organizations";
 
 const keysPath = (reader: JsonAuthUser) =>
-	`/next/console/users/${reader.user.slug}/keys`;
+	`/console/users/${reader.user.slug}/keys`;
 const wordmark = (page: Page) =>
 	page.getByRole("banner").getByRole("link", { name: "Bencher, home" });
 
@@ -25,8 +25,8 @@ test.describe("the wordmark", () => {
 		}),
 	});
 
-	// Kills a wordmark that leads to the classic console, or anywhere but the
-	// main project the browser remembers.
+	// Kills a wordmark that leads anywhere but the main project the browser
+	// remembers.
 	test("opens the main project the browser remembers, in the app", async ({
 		page,
 	}) => {
@@ -39,7 +39,7 @@ test.describe("the wordmark", () => {
 		});
 		await wordmark(page).click();
 
-		await expect(page).toHaveURL(nextPath(hashbrown.slug));
+		await expect(page).toHaveURL(consolePath(hashbrown.slug));
 		expect(
 			await page.evaluate(
 				() => (window as unknown as { stayed?: boolean }).stayed,
@@ -62,16 +62,19 @@ test("names the project the reader last opened", async ({
 			}),
 		})
 	).newPage();
-	await page.goto(nextPath(project.slug, "settings"));
+	await page.goto(consolePath(project.slug, "settings"));
 	await expect
 		.poll(() => page.evaluate((key) => localStorage.getItem(key), VERSION_KEY))
 		.toContain(project.slug);
 	await wordmark(page).hover();
 
-	await expect(wordmark(page)).toHaveAttribute("href", nextPath(project.slug));
+	await expect(wordmark(page)).toHaveAttribute(
+		"href",
+		consolePath(project.slug),
+	);
 });
 
-// Kills a reader with nothing remembered sent to a project, or to the classic console.
+// Kills a reader with nothing remembered sent to a project.
 test("opens Organizations for a reader with nothing remembered", async ({
 	newContext,
 }) => {
@@ -94,7 +97,7 @@ test("deleting the reader's last project lands on Organizations", async ({
 	const page = await (
 		await newContext({ storageState: signedIn(reader) })
 	).newPage();
-	await page.goto(nextPath(project.slug, "settings"));
+	await page.goto(consolePath(project.slug, "settings"));
 	await page.getByRole("button", { name: "Delete project" }).click();
 	const dialog = page.getByRole("alertdialog", {
 		name: `Delete ${project.slug}?`,

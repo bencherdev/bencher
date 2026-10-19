@@ -13,7 +13,7 @@ import type {
 	JsonThreshold,
 	JsonVariant,
 } from "../../types/bencher";
-import { NEXT_PROJECTS, projectPath, runPath } from "../paths";
+import { PROJECTS_PATH, projectPath, runPath } from "../paths";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import { failureOf } from "../settings/failure";
@@ -97,7 +97,7 @@ export const BranchCards = (props: {
 							{(start) => (
 								<>
 									<a
-										href={`${NEXT_PROJECTS}/${props.slug}/branches/${start().branch}`}
+										href={`${PROJECTS_PATH}/${props.slug}/branches/${start().branch}`}
 									>
 										{props.row?.start_point ?? "its start point"}
 									</a>
@@ -720,7 +720,7 @@ const ThresholdsCard = (props: {
 };
 
 const thresholdPath = (slug: string, uuid: string) =>
-	`${NEXT_PROJECTS}/${slug}/thresholds/${uuid}`;
+	`${PROJECTS_PATH}/${slug}/thresholds/${uuid}`;
 
 /** The parameters filter as tags, a set per row, or every variant. */
 const Sets = (props: { threshold: JsonThreshold }) => (

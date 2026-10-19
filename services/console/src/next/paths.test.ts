@@ -1,67 +1,58 @@
 import { describe, expect, test } from "vitest";
 import {
-	NEXT_PROJECTS,
+	PROJECTS_PATH,
 	alertPath,
-	nextHref,
 	organizationOf,
 	pageName,
-	parseNextPath,
+	parseConsolePath,
 	projectPath,
 	reportPath,
 	runPath,
 	tabOf,
 } from "./paths";
 
-const place = (path: string) => new URL(path, "https://bencher.dev");
-
 describe("projectPath", () => {
 	// Kills a link built from anything but the one base path.
 	test("puts every tab under the project's place in the new console", () => {
-		expect(projectPath("hashbrown")).toBe(`${NEXT_PROJECTS}/hashbrown/`);
+		expect(projectPath("hashbrown")).toBe(`${PROJECTS_PATH}/hashbrown/`);
 		expect(projectPath("hashbrown", "alerts")).toBe(
-			`${NEXT_PROJECTS}/hashbrown/alerts`,
+			`${PROJECTS_PATH}/hashbrown/alerts`,
 		);
 	});
 });
 
 describe("organizationOf", () => {
-	// Kills a project or account path taken for an organization's page, a
-	// classic path taken for the new console's, and an organization read from
-	// the wrong segment.
+	// Kills a project or account path taken for an organization's page, and an
+	// organization read from the wrong segment.
 	test("reads the organization an organization path is about", () => {
+		expect(organizationOf("/console/organizations/pompeii-llc/settings")).toBe(
+			"pompeii-llc",
+		);
 		expect(
-			organizationOf("/next/console/organizations/pompeii-llc/settings"),
-		).toBe("pompeii-llc");
-		expect(
-			organizationOf("/next/console/projects/hashbrown/settings"),
+			organizationOf("/console/projects/hashbrown/settings"),
 		).toBeUndefined();
 		expect(
-			organizationOf("/next/console/users/muriel-bagge/settings"),
-		).toBeUndefined();
-		expect(
-			organizationOf("/console/organizations/pompeii-llc/settings"),
+			organizationOf("/console/users/muriel-bagge/settings"),
 		).toBeUndefined();
 	});
 });
 
-describe("parseNextPath", () => {
+describe("parseConsolePath", () => {
 	// Kills a slug read from the wrong segment, and paths outside the console accepted.
 	test("reads the project and the rest of the path", () => {
-		expect(parseNextPath("/next/console/projects/hashbrown")).toEqual({
+		expect(parseConsolePath("/console/projects/hashbrown")).toEqual({
 			slug: "hashbrown",
 			rest: [],
 		});
-		expect(parseNextPath("/next/console/projects/hashbrown/")).toEqual({
+		expect(parseConsolePath("/console/projects/hashbrown/")).toEqual({
 			slug: "hashbrown",
 			rest: [],
 		});
-		expect(
-			parseNextPath("/next/console/projects/hashbrown/reports/abc"),
-		).toEqual({ slug: "hashbrown", rest: ["reports", "abc"] });
-		expect(
-			parseNextPath("/console/projects/hashbrown/reports"),
-		).toBeUndefined();
-		expect(parseNextPath("/next/console/projects/")).toBeUndefined();
+		expect(parseConsolePath("/console/projects/hashbrown/reports/abc")).toEqual(
+			{ slug: "hashbrown", rest: ["reports", "abc"] },
+		);
+		expect(parseConsolePath("/perf/hashbrown/reports")).toBeUndefined();
+		expect(parseConsolePath("/console/projects/")).toBeUndefined();
 	});
 });
 
@@ -81,77 +72,6 @@ describe("tabOf", () => {
 		expect(tabOf(["branches", "main"])).toBe("settings");
 		expect(tabOf(["keys"])).toBe("settings");
 		expect(tabOf(["nope"])).toBeUndefined();
-	});
-});
-
-describe("nextHref", () => {
-	// Kills a version gate that sends a reader somewhere other than the same
-	// place, or carries the classic paging into the new console.
-	test("sends a classic project path to the same place in the new console", () => {
-		expect(nextHref(place("/console/projects/hashbrown/reports/abc#top"))).toBe(
-			"/next/console/projects/hashbrown/reports/abc#top",
-		);
-		expect(nextHref(place("/console/projects/hashbrown/branches/main"))).toBe(
-			"/next/console/projects/hashbrown/branches/main",
-		);
-	});
-
-	// Kills the classic reports list sent to a new console page that does not
-	// exist: the new console lists runs.
-	test("sends the classic reports list and its form to Runs", () => {
-		expect(
-			nextHref(place("/console/projects/hashbrown/reports?page=2#top")),
-		).toBe(`${NEXT_PROJECTS}/hashbrown/runs#top`);
-		expect(nextHref(place("/console/projects/hashbrown/reports/add"))).toBe(
-			`${NEXT_PROJECTS}/hashbrown/runs`,
-		);
-	});
-
-	// Kills the classic perf page sent to a new console page that does not exist.
-	test("sends the classic perf page to Explore", () => {
-		expect(nextHref(place("/console/projects/hashbrown/perf?branches=x"))).toBe(
-			"/next/console/projects/hashbrown/explore",
-		);
-	});
-
-	// Kills a classic key page sent to a path the new console does not draw:
-	// keys live in Settings, as one list.
-	test("sends the classic key pages to Settings' Keys", () => {
-		for (const rest of [
-			"keys",
-			"keys/add",
-			"keys/0e5a0c32-8d3f-4b52-9a7e-3f8e0f1c2d4b",
-		]) {
-			expect(nextHref(place(`/console/projects/hashbrown/${rest}`))).toBe(
-				`${NEXT_PROJECTS}/hashbrown/keys`,
-			);
-		}
-	});
-
-	// Kills a reader sent to a creation form the new console does not have.
-	test("sends the classic add and edit forms to the list or the page they belong to", () => {
-		expect(nextHref(place("/console/projects/hashbrown/thresholds/add"))).toBe(
-			"/next/console/projects/hashbrown/thresholds",
-		);
-		expect(
-			nextHref(place("/console/projects/hashbrown/thresholds/abc/edit")),
-		).toBe("/next/console/projects/hashbrown/thresholds/abc");
-	});
-
-	// Kills a redirect out of a classic page that is not a project's.
-	test("leaves paths outside a classic project alone", () => {
-		expect(nextHref(place("/console/projects"))).toBeUndefined();
-	});
-
-	// Kills a reader sent from a classic page to "Page not found".
-	test("leaves classic pages the new console has no page for alone", () => {
-		expect(
-			nextHref(place("/console/projects/hashbrown/metrics/abc")),
-		).toBeUndefined();
-		expect(
-			nextHref(place("/console/projects/hashbrown/metrics")),
-		).toBeUndefined();
-		expect(nextHref(place("/console/projects/hashbrown/nope"))).toBeUndefined();
 	});
 });
 
@@ -198,20 +118,20 @@ describe("pageName", () => {
 // Kills a report link outside the project's reports.
 test("reportPath is the report under its project's reports", () => {
 	expect(reportPath("hashbrown", "abc")).toBe(
-		`${NEXT_PROJECTS}/hashbrown/reports/abc`,
+		`${PROJECTS_PATH}/hashbrown/reports/abc`,
 	);
 });
 
 // Kills an alert link outside the project's Alerts.
 test("alertPath is the alert under its project's Alerts", () => {
 	expect(alertPath("hashbrown", "abc")).toBe(
-		`${NEXT_PROJECTS}/hashbrown/alerts/abc`,
+		`${PROJECTS_PATH}/hashbrown/alerts/abc`,
 	);
 });
 
 // Kills a run link outside the project's Runs.
 test("runPath is the run under its project's Runs", () => {
 	expect(runPath("hashbrown", "abc")).toBe(
-		`${NEXT_PROJECTS}/hashbrown/runs/abc`,
+		`${PROJECTS_PATH}/hashbrown/runs/abc`,
 	);
 });

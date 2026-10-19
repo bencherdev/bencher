@@ -11,7 +11,7 @@ import {
 	VERSION_KEY,
 	crumb,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	settle,
 	signedIn,
@@ -66,7 +66,7 @@ test.describe("General, as the project's Maintainer", () => {
 	}) => {
 		const project = await createProject(request);
 		const renamed = unique("Hash Browns");
-		await page.goto(nextPath(project.slug, "settings"));
+		await page.goto(consolePath(project.slug, "settings"));
 		await expect(general(page)).toBeVisible();
 		await expect(save(page)).toBeDisabled();
 
@@ -98,7 +98,7 @@ test.describe("General, as the project's Maintainer", () => {
 	}) => {
 		const project = await createProject(request);
 		const slug = `${project.slug}-moved`;
-		await page.goto(nextPath(project.slug, "settings"));
+		await page.goto(consolePath(project.slug, "settings"));
 		await expect(general(page)).toBeVisible();
 
 		await page.getByRole("textbox", { name: "Slug" }).fill(slug);
@@ -111,7 +111,7 @@ test.describe("General, as the project's Maintainer", () => {
 		);
 		expect(await projectStatus(request, slug)).toBe(404);
 		await dialog.getByRole("button", { name: "Change slug" }).click();
-		await expect(page).toHaveURL(nextPath(slug, "settings"));
+		await expect(page).toHaveURL(consolePath(slug, "settings"));
 		const versions = await page.evaluate(
 			(key) => JSON.parse(localStorage.getItem(key) ?? "{}"),
 			VERSION_KEY,
@@ -132,7 +132,7 @@ test.describe("General, as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await createProject(request);
-		await page.goto(nextPath(project.slug, "settings"));
+		await page.goto(consolePath(project.slug, "settings"));
 		await expect(general(page)).toBeVisible();
 
 		for (const to of ["private", "public"]) {
@@ -164,7 +164,7 @@ test.describe("General, as the project's Maintainer", () => {
 		const project = await createProject(request, {
 			organization: organization.slug,
 		});
-		await page.goto(nextPath(project.slug, "settings"));
+		await page.goto(consolePath(project.slug, "settings"));
 		await expect(general(page)).toBeVisible();
 
 		await page.getByRole("button", { name: "Change visibility" }).click();
@@ -178,7 +178,7 @@ test.describe("General, as the project's Maintainer", () => {
 			refusal.getByRole("link", { name: "See plans" }),
 		).toHaveAttribute(
 			"href",
-			`/next/console/organizations/${organization.slug}/billing`,
+			`/console/organizations/${organization.slug}/billing`,
 		);
 		await dialog.getByRole("button", { name: "Cancel" }).click();
 		await expect(visibility(page)).toHaveAccessibleDescription(/public/);
@@ -195,7 +195,7 @@ test.describe("General, as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await createProject(request);
-		await page.goto(nextPath(project.slug, "settings"));
+		await page.goto(consolePath(project.slug, "settings"));
 		await expect(
 			page.getByRole("heading", { level: 2, name: "Danger" }),
 		).toBeVisible();
@@ -222,7 +222,7 @@ test.describe("General, as the project's Maintainer", () => {
 		});
 
 		await confirm.click();
-		await expect(page).toHaveURL(nextPath(hashbrown.slug));
+		await expect(page).toHaveURL(consolePath(hashbrown.slug));
 		expect(await projectStatus(request, project.slug)).toBe(404);
 		expect(
 			await page.evaluate(
@@ -238,7 +238,7 @@ test.describe("General, as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await createProject(request);
-		await page.goto(nextPath(project.slug, "settings"));
+		await page.goto(consolePath(project.slug, "settings"));
 		await expect(
 			page.getByRole("heading", { level: 2, name: "Danger" }),
 		).toBeVisible();
@@ -255,7 +255,7 @@ test.describe("General, as the project's Maintainer", () => {
 			.getByRole("textbox", { name: `Type ${project.slug} to confirm` })
 			.fill(project.slug);
 		await dialog.getByRole("button", { name: "Delete project" }).click();
-		await expect(page).toHaveURL(nextPath(hashbrown.slug));
+		await expect(page).toHaveURL(consolePath(hashbrown.slug));
 		expect(await storedQueries(page, project.slug)).toEqual([]);
 	});
 
@@ -265,7 +265,7 @@ test.describe("General, as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await createProject(request);
-		await page.goto(nextPath(project.slug, "settings"));
+		await page.goto(consolePath(project.slug, "settings"));
 		await page.getByRole("button", { name: "Delete project" }).click();
 		const dialog = page.getByRole("alertdialog");
 		await dialog
@@ -283,7 +283,7 @@ test.describe("as a reader who is a member of nothing", () => {
 	// Kills controls drawn for a reader the API would refuse: the form, Save,
 	// and the Danger section.
 	test("General is read only, with no Danger section", async ({ page }) => {
-		await page.goto(nextPath(hashbrown.slug, "settings"));
+		await page.goto(consolePath(hashbrown.slug, "settings"));
 		await expect(general(page)).toBeVisible();
 		await expect(page.getByText(READ_ONLY, { exact: true })).toBeVisible();
 		await expect(page.getByText(hashbrown.slug, { exact: true })).toBeVisible();
@@ -301,7 +301,7 @@ test.describe("as a reader who is a member of nothing", () => {
 
 	// Kills key controls, or a key list, shown to a reader without `manage`.
 	test("Keys shows no key and no control", async ({ page }) => {
-		await page.goto(nextPath(hashbrown.slug, "keys"));
+		await page.goto(consolePath(hashbrown.slug, "keys"));
 		await expect(keys(page)).toBeVisible();
 		await expect(page.getByText(READ_ONLY, { exact: true })).toBeVisible();
 		await expect(page.getByRole("button", { name: "New key" })).toHaveCount(0);
@@ -318,7 +318,7 @@ test.describe("Keys, as the project's Maintainer", () => {
 		page,
 	}) => {
 		const name = unique("release-benchmarks");
-		await page.goto(nextPath(hashbrown.slug, "keys"));
+		await page.goto(consolePath(hashbrown.slug, "keys"));
 		await expect(keys(page)).toBeVisible();
 
 		await page.getByRole("button", { name: "New key" }).click();
@@ -385,7 +385,7 @@ test.describe("Keys, as the project's Maintainer", () => {
 	}) => {
 		const name = unique("pr-preview");
 		await createKey(request, hashbrown.slug, name);
-		await page.goto(nextPath(hashbrown.slug, "keys"));
+		await page.goto(consolePath(hashbrown.slug, "keys"));
 		const active = page.getByRole("table", { name: "Active keys" });
 		await expect(
 			active.getByRole("row", { name: new RegExp(name) }),
@@ -468,7 +468,7 @@ test.describe("accessibility", () => {
 		}) => {
 			await axeInBothThemes(
 				page,
-				nextPath(hashbrown.slug, "settings"),
+				consolePath(hashbrown.slug, "settings"),
 				async () => {
 					await expect(general(page)).toBeVisible();
 					await page.getByRole("button", { name: opener }).click();
@@ -483,7 +483,7 @@ test.describe("accessibility", () => {
 	}) => {
 		await axeInBothThemes(
 			page,
-			nextPath(hashbrown.slug, "settings"),
+			consolePath(hashbrown.slug, "settings"),
 			async () => {
 				await expect(general(page)).toBeVisible();
 				await page
@@ -498,13 +498,19 @@ test.describe("accessibility", () => {
 	test("Keys and its new key dialog pass axe in both themes", async ({
 		page,
 	}) => {
-		await axeInBothThemes(page, nextPath(hashbrown.slug, "keys"), async () => {
-			await expect(
-				page.getByRole("table", { name: "Active keys" }),
-			).toBeVisible();
-			await page.getByRole("button", { name: "New key" }).click();
-			await expect(page.getByRole("dialog", { name: "New key" })).toBeVisible();
-		});
+		await axeInBothThemes(
+			page,
+			consolePath(hashbrown.slug, "keys"),
+			async () => {
+				await expect(
+					page.getByRole("table", { name: "Active keys" }),
+				).toBeVisible();
+				await page.getByRole("button", { name: "New key" }).click();
+				await expect(
+					page.getByRole("dialog", { name: "New key" }),
+				).toBeVisible();
+			},
+		);
 	});
 });
 
@@ -523,7 +529,7 @@ test.describe("narrow", () => {
 	}) => {
 		const key = unique("narrow");
 		await createKey(request, hashbrown.slug, key);
-		await page.goto(nextPath(hashbrown.slug, "settings"));
+		await page.goto(consolePath(hashbrown.slug, "settings"));
 		await expect(general(page)).toBeVisible();
 		await expect(
 			page.getByRole("navigation", { name: "Settings", exact: true }),

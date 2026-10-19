@@ -2,7 +2,7 @@ import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import type { JsonBranch, JsonProject } from "../src/types/bencher";
 import { createProject } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, nextPath, seed, settle, signedIn, test } from "./fixtures";
+import { expect, consolePath, seed, settle, signedIn, test } from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
@@ -119,7 +119,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await dimensionsProject(request);
-		await page.goto(nextPath(project.slug, "branches"));
+		await page.goto(consolePath(project.slug, "branches"));
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Branches" }),
 		).toBeVisible();
@@ -156,7 +156,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		);
 		expect(hrefs.length).toBeGreaterThan(1);
 		expect(new Set(hrefs)).toEqual(
-			new Set([nextPath(project.slug, "branches")]),
+			new Set([consolePath(project.slug, "branches")]),
 		);
 		await expect(
 			testbeds
@@ -188,8 +188,8 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await dimensionsProject(request);
-		const listPath = nextPath(project.slug, "branches");
-		const branchPath = nextPath(project.slug, "branches/devel");
+		const listPath = consolePath(project.slug, "branches");
+		const branchPath = consolePath(project.slug, "branches/devel");
 		await page.goto(listPath);
 		const devel = list(page, "Active branches")
 			.getByRole("row")
@@ -245,7 +245,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await dimensionsProject(request);
-		await page.goto(nextPath(project.slug, "branches"));
+		await page.goto(consolePath(project.slug, "branches"));
 		const branches = list(page, "Active branches");
 		await expect(branches.getByRole("row")).toHaveCount(4);
 
@@ -281,7 +281,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await dimensionsProject(request);
-		await page.goto(nextPath(project.slug, "branches"));
+		await page.goto(consolePath(project.slug, "branches"));
 		const branches = list(page, "Active branches");
 		const row = branches.getByRole("row").filter({ hasText: "feature-simd" });
 		await row.getByRole("button", { name: "Archive feature-simd" }).click();
@@ -338,7 +338,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 				archived: true,
 			},
 		);
-		await page.goto(nextPath(project.slug, "branches"));
+		await page.goto(consolePath(project.slug, "branches"));
 		await expect(list(page, "Active branches").getByRole("row")).toHaveCount(3);
 		await status(page, /^Archived/).check();
 		const archived = list(page, "Archived branches");
@@ -379,7 +379,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 				await route.fallback();
 			},
 		);
-		await page.goto(nextPath(project.slug, "branches"));
+		await page.goto(consolePath(project.slug, "branches"));
 		const row = list(page, "Active branches")
 			.getByRole("row")
 			.filter({ hasText: "devel" });
@@ -404,7 +404,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await dimensionsProject(request);
-		await page.goto(nextPath(project.slug, "benchmarks/blake3"));
+		await page.goto(consolePath(project.slug, "benchmarks/blake3"));
 		await expect(
 			page.getByRole("heading", { level: 1, name: "blake3" }),
 		).toBeVisible();
@@ -438,7 +438,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 	test("a branch's page shows its head, recent runs, and thresholds, and All runs opens them on Runs", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "branches/main"));
+		await page.goto(consolePath(hashbrown.slug, "branches/main"));
 		await expect(
 			page.getByRole("heading", { level: 1, name: "main" }),
 		).toBeVisible();
@@ -447,7 +447,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 			.getByRole("link", { name: "Branches" });
 		await expect(crumb).toHaveAttribute(
 			"href",
-			nextPath(hashbrown.slug, "branches"),
+			consolePath(hashbrown.slug, "branches"),
 		);
 		await expect(page.getByRole("region", { name: "Head" })).toContainText(
 			seed.last_main_hash,
@@ -458,7 +458,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		await expect(newest).toContainText("ubuntu-latest+1");
 		await expect(newest.getByRole("link")).toHaveAttribute(
 			"href",
-			new RegExp(`^${nextPath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
+			new RegExp(`^${consolePath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
 		);
 		const thresholds = page.getByRole("table", { name: "Thresholds" });
 		await expect(thresholds.getByRole("row")).toHaveCount(2);
@@ -469,7 +469,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 
 		await page.getByRole("link", { name: "All runs on main" }).click();
 		await expect(page).toHaveURL(
-			`${nextPath(hashbrown.slug, "runs")}?branch=main&window=all`,
+			`${consolePath(hashbrown.slug, "runs")}?branch=main&window=all`,
 		);
 		await expect(
 			page.getByRole("button", { name: "branch main" }),
@@ -491,7 +491,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 	test("a testbed's and a measure's pages show their thresholds", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "testbeds/ubuntu-latest"));
+		await page.goto(consolePath(hashbrown.slug, "testbeds/ubuntu-latest"));
 		await expect(
 			page.getByRole("heading", { level: 1, name: "ubuntu-latest" }),
 		).toBeVisible();
@@ -503,13 +503,13 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		).toContainText(seed.last_main_hash);
 		await page.getByRole("link", { name: "All runs on ubuntu-latest" }).click();
 		await expect(page).toHaveURL(
-			`${nextPath(hashbrown.slug, "runs")}?testbed=ubuntu-latest&window=all`,
+			`${consolePath(hashbrown.slug, "runs")}?testbed=ubuntu-latest&window=all`,
 		);
 		await expect(
 			page.getByRole("button", { name: "testbed ubuntu-latest" }),
 		).toBeVisible();
 
-		await page.goto(nextPath(hashbrown.slug, "measures/latency"));
+		await page.goto(consolePath(hashbrown.slug, "measures/latency"));
 		await expect(
 			page.getByRole("heading", { level: 1, name: "Latency" }),
 		).toBeVisible();
@@ -526,7 +526,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 	test("a benchmark's page shows its parameters in use and its variants", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "benchmarks/blake3"));
+		await page.goto(consolePath(hashbrown.slug, "benchmarks/blake3"));
 		await expect(
 			page.getByRole("heading", { level: 1, name: "blake3" }),
 		).toBeVisible();
@@ -544,7 +544,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 	}) => {
 		await axeInBothThemes(
 			page,
-			nextPath(hashbrown.slug, "branches"),
+			consolePath(hashbrown.slug, "branches"),
 			async () => {
 				await expect(
 					list(page, "Active branches").getByRole("link", { name: "main" }),
@@ -554,7 +554,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		);
 		await axeInBothThemes(
 			page,
-			nextPath(hashbrown.slug, "branches/main"),
+			consolePath(hashbrown.slug, "branches/main"),
 			async () => {
 				await expect(
 					page
@@ -566,7 +566,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		);
 		await axeInBothThemes(
 			page,
-			nextPath(hashbrown.slug, "testbeds/ubuntu-latest"),
+			consolePath(hashbrown.slug, "testbeds/ubuntu-latest"),
 			async () => {
 				await expect(
 					page
@@ -578,7 +578,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		);
 		await axeInBothThemes(
 			page,
-			nextPath(hashbrown.slug, "benchmarks/blake3"),
+			consolePath(hashbrown.slug, "benchmarks/blake3"),
 			async () => {
 				// A phone's table has no header row.
 				await expect(
@@ -598,14 +598,14 @@ test.describe("as a reader who is a member of nothing", () => {
 
 	// Kills Archive drawn for a reader the API would refuse.
 	test("the lists and the pages draw no Archive", async ({ page }) => {
-		await page.goto(nextPath(hashbrown.slug, "branches"));
+		await page.goto(consolePath(hashbrown.slug, "branches"));
 		await expect(page.getByText(READ_ONLY, { exact: true })).toBeVisible();
 		await expect(
 			list(page, "Active branches").getByRole("link", { name: "main" }),
 		).toBeVisible();
 		await expect(page.getByRole("button", { name: /^Archive/ })).toHaveCount(0);
 
-		await page.goto(nextPath(hashbrown.slug, "branches/main"));
+		await page.goto(consolePath(hashbrown.slug, "branches/main"));
 		await expect(
 			page.getByRole("heading", { level: 1, name: "main" }),
 		).toBeVisible();
@@ -626,7 +626,7 @@ test.describe("narrow", () => {
 	test("rows fold to two lines, targets are 44 px, and a page leads with its Record", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "branches"));
+		await page.goto(consolePath(hashbrown.slug, "branches"));
 		const row = list(page, "Active branches")
 			.getByRole("row")
 			.filter({ hasText: "feature-simd" });
@@ -652,7 +652,7 @@ test.describe("narrow", () => {
 			expect(box?.height).toBeGreaterThanOrEqual(44);
 		}
 
-		await page.goto(nextPath(hashbrown.slug, "branches/main"));
+		await page.goto(consolePath(hashbrown.slug, "branches/main"));
 		const record = page.getByRole("region", { name: "Record" });
 		const head = page.getByRole("region", { name: "Head" });
 		await expect(head).toBeVisible();

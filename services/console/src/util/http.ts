@@ -144,23 +144,6 @@ export const pathOptions = (
 	return dataOptions(hostname, pathname, HttpMethod.PATCH, token, data);
 };
 
-export const httpDelete = async (
-	hostname: string,
-	pathname: string,
-	token: undefined | null | string,
-) => api(deleteOptions(hostname, pathname, token));
-export const deleteOptions = (
-	hostname: string,
-	pathname: string,
-	token: undefined | null | string,
-) => {
-	return {
-		url: apiUrl(hostname, pathname),
-		method: HttpMethod.DELETE,
-		headers: headers(token),
-	};
-};
-
 const HEADERS_CONTENT_TYPE = {
 	"Content-Type": "application/json",
 };

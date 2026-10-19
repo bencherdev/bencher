@@ -14,8 +14,8 @@ import {
 import { handOff } from "./handoff";
 import { idbStore } from "./idb";
 import { forgetReader } from "./memory";
-import { type PageName, pageName, parseNextPath } from "./paths";
-import { consoleProjectQuery, fetchedVersions } from "./queries";
+import { type PageName, pageName, parseConsolePath } from "./paths";
+import { consoleProjectQuery } from "./queries";
 import { USER_KEY, isCurrent, readReader, signInHref } from "./reader";
 import { PAGES } from "./routes";
 
@@ -31,14 +31,13 @@ const boot = async (mount: HTMLElement) => {
 	}
 
 	const client = createQueryClient(() => signOut(store, client));
-	const versions = fetchedVersions(client);
 	const host = mount.dataset.apiUrl ?? "";
 	const api = createApi({
 		url: host,
 		token: reader.token,
 		expiration: Date.parse(reader.expiration),
 	});
-	const place = parseNextPath(location.pathname);
+	const place = parseConsolePath(location.pathname);
 	// The shell's one request starts before anything else, so the cache restore
 	// never delays it.
 	if (place) {
@@ -73,7 +72,6 @@ const boot = async (mount: HTMLElement) => {
 					client={client}
 					api={api}
 					reader={reader}
-					versions={versions}
 					flush={persister.flush}
 					signOut={(back) => signOut(store, client, back)}
 					host={host}

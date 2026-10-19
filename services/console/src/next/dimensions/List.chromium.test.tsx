@@ -933,7 +933,7 @@ test("a row opens its branch from anywhere on it, and Archive keeps its own clic
 		for (const { name } of ACTIVE) {
 			expectRowOpens(
 				rowOf(name).element(),
-				`/next/console/projects/hashbrown/branches/${name}`,
+				`/console/projects/hashbrown/branches/${name}`,
 			);
 		}
 		dispose?.();

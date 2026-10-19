@@ -41,17 +41,17 @@ test("a ButtonLink is a link drawn as the Button of its variant and size, hovere
 				<Button variant="primary" size="sm">
 					Act
 				</Button>
-				<ButtonLink href="/next/" variant="primary" size="sm">
+				<ButtonLink href="/console/" variant="primary" size="sm">
 					Go
 				</ButtonLink>
-				<ButtonLink href="/next/">Plain</ButtonLink>
+				<ButtonLink href="/console/">Plain</ButtonLink>
 				<Button>Plain act</Button>
 			</>
 		),
 		root,
 	);
 	const link = page.getByRole("link", { name: "Go" });
-	await expect.element(link).toHaveAttribute("href", "/next/");
+	await expect.element(link).toHaveAttribute("href", "/console/");
 	const button = page.getByRole("button", { name: "Act", exact: true });
 	expect(look(link.element())).toEqual(look(button.element()));
 	expect(look(page.getByRole("link", { name: "Plain" }).element())).toEqual(

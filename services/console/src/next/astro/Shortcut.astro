@@ -1,0 +1,30 @@
+---
+import { shortcutPage } from "../account/paths";
+import { USERS_PATH } from "../paths";
+import { USER_KEY } from "../reader";
+import NextHead from "./NextHead.astro";
+
+const page = shortcutPage(Astro.url.pathname) ?? "settings";
+
+// A shortcut names no user, so the reader's own page is found in the browser.
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Bencher</title>
+		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+		<NextHead />
+		<script is:inline define:vars={{ page, USERS_PATH, USER_KEY }}>
+			try {
+				var reader = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+				if (reader && reader.user && reader.user.slug) {
+					location.replace(USERS_PATH + "/" + reader.user.slug + "/" + page);
+				}
+			} catch (_) {}
+		</script>
+	</head>
+	<body></body>
+</html>

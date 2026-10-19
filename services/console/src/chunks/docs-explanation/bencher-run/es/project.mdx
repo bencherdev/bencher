@@ -18,7 +18,7 @@ Por ejemplo, un slug de Proyecto generado podría ser: `project-abc4567-wxyz1234
 Cuando se crea un nuevo Proyecto para usted, ya sea que el slug sea especificado o generado, el Proyecto debe pertenecer a una Organización.
 Si el usuario está autenticado con una clave de API de usuario ([la opción `--key`](#--key-key)) o [la opción obsoleta `--token`](#--token-token), el Proyecto se añade a la Organización personal de ese usuario.
 Si el usuario no está autenticado, el Proyecto se creará bajo una nueva Organización `unclaimed`.
-Esta Organización podrá ser `claimed` desde la página pública de rendimiento (Perf Page) del Proyecto o usando el slug del Proyecto mientras se esté autenticado en una invocación posterior de `bencher run`.
+Esta Organización podrá ser `claimed` desde el enlace `Claim this project` de la salida de `bencher run` o usando el slug del Proyecto mientras se esté autenticado en una invocación posterior de `bencher run`.
 
 > 🐰 IMPORTANTE: Si la variable de entorno `CI` está establecida en `true`,
 > entonces debe especificar el Proyecto o activar [la opción `--ci-on-the-fly`][ci on the fly].

@@ -95,10 +95,10 @@ describe("row", () => {
 		).toEqual(["Bagge Diner", "Pompeii LLC"]);
 	});
 
-	// Kills a version 0 project sent to the new console, a version 1 project
-	// sent to the classic one, and a missing run read as a time.
-	test("a version 0 project is classic, and a project that never ran has no age", () => {
-		const [classic, never, ran] = switcherRows(
+	// Kills a version 0 project sent anywhere but the console, and a missing
+	// run read as a time.
+	test("every project opens in the console, and a project that never ran has no age", () => {
+		const [zero, never, ran] = switcherRows(
 			user([
 				project("Crinkle Cut", { bmf_version: 0, last_report: NOW - HOUR }),
 				project("Cornbread", { last_report: NEVER }),
@@ -108,16 +108,16 @@ describe("row", () => {
 			"",
 			NOW,
 		);
-		expect(classic).toMatchObject({
-			classic: true,
-			href: "/console/projects/crinkle-cut/plots",
+		expect(zero).toMatchObject({
+			version: 0,
+			href: "/console/projects/crinkle-cut/",
 		});
 		expect(never).toMatchObject({
-			classic: false,
+			version: 1,
 			age: undefined,
-			href: "/next/console/projects/cornbread/",
+			href: "/console/projects/cornbread/",
 		});
-		expect(ran).toMatchObject({ classic: false, age: "2h ago" });
+		expect(ran).toMatchObject({ age: "2h ago" });
 	});
 
 	// Kills alerts taken from another project, and a current project picked by

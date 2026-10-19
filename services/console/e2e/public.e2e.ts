@@ -7,7 +7,7 @@ import { dimensions, expectNameOverUnits, plotAtEnd } from "./explore";
 import {
 	VERSION_KEY,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	settle,
 	signedIn,
@@ -309,44 +309,50 @@ test.describe("signed out", () => {
 		});
 	});
 
-	// Kills a classic perf link left on the classic page for a version 1
-	// project, or one that arrives without its lines or with the classic
-	// page's own settings.
-	test("a classic perf link of a version 1 project lands on the public plot with its query", async ({
+	// Kills a classic perf link drawn with the classic page's own settings or
+	// without its lines, a bound it turned on left out, and a project at
+	// either version sent away from its public plot.
+	test("a classic perf link draws its query in place, at either version", async ({
 		page,
 		request,
 	}) => {
-		const id = await dimensions(request, hashbrown.slug);
-		const branch = id.branch("main");
-		const measure = id.measure("Latency");
-		await page.goto(
-			`/perf/${hashbrown.slug}?branches=${branch}&measures=${measure}&tab=benchmarks&key=true&x_axis=version`,
-		);
-		await expect(page).toHaveURL(
-			publicPath(
-				hashbrown.slug,
-				`?branches=${branch}&measures=${measure}&x_axis=version`,
-			),
-		);
-		await expect(
-			page.getByRole("heading", { level: 1, name: hashbrown.name }),
-		).toBeVisible();
+		for (const project of [hashbrown, version_zero]) {
+			const id = await dimensions(request, project.slug);
+			const branch = id.branch("main");
+			await page.goto(
+				`/perf/${project.slug}?branches=${branch}&tab=benchmarks&key=true&x_axis=version&lower_value=true&upper_boundary=true`,
+			);
+			await expect(page).toHaveURL(
+				publicPath(
+					project.slug,
+					`?branches=${branch}&metrics=value&metrics=lower_value&x_axis=version`,
+				),
+			);
+			await expect(
+				page.getByRole("heading", { level: 1, name: project.name }),
+			).toBeVisible();
+		}
 	});
 
-	// Kills a public plot that keeps a version 0 project, which it cannot draw.
-	test("a version 0 project's public plot goes back to its perf page", async ({
-		page,
+	// Kills a public plot whose document names the project only after a read
+	// on the server, one without the site's preview image, and one without the
+	// API URL the browser reads it from.
+	test("the document carries the preview image and reads nothing on the server", async ({
+		request,
 	}) => {
-		await page.goto(publicPath(version_zero.slug, "?x_axis=version"));
-		await expect(page).toHaveURL(
-			(url) =>
-				url.pathname === `/perf/${version_zero.slug}` &&
-				url.searchParams.get("x_axis") === "version",
+		const response = await request.get(publicPath(hashbrown.slug));
+		const html = await response.text();
+		expect(html).toContain(`<title>${hashbrown.slug} | Bencher</title>`);
+		expect(html).toMatch(
+			/<meta property="og:image" content="https:\/\/s3\.amazonaws\.com\/public\.bencher\.dev\/img\/bencher-og-image\.png"/,
 		);
+		expect(html).not.toContain(hashbrown.name);
+		// The deploy check reads the build's API URL here.
+		expect(html).toContain(`data-api-url="${seed.api_url}"`);
 	});
 
-	// Kills a private project drawn for nobody, a page that asks the API what
-	// it already refused, and a sign in that forgets the way back.
+	// Kills a private project drawn for nobody, a page that asks the API again
+	// what it already refused, and a sign in that forgets the way back.
 	test("a private project asks the reader to log in, through a link that keeps the page", async ({
 		page,
 	}) => {
@@ -365,7 +371,9 @@ test.describe("signed out", () => {
 			page.getByRole("main").getByRole("link", { name: "Log in" }),
 		).toHaveAttribute("href", signInWayBack(path));
 		await page.waitForLoadState("networkidle");
-		expect(asked).toEqual([]);
+		expect(asked).toEqual([
+			`${seed.api_url}/v0/projects/${seed.projects.private.slug}`,
+		]);
 	});
 
 	test("the public plot passes axe in both themes", async ({
@@ -402,32 +410,6 @@ test.describe("signed out", () => {
 	}
 });
 
-test.describe("with the version memory", () => {
-	const { slug } = seed.projects.private;
-	test.use({
-		storageState: {
-			cookies: [],
-			origins: [
-				{
-					origin: seed.console_url,
-					localStorage: [
-						{ name: VERSION_KEY, value: JSON.stringify({ [slug]: 1 }) },
-					],
-				},
-			],
-		},
-	});
-
-	// Kills a classic perf page the server cannot read that stays put for a
-	// project the reader has seen on version 1.
-	test("a classic perf link the server cannot read follows the version memory", async ({
-		page,
-	}) => {
-		await page.goto(`/perf/${slug}?x_axis=version&tab=plots`);
-		await expect(page).toHaveURL(publicPath(slug, "?x_axis=version"));
-	});
-});
-
 test.describe("a signed in member", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
@@ -447,44 +429,34 @@ test.describe("a signed in member", () => {
 		await page.getByRole("link", { name: "Open in console" }).click();
 		await expect(page).toHaveURL(
 			(url) =>
-				url.pathname === nextPath(project.slug, "explore") &&
+				url.pathname === consolePath(project.slug, "explore") &&
 				url.searchParams.get("x_axis") === "version",
 		);
 		await twoLinesDrawn(page);
 	});
 
-	// Kills a private project's public plot refused to a reader who may read it,
-	// painted locked before the reader's own read answers, or one whose Share
-	// offers an embed no one can load.
+	// Kills a private project's public plot refused to a reader who may read
+	// it, a reader's token sent before the project refused everyone, which
+	// would lift a public project's window for members alone, and one whose
+	// Share offers an embed no one can load.
 	test("a private project's public plot opens for its member", async ({
 		page,
 	}) => {
 		const { private: locked } = seed.projects;
-		let release = () => {};
-		const held = new Promise<void>((resolve) => {
-			release = resolve;
+		const reads: (string | undefined)[] = [];
+		page.on("request", (sent) => {
+			if (sent.url() === `${seed.api_url}/v0/projects/${locked.slug}`) {
+				reads.push(sent.headers().authorization);
+			}
 		});
-		await page.route(
-			(url) =>
-				url.pathname === `/v0/projects/${locked.slug}` ||
-				(url.origin === new URL(seed.console_url).origin &&
-					url.pathname.endsWith(".js")),
-			async (route) => {
-				await held;
-				await route.continue();
-			},
-		);
-		// The server's page, before any script: the head marks the reader.
-		await page.goto(publicPath(locked.slug), { waitUntil: "commit" });
-		await expect(page.locator('main[aria-busy="true"]')).toBeVisible();
-		await expect(page.getByRole("heading", { level: 1 })).toHaveCount(0);
-		release();
+		await page.goto(publicPath(locked.slug));
 		await expect(
 			page.getByRole("heading", { level: 1, name: locked.name }),
 		).toBeVisible();
 		await expect(
 			page.getByRole("link", { name: "Open in console" }),
 		).toBeVisible();
+		expect(reads).toEqual([undefined, `Bearer ${seed.member.token}`]);
 
 		// Its embed would load for no one, so Share copies the link at once.
 		await page
@@ -506,9 +478,8 @@ test.describe("a signed in member", () => {
 test.describe("a signed in member of a version 0 project", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
-	// Kills a private version 0 project's public plot sent to the classic public
-	// page, which cannot show it, rather than to its console.
-	test("a private version 0 project goes to its console perf page", async ({
+	// Kills a private version 0 project's public plot sent anywhere else.
+	test("a private version 0 project's public plot opens for its member", async ({
 		page,
 		request,
 	}) => {
@@ -524,9 +495,10 @@ test.describe("a signed in member of a version 0 project", () => {
 			expect(response.ok(), await response.text()).toBe(true);
 		}
 		await page.goto(publicPath(project.slug));
-		await expect(page).toHaveURL(
-			(url) => url.pathname === `/console/projects/${project.slug}/perf`,
-		);
+		await expect(
+			page.getByRole("heading", { level: 1, name: project.name }),
+		).toBeVisible();
+		await expect(page).toHaveURL(publicPath(project.slug));
 	});
 });
 

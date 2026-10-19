@@ -150,7 +150,7 @@ test("a row reads its threshold from the batch's tables", async () => {
 		)
 		.toHaveAttribute(
 			"href",
-			"/next/console/projects/hashbrown/thresholds/00000000-0000-4000-8000-000000000002",
+			"/console/projects/hashbrown/thresholds/00000000-0000-4000-8000-000000000002",
 		);
 });
 

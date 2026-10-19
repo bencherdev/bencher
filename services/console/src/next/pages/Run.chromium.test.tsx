@@ -19,7 +19,7 @@ import type {
 import { alertId, alertsFixture, reportId } from "../alerts/testing";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { ProjectContext } from "../project";
 import { fakeApi } from "../reports/testing";
 import { screenBatch as reportScreenBatch } from "../report/query";
@@ -180,7 +180,7 @@ test("the heading names the run and the table reads its reports in start order",
 		.element(link)
 		.toHaveAttribute(
 			"href",
-			"/next/console/projects/hashbrown/reports/00000000-0000-4000-8000-000000001001",
+			"/console/projects/hashbrown/reports/00000000-0000-4000-8000-000000001001",
 		);
 	expect(link.element().getAttribute("aria-label")).toMatch(
 		/^macos-latest, report 5, started \d\d:\d\d:01$/,
@@ -292,7 +292,7 @@ test("a run the API cannot find, or that cannot be one, is not found", async () 
 		.toBeVisible();
 	await expect
 		.element(page.getByRole("link", { name: "Runs" }))
-		.toHaveAttribute("href", "/next/console/projects/hashbrown/runs");
+		.toHaveAttribute("href", "/console/projects/hashbrown/runs");
 	dispose?.();
 	document.body.replaceChildren();
 	requests.length = 0;
@@ -342,7 +342,7 @@ test("phone rows fold into two lines beside their number and open the report any
 	const box = row.getBoundingClientRect();
 	const hit = document.elementFromPoint(box.right - 4, box.bottom - 4);
 	expect(hit?.closest("a")?.getAttribute("href")).toBe(
-		"/next/console/projects/hashbrown/reports/00000000-0000-4000-8000-000000001000",
+		"/console/projects/hashbrown/reports/00000000-0000-4000-8000-000000001000",
 	);
 	expect(document.querySelector(".rp-sub")?.textContent).toMatch(
 		/ · v248 · 1 report · 36 lines · took /,
@@ -369,10 +369,7 @@ test("Previous and Next step to the runs on either side on its branch", async ()
 	const previous = page.getByRole("link", { name: /^Previous / });
 	await expect
 		.element(previous)
-		.toHaveAttribute(
-			"href",
-			`/next/console/projects/hashbrown/runs/${NEIGHBOR}`,
-		);
+		.toHaveAttribute("href", `/console/projects/hashbrown/runs/${NEIGHBOR}`);
 	expect(previous.element().getAttribute("aria-label")).toMatch(
 		/^Previous Sep 1[01], \d\d:\d8: the run on main, 4e02c1d$/,
 	);
@@ -397,7 +394,7 @@ test("hovering Next starts that run's first batch, so the move asks nothing more
 					data: runPageFixture([runReportFixture(0)], { next: neighbor() }),
 				},
 	);
-	mount(api, `${NEXT_PROJECTS}${PATH}`, NEXT_PROJECTS);
+	mount(api, `${PROJECTS_PATH}${PATH}`, PROJECTS_PATH);
 	const next = page.getByRole("link", { name: /^Next / });
 	await next.hover();
 	const asked = () => requests.filter((url) => url.pathname.endsWith(NEIGHBOR));
@@ -473,14 +470,14 @@ test("the run's alerts draw each line with the report it came from", async () =>
 		.element(report)
 		.toHaveAttribute(
 			"href",
-			`/next/console/projects/hashbrown/reports/${reportId(2)}`,
+			`/console/projects/hashbrown/reports/${reportId(2)}`,
 		);
 	expectNameStartsWithText(report.element());
 	await expect
 		.element(alerts().getByRole("link", { name: /^#5 · ubuntu-latest/ }))
 		.toHaveAttribute(
 			"href",
-			`/next/console/projects/hashbrown/reports/${reportId(5)}`,
+			`/console/projects/hashbrown/reports/${reportId(5)}`,
 		);
 	await expect
 		.element(
@@ -490,7 +487,7 @@ test("the run's alerts draw each line with the report it came from", async () =>
 		)
 		.toHaveAttribute(
 			"href",
-			`/next/console/projects/hashbrown/alerts/${alertId(1)}`,
+			`/console/projects/hashbrown/alerts/${alertId(1)}`,
 		);
 	const rows = [...alerts().element().querySelectorAll("tbody tr.lr")];
 	expect(rows.map((row) => row.className)).toEqual([
@@ -516,7 +513,7 @@ test("an alert row opens its plot in place and its line in Explore from its repo
 		explore.element().getAttribute("href") ?? "",
 		"http://console.test",
 	);
-	expect(href.pathname).toBe("/next/console/projects/hashbrown/explore");
+	expect(href.pathname).toBe("/console/projects/hashbrown/explore");
 	expect(href.search).toContain(reportId(2));
 });
 
@@ -1100,7 +1097,7 @@ test("moving to another run that alerted draws its lines at once", async () => {
 				})
 			: alertingRun([1], { next: neighbor() }),
 	}));
-	mount(api, `${NEXT_PROJECTS}${PATH}`, NEXT_PROJECTS);
+	mount(api, `${PROJECTS_PATH}${PATH}`, PROJECTS_PATH);
 	await expect.element(alerts()).toBeVisible();
 	await page.getByRole("link", { name: /^Next / }).click();
 	const moved = page.getByRole("table", {

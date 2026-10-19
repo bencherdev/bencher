@@ -65,7 +65,7 @@ const SUMMARY = [
 	["metrics", "metrics"],
 ] as const;
 
-/** A version 1 project's plot for anyone who can read it; the page's head marks a stored reader before the first paint, and `pu-in` and `pu-out` show what is theirs. */
+/** A project's plot for anyone who can read it; the page's head marks a stored reader before the first paint, and `pu-in` and `pu-out` show what is theirs. */
 const Public = (props: PublicProps) => (
 	<>
 		<header class="shell">

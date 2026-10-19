@@ -19,7 +19,7 @@ import {
 } from "solid-js";
 import type { JsonConsoleRunSummary } from "../../types/bencher";
 import ContentSkeleton from "../ContentSkeleton";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { useProject, useProjectNavigate } from "../project";
 import { useQueryResult } from "../query";
 import Controls, { nameKey } from "../reports/Controls";
@@ -52,7 +52,7 @@ const Runs = () => {
 		const query = encodeSearch(next);
 		// Router paths are relative to the console's base, and the project root is Runs too.
 		navigate(
-			`${location.pathname.slice(NEXT_PROJECTS.length)}${query ? `?${query}` : ""}`,
+			`${location.pathname.slice(PROJECTS_PATH.length)}${query ? `?${query}` : ""}`,
 			{ scroll: false },
 		);
 	};

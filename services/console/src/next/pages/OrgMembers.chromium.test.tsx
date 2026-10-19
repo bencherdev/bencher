@@ -307,5 +307,5 @@ test("the rail marks Members current", async () => {
 	await expect.element(link).toHaveAttribute("aria-current", "page");
 	await expect
 		.element(link)
-		.toHaveAttribute("href", "/next/console/organizations/pompeii-llc/members");
+		.toHaveAttribute("href", "/console/organizations/pompeii-llc/members");
 });

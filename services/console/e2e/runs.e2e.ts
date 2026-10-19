@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { axeInBothThemes } from "./axe";
 import {
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	settle,
 	signedIn,
@@ -12,7 +12,7 @@ import {
 
 const { hashbrown } = seed.projects;
 
-const runs = (search = "") => `${nextPath(hashbrown.slug, "runs")}${search}`;
+const runs = (search = "") => `${consolePath(hashbrown.slug, "runs")}${search}`;
 const listPath = `/v0/console/projects/${hashbrown.slug}/runs`;
 
 const heading = (page: Page) => page.getByRole("heading", { level: 1 });
@@ -237,7 +237,7 @@ test("a run opens its run page, whose rows open each report", async ({
 	await link.click();
 
 	await expect(page).toHaveURL(
-		new RegExp(`${nextPath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
+		new RegExp(`${consolePath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
 	);
 	await expect(
 		page.getByRole("heading", {
@@ -414,7 +414,7 @@ test("the newest run's alert names its report, opens its plot in place, and open
 // Kills a Runs link that waits for the click to ask for its first batch, and
 // a page that asks again for what the hover already fetched.
 test("hovering the Runs tab fetches its first batch", async ({ page }) => {
-	await page.goto(nextPath(hashbrown.slug, "plots"));
+	await page.goto(consolePath(hashbrown.slug, "plots"));
 	await expect(
 		page.getByRole("heading", { level: 1, name: "Plots" }),
 	).toBeVisible();
@@ -512,10 +512,10 @@ test("Clear asks once for every run in the window, and Back brings the filter ba
 test("Runs at the project root and a run pass axe in both themes", async ({
 	page,
 }) => {
-	await axeInBothThemes(page, nextPath(hashbrown.slug), async () => {
+	await axeInBothThemes(page, consolePath(hashbrown.slug), async () => {
 		await expect(rows(page).first()).toBeVisible();
 	});
-	await page.goto(nextPath(hashbrown.slug));
+	await page.goto(consolePath(hashbrown.slug));
 	await rows(page).first().getByRole("link").click();
 	await expect(page).toHaveURL(/\/runs\/[0-9a-f-]{36}$/);
 	await axeInBothThemes(page, page.url(), async () => {
@@ -620,7 +620,7 @@ test.describe("narrow", () => {
 			(target?.y ?? 0) + (target?.height ?? 0) / 2,
 		);
 		await expect(page).toHaveURL(
-			new RegExp(`${nextPath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
+			new RegExp(`${consolePath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
 		);
 
 		// The run's reports fold too, each opening its report from anywhere.
@@ -642,7 +642,7 @@ test.describe("narrow", () => {
 			(box?.y ?? 0) + (box?.height ?? 0) / 2,
 		);
 		await expect(page).toHaveURL(
-			new RegExp(`${nextPath(hashbrown.slug, "reports")}/[0-9a-f-]{36}$`),
+			new RegExp(`${consolePath(hashbrown.slug, "reports")}/[0-9a-f-]{36}$`),
 		);
 	});
 });

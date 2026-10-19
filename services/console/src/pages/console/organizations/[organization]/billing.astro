@@ -1,24 +1,7 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
-import { IS_BENCHER_CLOUD } from "astro:env/client";
-
-import OrgLayout from "../../../../layouts/console/OrgLayout.astro";
-import BillingPanel from "../../../../components/console/billing/BillingPanel";
-import AccountGate from "../../../../next/astro/AccountGate.astro";
-import { ORGANIZATIONS_PATH } from "../../../../next/paths";
-
-const params = Astro.params;
-const title = "Billing";
+import OrganizationPage from "../../../../next/astro/OrganizationPage.astro";
 ---
 
-<OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
-  <AccountGate slot="head" next={`${ORGANIZATIONS_PATH}/${params.organization}/billing`} />
-  <BillingPanel
-    client:only="solid-js"
-    apiUrl={BENCHER_API_URL}
-    isBencherCloud={IS_BENCHER_CLOUD}
-    params={params}
-  />
-</OrgLayout>
+<OrganizationPage />

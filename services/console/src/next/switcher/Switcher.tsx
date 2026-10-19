@@ -98,13 +98,9 @@ const Switcher = (props: {
 	};
 	const go = (row: SwitcherRow) => {
 		// A pick leads the next opening, even one whose data is all cached.
-		rememberVersion(localStorage, row.slug, row.classic ? 0 : 1);
+		rememberVersion(localStorage, row.slug, row.version);
 		props.onClose(true);
-		if (row.classic) {
-			location.assign(row.href);
-		} else {
-			navigate(row.href, { resolve: false });
-		}
+		navigate(row.href, { resolve: false });
 	};
 	const onKeyDown = (event: KeyboardEvent) => {
 		const count = matches().length;
@@ -281,20 +277,10 @@ const Switcher = (props: {
 										</span>
 										<span class="sw-run">
 											<Show
-												when={!match.row.classic}
-												fallback={
-													<span class="sw-classic">
-														Classic
-														<Glyph d="M7 17L17 7M8 7h9v9" />
-													</span>
-												}
+												when={match.row.age}
+												fallback={<span class="faint">No runs</span>}
 											>
-												<Show
-													when={match.row.age}
-													fallback={<span class="faint">No runs</span>}
-												>
-													{(age) => <span>{age()}</span>}
-												</Show>
+												{(age) => <span>{age()}</span>}
 											</Show>
 										</span>
 										<span class="sw-alerts">

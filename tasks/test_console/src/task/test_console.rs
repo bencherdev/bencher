@@ -1,8 +1,7 @@
 use std::{thread, time::Duration};
 
 use bencher_json::{
-    BmfVersion, DEV_BENCHER_API_URL_STR, DEVEL_BENCHER_URL_STR, JsonProject,
-    PROD_BENCHER_API_URL_STR, PROD_BENCHER_URL_STR,
+    DEV_BENCHER_API_URL_STR, DEVEL_BENCHER_URL_STR, PROD_BENCHER_API_URL_STR, PROD_BENCHER_URL_STR,
 };
 use serde::Serialize;
 
@@ -54,18 +53,13 @@ impl TestConsole {
         };
 
         // TODO replace this with some actual e2e tests
-        let (project_slug, project_name) = if self.dev {
-            ("the-computer", "The Computer")
-        } else {
-            ("bencher", "Bencher")
-        };
+        let project_slug = if self.dev { "the-computer" } else { "bencher" };
         let mut result = Ok(());
         for i in 0..5 {
             match test_ui_project(
                 console_url,
                 api_url,
                 project_slug,
-                project_name,
                 self.agent_key.as_deref(),
             )
             .await
@@ -95,35 +89,16 @@ async fn test_ui_project(
     console_url: &str,
     api_url: &str,
     project_slug: &str,
-    project_name: &str,
     agent_key: Option<&str>,
 ) -> anyhow::Result<()> {
-    let project: JsonProject = reqwest::Client::builder()
-        .user_agent(USER_AGENT)
-        .build()?
-        .get(format!("{api_url}/v0/projects/{project_slug}"))
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-    let (url, find_str) = if project.bmf_version == BmfVersion::V1 {
-        (
-            format!("{console_url}/next/perf/{project_slug}"),
-            format!("<title>{project_name} | Bencher</title>"),
-        )
-    } else {
-        (
-            format!("{console_url}/perf/{project_slug}"),
-            format!("<title>{project_name} | Bencher - Continuous Benchmarking</title>"),
-        )
-    };
-    println!(
-        "Testing UI project {project_slug} (BMF version {}) at {url}",
-        project.bmf_version
-    );
+    // The public plot reads nothing on the server, so its document names the project by its slug
+    // and carries the API URL the browser reads it from.
+    let url = format!("{console_url}/perf/{project_slug}");
+    let title = format!("<title>{project_slug} | Bencher</title>");
+    let api = format!("data-api-url=\"{api_url}\"");
+    println!("Testing UI project {project_slug} at {url}");
 
-    fetch_and_check(&url, agent_key, &find_str).await
+    fetch_and_check(&url, agent_key, &[&title, &api]).await
 }
 
 async fn test_ui_version(console_url: &str, agent_key: Option<&str>) -> anyhow::Result<()> {
@@ -132,10 +107,14 @@ async fn test_ui_version(console_url: &str, agent_key: Option<&str>) -> anyhow::
 
     let version = format!("Latest Version: <code>v{API_VERSION}</code>");
 
-    fetch_and_check(&url, agent_key, &version).await
+    fetch_and_check(&url, agent_key, &[&version]).await
 }
 
-async fn fetch_and_check(url: &str, agent_key: Option<&str>, find_str: &str) -> anyhow::Result<()> {
+async fn fetch_and_check(
+    url: &str,
+    agent_key: Option<&str>,
+    find_strs: &[&str],
+) -> anyhow::Result<()> {
     let client = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
     let request = client.get(url);
     let request = if let Some(agent_key) = agent_key {
@@ -146,10 +125,12 @@ async fn fetch_and_check(url: &str, agent_key: Option<&str>, find_str: &str) -> 
     let response = request.send().await?;
     let final_url = response.url().clone();
     let html = response.text().await?;
-    if !html.contains(find_str) {
-        return Err(anyhow::anyhow!(
-            "Failed to find `{find_str}` in HTML from {final_url}"
-        ));
+    for find_str in find_strs {
+        if !html.contains(find_str) {
+            return Err(anyhow::anyhow!(
+                "Failed to find `{find_str}` in HTML from {final_url}"
+            ));
+        }
     }
 
     Ok(())

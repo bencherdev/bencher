@@ -103,15 +103,24 @@ test("a reader with no projects onboards with their plan", async () => {
 	).toBe("/console/onboard/project?plan=team");
 });
 
-// Kills an organization's notice dropped, or the organization not used.
-test("a reader of one organization lands on its projects with the notice", async () => {
+// Kills a reader with a project sent anywhere but its root in the console.
+test("a reader with a project lands on it", async () => {
 	expect(
 		await redirect(
 			{ organizations: [acme], projects: [classic] },
 			"?notify_kind=ok&notify_text=Welcome",
 		),
-	).toBe(
-		"/console/organizations/acme/projects?notify_kind=ok&notify_text=Welcome",
+	).toBe("/console/projects/classic/");
+});
+
+// Kills a remembered organization sent to a page the console no longer has.
+test("a reader with no project lands on their remembered organization", async () => {
+	localStorage.setItem(
+		"BENCHER_ORGANIZATION",
+		JSON.stringify({ uuid: acme.uuid, name: acme.name, slug: acme.slug }),
+	);
+	expect(await redirect({ organizations: [acme, other], projects: [] })).toBe(
+		"/console/organizations/acme/settings",
 	);
 });
 
@@ -126,9 +135,12 @@ test("a reader with a plan lands on their organization's billing", async () => {
 });
 
 // Kills several organizations sent to one of them.
-test("a reader of several organizations lands on the list", async () => {
+test("a reader of several organizations with a plan lands on the list", async () => {
 	expect(
-		await redirect({ organizations: [acme, other], projects: [classic] }),
+		await redirect(
+			{ organizations: [acme, other], projects: [classic] },
+			"?plan=team",
+		),
 	).toBe("/console/organizations");
 });
 
@@ -137,21 +149,4 @@ test("a reader of no organization is sent to help", async () => {
 	expect(await redirect({ organizations: [], projects: [] })).toMatch(
 		/^hidden \/console\/users\/reader\/help\?/,
 	);
-});
-
-// Kills a version 0 project's notice dropped on the way to its classic page.
-test("a newest version 0 project lands on its classic plots with the notice", async () => {
-	const next: JsonConsoleUserProject = {
-		...classic,
-		uuid: "next-uuid",
-		slug: "next",
-		bmf_version: 1,
-		last_report: 500,
-	};
-	expect(
-		await redirect(
-			{ organizations: [acme], projects: [next, classic] },
-			"?notify_kind=ok&notify_text=Claimed",
-		),
-	).toBe("/console/projects/classic/plots?notify_kind=ok&notify_text=Claimed");
 });

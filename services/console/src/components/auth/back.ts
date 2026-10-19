@@ -8,7 +8,7 @@ const RETURN_KEY = "BENCHER_RETURN";
 export const RETURN_TTL = 30 * 60 * 1000;
 
 // The pages that send a reader to sign in: the console and the public plot.
-const RETURNS = ["/console/", "/perf/", "/next/console/", "/next/perf/"];
+const RETURNS = ["/console/", "/perf/"];
 // Servers resolve these differently, and no page of the console or the public plot has one.
 const UNRESOLVED = /\\|(^|\/)\.\.?(\/|$)/;
 // Sign in and its flows, the build's own files, and any file that is not a page.

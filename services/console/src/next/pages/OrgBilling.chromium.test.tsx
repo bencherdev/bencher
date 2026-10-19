@@ -788,5 +788,5 @@ test("the rail marks Billing current, in the new console", async () => {
 	await expect.element(billing).toHaveAttribute("aria-current", "page");
 	await expect
 		.element(billing)
-		.toHaveAttribute("href", "/next/console/organizations/pompeii-llc/billing");
+		.toHaveAttribute("href", "/console/organizations/pompeii-llc/billing");
 });

@@ -8,8 +8,7 @@ import { accountPage } from "./account/paths";
 import type { Api } from "./api";
 import { FlushContext } from "./flush";
 import Layout from "./Layout";
-import type { BmfVersion } from "./memory";
-import { NEXT_CONSOLE, organizationOf } from "./paths";
+import { CONSOLE_PATH, organizationOf } from "./paths";
 import { rememberReader } from "./reader";
 import { CONSOLE_ROUTES, OrganizationLayout, PROJECTS_ROUTE } from "./routes";
 
@@ -17,7 +16,6 @@ const App = (props: {
 	client: QueryClient;
 	api: Api;
 	reader: JsonAuthUser;
-	versions: () => Record<string, BmfVersion>;
 	flush: () => Promise<void>;
 	/** Ends the session; a sign in comes back here unless `back` is false. */
 	signOut: (back?: boolean) => void;
@@ -42,7 +40,7 @@ const App = (props: {
 					}}
 				>
 					<Router
-						base={NEXT_CONSOLE}
+						base={CONSOLE_PATH}
 						root={(section) => (
 							<Switch
 								fallback={
@@ -50,7 +48,6 @@ const App = (props: {
 										{...section}
 										api={props.api}
 										reader={reader()}
-										versions={props.versions}
 										host={props.host}
 										route={PROJECTS_ROUTE}
 										signOut={props.signOut}

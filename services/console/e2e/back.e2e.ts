@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
-import { expect, nextPath, seed, signedIn, signedOut, test } from "./fixtures";
+import {
+	expect,
+	consolePath,
+	seed,
+	signedIn,
+	signedOut,
+	test,
+} from "./fixtures";
 import { finishGitHub, startGitHub } from "./github";
 import { mailedLink } from "./mail";
 
@@ -18,10 +25,12 @@ const keptReturn = (page: Page) =>
 const kept = (path: string, at: number) =>
 	JSON.stringify({ href: absolute(path), at });
 // The member's projects change as other tests run; the admin's do not.
-const mainProject = new URL(nextPath(seed.admin_newest.slug), seed.console_url)
-	.href;
+const mainProject = new URL(
+	consolePath(seed.admin_newest.slug),
+	seed.console_url,
+).href;
 
-const alerts = `${nextPath(seed.projects.hashbrown.slug, "alerts")}?status=all`;
+const alerts = `${consolePath(seed.projects.hashbrown.slug, "alerts")}?status=all`;
 
 test.describe("signed out", () => {
 	test.use({ storageState: signedOut });
@@ -66,7 +75,7 @@ test.describe("signed out", () => {
 	// Kills a provider sign in that lands on the console instead of the page,
 	// or keeps the page for a later sign in.
 	test("a provider sign in returns to the page", async ({ page }) => {
-		const path = nextPath(seed.projects.private.slug, "runs");
+		const path = consolePath(seed.projects.private.slug, "runs");
 		await page.goto(path);
 		await expect(page).toHaveURL(logIn(path));
 		const { state } = await startGitHub(page, logIn(path));
@@ -131,11 +140,11 @@ test.describe("signed in", () => {
 			"javascript:alert(1)",
 			" JavaScript:alert(1)",
 			"\tjava\nscript:alert(1)",
-			"//evil.example/next/console",
-			"/\\evil.example/next/console",
+			"//evil.example/console",
+			"/\\evil.example/console",
 			" //evil.example",
-			"https://evil.example/next/console",
-			`${seed.console_url}@evil.example/next/console`,
+			"https://evil.example/console",
+			`${seed.console_url}@evil.example/console`,
 			`${seed.api_url}/v0/projects`,
 			"/auth/logout",
 		];
@@ -170,15 +179,15 @@ test.describe("signed in", () => {
 		`blob:${seed.console_url}/${REQUEST}`,
 		"/x/..%2fauth/logout",
 		"/x/..%5Cauth/logout",
-		"/next/console/..%2f..%2fauth/logout",
+		"/console/..%2f..%2fauth/logout",
 		"/perf/..%2fauth/logout",
 		"/perf/..%5Cauth/logout",
 		"/perf/..%252fauth/logout",
-		"/next/perf/%2e%2e%2fauth/logout",
+		"/perf/%2e%2e%2fauth/logout",
 		"/console/x%5Cy/..%2f..%2fauth/logout",
 		"/perf/a%5Cb/..%2f..%2fauth/logout",
 		"/console/x%5Cy/%2e%2e%2f%2e%2e%2fauth/logout",
-		`/next/console/a%5Cb%5Cc/..%2f..%2f..%2fauth/authorize?request=${REQUEST}`,
+		`/console/a%5Cb%5Cc/..%2f..%2f..%2fauth/authorize?request=${REQUEST}`,
 		"/consoles/",
 		"/docs/",
 		"/pricing",

@@ -11,11 +11,9 @@ import type {
 } from "../src/types/bencher";
 import { createReader, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { VERSION_KEY, expect, seed, signedIn, test } from "./fixtures";
+import { expect, seed, signedIn, test } from "./fixtures";
 
-const { hashbrown, version_zero } = seed.projects;
-
-const ORGANIZATIONS = "/next/console/organizations";
+const ORGANIZATIONS = "/console/organizations";
 const heading = (page: Page) =>
 	page.getByRole("heading", { level: 1, name: "Organizations" });
 const dialog = (page: Page) =>
@@ -72,9 +70,9 @@ test.describe("Organizations", () => {
 			.click();
 
 		await expect(page).toHaveURL(
-			/\/next\/console\/organizations\/([a-z0-9-]+)\/projects\/add$/,
+			/\/console\/organizations\/([a-z0-9-]+)\/projects\/add$/,
 		);
-		const slug = new URL(page.url()).pathname.split("/")[4] ?? "";
+		const slug = new URL(page.url()).pathname.split("/")[3] ?? "";
 		const made = await send<JsonOrganization>(
 			request,
 			reader,
@@ -87,7 +85,7 @@ test.describe("Organizations", () => {
 
 		await page.getByRole("textbox", { name: "Name" }).fill(unique("Rosti"));
 		await page.getByRole("button", { name: "Create project" }).click();
-		await expect(page).toHaveURL(/\/console\/projects\/[a-z0-9-]+\/plots$/);
+		await expect(page).toHaveURL(/\/console\/projects\/[a-z0-9-]+\/$/);
 
 		// The bootstrap never answers, so the row can come only from the cache.
 		await page.route(`${seed.api_url}/v0/console/users/**`, () => {});
@@ -135,7 +133,7 @@ test.describe("Organizations", () => {
 				emptyRow.getByRole("link", { name: "New project" }),
 			).toHaveAttribute(
 				"href",
-				`/next/console/organizations/${empty.slug}/projects/add`,
+				`/console/organizations/${empty.slug}/projects/add`,
 			);
 			await expect(fullRow).toContainText("1 project");
 			await expect(
@@ -143,10 +141,7 @@ test.describe("Organizations", () => {
 			).toHaveCount(0);
 			await expect(
 				fullRow.getByRole("link", { name: full.name }),
-			).toHaveAttribute(
-				"href",
-				`/next/console/organizations/${full.slug}/settings`,
-			);
+			).toHaveAttribute("href", `/console/organizations/${full.slug}/settings`);
 		}
 	});
 });
@@ -154,7 +149,7 @@ test.describe("Organizations", () => {
 test.describe("an organization's row", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
-	// Kills a row that leads to the classic settings, or to another organization.
+	// Kills a row that leads to another organization's settings.
 	test("opens the organization's General", async ({ page }) => {
 		await page.goto(ORGANIZATIONS);
 		await table(page)
@@ -176,7 +171,7 @@ test.describe("from Profile", () => {
 	// Kills a rail that leaves the console's app for Organizations, reloading
 	// the page.
 	test("the rail opens Organizations without a reload", async ({ page }) => {
-		await page.goto(`/next/console/users/${seed.member.user.slug}/settings`);
+		await page.goto(`/console/users/${seed.member.user.slug}/settings`);
 		await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
 			seed.member.user.name,
 		);
@@ -205,7 +200,7 @@ test.describe("from Profile", () => {
 test.describe("New organization's own path", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
-	// Kills the classic shortcut lost under /next/, and a closed dialog that
+	// Kills the classic form's path left with no page, and a closed dialog that
 	// leaves the reader on it, where a reload opens it again.
 	test("opens the dialog, and closing it goes back to the list", async ({
 		page,
@@ -218,36 +213,6 @@ test.describe("New organization's own path", () => {
 		await expect(dialog(page)).toHaveCount(0);
 		await expect(page).toHaveURL(ORGANIZATIONS);
 		await expect(heading(page)).toBeVisible();
-	});
-});
-
-const remembered = (versions: Record<string, number>) =>
-	signedIn(seed.member, { [VERSION_KEY]: JSON.stringify(versions) });
-
-test.describe("the classic Organizations, for a reader with a version 1 project", () => {
-	test.use({ storageState: remembered({ [hashbrown.slug]: 1 }) });
-
-	// Kills a classic list or form that keeps a reader the new page serves.
-	test("sends the reader to Organizations under /next/", async ({ page }) => {
-		await page.goto("/console/organizations");
-		await expect(page).toHaveURL(ORGANIZATIONS);
-		await expect(heading(page)).toBeVisible();
-
-		await page.goto("/console/organizations/add");
-		await expect(page).toHaveURL(`${ORGANIZATIONS}/add`);
-		await expect(dialog(page)).toBeVisible();
-	});
-});
-
-test.describe("the classic Organizations, for a reader of version 0 projects only", () => {
-	test.use({ storageState: remembered({ [version_zero.slug]: 0 }) });
-
-	// Kills a classic list that sends away a reader the new one does not serve.
-	test("keeps the reader", async ({ page }) => {
-		await page.goto("/console/organizations");
-		await page.waitForLoadState("networkidle");
-
-		expect(new URL(page.url()).pathname).toBe("/console/organizations");
 	});
 });
 

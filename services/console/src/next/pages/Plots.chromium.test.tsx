@@ -16,7 +16,7 @@ import type {
 import { type Api, ApiError, type Method } from "../api";
 import { budget } from "../budget";
 import { createQueryClient } from "../cache";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { middle, rowsOf, tokenRgb } from "../plot/pixels";
 import { placed } from "../plots/order";
 import { testTile } from "../plots/testing";
@@ -25,7 +25,7 @@ import { consoleProjectQuery } from "../queries";
 import { bootstrapOf } from "../settings/testing";
 import Plots from "./Plots";
 
-const PATH = `${NEXT_PROJECTS}/hashbrown/plots`;
+const PATH = `${PROJECTS_PATH}/hashbrown/plots`;
 
 let dispose: (() => void) | undefined;
 afterEach(() => {
@@ -177,7 +177,7 @@ const mount = (api: Api, client: QueryClient) => {
 			<QueryClientProvider client={client}>
 				<MemoryRouter
 					history={history}
-					base={NEXT_PROJECTS}
+					base={PROJECTS_PATH}
 					root={(props) => (
 						<ProjectContext.Provider value={{ api, slug: () => "hashbrown" }}>
 							<Suspense fallback={<p>Suspended</p>}>{props.children}</Suspense>
@@ -333,7 +333,7 @@ test("an empty Plots links to Explore, Runs, and Alerts to pin from", async () =
 	] as const) {
 		await expect
 			.element(page.getByRole("link", { name, exact: true }))
-			.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/${tab}`);
+			.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/${tab}`);
 	}
 });
 
@@ -353,7 +353,7 @@ test("New plot is drawn once on an empty Plots, where the first pin leaves it, a
 	expect(newPlot.elements()).toHaveLength(1);
 	await expect
 		.element(newPlot)
-		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/explore`);
+		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/explore`);
 	const before = placed();
 	dispose?.();
 	document.body.replaceChildren();

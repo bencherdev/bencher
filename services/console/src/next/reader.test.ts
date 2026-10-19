@@ -47,7 +47,7 @@ describe("isCurrent", () => {
 describe("signInHref", () => {
 	// Kills a way back that the classic sign in cannot read.
 	test("carries the way back the classic console reads", () => {
-		const path = "/next/console/projects/hashbrown/reports?page=2#top";
+		const path = "/console/projects/hashbrown/reports?page=2#top";
 		const href = new URL(signInHref(path), "https://bencher.dev");
 		expect(href.pathname).toBe("/auth/login");
 		expect(decodeBase64(href.searchParams.get("back"))).toBe(path);

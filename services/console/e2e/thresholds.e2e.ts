@@ -5,7 +5,7 @@ import { axeInBothThemes } from "./axe";
 import {
 	approach,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	settle,
 	signedIn,
@@ -21,7 +21,7 @@ import {
 const { hashbrown } = seed.projects;
 
 const thresholds = (slug: string, search = "") =>
-	`${nextPath(slug, "thresholds")}${search}`;
+	`${consolePath(slug, "thresholds")}${search}`;
 const thresholdPath = (slug: string, uuid: string, search = "") =>
 	`${thresholds(slug)}/${uuid}${search}`;
 
@@ -284,7 +284,7 @@ test("a row opens the threshold, its model, and the alerts it raised", async ({
 		dismissedRow.getByRole("link", { name: /, open the report$/ }),
 	).toHaveAttribute(
 		"href",
-		new RegExp(`${nextPath(hashbrown.slug, "reports")}/[0-9a-f-]{36}$`),
+		new RegExp(`${consolePath(hashbrown.slug, "reports")}/[0-9a-f-]{36}$`),
 	);
 
 	await page.getByRole("radio", { name: "Active" }).click();
@@ -386,7 +386,7 @@ test("Open in Explore names the threshold's lines that alerted", async ({
 	});
 	await expect(explore).toHaveAttribute(
 		"href",
-		new RegExp(`^${nextPath(hashbrown.slug, "explore")}\\?`),
+		new RegExp(`^${consolePath(hashbrown.slug, "explore")}\\?`),
 	);
 	const href = new URL(
 		(await explore.getAttribute("href")) ?? "",

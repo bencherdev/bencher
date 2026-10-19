@@ -1,16 +1,12 @@
-/** The new console, which keeps the classic console's paths under `/next`. */
-export const NEXT_CONSOLE = "/next/console";
-/** The classic console's project pages. */
-const CLASSIC_PROJECTS = "/console/projects";
-/** The new console serves BMF v1 projects here until version 0 retires. */
-export const NEXT_PROJECTS = `/next${CLASSIC_PROJECTS}`;
+export const CONSOLE_PATH = "/console";
+export const PROJECTS_PATH = `${CONSOLE_PATH}/projects`;
 /** The account pages, under the reader's slug. */
-export const NEXT_USERS = `${NEXT_CONSOLE}/users`;
+export const USERS_PATH = `${CONSOLE_PATH}/users`;
 
-export const profilePath = (user: string) => `${NEXT_USERS}/${user}/settings`;
+export const profilePath = (user: string) => `${USERS_PATH}/${user}/settings`;
 
 /** The reader's organizations, with each one's pages under its slug or UUID. */
-export const ORGANIZATIONS_PATH = `${NEXT_CONSOLE}/organizations`;
+export const ORGANIZATIONS_PATH = `${CONSOLE_PATH}/organizations`;
 
 export const organizationPath = (organization: string) =>
 	`${ORGANIZATIONS_PATH}/${organization}/settings`;
@@ -58,13 +54,13 @@ export const TABS: readonly { tab: Tab; label: string; segments: string[] }[] =
 	];
 
 export const projectPath = (slug: string, tab?: Tab) =>
-	`${NEXT_PROJECTS}/${slug}/${tab ?? ""}`;
+	`${PROJECTS_PATH}/${slug}/${tab ?? ""}`;
 
 /** A report's page, which sits outside the tab row's paths and belongs to Runs. */
 const REPORTS = "reports";
 
 export const reportPath = (slug: string, report: string) =>
-	`${NEXT_PROJECTS}/${slug}/${REPORTS}/${report}`;
+	`${PROJECTS_PATH}/${slug}/${REPORTS}/${report}`;
 
 export const alertPath = (slug: string, alert: string) =>
 	`${projectPath(slug, "alerts")}/${alert}`;
@@ -133,8 +129,8 @@ export interface ProjectLocation {
 	rest: string[];
 }
 
-export const parseNextPath = (pathname: string) =>
-	parseProjectPath(NEXT_PROJECTS, pathname);
+export const parseConsolePath = (pathname: string) =>
+	parseProjectPath(PROJECTS_PATH, pathname);
 
 const isReport = (rest: string[]) => rest.length === 2 && rest[0] === REPORTS;
 
@@ -148,41 +144,6 @@ export const tabOf = (rest: string[]): Tab | undefined => {
 		return "runs";
 	}
 	return TABS.find(({ segments }) => segments.includes(segment))?.tab;
-};
-
-/** A location, such as `window.location` or a `URL`. */
-type Place = Pick<URL, "pathname" | "hash">;
-
-// The classic perf page and Explore are the same place.
-const CLASSIC_PERF = "perf";
-const NEXT_EXPLORE = "explore";
-// The classic keys list is Settings' Keys.
-const KEYS = "keys";
-// The classic console lists reports where the new one lists runs, and has no run page.
-const NEXT_RUNS = "runs";
-
-/** The same place in the new console, if it has a page for it. */
-export const nextHref = ({ pathname, hash }: Place) => {
-	const place = parseProjectPath(CLASSIC_PROJECTS, pathname);
-	if (!place) {
-		return undefined;
-	}
-	const { slug, rest } = place;
-	if (rest[0] === CLASSIC_PERF) {
-		return projectPath(slug, NEXT_EXPLORE);
-	}
-	// Keys are one list in Settings, with no page of their own.
-	if (rest[0] === KEYS) {
-		return `${NEXT_PROJECTS}/${slug}/${KEYS}`;
-	}
-	// The new console creates nothing by hand, so a form lands on what it would edit.
-	const last = rest.at(-1);
-	const kept = last === "add" || last === "edit" ? rest.slice(0, -1) : rest;
-	const target = kept.length === 1 && kept[0] === REPORTS ? [NEXT_RUNS] : kept;
-	if (!tabOf(target)) {
-		return undefined;
-	}
-	return `${NEXT_PROJECTS}/${slug}/${target.join("/")}${kept.length < rest.length ? "" : hash}`;
 };
 
 const parseProjectPath = (

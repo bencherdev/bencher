@@ -6,7 +6,6 @@ import {
 	postOptions,
 	putOptions,
 	pathOptions,
-	deleteOptions,
 } from "./http";
 
 describe("apiHost", () => {
@@ -93,18 +92,5 @@ describe("pathOptions", () => {
 		);
 		expect(opts.method).toBe("PATCH");
 		expect(opts.data).toEqual(data);
-	});
-});
-
-describe("deleteOptions", () => {
-	test("returns DELETE config without data", () => {
-		const opts = deleteOptions(
-			"https://api.bencher.dev",
-			"/v0/projects/slug",
-			"tok",
-		);
-		expect(opts.method).toBe("DELETE");
-		expect(opts.url).toBe("https://api.bencher.dev/v0/projects/slug");
-		expect(opts.headers.Authorization).toBe("Bearer tok");
 	});
 });

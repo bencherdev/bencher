@@ -3,7 +3,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import {
 	USER_KEY,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	signedIn,
 	signedOut,
@@ -23,7 +23,7 @@ const CONSENT = "/auth/authorize";
 
 const PROJECT_SCOPES = "projects:read projects:write";
 // A page of the console that a sign in would return to, but for the request.
-const wayBack = Buffer.from(nextPath(seed.projects.hashbrown.slug)).toString(
+const wayBack = Buffer.from(consolePath(seed.projects.hashbrown.slug)).toString(
 	"base64",
 );
 const keptReturn = (page: Page) =>

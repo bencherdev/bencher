@@ -3,7 +3,7 @@ import {
 	VERSION_KEY,
 	crumb,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	settle,
 	signedIn,
@@ -26,13 +26,13 @@ import {
 
 const { hashbrown } = seed.projects;
 // The shell alone: a project path no page draws, so no page data rides along.
-const SHELL = nextPath(hashbrown.slug, "nowhere");
-const RUNS = nextPath(hashbrown.slug, "runs");
+const SHELL = consolePath(hashbrown.slug, "nowhere");
+const RUNS = consolePath(hashbrown.slug, "runs");
 // The project root, which is Runs, where bencher.dev lands a reader.
-const PROJECT = nextPath(hashbrown.slug);
-const EXPLORE = nextPath(hashbrown.slug, "explore");
+const PROJECT = consolePath(hashbrown.slug);
+const EXPLORE = consolePath(hashbrown.slug, "explore");
 // A report's page, under no tab of its own.
-const REPORTS = nextPath(hashbrown.slug, "reports");
+const REPORTS = consolePath(hashbrown.slug, "reports");
 
 test.use({ storageState: signedIn(seed.member) });
 
@@ -509,7 +509,7 @@ test("a cold metric landing reads in exactly two rounds", async ({
 	const metric = await newestMetric(request);
 	const cost = await coldLoad(
 		page,
-		nextPath(hashbrown.slug, `metrics/${metric}`),
+		consolePath(hashbrown.slug, `metrics/${metric}`),
 		() => expect(page.getByRole("figure")).toHaveAccessibleName("1 line"),
 	);
 	report("metric landing", cost);
@@ -520,10 +520,13 @@ test("a cold metric landing reads in exactly two rounds", async ({
 // Kills a General section that asks the API for what the shell's request
 // already holds, and one that shifts as the project arrives.
 test("a cold load of General holds the speed ceilings", async ({ page }) => {
-	const cost = await coldLoad(page, nextPath(hashbrown.slug, "settings"), () =>
-		expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
-			hashbrown.name,
-		),
+	const cost = await coldLoad(
+		page,
+		consolePath(hashbrown.slug, "settings"),
+		() =>
+			expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
+				hashbrown.name,
+			),
 	);
 	report("settings cold load", cost);
 	const ceiling = ceilings.settingsColdLoad;
@@ -573,7 +576,7 @@ const holds = (cost: Cost, ceiling: Partial<Record<keyof Cost, number>>) => {
 };
 
 const USER = `${seed.api_url}/v0/users/${seed.member.user.slug}`;
-const ACCOUNT = `/next/console/users/${seed.member.user.slug}`;
+const ACCOUNT = `/console/users/${seed.member.user.slug}`;
 
 // Kills a Profile that waits for the API to paint the reader's own account,
 // asks for more than the account and its legacy tokens, chains a second
@@ -687,9 +690,7 @@ test("a cold load of an organization's General holds the speed ceilings", async 
 		page.waitForResponse(`${organization}/allowed/edit`),
 		page.waitForResponse(`${organization}/allowed/delete`),
 	]);
-	await page.goto(
-		`/next/console/organizations/${seed.organization.slug}/settings`,
-	);
+	await page.goto(`/console/organizations/${seed.organization.slug}/settings`);
 	await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
 		seed.organization.name,
 	);
@@ -733,9 +734,7 @@ test("a cold load of an organization's Members holds the speed ceilings", async 
 		page.waitForResponse(`${organization}/allowed/create_role`),
 		page.waitForResponse(`${organization}/allowed/delete_role`),
 	]);
-	await page.goto(
-		`/next/console/organizations/${seed.organization.slug}/members`,
-	);
+	await page.goto(`/console/organizations/${seed.organization.slug}/members`);
 	await expect(
 		page
 			.getByRole("table", { name: "Members" })
@@ -760,7 +759,7 @@ test("a cold load of Organizations holds the speed ceilings", async ({
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
-	await page.goto("/next/console/organizations");
+	await page.goto("/console/organizations");
 	await expect(
 		page
 			.getByRole("table", { name: "Your organizations" })
@@ -797,7 +796,7 @@ test("a cold load of New project holds the speed ceilings", async ({
 	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
 	const cost = await accountColdLoad(
 		page,
-		`/next/console/organizations/${seed.organization.slug}/projects/add`,
+		`/console/organizations/${seed.organization.slug}/projects/add`,
 		[
 			organization,
 			`${organization}/usage`,
@@ -818,7 +817,7 @@ test("a cold load of an organization's Billing holds the speed ceilings", async 
 	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
 	const cost = await accountColdLoad(
 		page,
-		`/next/console/organizations/${seed.organization.slug}/billing`,
+		`/console/organizations/${seed.organization.slug}/billing`,
 		[organization, `${organization}/allowed/manage`, `${organization}/usage`],
 		() =>
 			expect(
@@ -832,7 +831,7 @@ test("a cold load of an organization's Billing holds the speed ceilings", async 
 // Kills key lists that wait on the shell's request, a third request for the
 // other status, and a table that shifts as the keys arrive.
 test("a cold load of Keys holds the speed ceilings", async ({ page }) => {
-	const cost = await coldLoad(page, nextPath(hashbrown.slug, "keys"), () =>
+	const cost = await coldLoad(page, consolePath(hashbrown.slug, "keys"), () =>
 		expect(page.getByRole("table", { name: "Active keys" })).toBeVisible(),
 	);
 	report("keys cold load", cost);
@@ -871,7 +870,7 @@ for (const [width, viewport] of [
 			["Runs", RUNS, runsReady, ceilings.runsColdLoad],
 			[
 				"General",
-				nextPath(hashbrown.slug, "settings"),
+				consolePath(hashbrown.slug, "settings"),
 				(page: Page) =>
 					expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
 						hashbrown.name,
@@ -880,7 +879,7 @@ for (const [width, viewport] of [
 			],
 			[
 				"Keys",
-				nextPath(hashbrown.slug, "keys"),
+				consolePath(hashbrown.slug, "keys"),
 				(page: Page) =>
 					expect(
 						page.getByRole("table", { name: "Active keys" }),
@@ -904,7 +903,7 @@ for (const [width, viewport] of [
 test("moving from General to Keys holds the speed ceilings", async ({
 	page,
 }) => {
-	await page.goto(nextPath(hashbrown.slug, "settings"));
+	await page.goto(consolePath(hashbrown.slug, "settings"));
 	await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
 		hashbrown.name,
 	);
@@ -1154,8 +1153,10 @@ for (const [width, viewport] of [
 		test(`a cold Plots load holds its speed ceilings at ${width}`, async ({
 			page,
 		}) => {
-			const cost = await coldLoad(page, nextPath(hashbrown.slug, "plots"), () =>
-				alertingTileShown(page),
+			const cost = await coldLoad(
+				page,
+				consolePath(hashbrown.slug, "plots"),
+				() => alertingTileShown(page),
 			);
 			report(`plots cold load ${width}`, cost);
 			const ceiling = ceilings.plotsColdLoad;
@@ -1419,7 +1420,7 @@ test("an Explore key toggle fits in a frame", async ({ page, request }) => {
 	expect(cost.apiRequests).toBe(0);
 });
 
-const THRESHOLDS = nextPath(hashbrown.slug, "thresholds");
+const THRESHOLDS = consolePath(hashbrown.slug, "thresholds");
 
 // Kills a switch into Thresholds that refetches the shell, asks for the list in
 // more than one request, pulls in more than its page, or finds its code a
@@ -1620,7 +1621,7 @@ for (const [width, viewport] of [
 			}) => {
 				const cost = await coldLoad(
 					page,
-					nextPath(hashbrown.slug, path),
+					consolePath(hashbrown.slug, path),
 					async () => {
 						await expect(shown(page)).toBeVisible();
 					},
@@ -1665,7 +1666,7 @@ for (const [width, viewport] of [
 		}) => {
 			const cost = await coldLoad(
 				page,
-				nextPath(hashbrown.slug, "alerts"),
+				consolePath(hashbrown.slug, "alerts"),
 				() =>
 					expect(
 						page
@@ -1754,7 +1755,7 @@ for (const [width, viewport] of [
 			const alert = await activeAlert(request);
 			const cost = await coldLoad(
 				page,
-				nextPath(hashbrown.slug, `alerts/${alert}`),
+				consolePath(hashbrown.slug, `alerts/${alert}`),
 				async () => {
 					await alertShown(page);
 					await expect(
@@ -1792,7 +1793,7 @@ for (const [width, viewport] of [
 					const alert = await activeAlert(request);
 					const cost = await coldLoad(
 						page,
-						nextPath(hashbrown.slug, `alerts/${alert}`),
+						consolePath(hashbrown.slug, `alerts/${alert}`),
 						async () => {
 							await expect(
 								page.getByText("Read only", { exact: true }),
@@ -1815,7 +1816,7 @@ for (const [width, viewport] of [
 test("a move from Alerts to an alert holds its speed ceilings", async ({
 	page,
 }) => {
-	await page.goto(nextPath(hashbrown.slug, "alerts"));
+	await page.goto(consolePath(hashbrown.slug, "alerts"));
 	await expect(
 		page.getByRole("link", { name: /^Open in Explore: / }).first(),
 	).toBeVisible();
@@ -1845,7 +1846,7 @@ test("a move from Alerts to an alert holds its speed ceilings", async ({
 // Kills a status switch that asks for more than its first batch, chains a
 // second round, or loads more code, before or after its list's idle load.
 test("a status switch on Alerts asks once", async ({ page }) => {
-	await page.goto(nextPath(hashbrown.slug, "alerts"));
+	await page.goto(consolePath(hashbrown.slug, "alerts"));
 	await expect(
 		page
 			.getByRole("table", { name: /^Alerts/ })
@@ -1912,9 +1913,10 @@ for (const [width, viewport] of [
 		});
 
 		// Kills a public page that waits on the API or on code to paint, asks
-		// the API twice or in two rounds, finds code late, links a second
-		// stylesheet or the styles of the console's other pages, or shifts as
-		// the plot arrives.
+		// the API for more than the project and its plot or in two rounds,
+		// finds code late, links a second stylesheet or the styles of the
+		// console's other pages, or shifts as the project's name and the plot
+		// arrive.
 		test(`a cold public plot holds its speed ceilings at ${width}`, async ({
 			page,
 			request,
@@ -1950,7 +1952,7 @@ for (const [width, viewport] of [
 			expect(blocking).toHaveLength(1);
 			expect(blocking[0]).toMatch(/\.css$/);
 			expect(cost.apiAnswersBeforePaint).toBe(0);
-			expect(cost.apiRequests).toBe(1);
+			expect(cost.apiRequests).toBe(2);
 			expect(cost.apiRounds).toBe(1);
 			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.shellShift).toBeLessThanOrEqual(ceiling.cls);
@@ -2033,18 +2035,18 @@ for (const [width, viewport] of [
 	});
 }
 
-// Kills code moved onto the classic console's pages, which every one of them
+// Kills code moved onto the pages that stay classic, which every one of them
 // would then load: a shared file the new console's groups fold more into.
-test("a cold load of a classic perf page holds its byte ceilings", async ({
+test("a cold load of a classic help page holds its byte ceilings", async ({
 	page,
 }) => {
-	await page.goto(`/console/projects/${seed.projects.version_zero.slug}/perf`);
+	await page.goto(`/console/users/${seed.member.user.slug}/help`);
 	await loadedAndIdle(page);
 	await settle(page, 600);
 
 	const cost = await measure(page, seed.api_url);
-	report("classic perf cold load", cost);
-	const ceiling = ceilings.classicPerfColdLoad;
+	report("classic help cold load", cost);
+	const ceiling = ceilings.classicHelpColdLoad;
 	// An island imports its code once it runs, before or after the load event.
 	expect(cost.jsBytes + cost.deferredJsBytes).toBeLessThanOrEqual(
 		ceiling.jsBytes,

@@ -18,7 +18,7 @@ import type {
 	JsonConsoleMeasureRow,
 	JsonConsoleTestbedRow,
 } from "../../types/bencher";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { useNarrow } from "../plot/narrow";
 import { type Range, visibleRange } from "../reports/rows";
 import { ROW_HEIGHT, type Row, thresholdsOf } from "./data";
@@ -262,7 +262,7 @@ const DimensionRow = (props: {
 			<td data-fold="l1" class="dm-name">
 				<a
 					class="dm-link rowlink-name"
-					href={`${NEXT_PROJECTS}/${props.slug}/${props.dimension}/${row().slug}`}
+					href={`${PROJECTS_PATH}/${props.slug}/${props.dimension}/${row().slug}`}
 				>
 					{row().name}
 				</a>

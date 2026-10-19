@@ -193,7 +193,7 @@ describe("the list", () => {
 		expect(href("Bagge Farm")).toBe(organizationPath("bagge-farm"));
 		expect(href("Settings", 1)).toBe(organizationPath("nowhere-labs"));
 		expect(href("New project")).toBe(
-			"/next/console/organizations/bagge-farm/projects/add",
+			"/console/organizations/bagge-farm/projects/add",
 		);
 	});
 
@@ -279,7 +279,7 @@ describe("New organization", () => {
 			.poll(() => steps)
 			.toEqual([
 				"flush",
-				"leave /next/console/organizations/bagge-farm-x1/projects/add",
+				"leave /console/organizations/bagge-farm-x1/projects/add",
 			]);
 		expect(sent).toEqual([
 			{
@@ -323,7 +323,7 @@ describe("New organization", () => {
 			.poll(() => steps)
 			.toEqual([
 				"flush",
-				"leave /next/console/organizations/bagge-farm/projects/add",
+				"leave /console/organizations/bagge-farm/projects/add",
 			]);
 		expect(sent).toHaveLength(1);
 	});

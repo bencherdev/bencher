@@ -83,13 +83,14 @@ const nextPreloads = () => {
 			for (const chunk of chunks.values()) {
 				const isEmbed =
 					chunk.isEntry &&
-					/\/src\/pages\/next\/perf\/\[project\]\/embed\.astro\?/.test(
+					/\/src\/pages\/perf\/\[project\]\/embed\.astro\?/.test(
 						chunk.facadeModuleId ?? "",
 					);
-				const page =
-					chunk.isEntry && !isEmbed
-						? chunk.facadeModuleId?.match(/\/src\/pages\/next\/(\w+)\//)?.[1]
-						: undefined;
+				const isPerf =
+					chunk.isEntry &&
+					/\/src\/pages\/perf\/\[project\]\/index\.astro\?/.test(
+						chunk.facadeModuleId ?? "",
+					);
 				// Astro's page script, which every page loads.
 				const isPageScript = chunk.isEntry && chunk.name === "page";
 				// The app's script, which every console page shares.
@@ -99,7 +100,7 @@ const nextPreloads = () => {
 				if (isApp || isPageScript) {
 					closure(chunk.fileName, entry);
 				}
-				if (page === "perf" || isPageScript) {
+				if (isPerf || isPageScript) {
 					closure(chunk.fileName, perf);
 				}
 				if (isEmbed || isPageScript) {

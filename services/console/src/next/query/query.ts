@@ -82,6 +82,8 @@ const PLOT = "plot";
 // The perf query's names, one set or metric name to each.
 const PARAMETERS = PerfQueryKey.Parameters;
 const METRICS = "metrics";
+const VALUE = "value";
+const BOUNDS = [PlotKey.LowerValue, PlotKey.UpperValue] as const;
 // Explore's own.
 const WINDOW = "window";
 const LAYOUT = "layout";
@@ -284,11 +286,9 @@ export const decodeQuery = (search: string): ExploreQuery => {
 			params.getAll(PARAMETERS).flatMap(readParameters),
 		).slice(0, MAX_ENTRIES),
 		measures: uuids(MEASURES),
-		metrics: distinct(
-			params.getAll(METRICS).filter(isName),
-			itself,
-			MAX_ENTRIES,
-		),
+		metrics: params.has(METRICS)
+			? distinct(params.getAll(METRICS).filter(isName), itself, MAX_ENTRIES)
+			: classicMetrics(params),
 		xAxis:
 			X_AXES.get(params.get(X_AXIS)) ?? X_AXES.get(params.get(RANGE)) ?? "date",
 		yScale: Y_SCALES.find((scale) => scale === params.get(Y_AXIS)) ?? "auto",
@@ -303,6 +303,12 @@ export const decodeQuery = (search: string): ExploreQuery => {
 		...(report !== null && isUuid(report) ? { report } : {}),
 		...(plot !== null && isUuid(plot) ? { plot } : {}),
 	};
+};
+
+// A classic link drew the value and each bound it turned on; one with none turned on draws every metric.
+const classicMetrics = (params: URLSearchParams): string[] => {
+	const bounds = BOUNDS.filter((bound) => params.get(bound) === "true");
+	return bounds.length > 0 ? [VALUE, ...bounds] : [];
 };
 
 /** Each UUID with the entry at its position in the list beside it, paired before either is dropped. */

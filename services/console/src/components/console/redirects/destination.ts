@@ -1,3 +1,4 @@
+import { projectPath } from "../../../next/paths";
 import type {
 	JsonConsoleUser,
 	JsonConsoleUserProject,
@@ -5,8 +6,7 @@ import type {
 
 /** Where `/console` sends a signed in reader. */
 export type ConsoleDestination =
-	| { kind: "next"; path: string }
-	| { kind: "classic"; path: string }
+	| { kind: "project"; path: string }
 	| { kind: "organization"; slug: string }
 	| { kind: "organizations" }
 	| { kind: "onboard" }
@@ -17,15 +17,9 @@ export const consoleDestination = (
 	cachedOrganization: undefined | string,
 	plan: boolean,
 ): ConsoleDestination => {
-	const newest = newestProject(reader.projects);
-	if (
-		!plan &&
-		newest &&
-		reader.projects.some((project) => project.bmf_version === 1)
-	) {
-		return newest.bmf_version === 1
-			? { kind: "next", path: `/next/console/projects/${newest.slug}/` }
-			: { kind: "classic", path: `/console/projects/${newest.slug}/plots` };
+	const [main] = [...reader.projects].sort(newestFirst);
+	if (!plan && main) {
+		return { kind: "project", path: projectPath(main.slug) };
 	}
 	if (cachedOrganization) {
 		return { kind: "organization", slug: cachedOrganization };
@@ -42,12 +36,6 @@ export const consoleDestination = (
 		: { kind: "onboard" };
 };
 
-const newestProject = (projects: JsonConsoleUserProject[]) =>
-	projects.reduce<JsonConsoleUserProject | undefined>(
-		(newest, project) =>
-			project.last_report != null &&
-			(newest?.last_report == null || project.last_report > newest.last_report)
-				? project
-				: newest,
-		undefined,
-	);
+// As the switcher orders them: the newest run first, then by name.
+const newestFirst = (a: JsonConsoleUserProject, b: JsonConsoleUserProject) =>
+	(b.last_report ?? 0) - (a.last_report ?? 0) || a.name.localeCompare(b.name);

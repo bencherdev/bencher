@@ -13,7 +13,7 @@ import FieldKind from "../kind";
 import { createStore } from "solid-js/store";
 import Field from "../Field";
 
-export const MODEL_TEST_ICON = "fas fa-vial";
+const MODEL_TEST_ICON = "fas fa-vial";
 
 export type InputValue = string | number | null | undefined;
 
@@ -117,7 +117,7 @@ const STATISTIC_FIELDS = {
 	},
 };
 
-export const fmtModelTest = (test: ModelTest) => {
+const fmtModelTest = (test: ModelTest) => {
 	switch (test) {
 		case ModelTest.Static:
 			return "Static";
@@ -204,7 +204,7 @@ const testSelectConfig = (modelTest: ModelTest) => {
 	};
 };
 
-export const testFragment = (modelTest: ModelTest) => {
+const testFragment = (modelTest: ModelTest) => {
 	switch (modelTest) {
 		case ModelTest.Static:
 			return "static";

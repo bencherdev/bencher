@@ -396,7 +396,7 @@ async fn portal_inner(
         .console_url
         .clone()
         .join(&format!(
-            "/next/console/organizations/{}/billing",
+            "/console/organizations/{}/billing",
             query_organization.slug
         ))
         .unwrap_or_else(|_| context.console_url.clone());

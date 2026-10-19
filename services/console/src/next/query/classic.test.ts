@@ -83,3 +83,43 @@ describe("exploreSearchFromClassic", () => {
 		expect(read("x_axis=nope&range=version")).toBe("version");
 	});
 });
+
+describe("a classic bound toggle", () => {
+	const metrics = (search: string) =>
+		decodeQuery(exploreSearchFromClassic(search)).metrics;
+
+	// Kills a bound the classic link turned on dropped, a bound it left off
+	// drawn, and the value itself left out beside a bound.
+	test("draws the value and each bound it turned on", () => {
+		expect(metrics("lower_value=true")).toEqual(["value", "lower_value"]);
+		expect(metrics("upper_value=true&lower_value=false")).toEqual([
+			"value",
+			"upper_value",
+		]);
+		expect(metrics("lower_value=true&upper_value=true")).toEqual([
+			"value",
+			"lower_value",
+			"upper_value",
+		]);
+	});
+
+	// Kills a classic link with no bound turned on narrowed to the value, which
+	// would draw nothing for a version 1 project's metrics.
+	test("with none turned on draws every metric", () => {
+		expect(metrics(CLASSIC)).toEqual([]);
+		expect(metrics("lower_boundary=true&upper_boundary=true")).toEqual([]);
+	});
+
+	// Kills a toggle overriding the metrics a link names.
+	test("leaves the metrics a link names alone", () => {
+		expect(metrics("metrics=latency&lower_value=true")).toEqual(["latency"]);
+	});
+
+	// Kills a public plot or embed that reads the toggle only after a redirect.
+	test("reads the same in place", () => {
+		expect(decodeQuery("?upper_value=true").metrics).toEqual([
+			"value",
+			"upper_value",
+		]);
+	});
+});

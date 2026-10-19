@@ -19,7 +19,7 @@ import { cutCells, cutHeaders, likelyRuns, runFixture } from "./testing";
 
 const NOW = Date.parse("2026-09-14T00:00:00Z");
 const RUN =
-	"/next/console/projects/hashbrown/runs/00000000-0000-4000-8000-000000000000";
+	"/console/projects/hashbrown/runs/00000000-0000-4000-8000-000000000000";
 
 let dispose: (() => void) | undefined;
 const ranges: Range[] = [];

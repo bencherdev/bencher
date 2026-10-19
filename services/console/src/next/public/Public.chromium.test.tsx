@@ -144,7 +144,7 @@ test("only a stored reader sees Open in console, on this query", async () => {
 		open.element().getAttribute("href") ?? "",
 		"https://bencher.dev",
 	);
-	expect(href.pathname).toBe("/next/console/projects/hashbrown/explore");
+	expect(href.pathname).toBe("/console/projects/hashbrown/explore");
 	expect(decodeQuery(href.search)).toEqual(QUERY);
 });
 

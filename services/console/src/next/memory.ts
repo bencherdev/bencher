@@ -1,10 +1,9 @@
 // Both memories are read by inline scripts before any module loads, so their
-// keys and shapes are a contract with `ShellPaint.astro`, `Landing.astro`, the
-// gates in `astro/`, and the classic console.
+// keys and shapes are a contract with `ShellPaint.astro` and `Landing.astro`.
 
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem" | "removeItem">;
 
-/** Each project's BMF version by slug, written whenever either console loads one. */
+/** Each project's BMF version by slug, in the order the console last loaded them. */
 export const VERSION_KEY = "BENCHER_BMF_VERSIONS";
 
 export type BmfVersion = 0 | 1;

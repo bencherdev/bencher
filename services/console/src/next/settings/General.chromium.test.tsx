@@ -319,10 +319,7 @@ describe("visibility", () => {
 			.toHaveTextContent("private needs a paid plan");
 		await expect
 			.element(refusal.getByRole("link", { name: "See plans" }))
-			.toHaveAttribute(
-				"href",
-				"/next/console/organizations/pompeii-llc/billing",
-			);
+			.toHaveAttribute("href", "/console/organizations/pompeii-llc/billing");
 		expect(project(mounted.client)).toEqual(PROJECT);
 		expect(line()).toContain("public");
 		await expect.element(confirm).toHaveFocus();

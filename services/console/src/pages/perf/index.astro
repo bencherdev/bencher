@@ -1,24 +1,11 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
+import { classicRedirect } from "../../next/classic";
 
-import PerfLayout from "../../layouts/perf/PerfLayout.astro";
-import PublicProjects from "../../components/perf/PublicProjects";
-import FallbackProjects from "../../components/perf/FallbackProjects";
-
-const title = "Public Projects";
+const to = classicRedirect(Astro.url);
+if (to) {
+	return Astro.redirect(to, 301);
+}
+return Astro.rewrite("/404");
 ---
-
-<PerfLayout
-  title={title}
-  titleFmt={(title) => `📈 ${title}`}
-  description="View continuous benchmarking results and performance regressions for public projects on Bencher"
-  published="2023-08-12T15:20:00Z"
-  modified={new Date().toISOString()}
->
-  <PublicProjects client:only="solid-js" apiUrl={BENCHER_API_URL} >
-    <!-- https://github.com/withastro/roadmap/discussions/724#discussioncomment-7251623 -->
-    <FallbackProjects slot="fallback" />
-  </PublicProjects>
-</PerfLayout>

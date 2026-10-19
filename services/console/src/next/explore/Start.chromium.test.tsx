@@ -239,10 +239,7 @@ test("a run row names its branch, its run, when it started, and its reports and 
 	] as const) {
 		await expect
 			.element(latest().getByRole("link", { name, exact: true }))
-			.toHaveAttribute(
-				"href",
-				`/next/console/projects/hashbrown/runs/${uuid(n)}`,
-			);
+			.toHaveAttribute("href", `/console/projects/hashbrown/runs/${uuid(n)}`);
 	}
 });
 
@@ -334,10 +331,7 @@ test("an opened run with more reports than it lists links to its page for the re
 	const rest = reports().getByRole("link", { name: "All 10 reports" });
 	await expect
 		.element(rest)
-		.toHaveAttribute(
-			"href",
-			`/next/console/projects/hashbrown/runs/${uuid(70)}`,
-		);
+		.toHaveAttribute("href", `/console/projects/hashbrown/runs/${uuid(70)}`);
 	expect(rest.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(
 		44,
 	);

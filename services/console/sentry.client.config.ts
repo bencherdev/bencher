@@ -1,7 +1,7 @@
 import { deferErrors, whenIdle } from "./src/util/deferredErrors";
 
 // The SDK arrives in its own chunk, so no page waits on it to paint. The new
-// console waits longer, until the page has loaded and the browser is idle.
+// console's pages wait longer, until the page has loaded and the browser is idle.
 // Errors raised before it arrives are kept and sent once it does.
 const errors = deferErrors(window);
 
@@ -22,7 +22,7 @@ const load = () =>
 		errors.flush((error) => Sentry.captureException(error));
 	});
 
-if (location.pathname.startsWith("/next/")) {
+if (document.querySelector("#console, #public, #embed")) {
 	whenIdle(load);
 } else {
 	load();

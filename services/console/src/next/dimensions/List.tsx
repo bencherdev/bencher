@@ -23,7 +23,7 @@ import {
 	onCleanup,
 	untrack,
 } from "solid-js";
-import { DIMENSIONS, NEXT_PROJECTS } from "../paths";
+import { DIMENSIONS, PROJECTS_PATH } from "../paths";
 import { useProject, useProjectNavigate } from "../project";
 import { useQueryResult } from "../query";
 import { failureOf } from "../settings/failure";
@@ -324,7 +324,7 @@ const List = (props: {
 				<For each={DIMENSIONS}>
 					{(dimension) => (
 						<a
-							href={`${NEXT_PROJECTS}/${slug()}/${dimension}`}
+							href={`${PROJECTS_PATH}/${slug()}/${dimension}`}
 							aria-current={dimension === props.dimension ? "page" : undefined}
 						>
 							{KINDS[dimension].label}

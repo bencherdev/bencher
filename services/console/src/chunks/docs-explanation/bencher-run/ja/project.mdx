@@ -18,7 +18,7 @@
 スラッグが指定されている場合でも自動生成された場合でも、新しい Project は必ず Organization に所属します。
 ユーザーがユーザーAPIキー（[`--key` オプション](#--key-key)）または[非推奨の `--token` オプション](#--token-token)で認証されている場合、そのユーザーの個人 Organization の下に Project が追加されます。
 ユーザーが認証されていない場合、Project は新しい `unclaimed` Organization の下に作成されます。
-この Organization は、Project の公開 Perf ページから `claimed` するか、後続の `bencher run` 実行時に認証した状態で Project スラッグを使用することで取得できます。
+この Organization は、`bencher run` の出力にある `Claim this project` リンクから `claimed` するか、後続の `bencher run` 実行時に認証した状態で Project スラッグを使用することで取得できます。
 
 > 🐰 重要: `CI` 環境変数が `true` に設定されている場合、
 > プロジェクトを指定するか、

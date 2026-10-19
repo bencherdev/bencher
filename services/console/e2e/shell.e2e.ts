@@ -2,7 +2,7 @@ import type { Route } from "@playwright/test";
 import {
 	crumb,
 	expect,
-	nextPath,
+	consolePath,
 	persistedQueries,
 	seed,
 	settle,
@@ -22,7 +22,7 @@ test.describe("without JavaScript", () => {
 	test("a cold deep link draws the bar and the tab row with Runs current", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "runs"));
+		await page.goto(consolePath(hashbrown.slug, "runs"));
 
 		await expect(
 			page.getByRole("banner").getByRole("link", { name: "Bencher, home" }),
@@ -47,7 +47,7 @@ test.describe("signed in", () => {
 	test("the crumb names the organization and the project, and Alerts counts the active alerts", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "runs"));
+		await page.goto(consolePath(hashbrown.slug, "runs"));
 
 		await expect(
 			crumb(page, `${seed.organization.name} / ${hashbrown.name}`),
@@ -62,7 +62,7 @@ test.describe("signed in", () => {
 	test("switching tabs routes on the client and fetches nothing already cached", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "runs"));
+		await page.goto(consolePath(hashbrown.slug, "runs"));
 		await expect(
 			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
 		).toBeVisible();
@@ -79,7 +79,7 @@ test.describe("signed in", () => {
 		});
 		await tabRow(page).getByRole("link", { name: "Settings" }).click();
 
-		await expect(page).toHaveURL(nextPath(hashbrown.slug, "settings"));
+		await expect(page).toHaveURL(consolePath(hashbrown.slug, "settings"));
 		await expect(
 			page.getByRole("heading", { level: 1, name: "General" }),
 		).toBeVisible();
@@ -99,7 +99,7 @@ test.describe("signed in", () => {
 	test("a warm reload paints the names from the cache before the API answers", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "runs"));
+		await page.goto(consolePath(hashbrown.slug, "runs"));
 		await expect(
 			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
 		).toBeVisible();
@@ -135,7 +135,7 @@ test.describe("signed in", () => {
 			await released;
 			await route.continue();
 		});
-		await page.goto(nextPath(hashbrown.slug, "runs"), {
+		await page.goto(consolePath(hashbrown.slug, "runs"), {
 			waitUntil: "commit",
 		});
 		const plots = tabRow(page).getByRole("link", { name: "Plots" });
@@ -154,7 +154,7 @@ test.describe("signed in", () => {
 	test("a returning reader's first paint names the project and counts its alerts before any module loads", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "runs"));
+		await page.goto(consolePath(hashbrown.slug, "runs"));
 		await expect(
 			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
 		).toBeVisible();

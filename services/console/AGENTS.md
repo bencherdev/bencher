@@ -93,25 +93,31 @@ Set one at the measured value plus a small margin, and only ever lower it.
 
 ## New Console
 
-The console for BMF v1 projects lives under `src/next/`, built on the design
+The console for every project lives under `src/next/`, built on the design
 system in [`packages/ui`](../../packages/ui/README.md), not Bulma. Every color
 is a token in `packages/ui/src/styles/theme.css`; a test fails when a color
-literal appears anywhere in `packages/ui/src`, `src/next`, or `src/pages/next`.
+literal appears anywhere in `packages/ui/src`, `src/next`, or the console's
+pages under `src/pages/console` and `src/pages/perf`. Only sign-up, sign-in,
+onboarding (`/console/onboard/*`), and help stay classic.
 `src/next/Head.astro` belongs in the head of every new console page: it preloads
 Inter and sets the theme before the first paint.
 
 Every path under a project is served by
-`src/pages/next/console/projects/[project]/[...path].astro`. Its inline scripts
-(`src/next/astro/`) run before any module loads and read `localStorage` keys
-that the classic console also reads or writes: `BENCHER_USER`, `BENCHER_THEME`,
-and `BENCHER_CONSOLE_SHELL` (`src/next/memory.ts`). The gates the classic pages
-and the landing render read `BENCHER_BMF_VERSIONS` the same way. Change a key or
-its shape on both sides at once.
+`src/pages/console/projects/[project]/[...path].astro`, which first answers a
+classic path with a permanent redirect from `src/next/classic.ts`, built from
+the path and query alone. Its inline scripts (`src/next/astro/`) run before any
+module loads and read `localStorage` keys that the classic pages also read or
+write: `BENCHER_USER`, `BENCHER_THEME`, and `BENCHER_CONSOLE_SHELL`
+(`src/next/memory.ts`). The landing reads `BENCHER_BMF_VERSIONS`, the recency
+of the projects the browser has opened, the same way. Change a key or its
+shape on both sides at once.
 
-Every account page under `src/pages/next/console/users/[user]/` is served by
+Every account page under `src/pages/console/users/[user]/` is served by
 `src/next/astro/AccountPage.astro`, Organizations by
-`src/pages/next/console/organizations/index.astro` and `add.astro`, and an
-organization's General by `src/pages/next/console/organizations/[organization]/settings.astro`.
+`src/pages/console/organizations/index.astro` and `add.astro`, and an
+organization's General by `src/pages/console/organizations/[organization]/settings.astro`.
+A classic route a page replaced redirects through `classicRedirect`, and
+`src/next/classic-routes.ts` lists every one so a test walks their paths.
 Every page loads the app through `src/next/astro/Main.astro`, so they share one entry,
 which `src/next/build/preloads.mjs` finds by that component: a page with a script
 of its own would split the entry in two. All of them import the same stylesheets, so
@@ -132,7 +138,7 @@ its modules moves into that file; the speed ceilings catch the growth.
 
 A stylesheet imported anywhere in a page's module graph, a lazy page's chunk
 included, is linked from that page's head and blocks its first paint. One that
-both `/next/` pages import leaves each page's sheet for a file (or, when small,
+both the console and the public plot import leaves each page's sheet for a file (or, when small,
 an inline style) of its own, so the console's page imports the design system's
 stylesheet and every page's styles, and the public plot imports only
 `src/next/public/page.css`, which gathers what it draws.
@@ -140,8 +146,8 @@ stylesheet and every page's styles, and the public plot imports only
 ## Sentry
 
 The browser SDK loads from `sentry.client.config.ts` as a dynamic import, so no
-page waits on it to paint; under `/next/` it waits for the load event and an
-idle moment. Errors raised before it arrives are queued and sent once it does.
+page waits on it to paint; on the new console's pages it waits for the load
+event and an idle moment. Errors raised before it arrives are queued and sent once it does.
 
 ## Formatting
 

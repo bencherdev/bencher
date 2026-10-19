@@ -1,24 +1,11 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
+import { classicRedirect } from "../../../../../next/classic";
 
-import OrgLayout from "../../../../../layouts/console/OrgLayout.astro";
-import TablePanel from "../../../../../components/console/table/TablePanel";
-import { BencherResource } from "../../../../../config/types";
-import FallbackTablePanel from "../../../../../components/console/table/FallbackTablePanel.astro";
-
-const params = Astro.params;
-const title = "Projects";
+const to = classicRedirect(Astro.url);
+if (to) {
+	return Astro.redirect(to, 301);
+}
+return Astro.rewrite("/404");
 ---
-
-<OrgLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
-  <TablePanel
-    client:only="solid-js"
-    apiUrl={BENCHER_API_URL}
-    params={params}
-    resource={BencherResource.PROJECTS}
-  >
-    <FallbackTablePanel slot="fallback" />
-  </TablePanel>
-</OrgLayout>
