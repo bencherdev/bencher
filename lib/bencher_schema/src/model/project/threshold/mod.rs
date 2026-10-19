@@ -536,39 +536,13 @@ impl InsertThreshold {
         dimensions: ThresholdDimensions,
         model: Model,
     ) -> Result<ThresholdId, HttpError> {
-        if let Some(existing) = QueryThreshold::find_by_dimensions(auth_conn!(context), &dimensions)
-            .map_err(|e| {
-                crate::error::issue_error(
-                    "Failed to query threshold dimensions",
-                    "Failed to query threshold dimensions:",
-                    e,
-                )
-            })?
-        {
-            let metric = dimensions.metric_name();
-            let parameters = dimensions
-                .parameters
-                .as_ref()
-                .map_or_else(|| "every variant".to_owned(), ParameterFilter::canonical);
-            return Err(resource_conflict_error(
-                BencherResource::Threshold,
-                (
-                    dimensions.branch_id,
-                    dimensions.testbed_id,
-                    dimensions.measure_id,
-                ),
-                format!(
-                    "A threshold ({uuid}) already exists for this branch, testbed, and measure, checking {metric} of {parameters}",
-                    uuid = existing.uuid
-                ),
-            ));
-        }
+        Self::check_unique(auth_conn!(context), &dimensions)?;
 
         QueryThreshold::check_active_cap(auth_conn!(context), &dimensions)?;
         #[cfg(feature = "plus")]
         Self::rate_limit(context, project_id).await?;
-        write_transaction!(context, |conn| {
-            Self::from_model_inner(conn, project_id, dimensions, model)
+        let threshold_id = write_transaction!(context, |conn| {
+            Self::from_model_inner(conn, project_id, dimensions.clone(), model)
         })
         .map_err(|e| {
             crate::error::issue_error(
@@ -576,7 +550,50 @@ impl InsertThreshold {
                 "Failed to create threshold from model:",
                 e,
             )
-        })
+        })?;
+        if let Some(threshold_id) = threshold_id {
+            return Ok(threshold_id);
+        }
+        Self::check_unique(auth_conn!(context), &dimensions)?;
+        Err(crate::error::issue_error(
+            "Failed to create threshold from model",
+            "Failed to create threshold from model:",
+            "the threshold insert conflicted, but no threshold has its dimensions",
+        ))
+    }
+
+    /// Refuse dimensions a threshold already holds.
+    fn check_unique(
+        conn: &mut DbConnection,
+        dimensions: &ThresholdDimensions,
+    ) -> Result<(), HttpError> {
+        let Some(existing) = QueryThreshold::find_by_dimensions(conn, dimensions).map_err(|e| {
+            crate::error::issue_error(
+                "Failed to query threshold dimensions",
+                "Failed to query threshold dimensions:",
+                e,
+            )
+        })?
+        else {
+            return Ok(());
+        };
+        let metric = dimensions.metric_name();
+        let parameters = dimensions
+            .parameters
+            .as_ref()
+            .map_or_else(|| "every variant".to_owned(), ParameterFilter::canonical);
+        Err(resource_conflict_error(
+            BencherResource::Threshold,
+            (
+                dimensions.branch_id,
+                dimensions.testbed_id,
+                dimensions.measure_id,
+            ),
+            format!(
+                "A threshold ({uuid}) already exists for this branch, testbed, and measure, checking {metric} of {parameters}",
+                uuid = existing.uuid
+            ),
+        ))
     }
 
     fn from_model_inner(
@@ -584,12 +601,17 @@ impl InsertThreshold {
         project_id: ProjectId,
         dimensions: ThresholdDimensions,
         model: Model,
-    ) -> diesel::QueryResult<ThresholdId> {
+    ) -> diesel::QueryResult<Option<ThresholdId>> {
         // Create the new threshold
         let insert_threshold = Self::new(project_id, dimensions);
-        diesel::insert_into(schema::threshold::table)
+        let inserted = diesel::insert_into(schema::threshold::table)
             .values(&insert_threshold)
+            .on_conflict_do_nothing()
             .execute(conn)?;
+        // A skipped insert leaves `last_insert_rowid()` at the last row this connection inserted.
+        if inserted == 0 {
+            return Ok(None);
+        }
 
         // Get the new threshold ID
         let threshold_id = diesel::select(last_insert_rowid()).get_result::<ThresholdId>(conn)?;
@@ -606,7 +628,7 @@ impl InsertThreshold {
             .set(schema::threshold::model_id.eq(model_id))
             .execute(conn)?;
 
-        Ok(threshold_id)
+        Ok(Some(threshold_id))
     }
 
     pub async fn from_start_point(
@@ -650,25 +672,7 @@ impl InsertThreshold {
         if has_writes {
             let project_id = query_branch.project_id;
             write_transaction!(context, |conn| {
-                for action in actions {
-                    match action {
-                        StartPointAction::Create(dimensions, model) => {
-                            Self::from_model_inner(conn, project_id, dimensions, model)?;
-                        },
-                        StartPointAction::Update(threshold, model) => {
-                            threshold.update_from_model_inner(conn, model)?;
-                        },
-                        StartPointAction::Remove(threshold) => {
-                            threshold.remove_current_model(conn)?;
-                        },
-                        StartPointAction::NoChange => {},
-                    }
-                }
-                for threshold in orphans {
-                    threshold.remove_current_model(conn)?;
-                    slog::debug!(log, "Removed model from current threshold {threshold:?}",);
-                }
-                diesel::QueryResult::Ok(())
+                Self::apply_start_point_actions(log, conn, project_id, actions, orphans)
             })
             .map_err(|e| {
                 crate::error::issue_error(
@@ -799,6 +803,37 @@ impl InsertThreshold {
         Ok((actions, orphans))
     }
 
+    /// Phase 2 of start point sync: apply the pre-computed actions.
+    fn apply_start_point_actions(
+        log: &Logger,
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        actions: Vec<StartPointAction>,
+        orphans: Vec<QueryThreshold>,
+    ) -> diesel::QueryResult<()> {
+        for action in actions {
+            match action {
+                StartPointAction::Create(dimensions, model) => {
+                    if Self::from_model_inner(conn, project_id, dimensions, model)?.is_none() {
+                        slog::debug!(log, "Skipped a threshold another request created first");
+                    }
+                },
+                StartPointAction::Update(threshold, model) => {
+                    threshold.update_from_model_inner(conn, model)?;
+                },
+                StartPointAction::Remove(threshold) => {
+                    threshold.remove_current_model(conn)?;
+                },
+                StartPointAction::NoChange => {},
+            }
+        }
+        for threshold in orphans {
+            threshold.remove_current_model(conn)?;
+            slog::debug!(log, "Removed model from current threshold {threshold:?}",);
+        }
+        Ok(())
+    }
+
     /// The thresholds a report declares, created or updated for its branch and its
     /// testbed.
     #[expect(
@@ -925,22 +960,7 @@ impl InsertThreshold {
             || !orphans.is_empty();
         if has_writes {
             write_transaction!(context, |conn| {
-                for action in actions {
-                    match action {
-                        ThresholdAction::Create(dimensions, model) => {
-                            Self::from_model_inner(conn, project_id, dimensions, model)?;
-                        },
-                        ThresholdAction::Update(threshold, model) => {
-                            threshold.update_from_model_inner(conn, model)?;
-                        },
-                        ThresholdAction::NoChange => {},
-                    }
-                }
-                for threshold in orphans {
-                    threshold.remove_current_model(conn)?;
-                    slog::debug!(log, "Removed model from threshold {threshold:?}");
-                }
-                diesel::QueryResult::Ok(())
+                Self::apply_report_actions(log, conn, project_id, actions, orphans)
             })
             .map_err(|e| {
                 crate::error::issue_error(
@@ -1040,6 +1060,34 @@ impl InsertThreshold {
                 declared.push((dimensions, model));
             },
         }
+    }
+
+    /// Phase 2 of report thresholds: apply the pre-computed actions.
+    fn apply_report_actions(
+        log: &Logger,
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        actions: Vec<ThresholdAction>,
+        orphans: Vec<QueryThreshold>,
+    ) -> diesel::QueryResult<()> {
+        for action in actions {
+            match action {
+                ThresholdAction::Create(dimensions, model) => {
+                    if Self::from_model_inner(conn, project_id, dimensions, model)?.is_none() {
+                        slog::debug!(log, "Skipped a threshold another request created first");
+                    }
+                },
+                ThresholdAction::Update(threshold, model) => {
+                    threshold.update_from_model_inner(conn, model)?;
+                },
+                ThresholdAction::NoChange => {},
+            }
+        }
+        for threshold in orphans {
+            threshold.remove_current_model(conn)?;
+            slog::debug!(log, "Removed model from threshold {threshold:?}");
+        }
+        Ok(())
     }
 
     /// Only the ceiling's own 429 is a `false`; every other error propagates.
@@ -1202,8 +1250,9 @@ mod tests {
     };
 
     use super::{
-        BranchId, DbConnection, InsertThreshold, MetricName, ParameterFilter, QueryThreshold,
-        ThresholdDimensions, ThresholdId, UpdateThreshold, model::ModelId,
+        BranchId, DbConnection, InsertThreshold, MetricName, Model, ParameterFilter,
+        QueryThreshold, StartPointAction, ThresholdAction, ThresholdDimensions, ThresholdId,
+        UpdateThreshold, model::ModelId,
     };
     use crate::model::project::{ProjectId, measure::MeasureId, testbed::TestbedId};
 
@@ -2711,5 +2760,192 @@ mod tests {
                 "{canonical}: the canonical text must survive the encoder unchanged"
             );
         }
+    }
+
+    /// A create on dimensions a threshold already holds is skipped, and the held
+    /// threshold keeps its model.
+    #[test]
+    fn a_create_on_held_dimensions_is_skipped() {
+        let mut conn = setup_test_db();
+        let (project_id, bare, _named) = two_dimensions(&mut conn);
+        let (held, held_model) = create_held(
+            &mut conn,
+            project_id,
+            &bare,
+            "00000000-0000-0000-0000-000000000040",
+            "00000000-0000-0000-0000-000000000050",
+        );
+
+        let created = InsertThreshold::from_model_inner(
+            &mut conn,
+            project_id,
+            bare.clone(),
+            Model::upper_boundary(),
+        )
+        .expect("A held create must not fail");
+
+        assert_eq!(created, None);
+        assert_eq!(
+            get_thresholds_for_branch(&mut conn, bare.branch_id),
+            vec![held]
+        );
+        assert_eq!(
+            models_of(&mut conn, held),
+            (Some(held_model), vec![held_model])
+        );
+        assert_eq!(
+            schema::model::table
+                .count()
+                .get_result::<i64>(&mut conn)
+                .expect("Failed to count models"),
+            1
+        );
+    }
+
+    /// A start point sync skips a create whose dimensions another request took first
+    /// and commits the rest of its batch.
+    #[test]
+    fn a_start_point_sync_skips_a_held_create_and_commits_the_rest() {
+        let mut conn = setup_test_db();
+        let (project_id, bare, named) = two_dimensions(&mut conn);
+        let (held, held_model) = create_held(
+            &mut conn,
+            project_id,
+            &bare,
+            "00000000-0000-0000-0000-000000000040",
+            "00000000-0000-0000-0000-000000000050",
+        );
+
+        conn.immediate_transaction(|conn| {
+            InsertThreshold::apply_start_point_actions(
+                &discard(),
+                conn,
+                project_id,
+                vec![
+                    StartPointAction::Create(bare, Model::lower_boundary()),
+                    StartPointAction::Create(named.clone(), Model::upper_boundary()),
+                ],
+                Vec::new(),
+            )
+        })
+        .expect("A held create must not fail the batch");
+
+        assert_eq!(
+            models_of(&mut conn, held),
+            (Some(held_model), vec![held_model])
+        );
+        assert_eq!(sole_model(&mut conn, &named), Model::upper_boundary());
+    }
+
+    /// A report sync skips a create whose dimensions another request took first and
+    /// commits the rest of its batch.
+    #[test]
+    fn a_report_sync_skips_a_held_create_and_commits_the_rest() {
+        let mut conn = setup_test_db();
+        let (project_id, bare, named) = two_dimensions(&mut conn);
+        let (held, held_model) = create_held(
+            &mut conn,
+            project_id,
+            &bare,
+            "00000000-0000-0000-0000-000000000040",
+            "00000000-0000-0000-0000-000000000050",
+        );
+
+        conn.immediate_transaction(|conn| {
+            InsertThreshold::apply_report_actions(
+                &discard(),
+                conn,
+                project_id,
+                vec![
+                    ThresholdAction::Create(bare, Model::lower_boundary()),
+                    ThresholdAction::Create(named.clone(), Model::upper_boundary()),
+                ],
+                Vec::new(),
+            )
+        })
+        .expect("A held create must not fail the batch");
+
+        assert_eq!(
+            models_of(&mut conn, held),
+            (Some(held_model), vec![held_model])
+        );
+        assert_eq!(sole_model(&mut conn, &named), Model::upper_boundary());
+    }
+
+    fn discard() -> slog::Logger {
+        slog::Logger::root(slog::Discard, slog::o!())
+    }
+
+    /// Bare dimensions, and named and filtered dimensions beside them on the same branch.
+    fn two_dimensions(
+        conn: &mut DbConnection,
+    ) -> (ProjectId, ThresholdDimensions, ThresholdDimensions) {
+        let (project_id, branch_id, testbed_id, measure_id) = dimensions_fixture(conn);
+        let bare = ThresholdDimensions::new(branch_id, testbed_id, None, measure_id, None);
+        let named = ThresholdDimensions::new(
+            branch_id,
+            testbed_id,
+            Some(filter(r#"[{"size": 512}]"#)),
+            measure_id,
+            Some(metric_name("p99")),
+        );
+        (project_id, bare, named)
+    }
+
+    /// A threshold with a model, as another request would have created it.
+    fn create_held(
+        conn: &mut DbConnection,
+        project_id: ProjectId,
+        dimensions: &ThresholdDimensions,
+        threshold_uuid: &str,
+        model_uuid: &str,
+    ) -> (ThresholdId, ModelId) {
+        let ThresholdDimensions {
+            branch_id,
+            testbed_id,
+            parameters,
+            measure_id,
+            metric,
+        } = dimensions.clone();
+        let threshold_id = create_threshold_with_dimensions(
+            conn,
+            project_id,
+            branch_id,
+            testbed_id,
+            parameters,
+            measure_id,
+            metric,
+            threshold_uuid,
+        );
+        let model_id = create_model(conn, threshold_id, model_uuid, 0);
+        (threshold_id, model_id)
+    }
+
+    /// A threshold's current model and every model it has had.
+    fn models_of(
+        conn: &mut DbConnection,
+        threshold_id: ThresholdId,
+    ) -> (Option<ModelId>, Vec<ModelId>) {
+        let models = schema::model::table
+            .filter(schema::model::threshold_id.eq(threshold_id))
+            .order(schema::model::id)
+            .select(schema::model::id)
+            .load::<ModelId>(conn)
+            .expect("Failed to load the threshold's models");
+        (get_threshold_model_id(conn, threshold_id), models)
+    }
+
+    /// The only model the threshold at these dimensions has ever had.
+    fn sole_model(conn: &mut DbConnection, dimensions: &ThresholdDimensions) -> Model {
+        let threshold = QueryThreshold::find_by_dimensions(conn, dimensions)
+            .expect("Failed to find the threshold")
+            .expect("No threshold has these dimensions");
+        let (current, models) = models_of(conn, threshold.id);
+        assert_eq!(current.map(|model_id| vec![model_id]), Some(models));
+        threshold
+            .model(conn)
+            .expect("Failed to read the model")
+            .expect("The threshold has no model")
+            .into_model()
     }
 }
