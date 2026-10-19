@@ -77,7 +77,7 @@ async fn put_inner(
     query_user.check_is_locked()?;
 
     let new_email = claims.new_email;
-    // Every write to a user moves `modified`, so a link ends with the user's next update.
+    // Any write that can change the user's email or profile moves `modified`, so it ends a link.
     let changed = write_transaction!(context, |conn| {
         let changed = diesel::update(
             schema::user::table
@@ -85,7 +85,11 @@ async fn put_inner(
                 .filter(schema::user::email.eq(&claims.email))
                 .filter(schema::user::modified.eq(claims.modified)),
         )
-        .set((schema::user::email.eq(&new_email), bump_modified(now)))
+        .set((
+            schema::user::email.eq(&new_email),
+            schema::user::email_verified.eq(now),
+            bump_modified(now),
+        ))
         .execute(conn)?;
         if changed > 0 {
             QueryToken::revoke_all(conn, query_user.id, now)?;

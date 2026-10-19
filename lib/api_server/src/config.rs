@@ -1,6 +1,6 @@
 use bencher_config::Config;
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
-use bencher_json::{JsonConfig, system::config::JsonConsole};
+use bencher_json::{JsonConfig, Sanitize as _, system::config::JsonConsole};
 use bencher_schema::{
     context::ApiContext,
     error::issue_error,
@@ -26,7 +26,7 @@ pub async fn server_config_options(
 
 /// View server configuration
 ///
-/// View the API server configuration.
+/// View the API server configuration, with its secrets redacted.
 /// The user must be an admin on the server to use this route.
 #[endpoint {
     method = GET,
@@ -43,7 +43,7 @@ pub async fn server_config_get(
 }
 
 async fn get_one_inner(log: &Logger) -> Result<JsonConfig, HttpError> {
-    Ok(Config::load_file(log)
+    let mut json_config: JsonConfig = Config::load_file(log)
         .await
         .map_err(|e| {
             issue_error(
@@ -53,7 +53,9 @@ async fn get_one_inner(log: &Logger) -> Result<JsonConfig, HttpError> {
             )
         })?
         .unwrap_or_default()
-        .into())
+        .into();
+    json_config.sanitize();
+    Ok(json_config)
 }
 
 #[endpoint {

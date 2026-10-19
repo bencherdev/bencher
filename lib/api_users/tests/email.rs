@@ -29,12 +29,15 @@ const LINK: &str = "Confirm Email: http://localhost:3000/auth/email?";
 const FROZEN_NOW: i64 = 4_102_444_800;
 
 // Fails if a new email applies before it is confirmed, if no confirm link reaches the new email,
-// if resending the current email sends one, or if asking revokes the user's legacy API tokens.
+// if resending the current email sends one, or if asking revokes the user's legacy API tokens
+// or clears the proof of the current email.
 #[tokio::test]
 async fn email_change_waits_for_confirm() {
     let (server, capture) = server_with_log().await;
     let user = server.signup("Wait User", "wait@example.com").await;
     let api_token = seed_token(&server, &user, "Legacy Token");
+    let verified = stored_email_verified(&server, &user);
+    assert!(verified.is_some());
 
     patch_user(&server, &user.token, &user, &json_email(&user.email)).await;
     assert_eq!(
@@ -55,15 +58,21 @@ async fn email_change_waits_for_confirm() {
     assert_eq!(links.len(), 1, "one confirm link to the new email");
     assert_eq!(links.first().map(|(uuid, _)| *uuid), Some(user.uuid));
     assert!(!is_revoked(&server, &user.token, &user, api_token.uuid).await);
+    assert_eq!(stored_email_verified(&server, &user), verified);
 }
 
 // Fails if confirming does not switch the email, keeps the user's legacy API tokens,
-// or answers with a session that is not for the new email.
+// answers with a session that is not for the new email, or leaves the new email unproven.
 #[tokio::test]
 async fn email_change_confirm() {
     let (server, capture) = server_with_log().await;
     let user = server.signup("Confirm User", "confirm@example.com").await;
     let api_token = seed_token(&server, &user, "Legacy Token");
+    // A user whose email was never proven, as one from before proofs were recorded.
+    diesel::update(schema::user::table.filter(schema::user::uuid.eq(user.uuid)))
+        .set(schema::user::email_verified.eq(None::<DateTime>))
+        .execute(&mut server.db_conn())
+        .expect("Failed to clear the proof");
     let new_email = email("confirm-new@example.com");
     let token = request_change(&server, &capture, &user.token, &user, &new_email).await;
 
@@ -75,6 +84,7 @@ async fn email_change_confirm() {
     let session = auth_user.token.to_string();
     assert_eq!(view_user(&server, &session, &user).await.email, new_email);
     assert!(is_revoked(&server, &session, &user, api_token.uuid).await);
+    assert!(stored_email_verified(&server, &user).is_some());
 }
 
 // Fails if a confirm link works twice.
@@ -370,7 +380,7 @@ async fn email_change_applies_other_fields() {
 }
 
 // Fails if a server admin's change to another user's email waits for a confirm,
-// or keeps that user's legacy API tokens.
+// keeps that user's legacy API tokens, or keeps the old email's proof.
 #[tokio::test]
 async fn email_change_admin_other_user() {
     let (server, capture) = server_with_log().await;
@@ -388,6 +398,7 @@ async fn email_change_admin_other_user() {
         0,
         "no confirm link"
     );
+    assert_eq!(stored_email_verified(&server, &user), None);
 
     let session = server
         .token_key()
@@ -565,6 +576,14 @@ fn stored_modified(server: &TestServer, user: &TestUser) -> DateTime {
         .select(schema::user::modified)
         .first(&mut server.db_conn())
         .expect("Failed to get the user's modified time")
+}
+
+fn stored_email_verified(server: &TestServer, user: &TestUser) -> Option<DateTime> {
+    schema::user::table
+        .filter(schema::user::uuid.eq(user.uuid))
+        .select(schema::user::email_verified)
+        .first(&mut server.db_conn())
+        .expect("Failed to get when the user's email was proven")
 }
 
 async fn is_revoked(server: &TestServer, bearer: &str, user: &TestUser, token: TokenUuid) -> bool {

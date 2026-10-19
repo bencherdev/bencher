@@ -6,6 +6,8 @@ mod audience;
 mod claims;
 mod error;
 mod key;
+#[cfg(feature = "plus")]
+mod oauth;
 
 pub use audience::Audience;
 pub use claims::{
@@ -16,6 +18,8 @@ pub use claims::{
 pub use claims::{ProjectOciClaims, RunnerOciClaims};
 pub use error::TokenError;
 pub use key::TokenKey;
+#[cfg(feature = "plus")]
+pub use oauth::{OAuthSigningKey, OAuthSigningKeyError};
 
 #[cfg(debug_assertions)]
 #[expect(clippy::expect_used, reason = "debug-only hardcoded key must be valid")]

@@ -17,8 +17,12 @@
 //! - POST `/oauth/revoke` - A refresh token's grant, or an access token, revoked
 //! - GET `/.well-known/oauth-protected-resource` (also at `/mcp`) - The MCP server's metadata
 //! - GET `/.well-known/oauth-authorization-server` - The authorization server's metadata
+//! - GET `/.well-known/openid-configuration` - The same, for OIDC
+//! - GET and POST `/oauth/userinfo` - Who the user of an access token is
+//! - GET `/oauth/jwks.json` - The key that signs ID tokens
 //!
-//! Every route answers `404` until `plus.oauth` is configured.
+//! Every route answers `404` until `plus.oauth` is configured, and the OIDC routes
+//! until `plus.oauth.signing_key` is too.
 //! These endpoints are `unpublished`: they belong to the OAuth protocol and the console's
 //! consent page, not the REST API.
 
@@ -27,16 +31,20 @@ mod authorize;
 mod client;
 mod discovery;
 mod error;
+mod id_token;
 mod params;
 mod response;
 mod revoke;
 mod token;
+mod userinfo;
 
 use bencher_endpoint::Registrar;
+use bencher_json::{OAuthScope, OAuthScopes};
 use bencher_schema::{
     context::{ApiContext, OAuthServer},
     error::not_found_error,
 };
+use bencher_token::OAuthSigningKey;
 use dropshot::{ApiDescription, ApiDescriptionRegisterError, HttpError};
 
 /// The authorization code flow's response type, the only one supported.
@@ -71,6 +79,13 @@ impl Registrar for Api {
         api_description.register(discovery::mcp_protected_resource_get)?;
         api_description.register(discovery::authorization_server_options)?;
         api_description.register(discovery::authorization_server_get)?;
+        api_description.register(discovery::openid_configuration_options)?;
+        api_description.register(discovery::openid_configuration_get)?;
+        api_description.register(discovery::jwks_options)?;
+        api_description.register(discovery::jwks_get)?;
+        api_description.register(userinfo::oauth_userinfo_options)?;
+        api_description.register(userinfo::oauth_userinfo_get)?;
+        api_description.register(userinfo::oauth_userinfo_post)?;
         Ok(())
     }
 }
@@ -80,4 +95,24 @@ fn oauth_server(context: &ApiContext) -> Result<&OAuthServer, HttpError> {
         .oauth
         .as_ref()
         .ok_or_else(|| not_found_error("OAuth is not configured on this server"))
+}
+
+/// The OAuth server and the key it signs ID tokens with, when OIDC is configured.
+fn openid_provider(context: &ApiContext) -> Result<(&OAuthServer, &OAuthSigningKey), HttpError> {
+    let oauth = oauth_server(context)?;
+    let signing_key = oauth
+        .signing_key()
+        .ok_or_else(|| not_found_error("OpenID Connect is not configured on this server"))?;
+    Ok((oauth, signing_key))
+}
+
+/// The scopes in `scope` that this server grants: the identity scopes only when it signs ID
+/// tokens. Unknown scopes, `offline_access` among them, are ignored.
+fn supported_scopes(oauth: &OAuthServer, scope: Option<&str>) -> OAuthScopes {
+    scope
+        .unwrap_or_default()
+        .split(' ')
+        .filter_map(|scope| scope.parse::<OAuthScope>().ok())
+        .filter(|scope| scope.is_project() || oauth.signing_key().is_some())
+        .collect()
 }

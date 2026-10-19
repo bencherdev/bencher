@@ -25,8 +25,14 @@ const SENTRY_DSN: &str = "PUBLIC_SENTRY_DSN";
 /// Sentry, while the console still draws what a Sentry build draws; the suite
 /// intercepts what it needs to see.
 const TEST_SENTRY_DSN: &str = "http://feedback@127.0.0.1:9/0";
+/// The debug defaults the test tokens are signed with.
+const ISSUER: &str = "http://localhost:3000/";
+const SECRET_KEY: &str = "DO_NOT_USE_THIS_IN_PRODUCTION";
 /// The app the suite connects to Bencher, whose redirects the browser never really reaches.
 const OAUTH_CLIENT: &str = "https://client.example/oauth/client.json";
+/// A test key, so the suite can show the identity scopes.
+const OAUTH_SIGNING_KEY: &str =
+    include_str!("../../../../../lib/bencher_token/src/test/oauth_signing_key.pem");
 
 /// The console end-to-end suite, run against an API on a fresh database.
 #[derive(Debug)]
@@ -254,12 +260,11 @@ fn spawn_api(
     log: &Utf8Path,
 ) -> anyhow::Result<Child> {
     let bind_address = api_url.trim_start_matches("http://");
-    // The issuer and secret are the debug defaults the test tokens are signed with.
     let config = serde_json::json!({
         "console": { "url": console_url },
         "security": {
-            "issuer": "http://localhost:3000/",
-            "secret_key": "DO_NOT_USE_THIS_IN_PRODUCTION",
+            "issuer": ISSUER,
+            "secret_key": SECRET_KEY,
         },
         "server": {
             "bind_address": bind_address,
@@ -273,6 +278,7 @@ fn spawn_api(
         "plus": {
             "oauth": {
                 "issuer": api_url,
+                "signing_key": OAUTH_SIGNING_KEY,
                 "clients": [{
                     "id": OAUTH_CLIENT,
                     "metadata": {

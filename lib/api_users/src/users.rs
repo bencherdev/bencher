@@ -274,6 +274,10 @@ async fn patch_inner(
     }
 
     let mut update_user = UpdateUser::from(json_user.clone());
+    // Unchanged as read, so never written: a stale address must not land on a newer, proven one.
+    if !email_changed {
+        update_user.email = None;
+    }
     let confirm = email_changed && auth_user.uuid() == query_user.uuid;
     let new_email = if confirm {
         update_user.email.take()
@@ -285,9 +289,14 @@ async fn patch_inner(
     }
 
     let now = context.clock.now();
+    // An email set here, by an admin for another user, is unproven.
+    let unverified = update_user
+        .email
+        .is_some()
+        .then_some(schema::user::email_verified.eq(None::<DateTime>));
     let modified = write_transaction!(context, |conn| {
         diesel::update(schema::user::table.filter(schema::user::id.eq(query_user.id)))
-            .set((&update_user, bump_modified(now)))
+            .set((&update_user, bump_modified(now), unverified))
             .execute(conn)?;
         if email_changed && !confirm {
             QueryToken::revoke_all(conn, query_user.id, now)?;

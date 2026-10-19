@@ -13,7 +13,7 @@ pub use bencher_valid::{
     CardBrand, CardCvc, CardNumber, Cpu, Disk, Entitlements, ExpirationMonth, ExpirationYear,
     GracePeriod, ImageDigest, ImageReference, LastFour, LicensedPlanId, Memory, MeteredPlanId,
     OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge, OAuthCodeHash,
-    OAuthCodeVerifier, OAuthIssuer, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken,
+    OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce, OAuthRedirectUri, OAuthRefreshToken,
     OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash, PlanLevel,
     PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash, Timeout,
 };

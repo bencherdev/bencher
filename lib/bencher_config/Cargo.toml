@@ -20,6 +20,7 @@ plus = [
     "bencher_oci_storage?/plus",
     "bencher_recaptcha/plus",
     "bencher_schema/plus",
+    "bencher_token/plus",
 ]
 sentry = ["bencher_schema/sentry"]
 otel = ["bencher_endpoint/otel", "bencher_recaptcha?/otel"]

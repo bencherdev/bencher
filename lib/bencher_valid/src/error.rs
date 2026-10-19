@@ -182,6 +182,9 @@ pub enum ValidError {
     #[error("Failed to validate OAuth nonce: expected at most 256 bytes")]
     OAuthNonce,
     #[cfg(feature = "plus")]
+    #[error("Failed to validate OAuth max age: expected a number of seconds")]
+    OAuthMaxAge,
+    #[cfg(feature = "plus")]
     #[error("Failed to validate SHA-256 hash: {0}")]
     Sha256(String),
     #[cfg(feature = "plus")]

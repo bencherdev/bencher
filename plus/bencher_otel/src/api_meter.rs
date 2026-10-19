@@ -1047,6 +1047,7 @@ pub enum OAuthAuthorizeFailureReason {
     ResponseType,
     Resource,
     ConsentRequired,
+    LoginRequired,
     ServerError,
 }
 
@@ -1063,6 +1064,7 @@ impl fmt::Display for OAuthAuthorizeFailureReason {
             Self::ResponseType => write!(f, "response_type"),
             Self::Resource => write!(f, "resource"),
             Self::ConsentRequired => write!(f, "consent_required"),
+            Self::LoginRequired => write!(f, "login_required"),
             Self::ServerError => write!(f, "server_error"),
         }
     }
@@ -1083,6 +1085,8 @@ pub enum OAuthConsentKind {
     ApproveSession,
     ApproveKey,
     Deny,
+    /// An approval with too old a sign in, which denied the request.
+    LoginRequired,
 }
 
 impl fmt::Display for OAuthConsentKind {
@@ -1091,6 +1095,7 @@ impl fmt::Display for OAuthConsentKind {
             Self::ApproveSession => write!(f, "approve_session"),
             Self::ApproveKey => write!(f, "approve_key"),
             Self::Deny => write!(f, "deny"),
+            Self::LoginRequired => write!(f, "login_required"),
         }
     }
 }

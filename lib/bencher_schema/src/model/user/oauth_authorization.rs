@@ -1,7 +1,8 @@
 use bencher_json::{
     DateTime, JsonOAuthAuthorization, JsonOAuthAuthorizationClient, JsonOAuthAuthorizationRedirect,
     NonEmpty, OAuthAuthorizationUuid, OAuthClientId, OAuthCodeChallenge, OAuthCodeHash,
-    OAuthGrantUuid, OAuthNonce, OAuthRedirectUri, OAuthRequestState, OAuthResource, OAuthScopes,
+    OAuthGrantUuid, OAuthMaxAge, OAuthNonce, OAuthRedirectUri, OAuthRequestState, OAuthResource,
+    OAuthScopes,
 };
 use chrono::TimeDelta;
 use diesel::{
@@ -44,11 +45,15 @@ pub struct QueryOAuthAuthorization {
     pub code_challenge: OAuthCodeChallenge,
     pub state: Option<OAuthRequestState>,
     pub nonce: Option<OAuthNonce>,
+    /// How recently the client needs its user to have signed in.
+    pub max_age: Option<OAuthMaxAge>,
     /// Whether the client asked for refresh tokens.
     pub refresh: bool,
     pub user_id: Option<UserId>,
     /// The user key the request was approved with: a grant made from it dies with the key.
     pub user_key_id: Option<UserKeyId>,
+    /// When the approving user signed in, unless they approved with a user key.
+    pub auth_time: Option<DateTime>,
     pub code_hash: Option<OAuthCodeHash>,
     pub grant_id: Option<OAuthGrantId>,
     pub created: DateTime,
@@ -93,6 +98,20 @@ impl QueryOAuthAuthorization {
         code_hash: &OAuthCodeHash,
         now: DateTime,
     ) -> diesel::QueryResult<OAuthAnswer> {
+        Self::approve_with_auth_time(conn, uuid, user_id, user_key_id, None, code_hash, now)
+    }
+
+    /// [`Self::approve`], for a user who signed in at `auth_time`. A request that needs a more
+    /// recent sign in is denied instead.
+    pub fn approve_with_auth_time(
+        conn: &mut DbConnection,
+        uuid: OAuthAuthorizationUuid,
+        user_id: UserId,
+        user_key_id: Option<UserKeyId>,
+        auth_time: Option<DateTime>,
+        code_hash: &OAuthCodeHash,
+        now: DateTime,
+    ) -> diesel::QueryResult<OAuthAnswer> {
         let Some(mut authorization) = Self::live(conn, uuid, now)? else {
             return Ok(OAuthAnswer::Missing);
         };
@@ -106,6 +125,16 @@ impl QueryOAuthAuthorization {
                 return Ok(OAuthAnswer::ForeignKey);
             }
         }
+        if let Some(max_age) = authorization.max_age
+            && !auth_time.is_some_and(|auth_time| max_age.admits(auth_time, now))
+        {
+            let answer = Self::deny(conn, uuid, now)?;
+            return Ok(if let OAuthAnswer::Recorded(authorization) = answer {
+                OAuthAnswer::LoginRequired(authorization)
+            } else {
+                answer
+            });
+        }
         let expiration = now + CODE;
         let updated = diesel::update(
             schema::oauth_authorization::table
@@ -115,6 +144,7 @@ impl QueryOAuthAuthorization {
         .set((
             schema::oauth_authorization::user_id.eq(user_id),
             schema::oauth_authorization::user_key_id.eq(user_key_id),
+            schema::oauth_authorization::auth_time.eq(auth_time),
             schema::oauth_authorization::code_hash.eq(code_hash),
             schema::oauth_authorization::expiration.eq(expiration),
         ))
@@ -124,6 +154,7 @@ impl QueryOAuthAuthorization {
         }
         authorization.user_id = Some(user_id);
         authorization.user_key_id = user_key_id;
+        authorization.auth_time = auth_time;
         authorization.code_hash = Some(code_hash.clone());
         authorization.expiration = expiration;
         Ok(OAuthAnswer::Recorded(Box::new(authorization)))
@@ -227,9 +258,11 @@ impl QueryOAuthAuthorization {
             code_challenge: _,
             state: _,
             nonce: _,
+            max_age: _,
             refresh: _,
             user_id: _,
             user_key_id: _,
+            auth_time: _,
             code_hash: _,
             grant_id: _,
             created: _,
@@ -275,6 +308,9 @@ pub enum OAuthAnswer {
     Repeated,
     /// The user key is not the approving user's.
     ForeignKey,
+    /// The request needed a more recent sign in than the user's, so it was denied: the request as
+    /// it stood.
+    LoginRequired(Box<QueryOAuthAuthorization>),
 }
 
 /// What an app asked for in its request to connect.
@@ -288,6 +324,7 @@ pub struct NewOAuthAuthorization {
     pub code_challenge: OAuthCodeChallenge,
     pub state: Option<OAuthRequestState>,
     pub nonce: Option<OAuthNonce>,
+    pub max_age: Option<OAuthMaxAge>,
     pub refresh: bool,
 }
 
@@ -313,6 +350,7 @@ impl NewOAuthAuthorization {
             code_challenge,
             state,
             nonce,
+            max_age,
             refresh,
         } = self;
         let uuid = OAuthAuthorizationUuid::from(uuid::Uuid::new_v4());
@@ -327,6 +365,7 @@ impl NewOAuthAuthorization {
                 code_challenge,
                 state,
                 nonce,
+                max_age,
                 refresh,
                 created: now,
                 expiration: now + PENDING,
@@ -348,6 +387,7 @@ struct InsertOAuthAuthorization {
     code_challenge: OAuthCodeChallenge,
     state: Option<OAuthRequestState>,
     nonce: Option<OAuthNonce>,
+    max_age: Option<OAuthMaxAge>,
     refresh: bool,
     created: DateTime,
     expiration: DateTime,

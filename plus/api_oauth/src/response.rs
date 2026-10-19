@@ -3,8 +3,8 @@ use dropshot::{Body, HttpError};
 use http::{
     HeaderValue, Response, StatusCode,
     header::{
-        ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, LOCATION, RETRY_AFTER,
-        WWW_AUTHENTICATE,
+        ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, CACHE_CONTROL, CONTENT_TYPE,
+        LOCATION, RETRY_AFTER, WWW_AUTHENTICATE,
     },
 };
 use serde::Serialize;
@@ -62,6 +62,30 @@ pub(crate) fn oauth_error(
             .headers_mut()
             .insert(RETRY_AFTER, HeaderValue::from_static(RETRY_AFTER_SECONDS));
     }
+    Ok(response)
+}
+
+/// Refuse a request for a resource that takes an access token (RFC 6750, section 3), with the
+/// `challenge` a browser client may read.
+pub(crate) fn bearer_error(
+    status: StatusCode,
+    challenge: &'static str,
+    error: &str,
+    description: &str,
+) -> Result<Response<Body>, HttpError> {
+    let mut response = json_with_status(
+        status,
+        &OAuthErrorBody {
+            error,
+            error_description: description,
+        },
+    )?;
+    let headers = response.headers_mut();
+    headers.insert(WWW_AUTHENTICATE, HeaderValue::from_static(challenge));
+    headers.insert(
+        ACCESS_CONTROL_EXPOSE_HEADERS,
+        HeaderValue::from_static("WWW-Authenticate"),
+    );
     Ok(response)
 }
 

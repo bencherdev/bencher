@@ -9496,7 +9496,7 @@
           "server"
         ],
         "summary": "View server configuration",
-        "description": "View the API server configuration. The user must be an admin on the server to use this route.",
+        "description": "View the API server configuration, with its secrets redacted. The user must be an admin on the server to use this route.",
         "operationId": "server_config_get",
         "responses": {
           "200": {
@@ -15967,6 +15967,15 @@
             "items": {
               "$ref": "#/components/schemas/OAuthResource"
             }
+          },
+          "signing_key": {
+            "nullable": true,
+            "description": "The RSA private key, in PEM format, that signs ID tokens. It enables the `openid`, `email`, and `profile` scopes.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
           }
         },
         "required": [
@@ -20622,6 +20631,27 @@
             "type": "string",
             "enum": [
               "projects:write"
+            ]
+          },
+          {
+            "description": "Who the user is.",
+            "type": "string",
+            "enum": [
+              "openid"
+            ]
+          },
+          {
+            "description": "The user's email address.",
+            "type": "string",
+            "enum": [
+              "email"
+            ]
+          },
+          {
+            "description": "The user's name.",
+            "type": "string",
+            "enum": [
+              "profile"
             ]
           }
         ]

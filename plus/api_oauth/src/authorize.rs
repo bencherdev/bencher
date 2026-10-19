@@ -3,8 +3,8 @@ use std::net::IpAddr;
 use bencher_cimd::{OAuthClientError, Throttled};
 use bencher_endpoint::{CorsResponse, Endpoint, Get};
 use bencher_json::{
-    OAuthAuthorizationUuid, OAuthClientId, OAuthCodeChallenge, OAuthNonce, OAuthRedirectUri,
-    OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
+    OAuthAuthorizationUuid, OAuthClientId, OAuthCodeChallenge, OAuthMaxAge, OAuthNonce,
+    OAuthRedirectUri, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
 };
 use bencher_schema::{
     context::{ApiContext, OAuthServer, RateLimiting},
@@ -21,6 +21,7 @@ use crate::{
     AUTHORIZATION_CODE_RESPONSE, S256, oauth_server,
     params::Params,
     response::{client_redirect, consent_page, found},
+    supported_scopes,
 };
 
 const RESPONSE_TYPE: &str = "response_type";
@@ -32,8 +33,9 @@ const CODE_CHALLENGE: &str = "code_challenge";
 const CODE_CHALLENGE_METHOD: &str = "code_challenge_method";
 const RESOURCE: &str = "resource";
 const NONCE: &str = "nonce";
+const MAX_AGE: &str = "max_age";
 const PROMPT: &str = "prompt";
-const PARAMETERS: [&str; 10] = [
+const PARAMETERS: [&str; 11] = [
     RESPONSE_TYPE,
     CLIENT_ID,
     REDIRECT_URI,
@@ -43,6 +45,7 @@ const PARAMETERS: [&str; 10] = [
     CODE_CHALLENGE_METHOD,
     RESOURCE,
     NONCE,
+    MAX_AGE,
     PROMPT,
 ];
 
@@ -181,23 +184,23 @@ async fn authorize(
     let nonce = params
         .value::<OAuthNonce>(NONCE)
         .map_err(|()| refuse(AuthorizeError::Nonce))?;
-    // Consent is always asked for, so a request that forbids asking cannot succeed.
-    if params
-        .get(PROMPT)
-        .is_some_and(|prompt| prompt.split(' ').any(|value| value == "none"))
-    {
-        return Err(refuse(AuthorizeError::ConsentRequired));
+    let max_age = params
+        .value::<OAuthMaxAge>(MAX_AGE)
+        .map_err(|()| refuse(AuthorizeError::MaxAge))?;
+    if let Some(error) = prompt_refusal(params.get(PROMPT)) {
+        return Err(refuse(error));
     }
 
     let authorization = NewOAuthAuthorization {
         client_id: client_id.clone(),
         client_name: metadata.name.clone(),
         redirect_uri: redirect_uri.clone(),
-        scope: scopes(params.get(SCOPE)),
+        scope: scopes(oauth, params.get(SCOPE)),
         resource,
         code_challenge,
         state: state.clone(),
         nonce,
+        max_age,
         refresh: metadata.refresh,
     };
     let now = context.clock.now();
@@ -211,17 +214,28 @@ async fn authorize(
     })
 }
 
-/// The scopes asked for that this server knows, or reading projects when there are none.
-fn scopes(scope: Option<&str>) -> OAuthScopes {
-    let scopes = scope
-        .unwrap_or_default()
-        .split(' ')
-        .filter_map(|scope| scope.parse::<OAuthScope>().ok())
-        .collect::<OAuthScopes>();
-    if scopes.iter().next().is_some() {
+/// Why consent cannot do what a request's `prompt` asks, if it cannot.
+fn prompt_refusal(prompt: Option<&str>) -> Option<AuthorizeError> {
+    let prompts = || prompt.unwrap_or_default().split(' ');
+    // Consent is always asked for, so a request that forbids asking cannot succeed.
+    if prompts().any(|value| value == "none") {
+        Some(AuthorizeError::ConsentRequired)
+    } else if prompts().any(|value| value == "login") {
+        // Nor can asking for consent make anyone sign in again.
+        Some(AuthorizeError::LoginRequired)
+    } else {
+        None
+    }
+}
+
+/// The scopes asked for that this server grants, with reading projects when none of them reach
+/// projects, so that every grant can use the MCP server.
+fn scopes(oauth: &OAuthServer, scope: Option<&str>) -> OAuthScopes {
+    let scopes = supported_scopes(oauth, scope);
+    if scopes.iter().any(OAuthScope::is_project) {
         scopes
     } else {
-        [OAuthScope::ProjectsRead].into_iter().collect()
+        scopes.iter().chain([OAuthScope::ProjectsRead]).collect()
     }
 }
 
@@ -282,7 +296,9 @@ enum AuthorizeError {
     CodeChallenge,
     Resource,
     Nonce,
+    MaxAge,
     ConsentRequired,
+    LoginRequired,
     Server,
 }
 
@@ -308,13 +324,15 @@ impl AuthorizeError {
             | Self::ResponseTypeMissing
             | Self::CodeChallengeMethod
             | Self::CodeChallenge
-            | Self::Nonce => "invalid_request",
+            | Self::Nonce
+            | Self::MaxAge => "invalid_request",
             Self::Client | Self::ClientFetch | Self::ClientDocument => "invalid_client",
             Self::Throttled | Self::ClientBusy => "temporarily_unavailable",
             Self::RedirectUri => "invalid_redirect_uri",
             Self::ResponseType => "unsupported_response_type",
             Self::Resource => "invalid_target",
             Self::ConsentRequired => "consent_required",
+            Self::LoginRequired => "login_required",
             Self::Server => "server_error",
         }
     }
@@ -336,7 +354,9 @@ impl AuthorizeError {
             Self::CodeChallenge => "The code_challenge parameter must be 43 base64url characters",
             Self::Resource => "The resource is not one this server issues tokens for",
             Self::Nonce => "The nonce parameter is longer than 256 bytes",
+            Self::MaxAge => "The max_age parameter must be a number of seconds",
             Self::ConsentRequired => "The user is always asked for consent",
+            Self::LoginRequired => "The user cannot be asked to sign in again",
             Self::Server => "The request could not be recorded, please try again",
         }
     }
@@ -351,7 +371,8 @@ impl AuthorizeError {
             | Self::ResponseTypeMissing
             | Self::CodeChallengeMethod
             | Self::CodeChallenge
-            | Self::Nonce => Reason::InvalidRequest,
+            | Self::Nonce
+            | Self::MaxAge => Reason::InvalidRequest,
             Self::Client => Reason::InvalidClient,
             Self::ClientFetch => Reason::ClientFetch,
             Self::ClientDocument => Reason::ClientDocument,
@@ -361,6 +382,7 @@ impl AuthorizeError {
             Self::ResponseType => Reason::ResponseType,
             Self::Resource => Reason::Resource,
             Self::ConsentRequired => Reason::ConsentRequired,
+            Self::LoginRequired => Reason::LoginRequired,
             Self::Server => Reason::ServerError,
         }
     }
@@ -379,10 +401,11 @@ mod tests {
     // the console's error page.
     #[test]
     fn only_a_verified_client_hears_why_it_was_refused() {
-        let oauth = OAuthServer::from(
+        let oauth = OAuthServer::try_from(
             serde_json::from_value::<JsonOAuthServer>(json!({"issuer": "https://api.example.com"}))
                 .unwrap(),
-        );
+        )
+        .unwrap();
         let state = "af0ifjsldkj".parse().unwrap();
 
         let refusal = Refusal::client(
