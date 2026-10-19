@@ -4,14 +4,23 @@ import type { JsonAccept, JsonAuthUser } from "../../types/bencher";
 import { authUser } from "../../util/auth";
 import { httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
-import { hiddenRedirect, useSearchParams } from "../../util/url";
+import { BACK_PARAM, hiddenRedirect, useSearchParams } from "../../util/url";
 import Redirect from "../site/Redirect";
 import { CLAIM_PARAM, INVITE_PARAM, PLAN_PARAM } from "./auth";
 import { AUTHORIZATION_PARAM, consentPath } from "./authorize/path";
+import { keepBack, signedInPath } from "./back";
 
-const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
+const AuthRedirect = (props: {
+	apiUrl?: string;
+	path: string;
+	/** A sign in page keeps its way back; the confirm page only returns to one. */
+	back?: "keep" | "take";
+}) => {
 	const [searchParams, _setSearchParams] = useSearchParams();
 	const user = authUser();
+	if (props.back === "keep") {
+		keepBack(searchParams[BACK_PARAM]);
+	}
 
 	const acceptFetcher = createMemo(() => {
 		return {
@@ -112,7 +121,9 @@ const AuthRedirect = (props: { apiUrl?: string; path: string }) => {
 			}
 		>
 			<Show
-				when={consentPath(searchParams[AUTHORIZATION_PARAM])}
+				when={(props.back ? signedInPath : consentPath)(
+					searchParams[AUTHORIZATION_PARAM],
+				)}
 				fallback={<Redirect path={props.path} />}
 			>
 				{(consent) => {

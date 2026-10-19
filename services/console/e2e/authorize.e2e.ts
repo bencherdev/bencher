@@ -1,6 +1,15 @@
 import { randomUUID } from "node:crypto";
 import type { APIRequestContext, Page } from "@playwright/test";
-import { USER_KEY, expect, seed, signedIn, signedOut, test } from "./fixtures";
+import {
+	USER_KEY,
+	expect,
+	nextPath,
+	seed,
+	signedIn,
+	signedOut,
+	test,
+} from "./fixtures";
+import { finishGitHub, startGitHub } from "./github";
 import { mailedLink } from "./mail";
 
 // The app the harness configures: it calls itself ChatGPT, but it is served from
@@ -11,9 +20,14 @@ const CALLBACK = "https://client.example/callback";
 const LOOPBACK = "http://127.0.0.1:61017/callback";
 const CHALLENGE = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM";
 const CONSENT = "/auth/authorize";
-const CORS = { "Access-Control-Allow-Origin": "*" };
 
 const PROJECT_SCOPES = "projects:read projects:write";
+// A page of the console that a sign in would return to, but for the request.
+const wayBack = Buffer.from(nextPath(seed.projects.hashbrown.slug)).toString(
+	"base64",
+);
+const keptReturn = (page: Page) =>
+	page.evaluate(() => localStorage.getItem("BENCHER_RETURN"));
 
 const authorizeUrl = (redirectUri: string, state: string, scope: string) =>
 	`${seed.api_url}/oauth/authorize?${new URLSearchParams({
@@ -199,6 +213,17 @@ test.describe("signed in", () => {
 		const { uuid } = await connect(page);
 		await page.goto(`/auth/login?authorization=${uuid}`);
 		await expect(page).toHaveURL(`${CONSENT}?request=${uuid}`);
+	});
+
+	// Kills a sign in that returns to the page asked for over a pending request,
+	// or keeps that page for a later sign in.
+	test("a pending request wins over the page asked for", async ({ page }) => {
+		const { uuid } = await connect(page);
+		await page.goto(
+			`/auth/login?${new URLSearchParams({ authorization: uuid, back: wayBack })}`,
+		);
+		await expect(page).toHaveURL(`${CONSENT}?request=${uuid}`);
+		expect(await keptReturn(page)).toBeNull();
 	});
 
 	// Kills a different account that leaves the session behind, or leaves the
@@ -533,7 +558,10 @@ test.describe("signed out", () => {
 		const logged: string[] = [];
 		page.on("console", (message) => logged.push(message.text()));
 		const { uuid } = await connect(page);
-		const { started } = await startGitHub(page, uuid);
+		const { started } = await startGitHub(
+			page,
+			`/auth/login?authorization=${uuid}`,
+		);
 
 		expect(started).toHaveLength(1);
 		expect(new URL(started[0] ?? "").searchParams.get("authorization")).toBe(
@@ -550,10 +578,28 @@ test.describe("signed out", () => {
 		page,
 	}) => {
 		const { uuid } = await connect(page);
-		const { state } = await startGitHub(page, uuid);
-		await finishGitHub(page, uuid, state);
+		const { state } = await startGitHub(
+			page,
+			`/auth/login?authorization=${uuid}`,
+		);
+		await finishGitHub(page, state, uuid);
 		await expect(page).toHaveURL(`${CONSENT}?request=${uuid}`);
 		await expect(approve(page)).toBeVisible();
+	});
+
+	// Kills a provider sign in that returns to the page asked for over a pending
+	// request, or keeps that page for a later sign in.
+	test("signing in with a provider returns to the request over the page asked for", async ({
+		page,
+	}) => {
+		const { uuid } = await connect(page);
+		const { state } = await startGitHub(
+			page,
+			`/auth/login?${new URLSearchParams({ authorization: uuid, back: wayBack })}`,
+		);
+		await finishGitHub(page, state, uuid);
+		await expect(page).toHaveURL(`${CONSENT}?request=${uuid}`);
+		expect(await keptReturn(page)).toBeNull();
 	});
 
 	// Kills a provider callback that signs in a browser that did not start the sign in.
@@ -561,7 +607,7 @@ test.describe("signed out", () => {
 		page,
 	}) => {
 		const { uuid } = await connect(page);
-		await finishGitHub(page, uuid, randomUUID());
+		await finishGitHub(page, randomUUID(), uuid);
 
 		const signIn = page.getByRole("button", {
 			name: `Sign in as ${seed.member.user.email}`,
@@ -581,8 +627,8 @@ test.describe("signed out", () => {
 		page,
 	}) => {
 		const { uuid } = await connect(page);
-		await startGitHub(page, uuid);
-		await finishGitHub(page, uuid, randomUUID());
+		await startGitHub(page, `/auth/login?authorization=${uuid}`);
+		await finishGitHub(page, randomUUID(), uuid);
 
 		await expect(
 			page.getByRole("button", {
@@ -621,48 +667,4 @@ const logInByEmail = async (page: Page, request: APIRequestContext) => {
 	await expect(page).toHaveURL((url) => url.pathname === "/auth/confirm");
 	expect(new URL(page.url()).searchParams.get("authorization")).toBe(uuid);
 	return { uuid, state, email };
-};
-
-/** Start a GitHub sign in for the request, as far as GitHub, which the browser never really reaches. */
-const startGitHub = async (page: Page, uuid: string) => {
-	const started: string[] = [];
-	const state = randomUUID();
-	await page.route(
-		(url) => url.href.startsWith(`${seed.api_url}/v0/auth/github?`),
-		(route) => {
-			if (route.request().method() !== "GET") {
-				return route.continue();
-			}
-			started.push(route.request().url());
-			return route.fulfill({
-				headers: CORS,
-				json: {
-					url: `https://github.example/login/oauth/authorize?${new URLSearchParams({ state })}`,
-				},
-			});
-		},
-	);
-	await page.route("https://github.example/**", (route) =>
-		route.fulfill({ contentType: "text/plain", body: "GitHub" }),
-	);
-	await page.goto(`/auth/login?authorization=${uuid}`);
-	await page.getByRole("button", { name: "Log in with GitHub" }).click();
-	await expect(page).toHaveURL(/^https:\/\/github\.example\//);
-	return { started, state };
-};
-
-/** Come back from GitHub with `state`, signed in as the member, for the request. */
-const finishGitHub = async (page: Page, uuid: string, state: string) => {
-	await page.route(`${seed.api_url}/v0/auth/github`, (route) =>
-		route.request().method() === "POST"
-			? route.fulfill({
-					status: 202,
-					headers: CORS,
-					json: { user: seed.member, authorization: uuid },
-				})
-			: route.continue(),
-	);
-	await page.goto(
-		`/auth/github?${new URLSearchParams({ code: "code", state })}`,
-	);
 };

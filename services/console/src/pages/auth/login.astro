@@ -10,12 +10,13 @@ import AuthRedirect from "../../components/auth/AuthRedirect";
 import OAuthForm from "../../components/auth/OAuthFrom";
 import {
 	AUTHORIZATION_PARAM,
-	signInPath,
+	switchPath as otherPath,
 } from "../../components/auth/authorize/path";
 
-const switchPath = signInPath(
+const switchPath = otherPath(
 	"/auth/signup",
 	Astro.url.searchParams.get(AUTHORIZATION_PARAM),
+	Astro.url.searchParams.get("back"),
 );
 const newUser = false;
 const title = "Log in";
@@ -24,7 +25,7 @@ const description =
 ---
 
 <AuthLayout title={title} description={description}>
-  <AuthRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} path="/console" />
+  <AuthRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} path="/console" back="keep" />
 
   <h1 class="title is-1">{title}</h1>
 

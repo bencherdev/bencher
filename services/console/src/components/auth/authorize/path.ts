@@ -23,3 +23,15 @@ export const signInPath = (path: string, authorization: unknown): string => {
 	const uuid = requestUuid(authorization);
 	return uuid ? `${path}?${AUTHORIZATION_PARAM}=${uuid}` : path;
 };
+
+/** The other sign in page at `path`, carrying the request and the way back. */
+export const switchPath = (
+	path: string,
+	authorization: unknown,
+	back: unknown,
+): string => {
+	const to = signInPath(path, authorization);
+	return typeof back === "string" && back
+		? `${to}${to.includes("?") ? "&" : "?"}${new URLSearchParams({ back })}`
+		: to;
+};

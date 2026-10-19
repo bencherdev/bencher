@@ -12,7 +12,8 @@ import { hiddenRedirect, useNavigate, useSearchParams } from "../../util/url";
 import { type InitValid, init_valid } from "../../util/valid";
 import SignInAs from "./SignInAs";
 import { PLAN_PARAM } from "./auth";
-import { consentPath, signInPath } from "./authorize/path";
+import { signInPath } from "./authorize/path";
+import { signedInPath } from "./back";
 import { takeSignIn } from "./signIn";
 
 const CODE_PARAM = "code";
@@ -33,6 +34,8 @@ const AuthOAuth = (props: Props) => {
 	const [pending, setPending] = createSignal<JsonOAuthUser>();
 
 	const signIn = (oauthUser: JsonOAuthUser) => {
+		// Taken before the reader is stored, so a tab that sees them first finds it gone.
+		const to = signedInPath(oauthUser?.authorization);
 		if (!setUser(oauthUser?.user)) {
 			navigateNotify(
 				NotifyKind.ERROR,
@@ -43,10 +46,9 @@ const AuthOAuth = (props: Props) => {
 			);
 			return;
 		}
-		const consent = consentPath(oauthUser.authorization);
 		const plan = oauthUser.plan;
-		if (consent) {
-			hiddenRedirect(consent);
+		if (to) {
+			hiddenRedirect(to);
 		} else {
 			navigateNotify(
 				NotifyKind.OK,
@@ -73,7 +75,7 @@ const AuthOAuth = (props: Props) => {
 		state: undefined | string;
 	}) => {
 		if (fetcher.user?.token) {
-			navigate("/console", { replace: true });
+			navigate(signedInPath(undefined) ?? "/console", { replace: true });
 		}
 		if (!fetcher.bencher_valid || !fetcher.code) {
 			return null;
