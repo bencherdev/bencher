@@ -106,6 +106,12 @@ set of operations a `bencher_run_` key can perform), also update:
 - The corresponding tool in `plus/api_mcp/src/tools/`
 - The Bencher skill docs: `plugins/bencher/skills/bencher/mcp.md`
 
+When changing OAuth sign-in (`plus/api_oauth`, the `plus.oauth` config, or the
+scopes and challenges in `plus/api_mcp`), also update `plugins/bencher/skills/bencher/mcp.md`,
+all nine `services/console/src/content/docs-how-to/*/mcp.mdx` pages, and all
+nine `services/console/src/chunks/docs-reference/server-config/*/plus-oauth.mdx`
+chunks.
+
 MCP tool input types must not be recursive: tool schemas are generated with
 `schemars` `inline_subschemas`, which recurses without bound, so a recursive
 input type would overflow the stack at schema generation time.

@@ -9,7 +9,13 @@ const MAX_LEN: usize = 128;
 
 /// A PKCE code verifier: the secret behind an authorization request's code challenge,
 /// 43 to 128 unreserved characters.
-pub struct OAuthCodeVerifier(String);
+pub struct OAuthCodeVerifier(
+    #[cfg_attr(
+        not(feature = "server"),
+        expect(dead_code, reason = "read only by the server's PKCE check")
+    )]
+    String,
+);
 
 impl OAuthCodeVerifier {
     /// Whether `challenge` is this verifier's `S256` challenge, compared in constant time.

@@ -17,19 +17,30 @@ tool output instead of shell parsing, or from MCP clients other than a shell.
 | Bencher Cloud | `https://mcp.bencher.dev/mcp` |
 | Self-Hosted (Plus) | `https://<api-host>/mcp` (default: `http://localhost:6610/mcp`) |
 
-Authentication uses the same `Authorization: Bearer` credentials as the REST
-API: a project API key (`bencher_run_*`) or a user API key (`bencher_user_*`).
-Public projects can be read without any credential. OAuth is not yet
-supported, so clients that only support OAuth for remote servers (e.g.
-claude.ai custom connectors) cannot connect yet.
+There are three ways to call it:
 
-Claude Code:
+- **OAuth sign-in**: clients with MCP OAuth support (ChatGPT, claude.ai custom
+  connectors, Claude Code) connect with no credential and sign in when asked.
+  The client opens Bencher's consent page in a browser, where the user logs in
+  (or pastes a `bencher_user_*` key) and approves the app. A self-hosted server
+  offers this only once its `plus.oauth` config section is set.
+- **API key**: the same `Authorization: Bearer` credentials as the REST API, a
+  project API key (`bencher_run_*`) or a user API key (`bencher_user_*`).
+- **Anonymous**: public projects can be read without any credential.
+
+Claude Code, signing in with OAuth (run `/mcp` in Claude Code to sign in when
+a tool asks):
+```bash
+claude mcp add --transport http bencher https://mcp.bencher.dev/mcp
+```
+
+Claude Code with an API key:
 ```bash
 claude mcp add --transport http bencher https://mcp.bencher.dev/mcp \
   --header "Authorization: Bearer $BENCHER_API_KEY"
 ```
 
-Generic MCP client configuration:
+Generic MCP client configuration with an API key:
 ```json
 {
   "mcpServers": {
@@ -44,12 +55,49 @@ Generic MCP client configuration:
 }
 ```
 
+## OAuth
+
+- Scopes: `projects:read` covers the read tools (`list_*`, `view_*`,
+  `query_perf`, `perf_image`), private projects included. `projects:write`
+  covers every other tool and includes read. A request naming neither gets
+  `projects:read`. `openid`, `email`, and `profile` (OpenID Connect) are
+  offered only when the server has `plus.oauth.signing_key`. The user approves
+  every connection, for all of the requested scopes or none.
+- A token acts as its user: project roles still decide every project, and it
+  never carries server admin authority.
+- Access tokens (`bencher_oauth_*`) last 1 hour. Refresh tokens rotate on every
+  use and lapse after 30 days unused; presenting a rotated refresh token again
+  revokes the connection. A connection lasts at most one year, and one
+  approved with a pasted user key ends when that key is revoked or expires.
+- OAuth access tokens are for the MCP server (and the OAuth UserInfo
+  endpoint): REST endpoints refuse them with `401`.
+- Users see and revoke connections under Connected Apps in the console
+  (`/console/users/apps`), while logged in (not with an API key).
+- Discovery: protected resource metadata at
+  `/.well-known/oauth-protected-resource/mcp`, authorization server metadata at
+  `/.well-known/oauth-authorization-server`. Clients register with a Client ID
+  Metadata Document (no dynamic client registration), use PKCE (`S256`), and
+  never authenticate (public clients only).
+
+## Anonymous Access and Rate Limits
+
+- Anonymous requests share a rate limit per IP address, so everyone behind one
+  address (a hosted client's egress included) shares it. Signed-in requests
+  are charged to the user, or to a project key's project, never to the IP.
+- With OAuth configured, an anonymous tool call that needs a signed-in user
+  gets a sign-in challenge instead of an error: reading a private project (a
+  nonexistent project or ID answers identically, so a mistyped ID within a
+  public project also challenges), any tool that writes except `submit_run` to
+  an unclaimed project, and any tool call over the per-IP limit.
+- With OAuth configured, every tool declares `_meta.securitySchemes`: `noauth`
+  when it works anonymously, and `oauth2` with the scope it needs.
+
 ## Tool Surface
 
 The tool surface mirrors what a project API key (`bencher_run_*`) can do:
-project-scoped reads and non-destructive writes. There are no delete or
-rename tools, and nothing outside a single project. A user key gets the same
-tool set applied across all of the user's projects.
+project-scoped reads and writes, with no delete tools. There are no rename
+tools, and nothing outside a single project. A user key or an OAuth token gets
+the same tool set applied across all of the user's projects.
 
 | Tools | Purpose |
 |-------|---------|
@@ -90,7 +138,19 @@ Notes:
 - Streamable HTTP transport, stateless: each POST is an independent JSON-RPC
   message answered with `application/json`. No SSE, no sessions.
 - Protocol versions `2025-03-26` and newer are supported.
-- Errors use two channels: invalid or expired credentials fail the whole
-  request with HTTP `401`, like the REST API, while authorization and
-  validation failures (`400`/`403`/`404`) come back as tool results with
-  `isError: true` carrying the REST status code and message.
+- A credential that is malformed, invalid, or expired fails the whole request
+  on every method with HTTP `401` (a well-formed JWT that fails validation is a
+  `400`). With OAuth configured, the `401` carries
+  `WWW-Authenticate: Bearer error="invalid_token", ..., resource_metadata="..."`,
+  so an OAuth client refreshes its token or signs in again.
+- Sign-in challenges (OAuth configured): an anonymous caller gets HTTP `401`
+  with `WWW-Authenticate: Bearer resource_metadata="...", scope="..."`, asking
+  for `projects:read`, or `projects:read projects:write` for a tool that
+  writes. An OAuth token without the tool's scope gets HTTP `403` with
+  `error="insufficient_scope"` and `scope="projects:read projects:write"`.
+  ChatGPT (recognized by `openai/` keys in the tool call's `_meta`, or an
+  `openai-mcp` `User-Agent`) gets either as a `200` tool result with
+  `isError: true` and the challenge in `_meta["mcp/www_authenticate"]`.
+- Other authorization and validation failures (`400`/`403`/`404`) come back
+  as tool results with `isError: true` carrying the REST status code and
+  message.

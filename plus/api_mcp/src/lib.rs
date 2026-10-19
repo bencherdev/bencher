@@ -25,7 +25,7 @@
 //! `https://mcp.bencher.dev/mcp`.
 //!
 //! The tool surface mirrors the operations available to a project API key
-//! (`bencher_run_`): project-scoped reads and non-destructive writes.
+//! (`bencher_run_`): project-scoped reads and writes, with no delete tools.
 //! Authentication accepts the same `Authorization: Bearer` credentials as
 //! the REST API (project key, user key, or token) by reusing the REST
 //! endpoint handlers; anonymous requests may read public projects.

@@ -3,11 +3,12 @@ title: "Bencher MCP"
 description: "通过托管的 MCP 服务器将 AI 代理和助手连接到 Bencher，以查询基准测试数据并提交结果"
 heading: "如何使用 Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-07-18T07:00:00Z"
+modified: "2026-10-18T01:00:00Z"
 sortOrder: 11
 ---
 
 import McpClaudeCode from "../../../chunks/docs-how-to/mcp/mcp-claude-code.mdx";
+import McpClaudeCodeKey from "../../../chunks/docs-how-to/mcp/mcp-claude-code-key.mdx";
 import McpJson from "../../../chunks/docs-how-to/mcp/mcp-json.mdx";
 
 Bencher MCP 是一个托管的 [Model Context Protocol](https://modelcontextprotocol.io)（MCP）服务器。
@@ -24,9 +25,17 @@ Bencher MCP 是一个托管的 [Model Context Protocol](https://modelcontextprot
 | Bencher Cloud | `https://mcp.bencher.dev/mcp` |
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
+将该 URL 添加到您的 MCP 客户端，并在客户端提示时使用您的 Bencher 账户登录。
+ChatGPT、claude.ai 自定义连接器和 Claude Code 都通过 OAuth 登录。
 例如，从 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 连接：
 
 <McpClaudeCode />
+
+当某个工具需要您登录时，在 Claude Code 中运行 `/mcp`，并按照浏览器中的步骤操作。
+
+如果改用 API 密钥连接，请在 `Authorization` 请求头中发送它：
+
+<McpClaudeCodeKey />
 
 或使用通用的 MCP 客户端配置：
 
@@ -34,19 +43,71 @@ Bencher MCP 是一个托管的 [Model Context Protocol](https://modelcontextprot
 
 ## 认证
 
-Bencher MCP 接受与 Bencher API 相同的 `Authorization: Bearer` 凭据：
-项目 API 密钥（`bencher_run_*`）或用户 API 密钥（`bencher_user_*`）。
-公开项目无需任何凭据即可读取。
-目前尚不支持 OAuth，因此仅支持通过 OAuth 连接远程服务器的 MCP 客户端暂时无法连接。
+### 使用 OAuth 登录
 
+支持 OAuth 的 MCP 客户端使用您的 Bencher 账户登录，因此您无需在其中粘贴任何密钥。
+客户端会在您连接时，或在某个工具首次需要您登录时，在浏览器中打开 Bencher。
+Bencher 以应用的网址来标识该应用，并列出该应用请求执行的操作。
+登录，或粘贴用户 API 密钥（`bencher_user_*`），然后批准或拒绝。
+每当有应用连接时，Bencher 都会询问您，且项目 API 密钥（`bencher_run_*`）无法用于批准。
+
+应用最多保持连接一年。
+使用用户 API 密钥批准的应用，会在该密钥被撤销或过期时立即断开连接。
+OAuth 访问令牌用于 Bencher MCP：
+Bencher API 会以 `401 Unauthorized` 拒绝它们。
+
+在 Bencher Self-Hosted 上，配置 API 服务器的 [`plus.oauth`](/zh/docs/reference/server-config/#plusoauth) 部分后即可登录。
+ChatGPT 和 claude.ai 需要能从互联网访问该服务器。
+只要服务器能获取 Claude Code 的客户端元数据文档，或已在 `plus.oauth.clients` 中配置该文档，Claude Code 也可以登录您自己网络中通过 `https` 提供服务的服务器。
+
+### 作用域
+
+对于应用请求的作用域，您只能全部批准或全部拒绝：
+
+| 作用域 | 应用可以 |
+| :--- | :--- |
+| `projects:read` | 查看您的项目及其结果，包括私有项目 |
+| `projects:write` | 查看、创建和更改您项目中的数据，包括私有项目，例如报告、阈值和警报，并提交会创建项目或认领 `unclaimed` 组织的运行 |
+| `openid` | 知道您登录的是哪个 Bencher 账户 |
+| `email` | 查看您的电子邮件地址及其是否已验证 |
+| `profile` | 查看您的姓名和用户名 |
+
+读取类工具（`list_*`、`view_*`、`query_perf` 和 `perf_image`）需要 `projects:read`。
+其他所有工具都需要 `projects:write`，它包含 `projects:read`。
+两者都未请求的应用会获得 `projects:read`。
+登录时未获得 `projects:write` 的应用，在调用写入类工具时会被要求重新登录。
+`openid`、`email` 和 `profile` 作用域用于 OpenID Connect，仅当服务器配置了 `plus.oauth.signing_key` 时才可用。
+应用以您的身份操作：它在每个项目中能查看和更改什么，仍由您在该项目中的角色决定，并且它永远不会拥有服务器管理员权限。
+
+### 已连接的应用
+
+要查看已连接到您账户的应用，请在 Bencher Console 的账户菜单中打开 **Connected Apps**，或访问 [`/console/users/apps`](/console/users/apps)。
+每个应用都按其网址列出，并显示它能执行的操作、连接时间、上次刷新访问权限的时间，以及您批准它的方式。
+**Revoke** 会立即断开应用的连接。
+
+### API 密钥
+
+Bencher MCP 也接受与 Bencher API 相同的 `Authorization: Bearer` 凭据：
+项目 API 密钥（`bencher_run_*`）或用户 API 密钥（`bencher_user_*`）。
 项目 API 密钥的权限范围限定在单个项目内，因此是大多数代理的最佳选择。
 用户 API 密钥可以访问该用户的所有项目。
+无效的凭据在每个请求中都会被拒绝，绝不会被当作匿名访问。
+
+### 不登录
+
+公开项目无需任何凭据即可读取。
+匿名请求按 IP 地址共享速率限制，而登录后的请求计入您自己的限制。
+当服务器配置了 OAuth 时，如果匿名工具调用需要登录，Bencher MCP 会请求您的客户端登录：
+
+- 读取私有项目时。不存在的项目会得到相同的响应，因此输错项目或 ID 时，即使是在公开项目中，也会被要求登录。
+- 调用写入类工具时，但向 [`unclaimed` 项目](/zh/docs/how-to/claim/#unclaimed-项目)提交的 `submit_run` 除外。
+- 超出匿名速率限制时。
 
 ## 工具
 
 工具范围与项目 API 密钥（`bencher_run_*`）的权限一致：
-项目范围内的读取和非破坏性的写入。
-没有删除或重命名工具，并且使用项目 API 密钥时，警报更新仅限于状态变更。
+项目范围内的读取和写入，没有删除工具。
+也没有重命名工具，并且使用项目 API 密钥时，警报更新仅限于状态变更。
 大多数工具都接受 `project` 参数，可以是项目的 slug 或 UUID。
 
 | 工具 | 用途 |

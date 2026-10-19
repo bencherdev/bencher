@@ -1,0 +1,31 @@
+### `plus.oauth`
+
+Mit diesem Abschnitt können sich MCP-Clients wie ChatGPT, claude.ai und Claude Code über OAuth [bei Bencher MCP anmelden](/de/docs/how-to/mcp/).
+Der API-Server wird zu ihrem OAuth-Autorisierungsserver, und Benutzer genehmigen jede App in der Bencher Console unter `console.url`.
+Der gesamte Abschnitt ist optional.
+Wenn er nicht angegeben ist, ist OAuth deaktiviert: Seine Endpunkte geben `404 Not Found` zurück, und Bencher MCP akzeptiert nur API-Schlüssel und anonyme Anfragen.
+
+| Name | Beispiel | Standardwert | Erforderlich | Beschreibung |
+| :---: | :---: | :---: | :---: | :---: |
+| issuer | "https://api.bencher.example.com" | --- | Ja | Der öffentliche Origin dieses API-Servers, unter dem Apps seine OAuth-Endpunkte finden: `https`, oder `http` nur für einen Loopback-Host wie `localhost`. Er muss ein Origin ohne Pfad sein, sonst startet der Server nicht. **WARNUNG** Ohne eine in `resources` aufgeführte URL folgt die Standard-Ressource diesem Wert, daher trennt eine Änderung die Apps, die bei der alten Standard-Ressource angemeldet sind, bis der alte Wert wiederhergestellt ist; mit einer in `resources` aufgeführten URL trennt eine Änderung nichts, solange der alte Origin diesen Server noch erreicht. |
+| resources | `["https://mcp.bencher.example.com/mcp", "https://api.bencher.example.com/mcp"]` | [`<issuer>/mcp`] | Nein | Die URLs des MCP-Endpunkts dieses Servers, bei denen sich Apps anmelden, die kanonische zuerst: `https`, oder `http` nur für einen Loopback-Host. Eine App, die keine angibt, erhält die erste. Das Entfernen einer URL trennt die Apps, die bei ihr angemeldet sind, bis sie wieder aufgeführt wird; ohne aufgeführte URL wird die Standard-Ressource bereitgestellt. |
+| clients | [\{ ... \}] | --- | Nein | Die einzigen Apps, die sich anmelden dürfen. Das Entfernen einer App trennt sie, bis sie wieder aufgeführt wird. Aufgeführte Apps werden auf der Zustimmungsseite als verifiziert gekennzeichnet. Wenn nicht angegeben, kann jede App eine Anmeldung anfragen, sofern der API-Server ein gültiges Client-Metadatendokument von ihrer Client-ID abrufen kann. |
+| clients.id | "https://app.example.com/oauth/client.json" | --- | Ja | Die Client-ID der App: die `https` URL ihres Client-Metadatendokuments. |
+| clients.metadata | \{ ... \} | --- | Nein | Das Client-Metadatendokument der App, das verwendet wird, anstatt es von `id` abzurufen, zum Beispiel auf einem Server ohne Internetzugang. Es muss ein gültiges Client-Metadatendokument sein, dessen `client_id` gleich `id` ist, sonst startet der Server nicht. |
+| signing_key | `"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"` | --- | Nein | Ein privater RSA-Schlüssel mit mindestens 2048 Bit im PEM-Format (PKCS #1 oder PKCS #8), der ID-Tokens signiert. Er aktiviert OpenID Connect: die Scopes `openid`, `email` und `profile`, ID-Tokens sowie die UserInfo-, JWKS- und Discovery-Endpunkte. Wenn nicht angegeben, ist OpenID Connect deaktiviert. Wenn er kein gültiger Schlüssel ist, startet der Server nicht. **ER SOLLTE SEHR SICHER SEIN!** Jedes Mal, wenn er protokolliert wird, wird er als `************` verschleiert dargestellt. |
+
+Ein JSON-String kann keinen Zeilenumbruch enthalten, schreiben Sie daher jeden Zeilenumbruch in `signing_key` als `\n`.
+Erzeugen Sie zum Beispiel einen Schlüssel und geben Sie ihn als JSON-String aus, ohne ihn in eine Datei zu schreiben:
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | jq -Rs .
+```
+
+Um den Signaturschlüssel zu rotieren, ersetzen Sie ihn. Dadurch wird keine App getrennt.
+
+Der API-Server stellt seine OAuth-Endpunkte und Metadaten an der Wurzel von `issuer` bereit.
+Wenn ein Reverse Proxy den API-Server unter einem Pfadpräfix bereitstellt, etwa `https://bencher.example.com/api`,
+setzen Sie `issuer` auf den Origin (`https://bencher.example.com`) und tragen Sie die vollständige URL des MCP-Endpunkts in `resources` ein (`https://bencher.example.com/api/mcp`).
+Der Proxy muss dann `/oauth/`, `/.well-known/oauth-authorization-server` und `/.well-known/openid-configuration` am Origin an dieselben Pfade auf dem API-Server weiterleiten,
+und den Metadatenpfad jeder Ressource, hier `/.well-known/oauth-protected-resource/api/mcp`, an `/.well-known/oauth-protected-resource/mcp` auf dem API-Server.
+Bei mehr als einer Ressource muss der Proxy außerdem den `Host` Header unverändert durchreichen, da der API-Server anhand dieses Headers die anzukündigende Ressource auswählt.

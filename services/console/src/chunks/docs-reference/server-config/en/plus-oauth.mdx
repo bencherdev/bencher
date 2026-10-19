@@ -1,0 +1,31 @@
+### `plus.oauth`
+
+This section lets MCP clients, such as ChatGPT, claude.ai, and Claude Code, [sign in to Bencher MCP](/docs/how-to/mcp/) with OAuth.
+The API server becomes their OAuth authorization server, and users approve each app on the Bencher Console at `console.url`.
+The entire section is optional.
+If not specified, then OAuth is off: its endpoints return `404 Not Found`, and Bencher MCP only accepts API keys and anonymous requests.
+
+| Name | Example | Default | Required | Description |
+| :---: | :---: | :---: | :---: | :---: |
+| issuer | "https://api.bencher.example.com" | --- | Yes | The public origin of this API server, where apps find its OAuth endpoints: `https`, or `http` only for a loopback host such as `localhost`. It must be an origin with no path, or the server will not start. **WARNING** Without a URL listed in `resources`, the default resource follows this value, so changing it disconnects the apps signed in to the old default until it is changed back; with a URL listed in `resources`, changing it disconnects nothing while the old origin still reaches this server. |
+| resources | `["https://mcp.bencher.example.com/mcp", "https://api.bencher.example.com/mcp"]` | [`<issuer>/mcp`] | No | The URLs of this server's MCP endpoint that apps sign in to, canonical first: `https`, or `http` only for a loopback host. An app that names none gets the first. Removing a URL disconnects the apps signed in to it until it is listed again; with no URL left, the default is served. |
+| clients | [\{ ... \}] | --- | No | The only apps that may sign in. Removing an app disconnects it until it is listed again. Listed apps are marked as verified on the consent page. If not specified, any app may ask to sign in, as long as the API server can fetch a valid client metadata document from its client ID. |
+| clients.id | "https://app.example.com/oauth/client.json" | --- | Yes | The app's client ID: the `https` URL of its client metadata document. |
+| clients.metadata | \{ ... \} | --- | No | The app's client metadata document, used instead of fetching it from `id`, for example on a server without internet access. It must be a valid client metadata document whose `client_id` equals `id`, or the server will not start. |
+| signing_key | `"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"` | --- | No | An RSA private key of at least 2048 bits, in PEM format (PKCS #1 or PKCS #8), that signs ID tokens. It turns on OpenID Connect: the `openid`, `email`, and `profile` scopes, ID tokens, and the UserInfo, JWKS, and discovery endpoints. If not specified, OpenID Connect is off. If it is not a valid key, the server will not start. **IT SHOULD BE VERY SECURE!** Whenever logged, it will appear obfuscated as `************`. |
+
+A JSON string cannot hold a line break, so write each line break in `signing_key` as `\n`.
+For example, generate a key and print it as a JSON string, without writing it to a file:
+
+```sh
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 | jq -Rs .
+```
+
+To rotate the signing key, replace it. This disconnects no app.
+
+The API server serves its OAuth endpoints and metadata at the root of `issuer`.
+If a reverse proxy serves the API server under a path prefix, such as `https://bencher.example.com/api`,
+set `issuer` to the origin (`https://bencher.example.com`) and list the full MCP endpoint URL in `resources` (`https://bencher.example.com/api/mcp`).
+The proxy must then route `/oauth/`, `/.well-known/oauth-authorization-server`, and `/.well-known/openid-configuration` at the origin to the same paths on the API server,
+and route each resource's metadata path, here `/.well-known/oauth-protected-resource/api/mcp`, to `/.well-known/oauth-protected-resource/mcp` on the API server.
+With more than one resource, the proxy must also pass the `Host` header through unchanged, since the API server picks the resource to advertise by it.
