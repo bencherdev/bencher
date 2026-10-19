@@ -1,0 +1,20 @@
+{
+  "name": "bencher",
+  "interface": {
+    "displayName": "Bencher"
+  },
+  "plugins": [
+    {
+      "name": "bencher",
+      "source": {
+        "source": "local",
+        "path": "./plugins/bencher"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

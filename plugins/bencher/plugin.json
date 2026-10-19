@@ -1,0 +1,88 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "bencher",
+  "version": "0.6.13",
+  "description": "Catch performance regressions before they merge",
+  "author": { "name": "Bencher", "url": "https://bencher.dev" },
+  "homepage": "https://bencher.dev",
+  "repository": "https://github.com/bencherdev/bencher",
+  "keywords": ["benchmarking", "continuous-benchmarking", "performance", "regression-detection", "ci", "bencher"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Bencher",
+        "shortDescription": "Continuous benchmarking",
+        "longDescription": "Bencher is a continuous benchmarking platform. It stores benchmark results from CI and local runs, tracks them over time, and raises an alert when a result crosses a threshold.\n\nThis plugin connects to Bencher Cloud through the Bencher MCP server and includes a skill on using Bencher and the bencher CLI.\n\nThe MCP tools list and view projects, branches, testbeds, benchmarks, measures, thresholds, alerts, reports, plots, and bare metal runner jobs, and view a single metric. They query performance data over time and render a performance plot as an image. They create branches, testbeds, benchmarks, measures, thresholds, and reports, and update branches, testbeds, benchmarks, measures, thresholds, and alerts. They submit a run: raw benchmark harness output that Bencher parses into a report.\n\nPublic projects are readable without signing in. Sign in with a Bencher account to read private projects and to change them. Every tool acts with your project roles. The plugin has no tools that delete anything.",
+        "developerName": "Bencher",
+        "category": "Developer Tools",
+        "capabilities": [],
+        "websiteURL": "https://bencher.dev",
+        "supportURL": "https://bencher.dev/help/",
+        "privacyPolicyURL": "https://bencher.dev/legal/privacy/",
+        "termsOfServiceURL": "https://bencher.dev/legal/terms-of-use/",
+        "defaultPrompt": [
+          "Run my benchmarks on Bencher bare metal and show me the results.",
+          "Compare my branch to main on Bencher bare metal and flag regressions.",
+          "Run my benchmarks on Bencher bare metal in GitHub Actions on every pull request."
+        ],
+        "brandColor": "#ed6704",
+        "brandColorDark": "#ed6704",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Find a public project by name",
+              "prompt": "Find the public project named Bencher on Bencher.",
+              "tools_triggered": "list_projects",
+              "expected_behavior": "Return the matching public projects, including Bencher (slug bencher)."
+            },
+            {
+              "description": "View a project",
+              "prompt": "Show the details of the bencher project on Bencher.",
+              "tools_triggered": "view_project",
+              "expected_behavior": "Return the Bencher project: name Bencher, slug bencher, public visibility, and its repository URL https://github.com/bencherdev/bencher."
+            },
+            {
+              "description": "List recent alerts",
+              "prompt": "Show the latest alerts for the bencher project on Bencher.",
+              "tools_triggered": "list_alerts",
+              "expected_behavior": "List the project's most recent alerts with the benchmark, status, and the threshold limit each one crossed."
+            },
+            {
+              "description": "Query performance history",
+              "prompt": "Show the Latency of the Adapter::Json benchmark on the devel branch and intel-v1 testbed of the bencher project on Bencher over the last 30 days.",
+              "tools_triggered": "list_branches, list_testbeds, list_benchmarks, list_measures, query_perf",
+              "expected_behavior": "Look up the branch, testbed, benchmark, and measure, then return the Latency value of each run in the last 30 days with its date."
+            },
+            {
+              "description": "Render a performance plot",
+              "prompt": "Plot the Latency of the Adapter::Json benchmark on the devel branch and intel-v1 testbed of the bencher project on Bencher over the last 30 days.",
+              "tools_triggered": "list_branches, list_testbeds, list_benchmarks, list_measures, perf_image",
+              "expected_behavior": "Look up the branch, testbed, benchmark, and measure, then show a plot image of the Latency values over the last 30 days."
+            }
+          ],
+          "negative": [
+            {
+              "description": "General coding question unrelated to benchmarking",
+              "prompt": "Write a Python function that reverses a string."
+            },
+            {
+              "description": "Unsupported deletion",
+              "prompt": "Delete the bencher project on Bencher."
+            },
+            {
+              "description": "Write to a project the signed-in account is not a member of",
+              "prompt": "Create a branch named review-test in the bencher project on Bencher."
+            }
+          ]
+        }
+      },
+      "publication": {
+        "release_notes": "Initial release with the Bencher MCP tools and the Bencher skill."
+      }
+    }
+  }
+}
