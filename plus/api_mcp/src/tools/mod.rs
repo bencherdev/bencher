@@ -381,26 +381,16 @@ impl ToolKind {
     }
 
     fn annotations(self, title: &str) -> ToolAnnotations {
-        let annotations =
-            ToolAnnotations::with_title(title).read_only(matches!(self.access(), ToolAccess::Read));
+        let annotations = ToolAnnotations::with_title(title)
+            .read_only(matches!(self.access(), ToolAccess::Read))
+            .open_world(matches!(self.anonymous(), Anonymous::Allowed));
         match self {
-            Self::Read => annotations.destructive(false).open_world(false),
-            Self::Create => annotations
-                .destructive(false)
-                .idempotent(false)
-                .open_world(false),
-            Self::Update => annotations
-                .destructive(true)
-                .idempotent(true)
-                .open_world(false),
-            Self::Report | Self::Reset => annotations
-                .destructive(true)
-                .idempotent(false)
-                .open_world(false),
-            Self::Run => annotations
-                .destructive(true)
-                .idempotent(false)
-                .open_world(true),
+            Self::Read => annotations.destructive(false).idempotent(true),
+            Self::Create => annotations.destructive(false).idempotent(false),
+            Self::Update => annotations.destructive(true).idempotent(true),
+            Self::Report | Self::Reset | Self::Run => {
+                annotations.destructive(true).idempotent(false)
+            },
         }
     }
 }

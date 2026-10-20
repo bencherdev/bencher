@@ -300,14 +300,14 @@ async fn mcp_tools_list() {
         assert!(tool["title"].is_string(), "{tool}");
         let annotations = &tool["annotations"];
         assert_eq!(annotations["title"], tool["title"], "{tool}");
-        for hint in ["readOnlyHint", "destructiveHint", "openWorldHint"] {
+        for hint in [
+            "readOnlyHint",
+            "destructiveHint",
+            "idempotentHint",
+            "openWorldHint",
+        ] {
             assert!(annotations[hint].is_boolean(), "Missing {hint}: {tool}");
         }
-        assert_eq!(
-            annotations["idempotentHint"].is_boolean(),
-            annotations["readOnlyHint"] == false,
-            "{tool}"
-        );
         assert_eq!(
             tool["outputSchema"]["type"] == "object",
             tool["name"] != "perf_image",
@@ -582,6 +582,11 @@ async fn mcp_tools_declare_how_to_sign_in() {
         };
         assert!(
             schemes.contains(&json!({"type": "oauth2", "scopes": [scope]})),
+            "{name}: {schemes:?}"
+        );
+        assert_eq!(
+            tool["annotations"]["openWorldHint"] == true,
+            schemes.contains(&json!({"type": "noauth"})),
             "{name}: {schemes:?}"
         );
 
