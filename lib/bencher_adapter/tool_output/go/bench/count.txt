@@ -1,0 +1,18 @@
+goos: linux
+goarch: amd64
+pkg: example.com/bench/copy
+cpu: Intel(R) Xeon(R) CPU @ 2.20GHz
+BenchmarkCopy-16    	    2000	       897.0 ns/op	4566.30 MB/s	    4096 B/op	       1 allocs/op
+BenchmarkCopy-16    	    2000	       824.4 ns/op	4968.58 MB/s	    4098 B/op	       1 allocs/op
+BenchmarkCopy-16    	    2000	       832.5 ns/op	4920.40 MB/s	    4096 B/op	       1 allocs/op
+PASS
+ok  	example.com/bench/copy	0.009s
+goos: linux
+goarch: amd64
+pkg: example.com/bench/fib
+cpu: Intel(R) Xeon(R) CPU @ 2.20GHz
+BenchmarkFib10-16    	    2000	       163.0 ns/op
+BenchmarkFib10-16    	    2000	       149.2 ns/op
+BenchmarkFib10-16    	    2000	       174.1 ns/op
+PASS
+ok  	example.com/bench/fib	0.004s

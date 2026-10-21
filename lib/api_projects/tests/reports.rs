@@ -2400,6 +2400,51 @@ fn measure_units(server: &TestServer, project_slug: &str) -> Vec<(String, String
         .expect("Failed to load the measures")
 }
 
+// POST /v0/projects/{project}/reports - the C++ and Go leaves create CPU time, allocations, and
+// allocated bytes in their own units
+//
+// Kills: a new built-in measure missing from the server's built-ins, which creates it in the
+// generic unit, and allocated bytes created without the unit the Go leaf gives it.
+#[tokio::test]
+async fn reports_post_creates_the_cpp_and_go_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "cppgo").await;
+    for (adapter, results) in [("cpp_google", GOOGLE_MEMORY), ("go_bench", GO_BENCHMEM)] {
+        post_report_body(
+            &server,
+            &token,
+            &project_slug,
+            &parse_report(adapter, &[results], Some(1)),
+        )
+        .await;
+    }
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any(["allocated", "allocations", "cpu-time"]))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        [
+            ("allocated", "allocated", "bytes (B)"),
+            ("allocations", "Allocations", "allocations"),
+            ("cpu-time", "CPU Time", "nanoseconds (ns)"),
+        ]
+        .map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
+const GOOGLE_MEMORY: &str =
+    include_str!("../../bencher_adapter/tool_output/cpp/google/memory.json");
+const GO_BENCHMEM: &str = include_str!("../../bencher_adapter/tool_output/go/bench/benchmem.txt");
+
 const CRITERION_CYCLES_PER_BYTE: &str =
     include_str!("../../bencher_adapter/tool_output/rust/criterion/cycles_per_byte.txt");
 const CRITERION_PERF_EVENTS: &str =

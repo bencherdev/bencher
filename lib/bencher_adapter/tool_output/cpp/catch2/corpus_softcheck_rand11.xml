@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="softcheck" rng-seed="11" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="After" filename="softcheck.cpp" line="25">
+    <BenchmarkResults name="Fibonacci 15" samples="100" resamples="100000" iterations="52" clockResolution="19.6728" estimatedDuration="1.9968e+06">
+      <!-- All values in nano seconds -->
+      <mean value="383.417" lowerBound="379.122" upperBound="394.625" ci="0.95"/>
+      <standardDeviation value="32.5639" lowerBound="15.0268" upperBound="66.3964" ci="0.95"/>
+      <outliers variance="0.728138" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="284" clockResolution="19.6728" estimatedDuration="1.9596e+06">
+      <!-- All values in nano seconds -->
+      <mean value="67.2477" lowerBound="66.5795" upperBound="68.6596" ci="0.95"/>
+      <standardDeviation value="4.73753" lowerBound="2.73551" upperBound="8.75536" ci="0.95"/>
+      <outliers variance="0.655867" lowMild="0" lowSevere="0" highMild="1" highSevere="6"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Before" filename="softcheck.cpp" line="9">
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="769" clockResolution="19.6728" estimatedDuration="1.9225e+06">
+      <!-- All values in nano seconds -->
+      <mean value="24.744" lowerBound="24.5976" upperBound="24.9873" ci="0.95"/>
+      <standardDeviation value="0.944721" lowerBound="0.612146" upperBound="1.36031" ci="0.95"/>
+      <outliers variance="0.346108" lowMild="0" lowSevere="0" highMild="1" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Soft check first" filename="softcheck.cpp" line="18">
+    <BenchmarkResults name="checks first">
+      <Expression success="false" type="CHECK" filename="softcheck.cpp" line="21">
+        <Original>
+          ++calls != 1
+        </Original>
+        <Expanded>
+          1 != 1
+        </Expanded>
+      </Expression> samples="100" resamples="100000" iterations="6492" clockResolution="19.6728" estimatedDuration="1.9476e+06"      <!-- All values in nano seconds -->
+      <mean value="3.00587" lowerBound="2.97018" upperBound="3.07199" ci="0.95"/>
+      <standardDeviation value="0.239244" lowerBound="0.147253" upperBound="0.356463" ci="0.95"/>
+      <outliers variance="0.707214" lowMild="0" lowSevere="0" highMild="0" highSevere="8"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Soft check in the samples" filename="softcheck.cpp" line="10">
+    <BenchmarkResults name="checks late" samples="100" resamples="100000" iterations="6306" clockResolution="19.6728" estimatedDuration="1.8918e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="CHECK" filename="softcheck.cpp" line="13">
+        <Original>
+          ++calls != at("FAIL_AT", 60)
+        </Original>
+        <Expanded>
+          60 != 60
+        </Expanded>
+      </Expression>
+      <mean value="3.05709" lowerBound="3.00538" upperBound="3.17465" ci="0.95"/>
+      <standardDeviation value="0.377499" lowerBound="0.205467" upperBound="0.706097" ci="0.95"/>
+      <outliers variance="0.852421" lowMild="0" lowSevere="0" highMild="1" highSevere="10"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1105" clockResolution="19.6728" estimatedDuration="1.8785e+06">
+      <!-- All values in nano seconds -->
+      <mean value="17.498" lowerBound="17.2817" upperBound="17.9044" ci="0.95"/>
+      <standardDeviation value="1.46125" lowerBound="0.899611" upperBound="2.27666" ci="0.95"/>
+      <outliers variance="0.727731" lowMild="22" lowSevere="0" highMild="0" highSevere="11"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <OverallResults successes="250" failures="2" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="2" expectedFailures="0" skips="0"/>
+</Catch2TestRun>
