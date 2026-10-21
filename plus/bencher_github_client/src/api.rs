@@ -7,7 +7,7 @@ use bencher_valid::{
 use oauth2::AccessToken;
 use reqwest::{
     RequestBuilder, Response, StatusCode,
-    header::{ACCEPT, HeaderMap, HeaderName, HeaderValue},
+    header::{ACCEPT, HeaderMap, HeaderName, HeaderValue, LOCATION},
     redirect,
 };
 use serde::{
@@ -29,15 +29,17 @@ pub(crate) static GITHUB_API_URL: LazyLock<Url> = LazyLock::new(|| {
 pub(crate) const USER_AGENT: &str = concat!("Bencher/", env!("CARGO_PKG_VERSION"));
 /// GitHub's largest page.
 const PER_PAGE: usize = 100;
-const TIMEOUT: Duration = Duration::from_secs(10);
+pub(crate) const TIMEOUT: Duration = Duration::from_secs(10);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 /// From GitHub's 422 for a repository outside the installation.
 const REPOSITORY_INACCESSIBLE: &str = "not accessible to the parent installation";
 /// From GitHub's 422 for a permission the installation has not approved.
 const PERMISSIONS_NOT_GRANTED: &str = "permissions requested are not granted";
+/// What a 403 or a 429 says about when to try again.
+const RATE_LIMIT_HEADERS: [&str; 3] = ["retry-after", "x-ratelimit-remaining", "x-ratelimit-reset"];
 
-/// The GitHub REST API, one request per call. It follows no redirect, so a credential only ever
-/// goes to the API.
+/// The GitHub REST API, one request per call. It follows no redirect but one, to the API's own
+/// origin, so a credential only ever goes to the API.
 #[derive(Debug, Clone)]
 pub(crate) struct GitHubApi {
     http: reqwest::Client,
@@ -54,8 +56,9 @@ pub enum GitHubApiError {
     RepositoryInaccessible,
     #[error("The GitHub App installation has not granted the permissions requested")]
     PermissionsNotGranted,
+    /// Any other answer, and for a 403 or a 429, its rate-limit headers.
     #[error("The GitHub API answered {0}")]
-    Status(StatusCode),
+    Status(StatusCode, HeaderMap),
     #[error("Failed to parse a GitHub API response: {0}")]
     Json(reqwest::Error),
     #[error("Failed to parse a GitHub repository name: {0}")]
@@ -142,6 +145,31 @@ impl GitHubApi {
         Ok(pushable)
     }
 
+    /// GET `path`, following one redirect to the API's own origin, which is how GitHub answers for
+    /// a repository that was renamed or transferred.
+    pub(crate) async fn get_following_redirect<T>(
+        &self,
+        path: &[&str],
+        bearer: &str,
+    ) -> Result<T, GitHubApiError>
+    where
+        T: DeserializeOwned,
+    {
+        let response = self
+            .http
+            .get(self.url(path))
+            .bearer_auth(bearer)
+            .send()
+            .await
+            .map_err(GitHubApiError::Request)?;
+        if response.status().is_redirection()
+            && let Some(location) = self.same_origin(&response)
+        {
+            return send(self.http.get(location).bearer_auth(bearer)).await;
+        }
+        answer(response).await
+    }
+
     pub(crate) async fn post<B, T>(
         &self,
         path: &[&str],
@@ -189,6 +217,13 @@ impl GitHubApi {
     pub(crate) fn url(&self, path: &[&str]) -> Url {
         join_path(&self.base, path)
     }
+
+    /// Where a redirect points, if it points to the API's own origin.
+    fn same_origin(&self, response: &Response) -> Option<Url> {
+        let location = response.headers().get(LOCATION)?.to_str().ok()?;
+        let url = response.url().join(location).ok()?;
+        (url.origin() == self.base.origin()).then_some(url)
+    }
 }
 
 async fn send<T>(request: RequestBuilder) -> Result<T, GitHubApiError>
@@ -196,7 +231,15 @@ where
     T: DeserializeOwned,
 {
     let response = request.send().await.map_err(GitHubApiError::Request)?;
+    answer(response).await
+}
+
+async fn answer<T>(response: Response) -> Result<T, GitHubApiError>
+where
+    T: DeserializeOwned,
+{
     let status = response.status();
+    let rate_limit = rate_limit(status, response.headers());
     if status.is_success() {
         response.json().await.map_err(GitHubApiError::Json)
     } else if status == StatusCode::NOT_FOUND {
@@ -206,8 +249,22 @@ where
     {
         Err(refusal)
     } else {
-        Err(GitHubApiError::Status(status))
+        Err(GitHubApiError::Status(status, rate_limit))
     }
+}
+
+/// The rate-limit headers of a 403 or a 429, and none of any other answer.
+fn rate_limit(status: StatusCode, headers: &HeaderMap) -> HeaderMap {
+    if status != StatusCode::FORBIDDEN && status != StatusCode::TOO_MANY_REQUESTS {
+        return HeaderMap::new();
+    }
+    RATE_LIMIT_HEADERS
+        .into_iter()
+        .filter_map(|name| {
+            let value = headers.get(name)?.clone();
+            Some((HeaderName::from_static(name), value))
+        })
+        .collect()
 }
 
 /// GitHub tells its 422 refusals apart only in the message, and no refusal holds a token.

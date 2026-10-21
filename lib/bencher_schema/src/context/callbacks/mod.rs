@@ -4,6 +4,7 @@ use std::{
 };
 
 use bencher_callback::{CallbackKey, CallbackSender};
+use bencher_github_client::GitHubApp;
 use bencher_json::Clock;
 use diesel::r2d2::{ConnectionManager, Pool};
 use slog::Logger;
@@ -42,6 +43,19 @@ impl Callbacks {
         shutdown: CancellationToken,
         clock: Clock,
     ) -> Self {
+        Self::new_with_github_app(connection, reader, key, sender, shutdown, clock, None)
+    }
+
+    /// With the GitHub App that mints the token of a dispatch sent without one.
+    pub fn new_with_github_app(
+        connection: Arc<tokio::sync::Mutex<DbConnection>>,
+        reader: Pool<ConnectionManager<DbConnection>>,
+        key: CallbackKey,
+        sender: Arc<dyn CallbackSender>,
+        shutdown: CancellationToken,
+        clock: Clock,
+        github_app: Option<Arc<GitHubApp>>,
+    ) -> Self {
         // Counted at each export, on a connection only if one is free, so a busy pool skips a point.
         #[cfg(feature = "otel")]
         {
@@ -52,7 +66,7 @@ impl Callbacks {
         }
         Self {
             delivery: Arc::new(Delivery::new(
-                connection, reader, key, sender, shutdown, clock,
+                connection, reader, key, sender, shutdown, clock, github_app,
             )),
             tasks: Arc::default(),
         }
@@ -1097,6 +1111,38 @@ mod tests {
         );
         let failed = harness.logged("Callback failed");
         assert!(failed[0].contains("reason=Open"), "{failed:?}");
+    }
+
+    // Kills sending a dispatch without a token as stored on a server with no GitHub App, which
+    // would send it with no token to the URL the run chose.
+    #[tokio::test(start_paused = true)]
+    async fn a_dispatch_without_a_token_is_never_sent_without_an_app() {
+        let harness = Harness::new([]);
+        let dispatch = JsonNewCallback::new(
+            "https://api.github.com/repos/owner/repo/dispatches",
+            [(
+                "Accept".to_owned(),
+                "application/vnd.github+json".to_owned(),
+            )],
+            Some(serde_json::json!({
+                "event_type": "bencher_run",
+                "client_payload": { "job": "{{ job.uuid }}" },
+            })),
+        )
+        .unwrap();
+        let (job_id, _) = harness.job(JobStatus::Processed, &dispatch).await;
+
+        harness.deliver(job_id).await;
+
+        assert_eq!(harness.sent(), 0);
+        assert_eq!(
+            harness.settled(job_id).await,
+            (JobCallbackState::Failed, 0, None, false)
+        );
+        let unsent = harness.logged("Callback request not sent");
+        assert!(unsent[0].contains("stage=app"), "{unsent:?}");
+        let failed = harness.logged("Callback failed");
+        assert!(failed[0].contains("reason=Unminted"), "{failed:?}");
     }
 
     #[tokio::test(start_paused = true)]

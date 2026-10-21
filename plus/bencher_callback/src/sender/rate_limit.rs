@@ -15,7 +15,7 @@ pub struct RateLimit {
 }
 
 impl RateLimit {
-    pub(super) fn read(status: StatusCode, headers: &HeaderMap) -> Self {
+    pub fn read(status: StatusCode, headers: &HeaderMap) -> Self {
         if status != StatusCode::FORBIDDEN && status != StatusCode::TOO_MANY_REQUESTS {
             return Self::default();
         }

@@ -363,7 +363,14 @@ async fn into_context(
     let clock = bencher_json::Clock::System;
 
     #[cfg(feature = "plus")]
-    let callbacks = new_callbacks(log, &database, &callback_key, &shutdown, &clock);
+    let callbacks = new_callbacks(
+        log,
+        &database,
+        &callback_key,
+        &shutdown,
+        &clock,
+        github_app.clone(),
+    );
 
     debug!(log, "Creating API context");
     Ok(ApiContext {
@@ -428,6 +435,7 @@ fn new_callbacks(
     callback_key: &CallbackKey,
     shutdown: &bencher_schema::context::CancellationToken,
     clock: &bencher_json::Clock,
+    github_app: Option<Arc<bencher_github_client::GitHubApp>>,
 ) -> Callbacks {
     // `main` installed the TLS crypto provider the client builds with.
     let callback_client = CallbackClient::new();
@@ -439,13 +447,14 @@ fn new_callbacks(
             error_chain(build_error)
         );
     }
-    Callbacks::new(
+    Callbacks::new_with_github_app(
         Arc::clone(&database.connection),
         database.auth_pool.clone(),
         callback_key.clone(),
         Arc::new(callback_client),
         shutdown.clone(),
         clock.clone(),
+        github_app,
     )
 }
 

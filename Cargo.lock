@@ -861,7 +861,6 @@ version = "0.6.13"
 dependencies = [
  "async-trait",
  "aws-lc-rs",
- "base64 0.22.1",
  "bencher_api",
  "bencher_callback",
  "bencher_config",
@@ -989,6 +988,7 @@ dependencies = [
  "octocrab",
  "progenitor-client",
  "rand 0.10.1",
+ "semver",
  "serde",
  "serde_json",
  "tabled",
@@ -1036,8 +1036,6 @@ dependencies = [
 name = "bencher_config"
 version = "0.6.13"
 dependencies = [
- "aws-lc-rs",
- "base64 0.22.1",
  "bencher_billing",
  "bencher_callback",
  "bencher_endpoint",
@@ -1054,7 +1052,6 @@ dependencies = [
  "diesel",
  "dropshot",
  "oso",
- "rustls",
  "serde_json",
  "slog",
  "thiserror 2.0.18",

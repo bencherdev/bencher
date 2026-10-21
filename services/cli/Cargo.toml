@@ -13,6 +13,7 @@ plus = [
     "bencher_client/plus",
     "bencher_comment/plus",
     "bencher_json/plus",
+    "dep:semver",
 ]
 
 [dependencies]
@@ -32,6 +33,7 @@ literally.workspace = true
 octocrab.workspace = true
 progenitor-client.workspace = true
 rand.workspace = true
+semver = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 tabled.workspace = true
