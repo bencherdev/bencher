@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="hyphen" rng-seed="3435049358" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Hyphen at the wrap" filename="hyphen.cpp" line="6">
+    <BenchmarkResults name="Benchmark of the hot loop numberBe-crunching words" samples="100" resamples="100000" iterations="6337" clockResolution="18.9042" estimatedDuration="1.2674e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.97106" lowerBound="2.9569" upperBound="3.00665" ci="0.95"/>
+      <standardDeviation value="0.104724" lowerBound="0.0356672" upperBound="0.188297" ci="0.95"/>
+      <outliers variance="0.316305" lowMild="0" lowSevere="0" highMild="2" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="770" clockResolution="18.9042" estimatedDuration="1.848e+06">
+      <!-- All values in nano seconds -->
+      <mean value="24.0876" lowerBound="23.9716" upperBound="24.3416" ci="0.95"/>
+      <standardDeviation value="0.832857" lowerBound="0.374053" upperBound="1.41779" ci="0.95"/>
+      <outliers variance="0.306617" lowMild="0" lowSevere="0" highMild="8" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="1" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="lastcolC" rng-seed="2707486140" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="lastcol.cpp" line="2">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="2049" clockResolution="22.0754" estimatedDuration="2.049e+06">
+      <!-- All values in nano seconds -->
+      <mean value="10.6655" lowerBound="10.6655" upperBound="10.6655" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Trailing word" filename="lastcol.cpp" line="3">
+    <BenchmarkResults name="trailing word" samples="100" resamples="100000" iterations="8189" clockResolution="22.0754" estimatedDuration="1.6378e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.6787" lowerBound="2.6787" upperBound="2.6787" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1367" clockResolution="22.0754" estimatedDuration="2.1872e+06">
+      <!-- All values in nano seconds -->
+      <mean value="15.9367" lowerBound="15.9367" upperBound="15.9367" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+debug
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Trailing value" filename="lastcol.cpp" line="4">
+    <BenchmarkResults name="trailing value" samples="100" resamples="100000" iterations="7648" clockResolution="22.0754" estimatedDuration="1.5296e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.67705" lowerBound="2.67705" upperBound="2.67705" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="868" clockResolution="22.0754" estimatedDuration="2.17e+06">
+      <!-- All values in nano seconds -->
+      <mean value="25.6551" lowerBound="25.6551" upperBound="25.6551" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+1.0 ns
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Trailing padded value" filename="lastcol.cpp" line="5">
+    <BenchmarkResults name="trailing padded value" samples="100" resamples="100000" iterations="7244" clockResolution="22.0754" estimatedDuration="2.1732e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68834" lowerBound="2.68834" upperBound="2.68834" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="519" clockResolution="22.0754" estimatedDuration="2.1798e+06">
+      <!-- All values in nano seconds -->
+      <mean value="43.4045" lowerBound="43.4045" upperBound="43.4045" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+1.0 ns
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Trailing count" filename="lastcol.cpp" line="6">
+    <BenchmarkResults name="trailing count" samples="100" resamples="100000" iterations="7268" clockResolution="22.0754" estimatedDuration="2.1804e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68845" lowerBound="2.68845" upperBound="2.68845" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="346" clockResolution="22.0754" estimatedDuration="2.1798e+06">
+      <!-- All values in nano seconds -->
+      <mean value="73.5374" lowerBound="73.5374" upperBound="73.5374" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+5
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Trailing word glued" filename="lastcol.cpp" line="7">
+    <BenchmarkResults name="trailing word glued" samples="100" resamples="100000" iterations="8191" clockResolution="22.0754" estimatedDuration="1.6382e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.67814" lowerBound="2.67814" upperBound="2.67814" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 13" samples="100" resamples="100000" iterations="187" clockResolution="22.0754" estimatedDuration="2.2066e+06">
+      <!-- All values in nano seconds -->
+      <mean value="114.403" lowerBound="114.403" upperBound="114.403" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+dbg
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Trailing padded glued" filename="lastcol.cpp" line="8">
+    <BenchmarkResults name="trailing padded glued" samples="100" resamples="100000" iterations="8196" clockResolution="22.0754" estimatedDuration="1.6392e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68672" lowerBound="2.68672" upperBound="2.68672" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 14" samples="100" resamples="100000" iterations="126" clockResolution="22.0754" estimatedDuration="2.2176e+06">
+      <!-- All values in nano seconds -->
+      <mean value="174.129" lowerBound="174.129" upperBound="174.129" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+2.0 us
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Trailing between" filename="lastcol.cpp" line="9">
+    <BenchmarkResults name="Fibonacci 15" samples="100" resamples="100000" iterations="62" clockResolution="22.0754" estimatedDuration="2.2134e+06">
+      <!-- All values in nano seconds -->
+      <mean value="356.004" lowerBound="356.004" upperBound="356.004" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 16" samples="100" resamples="100000" iterations="44" clockResolution="22.0754" estimatedDuration="2.2132e+06">
+      <!-- All values in nano seconds -->
+      <mean value="509.338" lowerBound="509.338" upperBound="509.338" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+x
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Trailing padded between" filename="lastcol.cpp" line="10">
+    <BenchmarkResults name="Fibonacci 17" samples="100" resamples="100000" iterations="21" clockResolution="22.0754" estimatedDuration="2.2764e+06">
+      <!-- All values in nano seconds -->
+      <mean value="1084.09" lowerBound="1084.09" upperBound="1084.09" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 18" samples="100" resamples="100000" iterations="16" clockResolution="22.0754" estimatedDuration="2.3216e+06">
+      <!-- All values in nano seconds -->
+      <mean value="1439.8" lowerBound="1439.8" upperBound="1439.8" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+2.0 us
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="After" filename="lastcol.cpp" line="11">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2211" clockResolution="22.0754" estimatedDuration="1.9899e+06">
+      <!-- All values in nano seconds -->
+      <mean value="6.34055" lowerBound="6.34055" upperBound="6.34055" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 6" samples="100" resamples="100000" iterations="3597" clockResolution="22.0754" estimatedDuration="2.1582e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.89262" lowerBound="4.89262" upperBound="4.89262" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="10" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch name="bdd">
+  <Group name="bdd">
+    <TestCase name="Scenario: Short scenario" filename="bdd.cpp" line="6">
+      <Section name="Given: a cache" filename="bdd.cpp" line="7">
+        <Section name="When: it is warm" filename="bdd.cpp" line="8">
+          <Section name="Then: lookups are fast" filename="bdd.cpp" line="9">
+            <BenchmarkResults name="lookup" samples="100" resamples="100000" iterations="949" clockResolution="22" estimatedDuration="2182700">
+              <!--All values in nano seconds-->
+              <mean value="24" lowerBound="24" upperBound="25" ci="0.95"/>
+              <standardDeviation value="4.37874" lowerBound="3.41647" upperBound="5.55609" ci="0.95"/>
+              <outliers variance="0.925608" lowMild="0" lowSevere="0" highMild="0" highSevere="23"/>
+            </BenchmarkResults>
+            <OverallResults successes="0" failures="0" expectedFailures="0"/>
+          </Section>
+          <OverallResults successes="0" failures="0" expectedFailures="0"/>
+        </Section>
+        <OverallResults successes="0" failures="0" expectedFailures="0"/>
+      </Section>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Scenario: A scenario with a name long enough that the console reporter has to wrap it twice over" filename="bdd.cpp" line="13">
+      <Section name="Given: a given clause with a name long enough that the console reporter has to wrap it" filename="bdd.cpp" line="14">
+        <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="594" clockResolution="22" estimatedDuration="2197800">
+          <!--All values in nano seconds-->
+          <mean value="37" lowerBound="37" upperBound="38" ci="0.95"/>
+          <standardDeviation value="1.34314" lowerBound="0.739328" upperBound="2.06534" ci="0.95"/>
+          <outliers variance="0.31655" lowMild="0" lowSevere="0" highMild="0" highSevere="7"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0"/>
+      </Section>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Parser: a test case with a colon and a long name that the console wraps" filename="bdd.cpp" line="18">
+      <Section name="Lexer: a section with a colon and a long name that the console wraps too" filename="bdd.cpp" line="19">
+        <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="366" clockResolution="22" estimatedDuration="2232600">
+          <!--All values in nano seconds-->
+          <mean value="62" lowerBound="61" upperBound="63" ci="0.95"/>
+          <standardDeviation value="3.47077" lowerBound="2.02728" upperBound="5.19784" ci="0.95"/>
+          <outliers variance="0.534798" lowMild="0" lowSevere="0" highMild="1" highSevere="6"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0"/>
+      </Section>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Plain" filename="bdd.cpp" line="23">
+      <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="201" clockResolution="22" estimatedDuration="2231100">
+        <!--All values in nano seconds-->
+        <mean value="101" lowerBound="101" upperBound="102" ci="0.95"/>
+        <standardDeviation value="3.62469" lowerBound="2.12622" upperBound="5.66502" ci="0.95"/>
+        <outliers variance="0.316562" lowMild="0" lowSevere="0" highMild="1" highSevere="6"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <OverallResults successes="0" failures="0" expectedFailures="0"/>
+  </Group>
+  <OverallResults successes="0" failures="0" expectedFailures="0"/>
+</Catch>

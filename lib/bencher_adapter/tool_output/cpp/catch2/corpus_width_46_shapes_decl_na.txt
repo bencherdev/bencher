@@ -1,0 +1,69 @@
+Randomness seeded to: 802357055
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+shapes is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+---------------------------------------------
+Before
+---------------------------------------------
+shapes.cpp:7
+.............................................
+
+        samples    iterations          mean
+---------------------------------------------
+100           566    32.0264 ns 
+
+---------------------------------------------
+Throws before the samples
+---------------------------------------------
+shapes.cpp:11
+.............................................
+
+        samples    iterations          mean
+---------------------------------------------
+Benchmark failed (boom) 
+shapes.cpp:11: FAILED:
+due to unexpected exception with message:
+  boom
+
+---------------------------------------------
+Checks inside
+  Inner section with a long name that wraps
+  across the console width
+---------------------------------------------
+shapes.cpp:17
+.............................................
+
+        samples    iterations          mean
+---------------------------------------------
+          100          1399    12.9103 ns 
+
+---------------------------------------------
+Throws in the samples
+---------------------------------------------
+shapes.cpp:25
+.............................................
+
+        samples    iterations          mean
+---------------------------------------------
+100          4830 Benchmark failed (late boom) 
+
+shapes.cpp:25: FAILED:
+due to unexpected exception with message:
+  late boom
+
+---------------------------------------------
+After
+---------------------------------------------
+shapes.cpp:34
+.............................................
+
+        samples    iterations          mean
+---------------------------------------------
+100           196     91.364 ns 
+
+=============================================
+test cases:   5 |   3 passed | 2 failed
+assertions: 126 | 124 passed | 2 failed
+

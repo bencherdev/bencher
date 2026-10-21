@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="casewrap" rng-seed="1111572312" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="A test case whose name is long enough that the console reporter wraps it onto a second line" filename="casewrap.cpp" line="6">
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1101" clockResolution="19.0112" estimatedDuration="1.8717e+06">
+      <!-- All values in nano seconds -->
+      <mean value="17.2034" lowerBound="17.0314" upperBound="17.487" ci="0.95"/>
+      <standardDeviation value="1.10449" lowerBound="0.764139" upperBound="1.75129" ci="0.95"/>
+      <outliers variance="0.605428" lowMild="0" lowSevere="0" highMild="4" highSevere="1"/>
+    </BenchmarkResults>
+    <Section name="A section" filename="casewrap.cpp" line="8">
+      <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="582" clockResolution="19.0112" estimatedDuration="1.8624e+06">
+        <!-- All values in nano seconds -->
+        <mean value="34.0524" lowerBound="33.3146" upperBound="35.1406" ci="0.95"/>
+        <standardDeviation value="4.49463" lowerBound="3.37083" upperBound="5.96002" ci="0.95"/>
+        <outliers variance="0.873055" lowMild="0" lowSevere="0" highMild="2" highSevere="11"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="casewrap.cpp" line="10">
+    <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="409" clockResolution="19.0112" estimatedDuration="1.8814e+06">
+      <!-- All values in nano seconds -->
+      <mean value="46.5805" lowerBound="46.2467" upperBound="47.518" ci="0.95"/>
+      <standardDeviation value="2.61994" lowerBound="1.10378" upperBound="5.54839" ci="0.95"/>
+      <outliers variance="0.544511" lowMild="5" lowSevere="0" highMild="1" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

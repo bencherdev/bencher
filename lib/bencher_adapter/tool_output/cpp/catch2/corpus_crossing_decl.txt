@@ -1,0 +1,112 @@
+Randomness seeded to: 3469573942
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+crossingP is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+crossing.cpp:2
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 8                                    100          1573     1.8876 ms 
+                                        11.2773 ns    11.1568 ns    11.4087 ns 
+                                        0.63944 ns   0.583454 ns   0.768013 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Crossing
+-------------------------------------------------------------------------------
+crossing.cpp:3
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+crossing                                       100          7030      1.406 ms 
+
+foo
+
+                                        2.68947 ns     2.6773 ns    2.71395 ns 
+                                      0.0837425 ns    0.04706 ns   0.132748 ns 
+                                                                               
+
+crossing.cpp:5: FAILED:
+  CHECK( fib(3) == 3 )
+with expansion:
+  2 == 3
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+disturbed after                      dbg          100          7027     1.4054 ms 
+                                        2.68789 ns    2.67395 ns    2.71728 ns 
+                                      0.0973788 ns   0.052716 ns   0.167471 ns 
+                                                                               
+Fibonacci 10                                   100           673     1.8844 ms 
+                                        26.6889 ns    26.4385 ns    26.9708 ns 
+                                        1.34478 ns    1.17828 ns     1.8845 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Crossing a header
+-------------------------------------------------------------------------------
+crossing.cpp:9
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+crossing early                       
+
+foo
+          100          7027     1.4054 ms 
+                                        2.67584 ns    2.66247 ns    2.70375 ns 
+                                      0.0943437 ns  0.0508331 ns   0.153126 ns 
+                                                                               
+
+crossing.cpp:11: FAILED:
+  CHECK( fib(3) == 3 )
+with expansion:
+  2 == 3
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+disturbed next                       dbg          100          7038     1.4076 ms 
+                                         2.6849 ns    2.67066 ns    2.71622 ns 
+                                       0.100599 ns  0.0518439 ns   0.180187 ns 
+                                                                               
+Fibonacci 11                                   100           402     1.8894 ms 
+                                        47.1306 ns    46.6606 ns    47.7321 ns 
+                                        2.69848 ns    2.24211 ns    3.51216 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+crossing.cpp:15
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 7                                    100          2668     1.8676 ms 
+                                        6.99238 ns    6.95367 ns    7.05965 ns 
+                                       0.254247 ns   0.166741 ns   0.387957 ns 
+                                                                               
+
+===============================================================================
+test cases: 4 | 2 passed | 2 failed
+assertions: 2 | 2 failed
+

@@ -1,0 +1,122 @@
+Randomness seeded to: 4282493645
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+longfail is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+longfail.cpp:7
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 10                                   100           732      2.196 ms 
+                                        30.1892 ns    29.9915 ns    30.5081 ns 
+                                        1.25705 ns   0.854484 ns    1.77384 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Fails in the samples
+-------------------------------------------------------------------------------
+longfail.cpp:9
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late                                     100          7274     2.1822 ms 
+
+longfail.cpp:12: FAILED:
+  REQUIRE( ++calls < 60 )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+Throws early
+-------------------------------------------------------------------------------
+longfail.cpp:17
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws early, long name Benchmark failed (boom) 
+
+longfail.cpp:17: FAILED:
+due to unexpected exception with message:
+  boom
+
+-------------------------------------------------------------------------------
+Fails again in the samples
+-------------------------------------------------------------------------------
+longfail.cpp:21
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late again                               100          4240       2.12 ms 
+
+longfail.cpp:24: FAILED:
+  REQUIRE( ++calls < 60 )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+Requires early
+-------------------------------------------------------------------------------
+longfail.cpp:29
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+requires early, long name 
+
+longfail.cpp:31: FAILED:
+  REQUIRE( fib(3) == 5 )
+with expansion:
+  2 == 5
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+End
+-------------------------------------------------------------------------------
+longfail.cpp:36
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+ Fibonacci 11           100           500 
+2.2 ms                                                53.4742 ns    53.1307 ns 
+53.9422 ns                                            2.03908 ns    1.51984 ns 
+2.85951 ns                                                                     
+                                     
+===============================================================================
+test cases:   6 |   2 passed | 4 failed
+assertions: 122 | 118 passed | 4 failed
+

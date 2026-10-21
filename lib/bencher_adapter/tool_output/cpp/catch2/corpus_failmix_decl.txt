@@ -1,0 +1,140 @@
+Randomness seeded to: 397854998
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+failmix is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Sections
+  first
+-------------------------------------------------------------------------------
+failmix.cpp:12
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 8                                    100          1554     1.8648 ms 
+                                        12.1439 ns    11.9176 ns    12.5636 ns 
+                                        1.52557 ns   0.955062 ns    2.36168 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Sections
+  fails before
+-------------------------------------------------------------------------------
+failmix.cpp:13
+...............................................................................
+
+failmix.cpp:14: FAILED:
+  REQUIRE( fib(3) == 5 )
+with expansion:
+  2 == 5
+
+-------------------------------------------------------------------------------
+Sections
+  fails inside
+-------------------------------------------------------------------------------
+failmix.cpp:17
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late                                     100          5875     1.7625 ms 
+
+failmix.cpp:20: FAILED:
+  REQUIRE( ++calls < at("FAIL_AT", 60) )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+Sections
+  checks between
+-------------------------------------------------------------------------------
+failmix.cpp:25
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+  Fibonacci 9           100           985 
+1.8715 ms                                             18.8877 ns    18.7322 ns 
+19.0962 ns                                           0.911755 ns   0.694046 ns 
+1.22466 ns                                                                     
+                                     
+failmix.cpp:27: FAILED:
+  CHECK( fib(3) == 5 )
+with expansion:
+  2 == 5
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+ Fibonacci 10           100           567 
+1.8711 ms                                             32.9331 ns    32.7056 ns 
+33.3444 ns                                            1.51853 ns   0.947563 ns 
+2.21231 ns                                                                     
+                                     
+-------------------------------------------------------------------------------
+Sections
+  last
+-------------------------------------------------------------------------------
+failmix.cpp:30
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+ Fibonacci 11           100           380 
+1.9 ms                                                53.0152 ns    51.4706 ns 
+55.7943 ns                                            10.3112 ns    6.44641 ns 
+15.3648 ns                                                                     
+                                     
+-------------------------------------------------------------------------------
+Messages
+-------------------------------------------------------------------------------
+failmix.cpp:32
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws two lines Benchmark failed (line one
+line two) 
+
+failmix.cpp:32: FAILED:
+due to unexpected exception with message:
+  line one
+  line two
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+failmix.cpp:41
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 15                                   100            51     1.9227 ms 
+                                        380.453 ns    377.687 ns    385.482 ns 
+                                        18.4783 ns    11.9695 ns    30.5747 ns 
+                                                                               
+
+===============================================================================
+test cases:  3 |  1 passed | 2 failed
+assertions: 63 | 59 passed | 4 failed
+

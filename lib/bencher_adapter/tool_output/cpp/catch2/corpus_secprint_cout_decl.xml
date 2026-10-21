@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="secprintC" rng-seed="3452310675" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="secprint.cpp" line="2">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1807" clockResolution="20.5219" estimatedDuration="1.9877e+06">
+      <!-- All values in nano seconds -->
+      <mean value="11.2992" lowerBound="11.2317" upperBound="11.425" ci="0.95"/>
+      <standardDeviation value="0.453083" lowerBound="0.253183" upperBound="0.67579" ci="0.95"/>
+      <outliers variance="0.37522" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Print before header" filename="secprint.cpp" line="3">
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1066" clockResolution="20.5219" estimatedDuration="2.0254e+06">
+      <!-- All values in nano seconds -->
+      <mean value="18.9938" lowerBound="18.7682" upperBound="19.3347" ci="0.95"/>
+      <standardDeviation value="1.397" lowerBound="1.00415" upperBound="1.97141" ci="0.95"/>
+      <outliers variance="0.666644" lowMild="0" lowSevere="0" highMild="4" highSevere="3"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+before header
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Glued before header" filename="secprint.cpp" line="4">
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="783" clockResolution="20.5219" estimatedDuration="2.0358e+06">
+      <!-- All values in nano seconds -->
+      <mean value="26.1755" lowerBound="25.9836" upperBound="26.5537" ci="0.95"/>
+      <standardDeviation value="1.3214" lowerBound="0.77486" upperBound="2.20675" ci="0.95"/>
+      <outliers variance="0.484672" lowMild="0" lowSevere="0" highMild="1" highSevere="23"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+glued
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Glued dash before header" filename="secprint.cpp" line="5">
+    <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="413" clockResolution="20.5219" estimatedDuration="2.0237e+06">
+      <!-- All values in nano seconds -->
+      <mean value="50.1732" lowerBound="49.7825" upperBound="50.8777" ci="0.95"/>
+      <standardDeviation value="2.5949" lowerBound="1.65434" upperBound="4.1601" ci="0.95"/>
+      <outliers variance="0.494806" lowMild="0" lowSevere="0" highMild="1" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+progress -
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Dashes before header" filename="secprint.cpp" line="6">
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="287" clockResolution="20.5219" estimatedDuration="2.0377e+06">
+      <!-- All values in nano seconds -->
+      <mean value="69.3724" lowerBound="68.8766" upperBound="70.2979" ci="0.95"/>
+      <standardDeviation value="3.34601" lowerBound="2.08855" upperBound="5.1535" ci="0.95"/>
+      <outliers variance="0.464525" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+-----
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Rule before header" filename="secprint.cpp" line="7">
+    <BenchmarkResults name="Fibonacci 13" samples="100" resamples="100000" iterations="147" clockResolution="20.5219" estimatedDuration="2.058e+06">
+      <!-- All values in nano seconds -->
+      <mean value="141.987" lowerBound="141.083" upperBound="143.492" ci="0.95"/>
+      <standardDeviation value="5.82721" lowerBound="3.86401" upperBound="8.52116" ci="0.95"/>
+      <outliers variance="0.385157" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+-------------------------------------------------------------------------------
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Sections print" filename="secprint.cpp" line="8">
+    <Section name="first" filename="secprint.cpp" line="9">
+      <BenchmarkResults name="Fibonacci 14" samples="100" resamples="100000" iterations="104" clockResolution="20.5219" estimatedDuration="2.0488e+06">
+        <!-- All values in nano seconds -->
+        <mean value="204.43" lowerBound="202.544" upperBound="207.028" ci="0.95"/>
+        <standardDeviation value="11.1869" lowerBound="8.62003" upperBound="15.4059" ci="0.95"/>
+        <outliers variance="0.524785" lowMild="0" lowSevere="0" highMild="3" highSevere="1"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="Given: a section with a colon" filename="secprint.cpp" line="10">
+      <BenchmarkResults name="Fibonacci 15" samples="100" resamples="100000" iterations="50" clockResolution="20.5219" estimatedDuration="2.055e+06">
+        <!-- All values in nano seconds -->
+        <mean value="415.358" lowerBound="411.793" upperBound="423.971" ci="0.95"/>
+        <standardDeviation value="26.5028" lowerBound="13.4517" upperBound="52.9908" ci="0.95"/>
+        <outliers variance="0.605248" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+in section
+  When: fake header line
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Scenario: Scenario print" filename="secprint.cpp" line="12">
+    <Section name="Given: a given" filename="secprint.cpp" line="12">
+      <Section name="When: a when" filename="secprint.cpp" line="12">
+        <BenchmarkResults name="Fibonacci 16" samples="100" resamples="100000" iterations="36" clockResolution="20.5219" estimatedDuration="2.0556e+06">
+          <!-- All values in nano seconds -->
+          <mean value="578.402" lowerBound="574.088" upperBound="584.114" ci="0.95"/>
+          <standardDeviation value="25.2194" lowerBound="19.0397" upperBound="34.244" ci="0.95"/>
+          <outliers variance="0.414803" lowMild="0" lowSevere="23" highMild="0" highSevere="4"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+Given: fake
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Print after last" filename="secprint.cpp" line="13">
+    <BenchmarkResults name="Fibonacci 17" samples="100" resamples="100000" iterations="17" clockResolution="20.5219" estimatedDuration="2.1726e+06">
+      <!-- All values in nano seconds -->
+      <mean value="1214.78" lowerBound="1207.79" upperBound="1227.37" ci="0.95"/>
+      <standardDeviation value="46.5618" lowerBound="28.2703" upperBound="68.6509" ci="0.95"/>
+      <outliers variance="0.35544" lowMild="0" lowSevere="0" highMild="2" highSevere="6"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+after last
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="Dashes between" filename="secprint.cpp" line="14">
+    <BenchmarkResults name="Fibonacci 18" samples="100" resamples="100000" iterations="13" clockResolution="20.5219" estimatedDuration="2.0748e+06">
+      <!-- All values in nano seconds -->
+      <mean value="1612.55" lowerBound="1597.8" upperBound="1639.74" ci="0.95"/>
+      <standardDeviation value="99.5411" lowerBound="63.4378" upperBound="161.707" ci="0.95"/>
+      <outliers variance="0.585238" lowMild="0" lowSevere="0" highMild="16" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 19" samples="100" resamples="100000" iterations="6" clockResolution="20.5219" estimatedDuration="2.1186e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3506.65" lowerBound="3487.19" upperBound="3542.41" ci="0.95"/>
+      <standardDeviation value="130.013" lowerBound="79.3501" upperBound="192.985" ci="0.95"/>
+      <outliers variance="0.336076" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0">
+      <StdOut>
+-----
+      </StdOut>
+    </OverallResult>
+  </TestCase>
+  <TestCase name="After" filename="secprint.cpp" line="15">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2626" clockResolution="20.5219" estimatedDuration="1.8382e+06">
+      <!-- All values in nano seconds -->
+      <mean value="7.3314" lowerBound="7.23773" upperBound="7.47281" ci="0.95"/>
+      <standardDeviation value="0.576285" lowerBound="0.428236" upperBound="0.956857" ci="0.95"/>
+      <outliers variance="0.697252" lowMild="0" lowSevere="0" highMild="1" highSevere="1"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 6" samples="100" resamples="100000" iterations="3897" clockResolution="20.5219" estimatedDuration="1.9485e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.85317" lowerBound="4.79017" upperBound="5.00168" ci="0.95"/>
+      <standardDeviation value="0.464251" lowerBound="0.179423" upperBound="0.813839" ci="0.95"/>
+      <outliers variance="0.779343" lowMild="0" lowSevere="0" highMild="1" highSevere="10"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="11" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

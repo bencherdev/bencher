@@ -1,0 +1,157 @@
+{
+  "context": {
+    "date": "2026-10-22T02:12:10+00:00",
+    "host_name": "localhost",
+    "executable": "./memory_reps",
+    "num_cpus": 16,
+    "mhz_per_cpu": 4194,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 16777216,
+        "num_sharing": 16
+      }
+    ],
+    "load_avg": [0.259766,0.418457,0.239746],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "BM_alloc/256",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_alloc/256",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 1022543,
+      "real_time": 1.3279225421338133e+01,
+      "cpu_time": 1.3280288457306931e+01,
+      "time_unit": "ns",
+      "allocs_per_iter": 1.0000000000000000e+00,
+      "max_bytes_used": 1024,
+      "total_allocated_bytes": 4096,
+      "net_heap_growth": 8
+    },
+    {
+      "name": "BM_alloc/256",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_alloc/256",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 1022543,
+      "real_time": 1.2831098545441595e+01,
+      "cpu_time": 1.2830741592285117e+01,
+      "time_unit": "ns",
+      "allocs_per_iter": 2.0000000000000000e+00,
+      "max_bytes_used": 2048,
+      "total_allocated_bytes": 8192,
+      "net_heap_growth": 16
+    },
+    {
+      "name": "BM_alloc/256",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_alloc/256",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 1022543,
+      "real_time": 1.2666283960686298e+01,
+      "cpu_time": 1.2666032626500792e+01,
+      "time_unit": "ns",
+      "allocs_per_iter": 4.0000000000000000e+00,
+      "max_bytes_used": 4096,
+      "total_allocated_bytes": 16384,
+      "net_heap_growth": 32
+    },
+    {
+      "name": "BM_alloc/256_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_alloc/256",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.2925535975822008e+01,
+      "cpu_time": 1.2925687558697613e+01,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_alloc/256_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_alloc/256",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 1.2831098545441597e+01,
+      "cpu_time": 1.2830741592285117e+01,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_alloc/256_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_alloc/256",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 3.1719572780726007e-01,
+      "cpu_time": 3.1794434862618925e-01,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_alloc/256_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_alloc/256",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 2.4540237898110662e-02,
+      "cpu_time": 2.4597867400271988e-02,
+      "time_unit": "ns"
+    }
+  ]
+}

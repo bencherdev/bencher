@@ -70,7 +70,7 @@
 		"apiRounds": 1,
 		"cls": 0.00025,
 		"jsBytes": 58647,
-		"deferredJsBytes": 132620,
+		"deferredJsBytes": 132696,
 		"stylesheets": 1,
 		"htmlBytes": 2770,
 		"inlineScriptBytes": 2560,
@@ -182,13 +182,13 @@
 	"thresholdsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 16190,
+		"jsBytes": 16214,
 		"scriptRounds": 1
 	},
 	"plotsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 63609,
+		"jsBytes": 63672,
 		"scriptRounds": 1
 	},
 	"thresholdsColdLoad": {
@@ -196,7 +196,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 59376,
+		"jsBytes": 59437,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"htmlBytes": 2760,
@@ -208,7 +208,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 81457,
+		"jsBytes": 81519,
 		"deferredJsBytes": 117864,
 		"stylesheets": 1,
 		"htmlBytes": 2840,
@@ -220,7 +220,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 117953,
+		"jsBytes": 118013,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2900,
 		"inlineScriptBytes": 2560,
@@ -243,7 +243,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 78018,
+		"jsBytes": 78073,
 		"deferredJsBytes": 112880,
 		"lateModules": 0
 	},
@@ -255,7 +255,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 79791,
+		"jsBytes": 79843,
 		"deferredJsBytes": 117903,
 		"stylesheets": 1,
 		"htmlBytes": 2840,
@@ -267,7 +267,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 96004,
+		"jsBytes": 96067,
 		"deferredJsBytes": 115690,
 		"stylesheets": 1,
 		"htmlBytes": 2800,
@@ -299,7 +299,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 106806,
+		"jsBytes": 106873,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2850,
 		"inlineScriptBytes": 2560,
@@ -307,7 +307,7 @@
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 78043,
+		"jsBytes": 78101,
 		"deferredJsBytes": 112880,
 		"cssBytes": 13062,
 		"htmlBytes": 2980,
@@ -315,14 +315,14 @@
 	},
 	"embedColdLoad": {
 		"cls": 0,
-		"jsBytes": 69237,
+		"jsBytes": 69296,
 		"deferredJsBytes": 112880,
 		"cssBytes": 11289,
 		"htmlBytes": 1560,
 		"inlineScriptBytes": 390
 	},
 	"classicHelpColdLoad": {
-		"jsBytes": 139750,
+		"jsBytes": 139820,
 		"cssBytes": 68100
 	},
 	"shellShift": {
@@ -499,7 +499,7 @@
 	"metricLanding": {
 		"apiRounds": 2,
 		"apiRequests": 3,
-		"jsBytes": 118731,
+		"jsBytes": 118788,
 		"lateModules": 2
 	}
 }

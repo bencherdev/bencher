@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="minfail" rng-seed="754943558" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Slow then failing" filename="minfail.cpp" line="9">
+    <BenchmarkResults name="sleeps 650 ms" samples="3" resamples="100000" iterations="1" clockResolution="18.9302" estimatedDuration="1.95047e+09">
+      <!-- All values in nano seconds -->
+      <mean value="6.50114e+08" lowerBound="6.50111e+08" upperBound="6.50116e+08" ci="0.95"/>
+      <standardDeviation value="2673.74" lowerBound="0" upperBound="3069.31" ci="0.95"/>
+      <outliers variance="0.222222" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="throws early">
+      <failed message="boom"/>
+    </BenchmarkResults>
+    <Exception filename="minfail.cpp" line="9">
+      boom
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="minfail.cpp" line="19">
+    <BenchmarkResults name="Fibonacci 10" samples="3" resamples="100000" iterations="618" clockResolution="18.9302" estimatedDuration="55620">
+      <!-- All values in nano seconds -->
+      <mean value="24.9396" lowerBound="24.7492" upperBound="25.1187" ci="0.95"/>
+      <standardDeviation value="0.245629" lowerBound="0" upperBound="0.253246" ci="0.95"/>
+      <outliers variance="0.222222" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="1" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="1" failures="1" expectedFailures="0" skips="0"/>
+</Catch2TestRun>
