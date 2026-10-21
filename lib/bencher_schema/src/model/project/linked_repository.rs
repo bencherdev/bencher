@@ -129,6 +129,29 @@ impl QueryLinkedRepository {
         .map(|updated| updated > 0)
     }
 
+    /// Connect this link through the installation that holds its repository now, which a lookup
+    /// after a refused mint found, and return it moved. A link replaced since is left alone.
+    pub fn move_to(
+        &self,
+        conn: &mut DbConnection,
+        installation: GitHubInstallationId,
+    ) -> QueryResult<Option<Self>> {
+        let moved = diesel::update(
+            schema::linked_repository::table
+                .filter(schema::linked_repository::project_id.eq(self.project_id))
+                .filter(schema::linked_repository::installation_id.eq(self.installation_id))
+                .filter(schema::linked_repository::repository_id.eq(self.repository_id)),
+        )
+        .set(connected(installation))
+        .execute(conn)?;
+        Ok((moved > 0).then(|| Self {
+            installation_id: installation,
+            status: LinkedRepositoryStatus::Connected,
+            reason: None,
+            ..self.clone()
+        }))
+    }
+
     /// Bring every link a webhook delivery names up to date. Each write sets an end state, so a
     /// duplicate of the latest delivery changes nothing.
     pub fn apply(conn: &mut DbConnection, change: &GitHubInstallationChange) -> QueryResult<()> {

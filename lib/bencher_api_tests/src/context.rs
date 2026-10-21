@@ -245,10 +245,6 @@ impl TestServer {
         set_busy_timeout(&mut conn).expect("Failed to set the busy timeout");
         run_migrations(&mut conn).expect("Failed to run migrations");
 
-        // Create connection pools
-        let public_pool = connection_pool(&db_path);
-        let auth_pool = connection_pool(&db_path);
-
         // Build minimal ApiContext
         let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let rbac = init_rbac().expect("Failed to init RBAC").into();
@@ -256,8 +252,8 @@ impl TestServer {
         let database = Database {
             path: PathBuf::from(&db_path),
             busy_timeout: BUSY_TIMEOUT_MS,
-            public_pool,
-            auth_pool,
+            public_pool: connection_pool(&db_path),
+            auth_pool: connection_pool(&db_path),
             connection: Arc::new(Mutex::new(conn)),
         };
 
@@ -270,13 +266,14 @@ impl TestServer {
         let shutdown = bencher_schema::context::CancellationToken::new();
         // Callbacks go to the recording sender, never through the real client.
         let callback_sender = Arc::new(crate::RecordingSender::default());
-        let callbacks = bencher_schema::context::Callbacks::new(
+        let callbacks = bencher_schema::context::Callbacks::new_with_github_app(
             Arc::clone(&database.connection),
             database.auth_pool.clone(),
             callback_key.clone(),
             callback_sender.clone(),
             shutdown.clone(),
             clock.clone(),
+            github_app.clone(),
         );
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
@@ -481,6 +478,12 @@ impl TestServer {
     #[cfg(feature = "plus")]
     pub fn callback_requests(&self) -> Vec<crate::CallbackRequest> {
         self.callback_sender.requests()
+    }
+
+    /// Answer the next callback the server sends with `status`, and those after it with 200.
+    #[cfg(feature = "plus")]
+    pub fn answer_next_callback(&self, status: http::StatusCode) {
+        self.callback_sender.answer_next(status);
     }
 
     /// Wait for every callback delivery to settle; the server claims no callback afterwards.

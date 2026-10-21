@@ -108,11 +108,6 @@ impl TryFrom<CliRun> for Run {
             job,
             backend,
         } = run;
-        // A detached run on GitHub Actions starts a check that only its callback can complete.
-        #[cfg(feature = "plus")]
-        if job.detach && ci.github_actions.is_some() && ci.ci_callback_token.is_none() {
-            return Err(RunError::DetachNeedsCallback.into());
-        }
         #[cfg(feature = "plus")]
         let build_time = cmd.build_time;
         #[cfg(feature = "plus")]
@@ -220,14 +215,21 @@ impl Run {
     }
 
     async fn check_and_run(&self, ci_check: &mut Option<CiCheck>) -> Result<(), RunError> {
-        if let Some(mismatch) = self
+        let mismatch = self
             .backend
             .check_version()
             .await
-            .map_err(RunError::ApiVersion)?
-        {
+            .map_err(RunError::ApiVersion)?;
+        if let Some(mismatch) = &mismatch {
             cli_eprintln_quietable!(self.log, "Warning: {mismatch}");
         }
+        #[cfg(feature = "plus")]
+        self.check_dispatch_token(
+            mismatch
+                .as_ref()
+                .map_or(crate::CLI_VERSION, |mismatch| mismatch.api_version.as_str()),
+            ci::github_api_url(false).as_deref(),
+        )?;
 
         if let Some(ci) = &self.ci {
             ci.safety_check(self.log)?;
@@ -251,6 +253,26 @@ impl Run {
         }
 
         self.run_and_report(ci_check).await
+    }
+
+    /// A detached run on GitHub Actions starts a check that only its dispatch can complete, so
+    /// without `--ci-callback-token` it needs a server that mints the dispatch's token, which it
+    /// does only for github.com.
+    #[cfg(feature = "plus")]
+    fn check_dispatch_token(
+        &self,
+        server_version: &str,
+        github_api_url: Option<&str>,
+    ) -> Result<(), RunError> {
+        let tokenless = self.ci.as_ref().is_some_and(|ci| !ci.has_callback_token())
+            && self.submit_job().is_some_and(|job| job.detach);
+        if tokenless
+            && !(mints_dispatch_token(server_version) && ci::mints_for_api_url(github_api_url))
+        {
+            Err(RunError::DetachNeedsCallback)
+        } else {
+            Ok(())
+        }
     }
 
     /// Best-effort: look up the Project, which the CI check names.
@@ -835,6 +857,15 @@ impl SectionReports for Run {
     }
 }
 
+/// The first server version that mints the token of a dispatch sent without one.
+#[cfg(feature = "plus")]
+const MINTING_VERSION: semver::Version = semver::Version::new(0, 6, 16);
+
+#[cfg(feature = "plus")]
+fn mints_dispatch_token(server_version: &str) -> bool {
+    semver::Version::parse(server_version).is_ok_and(|version| version >= MINTING_VERSION)
+}
+
 type ReportResult = Pin<
     Box<
         dyn Future<
@@ -1013,6 +1044,76 @@ mod tests {
                     Some(Timeout::try_from(7).unwrap())
                 )
             );
+        }
+    }
+
+    #[cfg(feature = "plus")]
+    mod dispatch_token {
+        use clap::Parser as _;
+
+        use super::super::Run;
+        use crate::bencher::sub::RunError;
+        use crate::parser::run::CliRun;
+
+        fn run(args: &[&str]) -> Run {
+            let args = ["--project", "my-project", "--image", "alpine:3.18"]
+                .iter()
+                .chain(args)
+                .copied()
+                .collect::<Vec<_>>();
+            Run::try_from(CliRun::try_parse_from(std::iter::once("run").chain(args)).unwrap())
+                .unwrap()
+        }
+
+        // Kills a refusal before the server's version is known, a gate on any version but the
+        // one that mints or on any API but github.com's, a prefix match on github.com's API URL,
+        // and a gate on a run with a token or a run that waits.
+        #[test]
+        fn a_detached_run_without_a_token_needs_a_server_that_mints() {
+            const GITHUB_COM: Option<&str> = Some("https://api.github.com");
+            const GHES: Option<&str> = Some("https://github.example.com/api/v3");
+            let detached = run(&["--detach", "--github-actions", "token"]);
+            let with_token = run(&[
+                "--detach",
+                "--github-actions",
+                "token",
+                "--ci-callback-token",
+                "callback-token",
+            ]);
+            let waiting = run(&["--github-actions", "token"]);
+            for (run, version, api_url, refused) in [
+                (&detached, "0.6.15", None, true),
+                (&detached, "0.6.16-rc.1", None, true),
+                (&detached, "not-a-version", None, true),
+                (&detached, "0.6.16", None, false),
+                (&detached, "0.6.17", None, false),
+                (&detached, "0.7.0", None, false),
+                (&detached, "0.6.16", GITHUB_COM, false),
+                (&detached, "0.6.16", Some("https://api.github.com/"), false),
+                (&detached, "0.6.16", GHES, true),
+                (
+                    &detached,
+                    "0.6.16",
+                    Some("https://api.github.com/api/v3"),
+                    true,
+                ),
+                (&detached, "0.6.16", Some("http://api.github.com"), true),
+                (&detached, "0.6.16", Some(""), true),
+                (&detached, "0.6.15", GITHUB_COM, true),
+                (&with_token, "0.6.15", None, false),
+                (&with_token, "0.6.16", GHES, false),
+                (&waiting, "0.6.15", GHES, false),
+            ] {
+                let checked = run.check_dispatch_token(version, api_url);
+                assert_eq!(
+                    matches!(checked, Err(RunError::DetachNeedsCallback)),
+                    refused,
+                    "{version} {api_url:?}: {checked:?}"
+                );
+                if !refused {
+                    assert!(checked.is_ok(), "{version} {api_url:?}: {checked:?}");
+                }
+            }
         }
     }
 

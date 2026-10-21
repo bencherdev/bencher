@@ -8,6 +8,10 @@ use crate::parser::run::CliRunCi;
 
 mod github_actions;
 
+#[cfg(feature = "plus")]
+pub(crate) use github_actions::github_api_url;
+#[cfg(feature = "plus")]
+pub use github_actions::mints_for_api_url;
 pub use github_actions::run_attempt_key;
 use github_actions::{CheckRunHandle, GitHubActions, GitHubError};
 
@@ -76,6 +80,14 @@ impl Ci {
             Self::GitHubActions(github_actions) => {
                 github_actions.safety_check(log).map_err(Into::into)
             },
+        }
+    }
+
+    /// Whether a detached run's dispatch carries `--ci-callback-token`.
+    #[cfg(feature = "plus")]
+    pub fn has_callback_token(&self) -> bool {
+        match self {
+            Self::GitHubActions(github_actions) => github_actions.callback_token.is_some(),
         }
     }
 

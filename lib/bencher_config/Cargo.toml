@@ -49,9 +49,7 @@ tokio.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-aws-lc-rs.workspace = true
-base64.workspace = true
-rustls.workspace = true
+bencher_github_client = { workspace = true, features = ["test-base-url"] }
 
 [lints]
 workspace = true

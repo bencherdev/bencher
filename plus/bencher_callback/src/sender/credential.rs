@@ -38,6 +38,17 @@ impl CallbackCredential {
         }
     }
 
+    /// A dispatch whose token is minted for a GitHub App installation spends that installation's
+    /// rate limit, whatever token each attempt mints.
+    pub fn installation(url: &Url, installation: u64) -> Self {
+        let installation = installation.to_string();
+        Self {
+            host: CallbackHost::of(url),
+            // A header value never holds a NUL, so no stored callback shares this credential.
+            authorization: Some(sha256(&[b"\0installation", installation.as_bytes()])),
+        }
+    }
+
     pub fn host(&self) -> &CallbackHost {
         &self.host
     }
@@ -149,5 +160,33 @@ mod tests {
                 != credential("https://user:other@api.github.com/", None),
             "each userinfo is its own credential"
         );
+    }
+
+    // Kills keying a minted dispatch by anything but its host and its installation, which would
+    // pace one installation's dispatches by another's, or by every anonymous callback's.
+    #[test]
+    fn a_minted_credential_is_the_host_and_the_installation() {
+        const DISPATCH: &str = "https://api.github.com/repos/owner/repo/dispatches";
+        let installation =
+            |url: &str, id| CallbackCredential::installation(&url.parse().unwrap(), id);
+        let minted = installation(DISPATCH, 2048);
+        assert!(
+            installation("https://api.github.com/repos/other/repo/dispatches", 2048) == minted,
+            "another repository in the installation"
+        );
+        for (other, what) in [
+            (installation(DISPATCH, 4096), "another installation"),
+            (
+                installation(
+                    "https://github.example.com/repos/owner/repo/dispatches",
+                    2048,
+                ),
+                "another host",
+            ),
+            (credential(DISPATCH, None), "an anonymous callback"),
+            (credential(DISPATCH, Some("Bearer token")), "a stored token"),
+        ] {
+            assert!(other != minted, "{what}");
+        }
     }
 }

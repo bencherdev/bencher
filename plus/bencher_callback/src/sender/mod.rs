@@ -47,6 +47,8 @@ pub enum CallbackAttempt {
     Connection(Arc<reqwest::Error>),
     /// The address policy refused the destination, so nothing was sent.
     Blocked(CallbackBlock),
+    /// No token could be minted for a dispatch, so nothing was sent.
+    Unminted,
 }
 
 /// Why the address policy refused a destination.
@@ -81,6 +83,8 @@ pub enum CallbackAttemptClass {
     Connection,
     #[display("blocked")]
     Blocked(CallbackBlockReason),
+    #[display("unminted")]
+    Unminted,
 }
 
 /// Why the address policy refused a callback, without the refused address.
@@ -119,6 +123,10 @@ pub enum CallbackFailure {
     /// does not build.
     #[display("render")]
     Render,
+    /// No token could be minted for a dispatch: the server has no GitHub App, the project has no
+    /// connected linked repository, or the mint itself failed for good.
+    #[display("unminted")]
+    Unminted,
 }
 
 /// The production sender: `https` to public addresses only, one request per attempt.
@@ -139,6 +147,7 @@ impl CallbackAttempt {
             Self::TimedOut => CallbackAttemptClass::Timeout,
             Self::Connection(_) => CallbackAttemptClass::Connection,
             Self::Blocked(block) => CallbackAttemptClass::Blocked(block.reason()),
+            Self::Unminted => CallbackAttemptClass::Unminted,
         }
     }
 

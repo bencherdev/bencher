@@ -32,8 +32,8 @@ mod source_ip;
 pub mod status;
 
 pub use job::{
-    InsertJob, JobId, JobTimeout, PendingInsertJob, QueryJob, UpdateJob, in_flight_jobs,
-    mark_orphaned_claimed_jobs_unknown, reprocess_completed_jobs,
+    InsertJob, JobId, JobTimeout, PendingInsertJob, QueryJob, UpdateJob, check_minted_dispatch,
+    in_flight_jobs, mark_orphaned_claimed_jobs_unknown, reprocess_completed_jobs,
 };
 pub use job_callback::{
     CallbackOutcome, HttpStatus, InsertJobCallback, QueryJobCallback, QueryJobCallbackView,
