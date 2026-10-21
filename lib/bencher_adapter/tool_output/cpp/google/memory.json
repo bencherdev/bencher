@@ -1,0 +1,61 @@
+{
+  "context": {
+    "date": "2026-10-21T22:43:37+00:00",
+    "host_name": "localhost",
+    "executable": "./bench",
+    "num_cpus": 16,
+    "mhz_per_cpu": 4194,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 16777216,
+        "num_sharing": 16
+      }
+    ],
+    "load_avg": [0.0800781,0.0166016,0.00537109],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "BM_alloc/256",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_alloc/256",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 1228048,
+      "real_time": 1.1769136874126971e+01,
+      "cpu_time": 1.1758176390499395e+01,
+      "time_unit": "ns",
+      "allocs_per_iter": 3.0000000000000000e+00,
+      "max_bytes_used": 1024,
+      "total_allocated_bytes": 16384,
+      "net_heap_growth": 0
+    }
+  ]
+}

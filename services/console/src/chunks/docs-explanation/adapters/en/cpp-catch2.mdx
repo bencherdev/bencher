@@ -5,5 +5,6 @@ import MakeCppCatch2 from "../make-cpp-catch2.mdx";
 The C++ Catch2 Adapter (`cpp_catch2`) expects [Catch2](https://github.com/catchorg/Catch2) output.
 The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
+For a Project at BMF version 1, Catch2's XML reporter (`-r xml`) is also read and gives the most reliable results, while its console output is read on a best-effort basis.
 
 <MakeCppCatch2 />

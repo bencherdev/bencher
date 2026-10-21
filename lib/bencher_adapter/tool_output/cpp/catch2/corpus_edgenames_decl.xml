@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="edgenames" rng-seed="1547472115" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Clean" filename="edgenames.cpp" line="28">
+    <BenchmarkResults name="Name of exactly thirty four chars!" samples="100" resamples="100000" iterations="6244" clockResolution="23.8474" estimatedDuration="1.8732e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.71393" lowerBound="2.69225" upperBound="2.75648" ci="0.95"/>
+      <standardDeviation value="0.146467" lowerBound="0.0775311" upperBound="0.228953" ci="0.95"/>
+      <outliers variance="0.524357" lowMild="0" lowSevere="0" highMild="3" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name of exactly thirty five chars!!" samples="100" resamples="100000" iterations="8440" clockResolution="23.8474" estimatedDuration="1.688e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.74689" lowerBound="2.71917" upperBound="2.80216" ci="0.95"/>
+      <standardDeviation value="0.19166" lowerBound="0.115871" upperBound="0.324373" ci="0.95"/>
+      <outliers variance="0.646019" lowMild="0" lowSevere="0" highMild="1" highSevere="7"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name of exactly thirty six chars!!!!" samples="100" resamples="100000" iterations="7507" clockResolution="23.8474" estimatedDuration="2.2521e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.82795" lowerBound="2.76643" upperBound="2.9257" ci="0.95"/>
+      <standardDeviation value="0.390083" lowerBound="0.275055" upperBound="0.5205" ci="0.95"/>
+      <outliers variance="0.883495" lowMild="7" lowSevere="0" highMild="2" highSevere="13"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name of exactly thirty seven chars!!!" samples="100" resamples="100000" iterations="7948" clockResolution="23.8474" estimatedDuration="2.3844e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.21499" lowerBound="2.96067" upperBound="4.12478" ci="0.95"/>
+      <standardDeviation value="2.09284" lowerBound="0.258838" upperBound="4.71754" ci="0.95"/>
+      <outliers variance="0.989639" lowMild="0" lowSevere="0" highMild="1" highSevere="10"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name of exactly thirty eight chars!!!!" samples="100" resamples="100000" iterations="7068" clockResolution="23.8474" estimatedDuration="2.1204e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.91156" lowerBound="2.89365" upperBound="2.94552" ci="0.95"/>
+      <standardDeviation value="0.119231" lowerBound="0.0635298" upperBound="0.182331" ci="0.95"/>
+      <outliers variance="0.385092" lowMild="1" lowSevere="0" highMild="2" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Averyveryverylongsinglewordthatcannotwrapatanyspaceatall" samples="100" resamples="100000" iterations="7827" clockResolution="23.8474" estimatedDuration="2.3481e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.00052" lowerBound="2.93764" upperBound="3.12472" ci="0.95"/>
+      <standardDeviation value="0.435795" lowerBound="0.258868" upperBound="0.701478" ci="0.95"/>
+      <outliers variance="0.894" lowMild="1" lowSevere="0" highMild="0" highSevere="11"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Twelve chars" samples="100" resamples="100000" iterations="7865" clockResolution="23.8474" estimatedDuration="2.3595e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.95562" lowerBound="2.91292" upperBound="3.07747" ci="0.95"/>
+      <standardDeviation value="0.335026" lowerBound="0.143092" upperBound="0.712626" ci="0.95"/>
+      <outliers variance="0.831419" lowMild="0" lowSevere="0" highMild="0" highSevere="11"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Thirteen char" samples="100" resamples="100000" iterations="7735" clockResolution="23.8474" estimatedDuration="2.3205e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.9038" lowerBound="2.88922" upperBound="2.93322" ci="0.95"/>
+      <standardDeviation value="0.097412" lowerBound="0.0549275" upperBound="0.165383" ci="0.95"/>
+      <outliers variance="0.296657" lowMild="5" lowSevere="0" highMild="1" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fourteen chars" samples="100" resamples="100000" iterations="7739" clockResolution="23.8474" estimatedDuration="2.3217e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.91879" lowerBound="2.89852" upperBound="2.95157" ci="0.95"/>
+      <standardDeviation value="0.126058" lowerBound="0.0782864" upperBound="0.174653" ci="0.95"/>
+      <outliers variance="0.405223" lowMild="5" lowSevere="0" highMild="0" highSevere="8"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fifteen chars!!" samples="100" resamples="100000" iterations="7812" clockResolution="23.8474" estimatedDuration="2.3436e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.93229" lowerBound="2.90479" upperBound="2.98808" ci="0.95"/>
+      <standardDeviation value="0.190275" lowerBound="0.100293" upperBound="0.313052" ci="0.95"/>
+      <outliers variance="0.615272" lowMild="3" lowSevere="0" highMild="1" highSevere="7"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="100" samples="100" resamples="100000" iterations="7574" clockResolution="23.8474" estimatedDuration="2.2722e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.12967" lowerBound="3.04323" upperBound="3.25812" ci="0.95"/>
+      <standardDeviation value="0.52935" lowerBound="0.39007" upperBound="0.696312" ci="0.95"/>
+      <outliers variance="0.915377" lowMild="0" lowSevere="0" highMild="1" highSevere="16"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="5 ns" samples="100" resamples="100000" iterations="7810" clockResolution="23.8474" estimatedDuration="2.343e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.91249" lowerBound="2.89869" upperBound="2.93846" ci="0.95"/>
+      <standardDeviation value="0.0915251" lowerBound="0.0469431" upperBound="0.138768" ci="0.95"/>
+      <outliers variance="0.267595" lowMild="1" lowSevere="0" highMild="1" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Größe ÄÖÜ äöü ß µs mit Umlauten und Länge" samples="100" resamples="100000" iterations="8095" clockResolution="23.8474" estimatedDuration="1.619e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.92828" lowerBound="2.89519" upperBound="3.04677" ci="0.95"/>
+      <standardDeviation value="0.283329" lowerBound="0.0773096" upperBound="0.645002" ci="0.95"/>
+      <outliers variance="0.779584" lowMild="0" lowSevere="0" highMild="1" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="日本語のベンチマーク名前" samples="100" resamples="100000" iterations="8141" clockResolution="23.8474" estimatedDuration="1.6282e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.96971" lowerBound="2.92716" upperBound="3.05722" ci="0.95"/>
+      <standardDeviation value="0.298442" lowerBound="0.173848" upperBound="0.516742" ci="0.95"/>
+      <outliers variance="0.790098" lowMild="6" lowSevere="0" highMild="3" highSevere="9"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name with  double  spaces that is long enough to wrap around" samples="100" resamples="100000" iterations="7901" clockResolution="23.8474" estimatedDuration="2.3703e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.37531" lowerBound="3.20912" upperBound="3.58151" ci="0.95"/>
+      <standardDeviation value="0.943322" lowerBound="0.794715" upperBound="1.08697" ci="0.95"/>
+      <outliers variance="0.968118" lowMild="0" lowSevere="0" highMild="3" highSevere="22"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Fails in the samples" filename="edgenames.cpp" line="29">
+    <BenchmarkResults name="fails late" samples="100" resamples="100000" iterations="7566" clockResolution="23.8474" estimatedDuration="2.2698e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="REQUIRE" filename="edgenames.cpp" line="32">
+        <Original>
+          ++calls &lt; at("FAIL_AT", 60)
+        </Original>
+        <Expanded>
+          60 &lt; 60
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Shifted" filename="edgenames.cpp" line="36">
+    <BenchmarkResults name="Name of exactly thirty four chars!" samples="100" resamples="100000" iterations="7744" clockResolution="23.8474" estimatedDuration="2.3232e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.91579" lowerBound="2.90209" upperBound="2.94631" ci="0.95"/>
+      <standardDeviation value="0.0987499" lowerBound="0.0517687" upperBound="0.160452" ci="0.95"/>
+      <outliers variance="0.296909" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name of exactly thirty five chars!!" samples="100" resamples="100000" iterations="7708" clockResolution="23.8474" estimatedDuration="2.3124e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.93084" lowerBound="2.91405" upperBound="2.96378" ci="0.95"/>
+      <standardDeviation value="0.116233" lowerBound="0.0682945" upperBound="0.177518" ci="0.95"/>
+      <outliers variance="0.365655" lowMild="3" lowSevere="0" highMild="1" highSevere="6"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name of exactly thirty six chars!!!!" samples="100" resamples="100000" iterations="8046" clockResolution="23.8474" estimatedDuration="1.6092e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.93318" lowerBound="2.90927" upperBound="2.99864" ci="0.95"/>
+      <standardDeviation value="0.185841" lowerBound="0.0828088" upperBound="0.387717" ci="0.95"/>
+      <outliers variance="0.605038" lowMild="0" lowSevere="0" highMild="0" highSevere="6"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name of exactly thirty seven chars!!!" samples="100" resamples="100000" iterations="5895" clockResolution="23.8474" estimatedDuration="2.358e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.79313" lowerBound="2.7411" upperBound="2.89382" ci="0.95"/>
+      <standardDeviation value="0.357882" lowerBound="0.211565" upperBound="0.563132" ci="0.95"/>
+      <outliers variance="0.862796" lowMild="0" lowSevere="0" highMild="0" highSevere="8"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name of exactly thirty eight chars!!!!" samples="100" resamples="100000" iterations="6081" clockResolution="23.8474" estimatedDuration="1.8243e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.86685" lowerBound="3.64237" upperBound="4.10689" ci="0.95"/>
+      <standardDeviation value="1.18498" lowerBound="1.08914" upperBound="1.30538" ci="0.95"/>
+      <outliers variance="0.978402" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Averyveryverylongsinglewordthatcannotwrapatanyspaceatall" samples="100" resamples="100000" iterations="5540" clockResolution="23.8474" estimatedDuration="2.216e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.81001" lowerBound="3.59128" upperBound="4.03962" ci="0.95"/>
+      <standardDeviation value="1.14842" lowerBound="1.06602" upperBound="1.22823" ci="0.95"/>
+      <outliers variance="0.978348" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Twelve chars" samples="100" resamples="100000" iterations="5804" clockResolution="23.8474" estimatedDuration="2.3216e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.87555" lowerBound="4.69703" upperBound="5.01727" ci="0.95"/>
+      <standardDeviation value="0.805166" lowerBound="0.647357" upperBound="0.973299" ci="0.95"/>
+      <outliers variance="0.915151" lowMild="0" lowSevere="17" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Thirteen char" samples="100" resamples="100000" iterations="4762" clockResolution="23.8474" estimatedDuration="2.381e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.95582" lowerBound="4.78378" upperBound="5.10033" ci="0.95"/>
+      <standardDeviation value="0.805665" lowerBound="0.660717" upperBound="0.969554" ci="0.95"/>
+      <outliers variance="0.914996" lowMild="9" lowSevere="10" highMild="1" highSevere="3"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fourteen chars" samples="100" resamples="100000" iterations="4886" clockResolution="23.8474" estimatedDuration="1.9544e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.48425" lowerBound="4.30925" upperBound="4.63933" ci="0.95"/>
+      <standardDeviation value="0.840221" lowerBound="0.747362" upperBound="0.938194" ci="0.95"/>
+      <outliers variance="0.936068" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fifteen chars!!" samples="100" resamples="100000" iterations="4879" clockResolution="23.8474" estimatedDuration="1.9516e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.9765" lowerBound="4.83875" upperBound="5.08474" ci="0.95"/>
+      <standardDeviation value="0.619748" lowerBound="0.477685" upperBound="0.798186" ci="0.95"/>
+      <outliers variance="0.862374" lowMild="1" lowSevere="8" highMild="3" highSevere="2"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="100" samples="100" resamples="100000" iterations="4847" clockResolution="23.8474" estimatedDuration="1.9388e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.90516" lowerBound="4.77596" upperBound="5.01098" ci="0.95"/>
+      <standardDeviation value="0.596989" lowerBound="0.47255" upperBound="0.771432" ci="0.95"/>
+      <outliers variance="0.852198" lowMild="4" lowSevere="3" highMild="4" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="5 ns" samples="100" resamples="100000" iterations="5031" clockResolution="23.8474" estimatedDuration="2.0124e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.88413" lowerBound="3.70728" upperBound="4.05738" ci="0.95"/>
+      <standardDeviation value="0.892091" lowerBound="0.831777" upperBound="0.977959" ci="0.95"/>
+      <outliers variance="0.95727" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Größe ÄÖÜ äöü ß µs mit Umlauten und Länge" samples="100" resamples="100000" iterations="5276" clockResolution="23.8474" estimatedDuration="2.1104e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.82757" lowerBound="3.65015" upperBound="4.01595" ci="0.95"/>
+      <standardDeviation value="0.934575" lowerBound="0.85298" upperBound="1.04912" ci="0.95"/>
+      <outliers variance="0.957585" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="日本語のベンチマーク名前" samples="100" resamples="100000" iterations="5728" clockResolution="23.8474" estimatedDuration="2.2912e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.73041" lowerBound="3.57196" upperBound="3.90575" ci="0.95"/>
+      <standardDeviation value="0.848878" lowerBound="0.755547" upperBound="0.998375" ci="0.95"/>
+      <outliers variance="0.957219" lowMild="0" lowSevere="0" highMild="1" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Name with  double  spaces that is long enough to wrap around" samples="100" resamples="100000" iterations="5572" clockResolution="23.8474" estimatedDuration="2.2288e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.54093" lowerBound="3.37911" upperBound="3.71668" ci="0.95"/>
+      <standardDeviation value="0.857227" lowerBound="0.78006" upperBound="0.951004" ci="0.95"/>
+      <outliers variance="0.957543" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="59" failures="1" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="1" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

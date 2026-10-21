@@ -1,0 +1,97 @@
+{
+  "context": {
+    "date": "2026-10-25T02:25:13+00:00",
+    "host_name": "localhost",
+    "executable": "./threads_argument",
+    "num_cpus": 16,
+    "mhz_per_cpu": 4194,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 16777216,
+        "num_sharing": 16
+      }
+    ],
+    "load_avg": [0.012207,0.0268555,0],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "BM_work/threads:5",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_work/threads:5",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 160744795,
+      "real_time": 3.7509961177900544e+00,
+      "cpu_time": 3.7508346631068203e+00,
+      "time_unit": "ns",
+      "allocs_per_iter": 5.0000000000000000e+00,
+      "max_bytes_used": 5120,
+      "total_allocated_bytes": 81920,
+      "net_heap_growth": 1280
+    },
+    {
+      "name": "BM_work/threads:5/threads:2",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "BM_work/threads:5/threads:2",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 2,
+      "iterations": 61567378,
+      "real_time": 1.1080132452611300e+01,
+      "cpu_time": 1.1079541132968179e+01,
+      "time_unit": "ns",
+      "allocs_per_iter": 1.0000000000000000e+01,
+      "max_bytes_used": 10240,
+      "total_allocated_bytes": 163840,
+      "net_heap_growth": 2560
+    },
+    {
+      "name": "BM_work/n:4/threads:1",
+      "family_index": 2,
+      "per_family_instance_index": 0,
+      "run_name": "BM_work/n:4/threads:1",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 162748732,
+      "real_time": 4.0393124721854399e+00,
+      "cpu_time": 4.0391114260724299e+00,
+      "time_unit": "ns",
+      "allocs_per_iter": 4.0000000000000000e+00,
+      "max_bytes_used": 4096,
+      "total_allocated_bytes": 65536,
+      "net_heap_growth": 1024
+    }
+  ]
+}

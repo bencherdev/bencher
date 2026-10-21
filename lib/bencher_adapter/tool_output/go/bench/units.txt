@@ -1,0 +1,9 @@
+goos: linux
+goarch: amd64
+pkg: example.com/bench/units
+cpu: Intel(R) Xeon(R) CPU @ 2.20GHz
+BenchmarkTwoTimes-16     	    2000	        18.99 ns/op	         3.000 us/op
+BenchmarkMicroOnly-16    	    2000	         2.000 us/op
+BenchmarkUndefined-16    	    2000	        38.36 ns/op	         4.000 hits/op	               NaN ratio/op
+PASS
+ok  	example.com/bench/units	0.004s

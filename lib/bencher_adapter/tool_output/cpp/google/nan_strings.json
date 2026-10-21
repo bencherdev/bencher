@@ -1,0 +1,74 @@
+{
+  "context": {
+    "date": "2026-10-22T05:15:56+00:00",
+    "host_name": "localhost",
+    "executable": "./strings",
+    "num_cpus": 16,
+    "mhz_per_cpu": 4194,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 16777216,
+        "num_sharing": 16
+      }
+    ],
+    "load_avg": [0.27002,0.074707,0.0214844],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "BM_IsNaN/iterations:10/manual_time",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_IsNaN/iterations:10/manual_time",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": NaN,
+      "cpu_time": 6.8999999999980531e+01,
+      "time_unit": "ns",
+      "label": "a \" NaN"
+    },
+    {
+      "name": "BM_after/iterations:10",
+      "family_index": 1,
+      "per_family_instance_index": 0,
+      "run_name": "BM_after/iterations:10",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 10,
+      "real_time": 1.9000000861524313e+01,
+      "cpu_time": 1.8100000000013939e+01,
+      "time_unit": "ns",
+      "hits": 3.0000000000000000e+00,
+      "ratio": NaN
+    }
+  ]
+}

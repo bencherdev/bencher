@@ -1,0 +1,137 @@
+Randomness seeded to: 190352952
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+failrealP is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+failreal.cpp:7
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 8                                    100          1740      1.914 ms 
+                                        11.3822 ns    11.3108 ns    11.4968 ns 
+                                       0.453413 ns   0.310854 ns   0.640592 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Paren space first line
+-------------------------------------------------------------------------------
+failreal.cpp:8
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+paren space                                    100          6547     1.9641 ms 
+Benchmark failed (expected f(1) 
+actual 2) 
+failreal.cpp:8: FAILED:
+due to unexpected exception with message:
+  expected f(1) 
+  actual 2
+
+-------------------------------------------------------------------------------
+Paren at line end
+-------------------------------------------------------------------------------
+failreal.cpp:9
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+    paren end           100          6643 
+1.9929 ms                            Benchmark failed (g(x)
+then h(y)) 
+
+failreal.cpp:9: FAILED:
+due to unexpected exception with message:
+  g(x)
+  then h(y)
+
+-------------------------------------------------------------------------------
+Three lines
+-------------------------------------------------------------------------------
+failreal.cpp:10
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+three lines                                    100          6703     2.0109 ms 
+Benchmark failed (one
+two
+three)     
+failreal.cpp:10: FAILED:
+due to unexpected exception with message:
+  one
+  two
+  three
+
+-------------------------------------------------------------------------------
+Trailing newline
+-------------------------------------------------------------------------------
+failreal.cpp:11
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+trailing newline           100          6857 
+2.0571 ms                            Benchmark failed (boom
+) 
+
+failreal.cpp:11: FAILED:
+due to unexpected exception with message:
+  boom
+
+-------------------------------------------------------------------------------
+Early paren space
+-------------------------------------------------------------------------------
+failreal.cpp:12
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+early paren space                    Benchmark failed (a(b) 
+c) 
+
+failreal.cpp:12: FAILED:
+due to unexpected exception with message:
+  a(b) 
+  c
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+failreal.cpp:13
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 7                                    100          1790      1.969 ms 
+                                        6.89065 ns     6.7323 ns     7.2906 ns 
+                                        1.11703 ns  0.0272122 ns    2.06324 ns 
+                                                                               
+Fibonacci 6                                    100          2435      1.948 ms 
+                                        5.30221 ns    5.26109 ns    5.42252 ns 
+                                       0.322735 ns   0.104604 ns   0.683595 ns 
+                                                                               
+
+===============================================================================
+test cases: 7 | 2 passed | 5 failed
+assertions: 5 | 5 failed
+

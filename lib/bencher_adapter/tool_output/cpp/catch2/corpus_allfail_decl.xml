@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="allfail" rng-seed="2970285980" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Only fails" filename="allfail.cpp" line="6">
+    <BenchmarkResults name="fails late" samples="100" resamples="100000" iterations="6539" clockResolution="20.0626" estimatedDuration="1.9617e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="REQUIRE" filename="allfail.cpp" line="9">
+        <Original>
+          ++calls &lt; 60
+        </Original>
+        <Expanded>
+          60 &lt; 60
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <OverallResults successes="59" failures="1" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="0" failures="1" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

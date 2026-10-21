@@ -12,10 +12,12 @@ plus = ["bencher_json/plus"]
 
 [dependencies]
 bencher_json = { workspace = true, features = ["server"] }
+bencher_valid.workspace = true
 gungraun-runner.workspace = true
 gungraun-summary.workspace = true
 nom.workspace = true
 ordered-float.workspace = true
+quick-xml.workspace = true
 rust_decimal = { workspace = true, features = ["serde-with-float"] }
 serde.workspace = true
 serde_json.workspace = true

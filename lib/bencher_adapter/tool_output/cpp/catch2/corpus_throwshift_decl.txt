@@ -1,0 +1,68 @@
+Randomness seeded to: 1986314369
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+throwshift is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Fails in the samples
+-------------------------------------------------------------------------------
+throwshift.cpp:7
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late                                     100          6307     1.8921 ms 
+
+throwshift.cpp:10: FAILED:
+  REQUIRE( ++calls < 60 )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+Throws in the samples
+-------------------------------------------------------------------------------
+throwshift.cpp:14
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+  throws late           100          6063 
+1.8189 ms                            Benchmark failed (late boom) 
+
+throwshift.cpp:14: FAILED:
+due to unexpected exception with message:
+  late boom
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+throwshift.cpp:21
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 12                                   100           286     1.9162 ms 
+                                        65.9266 ns     64.744 ns    68.3912 ns 
+                                        8.33624 ns    4.49039 ns    13.6636 ns 
+                                                                               
+Fibonacci 13                                   100           146     1.9272 ms 
+                                        128.458 ns    126.013 ns    133.444 ns 
+                                        17.1003 ns    9.63418 ns    27.2065 ns 
+                                                                               
+
+===============================================================================
+test cases:  3 |  1 passed | 2 failed
+assertions: 61 | 59 passed | 2 failed
+

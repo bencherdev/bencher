@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="sections" rng-seed="3324408481" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Sections" filename="sections.cpp" line="6">
+    <Section name="First" filename="sections.cpp" line="7">
+      <BenchmarkResults name="Fibonacci 10" samples="3" resamples="100000" iterations="609" clockResolution="18.937" estimatedDuration="56637">
+        <!-- All values in nano seconds -->
+        <mean value="29.9704" lowerBound="29.4532" upperBound="30.4641" ci="0.95"/>
+        <standardDeviation value="0.682172" lowerBound="3.55271e-15" upperBound="0.698205" ci="0.95"/>
+        <outliers variance="0.222222" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="Second" filename="sections.cpp" line="10">
+      <BenchmarkResults name="Fibonacci 11" samples="3" resamples="100000" iterations="409" clockResolution="18.937" estimatedDuration="56442">
+        <!-- All values in nano seconds -->
+        <mean value="45.0098" lowerBound="44.2249" upperBound="45.7767" ci="0.95"/>
+        <standardDeviation value="1.07212" lowerBound="0" upperBound="1.08458" ci="0.95"/>
+        <outliers variance="0.222222" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Plain" filename="sections.cpp" line="15">
+    <BenchmarkResults name="Fibonacci 12" samples="3" resamples="100000" iterations="219" clockResolution="18.937" estimatedDuration="56502">
+      <!-- All values in nano seconds -->
+      <mean value="84.7793" lowerBound="77.8858" upperBound="90.3151" ci="0.95"/>
+      <standardDeviation value="7.06714" lowerBound="0" upperBound="7.82876" ci="0.95"/>
+      <outliers variance="0.250052" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

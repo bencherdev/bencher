@@ -1,0 +1,88 @@
+Randomness seeded to: 2824004614
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+blankfailmsgP is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+blankfailmsg.cpp:2
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 8                                    100          1530      1.836 ms 
+                                        12.5314 ns     12.438 ns    12.6435 ns 
+                                       0.519982 ns   0.427426 ns   0.680579 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Blank then a failure on lines
+-------------------------------------------------------------------------------
+blankfailmsg.cpp:3
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 13                                   100           151     1.9026 ms 
+                                        126.633 ns    125.758 ns    127.728 ns 
+                                         4.9451 ns    3.97404 ns    6.42273 ns 
+                                                                               
+
+throws paragraphs                    Benchmark failed (first paragraph
+
+second paragraph) 
+
+blankfailmsg.cpp:3: FAILED:
+due to unexpected exception with message:
+  first paragraph
+  
+second paragraph
+
+-------------------------------------------------------------------------------
+Spaced name after a disturbed one
+-------------------------------------------------------------------------------
+blankfailmsg.cpp:8
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+disturbed                            dbg          100          6497     1.2994 ms 
+                                        2.68303 ns    2.67111 ns    2.70621 ns 
+                                      0.0790243 ns  0.0403246 ns   0.120041 ns 
+                                                                               
+                                               100          1078     1.8326 ms 
+                                        17.5038 ns    17.3063 ns    17.7678 ns 
+                                        1.16408 ns   0.926904 ns    1.60166 ns 
+                                                                               
+Fibonacci 15                                   100            52     1.9292 ms 
+                                        370.904 ns    368.788 ns    374.141 ns 
+                                        13.1852 ns    9.37114 ns    18.9621 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+blankfailmsg.cpp:13
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 7                                    100          2393     1.6751 ms 
+                                        6.42277 ns    6.34185 ns    6.72917 ns 
+                                       0.717723 ns   0.137978 ns    1.67094 ns 
+                                                                               
+
+===============================================================================
+test cases: 4 | 3 passed | 1 failed
+assertions: 1 | 1 failed
+
