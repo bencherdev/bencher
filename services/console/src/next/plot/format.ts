@@ -40,6 +40,7 @@ export const formatDelta = (
 };
 
 const whenFormats = new Map<string, Intl.DateTimeFormat>();
+const secondFormats = new Map<string, Intl.DateTimeFormat>();
 const dateFormats = new Map<string, Intl.DateTimeFormat>();
 
 const cached = (
@@ -63,6 +64,17 @@ export const formatWhen = (ms: number, timeZone?: string): string =>
 		day: "numeric",
 		hour: "2-digit",
 		minute: "2-digit",
+		hourCycle: "h23",
+	}).format(ms);
+
+/** A report's time to the second, "Oct 18, 17:08:05", in the reader's time zone unless one is given. */
+export const formatWhenSeconds = (ms: number, timeZone?: string): string =>
+	cached(secondFormats, timeZone, {
+		month: "short",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
 		hourCycle: "h23",
 	}).format(ms);
 

@@ -57,6 +57,8 @@ export const transform = (scale: YScale): Transform => {
 
 const PAD_BELOW = 0.16;
 const PAD_ABOVE = 0.18;
+// A spread this small against the values is floating point noise, so they draw as one value.
+const FLAT = 1e-9;
 
 /** The y range for values from `min` to `max`, padded in the scale's own space. */
 export const yRange = (
@@ -69,7 +71,11 @@ export const yRange = (
 	const { fwd, bwd } = transform(scale);
 	const low = fwd(min);
 	const high = fwd(max);
-	const span = high - low || Math.abs(high) * 0.1 || 1;
+	const magnitude = Math.max(Math.abs(min), Math.abs(max));
+	const span =
+		max - min > magnitude * FLAT
+			? high - low
+			: fwd(magnitude * 1.1) - fwd(magnitude) || 1;
 	let lo = bwd(low - span * below);
 	const hi = bwd(high + span * above);
 	if (scale.kind !== "log" && min >= 0 && lo < 0) {

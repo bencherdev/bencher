@@ -5,6 +5,7 @@ import {
 	formatTick,
 	formatValue,
 	formatWhen,
+	formatWhenSeconds,
 } from "./format";
 
 describe("formatValue", () => {
@@ -66,6 +67,15 @@ describe("formatWhen", () => {
 	test("reads month, day, and a 24 hour time", () => {
 		expect(formatWhen(Date.UTC(2026, 8, 13, 21, 6), "UTC")).toBe(
 			"Sep 13, 21:06",
+		);
+	});
+});
+
+describe("formatWhenSeconds", () => {
+	// Kills a dropped second or a twelve hour clock.
+	test("reads month, day, and a 24 hour time to the second", () => {
+		expect(formatWhenSeconds(Date.UTC(2026, 9, 18, 17, 8, 5), "UTC")).toBe(
+			"Oct 18, 17:08:05",
 		);
 	});
 });
