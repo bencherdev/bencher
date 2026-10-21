@@ -96,6 +96,39 @@ describe("yRange", () => {
 		expect(lo).toBeLessThan(5);
 		expect(hi).toBeGreaterThan(5);
 	});
+
+	// Kills a flatness check that counts a zero spread as a spread, which collapses the range to a point.
+	test("opens a range above a series of zeros", () => {
+		const [lo, hi] = yRange(yScale("auto", 0, 0), 0, 0);
+		expect(lo).toBe(0);
+		expect(hi).toBeGreaterThan(0);
+	});
+
+	// Kills treating only an exactly zero span as flat, which leaves a range a few ULPs wide whose rounded ticks all fall outside it.
+	test.each([
+		["linear", 3.3470205686065557, 3.3470205686065593],
+		["log", 1.0000000000000002, 1.0000000000000007],
+	] as const)(
+		"a %s range a few ULPs wide opens like a single value and ticks inside",
+		(kind, min, max) => {
+			const scale = { kind } as const;
+			const [lo, hi] = yRange(scale, min, max);
+			expect(lo).toBeLessThan(min);
+			expect(hi).toBeGreaterThan(max);
+			const { ticks } = yTicks(scale, lo, hi, 5);
+			expect(ticks.length).toBeGreaterThanOrEqual(3);
+			for (const tick of ticks) {
+				expect(tick).toBeGreaterThanOrEqual(lo);
+				expect(tick).toBeLessThanOrEqual(hi);
+			}
+		},
+	);
+
+	// Kills a flat floor so coarse that it pads away a real, if tiny, spread.
+	test("keeps a spread of a ten millionth of the value", () => {
+		const [lo, hi] = yRange({ kind: "linear" }, 1000, 1000.0001);
+		expect(hi - lo).toBeLessThan(0.001);
+	});
 });
 
 describe("yTicks", () => {

@@ -8,9 +8,14 @@ import {
 	strokeLimits,
 	strokeRanges,
 } from "./draw";
-import { formatDate, formatTick, formatWhen } from "./format";
+import {
+	formatDate,
+	formatTick,
+	formatWhen,
+	formatWhenSeconds,
+} from "./format";
 import { rangeBars } from "./iterations";
-import { axisFont, axisWidth } from "./labels";
+import { axisFont, axisWidth, labelWidth } from "./labels";
 import { transform, type YScale, yRange, yScale, yTicks } from "./scale";
 import { type LineStyle, lineDash } from "./series";
 import type { Palette } from "./theme";
@@ -45,6 +50,7 @@ const HOVER_REACH = 16;
 const X_AXIS_HEIGHT = 24;
 const TICK_SPACING = 50;
 const X_TICK_SPACING = 120;
+const MINUTE = 60_000;
 const DAY = 86_400_000;
 
 export interface PanelAxis {
@@ -204,6 +210,15 @@ export const createPanel = (
 				splits.map((split) => formatTick(split / factor, steps[axis] ?? 0)),
 		};
 	};
+	const xLabel =
+		options.xAxis === "date"
+			? (split: number, increment: number) =>
+					increment < MINUTE
+						? formatWhenSeconds(split)
+						: increment < DAY
+							? formatWhen(split)
+							: formatDate(split)
+			: (split: number) => String(split);
 	const xAxisOptions: uPlot.Axis = {
 		show: options.showX,
 		size: X_AXIS_HEIGHT,
@@ -213,17 +228,22 @@ export const createPanel = (
 		grid: { show: false },
 		ticks: { show: false },
 		space: X_TICK_SPACING,
-		...(options.xAxis === "date"
-			? {
-					values: (_, splits, _axis, _space, increment) =>
-						splits.map((split) =>
-							increment < DAY ? formatWhen(split) : formatDate(split),
-						),
-				}
-			: {
-					incrs: [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 1e4],
-					values: (_, splits) => splits.map((split) => String(split)),
-				}),
+		// Each label centers on its split, so one too near either edge of the canvas would clip.
+		filter: (u, splits, axis, _space, increment) => {
+			// uPlot resolves the axis font to the device pixel size it draws, which its types leave out.
+			const [drawn] = (u.axes[axis] as uPlot.Axis).font as unknown as [string];
+			const width = Math.round(u.width * pixelRatio());
+			return splits.map((split) => {
+				const center = u.valToPos(split, "x", true);
+				const half = labelWidth(xLabel(split, increment), drawn) / 2;
+				return center >= half && center + half <= width ? split : null;
+			});
+		},
+		values: (_, splits, _axis, _space, increment) =>
+			splits.map((split) => (split == null ? null : xLabel(split, increment))),
+		...(options.xAxis !== "date" && {
+			incrs: [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 1e4],
+		}),
 	};
 
 	const x = data.x as number[];
