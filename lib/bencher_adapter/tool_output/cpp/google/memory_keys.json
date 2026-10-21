@@ -1,0 +1,157 @@
+{
+  "context": {
+    "date": "2026-10-24T23:33:39+00:00",
+    "host_name": "localhost",
+    "executable": "./memory_keys",
+    "num_cpus": 16,
+    "mhz_per_cpu": 4194,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": true,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 16777216,
+        "num_sharing": 16
+      }
+    ],
+    "load_avg": [0,0.0424805,0.0498047],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "BM_rep/@threads:3/repeats:3",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_rep/@threads:3/repeats:3",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 1951157,
+      "real_time": 6.9560583797156195e+00,
+      "cpu_time": 6.9559420384930579e+00,
+      "time_unit": "ns",
+      "allocs_per_iter": 3.0000000000000000e+00,
+      "max_bytes_used": 1024,
+      "total_allocated_bytes": 16384,
+      "net_heap_growth": 0
+    },
+    {
+      "name": "BM_rep/@threads:3/repeats:3",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_rep/@threads:3/repeats:3",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 1951157,
+      "real_time": 6.9942439280436037e+00,
+      "cpu_time": 6.9945514379416949e+00,
+      "time_unit": "ns",
+      "allocs_per_iter": 3.0000000000000000e+00,
+      "max_bytes_used": 1024,
+      "total_allocated_bytes": 16384,
+      "net_heap_growth": 0
+    },
+    {
+      "name": "BM_rep/@threads:3/repeats:3",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_rep/@threads:3/repeats:3",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 1951157,
+      "real_time": 6.9497446899373223e+00,
+      "cpu_time": 6.9499004949371068e+00,
+      "time_unit": "ns",
+      "allocs_per_iter": 3.0000000000000000e+00,
+      "max_bytes_used": 1024,
+      "total_allocated_bytes": 16384,
+      "net_heap_growth": 0
+    },
+    {
+      "name": "BM_rep/@threads:3/repeats:3_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_rep/@threads:3/repeats:3",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 6.9666823325655152e+00,
+      "cpu_time": 6.9667979904572865e+00,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_rep/@threads:3/repeats:3_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_rep/@threads:3/repeats:3",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 6.9560583797156204e+00,
+      "cpu_time": 6.9559420384930597e+00,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_rep/@threads:3/repeats:3_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_rep/@threads:3/repeats:3",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.4076894081769693e-02,
+      "cpu_time": 2.4224273933183011e-02,
+      "time_unit": "ns"
+    },
+    {
+      "name": "BM_rep/@threads:3/repeats:3_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_rep/@threads:3/repeats:3",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 3.4560057330622188e-03,
+      "cpu_time": 3.4771029627045321e-03,
+      "time_unit": "ns"
+    }
+  ]
+}

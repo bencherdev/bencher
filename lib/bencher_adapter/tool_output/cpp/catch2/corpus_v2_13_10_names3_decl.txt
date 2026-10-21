@@ -1,0 +1,46 @@
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+names3 is a Catch v2.13.10 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Splits
+-------------------------------------------------------------------------------
+names3.cpp:6
+...............................................................................
+
+benchmark name                       samples       iterations    estimated
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+(averyveryverylongunbrokenwordwith-                                            
+outanybreakpointsatall)                        100          1628     1.9536 ms 
+                                        12.5947 ns    12.4903 ns    12.9379 ns 
+                                       0.801482 ns  0.0202094 ns    1.79247 ns 
+                                                                               
+short-                                                                         
+averyveryverylongunbrokenwordthate-                                            
+xceedsthecolumnwidth                           100          1609     1.9308 ms 
+                                        12.6904 ns    12.5632 ns    13.0326 ns 
+                                        0.93487 ns  0.0331235 ns    1.96663 ns 
+                                                                               
+a/bcdefghijklmnopqrstuvwxyzabcdefg-                                            
+hijklmnop                                      100          1538     1.9994 ms 
+                                        12.8929 ns    12.8161 ns     13.069 ns 
+                                       0.562247 ns   0.306041 ns     1.0135 ns 
+                                                                               
+Größenordnungsvergleichsmessungs-                                            
+durchführungsfunktion                         100          1607     1.9284 ms 
+                                        12.8244 ns    12.7708 ns     12.931 ns 
+                                       0.362263 ns   0.178172 ns   0.566552 ns 
+                                                                               
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ-                                            
+ÄÄÄÄÄÄÄÄÄÄÄÄÄ                     100          1650       1.98 ms 
+                                        12.6791 ns     12.591 ns    12.8744 ns 
+                                       0.640428 ns   0.337371 ns    1.15669 ns 
+                                                                               
+
+===============================================================================
+test cases: 1 | 1 passed
+assertions: - none -
+

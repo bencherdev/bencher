@@ -47,18 +47,28 @@ impl LeafResults {
     /// The results, recording `adapter` as the leaf that parsed them, or `None`
     /// when the input held no benchmark this leaf reads.
     pub(crate) fn finish(self, adapter: Adapter) -> Option<AdapterResults> {
+        (!self.inner.is_empty()).then(|| self.into_results(adapter))
+    }
+
+    /// [`Self::finish`], also when the input held benchmarks of this leaf's harness that it
+    /// could only skip, so that their count still reaches the report.
+    pub(crate) fn finish_with_skips(self, adapter: Adapter) -> Option<AdapterResults> {
+        (!self.inner.is_empty() || self.skipped.benchmarks > 0).then(|| self.into_results(adapter))
+    }
+
+    fn into_results(self, adapter: Adapter) -> AdapterResults {
         let Self {
             inner,
             skipped,
             units,
         } = self;
-        (!inner.is_empty()).then_some(AdapterResults {
+        AdapterResults {
             inner,
             version: BmfVersion::V1,
             resolved_adapter: Some(adapter),
             skipped,
             units,
-        })
+        }
     }
 }
 
@@ -96,5 +106,9 @@ impl Variant<'_> {
 
     pub(crate) fn skip_measure(&mut self) {
         self.skipped.measures += 1;
+    }
+
+    pub(crate) fn skip_metric(&mut self) {
+        self.skipped.metrics += 1;
     }
 }

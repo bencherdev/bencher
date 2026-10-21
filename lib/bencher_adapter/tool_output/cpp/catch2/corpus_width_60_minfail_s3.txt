@@ -1,0 +1,45 @@
+Randomness seeded to: 754943558
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+minfail is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-----------------------------------------------------------
+Slow then failing
+-----------------------------------------------------------
+minfail.cpp:9
+...........................................................
+
+benchmark name   samples       iterations    est run time
+                 mean          low mean      high mean
+                 std dev       low std dev   high std dev
+-----------------------------------------------------------
+sleeps 650 ms                3             1     1.95047 s 
+                    650.114 ms    650.111 ms    650.116 ms 
+                    2.67374 us          0 ns    3.06931 us 
+                                                           
+throws early     Benchmark failed (boom) 
+
+minfail.cpp:9: FAILED:
+due to unexpected exception with message:
+  boom
+
+-----------------------------------------------------------
+After
+-----------------------------------------------------------
+minfail.cpp:19
+...........................................................
+
+benchmark name   samples       iterations    est run time
+                 mean          low mean      high mean
+                 std dev       low std dev   high std dev
+-----------------------------------------------------------
+Fibonacci 10                 3           618      55.62 us 
+                    24.9396 ns    24.7492 ns    25.1187 ns 
+                   0.245629 ns          0 ns   0.253246 ns 
+                                                           
+
+===========================================================
+test cases: 2 | 1 passed | 1 failed
+assertions: 1 | 1 failed
+

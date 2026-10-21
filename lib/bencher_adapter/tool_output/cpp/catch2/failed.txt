@@ -1,0 +1,61 @@
+Filters: "Before","Fails at once","After"
+Randomness seeded to: 3949735082
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+fail is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+fail.cpp:8
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 10                                    20           736        368 us 
+                                        26.3657 ns     26.149 ns    27.2269 ns 
+                                       0.935551 ns  0.0114936 ns    1.71898 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Fails at once
+-------------------------------------------------------------------------------
+fail.cpp:12
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+requires false                       
+fail.cpp:14: FAILED:
+  REQUIRE( false )
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+fail.cpp:28
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 15                                    20            49     381.22 us 
+                                        338.289 ns    338.183 ns    338.433 ns 
+                                       0.271611 ns   0.175543 ns   0.438034 ns 
+                                                                               
+
+===============================================================================
+test cases: 3 | 2 passed | 1 failed
+assertions: 1 | 1 failed
+

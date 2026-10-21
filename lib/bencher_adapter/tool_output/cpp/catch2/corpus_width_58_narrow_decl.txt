@@ -1,0 +1,66 @@
+Randomness seeded to: 3965558353
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+narrow is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+---------------------------------------------------------
+Before
+---------------------------------------------------------
+narrow.cpp:5
+.........................................................
+
+benchmark      samples       iterations    est run time
+name           mean          low mean      high mean
+               std dev       low std dev   high std dev
+---------------------------------------------------------
+Fibonacci 8              100          1787     1.9657 ms 
+                  10.9525 ns    10.8939 ns    11.0684 ns 
+                 0.396625 ns   0.215077 ns   0.617537 ns 
+                                                         
+
+---------------------------------------------------------
+Narrow table
+---------------------------------------------------------
+narrow.cpp:6
+.........................................................
+
+benchmark      samples       iterations    est run time
+name           mean          low mean      high mean
+               std dev       low std dev   high std dev
+---------------------------------------------------------
+Fibonacci 9              100          1171     1.9907 ms 
+                  17.5775 ns    17.4443 ns     17.769 ns 
+                 0.806354 ns   0.577933 ns    1.11915 ns 
+                                                         
+a name long                                              
+enough to                                                
+wrap                     100          3342     2.0052 ms 
+                   4.7145 ns    4.68653 ns    4.76571 ns 
+                 0.187354 ns   0.124442 ns   0.283572 ns 
+                                                         
+throws         Benchmark failed (boom) 
+
+narrow.cpp:6: FAILED:
+due to unexpected exception with message:
+  boom
+
+---------------------------------------------------------
+After
+---------------------------------------------------------
+narrow.cpp:12
+.........................................................
+
+benchmark      samples       iterations    est run time
+name           mean          low mean      high mean
+               std dev       low std dev   high std dev
+---------------------------------------------------------
+Fibonacci 7              100          1881      1.881 ms 
+                  6.37484 ns    6.24921 ns    6.76122 ns 
+                 0.941624 ns  0.0146911 ns    2.07069 ns 
+                                                         
+
+=========================================================
+test cases: 3 | 2 passed | 1 failed
+assertions: 1 | 1 failed
+

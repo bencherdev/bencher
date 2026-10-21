@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="shapes" rng-seed="6" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Throws in the samples" filename="shapes.cpp" line="25">
+    <BenchmarkResults name="throws late" samples="100" resamples="100000" iterations="7158" clockResolution="19.6845" estimatedDuration="1.4316e+06">
+      <!-- All values in nano seconds -->
+      <failed message="late boom"/>
+    </BenchmarkResults>
+    <Exception filename="shapes.cpp" line="25">
+      late boom
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Checks inside" filename="shapes.cpp" line="16">
+    <Section name="Inner section with a long name that wraps across the console width" filename="shapes.cpp" line="17">
+      <BenchmarkResults name="checked with a rather long name that wraps around" samples="100" resamples="100000" iterations="1488" clockResolution="19.6845" estimatedDuration="1.9344e+06">
+        <!-- All values in nano seconds -->
+        <mean value="12.7394" lowerBound="12.6381" upperBound="12.8991" ci="0.95"/>
+        <standardDeviation value="0.639149" lowerBound="0.440761" upperBound="0.894583" ci="0.95"/>
+        <outliers variance="0.484481" lowMild="0" lowSevere="0" highMild="1" highSevere="4"/>
+      </BenchmarkResults>
+      <OverallResults successes="124" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Throws before the samples" filename="shapes.cpp" line="11">
+    <BenchmarkResults name="throws early">
+      <failed message="boom"/>
+    </BenchmarkResults>
+    <Exception filename="shapes.cpp" line="11">
+      boom
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="shapes.cpp" line="34">
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="222" clockResolution="19.6845" estimatedDuration="1.9536e+06">
+      <!-- All values in nano seconds -->
+      <mean value="87.0507" lowerBound="85.7223" upperBound="89.2901" ci="0.95"/>
+      <standardDeviation value="8.62301" lowerBound="5.77227" upperBound="13.05" ci="0.95"/>
+      <outliers variance="0.789809" lowMild="0" lowSevere="0" highMild="4" highSevere="2"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Before" filename="shapes.cpp" line="7">
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="630" clockResolution="19.6845" estimatedDuration="1.953e+06">
+      <!-- All values in nano seconds -->
+      <mean value="32.06" lowerBound="31.862" upperBound="32.4138" ci="0.95"/>
+      <standardDeviation value="1.31915" lowerBound="0.810509" upperBound="1.97874" ci="0.95"/>
+      <outliers variance="0.385233" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="124" failures="2" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="3" failures="2" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

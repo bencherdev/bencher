@@ -1,0 +1,58 @@
+Randomness seeded to: 1111572312
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+casewrap is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+A test case whose name is long enough that the console reporter wraps it onto a
+second line
+-------------------------------------------------------------------------------
+casewrap.cpp:6
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 9                                    100          1101     1.8717 ms 
+                                        17.2034 ns    17.0314 ns     17.487 ns 
+                                        1.10449 ns   0.764139 ns    1.75129 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+A test case whose name is long enough that the console reporter wraps it onto a
+second line
+  A section
+-------------------------------------------------------------------------------
+casewrap.cpp:8
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 10                                   100           582     1.8624 ms 
+                                        34.0524 ns    33.3146 ns    35.1406 ns 
+                                        4.49463 ns    3.37083 ns    5.96002 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+casewrap.cpp:10
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 11                                   100           409     1.8814 ms 
+                                        46.5805 ns    46.2467 ns     47.518 ns 
+                                        2.61994 ns    1.10378 ns    5.54839 ns 
+                                                                               
+
+===============================================================================
+test cases: 2 | 2 passed
+assertions: - none -
+

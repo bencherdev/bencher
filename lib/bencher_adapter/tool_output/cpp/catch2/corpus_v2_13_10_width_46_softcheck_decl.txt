@@ -1,0 +1,92 @@
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+softcheck is a Catch v2.13.10 host application.
+Run with -? for options
+
+---------------------------------------------
+Before
+---------------------------------------------
+softcheck.cpp:9
+.............................................
+
+   samples       iterations    estimated
+   mean          low mean      high mean
+   std dev       low std dev   high std dev
+---------------------------------------------
+100           138     2.0286 ms               
+154.586 ns    153.894 ns    156.044 ns               
+4.87932 ns    2.72091 ns    7.75785 ns               
+                               
+
+---------------------------------------------
+Soft check in the samples
+---------------------------------------------
+softcheck.cpp:10
+.............................................
+
+   samples       iterations    estimated
+   mean          low mean      high mean
+   std dev       low std dev   high std dev
+---------------------------------------------
+100          1591     1.9092 ms 
+
+softcheck.cpp:13: FAILED:
+  CHECK( ++calls != at("FAIL_AT", 60) )
+with expansion:
+  60 != 60
+
+   samples       iterations    estimated
+   mean          low mean      high mean
+   std dev       low std dev   high std dev
+---------------------------------------------
+       17.277 ns    17.0303 ns    17.5997 ns 
+      1.43749 ns    1.14152 ns    1.83488 ns 
+                                             
+100           210      2.037 ms               
+96.6949 ns    96.3927 ns    97.2629 ns               
+2.00559 ns    1.06391 ns    3.04051 ns               
+                               
+
+---------------------------------------------
+Soft check first
+---------------------------------------------
+softcheck.cpp:18
+.............................................
+
+softcheck.cpp:21: FAILED:
+  CHECK( ++calls != 1 )
+with expansion:
+  1 != 1
+
+   samples       iterations    estimated
+   mean          low mean      high mean
+   std dev       low std dev   high std dev
+---------------------------------------------
+100          1549     2.0137 ms               
+12.5858 ns    12.5454 ns    12.6667 ns               
+0.273432 ns   0.143012 ns   0.431969 ns               
+                               
+
+---------------------------------------------
+After
+---------------------------------------------
+softcheck.cpp:25
+.............................................
+
+   samples       iterations    estimated
+   mean          low mean      high mean
+   std dev       low std dev   high std dev
+---------------------------------------------
+100            13     2.1866 ms               
+1.648 us     1.6417 us    1.66019 us               
+42.8184 ns    22.2899 ns    66.2272 ns               
+                                         100 
+51     2.0502 ms                  392.319 ns 
+388.031 ns     400.75 ns                  29.5956 ns 
+17.2167 ns    45.8399 ns                             
+                 
+
+=============================================
+test cases:   4 |   2 passed | 2 failed
+assertions: 248 | 246 passed | 2 failed
+

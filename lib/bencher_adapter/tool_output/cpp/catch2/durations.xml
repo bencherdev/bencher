@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="sections" rng-seed="2589369209" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Sections" filename="sections.cpp" line="6">
+    <Section name="First" filename="sections.cpp" line="7">
+      <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="504" clockResolution="19.3247" estimatedDuration="1.9152e+06">
+        <!-- All values in nano seconds -->
+        <mean value="31.0266" lowerBound="30.6808" upperBound="31.7179" ci="0.95"/>
+        <standardDeviation value="2.40359" lowerBound="1.31611" upperBound="3.94879" ci="0.95"/>
+        <outliers variance="0.696875" lowMild="0" lowSevere="0" highMild="2" highSevere="3"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false" durationInSeconds="3.13077"/>
+    </Section>
+    <Section name="Second" filename="sections.cpp" line="10">
+      <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="380" clockResolution="19.3247" estimatedDuration="1.9e+06">
+        <!-- All values in nano seconds -->
+        <mean value="46.4511" lowerBound="46.0498" upperBound="46.9898" ci="0.95"/>
+        <standardDeviation value="2.34957" lowerBound="1.80446" upperBound="3.44973" ci="0.95"/>
+        <outliers variance="0.484732" lowMild="0" lowSevere="0" highMild="1" highSevere="2"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false" durationInSeconds="0.648494"/>
+    </Section>
+    <OverallResult success="true" skips="0" durationInSeconds="3.77931"/>
+  </TestCase>
+  <TestCase name="Plain" filename="sections.cpp" line="15">
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="234" clockResolution="19.3247" estimatedDuration="1.9188e+06">
+      <!-- All values in nano seconds -->
+      <mean value="80.9025" lowerBound="80.2341" upperBound="81.9406" ci="0.95"/>
+      <standardDeviation value="4.19506" lowerBound="3.06394" upperBound="6.8026" ci="0.95"/>
+      <outliers variance="0.504286" lowMild="0" lowSevere="0" highMild="1" highSevere="1"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0" durationInSeconds="0.788764"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

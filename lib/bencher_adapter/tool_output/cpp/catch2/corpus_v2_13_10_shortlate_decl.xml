@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch name="shortlate">
+  <Group name="shortlate">
+    <TestCase name="Before" filename="shortlate.cpp" line="6">
+      <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="360" clockResolution="20.5528" estimatedDuration="2.052e+06">
+        <!--All values in nano seconds-->
+        <mean value="56.9685" lowerBound="56.6742" upperBound="57.5377" ci="0.95"/>
+        <standardDeviation value="2.02567" lowerBound="1.13093" upperBound="3.08255" ci="0.95"/>
+        <outliers variance="0.316542" lowMild="0" lowSevere="0" highMild="2" highSevere="6"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Short late lines" filename="shortlate.cpp" line="7">
+      <BenchmarkResults name="short late" samples="100" resamples="100000" iterations="1654" clockResolution="20.5528" estimatedDuration="1.9848e+06">
+        <!--All values in nano seconds-->
+        <failed message="a
+
+b"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="141" clockResolution="20.5528" estimatedDuration="2.0586e+06">
+        <!--All values in nano seconds-->
+        <mean value="146.05" lowerBound="145.466" upperBound="147.265" ci="0.95"/>
+        <standardDeviation value="4.06425" lowerBound="2.30553" upperBound="6.45573" ci="0.95"/>
+        <outliers variance="0.219326" lowMild="0" lowSevere="0" highMild="1" highSevere="6"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="After" filename="shortlate.cpp" line="15">
+      <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="609" clockResolution="20.5528" estimatedDuration="2.0097e+06">
+        <!--All values in nano seconds-->
+        <mean value="33.6837" lowerBound="33.5403" upperBound="33.9936" ci="0.95"/>
+        <standardDeviation value="1.00015" lowerBound="0.519617" upperBound="1.71882" ci="0.95"/>
+        <outliers variance="0.248019" lowMild="0" lowSevere="0" highMild="0" highSevere="6"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <OverallResults successes="0" failures="0" expectedFailures="0"/>
+    <OverallResultsCases successes="3" failures="0" expectedFailures="0"/>
+  </Group>
+  <OverallResults successes="0" failures="0" expectedFailures="0"/>
+  <OverallResultsCases successes="3" failures="0" expectedFailures="0"/>
+</Catch>
