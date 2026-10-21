@@ -1,0 +1,30 @@
+
+### `--start-point-idempotency-key <KEY>`
+
+<br />
+
+Verwenden Sie den angegebenen Schlüssel als Idempotenzschlüssel für [das Flag `--start-point-reset`][start point reset option].
+Der Schlüssel kann ein beliebiger Text sein.
+Setzen Sie entweder die Option `--start-point-idempotency-key` oder die Umgebungsvariable `BENCHER_START_POINT_IDEMPOTENCY_KEY`.
+Wenn `--start-point-reset` nicht gesetzt ist oder der Schlüssel leer ist, wird diese Option ignoriert.
+
+- Wenn kein `branch` [Head][head] den Schlüssel hat, erstellt das Zurücksetzen einen neuen `branch` Head mit dem Schlüssel.
+- Wenn ein `branch` Head den Schlüssel bereits hat, wird dieser Head verwendet und der `branch` wird nicht erneut zurückgesetzt,
+  selbst wenn sich der Startpunkt geändert hat oder dieser Head inzwischen ersetzt wurde.
+
+Bei der Ausführung in GitHub Actions ist der Schlüssel standardmäßig der aktuelle Versuch des Workflow-Laufs.
+Alle Jobs eines Workflow-Laufs teilen sich einen `branch` Head, und eine erneute Ausführung des Workflows erstellt einen neuen Head.
+Spätere Schritte desselben Workflow-Laufs, die den `branch` zurücksetzen, verwenden ebenfalls diesen Head, daher setzen Sie für einen Schritt, der den `branch` erneut zurücksetzen soll, einen anderen Schlüssel.
+Setzen Sie bei anderen CI-Anbietern den Schlüssel auf einen Wert, der für jeden Job eines Pipeline-Laufs gleich ist
+(z.B.: `--start-point-idempotency-key "$CI_PIPELINE_ID"` in GitLab CI/CD).
+
+Wenn beispielsweise ein Workflow eine Matrix aus drei Jobs ausführt, die jeweils `--branch feature_branch --start-point main --start-point-reset --start-point-idempotency-key run-abc123` verwenden,
+dann:
+
+1. Der erste Job, der berichtet, erstellt einen neuen `feature_branch` [Head][head] von `main` mit dem Idempotenzschlüssel `run-abc123`
+2. Die anderen beiden Jobs verwenden denselben `feature_branch` Head, da er den Idempotenzschlüssel `run-abc123` hat
+3. Die Ergebnisse aller drei Jobs erscheinen gemeinsam auf `feature_branch`
+
+[head]: /de/docs/explanation/benchmarking/#head
+
+[start point reset option]: #--start-point-reset

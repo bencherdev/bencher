@@ -20,6 +20,11 @@
 则从指定哈希值的 `start-point` 复制所有最新数据以及可选的阈值。
 有关更多详细信息，请参阅[`--start-point-max-versions` 选项][start point max version option]和[`--start-point-clone-thresholds` 选项][start point clone thresholds option]。
 
+使用相同[幂等键][start point idempotency key option]对同一 `branch` 的重置共享一个 `branch` [Head][head]，
+因此同一次 CI 运行中的并行作业不会相互重置 `branch`。
+在 GitHub Actions 中运行时，该键会自动设置为当前工作流运行的尝试。
+同一工作流运行中后续重置 `branch` 的步骤也会使用该 Head，因此对于需要再次重置 `branch` 的步骤，请设置不同的键。
+
 例如，如果存在 `feature_branch` 而没有起始点，
 那么使用 `--branch feature_branch --start-point-reset` 会：
 
@@ -34,3 +39,4 @@
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count
 [start point clone thresholds option]: #--start-point-clone-thresholds
+[start point idempotency key option]: #--start-point-idempotency-key-key

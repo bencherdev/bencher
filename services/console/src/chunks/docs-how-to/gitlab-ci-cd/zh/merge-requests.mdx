@@ -49,6 +49,9 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
     这将防止基准数据漂移。
     请参阅[`--start-point-reset` 文档][start point reset]了解完整概览。
     (例如：`--start-point-reset`)
+    5. 使用 [GitLab CI/CD 预定义变量][gitlab ci cd redefined variables]设置 `--start-point-idempotency-key` 选项为流水线 ID，使同一流水线的所有作业共享 MR 分支的一个 Head。
+    请参阅[`--start-point-idempotency-key` 文档][start point idempotency key]了解完整概览。
+    (例如：`--start-point-idempotency-key "$CI_PIPELINE_ID"`)
 11. 设置 `--testbed` 选项为测试平台名称。
    可能应该与在 `image` 中选择的机器匹配。
    请参阅[`--tested` 文档][testbed option]了解更多细节。
@@ -78,6 +81,7 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
 [start point hash]: /zh/docs/explanation/branches/#--start-point-hash-hash
 [start point clone thresholds]: /zh/docs/explanation/branches/#--start-point-clone-thresholds
 [start point reset]: /zh/docs/explanation/branches/#--start-point-reset
+[start point idempotency key]: /zh/docs/explanation/branches/#--start-point-idempotency-key-key
 [testbed option]: /zh/docs/explanation/testbeds/#--testbed-testbed
 [alert err]: /zh/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /zh/docs/reference/bencher-metric-format/

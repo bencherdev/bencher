@@ -120,6 +120,7 @@ impl StartPoint {
             max_versions,
             clone_thresholds,
             reset: _,
+            idempotency_key: _,
         }) = json
         else {
             return Ok(None);

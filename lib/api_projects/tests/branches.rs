@@ -9,9 +9,9 @@
 //! Integration tests for project branch endpoints.
 
 use bencher_api_tests::{TestServer, TestUser};
-use bencher_json::{HeadUuid, JsonBranch, JsonBranches, VersionUuid};
+use bencher_json::{HeadIdempotencyKey, HeadUuid, JsonBranch, JsonBranches, VersionUuid};
 use bencher_schema::{context::DbConnection, schema};
-use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
 // GET /v0/projects/{project}/branches - list branches
@@ -576,4 +576,85 @@ async fn branches_reset_start_point_is_atomic() {
     let head_id = branch_head_id(&mut conn, "feature").expect("Branch has no head");
     assert_ne!(Some(head_id), old_head_id);
     assert_eq!(head_version_ids(&mut conn, head_id), source_versions);
+}
+
+// PATCH /v0/projects/{project}/branches/{branch} - resets with one idempotency key share one head
+#[tokio::test]
+async fn branches_resets_with_one_idempotency_key_share_one_head() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "branchidem@example.com").await;
+    let org = server.create_org(&user, "Branch Idem Org").await;
+    let project = server
+        .create_project(&user, &org, "Branch Idem Project")
+        .await;
+    let path = format!("/v0/projects/{}/branches", project.slug);
+
+    for slug in ["source", "feature"] {
+        let body = serde_json::json!({ "name": slug, "slug": slug });
+        let status = send_branch_json(&server, &user, http::Method::POST, &path, &body).await;
+        assert_eq!(status, StatusCode::CREATED);
+    }
+    let mut conn = server.db_conn();
+    let source_versions = seed_versions(&mut conn, "source", 3);
+    let old_head_id = branch_head_id(&mut conn, "feature");
+
+    let path = format!("{path}/feature");
+    let reset = serde_json::json!({
+        "start_point": {
+            "branch": "source",
+            "reset": true,
+            "idempotency_key": HeadIdempotencyKey::new()
+        }
+    });
+    let status = send_branch_json(&server, &user, http::Method::PATCH, &path, &reset).await;
+    assert_eq!(status, StatusCode::OK);
+    let head_id = branch_head_id(&mut conn, "feature").expect("Branch has no head");
+    assert_ne!(Some(head_id), old_head_id);
+
+    let status = send_branch_json(&server, &user, http::Method::PATCH, &path, &reset).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(branch_head_id(&mut conn, "feature"), Some(head_id));
+    assert_eq!(head_version_ids(&mut conn, head_id), source_versions);
+    let heads: i64 = schema::head::table
+        .inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id)))
+        .filter(schema::branch::slug.eq("feature"))
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count heads");
+    assert_eq!(heads, 2);
+}
+
+// PATCH /v0/projects/{project}/branches/{branch} - a reset that reuses a head never counts against the head rate limit
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn branches_reset_reusing_a_head_skips_the_head_rate_limit() {
+    let server = TestServer::new_with_creation_limits(u32::MAX, 3).await;
+    let user = server
+        .signup("Test User", "branchidemlimit@example.com")
+        .await;
+    let org = server.create_org(&user, "Branch Idem Limit Org").await;
+    let project = server
+        .create_project(&user, &org, "Branch Idem Limit Project")
+        .await;
+    let path = format!("/v0/projects/{}/branches", project.slug);
+    let body = serde_json::json!({ "name": "feature", "slug": "feature" });
+    let status = send_branch_json(&server, &user, http::Method::POST, &path, &body).await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let path = format!("{path}/feature");
+    let reset = |key: HeadIdempotencyKey| serde_json::json!({ "start_point": { "reset": true, "idempotency_key": key } });
+    let (a, b) = (HeadIdempotencyKey::new(), HeadIdempotencyKey::new());
+    for (key, expected) in [
+        (a, StatusCode::OK),
+        (b, StatusCode::OK),
+        // The branch now has its first head and the heads of `a` and `b` in the window.
+        (HeadIdempotencyKey::new(), StatusCode::TOO_MANY_REQUESTS),
+        (b, StatusCode::OK),
+        // The head of `a` has been replaced.
+        (a, StatusCode::OK),
+    ] {
+        let status =
+            send_branch_json(&server, &user, http::Method::PATCH, &path, &reset(key)).await;
+        assert_eq!(status, expected, "{key}");
+    }
 }

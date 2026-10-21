@@ -12950,6 +12950,10 @@
         "format": "uint32",
         "minimum": 0
       },
+      "HeadIdempotencyKey": {
+        "type": "string",
+        "format": "uuid"
+      },
       "HeadUuid": {
         "type": "string",
         "format": "uuid"
@@ -19997,6 +20001,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/GitHash"
+              }
+            ]
+          },
+          "idempotency_key": {
+            "nullable": true,
+            "description": "An idempotency key for the reset, which applies only when `reset` is `true`. If a head of the branch already holds the same key, that head is used instead of resetting the branch again, even if the start point has changed. Otherwise, the new branch head holds the key. For example, all of the jobs in one CI run can share one branch head by sending the same key.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HeadIdempotencyKey"
               }
             ]
           },

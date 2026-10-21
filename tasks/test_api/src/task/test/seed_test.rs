@@ -44,6 +44,10 @@ pub(crate) const CLI_DIR: &str = "./services/cli";
 // https://courage.fandom.com/wiki/Perfect#Plot
 const PERFECT_SEED: &str = "6";
 
+// Each reset stands for its own CI run, so none takes the start point idempotency key
+// of the GitHub Actions run that the test may run in.
+const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
+
 #[derive(Debug)]
 pub struct SeedTest {
     pub url: Url,
@@ -1029,6 +1033,7 @@ impl SeedTest {
             "--measure",
             MEASURE_SLUG,
         ])
+        .env_remove(GITHUB_ACTIONS)
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let _json: bencher_json::JsonReport =
@@ -1076,6 +1081,7 @@ impl SeedTest {
             "--pow",
             "10",
         ])
+        .env_remove(GITHUB_ACTIONS)
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let _json: bencher_json::JsonReport =
@@ -1125,6 +1131,7 @@ impl SeedTest {
             "--pow",
             "10",
         ])
+        .env_remove(GITHUB_ACTIONS)
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let _json: bencher_json::JsonReport =
@@ -1216,6 +1223,7 @@ impl SeedTest {
             "--seed",
             PERFECT_SEED,
         ])
+        .env_remove(GITHUB_ACTIONS)
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let _json: bencher_json::JsonReport =

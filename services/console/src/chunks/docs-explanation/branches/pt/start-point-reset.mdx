@@ -11,6 +11,11 @@ Redefina o `branch` especificado. Quando a opção [`--start-point`][start point
 
 Se um novo `branch` for criado com um Ponto de Partida, todos os dados mais recentes e, opcionalmente, os Limiares do `start-point` no hash especificado são copiados. Veja [a opção `--start-point-max-versions`][start point max version option] e [a opção `--start-point-clone-thresholds`][start point clone thresholds option] para mais detalhes.
 
+Redefinições do mesmo `branch` com a mesma [chave de idempotência][start point idempotency key option] compartilham um [Head][head] do `branch`,
+então os jobs paralelos de uma execução de CI não redefinem o `branch` uns sobre os outros.
+Ao executar no GitHub Actions, a chave é definida para você como a tentativa atual da execução do workflow.
+Etapas posteriores da mesma execução do workflow que redefinem o `branch` também usam esse Head, então defina uma chave diferente para uma etapa que precise redefinir o `branch` novamente.
+
 Por exemplo, se o `feature_branch` existir sem um Ponto de Partida, então usar `--branch feature_branch --start-point-reset`:
 
 1. Removeria o antigo [Head][head] do `feature_branch`
@@ -24,3 +29,4 @@ Por exemplo, se o `feature_branch` existir sem um Ponto de Partida, então usar 
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count
 [start point clone thresholds option]: #--start-point-clone-thresholds
+[start point idempotency key option]: #--start-point-idempotency-key-key

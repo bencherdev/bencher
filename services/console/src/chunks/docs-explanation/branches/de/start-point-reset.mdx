@@ -11,6 +11,11 @@ Setze den angegebenen `branch` zurück. Wenn die Option [`--start-point`][start 
 
 Wenn ein neuer `branch` mit einem Startpunkt erstellt wird, werden alle neuesten Daten und optional Schwellenwerte vom `start-point` beim angegebenen Hash kopiert. Weitere Einzelheiten finden Sie in der [Option `--start-point-max-versions`][start point max version option] und in der [Option `--start-point-clone-thresholds`][start point clone thresholds option].
 
+Zurücksetzungen desselben `branch` mit demselben [Idempotenzschlüssel][start point idempotency key option] teilen sich einen `branch` [Head][head],
+sodass die parallelen Jobs eines CI-Laufs den `branch` nicht gegenseitig zurücksetzen.
+Bei der Ausführung in GitHub Actions wird der Schlüssel automatisch auf den aktuellen Versuch des Workflow-Laufs gesetzt.
+Spätere Schritte desselben Workflow-Laufs, die den `branch` zurücksetzen, verwenden ebenfalls diesen Head, daher setzen Sie für einen Schritt, der den `branch` erneut zurücksetzen soll, einen anderen Schlüssel.
+
 Wenn beispielsweise `feature_branch` ohne Startpunkt existiert, dann würde die Verwendung von `--branch feature_branch --start-point-reset`:
 
 1. Den alten `feature_branch` [Head][head] entfernen
@@ -24,3 +29,4 @@ Wenn beispielsweise `feature_branch` ohne Startpunkt existiert, dann würde die 
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count
 [start point clone thresholds option]: #--start-point-clone-thresholds
+[start point idempotency key option]: #--start-point-idempotency-key-key

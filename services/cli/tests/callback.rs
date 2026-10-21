@@ -263,8 +263,18 @@ fn bencher_run(job_read: JobRead, args: &[&str]) -> Run {
 }
 
 /// Run `bencher run` with `args` against the stand-in, in the GitHub Actions environment if given.
-#[expect(clippy::expect_used, reason = "test helper")]
 fn bencher_run_with(stand_in: StandIn, github: Option<&GitHub>, args: &[&str]) -> Run {
+    bencher_run_in(stand_in, github, &[], args)
+}
+
+/// Run `bencher run` with `args` against the stand-in, with `env` and in the GitHub Actions environment if given.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn bencher_run_in(
+    stand_in: StandIn,
+    github: Option<&GitHub>,
+    env: &[(&str, &str)],
+    args: &[&str],
+) -> Run {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind a free port");
     let addr = listener
         .local_addr()
@@ -276,6 +286,7 @@ fn bencher_run_with(stand_in: StandIn, github: Option<&GitHub>, args: &[&str]) -
     let mut command = Command::new(env!("CARGO_BIN_EXE_bencher"));
     command
         .env_clear()
+        .envs(env.iter().copied())
         .args(["run", "--host", &format!("http://{addr}")])
         .args(args);
     let github_api_url = github.map(|github| {
@@ -886,6 +897,69 @@ fn usage_errors_print_no_secret() {
         assert!(!run.stderr().contains(GITHUB_TOKEN), "{}", run.stderr());
         assert!(run.requests.is_empty(), "{args:?} sent a request");
     }
+}
+
+// A job of a GitHub Actions workflow run attempt, without `--github-actions`.
+const RUN_ATTEMPT: [(&str, &str); 4] = [
+    ("GITHUB_ACTIONS", "true"),
+    ("GITHUB_REPOSITORY", "owner/repo"),
+    ("GITHUB_RUN_ID", "1234"),
+    ("GITHUB_RUN_ATTEMPT", "1"),
+];
+const IDEMPOTENCY_KEY: &str = "BENCHER_START_POINT_IDEMPOTENCY_KEY";
+
+#[test]
+fn a_reset_sends_the_key_of_its_github_actions_run_attempt() {
+    let reset = [&ATTEMPTS[..], &PROJECT, &DETACH, &["--start-point-reset"]].concat();
+    let key = |env: &[(&str, &str)], args: &[&str]| {
+        let run = bencher_run_in(
+            StandIn {
+                job_read: JobRead::Callback("skipped"),
+                version: VersionRead::Current,
+                check_runs: CheckRuns::Create,
+            },
+            None,
+            env,
+            args,
+        );
+        run.assert_success();
+        run.body("POST", "/v0/run")
+            .pointer("/start_point/idempotency_key")
+            .filter(|key| !key.is_null())
+            .cloned()
+    };
+    let rerun = [&RUN_ATTEMPT[..3], &[("GITHUB_RUN_ATTEMPT", "2")]].concat();
+    let given = [&RUN_ATTEMPT[..], &[(IDEMPOTENCY_KEY, "matrix")]].concat();
+
+    let job = key(&RUN_ATTEMPT, &reset);
+    assert!(job.is_some());
+    assert_eq!(key(&RUN_ATTEMPT, &reset), job, "another job of the attempt");
+    assert_ne!(key(&rerun, &reset), job, "a rerun");
+    assert_ne!(key(&given, &reset), job, "a given key");
+    assert_eq!(key(&[], &reset), None, "outside of GitHub Actions");
+    let act = [&RUN_ATTEMPT[..], &[("ACT", "true")]].concat();
+    assert_eq!(key(&act, &reset), None, "under act");
+    assert_eq!(
+        key(&given, &[&ATTEMPTS[..], &PROJECT, &DETACH].concat()),
+        None,
+        "without a reset"
+    );
+}
+
+#[test]
+fn an_attach_ignores_the_start_point_idempotency_key_variable() {
+    let run = bencher_run_in(
+        StandIn {
+            job_read: JobRead::Callback("delivered"),
+            version: VersionRead::Current,
+            check_runs: CheckRuns::Create,
+        },
+        None,
+        &[(IDEMPOTENCY_KEY, "matrix")],
+        &[&ATTEMPTS[..], &PROJECT, &["--job", JOB]].concat(),
+    );
+    run.assert_success();
+    assert_eq!(run.job_reads(), 1);
 }
 
 /// The `client_payload` the server would send, rendered through the same code it uses.

@@ -20,6 +20,11 @@
 指定されたハッシュで `start-point` から最新のデータとオプションでしきい値がコピーされます。
 詳細は[ `--start-point-max-versions` オプション][start point max version option]と[ `--start-point-clone-thresholds` オプション][start point clone thresholds option]を参照してください。
 
+同じ[冪等性キー][start point idempotency key option]を持つ同じ `branch` のリセットは1つの `branch` [Head][head] を共有するため、
+CI 実行の並列ジョブが互いに `branch` をリセットし合うことはありません。
+GitHub Actions で実行する場合、キーは現在のワークフロー実行の試行に自動的に設定されます。
+同じワークフロー実行の後続のステップで `branch` をリセットする場合も同じ Head が使用されるため、`branch` を再びリセットする必要があるステップには別のキーを設定してください。
+
 例えば、`feature_branch` がスタートポイントなしで存在している場合に、
 `--branch feature_branch --start-point-reset` を使用すると：
 
@@ -34,3 +39,4 @@
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count
 [start point clone thresholds option]: #--start-point-clone-thresholds
+[start point idempotency key option]: #--start-point-idempotency-key-key

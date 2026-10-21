@@ -6,6 +6,7 @@ use bencher_valid::{BranchName, DateTime, GitHash, NameId, ResourceId};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use super::head::HeadIdempotencyKey;
 use crate::{JsonHead, ProjectUuid};
 
 pub const START_POINT_MAX_VERSIONS: u32 = 64;
@@ -166,6 +167,12 @@ pub struct JsonUpdateStartPoint {
     /// If the start point `branch` is specified, the new branch head will begin at that start point.
     /// Otherwise, the branch head will be reset to an empty state.
     pub reset: Option<bool>,
+    /// An idempotency key for the reset, which applies only when `reset` is `true`.
+    /// If a head of the branch already holds the same key, that head is used instead of resetting the branch again,
+    /// even if the start point has changed.
+    /// Otherwise, the new branch head holds the key.
+    /// For example, all of the jobs in one CI run can share one branch head by sending the same key.
+    pub idempotency_key: Option<HeadIdempotencyKey>,
 }
 
 impl From<JsonUpdateStartPoint> for Option<JsonNewStartPoint> {
@@ -177,6 +184,7 @@ impl From<JsonUpdateStartPoint> for Option<JsonNewStartPoint> {
             clone_thresholds,
             // We don't care about the reset field since it is a new start point anyway.
             reset: _,
+            idempotency_key: _,
         } = start_point;
         Some(JsonNewStartPoint {
             // The branch field is required for a new start point.

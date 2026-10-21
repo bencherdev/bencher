@@ -7,6 +7,7 @@ use crate::parser::run::CliRunCi;
 
 mod github_actions;
 
+pub use github_actions::run_attempt_key;
 use github_actions::{CheckRunHandle, GitHubActions, GitHubError};
 
 #[derive(Debug)]

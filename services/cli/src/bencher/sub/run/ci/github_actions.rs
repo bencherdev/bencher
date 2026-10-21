@@ -21,6 +21,10 @@ const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
 const GITHUB_EVENT_PATH: &str = "GITHUB_EVENT_PATH";
 const GITHUB_EVENT_NAME: &str = "GITHUB_EVENT_NAME";
 const GITHUB_SHA: &str = "GITHUB_SHA";
+const GITHUB_REPOSITORY: &str = "GITHUB_REPOSITORY";
+const GITHUB_RUN_ID: &str = "GITHUB_RUN_ID";
+const GITHUB_RUN_ATTEMPT: &str = "GITHUB_RUN_ATTEMPT";
+const ACT: &str = "ACT";
 const GITHUB_API_URL: &str = "GITHUB_API_URL";
 const GITHUB_STEP_SUMMARY: &str = "GITHUB_STEP_SUMMARY";
 
@@ -826,6 +830,37 @@ fn head_sha(
     resolve_head_sha(event, std::env::var(GITHUB_SHA).ok())
 }
 
+/// The workflow run attempt that this job is part of on GitHub Actions, whether or not `--github-actions` is set.
+pub fn run_attempt_key() -> Option<String> {
+    workflow_run_attempt(
+        is_github_actions(),
+        std::env::var(ACT).as_deref() == Ok("true"),
+        std::env::var(GITHUB_REPOSITORY).ok(),
+        std::env::var(GITHUB_RUN_ID).ok(),
+        std::env::var(GITHUB_RUN_ATTEMPT).ok(),
+    )
+}
+
+// A rerun is a new attempt, so it resets the branch again.
+// `nektos/act` sets `ACT` and defaults the run ID and attempt to 1, so every local run would share one key.
+// The environment is read by the caller so this stays deterministic in tests.
+fn workflow_run_attempt(
+    is_github_actions: bool,
+    is_act: bool,
+    repository: Option<String>,
+    run_id: Option<String>,
+    run_attempt: Option<String>,
+) -> Option<String> {
+    let run_id = run_id.filter(|run_id| !run_id.is_empty())?;
+    (is_github_actions && !is_act).then(|| {
+        format!(
+            "{repository}/{run_id}/{run_attempt}",
+            repository = repository.unwrap_or_default(),
+            run_attempt = run_attempt.unwrap_or_default(),
+        )
+    })
+}
+
 // An explicit `--ci-id` names the check instead of the Project, and outside of
 // GitHub Actions no check is created at all, so neither needs the lookup.
 // The environment is read by the caller so this stays deterministic in tests.
@@ -1086,6 +1121,7 @@ mod tests {
         BENCHER_REPORT, FAILED_SUMMARY, GitHubError, IN_PROGRESS_SUMMARY, MAX_ID_LEN, MAX_NAME_LEN,
         NAME_FORMAT_LEN, branded_summary, check_conclusion, check_head_sha, check_run_id,
         check_run_name, check_run_output, needs_project_name, resolve_head_sha,
+        workflow_run_attempt,
     };
 
     #[test]
@@ -1180,6 +1216,55 @@ mod tests {
             .expect("env SHA"),
             "0011223344556677889900aabbccddeeff001122"
         );
+    }
+
+    #[test]
+    fn workflow_run_attempt_names_the_run_attempt() {
+        let first = attempt(true, Some("1234"), "1");
+        assert!(first.is_some());
+        assert_ne!(first, attempt(true, Some("1234"), "2"));
+        assert_ne!(first, attempt(true, Some("5678"), "1"));
+        assert_ne!(
+            first,
+            workflow_run_attempt(
+                true,
+                false,
+                Some("owner/other".to_owned()),
+                Some("1234".to_owned()),
+                Some("1".to_owned())
+            )
+        );
+    }
+
+    #[test]
+    fn workflow_run_attempt_needs_github_actions_and_a_run_id() {
+        assert_eq!(attempt(false, Some("1234"), "1"), None);
+        assert_eq!(attempt(true, None, "1"), None);
+        assert_eq!(attempt(true, Some(""), "1"), None);
+    }
+
+    #[test]
+    fn workflow_run_attempt_skips_act() {
+        assert_eq!(
+            workflow_run_attempt(
+                true,
+                true,
+                Some("owner/repo".to_owned()),
+                Some("1".to_owned()),
+                Some("1".to_owned())
+            ),
+            None
+        );
+    }
+
+    fn attempt(is_github_actions: bool, run_id: Option<&str>, run_attempt: &str) -> Option<String> {
+        workflow_run_attempt(
+            is_github_actions,
+            false,
+            Some("owner/repo".to_owned()),
+            run_id.map(ToOwned::to_owned),
+            Some(run_attempt.to_owned()),
+        )
     }
 
     #[test]

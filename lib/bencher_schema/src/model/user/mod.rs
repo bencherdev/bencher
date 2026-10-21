@@ -459,8 +459,12 @@ mod tests {
             "UPDATE user SET email_verified = 1 WHERE id % 2 = 0; PRAGMA foreign_keys = OFF",
         )
         .unwrap();
-        let version = conn.revert_last_migration(crate::MIGRATIONS).unwrap();
-        assert_eq!(version.to_string(), EMAIL_VERIFIED_MIGRATION);
+        loop {
+            let version = conn.revert_last_migration(crate::MIGRATIONS).unwrap();
+            if version.to_string() == EMAIL_VERIFIED_MIGRATION {
+                break;
+            }
+        }
         conn.batch_execute("PRAGMA foreign_keys = ON").unwrap();
         assert_eq!(user_rows(&mut conn), users);
         assert_eq!(child_counts(&mut conn), children);

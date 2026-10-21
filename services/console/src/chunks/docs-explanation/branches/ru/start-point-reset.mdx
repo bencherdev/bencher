@@ -11,6 +11,8 @@
 
 Если новая `ветка` создается с начальной точкой, то все самые последние данные и, при необходимости, Пороги из `начальной точки` на указанном хэше копируются. См. [опцию `--start-point-max-versions`][start point max version option] и [опцию `--start-point-clone-thresholds`][start point clone thresholds option] для получения более подробной информации.
 
+Сбросы одной и той же `ветки` с одним и тем же [ключом идемпотентности][start point idempotency key option] используют одну [Голову][head] `ветки`, поэтому параллельные задания одного запуска CI не сбрасывают `ветку` друг за другом. При запуске в GitHub Actions ключ автоматически устанавливается на текущую попытку запуска workflow. Последующие шаги того же запуска workflow, которые сбрасывают `ветку`, также используют эту Голову, поэтому задайте другой ключ для шага, которому нужно снова сбросить `ветку`.
+
 Например, если `feature_branch` существует без начальной точки, использование `--branch feature_branch --start-point-reset` приведет к следующим действиям:
 
 1. Удалит старую [Голову][head] `feature_branch`
@@ -24,3 +26,4 @@
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count
 [start point clone thresholds option]: #--start-point-clone-thresholds
+[start point idempotency key option]: #--start-point-idempotency-key-key

@@ -1,5 +1,6 @@
 use bencher_json::{
-    BranchName, BranchNameId, BranchSlug, BranchUuid, DateTime, JsonBranch, JsonNewBranch, NameId,
+    BranchName, BranchNameId, BranchSlug, BranchUuid, DateTime, HeadIdempotencyKey, JsonBranch,
+    JsonNewBranch, NameId,
     project::branch::{JsonUpdateBranch, JsonUpdateStartPoint},
 };
 use diesel::{
@@ -143,7 +144,19 @@ impl QueryBranch {
                 start_point: start_point.cloned().and_then(Into::into),
             },
         };
-        match Self::create_with_head(log, context, project_id, json_branch, warnings).await {
+        // The first head of a new branch holds the key of its reset,
+        // so a concurrent reset that loses the race to create the branch finds that head.
+        let idempotency_key = reset_idempotency_key(start_point);
+        match Self::create_with_head(
+            log,
+            context,
+            project_id,
+            json_branch,
+            idempotency_key,
+            warnings,
+        )
+        .await
+        {
             Ok(result) => Ok(result),
             Err(e) if crate::error::is_conflict(&e) => {
                 // Another concurrent request created this branch — re-lookup
@@ -167,7 +180,7 @@ impl QueryBranch {
     ) -> Result<Self, HttpError> {
         let mut warnings = ReportWarnings::default();
         Ok(
-            Self::create_with_head(log, context, project_id, json_branch, &mut warnings)
+            Self::create_with_head(log, context, project_id, json_branch, None, &mut warnings)
                 .await?
                 .0,
         )
@@ -178,11 +191,20 @@ impl QueryBranch {
         context: &ApiContext,
         project_id: ProjectId,
         json_branch: JsonNewBranch,
+        idempotency_key: Option<HeadIdempotencyKey>,
         warnings: &mut ReportWarnings,
     ) -> Result<(Self, QueryHead), HttpError> {
         #[cfg(feature = "plus")]
         InsertBranch::rate_limit(context, project_id).await?;
-        InsertBranch::from_json(log, context, project_id, json_branch, warnings).await
+        InsertBranch::from_json(
+            log,
+            context,
+            project_id,
+            json_branch,
+            idempotency_key,
+            warnings,
+        )
+        .await
     }
 
     pub async fn update_start_point_if_changed(
@@ -208,8 +230,15 @@ impl QueryBranch {
             );
             let new_start_point =
                 StartPoint::from_update_json(context, project_id, start_point).await?;
-            return InsertHead::for_branch(log, context, self, new_start_point.as_ref(), warnings)
-                .await;
+            return InsertHead::for_branch_with_idempotency_key(
+                log,
+                context,
+                self,
+                new_start_point.as_ref(),
+                reset_idempotency_key(start_point),
+                warnings,
+            )
+            .await;
         }
         // Get the current start point, if one exists.
         let current_start_point = self.get_start_point(context).await?;
@@ -217,13 +246,23 @@ impl QueryBranch {
         let new_start_point =
             StartPoint::from_update_json(context, project_id, start_point).await?;
 
-        // If reset is set then the branch head needs to be reset.
+        // If reset is set then the branch head needs to be reset,
+        // unless a head of the branch already holds the idempotency key of the reset.
         if let Some(JsonUpdateStartPoint {
-            reset: Some(true), ..
+            reset: Some(true),
+            idempotency_key,
+            ..
         }) = start_point
         {
-            return InsertHead::for_branch(log, context, self, new_start_point.as_ref(), warnings)
-                .await;
+            return InsertHead::for_branch_with_idempotency_key(
+                log,
+                context,
+                self,
+                new_start_point.as_ref(),
+                *idempotency_key,
+                warnings,
+            )
+            .await;
         }
 
         // Compare the current start point against the new start point.
@@ -414,6 +453,7 @@ impl InsertBranch {
         context: &ApiContext,
         project_id: ProjectId,
         branch: JsonNewBranch,
+        idempotency_key: Option<HeadIdempotencyKey>,
         warnings: &mut ReportWarnings,
     ) -> Result<(QueryBranch, QueryHead), HttpError> {
         let JsonNewBranch {
@@ -448,7 +488,8 @@ impl InsertBranch {
                 .execute(conn)?;
             let branch_id: BranchId = diesel::select(last_insert_rowid()).get_result(conn)?;
 
-            let insert_head = InsertHead::new(branch_id, start_point_id);
+            let insert_head =
+                InsertHead::new_with_idempotency_key(branch_id, start_point_id, idempotency_key);
             diesel::insert_into(schema::head::table)
                 .values(&insert_head)
                 .execute(conn)?;
@@ -513,6 +554,7 @@ impl InsertBranch {
             context,
             project_id,
             JsonNewBranch::main(),
+            None,
             &mut ReportWarnings::default(),
         )
         .await
@@ -558,6 +600,13 @@ impl UpdateBranch {
         }
         .into()
     }
+}
+
+/// The idempotency key of a reset, since a key without a reset has no effect.
+fn reset_idempotency_key(start_point: Option<&JsonUpdateStartPoint>) -> Option<HeadIdempotencyKey> {
+    start_point
+        .filter(|start_point| start_point.reset == Some(true))
+        .and_then(|start_point| start_point.idempotency_key)
 }
 
 #[cfg(test)]

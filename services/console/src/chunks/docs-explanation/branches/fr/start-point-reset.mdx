@@ -11,6 +11,11 @@ Réinitialise la `branche` spécifiée. Lorsque l'option [`--start-point`][start
 
 Si une nouvelle `branche` est créée avec un Point de Départ, alors toutes les données les plus récentes et éventuellement les Seuils du `start-point` au hachage spécifié sont copiés. Voir [l'option `--start-point-max-versions`][start point max version option] et [l'option `--start-point-clone-thresholds`][start point clone thresholds option] pour plus de détails.
 
+Les réinitialisations de la même `branche` avec la même [clé d'idempotence][start point idempotency key option] partagent une même [Tête][head] de `branche`,
+de sorte que les jobs parallèles d'une exécution de CI ne réinitialisent pas la `branche` les uns par-dessus les autres.
+Lors d'une exécution dans GitHub Actions, la clé est définie pour vous sur la tentative actuelle de l'exécution du workflow.
+Les étapes suivantes de la même exécution du workflow qui réinitialisent la `branche` utilisent aussi cette Tête, donc définissez une clé différente pour une étape qui doit réinitialiser la `branche` à nouveau.
+
 Par exemple, si `feature_branch` existe sans Point de Départ, alors utiliser `--branch feature_branch --start-point-reset` ferait :
 
 1. Supprimer l'ancienne [Tête][head] de `feature_branch`
@@ -24,3 +29,4 @@ Par exemple, si `feature_branch` existe sans Point de Départ, alors utiliser `-
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count
 [start point clone thresholds option]: #--start-point-clone-thresholds
+[start point idempotency key option]: #--start-point-idempotency-key-key

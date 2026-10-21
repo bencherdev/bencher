@@ -183,6 +183,11 @@ pub struct CliStartPointUpdate {
     /// Otherwise, the branch head will be reset to an empty state.
     #[clap(long)]
     pub start_point_reset: bool,
+
+    /// An idempotency key for `--start-point-reset`, which is ignored without it.
+    /// Resets of `branch` with the same key share one branch head.
+    #[clap(long, env = "BENCHER_START_POINT_IDEMPOTENCY_KEY", value_name = "KEY")]
+    pub start_point_idempotency_key: Option<String>,
 }
 
 #[derive(Parser, Debug)]

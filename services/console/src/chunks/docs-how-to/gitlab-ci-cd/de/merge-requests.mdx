@@ -52,6 +52,11 @@ Das untenstehende Beispiel sollte nur für Branches innerhalb desselben Reposito
     Dies verhindert ein Abdriften der Benchmark-Daten.
     Siehe [die `--start-point-reset` Dokumentation][start point reset] für einen vollständigen Überblick.
     (z.B.: `--start-point-reset`)
+    5. Setzen Sie die `--start-point-idempotency-key` Option auf die Pipeline-ID
+    mit einer [vordefinierten GitLab CI/CD Variablen][gitlab ci cd redefined variables],
+    damit sich alle Jobs einer Pipeline einen Head des MR-Branches teilen.
+    Siehe [die `--start-point-idempotency-key` Dokumentation][start point idempotency key] für einen vollständigen Überblick.
+    (z.B.: `--start-point-idempotency-key "$CI_PIPELINE_ID"`)
 11. Setzen Sie die `--testbed` Option auf den Namen des Testbeds.
     Dies sollte wahrscheinlich die Maschine widerspiegeln, die in `image` ausgewählt wurde.
     Siehe [die `--testbed` Dokumentation][testbed option] für mehr Details.
@@ -81,6 +86,7 @@ Das untenstehende Beispiel sollte nur für Branches innerhalb desselben Reposito
 [start point hash]: /de/docs/explanation/branches/#--start-point-hash-hash
 [start point clone thresholds]: /de/docs/explanation/branches/#--start-point-clone-thresholds
 [start point reset]: /de/docs/explanation/branches/#--start-point-reset
+[start point idempotency key]: /de/docs/explanation/branches/#--start-point-idempotency-key-key
 [testbed option]: /de/docs/explanation/testbeds/#--testbed-testbed
 [alert err]: /de/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /de/docs/reference/bencher-metric-format/

@@ -149,6 +149,12 @@ pub struct CliRunBranch {
     #[clap(long, alias = "branch-reset")]
     pub start_point_reset: bool,
 
+    /// An idempotency key for `--start-point-reset`, which is ignored without it.
+    /// Resets of `branch` with the same key share one branch head.
+    /// On GitHub Actions, the default key is the workflow run attempt.
+    #[clap(long, env = "BENCHER_START_POINT_IDEMPOTENCY_KEY", value_name = "KEY")]
+    pub start_point_idempotency_key: Option<String>,
+
     /// Deprecated: Do not use. This will soon be removed.
     #[clap(
         long,
@@ -533,6 +539,11 @@ mod tests {
                 "token",
                 "--ci-i-am-vulnerable-to-pwn-requests",
             ],
+        ),
+        // A key without a reset has no effect, so a CI-wide `BENCHER_START_POINT_IDEMPOTENCY_KEY` never refuses an attach.
+        (
+            "start_point_idempotency_key",
+            &["--start-point-idempotency-key", "key"],
         ),
         ("job_timeout", &["--job-timeout", "7"]),
         ("job_poll_interval", &["--job-poll-interval", "3"]),

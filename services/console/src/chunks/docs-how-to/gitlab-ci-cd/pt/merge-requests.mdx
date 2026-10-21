@@ -52,6 +52,11 @@ O exemplo abaixo deve ser usado apenas para branches dentro do mesmo repositóri
     Isso evitará a deriva de dados de benchmark.
     Veja [a documentação de `--start-point-reset`][start point reset] para uma visão completa.
     (ex: `--start-point-reset`)
+    5. Defina a opção `--start-point-idempotency-key` para o ID do pipeline
+    usando [uma variável pré-definida do GitLab CI/CD][gitlab ci cd redefined variables],
+    para que todos os jobs de um pipeline compartilhem um Head do Branch SM.
+    Veja [a documentação de `--start-point-idempotency-key`][start point idempotency key] para uma visão completa.
+    (ex: `--start-point-idempotency-key "$CI_PIPELINE_ID"`)
 11. Defina a opção `--testbed` para o nome do Testbed.
    Isso provavelmente deverá corresponder à máquina selecionada em `image`.
    Veja [a documentação de `--testbed`][testbed option] para mais detalhes.
@@ -81,6 +86,7 @@ O exemplo abaixo deve ser usado apenas para branches dentro do mesmo repositóri
 [start point hash]: /pt/docs/explanation/branches/#--start-point-hash-hash
 [start point clone thresholds]: /pt/docs/explanation/branches/#--start-point-clone-thresholds
 [start point reset]: /pt/docs/explanation/branches/#--start-point-reset
+[start point idempotency key]: /pt/docs/explanation/branches/#--start-point-idempotency-key-key
 [testbed option]: /pt/docs/explanation/testbeds/#--testbed-testbed
 [alert err]: /pt/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /pt/docs/reference/bencher-metric-format/

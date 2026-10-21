@@ -1,10 +1,10 @@
 use bencher_json::{
-    BranchUuid, DateTime, GitHash, HeadUuid, JsonHead, JsonStartPoint,
+    BranchUuid, DateTime, GitHash, HeadIdempotencyKey, HeadUuid, JsonHead, JsonStartPoint,
     project::head::{JsonVersion, VersionNumber},
 };
 use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _,
+    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, OptionalExtension as _,
+    QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 
 use dropshot::HttpError;
@@ -42,12 +42,27 @@ pub struct QueryHead {
     pub uuid: HeadUuid,
     pub branch_id: BranchId,
     pub start_point_id: Option<HeadVersionId>,
+    pub idempotency_key: Option<HeadIdempotencyKey>,
     pub created: DateTime,
     pub replaced: Option<DateTime>,
 }
 
 impl QueryHead {
     fn_get!(head, HeadId);
+
+    /// The head of the branch that holds the idempotency key, replaced or not.
+    fn id_for_idempotency_key(
+        conn: &mut DbConnection,
+        branch_id: BranchId,
+        idempotency_key: HeadIdempotencyKey,
+    ) -> diesel::QueryResult<Option<HeadId>> {
+        schema::head::table
+            .filter(schema::head::branch_id.eq(branch_id))
+            .filter(schema::head::idempotency_key.eq(idempotency_key))
+            .select(schema::head::id)
+            .first(conn)
+            .optional()
+    }
 
     pub fn from_uuid(
         conn: &mut DbConnection,
@@ -122,6 +137,7 @@ pub struct InsertHead {
     pub uuid: HeadUuid,
     pub branch_id: BranchId,
     pub start_point_id: Option<HeadVersionId>,
+    pub idempotency_key: Option<HeadIdempotencyKey>,
     pub created: DateTime,
     pub replaced: Option<DateTime>,
 }
@@ -171,10 +187,19 @@ impl InsertHead {
     }
 
     pub fn new(branch_id: BranchId, start_point_id: Option<HeadVersionId>) -> Self {
+        Self::new_with_idempotency_key(branch_id, start_point_id, None)
+    }
+
+    pub fn new_with_idempotency_key(
+        branch_id: BranchId,
+        start_point_id: Option<HeadVersionId>,
+        idempotency_key: Option<HeadIdempotencyKey>,
+    ) -> Self {
         Self {
             uuid: HeadUuid::new(),
             branch_id,
             start_point_id,
+            idempotency_key,
             created: DateTime::now(),
             replaced: None,
         }
@@ -187,64 +212,90 @@ impl InsertHead {
         branch_start_point: Option<&StartPoint>,
         warnings: &mut ReportWarnings,
     ) -> Result<(QueryBranch, QueryHead), HttpError> {
-        // Phase 1: Rate limit (requires await)
-        #[cfg(feature = "plus")]
-        Self::rate_limit(context, &query_branch).await?;
-
-        // Build the insert_head before acquiring the write lock
-        let insert_head = Self::new(
-            query_branch.id,
-            branch_start_point.map(StartPoint::head_version_id),
-        );
-        let old_head_id = query_branch.head_id;
-
-        // Phase 2: Batch all writes in a single transaction
-        let (new_head_id, silenced_alerts) = write_transaction!(context, |conn| {
-            // Insert the new head
-            diesel::insert_into(schema::head::table)
-                .values(&insert_head)
-                .execute(conn)?;
-            let new_head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
-            let version_ids = if let Some(start_point) = branch_start_point {
-                start_point.version_ids(conn)?
-            } else {
-                Vec::new()
-            };
-            InsertHeadVersion::insert_all(conn, new_head_id, &version_ids)?;
-
-            // Update the branch to point to the new head
-            diesel::update(schema::branch::table.filter(schema::branch::id.eq(query_branch.id)))
-                .set(schema::branch::head_id.eq(new_head_id))
-                .execute(conn)?;
-
-            // If there is an old head, mark it as replaced and silence its alerts
-            let silenced_alerts = if let Some(old_head_id) = old_head_id {
-                let update_head = UpdateHead::replace();
-                diesel::update(schema::head::table.filter(schema::head::id.eq(old_head_id)))
-                    .set(&update_head)
-                    .execute(conn)?;
-
-                QueryAlert::silence_all(conn, old_head_id, context.clock.now())?
-            } else {
-                0
-            };
-
-            diesel::QueryResult::Ok((new_head_id, silenced_alerts))
-        })
-        .map_err(|e| {
-            issue_error(
-                "Failed to create head for branch",
-                "Failed to create head for branch in batch transaction:",
-                e,
-            )
-        })?;
-        slog::debug!(
+        Self::for_branch_with_idempotency_key(
             log,
-            "Created head {new_head_id:?} for branch: {insert_head:?} (silenced {silenced_alerts} alerts)"
-        );
+            context,
+            query_branch,
+            branch_start_point,
+            None,
+            warnings,
+        )
+        .await
+    }
+
+    /// A new head for the branch, or the head of the branch that already holds the idempotency key.
+    pub async fn for_branch_with_idempotency_key(
+        log: &Logger,
+        context: &ApiContext,
+        query_branch: QueryBranch,
+        branch_start_point: Option<&StartPoint>,
+        idempotency_key: Option<HeadIdempotencyKey>,
+        warnings: &mut ReportWarnings,
+    ) -> Result<(QueryBranch, QueryHead), HttpError> {
+        // A head that already holds the key is found before the rate limit,
+        // so reusing it never counts as a new head.
+        let held_head_id = if let Some(idempotency_key) = idempotency_key {
+            QueryHead::id_for_idempotency_key(auth_conn!(context), query_branch.id, idempotency_key)
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to check head idempotency key",
+                        "Failed to check head idempotency key for branch:",
+                        e,
+                    )
+                })?
+        } else {
+            None
+        };
+
+        let head_id = if let Some(head_id) = held_head_id {
+            slog::debug!(
+                log,
+                "Reusing head {head_id:?} with idempotency key {idempotency_key:?}"
+            );
+            head_id
+        } else {
+            #[cfg(feature = "plus")]
+            Self::rate_limit(context, &query_branch).await?;
+
+            let insert_head = Self::new_with_idempotency_key(
+                query_branch.id,
+                branch_start_point.map(StartPoint::head_version_id),
+                idempotency_key,
+            );
+            let now = context.clock.now();
+            let branch_head = write_transaction!(context, |conn| {
+                insert_head.insert_for_branch(conn, branch_start_point, now)
+            })
+            .map_err(|e| {
+                issue_error(
+                    "Failed to create head for branch",
+                    "Failed to create head for branch in batch transaction:",
+                    e,
+                )
+            })?;
+            match branch_head {
+                BranchHead::Held(head_id) => {
+                    slog::debug!(
+                        log,
+                        "Reusing head {head_id:?} with idempotency key {idempotency_key:?}"
+                    );
+                    head_id
+                },
+                BranchHead::Created {
+                    head_id,
+                    silenced_alerts,
+                } => {
+                    slog::debug!(
+                        log,
+                        "Created head {head_id:?} for branch: {insert_head:?} (silenced {silenced_alerts} alerts)"
+                    );
+                    head_id
+                },
+            }
+        };
 
         // Read back using read connections
-        let query_head = QueryHead::get(auth_conn!(context), new_head_id)?;
+        let query_head = QueryHead::get(auth_conn!(context), head_id)?;
         slog::debug!(log, "Got head: {query_head:?}");
 
         let query_branch = QueryBranch::get(auth_conn!(context), query_branch.id)?;
@@ -257,6 +308,77 @@ impl InsertHead {
 
         Ok((query_branch, query_head))
     }
+
+    /// Point the branch at this new head, cloning the start point versions,
+    /// and replace the head the branch names when the write runs.
+    /// If a head of the branch already holds the idempotency key,
+    /// the branch is left as it is and that head is returned.
+    fn insert_for_branch(
+        &self,
+        conn: &mut DbConnection,
+        branch_start_point: Option<&StartPoint>,
+        now: DateTime,
+    ) -> diesel::QueryResult<BranchHead> {
+        if let Some(idempotency_key) = self.idempotency_key
+            && let Some(head_id) =
+                QueryHead::id_for_idempotency_key(conn, self.branch_id, idempotency_key)?
+        {
+            return Ok(BranchHead::Held(head_id));
+        }
+
+        // The head to replace is read under the write lock,
+        // so overlapping resets each replace the head they follow.
+        let old_head_id: Option<HeadId> = schema::branch::table
+            .filter(schema::branch::id.eq(self.branch_id))
+            .select(schema::branch::head_id)
+            .first(conn)?;
+
+        // Insert the new head
+        diesel::insert_into(schema::head::table)
+            .values(self)
+            .execute(conn)?;
+        let head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
+        let version_ids = if let Some(start_point) = branch_start_point {
+            start_point.version_ids(conn)?
+        } else {
+            Vec::new()
+        };
+        InsertHeadVersion::insert_all(conn, head_id, &version_ids)?;
+
+        // Update the branch to point to the new head
+        diesel::update(schema::branch::table.filter(schema::branch::id.eq(self.branch_id)))
+            .set(schema::branch::head_id.eq(head_id))
+            .execute(conn)?;
+
+        // If there is an old head, mark it as replaced and silence its alerts
+        let silenced_alerts = if let Some(old_head_id) = old_head_id {
+            let update_head = UpdateHead::replace();
+            diesel::update(schema::head::table.filter(schema::head::id.eq(old_head_id)))
+                .set(&update_head)
+                .execute(conn)?;
+
+            QueryAlert::silence_all(conn, old_head_id, now)?
+        } else {
+            0
+        };
+
+        Ok(BranchHead::Created {
+            head_id,
+            silenced_alerts,
+        })
+    }
+}
+
+/// The head a branch uses after [`InsertHead::insert_for_branch`].
+#[derive(Debug, Clone, Copy)]
+enum BranchHead {
+    /// A head of the branch already holds the idempotency key.
+    Held(HeadId),
+    /// The new head, with the count of alerts silenced on the head it replaced.
+    Created {
+        head_id: HeadId,
+        silenced_alerts: usize,
+    },
 }
 
 #[derive(Debug, Clone, diesel::AsChangeset)]
@@ -276,20 +398,397 @@ impl UpdateHead {
 #[cfg(test)]
 mod tests {
     use bencher_json::{
-        DateTime,
+        DateTime, HeadIdempotencyKey,
         project::{alert::AlertStatus, boundary::BoundaryLimit},
     };
-    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{
+        Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+        SelectableHelper as _, SqliteConnection, connection::SimpleConnection as _,
+    };
+    use diesel_migrations::MigrationHarness as _;
 
+    use super::{BranchHead, HeadId, InsertHead};
     use crate::{
-        model::project::branch::version::VersionId,
+        model::project::{
+            ProjectId,
+            branch::{
+                BranchId, QueryBranch,
+                head_version::QueryHeadVersion,
+                start_point::StartPoint,
+                version::{QueryVersion, VersionId},
+            },
+        },
         schema,
         test_util::{
-            count_head_versions, create_base_entities, create_branch_with_head,
+            BranchIds, count_head_versions, create_base_entities, create_branch_with_head,
             create_head_version, create_version, get_branch_head_id, get_head_replaced,
             get_head_versions, setup_test_db,
         },
     };
+
+    const KEY: &str = "00000000-0000-0000-0000-0000000000a1";
+    const OTHER_KEY: &str = "00000000-0000-0000-0000-0000000000a2";
+    const HEAD_IDEMPOTENCY_KEY_MIGRATION: &str = "20261021120000";
+
+    #[test]
+    fn resets_with_one_key_share_one_head() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let start_point = source_start_point(&mut conn, base.project_id);
+        let feature = feature_branch(&mut conn, base.project_id);
+
+        let first = created(reset(
+            &mut conn,
+            feature.branch_id,
+            Some(&start_point),
+            Some(key(KEY)),
+        ));
+        let total_head_versions: i64 = schema::head_version::table
+            .count()
+            .get_result(&mut conn)
+            .expect("Failed to count head versions");
+        let first_replaced = get_head_replaced(&mut conn, feature.head_id);
+
+        let second = held(reset(
+            &mut conn,
+            feature.branch_id,
+            Some(&start_point),
+            Some(key(KEY)),
+        ));
+
+        assert_eq!(second, first);
+        assert_eq!(
+            get_branch_head_id(&mut conn, feature.branch_id),
+            Some(first)
+        );
+        assert_eq!(head_count(&mut conn, feature.branch_id), 2);
+        assert_eq!(count_head_versions(&mut conn, first), 3);
+        let after: i64 = schema::head_version::table
+            .count()
+            .get_result(&mut conn)
+            .expect("Failed to count head versions");
+        assert_eq!(after, total_head_versions, "the reuse clones no versions");
+        assert!(get_head_replaced(&mut conn, first).is_none());
+        assert_eq!(
+            get_head_replaced(&mut conn, feature.head_id),
+            first_replaced,
+            "the reuse replaces nothing"
+        );
+    }
+
+    #[test]
+    fn a_key_held_by_a_replaced_head_returns_that_head() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let feature = feature_branch(&mut conn, base.project_id);
+
+        let older = created(reset(&mut conn, feature.branch_id, None, Some(key(KEY))));
+        let newer = created(reset(
+            &mut conn,
+            feature.branch_id,
+            None,
+            Some(key(OTHER_KEY)),
+        ));
+        assert!(get_head_replaced(&mut conn, older).is_some());
+
+        let late = held(reset(&mut conn, feature.branch_id, None, Some(key(KEY))));
+
+        assert_eq!(late, older);
+        assert_eq!(
+            get_branch_head_id(&mut conn, feature.branch_id),
+            Some(newer)
+        );
+        assert!(get_head_replaced(&mut conn, newer).is_none());
+        assert_eq!(head_count(&mut conn, feature.branch_id), 3);
+    }
+
+    #[test]
+    fn resets_without_a_key_create_a_head_each_time() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let feature = feature_branch(&mut conn, base.project_id);
+
+        let first = created(reset(&mut conn, feature.branch_id, None, None));
+        let second = created(reset(&mut conn, feature.branch_id, None, None));
+
+        assert_ne!(first, second);
+        assert_eq!(
+            get_branch_head_id(&mut conn, feature.branch_id),
+            Some(second)
+        );
+        assert!(get_head_replaced(&mut conn, feature.head_id).is_some());
+        assert!(get_head_replaced(&mut conn, first).is_some());
+        assert!(get_head_replaced(&mut conn, second).is_none());
+        assert_eq!(head_count(&mut conn, feature.branch_id), 3);
+    }
+
+    #[test]
+    fn a_key_is_scoped_to_its_branch() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let feature = feature_branch(&mut conn, base.project_id);
+        let other = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000020",
+            "other",
+            "other",
+            "00000000-0000-0000-0000-000000000021",
+        );
+
+        let feature_head = created(reset(&mut conn, feature.branch_id, None, Some(key(KEY))));
+        let other_head = created(reset(&mut conn, other.branch_id, None, Some(key(KEY))));
+
+        assert_ne!(feature_head, other_head);
+        assert_eq!(
+            get_branch_head_id(&mut conn, feature.branch_id),
+            Some(feature_head)
+        );
+        assert_eq!(
+            get_branch_head_id(&mut conn, other.branch_id),
+            Some(other_head)
+        );
+    }
+
+    #[test]
+    fn a_reset_replaces_the_head_current_when_it_writes() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let feature = feature_branch(&mut conn, base.project_id);
+
+        // Both resets read the branch while its first head is current,
+        // then an overlapping reset writes first.
+        let stale = InsertHead::new(feature.branch_id, None);
+        let overlapping = created(reset(&mut conn, feature.branch_id, None, None));
+        let last = conn
+            .immediate_transaction(|conn| stale.insert_for_branch(conn, None, DateTime::TEST))
+            .map(created)
+            .expect("Failed to reset the branch");
+
+        assert_eq!(get_branch_head_id(&mut conn, feature.branch_id), Some(last));
+        assert!(get_head_replaced(&mut conn, feature.head_id).is_some());
+        assert!(
+            get_head_replaced(&mut conn, overlapping).is_some(),
+            "the head the overlapping reset made is replaced"
+        );
+        assert!(get_head_replaced(&mut conn, last).is_none());
+    }
+
+    // The down migration restores the head table that the migrations before it built,
+    // and both ways carry every head.
+    #[test]
+    fn idempotency_key_migration_down_and_up_keeps_every_head() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let start_point = source_start_point(&mut conn, base.project_id);
+        let feature = feature_branch(&mut conn, base.project_id);
+        created(reset(
+            &mut conn,
+            feature.branch_id,
+            Some(&start_point),
+            Some(key(KEY)),
+        ));
+        let heads = head_rows(&mut conn);
+        let schema = head_schema(&mut conn);
+
+        // Foreign keys are off as in `run_migrations`, so the table rebuild does not cascade.
+        conn.batch_execute("PRAGMA foreign_keys = OFF")
+            .expect("Failed to disable foreign keys");
+        loop {
+            let version = conn
+                .revert_last_migration(crate::MIGRATIONS)
+                .expect("Failed to revert a migration");
+            if version.to_string() == HEAD_IDEMPOTENCY_KEY_MIGRATION {
+                break;
+            }
+        }
+        assert_eq!(
+            head_schema(&mut conn),
+            head_schema_before_the_migration(),
+            "down"
+        );
+        assert_eq!(head_rows(&mut conn), heads, "down");
+
+        conn.run_pending_migrations(crate::MIGRATIONS)
+            .expect("Failed to apply the migrations");
+        conn.batch_execute("PRAGMA foreign_keys = ON")
+            .expect("Failed to enable foreign keys");
+        assert_eq!(head_schema(&mut conn), schema, "up");
+        assert_eq!(head_rows(&mut conn), heads, "up");
+    }
+
+    fn key(key: &str) -> HeadIdempotencyKey {
+        key.parse().expect("Failed to parse the idempotency key")
+    }
+
+    /// Reset the branch as a report would, under one write transaction.
+    fn reset(
+        conn: &mut SqliteConnection,
+        branch_id: BranchId,
+        start_point: Option<&StartPoint>,
+        idempotency_key: Option<HeadIdempotencyKey>,
+    ) -> BranchHead {
+        let insert_head = InsertHead::new_with_idempotency_key(
+            branch_id,
+            start_point.map(StartPoint::head_version_id),
+            idempotency_key,
+        );
+        conn.immediate_transaction(|conn| {
+            insert_head.insert_for_branch(conn, start_point, DateTime::TEST)
+        })
+        .expect("Failed to reset the branch")
+    }
+
+    fn created(branch_head: BranchHead) -> HeadId {
+        let BranchHead::Created { head_id, .. } = branch_head else {
+            panic!("Expected a new head, got {branch_head:?}");
+        };
+        head_id
+    }
+
+    fn held(branch_head: BranchHead) -> HeadId {
+        let BranchHead::Held(head_id) = branch_head else {
+            panic!("Expected a held head, got {branch_head:?}");
+        };
+        head_id
+    }
+
+    fn head_count(conn: &mut SqliteConnection, branch_id: BranchId) -> i64 {
+        schema::head::table
+            .filter(schema::head::branch_id.eq(branch_id))
+            .count()
+            .get_result(conn)
+            .expect("Failed to count heads")
+    }
+
+    /// A source branch with three versions, as the start point at its newest version.
+    fn source_start_point(conn: &mut SqliteConnection, project_id: ProjectId) -> StartPoint {
+        let source = create_branch_with_head(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "source",
+            "source",
+            "00000000-0000-0000-0000-000000000031",
+        );
+        let mut newest = None;
+        for number in 1..=3 {
+            let version_id = create_version(
+                conn,
+                project_id,
+                &format!("00000000-0000-0000-0000-0000000003{number:02}"),
+                number,
+                None,
+            );
+            create_head_version(conn, source.head_id, version_id);
+            newest = Some(version_id);
+        }
+        let newest = newest.expect("three versions");
+        let branch = schema::branch::table
+            .filter(schema::branch::id.eq(source.branch_id))
+            .select(QueryBranch::as_select())
+            .first(conn)
+            .expect("Failed to get branch");
+        let head_version = schema::head_version::table
+            .filter(schema::head_version::head_id.eq(source.head_id))
+            .filter(schema::head_version::version_id.eq(newest))
+            .select(QueryHeadVersion::as_select())
+            .first(conn)
+            .expect("Failed to get head version");
+        let version = QueryVersion::get(conn, newest).expect("Failed to get version");
+        StartPoint {
+            branch,
+            head_version,
+            version,
+            max_versions: None,
+            clone_thresholds: None,
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq, diesel::QueryableByName)]
+    struct HeadRow {
+        #[diesel(sql_type = diesel::sql_types::Integer)]
+        id: i32,
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        uuid: String,
+        #[diesel(sql_type = diesel::sql_types::Integer)]
+        branch_id: i32,
+        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Integer>)]
+        start_point_id: Option<i32>,
+        #[diesel(sql_type = diesel::sql_types::BigInt)]
+        created: i64,
+        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::BigInt>)]
+        replaced: Option<i64>,
+    }
+
+    /// Every head, by the columns the table has with and without the key.
+    fn head_rows(conn: &mut SqliteConnection) -> Vec<HeadRow> {
+        diesel::sql_query(
+            "SELECT id, uuid, branch_id, start_point_id, created, replaced FROM head ORDER BY id",
+        )
+        .load(conn)
+        .expect("Failed to load the heads")
+    }
+
+    #[derive(Debug, PartialEq, Eq, diesel::QueryableByName)]
+    struct SchemaEntry {
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        kind: String,
+        #[diesel(sql_type = diesel::sql_types::Text)]
+        name: String,
+        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+        sql: Option<String>,
+    }
+
+    /// The head table and its indexes, with whitespace collapsed.
+    /// SQLite quotes the name of a table that a rename created, so the quotes are dropped.
+    fn head_schema(conn: &mut SqliteConnection) -> Vec<SchemaEntry> {
+        diesel::sql_query(
+            "SELECT type AS kind, name, sql FROM sqlite_master WHERE tbl_name = 'head' ORDER BY name",
+        )
+        .load::<SchemaEntry>(conn)
+        .expect("Failed to load the head schema")
+        .into_iter()
+        .map(|SchemaEntry { kind, name, sql }| SchemaEntry {
+            kind,
+            name,
+            sql: sql.map(|sql| {
+                sql.split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ")
+                    .replace(r#"CREATE TABLE "head""#, "CREATE TABLE head")
+            }),
+        })
+        .collect()
+    }
+
+    fn head_schema_before_the_migration() -> Vec<SchemaEntry> {
+        let mut conn =
+            SqliteConnection::establish(":memory:").expect("Failed to open the reference database");
+        conn.batch_execute("PRAGMA foreign_keys = OFF")
+            .expect("Failed to disable foreign keys");
+        let pending = conn
+            .pending_migrations(crate::MIGRATIONS)
+            .expect("Failed to list the migrations");
+        for migration in pending.iter().take_while(|migration| {
+            migration.name().version().to_string() != HEAD_IDEMPOTENCY_KEY_MIGRATION
+        }) {
+            conn.run_migration(migration.as_ref())
+                .expect("Failed to apply a migration");
+        }
+        head_schema(&mut conn)
+    }
+
+    fn feature_branch(conn: &mut SqliteConnection, project_id: ProjectId) -> BranchIds {
+        create_branch_with_head(
+            conn,
+            project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "feature",
+            "feature",
+            "00000000-0000-0000-0000-000000000011",
+        )
+    }
 
     /// Test that `head_version` records can be queried by `head_id`.
     /// This is the foundation of the `StartPoint::version_ids` operation.
@@ -875,8 +1374,7 @@ mod tests {
                 diesel::insert_into(schema::head::table)
                     .values(&insert_head)
                     .execute(conn)?;
-                let new_head_id: super::HeadId =
-                    diesel::select(last_insert_rowid()).get_result(conn)?;
+                let new_head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
 
                 diesel::update(
                     schema::branch::table.filter(schema::branch::id.eq(branch.branch_id)),
@@ -921,8 +1419,7 @@ mod tests {
             diesel::insert_into(schema::head::table)
                 .values(&insert_head)
                 .execute(conn)?;
-            let new_head_id: super::HeadId =
-                diesel::select(last_insert_rowid()).get_result(conn)?;
+            let new_head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
 
             diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch.branch_id)))
                 .set(schema::branch::head_id.eq(new_head_id))
@@ -1096,7 +1593,7 @@ mod tests {
             .execute(&mut conn)
             .expect("Failed to insert branch");
 
-        let branch_id: super::super::BranchId = {
+        let branch_id: BranchId = {
             use crate::macros::sql::last_insert_rowid;
             diesel::select(last_insert_rowid())
                 .get_result(&mut conn)
@@ -1116,8 +1613,7 @@ mod tests {
                 diesel::insert_into(schema::head::table)
                     .values(&insert_head)
                     .execute(conn)?;
-                let new_head_id: super::HeadId =
-                    diesel::select(last_insert_rowid()).get_result(conn)?;
+                let new_head_id: HeadId = diesel::select(last_insert_rowid()).get_result(conn)?;
 
                 diesel::update(schema::branch::table.filter(schema::branch::id.eq(branch_id)))
                     .set(schema::branch::head_id.eq(new_head_id))

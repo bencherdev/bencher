@@ -46,6 +46,9 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
     4. ベンチマークデータのドリフトを防ぐため、常にMRブランチを開始ポイントにリセットするために `--start-point-reset` フラグを設定します。
        [`--start-point-reset` ドキュメント][start point reset] を参照して、全体像を確認してください。
        （例: `--start-point-reset`）
+    5. [GitLab CI/CD 説明変数][gitlab ci cd redefined variables] を使用して、`--start-point-idempotency-key` オプションをパイプライン ID に設定します。これにより、1つのパイプラインのすべてのジョブがMRブランチの1つの Head を共有します。
+       [`--start-point-idempotency-key` ドキュメント][start point idempotency key] を参照して、全体像を確認してください。
+       （例: `--start-point-idempotency-key "$CI_PIPELINE_ID"`）
 11. `--testbed` オプションをテストベッド名に設定します。
     これは、おそらく `image` で選択したマシンと一致する必要があります。
     [`--tested` ドキュメント][testbed option] を参照してください。
@@ -75,6 +78,7 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
 [start point hash]: /ja/docs/explanation/branches/#--start-point-hash-hash
 [start point clone thresholds]: /ja/docs/explanation/branches/#--start-point-clone-thresholds
 [start point reset]: /ja/docs/explanation/branches/#--start-point-reset
+[start point idempotency key]: /ja/docs/explanation/branches/#--start-point-idempotency-key-key
 [testbed option]: /ja/docs/explanation/testbeds/#--testbed-testbed
 [alert err]: /ja/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ja/docs/reference/bencher-metric-format/

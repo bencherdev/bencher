@@ -1,0 +1,30 @@
+
+### `--start-point-idempotency-key <KEY>`
+
+<br />
+
+使用指定的键作为 [`--start-point-reset` 标志][start point reset option]的幂等键。
+该键可以是任意文本。
+设置 `--start-point-idempotency-key` 选项或 `BENCHER_START_POINT_IDEMPOTENCY_KEY` 环境变量。
+如果未设置 `--start-point-reset` 或该键为空，则忽略此选项。
+
+- 如果没有任何 `branch` [Head][head] 拥有该键，重置将创建一个带有该键的新 `branch` Head。
+- 如果某个 `branch` Head 已经拥有该键，则使用该 Head，并且不会再次重置 `branch`，
+  即使起始点已更改或该 Head 此后已被替换。
+
+在 GitHub Actions 中运行时，该键默认为当前工作流运行的尝试。
+同一工作流运行中的所有作业共享一个 `branch` Head，重新运行工作流会创建一个新的 Head。
+同一工作流运行中后续重置 `branch` 的步骤也会使用该 Head，因此对于需要再次重置 `branch` 的步骤，请设置不同的键。
+对于其他 CI 提供商，请将该键设置为在一次流水线运行的所有作业中都相同的值
+(例如：在 GitLab CI/CD 中使用 `--start-point-idempotency-key "$CI_PIPELINE_ID"`)。
+
+例如，如果一个工作流运行由三个作业组成的矩阵，每个作业都使用 `--branch feature_branch --start-point main --start-point-reset --start-point-idempotency-key run-abc123`，
+那么：
+
+1. 第一个报告的作业从 `main` 创建一个带有幂等键 `run-abc123` 的新 `feature_branch` [Head][head]
+2. 由于该 Head 带有幂等键 `run-abc123`，其他两个作业使用同一个 `feature_branch` Head
+3. 所有三个作业的结果一起显示在 `feature_branch` 上
+
+[head]: /zh/docs/explanation/benchmarking/#head
+
+[start point reset option]: #--start-point-reset

@@ -1,0 +1,30 @@
+
+### `--start-point-idempotency-key <KEY>`
+
+<br />
+
+Usa la clave especificada como clave de idempotencia para [el indicador `--start-point-reset`][start point reset option].
+La clave puede ser cualquier texto.
+Establece la opción `--start-point-idempotency-key` o la variable de entorno `BENCHER_START_POINT_IDEMPOTENCY_KEY`.
+Si `--start-point-reset` no está establecido o la clave está vacía, esta opción se ignora.
+
+- Si ningún [Head][head] de `branch` tiene la clave, el restablecimiento creará un nuevo Head de `branch` con la clave.
+- Si un Head de `branch` ya tiene la clave, se usará ese Head y la `branch` no se restablecerá de nuevo,
+  incluso si el Punto de Inicio ha cambiado o ese Head ha sido reemplazado desde entonces.
+
+Al ejecutarse en GitHub Actions, la clave por defecto es el intento actual de la ejecución del workflow.
+Todos los jobs de una ejecución del workflow comparten un Head de `branch`, y volver a ejecutar el workflow crea un nuevo Head.
+Los pasos posteriores de la misma ejecución del workflow que restablecen la `branch` también usan ese Head, así que establece una clave diferente para un paso que necesite restablecer la `branch` de nuevo.
+Para otros proveedores de CI, establece la clave a un valor que sea el mismo para todos los jobs de una ejecución del pipeline
+(ej: `--start-point-idempotency-key "$CI_PIPELINE_ID"` en GitLab CI/CD).
+
+Por ejemplo, si un workflow ejecuta una matriz de tres jobs que usan cada uno `--branch feature_branch --start-point main --start-point-reset --start-point-idempotency-key run-abc123`,
+entonces:
+
+1. El primer job en reportar crea un nuevo [Head][head] de `feature_branch` a partir de `main` con la clave de idempotencia `run-abc123`
+2. Los otros dos jobs usan ese mismo Head de `feature_branch`, ya que tiene la clave de idempotencia `run-abc123`
+3. Los resultados de los tres jobs aparecen juntos en `feature_branch`
+
+[head]: /es/docs/explanation/benchmarking/#head
+
+[start point reset option]: #--start-point-reset

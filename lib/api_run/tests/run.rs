@@ -11,7 +11,7 @@ use bencher_api_tests::TestServer;
 #[cfg(feature = "plus")]
 use bencher_api_tests::oci::compute_digest;
 use bencher_json::{
-    BmfVersion, JsonProjectKeyCreated, JsonReport, JsonReports,
+    BmfVersion, HeadIdempotencyKey, JsonProjectKeyCreated, JsonReport, JsonReports,
     project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
 };
 #[cfg(feature = "plus")]
@@ -2706,6 +2706,79 @@ async fn run_post_idempotency_key_returns_the_same_warnings() {
         let report: JsonReport = resp.json().await.expect("Failed to parse the report");
         assert_eq!(report.warnings, skipped, "{attempt}");
     }
+}
+
+// POST /v0/run - parallel runs that reset a new branch with one key share its first head
+#[tokio::test]
+async fn run_post_resets_with_one_start_point_idempotency_key_share_one_head() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "start_point_idempotency@example.com")
+        .await;
+    let org = server
+        .create_org(&user, "Start Point Idempotency Org")
+        .await;
+    let project = server
+        .create_project(&user, &org, "Start Point Idempotency Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let run = |branch: &str, start_point: serde_json::Value| {
+        serde_json::json!({
+            "project": project_slug,
+            "branch": branch,
+            "start_point": start_point,
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [bmf_results().to_string()]
+        })
+    };
+    let post = async |body: &serde_json::Value| -> JsonReport {
+        let resp = server
+            .client
+            .post(server.api_url("/v0/run"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        resp.json().await.expect("Failed to parse the report")
+    };
+
+    post(&run("main", serde_json::Value::Null)).await;
+    let key = HeadIdempotencyKey::new();
+    let reset = |key: HeadIdempotencyKey| {
+        run(
+            "feature",
+            serde_json::json!({ "branch": "main", "reset": true, "idempotency_key": key }),
+        )
+    };
+
+    let first = post(&reset(key)).await;
+    let second = post(&reset(key)).await;
+    assert_eq!(first.branch.head.uuid, second.branch.head.uuid);
+    assert!(first.branch.head.start_point.is_some());
+
+    let other = post(&reset(HeadIdempotencyKey::new())).await;
+    assert_ne!(other.branch.head.uuid, first.branch.head.uuid);
+
+    // A key without a reset is not kept on a new branch, so a later reset with it makes a new head.
+    let unkept = HeadIdempotencyKey::new();
+    let created = post(&run(
+        "unkept",
+        serde_json::json!({ "branch": "main", "idempotency_key": unkept }),
+    ))
+    .await;
+    let reset = post(&run(
+        "unkept",
+        serde_json::json!({ "branch": "main", "reset": true, "idempotency_key": unkept }),
+    ))
+    .await;
+    assert_ne!(created.branch.head.uuid, reset.branch.head.uuid);
 }
 
 // POST /v0/run - different idempotency keys create different reports

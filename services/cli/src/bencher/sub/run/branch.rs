@@ -1,6 +1,10 @@
-use bencher_json::{BranchNameId, GitHash};
+use bencher_json::{BranchNameId, GitHash, HeadIdempotencyKey};
 
-use crate::{bencher::sub::project::branch::start_point::StartPoint, parser::run::CliRunBranch};
+use super::ci::run_attempt_key;
+use crate::{
+    bencher::sub::project::branch::start_point::{StartPoint, reset_idempotency_key},
+    parser::run::CliRunBranch,
+};
 
 #[expect(
     clippy::struct_field_names,
@@ -31,14 +35,21 @@ impl TryFrom<CliRunBranch> for Branch {
             start_point_max_versions,
             start_point_clone_thresholds,
             start_point_reset,
+            start_point_idempotency_key,
             deprecated: _,
         } = run_branch;
+        let idempotency_key = reset_idempotency_key(
+            start_point_reset,
+            start_point_idempotency_key.as_deref(),
+            run_attempt_key().as_deref(),
+        );
         let start_point = map_start_point(
             start_point,
             start_point_hash,
             start_point_max_versions,
             start_point_clone_thresholds,
             start_point_reset,
+            idempotency_key,
         );
         Ok(Self {
             branch,
@@ -54,6 +65,7 @@ fn map_start_point(
     start_point_max_versions: u32,
     start_point_clone_thresholds: bool,
     start_point_reset: bool,
+    idempotency_key: Option<HeadIdempotencyKey>,
 ) -> StartPoint {
     let branch = start_point.and_then(|b| {
         // This allows for "continue on empty" semantics for the branch start point.
@@ -65,6 +77,7 @@ fn map_start_point(
         max_versions: start_point_max_versions,
         clone_thresholds: start_point_clone_thresholds,
         reset: start_point_reset,
+        idempotency_key,
     }
 }
 
