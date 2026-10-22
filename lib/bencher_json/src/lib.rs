@@ -84,7 +84,7 @@ pub use project::{
         BranchNameId, BranchResourceId, BranchSlug, BranchUuid, JsonBranch, JsonBranches,
         JsonNewBranch, JsonNewStartPoint,
     },
-    head::{HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
+    head::{HeadIdempotencyKey, HeadUuid, JsonHead, JsonStartPoint, VersionUuid},
     key::{
         JsonNewProjectKey, JsonProjectKey, JsonProjectKeyCreated, JsonProjectKeys,
         JsonPubProjectKey, JsonUpdateProjectKey, ProjectKeyUuid,

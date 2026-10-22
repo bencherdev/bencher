@@ -14,7 +14,8 @@ use bencher_api_tests::{TestServer, TestUser, helpers::get_project_id};
 #[cfg(feature = "plus")]
 use bencher_json::JsonReportIterationCounts;
 use bencher_json::{
-    JsonReport, JsonThreshold, JsonThresholds, MetricName, ModelUuid, ThresholdUuid,
+    HeadIdempotencyKey, JsonReport, JsonThreshold, JsonThresholds, MetricName, ModelUuid,
+    ThresholdUuid,
     project::{
         report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
         threshold::MAX_ACTIVE_THRESHOLDS,
@@ -23,7 +24,7 @@ use bencher_json::{
 use bencher_schema::{
     model::project::{
         ProjectId,
-        branch::BranchId,
+        branch::{BranchId, head::HeadId},
         threshold::{
             InsertThreshold, QueryThreshold, ThresholdId,
             model::{InsertModel, ModelId, QueryModel},
@@ -1125,6 +1126,72 @@ async fn a_start_point_reset_clone_frees_room_under_the_active_cap() {
         .collect::<Vec<_>>();
     active.sort();
     assert_eq!(active, fits);
+}
+
+// A reset that reuses the head its idempotency key holds still clones the start point thresholds.
+#[tokio::test]
+async fn a_start_point_reset_reusing_its_head_clones_thresholds() {
+    let server = TestServer::new().await;
+    let (user, project_slug) = project_with_thresholds(&server, "idemclone", 0).await;
+    // A start point is a version, so the branch needs a report to be cloned from.
+    let (status, body) = post_report(&server, &user, &project_slug, None).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let branches = format!("/v0/projects/{project_slug}/branches");
+    let feature = serde_json::json!({ "name": "feature" });
+    let (status, body) = send_json(&server, &user, Method::POST, &branches, &feature).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let key = HeadIdempotencyKey::new();
+    let path = format!("{branches}/feature");
+    let reset = serde_json::json!({
+        "start_point": { "branch": "ssize-branch", "reset": true, "idempotency_key": key }
+    });
+    let (status, body) = send_json(&server, &user, Method::PATCH, &path, &reset).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let head = feature_head_id(&server, &project_slug);
+    assert_eq!(
+        branch_thresholds(&server, &project_slug, "feature"),
+        Vec::new()
+    );
+
+    let thresholds = format!("/v0/projects/{project_slug}/thresholds");
+    let (status, body) = send_json(
+        &server,
+        &user,
+        Method::POST,
+        &thresholds,
+        &new_threshold("p50"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+
+    let reset = serde_json::json!({
+        "start_point": {
+            "branch": "ssize-branch",
+            "clone_thresholds": true,
+            "reset": true,
+            "idempotency_key": key
+        }
+    });
+    let (status, body) = send_json(&server, &user, Method::PATCH, &path, &reset).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(feature_head_id(&server, &project_slug), head);
+    let cloned = branch_thresholds(&server, &project_slug, "feature")
+        .into_iter()
+        .map(|(_, metric, has_model)| (metric, has_model))
+        .collect::<Vec<_>>();
+    assert_eq!(cloned, [("p50".to_owned(), true)]);
+}
+
+fn feature_head_id(server: &TestServer, project_slug: &str) -> Option<HeadId> {
+    let project_id = project_id(server, project_slug);
+    let mut conn = server.db_conn();
+    schema::branch::table
+        .filter(schema::branch::project_id.eq(project_id))
+        .filter(schema::branch::name.eq("feature"))
+        .select(schema::branch::head_id)
+        .first(&mut conn)
+        .expect("Failed to load the branch head")
 }
 
 // The API stays strict past the ceiling, where a report skips.

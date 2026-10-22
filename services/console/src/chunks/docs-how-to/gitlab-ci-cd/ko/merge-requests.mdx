@@ -47,6 +47,9 @@ Merge Requests에서 성능 회귀 문제를 잡기 위해서는, MRs에서 벤�
     이는 벤치마크 데이터 드리프트를 방지합니다.
     전체 개요는 [`--start-point-reset` 문서][start point reset]를 참조하세요.
     (예: `--start-point-reset`)
+    5. 하나의 파이프라인의 모든 작업이 MR 브랜치의 Head 하나를 공유하도록 GitLab CI/CD 사전 정의 변수를 사용하여 파이프라인 ID에 `--start-point-idempotency-key` 옵션 설정.
+    전체 개요는 [`--start-point-idempotency-key` 문서][start point idempotency key]를 참조하세요.
+    (예: `--start-point-idempotency-key "$CI_PIPELINE_ID"`)
 11. 테스트베드 이름에 `--testbed` 옵션 설정.
    이는 `image`에서 선택한 머신과 일치해야 할 것입니다.
    자세한 내용은 [`--tested` 문서][testbed option]를 참조하세요.
@@ -76,6 +79,7 @@ Merge Requests에서 성능 회귀 문제를 잡기 위해서는, MRs에서 벤�
 [start point hash]: /ko/docs/explanation/branches/#--start-point-hash-hash
 [start point clone thresholds]: /ko/docs/explanation/branches/#--start-point-clone-thresholds
 [start point reset]: /ko/docs/explanation/branches/#--start-point-reset
+[start point idempotency key]: /ko/docs/explanation/branches/#--start-point-idempotency-key-key
 [testbed option]: /ko/docs/explanation/testbeds/#--testbed-testbed
 [alert err]: /ko/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ko/docs/reference/bencher-metric-format/

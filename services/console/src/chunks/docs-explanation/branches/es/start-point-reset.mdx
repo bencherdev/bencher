@@ -21,6 +21,11 @@ Si se crea una nueva `branch` con un Punto de Inicio,
 entonces todos los datos más recientes y opcionalmente los Umbrales del `start-point` en el hash especificado se copian.
 Consulta [la opción `--start-point-max-versions`][start point max version option] y [la opción `--start-point-clone-thresholds`][start point clone thresholds option] para más detalles.
 
+Los restablecimientos de la misma `branch` con la misma [clave de idempotencia][start point idempotency key option] comparten un [Head][head] de `branch`,
+así que los jobs paralelos de una ejecución de CI no restablecen la `branch` uno sobre otro.
+Al ejecutarse en GitHub Actions, la clave se establece por ti al intento actual de la ejecución del workflow.
+Los pasos posteriores de la misma ejecución del workflow que restablecen la `branch` también usan ese Head, así que establece una clave diferente para un paso que necesite restablecer la `branch` de nuevo.
+
 Por ejemplo, si `feature_branch` existe sin un Punto de Inicio
 entonces al usar `--branch feature_branch --start-point-reset`
 haría:
@@ -36,3 +41,4 @@ haría:
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count
 [start point clone thresholds option]: #--start-point-clone-thresholds
+[start point idempotency key option]: #--start-point-idempotency-key-key

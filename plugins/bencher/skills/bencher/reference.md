@@ -15,6 +15,7 @@
 | `--start-point-max-versions <n>` | | 64 | Historical versions to include |
 | `--start-point-clone-thresholds` | | | Clone thresholds from start point |
 | `--start-point-reset` | | | Reset branch head to empty |
+| `--start-point-idempotency-key <key>` | `BENCHER_START_POINT_IDEMPOTENCY_KEY` | GitHub Actions run attempt | Resets with the same key share one branch head |
 
 ### Benchmark Configuration
 

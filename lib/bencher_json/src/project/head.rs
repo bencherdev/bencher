@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::BranchUuid;
 
 crate::typed_uuid::typed_uuid!(HeadUuid);
+crate::typed_uuid::typed_uuid!(HeadIdempotencyKey);
 crate::typed_uuid::typed_uuid!(VersionUuid);
 
 #[typeshare::typeshare]

@@ -1,0 +1,30 @@
+
+### `--start-point-idempotency-key <KEY>`
+
+<br />
+
+Use a chave especificada como chave de idempotência para [a flag `--start-point-reset`][start point reset option].
+A chave pode ser qualquer texto.
+Defina a opção `--start-point-idempotency-key` ou a variável de ambiente `BENCHER_START_POINT_IDEMPOTENCY_KEY`.
+Se `--start-point-reset` não estiver definido ou a chave estiver vazia, esta opção é ignorada.
+
+- Se nenhum [Head][head] do `branch` tiver a chave, a redefinição criará um novo Head do `branch` com a chave.
+- Se um Head do `branch` já tiver a chave, esse Head será usado e o `branch` não será redefinido novamente,
+  mesmo que o Ponto de Partida tenha mudado ou que esse Head tenha sido substituído desde então.
+
+Ao executar no GitHub Actions, a chave padrão é a tentativa atual da execução do workflow.
+Todos os jobs de uma execução do workflow compartilham um Head do `branch`, e executar o workflow novamente cria um novo Head.
+Etapas posteriores da mesma execução do workflow que redefinem o `branch` também usam esse Head, então defina uma chave diferente para uma etapa que precise redefinir o `branch` novamente.
+Para outros provedores de CI, defina a chave com um valor que seja o mesmo para todos os jobs de uma execução do pipeline
+(ex: `--start-point-idempotency-key "$CI_PIPELINE_ID"` no GitLab CI/CD).
+
+Por exemplo, se um workflow executa uma matriz de três jobs que usam cada um `--branch feature_branch --start-point main --start-point-reset --start-point-idempotency-key run-abc123`,
+então:
+
+1. O primeiro job a reportar cria um novo [Head][head] do `feature_branch` a partir de `main` com a chave de idempotência `run-abc123`
+2. Os outros dois jobs usam esse mesmo Head do `feature_branch`, já que ele tem a chave de idempotência `run-abc123`
+3. Os resultados dos três jobs aparecem juntos no `feature_branch`
+
+[head]: /pt/docs/explanation/benchmarking/#head
+
+[start point reset option]: #--start-point-reset

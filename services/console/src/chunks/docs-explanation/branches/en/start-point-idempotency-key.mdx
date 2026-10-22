@@ -1,0 +1,30 @@
+
+### `--start-point-idempotency-key <KEY>`
+
+<br />
+
+Use the specified key as the idempotency key for [the `--start-point-reset` flag][start point reset option].
+The key can be any text.
+Set either the `--start-point-idempotency-key` option or the `BENCHER_START_POINT_IDEMPOTENCY_KEY` environment variable.
+If `--start-point-reset` is not set or the key is empty, then this option is ignored.
+
+- If no `branch` [Head][head] has the key, then the reset will create a new `branch` Head with the key.
+- If a `branch` Head already has the key, then that Head will be used and the `branch` will not be reset again,
+  even if the Start Point has changed or that Head has since been replaced.
+
+When running in GitHub Actions, the key defaults to the current workflow run attempt.
+Every job in a workflow run shares one `branch` Head, and a re-run of the workflow creates a new Head.
+Later steps of the same workflow run that reset the `branch` also use that Head, so set a different key for a step that needs to reset the `branch` again.
+For other CI providers, set the key to a value that is the same for every job in a pipeline run
+(ex: `--start-point-idempotency-key "$CI_PIPELINE_ID"` in GitLab CI/CD).
+
+For example, if a workflow runs a matrix of three jobs that each use `--branch feature_branch --start-point main --start-point-reset --start-point-idempotency-key run-abc123`,
+then:
+
+1. The first job to report creates a new `feature_branch` [Head][head] from `main` with the idempotency key `run-abc123`
+2. The other two jobs use that same `feature_branch` Head, since it has the idempotency key `run-abc123`
+3. The results from all three jobs appear together on `feature_branch`
+
+[head]: /docs/explanation/benchmarking/#head
+
+[start point reset option]: #--start-point-reset

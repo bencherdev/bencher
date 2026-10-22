@@ -16,6 +16,7 @@ benchmark_mr_branch:
       --start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" \
       --start-point-clone-thresholds \
       --start-point-reset \
+      --start-point-idempotency-key "$CI_PIPELINE_ID" \
       --testbed debian:bullseye \
       --error-on-alert \
       --adapter json \

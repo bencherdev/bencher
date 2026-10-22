@@ -1,0 +1,30 @@
+
+### `--start-point-idempotency-key <KEY>`
+
+<br />
+
+Utilise la clé spécifiée comme clé d'idempotence pour [l'option `--start-point-reset`][start point reset option].
+La clé peut être n'importe quel texte.
+Définissez soit l'option `--start-point-idempotency-key`, soit la variable d'environnement `BENCHER_START_POINT_IDEMPOTENCY_KEY`.
+Si `--start-point-reset` n'est pas défini ou si la clé est vide, cette option est ignorée.
+
+- Si aucune [Tête][head] de `branche` n'a la clé, la réinitialisation créera une nouvelle Tête de `branche` avec la clé.
+- Si une Tête de `branche` a déjà la clé, cette Tête sera utilisée et la `branche` ne sera pas réinitialisée à nouveau,
+  même si le Point de Départ a changé ou si cette Tête a été remplacée depuis.
+
+Lors d'une exécution dans GitHub Actions, la clé par défaut est la tentative actuelle de l'exécution du workflow.
+Tous les jobs d'une exécution du workflow partagent une même Tête de `branche`, et une nouvelle exécution du workflow crée une nouvelle Tête.
+Les étapes suivantes de la même exécution du workflow qui réinitialisent la `branche` utilisent aussi cette Tête, donc définissez une clé différente pour une étape qui doit réinitialiser la `branche` à nouveau.
+Pour les autres fournisseurs de CI, définissez la clé sur une valeur identique pour chaque job d'une exécution du pipeline
+(ex : `--start-point-idempotency-key "$CI_PIPELINE_ID"` dans GitLab CI/CD).
+
+Par exemple, si un workflow exécute une matrice de trois jobs qui utilisent chacun `--branch feature_branch --start-point main --start-point-reset --start-point-idempotency-key run-abc123`,
+alors :
+
+1. Le premier job à rapporter crée une nouvelle [Tête][head] de `feature_branch` à partir de `main` avec la clé d'idempotence `run-abc123`
+2. Les deux autres jobs utilisent cette même Tête de `feature_branch`, puisqu'elle a la clé d'idempotence `run-abc123`
+3. Les résultats des trois jobs apparaissent ensemble sur `feature_branch`
+
+[head]: /fr/docs/explanation/benchmarking/#head
+
+[start point reset option]: #--start-point-reset

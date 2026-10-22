@@ -355,7 +355,7 @@ enum ToolKind {
     Update,
     /// Adds a report, and may replace threshold models and the branch head.
     Report,
-    /// An update that may reset the branch head, which starts a new head on every call.
+    /// An update that may reset the branch head, which starts a new head on every call without an idempotency key.
     Reset,
     /// A report that may also run a job, pulling its image from an outside registry
     /// and sending its callback to an outside URL.

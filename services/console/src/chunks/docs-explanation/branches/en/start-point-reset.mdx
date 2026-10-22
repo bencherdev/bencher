@@ -22,6 +22,11 @@ If a new `branch` is created with a Start Point,
 then all the most recent data and optionally Thresholds from the `start-point` at the specified hash are copied over.
 See [the `--start-point-max-versions` option][start point max version option] and [the `--start-point-clone-thresholds` option][start point clone thresholds option] for more details.
 
+Resets of the same `branch` with the same [idempotency key][start point idempotency key option] share one `branch` [Head][head],
+so the parallel jobs of a CI run do not reset the `branch` over each other.
+When running in GitHub Actions, the key is set for you to the current workflow run attempt.
+Later steps of the same workflow run that reset the `branch` also use that Head, so set a different key for a step that needs to reset the `branch` again.
+
 For example, if `feature_branch` exists without a Start Point
 then using `--branch feature_branch --start-point-reset`
 would:
@@ -37,3 +42,4 @@ would:
 [start point option]: #--branch-start-point-branch
 [start point max version option]: #--start-point-max-versions-count
 [start point clone thresholds option]: #--start-point-clone-thresholds
+[start point idempotency key option]: #--start-point-idempotency-key-key

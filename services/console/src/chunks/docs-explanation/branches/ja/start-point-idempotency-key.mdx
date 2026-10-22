@@ -1,0 +1,29 @@
+
+### `--start-point-idempotency-key <KEY>`
+
+<br />
+
+指定されたキーを[`--start-point-reset` フラグ][start point reset option]の冪等性キーとして使用します。
+キーには任意のテキストを使用できます。
+`--start-point-idempotency-key` オプションまたは `BENCHER_START_POINT_IDEMPOTENCY_KEY` 環境変数のいずれかを設定してください。
+`--start-point-reset` が設定されていない場合、またはキーが空の場合、このオプションは無視されます。
+
+- キーを持つ `branch` [Head][head] がない場合、リセットによってキーを持つ新しい `branch` Head が作成されます。
+- キーを持つ `branch` Head がすでにある場合、その Head が使用され、`branch` は再びリセットされません。
+  これは、スタートポイントが変更された場合や、その Head がその後置き換えられた場合でも同様です。
+
+GitHub Actions で実行する場合、キーのデフォルトは現在のワークフロー実行の試行です。
+ワークフロー実行のすべてのジョブは1つの `branch` Head を共有し、ワークフローを再実行すると新しい Head が作成されます。
+同じワークフロー実行の後続のステップで `branch` をリセットする場合も同じ Head が使用されるため、`branch` を再びリセットする必要があるステップには別のキーを設定してください。
+その他の CI プロバイダーでは、パイプライン実行のすべてのジョブで同じになる値をキーに設定してください。
+(例: GitLab CI/CD では `--start-point-idempotency-key "$CI_PIPELINE_ID"`)
+
+例えば、ワークフローがそれぞれ `--branch feature_branch --start-point main --start-point-reset --start-point-idempotency-key run-abc123` を使用する3つのジョブのマトリックスを実行する場合：
+
+1. 最初にレポートしたジョブが `main` から冪等性キー `run-abc123` を持つ新しい `feature_branch` [Head][head] を作成します
+2. その Head が冪等性キー `run-abc123` を持つため、残りの2つのジョブは同じ `feature_branch` Head を使用します
+3. 3つのジョブすべての結果が `feature_branch` にまとめて表示されます
+
+[head]: /ja/docs/explanation/benchmarking/#head
+
+[start point reset option]: #--start-point-reset

@@ -52,6 +52,11 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
     Это предотвратит искажение данных тестов производительности.
     Просмотрите [документацию по `--start-point-reset`][start point reset] для полного обзора.
     (например, `--start-point-reset`)
+    5. Установите опцию `--start-point-idempotency-key` на ID пайплайна,
+    используя [предопределенную переменную GitLab CI/CD][gitlab ci cd redefined variables],
+    чтобы все задания одного пайплайна использовали одну Голову ветки запроса на слияние.
+    Просмотрите [документацию по `--start-point-idempotency-key`][start point idempotency key] для полного обзора.
+    (например, `--start-point-idempotency-key "$CI_PIPELINE_ID"`)
 11. Установите опцию `--testbed` на имя тестовой среды.
    Это должно вероятно соответствовать выбранной машине в `image`.
    Просмотрите [документацию по `--testbed`][testbed option] для более подробной информации.
@@ -81,6 +86,7 @@ import MergeRequestsClosed from "./merge-requests-closed.mdx";
 [start point hash]: /ru/docs/explanation/branches/#--start-point-hash-hash
 [start point clone thresholds]: /ru/docs/explanation/branches/#--start-point-clone-thresholds
 [start point reset]: /ru/docs/explanation/branches/#--start-point-reset
+[start point idempotency key]: /ru/docs/explanation/branches/#--start-point-idempotency-key-key
 [testbed option]: /ru/docs/explanation/testbeds/#--testbed-testbed
 [alert err]: /ru/docs/explanation/thresholds/#--error-on-alert
 [bmf]: /ru/docs/reference/bencher-metric-format/

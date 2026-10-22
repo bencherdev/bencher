@@ -61,6 +61,7 @@ diesel::table! {
         uuid -> Text,
         branch_id -> Integer,
         start_point_id -> Nullable<Integer>,
+        idempotency_key -> Nullable<Text>,
         created -> BigInt,
         replaced -> Nullable<BigInt>,
     }

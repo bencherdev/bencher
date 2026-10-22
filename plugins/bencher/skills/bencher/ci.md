@@ -148,6 +148,7 @@ benchmark_mr:
         --start-point-hash "$CI_MERGE_REQUEST_TARGET_BRANCH_SHA" \
         --start-point-clone-thresholds \
         --start-point-reset \
+        --start-point-idempotency-key "$CI_PIPELINE_ID" \
         --testbed gitlab-ci \
         --error-on-alert \
         --format html \
@@ -188,6 +189,7 @@ When benchmarking a PR/MR branch:
 
 - `--start-point-clone-thresholds`: Copy threshold configuration from the base branch
 - `--start-point-reset`: Reset the branch head so only PR data is included
+- `--start-point-idempotency-key`: Share one reset branch head between the parallel jobs of one CI run. GitHub Actions sets it to the workflow run attempt. Elsewhere, use a pipeline ID (ex: `BENCHER_START_POINT_IDEMPOTENCY_KEY="$CI_PIPELINE_ID"`)
 
 ## Branch Cleanup
 
