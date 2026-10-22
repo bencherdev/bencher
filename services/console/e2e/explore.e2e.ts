@@ -377,10 +377,9 @@ test("Retry reads the page again when the server no longer has the plot's code",
 	expect(thrown).toEqual([]);
 });
 
-// Kills a Retry that imports the plot again in place after one of the plot's
-// own imports failed: that module stays failed for the page's life, so only
-// reading the page again draws the plot.
-test("Retry reads the page again when one of the plot's own imports did not load", async ({
+// Kills a Retry that does not draw the plot, or reads the whole page again to
+// do it, after one of the plot's own imports failed.
+test("Retry draws the plot in place when one of the plot's own imports did not load", async ({
 	page,
 	request,
 }) => {
@@ -397,13 +396,10 @@ test("Retry reads the page again when one of the plot's own imports did not load
 	await page.evaluate(() => {
 		Object.assign(window, { stayed: true });
 	});
-	await Promise.all([
-		page.waitForEvent("load"),
-		failed.getByRole("button", { name: "Retry" }).click(),
-	]);
-	expect(await page.evaluate(() => "stayed" in window)).toBe(false);
+	await failed.getByRole("button", { name: "Retry" }).click();
 	await expect(plot(page)).toHaveAccessibleName("2 lines");
 	await expect(failed).toHaveCount(0);
+	expect(await page.evaluate(() => "stayed" in window)).toBe(true);
 	expect(thrown).toEqual([]);
 });
 
