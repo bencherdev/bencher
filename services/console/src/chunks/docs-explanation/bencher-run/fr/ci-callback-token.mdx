@@ -5,9 +5,13 @@
 Optionnel : Définit le jeton d'authentification utilisé par le callback d'un [Job sur matériel dédié][job] détaché.
 
 Lorsque vous utilisez [le drapeau `--detach`][detach] et [l'option `--github-actions`](#--github-actions-github_token),
-cette option doit être définie sur un [jeton d'accès personnel à granularité fine][github fine-grained token]
+le serveur API de Bencher déclenche un workflow [`repository_dispatch`][github repository dispatch] lorsque le Job se termine.
+Pour un Projet avec un [dépôt lié][pull requests on bare metal], Bencher crée le jeton lui-même, donc cette option n'est pas nécessaire.
+Pour utiliser votre propre jeton à la place, définissez cette option sur un [jeton d'accès personnel à granularité fine][github fine-grained token]
 pour le dépôt avec au moins la permission `contents: write`.
-Cela permettra au serveur API de Bencher de déclencher un workflow [`repository_dispatch`][github repository dispatch] à l'aide du jeton.
+Bencher envoie alors l'événement `repository_dispatch` avec ce jeton, que le Projet ait un dépôt lié ou non.
+La CLI exige cette option sur GitHub Enterprise Server et avec un serveur API de Bencher antérieur à `v0.6.14`.
+Sans elle, une exécution détachée d'un Projet `claimed` est refusée si le serveur n'a pas d'application GitHub, si le Projet n'a pas de dépôt lié ou si son dépôt lié est déconnecté.
 Voir [Pull Requests sur matériel dédié dans GitHub Actions][pull requests on bare metal] pour un aperçu complet.
 
 > 🐰 Vous ne pouvez pas simplement utiliser le `GITHUB_TOKEN` ici, car il expire dès que le workflow en cours se termine !

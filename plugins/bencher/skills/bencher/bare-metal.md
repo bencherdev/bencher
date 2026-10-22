@@ -94,7 +94,7 @@ bencher run \
 | `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, only for a claimed project: a callback to exactly `https://api.github.com/repos/<OWNER>/<REPO>/dispatches` with an `Authorization: Bearer <token>` header and `"event_type": "bencher_run"` in its body goes out on any plan, any other callback needs a Bencher Plus plan, and otherwise the callback is skipped; use only a URL the user provides (requires `--image` and `--detach`, conflicts with `--github-actions`) |
 | `--callback-header '<NAME: VALUE>'` | Callback request header, quoted as one argument; use only headers the user provides (repeatable, requires `--callback-url`) |
 | `--callback-body '<json>'` | Callback JSON body, quoted as one argument: `{{ job.uuid }}`, `{{ job.status }}`, `{{ report.uuid }}`, `{{ project.uuid }}`, `{{ project.name }}`, and `{{ project.slug }}` are replaced anywhere inside a string, a string that is exactly `{{ report }}` becomes the whole report (once per body), and any other name in braces is refused; optional, and without it the body is the report (requires `--callback-url`) |
-| `--ci-callback-token <token>` | With `--detach` and `--github-actions`, the token for the `repository_dispatch` the CLI composes in place of `--callback-*` (see `ci.md`) |
+| `--ci-callback-token <token>` | With `--detach` and `--github-actions`, the token for the `repository_dispatch` the CLI composes in place of `--callback-*`; without it, the project's linked repository supplies the token (see `ci.md`) |
 | `--job <uuid>` | Wait for a submitted job, then post its results (requires `--project`; `--job-timeout` is the wait budget; refuses report options, including from `BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, and `BENCHER_CMD`) |
 
 ## Build Time and File Size Tracking
@@ -112,8 +112,10 @@ Submit the job and exit immediately (useful in CI where you check results later)
 bencher run --image my-bench:latest --detach "cargo bench"
 ```
 
-On GitHub Actions, `--detach` with `--github-actions` requires `--ci-callback-token`, so a second
-workflow can attach with `bencher run --job` and complete the GitHub Check (see `ci.md`).
+On GitHub Actions, `--detach` with `--github-actions` sends a `repository_dispatch` when the job
+finishes, with a token Bencher mints for the project's linked repository or with
+`--ci-callback-token`, so a second workflow can attach with `bencher run --job` and complete the
+GitHub Check (see `ci.md`).
 
 ## Environment Variables
 

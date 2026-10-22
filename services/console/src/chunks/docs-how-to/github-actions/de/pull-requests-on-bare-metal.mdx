@@ -20,6 +20,25 @@ Kombinieren Sie dieses Muster mit
 dem obigen Workflow [Pull Requests aus Forks][pull requests from forks],
 um Benchmarking auf dedizierter Hardware für Fork-PRs zu erhalten.
 
+Verknüpfen Sie zuerst einmalig das Repository mit dem Projekt:
+
+1. Öffnen Sie in der Bencher Console die `Settings` des Projekts und dann `Connections`.
+2. Klicken Sie auf der GitHub-Karte auf `Link repository`.
+   GitHub bringt Sie zurück zu `Connections`, wo die Karte jedes Repository auflistet, in das Sie pushen können.
+3. Klicken Sie neben dem Repository auf `Link`.
+   Wenn es nicht aufgeführt ist, klicken Sie auf `Install on GitHub` und geben Sie der App Zugriff darauf.
+   Wenn `Approval required` angezeigt wird, klicken Sie auf `Approve on GitHub`, genehmigen Sie die neuen Berechtigungen der App,
+   öffnen Sie dann erneut `Connections` und klicken Sie auf `Link repository`.
+
+Zum Verknüpfen benötigen Sie die Rolle Maintainer im Projekt, die Leader der Organisation und Server-Administratoren innehaben, und Push-Zugriff auf das Repository.
+Die GitHub App von Bencher benötigt Lese- und Schreibzugriff auf die Inhalte des Repositorys,
+weil `repository_dispatch` nichts Geringeres akzeptiert.
+Wenn ein Job beendet ist, erstellt Bencher ein Token für das verknüpfte Repository
+und sendet damit das `repository_dispatch`-Ereignis.
+Wenn die GitHub-Karte `Disconnected` anzeigt, klicken Sie auf `Install on GitHub` und geben Sie der App erneut Zugriff auf das Repository
+oder heben Sie die Sperrung ihrer Installation auf, dann wird die Verknüpfung wiederhergestellt.
+Für Bencher Self-Hosted benötigt der Server [eine eigene GitHub App][github app] und Version `v0.6.14` oder neuer.
+
 <PullRequestsOnBareMetalSubmitCode />
 
 1. Erstellen Sie eine erste GitHub Actions `workflow`-Datei.
@@ -74,14 +93,17 @@ um Benchmarking auf dedizierter Hardware für Fork-PRs zu erhalten.
 19. Setzen Sie die `--github-actions`-Option auf das GitHub API-Authentifizierungstoken, um die GitHub-Prüfung zu starten, unter Verwendung der [GitHub Actions `GITHUB_TOKEN` Umgebungsvariable][github token].
     Siehe [die `--github-actions` Dokumentation][github actions option] für mehr Details.
     (z.B.: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-20. Setzen Sie die `--ci-callback-token`-Option auf das **Repository**-Geheimnis `BENCHER_CALLBACK_TOKEN`,
-    damit Bencher das `repository_dispatch`-Ereignis senden kann, wenn der Job beendet ist.
-    Siehe [die `--ci-callback-token` Dokumentation][ci callback token option] für weitere Details.
-    (z.B.: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-21. Geben Sie den Benchmark-Befehl an, der im Image ausgeführt wird.
+20. Geben Sie den Benchmark-Befehl an, der im Image ausgeführt wird.
     Der Befehl wird an den Entrypoint des Images übergeben, falls es einen hat (siehe [die Option `--entrypoint`][entrypoint option]).
     Siehe [Benchmark Befehl][command argument] für einen vollständigen Überblick.
     (z.B.: `bencher mock`)
+
+Setzen Sie auf GitHub Enterprise Server, oder um Ihr eigenes Token zu behalten, die `--ci-callback-token`-Option
+auf ein [feingranulares persönliches Zugriffstoken][github fine-grained token]
+mit Lese- und Schreibzugriff auf die Inhalte des Repositorys, gespeichert als **Repository**-Geheimnis `BENCHER_CALLBACK_TOKEN`.
+Bencher sendet das `repository_dispatch`-Ereignis dann mit diesem Token, ob das Projekt ein verknüpftes Repository hat oder nicht.
+Siehe [die `--ci-callback-token` Dokumentation][ci callback token option] für weitere Details.
+(z.B.: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
 
 <PullRequestsOnBareMetalAttachCode />
 
@@ -144,6 +166,7 @@ um Benchmarking auf dedizierter Hardware für Fork-PRs zu erhalten.
 [github intermediate environment variable]: https://docs.github.com/de/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
 
 [bare metal]: /de/docs/explanation/bare-metal/
+[github app]: /de/docs/how-to/github-app/
 [pricing]: /pricing
 [bencher run]: /de/docs/explanation/bencher-run/
 [project option]: /de/docs/explanation/bencher-run/#--project-project

@@ -19,6 +19,21 @@ GitHub Actions 提供自托管运行器，
 将此模式与上面的[来自 Fork 的拉取请求][pull requests from forks]工作流结合使用，
 即可为 Fork PR 提供裸机基准测试。
 
+首先，将仓库与项目关联一次：
+
+1. 在 Bencher 控制台中，打开项目的 `Settings`，然后打开 `Connections`。
+2. 在 GitHub 卡片上，点击 `Link repository`。
+   GitHub 会将您带回 `Connections`，卡片会列出您可以推送的每个仓库。
+3. 点击仓库旁边的 `Link`。
+   如果仓库不在列表中，请点击 `Install on GitHub`，并授予应用对该仓库的访问权限。
+   如果仓库显示 `Approval required`，请点击 `Approve on GitHub` 并批准应用的新权限，然后重新打开 `Connections` 并点击 `Link repository`。
+
+关联仓库需要项目的 Maintainer 角色（组织的 Leader 和服务器管理员拥有该角色）以及对该仓库的推送权限。
+由于 `repository_dispatch` 不接受更低的权限，Bencher 的 GitHub App 需要对仓库内容的读写权限。
+Job 完成时，Bencher 会为关联的仓库创建一个令牌，并使用该令牌发送 `repository_dispatch` 事件。
+如果 GitHub 卡片显示 `Disconnected`，请点击 `Install on GitHub` 并重新授予应用对该仓库的访问权限，或者解除应用安装的暂停，关联随即恢复。
+对于 Bencher Self-Hosted，服务器需要[自己的 GitHub App][github app]以及 `v0.6.14` 或更高版本。
+
 <PullRequestsOnBareMetalSubmitCode />
 
 1. 创建第一个 GitHub Actions `workflow` 文件。
@@ -73,14 +88,16 @@ GitHub Actions 提供自托管运行器，
 19. 使用 [GitHub Actions `GITHUB_TOKEN` 环境变量][github token] 将 `--github-actions` 选项设置为 GitHub API 身份验证令牌，以启动 GitHub 检查。
     查看 [`--github-actions` 文档][github actions option] 以获取详细信息。
     （例如：`--github-actions '${{ secrets.GITHUB_TOKEN }}'`）
-20. 将 `--ci-callback-token` 选项设置为 `BENCHER_CALLBACK_TOKEN` **仓库**密钥，
-    以便 Bencher 能在 Job 完成时发送 `repository_dispatch` 事件。
-    查看 [`--ci-callback-token` 文档][ci callback token option] 以获取详细信息。
-    （例如：`--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`）
-21. 指定在镜像中运行的基准测试命令。
+20. 指定在镜像中运行的基准测试命令。
     如果镜像有入口点，该命令会传给该入口点（参见 [`--entrypoint` 选项][entrypoint option]）。
     查看 [基准测试命令][command argument] 以获取完整概览。
     （例如：`bencher mock`）
+
+在 GitHub Enterprise Server 上，或者要继续使用您自己的令牌，请将 `--ci-callback-token` 选项设置为一个对仓库内容具有读写权限的[细粒度个人访问令牌][github fine-grained token]，
+并将其存储为 `BENCHER_CALLBACK_TOKEN` **仓库**密钥。
+无论项目是否有关联的仓库，Bencher 都会使用该令牌发送 `repository_dispatch` 事件。
+查看 [`--ci-callback-token` 文档][ci callback token option] 以获取详细信息。
+（例如：`--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`）
 
 <PullRequestsOnBareMetalAttachCode />
 
@@ -140,6 +157,7 @@ GitHub Actions 提供自托管运行器，
 [github intermediate environment variable]: https://docs.github.com/zh/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
 
 [bare metal]: /zh/docs/explanation/bare-metal/
+[github app]: /zh/docs/how-to/github-app/
 [pricing]: /pricing
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
