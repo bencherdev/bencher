@@ -7,6 +7,10 @@ Run a benchmark command and submit results:
 bencher run "cargo bench"
 ```
 
+Without an API key, results go to a public `unclaimed` project that anyone can
+view and post results to. With a user API key, the project goes under the user's
+personal organization.
+
 The default adapter (`magic`) auto-detects the output format.
 To verify your setup without a real benchmark harness:
 ```bash

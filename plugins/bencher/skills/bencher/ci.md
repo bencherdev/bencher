@@ -28,36 +28,52 @@ as PR comments.
 
 ### Pull Request (runs on PR)
 
+Run the PR workflow on `pull_request` for same-repository PRs only, and never on
+`pull_request_target` with secrets.
+
 ```yaml
-- uses: bencherdev/bencher@main
-- run: |
-    bencher run \
-      --project my-project \
-      --branch "${{ github.head_ref }}" \
-      --hash "${{ github.event.pull_request.head.sha }}" \
-      --start-point "${{ github.base_ref }}" \
-      --start-point-hash "${{ github.event.pull_request.base.sha }}" \
-      --start-point-clone-thresholds \
-      --start-point-reset \
-      --testbed github-actions \
-      --error-on-alert \
-      --github-actions "${{ secrets.GITHUB_TOKEN }}" \
-      "cargo bench"
-  env:
-    BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+# on: pull_request
+benchmark_pr:
+  if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+  permissions:
+    checks: write
+    contents: read
+    pull-requests: write
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v6
+    - uses: bencherdev/bencher@main
+    - run: |
+        bencher run \
+          --project my-project \
+          --branch "$GITHUB_HEAD_REF" \
+          --hash "$HEAD_SHA" \
+          --start-point "$GITHUB_BASE_REF" \
+          --start-point-hash "$BASE_SHA" \
+          --start-point-clone-thresholds \
+          --start-point-reset \
+          --testbed github-actions \
+          --error-on-alert \
+          --github-actions "$GITHUB_TOKEN" \
+          "cargo bench"
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 ```
 
 ### PR Comment Options
 
 | Flag | Purpose |
 |------|---------|
-| `--github-actions <token>` | Enable PR comments (pass `${{ secrets.GITHUB_TOKEN }}`) |
+| `--github-actions <token>` | Enable PR comments (pass `secrets.GITHUB_TOKEN` through `env:`) |
 | `--ci-only-thresholds` | Only post if a threshold exists for the branch/testbed/measure |
 | `--ci-only-on-alert` | Only post when an alert is generated |
 | `--ci-public-links` | Use public URLs (no login required to view) |
 | `--ci-id <id>` | Custom identifier for the CI comment, used in place of the project name in the GitHub Check name (`Bencher Report (<id>)`) |
 | `--ci-number <n>` | Issue/PR number to post on |
-| `--ci-callback-token <token>` | Fine-grained personal access token with contents write on the repository, for the `repository_dispatch` a detached bare metal run sends (requires `--github-actions` and `--detach`) |
+| `--ci-callback-token <token>` | Fine-grained personal access token for this one repository with only contents write, for the `repository_dispatch` a detached bare metal run sends (requires `--github-actions` and `--detach`) |
 
 ### Bare Metal Without a Waiting Runner (Bencher Plus)
 
@@ -68,33 +84,50 @@ completes the check and the PR comment:
 
 ```yaml
 # Workflow 1, on pull_request
-- uses: bencherdev/bencher@main
-- run: |
-    bencher run \
-      --project my-project \
-      --branch "${{ github.head_ref }}" \
-      --hash "${{ github.event.pull_request.head.sha }}" \
-      --image my-bench:latest \
-      --detach \
-      --github-actions "${{ secrets.GITHUB_TOKEN }}" \
-      --ci-callback-token "${{ secrets.BENCHER_CALLBACK_TOKEN }}"
-  env:
-    BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+submit_pr_benchmarks:
+  if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+  permissions:
+    checks: write
+    contents: read
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v6
+    - uses: bencherdev/bencher@main
+    - run: |
+        bencher run \
+          --project my-project \
+          --branch "$GITHUB_HEAD_REF" \
+          --hash "$HEAD_SHA" \
+          --image my-bench:latest \
+          --detach \
+          --github-actions "$GITHUB_TOKEN" \
+          --ci-callback-token "$BENCHER_CALLBACK_TOKEN"
+      env:
+        BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+        BENCHER_CALLBACK_TOKEN: ${{ secrets.BENCHER_CALLBACK_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 ```
 
 ```yaml
 # Workflow 2, on repository_dispatch with types [bencher_run]
-# permissions: pull-requests: write, checks: write
-- uses: bencherdev/bencher@main
-- run: |
-    bencher run \
-      --project my-project \
-      --job "$JOB_UUID" \
-      --github-actions "${{ secrets.GITHUB_TOKEN }}" \
-      --error-on-alert
-  env:
-    BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
-    JOB_UUID: ${{ github.event.client_payload.bencher.job }}
+attach_pr_benchmarks:
+  permissions:
+    checks: write
+    pull-requests: write
+  runs-on: ubuntu-latest
+  steps:
+    - uses: bencherdev/bencher@main
+    - run: |
+        bencher run \
+          --project my-project \
+          --job "$JOB_UUID" \
+          --github-actions "$GITHUB_TOKEN" \
+          --error-on-alert
+      env:
+        BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        JOB_UUID: ${{ github.event.client_payload.bencher.job }}
 ```
 
 The payload's `bencher` object holds the Job UUID (`job`) and the Project slug (`project`), and the attach reads the rest of it.
@@ -108,6 +141,9 @@ For repos that want benchmarks without pre-creating the Bencher project:
 ```bash
 bencher run --ci-on-the-fly "cargo bench"
 ```
+
+With a user API key, the new project goes under the user's personal organization.
+Without a key, it is a public `unclaimed` project that anyone can view and post results to.
 
 ## GitLab CI/CD
 
@@ -132,7 +168,11 @@ benchmark_main:
         "cargo bench"
 ```
 
-### Merge Request Job
+### Merge Request Jobs
+
+The job that runs MR code saves the report as an artifact; a separate job that
+never checks out the MR posts it.
+Add `report` after `benchmark` in your `stages:`.
 
 ```yaml
 benchmark_mr:
@@ -141,7 +181,7 @@ benchmark_mr:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   script:
     - |
-      REPORT=$(bencher run \
+      bencher run \
         --project my-project \
         --branch "$CI_COMMIT_REF_NAME" \
         --start-point "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" \
@@ -151,17 +191,38 @@ benchmark_mr:
         --start-point-idempotency-key "$CI_PIPELINE_ID" \
         --testbed gitlab-ci \
         --error-on-alert \
+        --quiet \
         --format html \
-        "cargo bench")
+        "cargo bench" > report.html
+  artifacts:
+    when: always
+    paths:
+      - report.html
+
+post_mr_report:
+  stage: report
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+  dependencies:
+    - benchmark_mr
+  environment:
+    name: mr-report
+    action: prepare
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - '[ -s report.html ] || exit 0'
     - |
-      curl --request POST \
+      curl --fail --request POST \
         --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
-        --data-urlencode "body=$REPORT" \
+        --data-urlencode "body@report.html" \
         "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes"
 ```
 
 `$GITLAB_ACCESS_TOKEN` is a project access token with the `api` scope, stored as a
-masked CI/CD variable. The built-in `CI_JOB_TOKEN` cannot post MR notes.
+masked CI/CD variable scoped to the `mr-report` environment, so the job that runs
+MR code does not receive it. The built-in `CI_JOB_TOKEN` cannot post MR notes.
 
 ## Generic CI (Any Platform)
 
