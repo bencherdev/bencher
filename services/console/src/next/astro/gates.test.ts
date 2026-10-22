@@ -7,6 +7,8 @@ import { VERSION_KEY } from "../memory";
 import { profilePath, projectPath } from "../paths";
 import AccountGate from "./AccountGate.astro";
 import ClassicGate from "./ClassicGate.astro";
+import GitHubReturn from "./GitHubReturn.astro";
+import { takeGitHubReturn } from "./githubReturn";
 import Landing from "./Landing.astro";
 import NextHead from "./NextHead.astro";
 
@@ -273,5 +275,60 @@ describe("Landing", () => {
 			}),
 		};
 		expect(await land({ ...expired, ...versions("hashbrown", 1) })).toEqual([]);
+	});
+});
+
+describe("GitHubReturn", () => {
+	/** The return page's first script, run on a page at `url` for a reader whose storage is `storage`. */
+	const land = async (url: string, storage: Record<string, string>) => {
+		const page = new Window().document;
+		page.body.innerHTML = await container.renderToString(GitHubReturn);
+		const source = page.querySelector("script")?.textContent ?? "";
+		const { pathname, search, hash } = new URL(url);
+		const replaced: string[] = [];
+		const memory = {};
+		new Function("window", "localStorage", "location", "history", source)(
+			memory,
+			{ getItem: (key: string) => storage[key] ?? null },
+			{ pathname, search, hash },
+			{
+				state: null,
+				replaceState: (_state: unknown, _title: string, to: string) =>
+					replaced.push(to),
+			},
+		);
+		return { replaced, memory };
+	};
+
+	// Kills a code or a state left in the URL for any reader, signed in or
+	// not, where the sign-in guard, a session that ends as the page loads, or
+	// a sign out in another tab carries it to sign in and the way back it
+	// keeps; and a page that drops what the exchange needs, or keeps it in
+	// memory once the exchange took it.
+	test("the code and the state leave the URL at once, for the exchange alone", async () => {
+		for (const storage of [
+			{
+				[USER_KEY]: JSON.stringify({
+					token: "tok",
+					user: { uuid: "u" },
+					expiration: "2999-01-01T00:00:00Z",
+				}),
+			},
+			{},
+		]) {
+			const { replaced, memory } = await land(
+				"https://bencher.dev/next/console/github?code=c0de&state=s7a7e",
+				storage,
+			);
+			expect(replaced).toEqual(["/next/console/github"]);
+			expect(takeGitHubReturn(memory)).toEqual({
+				code: "c0de",
+				state: "s7a7e",
+			});
+			expect(takeGitHubReturn(memory)).toEqual({
+				code: undefined,
+				state: undefined,
+			});
+		}
 	});
 });

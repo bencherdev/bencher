@@ -1,4 +1,4 @@
-export type Section = "general" | "dimensions" | "keys";
+export type Section = "general" | "dimensions" | "keys" | "connections";
 
 /** The rail's sections, in order, each with its path under the project. */
 export const SECTIONS: readonly {
@@ -9,6 +9,7 @@ export const SECTIONS: readonly {
 	{ section: "general", label: "General", path: "settings" },
 	{ section: "dimensions", label: "Dimensions", path: "branches" },
 	{ section: "keys", label: "Keys", path: "keys" },
+	{ section: "connections", label: "Connections", path: "connections" },
 ];
 
 /** The section of Settings' page a path draws. */
@@ -22,6 +23,8 @@ export const sectionOf = (rest: string[]): Section | undefined => {
 			return "general";
 		case "keys":
 			return "keys";
+		case "connections":
+			return "connections";
 		default:
 			return undefined;
 	}

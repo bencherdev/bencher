@@ -52,8 +52,8 @@ export const TABS: readonly { tab: Tab; label: string; segments: string[] }[] =
 		{
 			tab: "settings",
 			label: "Settings",
-			// Dimensions and keys live in Settings.
-			segments: ["settings", ...DIMENSIONS, "keys"],
+			// Dimensions, keys, and connections live in Settings.
+			segments: ["settings", ...DIMENSIONS, "keys", "connections"],
 		},
 	];
 
@@ -100,6 +100,7 @@ export type PageName =
 	| "OrgBilling"
 	| "Organizations"
 	| "NewProject"
+	| "GitHub"
 	| "NotFound";
 
 /** The page that draws a project path, from its segments after the project. */

@@ -13,6 +13,7 @@ import ShellPaint from "../../../../../next/astro/ShellPaint.astro";
 import { drawsPlot } from "../../../../../next/explore/request";
 import { pageName, parseNextPath, tabOf } from "../../../../../next/paths";
 import { modulePreloads } from "../../../../../next/preloads";
+import { sectionOf } from "../../../../../next/settings/section";
 import { exploreSearchFromClassic } from "../../../../../next/query/classic";
 import { decodeQuery, readsExplore } from "../../../../../next/query/query";
 import Shell from "../../../../../next/shell/Shell";
@@ -45,6 +46,13 @@ const plot =
 	page === "Alert" ||
 	(page === "Explore" &&
 		drawsPlot(decodeQuery(exploreSearchFromClassic(Astro.url.search))));
+// Settings loads a section's code of its own only when the link opens it.
+const parts = [
+	...(plot ? ["plot/Plot"] : []),
+	...(place && sectionOf(place.rest) === "connections"
+		? ["settings/Connections"]
+		: []),
+];
 // A metric's landing replaces itself with Explore on its line, whose code it asks for too.
 const preloads =
 	page === "Metric"
@@ -54,7 +62,7 @@ const preloads =
 					...modulePreloads("Explore", ["plot/Plot", "metric/explore"]),
 				]),
 			]
-		: modulePreloads(page, plot ? ["plot/Plot"] : []);
+		: modulePreloads(page, parts);
 ---
 
 <!doctype html>
