@@ -288,17 +288,18 @@ describe("what the page knows", () => {
 
 describe("legacy tokens", () => {
 	// Kills a link drawn at no tokens, a confirmation asked with nothing to
-	// revoke, an email change held back for one, and a session kept after
-	// the email it was signed in with is gone.
-	test("with none, there is no link and an email change saves and signs out", async () => {
-		const { api, sent } = userApi(0);
+	// revoke, and an email change held back for one.
+	test("with none, there is no link and an email change asks nothing first", async () => {
+		const { api, sent } = userApi(0, async () => USER);
 		mount(api);
 
 		await expect.element(textbox("Email")).toHaveValue(USER.email);
 		await textbox("Email").fill("muriel@courage.example");
 		await save().click();
 
-		await expect.poll(() => signedOut).toBe(1);
+		await expect
+			.element(page.getByRole("status"))
+			.toHaveTextContent("Confirm link sent to muriel@courage.example");
 		expect(sent.map(({ body }) => body)).toEqual([
 			{ email: "muriel@courage.example" },
 		]);
@@ -342,6 +343,55 @@ describe("legacy tokens", () => {
 		expect(page.getByRole("alert").query()).toBeNull();
 	});
 
+	// Kills a reader signed out for an email change that waits on its confirm
+	// link, a field left showing an email not yet theirs, a status that does
+	// not say where the link went or also says Saved, and one that outlives
+	// the next edit.
+	test("an email change the API holds for its confirm link keeps the reader signed in", async () => {
+		const { api, sent } = userApi(0, async () => USER);
+		mount(api);
+
+		await textbox("Email").fill("muriel@courage.example");
+		await save().click();
+
+		await expect
+			.element(page.getByRole("status"))
+			.toHaveTextContent("Confirm link sent to muriel@courage.example");
+		await expect
+			.element(page.getByRole("status"))
+			.not.toHaveTextContent("Saved");
+		await expect.element(textbox("Email")).toHaveValue(USER.email);
+		expect(sent.map(({ body }) => body)).toEqual([
+			{ email: "muriel@courage.example" },
+		]);
+		expect(signedOut).toBe(0);
+
+		await textbox("Name").fill("Muriel Courage");
+		await expect
+			.poll(() => page.getByText(/^Confirm link sent/).query())
+			.toBeNull();
+	});
+
+	// Kills a case-only edit, which the API reads as the same email, taken for
+	// a change: signed out for nothing, or asked to revoke legacy tokens.
+	test("a case-only email edit is saved, with no confirmation and no sign out", async () => {
+		const { api, sent } = userApi(2, async (sent) => ({
+			...USER,
+			...(sent.body as object),
+			email: USER.email,
+		}));
+		mount(api);
+
+		await expect.element(legacyLink()).toHaveTextContent("2 legacy tokens");
+		await textbox("Email").fill("Muriel@Nowhere.Example");
+		await save().click();
+
+		await expect.element(page.getByRole("status")).toHaveTextContent("Saved");
+		expect(page.getByRole("alertdialog").query()).toBeNull();
+		expect(sent).toHaveLength(1);
+		expect(signedOut).toBe(0);
+	});
+
 	// Kills an admin signed out for changing another user's email, and that
 	// user kept as the reader.
 	test("another user's email change keeps the reader signed in", async () => {
@@ -361,9 +411,15 @@ describe("legacy tokens", () => {
 	// a phone, an email change sent before the reader confirms, a Cancel that
 	// sends it anyway, and a confirmation asked for a change that revokes
 	// nothing.
-	// The session ends only once the change is made.
 	test("with some, a link counts them and an email change confirms first", async () => {
-		const { api, sent } = userApi(2);
+		// The API holds an email change for its confirm link and makes any other.
+		let current = USER;
+		const { api, sent } = userApi(2, async (change) => {
+			if (!(change.body as { email?: string }).email) {
+				current = { ...current, ...(change.body as object) };
+			}
+			return current;
+		});
 		mount(api);
 
 		await expect.element(legacyLink()).toHaveTextContent("2 legacy tokens");
@@ -392,11 +448,13 @@ describe("legacy tokens", () => {
 			.element(textbox("Email"))
 			.toHaveValue("muriel@courage.example");
 
-		expect(signedOut).toBe(0);
 		await save().click();
 		await page.getByRole("button", { name: "Change email" }).click();
-		await expect.poll(() => signedOut).toBe(1);
+		await expect
+			.element(page.getByRole("status"))
+			.toHaveTextContent("Confirm link sent to muriel@courage.example");
 		expect(sent[1]?.body).toEqual({ email: "muriel@courage.example" });
+		expect(signedOut).toBe(0);
 	});
 });
 

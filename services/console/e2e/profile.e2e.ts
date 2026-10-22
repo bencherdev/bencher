@@ -97,8 +97,8 @@ test.describe("Profile", () => {
 
 	// Kills an email change sent before the reader confirms the revocation, a
 	// count of legacy tokens read from anything but the tokens list, and a
-	// session kept once the email it was signed in with is gone.
-	test("an email change with legacy tokens confirms before it is sent, then signs out", async ({
+	// reader signed out while the change waits for its confirm link.
+	test("an email change with legacy tokens confirms before it is sent, then waits for its link", async ({
 		newContext,
 		request,
 	}) => {
@@ -106,7 +106,8 @@ test.describe("Profile", () => {
 		const page = await readerPage(newContext, reader);
 		const { slug, uuid } = reader.user;
 		await twoLegacyTokens(page, slug);
-		// A user key cannot change an email, so the API keeps it and answers as if it had.
+		// A user key cannot change an email; the API holds a session's change for
+		// its confirm link and answers with the current email, as here.
 		const sent: unknown[] = [];
 		await page.route(`${seed.api_url}/v0/users/${uuid}`, async (route) => {
 			if (route.request().method() !== "PATCH") {
@@ -115,10 +116,7 @@ test.describe("Profile", () => {
 			}
 			sent.push(route.request().postDataJSON());
 			const response = await route.fetch({ postData: "{}" });
-			await route.fulfill({
-				response,
-				json: { ...reader.user, email: "courage@bagge.example" },
-			});
+			await route.fulfill({ response, json: reader.user });
 		});
 		await page.goto(profilePath(slug));
 
@@ -132,7 +130,10 @@ test.describe("Profile", () => {
 		expect(sent).toEqual([]);
 
 		await dialog.getByRole("button", { name: "Change email" }).click();
-		await expect(page).toHaveURL(/\/auth\/login\?/);
+		await expect(
+			page.getByRole("status").filter({ hasText: "Confirm link" }),
+		).toHaveText("Confirm link sent to courage@bagge.example");
+		await expect(page).toHaveURL(profilePath(slug));
 		expect(sent).toEqual([{ email: "courage@bagge.example" }]);
 	});
 
