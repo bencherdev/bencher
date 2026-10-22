@@ -1,7 +1,8 @@
 use bencher_comment::ReportComment;
 #[cfg(feature = "plus")]
-use bencher_json::JsonNewCallback;
-use bencher_json::ResourceName;
+use bencher_json::{JsonNewCallback, ResourceName};
+use bencher_json::{JsonProject, ProjectSlug, ProjectUuid, ReportUuid};
+use url::Url;
 
 use crate::parser::run::CliRunCi;
 
@@ -78,27 +79,33 @@ impl Ci {
         }
     }
 
-    /// Whether the CI check name needs the Project name resolved before the run.
-    pub fn needs_project_name(&self) -> bool {
+    /// Whether the CI check needs the Project resolved before the run.
+    pub fn needs_project(&self) -> bool {
         match self {
-            Self::GitHubActions(github_actions) => github_actions.needs_project_name(),
+            Self::GitHubActions(_) => GitHubActions::needs_project(),
         }
     }
 
     /// Best-effort: start an in-progress check before the benchmark runs.
-    pub async fn start(&self, project_name: Option<&ResourceName>, log: bool) -> Option<CiCheck> {
+    pub async fn start(
+        &self,
+        project: Option<&JsonProject>,
+        sub_adapter: &bencher_comment::SubAdapter,
+        log: bool,
+    ) -> Option<CiCheck> {
         match self {
             Self::GitHubActions(github_actions) => github_actions
-                .start_check(project_name, log)
+                .start_check(project, sub_adapter, log)
                 .await
                 .map(CiCheck::GitHubActions),
         }
     }
 
-    pub async fn run(
+    pub async fn run<R: SectionReports>(
         &self,
         check: Option<CiCheck>,
-        report_comment: &ReportComment,
+        report: &PostedReport<'_>,
+        reports: &R,
         #[cfg(feature = "plus")] failure: Option<JobFailure>,
         log: bool,
     ) -> Result<(), CiError> {
@@ -108,13 +115,33 @@ impl Ci {
                 github_actions
                     .run(
                         check,
-                        report_comment,
+                        report,
+                        reports,
                         #[cfg(feature = "plus")]
                         failure,
                         log,
                     )
                     .await
                     .map_err(Into::into)
+            },
+        }
+    }
+
+    /// Best-effort: a detached run names its report in its check.
+    #[cfg(feature = "plus")]
+    pub async fn report_submitted(
+        &self,
+        check: &CiCheck,
+        project: ProjectUuid,
+        report: ReportUuid,
+        sub_adapter: &bencher_comment::SubAdapter,
+        log: bool,
+    ) {
+        match (self, check) {
+            (Self::GitHubActions(github_actions), CiCheck::GitHubActions(handle)) => {
+                github_actions
+                    .report_submitted(handle, project, report, sub_adapter, log)
+                    .await;
             },
         }
     }
@@ -184,4 +211,25 @@ impl Ci {
             Self::GitHubActions(_) => "github".to_owned(),
         }
     }
+}
+
+/// A job's report, with what its section of the pull request comment needs of it.
+pub struct PostedReport<'a> {
+    pub comment: &'a ReportComment,
+    pub project: ProjectUuid,
+    pub report: ReportUuid,
+    pub sub_adapter: bencher_comment::SubAdapter,
+    pub console_url: Url,
+}
+
+/// The reports of the other jobs' sections of the pull request comment.
+pub trait SectionReports {
+    /// A single attempt, `None` when the report cannot be fetched.
+    fn section_report(
+        &self,
+        console_url: &Url,
+        project: &ProjectSlug,
+        report: ReportUuid,
+        sub_adapter: bencher_comment::SubAdapter,
+    ) -> impl Future<Output = Option<ReportComment>>;
 }

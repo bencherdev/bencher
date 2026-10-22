@@ -5,11 +5,12 @@ use bencher_client::types::JsonNewRunJob;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings};
 use bencher_comment::ReportComment;
 use bencher_json::{
-    DateTime, JsonProject, JsonReport, ProjectResourceId, ResourceName, RunContext, TestbedNameId,
-    project::report::Iteration,
+    DateTime, JsonProject, JsonReport, ProjectResourceId, ProjectSlug, ReportUuid, RunContext,
+    TestbedNameId, project::report::Iteration,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JobUuid, JsonJob, JsonNewCallback, sanitize_json};
+use url::Url;
 
 use crate::{
     CliError,
@@ -31,7 +32,7 @@ mod sub_adapter;
 use branch::Branch;
 #[cfg(feature = "plus")]
 use ci::JobFailure;
-use ci::{Ci, CiCheck};
+use ci::{Ci, CiCheck, PostedReport, SectionReports};
 pub use error::RunError;
 use format::Format;
 #[cfg(feature = "plus")]
@@ -239,21 +240,23 @@ impl Run {
             && ci_check.is_none()
             && !self.dry_run
         {
-            let project_name = if ci.needs_project_name() {
-                self.project_name().await
+            let project = if ci.needs_project() {
+                self.project().await
             } else {
                 None
             };
-            *ci_check = ci.start(project_name.as_ref(), self.log).await;
+            *ci_check = ci
+                .start(project.as_ref(), &self.sub_adapter.into(), self.log)
+                .await;
         }
 
         self.run_and_report(ci_check).await
     }
 
-    /// Best-effort: look up the Project name so the CI check can be named for it.
-    /// The name is only knowable before the benchmarks run if `--project` is set,
-    /// so an on-the-fly Project simply goes without the Project name in the check name.
-    async fn project_name(&self) -> Option<ResourceName> {
+    /// Best-effort: look up the Project, which the CI check names.
+    /// The Project is only knowable before the benchmarks run if `--project` is set,
+    /// so the check of an on-the-fly Project goes without it until the run completes.
+    async fn project(&self) -> Option<JsonProject> {
         let project = self.project.clone()?;
         let json_project: JsonProject = self
             .backend
@@ -267,11 +270,11 @@ impl Run {
                 // which is only created once the Report is posted.
                 cli_eprintln_quietable!(
                     self.log,
-                    "Could not resolve the Project name for the CI check: {err}"
+                    "Could not resolve the Project for the CI check: {err}"
                 );
             })
             .ok()?;
-        Some(json_project.name)
+        Some(json_project)
     }
 
     async fn run_and_report(&self, ci_check: &mut Option<CiCheck>) -> Result<(), RunError> {
@@ -352,6 +355,16 @@ impl Run {
         ci_check: &mut Option<CiCheck>,
     ) -> Result<(), RunError> {
         cli_eprintln_quietable!(self.log, "Remote job submitted successfully: {job_uuid}");
+        if let (Some(ci), Some(check)) = (&self.ci, ci_check.as_ref()) {
+            ci.report_submitted(
+                check,
+                json_report.project.uuid,
+                json_report.uuid,
+                &self.sub_adapter.into(),
+                self.log,
+            )
+            .await;
+        }
         let skipped = has_callback
             && self
                 .callback_notice(&json_report, job_uuid, ci_check.as_ref())
@@ -363,8 +376,8 @@ impl Run {
             ci.complete_unfired(check, &json_report.project.name, self.log)
                 .await;
         }
-        self.display_report_with_pending(json_report, true)
-            .await
+        let console_url = self.console_url().await?;
+        self.display_report(console_url, json_report, true)
             .map(drop)
     }
 
@@ -664,11 +677,21 @@ impl Run {
         ci_check: &mut Option<CiCheck>,
     ) -> Result<(), RunError> {
         let alerts_count = usize::try_from(json_report.counts.alerts.total).unwrap_or(usize::MAX);
-        let report_comment = self.display_report(json_report).await?;
+        let (project, report) = (json_report.project.uuid, json_report.uuid);
+        let console_url = self.console_url().await?;
+        let report_comment = self.display_report(console_url.clone(), json_report, false)?;
         if let Some(ci) = &self.ci {
+            let report = PostedReport {
+                comment: &report_comment,
+                project,
+                report,
+                sub_adapter: self.sub_adapter.into(),
+                console_url,
+            };
             ci.run(
                 ci_check.take(),
-                &report_comment,
+                &report,
+                self,
                 #[cfg(feature = "plus")]
                 failure,
                 self.log,
@@ -705,7 +728,7 @@ impl Run {
     async fn fetch_report(
         &self,
         project: &ProjectResourceId,
-        report_uuid: bencher_json::ReportUuid,
+        report_uuid: ReportUuid,
     ) -> Result<JsonReport, crate::BackendError> {
         self.backend
             .send_with(|client| {
@@ -726,7 +749,7 @@ impl Run {
     async fn best_effort_display_report(
         &self,
         project: &ProjectResourceId,
-        report_uuid: bencher_json::ReportUuid,
+        report_uuid: ReportUuid,
         failure: JobFailure,
         ci_check: &mut Option<CiCheck>,
     ) {
@@ -742,27 +765,26 @@ impl Run {
         }
     }
 
-    async fn display_report(&self, json_report: JsonReport) -> Result<ReportComment, RunError> {
-        self.display_report_with_pending(json_report, false).await
+    async fn console_url(&self) -> Result<Url, RunError> {
+        self.backend
+            .get_console_url()
+            .await
+            .map_err(RunError::ConsoleUrl)
     }
 
-    async fn display_report_with_pending(
+    fn display_report(
         &self,
+        console_url: Url,
         json_report: JsonReport,
         pending: bool,
     ) -> Result<ReportComment, RunError> {
-        let console_url = self
-            .backend
-            .get_console_url()
-            .await
-            .map_err(RunError::ConsoleUrl)?;
-        let source = self
-            .ci
-            .as_ref()
-            .map_or_else(|| "cli".to_owned(), Ci::source);
-        let report_comment =
-            ReportComment::new(console_url, json_report, self.sub_adapter.into(), source)
-                .with_pending(pending);
+        let report_comment = ReportComment::new(
+            console_url,
+            json_report,
+            self.sub_adapter.into(),
+            self.source(),
+        )
+        .with_pending(pending);
 
         let report_str = match self.format {
             Format::Human => report_comment.human(),
@@ -772,6 +794,44 @@ impl Run {
         let newline_prefix = if self.log { "\n" } else { "" };
         cli_println!("{newline_prefix}{report_str}");
         Ok(report_comment)
+    }
+
+    fn source(&self) -> String {
+        self.ci
+            .as_ref()
+            .map_or_else(|| "cli".to_owned(), Ci::source)
+    }
+}
+
+impl SectionReports for Run {
+    async fn section_report(
+        &self,
+        console_url: &Url,
+        project: &ProjectSlug,
+        report: ReportUuid,
+        sub_adapter: bencher_comment::SubAdapter,
+    ) -> Option<ReportComment> {
+        let json_report: JsonReport = self
+            .backend
+            .send_once(|client| {
+                let project = ProjectResourceId::Slug(project.clone());
+                async move {
+                    client
+                        .proj_report_get()
+                        .project(project)
+                        .report(report)
+                        .send()
+                        .await
+                }
+            })
+            .await
+            .ok()?;
+        Some(ReportComment::new(
+            console_url.clone(),
+            json_report,
+            sub_adapter,
+            self.source(),
+        ))
     }
 }
 
