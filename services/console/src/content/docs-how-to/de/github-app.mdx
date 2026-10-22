@@ -3,7 +3,7 @@ title: "Selbst gehostete GitHub App"
 description: "Erstellen Sie eine GitHub App, um Bencher Self-Hosted die Authentifizierung mit GitHub zu ermöglichen"
 heading: "So erstellen Sie eine selbst gehostete GitHub App"
 published: "2023-10-27T08:40:00Z"
-modified: "2025-04-09T03:04:20Z"
+modified: "2026-10-22T17:53:40Z"
 sortOrder: 9
 ---
 
@@ -53,6 +53,37 @@ Setzen Sie die Umgebungsvariable `GITHUB_CLIENT_ID`, wenn Sie das `bencher-conso
 
 ### API-Server
 Fügen Sie die `client_id` und das `client_secret` zu [dem `plus.github` Abschnitt der Serverkonfiguration](/de/docs/reference/server-config/#plusgithub) hinzu. Wenn der GitHub-Abschnitt fehlt, wird der Server alle GitHub-Authentifizierungsanfragen ablehnen.
+
+## Verknüpfte Repositorys
+
+Aktualisieren Sie den Bencher Self-Hosted API-Server und die Console auf `v0.6.14` oder neuer, bevor Sie diese Einstellungen ändern.
+
+Damit ein Projekt für seine abgelösten Läufe [ein GitHub-Repository verknüpfen][linked repository] kann,
+setzen Sie zusätzlich diese Einstellungen für die GitHub App:
+
+- Identifizierung und Autorisierung von Benutzern
+  - Rückruf-URL
+    - Setzen Sie die erste Rückruf-URL auf Ihre Bencher Self-Hosted Console URL mit dem Pfad `/console/github` (z.B. `https://bencher.example.com/console/github`).
+      GitHub schickt den Benutzer nach der Installation der App zur ersten Rückruf-URL.
+    - Behalten Sie danach die Rückruf-URL mit dem Pfad `/auth/github` für die Anmeldung (z.B. `https://bencher.example.com/auth/github`).
+      GitHub lehnt eine Anmeldung ab, deren Rückruf-URL nicht aufgeführt ist.
+  - ✅ Benutzer-Autorisierung (OAuth) während der Installation anfordern
+- Webhook
+  - ✅ Aktiv - Setzen Sie das Häkchen in diesem Kästchen
+  - Webhook-URL
+    - Setzen Sie sie auf Ihre Bencher Self-Hosted API-Server-URL mit dem Pfad `/v0/github/webhook` (z.B. `https://api.bencher.example.com/v0/github/webhook`)
+  - Webhook-Geheimnis
+    - Geben Sie ein zufälliges Geheimnis ein und notieren Sie es (z.B. `0123456789abcdef0123456789abcdef`)
+- Berechtigungen
+  - Repository-Berechtigungen
+    - Inhalte: `Lesen und Schreiben`
+  - Ereignisse abonnieren
+    - Lassen Sie jedes Ereignis deaktiviert
+- Notieren Sie den Slug der App, den letzten Teil der URL ihrer öffentlichen Seite (z.B. `my-bencher-app` in `https://github.com/apps/my-bencher-app`)
+
+Fügen Sie den Slug, den privaten Schlüssel und das Webhook-Geheimnis als `app` zu [dem `plus.github` Abschnitt der Serverkonfiguration](/de/docs/reference/server-config/#plusgithub) hinzu.
+
+[linked repository]: /de/docs/how-to/github-actions/#pull-requests-auf-dedizierter-hardware
 
 <br/>
 

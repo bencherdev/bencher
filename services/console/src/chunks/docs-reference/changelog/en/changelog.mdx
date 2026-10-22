@@ -1,4 +1,5 @@
 ## Pending `v0.6.14`
+- Link a GitHub repository to a Project in its Settings, and a detached Bare Metal run on GitHub Actions no longer needs `--ci-callback-token`
 - Add `--start-point-idempotency-key` (or `BENCHER_START_POINT_IDEMPOTENCY_KEY`) to `bencher run`, `bencher report create`, and `bencher branch update`, so parallel jobs that reset a Branch with the same key share one Head; in GitHub Actions, `bencher run` defaults the key to the workflow run attempt
 - Fix concurrent runs on a Branch failing when they create the same Thresholds, such as parallel runs that clone Thresholds from a start point; the first run creates them and the rest use them
 - Add `--image-cache-size` to `runner up` (or `BENCHER_IMAGE_CACHE_SIZE`), the bytes of Image config and layer blobs a Bare Metal Runner keeps across Jobs in `blobs` under its `--state-dir`, so a Job downloads only the blobs the Runner does not already hold, while its manifest still comes from the registry. Between Jobs the least recently used blobs are removed until the rest fit, a Runner given a size exits at startup if it cannot make the store its own, and without one the Runner keeps none

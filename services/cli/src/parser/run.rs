@@ -272,7 +272,7 @@ pub struct CliRunCi {
     /// CAUTION: Override safety checks and accept that you are vulnerable to pwn requests (requires: `--github-actions`)
     #[clap(long, requires = "ci_cd", hide = true)]
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
-    /// Fine-grained personal access token with contents write on this repository, for the `repository_dispatch` that a detached job's callback sends (requires: `--github-actions` and `--detach`).
+    /// Fine-grained personal access token with contents write on this repository, for the `repository_dispatch` that a detached job's callback sends; without it, the project's linked repository supplies the token (requires: `--github-actions` and `--detach`).
     /// Bencher sends it after this workflow's `GITHUB_TOKEN` has expired, so it cannot be that token.
     #[cfg(feature = "plus")]
     #[clap(

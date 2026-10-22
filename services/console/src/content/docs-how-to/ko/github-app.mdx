@@ -3,7 +3,7 @@ title: "셀프 호스팅 GitHub 앱"
 description: "Bencher Self-Hosted가 GitHub과 인증하도록 허용하는 GitHub 앱 생성"
 heading: "셀프 호스팅 GitHub 앱 생성 방법"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-04-17T12:48:43Z"
+modified: "2026-10-22T17:53:40Z"
 sortOrder: 9
 ---
 
@@ -52,6 +52,36 @@ Bencher Self-Hosted를 사용하려면 [Bencher Plus Enterprise 요금제][bench
 
 ### API 서버
 `client_id`와 `client_secret`를 [서버 구성의 `plus.github` 섹션](/ko/docs/reference/server-config/#plusgithub)에 추가합니다. 만약 GitHub 섹션이 누락되면, 서버는 GitHub 인증 요청을 실패시킵니다.
+
+## 연결된 저장소
+
+이 설정을 변경하기 전에 Bencher Self-Hosted API 서버와 콘솔을 `v0.6.14` 이상으로 업그레이드하세요.
+
+프로젝트가 분리된 실행을 위해 [GitHub 저장소를 연결][linked repository]할 수 있게 하려면 GitHub 앱에 다음도 설정합니다.
+
+- 사용자 식별 및 인증
+  - 콜백 URL
+    - 첫 번째 콜백 URL을 `/console/github` 경로를 가진 Bencher Self-Hosted 콘솔 URL로 설정 (예: `https://bencher.example.com/console/github`).
+      GitHub는 앱을 설치한 사용자를 첫 번째 콜백 URL로 보냅니다.
+    - 그 뒤에 로그인을 위한 `/auth/github` 경로의 콜백 URL을 유지 (예: `https://bencher.example.com/auth/github`).
+      GitHub는 콜백 URL이 목록에 없는 로그인을 거부합니다.
+  - ✅ 설치 도중 사용자 인증 (OAuth) 요청
+- 웹훅
+  - ✅ 활성화 - 이 상자를 체크
+  - 웹훅 URL
+    - `/v0/github/webhook` 경로를 가진 Bencher Self-Hosted API 서버 URL로 설정 (예: `https://api.bencher.example.com/v0/github/webhook`)
+  - 웹훅 시크릿
+    - 임의의 시크릿을 입력하고 기재해 두세요 (예: `0123456789abcdef0123456789abcdef`)
+- 권한
+  - 저장소 권한
+    - 콘텐츠: `읽기 및 쓰기`
+  - 이벤트 구독
+    - 모든 이벤트를 체크하지 않은 상태로 두기
+- 앱의 슬러그, 즉 공개 페이지 URL의 마지막 부분을 기재해 두세요 (예: `https://github.com/apps/my-bencher-app`의 `my-bencher-app`)
+
+슬러그, 비공개 키, 웹훅 시크릿을 [서버 구성의 `plus.github` 섹션](/ko/docs/reference/server-config/#plusgithub)에 `app`으로 추가합니다.
+
+[linked repository]: /ko/docs/how-to/github-actions/#베어-메탈에서의-pull-requests
 
 <br/>
 

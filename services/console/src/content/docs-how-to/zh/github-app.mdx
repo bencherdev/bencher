@@ -3,7 +3,7 @@ title: "自托管的GitHub应用"
 description: "创建一个GitHub应用，使Bencher自托管能进行GitHub身份验证"
 heading: "如何创建一个自托管的GitHub应用"
 published: "2023-10-27T08:40:00Z"
-modified: "2025-04-09T03:04:20Z"
+modified: "2026-10-22T17:53:40Z"
 sortOrder: 9
 ---
 
@@ -52,6 +52,36 @@ sortOrder: 9
 
 ### API服务器
 在服务器配置的[`plus.github`部分](/zh/docs/reference/server-config/#plusgithub)，添加 `client_id` 和 `client_secret`。如果GitHub部分丢失，服务器将无法接受GitHub的认证请求。
+
+## 关联的仓库
+
+在更改这些设置之前，请先将 Bencher 自托管 API 服务器和控制台升级到 `v0.6.14` 或更高版本。
+
+要让项目能为其分离的运行[关联 GitHub 仓库][linked repository]，还需为 GitHub 应用设置以下内容：
+
+- 用户身份识别和授权
+  - 回调URL
+    - 将第一个回调地址设置为你的Bencher自托管控制台的URL，并加上路径`/console/github`（例如：`https://bencher.example.com/console/github`）。
+      GitHub 会在用户安装应用后将其发送到第一个回调地址。
+    - 在其后保留路径为`/auth/github`的回调地址，用于登录（例如：`https://bencher.example.com/auth/github`）。
+      GitHub 会拒绝回调地址不在列表中的登录。
+  - ✅在安装过程中请求用户授权（OAuth）
+- Webhook
+  - ✅启用 - 勾选这个框
+  - Webhook URL
+    - 设置为你的Bencher自托管API服务器的URL，并加上路径`/v0/github/webhook`（例如：`https://api.bencher.example.com/v0/github/webhook`）
+  - Webhook 密钥
+    - 输入一个随机密钥并记下它（例如：`0123456789abcdef0123456789abcdef`）
+- 权限
+  - 仓库权限
+    - 内容：`读写`
+  - 订阅事件
+    - 不勾选任何事件
+- 记下应用的 slug，即其公开页面URL的最后一部分（例如：`https://github.com/apps/my-bencher-app` 中的 `my-bencher-app`）
+
+在服务器配置的[`plus.github`部分](/zh/docs/reference/server-config/#plusgithub)，将 slug、私人钥匙和 webhook 密钥添加为 `app`。
+
+[linked repository]: /zh/docs/how-to/github-actions/#裸机上的-pull-requests
 
 <br/>
 

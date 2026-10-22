@@ -73,14 +73,16 @@ benchmark_pr:
 | `--ci-public-links` | Use public URLs (no login required to view) |
 | `--ci-id <id>` | Custom identifier for the CI comment, used in place of the project name in the GitHub Check name (`Bencher Report (<id>)`) |
 | `--ci-number <n>` | Issue/PR number to post on |
-| `--ci-callback-token <token>` | Fine-grained personal access token for this one repository with only contents write, for the `repository_dispatch` a detached bare metal run sends (requires `--github-actions` and `--detach`) |
+| `--ci-callback-token <token>` | Fine-grained personal access token for this one repository with only contents write, for the `repository_dispatch` a detached bare metal run sends; without it, the project's linked repository supplies the token (requires `--github-actions` and `--detach`) |
 
 ### Bare Metal Without a Waiting Runner (Bencher Plus)
 
 `--detach` with `--github-actions` starts the GitHub Check, submits the job, and exits.
-When the job finishes, Bencher sends a `repository_dispatch` (event type `bencher_run`) with
-`--ci-callback-token`, and a second workflow on the default branch attaches to the job and
-completes the check and the PR comment:
+When the job finishes, Bencher sends a `repository_dispatch` (event type `bencher_run`) with a
+token it mints for the project's linked repository, and a second workflow on the default branch
+attaches to the job and completes the check and the PR comment. A user with the Maintainer role
+on the project, which Organization Leaders and server admins hold, and push access to the
+repository links it once in the project's Settings, under Connections.
 
 ```yaml
 # Workflow 1, on pull_request
@@ -100,11 +102,9 @@ submit_pr_benchmarks:
           --hash "$HEAD_SHA" \
           --image my-bench:latest \
           --detach \
-          --github-actions "$GITHUB_TOKEN" \
-          --ci-callback-token "$BENCHER_CALLBACK_TOKEN"
+          --github-actions "$GITHUB_TOKEN"
       env:
         BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
-        BENCHER_CALLBACK_TOKEN: ${{ secrets.BENCHER_CALLBACK_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 ```
@@ -131,9 +131,9 @@ attach_pr_benchmarks:
 ```
 
 The payload's `bencher` object holds the Job UUID (`job`) and the Project slug (`project`), and the attach reads the rest of it.
-`--detach` with `--github-actions` requires `--ci-callback-token`, and `--callback-url` conflicts with `--github-actions`.
+Pass `--ci-callback-token` on GitHub Enterprise Server or against a server older than v0.6.14, where the CLI refuses a detached run without it, or to keep the user's own token, which goes as stored with no mint. Without it, the server refuses the run for a claimed project when it has no GitHub App or the project has no connected linked repository. `--callback-url` conflicts with `--github-actions`.
 Give each detached job of one PR its own `--ci-id`, so each keeps its own comment.
-The dispatch to `api.github.com`, which carries `--ci-callback-token` as a `Bearer` token and the `bencher_run` event, goes out on any plan for a claimed project. On GitHub Enterprise Server it also needs a Bencher Plus plan. Otherwise the callback is skipped and the check completes as neutral.
+The dispatch to `api.github.com` with the `bencher_run` event, minted or carrying `--ci-callback-token` as a `Bearer` token, goes out on any plan for a claimed project. On GitHub Enterprise Server it also needs a Bencher Plus plan. Otherwise the callback is skipped and the check completes as neutral.
 
 ### On-the-Fly Project Creation
 
