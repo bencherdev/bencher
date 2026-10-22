@@ -81,7 +81,7 @@ RUN chmod +x build_wasm.sh
 RUN ./build_wasm.sh
 
 # https://hub.docker.com/_/node
-FROM node:24.19.0-bookworm@sha256:934240a162082fd8b8a2f90cd5114446443f1eba1c5378f6687167ca405e6584 AS builder
+FROM node:26.12.0-trixie@sha256:1b84b89ada025e3b14543cbb837ffaa1c1b5273b841c5b94dd1a8f9c1d8cf7fe AS builder
 COPY services/api/openapi.json /usr/src/bencher/services/api/openapi.json
 COPY services/cli/templates/output /usr/src/bencher/services/cli/templates/output
 COPY services/runner/templates/output /usr/src/bencher/services/runner/templates/output
@@ -107,7 +107,7 @@ COPY services/console/.env.runtime .env.runtime
 RUN npm run node
 
 # https://hub.docker.com/_/node
-FROM node:24.19.0-bookworm@sha256:934240a162082fd8b8a2f90cd5114446443f1eba1c5378f6687167ca405e6584 AS packager
+FROM node:26.12.0-trixie@sha256:1b84b89ada025e3b14543cbb837ffaa1c1b5273b841c5b94dd1a8f9c1d8cf7fe AS packager
 COPY --from=builder /usr/src/bencher/services/console/dist /usr/src/bencher/services/console/dist
 COPY --from=builder /usr/src/bencher/services/console/package-lock.json /usr/src/bencher/services/console/package-lock.json
 COPY --from=builder /usr/src/bencher/services/console/package.json /usr/src/bencher/services/console/package.json
@@ -118,7 +118,7 @@ WORKDIR /usr/src/bencher/services/console
 RUN npm ci --omit=dev
 
 # https://github.com/GoogleContainerTools/distroless/tree/main/nodejs
-FROM gcr.io/distroless/nodejs24-debian12@sha256:61f4f4341db81820c24ce771b83d202eb6452076f58628cd536cc7d94a10978b
+FROM gcr.io/distroless/nodejs26-debian13@sha256:746f728c8b61c9beb5d0350f054b4049c4cef0ae71d5b3f8f33bc57904bbc37e
 COPY --from=packager /usr/src/bencher/services/console /usr/src/bencher
 
 ENV HOST=0.0.0.0
