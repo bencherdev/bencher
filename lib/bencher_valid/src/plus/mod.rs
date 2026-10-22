@@ -36,7 +36,10 @@ pub use cpu::Cpu;
 pub use cvc::CardCvc;
 pub use disk::Disk;
 pub use entitlements::Entitlements;
-pub use github::{GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName};
+pub use github::{
+    GitHubAppSlug, GitHubInstallationId, GitHubInstallationPermission, GitHubRepositoryId,
+    GitHubRepositoryName,
+};
 pub use grace_period::GracePeriod;
 pub use heartbeat_timeout::HeartbeatTimeout;
 pub use image_reference::ImageReference;

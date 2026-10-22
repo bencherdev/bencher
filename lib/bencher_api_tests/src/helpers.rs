@@ -26,6 +26,7 @@ use http::StatusCode;
 
 use crate::{
     TestServer,
+    github::{GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET},
     seed::{TestProject, TestUser},
 };
 
@@ -333,12 +334,13 @@ pub fn seed_oauth_authorization(server: &TestServer, now: DateTime) -> OAuthAuth
     .expect("Failed to insert OAuth authorization")
 }
 
-/// A GitHub sign-in client with test credentials: it builds sign-in URLs, never calling GitHub.
+/// A GitHub client with the test app's credentials. A test that has it call GitHub first gives it
+/// a fake GitHub with `with_base_url`.
 #[expect(clippy::expect_used, reason = "test helper parsing fixed credentials")]
 pub fn github_client() -> GitHubClient {
     GitHubClient::new(
-        "test-client".parse().expect("Invalid client ID"),
-        "test-secret".parse().expect("Invalid client secret"),
+        GITHUB_CLIENT_ID.parse().expect("Invalid client ID"),
+        GITHUB_CLIENT_SECRET.parse().expect("Invalid client secret"),
     )
 }
 

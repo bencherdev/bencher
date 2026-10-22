@@ -14,6 +14,8 @@ macro_rules! github_id {
     ($name:ident) => {
         #[derive(Debug, Display, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
         #[cfg_attr(feature = "schema", derive(JsonSchema))]
+        #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+        #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::BigInt))]
         #[serde(try_from = "u64")]
         pub struct $name(u64);
 
@@ -32,6 +34,35 @@ macro_rules! github_id {
                 id.0
             }
         }
+
+        #[cfg(feature = "db")]
+        impl<DB> diesel::serialize::ToSql<diesel::sql_types::BigInt, DB> for $name
+        where
+            DB: diesel::backend::Backend,
+            for<'a> i64: diesel::serialize::ToSql<diesel::sql_types::BigInt, DB>
+                + Into<
+                    <DB::BindCollector<'a> as diesel::query_builder::BindCollector<'a, DB>>::Buffer,
+                >,
+        {
+            fn to_sql<'b>(
+                &'b self,
+                out: &mut diesel::serialize::Output<'b, '_, DB>,
+            ) -> diesel::serialize::Result {
+                out.set_value(i64::try_from(self.0)?);
+                Ok(diesel::serialize::IsNull::No)
+            }
+        }
+
+        #[cfg(feature = "db")]
+        impl<DB> diesel::deserialize::FromSql<diesel::sql_types::BigInt, DB> for $name
+        where
+            DB: diesel::backend::Backend,
+            i64: diesel::deserialize::FromSql<diesel::sql_types::BigInt, DB>,
+        {
+            fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+                Ok(u64::try_from(i64::from_sql(bytes)?)?.try_into()?)
+            }
+        }
     };
 }
 
@@ -39,7 +70,10 @@ github_id!(GitHubInstallationId);
 github_id!(GitHubRepositoryId);
 
 /// A repository's owner and name, each safe to use as one URL path segment.
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
+#[serde(try_from = "String", into = "String")]
 pub struct GitHubRepositoryName {
     owner: String,
     name: String,
@@ -81,6 +115,77 @@ impl FromStr for GitHubRepositoryName {
             .ok_or_else(|| ValidError::GitHubRepositoryName(full_name.to_owned()))?;
         Self::new(owner, name)
     }
+}
+
+impl TryFrom<String> for GitHubRepositoryName {
+    type Error = ValidError;
+
+    fn try_from(full_name: String) -> Result<Self, Self::Error> {
+        full_name.parse()
+    }
+}
+
+impl From<GitHubRepositoryName> for String {
+    fn from(full_name: GitHubRepositoryName) -> Self {
+        full_name.to_string()
+    }
+}
+
+#[cfg(feature = "db")]
+crate::typed_string!(GitHubRepositoryName);
+
+#[cfg(feature = "schema")]
+impl JsonSchema for GitHubRepositoryName {
+    fn schema_name() -> String {
+        "GitHubRepositoryName".to_owned()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        String::json_schema(generator)
+    }
+}
+
+/// The app's name in its GitHub URLs, safe to use as one URL path segment.
+#[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(try_from = "String")]
+pub struct GitHubAppSlug(String);
+
+impl TryFrom<String> for GitHubAppSlug {
+    type Error = ValidError;
+
+    fn try_from(slug: String) -> Result<Self, Self::Error> {
+        if is_valid_github_path_segment(&slug) {
+            Ok(Self(slug))
+        } else {
+            Err(ValidError::GitHubAppSlug(slug))
+        }
+    }
+}
+
+impl FromStr for GitHubAppSlug {
+    type Err = ValidError;
+
+    fn from_str(slug: &str) -> Result<Self, Self::Err> {
+        Self::try_from(slug.to_owned())
+    }
+}
+
+impl AsRef<str> for GitHubAppSlug {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Whether an installation of the app has approved its contents write.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum GitHubInstallationPermission {
+    Granted,
+    /// The installation must approve the new permission on GitHub before it can mint.
+    ApprovalRequired,
 }
 
 fn is_valid_github_id(id: u64) -> bool {

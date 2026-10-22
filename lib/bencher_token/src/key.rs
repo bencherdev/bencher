@@ -10,17 +10,14 @@ use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode,
     errors::ErrorKind as JsonWebTokenErrorKind,
 };
+use serde::{Serialize, de::DeserializeOwned};
 use uuid::Uuid;
 
 #[cfg(feature = "plus")]
-use bencher_json::ProjectUuid;
-#[cfg(feature = "plus")]
-use bencher_json::RunnerUuid;
+use bencher_json::{
+    GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, ProjectUuid, RunnerUuid,
+};
 
-#[cfg(feature = "plus")]
-use crate::ProjectOciClaims;
-#[cfg(feature = "plus")]
-use crate::RunnerOciClaims;
 #[cfg(feature = "plus")]
 use crate::claims::ProjectOciTokenClaims;
 use crate::claims::PublicOciTokenClaims;
@@ -30,6 +27,8 @@ use crate::{
     Audience, AuthOciClaims, Claims, EmailChangeClaims, InviteClaims, OAuthClaims, OciAction,
     OciScopeClaims, OrgClaims, PublicOciClaims, StateClaims, TokenError,
 };
+#[cfg(feature = "plus")]
+use crate::{GitHubGrantClaims, GitHubStateClaims, ProjectOciClaims, RunnerOciClaims};
 
 static HEADER: LazyLock<Header> = LazyLock::new(Header::default);
 const ALGORITHM: Algorithm = Algorithm::HS256;
@@ -120,22 +119,17 @@ impl TokenKey {
         email: Email,
         new_email: Email,
     ) -> Result<Jwt, TokenError> {
-        let now = now.timestamp();
-        let claims = EmailChangeClaims {
+        let (iat, exp) = issued_and_expires(now, ttl);
+        self.encode_claims(&EmailChangeClaims {
             aud: Audience::EmailChange.into(),
-            exp: now.checked_add(i64::from(ttl)).unwrap_or(now),
-            iat: now,
+            exp,
+            iat,
             iss: self.issuer.clone(),
             sub: user,
             modified,
             email,
             new_email,
-        };
-        Jwt::from_str(
-            &encode(&HEADER, &claims, &self.encoding)
-                .map_err(|e| TokenError::Encode { error: e })?,
-        )
-        .map_err(TokenError::Parse)
+        })
     }
 
     pub fn new_oci_public(
@@ -230,6 +224,51 @@ impl TokenKey {
         .map_err(TokenError::Parse)
     }
 
+    /// A trip to GitHub that `user` starts to link a repository to `project`.
+    #[cfg(feature = "plus")]
+    pub fn new_github_state(
+        &self,
+        now: DateTime,
+        ttl: u32,
+        user: UserUuid,
+        project: ProjectUuid,
+    ) -> Result<Jwt, TokenError> {
+        let (iat, exp) = issued_and_expires(now, ttl);
+        self.encode_claims(&GitHubStateClaims {
+            aud: Audience::GitHubState.into(),
+            exp,
+            iat,
+            iss: self.issuer.clone(),
+            sub: user,
+            project,
+        })
+    }
+
+    /// A grant to link the repository, for the user and the project of the trip's `state`.
+    #[cfg(feature = "plus")]
+    pub fn new_github_grant(
+        &self,
+        now: DateTime,
+        ttl: u32,
+        state: &GitHubStateClaims,
+        installation: GitHubInstallationId,
+        repository: GitHubRepositoryId,
+        full_name: GitHubRepositoryName,
+    ) -> Result<Jwt, TokenError> {
+        let (iat, exp) = issued_and_expires(now, ttl);
+        self.encode_claims(&GitHubGrantClaims {
+            aud: Audience::GitHubGrant.into(),
+            exp,
+            iat,
+            iss: self.issuer.clone(),
+            sub: state.sub,
+            project: state.project,
+            installation,
+            repository,
+            full_name,
+        })
+    }
+
     fn validate(
         &self,
         token: &Jwt,
@@ -282,27 +321,40 @@ impl TokenKey {
         token: &Jwt,
         now: DateTime,
     ) -> Result<EmailChangeClaims, TokenError> {
-        let mut validation = Validation::new(ALGORITHM);
-        validation.set_audience(&[Audience::EmailChange]);
-        validation.set_issuer(&[self.issuer.as_str()]);
-        validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
-        // Expiry is checked against `now` below, so the server's clock decides it.
-        validation.validate_exp = false;
+        self.validate_at(
+            token,
+            Audience::EmailChange,
+            now,
+            |claims: &EmailChangeClaims| claims.exp,
+        )
+    }
 
-        let token_data: TokenData<EmailChangeClaims> =
-            decode(token.as_ref(), &self.decoding, &validation)
-                .map_err(|error| TokenError::Decode { error })?;
-        let exp = token_data.claims.exp;
-        let now = now.timestamp();
-        if exp < now {
-            Err(TokenError::Expired {
-                exp,
-                now,
-                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
-            })
-        } else {
-            Ok(token_data.claims)
-        }
+    #[cfg(feature = "plus")]
+    pub fn validate_github_state(
+        &self,
+        token: &Jwt,
+        now: DateTime,
+    ) -> Result<GitHubStateClaims, TokenError> {
+        self.validate_at(
+            token,
+            Audience::GitHubState,
+            now,
+            |claims: &GitHubStateClaims| claims.exp,
+        )
+    }
+
+    #[cfg(feature = "plus")]
+    pub fn validate_github_grant(
+        &self,
+        token: &Jwt,
+        now: DateTime,
+    ) -> Result<GitHubGrantClaims, TokenError> {
+        self.validate_at(
+            token,
+            Audience::GitHubGrant,
+            now,
+            |claims: &GitHubGrantClaims| claims.exp,
+        )
     }
 
     pub fn validate_oci_public(&self, token: &Jwt) -> Result<PublicOciClaims, TokenError> {
@@ -379,6 +431,57 @@ impl TokenKey {
             token_data.claims.try_into()
         }
     }
+
+    fn encode_claims<C>(&self, claims: &C) -> Result<Jwt, TokenError>
+    where
+        C: Serialize,
+    {
+        Jwt::from_str(
+            &encode(&HEADER, claims, &self.encoding)
+                .map_err(|e| TokenError::Encode { error: e })?,
+        )
+        .map_err(TokenError::Parse)
+    }
+
+    /// The claims of a token for `audience` that has not expired by `now`.
+    fn validate_at<C>(
+        &self,
+        token: &Jwt,
+        audience: Audience,
+        now: DateTime,
+        exp: fn(&C) -> i64,
+    ) -> Result<C, TokenError>
+    where
+        C: DeserializeOwned,
+    {
+        let mut validation = Validation::new(ALGORITHM);
+        validation.set_audience(&[audience]);
+        validation.set_issuer(&[self.issuer.as_str()]);
+        validation.set_required_spec_claims(&["aud", "exp", "iss", "sub"]);
+        // Expiry is checked against `now` below, so the server's clock decides it.
+        validation.validate_exp = false;
+
+        let claims = decode::<C>(token.as_ref(), &self.decoding, &validation)
+            .map_err(|error| TokenError::Decode { error })?
+            .claims;
+        let exp = exp(&claims);
+        let now = now.timestamp();
+        if exp < now {
+            Err(TokenError::Expired {
+                exp,
+                now,
+                error: JsonWebTokenErrorKind::ExpiredSignature.into(),
+            })
+        } else {
+            Ok(claims)
+        }
+    }
+}
+
+/// The issue and expiry times of a token issued at `now` that lasts `ttl` seconds.
+fn issued_and_expires(now: DateTime, ttl: u32) -> (i64, i64) {
+    let now = now.timestamp();
+    (now, now.checked_add(i64::from(ttl)).unwrap_or(now))
 }
 
 #[cfg(test)]
@@ -626,6 +729,127 @@ mod tests {
 
     fn at(timestamp: i64) -> DateTime {
         DateTime::try_from(timestamp).unwrap()
+    }
+
+    // --- GitHub link tokens ---
+
+    #[cfg(feature = "plus")]
+    const GITHUB_TTL: u32 = 10 * 60;
+
+    #[cfg(feature = "plus")]
+    fn github_state(secret_key: &TokenKey) -> (Jwt, crate::GitHubStateClaims) {
+        let token = secret_key
+            .new_github_state(
+                at(EMAIL_CHANGE_NOW),
+                GITHUB_TTL,
+                UserUuid::new(),
+                bencher_json::ProjectUuid::new(),
+            )
+            .unwrap();
+        let claims = secret_key
+            .validate_github_state(&token, at(EMAIL_CHANGE_NOW))
+            .unwrap();
+        (token, claims)
+    }
+
+    #[cfg(feature = "plus")]
+    fn github_grant(secret_key: &TokenKey, state: &crate::GitHubStateClaims) -> Jwt {
+        secret_key
+            .new_github_grant(
+                at(EMAIL_CHANGE_NOW),
+                GITHUB_TTL,
+                state,
+                bencher_json::GitHubInstallationId::try_from(2048).unwrap(),
+                bencher_json::GitHubRepositoryId::try_from(4096).unwrap(),
+                "octo-cat/hello-world".parse().unwrap(),
+            )
+            .unwrap()
+    }
+
+    // Kills a state that loses its user or its project, or expires by the system clock.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_github_state() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let user = UserUuid::new();
+        let project = bencher_json::ProjectUuid::new();
+
+        let token = secret_key
+            .new_github_state(at(EMAIL_CHANGE_NOW), GITHUB_TTL, user, project)
+            .unwrap();
+
+        let claims = secret_key
+            .validate_github_state(&token, at(EMAIL_CHANGE_NOW))
+            .unwrap();
+        assert_eq!(claims.aud, Audience::GitHubState.to_string());
+        assert_eq!(claims.sub, user);
+        assert_eq!(claims.project, project);
+    }
+
+    // Kills a grant that takes its user or its project from anywhere but the state, or loses its
+    // installation, its repository, or its full name.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_github_grant() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let (_state_token, state) = github_state(&secret_key);
+
+        let token = github_grant(&secret_key, &state);
+
+        let claims = secret_key
+            .validate_github_grant(&token, at(EMAIL_CHANGE_NOW))
+            .unwrap();
+        assert_eq!(claims.aud, Audience::GitHubGrant.to_string());
+        assert_eq!(claims.sub, state.sub);
+        assert_eq!(claims.project, state.project);
+        assert_eq!(u64::from(claims.installation), 2048);
+        assert_eq!(u64::from(claims.repository), 4096);
+        assert_eq!(claims.full_name.to_string(), "octo-cat/hello-world");
+    }
+
+    // Kills a state or a grant that outlives its ten minutes, or expires by the system clock.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_github_state_and_grant_expire() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let (state_token, state) = github_state(&secret_key);
+        let grant_token = github_grant(&secret_key, &state);
+        let expiration = EMAIL_CHANGE_NOW + i64::from(GITHUB_TTL);
+
+        secret_key
+            .validate_github_state(&state_token, at(expiration))
+            .unwrap();
+        secret_key
+            .validate_github_state(&state_token, at(expiration + 1))
+            .unwrap_err();
+        secret_key
+            .validate_github_grant(&grant_token, at(expiration))
+            .unwrap();
+        secret_key
+            .validate_github_grant(&grant_token, at(expiration + 1))
+            .unwrap_err();
+    }
+
+    // A grant holds every claim of a state, so this kills a state or a grant accepted without
+    // its own audience.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn jwt_github_state_and_grant_need_their_own_audience() {
+        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
+        let (_state_token, state) = github_state(&secret_key);
+        let grant_token = github_grant(&secret_key, &state);
+        let mut claims = secret_key
+            .validate_github_grant(&grant_token, at(EMAIL_CHANGE_NOW))
+            .unwrap();
+        claims.aud = Audience::GitHubState.to_string();
+        let grant_as_state = secret_key.encode_claims(&claims).unwrap();
+
+        secret_key
+            .validate_github_state(&grant_token, at(EMAIL_CHANGE_NOW))
+            .unwrap_err();
+        secret_key
+            .validate_github_grant(&grant_as_state, at(EMAIL_CHANGE_NOW))
+            .unwrap_err();
     }
 
     // --- OCI Public tokens ---

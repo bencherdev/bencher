@@ -914,6 +914,82 @@
         }
       }
     },
+    "/v0/github/exchange": {
+      "post": {
+        "tags": [
+          "projects",
+          "github"
+        ],
+        "summary": "Exchange a GitHub code for repositories to link",
+        "description": "Exchange the code that GitHub sent back with a link state for every repository the user can push to, in every installation of the app the user can see. Each repository whose installation has granted the app contents write comes with a grant to link it, which lasts ten minutes. The state must be from this user, and the user must have `manage` permissions for its project.",
+        "operationId": "github_exchange_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonOAuth"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonGitHubRepositories"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/organizations": {
       "get": {
         "tags": [
@@ -5262,6 +5338,313 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/JsonBranch"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects/{project}/github": {
+      "get": {
+        "tags": [
+          "projects",
+          "github"
+        ],
+        "summary": "View a project's linked repository",
+        "description": "View the GitHub repository a project's dispatches go to, if it has one. The user must have `manage` permissions for the project.",
+        "operationId": "proj_github_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonProjectGitHub"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "projects",
+          "github"
+        ],
+        "summary": "Link a repository to a project",
+        "description": "Link the GitHub repository that a grant from the GitHub code exchange names. The grant must be for this project and from this user, and it lasts ten minutes. A project links at most one repository, so this replaces any link it had. The user must have `manage` permissions for the project.",
+        "operationId": "proj_github_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonNewLinkedRepository"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonLinkedRepository"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects",
+          "github"
+        ],
+        "summary": "Unlink a project's repository",
+        "description": "Remove the project's linked repository, if it has one. The user must have `manage` permissions for the project.",
+        "operationId": "proj_github_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/projects/{project}/github/urls": {
+      "get": {
+        "tags": [
+          "projects",
+          "github"
+        ],
+        "summary": "Start linking a repository to a project",
+        "description": "The GitHub pages that start a link: the authorize page, and the install page for a repository whose owner has not installed the app yet. Both carry a state for this project and this user, which lasts ten minutes. The user must have `manage` permissions for the project.",
+        "operationId": "proj_github_urls_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonGitHubLinkUrls"
                 }
               }
             }
@@ -12945,6 +13328,36 @@
       "GitHash": {
         "type": "string"
       },
+      "GitHubAppSlug": {
+        "description": "The app's name in its GitHub URLs, safe to use as one URL path segment.",
+        "type": "string"
+      },
+      "GitHubInstallationId": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0
+      },
+      "GitHubInstallationPermission": {
+        "description": "Whether an installation of the app has approved its contents write.",
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "granted"
+            ]
+          },
+          {
+            "description": "The installation must approve the new permission on GitHub before it can mint.",
+            "type": "string",
+            "enum": [
+              "approval_required"
+            ]
+          }
+        ]
+      },
+      "GitHubRepositoryName": {
+        "type": "string"
+      },
       "GracePeriod": {
         "type": "integer",
         "format": "uint32",
@@ -13678,13 +14091,101 @@
               }
             ]
           },
+          "slug": {
+            "description": "The app's name in its GitHub URLs, as in `https://github.com/apps/{slug}`.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHubAppSlug"
+              }
+            ]
+          },
           "webhook_secret": {
             "$ref": "#/components/schemas/Secret"
           }
         },
         "required": [
           "private_key",
+          "slug",
           "webhook_secret"
+        ]
+      },
+      "JsonGitHubLinkUrls": {
+        "description": "Where to send the user to link a repository, or to install the GitHub App first.",
+        "type": "object",
+        "properties": {
+          "authorize": {
+            "description": "GitHub's authorize page.",
+            "type": "string",
+            "format": "uri"
+          },
+          "install": {
+            "description": "GitHub's install page for the app.",
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "authorize",
+          "install"
+        ]
+      },
+      "JsonGitHubRepositories": {
+        "description": "The repositories the user may link to the project, from a GitHub code exchange.",
+        "type": "object",
+        "properties": {
+          "project": {
+            "description": "The project the link was started for.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ProjectSlug"
+              }
+            ]
+          },
+          "repositories": {
+            "description": "Every repository the user can push to, in every installation of the app the user can see.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonGitHubRepository"
+            }
+          }
+        },
+        "required": [
+          "project",
+          "repositories"
+        ]
+      },
+      "JsonGitHubRepository": {
+        "type": "object",
+        "properties": {
+          "full_name": {
+            "$ref": "#/components/schemas/GitHubRepositoryName"
+          },
+          "grant": {
+            "nullable": true,
+            "description": "The grant to link this repository, only if its installation has granted the permission.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Jwt"
+              }
+            ]
+          },
+          "installation": {
+            "$ref": "#/components/schemas/GitHubInstallationId"
+          },
+          "installation_url": {
+            "description": "The installation's page on GitHub, where its owner approves a new permission.",
+            "type": "string",
+            "format": "uri"
+          },
+          "permission": {
+            "$ref": "#/components/schemas/GitHubInstallationPermission"
+          }
+        },
+        "required": [
+          "full_name",
+          "installation",
+          "installation_url",
+          "permission"
         ]
       },
       "JsonGoogle": {
@@ -14166,6 +14667,44 @@
           "organization"
         ]
       },
+      "JsonLinkedRepository": {
+        "description": "A project's linked repository, which its dispatches go to.",
+        "type": "object",
+        "properties": {
+          "full_name": {
+            "$ref": "#/components/schemas/GitHubRepositoryName"
+          },
+          "linked": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "reason": {
+            "nullable": true,
+            "description": "Why the link is disconnected, if it is.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LinkedRepositoryReason"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/LinkedRepositoryStatus"
+          },
+          "user": {
+            "description": "The user who linked it.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPubUser"
+              }
+            ]
+          }
+        },
+        "required": [
+          "full_name",
+          "linked",
+          "status",
+          "user"
+        ]
+      },
       "JsonLogging": {
         "type": "object",
         "properties": {
@@ -14639,6 +15178,22 @@
             ]
           }
         }
+      },
+      "JsonNewLinkedRepository": {
+        "type": "object",
+        "properties": {
+          "grant": {
+            "description": "A grant from the GitHub code exchange.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Jwt"
+              }
+            ]
+          }
+        },
+        "required": [
+          "grant"
+        ]
       },
       "JsonNewMeasure": {
         "type": "object",
@@ -17283,6 +17838,21 @@
           "uuid",
           "visibility"
         ]
+      },
+      "JsonProjectGitHub": {
+        "description": "A project's link to GitHub.",
+        "type": "object",
+        "properties": {
+          "linked_repository": {
+            "nullable": true,
+            "description": "The project's linked repository, if it has one.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonLinkedRepository"
+              }
+            ]
+          }
+        }
       },
       "JsonProjectKey": {
         "type": "object",
@@ -20514,6 +21084,38 @@
         },
         "maxItems": 64
       },
+      "LinkedRepositoryReason": {
+        "oneOf": [
+          {
+            "description": "The app was uninstalled.",
+            "type": "string",
+            "enum": [
+              "uninstalled"
+            ]
+          },
+          {
+            "description": "The app's installation was suspended.",
+            "type": "string",
+            "enum": [
+              "suspended"
+            ]
+          },
+          {
+            "description": "The repository was removed from the app's installation.",
+            "type": "string",
+            "enum": [
+              "removed"
+            ]
+          }
+        ]
+      },
+      "LinkedRepositoryStatus": {
+        "type": "string",
+        "enum": [
+          "connected",
+          "disconnected"
+        ]
+      },
       "LogLevel": {
         "type": "string",
         "enum": [
@@ -21710,6 +22312,10 @@
     },
     {
       "name": "checkout"
+    },
+    {
+      "name": "github",
+      "description": "GitHub"
     },
     {
       "name": "jobs",

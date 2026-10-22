@@ -1,6 +1,9 @@
 use std::{sync::LazyLock, time::Duration};
 
-use bencher_valid::{GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, ValidError};
+use bencher_valid::{
+    GitHubInstallationId, GitHubInstallationPermission, GitHubRepositoryId, GitHubRepositoryName,
+    ValidError,
+};
 use oauth2::AccessToken;
 use reqwest::{
     RequestBuilder, Response, StatusCode,
@@ -94,6 +97,7 @@ impl GitHubApi {
         // A suspended installation mints no token, so none of its repositories can be linked.
         for JsonInstallation {
             id: installation,
+            html_url: installation_url,
             suspended_at: _,
             permissions: JsonInstallationPermissions { contents },
         } in installations
@@ -126,6 +130,7 @@ impl GitHubApi {
                 if push {
                     pushable.push(GitHubRepository {
                         installation,
+                        installation_url: installation_url.clone(),
                         permission,
                         id,
                         full_name: GitHubRepositoryName::new(&login, &name)
@@ -231,17 +236,11 @@ pub(crate) fn join_path(base: &Url, path: &[&str]) -> Url {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GitHubRepository {
     pub installation: GitHubInstallationId,
+    /// The installation's page on GitHub, where its owner approves a new permission.
+    pub installation_url: Url,
     pub permission: GitHubInstallationPermission,
     pub id: GitHubRepositoryId,
     pub full_name: GitHubRepositoryName,
-}
-
-/// Whether the installation has approved the app's contents write.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum GitHubInstallationPermission {
-    Granted,
-    /// The installation must approve the new permission on GitHub before it can mint.
-    ApprovalRequired,
 }
 
 #[derive(Deserialize)]
@@ -259,6 +258,7 @@ struct JsonPage<T> {
 #[derive(Deserialize)]
 struct JsonInstallation {
     id: GitHubInstallationId,
+    html_url: Url,
     suspended_at: Option<IgnoredAny>,
     permissions: JsonInstallationPermissions,
 }
@@ -309,7 +309,14 @@ mod tests {
     const USER_TOKEN: &str = "user-token-marker";
 
     fn installation(id: u64, suspended_at: &str, permissions: &str) -> String {
-        format!(r#"{{"id": {id}, "suspended_at": {suspended_at}, "permissions": {permissions}}}"#)
+        format!(
+            r#"{{"id": {id}, "html_url": "{}", "suspended_at": {suspended_at}, "permissions": {permissions}}}"#,
+            installation_url(id)
+        )
+    }
+
+    fn installation_url(id: u64) -> String {
+        format!("https://github.com/settings/installations/{id}")
     }
 
     fn repository(id: u64, push: bool) -> String {
@@ -336,13 +343,15 @@ mod tests {
     ) -> GitHubRepository {
         GitHubRepository {
             installation: GitHubInstallationId::try_from(installation).unwrap(),
+            installation_url: installation_url(installation).parse().unwrap(),
             permission,
             id: GitHubRepositoryId::try_from(id).unwrap(),
             full_name: format!("octo-cat/repo-{id}").parse().unwrap(),
         }
     }
 
-    // Kills dropping the push filter or the suspended filter, attaching the wrong installation,
+    // Kills dropping the push filter or the suspended filter, attaching the wrong installation or
+    // the wrong installation's page,
     // stopping before a full page's successor or after a short page, granting contents write to
     // an installation with any other access, parsing the name of a repository without push, and
     // building a URL that misses the base's path.

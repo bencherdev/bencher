@@ -1,6 +1,6 @@
 use std::fmt;
 
-use bencher_valid::{NonEmpty, Sanitize, Secret};
+use bencher_valid::{GitHubAppSlug, NonEmpty, Sanitize, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -30,6 +30,8 @@ impl Sanitize for JsonGitHub {
 #[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonGitHubApp {
+    /// The app's name in its GitHub URLs, as in `https://github.com/apps/{slug}`.
+    pub slug: GitHubAppSlug,
     /// The app's private key, in PEM.
     pub private_key: Secret,
     pub webhook_secret: Secret,
@@ -44,6 +46,7 @@ impl fmt::Debug for JsonGitHubApp {
 impl Sanitize for JsonGitHubApp {
     fn sanitize(&mut self) {
         let Self {
+            slug: _,
             private_key,
             webhook_secret,
         } = self;
@@ -63,7 +66,7 @@ mod tests {
 
     fn github() -> JsonGitHub {
         serde_json::from_str(&format!(
-            r#"{{"client_id": "Iv1.0123456789abcdef", "client_secret": "client-secret", "app": {{"private_key": "{PRIVATE_KEY}", "webhook_secret": "{WEBHOOK_SECRET}"}}}}"#
+            r#"{{"client_id": "Iv1.0123456789abcdef", "client_secret": "client-secret", "app": {{"slug": "bencher-test", "private_key": "{PRIVATE_KEY}", "webhook_secret": "{WEBHOOK_SECRET}"}}}}"#
         ))
         .unwrap()
     }

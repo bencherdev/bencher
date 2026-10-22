@@ -1711,6 +1711,39 @@ export interface JsonCustomer {
 	email: Email;
 }
 
+/** Where to send the user to link a repository, or to install the GitHub App first. */
+export interface JsonGitHubLinkUrls {
+	/** GitHub's authorize page. */
+	authorize: Url;
+	/** GitHub's install page for the app. */
+	install: Url;
+}
+
+/** Whether an installation of the app has approved its contents write. */
+export enum GitHubInstallationPermission {
+	Granted = "granted",
+	/** The installation must approve the new permission on GitHub before it can mint. */
+	ApprovalRequired = "approval_required",
+}
+
+export interface JsonGitHubRepository {
+	full_name: string;
+	installation: number;
+	/** The installation's page on GitHub, where its owner approves a new permission. */
+	installation_url: Url;
+	permission: GitHubInstallationPermission;
+	/** The grant to link this repository, only if its installation has granted the permission. */
+	grant?: Jwt;
+}
+
+/** The repositories the user may link to the project, from a GitHub code exchange. */
+export interface JsonGitHubRepositories {
+	/** The project the link was started for. */
+	project: Slug;
+	/** Every repository the user can push to, in every installation of the app the user can see. */
+	repositories: JsonGitHubRepository[];
+}
+
 export enum PlanLevel {
 	Free = "free",
 	Pro = "pro",
@@ -1725,6 +1758,37 @@ export interface JsonLicense {
 	entitlements: Entitlements;
 	issued_at: string;
 	expiration: string;
+}
+
+export enum LinkedRepositoryStatus {
+	Connected = "connected",
+	Disconnected = "disconnected",
+}
+
+export enum LinkedRepositoryReason {
+	/** The app was uninstalled. */
+	Uninstalled = "uninstalled",
+	/** The app's installation was suspended. */
+	Suspended = "suspended",
+	/** The repository was removed from the app's installation. */
+	Removed = "removed",
+}
+
+export interface JsonPubUser {
+	uuid: Uuid;
+	name: UserName;
+	slug: Slug;
+}
+
+/** A project's linked repository, which its dispatches go to. */
+export interface JsonLinkedRepository {
+	full_name: string;
+	status: LinkedRepositoryStatus;
+	/** Why the link is disconnected, if it is. */
+	reason?: LinkedRepositoryReason;
+	/** The user who linked it. */
+	user: JsonPubUser;
+	linked: string;
 }
 
 export interface JsonLogin {
@@ -1818,6 +1882,11 @@ export interface JsonNewCheckout {
 
 export interface JsonNewClaim {
 	empty?: undefined;
+}
+
+export interface JsonNewLinkedRepository {
+	/** A grant from the GitHub code exchange. */
+	grant: Jwt;
 }
 
 export interface JsonNewMember {
@@ -2383,6 +2452,12 @@ export interface JsonPlanPortal {
 	url: string;
 }
 
+/** A project's link to GitHub. */
+export interface JsonProjectGitHub {
+	/** The project's linked repository, if it has one. */
+	linked_repository?: JsonLinkedRepository;
+}
+
 export interface JsonProjectKey {
 	uuid: Uuid;
 	project: Uuid;
@@ -2411,12 +2486,6 @@ export interface JsonProjectKeyCreated {
 export interface JsonPubProjectKey {
 	uuid: Uuid;
 	name: ResourceName;
-}
-
-export interface JsonPubUser {
-	uuid: Uuid;
-	name: UserName;
-	slug: Slug;
 }
 
 /** Counts for a single iteration of a report. */
