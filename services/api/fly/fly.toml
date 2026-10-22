@@ -6,6 +6,9 @@ kill_timeout = "6s"
 [build]
 image = "registry.fly.io/bencher-api"
 
+[env]
+SENTRY_ENVIRONMENT = "production"
+
 [[mounts]]
 source = "bencher_api_data"
 destination = "/var/lib/bencher/data"
