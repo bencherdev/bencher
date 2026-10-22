@@ -20,6 +20,21 @@ Bencher Bare Metal Job을 비동기적으로 기다릴 수 있게 합니다.
 위의 [포크에서의 Pull Requests][pull requests from forks] 워크플로와
 이 패턴을 함께 사용하세요.
 
+먼저 저장소를 프로젝트에 한 번 연결합니다.
+
+1. Bencher Console에서 프로젝트의 `Settings`를 연 다음 `Connections`를 엽니다.
+2. GitHub 카드에서 `Link repository`를 클릭합니다.
+   GitHub에서 `Connections`로 돌아오면, 카드에 푸시할 수 있는 각 저장소가 나열됩니다.
+3. 저장소 옆의 `Link`를 클릭합니다.
+   목록에 없으면 `Install on GitHub`를 클릭하고 앱에 해당 저장소에 대한 접근 권한을 부여합니다.
+   `Approval required`가 표시되면 `Approve on GitHub`를 클릭하여 앱의 새 권한을 승인한 다음, `Connections`를 다시 열고 `Link repository`를 클릭합니다.
+
+연결하려면 프로젝트의 Maintainer 역할(조직의 Leader와 서버 관리자가 가진 역할)과 저장소에 대한 푸시 권한이 필요합니다.
+`repository_dispatch`는 그보다 낮은 권한을 받아들이지 않으므로, Bencher의 GitHub 앱에는 저장소 콘텐츠에 대한 읽기 및 쓰기 권한이 필요합니다.
+Job이 끝나면 Bencher는 연결된 저장소에 대한 토큰을 만들고 그 토큰으로 `repository_dispatch` 이벤트를 보냅니다.
+GitHub 카드에 `Disconnected`가 표시되면 `Install on GitHub`를 클릭하고 앱에 저장소에 대한 접근 권한을 다시 부여하거나 앱 설치의 일시 중지를 해제하면 연결이 다시 이어집니다.
+Bencher Self-Hosted의 경우 서버에 [자체 GitHub 앱][github app]과 `v0.6.16` 이상의 버전이 필요합니다.
+
 <PullRequestsOnBareMetalSubmitCode />
 
 1. 첫 번째 GitHub Actions `workflow` 파일을 생성합니다.
@@ -74,13 +89,15 @@ Bencher Bare Metal Job을 비동기적으로 기다릴 수 있게 합니다.
 19. [GitHub Actions `GITHUB_TOKEN` 환경 변수][github token]를 사용하여 GitHub Check를 시작할 GitHub API 인증 토큰으로 `--github-actions` 옵션을 설정합니다.
     더 많은 세부 사항은 [`--github-actions` 문서][github actions option]를 참조하세요.
     (예: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-20. Job이 끝났을 때 Bencher가 `repository_dispatch` 이벤트를 보낼 수 있도록 `--ci-callback-token` 옵션을 `BENCHER_CALLBACK_TOKEN` **레포지토리** 시크릿으로 설정합니다.
-    더 많은 세부 사항은 [`--ci-callback-token` 문서][ci callback token option]를 참조하세요.
-    (예: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-21. 이미지 안에서 실행할 벤치마크 명령을 지정합니다.
+20. 이미지 안에서 실행할 벤치마크 명령을 지정합니다.
     이미지에 엔트리포인트가 있으면 명령은 그 엔트리포인트에 전달됩니다([`--entrypoint` 옵션][entrypoint option] 참조).
     전체 개요는 [벤치마크 명령][command argument]을 참조하세요.
     (예: `bencher mock`)
+
+GitHub Enterprise Server에서 또는 자체 토큰을 계속 사용하려면, `--ci-callback-token` 옵션을 저장소 콘텐츠에 대한 읽기 및 쓰기 권한을 가진 [fine-grained personal access token][github fine-grained token]으로 설정하고 `BENCHER_CALLBACK_TOKEN` **레포지토리** 시크릿으로 저장합니다.
+Bencher는 프로젝트에 연결된 저장소가 있든 없든 그 토큰으로 `repository_dispatch` 이벤트를 보냅니다.
+더 많은 세부 사항은 [`--ci-callback-token` 문서][ci callback token option]를 참조하세요.
+(예: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
 
 <PullRequestsOnBareMetalAttachCode />
 
@@ -140,6 +157,7 @@ Bencher Bare Metal Job을 비동기적으로 기다릴 수 있게 합니다.
 [github intermediate environment variable]: https://docs.github.com/ko/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
 
 [bare metal]: /ko/docs/explanation/bare-metal/
+[github app]: /ko/docs/how-to/github-app/
 [pricing]: /pricing
 [bencher run]: /ko/docs/explanation/bencher-run/
 [project option]: /ko/docs/explanation/bencher-run/#--project-project

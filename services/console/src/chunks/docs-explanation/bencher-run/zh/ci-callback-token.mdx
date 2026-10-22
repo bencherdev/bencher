@@ -5,9 +5,13 @@
 可选：设置分离的[裸机 Job][job]回调所使用的身份认证令牌。
 
 使用 [`--detach` 标志][detach]和 [`--github-actions` 选项](#--github-actions-github_token)时，
-应将此选项设置为一个[细粒度个人访问令牌][github fine-grained token]，
+Bencher API 服务器会在 Job 完成时触发 [`repository_dispatch`][github repository dispatch] 工作流。
+对于有[关联的仓库][pull requests on bare metal]的项目，Bencher 会为其创建令牌，因此不需要此选项。
+如需改用您自己的令牌，请将此选项设置为一个[细粒度个人访问令牌][github fine-grained token]，
 并且该令牌对该仓库至少具有 `contents: write` 权限。
-这将允许 Bencher API 服务器使用该令牌触发 [`repository_dispatch`][github repository dispatch] 工作流。
+此时，无论项目是否有关联的仓库，Bencher 都会使用该令牌发送 `repository_dispatch` 事件。
+在 GitHub Enterprise Server 上，以及 Bencher API 服务器早于 `v0.6.16` 时，CLI 要求设置此选项。
+没有此选项时，如果服务器没有 GitHub App、项目没有关联的仓库，或其关联的仓库已断开连接，`claimed` 项目的分离运行会被拒绝。
 有关完整概述，请参见 [GitHub Actions 中裸机上的 Pull Requests][pull requests on bare metal]。
 
 > 🐰 这里不能直接使用 `GITHUB_TOKEN`，因为它会在当前工作流结束时立即过期！

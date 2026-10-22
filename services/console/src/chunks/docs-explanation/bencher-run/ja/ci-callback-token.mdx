@@ -5,8 +5,12 @@
 オプション: デタッチした[ベアメタルJob][job]のコールバックで使用する認証トークンを設定します。
 
 [`--detach`フラグ][detach]と[`--github-actions`オプション](#--github-actions-github_token)を使用する場合、
-このオプションには、そのリポジトリに対して少なくとも`contents: write`権限を持つ[Fine-grained personal access token][github fine-grained token]を設定してください。
-これにより、Bencher APIサーバーはそのトークンを使用して[`repository_dispatch`][github repository dispatch]ワークフローをトリガーできます。
+Jobが終了すると、Bencher APIサーバーは[`repository_dispatch`][github repository dispatch]ワークフローをトリガーします。
+[リンクされたリポジトリ][pull requests on bare metal]を持つプロジェクトでは、Bencherがトークンを作成するため、このオプションは不要です。
+代わりに独自のトークンを使用するには、このオプションに、そのリポジトリに対して少なくとも`contents: write`権限を持つ[Fine-grained personal access token][github fine-grained token]を設定してください。
+その場合、Bencherは、プロジェクトにリンクされたリポジトリがあるかどうかにかかわらず、このトークンで`repository_dispatch`イベントを送信します。
+CLIは、GitHub Enterprise Serverと、`v0.6.16`より前のBencher APIサーバーでは、このオプションを必須とします。
+このオプションがない場合、サーバーにGitHub Appがない、プロジェクトにリンクされたリポジトリがない、またはリンクされたリポジトリが切断されていると、`claimed`プロジェクトのデタッチした実行は拒否されます。
 全体を把握するために[GitHub Actionsでのベアメタル上のプルリクエスト][pull requests on bare metal]を参照してください。
 
 > 🐰 `GITHUB_TOKEN`は現在のワークフローが終了するとすぐに期限切れになるため、ここで`GITHUB_TOKEN`をそのまま使用することはできません！
