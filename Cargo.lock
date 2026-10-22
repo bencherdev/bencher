@@ -920,6 +920,7 @@ version = "0.6.14"
 dependencies = [
  "bencher_json",
  "ordered-float",
+ "serde",
  "serde_json",
  "url",
 ]
