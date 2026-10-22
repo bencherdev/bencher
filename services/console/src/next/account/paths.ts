@@ -8,6 +8,8 @@ const ACCOUNT_PAGES = {
 	"users/tokens": { page: "LegacyTokens", title: "Legacy tokens" },
 	organizations: { page: "Organizations", title: "Organizations" },
 	"organizations/add": { page: "Organizations", title: "Organizations" },
+	// GitHub's return from linking a repository, under the reader's account bar.
+	github: { page: "GitHub", title: "GitHub" },
 } as const satisfies Record<string, { page: PageName; title: string }>;
 
 const SHORTCUT = "users/apps";

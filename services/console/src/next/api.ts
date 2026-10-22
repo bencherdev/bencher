@@ -24,7 +24,7 @@ interface ApiResponse<T> {
 	headers: Headers;
 }
 
-export type Method = "POST" | "PATCH" | "DELETE";
+export type Method = "POST" | "PUT" | "PATCH" | "DELETE";
 
 export interface Api {
 	get<T>(path: string, signal?: AbortSignal): Promise<ApiResponse<T>>;

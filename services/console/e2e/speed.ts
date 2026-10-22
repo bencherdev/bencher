@@ -126,6 +126,8 @@ export const measure = async (
 	page: Page,
 	apiUrl: string,
 	since = 0,
+	/** The document the load opened, when the app has since moved to another page. */
+	opened = page.url(),
 ): Promise<Cost> => {
 	const timing = await page.evaluate(
 		([api, from]) => {
@@ -176,7 +178,9 @@ export const measure = async (
 	);
 
 	// What the server sent, before any script added links of its own.
-	const served = await (await page.request.get(page.url())).body();
+	const served = await (
+		await page.request.get(new URL(opened, page.url()).href)
+	).body();
 	const html = served.toString("utf8");
 	const inlineScripts = [
 		...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g),

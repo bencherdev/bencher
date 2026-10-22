@@ -6,7 +6,7 @@ export const failureOf = (error: unknown, failed: string) =>
 		? `${failed}: ${apiMessage(error)}`
 		: failed;
 
-const apiMessage = (error: ApiError) => {
+export const apiMessage = (error: ApiError) => {
 	try {
 		const message = JSON.parse(error.message)?.message;
 		if (typeof message === "string" && message) {

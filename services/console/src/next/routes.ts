@@ -66,6 +66,7 @@ export const PAGES: Record<PageName, Page> = {
 	OrgBilling: organizationPage(() => import("./pages/OrgBilling")),
 	Organizations: lazy(() => import("./pages/Organizations")),
 	NewProject: organizationPage(() => import("./pages/NewProject")),
+	GitHub: lazy(() => import("./pages/GitHub")),
 	NotFound: lazy(() => import("./pages/NotFound")),
 };
 
@@ -111,6 +112,8 @@ export const PROJECTS_ROUTE = "/projects";
 /** Relative to the new console's root, every path its router owns. */
 export const CONSOLE_ROUTES: RouteDefinition[] = [
 	{ path: PROJECTS_ROUTE, children: ROUTES },
+	// Where GitHub sends the reader back from linking a repository, outside any project.
+	{ path: "/github", component: PAGES.GitHub },
 	{ path: "/users/:user/settings", component: PAGES.Profile },
 	{ path: "/users/:user/keys", component: PAGES.UserKeys },
 	{ path: "/users/:user?/apps", component: PAGES.ConnectedApps },
