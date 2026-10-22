@@ -1,6 +1,5 @@
-import Menu from "@bencherdev/ui/Menu";
+import Menu, { MenuItem } from "@bencherdev/ui/Menu";
 import {
-	type JSX,
 	Show,
 	createMemo,
 	createSignal,
@@ -284,13 +283,3 @@ const Tile = (props: {
 };
 
 export default Tile;
-
-const MenuItem = (props: JSX.ButtonHTMLAttributes<HTMLButtonElement>) => (
-	<button
-		type="button"
-		role="menuitem"
-		tabindex={-1}
-		class="ui-menu-item"
-		{...props}
-	/>
-);

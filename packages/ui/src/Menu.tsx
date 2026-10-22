@@ -105,6 +105,19 @@ const Menu = (props: MenuProps) => {
 
 export default Menu;
 
+/** One action in a Menu. */
+export const MenuItem = (
+	props: JSX.ButtonHTMLAttributes<HTMLButtonElement>,
+) => (
+	<button
+		type="button"
+		role="menuitem"
+		tabindex={-1}
+		class="ui-menu-item"
+		{...props}
+	/>
+);
+
 export interface MenuItemRadioProps
 	extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "onSelect"> {
 	checked: boolean;

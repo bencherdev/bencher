@@ -1,0 +1,5 @@
+/* The embed's one stylesheet: the plot and its line, without the console's pages. */
+@import "@bencherdev/ui/styles.css";
+@import "../styles/console.css";
+@import "../plot/plot.css";
+@import "./embed.css";

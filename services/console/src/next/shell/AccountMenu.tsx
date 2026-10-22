@@ -1,5 +1,5 @@
 import Icon from "@bencherdev/ui/Icon";
-import Menu from "@bencherdev/ui/Menu";
+import Menu, { MenuItem as Item } from "@bencherdev/ui/Menu";
 import Sheet from "@bencherdev/ui/Sheet";
 import { QueryClientContext } from "@tanstack/solid-query";
 import { type JSX, Show, createSignal, useContext } from "solid-js";
@@ -155,16 +155,6 @@ const AccountMenu = (props: AccountMenuProps) => {
 };
 
 export default AccountMenu;
-
-const Item = (props: JSX.ButtonHTMLAttributes<HTMLButtonElement>) => (
-	<button
-		type="button"
-		role="menuitem"
-		tabindex={-1}
-		class="ui-menu-item"
-		{...props}
-	/>
-);
 
 const Link = (props: JSX.AnchorHTMLAttributes<HTMLAnchorElement>) => (
 	<a role="menuitem" tabindex={-1} class="ui-menu-item" {...props} />

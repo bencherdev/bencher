@@ -1419,6 +1419,7 @@ test("a viewer can share but not pin", async ({ newContext, request }) => {
 		0,
 	);
 	await page.getByRole("button", { name: "Share" }).click();
+	await page.getByRole("menuitem", { name: "Copy link" }).click();
 	await expect(page.getByRole("button", { name: "Link copied" })).toBeVisible();
 	expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
 		page.url(),

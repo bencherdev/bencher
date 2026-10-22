@@ -27,9 +27,10 @@ const pinned = (canPin: boolean) => {
 				full={false}
 				hasLines={true}
 				working={false}
-				shared={false}
+				embeddable={true}
+				copied={undefined}
 				confirmation={undefined}
-				onShare={() => {}}
+				onCopy={() => {}}
 				onPin={() => {}}
 				onUndo={() => {}}
 				onEdit={() => {}}

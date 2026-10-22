@@ -20,7 +20,9 @@ import Controls from "../explore/Controls";
 import { plotData } from "../explore/data";
 import { BOXES, clearable, settleFocus } from "../explore/edit";
 import Editor from "../explore/Editor";
+import { embedCode } from "../embed/code";
 import Header, { type Confirmation } from "../explore/Header";
+import type { Copied } from "../explore/Share";
 import { measuresLayout } from "../explore/layout";
 import Leave from "../explore/Leave";
 import { useAlertChange } from "../alerts/change";
@@ -222,13 +224,13 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 		shown: Confirmation;
 		undo: () => Promise<void>;
 	}>();
-	const [shared, setShared] = createSignal(false);
+	const [copied, setCopied] = createSignal<Copied>();
 	const [working, setWorking] = createSignal(false);
 	const [failure, setFailure] = createSignal<string>();
 	/** The reader changed the query. */
 	const edit = (next: ExploreQuery, replace = false) => {
 		setConfirmation(undefined);
-		setShared(false);
+		setCopied(undefined);
 		setFailure(undefined);
 		go(settleVisibility(next, drawn()), replace);
 	};
@@ -401,10 +403,20 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 		go(queryFromPlot(plot), true);
 	};
 
-	const share = () =>
+	const copy = (what: Copied) =>
 		navigator.clipboard
-			.writeText(window.location.href)
-			.then(() => setShared(true))
+			.writeText(
+				what === "link"
+					? window.location.href
+					: embedCode({
+							origin: window.location.origin,
+							slug: slug(),
+							query: query(),
+							name: bootstrap().data?.project.name ?? slug(),
+							title: pinned()?.title ?? undefined,
+						}),
+			)
+			.then(() => setCopied(what))
 			.catch(() => {});
 
 	// Leaving a pin with unsaved changes for another page asks first; a link
@@ -555,9 +567,10 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 					full={full()}
 					hasLines={(data()?.lines.length ?? 0) > 0}
 					working={working()}
-					shared={shared()}
+					embeddable={bootstrap().data?.project.visibility === "public"}
+					copied={copied()}
 					confirmation={confirmation()?.shown}
-					onShare={share}
+					onCopy={copy}
 					onPin={() => create("Pinned")}
 					onUndo={undo}
 					onEdit={() => setEditing(pinned())}

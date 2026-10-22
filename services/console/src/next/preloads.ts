@@ -9,7 +9,14 @@ interface Preloads {
 	/** Modules a page imports only when it needs them, by their path under `src/next`. */
 	parts: Record<string, string[]>;
 	/** The public plot's page, which has an entry of its own. */
-	perf: { entry: string[]; parts: Record<string, string[]> };
+	perf: Standalone;
+	/** The embed's page, which has an entry of its own. */
+	embed: Standalone;
+}
+
+interface Standalone {
+	entry: string[];
+	parts: Record<string, string[]>;
 }
 
 // The build writes the client's module graph over this placeholder once the
@@ -41,16 +48,20 @@ export const modulePreloads = (
 	];
 };
 
+const standalonePreloads =
+	(page: "perf" | "embed") =>
+	(parts: readonly string[] = []): string[] => {
+		if (typeof BUILT !== "object" || BUILT === null) {
+			return [];
+		}
+		const { entry, parts: own } = (BUILT as Preloads)[page];
+		return [
+			...new Set([...entry, ...parts.flatMap((part) => own[part] ?? [])]),
+		];
+	};
+
 /** Every module the public plot's page loads, and those of the `parts` this link needs. */
-export const perfPreloads = (parts: readonly string[] = []): string[] => {
-	if (typeof BUILT !== "object" || BUILT === null) {
-		return [];
-	}
-	const { perf } = BUILT as Preloads;
-	return [
-		...new Set([
-			...perf.entry,
-			...parts.flatMap((part) => perf.parts[part] ?? []),
-		]),
-	];
-};
+export const perfPreloads = standalonePreloads("perf");
+
+/** Every module the embed's page loads, and those of the `parts` this link needs. */
+export const embedPreloads = standalonePreloads("embed");

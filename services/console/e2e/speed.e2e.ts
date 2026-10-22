@@ -13,7 +13,7 @@ import {
 } from "./fixtures";
 import { listPlots } from "./api";
 import { explore, twoLines } from "./explore";
-import { publicPath, twoLinesDrawn, twoRecentLines } from "./public";
+import { embedLink, publicPath, twoLinesDrawn, twoRecentLines } from "./public";
 import ceilings from "./speed-ceilings.json" with { type: "json" };
 import {
 	type Cost,
@@ -1871,6 +1871,73 @@ for (const [width, viewport] of [
 			expect(cost.apiRounds).toBe(1);
 			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.shellShift).toBeLessThanOrEqual(ceiling.cls);
+			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
+			expect(cost.cssBytes).toBeLessThanOrEqual(ceiling.cssBytes);
+			expect(cost.htmlBytes).toBeLessThanOrEqual(ceiling.htmlBytes);
+			expect(cost.inlineScriptBytes).toBeLessThanOrEqual(
+				ceiling.inlineScriptBytes,
+			);
+			expect(cost.lateModules).toBe(0);
+		});
+	});
+}
+
+// The embed: a frame on another site that paints from its document and one
+// stylesheet, then reads the project and its plot in one round.
+for (const [width, viewport] of [
+	["desktop", undefined],
+	["390", { width: 390, height: 844 }],
+] as const) {
+	test.describe(`the embed at ${width}`, () => {
+		// Its lines reported near the real time (see `twoRecentLines`).
+		test.use({
+			storageState: signedOut,
+			freezeClock: false,
+			...(viewport ? { viewport } : {}),
+		});
+
+		// Kills an embed that waits on the API or on code to paint, reads the
+		// API more than once a resource or in two rounds, finds code late, links
+		// a second stylesheet or the styles of the pages it does not draw, or
+		// shifts as the name and the plot arrive.
+		test(`a cold embed holds its speed ceilings at ${width}`, async ({
+			page,
+			request,
+		}) => {
+			const { project, search } = await twoRecentLines(request);
+			await observeLayoutShift(page);
+			await page.route(`${seed.api_url}/**`, async (route) => {
+				await new Promise((resolve) => setTimeout(resolve, 500));
+				await route.continue();
+			});
+			await page.goto(embedLink(project.slug, search));
+			await twoLinesDrawn(page);
+			await expect(
+				page.getByRole("link", { name: project.name, exact: true }),
+			).toBeVisible();
+			await loadedAndIdle(page);
+			await settle(page);
+			const cost = await measure(page, seed.api_url);
+			const blocking = await page.evaluate(() =>
+				(
+					performance.getEntriesByType(
+						"resource",
+					) as (PerformanceResourceTiming & {
+						renderBlockingStatus?: string;
+					})[]
+				)
+					.filter((entry) => entry.renderBlockingStatus === "blocking")
+					.map((entry) => entry.name),
+			);
+			report(`embed cold load ${width}`, cost);
+			const ceiling = ceilings.embedColdLoad;
+			expect(blocking).toHaveLength(1);
+			expect(blocking[0]).toMatch(/\.css$/);
+			expect(cost.apiAnswersBeforePaint).toBe(0);
+			expect(cost.apiRequests).toBe(2);
+			expect(cost.apiRounds).toBe(1);
+			expect(cost.cls).toBeLessThanOrEqual(ceiling.cls);
 			expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
 			expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 			expect(cost.cssBytes).toBeLessThanOrEqual(ceiling.cssBytes);

@@ -77,6 +77,7 @@ const plot = found === "public" && drawable(query);
 				query={query}
 				signIn={signInHref(`${Astro.url.pathname}${Astro.url.search}`)}
 				view={found === "private" ? "checking" : "plot"}
+				embeddable={found === "public"}
 			/>
 		</div>
 		<script>

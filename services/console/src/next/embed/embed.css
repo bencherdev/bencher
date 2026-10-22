@@ -1,0 +1,59 @@
+/* the embed: the plot and its key under one line, in a frame on another site */
+.em {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px 12px 12px;
+	font-size: 14px;
+	line-height: 1.45;
+}
+.em-line {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	height: 28px;
+	min-width: 0;
+}
+.em-name {
+	flex: 1;
+	min-width: 0;
+	margin: 0;
+	overflow: hidden;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 20px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.em-name a {
+	color: var(--color-text-primary);
+}
+.em-skel {
+	max-width: 200px;
+}
+.em-line .brand {
+	display: inline-flex;
+	flex: none;
+	margin-inline-start: auto;
+}
+.em-line .brand img {
+	width: 106px;
+	height: 20px;
+}
+.em-plot {
+	position: relative;
+}
+/* Over the plot's first axes row, so a failure moves nothing. */
+.em-failed {
+	position: absolute;
+	z-index: 1;
+	top: 0;
+	right: 10px;
+	left: 10px;
+	margin: 0;
+	color: var(--color-text-muted);
+}
+.em-note {
+	margin: 0;
+	color: var(--color-text-muted);
+}

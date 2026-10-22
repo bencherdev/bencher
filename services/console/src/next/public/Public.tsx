@@ -21,7 +21,7 @@ import { measuresLayout } from "../explore/layout";
 import { parameterRows } from "../explore/parameters";
 import PlotFrame from "../explore/PlotFrame";
 import { drawable } from "../explore/request";
-import ShareIcon from "../explore/ShareIcon";
+import Share, { type Copied } from "../explore/Share";
 import { chipSummary } from "../explore/summary";
 import { projectPath } from "../paths";
 import { lineVisible, settleVisibility } from "../query/line";
@@ -48,10 +48,12 @@ export interface PublicProps {
 	/** Why the last answer did not arrive. */
 	refused?: string | undefined;
 	plot?: PlotView | undefined;
-	shared?: boolean | undefined;
+	/** The project is public, so Share offers its embed. */
+	embeddable?: boolean | undefined;
+	copied?: Copied | undefined;
 	onQuery?: (query: ExploreQuery) => void;
 	onRetry?: () => void;
-	onShare?: () => void;
+	onCopy?: (what: Copied) => void;
 }
 
 const SUMMARY = [
@@ -191,10 +193,11 @@ const Plotted = (props: PublicProps) => {
 					presetsOnly
 				>
 					<span class="spacer" />
-					<Button size="sm" onClick={() => props.onShare?.()}>
-						<ShareIcon />
-						{props.shared ? "Link copied" : "Share"}
-					</Button>
+					<Share
+						embeddable={props.embeddable ?? false}
+						copied={props.copied}
+						onCopy={(what) => props.onCopy?.(what)}
+					/>
 				</Controls>
 			</section>
 			<Show

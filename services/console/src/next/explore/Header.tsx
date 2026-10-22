@@ -1,7 +1,7 @@
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
 import { type JSX, Show } from "solid-js";
-import ShareIcon from "./ShareIcon";
+import Share, { type Copied } from "./Share";
 
 export interface Confirmation {
 	/** What happened, such as "Pinned". */
@@ -43,9 +43,11 @@ const Header = (props: {
 	full: boolean;
 	hasLines: boolean;
 	working: boolean;
-	shared: boolean;
+	/** The project is public, so Share offers its embed. */
+	embeddable: boolean;
+	copied: Copied | undefined;
 	confirmation: Confirmation | undefined;
-	onShare: () => void;
+	onCopy: (what: Copied) => void;
 	onPin: () => void;
 	onUndo: () => void;
 	onEdit: () => void;
@@ -53,15 +55,13 @@ const Header = (props: {
 	onSave: () => void;
 	onSaveNew: () => void;
 }) => {
-	const Share = () => (
-		<Button
-			size="sm"
+	const Shared = () => (
+		<Share
+			embeddable={props.embeddable}
+			copied={props.copied}
 			disabled={!props.hasLines}
-			onClick={() => props.onShare()}
-		>
-			<ShareIcon />
-			{props.shared ? "Link copied" : "Share"}
-		</Button>
+			onCopy={(what) => props.onCopy(what)}
+		/>
 	);
 	return (
 		<>
@@ -97,7 +97,7 @@ const Header = (props: {
 							when={props.pinned}
 							fallback={
 								<>
-									<Share />
+									<Shared />
 									<Show when={props.canPin}>
 										<Button
 											size="sm"
@@ -136,7 +136,7 @@ const Header = (props: {
 									Save
 								</Button>
 							</Show>
-							<Share />
+							<Shared />
 						</Show>
 					</Show>
 				</div>
