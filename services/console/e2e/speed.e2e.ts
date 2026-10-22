@@ -563,7 +563,7 @@ const accountColdLoad = async (
 	await answered;
 	await loadedAndIdle(page);
 	await settle(page);
-	return measure(page, seed.api_url);
+	return measure(page, seed.api_url, 0, path);
 };
 
 const holds = (cost: Cost, ceiling: Partial<Record<keyof Cost, number>>) => {
@@ -850,6 +850,77 @@ test("a cold load of Keys holds the speed ceilings", async ({ page }) => {
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
+const NO_APP = "This server has no GitHub App";
+
+// Kills a GitHub link that waits on the shell's request, section code the
+// document does not name, and a card that shifts as the link arrives.
+test("a cold load of Connections holds the speed ceilings", async ({
+	page,
+}) => {
+	const cost = await coldLoad(
+		page,
+		nextPath(hashbrown.slug, "connections"),
+		() =>
+			expect(page.getByRole("region", { name: "GitHub" })).toContainText(
+				NO_APP,
+			),
+	);
+	report("connections cold load", cost);
+	holds(cost, ceilings.connectionsColdLoad);
+	expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
+});
+
+// Kills a GitHub return that asks for more than the exchange and then the
+// project's first view, code its document does not name, and a list that
+// shifts as it arrives. The API here has no GitHub App, so its answers are
+// faked.
+test("a cold load of the GitHub return page holds the speed ceilings", async ({
+	page,
+}) => {
+	const exchange = `${seed.api_url}/v0/github/exchange`;
+	const link = `${seed.api_url}/v0/projects/${hashbrown.slug}/github`;
+	const cors = { "Access-Control-Allow-Origin": "*" };
+	const state = `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify({ project: hashbrown.uuid })).toString("base64url")}.c2ln`;
+	const cost = await accountColdLoad(
+		page,
+		`/next/console/github?${new URLSearchParams({ code: "code", state })}`,
+		[exchange, link],
+		() =>
+			expect(
+				page.getByRole("button", { name: "Link pompeii-llc/hashbrown" }),
+			).toBeVisible(),
+		(route) => {
+			const method = route.request().method();
+			const url = route.request().url();
+			if (url === exchange && method === "POST") {
+				return route.fulfill({
+					headers: cors,
+					json: {
+						project: hashbrown.slug,
+						repositories: [
+							{
+								full_name: "pompeii-llc/hashbrown",
+								installation: 1,
+								installation_url: "https://github.example/installations/1",
+								permission: "granted",
+								grant: "grant",
+							},
+						],
+					},
+				});
+			}
+			if (url === link && method === "GET") {
+				return route.fulfill({ headers: cors, json: {} });
+			}
+			return route.continue();
+		},
+	);
+	report("github return cold load", cost);
+	holds(cost, ceilings.githubReturnColdLoad);
+	// The project's shell takes over from the account bar, its Alerts count arriving once.
+	expect(cost.shellShift).toBeLessThanOrEqual(shellCeiling(page));
+});
+
 // Measures each page's cold load on a narrow screen: what the page moves as its
 // data arrives, and what the shell moves when the Alerts count arrives.
 for (const [width, viewport] of [
@@ -886,6 +957,15 @@ for (const [width, viewport] of [
 						page.getByRole("table", { name: "Active keys" }),
 					).toBeVisible(),
 				ceilings.keysColdLoad,
+			],
+			[
+				"Connections",
+				nextPath(hashbrown.slug, "connections"),
+				(page: Page) =>
+					expect(page.getByRole("region", { name: "GitHub" })).toContainText(
+						NO_APP,
+					),
+				ceilings.connectionsColdLoad,
 			],
 		] as const) {
 			test(`a cold load of ${name} moves nothing at ${width}`, async ({

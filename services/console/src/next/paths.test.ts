@@ -80,6 +80,7 @@ describe("tabOf", () => {
 		expect(tabOf(["settings"])).toBe("settings");
 		expect(tabOf(["branches", "main"])).toBe("settings");
 		expect(tabOf(["keys"])).toBe("settings");
+		expect(tabOf(["connections"])).toBe("settings");
 		expect(tabOf(["nope"])).toBeUndefined();
 	});
 });
@@ -179,7 +180,7 @@ describe("pageName", () => {
 	});
 
 	// Kills a dimension list or page drawn by Settings, whose chunk would then
-	// carry them, and Settings or Keys drawn by the dimensions' page.
+	// carry them, and Settings, Keys, or Connections drawn by another page.
 	test("the dimension lists and their pages are one page, beside Settings", () => {
 		for (const dimension of [
 			"branches",
@@ -192,6 +193,7 @@ describe("pageName", () => {
 		}
 		expect(pageName(["settings"])).toBe("Settings");
 		expect(pageName(["keys"])).toBe("Settings");
+		expect(pageName(["connections"])).toBe("Settings");
 	});
 });
 
