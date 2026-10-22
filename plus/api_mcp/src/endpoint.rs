@@ -8,7 +8,8 @@ use http_body_util::Full;
 use rmcp::{
     model::{ClientJsonRpcMessage, ClientRequest},
     transport::{
-        StreamableHttpServerConfig, StreamableHttpService, common::http_header::JSON_MIME_TYPE,
+        StreamableHttpServerConfig, StreamableHttpService,
+        common::http_header::{HEADER_MCP_PROTOCOL_VERSION, JSON_MIME_TYPE},
         streamable_http_server::session::never::NeverSessionManager,
     },
 };
@@ -60,6 +61,9 @@ pub async fn mcp_post(
     if let Some(challenge) = server.challenge_response() {
         return challenge;
     }
+    if parts.status.is_client_error() {
+        log_rejection(server.rqctx(), parts.status, body.as_bytes());
+    }
     insert_cors_headers(&mut parts.headers);
     Ok(Response::from_parts(parts, Body::wrap(response_body)))
 }
@@ -104,6 +108,34 @@ fn server_config(max_request_body_bytes: usize) -> StreamableHttpServerConfig {
         // any cross-origin client already has.
         .disable_allowed_hosts()
         .disable_allowed_origins()
+}
+
+fn log_rejection(rqctx: &RequestContext<ApiContext>, status: StatusCode, body: &[u8]) {
+    let headers = rqctx.request.headers();
+    let sent = |name: &str| headers.get(name).and_then(|value| value.to_str().ok());
+    let body_shape = if body.trim_ascii().is_empty() {
+        "empty"
+    } else {
+        match serde_json::from_slice(body) {
+            Ok(serde_json::Value::Array(_)) => "array",
+            Ok(serde_json::Value::Object(_)) => "object",
+            Ok(_) => "other JSON",
+            Err(_) => "not JSON",
+        }
+    };
+    slog::info!(
+        &rqctx.log,
+        "MCP request rejected";
+        "status" => status.as_u16(),
+        "content_type" => sent(header::CONTENT_TYPE.as_str()),
+        "content_encoding" => sent(header::CONTENT_ENCODING.as_str()),
+        "content_length" => sent(header::CONTENT_LENGTH.as_str()),
+        "transfer_encoding" => sent(header::TRANSFER_ENCODING.as_str()),
+        "user_agent" => sent(header::USER_AGENT.as_str()),
+        "mcp_protocol_version" => sent(HEADER_MCP_PROTOCOL_VERSION),
+        "body_bytes" => body.len(),
+        "body_shape" => body_shape,
+    );
 }
 
 pub fn insert_cors_headers(headers: &mut HeaderMap) {

@@ -61,6 +61,10 @@ impl BencherMcp {
         }
     }
 
+    pub fn rqctx(&self) -> &dropshot::RequestContext<ApiContext> {
+        &self.rqctx
+    }
+
     /// The response to answer in place of the SDK's, once a tool call raised a challenge.
     pub fn challenge_response(&self) -> Option<Result<Response<Body>, HttpError>> {
         let challenge = self.challenge.get()?;
