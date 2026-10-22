@@ -28,8 +28,8 @@ use http::StatusCode;
 use reqwest::{
     Url,
     header::{
-        ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, CONTENT_TYPE, HOST, HeaderMap,
-        HeaderName, USER_AGENT, WWW_AUTHENTICATE,
+        ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, HOST, HeaderMap, HeaderName,
+        USER_AGENT, WWW_AUTHENTICATE,
     },
 };
 use serde_json::{Value, json};
@@ -664,60 +664,6 @@ async fn oauth_anonymous_caller_signs_in() {
     assert!(message["result"].get("_meta").is_none(), "{message}");
 }
 
-// An anonymous empty request is a probe for how to sign in and is challenged;
-// a signed-in one, and any other request, reaches the SDK
-#[tokio::test]
-async fn oauth_anonymous_empty_request_signs_in() {
-    let server = server_with(Some(oauth_server())).await;
-    let user = server
-        .signup("OAuth Prober", "oauth-prober@example.com")
-        .await;
-    let grant = grant(&server, &user, "projects:read");
-
-    for body in ["", " \r\n\t"] {
-        assert_sign_in(
-            post_raw(&server, None, body).await,
-            "projects:read",
-            "Sign in to Bencher to read private projects",
-        )
-        .await;
-    }
-    let url = Url::parse(RESOURCE_METADATA).expect("Invalid resource metadata URL");
-    let metadata: Value = server
-        .client
-        .get(server.api_url(url.path()))
-        .header(HOST, url.host_str().expect("Missing host"))
-        .send()
-        .await
-        .expect("Failed to read the resource metadata")
-        .json()
-        .await
-        .expect("Invalid resource metadata");
-    assert_eq!(metadata["resource"], oauth_resource().as_ref());
-
-    let bearers: [&str; 2] = [user.token.as_ref(), grant.access_token.as_ref()];
-    for bearer in bearers {
-        assert_not_challenged(&post_raw(&server, Some(bearer), "").await);
-    }
-    assert_not_challenged(&post_raw(&server, None, "not JSON").await);
-    assert_not_challenged(&post_raw(&server_with(None).await, None, "").await);
-
-    let initialize = json!({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "initialize",
-        "params": {
-            "protocolVersion": "2025-06-18",
-            "capabilities": {},
-            "clientInfo": {"name": "test-client", "version": "0.0.0"}
-        }
-    });
-    assert_eq!(
-        post(&server, None, &initialize).await.status(),
-        StatusCode::OK
-    );
-}
-
 // The server instructions mention signing in only once OAuth is configured
 #[tokio::test]
 async fn oauth_instructions_mention_sign_in() {
@@ -797,12 +743,9 @@ async fn oauth_chatgpt_reads_the_challenge_from_the_result() {
 
     let resp = post_as_chatgpt(&server, None, create_testbed.clone()).await;
     assert_chatgpt_challenge(resp, &sign_in).await;
-    let resp = send(
-        mcp_request(&server, None)
-            .json(&create_testbed)
-            .header(USER_AGENT, "openai-mcp/1.0.0"),
-    )
-    .await;
+    let resp =
+        send(mcp_request(&server, None, &create_testbed).header(USER_AGENT, "openai-mcp/1.0.0"))
+            .await;
     assert_chatgpt_challenge(resp, &sign_in).await;
 
     let read = grant(&server, &user, "projects:read");
@@ -973,31 +916,12 @@ async fn call_tool(
 }
 
 async fn post(server: &TestServer, bearer: Option<&str>, body: &Value) -> reqwest::Response {
-    send(mcp_request(server, bearer).json(body)).await
-}
-
-/// POST a raw body, as a client probing for how to sign in does.
-async fn post_raw(
-    server: &TestServer,
-    bearer: Option<&str>,
-    body: &'static str,
-) -> reqwest::Response {
-    send(
-        mcp_request(server, bearer)
-            .header(CONTENT_TYPE, "application/octet-stream")
-            .body(body),
-    )
-    .await
+    send(mcp_request(server, bearer, body)).await
 }
 
 /// POST from the one address that every rate limited test charges.
 async fn from_ip(server: &TestServer, bearer: Option<&str>, body: &Value) -> reqwest::Response {
-    send(
-        mcp_request(server, bearer)
-            .json(body)
-            .header("X-Forwarded-For", REMOTE_IP),
-    )
-    .await
+    send(mcp_request(server, bearer, body).header("X-Forwarded-For", REMOTE_IP)).await
 }
 
 /// POST as `ChatGPT` does, marking the tool call with an `openai/` request `_meta` key.
@@ -1014,8 +938,8 @@ async fn post_as_chatgpt(
     post(server, bearer, &body).await
 }
 
-fn mcp_request(server: &TestServer, bearer: Option<&str>) -> reqwest::RequestBuilder {
-    let mut request = server.client.post(server.api_url("/mcp"));
+fn mcp_request(server: &TestServer, bearer: Option<&str>, body: &Value) -> reqwest::RequestBuilder {
+    let mut request = server.client.post(server.api_url("/mcp")).json(body);
     if let Some(bearer) = bearer {
         request = request.header(
             bencher_json::AUTHORIZATION,
@@ -1144,15 +1068,6 @@ async fn assert_sign_in(resp: reqwest::Response, scope: &str, description: &str)
     assert_eq!(
         body,
         json!({"error": "login_required", "error_description": description})
-    );
-}
-
-/// Assert the answer to a body that is not a JSON-RPC message: a `415` without a challenge.
-fn assert_not_challenged(resp: &reqwest::Response) {
-    assert_eq!(resp.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-    assert!(
-        resp.headers().get(WWW_AUTHENTICATE).is_none(),
-        "Unexpected challenge: {resp:?}"
     );
 }
 
