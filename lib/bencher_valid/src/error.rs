@@ -103,6 +103,12 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to parse grace period: {0}")]
     GracePeriodStr(std::num::ParseIntError),
+    #[cfg(feature = "plus")]
+    #[error("Invalid GitHub ID: {0}")]
+    GitHubId(u64),
+    #[cfg(feature = "plus")]
+    #[error("Invalid GitHub repository name: {0}")]
+    GitHubRepositoryName(String),
 
     #[cfg(feature = "plus")]
     #[error("Failed to validate architecture: {0}")]
