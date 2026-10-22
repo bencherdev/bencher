@@ -9,6 +9,7 @@ describe("accountPage", () => {
 		const users = "/next/console/users/muriel-bagge";
 		expect(accountPage(`${users}/settings`)?.page).toBe("Profile");
 		expect(accountPage(`${users}/keys`)?.page).toBe("UserKeys");
+		expect(accountPage(`${users}/apps`)?.page).toBe("ConnectedApps");
 		expect(accountPage(`${users}/tokens/`)?.page).toBe("LegacyTokens");
 		expect(accountPage("/next/console/organizations")?.page).toBe(
 			"Organizations",
@@ -26,5 +27,15 @@ describe("accountPage", () => {
 		expect(
 			accountPage("/next/console/projects/hashbrown/keys"),
 		).toBeUndefined();
+	});
+
+	// Kills the shortcut read as a user named "apps" with no page, and that
+	// user's own pages read as the shortcut.
+	test("names Connected Apps for the shortcut that names no user", () => {
+		expect(accountPage("/next/console/users/apps")?.page).toBe("ConnectedApps");
+		expect(accountPage("/next/console/users/apps/apps")?.page).toBe(
+			"ConnectedApps",
+		);
+		expect(accountPage("/next/console/users/apps/keys")?.page).toBe("UserKeys");
 	});
 });

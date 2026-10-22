@@ -656,6 +656,21 @@ test("a cold load of legacy tokens holds the speed ceilings", async ({
 	holds(cost, ceilings.legacyTokensColdLoad);
 });
 
+// Kills a Connected Apps page that reads more than its one list, chains it
+// after another answer, or shifts as it arrives.
+test("a cold load of Connected Apps holds the speed ceilings", async ({
+	page,
+}) => {
+	const cost = await accountColdLoad(
+		page,
+		`${ACCOUNT}/apps`,
+		[`${USER}/oauth/grants?per_page=255&direction=desc`],
+		() => expect(page.getByText("No connected apps")).toBeVisible(),
+	);
+	report("connected apps cold load", cost);
+	holds(cost, ceilings.connectedAppsColdLoad);
+});
+
 // Kills an organization's General that asks for more than the organization
 // and the reader's permissions, chains a second round, or shifts as they arrive.
 test("a cold load of an organization's General holds the speed ceilings", async ({

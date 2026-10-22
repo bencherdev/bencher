@@ -93,6 +93,7 @@ export type PageName =
 	| "Dimensions"
 	| "Profile"
 	| "UserKeys"
+	| "ConnectedApps"
 	| "LegacyTokens"
 	| "OrgGeneral"
 	| "OrgMembers"
