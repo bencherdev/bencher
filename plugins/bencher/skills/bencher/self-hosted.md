@@ -66,9 +66,12 @@ bencher down console
 
 Pass environment variables to containers. The API server is configured via
 `BENCHER_CONFIG` (a JSON string) or `BENCHER_CONFIG_PATH` (a path to a JSON
-file inside the container), not individual settings variables:
+file inside the container), not individual settings variables. The config holds
+secrets, so create `bencher.json` and mount it rather than passing its contents:
 ```bash
-bencher up --api-env BENCHER_CONFIG="$(cat bencher.json)"
+bencher up \
+  --api-volume "$PWD/bencher.json:/etc/bencher/bencher.json" \
+  --api-env BENCHER_CONFIG_PATH=/etc/bencher/bencher.json
 ```
 
 See https://bencher.dev/docs/reference/server-config/ for the config JSON schema.
@@ -97,7 +100,11 @@ After `bencher up`:
 3. Create an organization and project
 4. Generate a project API key (or user API key) for CLI/CI use
 
-Or via CLI (the email is a positional argument and `--i-agree` is required):
+Or via CLI (the email is a positional argument and `--i-agree` is required).
+`--i-agree` accepts the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use),
+Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement
+(https://bencher.dev/legal/license). Show the user these links and pass it only
+after they agree:
 ```bash
 bencher auth signup --name "Admin" --i-agree admin@example.com --host http://localhost:6610
 ```

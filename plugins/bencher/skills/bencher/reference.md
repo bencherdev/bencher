@@ -7,7 +7,7 @@
 | Flag | Env Var | Default | Purpose |
 |------|---------|---------|---------|
 | `--project <slug>` | `BENCHER_PROJECT` | | Project slug or UUID |
-| `--ci-on-the-fly` | | | Auto-create project in CI |
+| `--ci-on-the-fly` | | | Auto-create project in CI (without a key, a public `unclaimed` project) |
 | `--branch <name>` | `BENCHER_BRANCH` | | Branch name/slug/UUID (auto-created) |
 | `--hash <hash>` | | HEAD | Git commit hash |
 | `--start-point <branch>` | | | Base branch for new branch |
@@ -73,7 +73,7 @@
 | `--ci-public-links` | Use public URLs |
 | `--ci-id <id>` | Custom CI comment identifier, replaces the project name in the GitHub Check name |
 | `--ci-number <n>` | Issue/PR number |
-| `--ci-callback-token <token>` | Fine-grained personal access token with contents write on the repository, for the `repository_dispatch` a detached run sends (requires `--github-actions` and `--detach`) |
+| `--ci-callback-token <token>` | Fine-grained personal access token for this one repository with only contents write, for the `repository_dispatch` a detached run sends (requires `--github-actions` and `--detach`) |
 
 ### Bare Metal (Bencher Plus)
 
@@ -87,8 +87,8 @@
 | `--job-timeout <secs>` | Maximum execution time |
 | `--job-poll-interval <secs>` | Poll interval |
 | `--detach` | Submit without waiting (conflicts with `--job-poll-interval`) |
-| `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, only for a claimed project: a callback to exactly `https://api.github.com/repos/<OWNER>/<REPO>/dispatches` with an `Authorization: Bearer <token>` header and `"event_type": "bencher_run"` in its body goes out on any plan, any other callback needs a Bencher Plus plan, and otherwise the callback is skipped (requires `--image` and `--detach`, conflicts with `--github-actions`) |
-| `--callback-header '<NAME: VALUE>'` | Callback request header, quoted as one argument (repeatable, requires `--callback-url`) |
+| `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, only for a claimed project: a callback to exactly `https://api.github.com/repos/<OWNER>/<REPO>/dispatches` with an `Authorization: Bearer <token>` header and `"event_type": "bencher_run"` in its body goes out on any plan, any other callback needs a Bencher Plus plan, and otherwise the callback is skipped; use only a URL the user provides (requires `--image` and `--detach`, conflicts with `--github-actions`) |
+| `--callback-header '<NAME: VALUE>'` | Callback request header, quoted as one argument; use only headers the user provides (repeatable, requires `--callback-url`) |
 | `--callback-body '<json>'` | Callback JSON body, quoted as one argument: `{{ job.uuid }}`, `{{ job.status }}`, `{{ report.uuid }}`, `{{ project.uuid }}`, `{{ project.name }}`, and `{{ project.slug }}` are replaced anywhere inside a string, a string that is exactly `{{ report }}` becomes the whole report (once per body), and any other name in braces is refused; optional, and without it the body is the report (requires `--callback-url`) |
 | `--job <uuid>` | Wait for a submitted job, then post its results (requires `--project`; `--job-timeout` is the wait budget; refuses report options, including from `BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, and `BENCHER_CMD`) |
 
@@ -99,7 +99,7 @@
 | `--host <url>` | `BENCHER_HOST` | `https://api.bencher.dev` | API host |
 | `--token <jwt>` | `BENCHER_API_TOKEN` | | User API token (JWT). Deprecated; use `--key` |
 | `--key <key>` | `BENCHER_API_KEY` | | Bencher API key: user (`bencher_user_*`) or project (`bencher_run_*`); project keys need `--project` or `--image` |
-| `--insecure-host` | | | Allow insecure HTTPS connections |
+| `--insecure-host` | | | Skip TLS certificate verification, for a self-hosted server with a self-signed certificate. Use only on a secure network with verified sources: it exposes the connection to man-in-the-middle attacks |
 | `--native-tls` | | | Use platform native TLS certificates |
 | `--timeout <secs>` | | 15 | Request timeout (1-900) |
 | `--attempts <n>` | | 35 | Request attempts |

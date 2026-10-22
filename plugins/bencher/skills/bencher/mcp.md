@@ -32,9 +32,9 @@ There are three ways to call it:
 - **OAuth sign-in**: clients with MCP OAuth support (ChatGPT, Claude Code, and
   claude.ai with a self-hosted server added as a custom connector) connect with
   no credential and sign in when asked.
-  The client opens Bencher's consent page in a browser, where the user logs in
-  (or pastes a `bencher_user_*` key) and approves the app. A self-hosted server
-  offers this only once its `plus.oauth` config section is set.
+  The client opens Bencher's consent page in the user's browser, where the user
+  signs in and approves the app. The agent never handles a key. A self-hosted
+  server offers this only once its `plus.oauth` config section is set.
 - **API key**: the same `Authorization: Bearer` credentials as the REST API, a
   project API key (`bencher_run_*`) or a user API key (`bencher_user_*`).
 - **Anonymous**: public projects can be read without any credential.
@@ -79,7 +79,7 @@ Generic MCP client configuration with an API key:
 - Access tokens (`bencher_oauth_*`) last 1 hour. Refresh tokens rotate on every
   use and lapse after 30 days unused; presenting a rotated refresh token again
   revokes the connection. A connection lasts at most one year, and one
-  approved with a pasted user key ends when that key is revoked or expires.
+  approved with a user API key ends when that key is revoked or expires.
 - OAuth access tokens are for the MCP server (and the OAuth UserInfo
   endpoint): REST endpoints refuse them with `401`.
 - Users see and revoke connections under Connected Apps in the console
@@ -149,19 +149,12 @@ Notes:
 - Streamable HTTP transport, stateless: each POST is an independent JSON-RPC
   message answered with `application/json`. No SSE, no sessions.
 - Protocol versions `2025-03-26` and newer are supported.
-- A credential that is malformed, invalid, or expired fails the whole request
-  on every method with HTTP `401` (a well-formed JWT that fails validation is a
-  `400`). With OAuth configured, the `401` carries
-  `WWW-Authenticate: Bearer error="invalid_token", ..., resource_metadata="..."`,
-  so an OAuth client refreshes its token or signs in again.
-- Sign-in challenges (OAuth configured): an anonymous caller gets HTTP `401`
-  with `WWW-Authenticate: Bearer resource_metadata="...", scope="..."`, asking
-  for `projects:read`, or `projects:read projects:write` for a tool that
-  writes. An OAuth token without the tool's scope gets HTTP `403` with
-  `error="insufficient_scope"` and `scope="projects:read projects:write"`.
-  ChatGPT (recognized by `openai/` keys in the tool call's `_meta`, or an
-  `openai-mcp` `User-Agent`) gets either as a `200` tool result with
-  `isError: true` and the challenge in `_meta["mcp/www_authenticate"]`.
+- A malformed, invalid, or expired credential fails the whole request with
+  HTTP `401` (a well-formed JWT that fails validation is a `400`), so an OAuth
+  client refreshes its token or signs in again.
+- With OAuth configured, a tool that needs sign-in, or a scope the token lacks,
+  answers with a sign-in challenge (HTTP `401` or `403`). Some clients receive it
+  as a tool result with `isError: true` instead.
 - Other authorization and validation failures (`400`/`403`/`404`) come back
   as tool results with `isError: true` carrying the REST status code and
   message.
