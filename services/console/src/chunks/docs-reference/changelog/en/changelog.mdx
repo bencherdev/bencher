@@ -3,6 +3,7 @@
 - List exact matches first, then the most recently used, in the Console search menus for Branches, Testbeds, Benchmarks, Measures, Parameters, and Metrics (Thank you [thomaseizinger](https://github.com/thomaseizinger))
 - A project key can now create and update plots with `POST /v0/projects/{project}/plots` and `PATCH /v0/projects/{project}/plots/{plot}`, and Bencher MCP adds the `create_plot` and `update_plot` tools
 - **BREAKING CHANGE** Remove the perf image endpoint (`GET /v0/projects/{project}/perf/img`) and the MCP `perf_image` tool; embed the perf plot from a public project's perf page instead
+- With `--github-actions`, the jobs of a Project on a pull request now share one comment with a numbered Report row per job, and `--ci-id` labels the job's Report
 
 ## `v0.6.14`
 - Add `--start-point-idempotency-key` (or `BENCHER_START_POINT_IDEMPOTENCY_KEY`) to `bencher run`, `bencher report create`, and `bencher branch update`, so parallel jobs that reset a Branch with the same key share one Head; in GitHub Actions, `bencher run` defaults the key to the workflow run attempt

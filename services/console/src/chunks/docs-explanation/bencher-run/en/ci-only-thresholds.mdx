@@ -4,5 +4,6 @@
 
 Optional: Only post results to CI if [a Threshold exists](/docs/explanation/thresholds/) for the Branch, Testbed, and Measure.
 If no Thresholds exist, then no pull request comment will be posted.
+Every job of a Project on a pull request shares one comment, so the comment is posted if a Threshold exists for any of its Reports.
 This only applies to pull request comments. The GitHub Check is always created.
 Requires: `--github-actions`

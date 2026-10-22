@@ -3,8 +3,17 @@
 <br />
 
 Opcional: ID personalizado para publicar resultados en CI.  
-Por defecto, Bencher segmentará automáticamente los resultados según la combinación de: Proyecto, Rama, Banco de pruebas y [Adaptador](/es/docs/explanation/adapters/).  
-Establecer un ID personalizado es útil cuando Bencher se ejecuta múltiples veces en el mismo flujo de trabajo de CI para la misma combinación de Proyecto, Rama, Banco de pruebas y Adaptador.  
+Todos los trabajos de un Proyecto en una solicitud de extracción comparten un comentario, con una fila de Informe para cada trabajo.  
+Con un ID, la etiqueta de la fila es su número y el ID (ej: `2 (microbench)`).  
+Hasta que exista el Informe del trabajo, su fila muestra solo el ID y ningún número (ej: `(microbench)`), como `Pending` mientras el trabajo se ejecuta, y va después de las filas numeradas.  
+Sin un ID, la etiqueta es solo el número, y la fila aparece una vez que existe el Informe del trabajo.  
+Por defecto, los trabajos comparten una fila cuando tienen la misma combinación de: Rama, Banco de pruebas y [Adaptador](/es/docs/explanation/adapters/),  
+junto con [`--build-time`](#--build-time) y [`--file-size`](#--file-size-file) si están configurados.  
+Establecer un ID personalizado es útil cuando Bencher se ejecuta múltiples veces en el mismo commit para la misma combinación de Proyecto, Rama, Banco de pruebas y Adaptador,  
+para que cada ejecución tenga su propia fila.  
+Por ejemplo, una ejecución de `push` y una ejecución de `pull_request` en la misma rama comparten el commit de encabezado,  
+así que asigne a cada ejecución su propio ID, o no use `--github-actions` en la ejecución de `push`.  
+De lo contrario, las ejecuciones comparten una fila, que muestra solo una de ellas, y una ejecución más antigua no escribe nada una vez que una ejecución más reciente ocupa la fila.  
 El ID también se usa en lugar del nombre del Proyecto en el nombre de la Verificación de GitHub (es decir, `Bencher Report (<ID>)`),  
 de modo que cada invocación obtiene un nombre estable que puede usarse como una verificación de estado requerida separada.  
 Requiere: `--github-actions`

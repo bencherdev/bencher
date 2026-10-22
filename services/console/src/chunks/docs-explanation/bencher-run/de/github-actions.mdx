@@ -16,9 +16,41 @@ Wenn die GitHub-Prüfung nicht erstellt werden kann, protokolliert `bencher run`
 
 Wenn `bencher run` als Teil einer Pull-Anfrage verwendet wird,
 dann werden die Ergebnisse auch als Kommentar zur Pull-Anfrage hinzugefügt.
+Alle Jobs eines Projekts in der Pull-Anfrage teilen sich diesen einen Kommentar, mit einer Berichtszeile für jeden Job.
 Dies erfordert, dass das Token [den `pull-requests` Bereich mit `write` Berechtigungen][github token permissions] hat.
 Die Ergebnisse werden außerdem immer zur Zusammenfassung des Jobs hinzugefügt.
 Mit [dem Flag `--detach`](/de/docs/explanation/images/#--detach) veröffentlicht der abgelöste Lauf keinen Kommentar und schreibt keine Zusammenfassung des Jobs, und [die Verbindung mit `--job`](/de/docs/explanation/images/#--job-uuid) schließt die GitHub-Prüfung ab, die er gestartet hat (siehe [die Option `--ci-callback-token`](#--ci-callback-token-token)).
+
+Bei zwei oder mehr Zeilen zeigt der Kommentar eine Übersichtstabelle mit jedem Bericht, seinem Testbed, seinem Adapter und seinem Status (`Pending`, die Anzahl der Alerts, `No Alerts` oder `Failed`).
+Die Zeilen stehen in der Reihenfolge, in der die Berichte gestartet wurden, nummeriert ab 1, so wie die Console die Berichte eines Laufs auflistet.
+Die Beschriftung jeder Zeile ist ihre Nummer, gefolgt vom Wert [der Option `--ci-id`](#--ci-id-id) in Klammern, wenn sie gesetzt ist (z.B.: `2 (microbench)`).
+Die Beschriftung verlinkt auf den Bericht, das Testbed auf seine Seite in der Console und der Adapter auf seinen Teil [der Adapter-Dokumentation](/de/docs/explanation/adapters/).
+Wenn die Jobs mehr als einen Branch verwenden, erhält die Übersichtstabelle eine Spalte für den Branch.
+Danach enthält eine Tabelle die Alerts aller Berichte, mit einer Spalte für den Bericht.
+Dann folgen die Ergebnisse jedes Berichts in einem einklappbaren Block (z.B.: `Report 2 (microbench): 14 benchmarks, 2 alerts`),
+der geöffnet ist, wenn der Bericht Alerts hat.
+Jeder Job behält seine eigene GitHub-Prüfung und seine eigene Zusammenfassung des Jobs,
+sodass sich die Namen der GitHub-Prüfungen und die erforderlichen Statusprüfungen nicht ändern.
+Ein Job, dessen Commit nicht mehr der Head-Commit der Pull-Anfrage ist, lässt den Kommentar unverändert.
+Wenn das Token die Pull-Anfrage nicht lesen kann, protokolliert der Job eine Warnung und schreibt den Kommentar, ohne den Head-Commit zu prüfen.
+
+Ein GitHub-Kommentar hat eine Größenbeschränkung, daher verwendet der Kommentar die erste dieser Formen, die passt:
+
+1. Alle oben genannten Teile
+2. Ohne die einklappbaren Blöcke, mit einem Hinweis, dass der Kommentar gekürzt ist
+3. Jede Übersichtszeile und die Gesamtzahl der Alerts, ohne die Zeilen der Alerts
+4. Als letzter Ausweg die ersten Übersichtszeilen, dann `and N more reports` für den Rest
+
+Mit einer Zeile ist der Kommentar derselbe wie zuvor, und wenn er zu groß ist, verlinkt er auf den vollständigen Bericht.
+
+Um die anderen Jobs zu finden, listet `bencher run` die GitHub-Prüfungen des Head-Commits auf,
+was der obige `checks` Bereich mit `write` Berechtigungen bereits erlaubt.
+Wenn ein Job seine GitHub-Prüfung nicht erstellen oder abschließen kann, nicht feststellen kann, welcher GitHub App sie gehört, oder die GitHub-Prüfungen nicht auflisten kann,
+dann veröffentlicht er einen Kommentar nur mit seinen eigenen Ergebnissen.
+Kommentare für das Projekt aus einer früheren Version von `bencher run` werden ersetzt:
+Der erste Job, der den gemeinsamen Kommentar schreibt, aktualisiert den ältesten davon und löscht die übrigen.
+Beim Schreiben des gemeinsamen Kommentars aktualisiert oder löscht ein Job nur Kommentare, die von der GitHub App gepostet wurden, der seine GitHub-Prüfung gehört,
+mit dem `GITHUB_TOKEN` also vom Bot `github-actions`.
 
 [github token]: https://docs.github.com/de/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/de/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

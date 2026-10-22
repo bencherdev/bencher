@@ -12,7 +12,20 @@
 
 这要求令牌具有 [具备 `write` 权限的 `checks` 范围][github token permissions]。如果无法创建 GitHub 检查，`bencher run` 将记录一条警告并继续。
 
-当 `bencher run` 作为拉取请求的一部分使用时，结果还将作为一条评论添加到拉取请求中。这要求令牌具有 [具备 `write` 权限的 `pull-requests` 范围][github token permissions]。结果也将始终被添加到作业摘要中。使用 [`--detach` 标志](/zh/docs/explanation/images/#--detach)时，分离的运行不会发布评论，也不会写入作业摘要，而 [`--job` 连接](/zh/docs/explanation/images/#--job-uuid)会完成它所启动的 GitHub 检查（参见 [`--ci-callback-token` 选项](#--ci-callback-token-token)）。
+当 `bencher run` 作为拉取请求的一部分使用时，结果还将作为一条评论添加到拉取请求中。拉取请求上同一项目的所有作业共享这一条评论，每个作业各有一行报告。这要求令牌具有 [具备 `write` 权限的 `pull-requests` 范围][github token permissions]。结果也将始终被添加到作业摘要中。使用 [`--detach` 标志](/zh/docs/explanation/images/#--detach)时，分离的运行不会发布评论，也不会写入作业摘要，而 [`--job` 连接](/zh/docs/explanation/images/#--job-uuid)会完成它所启动的 GitHub 检查（参见 [`--ci-callback-token` 选项](#--ci-callback-token-token)）。
+
+当有两行或更多行时，评论会显示一张摘要表，列出每个报告及其测试平台、适配器和状态（`Pending`、警报数量、`No Alerts` 或 `Failed`）。各行按报告开始的顺序排列，从 1 开始编号，与控制台列出一次运行的报告的方式相同。每行的标签是其编号，如果设置了 [`--ci-id` 选项](#--ci-id-id)，后面会跟上括号中的该选项值（例如：`2 (microbench)`）。标签链接到报告，测试平台链接到其在控制台中的页面，适配器链接到[适配器文档](/zh/docs/explanation/adapters/)中的对应部分。当作业使用多个分支时，摘要表会增加一列分支。接着，一张表格包含所有报告的警报，并带有一列报告。然后每个报告的结果位于可折叠的块中（例如：`Report 2 (microbench): 14 benchmarks, 2 alerts`），当该报告有警报时该块默认展开。每个作业保留自己的 GitHub 检查和作业摘要，因此 GitHub 检查名称和必需状态检查不会改变。如果作业的提交已不再是拉取请求的头提交，该作业将保持评论不变。如果令牌无法读取拉取请求，则该作业将记录一条警告，并在不检查头提交的情况下写入评论。
+
+GitHub 评论有大小限制，因此评论会使用以下形式中第一个能容纳的形式：
+
+1. 以上所有部分
+2. 不含可折叠的块，并附有评论已被截断的提示
+3. 每一行摘要和警报总数，不含警报行
+4. 作为最后手段，前几行摘要，然后用 `and N more reports` 表示其余的行
+
+只有一行时，评论与以前相同，如果过大，则链接到完整报告。
+
+为了找到其他作业，`bencher run` 会列出头提交上的 GitHub 检查，上述具备 `write` 权限的 `checks` 范围已经允许这样做。如果作业无法创建或完成其 GitHub 检查、无法确定拥有该检查的 GitHub App，或无法列出 GitHub 检查，则它将发布一条仅包含其自身结果的评论。来自早期版本 `bencher run` 的该项目评论将被替换：第一个写入共享评论的作业会更新其中最旧的一条并删除其余的。写入共享评论时，作业只会更新或删除由拥有其 GitHub 检查的 GitHub App 发布的评论，使用 `GITHUB_TOKEN` 时即 `github-actions` 机器人。
 
 [github token]: https://docs.github.com/zh/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/zh/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

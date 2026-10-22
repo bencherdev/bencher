@@ -2,4 +2,4 @@
 
 <br />
 
-Opcional: Solo comenzar a publicar resultados en CI si [se genera una Alerta](/es/docs/explanation/thresholds/#alerts). Si se genera una Alerta, entonces todos los resultados subsecuentes también se publicarán incluso si no contienen ninguna Alerta. Esto solo aplica a los comentarios de la solicitud de extracción. La Verificación de GitHub siempre se crea. Requiere: `--github-actions`
+Opcional: Solo comenzar a publicar resultados en CI si [se genera una Alerta](/es/docs/explanation/thresholds/#alerts). Si se genera una Alerta, entonces todos los resultados subsecuentes también se publicarán incluso si no contienen ninguna Alerta. Todos los trabajos de un Proyecto en una solicitud de extracción comparten un comentario, por lo que el comentario se crea en cuanto cualquiera de sus Informes tiene una Alerta, y después cada trabajo lo actualiza. Esto solo aplica a los comentarios de la solicitud de extracción. La Verificación de GitHub siempre se crea. Requiere: `--github-actions`

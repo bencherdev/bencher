@@ -16,9 +16,41 @@ Si la vérification GitHub ne peut pas être créée, `bencher run` enregistrera
 
 Lorsque `bencher run` est utilisé dans le cadre d'une pull request,
 les résultats seront également ajoutés à la pull request en tant que commentaire.
+Tous les travaux d'un Projet sur la pull request partagent ce seul commentaire, avec une ligne de Rapport pour chaque travail.
 Cela nécessite que le jeton ait [le scope `pull-requests` avec les permissions `write`][github token permissions].
 Les résultats seront également toujours ajoutés au résumé du travail.
 Avec [le drapeau `--detach`](/fr/docs/explanation/images/#--detach), l'exécution détachée ne publie aucun commentaire et n'écrit aucun résumé du travail, et [le rattachement avec `--job`](/fr/docs/explanation/images/#--job-uuid) complète la vérification GitHub qu'elle a démarrée (voir [l'option `--ci-callback-token`](#--ci-callback-token-token)).
+
+Avec deux lignes ou plus, le commentaire affiche un tableau de résumé de chaque Rapport avec son Banc d'essai, son Adaptateur et son statut (`Pending`, le nombre d'Alertes, `No Alerts` ou `Failed`).
+Les lignes sont dans l'ordre de démarrage des Rapports, numérotées à partir de 1, comme la Console liste les Rapports d'une exécution.
+Le libellé de chaque ligne est son numéro, suivi de la valeur de [l'option `--ci-id`](#--ci-id-id) entre parenthèses si elle est définie (ex : `2 (microbench)`).
+Le libellé renvoie vers le Rapport, le Banc d'essai vers sa page dans la Console et l'Adaptateur vers sa partie de [la documentation des Adaptateurs](/fr/docs/explanation/adapters/).
+Lorsque les travaux utilisent plus d'une Branche, le tableau de résumé ajoute une colonne pour la Branche.
+Ensuite, un tableau contient les Alertes de tous les Rapports, avec une colonne pour le Rapport.
+Puis les résultats de chaque Rapport suivent dans un bloc repliable (ex : `Report 2 (microbench): 14 benchmarks, 2 alerts`),
+qui est ouvert lorsque le Rapport a des Alertes.
+Chaque travail conserve sa propre vérification GitHub et son propre résumé du travail,
+de sorte que les noms des vérifications GitHub et les vérifications de statut requises ne changent pas.
+Un travail dont le commit n'est plus le commit de tête de la pull request laisse le commentaire tel quel.
+Si le jeton ne peut pas lire la pull request, alors le travail enregistrera un avertissement et écrira le commentaire sans vérifier son commit de tête.
+
+Un commentaire GitHub a une taille limite, donc le commentaire utilise la première de ces formes qui tient :
+
+1. Toutes les parties ci-dessus
+2. Sans les blocs repliables, avec une note indiquant que le commentaire est tronqué
+3. Chaque ligne de résumé et le nombre total d'Alertes, sans les lignes d'Alertes
+4. En dernier recours, les premières lignes de résumé, puis `and N more reports` pour le reste
+
+Avec une seule ligne, le commentaire est le même qu'avant, et s'il est trop grand, il renvoie vers le Rapport complet.
+
+Pour trouver les autres travaux, `bencher run` liste les vérifications GitHub du commit de tête,
+ce que le scope `checks` avec les permissions `write` ci-dessus permet déjà.
+Si un travail ne peut pas créer ou compléter sa vérification GitHub, ne peut pas déterminer quelle GitHub App la possède, ou ne peut pas lister les vérifications GitHub,
+alors il publiera un commentaire avec seulement ses propres résultats.
+Les commentaires du Projet provenant d'une version antérieure de `bencher run` sont remplacés :
+le premier travail qui écrit le commentaire partagé met à jour le plus ancien d'entre eux et supprime les autres.
+Lorsqu'il écrit le commentaire partagé, un travail ne met à jour ou ne supprime que les commentaires publiés par la GitHub App qui possède sa vérification GitHub,
+c'est-à-dire le bot `github-actions` avec le `GITHUB_TOKEN`.
 
 [github token]: https://docs.github.com/fr/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/fr/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
