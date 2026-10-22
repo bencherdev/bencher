@@ -22,10 +22,19 @@ use bencher_json::{
 use ordered_float::OrderedFloat;
 use url::Url;
 
+mod check;
+mod group;
+mod tag;
+
+pub use check::SectionCheck;
+pub use group::{GroupComment, Section};
+pub use tag::{CommentTag, group_tag};
+
 // 4 weeks
 const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(672);
 
 const EMPTY_CELL: &str = "<td></td>";
+const TRUNCATED_NOTICE: &str = "<blockquote><h3>⚠️ WARNING: Truncated view!</h3><p>The full continuous benchmarking report exceeds the maximum length allowed on this platform.</p></blockquote>";
 
 /// The branded report title markup.
 /// Shared with the `bencher` CLI GitHub Check summaries,
@@ -181,7 +190,7 @@ impl ReportComment {
     }
 
     pub fn html(&self, require_threshold: bool, id: Option<&str>) -> String {
-        self.html_inner(require_threshold, id, false)
+        self.html_inner(require_threshold, &self.bencher_tag(id), false)
     }
 
     pub fn html_with_max_length(
@@ -190,15 +199,19 @@ impl ReportComment {
         id: Option<&str>,
         max_length: usize,
     ) -> String {
-        let html = self.html(require_threshold, id);
+        self.html_with_tag(require_threshold, &self.bencher_tag(id), max_length)
+    }
+
+    fn html_with_tag(&self, require_threshold: bool, tag: &str, max_length: usize) -> String {
+        let html = self.html_inner(require_threshold, tag, false);
         if html.len() > max_length {
-            self.html_inner(require_threshold, id, true)
+            self.html_inner(require_threshold, tag, true)
         } else {
             html
         }
     }
 
-    fn html_inner(&self, require_threshold: bool, id: Option<&str>, truncated: bool) -> String {
+    fn html_inner(&self, require_threshold: bool, tag: &str, truncated: bool) -> String {
         let mut html = String::new();
         let html_mut = &mut html;
         self.html_header(html_mut);
@@ -206,7 +219,7 @@ impl ReportComment {
         self.html_benchmarks(html_mut, require_threshold, truncated);
         self.html_footer(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
-        self.html_bencher_tag(html_mut, id);
+        html_mut.push_str(tag);
         html
     }
 
@@ -228,26 +241,32 @@ impl ReportComment {
             (
                 "Branch",
                 self.json_report.branch.name.to_string(),
-                self.resource_url(Resource::Branch {
-                    slug: self.json_report.branch.slug.clone(),
-                    head: self.json_report.branch.head.uuid,
-                }),
+                self.branch_url(Some(self.json_report.branch.head.uuid)),
             ),
             (
                 "Testbed",
                 self.json_report.testbed.name.to_string(),
-                self.resource_url(Resource::Testbed {
-                    slug: self.json_report.testbed.slug.clone(),
-                    #[cfg(feature = "plus")]
-                    spec: self.json_report.testbed.spec.as_ref().map(|s| s.uuid),
-                }),
+                self.testbed_url(),
             ),
         ] {
-            html.push_str(&format!(
-                r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#,
-            ));
+            html_link_row(html, row, &name, &url);
         }
         html.push_str("</table>");
+    }
+
+    fn branch_url(&self, head: Option<HeadUuid>) -> Url {
+        self.resource_url(Resource::Branch {
+            slug: self.json_report.branch.slug.clone(),
+            head,
+        })
+    }
+
+    fn testbed_url(&self) -> Url {
+        self.resource_url(Resource::Testbed {
+            slug: self.json_report.testbed.slug.clone(),
+            #[cfg(feature = "plus")]
+            spec: self.json_report.testbed.spec.as_ref().map(|s| s.uuid),
+        })
     }
 
     fn html_benchmarks(&self, html: &mut String, require_threshold: bool, truncated: bool) {
@@ -267,7 +286,7 @@ impl ReportComment {
                 html.push_str("<blockquote><h3>⚠️ WARNING: No benchmarks found!</h3></blockquote>");
             }
         } else if truncated {
-            html.push_str("<blockquote><h3>⚠️ WARNING: Truncated view!</h3><p>The full continuous benchmarking report exceeds the maximum length allowed on this platform.</p></blockquote>");
+            html.push_str(TRUNCATED_NOTICE);
         }
     }
 
@@ -300,11 +319,7 @@ impl ReportComment {
         if self.alerts().is_empty() {
             return;
         }
-        let alerts_len = self.alerts().len();
-        html.push_str(&format!(
-            "<h3>🚨 {alerts_len} {alert}</h3>",
-            alert = if alerts_len == 1 { "Alert" } else { "Alerts" },
-        ));
+        html_alerts_heading(html, self.alerts().len());
 
         if !truncated {
             self.html_alerts_table(html);
@@ -312,98 +327,90 @@ impl ReportComment {
     }
 
     fn html_alerts_table(&self, html: &mut String) {
+        let columns = self.alert_columns();
         html.push_str("<table>");
-        self.html_alerts_table_header(html);
-        self.html_alerts_table_body(html);
-        html.push_str("</table>");
-    }
-
-    fn html_alerts_table_header(&self, html: &mut String) {
         html.push_str("<thead>");
         html.push_str("<tr>");
-        if self.multiple_iterations {
-            html.push_str("<th>Iteration</th>");
-        }
-        html.push_str("<th>Benchmark</th>");
-        html.push_str("<th>Measure<br />Units</th>");
-        html.push_str("<th>View</th>");
-        html.push_str("<th>Benchmark Result<br />(Result Δ%)</th>");
-        if self.has_lower_boundary_alert() {
-            html.push_str("<th>Lower Boundary<br />(Limit %)</th>");
-        }
-        if self.has_upper_boundary_alert() {
-            html.push_str("<th>Upper Boundary<br />(Limit %)</th>");
-        }
+        columns.html_header_cells(html);
         html.push_str("</tr>");
         html.push_str("</thead>");
-    }
-
-    fn html_alerts_table_body(&self, html: &mut String) {
         html.push_str("<tbody>");
-
         for alert in self.alerts() {
-            let (factor, units, units_symbol) = {
-                let mut min = alert.value;
-                if let Some(lower_limit) = alert.boundary.lower_limit {
-                    min = min.min(lower_limit);
-                }
-                if let Some(upper_limit) = alert.boundary.upper_limit {
-                    min = min.min(upper_limit);
-                }
-                let units = Units::new(min.into(), alert.threshold.measure.units.clone());
-                (
-                    units.scale_factor(),
-                    units.scale_units(),
-                    units.scale_units_symbol(),
-                )
-            };
-
             html.push_str("<tr>");
-            if self.multiple_iterations {
-                html.push_str(&format!("<td>{}</td>", alert.iteration));
-            }
-            html.push_str(&format!(
-                "<td><a href=\"{url}\">{benchmark}</a></td>",
-                url = self.resource_url(Resource::Benchmark(alert.benchmark.slug.clone())),
-                benchmark = alert.benchmark.name,
-            ));
-            html.push_str(&format!(
-                "<td><a href=\"{url}\">{measure}<br />{units}</a></td>",
-                url = self.resource_url(Resource::Measure(alert.threshold.measure.slug.clone())),
-                measure = alert.threshold.measure.name,
-            ));
-            self.html_alerts_table_view_cell(html, alert);
-            value_cell(
-                html,
-                alert.value,
-                alert.boundary.baseline,
-                factor,
-                &units_symbol,
-                true,
-            );
-            if self.has_lower_boundary_alert() {
-                lower_limit_cell(
-                    html,
-                    alert.value,
-                    alert.boundary.lower_limit,
-                    factor,
-                    &units_symbol,
-                    alert.limit == BoundaryLimit::Lower,
-                );
-            }
-            if self.has_upper_boundary_alert() {
-                upper_limit_cell(
-                    html,
-                    alert.value,
-                    alert.boundary.upper_limit,
-                    factor,
-                    &units_symbol,
-                    alert.limit == BoundaryLimit::Upper,
-                );
-            }
+            self.html_alert_cells(html, alert, columns);
             html.push_str("</tr>");
         }
         html.push_str("</tbody>");
+        html.push_str("</table>");
+    }
+
+    fn alert_columns(&self) -> AlertColumns {
+        AlertColumns {
+            iteration: self.multiple_iterations,
+            lower: self.has_boundary_alert(BoundaryLimit::Lower),
+            upper: self.has_boundary_alert(BoundaryLimit::Upper),
+        }
+    }
+
+    fn html_alert_cells(&self, html: &mut String, alert: &JsonAlert, columns: AlertColumns) {
+        let (factor, units, units_symbol) = {
+            let mut min = alert.value;
+            if let Some(lower_limit) = alert.boundary.lower_limit {
+                min = min.min(lower_limit);
+            }
+            if let Some(upper_limit) = alert.boundary.upper_limit {
+                min = min.min(upper_limit);
+            }
+            let units = Units::new(min.into(), alert.threshold.measure.units.clone());
+            (
+                units.scale_factor(),
+                units.scale_units(),
+                units.scale_units_symbol(),
+            )
+        };
+
+        if columns.iteration {
+            html.push_str(&format!("<td>{}</td>", alert.iteration));
+        }
+        html.push_str(&format!(
+            "<td><a href=\"{url}\">{benchmark}</a></td>",
+            url = self.resource_url(Resource::Benchmark(alert.benchmark.slug.clone())),
+            benchmark = alert.benchmark.name,
+        ));
+        html.push_str(&format!(
+            "<td><a href=\"{url}\">{measure}<br />{units}</a></td>",
+            url = self.resource_url(Resource::Measure(alert.threshold.measure.slug.clone())),
+            measure = alert.threshold.measure.name,
+        ));
+        self.html_alerts_table_view_cell(html, alert);
+        value_cell(
+            html,
+            alert.value,
+            alert.boundary.baseline,
+            factor,
+            &units_symbol,
+            true,
+        );
+        if columns.lower {
+            lower_limit_cell(
+                html,
+                alert.value,
+                alert.boundary.lower_limit,
+                factor,
+                &units_symbol,
+                alert.limit == BoundaryLimit::Lower,
+            );
+        }
+        if columns.upper {
+            upper_limit_cell(
+                html,
+                alert.value,
+                alert.boundary.upper_limit,
+                factor,
+                &units_symbol,
+                alert.limit == BoundaryLimit::Upper,
+            );
+        }
     }
 
     fn html_alerts_table_view_cell(&self, html: &mut String, alert: &JsonAlert) {
@@ -436,18 +443,14 @@ impl ReportComment {
 
         html.push_str("<details><summary>Click to view all benchmark results</summary>");
         html.push_str("<br />");
-        for iteration in self.results() {
-            self.html_iteration_table(html, iteration, require_threshold);
-        }
+        self.html_iteration_tables(html, require_threshold);
         html.push_str("</details>");
     }
 
-    fn has_lower_boundary_alert(&self) -> bool {
-        self.has_boundary_alert(BoundaryLimit::Lower)
-    }
-
-    fn has_upper_boundary_alert(&self) -> bool {
-        self.has_boundary_alert(BoundaryLimit::Upper)
+    fn html_iteration_tables(&self, html: &mut String, require_threshold: bool) {
+        for iteration in self.results() {
+            self.html_iteration_table(html, iteration, require_threshold);
+        }
     }
 
     fn has_boundary_alert(&self, boundary_limit: BoundaryLimit) -> bool {
@@ -647,13 +650,14 @@ impl ReportComment {
         ));
     }
 
-    fn html_bencher_tag(&self, html: &mut String, id: Option<&str>) {
-        html.push_str(&self.bencher_tag(id));
-    }
-
     // The Bencher tag allows us to easily check whether a comment is a Bencher report when updating
     pub fn bencher_tag(&self, id: Option<&str>) -> String {
-        let id = id.map_or_else(
+        tag::job_tag(&self.json_report.project.slug, &self.tag_id(id))
+    }
+
+    /// The ID in the Bencher tag: `id`, else the Branch, Testbed, and Adapter of the Report.
+    pub fn tag_id(&self, id: Option<&str>) -> String {
+        id.map_or_else(
             || {
                 format!(
                     "{branch}/{testbed}/{adapter}{build_time}{file_size}",
@@ -673,10 +677,6 @@ impl ReportComment {
                 )
             },
             str::to_owned,
-        );
-        format!(
-            r#"<div id="bencher.dev/projects/{project}/id/{id}"></div>"#,
-            project = self.json_report.project.slug,
         )
     }
 
@@ -685,6 +685,10 @@ impl ReportComment {
     /// so Reports for different Projects on the same commit do not collide.
     pub fn project_name(&self) -> &ResourceName {
         &self.json_report.project.name
+    }
+
+    pub fn project_slug(&self) -> &ProjectSlug {
+        &self.json_report.project.slug
     }
 
     pub fn has_threshold(&self) -> bool {
@@ -841,7 +845,7 @@ enum Resource {
     Report(ReportUuid),
     Branch {
         slug: BranchSlug,
-        head: HeadUuid,
+        head: Option<HeadUuid>,
     },
     Testbed {
         slug: TestbedSlug,
@@ -873,7 +877,9 @@ impl Resource {
 
     fn query_param(&self) -> Option<(&'static str, String)> {
         match self {
-            Self::Branch { head, .. } => Some(("head", head.to_string())),
+            Self::Branch {
+                head: Some(head), ..
+            } => Some(("head", head.to_string())),
             #[cfg(feature = "plus")]
             Self::Testbed {
                 spec: Some(spec), ..
@@ -883,6 +889,7 @@ impl Resource {
             } => Some(("model", model.to_string())),
             Self::Project
             | Self::Report(_)
+            | Self::Branch { head: None, .. }
             | Self::Testbed { .. }
             | Self::Benchmark(_)
             | Self::Measure(_)
@@ -940,6 +947,62 @@ fn alert_status(alert: &JsonAlert) -> &str {
     match alert.status {
         AlertStatus::Active => "🔔",
         AlertStatus::Dismissed | AlertStatus::Silenced => "🔕",
+    }
+}
+
+fn html_link_row(html: &mut String, row: &str, name: &str, url: &Url) {
+    html.push_str(&format!(
+        r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#,
+    ));
+}
+
+fn html_alerts_heading(html: &mut String, alerts_len: usize) {
+    html.push_str(&format!("<h3>🚨 {}</h3>", counted(alerts_len, "Alert")));
+}
+
+fn counted(count: usize, noun: &str) -> String {
+    if count == 1 {
+        format!("{count} {noun}")
+    } else {
+        format!("{count} {noun}s")
+    }
+}
+
+/// The alerts table columns that only some tables have.
+#[derive(Clone, Copy)]
+struct AlertColumns {
+    iteration: bool,
+    lower: bool,
+    upper: bool,
+}
+
+impl AlertColumns {
+    fn html_header_cells(self, html: &mut String) {
+        if self.iteration {
+            html.push_str("<th>Iteration</th>");
+        }
+        html.push_str("<th>Benchmark</th>");
+        html.push_str("<th>Measure<br />Units</th>");
+        html.push_str("<th>View</th>");
+        html.push_str("<th>Benchmark Result<br />(Result Δ%)</th>");
+        if self.lower {
+            html.push_str("<th>Lower Boundary<br />(Limit %)</th>");
+        }
+        if self.upper {
+            html.push_str("<th>Upper Boundary<br />(Limit %)</th>");
+        }
+    }
+}
+
+impl BitOr for AlertColumns {
+    type Output = Self;
+
+    fn bitor(self, rhs: Self) -> Self {
+        Self {
+            iteration: self.iteration || rhs.iteration,
+            lower: self.lower || rhs.lower,
+            upper: self.upper || rhs.upper,
+        }
     }
 }
 
@@ -1202,6 +1265,7 @@ mod tests {
         DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonReportCounts, JsonTestbed,
         project::{
             Visibility,
+            boundary::BoundaryLimit,
             report::{Adapter, JsonReportResults},
         },
     };
@@ -1211,7 +1275,7 @@ mod tests {
 
     const CONSOLE_URL: &str = "https://bencher.example.com";
 
-    fn json_report(visibility: Visibility) -> JsonReport {
+    pub(crate) fn json_report(visibility: Visibility) -> JsonReport {
         let project_uuid = "11111111-1111-1111-1111-111111111111".parse().unwrap();
         JsonReport {
             uuid: "00000000-0000-0000-0000-000000000000".parse().unwrap(),
@@ -1269,11 +1333,11 @@ mod tests {
         }
     }
 
-    fn report_comment(visibility: Visibility) -> ReportComment {
+    pub(crate) fn report_comment(visibility: Visibility) -> ReportComment {
         report_comment_for(json_report(visibility))
     }
 
-    fn report_comment_for(report: JsonReport) -> ReportComment {
+    pub(crate) fn report_comment_for(report: JsonReport) -> ReportComment {
         ReportComment::new(
             CONSOLE_URL.parse().unwrap(),
             report,
@@ -1285,7 +1349,7 @@ mod tests {
         )
     }
 
-    fn job_report() -> JsonReport {
+    pub(crate) fn job_report() -> JsonReport {
         JsonReport {
             #[cfg(feature = "plus")]
             job: Some("12121212-1212-1212-1212-121212121212".parse().unwrap()),
@@ -1298,7 +1362,7 @@ mod tests {
     ///
     /// Built from JSON rather than constructors because the absent deprecated
     /// `metric` is the wire shape under test.
-    fn value_less_results() -> JsonReportResults {
+    pub(crate) fn value_less_results() -> JsonReportResults {
         let date = serde_json::to_value(DateTime::TEST).unwrap();
         let measure = |uuid: &str, name: &str, slug: &str| {
             serde_json::json!({
@@ -1372,7 +1436,7 @@ mod tests {
     ///
     /// Built from JSON because the wire shape is what is under test: the singular
     /// fields carry the bare threshold, and the alert carries the `p99` one.
-    fn named_alert_report() -> JsonReport {
+    pub(crate) fn named_alert_report() -> JsonReport {
         let mut report = json_report(Visibility::Public);
         report.results = Some(serde_json::from_value(named_alert_results()).unwrap());
         // The only alert is the `p99` threshold's, on a row this table never draws.
@@ -1433,7 +1497,7 @@ mod tests {
 
     /// One benchmark whose `latency` `value` row the bare threshold checked and
     /// accepted: 1.0 sits well inside its upper limit of 100.0.
-    fn named_alert_results() -> serde_json::Value {
+    pub(crate) fn named_alert_results() -> serde_json::Value {
         let boundary = serde_json::json!({
             "baseline": 1.0,
             "lower_limit": null,
@@ -1507,6 +1571,51 @@ mod tests {
             "created": named_alert_date(),
             "modified": named_alert_date(),
         }])
+    }
+
+    /// A report on its own Branch and Testbed, so links from two of them differ.
+    pub(crate) fn report_on(uuid: &str, branch: (&str, &str), testbed: (&str, &str)) -> JsonReport {
+        let mut report = json_report(Visibility::Public);
+        report.uuid = uuid.parse().unwrap();
+        let (branch_uuid, branch_slug) = branch;
+        report.branch.uuid = branch_uuid.parse().unwrap();
+        report.branch.name = branch_slug.parse().unwrap();
+        report.branch.slug = branch_slug.parse().unwrap();
+        let (testbed_uuid, testbed_slug) = testbed;
+        report.testbed.uuid = testbed_uuid.parse().unwrap();
+        report.testbed.name = testbed_slug.parse().unwrap();
+        report.testbed.slug = testbed_slug.parse().unwrap();
+        report
+    }
+
+    /// The report with one alert past `limit` in each of its `iterations` iterations.
+    pub(crate) fn with_alerts(
+        mut report: JsonReport,
+        limit: BoundaryLimit,
+        iterations: u32,
+    ) -> JsonReport {
+        let result = named_alert_results()[0][0].clone();
+        let mut alert = named_alert_alerts(&report.branch, &report.testbed)[0].clone();
+        alert["limit"] = serde_json::to_value(limit).unwrap();
+        if limit == BoundaryLimit::Lower {
+            alert["boundary"] = serde_json::json!({
+                "baseline": 1000.0,
+                "lower_limit": 600.0,
+                "upper_limit": null,
+            });
+        }
+        let (results, alerts): (Vec<_>, Vec<_>) = (0..iterations)
+            .map(|iteration| {
+                let mut result = result.clone();
+                result["iteration"] = iteration.into();
+                let mut alert = alert.clone();
+                alert["iteration"] = iteration.into();
+                (serde_json::json!([result]), alert)
+            })
+            .unzip();
+        report.results = Some(serde_json::from_value(results.into()).unwrap());
+        report.alerts = Some(serde_json::from_value(alerts.into()).unwrap());
+        report
     }
 
     // A measure counts as checked when the deprecated singular threshold is present,

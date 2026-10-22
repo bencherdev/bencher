@@ -13,6 +13,7 @@ plus = ["bencher_json/plus"]
 [dependencies]
 bencher_json.workspace = true
 ordered-float.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 url.workspace = true
 
