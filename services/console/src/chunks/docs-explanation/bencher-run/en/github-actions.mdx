@@ -16,9 +16,29 @@ If the GitHub Check cannot be created, then `bencher run` will log a warning and
 
 When `bencher run` is used as a part of a pull request,
 then the results will also be added to the pull request as a comment.
+Every job of a Project on the pull request shares this one comment, with a section for each job.
 This requires the token to have [the `pull-requests` scope with `write` permissions][github token permissions].
 The results will always be added to the job summary as well.
 With [the `--detach` flag](/docs/explanation/images/#--detach), the detached run posts no comment and writes no job summary, and [the attach](/docs/explanation/images/#--job-uuid) completes the GitHub Check it started (see [the `--ci-callback-token` option](#--ci-callback-token-token)).
+
+Each job's section is named for [the `--ci-id` option](#--ci-id-id) if it is set,
+otherwise for the job's Branch, Testbed, and Adapter.
+With two or more sections, the comment shows a summary row for each section with its status (`Pending`, the number of Alerts, `No Alerts`, or `Failed`),
+one table of every Alert,
+and the results of each section in a collapsible block that is open when the section has Alerts.
+Each job keeps its own GitHub Check and job summary,
+so GitHub Check names and required status checks do not change.
+A job whose commit is no longer the head of the pull request leaves the comment as it is.
+If the token cannot read the pull request, then the job will log a warning and write the comment without checking its head commit.
+
+To find the other sections, `bencher run` lists the GitHub Checks on the head commit,
+which the `checks` scope with `write` permissions above already allows.
+If a job cannot create or complete its GitHub Check, cannot tell which GitHub App owns it, or cannot list the GitHub Checks,
+then it will post a comment with only its own results.
+Comments for the Project from an earlier version of `bencher run` are replaced:
+the first job to write the shared comment updates the oldest of them and deletes the rest.
+When writing the shared comment, a job only updates or deletes comments posted by the GitHub App that owns its GitHub Check,
+which with the `GITHUB_TOKEN` is the `github-actions` bot.
 
 [github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

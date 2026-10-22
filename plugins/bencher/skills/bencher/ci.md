@@ -71,7 +71,7 @@ benchmark_pr:
 | `--ci-only-thresholds` | Only post if a threshold exists for the branch/testbed/measure |
 | `--ci-only-on-alert` | Only post when an alert is generated |
 | `--ci-public-links` | Use public URLs (no login required to view) |
-| `--ci-id <id>` | Custom identifier for the CI comment, used in place of the project name in the GitHub Check name (`Bencher Report (<id>)`) |
+| `--ci-id <id>` | Names the job's section in the Project's PR comment, used in place of the project name in the GitHub Check name (`Bencher Report (<id>)`) |
 | `--ci-number <n>` | Issue/PR number to post on |
 | `--ci-callback-token <token>` | Fine-grained personal access token for this one repository with only contents write, for the `repository_dispatch` a detached bare metal run sends (requires `--github-actions` and `--detach`) |
 
@@ -132,7 +132,7 @@ attach_pr_benchmarks:
 
 The payload's `bencher` object holds the Job UUID (`job`) and the Project slug (`project`), and the attach reads the rest of it.
 `--detach` with `--github-actions` requires `--ci-callback-token`, and `--callback-url` conflicts with `--github-actions`.
-Give each detached job of one PR its own `--ci-id`, so each keeps its own comment.
+Give each detached job of one PR its own `--ci-id`, so each keeps its own section of the PR comment.
 The dispatch to `api.github.com`, which carries `--ci-callback-token` as a `Bearer` token and the `bencher_run` event, goes out on any plan for a claimed project. On GitHub Enterprise Server it also needs a Bencher Plus plan. Otherwise the callback is skipped and the check completes as neutral.
 
 ### On-the-Fly Project Creation

@@ -4,5 +4,6 @@
 
 Optional: Veröffentlicht Ergebnisse nur in CI, wenn [ein Schwellenwert existiert](/de/docs/explanation/thresholds/) für den Branch, das Testbett und die Messung.
 Wenn keine Schwellenwerte existieren, wird kein Pull-Request-Kommentar veröffentlicht.
+Alle Jobs eines Projekts in einem Pull Request teilen sich einen Kommentar, daher wird der Kommentar veröffentlicht, wenn für einen seiner Abschnitte ein Schwellenwert existiert.
 Dies gilt nur für Pull-Request-Kommentare. Die GitHub-Prüfung wird immer erstellt.
 Erfordert: `--github-actions`

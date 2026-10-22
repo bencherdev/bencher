@@ -3,8 +3,16 @@
 <br />
 
 Optional: Benutzerdefinierte ID zum Posten von Ergebnissen an CI.
-Standardmäßig segmentiert Bencher die Ergebnisse automatisch anhand der Kombination von: Projekt, Branch, Testbed und [Adapter](/de/docs/explanation/adapters/).
-Das Festlegen einer benutzerdefinierten ID ist nützlich, wenn Bencher im gleichen CI-Workflow mehrmals für die gleiche Projekt-, Branch-, Testbed- und Adapter-Kombination ausgeführt wird.
+Alle Jobs eines Projekts in einem Pull Request teilen sich einen Kommentar, und die ID benennt den Abschnitt des Jobs in diesem Kommentar.
+Mit einer ID wird der Abschnitt des Jobs als `Pending` angezeigt, solange der Job läuft.
+Ohne ID erscheint der Abschnitt, sobald der Bericht des Jobs erstellt ist.
+Standardmäßig wird der Abschnitt eines Jobs nach der Kombination von: Branch, Testbed und [Adapter](/de/docs/explanation/adapters/) benannt,
+zusammen mit [`--build-time`](#--build-time) und [`--file-size`](#--file-size-file), falls gesetzt.
+Das Festlegen einer benutzerdefinierten ID ist nützlich, wenn Bencher auf dem gleichen Commit mehrmals für die gleiche Projekt-, Branch-, Testbed- und Adapter-Kombination ausgeführt wird,
+damit jeder Lauf seinen eigenen Abschnitt erhält.
+Zum Beispiel teilen sich ein `push`-Lauf und ein `pull_request`-Lauf auf demselben Branch den Head-Commit,
+geben Sie daher jedem Lauf eine eigene ID, oder verwenden Sie `--github-actions` nicht für den `push`-Lauf.
+Andernfalls kann nur der Abschnitt des neueren Jobs erscheinen, und der andere Job schreibt nichts.
 Die ID wird außerdem anstelle des Projektnamens im Namen der GitHub-Prüfung verwendet (d.h. `Bencher Report (<ID>)`),
 sodass jeder Aufruf einen stabilen Namen erhält, der als separate erforderliche Statusprüfung verwendet werden kann.
 Erforderlich: `--github-actions`

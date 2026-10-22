@@ -3,8 +3,16 @@
 <br />
 
 Optional: Custom ID for posting results to CI.
-By default, Bencher will automatically segment out results by the combination of: Project, Branch, Testbed, and [Adapter](/docs/explanation/adapters/).
-Setting a custom ID is useful when Bencher is being run multiple times in the same CI workflow for the same Project, Branch, Testbed, and Adapter combination.
+Every job of a Project on a pull request shares one comment, and the ID names the job's section in that comment.
+With an ID, the job's section shows as `Pending` while the job runs.
+Without one, the section appears once the job's Report is created.
+By default, a job's section is named for the combination of: Branch, Testbed, and [Adapter](/docs/explanation/adapters/),
+along with [`--build-time`](#--build-time) and [`--file-size`](#--file-size-file) if set.
+Setting a custom ID is useful when Bencher is being run multiple times on the same commit for the same Project, Branch, Testbed, and Adapter combination,
+so that each run gets its own section.
+For example, a `push` run and a `pull_request` run on the same branch share the head commit,
+so give each run its own ID, or do not use `--github-actions` for the `push` run.
+Otherwise, only the newer job's section can appear, and the other job writes nothing.
 The ID is also used in place of the Project name in the GitHub Check name (ie `Bencher Report (<ID>)`),
 so each invocation gets a stable name that can be used as a separate required status check.
 Requires: `--github-actions`
