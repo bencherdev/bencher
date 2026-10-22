@@ -45,6 +45,8 @@ pub enum GitHubAppError {
     },
     #[error("Failed to parse the minted repository's name: {0}")]
     RepositoryName(ValidError),
+    #[error("Failed to look up the repository's installation: {0}")]
+    Installation(GitHubApiError),
 }
 
 impl GitHubApp {
@@ -155,6 +157,27 @@ impl GitHubApp {
         })
     }
 
+    /// The installation of the app that holds the repository now, if any does.
+    pub async fn repository_installation(
+        &self,
+        now: DateTime,
+        full_name: &GitHubRepositoryName,
+    ) -> Result<Option<GitHubInstallationId>, GitHubAppError> {
+        let jwt = self.jwt(now).map_err(GitHubAppError::Sign)?;
+        match self
+            .api
+            .get_following_redirect(
+                &["repos", full_name.owner(), full_name.name(), "installation"],
+                &jwt,
+            )
+            .await
+        {
+            Ok(JsonRepositoryInstallation { id }) => Ok(Some(id)),
+            Err(GitHubApiError::NotFound) => Ok(None),
+            Err(e) => Err(GitHubAppError::Installation(e)),
+        }
+    }
+
     /// Where a dispatch to the repository goes, on the same API as the mint.
     pub fn dispatch_url(&self, full_name: &GitHubRepositoryName) -> Url {
         self.api
@@ -226,13 +249,13 @@ struct JsonMintedRepository {
     name: String,
 }
 
+#[derive(Deserialize)]
+struct JsonRepositoryInstallation {
+    id: GitHubInstallationId,
+}
+
 #[cfg(test)]
 mod tests {
-    use aws_lc_rs::{
-        encoding::{AsDer as _, Pkcs8V1Der},
-        rsa::{KeyPair, KeySize},
-        signature::KeyPair as _,
-    };
     use base64::{Engine as _, engine::general_purpose::STANDARD};
     use bencher_valid::{DateTime, GitHubInstallationId, GitHubRepositoryId, Jwt, Secret};
     use jsonwebtoken::{Algorithm, DecodingKey, Validation};
@@ -242,7 +265,7 @@ mod tests {
     use crate::{
         GitHubApiError,
         api::USER_AGENT,
-        test_server::{Server, install_crypto_provider},
+        test_server::{Received, Server, app_key, install_crypto_provider},
     };
 
     const CLIENT_ID: &str = "Iv1.0123456789abcdef";
@@ -250,6 +273,8 @@ mod tests {
     const INSTALLATION_ID: u64 = 2048;
     const REPOSITORY_ID: u64 = 4096;
     const OTHER_REPOSITORY_ID: u64 = 8192;
+    const OTHER_INSTALLATION_ID: u64 = 6000;
+    const ELSEWHERE: &str = "https://elsewhere.example/repositories/4096/installation";
     const TOKEN: &str = "installation-token-marker";
     const WEBHOOK_SECRET: &str = "webhook-secret-marker";
     const REPOSITORY_INACCESSIBLE: &str = "There is at least one repository that does not exist or is not accessible to the parent installation.";
@@ -265,14 +290,8 @@ mod tests {
 
     /// A fresh key pair: the private key as a PKCS#8 PEM, and the public key to verify with.
     fn key_pair() -> (Secret, DecodingKey) {
-        let key_pair = KeyPair::generate(KeySize::Rsa2048).unwrap();
-        let private: Pkcs8V1Der<'static> = key_pair.as_der().unwrap();
-        let pem = format!(
-            "-----BEGIN PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
-            STANDARD.encode(private.as_ref())
-        );
-        let public = DecodingKey::from_rsa_der(key_pair.public_key().as_ref());
-        (pem.parse().unwrap(), public)
+        let (private_key, public_key) = app_key();
+        (private_key, DecodingKey::from_rsa_der(&public_key))
     }
 
     fn app(private_key: &Secret, server: Option<&Server>) -> GitHubApp {
@@ -350,10 +369,10 @@ mod tests {
     #[test]
     fn new_refuses_a_key_that_cannot_sign() {
         install_crypto_provider();
-        let key_pair = KeyPair::generate(KeySize::Rsa2048).unwrap();
+        let (_private_key, public_key) = app_key();
         let public_key = format!(
             "-----BEGIN RSA PUBLIC KEY-----\n{}\n-----END RSA PUBLIC KEY-----\n",
-            STANDARD.encode(key_pair.public_key().as_ref())
+            STANDARD.encode(public_key)
         );
 
         let error = GitHubApp::new(
@@ -547,6 +566,183 @@ mod tests {
         }
     }
 
+    // Kills asking any other path or under any other JWT, building the path with `Url::join`, and
+    // reading the installation from anywhere but the answer's `id`.
+    #[tokio::test]
+    async fn the_lookup_asks_which_installation_holds_the_repository() {
+        let (private_key, public) = key_pair();
+        let server = Server::start(vec![(200, installation_body(OTHER_INSTALLATION_ID))]).await;
+
+        let installation = app(&private_key, Some(&server))
+            .repository_installation(DateTime::TEST, &"octo-cat/hello.world".parse().unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(installation.map(u64::from), Some(OTHER_INSTALLATION_ID));
+        let [request] = server.received().await.try_into().ok().unwrap();
+        assert_eq!(
+            request.request_line(),
+            "GET /github/repos/octo-cat/hello.world/installation HTTP/1.1"
+        );
+        assert_eq!(request.header("user-agent"), Some(USER_AGENT));
+        let jwt = request
+            .header("authorization")
+            .and_then(|authorization| authorization.strip_prefix("Bearer "))
+            .unwrap();
+        assert_eq!(verify(jwt, &public).unwrap().iss, CLIENT_ID);
+    }
+
+    // Only a 404 says no installation holds the repository, so this kills folding a moved
+    // repository, a refusal, or an outage into none, which would disconnect a live link.
+    #[tokio::test]
+    async fn only_a_404_finds_no_installation() {
+        let (private_key, _public) = key_pair();
+        for (status, none) in [(404, true), (301, false), (403, false), (500, false)] {
+            let server = Server::start_with_headers(vec![(
+                status,
+                vec![("location", ELSEWHERE.to_owned())],
+                r#"{"message": "Refused"}"#.to_owned(),
+            )])
+            .await;
+
+            let installation = app(&private_key, Some(&server))
+                .repository_installation(DateTime::TEST, &"octo-cat/repo".parse().unwrap())
+                .await;
+
+            if none {
+                assert!(
+                    matches!(installation, Ok(None)),
+                    "{status}: {installation:?}"
+                );
+            } else {
+                assert!(
+                    matches!(installation, Err(GitHubAppError::Installation(_))),
+                    "{status}: {installation:?}"
+                );
+            }
+            assert_eq!(server.received().await.len(), 1, "{status}");
+        }
+    }
+
+    // The operator's ruling: one redirect, and only to the API's own origin. Kills following none,
+    // following a second one, following one to any other host or to the API's host by another
+    // scheme or port, and dropping the JWT from the redirected request.
+    #[tokio::test]
+    async fn the_lookup_follows_one_redirect_on_the_api_origin() {
+        const MOVED: &str = "/github/repositories/4096/installation";
+        let (private_key, public) = key_pair();
+        let moved = |location: &str| (301, vec![("location", location.to_owned())], String::new());
+        let server = Server::start_with_headers(vec![
+            moved(MOVED),
+            (200, Vec::new(), installation_body(OTHER_INSTALLATION_ID)),
+        ])
+        .await;
+
+        let installation = app(&private_key, Some(&server))
+            .repository_installation(DateTime::TEST, &"octo-cat/renamed".parse().unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(installation.map(u64::from), Some(OTHER_INSTALLATION_ID));
+        let received = server.received().await;
+        let lines: Vec<&str> = received.iter().map(Received::request_line).collect();
+        assert_eq!(
+            lines,
+            [
+                "GET /github/repos/octo-cat/renamed/installation HTTP/1.1",
+                "GET /github/repositories/4096/installation HTTP/1.1",
+            ]
+        );
+        for request in &received {
+            let jwt = request
+                .header("authorization")
+                .and_then(|authorization| authorization.strip_prefix("Bearer "))
+                .unwrap();
+            assert_eq!(verify(jwt, &public).unwrap().iss, CLIENT_ID);
+        }
+
+        for (responses, what) in [
+            (vec![moved(ELSEWHERE)], "another host"),
+            (
+                vec![moved(
+                    "https://127.0.0.1/github/repositories/4096/installation",
+                )],
+                "the API's host by another scheme",
+            ),
+            (
+                vec![moved(
+                    "http://127.0.0.1:1/github/repositories/4096/installation",
+                )],
+                "the API's host on another port",
+            ),
+            (vec![moved(MOVED), moved(MOVED)], "a second redirect"),
+        ] {
+            let scripted = responses.len();
+            let server = Server::start_with_headers(responses).await;
+
+            let error = app(&private_key, Some(&server))
+                .repository_installation(DateTime::TEST, &"octo-cat/renamed".parse().unwrap())
+                .await
+                .unwrap_err();
+
+            assert!(
+                matches!(
+                    &error,
+                    GitHubAppError::Installation(GitHubApiError::Status(status, _))
+                        if status.as_u16() == 301
+                ),
+                "{what}: {error:?}"
+            );
+            assert_eq!(server.received().await.len(), scripted, "{what}");
+        }
+    }
+
+    // Kills dropping the rate-limit headers of a refused mint, which tell the pacer when to try
+    // again, and keeping any other header or those of any other refusal.
+    #[tokio::test]
+    async fn a_rate_limited_mint_keeps_its_rate_limit_headers() {
+        let (private_key, _public) = key_pair();
+        for (status, kept) in [(403, true), (429, true), (500, false)] {
+            let server = Server::start_with_headers(vec![(
+                status,
+                vec![
+                    ("retry-after", "30".to_owned()),
+                    ("x-ratelimit-remaining", "0".to_owned()),
+                    ("x-ratelimit-reset", "1720679000".to_owned()),
+                    ("x-github-request-id", "request-marker".to_owned()),
+                ],
+                r#"{"message": "Rate limited"}"#.to_owned(),
+            )])
+            .await;
+
+            let error = app(&private_key, Some(&server))
+                .mint(DateTime::TEST, installation(), repository())
+                .await
+                .unwrap_err();
+
+            let GitHubAppError::Mint(GitHubApiError::Status(answered, headers)) = &error else {
+                panic!("{status}: {error:?}");
+            };
+            assert_eq!(answered.as_u16(), status);
+            let mut headers: Vec<(&str, &str)> = headers
+                .iter()
+                .map(|(name, value)| (name.as_str(), value.to_str().unwrap()))
+                .collect();
+            headers.sort_unstable();
+            let expected: &[(&str, &str)] = if kept {
+                &[
+                    ("retry-after", "30"),
+                    ("x-ratelimit-remaining", "0"),
+                    ("x-ratelimit-reset", "1720679000"),
+                ]
+            } else {
+                &[]
+            };
+            assert_eq!(headers, expected, "{status}");
+            server.received().await;
+        }
+    }
+
     // `Secret` prints itself in a debug build, so this kills a derived `Debug` on either type.
     #[test]
     fn debug_hides_the_key_the_webhook_secret_and_the_token() {
@@ -573,6 +769,12 @@ mod tests {
         assert!(printed.contains("octo-cat"), "{printed}");
     }
 
+    fn installation_body(id: u64) -> String {
+        format!(
+            r#"{{"id": {id}, "account": {{"login": "octo-cat", "id": 1}}, "repository_selection": "selected", "permissions": {{"contents": "write", "metadata": "read"}}, "suspended_at": null}}"#
+        )
+    }
+
     /// The mint's refusal, named as the table names it.
     fn refusal(error: GitHubAppError) -> String {
         let GitHubAppError::Mint(error) = error else {
@@ -582,7 +784,7 @@ mod tests {
             GitHubApiError::NotFound => "NotFound".to_owned(),
             GitHubApiError::RepositoryInaccessible => "RepositoryInaccessible".to_owned(),
             GitHubApiError::PermissionsNotGranted => "PermissionsNotGranted".to_owned(),
-            GitHubApiError::Status(status) => status.as_str().to_owned(),
+            GitHubApiError::Status(status, _) => status.as_str().to_owned(),
             GitHubApiError::Request(_)
             | GitHubApiError::Json(_)
             | GitHubApiError::RepositoryName(_) => panic!("{error:?}"),

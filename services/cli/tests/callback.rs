@@ -86,6 +86,7 @@ enum CheckRuns {
 #[derive(Clone, Copy)]
 enum VersionRead {
     Current,
+    Version(&'static str),
     ServerError,
 }
 
@@ -103,6 +104,8 @@ enum GitHubApi {
     StandIn,
     /// An `https` URL that refuses connections: no check starts, and a composed dispatch validates.
     Unreachable,
+    /// No `GITHUB_API_URL`, so the run uses github.com's API: only a dry run, which reaches no API.
+    Unset,
 }
 
 /// How the stand-in answers a read of the job.
@@ -289,20 +292,21 @@ fn bencher_run_in(
         .envs(env.iter().copied())
         .args(["run", "--host", &format!("http://{addr}")])
         .args(args);
-    let github_api_url = github.map(|github| {
+    let github_api_url = github.and_then(|github| {
         std::fs::write(&event_path, github.event.to_string()).expect("Failed to write the event");
-        let api_url = match github.api {
-            GitHubApi::StandIn => format!("http://{addr}"),
-            GitHubApi::Unreachable => format!("https://127.0.0.1:{}", refused_port()),
-        };
         command
             .env("GITHUB_ACTIONS", "true")
             .env("GITHUB_EVENT_NAME", github.event_name)
             .env("GITHUB_EVENT_PATH", &event_path)
-            .env("GITHUB_API_URL", &api_url)
             .env("GITHUB_SHA", GITHUB_SHA)
             .env("GITHUB_STEP_SUMMARY", &summary_path);
-        api_url
+        let api_url = match github.api {
+            GitHubApi::StandIn => format!("http://{addr}"),
+            GitHubApi::Unreachable => format!("https://127.0.0.1:{}", refused_port()),
+            GitHubApi::Unset => return None,
+        };
+        command.env("GITHUB_API_URL", &api_url);
+        Some(api_url)
     });
     thread::scope(|scope| {
         let server = scope.spawn(|| serve(&listener, stand_in));
@@ -512,6 +516,9 @@ fn respond(request: &Request, stand_in: StandIn) -> (&'static str, String) {
                 OK,
                 serde_json::json!({ "version": env!("CARGO_PKG_VERSION") }).to_string(),
             ),
+            VersionRead::Version(version) => {
+                (OK, serde_json::json!({ "version": version }).to_string())
+            },
             VersionRead::ServerError => error(SERVER_ERROR, "Internal Server Error"),
         },
         ("GET", "/v0/projects/project") => (
@@ -1084,21 +1091,92 @@ fn detach_on_a_push_composes_no_number() {
     );
 }
 
+/// A server before the one that mints the dispatch's token.
+const BEFORE_MINTING: VersionRead = VersionRead::Version("0.6.13");
+/// The first server that mints it.
+const MINTING: VersionRead = VersionRead::Version("0.6.14");
+
+/// A detached run on GitHub Actions against a server answering its version check with `version`.
+fn detach_on(version: VersionRead, github: &GitHub, args: &[&str]) -> Run {
+    github_run_with(
+        StandIn {
+            job_read: JobRead::Callback("pending"),
+            version,
+            check_runs: CheckRuns::Create,
+        },
+        github,
+        &[&DETACH[..], args].concat(),
+    )
+}
+
+// Kills a refusal that starts a check or submits the run, and composing a dispatch without a
+// token for a server that cannot mint one, or for a GitHub that is not github.com.
 #[test]
 fn detach_without_a_callback_is_refused() {
-    let run = github_run(
-        JobRead::Callback("pending"),
-        &pull_request(GitHubApi::StandIn),
-        &DETACH,
-    );
-    assert_eq!(run.output.status.code(), Some(1), "{}", run.stderr());
-    let stderr = run.stderr();
-    assert!(
-        stderr.contains("`--detach` with `--github-actions` requires `--ci-callback-token`"),
-        "{stderr}"
-    );
-    run.assert_no_marker();
-    assert!(run.requests.is_empty());
+    for (version, api, what) in [
+        (
+            BEFORE_MINTING,
+            GitHubApi::Unset,
+            "a server that cannot mint",
+        ),
+        (MINTING, GitHubApi::Unreachable, "another GitHub API"),
+    ] {
+        let run = detach_on(version, &pull_request(api), &[]);
+        assert_eq!(
+            run.output.status.code(),
+            Some(1),
+            "{what}: {}",
+            run.stderr()
+        );
+        let stderr = run.stderr();
+        assert!(
+            stderr.contains("`--detach` with `--github-actions` requires `--ci-callback-token`"),
+            "{what}: {stderr}"
+        );
+        run.assert_no_marker();
+        let requests: Vec<(&str, &str)> = run
+            .requests
+            .iter()
+            .map(|request| (request.method.as_str(), request.path.as_str()))
+            .collect();
+        assert_eq!(requests, [("GET", VERSION_PATH)], "{what}");
+    }
+}
+
+// Kills a dispatch without `--ci-callback-token` that carries an `Authorization` header, goes to
+// any API but github.com's, or carries any other payload. A dry run starts no check and submits
+// nothing, so nothing reaches GitHub.
+#[test]
+fn detach_without_a_callback_composes_a_dispatch_without_a_token() {
+    let run = detach_on(MINTING, &pull_request(GitHubApi::Unset), &["--dry-run"]);
+    run.assert_success();
+
+    let requests: Vec<(&str, &str)> = run
+        .requests
+        .iter()
+        .map(|request| (request.method.as_str(), request.path.as_str()))
+        .collect();
+    assert_eq!(requests, [("GET", VERSION_PATH)]);
+    let composed: bencher_json::JsonNewCallback = serde_json::from_value(serde_json::json!({
+        "url": "https://api.github.com/repos/owner/repo/dispatches",
+        "headers": {
+            "accept": "application/vnd.github+json",
+            "x-github-api-version": "2022-11-28",
+        },
+        "body": {
+            "event_type": "bencher_run",
+            "client_payload": {
+                "bencher": {
+                    "project": "{{ project.slug }}",
+                    "job": "{{ job.uuid }}",
+                    "ci_number": 7,
+                },
+                "github": { "sha": HEAD_SHA },
+            },
+        },
+    }))
+    .expect("The composed callback is valid");
+    run.assert_echo(&composed);
 }
 
 fn attach(github: &GitHub, args: &[&str]) -> Run {

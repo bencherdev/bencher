@@ -520,6 +520,7 @@ impl GitHubActions {
     }
 
     /// The `repository_dispatch` that a detached run's callback sends, so its attach can complete the check.
+    /// Without `--ci-callback-token`, it goes without a token, which the server mints.
     #[cfg(feature = "plus")]
     pub fn dispatch_callback(
         &self,
@@ -527,9 +528,6 @@ impl GitHubActions {
         sub_adapter: &bencher_comment::SubAdapter,
         log: bool,
     ) -> Result<Option<JsonNewCallback>, GitHubError> {
-        let Some(token) = &self.callback_token else {
-            return Ok(None);
-        };
         if !is_github_actions() {
             cli_println_quietable!(
                 log,
@@ -542,7 +540,7 @@ impl GitHubActions {
         let full_name = repository_full_name(&event_str, &event)?;
         let payload = self.dispatch_payload(&event_str, &event, check, sub_adapter)?;
         let api_url = github_api_url(log).unwrap_or_else(|| DEFAULT_GITHUB_API_URL.to_owned());
-        dispatch_request(&api_url, full_name, token, &payload).map(Some)
+        dispatch_request(&api_url, full_name, self.callback_token.as_ref(), &payload).map(Some)
     }
 
     /// `--ci-id`, the pull request, the comment tag's flags, the head SHA the check was started at, and the check.
@@ -989,7 +987,7 @@ fn check_error(err: octocrab::Error, variant: fn(octocrab::Error) -> GitHubError
     }
 }
 
-fn github_api_url(log: bool) -> Option<String> {
+pub(crate) fn github_api_url(log: bool) -> Option<String> {
     if let Ok(url) = std::env::var(GITHUB_API_URL) {
         Some(url)
     } else {
@@ -1073,12 +1071,20 @@ impl DispatchPayload {
     }
 }
 
-/// The `repository_dispatch` request, validated as any other callback.
+/// Whether Bencher can mint the token of a dispatch composed with `api_url`, the `GITHUB_API_URL`
+/// that `dispatch_callback` reads: only for github.com's API, which an unset one defaults to.
+#[cfg(feature = "plus")]
+pub fn mints_for_api_url(api_url: Option<&str>) -> bool {
+    api_url.is_none_or(|api_url| api_url.trim_end_matches('/') == DEFAULT_GITHUB_API_URL)
+}
+
+/// The `repository_dispatch` request, validated as any other callback. Without a token, it has no
+/// `Authorization` header.
 #[cfg(feature = "plus")]
 fn dispatch_request(
     api_url: &str,
     full_name: &str,
-    token: &Secret,
+    token: Option<&Secret>,
     payload: &DispatchPayload,
 ) -> Result<JsonNewCallback, GitHubError> {
     let url = format!(
@@ -1086,10 +1092,12 @@ fn dispatch_request(
         api_url = api_url.trim_end_matches('/')
     );
     let headers = [
-        ("Accept", "application/vnd.github+json".to_owned()),
-        ("Authorization", format!("Bearer {}", token.as_ref())),
-        ("X-GitHub-Api-Version", GITHUB_API_VERSION.to_owned()),
+        Some(("Accept", "application/vnd.github+json".to_owned())),
+        token.map(|token| ("Authorization", format!("Bearer {}", token.as_ref()))),
+        Some(("X-GitHub-Api-Version", GITHUB_API_VERSION.to_owned())),
     ]
+    .into_iter()
+    .flatten()
     .map(|(name, value)| (name.to_owned(), value));
     let DispatchPayload { bencher, github } = payload;
     let body = serde_json::json!({
@@ -1482,7 +1490,8 @@ mod tests {
 #[cfg(feature = "plus")]
 mod dispatch_tests {
     use bencher_json::{
-        CallbackContext, JobStatus, JsonNewCallback, ProjectUuid, ReportUuid, runner::CallbackError,
+        CallbackContext, JobStatus, JsonNewCallback, ProjectUuid, ReportUuid,
+        runner::{CallbackError, GitHubDispatch},
     };
     use octocrab::models::CheckRunId;
     use serde_json::{Value, json};
@@ -1522,7 +1531,7 @@ mod dispatch_tests {
         dispatch_request(
             API_URL,
             FULL_NAME,
-            &TOKEN.parse::<Secret>().unwrap(),
+            Some(&TOKEN.parse::<Secret>().unwrap()),
             payload,
         )
         .unwrap()
@@ -1546,7 +1555,7 @@ mod dispatch_tests {
         let callback = dispatch_request(
             "https://github.example.com/api/v3/",
             FULL_NAME,
-            &TOKEN.parse::<Secret>().unwrap(),
+            Some(&TOKEN.parse::<Secret>().unwrap()),
             &payload(None, None, None),
         )
         .unwrap();
@@ -1557,21 +1566,41 @@ mod dispatch_tests {
     }
 
     /// The server sends the dispatch without Bencher Plus only when it recognizes the whole
-    /// composed request, whatever its payload.
+    /// composed request, whatever its payload, and mints the token only for one without a token.
+    /// Kills a tokenless dispatch that carries any `Authorization` header, or any other body.
     #[test]
     fn the_default_api_url_composes_the_bencher_run_dispatch() {
+        let token = TOKEN.parse::<Secret>().unwrap();
         let mut flags = payload(Some(7), Some(4242), Some("suite"));
         flags.bencher.build_time = true;
         flags.bencher.file_size = true;
         for dispatch in [flags, payload(None, None, None)] {
-            let callback = dispatch_request(
-                DEFAULT_GITHUB_API_URL,
-                FULL_NAME,
-                &TOKEN.parse::<Secret>().unwrap(),
-                &dispatch,
-            )
-            .unwrap();
-            assert!(callback.is_bencher_run_dispatch(), "{dispatch:?}");
+            let with_token =
+                dispatch_request(DEFAULT_GITHUB_API_URL, FULL_NAME, Some(&token), &dispatch)
+                    .unwrap();
+            let without =
+                dispatch_request(DEFAULT_GITHUB_API_URL, FULL_NAME, None, &dispatch).unwrap();
+
+            assert_eq!(
+                with_token.github_dispatch(),
+                Some(GitHubDispatch::Bearer),
+                "{dispatch:?}"
+            );
+            assert_eq!(
+                without.github_dispatch(),
+                Some(GitHubDispatch::Minted),
+                "{dispatch:?}"
+            );
+            let mut stripped = serde_json::to_value(&with_token).unwrap();
+            stripped["headers"]
+                .as_object_mut()
+                .unwrap()
+                .remove("authorization");
+            assert_eq!(
+                serde_json::to_value(&without).unwrap(),
+                stripped,
+                "{dispatch:?}"
+            );
         }
     }
 
@@ -1632,7 +1661,7 @@ mod dispatch_tests {
         let err = dispatch_request(
             API_URL,
             FULL_NAME,
-            &TOKEN.parse::<Secret>().unwrap(),
+            Some(&TOKEN.parse::<Secret>().unwrap()),
             &payload(None, None, Some("suite-{{ job.id }}")),
         )
         .unwrap_err();
@@ -1649,7 +1678,7 @@ mod dispatch_tests {
             let err = dispatch_request(
                 API_URL,
                 FULL_NAME,
-                &TOKEN.parse::<Secret>().unwrap(),
+                Some(&TOKEN.parse::<Secret>().unwrap()),
                 &payload(None, None, Some(ci_id)),
             )
             .unwrap_err();

@@ -161,6 +161,7 @@ rust_decimal = "1.40"
 # ECMAScript `Number::toString` formatting, which is what RFC 8785 (JCS) requires
 ryu-js = "1.0"
 schemars = { version = "0.8", features = ["uuid1"] }
+semver = "1.0"
 sentry = { version = "0.48", default-features = false, features = [
     "reqwest",
     "rustls-no-provider",

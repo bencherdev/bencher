@@ -1,13 +1,17 @@
-use aws_lc_rs::{
-    encoding::{AsDer as _, Pkcs8V1Der},
-    hmac,
-    rsa::{KeyPair, KeySize},
+use aws_lc_rs::hmac;
+pub use bencher_github_client::test_server::{
+    Answer, HOLD, NO_ANSWER, Received, Server as GitHubServer,
 };
-use base64::{Engine as _, engine::general_purpose::STANDARD};
-pub use bencher_github_client::test_server::{Received, Server as GitHubServer};
-use bencher_github_client::{GitHubApp, test_server::install_crypto_provider};
+use bencher_github_client::{
+    GitHubApp,
+    test_server::{app_key, install_crypto_provider},
+};
 
-use crate::TestServer;
+use bencher_json::{DateTime, GitHubInstallationId, GitHubRepositoryId};
+use bencher_schema::{model::project::linked_repository::QueryLinkedRepository, schema};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+use crate::{TestProject, TestServer, TestUser};
 
 pub const GITHUB_CLIENT_ID: &str = "Iv1.0123456789abcdef";
 pub const GITHUB_CLIENT_SECRET: &str = "client-secret-marker";
@@ -40,6 +44,42 @@ impl TestServer {
     }
 }
 
+impl TestServer {
+    /// Link `project` to a repository in an installation, connected, as a `PUT` with a grant
+    /// from `user` would, and return the link.
+    #[expect(clippy::expect_used, reason = "test helper")]
+    pub fn link_repository(
+        &self,
+        project: &TestProject,
+        user: &TestUser,
+        installation: u64,
+        repository: u64,
+        full_name: &str,
+    ) -> QueryLinkedRepository {
+        let mut conn = self.db_conn();
+        let project_id = schema::project::table
+            .filter(schema::project::uuid.eq(project.uuid))
+            .select(schema::project::id)
+            .first(&mut conn)
+            .expect("No project");
+        let user_id = schema::user::table
+            .filter(schema::user::uuid.eq(user.uuid))
+            .select(schema::user::id)
+            .first(&mut conn)
+            .expect("No user");
+        let link = QueryLinkedRepository::connected(
+            project_id,
+            GitHubInstallationId::try_from(installation).expect("Invalid installation"),
+            GitHubRepositoryId::try_from(repository).expect("Invalid repository"),
+            full_name.parse().expect("Invalid full name"),
+            user_id,
+            DateTime::TEST,
+        );
+        link.replace(&mut conn).expect("Failed to write the link");
+        link
+    }
+}
+
 /// The signature that GitHub sends with `body`, by the test app's webhook secret.
 pub fn github_signature(body: &str) -> String {
     let key = hmac::Key::new(hmac::HMAC_SHA256, GITHUB_WEBHOOK_SECRET.as_bytes());
@@ -53,16 +93,11 @@ pub fn github_signature(body: &str) -> String {
 #[expect(clippy::expect_used, reason = "test helper")]
 pub(crate) fn app(base: url::Url) -> GitHubApp {
     install_crypto_provider();
-    let key_pair = KeyPair::generate(KeySize::Rsa2048).expect("Failed to generate a key");
-    let der: Pkcs8V1Der<'static> = key_pair.as_der().expect("Failed to encode the key");
-    let private_key = format!(
-        "-----BEGIN PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
-        STANDARD.encode(der.as_ref())
-    );
+    let (private_key, _public_key) = app_key();
     GitHubApp::new(
         GITHUB_CLIENT_ID.parse().expect("Invalid client ID"),
         GITHUB_APP_SLUG.parse().expect("Invalid app slug"),
-        &private_key.parse().expect("Invalid private key"),
+        &private_key,
         GITHUB_WEBHOOK_SECRET
             .parse()
             .expect("Invalid webhook secret"),

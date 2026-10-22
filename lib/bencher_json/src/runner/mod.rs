@@ -13,8 +13,8 @@ pub mod status;
 pub mod websocket;
 
 pub use callback::{
-    CALLBACK_JOB_STATUSES, CallbackContext, CallbackError, JobCallbackState, JsonJobCallback,
-    JsonNewCallback,
+    CALLBACK_JOB_STATUSES, CallbackContext, CallbackError, GitHubDispatch, JobCallbackState,
+    JsonJobCallback, JsonNewCallback,
 };
 pub use health::{
     HealthFindingKind, HealthState, JsonHealthFinding, JsonMdArray, JsonNvmeHealth,
