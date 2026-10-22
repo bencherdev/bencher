@@ -480,6 +480,43 @@ const coldLoad = async (
 	return measure(page, seed.api_url);
 };
 
+/** A metric of the seed's newest report, through the API. */
+const newestMetric = async (request: APIRequestContext) => {
+	const headers = { Authorization: `Bearer ${seed.member.token}` };
+	const reports = `${seed.api_url}/v0/projects/${hashbrown.slug}/reports`;
+	const [newest] = (await (
+		await request.get(`${reports}?per_page=1`, { headers })
+	).json()) as { uuid: string }[];
+	const report = (await (
+		await request.get(`${reports}/${newest?.uuid}`, { headers })
+	).json()) as {
+		results: { measures: { metrics: { uuid: string }[] }[] }[][];
+	};
+	const metric = report.results[0]?.[0]?.measures[0]?.metrics[0]?.uuid;
+	if (!metric) {
+		throw new Error("The newest report has no metric");
+	}
+	return metric;
+};
+
+// Kills a metric's landing that waits on the shell's request to read the
+// metric, or that reads anything more before Explore draws its line: the read
+// and Explore's are its two rounds.
+test("a cold metric landing reads in exactly two rounds", async ({
+	page,
+	request,
+}) => {
+	const metric = await newestMetric(request);
+	const cost = await coldLoad(
+		page,
+		nextPath(hashbrown.slug, `metrics/${metric}`),
+		() => expect(page.getByRole("figure")).toHaveAccessibleName("1 line"),
+	);
+	report("metric landing", cost);
+	expect(cost.apiRounds).toBe(ceilings.metricLanding.apiRounds);
+	holds(cost, ceilings.metricLanding);
+});
+
 // Kills a General section that asks the API for what the shell's request
 // already holds, and one that shifts as the project arrives.
 test("a cold load of General holds the speed ceilings", async ({ page }) => {

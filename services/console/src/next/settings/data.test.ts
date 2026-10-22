@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/solid-query";
 import { describe, expect, test } from "vitest";
 import {
 	type JsonConsoleProject,
+	type JsonConsoleUserProject,
 	type JsonProject,
 	type JsonProjectKey,
 	type JsonToken,
@@ -14,11 +15,13 @@ import {
 	rememberShell,
 	rememberedVersion,
 } from "../memory";
+import { ORGANIZATIONS_PATH, projectPath } from "../paths";
 import {
 	type KeyPage,
 	addKey,
 	applyPatch,
 	forgetSlug,
+	newestHome,
 	keysQuery,
 	projectKeys,
 	revokeKey,
@@ -286,5 +289,42 @@ describe("keysQuery", () => {
 		expect(page.keys.map(({ name }) => name)).toEqual(["ci-2024"]);
 		expect(JSON.stringify(page)).not.toContain(token.token);
 		expect(revoked.keys.map((row) => row.revoked)).toEqual([revokedAt]);
+	});
+});
+
+describe("newestHome", () => {
+	const listed = (slug: string, bmf_version: 0 | 1, last_report?: number) =>
+		({
+			uuid: slug,
+			name: slug,
+			slug,
+			organization: "o",
+			bmf_version,
+			...(last_report === undefined ? {} : { last_report }),
+			active_alerts: 0,
+		}) as JsonConsoleUserProject;
+
+	// Kills a landing that is not the project with the newest run, or that
+	// opens a version 0 project anywhere but where the browser would.
+	test("opens the project with the newest run where its version opens", () => {
+		expect(
+			newestHome([
+				listed("old", 1, 1),
+				listed("new", 1, 3),
+				listed("mid", 1, 2),
+			]),
+		).toBe(projectPath("new"));
+		expect(newestHome([listed("old", 1, 1), listed("v0", 0, 2)])).toBe(
+			"/console/projects/v0/plots",
+		);
+	});
+
+	// Kills a reader whose projects never ran sent nowhere, or to a project the
+	// switcher does not list first, and one with none sent to a project.
+	test("with no runs is the first by name, and with no project is Organizations", () => {
+		expect(newestHome([listed("zest", 1), listed("apple", 1)])).toBe(
+			projectPath("apple"),
+		);
+		expect(newestHome([])).toBe(ORGANIZATIONS_PATH);
 	});
 });

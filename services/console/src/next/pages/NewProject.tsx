@@ -17,6 +17,7 @@ import { useAccount } from "../account/context";
 import { FlushContext } from "../flush";
 import { organizationIn } from "../organization/data";
 import { privateQuery } from "../organization/visibility";
+import { projectAt } from "../home";
 import { projectPath } from "../paths";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
@@ -102,7 +103,7 @@ const NewProject = (props: {
 		await flush();
 		if (bmf_version === 0) {
 			(props.leave ?? ((href) => location.assign(href)))(
-				`/console/projects/${slug}/plots`,
+				projectAt(slug, 0) ?? "",
 			);
 		} else {
 			navigate(projectPath(slug), { resolve: false });

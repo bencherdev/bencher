@@ -46,6 +46,7 @@ export const PAGES: Record<PageName, Page> = {
 		import("./plot/Plot").catch(() => {});
 		return alertPage();
 	}),
+	Metric: lazy(() => import("./pages/Metric")),
 	Thresholds: lazy(() => import("./pages/Thresholds")),
 	Threshold: lazy(() => import("./pages/Threshold")),
 	// Reading only the default export spares the bundler a namespace object.
@@ -89,6 +90,7 @@ export const ROUTES: RouteDefinition[] = [
 	{ path: "/:project/reports/:report", component: PAGES.Report },
 	{ path: "/:project/thresholds/:threshold", component: PAGES.Threshold },
 	{ path: "/:project/alerts/:alert", component: PAGES.Alert },
+	{ path: "/:project/metrics/:metric", component: PAGES.Metric },
 	...TABS.flatMap(({ segments }) =>
 		segments.map((segment) => {
 			const page = pageName([segment]);

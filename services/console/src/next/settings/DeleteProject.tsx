@@ -2,22 +2,26 @@ import Button from "@bencherdev/ui/Button";
 import Dialog from "@bencherdev/ui/Dialog";
 import Icon from "@bencherdev/ui/Icon";
 import TextInput from "@bencherdev/ui/TextInput";
+import { useNavigate } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { Show, createSignal, useContext } from "solid-js";
-import type { JsonProject } from "../../types/bencher";
+import type { JsonConsoleUser, JsonProject } from "../../types/bencher";
+import { AccountContext } from "../account/context";
 import { FlushContext } from "../flush";
+import { rememberedHome } from "../home";
+import { NEXT_CONSOLE } from "../paths";
 import { useProject } from "../project";
-import { forgetSlug } from "./data";
+import { consoleUserQuery } from "../queries";
+import { forgetSlug, newestHome } from "./data";
 import { failureOf } from "./general";
 
 /**
  * Deleting cannot be undone, so it waits for the reader to type the slug,
- * exactly; then the reader lands on the organization's projects.
+ * exactly; then the reader lands on their main project, or on Organizations
+ * with none left.
  */
 const DeleteProject = (props: {
 	project: JsonProject;
-	/** The organization's UUID, whose projects page is where the reader lands. */
-	organization: string;
 	onDismiss: () => void;
 	/** Where the browser goes once the project is gone. */
 	leave?: (href: string) => void;
@@ -25,6 +29,8 @@ const DeleteProject = (props: {
 	const { api } = useProject();
 	const client = useQueryClient();
 	const flush = useContext(FlushContext);
+	const navigate = useNavigate();
+	const reader = useContext(AccountContext)?.reader().user.uuid;
 	const [typed, setTyped] = createSignal("");
 	const matches = () => typed() === props.project.slug;
 	const [deleting, setDeleting] = createSignal(false);
@@ -42,12 +48,36 @@ const DeleteProject = (props: {
 			setDeleting(false);
 			return;
 		}
-		forgetSlug(client, localStorage, props.project.slug);
-		// Leaving the app first would keep the project in the browser's store.
+		const { slug } = props.project;
+		forgetSlug(client, localStorage, slug);
+		const projects = reader ? consoleUserQuery(api, reader) : undefined;
+		if (projects) {
+			client.setQueryData<JsonConsoleUser>(
+				projects.queryKey,
+				(user) =>
+					user && {
+						...user,
+						projects: user.projects.filter((project) => project.slug !== slug),
+					},
+			);
+		}
+		// Before any full load, so the browser's store drops the project too.
 		await flush();
-		(props.leave ?? ((href) => location.assign(href)))(
-			`/console/organizations/${props.organization}/projects`,
-		);
+		const to =
+			rememberedHome(localStorage) ??
+			newestHome(
+				(projects &&
+					(await client.fetchQuery(projects).catch(() => undefined))
+						?.projects) ??
+					[],
+			);
+		if (props.leave) {
+			props.leave(to);
+		} else if (to.startsWith(`${NEXT_CONSOLE}/`)) {
+			navigate(to.slice(NEXT_CONSOLE.length));
+		} else {
+			location.assign(to);
+		}
 	};
 	return (
 		<Dialog

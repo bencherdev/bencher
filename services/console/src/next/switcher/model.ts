@@ -1,4 +1,5 @@
 import type { JsonConsoleUser } from "../../types/bencher";
+import { projectAt } from "../home";
 import { projectPath } from "../paths";
 import { relativeTime } from "../reports/format";
 
@@ -50,9 +51,9 @@ export const switcherRows = (
 				name: project.name,
 				organization: many ? organizationName : undefined,
 				organizationName,
-				href: classic
-					? `/console/projects/${project.slug}/plots`
-					: projectPath(project.slug),
+				href:
+					projectAt(project.slug, project.bmf_version) ??
+					projectPath(project.slug),
 				classic,
 				age: project.last_report
 					? relativeTime(project.last_report, now)

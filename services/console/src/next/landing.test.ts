@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { landing } from "./landing";
+import { projectAt } from "./home";
 import { projectPath } from "./paths";
 
 const NOW = Date.parse("2026-09-14T00:00:00Z");
@@ -20,9 +21,9 @@ describe("landing", () => {
 			user: { uuid: "u" },
 			expiration: "2026-09-15T00:00:00Z",
 		});
-		expect(landing(null, HASHBROWN, "", NOW)).toBeUndefined();
-		expect(landing(noToken, HASHBROWN, "", NOW)).toBeUndefined();
-		expect(landing("{", HASHBROWN, "", NOW)).toBeUndefined();
+		expect(landing(null, HASHBROWN, "", NOW, projectAt)).toBeUndefined();
+		expect(landing(noToken, HASHBROWN, "", NOW, projectAt)).toBeUndefined();
+		expect(landing("{", HASHBROWN, "", NOW, projectAt)).toBeUndefined();
 	});
 
 	// Kills a landing that trusts a token past its expiration.
@@ -32,7 +33,7 @@ describe("landing", () => {
 			user: { uuid: "u" },
 			expiration: "2026-09-13T23:59:59Z",
 		});
-		expect(landing(expired, HASHBROWN, "", NOW)).toBeUndefined();
+		expect(landing(expired, HASHBROWN, "", NOW, projectAt)).toBeUndefined();
 	});
 
 	// Kills an expiration check that lets a token through at its expiration.
@@ -42,7 +43,7 @@ describe("landing", () => {
 			user: { uuid: "u" },
 			expiration: new Date(NOW).toISOString(),
 		});
-		expect(landing(expiring, HASHBROWN, "", NOW)).toBeUndefined();
+		expect(landing(expiring, HASHBROWN, "", NOW, projectAt)).toBeUndefined();
 	});
 
 	// Kills a token check that takes any truthy token.
@@ -52,43 +53,59 @@ describe("landing", () => {
 			user: { uuid: "u" },
 			expiration: "2026-09-15T00:00:00Z",
 		});
-		expect(landing(numeric, HASHBROWN, "", NOW)).toBeUndefined();
+		expect(landing(numeric, HASHBROWN, "", NOW, projectAt)).toBeUndefined();
 	});
 
 	// Kills a landing that drops an invite, a claim, or a plan before the
 	// page can act on it.
 	test("a query string stays", () => {
-		expect(landing(READER, HASHBROWN, "?invite=abc", NOW)).toBeUndefined();
+		expect(
+			landing(READER, HASHBROWN, "?invite=abc", NOW, projectAt),
+		).toBeUndefined();
 	});
 
 	// Kills a landing that sends a reader with no main project anywhere.
 	test("no memory stays", () => {
-		expect(landing(READER, null, "", NOW)).toBeUndefined();
-		expect(landing(READER, "{}", "", NOW)).toBeUndefined();
-		expect(landing(READER, "{", "", NOW)).toBeUndefined();
+		expect(landing(READER, null, "", NOW, projectAt)).toBeUndefined();
+		expect(landing(READER, "{}", "", NOW, projectAt)).toBeUndefined();
+		expect(landing(READER, "{", "", NOW, projectAt)).toBeUndefined();
 	});
 
 	// Kills a version 1 project sent anywhere but its root in the new console.
 	test("a version 1 project lands on its root", () => {
-		expect(landing(READER, HASHBROWN, "", NOW)).toBe(projectPath("hashbrown"));
+		expect(landing(READER, HASHBROWN, "", NOW, projectAt)).toBe(
+			projectPath("hashbrown"),
+		);
 	});
 
 	// Kills a version 0 project sent to the new console, which would send it
 	// back.
 	test("a version 0 project lands on its classic page", () => {
-		expect(landing(READER, versions({ hashbrown: 0 }), "", NOW)).toBe(
-			"/console/projects/hashbrown/plots",
-		);
+		expect(
+			landing(READER, versions({ hashbrown: 0 }), "", NOW, projectAt),
+		).toBe("/console/projects/hashbrown/plots");
 	});
 
 	// Kills a landing on the first project remembered rather than the last
 	// one visited, and one that stops at an entry that names no version.
 	test("the most recent project wins", () => {
 		expect(
-			landing(READER, versions({ hashbrown: 0, crinkle: 1 }), "", NOW),
+			landing(
+				READER,
+				versions({ hashbrown: 0, crinkle: 1 }),
+				"",
+				NOW,
+				projectAt,
+			),
 		).toBe(projectPath("crinkle"));
 		expect(
-			landing(READER, versions({ hashbrown: 1, crinkle: 2 }), "", NOW),
+			landing(
+				READER,
+				versions({ hashbrown: 1, crinkle: 2 }),
+				"",
+				NOW,
+				projectAt,
+			),
 		).toBe(projectPath("hashbrown"));
 	});
 });

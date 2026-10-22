@@ -5,12 +5,15 @@ import { BENCHER_API_URL } from "astro:env/server";
 
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import CheckoutRedirect from "../../../../components/console/redirects/CheckoutRedirect";
+import AccountGate from "../../../../next/astro/AccountGate.astro";
+import { ORGANIZATIONS_PATH } from "../../../../next/paths";
 
 const { organization } = Astro.params;
 const title = "Bencher Checkout";
 ---
 
 <BaseLayout title={title} description={title}>
+  <AccountGate slot="head" next={`${ORGANIZATIONS_PATH}/${organization}/billing`} />
   <div slot="navbar"></div>
   <CheckoutRedirect client:only="solid-js" apiUrl={BENCHER_API_URL} organization={organization} />
   <div slot="footer"></div>

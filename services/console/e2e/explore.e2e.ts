@@ -604,6 +604,39 @@ test("an Explore link at the project root opens Explore with its query", async (
 	await expect(plot(page)).toHaveAccessibleName("2 lines");
 });
 
+// A released CLI's pull request comment tracks every link it writes.
+const COMMENT_UTM =
+	"utm_medium=referral&utm_source=github&utm_content=comment&utm_campaign=pr+comments&utm_term=hashbrown";
+
+// Kills a comment's project link that its tracking sends from Runs to Explore.
+test("a comment's project link with its tracking opens Runs", async ({
+	page,
+}) => {
+	const link = `${nextPath(hashbrown.slug)}?${COMMENT_UTM}`;
+	await page.goto(link);
+	await expect(page).toHaveURL(link);
+	await expect(
+		page
+			.getByRole("navigation", { name: "Project" })
+			.getByRole("link", { name: "Runs" }),
+	).toHaveAttribute("aria-current", "page");
+	await expect(
+		page.getByRole("table", { name: "Runs, newest first" }),
+	).toBeVisible();
+});
+
+// Kills a comment's plot link that its tracking keeps from Explore.
+test("a comment's plot link with its tracking at the project root opens Explore", async ({
+	page,
+	request,
+}) => {
+	const link = explore(hashbrown.slug, (await twoLines(request)).query);
+	const { search } = new URL(link, seed.console_url);
+	await page.goto(`${nextPath(hashbrown.slug)}${search}&${COMMENT_UTM}`);
+	await expect(page).toHaveURL(link);
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+});
+
 // Kills a blank Explore without its starting points, and an alert that opens
 // more than its line or names a source that does not link to that alert.
 test("blank Explore starts from alerts, runs, and pins", async ({ page }) => {

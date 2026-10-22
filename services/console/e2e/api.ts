@@ -65,6 +65,34 @@ export const createProject = async (
 	);
 };
 
+/** A version 1 project in `reader`'s own organization, which signing up made. */
+export const createOwnProject = async (
+	request: APIRequestContext,
+	reader: JsonAuthUser,
+) => {
+	const own = await request.get(`${seed.api_url}/v0/organizations`, {
+		headers: { Authorization: `Bearer ${reader.token}` },
+	});
+	const [organization] = (await own.json()) as JsonOrganization[];
+	if (!organization) {
+		throw new Error("Signing up made no organization");
+	}
+	const project = await send<JsonProject>(
+		request,
+		"POST",
+		`/v0/organizations/${organization.slug}/projects`,
+		reader.token,
+		{ name: unique("Rosti"), visibility: "public" },
+	);
+	return send<JsonProject>(
+		request,
+		"PATCH",
+		`/v0/projects/${project.slug}`,
+		seed.admin.token,
+		{ bmf_version: 1 },
+	);
+};
+
 /** An organization of the member's with no plan, so a private project is refused. */
 export const createOrganization = (request: APIRequestContext) =>
 	send<JsonOrganization>(

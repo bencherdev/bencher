@@ -171,6 +171,9 @@ describe("pageName", () => {
 		expect(pageName(["thresholds", "abc", "def"])).toBe("Thresholds");
 		expect(pageName(["alerts", "abc"])).toBe("Alert");
 		expect(pageName(["alerts", "abc", "def"])).toBe("Alerts");
+		expect(pageName(["metrics", "abc"])).toBe("Metric");
+		expect(pageName(["metrics"])).toBe("NotFound");
+		expect(pageName(["metrics", "abc", "def"])).toBe("NotFound");
 		expect(pageName(["branches", "main"])).toBe("Dimensions");
 		expect(pageName(["nope"])).toBe("NotFound");
 	});

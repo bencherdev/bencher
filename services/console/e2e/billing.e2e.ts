@@ -117,8 +117,97 @@ test.describe("the classic Billing, for a reader with a version 1 project", () =
 	});
 });
 
+const checkoutReturn = (organization: string) =>
+	`/console/organizations/${organization}/checkout?checkout=cs_test_e2e&level=pro`;
+
+/** Every plan Billing posts, answering each with `status`. */
+const planRequests = async (page: Page, status?: number) => {
+	const plans: unknown[] = [];
+	await page.route(`${seed.api_url}/v0/organizations/*/plan`, async (route) => {
+		if (route.request().method() !== "POST") {
+			return route.fallback();
+		}
+		plans.push(route.request().postDataJSON());
+		if (status === undefined) {
+			return route.fallback();
+		}
+		const response = await route.fetch();
+		const { "content-length": _, ...headers } = response.headers();
+		await route.fulfill({ response, status, json: {}, headers });
+	});
+	return plans;
+};
+
+test.describe("Stripe's return, for a reader with a version 1 project", () => {
+	test.use({ storageState: remembered({ [hashbrown.slug]: 1 }) });
+
+	// Kills a return that reaches the new Billing without its plan recorded,
+	// records it twice, keeps the session on the link for a reload to record
+	// again, or says Enrolled over the usage from before the plan.
+	test("records the plan once and says so with the usage read after it", async ({
+		page,
+	}) => {
+		const plans = await planRequests(page, 201);
+		// Every usage read once the plan is posted waits for the test.
+		const held: (() => void)[] = [];
+		await page.route(
+			`${seed.api_url}/v0/organizations/*/usage`,
+			async (route) => {
+				if (plans.length > 0) {
+					await new Promise<void>((resolve) => held.push(resolve));
+				}
+				await route.fallback();
+			},
+		);
+		const enrolled = page.getByRole("status").filter({ hasText: "Enrolled" });
+		const license = page.getByRole("region", { name: "Enterprise License" });
+		await page.goto(checkoutReturn(seed.organization.slug));
+
+		await expect(page).toHaveURL(billingPath(seed.organization.slug));
+		await expect.poll(() => held.length).toBeGreaterThan(0);
+		await page.waitForTimeout(200);
+		await expect(enrolled).toHaveCount(0);
+		await expect(license).toHaveCount(0);
+
+		for (const release of held) {
+			release();
+		}
+		await expect(enrolled).toHaveText("Enrolled in Pro");
+		await expect(license).toBeVisible();
+		await page.waitForLoadState("networkidle");
+		expect(plans).toEqual([{ checkout: "cs_test_e2e", level: "pro" }]);
+	});
+
+	// Kills a failed return that says nothing.
+	test("says why the plan was not recorded", async ({ page }) => {
+		const plans = await planRequests(page);
+		await page.goto(checkoutReturn(seed.organization.slug));
+
+		await expect(page).toHaveURL(billingPath(seed.organization.slug));
+		await expect(
+			page.getByRole("alert").filter({ hasText: "Pro plan" }),
+		).toHaveText(/^Bencher did not record the Pro plan/);
+		expect(plans).toHaveLength(1);
+	});
+});
+
 test.describe("the classic Billing, for a reader of version 0 projects only", () => {
 	test.use({ storageState: remembered({ [version_zero.slug]: 0 }) });
+
+	// Kills a classic checkout that no longer records the plan for a reader the
+	// new Billing does not serve.
+	test("the classic checkout records the plan and keeps the reader", async ({
+		page,
+	}) => {
+		const plans = await planRequests(page, 201);
+		await page.goto(checkoutReturn(seed.organization.slug));
+
+		await expect(page).toHaveURL(
+			(url) => url.pathname === classicBilling(seed.organization.slug),
+		);
+		expect(plans).toHaveLength(1);
+		expect(plans[0]).toMatchObject({ checkout: "cs_test_e2e", level: "pro" });
+	});
 
 	// Kills a classic Billing that sends away a reader the new one does not serve.
 	test("keeps the reader", async ({ page }) => {
