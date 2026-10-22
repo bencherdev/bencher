@@ -14,11 +14,7 @@ use rmcp::{
     },
 };
 
-use crate::{
-    principal::{Caller, Challenge, SignInReason, resource_metadata},
-    server::BencherMcp,
-    tools::{McpTool, ToolAccess},
-};
+use crate::{principal::Caller, server::BencherMcp, tools::McpTool};
 
 const MCP_ACCEPT: &str = "application/json, text/event-stream";
 const MCP_ALLOW_METHODS: &str = "POST, OPTIONS";
@@ -54,18 +50,6 @@ pub async fn mcp_post(
     // Invalid or expired credentials fail the whole request with a `401` whatever its method,
     // just like the REST API; anonymous requests may still read public projects.
     let caller = Caller::new(&rqctx, called_tool(body.as_bytes())).await?;
-    // An anonymous empty request is how a client probes for whether and where to sign in.
-    if is_empty(body.as_bytes())
-        && let Caller::Principal(principal) = &caller
-        && principal.is_anonymous()
-        && let Some(oauth) = &rqctx.context().oauth
-    {
-        let challenge = Challenge::SignIn {
-            access: ToolAccess::Read,
-            reason: SignInReason::Required,
-        };
-        return challenge.into_response(&resource_metadata(oauth, &rqctx));
-    }
 
     let request = mcp_request(&rqctx, &body);
     let config = server_config(rqctx.request_body_max_bytes());
@@ -129,7 +113,7 @@ fn server_config(max_request_body_bytes: usize) -> StreamableHttpServerConfig {
 fn log_rejection(rqctx: &RequestContext<ApiContext>, status: StatusCode, body: &[u8]) {
     let headers = rqctx.request.headers();
     let sent = |name: &str| headers.get(name).and_then(|value| value.to_str().ok());
-    let body_shape = if is_empty(body) {
+    let body_shape = if body.trim_ascii().is_empty() {
         "empty"
     } else {
         match serde_json::from_slice(body) {
@@ -152,10 +136,6 @@ fn log_rejection(rqctx: &RequestContext<ApiContext>, status: StatusCode, body: &
         "body_bytes" => body.len(),
         "body_shape" => body_shape,
     );
-}
-
-const fn is_empty(body: &[u8]) -> bool {
-    body.trim_ascii().is_empty()
 }
 
 pub fn insert_cors_headers(headers: &mut HeaderMap) {
