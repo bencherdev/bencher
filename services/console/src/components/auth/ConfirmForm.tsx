@@ -33,12 +33,8 @@ import Field from "../field/Field";
 import FieldKind from "../field/kind";
 import SignInAs from "./SignInAs";
 import { AUTH_FIELDS, EMAIL_PARAM, PLAN_PARAM, TOKEN_PARAM } from "./auth";
-import {
-	AUTHORIZATION_PARAM,
-	consentPath,
-	requestUuid,
-	signInPath,
-} from "./authorize/path";
+import { AUTHORIZATION_PARAM, requestUuid, signInPath } from "./authorize/path";
+import { signedInPath } from "./back";
 import { takeSignIn } from "./signIn";
 
 export interface Props {
@@ -119,13 +115,14 @@ const ConfirmForm = (props: Props) => {
 	};
 
 	const signIn = (user: JsonAuthUser) => {
+		// Taken before the reader is stored, so a tab that sees them first finds it gone.
+		const to = signedInPath(authorization());
 		if (!setUser(user)) {
 			pageNotify(NotifyKind.ERROR, "Invalid user. Please, try again.");
 			return;
 		}
-		const consent = consentPath(authorization());
-		if (consent) {
-			hiddenRedirect(consent);
+		if (to) {
+			hiddenRedirect(to);
 		} else {
 			navigateNotify(
 				NotifyKind.OK,
