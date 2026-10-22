@@ -23,13 +23,13 @@ jobs:
       - name: Download Bench Image
         id: download_bench
         continue-on-error: true
-        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
+        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
         with:
           name: bench_image.tar
           run_id: ${{ github.event.workflow_run.id }}
       - name: Download PR Event
         if: steps.download_bench.outcome == 'success'
-        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
+        uses: dawidd6/action-download-artifact@eab87c9830c39eff17e5a6eadb20bfb4bc880477 # v27
         with:
           name: ${{ env.PR_EVENT }}
           run_id: ${{ github.event.workflow_run.id }}
@@ -44,7 +44,7 @@ jobs:
           docker push registry.bencher.dev/bencher:${GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA}
       - name: Read PR Event Data
         if: steps.download_bench.outcome == 'success'
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const fs = require('fs');
