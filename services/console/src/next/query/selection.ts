@@ -11,6 +11,7 @@ import {
 	distinct,
 	encodeQuery,
 	itself,
+	narrowingSets,
 } from "./query";
 
 /** A line picked on another page, such as a report's row. */
@@ -43,9 +44,11 @@ const selectionQuery = (
 	const alerting = lines.find((line) => line.alerting);
 	const [lone] = keys.length === 1 ? keys : [];
 	const focus = alerting === undefined ? lone : keyOf(alerting);
-	const sets = distinct(
-		lines.map(({ parameters }) => parameters),
-		canonicalParameters,
+	const sets = narrowingSets(
+		distinct(
+			lines.map(({ parameters }) => parameters),
+			canonicalParameters,
+		),
 	);
 	return {
 		...blankQuery(),

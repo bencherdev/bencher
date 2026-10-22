@@ -53,7 +53,7 @@ interface LineRowProps {
 	selected?: boolean;
 	expanded: boolean;
 	onExpand: (expanded: boolean) => void;
-	onNoThreshold?: () => void;
+	onNoThreshold?: (() => void) | undefined;
 	/** Hovering or focusing the expand control, before the click. */
 	onIntent?: () => void;
 	/** What the row shows in the measure's place, such as the report an alert came from. */
@@ -233,7 +233,10 @@ const LineRow = (props: LineRowProps) => {
 		}
 	};
 	const noThreshold = () => (
-		<Show when={props.onNoThreshold}>
+		<Show
+			when={props.onNoThreshold}
+			fallback={<span class="lr-quiet">no threshold</span>}
+		>
 			{(open) => (
 				<button
 					type="button"

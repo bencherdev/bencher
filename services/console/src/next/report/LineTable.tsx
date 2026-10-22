@@ -46,6 +46,8 @@ interface LineTableProps {
 	selected?: ReadonlySet<string> | undefined;
 	onSelect?: (line: ReportLine, selected: boolean) => void;
 	onNoThreshold?: (line: ReportLine) => void;
+	/** Whether a line no threshold checks can have one declared, which `onNoThreshold` then offers; every line when absent. */
+	declares?: ((line: ReportLine) => boolean) | undefined;
 	/** A column in the measure's place: its header, its width's class, and each row's cell. */
 	aside?: Column;
 	/** A column beside the measure's, which a narrow row draws before the measure. */
@@ -305,7 +307,11 @@ const LineTable = (props: LineTableProps) => {
 								}
 								expanded={props.expanded.has(slot.key)}
 								onExpand={(expanded) => props.onExpand(slot, expanded)}
-								onNoThreshold={() => props.onNoThreshold?.(slot)}
+								onNoThreshold={
+									props.onNoThreshold && (props.declares?.(slot) ?? true)
+										? () => props.onNoThreshold?.(slot)
+										: undefined
+								}
 								aside={aside}
 								beside={beside}
 								dimmed={props.dimmed?.(slot) === true}

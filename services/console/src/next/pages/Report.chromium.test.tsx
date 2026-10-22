@@ -619,6 +619,103 @@ test("the no-threshold sheet guards the side the report's other lines guard", as
 	await expect.element(exact).not.toHaveTextContent("--threshold-upper");
 });
 
+// Kills a bound line of a version 0 project offered a threshold it cannot
+// declare, a value line's sheet taught the version 1 flags its project refuses
+// or an exact threshold on parameters it has none of, and a sheet that names
+// `json` rather than the adapter of the line's report.
+test("on a version 0 project only a value line offers the no-threshold sheet, with plain flags", async () => {
+	const unchecked = {
+		model: undefined,
+		baseline: undefined,
+		upper_limit: undefined,
+	};
+	const report = reportFixture(
+		[
+			lineFixture(unchecked),
+			lineFixture({ ...unchecked, metric: "lower_value" }),
+			lineFixture({ ...unchecked, metric: "upper_value" }),
+		],
+		{
+			adapter: "rust_criterion",
+			variants: [{ uuid: "v", benchmark: 0, parameters: {} }],
+			counts: {
+				benchmarks: 1,
+				variants: 1,
+				measures: 1,
+				metrics: 3,
+				iterations: 1,
+				alerts: { total: 0, active: 0 },
+			},
+		} as never,
+	);
+	const v0 = bootstrapOf();
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? { data: report }
+			: { data: { ...v0, project: { ...v0.project, bmf_version: 0 } } },
+	);
+	mount(api, impatient());
+	await expect.element(table()).toBeVisible();
+	await expect
+		.poll(() => table().getByText("no threshold", { exact: true }).elements())
+		.toHaveLength(3);
+	const offers = table().getByRole("button", { name: /^No threshold checks / });
+	await expect.poll(() => offers.elements()).toHaveLength(1);
+	await offers.click();
+	const sheet = page.getByRole("dialog", {
+		name: "No threshold checks this line",
+	});
+	await expect.element(sheet).toHaveTextContent("--adapter rust_criterion");
+	await expect.element(sheet).toHaveTextContent("--threshold-measure latency");
+	await expect.element(sheet).not.toHaveTextContent("--threshold-metric");
+	await expect
+		.element(sheet.getByRole("region", { name: "Exactly this line" }))
+		.not.toBeInTheDocument();
+});
+
+// Kills the version 0 rule applied to a version 1 project, whose lines of any
+// metric can have a threshold declared.
+test("on a version 1 project a line of any metric offers the no-threshold sheet", async () => {
+	const unchecked = {
+		model: undefined,
+		baseline: undefined,
+		upper_limit: undefined,
+	};
+	const report = reportFixture(
+		[
+			lineFixture({ ...unchecked, metric: "value" }),
+			lineFixture({ ...unchecked, metric: "p99" }),
+		],
+		{
+			counts: {
+				benchmarks: 1,
+				variants: 2,
+				measures: 1,
+				metrics: 2,
+				iterations: 1,
+				alerts: { total: 0, active: 0 },
+			},
+		} as never,
+	);
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: report } : { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	await expect.element(table()).toBeVisible();
+	const offers = table().getByRole("button", { name: /^No threshold checks / });
+	await expect.poll(() => offers.elements()).toHaveLength(2);
+	await table()
+		.getByRole("button", { name: /^No threshold checks .* p99\. / })
+		.click();
+	await expect
+		.element(
+			page
+				.getByRole("dialog", { name: "No threshold checks this line" })
+				.getByRole("region", { name: "Exactly this line" }),
+		)
+		.toHaveTextContent("--threshold-metric p99");
+});
+
 // Kills a host read from anywhere but the project the page is in.
 test("the no-threshold sheet names the project's self-hosted API", async () => {
 	const { api } = fakeApi((url) =>

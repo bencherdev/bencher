@@ -55,7 +55,10 @@ export const thresholdSnippets = <L extends SnippetLine>(
 };
 
 // Guard the way the project already guards this measure; with no threshold on it, throughput against falling and the rest against rising.
-const guardFor = (line: SnippetLine, lines: readonly SnippetLine[]): Guard =>
+export const guardFor = (
+	line: SnippetLine,
+	lines: readonly SnippetLine[],
+): Guard =>
 	lines.find((other) => other.measure === line.measure && other.guard)?.guard ??
 	(line.measure === "throughput" ? "lower" : "upper");
 
@@ -92,6 +95,13 @@ const snippet = (
 			: [row("  --threshold-upper-boundary 0.99", true)]),
 		row("  --file results.json"),
 	];
+	return commandOf(rows);
+};
+
+type Row = { text: string; flag: boolean };
+
+/** The export line and the command it runs, each command row but the last continued. */
+export const commandOf = (rows: readonly Row[]) => {
 	const code = rows.map(({ text, flag }, index) => ({
 		text: index === 0 || index === rows.length - 1 ? text : `${text} \\`,
 		flag,

@@ -11,12 +11,7 @@ import Main from "../../../../../next/astro/Main.astro";
 import NextHead from "../../../../../next/astro/NextHead.astro";
 import ShellPaint from "../../../../../next/astro/ShellPaint.astro";
 import { drawsPlot } from "../../../../../next/explore/request";
-import {
-	classicPlace,
-	pageName,
-	parseNextPath,
-	tabOf,
-} from "../../../../../next/paths";
+import { pageName, parseNextPath, tabOf } from "../../../../../next/paths";
 import { modulePreloads } from "../../../../../next/preloads";
 import { readsOnlyRuns } from "../../../../../next/reports/search";
 import { exploreSearchFromClassic } from "../../../../../next/query/classic";
@@ -44,7 +39,6 @@ if (place?.rest.length === 0 && !readsOnlyRuns(Astro.url.searchParams)) {
 	);
 }
 const tab = place && tabOf(place.rest);
-const classic = classicPlace(Astro.url.pathname);
 const page = place ? pageName(place.rest) : "NotFound";
 // A link that draws a plot asks for the plot's code with the page's.
 const plot =
@@ -61,7 +55,7 @@ const plot =
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>{slug} | Bencher</title>
 		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
-		<NextHead slug={slug} classic={classic} />
+		<NextHead />
 		<Head />
 		{modulePreloads(page, plot ? ["plot/Plot"] : []).map((href) => <link rel="modulepreload" href={href} />)}
 	</head>

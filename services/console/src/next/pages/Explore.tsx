@@ -545,6 +545,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 				!drawable(query()) || (!busy() && (perf().isSuccess || perf().isError))
 			}
 			readOnly={props.readOnly}
+			versionZero={bootstrap().data?.project.bmf_version === 0}
 			onQuery={(next) => edit(settleFocus(query(), next))}
 			onBenchmarks={() => wantPlot()}
 		/>

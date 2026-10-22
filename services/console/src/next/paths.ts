@@ -155,36 +155,6 @@ const KEYS = "keys";
 // The classic console lists reports where the new one lists runs, and has no run page.
 const NEXT_RUNS = "runs";
 
-// A redirect between the consoles keeps the place and drops the query: each
-// console reads its own, and the classic one adds paging to its lists.
-
-/** The same place in the classic console. */
-export const classicHref = ({ pathname, hash }: Place) => {
-	const place = classicPlace(pathname);
-	return place && `${place.path}${place.hash ? hash : ""}`;
-};
-
-/** The same place in the classic console, before its hash. */
-export const classicPlace = (pathname: string): ClassicPlace | undefined => {
-	const place = parseNextPath(pathname);
-	if (!place) {
-		return undefined;
-	}
-	const { slug, rest } = place;
-	if (rest[0] === NEXT_EXPLORE) {
-		return { path: `${CLASSIC_PROJECTS}/${slug}/${CLASSIC_PERF}`, hash: false };
-	}
-	const path =
-		rest.length === 0 || rest[0] === NEXT_RUNS ? REPORTS : rest.join("/");
-	return { path: `${CLASSIC_PROJECTS}/${slug}/${path}`, hash: true };
-};
-
-export interface ClassicPlace {
-	path: string;
-	/** Whether the page reads a hash; the perf page reads none. */
-	hash: boolean;
-}
-
 /** The same place in the new console, if it has a page for it. */
 export const nextHref = ({ pathname, hash }: Place) => {
 	const place = parseProjectPath(CLASSIC_PROJECTS, pathname);

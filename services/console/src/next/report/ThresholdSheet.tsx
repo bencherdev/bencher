@@ -1,5 +1,6 @@
 import Sheet from "@bencherdev/ui/Sheet";
 import type { QueryObserverResult } from "@tanstack/solid-query";
+import type { Adapter, BmfVersion } from "../../types/bencher";
 import { For, Match, Show, Switch } from "solid-js";
 import Code from "./Code";
 import { runHost, useProject } from "../project";
@@ -8,6 +9,7 @@ import type { ReportLine } from "./lines";
 import { countQuery } from "./query";
 import { lineLabel } from "./row";
 import { thresholdSnippets } from "./snippet";
+import { thresholdSnippetV0 } from "./snippetV0";
 
 interface ThresholdSheetProps {
 	/** The line no threshold checks, while the sheet is open. */
@@ -17,6 +19,9 @@ interface ThresholdSheetProps {
 	report: string;
 	branch: string;
 	testbed: string;
+	/** The adapter of the report, which a version 0 snippet names. */
+	adapter: Adapter;
+	version: BmfVersion | undefined;
 	/** Where the run reports, for a server other than Bencher Cloud. */
 	host: string | undefined;
 	onClose: () => void;
@@ -31,7 +36,7 @@ const ThresholdSheet = (props: ThresholdSheetProps) => (
 		done="Close"
 		side
 	>
-		<Show when={props.line}>
+		<Show when={props.version !== undefined && props.line}>
 			{(line) => <Snippets {...props} line={line()} />}
 		</Show>
 	</Sheet>
@@ -41,17 +46,26 @@ export default ThresholdSheet;
 
 const Snippets = (props: ThresholdSheetProps & { line: ReportLine }) => {
 	const { api, slug } = useProject();
-	const snippets = () =>
-		thresholdSnippets(
-			{
-				project: slug(),
-				branch: props.branch,
-				testbed: props.testbed,
-				host: runHost(props.host),
-			},
-			snippetLine(props.line),
-			props.lines.map(snippetLine),
-		);
+	const snippets = () => {
+		const place = {
+			project: slug(),
+			branch: props.branch,
+			testbed: props.testbed,
+			host: runHost(props.host),
+		};
+		const line = snippetLine(props.line);
+		const lines = props.lines.map(snippetLine);
+		return props.version === 0
+			? {
+					exact: null,
+					simple: thresholdSnippetV0(
+						{ ...place, adapter: props.adapter },
+						line,
+						lines,
+					),
+				}
+			: thresholdSnippets(place, line, lines);
+	};
 	const label = () =>
 		lineLabel(
 			{

@@ -30,12 +30,16 @@ const rememberedVersion = (page: Page, slug: string) =>
 test.describe("with no version memory", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
-	// Kills a new console that keeps a version 0 project.
-	test("a version 0 project under /next/ lands on its classic page", async ({
+	// Kills a new console that sends a version 0 project back to the classic one.
+	test("a version 0 project under /next/ stays in the new console", async ({
 		page,
 	}) => {
 		await page.goto(nextPath(version_zero.slug, "runs"));
-		await expect(page).toHaveURL(classicReports);
+		await expect(
+			page.getByRole("heading", { level: 1, name: "6 runs" }),
+		).toBeVisible();
+		await expect(page).toHaveURL(nextPath(version_zero.slug, "runs"));
+		await expect.poll(() => rememberedVersion(page, version_zero.slug)).toBe(0);
 	});
 
 	// Kills a classic console that keeps a version 1 project.
@@ -82,13 +86,16 @@ test.describe("with the version memory", () => {
 test.describe("with a stale version 1 memory", () => {
 	test.use({ storageState: remembered({ [version_zero.slug]: 1 }) });
 
-	// Kills a memory that only the inline script reads and nothing corrects.
-	test("the project corrects it and the reader stays on the classic page", async ({
+	// Kills a memory that only the inline script reads and nothing corrects, and
+	// a new console that then sends the reader back to the classic page.
+	test("the project corrects it and the reader stays where the classic page sent them", async ({
 		page,
 	}) => {
 		await page.goto(`/console/projects/${version_zero.slug}/reports`);
 
 		await expect.poll(() => rememberedVersion(page, version_zero.slug)).toBe(0);
+		await expect(page).toHaveURL(nextPath(version_zero.slug, "runs"));
+		await page.goto(`/console/projects/${version_zero.slug}/reports`);
 		await expect(page).toHaveURL(classicReports);
 	});
 });
@@ -96,12 +103,12 @@ test.describe("with a stale version 1 memory", () => {
 test.describe("with a stale version 0 memory", () => {
 	test.use({ storageState: remembered({ [hashbrown.slug]: 0 }) });
 
-	// Kills a classic console that sends a version 1 project to /next/ without
-	// correcting the memory.
+	// Kills a classic console that keeps a version 1 project, or sends it to
+	// /next/ without correcting the memory.
 	test("the project corrects it and the reader ends on /next/", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "runs"));
+		await page.goto(`/console/projects/${hashbrown.slug}/reports`);
 
 		await expect.poll(() => rememberedVersion(page, hashbrown.slug)).toBe(1);
 		await expect(page).toHaveURL(nextPath(hashbrown.slug, "runs"));

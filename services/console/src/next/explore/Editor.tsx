@@ -52,6 +52,8 @@ const Editor = (props: {
 	/** The plot query has answered for the query shown. */
 	settled: boolean;
 	readOnly?: boolean | undefined;
+	/** The project is on BMF version 0, whose variants have no parameters to filter by. */
+	versionZero?: boolean | undefined;
 	onQuery: (query: ExploreQuery) => void;
 	/** The reader reached for a benchmark: the plot is likely next. */
 	onBenchmarks?: (() => void) | undefined;
@@ -127,6 +129,7 @@ const Editor = (props: {
 				query={props.query}
 				perf={props.perf}
 				readOnly={props.readOnly}
+				versionZero={props.versionZero}
 				onQuery={props.onQuery}
 			/>
 			<Box
@@ -220,6 +223,7 @@ const Sets = (props: {
 	query: ExploreQuery;
 	perf: JsonConsolePerf | undefined;
 	readOnly?: boolean | undefined;
+	versionZero?: boolean | undefined;
 	onQuery: (query: ExploreQuery) => void;
 }) => {
 	const { api, slug } = useProject();
@@ -245,6 +249,11 @@ const Sets = (props: {
 			hint={hint()}
 			readOnly={props.readOnly}
 			full={props.query.sets.length >= MAX_ENTRIES}
+			locked={
+				props.versionZero
+					? "Filtering by parameters needs a version 1 project."
+					: undefined
+			}
 			onRemove={() => {}}
 			options={(text) => {
 				// The chosen benchmarks' every variant, read only once the reader looks.
@@ -298,7 +307,7 @@ const Sets = (props: {
 				{(set, index) => {
 					const row = () => rows()[index];
 					const tags = () => tagsOf(set());
-					const name = () => tags().join(" ") || "every variant";
+					const name = () => tags().join(" ");
 					const covering = () => {
 						const by = row()?.coveredBy;
 						return by === undefined ? undefined : props.query.sets[by];
@@ -315,7 +324,7 @@ const Sets = (props: {
 								classList={{ "ex-covered": covering() !== undefined }}
 							>
 								<span class="ex-tags">
-									<For each={tags().length > 0 ? tags() : ["every variant"]}>
+									<For each={tags()}>
 										{(text) => <span class="ex-tag">{text}</span>}
 									</For>
 								</span>

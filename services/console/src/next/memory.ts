@@ -1,6 +1,6 @@
 // Both memories are read by inline scripts before any module loads, so their
-// keys and shapes are a contract with `NextHead.astro`, `ShellPaint.astro`,
-// `Landing.astro`, and the classic console.
+// keys and shapes are a contract with `ShellPaint.astro`, `Landing.astro`, the
+// gates in `astro/`, and the classic console.
 
 type Storage = Pick<globalThis.Storage, "getItem" | "setItem" | "removeItem">;
 

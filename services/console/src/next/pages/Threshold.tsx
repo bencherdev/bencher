@@ -250,11 +250,17 @@ const Threshold = () => {
 					</p>
 				</div>
 				<Switch>
-					<Match when={data()}>
+					{/* The cards wait for the project's version, which says what Change teaches, so nothing below them moves. */}
+					<Match when={bootstrap().data && data()}>
 						{(threshold) => (
 							<>
 								<Cards slug={slug()} threshold={threshold()} now={now()} />
-								<Change slug={slug()} threshold={threshold()} host={host} />
+								<Change
+									slug={slug()}
+									threshold={threshold()}
+									host={host}
+									version={bootstrap().data?.project.bmf_version}
+								/>
 								<section class="th-alerts" aria-labelledby="th-alerts">
 									<div class="th-alerts-head">
 										<h2 class="seclabel" id="th-alerts">

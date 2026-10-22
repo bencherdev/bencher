@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 import {
 	NEXT_PROJECTS,
 	alertPath,
-	classicHref,
 	nextHref,
 	organizationOf,
 	pageName,
@@ -82,61 +81,6 @@ describe("tabOf", () => {
 		expect(tabOf(["branches", "main"])).toBe("settings");
 		expect(tabOf(["keys"])).toBe("settings");
 		expect(tabOf(["nope"])).toBeUndefined();
-	});
-});
-
-describe("classicHref", () => {
-	// Kills a version gate that sends a reader somewhere other than the same
-	// place, or carries a query the other console does not read.
-	test("sends a new console path to the same place in the classic console", () => {
-		expect(
-			classicHref(place("/next/console/projects/hashbrown/reports/abc#top")),
-		).toBe("/console/projects/hashbrown/reports/abc#top");
-		expect(
-			classicHref(place("/next/console/projects/hashbrown/thresholds/abc")),
-		).toBe("/console/projects/hashbrown/thresholds/abc");
-	});
-
-	// Kills Runs or a run sent to a classic page that does not exist: the
-	// classic console lists reports.
-	test("sends Runs and a run to the classic reports list", () => {
-		expect(
-			classicHref(
-				place("/next/console/projects/hashbrown/runs?window=all#top"),
-			),
-		).toBe("/console/projects/hashbrown/reports#top");
-		expect(
-			classicHref(place("/next/console/projects/hashbrown/runs/abc")),
-		).toBe("/console/projects/hashbrown/reports");
-	});
-
-	// Kills Explore sent to a classic page that does not exist, and the
-	// project root, which is Runs, sent to the classic perf page.
-	test("sends Explore to the classic perf page and the project root to the classic reports list", () => {
-		expect(
-			classicHref(place("/next/console/projects/hashbrown/explore?x=1")),
-		).toBe("/console/projects/hashbrown/perf");
-		for (const pathname of [
-			"/next/console/projects/hashbrown",
-			"/next/console/projects/hashbrown/",
-		]) {
-			expect(classicHref(place(`${pathname}#top`))).toBe(
-				"/console/projects/hashbrown/reports#top",
-			);
-		}
-	});
-
-	// Kills a version 0 project sent from the new Keys page to a classic page
-	// that does not exist.
-	test("sends Settings' Keys to the classic keys list", () => {
-		expect(classicHref(place("/next/console/projects/hashbrown/keys"))).toBe(
-			"/console/projects/hashbrown/keys",
-		);
-	});
-
-	// Kills a redirect out of a page the new console does not own.
-	test("leaves paths outside the new console alone", () => {
-		expect(classicHref(place("/console/projects/x"))).toBeUndefined();
 	});
 });
 

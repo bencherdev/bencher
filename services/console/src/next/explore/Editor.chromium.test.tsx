@@ -74,6 +74,7 @@ const render = (
 		perf?: JsonConsolePerf | undefined;
 		settled?: boolean;
 		readOnly?: boolean;
+		versionZero?: boolean;
 	} = {},
 ) => {
 	const edits: ExploreQuery[] = [];
@@ -86,6 +87,7 @@ const render = (
 					perf={options.perf}
 					settled={options.settled ?? true}
 					readOnly={options.readOnly}
+					versionZero={options.versionZero}
 					onQuery={(next) => {
 						edits.push(next);
 						setQuery(next);
@@ -255,4 +257,43 @@ test("the parameters hint holds its place when its count arrives at 900 px", asy
 	});
 	await expect.element(hint).toHaveTextContent("1 variant");
 	expect(place()).toEqual(before);
+});
+
+const LOCKED = "Filtering by parameters needs a version 1 project.";
+
+// Kills a parameters box a version 0 project can add a set to, which its
+// variants have no parameters to match, one disabled without a mark or the
+// tooltip that says why, and one locked on a version 1 project.
+test("on a version 0 project the parameters box is locked, and says why", async () => {
+	await page.viewport(1280, 800);
+	const { api, asked } = reading(() => []);
+	const edits = render(
+		api,
+		{ ...QUERY, sets: [] },
+		{
+			perf: PERF,
+			versionZero: true,
+		},
+	);
+	const parameters = page.getByRole("group", { name: "Parameters" });
+	const add = parameters.getByRole("button", { name: "Add set" });
+	await expect.element(add).toHaveAttribute("aria-disabled", "true");
+	await expect.element(add).toHaveAccessibleDescription(LOCKED);
+	expect(add.element().querySelector('[data-icon="read-only"]')).not.toBeNull();
+	await add.hover();
+	await expect.element(page.getByRole("tooltip")).toHaveTextContent(LOCKED);
+	(add.element() as HTMLButtonElement).click();
+	await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
+	expect(edits).toEqual([]);
+	expect(asked.filter((path) => path.includes("/variants"))).toEqual([]);
+	await expect.element(parameters.getByText("every variant")).toBeVisible();
+	cleanup?.();
+
+	render(api, QUERY, { perf: PERF });
+	const open = page
+		.getByRole("group", { name: "Parameters" })
+		.getByRole("button", { name: "Add set" });
+	await expect.element(open).not.toHaveAttribute("aria-disabled");
+	await open.click();
+	await expect.element(page.getByRole("menu")).toBeVisible();
 });

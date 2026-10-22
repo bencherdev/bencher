@@ -1,5 +1,7 @@
+import Icon from "@bencherdev/ui/Icon";
 import Menu from "@bencherdev/ui/Menu";
 import TextInput from "@bencherdev/ui/TextInput";
+import Tooltip from "@bencherdev/ui/Tooltip";
 import {
 	For,
 	Index,
@@ -53,6 +55,8 @@ const Box = (props: {
 	readOnly?: boolean | undefined;
 	/** The box holds as many values as the query reads. */
 	full?: boolean | undefined;
+	/** Why nothing can be added, which its add control shows locked. */
+	locked?: string | undefined;
 	onRemove: (index: number) => void;
 	/** The add control's choices, read once it opens; `text` is what the reader searched. */
 	options: (text: () => string) => () => Option[];
@@ -131,7 +135,23 @@ const Box = (props: {
 				)}
 			</Index>
 			{props.children}
-			<Show when={!(props.readOnly || props.full)}>
+			<Show when={props.locked && !props.readOnly ? props.locked : undefined}>
+				{(why) => (
+					<span class="ex-anchor">
+						<Tooltip tip={why()}>
+							<button
+								type="button"
+								class="ex-add ex-locked"
+								aria-disabled="true"
+							>
+								<Icon name="read-only" />
+								Add {props.noun}
+							</button>
+						</Tooltip>
+					</span>
+				)}
+			</Show>
+			<Show when={!(props.readOnly || props.full || props.locked)}>
 				<span class="ex-anchor">
 					<button
 						ref={add}

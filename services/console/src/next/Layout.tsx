@@ -20,7 +20,7 @@ import {
 	rememberShell,
 	rememberVersion,
 } from "./memory";
-import { TABS, classicHref, parseNextPath, tabOf } from "./paths";
+import { TABS, parseNextPath, tabOf } from "./paths";
 import { ProjectContext } from "./project";
 import { consoleProjectQuery } from "./queries";
 import { useQueryResult } from "./query";
@@ -54,17 +54,11 @@ const Layout = (
 		readShell(localStorage, reader(), slug()),
 	);
 
-	// The project's own version, fetched on this load, corrects the memory, and
-	// a version 0 project belongs to the classic console.
+	// The project's own version, fetched on this load, corrects the memory.
 	createEffect(() => {
 		const version = props.versions()[slug()];
-		if (version === undefined) {
-			return;
-		}
-		rememberVersion(localStorage, slug(), version);
-		const classic = version === 0 && classicHref(window.location);
-		if (classic) {
-			window.location.replace(classic);
+		if (version !== undefined) {
+			rememberVersion(localStorage, slug(), version);
 		}
 	});
 
