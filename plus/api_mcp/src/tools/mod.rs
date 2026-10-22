@@ -383,7 +383,7 @@ impl ToolKind {
     fn annotations(self, title: &str) -> ToolAnnotations {
         let annotations = ToolAnnotations::with_title(title)
             .read_only(matches!(self.access(), ToolAccess::Read))
-            .open_world(matches!(self.anonymous(), Anonymous::Allowed));
+            .open_world(true);
         match self {
             Self::Read => annotations.destructive(false).idempotent(true),
             Self::Create => annotations.destructive(false).idempotent(false),

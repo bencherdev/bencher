@@ -308,6 +308,7 @@ async fn mcp_tools_list() {
         ] {
             assert!(annotations[hint].is_boolean(), "Missing {hint}: {tool}");
         }
+        assert_eq!(annotations["openWorldHint"], true, "{tool}");
         assert_eq!(
             tool["outputSchema"]["type"] == "object",
             tool["name"] != "perf_image",
@@ -582,11 +583,6 @@ async fn mcp_tools_declare_how_to_sign_in() {
         };
         assert!(
             schemes.contains(&json!({"type": "oauth2", "scopes": [scope]})),
-            "{name}: {schemes:?}"
-        );
-        assert_eq!(
-            tool["annotations"]["openWorldHint"] == true,
-            schemes.contains(&json!({"type": "noauth"})),
             "{name}: {schemes:?}"
         );
 
