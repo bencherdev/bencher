@@ -3,9 +3,6 @@ name: CLI
 on:
   workflow_call:
     inputs:
-      bencher-version:
-        type: string
-        required: true
       mold-version:
         type: string
         required: true
@@ -122,13 +119,9 @@ jobs:
           persist-credentials: false
       - name: Unix CLI Install Script Version
         if: matrix.os != 'windows-2022'
-        env:
-          BENCHER_VERSION: ${{ inputs.bencher-version }}
         run: cat services/cli/templates/output/install-cli.sh | sh
       - name: Windows CLI Install Script Version
         if: matrix.os == 'windows-2022'
-        env:
-          BENCHER_VERSION: ${{ inputs.bencher-version }}
         run: powershell -c "gc -Raw services/cli/templates/output/install-cli.ps1 | iex"
       - name: Run Bencher CLI
         run: bencher run --project ${{ env.BENCHER_PROJECT }} --key ${{ secrets.BENCHER_API_KEY }} --dry-run "bencher mock"

@@ -1,0 +1,63 @@
+name: Release version
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version to bump
+        type: choice
+        options: [patch, minor]
+        default: patch
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release_version:
+    name: Release version
+    permissions:
+      actions: write
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Require devel
+        if: github.ref != 'refs/heads/devel'
+        run: |
+          echo "::error::Releases are cut from devel, not $GITHUB_REF"
+          exit 1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2 # zizmor: ignore[artipacked] this job commits the release to devel and pushes it with its tag, so it needs the persisted GITHUB_TOKEN
+        with:
+          fetch-depth: 0
+      - uses: rui314/setup-mold@339e96b4ff1f3bd865856ba4cbbe8818a7acb038 # v1
+        with:
+          mold-version: "2.34.1"
+      - uses: ./.github/actions/setup-node
+        with:
+          working-directory: ./services/action
+      - name: Install Typeshare CLI
+        env:
+          TYPESHARE_VERSION: "1.13.2"
+        run: cargo install typeshare-cli --version "$TYPESHARE_VERSION" --locked
+      - name: Release
+        id: release
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          git config --global user.name "Bencher"
+          git config --global user.email "git@bencher.dev"
+          ./scripts/tag.sh "$BUMP"
+          TAG="v$(cargo bin-version)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Released $TAG" >> "$GITHUB_STEP_SUMMARY"
+      # Pushes made with GITHUB_TOKEN do not trigger workflows.
+      - name: Trigger CI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          gh workflow run ci.yml --ref devel
+          gh workflow run ci.yml --ref "$TAG"
