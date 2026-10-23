@@ -11,7 +11,7 @@ use bencher_json::{
         report::{
             Adapter, Iteration, JsonReportAlerts, JsonReportBoundary, JsonReportMeasure,
             JsonReportMetric, JsonReportResult, JsonReportResults, JsonReportSettings,
-            JsonReportVariant, ReportIdempotencyKey,
+            JsonReportVariant, ParseOutcome, ReportIdempotencyKey,
         },
         threshold::JsonThresholdModel,
     },
@@ -24,7 +24,7 @@ use diesel::{
 };
 
 use dropshot::HttpError;
-use results::ReportResults;
+use results::{ParseRecord, ReportResults};
 use slog::Logger;
 use warning::{ReportWarnings, get_report_warnings};
 
@@ -124,7 +124,10 @@ pub struct QueryReport {
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
     pub spec_id: Option<SpecId>,
+    pub bmf_version: Option<BmfVersion>,
     pub adapter: Adapter,
+    pub resolved_adapter: Option<Adapter>,
+    pub parse_outcome: Option<ParseOutcome>,
     pub start_time: DateTime,
     pub end_time: DateTime,
     pub created: DateTime,
@@ -325,6 +328,7 @@ impl QueryReport {
                 testbed_id,
                 spec_id,
                 &json_report,
+                bmf_version,
                 adapter,
                 now,
             );
@@ -363,7 +367,7 @@ impl QueryReport {
         }
 
         // Read full report via public_conn (outside write lock)
-        let query_report = schema::report::table
+        let mut query_report = schema::report::table
             .filter(schema::report::uuid.eq(&insert_report_uuid))
             .first::<Self>(actor_conn!(context, api_actor))
             .map_err(|e| {
@@ -481,7 +485,10 @@ impl QueryReport {
             version_id,
             testbed_id,
             spec_id,
+            bmf_version,
             adapter,
+            resolved_adapter: _,
+            parse_outcome,
             start_time,
             end_time,
             created,
@@ -538,7 +545,9 @@ impl QueryReport {
             testbed,
             start_time,
             end_time,
+            bmf_version,
             adapter,
+            parse_outcome,
             results,
             alerts,
             counts,
@@ -555,7 +564,7 @@ impl QueryReport {
     /// Includes plan usage tracking and validation.
     #[expect(clippy::too_many_arguments, reason = "cfg features add extra params")]
     pub async fn process_results(
-        &self,
+        &mut self,
         log: &Logger,
         context: &ApiContext,
         branch_id: BranchId,
@@ -594,16 +603,34 @@ impl QueryReport {
                 &mut usage,
             )
             .await;
-        if processed.is_ok() && !warnings.is_empty() {
+        // The parse is recorded whether or not the rest of processing succeeded,
+        // so a report whose results failed to parse says so.
+        let parse = report_results.parse;
+        let write_warnings = processed.is_ok() && !warnings.is_empty();
+        if parse.is_some() || write_warnings {
             let report_id = self.id;
-            processed = write_transaction!(context, |conn| warnings.insert(conn, report_id))
-                .map_err(|e| {
-                    issue_error(
-                        "Failed to write report warnings",
-                        &format!("Failed to write the warnings for report ({report_id}):"),
-                        e,
-                    )
-                });
+            let written = write_transaction!(context, |conn| {
+                if let Some(parse) = parse {
+                    parse.update(conn, report_id)?;
+                }
+                if write_warnings {
+                    warnings.insert(conn, report_id)?;
+                }
+                diesel::QueryResult::Ok(())
+            })
+            .map_err(|e| {
+                issue_error(
+                    "Failed to record report parse",
+                    &format!("Failed to record the parse and warnings of report ({report_id}):"),
+                    e,
+                )
+            });
+            if written.is_ok()
+                && let Some(ParseRecord { outcome, .. }) = parse
+            {
+                self.parse_outcome = Some(outcome);
+            }
+            processed = processed.and(written);
         }
 
         #[cfg(all(feature = "otel", feature = "plus"))]
@@ -1278,6 +1305,7 @@ pub struct InsertReport {
     pub version_id: VersionId,
     pub testbed_id: TestbedId,
     pub spec_id: Option<SpecId>,
+    pub bmf_version: BmfVersion,
     pub adapter: Adapter,
     pub start_time: DateTime,
     pub end_time: DateTime,
@@ -1298,6 +1326,7 @@ impl InsertReport {
         testbed_id: TestbedId,
         spec_id: Option<SpecId>,
         report: &JsonNewReport,
+        bmf_version: BmfVersion,
         adapter: Adapter,
         now: DateTime,
     ) -> Self {
@@ -1311,6 +1340,7 @@ impl InsertReport {
             version_id,
             testbed_id,
             spec_id,
+            bmf_version,
             adapter,
             start_time: report.start_time,
             end_time: report.end_time,
