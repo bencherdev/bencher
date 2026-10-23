@@ -21,6 +21,7 @@ import bencher_valid_init, {
 	is_valid_model,
 	is_valid_window,
 } from "bencher_valid";
+import bencher_valid_wasm from "bencher_valid/bencher_valid_bg.wasm?url";
 import type { JsonAuthUser } from "../types/bencher";
 
 export const DEBOUNCE_DELAY = 10;
@@ -29,7 +30,7 @@ export type InitValid = undefined | InitOutput;
 
 export const init_valid = async (): Promise<InitValid> => {
 	try {
-		return await bencher_valid_init();
+		return await bencher_valid_init({ module_or_path: bencher_valid_wasm });
 	} catch (error) {
 		console.error(error);
 		Sentry.captureException(error);

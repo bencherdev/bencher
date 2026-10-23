@@ -23,6 +23,19 @@ test.describe("signed out", () => {
 		await page.goto(path);
 		await expect(page).toHaveURL(signInWayBack(path));
 	});
+
+	// Kills validators whose WASM never loads, which leaves Log in disabled for good.
+	test("a valid email enables Log in", async ({ page }) => {
+		await page.goto("/auth/login");
+		const logIn = page.getByRole("button", { name: "Log in", exact: true });
+		// The form replaces its placeholder once it loads, so fill until it takes.
+		await expect(async () => {
+			await page
+				.getByPlaceholder("email@example.com")
+				.fill("reader@example.com");
+			await expect(logIn).toBeEnabled({ timeout: 1_000 });
+		}).toPass();
+	});
 });
 
 test.describe("signed in", () => {

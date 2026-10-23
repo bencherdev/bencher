@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { initSync } from "bencher_valid";
 import { describe, expect, test } from "vitest";
 import {
-	init_valid,
 	jwtOptionalInvalid,
 	jwtRequiredInvalid,
 	validBenchmarkName,
@@ -29,7 +31,13 @@ import {
 	validWindow,
 } from "./valid";
 
-const wasmReady = await init_valid();
+const WASM = join(
+	import.meta.dirname,
+	"../../../../lib/bencher_valid/pkg/bencher_valid_bg.wasm",
+);
+const wasmReady = existsSync(WASM)
+	? initSync({ module: readFileSync(WASM) })
+	: undefined;
 
 describe.skipIf(!wasmReady)("WASM validators", () => {
 	const fakeJwt =
