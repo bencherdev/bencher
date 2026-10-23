@@ -196,6 +196,9 @@ jobs:
         env:
           DEPLOY_TARGET: ${{ matrix.artifact == 'bencher-console' && inputs.cloudflare-env == 'dev' && 'dev-console' || 'console' }}
         run: npm run deploy-target "$DEPLOY_TARGET"
+      - name: Verify WASM Hash
+        working-directory: ./services/console
+        run: npm run wasm-hash
       # The deploy jobs download this instead of rebuilding the console.
       # `wrangler deploy` finds the built config through `.wrangler/deploy/config.json`,
       # and `upload-artifact` omits hidden files unless told otherwise, so without
