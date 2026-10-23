@@ -37,7 +37,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: rui314/setup-mold@339e96b4ff1f3bd865856ba4cbbe8818a7acb038 # v1
@@ -45,7 +45,7 @@ jobs:
         with:
           mold-version: ${{ inputs.mold-version }}
       - name: Setup Go (for OCI conformance tests)
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ inputs.go-version }}
       - name: Run Smoke Test
@@ -66,7 +66,7 @@ jobs:
       BUILD_WINDOWS_X86_64: windows-x86-64
       BUILD_WINDOWS_ARM_64: windows-arm-64
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -79,68 +79,68 @@ jobs:
 
       # Download all artifacts from the CI workflow
       - name: Download CLI Linux x86_64 Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}
 
       - name: Download CLI Linux ARM64 Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}
 
       - name: Download CLI macOS x86_64 Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_MACOS_X86_64 }}
 
       - name: Download CLI macOS ARM64 Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_MACOS_ARM_64 }}
 
       - name: Download CLI Windows x86_64 Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_WINDOWS_X86_64 }}.exe
 
       - name: Download CLI Windows ARM64 Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_WINDOWS_ARM_64 }}.exe
 
       - name: Download CLI Linux x86_64 .deb Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}.deb
 
       - name: Download CLI Linux ARM64 .deb Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.CLI_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}.deb
 
       - name: Download Runner Linux x86_64 Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.RUNNER_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_X86_64 }}
 
       - name: Download Runner Linux ARM64 Artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ env.RUNNER_BIN_NAME }}-${{ env.VERSION }}-${{ env.BUILD_LINUX_ARM_64 }}
 
       # Push multi-arch images to GHCR & Docker Hub
       - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log in to the Container registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
@@ -190,7 +190,7 @@ jobs:
         run: cargo gen-notes
 
       - name: GitHub Release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2 # zizmor: ignore[superfluous-actions] handles multi-file uploads, prerelease detection, and notes body; preferred over a hand-rolled `gh release` script
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3 # zizmor: ignore[superfluous-actions] handles multi-file uploads, prerelease detection, and notes body; preferred over a hand-rolled `gh release` script
         with:
           tag_name: ${{ env.VERSION }}
           prerelease: ${{ contains(env.VERSION, '-rc') }}
