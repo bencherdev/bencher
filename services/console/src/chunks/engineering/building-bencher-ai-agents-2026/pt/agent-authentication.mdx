@@ -1,0 +1,12 @@
+## Autenticação de Agentes
+
+Até o Bencher Bare Metal, toda a autenticação era feita com JWTs. JWTs grandes, lindos e incompreensíveis. A autenticação dos runners do Bare Metal era uma chave de API com um prefixo de nome, por ex. `bencher_runner_abc123...`.
+
+No lado do cliente, eu queria dar aos agentes algo com que trabalhar além do próprio token de API JWT do usuário. O meio-termo a que cheguei foi finalmente implementar uma funcionalidade pedida havia muito tempo: a autenticação com escopo de projeto. O Claude me ajudou a criar chaves de API seguras, com prefixo e com escopo de projeto. Essas chaves de API são limitadas às permissões equivalentes ao que [o comando `bencher run` da CLI][bencher run] realiza: leituras com escopo de projeto e escritas não destrutivas. Isso também faz dessas chaves de API uma escolha natural para uso em fluxos de trabalho de CI de benchmarking contínuo.
+
+Mais tarde, quando adicionei o [Bencher MCP][bencher mcp], essas chaves de API com escopo de projeto também passaram a ser usadas para a autenticação lá. O padrão MCP adota o OAuth 2.1, mas ele [ainda está em rascunho][ietf oauth 2.1], então eu não quis implementá-lo ainda. Sinceramente, sou meio cético em relação ao MCP. Ainda acho que uma boa CLI + [skills][bencher skills] é uma forma mais eficaz e portável de expor um serviço a um agente. O maior problema das CLIs, porém, é a falta de um mecanismo de autenticação padrão. Então, mesmo que o OAuth 2.1 ainda esteja em rascunho, pelo menos o MCP tem isso resolvido. E uma boa história de authn importa _muito_ para clientes enterprise.
+
+[bencher run]: /pt/docs/explanation/bencher-run/
+[bencher mcp]: /pt/docs/how-to/mcp/
+[ietf oauth 2.1]: https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/
+[bencher skills]: /pt/docs/how-to/install-cli/#claude-code

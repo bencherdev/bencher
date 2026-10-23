@@ -1,0 +1,26 @@
+_Cet essai a été initialement soumis au concours [The Pragmatic Engineer's How Software Engineering is Changing Essay Challenge][pragmatic engineer essay challenge] le 4 octobre 2026._
+
+Cette année a marqué un changement radical dans ma façon de construire des logiciels. Je suis ingénieur logiciel de niveau staff. Au cours des six dernières années, j'ai travaillé professionnellement en Rust, à la fois pour une licorne soutenue par YC et a16z et pour une entreprise du Fortune 500. En tant que développeur C++ repenti, j'ai été attiré par la profondeur et le savoir-faire qu'exigeait Rust. J'étais devenu un artisan expert dans l'art de ciseler à la main des logiciels systèmes temps réel. Au cours des dix derniers mois, j'ai dû enterrer cette identité. Même si mon intitulé de poste indique toujours "ingénieur logiciel", mon métier est désormais celui d'"ingénieur de contexte".
+
+Ces quatre dernières années, j'ai passé mes soirées et mes week-ends à construire une entreprise open source et autofinancée, [Bencher][bencher]. Bencher est une plateforme de benchmarking continu qui aide les ingénieurs en logiciels systèmes à détecter les régressions de performance avant qu'elles ne soient fusionnées. Il faut toute une suite d'outils pour y parvenir : un CLI, un serveur API et une console web frontend. Chacun de ces composants a été écrit, à une erreur d'arrondi près, par moi. J'ai eu quelques contributeurs open source notables au fil des années, mais la grande majorité de Bencher le projet open source et 100 % de Bencher l'entreprise ont été conçus et implémentés par moi-même.
+
+Pendant ces quatre années, je n'ai pas non plus vécu dans une grotte. Je me suis fiancé, marié, et j'ai eu mon premier enfant. Il me fallait des semaines, et parfois des mois, pour venir à bout de l'implémentation d'une grosse fonctionnalité et la déployer. Je devais jongler entre le développement et le support. Bencher avait déjà de nombreux utilisateurs, alors je passais pas mal de temps à répondre aux questions et à corriger le bug occasionnel.
+
+En 2022, mon utilisation des LLM se résumait à la version gratuite pour Rust de [TabNine][wikipedia tabnine], un outil de développement d'autocomplétion par tabulation créé par un étudiant, l'un des premiers stagiaires d'OpenAI, qui travaillait sur un drôle de petit projet nommé Codex. Une fois GitHub Copilot lancé, avec un support officieux de Rust, j'ai mis la main au portefeuille : 10 $/mois pour une licence personnelle.
+
+C'était laborieux. Mais ça ressemblait quand même un peu à de la magie. Je me souviens avoir été bluffé, peu après l'ajout du chat à l'extension VSCode de GitHub Copilot, par sa capacité à créer des [macros procédurales][rust procedural macros] Rust. En général, je devais un peu retoucher le résultat, mais à quelques reprises, il a réussi du premier coup. Dingue ! C'était cool et ça m'a probablement fait gagner un peu de temps, mais je travaillais encore essentiellement de la même manière qu'avant.
+
+À partir de là, j'étais convaincu que Microsoft était à l'avant-garde avec GitHub Copilot. Même si ces nouveaux labos dernier cri balançaient des "agents" à tout-va, je pouvais compter sur GitHub Copilot pour suivre le mouvement s'il y avait quoi que ce soit d'intéressant. J'entendais des gens comme Dan Shipper sur le [Lenny's Podcast][lennys podcast dan shipper 2025], et leur description des capacités des modèles ne collait tout simplement ni avec mon expérience ni avec mon niveau d'exigence.
+
+Au début de l'année dernière, j'ai écrit un article revenant sur trois ans de développement de Bencher, [Revue d'Ingénierie : Édition 2025][bencher engineering review]. Dans cet article, je passais en revue toutes mes grandes décisions d'ingénierie pour construire Bencher : frontend, backend, environnement de développement, CI, et j'en passe. J'ai consacré un paragraphe entier à pester contre la difficulté que j'avais eue, deux ans plus tôt, à comprendre [CUE lang][cue lang]. Pourtant, il n'y a pas une seule mention de l'IA, des LLM, ni même de Copilot dans ces 3 500 mots.
+
+Avance rapide, moins d'un an plus tard, et me voilà à compatir avec [We mourn our craft][we mourn].
+
+[pragmatic engineer essay challenge]: https://blog.pragmaticengineer.com/how-software-engineering-is-changing-an-essay-challenge/
+[bencher]: https://bencher.dev
+[wikipedia tabnine]: https://en.wikipedia.org/wiki/Tabnine
+[rust procedural macros]: https://doc.rust-lang.org/reference/procedural-macros.html
+[lennys podcast dan shipper 2025]: https://www.lennysnewsletter.com/p/inside-every-dan-shipper
+[bencher engineering review]: /fr/learn/engineering/engineering-review-2025/
+[cue lang]: https://cuelang.org/
+[we mourn]: https://nolanlawson.com/2026/02/07/we-mourn-our-craft/

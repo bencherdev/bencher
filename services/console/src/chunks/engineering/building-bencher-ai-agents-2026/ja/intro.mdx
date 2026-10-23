@@ -1,0 +1,26 @@
+_このエッセイは、もともと2026年10月4日に[The Pragmatic Engineer's How Software Engineering is Changing Essay Challenge][pragmatic engineer essay challenge]へ応募したものです。_
+
+今年、私のソフトウェアの作り方は根本から変わりました。私はスタッフソフトウェアエンジニアです。この6年間、YCとa16zが出資するユニコーン企業と、Fortune 500企業の両方で、仕事としてRustを書いてきました。C++からのリハビリ中の開発者として、Rustが求める奥深さと技量に惹かれていきました。リアルタイムシステムソフトウェアを手作業で彫り上げる熟練の職人になっていたのです。しかしこの10か月で、私はそのアイデンティティを葬らなければなりませんでした。肩書きは今も「ソフトウェアエンジニア」ですが、私の仕事は今や「コンテキストエンジニア」のそれです。
+
+この4年間、私は夜と週末を使って、オープンソースで自己資金のビジネス、[Bencher][bencher]を作ってきました。Bencherは、システムソフトウェアエンジニアがパフォーマンス回帰をマージ前に検出できるようにする継続的ベンチマーキングプラットフォームです。これを実現するには一連のツールが必要です。CLI、APIサーバー、そしてフロントエンドのWebコンソールUIです。これらのコンポーネントはどれも、誤差の範囲で、すべて私が書きました。長年の間に何人か注目すべきオープンソースコントリビューターがいましたが、オープンソースプロジェクトとしてのBencherの大部分と、ビジネスとしてのBencherの100%は、私自身が設計し実装したものです。
+
+この4年間、私はただ浮世離れした暮らしをしていたわけではありません。婚約し、結婚し、第一子が生まれました。大きな機能を実装してリリースするまでに、数週間、時には数か月かかりました。開発とサポートを両立させなければなりませんでした。Bencherにはすでに多くのユーザーがいたので、質問に答えたり、たまに出てくるバグを直したりすることにかなりの時間を費やしていました。
+
+2022年当時、私のLLMの使い方といえば、[TabNine][wikipedia tabnine]のRust向けフリーウェア版くらいでした。TabNineは、Codexという名のちょっと変わった小さなプロジェクトに取り組んでいたOpenAIの初期インターンでもある学生が作った、Tabキーで補完する開発者ツールです。GitHub Copilotがローンチされ、非公式にRustをサポートし始めると、私は奮発して月10ドルの個人ライセンスを購入しました。
+
+荒削りでした。それでも、ちょっとした魔法のように感じられました。GitHub CopilotのVSCode拡張機能にチャットが追加されて間もない頃、Rustの[手続き的マクロ][rust procedural macros]を作るのがあまりにも上手くて驚かされたのを覚えています。たいていは出力を多少手直しする必要がありましたが、何度かは一発で完璧に書き上げてくれました。ヤバすぎる！これはクールでしたし、多少の時間短縮にもなったのでしょうが、私の仕事の進め方は基本的に以前と変わりませんでした。
+
+それ以来、私は「MicrosoftはGitHub Copilotで最先端を走っている」という考えを持つようになりました。新興のAIラボが「エージェント」なるものを世に出していても、価値のあるものならGitHub Copilotがちゃんと追いつくだろうと信じていられました。[Lenny’s Podcast][lennys podcast dan shipper 2025]でDan Shipperのような人たちの話を聞いても、彼らが語るモデルの能力は、私の経験とも品質基準とも噛み合いませんでした。
+
+昨年の初め、私はBencher開発の3年間を振り返る記事、[エンジニアリングレビュー：2025年版][bencher engineering review]を書きました。その記事では、フロントエンド、バックエンド、開発環境、CIなど、Bencherを作るうえで下したエンジニアリング上の主要な決定をすべて取り上げました。2年前に[CUE lang][cue lang]を理解しようとしてどれだけ苦労したかの愚痴に、丸々1段落を費やしたほどです。それなのに、3,500語に及ぶあの記事のどこにも、AIやLLM、さらにはCopilotについてさえ、一言も触れていないのです。
+
+それから1年も経たない今、私は[We mourn our craft][we mourn]に共感し、一緒に嘆いています。
+
+[pragmatic engineer essay challenge]: https://blog.pragmaticengineer.com/how-software-engineering-is-changing-an-essay-challenge/
+[bencher]: https://bencher.dev
+[wikipedia tabnine]: https://en.wikipedia.org/wiki/Tabnine
+[rust procedural macros]: https://doc.rust-lang.org/reference/procedural-macros.html
+[lennys podcast dan shipper 2025]: https://www.lennysnewsletter.com/p/inside-every-dan-shipper
+[bencher engineering review]: /ja/learn/engineering/engineering-review-2025/
+[cue lang]: https://cuelang.org/
+[we mourn]: https://nolanlawson.com/2026/02/07/we-mourn-our-craft/

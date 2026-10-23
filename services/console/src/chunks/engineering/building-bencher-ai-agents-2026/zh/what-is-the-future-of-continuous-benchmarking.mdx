@@ -1,0 +1,27 @@
+## 持续基准测试的未来是什么？
+
+想要预测未来会怎样，规律似乎是去看前沿实验室自己在做什么。看起来，我们所有人六到十二个月后都会走到那一步。The Pragmatic Engineer 的文章[《Inside OpenAI’s agentic software factory》][pragmatic openai]从持续基准测试的角度揭示了一些有趣的东西：
+
+> 新增：“perf harness”：智能体还会使用一个 perf harness，
+> 把有问题的 PR 发送到 Synthetics A/B 框架，以评估其对性能的影响。
+> 如上所述，过去六个月里 CI 系统的负载大幅增加。
+
+OpenAI 的 “perf harness” 看起来与[相对持续基准测试][bencher relative]这一成熟实践非常相似。真正新颖的 AI 部分，在于 A/B 框架中的合成环节。合成测试数据并不新鲜。但能够自主地塑造这些合成数据来评估手头变更集的性能，这绝对是新东西！让开发者真正动手写基准测试，向来是最难的。现在它被自动化了。就像智能体大幅提高了功能测试覆盖率一样，它们也让我们能够大幅提高性能测试覆盖率。
+
+在这条路上，OpenAI 并不孤单。Anthropic 随后不久就发表了[《How we made claude.ai 3x faster in two weeks》][claude faster]。文中他们同样描述了即时构建基准测试的做法。一个关键区别是，Anthropic 找到了一些与性能相关的确定性计数：指令数、每次交互的提交数、函数调用、样式重新计算以及 DOM 变更。随后 Claude 对这些计数进行爬山优化，以提升他们应用的性能。在优化流程结束时，他们检查了这些基于计数的优化是否真的带来了现实世界中挂钟时间的改善。
+
+这些方法论与我自己开发 Bencher 时的亲身经历不谋而合。不过，我的 A/B 性能测试都是在本地或智能体的工作机上运行的，而不是在 CI 循环中。每当我要对某个查询做大的改动，或进行一次有分量的 schema 迁移时，我都会让 Claude 对这项改动做一次详尽的性能评估。这始终包括挂钟时间，偶尔还包括一些相关的确定性计数（例如 SQLite 虚拟机指令数）。
+
+由于“吵闹的邻居”问题，这些由智能体主导的性能优化流程的误差范围一直相当大。我打算为 Bencher Bare Metal 添加 fixtures（额外的基准测试输入）和 artifacts（额外的基准测试输出），以便让我的智能体更有把握地运行这些性能优化任务。智能体仍然会在本地完成大部分优化工作，尽其所能地针对挂钟时间或确定性计数进行爬山优化。然后，它会使用 Bencher Bare Metal 来检验自己的工作，就像一把测量挂钟时间的卡尺。
+
+尽管我认为一年左右之后，Bencher 的大多数“用户”都会是智能体，但我仍然认为，大多数人类在查看进展时还是会想要一个可视化界面。我目前正在 Claude 的帮助下，深陷于对 Bencher UI 的全面重新设计之中。作为一名在 GitHub Copilot Tab 自动补全的年代写着 Anyscript 的 Rust 工程师，现在这套 UI 还有很多不尽如人意之处。不过，UI 的重写被另一项更加雄心勃勃的大改造挡住了：新版本的 [Bencher Metric Format (BMF)][bencher bmf]。
+
+BMF 是 Bencher 内部用来规范化基准测试结果的核心格式。它贯穿*一切*。新版本的 BMF 将允许对基准测试进行参数化。你可以写 `my_benchmark`，并带上参数 `size: 16 MB` 和 `size: 32 MB`，而不必拆成两个独立的基准测试 `my_benchmark_16_mb` 和 `my_benchmark_32_mb`。新版本的 BMF 还将允许任意的指标名称。你可以为 `Latency` 度量提供 `mean`、`p95` 和 `p99` 指标，而不是只能有 `mean`，或者不得不把 `Latency (mean)`、`Latency (p95)` 和 `Latency (p99)` 做成三个独立的度量。
+
+支持这个新版本的 BMF，是对 Bencher 核心的一次大规模改造。在 Fable 5 之前，用任何模型来做这项工作我都不会放心。正如上文所说，大部分 Bare Metal 的工作都与 Bencher 的核心正交：随时间跟踪性能，并在出现回归时发出警报。而 BMF 正处于这一核心价值主张的中心。我对 Fable 5 的信任，以及对 Fable 5.1 和 Opus 5.5 更甚的信任，再一次让我得以着手一个原本需要耗费好几年晚上和周末才能完成的项目。以前我不得不花相当多的时间来[为 Bencher 优化 SQLite][bencher sqlite]。现在，每次我演进数据模型时，我只需让 Claude 启动一个智能体做一次彻底的性能调查，确保一切依然高性能。将来，我觉得我连开口都不用了。
+
+[pragmatic openai]: https://newsletter.pragmaticengineer.com/p/openai-software-factory
+[bencher relative]: /zh/docs/how-to/track-benchmarks/#相对持续基准测试
+[claude faster]: https://claude.dev/blog/how-we-made-claude-ai-faster/
+[bencher bmf]: /zh/docs/reference/bencher-metric-format/
+[bencher sqlite]: /zh/learn/engineering/sqlite-performance-tuning/

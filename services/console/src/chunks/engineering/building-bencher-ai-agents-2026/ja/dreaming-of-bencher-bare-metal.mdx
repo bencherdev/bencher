@@ -1,0 +1,17 @@
+## Bencher Bare Metalを夢見て
+
+Bencherのごく初期の頃から、私はベアメタルのベンチマーキングフリートを作ることを夢見ていました。従来のCIランナーは、仮想マシンであるがゆえにノイズが多すぎて、一貫したベンチマーク結果を得られません。たとえばレイテンシの200%増加なら検出できるかもしれませんが、20%の増加を確実に検出することは決してできないでしょう。CIでベンチマークを行う方法の1つとして、命令数があります。命令数はほぼ決定的です。しかし、命令数はあなたが本当に気にしているもの、つまり実時間の代理指標にすぎません。「CPUシミュレーション」の中で実行して命令数を出力するものは、どれも速度と相関するだけです。問題は、実際にベアメタル上で測定しない限り、それがどれだけずれているのか、あるいはずれていないのかが決してわからないことです。
+
+Bencherの最初期のユーザーの1つが、[Rustlsプロジェクト][rustls case study]でした。私も彼らの[Rustlsベンチランナー][github rustls bench app]にコントリビュートしました。しかし、これはベアメタルのベンチマーキングフリートを構築する土台としては良いものではありませんでした。単一のホスト上で動いており、すべてのベンチマークワークロードを信頼済みとして扱っていたのです。つまり、フォークからのPRは受け付けられず、マルチテナンシーもありません。それに、ほとんどのチームは、ベアメタルのベンチマーキングサーバー1台につき月100ドル以上も払いたくはありません。
+
+オーケストレーション層にGitHub Actionsを使うことも検討しましたが、このアプローチにはいくつかの根本的な欠点がありました。まず、[GitHub Actions Runner][github actions runner]はC#で書かれています。つまり、実行の途中でガベージコレクタが動き出し、ベンチマーク結果を歪めてしまう可能性があります。ああ、それから実行中に動き出さないよう[自動アップデーター][runner auto updater]は必ずオフにしておきましょう。でも、オフにしたまま放っておきすぎるのも禁物です。さもないとジョブが動かなくなりますから！
+
+仮にGitHub Actions Runnerが静かで行儀の良いRustバイナリだったとしても、より根本的な問題は、それがGitHub Actionsに縛られていることでした。Bencherは最初からCLIファーストです。良くも悪くも、私はBencherを特定のCIプロバイダーに深く結びつけたくありませんでした。[Bencher CLI GitHub Action][github action bencher cli]はありますが、それがやるのはCLIをインストールすることだけです。Bencher Bare Metalは、GitHub Actionsからだけでなく、CLIが動く場所ならどこからでも使えるようにしたかったのです。
+
+私が思いついたアイデアは、OCIイメージを使ってベンチマークのワークロードをまとめ、オプションのごく小さなサンドボックスを使って、特定のベアメタルホスト上では常に一度に1つのジョブだけを実行するというものでした。これを夜と週末だけで一人で作り上げることを考えると、気が遠くなりました。本業と家族を抱えながら一人でコツコツ進めていたら、少なくとも1年はかかったでしょう。
+
+[rustls case study]: /ja/learn/case-study/rustls/
+[github rustls bench app]: https://github.com/rustls/rustls-bench-app
+[github actions runner]: https://github.com/actions/runner
+[runner auto updater]: https://docs.github.com/en/actions/reference/runners/self-hosted-runners#runner-software-updates-on-self-hosted-runners
+[github action bencher cli]: https://github.com/marketplace/actions/bencher-cli

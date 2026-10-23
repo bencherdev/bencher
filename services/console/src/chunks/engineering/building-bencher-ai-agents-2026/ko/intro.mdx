@@ -1,0 +1,26 @@
+_이 에세이는 원래 2026년 10월 4일에 [The Pragmatic Engineer's How Software Engineering is Changing Essay Challenge][pragmatic engineer essay challenge]에 제출한 글입니다._
+
+올해는 제가 소프트웨어를 만드는 방식이 근본적으로 바뀐 해였습니다. 저는 스태프 소프트웨어 엔지니어입니다. 지난 6년 동안 YC와 a16z의 투자를 받은 유니콘 기업과 Fortune 500 기업 양쪽에서 Rust로 일해 왔습니다. C++ 개발에서 회복 중인 사람으로서, 저는 Rust가 요구하는 깊이와 기술에 끌렸습니다. 실시간 시스템 소프트웨어를 손으로 한 땀 한 땀 깎아 내는 숙련된 장인이 되어 있었죠. 그런데 지난 10개월 동안 그 정체성을 묻어야 했습니다. 직함은 여전히 "소프트웨어 엔지니어"이지만, 제 일은 이제 "컨텍스트 엔지니어"의 일이 되었습니다.
+
+지난 4년 동안 저는 밤과 주말을 바쳐 오픈 소스이자 부트스트랩 비즈니스인 [Bencher][bencher]를 만들어 왔습니다. Bencher는 시스템 소프트웨어 엔지니어가 성능 회귀를 병합 전에 잡아낼 수 있도록 돕는 지속적인 벤치마킹 플랫폼입니다. 이를 위해서는 CLI, API 서버, 프런트엔드 웹 콘솔 UI라는 여러 도구가 필요합니다. 이 구성 요소들은 반올림 오차 수준을 빼면 전부 제가 작성했습니다. 그동안 눈에 띄는 오픈 소스 기여자가 몇 분 계셨지만, 오픈 소스 프로젝트로서의 Bencher는 대부분, 그리고 비즈니스로서의 Bencher는 100% 제가 직접 설계하고 구현했습니다.
+
+이 4년 동안 제가 세상과 담을 쌓고 산 것은 아닙니다. 약혼하고, 결혼하고, 첫 아이를 얻었습니다. 큰 기능 하나를 구현해서 배포하기까지 몇 주, 때로는 몇 달이 걸렸습니다. 개발과 지원을 동시에 해내야 했습니다. Bencher에는 이미 사용자가 많았기 때문에, 질문에 답하고 이따금 나오는 버그를 고치는 데 꽤 많은 시간을 썼습니다.
+
+2022년 당시 제가 LLM을 쓰는 방식이라고는 [TabNine][wikipedia tabnine]의 Rust 무료 버전이 전부였습니다. TabNine은 탭 한 번으로 자동 완성해 주는 개발자 도구로, 한 학생이 만들었는데 그는 OpenAI의 초기 인턴으로 Codex라는 재미있는 작은 프로젝트를 하고 있었습니다. GitHub Copilot이 출시되고 비공식적으로 Rust 지원이 추가되자, 저는 개인 라이선스 비용으로 월 $10를 기꺼이 냈습니다.
+
+엉성했습니다. 그래도 여전히 약간은 마법처럼 느껴졌습니다. GitHub Copilot VSCode 확장에 채팅이 추가된 직후, Rust [절차적 매크로][rust procedural macros]를 정말 잘 만들어 내는 걸 보고 감탄했던 기억이 납니다. 보통은 결과물을 조금 손봐야 했지만, 몇 번은 한 번에 완성해 냈습니다. 대박! 멋졌고 시간도 어느 정도 아껴 줬겠지만, 저는 여전히 대체로 예전과 같은 방식으로 일했습니다.
+
+그때부터 저는 Microsoft가 GitHub Copilot으로 선두에 서 있다고 생각하게 됐습니다. 신생 연구소들이 "에이전트"를 내놓고 있어도, 쓸 만한 게 있다면 GitHub Copilot이 따라잡을 거라고 믿었습니다. [Lenny's Podcast][lennys podcast dan shipper 2025]에서 Dan Shipper 같은 사람들의 이야기를 들어도, 그들이 말하는 모델의 능력은 제 경험과도, 제 품질 기준과도 도무지 맞지 않았습니다.
+
+작년 초, 저는 Bencher 개발 3년을 돌아보는 글 [엔지니어링 리뷰: 2025 에디션][bencher engineering review]을 썼습니다. 그 글에서는 프런트엔드, 백엔드, 개발자 환경, CI 등 Bencher를 만들면서 내린 주요 엔지니어링 결정을 빠짐없이 다뤘습니다. 2년 전 [CUE lang][cue lang]을 이해하느라 얼마나 고생했는지 하소연하는 데 한 문단을 통째로 쓰기도 했습니다. 그런데 그 3,500단어짜리 글 어디에도 AI, LLM, 심지어 Copilot이라는 말이 단 한 번도 나오지 않습니다.
+
+그로부터 1년도 채 지나지 않은 지금, 저는 [We mourn our craft][we mourn]에 깊이 공감하고 있습니다.
+
+[pragmatic engineer essay challenge]: https://blog.pragmaticengineer.com/how-software-engineering-is-changing-an-essay-challenge/
+[bencher]: https://bencher.dev
+[wikipedia tabnine]: https://en.wikipedia.org/wiki/Tabnine
+[rust procedural macros]: https://doc.rust-lang.org/reference/procedural-macros.html
+[lennys podcast dan shipper 2025]: https://www.lennysnewsletter.com/p/inside-every-dan-shipper
+[bencher engineering review]: /ko/learn/engineering/engineering-review-2025/
+[cue lang]: https://cuelang.org/
+[we mourn]: https://nolanlawson.com/2026/02/07/we-mourn-our-craft/

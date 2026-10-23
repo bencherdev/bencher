@@ -1,0 +1,27 @@
+## 지속적인 벤치마킹의 미래는?
+
+미래가 어떻게 될지 점쳐 보려 할 때, 프런티어 연구소들이 직접 무엇을 하고 있는지 살펴봐야 한다는 것이 하나의 패턴처럼 보입니다. 6개월에서 12개월이면 우리 모두 그곳에 도착해 있을 것 같으니까요. The Pragmatic Engineer의 [Inside OpenAI’s agentic software factory][pragmatic openai]는 지속적인 벤치마킹 관점에서 이 부분에 흥미로운 빛을 비춰 줍니다.
+
+> 신규: "perf 하네스": 에이전트는 perf 하네스도 사용해
+> 문제가 있는 PR을 Synthetics A/B 프레임워크로 보내 성능에 미치는 영향을 평가합니다.
+> 앞서 언급했듯이, 지난 6개월 동안 CI 시스템에 걸리는 부하가 크게 늘었습니다.
+
+OpenAI의 "perf 하네스"는 이미 확립된 관행인 [상대적 지속적 벤치마킹][bencher relative]과 매우 비슷해 보입니다. 새로운 AI 요소는 A/B 프레임워크의 합성(synthetic) 부분입니다. 합성 테스트 데이터 자체는 새로운 것이 아닙니다. 하지만 당면한 변경 세트의 성능을 평가하기 위해 그 합성 데이터를 자율적으로 만들어 낼 수 있다는 것은 분명 새로운 일입니다! 개발자가 실제로 벤치마크를 작성하게 만드는 일은 늘 고역이었습니다. 이제는 그것이 자동화됐습니다. 에이전트가 기능 테스트 커버리지를 대폭 늘린 것과 마찬가지로, 성능 테스트 커버리지도 대폭 늘릴 수 있게 해 주고 있습니다.
+
+OpenAI만 이런 시도를 하는 것은 아닙니다. Anthropic도 곧이어 [How we made claude.ai 3x faster in two weeks][claude faster]를 공개했습니다. 이 글에서도 벤치마크를 즉석에서 만들어 내는 과정을 설명합니다. 한 가지 핵심적인 차이는 Anthropic이 성능과 상관관계가 있는 결정적인 카운트들을 찾아냈다는 점입니다. 명령어, 상호작용당 커밋 수, 함수 호출, 스타일 재계산, DOM 변경이 그것입니다. 그런 다음 Claude가 이 카운트들을 힐 클라이밍해서 앱의 성능을 최적화했습니다. 최적화 단계가 끝나면, 카운트 기반 최적화가 실제로 현실의 벽시계 시간 개선으로 이어졌는지 확인했습니다.
+
+이런 방법론은 제가 Bencher를 작업하면서 직접 겪어 온 것과 맞아떨어집니다. 다만 제 A/B 성능 테스트는 CI 루프가 아니라 모두 로컬이나 에이전트의 작업 머신에서 실행됐습니다. 쿼리를 크게 바꾸거나 의미 있는 스키마 마이그레이션을 하려고 할 때마다, 저는 Claude에게 그 변경에 대한 철저한 성능 평가를 시킵니다. 여기에는 항상 벽시계 시간이 포함되고, 가끔은 그에 따른 결정적인 카운트(예: SQLite 가상 머신 명령어)도 포함됩니다.
+
+시끄러운 이웃 문제 때문에, 에이전트가 주도한 이런 성능 최적화 작업의 오차 범위는 꽤 넓었습니다. 저는 에이전트가 이런 성능 최적화 작업을 더 높은 신뢰도로 수행할 수 있도록, Bencher Bare Metal에 픽스처(추가 벤치마크 입력)와 아티팩트(추가 벤치마크 출력)를 추가하려고 합니다. 에이전트는 여전히 최적화 작업의 대부분을 로컬에서 하면서 벽시계 시간이나 결정적인 카운트를 기준으로 최대한 힐 클라이밍을 할 것입니다. 그런 다음 일종의 벽시계 캘리퍼처럼 Bencher Bare Metal을 사용해 자기 작업을 검증할 것입니다.
+
+1년쯤 뒤면 Bencher의 "사용자" 대부분이 에이전트가 될 거라고 생각하지만, 그래도 대부분의 사람은 상황을 확인할 때 시각적인 인터페이스를 원할 거라고 봅니다. 저는 지금 Claude의 도움을 받아 Bencher UI를 완전히 다시 디자인하는 작업에 푹 빠져 있습니다. GitHub Copilot의 탭 자동 완성 시절에 Anyscript를 쓰던 Rust 엔지니어가 만든 탓에, 지금의 UI는 아쉬운 점이 많습니다. 하지만 UI 재작성은 그보다 훨씬 더 야심 찬 또 다른 대개편, 즉 [Bencher Metric Format (BMF)][bencher bmf]의 새 버전에 막혀 있습니다.
+
+BMF는 Bencher 안에서 벤치마크 결과를 정규화하는 핵심 포맷입니다. *모든 것*을 관통하죠. 이 새 버전의 BMF에서는 벤치마크를 매개변수화할 수 있습니다. `my_benchmark_16_mb`와 `my_benchmark_32_mb`라는 두 개의 별도 벤치마크를 두는 대신, `my_benchmark`에 `size: 16 MB`와 `size: 32 MB`라는 매개변수를 지정할 수 있게 됩니다. 새 버전의 BMF에서는 임의의 메트릭 이름도 쓸 수 있습니다. `Latency` 측정값에 대해 `mean`만 두거나 `Latency (mean)`, `Latency (p95)`, `Latency (p99)`를 별도의 측정값으로 만들 필요 없이, `mean`, `p95`, `p99` 메트릭을 제공할 수 있게 됩니다.
+
+이 새 BMF 버전을 지원하는 것은 Bencher 코어의 대대적인 개편입니다. Fable 5 이전의 그 어떤 모델로도 이 작업을 하는 것이 마음 편하지 않았을 겁니다. 앞서 이야기했듯이, Bare Metal 작업의 대부분은 Bencher의 코어, 즉 시간에 따른 성능 추적과 회귀 알림과는 직교하는 위치에 있었습니다. BMF는 그 핵심 가치 제안의 중심에 있습니다. Fable 5, 그리고 그보다 더 Fable 5.1과 Opus 5.5에 대한 신뢰 덕분에, 저는 또다시 밤과 주말을 몇 년은 바쳐야 끝났을 프로젝트를 시작할 수 있었습니다. 예전에는 [Bencher를 위해 SQLite를 최적화][bencher sqlite]하는 데 꽤 많은 시간을 써야 했습니다. 이제는 모델을 발전시킬 때마다 Claude에게 에이전트를 띄워 철저한 성능 조사를 하고 모든 것이 여전히 빠른지 확인하라고 부탁하기만 하면 됩니다. 앞으로는 부탁할 필요조차 없을 거라고 생각합니다.
+
+[pragmatic openai]: https://newsletter.pragmaticengineer.com/p/openai-software-factory
+[bencher relative]: /ko/docs/how-to/track-benchmarks/#상대적-지속적-벤치마킹
+[claude faster]: https://claude.dev/blog/how-we-made-claude-ai-faster/
+[bencher bmf]: /ko/docs/reference/bencher-metric-format/
+[bencher sqlite]: /ko/learn/engineering/sqlite-performance-tuning/

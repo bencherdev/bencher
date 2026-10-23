@@ -1,0 +1,21 @@
+## Building Bencher Bare Metal
+
+With Opus 4.5 and Claude Code in-hand in January of this year, I felt like I could finally see the practical path forward for building out Bencher Bare Metal. I once again ponied up, this time to the tune of $200/month for the Claude Max 20x plan. Probably the best business expense ever.
+
+I started to absolutely crank and tried my best to max out my Claude plan usage each week. I stopped handwriting code, both on Bencher and at my day job. At this point I was still iterating in pretty tight loops, using Plan mode, reading all of the output, and running in `Accept edits` mode. I didn’t trust the agent to touch git/jj at this point, so I would handle all version control myself. I thought of myself as a human-in-the-loop Ralph Loop. At about five agents running in parallel, my brain would start to melt.
+
+One suggestion that I had heard was to have separate agents do the implementation and the review, so I started to do separate adversarial reviews. These adversarial reviews really seemed to help improve the quality of the output. I created my own GitHub Actions review bot that used my Claude Code subscription API key. I would then have my local agent iterate with this CI reviewer in order to save cycles on my local machine.
+
+At one point in there, I thought I was going to have Claude build its own hypervisor for the benchmarking sandbox. I then asked Claude to do an adversarial review of the plan as Linus Torvalds, and it told me I was stupid and this was a very, very, very dumb idea. No sycophancy when Linus is in your context! So I scrapped that plan and went with [Firecracker][github firecracker].
+
+The enemy of good benchmarking is variance, not speed per se. So even though Firecracker adds overhead as a hypervisor it is very consistent overhead, especially with only one microVM ever running at a time. This allows shared Bencher Bare Metal runners to have both multitenancy and very consistent benchmarking results. I also worked with Claude using Plan mode to design things so that the sandbox was optional. If a user wants to run on their own dedicated server where they do trust every workload, then they can run without Firecracker with near zero overhead.
+
+Developing the Bare Metal `runner` was a big learning lesson for me about how important it is for agents to have a tight feedback loop. Even after Opus 4.6 came out, Claude seemed to be struggling to get everything working consistently. Once I gave it access to a development environment with KVM enabled (which is required to run Firecracker), things really started to click. These agents aren't omniscient, they're just really persistent.
+
+The level of scrutiny that I put Claude’s work under depended on the part of the code base it was working in. The code that was purely for Bare Metal such as the OCI registry and the `runner` binary I only lightly reviewed. As long as it passed adversarial review, the end-to-end tests passed, and things didn’t look too terrible, I merged it. For the code that touched the existing core, job queuing and report processing, I was as nitpicky as ever.
+
+At the end of March this year, I released Bencher Bare Metal as a part of [v0.6.0][bencher 6]. For the public bare metal fleet, I was considering using AWS EC2 Bare Metal. However, these machines are both _massive_ and ARM only. To match most real world workloads, I wanted working class Intel `x86` machines. I researched with Claude to find the best home for the fleet that would meet the design constraints. We ended up being able to offer the `intel-v1` [Spec][bencher spec] on Bencher Cloud that gives users 4 vCPUs, 48 GB memory, and 128 GB disk billed to the minute. On well structured benchmarks, I was consistently getting &lt;2% variance between runs across the fleet.
+
+[github firecracker]: https://github.com/firecracker-microvm/firecracker
+[bencher 6]: /docs/reference/changelog/#v060
+[bencher spec]: /docs/explanation/testbeds/#--spec-spec

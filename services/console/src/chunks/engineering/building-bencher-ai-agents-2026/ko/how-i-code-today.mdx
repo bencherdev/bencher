@@ -1,0 +1,12 @@
+## 요즘 제가 코딩하는 방식
+
+GitHub Copilot을 쓰던 시절에는 VSCode의 확장이었습니다. Claude Code로 처음 넘어왔을 때는 CLI를 썼습니다. 터미널 창 세 개를 각각 별도의 macOS Space에 띄워 두곤 했습니다. 터미널 창마다 탭이 두 개 있었습니다. 하나는 Claude용, 다른 하나는 [Jujutsu (`jj`)][github jj]용이었습니다. 버전 관리와 `jj` 워크스페이스는 여전히 제가 직접 관리하고 있었습니다.
+
+요즘은 그냥 Claude Code 데스크톱 앱을 씁니다. 새 세션은 모두 `worktree` 체크박스를 켠 상태로 제 meta-repo에서 시작합니다. Plan mode는 몇 달 전에 그만 썼습니다. Matt Pocock의 [`/grill-me` 스킬][github grill me]도 설치한 적이 없습니다. 그냥 프롬프트에 Claude에게 "모든 설계 결정에 대해 나를 집요하게 캐물어 줘"라고 쓰면, 이제는 모델이 알아서 할 일을 압니다. 제 ~~`CLAUDE.md`~~ `AGENTS.md`는 모델이 제가 원하는 대로 움직이도록 꽤 잘 다듬어져 있습니다.
+
+Claude Review CI 워크플로는 사실상 퇴역시켰습니다. 이제는 제가 따로 부탁하지 않아도 에이전트가 로컬에서 적대적 리뷰어를 띄웁니다. 그런 다음 둘이 합의에 이를 때까지 반복하는데, 때로는 여섯 라운드까지 갑니다. 최근에는 개발 작업을 외부 작업용 박스로 넘기고, 로컬 머신은 오케스트레이터로만 남겨 두는 실험을 시작했습니다.
+
+제가 버전 관리를 직접 건드리는 경우는 직접 테스트해 보려고 빌드를 체크아웃할 때, 또는 태그가 붙은 버전 릴리스를 만들 때뿐입니다. 각각 대략 일주일에 한 번, 한 달에 한 번 정도입니다. 그 외에는 이제 그냥 Claude에게 맡깁니다. 드래프트 PR을 적극적으로 활용하고, GitHub에서 쓸 수 있게 된 지금은 스택형 PR도 씁니다. PR이 열리기 전까지는 코드를 보지 않습니다. Bencher 코드는 여전히 훑어보긴 하지만, 이제는 제대로 된 코드 리뷰라기보다는 정상인지 확인하는 수준입니다.
+
+[github jj]: https://github.com/jj-vcs/jj
+[github grill me]: https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md

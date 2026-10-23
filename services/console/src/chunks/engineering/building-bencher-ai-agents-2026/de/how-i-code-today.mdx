@@ -1,0 +1,12 @@
+## Wie ich heute programmiere
+
+Als ich noch GitHub Copilot benutzte, war das eine Erweiterung in VSCode. Als ich zum ersten Mal zu Claude Code wechselte, nutzte ich die CLI. Ich hatte drei Terminalfenster, jedes in seinem eigenen macOS Space. Jedes Terminalfenster hatte zwei Tabs. Ein Tab war für Claude, der andere für [Jujutsu (`jj`)][github jj]. Ich verwaltete die Versionskontrolle und die `jj`-Workspaces noch selbst.
+
+Heutzutage nutze ich einfach die Claude Code Desktop-App. Jede neue Session starte ich aus meinem Meta-Repo mit aktivierter `worktree`-Checkbox. Den Plan mode nutze ich seit ein paar Monaten nicht mehr. Matt Pococks [`/grill-me`-Skill][github grill me] habe ich nie installiert. Ich bitte Claude im Prompt einfach, mich „zu allen Designentscheidungen zu grillen“, und inzwischen weiß das Modell, was zu tun ist. Meine ~~`CLAUDE.md`~~ `AGENTS.md` ist ziemlich gut darauf abgestimmt, wie sich das Modell verhalten soll.
+
+Meinen Claude Review CI-Workflow habe ich so gut wie stillgelegt. Der Agent startet jetzt lokal einen adversarialen Reviewer, ohne dass ich überhaupt fragen muss. Dann iterieren die beiden, bis sie sich einig sind, manchmal bis zu einem halben Dutzend Runden. Ich habe angefangen damit zu experimentieren, Entwicklungsarbeit auf externe Arbeitsrechner auszulagern und meinen lokalen Rechner nur noch als Orchestrator zu nutzen.
+
+Die Versionskontrolle fasse ich nur noch selbst an, wenn ich einen Build auschecken will, um selbst etwas zu testen, oder wenn ich ein getaggtes, versioniertes Release von Bencher erstelle. Das passiert etwa einmal pro Woche bzw. einmal pro Monat. Ansonsten überlasse ich das inzwischen einfach Claude. Ich nutze ausgiebig Draft-PRs und, jetzt wo sie auf GitHub verfügbar sind, auch Stacked PRs. Den Code sehe ich mir erst an, wenn der PR offen ist. Beim Code für Bencher scrolle ich zwar immer noch durch, aber das ist inzwischen eher ein Plausibilitätscheck als ein echtes Code-Review.
+
+[github jj]: https://github.com/jj-vcs/jj
+[github grill me]: https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md

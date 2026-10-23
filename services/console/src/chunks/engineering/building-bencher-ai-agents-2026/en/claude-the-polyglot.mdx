@@ -1,0 +1,7 @@
+## Claude the Polyglot
+
+Back in 2023, I decided that I wanted the Bencher docs to be available in 9 languages: English, Chinese, Spanish, Brazilian Portuguese, Russian, Japanese, French, German, and Korean. How did I pick those nine languages? They’re the languages the GitHub docs were in, so I figured that was a good enough approximation. The only problem is I’m only fluent in English. So I had GPT-4 translate the docs for me. At the time GPT-4 only had a context window of 8k tokens. This meant that I had to break down all of my doc pages into “chunks” under 8k tokens in size. Then I had to create a CLI tool to handle translating and very often retranslating chunks after they had been updated.
+
+This was a very tedious and error prone process. I would have to hand edit the translated files because even with some very explicit system prompt instructions the model would still botch import paths or stick everything inside of another layer of a Markdown block, especially in Japanese for some reason.
+
+Once I started to use Claude Code with Opus 4.5, this all went away. Now the agent just does it. The convention for what constitutes a chunk is there in the codebase, and Claude just follows it. When I was writing the technical documentation for Bencher Bare Metal, Claude just handled the chunking and orchestrating the translations. Even though the context size is now more than large enough to handle an entire page, I like having the chunks. It helps keep changes isolated, so only the relevant sections of a page get retranslated during a revision.

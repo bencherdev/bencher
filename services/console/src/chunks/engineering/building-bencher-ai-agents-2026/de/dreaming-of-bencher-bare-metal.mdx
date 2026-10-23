@@ -1,0 +1,17 @@
+## Der Traum von Bencher Bare Metal
+
+Schon seit den allerersten Tagen von Bencher hatte ich davon geträumt, eine Bare-Metal-Flotte für Benchmarks aufzubauen. Herkömmliche CI-Runner sind, weil sie virtuelle Maschinen sind, zu verrauscht, um konsistente Benchmark-Ergebnisse zu liefern. Einen Anstieg der Latenz um, sagen wir, 200 % könnten Sie erkennen, aber einen Anstieg um 20 % würden Sie nie zuverlässig erkennen. Instruktionszahlen sind eine Möglichkeit für Benchmarks in CI. Diese sind weitgehend deterministisch. Allerdings sind Instruktionszahlen nur ein Stellvertreter für das, was Sie eigentlich interessiert: die Wanduhrzeit. Alles, was in einer „CPU-Simulation“ läuft und Instruktionszahlen ausspuckt, kann nur mit der Geschwindigkeit korrelieren. Das Problem ist, dass Sie nie wissen, wie stark oder wie wenig es danebenliegt, solange Sie nicht tatsächlich auf Bare Metal messen.
+
+Einer der allerersten Nutzer von Bencher war [das Rustls-Projekt][rustls case study]. Ich habe an deren [Rustls Bench Runner][github rustls bench app] mitgewirkt. Allerdings war das keine gute Grundlage, um darauf eine Bare-Metal-Flotte für Benchmarks aufzubauen. Er lief auf einem einzigen Host und behandelte alle Benchmark-Workloads als vertrauenswürdig. Das heißt: keine PRs aus Forks und keine Multi-Tenancy. Außerdem wollen die meisten Teams keine 100 $+ pro Monat für jeden Bare-Metal-Server für Benchmarks zahlen.
+
+Ich hatte überlegt, GitHub Actions für die Orchestrierungsebene zu nutzen, aber dieser Ansatz hatte ein paar grundlegende Schwächen. Zunächst einmal ist der [GitHub Actions Runner][github actions runner] in C# geschrieben. Das bedeutet, dass sein Garbage Collector mitten in Ihrem Lauf anspringen und Ihre Benchmark-Ergebnisse verfälschen könnte. Ach ja, und denken Sie daran, [den automatischen Updater][runner auto updater] abzuschalten, damit er nicht mitten im Lauf anspringt, aber vergessen Sie ihn auch nicht zu lange, sonst laufen Ihre Jobs irgendwann nicht mehr!
+
+Selbst wenn der GitHub Actions Runner ein nettes, leises Rust-Binary gewesen wäre, bestand das grundlegendere Problem darin, dass er an GitHub Actions gebunden war. Bencher ist von Anfang an CLI-first. Ob gut oder schlecht, ich wollte Bencher nie zu eng an einen einzelnen CI-Anbieter binden. Es gibt eine [Bencher CLI GitHub Action][github action bencher cli], aber die installiert nur die CLI für Sie. Ich wollte, dass Bencher Bare Metal überall funktioniert, wo auch die CLI funktioniert, nicht nur in GitHub Actions.
+
+Die Idee, auf die ich kam, war, OCI-Images zu verwenden, um den Benchmark-Workload zu bündeln, und eine optionale, sehr kleine Sandbox, um immer nur einen Job zur Zeit auf einem bestimmten Bare-Metal-Host auszuführen. Die Aussicht, das alles allein an Abenden und Wochenenden aufzubauen, war entmutigend. Mit einem Hauptjob und einer Familie hätte es mindestens ein Jahr gedauert, mich allein Stück für Stück durchzuarbeiten.
+
+[rustls case study]: /de/learn/case-study/rustls/
+[github rustls bench app]: https://github.com/rustls/rustls-bench-app
+[github actions runner]: https://github.com/actions/runner
+[runner auto updater]: https://docs.github.com/en/actions/reference/runners/self-hosted-runners#runner-software-updates-on-self-hosted-runners
+[github action bencher cli]: https://github.com/marketplace/actions/bencher-cli

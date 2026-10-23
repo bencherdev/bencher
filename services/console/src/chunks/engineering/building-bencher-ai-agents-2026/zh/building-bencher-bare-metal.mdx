@@ -1,0 +1,21 @@
+## 构建 Bencher Bare Metal
+
+今年一月，有了 Opus 4.5 和 Claude Code 在手，我觉得自己终于看清了构建 Bencher Bare Metal 的可行路径。我再一次掏了腰包，这次是每月 200 美元的 Claude Max 20x 套餐。这大概是有史以来最值的一笔业务开支。
+
+我开始火力全开，每周都尽力把 Claude 套餐的用量用满。我不再手写代码了，无论是在 Bencher 上还是在白天的工作中。那时我仍在以相当紧凑的循环迭代：使用 Plan mode，阅读所有输出，并在 `Accept edits` 模式下运行。那时我还不信任智能体去碰 git/jj，所以所有版本控制都由我自己处理。我把自己看作一个“人在回路中”的 Ralph Loop。当并行运行大约五个智能体时，我的大脑就开始融化了。
+
+我听到过一条建议：让不同的智能体分别负责实现和审查，于是我开始做独立的对抗式审查。这些对抗式审查似乎确实有助于提升输出质量。我自己做了一个 GitHub Actions 审查机器人，用的是我 Claude Code 订阅的 API 密钥。然后我让本地智能体和这个 CI 审查者反复迭代，以节省本地机器的算力。
+
+期间有一阵子，我以为自己要让 Claude 为基准测试沙箱构建它自己的 hypervisor。然后我让 Claude 以 Linus Torvalds 的身份对这个计划做一次对抗式审查，结果它告诉我我很蠢，这是一个非常、非常、非常愚蠢的主意。只要 Linus 在你的上下文里，就别想有阿谀奉承！于是我放弃了这个计划，改用 [Firecracker][github firecracker]。
+
+良好基准测试的敌人是方差，而不是速度本身。所以，尽管 Firecracker 作为 hypervisor 会带来开销，但这个开销非常稳定，尤其是在每次只运行一个 microVM 的情况下。这让共享的 Bencher Bare Metal Runner 既能支持多租户，又能得到非常一致的基准测试结果。我还和 Claude 一起使用 Plan mode 进行设计，让沙箱成为可选项。如果用户想在自己的专用服务器上运行，并且信任每一个工作负载，那么他们可以不用 Firecracker 运行，开销几乎为零。
+
+开发 Bare Metal `runner` 让我深刻认识到，给智能体一个紧凑的反馈循环有多重要。即使在 Opus 4.6 发布之后，Claude 似乎仍然很难让所有东西稳定地跑起来。等我给了它一个启用了 KVM 的开发环境（运行 Firecracker 必需的），一切才真正开始顺起来。这些智能体并非无所不知，它们只是非常有韧劲。
+
+我对 Claude 的工作审查得多严，取决于它在代码库的哪个部分工作。对于纯粹属于 Bare Metal 的代码，比如 OCI 镜像仓库和 `runner` 二进制文件，我只是粗略地审查一下。只要它通过了对抗式审查、端到端测试通过、看起来也不算太糟糕，我就合并。而对于触及现有核心的代码，即任务排队和报告处理，我依旧和以往一样吹毛求疵。
+
+今年三月底，我在 [v0.6.0][bencher 6] 中发布了 Bencher Bare Metal。对于公共裸机机群，我曾考虑使用 AWS EC2 Bare Metal。然而，这些机器不仅*巨大无比*，而且只有 ARM。为了贴合大多数真实世界的工作负载，我想要的是朴实耐用的 Intel `x86` 机器。我和 Claude 一起做调研，为机群寻找一个能满足设计约束的最佳归宿。最终，我们得以在 Bencher Cloud 上提供 `intel-v1` [Spec][bencher spec]，为用户提供 4 个 vCPU、48 GB 内存和 128 GB 磁盘，按分钟计费。在结构良好的基准测试上，我在整个机群中各次运行之间的方差始终保持在 &lt;2%。
+
+[github firecracker]: https://github.com/firecracker-microvm/firecracker
+[bencher 6]: /zh/docs/reference/changelog/#v060
+[bencher spec]: /zh/docs/explanation/testbeds/#--spec-spec

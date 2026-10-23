@@ -1,0 +1,12 @@
+## Comment je code aujourd'hui
+
+À l'époque où j'utilisais GitHub Copilot, c'était une extension dans VSCode. Quand je suis passé à Claude Code, j'utilisais le CLI. J'avais trois fenêtres de terminal, chacune dans son propre Space macOS. Chaque fenêtre de terminal avait deux onglets. Un onglet pour Claude, l'autre pour [Jujutsu (`jj`)][github jj]. Je gérais encore moi-même le contrôle de version et les workspaces `jj`.
+
+Aujourd'hui, j'utilise simplement l'application de bureau Claude Code. Chaque nouvelle session que je démarre part de mon méta-dépôt avec la case `worktree` cochée. J'ai arrêté d'utiliser le Plan mode il y a quelques mois. Je n'ai jamais installé le [skill `/grill-me`][github grill me] de Matt Pocock. Je demande simplement à Claude de "me cuisiner sur toutes les décisions de conception" dans le prompt, et à ce stade le modèle sait quoi faire. Mon ~~`CLAUDE.md`~~ `AGENTS.md` est plutôt bien réglé sur la façon dont je veux que le modèle se comporte.
+
+J'ai pratiquement mis hors service mon workflow de CI Claude Review. L'agent se charge désormais de lancer un relecteur contradictoire en local sans même que j'aie à le demander. Ensuite, ils itèrent jusqu'à converger, parfois jusqu'à une demi-douzaine de tours. J'ai commencé à expérimenter le transfert du travail de développement vers des machines de travail externes, en ne gardant ma machine locale que comme orchestrateur.
+
+Les seules fois où je touche encore moi-même au contrôle de version, c'est quand j'essaie de récupérer un build pour tester des choses moi-même ou quand je crée une release taguée et versionnée de Bencher. Cela arrive environ une fois par semaine et une fois par mois, respectivement. À part ça, je laisse désormais Claude s'en occuper. J'utilise abondamment les PR en brouillon et, maintenant qu'elles sont disponibles sur GitHub, les PR empilées. Je ne regarde pas le code avant que la PR soit ouverte. Je parcours encore le code de Bencher, mais à ce stade c'est plus une vérification de bon sens qu'une véritable revue de code.
+
+[github jj]: https://github.com/jj-vcs/jj
+[github grill me]: https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md
