@@ -124,10 +124,10 @@ image = "0.25"
 jsonschema = { version = "0.58", default-features = false }
 jsonwebtoken = { version = "10.3", features = ["rust_crypto"] }
 libc = "0.2"
-# https://github.com/diesel-rs/diesel/blob/2c3677ee90d37e19c595145c691019627976e58d/diesel/Cargo.toml#L53
+# https://github.com/diesel-rs/diesel/blob/4007d771b1e808839f771a693f6bae9f821f0e64/diesel/Cargo.toml#L53
 # https://github.com/tauri-apps/tauri/discussions/6183
 # Always needed for Windows and all other targets when building a distroless image
-libsqlite3-sys = { version = ">=0.17.2, <0.37.0", features = ["bundled"] }
+libsqlite3-sys = { version = "0.38.2", features = ["bundled"] }
 literally = "0.1"
 mail-send = { version = "0.6", default-features = false, features = ["builder", "aws_lc_rs", "tls12"] }
 minijinja = "2.17"
