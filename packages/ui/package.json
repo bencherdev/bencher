@@ -20,8 +20,8 @@
 		"solid-js": "^1.9.14"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.7",
-		"solid-js": "^1.9.14",
+		"@biomejs/biome": "^2.5.15",
+		"solid-js": "^1.9.17",
 		"typescript": "^6.0.3"
 	}
 }

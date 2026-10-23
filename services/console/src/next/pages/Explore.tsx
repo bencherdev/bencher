@@ -178,7 +178,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 			loadPlot()
 				.then((view) => setPlotView(() => view))
 				.catch(() => {
-					// A failed module, the chunk or one it imports, stays failed for the page's life: only reading the page again loads it.
+					// A retry that fails too reads the page again, which replaces a chunk a newer deploy took away.
 					if (retry) {
 						window.location.reload();
 					} else {

@@ -190,10 +190,7 @@ The build job and both deploy jobs run it, and so should any manual deploy: it
 is the only thing standing between a forgotten `CLOUDFLARE_ENV` and a
 production overwrite.
 
-Local `wrangler dev` currently refuses to start: the pinned `workerd` supports
-compatibility dates only through 2026-08-08 and `wrangler.jsonc` asks for
-2026-08-11. Deployed Workers are unaffected. The same lag, plus `workerd`
-disallowing WebAssembly code generation (which Shiki needs), is why
+`workerd` disallowing WebAssembly code generation (which Shiki needs) is why
 `prerenderEnvironment` is `"node"`.
 
 `adapter.js` rewrites `astro.config.mjs` in place by matching four marker lines
