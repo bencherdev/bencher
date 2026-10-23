@@ -459,8 +459,12 @@ const AdapterCard = (props: Props) => {
 					case Adapter.RubyBenchmark:
 						return "%EF%B8%8F-ruby-benchmark";
 					case Adapter.RustBench:
+					case Adapter.RustBenchJson:
+					case Adapter.RustBenchText:
 						return "-rust-bench";
 					case Adapter.RustCriterion:
+					case Adapter.RustCriterionJson:
+					case Adapter.RustCriterionText:
 						return "-rust-criterion";
 					case Adapter.RustIai:
 						return "-rust-iai";
@@ -514,8 +518,12 @@ const AdapterCard = (props: Props) => {
 						case Adapter.RubyBenchmark:
 							return "Ruby Benchmark";
 						case Adapter.RustBench:
+						case Adapter.RustBenchJson:
+						case Adapter.RustBenchText:
 							return "Rust libtest bench";
 						case Adapter.RustCriterion:
+						case Adapter.RustCriterionJson:
+						case Adapter.RustCriterionText:
 							return "Rust Criterion";
 						case Adapter.RustIai:
 							return "Rust Iai";

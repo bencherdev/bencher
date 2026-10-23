@@ -1,6 +1,6 @@
 use bencher_json::{BenchmarkName, JsonNewMetric, project::report::JsonAverage};
 use nom::{
-    IResult, Parser as _,
+    IResult, Parser,
     bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::{eof, map, map_res},
@@ -47,49 +47,73 @@ fn parse_criterion<'i>(
     prior_line: Option<&str>,
     input: &'i str,
 ) -> IResult<&'i str, (BenchmarkName, JsonNewMetric)> {
+    parse_criterion_time(prior_line, input, parse_criterion_duration).map(
+        |(remainder, (benchmark_name, (lower_value, value, upper_value)))| {
+            (
+                remainder,
+                (
+                    benchmark_name,
+                    JsonNewMetric {
+                        value,
+                        lower_value: Some(lower_value),
+                        upper_value: Some(upper_value),
+                    },
+                ),
+            )
+        },
+    )
+}
+
+/// A criterion `time:` line, whose benchmark name is on the line itself or,
+/// when too long to fit, on the line before it.
+pub(crate) fn parse_criterion_time<'i, O, P>(
+    prior_line: Option<&str>,
+    input: &'i str,
+    element: P,
+) -> IResult<&'i str, (BenchmarkName, (O, O, O))>
+where
+    P: Parser<&'i str, Output = O, Error = nom::error::Error<&'i str>> + Clone,
+{
     map_res(
-        many_till(anychar, parse_criterion_time),
-        |(name_chars, json_metric)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
+        many_till(
+            anychar,
+            map(
+                (
+                    (space1, tag("time:"), space1),
+                    parse_criterion_interval(element),
+                    eof,
+                ),
+                |(_, interval, _)| interval,
+            ),
+        ),
+        |(name_chars, interval)| -> Result<(BenchmarkName, (O, O, O)), NomError> {
             let name: String = if name_chars.is_empty() {
                 prior_line.ok_or_else(|| nom_error(String::new()))?.into()
             } else {
                 name_chars.into_iter().collect()
             };
             let benchmark_name = parse_benchmark_name(&name)?;
-            Ok((benchmark_name, json_metric))
+            Ok((benchmark_name, interval))
         },
     )
     .parse(input)
 }
 
-fn parse_criterion_time(input: &str) -> IResult<&str, JsonNewMetric> {
-    map(
-        ((space1, tag("time:"), space1), parse_criterion_metric, eof),
-        |(_, json_metric, _)| json_metric,
-    )
-    .parse(input)
-}
-
-fn parse_criterion_metric(input: &str) -> IResult<&str, JsonNewMetric> {
+/// A criterion interval, `[lower estimate upper]`.
+pub(crate) fn parse_criterion_interval<'i, O, P>(
+    element: P,
+) -> impl Parser<&'i str, Output = (O, O, O), Error = nom::error::Error<&'i str>>
+where
+    P: Parser<&'i str, Output = O, Error = nom::error::Error<&'i str>> + Clone,
+{
     map(
         delimited(
             tag("["),
-            (
-                parse_criterion_duration,
-                space1,
-                parse_criterion_duration,
-                space1,
-                parse_criterion_duration,
-            ),
+            (element.clone(), space1, element.clone(), space1, element),
             tag("]"),
         ),
-        |(lower_value, _, value, _, upper_value)| JsonNewMetric {
-            value,
-            lower_value: Some(lower_value),
-            upper_value: Some(upper_value),
-        },
+        |(lower, _, estimate, _, upper)| (lower, estimate, upper),
     )
-    .parse(input)
 }
 
 fn parse_criterion_duration(input: &str) -> IResult<&str, OrderedFloat<f64>> {

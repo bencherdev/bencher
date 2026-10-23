@@ -10,7 +10,7 @@ use crate::{
     Adaptable, Settings,
     results::{
         adapter_metrics::{AdapterMetrics, NamedMap},
-        adapter_results::{AdapterResults, BenchmarkEntries, ResultsMap, Skipped},
+        adapter_results::{AdapterResults, BenchmarkEntries, MeasureUnits, ResultsMap, Skipped},
     },
 };
 
@@ -95,6 +95,7 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
         version: BmfVersion::V1,
         resolved_adapter: Some(Adapter::JsonV1),
         skipped,
+        units: MeasureUnits::new(),
     }
 }
 

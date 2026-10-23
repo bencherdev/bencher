@@ -6,7 +6,7 @@ use gungraun_summary::{
     util::SummaryByVersion,
     v6::{
         BenchmarkSummary, CachegrindMetric, DhatMetric, ErrorMetric, EventKind, Metric,
-        MetricsDiff, MetricsSummary, ToolMetricSummary, ValgrindTool,
+        MetricsDiff, MetricsSummary, Profile, ToolMetricSummary, ValgrindTool,
     },
 };
 
@@ -24,7 +24,7 @@ impl Adaptable for AdapterRustGungraunJson {
         // Clean up the input by removing ANSI escape codes:
         let input = strip_ansi_escapes::strip_str(input);
 
-        parse_multiple(&input).and_then(AdapterResults::new_gungraun)
+        parse_blocks(&input, parse_benchmark).and_then(AdapterResults::new_gungraun)
     }
 }
 
@@ -34,7 +34,7 @@ impl Adaptable for AdapterRustGungraunJson {
 /// mixed pretty and ndjson format making bencher future proof in that regard. The parser also
 /// ignores intermixed json output from other tools or cargo itself, for example `cargo bench
 /// --message-format=json`.
-fn parse_multiple(input: &str) -> Option<Vec<(BenchmarkName, Vec<GungraunMeasure>)>> {
+pub(crate) fn parse_blocks<T>(input: &str, parse: impl Fn(&str) -> Option<T>) -> Option<Vec<T>> {
     let lines = input.lines().collect::<Vec<_>>();
 
     let mut parsed = vec![];
@@ -46,7 +46,7 @@ fn parse_multiple(input: &str) -> Option<Vec<(BenchmarkName, Vec<GungraunMeasure
             // A block that is never closed is not a benchmark, so resume on the line after the
             // opening brace instead of consuming the rest of the input.
             if let Some((end, block)) = pretty_block(&lines, index, indent) {
-                if let Some(one) = parse_benchmark(&block) {
+                if let Some(one) = parse(&block) {
                     parsed.push(one);
                 }
                 index = end.saturating_add(1);
@@ -54,7 +54,7 @@ fn parse_multiple(input: &str) -> Option<Vec<(BenchmarkName, Vec<GungraunMeasure
             }
         } else if trimmed.starts_with('{')
             && trimmed.ends_with('}')
-            && let Some(one) = parse_benchmark(line)
+            && let Some(one) = parse(line)
         {
             parsed.push(one);
         }
@@ -80,47 +80,47 @@ fn pretty_block(lines: &[&str], start: usize, indent: usize) -> Option<(usize, S
 
 fn parse_benchmark(input: &str) -> Option<(BenchmarkName, Vec<GungraunMeasure>)> {
     let (name, summary) = parse_json(input.as_bytes())?;
+    Some((
+        name,
+        summary
+            .profiles
+            .0
+            .into_iter()
+            .flat_map(profile_measures)
+            .collect(),
+    ))
+}
 
-    let measures = summary
-        .profiles
-        .0
-        .into_iter()
-        .flat_map(|profile| match profile.summaries.total.summary {
-            ToolMetricSummary::Cachegrind(metrics_summary) => {
-                parse_cachegrind_metrics_summary(metrics_summary)
-            },
-            ToolMetricSummary::Callgrind(metrics_summary) => {
-                parse_callgrind_metrics_summary(metrics_summary)
-            },
-            ToolMetricSummary::Dhat(metrics_summary) => parse_dhat_metrics_summary(metrics_summary),
-            ToolMetricSummary::ErrorTool(metrics_summary) => match profile.tool {
-                ValgrindTool::Memcheck => parse_memcheck_metrics_summary(metrics_summary),
-                ValgrindTool::Helgrind => parse_helgrind_metrics_summary(metrics_summary),
-                ValgrindTool::DRD => parse_drd_metrics_summary(metrics_summary),
-                // These other tools are no error tools and are already covered
-                ValgrindTool::Callgrind
-                | ValgrindTool::Cachegrind
-                | ValgrindTool::DHAT
-                // These tools don't have a metric output (covered by `ToolMetricSummary::None`)
-                | ValgrindTool::Massif
-                | ValgrindTool::BBV => vec![],
-            },
-            ToolMetricSummary::None => vec![],
-        })
-        .collect();
-
-    Some((name, measures))
+/// Every counter in the total of a version 6 profile.
+pub(crate) fn profile_measures(profile: Profile) -> Vec<GungraunMeasure> {
+    match profile.summaries.total.summary {
+        ToolMetricSummary::Cachegrind(metrics_summary) => {
+            parse_cachegrind_metrics_summary(metrics_summary)
+        },
+        ToolMetricSummary::Callgrind(metrics_summary) => {
+            parse_callgrind_metrics_summary(metrics_summary)
+        },
+        ToolMetricSummary::Dhat(metrics_summary) => parse_dhat_metrics_summary(metrics_summary),
+        ToolMetricSummary::ErrorTool(metrics_summary) => match profile.tool {
+            ValgrindTool::Memcheck => parse_memcheck_metrics_summary(metrics_summary),
+            ValgrindTool::Helgrind => parse_helgrind_metrics_summary(metrics_summary),
+            ValgrindTool::DRD => parse_drd_metrics_summary(metrics_summary),
+            // These other tools are no error tools and are already covered
+            ValgrindTool::Callgrind
+            | ValgrindTool::Cachegrind
+            | ValgrindTool::DHAT
+            // These tools don't have a metric output (covered by `ToolMetricSummary::None`)
+            | ValgrindTool::Massif
+            | ValgrindTool::BBV => vec![],
+        },
+        ToolMetricSummary::None => vec![],
+    }
 }
 
 fn parse_json(input: &[u8]) -> Option<(BenchmarkName, BenchmarkSummary)> {
-    // Using the version aware gungraun_summary parsing method to simplify adapting gungraun summary
-    // version updates. At the moment there's just v6
-    let summary = match gungraun_summary::util::parse_slice(input) {
-        Ok(summary_by_version) => match summary_by_version {
-            SummaryByVersion::V6(benchmark_summary) => benchmark_summary,
-            _ => return None,
-        },
-        Err(_) => return None,
+    // The version 0 tree reads summary schema 6 only.
+    let Ok(SummaryByVersion::V6(summary)) = gungraun_summary::util::parse_slice(input) else {
+        return None;
     };
 
     let name: BenchmarkName = if let Some(id) = &summary.id {
@@ -138,13 +138,17 @@ fn parse_drd_metrics_summary(metrics_summary: MetricsSummary<ErrorMetric>) -> Ve
         .0
         .into_iter()
         .filter_map(|(metric, diff)| diff_to_json(&diff).map(|json| (metric, json)))
-        .map(|(metric, json)| match metric {
-            ErrorMetric::Contexts => GungraunMeasure::DrdContexts(json),
-            ErrorMetric::Errors => GungraunMeasure::DrdErrors(json),
-            ErrorMetric::SuppressedContexts => GungraunMeasure::DrdSuppressedContexts(json),
-            ErrorMetric::SuppressedErrors => GungraunMeasure::DrdSuppressedErrors(json),
-        })
+        .map(|(metric, json)| drd_measure(metric, json))
         .collect()
+}
+
+pub(crate) fn drd_measure(metric: ErrorMetric, json: JsonNewMetric) -> GungraunMeasure {
+    match metric {
+        ErrorMetric::Contexts => GungraunMeasure::DrdContexts(json),
+        ErrorMetric::Errors => GungraunMeasure::DrdErrors(json),
+        ErrorMetric::SuppressedContexts => GungraunMeasure::DrdSuppressedContexts(json),
+        ErrorMetric::SuppressedErrors => GungraunMeasure::DrdSuppressedErrors(json),
+    }
 }
 
 fn parse_helgrind_metrics_summary(
@@ -154,13 +158,17 @@ fn parse_helgrind_metrics_summary(
         .0
         .into_iter()
         .filter_map(|(metric, diff)| diff_to_json(&diff).map(|json| (metric, json)))
-        .map(|(metric, json)| match metric {
-            ErrorMetric::Contexts => GungraunMeasure::HelgrindContexts(json),
-            ErrorMetric::Errors => GungraunMeasure::HelgrindErrors(json),
-            ErrorMetric::SuppressedContexts => GungraunMeasure::HelgrindSuppressedContexts(json),
-            ErrorMetric::SuppressedErrors => GungraunMeasure::HelgrindSuppressedErrors(json),
-        })
+        .map(|(metric, json)| helgrind_measure(metric, json))
         .collect()
+}
+
+pub(crate) fn helgrind_measure(metric: ErrorMetric, json: JsonNewMetric) -> GungraunMeasure {
+    match metric {
+        ErrorMetric::Contexts => GungraunMeasure::HelgrindContexts(json),
+        ErrorMetric::Errors => GungraunMeasure::HelgrindErrors(json),
+        ErrorMetric::SuppressedContexts => GungraunMeasure::HelgrindSuppressedContexts(json),
+        ErrorMetric::SuppressedErrors => GungraunMeasure::HelgrindSuppressedErrors(json),
+    }
 }
 
 fn parse_memcheck_metrics_summary(
@@ -170,13 +178,17 @@ fn parse_memcheck_metrics_summary(
         .0
         .into_iter()
         .filter_map(|(metric, diff)| diff_to_json(&diff).map(|json| (metric, json)))
-        .map(|(metric, json)| match metric {
-            ErrorMetric::Contexts => GungraunMeasure::MemcheckContexts(json),
-            ErrorMetric::Errors => GungraunMeasure::MemcheckErrors(json),
-            ErrorMetric::SuppressedContexts => GungraunMeasure::MemcheckSuppressedContexts(json),
-            ErrorMetric::SuppressedErrors => GungraunMeasure::MemcheckSuppressedErrors(json),
-        })
+        .map(|(metric, json)| memcheck_measure(metric, json))
         .collect()
+}
+
+pub(crate) fn memcheck_measure(metric: ErrorMetric, json: JsonNewMetric) -> GungraunMeasure {
+    match metric {
+        ErrorMetric::Contexts => GungraunMeasure::MemcheckContexts(json),
+        ErrorMetric::Errors => GungraunMeasure::MemcheckErrors(json),
+        ErrorMetric::SuppressedContexts => GungraunMeasure::MemcheckSuppressedContexts(json),
+        ErrorMetric::SuppressedErrors => GungraunMeasure::MemcheckSuppressedErrors(json),
+    }
 }
 
 fn parse_callgrind_metrics_summary(
@@ -186,46 +198,50 @@ fn parse_callgrind_metrics_summary(
         .0
         .into_iter()
         .filter_map(|(event_kind, diff)| diff_to_json(&diff).map(|json| (event_kind, json)))
-        .map(|(event_kind, json)| match event_kind {
-            EventKind::AcCost1 => GungraunMeasure::L1BadTemporalLocality(json),
-            EventKind::AcCost2 => GungraunMeasure::LLBadTemporalLocality(json),
-            EventKind::Bc => GungraunMeasure::ExecutedConditionalBranches(json),
-            EventKind::Bcm => GungraunMeasure::MispredictedConditionalBranches(json),
-            EventKind::Bi => GungraunMeasure::ExecutedIndirectBranches(json),
-            EventKind::Bim => GungraunMeasure::MispredictedIndirectBranches(json),
-            EventKind::D1MissRate => GungraunMeasure::L1DataCacheMissRate(json),
-            EventKind::D1mr => GungraunMeasure::L1DataCacheReadMisses(json),
-            EventKind::D1mw => GungraunMeasure::L1DataCacheWriteMisses(json),
-            EventKind::DLdmr => GungraunMeasure::DirtyMissDataRead(json),
-            EventKind::DLdmw => GungraunMeasure::DirtyMissDataWrite(json),
-            EventKind::DLmr => GungraunMeasure::LLDataCacheReadMisses(json),
-            EventKind::DLmw => GungraunMeasure::LLDataCacheWriteMisses(json),
-            EventKind::Dr => GungraunMeasure::DataCacheReads(json),
-            EventKind::Dw => GungraunMeasure::DataCacheWrites(json),
-            EventKind::EstimatedCycles => GungraunMeasure::EstimatedCycles(json),
-            EventKind::Ge => GungraunMeasure::GlobalBusEvents(json),
-            EventKind::I1MissRate => GungraunMeasure::L1InstrCacheMissRate(json),
-            EventKind::I1mr => GungraunMeasure::L1InstrCacheReadMisses(json),
-            EventKind::ILdmr => GungraunMeasure::DirtyMissInstructionRead(json),
-            EventKind::ILmr => GungraunMeasure::LLInstrCacheReadMisses(json),
-            EventKind::Ir => GungraunMeasure::Instructions(json),
-            EventKind::L1HitRate => GungraunMeasure::L1HitRate(json),
-            EventKind::L1hits => GungraunMeasure::L1Hits(json),
-            EventKind::LLHitRate => GungraunMeasure::LLHitRate(json),
-            EventKind::LLMissRate => GungraunMeasure::LLCacheMissRate(json),
-            EventKind::LLdMissRate => GungraunMeasure::LLDataCacheMissRate(json),
-            EventKind::LLhits => GungraunMeasure::LLHits(json),
-            EventKind::LLiMissRate => GungraunMeasure::LLInstrCacheMissRate(json),
-            EventKind::RamHitRate => GungraunMeasure::RamHitRate(json),
-            EventKind::RamHits => GungraunMeasure::RamHits(json),
-            EventKind::SpLoss1 => GungraunMeasure::L1BadSpatialLocality(json),
-            EventKind::SpLoss2 => GungraunMeasure::LLBadSpatialLocality(json),
-            EventKind::SysCount => GungraunMeasure::NumberSystemCalls(json),
-            EventKind::SysCpuTime => GungraunMeasure::CpuTimeSystemCalls(json),
-            EventKind::SysTime => GungraunMeasure::TimeSystemCalls(json),
-            EventKind::TotalRW => GungraunMeasure::TotalReadWrite(json),
-        })
+        .map(|(event_kind, json)| callgrind_measure(event_kind, json))
         .collect()
+}
+
+pub(crate) fn callgrind_measure(event_kind: EventKind, json: JsonNewMetric) -> GungraunMeasure {
+    match event_kind {
+        EventKind::AcCost1 => GungraunMeasure::L1BadTemporalLocality(json),
+        EventKind::AcCost2 => GungraunMeasure::LLBadTemporalLocality(json),
+        EventKind::Bc => GungraunMeasure::ExecutedConditionalBranches(json),
+        EventKind::Bcm => GungraunMeasure::MispredictedConditionalBranches(json),
+        EventKind::Bi => GungraunMeasure::ExecutedIndirectBranches(json),
+        EventKind::Bim => GungraunMeasure::MispredictedIndirectBranches(json),
+        EventKind::D1MissRate => GungraunMeasure::L1DataCacheMissRate(json),
+        EventKind::D1mr => GungraunMeasure::L1DataCacheReadMisses(json),
+        EventKind::D1mw => GungraunMeasure::L1DataCacheWriteMisses(json),
+        EventKind::DLdmr => GungraunMeasure::DirtyMissDataRead(json),
+        EventKind::DLdmw => GungraunMeasure::DirtyMissDataWrite(json),
+        EventKind::DLmr => GungraunMeasure::LLDataCacheReadMisses(json),
+        EventKind::DLmw => GungraunMeasure::LLDataCacheWriteMisses(json),
+        EventKind::Dr => GungraunMeasure::DataCacheReads(json),
+        EventKind::Dw => GungraunMeasure::DataCacheWrites(json),
+        EventKind::EstimatedCycles => GungraunMeasure::EstimatedCycles(json),
+        EventKind::Ge => GungraunMeasure::GlobalBusEvents(json),
+        EventKind::I1MissRate => GungraunMeasure::L1InstrCacheMissRate(json),
+        EventKind::I1mr => GungraunMeasure::L1InstrCacheReadMisses(json),
+        EventKind::ILdmr => GungraunMeasure::DirtyMissInstructionRead(json),
+        EventKind::ILmr => GungraunMeasure::LLInstrCacheReadMisses(json),
+        EventKind::Ir => GungraunMeasure::Instructions(json),
+        EventKind::L1HitRate => GungraunMeasure::L1HitRate(json),
+        EventKind::L1hits => GungraunMeasure::L1Hits(json),
+        EventKind::LLHitRate => GungraunMeasure::LLHitRate(json),
+        EventKind::LLMissRate => GungraunMeasure::LLCacheMissRate(json),
+        EventKind::LLdMissRate => GungraunMeasure::LLDataCacheMissRate(json),
+        EventKind::LLhits => GungraunMeasure::LLHits(json),
+        EventKind::LLiMissRate => GungraunMeasure::LLInstrCacheMissRate(json),
+        EventKind::RamHitRate => GungraunMeasure::RamHitRate(json),
+        EventKind::RamHits => GungraunMeasure::RamHits(json),
+        EventKind::SpLoss1 => GungraunMeasure::L1BadSpatialLocality(json),
+        EventKind::SpLoss2 => GungraunMeasure::LLBadSpatialLocality(json),
+        EventKind::SysCount => GungraunMeasure::NumberSystemCalls(json),
+        EventKind::SysCpuTime => GungraunMeasure::CpuTimeSystemCalls(json),
+        EventKind::SysTime => GungraunMeasure::TimeSystemCalls(json),
+        EventKind::TotalRW => GungraunMeasure::TotalReadWrite(json),
+    }
 }
 
 fn parse_cachegrind_metrics_summary(
@@ -235,35 +251,39 @@ fn parse_cachegrind_metrics_summary(
         .0
         .into_iter()
         .filter_map(|(metric, diff)| diff_to_json(&diff).map(|json| (metric, json)))
-        .map(|(metric, json)| match metric {
-            CachegrindMetric::Bc => GungraunMeasure::ExecutedConditionalBranches(json),
-            CachegrindMetric::Bcm => GungraunMeasure::MispredictedConditionalBranches(json),
-            CachegrindMetric::Bi => GungraunMeasure::ExecutedIndirectBranches(json),
-            CachegrindMetric::Bim => GungraunMeasure::MispredictedIndirectBranches(json),
-            CachegrindMetric::D1MissRate => GungraunMeasure::L1DataCacheMissRate(json),
-            CachegrindMetric::D1mr => GungraunMeasure::L1DataCacheReadMisses(json),
-            CachegrindMetric::D1mw => GungraunMeasure::L1DataCacheWriteMisses(json),
-            CachegrindMetric::DLmr => GungraunMeasure::LLDataCacheReadMisses(json),
-            CachegrindMetric::DLmw => GungraunMeasure::LLDataCacheWriteMisses(json),
-            CachegrindMetric::Dr => GungraunMeasure::DataCacheReads(json),
-            CachegrindMetric::Dw => GungraunMeasure::DataCacheWrites(json),
-            CachegrindMetric::EstimatedCycles => GungraunMeasure::EstimatedCycles(json),
-            CachegrindMetric::I1MissRate => GungraunMeasure::L1InstrCacheMissRate(json),
-            CachegrindMetric::I1mr => GungraunMeasure::L1InstrCacheReadMisses(json),
-            CachegrindMetric::ILmr => GungraunMeasure::LLInstrCacheReadMisses(json),
-            CachegrindMetric::Ir => GungraunMeasure::Instructions(json),
-            CachegrindMetric::L1HitRate => GungraunMeasure::L1HitRate(json),
-            CachegrindMetric::L1hits => GungraunMeasure::L1Hits(json),
-            CachegrindMetric::LLHitRate => GungraunMeasure::LLHitRate(json),
-            CachegrindMetric::LLMissRate => GungraunMeasure::LLCacheMissRate(json),
-            CachegrindMetric::LLdMissRate => GungraunMeasure::LLDataCacheMissRate(json),
-            CachegrindMetric::LLhits => GungraunMeasure::LLHits(json),
-            CachegrindMetric::LLiMissRate => GungraunMeasure::LLInstrCacheMissRate(json),
-            CachegrindMetric::RamHitRate => GungraunMeasure::RamHitRate(json),
-            CachegrindMetric::RamHits => GungraunMeasure::RamHits(json),
-            CachegrindMetric::TotalRW => GungraunMeasure::TotalReadWrite(json),
-        })
+        .map(|(metric, json)| cachegrind_measure(metric, json))
         .collect()
+}
+
+pub(crate) fn cachegrind_measure(metric: CachegrindMetric, json: JsonNewMetric) -> GungraunMeasure {
+    match metric {
+        CachegrindMetric::Bc => GungraunMeasure::ExecutedConditionalBranches(json),
+        CachegrindMetric::Bcm => GungraunMeasure::MispredictedConditionalBranches(json),
+        CachegrindMetric::Bi => GungraunMeasure::ExecutedIndirectBranches(json),
+        CachegrindMetric::Bim => GungraunMeasure::MispredictedIndirectBranches(json),
+        CachegrindMetric::D1MissRate => GungraunMeasure::L1DataCacheMissRate(json),
+        CachegrindMetric::D1mr => GungraunMeasure::L1DataCacheReadMisses(json),
+        CachegrindMetric::D1mw => GungraunMeasure::L1DataCacheWriteMisses(json),
+        CachegrindMetric::DLmr => GungraunMeasure::LLDataCacheReadMisses(json),
+        CachegrindMetric::DLmw => GungraunMeasure::LLDataCacheWriteMisses(json),
+        CachegrindMetric::Dr => GungraunMeasure::DataCacheReads(json),
+        CachegrindMetric::Dw => GungraunMeasure::DataCacheWrites(json),
+        CachegrindMetric::EstimatedCycles => GungraunMeasure::EstimatedCycles(json),
+        CachegrindMetric::I1MissRate => GungraunMeasure::L1InstrCacheMissRate(json),
+        CachegrindMetric::I1mr => GungraunMeasure::L1InstrCacheReadMisses(json),
+        CachegrindMetric::ILmr => GungraunMeasure::LLInstrCacheReadMisses(json),
+        CachegrindMetric::Ir => GungraunMeasure::Instructions(json),
+        CachegrindMetric::L1HitRate => GungraunMeasure::L1HitRate(json),
+        CachegrindMetric::L1hits => GungraunMeasure::L1Hits(json),
+        CachegrindMetric::LLHitRate => GungraunMeasure::LLHitRate(json),
+        CachegrindMetric::LLMissRate => GungraunMeasure::LLCacheMissRate(json),
+        CachegrindMetric::LLdMissRate => GungraunMeasure::LLDataCacheMissRate(json),
+        CachegrindMetric::LLhits => GungraunMeasure::LLHits(json),
+        CachegrindMetric::LLiMissRate => GungraunMeasure::LLInstrCacheMissRate(json),
+        CachegrindMetric::RamHitRate => GungraunMeasure::RamHitRate(json),
+        CachegrindMetric::RamHits => GungraunMeasure::RamHits(json),
+        CachegrindMetric::TotalRW => GungraunMeasure::TotalReadWrite(json),
+    }
 }
 
 fn parse_dhat_metrics_summary(metrics_summary: MetricsSummary<DhatMetric>) -> Vec<GungraunMeasure> {
@@ -271,22 +291,26 @@ fn parse_dhat_metrics_summary(metrics_summary: MetricsSummary<DhatMetric>) -> Ve
         .0
         .into_iter()
         .filter_map(|(metric, diff)| diff_to_json(&diff).map(|json| (metric, json)))
-        .map(|(metric, json)| match metric {
-            DhatMetric::AtTEndBlocks => GungraunMeasure::AtTEndBlocks(json),
-            DhatMetric::AtTEndBytes => GungraunMeasure::AtTEndBytes(json),
-            DhatMetric::AtTGmaxBlocks => GungraunMeasure::AtTGmaxBlocks(json),
-            DhatMetric::AtTGmaxBytes => GungraunMeasure::AtTGmaxBytes(json),
-            DhatMetric::MaximumBlocks => GungraunMeasure::MaximumBlocks(json),
-            DhatMetric::MaximumBytes => GungraunMeasure::MaximumBytes(json),
-            DhatMetric::ReadsBytes => GungraunMeasure::ReadsBytes(json),
-            DhatMetric::TotalBlocks => GungraunMeasure::TotalBlocks(json),
-            DhatMetric::TotalBytes => GungraunMeasure::TotalBytes(json),
-            DhatMetric::TotalEvents => GungraunMeasure::TotalEvents(json),
-            DhatMetric::TotalLifetimes => GungraunMeasure::TotalLifetimes(json),
-            DhatMetric::TotalUnits => GungraunMeasure::TotalUnits(json),
-            DhatMetric::WritesBytes => GungraunMeasure::WritesBytes(json),
-        })
+        .map(|(metric, json)| dhat_measure(metric, json))
         .collect()
+}
+
+pub(crate) fn dhat_measure(metric: DhatMetric, json: JsonNewMetric) -> GungraunMeasure {
+    match metric {
+        DhatMetric::AtTEndBlocks => GungraunMeasure::AtTEndBlocks(json),
+        DhatMetric::AtTEndBytes => GungraunMeasure::AtTEndBytes(json),
+        DhatMetric::AtTGmaxBlocks => GungraunMeasure::AtTGmaxBlocks(json),
+        DhatMetric::AtTGmaxBytes => GungraunMeasure::AtTGmaxBytes(json),
+        DhatMetric::MaximumBlocks => GungraunMeasure::MaximumBlocks(json),
+        DhatMetric::MaximumBytes => GungraunMeasure::MaximumBytes(json),
+        DhatMetric::ReadsBytes => GungraunMeasure::ReadsBytes(json),
+        DhatMetric::TotalBlocks => GungraunMeasure::TotalBlocks(json),
+        DhatMetric::TotalBytes => GungraunMeasure::TotalBytes(json),
+        DhatMetric::TotalEvents => GungraunMeasure::TotalEvents(json),
+        DhatMetric::TotalLifetimes => GungraunMeasure::TotalLifetimes(json),
+        DhatMetric::TotalUnits => GungraunMeasure::TotalUnits(json),
+        DhatMetric::WritesBytes => GungraunMeasure::WritesBytes(json),
+    }
 }
 
 fn diff_to_json(diff: &MetricsDiff) -> Option<JsonNewMetric> {

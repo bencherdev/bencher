@@ -34,23 +34,27 @@ impl Adaptable for AdapterRustIai {
             Some(JsonAverage::Mean | JsonAverage::Median) => return None,
         }
 
-        let mut benchmark_metrics = Vec::new();
-        let lines = input.lines().collect::<Vec<_>>();
-        for lines in lines.windows(IAI_METRICS_LINE_COUNT) {
-            let Ok(lines) = lines.try_into() else {
-                debug_assert!(
-                    false,
-                    "Windows struct should always be convertible to array of the same size."
-                );
-                continue;
-            };
-            if let Some((benchmark_name, metrics)) = parse_iai_lines(lines) {
-                benchmark_metrics.push((benchmark_name, metrics));
-            }
-        }
-
-        AdapterResults::new_iai(benchmark_metrics)
+        AdapterResults::new_iai(parse_iai(input))
     }
+}
+
+/// Every benchmark in iai's output, with its five counters.
+pub(crate) fn parse_iai(input: &str) -> Vec<(BenchmarkName, Vec<IaiMeasure>)> {
+    let mut benchmark_metrics = Vec::new();
+    let lines = input.lines().collect::<Vec<_>>();
+    for lines in lines.windows(IAI_METRICS_LINE_COUNT) {
+        let Ok(lines) = lines.try_into() else {
+            debug_assert!(
+                false,
+                "Windows struct should always be convertible to array of the same size."
+            );
+            continue;
+        };
+        if let Some((benchmark_name, metrics)) = parse_iai_lines(lines) {
+            benchmark_metrics.push((benchmark_name, metrics));
+        }
+    }
+    benchmark_metrics
 }
 
 fn parse_iai_lines(
