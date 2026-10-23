@@ -11,7 +11,7 @@ use crate::{context::DbConnection, error::resource_not_found_err, schema};
 use super::ReportId;
 
 /// What one report skipped, tallied by resource and action until it is written.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct ReportWarnings(BTreeMap<(ReportWarningResource, ReportWarningAction), u32>);
 
 impl ReportWarnings {

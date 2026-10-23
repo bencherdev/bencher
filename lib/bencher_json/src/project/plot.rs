@@ -891,7 +891,7 @@ impl AsRef<str> for LineKey {
 /// Lists of names and keys, written out by hand because a newtype over a `Vec` does not
 /// derive to the array the wire carries.
 #[cfg(feature = "schema")]
-mod list_schema {
+pub(crate) mod list_schema {
     use schemars::{
         JsonSchema,
         r#gen::SchemaGenerator,
@@ -902,7 +902,10 @@ mod list_schema {
         LineKey, LineKeys, MAX_DIMENSION_ENTRIES, MAX_HIDDEN_LINES, MetricFilter, MetricName,
     };
 
-    fn array_of<T: JsonSchema>(generator: &mut SchemaGenerator, max_items: usize) -> Schema {
+    pub(crate) fn array_of<T: JsonSchema>(
+        generator: &mut SchemaGenerator,
+        max_items: usize,
+    ) -> Schema {
         SchemaObject {
             instance_type: Some(InstanceType::Array.into()),
             array: Some(Box::new(ArrayValidation {

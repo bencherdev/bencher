@@ -50,6 +50,7 @@
 "ParameterSet" = "Record<string, string | number | boolean>"
 "ParameterFilter" = "Record<string, string | number | boolean>[]"
 "MetricFilter" = "string[]"
+"MeasureFilter" = "MeasureNameId[]"
 "LineKey" = "string"
 "LineKeys" = "string[]"
 "BigInt" = "number"

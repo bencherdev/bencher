@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bencher_adapter::{
     AdapterError, AdapterResults, AdapterResultsArray, Settings as AdapterSettings,
@@ -11,7 +11,8 @@ use bencher_json::{
     BenchmarkName, BenchmarkNameId, BmfVersion, DateTime, MeasureNameId, MetricName, ParameterSet,
     Slug,
     project::report::{
-        Adapter, Iteration, JsonReportSettings, ParseOutcome, ReportWarningResource,
+        Adapter, Iteration, JsonAverage, JsonReportSettings, MeasureFilter, ParseOutcome,
+        ReportWarningResource,
     },
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
@@ -129,8 +130,8 @@ impl ReportResults {
                 )
             })?;
 
-        let adapter_settings = AdapterSettings::new(settings.average, bmf_version);
-        let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
+        let adapter_settings = adapter_settings_at(settings.average, bmf_version, warnings);
+        let mut results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
             .inspect_err(|_| self.parse = Some(ParseRecord::FAILED))
             .map_err(|e| match e {
                 // The adapter is right and the declared version is wrong, so no adapter hint.
@@ -142,6 +143,11 @@ impl ReportResults {
                 },
             })?;
         self.parse = Some(ParseRecord::parsed(&results_array, warnings));
+
+        if let Some(measures) = &settings.measures {
+            self.keep_measures(context, measures, &mut results_array)
+                .await?;
+        }
 
         // The adapter counts; the log line and the counter are here because this is
         // where the providers are in scope.
@@ -433,6 +439,36 @@ impl ReportResults {
         }))
     }
 
+    /// Drop every measure the report does not keep, before anything is stored.
+    async fn keep_measures(
+        &self,
+        context: &ApiContext,
+        measures: &MeasureFilter,
+        results_array: &mut AdapterResultsArray,
+    ) -> Result<(), HttpError> {
+        if measures.measures().is_empty() {
+            return Ok(());
+        }
+        let kept = kept_measures(
+            auth_conn!(context),
+            self.project_id,
+            measures,
+            results_array,
+        )
+        .map_err(|e| {
+            issue_error(
+                "Failed to resolve the kept measures",
+                &format!(
+                    "Failed to resolve the measures that report ({}) keeps:",
+                    self.report_id
+                ),
+                e,
+            )
+        })?;
+        results_array.retain_measures(|measure| kept.contains(measure));
+        Ok(())
+    }
+
     async fn benchmark_id(
         &mut self,
         log: &Logger,
@@ -490,6 +526,45 @@ impl ReportResults {
             measure_id
         })
     }
+}
+
+/// The settings a report reads its results with: no average at version 1, where every average
+/// a harness reports is its own metric, so a requested one is ignored with a warning.
+fn adapter_settings_at(
+    average: Option<JsonAverage>,
+    bmf_version: BmfVersion,
+    warnings: &mut ReportWarnings,
+) -> AdapterSettings {
+    if bmf_version == BmfVersion::V1 && average.is_some() {
+        warnings.ignore_with_count(ReportWarningResource::Average, 1);
+        return AdapterSettings::new(None, bmf_version);
+    }
+    AdapterSettings::new(average, bmf_version)
+}
+
+/// The measures of the results that a listed measure names, matched by what each resolves to
+/// in the project, so a name and a slug of one measure match.
+fn kept_measures(
+    conn: &mut DbConnection,
+    project_id: ProjectId,
+    measures: &MeasureFilter,
+    results_array: &AdapterResultsArray,
+) -> diesel::QueryResult<HashSet<MeasureNameId>> {
+    let mut listed = HashSet::with_capacity(measures.measures().len());
+    for measure in measures.measures() {
+        if let Some(identity) = QueryMeasure::identity(conn, project_id, measure)? {
+            listed.insert(identity);
+        }
+    }
+    let mut kept = HashSet::new();
+    for measure in results_array.measures() {
+        if let Some(identity) = QueryMeasure::identity(conn, project_id, measure)?
+            && listed.contains(&identity)
+        {
+            kept.insert(measure.clone());
+        }
+    }
+    Ok(kept)
 }
 
 /// How a report's results parsed, as the report records it.
@@ -655,14 +730,15 @@ fn strip_ignore_suffix(benchmark: BenchmarkNameId) -> (BenchmarkNameId, bool) {
 mod tests {
     use bencher_adapter::{AdapterResults, AdapterResultsArray};
     use bencher_json::{
-        BenchmarkNameId,
+        BenchmarkNameId, BmfVersion,
         project::report::{
-            Adapter, JsonReportWarning, ParseOutcome, ReportWarningAction, ReportWarningResource,
+            Adapter, JsonAverage, JsonReportWarning, ParseOutcome, ReportWarningAction,
+            ReportWarningResource,
         },
     };
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
-    use super::{ParseRecord, strip_ignore_suffix};
+    use super::{ParseRecord, adapter_settings_at, strip_ignore_suffix};
     use crate::{
         model::project::report::warning::{ReportWarnings, get_report_warnings},
         schema,
@@ -756,6 +832,35 @@ mod tests {
                 count: 2,
             }])
         );
+    }
+
+    /// Kills: an average at version 1 that still reaches the adapter or is ignored without a
+    /// warning, a warning at version 1 with no average, and an average at version 0 that is
+    /// dropped, changed, or warned of.
+    #[test]
+    fn adapter_settings_at_withholds_the_average_at_version_1() {
+        let mut warnings = ReportWarnings::default();
+        let settings =
+            adapter_settings_at(Some(JsonAverage::Median), BmfVersion::V0, &mut warnings);
+        assert!(
+            matches!(settings.average, Some(JsonAverage::Median)),
+            "{settings:?}"
+        );
+        assert_eq!(settings.bmf_version, BmfVersion::V0);
+        assert_eq!(warnings, ReportWarnings::default());
+
+        let settings = adapter_settings_at(None, BmfVersion::V1, &mut warnings);
+        assert!(settings.average.is_none(), "{settings:?}");
+        assert_eq!(settings.bmf_version, BmfVersion::V1);
+        assert_eq!(warnings, ReportWarnings::default());
+
+        let settings =
+            adapter_settings_at(Some(JsonAverage::Median), BmfVersion::V1, &mut warnings);
+        assert!(settings.average.is_none(), "{settings:?}");
+        assert_eq!(settings.bmf_version, BmfVersion::V1);
+        let mut expected = ReportWarnings::default();
+        expected.ignore_with_count(ReportWarningResource::Average, 1);
+        assert_eq!(warnings, expected);
     }
 
     #[test]
