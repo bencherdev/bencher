@@ -1,0 +1,27 @@
+## What is the future of Continuous Benchmarking?
+
+When trying to divine what the future holds, the pattern seems to be that we should look at what the frontier labs themselves are doing. We'll all be there in six to twelve months it seems. The Pragmatic Engineer's [Inside OpenAI’s agentic software factory][pragmatic openai] shines an interesting light on this from a continuous benchmarking perspective:
+
+> New: a “perf harness”: the agent also uses a perf harness
+> to send problematic PRs to the Synthetics A/B framework for evaluating performance implications.
+> As mentioned above, the load upon CI systems has increased greatly in the past six months.
+
+OpenAI's "perf harness" seems very similar to the established practice of [relative continuous benchmarking][bencher relative]. The novel AI piece is the synthetic part of the A/B framework. Synthetic test data is not new. But being able to autonomously shape those synthetic data to evaluate the performance of the changeset at hand certainly is new! Getting a developer to actually write the benchmarks has always been the struggle. Now it's automated. In the same way that agents have drastically increased feature test coverage, they're also enabling us to drastically increase performance test coverage.
+
+OpenAI is not alone in this pursuit. Anthropic soon thereafter published [How we made claude.ai 3x faster in two weeks][claude faster]. In it they also describe building benchmarks on the fly. One key difference was that Anthropic found deterministic counts that correlate with performance: instructions, commits per interaction, function calls, style recalculations, and DOM mutations. Claude then hill climbed these counts to optimize the performance of their app. At the end of the optimization pass, they checked that their count based optimizations actually resulted in real-world wall-clock time improvements.
+
+These methodologies line up with what I've personally been experiencing working on Bencher. Though, my A/B performance tests have all been run locally or on an agent's work machine, not in a CI loop. Whenever I'm about to make a large change to a query or a meaningful schema migration, I have Claude do an exhaustive performance evaluation of the change. This always includes wall-clock time and occasionally some corollary deterministic counts (ex SQLite virtual machine instructions).
+
+Due to noisy neighbor issues, these agent led performance optimization passes have had pretty wide error bars on them. I'm looking to add fixtures (additional benchmark inputs) and artifacts (additional benchmark outputs) to Bencher Bare Metal in order to better enable my agent to run these performance optimization tasks with a higher confidence. The agent will still do most of its optimization work locally, hill climbing the best it can on wall-clock time or deterministic counts. Then it'll use Bencher Bare Metal to check its work, as a sort of wall-clock caliper.
+
+Even though I think most “users” of Bencher will be agents within a year or so, I still think most humans will want a visual interface for when they check in. I'm currently neck deep in a total redesign of the Bencher UI with the help of Claude. As a Rust engineer writing Anyscript during the days of GitHub Copilot tab autocomplete, the current UI leaves much to be desired. The UI rewrite is blocked on another even more ambitious overhaul though, a new version of [Bencher Metric Format (BMF)][bencher bmf].
+
+BMF is the core format that benchmark results are normalized to within Bencher. It runs through _everything_. This new version of BMF will allow for benchmarks to be parameterized. You'll be able to say `my_benchmark` with the parameters `size: 16 MB` and `size: 32 MB`, instead of having two separate benchmarks, `my_benchmark_16_mb` and `my_benchmark_32_mb`. The new version of BMF will also allow for arbitrary metric names. You'll be able to provide `mean`, `p95`, and `p99` metrics for your `Latency` measurements, instead of just having `mean` or needing to make `Latency (mean)`, `Latency (p95)`, and `Latency (p99)` as separate measurements.
+
+Supporting this new BMF version is a massive overhaul to the core of Bencher. I would not have felt comfortable doing this work with anything prior to Fable 5. As discussed above, most of the Bare Metal work sat orthogonal to the core of Bencher: tracking performance over time and alerting on regressions. BMF is central to that core value proposition. My trust in Fable 5 and even more so Fable 5.1 and Opus 5.5 has again allowed me to start on a project that would have taken years of nights and weekends to complete. I previously had to spend quite a bit of time [optimizing SQLite for Bencher][bencher sqlite]. Now every time I evolve the model, I just ask Claude to spin up an agent to do a thorough performance investigation to make sure everything is still performant. In the future, I don’t even think I’ll have to ask.
+
+[pragmatic openai]: https://newsletter.pragmaticengineer.com/p/openai-software-factory
+[bencher relative]: /docs/how-to/track-benchmarks/#relative-continuous-benchmarking
+[claude faster]: https://claude.dev/blog/how-we-made-claude-ai-faster/
+[bencher bmf]: /docs/reference/bencher-metric-format/
+[bencher sqlite]: /learn/engineering/sqlite-performance-tuning/

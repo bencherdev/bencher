@@ -1,0 +1,26 @@
+_This essay was originally submitted to [The Pragmatic Engineer's How Software Engineering is Changing Essay Challenge][pragmatic engineer essay challenge] on October 4, 2026._
+
+This year has marked a radical shift in the way that I build software. I’m a staff software engineer. In the past six years, I’ve worked professionally in Rust for both a YC and a16z backed unicorn and a Fortune 500 company. As a recovering C++ developer, I found myself drawn to the depth and skill Rust required. I had become an expert craftsman at hand chiseling real-time systems software. In the past ten months, I’ve had to bury that identity. While my job title still says “software engineer”, my job is now that of a “context engineer”.
+
+Over the past four years, I've spent my nights and weekends building an open source, bootstrapped business, [Bencher][bencher]. Bencher is a continuous benchmarking platform that helps systems software engineers catch performance regressions before they merge. It takes a suite of tools to accomplish this: a CLI, an API server, and a frontend web console UI. Each of these components was written, within a rounding error, by me. I’ve had a few notable open source contributors over the years, but the vast majority of Bencher the open source project and 100% of Bencher the business was designed and implemented by myself.
+
+In these four years, I didn’t just live under a rock. I got engaged, married, and had my first child. It would take weeks and sometimes months for me to work through a large feature implementation and roll it out. I had to juggle both development and support. Bencher already had many users, so I would spend quite a bit of time answering questions and fixing the occasional bug.
+
+Back in 2022 my use of LLMs consisted of the Rust freeware version of [TabNine][wikipedia tabnine], a tab to autocomplete developer tool built by a student and early intern at OpenAI working on this funny little project named Codex. Once GitHub Copilot launched and unofficially added Rust support, I ponied up the $10/month for a personal license.
+
+It was rough. But it still felt a bit like magic. I remember being wowed shortly after chat was added to the GitHub Copilot VSCode extension by how good it was at creating Rust [procedural macros][rust procedural macros]. Usually I had to tweak the output some, but a few times, it managed to oneshot it. Bananas! This was cool and probably helped save some time, but I still predominantly worked in the same way as before.
+
+From that point onward, I had this mindset that Microsoft was in the vanguard with GitHub Copilot. Even if these newfangled labs were throwing “agents” out there, I could trust that GitHub Copilot would keep up if there was anything worthwhile. I would hear folks like Dan Shipper on [Lenny’s Podcast][lennys podcast dan shipper 2025], and their telling of the model’s capabilities just did not square with my experience nor quality bar.
+
+Early last year, I wrote a post reflecting on three years of Bencher development, [Engineering Review: 2025 Edition][bencher engineering review]. In that post I covered all of my major engineering decisions to build Bencher spanning frontend, backend, developer environment, CI, you name it. I spent an entire paragraph venting about how hard of a time I had trying to wrap my head around [CUE lang][cue lang] two years prior. Yet, there's not a single mention of AI, LLMs, or even Copilot anywhere in that 3,500 word write up.
+
+Fast forward to less than a year later, and I'm commiserating with [We mourn our craft][we mourn].
+
+[pragmatic engineer essay challenge]: https://blog.pragmaticengineer.com/how-software-engineering-is-changing-an-essay-challenge/
+[bencher]: https://bencher.dev
+[wikipedia tabnine]: https://en.wikipedia.org/wiki/Tabnine
+[rust procedural macros]: https://doc.rust-lang.org/reference/procedural-macros.html
+[lennys podcast dan shipper 2025]: https://www.lennysnewsletter.com/p/inside-every-dan-shipper
+[bencher engineering review]: /learn/engineering/engineering-review-2025/
+[cue lang]: https://cuelang.org/
+[we mourn]: https://nolanlawson.com/2026/02/07/we-mourn-our-craft/
