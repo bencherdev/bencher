@@ -20,13 +20,18 @@ impl ReportWarnings {
     }
 
     pub fn skip_with_count(&mut self, resource: ReportWarningResource, count: usize) {
+        self.add(resource, ReportWarningAction::Skip, count);
+    }
+
+    pub fn ignore_with_count(&mut self, resource: ReportWarningResource, count: usize) {
+        self.add(resource, ReportWarningAction::Ignore, count);
+    }
+
+    fn add(&mut self, resource: ReportWarningResource, action: ReportWarningAction, count: usize) {
         if count == 0 {
             return;
         }
-        let tally = self
-            .0
-            .entry((resource, ReportWarningAction::Skip))
-            .or_default();
+        let tally = self.0.entry((resource, action)).or_default();
         *tally = tally.saturating_add(u32::try_from(count).unwrap_or(u32::MAX));
     }
 

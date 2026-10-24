@@ -236,6 +236,9 @@ async fn report_project_key_migration_round_trips_every_report() {
         .cloned()
         .map(|mut row| {
             row.remove("project_key_id");
+            for column in PARSE_COLUMNS {
+                row.remove(column);
+            }
             row
         })
         .collect::<Vec<_>>();
@@ -245,7 +248,8 @@ async fn report_project_key_migration_round_trips_every_report() {
         .expect("Failed to apply the migrations");
     conn.batch_execute("PRAGMA foreign_keys = ON")
         .expect("Failed to enable foreign keys");
-    assert_eq!(report_rows(&mut conn), before, "up");
+    // The parse columns came after this migration, so they come back empty.
+    assert_eq!(report_rows(&mut conn), without_parse(&before), "up");
     let kept = |schema: Vec<(String, String, Option<String>)>| {
         schema
             .into_iter()
@@ -253,6 +257,142 @@ async fn report_project_key_migration_round_trips_every_report() {
             .collect::<Vec<_>>()
     };
     assert_eq!(kept(report_schema(&mut conn)), kept(reference), "up");
+}
+
+/// The report columns that record how a report's results parsed.
+const PARSE_COLUMNS: [&str; 3] = ["bmf_version", "resolved_adapter", "parse_outcome"];
+
+// The migration that records how a report parsed carries every report row through it, down and
+// back up. Down leaves the report table, its indexes, and its foreign keys exactly as the
+// migrations before it built them. Up keeps those indexes and foreign keys and places the new
+// columns beside `adapter`, empty for every report that was already there.
+#[tokio::test]
+async fn report_parse_migration_round_trips_every_report() {
+    const REPORT_PARSE_MIGRATION: &str = "20261022120000";
+
+    let server = TestServer::new().await;
+    // The first signup is the server admin, who alone may create a spec.
+    let user = server
+        .signup("Test User", "runparsemigration@example.com")
+        .await;
+    let org = server.create_org(&user, "Run Parse Migration Org").await;
+    let project = server
+        .create_project(&user, &org, "Run Parse Migration Project")
+        .await;
+    post_migration_reports(&server, &user, &project).await;
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({
+            "project": project.slug,
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:04:00Z",
+            "end_time": "2024-01-01T00:05:00Z",
+            "results": [bmf_v1_results().to_string()],
+            "bmf_version": 1,
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "Failed to post the run");
+
+    let mut conn = server.db_conn();
+    let before = report_rows(&mut conn);
+    for column in PARSE_COLUMNS {
+        assert!(
+            before
+                .iter()
+                .any(|row| row.get(column).is_some_and(|value| !value.is_null())),
+            "no report carries {column}"
+        );
+    }
+    let head = report_schema(&mut conn);
+    let mut reference = database_before(REPORT_PARSE_MIGRATION);
+    let reference_schema = report_schema(&mut reference);
+
+    conn.batch_execute("PRAGMA foreign_keys = OFF")
+        .expect("Failed to disable foreign keys");
+    loop {
+        let version = conn
+            .revert_last_migration(MIGRATIONS)
+            .expect("Failed to revert a migration");
+        if version.to_string() == REPORT_PARSE_MIGRATION {
+            break;
+        }
+    }
+    assert_eq!(report_schema(&mut conn), reference_schema, "down");
+    let without_columns = before
+        .iter()
+        .cloned()
+        .map(|mut row| {
+            for column in PARSE_COLUMNS {
+                row.remove(column);
+            }
+            row
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(report_rows(&mut conn), without_columns, "down");
+
+    conn.run_pending_migrations(MIGRATIONS)
+        .expect("Failed to apply the migrations");
+    conn.batch_execute("PRAGMA foreign_keys = ON")
+        .expect("Failed to enable foreign keys");
+    assert_eq!(report_schema(&mut conn), head, "up");
+    assert_eq!(
+        report_foreign_keys(&mut conn),
+        report_foreign_keys(&mut reference),
+        "up"
+    );
+    assert_eq!(
+        report_columns(&mut conn),
+        with_parse_columns(report_columns(&mut reference)),
+        "up"
+    );
+    let indexes = |schema: Vec<(String, String, Option<String>)>| {
+        schema
+            .into_iter()
+            .filter(|(_, name, _)| name != "report")
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        indexes(report_schema(&mut conn)),
+        indexes(reference_schema),
+        "up"
+    );
+    assert_eq!(report_rows(&mut conn), without_parse(&before), "up");
+    assert_eq!(foreign_key_violations(&mut conn), 0, "up");
+}
+
+/// The rows with every parse column emptied, as a migration that adds them leaves them.
+fn without_parse(
+    rows: &[serde_json::Map<String, serde_json::Value>],
+) -> Vec<serde_json::Map<String, serde_json::Value>> {
+    rows.iter()
+        .cloned()
+        .map(|mut row| {
+            for column in PARSE_COLUMNS {
+                row.insert(column.to_owned(), serde_json::Value::Null);
+            }
+            row
+        })
+        .collect()
+}
+
+fn foreign_key_violations(conn: &mut diesel::SqliteConnection) -> i64 {
+    #[derive(diesel::QueryableByName)]
+    struct Count {
+        #[diesel(sql_type = diesel::sql_types::BigInt)]
+        count: i64,
+    }
+    diesel::sql_query("SELECT COUNT(*) AS count FROM pragma_foreign_key_check")
+        .get_result::<Count>(conn)
+        .expect("Failed to check the foreign keys")
+        .count
 }
 
 /// A run with an idempotency key, and with the plus feature a job run, which records its spec.
@@ -316,6 +456,11 @@ async fn post_migration_reports(
 
 /// The report table's schema as the migrations before `version` built it.
 fn report_schema_before(version: &str) -> Vec<(String, String, Option<String>)> {
+    report_schema(&mut database_before(version))
+}
+
+/// A database as the migrations before `version` built it.
+fn database_before(version: &str) -> diesel::SqliteConnection {
     let mut reference = diesel::SqliteConnection::establish(":memory:")
         .expect("Failed to open the reference database");
     reference
@@ -332,7 +477,7 @@ fn report_schema_before(version: &str) -> Vec<(String, String, Option<String>)> 
             .run_migration(migration.as_ref())
             .expect("Failed to apply a migration");
     }
-    report_schema(&mut reference)
+    reference
 }
 
 /// Every row of the report table, with every column the table has, in row order.
@@ -388,6 +533,77 @@ fn report_schema(conn: &mut diesel::SqliteConnection) -> Vec<(String, String, Op
         (kind, name, sql)
     })
     .collect()
+}
+
+/// The report table's foreign keys, by column.
+fn report_foreign_keys(conn: &mut diesel::SqliteConnection) -> Vec<ForeignKey> {
+    diesel::sql_query(
+        r#"SELECT "from" AS source, "table" AS target, "to" AS target_column, on_update, on_delete, "match" AS matching
+        FROM pragma_foreign_key_list('report') ORDER BY "from", seq"#,
+    )
+    .load::<ForeignKey>(conn)
+    .expect("Failed to read the report foreign keys")
+}
+
+#[derive(Debug, PartialEq, Eq, diesel::QueryableByName)]
+struct ForeignKey {
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    source: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    target: String,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+    target_column: Option<String>,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    on_update: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    on_delete: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    matching: String,
+}
+
+/// The report table's columns, in order.
+fn report_columns(conn: &mut diesel::SqliteConnection) -> Vec<Column> {
+    diesel::sql_query(
+        r#"SELECT name, type AS kind, "notnull" AS not_null, dflt_value AS default_value, pk AS primary_key
+        FROM pragma_table_info('report') ORDER BY cid"#,
+    )
+    .load::<Column>(conn)
+    .expect("Failed to read the report columns")
+}
+
+/// The columns with each parse column placed beside the column it belongs after.
+fn with_parse_columns(columns: Vec<Column>) -> Vec<Column> {
+    let mut placed = Vec::with_capacity(columns.len() + PARSE_COLUMNS.len());
+    for column in columns {
+        let after: &[&str] = match column.name.as_str() {
+            "spec_id" => &["bmf_version"],
+            "adapter" => &["resolved_adapter", "parse_outcome"],
+            _ => &[],
+        };
+        placed.push(column);
+        placed.extend(after.iter().map(|&name| Column {
+            name: name.to_owned(),
+            kind: "INTEGER".to_owned(),
+            not_null: 0,
+            default_value: None,
+            primary_key: 0,
+        }));
+    }
+    placed
+}
+
+#[derive(Debug, PartialEq, Eq, diesel::QueryableByName)]
+struct Column {
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    name: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    kind: String,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    not_null: i64,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+    default_value: Option<String>,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    primary_key: i64,
 }
 
 // --- Job creation integration tests (Plus only) ---
@@ -2510,6 +2726,7 @@ async fn stored_job_bmf_version(
 
     // A pending job's config is not listed, so it is read from the row.
     {
+        use bencher_json::project::report::{Adapter, ParseOutcome};
         use bencher_schema::schema;
         use diesel::{QueryDsl as _, RunQueryDsl as _};
         let mut conn = server.db_conn();
@@ -2519,6 +2736,17 @@ async fn stored_job_bmf_version(
             .expect("Failed to query job config");
         let config: bencher_json::JsonJobConfig =
             serde_json::from_str(&stored_config).expect("Failed to parse job config");
+        // The job's report is read at the job's version, and nothing is parsed yet.
+        let report: (Option<BmfVersion>, Option<Adapter>, Option<ParseOutcome>) =
+            schema::report::table
+                .select((
+                    schema::report::bmf_version,
+                    schema::report::resolved_adapter,
+                    schema::report::parse_outcome,
+                ))
+                .first(&mut conn)
+                .expect("Failed to query the job's report");
+        assert_eq!(report, (config.bmf_version, None, None), "{label}");
         config.bmf_version
     }
 }
@@ -2669,8 +2897,8 @@ async fn run_post_idempotency_key_returns_the_same_warnings() {
         .create_project(&user, &org, "Idempotency Warn Project")
         .await;
 
-    // Ten metric names on one measure, two past the per measure cap of eight.
-    let names = (1..=10)
+    // Eighteen metric names on one measure, two past the per measure cap of sixteen.
+    let names = (1..=18)
         .map(|n| (format!("p{n}"), serde_json::json!(n)))
         .collect::<serde_json::Map<_, _>>();
     let results = serde_json::json!({ "bench": [{ "measures": { "latency": names } }] });
