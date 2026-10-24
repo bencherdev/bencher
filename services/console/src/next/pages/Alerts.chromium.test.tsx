@@ -24,14 +24,14 @@ import { type Api, ApiError, type Method } from "../api";
 import { READ, alertId, alertsFixture } from "../alerts/testing";
 import { budget } from "../budget";
 import { createQueryClient } from "../cache";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { ProjectContext } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { bootstrapOf } from "../settings/testing";
 import { linesDrawn, readLinesTopToBottom } from "../report/testing";
 import Alerts from "./Alerts";
 
-const PATH = `${NEXT_PROJECTS}/hashbrown/alerts`;
+const PATH = `${PROJECTS_PATH}/hashbrown/alerts`;
 const NAME = "blake3 n=0 Latency";
 const ALL = "the alerts in the report on main, ubuntu-latest, Sep 13, 21:16";
 
@@ -107,7 +107,7 @@ const mount = (
 			<QueryClientProvider client={client}>
 				<MemoryRouter
 					history={history}
-					base={NEXT_PROJECTS}
+					base={PROJECTS_PATH}
 					root={(props) => (
 						<ProjectContext.Provider value={{ api, slug: () => "hashbrown" }}>
 							<Suspense fallback={<p>Suspended</p>}>{props.children}</Suspense>
@@ -1632,7 +1632,7 @@ test("an alert row's Open in Explore is Open 1 for that row alone", async () => 
 		.first();
 	await expect.element(row).toBeVisible();
 	const href = row.element().getAttribute("href");
-	expect(href).toMatch(/^\/next\/console\/projects\/hashbrown\/explore\?/);
+	expect(href).toMatch(/^\/console\/projects\/hashbrown\/explore\?/);
 	await page
 		.getByRole("checkbox", { name: `Select ${NAME}` })
 		.first()
@@ -1667,7 +1667,7 @@ test("a pinned readout on a row's alert opens it and dismisses it as its row doe
 	const readout = region.getByRole("status");
 	await expect
 		.element(readout.getByRole("link", { name: `Alert: ${NAME}` }))
-		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/alerts/${alertId(2)}`);
+		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/alerts/${alertId(2)}`);
 	await readout
 		.getByRole("button", { name: `Dismiss the alert on ${NAME}` })
 		.click();
@@ -1733,6 +1733,6 @@ test("each row's name links to its alert's page", async () => {
 	const links = page.getByRole("link", { name: `${NAME}, open the alert` });
 	await expect.element(links.first()).toBeVisible();
 	expect(links.elements().map((link) => link.getAttribute("href"))).toEqual(
-		[1, 2, 3].map((n) => `${NEXT_PROJECTS}/hashbrown/alerts/${alertId(n)}`),
+		[1, 2, 3].map((n) => `${PROJECTS_PATH}/hashbrown/alerts/${alertId(n)}`),
 	);
 });

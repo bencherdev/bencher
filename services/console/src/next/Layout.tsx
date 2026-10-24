@@ -14,13 +14,12 @@ import type { JsonAuthUser } from "../types/bencher";
 import { type Api, ApiError } from "./api";
 import ContentSkeleton from "./ContentSkeleton";
 import {
-	type BmfVersion,
 	forgetVersion,
 	readShell,
 	rememberShell,
 	rememberVersion,
 } from "./memory";
-import { TABS, parseNextPath, tabOf } from "./paths";
+import { TABS, parseConsolePath, tabOf } from "./paths";
 import { ProjectContext } from "./project";
 import { consoleProjectQuery } from "./queries";
 import { useQueryResult } from "./query";
@@ -33,7 +32,6 @@ const Layout = (
 	props: RouteSectionProps & {
 		api: Api;
 		reader: JsonAuthUser;
-		versions: () => Record<string, BmfVersion>;
 		host?: string | undefined;
 		/** Where the router keeps project paths, under its base. */
 		route?: string | undefined;
@@ -41,7 +39,7 @@ const Layout = (
 	},
 ) => {
 	const location = useLocation();
-	const place = createMemo(() => parseNextPath(location.pathname));
+	const place = createMemo(() => parseConsolePath(location.pathname));
 	const slug = () => place()?.slug ?? "";
 	const tab = () => tabOf(place()?.rest ?? []);
 	const reader = () => props.reader.user.uuid;
@@ -54,17 +52,14 @@ const Layout = (
 		readShell(localStorage, reader(), slug()),
 	);
 
-	// The project's own version, fetched on this load, corrects the memory.
-	createEffect(() => {
-		const version = props.versions()[slug()];
-		if (version !== undefined) {
-			rememberVersion(localStorage, slug(), version);
-		}
-	});
-
 	createEffect(() => {
 		const project = data();
 		if (project) {
+			rememberVersion(
+				localStorage,
+				slug(),
+				project.project.bmf_version === 0 ? 0 : 1,
+			);
 			rememberShell(localStorage, reader(), slug(), {
 				organization: project.organization.name,
 				organizationUuid: project.organization.uuid,

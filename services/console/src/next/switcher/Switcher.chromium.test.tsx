@@ -176,9 +176,9 @@ test("a click outside closes it", async () => {
 	await expect.element(dialog()).not.toBeInTheDocument();
 });
 
-// Kills rows that drop the organization of a reader of two, the Classic tag,
-// No runs, the alerts, or the current project's mark, and a classic row that
-// links into the new console.
+// Kills rows that drop the organization of a reader of two, No runs, the
+// alerts, or the current project's mark, and a version 0 row that links
+// anywhere but its project in the console or still wears a Classic tag.
 test("each row names its organization, its last run, and its active alerts", async () => {
 	await open();
 
@@ -188,12 +188,10 @@ test("each row names its organization, its last run, and its active alerts", asy
 	expect(hashbrown?.textContent).toContain("5 active alerts");
 	expect(gizmo?.textContent).toContain("Bagge Diner");
 	expect(gizmo?.textContent).toContain("3h ago");
-	expect(cathode?.textContent).toContain("Classic");
-	expect(cathode?.getAttribute("href")).toBe("/console/projects/cathode/plots");
+	expect(cathode?.textContent).not.toContain("Classic");
+	expect(cathode?.getAttribute("href")).toBe("/console/projects/cathode/");
 	expect(cornbread?.textContent).toContain("No runs");
-	expect(cornbread?.getAttribute("href")).toBe(
-		"/next/console/projects/cornbread/",
-	);
+	expect(cornbread?.getAttribute("href")).toBe("/console/projects/cornbread/");
 });
 
 // Kills a footer that drops New project or Settings, sends either to an
@@ -204,10 +202,10 @@ test("the footer holds New project and the current organization's Settings", asy
 
 	await expect
 		.element(dialog().getByRole("link", { name: "New project" }))
-		.toHaveAttribute("href", "/next/console/organizations/o1/projects/add");
+		.toHaveAttribute("href", "/console/organizations/o1/projects/add");
 	await expect
 		.element(dialog().getByRole("link", { name: "Pompeii LLC settings" }))
-		.toHaveAttribute("href", "/next/console/organizations/o1/settings");
+		.toHaveAttribute("href", "/console/organizations/o1/settings");
 });
 
 // Kills an organization's crumb that opens no switcher, one that cannot reach
@@ -264,7 +262,7 @@ test("an organization's crumb opens the switcher on the reader's projects", asyn
 	expect(document.querySelector(".sw-cur")).toBeNull();
 	await expect
 		.element(dialog().getByRole("link", { name: "Pompeii LLC settings" }))
-		.toHaveAttribute("href", "/next/console/organizations/o1/settings");
+		.toHaveAttribute("href", "/console/organizations/o1/settings");
 });
 
 // Kills arrows that do not move the active row, an active row the list does
@@ -280,7 +278,7 @@ test("arrow keys move through the rows and Enter opens one in the app", async ()
 
 	await userEvent.keyboard("{Enter}");
 
-	expect(history.get()).toBe("/next/console/projects/gizmo/");
+	expect(history.get()).toBe("/console/projects/gizmo/");
 	await expect.element(dialog()).not.toBeInTheDocument();
 	// A pick leads the next opening even when nothing about it is fetched.
 	expect(recentSlugs(localStorage)[0]).toBe("gizmo");
@@ -295,7 +293,7 @@ test("typing searches; with no match the list reads No matches, and Clear search
 	await userEvent.keyboard("diner");
 	expect(names()).toEqual(["Gizmo"]);
 	await userEvent.keyboard("{Enter}");
-	expect(history.get()).toBe("/next/console/projects/gizmo/");
+	expect(history.get()).toBe("/console/projects/gizmo/");
 
 	await crumb().click();
 	await userEvent.keyboard("zeppelin");

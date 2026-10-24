@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
 import { axeInBothThemes } from "./axe";
-import { expect, nextPath, seed, signedIn, test } from "./fixtures";
+import { expect, consolePath, seed, signedIn, test } from "./fixtures";
 import { publicPath } from "./public";
 
 const { hashbrown } = seed.projects;
-const RUNS = nextPath(hashbrown.slug, "runs");
+const RUNS = consolePath(hashbrown.slug, "runs");
 
 test.use({ storageState: signedIn(seed.member) });
 

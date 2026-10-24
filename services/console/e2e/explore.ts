@@ -4,7 +4,7 @@ import {
 	blankQuery,
 	encodeQuery,
 } from "../src/next/query/query";
-import { expect, nextPath, seed } from "./fixtures";
+import { expect, consolePath, seed } from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
@@ -38,7 +38,7 @@ export const dimensions = async (
 };
 
 export const explore = (project: string, query?: Partial<ExploreQuery>) =>
-	`${nextPath(project, "explore")}${query ? encodeQuery({ ...blankQuery(), ...query }) : ""}`;
+	`${consolePath(project, "explore")}${query ? encodeQuery({ ...blankQuery(), ...query }) : ""}`;
 
 /** The seed's alerting variant and the one beside it: blake3 at 64 KiB on one thread. */
 export const twoLines = async (request: APIRequestContext) => {

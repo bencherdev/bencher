@@ -1,5 +1,5 @@
 import { For, type JSX } from "solid-js";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { SECTIONS, type Section } from "./section";
 
 /**
@@ -15,7 +15,7 @@ const Frame = (props: {
 		<For each={SECTIONS}>
 			{({ section, label, path }) => (
 				<a
-					href={`${NEXT_PROJECTS}/${props.slug}/${path}`}
+					href={`${PROJECTS_PATH}/${props.slug}/${path}`}
 					aria-current={section === props.section ? "page" : undefined}
 				>
 					{label}

@@ -1,7 +1,7 @@
 import {
 	crumb,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	signedIn,
 	tabRow,
@@ -21,7 +21,7 @@ test.use({
 test("the narrow bar keeps the wordmark, the bell, Feedback, the menu, and the avatar, and the active tab is in view", async ({
 	page,
 }) => {
-	await page.goto(nextPath(hashbrown.slug, "settings"));
+	await page.goto(consolePath(hashbrown.slug, "settings"));
 	const bar = page.getByRole("banner");
 
 	const mark = bar.getByRole("link", { name: "Bencher, home" });

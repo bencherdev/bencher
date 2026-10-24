@@ -1,7 +1,7 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { axeInBothThemes } from "./axe";
 import { dimensions, explore, twoLines } from "./explore";
-import { expect, nextPath, seed, signedIn, test } from "./fixtures";
+import { expect, consolePath, seed, signedIn, test } from "./fixtures";
 import { loadedAndIdle, observeLayoutShift } from "./speed";
 import ceilings from "./speed-ceilings.json" with { type: "json" };
 
@@ -45,7 +45,7 @@ const latencyPlot = async (request: APIRequestContext) => {
 };
 
 const reportPath = (report: string) =>
-	`${nextPath(iterations.slug, "reports")}/${report}`;
+	`${consolePath(iterations.slug, "reports")}/${report}`;
 
 /** The plot area inside `scope`, which reads out the report under the pointer. */
 const plotArea = (scope: Page | ReturnType<Page["getByRole"]>) =>
@@ -216,7 +216,9 @@ test.describe("a report run three times", () => {
 			{ headers: { Authorization: `Bearer ${seed.member.token}` } },
 		);
 		const [report] = (await response.json()) as { uuid: string }[];
-		await page.goto(`${nextPath(hashbrown.slug, "reports")}/${report?.uuid}`);
+		await page.goto(
+			`${consolePath(hashbrown.slug, "reports")}/${report?.uuid}`,
+		);
 		await expect(
 			page.getByRole("table", { name: /^Lines in report / }),
 		).toBeVisible();

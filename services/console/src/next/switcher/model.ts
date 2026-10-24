@@ -1,5 +1,6 @@
 import type { JsonConsoleUser } from "../../types/bencher";
 import { projectAt } from "../home";
+import type { BmfVersion } from "../memory";
 import { projectPath } from "../paths";
 import { relativeTime } from "../reports/format";
 
@@ -11,7 +12,7 @@ export interface SwitcherRow {
 	/** Searched whether or not the row names it. */
 	organizationName: string;
 	href: string;
-	classic: boolean;
+	version: BmfVersion;
 	/** How long ago it last ran, if it ever has. */
 	age: string | undefined;
 	alerts: number;
@@ -44,7 +45,6 @@ export const switcherRows = (
 				a.name.localeCompare(b.name),
 		)
 		.map((project) => {
-			const classic = project.bmf_version === 0;
 			const organizationName = organizations.get(project.organization) ?? "";
 			return {
 				slug: project.slug,
@@ -54,7 +54,7 @@ export const switcherRows = (
 				href:
 					projectAt(project.slug, project.bmf_version) ??
 					projectPath(project.slug),
-				classic,
+				version: project.bmf_version === 0 ? 0 : 1,
 				age: project.last_report
 					? relativeTime(project.last_report, now)
 					: undefined,

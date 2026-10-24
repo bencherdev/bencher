@@ -1,24 +1,16 @@
-import type { Page } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
 import {
 	VERSION_KEY,
+	consolePath,
 	expect,
-	nextPath,
 	seed,
-	settle,
 	signedIn,
 	test,
 } from "./fixtures";
 
 const { hashbrown, version_zero } = seed.projects;
 
-// The classic Reports page adds its own paging to the query.
-const classicReports = (url: URL) =>
-	url.pathname === `/console/projects/${version_zero.slug}/reports`;
-
-const remembered = (versions: Record<string, number>) =>
-	signedIn(seed.member, { [VERSION_KEY]: JSON.stringify(versions) });
-
-// The page can move between consoles, so a read can land mid navigation.
+// The page can move, so a read can land mid navigation.
 const rememberedVersion = (page: Page, slug: string) =>
 	page
 		.evaluate(
@@ -27,172 +19,45 @@ const rememberedVersion = (page: Page, slug: string) =>
 		)
 		.catch(() => undefined);
 
-test.describe("with no version memory", () => {
-	test.use({ storageState: signedIn(seed.member) });
-
-	// Kills a new console that sends a version 0 project back to the classic one.
-	test("a version 0 project under /next/ stays in the new console", async ({
-		page,
-	}) => {
-		await page.goto(nextPath(version_zero.slug, "runs"));
-		await expect(
-			page.getByRole("heading", { level: 1, name: "6 runs" }),
-		).toBeVisible();
-		await expect(page).toHaveURL(nextPath(version_zero.slug, "runs"));
-		await expect.poll(() => rememberedVersion(page, version_zero.slug)).toBe(0);
-	});
-
-	// Kills a classic console that keeps a version 1 project.
-	test("a classic page of a version 1 project lands on /next/", async ({
-		page,
-	}) => {
-		await page.goto(`/console/projects/${hashbrown.slug}/reports`);
-		await expect(page).toHaveURL(nextPath(hashbrown.slug, "runs"));
-	});
+// Each project remembered at the other version, which nothing reads any more.
+test.use({
+	storageState: signedIn(seed.member, {
+		[VERSION_KEY]: JSON.stringify({
+			[version_zero.slug]: 1,
+			[hashbrown.slug]: 0,
+		}),
+	}),
 });
 
-test.describe("with the version memory", () => {
-	test.use({ storageState: remembered({ [hashbrown.slug]: 1 }) });
+// Kills a version 0 project sent anywhere but the console, and a memory left
+// at another version than the project's own.
+test("a version 0 project opens in the console", async ({ page }) => {
+	await page.goto(consolePath(version_zero.slug, "runs"));
+	await expect(
+		page.getByRole("heading", { level: 1, name: "6 runs" }),
+	).toBeVisible();
+	await expect(page).toHaveURL(consolePath(version_zero.slug, "runs"));
+	await expect.poll(() => rememberedVersion(page, version_zero.slug)).toBe(0);
+});
 
-	// Kills a classic redirect that waits for the project to load.
-	test("a classic page redirects before it asks for the project", async ({
-		page,
-	}) => {
-		const order: string[] = [];
-		page.on("request", (request) => {
-			const url = new URL(request.url());
+// Kills a classic page left in place, or one that loads a document of its
+// own before it moves, for a project at either version.
+test("a classic page of a project at either version lands in the console in one redirect", async ({
+	page,
+}) => {
+	for (const project of [version_zero, hashbrown]) {
+		const classic = `/console/projects/${project.slug}/reports`;
+		const documents: string[] = [];
+		const record = (request: Request) => {
 			if (request.resourceType() === "document") {
-				order.push(url.pathname);
-			} else if (
-				request.url() === `${seed.api_url}/v0/projects/${hashbrown.slug}`
-			) {
-				order.push("project");
+				documents.push(new URL(request.url()).pathname);
 			}
-		});
+		};
+		page.on("request", record);
+		await page.goto(classic);
+		page.off("request", record);
 
-		await page.goto(`/console/projects/${hashbrown.slug}/reports`);
-		await expect(page).toHaveURL(nextPath(hashbrown.slug, "runs"));
-		await expect(
-			page.getByRole("heading", { level: 1, name: "Runs" }),
-		).toBeVisible();
-
-		expect(order.slice(0, 2)).toEqual([
-			`/console/projects/${hashbrown.slug}/reports`,
-			nextPath(hashbrown.slug, "runs"),
-		]);
-	});
+		await expect(page).toHaveURL(consolePath(project.slug, "runs"));
+		expect(documents).toEqual([classic, consolePath(project.slug, "runs")]);
+	}
 });
-
-test.describe("with a stale version 1 memory", () => {
-	test.use({ storageState: remembered({ [version_zero.slug]: 1 }) });
-
-	// Kills a memory that only the inline script reads and nothing corrects, and
-	// a new console that then sends the reader back to the classic page.
-	test("the project corrects it and the reader stays where the classic page sent them", async ({
-		page,
-	}) => {
-		await page.goto(`/console/projects/${version_zero.slug}/reports`);
-
-		await expect.poll(() => rememberedVersion(page, version_zero.slug)).toBe(0);
-		await expect(page).toHaveURL(nextPath(version_zero.slug, "runs"));
-		await page.goto(`/console/projects/${version_zero.slug}/reports`);
-		await expect(page).toHaveURL(classicReports);
-	});
-});
-
-test.describe("with a stale version 0 memory", () => {
-	test.use({ storageState: remembered({ [hashbrown.slug]: 0 }) });
-
-	// Kills a classic console that keeps a version 1 project, or sends it to
-	// /next/ without correcting the memory.
-	test("the project corrects it and the reader ends on /next/", async ({
-		page,
-	}) => {
-		await page.goto(`/console/projects/${hashbrown.slug}/reports`);
-
-		await expect.poll(() => rememberedVersion(page, hashbrown.slug)).toBe(1);
-		await expect(page).toHaveURL(nextPath(hashbrown.slug, "runs"));
-	});
-});
-
-test.describe("with a saved response from before the move to version 1", () => {
-	test.use({ storageState: signedIn(seed.member) });
-
-	// Kills a new console that switches on a response restored from the cache.
-	test("the reader settles on /next/", async ({ page }) => {
-		await page.goto(nextPath(hashbrown.slug, "runs"));
-		await expect
-			.poll(async () =>
-				(await cache(page))?.state.queries.some(
-					(query) => query.queryHash === BOOTSTRAP_HASH,
-				),
-			)
-			.toBe(true);
-		// Off the new console, nothing saves over the entry rewritten below.
-		await page.goto("/help");
-		const entry = await cache(page);
-		const bootstrap = entry?.state.queries.find(
-			(query) => query.queryHash === BOOTSTRAP_HASH,
-		);
-		if (!entry || !bootstrap) {
-			throw new Error("The new console saved no response for the project");
-		}
-		const saved = bootstrap.state.data as { project: { bmf_version: number } };
-		saved.project.bmf_version = 0;
-		await cache(page, entry);
-
-		// The saved response is restored well before the fresh one arrives.
-		const bootstrapUrl = `${seed.api_url}/v0/console/projects/${hashbrown.slug}`;
-		await page.route(bootstrapUrl, async (route) => {
-			await new Promise((resolve) => setTimeout(resolve, 500));
-			await route.continue();
-		});
-		const visited: string[] = [];
-		page.on("request", (request) => {
-			if (request.resourceType() === "document") {
-				visited.push(new URL(request.url()).pathname);
-			}
-		});
-		const fresh = page.waitForResponse(bootstrapUrl, { timeout: 10_000 });
-		// A console that switches cuts this navigation short.
-		await page.goto(nextPath(hashbrown.slug, "runs")).catch(() => {});
-		await fresh;
-		await settle(page);
-
-		expect(visited).toEqual([nextPath(hashbrown.slug, "runs")]);
-		expect(await rememberedVersion(page, hashbrown.slug)).toBe(1);
-	});
-});
-
-type CacheEntry = {
-	state: {
-		queries: { queryHash: string; state: { data: unknown } }[];
-	};
-};
-
-const BOOTSTRAP_HASH = JSON.stringify(["console", "project", hashbrown.slug]);
-
-/** The reader's saved cache, read or replaced as the new console stores it. */
-const cache = (page: Page, entry?: CacheEntry) =>
-	page.evaluate(
-		([reader, entry]) =>
-			new Promise<CacheEntry | undefined>((resolve, reject) => {
-				const open = indexedDB.open("bencher-console", 1);
-				open.onupgradeneeded = () => open.result.createObjectStore("cache");
-				open.onerror = () => reject(open.error);
-				open.onsuccess = () => {
-					const db = open.result;
-					const transaction = db.transaction(
-						"cache",
-						entry ? "readwrite" : "readonly",
-					);
-					const store = transaction.objectStore("cache");
-					const request = entry ? store.put(entry, reader) : store.get(reader);
-					transaction.oncomplete = () => {
-						db.close();
-						resolve(entry ? undefined : request.result);
-					};
-				};
-			}),
-		[seed.member.user.uuid, entry] as const,
-	);

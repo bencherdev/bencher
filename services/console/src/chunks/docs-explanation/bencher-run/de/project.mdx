@@ -18,7 +18,7 @@ Zum Beispiel könnte ein erzeugter Projekt-Slug so aussehen: `project-abc4567-wx
 Wenn ein neues Project für Sie erstellt wird, egal ob der Slug angegeben oder generiert wurde, muss das Project zu einer Organization gehören.
 Wenn der Benutzer mit einem Benutzer-API-Schlüssel ([der Option `--key`](#--key-key)) oder [der veralteten Option `--token`](#--token-token) authentifiziert ist, wird das Project unter der persönlichen Organization dieses Benutzers hinzugefügt.
 Wenn der Benutzer nicht authentifiziert ist, wird das Project unter einer neuen `unclaimed` Organization erstellt.
-Diese Organization kann dann per `claimed` von der öffentlichen Perf Page des Projects beansprucht werden oder indem man den Project-Slug bei Authentifizierung in einem späteren Aufruf von `bencher run` verwendet.
+Diese Organization kann dann per `claimed` über den Link `Claim this project` in der Ausgabe von `bencher run` beansprucht werden oder indem man den Project-Slug bei Authentifizierung in einem späteren Aufruf von `bencher run` verwendet.
 
 > 🐰 WICHTIG: Wenn die Umgebungsvariable `CI` auf `true` gesetzt ist,
 > müssen Sie entweder das Project angeben oder das [`--ci-on-the-fly` flag][ci on the fly] setzen.

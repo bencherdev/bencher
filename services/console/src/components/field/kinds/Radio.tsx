@@ -10,7 +10,9 @@ import FieldKind from "../kind";
 import { toCapitalized } from "../../../config/util";
 import { debounce } from "@solid-primitives/scheduled";
 import { DEBOUNCE_DELAY } from "../../../util/valid";
-import { DEFAULT_PAGE, DEFAULT_PER_PAGE } from "../../console/perf/PerfPanel";
+
+const DEFAULT_PER_PAGE = 8;
+const DEFAULT_PAGE = 1;
 
 export type RadioValue = string;
 

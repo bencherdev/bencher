@@ -1,7 +1,7 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { postReport } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, nextPath, seed, signedIn, test } from "./fixtures";
+import { expect, consolePath, seed, signedIn, test } from "./fixtures";
 
 // The runner project's jobs are written as the runner protocol leaves them
 // (no API takes a job through its states without a runner); everything else
@@ -39,7 +39,7 @@ const counting = (page: Page, path: string) => {
 test("the Runs list shows each run's jobs where its time lands", async ({
 	page,
 }) => {
-	await page.goto(nextPath(runner.slug, "runs"));
+	await page.goto(consolePath(runner.slug, "runs"));
 	const table = page.getByRole("table", { name: "Runs, newest first" });
 	const row = (hash: string) =>
 		table.getByRole("row").filter({ hasText: hash.slice(0, 7) });
@@ -65,7 +65,7 @@ test("the Runs list shows each run's jobs where its time lands", async ({
 test("a run page shows each report's job and asks again while one runs", async ({
 	page,
 }) => {
-	await page.goto(nextPath(runner.slug, "runs"));
+	await page.goto(consolePath(runner.slug, "runs"));
 	const asked = counting(page, `/v0/console/projects/${runner.slug}/runs`);
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
@@ -100,7 +100,7 @@ test("a run page shows each report's job and asks again while one runs", async (
 
 // Kills a run page that asks again with nothing unfinished.
 test("a finished run's page does not ask again", async ({ page }) => {
-	await page.goto(nextPath(runner.slug, "runs"));
+	await page.goto(consolePath(runner.slug, "runs"));
 	const link = page
 		.getByRole("table", { name: "Runs, newest first" })
 		.getByRole("link", { name: /run 5f3c9a0/ });
@@ -147,7 +147,7 @@ const storedKeys = (page: Page) =>
 test("a page that shows a running job never stores what it hears", async ({
 	page,
 }) => {
-	await page.goto(nextPath(runner.slug, "runs"));
+	await page.goto(consolePath(runner.slug, "runs"));
 	await expect(page.getByText("Running 48s")).toBeVisible();
 	await expect
 		.poll(async () => (await storedKeys(page)).length, { timeout: 10_000 })
@@ -163,7 +163,7 @@ test("a page that shows a running job never stores what it hears", async ({
 test("a running report says so in its heading and names its spec", async ({
 	page,
 }) => {
-	await page.goto(nextPath(runner.slug, "runs"));
+	await page.goto(consolePath(runner.slug, "runs"));
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
 		.getByRole("link", { name: new RegExp(`run ${seed.jobs_hash}`) })
@@ -186,7 +186,7 @@ test("a running report says so in its heading and names its spec", async ({
 test("blank Explore's latest runs show their jobs, and an opened run's unfinished reports show theirs", async ({
 	page,
 }) => {
-	await page.goto(nextPath(runner.slug, "explore"));
+	await page.goto(consolePath(runner.slug, "explore"));
 	const run = latest(page).getByRole("button", {
 		name: new RegExp(`^main, run ${seed.jobs_hash}, .*Running 48s$`),
 	});
@@ -227,7 +227,7 @@ test("a running run holds alerting lines that land behind Show", async ({
 	request,
 }) => {
 	const held = own(seed.projects.held);
-	await page.goto(nextPath(held.slug, "runs"));
+	await page.goto(consolePath(held.slug, "runs"));
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
 		.getByRole("link", { name: new RegExp(`run ${seed.held_hash}`) })
@@ -260,7 +260,7 @@ test("the setup card gives way to a queued job's run, which shows its status", a
 	request,
 }) => {
 	const handover = own(seed.projects.handover);
-	await page.goto(nextPath(handover.slug));
+	await page.goto(consolePath(handover.slug));
 	const card = page.getByRole("region", { name: "Send the first report" });
 	await expect(card).toBeVisible();
 	expect((await unarchive(request, handover.slug)).ok()).toBe(true);
@@ -293,7 +293,7 @@ test.describe("with motion reduced, so the running pulse rests", () => {
 	test("the Runs list of pending runs passes axe in both themes", async ({
 		page,
 	}) => {
-		await axeInBothThemes(page, nextPath(runner.slug, "runs"), async () => {
+		await axeInBothThemes(page, consolePath(runner.slug, "runs"), async () => {
 			await expect(runs(page).getByText("Queued").first()).toBeVisible();
 		});
 	});
@@ -302,7 +302,7 @@ test.describe("with motion reduced, so the running pulse rests", () => {
 	test("a running run's page passes axe in both themes", async ({ page }) => {
 		await axeInBothThemes(
 			page,
-			nextPath(runner.slug, "runs"),
+			consolePath(runner.slug, "runs"),
 			() => expect(page.locator(".rp-titlerow")).toContainText("Running"),
 			() => openRun(page),
 		);
@@ -315,7 +315,7 @@ test.describe("with motion reduced, so the running pulse rests", () => {
 	}) => {
 		await axeInBothThemes(
 			page,
-			nextPath(runner.slug, "runs"),
+			consolePath(runner.slug, "runs"),
 			() => expect(page.locator(".rp-titlerow")).toContainText("Running"),
 			async () => {
 				await openRun(page);
@@ -335,7 +335,7 @@ test.describe("with motion reduced, so the running pulse rests", () => {
 	}) => {
 		await axeInBothThemes(
 			page,
-			nextPath(runner.slug, "explore"),
+			consolePath(runner.slug, "explore"),
 			() =>
 				expect(
 					page.getByRole("region", {
@@ -363,7 +363,7 @@ test.describe("with motion reduced, so the running pulse rests", () => {
 		}
 		await axeInBothThemes(
 			page,
-			nextPath(held.slug, "runs"),
+			consolePath(held.slug, "runs"),
 			() =>
 				expect(
 					page.getByRole("status").filter({ hasText: "new line" }),

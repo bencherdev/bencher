@@ -4,28 +4,26 @@ import { describe, expect, test } from "vitest";
 import { decodeBase64 } from "../../util/convert";
 import { USER_KEY } from "../reader";
 import { VERSION_KEY } from "../memory";
-import { profilePath, projectPath } from "../paths";
-import AccountGate from "./AccountGate.astro";
-import ClassicGate from "./ClassicGate.astro";
+import { projectPath } from "../paths";
 import Landing from "./Landing.astro";
 import NextHead from "./NextHead.astro";
+import Shortcut from "./Shortcut.astro";
 
 const container = await AstroContainer.create();
 
-/** The inline script a component renders, run on a page at `url` with `storage`. */
+/** The inline scripts a component renders, run in order on a page at `url` with `storage`. */
 const run = (html: string, url: string, storage: Record<string, string>) => {
 	const page = new Window().document;
 	page.body.innerHTML = html;
-	const source = page.querySelector("script")?.textContent;
 	const replaced: string[] = [];
 	const { pathname, search, hash } = new URL(url);
-	if (source) {
-		new Function("localStorage", "location", source)(
+	for (const script of page.querySelectorAll("script")) {
+		new Function("localStorage", "location", script.textContent ?? "")(
 			{ getItem: (key: string) => storage[key] ?? null },
 			{ pathname, search, hash, replace: (to: string) => replaced.push(to) },
 		);
 	}
-	return { source, replaced };
+	return { replaced };
 };
 
 const SIGNED_IN = { [USER_KEY]: '{"token":"tok","user":{"uuid":"u"}}' };
@@ -36,7 +34,7 @@ const versions = (slug: string, version: number) => ({
 describe("NextHead", () => {
 	const next = async (url: string, storage: Record<string, string>) =>
 		run(await container.renderToString(NextHead), url, storage).replaced;
-	const URL_ = "https://bencher.dev/next/console/projects/hashbrown/runs";
+	const URL_ = "https://bencher.dev/console/projects/hashbrown/runs";
 
 	// Kills a gate that still sends a version 0 project back to the classic
 	// console, which would keep its pages out of the new one.
@@ -61,168 +59,9 @@ describe("NextHead", () => {
 			const href = new URL(to ?? "", "https://bencher.dev");
 			expect(href.pathname).toBe("/auth/login");
 			expect(decodeBase64(href.searchParams.get("back"))).toBe(
-				"/next/console/projects/hashbrown/runs?page=2#top",
+				"/console/projects/hashbrown/runs?page=2#top",
 			);
 		}
-	});
-});
-
-describe("ClassicGate", () => {
-	const classic = async (url: string, storage: Record<string, string>) =>
-		run(
-			await container.renderToString(ClassicGate, {
-				props: { slug: "hashbrown" },
-				request: new Request(url),
-			}),
-			url,
-			storage,
-		);
-	const URL_ = "https://bencher.dev/console/projects/hashbrown/reports";
-
-	// Kills a classic page that waits for its own code to leave.
-	test("a project remembered on version 1 goes to the same place under /next/", async () => {
-		expect(
-			(await classic(`${URL_}?per_page=8#top`, versions("hashbrown", 1)))
-				.replaced,
-		).toEqual(["/next/console/projects/hashbrown/runs#top"]);
-	});
-
-	// Kills a classic page that leaves for a project it should keep.
-	test("a project remembered on version 0, or not at all, stays", async () => {
-		expect((await classic(URL_, versions("hashbrown", 0))).replaced).toEqual(
-			[],
-		);
-		expect((await classic(URL_, {})).replaced).toEqual([]);
-	});
-
-	// Kills a classic perf link that arrives in Explore without its query.
-	test("the perf page goes to Explore with its query", async () => {
-		expect(
-			(
-				await classic(
-					"https://bencher.dev/console/projects/hashbrown/perf?branches=b&x_axis=version",
-					versions("hashbrown", 1),
-				)
-			).replaced,
-		).toEqual([
-			"/next/console/projects/hashbrown/explore?branches=b&x_axis=version",
-		]);
-	});
-
-	// Kills a classic page sent to "Page not found" under /next/.
-	test("a page the new console does not have stays", async () => {
-		expect(
-			(
-				await classic(
-					"https://bencher.dev/console/projects/hashbrown/metrics/abc",
-					versions("hashbrown", 1),
-				)
-			).replaced,
-		).toEqual([]);
-	});
-
-	// Kills a classic alert page that sends a reader who is not signed in to
-	// sign in under /next/, rather than where the classic page would send them,
-	// and one that keeps a signed in reader.
-	test("the classic alert page sends only a signed in reader to the new console", async () => {
-		const ALERT = "https://bencher.dev/console/projects/hashbrown/alerts/a";
-		const gate = async (storage: Record<string, string>) =>
-			run(
-				await container.renderToString(ClassicGate, {
-					props: { slug: "hashbrown", signedOut: "/perf/hashbrown/alerts/a" },
-					request: new Request(ALERT),
-				}),
-				ALERT,
-				storage,
-			).replaced;
-		expect(await gate({ ...SIGNED_IN, ...versions("hashbrown", 1) })).toEqual([
-			"/next/console/projects/hashbrown/alerts/a",
-		]);
-		expect(await gate(versions("hashbrown", 1))).toEqual([
-			"/perf/hashbrown/alerts/a",
-		]);
-		expect(await gate(versions("hashbrown", 0))).toEqual([]);
-	});
-
-	// Kills a gate on pages that are not a project's.
-	test("renders nothing outside a project", async () => {
-		expect(
-			(await classic("https://bencher.dev/console/projects", {})).source,
-		).toBeUndefined();
-	});
-});
-
-describe("ClassicGate on the public perf page", () => {
-	const URL_ =
-		"https://bencher.dev/perf/hashbrown?branches=b&x_axis=version&tab=benchmarks";
-	const NEXT = "/next/perf/hashbrown?branches=b&x_axis=version";
-	const perf = async (storage: Record<string, string>) =>
-		run(
-			await container.renderToString(ClassicGate, {
-				props: { slug: "hashbrown", next: NEXT },
-				request: new Request(URL_),
-			}),
-			URL_,
-			storage,
-		).replaced;
-
-	// Kills a public perf page that waits for its own code to leave, or that
-	// leaves with the classic page's query instead of the public plot's.
-	test("a project remembered on version 1 goes to the public plot with its query", async () => {
-		expect(await perf(versions("hashbrown", 1))).toEqual([NEXT]);
-	});
-
-	// Kills a public perf page that leaves for a project it should keep.
-	test("a project remembered on version 0, or not at all, stays", async () => {
-		expect(await perf(versions("hashbrown", 0))).toEqual([]);
-		expect(await perf({})).toEqual([]);
-	});
-});
-
-describe("AccountGate", () => {
-	const URL_ = "https://bencher.dev/console/users/muriel-bagge/settings#top";
-	const gate = async (storage: Record<string, string>) =>
-		run(
-			await container.renderToString(AccountGate, {
-				props: { next: profilePath("muriel-bagge") },
-				request: new Request(URL_),
-			}),
-			URL_,
-			storage,
-		).replaced;
-
-	// Kills a classic Profile that waits for its own code to leave, or that
-	// asks the version of one project rather than any.
-	test("a reader with a version 1 project goes to Profile under /next/", async () => {
-		expect(
-			await gate({
-				[VERSION_KEY]: JSON.stringify({ "crinkle-cut": 0, hashbrown: 1 }),
-			}),
-		).toEqual([profilePath("muriel-bagge")]);
-	});
-
-	// Kills a gate that drops the query, such as the pricing page's plan.
-	test("the query goes along", async () => {
-		const url =
-			"https://bencher.dev/console/users/muriel-bagge/settings?plan=pro";
-		expect(
-			run(
-				await container.renderToString(AccountGate, {
-					props: { next: profilePath("muriel-bagge") },
-					request: new Request(url),
-				}),
-				url,
-				versions("hashbrown", 1),
-			).replaced,
-		).toEqual([`${profilePath("muriel-bagge")}?plan=pro`]);
-	});
-
-	// Kills a gate that moves a reader of version 0 projects only, or one
-	// that fails on a memory it cannot read.
-	test("a reader without a version 1 project stays", async () => {
-		expect(await gate(versions("crinkle-cut", 0))).toEqual([]);
-		expect(await gate({})).toEqual([]);
-		expect(await gate({ [VERSION_KEY]: "{" })).toEqual([]);
 	});
 });
 
@@ -243,6 +82,13 @@ describe("Landing", () => {
 	// on, or a script that reads other keys than the landing's.
 	test("a signed in reader goes to the main project before the page loads", async () => {
 		expect(await land({ ...reader, ...versions("hashbrown", 1) })).toEqual([
+			projectPath("hashbrown"),
+		]);
+	});
+
+	// Kills a version 0 project sent anywhere but its root in the console.
+	test("a version 0 project lands on its root too", async () => {
+		expect(await land({ ...reader, ...versions("hashbrown", 0) })).toEqual([
 			projectPath("hashbrown"),
 		]);
 	});
@@ -273,5 +119,51 @@ describe("Landing", () => {
 			}),
 		};
 		expect(await land({ ...expired, ...versions("hashbrown", 1) })).toEqual([]);
+	});
+});
+
+describe("Shortcut", () => {
+	const go = async (url: string, storage: Record<string, string>) =>
+		run(
+			await container.renderToString(Shortcut, { request: new Request(url) }),
+			url,
+			storage,
+		).replaced;
+	const reader = {
+		[USER_KEY]: JSON.stringify({
+			token: "tok",
+			user: { slug: "muriel-bagge" },
+		}),
+	};
+
+	// Kills a shortcut that names no user sent anywhere but the reader's own
+	// page of the same kind.
+	test("a signed in reader lands on their own page", async () => {
+		const cases: [string, string][] = [
+			["/console/users", "settings"],
+			["/console/users/settings", "settings"],
+			["/console/users/keys/add", "keys"],
+			["/console/users/tokens", "tokens"],
+		];
+		for (const [path, page] of cases) {
+			expect(await go(`https://bencher.dev${path}`, reader), path).toEqual([
+				`/console/users/muriel-bagge/${page}`,
+			]);
+		}
+	});
+
+	// Kills a reader who is not signed in left on a blank page, and one sent
+	// to sign in without the shortcut to return to.
+	test("a reader who is not signed in goes to sign in and back", async () => {
+		const [to, ...rest] = await go(
+			"https://bencher.dev/console/users/keys/add",
+			{},
+		);
+		expect(rest).toEqual([]);
+		const href = new URL(to ?? "", "https://bencher.dev");
+		expect(href.pathname).toBe("/auth/login");
+		expect(decodeBase64(href.searchParams.get("back"))).toBe(
+			"/console/users/keys/add",
+		);
 	});
 });

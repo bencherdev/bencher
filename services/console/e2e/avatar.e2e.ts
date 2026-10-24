@@ -6,7 +6,7 @@ import {
 	USER_KEY,
 	VERSION_KEY,
 	expect,
-	nextPath,
+	consolePath,
 	persistedQueries,
 	seed,
 	signedIn,
@@ -15,7 +15,7 @@ import {
 } from "./fixtures";
 
 const { hashbrown, iterations } = seed.projects;
-const RUNS = nextPath(hashbrown.slug, "runs");
+const RUNS = consolePath(hashbrown.slug, "runs");
 
 test.use({ storageState: signedIn(seed.member) });
 
@@ -111,7 +111,7 @@ test.describe("on a phone", () => {
 			.getByRole("option", { name: new RegExp(`^${iterations.name}`) })
 			.click();
 
-		await expect(page).toHaveURL(nextPath(iterations.slug));
+		await expect(page).toHaveURL(consolePath(iterations.slug));
 		await expect(sheet(page)).toBeHidden();
 		expect(documents).toEqual([]);
 	});

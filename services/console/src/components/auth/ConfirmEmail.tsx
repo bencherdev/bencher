@@ -3,7 +3,8 @@ import { Match, Show, Switch, createResource, createSignal } from "solid-js";
 import type { JsonAuthUser, JsonConfirm, Jwt } from "../../types/bencher";
 import { getUserRaw, setUser } from "../../util/auth";
 import { httpPut } from "../../util/http";
-import { NotifyKind, notifyPath } from "../../util/notify";
+import { deleteCache } from "../../next/idb";
+import { profilePath } from "../../next/paths";
 import { hiddenRedirect, useSearchParams } from "../../util/url";
 import { init_valid, validJwt, validUuid } from "../../util/valid";
 import { TOKEN_PARAM, USER_PARAM } from "./auth";
@@ -41,15 +42,9 @@ const ConfirmEmail = (props: Props) => {
 					if (!setUser(authUser)) {
 						return EmailState.Failed;
 					}
-					hiddenRedirect(
-						notifyPath(
-							NotifyKind.OK,
-							`Your email is now ${authUser.user.email}.`,
-							`/console/users/${authUser.user.slug}/settings`,
-							null,
-							null,
-						),
-					);
+					// The console's saved responses still hold the email just replaced.
+					deleteCache();
+					hiddenRedirect(profilePath(authUser.user.slug));
 					return EmailState.Confirming;
 				})
 				.catch((error) => {

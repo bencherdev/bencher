@@ -239,10 +239,7 @@ test("a branch's page shows its start point, head, recent runs, and thresholds",
 	await expect.element(head).toHaveTextContent(/main at 4e02c1d/);
 	await expect
 		.element(head.getByRole("link", { name: "main" }))
-		.toHaveAttribute(
-			"href",
-			"/next/console/projects/hashbrown/branches/main-uuid",
-		);
+		.toHaveAttribute("href", "/console/projects/hashbrown/branches/main-uuid");
 	const thresholds = page.getByRole("table", { name: "Thresholds" });
 	const link = thresholds.getByRole("link", {
 		name: "macos-arm64, threshold for Latency on 412/merge, macos-arm64",
@@ -251,7 +248,7 @@ test("a branch's page shows its start point, head, recent runs, and thresholds",
 		.element(link)
 		.toHaveAttribute(
 			"href",
-			"/next/console/projects/hashbrown/thresholds/threshold-macos-arm64",
+			"/console/projects/hashbrown/thresholds/threshold-macos-arm64",
 		);
 	expectNameStartsWithText(link.element());
 	await expect
@@ -263,10 +260,7 @@ test("a branch's page shows its start point, head, recent runs, and thresholds",
 	});
 	await expect
 		.element(run)
-		.toHaveAttribute(
-			"href",
-			`/next/console/projects/hashbrown/runs/${RUN.uuid}`,
-		);
+		.toHaveAttribute("href", `/console/projects/hashbrown/runs/${RUN.uuid}`);
 	expectNameStartsWithText(run.element());
 	await expect
 		.element(recent.getByRole("row").nth(1))
@@ -283,7 +277,7 @@ test("a branch's page shows its start point, head, recent runs, and thresholds",
 		.element(page.getByRole("link", { name: "All runs on 412/merge" }))
 		.toHaveAttribute(
 			"href",
-			"/next/console/projects/hashbrown/runs?branch=412-merge&window=all",
+			"/console/projects/hashbrown/runs?branch=412-merge&window=all",
 		);
 });
 
@@ -403,15 +397,12 @@ test("a testbed's page leads its spec with its name and slug and lists its recen
 				name: /, run 9c1f2e4 on 412\/merge, 2 reports$/,
 			}),
 		)
-		.toHaveAttribute(
-			"href",
-			`/next/console/projects/hashbrown/runs/${RUN.uuid}`,
-		);
+		.toHaveAttribute("href", `/console/projects/hashbrown/runs/${RUN.uuid}`);
 	await expect
 		.element(page.getByRole("link", { name: "All runs on ubuntu-latest" }))
 		.toHaveAttribute(
 			"href",
-			"/next/console/projects/hashbrown/runs?testbed=ubuntu-latest&window=all",
+			"/console/projects/hashbrown/runs?testbed=ubuntu-latest&window=all",
 		);
 });
 

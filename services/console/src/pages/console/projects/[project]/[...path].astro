@@ -1,0 +1,77 @@
+---
+// Every path under a project answers with this one document: the shell and a
+// skeleton, painted before any script runs. The app routes from there.
+export const prerender = false;
+
+import { BENCHER_API_URL } from "astro:env/server";
+
+import { classicRedirect } from "../../../../next/classic";
+import ContentSkeleton from "../../../../next/ContentSkeleton";
+import Head from "../../../../next/Head.astro";
+import Main from "../../../../next/astro/Main.astro";
+import NextHead from "../../../../next/astro/NextHead.astro";
+import ShellPaint from "../../../../next/astro/ShellPaint.astro";
+import { drawsPlot } from "../../../../next/explore/request";
+import { pageName, parseConsolePath, tabOf } from "../../../../next/paths";
+import { modulePreloads } from "../../../../next/preloads";
+import { decodeQuery } from "../../../../next/query/query";
+import Shell from "../../../../next/shell/Shell";
+import "@bencherdev/ui/styles.css";
+import "../../../../next/styles/console.css";
+import "../../../../next/explore/explore.css";
+import "../../../../next/reports/reports.css";
+import "../../../../next/plot/plot.css";
+import "../../../../next/report/report.css";
+import "../../../../next/thresholds/thresholds.css";
+import "../../../../next/dimensions/dimensions.css";
+import "../../../../next/alerts/alerts.css";
+import "../../../../next/plots/plots.css";
+import "../../../../next/public/public.css";
+import "../../../../next/feedback/feedback.css";
+import "../../../../next/switcher/switcher.css";
+
+const classic = classicRedirect(Astro.url);
+if (classic) {
+	return Astro.redirect(classic, 301);
+}
+const slug = Astro.params.project ?? "";
+const place = parseConsolePath(Astro.url.pathname);
+const tab = place && tabOf(place.rest);
+const page = place ? pageName(place.rest) : "NotFound";
+// A link that draws a plot asks for the plot's code with the page's.
+const plot =
+	page === "Plots" ||
+	page === "Alert" ||
+	(page === "Explore" && drawsPlot(decodeQuery(Astro.url.search)));
+// A metric's landing replaces itself with Explore on its line, whose code it asks for too.
+const preloads =
+	page === "Metric"
+		? [
+				...new Set([
+					...modulePreloads(page),
+					...modulePreloads("Explore", ["plot/Plot", "metric/explore"]),
+				]),
+			]
+		: modulePreloads(page, plot ? ["plot/Plot"] : []);
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{slug} | Bencher</title>
+		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+		<NextHead />
+		<Head />
+		{preloads.map((href) => <link rel="modulepreload" href={href} />)}
+	</head>
+	<body>
+		<div id="console" class="console" data-api-url={BENCHER_API_URL}>
+			<Shell slug={slug} tab={tab} />
+			<ContentSkeleton />
+		</div>
+		<ShellPaint slug={slug} />
+		<Main />
+	</body>
+</html>

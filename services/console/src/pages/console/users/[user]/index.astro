@@ -1,5 +1,11 @@
 ---
 export const prerender = false;
 
-return Astro.redirect(`/console/users/${Astro.params.user}/settings`);
+import { classicRedirect } from "../../../../next/classic";
+
+const to = classicRedirect(Astro.url);
+if (to) {
+	return Astro.redirect(to, 301);
+}
+return Astro.rewrite("/404");
 ---

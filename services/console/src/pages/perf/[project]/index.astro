@@ -1,110 +1,63 @@
 ---
+// The browser reads the project and its plot, so the server reads nothing.
 export const prerender = false;
 
-import { BENCHER_API_URL, INTERNAL_API_URL } from "astro:env/server";
-import { IS_BENCHER_CLOUD } from "astro:env/client";
+import { BENCHER_API_URL } from "astro:env/server";
 
-import PerfLayout from "../../../layouts/perf/PerfLayout.astro";
-import PublicProject from "../../../components/perf/PublicProject";
-import type { JsonProject } from "../../../types/bencher";
-import Tetris from "../../../components/site/Tetris.astro";
-import Notification from "../../../components/site/Notification";
-import ReconnectingBanner from "../../../components/site/ReconnectingBanner";
-import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
-import FallbackPerfPanel from "../../../components/console/perf/FallbackPerfPanel.astro";
-import ClassicGate from "../../../next/astro/ClassicGate.astro";
-import { publicPlotHref } from "../../../next/public/query";
-import * as Sentry from "@sentry/astro";
+import Head from "../../../next/Head.astro";
+import { drawable } from "../../../next/explore/request";
+import { perfPreloads } from "../../../next/preloads";
+import Public from "../../../next/public/Public";
+import { publicPlotPath } from "../../../next/public/query";
+import { decodeQuery } from "../../../next/query/query";
+import { USER_KEY, signInHref } from "../../../next/reader";
+import { BENCHER_OG_IMAGE, BENCHER_SITE_URL } from "../../../util/ext";
+import "../../../next/public/page.css";
 
-const params = Astro.params;
-const getProjectUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
-	params.project
-}`;
-
-let jsonProject: undefined | JsonProject;
-let title = "Public Project";
-let description =
-	"View continuous benchmarking results and performance regressions on Bencher";
-let notFound = false;
-if (params.project && params.project !== "undefined") {
-	try {
-		const projectResponse = await fetchSSR(getProjectUrl);
-		jsonProject = await projectResponse.json();
-		if (jsonProject?.uuid) {
-			title = `${jsonProject?.name}`;
-			description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
-		} else {
-			title = "Not Found";
-			description = "Public Project not found";
-			notFound = true;
-		}
-	} catch (e) {
-		console.error(`Failed to fetch project data: ${e}`);
-		Sentry.captureException(e);
-	}
-}
-
-// A version 1 project's public plot lives under /next/, and a project this
-// page could not read may be one the reader has seen there.
-const nextPlot =
-	params.project && publicPlotHref(params.project, Astro.url.search);
-if (nextPlot && jsonProject?.uuid && jsonProject.bmf_version === 1) {
-	return Astro.redirect(nextPlot);
-}
-
-let image: undefined | string;
-if (hasPerfImage(Astro.url)) {
-	image = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
-		params.project
-	}/perf/img${Astro.url.search}`;
-}
-
-// GitHub query for use of imgs:
-// /https:\/\/api.bencher.dev\/v0\/projects\/.*\/perf/
+const slug = Astro.params.project ?? "";
+const query = decodeQuery(Astro.url.search);
+const title = `${slug} | Bencher`;
 ---
 
-<PerfLayout
-  title={title}
-  titleFmt={(title) => `📈 ${title}`}
-  description={description}
-  published={jsonProject?.created}
-  modified={jsonProject?.modified}
-  image={image}
->
-  { !jsonProject?.uuid && <ClassicGate slot="head" slug={params.project} next={nextPlot} /> }
-  { notFound ?
-  <section class="section">
-    <div class="container">
-      <div class="columns">
-        <div class="column">
-          <h1 class="title is-1">Project Not Found</h1>
-          <hr />
-          <p>Could not find Project: <code>{params.project}</code></p>
-          <p>The Project may be private or it may not exist.</p>
-          <br />
-          <a class="button" href="/perf">Go to Public Projects</a>
-        </div>
-        <div class="column">
-          <Tetris />
-        </div>
-      </div>
-    </div>
-  </section>
-  :
-  <>
-    <ReconnectingBanner client:only="solid-js" />
-    <Notification client:only="solid-js" />
-    <PublicProject client:only="solid-js" apiUrl={BENCHER_API_URL} isBencherCloud={IS_BENCHER_CLOUD} params={params} project={jsonProject}>
-      <section slot="fallback" class="section">
-        <div class="container">
-          <div class="columns">
-            <div class="column">
-              <FallbackPerfPanel  />
-            </div>
-          </div>
-        </div>
-      </section>
-    </PublicProject>
-  </>
-  }
-</PerfLayout>
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title}</title>
+		<meta
+			name="description"
+			content={`${slug} performance over time, continuously benchmarked with Bencher`}
+		/>
+		<meta property="og:title" content={title} />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={`${BENCHER_SITE_URL}${publicPlotPath(slug)}`} />
+		<meta property="og:image" content={BENCHER_OG_IMAGE} />
+		<meta name="twitter:card" content="summary_large_image" />
+		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+		<script is:inline define:vars={{ USER_KEY }}>
+			try {
+				var reader = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+				if (reader && reader.token && Date.parse(reader.expiration) > Date.now()) {
+					document.documentElement.setAttribute("data-reader", "");
+				}
+			} catch (_) {}
+		</script>
+		<Head />
+		{perfPreloads(drawable(query) ? ["plot/Plot"] : []).map((href) => <link rel="modulepreload" href={href} />)}
+	</head>
+	<body>
+		<div id="public" class="console" data-api-url={BENCHER_API_URL} data-slug={slug}>
+			<Public
+				slug={slug}
+				name={slug}
+				query={query}
+				signIn={signInHref(`${Astro.url.pathname}${Astro.url.search}`)}
+				view="plot"
+			/>
+		</div>
+		<script>
+			import "../../../next/public/main";
+		</script>
+	</body>
+</html>

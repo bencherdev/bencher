@@ -26,25 +26,23 @@ test.describe("a new email", () => {
 		const newEmail = `new-${reader.user.email}`;
 
 		await page.goto(settings(reader.user.slug));
-		const card = page.locator("#Email");
-		await card.getByRole("button", { name: "Update" }).click();
-		await card.getByRole("textbox").fill(newEmail);
-		await card.getByRole("button", { name: "Save" }).click();
+		const email = page.getByRole("textbox", { name: "Email" });
+		await expect(email).toHaveValue(reader.user.email);
+		await email.fill(newEmail);
+		await page.getByRole("button", { name: "Save changes" }).click();
 		await expect(
-			page.getByText(`We've sent a confirm link to ${newEmail}.`),
-		).toBeVisible();
-		await expect(page).toHaveURL(new RegExp(settings(reader.user.slug)));
-		await expect(card.getByRole("textbox")).toHaveValue(reader.user.email);
+			page.getByRole("status").filter({ hasText: "Confirm link" }),
+		).toHaveText(`Confirm link sent to ${newEmail}`);
+		await expect(page).toHaveURL(settings(reader.user.slug));
+		await expect(email).toHaveValue(reader.user.email);
+		expect((await storedUser(page)).token).toBe(reader.token);
 
 		const link = await mailedLink(newEmail, "Confirm Bencher Email Change");
 		expect(link.pathname).toBe("/auth/email");
 		await page.goto(link.href);
 		await page.getByRole("button", { name: "Change email" }).click();
-		await expect(
-			page.getByText(`Your email is now ${newEmail}.`),
-		).toBeVisible();
-		await expect(page).toHaveURL(new RegExp(settings(reader.user.slug)));
-		await expect(page.locator("#Email").getByRole("textbox")).toHaveValue(
+		await expect(page).toHaveURL(settings(reader.user.slug));
+		await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(
 			newEmail,
 		);
 		const stored = await storedUser(page);
@@ -99,10 +97,10 @@ test.describe("a confirm link", () => {
 
 		await page.goto(link.href);
 		await page.getByRole("button", { name: "Change email" }).click();
-		await expect(
-			page.getByText(`Your email is now ${newEmail}.`),
-		).toBeVisible();
-		await expect(page).toHaveURL(new RegExp(settings(reader.user.slug)));
+		await expect(page).toHaveURL(settings(reader.user.slug));
+		await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(
+			newEmail,
+		);
 		expect((await storedUser(page)).user.email).toBe(newEmail);
 		expect(await apiEmail(request, reader)).toBe(newEmail);
 	});

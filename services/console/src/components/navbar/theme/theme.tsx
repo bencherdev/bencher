@@ -29,7 +29,7 @@ export enum ThemeId {
 	Dark = DARK_THEME_ID,
 }
 
-export const getColorScheme = () => {
+const getColorScheme = () => {
 	if (window.matchMedia("(prefers-color-scheme: light)").matches) {
 		return Theme.Light;
 	}

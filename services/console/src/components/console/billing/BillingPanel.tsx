@@ -10,9 +10,7 @@ import {
 	createResource,
 	createSignal,
 } from "solid-js";
-import consoleConfig from "../../../config/console";
-import { Host } from "../../../config/organization/billing";
-import { BencherResource } from "../../../config/types";
+import billingConfig, { Host } from "../../../config/organization/billing";
 import {
 	type JsonAuthUser,
 	type JsonUsage,
@@ -68,7 +66,7 @@ const BillingPanel = (props: Props) => {
 	const user = authUser();
 	const config = createMemo<BillingPanelConfig>(
 		() =>
-			consoleConfig[BencherResource.BILLING]?.[
+			billingConfig[
 				props.isBencherCloud ? Host.BENCHER_CLOUD : Host.SELF_HOSTED
 			],
 	);

@@ -14,14 +14,14 @@ interface Props {
 	suppressNotification?: undefined | boolean;
 }
 
-const { apiUrl, params, title, redirect, suppressNotification } = Astro.props;
+const { title, redirect, suppressNotification } = Astro.props;
 const description =
 	"Sign up for Bencher! Add Continuous Benchmarking to your project and catch performance regressions before they merge.";
 ---
 
 <BaseLayout title={title} description={description}>
   <slot name="head" slot="head" />
-  <ConsoleNavbar slot="navbar" apiUrl={apiUrl} params={params} />
+  <ConsoleNavbar slot="navbar" />
   <AnonRedirect client:only="solid-js" path={redirect ?? "/auth/login"} />
   <div class="columns is-reverse-mobile">
     <div class="columns">

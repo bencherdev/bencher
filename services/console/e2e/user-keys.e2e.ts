@@ -1,11 +1,11 @@
 import type { Page } from "@playwright/test";
 import { createUserKey, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { VERSION_KEY, expect, seed, settle, signedIn, test } from "./fixtures";
+import { expect, seed, settle, signedIn, test } from "./fixtures";
 
 const { slug } = seed.member.user;
-const keysPath = `/next/console/users/${slug}/keys`;
-const tokensPath = `/next/console/users/${slug}/tokens`;
+const keysPath = `/console/users/${slug}/keys`;
+const tokensPath = `/console/users/${slug}/tokens`;
 const TOKENS = `${seed.api_url}/v0/users/${slug}/tokens`;
 
 const status = (page: Page) => page.getByRole("main").getByRole("status");
@@ -166,7 +166,7 @@ test.describe("Legacy tokens", () => {
 		page,
 	}) => {
 		await twoLegacyTokens(page);
-		await page.goto(`/next/console/users/${slug}/settings`);
+		await page.goto(`/console/users/${slug}/settings`);
 		await page.evaluate(() => {
 			(window as Window & { stayed?: boolean }).stayed = true;
 		});
@@ -198,56 +198,6 @@ test.describe("Legacy tokens", () => {
 		await settle(page, 1_500);
 		expect(await stored(page)).not.toContain("legacy-secret");
 	});
-});
-
-test.describe("the classic pages, for a reader with a version 1 project", () => {
-	test.use({
-		storageState: signedIn(seed.member, {
-			[VERSION_KEY]: JSON.stringify({
-				[seed.projects.hashbrown.slug]: 1,
-			}),
-		}),
-	});
-
-	// Kills a classic Keys or legacy tokens page that keeps a reader the new
-	// one serves, or sends them to another page.
-	for (const [classic, next, title] of [
-		[`/console/users/${slug}/keys`, keysPath, "Keys"],
-		[`/console/users/${slug}/tokens`, tokensPath, "Legacy tokens"],
-	] as const) {
-		test(`${classic} sends the reader to ${title} under /next/`, async ({
-			page,
-		}) => {
-			await page.goto(classic);
-			await expect(page).toHaveURL(next);
-			await expect(
-				page.getByRole("heading", { level: 1, name: title }),
-			).toBeVisible();
-		});
-	}
-});
-
-test.describe("the classic pages, for a reader of version 0 projects only", () => {
-	test.use({
-		storageState: signedIn(seed.member, {
-			[VERSION_KEY]: JSON.stringify({
-				[seed.projects.version_zero.slug]: 0,
-			}),
-		}),
-	});
-
-	// Kills a classic page that sends away a reader the new one does not serve.
-	for (const path of [
-		`/console/users/${slug}/keys`,
-		`/console/users/${slug}/tokens`,
-	]) {
-		test(`${path} keeps the reader`, async ({ page }) => {
-			await page.goto(path);
-			await page.waitForLoadState("networkidle");
-			// The classic list adds its paging to the query.
-			expect(new URL(page.url()).pathname).toBe(path);
-		});
-	}
 });
 
 test.describe("accessibility", () => {

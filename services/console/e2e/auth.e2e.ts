@@ -1,7 +1,7 @@
 import {
 	USER_KEY,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	signedIn,
 	signedOut,
@@ -19,7 +19,7 @@ test.describe("signed out", () => {
 	test("the private project sends the reader to sign in with the way back", async ({
 		page,
 	}) => {
-		const path = nextPath(seed.projects.private.slug, "runs");
+		const path = consolePath(seed.projects.private.slug, "runs");
 		await page.goto(path);
 		await expect(page).toHaveURL(signInWayBack(path));
 	});
@@ -49,7 +49,7 @@ test.describe("signed in", () => {
 		await page.route(`${seed.api_url}/v0/console/projects/**`, (route) =>
 			route.fulfill({ status: 401, json: { message: "Unauthorized" } }),
 		);
-		const path = nextPath(seed.projects.hashbrown.slug, "alerts");
+		const path = consolePath(seed.projects.hashbrown.slug, "alerts");
 		await page.goto(path);
 		await expect(page).toHaveURL(signInWayBack(path));
 		expect(
@@ -70,7 +70,7 @@ test.describe("with a badly signed token", () => {
 	// Kills a client that reads the API's 400 for a token it cannot validate as
 	// an empty project instead of a reader who must sign in again.
 	test("the reader is sent to sign in with the way back", async ({ page }) => {
-		const path = nextPath(seed.projects.hashbrown.slug, "alerts");
+		const path = consolePath(seed.projects.hashbrown.slug, "alerts");
 		await page.goto(path);
 		await expect(page).toHaveURL(signInWayBack(path));
 	});

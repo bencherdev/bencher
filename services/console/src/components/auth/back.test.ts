@@ -31,18 +31,18 @@ describe("backPage", () => {
 	test("is the named page, whole and absolute on the origin", () => {
 		expect(
 			backPage(
-				b64("/next/console/projects/hashbrown/alerts?status=all#top"),
+				b64("/console/projects/hashbrown/alerts?status=all#top"),
 				ORIGIN,
 			),
-		).toBe(`${ORIGIN}/next/console/projects/hashbrown/alerts?status=all#top`);
+		).toBe(`${ORIGIN}/console/projects/hashbrown/alerts?status=all#top`);
 		expect(backPage(b64("/perf/hashbrown?é=1"), ORIGIN)).toBe(
 			`${ORIGIN}/perf/hashbrown?%C3%A9=1`,
 		);
-		expect(backPage(b64(`${ORIGIN}/next/console/projects//evil`), ORIGIN)).toBe(
-			`${ORIGIN}/next/console/projects//evil`,
+		expect(backPage(b64(`${ORIGIN}/console/projects//evil`), ORIGIN)).toBe(
+			`${ORIGIN}/console/projects//evil`,
 		);
-		expect(backPage(b64("/next/console/projects/%2F%2Fevil"), ORIGIN)).toBe(
-			`${ORIGIN}/next/console/projects/%2F%2Fevil`,
+		expect(backPage(b64("/console/projects/%2F%2Fevil"), ORIGIN)).toBe(
+			`${ORIGIN}/console/projects/%2F%2Fevil`,
 		);
 	});
 
@@ -51,36 +51,39 @@ describe("backPage", () => {
 	test("is a console or public plot page in any of its own encodings", () => {
 		for (const back of [
 			"/console",
-			"/next/console/projects/hashbrown/",
-			"/next/console/projects/hashbrown/explore?q=%25&x=%2561#a%25b",
+			"/console/projects/hashbrown/",
+			"/console/projects/hashbrown/explore?q=%25&x=%2561#a%25b",
 			"/perf/hashbrown?heads=%25",
-			"/next/perf/hashbrown/embed?title=50%25%20faster",
-			"/next/console/projects/caf%C3%A9/",
+			"/perf/hashbrown/embed?title=50%25%20faster",
+			"/console/projects/caf%C3%A9/",
 			"/console/projects/hashbrown/perf?clear=true#x%20y",
-			"/next/console/projects/hashbrown/runs/0b5c4f6e-2a1d-4c3b-9e8f-7a6b5c4d3e2f",
+			"/console/projects/hashbrown/runs/0b5c4f6e-2a1d-4c3b-9e8f-7a6b5c4d3e2f",
 		]) {
 			expect(backPage(b64(back), ORIGIN), back).toBe(`${ORIGIN}${back}`);
 		}
 	});
 
-	// Kills a return to a page outside the console and the public plot, or one
-	// whose dot segments or backslashes resolve outside them once decoded.
+	// Kills a return to a page outside the console and the public plot, the
+	// console's retired prefix included, or one whose dot segments or
+	// backslashes resolve outside them once decoded.
 	test("is nothing outside the console and the public plot", () => {
 		for (const back of [
 			"/x/..%2fauth/logout",
 			"/x/..%5Cauth/logout",
-			"/next/console/..%2f..%2fauth/logout",
+			"/console/..%2f..%2fauth/logout",
 			"/perf/..%2fauth/logout",
 			"/perf/..%5Cauth/logout",
 			"/perf/..%252fauth/logout",
-			"/next/perf/%2e%2e%2fauth/logout",
+			"/perf/%2e%2e%2fauth/logout",
 			"/console/x%5Cy/..%2f..%2fauth/logout",
 			"/perf/a%5Cb/..%2f..%2fauth/logout",
 			"/console/x%5Cy/%2e%2e%2f%2e%2e%2fauth/logout",
-			"/next/console/a%5Cb%5Cc/..%2f..%2f..%2fauth/authorize?request=0b5c4f6e-2a1d-4c3b-9e8f-7a6b5c4d3e2f",
+			"/console/a%5Cb%5Cc/..%2f..%2f..%2fauth/authorize?request=0b5c4f6e-2a1d-4c3b-9e8f-7a6b5c4d3e2f",
 			"/perf/%5C..%5C..%5Cauth/logout",
 			"/console/%2e%2fprojects/hashbrown",
 			"/consoles/",
+			"/next/console/projects/hashbrown/",
+			"/next/perf/hashbrown",
 			"/docs/",
 			"/pricing",
 			"/",
@@ -103,10 +106,10 @@ describe("backPage", () => {
 			"/\\evil.com",
 			" //evil.com",
 			"https://evil.com",
-			"HTTPS://EVIL.COM/next/console",
-			`${ORIGIN}.evil.com/next/console`,
-			`${ORIGIN}@evil.com/next/console`,
-			"http://bencher.example/next/console",
+			"HTTPS://EVIL.COM/console",
+			`${ORIGIN}.evil.com/console`,
+			`${ORIGIN}@evil.com/console`,
+			"http://bencher.example/console",
 			"https://api.bencher.example/v0/projects",
 			`blob:${ORIGIN}/0b5c4f6e-2a1d-4c3b-9e8f-7a6b5c4d3e2f`,
 		]) {
@@ -134,7 +137,7 @@ describe("backPage", () => {
 			"/_image?href=x",
 			"/robots.txt",
 			"/perf/hashbrown/robots.txt",
-			"/next/console/projects/hashbrown/main.js",
+			"/console/projects/hashbrown/main.js",
 			"/v0/bmf.json",
 		]) {
 			expect(backPage(b64(back), ORIGIN), back).toBeUndefined();
@@ -153,9 +156,9 @@ describe("keepReturn", () => {
 	// Kills a sign in page that does not keep the page, or keeps one it refuses.
 	test("keeps a page and forgets any other value", () => {
 		const storage = memory();
-		keepReturn(storage, b64("/next/console/projects/hashbrown/"), ORIGIN, NOW);
+		keepReturn(storage, b64("/console/projects/hashbrown/"), ORIGIN, NOW);
 		expect(JSON.parse(storage.map.get(KEY) ?? "null")).toEqual({
-			href: `${ORIGIN}/next/console/projects/hashbrown/`,
+			href: `${ORIGIN}/console/projects/hashbrown/`,
 			at: NOW,
 		});
 		keepReturn(storage, b64("https://evil.com"), ORIGIN, NOW);
@@ -191,7 +194,7 @@ describe("takeReturn", () => {
 	// script or an older console wrote is checked again when read.
 	test("checks the kept page again", () => {
 		for (const value of [
-			kept("https://evil.com/next/console"),
+			kept("https://evil.com/console"),
 			kept("javascript:alert(1)"),
 			kept(`${ORIGIN}/auth/logout`),
 			kept(`${ORIGIN}/%61uth/logout`),

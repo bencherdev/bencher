@@ -2,16 +2,10 @@ import type { Page } from "@playwright/test";
 import type { JsonMember } from "../src/types/bencher";
 import { createMember, createOrganization, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { VERSION_KEY, expect, seed, signedIn, test } from "./fixtures";
-
-const { hashbrown, version_zero } = seed.projects;
+import { expect, seed, signedIn, test } from "./fixtures";
 
 const membersPath = (organization: string) =>
-	`/next/console/organizations/${organization}/members`;
-const classicMembers = (organization: string) =>
 	`/console/organizations/${organization}/members`;
-const heading = (page: Page) =>
-	page.getByRole("heading", { level: 1, name: "Members" });
 const table = (page: Page) => page.getByRole("table", { name: "Members" });
 
 test.use({ storageState: signedIn(seed.member) });
@@ -83,7 +77,7 @@ test.describe("from General", () => {
 	// page, or a title left on General.
 	test("the rail opens Members without a reload", async ({ page }) => {
 		await page.goto(
-			`/next/console/organizations/${seed.organization.slug}/settings`,
+			`/console/organizations/${seed.organization.slug}/settings`,
 		);
 		await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
 			seed.organization.name,
@@ -109,35 +103,6 @@ test.describe("from General", () => {
 				() => (window as Window & { stayed?: boolean }).stayed,
 			),
 		).toBe(true);
-	});
-});
-
-const remembered = (versions: Record<string, number>) =>
-	signedIn(seed.member, { [VERSION_KEY]: JSON.stringify(versions) });
-
-test.describe("the classic members, for a reader with a version 1 project", () => {
-	test.use({ storageState: remembered({ [hashbrown.slug]: 1 }) });
-
-	// Kills a classic members page that keeps a reader the new one serves.
-	test("sends the reader to Members under /next/", async ({ page }) => {
-		await page.goto(classicMembers(seed.organization.slug));
-
-		await expect(page).toHaveURL(membersPath(seed.organization.slug));
-		await expect(heading(page)).toBeVisible();
-	});
-});
-
-test.describe("the classic members, for a reader of version 0 projects only", () => {
-	test.use({ storageState: remembered({ [version_zero.slug]: 0 }) });
-
-	// Kills a classic members page that sends away a reader the new one does not serve.
-	test("keeps the reader", async ({ page }) => {
-		await page.goto(classicMembers(seed.organization.slug));
-		await page.waitForLoadState("networkidle");
-
-		expect(new URL(page.url()).pathname).toBe(
-			classicMembers(seed.organization.slug),
-		);
 	});
 });
 

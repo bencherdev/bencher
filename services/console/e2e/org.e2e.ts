@@ -11,17 +11,15 @@ import {
 	VERSION_KEY,
 	crumb,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	signedIn,
 	test,
 } from "./fixtures";
 
-const { hashbrown, version_zero } = seed.projects;
+const { hashbrown } = seed.projects;
 
 const generalPath = (organization: string) =>
-	`/next/console/organizations/${organization}/settings`;
-const classicGeneral = (organization: string) =>
 	`/console/organizations/${organization}/settings`;
 const heading = (page: Page) =>
 	page.getByRole("heading", { level: 1, name: "General" });
@@ -122,7 +120,7 @@ test.describe("General", () => {
 			.fill(organization.slug);
 		await confirm.click();
 
-		await expect(page).toHaveURL("/next/console/organizations");
+		await expect(page).toHaveURL("/console/organizations");
 		expect((await readOrganization(request, organization.slug)).status()).toBe(
 			404,
 		);
@@ -133,13 +131,13 @@ test.describe("General", () => {
 		expect(versions).toEqual({ [hashbrown.slug]: 1 });
 	});
 
-	// Kills the classic shortcuts to an organization lost under /next/.
+	// Kills the classic paths to an organization left with no page.
 	test("the organization's root and its projects open General", async ({
 		page,
 	}) => {
 		for (const path of ["", "/projects"]) {
 			await page.goto(
-				`/next/console/organizations/${seed.organization.slug}${path}`,
+				`/console/organizations/${seed.organization.slug}${path}`,
 			);
 			await expect(page).toHaveURL(generalPath(seed.organization.slug));
 			await expect(heading(page)).toBeVisible();
@@ -148,12 +146,11 @@ test.describe("General", () => {
 });
 
 test.describe("from a project page", () => {
-	// Kills a switcher footer that still leads to the classic settings, or to
-	// another organization's, and a page titled for another section.
+	// Kills a switcher footer that leads to another organization's settings, and a page titled for another section.
 	test("the switcher's footer opens the organization's General", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "runs"));
+		await page.goto(consolePath(hashbrown.slug, "runs"));
 		await crumb(page, `${seed.organization.name} / ${hashbrown.name}`).click();
 		await page
 			.getByRole("dialog", { name: "Switch project" })
@@ -166,33 +163,6 @@ test.describe("from a project page", () => {
 		await expect(page).toHaveTitle(
 			`General | ${seed.organization.name} | Bencher`,
 		);
-	});
-});
-
-const remembered = (versions: Record<string, number>) =>
-	signedIn(seed.member, { [VERSION_KEY]: JSON.stringify(versions) });
-
-test.describe("the classic settings, for a reader with a version 1 project", () => {
-	test.use({ storageState: remembered({ [hashbrown.slug]: 1 }) });
-
-	// Kills a classic organization page that keeps a reader the new one serves.
-	test("sends the reader to General under /next/", async ({ page }) => {
-		await page.goto(classicGeneral(seed.organization.slug));
-
-		await expect(page).toHaveURL(generalPath(seed.organization.slug));
-		await expect(heading(page)).toBeVisible();
-	});
-});
-
-test.describe("the classic settings, for a reader of version 0 projects only", () => {
-	test.use({ storageState: remembered({ [version_zero.slug]: 0 }) });
-
-	// Kills a classic organization page that sends away a reader the new one does not serve.
-	test("keeps the reader", async ({ page }) => {
-		await page.goto(classicGeneral(seed.organization.slug));
-		await page.waitForLoadState("networkidle");
-
-		await expect(page).toHaveURL(classicGeneral(seed.organization.slug));
 	});
 });
 

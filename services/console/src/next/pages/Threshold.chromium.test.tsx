@@ -191,7 +191,7 @@ test("Applies to links the branch, the testbed, and the measure to their pages",
 	] as const) {
 		await expect
 			.element(applies.getByRole("link", { name, exact: true }))
-			.toHaveAttribute("href", `/next/console/projects/hashbrown/${path}`);
+			.toHaveAttribute("href", `/console/projects/hashbrown/${path}`);
 	}
 });
 
@@ -1393,10 +1393,7 @@ test("each alert is its own row, naming its report and its status", async () => 
 	const report = rows.nth(1).getByRole("link", { name: /, open the report$/ });
 	await expect
 		.element(report)
-		.toHaveAttribute(
-			"href",
-			"/next/console/projects/hashbrown/reports/report-new",
-		);
+		.toHaveAttribute("href", "/console/projects/hashbrown/reports/report-new");
 	expectNameStartsWithText(report.element());
 	await expect
 		.element(rows.nth(1).getByRole("img", { name: "alerting" }))
@@ -1432,7 +1429,7 @@ test("Open in Explore links once the alerts arrive", async () => {
 	const link = page.getByRole("link", { name: EXPLORE });
 	await expect.element(link).toBeVisible();
 	expect(link.element().getAttribute("href")).toMatch(
-		/^\/next\/console\/projects\/hashbrown\/explore\?branches=main-uuid&/,
+		/^\/console\/projects\/hashbrown\/explore\?branches=main-uuid&/,
 	);
 });
 
@@ -1873,7 +1870,7 @@ test("a pinned readout on a row's alert opens it and dismisses it as its row doe
 	const row = activeRow();
 	const name = row?.querySelector("a.al-link");
 	expect(name?.getAttribute("href")).toBe(
-		"/next/console/projects/hashbrown/alerts/alert-1",
+		"/console/projects/hashbrown/alerts/alert-1",
 	);
 	const expand = row?.querySelector<HTMLElement>(".lr-twist");
 	if (!expand) {
@@ -1888,7 +1885,7 @@ test("a pinned readout on a row's alert opens it and dismisses it as its row doe
 	const readout = region.getByRole("status");
 	await expect
 		.element(readout.getByRole("link", { name: /^Alert: blake3/ }))
-		.toHaveAttribute("href", "/next/console/projects/hashbrown/alerts/alert-1");
+		.toHaveAttribute("href", "/console/projects/hashbrown/alerts/alert-1");
 	await readout
 		.getByRole("button", { name: /^Dismiss the alert on blake3/ })
 		.click();

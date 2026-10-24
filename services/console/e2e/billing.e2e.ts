@@ -1,13 +1,9 @@
 import type { Page } from "@playwright/test";
 import { createOrganization } from "./api";
 import { axeInBothThemes } from "./axe";
-import { VERSION_KEY, expect, seed, signedIn, test } from "./fixtures";
-
-const { hashbrown, version_zero } = seed.projects;
+import { expect, seed, signedIn, test } from "./fixtures";
 
 const billingPath = (organization: string) =>
-	`/next/console/organizations/${organization}/billing`;
-const classicBilling = (organization: string) =>
 	`/console/organizations/${organization}/billing`;
 const heading = (page: Page) =>
 	page.getByRole("heading", { level: 1, name: "Billing" });
@@ -66,11 +62,10 @@ test.describe("Billing", () => {
 });
 
 test.describe("from General", () => {
-	// Kills a rail whose Billing leaves the app for a full page load, or for
-	// the classic console.
+	// Kills a rail whose Billing leaves the app for a full page load.
 	test("the rail opens Billing in the app", async ({ page }) => {
 		await page.goto(
-			`/next/console/organizations/${seed.organization.slug}/settings`,
+			`/console/organizations/${seed.organization.slug}/settings`,
 		);
 		await expect(page.getByRole("textbox", { name: "Name" })).toHaveValue(
 			seed.organization.name,
@@ -90,30 +85,6 @@ test.describe("from General", () => {
 				() => (window as unknown as { stayed?: boolean }).stayed,
 			),
 		).toBe(true);
-	});
-});
-
-const remembered = (versions: Record<string, number>) =>
-	signedIn(seed.member, { [VERSION_KEY]: JSON.stringify(versions) });
-
-test.describe("the classic Billing, for a reader with a version 1 project", () => {
-	test.use({ storageState: remembered({ [hashbrown.slug]: 1 }) });
-
-	// Kills a classic Billing that drops the pricing page's plan on the way.
-	test("keeps the query on the way", async ({ page }) => {
-		await page.goto(`${classicBilling(seed.organization.slug)}?plan=pro`);
-
-		await expect(page).toHaveURL(
-			`${billingPath(seed.organization.slug)}?plan=pro`,
-		);
-	});
-
-	// Kills a classic Billing that keeps a reader the new one serves.
-	test("sends the reader to Billing under /next/", async ({ page }) => {
-		await page.goto(classicBilling(seed.organization.slug));
-
-		await expect(page).toHaveURL(billingPath(seed.organization.slug));
-		await expect(heading(page)).toBeVisible();
 	});
 });
 
@@ -138,8 +109,24 @@ const planRequests = async (page: Page, status?: number) => {
 	return plans;
 };
 
-test.describe("Stripe's return, for a reader with a version 1 project", () => {
-	test.use({ storageState: remembered({ [hashbrown.slug]: 1 }) });
+test.describe("Stripe's return", () => {
+	// Kills a classic checkout return that reaches Billing without Stripe's
+	// query, or through a page of its own.
+	test("the classic checkout redirects to Billing with Stripe's query", async ({
+		request,
+	}) => {
+		const response = await request.get(checkoutReturn(seed.organization.slug), {
+			maxRedirects: 0,
+		});
+		expect(response.status()).toBe(301);
+		const location = new URL(
+			response.headers().location ?? "",
+			seed.console_url,
+		);
+		expect(`${location.pathname}${location.search}`).toBe(
+			`${billingPath(seed.organization.slug)}?checkout=cs_test_e2e&level=pro`,
+		);
+	});
 
 	// Kills a return that reaches the new Billing without its plan recorded,
 	// records it twice, keeps the session on the link for a reload to record
@@ -188,33 +175,6 @@ test.describe("Stripe's return, for a reader with a version 1 project", () => {
 			page.getByRole("alert").filter({ hasText: "Pro plan" }),
 		).toHaveText(/^Bencher did not record the Pro plan/);
 		expect(plans).toHaveLength(1);
-	});
-});
-
-test.describe("the classic Billing, for a reader of version 0 projects only", () => {
-	test.use({ storageState: remembered({ [version_zero.slug]: 0 }) });
-
-	// Kills a classic checkout that no longer records the plan for a reader the
-	// new Billing does not serve.
-	test("the classic checkout records the plan and keeps the reader", async ({
-		page,
-	}) => {
-		const plans = await planRequests(page, 201);
-		await page.goto(checkoutReturn(seed.organization.slug));
-
-		await expect(page).toHaveURL(
-			(url) => url.pathname === classicBilling(seed.organization.slug),
-		);
-		expect(plans).toHaveLength(1);
-		expect(plans[0]).toMatchObject({ checkout: "cs_test_e2e", level: "pro" });
-	});
-
-	// Kills a classic Billing that sends away a reader the new one does not serve.
-	test("keeps the reader", async ({ page }) => {
-		await page.goto(classicBilling(seed.organization.slug));
-		await page.waitForLoadState("networkidle");
-
-		await expect(page).toHaveURL(classicBilling(seed.organization.slug));
 	});
 });
 

@@ -211,6 +211,7 @@ export default defineConfig({
 			filter: (page) =>
 				!(
 					page.includes("bencher.dev/console") ||
+					page.includes("bencher.dev/perf") ||
 					page.includes("bencher.dev/chat") ||
 					page.includes("bencher.dev/demo") ||
 					page.includes("bencher.dev/repo")

@@ -1,3 +1,7 @@
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, test } from "vitest";
 import nextPreloads from "./preloads.mjs";
 
@@ -63,5 +67,64 @@ describe("a lazy import's preload list", () => {
 		expect(
 			resolve("assets/Page.js", deps, { hostId: "assets/other.js" }),
 		).toEqual(deps);
+	});
+});
+
+describe("the pages' entries", () => {
+	// Kills the public plot or its embed loading the console's entry, or none
+	// of its own, and a classic page's script taken for the public plot's.
+	test("the public plot and its embed each load their own script", async () => {
+		const dir = await mkdtemp(join(tmpdir(), "preloads-"));
+		const server = join(dir, "entry.mjs");
+		await writeFile(server, 'const BUILT = "@@BENCHER_NEXT_PRELOADS@@";');
+		/** @type {any} */
+		let plugin;
+		const integration = nextPreloads();
+		integration.hooks["astro:config:setup"]({
+			updateConfig: (/** @type {any} */ config) => {
+				[plugin] = config.vite.plugins;
+			},
+		});
+		integration.hooks["astro:config:done"]({
+			config: { build: { server: pathToFileURL(`${dir}/`) } },
+		});
+		const page = (/** @type {string} */ file) =>
+			`/repo/services/console/src/pages/${file}?astro&type=script&index=0&lang.ts`;
+		/** @type {[string, string[], string | null][]} */
+		const chunks = [
+			[
+				"assets/app.js",
+				["assets/shared.js"],
+				"/repo/services/console/src/next/astro/Main.astro?astro&type=script&index=0&lang.ts",
+			],
+			[
+				"assets/perf.js",
+				["assets/shared.js"],
+				page("perf/[project]/index.astro"),
+			],
+			["assets/embed.js", [], page("perf/[project]/embed.astro")],
+			["assets/plan.js", [], page("console/onboard/plan.astro")],
+			["assets/shared.js", [], null],
+		];
+		plugin.generateBundle.call(
+			{ environment: { name: "client" } },
+			{},
+			Object.fromEntries(
+				chunks.map(([fileName, imports, facadeModuleId]) => [
+					fileName,
+					{ type: "chunk", fileName, imports, isEntry: true, facadeModuleId },
+				]),
+			),
+		);
+		await integration.hooks["astro:build:done"]();
+		const built = JSON.parse(
+			(await readFile(server, "utf8")).replace(/^const BUILT = |;$/g, ""),
+		);
+		expect(built.entry.sort()).toEqual(["/assets/app.js", "/assets/shared.js"]);
+		expect(built.perf.entry.sort()).toEqual([
+			"/assets/perf.js",
+			"/assets/shared.js",
+		]);
+		expect(built.embed.entry).toEqual(["/assets/embed.js"]);
 	});
 });

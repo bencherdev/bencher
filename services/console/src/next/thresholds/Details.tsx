@@ -12,7 +12,7 @@ import Sets from "./Sets";
 import { declarationSnippet } from "./snippet";
 import { declarationSnippetV0 } from "./snippetV0";
 import { modelRows, modelText } from "./text";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { runHost } from "../project";
 
 const CHANGE = "th-change";
@@ -25,7 +25,7 @@ export const Cards = (props: {
 }) => {
 	const archived = () => archivedBy(props.threshold);
 	const inspect = (dimension: string, slug: string) =>
-		`${NEXT_PROJECTS}/${props.slug}/${dimension}/${slug}`;
+		`${PROJECTS_PATH}/${props.slug}/${dimension}/${slug}`;
 	return (
 		<div class="th-cards">
 			<Card

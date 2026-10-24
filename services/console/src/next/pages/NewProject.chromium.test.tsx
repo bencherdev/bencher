@@ -43,7 +43,7 @@ const USAGE: Record<string, Partial<JsonUsage>> = {
 /**
  * New project for Pompeii LLC; the API makes each project at `bmf_version`
  * unless `answer` says otherwise, and `steps` records each flush of the
- * browser's store, then where the page left for.
+ * browser's store.
  */
 const open = ({
 	bmf_version = 0,
@@ -70,22 +70,19 @@ const open = ({
 		mounted.client.getQueryData<JsonConsoleUser>(
 			consoleUserQuery(api, "u").queryKey,
 		);
-	const mounted = mount(
-		() => <NewProject leave={(href) => steps.push(`leave ${href}`)} />,
-		{
-			api,
-			path,
-			allowed: null,
-			flush: async () => {
-				// A store that takes a moment, so a page that does not wait for it shows.
-				await new Promise((resolve) => setTimeout(resolve, 20));
-				const project = bootstrap()?.projects.find(
-					({ slug }) => slug === "hash-brown-x1",
-				);
-				steps.push(`flush ${project?.bmf_version}`);
-			},
+	const mounted = mount(() => <NewProject />, {
+		api,
+		path,
+		allowed: null,
+		flush: async () => {
+			// A store that takes a moment, so a page that does not wait for it shows.
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			const project = bootstrap()?.projects.find(
+				({ slug }) => slug === "hash-brown-x1",
+			);
+			steps.push(`flush ${project?.bmf_version}`);
 		},
-	);
+	});
 	dispose = mounted.dispose;
 	return { ...mounted, sent, steps, bootstrap };
 };
@@ -225,39 +222,30 @@ describe("the form", () => {
 
 describe("after create", () => {
 	// Kills a bootstrap left without the project, one that guesses its
-	// version, and a version 0 project sent to the new console.
-	test("a version 0 project joins the bootstrap, then lands on its classic page", async () => {
-		const { steps, bootstrap, history } = open({ bmf_version: 0 });
-		await textbox("Name").fill("Hash Brown");
-		await create().click();
+	// version, a project at either version sent anywhere but its root in the
+	// console, and one moved before the bootstrap holds it.
+	test.each([0, 1])(
+		"a version %i project joins the bootstrap, then lands on its root",
+		async (bmf_version) => {
+			const { steps, bootstrap, history } = open({ bmf_version });
+			await textbox("Name").fill("Hash Brown");
+			await create().click();
 
-		await expect
-			.poll(() => steps)
-			.toEqual(["flush 0", "leave /console/projects/hash-brown-x1/plots"]);
-		expect(history.get()).toBe("/organizations/pompeii-llc/projects/add");
-		expect(bootstrap()?.projects).toEqual([
-			...BOOTSTRAP.projects,
-			{
-				uuid: "p9",
-				name: "Hash Brown",
-				slug: "hash-brown-x1",
-				organization: "o1",
-				bmf_version: 0,
-				active_alerts: 0,
-			},
-		]);
-	});
-
-	// Kills a version 1 project sent to the classic console, or moved before
-	// the bootstrap holds it.
-	test("a version 1 project joins the bootstrap, then lands on its root", async () => {
-		const { steps, history } = open({ bmf_version: 1 });
-		await textbox("Name").fill("Hash Brown");
-		await create().click();
-
-		await expect
-			.poll(() => history.get())
-			.toBe("/next/console/projects/hash-brown-x1/");
-		expect(steps).toEqual(["flush 1"]);
-	});
+			await expect
+				.poll(() => history.get())
+				.toBe("/console/projects/hash-brown-x1/");
+			expect(steps).toEqual([`flush ${bmf_version}`]);
+			expect(bootstrap()?.projects).toEqual([
+				...BOOTSTRAP.projects,
+				{
+					uuid: "p9",
+					name: "Hash Brown",
+					slug: "hash-brown-x1",
+					organization: "o1",
+					bmf_version,
+					active_alerts: 0,
+				},
+			]);
+		},
+	);
 });

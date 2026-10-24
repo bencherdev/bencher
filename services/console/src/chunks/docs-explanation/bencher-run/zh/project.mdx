@@ -18,7 +18,7 @@
 当为你创建新项目时，无论 slug 是指定的还是生成的，该项目必须属于某个组织。
 如果用户使用用户 API 密钥（[`--key` 选项](#--key-key)）或[已弃用的 `--token` 选项](#--token-token)进行了认证，则该项目会被添加到该用户的个人组织下。
 如果用户未认证，则该项目会在一个新的 `unclaimed` 组织下创建。
-该组织随后可以通过项目的公开 Perf 页面进行 `claimed`，或在后续已认证的 `bencher run` 调用中使用项目 slug 来认领。
+该组织随后可以通过 `bencher run` 输出中的 `Claim this project` 链接进行 `claimed`，或在后续已认证的 `bencher run` 调用中使用项目 slug 来认领。
 
 > 🐰 重要：如果 `CI` 环境变量被设置为 `true`，
 > 那么你需要要么指定项目，

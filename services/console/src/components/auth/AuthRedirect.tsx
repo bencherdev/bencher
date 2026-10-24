@@ -1,8 +1,13 @@
 import * as Sentry from "@sentry/astro";
 import { Show, createMemo, createResource } from "solid-js";
-import type { JsonAccept, JsonAuthUser } from "../../types/bencher";
+import { projectPath } from "../../next/paths";
+import type {
+	JsonAccept,
+	JsonAuthUser,
+	JsonProject,
+} from "../../types/bencher";
 import { authUser } from "../../util/auth";
-import { httpPost } from "../../util/http";
+import { httpGet, httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
 import { BACK_PARAM, hiddenRedirect, useSearchParams } from "../../util/url";
 import Redirect from "../site/Redirect";
@@ -85,13 +90,13 @@ const AuthRedirect = (props: {
 		}
 		const path = `/v0/organizations/${organization_uuid}/claim`;
 		return await httpPost(props.apiUrl, path, token, {})
-			.then((_resp) => {
-				navigateNotify(
-					NotifyKind.OK,
-					"Project claimed!",
-					"/console",
-					null,
-					null,
+			.then(async () => {
+				hiddenRedirect(
+					(await claimedProject(
+						props.apiUrl ?? "",
+						organization_uuid,
+						token,
+					)) ?? "/console",
 				);
 			})
 			.catch((error) => {
@@ -136,3 +141,12 @@ const AuthRedirect = (props: {
 };
 
 export default AuthRedirect;
+
+// An unclaimed organization holds the one project its run made; `projectAt` here would split its module out of every console page's entry.
+const claimedProject = (apiUrl: string, organization: string, token: string) =>
+	httpGet(apiUrl, `/v0/organizations/${organization}/projects`, token)
+		.then((resp) => {
+			const [project]: JsonProject[] = resp?.data ?? [];
+			return project && projectPath(project.slug);
+		})
+		.catch(() => undefined);

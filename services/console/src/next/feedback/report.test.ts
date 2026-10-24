@@ -10,7 +10,7 @@ import {
 } from "./report";
 
 const ABOUT = {
-	url: "https://bencher.dev/next/console/projects/hashbrown/runs",
+	url: "https://bencher.dev/console/projects/hashbrown/runs",
 	slug: "hashbrown",
 	email: "muriel@nowhere.example",
 	build: "0.6.13",
@@ -30,7 +30,7 @@ describe("feedbackArgs", () => {
 		expect(feedbackArgs(form(), ABOUT)).toEqual({
 			params: {
 				message: "Runs shows Queued on the newest run.",
-				url: "https://bencher.dev/next/console/projects/hashbrown/runs",
+				url: "https://bencher.dev/console/projects/hashbrown/runs",
 				email: "muriel@nowhere.example",
 				tags: { kind: "bug", project: "hashbrown", build: "0.6.13" },
 			},
@@ -87,12 +87,12 @@ const event = (): Event => ({
 	type: "feedback",
 	release: "4f2a91c",
 	environment: "production",
-	transaction: "/next/console/projects/hashbrown/runs",
+	transaction: "/console/projects/hashbrown/runs",
 	request: {
-		url: "https://bencher.dev/next/console/projects/hashbrown/runs",
+		url: "https://bencher.dev/console/projects/hashbrown/runs",
 		headers: {
 			"User-Agent": "Mozilla/5.0",
-			Referer: "https://bencher.dev/next/console/projects/hashbrown",
+			Referer: "https://bencher.dev/console/projects/hashbrown",
 		},
 	},
 	contexts: {
@@ -109,7 +109,7 @@ const event = (): Event => ({
 			trace_id: "a".repeat(32),
 			release: "4f2a91c",
 			environment: "production",
-			transaction: "/next/console/projects/hashbrown/runs",
+			transaction: "/console/projects/hashbrown/runs",
 		},
 	},
 });
@@ -124,7 +124,7 @@ describe("scrub", () => {
 	// transaction, the sampling context, or the referrer.
 	test("an unticked page leaves no address", () => {
 		const scrubbed = scrub(event(), new Set(["page"]));
-		expect(JSON.stringify(scrubbed)).not.toContain("/next/console");
+		expect(JSON.stringify(scrubbed)).not.toContain("/console");
 		expect(scrubbed.request).toEqual({
 			headers: { "User-Agent": "Mozilla/5.0" },
 		});
@@ -136,7 +136,7 @@ describe("scrub", () => {
 		const scrubbed = scrub(event(), new Set(["browser"]));
 		expect(scrubbed.contexts?.culture).toBeUndefined();
 		expect(scrubbed.request?.headers).toEqual({
-			Referer: "https://bencher.dev/next/console/projects/hashbrown",
+			Referer: "https://bencher.dev/console/projects/hashbrown",
 		});
 	});
 

@@ -1,24 +1,7 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
-
-import UserLayout from "../../../layouts/console/UserLayout.astro";
-import PosterPanel from "../../../components/console/poster/PosterPanel";
-import { BencherResource } from "../../../config/types";
-import AccountGate from "../../../next/astro/AccountGate.astro";
-import { ORGANIZATIONS_PATH } from "../../../next/paths";
-
-const params = Astro.params;
-const title = "Add Organization";
+import AccountPage from "../../../next/astro/AccountPage.astro";
 ---
 
-<UserLayout apiUrl={BENCHER_API_URL} params={params} title={title}>
-  <AccountGate slot="head" next={`${ORGANIZATIONS_PATH}/add`} />
-  <PosterPanel
-    client:only="solid-js"
-    apiUrl={BENCHER_API_URL}
-    params={params}
-    resource={BencherResource.ORGANIZATIONS}
-  />
-</UserLayout>
+<AccountPage />

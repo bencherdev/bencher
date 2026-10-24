@@ -1,3 +1,11 @@
 ---
+export const prerender = false;
+
+import { classicRedirect } from "../../../next/classic";
+
+const to = classicRedirect(Astro.url);
+if (to) {
+	return Astro.redirect(to, 301);
+}
+return Astro.rewrite("/404");
 ---
-<meta http-equiv="refresh" content="0;url=/console" />

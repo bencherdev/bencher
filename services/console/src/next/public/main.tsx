@@ -12,14 +12,14 @@ import Public, { type PlotView } from "./Public";
 import { publicPlotPath } from "./query";
 import { type Refusal, reads } from "./read";
 
-const boot = (mount: HTMLElement) => {
-	const { apiUrl = "", slug = "", name = slug, found } = mount.dataset;
+export const boot = (mount: HTMLElement) => {
+	const { apiUrl = "", slug = "" } = mount.dataset;
 	const reader = readReader(localStorage);
 	const token =
 		reader && isCurrent(reader, Date.now()) ? reader.token : undefined;
-	// A project the page read without a sign in draws the same for everyone.
-	const sent = found === "public" ? undefined : token;
-	const get = reads(apiUrl, sent);
+	// Read as no one first, so a public project draws the same for everyone;
+	// only a project that refuses everyone is read again as the reader.
+	let get = reads(apiUrl);
 	const project = `/v0/projects/${encodeURIComponent(slug)}`;
 
 	const initial = decodeQuery(location.search);
@@ -28,39 +28,36 @@ const boot = (mount: HTMLElement) => {
 	if (here() !== `${location.pathname}${location.search}`) {
 		history.replaceState(history.state, "", here());
 	}
-	if (found === "public") {
-		rememberVersion(localStorage, slug, 1);
-	}
 
-	const [title, setTitle] = createSignal(name);
-	const [embeddable, setEmbeddable] = createSignal(found === "public");
-	// As the page painted it: a project the server could not read at all is
-	// drawn as a plot until the reader's own read says otherwise.
-	const [view, setView] = createSignal<"plot" | "locked" | "checking">(
-		found !== "private" ? "plot" : token ? "checking" : "locked",
-	);
-	// Without a reader, the API already said it shows this project to no one.
-	const blocked = found === "private" && !token;
-	if (found !== "public" && !blocked) {
+	const [title, setTitle] = createSignal(slug);
+	const [embeddable, setEmbeddable] = createSignal(false);
+	const [view, setView] = createSignal<"plot" | "locked" | "checking">("plot");
+	const readProject = (asReader: boolean): Promise<boolean> =>
 		get<JsonProject>(project).then(
 			(read) => {
 				rememberVersion(localStorage, slug, read.bmf_version === 1 ? 1 : 0);
-				if (read.bmf_version !== 1) {
-					location.replace(
-						`${read.visibility === "public" ? `/perf/${slug}` : `/console/projects/${slug}/perf`}${location.search}`,
-					);
-					return;
-				}
 				setTitle(read.name);
 				setEmbeddable(read.visibility === "public");
 				document.title = `${read.name} | Bencher`;
 				setView("plot");
+				if (asReader && drawable(query())) {
+					ask(query());
+				}
+				return true;
 			},
 			(error: Refusal) => {
-				setView(error.status && error.status < 500 ? "locked" : "plot");
+				const refused = Boolean(error.status && error.status < 500);
+				if (refused && token && !asReader) {
+					get = reads(apiUrl, token);
+					setView("checking");
+					return readProject(true);
+				}
+				setView(refused ? "locked" : "plot");
+				return !refused;
 			},
 		);
-	}
+	// A plot refused before the project answers waits for it: a project no one may read shows no error.
+	const readable = readProject(false);
 
 	// Each answer kept, so going back to a window draws at once.
 	const answers = new Map<string, JsonConsolePerf>();
@@ -89,12 +86,14 @@ const boot = (mount: HTMLElement) => {
 					setBusy(false);
 				}
 			},
-			(error: Refusal) => {
+			async (error: Refusal) => {
+				const refusedQuery = Boolean(error.status && error.status < 500);
+				if (refusedQuery && !(await readable)) {
+					return;
+				}
 				if (turn === asked) {
 					setRefused(
-						error.status && error.status < 500
-							? "The API refused this query"
-							: "The plot did not load",
+						refusedQuery ? "The API refused this query" : "The plot did not load",
 					);
 					setBusy(false);
 				}
@@ -103,7 +102,7 @@ const boot = (mount: HTMLElement) => {
 	};
 
 	const [plot, setPlot] = createSignal<PlotView>();
-	if (drawable(initial) && !blocked) {
+	if (drawable(initial)) {
 		import("../plot/Plot")
 			.then(({ default: loaded }) => setPlot(() => loaded))
 			.catch(() => {});
@@ -122,7 +121,7 @@ const boot = (mount: HTMLElement) => {
 				on(
 					() => requestKey(query()),
 					() => {
-						if (drawable(query()) && !blocked) {
+						if (drawable(query())) {
 							ask(query());
 						}
 					},

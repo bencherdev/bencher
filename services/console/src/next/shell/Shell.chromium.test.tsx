@@ -450,12 +450,12 @@ test("the tab row reads Explore, Runs, Alerts, Thresholds, Plots, Settings, with
 			link.getAttribute("href"),
 		]),
 	).toEqual([
-		["Explore", "/next/console/projects/hashbrown/explore"],
-		["Runs", "/next/console/projects/hashbrown/"],
-		["Alerts", "/next/console/projects/hashbrown/alerts"],
-		["Thresholds", "/next/console/projects/hashbrown/thresholds"],
-		["Plots", "/next/console/projects/hashbrown/plots"],
-		["Settings", "/next/console/projects/hashbrown/settings"],
+		["Explore", "/console/projects/hashbrown/explore"],
+		["Runs", "/console/projects/hashbrown/"],
+		["Alerts", "/console/projects/hashbrown/alerts"],
+		["Thresholds", "/console/projects/hashbrown/thresholds"],
+		["Plots", "/console/projects/hashbrown/plots"],
+		["Settings", "/console/projects/hashbrown/settings"],
 	]);
 	expect(tabs.getByRole("link", { name: "Runs" }).element().ariaCurrent).toBe(
 		"page",

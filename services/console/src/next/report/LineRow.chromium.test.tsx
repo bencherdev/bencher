@@ -14,7 +14,7 @@ import { lineFixture, reportFixture } from "./testing";
 
 const NAME = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
 const UNCHECKED = "blake3 input_bytes=65536 simd=avx2 threads=1 Throughput";
-const EXPLORE = "/next/console/projects/hashbrown/explore?benchmarks=b";
+const EXPLORE = "/console/projects/hashbrown/explore?benchmarks=b";
 
 let dispose: (() => void) | undefined;
 

@@ -3,7 +3,7 @@ import { axeInBothThemes } from "./axe";
 import {
 	crumb,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	settle,
 	signedIn,
@@ -12,7 +12,7 @@ import {
 } from "./fixtures";
 
 const { hashbrown, iterations, version_zero, empty } = seed.projects;
-const RUNS = nextPath(hashbrown.slug, "runs");
+const RUNS = consolePath(hashbrown.slug, "runs");
 const BOOTSTRAP = `${seed.api_url}/v0/console/users/${seed.member.user.uuid}`;
 
 test.use({ storageState: signedIn(seed.member) });
@@ -54,7 +54,7 @@ test("the crumb opens the switcher on the reader's projects, and a pick moves in
 	await search(page).fill(iterations.name);
 	await option(page, iterations.name).click();
 
-	await expect(page).toHaveURL(nextPath(iterations.slug));
+	await expect(page).toHaveURL(consolePath(iterations.slug));
 	await expect(dialog(page)).toBeHidden();
 	await expect(
 		crumb(page, `${seed.organization.name} / ${iterations.name}`),
@@ -62,24 +62,30 @@ test("the crumb opens the switcher on the reader's projects, and a pick moves in
 	expect(documents).toEqual([]);
 });
 
-// Kills a version 0 project opened in the new console or routed in the app
-// rather than loaded, and an Enter that does not open the search's first match.
-test("a version 0 project opens in the classic console", async ({ page }) => {
-	const classic = `/console/projects/${version_zero.slug}/plots`;
+// Kills a version 0 project sent anywhere but its root in the console, a pick
+// that loads a new document for it, and an Enter that does not open the
+// search's first match.
+test("a version 0 project opens in the console", async ({ page }) => {
 	await arrive(page);
+	const documents: string[] = [];
+	page.on("request", (request) => {
+		if (request.resourceType() === "document") {
+			documents.push(request.url());
+		}
+	});
 	await crumb(page).click();
 
 	await search(page).fill(version_zero.name);
-	await expect(option(page, version_zero.name)).toContainText("Classic");
-	const loaded = page.waitForRequest(
-		(request) =>
-			request.resourceType() === "document" &&
-			new URL(request.url()).pathname === classic,
-	);
 	await search(page).press("Enter");
 
-	await loaded;
-	await expect(page).toHaveURL(classic);
+	await expect(page).toHaveURL(consolePath(version_zero.slug));
+	await expect(
+		crumb(page, `${seed.organization.name} / ${version_zero.name}`),
+	).toBeVisible();
+	await expect(
+		page.getByRole("heading", { level: 1, name: "6 runs" }),
+	).toBeVisible();
+	expect(documents).toEqual([]);
 });
 
 // Kills the reader's projects asked for on every load, and a hover that starts

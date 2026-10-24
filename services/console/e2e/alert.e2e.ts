@@ -4,9 +4,9 @@ import type { JsonAlert } from "../src/types/bencher";
 import { createAlerts } from "./api";
 import { axeInBothThemes } from "./axe";
 import {
-	VERSION_KEY,
 	expect,
-	nextPath,
+	consolePath,
+	logInTo,
 	seed,
 	signedIn,
 	signedOut,
@@ -20,7 +20,7 @@ const BLAKE3 = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
 const line = (benchmark: string) => `${benchmark} n=0 Latency`;
 
 const alertPage = (slug: string, alert: string) =>
-	`${nextPath(slug, "alerts")}/${alert}`;
+	`${consolePath(slug, "alerts")}/${alert}`;
 const heading = (page: Page) => page.getByRole("heading", { level: 1 });
 const readout = (page: Page) => page.getByRole("figure").getByRole("status");
 /** The pinned readout's link to the alert on `name`. */
@@ -113,8 +113,8 @@ const recordPaints = (page: Page) =>
 			}
 		});
 	});
-/** The classic documents that painted before they went. */
-const classicPaints = async (page: Page) =>
+/** The console's documents that painted before they went. */
+const consolePaints = async (page: Page) =>
 	(
 		(await page.evaluate(() =>
 			JSON.parse(sessionStorage.getItem("painted") ?? "[]"),
@@ -149,7 +149,7 @@ test.describe("signed in", () => {
 		request,
 	}) => {
 		const alert = await alertOf(request, hashbrown.slug, "blake3");
-		await page.goto(nextPath(hashbrown.slug, "alerts"));
+		await page.goto(consolePath(hashbrown.slug, "alerts"));
 		await page.getByRole("link", { name: `${BLAKE3}, open the alert` }).click();
 		await expect(page).toHaveURL(alertPage(hashbrown.slug, alert.uuid));
 		await expect(heading(page)).toContainText("blake3");
@@ -458,10 +458,8 @@ test.describe("signed in", () => {
 		}
 	});
 
-	// Kills a redirect that moves an alert out of the classic console whatever
-	// its project's version, and a classic perf page that loses the alert read
-	// beside its project.
-	test("a version 0 project's classic alert links stay classic", async ({
+	// Kills a version 0 project's classic alert links kept out of the console.
+	test("a version 0 project's classic alert links open the alert's page", async ({
 		page,
 		request,
 	}) => {
@@ -481,19 +479,20 @@ test.describe("signed in", () => {
 			`/perf/${project.slug}/alerts/${alert.uuid}`,
 		]) {
 			await page.goto(classic);
-			await page.waitForLoadState("networkidle");
-			expect(new URL(page.url()).pathname).toBe(classic);
+			await expect(page).toHaveURL(alertPage(project.slug, alert.uuid));
+			await expect(heading(page)).toContainText("bench-02");
 		}
-		await expect(page).toHaveTitle(/bench-02/);
 	});
 });
 
 test.describe("signed out", () => {
 	test.use({ storageState: signedOut, timezoneId: "UTC" });
+	test.beforeEach(({ page }) => recordPaints(page));
 
-	// Kills a signed-out reader sent to sign in, or to the public plot of
-	// another line, another window, or no report.
-	test("a classic alert link lands a signed-out reader on the public plot of its line at its report", async ({
+	// Kills a signed-out reader of a classic alert link sent anywhere but sign
+	// in, one sent there without the alert page to return to, and a console
+	// page that paints before it moves.
+	test("a classic alert link sends a signed-out reader to sign in and back to the alert page", async ({
 		page,
 		request,
 	}) => {
@@ -504,15 +503,14 @@ test.describe("signed out", () => {
 		]) {
 			await page.goto(classic);
 			await expect(page).toHaveURL(
-				new RegExp(`^[^?]*/next/perf/${hashbrown.slug}\\?`),
+				logInTo(alertPage(hashbrown.slug, alert.uuid)),
 			);
-			const search = new URL(page.url()).searchParams;
-			expect(search.get("report")).toBe(alert.report);
-			expect(search.get("benchmarks")).toBe(alert.benchmark.uuid);
-			expect(search.get("branches")).toBe(alert.threshold.branch.uuid);
-			expect(search.get("end_time")).toBe(String(Date.parse(alert.created)));
-			await expect(page.getByRole("figure")).toHaveAccessibleName(/^1 line/);
 		}
+		const closed = seed.projects.private;
+		const unknown = alertPage(closed.slug, randomUUID());
+		await page.goto(unknown);
+		await expect(page).toHaveURL(logInTo(unknown));
+		expect(await consolePaints(page)).toEqual([]);
 	});
 });
 
@@ -534,56 +532,5 @@ test.describe("a reader who is not a member", () => {
 		await expect(
 			readout(page).getByRole("button", { name: /the alert on/ }),
 		).toHaveCount(0);
-	});
-});
-
-test.describe("signed out, remembering version 1", () => {
-	const closed = seed.projects.private;
-	test.use({
-		storageState: {
-			cookies: [],
-			origins: [
-				{
-					origin: seed.console_url,
-					localStorage: [
-						{
-							name: VERSION_KEY,
-							value: JSON.stringify({ [hashbrown.slug]: 1, [closed.slug]: 1 }),
-						},
-					],
-				},
-			],
-		},
-		timezoneId: "UTC",
-	});
-	test.beforeEach(({ page }) => recordPaints(page));
-
-	// Kills a classic console page that draws itself before it moves a reader
-	// who is not signed in, and one that sends them anywhere but to sign in.
-	test("a classic console page moves before it paints, to sign in", async ({
-		page,
-	}) => {
-		for (const slug of [hashbrown.slug, closed.slug]) {
-			await page.goto(`/console/projects/${slug}/reports`);
-			await expect(page).toHaveURL(/\/auth\/login\?/);
-		}
-		expect(await classicPaints(page)).toEqual([]);
-	});
-
-	// Kills a classic console alert link that draws the classic console, or
-	// sends a reader who is not signed in to sign in rather than to the public
-	// plot of a public project's alert, or a private project's anywhere else.
-	test("a classic console alert link moves before it paints, to the public plot or to sign in", async ({
-		page,
-		request,
-	}) => {
-		const alert = await alertOf(request, hashbrown.slug, "blake3");
-		await page.goto(`/console/projects/${hashbrown.slug}/alerts/${alert.uuid}`);
-		await expect(page).toHaveURL(
-			new RegExp(`^[^?]*/next/perf/${hashbrown.slug}\\?`),
-		);
-		await page.goto(`/console/projects/${closed.slug}/alerts/${randomUUID()}`);
-		await expect(page).toHaveURL(/\/auth\/login\?/);
-		expect(await classicPaints(page)).toEqual([]);
 	});
 });

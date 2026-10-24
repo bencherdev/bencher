@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { createProject, postReport } from "./api";
-import { expect, nextPath, seed, signedIn, tabRow, test } from "./fixtures";
+import { expect, consolePath, seed, signedIn, tabRow, test } from "./fixtures";
 
 test.use({ storageState: signedIn(seed.member) });
 
@@ -34,10 +34,10 @@ test("a metric's link opens Explore on exactly its line at its report", async ({
 		throw new Error("The report has no p99");
 	}
 
-	await page.goto(nextPath(project.slug, `metrics/${metric.uuid}`));
+	await page.goto(consolePath(project.slug, `metrics/${metric.uuid}`));
 
 	await expect(page).toHaveURL(
-		(url) => url.pathname === nextPath(project.slug, "explore"),
+		(url) => url.pathname === consolePath(project.slug, "explore"),
 	);
 	const params = new URL(page.url()).searchParams;
 	expect(params.getAll("metrics")).toEqual(["p99"]);
@@ -55,13 +55,13 @@ test("Back from a metric's Explore returns to the page before it", async ({
 	request,
 }) => {
 	const project = await createProject(request);
-	await page.goto(nextPath(project.slug, "runs"));
-	await page.goto(nextPath(project.slug, `metrics/${randomUUID()}`));
-	await expect(page).toHaveURL(nextPath(project.slug, "explore"));
+	await page.goto(consolePath(project.slug, "runs"));
+	await page.goto(consolePath(project.slug, `metrics/${randomUUID()}`));
+	await expect(page).toHaveURL(consolePath(project.slug, "explore"));
 
 	await page.goBack();
 
-	await expect(page).toHaveURL(nextPath(project.slug, "runs"));
+	await expect(page).toHaveURL(consolePath(project.slug, "runs"));
 });
 
 // Kills a metric that cannot be read leaving the reader on the landing, or
@@ -72,7 +72,7 @@ test("a metric that cannot be read opens Explore with nothing chosen", async ({
 }) => {
 	const project = await createProject(request);
 
-	await page.goto(nextPath(project.slug, `metrics/${randomUUID()}`));
+	await page.goto(consolePath(project.slug, `metrics/${randomUUID()}`));
 
-	await expect(page).toHaveURL(nextPath(project.slug, "explore"));
+	await expect(page).toHaveURL(consolePath(project.slug, "explore"));
 });

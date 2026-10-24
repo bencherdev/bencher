@@ -18,7 +18,7 @@ import {
 import { ALERT, REPORT, THRESHOLD, alertDetail, uuid } from "../alert/testing";
 import { type Api, ApiError, type Method } from "../api";
 import { createQueryClient } from "../cache";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { rowsOf, tokenRgb } from "../plot/pixels";
 import { ProjectContext } from "../project";
 import { consoleProjectQuery } from "../queries";
@@ -26,7 +26,7 @@ import { decodeQuery } from "../query/query";
 import { bootstrapOf } from "../settings/testing";
 import Alert from "./Alert";
 
-const PATH = `${NEXT_PROJECTS}/hashbrown/alerts/${ALERT}`;
+const PATH = `${PROJECTS_PATH}/hashbrown/alerts/${ALERT}`;
 const NAME = "blake3 input=64KiB simd=avx2 threads=1 Latency";
 const ALERT_PATH = `/v0/console/projects/hashbrown/alerts/${ALERT}`;
 
@@ -93,7 +93,7 @@ const mount = (api: Api, path = PATH, client = newClient()) => {
 			<QueryClientProvider client={client}>
 				<MemoryRouter
 					history={history}
-					base={NEXT_PROJECTS}
+					base={PROJECTS_PATH}
 					root={(props) => (
 						<ProjectContext.Provider value={{ api, slug: () => "hashbrown" }}>
 							<Suspense fallback={<p>Suspended</p>}>{props.children}</Suspense>
@@ -312,7 +312,7 @@ test("the facts link to the report, the threshold, and the line in Explore", asy
 	mount(api);
 	await expect
 		.element(page.getByRole("link", { name: /open the report$/ }))
-		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/reports/${REPORT}`);
+		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/reports/${REPORT}`);
 	await expect
 		.element(
 			page.getByRole("link", {
@@ -321,7 +321,7 @@ test("the facts link to the report, the threshold, and the line in Explore", asy
 		)
 		.toHaveAttribute(
 			"href",
-			`${NEXT_PROJECTS}/hashbrown/thresholds/${THRESHOLD}`,
+			`${PROJECTS_PATH}/hashbrown/thresholds/${THRESHOLD}`,
 		);
 	expect(
 		[...document.querySelectorAll(".ap-fact dt")].map(
@@ -335,7 +335,7 @@ test("the facts link to the report, the threshold, and the line in Explore", asy
 		explore.element().getAttribute("href") ?? "",
 		"https://bencher.dev",
 	);
-	expect(href.pathname).toBe(`${NEXT_PROJECTS}/hashbrown/explore`);
+	expect(href.pathname).toBe(`${PROJECTS_PATH}/hashbrown/explore`);
 	const query = decodeQuery(href.search);
 	const detail = alertDetail();
 	expect(query.branches).toEqual([{ uuid: uuid(20), head: uuid(21) }]);
@@ -365,7 +365,7 @@ test("the plot opens pinned on the alert, its readout with neither the alert's l
 // Kills a page that asks the API for an alert no UUID names, and an unknown alert drawn as a failure.
 test("a malformed or unknown alert is not found", async () => {
 	const { api, reads } = fakeApi(answers());
-	mount(api, `${NEXT_PROJECTS}/hashbrown/alerts/not-a-uuid`);
+	mount(api, `${PROJECTS_PATH}/hashbrown/alerts/not-a-uuid`);
 	await expect.element(heading()).toHaveTextContent("Alert not found");
 	expect(reads.filter((path) => path.includes("/alerts/"))).toHaveLength(0);
 

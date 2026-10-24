@@ -2,11 +2,11 @@ import type { Page } from "@playwright/test";
 import { createProject, listPlots, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
 import { dimensions, explore } from "./explore";
-import { expect, nextPath, seed, signedIn, test } from "./fixtures";
+import { expect, consolePath, seed, signedIn, test } from "./fixtures";
 import { createPin, pinnedProject } from "./plots";
 
 const { hashbrown } = seed.projects;
-const PLOTS = nextPath(hashbrown.slug, "plots");
+const PLOTS = consolePath(hashbrown.slug, "plots");
 const DAY = 24 * 60 * 60 * 1000;
 
 /** The seed's pins, top first, with what each draws at its own window. */
@@ -118,7 +118,7 @@ test("rename, move, and unpin with Undo save as they show", async ({
 	request,
 }) => {
 	const project = await pinnedProject(request);
-	await page.goto(nextPath(project.slug, "plots"));
+	await page.goto(consolePath(project.slug, "plots"));
 	await expect(titles(page)).toHaveText(["Pin 1", "Pin 2", "Pin 3"]);
 
 	await more(page, "Pin 1", "Move down");
@@ -160,7 +160,7 @@ test("Reorder mode moves a tile up and the order survives a reload", async ({
 	request,
 }) => {
 	const project = await pinnedProject(request);
-	await page.goto(nextPath(project.slug, "plots"));
+	await page.goto(consolePath(project.slug, "plots"));
 	await page.getByRole("button", { name: "Reorder" }).click();
 	const reorder = page.getByRole("region", { name: "Reorder" });
 	await reorder.getByRole("button", { name: "Move Pin 3 up" }).click();
@@ -181,7 +181,7 @@ test("Reorder mode moves a tile up and the order survives a reload", async ({
 test("New plot opens a blank Explore", async ({ page }) => {
 	await page.goto(PLOTS);
 	await page.getByRole("link", { name: "New plot" }).click();
-	await expect(page).toHaveURL(nextPath(hashbrown.slug, "explore"));
+	await expect(page).toHaveURL(consolePath(hashbrown.slug, "explore"));
 	await expect(
 		page.getByRole("heading", { level: 1, name: "Unsaved plot" }),
 	).toBeVisible();
@@ -194,7 +194,7 @@ test("the pin dialog changes the title, the window, and the position", async ({
 	request,
 }) => {
 	const project = await pinnedProject(request);
-	await page.goto(nextPath(project.slug, "plots"));
+	await page.goto(consolePath(project.slug, "plots"));
 	await more(page, "Pin 1", "Rename");
 	const dialog = page.getByRole("dialog", { name: "Edit pin" });
 	await dialog.getByRole("textbox", { name: "Title" }).fill("Fortnight");
@@ -271,7 +271,7 @@ test("at 64 pins Plots says so, Pin says so, and the API refuses another", async
 	request,
 }) => {
 	const project = await pinnedProject(request, 64);
-	await page.goto(nextPath(project.slug, "plots"));
+	await page.goto(consolePath(project.slug, "plots"));
 	await expect(page.getByText("64 of 64 pinned")).toBeVisible();
 	await expect(
 		createPin(request, project.slug, { title: "One more" }),
@@ -301,7 +301,7 @@ test.describe("a taller screen", () => {
 	// frames, and tiles that draw far below it.
 	test("tiles draw as they near the screen", async ({ page, request }) => {
 		const project = await pinnedProject(request, 8);
-		await page.goto(nextPath(project.slug, "plots"));
+		await page.goto(consolePath(project.slug, "plots"));
 		const canvases = (title: string) => tile(page, title).locator("canvas");
 		// The third row sits under the fold, within half a screen of it.
 		await expect(canvases("Pin 5").first()).toBeAttached();
@@ -369,7 +369,7 @@ test("a batch that did not load says so and loads on Retry", async ({
 		asked += 1;
 		return route.fulfill({ status: 500, json: {} });
 	});
-	await page.goto(nextPath(project.slug, "plots"));
+	await page.goto(consolePath(project.slug, "plots"));
 	await expect(figure(page, "Pin 1")).toHaveAccessibleName("2 lines over 4w");
 	await tile(page, "Pin 8").scrollIntoViewIfNeeded();
 	const failed = page.getByRole("alert").filter({ hasText: "did not load" });
@@ -425,7 +425,7 @@ test("Plots passes axe in both themes", async ({ page }) => {
 // name missing in either theme.
 test("an empty Plots passes axe in both themes", async ({ page, request }) => {
 	const project = await pinnedProject(request, 0);
-	await axeInBothThemes(page, nextPath(project.slug, "plots"), async () => {
+	await axeInBothThemes(page, consolePath(project.slug, "plots"), async () => {
 		await expect(
 			page.getByRole("main").getByRole("link", { name: "report", exact: true }),
 		).toBeVisible();
@@ -442,7 +442,7 @@ test.describe("narrow", () => {
 		request,
 	}) => {
 		const project = await pinnedProject(request);
-		await page.goto(nextPath(project.slug, "plots"));
+		await page.goto(consolePath(project.slug, "plots"));
 		await expect(titles(page)).toHaveText(["Pin 1", "Pin 2", "Pin 3"]);
 		const lefts = await Promise.all(
 			["Pin 1", "Pin 2"].map(

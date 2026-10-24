@@ -1,4 +1,4 @@
-import { expect, nextPath, seed, signedIn, test } from "./fixtures";
+import { expect, consolePath, seed, signedIn, test } from "./fixtures";
 
 // The member's projects change as other tests run; the admin's do not.
 test.use({ storageState: signedIn(seed.admin) });
@@ -25,7 +25,7 @@ test("/console lands a reader with no version memory on the newest project", asy
 	});
 
 	await page.goto("/console");
-	await expect(page).toHaveURL(nextPath(seed.admin_newest.slug));
+	await expect(page).toHaveURL(consolePath(seed.admin_newest.slug));
 
 	expect(requests).toEqual([`GET /v0/console/users/${seed.admin.user.uuid}`]);
 });

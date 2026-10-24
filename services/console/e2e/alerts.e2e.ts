@@ -11,7 +11,7 @@ import {
 import {
 	approach,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	settle,
 	signedIn,
@@ -32,7 +32,7 @@ const NEWER = "main, ubuntu-latest, Sep 13, 21:00";
 const SILENCED = "feature, ubuntu-latest, Sep 13, 23:00";
 
 const alerts = (slug: string, search = "") =>
-	`${nextPath(slug, "alerts")}${search}`;
+	`${consolePath(slug, "alerts")}${search}`;
 const heading = (page: Page) => page.getByRole("heading", { level: 1 });
 const status = (page: Page, name: string) =>
 	page.getByRole("radiogroup", { name: "Status" }).getByRole("radio", { name });
@@ -125,7 +125,7 @@ test("the active blake3 alert sits under report 9c1f2e4 with its value, delta, a
 			.getAttribute("href")) ?? "",
 		seed.console_url,
 	);
-	expect(open.pathname).toBe(nextPath(hashbrown.slug, "explore"));
+	expect(open.pathname).toBe(consolePath(hashbrown.slug, "explore"));
 	expect(open.searchParams.get("only")?.split(",")).toHaveLength(1);
 	const blake3 = row(page, BLAKE3);
 	await expect(blake3).toContainText("20.60 ns");
@@ -866,7 +866,7 @@ test.describe("a reader who cannot edit", () => {
 			(await open.getAttribute("href")) ?? "",
 			seed.console_url,
 		);
-		expect(href.pathname).toBe(nextPath(hashbrown.slug, "explore"));
+		expect(href.pathname).toBe(consolePath(hashbrown.slug, "explore"));
 		expect(href.searchParams.get("only")?.split(",")).toHaveLength(1);
 	});
 });

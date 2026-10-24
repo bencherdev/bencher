@@ -1,98 +1,39 @@
 ---
+// The browser reads the project and its plot, so the server reads nothing.
 export const prerender = false;
 
-import { BENCHER_API_URL, INTERNAL_API_URL } from "astro:env/server";
-import { IS_BENCHER_CLOUD } from "astro:env/client";
+import { BENCHER_API_URL } from "astro:env/server";
 
-import BaseLayout from "../../../layouts/BaseLayout.astro";
-import type { JsonProject } from "../../../types/bencher";
-import PerfPanel from "../../../components/console/perf/PerfPanel";
-import { fetchSSR, hasPerfImage } from "../../../components/perf/util";
-import * as Sentry from "@sentry/astro";
+import Embed from "../../../next/embed/Embed";
+import { drawable } from "../../../next/explore/request";
+import Head from "../../../next/Head.astro";
+import { embedPreloads } from "../../../next/preloads";
+import { publicPlotPath } from "../../../next/public/query";
+import { BENCHER_SITE_URL } from "../../../util/ext";
+import { decodeQuery } from "../../../next/query/query";
+import "../../../next/embed/page.css";
 
-const params = Astro.params;
-const getProjectUrl = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
-	params.project
-}`;
-
-let jsonProject: undefined | JsonProject;
-let title = "Public Project";
-let description =
-	"View continuous benchmarking results and performance regressions on Bencher";
-let notFound = false;
-if (params.project && params.project !== "undefined") {
-	try {
-		const projectResponse = await fetchSSR(getProjectUrl);
-		jsonProject = await projectResponse.json();
-		if (jsonProject?.uuid) {
-			title = `${jsonProject?.name}`;
-			description = `View ${jsonProject?.name} continuous benchmarking results and performance regressions on Bencher`;
-		} else {
-			title = "Not Found";
-			description = "Public Project not found";
-			notFound = true;
-		}
-	} catch (e) {
-		console.error(`Failed to fetch project data: ${e}`);
-		Sentry.captureException(e);
-	}
-}
-
-let image: undefined | string;
-if (hasPerfImage(Astro.url)) {
-	image = `${INTERNAL_API_URL ?? BENCHER_API_URL}/v0/projects/${
-		params.project
-	}/perf/img${Astro.url.search}`;
-}
-
-// GitHub query for use of embeds:
-// /https:\/\/bencher.dev\/perf\/.*\/embed/
+const slug = Astro.params.project ?? "";
+const query = decodeQuery(Astro.url.search);
 ---
 
-<BaseLayout
-  title={title}
-  titleFmt={(title) => `📈 ${title}`}
-  description={description}
-  published={jsonProject?.created}
-  modified={jsonProject?.modified}
-  perfImage={image}
-  canonical={`/perf/${params.project}`}
->
-    <div slot="navbar"></div>
-    {notFound ? (
-      <div class="container box">
-        <div class="columns is-centered">
-          <div class="column is-narrow">
-            <h2 class="title is-2">Project Not Found</h2>
-            <hr />
-            <p>Could not find Project: <code>{params.project}</code></p>
-            <p>The Project may be private or it may not exist.</p>
-          </div>
-        </div>
-      </div>
-    ) :
-    <PerfPanel
-      client:only="solid-js"
-      apiUrl={BENCHER_API_URL}
-      isBencherCloud={IS_BENCHER_CLOUD}
-      params={params}
-      project={jsonProject}
-      isEmbed={true}
-    >
-      <div slot="fallback" class="panel">
-        <nav class="panel-heading columns is-vcentered">
-            <div class="column">
-                &nbsp;
-            </div>
-        </nav>
-        <div class="panel-block">
-            <progress
-                class="progress is-primary"
-                style="margin-top: 8rem; margin-bottom: 16rem;"
-                max="100"
-            />
-        </div>
-      </div>
-    </PerfPanel>}
-    <div slot="footer"></div>
-</BaseLayout>
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{slug} | Bencher</title>
+		<link rel="canonical" href={`${BENCHER_SITE_URL}${publicPlotPath(slug)}`} />
+		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+		<Head />
+		{embedPreloads(drawable(query) ? ["plot/Plot"] : []).map((href) => <link rel="modulepreload" href={href} />)}
+	</head>
+	<body>
+		<div id="embed" data-api-url={BENCHER_API_URL} data-slug={slug}>
+			<Embed slug={slug} query={query} view="plot" />
+		</div>
+		<script>
+			import "../../../next/embed/main";
+		</script>
+	</body>
+</html>

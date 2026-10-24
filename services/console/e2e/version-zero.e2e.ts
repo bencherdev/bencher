@@ -7,7 +7,14 @@ import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import type { JsonPlot, JsonThreshold } from "../src/types/bencher";
 import { createProject } from "./api";
 import { dimensions, explore } from "./explore";
-import { approach, expect, nextPath, seed, signedIn, test } from "./fixtures";
+import {
+	approach,
+	expect,
+	consolePath,
+	seed,
+	signedIn,
+	test,
+} from "./fixtures";
 
 const { version_zero } = seed.projects;
 
@@ -27,7 +34,7 @@ test.use({ storageState: signedIn(seed.member), timezoneId: "UTC" });
 
 /** The newest run's report, reached from Runs as a reader would. */
 const newestReport = async (page: Page) => {
-	await page.goto(nextPath(version_zero.slug, "runs"));
+	await page.goto(consolePath(version_zero.slug, "runs"));
 	await expect(heading(page)).toHaveText("6 runs");
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
@@ -47,8 +54,8 @@ const newestReport = async (page: Page) => {
 	await expect(heading(page)).toHaveText("main · ubuntu-latest");
 };
 
-// Kills any page of a version 0 project that still sends it back to the
-// classic console, or fails to draw its data.
+// Kills any page of a version 0 project that sends it away or fails to draw
+// its data.
 test("every page draws a version 0 project", async ({ page, request }) => {
 	await newestReport(page);
 	await expect(lines(page)).toContainText("blake3 Latency lower_value");
@@ -65,15 +72,15 @@ test("every page draws a version 0 project", async ({ page, request }) => {
 	// Every metric: the value and both of its bounds.
 	await expect(page.getByRole("figure")).toHaveAccessibleName("3 lines");
 
-	await page.goto(nextPath(version_zero.slug, "plots"));
+	await page.goto(consolePath(version_zero.slug, "plots"));
 	await expect(heading(page)).toHaveText("1 pinned plot");
 
-	await page.goto(nextPath(version_zero.slug, "alerts"));
+	await page.goto(consolePath(version_zero.slug, "alerts"));
 	await expect(heading(page)).toHaveText("1 active");
 	await page.getByRole("link", { name: /^blake3 .*, open the alert$/ }).click();
 	await expect(heading(page)).toContainText("blake3");
 
-	await page.goto(nextPath(version_zero.slug, "thresholds"));
+	await page.goto(consolePath(version_zero.slug, "thresholds"));
 	await expect(heading(page)).toHaveText("1 threshold");
 	await page
 		.getByRole("link", {
@@ -92,7 +99,7 @@ test("every page draws a version 0 project", async ({ page, request }) => {
 		["measures/latency", "Latency"],
 		["settings", "General"],
 	] as const) {
-		await page.goto(nextPath(version_zero.slug, path));
+		await page.goto(consolePath(version_zero.slug, path));
 		await expect(heading(page)).toHaveText(name);
 	}
 });
@@ -141,7 +148,7 @@ test("Change this threshold teaches version 0 with no adapter", async ({
 		`/v0/projects/${version_zero.slug}/thresholds`,
 	);
 	await page.goto(
-		nextPath(version_zero.slug, `thresholds/${threshold?.uuid ?? ""}`),
+		consolePath(version_zero.slug, `thresholds/${threshold?.uuid ?? ""}`),
 	);
 	const change = page.getByRole("region", { name: "Change this threshold" });
 	await expect(change).toContainText("--threshold-measure latency");
@@ -194,7 +201,7 @@ test("a classic pin draws every metric and opens in Explore", async ({
 	);
 	const title = pin?.title ?? "";
 	expect(pin?.metrics).toBeUndefined();
-	await page.goto(nextPath(version_zero.slug, "plots"));
+	await page.goto(consolePath(version_zero.slug, "plots"));
 	await expect(
 		page.getByRole("region", { name: title, exact: true }).getByRole("figure"),
 	).toHaveAccessibleName("3 lines over 4w");
@@ -221,7 +228,7 @@ test("an empty version 0 project's setup card teaches a run that lands", async (
 	request,
 }) => {
 	const project = await createProject(request, { version: 0 });
-	await page.goto(nextPath(project.slug, "runs"));
+	await page.goto(consolePath(project.slug, "runs"));
 	await expect(heading(page)).toHaveText("Send the first report");
 	await expect(
 		page.getByText(`${project.name} · BMF v0 · no reports yet`),

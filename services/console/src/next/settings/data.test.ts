@@ -305,8 +305,8 @@ describe("newestHome", () => {
 		}) as JsonConsoleUserProject;
 
 	// Kills a landing that is not the project with the newest run, or that
-	// opens a version 0 project anywhere but where the browser would.
-	test("opens the project with the newest run where its version opens", () => {
+	// opens a version 0 project anywhere but its root in the console.
+	test("opens the project with the newest run at its root", () => {
 		expect(
 			newestHome([
 				listed("old", 1, 1),
@@ -315,7 +315,7 @@ describe("newestHome", () => {
 			]),
 		).toBe(projectPath("new"));
 		expect(newestHome([listed("old", 1, 1), listed("v0", 0, 2)])).toBe(
-			"/console/projects/v0/plots",
+			projectPath("v0"),
 		);
 	});
 

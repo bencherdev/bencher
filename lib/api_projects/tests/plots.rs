@@ -20,6 +20,7 @@ use http::{Method, StatusCode};
 use serde_json::{Value, json};
 
 const PLOT_VIEW_MIGRATION: &str = "20261008120000";
+const PLOT_CLASSIC_METRICS_MIGRATION: &str = "20261019120000";
 
 /// The fields a plot made before it could keep a view reads with.
 const CLASSIC_FIELDS: [&str; 16] = [
@@ -508,6 +509,17 @@ fn revert_migration(conn: &mut DbConnection) {
         .expect("Failed to enable foreign keys");
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "test helper setting a project's version"
+)]
+fn set_bmf_version(conn: &mut DbConnection, project_id: i32, version: i32) {
+    diesel::update(schema::project::table.filter(schema::project::id.eq(project_id)))
+        .set(schema::project::bmf_version.eq(version))
+        .execute(conn)
+        .expect("Failed to set the project's BMF version");
+}
+
 #[expect(clippy::expect_used, reason = "test helper applying migrations")]
 fn apply_migration(conn: &mut DbConnection) {
     conn.batch_execute("PRAGMA foreign_keys = OFF")
@@ -562,6 +574,12 @@ async fn plot_create_keeps_at_most_64_plots() {
 #[tokio::test(flavor = "multi_thread")]
 async fn plot_view_migration_down_and_up_keeps_every_plot() {
     let f = fixture("plotviewmigration").await;
+    // On the way up, a version 0 project's pins without metrics are given them.
+    set_bmf_version(
+        &mut db_conn(&f.server),
+        get_project_id(&f.server, &f.project_slug),
+        1,
+    );
     // A deleted first plot leaves a gap in the IDs, so a renumbered row shows.
     let deleted = uuid_of(&f.create(&json!({})).await);
     let classic = f.create(&json!({})).await;
@@ -658,4 +676,136 @@ async fn plot_view_migration_down_and_up_keeps_every_plot() {
     assert_eq!(after, before, "a plot without a view reads the same");
     f.assert_view(&f.read(uuid_of(&viewed)).await.0, &json!({}))
         .await;
+}
+
+/// One row per plot: its title and its metrics as stored.
+const METRIC_ROWS: &str = "SELECT json_array(title, metrics) AS row FROM plot ORDER BY id";
+
+#[expect(clippy::expect_used, reason = "test helper inserting a plot")]
+fn insert_plot(
+    conn: &mut DbConnection,
+    project_id: i32,
+    title: &str,
+    (lower_value, upper_value): (bool, bool),
+    metrics: Option<&str>,
+) {
+    diesel::insert_into(schema::plot::table)
+        .values((
+            schema::plot::uuid.eq(PlotUuid::new().to_string()),
+            schema::plot::project_id.eq(project_id),
+            schema::plot::rank.eq(1i64),
+            schema::plot::title.eq(title),
+            schema::plot::lower_value.eq(lower_value),
+            schema::plot::upper_value.eq(upper_value),
+            schema::plot::lower_boundary.eq(true),
+            schema::plot::upper_boundary.eq(true),
+            schema::plot::x_axis.eq(0),
+            schema::plot::y_axis.eq(0),
+            schema::plot::window.eq(604_800i64),
+            schema::plot::metrics.eq(metrics),
+            schema::plot::created.eq(0i64),
+            schema::plot::modified.eq(0i64),
+        ))
+        .execute(conn)
+        .expect("Failed to insert a plot");
+}
+
+// Kills: metrics written for a version 1 project's pins, over metrics a pin
+// already names, without a bound the pin showed or with one it hid, in another
+// format than the column's own, an up that writes again when run twice, and a
+// down that clears metrics up did not write, a version 1 pin's included, or
+// leaves those it did.
+#[tokio::test(flavor = "multi_thread")]
+async fn plot_classic_metrics_migration_draws_each_classic_pin_as_before() {
+    let f = fixture("plotclassicmetrics").await;
+    let org = f.server.create_org(&f.user, "Org Version One").await;
+    let other = f.server.create_project(&f.user, &org, "Version One").await;
+    let v0 = get_project_id(&f.server, &f.project_slug);
+    let v1 = get_project_id(&f.server, other.slug.as_ref());
+    let mut conn = db_conn(&f.server);
+    set_bmf_version(&mut conn, v1, 1);
+    for (project, title, bounds, metrics) in [
+        (v0, "value", (false, false), None),
+        (v0, "lower", (true, false), None),
+        (v0, "upper", (false, true), None),
+        (v0, "both", (true, true), None),
+        (v0, "named", (true, false), Some(r#"["p99"]"#)),
+        (
+            v0,
+            "chosen",
+            (false, false),
+            Some(r#"["value","lower_value"]"#),
+        ),
+        (v1, "version one", (true, true), None),
+        (
+            v1,
+            "version one value",
+            (false, false),
+            Some(r#"["value"]"#),
+        ),
+    ] {
+        insert_plot(&mut conn, project, title, bounds, metrics);
+    }
+    let before = raw_rows(&mut conn, METRIC_ROWS);
+
+    conn.batch_execute("PRAGMA foreign_keys = OFF")
+        .expect("Failed to disable foreign keys");
+    loop {
+        let reverted = conn
+            .revert_last_migration(MIGRATIONS)
+            .expect("Failed to revert the migration");
+        if reverted.to_string() == PLOT_CLASSIC_METRICS_MIGRATION {
+            break;
+        }
+    }
+    assert_eq!(
+        raw_rows(&mut conn, METRIC_ROWS),
+        before,
+        "down on no pin it wrote"
+    );
+    conn.run_pending_migrations(MIGRATIONS)
+        .expect("Failed to apply the migration");
+    let migrated = vec![
+        r#"["value","[\"value\"]"]"#,
+        r#"["lower","[\"value\",\"lower_value\"]"]"#,
+        r#"["upper","[\"value\",\"upper_value\"]"]"#,
+        r#"["both","[\"value\",\"lower_value\",\"upper_value\"]"]"#,
+        r#"["named","[\"p99\"]"]"#,
+        r#"["chosen","[\"value\",\"lower_value\"]"]"#,
+        r#"["version one",null]"#,
+        r#"["version one value","[\"value\"]"]"#,
+    ];
+    assert_eq!(raw_rows(&mut conn, METRIC_ROWS), migrated, "up");
+    conn.batch_execute(include_str!(
+        "../../bencher_schema/migrations/2026-10-19-120000_plot_classic_metrics/up.sql"
+    ))
+    .expect("Failed to run up again");
+    assert_eq!(raw_rows(&mut conn, METRIC_ROWS), migrated, "up again");
+
+    loop {
+        let reverted = conn
+            .revert_last_migration(MIGRATIONS)
+            .expect("Failed to revert the migration");
+        if reverted.to_string() == PLOT_CLASSIC_METRICS_MIGRATION {
+            break;
+        }
+    }
+    assert_eq!(raw_rows(&mut conn, METRIC_ROWS), before, "down");
+    conn.run_pending_migrations(MIGRATIONS)
+        .expect("Failed to apply the migration");
+    conn.batch_execute("PRAGMA foreign_keys = ON")
+        .expect("Failed to enable foreign keys");
+
+    let (status, body) = f.send(Method::GET, f.plots_url(), None).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let lower = parse(&body)
+        .as_array()
+        .and_then(|plots| {
+            plots
+                .iter()
+                .find(|plot| plot.get("title") == Some(&json!("lower")))
+                .cloned()
+        })
+        .unwrap_or_default();
+    assert_eq!(lower.get("metrics"), Some(&json!(["value", "lower_value"])));
 }

@@ -5,7 +5,7 @@ import Navbar from "../components/navbar/Navbar.astro";
 import Footer from "../components/site/Footer.astro";
 import GoogleAnalytics from "../components/site/GoogleAnalytics.astro";
 import { BENCHER_TITLE, BENCHER_DESCRIPTION } from "../util/resource";
-import { BENCHER_SITE_URL } from "../util/ext";
+import { BENCHER_OG_IMAGE, BENCHER_SITE_URL } from "../util/ext";
 import { defaultLang } from "../i18n/ui.ts";
 import {
 	type Author,
@@ -20,7 +20,6 @@ interface Props {
 	description: string;
 	published?: undefined | string;
 	modified?: undefined | string;
-	perfImage?: undefined | string;
 	lang?: undefined | string;
 	author?: undefined | Author;
 	canonical?: undefined | string;
@@ -36,7 +35,6 @@ const {
 	description,
 	published,
 	modified,
-	perfImage,
 	lang,
 	author,
 	canonical,
@@ -45,40 +43,14 @@ const {
 	url,
 } = Astro.props;
 
-const BENCHER_OG_IMAGE =
-	"https://s3.amazonaws.com/public.bencher.dev/img/bencher-og-image.png";
+const BENCHER_OG_IMAGE_ALT = "🐰 Bencher";
 
-const imageUrl = () => {
-	if (perfImage) {
-		return perfImage;
-	}
-	return BENCHER_OG_IMAGE;
-};
-
-const imageAlt = () => {
-	if (perfImage) {
-		return `Track the performance for ${title}`;
-	}
-	return "🐰 Bencher";
-};
-
-const image = () => {
-	if (perfImage) {
-		return {
-			url: imageUrl(),
-			type: "image/jpg",
-			width: 1024,
-			height: 768,
-			alt: imageAlt(),
-		};
-	}
-	return {
-		url: imageUrl(),
-		type: "image/png",
-		width: 1200,
-		height: 630,
-		alt: imageAlt(),
-	};
+const image = {
+	url: BENCHER_OG_IMAGE,
+	type: "image/png",
+	width: 1200,
+	height: 630,
+	alt: BENCHER_OG_IMAGE_ALT,
 };
 
 const article = () => {
@@ -143,14 +115,14 @@ const article = () => {
         basic: {
           title: titleFmt ? titleFmt(title) : title,
           type: "website",
-          image: imageUrl(),
+          image: BENCHER_OG_IMAGE,
           url,
         },
         optional: {
           siteName: "🐰 Bencher",
           description: description ?? BENCHER_DESCRIPTION,
         },
-        image: image(),
+        image,
         article: article(),
       }}
       twitter={{
@@ -159,8 +131,8 @@ const article = () => {
         creator: author ? twitter(author) : TWITTER_BENCHER,
         title: titleFmt ? titleFmt(title) : title,
         description: description ?? BENCHER_DESCRIPTION,
-        image: imageUrl(),
-        imageAlt: imageAlt(),
+        image: BENCHER_OG_IMAGE,
+        imageAlt: BENCHER_OG_IMAGE_ALT,
       }}
     />
     <!-- https://devicon.dev/ -->

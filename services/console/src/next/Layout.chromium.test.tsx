@@ -9,7 +9,7 @@ import type { JsonAuthUser, JsonConsoleProject } from "../types/bencher";
 import { type Api, ApiError } from "./api";
 import Layout from "./Layout";
 import { VERSION_KEY } from "./memory";
-import { NEXT_PROJECTS } from "./paths";
+import { PROJECTS_PATH } from "./paths";
 import { consoleProjectQuery } from "./queries";
 import { PAGES, ROUTES } from "./routes";
 
@@ -54,7 +54,7 @@ let dispose: (() => void) | undefined;
 const mount = (
 	client: QueryClient,
 	api: Api,
-	path = `${NEXT_PROJECTS}/hashbrown/nowhere`,
+	path = `${PROJECTS_PATH}/hashbrown/nowhere`,
 ) => {
 	const history = createMemoryHistory();
 	history.set({ value: path });
@@ -66,15 +66,8 @@ const mount = (
 			<QueryClientProvider client={client}>
 				<MemoryRouter
 					history={history}
-					base={NEXT_PROJECTS}
-					root={(section) => (
-						<Layout
-							{...section}
-							api={api}
-							reader={reader}
-							versions={() => ({})}
-						/>
-					)}
+					base={PROJECTS_PATH}
+					root={(section) => <Layout {...section} api={api} reader={reader} />}
 				>
 					{ROUTES}
 				</MemoryRouter>
@@ -120,7 +113,7 @@ describe("the layout", () => {
 			document.querySelector('nav[aria-label="Project"] [aria-current="page"]')
 				?.textContent;
 
-		mount(seeded(), api, `${NEXT_PROJECTS}/hashbrown`);
+		mount(seeded(), api, `${PROJECTS_PATH}/hashbrown`);
 		await expect
 			.element(page.getByRole("heading", { level: 1, name: "Runs" }))
 			.toBeVisible();
@@ -132,7 +125,7 @@ describe("the layout", () => {
 		dispose?.();
 		document.body.replaceChildren();
 
-		mount(seeded(), api, `${NEXT_PROJECTS}/hashbrown/explore`);
+		mount(seeded(), api, `${PROJECTS_PATH}/hashbrown/explore`);
 		await expect
 			.element(page.getByRole("heading", { name: "Start from" }))
 			.toBeVisible();
@@ -234,6 +227,30 @@ describe("the layout", () => {
 			expect(JSON.parse(localStorage.getItem(VERSION_KEY) ?? "null")).toEqual({
 				crinkle: 1,
 			});
+		},
+	);
+
+	// Kills a project the reader opened left out of the memory, so bencher.dev's
+	// root would not land on it, and one remembered at another version than its
+	// own or behind a project opened before it.
+	test.each([0, 1])(
+		"a version %i project that loads is the most recent remembered",
+		async (version) => {
+			localStorage.setItem(
+				VERSION_KEY,
+				JSON.stringify({ hashbrown: 1 - version, crinkle: 1 }),
+			);
+			const { api, answers } = heldApi();
+			mount(new QueryClient(), api);
+			await expect.poll(() => answers.length).toBe(1);
+			answers[0]?.({
+				...bootstrap(0),
+				project: { ...bootstrap(0).project, bmf_version: version },
+			});
+
+			await expect
+				.poll(() => localStorage.getItem(VERSION_KEY))
+				.toBe(JSON.stringify({ crinkle: 1, hashbrown: version }));
 		},
 	);
 });

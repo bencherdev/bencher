@@ -49,8 +49,8 @@ import Start from "../explore/Start";
 import { chipSummary } from "../explore/summary";
 import { rollingName } from "../explore/window";
 import {
-	NEXT_PROJECTS,
-	parseNextPath,
+	PROJECTS_PATH,
+	parseConsolePath,
 	alertPath,
 	projectPath,
 	reportPath,
@@ -87,7 +87,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 	const narrow = useNarrow();
 	const query = createMemo(() => decodeQuery(location.search));
 	// Router paths are relative to the console's base.
-	const here = () => location.pathname.slice(NEXT_PROJECTS.length);
+	const here = () => location.pathname.slice(PROJECTS_PATH.length);
 	// A view change keeps where the query came from; an edit makes it the reader's own.
 	const go = (next: ExploreQuery, replace = false) =>
 		navigate(`${here()}${encodeQuery(next)}`, {
@@ -424,7 +424,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 	const [leaving, setLeaving] = createSignal<string>();
 	let discarded = false;
 	const destination = (path: string) => {
-		const place = parseNextPath(path);
+		const place = parseConsolePath(path);
 		const tab = place ? tabOf(place.rest) : undefined;
 		return { explore: place?.slug === slug() && tab === "explore", tab };
 	};
@@ -469,8 +469,8 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 			return;
 		}
 		discarded = true;
-		if (to.startsWith(`${NEXT_PROJECTS}/`)) {
-			navigate(to.slice(NEXT_PROJECTS.length));
+		if (to.startsWith(`${PROJECTS_PATH}/`)) {
+			navigate(to.slice(PROJECTS_PATH.length));
 		} else {
 			window.location.assign(to);
 		}

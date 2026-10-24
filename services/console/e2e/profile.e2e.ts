@@ -6,19 +6,11 @@ import type {
 import type { JsonAuthUser } from "../src/types/bencher";
 import { createReader, readUser, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import {
-	VERSION_KEY,
-	expect,
-	nextPath,
-	seed,
-	signedIn,
-	test,
-} from "./fixtures";
+import { expect, consolePath, seed, signedIn, test } from "./fixtures";
 
-const { hashbrown, version_zero } = seed.projects;
+const { hashbrown } = seed.projects;
 
-const profilePath = (user: string) => `/next/console/users/${user}/settings`;
-const classicProfile = (user: string) => `/console/users/${user}/settings`;
+const profilePath = (user: string) => `/console/users/${user}/settings`;
 const heading = (page: Page) =>
 	page.getByRole("heading", { level: 1, name: "Profile" });
 const textbox = (page: Page, name: string) =>
@@ -162,7 +154,7 @@ test.describe("from a project page", () => {
 	test("the avatar's menu opens Profile from a project without a reload", async ({
 		page,
 	}) => {
-		await page.goto(nextPath(hashbrown.slug, "settings"));
+		await page.goto(consolePath(hashbrown.slug, "settings"));
 		await expect(textbox(page, "Name")).toHaveValue(hashbrown.name);
 		await page.evaluate(() => {
 			(window as Window & { stayed?: boolean }).stayed = true;
@@ -184,39 +176,12 @@ test.describe("from a project page", () => {
 test.describe("the account's root", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
-	// Kills the classic shortcut to Profile lost under /next/.
+	// Kills the classic account root left with no page.
 	test("opens Profile", async ({ page }) => {
-		await page.goto(`/next/console/users/${seed.member.user.slug}`);
+		await page.goto(`/console/users/${seed.member.user.slug}`);
 
 		await expect(page).toHaveURL(profilePath(seed.member.user.slug));
 		await expect(heading(page)).toBeVisible();
-	});
-});
-
-const remembered = (versions: Record<string, number>) =>
-	signedIn(seed.member, { [VERSION_KEY]: JSON.stringify(versions) });
-
-test.describe("the classic Profile, for a reader with a version 1 project", () => {
-	test.use({ storageState: remembered({ [hashbrown.slug]: 1 }) });
-
-	// Kills a classic Profile that keeps a reader the new one serves.
-	test("sends the reader to Profile under /next/", async ({ page }) => {
-		await page.goto(classicProfile(seed.member.user.slug));
-
-		await expect(page).toHaveURL(profilePath(seed.member.user.slug));
-		await expect(heading(page)).toBeVisible();
-	});
-});
-
-test.describe("the classic Profile, for a reader of version 0 projects only", () => {
-	test.use({ storageState: remembered({ [version_zero.slug]: 0 }) });
-
-	// Kills a classic Profile that sends away a reader the new one does not serve.
-	test("keeps the reader", async ({ page }) => {
-		await page.goto(classicProfile(seed.member.user.slug));
-		await page.waitForLoadState("networkidle");
-
-		await expect(page).toHaveURL(classicProfile(seed.member.user.slug));
 	});
 });
 

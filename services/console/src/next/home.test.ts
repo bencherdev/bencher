@@ -10,13 +10,13 @@ const versions = (entries: Record<string, number>) => ({
 
 describe("rememberedHome", () => {
 	// Kills a home that is not the most recently loaded project, one opened
-	// anywhere but where its version opens, and a guess when nothing is known.
-	test("is the newest remembered project where its version opens", () => {
+	// anywhere but its root at either version, and a guess when nothing is known.
+	test("is the newest remembered project at its root", () => {
 		expect(rememberedHome(versions({ older: 0, newer: 1 }))).toBe(
 			projectPath("newer"),
 		);
 		expect(rememberedHome(versions({ older: 1, newer: 0 }))).toBe(
-			"/console/projects/newer/plots",
+			projectPath("newer"),
 		);
 		expect(rememberedHome({ getItem: () => null })).toBeUndefined();
 	});

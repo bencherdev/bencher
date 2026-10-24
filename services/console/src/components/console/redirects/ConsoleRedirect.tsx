@@ -5,8 +5,6 @@ import { authUser, removeUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { removeOnboardProjectKey } from "../../../util/onboard";
 import {
-	NOTIFY_KIND_PARAM,
-	NOTIFY_TEXT_PARAM,
 	NotifyKind,
 	forwardParams,
 	navigateNotify,
@@ -23,6 +21,7 @@ import {
 	validJwt,
 	validPlanLevel,
 } from "../../../util/valid";
+import { ORGANIZATIONS_PATH, organizationPath } from "../../../next/paths";
 import { PLAN_PARAM } from "../../auth/auth";
 import { consoleDestination } from "./destination";
 
@@ -43,16 +42,8 @@ const ConsoleRedirect = (props: Props) => {
 	// which forwards the plan param to its final plan step.
 	const orgDestination = (slug: string) =>
 		validPlanLevel(searchParams[PLAN_PARAM])
-			? forwardParams(
-					`/console/organizations/${slug}/billing`,
-					[PLAN_PARAM],
-					[],
-				)
-			: forwardParams(
-					`/console/organizations/${slug}/projects`,
-					[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM],
-					null,
-				);
+			? forwardParams(`${ORGANIZATIONS_PATH}/${slug}/billing`, [PLAN_PARAM], [])
+			: organizationPath(slug);
 
 	const logout = () => {
 		removeUser();
@@ -104,24 +95,14 @@ const ConsoleRedirect = (props: Props) => {
 					setOrganization(only);
 				}
 				switch (destination.kind) {
-					case "next":
+					case "project":
 						navigate(destination.path, { replace: true });
-						break;
-					case "classic":
-						navigate(
-							forwardParams(
-								destination.path,
-								[NOTIFY_KIND_PARAM, NOTIFY_TEXT_PARAM],
-								null,
-							),
-							{ replace: true },
-						);
 						break;
 					case "organization":
 						navigate(orgDestination(destination.slug), { replace: true });
 						break;
 					case "organizations":
-						navigate("/console/organizations", { replace: true });
+						navigate(ORGANIZATIONS_PATH, { replace: true });
 						break;
 					case "onboard":
 						navigate(

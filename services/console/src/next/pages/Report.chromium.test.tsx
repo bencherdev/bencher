@@ -17,7 +17,7 @@ import type {
 } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { ProjectContext } from "../project";
 import { linesOf } from "../report/lines";
 import {
@@ -34,7 +34,7 @@ import { bootstrapOf } from "../settings/testing";
 import { expectNameStartsWithText } from "../ui/testing";
 import Report from "./Report";
 
-const PATH = `${NEXT_PROJECTS}/hashbrown/reports/${REPORT}`;
+const PATH = `${PROJECTS_PATH}/hashbrown/reports/${REPORT}`;
 
 let dispose: (() => void) | undefined;
 
@@ -54,7 +54,7 @@ const mount = (
 			<QueryClientProvider client={client}>
 				<MemoryRouter
 					history={history}
-					base={NEXT_PROJECTS}
+					base={PROJECTS_PATH}
 					root={(props) => (
 						<ProjectContext.Provider
 							value={{ api, slug: () => "hashbrown", host }}
@@ -413,7 +413,7 @@ test("a row's Open in Explore is Open 1 for that row alone", async () => {
 	const row = page.getByRole("link", { name: `Open in Explore: ${SMALL}` });
 	await expect.element(row).toBeVisible();
 	const href = row.element().getAttribute("href");
-	expect(href).toMatch(/^\/next\/console\/projects\/hashbrown\/explore\?/);
+	expect(href).toMatch(/^\/console\/projects\/hashbrown\/explore\?/);
 	await page.getByRole("checkbox", { name: `Select ${SMALL}` }).click();
 	await expect
 		.element(page.getByRole("link", { name: "Open 1 in Explore" }))
@@ -853,7 +853,7 @@ test("a malformed report id is not found at once, without asking the API", async
 	const { api, requests } = fakeApi((url) =>
 		isReport(url) ? { data: reportFixture() } : { data: bootstrapOf() },
 	);
-	mount(api, impatient(), `${NEXT_PROJECTS}/hashbrown/reports/9c1f2e4`);
+	mount(api, impatient(), `${PROJECTS_PATH}/hashbrown/reports/9c1f2e4`);
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
 		.toHaveTextContent("Report not found");
@@ -903,7 +903,7 @@ const pinAlert = async () => {
 	const readout = region.getByRole("status");
 	await expect
 		.element(readout.getByRole("link", { name: `Alert: ${LATENCY}` }))
-		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/alerts/alert-uuid`);
+		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/alerts/alert-uuid`);
 	return readout;
 };
 
@@ -921,7 +921,7 @@ test("a row that alerted links its alert, and its pinned readout dismisses it", 
 	const sent = alertedReport();
 	await expect
 		.element(page.getByRole("link", { name: `${LATENCY}, open the alert` }))
-		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/alerts/alert-uuid`);
+		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/alerts/alert-uuid`);
 	const readout = await pinAlert();
 	await dismissIn(readout).click();
 	await expect.element(reactivateIn(readout)).toBeVisible();
@@ -973,7 +973,7 @@ test("the crumb leads back to the report's run, and the sub line leads with its 
 	const back = page.getByRole("link", { name: "main 9c1f2e4", exact: true });
 	await expect
 		.element(back)
-		.toHaveAttribute("href", `${NEXT_PROJECTS}/hashbrown/runs/${RUN}`);
+		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/runs/${RUN}`);
 	expect(crumbs()?.textContent).toBe("Runs/main · 9c1f2e4/");
 	expect(subLine()).toMatch(
 		/^#5 of 8 · Sep 1[34], 2026, \d\d:\d6:00 · json · /,
@@ -1029,7 +1029,7 @@ test("Previous and Next walk the run's reports by place and testbed, the testbed
 		.element(previous)
 		.toHaveAttribute(
 			"href",
-			`${NEXT_PROJECTS}/hashbrown/reports/${PREVIOUS}?sort=delta`,
+			`${PROJECTS_PATH}/hashbrown/reports/${PREVIOUS}?sort=delta`,
 		);
 	await expect
 		.element(previous)
@@ -1042,7 +1042,7 @@ test("Previous and Next walk the run's reports by place and testbed, the testbed
 		.element(next)
 		.toHaveAttribute(
 			"href",
-			`${NEXT_PROJECTS}/hashbrown/reports/${NEXT}?sort=delta`,
+			`${PROJECTS_PATH}/hashbrown/reports/${NEXT}?sort=delta`,
 		);
 	await expect.element(next).toHaveTextContent("Next #6 · macos-latest");
 

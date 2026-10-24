@@ -20,7 +20,7 @@ Quando um novo Projeto é criado para você, seja o slug especificado ou gerado,
 o Projeto precisa pertencer a uma Organização.
 Se o usuário estiver autenticado com uma chave de API de usuário ([a opção `--key`](#--key-key)) ou [a opção obsoleta `--token`](#--token-token), o Projeto é adicionado à Organização pessoal desse usuário.
 Se o usuário não estiver autenticado, o Projeto será criado sob uma nova Organização `unclaimed`.
-Essa Organização pode então ser `claimed` a partir da Perf Page pública do Projeto
+Essa Organização pode então ser `claimed` a partir do link `Claim this project` na saída do `bencher run`
 ou usando o slug do Projeto enquanto autenticado em uma invocação subsequente de `bencher run`.
 
 > 🐰 IMPORTANTE: Se a variável de ambiente `CI` estiver definida como `true`,

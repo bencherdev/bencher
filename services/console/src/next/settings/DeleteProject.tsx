@@ -9,7 +9,7 @@ import type { JsonConsoleUser, JsonProject } from "../../types/bencher";
 import { AccountContext } from "../account/context";
 import { FlushContext } from "../flush";
 import { rememberedHome } from "../home";
-import { NEXT_CONSOLE } from "../paths";
+import { CONSOLE_PATH } from "../paths";
 import { useProject } from "../project";
 import { consoleUserQuery } from "../queries";
 import { forgetSlug, newestHome } from "./data";
@@ -73,8 +73,8 @@ const DeleteProject = (props: {
 			);
 		if (props.leave) {
 			props.leave(to);
-		} else if (to.startsWith(`${NEXT_CONSOLE}/`)) {
-			navigate(to.slice(NEXT_CONSOLE.length));
+		} else if (to.startsWith(`${CONSOLE_PATH}/`)) {
+			navigate(to.slice(CONSOLE_PATH.length));
 		} else {
 			location.assign(to);
 		}

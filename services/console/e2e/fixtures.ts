@@ -92,8 +92,12 @@ export const signedIn = (
 
 export const signedOut: StorageState = { cookies: [], origins: [] };
 
-export const nextPath = (slug: string, tab = "") =>
-	`/next/console/projects/${slug}/${tab}`;
+/** Sign in, carrying `back` as the page it returns to. */
+export const logInTo = (back: string) =>
+	`/auth/login?${new URLSearchParams({ back: Buffer.from(back).toString("base64") })}`;
+
+export const consolePath = (slug: string, tab = "") =>
+	`/console/projects/${slug}/${tab}`;
 
 export const test = base.extend<{
 	freezeClock: boolean;

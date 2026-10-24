@@ -4,7 +4,7 @@ import { axeInBothThemes } from "./axe";
 import {
 	approach,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	settle,
 	signedIn,
@@ -30,7 +30,7 @@ const newestMain = async (request: APIRequestContext) => {
 };
 
 const reportPath = (slug: string, report: string, search = "") =>
-	`${nextPath(slug, "reports")}/${report}${search}`;
+	`${consolePath(slug, "reports")}/${report}${search}`;
 
 const table = (page: Page) =>
 	page.getByRole("table", { name: /^Lines in report / });
@@ -318,7 +318,7 @@ test("Open 2 in Explore opens exactly the selected lines", async ({
 		(await open.getAttribute("href")) ?? "",
 		seed.console_url,
 	);
-	expect(href.pathname).toBe(nextPath(hashbrown.slug, "explore"));
+	expect(href.pathname).toBe(consolePath(hashbrown.slug, "explore"));
 	expect(href.searchParams.get("only")?.split(",")).toHaveLength(2);
 	expect(href.searchParams.get("report")).toBe(report);
 	await open.click();
@@ -360,7 +360,7 @@ test("a reader who only waits gets each row's Open in Explore", async ({
 	await page.goto(reportPath(hashbrown.slug, await newestMain(request)));
 	await expect(
 		page.getByRole("link", { name: `Open in Explore: ${ALERTING}` }),
-	).toHaveAttribute("href", /^\/next\/console\/projects\/[^/]+\/explore\?/);
+	).toHaveAttribute("href", /^\/console\/projects\/[^/]+\/explore\?/);
 	await expect(
 		page.getByRole("link", { name: `Open in Explore: ${UNCHECKED}` }),
 	).toBeVisible();
@@ -372,7 +372,7 @@ test("a reader who only waits gets each row's Open in Explore", async ({
 test("a reader who moves from Runs to a report and only waits gets each row's Open in Explore", async ({
 	page,
 }) => {
-	await page.goto(nextPath(hashbrown.slug, "runs"));
+	await page.goto(consolePath(hashbrown.slug, "runs"));
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
 		.getByRole("link")
@@ -389,7 +389,7 @@ test("a reader who moves from Runs to a report and only waits gets each row's Op
 	).toBeVisible();
 	await expect(
 		page.getByRole("link", { name: /^Open in Explore: / }).first(),
-	).toHaveAttribute("href", /^\/next\/console\/projects\/[^/]+\/explore\?/);
+	).toHaveAttribute("href", /^\/console\/projects\/[^/]+\/explore\?/);
 });
 
 // Kills a sheet without the exact threshold's parameters and metric, counts
@@ -438,7 +438,7 @@ test("an unknown report says so", async ({ page }) => {
 	);
 	await expect(
 		page.getByRole("main").getByRole("link", { name: "Runs", exact: true }),
-	).toHaveAttribute("href", nextPath(hashbrown.slug, "runs"));
+	).toHaveAttribute("href", consolePath(hashbrown.slug, "runs"));
 });
 
 // Kills a malformed link, such as a short hash, sent to the API, which refuses

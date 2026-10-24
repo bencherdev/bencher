@@ -78,12 +78,11 @@ describe("landing", () => {
 		);
 	});
 
-	// Kills a version 0 project sent to the new console, which would send it
-	// back.
-	test("a version 0 project lands on its classic page", () => {
+	// Kills a version 0 project sent anywhere but its root in the console.
+	test("a version 0 project lands on its root", () => {
 		expect(
 			landing(READER, versions({ hashbrown: 0 }), "", NOW, projectAt),
-		).toBe("/console/projects/hashbrown/plots");
+		).toBe(projectPath("hashbrown"));
 	});
 
 	// Kills a landing on the first project remembered rather than the last

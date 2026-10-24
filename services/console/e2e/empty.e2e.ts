@@ -1,7 +1,7 @@
 import { createProject, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
 import { dimensions } from "./explore";
-import { expect, nextPath, seed, signedIn, tabRow, test } from "./fixtures";
+import { expect, consolePath, seed, signedIn, tabRow, test } from "./fixtures";
 
 const { empty, hashbrown } = seed.projects;
 const DAY = 24 * 60 * 60 * 1000;
@@ -33,7 +33,7 @@ test.describe("a project's Maintainer", () => {
 					);
 			}).observe(document, { childList: true, subtree: true });
 		});
-		await page.goto(nextPath(project.slug));
+		await page.goto(consolePath(project.slug));
 		await expect(card(page)).toBeVisible();
 		await expect(
 			tabRow(page).getByRole("link", { name: "Runs" }),
@@ -82,7 +82,7 @@ test.describe("a project's Maintainer", () => {
 		await expect(rows).toHaveCount(1);
 		await expect(rows.getByRole("link").first()).toHaveAttribute(
 			"href",
-			new RegExp(`^${nextPath(project.slug, "runs")}/[0-9a-f-]{36}$`),
+			new RegExp(`^${consolePath(project.slug, "runs")}/[0-9a-f-]{36}$`),
 		);
 	});
 
@@ -130,7 +130,7 @@ test.describe("a project's Maintainer", () => {
 				document.dispatchEvent(new Event("visibilitychange"));
 			}, hidden);
 
-		await page.goto(nextPath(project.slug));
+		await page.goto(consolePath(project.slug));
 		await expect(card(page)).toBeVisible();
 		await expect.poll(() => polls, { timeout: 8_000 }).toBe(2);
 		const written = await puts();
@@ -168,7 +168,7 @@ test.describe("a project's Maintainer", () => {
 			benchmarks: id.benchmark("hash"),
 			measures: id.measure("Latency"),
 		});
-		await page.goto(`${nextPath(project.slug, "explore")}?${search}`);
+		await page.goto(`${consolePath(project.slug, "explore")}?${search}`);
 		const query = page.getByRole("region", { name: "Query" });
 		await expect(query).toBeVisible();
 		const panel = await query.elementHandle();
@@ -204,14 +204,14 @@ test.describe("a project's Maintainer", () => {
 				url.searchParams.get("per_page") === "4",
 			(route) => route.fulfill({ status: 500, json: {} }),
 		);
-		await page.goto(nextPath(hashbrown.slug, "explore"));
+		await page.goto(consolePath(hashbrown.slug, "explore"));
 		await expect(page.getByRole("region", { name: "Query" })).toBeVisible({
 			timeout: 15_000,
 		});
 	});
 
 	test("the setup card passes axe in both themes", async ({ page }) => {
-		await axeInBothThemes(page, nextPath(empty.slug), () =>
+		await axeInBothThemes(page, consolePath(empty.slug), () =>
 			expect(
 				card(page).getByRole("button", { name: "Create key" }),
 			).toBeEnabled(),
@@ -224,7 +224,7 @@ test.describe("a reader who is not a Maintainer", () => {
 
 	// Kills Create key offered to a reader the API refuses it to.
 	test("sees the setup card without Create key", async ({ page }) => {
-		await page.goto(nextPath(empty.slug));
+		await page.goto(consolePath(empty.slug));
 		await expect(card(page)).toBeVisible();
 		await expect(
 			card(page).getByText("Read only", { exact: true }),
@@ -243,7 +243,7 @@ test.describe("narrow", () => {
 
 	// Kills a card wider than a phone, and a Create key under 44 px.
 	test("the setup card fits a phone", async ({ page }) => {
-		await page.goto(nextPath(empty.slug));
+		await page.goto(consolePath(empty.slug));
 		const create = card(page).getByRole("button", { name: "Create key" });
 		await expect(create).toBeVisible();
 		expect((await create.boundingBox())?.height).toBeGreaterThanOrEqual(44);

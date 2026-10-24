@@ -101,12 +101,10 @@ describe("wide", () => {
 		]);
 		const href = (name: string) =>
 			(item(name).element() as HTMLAnchorElement).getAttribute("href");
-		expect(href("Profile")).toBe("/next/console/users/muriel-bagge/settings");
-		expect(href("Keys")).toBe("/next/console/users/muriel-bagge/keys");
-		expect(href("Connected Apps")).toBe(
-			"/next/console/users/muriel-bagge/apps",
-		);
-		expect(href("Organizations")).toBe("/next/console/organizations");
+		expect(href("Profile")).toBe("/console/users/muriel-bagge/settings");
+		expect(href("Keys")).toBe("/console/users/muriel-bagge/keys");
+		expect(href("Connected Apps")).toBe("/console/users/muriel-bagge/apps");
+		expect(href("Organizations")).toBe("/console/organizations");
 		expect(href("Help")).toBe("/help/");
 	});
 

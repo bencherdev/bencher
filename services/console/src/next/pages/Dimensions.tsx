@@ -8,7 +8,7 @@ import { KINDS, placeOf } from "../dimensions/dimension";
 import Inspect, { prefetchInspect } from "../dimensions/Inspect";
 import List from "../dimensions/List";
 import { decodeSearch } from "../dimensions/search";
-import { parseNextPath } from "../paths";
+import { parseConsolePath } from "../paths";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
@@ -21,7 +21,7 @@ const Dimensions = () => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
 	const place = createMemo(
-		() => placeOf(parseNextPath(location.pathname)?.rest ?? []),
+		() => placeOf(parseConsolePath(location.pathname)?.rest ?? []),
 		undefined,
 		{
 			equals: (a, b) => a?.dimension === b?.dimension && a?.entry === b?.entry,

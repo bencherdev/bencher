@@ -91,7 +91,7 @@ test("Delete organization stays off until the slug is typed exactly, then delete
 	await expect.element(confirm).toBeEnabled();
 
 	await confirm.click();
-	await expect.poll(() => left).toEqual(["/next/console/organizations"]);
+	await expect.poll(() => left).toEqual(["/console/organizations"]);
 	expect(sent).toEqual([
 		{ method: "DELETE", path: "/v0/organizations/o1", body: undefined },
 	]);
@@ -187,7 +187,7 @@ test("a page reached by UUID forgets the organization under its UUID", async () 
 		.fill("pompeii-llc");
 	await dialog.getByRole("button", { name: "Delete organization" }).click();
 
-	await expect.poll(() => left).toEqual(["/next/console/organizations"]);
+	await expect.poll(() => left).toEqual(["/console/organizations"]);
 	expect(sent).toHaveLength(1);
 	expect(
 		mounted.client.getQueryData(organizationQuery(api, "o1").queryKey),
@@ -217,5 +217,5 @@ test("Delete leaves once the cache has written the removal", async () => {
 	await new Promise((resolve) => setTimeout(resolve, 100));
 	expect(left).toEqual([]);
 	held[0]?.write();
-	await expect.poll(() => left).toEqual(["/next/console/organizations"]);
+	await expect.poll(() => left).toEqual(["/console/organizations"]);
 });

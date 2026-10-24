@@ -25,7 +25,7 @@ import type {
 } from "../../types/bencher";
 import type { Api } from "../api";
 import { ApiError } from "../api";
-import { NEXT_PROJECTS } from "../paths";
+import { PROJECTS_PATH } from "../paths";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import { failureOf } from "../settings/failure";
@@ -241,7 +241,7 @@ const Inspect = (props: {
 		queue = sent;
 	};
 
-	const list = () => `${NEXT_PROJECTS}/${slug()}/${props.dimension}`;
+	const list = () => `${PROJECTS_PATH}/${slug()}/${props.dimension}`;
 	const thresholdsState = (): ThresholdsState => ({
 		data: thresholds().data,
 		failed: thresholds().isLoadingError,

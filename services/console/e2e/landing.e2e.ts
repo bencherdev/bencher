@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import {
 	VERSION_KEY,
 	expect,
-	nextPath,
+	consolePath,
 	seed,
 	signedIn,
 	signedOut,
@@ -63,9 +63,9 @@ const rootRendering = async (page: Page): Promise<RootRendering> =>
 test.describe("a signed in reader with a remembered version 1 project", () => {
 	test.use({ storageState: remembered({ [hashbrown.slug]: 1 }) });
 
-	// Kills a root page that renders at all, asks the API, or lets
-	// its own redirect to the classic console overtake the landing while the
-	// project page is slow to answer, and a landing on anything but Runs.
+	// Kills a root page that renders at all, asks the API, or lets its own
+	// redirect overtake the landing while the project page is slow to answer,
+	// and a landing on anything but Runs.
 	test("lands on Runs at the project's root with the root page never rendering or asking the API", async ({
 		page,
 	}) => {
@@ -79,7 +79,7 @@ test.describe("a signed in reader with a remembered version 1 project", () => {
 			}
 		});
 		await page.route(
-			(url) => url.pathname.startsWith(nextPath(hashbrown.slug)),
+			(url) => url.pathname.startsWith(consolePath(hashbrown.slug)),
 			async (route) => {
 				if (route.request().resourceType() === "document") {
 					await new Promise((resolve) => setTimeout(resolve, 1_000));
@@ -90,14 +90,14 @@ test.describe("a signed in reader with a remembered version 1 project", () => {
 
 		await page.goto("/");
 
-		await expect(page).toHaveURL(nextPath(hashbrown.slug));
+		await expect(page).toHaveURL(consolePath(hashbrown.slug));
 		await expect(
 			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
 		).toBeVisible();
 		await expect(
 			page.getByRole("table", { name: "Runs, newest first" }),
 		).toBeVisible();
-		expect(order.slice(0, 2)).toEqual(["/", nextPath(hashbrown.slug)]);
+		expect(order.slice(0, 2)).toEqual(["/", consolePath(hashbrown.slug)]);
 		expect(await rootRendering(page)).toEqual({});
 	});
 });
@@ -105,12 +105,13 @@ test.describe("a signed in reader with a remembered version 1 project", () => {
 test.describe("a signed in reader with a remembered version 0 project", () => {
 	test.use({ storageState: remembered({ [version_zero.slug]: 0 }) });
 
-	// Kills a version 0 project sent to the new console, which sends it back.
-	test("lands on the project's classic page", async ({ page }) => {
+	// Kills a version 0 project sent anywhere but Runs at its root in the console.
+	test("lands on Runs at the project's root", async ({ page }) => {
 		await page.goto("/");
-		await expect(page).toHaveURL(
-			`/console/projects/${version_zero.slug}/plots`,
-		);
+		await expect(page).toHaveURL(consolePath(version_zero.slug));
+		await expect(
+			page.getByRole("heading", { level: 1, name: "6 runs" }),
+		).toBeVisible();
 	});
 });
 

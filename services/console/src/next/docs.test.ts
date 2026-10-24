@@ -4,7 +4,13 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
 
 const CONSOLE = fileURLToPath(new URL("../../", import.meta.url));
-const ROOTS = ["src/next", "src/pages/next"];
+const ROOTS = [
+	"src/next",
+	"src/pages/console/projects",
+	"src/pages/console/organizations",
+	"src/pages/console/users",
+	"src/pages/perf",
+];
 const SOURCE = /\.(?:astro|mjs|tsx?)$/;
 const TEST = /\.test\.[jt]sx?$/;
 // A self-hosted install without internet serves its own docs, so no link is
