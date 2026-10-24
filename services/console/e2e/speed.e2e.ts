@@ -302,8 +302,7 @@ test("a move from Runs to a run holds its speed ceilings", async ({ page }) => {
 	const since = await mark(page);
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
-		.getByRole("link")
-		.first()
+		.getByRole("link", { name: seed.last_main_hash, exact: true })
 		.click();
 	await expect(runReports(page).getByRole("link").first()).toBeVisible();
 	await settle(page);
@@ -317,6 +316,100 @@ test("a move from Runs to a run holds its speed ceilings", async ({ page }) => {
 	expect(cost.deferredJsBytes).toBeLessThanOrEqual(ceiling.deferredJsBytes);
 	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
 });
+
+/** The newest run's toggle on the Runs list. */
+const newestToggle = (page: Page) =>
+	page.getByRole("table", { name: "Runs, newest first" }).getByRole("button", {
+		name: new RegExp(`^main, run ${seed.last_main_hash}, `),
+	});
+
+/** The newest run's last report, once the run is open. */
+const newestReport = (page: Page) =>
+	page
+		.getByRole("table", { name: "Runs, newest first" })
+		.getByRole("link", { name: /, report 2, / });
+
+// Kills an expand that asks for the run's reports in more than one request or
+// round, pulls in code, or finds it a round late.
+test("expanding a run on the Runs list holds its speed ceilings", async ({
+	page,
+}) => {
+	await page.goto(RUNS);
+	await runsReady(page);
+
+	await holdScripts(page);
+	const since = await mark(page);
+	await newestToggle(page).click();
+	await expect(newestReport(page)).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("run expand", cost);
+	const ceiling = ceilings.runExpand;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.apiRounds).toBeLessThanOrEqual(ceiling.apiRounds);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
+});
+
+// Kills an expand that asks again for what the pointer's arrival on the run
+// already read, or that loads anything then.
+test("expanding a run the pointer arrived on first holds its speed ceilings", async ({
+	page,
+}) => {
+	await page.goto(RUNS);
+	await runsReady(page);
+	await newestToggle(page).hover();
+	await settle(page);
+
+	await holdScripts(page);
+	const since = await mark(page);
+	await newestToggle(page).click();
+	await expect(newestReport(page)).toBeVisible();
+	await settle(page);
+
+	const cost = await measure(page, seed.api_url, since);
+	report("run expand prefetched", cost);
+	const ceiling = ceilings.runExpandPrefetched;
+	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
+	expect(cost.jsBytes).toBeLessThanOrEqual(ceiling.jsBytes);
+	expect(cost.scriptRounds).toBeLessThanOrEqual(ceiling.scriptRounds);
+});
+
+for (const [width, viewport] of [
+	["1280", { width: 1280, height: 800 }],
+	["768", { width: 768, height: 1024 }],
+	["390", { width: 390, height: 844 }],
+] as const) {
+	test.describe(`a run expand at ${width}`, () => {
+		test.use({ viewport });
+
+		// Kills an opened run whose reports, arriving well after the click,
+		// push the rows below them rather than fill the rows held for them.
+		test(`an opened run's reports arriving late move nothing at ${width}`, async ({
+			page,
+		}) => {
+			await observeLayoutShift(page);
+			await page.goto(RUNS);
+			await runsReady(page);
+			await page.route(
+				`${seed.api_url}/v0/console/projects/${hashbrown.slug}/runs/*`,
+				async (route) => {
+					await new Promise((resolve) => setTimeout(resolve, 1_000));
+					await route.continue();
+				},
+			);
+
+			await newestToggle(page).click();
+			await expect(newestReport(page)).toBeVisible();
+			await settle(page);
+
+			const cost = await measure(page, seed.api_url);
+			report(`run expand ${width}`, cost);
+			expect(cost.cls).toBeLessThanOrEqual(ceilings.runExpand.cls);
+		});
+	});
+}
 
 // Kills a Feedback dialog whose code loads in more than one round, asks the
 // API for anything, or grows.

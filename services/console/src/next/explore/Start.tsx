@@ -27,13 +27,18 @@ import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import type { ExploreQuery } from "../query/query";
 import { exploreSearch } from "../query/selection";
-import { reportStatus, runStatus, statusText } from "../runs/status";
+import {
+	RUN_REPORTS,
+	reportStatus,
+	runReportsQuery,
+	runStatus,
+	statusText,
+} from "../runs/status";
 import StatusPill from "../runs/StatusPill";
 import { type Option, SearchMenu } from "./Box";
 import { plotSearch } from "./pinned";
 import { type Dimension, OPTIONS, nameQuery } from "./queries";
 import {
-	RUN_REPORTS,
 	type RunReport,
 	START,
 	alertLine,
@@ -42,7 +47,6 @@ import {
 	reportBenchmarksQuery,
 	runHref,
 	runName,
-	runReportsQuery,
 	runTime,
 	startQueries,
 } from "./start";

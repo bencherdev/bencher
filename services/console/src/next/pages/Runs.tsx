@@ -1,9 +1,12 @@
-import { useLocation } from "@solidjs/router";
+import { useIsRouting, useLocation } from "@solidjs/router";
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
 import Skeleton from "@bencherdev/ui/Skeleton";
-import type { QueryObserverResult } from "@tanstack/solid-query";
+import {
+	type QueryObserverResult,
+	useQueryClient,
+} from "@tanstack/solid-query";
 import {
 	type Accessor,
 	For,
@@ -26,9 +29,10 @@ import Controls, { nameKey } from "../reports/Controls";
 import { type Range, hasMore, loadMore } from "../reports/rows";
 import { screenBatch } from "../reports/virtual";
 import { type RunsBatch, batchQuery } from "../runs/query";
+import { runReportsQuery } from "../runs/status";
 
 export { prefetchRuns as prefetch } from "../runs/query";
-import RunsTable from "../runs/RunsTable";
+import RunsTable, { ChildRow } from "../runs/RunsTable";
 import {
 	type FilterNames,
 	type ReportsSearch,
@@ -127,11 +131,93 @@ const Runs = () => {
 				.catch(() => {});
 		}
 	});
+	const client = useQueryClient();
+	const routing = useIsRouting();
+	// Opened runs come back from the history entry before the first draw, and read their reports and load their rows' code beside the list.
+	const restore = (state: unknown) => {
+		const runs = new Set(keptOpen(state));
+		if (runs.size > 0) {
+			ChildRow.preload();
+		}
+		return runs;
+	};
+	// A page a move opens reads the entry the move goes to, which the browser reaches only once the move ends.
+	const [open, setOpen] = createSignal<ReadonlySet<string>>(
+		restore(routing() ? location.state : window.history.state),
+	);
+	const toggle = (run: string) =>
+		setOpen((was) => {
+			const next = new Set(was);
+			if (!next.delete(run)) {
+				next.add(run);
+			}
+			return next;
+		});
+	// Another project's list opens the runs its own entry kept.
+	let project = slug();
+	createComputed(() => {
+		if (!routing() && slug() !== project) {
+			project = slug();
+			setOpen(restore(window.history.state));
+		}
+	});
+	// Kept on the history entry, once a move has reached it, so Back reopens them and a new visit starts closed.
+	createEffect(
+		on([open, routing], ([runs, moving]) => {
+			if (!moving) {
+				keepOpen(runs);
+			}
+		}),
+	);
+	// Once a new search answers, the runs it no longer lists close.
+	const [searched, setSearched] = createSignal(false);
+	createComputed(on(search, () => setSearched(true), { defer: true }));
+	createEffect(() => {
+		if (searched() && first() && !busy()) {
+			setSearched(false);
+			const listed = new Set(runs().map((run) => run.uuid));
+			const kept = [...open()].filter((run) => listed.has(run));
+			if (kept.length < open().size) {
+				setOpen(new Set(kept));
+			}
+		}
+	});
+	const reads = createMemo(
+		mapArray(
+			() => [...open()],
+			(run) => {
+				// Read in the project it was opened in: a move to another project keeps the opened runs until it ends.
+				const project = slug();
+				return [
+					run,
+					useQueryResult(() => runReportsQuery(api, project, run)),
+				] as const;
+			},
+		),
+	);
+	const readOf = createMemo(() => new Map(reads()));
+	const intendRun = (run: string) =>
+		client.query(runReportsQuery(api, slug(), run)).catch(() => {});
+	// A run that raised alerts draws them on its page with code of their own.
+	const intendRunPage = (run: JsonConsoleRunSummary) => {
+		if (run.alerts.total > 0) {
+			import("../runs/RunAlerts").catch(() => {});
+		}
+	};
+	// The report page's first batch comes with its code, which the move needs anyway.
+	const intendReport = (report: string) =>
+		import("./Report")
+			.then(({ prefetch }) => prefetch(client, api, slug(), report))
+			.catch(() => {});
+
 	const [now, setNow] = createSignal(Date.now());
 	// Every answer, a poll's too, moves the times the rows count from now.
 	createComputed(
 		on(
-			() => batches().map((batch) => batch.dataUpdatedAt),
+			() => [
+				...batches().map((batch) => batch.dataUpdatedAt),
+				...reads().map(([, read]) => read().dataUpdatedAt),
+			],
 			() => setNow(Date.now()),
 		),
 	);
@@ -213,6 +299,13 @@ const Runs = () => {
 							onRetry={
 								next()?.isLoadingError ? () => next()?.refetch() : undefined
 							}
+							open={open()}
+							onToggle={toggle}
+							reports={(run) => readOf().get(run)?.()}
+							onRetryReports={(run) => readOf().get(run)?.().refetch()}
+							onRunIntent={intendRun}
+							onReportIntent={intendReport}
+							onRunPageIntent={intendRunPage}
 						/>
 					</Match>
 					<Match when={batches()[0]?.isLoadingError}>
@@ -238,6 +331,23 @@ const Runs = () => {
 };
 
 type SetupView = typeof import("../runs/Setup").default;
+
+/** Where the history entry keeps the runs opened to their reports. */
+const OPEN = "runs";
+
+/** The runs the reader opened on a history entry, from its state. */
+const keptOpen = (state: unknown): string[] => {
+	const kept = (state as Record<string, unknown> | null | undefined)?.[OPEN];
+	return Array.isArray(kept)
+		? kept.filter((run): run is string => typeof run === "string")
+		: [];
+};
+
+const keepOpen = (runs: ReadonlySet<string>) =>
+	window.history.replaceState(
+		{ ...window.history.state, [OPEN]: [...runs] },
+		"",
+	);
 
 /** The names of the branch and the testbed the search filters by, by slug. */
 const useNames = (search: Accessor<ReportsSearch>): Accessor<FilterNames> => {

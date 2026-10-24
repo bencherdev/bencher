@@ -3,8 +3,14 @@ import { playwright } from "@vitest/browser-playwright";
 import { getViteConfig } from "astro/config";
 import solid from "vite-plugin-solid";
 import { configDefaults } from "vitest/config";
+import type { BrowserCommand } from "vitest/node";
 
 const CHROMIUM_TESTS = "src/**/*.chromium.test.{ts,tsx}";
+
+/** Rest the mouse at the page's corner, where a fresh page has it. */
+const restPointer: BrowserCommand<[]> = async ({ page }) => {
+	await page.mouse.move(0, 0);
+};
 
 export default getViteConfig({
 	test: {
@@ -36,11 +42,13 @@ export default getViteConfig({
 					provide: {
 						speedFactor: Number(process.env.BENCHER_SPEED_FACTOR ?? 1),
 					},
+					setupFiles: ["src/next/pointer.setup.ts"],
 					browser: {
 						enabled: true,
 						provider: playwright(),
 						headless: true,
 						instances: [{ browser: "chromium" }],
+						commands: { restPointer },
 					},
 				},
 			},

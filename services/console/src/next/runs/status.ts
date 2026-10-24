@@ -1,8 +1,10 @@
 import type {
 	ConsoleJobStatus,
 	JsonConsoleJob,
+	JsonConsoleRun,
 	JsonConsoleRunJobs,
 } from "../../types/bencher";
+import type { Api } from "../api";
 
 /** A runner job's state as the console names it, compared by value so the generated enum stays out of the bundle. */
 export type JobKind = `${ConsoleJobStatus}`;
@@ -112,4 +114,19 @@ export const live = <T>(unfinished: (data: T) => boolean) => ({
 	refetchInterval: ({ state }: { state: { data: T | undefined } }) =>
 		state.data !== undefined && unfinished(state.data) ? POLL : false,
 	meta: { unfinished },
+});
+
+/** How many of a run's reports an opened run lists; its page lists the rest. */
+export const RUN_REPORTS = 8;
+
+/** The first of a run's reports in start order, as an opened run lists them, on the Runs list and blank Explore alike. */
+export const runReportsQuery = (api: Api, slug: string, run: string) => ({
+	queryKey: ["console", "run-reports", slug, run],
+	queryFn: async () =>
+		(
+			await api.get<JsonConsoleRun>(
+				`/v0/console/projects/${encodeURIComponent(slug)}/runs/${encodeURIComponent(run)}?per_page=${RUN_REPORTS}`,
+			)
+		).data,
+	...live((run: JsonConsoleRun) => unfinished(run.jobs)),
 });
