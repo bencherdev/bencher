@@ -5,6 +5,8 @@ use std::collections::HashMap;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+#[cfg(all(test, not(feature = "client")))]
+use tempfile as _;
 
 #[cfg(feature = "client")]
 mod client;

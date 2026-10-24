@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 use gix::Repository;
 
@@ -15,7 +15,9 @@ const ROOT: &str = "root";
 impl RunContext {
     pub fn current() -> Self {
         let mut context = Self::default();
-        git_context(&mut context);
+        if let Ok(current_dir) = std::env::current_dir() {
+            git_context(&mut context, &current_dir);
+        }
         testbed_context(&mut context);
         context
     }
@@ -36,8 +38,8 @@ impl From<RunContext> for HashMap<String, String> {
     }
 }
 
-fn git_context(context: &mut RunContext) {
-    let Some(repo) = find_repo() else {
+fn git_context(context: &mut RunContext, directory: &Path) {
+    let Some(repo) = find_repo(directory) else {
         return;
     };
 
@@ -69,9 +71,8 @@ fn testbed_context(context: &mut RunContext) {
     }
 }
 
-fn find_repo() -> Option<Repository> {
-    let current_dir = std::env::current_dir().ok()?;
-    for directory in current_dir.ancestors() {
+fn find_repo(directory: &Path) -> Option<Repository> {
+    for directory in directory.ancestors() {
         if let Ok(repo) = gix::open(directory) {
             return Some(repo);
         }
@@ -112,4 +113,67 @@ fn branch_hash(repo: &Repository) -> Option<String> {
     let head_id = repo.head_id().ok()?;
     let head_object = head_id.object().ok()?;
     Some(head_object.id.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{path::Path, process::Command};
+
+    use super::git_context;
+    use crate::{ContextPath, RunContext};
+
+    fn git(directory: &Path, args: &[&str]) -> String {
+        let output = Command::new("git")
+            .env("GIT_CONFIG_GLOBAL", "/dev/null")
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .args([
+                "-c",
+                "user.name=Bencher",
+                "-c",
+                "user.email=bencher@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "-c",
+                "core.hooksPath=/dev/null",
+            ])
+            .args(args)
+            .current_dir(directory)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "git {args:?}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        String::from_utf8(output.stdout).unwrap().trim().to_owned()
+    }
+
+    #[test]
+    fn git_context_from_a_repository() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let repo = temp_dir.path().join("my-repo");
+        let nested = repo.join("nested");
+        std::fs::create_dir_all(&nested).unwrap();
+        git(&repo, &["init", "--quiet", "--initial-branch", "trunk"]);
+        git(
+            &repo,
+            &["commit", "--quiet", "--allow-empty", "--message", "root"],
+        );
+        let root = git(&repo, &["rev-parse", "HEAD"]);
+        git(
+            &repo,
+            &["commit", "--quiet", "--allow-empty", "--message", "head"],
+        );
+        let head = git(&repo, &["rev-parse", "HEAD"]);
+
+        let mut context = RunContext::default();
+        git_context(&mut context, &nested);
+
+        let value = |path| context.0.get(&RunContext::key(path)).map(String::as_str);
+        assert_eq!(value(ContextPath::REPO_NAME), Some("my-repo"));
+        assert_eq!(value(ContextPath::REPO_HASH), Some(root.as_str()));
+        assert_eq!(value(ContextPath::BRANCH_REF), Some("refs/heads/trunk"));
+        assert_eq!(value(ContextPath::BRANCH_REF_NAME), Some("trunk"));
+        assert_eq!(value(ContextPath::BRANCH_HASH), Some(head.as_str()));
+    }
 }
