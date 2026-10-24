@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-minijinja = { workspace = true, features = ["loader"] }
+minijinja = { workspace = true, features = ["serde"] }
 newline-converter.workspace = true
 serde.workspace = true
 

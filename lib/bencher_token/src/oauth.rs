@@ -42,7 +42,9 @@ impl OAuthSigningKey {
             return Err(OAuthSigningKeyError::Short);
         }
         // RFC 7638, so the key ID stays the same for as long as the key does.
-        let kid = jwk.thumbprint(ThumbprintHash::SHA256);
+        let kid = jwk
+            .thumbprint(ThumbprintHash::SHA256)
+            .map_err(OAuthSigningKeyError::Rsa)?;
         jwk.common.key_id = Some(kid.clone());
         jwk.common.public_key_use = Some(PublicKeyUse::Signature);
         Ok(Self {
