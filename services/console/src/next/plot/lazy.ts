@@ -3,8 +3,7 @@ type PlotView = PlotModule["default"];
 
 let view: PlotView | undefined;
 let loading: Promise<PlotView> | undefined;
-// A module that failed to load stays failed under its URL for the page's
-// life, so a later try asks for the chunk under a new one.
+// The URL of the module that failed to load, for a later try to ask for again.
 let failed: string | undefined;
 let tries = 0;
 
