@@ -44,12 +44,12 @@ pub struct AdapterMetric {
 /// Metrics in lexicographic order, which is the order the cap keeps.
 pub type NamedMap = BTreeMap<MetricName, OrderedFloat<f64>>;
 
-/// The most metrics one measure may carry, enough for every statistic most
-/// harnesses report in one unit.
+/// The most metrics one measure may carry, enough for every statistic a
+/// harness reports in one unit.
 ///
 /// Deliberately low: raising the cap is a release note and lowering it is a
 /// breaking change, so the asymmetry runs one way.
-pub const MAX_METRIC_NAMES: usize = 16;
+pub const MAX_METRIC_NAMES: usize = 32;
 
 impl From<NamedMap> for AdapterMetric {
     fn from(inner: NamedMap) -> Self {
