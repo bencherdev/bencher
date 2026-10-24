@@ -16,9 +16,29 @@ Wenn die GitHub-Prüfung nicht erstellt werden kann, protokolliert `bencher run`
 
 Wenn `bencher run` als Teil einer Pull-Anfrage verwendet wird,
 dann werden die Ergebnisse auch als Kommentar zur Pull-Anfrage hinzugefügt.
+Alle Jobs eines Projekts in der Pull-Anfrage teilen sich diesen einen Kommentar, mit einem Abschnitt für jeden Job.
 Dies erfordert, dass das Token [den `pull-requests` Bereich mit `write` Berechtigungen][github token permissions] hat.
 Die Ergebnisse werden außerdem immer zur Zusammenfassung des Jobs hinzugefügt.
 Mit [dem Flag `--detach`](/de/docs/explanation/images/#--detach) veröffentlicht der abgelöste Lauf keinen Kommentar und schreibt keine Zusammenfassung des Jobs, und [die Verbindung mit `--job`](/de/docs/explanation/images/#--job-uuid) schließt die GitHub-Prüfung ab, die er gestartet hat (siehe [die Option `--ci-callback-token`](#--ci-callback-token-token)).
+
+Der Abschnitt eines Jobs wird nach [der Option `--ci-id`](#--ci-id-id) benannt, wenn sie gesetzt ist,
+andernfalls nach dem Branch, dem Testbed und dem Adapter des Jobs.
+Bei zwei oder mehr Abschnitten zeigt der Kommentar für jeden Abschnitt eine Übersichtszeile mit seinem Status (`Pending`, die Anzahl der Alerts, `No Alerts` oder `Failed`),
+eine Tabelle aller Alerts
+und die Ergebnisse jedes Abschnitts in einem einklappbaren Block, der geöffnet ist, wenn der Abschnitt Alerts hat.
+Jeder Job behält seine eigene GitHub-Prüfung und seine eigene Zusammenfassung des Jobs,
+sodass sich die Namen der GitHub-Prüfungen und die erforderlichen Statusprüfungen nicht ändern.
+Ein Job, dessen Commit nicht mehr der Head-Commit der Pull-Anfrage ist, lässt den Kommentar unverändert.
+Wenn das Token die Pull-Anfrage nicht lesen kann, protokolliert der Job eine Warnung und schreibt den Kommentar, ohne den Head-Commit zu prüfen.
+
+Um die anderen Abschnitte zu finden, listet `bencher run` die GitHub-Prüfungen des Head-Commits auf,
+was der obige `checks` Bereich mit `write` Berechtigungen bereits erlaubt.
+Wenn ein Job seine GitHub-Prüfung nicht erstellen oder abschließen kann, nicht feststellen kann, welcher GitHub App sie gehört, oder die GitHub-Prüfungen nicht auflisten kann,
+dann veröffentlicht er einen Kommentar nur mit seinen eigenen Ergebnissen.
+Kommentare für das Projekt aus einer früheren Version von `bencher run` werden ersetzt:
+Der erste Job, der den gemeinsamen Kommentar schreibt, aktualisiert den ältesten davon und löscht die übrigen.
+Beim Schreiben des gemeinsamen Kommentars aktualisiert oder löscht ein Job nur Kommentare, die von der GitHub App gepostet wurden, der seine GitHub-Prüfung gehört,
+mit dem `GITHUB_TOKEN` also vom Bot `github-actions`.
 
 [github token]: https://docs.github.com/de/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/de/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

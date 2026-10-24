@@ -36,6 +36,7 @@
 - **BREAKING CHANGE** Security fix for URL validation: a project URL must now use `http` or `https`, an existing project URL that does not is shown as plain text, and the Console no longer links to a URL with any other scheme
 - Security fix for the Console's embed snippet: it now escapes the project name and title
 - Add Bencher to the [Claude connectors directory](https://claude.ai/directory/bencher)
+- With `--github-actions`, the jobs of a Project on a pull request now share one comment with a section per job, and `--ci-id` names the job's section
 
 ## `v0.6.13`
 - Fix slow alert lists and perf queries on large projects

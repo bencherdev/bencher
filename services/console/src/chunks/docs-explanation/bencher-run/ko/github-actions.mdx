@@ -16,9 +16,29 @@ GitHub Check를 생성할 수 없는 경우, `bencher run`은 경고를 기록�
 
 `bencher run`이 pull request의 일부로 사용될 경우,
 결과가 pull request에도 댓글로 추가됩니다.
+pull request에서 프로젝트의 모든 작업은 이 하나의 댓글을 공유하며, 각 작업마다 섹션이 있습니다.
 이 경우 토큰에 [`write` 권한을 가진 `pull-requests` 범위가 필요합니다][github token permissions].
 결과는 항상 작업 요약에도 추가됩니다.
 [`--detach` 플래그](/ko/docs/explanation/images/#--detach)를 사용하면 분리된 실행은 댓글을 게시하지 않고 작업 요약도 작성하지 않으며, [`--job` 연결](/ko/docs/explanation/images/#--job-uuid)이 시작된 GitHub Check를 완료합니다([`--ci-callback-token` 옵션](#--ci-callback-token-token) 참조).
+
+각 작업의 섹션은 [`--ci-id` 옵션](#--ci-id-id)이 설정된 경우 그 값으로,
+그렇지 않으면 작업의 브랜치, 테스트베드 및 어댑터로 이름이 지정됩니다.
+섹션이 두 개 이상이면, 댓글에는 각 섹션의 상태(`Pending`, 경고 수, `No Alerts` 또는 `Failed`)를 보여주는 요약 행,
+모든 경고를 담은 하나의 표,
+그리고 섹션에 경고가 있을 때 펼쳐지는 접을 수 있는 블록 안에 각 섹션의 결과가 표시됩니다.
+각 작업은 자체 GitHub Check와 작업 요약을 유지하므로,
+GitHub Check 이름과 필수 상태 검사는 변경되지 않습니다.
+커밋이 더 이상 pull request의 헤드 커밋이 아닌 작업은 댓글을 그대로 둡니다.
+토큰이 pull request를 읽을 수 없는 경우, 작업은 경고를 기록하고 헤드 커밋을 확인하지 않은 채 댓글을 작성합니다.
+
+다른 섹션을 찾기 위해 `bencher run`은 헤드 커밋의 GitHub Check 목록을 조회하며,
+이는 위의 `write` 권한을 가진 `checks` 범위로 이미 허용됩니다.
+작업이 자신의 GitHub Check를 생성하거나 완료할 수 없거나, 해당 GitHub Check를 소유한 GitHub App을 알 수 없거나, GitHub Check 목록을 조회할 수 없는 경우,
+자신의 결과만 담은 댓글을 게시합니다.
+이전 버전의 `bencher run`이 남긴 프로젝트의 댓글은 대체됩니다:
+공유 댓글을 처음 작성하는 작업이 그중 가장 오래된 댓글을 업데이트하고 나머지는 삭제합니다.
+공유 댓글을 작성할 때 작업이 업데이트하거나 삭제하는 댓글은 자신의 GitHub Check를 소유한 GitHub App이 게시한 댓글뿐이며,
+`GITHUB_TOKEN`을 사용하는 경우 이는 `github-actions` 봇입니다.
 
 [github token]: https://docs.github.com/ko/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/ko/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

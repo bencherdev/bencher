@@ -15,9 +15,29 @@
 GitHubチェックを作成できない場合、`bencher run`は警告をログに記録して続行します。
 
 `bencher run`がプルリクエストの一部として使用されると、結果はコメントとしてプルリクエストにも追加されます。
+プルリクエスト上のプロジェクトのすべてのジョブはこの1つのコメントを共有し、ジョブごとにセクションを持ちます。
 これにはトークンが[`pull-requests` スコープに対する`write`権限][github token permissions]を持っている必要があります。
 結果は常にジョブサマリーにも追加されます。
 [`--detach`フラグ](/ja/docs/explanation/images/#--detach)を指定すると、デタッチした実行はコメントを投稿せず、ジョブサマリーも書き込みません。[`--job`によるアタッチ](/ja/docs/explanation/images/#--job-uuid)が、開始されたGitHubチェックを完了します（[`--ci-callback-token`オプション](#--ci-callback-token-token)を参照）。
+
+各ジョブのセクションは、[`--ci-id`オプション](#--ci-id-id)が設定されている場合はその値で、
+設定されていない場合はジョブのブランチ、テストベッド、アダプターで名付けられます。
+セクションが2つ以上ある場合、コメントには各セクションのステータス（`Pending`、アラートの数、`No Alerts`、または`Failed`）を示すサマリー行、
+すべてのアラートをまとめた1つの表、
+そしてセクションにアラートがある場合に開いた状態になる折りたたみブロック内の各セクションの結果が表示されます。
+各ジョブは独自のGitHubチェックとジョブサマリーを保持するため、
+GitHubチェック名と必須ステータスチェックは変わりません。
+コミットがプルリクエストのヘッドコミットでなくなったジョブは、コメントをそのままにします。
+トークンがプルリクエストを読み取れない場合、ジョブは警告をログに記録し、ヘッドコミットを確認せずにコメントを書き込みます。
+
+他のセクションを見つけるために、`bencher run`はヘッドコミットのGitHubチェックを一覧表示します。
+これは上記の`checks`スコープに対する`write`権限ですでに許可されています。
+ジョブが自身のGitHubチェックを作成または完了できない場合、そのGitHubチェックを所有するGitHub Appを特定できない場合、あるいはGitHubチェックを一覧表示できない場合は、
+自身の結果のみを含むコメントを投稿します。
+以前のバージョンの`bencher run`によるプロジェクトのコメントは置き換えられます：
+共有コメントを最初に書き込むジョブが、その中で最も古いものを更新し、残りを削除します。
+共有コメントを書き込む際、ジョブが更新または削除するのは、自身のGitHubチェックを所有するGitHub Appが投稿したコメントのみで、
+`GITHUB_TOKEN`の場合は`github-actions`ボットです。
 
 [github token]: https://docs.github.com/ja/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/ja/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token

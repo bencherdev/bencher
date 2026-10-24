@@ -3,8 +3,16 @@
 <br />
 
 Opcional: ID personalizado para publicar resultados en CI.  
-Por defecto, Bencher segmentará automáticamente los resultados según la combinación de: Proyecto, Rama, Banco de pruebas y [Adaptador](/es/docs/explanation/adapters/).  
-Establecer un ID personalizado es útil cuando Bencher se ejecuta múltiples veces en el mismo flujo de trabajo de CI para la misma combinación de Proyecto, Rama, Banco de pruebas y Adaptador.  
+Todos los trabajos de un Proyecto en una solicitud de extracción comparten un comentario, y el ID nombra la sección del trabajo en ese comentario.  
+Con un ID, la sección del trabajo se muestra como `Pending` mientras el trabajo se ejecuta.  
+Sin él, la sección aparece una vez que se crea el Informe del trabajo.  
+Por defecto, la sección de un trabajo se nombra según la combinación de: Rama, Banco de pruebas y [Adaptador](/es/docs/explanation/adapters/),  
+junto con [`--build-time`](#--build-time) y [`--file-size`](#--file-size-file) si están configurados.  
+Establecer un ID personalizado es útil cuando Bencher se ejecuta múltiples veces en el mismo commit para la misma combinación de Proyecto, Rama, Banco de pruebas y Adaptador,  
+para que cada ejecución tenga su propia sección.  
+Por ejemplo, una ejecución de `push` y una ejecución de `pull_request` en la misma rama comparten el commit de encabezado,  
+así que asigne a cada ejecución su propio ID, o no use `--github-actions` en la ejecución de `push`.  
+De lo contrario, solo puede aparecer la sección del trabajo más reciente, y el otro trabajo no escribe nada.  
 El ID también se usa en lugar del nombre del Proyecto en el nombre de la Verificación de GitHub (es decir, `Bencher Report (<ID>)`),  
 de modo que cada invocación obtiene un nombre estable que puede usarse como una verificación de estado requerida separada.  
 Requiere: `--github-actions`

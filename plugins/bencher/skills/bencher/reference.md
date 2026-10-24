@@ -71,7 +71,7 @@
 | `--ci-only-thresholds` | Post only if threshold exists |
 | `--ci-only-on-alert` | Post only on alert |
 | `--ci-public-links` | Use public URLs |
-| `--ci-id <id>` | Custom CI comment identifier, replaces the project name in the GitHub Check name |
+| `--ci-id <id>` | Names the job's section in the PR comment, replaces the project name in the GitHub Check name |
 | `--ci-number <n>` | Issue/PR number |
 | `--ci-callback-token <token>` | Fine-grained personal access token for this one repository with only contents write, for the `repository_dispatch` a detached run sends (requires `--github-actions` and `--detach`) |
 

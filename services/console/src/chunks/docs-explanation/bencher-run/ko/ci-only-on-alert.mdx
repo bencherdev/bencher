@@ -2,4 +2,4 @@
 
 <br />
 
-선택 사항: [경고가 생성된 경우](/ko/docs/explanation/thresholds/#alerts) 에만 CI에 결과 게시를 시작합니다. 경고가 생성되면 그 이후의 모든 결과도 경고를 포함하지 않더라도 게시됩니다. 이는 pull request 댓글에만 적용됩니다. GitHub Check는 항상 생성됩니다. 필요 조건: `--github-actions`
+선택 사항: [경고가 생성된 경우](/ko/docs/explanation/thresholds/#alerts) 에만 CI에 결과 게시를 시작합니다. 경고가 생성되면 그 이후의 모든 결과도 경고를 포함하지 않더라도 게시됩니다. pull request에서 프로젝트의 모든 작업은 하나의 댓글을 공유하므로, 섹션 중 하나라도 경고가 있으면 댓글이 생성되고, 그 이후에는 모든 작업이 이를 업데이트합니다. 이는 pull request 댓글에만 적용됩니다. GitHub Check는 항상 생성됩니다. 필요 조건: `--github-actions`
