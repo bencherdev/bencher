@@ -1,0 +1,17 @@
+## Who Didn't Build a Harness in 2026?
+
+While building Bencher Bare Metal, I also had Claude create tooling for itself to manage the fleet. This consisted of two parts, a CLI in the `bencher` repo for routine tasks and a new meta-repository (meta-repo). This meta-repo holds all of the docs and context for Bencher as a product. Every other repo in the `bencherdev` GitHub organization is a submodule in this meta-repo. The meta-repo allows the agent to easily work on a task that may span multiple repositories and write docs that I would prefer not to be public (product strategy, incident reports, etc).
+
+I wanted to build my own agent on top of the Claude Code CLI that would take this meta-repo from an artifact to a proactive part of the development cycle. Once Fable 5 became available, I put a lot of my focus into building this agent. I wanted to be able to trust this agent to run autonomously. A big part of this was security (ie mitigating prompt injections). I designed it so that worker agents never hold any secrets. All secrets are injected by a network proxy and restricted to allow-listed endpoints. The agents themselves ran in yet another Firecracker microVM, this time with parallelism. The agent control box and the network proxy + sandboxes ran on completely different hosts.
+
+My grand vision was for the interface to be a queue ranked by task priority. That is, the goal of this agent would be to show me _the most_ important task in that given moment. Where the Facebook/Instagram/Twitter/X/TikTok feeds are optimized for engagement, this feed would be optimized for importance to me.
+
+I wanted to create the tool that would put myself [below the A~~P~~I][replace with api]. I had found that I spent most of my time context switching and hopping between threads. My hope was that the agent could help alleviate this juggling by rank ordering things for me. With a Reddit-like up vote/down vote system, I could train the agent to know whether that new Slack message was really the most important thing for me to pay attention to.
+
+I’ve also found that a lot of my job now is being my agent’s Rubeus Hagrid, its “keeper of the keys”. Injection at the network proxy level with a restricted endpoint allow-list was the best way that Claude and I could come up with to both keep the agent from ever having access to a secret and still being able to use tools like the `gh` CLI out of the box.
+
+The other headline goal was to _never_ leave the agent interface. Navigating away from the agent for any reason is seen as a failure of the harness. I created a procedural UI component system so that the agent working on a task could build a novel interface on the fly or choose one of the existing components in the library based on the task at hand. Code, email, Slack, calendar, production telemetry data, error monitoring, everything all in one interface, all in one prioritized queue.
+
+I got a minimal version of all of this up and running. However, there's still a lot of rough edges. I'm currently much more productive if I just use the Claude desktop app. And at the present moment, I need as much immediate productivity as I can get to keep up with demand.
+
+[replace with api]: https://rein.pk/replacing-middle-management-with-apis
