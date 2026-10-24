@@ -26,5 +26,8 @@ windows = { workspace = true, optional = true, features = [
     "Win32_System_Registry",
 ] }
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true
