@@ -1,7 +1,9 @@
-use bencher_comment::{BENCHER_REPORT_TITLE, ReportComment};
+use bencher_comment::{BENCHER_REPORT_TITLE, ReportComment, SectionCheck};
 #[cfg(feature = "plus")]
-use bencher_json::{GitHash, JsonNewCallback, ValidError, runner::CallbackError};
-use bencher_json::{ResourceName, Secret};
+use bencher_json::{
+    GitHash, JsonNewCallback, ProjectUuid, ReportUuid, ValidError, runner::CallbackError,
+};
+use bencher_json::{JsonProject, ResourceName, Secret};
 use octocrab::{
     Octocrab,
     models::{CheckRunId, CommentId},
@@ -16,6 +18,15 @@ use crate::{cli_eprintln_quietable, cli_println_quietable};
 use super::super::job::CALLBACK_SKIPPED;
 #[cfg(feature = "plus")]
 use super::JobFailure;
+use super::{PostedReport, SectionReports};
+
+mod external_id;
+mod group;
+mod section;
+
+use external_id::{ExternalId, Kind};
+use group::{Author, CheckApp, GroupWrite, Outcome, OwnSection};
+use section::SectionKey;
 
 const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
 const GITHUB_EVENT_PATH: &str = "GITHUB_EVENT_PATH";
@@ -142,6 +153,14 @@ pub enum GitHubError {
     CreateComment(octocrab::Error),
     #[error("Failed to update GitHub PR comment: {}", _0.to_string())]
     UpdateComment(octocrab::Error),
+    #[error("Failed to get GitHub PR comment: {}", _0.to_string())]
+    Comment(octocrab::Error),
+    #[error("Failed to delete GitHub PR comment: {}", _0.to_string())]
+    DeleteComment(octocrab::Error),
+    #[error("Failed to get GitHub pull request: {}", _0.to_string())]
+    PullRequest(octocrab::Error),
+    #[error("Failed to list GitHub Checks: {}", _0.to_string())]
+    CheckRuns(octocrab::Error),
     #[error(
         "{}",
         permissions_help("pull-requests", "pull-requests-from-forks", _0)
@@ -235,9 +254,10 @@ impl GitHubActions {
         Ok(())
     }
 
-    /// Whether the Check name needs the Project name resolved before the run.
-    pub fn needs_project_name(&self) -> bool {
-        needs_project_name(self.ci_id.as_deref(), is_github_actions())
+    /// Whether the Check needs the Project resolved before the run:
+    /// its name when there is no `--ci-id`, and its UUID for the `external_id`.
+    pub fn needs_project() -> bool {
+        is_github_actions()
     }
 
     /// Best-effort: create the GitHub Check with an `in_progress` status
@@ -245,7 +265,8 @@ impl GitHubActions {
     /// conclusion left by a previous run. Failures are logged, never fatal.
     pub async fn start_check(
         &self,
-        project_name: Option<&ResourceName>,
+        project: Option<&JsonProject>,
+        sub_adapter: &bencher_comment::SubAdapter,
         log: bool,
     ) -> Option<CheckRunHandle> {
         if !is_github_actions() {
@@ -253,7 +274,7 @@ impl GitHubActions {
             // so stay quiet here to avoid printing it twice.
             return None;
         }
-        match self.try_start_check(project_name, log).await {
+        match self.try_start_check(project, sub_adapter, log).await {
             Ok(handle) => Some(handle),
             Err(err) => {
                 cli_eprintln_quietable!(
@@ -267,10 +288,16 @@ impl GitHubActions {
 
     async fn try_start_check(
         &self,
-        project_name: Option<&ResourceName>,
+        project: Option<&JsonProject>,
+        sub_adapter: &bencher_comment::SubAdapter,
         log: bool,
     ) -> Result<CheckRunHandle, GitHubError> {
-        let id = check_run_id(self.ci_id.as_deref(), project_name);
+        let id = check_run_id(self.ci_id.as_deref(), project.map(|project| &project.name));
+        let external_id = ExternalId {
+            project: project.map(|project| project.uuid),
+            report: None,
+            kind: Kind::new(self.ci_id.as_deref(), sub_adapter),
+        };
         let (event_str, event) = github_event()?;
         let full_name = repository_full_name(&event_str, &event)?;
         let (owner, repo) = split_full_name(full_name)?;
@@ -283,6 +310,7 @@ impl GitHubActions {
             .github_client(log)?
             .checks(owner, repo)
             .create_check_run(check_run_name(id), head_sha)
+            .external_id(external_id.to_string())
             .status(CheckRunStatus::InProgress)
             .output(check_run_output(branded_summary(IN_PROGRESS_SUMMARY)))
             .send()
@@ -295,10 +323,11 @@ impl GitHubActions {
         })
     }
 
-    pub async fn run(
+    pub async fn run<R: SectionReports>(
         &self,
         check: Option<CheckRunHandle>,
-        report_comment: &ReportComment,
+        report: &PostedReport<'_>,
+        reports: &R,
         #[cfg(feature = "plus")] failure: Option<JobFailure>,
         log: bool,
     ) -> Result<(), GitHubError> {
@@ -313,7 +342,7 @@ impl GitHubActions {
 
         // Creating a job summary is not considered "posting" to CI,
         // so it is done regardless of the `ci_only_thresholds` option.
-        self.create_job_summary(report_comment, log);
+        self.create_job_summary(report.comment, log);
 
         let (event_str, event) = github_event()?;
 
@@ -321,10 +350,10 @@ impl GitHubActions {
         // The check is completed regardless of `--ci-only-thresholds` and
         // `--ci-only-on-alert` so that a `success`/`failure` conclusion is always
         // reported and the check can be used as a required status check.
-        if let Err(err) = self
+        let own_check = self
             .complete_github_check(
                 check,
-                report_comment,
+                report,
                 #[cfg(feature = "plus")]
                 failure,
                 log,
@@ -332,15 +361,10 @@ impl GitHubActions {
                 &event,
             )
             .await
-        {
-            cli_eprintln_quietable!(log, "Failed to complete GitHub Check\n{err}");
-        }
-
-        // Only post a pull request comment if there are thresholds set
-        if self.ci_only_thresholds && !report_comment.has_threshold() {
-            cli_println_quietable!(log, "No thresholds set. Skipping pull request comment.");
-            return Ok(());
-        }
+            .inspect_err(|err| {
+                cli_eprintln_quietable!(log, "Failed to complete GitHub Check\n{err}");
+            })
+            .ok();
 
         let Some(issue_number) = self.issue_number(&event_str, &event)? else {
             #[cfg(feature = "plus")]
@@ -359,7 +383,51 @@ impl GitHubActions {
             return Ok(());
         };
 
-        self.create_pull_request_comment(report_comment, log, &event_str, &event, issue_number)
+        // Only a comment by the bot of the app that owns the check is read, so without it there is no group.
+        if let Some((own_check, Some(author))) = own_check {
+            let kind = Kind::new(self.ci_id.as_deref(), &report.sub_adapter);
+            let full_name = repository_full_name(&event_str, &event)?;
+            let (owner, repo) = split_full_name(full_name)?;
+            let head_sha = head_sha(
+                &event,
+                #[cfg(feature = "plus")]
+                self.dispatch.as_ref(),
+            )?;
+            if let Some(key) = SectionKey::new(kind, &own_check, Some(report.comment))
+                && let Ok(head_sha) = head_sha.parse()
+            {
+                let group = GroupWrite {
+                    client: self.github_client(log)?,
+                    owner,
+                    repo,
+                    issue_number,
+                    head_sha,
+                    project: report.project,
+                    project_slug: report.comment.project_slug(),
+                    own: OwnSection {
+                        key,
+                        check: own_check,
+                        report: report.comment,
+                    },
+                    author,
+                    reports,
+                    console_url: &report.console_url,
+                    require_threshold: self.ci_only_thresholds,
+                    only_on_alert: self.ci_only_on_alert,
+                    log,
+                };
+                if let Outcome::Done = group.write().await? {
+                    return Ok(());
+                }
+            }
+        }
+
+        // Today's comment, for this job alone.
+        if self.ci_only_thresholds && !report.comment.has_threshold() {
+            cli_println_quietable!(log, "No thresholds set. Skipping pull request comment.");
+            return Ok(());
+        }
+        self.create_pull_request_comment(report.comment, log, &event_str, &event, issue_number)
             .await
     }
 
@@ -401,15 +469,17 @@ impl GitHubActions {
         }
     }
 
+    /// The completed check, as the job's own section records it.
     async fn complete_github_check(
         &self,
         check: Option<CheckRunHandle>,
-        report_comment: &ReportComment,
+        report: &PostedReport<'_>,
         #[cfg(feature = "plus")] failure: Option<JobFailure>,
         log: bool,
         event_str: &str,
         event: &serde_json::Value,
-    ) -> Result<(), GitHubError> {
+    ) -> Result<(SectionCheck, Option<Author>), GitHubError> {
+        let report_comment = report.comment;
         let summary = report_comment.html_with_max_length(
             self.ci_only_thresholds,
             self.ci_id.as_deref(),
@@ -421,6 +491,12 @@ impl GitHubActions {
             #[cfg(feature = "plus")]
             failure,
         );
+        let external_id = ExternalId {
+            project: Some(report.project),
+            report: Some(report.report),
+            kind: Kind::new(self.ci_id.as_deref(), &report.sub_adapter),
+        }
+        .to_string();
         // The Report always names its Project, so the completed check is always
         // named for it, even when the pre-run lookup could not name the
         // in-progress check. Required status checks match by exact name, so the
@@ -431,18 +507,22 @@ impl GitHubActions {
         ));
 
         // Providing a conclusion sets the check status to `completed`.
-        if let Some(CheckRunHandle { owner, repo, id }) = check {
+        let completion = Completion {
+            // A no-op on an update unless the in-progress check fell back to a bare name.
+            name: &name,
+            output,
+            conclusion,
+            external_id: &external_id,
+        };
+        // The response names the app whose bot writes the pull request comment.
+        let completed: CompletedCheck = if let Some(CheckRunHandle { owner, repo, id }) = check {
             self.github_client(log)?
-                .checks(owner, repo)
-                .update_check_run(id)
-                // A no-op unless the in-progress check fell back to a bare name.
-                .name(name)
-                .output(output)
-                .conclusion(conclusion)
-                .send()
+                .patch(
+                    format!("/repos/{owner}/{repo}/check-runs/{id}"),
+                    Some(&completion),
+                )
                 .await
-                .map(|_| ())
-                .map_err(|e| check_error(e, GitHubError::UpdateCheck))
+                .map_err(|e| check_error(e, GitHubError::UpdateCheck))?
         } else {
             // The in-progress check failed to be created,
             // so fall back to creating the check with a conclusion.
@@ -454,15 +534,31 @@ impl GitHubActions {
                 self.dispatch.as_ref(),
             )?;
             self.github_client(log)?
-                .checks(owner, repo)
-                .create_check_run(name, head_sha)
-                .output(output)
-                .conclusion(conclusion)
-                .send()
+                .post(
+                    format!("/repos/{owner}/{repo}/check-runs"),
+                    Some(&NewCompletion {
+                        head_sha: &head_sha,
+                        completion,
+                    }),
+                )
                 .await
-                .map(|_| ())
-                .map_err(|e| check_error(e, GitHubError::CreateCheck))
-        }
+                .map_err(|e| check_error(e, GitHubError::CreateCheck))?
+        };
+        // The record of the check as GitHub holds it, so every writer records it the same way.
+        let CompletedCheck {
+            id,
+            name,
+            conclusion: completed_conclusion,
+            external_id: completed_external_id,
+            app,
+        } = completed;
+        let own_check = SectionCheck {
+            id: id.into_inner(),
+            name,
+            conclusion: completed_conclusion.or_else(|| conclusion_name(conclusion)),
+            external_id: completed_external_id.unwrap_or(external_id),
+        };
+        Ok((own_check, app.and_then(Author::new)))
     }
 
     /// Best-effort: complete a still in-progress check as failed when
@@ -516,6 +612,40 @@ impl GitHubActions {
         .await;
         if let Err(err) = finished {
             cli_eprintln_quietable!(log, "Failed to complete GitHub Check\n{err}");
+        }
+    }
+
+    /// Best-effort: a detached run names its report in its check, so other jobs list its section
+    /// while it is pending. Failures are logged, never fatal.
+    #[cfg(feature = "plus")]
+    pub async fn report_submitted(
+        &self,
+        handle: &CheckRunHandle,
+        project: ProjectUuid,
+        report: ReportUuid,
+        sub_adapter: &bencher_comment::SubAdapter,
+        log: bool,
+    ) {
+        let CheckRunHandle { owner, repo, id } = handle;
+        let external_id = ExternalId {
+            project: Some(project),
+            report: Some(report),
+            kind: Kind::new(self.ci_id.as_deref(), sub_adapter),
+        };
+        let updated = async {
+            self.github_client(log)?
+                .checks(owner, repo)
+                .update_check_run(*id)
+                // `octocrab` names the setter of `external_id` this way.
+                .external_url(external_id.to_string())
+                .send()
+                .await
+                .map(drop)
+                .map_err(|e| check_error(e, GitHubError::UpdateCheck))
+        }
+        .await;
+        if let Err(err) = updated {
+            cli_eprintln_quietable!(log, "Failed to name the report in the GitHub Check\n{err}");
         }
     }
 
@@ -715,20 +845,16 @@ impl GitHubActions {
             }
             issue_handler.create_comment(issue_number, body).await
         };
-        if let Err(e) = comment {
-            Err(
-                // https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
-                if is_permissions_error(&e) {
-                    GitHubError::BadCommentPermissions(e)
-                } else if comment_id.is_some() {
-                    GitHubError::UpdateComment(e)
+        comment.map(drop).map_err(|e| {
+            comment_error(
+                e,
+                if comment_id.is_some() {
+                    GitHubError::UpdateComment
                 } else {
-                    GitHubError::CreateComment(e)
+                    GitHubError::CreateComment
                 },
             )
-        } else {
-            Ok(())
-        }
+        })
     }
 }
 
@@ -861,13 +987,6 @@ fn workflow_run_attempt(
     })
 }
 
-// An explicit `--ci-id` names the check instead of the Project, and outside of
-// GitHub Actions no check is created at all, so neither needs the lookup.
-// The environment is read by the caller so this stays deterministic in tests.
-fn needs_project_name(ci_id: Option<&str>, is_github_actions: bool) -> bool {
-    ci_id.is_none() && is_github_actions
-}
-
 // An explicit `--ci-id` takes the Project name's place in the check run name.
 // The `in_progress` create and the fallback create must resolve the ID the same
 // way, or a required status check would never be reported, so both go through here.
@@ -916,6 +1035,13 @@ fn check_conclusion(
     } else {
         CheckRunConclusion::Success
     }
+}
+
+fn conclusion_name(conclusion: CheckRunConclusion) -> Option<String> {
+    serde_json::to_value(conclusion)
+        .ok()?
+        .as_str()
+        .map(ToOwned::to_owned)
 }
 
 fn check_run_output(summary: String) -> CheckRunOutput {
@@ -981,6 +1107,15 @@ fn is_permissions_error(err: &octocrab::Error) -> bool {
 }
 
 // https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
+fn comment_error(err: octocrab::Error, variant: fn(octocrab::Error) -> GitHubError) -> GitHubError {
+    if is_permissions_error(&err) {
+        GitHubError::BadCommentPermissions(err)
+    } else {
+        variant(err)
+    }
+}
+
+// https://github.blog/changelog/2023-02-02-github-actions-updating-the-default-github_token-permissions-to-read-only/
 fn check_error(err: octocrab::Error, variant: fn(octocrab::Error) -> GitHubError) -> GitHubError {
     if is_permissions_error(&err) {
         GitHubError::BadCheckPermissions(err)
@@ -1000,6 +1135,32 @@ fn github_api_url(log: bool) -> Option<String> {
         );
         None
     }
+}
+
+// https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#update-a-check-run
+#[derive(serde::Serialize)]
+struct Completion<'a> {
+    name: &'a str,
+    output: CheckRunOutput,
+    conclusion: CheckRunConclusion,
+    external_id: &'a str,
+}
+
+// https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#create-a-check-run
+#[derive(serde::Serialize)]
+struct NewCompletion<'a> {
+    head_sha: &'a str,
+    #[serde(flatten)]
+    completion: Completion<'a>,
+}
+
+#[derive(serde::Deserialize)]
+struct CompletedCheck {
+    id: CheckRunId,
+    name: String,
+    conclusion: Option<String>,
+    external_id: Option<String>,
+    app: Option<CheckApp>,
 }
 
 /// What a detached run's `repository_dispatch` carries to its attach. The composed body also
@@ -1120,8 +1281,7 @@ mod tests {
     use super::{
         BENCHER_REPORT, FAILED_SUMMARY, GitHubError, IN_PROGRESS_SUMMARY, MAX_ID_LEN, MAX_NAME_LEN,
         NAME_FORMAT_LEN, branded_summary, check_conclusion, check_head_sha, check_run_id,
-        check_run_name, check_run_output, needs_project_name, resolve_head_sha,
-        workflow_run_attempt,
+        check_run_name, check_run_output, resolve_head_sha, workflow_run_attempt,
     };
 
     #[test]
@@ -1354,24 +1514,6 @@ mod tests {
     #[test]
     fn check_run_id_none() {
         assert_eq!(check_run_id(None, None), None);
-    }
-
-    #[test]
-    fn needs_project_name_github_actions() {
-        assert!(needs_project_name(None, true));
-    }
-
-    // A `--ci-id` names the check, so there is nothing to look up
-    #[test]
-    fn needs_project_name_ci_id() {
-        assert!(!needs_project_name(Some("embedded"), true));
-    }
-
-    // No check is created outside of GitHub Actions, so there is nothing to name
-    #[test]
-    fn needs_project_name_not_github_actions() {
-        assert!(!needs_project_name(None, false));
-        assert!(!needs_project_name(Some("embedded"), false));
     }
 
     #[test]
