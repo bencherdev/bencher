@@ -1,6 +1,6 @@
 use bencher_client::types::{
     Adapter, DateTime, GitHash, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings,
-    JsonUpdateStartPoint,
+    JsonUpdateStartPoint, MeasureFilter,
 };
 use bencher_json::{BranchNameId, ProjectResourceId, TestbedNameId};
 
@@ -16,8 +16,10 @@ use crate::{
 mod adapter;
 mod average;
 mod fold;
+mod measures;
 mod thresholds;
 
+pub use measures::{MeasuresError, measure_filter};
 pub use thresholds::{Thresholds, ThresholdsError};
 
 #[derive(Debug, Clone)]
@@ -34,6 +36,7 @@ pub struct Create {
     pub adapter: Option<Adapter>,
     pub average: Option<JsonAverage>,
     pub fold: Option<JsonFold>,
+    pub measures: Option<MeasureFilter>,
     pub backend: AuthBackend,
 }
 
@@ -54,6 +57,7 @@ impl TryFrom<CliReportCreate> for Create {
             adapter,
             average,
             fold,
+            measure,
             backend,
         } = create;
         Ok(Self {
@@ -69,6 +73,7 @@ impl TryFrom<CliReportCreate> for Create {
             adapter: adapter.map(Into::into),
             average: average.map(Into::into),
             fold: fold.map(Into::into),
+            measures: measure_filter(measure)?,
             backend: backend.try_into()?,
         })
     }
@@ -87,6 +92,7 @@ impl From<Create> for JsonNewReport {
             adapter,
             average,
             fold,
+            measures,
             ..
         } = create;
         Self {
@@ -105,6 +111,7 @@ impl From<Create> for JsonNewReport {
                 adapter,
                 average,
                 fold,
+                measures,
             }),
         }
     }
@@ -124,5 +131,44 @@ impl SubCmd for Create {
             })
             .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_client::types::JsonNewReport;
+    use clap::Parser as _;
+
+    use super::Create;
+    use crate::parser::project::report::CliReportCreate;
+
+    /// Kills: a `--measure` list that the parse discards, and a report whose request sends no
+    /// list.
+    #[test]
+    fn report_create_sends_the_listed_measures() {
+        let cli = CliReportCreate::try_parse_from([
+            "create",
+            "my-project",
+            "--branch",
+            "main",
+            "--testbed",
+            "localhost",
+            "--start-time",
+            "2024-01-01T00:00:00Z",
+            "--end-time",
+            "2024-01-01T00:01:00Z",
+            "--key",
+            "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
+            "--measure",
+            "latency",
+            "--measure",
+            "Wall Clock",
+        ])
+        .unwrap();
+        let json_new_report = JsonNewReport::from(Create::try_from(cli).unwrap());
+        assert_eq!(
+            serde_json::to_value(json_new_report).unwrap()["settings"]["measures"],
+            serde_json::json!(["latency", "Wall Clock"])
+        );
     }
 }

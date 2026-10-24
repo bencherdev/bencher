@@ -2087,3 +2087,294 @@ async fn get_report(
     assert_eq!(resp.status(), StatusCode::OK);
     resp.json().await.expect("Failed to parse the report")
 }
+
+// POST /v0/projects/{project}/reports - only the listed measures are stored, each matched by name
+// or slug, at both versions: a dropped measure leaves no measure, metric, or series, a benchmark
+// left with nothing leaves no benchmark or report benchmark, and a listed measure the results
+// lack is ignored
+//
+// Kills: a filter that keeps an unlisted measure, matches only the spelling the results use or
+// misses a built-in measure listed by its name, creates a dropped measure or the benchmark it
+// emptied, writes their report benchmark or series, refuses or creates a listed measure the
+// results lack, or records a parse the filter emptied.
+#[tokio::test]
+async fn reports_post_keeps_only_the_listed_measures() {
+    let server = TestServer::new().await;
+    for bmf_version in [0, 1] {
+        let (token, project_slug) = ingest_project(&server, &format!("keep{bmf_version}")).await;
+        let (measures_before, _, _, _) = stored(&server, &project_slug);
+        let report = keeping(
+            &kept_and_dropped(bmf_version),
+            bmf_version,
+            &["Latency", "throughput", "My Kept", "Ge", "never-reported"],
+        );
+        let (status, body) = try_post_ingest(&server, &token, &project_slug, &report).await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+        assert_eq!(report.warnings, None, "{bmf_version}");
+        assert_eq!(
+            report.parse_outcome,
+            Some(ParseOutcome::Parsed),
+            "{bmf_version}"
+        );
+
+        assert_eq!(
+            ingested(&server, &project_slug),
+            vec![
+                row("bench_kept", "{}", "global-bus-events", "value"),
+                row("bench_kept", "{}", "latency", "value"),
+                row("bench_kept", "{}", "my-kept", "value"),
+                row("bench_kept", "{}", "throughput", "value"),
+            ],
+            "{bmf_version}"
+        );
+        let mut measures = measures_before;
+        measures
+            .extend(["global-bus-events", "latency", "my-kept", "throughput"].map(str::to_owned));
+        measures.sort();
+        measures.dedup();
+        let series = if cfg!(feature = "plus") { 4 } else { 0 };
+        assert_eq!(
+            stored(&server, &project_slug),
+            (measures, vec!["bench_kept".to_owned()], 1, series),
+            "{bmf_version}"
+        );
+    }
+}
+
+// POST /v0/projects/{project}/reports - a list of measures none of which the results hold drops
+// every measure, and the report still parsed; an empty list keeps every measure
+//
+// Kills: a filter that keeps everything when nothing it lists is present, an empty list that
+// drops everything, and a report the filter emptied recorded as empty or failed.
+#[tokio::test]
+async fn reports_post_keeps_nothing_unlisted_and_everything_for_an_empty_list() {
+    let server = TestServer::new().await;
+    for bmf_version in [0, 1] {
+        let (token, project_slug) = ingest_project(&server, &format!("none{bmf_version}")).await;
+        let report = keeping(
+            &kept_and_dropped(bmf_version),
+            bmf_version,
+            &["never-reported"],
+        );
+        let report = post_report_body(&server, &token, &project_slug, &report).await;
+        assert_eq!(
+            report.parse_outcome,
+            Some(ParseOutcome::Parsed),
+            "{bmf_version}"
+        );
+        assert_eq!(
+            ingested(&server, &project_slug),
+            Vec::new(),
+            "{bmf_version}"
+        );
+        let (_, benchmarks, report_benchmarks, _) = stored(&server, &project_slug);
+        assert_eq!(
+            (benchmarks, report_benchmarks),
+            (Vec::new(), 0),
+            "{bmf_version}"
+        );
+
+        let (token, project_slug) = ingest_project(&server, &format!("all{bmf_version}")).await;
+        let report = keeping(&kept_and_dropped(bmf_version), bmf_version, &[]);
+        post_report_body(&server, &token, &project_slug, &report).await;
+        assert_eq!(ingested(&server, &project_slug).len(), 6, "{bmf_version}");
+    }
+}
+
+// POST /v0/projects/{project}/reports - a report may list 64 measures to keep, and one more is a
+// bad request
+//
+// Kills: a list with no limit, and a limit off by one either way.
+#[tokio::test]
+async fn reports_post_limits_the_listed_measures() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "keeplimit").await;
+    let results = kept_and_dropped(1);
+    for (count, status) in [(64, StatusCode::CREATED), (65, StatusCode::BAD_REQUEST)] {
+        let names = (0..count).map(|n| format!("m{n}")).collect::<Vec<_>>();
+        let names = names.iter().map(String::as_str).collect::<Vec<_>>();
+        let (actual, body) = try_post_ingest(
+            &server,
+            &token,
+            &project_slug,
+            &keeping(&results, 1, &names),
+        )
+        .await;
+        assert_eq!(actual, status, "{count}: {body}");
+    }
+}
+
+// POST /v0/projects/{project}/reports - the average setting is ignored with a warning at BMF
+// version 1, and works as it always has at version 0
+//
+// Kills: an average at version 1 that warns of nothing, warns more than once, or warns under any
+// other resource or action, and an average at version 0 that warns.
+#[tokio::test]
+async fn reports_post_ignores_the_average_at_version_1() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "average").await;
+    for (bmf_version, results, warnings) in [
+        (0, BMF_V0, None),
+        (
+            1,
+            BMF_V1,
+            Some(vec![JsonReportWarning {
+                resource: ReportWarningResource::Average,
+                action: ReportWarningAction::Ignore,
+                count: 1,
+            }]),
+        ),
+    ] {
+        let report = settled_report(
+            results,
+            bmf_version,
+            &serde_json::json!({ "adapter": "json", "average": "median" }),
+        );
+        let report = post_report_body(&server, &token, &project_slug, &report).await;
+        assert_eq!(report.warnings, warnings, "{bmf_version}");
+        let read = get_report(&server, &token, &project_slug, report.uuid).await;
+        assert_eq!(read.warnings, warnings, "{bmf_version}");
+    }
+}
+
+// POST /v0/projects/{project}/reports - a measure whose name makes no slug is kept when it is
+// listed by that name
+//
+// Kills: a filter that cannot match a measure whose name makes no slug.
+#[tokio::test]
+async fn reports_post_keeps_a_listed_measure_whose_name_makes_no_slug() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "unslugged").await;
+    let results = serde_json::json!({
+        "bench": [{ "measures": { "~~~": { "value": 1.0 }, "latency": { "value": 2.0 } } }],
+    });
+    let report = keeping(&results, 1, &["~~~"]);
+    post_report_body(&server, &token, &project_slug, &report).await;
+    let ingested = ingested(&server, &project_slug);
+    assert_eq!(ingested.len(), 1);
+    assert!(
+        ingested
+            .iter()
+            .all(|(_, _, measure, _)| measure != "latency"),
+        "{ingested:?}"
+    );
+}
+
+// POST /v0/projects/{project}/reports - a measure the project holds is kept when it is listed by
+// its name, though the results name it by a slug that the name does not make
+//
+// Kills: a filter that resolves a listed name to the measure it would create instead of the
+// measure the project holds.
+#[tokio::test]
+async fn reports_post_keeps_an_existing_measure_listed_by_a_name_whose_slug_differs() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "existing").await;
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/measures")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({ "name": "Wall Clock", "slug": "wall", "units": "seconds" }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let results = serde_json::json!({
+        "bench": [{ "measures": { "wall": { "value": 1.0 }, "latency": { "value": 2.0 } } }],
+    });
+    let report = keeping(&results, 1, &["Wall Clock"]);
+    post_report_body(&server, &token, &project_slug, &report).await;
+    assert_eq!(
+        ingested(&server, &project_slug),
+        vec![row("bench", "{}", "wall", "value")]
+    );
+}
+
+/// A report of `results` at `bmf_version` that keeps only `measures`.
+fn keeping(results: &serde_json::Value, bmf_version: u8, measures: &[&str]) -> serde_json::Value {
+    settled_report(
+        &results.to_string(),
+        bmf_version,
+        &serde_json::json!({ "adapter": "json", "measures": measures }),
+    )
+}
+
+/// A report of `results` at `bmf_version` with `settings`.
+fn settled_report(
+    results: &str,
+    bmf_version: u8,
+    settings: &serde_json::Value,
+) -> serde_json::Value {
+    serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [results],
+        "bmf_version": bmf_version,
+        "settings": settings,
+    })
+}
+
+/// The kept and dropped measures, and a benchmark with only a dropped one, at `bmf_version`.
+fn kept_and_dropped(bmf_version: u8) -> serde_json::Value {
+    let kept = serde_json::json!({
+        "latency": { "value": 1.0 },
+        "throughput": { "value": 2.0 },
+        "my-kept": { "value": 3.0 },
+        "my-dropped": { "value": 4.0 },
+        "global-bus-events": { "value": 6.0 },
+    });
+    let dropped = serde_json::json!({ "my-dropped": { "value": 5.0 } });
+    if bmf_version == 0 {
+        serde_json::json!({ "bench_kept": kept, "bench_dropped": dropped })
+    } else {
+        serde_json::json!({
+            "bench_kept": [{ "measures": kept }],
+            "bench_dropped": [{ "measures": dropped }],
+        })
+    }
+}
+
+/// The slugs of a project's measures, its benchmarks' names, its report benchmarks, and the
+/// series it bills, as Plus counts them.
+fn stored(server: &TestServer, project_slug: &str) -> (Vec<String>, Vec<String>, i64, i64) {
+    let project_id = get_project_id(server, project_slug);
+    let mut conn = server.db_conn();
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .order(schema::measure::slug)
+        .select(schema::measure::slug)
+        .load::<Slug>(&mut conn)
+        .expect("Failed to load the measures")
+        .into_iter()
+        .map(|slug| slug.to_string())
+        .collect();
+    let benchmarks = schema::benchmark::table
+        .filter(schema::benchmark::project_id.eq(project_id))
+        .order(schema::benchmark::name)
+        .select(schema::benchmark::name)
+        .load::<BenchmarkName>(&mut conn)
+        .expect("Failed to load the benchmarks")
+        .into_iter()
+        .map(|name| name.to_string())
+        .collect();
+    let report_benchmarks = schema::report_benchmark::table
+        .inner_join(schema::benchmark::table)
+        .filter(schema::benchmark::project_id.eq(project_id))
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count the report benchmarks");
+    #[cfg(feature = "plus")]
+    let series = schema::series_last_seen::table
+        .filter(schema::series_last_seen::project_id.eq(project_id))
+        .count()
+        .get_result(&mut conn)
+        .expect("Failed to count the series");
+    #[cfg(not(feature = "plus"))]
+    let series = 0;
+    (measures, benchmarks, report_benchmarks, series)
+}

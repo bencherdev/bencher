@@ -2789,6 +2789,61 @@ async fn run_post_with_job_stores_the_projects_bmf_version_when_absent() {
     );
 }
 
+// POST /v0/run with job stores the measures the run keeps and its average on the job config,
+// where the job's results are processed
+//
+// Kills: a job config that loses the kept measures.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_stores_the_kept_measures() {
+    use bencher_schema::schema;
+    use diesel::QueryDsl as _;
+
+    let server = TestServer::new().await;
+    let user = server.signup("Job User", "runjob_keep@example.com").await;
+    let org = server.create_org(&user, "Keep Job Org").await;
+    let project = server.create_project(&user, &org, "Keep Job Project").await;
+    create_fallback_spec(&server, &user).await;
+    let project_slug: &str = project.slug.as_ref();
+    push_test_image(&server, &project, &user, "v1").await;
+
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [],
+        "settings": { "measures": ["latency", "Throughput"] },
+        "job": {
+            "image": format!("localhost/{project_slug}:v1"),
+        }
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "POST run with a job");
+
+    let stored_config: String = schema::job::table
+        .select(schema::job::config)
+        .first(&mut server.db_conn())
+        .expect("Failed to query job config");
+    let config: serde_json::Value =
+        serde_json::from_str(&stored_config).expect("Failed to parse job config");
+    assert_eq!(
+        config.get("measures"),
+        Some(&serde_json::json!(["latency", "Throughput"]))
+    );
+}
+
 // POST /v0/run with job referencing a nonexistent tag — fails
 #[cfg(feature = "plus")]
 #[tokio::test]

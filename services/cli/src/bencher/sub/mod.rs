@@ -33,7 +33,11 @@ use project::{
     testbed::Testbed,
     threshold::Threshold,
 };
-pub use project::{archive::ArchiveError, report::ThresholdsError, threshold::ThresholdError};
+pub use project::{
+    archive::ArchiveError,
+    report::{MeasuresError, ThresholdsError},
+    threshold::ThresholdError,
+};
 use run::Run;
 pub use run::{RunError, runner::output::Output};
 pub use sub_cmd::SubCmd;
