@@ -103,6 +103,36 @@ pub mod dotnet {
         "total-operations",
         "operations"
     );
+    create_measure!(
+        Gen0CollectsPer1000Ops,
+        "Gen0 Collects per 1000 Operations",
+        "gen0-collects-per-1000-ops",
+        "collects / 1000 operations"
+    );
+    create_measure!(
+        Gen1CollectsPer1000Ops,
+        "Gen1 Collects per 1000 Operations",
+        "gen1-collects-per-1000-ops",
+        "collects / 1000 operations"
+    );
+    create_measure!(
+        Gen2CollectsPer1000Ops,
+        "Gen2 Collects per 1000 Operations",
+        "gen2-collects-per-1000-ops",
+        "collects / 1000 operations"
+    );
+}
+
+pub mod jmh {
+    use bencher_valid::NANOSECONDS;
+
+    create_measure!(SampleTime, "Sample Time", "sample-time", NANOSECONDS);
+    create_measure!(
+        SingleShotTime,
+        "Single Shot Time",
+        "single-shot-time",
+        NANOSECONDS
+    );
 }
 
 pub mod iai {

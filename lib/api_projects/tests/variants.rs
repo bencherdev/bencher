@@ -833,7 +833,7 @@ async fn metric_cap_does_not_fail_the_report() {
 
     let mut measures = serde_json::Map::new();
     measures.insert("value".to_owned(), serde_json::json!(1.0));
-    for index in 0..16u32 {
+    for index in 0..32u32 {
         measures.insert(format!("p{index}"), serde_json::json!(f64::from(index)));
     }
 
@@ -857,11 +857,7 @@ async fn metric_cap_does_not_fail_the_report() {
     let project_id = get_project_id(&server, &fixture.project_slug);
     let mut conn = server.db_conn();
     let names = metric_rows(&mut conn, project_id);
-    assert_eq!(
-        names.len(),
-        16,
-        "the cap keeps sixteen names, got {names:?}"
-    );
+    assert_eq!(names.len(), 32, "the cap keeps 32 names, got {names:?}");
     assert!(
         names.iter().any(|(_, name, _)| name == "value"),
         "the point estimate is never dropped, got {names:?}"

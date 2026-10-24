@@ -2971,8 +2971,8 @@ async fn run_post_idempotency_key_returns_the_same_warnings() {
         .create_project(&user, &org, "Idempotency Warn Project")
         .await;
 
-    // Eighteen metric names on one measure, two past the per measure cap of sixteen.
-    let names = (1..=18)
+    // 34 metric names on one measure, two past the per measure cap of 32.
+    let names = (1..=34)
         .map(|n| (format!("p{n}"), serde_json::json!(n)))
         .collect::<serde_json::Map<_, _>>();
     let results = serde_json::json!({ "bench": [{ "measures": { "latency": names } }] });
