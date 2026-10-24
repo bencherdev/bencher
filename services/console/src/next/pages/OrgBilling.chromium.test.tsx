@@ -476,14 +476,18 @@ describe("Stripe's return", () => {
 	const enrolled = () => page.getByRole("status").getByText("Enrolled in Pro");
 
 	// Kills "Enrolled" drawn over the plan from before the checkout, with its
-	// Start trial still live, before the usage read after the plan answers.
+	// Start trial still live, before the usage read after the plan answers, and
+	// any usage read but that one.
 	test("says Enrolled only with the usage read after the plan is recorded", async () => {
 		// The usage read once the plan is posted waits for the test.
 		const held: ((usage: JsonUsage) => void)[] = [];
+		// Counted apart from `sent`, which a read during mount finds unassigned.
+		let reads = 0;
 		const { sent, history } = open(FREE, {
 			path: RETURN,
 			read: async (path) => {
 				expect(path).toBe(USAGE);
+				reads += 1;
 				return sent.length === 0
 					? answered(FREE)
 					: new Promise((resolve) =>
@@ -506,6 +510,8 @@ describe("Stripe's return", () => {
 		}
 		await expect.element(enrolled()).toBeVisible();
 		await expect.element(region("Pro Plan")).toBeVisible();
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(reads).toBe(1);
 	});
 
 	// Kills a replayed return, whose plan the API already holds, shown as a failure.

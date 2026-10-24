@@ -66,10 +66,13 @@ const OrgBilling = () => {
 	const key = () => params.organization ?? "";
 	const organization = useQueryResult(() => organizationQuery(api, key()));
 	const manage = useQueryResult(() => manageQuery(api, key()));
-	// The API shows usage only to a reader who manages the organization.
+	const { enrollment, recorded } = useCheckoutReturn(key);
+	// The API shows usage only to a reader who manages the organization, and Stripe's return reads it once the plan is recorded.
 	const usage = useQueryResult(() => ({
 		...usageQuery(api, key()),
-		enabled: manage().data !== false,
+		enabled:
+			manage().data !== false &&
+			(enrollment()?.status !== "enrolling" || recorded()),
 	}));
 	// Only read: an organization the reader has seen names the rail at once.
 	const bootstrap = useQueryResult(() => ({
@@ -78,7 +81,6 @@ const OrgBilling = () => {
 	}));
 	const name = () =>
 		organization().data?.name ?? organizationIn(bootstrap().data, key())?.name;
-	const enrollment = useCheckoutReturn(key);
 	// An expired or invalid license answers 402, and its key still needs replacing.
 	const unlicensed = () => {
 		const error = usage().error;
@@ -160,6 +162,7 @@ const useCheckoutReturn = (organization: () => string) => {
 			? { status: "enrolling", level }
 			: undefined,
 	);
+	const [recorded, setRecorded] = createSignal(false);
 	onMount(() => {
 		if (!enrollment()) {
 			return;
@@ -173,16 +176,21 @@ const useCheckoutReturn = (organization: () => string) => {
 					api,
 					organization(),
 					search,
-					() =>
-						client.invalidateQueries({
-							queryKey: usageQuery(api, organization()).queryKey,
-						}),
+					() => {
+						// The page's read that this starts and the read below are one request.
+						setRecorded(true);
+						// A read that fails leaves its error in the cache for the page to show.
+						return client.fetchQuery(usageQuery(api, organization())).then(
+							() => undefined,
+							() => undefined,
+						);
+					},
 					setEnrollment,
 				),
 			)
 			.catch((error) => setEnrollment({ status: "failed", level, error }));
 	});
-	return enrollment;
+	return { enrollment, recorded };
 };
 
 const UsageView = (props: { usage: Usage; name: string }) => {

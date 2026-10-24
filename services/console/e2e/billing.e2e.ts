@@ -135,14 +135,17 @@ test.describe("Stripe's return", () => {
 		page,
 	}) => {
 		const plans = await planRequests(page, 201);
-		// Every usage read once the plan is posted waits for the test.
+		// A usage read from before the plan never answers, and every one after it waits for the test.
 		const held: (() => void)[] = [];
+		let reads = 0;
 		await page.route(
 			`${seed.api_url}/v0/organizations/*/usage`,
 			async (route) => {
-				if (plans.length > 0) {
-					await new Promise<void>((resolve) => held.push(resolve));
+				reads += 1;
+				if (plans.length === 0) {
+					await new Promise<void>(() => {});
 				}
+				await new Promise<void>((resolve) => held.push(resolve));
 				await route.fallback();
 			},
 		);
@@ -163,6 +166,7 @@ test.describe("Stripe's return", () => {
 		await expect(license).toBeVisible();
 		await page.waitForLoadState("networkidle");
 		expect(plans).toEqual([{ checkout: "cs_test_e2e", level: "pro" }]);
+		expect(reads).toBe(1);
 	});
 
 	// Kills a failed return that says nothing.
