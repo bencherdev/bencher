@@ -10,7 +10,7 @@ const load = () =>
 	import("@sentry/astro").then((Sentry) => {
 		Sentry.init({
 			dsn: import.meta.env.PUBLIC_SENTRY_DSN,
-			environment: import.meta.env.PUBLIC_VERCEL_ENV,
+			environment: import.meta.env.SENTRY_ENVIRONMENT,
 			release: import.meta.env.PUBLIC_VERCEL_GIT_COMMIT_SHA,
 			tracesSampleRate: 1,
 			integrations: [

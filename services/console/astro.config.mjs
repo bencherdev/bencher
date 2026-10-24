@@ -11,6 +11,7 @@ import wasmPack from "vite-plugin-wasm-pack";
 
 import { headingAutolink } from "./markdown.js";
 import nextPreloads from "./src/next/build/preloads.mjs";
+import { sentryEnvironment } from "./src/next/build/sentry.mjs";
 
 const CLIENT = "client";
 const SERVER = "server";
@@ -21,6 +22,8 @@ const SECRET = "secret";
 const BENCHER_CHAT_URL = "https://discord.gg/yGEsdUh7R4";
 const BENCHER_CALENDLY_URL = "https://calendly.com/bencher/demo";
 const BENCHER_GITHUB_URL = "https://github.com/bencherdev/bencher";
+
+const SENTRY_ENVIRONMENT = sentryEnvironment(process.env.CLOUDFLARE_ENV);
 
 // Modules the console's pages load together, merged into one file per set:
 // each extra file costs a request and a gzip dictionary of its own.
@@ -238,6 +241,7 @@ export default defineConfig({
 			// DO NOT REMOVE OR MODIFY: This line is used by adapter.js
 			enabled: undefined,
 			dsn: process.env.PUBLIC_SENTRY_DSN,
+			environment: SENTRY_ENVIRONMENT,
 			sourceMapsUploadOptions: {
 				enabled: process.env.SENTRY_UPLOAD === "true",
 				org: "bencher",
@@ -247,6 +251,10 @@ export default defineConfig({
 		}),
 	],
 	vite: {
+		// `sentry.client.config.ts` replaces the init the integration writes, so it reads this instead.
+		define: {
+			"import.meta.env.SENTRY_ENVIRONMENT": JSON.stringify(SENTRY_ENVIRONMENT),
+		},
 		assetsInclude: ["**/*.sh", "**/*.ps1"],
 		plugins: [wasmPack("../../lib/bencher_valid")],
 		// `@bencherdev/ui` is linked by path, so its files live outside this package:
