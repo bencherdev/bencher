@@ -1,0 +1,83 @@
+{
+   "Title":"Global-20261024-022412",
+   "HostEnvironmentInfo":{
+      "BenchmarkDotNetCaption":"BenchmarkDotNet",
+      "BenchmarkDotNetVersion":"0.15.8",
+      "OsVersion":"Linux Ubuntu 24.04.5 LTS (Noble Numbat)",
+      "ProcessorName":"Unknown processor",
+      "PhysicalProcessorCount":1,
+      "PhysicalCoreCount":16,
+      "LogicalCoreCount":16,
+      "RuntimeVersion":".NET 8.0.32 (8.0.32, 8.0.3226.50405)",
+      "Architecture":"X64",
+      "HasAttachedDebugger":false,
+      "HasRyuJit":true,
+      "Configuration":"RELEASE",
+      "DotNetCliVersion":"8.0.132",
+      "ChronometerFrequency":{
+         "Hertz":1000000000
+      },
+      "HardwareTimerKind":"Unknown"
+   },
+   "Benchmarks":[
+      {
+         "DisplayInfo":"Global.Add: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)",
+         "Namespace":null,
+         "Type":"Global",
+         "Method":"Add",
+         "MethodTitle":"Add",
+         "Parameters":"",
+         "FullName":"Global.Add",
+         "HardwareIntrinsics":"",
+         "Statistics":{
+            "OriginalValues":[
+               0,0,0
+            ],
+            "N":3,
+            "Min":0,
+            "LowerFence":0,
+            "Q1":0,
+            "Median":0,
+            "Mean":0,
+            "Q3":0,
+            "UpperFence":0,
+            "Max":0,
+            "InterquartileRange":0,
+            "LowerOutliers":[
+               
+            ],
+            "UpperOutliers":[
+               
+            ],
+            "AllOutliers":[
+               
+            ],
+            "StandardError":0,
+            "Variance":0,
+            "StandardDeviation":0,
+            "Skewness":"",
+            "Kurtosis":"",
+            "ConfidenceInterval":{
+               "N":3,
+               "Mean":0,
+               "StandardError":0,
+               "Level":12,
+               "Margin":0,
+               "Lower":0,
+               "Upper":0
+            },
+            "Percentiles":{
+               "P0":0,
+               "P25":0,
+               "P50":0,
+               "P67":0,
+               "P80":0,
+               "P85":0,
+               "P90":0,
+               "P95":0,
+               "P100":0
+            }
+         }
+      }
+   ]
+}
