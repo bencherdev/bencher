@@ -159,7 +159,7 @@ jobs:
         working-directory: ./services/action
         run: |
           npm install --include=dev
-          npx biome ci --linter-enabled false --organize-imports-enabled false .
+          npx biome ci --linter-enabled false --assist-enabled false .
       - name: Biome format Console UI
         working-directory: ./services/console
         run: |
@@ -186,7 +186,7 @@ jobs:
         working-directory: ./services/action
         run: |
           npm install --include=dev
-          npx biome ci --formatter-enabled false --organize-imports-enabled false .
+          npx biome ci --formatter-enabled false --assist-enabled false .
       - name: Biome check Console UI
         working-directory: ./services/console
         run: |
