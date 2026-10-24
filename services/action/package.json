@@ -1,19 +1,20 @@
 {
 	"private": true,
+	"type": "module",
 	"scripts": {
 		"fmt": "biome format --write .",
 		"build": "ncc build -o dist src/main.ts"
 	},
 	"dependencies": {
-		"@actions/core": "^2.0.3",
-		"@actions/http-client": "^3.0.2",
-		"@actions/tool-cache": "^3.0.1"
+		"@actions/core": "^3.0.1",
+		"@actions/http-client": "^4.0.1",
+		"@actions/tool-cache": "^4.0.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
 		"@tsconfig/node24": "^24.0.5",
 		"@types/node": "^24.19.2",
-		"@vercel/ncc": "^0.38.4",
+		"@vercel/ncc": "^0.45.0",
 		"typescript": "^5.9.3"
 	}
 }
