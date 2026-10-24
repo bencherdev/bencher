@@ -25,6 +25,9 @@ const SENTRY_DSN: &str = "PUBLIC_SENTRY_DSN";
 /// Sentry, while the console still draws what a Sentry build draws; the suite
 /// intercepts what it needs to see.
 const TEST_SENTRY_DSN: &str = "http://feedback@127.0.0.1:9/0";
+/// Set to `true`, the console records no Sentry Replay, whose compression
+/// worker can deadlock headless Chromium.
+const SENTRY_NO_REPLAY: &str = "PUBLIC_SENTRY_NO_REPLAY";
 /// The debug defaults the test tokens are signed with.
 const ISSUER: &str = "http://localhost:3000/";
 const SECRET_KEY: &str = "DO_NOT_USE_THIS_IN_PRODUCTION";
@@ -248,7 +251,8 @@ fn npm_command(dir: &Utf8Path, args: &[&str]) -> Command {
     command
         .args(args)
         .current_dir(dir)
-        .env(SENTRY_DSN, TEST_SENTRY_DSN);
+        .env(SENTRY_DSN, TEST_SENTRY_DSN)
+        .env(SENTRY_NO_REPLAY, "true");
     command
 }
 
@@ -399,12 +403,12 @@ mod tests {
 
     use camino::Utf8Path;
 
-    use super::{SENTRY_DSN, TEST_SENTRY_DSN, console_command, npm_command};
+    use super::{SENTRY_DSN, SENTRY_NO_REPLAY, TEST_SENTRY_DSN, console_command, npm_command};
 
-    fn sentry_dsn(command: &Command) -> Option<&OsStr> {
+    fn env<'c>(command: &'c Command, name: &str) -> Option<&'c OsStr> {
         command
             .get_envs()
-            .find_map(|(key, value)| (key == SENTRY_DSN).then_some(value))
+            .find_map(|(key, value)| (key == name).then_some(value))
             .flatten()
     }
 
@@ -414,10 +418,23 @@ mod tests {
     fn console_builds_and_serves_with_the_test_sentry_dsn() {
         let dir = Utf8Path::new("services/console");
         let test = Some(OsStr::new(TEST_SENTRY_DSN));
-        assert_eq!(sentry_dsn(&npm_command(dir, &["run", "build"])), test);
+        assert_eq!(env(&npm_command(dir, &["run", "build"]), SENTRY_DSN), test);
         assert_eq!(
-            sentry_dsn(&console_command(dir, "http://127.0.0.1:61016", "3000")),
+            env(
+                &console_command(dir, "http://127.0.0.1:61016", "3000"),
+                SENTRY_DSN
+            ),
             test
+        );
+    }
+
+    // Kills a test build that records a Sentry Replay.
+    #[test]
+    fn console_builds_with_no_sentry_replay() {
+        let dir = Utf8Path::new("services/console");
+        assert_eq!(
+            env(&npm_command(dir, &["run", "build"]), SENTRY_NO_REPLAY),
+            Some(OsStr::new("true"))
         );
     }
 }

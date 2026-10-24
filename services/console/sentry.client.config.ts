@@ -4,6 +4,7 @@ import { deferErrors, whenIdle } from "./src/util/deferredErrors";
 // console waits longer, until the page has loaded and the browser is idle.
 // Errors raised before it arrives are kept and sent once it does.
 const errors = deferErrors(window);
+const replay = import.meta.env.PUBLIC_SENTRY_NO_REPLAY !== "true";
 
 const load = () =>
 	import("@sentry/astro").then((Sentry) => {
@@ -16,8 +17,8 @@ const load = () =>
 				Sentry.browserTracingIntegration(),
 				Sentry.replayIntegration(),
 			],
-			replaysSessionSampleRate: 0.1,
-			replaysOnErrorSampleRate: 1,
+			replaysSessionSampleRate: replay ? 0.1 : 0,
+			replaysOnErrorSampleRate: replay ? 1 : 0,
 		});
 		errors.flush((error) => Sentry.captureException(error));
 	});
