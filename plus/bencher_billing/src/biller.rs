@@ -1579,6 +1579,7 @@ mod tests {
 
     fn make_subscription_item(price_id: &str) -> stripe_billing::SubscriptionItem {
         stripe_billing::SubscriptionItem {
+            billed_until: None,
             billing_thresholds: None,
             created: 0,
             current_period_end: 0,
@@ -1732,7 +1733,7 @@ mod tests {
 
         // Pro Metered Plan
         let organization = OrganizationUuid::new();
-        metered_subscription(
+        Box::pin(metered_subscription(
             &biller,
             organization,
             customer_id.clone(),
@@ -1741,12 +1742,12 @@ mod tests {
             DEFAULT_PRICE_NAME.into(),
             3,
             7,
-        )
+        ))
         .await;
 
         // Team Metered Plan
         let organization = OrganizationUuid::new();
-        metered_subscription(
+        Box::pin(metered_subscription(
             &biller,
             organization,
             customer_id.clone(),
@@ -1755,7 +1756,7 @@ mod tests {
             DEFAULT_PRICE_NAME.into(),
             5,
             10,
-        )
+        ))
         .await;
 
         // Team Licensed Plan
@@ -1773,7 +1774,7 @@ mod tests {
 
         // Enterprise Metered Plan
         let organization = OrganizationUuid::new();
-        metered_subscription(
+        Box::pin(metered_subscription(
             &biller,
             organization,
             customer_id.clone(),
@@ -1782,7 +1783,7 @@ mod tests {
             DEFAULT_PRICE_NAME.into(),
             10,
             25,
-        )
+        ))
         .await;
 
         // Enterprise Licensed Plan

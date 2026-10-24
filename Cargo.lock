@@ -523,9 +523,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbbfb37a60928c837f3d1db41ed9561a69e86052e5ea11451bfc8406fd22d99e"
+checksum = "865e5a3e16d6b34d2a1717cd544e33100463b5cf312095b894bd46c435a7b97c"
 dependencies = [
  "async-stripe-client-core",
  "async-stripe-shared",
@@ -542,9 +542,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe-billing"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cc8d927d27943b360584e527524efba0bc92c15cee39e33efee64c0727e9e2a"
+checksum = "5d78c9418d14d4886f06251836d92437a77a7b82c9db9096b48ef36752e2df3e"
 dependencies = [
  "async-stripe-client-core",
  "async-stripe-shared",
@@ -557,9 +557,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe-checkout"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a7cc969611dc770fbffe5520128d53fb7618f2f64cacdcc5fdc80066042bd92"
+checksum = "022e3ef4d54938ba8a346c132e4df1298b453c2bf36f2ea8b1a4162fc7f89141"
 dependencies = [
  "async-stripe-client-core",
  "async-stripe-shared",
@@ -572,9 +572,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe-client-core"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb102f82be32b4be0af662746ecc1b632371903eb096e8d840505431277e090c"
+checksum = "3441797b3acbea16f073e121f9003534a5307bb108932c43415a8dd2bcc40420"
 dependencies = [
  "async-stripe-shared",
  "async-stripe-types",
@@ -590,9 +590,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe-core"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0a62f29770d512604b6b85e977ec692f7fe31449a6af1c2ad39a4a3559992b3"
+checksum = "6096d17c61a7fdef95eaa1e143517ca2c412161344bb2147f0ebf3d744ce4a1f"
 dependencies = [
  "async-stripe-client-core",
  "async-stripe-shared",
@@ -605,9 +605,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe-payment"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9063ec5de6b3c6ea14141911fd55eb2e54051acc9c0223b4ce7f938295f587fb"
+checksum = "25da12dc6a80a34b3f21cda33e27bf6702afdfb14a2b464decf3c601af702531"
 dependencies = [
  "async-stripe-client-core",
  "async-stripe-shared",
@@ -620,9 +620,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe-product"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7453e7a781fe3f4933b3662dd174b7b6aa02e0e96a77b2c8945732ba132f1392"
+checksum = "f69e1562df05093f7cdf96490b37e7c88ccb6dae6dfbc6f07049463c342ac0ea"
 dependencies = [
  "async-stripe-client-core",
  "async-stripe-shared",
@@ -635,9 +635,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe-shared"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "80a31d49bf137889e1ece81c2aca94d144c041815388df5b8616a787e7beb611"
+checksum = "4830148224a1d44fc85847979f657f88d6b2689567dc100c1d1cb54d1514a07b"
 dependencies = [
  "async-stripe-types",
  "miniserde",
@@ -648,9 +648,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe-types"
-version = "1.0.0-rc.6"
+version = "1.0.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b461a9cc3cd14d56843aa9eced46b3d0e8c1937a2c735e224be5c6e529258c22"
+checksum = "c921209c3bf6c54a5917734ccc732575d11d75848f7c1f64617824f0376b9065"
 dependencies = [
  "miniserde",
  "serde",
@@ -7968,12 +7968,12 @@ checksum = "5b3dc8af474f516a851ff4bd12db780f948b9250ad37211e4eec0bccea54e01b"
 
 [[package]]
 name = "smol_str"
-version = "0.3.2"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9676b89cd56310a87b93dec47b11af744f34d5fc9f367b829474eec0a891350d"
+checksum = "4aaa7368fcf4852a4c2dd92df0cace6a71f2091ca0a23391ce7f3a31833f1523"
 dependencies = [
  "borsh",
- "serde",
+ "serde_core",
 ]
 
 [[package]]
