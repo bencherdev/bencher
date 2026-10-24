@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="shapes9" rng-seed="2646494534" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Leading spaces split" filename="shapes9.cpp" line="2">
+    <BenchmarkResults name="   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" samples="100" resamples="100000" iterations="1802" clockResolution="19.1181" estimatedDuration="1.802e+06">
+      <!-- All values in nano seconds -->
+      <mean value="10.3813" lowerBound="10.3294" upperBound="10.4778" ci="0.95"/>
+      <standardDeviation value="0.350673" lowerBound="0.224059" upperBound="0.54288" ci="0.95"/>
+      <outliers variance="0.29684" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name=" yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy" samples="100" resamples="100000" iterations="1178" clockResolution="19.1181" estimatedDuration="1.8848e+06">
+      <!-- All values in nano seconds -->
+      <mean value="16.8741" lowerBound="16.7478" upperBound="17.0521" ci="0.95"/>
+      <standardDeviation value="0.759626" lowerBound="0.551799" upperBound="1.10791" ci="0.95"/>
+      <outliers variance="0.425073" lowMild="0" lowSevere="22" highMild="12" highSevere="12"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name=": a test case whose name starts with a colon and runs long enough to wrap onto a second line" filename="shapes9.cpp" line="6">
+    <Section name="inner" filename="shapes9.cpp" line="7">
+      <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="758" clockResolution="19.1181" estimatedDuration="1.895e+06">
+        <!-- All values in nano seconds -->
+        <mean value="25.8134" lowerBound="25.5928" upperBound="26.1153" ci="0.95"/>
+        <standardDeviation value="1.30347" lowerBound="0.997545" upperBound="1.76708" ci="0.95"/>
+        <outliers variance="0.48468" lowMild="0" lowSevere="0" highMild="1" highSevere="4"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Long section colon" filename="shapes9.cpp" line="9">
+    <Section name="a section whose colon sits well past a quarter: of the width so the wrap goes back to two spaces" filename="shapes9.cpp" line="10">
+      <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="450" clockResolution="19.1181" estimatedDuration="1.89e+06">
+        <!-- All values in nano seconds -->
+        <mean value="45.3001" lowerBound="44.7315" upperBound="46.0186" ci="0.95"/>
+        <standardDeviation value="3.24469" lowerBound="2.63289" upperBound="4.1361" ci="0.95"/>
+        <outliers variance="0.656328" lowMild="0" lowSevere="0" highMild="3" highSevere="0"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="shapes9.cpp" line="12">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2054" clockResolution="19.1181" estimatedDuration="1.8486e+06">
+      <!-- All values in nano seconds -->
+      <mean value="6.80064" lowerBound="6.72051" upperBound="7.05703" ci="0.95"/>
+      <standardDeviation value="0.651568" lowerBound="0.232856" upperBound="1.41071" ci="0.95"/>
+      <outliers variance="0.779377" lowMild="0" lowSevere="0" highMild="1" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="4" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

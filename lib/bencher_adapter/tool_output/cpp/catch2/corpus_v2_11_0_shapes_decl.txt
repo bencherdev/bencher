@@ -1,0 +1,87 @@
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+shapes is a Catch v2.11.0 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+shapes.cpp:7
+...............................................................................
+
+benchmark name                                  samples       iterations    estimated
+                                                mean          low mean      high mean
+                                                std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 10                                              100           137     2.0824 ms 
+                                                       151 ns        149 ns        161 ns 
+                                                        21 ns          3 ns         49 ns 
+                                                                                          
+
+-------------------------------------------------------------------------------
+Throws before the samples
+-------------------------------------------------------------------------------
+shapes.cpp:11
+...............................................................................
+
+benchmark name                                  samples       iterations    estimated
+                                                mean          low mean      high mean
+                                                std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws early                                    Benchmark failed (boom) 
+Fibonacci 9                                               100           225       2.07 ms 
+                                                        98 ns         96 ns        101 ns 
+                                                        11 ns          9 ns         14 ns 
+                                                                                          
+
+-------------------------------------------------------------------------------
+Checks inside
+  Inner section with a long name that wraps across the console width
+-------------------------------------------------------------------------------
+shapes.cpp:17
+...............................................................................
+
+benchmark name                                  samples       iterations    estimated
+                                                mean          low mean      high mean
+                                                std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+checked with a rather long name that wraps                                                
+around                                                    100           362     2.0634 ms 
+                                                        57 ns         56 ns         58 ns 
+                                                         3 ns          2 ns          5 ns 
+                                                                                          
+
+-------------------------------------------------------------------------------
+Throws in the samples
+-------------------------------------------------------------------------------
+shapes.cpp:25
+...............................................................................
+
+benchmark name                                  samples       iterations    estimated
+                                                mean          low mean      high mean
+                                                std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws late                                               100          1614     1.9368 ms 
+Benchmark failed (late boom)                      Fibonacci 7           100           595 
+2.0825 ms                                                             34 ns         34 ns 
+34 ns                                                                  1 ns          0 ns 
+1 ns                                                                                      
+                                                
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+shapes.cpp:34
+...............................................................................
+
+benchmark name                                  samples       iterations    estimated
+                                                mean          low mean      high mean
+                                                std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+ Fibonacci 12           100            53 
+2.0776 ms                                                            394 ns        392 ns 
+397 ns                                                                12 ns          6 ns 
+19 ns                                                                                     
+                                                
+===============================================================================
+All tests passed (122 assertions in 5 test cases)
+

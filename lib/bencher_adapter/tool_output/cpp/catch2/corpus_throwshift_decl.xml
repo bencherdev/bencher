@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="throwshift" rng-seed="1986314369" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Fails in the samples" filename="throwshift.cpp" line="7">
+    <BenchmarkResults name="fails late" samples="100" resamples="100000" iterations="6307" clockResolution="19.2393" estimatedDuration="1.8921e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="REQUIRE" filename="throwshift.cpp" line="10">
+        <Original>
+          ++calls &lt; 60
+        </Original>
+        <Expanded>
+          60 &lt; 60
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Throws in the samples" filename="throwshift.cpp" line="14">
+    <BenchmarkResults name="throws late" samples="100" resamples="100000" iterations="6063" clockResolution="19.2393" estimatedDuration="1.8189e+06">
+      <!-- All values in nano seconds -->
+      <failed message="late boom"/>
+    </BenchmarkResults>
+    <Exception filename="throwshift.cpp" line="14">
+      late boom
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="throwshift.cpp" line="21">
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="286" clockResolution="19.2393" estimatedDuration="1.9162e+06">
+      <!-- All values in nano seconds -->
+      <mean value="65.9266" lowerBound="64.744" upperBound="68.3912" ci="0.95"/>
+      <standardDeviation value="8.33624" lowerBound="4.49039" upperBound="13.6636" ci="0.95"/>
+      <outliers variance="0.862603" lowMild="0" lowSevere="0" highMild="1" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 13" samples="100" resamples="100000" iterations="146" clockResolution="19.2393" estimatedDuration="1.9272e+06">
+      <!-- All values in nano seconds -->
+      <mean value="128.458" lowerBound="126.013" upperBound="133.444" ci="0.95"/>
+      <standardDeviation value="17.1003" lowerBound="9.63418" upperBound="27.2065" ci="0.95"/>
+      <outliers variance="0.873172" lowMild="0" lowSevere="17" highMild="1" highSevere="13"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="59" failures="2" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="1" failures="2" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

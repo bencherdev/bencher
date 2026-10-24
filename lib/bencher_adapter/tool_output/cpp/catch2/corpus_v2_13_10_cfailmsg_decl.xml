@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch name="cfailmsgP">
+  <Group name="cfailmsgP">
+    <TestCase name="Before" filename="cfailmsg.cpp" line="5">
+      <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="360" clockResolution="20.5966" estimatedDuration="2.052e+06">
+        <!--All values in nano seconds-->
+        <mean value="57.6765" lowerBound="57.1438" upperBound="59.0081" ci="0.95"/>
+        <standardDeviation value="3.96751" lowerBound="1.17021" upperBound="7.02225" ci="0.95"/>
+        <outliers variance="0.636049" lowMild="4" lowSevere="0" highMild="1" highSevere="8"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Paragraphs early" filename="cfailmsg.cpp" line="6">
+      <BenchmarkResults name="throws paragraphs">
+        <failed message="first paragraph
+
+second paragraph"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="217" clockResolution="20.5966" estimatedDuration="2.0398e+06">
+        <!--All values in nano seconds-->
+        <mean value="95.0161" lowerBound="94.3548" upperBound="96.3758" ci="0.95"/>
+        <standardDeviation value="4.6126" lowerBound="2.60935" upperBound="7.34869" ci="0.95"/>
+        <outliers variance="0.464724" lowMild="0" lowSevere="0" highMild="3" highSevere="9"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Paragraphs late" filename="cfailmsg.cpp" line="10">
+      <BenchmarkResults name="throws paragraphs late" samples="100" resamples="100000" iterations="1621" clockResolution="20.5966" estimatedDuration="1.9452e+06">
+        <!--All values in nano seconds-->
+        <failed message="late (1)
+
+late (2)"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="137" clockResolution="20.5966" estimatedDuration="2.0687e+06">
+        <!--All values in nano seconds-->
+        <mean value="152.1" lowerBound="150.616" upperBound="154.936" ci="0.95"/>
+        <standardDeviation value="10.106" lowerBound="6.12451" upperBound="15.7883" ci="0.95"/>
+        <outliers variance="0.625503" lowMild="0" lowSevere="0" highMild="0" highSevere="6"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Trailing newline" filename="cfailmsg.cpp" line="18">
+      <BenchmarkResults name="throws a newline">
+        <failed message="ends in a newline
+"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="84" clockResolution="20.5966" estimatedDuration="2.0664e+06">
+        <!--All values in nano seconds-->
+        <mean value="245.894" lowerBound="244.654" upperBound="248.411" ci="0.95"/>
+        <standardDeviation value="8.2992" lowerBound="4.59627" upperBound="14.0982" ci="0.95"/>
+        <outliers variance="0.296818" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="After" filename="cfailmsg.cpp" line="22">
+      <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="583" clockResolution="20.5966" estimatedDuration="2.0405e+06">
+        <!--All values in nano seconds-->
+        <mean value="46.8734" lowerBound="45.0388" upperBound="48.599" ci="0.95"/>
+        <standardDeviation value="9.14575" lowerBound="8.53215" upperBound="9.6354" ci="0.95"/>
+        <outliers variance="0.936373" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 6" samples="100" resamples="100000" iterations="954" clockResolution="20.5966" estimatedDuration="2.0034e+06">
+        <!--All values in nano seconds-->
+        <mean value="21.6508" lowerBound="21.5008" upperBound="21.9509" ci="0.95"/>
+        <standardDeviation value="0.985158" lowerBound="0.560638" upperBound="1.67527" ci="0.95"/>
+        <outliers variance="0.434718" lowMild="0" lowSevere="0" highMild="1" highSevere="5"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <OverallResults successes="0" failures="0" expectedFailures="0"/>
+    <OverallResultsCases successes="5" failures="0" expectedFailures="0"/>
+  </Group>
+  <OverallResults successes="0" failures="0" expectedFailures="0"/>
+  <OverallResultsCases successes="5" failures="0" expectedFailures="0"/>
+</Catch>

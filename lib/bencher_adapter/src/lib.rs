@@ -79,12 +79,12 @@ pub(crate) fn convert_v0(
         Adapter::CSharp => AdapterCSharp::parse(input, settings),
         Adapter::CSharpDotNet => AdapterCSharpDotNet::parse(input, settings),
         Adapter::Cpp => AdapterCpp::parse(input, settings),
-        Adapter::CppCatch2 => AdapterCppCatch2::parse(input, settings),
+        Adapter::CppCatch2 | Adapter::CppCatch2Text => AdapterCppCatch2::parse(input, settings),
         Adapter::CppGoogle => AdapterCppGoogle::parse(input, settings),
         Adapter::Dart => AdapterDart::parse(input, settings),
         Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarness::parse(input, settings),
         Adapter::Go => AdapterGo::parse(input, settings),
-        Adapter::GoBench => AdapterGoBench::parse(input, settings),
+        Adapter::GoBench | Adapter::GoBenchText => AdapterGoBench::parse(input, settings),
         Adapter::Java => AdapterJava::parse(input, settings),
         Adapter::JavaJmh => AdapterJavaJmh::parse(input, settings),
         Adapter::Js => AdapterJs::parse(input, settings),
@@ -101,8 +101,11 @@ pub(crate) fn convert_v0(
         Adapter::RustCriterion | Adapter::RustCriterionText => {
             AdapterRustCriterion::parse(input, settings)
         },
-        // The version 0 tree reads no structured Rust output.
-        Adapter::RustBenchJson | Adapter::RustCriterionJson => None,
+        // The version 0 tree reads no structured Rust, Catch2, or Go output.
+        Adapter::RustBenchJson
+        | Adapter::RustCriterionJson
+        | Adapter::CppCatch2Xml
+        | Adapter::GoBenchJson => None,
         Adapter::RustIai => AdapterRustIai::parse(input, settings),
         Adapter::RustGungraun => AdapterRustGungraun::parse(input, settings),
         Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse(input, settings),

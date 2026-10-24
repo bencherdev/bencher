@@ -3,15 +3,22 @@ use bencher_json::project::report::Adapter;
 use crate::{
     Adaptable as _, Settings,
     adapters::{
-        bmf_v1::rust::{
-            bench::{AdapterRustBenchJson, AdapterRustBenchText, AdapterRustBenchV1},
-            criterion::AdapterRustCriterionV1,
-            criterion_json::AdapterRustCriterionJson,
-            criterion_text::AdapterRustCriterionText,
-            gungraun::AdapterRustGungraunV1,
-            gungraun_json::AdapterRustGungraunJsonV1,
-            gungraun_stdout::AdapterRustGungraunStdoutV1,
-            iai::AdapterRustIaiV1,
+        bmf_v1::{
+            cpp::{
+                catch2::AdapterCppCatch2V1, catch2_text::AdapterCppCatch2Text,
+                catch2_xml::AdapterCppCatch2Xml, google::AdapterCppGoogleV1,
+            },
+            go::bench::{AdapterGoBenchJson, AdapterGoBenchText, AdapterGoBenchV1},
+            rust::{
+                bench::{AdapterRustBenchJson, AdapterRustBenchText, AdapterRustBenchV1},
+                criterion::AdapterRustCriterionV1,
+                criterion_json::AdapterRustCriterionJson,
+                criterion_text::AdapterRustCriterionText,
+                gungraun::AdapterRustGungraunV1,
+                gungraun_json::AdapterRustGungraunJsonV1,
+                gungraun_stdout::AdapterRustGungraunStdoutV1,
+                iai::AdapterRustIaiV1,
+            },
         },
         json::v1::AdapterJsonV1,
     },
@@ -19,8 +26,11 @@ use crate::{
     results::adapter_results::AdapterResults,
 };
 
+pub mod cpp;
+pub mod go;
 mod leaf;
 mod magic;
+mod runs;
 pub mod rust;
 
 use magic::AdapterMagicV1;
@@ -43,13 +53,17 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::RustGungraun => AdapterRustGungraunV1::parse(input, settings),
         Adapter::RustGungraunJson => AdapterRustGungraunJsonV1::parse(input, settings),
         Adapter::RustGungraunStdout => AdapterRustGungraunStdoutV1::parse(input, settings),
+        Adapter::CppGoogle => AdapterCppGoogleV1::parse(input, settings),
+        Adapter::CppCatch2 => AdapterCppCatch2V1::parse(input, settings),
+        Adapter::CppCatch2Xml => AdapterCppCatch2Xml::parse(input, settings),
+        Adapter::CppCatch2Text => AdapterCppCatch2Text::parse(input, settings),
+        Adapter::GoBench => AdapterGoBenchV1::parse(input, settings),
+        Adapter::GoBenchJson => AdapterGoBenchJson::parse(input, settings),
+        Adapter::GoBenchText => AdapterGoBenchText::parse(input, settings),
         Adapter::JsonV0
         | Adapter::Rust
         | Adapter::Cpp
-        | Adapter::CppGoogle
-        | Adapter::CppCatch2
         | Adapter::Go
-        | Adapter::GoBench
         | Adapter::Java
         | Adapter::JavaJmh
         | Adapter::CSharp
@@ -88,7 +102,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 39] = [
+    const ADAPTERS: [Adapter; 43] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -107,8 +121,12 @@ mod test_bmf_v1 {
         Adapter::Cpp,
         Adapter::CppGoogle,
         Adapter::CppCatch2,
+        Adapter::CppCatch2Xml,
+        Adapter::CppCatch2Text,
         Adapter::Go,
         Adapter::GoBench,
+        Adapter::GoBenchJson,
+        Adapter::GoBenchText,
         Adapter::Java,
         Adapter::JavaJmh,
         Adapter::CSharp,
@@ -189,7 +207,7 @@ mod test_bmf_v1 {
             for bmf_version in [BmfVersion::V0, BmfVersion::V1] {
                 let settings = version_settings(bmf_version);
                 for adapter in ADAPTERS {
-                    if bmf_version == BmfVersion::V1 && is_rust(adapter) {
+                    if bmf_version == BmfVersion::V1 && is_ported(adapter) {
                         continue;
                     }
                     assert_eq!(
@@ -203,7 +221,7 @@ mod test_bmf_v1 {
         }
     }
 
-    fn is_rust(adapter: Adapter) -> bool {
+    fn is_ported(adapter: Adapter) -> bool {
         matches!(
             adapter,
             Adapter::RustBench
@@ -216,6 +234,13 @@ mod test_bmf_v1 {
                 | Adapter::RustGungraun
                 | Adapter::RustGungraunJson
                 | Adapter::RustGungraunStdout
+                | Adapter::CppGoogle
+                | Adapter::CppCatch2
+                | Adapter::CppCatch2Xml
+                | Adapter::CppCatch2Text
+                | Adapter::GoBench
+                | Adapter::GoBenchJson
+                | Adapter::GoBenchText
         )
     }
 

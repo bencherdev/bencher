@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="breaks" rng-seed="748653383" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Clean" filename="breaks.cpp" line="17">
+    <BenchmarkResults name="std::vector&lt;int>::push_back/reserve=1024,clear" samples="100" resamples="100000" iterations="6380" clockResolution="19.0734" estimatedDuration="1.276e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.69228" lowerBound="2.67487" upperBound="2.72649" ci="0.95"/>
+      <standardDeviation value="0.115877" lowerBound="0.0614155" upperBound="0.175817" ci="0.95"/>
+      <outliers variance="0.405121" lowMild="8" lowSevere="1" highMild="0" highSevere="7"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="parse(json),then:validate;finally+serialize=done" samples="100" resamples="100000" iterations="6598" clockResolution="19.0734" estimatedDuration="1.3196e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.74224" lowerBound="2.66826" upperBound="3.08341" ci="0.95"/>
+      <standardDeviation value="0.690862" lowerBound="0.0650977" upperBound="1.63905" ci="0.95"/>
+      <outliers variance="0.967684" lowMild="1" lowSevere="0" highMild="2" highSevere="6"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="lookup_table_with_long_identifier[index_of_entry]" samples="100" resamples="100000" iterations="6624" clockResolution="19.0734" estimatedDuration="1.3248e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68404" lowerBound="2.66762" upperBound="2.71603" ci="0.95"/>
+      <standardDeviation value="0.110718" lowerBound="0.0610639" upperBound="0.1709" ci="0.95"/>
+      <outliers variance="0.385308" lowMild="0" lowSevere="0" highMild="1" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="hash_map_insert_and_find_operations_combined{many}" samples="100" resamples="100000" iterations="6995" clockResolution="19.0734" estimatedDuration="1.399e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.69148" lowerBound="2.67942" upperBound="2.71598" ci="0.95"/>
+      <standardDeviation value="0.0830466" lowerBound="0.0473463" upperBound="0.131249" ci="0.95"/>
+      <outliers variance="0.258036" lowMild="2" lowSevere="0" highMild="2" highSevere="7"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="a_rather_long_snake_case_identifier_name|with_pipe" samples="100" resamples="100000" iterations="7055" clockResolution="19.0734" estimatedDuration="1.411e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.69095" lowerBound="2.67747" upperBound="2.7171" ci="0.95"/>
+      <standardDeviation value="0.0909182" lowerBound="0.0510289" upperBound="0.140751" ci="0.95"/>
+      <outliers variance="0.296846" lowMild="1" lowSevere="0" highMild="1" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Averyveryverylongsinglewordthatcannotbreakanywhere" samples="100" resamples="100000" iterations="6001" clockResolution="19.0734" estimatedDuration="1.8003e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68862" lowerBound="2.67537" upperBound="2.71595" ci="0.95"/>
+      <standardDeviation value="0.092399" lowerBound="0.0516746" upperBound="0.150903" ci="0.95"/>
+      <outliers variance="0.306453" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Fails in the samples" filename="breaks.cpp" line="18">
+    <BenchmarkResults name="fails late" samples="100" resamples="100000" iterations="7079" clockResolution="19.0734" estimatedDuration="1.4158e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="REQUIRE" filename="breaks.cpp" line="21">
+        <Original>
+          ++calls &lt; at("FAIL_AT", 60)
+        </Original>
+        <Expanded>
+          60 &lt; 60
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Shifted" filename="breaks.cpp" line="25">
+    <BenchmarkResults name="std::vector&lt;int>::push_back/reserve=1024,clear" samples="100" resamples="100000" iterations="6658" clockResolution="19.0734" estimatedDuration="1.3316e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.76924" lowerBound="2.66789" upperBound="3.03101" ci="0.95"/>
+      <standardDeviation value="0.726538" lowerBound="0.0775146" upperBound="1.45205" ci="0.95"/>
+      <outliers variance="0.967864" lowMild="0" lowSevere="0" highMild="1" highSevere="3"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="parse(json),then:validate;finally+serialize=done" samples="100" resamples="100000" iterations="6617" clockResolution="19.0734" estimatedDuration="1.3234e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.69225" lowerBound="2.68244" upperBound="2.71392" ci="0.95"/>
+      <standardDeviation value="0.0715606" lowerBound="0.0377005" upperBound="0.118469" ci="0.95"/>
+      <outliers variance="0.209296" lowMild="1" lowSevere="0" highMild="5" highSevere="10"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="lookup_table_with_long_identifier[index_of_entry]" samples="100" resamples="100000" iterations="7050" clockResolution="19.0734" estimatedDuration="1.41e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.89665" lowerBound="2.87045" upperBound="2.94318" ci="0.95"/>
+      <standardDeviation value="0.174447" lowerBound="0.113795" upperBound="0.264383" ci="0.95"/>
+      <outliers variance="0.575003" lowMild="1" lowSevere="0" highMild="0" highSevere="10"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="hash_map_insert_and_find_operations_combined{many}" samples="100" resamples="100000" iterations="6628" clockResolution="19.0734" estimatedDuration="1.3256e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68184" lowerBound="2.67052" upperBound="2.70439" ci="0.95"/>
+      <standardDeviation value="0.0774633" lowerBound="0.0382662" upperBound="0.122688" ci="0.95"/>
+      <outliers variance="0.238295" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="a_rather_long_snake_case_identifier_name|with_pipe" samples="100" resamples="100000" iterations="6819" clockResolution="19.0734" estimatedDuration="1.3638e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68178" lowerBound="2.66329" upperBound="2.71767" ci="0.95"/>
+      <standardDeviation value="0.121851" lowerBound="0.0623149" upperBound="0.183978" ci="0.95"/>
+      <outliers variance="0.434674" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Averyveryverylongsinglewordthatcannotbreakanywhere" samples="100" resamples="100000" iterations="6114" clockResolution="19.0734" estimatedDuration="1.8342e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.67489" lowerBound="2.65937" upperBound="2.71519" ci="0.95"/>
+      <standardDeviation value="0.111466" lowerBound="0.0137465" upperBound="0.216471" ci="0.95"/>
+      <outliers variance="0.394874" lowMild="0" lowSevere="0" highMild="1" highSevere="3"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="59" failures="1" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="1" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

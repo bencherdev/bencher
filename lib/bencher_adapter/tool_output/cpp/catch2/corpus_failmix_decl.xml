@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="failmix" rng-seed="397854998" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Sections" filename="failmix.cpp" line="11">
+    <Section name="first" filename="failmix.cpp" line="12">
+      <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1554" clockResolution="18.9963" estimatedDuration="1.8648e+06">
+        <!-- All values in nano seconds -->
+        <mean value="12.1439" lowerBound="11.9176" upperBound="12.5636" ci="0.95"/>
+        <standardDeviation value="1.52557" lowerBound="0.955062" upperBound="2.36168" ci="0.95"/>
+        <outliers variance="0.862506" lowMild="0" lowSevere="0" highMild="1" highSevere="6"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="fails before" filename="failmix.cpp" line="13">
+      <Expression success="false" type="REQUIRE" filename="failmix.cpp" line="14">
+        <Original>
+          fib(3) == 5
+        </Original>
+        <Expanded>
+          2 == 5
+        </Expanded>
+      </Expression>
+      <OverallResults successes="0" failures="1" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="fails inside" filename="failmix.cpp" line="17">
+      <BenchmarkResults name="fails late" samples="100" resamples="100000" iterations="5875" clockResolution="18.9963" estimatedDuration="1.7625e+06">
+        <!-- All values in nano seconds -->
+        <Expression success="false" type="REQUIRE" filename="failmix.cpp" line="20">
+          <Original>
+            ++calls &lt; at("FAIL_AT", 60)
+          </Original>
+          <Expanded>
+            60 &lt; 60
+          </Expanded>
+        </Expression>
+        <failed message="{ nested assertion failed }"/>
+      </BenchmarkResults>
+      <OverallResults successes="59" failures="1" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="checks between" filename="failmix.cpp" line="25">
+      <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="985" clockResolution="18.9963" estimatedDuration="1.8715e+06">
+        <!-- All values in nano seconds -->
+        <mean value="18.8877" lowerBound="18.7322" upperBound="19.0962" ci="0.95"/>
+        <standardDeviation value="0.911755" lowerBound="0.694046" upperBound="1.22466" ci="0.95"/>
+        <outliers variance="0.464551" lowMild="0" lowSevere="0" highMild="4" highSevere="0"/>
+      </BenchmarkResults>
+      <Expression success="false" type="CHECK" filename="failmix.cpp" line="27">
+        <Original>
+          fib(3) == 5
+        </Original>
+        <Expanded>
+          2 == 5
+        </Expanded>
+      </Expression>
+      <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="567" clockResolution="18.9963" estimatedDuration="1.8711e+06">
+        <!-- All values in nano seconds -->
+        <mean value="32.9331" lowerBound="32.7056" upperBound="33.3444" ci="0.95"/>
+        <standardDeviation value="1.51853" lowerBound="0.947563" upperBound="2.21231" ci="0.95"/>
+        <outliers variance="0.444449" lowMild="0" lowSevere="0" highMild="6" highSevere="5"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="1" expectedFailures="0" skipped="false"/>
+    </Section>
+    <Section name="last" filename="failmix.cpp" line="30">
+      <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="380" clockResolution="18.9963" estimatedDuration="1.9e+06">
+        <!-- All values in nano seconds -->
+        <mean value="53.0152" lowerBound="51.4706" upperBound="55.7943" ci="0.95"/>
+        <standardDeviation value="10.3112" lowerBound="6.44641" upperBound="15.3648" ci="0.95"/>
+        <outliers variance="0.93635" lowMild="3" lowSevere="0" highMild="1" highSevere="9"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Messages" filename="failmix.cpp" line="32">
+    <BenchmarkResults name="throws two lines">
+      <failed message="line one
+line two"/>
+    </BenchmarkResults>
+    <Exception filename="failmix.cpp" line="32">
+      line one
+line two
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="failmix.cpp" line="41">
+    <BenchmarkResults name="Fibonacci 15" samples="100" resamples="100000" iterations="51" clockResolution="18.9963" estimatedDuration="1.9227e+06">
+      <!-- All values in nano seconds -->
+      <mean value="380.453" lowerBound="377.687" upperBound="385.482" ci="0.95"/>
+      <standardDeviation value="18.4783" lowerBound="11.9695" upperBound="30.5747" ci="0.95"/>
+      <outliers variance="0.464739" lowMild="1" lowSevere="3" highMild="0" highSevere="8"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="59" failures="4" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="1" failures="2" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

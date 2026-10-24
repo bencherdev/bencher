@@ -1,0 +1,76 @@
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+bdd is a Catch v2.11.0 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Scenario: Short scenario
+      Given: a cache
+       When: it is warm
+       Then: lookups are fast
+-------------------------------------------------------------------------------
+bdd.cpp:9
+...............................................................................
+
+benchmark name                                  samples       iterations    estimated
+                                                mean          low mean      high mean
+                                                std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+lookup                                                    100           953     2.1919 ms 
+                                                        22 ns         22 ns         23 ns 
+                                                         0 ns          0 ns          1 ns 
+                                                                                          
+
+-------------------------------------------------------------------------------
+Scenario: A scenario with a name long enough that the console reporter has to
+          wrap it twice over
+      Given: a given clause with a name long enough that the console reporter
+             has to wrap it
+-------------------------------------------------------------------------------
+bdd.cpp:14
+...............................................................................
+
+benchmark name                                  samples       iterations    estimated
+                                                mean          low mean      high mean
+                                                std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 7                                               100           594     2.1978 ms 
+                                                        39 ns         38 ns         41 ns 
+                                                         7 ns          5 ns          9 ns 
+                                                                                          
+
+-------------------------------------------------------------------------------
+Parser: a test case with a colon and a long name that the console wraps
+  Lexer: a section with a colon and a long name that the console wraps too
+-------------------------------------------------------------------------------
+bdd.cpp:19
+...............................................................................
+
+benchmark name                                  samples       iterations    estimated
+                                                mean          low mean      high mean
+                                                std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 8                                               100           355      2.201 ms 
+                                                        78 ns         74 ns         82 ns 
+                                                        21 ns         19 ns         23 ns 
+                                                                                          
+
+-------------------------------------------------------------------------------
+Plain
+-------------------------------------------------------------------------------
+bdd.cpp:23
+...............................................................................
+
+benchmark name                                  samples       iterations    estimated
+                                                mean          low mean      high mean
+                                                std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 9                                               100           213     2.2152 ms 
+                                                       102 ns        102 ns        103 ns 
+                                                         3 ns          2 ns          5 ns 
+                                                                                          
+
+===============================================================================
+test cases: 4 | 4 passed
+assertions: - none -
+

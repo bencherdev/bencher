@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="cbsamplesP" rng-seed="2044578470" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="cbsamples.cpp" line="4">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1633" clockResolution="19.7022" estimatedDuration="1.9596e+06">
+      <!-- All values in nano seconds -->
+      <mean value="12.6593" lowerBound="12.4709" upperBound="12.8852" ci="0.95"/>
+      <standardDeviation value="1.04398" lowerBound="0.855752" upperBound="1.35519" ci="0.95"/>
+      <outliers variance="0.717757" lowMild="0" lowSevere="0" highMild="2" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Names" filename="cbsamples.cpp" line="5">
+    <BenchmarkResults name="benchmark name samples" samples="100" resamples="100000" iterations="4138" clockResolution="19.7022" estimatedDuration="1.6552e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.62378" lowerBound="4.54565" upperBound="4.94664" ci="0.95"/>
+      <standardDeviation value="0.693348" lowerBound="0.144866" upperBound="1.61342" ci="0.95"/>
+      <outliers variance="0.894371" lowMild="0" lowSevere="0" highMild="0" highSevere="3"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1070" clockResolution="19.7022" estimatedDuration="1.926e+06">
+      <!-- All values in nano seconds -->
+      <mean value="18.2428" lowerBound="18.118" upperBound="18.5484" ci="0.95"/>
+      <standardDeviation value="0.937142" lowerBound="0.474239" upperBound="1.87838" ci="0.95"/>
+      <outliers variance="0.4946" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="652" clockResolution="19.7022" estimatedDuration="1.956e+06">
+      <!-- All values in nano seconds -->
+      <mean value="30.5397" lowerBound="30.0138" upperBound="31.2053" ci="0.95"/>
+      <standardDeviation value="3.00332" lowerBound="2.45608" upperBound="4.43598" ci="0.95"/>
+      <outliers variance="0.78966" lowMild="0" lowSevere="0" highMild="1" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="cbsamples.cpp" line="6">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2950" clockResolution="19.7022" estimatedDuration="1.77e+06">
+      <!-- All values in nano seconds -->
+      <mean value="7.305" lowerBound="7.23782" upperBound="7.44528" ci="0.95"/>
+      <standardDeviation value="0.473773" lowerBound="0.280863" upperBound="0.892217" ci="0.95"/>
+      <outliers variance="0.615256" lowMild="0" lowSevere="0" highMild="0" highSevere="7"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 6" samples="100" resamples="100000" iterations="3680" clockResolution="19.7022" estimatedDuration="1.84e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.72923" lowerBound="4.66936" upperBound="4.94515" ci="0.95"/>
+      <standardDeviation value="0.507056" lowerBound="0.158756" upperBound="1.13822" ci="0.95"/>
+      <outliers variance="0.810861" lowMild="0" lowSevere="0" highMild="1" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="3" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

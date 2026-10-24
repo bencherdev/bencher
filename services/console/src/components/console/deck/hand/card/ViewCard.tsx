@@ -437,12 +437,16 @@ const AdapterCard = (props: Props) => {
 					case Adapter.CSharpDotNet:
 						return "%EF%B8%8F⃣-c-dotnet";
 					case Adapter.CppCatch2:
+					case Adapter.CppCatch2Xml:
+					case Adapter.CppCatch2Text:
 						return "-c-catch2";
 					case Adapter.CppGoogle:
 						return "-c-google";
 					case Adapter.DartBenchmarkHarness:
 						return "-dart-benchmark_harness";
 					case Adapter.GoBench:
+					case Adapter.GoBenchJson:
+					case Adapter.GoBenchText:
 						return "-go-bench";
 					case Adapter.JavaJmh:
 						return "%EF%B8%8F-java-jmh";
@@ -496,12 +500,16 @@ const AdapterCard = (props: Props) => {
 						case Adapter.CSharpDotNet:
 							return "C# BenchmarkDotNet";
 						case Adapter.CppCatch2:
+						case Adapter.CppCatch2Xml:
+						case Adapter.CppCatch2Text:
 							return "C++ Catch2";
 						case Adapter.CppGoogle:
 							return "C++ Google Benchmark";
 						case Adapter.DartBenchmarkHarness:
 							return "Dart benchmark_harness";
 						case Adapter.GoBench:
+						case Adapter.GoBenchJson:
+						case Adapter.GoBenchText:
 							return "Go test -bench";
 						case Adapter.JavaJmh:
 							return "Java Microbenchmark Harness (JMH)";
