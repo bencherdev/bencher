@@ -6,8 +6,10 @@ import { deferErrors, whenIdle } from "./src/util/deferredErrors";
 const errors = deferErrors(window);
 const replay = import.meta.env.PUBLIC_SENTRY_NO_REPLAY !== "true";
 
-const load = () =>
-	import("@sentry/astro").then((Sentry) => {
+const load = () => {
+	const options = import("./src/util/sentry");
+	return import("@sentry/astro").then(async (Sentry) => {
+		const { dataCollection } = await options;
 		Sentry.init({
 			dsn: import.meta.env.PUBLIC_SENTRY_DSN,
 			environment: import.meta.env.SENTRY_ENVIRONMENT,
@@ -19,9 +21,11 @@ const load = () =>
 			],
 			replaysSessionSampleRate: replay ? 0.1 : 0,
 			replaysOnErrorSampleRate: replay ? 1 : 0,
+			dataCollection,
 		});
 		errors.flush((error) => Sentry.captureException(error));
 	});
+};
 
 if (document.querySelector("#console, #public, #embed")) {
 	whenIdle(load);
