@@ -58,10 +58,7 @@ fn main() -> Result<(), ApiError> {
 async fn serve() -> Result<(), ApiError> {
     let log = bencher_logger::bootstrap_logger();
     #[cfg(feature = "sentry")]
-    let guard = sentry::init(sentry::ClientOptions {
-        release: sentry::release_name!(),
-        ..Default::default()
-    });
+    let guard = sentry::init(sentry_options());
     info!(&log, "🐰 Bencher API Server v{BENCHER_API_VERSION}");
 
     let crypto_provider = aws_lc_rs::default_provider();
@@ -199,14 +196,15 @@ fn init_sentry(log: &Logger, config: &Config) -> Option<ClientInitGuard> {
         .and_then(|cloud| cloud.sentry.as_ref())
         .map(|sentry_dsn| {
             info!(log, "Initializing Sentry for error tracking");
-            sentry::init((
-                sentry_dsn.as_ref(),
-                sentry::ClientOptions {
-                    release: sentry::release_name!(),
-                    ..Default::default()
-                },
-            ))
+            sentry::init((sentry_dsn.as_ref(), sentry_options()))
         })
+}
+
+#[cfg(feature = "sentry")]
+fn sentry_options() -> sentry::ClientOptions {
+    let mut options = sentry::ClientOptions::new();
+    options.release = sentry::release_name!();
+    options
 }
 
 #[cfg(feature = "plus")]

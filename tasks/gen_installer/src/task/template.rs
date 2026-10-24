@@ -81,7 +81,7 @@ impl Template {
         for &template_kind in &self.templates {
             let template = self.env.get_template(template_kind.template_file())?;
             let ctx = TemplateContext::new(template_kind);
-            let mut rendered = template.render(&ctx)?;
+            let mut rendered = template.render(minijinja::value::Serde(&ctx))?;
             // minijinja strips trailing newlines from templates
             if !rendered.ends_with('\n') {
                 rendered.push('\n');
