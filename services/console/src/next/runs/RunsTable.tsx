@@ -1,5 +1,15 @@
+import Icon from "@bencherdev/ui/Icon";
+import Skeleton from "@bencherdev/ui/Skeleton";
 import Table from "@bencherdev/ui/Table";
-import { For, Show } from "solid-js";
+import {
+	For,
+	Show,
+	Suspense,
+	createEffect,
+	createMemo,
+	createSignal,
+	lazy,
+} from "solid-js";
 import type {
 	JsonConsoleAuthor,
 	JsonConsoleRunSummary,
@@ -9,16 +19,30 @@ import { runPath } from "../paths";
 import type { Range } from "../reports/rows";
 import { MoreRows, Spacer } from "../reports/TableRows";
 import { useVirtualRows } from "../reports/virtual";
-import { allNames, runHead } from "./format";
+import { allNames, runHead, secondsTime } from "./format";
 import { Alerts, Author, Dash } from "./cells";
+import {
+	type RunReportsRead,
+	type RunsRow,
+	createRunsRows,
+	runsIn,
+} from "./rows";
 import StatusPill from "./StatusPill";
 import { landed, runStatus, statusText } from "./status";
 
 const COLUMNS = 10;
 
+const NONE: ReadonlySet<string> = new Set();
+
+const PARTS = { Alerts, Author, Dash, secondsTime };
+
+/** An opened run's rows draw with code of their own, which starts as the reader moves to a run. */
+export const ChildRow = lazy(() => import("./RunChildren"));
+
 /**
- * The runs, newest first, drawing only the rows on screen: rows above and
- * below them are spacers of the same height.
+ * The runs, newest first, each opened run's first reports under it, drawing
+ * only the rows on screen: rows above and below them are spacers of the same
+ * height.
  */
 const RunsTable = (props: {
 	slug: string;
@@ -26,23 +50,85 @@ const RunsTable = (props: {
 	/** Every run the search matches, loaded or not. */
 	total: number;
 	now: number;
-	/** The rows on screen changed, not counting those drawn either side. */
+	/** The runs on screen changed, not counting those drawn either side. */
 	onRange?: (range: Range) => void;
 	/** The rows are a search's before the last, while the new one loads. */
 	busy?: boolean;
 	loading?: boolean;
 	/** The next batch failed; asks for it again. */
 	onRetry?: (() => void) | undefined;
+	/** The runs opened to their reports. */
+	open?: ReadonlySet<string>;
+	onToggle?: (run: string) => void;
+	/** An opened run's read of its first reports. */
+	reports?: (run: string) => RunReportsRead | undefined;
+	/** An opened run's reports failed; asks for them again. */
+	onRetryReports?: (run: string) => void;
+	/** The pointer moving onto a run's row, or focus or a touch on its toggle, before the click. */
+	onRunIntent?: (run: string) => void;
+	/** Moving onto, focusing, or touching a report's link, before the click. */
+	onReportIntent?: (report: string) => void;
+	/** Moving onto, focusing, or touching a way to a run's page, its head or the row for the rest of its reports, before the click. */
+	onRunPageIntent?: (run: JsonConsoleRunSummary) => void;
 }) => {
-	const rows = useVirtualRows({
-		rows: () => props.runs,
-		onRange: (range) => props.onRange?.(range),
+	const rowsOf = createRunsRows();
+	const flat = createMemo(() =>
+		rowsOf(props.runs, props.open ?? NONE, (run) => props.reports?.(run)),
+	);
+	const [onScreen, setOnScreen] = createSignal<Range>();
+	const rows = useVirtualRows({ rows: flat, onRange: setOnScreen });
+	createEffect(() => {
+		const range = onScreen();
+		if (range) {
+			props.onRange?.(runsIn(flat(), range));
+		}
 	});
+	const toPage = (run: JsonConsoleRunSummary) => (event?: PointerEvent) => {
+		if (!event || event.movementX || event.movementY) {
+			props.onRunPageIntent?.(run);
+		}
+	};
+	const draw = (row: RunsRow, index: () => number) => {
+		if (row.kind === "run") {
+			return (
+				<RunRow
+					slug={props.slug}
+					run={row.run}
+					now={props.now}
+					index={index()}
+					open={(props.open ?? NONE).has(row.run.uuid)}
+					onToggle={() => props.onToggle?.(row.run.uuid)}
+					onIntent={() => {
+						ChildRow.preload();
+						props.onRunIntent?.(row.run.uuid);
+					}}
+					onPageIntent={toPage(row.run)}
+				/>
+			);
+		}
+		if (row.kind === "loading") {
+			return <LoadingRow index={index()} />;
+		}
+		return (
+			<Suspense fallback={<LoadingRow index={index()} />}>
+				<ChildRow
+					row={row}
+					slug={props.slug}
+					now={props.now}
+					index={index()}
+					onReportIntent={(report) => props.onReportIntent?.(report)}
+					onRunIntent={(run, event) => toPage(run)(event)}
+					onRetry={(run) => props.onRetryReports?.(run)}
+					parts={PARTS}
+				/>
+			</Suspense>
+		);
+	};
 	return (
 		<Table
 			class="reports-table rn-list"
 			aria-label="Runs, newest first"
-			aria-rowcount={props.total + 1}
+			aria-rowcount={props.total + flat().length - props.runs.length + 1}
 			aria-busy={props.busy === true ? "true" : undefined}
 			data-fold=""
 		>
@@ -82,14 +168,7 @@ const RunsTable = (props: {
 			<tbody ref={rows.body}>
 				<Spacer height={rows.above()} columns={COLUMNS} />
 				<For each={rows.shown()}>
-					{(run, index) => (
-						<RunRow
-							slug={props.slug}
-							run={run}
-							now={props.now}
-							index={rows.start() + index()}
-						/>
-					)}
+					{(row, index) => draw(row, () => rows.start() + index())}
 				</For>
 				<Spacer height={rows.below()} columns={COLUMNS} />
 				<MoreRows
@@ -112,20 +191,15 @@ const RunRow = (props: {
 	run: JsonConsoleRunSummary;
 	now: number;
 	index: number;
+	open: boolean;
+	onToggle: () => void;
+	onIntent: () => void;
+	onPageIntent: (event?: PointerEvent) => void;
 }) => {
 	const head = () => runHead(props.run);
 	const absolute = () => absoluteTime(props.run.start_time);
 	const status = () => runStatus(props.run, props.now, duration);
 	const counted = () => landed(props.run.reports, props.run.jobs);
-	// A run that raised alerts draws them with code of their own, which starts as the reader moves to it.
-	const alertsAhead = (event?: PointerEvent) => {
-		if (
-			props.run.alerts.total > 0 &&
-			(!event || event.movementX || event.movementY)
-		) {
-			import("./RunAlerts").catch(() => {});
-		}
-	};
 	// The lists the row shows as one name and a count, whole, for a reader without a pointer.
 	const label = () =>
 		[
@@ -155,30 +229,41 @@ const RunRow = (props: {
 				</time>
 			</td>
 			<td data-fold="l1" class="reports-branch">
-				<a
-					class="reports-link rowlink-name"
-					href={runPath(props.slug, props.run.uuid)}
+				<button
+					type="button"
+					class="rn-toggle rowlink-name"
 					aria-label={label()}
-					onPointerMove={alertsAhead}
-					onFocus={() => alertsAhead()}
-					onTouchStart={() => alertsAhead()}
+					aria-expanded={props.open}
+					onClick={() => props.onToggle()}
+					onPointerMove={(event) => {
+						if (event.movementX || event.movementY) {
+							props.onIntent();
+						}
+					}}
+					onFocus={() => props.onIntent()}
+					onTouchStart={() => props.onIntent()}
 				>
 					{props.run.branch.name}
-				</a>
+				</button>
 			</td>
 			<td class="reports-hash">
-				<Show when={!props.run.hash} fallback={head()}>
-					<span class="rowlink-own" title={`Version ${props.run.number}`}>
-						{head()}
-					</span>
-				</Show>
+				<a
+					href={runPath(props.slug, props.run.uuid)}
+					title={props.run.hash ? undefined : `Version ${props.run.number}`}
+					onPointerMove={(event) => props.onPageIntent(event)}
+					onFocus={() => props.onPageIntent()}
+					onTouchStart={() => props.onPageIntent()}
+				>
+					{head()}
+				</a>
 			</td>
 			<td class="rn-n" data-align="end">
 				<span class="ui-fold-label">· </span>
 				{props.run.reports}
 				<span class="ui-fold-label">
 					{props.run.reports === 1 ? " report" : " reports"}
-				</span>
+				</span>{" "}
+				<Icon name="chevron-down" class="rn-caret muted" />
 			</td>
 			<td data-fold="l2" class="reports-testbed">
 				<First names={props.run.testbeds} count={props.run.testbed_count} />
@@ -205,6 +290,22 @@ const RunRow = (props: {
 		</tr>
 	);
 };
+
+/** A report of an opened run not yet read, holding its row's place with a placeholder where its testbed will be. */
+const LoadingRow = (props: { index: number }) => (
+	<tr
+		class="reports-row rn-row rn-child"
+		aria-rowindex={props.index + 2}
+		aria-busy="true"
+	>
+		<td data-fold="hide" />
+		<td data-fold="hide" colSpan={3} />
+		<td data-fold="l1">
+			<Skeleton size="text" />
+		</td>
+		<td data-fold="hide" colSpan={5} />
+	</tr>
+);
 
 /** The first name, cut short before a muted count of the rest whose hover lists them all. */
 const First = (props: { names: readonly string[]; count: number }) => (

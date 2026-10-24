@@ -3,7 +3,6 @@ import type {
 	JsonConsoleBranch,
 	JsonConsoleMeasure,
 	JsonConsoleReport,
-	JsonConsoleRun,
 	JsonConsoleRunReport,
 	JsonConsoleRunSummary,
 	JsonConsoleRuns,
@@ -26,9 +25,6 @@ const VALUE = "value";
 
 /** How many of each list blank Explore starts from. */
 export const START = { alerts: 3, runs: 4, plots: 3 } as const;
-
-/** How many of a run's reports an opened run lists; its page lists the rest. */
-export const RUN_REPORTS = 8;
 
 const listQuery = <T>(api: Api, slug: string, name: string, path: string) => ({
 	queryKey: ["console", "start", slug, name],
@@ -68,18 +64,6 @@ export const startQueries = (api: Api, slug: string) => ({
 		"plots",
 		`/plots?per_page=${START.plots}`,
 	),
-});
-
-/** The first of a run's reports in start order, as an opened run lists them. */
-export const runReportsQuery = (api: Api, slug: string, run: string) => ({
-	queryKey: ["console", "run-reports", slug, run],
-	queryFn: async () =>
-		(
-			await api.get<JsonConsoleRun>(
-				`${consolePath(slug)}/runs/${encodeURIComponent(run)}?per_page=${RUN_REPORTS}`,
-			)
-		).data,
-	...live((run: JsonConsoleRun) => unfinished(run.jobs)),
 });
 
 /** The line an alert fired on, as Explore opens it. */

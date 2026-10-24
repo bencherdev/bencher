@@ -1,8 +1,9 @@
 import type { Locator, Page } from "@playwright/test";
 import { axeInBothThemes } from "./axe";
 import {
-	expect,
 	consolePath,
+	crumb,
+	expect,
 	seed,
 	settle,
 	signedIn,
@@ -82,8 +83,15 @@ test("rows are newest first, one per run, and read each run", async ({
 	expect(await hoverTitle(page, newest.getByText("+1").first())).toBe(
 		"ubuntu-latest, macos-latest",
 	);
-	await expect(newest.getByRole("link")).toHaveAccessibleName(
+	await expect(newest.getByRole("button")).toHaveAccessibleName(
 		`main, run ${seed.last_main_hash}, 2 reports, ubuntu-latest, macos-latest, json, magic, by ${seed.member.user.name}, GitHub Actions, Sep 13, 2026, 21:16`,
+	);
+	await expect(newest.getByRole("button")).toHaveAttribute(
+		"aria-expanded",
+		"false",
+	);
+	await expect(newest.getByRole("link")).toHaveAccessibleName(
+		seed.last_main_hash,
 	);
 	await expect(
 		newest.getByRole("cell").first().locator("time"),
@@ -211,15 +219,17 @@ test.describe("on a short screen", () => {
 	});
 });
 
-// Kills a row link that reloads the document, leads anywhere but its run, or
+// Kills a run's head that reloads the document, leads anywhere but its run, or
 // loads the run page's code only once clicked, a run page that lists anything
 // but the run's reports in start order, and a report row that leads anywhere
 // but its report.
-test("a run opens its run page, whose rows open each report", async ({
+test("a run's head opens its run page, whose rows open each report", async ({
 	page,
 }) => {
 	await page.goto(runs());
-	const link = rows(page).first().getByRole("link");
+	const link = rows(page)
+		.first()
+		.getByRole("link", { name: seed.last_main_hash, exact: true });
 	await expect(link).toBeVisible();
 	await settle(page);
 
@@ -289,8 +299,7 @@ test("a split run lists its reports by start, told apart to the second", async (
 }) => {
 	await page.goto(runs("?branch=feature-simd&window=all"));
 	await rows(page)
-		.filter({ hasText: seed.split_hash })
-		.getByRole("link")
+		.getByRole("link", { name: seed.split_hash, exact: true })
 		.click();
 	await expect(
 		page.getByRole("heading", {
@@ -319,6 +328,173 @@ test("a split run lists its reports by start, told apart to the second", async (
 	]);
 });
 
+// Kills a run that opens its page rather than its reports in place, reports
+// out of start order or in the wrong columns, a report row that leads anywhere
+// but its report or reloads the document, an expand that loads the run page's
+// code, opened runs kept in the URL or forgotten on Back, and a head that
+// opens anything but the run's page.
+test("a run opens in place to its reports, stays open across Back from one, and its head opens its page", async ({
+	page,
+}) => {
+	const documents: string[] = [];
+	const runCode: string[] = [];
+	page.on("request", (request) => {
+		if (request.resourceType() === "document") {
+			documents.push(request.url());
+		}
+		if (/\/Run(Alerts)?\.[^/]*\.js$/.test(new URL(request.url()).pathname)) {
+			runCode.push(request.url());
+		}
+	});
+	const listed = runs("?branch=feature-simd&window=all");
+	await page.goto(listed);
+	await expect(heading(page)).toHaveText("5 runs");
+	documents.length = 0;
+	const split = rows(page).filter({ hasText: seed.split_hash });
+	const toggle = split.getByRole("button", {
+		name: new RegExp(`^feature-simd, run ${seed.split_hash}, 4 reports, `),
+	});
+	await toggle.click();
+	await expect(toggle).toHaveAttribute("aria-expanded", "true");
+	const reports = rows(page).filter({
+		has: page.getByRole("link", { name: /, report \d, / }),
+	});
+	await expect(reports).toHaveCount(4);
+	const cells = async (index: number) =>
+		(await reports.nth(index).getByRole("cell").allTextContents()).slice(0, 6);
+	expect([
+		await cells(0),
+		await cells(1),
+		await cells(2),
+		await cells(3),
+	]).toEqual([
+		["00:00:00", "1", "", "", "ubuntu-latest", "json"],
+		["00:00:02", "2", "", "", "ubuntu-latest", "json"],
+		["00:00:03", "3", "", "", "macos-latest", "json"],
+		["00:00:04", "4", "", "", "ubuntu-latest", "json"],
+	]);
+	await settle(page);
+	expect(runCode).toEqual([]);
+	await expect(page).toHaveURL(listed);
+
+	await reports.nth(2).getByRole("link").click();
+	await expect(heading(page)).toHaveText("feature-simd · macos-latest");
+	await expect(page.locator(".rp-sub")).toHaveText(/^#3 of 4 · /);
+	await page.goBack();
+	await expect(page).toHaveURL(listed);
+	await expect(toggle).toHaveAttribute("aria-expanded", "true");
+	await expect(reports).toHaveCount(4);
+
+	await split.getByRole("link", { name: seed.split_hash, exact: true }).click();
+	await expect(heading(page)).toHaveText(`feature-simd · ${seed.split_hash}`);
+	expect(documents).toEqual([]);
+});
+
+/** Where the list's opened runs sit among its runs, in list order. */
+const opened = (page: Page) =>
+	table(page)
+		.getByRole("button")
+		.evaluateAll((toggles) =>
+			toggles.flatMap((toggle, index) =>
+				toggle.getAttribute("aria-expanded") === "true" ? [index] : [],
+			),
+		);
+
+// Kills opened runs a search change keeps on the history entry it leaves, not
+// the one it makes, so Back from a report closes them.
+test("a run opened before a window change is still open on Back from one of its reports", async ({
+	page,
+}) => {
+	await page.goto(runs("?branch=feature-simd&window=all"));
+	const toggle = rows(page)
+		.filter({ hasText: seed.split_hash })
+		.getByRole("button");
+	await toggle.click();
+	await expect(toggle).toHaveAttribute("aria-expanded", "true");
+	await page.getByRole("radio", { name: "3m" }).click();
+	await expect(page.getByRole("radio", { name: "3m" })).toBeChecked();
+	await expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+	await table(page)
+		.getByRole("link", { name: /^macos-latest, report 3, / })
+		.click();
+	await expect(heading(page)).toHaveText("feature-simd · macos-latest");
+	await page.goBack();
+	await expect(page.getByRole("radio", { name: "3m" })).toBeChecked();
+	await expect(toggle).toHaveAttribute("aria-expanded", "true");
+});
+
+// Kills a project root opened from the Runs tab that opens the tab's runs,
+// and a page that, on the way back, writes the runs opened on one entry onto
+// the other.
+test("the Runs tab and the project root each keep their own opened runs across Back and Forward", async ({
+	page,
+}) => {
+	await page.goto(runs());
+	await table(page).getByRole("button").first().click();
+	await expect.poll(() => opened(page)).toEqual([0]);
+
+	// The Runs tab leads to the project root, a page of its own.
+	await tabRow(page).getByRole("link", { name: "Runs" }).click();
+	await expect(page).toHaveURL(consolePath(hashbrown.slug));
+	await expect(heading(page)).toHaveText("15 runs");
+	await expect.poll(() => opened(page)).toEqual([]);
+	await table(page).getByRole("button").nth(1).click();
+	await expect.poll(() => opened(page)).toEqual([1]);
+
+	await page.goBack();
+	await expect(page).toHaveURL(runs());
+	await expect.poll(() => opened(page)).toEqual([0]);
+	await page.goForward();
+	await expect(page).toHaveURL(consolePath(hashbrown.slug));
+	await expect.poll(() => opened(page)).toEqual([1]);
+	await page.goBack();
+	await expect.poll(() => opened(page)).toEqual([0]);
+});
+
+// Kills a list that, once the switcher moves it to another project, stops
+// keeping the runs opened there or keeps the first project's, and one that on
+// the way back opens anything but what each project's entry kept.
+test("each project's list keeps its own opened runs across the switcher, Back, and Forward", async ({
+	page,
+}) => {
+	const { runner } = seed.projects;
+	await page.goto(consolePath(hashbrown.slug));
+	const first = () => table(page).getByRole("button").first();
+	await first().click();
+	await expect(first()).toHaveAttribute("aria-expanded", "true");
+
+	await crumb(page).click();
+	const dialog = page.getByRole("dialog", { name: "Switch project" });
+	await dialog
+		.getByRole("combobox", { name: "Search projects" })
+		.fill(runner.name);
+	await dialog
+		.getByRole("option", { name: new RegExp(`^${runner.name}`) })
+		.click();
+	await expect(page).toHaveURL(consolePath(runner.slug));
+	await expect(
+		table(page).getByRole("link", { name: seed.jobs_hash, exact: true }),
+	).toBeVisible();
+	await expect.poll(() => page.evaluate(() => history.state?.runs)).toEqual([]);
+	expect(await opened(page)).toEqual([]);
+	await first().click();
+	await expect(first()).toHaveAttribute("aria-expanded", "true");
+
+	await page.goBack();
+	await expect(page).toHaveURL(consolePath(hashbrown.slug));
+	await expect(
+		table(page).getByRole("link", { name: seed.last_main_hash, exact: true }),
+	).toBeVisible();
+	await expect.poll(() => opened(page)).toEqual([0]);
+	await page.goForward();
+	await expect(page).toHaveURL(consolePath(runner.slug));
+	await expect(
+		table(page).getByRole("link", { name: seed.jobs_hash, exact: true }),
+	).toBeVisible();
+	await expect(first()).toHaveAttribute("aria-expanded", "true");
+});
+
 const runReports = (page: Page) =>
 	page
 		.getByRole("table", { name: "Reports in this run, by start" })
@@ -342,8 +518,7 @@ test("a run, its reports, and the next run walk together, and Back walks it all 
 	await page.goto(runs("?branch=feature-simd&window=all"));
 	const split = `feature-simd ${seed.split_hash}`;
 	await rows(page)
-		.filter({ hasText: seed.split_hash })
-		.getByRole("link")
+		.getByRole("link", { name: seed.split_hash, exact: true })
 		.click();
 	await expect(heading(page)).toHaveText(`feature-simd · ${seed.split_hash}`);
 	await expect(page.getByRole("button", { name: "Previous" })).toBeDisabled();
@@ -393,7 +568,10 @@ test("the newest run's alert names its report, opens its plot in place, and open
 	page,
 }) => {
 	await page.goto(runs());
-	await rows(page).first().getByRole("link").click();
+	await rows(page)
+		.first()
+		.getByRole("link", { name: seed.last_main_hash, exact: true })
+		.click();
 	const section = page.getByRole("region", { name: "Alerts in this run" });
 	await expect(section.locator(".count")).toHaveText("1");
 	const alerts = section.getByRole("table", {
@@ -508,15 +686,25 @@ test("Clear asks once for every run in the window, and Back brings the filter ba
 });
 
 // Kills names, roles, and contrast that fail in either theme, at the project
-// root where a reader lands.
-test("Runs at the project root and a run pass axe in both themes", async ({
+// root where a reader lands, a run opened there included.
+test("Runs at the project root with a run opened, and a run, pass axe in both themes", async ({
 	page,
 }) => {
 	await axeInBothThemes(page, consolePath(hashbrown.slug), async () => {
-		await expect(rows(page).first()).toBeVisible();
+		const toggle = rows(page).first().getByRole("button");
+		// A reload keeps the run opened on its history entry.
+		if ((await toggle.getAttribute("aria-expanded")) !== "true") {
+			await toggle.click();
+		}
+		await expect(
+			table(page).getByRole("link", { name: /, report 2, / }),
+		).toBeVisible();
 	});
 	await page.goto(consolePath(hashbrown.slug));
-	await rows(page).first().getByRole("link").click();
+	await rows(page)
+		.first()
+		.getByRole("link", { name: seed.last_main_hash, exact: true })
+		.click();
 	await expect(page).toHaveURL(/\/runs\/[0-9a-f-]{36}$/);
 	await axeInBothThemes(page, page.url(), async () => {
 		await expect(
@@ -541,8 +729,9 @@ test.describe("narrow", () => {
 	// Kills a table that keeps its columns on a phone, a window or filters left
 	// in a row of controls, a Filters sheet that does not open, stops being
 	// modal once a filter is picked, or forgets what it applied, a row whose
-	// numbers are not on the right, a row only its text opens, and targets
-	// (inputs included) under 44 px.
+	// numbers are not on the right, a row only its text opens, an opened run's
+	// reports that do not fold as tall as it, and targets (inputs included)
+	// under 44 px.
 	test("rows fold, the window is one chip, and the filters open in a sheet", async ({
 		page,
 	}) => {
@@ -598,6 +787,7 @@ test.describe("narrow", () => {
 		for (const target of [
 			page.getByRole("button", { name: "Window 1w, 1 week" }),
 			filtersChip,
+			rows(page).first().getByRole("link"),
 		]) {
 			const size = await target.boundingBox();
 			expect(size?.height).toBeGreaterThanOrEqual(44);
@@ -614,11 +804,21 @@ test.describe("narrow", () => {
 			await expect(rows(page).first()).toBeVisible();
 		});
 
+		// A run opens in place from the end of its row, its reports folding too.
 		const target = await rows(page).first().boundingBox();
 		await page.mouse.click(
 			(target?.x ?? 0) + (target?.width ?? 0) - 8,
 			(target?.y ?? 0) + (target?.height ?? 0) / 2,
 		);
+		await expect(rows(page).first().getByRole("button")).toHaveAttribute(
+			"aria-expanded",
+			"true",
+		);
+		await expect(rows(page).nth(1).getByRole("link")).toBeVisible();
+		const child = await rows(page).nth(1).boundingBox();
+		expect(child?.height).toBe(target?.height);
+		expect((child?.x ?? 0) + (child?.width ?? 0)).toBeLessThanOrEqual(390);
+		await rows(page).first().getByRole("link").click();
 		await expect(page).toHaveURL(
 			new RegExp(`${consolePath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
 		);

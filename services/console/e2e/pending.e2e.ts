@@ -69,7 +69,7 @@ test("a run page shows each report's job and asks again while one runs", async (
 	const asked = counting(page, `/v0/console/projects/${runner.slug}/runs`);
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
-		.getByRole("link", { name: new RegExp(`run ${seed.jobs_hash}`) })
+		.getByRole("link", { name: seed.jobs_hash, exact: true })
 		.click();
 	const reports = page.getByRole("table", {
 		name: "Reports in this run, by start",
@@ -98,12 +98,54 @@ test("a run page shows each report's job and asks again while one runs", async (
 	expect(asked()).toBeLessThanOrEqual(1);
 });
 
+// Kills an opened run whose rows are drawn again on each poll while its job
+// runs, which takes the focus from them, and one that stops asking.
+test("an opened running run keeps its rows and the focus across polls", async ({
+	page,
+}) => {
+	await page.goto(consolePath(runner.slug, "runs"));
+	const table = page.getByRole("table", { name: "Runs, newest first" });
+	const run = (
+		(await table
+			.getByRole("link", { name: seed.jobs_hash, exact: true })
+			.getAttribute("href")) ?? ""
+	)
+		.split("/")
+		.at(-1);
+	const listAsked = counting(page, `/v0/console/projects/${runner.slug}/runs`);
+	const runAsked = counting(
+		page,
+		`/v0/console/projects/${runner.slug}/runs/${run}`,
+	);
+	await table
+		.getByRole("button", { name: new RegExp(`^main, run ${seed.jobs_hash}, `) })
+		.click();
+	const report = table.getByRole("link", {
+		name: /^ubuntu-latest, report 1, /,
+	});
+	await report.focus();
+	await report.evaluate((element) => {
+		(element as HTMLElement).dataset.kept = "";
+	});
+	const [list, opened] = [listAsked(), runAsked()];
+	await expect
+		.poll(() => Math.min(listAsked() - list, runAsked() - opened), {
+			timeout: 12_000,
+		})
+		.toBeGreaterThanOrEqual(1);
+	expect(
+		await page.evaluate(
+			() => (document.activeElement as HTMLElement | null)?.dataset.kept,
+		),
+	).toBe("");
+});
+
 // Kills a run page that asks again with nothing unfinished.
 test("a finished run's page does not ask again", async ({ page }) => {
 	await page.goto(consolePath(runner.slug, "runs"));
 	const link = page
 		.getByRole("table", { name: "Runs, newest first" })
-		.getByRole("link", { name: /run 5f3c9a0/ });
+		.getByRole("link", { name: "5f3c9a0", exact: true });
 	const href = (await link.getAttribute("href")) ?? "";
 	const asked = counting(
 		page,
@@ -166,7 +208,7 @@ test("a running report says so in its heading and names its spec", async ({
 	await page.goto(consolePath(runner.slug, "runs"));
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
-		.getByRole("link", { name: new RegExp(`run ${seed.jobs_hash}`) })
+		.getByRole("link", { name: seed.jobs_hash, exact: true })
 		.click();
 	await page
 		.getByRole("table", { name: "Reports in this run, by start" })
@@ -230,7 +272,7 @@ test("a running run holds alerting lines that land behind Show", async ({
 	await page.goto(consolePath(held.slug, "runs"));
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
-		.getByRole("link", { name: new RegExp(`run ${seed.held_hash}`) })
+		.getByRole("link", { name: seed.held_hash, exact: true })
 		.click();
 	const alerts = page.getByRole("table", { name: /^Alerts in run / });
 	await expect(alerts).toBeVisible();
@@ -281,7 +323,7 @@ test.describe("with motion reduced, so the running pulse rests", () => {
 	/** Opens the running run from the Runs list, the pointer then off its rows. */
 	const openRun = async (page: Page) => {
 		await runs(page)
-			.getByRole("link", { name: new RegExp(`run ${seed.jobs_hash}`) })
+			.getByRole("link", { name: seed.jobs_hash, exact: true })
 			.click();
 		await expect(
 			page.getByRole("table", { name: "Reports in this run, by start" }),
@@ -370,7 +412,7 @@ test.describe("with motion reduced, so the running pulse rests", () => {
 				).toBeVisible({ timeout: 15_000 }),
 			async () => {
 				await runs(page)
-					.getByRole("link", { name: new RegExp(`run ${seed.held_hash}`) })
+					.getByRole("link", { name: seed.held_hash, exact: true })
 					.click();
 				await expect(
 					page.getByRole("table", { name: /^Alerts in run / }),

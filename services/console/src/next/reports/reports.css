@@ -67,11 +67,13 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
-.console a.reports-link {
+.console a.reports-link,
+.rn-toggle {
 	color: var(--color-text-primary);
 	font-weight: var(--font-weight-semibold);
 }
-.console a.reports-link:hover {
+.console a.reports-link:hover,
+.rn-toggle:hover {
 	color: var(--color-text-accent);
 }
 .reports-hash {
@@ -146,6 +148,20 @@
 .rn-ord {
 	color: var(--color-text-muted);
 	font: 12px var(--font-family-code);
+}
+/* A run's row opens it to its reports from anywhere; its head, above that, opens its page. */
+.rn-toggle {
+	display: block;
+	max-width: 100%;
+	padding: 0;
+	border: 0;
+	background: none;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+}
+tr:has([aria-expanded="true"]) .rn-caret {
+	transform: rotate(180deg);
 }
 /* A runner job's status where its run's or report's time will land. */
 .rn-st {
@@ -298,6 +314,10 @@
 	.reports-table td.rn-status {
 		padding-inline-end: 0;
 	}
+	/* An opened run's rows start their Branch column indented under it. */
+	.rn-child > td:nth-child(2) {
+		padding-left: 26px;
+	}
 }
 
 /* Below a laptop each run list scrolls sideways: the Runs list keeps its layout on a 1024 px page, and a run's reports keep every column whole. */
@@ -332,6 +352,14 @@
 		padding-left: 6px;
 		font-size: 12px;
 	}
+	/* The head's band reaches past its line to a touch target, inside its row. */
+	.reports-hash a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		margin: -11px -8px -17px;
+		padding: 0 8px;
+	}
 	.reports-table.ui-table[data-fold] tbody tr.reports-row > td.rn-n {
 		grid-area: 2 / 2;
 		padding-left: 6px;
@@ -363,6 +391,10 @@
 	}
 	.reports-table.ui-table[data-fold] tbody tr.rn-row > td[data-fold="l2"] {
 		grid-area: 2 / 2 / 3 / 4;
+	}
+	/* An opened run's rows sit indented under it. */
+	.reports-table.ui-table[data-fold] tbody tr.rn-child {
+		padding-left: 28px;
 	}
 	.rn-held .ui-button {
 		min-height: 44px;

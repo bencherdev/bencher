@@ -2,13 +2,13 @@ import { QueryObserver, focusManager } from "@tanstack/solid-query";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { Api } from "../api";
 import { createQueryClient } from "../cache";
-import { runReportsQuery, startQueries } from "../explore/start";
+import { startQueries } from "../explore/start";
 import { batchQuery as reportBatchQuery } from "../report/query";
 import { parseReportView } from "../report/view";
 import { DEFAULT_SEARCH } from "../reports/search";
 import { batchQuery } from "./query";
 import { runBatchQuery } from "./run";
-import { POLL } from "./status";
+import { POLL, runReportsQuery } from "./status";
 
 const RUNNING = { queued: 0, running: 1, failed: 0, canceled: 0, since: 0 };
 const ENDED = { queued: 0, running: 0, failed: 1, canceled: 0 };
