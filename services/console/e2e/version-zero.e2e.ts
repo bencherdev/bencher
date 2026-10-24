@@ -41,9 +41,7 @@ const newestReport = async (page: Page) => {
 		.getByRole("rowgroup")
 		.last()
 		.getByRole("row")
-		.filter({ hasText: seed.version_zero_hash })
-		.getByRole("link")
-		.first()
+		.getByRole("link", { name: seed.version_zero_hash, exact: true })
 		.click();
 	await expect(heading(page)).toHaveText(`main · ${seed.version_zero_hash}`);
 	await page

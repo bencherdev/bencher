@@ -375,8 +375,7 @@ test("a reader who moves from Runs to a report and only waits gets each row's Op
 	await page.goto(consolePath(hashbrown.slug, "runs"));
 	await page
 		.getByRole("table", { name: "Runs, newest first" })
-		.getByRole("link")
-		.first()
+		.getByRole("link", { name: seed.last_main_hash, exact: true })
 		.click();
 	await page
 		.getByRole("table", { name: "Reports in this run, by start" })
