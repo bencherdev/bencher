@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import * as toolCache from "@actions/tool-cache";
 import { chmod } from "node:fs/promises";
 
-import spec from "../../api/openapi.json";
+import spec from "../../api/openapi.json" with { type: "json" };
 
 const run = async () => {
 	const { bin, url, semVer } = getUrl();
