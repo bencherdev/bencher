@@ -30,6 +30,9 @@ ignore = [
     "RUSTSEC-2026-0173",
     # https://rustsec.org/advisories/RUSTSEC-2026-0192.html
     "RUSTSEC-2026-0192",
+    # https://rustsec.org/advisories/RUSTSEC-2026-0387.html
+    # `p256` signs in the API only for a Self-Hosted license at plan creation, one per organization with a Stripe call in the same request, and every verification uses a public key
+    "RUSTSEC-2026-0387",
 ]
 
 [bans]
