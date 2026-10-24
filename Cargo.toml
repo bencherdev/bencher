@@ -150,7 +150,7 @@ percent-encoding = "2.3"
 plotters = "0.3"
 plotters-bitmap = "0.3"
 pretty_assertions = "1.4"
-prettyplease = "0.2"
+prettyplease = "0.3"
 rand = "0.10"
 regex = "1.12"
 regex-lite = "0.1"
@@ -180,7 +180,7 @@ statrs = "0.19"
 strip-ansi-escapes = "0.2"
 strum = { version = "0.28", features = ["derive"] }
 subtle = "2.6"
-syn = "2.0"
+syn = "3.0"
 sync_wrapper = "1.0"
 tabled = "0.22"
 tar = "0.4"
@@ -202,8 +202,8 @@ windows = "0.62"
 zstd = "0.13"
 # oxide
 dropshot = { version = "0.17.1", default-features = false }
-progenitor = { version = "0.14", default-features = false }
-progenitor-client = { version = "0.14", default-features = false }
+progenitor = { version = "0.15", default-features = false }
+progenitor-client = { version = "0.15", default-features = false }
 
 [workspace.lints.rust]
 # https://doc.rust-lang.org/rustc/lints/listing/index.html
