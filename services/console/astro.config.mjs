@@ -240,18 +240,15 @@ export default defineConfig({
 			// https://docs.sentry.io/platforms/javascript/guides/astro/
 			// DO NOT REMOVE OR MODIFY: This line is used by adapter.js
 			enabled: undefined,
-			dsn: process.env.PUBLIC_SENTRY_DSN,
-			environment: SENTRY_ENVIRONMENT,
-			sourceMapsUploadOptions: {
-				enabled: process.env.SENTRY_UPLOAD === "true",
-				org: "bencher",
-				project: "bencher-console",
-				authToken: process.env.SENTRY_AUTH_TOKEN,
-			},
+			org: "bencher",
+			project: "bencher-console",
+			authToken: process.env.SENTRY_AUTH_TOKEN,
+			sourcemaps: { disable: process.env.SENTRY_UPLOAD !== "true" },
 		}),
 	],
 	vite: {
-		// `sentry.client.config.ts` replaces the init the integration writes, so it reads this instead.
+		// `sentry.client.config.ts` and `sentry.server.config.ts` replace the inits
+		// the integration writes, so they read this instead.
 		define: {
 			"import.meta.env.SENTRY_ENVIRONMENT": JSON.stringify(SENTRY_ENVIRONMENT),
 		},
