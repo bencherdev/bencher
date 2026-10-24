@@ -81,14 +81,14 @@ bencher_output_protocol = { path = "plus/bencher_output_protocol" }
 anyhow = "1.0"
 backhand = "0.25"
 assert_cmd = "2.2"
-async-stripe = { version = "1.0.0-rc.6", default-features = false }
-async-stripe-billing = "1.0.0-rc.6"
-async-stripe-checkout = "1.0.0-rc.6"
-async-stripe-core = "1.0.0-rc.6"
-async-stripe-payment = "1.0.0-rc.6"
-async-stripe-product = "1.0.0-rc.6"
-async-stripe-shared = "1.0.0-rc.6"
-async-stripe-types = "1.0.0-rc.6"
+async-stripe = { version = "1.0.0-rc.9", default-features = false }
+async-stripe-billing = "1.0.0-rc.9"
+async-stripe-checkout = "1.0.0-rc.9"
+async-stripe-core = "1.0.0-rc.9"
+async-stripe-payment = "1.0.0-rc.9"
+async-stripe-product = "1.0.0-rc.9"
+async-stripe-shared = "1.0.0-rc.9"
+async-stripe-types = "1.0.0-rc.9"
 async-trait = "0.1"
 aws-lc-rs = { version = "1.18", default-features = false, features = ["aws-lc-sys"] }
 base64 = "0.22"
