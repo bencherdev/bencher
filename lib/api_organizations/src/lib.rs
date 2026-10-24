@@ -13,7 +13,7 @@ mod claim;
 mod members;
 mod organizations;
 mod plan;
-mod projects;
+pub mod projects;
 mod sso;
 mod usage;
 

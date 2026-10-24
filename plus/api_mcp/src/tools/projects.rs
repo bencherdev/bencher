@@ -1,6 +1,7 @@
-use api_projects::projects::{
-    ProjectParams, ProjectsPagination, ProjectsQuery, get_ls_inner, get_one_inner,
+use api_organizations::projects::{
+    OrgProjectsPagination, OrgProjectsParams, OrgProjectsQuery, get_ls_inner,
 };
+use api_projects::projects::{ProjectParams, get_one_inner};
 use bencher_json::{JsonProject, JsonProjects};
 use bencher_schema::{context::ApiContext, model::user::actor::ApiActor};
 use dropshot::HttpError;
@@ -14,9 +15,11 @@ use super::{ListOutput, json_result, json_schema, list_result, parse_input};
 #[derive(Deserialize, JsonSchema)]
 struct ListProjectsInput {
     #[serde(flatten)]
-    pagination: ProjectsPagination,
+    path: OrgProjectsParams,
     #[serde(flatten)]
-    query: ProjectsQuery,
+    pagination: OrgProjectsPagination,
+    #[serde(flatten)]
+    query: OrgProjectsQuery,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -28,9 +31,10 @@ struct ViewProjectInput {
 pub fn list_tool(name: &'static str) -> Tool {
     Tool::new(
         name,
-        "List projects. \
+        "List an organization's projects. \
+         The `organization` argument accepts an organization slug or UUID. \
          With a project API key (`bencher_run_`), only that project is returned; \
-         with a user API key, all projects visible to the user are returned.",
+         with a user API key, every project in the organization is returned.",
         json_schema::<ListProjectsInput>(),
     )
     .with_raw_output_schema(json_schema::<ListOutput<JsonProjects>>())
@@ -41,8 +45,12 @@ pub async fn list(
     api_actor: &ApiActor,
     arguments: Value,
 ) -> Result<CallToolResult, HttpError> {
-    let ListProjectsInput { pagination, query } = parse_input(arguments)?;
-    let (json, total_count) = get_ls_inner(context, pagination, query, api_actor).await?;
+    let ListProjectsInput {
+        path,
+        pagination,
+        query,
+    } = parse_input(arguments)?;
+    let (json, total_count) = get_ls_inner(context, path, pagination, query, api_actor).await?;
     list_result(json, total_count)
 }
 

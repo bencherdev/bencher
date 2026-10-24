@@ -11,11 +11,18 @@ use bencher_schema::model::organization::plan::PlanKind;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::resource_not_found_err,
+    error::{
+        BEARER_AUTH_FORMAT, BencherResource, resource_not_found_err, resource_not_found_error,
+        unauthorized_error,
+    },
     model::{
         organization::QueryOrganization,
-        project::{InsertProject, QueryProject},
-        user::auth::{AuthUser, BearerToken},
+        project::{InsertProject, ProjectId, QueryProject},
+        user::{
+            actor::{ApiActor, ProjectKeyActor},
+            auth::{AuthUser, BearerToken},
+            public::PublicUser,
+        },
     },
     schema,
 };
@@ -89,35 +96,54 @@ pub async fn org_projects_get(
         path_params.into_inner(),
         pagination_params.into_inner(),
         query_params.into_inner(),
-        &auth_user,
+        &ApiActor::from(auth_user),
     )
     .await?;
     Ok(Get::auth_response_ok_with_total_count(json, total_count))
 }
 
-async fn get_ls_inner(
+pub async fn get_ls_inner(
     context: &ApiContext,
     path_params: OrgProjectsParams,
     pagination_params: OrgProjectsPagination,
     query_params: OrgProjectsQuery,
-    auth_user: &AuthUser,
+    api_actor: &ApiActor,
 ) -> Result<(JsonProjects, TotalCount), HttpError> {
-    let query_organization = QueryOrganization::is_allowed_resource_id(
-        auth_conn!(context),
-        &context.rbac,
-        &path_params.organization,
-        auth_user,
-        Permission::View,
-    )?;
+    let (query_organization, key_project) = match api_actor {
+        ApiActor::Public(PublicUser::Auth(auth_user)) => (
+            QueryOrganization::is_allowed_resource_id(
+                auth_conn!(context),
+                &context.rbac,
+                &path_params.organization,
+                auth_user,
+                Permission::View,
+            )?,
+            None,
+        ),
+        ApiActor::Public(PublicUser::Public(_)) => {
+            return Err(unauthorized_error(format!(
+                "Listing an organization's projects requires authentication. {BEARER_AUTH_FORMAT}"
+            )));
+        },
+        ApiActor::ProjectKey(project_key) => (
+            key_organization(context, &path_params.organization, project_key).await?,
+            Some(project_key.project_id),
+        ),
+    };
 
-    let projects = get_ls_query(&query_organization, &pagination_params, &query_params)
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryProject>(auth_conn!(context))
-        .map_err(resource_not_found_err!(
-            Project,
-            (&query_organization, &pagination_params, &query_params)
-        ))?;
+    let projects = get_ls_query(
+        &query_organization,
+        key_project,
+        &pagination_params,
+        &query_params,
+    )
+    .offset(pagination_params.offset())
+    .limit(pagination_params.limit())
+    .load::<QueryProject>(auth_conn!(context))
+    .map_err(resource_not_found_err!(
+        Project,
+        (&query_organization, &pagination_params, &query_params)
+    ))?;
 
     // Drop connection lock before iterating
     let json_projects = auth_conn!(context, |conn| {
@@ -127,26 +153,55 @@ async fn get_ls_inner(
             .collect()
     });
 
-    let total_count = get_ls_query(&query_organization, &pagination_params, &query_params)
-        .count()
-        .get_result::<i64>(auth_conn!(context))
-        .map_err(resource_not_found_err!(
-            Project,
-            (&query_organization, &pagination_params, &query_params)
-        ))?
-        .try_into()?;
+    let total_count = get_ls_query(
+        &query_organization,
+        key_project,
+        &pagination_params,
+        &query_params,
+    )
+    .count()
+    .get_result::<i64>(auth_conn!(context))
+    .map_err(resource_not_found_err!(
+        Project,
+        (&query_organization, &pagination_params, &query_params)
+    ))?
+    .try_into()?;
 
     Ok((json_projects, total_count))
 }
 
+async fn key_organization(
+    context: &ApiContext,
+    organization: &OrganizationResourceId,
+    project_key: &ProjectKeyActor,
+) -> Result<QueryOrganization, HttpError> {
+    let query_project = QueryProject::get(auth_conn!(context), project_key.project_id)?;
+    // Another organization answers as a missing one, so a key learns nothing about it.
+    QueryOrganization::from_resource_id(auth_conn!(context), organization)
+        .ok()
+        .filter(|query_organization| query_organization.id == query_project.organization_id)
+        .ok_or_else(|| {
+            resource_not_found_error(
+                BencherResource::Organization,
+                organization,
+                Permission::View,
+            )
+        })
+}
+
 fn get_ls_query<'q>(
     query_organization: &'q QueryOrganization,
+    key_project: Option<ProjectId>,
     pagination_params: &OrgProjectsPagination,
     query_params: &'q OrgProjectsQuery,
 ) -> schema::project::BoxedQuery<'q, diesel::sqlite::Sqlite> {
     let mut query = QueryProject::belonging_to(query_organization)
         .into_boxed()
         .filter(schema::project::deleted.is_null());
+
+    if let Some(project_id) = key_project {
+        query = query.filter(schema::project::id.eq(project_id));
+    }
 
     if let Some(name) = query_params.name.as_ref() {
         query = query.filter(schema::project::name.eq(name));

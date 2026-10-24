@@ -43,7 +43,7 @@ grace_period = "24s"
 interval = "12s"
 timeout = "2s"
 method = "get"
-path = "/v0/projects?per_page=0"
+path = "/v0/server/health"
 protocol = "http"
 
 [[vm]]

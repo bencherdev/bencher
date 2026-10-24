@@ -177,6 +177,7 @@ dependencies = [
 name = "api_mcp"
 version = "0.6.13"
 dependencies = [
+ "api_organizations",
  "api_projects",
  "api_run",
  "base64 0.22.1",

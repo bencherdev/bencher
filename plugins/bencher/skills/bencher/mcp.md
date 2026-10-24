@@ -99,7 +99,8 @@ Generic MCP client configuration with an API key:
   gets a sign-in challenge instead of an error: reading a private project (a
   nonexistent project or ID answers identically, so a mistyped ID within a
   public project also challenges), any tool that writes except `submit_run` to
-  an unclaimed project, and any tool call over the per-IP limit.
+  an unclaimed project, `list_projects` for an organization's projects, and any
+  tool call over the per-IP limit.
 - With OAuth configured, every tool declares `_meta.securitySchemes`: `noauth`
   when it works anonymously, and `oauth2` with the scope it needs.
 

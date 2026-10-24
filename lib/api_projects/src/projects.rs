@@ -1,11 +1,5 @@
-use bencher_endpoint::{
-    CorsResponse, Delete, Endpoint, Get, Patch, ResponseDeleted, ResponseOk, TotalCount,
-};
-use bencher_json::{
-    JsonDirection, JsonPagination, JsonProject, JsonProjects, ProjectResourceId, ResourceName,
-    Sanitize as _, Search,
-    project::{JsonUpdateProject, Visibility},
-};
+use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, ResponseDeleted, ResponseOk};
+use bencher_json::{JsonProject, ProjectResourceId, Sanitize as _, project::JsonUpdateProject};
 use bencher_rbac::project::Permission;
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::plan::PlanKind;
@@ -21,190 +15,15 @@ use bencher_schema::{
         user::{
             actor::{ApiActor, PubProjectBearerToken},
             auth::{AuthUser, BearerToken},
-            public::PublicUser,
         },
     },
     schema, write_conn,
 };
-use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
-    TextExpressionMethods as _,
-};
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
-use futures::{StreamExt as _, stream::FuturesOrdered};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
-
-pub type ProjectsPagination = JsonPagination<ProjectsSort>;
-
-#[derive(Debug, Clone, Copy, Default, Deserialize, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ProjectsSort {
-    /// Sort by project name.
-    #[default]
-    Name,
-}
-
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
-pub struct ProjectsQuery {
-    /// Filter by project name, exact match.
-    pub name: Option<ResourceName>,
-    /// Search by project name, slug, or UUID.
-    pub search: Option<Search>,
-}
-
-#[endpoint {
-    method = OPTIONS,
-    path =  "/v0/projects",
-    tags = ["projects"]
-}]
-pub async fn projects_options(
-    _rqctx: RequestContext<ApiContext>,
-    _pagination_params: Query<ProjectsPagination>,
-    _query_params: Query<ProjectsQuery>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into()]))
-}
-
-/// List projects
-///
-/// List all projects.
-/// If the user is not authenticated, then only public projects are returned.
-/// If the user is authenticated, then all public projects and
-/// any private project where the user has `view` permissions are returned.
-/// If a project key is provided, then only the key's project is returned.
-/// By default, the projects are sorted in alphabetical order by name.
-/// The HTTP response header `X-Total-Count` contains the total number of projects.
-#[endpoint {
-    method = GET,
-    path =  "/v0/projects",
-    tags = ["projects"]
-}]
-pub async fn projects_get(
-    rqctx: RequestContext<ApiContext>,
-    bearer_token: PubProjectBearerToken,
-    pagination_params: Query<ProjectsPagination>,
-    query_params: Query<ProjectsQuery>,
-) -> Result<ResponseOk<JsonProjects>, HttpError> {
-    let api_actor = ApiActor::from_token(
-        &rqctx.log,
-        rqctx.context(),
-        #[cfg(feature = "plus")]
-        rqctx.request.headers(),
-        bearer_token,
-    )
-    .await?;
-    let (json, total_count) = get_ls_inner(
-        rqctx.context(),
-        pagination_params.into_inner(),
-        query_params.into_inner(),
-        &api_actor,
-    )
-    .await
-    .map_err(with_auth_hint)?;
-    Ok(Get::response_ok_with_total_count(
-        json,
-        api_actor.is_auth(),
-        total_count,
-    ))
-}
-
-pub async fn get_ls_inner(
-    context: &ApiContext,
-    pagination_params: ProjectsPagination,
-    query_params: ProjectsQuery,
-    api_actor: &ApiActor,
-) -> Result<(JsonProjects, TotalCount), HttpError> {
-    let projects = get_ls_query(context, &pagination_params, &query_params, api_actor)
-        .offset(pagination_params.offset())
-        .limit(pagination_params.limit())
-        .load::<QueryProject>(actor_conn!(context, api_actor))
-        .map_err(resource_not_found_err!(
-            Project,
-            (&pagination_params, &query_params)
-        ))?;
-
-    // Drop connection lock before iterating
-    let json_projects = projects
-        .into_iter()
-        .map(|project| async { project.into_json(actor_conn!(context, api_actor)) })
-        .collect::<FuturesOrdered<_>>()
-        .collect::<Vec<_>>()
-        .await
-        .into_iter()
-        .filter_map(|project| match project {
-            Ok(project) => Some(project),
-            Err(err) => {
-                debug_assert!(false, "{err}");
-                #[cfg(feature = "sentry")]
-                sentry::capture_error(&err);
-                None
-            },
-        })
-        .collect::<Vec<_>>();
-
-    let total_count = get_ls_query(context, &pagination_params, &query_params, api_actor)
-        .count()
-        .get_result::<i64>(actor_conn!(context, api_actor))
-        .map_err(resource_not_found_err!(
-            Project,
-            (&pagination_params, &query_params)
-        ))?
-        .try_into()?;
-
-    Ok((json_projects.into(), total_count))
-}
-
-fn get_ls_query<'q>(
-    context: &ApiContext,
-    pagination_params: &ProjectsPagination,
-    query_params: &'q ProjectsQuery,
-    api_actor: &ApiActor,
-) -> schema::project::BoxedQuery<'q, diesel::sqlite::Sqlite> {
-    let mut query = schema::project::table
-        .into_boxed()
-        .filter(schema::project::deleted.is_null());
-
-    match api_actor {
-        ApiActor::Public(public_user) => {
-            if let PublicUser::Auth(auth_user) = public_user {
-                if !auth_user.is_admin(&context.rbac) {
-                    let projects = auth_user.projects(&context.rbac, Permission::View);
-                    query = query.filter(
-                        schema::project::id
-                            .eq_any(projects)
-                            .or(schema::project::visibility.eq(Visibility::Public)),
-                    );
-                }
-            } else {
-                query = query.filter(schema::project::visibility.eq(Visibility::Public));
-            }
-        },
-        ApiActor::ProjectKey(project_key_actor) => {
-            query = query.filter(schema::project::id.eq(project_key_actor.project_id));
-        },
-    }
-
-    if let Some(name) = query_params.name.as_ref() {
-        query = query.filter(schema::project::name.eq(name));
-    }
-    if let Some(search) = query_params.search.as_ref() {
-        query = query.filter(
-            schema::project::name
-                .like(search)
-                .or(schema::project::slug.like(search))
-                .or(schema::project::uuid.like(search)),
-        );
-    }
-
-    match pagination_params.order() {
-        ProjectsSort::Name => match pagination_params.direction {
-            Some(JsonDirection::Asc) | None => query.order(schema::project::name.asc()),
-            Some(JsonDirection::Desc) => query.order(schema::project::name.desc()),
-        },
-    }
-}
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjectParams {

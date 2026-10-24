@@ -7,7 +7,7 @@
 //! Integration tests for the MCP Streamable HTTP endpoint (POST /mcp).
 
 use bencher_api_tests::{
-    TestProject, TestServer, TestServerOptions, TestUser,
+    TestOrg, TestProject, TestServer, TestServerOptions, TestUser,
     helpers::{oauth_server, set_job_status},
     oci::create_oci_manifest,
 };
@@ -359,7 +359,7 @@ async fn mcp_invalid_credential() {
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
-// A user token sees their projects via tools/call
+// A user token sees an organization's projects via tools/call
 #[tokio::test]
 async fn mcp_list_projects_user_token() {
     let server = TestServer::new().await;
@@ -370,7 +370,7 @@ async fn mcp_list_projects_user_token() {
     let result = mcp_result(
         &server,
         Some(&user.token),
-        &call_tool_request("list_projects", &json!({})),
+        &call_tool_request("list_projects", &json!({"organization": org.slug})),
     )
     .await;
 
@@ -384,6 +384,53 @@ async fn mcp_list_projects_user_token() {
     let slug: &str = project.slug.as_ref();
     assert!(slugs.contains(&slug), "Missing project: {slugs:?}");
     assert!(content["total_count"].is_number());
+}
+
+// A project key lists only its own project, and only under its own organization;
+// an anonymous caller lists nothing
+#[tokio::test]
+async fn mcp_list_projects_project_key() {
+    let server = TestServer::new().await;
+    let user = server.signup("MCP Lister", "mcp-lister@bencher.dev").await;
+    let org = server.create_org(&user, "MCP Lister Org").await;
+    let project = server
+        .create_project(&user, &org, "MCP Listed Project")
+        .await;
+    let other = server
+        .create_project(&user, &org, "MCP Unlisted Project")
+        .await;
+    let elsewhere = server.create_org(&user, "MCP Elsewhere Org").await;
+    server
+        .create_project(&user, &elsewhere, "MCP Elsewhere Project")
+        .await;
+    let key = server.create_project_key(&user, &project, "mcp-key").await;
+
+    let list = async |bearer: Option<&str>, organization: &TestOrg| {
+        let body = call_tool_request("list_projects", &json!({"organization": organization.slug}));
+        mcp_result(&server, bearer, &body).await
+    };
+
+    let content = tool_content(&list(Some(&user.token), &org).await);
+    assert_eq!(content["total_count"], 2, "{content}");
+
+    let content = tool_content(&list(Some(key.key.as_ref()), &org).await);
+    let slugs: Vec<&str> = content["data"]
+        .as_array()
+        .expect("Missing data array")
+        .iter()
+        .filter_map(|p| p["slug"].as_str())
+        .collect();
+    let slug: &str = project.slug.as_ref();
+    assert_eq!(slugs, [slug], "{content}");
+    assert_eq!(content["total_count"], 1, "{content}");
+    let other_slug: &str = other.slug.as_ref();
+    assert!(!slugs.contains(&other_slug));
+
+    let error = tool_error(&list(Some(key.key.as_ref()), &elsewhere).await);
+    assert!(error.starts_with("404"), "Expected 404 error: {error}");
+
+    let error = tool_error(&list(None, &org).await);
+    assert!(error.starts_with("401"), "Expected 401 error: {error}");
 }
 
 // A project key can view its own project but not another one
@@ -533,7 +580,7 @@ async fn mcp_tool_results_match_output_schemas() {
         .create_project(&user, &org, "MCP Schemas Project")
         .await;
 
-    for (tool, arguments) in seed_every_tool(&server, &user, &project).await {
+    for (tool, arguments) in seed_every_tool(&server, &user, &org, &project).await {
         let result = mcp_result(
             &server,
             Some(&user.token),
@@ -565,7 +612,7 @@ async fn mcp_tools_declare_how_to_sign_in() {
     let project = server
         .create_project(&user, &org, "MCP Signs In Project")
         .await;
-    let every_tool = seed_every_tool(&server, &user, &project).await;
+    let every_tool = seed_every_tool(&server, &user, &org, &project).await;
 
     let tools_list = json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"});
     let tools = json_rpc_result(mcp_post(&server, None, &tools_list).await, &tools_list).await;
@@ -632,6 +679,7 @@ async fn mcp_tools_declare_how_to_sign_in() {
 async fn seed_every_tool(
     server: &TestServer,
     user: &TestUser,
+    org: &TestOrg,
     project: &TestProject,
 ) -> Vec<(&'static str, Value)> {
     let project_slug: &str = project.slug.as_ref();
@@ -770,7 +818,7 @@ async fn seed_every_tool(
         "measures": measure["uuid"]
     });
     let mut every_tool = vec![
-        ("list_projects", json!({})),
+        ("list_projects", json!({"organization": org.slug})),
         ("view_project", json!({})),
         ("list_reports", json!({})),
         ("view_report", json!({"report": report["uuid"]})),
@@ -1036,7 +1084,7 @@ async fn mcp_list_projects_2026_user_token() {
         Some(&user.token),
         &request_2026(
             "tools/call",
-            json!({"name": "list_projects", "arguments": {}}),
+            json!({"name": "list_projects", "arguments": {"organization": org.slug}}),
         ),
     )
     .await;

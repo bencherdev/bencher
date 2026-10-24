@@ -186,7 +186,7 @@ bencher noise
 
 ```bash
 # Projects
-bencher project list [organization]
+bencher project list <organization>
 bencher project view <project>
 bencher project create <organization> --name <name>
 

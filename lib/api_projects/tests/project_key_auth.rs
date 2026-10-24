@@ -11,8 +11,8 @@
 use bencher_api_tests::{TestServer, helpers::seed_token};
 use bencher_json::{
     JsonBenchmark, JsonBranch, JsonBranches, JsonMeasure, JsonProject, JsonProjectKey,
-    JsonProjectKeyCreated, JsonProjectKeys, JsonProjects, JsonReport, JsonTestbed, JsonThreshold,
-    ProjectKey, ProjectKeyUuid,
+    JsonProjectKeyCreated, JsonProjectKeys, JsonReport, JsonTestbed, JsonThreshold, ProjectKey,
+    ProjectKeyUuid,
 };
 use http::StatusCode;
 
@@ -63,29 +63,6 @@ async fn project_key_get_project() {
     assert_eq!(resp.status(), StatusCode::OK);
     let project: JsonProject = resp.json().await.expect("Failed to parse response");
     let slug: &str = project.slug.as_ref();
-    assert_eq!(slug, project_slug);
-}
-
-// GET /v0/projects - list projects with key returns only key's project
-#[tokio::test]
-async fn project_key_list_projects() {
-    let (server, project_slug, _token, key) = setup().await;
-
-    let resp = server
-        .client
-        .get(server.api_url("/v0/projects"))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::OK);
-    let projects: JsonProjects = resp.json().await.expect("Failed to parse response");
-    assert_eq!(projects.0.len(), 1);
-    let slug: &str = projects.0[0].slug.as_ref();
     assert_eq!(slug, project_slug);
 }
 

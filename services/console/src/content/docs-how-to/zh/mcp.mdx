@@ -108,6 +108,7 @@ Bencher MCP 也接受与 Bencher API 相同的 `Authorization: Bearer` 凭据：
 
 - 读取私有项目时。不存在的项目会得到相同的响应，因此输错项目或 ID 时，即使是在公开项目中，也会被要求登录。
 - 调用写入类工具时，但向 [`unclaimed` 项目](/zh/docs/how-to/claim/#unclaimed-项目)提交的 `submit_run` 除外。
+- 使用 `list_projects` 列出组织的项目时。
 - 超出匿名速率限制时。
 
 ## 工具

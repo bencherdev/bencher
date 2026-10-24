@@ -217,6 +217,14 @@ impl McpTool {
         self.kind().access()
     }
 
+    const fn anonymous(self) -> Anonymous {
+        if matches!(self, Self::ListProjects) {
+            Anonymous::Refused
+        } else {
+            self.kind().anonymous()
+        }
+    }
+
     pub fn list() -> ListToolsResult {
         // The tool list is static, so the schemas are generated once
         static LIST: LazyLock<ListToolsResult> = LazyLock::new(|| {
@@ -240,7 +248,7 @@ impl McpTool {
 
     fn security_schemes(self) -> MetaObject {
         let oauth2 = json!({"type": "oauth2", "scopes": [self.access().scope()]});
-        let schemes = match self.kind().anonymous() {
+        let schemes = match self.anonymous() {
             Anonymous::Allowed => json!([{"type": "noauth"}, oauth2]),
             Anonymous::Refused => json!([oauth2]),
         };
