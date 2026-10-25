@@ -52,6 +52,8 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.JsBenchmark:
 		case Adapter.JsTime:
 		case Adapter.JsVitest:
+		case Adapter.JsVitestV1:
+		case Adapter.JsVitestV5:
 			return JS_ICON;
 		case Adapter.PythonAsv:
 		case Adapter.PythonPytest:
@@ -104,7 +106,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.JsTime:
 			return `bencher run${host} "node benchmark.js"`;
 		case Adapter.JsVitest:
+		case Adapter.JsVitestV1:
 			return `bencher run${host} --file results.json "vitest bench --run --outputJson results.json"`;
+		case Adapter.JsVitestV5:
+			return `bencher run${host} --file results.json "vitest bench --run --reporter=json --outputFile results.json"`;
 		case Adapter.PythonAsv:
 			return `bencher run${host} "asv run"`;
 		case Adapter.PythonPytest:
