@@ -123,7 +123,6 @@ jobs:
     if: github.ref != 'refs/heads/cloud'
     uses: ./.github/workflows/cli.yml
     with:
-      bencher-version: "0.6.13"
       mold-version: "2.34.1"
       zig-build-version: "0.23.4"
       zig-version: "0.13.0"
@@ -167,18 +166,19 @@ jobs:
           RUNNER_CHANGED: ${{ needs.changes.outputs.runner }}
         run: |
           set -euo pipefail
-          # Only push runs in this repository are trusted: a fork pull request
-          # can name its branch `devel` and upload artifacts under these names.
-          RUN_ID="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?event=push&branch=devel&head_sha=$GITHUB_SHA&per_page=100" --jq '
+          # Only push and dispatch runs in this repository are trusted: both need write access
+          # and a ref in this repository, while a fork pull request can name its branch `devel`
+          # and upload artifacts under these names.
+          RUN_ID="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=devel&head_sha=$GITHUB_SHA&per_page=100" --jq '
             [.workflow_runs[] | select(
-              .event == "push"
+              (.event == "push" or .event == "workflow_dispatch")
               and .head_branch == "devel"
               and .head_repository.full_name == env.GITHUB_REPOSITORY
               and .path == ".github/workflows/ci.yml"
               and .head_sha == env.GITHUB_SHA
             )] | max_by(.created_at) | .id // empty')"
           if [[ -z "$RUN_ID" ]]; then
-            echo "::error::No devel push run of ci.yml for commit $GITHUB_SHA, so there are no builds to deploy. Push the commit to devel, then re-run this workflow once that run has uploaded them."
+            echo "::error::No devel push or dispatch run of ci.yml for commit $GITHUB_SHA, so there are no builds to deploy. Run 'gh workflow run ci.yml --ref devel' for this commit, then re-run this workflow once that run has uploaded them."
             exit 1
           fi
           RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID"
@@ -354,8 +354,8 @@ jobs:
       # this run will perform. Anything that does not deploy dev builds the
       # top-level (production) configuration.
       cloudflare-env: ${{ (github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy'))) && 'dev' || '' }}
-      # Cloud deploys reuse this top-level console, and the lookup only trusts push runs.
-      build-console-prod: ${{ github.event_name == 'push' && github.ref == 'refs/heads/devel' }}
+      # Cloud deploys reuse this top-level console, and the lookup only trusts push and dispatch runs.
+      build-console-prod: ${{ github.ref == 'refs/heads/devel' }}
       # Only runs that deploy upload sourcemaps, and only from this repository:
       # fork pull requests get no secrets, and uploading without a token fails the build.
       sentry-upload: ${{ github.ref == 'refs/heads/devel' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.labels.*.name, 'deploy')) }}
