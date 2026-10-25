@@ -35,6 +35,13 @@ test("the parameters chip names a lone set by its tags, and counts several", () 
 	expect(sets({ sets: [] })).toBe("every variant");
 });
 
+// Kills an empty value shown bare on the chip, which reads as no value.
+test("the parameters chip shows an empty value as quotes", () => {
+	expect(chipSummary({ ...QUERY, sets: [{ env: "" }] }, "sets", PERF)).toBe(
+		'env=""',
+	);
+});
+
 // Kills a chip that counts values the plot has named, and one that names a
 // value the plot has not, by its UUID.
 test("a chip names its values once the plot has named them all, and counts them until then", () => {

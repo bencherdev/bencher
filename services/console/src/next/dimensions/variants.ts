@@ -1,10 +1,11 @@
 import type { JsonVariant } from "../../types/bencher";
+import { parameterTag, shownValue } from "../tag";
 
 /** A variant's parameters as `key=value` tags, in key order. */
 export const tagsOf = (variant: JsonVariant) =>
-	Object.keys(variant.parameters)
-		.sort()
-		.map((key) => `${key}=${variant.parameters[key]}`);
+	Object.entries(variant.parameters)
+		.sort(([a], [b]) => (a < b ? -1 : 1))
+		.map(([key, value]) => parameterTag(key, value));
 
 /**
  * Every benchmark is born with an empty variant, which a run that reports
@@ -23,7 +24,8 @@ export const parametersInUse = (variants: JsonVariant[]) => {
 	for (const variant of variants) {
 		for (const [key, value] of Object.entries(variant.parameters)) {
 			const values = keys.get(key) ?? new Map<string, number>();
-			values.set(String(value), (values.get(String(value)) ?? 0) + 1);
+			const shown = shownValue(value);
+			values.set(shown, (values.get(shown) ?? 0) + 1);
 			keys.set(key, values);
 		}
 	}
