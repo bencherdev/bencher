@@ -6,7 +6,7 @@
 		"cls": 0.00025,
 		"jsBytes": 40720,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2620,
 		"inlineScriptBytes": 2560,
@@ -342,7 +342,7 @@
 		"jsBytes": 44800,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"htmlBytes": 1770,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -356,7 +356,7 @@
 		"jsBytes": 46760,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"htmlBytes": 1870,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -370,7 +370,7 @@
 		"jsBytes": 47580,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"htmlBytes": 1780,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -384,7 +384,7 @@
 		"jsBytes": 56890,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"htmlBytes": 1830,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -398,7 +398,7 @@
 		"jsBytes": 57980,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"htmlBytes": 1850,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -412,7 +412,7 @@
 		"jsBytes": 47870,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"htmlBytes": 1800,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -426,7 +426,7 @@
 		"jsBytes": 51110,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"htmlBytes": 1910,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -440,7 +440,7 @@
 		"jsBytes": 50300,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"htmlBytes": 1890,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -454,7 +454,7 @@
 		"jsBytes": 53310,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 17240,
+		"cssBytes": 17340,
 		"htmlBytes": 1890,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
