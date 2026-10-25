@@ -908,6 +908,84 @@ test("an opened run whose reports failed shows one row whose Retry asks again", 
 	expect(row?.getBoundingClientRect().height).toBe(40);
 });
 
+// Kills a report, All, failed, or placeholder row without the tint or the
+// rail, a tint or a rail on a run's own row, a hover that replaces the tint
+// or stacks nothing on it, and a tint or rail lost on a phone.
+test("an opened run's rows take a tint and a rail, and their hover stacks on the tint", async () => {
+	for (const width of [1280, 390]) {
+		await page.viewport(width, 844);
+		const runs = [
+			runFixture(0, { reports: 3 }),
+			runFixture(1, { reports: 2 }),
+			runFixture(2, { reports: 2 }),
+			runFixture(3),
+		];
+		const [read, failed, waiting] = runs as [
+			JsonConsoleRunSummary,
+			JsonConsoleRunSummary,
+			JsonConsoleRunSummary,
+		];
+		mount(runs, 4, {
+			opened: [read.uuid, failed.uuid, waiting.uuid],
+			reads: {
+				[read.uuid]: readOf(2, 3),
+				[failed.uuid]: { isError: true },
+			},
+		});
+		await expect
+			.element(table().getByRole("link", { name: "All 3 reports" }))
+			.toBeVisible();
+		await expect.element(table().getByRole("alert")).toBeVisible();
+		await expect
+			.poll(
+				() =>
+					document.querySelectorAll("tbody .reports-testbed .rowlink-name")
+						.length,
+			)
+			.toBe(2);
+		const rows = [
+			...document.querySelectorAll<HTMLElement>("tbody tr[aria-rowindex]"),
+		];
+		const children = rows.filter((row) => !row.querySelector(".rn-toggle"));
+		const parents = rows.filter((row) => row.querySelector(".rn-toggle"));
+		expect([children.length, parents.length]).toEqual([6, 4]);
+		const tint = (row: Element) => getComputedStyle(row).backgroundColor;
+		const rails = (row: HTMLElement) =>
+			[row, ...row.querySelectorAll("td")]
+				.filter((element) => element.checkVisibility())
+				.map((element) => getComputedStyle(element, "::before"))
+				.filter((style) => style.content !== "none" && style.display !== "none")
+				.map((style) => style.backgroundColor);
+		const [first] = children as [HTMLElement];
+		const [parent, resting] = parents as [HTMLElement, HTMLElement];
+		for (const row of children) {
+			expect(tint(row)).toBe(tint(first));
+			expect(rails(row)).toHaveLength(1);
+			expect([tint(row), tint(parent)]).not.toContain(rails(row)[0]);
+		}
+		for (const row of parents) {
+			expect(tint(row)).not.toBe(tint(first));
+			expect(rails(row)).toEqual([]);
+		}
+
+		const [hovered, sibling] = children.filter((row) =>
+			row.querySelector(".reports-testbed .rowlink-name"),
+		) as [HTMLElement, HTMLElement];
+		await userEvent.hover(parent);
+		await expect.poll(() => tint(parent)).not.toBe(tint(resting));
+		const overlay = tint(parent);
+		await userEvent.hover(hovered);
+		await expect
+			.poll(() => getComputedStyle(hovered).backgroundImage)
+			.toContain(overlay);
+		expect(tint(hovered)).toBe(tint(sibling));
+		expect(getComputedStyle(sibling).backgroundImage).toBe("none");
+		await userEvent.unhover(hovered);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
 // Kills a row count or row numbers that leave an opened run's rows out, and
 // a range on screen counted in rows rather than runs, which would ask for the
 // next batch of runs too soon while one is open.

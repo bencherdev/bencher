@@ -163,6 +163,28 @@
 tr:has([aria-expanded="true"]) .rn-caret {
 	transform: rotate(180deg);
 }
+.rn-child {
+	position: relative;
+	background: var(--color-background-tag);
+}
+.rn-child.rowlink:hover {
+	background: linear-gradient(
+			var(--color-overlay-hover),
+			var(--color-overlay-hover)
+		)
+		var(--color-background-tag);
+}
+/* A row's own pseudo-element would become a cell, and a wide row's separators straddle its edges. */
+.rn-child > [data-fold="l1"]::before {
+	content: "";
+	position: absolute;
+	inset: 0.5px auto -0.5px 0;
+	width: 2px;
+	background: var(--color-border-emphasized);
+}
+:where(.rn-child):not(:has(+ .rn-child)) > [data-fold="l1"]::before {
+	bottom: 0.5px;
+}
 /* A runner job's status where its run's or report's time will land. */
 .rn-st {
 	display: inline-flex;
@@ -395,6 +417,13 @@ tr:has([aria-expanded="true"]) .rn-caret {
 	/* An opened run's rows sit indented under it. */
 	.reports-table.ui-table[data-fold] tbody tr.rn-child {
 		padding-left: 28px;
+		background-clip: padding-box;
+	}
+	.rn-child > [data-fold]::before {
+		inset: -1px auto 0 0;
+	}
+	:not(.rn-child) + .rn-child > [data-fold]::before {
+		top: 0;
 	}
 	.rn-held .ui-button {
 		min-height: 44px;
