@@ -752,6 +752,8 @@ export enum Adapter {
 	JsBenchmark = "js_benchmark",
 	JsTime = "js_time",
 	JsVitest = "js_vitest",
+	JsVitestV1 = "js_vitest_v1",
+	JsVitestV5 = "js_vitest_v5",
 	Python = "python",
 	PythonAsv = "python_asv",
 	PythonPytest = "python_pytest",

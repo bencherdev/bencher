@@ -53,6 +53,8 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"js_benchmark",
 	"js_time",
 	"js_vitest",
+	"js_vitest_v1",
+	"js_vitest_v5",
 	"json",
 	"json_v0",
 	"json_v1",

@@ -95,6 +95,12 @@ impl Finite {
     }
 }
 
+impl From<Option<f64>> for Finite {
+    fn from(value: Option<f64>) -> Self {
+        Self(value.filter(|value| value.is_finite()))
+    }
+}
+
 impl<'de> Deserialize<'de> for Finite {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

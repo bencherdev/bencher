@@ -65,6 +65,10 @@ impl LeafResults {
         self.skipped.variants += 1;
     }
 
+    pub(crate) fn skip_measure(&mut self) {
+        self.skipped.measures += 1;
+    }
+
     /// The results, recording `adapter` as the leaf that parsed them, or `None`
     /// when the input held no benchmark this leaf reads.
     pub(crate) fn finish(self, adapter: Adapter) -> Option<AdapterResults> {

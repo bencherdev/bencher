@@ -81,6 +81,7 @@ pub mod default {
     create_measure!(Cycles, "Cycles", "cycles", "cycles");
     create_measure!(CpuTime, "CPU Time", "cpu-time", NANOSECONDS);
     create_measure!(Allocations, "Allocations", "allocations", "allocations");
+    create_measure!(PageFaults, "Page Faults", "page-faults", "faults");
 }
 
 pub mod json {

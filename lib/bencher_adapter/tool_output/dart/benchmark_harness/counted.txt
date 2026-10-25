@@ -1,0 +1,4 @@
+MyBench(RunTime): 0.59775325
+MyBench(Count): 3.0
+MyBench.totalIterations(Count): 3.0 runs
+Loop.totalIterations(RunTime): 0.2910974105016523 us.
