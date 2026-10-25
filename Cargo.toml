@@ -199,7 +199,7 @@ uuid = "1.22"
 wasm-bindgen = "0.2"
 wasm-bindgen-test = "0.3"
 windows = "0.62"
-zstd = "0.13"
+zstd = "0.14"
 # oxide
 dropshot = { version = "0.17.1", default-features = false }
 progenitor = { version = "0.15", default-features = false }
