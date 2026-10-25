@@ -28,10 +28,17 @@ const order = [
  * The order's read waits for `release` when `held`.
  */
 const open = (
-	props: { order?: typeof order; held?: boolean; refused?: number } = { order },
+	props: {
+		order?: typeof order;
+		held?: boolean;
+		refused?: number;
+		pinned?: Partial<JsonPlot>;
+	} = { order },
 ) => {
 	let refusals = props.refused ?? 0;
-	const { plot, perf } = testTile();
+	const tile = testTile();
+	const plot = { ...tile.plot, ...props.pinned };
+	const { perf } = tile;
 	const reads: URL[] = [];
 	let release = () => {};
 	const held = new Promise<void>((resolve) => {
@@ -91,6 +98,12 @@ const windowDays = (url: URL) =>
 	(Number(url.searchParams.get("end_time")) -
 		Number(url.searchParams.get("start_time"))) /
 	(DAY * 1000);
+
+// Kills an empty value shown bare in the saved query, which reads as no value.
+test("the saved query shows an empty value as quotes", async () => {
+	const { dialog } = open({ order, pinned: { parameters: [{ env: "" }] } });
+	await expect.element(dialog.getByText(/ · env="" · /)).toBeVisible();
+});
 
 // Kills a custom window of the wrong length, a preview that stays at the saved
 // window, a window the save leaves out, and a move sent when the pin stays put.

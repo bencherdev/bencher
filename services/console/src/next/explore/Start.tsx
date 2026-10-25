@@ -51,6 +51,7 @@ import {
 	startQueries,
 } from "./start";
 import { rollingName } from "./window";
+import { parameterTag } from "../tag";
 
 /** Three short lists blank Explore starts from, asked for in one round; a run opens to its reports in place, and a report to its benchmarks. */
 const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
@@ -109,7 +110,7 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 										alert.limit === BoundaryLimit.Lower ? "lower" : "upper",
 									);
 						const tags = Object.entries(alert.variant.parameters).map(
-							([key, value]) => `${key}=${String(value)}`,
+							([key, value]) => parameterTag(key, value),
 						);
 						const { branch, testbed, measure } = alert.threshold;
 						return (

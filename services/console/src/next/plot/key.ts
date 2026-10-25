@@ -1,4 +1,5 @@
 import type { PlotLine, PlotMeasure, PlotParameterValue } from "./types";
+import { parameterTag } from "../tag";
 
 /** Line indices in key order: alerting lines first, then the given order. */
 export const keyOrder = (lines: readonly PlotLine[]): number[] => {
@@ -40,7 +41,7 @@ export const varyingKeys = (lines: readonly PlotLine[]): string[] =>
 	);
 
 const tag = (key: string, value: PlotParameterValue): string =>
-	`${key}=${String(value)}`;
+	parameterTag(key, value);
 
 /** The parameters every line carries with one value, which key entries leave out. */
 export const constantParameters = (lines: readonly PlotLine[]): string[] => {

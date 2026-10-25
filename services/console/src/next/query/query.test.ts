@@ -205,6 +205,11 @@ describe("decodeQuery", () => {
 		});
 	});
 
+	// Kills an empty string value dropped, which the API reads as a value of its own.
+	test("read an empty string value", () => {
+		expect(decodeQuery('parameters={"env":""}').sets).toEqual([{ env: "" }]);
+	});
+
 	// Kills a set list holding the empty set read as narrowing, which the API
 	// reads as every variant: the box would draw a row that filters nothing.
 	// The empty set counts past the eight sets the box keeps.

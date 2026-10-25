@@ -27,6 +27,7 @@ import { projectPath } from "../paths";
 import { lineVisible, settleVisibility } from "../query/line";
 import { type ExploreQuery, encodeQuery } from "../query/query";
 import Tools from "../shell/Tools";
+import { parameterTag } from "../tag";
 
 export type PlotView = typeof import("../plot/Plot").default;
 
@@ -313,7 +314,7 @@ const Boxes = (props: {
 							<span class="ex-tags">
 								<For
 									each={Object.entries(set()).map(
-										([key, value]) => `${key}=${String(value)}`,
+										([key, value]) => parameterTag(key, value),
 									)}
 								>
 									{(tag) => <span class="ex-tag">{tag}</span>}

@@ -14,6 +14,7 @@ import type {
 	PlotXAxis,
 } from "./types";
 import type { UnitScale } from "./units";
+import { parameterTag } from "../tag";
 
 const READOUT_ROWS = 6;
 
@@ -21,9 +22,9 @@ const READOUT_ROWS = 6;
 export const tagsOf = (
 	parameters: Readonly<Record<string, PlotParameterValue>>,
 ) =>
-	Object.keys(parameters)
-		.sort()
-		.map((key) => `${key}=${String(parameters[key])}`);
+	Object.entries(parameters)
+		.sort(([a], [b]) => (a < b ? -1 : 1))
+		.map(([key, value]) => parameterTag(key, value));
 
 // A threshold with no metric checks the conventional name.
 const VALUE = "value";
