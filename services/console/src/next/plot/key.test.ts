@@ -50,6 +50,30 @@ describe("varyingKeys", () => {
 	});
 });
 
+describe("lineNames", () => {
+	// Kills an empty value shown bare, which reads as no value, whether its
+	// entry names the key or shows the value alone.
+	test("shows an empty value as quotes", () => {
+		const tags = (parameters: Record<string, string | number>[]) =>
+			lineNames(
+				parameters.map((set, n) =>
+					testLine({ id: String(n), parameters: set }),
+				),
+				MEASURES,
+			).names.map(({ tags }) => tags);
+		expect(
+			tags([
+				{ env: "", n: 1 },
+				{ env: "a", n: 2 },
+			]),
+		).toEqual([
+			['env=""', "n=1"],
+			["env=a", "n=2"],
+		]);
+		expect(tags([{ env: "" }, { env: "a" }])).toEqual([['""'], ["a"]]);
+	});
+});
+
 describe("constantParameters", () => {
 	test("lists the parameters every line carries with one value", () => {
 		const lines = [

@@ -383,7 +383,9 @@ fn adapter_docs(adapter: Adapter) -> (&'static str, &'static str) {
         Adapter::JsVitest | Adapter::JsVitestV1 | Adapter::JsVitestV5 => {
             ("JavaScript Vitest", "-javascript-vitest")
         },
-        Adapter::PythonAsv => ("Python ASV", "-python-asv"),
+        Adapter::PythonAsv | Adapter::PythonAsvJson | Adapter::PythonAsvText => {
+            ("Python ASV", "-python-asv")
+        },
         Adapter::PythonPytest => ("Python Pytest", "-python-pytest"),
         Adapter::RubyBenchmark => ("Ruby Benchmark", "%EF%B8%8F-ruby-benchmark"),
         Adapter::ShellHyperfine | Adapter::ShellHyperfineV1 | Adapter::ShellHyperfineV2 => {

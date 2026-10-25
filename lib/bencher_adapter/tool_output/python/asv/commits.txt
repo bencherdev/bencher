@@ -1,0 +1,30 @@
+· Creating environments
+· Discovering benchmarks
+· Running 6 total benchmarks (2 commits * 1 environments * 3 benchmarks)
+[ 0.00%] · For demo commit cb27eaf9 <main>:
+[ 0.00%] ·· Benchmarking virtualenv-py3.12
+[ 8.33%] ··· Running (benchmarks.TimeSuite.time_iterkeys--)...
+[33.33%] ··· benchmarks.TimeSuite.time_iterkeys                                                             2.09±0.08μs
+[41.67%] ··· benchmarks.TimeSuite.time_keys                                                                 2.15±0.02μs
+[50.00%] ··· benchmarks.time_single_param                                                                            ok
+[50.00%] ··· ======== =============
+              param1               
+             -------- -------------
+                1       85.3±0.5ns 
+               1000    5.59±0.01μs 
+             ======== =============
+
+[50.00%] · For demo commit ba16d452 <main~1>:
+[50.00%] ·· Building for virtualenv-py3.12
+[50.00%] ·· Benchmarking virtualenv-py3.12
+[58.33%] ··· Running (benchmarks.TimeSuite.time_iterkeys--)...
+[83.33%] ··· benchmarks.TimeSuite.time_iterkeys                                                             2.10±0.04μs
+[91.67%] ··· benchmarks.TimeSuite.time_keys                                                                  2.34±0.2μs
+[100.00%] ··· benchmarks.time_single_param                                                                            ok
+[100.00%] ··· ======== =============
+               param1               
+              -------- -------------
+                 1        87.0±1ns  
+                1000    5.65±0.05μs 
+              ======== =============
+

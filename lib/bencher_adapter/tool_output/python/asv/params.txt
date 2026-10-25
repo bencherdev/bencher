@@ -1,0 +1,96 @@
+· Creating environments
+· Discovering benchmarks
+· Running 10 total benchmarks (1 commits * 1 environments * 10 benchmarks)
+[ 0.00%] · For demo commit cb27eaf9 <main>:
+[ 0.00%] ·· Benchmarking virtualenv-py3.12
+[10.00%] ··· Running (benchmarks.Params.time_join--).......
+[55.00%] ··· benchmarks.MemSuite.mem_list                                                                          2.1k
+[60.00%] ··· benchmarks.Params.time_join                                                                             ok
+[60.00%] ··· ====== ========= ==========
+             --             kind        
+             ------ --------------------
+              size      a        b c    
+             ====== ========= ==========
+               10    150±4ns   146±2ns  
+              100    420±8ns   427±40ns 
+             ====== ========= ==========
+
+[65.00%] ··· benchmarks.TimeSuite.time_iterkeys                                                              2.12±0.3μs
+[70.00%] ··· benchmarks.TimeSuite.time_keys                                                                  2.10±0.3μs
+[75.00%] ··· benchmarks.Wide.time_wide                                                                       2/8 failed
+[75.00%] ··· === ========= ============= =========== ===============
+             --                     scale / label                   
+             --- ---------------------------------------------------
+              n   0.5 / x   0.5 / y / z   1e-05 / x   1e-05 / y / z 
+             === ========= ============= =========== ===============
+              1   124±9ns     125±10ns     124±10ns      135±4ns    
+              2    failed     157±7ns       failed       152±10ns   
+             === ========= ============= =========== ===============
+             For parameters: 2, 0.5, 'x'
+             Traceback (most recent call last):
+               File "/tmp/venv/lib/python3.12/site-packages/asv/benchmark.py", line 99, in <module>
+                 main()
+               File "/tmp/venv/lib/python3.12/site-packages/asv/benchmark.py", line 91, in main
+                 commands[mode](args)
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/run.py", line 73, in _run
+                 result = benchmark.do_run()
+                          ^^^^^^^^^^^^^^^^^^
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/benchmarks/_base.py", line 779, in do_run
+                 return self.run(*self._build_params())
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/benchmarks/time.py", line 235, in run
+                 samples, number = self.benchmark_timing(
+                                   ^^^^^^^^^^^^^^^^^^^^^^
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/benchmarks/time.py", line 331, in benchmark_timing
+                 timing = timer.timeit(number)
+                          ^^^^^^^^^^^^^^^^^^^^
+               File "/usr/lib/python3.12/timeit.py", line 180, in timeit
+                 timing = self.inner(it, self.timer)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+               File "<timeit-src>", line 6, in inner
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/benchmarks/time.py", line 130, in func
+                 self.func(*param)
+               File "/tmp/asvproj/benchmarks/benchmarks.py", line 36, in time_wide
+                 raise ValueError("boom")
+             ValueError: boom
+             
+             For parameters: 2, 1e-05, 'x'
+             Traceback (most recent call last):
+               File "/tmp/venv/lib/python3.12/site-packages/asv/benchmark.py", line 99, in <module>
+                 main()
+               File "/tmp/venv/lib/python3.12/site-packages/asv/benchmark.py", line 91, in main
+                 commands[mode](args)
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/run.py", line 73, in _run
+                 result = benchmark.do_run()
+                          ^^^^^^^^^^^^^^^^^^
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/benchmarks/_base.py", line 779, in do_run
+                 return self.run(*self._build_params())
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/benchmarks/time.py", line 235, in run
+                 samples, number = self.benchmark_timing(
+                                   ^^^^^^^^^^^^^^^^^^^^^^
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/benchmarks/time.py", line 331, in benchmark_timing
+                 timing = timer.timeit(number)
+                          ^^^^^^^^^^^^^^^^^^^^
+               File "/usr/lib/python3.12/timeit.py", line 180, in timeit
+                 timing = self.inner(it, self.timer)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+               File "<timeit-src>", line 6, in inner
+               File "/tmp/asvproj/.asv/env/606287e3db2922a1ea431fdbf3655ceb/lib/python3.12/site-packages/asv_runner/benchmarks/time.py", line 130, in func
+                 self.func(*param)
+               File "/tmp/asvproj/benchmarks/benchmarks.py", line 36, in time_wide
+                 raise ValueError("boom")
+             ValueError: boom
+
+[80.00%] ··· benchmarks.peakmem_list                                                                              27.2M
+[85.00%] ··· benchmarks.time_fails                                                                               failed
+[90.00%] ··· benchmarks.time_single_param                                                                            ok
+[90.00%] ··· ======== ============
+              param1              
+             -------- ------------
+                1       77.5±6ns  
+               1000    5.36±0.2μs 
+             ======== ============
+
+[95.00%] ··· benchmarks.time_slow                                                                              2.06±0ms
+[100.00%] ··· benchmarks.track_count                                                                                  42

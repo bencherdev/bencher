@@ -29,7 +29,7 @@ import { lineVisible, settleVisibility } from "../query/line";
 import { type ExploreQuery, encodeQuery } from "../query/query";
 import Tools from "../shell/Tools";
 import { formatCount } from "../plot/count";
-import Tag from "../tag";
+import Tag, { parameterTag } from "../tag";
 
 export type PlotView = typeof import("../plot/Plot").default;
 
@@ -319,7 +319,7 @@ const Boxes = (props: {
 							<span class="ex-tags">
 								<For
 									each={Object.entries(set()).map(
-										([key, value]) => `${key}=${String(value)}`,
+										([key, value]) => parameterTag(key, value),
 									)}
 								>
 									{(tag) => <Tag class="ex-tag" tag={tag} tail reveal />}

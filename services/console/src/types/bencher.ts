@@ -756,6 +756,8 @@ export enum Adapter {
 	JsVitestV5 = "js_vitest_v5",
 	Python = "python",
 	PythonAsv = "python_asv",
+	PythonAsvJson = "python_asv_json",
+	PythonAsvText = "python_asv_text",
 	PythonPytest = "python_pytest",
 	Ruby = "ruby",
 	RubyBenchmark = "ruby_benchmark",

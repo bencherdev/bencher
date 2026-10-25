@@ -67,9 +67,10 @@ pub fn is_valid_parameter_key(parameter_key: &str) -> bool {
 
 /// The string value of one benchmark parameter.
 ///
-/// Only the string form is bound. A number or a boolean has one canonical
-/// spelling that is inherently short, so a length rule over either would be a
-/// rule about nothing.
+/// Unlike a key, a value may be empty: a variable set to the empty string is not
+/// one left unset. Only the string form is bound. A number or a boolean has one
+/// canonical spelling that is inherently short, so a length rule over either would
+/// be a rule about nothing.
 #[derive(Debug, Display, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(try_from = "String")]
@@ -113,7 +114,7 @@ impl From<ParameterValue> for String {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_parameter_value(parameter_value: &str) -> bool {
-    is_valid_len(parameter_value)
+    parameter_value.is_empty() || is_valid_len(parameter_value)
 }
 
 #[cfg(test)]
@@ -139,14 +140,14 @@ mod tests {
 
     #[test]
     fn is_valid_parameter_value_true() {
-        for value in ["read", "write", "sequential", LEN_64_STR] {
+        for value in [LEN_0_STR, "read", "write", "sequential", LEN_64_STR] {
             assert_eq!(true, is_valid_parameter_value(value), "{value}");
         }
     }
 
     #[test]
     fn is_valid_parameter_value_false() {
-        for value in [LEN_0_STR, LEN_65_STR, " ", "\r", " lead", "trail "] {
+        for value in [LEN_65_STR, " ", "\r", " lead", "trail "] {
             assert_eq!(false, is_valid_parameter_value(value), "{value}");
         }
     }
@@ -168,6 +169,7 @@ mod tests {
         let json = serde_json::to_string(&parameter_value).unwrap();
         assert_eq!(json, "\"read\"");
 
-        serde_json::from_str::<ParameterValue>("\"\"").unwrap_err();
+        let empty: ParameterValue = serde_json::from_str("\"\"").unwrap();
+        assert_eq!(empty.as_ref(), "");
     }
 }
