@@ -1,0 +1,4 @@
+sum loop: 6.468ms
+offset: -1.5s
+x: .5ms
+sort: 1.114ms
