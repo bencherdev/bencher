@@ -1,0 +1,12 @@
+## Autenticación de agentes
+
+Hasta Bencher Bare Metal, toda la autenticación había sido con JWT. JWT grandes, preciosos e incomprensibles. La autenticación de los runners de Bare Metal era una clave API con un prefijo de nombre, por ejemplo `bencher_runner_abc123...`.
+
+En el lado del cliente, quería darles a los agentes algo con lo que trabajar que no fuera el propio JWT del token API de un usuario. El punto intermedio que encontré fue implementar por fin una funcionalidad muy solicitada desde hacía tiempo: la autenticación con alcance de proyecto. Claude me ayudó a crear claves API seguras, con prefijo y con alcance de proyecto. Estas claves API están limitadas a permisos equivalentes a lo que hace [el comando `bencher run` del CLI][bencher run]: lecturas con alcance de proyecto y escrituras no destructivas. Esto también hace que estas claves API encajen de forma natural en los flujos de trabajo de CI de benchmarking continuo.
+
+Más tarde, cuando añadí el [Bencher MCP][bencher mcp], estas claves API con alcance de proyecto también se usaron para la autenticación allí. El estándar MCP especifica OAuth 2.1, pero [todavía es un borrador][ietf oauth 2.1], así que no quise implementarlo aún. Sinceramente, soy un poco escéptico con MCP. Sigo pensando que un buen CLI + [skills][bencher skills] es una forma más eficaz y portable de exponer un servicio a un agente. Aunque el mayor problema de los CLI es que carecen de un mecanismo de autenticación estándar. Así que, aunque OAuth 2.1 todavía sea un borrador, al menos MCP tiene eso cubierto. Y una buena historia de autenticación importa _de verdad_ en el mundo enterprise.
+
+[bencher run]: /es/docs/explanation/bencher-run/
+[bencher mcp]: /es/docs/how-to/mcp/
+[ietf oauth 2.1]: https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/
+[bencher skills]: /es/docs/how-to/install-cli/#claude-code

@@ -1,0 +1,27 @@
+## What happens when the number of developers 100x?
+
+Back in 2022, I was looking for a new side project. I had shutdown my previous wantrepreneurial endeavor back in 2020. LPT: Listen to Jason Cohen, [don't try to bootstrap a marketplace][youtube jason cohen marketplace].
+
+I was building a static bash parser and analyzer in Rust at my day job, and I found I was having to use a spreadsheet to track my benchmark results. The Rust project has [`rustc-perf`][rustc perf] to track the performance of the compiler itself. Yet, there wasn't a good tool to do this on my own code.
+
+I did _a lot_ of research into [prior art][bencher prior art] within the field. Over the course of a few months, I had calls with several developers who had either built or advocated building continuous benchmarking tools. Everyone was reinventing the wheel. I thought I had found a nice quiet node in the water of the marketplace. There was an obvious, ongoing need. Many teams were already paying more than $100/month for their own bare metal runners. So there was willingness to pay. Yet, the use case was niche. Most modern software is deployed as a service, so shifting performance testing left wasn't as much of a priority for most teams. They'd just set up alerts in Grafana post deploy and post hoc catch anything that slipped through.
+
+With highly capable agents coming online though, two factors have greatly increased the usage of Bencher:
+
+1. The need to adopt software engineering best practices in order to deterministically test the output of agents
+2. The ease of adopting software engineering best practices with the help of agents
+
+LLMs and by extension agents are nondeterministic, stochastic systems. Like human developers, they need guardrails in order to make sure they maintain code quality. The ways to do this are not new: a robust type system, a standard formatter, a linter turned up to 11, tests, tests, and more tests. All run in CI. For performance sensitive workloads, these tests include benchmarks that are tracked. Tracking software performance over time allows you to catch performance regressions in CI. This is called continuous benchmarking. Implementing continuous benchmarking was always a bit of a chore. Only teams that really, _really_ cared about performance would do it, and they made great Bencher users!
+
+With the advent of agents though, the overhead of adding continuous benchmarking to your workflow using Bencher became just a short prompt away. It's hard to track completely, but I would wager the vast majority of Bencher's inbound signups now come from the recommendation of an agent or an agent doing it themselves. This will only become more true over time, as more developers adopt agents and empower them with agentic commerce. It may or may not be the [x402 protocol][x402 protocol], but I think a lot of devtool spend in the future will be mediated by agents. I recommend that you reserve your [Cloudflare Wallet][cloudflare wallet] and [Stripe Wallet][stripe wallet], if you haven't already.
+
+Nearly all devtools will need to move to usage-based pricing in the agentic era. Seat-based pricing does not make sense when agents are the ones using your service. Bencher has always had usage-based pricing. However, with the help of Claude I recently revamped the pricing model to be even more agent friendly. Previously, Bencher would charge per Metric. A Metric is a single point-in-time benchmark result. For example, if you have 1 benchmark and you run it 5 times, that creates 5 Metrics. Claude helped me analyze user feedback and usage patterns. I came to the conclusion that the unit we were using for our usage-based pricing model needed to change. Now Bencher charges per Benchmark Series. A Benchmark Series is a benchmark tracked over time. Going back to our example, if you have 1 benchmark and you run it 5 times, that is 1 Benchmark Series. This new pricing model gives users a lot more predictability. You can hand an agent an optimization problem, and it can hill climb on your historical benchmarks without incurring any additional cost.
+
+One of the things that I have not seen change this past year are open source contributions. Bencher has received a couple of AI slop PRs. The main issue with these PRs was that they fixed random, unrelated bugs they happened to find along the way. They were still genuine bugs though! So I just sort of shrugged and merged the PRs after having my own agent review them of course. It is a bit sad, but I no longer see much benefit to courting open source contributors. Whether it's their tokens or mine, I still need to put the same amount of effort into reviewing the code. It's now much more energy to review a contributor's PR than to iterate with Claude myself.
+
+[youtube jason cohen marketplace]: https://youtu.be/otbnC2zE2rw?si=S1wob8y1TiOiverE&t=2071
+[rustc perf]: https://github.com/rust-lang/rustc-perf
+[bencher prior art]: /docs/reference/prior-art/
+[x402 protocol]: https://x402.org/
+[cloudflare wallet]: https://cloudflare.pay/
+[stripe wallet]: https://docs.stripe.com/payments/wallets

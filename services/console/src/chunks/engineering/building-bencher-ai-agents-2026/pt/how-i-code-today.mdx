@@ -1,0 +1,12 @@
+## Como Eu Programo Hoje
+
+Na época em que eu usava o GitHub Copilot, ele era uma extensão no VSCode. Quando mudei para o Claude Code, eu usava a CLI. Eu tinha três janelas de terminal, cada uma em seu próprio Space do macOS. Cada janela de terminal tinha duas abas. Uma aba era para o Claude e a outra para o [Jujutsu (`jj`)][github jj]. Eu ainda gerenciava o controle de versão e os workspaces do `jj` eu mesmo.
+
+Hoje em dia, eu só uso o app desktop do Claude Code. Toda nova sessão que inicio parte do meu meta-repo com a caixa de seleção `worktree` marcada. Parei de usar o Plan mode há alguns meses. Nunca instalei a [skill `/grill-me`][github grill me] do Matt Pocock. Eu só peço ao Claude no prompt para “me sabatinar sobre todas as decisões de design”, e a esta altura o modelo sabe o que fazer. Meu ~~`CLAUDE.md`~~ `AGENTS.md` está bem ajustado para o jeito como quero que o modelo se comporte.
+
+Praticamente desativei meu fluxo de trabalho de CI do Claude Review. Agora o agente cuida de iniciar um revisor adversarial localmente sem que eu sequer precise pedir. Depois eles iteram até convergir, às vezes por até meia dúzia de rodadas. Comecei a experimentar transferir o trabalho de desenvolvimento para máquinas de trabalho externas e deixar minha máquina local apenas como orquestradora.
+
+A única vez que mexo no controle de versão eu mesmo é quando quero fazer checkout de um build para testar coisas por conta própria ou quando estou criando um release versionado e com tag do Bencher. Isso acontece cerca de uma vez por semana e uma vez por mês, respectivamente. Fora isso, agora eu simplesmente deixo o Claude cuidar disso. Faço amplo uso de PRs em draft e, agora que estão disponíveis no GitHub, de PRs empilhados. Não olho para o código até o PR estar aberto. Eu ainda passo os olhos pelo código do Bencher, mas a esta altura é mais uma checagem de sanidade do que uma revisão de código de verdade.
+
+[github jj]: https://github.com/jj-vcs/jj
+[github grill me]: https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md

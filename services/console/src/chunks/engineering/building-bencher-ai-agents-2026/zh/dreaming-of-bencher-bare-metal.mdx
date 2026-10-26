@@ -1,0 +1,17 @@
+## 梦想中的 Bencher Bare Metal
+
+从 Bencher 最早期开始，我就一直梦想着打造一支裸机基准测试机群。传统的 CI 运行器由于本身就是虚拟机，噪声太大，无法给出一致的基准测试结果。你也许能检测到延迟增加了 200%，但永远无法可靠地检测到 20% 的增长。指令计数是在 CI 中进行基准测试的一种可能方案。它们基本上是确定性的。然而，指令计数只是你真正关心的东西（挂钟时间）的一个代理指标。任何在“CPU 模拟”中运行并吐出指令计数的东西，都只能与速度存在相关性。问题在于，除非你真的在裸机上测量，否则你永远不知道它到底偏差了多少。
+
+Bencher 最早的用户之一是 [Rustls 项目][rustls case study]。我参与贡献了他们的 [Rustls bench runner][github rustls bench app]。然而，它并不适合作为构建裸机基准测试机群的基础。它只部署在一台主机上，并且把所有基准测试工作负载都视为可信的。这意味着不支持来自 fork 的 PR，也不支持多租户。再说，大多数团队也不想为每台裸机基准测试服务器每月支付 100 美元以上。
+
+我曾考虑过用 GitHub Actions 作为编排层，但这种方案有几个根本性的缺陷。首先，[GitHub Actions Runner][github actions runner] 是用 C# 编写的。这意味着它的垃圾回收器可能会在你的运行过程中突然启动，扭曲你的基准测试结果。哦对了，记得把[自动更新程序][runner auto updater]关掉，免得它在运行途中启动，但也别把它忘太久，否则你的任务就会停止运行！
+
+就算 GitHub Actions Runner 是一个安静乖巧的 Rust 二进制文件，更根本的问题在于它和 GitHub Actions 绑死了。Bencher 从一开始就是 CLI 优先的。不管是好是坏，我一直不想把 Bencher 和任何一家 CI 提供商绑得太深。确实有一个 [Bencher CLI GitHub Action][github action bencher cli]，但它所做的也只是帮你安装 CLI。我希望 Bencher Bare Metal 能在 CLI 能运行的任何地方工作，而不仅仅是 GitHub Actions。
+
+我想到的点子是：用 OCI 镜像来打包基准测试工作负载，再加上一个可选的、非常小的沙箱，确保在某台裸机主机上每次只运行一个任务。一想到要靠晚上和周末自己一个人把它做出来，我就望而生畏。白天有工作，家里还有家庭，我一个人一点点啃，至少也要花上一年。
+
+[rustls case study]: /zh/learn/case-study/rustls/
+[github rustls bench app]: https://github.com/rustls/rustls-bench-app
+[github actions runner]: https://github.com/actions/runner
+[runner auto updater]: https://docs.github.com/en/actions/reference/runners/self-hosted-runners#runner-software-updates-on-self-hosted-runners
+[github action bencher cli]: https://github.com/marketplace/actions/bencher-cli

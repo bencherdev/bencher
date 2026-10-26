@@ -1,0 +1,12 @@
+## 智能体认证
+
+在 Bencher Bare Metal 之前，所有的认证用的都是 JWT。又大、又美、又让人看不懂的 JWT。而 Bare Metal Runner 的认证则使用带名称前缀的 API 密钥，例如 `bencher_runner_abc123...`。
+
+在客户端，我想给智能体提供一种东西，而不是让它们直接用用户自己的 API 令牌 JWT。我找到的折中方案是，终于实现了一个呼声已久的功能：项目范围的认证。Claude 帮我创建了安全的、项目范围的、带前缀的 API 密钥。这些 API 密钥的权限仅限于与 [`bencher run` CLI 命令][bencher run]所执行的操作相当的范围：项目范围内的读取和非破坏性的写入。这也让这些 API 密钥天然适合用在持续基准测试的 CI 工作流中。
+
+后来我加入 [Bencher MCP][bencher mcp] 时，这些项目范围的 API 密钥也被用作那里的认证方式。MCP 标准指定的是 OAuth 2.1，但它[仍处于草案阶段][ietf oauth 2.1]，所以我暂时还不想实现它。说实话，我对 MCP 有点持怀疑态度。我仍然认为，一个好用的 CLI 加上[技能][bencher skills]，是向智能体开放一项服务更有效、也更具可移植性的方式。不过 CLI 最大的问题在于缺乏标准的认证机制。所以，尽管 OAuth 2.1 仍处于草案阶段，至少 MCP 把这一点考虑到了。而一个好的认证方案对企业来说*真的*很重要。
+
+[bencher run]: /zh/docs/explanation/bencher-run/
+[bencher mcp]: /zh/docs/how-to/mcp/
+[ietf oauth 2.1]: https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/
+[bencher skills]: /zh/docs/how-to/install-cli/#claude-code

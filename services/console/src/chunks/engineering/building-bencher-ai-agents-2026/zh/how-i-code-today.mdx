@@ -1,0 +1,12 @@
+## 我如今怎样写代码
+
+当年我用 GitHub Copilot 的时候，它是 VSCode 里的一个扩展。刚换到 Claude Code 时，我用的是 CLI。我会开三个终端窗口，每个都放在各自的 macOS Space 里。每个终端窗口有两个标签页。一个标签页给 Claude，另一个给 [Jujutsu (`jj`)][github jj]。那时我仍然自己管理版本控制和 `jj` workspace。
+
+如今，我只用 Claude Code 桌面应用。我开启的每一个新会话，都是从我的元仓库出发，并勾选了 `worktree` 复选框。几个月前我就不再用 Plan mode 了。我从来没装过 Matt Pocock 的 [`/grill-me` 技能][github grill me]。我只是在提示词里让 Claude “就所有设计决策对我进行拷问”，到了这个阶段，模型已经知道该怎么做了。我的 ~~`CLAUDE.md`~~ `AGENTS.md` 已经被调校得相当贴合我希望模型表现的方式。
+
+我的 Claude Review CI 工作流基本上已经退役了。现在，智能体会在本地自行启动一个对抗式审查者，根本不用我开口。然后它们反复迭代直到达成一致，有时多达六轮左右。我也开始尝试把开发工作卸载到外部的工作机上，只把本地机器留作编排者。
+
+我现在唯一会亲自碰版本控制的时候，是要检出某个构建亲自测试东西，或者要为 Bencher 创建一个打了标签、带版本号的发布。这两件事分别大约每周一次和每月一次。除此之外，我现在都交给 Claude 处理。我大量使用草稿 PR，而且既然 GitHub 上已经可以用了，还有堆叠 PR。PR 打开之前，我不看代码。我仍然会把 Bencher 的代码滚动浏览一遍，但到了这个阶段，这更像是一次合理性检查，而不是真正的代码审查。
+
+[github jj]: https://github.com/jj-vcs/jj
+[github grill me]: https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md

@@ -1,0 +1,26 @@
+_本文最初于 2026 年 10 月 4 日投稿至 [The Pragmatic Engineer's How Software Engineering is Changing Essay Challenge][pragmatic engineer essay challenge]。_
+
+今年，我构建软件的方式发生了翻天覆地的变化。我是一名主任软件工程师（staff software engineer）。过去六年里，我先后在一家由 YC 和 a16z 投资的独角兽公司和一家财富 500 强公司专职使用 Rust 工作。作为一名正在“戒断”中的 C++ 开发者，我发现自己被 Rust 所要求的深度和技艺深深吸引。我早已成为一名手工雕琢实时系统软件的资深匠人。而在过去的十个月里，我不得不亲手埋葬这个身份。虽然我的职位名称仍然写着“软件工程师”，但我现在的工作其实是“上下文工程师”。
+
+过去四年，我把晚上和周末都花在了打造一个开源、自力更生的业务上：[Bencher][bencher]。Bencher 是一个持续基准测试平台，帮助系统软件工程师在合并之前就发现性能回归。要做到这一点，需要一整套工具：一个 CLI、一个 API 服务器，以及一个前端 Web 控制台界面。这些组件，除去可以忽略不计的误差，全都是我一个人写的。这些年来我也有过几位值得一提的开源贡献者，但 Bencher 这个开源项目的绝大部分，以及 Bencher 这门生意的 100%，都是由我自己设计和实现的。
+
+这四年里，我可没有与世隔绝。我订了婚、结了婚，还迎来了第一个孩子。一个大型功能，我往往要花几周甚至几个月才能实现并上线。我得同时兼顾开发和技术支持。Bencher 那时已经有不少用户了，所以我会花相当多的时间回答问题，顺便修修偶尔冒出来的 bug。
+
+早在 2022 年，我对 LLM 的使用仅限于 [TabNine][wikipedia tabnine] 的 Rust 免费版。这是一个按 Tab 键自动补全的开发者工具，作者是一名学生，也是 OpenAI 的早期实习生，当时在做一个名叫 Codex 的有趣小项目。等到 GitHub Copilot 发布并非正式地加入 Rust 支持后，我掏出每月 10 美元买了一个个人许可证。
+
+它用起来很糙。但仍然有点像魔法。我记得 GitHub Copilot 的 VSCode 扩展加入聊天功能后不久，它写 Rust [过程宏][rust procedural macros]的本事就让我大吃一惊。通常我还得稍微改改它的输出，但有那么几次，它居然一次就搞定了。离谱！这很酷，大概也帮我省了些时间，但我的工作方式基本上还是和以前一样。
+
+从那以后，我一直抱着这样一种心态：微软凭借 GitHub Copilot 走在最前沿。就算那些新冒出来的实验室到处推出“智能体”，我也相信只要有什么真正有价值的东西，GitHub Copilot 都会跟上。我会听到像 Dan Shipper 这样的人在 [Lenny’s Podcast][lennys podcast dan shipper 2025] 上讲述模型的能力，可他们说的和我的实际体验、我的质量标准根本对不上。
+
+去年年初，我写了一篇文章回顾 Bencher 三年来的开发历程：[工程回顾：2025 年版][bencher engineering review]。在那篇文章中，我讲述了构建 Bencher 时所做的所有重大工程决策，涵盖前端、后端、开发者环境、CI，应有尽有。我还用了整整一段来吐槽两年前自己为了搞懂 [CUE lang][cue lang] 有多痛苦。然而，在那篇 3,500 词的长文里，AI、LLM，甚至 Copilot，一次都没有出现过。
+
+快进到不到一年之后，我已经在和[《We mourn our craft》][we mourn]同悲共叹了。
+
+[pragmatic engineer essay challenge]: https://blog.pragmaticengineer.com/how-software-engineering-is-changing-an-essay-challenge/
+[bencher]: https://bencher.dev
+[wikipedia tabnine]: https://en.wikipedia.org/wiki/Tabnine
+[rust procedural macros]: https://doc.rust-lang.org/reference/procedural-macros.html
+[lennys podcast dan shipper 2025]: https://www.lennysnewsletter.com/p/inside-every-dan-shipper
+[bencher engineering review]: /zh/learn/engineering/engineering-review-2025/
+[cue lang]: https://cuelang.org/
+[we mourn]: https://nolanlawson.com/2026/02/07/we-mourn-our-craft/

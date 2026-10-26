@@ -1,0 +1,12 @@
+## How I Code Today
+
+Back when I was using GitHub Copilot, it was an extension in VSCode. When I first switched to Claude Code, I was using the CLI. I would have three terminal windows each in their own macOS Space. Each terminal window would have two tabs. One tab was for Claude the other was for [Jujutsu (`jj`)][github jj]. I was still managing the version control and `jj` workspaces myself.
+
+Nowadays, I just use the Claude Code desktop app. Every new session that I start is from my meta-repo with the `worktree` checkbox enabled. I stopped using Plan mode a few months back. I never installed Matt Pocock’s [`/grill-me` skill][github grill me]. I just ask Claude to “grill me on all design decisions” in the prompt, and at this point the model knows what to do. My ~~`CLAUDE.md`~~ `AGENTS.md` is pretty well tuned to how I want the model to behave.
+
+I’ve all but decommissioned my Claude Review CI workflow. The agent now handles spinning up an adversarial reviewer locally without me having to even ask. Then they iterate until they converge, sometimes up to a half dozen rounds. I’ve started to experiment with offloading development work to external work boxes and just leaving my local machine as the orchestrator.
+
+The only time I ever touch version control myself is when I’m trying to check out a build to test things myself or when I’m creating a tagged, versioned release of Bencher. These happen about once per week and once per month respectively. Other than that, I just let Claude handle it now. I make ample use of draft PRs and now that they’re available on GitHub, stacked PRs. I don’t look at the code until the PR is open. I will still scroll through the code for Bencher, but it’s more of a sanity check than a real code review at this point.
+
+[github jj]: https://github.com/jj-vcs/jj
+[github grill me]: https://github.com/mattpocock/skills/blob/main/skills/productivity/grill-me/SKILL.md

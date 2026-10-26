@@ -1,0 +1,12 @@
+## エージェントの認証
+
+Bencher Bare Metalまでは、認証はすべてJWTでした。大きくて、美しくて、理解不能なJWTです。Bare Metalランナーの認証には、名前のプレフィックスが付いたAPIキー、たとえば`bencher_runner_abc123...`を使いました。
+
+クライアント側では、ユーザー自身のAPIトークンであるJWT以外に、エージェントが扱えるものを用意したいと考えました。そこで私が落とし所として選んだのが、長く要望されていた機能、プロジェクトスコープの認証をついに実装することでした。Claudeの助けを借りて、安全な、プロジェクトスコープでプレフィックス付きのAPIキーを作りました。これらのAPIキーの権限は、[`bencher run` CLIコマンド][bencher run]が行う操作と同等のもの、つまりプロジェクトスコープの読み取りと非破壊的な書き込みに限定されています。これにより、これらのAPIキーは継続的ベンチマーキングのCIワークフローで使うのにもぴったりなものになっています。
+
+その後、[Bencher MCP][bencher mcp]を追加した際にも、これらのプロジェクトスコープのAPIキーをそこでの認証に使いました。MCPの標準はOAuth 2.1を指定していますが、OAuth 2.1は[まだドラフト段階][ietf oauth 2.1]なので、今はまだ実装したくありませんでした。正直なところ、私はちょっとしたMCP懐疑派です。サービスをエージェントに公開するなら、良いCLIと[スキル][bencher skills]の組み合わせのほうが、より効果的でポータブルな方法だと今でも思っています。とはいえ、CLIの最大の問題は、標準的な認証の仕組みがないことです。ですから、OAuth 2.1がまだドラフトだとしても、少なくともMCPはその点をカバーしています。そして、優れた認証の仕組みはエンタープライズにとって*本当に*重要なのです。
+
+[bencher run]: /ja/docs/explanation/bencher-run/
+[bencher mcp]: /ja/docs/how-to/mcp/
+[ietf oauth 2.1]: https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/
+[bencher skills]: /ja/docs/how-to/install-cli/#claude-code

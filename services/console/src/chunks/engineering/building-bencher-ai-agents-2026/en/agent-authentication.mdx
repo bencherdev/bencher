@@ -1,0 +1,12 @@
+## Agent Authentication
+
+Up until Bencher Bare Metal, all authentication had been JWTs. Big, beautiful, incomprehensible JWTs. The authentication for Bare Metal runners was a name prefixed API key, ex `bencher_runner_abc123...`.
+
+On the client side, I wanted to give agents something to work with other than a user's own API token JWT. The middle ground that I struck was finally implementing a long requested feature, project-scoped authentication. Claude helped me create secure project-scoped, prefixed API keys. These API keys are limited to the permissions equivalent to what [the `bencher run` CLI command][bencher run] performs, project-scoped reads and non-destructive writes. This also makes these API keys a natural fit for use in continuous benchmarking CI workflows.
+
+Later when I added the [Bencher MCP][bencher mcp], these project-scoped API keys were also used for the authentication there. The MCP standard names OAuth 2.1, however it is [still in draft][ietf oauth 2.1], so I didn't want to implement it yet. I'm honestly a bit of an MCP skeptic. I still think a good CLI + [skills][bencher skills] is a more effective and portable way to expose a service to an agent. The biggest issue with CLIs though is their lack of a standard authentication mechanism. So even though OAuth 2.1 is still in draft, at least MCP has that covered. And a good authn story _really_ matters to enterprise.
+
+[bencher run]: /docs/explanation/bencher-run/
+[bencher mcp]: /docs/how-to/mcp/
+[ietf oauth 2.1]: https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/
+[bencher skills]: /docs/how-to/install-cli/#claude-code

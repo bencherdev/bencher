@@ -1,0 +1,12 @@
+## Authentifizierung für Agenten
+
+Bis zu Bencher Bare Metal lief die gesamte Authentifizierung über JWTs. Große, schöne, unverständliche JWTs. Die Authentifizierung für Bare Metal Runner war ein API-Schlüssel mit Namenspräfix, z. B. `bencher_runner_abc123...`.
+
+Auf der Client-Seite wollte ich Agenten etwas anderes an die Hand geben als das eigene API-Token-JWT eines Nutzers. Der Mittelweg, den ich fand, war, endlich ein lang gewünschtes Feature umzusetzen: projektbezogene Authentifizierung. Claude half mir, sichere, projektbezogene API-Schlüssel mit Präfix zu erstellen. Diese API-Schlüssel sind auf die Berechtigungen beschränkt, die dem entsprechen, was [der CLI-Befehl `bencher run`][bencher run] ausführt: projektbezogene Lesezugriffe und nicht destruktive Schreibzugriffe. Das macht diese API-Schlüssel auch zu einer natürlichen Wahl für Workflows für kontinuierliches Benchmarking in CI.
+
+Als ich später den [Bencher MCP][bencher mcp] hinzufügte, wurden diese projektbezogenen API-Schlüssel auch dort für die Authentifizierung verwendet. Der MCP-Standard nennt OAuth 2.1, das allerdings [noch ein Entwurf ist][ietf oauth 2.1], also wollte ich es noch nicht implementieren. Ehrlich gesagt bin ich ein bisschen ein MCP-Skeptiker. Ich denke immer noch, dass eine gute CLI + [Skills][bencher skills] ein effektiverer und portablerer Weg ist, einen Dienst für einen Agenten bereitzustellen. Das größte Problem von CLIs ist allerdings, dass ihnen ein standardisierter Authentifizierungsmechanismus fehlt. Auch wenn OAuth 2.1 also noch ein Entwurf ist, hat MCP das wenigstens abgedeckt. Und eine gute Antwort auf die Authentifizierungsfrage ist für Unternehmenskunden _wirklich_ wichtig.
+
+[bencher run]: /de/docs/explanation/bencher-run/
+[bencher mcp]: /de/docs/how-to/mcp/
+[ietf oauth 2.1]: https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/
+[bencher skills]: /de/docs/how-to/install-cli/#claude-code

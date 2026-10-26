@@ -1,0 +1,12 @@
+## 에이전트 인증
+
+Bencher Bare Metal 이전까지 모든 인증은 JWT였습니다. 크고, 아름답고, 도무지 알아볼 수 없는 JWT 말이죠. Bare Metal 러너의 인증은 이름 접두사가 붙은 API 키였습니다. 예를 들면 `bencher_runner_abc123...` 같은 것이죠.
+
+클라이언트 쪽에서는 사용자 본인의 API 토큰 JWT 말고 에이전트가 쓸 수 있는 다른 무언가를 주고 싶었습니다. 그래서 찾은 절충안은 오랫동안 요청받아 온 기능, 즉 프로젝트 범위 인증을 마침내 구현하는 것이었습니다. Claude는 제가 안전한 프로젝트 범위의 접두사 API 키를 만드는 것을 도와줬습니다. 이 API 키들은 [`bencher run` CLI 명령][bencher run]이 수행하는 것과 동등한 권한, 즉 프로젝트 범위의 읽기와 파괴적이지 않은 쓰기로 제한됩니다. 덕분에 이 API 키들은 지속적인 벤치마킹 CI 워크플로에서 쓰기에도 자연스럽게 잘 맞습니다.
+
+나중에 [Bencher MCP][bencher mcp]를 추가했을 때도, 이 프로젝트 범위 API 키를 그곳의 인증에 사용했습니다. MCP 표준은 OAuth 2.1을 명시하고 있지만, OAuth 2.1은 [아직 초안 단계][ietf oauth 2.1]이라서 당장 구현하고 싶지는 않았습니다. 솔직히 저는 MCP에 다소 회의적인 편입니다. 저는 여전히 좋은 CLI와 [스킬][bencher skills]의 조합이 에이전트에게 서비스를 노출하는 더 효과적이고 이식성 높은 방법이라고 생각합니다. 다만 CLI의 가장 큰 문제는 표준 인증 메커니즘이 없다는 점입니다. 그러니 OAuth 2.1이 아직 초안이라 해도, 적어도 MCP는 그 부분을 해결하고 있습니다. 그리고 좋은 인증 체계는 엔터프라이즈에게 _정말_ 중요합니다.
+
+[bencher run]: /ko/docs/explanation/bencher-run/
+[bencher mcp]: /ko/docs/how-to/mcp/
+[ietf oauth 2.1]: https://datatracker.ietf.org/doc/draft-ietf-oauth-v2-1/
+[bencher skills]: /ko/docs/how-to/install-cli/#claude-code
