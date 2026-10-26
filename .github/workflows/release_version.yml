@@ -24,13 +24,9 @@ jobs:
       contents: write
     runs-on: ubuntu-22.04
     steps:
-      - name: Require devel
-        if: github.ref != 'refs/heads/devel'
-        run: |
-          echo "::error::Releases are cut from devel, not $GITHUB_REF"
-          exit 1
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2 # zizmor: ignore[artipacked] this job commits the release to devel and pushes it with its tag, so it needs the persisted GITHUB_TOKEN
         with:
+          ref: devel
           fetch-depth: 0
       - uses: rui314/setup-mold@339e96b4ff1f3bd865856ba4cbbe8818a7acb038 # v1
         with:
