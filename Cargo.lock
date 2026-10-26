@@ -139,7 +139,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 name = "api_auth"
 version = "0.6.14"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
@@ -180,7 +180,7 @@ dependencies = [
  "api_organizations",
  "api_projects",
  "api_run",
- "base64 0.22.1",
+ "base64 0.23.1",
  "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
@@ -989,7 +989,7 @@ dependencies = [
 name = "bencher_client"
 version = "0.6.14"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "bencher_json",
  "bytes",
  "chrono",
@@ -1463,7 +1463,7 @@ dependencies = [
 name = "bencher_valid"
 version = "0.6.14"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "chrono",
  "console_error_panic_hook",
  "derive_more",
@@ -8467,7 +8467,7 @@ name = "test_console"
 version = "0.6.14"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
+ "base64 0.23.1",
  "bencher_json",
  "bencher_license",
  "bencher_token",
