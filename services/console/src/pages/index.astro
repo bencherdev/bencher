@@ -44,13 +44,13 @@ import CallToAction from "../components/landing/CallToAction.astro";
 
           <div class="buttons">
             <a
-              class="button is-primary is-medium is-responsive"
+              class="button is-primary is-medium"
               href="/auth/signup"
             >
               Benchmark for free
             </a>
             <a
-              class="button is-medium is-responsive"
+              class="button is-medium"
               href="/docs/tutorial/bare-metal/"
             >
               Quickstart
@@ -119,9 +119,21 @@ import CallToAction from "../components/landing/CallToAction.astro";
     }
   }
 
+  @media screen and (max-width: 480px) {
+    .buttons .button {
+      width: 100%;
+    }
+  }
+
   @media screen and (min-width: 769px) {
     .hero-landing {
       padding: max(6rem, 15vh) 2rem 2rem;
+    }
+  }
+
+  @media screen and (min-width: 769px) and (max-width: 1023px) {
+    .buttons .button {
+      font-size: var(--bulma-size-normal);
     }
   }
 
