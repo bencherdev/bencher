@@ -265,8 +265,10 @@ impl InsertUser {
 
         let insert_org_role = if let Some(invite) = &json_signup.invite {
             InsertOrganizationRole::from_jwt(conn, token_key, invite, query_user.id)?
-        } else if let Some(organization_uuid) = json_signup.claim {
-            let organization_id = QueryOrganization::get_id(conn, organization_uuid)?;
+        } else if let Some(organization_uuid) = json_signup.claim
+            && let organization_id = QueryOrganization::get_id(conn, organization_uuid)?
+            && !QueryOrganization::get(conn, organization_id)?.is_claimed(conn)?
+        {
             let timestamp = DateTime::now();
             InsertOrganizationRole {
                 user_id: query_user.id,

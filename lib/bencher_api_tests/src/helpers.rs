@@ -7,8 +7,9 @@ use bencher_google_client::GoogleClient;
 use bencher_json::{
     BranchName, BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid,
     OAuthAccessToken, OAuthAuthorizationUuid, OAuthGrantUuid, OAuthRefreshToken, OAuthResource,
-    OAuthScopes, OAuthTokenHash, ParameterSet, PlanLevel, ReportUuid, ResourceName, TestbedUuid,
-    TokenUuid, UserKeyUuid, VariantUuid, VersionUuid, system::config::JsonOAuthServer,
+    OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet, PlanLevel, ReportUuid,
+    ResourceName, TestbedUuid, TokenUuid, UserKeyUuid, UserUuid, VariantUuid, VersionUuid,
+    system::config::JsonOAuthServer,
 };
 use bencher_rbac::project::Role;
 use bencher_schema::{
@@ -467,6 +468,21 @@ pub fn grant_project_role(server: &TestServer, user: &TestUser, project_slug: &s
         ))
         .execute(&mut conn)
         .expect("Failed to grant the project role");
+}
+
+/// The organizations a user holds a role in.
+#[expect(
+    clippy::expect_used,
+    reason = "test helper querying organization roles"
+)]
+pub fn user_organizations(server: &TestServer, user: UserUuid) -> Vec<OrganizationUuid> {
+    schema::organization_role::table
+        .inner_join(schema::user::table)
+        .inner_join(schema::organization::table)
+        .filter(schema::user::uuid.eq(user))
+        .select(schema::organization::uuid)
+        .load(&mut server.db_conn())
+        .expect("Failed to get organization roles")
 }
 
 /// Insert a metric as its named rows.

@@ -243,3 +243,52 @@ async fn signup_link_returns_to_a_pending_authorization() {
         );
     }
 }
+
+// POST /v0/auth/signup - claim an unclaimed organization
+#[tokio::test]
+async fn signup_claim_unclaimed_organization() {
+    use bencher_api_tests::helpers::{base_timestamp, user_organizations};
+    use bencher_json::OrganizationUuid;
+    use bencher_schema::{model::organization::InsertOrganization, schema};
+    use diesel::RunQueryDsl as _;
+
+    let server = TestServer::new().await;
+    let timestamp = base_timestamp();
+    let organization = InsertOrganization {
+        uuid: OrganizationUuid::new(),
+        name: "Unclaimed".parse().unwrap(),
+        slug: "unclaimed".parse().unwrap(),
+        created: timestamp,
+        modified: timestamp,
+    };
+    diesel::insert_into(schema::organization::table)
+        .values(&organization)
+        .execute(&mut server.db_conn())
+        .unwrap();
+
+    let user = server
+        .signup_with_claim("Claim User", "claim@example.com", Some(organization.uuid))
+        .await
+        .uuid;
+    assert_eq!(user_organizations(&server, user), [organization.uuid]);
+}
+
+// POST /v0/auth/signup - claim a claimed organization
+#[tokio::test]
+async fn signup_claim_claimed_organization() {
+    use bencher_api_tests::helpers::user_organizations;
+    use bencher_json::OrganizationUuid;
+
+    let server = TestServer::new().await;
+    let leader = server.signup("Leader", "leader@example.com").await;
+    let organization = server.create_org(&leader, "Claimed").await;
+
+    let user = server
+        .signup_with_claim("Claim User", "claim@example.com", Some(organization.uuid))
+        .await
+        .uuid;
+    assert_eq!(
+        user_organizations(&server, user),
+        [OrganizationUuid::from(user)]
+    );
+}
