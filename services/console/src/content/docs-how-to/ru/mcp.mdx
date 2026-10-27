@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Подключайте ИИ-агентов и ассистентов к Bencher через размещённый MCP-сервер для запроса данных бенчмарков и отправки результатов"
 heading: "Как использовать Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-19T07:00:00Z"
+modified: "2026-10-27T07:00:00Z"
 sortOrder: 11
 ---
 
@@ -25,7 +25,12 @@ Bencher есть в [каталоге коннекторов Claude](https://cla
 Claude Code использует коннекторы, добавленные в claude.ai, когда в нём выполнен вход с подпиской claude.ai.
 Коннектор подключается только к Bencher Cloud.
 
-Вместо этого используйте URL с ChatGPT и другими MCP-клиентами, с Claude Code без входа по подписке claude.ai, с Bencher Self-Hosted и в CI:
+Bencher есть в [каталоге плагинов OpenAI](https://chatgpt.com/plugins/plugin_asdk_app_6ad5be4f4e108191b3447b372bf3244e), который обслуживает ChatGPT и Codex.
+Добавьте плагин Bencher и войдите с помощью своей учётной записи Bencher, когда вас попросят.
+В Codex плагин также добавляет навык Bencher, чтобы Codex мог запускать CLI `bencher`.
+Плагин подключается только к Bencher Cloud.
+
+Вместо этого используйте URL с другими MCP-клиентами, с Claude Code без входа по подписке claude.ai, с Bencher Self-Hosted и в CI:
 
 | Развёртывание | URL |
 | :--- | :--- |
@@ -33,7 +38,7 @@ Claude Code использует коннекторы, добавленные в
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
 Добавьте URL в свой MCP-клиент и войдите с помощью своей учётной записи Bencher, когда клиент попросит.
-ChatGPT и Claude Code входят через OAuth, как и claude.ai, когда вы добавляете сервер Bencher Self-Hosted как пользовательский коннектор.
+Claude Code входит через OAuth, так же как ChatGPT и claude.ai, когда вы добавляете сервер Bencher Self-Hosted по его URL.
 Например, подключитесь из [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
 
 <McpClaudeCode />
