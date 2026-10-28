@@ -45,12 +45,16 @@ Glossary of terms for Bencher concepts.
 - **Parameter**:
   1 key mapped to 1 JSON scalar.
 - **Parameters**:
-  The full map of Parameters for 1 Variant.
+  The full Parameter Set of 1 Variant.
+- **Parameter Set**:
+  A map of Parameters.
   Each key maps to a JSON scalar: a string, a number, or a boolean.
   Values are canonicalized, so `16`, `16.0`, and `1.6e1` are the same value.
-  Parameters may carry at most 8 keys.
+  A Parameter Set may carry at most 8 keys.
+  In a parameters filter, a Parameter Set may name only some keys,
+  and it matches every Variant whose Parameters hold the same value for each key it names.
 - **Variant**:
-  A Benchmark with 1 set of Parameters.
+  A Benchmark with 1 Parameter Set.
   If no Parameters are declared, a Benchmark has a single Variant
   with empty Parameters.
   A Variant is a sub-dimension of a Benchmark.
@@ -70,8 +74,10 @@ Glossary of terms for Bencher concepts.
 
 - **Threshold**:
   Used to catch performance regressions.
-  A Threshold is assigned to a unique combination of: Branch, Testbed, and Measure.
+  A Threshold is assigned to a unique combination of: Branch, Testbed, parameters filter, Measure, and Metric name.
   A parameters filter can be specified to select the Variants a Threshold checks.
+  A parameters filter is a list of Parameter Sets, and it matches a Variant if any of its Parameter Sets matches that Variant.
+  An empty filter matches every Variant.
 - **Model**:
   The combination of a Test and its parameters for a Threshold.
 - **Test**:
