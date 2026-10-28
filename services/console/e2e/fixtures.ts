@@ -37,7 +37,7 @@ export interface Seed {
 		iterations: SeedProject;
 		/** Runner jobs that wait, run, failed, and were canceled, and one finished run. */
 		runner: SeedProject;
-		/** Each with one run that alerted and still runs, which tests add alerting reports to: one per repeat. */
+		/** Each with one run that alerted and still runs, which tests add alerting reports to: one per repeat, then one for the axe scan. */
 		held: SeedProject[];
 		/** Each with one report, a queued job's, on an archived branch: one per repeat. */
 		handover: SeedProject[];
