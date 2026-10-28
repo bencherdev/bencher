@@ -112,7 +112,7 @@ fs-err = "3.3"
 futures = "0.3"
 futures-concurrency = "7"
 futures-util = "0.3"
-gix = { version = "0.89", default-features = false, features = ["sha1"] }
+gix = { version = "0.90", default-features = false, features = ["sha1"] }
 gix-hash = { version = "0.28", features = ["sha1"] }
 git-validate = "0.7"
 gungraun-summary = { version = "6" }
