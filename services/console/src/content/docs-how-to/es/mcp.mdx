@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Conecte agentes y asistentes de IA a Bencher con el servidor MCP alojado para consultar datos de benchmarks y enviar resultados"
 heading: "Cómo usar Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-19T07:00:00Z"
+modified: "2026-10-27T07:00:00Z"
 sortOrder: 11
 ---
 
@@ -25,7 +25,12 @@ Agregue el conector de Bencher e inicie sesión con su cuenta de Bencher cuando 
 Claude Code usa los conectores que agrega en claude.ai cuando este ha iniciado sesión con una suscripción de claude.ai.
 El conector solo se conecta a Bencher Cloud.
 
-En su lugar, use la URL con ChatGPT y otros clientes MCP, con Claude Code sin un inicio de sesión con suscripción de claude.ai, con Bencher Self-Hosted y en CI:
+Bencher está en el [directorio de plugins de OpenAI](https://chatgpt.com/plugins/plugin_asdk_app_6ad5be4f4e108191b3447b372bf3244e), que da servicio a ChatGPT y Codex.
+Agregue el plugin de Bencher e inicie sesión con su cuenta de Bencher cuando se le pida.
+En Codex, el plugin también incluye el skill de Bencher, para que Codex pueda ejecutar la CLI `bencher`.
+El plugin solo se conecta a Bencher Cloud.
+
+En su lugar, use la URL con otros clientes MCP, con Claude Code sin un inicio de sesión con suscripción de claude.ai, con Bencher Self-Hosted y en CI:
 
 | Despliegue | URL |
 | :--- | :--- |
@@ -33,7 +38,7 @@ En su lugar, use la URL con ChatGPT y otros clientes MCP, con Claude Code sin un
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
 Agregue la URL a su cliente MCP e inicie sesión con su cuenta de Bencher cuando el cliente se lo pida.
-ChatGPT y Claude Code inician sesión con OAuth, al igual que claude.ai cuando agrega un servidor de Bencher Self-Hosted como conector personalizado.
+Claude Code inicia sesión con OAuth, al igual que ChatGPT y claude.ai cuando agrega un servidor de Bencher Self-Hosted por su URL.
 Por ejemplo, conéctese desde [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
 
 <McpClaudeCode />

@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "호스팅된 MCP 서버로 AI 에이전트와 어시스턴트를 Bencher에 연결하여 벤치마크 데이터를 조회하고 결과를 제출하세요"
 heading: "Bencher MCP 사용 방법"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-19T07:00:00Z"
+modified: "2026-10-27T07:00:00Z"
 sortOrder: 11
 ---
 
@@ -25,7 +25,12 @@ Bencher 커넥터를 추가하고, Claude가 요청하면 Bencher 계정으로 �
 Claude Code는 claude.ai 구독으로 로그인되어 있으면 claude.ai에서 추가한 커넥터를 사용합니다.
 이 커넥터는 Bencher Cloud에만 연결됩니다.
 
-ChatGPT 및 기타 MCP 클라이언트, claude.ai 구독으로 로그인하지 않은 Claude Code, Bencher Self-Hosted, CI에서는 대신 URL을 사용하세요:
+Bencher는 ChatGPT와 Codex에서 사용하는 [OpenAI 플러그인 디렉터리](https://chatgpt.com/plugins/plugin_asdk_app_6ad5be4f4e108191b3447b372bf3244e)에 등록되어 있습니다.
+Bencher 플러그인을 추가하고, 요청을 받으면 Bencher 계정으로 로그인하세요.
+Codex에서는 플러그인이 Bencher 스킬도 함께 제공하므로 Codex가 `bencher` CLI를 실행할 수 있습니다.
+이 플러그인은 Bencher Cloud에만 연결됩니다.
+
+기타 MCP 클라이언트, claude.ai 구독으로 로그인하지 않은 Claude Code, Bencher Self-Hosted, CI에서는 대신 URL을 사용하세요:
 
 | 배포 | URL |
 | :--- | :--- |
@@ -33,7 +38,7 @@ ChatGPT 및 기타 MCP 클라이언트, claude.ai 구독으로 로그인하지 �
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
 MCP 클라이언트에 URL을 추가하고, 클라이언트가 요청하면 Bencher 계정으로 로그인하세요.
-ChatGPT와 Claude Code는 OAuth로 로그인하며, Bencher Self-Hosted 서버를 claude.ai 사용자 지정 커넥터로 추가하면 claude.ai도 OAuth로 로그인합니다.
+Claude Code는 OAuth로 로그인하며, Bencher Self-Hosted 서버를 URL로 추가하면 ChatGPT와 claude.ai도 OAuth로 로그인합니다.
 예를 들어 [Claude Code](https://docs.anthropic.com/en/docs/claude-code)에서 연결하려면:
 
 <McpClaudeCode />

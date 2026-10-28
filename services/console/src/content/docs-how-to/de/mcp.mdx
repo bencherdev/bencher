@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Verbinden Sie KI-Agenten und Assistenten über den gehosteten MCP-Server mit Bencher, um Benchmark-Daten abzufragen und Ergebnisse zu übermitteln"
 heading: "So verwenden Sie Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-19T07:00:00Z"
+modified: "2026-10-27T07:00:00Z"
 sortOrder: 11
 ---
 
@@ -25,7 +25,12 @@ Fügen Sie den Bencher-Konnektor hinzu und melden Sie sich mit Ihrem Bencher-Kon
 Claude Code verwendet die Konnektoren, die Sie in claude.ai hinzufügen, wenn es mit einem claude.ai-Abonnement angemeldet ist.
 Der Konnektor verbindet sich nur mit Bencher Cloud.
 
-Verwenden Sie stattdessen die URL mit ChatGPT und anderen MCP-Clients, mit Claude Code ohne Anmeldung über ein claude.ai-Abonnement, mit Bencher Self-Hosted und in CI:
+Bencher ist im [OpenAI-Pluginverzeichnis](https://chatgpt.com/plugins/plugin_asdk_app_6ad5be4f4e108191b3447b372bf3244e), das ChatGPT und Codex bedient.
+Fügen Sie das Bencher-Plugin hinzu und melden Sie sich mit Ihrem Bencher-Konto an, wenn Sie dazu aufgefordert werden.
+In Codex bringt das Plugin auch den Bencher-Skill mit, sodass Codex die `bencher` CLI ausführen kann.
+Das Plugin verbindet sich nur mit Bencher Cloud.
+
+Verwenden Sie stattdessen die URL mit anderen MCP-Clients, mit Claude Code ohne Anmeldung über ein claude.ai-Abonnement, mit Bencher Self-Hosted und in CI:
 
 | Bereitstellung | URL |
 | :--- | :--- |
@@ -33,7 +38,7 @@ Verwenden Sie stattdessen die URL mit ChatGPT und anderen MCP-Clients, mit Claud
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
 Fügen Sie die URL zu Ihrem MCP-Client hinzu und melden Sie sich mit Ihrem Bencher-Konto an, wenn der Client Sie dazu auffordert.
-ChatGPT und Claude Code melden sich über OAuth an, ebenso claude.ai, wenn Sie einen Bencher Self-Hosted Server als benutzerdefinierten Konnektor hinzufügen.
+Claude Code meldet sich über OAuth an, ebenso ChatGPT und claude.ai, wenn Sie einen Bencher Self-Hosted Server über seine URL hinzufügen.
 Verbinden Sie sich zum Beispiel über [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
 
 <McpClaudeCode />

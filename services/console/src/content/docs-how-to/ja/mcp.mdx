@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "ホスト型 MCP サーバーで AI エージェントやアシスタントを Bencher に接続し、ベンチマークデータの照会と結果の送信を行います"
 heading: "Bencher MCP の使い方"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-19T07:00:00Z"
+modified: "2026-10-27T07:00:00Z"
 sortOrder: 11
 ---
 
@@ -25,7 +25,12 @@ Bencher コネクターを追加し、Claude に求められたら Bencher ア�
 Claude Code は、claude.ai のサブスクリプションでログインしている場合、claude.ai で追加したコネクターを使用します。
 このコネクターは Bencher Cloud にのみ接続します。
 
-ChatGPT やその他の MCP クライアント、claude.ai のサブスクリプションでログインしていない Claude Code、Bencher Self-Hosted、CI では、代わりに URL を使用します:
+Bencher は、ChatGPT と Codex で使える [OpenAI プラグインディレクトリ](https://chatgpt.com/plugins/plugin_asdk_app_6ad5be4f4e108191b3447b372bf3244e) に掲載されています。
+Bencher プラグインを追加し、求められたら Bencher アカウントでサインインします。
+Codex では、プラグインが Bencher スキルも追加するため、Codex は `bencher` CLI を実行できます。
+このプラグインは Bencher Cloud にのみ接続します。
+
+その他の MCP クライアント、claude.ai のサブスクリプションでログインしていない Claude Code、Bencher Self-Hosted、CI では、代わりに URL を使用します:
 
 | デプロイメント | URL |
 | :--- | :--- |
@@ -33,7 +38,7 @@ ChatGPT やその他の MCP クライアント、claude.ai のサブスクリプ
 | Bencher Self-Hosted | `https://<api-host>/mcp` |
 
 MCP クライアントに URL を追加し、クライアントに求められたら Bencher アカウントでサインインします。
-ChatGPT と Claude Code は OAuth でサインインし、Bencher Self-Hosted サーバーを claude.ai のカスタムコネクターとして追加した場合は claude.ai も OAuth でサインインします。
+Claude Code は OAuth でサインインし、Bencher Self-Hosted サーバーを URL で追加した場合は ChatGPT と claude.ai も OAuth でサインインします。
 たとえば、[Claude Code](https://docs.anthropic.com/en/docs/claude-code) から接続するには:
 
 <McpClaudeCode />

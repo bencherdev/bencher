@@ -19,8 +19,14 @@ sign in with their Bencher account. Claude Code uses the connectors added in
 claude.ai when it is logged in with a claude.ai subscription. The connector
 reaches Bencher Cloud only.
 
-Use the URL instead with ChatGPT and other MCP clients, with Claude Code
-without a claude.ai subscription login, with a self-hosted server, and in CI:
+Bencher is in the OpenAI plugins directory
+(https://chatgpt.com/plugins/plugin_asdk_app_6ad5be4f4e108191b3447b372bf3244e),
+which serves ChatGPT and Codex. ChatGPT and Codex users add the Bencher plugin
+and sign in with their Bencher account. In Codex, the plugin also brings this
+skill. The plugin reaches Bencher Cloud only.
+
+Use the URL instead with other MCP clients, with Claude Code without a
+claude.ai subscription login, with a self-hosted server, and in CI:
 
 | Deployment | URL |
 |------------|-----|
@@ -29,9 +35,9 @@ without a claude.ai subscription login, with a self-hosted server, and in CI:
 
 There are three ways to call it:
 
-- **OAuth sign-in**: clients with MCP OAuth support (ChatGPT, Claude Code, and
-  claude.ai with a self-hosted server added as a custom connector) connect with
-  no credential and sign in when asked.
+- **OAuth sign-in**: clients with MCP OAuth support (Claude Code, and ChatGPT
+  and claude.ai with a self-hosted server added by its URL) connect with no
+  credential and sign in when asked.
   The client opens Bencher's consent page in the user's browser, where the user
   signs in and approves the app. The agent never handles a key. A self-hosted
   server offers this only once its `plus.oauth` config section is set.
