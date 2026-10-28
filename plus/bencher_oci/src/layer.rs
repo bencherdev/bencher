@@ -333,6 +333,38 @@ mod tests {
     }
 
     #[test]
+    fn extract_zstd_layer() {
+        use tar::{Builder, Header};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let layer_path = temp_dir.path().join("layer.tar.zst");
+        let extract_dir = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&extract_dir).unwrap();
+
+        let content = b"hello";
+        let mut builder = Builder::new(Vec::new());
+        let mut header = Header::new_gnu();
+        header.set_entry_type(EntryType::Regular);
+        header.set_size(content.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder
+            .append_data(&mut header, "hello.txt", &content[..])
+            .unwrap();
+        let tar_bytes = builder.into_inner().unwrap();
+        let layer_bytes = zstd::stream::encode_all(&tar_bytes[..], 0).unwrap();
+        std::fs::write(&layer_path, layer_bytes).unwrap();
+
+        let layer = Utf8Path::from_path(&layer_path).unwrap();
+        let target = Utf8Path::from_path(&extract_dir).unwrap();
+        extract_layer(layer, target, LayerCompression::Zstd).unwrap();
+        assert_eq!(
+            std::fs::read(extract_dir.join("hello.txt")).unwrap(),
+            content
+        );
+    }
+
+    #[test]
     fn safe_join_normal_path() {
         let dir = Utf8Path::new("/rootfs");
         let result = safe_join(dir, std::path::Path::new("usr/bin/hello")).unwrap();
