@@ -79,7 +79,7 @@ bencher_init = { path = "plus/bencher_init" }
 bencher_output_protocol = { path = "plus/bencher_output_protocol" }
 # crates.io
 anyhow = "1.0"
-backhand = "0.25"
+backhand = { version = "0.25", default-features = false, features = ["gzip", "parallel", "error-strings"] }
 assert_cmd = "2.2"
 async-stripe = { version = "1.0.0-rc.9", default-features = false }
 async-stripe-billing = "1.0.0-rc.9"
@@ -199,7 +199,7 @@ uuid = "1.22"
 wasm-bindgen = "0.2"
 wasm-bindgen-test = "0.3"
 windows = "0.62"
-zstd = "0.13"
+zstd = "0.14"
 # oxide
 dropshot = { version = "0.17.1", default-features = false }
 progenitor = { version = "0.15", default-features = false }
