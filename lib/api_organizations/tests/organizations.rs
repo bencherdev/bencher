@@ -179,6 +179,34 @@ async fn organizations_update() {
     assert_eq!(updated.name.as_ref(), "Updated Org Name");
 }
 
+// PATCH /v0/organizations/{organization} - a key saved though it is not this organization's license
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn organizations_update_invalid_license() {
+    use bencher_json::PlanLevel;
+
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "orglicense@example.com").await;
+    let licensed = server.create_org(&user, "Licensed Org").await;
+    server
+        .license_org(&user, &licensed, PlanLevel::Enterprise)
+        .await;
+    let other_license = view_org(&server, &user, licensed.uuid)
+        .await
+        .license
+        .expect("No license");
+    // Free the key, so only the license check stands between it and another organization.
+    let (status, body) =
+        patch_license(&server, &user, licensed.uuid, serde_json::Value::Null).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let org = server.create_org(&user, "Unlicensed Org").await;
+
+    let (status, body) =
+        patch_license(&server, &user, org.uuid, serde_json::json!(other_license)).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    assert!(view_org(&server, &user, org.uuid).await.license.is_none());
+}
+
 // DELETE /v0/organizations/{organization} - delete org
 #[tokio::test]
 async fn organizations_delete() {
@@ -626,4 +654,51 @@ async fn organizations_soft_delete_cascades_child_resources() {
             "{endpoint} should return 404 after org soft-delete"
         );
     }
+}
+
+#[cfg(feature = "plus")]
+#[expect(clippy::expect_used, reason = "test helper patching a license")]
+async fn patch_license(
+    server: &TestServer,
+    user: &bencher_api_tests::TestUser,
+    organization: OrganizationUuid,
+    license: serde_json::Value,
+) -> (StatusCode, String) {
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/organizations/{organization}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "license": license }))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    (
+        status,
+        resp.text().await.expect("Failed to read response body"),
+    )
+}
+
+#[cfg(feature = "plus")]
+#[expect(clippy::expect_used, reason = "test helper viewing an organization")]
+async fn view_org(
+    server: &TestServer,
+    user: &bencher_api_tests::TestUser,
+    organization: OrganizationUuid,
+) -> JsonOrganization {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/organizations/{organization}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "Failed to view organization");
+    resp.json().await.expect("Failed to parse response")
 }

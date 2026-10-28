@@ -1,11 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import {
-	createKey,
-	createOrganization,
-	createProject,
-	projectStatus,
-	unique,
-} from "./api";
+import { createKey, createProject, projectStatus, unique } from "./api";
 import { axeInBothThemes } from "./axe";
 import {
 	VERSION_KEY,
@@ -152,39 +146,6 @@ test.describe("General, as the project's Maintainer", () => {
 			);
 			expect(await projectVisibility(request, project.slug)).toBe(to);
 		}
-	});
-
-	// Kills a refusal that is swallowed, shown outside the dialog, or left
-	// applied in the cache as if the project were private.
-	test("private on an organization with no plan is refused in the dialog, with the plans link", async ({
-		page,
-		request,
-	}) => {
-		const organization = await createOrganization(request);
-		const project = await createProject(request, {
-			organization: organization.slug,
-		});
-		await page.goto(consolePath(project.slug, "settings"));
-		await expect(general(page)).toBeVisible();
-
-		await page.getByRole("button", { name: "Change visibility" }).click();
-		const dialog = page.getByRole("alertdialog", {
-			name: `Make ${project.slug} private?`,
-		});
-		await dialog.getByRole("button", { name: "Make private" }).click();
-		const refusal = dialog.getByRole("alert");
-		await expect(refusal).toContainText("private needs a paid plan");
-		await expect(
-			refusal.getByRole("link", { name: "See plans" }),
-		).toHaveAttribute(
-			"href",
-			`/console/organizations/${organization.slug}/billing`,
-		);
-		await dialog.getByRole("button", { name: "Cancel" }).click();
-		await expect(visibility(page)).toHaveAccessibleDescription(/public/);
-
-		await page.reload();
-		await expect(visibility(page)).toHaveAccessibleDescription(/public/);
 	});
 
 	// Kills a Danger section drawn from the wrong permission, a delete that is

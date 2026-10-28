@@ -138,6 +138,21 @@ async fn email_change_confirm_expired() {
     assert_eq!(status, StatusCode::OK, "{body}");
 }
 
+// Fails if a session token at the confirm answers anything but 401.
+#[tokio::test]
+async fn email_change_confirm_session_token() {
+    let server = TestServer::new().await;
+    let user = server.signup("Session User", "session@example.com").await;
+    let session: Jwt = user.token.parse().expect("Invalid session token");
+
+    let (status, body) = confirm(&server, user.uuid, &session).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "{body}");
+    assert_eq!(
+        view_user(&server, &user.token, &user).await.email,
+        user.email
+    );
+}
+
 // Fails if a confirm link changes the email of a user other than the one it names,
 // whether opened at that other user's path or at the named user's path.
 #[tokio::test]
