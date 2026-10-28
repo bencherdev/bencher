@@ -210,8 +210,8 @@ impl From<OAuthProvider> for bencher_otel::OAuthProvider {
 
 #[cfg(test)]
 mod tests {
-    use bencher_api_tests::TestServer;
-    use bencher_json::{Email, OAuthAuthorizationUuid};
+    use bencher_api_tests::{TestServer, helpers::user_organizations};
+    use bencher_json::{Email, OAuthAuthorizationUuid, OrganizationUuid};
     use bencher_schema::{model::user::QueryUser, schema};
     use diesel::{ExpressionMethods as _, RunQueryDsl as _};
 
@@ -272,5 +272,33 @@ mod tests {
             let query_user = QueryUser::get_with_email(&mut server.db_conn(), &email).unwrap();
             assert!(query_user.email_verified.is_some(), "{provider}");
         }
+    }
+
+    // Kills a provider signup that makes a new user a member of an organization that already has
+    // members.
+    #[tokio::test]
+    async fn provider_signup_claim_claimed_organization() {
+        let server = TestServer::new().await;
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        let leader = server.signup("Leader", "leader@example.com").await;
+        let organization = server.create_org(&leader, "Claimed").await;
+
+        let user = handle_oauth_user(
+            &log,
+            server.context(),
+            OAuthState::new(None, Some(organization.uuid), None),
+            "Provider User".parse().unwrap(),
+            "provider@example.com".parse().unwrap(),
+            OAuthProvider::GitHub,
+        )
+        .await
+        .unwrap()
+        .user
+        .user
+        .uuid;
+        assert_eq!(
+            user_organizations(&server, user),
+            [OrganizationUuid::from(user)]
+        );
     }
 }

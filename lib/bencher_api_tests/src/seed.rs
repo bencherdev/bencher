@@ -39,8 +39,18 @@ pub struct TestProjectKey {
 impl TestServer {
     /// Sign up a new user and return their info with a valid token.
     /// This creates the user via the signup endpoint and confirms them.
-    #[expect(clippy::expect_used, reason = "test helper for user signup flow")]
     pub async fn signup(&self, name: &str, email: &str) -> TestUser {
+        self.signup_with_claim(name, email, None).await
+    }
+
+    /// Sign up a new user with an optional organization claim, then confirm them.
+    #[expect(clippy::expect_used, reason = "test helper for user signup flow")]
+    pub async fn signup_with_claim(
+        &self,
+        name: &str,
+        email: &str,
+        claim: Option<OrganizationUuid>,
+    ) -> TestUser {
         let email: Email = email.parse().expect("Invalid email");
         let name: UserName = name.parse().expect("Invalid name");
 
@@ -51,7 +61,7 @@ impl TestServer {
             email: email.clone(),
             plan: None,
             invite: None,
-            claim: None,
+            claim,
             i_agree: true,
             recaptcha_token: None,
             authorization: None,
@@ -62,7 +72,7 @@ impl TestServer {
             slug: None,
             email: email.clone(),
             invite: None,
-            claim: None,
+            claim,
             i_agree: true,
         };
 
