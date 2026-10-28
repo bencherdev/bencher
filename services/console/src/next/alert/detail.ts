@@ -1,8 +1,8 @@
 import type { JsonConsoleAlertDetail } from "../../types/bencher";
 import type { Api } from "../api";
-import { formatDelta, formatValue } from "../plot/format";
+import { changeOf, formatMeasure } from "../plot/format";
 import { fullName, tagsOf } from "../plot/readout";
-import { unitScale } from "../plot/units";
+import { boundaryText } from "../thresholds/text";
 
 /** An alert, its report, and its line's plot, in the one request its page makes. */
 export const alertQuery = (api: Api, slug: string, alert: string) => ({
@@ -52,22 +52,14 @@ export const alertFacts = (detail: JsonConsoleAlertDetail) => {
 	// As the line's report row says it, from the baseline the threshold compared the value with.
 	const delta =
 		(lower || upper) && detail.baseline != null
-			? formatDelta(
+			? changeOf(
 					detail.value,
 					detail.baseline,
 					lower && upper ? "both" : upper ? "upper" : "lower",
 				)
 			: null;
-	const scale = unitScale(
-		Math.min(
-			detail.value,
-			limit ?? detail.value,
-			detail.baseline ?? detail.value,
-		),
-		measure.units,
-	);
 	const format = (value: number | undefined) =>
-		value === undefined ? undefined : formatValue(value, scale);
+		value === undefined ? undefined : formatMeasure(value, measure.units);
 	const boundary = model?.[`${side}_boundary`];
 	return {
 		benchmark: benchmark.name,
@@ -86,15 +78,14 @@ export const alertFacts = (detail: JsonConsoleAlertDetail) => {
 		value: format(detail.value),
 		limit: format(limit),
 		baseline: format(detail.baseline),
-		delta: delta && {
-			...delta,
-			arrow: delta.tone && (detail.value > (detail.baseline ?? 0) ? "↑" : "↓"),
-		},
+		delta,
 		threshold: model && {
 			uuid: model.threshold,
 			text: [
 				model.test,
-				...(boundary == null ? [] : [`${side}_boundary ${boundary}`]),
+				...(boundary == null
+					? []
+					: [`${side}_boundary ${boundaryText(boundary)}`]),
 			].join(" · "),
 		},
 	};

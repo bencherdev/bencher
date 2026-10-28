@@ -18,6 +18,7 @@ import { modelText } from "./text";
 import { ROW_HEIGHT } from "./query";
 import Sets from "./Sets";
 import type { ThresholdRow } from "./rows";
+import { formatCount } from "../plot/count";
 
 /** Rows drawn above and below the screen, so a quick scroll never shows a gap. */
 const OVERSCAN = 8;
@@ -273,10 +274,10 @@ const Row = (props: {
 					<Show when={props.row.active > 0}>
 						<span class="th-active">
 							<span class="th-dot" aria-hidden="true" />
-							{props.row.active} active
+							{formatCount(props.row.active)} active
 						</span>{" "}
 					</Show>
-					<span class="th-quiet">{props.row.raised} raised</span>
+					<span class="th-quiet">{formatCount(props.row.raised)} raised</span>
 				</span>
 			</td>
 		</tr>

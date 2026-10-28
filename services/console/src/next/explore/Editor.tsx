@@ -26,9 +26,10 @@ import {
 	searchQuery,
 	variantsQuery,
 } from "./queries";
+import { formatCount } from "../plot/count";
 
 const plural = (count: number, one: string, many: string) =>
-	`${count} ${count === 1 ? one : many}`;
+	`${formatCount(count)} ${count === 1 ? one : many}`;
 
 const tag = ([key, value]: [string, ParameterValue]) =>
 	`${key}=${String(value)}`;

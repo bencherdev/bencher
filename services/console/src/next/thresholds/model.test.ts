@@ -48,6 +48,20 @@ describe("modelText", () => {
 		);
 	});
 
+	// Kills a boundary printed with the noise of its binary fraction, or a sample size left ungrouped.
+	test("prints a boundary as it was set and groups a sample size", () => {
+		expect(
+			modelText({
+				test: "percentage",
+				upper_boundary: 0.1 + 0.2,
+				max_sample_size: 1_000_000,
+			}),
+		).toBe("percentage · upper_boundary 0.3 · max_sample_size 1,000,000");
+		expect(modelText({ test: "static", upper_boundary: 1e300 })).toBe(
+			"static · upper_boundary 1e300",
+		);
+	});
+
 	// Kills a threshold without a model drawn as an empty cell.
 	test("says when there is no model", () => {
 		expect(modelText(undefined)).toBe("no model");

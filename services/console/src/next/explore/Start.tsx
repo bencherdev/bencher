@@ -15,14 +15,14 @@ import {
 	createUniqueId,
 	on,
 } from "solid-js";
-import {
-	BoundaryLimit,
-	type JsonAlert,
-	type JsonConsoleRunSummary,
-	type JsonPlot,
+import type {
+	JsonAlert,
+	JsonConsoleRunSummary,
+	JsonPlot,
 } from "../../types/bencher";
 import { projectPath } from "../paths";
-import { formatDelta, formatWhen } from "../plot/format";
+import { formatChange, formatWhen } from "../plot/format";
+import { formatCount } from "../plot/count";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import type { ExploreQuery } from "../query/query";
@@ -103,11 +103,7 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 						const delta =
 							alert.boundary.baseline === undefined
 								? null
-								: formatDelta(
-										alert.value,
-										alert.boundary.baseline,
-										alert.limit === BoundaryLimit.Lower ? "lower" : "upper",
-									);
+								: formatChange(alert.value, alert.boundary.baseline);
 						const tags = Object.entries(alert.variant.parameters).map(
 							([key, value]) => `${key}=${String(value)}`,
 						);
@@ -138,7 +134,7 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 									</span>
 									<span class="ex-sub">
 										{branch.name} · {testbed.name}
-										{delta ? ` · ${delta.text}` : ""}
+										{delta ? ` · ${delta}` : ""}
 									</span>
 								</span>
 							</a>
@@ -226,8 +222,9 @@ const RunRow = (props: {
 	const sub = () =>
 		[
 			formatWhen(props.run.start_time),
-			props.run.reports > 1 && `${props.run.reports} reports`,
-			props.run.testbed_count > 1 && `${props.run.testbed_count} testbeds`,
+			props.run.reports > 1 && `${formatCount(props.run.reports)} reports`,
+			props.run.testbed_count > 1 &&
+				`${formatCount(props.run.testbed_count)} testbeds`,
 		].filter((part): part is string => typeof part === "string");
 	const panel = createUniqueId();
 	return (

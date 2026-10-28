@@ -1,4 +1,5 @@
 import type { ModelTest } from "../../types/bencher";
+import { formatCount } from "../plot/count";
 
 /** A threshold model as the API names its fields, its test by name. */
 export interface ModelLike {
@@ -31,9 +32,15 @@ export const modelRows = (model: ModelLike): [Field, string | undefined][] =>
 				? undefined
 				: field === "window"
 					? durationText(value)
-					: String(value),
+					: field.endsWith("_boundary")
+						? boundaryText(value)
+						: formatCount(value),
 		];
 	});
+
+/** A boundary to the twelve significant digits a person sets one in, without the noise of binary fractions. */
+export const boundaryText = (boundary: number) =>
+	String(Number(boundary.toPrecision(12))).replace("e+", "e");
 
 /** The model on one line: its test, then each field it has. */
 export const modelText = (model: ModelLike | undefined) =>
@@ -60,5 +67,5 @@ export const durationText = (seconds: number) => {
 		1,
 	];
 	const count = seconds / size;
-	return `${count} ${unit}${count === 1 ? "" : "s"}`;
+	return `${formatCount(count)} ${unit}${count === 1 ? "" : "s"}`;
 };

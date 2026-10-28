@@ -1,8 +1,8 @@
 import { sameX } from "./columns";
 import {
+	changeOf,
 	type Delta,
-	formatDelta,
-	formatValue,
+	formatMeasure,
 	formatWhen,
 	type Guard,
 } from "./format";
@@ -13,7 +13,6 @@ import type {
 	PlotParameterValue,
 	PlotXAxis,
 } from "./types";
-import type { UnitScale } from "./units";
 
 const READOUT_ROWS = 6;
 
@@ -41,8 +40,6 @@ export const fullName = (
 		measure,
 		...(metric === VALUE ? [] : [metric]),
 	].join(" ");
-
-const NO_SCALE: UnitScale = { factor: 1, symbol: "" };
 
 /** One iteration of the focused line's report. */
 interface ReadoutIteration {
@@ -89,7 +86,6 @@ export const readout = (
 	index: number,
 	order: readonly number[],
 	focus: number | null,
-	scales: readonly UnitScale[],
 	xAxis: PlotXAxis,
 	timeZone?: string,
 	cursor: { line: number | null; chosen?: number | undefined } = {
@@ -117,17 +113,17 @@ export const readout = (
 		if (rows.length === READOUT_ROWS) {
 			continue;
 		}
-		const scale = scales[line.measure] ?? NO_SCALE;
+		const units = data.measures[line.measure]?.units ?? "";
 		const row: ReadoutRow = {
 			line: lineIndex,
 			point,
-			value: formatValue(line.y[point] ?? 0, scale),
+			value: formatMeasure(line.y[point] ?? 0, units),
 			report: data.report[point] ?? 0,
 			focused: lineIndex === focus,
 		};
 		if (row.focused) {
 			row.delta = deltaAt(line, point);
-			const limit = limitAt(line, point, scale);
+			const limit = limitAt(line, point, units);
 			if (limit) {
 				row.limit = limit;
 			}
@@ -139,7 +135,7 @@ export const readout = (
 		// The focused line, or the only one, lists its report's iterations.
 		const iterations =
 			(row.focused || lines.length === 1) &&
-			iterationsAt(data, line, point, scale, cursor.chosen);
+			iterationsAt(data, line, point, units, cursor.chosen);
 		if (iterations) {
 			row.iterations = iterations;
 		}
@@ -177,7 +173,7 @@ const iterationsAt = (
 	data: PlotData,
 	line: PlotLine,
 	point: number,
-	scale: UnitScale,
+	units: string,
 	chosen: number | undefined,
 ): ReadoutIteration[] | undefined => {
 	const { iteration, report } = data;
@@ -189,7 +185,7 @@ const iterationsAt = (
 	return iteration && (points.length > 1 || chosen !== undefined)
 		? points.map((index) => ({
 				iteration: (iteration[index] ?? 0) + 1,
-				value: formatValue(line.y[index] ?? 0, scale),
+				value: formatMeasure(line.y[index] ?? 0, units),
 				emphasized: index === point,
 				alerted: line.alerts.includes(index),
 			}))
@@ -211,13 +207,13 @@ const deltaAt = (line: PlotLine, point: number): Delta | null => {
 	const guard = guardAt(line, point);
 	return value == null || baseline == null || !guard
 		? null
-		: formatDelta(value, baseline, guard);
+		: changeOf(value, baseline, guard);
 };
 
 const limitAt = (
 	line: PlotLine,
 	point: number,
-	scale: UnitScale,
+	units: string,
 ): string | undefined => {
 	if (!line.lower && !line.upper) {
 		return "no threshold";
@@ -225,10 +221,10 @@ const limitAt = (
 	const lower = line.lower?.[point];
 	const upper = line.upper?.[point];
 	if (lower != null && upper != null) {
-		return `limits ${formatValue(lower, scale)} to ${formatValue(upper, scale)}`;
+		return `limits ${formatMeasure(lower, units)} to ${formatMeasure(upper, units)}`;
 	}
 	const limit = upper ?? lower;
-	return limit == null ? undefined : `limit ${formatValue(limit, scale)}`;
+	return limit == null ? undefined : `limit ${formatMeasure(limit, units)}`;
 };
 
 const GAP = 12;

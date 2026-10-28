@@ -4,11 +4,6 @@ import { clicked, readout, readoutLeft } from "./readout";
 import { DAY, START, testData, testLine } from "./testing";
 import type { PlotData } from "./types";
 
-const SCALES = [
-	{ factor: 1e3, symbol: "µs" },
-	{ factor: 1, symbol: "ops" },
-];
-
 const DATA: PlotData = {
 	...testData([
 		testLine({
@@ -29,7 +24,7 @@ const DATA: PlotData = {
 describe("readout", () => {
 	// Kills formatting in raw units, reading the wrong index, or another measure's units.
 	test("lists each visible line's value at the x in its measure's units", () => {
-		const result = readout(DATA, 0, [0, 1, 2], null, SCALES, "date", "UTC");
+		const result = readout(DATA, 0, [0, 1, 2], null, "date", "UTC");
 		expect(result.rows.map(({ line, value }) => [line, value])).toEqual([
 			[0, "18.00 µs"],
 			[1, "17.00 µs"],
@@ -40,13 +35,13 @@ describe("readout", () => {
 	});
 
 	test("leaves out a line with no point at the x", () => {
-		const result = readout(DATA, 1, [0, 1, 2], null, SCALES, "date", "UTC");
+		const result = readout(DATA, 1, [0, 1, 2], null, "date", "UTC");
 		expect(result.rows.map(({ line }) => line)).toEqual([0, 2]);
 	});
 
 	// Kills listing hidden lines: the caller passes only the visible ones.
 	test("lists only the lines it is given", () => {
-		const result = readout(DATA, 0, [2], null, SCALES, "date", "UTC");
+		const result = readout(DATA, 0, [2], null, "date", "UTC");
 		expect(result.rows.map(({ line }) => line)).toEqual([2]);
 	});
 
@@ -62,30 +57,26 @@ describe("readout", () => {
 			),
 		};
 		expect(
-			readout(data, 1, [0, 2], 0, SCALES, "date", "UTC").rows.map(
-				({ alert }) => alert,
-			),
+			readout(data, 1, [0, 2], 0, "date", "UTC").rows.map(({ alert }) => alert),
 		).toEqual([raised, undefined]);
 		expect(
-			readout(data, 0, [0, 2], 0, SCALES, "date", "UTC").rows[0]?.alert,
+			readout(data, 0, [0, 2], 0, "date", "UTC").rows[0]?.alert,
 		).toBeUndefined();
 		expect(
-			readout(data, 1, [0, 2], 2, SCALES, "date", "UTC").rows.map(
-				({ alert }) => alert,
-			),
+			readout(data, 1, [0, 2], 2, "date", "UTC").rows.map(({ alert }) => alert),
 		).toEqual([{ ...raised, uuid: "other" }, undefined]);
 	});
 
 	// Kills a focused line that loses its place, its delta, or its limit.
 	test("leads with the focused line, its delta, and its limit", () => {
-		const result = readout(DATA, 1, [2, 0], 0, SCALES, "date", "UTC");
+		const result = readout(DATA, 1, [2, 0], 0, "date", "UTC");
 		expect(result.rows[0]).toEqual({
 			line: 0,
 			point: 1,
 			value: "20.60 µs",
 			report: 1,
 			focused: true,
-			delta: { text: "+13.8%", tone: "worse" },
+			delta: { text: "+13.8%", arrow: "↑", tone: "worse" },
 			limit: "limit 19.40 µs",
 		});
 		expect(result.rows[1]?.focused).toBe(false);
@@ -93,7 +84,7 @@ describe("readout", () => {
 	});
 
 	test("says when no threshold checks the focused line", () => {
-		const result = readout(DATA, 0, [1], 1, SCALES, "date", "UTC");
+		const result = readout(DATA, 0, [1], 1, "date", "UTC");
 		expect(result.rows[0]?.limit).toBe("no threshold");
 		expect(result.rows[0]?.delta).toBeNull();
 	});
@@ -110,7 +101,6 @@ describe("readout", () => {
 			0,
 			[0, 1, 2, 3, 4, 5, 6, 7, 8],
 			8,
-			SCALES,
 			"date",
 			"UTC",
 		);
@@ -134,7 +124,7 @@ describe("readout", () => {
 				testLine({ id: "b", y: [null, 2000, null] }),
 			],
 		};
-		const result = readout(shared, 0, [0, 1], null, SCALES, "date", "UTC");
+		const result = readout(shared, 0, [0, 1], null, "date", "UTC");
 		expect(result.rows.map(({ line, report }) => [line, report])).toEqual([
 			[0, 0],
 			[1, 1],
@@ -142,7 +132,7 @@ describe("readout", () => {
 	});
 
 	test("names the version on a version axis", () => {
-		const result = readout(DATA, 1, [0], null, SCALES, "version", "UTC");
+		const result = readout(DATA, 1, [0], null, "version", "UTC");
 		expect(result.when).toBe("Version 101");
 	});
 });
@@ -174,16 +164,9 @@ const RUNS = withThrough(RAW_RUNS);
 describe("readout of iterations", () => {
 	// Kills the pointed iteration read as the one the line runs through, an iteration left out, and the alerted one unmarked.
 	test("lists the focused line's iterations, the pointed one emphasized with its delta and limit", () => {
-		const [focused, other] = readout(
-			RUNS,
-			1,
-			[0, 1],
-			0,
-			SCALES,
-			"date",
-			"UTC",
-			{ line: 0 },
-		).rows;
+		const [focused, other] = readout(RUNS, 1, [0, 1], 0, "date", "UTC", {
+			line: 0,
+		}).rows;
 		expect(focused).toMatchObject({
 			point: 1,
 			value: "18.50 µs",
@@ -203,7 +186,7 @@ describe("readout of iterations", () => {
 
 	// Kills a cursor on no line that emphasizes the iteration it happens to sit on.
 	test("emphasizes the iteration the line runs through when the cursor is on no line", () => {
-		const [focused] = readout(RUNS, 3, [0], 0, SCALES, "date", "UTC").rows;
+		const [focused] = readout(RUNS, 3, [0], 0, "date", "UTC").rows;
 		expect(focused).toMatchObject({
 			point: 2,
 			value: "20.60 µs",
@@ -219,7 +202,7 @@ describe("readout of iterations", () => {
 
 	// Kills a plot of one line, which Explore draws with nothing focused, that reads out one iteration.
 	test("lists the only line's iterations though it is not focused", () => {
-		const [only] = readout(RUNS, 3, [0], null, SCALES, "date", "UTC").rows;
+		const [only] = readout(RUNS, 3, [0], null, "date", "UTC").rows;
 		expect(only?.focused).toBe(false);
 		expect(only?.iterations?.map(({ emphasized }) => emphasized)).toEqual([
 			false,
@@ -227,7 +210,7 @@ describe("readout of iterations", () => {
 			false,
 		]);
 		expect(
-			readout(RUNS, 3, [0, 1], null, SCALES, "date", "UTC").rows.map(
+			readout(RUNS, 3, [0, 1], null, "date", "UTC").rows.map(
 				({ iterations }) => iterations,
 			),
 		).toEqual([undefined, undefined]);
@@ -236,8 +219,7 @@ describe("readout of iterations", () => {
 	// Kills a report run once listed as a single iteration, as if it ran several.
 	test("lists no iterations for a report run once", () => {
 		expect(
-			readout(RUNS, 0, [0], 0, SCALES, "date", "UTC", { line: 0 }).rows[0]
-				?.iterations,
+			readout(RUNS, 0, [0], 0, "date", "UTC", { line: 0 }).rows[0]?.iterations,
 		).toBeUndefined();
 	});
 
@@ -255,7 +237,7 @@ describe("readout of iterations", () => {
 			lines: [testLine({ id: "a", y: [18_000, 19_000, 21_000] })],
 		});
 		expect(
-			readout(shared, 0, [0], 0, SCALES, "version", "UTC", {
+			readout(shared, 0, [0], 0, "version", "UTC", {
 				line: 0,
 			}).rows[0]?.iterations?.map(({ value }) => value),
 		).toEqual(["18.00 µs", "19.00 µs"]);
@@ -265,7 +247,7 @@ describe("readout of iterations", () => {
 	test("names the chosen iteration", () => {
 		const second = withThrough(onlyIteration(RAW_RUNS, 2));
 		expect(
-			readout(second, 0, [0], 0, SCALES, "date", "UTC", {
+			readout(second, 0, [0], 0, "date", "UTC", {
 				line: null,
 				chosen: 2,
 			}).rows[0]?.iterations,

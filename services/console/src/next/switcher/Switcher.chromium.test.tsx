@@ -195,6 +195,15 @@ test("each row names its organization, its last run, and its active alerts", asy
 	expect(cornbread?.getAttribute("href")).toBe("/console/projects/cornbread/");
 });
 
+// Kills an alerts pill that grows past two digits.
+test("a row with more than 99 active alerts counts 99+", async () => {
+	await open({
+		...READER,
+		projects: [project("Hashbrown", { active_alerts: 100 })],
+	});
+	expect(options()[0]?.textContent).toContain("99+ active alerts");
+});
+
 // Kills a footer that drops New project or Settings, sends either to an
 // organization other than the current project's, or sends Settings to the
 // classic page the new console replaces.

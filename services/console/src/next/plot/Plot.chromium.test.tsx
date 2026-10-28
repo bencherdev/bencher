@@ -1520,6 +1520,45 @@ describe("Plot axes", () => {
 		}
 	});
 
+	// Kills an axis in the tier of its smallest tick, which reads a range of minutes in nanoseconds.
+	test("an axis takes the tier of its largest tick", async () => {
+		mount({
+			data: testData([
+				testLine({ id: "zero", benchmark: "crc32c", y: [0, 0, 0] }),
+				testLine({ id: "big", benchmark: "sha256", y: [1e12, 1e12, 1e12] }),
+			]),
+		});
+		await settle();
+		await expect
+			.element(page.getByText("Latency, m", { exact: true }))
+			.toBeInTheDocument();
+	});
+
+	// Kills a y axis uPlot gives up on past its own steps, which draws no labels.
+	test("labels a y axis at 1e300", async () => {
+		const drawn: string[] = [];
+		const fillText = CanvasRenderingContext2D.prototype.fillText;
+		CanvasRenderingContext2D.prototype.fillText = function (
+			this: CanvasRenderingContext2D,
+			...args: Parameters<typeof fillText>
+		) {
+			drawn.push(args[0]);
+			return fillText.apply(this, args);
+		};
+		try {
+			mount({
+				data: testData([testLine({ id: "huge", y: [1e300, 2e300, 3e300] })]),
+			});
+			await settle();
+			await plotArea();
+		} finally {
+			CanvasRenderingContext2D.prototype.fillText = fillText;
+		}
+		expect(
+			drawn.filter((text) => text.endsWith("e300")).length,
+		).toBeGreaterThanOrEqual(3);
+	});
+
 	// Kills an axis that shrinks to the visible lines' labels, which moves the plot area under the reader.
 	test("never narrows the y axis below the width every line needs", async () => {
 		const data = testData([
@@ -1627,7 +1666,7 @@ const DUAL = testData(
 );
 // As long as the seed's titles.
 const LEFT = "Latency, ns";
-const RIGHT = "Throughput, ops/s x 1e3";
+const RIGHT = "Throughput, ops/s";
 const NOTE = "4w, ending at this report";
 const BOUNDARY = /^boundary: /;
 
@@ -1757,7 +1796,7 @@ describe("Plot axes row", () => {
 					alerts: [2],
 				}),
 			],
-			[{ name: "Throughput", units: "operations / second (ops/s)" }],
+			[{ name: "Total throughput", units: "operations / second (ops/s)" }],
 		);
 		mount({ data, note: NOTE }, 292);
 		await settle();
