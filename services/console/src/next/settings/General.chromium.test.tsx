@@ -2,6 +2,7 @@ import { type JsonConsoleProject, Visibility } from "../../types/bencher";
 import { afterEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { ApiError } from "../api";
+import { axeInBothThemes } from "../axe/testing";
 import { VERSION_KEY } from "../memory";
 import General from "./General";
 import { PROJECT, bootstrapOf, fakeApi, mount, watchFallback } from "./testing";
@@ -487,3 +488,34 @@ describe("what a reader sees", () => {
 		);
 	});
 });
+
+// Kills a confirmation of General that fails axe in either theme.
+for (const [name, opens] of [
+	[
+		"Change visibility",
+		() => page.getByRole("button", { name: "Change visibility" }).click(),
+	],
+	[
+		"Delete project",
+		() => page.getByRole("button", { name: "Delete project" }).click(),
+	],
+	[
+		"slug",
+		async () => {
+			await page.getByRole("textbox", { name: "Slug" }).fill("hashbrown-moved");
+			await save().click();
+		},
+	],
+] as const) {
+	test(`the ${name} confirmation passes axe in both themes`, async () => {
+		await axeInBothThemes(async () => {
+			dispose = mount(() => <General />, { api: fakeApi().api }).dispose;
+			await opens();
+			await expect.element(page.getByRole("alertdialog")).toBeVisible();
+			return () => {
+				dispose?.();
+				dispose = undefined;
+			};
+		});
+	});
+}

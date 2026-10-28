@@ -227,13 +227,4 @@ test.describe("accessibility", () => {
 			).toBeVisible(),
 		);
 	});
-
-	test("New organization passes axe in both themes", async ({ page }) => {
-		await axeInBothThemes(page, `${ORGANIZATIONS}/add`, async () => {
-			await dialog(page)
-				.getByRole("textbox", { name: "Name" })
-				.fill("Bagge Farm");
-			await expect(dialog(page)).toContainText("bagge-farm");
-		});
-	});
 });

@@ -3,6 +3,7 @@ import { page } from "vitest/browser";
 import type { JsonToken } from "../../types/bencher";
 import { type Api, ApiError, type Method } from "../api";
 import { mountAccount } from "../account/testing";
+import { axeInBothThemes } from "../axe/testing";
 import LegacyTokens from "./LegacyTokens";
 
 let dispose: (() => void) | undefined;
@@ -149,4 +150,21 @@ test("a list that did not load says so, and Retry reads it again", async () => {
 	fail = false;
 	await page.getByRole("button", { name: "Retry" }).click();
 	await expect.element(table().getByText("ci-2024")).toBeVisible();
+});
+
+// Kills a revoke confirmation that fails axe in either theme.
+test("the revoke confirmation passes axe in both themes", async () => {
+	await axeInBothThemes(async () => {
+		dispose = mountAccount(LegacyTokens, "tokens", {
+			api: tokensApi().api,
+		}).dispose;
+		await page.getByRole("button", { name: "Revoke ci-2024" }).click();
+		await expect
+			.element(page.getByRole("alertdialog", { name: "Revoke ci-2024?" }))
+			.toBeVisible();
+		return () => {
+			dispose?.();
+			dispose = undefined;
+		};
+	});
 });

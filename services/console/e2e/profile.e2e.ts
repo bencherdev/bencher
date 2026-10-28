@@ -194,24 +194,4 @@ test.describe("accessibility", () => {
 			expect(textbox(page, "Name")).toHaveValue(seed.member.user.name),
 		);
 	});
-
-	test("Profile's email confirmation passes axe in both themes", async ({
-		page,
-	}) => {
-		const { slug } = seed.member.user;
-		await twoLegacyTokens(page, slug);
-		await axeInBothThemes(
-			page,
-			profilePath(slug),
-			async () => {},
-			async () => {
-				await expect(
-					page.getByRole("link", { name: "2 legacy tokens" }),
-				).toBeVisible();
-				await textbox(page, "Email").fill("muriel@bagge.example");
-				await save(page).click();
-				await expect(page.getByRole("alertdialog")).toBeVisible();
-			},
-		);
-	});
 });

@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type { JsonProjectKey } from "../../types/bencher";
 import { ApiError } from "../api";
+import { axeInBothThemes } from "../axe/testing";
 import Keys from "./Keys";
 import { bootstrapOf, fakeApi, mount, watchFallback } from "./testing";
 
@@ -282,4 +283,19 @@ test("the page holds while the key lists load", () => {
 		1,
 	);
 	expect(page.getByText("Suspended").elements()).toHaveLength(0);
+});
+
+// Kills a new key dialog that fails axe in either theme.
+test("the new key dialog passes axe in both themes", async () => {
+	await axeInBothThemes(async () => {
+		dispose = mount(() => <Keys />, { api: fakeApi().api, cached }).dispose;
+		await page.getByRole("button", { name: "New key" }).click();
+		await expect
+			.element(page.getByRole("dialog", { name: "New key" }))
+			.toBeVisible();
+		return () => {
+			dispose?.();
+			dispose = undefined;
+		};
+	});
 });

@@ -1,5 +1,4 @@
 import type { Page } from "@playwright/test";
-import { axeInBothThemes } from "./axe";
 import { expect, consolePath, seed, signedIn, test } from "./fixtures";
 import { publicPath } from "./public";
 
@@ -94,32 +93,4 @@ test("the public plot has no Feedback control", async ({ page }) => {
 	await expect(
 		page.getByRole("button", { name: "Feedback", exact: true }),
 	).toHaveCount(0);
-});
-
-// Kills a dialog or a state of it that fails axe in either theme.
-test("the dialog passes axe in both themes, sent", async ({ page }) => {
-	await sentry(page, "accept");
-	await axeInBothThemes(
-		page,
-		RUNS,
-		() => expect(dialog(page).getByRole("status")).toBeVisible(),
-		async () => {
-			await compose(page, "Queued forever");
-			await dialog(page).getByRole("button", { name: "Send" }).click();
-		},
-	);
-});
-
-// Kills a dialog or a state of it that fails axe in either theme.
-test("the dialog passes axe in both themes, failed", async ({ page }) => {
-	await sentry(page, "block");
-	await axeInBothThemes(
-		page,
-		RUNS,
-		() => expect(dialog(page).getByRole("alert")).toBeVisible(),
-		async () => {
-			await compose(page, "Queued forever");
-			await dialog(page).getByRole("button", { name: "Send" }).click();
-		},
-	);
 });

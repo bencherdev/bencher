@@ -1,5 +1,4 @@
 import type { Page } from "@playwright/test";
-import { axeInBothThemes } from "./axe";
 import {
 	crumb,
 	expect,
@@ -154,31 +153,3 @@ test("a returning reader's switcher opens from the cache", async ({ page }) => {
 	await expect(option(page, hashbrown.name)).toBeVisible();
 	await page.unrouteAll({ behavior: "ignoreErrors" });
 });
-
-// Kills names, roles, contrast, or focus that axe finds wanting in either
-// theme, with rows or with none matching.
-for (const query of ["", "zeppelin"]) {
-	test(`the open switcher passes axe in both themes${query ? " with no match" : ""}`, async ({
-		page,
-	}) => {
-		await axeInBothThemes(
-			page,
-			RUNS,
-			async () => {
-				await settle(page);
-			},
-			async () => {
-				// A phone has no crumb; its way in comes with the avatar menu.
-				await settle(page);
-				if (await crumb(page).isVisible()) {
-					await crumb(page).click();
-					await expect(option(page, hashbrown.name)).toBeVisible();
-					await search(page).fill(query);
-					await expect(
-						query ? dialog(page).getByText("No matches") : search(page),
-					).toBeVisible();
-				}
-			},
-		);
-	});
-}
