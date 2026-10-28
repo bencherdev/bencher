@@ -4,6 +4,7 @@ import type { ExploreQuery } from "../query/query";
 import CustomRange from "./CustomRange";
 import { LINE_CAP, lineCapWarning, measuresLayout } from "./layout";
 import { PRESETS, type WindowChoice, pickWindow, windowChoice } from "./window";
+import { formatCount } from "../plot/count";
 
 const X_AXES = [
 	{ value: "date", label: "Report date" },
@@ -128,7 +129,7 @@ const Controls = (props: {
 						<path d="M12 10v4M12 17v.5" />
 					</svg>
 					<b>
-						{props.total} of {LINE_CAP} lines
+						{formatCount(props.total)} of {LINE_CAP} lines
 					</b>
 				</p>
 			</Show>

@@ -54,6 +54,7 @@ import {
 	pickSort,
 } from "./search";
 import RowTable from "./RowTable";
+import { formatCount } from "../plot/count";
 
 const SEARCH_DELAY = 200;
 const SKELETON_ROWS = 8;
@@ -416,7 +417,8 @@ const List = (props: {
 								value: "active",
 								label: (
 									<>
-										Active <span class="count">{first()?.active}</span>
+										Active{" "}
+										<span class="count">{formatCount(first()?.active)}</span>
 									</>
 								),
 							},
@@ -424,7 +426,8 @@ const List = (props: {
 								value: "archived",
 								label: (
 									<>
-										Archived <span class="count">{first()?.archived}</span>
+										Archived{" "}
+										<span class="count">{formatCount(first()?.archived)}</span>
 									</>
 								),
 							},

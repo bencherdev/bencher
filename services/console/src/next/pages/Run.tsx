@@ -31,6 +31,7 @@ import type {
 import { type Api, ApiError } from "../api";
 import { projectPath, runPath } from "../paths";
 import { formatWhen } from "../plot/format";
+import { formatCount } from "../plot/count";
 import { useNarrow } from "../plot/narrow";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
@@ -216,7 +217,7 @@ const Run = () => {
 					<div class="dm-section-head">
 						<h2 class="seclabel">Reports</h2>
 						<Show when={run()}>
-							{(run) => <span class="count">{run().total}</span>}
+							{(run) => <span class="count">{formatCount(run().total)}</span>}
 						</Show>
 					</div>
 					<Switch>
@@ -274,7 +275,7 @@ const Run = () => {
 											{(count) => (
 												<span class="rn-held" role="status">
 													<span>
-														<b>{count()}</b> new{" "}
+														<b>{formatCount(count())}</b> new{" "}
 														{count() === 1 ? "line" : "lines"}
 													</span>
 													<Button
@@ -410,7 +411,7 @@ const subtitle = (run: JsonConsoleRun, narrow: boolean, now: number) => {
 };
 
 const plural = (count: number, noun: string) =>
-	`${count} ${count === 1 ? noun : `${noun}s`}`;
+	`${formatCount(count)} ${count === 1 ? noun : `${noun}s`}`;
 
 /** How many alerts the run raised, and how many the section draws when that is fewer. */
 const alertCount = (alerting: JsonConsoleAlerts) => {
@@ -419,8 +420,8 @@ const alertCount = (alerting: JsonConsoleAlerts) => {
 		0,
 	);
 	return drawn < alerting.total
-		? `${drawn} of ${alerting.total}`
-		: String(alerting.total);
+		? `${formatCount(drawn)} of ${formatCount(alerting.total)}`
+		: formatCount(alerting.total);
 };
 
 const NotFound = (props: { slug: string }) => (

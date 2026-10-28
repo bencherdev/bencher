@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/solid-query";
 import type { JsonMember } from "../../types/bencher";
 import type { Api } from "../api";
+import { formatCount } from "../plot/count";
 
 const path = (organization: string) =>
 	`/v0/organizations/${encodeURIComponent(organization)}/members`;
@@ -77,7 +78,7 @@ export const removeMember = async (
 export const sendable = (email: string) => email.trim().indexOf("@") > 0;
 
 export const memberCount = (count: number) =>
-	`${count} ${count === 1 ? "member" : "members"}`;
+	`${formatCount(count)} ${count === 1 ? "member" : "members"}`;
 
 const addedFormat = new Intl.DateTimeFormat("en-US", {
 	month: "short",

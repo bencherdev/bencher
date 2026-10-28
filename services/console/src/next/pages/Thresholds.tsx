@@ -37,6 +37,7 @@ import {
 	windowPhrase,
 } from "../thresholds/search";
 import ThresholdsTable from "../thresholds/ThresholdsTable";
+import { formatCount } from "../plot/count";
 
 /** Skeleton rows for a list never fetched, which show only once the wait is noticeable. */
 const SKELETON_ROWS = 8;
@@ -133,7 +134,9 @@ const Thresholds = () => {
 							</>
 						}
 					>
-						{total() === 1 ? `1 ${noun()}` : `${total()} ${noun()}s`}
+						{total() === 1
+							? `1 ${noun()}`
+							: `${formatCount(total())} ${noun()}s`}
 					</Show>
 				</Heading>
 			</div>

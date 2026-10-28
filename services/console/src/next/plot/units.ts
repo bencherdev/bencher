@@ -1,11 +1,11 @@
-// A port of bencher_valid's unit scaling, whose WASM build is 352 KB gzipped.
+// The tiers of bencher_valid's unit scaling, with seconds read in nanoseconds so they reach below a second.
 
-export interface UnitScale {
+export interface Tier {
 	factor: number;
 	symbol: string;
 }
 
-const NANOSECONDS: readonly UnitScale[] = [
+const NANOSECONDS: readonly Tier[] = [
 	{ factor: 1, symbol: "ns" },
 	{ factor: 1e3, symbol: "µs" },
 	{ factor: 1e6, symbol: "ms" },
@@ -14,13 +14,7 @@ const NANOSECONDS: readonly UnitScale[] = [
 	{ factor: 3.6e12, symbol: "h" },
 ];
 
-const SECONDS: readonly UnitScale[] = [
-	{ factor: 1, symbol: "s" },
-	{ factor: 60, symbol: "m" },
-	{ factor: 3600, symbol: "h" },
-];
-
-const BYTES: readonly UnitScale[] = [
+const BYTES: readonly Tier[] = [
 	{ factor: 1, symbol: "B" },
 	{ factor: 1e3, symbol: "KB" },
 	{ factor: 1e6, symbol: "MB" },
@@ -29,50 +23,20 @@ const BYTES: readonly UnitScale[] = [
 	{ factor: 1e15, symbol: "PB" },
 ];
 
-const POWERS = [1, 1e3, 1e6, 1e9, 1e12, 1e15];
+/** A unit's tiers, and how many of the first tier one of the unit is. */
+export interface Family {
+	tiers: readonly Tier[];
+	base: number;
+}
 
-const FIXED: Readonly<Record<string, readonly UnitScale[]>> = {
-	"nanoseconds (ns)": NANOSECONDS,
-	"seconds (s)": SECONDS,
-	"bytes (B)": BYTES,
+const FAMILIES: Readonly<Record<string, Family>> = {
+	"nanoseconds (ns)": { tiers: NANOSECONDS, base: 1 },
+	"seconds (s)": { tiers: NANOSECONDS, base: 1e9 },
+	"bytes (B)": { tiers: BYTES, base: 1 },
 };
 
-/** The units to show values in when the smallest is `min`. */
-export const unitScale = (min: number, units: string): UnitScale => {
-	const fixed = FIXED[units];
-	if (fixed) {
-		return fixed[
-			tier(
-				min,
-				fixed.map(({ factor }) => factor),
-			)
-		] as UnitScale;
-	}
-	const power = tier(min, POWERS);
-	const factor = POWERS[power] as number;
-	const suffix = power === 0 ? "" : `x 1e${power * 3}`;
-	const symbol = symbolOf(units);
-	if (symbol === undefined) {
-		return { factor, symbol: suffix };
-	}
-	return { factor, symbol: suffix ? `${symbol} ${suffix}` : symbol };
-};
+export const familyOf = (units: string): Family | undefined => FAMILIES[units];
 
-// NaN fails every comparison and lands on the last tier, as the Rust match does.
-const tier = (min: number, factors: readonly number[]): number => {
-	for (let index = 1; index < factors.length; index++) {
-		if (min < (factors[index] as number)) {
-			return index - 1;
-		}
-	}
-	return factors.length - 1;
-};
-
-const symbolOf = (units: string): string | undefined => {
-	const open = units.indexOf("(");
-	if (open < 0) {
-		return undefined;
-	}
-	const close = units.indexOf(")", open + 1);
-	return close < 0 ? undefined : units.slice(open + 1, close);
-};
+/** The text in a unit's first parentheses, else the whole unit. */
+export const symbolOf = (units: string): string =>
+	(/\(([^)]*)\)/.exec(units)?.[1] ?? units).trim();

@@ -23,6 +23,7 @@ import { accountPath } from "../account/paths";
 import { ApiError } from "../api";
 import { useQueryResult } from "../query";
 import { Frame, failureOf } from "./Profile";
+import { formatCount } from "../plot/count";
 
 /** The apps connected to the reader's account, each revoked after a confirmation. */
 const ConnectedApps = () => {
@@ -156,7 +157,7 @@ const ConnectedApps = () => {
 							}
 						>
 							<p class="muted sm">
-								Newest {page().grants.length} of {page().total}
+								Newest {page().grants.length} of {formatCount(page().total)}
 							</p>
 						</Show>
 					</div>

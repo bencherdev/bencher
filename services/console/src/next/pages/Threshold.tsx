@@ -21,6 +21,7 @@ import type {
 import { ApiError } from "../api";
 import { alertPath, projectPath, reportPath } from "../paths";
 import { formatDate, formatWhen } from "../plot/format";
+import { formatCount } from "../plot/count";
 import { useNarrow } from "../plot/narrow";
 import type { PlotAlerts } from "../plot/Plot";
 import { FIRST, useAlertBatches } from "../alerts/batches";
@@ -278,8 +279,11 @@ const Threshold = () => {
 														withPending(counts(), [rows.pending()]);
 													return (
 														<>
-															{shown().active} active ·{" "}
-															{shown().dismissed + shown().silenced} dismissed
+															{formatCount(shown().active)} active ·{" "}
+															{formatCount(
+																shown().dismissed + shown().silenced,
+															)}{" "}
+															dismissed
 														</>
 													);
 												}}

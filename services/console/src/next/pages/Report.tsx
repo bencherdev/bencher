@@ -62,6 +62,7 @@ import { duration, shortHash } from "../reports/format";
 import Neighbor, { onMoved } from "../runs/Neighbor";
 import { reportStatus } from "../runs/status";
 import StatusPill from "../runs/StatusPill";
+import { formatCount } from "../plot/count";
 
 const SKELETON_ROWS = 8;
 
@@ -264,7 +265,7 @@ const Report = () => {
 		return {
 			href: reportPath(slug(), link.uuid) + query(view()),
 			shown,
-			detail: `report ${link.order} of ${current.run.total}${narrow() ? `, ${link.testbed}` : ""}`,
+			detail: `report ${formatCount(link.order)} of ${formatCount(current.run.total)}${narrow() ? `, ${link.testbed}` : ""}`,
 		};
 	};
 	const intent = (side: "previous" | "next") => {
@@ -595,7 +596,9 @@ const subtitle = (
 	const run = report.run;
 	// A report alone in its run has no place to tell.
 	const place =
-		run?.order && run.total > 1 ? `#${run.order} of ${run.total}` : undefined;
+		run?.order && run.total > 1
+			? `#${formatCount(run.order)} of ${formatCount(run.total)}`
+			: undefined;
 	const spec = report.spec && SPEC;
 	if (narrow) {
 		return [
@@ -628,7 +631,7 @@ const subtitle = (
 };
 
 const plural = (count: number, noun: string) =>
-	`${count} ${count === 1 ? noun : `${noun}s`}`;
+	`${formatCount(count)} ${count === 1 ? noun : `${noun}s`}`;
 
 /** When the report started, to the second, as its run's reports start close together; a narrow page leaves out the year. */
 const startTime = (time: number, narrow: boolean) =>
@@ -650,7 +653,9 @@ const Selection = (props: {
 }) => (
 	<section class="rp-selbar" aria-label="Selected lines">
 		<span class="rp-selcount" aria-live="polite">
-			{props.count === 1 ? "1 line selected" : `${props.count} lines selected`}
+			{props.count === 1
+				? "1 line selected"
+				: `${formatCount(props.count)} lines selected`}
 		</span>
 		<Show when={props.count > 0}>
 			<button
@@ -676,11 +681,11 @@ const Selection = (props: {
 					data-variant="primary"
 					data-size="sm"
 					href={href()}
-					aria-label={`Open ${props.count} in Explore`}
+					aria-label={`Open ${formatCount(props.count)} in Explore`}
 				>
 					{props.narrow
-						? `Open ${props.count}`
-						: `Open ${props.count} in Explore`}
+						? `Open ${formatCount(props.count)}`
+						: `Open ${formatCount(props.count)} in Explore`}
 				</a>
 			)}
 		</Show>

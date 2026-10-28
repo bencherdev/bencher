@@ -8,6 +8,7 @@ import Avatar from "./Avatar";
 import Crumb from "./Crumb";
 import Feedback from "./Feedback";
 import Tools from "./Tools";
+import { BADGE_MAX, formatCount } from "../plot/count";
 
 interface ShellProps {
 	/** The project's slug; an account or organization page's bar has no project. */
@@ -46,7 +47,7 @@ const Shell = (props: ShellProps) => {
 	const refresh = () => setHref(home());
 	/** The count a badge shows, two digits at most. */
 	const count = () =>
-		props.alerts ? (props.alerts > 99 ? "99+" : String(props.alerts)) : "";
+		props.alerts ? formatCount(props.alerts, BADGE_MAX) : "";
 	// On a phone the bell shows only its count, so its name starts there.
 	const alertsLabel = () =>
 		props.alerts

@@ -1,10 +1,7 @@
 import { For, type JSX, Show, Suspense, createMemo, lazy } from "solid-js";
 import InlineHistory from "../plot/InlineHistory";
-import type { Guard } from "../plot/format";
-import { formatValue } from "../plot/format";
+import { changeOf, type Guard } from "../plot/format";
 import { inlineOf } from "../plot/inline";
-import { unitScale } from "../plot/units";
-import { deltaOf } from "./delta";
 import type { AlignedSeries } from "./lines";
 import { type ParameterSet, iterationTag, lineLabel, rowNumbers } from "./row";
 import { rowClick } from "./rowClick";
@@ -32,8 +29,6 @@ interface RowLine {
 	iterations?: number;
 	chosen?: number;
 }
-
-const UNITS = { unitScale, formatValue };
 
 /** The columns of a wide row; a narrow one folds them into four. */
 export const COLUMNS = { wide: 9, narrow: 4 } as const;
@@ -95,7 +90,6 @@ const LineRow = (props: LineRowProps) => {
 			},
 			props.line.guard,
 			props.line.measure.units,
-			UNITS,
 		);
 	const region = () => `lr-ex-${props.line.key}`;
 	const alerting = () => props.line.alert !== undefined && !props.dimmed;
@@ -205,15 +199,19 @@ const LineRow = (props: LineRowProps) => {
 	);
 	const delta = () => (
 		<Show
-			when={deltaOf(props.line.value, props.line.baseline, props.line.guard)}
+			when={
+				props.line.guard &&
+				props.line.baseline != null &&
+				changeOf(props.line.value, props.line.baseline, props.line.guard)
+			}
 		>
 			{(delta) => (
-				<span class={delta().word ? `lr-${delta().word}` : undefined}>
+				<span class={delta().tone ? `lr-${delta().tone}` : undefined}>
 					<Show when={delta().arrow}>
 						<span aria-hidden="true">{delta().arrow} </span>
 					</Show>
 					{delta().text}
-					<Show when={delta().word}> {delta().word}</Show>
+					<Show when={delta().tone}> {delta().tone}</Show>
 				</span>
 			)}
 		</Show>
@@ -271,9 +269,9 @@ const LineRow = (props: LineRowProps) => {
 						<td>{props.aside ?? props.line.measure.name}</td>
 						<Show when={props.beside}>{(beside) => <td>{beside()}</td>}</Show>
 						<td>{history()}</td>
-						<td class="lr-end lr-num">{numbers().value}</td>
+						<td class="lr-end lr-num ui-num">{numbers().value}</td>
 						<td class="lr-num">{delta()}</td>
-						<td class="lr-end">
+						<td class="lr-end ui-num">
 							<Show when={props.line.guard} fallback={noThreshold()}>
 								<span class="lr-num">{numbers().limit}</span>
 							</Show>
@@ -324,7 +322,7 @@ const LineRow = (props: LineRowProps) => {
 					</td>
 					<td>
 						<div class="lrn-num">
-							<b class="lr-num">{numbers().value}</b>
+							<b class="lr-num ui-num">{numbers().value}</b>
 							<span class="lr-num">{delta()}</span>
 						</div>
 					</td>

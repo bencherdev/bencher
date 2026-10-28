@@ -37,7 +37,7 @@ describe("alertFacts", () => {
 	// Kills the other side's limit, a side read from anything but the alert,
 	// numbers in raw units or each in its own, and a delta not measured from the
 	// baseline the threshold compared with.
-	test("states the crossed limit by its side, in one unit with the value and the baseline", () => {
+	test("states the crossed limit by its side, each number in its own tier", () => {
 		expect(alertFacts(alertDetail())).toMatchObject({
 			side: "upper",
 			value: "20.62 µs",
@@ -62,8 +62,8 @@ describe("alertFacts", () => {
 		expect(alertFacts(lower)).toMatchObject({
 			side: "lower",
 			value: "900.00 ns",
-			limit: "1,000.00 ns",
-			baseline: "1,200.00 ns",
+			limit: "1.00 µs",
+			baseline: "1.20 µs",
 			delta: { text: "-25.0%", arrow: "↓", tone: "worse" },
 		});
 	});

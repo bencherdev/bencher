@@ -5,6 +5,7 @@ import type {
 	JsonUsage,
 } from "../../types/bencher";
 import type { Api } from "../api";
+import { formatCount } from "../plot/count";
 
 const path = (organization: string) =>
 	`/v0/organizations/${encodeURIComponent(organization)}`;
@@ -52,8 +53,6 @@ const DOLLARS = new Intl.NumberFormat("en-US", {
 
 export const usd = (dollars: number) => DOLLARS.format(dollars);
 
-export const count = (value: number) => value.toLocaleString("en-US");
-
 const price = (cents: number) => usd(cents / 100).replace(/\.00$/, "");
 
 const day = (time: string, timeZone: string | undefined, year: boolean) =>
@@ -100,7 +99,9 @@ export const bands = (tiers: JsonPriceTier[]) =>
 	tiers.map((tier, index) => {
 		const from = index === 0 ? 0 : (tiers[index - 1]?.up_to ?? 0) + 1;
 		return {
-			range: isOpen(tier) ? `${from} or more` : `${from} to ${tier.up_to}`,
+			range: isOpen(tier)
+				? `${formatCount(from)} or more`
+				: `${formatCount(from)} to ${formatCount(tier.up_to ?? 0)}`,
 			price: bandPrice(tier),
 		};
 	});

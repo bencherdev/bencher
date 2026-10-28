@@ -65,6 +65,7 @@ import {
 } from "../alerts/status";
 import { alertPath, projectPath, reportPath } from "../paths";
 import { formatWhen } from "../plot/format";
+import { formatCount } from "../plot/count";
 import type { PlotAlerts } from "../plot/Plot";
 import { useNarrow } from "../plot/narrow";
 import { useProject, useProjectNavigate } from "../project";
@@ -575,7 +576,7 @@ const Alerts = () => {
 								</>
 							}
 						>
-							{(shownCounts) => <>{shownCounts().active} active</>}
+							{(shownCounts) => <>{formatCount(shownCounts().active)} active</>}
 						</Show>
 					</Heading>
 					{/* Drawn once the count is known, so its arrival moves nothing. */}
@@ -585,10 +586,10 @@ const Alerts = () => {
 							class="al-all"
 							aria-haspopup="dialog"
 							disabled={activeCount() === 0 || busy()}
-							aria-label={`Dismiss all ${activeCount()} active alerts that match the filters`}
+							aria-label={`Dismiss all ${formatCount(activeCount())} active alerts that match the filters`}
 							onClick={() => setConfirming(true)}
 						>
-							Dismiss all {activeCount()}
+							Dismiss all {formatCount(activeCount())}
 						</Button>
 					</Show>
 				</div>
@@ -600,8 +601,8 @@ const Alerts = () => {
 						{(shownCounts) => (
 							<>
 								{filterCount(search()) > 0
-									? `${bootstrap().data?.active_alerts ?? 0} active in the project`
-									: `${shownCounts().dismissed} dismissed · ${shownCounts().silenced} silenced`}
+									? `${formatCount(bootstrap().data?.active_alerts ?? 0)} active in the project`
+									: `${formatCount(shownCounts().dismissed)} dismissed · ${formatCount(shownCounts().silenced)} silenced`}
 							</>
 						)}
 					</Show>
@@ -750,7 +751,7 @@ const Alerts = () => {
 export default Alerts;
 
 const plural = (count: number, noun: string) =>
-	`${count} ${count === 1 ? noun : `${noun}s`}`;
+	`${formatCount(count)} ${count === 1 ? noun : `${noun}s`}`;
 
 /** The window on its own, such as "the last 4 weeks". */
 const windowText = (search: AlertsSearch, now: number) =>
@@ -914,9 +915,11 @@ const Selection = (props: {
 						data-variant="primary"
 						data-size="sm"
 						href={href()}
-						aria-label={`Open ${count()} in Explore`}
+						aria-label={`Open ${formatCount(count())} in Explore`}
 					>
-						{props.narrow ? `Open ${count()}` : `Open ${count()} in Explore`}
+						{props.narrow
+							? `Open ${formatCount(count())}`
+							: `Open ${formatCount(count())} in Explore`}
 					</a>
 				)}
 			</Show>
