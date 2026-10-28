@@ -28,7 +28,9 @@ use bencher_schema::{
     },
     schema, write_conn,
 };
-use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{
+    BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, dsl::max,
+};
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -49,6 +51,9 @@ pub enum ProjVariantsSort {
     /// Sort by variant creation date time.
     #[default]
     Created,
+    /// Sort by the variant's newest report, newest first when no direction is given, with the
+    /// never reported last either way.
+    LastUsed,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -180,6 +185,26 @@ fn get_ls_query<'q>(
             Some(JsonDirection::Desc) => {
                 query.order((schema::variant::created.desc(), schema::variant::id.desc()))
             },
+        },
+        ProjVariantsSort::LastUsed => {
+            let newest = schema::report_benchmark::table
+                .filter(schema::report_benchmark::variant_id.eq(schema::variant::id))
+                .select(max(schema::report_benchmark::report_id))
+                .single_value();
+            match pagination_params.direction {
+                Some(JsonDirection::Asc) => query.order((
+                    newest.is_null().asc(),
+                    newest.asc(),
+                    schema::variant::created.asc(),
+                    schema::variant::id.asc(),
+                )),
+                Some(JsonDirection::Desc) | None => query.order((
+                    newest.is_null().asc(),
+                    newest.desc(),
+                    schema::variant::created.desc(),
+                    schema::variant::id.desc(),
+                )),
+            }
         },
     }
 }

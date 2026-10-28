@@ -8,6 +8,12 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Text))]
 pub struct Search(String);
 
+impl AsRef<str> for Search {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 #[cfg(feature = "db")]
 mod search_query {
     use super::Search;

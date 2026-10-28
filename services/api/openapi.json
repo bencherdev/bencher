@@ -21374,6 +21374,13 @@
             "enum": [
               "created"
             ]
+          },
+          {
+            "description": "Sort by the variant's newest report, newest first when no direction is given, with the never reported last either way.",
+            "type": "string",
+            "enum": [
+              "last_used"
+            ]
           }
         ]
       },

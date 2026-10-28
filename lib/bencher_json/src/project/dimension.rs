@@ -14,7 +14,7 @@ pub const DEFAULT_CONSOLE_DIMENSIONS_PER_PAGE: u8 = 64;
 #[derive(Debug, Clone, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConsoleDimensionsQueryParams {
-    /// Search by name, slug, or UUID.
+    /// Search by name, slug, or UUID, with an exact name or slug first.
     pub search: Option<Search>,
     /// If set to `true`, only the archived ones. Otherwise, only the active ones.
     pub archived: Option<bool>,

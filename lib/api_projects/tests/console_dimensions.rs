@@ -343,13 +343,14 @@ async fn console_measures_list_each_measure_with_its_units_and_thresholds() {
 }
 
 // GET /v0/console/projects/{project}/branches - each sort in each direction, a time sort newest
-// first when no direction is given, ties broken by name in the same direction, and the never
-// reported last either way
+// first when no direction is given, ties broken by name in the direction of a name sort and A to
+// Z under a time sort, and the never reported last either way
+// Kills: a time sort's ties listed Z to A when it runs newest first.
 #[tokio::test]
 async fn console_branches_sort_by_name_created_and_last_used() {
     let server = TestServer::new().await;
     let f = seed_project(&server, "dmsort").await;
-    // A second branch created with main sorts after it by name, either way.
+    // A second branch created with main and, like old, never reported.
     insert_branch(
         &mut server.db_conn(),
         &f.base,
@@ -372,11 +373,11 @@ async fn console_branches_sort_by_name_created_and_last_used() {
         ),
         (
             "sort=created",
-            &["old", "feature", "devel", "main2", "main"],
+            &["old", "feature", "devel", "main", "main2"],
         ),
         (
             "sort=created&direction=desc",
-            &["old", "feature", "devel", "main2", "main"],
+            &["old", "feature", "devel", "main", "main2"],
         ),
         (
             "sort=created&direction=asc",
@@ -384,11 +385,11 @@ async fn console_branches_sort_by_name_created_and_last_used() {
         ),
         (
             "sort=last_used",
-            &["feature", "main", "devel", "old", "main2"],
+            &["feature", "main", "devel", "main2", "old"],
         ),
         (
             "sort=last_used&direction=desc",
-            &["feature", "main", "devel", "old", "main2"],
+            &["feature", "main", "devel", "main2", "old"],
         ),
         (
             "sort=last_used&direction=asc",
@@ -467,6 +468,61 @@ async fn console_branches_page_and_search() {
             (&json!(total), &json!(4), &json!(1)),
             "{query}"
         );
+    }
+}
+
+// GET /v0/console/projects/{project}/branches - a search puts the branch whose name or slug is the
+// search text, ignoring case, ahead of every other match, whatever the sort and direction
+// Kills: an exact match left past the first page because more matches sort ahead of it.
+#[tokio::test]
+async fn console_branches_search_puts_an_exact_match_first() {
+    let server = TestServer::new().await;
+    let user = server.signup("Dimension User", "dmexact@example.com").await;
+    let org = server.create_org(&user, "dmexact org").await;
+    let project = server.create_project(&user, &org, "dmexact project").await;
+    let slug = project.slug.to_string();
+    let project_id = get_project_id(&server, &slug);
+
+    let mut conn = server.db_conn();
+    let conn = &mut conn;
+    let base = insert_base(conn, project_id);
+    let (testbed, _) = insert_testbed(conn, project_id, "localhost", 0, None, None);
+    let (_, variant) = insert_benchmark(conn, project_id, "bench", 0, None);
+    let main = insert_branch(conn, &base, "main", &BranchSpec::default());
+    let a_main = insert_branch(conn, &base, "a-main", &BranchSpec::default());
+    insert_branch(conn, &base, "b-main", &BranchSpec::default());
+    insert_branch(conn, &base, "main2", &BranchSpec::default());
+    insert_branch(
+        conn,
+        &base,
+        "devel",
+        &BranchSpec {
+            slug: Some("dev"),
+            ..BranchSpec::default()
+        },
+    );
+    insert_branch(conn, &base, "a-dev", &BranchSpec::default());
+    insert_branch(conn, &base, "b-dev", &BranchSpec::default());
+    for (branch, created) in [(&main, 300), (&a_main, 500)] {
+        insert_report(
+            conn,
+            project_id,
+            (branch.head, testbed, base.version),
+            created,
+            (variant, &[]),
+        );
+    }
+
+    for (query, expected) in [
+        ("search=mai&per_page=2", ["a-main", "b-main"]),
+        ("search=MAIN&per_page=2", ["main", "a-main"]),
+        ("search=main&direction=desc&per_page=2", ["main", "main2"]),
+        ("search=main&sort=last_used&per_page=2", ["main", "a-main"]),
+        ("search=Dev&per_page=2", ["devel", "a-dev"]),
+    ] {
+        let (status, body) = get(&server, &user.token, &slug, "branches", query).await;
+        assert_eq!(status, StatusCode::OK, "{query}");
+        assert_eq!(names(&body, "branches"), expected, "{query}");
     }
 }
 
