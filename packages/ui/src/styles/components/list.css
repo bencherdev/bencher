@@ -15,6 +15,10 @@
 		color: inherit;
 	}
 
+	.ui-list-item > * {
+		min-width: 0;
+	}
+
 	.ui-list-item + .ui-list-item {
 		border-block-start: var(--border-width) solid var(--color-border);
 	}

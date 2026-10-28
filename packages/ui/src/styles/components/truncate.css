@@ -1,0 +1,75 @@
+@layer ui-components {
+	.ui-trunc {
+		display: inline-flex;
+		min-width: 0;
+		max-width: 100%;
+	}
+
+	.ui-trunc > span {
+		flex: 0 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* A cut tail is drawn whole after the ellipsis, and only the text before it shrinks; the alt text keeps it out of the accessible name. It leaves the text room for a whole ellipsis in any weight, so no sliver of a glyph shows and a selection across it copies. */
+	.ui-trunc[data-tail]::after {
+		content: attr(data-tail) / "";
+		flex: none;
+		max-width: calc(100% - 1.25em);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* A cut root keeps the intrinsic width of its whole text, so the drawn tail never changes the space it gets. An engine without the property sizes it by its content. */
+	@supports (contain-intrinsic-inline-size: 1px) {
+		.ui-trunc[data-cut]:not([data-open]) {
+			contain: inline-size;
+			contain-intrinsic-inline-size: var(--ui-trunc-whole);
+		}
+	}
+
+	.ui-trunc[data-open] {
+		display: inline;
+	}
+
+	.ui-trunc[data-open] > span {
+		white-space: normal;
+	}
+
+	.ui-trunc[data-open]::after {
+		content: none;
+	}
+
+	/* A reveal reads as the text it holds. */
+	button.ui-trunc {
+		appearance: none;
+		padding: 0;
+		border: 0;
+		background: none;
+		font: inherit;
+		letter-spacing: inherit;
+		text-align: start;
+		text-transform: inherit;
+		cursor: pointer;
+	}
+
+	/* Parts of one label share its width fairly: a short part stays whole and the long ones split the rest. */
+	.ui-parts {
+		display: grid;
+		grid-auto-flow: column;
+		grid-auto-columns: minmax(auto, max-content);
+		column-gap: var(--spacing-2);
+	}
+
+	.ui-parts > * {
+		min-width: 0;
+	}
+
+	.ui-parts > [data-fixed] {
+		min-width: max-content;
+		white-space: nowrap;
+	}
+}

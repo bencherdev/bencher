@@ -23,6 +23,9 @@
 		--size-element-md: 40px;
 		--size-element-lg: 48px;
 
+		/* The narrowest a name column gets before its grid folds or restacks. */
+		--size-name-min: 16ch;
+
 		/* Shape. Concentric by construction: inner < element < container. */
 		--radius-inner: 6px;
 		--radius-element: 8px;

@@ -1,6 +1,7 @@
 import type { JSX } from "solid-js";
 import { onCleanup, onMount, splitProps } from "solid-js";
 import Icon from "./Icon";
+import { TruncateChild } from "./Truncate";
 
 export interface MenuProps extends JSX.HTMLAttributes<HTMLDivElement> {
 	/** The menu's accessible name. */
@@ -147,7 +148,7 @@ export const MenuItemRadio = (props: MenuItemRadioProps) => {
 			{...rest}
 		>
 			<Icon name="check" class="ui-menu-check" />
-			{local.children}
+			<TruncateChild>{local.children}</TruncateChild>
 		</button>
 	);
 };

@@ -1,5 +1,6 @@
 import type { JSX } from "solid-js";
 import { Show, splitProps } from "solid-js";
+import { TruncateChild } from "./Truncate";
 
 export type TokenTone =
 	| "blue"
@@ -40,7 +41,7 @@ const Token = (props: TokenProps) => {
 			<Show when={local.dot === true}>
 				<span class="ui-token-dot" />
 			</Show>
-			{local.children}
+			<TruncateChild reveal>{local.children}</TruncateChild>
 		</span>
 	);
 };

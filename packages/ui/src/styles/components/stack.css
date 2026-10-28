@@ -4,6 +4,10 @@
 		flex-direction: column;
 	}
 
+	.ui-stack > * {
+		min-width: 0;
+	}
+
 	.ui-stack[data-direction="row"] {
 		flex-direction: row;
 		align-items: center;
