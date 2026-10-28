@@ -2231,11 +2231,12 @@ dependencies = [
 
 [[package]]
 name = "css-inline"
-version = "0.22.1"
+version = "0.23.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e50363b383b35fc4681129a12f93a653a58033cff464126a61c831c1563476ab"
+checksum = "c357d136b76b660cf6024f37871b9c39f4f31e63cc7e548c81579cae22bbd45b"
 dependencies = [
  "cssparser",
+ "hashbrown 0.17.1",
  "html5ever",
  "memchr",
  "precomputed-hash",
