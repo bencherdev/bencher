@@ -389,11 +389,17 @@ test("a picked branch or testbed is named from its option, not asked for again",
 		const path = url.pathname;
 		if (path.endsWith("/branches")) {
 			return {
-				data: [{ uuid: "b", name: "feature/simd", slug: "feature-simd" }],
+				data: {
+					branches: [{ uuid: "b", name: "feature/simd", slug: "feature-simd" }],
+				},
 			};
 		}
 		if (path.endsWith("/testbeds")) {
-			return { data: [{ uuid: "t", name: "Bare metal", slug: "bare-metal" }] };
+			return {
+				data: {
+					testbeds: [{ uuid: "t", name: "Bare metal", slug: "bare-metal" }],
+				},
+			};
 		}
 		if (path.includes("/branches/") || path.includes("/testbeds/")) {
 			return { data: { uuid: "x", name: "asked again", slug: "x" } };

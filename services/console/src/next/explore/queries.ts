@@ -1,5 +1,9 @@
 import type {
+	JsonConsoleBenchmarks,
+	JsonConsoleBranches,
+	JsonConsoleMeasures,
 	JsonConsolePerf,
+	JsonConsoleTestbeds,
 	JsonPlot,
 	JsonVariant,
 } from "../../types/bencher";
@@ -43,13 +47,13 @@ export const plotQuery = (api: Api, slug: string, plot: string) => ({
 // The API's largest page: suggestions read every variant a benchmark has.
 const ALL = 255;
 
-/** A benchmark's variants, which suggest the parameters box's tags and name a pin. */
+/** A benchmark's variants, the most recently reported first, which suggest the parameters box's tags and name a pin. */
 export const variantsQuery = (api: Api, slug: string, benchmark: string) => ({
 	queryKey: ["console", "variants", slug, benchmark],
 	queryFn: async (): Promise<Parameters[]> =>
 		(
 			await api.get<JsonVariant[]>(
-				`${project(slug)}/benchmarks/${encodeURIComponent(benchmark)}/variants?per_page=${ALL}`,
+				`${project(slug)}/benchmarks/${encodeURIComponent(benchmark)}/variants?per_page=${ALL}&sort=last_used`,
 			)
 		).data.map(({ parameters }) => parameters),
 	staleTime: 5 * 60_000,
@@ -84,7 +88,7 @@ export const nameQuery = (
 /** How many values an add control lists at once; its search finds the rest. */
 export const OPTIONS = 32;
 
-/** A project's branches, testbeds, benchmarks, or measures matching `text`. */
+/** A project's branches, testbeds, benchmarks, or measures matching `text`, the most recently reported first. */
 export const searchQuery = (
 	api: Api,
 	slug: string,
@@ -95,13 +99,22 @@ export const searchQuery = (
 	// The last options stay while the next search loads, so the list never blinks empty.
 	placeholderData: (previous: Named[] | undefined) => previous,
 	queryFn: async () => {
-		const params = new URLSearchParams({ per_page: String(OPTIONS) });
+		const params = new URLSearchParams({
+			per_page: String(OPTIONS),
+			sort: "last_used",
+		});
 		if (text) {
 			params.set("search", text);
 		}
-		return (
-			await api.get<Named[]>(`${project(slug)}/${dimension}?${params}`)
-		).data.map(({ uuid, name, units }) => ({
+		const rows: Named[] = (
+			await api.get<
+				JsonConsoleBranches &
+					JsonConsoleTestbeds &
+					JsonConsoleBenchmarks &
+					JsonConsoleMeasures
+			>(`${consolePath(slug)}/${dimension}?${params}`)
+		).data[dimension];
+		return rows.map(({ uuid, name, units }) => ({
 			uuid,
 			name,
 			...(units === undefined ? {} : { units }),

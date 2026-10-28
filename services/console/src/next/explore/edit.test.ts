@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
+import type { JsonConsolePerfLine } from "../../types/bencher";
 import { DEFAULT_WINDOW, type ExploreQuery, blankQuery } from "../query/query";
 import {
 	clearable,
 	hasValues,
+	metricNames,
 	settleFocus,
 	withValue,
 	withoutValue,
@@ -147,5 +149,39 @@ describe("settleFocus", () => {
 			sets: [{ size: 64, simd: "avx2" }],
 		};
 		expect(settleFocus(current, copy).focus).toBe(current.focus);
+	});
+});
+
+describe("metricNames", () => {
+	// Kills repeating a name, a name ranked by its first line alone or in
+	// drawing order, a thinned line's point read at its value's position, and
+	// a name with no point in the window ahead of one with a point.
+	test("list each drawn metric name once, the one with the newest point first", () => {
+		const line = (
+			metric: string,
+			y: (number | null)[],
+			index?: number[],
+		): JsonConsolePerfLine => ({
+			branch: 0,
+			testbed: 0,
+			benchmark: 0,
+			variant: 0,
+			measure: 0,
+			metric,
+			series: { y, ...(index && { index }), alerts: [] },
+		});
+		const lines = [
+			line("p50", [null, null, null]),
+			line("value", [1, null, null]),
+			line("max", [8, null, null]),
+			line("p99", [5], [1]),
+			line("value", [null, null, 3]),
+		];
+		expect(
+			metricNames({
+				points: { x: [1000, 2000, 3000], report: [0, 1, 2] },
+				lines,
+			}),
+		).toEqual(["value", "p99", "max", "p50"]);
 	});
 });

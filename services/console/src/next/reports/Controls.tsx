@@ -12,7 +12,12 @@ import {
 	createUniqueId,
 	onCleanup,
 } from "solid-js";
-import type { JsonBranch, JsonTestbed } from "../../types/bencher";
+import type {
+	JsonConsoleBranchRow,
+	JsonConsoleBranches,
+	JsonConsoleTestbedRow,
+	JsonConsoleTestbeds,
+} from "../../types/bencher";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import {
@@ -259,7 +264,7 @@ const Filters = (props: {
 				value={props.search.branch}
 				label={props.names.branch}
 				search
-				options={(text) => useNamed<JsonBranch>("branches", text)}
+				options={(text) => useNamed("branches", text)}
 				onPick={(branch, label) =>
 					props.onSearch(
 						withFilter(
@@ -275,7 +280,7 @@ const Filters = (props: {
 				value={props.search.testbed}
 				label={props.names.testbed}
 				search
-				options={(text) => useNamed<JsonTestbed>("testbeds", text)}
+				options={(text) => useNamed("testbeds", text)}
 				onPick={(testbed, label) =>
 					props.onSearch(
 						withFilter(
@@ -290,11 +295,12 @@ const Filters = (props: {
 				name="adapter"
 				value={props.search.adapter}
 				search
-				options={(text) => () =>
-					ADAPTERS.filter((adapter) =>
-						adapter.includes(text().toLowerCase()),
-					).map((adapter) => ({ value: adapter, label: adapter }))
-				}
+				options={(text) => () => {
+					const lower = text().toLowerCase();
+					return ADAPTERS.filter((adapter) => adapter.includes(lower))
+						.sort((a, b) => Number(b === lower) - Number(a === lower))
+						.map((adapter) => ({ value: adapter, label: adapter }));
+				}}
 				onPick={(adapter) =>
 					props.onSearch(
 						withFilter(
@@ -350,27 +356,29 @@ export interface Option {
 	label: string;
 }
 
-/** A project's branches or testbeds whose name or slug matches `text`, by slug. */
-const useNamed = <T extends { slug: string; name: string }>(
-	resource: "branches" | "testbeds",
-	text: () => string,
-) => {
+/** A project's branches or testbeds whose name or slug matches `text`, the most recently reported first, by slug. */
+const useNamed = (resource: "branches" | "testbeds", text: () => string) => {
 	const { api, slug } = useProject();
 	const result = useQueryResult(() => ({
-		queryKey: ["console", resource, slug(), text()],
+		queryKey: ["console", resource, slug(), text(), "last_used"],
 		// The last options stay while the next search loads, so the list never blinks empty.
-		placeholderData: (previous: T[] | undefined) => previous,
+		placeholderData: (
+			previous: (JsonConsoleBranchRow | JsonConsoleTestbedRow)[] | undefined,
+		) => previous,
 		queryFn: async ({ signal }: { signal: AbortSignal }) => {
-			const params = new URLSearchParams({ per_page: String(OPTIONS) });
+			const params = new URLSearchParams({
+				per_page: String(OPTIONS),
+				sort: "last_used",
+			});
 			if (text()) {
 				params.set("search", text());
 			}
 			return (
-				await api.get<T[]>(
-					`/v0/projects/${encodeURIComponent(slug())}/${resource}?${params}`,
+				await api.get<JsonConsoleBranches & JsonConsoleTestbeds>(
+					`/v0/console/projects/${encodeURIComponent(slug())}/${resource}?${params}`,
 					signal,
 				)
-			).data;
+			).data[resource];
 		},
 	}));
 	return () =>

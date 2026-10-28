@@ -193,6 +193,19 @@ describe("benchmarkOptions", () => {
 		).toEqual(["blake3", "xxh3"]);
 		expect(benchmarkOptions(benchmarks, "", 2)).toHaveLength(2);
 	});
+
+	// Kills the benchmark named what is typed left where the list put it,
+	// past a menu's worth, or found by a match that heeds case.
+	test("put the benchmark named what is typed first, ignoring case", () => {
+		const benchmarks = ["sha256", "sha512", "Sha"].map((name, n) => ({
+			uuid: uuid(n),
+			name,
+			measures: [],
+		}));
+		expect(
+			benchmarkOptions(benchmarks, "SHA", 2).map(({ label }) => label),
+		).toEqual(["Sha", "sha256"]);
+	});
 });
 
 describe("runTime", () => {

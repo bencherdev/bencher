@@ -18,6 +18,7 @@ import {
 } from "../query/query";
 import type { SelectedLine } from "../query/selection";
 import { live, unfinished } from "../runs/status";
+import { exactFirst } from "./edit";
 import { consolePath, project } from "./queries";
 
 // A threshold with no metric checks the conventional name.
@@ -180,15 +181,18 @@ export const reportBenchmarkQuery = (
 	report: report.uuid,
 });
 
-/** The report's benchmarks whose names hold `text`, ignoring case, at most a menu's worth. */
+/** The report's benchmarks whose names hold `text`, ignoring case, the one named `text` first, at most a menu's worth. */
 export const benchmarkOptions = (
 	benchmarks: readonly ReportBenchmark[],
 	text: string,
 	max: number,
 ): { value: string; label: string }[] => {
 	const lower = text.toLowerCase();
-	return benchmarks
-		.filter(({ name }) => name.toLowerCase().includes(lower))
+	return exactFirst(
+		benchmarks.filter(({ name }) => name.toLowerCase().includes(lower)),
+		text,
+		({ name }) => name,
+	)
 		.slice(0, max)
 		.map(({ uuid, name }) => ({ value: uuid, label: name }));
 };

@@ -6,7 +6,7 @@ import {
 	ModelTest,
 } from "../../types/bencher";
 import { lineKey } from "../query/line";
-import { metricNames, plotData } from "./data";
+import { plotData } from "./data";
 
 const uuid = (n: number) =>
 	`00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
@@ -181,12 +181,5 @@ describe("plotData", () => {
 			"percentage lower and upper",
 			undefined,
 		]);
-	});
-});
-
-describe("metricNames", () => {
-	// Kills repeating a name or reordering what the response drew.
-	test("list each drawn metric name once, in drawing order", () => {
-		expect(metricNames(PERF)).toEqual(["value", "p99"]);
 	});
 });

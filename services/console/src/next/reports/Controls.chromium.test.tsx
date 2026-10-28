@@ -122,10 +122,12 @@ test("options that arrive and change never take the page out", async () => {
 		await new Promise((resolve) => setTimeout(resolve, 50));
 		const text = url.searchParams.get("search") ?? "";
 		return {
-			data: [
-				branch("main", "main"),
-				branch("feature-simd", "feature-simd"),
-			].filter(({ name }) => name.includes(text)),
+			data: {
+				branches: [
+					branch("main", "main"),
+					branch("feature-simd", "feature-simd"),
+				].filter(({ name }) => name.includes(text)),
+			},
 		};
 	});
 	const stop = watchFallback();
@@ -145,15 +147,19 @@ test("options that arrive and change never take the page out", async () => {
 	expect(stop()).toBe(false);
 });
 
-// Kills a search box whose text never reaches the API, for branches or testbeds.
-test("the branch and testbed menus ask the API for what is typed", async () => {
+// Kills a search box whose text never reaches the API, for branches or
+// testbeds, and a search that asks for anything but the most recently used.
+test("the branch and testbed menus ask the API for the most recently used matching what is typed", async () => {
 	await page.viewport(1280, 720);
-	const { api, requests } = fakeApi(() => ({ data: [] }));
+	const { api, requests } = fakeApi(() => ({
+		data: { branches: [], testbeds: [] },
+	}));
 	mount(api);
 	const asked = (resource: string, text: string) =>
 		requests.some(
 			(url) =>
-				url.pathname === `/v0/projects/hashbrown/${resource}` &&
+				url.pathname === `/v0/console/projects/hashbrown/${resource}` &&
+				url.searchParams.get("sort") === "last_used" &&
 				url.searchParams.get("search") === text,
 		);
 
@@ -174,7 +180,14 @@ test("options stay while the next search loads, and a pick filters by slug", asy
 	const { api } = fakeApi((url) =>
 		url.searchParams.get("search") === "412"
 			? new Promise<never>(() => {})
-			: { data: [branch("main", "main"), branch("412/merge", "412-merge")] },
+			: {
+					data: {
+						branches: [
+							branch("main", "main"),
+							branch("412/merge", "412-merge"),
+						],
+					},
+				},
 	);
 	mount(api);
 

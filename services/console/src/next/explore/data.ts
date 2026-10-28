@@ -78,8 +78,3 @@ const TESTS: Record<ModelTest, string> = {
 	[ModelTest.Iqr]: "IQR",
 	[ModelTest.DeltaIqr]: "delta IQR",
 };
-
-/** The metric names the answer drew, each once. */
-export const metricNames = (perf: JsonConsolePerf): string[] => [
-	...new Set(perf.lines.map(({ metric }) => metric)),
-];
