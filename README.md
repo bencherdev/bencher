@@ -9,11 +9,7 @@
   Bencher
 </h1>
 
-**Run locally. Run in CI. Same bare metal every time.**
-
-[Bencher](https://bencher.dev) is the first continuous benchmarking platform
-to run your existing benchmarks on the _exact same_ bare metal both locally and in CI.
-It tracks results over time and fails the PR when there's a performance regression.
+[Bencher](https://bencher.dev) is a [continuous benchmarking](https://bencher.dev/docs/explanation/continuous-benchmarking/) platform that helps software engineers and agents catch performance regressions before they merge. [Bencher Bare Metal](https://bencher.dev/docs/explanation/bare-metal/) runs your benchmarks on the exact same bare metal, whether launched from your local terminal, an agent sandbox, or in CI.
 
 <p align="center">
   <a href="https://bencher.dev">
