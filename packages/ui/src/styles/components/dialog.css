@@ -50,11 +50,11 @@
 		font-weight: var(--font-weight-bold);
 		letter-spacing: -0.01em;
 		line-height: 1.25;
-		overflow-wrap: anywhere;
 	}
 
 	/* The head and foot stay in view while a tall body scrolls between them. */
 	.ui-dialog-body {
+		container-type: inline-size;
 		display: flex;
 		flex-direction: column;
 		gap: 14px;

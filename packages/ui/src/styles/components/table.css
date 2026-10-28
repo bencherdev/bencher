@@ -1,5 +1,6 @@
 @layer ui-components {
 	.ui-table-scroll {
+		container-type: inline-size;
 		overflow-x: auto;
 		border: var(--border-width) solid var(--color-border-emphasized);
 		border-radius: var(--radius-container);

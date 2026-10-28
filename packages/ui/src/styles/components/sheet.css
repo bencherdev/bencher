@@ -41,6 +41,7 @@
 	}
 
 	.ui-sheet-body {
+		container-type: inline-size;
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-3);

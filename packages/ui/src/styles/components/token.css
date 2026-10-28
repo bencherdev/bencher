@@ -3,6 +3,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--spacing-1);
+		max-width: 100%;
 		padding: 2px var(--spacing-2);
 		border-radius: var(--radius-full);
 		background: var(--color-background-muted);

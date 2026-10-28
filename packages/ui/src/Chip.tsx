@@ -1,6 +1,7 @@
 import type { JSX } from "solid-js";
 import { Show, splitProps } from "solid-js";
 import Icon from "./Icon";
+import { TruncateChild } from "./Truncate";
 
 export interface ChipProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
 	/** A quiet key before the value, such as `branch` in `branch main`. */
@@ -27,10 +28,17 @@ const Chip = (props: ChipProps) => {
 			data-on={local.on ? "" : undefined}
 			{...rest}
 		>
-			<Show when={local.label}>
-				<span class="ui-chip-key">{local.label}</span>{" "}
+			<Show
+				when={local.label}
+				fallback={<TruncateChild>{local.children}</TruncateChild>}
+			>
+				<span class="ui-parts">
+					<span class="ui-chip-key" data-fixed>
+						{local.label}
+					</span>{" "}
+					<TruncateChild>{local.children}</TruncateChild>
+				</span>
 			</Show>
-			{local.children}
 			<Show when={local.caret}>
 				<Icon name="chevron-down" class="ui-chip-caret" />
 			</Show>
