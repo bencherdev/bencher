@@ -10,9 +10,9 @@
 
 use bencher_api_tests::{TestServer, helpers::seed_token};
 use bencher_json::{
-    JsonBenchmark, JsonBranch, JsonBranches, JsonMeasure, JsonProject, JsonProjectKey,
-    JsonProjectKeyCreated, JsonProjectKeys, JsonReport, JsonTestbed, JsonThreshold, ProjectKey,
-    ProjectKeyUuid,
+    BranchUuid, JsonBenchmark, JsonBranch, JsonBranches, JsonMeasure, JsonPlot, JsonPlots,
+    JsonProject, JsonProjectKey, JsonProjectKeyCreated, JsonProjectKeys, JsonReport, JsonTestbed,
+    JsonThreshold, ProjectKey, ProjectKeyUuid,
 };
 use http::StatusCode;
 
@@ -1117,6 +1117,427 @@ async fn project_key_can_dismiss_alert() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::OK);
+}
+
+// POST /v0/projects/{project}/plots - create plot with key
+#[tokio::test]
+async fn project_key_can_create_plot() {
+    let (server, project_slug, _token, key) = setup().await;
+    let plot = new_plot(&server, &project_slug, key.as_ref()).await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/plots", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&plot)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let plot: JsonPlot = resp.json().await.expect("Failed to parse response");
+    let title: Option<&str> = plot.title.as_ref().map(AsRef::as_ref);
+    assert_eq!(title, Some("Key Plot"));
+}
+
+// PATCH /v0/projects/{project}/plots/{plot} - project key CAN update, title included
+#[tokio::test]
+async fn project_key_can_update_plot() {
+    let (server, project_slug, token, key) = setup().await;
+    let plot = new_plot(&server, &project_slug, &token).await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/plots", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&plot)
+        .send()
+        .await
+        .expect("Failed to create plot");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let plot: JsonPlot = resp.json().await.expect("Failed to parse plot");
+
+    let resp = server
+        .client
+        .patch(server.api_url(&format!(
+            "/v0/projects/{}/plots/{}",
+            project_slug, plot.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .json(&serde_json::json!({"title": "Retitled", "upper_boundary": false}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let plot: JsonPlot = resp.json().await.expect("Failed to parse response");
+    let title: Option<&str> = plot.title.as_ref().map(AsRef::as_ref);
+    assert_eq!(title, Some("Retitled"));
+    assert!(!plot.upper_boundary);
+}
+
+#[tokio::test]
+async fn project_key_cannot_create_or_update_plot_in_wrong_project() {
+    let server = TestServer::new().await;
+    let user = server.signup("Key User", "keycrossplot@example.com").await;
+    let org = server.create_org(&user, "Cross Plot Org").await;
+    let project_a = server.create_project(&user, &org, "Plot A").await;
+    let project_b = server.create_project(&user, &org, "Plot B").await;
+
+    let slug_a: &str = project_a.slug.as_ref();
+    let slug_b: &str = project_b.slug.as_ref();
+    let key_a = server
+        .create_project_key(&user, &project_a, "cross-plot-key")
+        .await;
+
+    let plot = new_plot(&server, slug_b, &user.token).await;
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/plots", slug_b)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&plot)
+        .send()
+        .await
+        .expect("Failed to create plot");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let plot_b: JsonPlot = resp.json().await.expect("Failed to parse plot");
+
+    // Try to create a plot in project B with project A's key
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/plots", slug_b)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_a.key.as_ref()),
+        )
+        .json(&plot)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        body.contains("access denied"),
+        "Expected 'access denied' in body, got: {}",
+        body
+    );
+
+    // Try to update project B's plot with project A's key
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{}/plots/{}", slug_b, plot_b.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_a.key.as_ref()),
+        )
+        .json(&serde_json::json!({"title": "Cross"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    let body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        body.contains("access denied"),
+        "Expected 'access denied' in body, got: {}",
+        body
+    );
+
+    // Nor can project A's key reach project B's plot through its own project
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{}/plots/{}", slug_a, plot_b.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_a.key.as_ref()),
+        )
+        .json(&serde_json::json!({"title": "Cross"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// DELETE /v0/projects/{project}/plots/{plot} - project key cannot delete
+#[tokio::test]
+async fn project_key_cannot_delete_plot() {
+    let (server, project_slug, token, key) = setup().await;
+    let plot = new_plot(&server, &project_slug, &token).await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/plots", project_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&plot)
+        .send()
+        .await
+        .expect("Failed to create plot");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let plot: JsonPlot = resp.json().await.expect("Failed to parse plot");
+    let plot_url = server.api_url(&format!(
+        "/v0/projects/{}/plots/{}",
+        project_slug, plot.uuid
+    ));
+
+    let resp = server
+        .client
+        .delete(&plot_url)
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+    // The plot is not deleted.
+    let resp = server
+        .client
+        .get(&plot_url)
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key.as_ref()),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+// POST /v0/projects/{project}/plots - a branch from another project is not found
+#[tokio::test]
+async fn project_key_cannot_create_plot_with_other_project_branch() {
+    let ForeignBranch {
+        server,
+        slug_a,
+        key_a,
+        mut plot_a,
+        branch_b,
+    } = setup_foreign_branch().await;
+    plot_a["branches"] = serde_json::json!([branch_b]);
+    let plots_url = server.api_url(&format!("/v0/projects/{}/plots", slug_a));
+
+    let resp = server
+        .client
+        .post(&plots_url)
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_a.as_ref()),
+        )
+        .json(&plot_a)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    let body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        body.contains(&branch_b.to_string()),
+        "Expected the foreign branch in body, got: {}",
+        body
+    );
+
+    // No plot is created.
+    let resp = server
+        .client
+        .get(&plots_url)
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_a.as_ref()),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let plots: JsonPlots = resp.json().await.expect("Failed to parse response");
+    assert!(plots.0.is_empty());
+}
+
+// PATCH /v0/projects/{project}/plots/{plot} - a branch from another project is not found
+#[tokio::test]
+async fn project_key_cannot_update_plot_with_other_project_branch() {
+    let ForeignBranch {
+        server,
+        slug_a,
+        key_a,
+        plot_a,
+        branch_b,
+    } = setup_foreign_branch().await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/plots", slug_a)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_a.as_ref()),
+        )
+        .json(&plot_a)
+        .send()
+        .await
+        .expect("Failed to create plot");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let created: serde_json::Value = resp.json().await.expect("Failed to parse plot");
+    let plot_url = server.api_url(&format!(
+        "/v0/projects/{}/plots/{}",
+        slug_a,
+        created["uuid"].as_str().expect("Plot UUID")
+    ));
+
+    let resp = server
+        .client
+        .patch(&plot_url)
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_a.as_ref()),
+        )
+        .json(&serde_json::json!({"title": "Foreign", "branches": [branch_b]}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    let body = resp.text().await.expect("Failed to read response body");
+    assert!(
+        body.contains(&branch_b.to_string()),
+        "Expected the foreign branch in body, got: {}",
+        body
+    );
+
+    // The plot is unchanged.
+    let resp = server
+        .client
+        .get(&plot_url)
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key_a.as_ref()),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let plot: serde_json::Value = resp.json().await.expect("Failed to parse response");
+    assert_eq!(plot, created);
+}
+
+/// A key and a new plot body for project A, and a branch in project B.
+struct ForeignBranch {
+    server: TestServer,
+    slug_a: String,
+    key_a: ProjectKey,
+    plot_a: serde_json::Value,
+    branch_b: BranchUuid,
+}
+
+async fn setup_foreign_branch() -> ForeignBranch {
+    let server = TestServer::new().await;
+    let user = server.signup("Key User", "keyuser@example.com").await;
+    let org = server.create_org(&user, "Foreign Plot Org").await;
+    let project_a = server.create_project(&user, &org, "Foreign A").await;
+    let project_b = server.create_project(&user, &org, "Foreign B").await;
+    let slug_a: &str = project_a.slug.as_ref();
+    let slug_b: &str = project_b.slug.as_ref();
+    let key_a = server
+        .create_project_key(&user, &project_a, "foreign-plot-key")
+        .await;
+    let plot_a = new_plot(&server, slug_a, key_a.key.as_ref()).await;
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/branches", slug_b)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({"name": "foreign-branch"}))
+        .send()
+        .await
+        .expect("Failed to create branch");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let branch_b: JsonBranch = resp.json().await.expect("Failed to parse branch");
+
+    ForeignBranch {
+        server,
+        slug_a: slug_a.to_owned(),
+        key_a: key_a.key,
+        plot_a,
+        branch_b: branch_b.uuid,
+    }
+}
+
+/// A new plot body for a project, with a branch, testbed, benchmark, and measure created by `bearer`.
+async fn new_plot(server: &TestServer, project_slug: &str, bearer: &str) -> serde_json::Value {
+    let create = async |resource: &str, body: serde_json::Value| {
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/projects/{}/{}", project_slug, resource)))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::CREATED, "{}", resource);
+        resp
+    };
+    let branch: JsonBranch = create("branches", serde_json::json!({"name": "plot-branch"}))
+        .await
+        .json()
+        .await
+        .expect("Failed to parse branch");
+    let testbed: JsonTestbed = create("testbeds", serde_json::json!({"name": "plot-testbed"}))
+        .await
+        .json()
+        .await
+        .expect("Failed to parse testbed");
+    let benchmark: JsonBenchmark =
+        create("benchmarks", serde_json::json!({"name": "plot-benchmark"}))
+            .await
+            .json()
+            .await
+            .expect("Failed to parse benchmark");
+    let measure: JsonMeasure = create(
+        "measures",
+        serde_json::json!({"name": "plot-measure", "units": "ns"}),
+    )
+    .await
+    .json()
+    .await
+    .expect("Failed to parse measure");
+
+    serde_json::json!({
+        "title": "Key Plot",
+        "lower_value": false,
+        "upper_value": false,
+        "lower_boundary": false,
+        "upper_boundary": true,
+        "x_axis": "date_time",
+        "window": 2_592_000,
+        "branches": [branch.uuid],
+        "testbeds": [testbed.uuid],
+        "benchmarks": [benchmark.uuid],
+        "measures": [measure.uuid],
+    })
 }
 
 // Fails if project key POST accepts a deprecated user API token or a user API key.

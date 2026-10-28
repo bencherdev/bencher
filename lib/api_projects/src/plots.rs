@@ -200,7 +200,8 @@ fn get_ls_query<'q>(
 /// Create a plot
 ///
 /// Create a plot for a project.
-/// The user must have `create` permissions for the project.
+/// The user must have `create` permissions for the project,
+/// or provide a valid project key for the project.
 /// A project can have a maximum of 64 plots at a time.
 #[endpoint {
     method = POST,
@@ -209,36 +210,43 @@ fn get_ls_query<'q>(
 }]
 pub async fn proj_plot_post(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjPlotsParams>,
     body: TypedBody<JsonNewPlot>,
 ) -> Result<ResponseCreated<JsonPlot>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
+        &api_actor,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Post::auth_response_created(json))
 }
 
-async fn post_inner(
+pub async fn post_inner(
     context: &ApiContext,
     path_params: ProjPlotsParams,
     json_plot: JsonNewPlot,
-    auth_user: &AuthUser,
+    api_actor: &ApiActor,
 ) -> Result<JsonPlot, HttpError> {
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Create,
     )?;
 
@@ -322,7 +330,8 @@ pub async fn get_one_inner(
 /// Update a plot
 ///
 /// Update a plot for a project.
-/// The user must have `edit` permissions for the project.
+/// The user must have `edit` permissions for the project,
+/// or provide a valid project key for the project.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}/plots/{plot}",
@@ -330,37 +339,43 @@ pub async fn get_one_inner(
 }]
 pub async fn proj_plot_patch(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
+    bearer_token: PubProjectBearerToken,
     path_params: Path<ProjPlotParams>,
     body: TypedBody<JsonUpdatePlot>,
 ) -> Result<ResponseOk<JsonPlot>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let context = rqctx.context();
+    let api_actor = ApiActor::from_token(
+        &rqctx.log,
+        rqctx.context(),
+        #[cfg(feature = "plus")]
+        rqctx.request.headers(),
+        bearer_token,
+    )
+    .await?;
     let json = patch_inner(
-        context,
+        rqctx.context(),
+        &api_actor,
         path_params.into_inner(),
         body.into_inner(),
-        &auth_user,
     )
     .await
-    .map_err(with_token_hint)?;
+    .map_err(with_auth_hint)?;
     Ok(Patch::auth_response_ok(json))
 }
 
-async fn patch_inner(
+pub async fn patch_inner(
     context: &ApiContext,
+    api_actor: &ApiActor,
     path_params: ProjPlotParams,
     json_plot: JsonUpdatePlot,
-    auth_user: &AuthUser,
 ) -> Result<JsonPlot, HttpError> {
     // Verify that the user is allowed
-    let query_project = QueryProject::is_allowed(
+    let query_project = QueryProject::is_allowed_actor_auth(
         auth_conn!(context),
         &context.rbac,
         #[cfg(feature = "plus")]
         &context.rate_limiting,
         &path_params.project,
-        auth_user,
+        api_actor,
         Permission::Edit,
     )?;
 
