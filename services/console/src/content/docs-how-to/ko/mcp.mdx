@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "호스팅된 MCP 서버로 AI 에이전트와 어시스턴트를 Bencher에 연결하여 벤치마크 데이터를 조회하고 결과를 제출하세요"
 heading: "Bencher MCP 사용 방법"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-27T07:00:00Z"
+modified: "2026-10-28T19:00:00Z"
 sortOrder: 11
 ---
 
@@ -84,7 +84,7 @@ Claude Code는 서버가 Claude Code의 클라이언트 메타데이터 문서�
 | `email` | 이메일 주소와 인증 여부를 조회 |
 | `profile` | 이름과 사용자 이름을 조회 |
 
-읽기 도구(`list_*`, `view_*`, `query_perf`, `perf_image`)에는 `projects:read`가 필요합니다.
+읽기 도구(`list_*`, `view_*`, `query_perf`)에는 `projects:read`가 필요합니다.
 그 밖의 모든 도구에는 `projects:read`를 포함하는 `projects:write`가 필요합니다.
 둘 다 요청하지 않는 앱은 `projects:read`를 받습니다.
 `projects:write` 없이 로그인한 앱은 쓰기 도구를 호출하면 다시 로그인하라는 요청을 받습니다.
@@ -126,7 +126,7 @@ Bencher MCP는 Bencher API와 동일한 `Authorization: Bearer` 자격 증명도
 | 도구 | 용도 |
 | :--- | :--- |
 | `submit_run` | 벤치마크 하네스의 원시 출력을 제출합니다. 서버가 이를 파싱하고 브랜치, 테스트베드, 임계값을 필요에 따라 자동 생성합니다 |
-| `query_perf`, `perf_image` | 시간에 따른 벤치마크 메트릭을 조회하고 성능 플롯 이미지를 생성합니다 |
+| `query_perf` | 시간에 따른 벤치마크 메트릭을 조회합니다 |
 | `list_projects`, `view_project` | 프로젝트 |
 | `list_reports`, `create_report`, `view_report` | 리포트 |
 | `list_branches`, `create_branch`, `view_branch`, `update_branch` | 브랜치 |

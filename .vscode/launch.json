@@ -49,24 +49,6 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests for `bencher_plot`",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--package=bencher_plot",
-                ],
-                "filter": {
-                    "name": "bencher_plot",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
             "name": "Debug unit tests for `bencher_rank`",
             "cargo": {
                 "args": [

@@ -8,8 +8,6 @@ RUN apt-get update \
     && apt-get install -y \
     # Linker
     clang \
-    # Plot
-    pkg-config libfreetype6-dev libfontconfig1-dev \
     # Stripe
     ca-certificates
 
@@ -84,15 +82,6 @@ RUN --mount=type=secret,id=s3_access_key_id,required=false \
     cargo build --release --bin api \
     && (sccache --show-stats || true)
 
-WORKDIR /usr/local/bencher-deps
-RUN cp /usr/lib/$(uname -m)-linux-gnu/libexpat.so.1 libexpat.so.1
-RUN cp /usr/lib/$(uname -m)-linux-gnu/libfontconfig.so.1 libfontconfig.so.1
-RUN cp /usr/lib/$(uname -m)-linux-gnu/libfreetype.so.6 libfreetype.so.6
-RUN cp /usr/lib/$(uname -m)-linux-gnu/libpng16.so.16 libpng16.so.16
-RUN cp /usr/lib/$(uname -m)-linux-gnu/libbrotlicommon.so.1 libbrotlicommon.so.1
-RUN cp /usr/lib/$(uname -m)-linux-gnu/libbrotlidec.so.1 libbrotlidec.so.1
-RUN cp /usr/lib/$(uname -m)-linux-gnu/libz.so.1 libz.so.1
-
 WORKDIR /usr/lib/bencher
 RUN cp /usr/src/bencher/target/release/api api
 WORKDIR /var/lib/bencher/data
@@ -100,11 +89,6 @@ WORKDIR /var/lib/bencher/data
 # https://github.com/GoogleContainerTools/distroless/blob/main/cc/README.md
 FROM gcr.io/distroless/cc-debian12@sha256:0c8eac8ea42a167255d03c3ba6dfad2989c15427ed93d16c53ef9706ea4691df
 COPY --from=litestream /tmp/litestream/litestream /usr/bin/litestream
-
-COPY --from=builder /etc/fonts /etc/fonts
-COPY --from=builder /usr/include/fontconfig /usr/include/fontconfig
-COPY --from=builder /usr/local/bencher-deps /usr/lib
-COPY --from=builder /usr/share/fonts /usr/share/fonts
 
 # Executable
 COPY --from=builder /usr/lib/bencher /usr/lib/bencher

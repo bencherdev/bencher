@@ -16,7 +16,7 @@ use bencher_schema::context::RateLimiting;
 use http::{StatusCode, header::WWW_AUTHENTICATE};
 use serde_json::{Value, json};
 
-const MCP_TOOL_COUNT: usize = 38;
+const MCP_TOOL_COUNT: usize = 37;
 const PROTOCOL_VERSION_2026: &str = "2026-07-28";
 
 /// Build a JSON-RPC POST to /mcp, optionally with a bearer credential.
@@ -309,11 +309,7 @@ async fn mcp_tools_list() {
             assert!(annotations[hint].is_boolean(), "Missing {hint}: {tool}");
         }
         assert_eq!(annotations["openWorldHint"], true, "{tool}");
-        assert_eq!(
-            tool["outputSchema"]["type"] == "object",
-            tool["name"] != "perf_image",
-            "{tool}"
-        );
+        assert_eq!(tool["outputSchema"]["type"], "object", "{tool}");
     }
 }
 
@@ -879,8 +875,7 @@ async fn seed_every_tool(
             "view_metric",
             json!({"metric": result["measures"][0]["metrics"][0]["uuid"]}),
         ),
-        ("query_perf", perf.clone()),
-        ("perf_image", perf),
+        ("query_perf", perf),
         ("list_plots", json!({})),
         ("view_plot", json!({"plot": plot["uuid"]})),
         ("list_jobs", json!({})),

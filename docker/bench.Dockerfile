@@ -33,7 +33,6 @@ RUN cargo init --lib bencher_endpoint
 RUN cargo init --lib bencher_logger
 RUN cargo init --lib bencher_noise
 RUN cargo init --lib bencher_parser
-RUN cargo init --lib bencher_plot
 RUN cargo init --lib bencher_rank
 RUN cargo init --lib bencher_rbac
 RUN cargo init --lib bencher_schema

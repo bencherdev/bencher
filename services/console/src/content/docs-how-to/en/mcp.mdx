@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Connect AI agents and assistants to Bencher with the hosted MCP server to query benchmark data and submit results"
 heading: "How to Use Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-27T07:00:00Z"
+modified: "2026-10-28T19:00:00Z"
 sortOrder: 11
 ---
 
@@ -84,7 +84,7 @@ You approve all of the scopes an app asks for, or none of them:
 | `email` | View your email address and whether it is verified |
 | `profile` | View your name and username |
 
-The read tools (`list_*`, `view_*`, `query_perf`, and `perf_image`) need `projects:read`.
+The read tools (`list_*`, `view_*`, and `query_perf`) need `projects:read`.
 Every other tool needs `projects:write`, which includes `projects:read`.
 An app that asks for neither gets `projects:read`.
 An app signed in without `projects:write` is asked to sign in again when it calls a tool that writes.
@@ -126,7 +126,7 @@ Most tools take a `project` argument that accepts either a project slug or UUID.
 | Tool | Purpose |
 | :--- | :--- |
 | `submit_run` | Submit raw benchmark harness output; the server parses it and creates branches, testbeds, and thresholds on the fly |
-| `query_perf`, `perf_image` | Query benchmark metrics over time; render a perf plot image |
+| `query_perf` | Query benchmark metrics over time |
 | `list_projects`, `view_project` | Projects |
 | `list_reports`, `create_report`, `view_report` | Reports |
 | `list_branches`, `create_branch`, `view_branch`, `update_branch` | Branches |

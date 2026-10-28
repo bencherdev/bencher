@@ -58,8 +58,6 @@ use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
-pub mod img;
-
 // 4 weeks, a whole number of weeks so the window always spans the same weekday mix.
 pub(crate) const DEFAULT_REPORT_HISTORY: Duration = Duration::from_hours(672);
 

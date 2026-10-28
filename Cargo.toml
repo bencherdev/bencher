@@ -34,7 +34,6 @@ bencher_json = { path = "lib/bencher_json" }
 bencher_logger = { path = "lib/bencher_logger" }
 bencher_noise = { path = "lib/bencher_noise" }
 bencher_parser = { path = "lib/bencher_parser" }
-bencher_plot = { path = "lib/bencher_plot" }
 bencher_rank = { path = "lib/bencher_rank" }
 bencher_rbac = { path = "lib/bencher_rbac" }
 bencher_schema = { path = "lib/bencher_schema" }
@@ -120,7 +119,6 @@ hex = "0.4"
 http = "1.4"
 http-body-util = "0.1"
 hyper = "1.8"
-image = "0.25"
 jsonschema = { version = "0.59", default-features = false }
 jsonwebtoken = { version = "11.1", features = ["rust_crypto"] }
 libc = "0.2"
@@ -147,8 +145,6 @@ ordered-float = "5.1"
 oso = "0.27"
 paste = "1.0"
 percent-encoding = "2.3"
-plotters = "0.3"
-plotters-bitmap = "0.3"
 pretty_assertions = "1.4"
 prettyplease = "0.3"
 rand = "0.10"

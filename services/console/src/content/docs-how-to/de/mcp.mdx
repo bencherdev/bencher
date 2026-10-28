@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Verbinden Sie KI-Agenten und Assistenten über den gehosteten MCP-Server mit Bencher, um Benchmark-Daten abzufragen und Ergebnisse zu übermitteln"
 heading: "So verwenden Sie Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-27T07:00:00Z"
+modified: "2026-10-28T19:00:00Z"
 sortOrder: 11
 ---
 
@@ -84,7 +84,7 @@ Sie genehmigen entweder alle Scopes, die eine App anfordert, oder keinen davon:
 | `email` | Ihre E-Mail-Adresse ansehen und ob sie verifiziert ist |
 | `profile` | Ihren Namen und Benutzernamen ansehen |
 
-Die Lese-Tools (`list_*`, `view_*`, `query_perf` und `perf_image`) benötigen `projects:read`.
+Die Lese-Tools (`list_*`, `view_*` und `query_perf`) benötigen `projects:read`.
 Alle anderen Tools benötigen `projects:write`, das `projects:read` einschließt.
 Eine App, die keinen der beiden anfordert, erhält `projects:read`.
 Eine App, die ohne `projects:write` angemeldet ist, wird erneut zur Anmeldung aufgefordert, wenn sie ein Tool aufruft, das schreibt.
@@ -126,7 +126,7 @@ Die meisten Tools nehmen ein `project` Argument entgegen, das entweder einen Pro
 | Tool | Zweck |
 | :--- | :--- |
 | `submit_run` | Rohe Benchmark-Harness-Ausgabe übermitteln; der Server parst sie und legt Branches, Testbeds und Thresholds bei Bedarf automatisch an |
-| `query_perf`, `perf_image` | Benchmark-Metriken über die Zeit abfragen; ein Perf-Diagramm als Bild rendern |
+| `query_perf` | Benchmark-Metriken über die Zeit abfragen |
 | `list_projects`, `view_project` | Projekte |
 | `list_reports`, `create_report`, `view_report` | Reports |
 | `list_branches`, `create_branch`, `view_branch`, `update_branch` | Branches |
