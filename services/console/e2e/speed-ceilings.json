@@ -315,7 +315,7 @@
 	},
 	"embedColdLoad": {
 		"cls": 0,
-		"jsBytes": 61070,
+		"jsBytes": 61207,
 		"deferredJsBytes": 112880,
 		"cssBytes": 9940,
 		"htmlBytes": 1512,

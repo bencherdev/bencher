@@ -13,17 +13,19 @@ use rmcp::{
     model::{
         CallToolRequestParams, CallToolResponse, CallToolResult, CompleteRequestMethod,
         CompleteRequestParams, CompleteResult, Implementation, ListPromptsRequestMethod,
-        ListPromptsResult, ListResourceTemplatesRequestMethod, ListResourceTemplatesResult,
-        ListResourcesRequestMethod, ListResourcesResult, ListToolsResult, PaginatedRequestParams,
-        ProtocolVersion, RequestMetaObject, ServerCapabilities, ServerConfig,
+        ListPromptsResult, ListResourcesResult, ListToolsResult, PaginatedRequestParams,
+        ProtocolVersion, ReadResourceRequestParams, ReadResourceResponse, RequestMetaObject,
+        ServerCapabilities, ServerConfig,
     },
     service::{MaybeSendFuture, RequestContext},
 };
+use serde_json::json;
 use slog::Logger;
 
 use crate::{
     principal::{Caller, Challenge, ClientStyle, McpPrincipal, SignInReason, resource_metadata},
     tools::{McpTool, error_result},
+    ui,
 };
 
 const SERVER_NAME: &str = "bencher";
@@ -123,9 +125,14 @@ impl ServerHandler for BencherMcp {
         } else {
             API_KEY_INSTRUCTIONS
         };
-        ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::new(SERVER_NAME, env!("CARGO_PKG_VERSION")))
-            .with_instructions(format!("{INSTRUCTIONS_HEAD} {auth} {INSTRUCTIONS_TAIL}"))
+        ServerConfig::new(
+            ServerCapabilities::builder()
+                .enable_tools()
+                .enable_resources()
+                .build(),
+        )
+        .with_server_info(Implementation::new(SERVER_NAME, env!("CARGO_PKG_VERSION")))
+        .with_instructions(format!("{INSTRUCTIONS_HEAD} {auth} {INSTRUCTIONS_TAIL}"))
     }
 
     fn supported_protocol_versions(&self) -> Cow<'static, [ProtocolVersion]> {
@@ -189,28 +196,29 @@ impl ServerHandler for BencherMcp {
         Ok(result.into())
     }
 
-    // Only the tools capability is advertised, but the SDK answers these with empty results
     fn list_resources(
         &self,
         _request: Option<PaginatedRequestParams>,
         _context: RequestContext<RoleServer>,
     ) -> impl Future<Output = Result<ListResourcesResult, ErrorData>> + MaybeSendFuture + '_ {
-        std::future::ready(Err(
-            ErrorData::method_not_found::<ListResourcesRequestMethod>(),
-        ))
+        std::future::ready(Ok(ui::list(self.rqctx.context().oauth.as_ref())))
     }
 
-    fn list_resource_templates(
+    fn read_resource(
         &self,
-        _request: Option<PaginatedRequestParams>,
+        request: ReadResourceRequestParams,
         _context: RequestContext<RoleServer>,
-    ) -> impl Future<Output = Result<ListResourceTemplatesResult, ErrorData>> + MaybeSendFuture + '_
-    {
-        std::future::ready(Err(ErrorData::method_not_found::<
-            ListResourceTemplatesRequestMethod,
-        >()))
+    ) -> impl Future<Output = Result<ReadResourceResponse, ErrorData>> + MaybeSendFuture + '_ {
+        let ReadResourceRequestParams { uri, .. } = request;
+        let read = ui::read(&uri, self.rqctx.context().oauth.as_ref())
+            .map(Into::into)
+            .ok_or_else(|| {
+                ErrorData::resource_not_found("Resource not found", Some(json!({"uri": uri})))
+            });
+        std::future::ready(read)
     }
 
+    // Only the tools and resources capabilities are advertised, but the SDK answers these with empty results
     fn list_prompts(
         &self,
         _request: Option<PaginatedRequestParams>,

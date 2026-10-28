@@ -29,6 +29,7 @@
 		"wasm-hash": "node wasm_hash.js",
 		"node": "npm ci && npm run adapter node && npm run build",
 		"cloudflare": "npm ci && npm run adapter cloudflare && npm run build && npm run pagefind:cloudflare",
+		"mcp": "vite build --config vite.mcp.config.ts",
 		"preview": "export BENCHER_API_URL=http://127.0.0.1:6610 && export OAUTH_GITHUB=true && OAUTH_GOOGLE=true && astro preview --port 3000",
 		"astro": "astro",
 		"check": "astro check",
@@ -42,6 +43,9 @@
 		"@astrojs/node": "^11.1.7",
 		"@astrojs/sitemap": "^3.7.4",
 		"@astrojs/solid-js": "^7.0.2",
+		"@modelcontextprotocol/client": "2.3.1",
+		"@modelcontextprotocol/core": "2.3.1",
+		"@modelcontextprotocol/ext-apps": "2.0.3",
 		"@sentry/astro": "^11.8.0",
 		"@sentry/cloudflare": "^11.8.0",
 		"@solid-primitives/scheduled": "^1.5.3",
@@ -58,7 +62,8 @@
 		"solid-js": "^1.9.17",
 		"typescript": "^6.0.3",
 		"uplot": "^1.6.32",
-		"vite-plugin-wasm-pack": "^0.1.12"
+		"vite-plugin-wasm-pack": "^0.1.12",
+		"zod": "4.6.7"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.13.0",
@@ -75,6 +80,7 @@
 		"pagefind": "^1.5.2",
 		"playwright": "^1.64.1",
 		"sass": "^1.105.1",
+		"vite-plugin-singlefile": "2.3.4",
 		"vite-plugin-solid": "^2.11.14",
 		"vitest": "^4.1.12",
 		"wrangler": "^4.151.0"

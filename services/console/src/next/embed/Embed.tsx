@@ -1,5 +1,5 @@
 import Skeleton from "@bencherdev/ui/Skeleton";
-import { Match, Show, Switch, createMemo } from "solid-js";
+import { type JSX, Match, Show, Switch, createMemo } from "solid-js";
 import type { JsonConsolePerf } from "../../types/bencher";
 import { plotData } from "../explore/data";
 import { measuresLayout } from "../explore/layout";
@@ -25,11 +25,25 @@ export interface EmbedProps {
 	refused?: string | undefined;
 	plot?: PlotView | undefined;
 	onQuery?: (query: ExploreQuery) => void;
+	/** Where the line and the readout link to; without them, the line opens the public plot and the readout has no links. */
+	links?: EmbedLinks | undefined;
+	/** The wordmark's images, in place of the site's own. */
+	wordmarks?: { dark: string; light: string } | undefined;
+	/** Controls at the end of the line. */
+	actions?: JSX.Element;
+}
+
+export interface EmbedLinks {
+	plot: string;
+	report: (uuid: string) => string;
+	alert: (uuid: string) => string;
 }
 
 /** A public project's plot and key for a frame on another site, under a line that opens its public plot. */
 const Embed = (props: EmbedProps) => {
-	const href = () => `${publicPlotPath(props.slug)}${encodeQuery(props.query)}`;
+	const href = () =>
+		props.links?.plot ??
+		`${publicPlotPath(props.slug)}${encodeQuery(props.query)}`;
 	const edit = (next: ExploreQuery) => props.onQuery?.(next);
 	const data = createMemo(() => props.answer && plotData(props.answer));
 	const drawn = createMemo(() => data()?.lines.map(({ id }) => id) ?? []);
@@ -69,9 +83,10 @@ const Embed = (props: EmbedProps) => {
 					rel="noopener"
 					aria-label="Bencher"
 				>
-					<img src="/wordmark-dark.svg" alt="" />
-					<img src="/wordmark-light.svg" alt="" />
+					<img src={props.wordmarks?.dark ?? "/wordmark-dark.svg"} alt="" />
+					<img src={props.wordmarks?.light ?? "/wordmark-light.svg"} alt="" />
 				</a>
+				{props.actions}
 			</div>
 			<Switch
 				fallback={
@@ -111,6 +126,8 @@ const Embed = (props: EmbedProps) => {
 										scale={props.query.yScale}
 										layout={layout()}
 										reserve={reserve()}
+										{...(props.links && { reportHref: props.links.report })}
+										alerts={props.links && { href: props.links.alert }}
 										note={
 											props.answer?.window.clamped
 												? "Cut to 3 months"

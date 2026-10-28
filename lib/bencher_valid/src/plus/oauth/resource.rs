@@ -76,6 +76,11 @@ impl OAuthResource {
             })
     }
 
+    /// The scheme, host, and port the resource is served at.
+    pub fn origin(&self) -> &str {
+        self.origin_and_path().0
+    }
+
     /// The origin holds the scheme's two slashes, so the path starts at the third, if any.
     fn origin_and_path(&self) -> (&str, &str) {
         let path = self

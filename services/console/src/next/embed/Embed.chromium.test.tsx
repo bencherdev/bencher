@@ -1,13 +1,19 @@
 import "./page.css";
+import Button from "@bencherdev/ui/Button";
+import Icon from "@bencherdev/ui/Icon";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type { JsonConsolePerf } from "../../types/bencher";
+import {
+	AlertStatus,
+	BoundaryLimit,
+	type JsonConsolePerf,
+} from "../../types/bencher";
 import Plot from "../plot/Plot";
 import { publicPlotPath } from "../public/query";
 import { type ExploreQuery, blankQuery, decodeQuery } from "../query/query";
-import Embed, { type EmbedProps } from "./Embed";
+import Embed, { type EmbedLinks, type EmbedProps } from "./Embed";
 
 const uuid = (n: number) =>
 	`00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
@@ -79,6 +85,9 @@ const show = (props: Partial<EmbedProps> = {}) => {
 				refused={shown.refused}
 				plot={shown.plot}
 				onQuery={setQuery}
+				links={shown.links}
+				wordmarks={shown.wordmarks}
+				actions={shown.actions}
 			/>
 		);
 	}, root);
@@ -224,4 +233,129 @@ test("a query with no lines says so", async () => {
 	show({ query: blankQuery(), answer: undefined });
 	await expect.element(page.getByText("No lines")).toBeVisible();
 	expect(page.getByRole("figure").elements()).toHaveLength(0);
+});
+
+// One line whose middle report raised an alert.
+const ALERTED: JsonConsolePerf = {
+	...PERF,
+	total: 1,
+	points: { x: [1, 2, 3], report: [0, 1, 2] },
+	reports: [20, 21, 22].map((n) => ({ uuid: uuid(n), version: n })),
+	variants: [{ uuid: uuid(30), benchmark: 0, parameters: {} }],
+	lines: [
+		{
+			branch: 0,
+			testbed: 0,
+			benchmark: 0,
+			variant: 0,
+			measure: 0,
+			metric: "value",
+			series: {
+				y: [1, 3, 1],
+				upper: [2, 2, 2],
+				alerts: [
+					{
+						index: 1,
+						uuid: uuid(40),
+						limit: BoundaryLimit.Upper,
+						status: AlertStatus.Active,
+					},
+				],
+			},
+		},
+	],
+};
+
+const LINKS: EmbedLinks = {
+	plot: "https://bencher.test/console/projects/hashbrown/explore",
+	report: (uuid) => `https://bencher.test/reports/${uuid}`,
+	alert: (uuid) => `https://bencher.test/alerts/${uuid}`,
+};
+
+const svg = (fill: string) =>
+	`data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 1"><rect width="6" height="1" fill="${fill}"/></svg>`)}`;
+
+// Kills a link prop that only one of the line's links opens, a readout that
+// keeps no link to the report or the alert it pins, an alert the readout
+// offers to change, and wordmarks that still load from the site.
+test("links and wordmarks replace the line's and give the readout its links, with no alert action", async () => {
+	await page.viewport(1280, 900);
+	const wordmarks = { dark: svg("white"), light: svg("black") };
+	show({ answer: ALERTED, links: LINKS, wordmarks });
+	for (const name of ["Hashbrown", "Bencher"]) {
+		const link = page
+			.getByRole("link", { name, exact: true })
+			.element() as HTMLAnchorElement;
+		expect(link.href).toBe(LINKS.plot);
+	}
+	const images = [...document.querySelectorAll<HTMLImageElement>(".brand img")];
+	expect(images.map(({ src }) => src)).toEqual([
+		wordmarks.dark,
+		wordmarks.light,
+	]);
+
+	// As in Explore, the readout offers the alert of the line in focus.
+	await userEvent.click(
+		page.getByRole("button", { name: /^Focus line of / }).first(),
+	);
+	const area = page.getByRole("group", { name: /lines?,/ });
+	const box = area.element().getBoundingClientRect();
+	await area.click({ position: { x: box.width / 2, y: box.height / 2 } });
+	const alert = page.getByRole("link", { name: /^Alert: / });
+	await expect.element(alert).toHaveAttribute("href", LINKS.alert(uuid(40)));
+	const report = document.querySelector<HTMLAnchorElement>(".pl-when a");
+	expect(report?.href).toBe(LINKS.report(uuid(21)));
+	expect(
+		page
+			.getByRole("button", { name: /^(Dismiss|Reactivate) the alert/ })
+			.elements(),
+	).toHaveLength(0);
+});
+
+// Kills actions that sit anywhere but the end of the line, or a line that
+// grows to hold a phone's full height button and moves the plot down.
+test("actions end the line and move nothing, at a phone's width too", async () => {
+	for (const width of [1280, 390]) {
+		await page.viewport(width, 900);
+		const place = () => ({
+			line: document
+				.querySelector(".em-line")
+				?.getBoundingClientRect()
+				.toJSON(),
+			figure: page.getByRole("figure").element().getBoundingClientRect().top,
+		});
+		show();
+		await expect
+			.element(page.getByRole("figure"))
+			.toHaveAccessibleName("2 lines");
+		const without = place();
+		dispose?.();
+		document.body.replaceChildren();
+
+		show({
+			actions: (
+				<Button variant="ghost" iconOnly aria-label="Close">
+					<Icon name="close" />
+				</Button>
+			),
+		});
+		await expect
+			.element(page.getByRole("figure"))
+			.toHaveAccessibleName("2 lines");
+		const action = page.getByRole("button", { name: "Close" }).element();
+		if (width < 768) {
+			expect(action.getBoundingClientRect().height).toBeGreaterThan(
+				without.line?.height ?? 0,
+			);
+		}
+		expect(action.parentElement?.lastElementChild, `at ${width}`).toBe(action);
+		expect(
+			action.parentElement?.classList.contains("em-line"),
+			`at ${width}`,
+		).toBe(true);
+		expect(place(), `at ${width}`).toEqual(without);
+		dispose?.();
+		dispose = undefined;
+		document.body.replaceChildren();
+	}
 });

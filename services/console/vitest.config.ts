@@ -33,7 +33,8 @@ export default getViteConfig({
 				},
 				server: {
 					fs: {
-						allow: [".", "../../packages/ui"],
+						// The MCP App's test reads the page the MCP server serves.
+						allow: [".", "../../packages/ui", "../../plus/api_mcp/ui"],
 					},
 				},
 				test: {
