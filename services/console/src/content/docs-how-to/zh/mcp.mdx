@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "通过托管的 MCP 服务器将 AI 代理和助手连接到 Bencher，以查询基准测试数据并提交结果"
 heading: "如何使用 Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-27T07:00:00Z"
+modified: "2026-10-28T19:00:00Z"
 sortOrder: 11
 ---
 
@@ -84,7 +84,7 @@ ChatGPT 和 claude.ai 需要能从互联网访问该服务器。
 | `email` | 查看您的电子邮件地址及其是否已验证 |
 | `profile` | 查看您的姓名和用户名 |
 
-读取类工具（`list_*`、`view_*`、`query_perf` 和 `perf_image`）需要 `projects:read`。
+读取类工具（`list_*`、`view_*` 和 `query_perf`）需要 `projects:read`。
 其他所有工具都需要 `projects:write`，它包含 `projects:read`。
 两者都未请求的应用会获得 `projects:read`。
 登录时未获得 `projects:write` 的应用，在调用写入类工具时会被要求重新登录。
@@ -126,7 +126,7 @@ Bencher MCP 也接受与 Bencher API 相同的 `Authorization: Bearer` 凭据：
 | 工具 | 用途 |
 | :--- | :--- |
 | `submit_run` | 提交基准测试工具的原始输出；服务器会解析它，并按需自动创建分支、测试环境和阈值 |
-| `query_perf`, `perf_image` | 查询基准测试指标随时间的变化；生成性能图表图片 |
+| `query_perf` | 查询基准测试指标随时间的变化 |
 | `list_projects`, `view_project` | 项目 |
 | `list_reports`, `create_report`, `view_report` | 报告 |
 | `list_branches`, `create_branch`, `view_branch`, `update_branch` | 分支 |

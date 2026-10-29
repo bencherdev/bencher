@@ -43,12 +43,6 @@ jobs:
           mold-version: ${{ inputs.mold-version }}
       - name: Run Tests
         run: ./scripts/test.sh
-      - name: Upload Perf JPEG
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: perf.jpeg
-          path: ./lib/bencher_plot/perf.jpeg
-          if-no-files-found: error
 
   cargo_test_fork:
     name: Cargo Test
@@ -72,12 +66,6 @@ jobs:
         run: RUST_BACKTRACE=1 cargo nextest run --all-features --no-capture --profile ci
       - name: cargo test --doc
         run: RUST_BACKTRACE=1 cargo test --doc --all-features
-      - name: Upload Perf JPEG
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: perf.jpeg
-          path: ./lib/bencher_plot/perf.jpeg
-          if-no-files-found: error
 
   api_smoke_test:
     name: API Smoke Test (${{ matrix.image-store }})

@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "Conecte agentes e assistentes de IA ao Bencher com o servidor MCP hospedado para consultar dados de benchmark e enviar resultados"
 heading: "Como usar o Bencher MCP"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-27T07:00:00Z"
+modified: "2026-10-28T19:00:00Z"
 sortOrder: 11
 ---
 
@@ -84,7 +84,7 @@ Você aprova todos os escopos que um aplicativo pede, ou nenhum deles:
 | `email` | Ver o seu endereço de e-mail e se ele está verificado |
 | `profile` | Ver o seu nome e nome de usuário |
 
-As ferramentas de leitura (`list_*`, `view_*`, `query_perf` e `perf_image`) precisam de `projects:read`.
+As ferramentas de leitura (`list_*`, `view_*` e `query_perf`) precisam de `projects:read`.
 Todas as outras ferramentas precisam de `projects:write`, que inclui `projects:read`.
 Um aplicativo que não pede nenhum dos dois recebe `projects:read`.
 Um aplicativo que entrou sem `projects:write` é solicitado a entrar novamente quando chama uma ferramenta que grava.
@@ -126,7 +126,7 @@ A maioria das ferramentas aceita um argumento `project`, que pode ser o slug ou 
 | Ferramenta | Propósito |
 | :--- | :--- |
 | `submit_run` | Enviar a saída bruta do harness de benchmark; o servidor a analisa e cria branches, testbeds e thresholds automaticamente |
-| `query_perf`, `perf_image` | Consultar métricas de benchmark ao longo do tempo; gerar uma imagem do gráfico de desempenho |
+| `query_perf` | Consultar métricas de benchmark ao longo do tempo |
 | `list_projects`, `view_project` | Projetos |
 | `list_reports`, `create_report`, `view_report` | Relatórios |
 | `list_branches`, `create_branch`, `view_branch`, `update_branch` | Branches |

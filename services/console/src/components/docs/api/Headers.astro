@@ -12,8 +12,6 @@ const contentType = () => {
 		case HeadersKind.Pub:
 		case HeadersKind.Auth:
 			return "application/json";
-		case HeadersKind.Img:
-			return "image/jpeg";
 	}
 };
 
@@ -22,7 +20,6 @@ const authBearerRequired = () => {
 		case HeadersKind.Auth:
 			return true;
 		case HeadersKind.Pub:
-		case HeadersKind.Img:
 			return false;
 	}
 };

@@ -19,8 +19,6 @@ prerequisites installed on your machine.
    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
    ```
 - [mold](https://github.com/rui314/mold)
-- [fontconfig](https://gitlab.freedesktop.org/fontconfig/fontconfig)
-- [freetype2](https://freetype.org)
 
 ### Installation
 

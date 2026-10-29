@@ -58,10 +58,10 @@
               "expected_behavior": "Look up the branch, testbed, benchmark, and measure, then return the Latency value of each run in the last 30 days with its date."
             },
             {
-              "description": "Render a performance plot",
-              "prompt": "Plot the Latency of the bencher::mock_0 benchmark on the main branch and ubuntu-latest testbed of the example project on Bencher over the last 30 days.",
-              "tools_triggered": "list_branches, list_testbeds, list_benchmarks, list_measures, perf_image",
-              "expected_behavior": "Look up the branch, testbed, benchmark, and measure, then show a plot image of the Latency values over the last 30 days."
+              "description": "Describe a performance trend",
+              "prompt": "How has the Latency of the bencher::mock_0 benchmark on the main branch and ubuntu-latest testbed of the example project on Bencher changed over the last 4 weeks?",
+              "tools_triggered": "list_branches, list_testbeds, list_benchmarks, list_measures, query_perf",
+              "expected_behavior": "Look up the branch, testbed, benchmark, and measure, then compare the earliest and latest Latency values in the last 4 weeks and say whether Latency went up or down and by about how much."
             }
           ],
           "negative": [

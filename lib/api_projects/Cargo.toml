@@ -16,7 +16,6 @@ otel = ["dep:bencher_otel", "bencher_endpoint/otel", "bencher_schema/otel"]
 bencher_endpoint.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_otel = { workspace = true, optional = true }
-bencher_plot.workspace = true
 bencher_rbac.workspace = true
 bencher_schema.workspace = true
 diesel.workspace = true

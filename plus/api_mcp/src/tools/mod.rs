@@ -77,7 +77,6 @@ pub enum McpTool {
     UpdateAlert,
     ViewMetric,
     QueryPerf,
-    PerfImage,
     ListPlots,
     CreatePlot,
     ViewPlot,
@@ -124,7 +123,6 @@ impl McpTool {
             Self::UpdateAlert => "update_alert",
             Self::ViewMetric => "view_metric",
             Self::QueryPerf => "query_perf",
-            Self::PerfImage => "perf_image",
             Self::ListPlots => "list_plots",
             Self::CreatePlot => "create_plot",
             Self::ViewPlot => "view_plot",
@@ -167,7 +165,6 @@ impl McpTool {
             Self::UpdateAlert => "Update alert",
             Self::ViewMetric => "View metric",
             Self::QueryPerf => "Query perf",
-            Self::PerfImage => "Render perf image",
             Self::ListPlots => "List plots",
             Self::CreatePlot => "Create plot",
             Self::ViewPlot => "View plot",
@@ -197,7 +194,6 @@ impl McpTool {
             | Self::ViewAlert
             | Self::ViewMetric
             | Self::QueryPerf
-            | Self::PerfImage
             | Self::ListPlots
             | Self::ViewPlot
             | Self::ListJobs
@@ -299,7 +295,6 @@ impl McpTool {
             Self::UpdateAlert => alerts::update_tool(self.name()),
             Self::ViewMetric => metrics::view_tool(self.name()),
             Self::QueryPerf => perf::query_tool(self.name()),
-            Self::PerfImage => perf::image_tool(self.name()),
             Self::ListPlots => plots::list_tool(self.name()),
             Self::CreatePlot => plots::create_tool(self.name()),
             Self::ViewPlot => plots::view_tool(self.name()),
@@ -355,7 +350,6 @@ impl McpTool {
             Self::UpdateAlert => Box::pin(alerts::update(context, &api_actor, arguments)),
             Self::ViewMetric => Box::pin(metrics::view(context, &api_actor, arguments)),
             Self::QueryPerf => Box::pin(perf::query(log, context, &api_actor, arguments)),
-            Self::PerfImage => Box::pin(perf::image(log, context, &api_actor, arguments)),
             Self::ListPlots => Box::pin(plots::list(context, &api_actor, arguments)),
             Self::CreatePlot => Box::pin(plots::create(context, &api_actor, arguments)),
             Self::ViewPlot => Box::pin(plots::view(context, &api_actor, arguments)),

@@ -120,12 +120,6 @@ impl bencher_endpoint::Registrar for Api {
         }
         api_description.register(perf::proj_perf_get)?;
 
-        // Perf Image
-        if http_options {
-            api_description.register(perf::img::proj_perf_img_options)?;
-        }
-        api_description.register(perf::img::proj_perf_img_get)?;
-
         // Plots
         if http_options {
             api_description.register(plots::proj_plots_options)?;

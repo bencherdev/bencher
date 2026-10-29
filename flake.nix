@@ -35,7 +35,6 @@
           clang
           mold
           pkg-config
-          fontconfig
           binutils
         ];
         rust_tools = with pkgs; [

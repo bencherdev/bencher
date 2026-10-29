@@ -3,7 +3,7 @@ title: "Bencher MCP"
 description: "ホスト型 MCP サーバーで AI エージェントやアシスタントを Bencher に接続し、ベンチマークデータの照会と結果の送信を行います"
 heading: "Bencher MCP の使い方"
 published: "2026-07-18T07:00:00Z"
-modified: "2026-10-27T07:00:00Z"
+modified: "2026-10-28T19:00:00Z"
 sortOrder: 11
 ---
 
@@ -84,7 +84,7 @@ Claude Code は、サーバーが Claude Code のクライアントメタデー�
 | `email` | メールアドレスと、それが確認済みかどうかを表示する |
 | `profile` | 名前とユーザー名を表示する |
 
-読み取りツール（`list_*`、`view_*`、`query_perf`、`perf_image`）には `projects:read` が必要です。
+読み取りツール（`list_*`、`view_*`、`query_perf`）には `projects:read` が必要です。
 その他のツールにはすべて `projects:write` が必要で、これには `projects:read` が含まれます。
 どちらも求めないアプリには `projects:read` が付与されます。
 `projects:write` なしでサインインしたアプリは、書き込みを行うツールを呼び出すと、再度サインインを求められます。
@@ -126,7 +126,7 @@ Bencher MCP は Bencher API と同じ `Authorization: Bearer` 認証情報も受
 | ツール | 用途 |
 | :--- | :--- |
 | `submit_run` | ベンチマークハーネスの生の出力を送信します。サーバーが解析し、ブランチ、テストベッド、しきい値を必要に応じて自動作成します |
-| `query_perf`, `perf_image` | ベンチマークメトリクスの推移を照会し、パフォーマンスプロット画像を生成します |
+| `query_perf` | ベンチマークメトリクスの推移を照会します |
 | `list_projects`, `view_project` | プロジェクト |
 | `list_reports`, `create_report`, `view_report` | レポート |
 | `list_branches`, `create_branch`, `view_branch`, `update_branch` | ブランチ |

@@ -75,7 +75,7 @@ Generic MCP client configuration with an API key:
 ## OAuth
 
 - Scopes: `projects:read` covers the read tools (`list_*`, `view_*`,
-  `query_perf`, `perf_image`), private projects included. `projects:write`
+  `query_perf`), private projects included. `projects:write`
   covers every other tool and includes read. A request naming neither gets
   `projects:read`. `openid`, `email`, and `profile` (OpenID Connect) are
   offered only when the server has `plus.oauth.signing_key`. The user approves
@@ -120,7 +120,7 @@ the same tool set applied across all of the user's projects.
 | Tools | Purpose |
 |-------|---------|
 | `submit_run` | Submit raw benchmark harness output; the server parses it (adapter defaults to `magic`) and creates branches, testbeds, and thresholds on the fly |
-| `query_perf`, `perf_image` | Query metrics over time; render a perf plot (JPEG) |
+| `query_perf` | Query metrics over time |
 | `list_projects`, `view_project` | Project discovery |
 | `list_reports`, `create_report`, `view_report` | Reports |
 | `list_branches`, `create_branch`, `view_branch`, `update_branch` | Branches (no rename with a project key) |
