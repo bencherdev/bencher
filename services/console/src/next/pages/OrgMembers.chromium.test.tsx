@@ -113,7 +113,7 @@ describe("invite", () => {
 
 		await expect
 			.element(page.getByRole("status"))
-			.toHaveTextContent("Invitation sent to courage@nowhere.example");
+			.toHaveTextContent("Invitation sent");
 		expect(sent).toEqual([
 			{
 				method: "POST",
@@ -189,9 +189,7 @@ describe("remove", () => {
 			["Muriel Bagge you", "muriel@nowhere.example", ""],
 		]);
 		await expect.element(page.getByText("1 member")).toBeVisible();
-		await expect
-			.element(page.getByRole("status"))
-			.toHaveTextContent("Removed Eustace Bagge");
+		await expect.element(page.getByRole("status")).toHaveTextContent("Removed");
 		expect(reads).toEqual([]);
 		await expect
 			.element(page.getByRole("heading", { level: 1, name: "Members" }))
@@ -213,7 +211,7 @@ describe("remove", () => {
 
 		await expect
 			.element(page.getByRole("alert"))
-			.toHaveTextContent("Bencher did not remove Eustace Bagge: Forbidden");
+			.toHaveTextContent("Not removed: Forbidden");
 		expect(rows()).toHaveLength(2);
 	});
 });
@@ -321,5 +319,73 @@ test("the remove confirmation passes axe in both themes", async () => {
 			dispose?.();
 			dispose = undefined;
 		};
+	});
+});
+
+describe("long names", () => {
+	const LONG = member(
+		"u",
+		"a".repeat(64),
+		`${"m".repeat(64)}@long-domain-name-for-stress.example`,
+	);
+	const SPACED = member(
+		"u2",
+		"Quarterly Platform Performance Regression Tracking Group North X",
+		`${"s".repeat(64)}@nowhere.example`,
+	);
+	/** The name floor, 16ch, in pixels in a table cell. */
+	const floor = () => {
+		const probe = document.createElement("span");
+		probe.style.cssText = "position: absolute; width: var(--size-name-min)";
+		document.querySelector("td")?.append(probe);
+		const width = probe.getBoundingClientRect().width;
+		probe.remove();
+		return width;
+	};
+
+	// Kills a long name or email that widens the table past its box, a name
+	// squeezed under the floor beside a whole email, and "you" pushed out.
+	test.each([320, 1024])(
+		"at %i px they fit, each name keeps the floor, and you stays whole",
+		async (width) => {
+			await page.viewport(width, 900);
+			open({ members: { members: [LONG, SPACED], total: 2 } });
+			await expect.element(table()).toBeVisible();
+
+			const scroll = table().element().parentElement as HTMLElement;
+			expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
+			for (const name of document.querySelectorAll('td[data-fold="l1"] b')) {
+				expect(name.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+					floor(),
+				);
+				expect(name.querySelector(".ui-trunc")).not.toBeNull();
+				expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+				expect(name.getBoundingClientRect().height).toBeLessThan(
+					Number.parseFloat(getComputedStyle(name).lineHeight) * 1.5,
+				);
+			}
+			const you = document.querySelector<HTMLElement>("td [data-fixed]");
+			expect(you?.scrollWidth).toBeLessThanOrEqual(you?.clientWidth ?? 0);
+			expect(you?.getBoundingClientRect().right).toBeLessThanOrEqual(
+				you?.closest("td")?.getBoundingClientRect().right ?? 0,
+			);
+		},
+	);
+
+	// Kills a long organization name that runs past the rail, or wraps down it.
+	test("the rail holds a long organization name on one line", async () => {
+		await page.viewport(1440, 900);
+		open({ organization: { ...ORGANIZATION, name: "a".repeat(64) } });
+		await expect.element(table()).toBeVisible();
+
+		const name = document.querySelector(".rail .eyebrow") as HTMLElement;
+		const rail = name.parentElement?.getBoundingClientRect();
+		expect(name.getBoundingClientRect().right).toBeLessThanOrEqual(
+			rail?.right ?? 0,
+		);
+		expect(name.getBoundingClientRect().height).toBeLessThan(
+			Number.parseFloat(getComputedStyle(name).lineHeight) * 1.5 +
+				Number.parseFloat(getComputedStyle(name).paddingTop) * 2,
+		);
 	});
 });

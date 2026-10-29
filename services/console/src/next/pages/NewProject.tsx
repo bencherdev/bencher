@@ -4,6 +4,7 @@ import Heading from "@bencherdev/ui/Heading";
 import Selector from "@bencherdev/ui/Selector";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useNavigate, useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { For, Show, createMemo, createSignal, useContext } from "solid-js";
@@ -258,10 +259,13 @@ const NewProject = () => {
 								<Show when={failed()}>
 									{(failure) => (
 										<p class="ferror" role="alert">
-											{failureOf(
-												failure().error,
-												"Bencher did not make the project",
-											)}
+											<Truncate
+												text={failureOf(
+													failure().error,
+													"Bencher did not make the project",
+												)}
+												reveal
+											/>
 										</p>
 									)}
 								</Show>

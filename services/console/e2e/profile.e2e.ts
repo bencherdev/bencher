@@ -124,7 +124,7 @@ test.describe("Profile", () => {
 		await dialog.getByRole("button", { name: "Change email" }).click();
 		await expect(
 			page.getByRole("status").filter({ hasText: "Confirm link" }),
-		).toHaveText("Confirm link sent to courage@bagge.example");
+		).toHaveText("Confirm link sent");
 		await expect(page).toHaveURL(profilePath(slug));
 		expect(sent).toEqual([{ email: "courage@bagge.example" }]);
 	});

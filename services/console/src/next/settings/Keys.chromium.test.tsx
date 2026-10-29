@@ -3,6 +3,7 @@ import { page, userEvent } from "vitest/browser";
 import type { JsonProjectKey } from "../../types/bencher";
 import { ApiError } from "../api";
 import { axeInBothThemes } from "../axe/testing";
+import { KeyTable } from "./KeyList";
 import Keys from "./Keys";
 import { bootstrapOf, fakeApi, mount, watchFallback } from "./testing";
 
@@ -64,12 +65,78 @@ test("a refused revoke puts the key back and says why", async () => {
 	refuse(new ApiError(503, "server", '{"message":"Busy"}'));
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not revoke everett-laptop: Busy");
+		.toHaveTextContent("Not revoked: Busy");
 	await expect.element(active.getByText("everett-laptop")).toBeVisible();
 	await expect
 		.element(page.getByRole("radio", { name: "Active 1" }))
 		.toBeInTheDocument();
 });
+
+// Kills an API reason that grows the toolbar a line at a time, and one cut
+// with no way to read the rest.
+test("a long refusal holds one line and opens whole in place", async () => {
+	await page.viewport(390, 844);
+	const reason = `Key ${"k".repeat(64)} is held by ${"a".repeat(200)}`;
+	const { api } = fakeApi(async () => {
+		throw new ApiError(409, "client", JSON.stringify({ message: reason }));
+	});
+	dispose = mount(() => <Keys />, { api, cached }).dispose;
+	await page.getByRole("button", { name: "Revoke everett-laptop" }).click();
+	await page
+		.getByRole("alertdialog", { name: "Revoke everett-laptop?" })
+		.getByRole("button", { name: "Revoke key" })
+		.click();
+
+	const alert = page.getByRole("alert");
+	await expect.element(alert).toHaveTextContent(`Not revoked: ${reason}`);
+	const line = Number.parseFloat(getComputedStyle(alert.element()).lineHeight);
+	const height = () => alert.element().getBoundingClientRect().height;
+	expect(height()).toBeLessThan(line * 1.5);
+	expect(alert.element().getBoundingClientRect().right).toBeLessThanOrEqual(
+		window.innerWidth,
+	);
+	await alert.getByRole("button").click();
+	await expect
+		.element(alert.getByRole("button"))
+		.toHaveAttribute("aria-expanded", "true");
+	expect(height()).toBeGreaterThan(line * 2);
+});
+
+// Kills a long key name that runs out of its cell, wraps down it, or pushes
+// the New tag away from it.
+test.each([320, 1024])(
+	"at %i px a long key name holds one line in its cell",
+	async (width) => {
+		await page.viewport(width, 844);
+		dispose = mount(
+			() => (
+				<KeyTable
+					status="active"
+					label="Active keys"
+					empty="No keys"
+					keys={[{ ...key, name: "k".repeat(64) }]}
+					made={new Set([key.uuid])}
+					onRevoke={() => {}}
+				/>
+			),
+			{ api: fakeApi().api },
+		).dispose;
+		await expect
+			.element(page.getByRole("table", { name: "Active keys" }))
+			.toBeVisible();
+
+		const name = document.querySelector("td b") as HTMLElement;
+		expect(name.querySelector(".ui-trunc")).not.toBeNull();
+		expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
+		expect(name.getBoundingClientRect().height).toBeLessThan(
+			Number.parseFloat(getComputedStyle(name).lineHeight) * 1.5,
+		);
+		const tag = document.querySelector(".newtag") as HTMLElement;
+		expect(
+			tag.getBoundingClientRect().left - name.getBoundingClientRect().right,
+		).toBeLessThan(12);
+	},
+);
 
 // Kills key controls drawn for a reader the API would refuse.
 test("a reader without manage sees no key and no control", () => {

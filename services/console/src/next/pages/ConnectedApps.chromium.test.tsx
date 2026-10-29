@@ -223,9 +223,7 @@ test("Revoke asks first: Cancel keeps the app, and Revoke app removes it", async
 	expect(sent).toEqual([{ method: "DELETE", path: `${GRANTS}/grant-chatgpt` }]);
 	await expect.element(app("chatgpt.example")).not.toBeInTheDocument();
 	await expect.element(app("claude.example")).toBeVisible();
-	await expect
-		.element(page.getByRole("status"))
-		.toHaveTextContent("Revoked chatgpt.example");
+	await expect.element(page.getByRole("status")).toHaveTextContent("Revoked");
 	await expect
 		.element(page.getByRole("heading", { level: 1, name: "Connected Apps" }))
 		.toHaveFocus();
@@ -258,12 +256,10 @@ test("a refused revoke keeps the app in its place and says why", async () => {
 	await page.getByRole("button", { name: "Revoke app" }).click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent(
-			"Bencher did not revoke chatgpt.example: Database is busy",
-		);
+		.toHaveTextContent("Not revoked: Database is busy");
 	await expect.element(app("chatgpt.example")).toBeVisible();
 	expect(hosts()).toEqual(["chatgpt.example", "claude.example"]);
-	expect(page.getByText("Revoked chatgpt.example").elements()).toHaveLength(0);
+	expect(document.querySelector('[role="status"]')?.textContent).toBe("");
 });
 
 // Kills a failure from an earlier revoke left on screen after a later one
@@ -284,9 +280,7 @@ test("a revoke that succeeds clears an earlier refusal", async () => {
 	await page.getByRole("button", { name: "Revoke claude.example" }).click();
 	await page.getByRole("button", { name: "Revoke app" }).click();
 	await expect.element(app("claude.example")).not.toBeInTheDocument();
-	await expect
-		.element(page.getByRole("status"))
-		.toHaveTextContent("Revoked claude.example");
+	await expect.element(page.getByRole("status")).toHaveTextContent("Revoked");
 	expect(page.getByRole("alert").elements()).toHaveLength(0);
 });
 

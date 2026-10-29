@@ -6,6 +6,7 @@ import Segmented from "@bencherdev/ui/Segmented";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import Table from "@bencherdev/ui/Table";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useQueryClient } from "@tanstack/solid-query";
 import {
 	For,
@@ -76,7 +77,7 @@ const KeyList = (props: {
 	const revoke = async (key: KeyRow) => {
 		const home = props.home;
 		setFailure("");
-		setNote(`Revoked ${key.name}`);
+		setNote("Revoked");
 		// A read of the active list in flight would land over the change.
 		await client.cancelQueries({ queryKey: keysKey(home, false) });
 		const unread = revoked().data === undefined;
@@ -94,7 +95,7 @@ const KeyList = (props: {
 		} catch (error) {
 			undo();
 			setNote("");
-			setFailure(failureOf(error, `Bencher did not revoke ${key.name}`));
+			setFailure(failureOf(error, "Not revoked"));
 		}
 	};
 
@@ -154,9 +155,11 @@ const KeyList = (props: {
 							</Show>
 						</span>
 						<Show when={failure()}>
-							<p class="ferror" role="alert">
-								{failure()}
-							</p>
+							{(message) => (
+								<p class="ferror" role="alert">
+									<Truncate text={message()} reveal />
+								</p>
+							)}
 						</Show>
 					</div>
 					<Show
@@ -273,10 +276,16 @@ export const KeyTable = (props: {
 					{(key) => (
 						<tr>
 							<td data-fold="l1">
-								<b class="mono">{key.name}</b>
-								<Show when={props.made.has(key.uuid)}>
-									<span class="newtag">New</span>
-								</Show>
+								<span class="ui-parts">
+									<b class="mono">
+										<Truncate text={key.name} reveal />
+									</b>
+									<Show when={props.made.has(key.uuid)}>
+										<span class="newtag" data-fixed>
+											New
+										</span>
+									</Show>
+								</span>
 							</td>
 							<td data-fold="l2" class="muted">
 								<span class="ui-fold-label">Created </span>
@@ -432,7 +441,13 @@ const NewKey = (props: {
 					<Show when={failed()}>
 						{(failure) => (
 							<p class="ferror" role="alert">
-								{failureOf(failure().error, "Bencher did not make the key")}
+								<Truncate
+									text={failureOf(
+										failure().error,
+										"Bencher did not make the key",
+									)}
+									reveal
+								/>
 							</p>
 						)}
 					</Show>

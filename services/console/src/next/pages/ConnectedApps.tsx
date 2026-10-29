@@ -4,6 +4,7 @@ import Dialog from "@bencherdev/ui/Dialog";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useNavigate, useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { For, Show, createSignal } from "solid-js";
@@ -44,9 +45,8 @@ const ConnectedApps = () => {
 	let heading: HTMLHeadingElement | undefined;
 
 	const revoke = async (grant: JsonOAuthGrant) => {
-		const host = grant.client.host;
 		setFailure("");
-		setNote(`Revoked ${host}`);
+		setNote("Revoked");
 		// A read in flight would land over the change.
 		await client.cancelQueries({ queryKey: grantsQuery(api, user()).queryKey });
 		const undo = dropGrant(client, api, user(), grant.uuid);
@@ -59,7 +59,7 @@ const ConnectedApps = () => {
 			if (!(error instanceof ApiError && error.kind === "not_found")) {
 				undo();
 				setNote("");
-				setFailure(failureOf(error, `Bencher did not revoke ${host}`));
+				setFailure(failureOf(error, "Not revoked"));
 				return;
 			}
 		}
@@ -99,9 +99,11 @@ const ConnectedApps = () => {
 				</div>
 			</div>
 			<Show when={failure()}>
-				<p class="ferror" role="alert">
-					{failure()}
-				</p>
+				{(message) => (
+					<p class="ferror" role="alert">
+						<Truncate text={message()} reveal />
+					</p>
+				)}
 			</Show>
 			<Show
 				when={list().data}

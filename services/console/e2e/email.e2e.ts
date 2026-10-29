@@ -32,7 +32,7 @@ test.describe("a new email", () => {
 		await page.getByRole("button", { name: "Save changes" }).click();
 		await expect(
 			page.getByRole("status").filter({ hasText: "Confirm link" }),
-		).toHaveText(`Confirm link sent to ${newEmail}`);
+		).toHaveText("Confirm link sent");
 		await expect(page).toHaveURL(settings(reader.user.slug));
 		await expect(email).toHaveValue(reader.user.email);
 		expect((await storedUser(page)).token).toBe(reader.token);

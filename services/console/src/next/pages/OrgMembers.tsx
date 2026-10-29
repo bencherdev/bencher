@@ -6,6 +6,7 @@ import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import Table from "@bencherdev/ui/Table";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { For, Show, createSignal } from "solid-js";
@@ -65,11 +66,11 @@ const OrgMembers = () => {
 		setFailure("");
 		try {
 			await removeMember(api, client, key(), member.uuid);
-			setNote(`Removed ${member.name}`);
+			setNote("Removed");
 			// The row whose Remove held focus is gone.
 			heading?.focus();
 		} catch (error) {
-			setFailure(failureOf(error, `Bencher did not remove ${member.name}`));
+			setFailure(failureOf(error, "Not removed"));
 		}
 	};
 
@@ -106,9 +107,11 @@ const OrgMembers = () => {
 				</div>
 			</div>
 			<Show when={failure()}>
-				<p class="ferror" role="alert">
-					{failure()}
-				</p>
+				{(message) => (
+					<p class="ferror" role="alert">
+						<Truncate text={message()} reveal />
+					</p>
+				)}
 			</Show>
 			<Show
 				when={ready()}
@@ -138,9 +141,9 @@ const OrgMembers = () => {
 						<Show when={shown().roles.invite}>
 							<Invite
 								organization={key()}
-								onSent={(email) => {
+								onSent={() => {
 									setFailure("");
-									setNote(`Invitation sent to ${email}`);
+									setNote("Invitation sent");
 								}}
 							/>
 						</Show>
@@ -200,10 +203,7 @@ const OrgMembers = () => {
 
 export default OrgMembers;
 
-const Invite = (props: {
-	organization: string;
-	onSent: (email: string) => void;
-}) => {
+const Invite = (props: { organization: string; onSent: () => void }) => {
 	const { api } = useAccount();
 	const [email, setEmail] = createSignal("");
 	const [sending, setSending] = createSignal(false);
@@ -216,7 +216,7 @@ const Invite = (props: {
 		try {
 			await invite(api, props.organization, to);
 			setEmail("");
-			props.onSent(to);
+			props.onSent();
 			// Send invite disables itself once the field is empty.
 			input?.focus();
 		} catch (error) {
@@ -269,9 +269,11 @@ const Invite = (props: {
 					</Button>
 				</div>
 				<Show when={failure()}>
-					<p class="ferror" role="alert">
-						{failure()}
-					</p>
+					{(message) => (
+						<p class="ferror" role="alert">
+							<Truncate text={message()} reveal />
+						</p>
+					)}
 				</Show>
 			</div>
 		</form>
@@ -301,14 +303,22 @@ const MemberTable = (props: {
 					return (
 						<tr>
 							<td data-fold="l1">
-								<b>{member.name}</b>
-								<Show when={you()}>
-									{" "}
-									<span class="muted sm">you</span>
-								</Show>
+								<span class="ui-parts">
+									<b>
+										<Truncate text={member.name} reveal />
+									</b>
+									<Show when={you()}>
+										{" "}
+										<span class="muted sm" data-fixed>
+											you
+										</span>
+									</Show>
+								</span>
 							</td>
 							<td data-fold="l2" class="muted">
-								{member.email}
+								<span class="ui-parts">
+									<Truncate text={member.email} reveal />
+								</span>
 							</td>
 							<td data-fold="act" class="act">
 								<Show when={props.roles.remove && !you()}>

@@ -124,7 +124,7 @@ test.describe("the new console's Connected Apps", () => {
 		await expect(page.getByText("No connected apps")).toBeVisible();
 		await expect(nextHeading(page)).toBeFocused();
 		await expect(page.getByRole("main").getByRole("status")).toHaveText(
-			"Revoked client.example",
+			"Revoked",
 		);
 		expect(deletes).toEqual([`${grantsUrl(user)}/${grant.uuid}`]);
 

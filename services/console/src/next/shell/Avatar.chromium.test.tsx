@@ -39,14 +39,21 @@ afterEach(() => {
 /**
  * The shell on Hashbrown's Runs, or on an account page, at this width; with
  * `asked`, nothing is cached and every read is recorded there, unanswered.
+ * Hashbrown goes by `name`.
  */
 const open = async (
 	width: number,
 	{
 		project = true,
+		name = "Hashbrown",
 		signOut = () => {},
 		asked,
-	}: { project?: boolean; signOut?: () => void; asked?: string[] } = {},
+	}: {
+		project?: boolean;
+		name?: string;
+		signOut?: () => void;
+		asked?: string[];
+	} = {},
 ) => {
 	await page.viewport(width, 844);
 	unmount = mount(
@@ -56,7 +63,7 @@ const open = async (
 					slug="hashbrown"
 					tab="runs"
 					organization={{ name: "Pompeii LLC", uuid: "o1" }}
-					project="Hashbrown"
+					project={name}
 					reader="u"
 					user={USER}
 					signOut={signOut}
@@ -70,7 +77,17 @@ const open = async (
 				return new Promise(() => {});
 			}).api,
 			path: "/hashbrown/runs",
-			cached: asked ? [] : [[["console", "user", "u"], READER]],
+			cached: asked
+				? []
+				: [
+						[
+							["console", "user", "u"],
+							{
+								...READER,
+								projects: READER.projects.map((one) => ({ ...one, name })),
+							},
+						],
+					],
 		},
 	).dispose;
 };
@@ -256,6 +273,49 @@ describe("phone", () => {
 		await item("Organizations").click();
 
 		await expect.element(menu()).not.toBeInTheDocument();
+	});
+
+	// Kills a long project that runs Switch project past the menu, and one that
+	// squeezes the words Switch project.
+	test("at 320 px a long project is cut inside Switch project", async () => {
+		await open(320, { name: "p".repeat(64) });
+		await avatar().click();
+
+		const entry = item(/^Switch project/).element() as HTMLElement;
+		expect(entry.scrollWidth).toBeLessThanOrEqual(entry.clientWidth);
+		const words = [...entry.childNodes].find(
+			(node) => node.textContent === "Switch project",
+		);
+		const range = document.createRange();
+		range.selectNodeContents(words as Node);
+		expect(range.getBoundingClientRect().right).toBeLessThanOrEqual(
+			entry.querySelector(".end")?.getBoundingClientRect().left ?? 0,
+		);
+		const name = entry.querySelector(".end .ui-trunc > span") as HTMLElement;
+		expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
+	});
+
+	// Kills a phone switcher whose last run and alerts squeeze the project's
+	// name under the floor, and a restacked row that outgrows its fixed height.
+	test("at 320 px a row's name takes the row and the last run and alerts sit under it", async () => {
+		await open(320, { name: "p".repeat(64) });
+		await avatar().click();
+		await item(/^Switch project/).click();
+		const option = page.getByRole("option", { name: /^p+/ });
+		await expect.element(option).toBeVisible();
+
+		const row = option.element().getBoundingClientRect();
+		const title = option
+			.element()
+			.querySelector(".sw-title")
+			?.getBoundingClientRect();
+		const run = option
+			.element()
+			.querySelector(".sw-run")
+			?.getBoundingClientRect();
+		expect(title?.width).toBeGreaterThan(row.width / 2);
+		expect(run?.top).toBeGreaterThanOrEqual(title?.bottom ?? 0);
+		expect(run?.bottom).toBeLessThanOrEqual(row.bottom);
 	});
 
 	// Kills Switch project offered on an account page, which has no project to
