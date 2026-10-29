@@ -1,5 +1,6 @@
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
+import Truncate from "@bencherdev/ui/Truncate";
 import { type JSX, Show } from "solid-js";
 import Share, { type Copied } from "./Share";
 
@@ -82,7 +83,7 @@ const Header = (props: {
 								<span aria-hidden="true">/</span>
 							</div>
 							<Heading level={1} size="lg">
-								{title()}
+								<Truncate text={title()} reveal />
 							</Heading>
 							<Show when={props.dirty}>
 								<span class="ex-pill">Unsaved changes</span>

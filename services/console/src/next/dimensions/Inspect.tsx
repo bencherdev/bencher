@@ -3,6 +3,7 @@ import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	type QueryClient,
 	type QueryObserverResult,
@@ -186,9 +187,7 @@ const Inspect = (props: {
 		const { back, held } = counts();
 		setNote({
 			archived: archive,
-			text: archive
-				? archivedNote(shown.name, back)
-				: unarchivedNote(shown.name, back, held),
+			text: archive ? archivedNote(back) : unarchivedNote(back, held),
 		});
 		const dimension = props.dimension;
 		const project = slug();
@@ -236,10 +235,7 @@ const Inspect = (props: {
 						setNote(undefined);
 					}
 					setFailure(
-						failureOf(
-							error,
-							`Bencher did not ${archive ? "archive" : "unarchive"} ${shown.name}`,
-						),
+						failureOf(error, archive ? "Not archived" : "Not unarchived"),
 					);
 				}
 			});
@@ -308,7 +304,7 @@ const Inspect = (props: {
 								{(shown) => (
 									<>
 										<Heading level={1} size="xl">
-											{shown().name}
+											<Truncate text={shown().name} tail reveal />
 										</Heading>
 										<Show when={archived()}>
 											<span class="dm-pill">Archived</span>
@@ -367,7 +363,7 @@ const Inspect = (props: {
 						<Impact
 							name={shown().name}
 							text={archiveImpact(counts().back)}
-							confirm={`Archive ${shown().name}`}
+							confirm="Archive"
 							onConfirm={() => {
 								change(true);
 								focus(() => undoButton);
@@ -399,7 +395,7 @@ const Inspect = (props: {
 				</Show>
 				<Show when={failure()}>
 					<p class="ferror" role="alert">
-						{failure()}
+						<Truncate text={failure()} reveal />
 					</p>
 				</Show>
 				<RecordCard detail={detail().data} />
@@ -445,10 +441,15 @@ const Subtitle = (props: {
 	row: { last_report?: number; start_point?: string } | undefined;
 }): JSX.Element => {
 	const parts = () => {
-		const shown: string[] = [];
+		const shown: JSX.Element[] = [];
 		const from = props.row?.start_point;
 		if (from) {
-			shown.push(`from ${from}`);
+			shown.push(
+				<span class="dm-from">
+					from{"\u00a0"}
+					<Truncate text={from} tail reveal />
+				</span>,
+			);
 		}
 		if (props.dimension === "measures" && props.detail) {
 			shown.push((props.detail as JsonMeasure).units);

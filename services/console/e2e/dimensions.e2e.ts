@@ -349,7 +349,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 			.getByRole("button", { name: "Unarchive feature-simd" })
 			.click();
 		await expect(page.getByRole("main").getByRole("status")).toContainText(
-			"Unarchived feature-simd and 1 threshold",
+			"Unarchived with 1 threshold",
 		);
 		await expect
 			.poll(
@@ -388,9 +388,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 			.getByRole("group", { name: "Archive devel" })
 			.getByRole("button", { name: "Archive", exact: true })
 			.click();
-		await expect(page.getByRole("alert")).toContainText(
-			"Bencher did not archive devel",
-		);
+		await expect(page.getByRole("alert")).toContainText("Not archived");
 		await expect(
 			row.getByRole("button", { name: "Archive devel" }),
 		).toBeVisible();
@@ -455,7 +453,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		const runs = page.getByRole("table", { name: "Recent runs" });
 		const newest = runs.getByRole("row").nth(1);
 		await expect(newest).toContainText(seed.last_main_hash);
-		await expect(newest).toContainText("ubuntu-latest+1");
+		await expect(newest).toContainText("ubuntu-latest, macos-latest");
 		await expect(newest.getByRole("link")).toHaveAttribute(
 			"href",
 			new RegExp(`^${consolePath(hashbrown.slug, "runs")}/[0-9a-f-]{36}$`),
@@ -467,7 +465,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		);
 		await expect(thresholds.getByRole("row").nth(1)).toContainText("Latency");
 
-		await page.getByRole("link", { name: "All runs on main" }).click();
+		await page.getByRole("link", { name: "All runs", exact: true }).click();
 		await expect(page).toHaveURL(
 			`${consolePath(hashbrown.slug, "runs")}?branch=main&window=all`,
 		);
@@ -501,7 +499,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		await expect(
 			page.getByRole("table", { name: "Recent runs" }).getByRole("row").nth(1),
 		).toContainText(seed.last_main_hash);
-		await page.getByRole("link", { name: "All runs on ubuntu-latest" }).click();
+		await page.getByRole("link", { name: "All runs", exact: true }).click();
 		await expect(page).toHaveURL(
 			`${consolePath(hashbrown.slug, "runs")}?testbed=ubuntu-latest&window=all`,
 		);

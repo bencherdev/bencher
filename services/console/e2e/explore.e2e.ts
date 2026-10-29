@@ -667,7 +667,7 @@ test("blank Explore starts from alerts, runs, and pins", async ({ page }) => {
 	const alert = alerting.getByRole("link", { name: /^blake3 / });
 	await expect(alert).toHaveCount(1);
 	await expect(alert).toHaveAccessibleName(
-		/^blake3 input_bytes=65536 simd=avx2 threads=1 Latency main · ubuntu-latest · \+\d+\.\d%$/,
+		/^blake3 Latency input_bytes = 65536 simd = avx2 threads = 1 main · ubuntu-latest · \+\d+\.\d%$/,
 	);
 	await expect(
 		page.getByRole("region", { name: "Latest runs" }).getByRole("button", {
@@ -681,7 +681,9 @@ test("blank Explore starts from alerts, runs, and pins", async ({ page }) => {
 	await alert.click();
 	await expect(plot(page)).toHaveAccessibleName("1 line");
 	await expect(page).toHaveURL(/focus=/);
-	await expect(page.getByText(/on main · ubuntu-latest$/)).toBeVisible();
+	await expect(
+		page.getByRole("region", { name: "Query" }).getByRole("paragraph"),
+	).toHaveText(/^from an alert on\s*main\s*·\s*ubuntu-latest$/);
 	await page.getByRole("link", { name: "alert", exact: true }).click();
 	await expect(page).toHaveURL(
 		new RegExp(`${consolePath(hashbrown.slug, "alerts")}/[0-9a-f-]{36}$`),
@@ -722,8 +724,8 @@ test("a latest run opens to its reports, and a report to the benchmarks it ran; 
 		name: `Reports in run ${seed.last_main_hash}`,
 	});
 	await expect(reports.getByRole("button")).toHaveText([
-		/^1\s*main\s*· ubuntu-latest$/,
-		/^2\s*main\s*· macos-latest$/,
+		/^1\s*main\s*·\s*ubuntu-latest$/,
+		/^2\s*main\s*·\s*macos-latest$/,
 	]);
 	await reports.getByRole("button", { name: /^2 main · macos-latest/ }).click();
 	const search = page.getByRole("searchbox", {

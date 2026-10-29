@@ -3,6 +3,7 @@ import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Chip from "@bencherdev/ui/Chip";
 import Sheet from "@bencherdev/ui/Sheet";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useQueryClient } from "@tanstack/solid-query";
 import {
 	For,
@@ -486,23 +487,30 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 		if (blank()) {
 			return "No lines";
 		}
-		const { alert, uuid } =
-			(location.state as { alert?: string; uuid?: string } | undefined) ?? {};
-		if (alert !== undefined) {
+		const { branch, testbed, uuid } =
+			(location.state as
+				| { branch?: string; testbed?: string; uuid?: string }
+				| undefined) ?? {};
+		if (branch !== undefined && testbed !== undefined) {
 			return (
-				<>
-					from an{" "}
-					<a
-						href={
-							uuid === undefined
-								? projectPath(slug(), "alerts")
-								: alertPath(slug(), uuid)
-						}
-					>
-						alert
-					</a>{" "}
-					on {alert}
-				</>
+				<span class="ui-parts ex-from">
+					<span data-fixed>
+						from an{" "}
+						<a
+							href={
+								uuid === undefined
+									? projectPath(slug(), "alerts")
+									: alertPath(slug(), uuid)
+							}
+						>
+							alert
+						</a>{" "}
+						on
+					</span>
+					<Truncate text={branch} tail />
+					<span data-fixed>·</span>
+					<Truncate text={testbed} tail />
+				</span>
 			);
 		}
 		const report = query().report;
@@ -604,9 +612,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 									aria-haspopup="dialog"
 									onClick={() => setSheet(true)}
 								>
-									<span class="ex-ellip">
-										{chipSummary(query(), dimension, answer())}
-									</span>
+									{chipSummary(query(), dimension, answer())}
 								</Chip>
 							)}
 						</For>
@@ -716,7 +722,6 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 			/>
 			<Show when={leaving()}>
 				<Leave
-					title={pinned()?.title ?? "This pinned plot"}
 					saving={working()}
 					onStay={() => setLeaving(undefined)}
 					onLeave={leave}

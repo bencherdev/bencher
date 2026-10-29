@@ -3,6 +3,7 @@ import Dialog from "@bencherdev/ui/Dialog";
 import Icon from "@bencherdev/ui/Icon";
 import Segmented from "@bencherdev/ui/Segmented";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import { For, Show, createMemo, createSignal, createUniqueId } from "solid-js";
 import {
 	type JsonConsolePerf,
@@ -392,7 +393,9 @@ const SavedWith = (props: {
 			</div>
 			<div class="kv">
 				<dt>focused line</dt>
-				<dd>{focus()}</dd>
+				<dd>
+					<Truncate text={focus()} tail reveal />
+				</dd>
 			</div>
 			<div class="kv">
 				<dt>view</dt>

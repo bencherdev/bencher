@@ -373,7 +373,7 @@ test("a batch that did not load says so and loads on Retry", async ({
 	await expect(figure(page, "Pin 1")).toHaveAccessibleName("2 lines over 4w");
 	await tile(page, "Pin 8").scrollIntoViewIfNeeded();
 	const failed = page.getByRole("alert").filter({ hasText: "did not load" });
-	await expect(failed).toContainText("Pin 7 and Pin 8 did not load", {
+	await expect(failed).toContainText("2 plots did not load", {
 		timeout: 15_000,
 	});
 	await expect(figure(page, "Pin 8")).toHaveAccessibleName(

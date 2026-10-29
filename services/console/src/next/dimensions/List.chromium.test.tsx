@@ -139,7 +139,7 @@ test("archiving dims the row at once, and a refusal puts it back and says why", 
 		.toBeInTheDocument();
 	await expect
 		.element(page.getByRole("status"))
-		.toHaveTextContent("Archived feature-simd and 1 threshold");
+		.toHaveTextContent("Archived with 1 threshold");
 	await expect
 		.poll(() => fake.sent)
 		.toEqual([
@@ -153,7 +153,7 @@ test("archiving dims the row at once, and a refusal puts it back and says why", 
 	refuse(new ApiError(409, "client", '{"message":"Busy"}'));
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not archive feature-simd: Busy");
+		.toHaveTextContent("Not archived: Busy");
 	await expect
 		.element(
 			rowOf("feature-simd").getByRole("button", {
@@ -214,7 +214,7 @@ test("unarchiving says which thresholds come back and which stay", async () => {
 	await expect
 		.element(page.getByRole("status"))
 		.toHaveTextContent(
-			"Unarchived gone and 1 threshold · 1 threshold still archived",
+			"Unarchived with 1 threshold · 1 threshold still archived",
 		);
 	await expect
 		.element(page.getByRole("button", { name: "Undo, gone" }))
@@ -704,7 +704,7 @@ test("under Archived, a refused Undo on a row the list was read again without pu
 	await table.getByRole("button", { name: "Undo, old-2" }).click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not archive old-2: Busy");
+		.toHaveTextContent("Not archived: Busy");
 	await expect
 		.element(page.getByRole("radio", { name: "Archived 2" }))
 		.toBeInTheDocument();
@@ -796,7 +796,7 @@ test("a refused Undo after the archive landed shows the row archived again", asy
 	await page.getByRole("button", { name: "Undo, devel" }).click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not unarchive devel: Busy");
+		.toHaveTextContent("Not unarchived: Busy");
 	await expect.element(rowOf("devel")).toHaveTextContent(/Archived just now/);
 	await expect
 		.element(page.getByRole("radio", { name: "Active 2" }))
