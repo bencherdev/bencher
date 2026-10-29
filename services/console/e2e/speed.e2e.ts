@@ -1549,7 +1549,7 @@ test("an Explore key toggle fits in a frame", async ({ page, request }) => {
 
 	const since = await mark(page);
 	const times = await page.evaluate(async () => {
-		const toggle = /^blake3 simd=sse4\.2.*: (hide|show) its line$/;
+		const toggle = /^sse4\.2.*: (hide|show) its line$/;
 		const button = () =>
 			[...document.querySelectorAll("button")].find((each) =>
 				toggle.test(each.getAttribute("aria-label") ?? ""),
@@ -1881,7 +1881,8 @@ const activeAlert = async (request: APIRequestContext) => {
 	}
 	return alert.uuid;
 };
-const ALERT_NAME = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
+// What the alert row's controls call its line, alone in the list.
+const ALERT_NAME = "blake3";
 
 /** The alert's page is drawn, its plot pinned on the alert. */
 const alertShown = (page: Page) =>
@@ -1997,9 +1998,7 @@ test("a move from Alerts to an alert holds its speed ceilings", async ({
 
 	await holdScripts(page);
 	const since = await mark(page);
-	await page
-		.getByRole("link", { name: `${ALERT_NAME}, open the alert` })
-		.click();
+	await page.getByRole("link", { name: /^blake3 .*, open the alert$/ }).click();
 	await alertShown(page);
 	await expect(
 		page.getByRole("link", { name: `Open in Explore: ${ALERT_NAME}` }),

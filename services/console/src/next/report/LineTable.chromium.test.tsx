@@ -98,16 +98,16 @@ test("draws only the rows on screen, and follows the scroll", async () => {
 	expect(drawnRows()).toBeGreaterThan(15);
 	expect(drawnRows()).toBeLessThan(45);
 	await expect
-		.element(page.getByRole("button", { name: "Expand bench-49 n=9 Latency" }))
+		.element(page.getByRole("button", { name: "Expand bench-49 n=9" }))
 		.not.toBeInTheDocument();
 
 	bottom();
 	await expect
-		.element(page.getByRole("button", { name: "Expand bench-49 n=9 Latency" }))
+		.element(page.getByRole("button", { name: "Expand bench-49 n=9" }))
 		.toBeInTheDocument();
 	expect(drawnRows()).toBeLessThan(45);
 	await expect
-		.element(page.getByRole("button", { name: "Expand bench-0 n=0 Latency" }))
+		.element(page.getByRole("button", { name: "Expand bench-0 n=0" }))
 		.not.toBeInTheDocument();
 });
 
@@ -129,7 +129,7 @@ test("asks for more once the last rows loaded come near the screen", async () =>
 test("an expanded row reserves its space at once and draws its plot after that frame paints", async () => {
 	mount(20);
 	const twist = page.getByRole("button", {
-		name: "Expand bench-0 n=0 Latency",
+		name: "Expand bench-0 n=0",
 	});
 	const plotCode = () =>
 		performance
@@ -150,7 +150,7 @@ test("an expanded row reserves its space at once and draws its plot after that f
 	await expect
 		.element(
 			page
-				.getByRole("region", { name: "bench-0 n=0 Latency, full plot" })
+				.getByRole("region", { name: "bench-0 n=0, full plot" })
 				.getByRole("button", { name: /: hide its line$/ }),
 		)
 		.toBeVisible();
@@ -166,11 +166,9 @@ for (const [width, narrow] of [
 	test(`an expanded row's plot fills its space, key and all, at ${width}`, async () => {
 		await page.viewport(width, 800);
 		mount(3, () => {}, { narrow });
-		await page
-			.getByRole("button", { name: "Expand bench-0 n=0 Latency" })
-			.click();
+		await page.getByRole("button", { name: "Expand bench-0 n=0" }).click();
 		const region = page.getByRole("region", {
-			name: "bench-0 n=0 Latency, full plot",
+			name: "bench-0 n=0, full plot",
 		});
 		const toggle = region.getByRole("button", { name: /: hide its line$/ });
 		await expect.element(toggle).toBeVisible();
@@ -192,22 +190,16 @@ for (const [width, narrow] of [
 	test(`an open row keeps its height once it scrolls out of view at ${width}`, async () => {
 		await page.viewport(width, 800);
 		mount(200, () => {}, { narrow });
-		await page
-			.getByRole("button", { name: "Expand bench-0 n=0 Latency" })
-			.click();
+		await page.getByRole("button", { name: "Expand bench-0 n=0" }).click();
 		await expect
-			.element(
-				page.getByRole("region", { name: "bench-0 n=0 Latency, full plot" }),
-			)
+			.element(page.getByRole("region", { name: "bench-0 n=0, full plot" }))
 			.toBeInTheDocument();
 		const height = () =>
 			page.getByRole("table").element().getBoundingClientRect().height;
 		const open = height();
 		bottom();
 		await expect
-			.element(
-				page.getByRole("button", { name: "Expand bench-19 n=9 Latency" }),
-			)
+			.element(page.getByRole("button", { name: "Expand bench-19 n=9" }))
 			.toBeInTheDocument();
 		expect(height()).toBe(open);
 	});
@@ -228,7 +220,7 @@ test("expanding a row and toggling its line in the key each fit in a frame", asy
 	const toggles: number[] = [];
 	for (let run = 0; run < RUNS; run++) {
 		const twist = page
-			.getByRole("button", { name: /^Expand bench-0 n=0 Latency$/ })
+			.getByRole("button", { name: /^Expand bench-0 n=0$/ })
 			.element() as HTMLElement;
 		const start = performance.now();
 		twist.click();
@@ -236,7 +228,7 @@ test("expanding a row and toggling its line in the key each fit in a frame", asy
 		expands.push(performance.now() - start);
 
 		const hide = page
-			.getByRole("region", { name: "bench-0 n=0 Latency, full plot" })
+			.getByRole("region", { name: "bench-0 n=0, full plot" })
 			.getByRole("button", { name: /: hide its line$/ });
 		await expect.element(hide).toBeVisible();
 		await frame();
@@ -247,7 +239,7 @@ test("expanding a row and toggling its line in the key each fit in a frame", asy
 
 		(
 			page
-				.getByRole("button", { name: "Collapse bench-0 n=0 Latency" })
+				.getByRole("button", { name: "Collapse bench-0 n=0" })
 				.element() as HTMLElement
 		).click();
 		await frame();
@@ -267,13 +259,9 @@ test("a group's header names it and counts its variants and lines", async () => 
 // Kills row numbers that skip an open row's plot, or a count that leaves it out.
 test("numbers every row for a screen reader, an open line taking two", async () => {
 	mount(3);
-	await page
-		.getByRole("button", { name: "Expand bench-0 n=1 Latency" })
-		.click();
+	await page.getByRole("button", { name: "Expand bench-0 n=1" }).click();
 	await expect
-		.element(
-			page.getByRole("region", { name: "bench-0 n=1 Latency, full plot" }),
-		)
+		.element(page.getByRole("region", { name: "bench-0 n=1, full plot" }))
 		.toBeInTheDocument();
 	const numbers = [
 		...document.querySelectorAll<HTMLElement>("tr[aria-rowindex]"),
@@ -385,7 +373,7 @@ test.each([
 		async () => {
 			await userEvent.hover(page.getByRole("columnheader", { name: "Line" }));
 			await userEvent.hover(
-				page.getByRole("button", { name: "Expand bench-0 n=1 Latency" }),
+				page.getByRole("button", { name: "Expand bench-0 n=1" }),
 			);
 		},
 	],
@@ -417,7 +405,7 @@ test.each([
 			await expect
 				.element(
 					page.getByRole("link", {
-						name: `Open in Explore: bench-0 n=${index} Latency`,
+						name: `Open in Explore: bench-0 n=${index}`,
 					}),
 				)
 				.toHaveAttribute("href", `/explore?lines=${line.key}`);
@@ -437,7 +425,7 @@ test("each row's Explore link arrives once the page goes idle, with no pointer o
 		await expect
 			.element(
 				page.getByRole("link", {
-					name: `Open in Explore: bench-0 n=${index} Latency`,
+					name: `Open in Explore: bench-0 n=${index}`,
 				}),
 			)
 			.toHaveAttribute("href", `/explore?lines=${line.key}`);
@@ -522,7 +510,7 @@ test("where the browser has no idle callback, the links still arrive", async () 
 		await expect
 			.element(
 				page.getByRole("link", {
-					name: "Open in Explore: bench-0 n=0 Latency",
+					name: "Open in Explore: bench-0 n=0",
 				}),
 				{ timeout: 3_000 },
 			)

@@ -61,6 +61,8 @@ interface LineRowProps {
 	actions?: (() => JSX.Element) | undefined;
 	/** The line's plot in Explore, once the page can write its link. */
 	explore?: string | undefined;
+	/** What the row's controls call its line: short, among the lines of its table. */
+	name?: string | undefined;
 	/** The page of the alert the row names, which its name links to. */
 	href?: string | undefined;
 	/** What the row expands into, drawn in a row of its own under it. */
@@ -91,6 +93,7 @@ const LineRow = (props: LineRowProps) => {
 			props.line.guard,
 			props.line.measure.units,
 		);
+	const short = () => props.name ?? label().name;
 	const region = () => `lr-ex-${props.line.key}`;
 	const alerting = () => props.line.alert !== undefined && !props.dimmed;
 	const columns = () =>
@@ -108,7 +111,7 @@ const LineRow = (props: LineRowProps) => {
 						type="checkbox"
 						class="lr-cb"
 						checked={props.selected === true}
-						aria-label={`Select ${label().name}`}
+						aria-label={`Select ${short()}`}
 						onChange={(event) => onSelect()(event.currentTarget.checked)}
 					/>
 				</label>
@@ -121,7 +124,7 @@ const LineRow = (props: LineRowProps) => {
 			class="lr-twist"
 			aria-expanded={props.expanded}
 			aria-controls={region()}
-			aria-label={`${props.expanded ? "Collapse" : "Expand"} ${label().name}`}
+			aria-label={`${props.expanded ? "Collapse" : "Expand"} ${short()}`}
 			onClick={() => props.onExpand(!props.expanded)}
 			onPointerEnter={() => props.onIntent?.()}
 			onFocus={() => props.onIntent?.()}
@@ -194,7 +197,7 @@ const LineRow = (props: LineRowProps) => {
 			x={inline().x}
 			line={inline().line}
 			muted={props.dimmed === true}
-			label={`${label().name}, history`}
+			label={`${short()}, history`}
 		/>
 	);
 	const delta = () => (
@@ -220,7 +223,7 @@ const LineRow = (props: LineRowProps) => {
 		<Show when={props.explore}>
 			{(href) => (
 				<Suspense>
-					<RowExplore href={href()} name={label().name} />
+					<RowExplore href={href()} name={short()} />
 				</Suspense>
 			)}
 		</Show>
@@ -239,7 +242,7 @@ const LineRow = (props: LineRowProps) => {
 				<button
 					type="button"
 					class="lnk lr-quiet"
-					aria-label={`No threshold checks ${label().name}. Show the run snippet that declares one.`}
+					aria-label={`No threshold checks ${short()}. Show the run snippet that declares one.`}
 					onClick={() => open()()}
 				>
 					no threshold
@@ -332,7 +335,7 @@ const LineRow = (props: LineRowProps) => {
 			<Show when={props.expanded}>
 				<tr class="lr-exrow" aria-rowindex={props.index + 1}>
 					<td colSpan={columns()}>
-						<section id={region()} aria-label={`${label().name}, full plot`}>
+						<section id={region()} aria-label={`${short()}, full plot`}>
 							{props.children}
 						</section>
 					</td>

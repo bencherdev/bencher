@@ -37,7 +37,6 @@ import { useRowStatus } from "../alerts/rowStatus";
 import { type AlertLine, alertLinesOf } from "../alerts/lines";
 import { distinctLines, visibleLines, withKept } from "../alerts/rows";
 import { withPending } from "../alerts/status";
-import { lineLabel } from "../report/row";
 import { Cards, Change } from "../thresholds/Details";
 import { archivedBy, dayText, filterSummary } from "../thresholds/model";
 import { alertsBatch, alertsQuery, thresholdQuery } from "../thresholds/query";
@@ -491,22 +490,12 @@ const Alerts = (props: {
 					}}
 					dimmed={(line) => props.statusOf(line as AlertLine) !== "active"}
 					actions={{
-						cell: (line) => {
+						cell: (line, name) => {
 							const alert = line as AlertLine;
 							const change = props.onChange;
 							return (
 								<AlertActions
-									name={
-										lineLabel(
-											{
-												benchmark: line.benchmark.name,
-												parameters: line.parameters,
-												measure: line.measure.name,
-												metric: line.metric,
-											},
-											false,
-										).name
-									}
+									name={name()}
 									status={props.statusOf(alert)}
 									justNow={props.changed(alert)}
 									modified={alert.modified}

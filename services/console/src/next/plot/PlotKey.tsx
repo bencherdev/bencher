@@ -1,6 +1,7 @@
 import Tooltip from "@bencherdev/ui/Tooltip";
+import Truncate from "@bencherdev/ui/Truncate";
 import { createSignal, For, Index, Show } from "solid-js";
-import type { LineName } from "./key";
+import type { LineName, LineNames } from "./key";
 import type { LineStyle } from "./series";
 import { EyeOff, Swatch, Target } from "./Swatch";
 import type { PlotLine } from "./types";
@@ -14,7 +15,7 @@ export interface PlotKeyProps {
 	hidden: ReadonlySet<number>;
 	/** The line whose focus target is pressed. */
 	focused: number | null;
-	constants: readonly string[];
+	shared: LineNames["shared"];
 	/** Whether a line has an alert still active. */
 	alerting: (line: number) => boolean;
 	/** Entries shown before the rest fold behind Show all. */
@@ -28,6 +29,51 @@ export interface PlotKeyProps {
 
 const plural = (count: number) => (count === 1 ? "line" : "lines");
 
+/** A rest this short never shrinks, so every entry keeps what tells it apart. */
+const FIXED_REST = 32;
+
+/** A line's name as parts of the label around it: its rest, whole when short unless `cut`, and the tags and details that give way first. */
+export const NameParts = (props: { name: LineName; cut?: boolean }) => (
+	<>
+		<Show when={props.name.rest}>
+			{(rest) => (
+				<Show
+					when={props.cut === true || rest().length > FIXED_REST}
+					fallback={
+						<span class="pl-rest" data-fixed>
+							{rest()}
+						</span>
+					}
+				>
+					<Truncate class="pl-rest" text={rest()} tail />
+				</Show>
+			)}
+		</Show>
+		<Index each={props.name.tags}>
+			{(tag) => (
+				<>
+					{" "}
+					<span class="pl-tag">{tag()}</span>
+				</>
+			)}
+		</Index>
+		<Index each={props.name.detail}>
+			{(detail) => (
+				<>
+					{" "}
+					<Truncate class="pl-km" text={detail()} tail />
+				</>
+			)}
+		</Index>
+	</>
+);
+
+const Dot = () => (
+	<span class="pl-dot" data-fixed aria-hidden="true">
+		·
+	</span>
+);
+
 export const PlotKey = (props: PlotKeyProps) => {
 	const [open, setOpen] = createSignal(false);
 	const shown = () =>
@@ -36,26 +82,29 @@ export const PlotKey = (props: PlotKeyProps) => {
 			: props.order.slice(0, props.max);
 	return (
 		<div class="pl-key" classList={{ compact: props.compact }}>
-			<div class="pl-khead">
-				<span>
+			<div class="pl-khead ui-parts">
+				<span data-fixed>
 					<b>{props.lines.length}</b> {plural(props.lines.length)}
 				</span>
 				<Show when={props.hidden.size > 0}>
-					<span class="pl-dot" aria-hidden="true">
-						·
-					</span>
-					<span>{props.hidden.size} hidden</span>
+					<Dot />
+					<span data-fixed>{props.hidden.size} hidden</span>
 				</Show>
-				<Show when={props.constants.length > 0}>
-					<span class="pl-dot" aria-hidden="true">
-						·
-					</span>
-					<Tooltip tip="On every line">
-						{/* biome-ignore lint/a11y/noNoninteractiveTabindex: focusable, so the keyboard reaches its tooltip */}
-						<span class="pl-ellipsis pl-mono" tabIndex={0}>
-							{props.constants.join(" ")}
-						</span>
-					</Tooltip>
+				<Show when={props.shared.benchmark}>
+					{(benchmark) => (
+						<>
+							<Dot />
+							<Truncate class="pl-mono" text={benchmark()} tail reveal />
+						</>
+					)}
+				</Show>
+				<Show when={props.shared.parameters.length > 0}>
+					<Dot />
+					<Truncate
+						class="pl-mono"
+						text={props.shared.parameters.join(" ")}
+						reveal
+					/>
 				</Show>
 			</div>
 			<div class="pl-kgrid">
@@ -86,7 +135,7 @@ export const PlotKey = (props: PlotKeyProps) => {
 								<Tooltip tip={hidden() ? "Show line" : "Hide line"}>
 									<button
 										type="button"
-										class="pl-ktog"
+										class="pl-ktog ui-parts"
 										aria-label={`${name().text}: ${hidden() ? "show" : "hide"} its line`}
 										onClick={() => props.onToggle(line)}
 									>
@@ -97,23 +146,16 @@ export const PlotKey = (props: PlotKeyProps) => {
 												stroke={style().axis === 1 ? "dotted" : "solid"}
 											/>
 										</Show>
-										<b>{name().benchmark}</b>
-										<Index each={name().tags}>
-											{(tag) => (
-												<>
-													{" "}
-													<span class="pl-tag">{tag()}</span>
-												</>
+										<Show when={style().ordinal}>
+											{(ordinal) => (
+												<span
+													class="pl-ord"
+													data-fixed
+													data-ordinal={ordinal()}
+												/>
 											)}
-										</Index>
-										<Index each={name().detail}>
-											{(detail) => (
-												<>
-													{" "}
-													<span class="pl-km">{detail()}</span>
-												</>
-											)}
-										</Index>
+										</Show>
+										<NameParts name={name()} />
 										<Show when={props.alerting(line)}>
 											<span class="pl-alertdot" aria-hidden="true" />
 										</Show>

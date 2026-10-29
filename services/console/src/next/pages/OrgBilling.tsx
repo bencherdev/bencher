@@ -363,7 +363,13 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 								</Show>
 							</span>
 							<Show when={included()}>
-								{(of) => <Meter used={used()} of={of()} unit="active series" />}
+								{(of) => (
+									<Meter
+										used={used()}
+										of={of()}
+										unit={seriesBilled() ? "active series" : "metrics"}
+									/>
+								)}
 							</Show>
 						</Stat>
 						<Stat label="Bare metal">

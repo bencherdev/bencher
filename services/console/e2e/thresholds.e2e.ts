@@ -38,8 +38,10 @@ const stampedDay = String.raw`[A-Z][a-z]{2} \d{1,2}(?:, \d{4})?`;
 
 const LATENCY =
 	"Threshold on main, ubuntu-latest, Latency, value, every variant";
-const ALERTING = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
-const DISMISSED = "sha256 input_bytes=65536 simd=avx2 threads=4 Latency";
+// The threshold's two alerts, as their controls call them: their benchmark, and
+// their threads where both are listed.
+const ALERTING = "blake3";
+const DISMISSED = "sha256";
 
 const headers = (token = seed.member.token) => ({
 	Authorization: `Bearer ${token}`,
@@ -546,9 +548,9 @@ test.describe("a list longer than a batch", () => {
 			thresholdPath(project.slug, threshold?.uuid ?? "", "?status=active"),
 			label,
 		);
-		expect(
-			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
-		).toEqual(manyAlertNames(60));
+		expect(await alertsTopToBottom(page, label, "bench-59")).toEqual(
+			manyAlertNames(60),
+		);
 		const [, size = 0] = offsets;
 		expect(offsets.slice(0, 3)).toEqual([0, size, size - 1]);
 	});
@@ -577,10 +579,8 @@ test.describe("a list longer than a batch", () => {
 			label,
 		);
 		expect(focus).toEqual([0]);
-		expect(
-			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
-		).toEqual(
-			manyAlertNames(60).filter((name) => name !== "bench-03 n=0 Latency"),
+		expect(await alertsTopToBottom(page, label, "bench-59")).toEqual(
+			manyAlertNames(60).filter((name) => name !== "bench-03"),
 		);
 		expect(reread()).toEqual([0, size, 2 * size, 3 * size]);
 	});
