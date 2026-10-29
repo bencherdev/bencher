@@ -79,7 +79,9 @@ pub enum McpTool {
     QueryPerf,
     PerfImage,
     ListPlots,
+    CreatePlot,
     ViewPlot,
+    UpdatePlot,
     ListJobs,
     ViewJob,
 }
@@ -124,7 +126,9 @@ impl McpTool {
             Self::QueryPerf => "query_perf",
             Self::PerfImage => "perf_image",
             Self::ListPlots => "list_plots",
+            Self::CreatePlot => "create_plot",
             Self::ViewPlot => "view_plot",
+            Self::UpdatePlot => "update_plot",
             Self::ListJobs => "list_jobs",
             Self::ViewJob => "view_job",
         }
@@ -165,7 +169,9 @@ impl McpTool {
             Self::QueryPerf => "Query perf",
             Self::PerfImage => "Render perf image",
             Self::ListPlots => "List plots",
+            Self::CreatePlot => "Create plot",
             Self::ViewPlot => "View plot",
+            Self::UpdatePlot => "Update plot",
             Self::ListJobs => "List jobs",
             Self::ViewJob => "View job",
         }
@@ -200,7 +206,8 @@ impl McpTool {
             | Self::CreateTestbed
             | Self::CreateBenchmark
             | Self::CreateMeasure
-            | Self::CreateThreshold => ToolKind::Create,
+            | Self::CreateThreshold
+            | Self::CreatePlot => ToolKind::Create,
             Self::CreateReport => ToolKind::Report,
             Self::SubmitRun => ToolKind::Run,
             Self::UpdateBranch => ToolKind::Reset,
@@ -208,7 +215,8 @@ impl McpTool {
             | Self::UpdateBenchmark
             | Self::UpdateMeasure
             | Self::UpdateThreshold
-            | Self::UpdateAlert => ToolKind::Update,
+            | Self::UpdateAlert
+            | Self::UpdatePlot => ToolKind::Update,
         }
     }
 
@@ -293,7 +301,9 @@ impl McpTool {
             Self::QueryPerf => perf::query_tool(self.name()),
             Self::PerfImage => perf::image_tool(self.name()),
             Self::ListPlots => plots::list_tool(self.name()),
+            Self::CreatePlot => plots::create_tool(self.name()),
             Self::ViewPlot => plots::view_tool(self.name()),
+            Self::UpdatePlot => plots::update_tool(self.name()),
             Self::ListJobs => jobs::list_tool(self.name()),
             Self::ViewJob => jobs::view_tool(self.name()),
         };
@@ -347,7 +357,9 @@ impl McpTool {
             Self::QueryPerf => Box::pin(perf::query(log, context, &api_actor, arguments)),
             Self::PerfImage => Box::pin(perf::image(log, context, &api_actor, arguments)),
             Self::ListPlots => Box::pin(plots::list(context, &api_actor, arguments)),
+            Self::CreatePlot => Box::pin(plots::create(context, &api_actor, arguments)),
             Self::ViewPlot => Box::pin(plots::view(context, &api_actor, arguments)),
+            Self::UpdatePlot => Box::pin(plots::update(context, &api_actor, arguments)),
             Self::ListJobs => Box::pin(jobs::list(context, &api_actor, arguments)),
             Self::ViewJob => Box::pin(jobs::view(log, context, &api_actor, arguments)),
         };

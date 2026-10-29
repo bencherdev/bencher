@@ -6825,7 +6825,7 @@
           "plots"
         ],
         "summary": "Create a plot",
-        "description": "Create a plot for a project. The user must have `create` permissions for the project. A project can have a maximum of 64 plots at a time.",
+        "description": "Create a plot for a project. The user must have `create` permissions for the project, or provide a valid project key for the project. A project can have a maximum of 64 plots at a time.",
         "operationId": "proj_plot_post",
         "parameters": [
           {
@@ -7073,7 +7073,7 @@
           "plots"
         ],
         "summary": "Update a plot",
-        "description": "Update a plot for a project. The user must have `edit` permissions for the project.",
+        "description": "Update a plot for a project. The user must have `edit` permissions for the project, or provide a valid project key for the project.",
         "operationId": "proj_plot_patch",
         "parameters": [
           {

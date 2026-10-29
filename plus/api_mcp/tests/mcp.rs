@@ -16,7 +16,7 @@ use bencher_schema::context::RateLimiting;
 use http::{StatusCode, header::WWW_AUTHENTICATE};
 use serde_json::{Value, json};
 
-const MCP_TOOL_COUNT: usize = 36;
+const MCP_TOOL_COUNT: usize = 38;
 const PROTOCOL_VERSION_2026: &str = "2026-07-28";
 
 /// Build a JSON-RPC POST to /mcp, optionally with a bearer credential.
@@ -509,6 +509,58 @@ async fn mcp_project_key_create_but_not_rename() {
     assert!(error.starts_with("403"), "Expected 403 error: {error}");
 }
 
+// A project key can create a plot and update it, title included
+#[tokio::test]
+async fn mcp_project_key_create_and_update_plot() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("MCP Plotter", "mcp-plotter@bencher.dev")
+        .await;
+    let org = server.create_org(&user, "MCP Plotter Org").await;
+    let project = server
+        .create_project(&user, &org, "MCP Plotter Project")
+        .await;
+    let key = server.create_project_key(&user, &project, "mcp-key").await;
+    let project_slug: &str = project.slug.as_ref();
+    let call = async |name: &str, mut arguments: Value| {
+        arguments["project"] = json!(project_slug);
+        let request = call_tool_request(name, &arguments);
+        tool_content(&mcp_result(&server, Some(key.key.as_ref()), &request).await)
+    };
+
+    let branch = call("create_branch", json!({"name": "main"})).await;
+    let testbed = call("create_testbed", json!({"name": "localhost"})).await;
+    let benchmark = call("create_benchmark", json!({"name": "mcp_bench"})).await;
+    let measure = call("create_measure", json!({"name": "latency", "units": "ns"})).await;
+    let plot = call(
+        "create_plot",
+        json!({
+            "title": "MCP Plot",
+            "lower_value": false,
+            "upper_value": false,
+            "lower_boundary": false,
+            "upper_boundary": true,
+            "x_axis": "date_time",
+            "window": 2_592_000,
+            "branches": [branch["uuid"]],
+            "testbeds": [testbed["uuid"]],
+            "benchmarks": [benchmark["uuid"]],
+            "measures": [measure["uuid"]]
+        }),
+    )
+    .await;
+    assert_eq!(plot["title"], "MCP Plot", "{plot}");
+
+    let updated = call(
+        "update_plot",
+        json!({"plot": plot["uuid"], "title": "Retitled", "window": 604_800}),
+    )
+    .await;
+    assert_eq!(updated["uuid"], plot["uuid"], "{updated}");
+    assert_eq!(updated["title"], "Retitled", "{updated}");
+    assert_eq!(updated["window"], 604_800, "{updated}");
+}
+
 // Anonymous requests can read a public project, mirroring the REST API
 #[tokio::test]
 async fn mcp_anonymous_public_project() {
@@ -750,36 +802,25 @@ async fn seed_every_tool(
     let alert = &alerts["data"][0];
     assert!(alert.is_object(), "Expected an alert: {alerts}");
 
-    let plot = server
-        .client
-        .post(server.api_url(&format!("/v0/projects/{project_slug}/plots")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
-        .json(&json!({
-            "title": "MCP Plot",
-            "lower_value": false,
-            "upper_value": false,
-            "lower_boundary": false,
-            "upper_boundary": true,
-            "x_axis": "date_time",
-            "layout": "stacked",
-            "window": 2_592_000,
-            "branches": [branch["uuid"]],
-            "testbeds": [testbed["uuid"]],
-            "benchmarks": [benchmark["uuid"]],
-            "parameters": [{"threads": 4}],
-            "measures": [measure["uuid"]],
-            "metrics": ["p99", "value"],
-            "hidden": ["1a2b3c4d5e6"],
-            "focus": "0123456789abcdef"
-        }))
-        .send()
-        .await
-        .expect("Plot request failed");
-    assert_eq!(plot.status(), StatusCode::CREATED, "Failed to create plot");
-    let plot: Value = plot.json().await.expect("Invalid plot");
+    let new_plot = json!({
+        "title": "MCP Plot",
+        "lower_value": false,
+        "upper_value": false,
+        "lower_boundary": false,
+        "upper_boundary": true,
+        "x_axis": "date_time",
+        "layout": "stacked",
+        "window": 2_592_000,
+        "branches": [branch["uuid"]],
+        "testbeds": [testbed["uuid"]],
+        "benchmarks": [benchmark["uuid"]],
+        "parameters": [{"threads": 4}],
+        "measures": [measure["uuid"]],
+        "metrics": ["p99", "value"],
+        "hidden": ["1a2b3c4d5e6"],
+        "focus": "0123456789abcdef"
+    });
+    let plot = call("create_plot", new_plot.clone()).await;
 
     let mut job_run = run(3, 10.0);
     job_run["job"] = json!({
@@ -888,6 +929,11 @@ async fn seed_every_tool(
         (
             "update_alert",
             json!({"alert": alert["uuid"], "status": "dismissed"}),
+        ),
+        ("create_plot", new_plot),
+        (
+            "update_plot",
+            json!({"plot": plot["uuid"], "title": "Retitled", "focus": null}),
         ),
         ("create_report", run(4, 10.0)),
         ("submit_run", run(5, 10.0)),
