@@ -1,4 +1,5 @@
 import Icon from "@bencherdev/ui/Icon";
+import Truncate from "@bencherdev/ui/Truncate";
 import { type JSX, Show } from "solid-js";
 import type {
 	JsonConsoleAuthor,
@@ -36,7 +37,7 @@ export const Author = (props: {
 			<span role="img" aria-label={key() ? "Project key" : "User"}>
 				<Icon name={key() ? "key" : "user"} />
 			</span>
-			<span class="rn-name">{props.author.name}</span>
+			<Truncate text={props.author.name} tail />
 			{props.children}
 		</span>
 	);

@@ -1,4 +1,5 @@
 import Table from "@bencherdev/ui/Table";
+import Truncate from "@bencherdev/ui/Truncate";
 import { For, Show } from "solid-js";
 import type { JsonConsoleRunReport } from "../../types/bencher";
 import { reportPath } from "../paths";
@@ -127,7 +128,7 @@ const ReportRow = (props: {
 					onFocus={() => props.onIntent()}
 					onTouchStart={() => props.onIntent()}
 				>
-					{props.report.testbed.name}
+					<Truncate text={props.report.testbed.name} tail />
 				</a>
 			</td>
 			<td data-fold="hide">{props.report.adapter}</td>

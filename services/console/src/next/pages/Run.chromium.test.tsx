@@ -34,6 +34,7 @@ import {
 } from "../runs/testing";
 import { bootstrapOf } from "../settings/testing";
 import {
+	STRESS,
 	columnEdges,
 	expectNameStartsWithText,
 	expectRowOpens,
@@ -115,6 +116,39 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
+// Kills a phone head that grows when the run arrives, a long branch that
+// takes the hash's place, and a sub line that pushes the page sideways.
+test("on a phone the head holds its size and the hash stays whole beside a long branch", async () => {
+	for (const width of [320, 390]) {
+		await page.viewport(width, 844);
+		const answer = Promise.withResolvers<unknown>();
+		const { api } = fakeApi(() => answer.promise.then((data) => ({ data })));
+		mount(api);
+		const head = () => document.querySelector<HTMLElement>(".rp-head");
+		await expect
+			.poll(() => head()?.querySelector(".ui-skeleton"))
+			.not.toBeNull();
+		const held = head()?.getBoundingClientRect().height;
+		const fixture = runPageFixture([runReportFixture(0)], {
+			total: 8,
+			testbeds: 2,
+			lines: 96,
+		});
+		answer.resolve({
+			...fixture,
+			branch: { ...fixture.branch, name: STRESS.branch },
+		});
+		await expect.poll(() => head()?.querySelector(".ui-skeleton")).toBeNull();
+		expect(head()?.getBoundingClientRect().height).toBe(held);
+		const hash = document.querySelector<HTMLElement>(".rn-titlehash");
+		expect(hash?.scrollWidth).toBeLessThanOrEqual(hash?.clientWidth ?? 0);
+		expect(hash?.textContent).toBe("9c1f2e4");
+		expect(document.documentElement.scrollWidth).toBe(width);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
 // Kills a heading that names the run by anything but its branch and head, an
 // alerts count of the active alerts rather than every one, a sub line whose
 // counts or time are read from the page rather than the run, cells that read
@@ -151,9 +185,12 @@ test("the heading names the run and the table reads its reports in start order",
 
 	const heading = page.getByRole("heading", { level: 1 });
 	await expect.element(heading).toHaveTextContent("main · 9c1f2e4");
+	await expect
+		.element(page.getByRole("button", { name: "Copy hash" }))
+		.toBeVisible();
 	await expect.element(page.getByText("3 alerts")).toBeVisible();
 	expect(document.querySelector(".rp-sub")?.textContent).toMatch(
-		/^Sep 1[34], 2026, \d\d:\d6 · version 248 · 8 reports, 2 testbeds · 96 lines · took 14m 08s$/,
+		/^Sep 1[34], 2026, \d\d:\d6 · version 248 · 8 reports · 2 testbeds: ubuntu-latest, macos-latest · 96 lines · took 14m 08s$/,
 	);
 	expect(document.querySelector(".count")?.textContent).toBe("8");
 	expect(cells(2)).toEqual([

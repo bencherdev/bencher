@@ -528,9 +528,8 @@ for (const width of [900, 390, 360]) {
 			expect(box.top).toBeGreaterThanOrEqual(cell?.top ?? Number.NaN);
 			expect(box.bottom).toBeLessThanOrEqual(cell?.bottom ?? Number.NaN);
 			expect(element.scrollWidth).toBeLessThanOrEqual(element.clientWidth);
-			expect(Math.round(row?.height ?? 0)).toBe(
-				HEIGHTS.narrow.line + HEIGHTS.narrow.actions,
-			);
+			const heights = HEIGHTS[width < 390 ? "stacked" : "narrow"];
+			expect(Math.round(row?.height ?? 0)).toBe(heights.line + heights.actions);
 		}
 	});
 }
@@ -1649,7 +1648,7 @@ test("an archived threshold says so, and what archived it", async () => {
 	expect(page.getByText("active", { exact: true }).query()).toBeNull();
 	await expect
 		.element(page.getByRole("region", { name: "Applies to" }))
-		.toHaveTextContent(/Archived Sep 8(, 2026)? with testbed ubuntu-old/);
+		.toHaveTextContent(/Archived Sep 8(, 2026)? with its testbed$/);
 });
 
 // Kills cards drawn before the project's version says what Change teaches,
@@ -1859,6 +1858,33 @@ test("on a phone, Status spans the page", async () => {
 	const status = page.getByRole("radiogroup", { name: "Status" });
 	await expect.element(status).toBeVisible();
 	expect(status.element().getBoundingClientRect().width).toBeGreaterThan(300);
+});
+
+// Kills a title the pills and Open in Explore squeeze under the name floor on
+// a phone.
+test("at 320 px the title keeps the name floor", async () => {
+	await page.viewport(320, 900);
+	const { api: answered } = api();
+	mount(answered, client());
+	const title = page.getByRole("heading", { level: 1 });
+	await expect
+		.element(title)
+		.toHaveTextContent("main · ubuntu-latest · Latency · value");
+	const heading = title.element() as HTMLElement;
+	const width = (css: string, text = "") => {
+		const probe = document.createElement("span");
+		probe.style.cssText = `position: absolute; white-space: nowrap; ${css}`;
+		probe.textContent = text;
+		heading.append(probe);
+		const found = probe.getBoundingClientRect().width;
+		probe.remove();
+		return found;
+	};
+	const floor = width("width: var(--size-name-min)");
+	const whole = width("", heading.textContent ?? "");
+	expect(heading.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+		Math.min(floor, whole),
+	);
 });
 
 // Kills a readout on a row's alert that changes it outside its row, which

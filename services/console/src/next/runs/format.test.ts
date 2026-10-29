@@ -9,13 +9,14 @@ test("a run reads as its short hash, else its version number", () => {
 	expect(runHead({ number: 252 })).toBe("v252");
 });
 
-// Kills a list cut at the names the API sent, and a count of the rest taken
-// from the names rather than the run.
+// Kills a list cut at the names the API sent, a count of the rest taken from
+// the names rather than the run, and a list of none that starts with a comma.
 test("every name, and how many more the run holds", () => {
 	expect(allNames(["ubuntu-latest", "macos-latest"], 2)).toBe(
 		"ubuntu-latest, macos-latest",
 	);
 	expect(allNames(["t1", "t2"], 9)).toBe("t1, t2, and 7 more");
+	expect(allNames([], 3)).toBe("3 more");
 });
 
 // Kills a start without its seconds, which cannot tell apart reports started

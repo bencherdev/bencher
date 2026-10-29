@@ -3,6 +3,7 @@ import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	type QueryClient,
 	type QueryObserverResult,
@@ -29,6 +30,7 @@ import type {
 	JsonConsoleRunReport,
 } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
+import Dot from "../dot";
 import { projectPath, runPath } from "../paths";
 import { formatWhen } from "../plot/format";
 import { formatCount } from "../plot/count";
@@ -39,7 +41,8 @@ import { useQueryResult } from "../query";
 import { absoluteTime, duration } from "../reports/format";
 import { type Range, hasMore, loadMore } from "../reports/rows";
 import { screenBatch } from "../reports/virtual";
-import { runHead } from "../runs/format";
+import CopyHash from "../runs/CopyHash";
+import { allNames, runHead } from "../runs/format";
 import Neighbor from "../runs/Neighbor";
 import { isRunId, runBatchQuery } from "../runs/run";
 import RunReports from "../runs/RunReports";
@@ -112,6 +115,11 @@ const Run = () => {
 		}
 		return all;
 	});
+
+	/** The testbeds of the reports loaded so far, each once. */
+	const testbeds = createMemo(() => [
+		...new Set(reports().map((report) => report.testbed.name)),
+	]);
 
 	const [now, setNow] = createSignal(Date.now());
 	// Every answer, a poll's too, moves the times the page counts from now.
@@ -209,12 +217,27 @@ const Run = () => {
 							onIntent={() => intendRun(run()?.next)}
 						/>
 					</div>
-					<p class="ph-sub rp-sub">
+					<p class="ph-sub rp-sub ui-parts">
 						<Show
 							when={run()}
 							fallback={<Skeleton size="text" class="rp-sub-skel" />}
 						>
-							{(run) => subtitle(run(), narrow(), now())}
+							{(run) => (
+								<For each={subtitle(run(), testbeds(), narrow(), now())}>
+									{(part, index) => (
+										<>
+											<Show when={index() > 0}>
+												<Dot />
+											</Show>
+											{part.reveal ? (
+												<Truncate text={part.text} reveal />
+											) : (
+												<span data-fixed>{part.text}</span>
+											)}
+										</>
+									)}
+								</For>
+							)}
 						</Show>
 					</p>
 				</div>
@@ -357,13 +380,17 @@ const Title = (props: { run: JsonConsoleRun | undefined; now: number }) => (
 				}
 			>
 				{(run) => (
-					<>
-						{run().branch.name} <span aria-hidden="true">·</span>{" "}
-						<span class="rn-titlehash">{runHead(run())}</span>
-					</>
+					<span class="ui-parts">
+						<Truncate text={run().branch.name} tail reveal />
+						<Dot />
+						<span class="rn-titlehash" data-fixed>
+							{runHead(run())}
+						</span>
+					</span>
 				)}
 			</Show>
 		</Heading>
+		<Show when={props.run?.hash}>{(hash) => <CopyHash hash={hash()} />}</Show>
 		<Show when={(props.run?.alerts.total ?? 0) > 0}>
 			<span class="rp-alerts">
 				<svg class="lr-alertdot" viewBox="0 0 8 8" aria-hidden="true">
@@ -384,8 +411,13 @@ const Title = (props: { run: JsonConsoleRun | undefined; now: number }) => (
 	</div>
 );
 
-/** When, which version, its counts so far, and how long it took once its jobs are done. */
-const subtitle = (run: JsonConsoleRun, narrow: boolean, now: number) => {
+/** When, which version, its counts so far, its testbeds, and how long it took once its jobs are done; only the testbeds give way, to a reveal. */
+const subtitle = (
+	run: JsonConsoleRun,
+	testbeds: readonly string[],
+	narrow: boolean,
+	now: number,
+) => {
 	// The heading's status carries a run's time until its jobs are done.
 	const took = runStatus(run, now, duration).kind
 		? undefined
@@ -393,26 +425,32 @@ const subtitle = (run: JsonConsoleRun, narrow: boolean, now: number) => {
 	const lines = landed(run.total, run.jobs)
 		? plural(run.lines, "line")
 		: undefined;
-	if (narrow) {
-		return [
-			formatWhen(run.start_time),
-			`v${run.number}`,
-			plural(run.total, "report"),
-			lines,
-			took,
-		]
-			.filter(Boolean)
-			.join(" · ");
-	}
-	return [
-		absoluteTime(run.start_time),
-		`version ${run.number}`,
-		`${plural(run.total, "report")}, ${plural(run.testbeds, "testbed")}`,
-		lines,
-		took,
-	]
-		.filter(Boolean)
-		.join(" · ");
+	const named = {
+		text:
+			testbeds.length > 0
+				? `${plural(run.testbeds, "testbed")}: ${allNames(testbeds, run.testbeds)}`
+				: plural(run.testbeds, "testbed"),
+		reveal: true,
+	};
+	const fixed = (text: string | undefined) =>
+		text === undefined ? [] : [{ text, reveal: false }];
+	return narrow
+		? [
+				...fixed(formatWhen(run.start_time)),
+				...fixed(`v${run.number}`),
+				...fixed(plural(run.total, "report")),
+				...fixed(lines),
+				...fixed(took),
+				named,
+			]
+		: [
+				...fixed(absoluteTime(run.start_time)),
+				...fixed(`version ${run.number}`),
+				...fixed(plural(run.total, "report")),
+				named,
+				...fixed(lines),
+				...fixed(took),
+			];
 };
 
 const plural = (count: number, noun: string) =>

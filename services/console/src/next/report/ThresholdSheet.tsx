@@ -1,6 +1,8 @@
+import Truncate from "@bencherdev/ui/Truncate";
 import Sheet from "@bencherdev/ui/Sheet";
 import type { QueryObserverResult } from "@tanstack/solid-query";
 import type { Adapter, BmfVersion } from "../../types/bencher";
+import Tag from "../tag";
 import { For, Match, Show, Switch } from "solid-js";
 import Code from "./Code";
 import { runHost, useProject } from "../project";
@@ -91,10 +93,10 @@ const Snippets = (props: ThresholdSheetProps & { line: ReportLine }) => {
 	return (
 		<>
 			<div class="rp-id">
-				<b>{props.line.benchmark.name}</b>
-				<For each={label().tags}>
-					{(tag) => <span class="lr-ptag">{tag}</span>}
-				</For>
+				<b>
+					<Truncate text={props.line.benchmark.name} tail reveal />
+				</b>
+				<For each={label().tags}>{(tag) => <Tag tag={tag} reveal />}</For>
 				<span class="muted sm">
 					{props.line.measure.name}, metric {props.line.metric}, on {where()}
 				</span>

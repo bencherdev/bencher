@@ -4,6 +4,7 @@ import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	type QueryObserverResult,
 	useQueryClient,
@@ -12,19 +13,17 @@ import {
 	For,
 	Match,
 	Show,
-	Suspense,
 	Switch,
 	createComputed,
 	createMemo,
 	createSignal,
-	lazy,
 	mapArray,
 	on,
 } from "solid-js";
 import type { JsonConsoleReport, JsonConsoleSpec } from "../../types/bencher";
 import type { Settable } from "../alerts/status";
-import { useFold } from "../alerts/fold";
 import { ApiError } from "../api";
+import Dot from "../dot";
 import { alertPath, projectPath, reportPath, runPath } from "../paths";
 import { useNarrow } from "../plot/narrow";
 import { leafOf } from "../leaf";
@@ -32,6 +31,7 @@ import { useEntityTitle, useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import Controls from "../report/Controls";
+import { FOLD } from "../report/fold";
 import LineTable from "../report/LineTable";
 import {
 	type GroupRow,
@@ -62,6 +62,7 @@ import {
 import { duration, shortHash } from "../reports/format";
 import Neighbor, { onMoved } from "../runs/Neighbor";
 import { reportStatus } from "../runs/status";
+import CopyHash from "../runs/CopyHash";
 import StatusPill from "../runs/StatusPill";
 import { formatCount } from "../plot/count";
 
@@ -75,7 +76,6 @@ const Report = () => {
 	const navigate = useProjectNavigate();
 	const client = useQueryClient();
 	const narrow = useNarrow();
-	const fold = useFold();
 	const view = createMemo(() =>
 		parseReportView(new URLSearchParams(location.search)),
 	);
@@ -318,7 +318,7 @@ const Report = () => {
 							onIntent={() => intent("next")}
 						/>
 					</div>
-					<p class="ph-sub rp-sub">
+					<p class="ph-sub rp-sub ui-parts">
 						<Show
 							when={report()}
 							fallback={<Skeleton size="text" class="rp-sub-skel" />}
@@ -328,19 +328,24 @@ const Report = () => {
 									each={subtitle(
 										report(),
 										// The run's crumb names the hash when there is one.
-										report().run ? undefined : hash(),
+										report().run ? undefined : report().version.hash,
 										view().search ? undefined : report().total,
 										narrow(),
 									)}
 								>
 									{(part, index) => (
 										<>
-											{index() > 0 && " · "}
-											{part === SPEC ? (
-												<Spec spec={report().spec} narrow={narrow()} />
+											<Show when={index() > 0}>
+												<Dot />
+											</Show>
+											{part.kind === "reveal" ? (
+												<Truncate text={part.text} reveal />
 											) : (
-												part
+												<span data-fixed>{part.text}</span>
 											)}
+											<Show when={part.kind === "hash" && part.hash}>
+												{(whole) => <CopyHash hash={whole()} />}
+											</Show>
 										</>
 									)}
 								</For>
@@ -383,7 +388,7 @@ const Report = () => {
 								label={`Lines in report ${hash() ?? report().uuid}, grouped by ${first()?.group}`}
 								slots={slots()}
 								rows={groups().length + report().total}
-								narrow={fold()}
+								fold={FOLD.report}
 								metrics={report().counts.metrics > 1}
 								history={`History, ${windowLabel()}`}
 								expanded={expanded()}
@@ -486,7 +491,7 @@ const Crumb = (props: {
 	readOnly?: boolean;
 	onRunIntent?: (version: string) => void;
 }) => (
-	<div class="crumb-line">
+	<div class="crumb-line rp-crumb">
 		<a href={projectPath(props.slug, "runs")}>Runs</a>
 		<span aria-hidden="true">/</span>
 		<Show when={props.report?.run && props.report}>
@@ -496,16 +501,19 @@ const Crumb = (props: {
 				return (
 					<>
 						<a
-							class="as-typed"
+							class="as-typed rp-crumbrun"
 							href={runPath(props.slug, version())}
 							onPointerMove={onMoved(intent)}
 							onFocus={intent}
 							onTouchStart={intent}
 						>
-							{report().branch.name} <span aria-hidden="true">·</span>{" "}
-							<span class="rn-crumbhash">
-								{shortHash(report().version.hash) ??
-									`v${report().version.number}`}
+							<span class="ui-parts">
+								<Truncate text={report().branch.name} tail />
+								<Dot />
+								<span class="rn-crumbhash" data-fixed>
+									{shortHash(report().version.hash) ??
+										`v${report().version.number}`}
+								</span>
 							</span>
 						</a>
 						<span aria-hidden="true">/</span>
@@ -542,9 +550,11 @@ const Title = (props: {
 				}
 			>
 				{(report) => (
-					<>
-						{report().branch.name} · {report().testbed.name}
-					</>
+					<span class="ui-parts">
+						<Truncate text={report().branch.name} tail reveal />
+						<Dot />
+						<Truncate text={report().testbed.name} tail reveal />
+					</span>
 				)}
 			</Show>
 		</Heading>
@@ -564,33 +574,18 @@ const Title = (props: {
 	</div>
 );
 
-/** Where the sub line names the spec a runner report ran on. */
-const SPEC = Symbol("spec");
+const GIB = 1024 ** 3;
 
-/** The spec's tooltip loads only for a runner report; until it arrives its name holds the same box. */
-const SpecTip = lazy(() => import("../report/SpecTip"));
+/** A runner report's spec by name, then its OS, architecture, CPU, and memory. */
+const specText = (spec: JsonConsoleSpec) =>
+	`${spec.name} (${spec.os}, ${spec.architecture}, ${spec.cpu}, ${Math.round((spec.memory / GIB) * 10) / 10} GiB)`;
 
-/** A runner report's spec by name, its OS, architecture, CPU, and memory in a tooltip; a phone, which shows no tooltip, reads its name. */
-const Spec = (props: {
-	spec: JsonConsoleSpec | undefined;
-	narrow: boolean;
-}) => (
-	<Show when={props.spec}>
-		{(spec) => (
-			<Show when={!props.narrow} fallback={spec().name}>
-				<Suspense
-					fallback={
-						<button type="button" class="rn-specname">
-							{spec().name}
-						</button>
-					}
-				>
-					<SpecTip spec={spec()} />
-				</Suspense>
-			</Show>
-		)}
-	</Show>
-);
+interface SubPart {
+	text: string;
+	/** A part that gives way, to a reveal; the hash, with its whole for Copy; else a part kept whole. */
+	kind: "reveal" | "hash" | "fixed";
+	hash?: string;
+}
 
 /** Its place in its run, when, how, and what the report holds; `lines` is left out while a filter narrows them. */
 const subtitle = (
@@ -598,7 +593,7 @@ const subtitle = (
 	hash: string | undefined,
 	lines: number | undefined,
 	narrow: boolean,
-) => {
+): SubPart[] => {
 	// A runner job's report holds nothing until its results are in, and its status carries its time.
 	const job = report.job !== undefined;
 	const total = lines === undefined || job ? [] : [plural(lines, "line")];
@@ -608,35 +603,51 @@ const subtitle = (
 		run?.order && run.total > 1
 			? `#${formatCount(run.order)} of ${formatCount(run.total)}`
 			: undefined;
-	const spec = report.spec && SPEC;
+	const fixed = (text: string | undefined): SubPart[] =>
+		text === undefined ? [] : [{ text, kind: "fixed" }];
+	const spec: SubPart[] = report.spec
+		? [{ text: specText(report.spec), kind: "reveal" }]
+		: [];
+	const version: SubPart[] =
+		hash === undefined
+			? []
+			: [{ text: shortHash(hash) ?? hash, kind: "hash", hash }];
 	if (narrow) {
+		// The spec last, where it takes the rest of its line.
 		return [
-			place,
-			startTime(report.start_time, true),
-			report.adapter,
-			spec,
-			hash,
-			...total,
-		].filter((part): part is string | typeof SPEC => part !== undefined);
+			...fixed(place),
+			...fixed(startTime(report.start_time, true)),
+			...fixed(report.adapter),
+			...version,
+			...total.flatMap(fixed),
+			...spec,
+		];
 	}
 	const counts = report.counts;
 	return [
-		place,
-		startTime(report.start_time, false),
-		report.adapter,
-		spec,
-		hash,
-		job
-			? undefined
+		...fixed(place),
+		...fixed(startTime(report.start_time, false)),
+		...fixed(report.adapter),
+		...spec,
+		...version,
+		...(job
+			? []
 			: [
-					plural(counts.benchmarks, "benchmark"),
-					plural(counts.variants, "variant"),
-					plural(counts.measures, "measure"),
-					...(counts.metrics > 1 ? [plural(counts.metrics, "metric")] : []),
-					...total,
-				].join(", "),
-		job ? undefined : `took ${duration(report.end_time - report.start_time)}`,
-	].filter((part): part is string | typeof SPEC => part !== undefined);
+					{
+						text: [
+							plural(counts.benchmarks, "benchmark"),
+							plural(counts.variants, "variant"),
+							plural(counts.measures, "measure"),
+							...(counts.metrics > 1 ? [plural(counts.metrics, "metric")] : []),
+							...total,
+						].join(", "),
+						kind: "reveal" as const,
+					},
+				]),
+		...fixed(
+			job ? undefined : `took ${duration(report.end_time - report.start_time)}`,
+		),
+	];
 };
 
 const plural = (count: number, noun: string) =>
