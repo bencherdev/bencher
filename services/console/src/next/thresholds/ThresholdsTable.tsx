@@ -1,5 +1,6 @@
 import Button from "@bencherdev/ui/Button";
 import Table from "@bencherdev/ui/Table";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	For,
 	Show,
@@ -11,7 +12,6 @@ import {
 	onMount,
 } from "solid-js";
 import { projectPath } from "../paths";
-import { useNarrow } from "../plot/narrow";
 import { type Range, visibleRange } from "../reports/rows";
 import { archivedBy, dayText, filterSets, filterSummary } from "./model";
 import { modelText } from "./text";
@@ -23,6 +23,8 @@ import { formatCount } from "../plot/count";
 /** Rows drawn above and below the screen, so a quick scroll never shows a gap. */
 const OVERSCAN = 8;
 const COLUMNS = 7;
+/** The width below which the Branch column holds under 16 characters. */
+const THRESHOLDS_FOLD = 945;
 
 /**
  * The thresholds, oldest first, drawing only the rows on screen: rows above
@@ -46,11 +48,13 @@ const ThresholdsTable = (props: {
 	/** The next batch failed; asks for it again. */
 	onRetry?: (() => void) | undefined;
 }) => {
-	const narrow = useNarrow();
+	const [lines, setLines] = createSignal(1);
+	const narrow = () => lines() > 1;
 	const [range, setRange] = createSignal<Range>({ start: 0, end: 0 });
 	let body: HTMLTableSectionElement | undefined;
 	let onScreen: Range = { start: 0, end: 0 };
-	const rowHeight = () => (narrow() ? ROW_HEIGHT.narrow : ROW_HEIGHT.wide);
+	const rowHeight = () =>
+		ROW_HEIGHT[lines() as keyof typeof ROW_HEIGHT] ?? ROW_HEIGHT[1];
 
 	const measure = () => {
 		if (!body) {
@@ -91,7 +95,7 @@ const ThresholdsTable = (props: {
 			}
 		});
 	});
-	createEffect(on([() => props.rows.length, narrow], measure));
+	createEffect(on([() => props.rows.length, lines], measure));
 
 	const shown = createMemo(() => props.rows.slice(range().start, range().end));
 	const above = () => range().start * rowHeight();
@@ -103,7 +107,8 @@ const ThresholdsTable = (props: {
 			aria-label={`${props.archived ? "Archived thresholds" : "Thresholds"}, with the alerts each raised ${props.window}`}
 			aria-rowcount={props.total + 1}
 			aria-busy={props.busy === true ? "true" : undefined}
-			fold
+			fold={THRESHOLDS_FOLD}
+			onLines={setLines}
 		>
 			<thead>
 				<tr aria-rowindex={1}>
@@ -229,12 +234,19 @@ const Row = (props: {
 						</span>
 					)}
 				</Show>
+				{/* Every part is drawn, and the table's own CSS shows those its width has room for, so a fold moves nothing a frame later. */}
 				<a
-					class="th-link rowlink-name"
+					class="th-link rowlink-name ui-parts"
 					href={`${projectPath(props.slug, "thresholds")}/${props.row.uuid}`}
 					aria-label={thresholdName(shown(), props.row)}
 				>
-					{shown()}
+					<Truncate text={props.row.branch.name} tail />
+					<Dot />
+					<Truncate text={props.row.testbed.name} tail />
+					<Dot />
+					<span data-fixed>{filterSummary(props.row.parameters)}</span>
+					<Dot />
+					<span data-fixed>{props.row.model?.test ?? "no model"}</span>
 				</a>
 				<Show when={!props.narrow && props.row.branch.start_point}>
 					{(from) => <span class="th-from"> from {from()}</span>}
@@ -283,3 +295,13 @@ const Row = (props: {
 		</tr>
 	);
 };
+
+/** A separator between a folded name's parts; the spaces, which the grid drops, keep the parts apart in the text read. */
+const Dot = () => (
+	<>
+		{" "}
+		<span data-fixed aria-hidden="true">
+			·
+		</span>{" "}
+	</>
+);

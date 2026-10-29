@@ -17,7 +17,14 @@ import { runFixture } from "../runs/testing";
 import { type Sent, bootstrapOf, mount } from "../settings/testing";
 import type { Dimension } from "./dimension";
 import Inspect from "./Inspect";
-import { expectNameStartsWithText, expectRowOpens } from "../ui/testing";
+import {
+	FLOOR_WIDTHS,
+	STRESS,
+	expectFoldAt,
+	expectNameStartsWithText,
+	expectRowOpens,
+	nameFloor,
+} from "../ui/testing";
 
 let dispose: (() => void) | undefined;
 
@@ -279,6 +286,93 @@ test("a branch's page shows its start point, head, recent runs, and thresholds",
 			"href",
 			"/console/projects/hashbrown/runs?branch=412-merge&window=all",
 		);
+});
+
+// Kills a branch's recent runs or thresholds that keep their columns where a
+// testbed's name falls under 16 characters, and one that scrolls sideways in
+// its own track instead.
+test("a branch's recent runs and thresholds hold 16 characters of name, or fold", async () => {
+	const { api } = fakeApi((url) => {
+		const path = url.pathname;
+		if (path === "/v0/projects/hashbrown/branches/412-merge") {
+			return { data: BRANCH };
+		}
+		if (path === "/v0/console/projects/hashbrown/branches") {
+			return { data: { branches: [ROW] } };
+		}
+		if (path === "/v0/projects/hashbrown/thresholds") {
+			return { data: [threshold(STRESS.name)], total: 1 };
+		}
+		if (path === "/v0/console/projects/hashbrown/runs") {
+			return {
+				data: { total: 1, runs: [{ ...RUN, testbeds: [STRESS.name] }] },
+			};
+		}
+		return new ApiError(404, "not_found", "{}");
+	});
+	const held: Record<string, unknown> = {};
+	for (const width of FLOOR_WIDTHS) {
+		await page.viewport(width, 720);
+		dispose = mount(
+			() => <Inspect dimension="branches" entry="412-merge" edit={true} />,
+			{ api, path: "/hashbrown/branches/412-merge", bootstrap: bootstrapOf() },
+		).dispose;
+		for (const name of ["Recent runs", "Thresholds"]) {
+			const table = page.getByRole("table", { name });
+			await expect.element(table).toBeVisible();
+			held[`${name} ${width}`] = nameFloor(table.element(), "Testbed");
+		}
+		dispose();
+		dispose = undefined;
+	}
+	const folded = { name: "folded", sideways: false };
+	const fine = { name: "held", sideways: false };
+	expect(held).toEqual({
+		"Recent runs 320": folded,
+		"Recent runs 768": fine,
+		"Recent runs 1024": fine,
+		"Recent runs 1440": fine,
+		"Thresholds 320": folded,
+		"Thresholds 768": fine,
+		"Thresholds 1024": fine,
+		"Thresholds 1440": fine,
+	});
+});
+
+// Kills a card's table that folds a pixel late or early.
+test("a branch's recent runs and thresholds, and a benchmark's variants, fold at their own widths", async () => {
+	const { api } = fakeApi((url) => {
+		const path = url.pathname;
+		if (path === "/v0/projects/hashbrown/branches/412-merge") {
+			return { data: BRANCH };
+		}
+		if (path === "/v0/console/projects/hashbrown/branches") {
+			return { data: { branches: [ROW] } };
+		}
+		if (path === "/v0/projects/hashbrown/thresholds") {
+			return { data: [threshold(STRESS.name)], total: 1 };
+		}
+		if (path === "/v0/console/projects/hashbrown/runs") {
+			return {
+				data: { total: 1, runs: [{ ...RUN, testbeds: [STRESS.name] }] },
+			};
+		}
+		return new ApiError(404, "not_found", "{}");
+	});
+	dispose = (await show(api, "branches", "412-merge")).dispose;
+	for (const [name, fold] of [
+		["Recent runs", 533],
+		["Thresholds", 615],
+	] as const) {
+		const table = page.getByRole("table", { name });
+		await expect.element(table).toBeVisible();
+		await document.fonts.ready;
+		expectFoldAt(table.element(), "Testbed", fold);
+	}
+	dispose();
+	dispose = (await show(benchmarkApi().api, "benchmarks", "blake3")).dispose;
+	await expect.element(variantsTable().getByText("threads=4")).toBeVisible();
+	expectFoldAt(variantsTable().element(), "Variant", 215);
 });
 
 const GIB = 1024 ** 3;

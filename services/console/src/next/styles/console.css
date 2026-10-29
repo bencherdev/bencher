@@ -820,6 +820,21 @@
 .keytbl b {
 	font-weight: var(--font-weight-semibold);
 }
+/* Where its expiry and Revoke leave a folded key's name under 16 characters, they take a third line. */
+@container ui-table (width <= 352px) {
+	.keytbl {
+		--ui-table-lines: 3;
+	}
+	.keytbl.ui-table[data-fold] tbody tr {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+	.keytbl.ui-table[data-fold] td[data-fold="n1"] {
+		grid-area: 3 / 1;
+	}
+	.keytbl.ui-table[data-fold] td[data-fold="act"] {
+		grid-area: 3 / 2;
+	}
+}
 .keys-empty {
 	margin: 0;
 	padding: 32px 16px;

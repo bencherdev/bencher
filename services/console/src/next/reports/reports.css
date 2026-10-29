@@ -324,7 +324,7 @@ tr:has([aria-expanded="true"]) .rn-caret {
 }
 
 /* Columns sized by their headers alone, never by the rows drawn, so they hold still as rows come and go. */
-@media (min-width: 768px) {
+@container ui-table not (width <= 10em) {
 	.reports-table {
 		table-layout: fixed;
 	}
@@ -342,16 +342,6 @@ tr:has([aria-expanded="true"]) .rn-caret {
 	}
 }
 
-/* Below a laptop each run list scrolls sideways: the Runs list keeps its layout on a 1024 px page, and a run's reports keep every column whole. */
-@media (min-width: 768px) and (max-width: 1023px) {
-	.rn-list {
-		min-width: 974px;
-	}
-	.rn-table {
-		min-width: 880px;
-	}
-}
-
 @media (max-width: 767px) {
 	.reports-wide {
 		display: none;
@@ -359,6 +349,13 @@ tr:has([aria-expanded="true"]) .rn-caret {
 	.reports-narrow {
 		display: flex;
 	}
+	.rn-held .ui-button {
+		min-height: 44px;
+	}
+}
+
+/* A folded run list, in step with the design system's Table fold. */
+@container ui-table (width <= 10em) {
 	.reports-table.ui-table[data-fold] tbody tr.reports-row {
 		grid-template-columns: auto auto minmax(0, 1fr) auto;
 		box-sizing: border-box;
@@ -425,7 +422,50 @@ tr:has([aria-expanded="true"]) .rn-caret {
 	:not(.rn-child) + .rn-child > [data-fold]::before {
 		top: 0;
 	}
-	.rn-held .ui-button {
-		min-height: 44px;
+}
+
+/* Where a run's alerts or status leave its branch under 16 characters, they and its time take a third line, and every row of the list grows to it. */
+@container ui-table (width <= 443px) {
+	.rn-list {
+		--ui-table-lines: 3;
+	}
+	.rn-list.ui-table[data-fold] tbody tr.reports-row {
+		height: 78px;
+		min-height: 78px;
+	}
+	.rn-list.ui-table[data-fold]
+		tbody
+		tr.reports-row:not(.rn-row)
+		> td[data-fold="n1"] {
+		grid-area: 3 / 1 / 4 / -1;
+		justify-self: end;
+	}
+	.rn-list.ui-table[data-fold]
+		tbody
+		tr.reports-row:not(.rn-row)
+		> td[data-fold="n2"] {
+		grid-area: 3 / 1 / 4 / -1;
+		justify-self: start;
+	}
+	/* The head's band reaches its row's top from the first of three lines. */
+	.rn-list .reports-hash a {
+		margin-block: -10px -15px;
+	}
+}
+
+/* The same for a report's testbed, in a run's reports and under an opened run. */
+@container ui-table (width <= 371px) {
+	.rn-table {
+		--ui-table-lines: 3;
+	}
+	.rn-table.ui-table[data-fold] tbody tr.reports-row {
+		height: 78px;
+		min-height: 78px;
+	}
+	.reports-table.ui-table[data-fold] tbody tr.rn-row > td.rn-ord {
+		grid-area: 1 / 1 / 4 / 2;
+	}
+	.reports-table.ui-table[data-fold] tbody tr.rn-row > td[data-fold="n1"] {
+		grid-area: 3 / 2 / 4 / -1;
 	}
 }

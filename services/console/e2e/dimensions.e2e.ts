@@ -289,7 +289,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		await expect(impact).toContainText(
 			"Hides its lines and archives 1 threshold",
 		);
-		await impact.getByRole("button", { name: "Archive feature-simd" }).click();
+		await impact.getByRole("button", { name: "Archive", exact: true }).click();
 
 		await expect(row).toContainText("Archived just now");
 		await expect(status(page, /^Active/)).toHaveAccessibleName("Active 2");
@@ -386,7 +386,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		await row.getByRole("button", { name: "Archive devel" }).click();
 		await page
 			.getByRole("group", { name: "Archive devel" })
-			.getByRole("button", { name: "Archive devel" })
+			.getByRole("button", { name: "Archive", exact: true })
 			.click();
 		await expect(page.getByRole("alert")).toContainText(
 			"Bencher did not archive devel",

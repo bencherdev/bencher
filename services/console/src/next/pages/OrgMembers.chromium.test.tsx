@@ -1,3 +1,4 @@
+import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import {
@@ -14,7 +15,16 @@ import {
 	rolesQuery,
 } from "../organization/members";
 import { ORGANIZATION, mount } from "../organization/testing";
+import { KeyTable } from "../settings/KeyList";
 import { fakeApi } from "../settings/testing";
+import {
+	FLOOR_WIDTHS,
+	STRESS,
+	expectFoldAt,
+	expectLinesAt,
+	nameFloor,
+	sizeTo,
+} from "../ui/testing";
 import OrgMembers from "./OrgMembers";
 
 let dispose: (() => void) | undefined;
@@ -395,4 +405,170 @@ describe("long names", () => {
 				Number.parseFloat(getComputedStyle(name).paddingTop) * 2,
 		);
 	});
+});
+
+// Kills a members or key list that keeps its columns where its name falls
+// under 16 characters, and one that scrolls sideways in its own track,
+// pushing Remove or Revoke off its edge.
+test("the members and key lists hold 16 characters of name, or fold", async () => {
+	const long = member(
+		"x",
+		STRESS.name,
+		`${"m".repeat(64)}@long-domain-name-for-stress.example`,
+	);
+	const held: Record<string, unknown> = {};
+	for (const width of FLOOR_WIDTHS) {
+		await page.viewport(width, 720);
+		open({ members: { members: [MURIEL, long], total: 2 } });
+		await expect.element(table()).toBeVisible();
+		held[`members ${width}`] = nameFloor(table().element(), "Name");
+		dispose?.();
+		const root = document.body.appendChild(document.createElement("div"));
+		dispose = render(
+			() => (
+				<KeyTable
+					status="active"
+					label="Active keys"
+					empty="No keys"
+					keys={[
+						{
+							uuid: "k",
+							name: STRESS.name,
+							creation: "2026-09-01T00:00:00Z",
+							expiration: "2026-12-01T00:00:00Z",
+						},
+					]}
+					made={new Set()}
+					onRevoke={() => {}}
+				/>
+			),
+			root,
+		);
+		const keys = page.getByRole("table", { name: "Active keys" });
+		await expect.element(keys).toBeVisible();
+		held[`keys ${width}`] = nameFloor(keys.element(), "Name");
+		dispose();
+		dispose = undefined;
+		root.remove();
+	}
+	const folded = { name: "folded", sideways: false };
+	const fine = { name: "held", sideways: false };
+	expect(held).toEqual({
+		"members 320": folded,
+		"members 768": fine,
+		"members 1024": fine,
+		"members 1440": fine,
+		"keys 320": folded,
+		"keys 768": fine,
+		"keys 1024": fine,
+		"keys 1440": fine,
+	});
+});
+
+// Kills a members name cell that takes the room the email's share leaves, as
+// one without `ui-table-name` does.
+test("at 600 px the members name and email share the room Remove leaves", async () => {
+	await page.viewport(1440, 720);
+	open({
+		members: {
+			members: [
+				MURIEL,
+				member(
+					"x",
+					STRESS.name,
+					`${"m".repeat(64)}@long-domain-name-for-stress.example`,
+				),
+			],
+			total: 2,
+		},
+	});
+	await expect.element(table()).toBeVisible();
+	await document.fonts.ready;
+	sizeTo(table().element(), 600);
+	const row = table()
+		.element()
+		.querySelector("tbody tr:last-child") as HTMLElement;
+	const width = (fold: string) =>
+		(
+			row.querySelector(`td[data-fold="${fold}"]`) as HTMLElement
+		).getBoundingClientRect().width;
+	expect(Math.round(width("l1"))).toBe(Math.round(width("l2")));
+	expect(width("l1")).toBeGreaterThan(width("act"));
+	document.body.style.width = "";
+});
+
+// Kills a members or key list that folds a pixel late or early, and a Revoke
+// kept beside a folded key's name where it leaves the name under 16
+// characters.
+test("the members and key lists fold at their own widths, and Revoke takes a line of its own", async () => {
+	await page.viewport(1440, 720);
+	open({
+		members: {
+			members: [
+				MURIEL,
+				member(
+					"x",
+					STRESS.name,
+					`${"m".repeat(64)}@long-domain-name-for-stress.example`,
+				),
+			],
+			total: 2,
+		},
+	});
+	await expect.element(table()).toBeVisible();
+	await document.fonts.ready;
+	expectFoldAt(table().element(), "Name", 369);
+	dispose?.();
+	const root = document.body.appendChild(document.createElement("div"));
+	dispose = render(
+		() => (
+			<KeyTable
+				status="active"
+				label="Active keys"
+				empty="No keys"
+				keys={[
+					{
+						uuid: "k",
+						name: STRESS.name,
+						creation: "2026-09-01T00:00:00Z",
+						expiration: "2026-12-01T00:00:00Z",
+					},
+				]}
+				made={new Set()}
+				onRevoke={() => {}}
+			/>
+		),
+		root,
+	);
+	const keys = page.getByRole("table", { name: "Active keys" });
+	await expect.element(keys).toBeVisible();
+	expectFoldAt(keys.element(), "Name", 407);
+	expectLinesAt(keys.element(), 352, 3);
+	// On a phone's page the name holds WebKit's 16 characters (131.2px at 13px), wider than Chromium's.
+	sizeTo(keys.element(), 290);
+	const name = keys
+		.element()
+		.querySelector('td[data-fold="l1"]') as HTMLElement;
+	expect(name.clientWidth).toBeGreaterThanOrEqual(131.2);
+	const box = name.getBoundingClientRect();
+	const beside = [...(name.parentElement as HTMLElement).children]
+		.filter((cell) => cell !== name && cell.getClientRects().length > 0)
+		.map((cell) => cell.getBoundingClientRect())
+		.filter(
+			(other) =>
+				other.left < box.right &&
+				other.right > box.left &&
+				other.top < box.bottom &&
+				other.bottom > box.top,
+		);
+	expect(beside).toEqual([]);
+	const third = ["n1", "act"].map(
+		(slot) =>
+			(name.parentElement as HTMLElement)
+				.querySelector(`td[data-fold="${slot}"]`)
+				?.getBoundingClientRect().top,
+	);
+	expect(third[0]).toBeCloseTo(third[1] ?? 0, 0);
+	expect(third[0]).toBeGreaterThan(box.bottom);
+	document.body.style.width = "";
 });
