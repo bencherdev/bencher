@@ -16,11 +16,12 @@
 .rp-head > .ph-sub {
 	grid-column: 1 / -1;
 }
+/* One line, where only the parts that reveal give way; a phone wraps the parts whole, in the two lines held for them. */
 .ph-sub.rp-sub {
-	display: block;
-	overflow: hidden;
-	white-space: nowrap;
-	text-overflow: ellipsis;
+	display: grid;
+	justify-content: start;
+	align-items: center;
+	min-height: 1lh;
 }
 .rp-titlerow {
 	display: flex;
@@ -32,9 +33,13 @@
 .rp-titlerow h1 {
 	min-width: 0;
 	margin: 0;
-	overflow-x: clip;
-	white-space: nowrap;
-	text-overflow: ellipsis;
+}
+/* Only the run's link gives way; the words around it stay whole. */
+.rp-crumb > :not(.rp-crumbrun) {
+	flex: none;
+}
+.rp-crumbrun {
+	min-width: 0;
 }
 /* At the end of the crumb line, which its negative margins keep from growing, so it arrives taking no width from the title. */
 .rp-ro {
@@ -70,27 +75,7 @@
 	font-size: 12px;
 	white-space: nowrap;
 }
-/* A runner report's spec, whose tooltip lists what it ran on. */
-.rn-specname {
-	padding: 0;
-	border: 0;
-	background: none;
-	color: inherit;
-	font: inherit;
-	text-decoration: underline dotted var(--color-text-faint);
-	text-underline-offset: 3px;
-}
-.rn-spectip {
-	display: grid;
-	grid-template-columns: auto auto;
-	gap: 3px 14px;
-	color: var(--color-text-muted);
-}
-.rn-spectip b {
-	color: var(--color-text-primary);
-	font: inherit;
-	font-family: var(--font-family-code);
-}
+
 /* Placeholders hold the line boxes of what replaces them. */
 .ui-skeleton.rp-title-skel {
 	display: inline-block;
@@ -100,7 +85,8 @@
 }
 .ui-skeleton.rp-sub-skel {
 	display: block;
-	width: min(48ch, 100%);
+	width: 48ch;
+	max-width: 100%;
 	height: 1lh;
 }
 .rp-actions {
@@ -177,6 +163,23 @@
 	margin: 12px 0;
 }
 
+/* The table's width, which a row's fold never changes, read for that fold. */
+.lr-box {
+	position: relative;
+}
+.lr-size {
+	position: absolute;
+	inset: 0 0 auto;
+	height: 0;
+}
+/* Inside the table's border, the width of a row's expansion. */
+.lr-measure {
+	position: absolute;
+	inset: 0 var(--border-width) auto;
+	height: 0;
+	overflow: hidden;
+	visibility: hidden;
+}
 .lr-table {
 	width: 100%;
 	table-layout: fixed;
@@ -245,6 +248,13 @@
 .lr-c-numbers {
 	width: 108px;
 }
+/* The limit gives way first, so the value and its delta stay whole. */
+.lrn-l3 > :last-child {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
 .lr-table td,
 .lr-table th {
 	box-sizing: border-box;
@@ -283,11 +293,33 @@
 }
 .lr-line,
 .lrn-l1 {
+	container-type: inline-size;
+}
+.lr-line,
+.lrn-l1,
+.lr-line .al-link,
+.lrn-l1 .al-link {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	overflow: hidden;
 	white-space: nowrap;
+}
+/* The name gives way with its tags but never past its tail, which its unseen copy holds; the tags take what is left. */
+.lr-name {
+	display: inline-grid;
+}
+
+/* A pixel over the tail, which a cut Truncate leaves its text, and never past the line beside the alert dot (8 px and its 6 px gap). */
+.lr-hold {
+	max-width: calc(100cqi - 14px);
+	height: 0;
+	padding-left: 1px;
+	visibility: hidden;
+}
+
+.lr-fixed {
+	flex: none;
 }
 .lr-line b,
 .lrn-l1 b {
@@ -295,10 +327,6 @@
 }
 /* A row naming an alert links its name to the alert's page; the rest of the row still toggles its plot. */
 .console a.al-link {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	min-width: 0;
 	color: var(--color-text-primary);
 }
 .console .lr-dim a.al-link {
@@ -336,6 +364,7 @@
 .lr-group b {
 	color: var(--color-text-primary);
 }
+
 .lr-galert {
 	color: var(--color-text-error);
 }
@@ -343,6 +372,12 @@
 .lr-exrow > td {
 	padding: 0;
 	background: var(--color-background-surface);
+}
+/* A line's whole name above its plot, wrapped to as many lines as it takes. */
+.lr-id {
+	padding: 8px 10px 0;
+	font-size: 12.5px;
+	line-height: 22px;
 }
 .lr-exrow section {
 	height: 315px;
@@ -381,6 +416,7 @@
 .lr-ptag {
 	display: inline-flex;
 	align-items: center;
+	max-width: 100%;
 	height: 20px;
 	padding: 0 6px;
 	border-radius: 4px;
@@ -392,6 +428,28 @@
 .lr-ptag {
 	background: var(--color-background-blue);
 	color: var(--color-text-blue);
+}
+/* A parameter's key and value share its pill. */
+.lr-ptag.ui-parts {
+	display: inline-grid;
+	column-gap: 0;
+}
+/* A row's tags in one track beside its name, in order, each up to its own width; the track cuts the rest. */
+.lr-tags {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	overflow: hidden;
+}
+.lr-tags > * {
+	flex: none;
+}
+.lr-id .lr-tag,
+.lr-id .lr-ptag {
+	display: inline;
+	padding: 2px 6px;
+	white-space: normal;
+	box-decoration-break: clone;
 }
 .lr-alertdot {
 	flex: none;
@@ -454,6 +512,12 @@
 .lrn.lrn-act > td {
 	height: 108px;
 }
+.lr-table.lr-stacked .lrn > td {
+	height: 84px;
+}
+.lr-table.lr-stacked .lrn.lrn-act > td {
+	height: 128px;
+}
 .lrn .lr-act .lnk {
 	flex: none;
 	justify-content: center;
@@ -491,6 +555,10 @@
 	color: var(--color-text-secondary);
 	white-space: nowrap;
 }
+.lrn-measure {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
 .lrn-num {
 	display: flex;
 	flex-direction: column;
@@ -504,6 +572,17 @@
 }
 .lrn-num b {
 	font-size: 13.5px;
+}
+/* Stacked, the numbers run along a line of their own under the measure. */
+.lrn-num.lrn-l3 {
+	flex-direction: row;
+	gap: 8px;
+	margin-top: 4px;
+}
+.lrn-l3 > * {
+	flex: none;
+	width: auto;
+	margin-left: 0;
 }
 
 /* A row no longer alerting, as a dismissed alert: muted by color, never faded. */
@@ -542,9 +621,44 @@
 	display: none;
 }
 
+.rn-copy {
+	flex: none;
+	display: inline-flex;
+}
+.rn-copy > .ui-button {
+	margin-block: -8px;
+}
+/* Both words take the place, so a press never changes the button's width. */
+.rn-copyword {
+	display: inline-grid;
+}
+.rn-copyword > * {
+	grid-area: 1 / 1;
+}
+.rn-copied,
+.rn-copyword[data-copied] > .rn-copyto {
+	visibility: hidden;
+}
+.rn-copyword[data-copied] > .rn-copied {
+	visibility: visible;
+}
+
 @media (max-width: 767px) {
 	.pagehead.rp-head {
 		grid-template-columns: minmax(0, 1fr);
+	}
+	.ph-sub.rp-sub {
+		display: flex;
+		flex-wrap: wrap;
+		column-gap: var(--spacing-2);
+		min-height: 2lh;
+	}
+	.rp-sub > .ui-trunc {
+		flex: 1 1 0;
+		min-width: 8ch;
+	}
+	.rn-copy > .ui-button {
+		margin-block: -14px;
 	}
 	.rp-actions {
 		order: 1;
@@ -570,6 +684,9 @@
 	align-items: center;
 	flex-wrap: wrap;
 	gap: 6px;
+}
+.rp-id > b {
+	max-width: 100%;
 }
 .rp-sec {
 	display: flex;

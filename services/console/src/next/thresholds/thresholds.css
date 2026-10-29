@@ -148,9 +148,6 @@
 .th-titlerow h1 {
 	min-width: 0;
 	margin: 0;
-	overflow-x: clip;
-	white-space: nowrap;
-	text-overflow: ellipsis;
 }
 .ui-skeleton.th-title-skel {
 	display: inline-block;
@@ -296,6 +293,21 @@
 	}
 	.th-narrow {
 		display: flex;
+	}
+	/* On a phone the title takes the head's whole width: Open in Explore moves under the head, and the pills take a line of their own, which the row holds before they arrive. */
+	.pagehead.th-head {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.th-head .ph-actions {
+		order: 1;
+	}
+	.th-titlerow {
+		flex-wrap: wrap;
+		align-content: flex-start;
+		min-height: calc(1.15 * var(--font-size-xl) + 8px + 24px);
+	}
+	.th-titlerow h1 {
+		flex-basis: 100%;
 	}
 }
 

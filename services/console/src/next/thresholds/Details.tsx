@@ -77,7 +77,7 @@ export const Cards = (props: {
 								when={props.threshold.parameters?.length}
 								fallback="every variant"
 							>
-								<Sets sets={filterSets(props.threshold.parameters)} />
+								<Sets sets={filterSets(props.threshold.parameters)} reveal />
 							</Show>
 						</dd>
 					</div>
@@ -85,8 +85,7 @@ export const Cards = (props: {
 				<Show when={archived()}>
 					{(by) => (
 						<p class="th-note">
-							Archived {dayText(by().archived, props.now)} with {by().kind}{" "}
-							{by().name}
+							Archived {dayText(by().archived, props.now)} with its {by().kind}
 						</p>
 					)}
 				</Show>

@@ -2,15 +2,18 @@ import "@bencherdev/ui/styles.css";
 import "../styles/console.css";
 import "../plot/plot.css";
 import "./report.css";
+import "../thresholds/thresholds.css";
 import { THEME_ATTRIBUTE } from "@bencherdev/ui/ThemeToggle";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { FOLD, STACK } from "./fold";
 import LineTable from "./LineTable";
 import { type ReportLine, groupsOf, linesOf, plotOf } from "./lines";
 import { slotsOf } from "./slots";
-import { longReport } from "./testing";
+import { HEIGHTS } from "./LineTable";
+import { lineFixture, longReport, reportFixture } from "./testing";
 
 // One frame at 120 Hz.
 const FRAME_MS = 8.3;
@@ -36,8 +39,8 @@ const mount = (
 	count: number,
 	onNearEnd = () => {},
 	extra: Partial<Parameters<typeof LineTable>[0]> = {},
+	report = longReport(count),
 ) => {
-	const report = longReport(count);
 	const lines = linesOf(report);
 	const slots = slotsOf(groupsOf(report, "benchmark"), lines);
 	const [expanded, setExpanded] = createSignal<ReadonlySet<string>>(new Set());
@@ -50,7 +53,7 @@ const mount = (
 				label="Lines"
 				slots={slots}
 				rows={slots.length}
-				narrow={false}
+				fold={880}
 				metrics={false}
 				history="History, 4w"
 				expanded={expanded()}
@@ -159,13 +162,10 @@ test("an expanded row reserves its space at once and draws its plot after that f
 
 // Kills a reserved height short of the plot and its key, which cuts off the
 // bottom of the key's entries, or one that leaves a gap under them.
-for (const [width, narrow] of [
-	[1280, false],
-	[390, true],
-] as const) {
+for (const width of [1280, 390]) {
 	test(`an expanded row's plot fills its space, key and all, at ${width}`, async () => {
 		await page.viewport(width, 800);
-		mount(3, () => {}, { narrow });
+		mount(3);
 		await page.getByRole("button", { name: "Expand bench-0 n=0" }).click();
 		const region = page.getByRole("region", {
 			name: "bench-0 n=0, full plot",
@@ -183,13 +183,10 @@ for (const [width, narrow] of [
 
 // Kills offsets that leave out an open row's plot, or count it at another
 // height than it draws, so the list moves once the row scrolls away.
-for (const [width, narrow] of [
-	[1280, false],
-	[390, true],
-] as const) {
+for (const width of [1280, 390]) {
 	test(`an open row keeps its height once it scrolls out of view at ${width}`, async () => {
 		await page.viewport(width, 800);
-		mount(200, () => {}, { narrow });
+		mount(200);
 		await page.getByRole("button", { name: "Expand bench-0 n=0" }).click();
 		await expect
 			.element(page.getByRole("region", { name: "bench-0 n=0, full plot" }))
@@ -348,7 +345,6 @@ test("a list with row controls gives them a column, and dims the rows it names",
 test("a narrow list draws a line of controls only for the rows it names", async () => {
 	await page.viewport(390, 800);
 	mount(3, undefined, {
-		narrow: true,
 		actions: {
 			cell: (line) => <button type="button">Act on {line.variant}</button>,
 			narrow: (line) => line.variant === "v1",
@@ -520,4 +516,394 @@ test("where the browser has no idle callback, the links still arrive", async () 
 			Object.defineProperty(owner, "requestIdleCallback", own);
 		}
 	}
+});
+
+/** 16 characters of the row's name, in the engine where they are widest. */
+const FLOOR = 131.2;
+
+/** The width of the Line column's text, or of a folded row's name, with the table `width` wide. */
+const nameAt = async (box: HTMLElement, width: number, layout: string) => {
+	box.style.width = `${width}px`;
+	const table = page.getByRole("table").element();
+	await expect
+		.poll(() =>
+			table.classList.contains("lr-stacked")
+				? "stacked"
+				: table.classList.contains("lr-narrow")
+					? "narrow"
+					: "wide",
+		)
+		.toBe(layout);
+	const line = [...table.querySelectorAll("th")].find(
+		(th) => th.textContent === "Line",
+	);
+	if (line) {
+		const style = getComputedStyle(line);
+		return (
+			line.getBoundingClientRect().width -
+			Number.parseFloat(style.paddingLeft) -
+			Number.parseFloat(style.paddingRight)
+		);
+	}
+	return (
+		table.querySelector(".lrn-l1")?.getBoundingClientRect().width ?? Number.NaN
+	);
+};
+
+// Kills a fold or a stack keyed to the screen rather than the table, and a
+// width that lets the name fall under 16 characters or folds a pixel early.
+test.each([
+	["report", FOLD.report, { selected: new Set<string>(), onSelect: () => {} }],
+	[
+		"alerts",
+		FOLD.alerts,
+		{
+			selected: new Set<string>(),
+			onSelect: () => {},
+			actions: {
+				cell: () => <span>Dismiss</span>,
+				narrow: (): boolean => false,
+			},
+		},
+	],
+	[
+		"run",
+		FOLD.run,
+		{ beside: { label: "Report", column: "th-c-report", cell: () => "#1" } },
+	],
+	[
+		"threshold",
+		FOLD.threshold,
+		{
+			aside: { label: "Report", column: "th-c-report", cell: () => "Sep 1" },
+			actions: {
+				cell: () => <span>Dismiss</span>,
+				narrow: (): boolean => false,
+			},
+		},
+	],
+] as const)(
+	"the %s list folds and stacks by its own width, its name at least 16 characters",
+	async (list, fold, extra) => {
+		// Under 1280 px, where the Report column is at its narrower width.
+		await page.viewport(1200, 800);
+		const box = document.createElement("div");
+		box.className = list === "report" ? "" : "lr-alerts";
+		document.body.append(box);
+		dispose = render(
+			() => (
+				<LineTable
+					label="Lines"
+					slots={linesOf(longReport(3))}
+					rows={3}
+					fold={fold}
+					metrics={false}
+					history="History, 4w"
+					expanded={new Set()}
+					onExpand={() => {}}
+					plot={(line) => ({
+						data: plotOf(line, "main", "ubuntu-latest"),
+						note: "4w",
+						reportHref: (uuid) => `/reports/${uuid}`,
+					})}
+					{...(extra as Partial<Parameters<typeof LineTable>[0]>)}
+				/>
+			),
+			box,
+		);
+		const stack = STACK["selected" in extra ? "select" : "plain"];
+		for (const [width, layout] of [
+			[fold + 1, "wide"],
+			[stack + 1, "narrow"],
+		] as const) {
+			const name = await nameAt(box, width, layout);
+			expect(name, `${layout} at ${width}`).toBeGreaterThanOrEqual(FLOOR);
+			expect(name, `${layout} at ${width}`).toBeLessThan(FLOOR + 1);
+		}
+		await nameAt(box, fold, "narrow");
+		expect(await nameAt(box, stack, "stacked")).toBeGreaterThanOrEqual(FLOOR);
+		const row = document.querySelector("tr.lrn:not(.lrn-act)");
+		expect(row?.getBoundingClientRect().height).toBe(HEIGHTS.stacked.line);
+		// A 320 px phone's table: the value, delta, and limit each whole on their line.
+		await nameAt(box, 292, "stacked");
+		for (const number of document.querySelectorAll<HTMLElement>(
+			".lrn-l3 > *",
+		)) {
+			expect(number.scrollWidth, number.textContent ?? "").toBeLessThanOrEqual(
+				number.clientWidth,
+			);
+		}
+		// Numbers at their longest: the limit gives way, inside its line.
+		const numbers = document.querySelector<HTMLElement>(
+			".lrn-l3",
+		) as HTMLElement;
+		const [value, delta, limit] = numbers.children as unknown as HTMLElement[];
+		(value as HTMLElement).textContent = "-123,456,789";
+		(delta as HTMLElement).textContent = "↑ +999.9%";
+		expect((value as HTMLElement).scrollWidth).toBeLessThanOrEqual(
+			(value as HTMLElement).clientWidth,
+		);
+		expect(limit?.getBoundingClientRect().right).toBeLessThanOrEqual(
+			numbers.getBoundingClientRect().right,
+		);
+	},
+);
+
+const PATH = `my_crate::${"module_000::".repeat(80)}bench_fn_name_000`;
+
+/** A report of 4 lines, each its own long benchmark with 8 long parameters, every line's tag `n` telling them apart. */
+const taggedReport = () => {
+	const report = reportFixture(
+		Array.from({ length: 4 }, (_, index) =>
+			lineFixture({
+				variant: index,
+				benchmark: index,
+				alert: { uuid: `a${index}`, limit: "upper", status: "active" } as never,
+			}),
+		),
+	);
+	return {
+		...report,
+		benchmarks: Array.from({ length: 4 }, (_, index) => ({
+			uuid: `b${index}`,
+			name: `${PATH}${index + 1}`,
+			slug: `b${index}`,
+		})),
+		variants: Array.from({ length: 4 }, (_, index) => ({
+			uuid: `v${index}`,
+			benchmark: index,
+			parameters: Object.fromEntries(
+				Array.from({ length: 8 }, (_, tag) => [
+					`${tag}${"k".repeat(63)}`,
+					`${index}${"v".repeat(63)}`,
+				]),
+			),
+		})),
+		groups: Array.from({ length: 4 }, (_, index) => ({
+			key: index,
+			lines: 99_999,
+			variants: 99_999,
+			alerts: 999_999,
+		})),
+	};
+};
+
+const mountTagged = (width: number, href?: string) => {
+	const report = taggedReport();
+	const [expanded, setExpanded] = createSignal<ReadonlySet<string>>(new Set());
+	const box = document.createElement("div");
+	box.className = "console";
+	box.style.width = `${width}px`;
+	document.body.append(box);
+	dispose = render(
+		() => (
+			<LineTable
+				label="Lines"
+				slots={slotsOf(groupsOf(report, "benchmark"), linesOf(report))}
+				rows={8}
+				fold={FOLD.report}
+				metrics={false}
+				history="History, 4w"
+				expanded={expanded()}
+				onExpand={(line: ReportLine, open: boolean) =>
+					setExpanded(new Set(open ? [line.key] : []))
+				}
+				selected={new Set()}
+				onSelect={() => {}}
+				{...(href === undefined ? {} : { href: () => href })}
+				plot={(line) => ({
+					data: plotOf(line, "main", "ubuntu-latest"),
+					note: "4w",
+					reportHref: (uuid) => `/reports/${uuid}`,
+				})}
+			/>
+		),
+		box,
+	);
+};
+
+// Kills a phone row whose name, where its line cannot hold the tail beside
+// the alert dot, pushes past the line rather than ending in an ellipsis, or
+// has no way to its whole, which its expansion opens with.
+test("at 320 px a name beside 8 long tags ends in an ellipsis, whole in its expansion", async () => {
+	await page.viewport(320, 800);
+	mountTagged(292);
+	const cut = ".lrn-l1 b .ui-trunc[data-tail]";
+	await expect.poll(() => document.querySelector(cut)).not.toBeNull();
+	const name = document.querySelector<HTMLElement>(cut);
+	expect(name?.getBoundingClientRect().width).toBeLessThan(
+		textWidth(name as HTMLElement, name?.dataset.tail ?? ""),
+	);
+	name?.closest("tr")?.querySelector<HTMLElement>(".lr-twist")?.click();
+	await expect
+		.element(page.getByRole("region", { name: /full plot$/ }))
+		.toBeInTheDocument();
+	expect(document.querySelector(".lr-exrow .lr-id b")?.textContent).toBe(
+		`${PATH}1`,
+	);
+});
+
+// Kills a name held at its tail on a line too short for it, which pushes it,
+// or the alert link holding it, past the line's end.
+test("on a line shorter than a name's tail the name and its link stay inside it", async () => {
+	await page.viewport(320, 800);
+	for (const href of [undefined, "/alerts/a"]) {
+		mountTagged(260, href);
+		const cut = ".lrn-l1 b .ui-trunc[data-tail]";
+		await expect.poll(() => document.querySelector(cut)).not.toBeNull();
+		for (const name of document.querySelectorAll<HTMLElement>(cut)) {
+			const line = name.closest(".lrn-l1")?.getBoundingClientRect();
+			expect(name.getBoundingClientRect().right).toBeLessThanOrEqual(
+				line?.right ?? 0,
+			);
+			expect(
+				name.closest("a")?.getBoundingClientRect().right ?? 0,
+			).toBeLessThanOrEqual(line?.right ?? 0);
+		}
+		dispose?.();
+		dispose = undefined;
+		document.body.replaceChildren();
+	}
+});
+
+/** The width `text` takes in `element`'s font. */
+const textWidth = (element: Element, text: string) => {
+	const probe = document.createElement("span");
+	probe.style.cssText = `position: absolute; white-space: nowrap; font: ${getComputedStyle(element).font}`;
+	probe.textContent = text;
+	document.body.append(probe);
+	const width = probe.getBoundingClientRect().width;
+	probe.remove();
+	return width;
+};
+
+// Kills tags that each take a track of their own, or a name that gives way
+// before its tags, which cuts an alerting row's tail until every row reads the
+// same; a pill that cuts its value before its key; and, where the line has
+// room, a first tag that shows no text.
+for (const [width, table] of [
+	[1440, 1392],
+	[1024, 976],
+	[390, 362],
+] as const) {
+	test(`at ${width} px each name's tail is whole beside 8 long tags`, async () => {
+		await page.viewport(width, 800);
+		mountTagged(table);
+		await expect
+			.poll(
+				() =>
+					document.querySelectorAll(
+						".lr-line b .ui-trunc[data-tail], .lrn-l1 b .ui-trunc[data-tail]",
+					).length,
+			)
+			.toBe(4);
+		expect(document.querySelectorAll("svg.lr-alertdot")).toHaveLength(4);
+		// The tail's copy that holds each name is never drawn.
+		for (const hold of document.querySelectorAll(".lr-hold")) {
+			expect(hold.checkVisibility({ visibilityProperty: true })).toBe(false);
+		}
+		for (const name of document.querySelectorAll<HTMLElement>(
+			".lr-line b .ui-trunc[data-tail], .lrn-l1 b .ui-trunc[data-tail]",
+		)) {
+			const tail = name.dataset.tail ?? "";
+			expect(tail).toMatch(/^bench_fn_name_000[1-4]$/);
+			expect(name.getBoundingClientRect().width).toBeGreaterThan(
+				textWidth(name, tail),
+			);
+		}
+		for (const tag of document.querySelectorAll<HTMLElement>(
+			".lr-tags .lr-ptag",
+		)) {
+			const [key, value] = tag.querySelectorAll<HTMLElement>(".ui-trunc");
+			expect(value?.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+				Math.min(
+					key?.getBoundingClientRect().width ?? 0,
+					textWidth(tag, value?.textContent ?? ""),
+				) - 0.5,
+			);
+		}
+		if (width === 1440) {
+			for (const tags of document.querySelectorAll<HTMLElement>(".lr-tags")) {
+				const [key, value] = tags.querySelectorAll<HTMLElement>(
+					".lr-ptag:first-child .ui-trunc",
+				);
+				const track = tags.getBoundingClientRect();
+				expect(
+					tags.querySelector(".lr-ptag")?.getBoundingClientRect().right,
+				).toBeLessThanOrEqual(track.right);
+				for (const part of [key, value]) {
+					const box = part?.getBoundingClientRect();
+					expect(box?.left).toBeLessThan(track.right);
+					expect(box?.width).toBeGreaterThan(textWidth(tags, "kkkk"));
+				}
+			}
+		}
+	});
+}
+
+// Kills a header that cuts its alert count, or gives its counts no share
+// beside a long name.
+test("at 320 px a group header keeps its alert count whole beside a long name", async () => {
+	await page.viewport(320, 800);
+	mountTagged(292);
+	await expect
+		.poll(() => document.querySelector<HTMLElement>("tr.lr-group"))
+		.not.toBeNull();
+	const group = document.querySelector<HTMLElement>(
+		"tr.lr-group",
+	) as HTMLElement;
+	const alerts = group.querySelector<HTMLElement>(".lr-galert") as HTMLElement;
+	expect(alerts.scrollWidth).toBeLessThanOrEqual(alerts.clientWidth);
+	expect(alerts.getBoundingClientRect().right).toBeLessThanOrEqual(
+		group.getBoundingClientRect().right,
+	);
+	const [name, counts] = group.querySelectorAll<HTMLElement>(".ui-trunc");
+	// The counts give way inside their own box, never over the alert count.
+	const box = alerts.previousElementSibling?.previousElementSibling;
+	expect(box?.scrollWidth).toBeLessThanOrEqual(box?.clientWidth ?? 0);
+	expect(
+		counts?.dataset.cut === undefined ||
+			(counts?.getBoundingClientRect().width ?? 0) >=
+				(name?.getBoundingClientRect().width ?? 0) - 0.5,
+	).toBe(true);
+});
+
+// Kills an open row whose whole name is measured only while drawn, so a width
+// change while it is off screen moves the list when it returns, and a measured
+// copy that is drawn.
+test("an open row resized while out of view keeps its place on its return", async () => {
+	await page.viewport(1280, 800);
+	const report = longReport(200);
+	// A name that wraps to more lines on a phone than on a desktop.
+	(report.benchmarks[0] as { name: string }).name =
+		`bench-0 ${"segment ".repeat(60)}`;
+	mount(200, undefined, {}, report);
+	await page
+		.getByRole("button", { name: /^Expand .*n=0$/ })
+		.first()
+		.click();
+	await expect
+		.element(page.getByRole("region", { name: /n=0, full plot$/ }))
+		.toBeInTheDocument();
+	// The copy measured for the list is never drawn.
+	const measured = document.querySelector(".lr-measure .lr-id");
+	expect(measured).not.toBeNull();
+	expect(measured?.checkVisibility({ visibilityProperty: true })).toBe(false);
+	bottom();
+	await expect
+		.element(page.getByRole("button", { name: "Expand bench-19 n=9" }))
+		.toBeInTheDocument();
+	await page.viewport(390, 800);
+	const table = () => page.getByRole("table").element();
+	await expect.poll(() => table().classList.contains("lr-narrow")).toBe(true);
+	await new Promise((resolve) => requestAnimationFrame(resolve));
+	const away = table().getBoundingClientRect().height;
+	window.scrollTo({ top: 0, behavior: "instant" });
+	await expect
+		.element(page.getByRole("region", { name: /n=0, full plot$/ }))
+		.toBeInTheDocument();
+	for (const _ of [0, 1, 2]) {
+		await new Promise((resolve) => requestAnimationFrame(resolve));
+	}
+	expect(table().getBoundingClientRect().height).toBe(away);
 });

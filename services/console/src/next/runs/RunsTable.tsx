@@ -1,6 +1,7 @@
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import Table from "@bencherdev/ui/Table";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	For,
 	Show,
@@ -246,7 +247,7 @@ const RunRow = (props: {
 					onFocus={() => props.onIntent()}
 					onTouchStart={() => props.onIntent()}
 				>
-					{props.run.branch.name}
+					<Truncate text={props.run.branch.name} tail />
 				</button>
 			</td>
 			<td class="reports-hash">
@@ -313,7 +314,7 @@ const LoadingRow = (props: { index: number }) => (
 /** The first name, cut short before a muted count of the rest whose hover lists them all. */
 const First = (props: { names: readonly string[]; count: number }) => (
 	<span class="rn-first">
-		<span class="rn-name">{props.names[0]}</span>
+		<Truncate text={props.names[0] ?? ""} tail />
 		<More names={props.names} count={props.count} />
 	</span>
 );

@@ -256,7 +256,7 @@ test("a run's head opens its run page, whose rows open each report", async ({
 		}),
 	).toBeVisible();
 	await expect(page.locator(".rp-sub")).toHaveText(
-		/^Sep 13, 2026, 21:16 · version \d+ · 2 reports, 2 testbeds · 40 lines · took 34m 12s$/,
+		/^Sep 13, 2026, 21:16 · version \d+ · 2 reports · 2 testbeds: [\w-]+, [\w-]+ · 40 lines · took 34m 12s$/,
 	);
 	const reports = page
 		.getByRole("table", { name: "Reports in this run, by start" })
@@ -285,7 +285,7 @@ test("a run's head opens its run page, whose rows open each report", async ({
 	]);
 	await reports.nth(1).getByRole("link").click();
 	await expect(
-		page.getByRole("heading", { level: 1, name: "main · macos-latest" }),
+		page.getByRole("heading", { level: 1, name: "main macos-latest" }),
 	).toBeVisible();
 	await page.getByRole("link", { name: "Runs", exact: true }).first().click();
 	await expect(heading(page)).toHaveText("15 runs");
