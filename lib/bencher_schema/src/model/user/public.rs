@@ -7,8 +7,6 @@ use dropshot::{
 };
 use slog::Logger;
 
-#[cfg(feature = "plus")]
-use crate::RateLimiting;
 use crate::{
     ApiContext,
     model::user::{
@@ -43,8 +41,16 @@ impl PublicUser {
         #[cfg(feature = "plus")] headers: &crate::HeaderMap,
         bearer_token: PubBearerToken,
     ) -> Result<Self, HttpError> {
-        Ok(if let Some(bearer_token) = bearer_token.0 {
-            let user = AuthUser::from_token(context, bearer_token).await?;
+        // A session cookie the API does not honor, or a dead one, leaves the request anonymous.
+        let bearer_token = bearer_token
+            .0
+            .filter(|bearer_token| bearer_token.is_honored(context));
+        let auth_user = if let Some(bearer_token) = bearer_token {
+            AuthUser::from_pub_token(context, bearer_token).await?
+        } else {
+            None
+        };
+        Ok(if let Some(user) = auth_user {
             slog::info!(
                 log,
                 "Authenticated user"; "user_uuid" => %user.user.uuid
@@ -53,7 +59,7 @@ impl PublicUser {
         } else {
             #[cfg(feature = "plus")]
             let remote_ip = {
-                let remote_ip = RateLimiting::remote_ip(log, headers);
+                let remote_ip = context.remote_ip(log, headers);
                 remote_ip
                     .map(|ip| context.rate_limiting.public_request(ip))
                     .transpose()?;

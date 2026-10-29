@@ -4,7 +4,7 @@ use bencher_api_tests as _;
 #[cfg(test)]
 use diesel as _;
 #[cfg(test)]
-use http as _;
+use reqwest as _;
 #[cfg(test)]
 use serde_json as _;
 #[cfg(test)]
@@ -25,6 +25,7 @@ mod confirm;
 mod login;
 mod oauth;
 pub mod oci;
+mod session;
 mod signup;
 
 #[cfg(feature = "plus")]
@@ -55,6 +56,13 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(login::auth_login_post)?;
         api_description.register(confirm::auth_confirm_post)?;
         api_description.register(accept::auth_accept_post)?;
+
+        // Session
+        if http_options {
+            api_description.register(session::auth_session_options)?;
+        }
+        api_description.register(session::auth_session_get)?;
+        api_description.register(session::auth_session_delete)?;
 
         #[cfg(feature = "plus")]
         {
@@ -104,7 +112,7 @@ async fn verify_recaptcha(
         ));
     };
 
-    let remote_ip = bencher_schema::RateLimiting::remote_ip(log, headers);
+    let remote_ip = context.remote_ip(log, headers);
     slog::info!(log, "Verifying reCAPTCHA from remote IP address"; "remote_ip" => ?remote_ip);
 
     recaptcha_client

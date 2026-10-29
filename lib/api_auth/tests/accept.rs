@@ -64,5 +64,5 @@ async fn accept_missing_invite() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }

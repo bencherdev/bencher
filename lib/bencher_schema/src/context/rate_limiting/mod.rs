@@ -489,8 +489,8 @@ impl RateLimiting {
         self.bandwidth.record(org_uuid, bytes);
     }
 
-    pub fn remote_ip(log: &Logger, headers: &HeaderMap) -> Option<IpAddr> {
-        remote_ip::remote_ip(log, headers)
+    pub(super) fn remote_ip(log: &Logger, headers: &HeaderMap, relayed: bool) -> Option<IpAddr> {
+        remote_ip::remote_ip(log, headers, relayed)
     }
 
     pub fn save(&self, db_path: &Path, log: &Logger) -> Result<(), RateLimitingPersistError> {

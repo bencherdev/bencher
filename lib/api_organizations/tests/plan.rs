@@ -58,10 +58,10 @@ async fn plan_requires_auth() {
         .await
         .expect("Request failed");
 
-    // Without auth, should get an error (either 400 Bad Request or 404 Not Found)
+    // Without auth, should get an error (either 401 Unauthorized or 404 Not Found)
     assert!(
-        resp.status() == StatusCode::BAD_REQUEST || resp.status() == StatusCode::NOT_FOUND,
-        "Expected 400 or 404, got: {}",
+        resp.status() == StatusCode::UNAUTHORIZED || resp.status() == StatusCode::NOT_FOUND,
+        "Expected 401 or 404, got: {}",
         resp.status()
     );
 }

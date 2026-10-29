@@ -1,12 +1,16 @@
 pub mod bencher_key;
 pub mod project_key;
 pub mod project_key_hash;
+pub mod session_token;
+pub mod session_token_hash;
 pub mod user_key;
 pub mod user_key_hash;
 
 pub use bencher_key::BencherKey;
 pub use project_key::ProjectKey;
 pub use project_key_hash::ProjectKeyHash;
+pub use session_token::SessionToken;
+pub use session_token_hash::SessionTokenHash;
 pub use user_key::UserKey;
 pub use user_key_hash::UserKeyHash;
 
