@@ -2,7 +2,12 @@ import { createEffect, createSignal, on } from "solid-js";
 import { render } from "solid-js/web";
 import type { JsonConsolePerf, JsonProject } from "../../types/bencher";
 import { embedCode } from "../embed/code";
-import { drawable, perfSearch, requestKey } from "../explore/request";
+import {
+	drawable,
+	perfSearch,
+	refusalOf,
+	requestKey,
+} from "../explore/request";
 import type { Copied } from "../explore/Share";
 import { handOff } from "../handoff";
 import { rememberVersion } from "../memory";
@@ -92,9 +97,7 @@ export const boot = (mount: HTMLElement) => {
 					return;
 				}
 				if (turn === asked) {
-					setRefused(
-						refusedQuery ? "The API refused this query" : "The plot did not load",
-					);
+					setRefused(refusalOf(error.status) ?? "The plot did not load");
 					setBusy(false);
 				}
 			},

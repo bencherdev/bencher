@@ -26,7 +26,8 @@ import type {
 import type { Api } from "../api";
 import { ApiError } from "../api";
 import { PROJECTS_PATH } from "../paths";
-import { useProject } from "../project";
+import { leafOf } from "../leaf";
+import { useEntityTitle, useProject } from "../project";
 import { useQueryResult } from "../query";
 import { failureOf } from "../settings/failure";
 import {
@@ -102,6 +103,10 @@ const Inspect = (props: {
 	const detail = useQueryResult(() =>
 		detailQuery(api, slug(), props.dimension, props.entry),
 	);
+	useEntityTitle(kind().title, () => {
+		const name = detail().data?.name;
+		return name && leafOf(name);
+	});
 	// The public API writes an active dimension's archived time as null.
 	const archived = () => Boolean(detail().data?.archived);
 	const row = useQueryResult(() =>

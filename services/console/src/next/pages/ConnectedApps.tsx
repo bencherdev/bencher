@@ -223,7 +223,7 @@ const App = (props: {
 		<section class="setcard" aria-labelledby={id()}>
 			<div class="setcard-head">
 				<Heading level={2} id={id()} class="mono">
-					{props.grant.client.host}
+					<Host host={props.grant.client.host} />
 				</Heading>
 				<span class="spacer" />
 				<button
@@ -291,4 +291,20 @@ const App = (props: {
 
 const Day = (props: { at: string }) => (
 	<time datetime={props.at}>{day(props.at)}</time>
+);
+
+/** A host the app chose, whole, breaking first after its dots. */
+const Host = (props: { host: string }) => (
+	<For each={props.host.split(".")}>
+		{(label, index) => (
+			<>
+				{index() > 0 && (
+					<>
+						.<wbr />
+					</>
+				)}
+				{label}
+			</>
+		)}
+	</For>
 );

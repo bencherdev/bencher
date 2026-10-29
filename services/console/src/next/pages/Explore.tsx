@@ -43,7 +43,13 @@ import {
 	plotQuery,
 	variantsQuery,
 } from "../explore/queries";
-import { drawable, drawsPlot, requestKey } from "../explore/request";
+import {
+	TOO_LONG,
+	drawable,
+	drawsPlot,
+	refusalOf,
+	requestKey,
+} from "../explore/request";
 import { useRequested } from "../explore/requested";
 import Start from "../explore/Start";
 import { chipSummary } from "../explore/summary";
@@ -61,7 +67,7 @@ import { loadPlot, loadedPlot } from "../plot/lazy";
 import { useNarrow } from "../plot/narrow";
 import EditPin from "../plots/EditPin";
 import { PLOTS_LIMIT, countPins } from "../plots/pins";
-import { useProject, useProjectNavigate } from "../project";
+import { useEntityTitle, useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { exploreSearchFromClassic } from "../query/classic";
@@ -164,11 +170,10 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 		if (!isLoadingError) {
 			return undefined;
 		}
-		return error instanceof ApiError &&
-			error.kind !== "network" &&
-			error.kind !== "server"
-			? "The API refused this query"
-			: "The plot did not load";
+		return (
+			refusalOf(error instanceof ApiError ? error.status : undefined) ??
+			"The plot did not load"
+		);
 	};
 	const [PlotView, setPlotView] = createSignal(loadedPlot());
 	const [plotMissing, setPlotMissing] = createSignal(false);
@@ -241,6 +246,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 	}));
 	const pinned = () =>
 		query().plot === undefined ? undefined : plotResult().data;
+	useEntityTitle("Plot", () => pinned()?.title ?? undefined);
 	// A bare link to a pin opens its query; a pin gone since is an unsaved plot.
 	createEffect(() => {
 		const plot = pinned();
@@ -636,19 +642,21 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 							<div class="ex-failed">
 								<Banner status="error" role="alert" class="load-error">
 									<span class="grow">{text()}</span>
-									<Button
-										size="lg"
-										disabled={refused() !== undefined && perf().isFetching}
-										onClick={() => {
-											if (plotMissing()) {
-												wantPlot(true);
-											} else {
-												void perf().refetch();
-											}
-										}}
-									>
-										Retry
-									</Button>
+									<Show when={text() !== TOO_LONG}>
+										<Button
+											size="lg"
+											disabled={refused() !== undefined && perf().isFetching}
+											onClick={() => {
+												if (plotMissing()) {
+													wantPlot(true);
+												} else {
+													void perf().refetch();
+												}
+											}}
+										>
+											Retry
+										</Button>
+									</Show>
 								</Banner>
 							</div>
 						)}

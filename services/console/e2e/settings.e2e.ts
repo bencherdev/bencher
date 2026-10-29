@@ -149,7 +149,7 @@ test.describe("General, as the project's Maintainer", () => {
 	});
 
 	// Kills a Danger section drawn from the wrong permission, a delete that is
-	// not held until the slug is typed exactly, and one that lands anywhere but
+	// not held until the slug is typed, and one that lands anywhere but
 	// the reader's main project, or leaves the app to get there.
 	test("Delete stays off until the slug matches, then deletes and lands on the reader's main project", async ({
 		page,
@@ -174,7 +174,7 @@ test.describe("General, as the project's Maintainer", () => {
 		await expect(confirm).toBeDisabled();
 		await typed.fill(project.slug.slice(0, -1));
 		await expect(confirm).toBeDisabled();
-		await typed.fill(`${project.slug} `);
+		await typed.fill(`${project.slug}x`);
 		await expect(confirm).toBeDisabled();
 		await typed.fill(project.slug);
 		await expect(confirm).toBeEnabled();

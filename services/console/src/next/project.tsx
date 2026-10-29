@@ -1,5 +1,12 @@
 import { type NavigateOptions, useNavigate } from "@solidjs/router";
-import { type Accessor, createContext, useContext } from "solid-js";
+import {
+	type Accessor,
+	type Setter,
+	createComputed,
+	createContext,
+	onCleanup,
+	useContext,
+} from "solid-js";
 import { AccountContext } from "./account/context";
 import type { Api } from "./api";
 
@@ -10,6 +17,14 @@ interface Project {
 	host?: string | undefined;
 	/** Where the router keeps project paths, under its base. */
 	route?: string | undefined;
+	/** The entity the page shows, which the tab title names first. */
+	entity?: Setter<Entity | undefined>;
+}
+
+export interface Entity {
+	/** What the page shows, such as `Alert`. */
+	kind: string;
+	name: string;
 }
 
 // Bencher Cloud's API, which `bencher run` reports to unless told otherwise.
@@ -40,4 +55,24 @@ export const useProjectNavigate = () => {
 	const route = useContext(ProjectContext)?.route ?? "";
 	return (to: string, options?: Partial<NavigateOptions>) =>
 		navigate(`${route}${to}`, options);
+};
+
+/** Names the page's entity in the tab title while the page shows it. */
+export const useEntityTitle = (
+	kind: string,
+	name: Accessor<string | undefined>,
+) => {
+	const set = useContext(ProjectContext)?.entity;
+	if (!set) {
+		return;
+	}
+	let shown: Entity | undefined;
+	// Before effects, so the announcer never reads the last page's entity.
+	createComputed(() => {
+		const named = name();
+		shown = named === undefined ? undefined : { kind, name: named };
+		set(shown);
+	});
+	// The next page may name its entity before this one leaves.
+	onCleanup(() => set((current) => (current === shown ? undefined : current)));
 };

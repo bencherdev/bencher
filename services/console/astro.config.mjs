@@ -45,7 +45,7 @@ const SHARED_FILES = [
 	},
 	{
 		name: "bar",
-		test: /[\\/](packages[\\/]ui[\\/]src[\\/](Banner|Button|Heading|Icon|Skeleton|ThemeToggle)\.tsx|src[\\/]next[\\/](shell[\\/]Tools\.tsx|(handoff|reader|theme)\.ts))$/,
+		test: /[\\/](packages[\\/]ui[\\/]src[\\/]((Banner|Button|Heading|Icon|Skeleton|ThemeToggle)\.tsx|tail\.ts)|src[\\/]next[\\/](shell[\\/]Tools\.tsx|(handoff|reader|theme)\.ts))$/,
 	},
 	{
 		name: "sheet",

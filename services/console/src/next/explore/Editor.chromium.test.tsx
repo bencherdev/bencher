@@ -3,7 +3,7 @@ import { createSignal } from "solid-js";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type { JsonConsolePerf } from "../../types/bencher";
-import type { Api } from "../api";
+import { type Api, ApiError } from "../api";
 import { type ExploreQuery, blankQuery } from "../query/query";
 import { mount } from "../settings/testing";
 import Editor from "./Editor";
@@ -137,6 +137,47 @@ test("values take their names from the plot, and ask only for those it drew no l
 		.element(page.getByRole("button", { name: "Remove measure Throughput" }))
 		.toBeVisible();
 	expect(asked).toEqual([`/v0/projects/hashbrown/measures/${uuid(8)}`]);
+});
+
+// Kills a name whose lookup failed left a UUID for good.
+test("a name that did not load is asked for again once the next plot answers", async () => {
+	let fail = true;
+	const asked: string[] = [];
+	const api: Api = {
+		get: async <T,>(path: string) => {
+			asked.push(path);
+			if (fail) {
+				throw new ApiError(500, "server", "");
+			}
+			return { data: { name: "Throughput" } as T, headers: new Headers() };
+		},
+		send: async () => {
+			throw new Error("The editor sends no changes");
+		},
+	};
+	const [settled, setSettled] = createSignal(true);
+	const query = { ...QUERY, measures: [uuid(7), uuid(8)] };
+	cleanup = mount(
+		() => (
+			<Editor
+				query={query}
+				perf={PERF}
+				settled={settled()}
+				onQuery={() => {}}
+			/>
+		),
+		{ api },
+	).dispose;
+	await expect
+		.element(page.getByRole("button", { name: `Remove measure ${uuid(8)}` }))
+		.toBeVisible();
+	await expect.poll(() => asked.length).toBeGreaterThan(0);
+	fail = false;
+	setSettled(false);
+	setSettled(true);
+	await expect
+		.element(page.getByRole("button", { name: "Remove measure Throughput" }))
+		.toBeVisible();
 });
 
 // Kills a search that offers what the box already holds, a search that asks

@@ -122,6 +122,23 @@ describe("defaultPinTitle", () => {
 		).toBe("blake3, Latency and Throughput on main and 412/merge");
 	});
 
+	// Kills cutting a long path at the limit, which gives every pin of one module the same title.
+	test("name a long benchmark and branch by their last segment", () => {
+		const path = (leaf: string) =>
+			`${Array.from({ length: 83 }, (_, i) => `module_${String(i).padStart(3, "0")}`).join("::")}::${leaf}`;
+		const branch = `release/2026/q4/${"subsystem/".repeat(20)}very-long-leaf-000`;
+		const title = (leaf: string) =>
+			defaultPinTitle([
+				{ ...LINE, benchmark: path(leaf), branch, variants: [] },
+			]);
+		expect(title("bench_fn_name_0002")).toBe(
+			"bench_fn_name_0002, Latency on very-long-leaf-000",
+		);
+		expect(title("bench_fn_name_0004")).toBe(
+			"bench_fn_name_0004, Latency on very-long-leaf-000",
+		);
+	});
+
 	// Kills a title the API refuses: longer than 64 bytes, or ending in a space.
 	test("fit the API's 64 byte limit, cutting between words", () => {
 		const title = defaultPinTitle([

@@ -3,12 +3,26 @@ import type {
 	JsonPlan,
 	JsonPriceTier,
 	JsonUsage,
+	PlanLevel,
 } from "../../types/bencher";
 import type { Api } from "../api";
 import { formatCount } from "../plot/count";
 
 const path = (organization: string) =>
 	`/v0/organizations/${encodeURIComponent(organization)}`;
+
+const LEVELS: Record<`${PlanLevel}`, true> = {
+	free: true,
+	pro: true,
+	team: true,
+	enterprise: true,
+};
+
+/** `level` if it names a plan, so text from a link never reaches the page. */
+export const planLevel = (level: string | null): PlanLevel | undefined =>
+	level !== null && Object.hasOwn(LEVELS, level)
+		? (level as PlanLevel)
+		: undefined;
 
 /** A plan as the page keeps it: without the payer's name and email, which it never shows. */
 export type Plan = Omit<JsonPlan, "customer">;

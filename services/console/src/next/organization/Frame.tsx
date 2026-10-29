@@ -45,7 +45,7 @@ const Frame = (props: {
 	return (
 		<main class="page setwrap">
 			<nav class="rail" aria-label="Organization settings">
-				<span class="eyebrow">
+				<span class="eyebrow as-typed">
 					<Truncate text={props.name ?? props.organization} reveal />
 				</span>
 				{links()}
