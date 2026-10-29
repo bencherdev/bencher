@@ -1407,6 +1407,45 @@ async fn projects_update_private_for_a_paid_org_past_its_daily_metrics_limit() {
     assert_eq!(status, StatusCode::OK, "{resp_body}");
 }
 
+// PATCH /v0/projects/{project} - a project made private for an organization with no plan
+#[tokio::test]
+async fn projects_update_private_without_a_plan() {
+    use bencher_api_tests::helpers::plan_project;
+
+    let server = TestServer::new().await;
+    let (user, project) = plan_project(&server, "private", None).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "visibility": "private" }))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let resp_body = resp.text().await.expect("Failed to read response body");
+    assert_eq!(status, StatusCode::PAYMENT_REQUIRED, "{resp_body}");
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let fetched: JsonProject = resp.json().await.expect("Failed to parse response");
+    assert!(fetched.visibility.is_public());
+}
+
 // Each dimension of a plot names at most `MAX_DIMENSION_ENTRIES` entries, on create and on
 // update, and a refusal names the field and the cap.
 #[tokio::test]

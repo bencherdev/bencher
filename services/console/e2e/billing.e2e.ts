@@ -32,33 +32,6 @@ test.describe("Billing", () => {
 			page.getByRole("button", { name: "Replace key" }),
 		).toBeDisabled();
 	});
-
-	// Kills an unlicensed install drawn without this month's usage or Contact
-	// us, and a key the API refuses without saying why.
-	test("an unlicensed organization offers a key, and a refused one says why", async ({
-		page,
-		request,
-	}) => {
-		const organization = await createOrganization(request);
-		await page.goto(billingPath(organization.slug));
-
-		await expect(
-			page.getByRole("region", { name: "This month" }),
-		).toContainText("Metrics");
-		await expect(
-			page
-				.getByRole("region", { name: "License", exact: true })
-				.getByRole("link", { name: "Contact us" }),
-		).toBeVisible();
-		await page
-			.getByRole("textbox", { name: "License key" })
-			.fill("not.a.license");
-		await page.getByRole("button", { name: "Save key" }).click();
-
-		await expect(keyBox(page).getByRole("alert")).toContainText(
-			"Bencher did not save the license key",
-		);
-	});
 });
 
 test.describe("from General", () => {

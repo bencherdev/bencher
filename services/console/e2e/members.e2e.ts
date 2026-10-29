@@ -1,5 +1,4 @@
 import type { Page } from "@playwright/test";
-import type { JsonMember } from "../src/types/bencher";
 import { createMember, createOrganization, unique } from "./api";
 import { axeInBothThemes } from "./axe";
 import { expect, seed, signedIn, test } from "./fixtures";
@@ -40,35 +39,6 @@ test.describe("Members", () => {
 		);
 		// The header row and the reader's own.
 		await expect(table(page).getByRole("row")).toHaveCount(2);
-	});
-
-	// Kills a remove that skips its confirmation, never reaches the API, or
-	// leaves the member listed.
-	test("removing a member confirms, then the API no longer lists them", async ({
-		page,
-		request,
-	}) => {
-		const organization = await createOrganization(request);
-		const member = await createMember(request, organization);
-		const name = member.user.name;
-		await page.goto(membersPath(organization.slug));
-
-		await page.getByRole("button", { name: `Remove ${name}` }).click();
-		await page
-			.getByRole("alertdialog", { name: `Remove ${name}?` })
-			.getByRole("button", { name: "Remove member" })
-			.click();
-
-		await expect(
-			page.getByRole("button", { name: `Remove ${name}` }),
-		).toHaveCount(0);
-		const listed = (await (
-			await request.get(
-				`${seed.api_url}/v0/organizations/${organization.slug}/members`,
-				{ headers: { Authorization: `Bearer ${seed.member.token}` } },
-			)
-		).json()) as JsonMember[];
-		expect(listed.map(({ uuid }) => uuid)).toEqual([seed.member.user.uuid]);
 	});
 });
 

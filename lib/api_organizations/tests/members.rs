@@ -6,11 +6,13 @@
 )]
 //! Integration tests for organization member endpoints.
 
-use bencher_api_tests::TestServer;
+use bencher_api_tests::{TestOrg, TestServer, TestUser, helpers::user_organizations};
 use bencher_json::{
-    JsonMembers,
+    JsonMembers, OrganizationUuid, UserUuid,
     organization::member::{JsonNewMember, OrganizationRole},
+    system::auth::JsonAccept,
 };
+use bencher_schema::INVITE_TOKEN_TTL;
 use http::StatusCode;
 
 // GET /v0/organizations/{organization}/members - list members
@@ -97,6 +99,64 @@ async fn members_invite() {
     assert_eq!(resp.status(), StatusCode::ACCEPTED);
 }
 
+// DELETE /v0/organizations/{organization}/members/{user} - a remove that leaves the member listed
+// or takes them out of their other organizations
+#[tokio::test]
+async fn members_remove() {
+    let server = TestServer::new().await;
+    let leader = server.signup("Test User", "remover@example.com").await;
+    let org = server.create_org(&leader, "Remove Org").await;
+    let member = server.signup("Test Member", "removed@example.com").await;
+    let invite = server
+        .token_key()
+        .new_invite(
+            member.email.clone(),
+            INVITE_TOKEN_TTL,
+            org.uuid,
+            OrganizationRole::Leader,
+        )
+        .expect("Failed to mint invite");
+    let resp = server
+        .client
+        .post(server.api_url("/v0/auth/accept"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&member.token),
+        )
+        .json(&JsonAccept { invite })
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+    assert!(
+        member_uuids(&server, &leader, &org)
+            .await
+            .contains(&member.uuid)
+    );
+
+    let org_slug: &str = org.slug.as_ref();
+    let resp = server
+        .client
+        .delete(server.api_url(&format!(
+            "/v0/organizations/{}/members/{}",
+            org_slug, member.uuid
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&leader.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    assert_eq!(member_uuids(&server, &leader, &org).await, [leader.uuid]);
+    assert_eq!(
+        user_organizations(&server, member.uuid),
+        [OrganizationUuid::from(member.uuid)]
+    );
+}
+
 // POST /v0/organizations/{organization}/members - invite without name
 #[tokio::test]
 async fn members_invite_no_name() {
@@ -153,4 +213,22 @@ async fn members_invite_invalid_email() {
         .expect("Request failed");
 
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+}
+
+#[expect(clippy::expect_used, reason = "test helper listing members")]
+async fn member_uuids(server: &TestServer, user: &TestUser, org: &TestOrg) -> Vec<UserUuid> {
+    let org_slug: &str = org.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/organizations/{}/members", org_slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "Failed to list members");
+    let members: JsonMembers = resp.json().await.expect("Failed to parse response");
+    members.0.into_iter().map(|member| member.uuid).collect()
 }
