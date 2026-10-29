@@ -6,6 +6,7 @@ import {
 	test as base,
 	expect,
 	type Page,
+	type Request,
 } from "@playwright/test";
 import type { JsonAuthUser } from "../src/types/bencher";
 
@@ -37,7 +38,7 @@ export interface Seed {
 		iterations: SeedProject;
 		/** Runner jobs that wait, run, failed, and were canceled, and one finished run. */
 		runner: SeedProject;
-		/** Each with one run that alerted and still runs, which tests add alerting reports to: one per repeat. */
+		/** Each with one run that alerted and still runs, which tests add alerting reports to: one per repeat, then one for the axe scan. */
 		held: SeedProject[];
 		/** Each with one report, a queued job's, on an archived branch: one per repeat. */
 		handover: SeedProject[];
@@ -102,6 +103,7 @@ export const consolePath = (slug: string, tab = "") =>
 export const test = base.extend<{
 	freezeClock: boolean;
 	frozenClock: undefined;
+	trackedRequests: undefined;
 	/** A browser of its own, at the same date as the test's. */
 	newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>;
 }>({
@@ -120,11 +122,20 @@ export const test = base.extend<{
 		},
 		{ auto: true },
 	],
+	// Counted from each page's start, so `settle` sees a request already in flight when it is called.
+	trackedRequests: [
+		async ({ context }, use) => {
+			trackPages(context);
+			await use(undefined);
+		},
+		{ auto: true },
+	],
 	newContext: async ({ browser, freezeClock }, use) => {
 		const contexts: BrowserContext[] = [];
 		await use(async (options) => {
 			const context = await browser.newContext(options);
 			contexts.push(context);
+			trackPages(context);
 			if (freezeClock) {
 				await context.addInitScript(freezeDate, Date.parse(seed.now));
 			}
@@ -157,31 +168,82 @@ export const crumb = (page: Page, name = "") =>
 		.getByRole("banner")
 		.getByRole("button", { name: `${name}, switch project` });
 
-/** Resolves once no request has been in flight for `quietMs`. */
-export const settle = async (page: Page, quietMs = 300) => {
-	let inFlight = 0;
-	let last = Date.now();
-	const start = () => {
-		inFlight += 1;
-	};
-	const end = () => {
-		inFlight -= 1;
-		last = Date.now();
-	};
-	page.on("request", start);
-	page.on("requestfinished", end);
-	page.on("requestfailed", end);
-	try {
-		await expect
-			.poll(() => inFlight <= 0 && Date.now() - last >= quietMs, {
-				intervals: [50],
-			})
-			.toBe(true);
-	} finally {
-		page.off("request", start);
-		page.off("requestfinished", end);
-		page.off("requestfailed", end);
+/** Each page's requests in flight, and when the last one ended. */
+const traffic = new WeakMap<Page, Traffic>();
+
+interface Traffic {
+	inFlight: Set<Request>;
+	/** The main frame's request for a new document, until the document commits. */
+	navigation?: Request;
+	last: number;
+}
+
+const track = (page: Page) => {
+	const known = traffic.get(page);
+	if (known) {
+		return known;
 	}
+	const counted: Traffic = { inFlight: new Set(), last: Date.now() };
+	traffic.set(page, counted);
+	const end = (request: Request) => {
+		if (counted.inFlight.delete(request)) {
+			counted.last = Date.now();
+		}
+	};
+	page.on("request", (request) => {
+		if (request.isNavigationRequest() && request.frame() === page.mainFrame()) {
+			counted.navigation = request;
+		}
+		counted.inFlight.add(request);
+	});
+	page.on("requestfinished", end);
+	page.on("requestfailed", (request) => {
+		if (request === counted.navigation) {
+			counted.navigation = undefined;
+		}
+		end(request);
+	});
+	// A new document's commit ends the old one's requests, and no event says so.
+	page.on("framenavigated", (frame) => {
+		const { navigation } = counted;
+		if (
+			frame !== page.mainFrame() ||
+			!navigation ||
+			withoutHash(frame.url()) !== withoutHash(navigation.url())
+		) {
+			return;
+		}
+		counted.navigation = undefined;
+		for (const request of counted.inFlight) {
+			if (request !== navigation) {
+				end(request);
+			}
+		}
+	});
+	return counted;
+};
+
+const withoutHash = (url: string) => url.split("#")[0];
+
+const trackPages = (context: BrowserContext) => {
+	for (const page of context.pages()) {
+		track(page);
+	}
+	context.on("page", track);
+};
+
+/** Resolves once no request has been in flight for `quietMs`, counting from the call at the earliest. */
+export const settle = async (page: Page, quietMs = 300) => {
+	const counted = track(page);
+	const called = Date.now();
+	await expect
+		.poll(
+			() =>
+				counted.inFlight.size === 0 &&
+				Date.now() - Math.max(counted.last, called) >= quietMs,
+			{ intervals: [50] },
+		)
+		.toBe(true);
 };
 
 /** Moves the pointer across `lines` as a reader heading for a row does, which brings the rows' Explore links without waiting for the page to go idle. */

@@ -200,7 +200,7 @@ struct SeedProjects {
     /// Version 1, with runner jobs that wait, run, failed, and were canceled.
     runner: SeedProject,
     /// Version 1, each with one run that alerted and still runs, which the suite adds alerting
-    /// reports to: one for each repeat.
+    /// reports to: one for each repeat, then one for the axe scan.
     held: Vec<SeedProject>,
     /// Version 1, each with one report, a queued job's, on an archived branch: one for each repeat.
     handover: Vec<SeedProject>,

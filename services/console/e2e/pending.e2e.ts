@@ -268,7 +268,7 @@ test("a running run holds alerting lines that land behind Show", async ({
 	page,
 	request,
 }) => {
-	const held = own(seed.projects.held);
+	const held = own(seed.projects.held.slice(0, -1));
 	await page.goto(consolePath(held.slug, "runs"));
 	await page
 		.getByRole("table", { name: "Runs, newest first" })

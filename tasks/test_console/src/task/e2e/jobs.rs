@@ -136,7 +136,7 @@ pub(super) async fn seed(
     spec(api, admin_token).await?;
     let runner = project(api, organization, RUNNER, token, admin_token).await?;
     runner_runs(api, db, &runner, token).await?;
-    let mut held = Vec::with_capacity(REPEATS);
+    let mut held = Vec::with_capacity(REPEATS + 1);
     let mut handover = Vec::with_capacity(REPEATS);
     for repeat in 0..REPEATS {
         let name = format!("{HELD} {repeat}");
@@ -148,6 +148,10 @@ pub(super) async fn seed(
         handover_run(api, db, &seeded, token).await?;
         handover.push(seeded);
     }
+    let name = format!("{HELD} {REPEATS}");
+    let scanned = project(api, organization, &name, token, admin_token).await?;
+    held_run(api, db, &scanned, token).await?;
+    held.push(scanned);
     Ok(JobProjects {
         runner,
         held,

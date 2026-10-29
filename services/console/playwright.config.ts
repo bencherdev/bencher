@@ -11,6 +11,7 @@ const baseURL = seed
 export default defineConfig({
 	testDir: "./e2e",
 	testMatch: "**/*.e2e.ts",
+	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
 	retries: 0,
 	reporter: process.env.CI ? [["list"], ["github"]] : "list",
