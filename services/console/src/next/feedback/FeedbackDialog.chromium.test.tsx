@@ -135,6 +135,31 @@ test("an added image goes with the report until removed", async () => {
 	expect(sentForm().image).toBeUndefined();
 });
 
+// Kills a long file name that pushes its Remove out of the dialog, or wraps
+// down it.
+test("a long image name holds one line beside its Remove at 320 px", async () => {
+	await page.viewport(320, 700);
+	await userEvent.upload(
+		page.getByLabelText("Add an image", { exact: true }),
+		new File([new Uint8Array(8)], `${"screenshot-".repeat(18)}.png`, {
+			type: "image/png",
+		}),
+	);
+	await expect.poll(() => document.querySelector(".fb-attach")).not.toBeNull();
+	const attached = document.querySelector(".fb-attach") as HTMLElement;
+
+	const body = attached.closest(".ui-dialog-body") as HTMLElement;
+	const remove = attached.querySelector("button[aria-label^='Remove']");
+	expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth);
+	expect(remove?.getBoundingClientRect().right).toBeLessThanOrEqual(
+		body.getBoundingClientRect().right,
+	);
+	const name = attached.querySelector(".ui-trunc") as HTMLElement;
+	expect(name.getBoundingClientRect().height).toBeLessThan(
+		Number.parseFloat(getComputedStyle(name).lineHeight) * 1.5,
+	);
+});
+
 // Kills a sent report that leaves the form up, a Sent the focus and a screen
 // reader never reach, and a dialog that never closes on its own or closes
 // before the reader can see it went.

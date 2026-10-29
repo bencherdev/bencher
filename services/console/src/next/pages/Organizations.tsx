@@ -6,6 +6,7 @@ import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import Table from "@bencherdev/ui/Table";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useLocation, useNavigate } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { For, Show, createMemo, createSignal, useContext } from "solid-js";
@@ -105,12 +106,14 @@ const Organizations = (props: {
 								{(organization) => (
 									<tr class="rowlink">
 										<td data-fold="l1">
-											<a
-												class="namelink rowlink-name"
-												href={organizationPath(organization.slug)}
-											>
-												{organization.name}
-											</a>
+											<span class="ui-parts">
+												<a
+													class="namelink rowlink-name"
+													href={organizationPath(organization.slug)}
+												>
+													<Truncate text={organization.name} />
+												</a>
+											</span>
 										</td>
 										<td data-fold="n1" data-align="end" class="muted">
 											{organization.projects
@@ -241,10 +244,13 @@ const NewOrganization = (props: {
 					<Show when={failed()}>
 						{(failure) => (
 							<p class="ferror" role="alert">
-								{failureOf(
-									failure().error,
-									"Bencher did not make the organization",
-								)}
+								<Truncate
+									text={failureOf(
+										failure().error,
+										"Bencher did not make the organization",
+									)}
+									reveal
+								/>
 							</p>
 						)}
 					</Show>

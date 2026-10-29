@@ -35,7 +35,7 @@ test.describe("Members", () => {
 		expect(sent.status()).toBe(202);
 		expect(sent.request().postDataJSON()).toEqual({ email, role: "leader" });
 		await expect(page.getByRole("main").getByRole("status")).toHaveText(
-			`Invitation sent to ${email}`,
+			"Invitation sent",
 		);
 		// The header row and the reader's own.
 		await expect(table(page).getByRole("row")).toHaveCount(2);

@@ -6,6 +6,7 @@ import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import Table from "@bencherdev/ui/Table";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useLocation, useNavigate, useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import {
@@ -349,7 +350,7 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 					<Show when={!confirming() && failure()}>
 						{(message) => (
 							<p class="ferror" role="alert">
-								{message()}
+								<Truncate text={message()} reveal />
 							</p>
 						)}
 					</Show>
@@ -477,7 +478,7 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 								<Show when={failure()}>
 									{(message) => (
 										<p class="ferror" role="alert">
-											{message()}
+											<Truncate text={message()} reveal />
 										</p>
 									)}
 								</Show>
@@ -539,7 +540,7 @@ const Payment = (props: { organization: string; card: JsonCardDetails }) => {
 				<Show when={failure()}>
 					{(message) => (
 						<p class="ferror" role="alert">
-							{message()}
+							<Truncate text={message()} reveal />
 						</p>
 					)}
 				</Show>

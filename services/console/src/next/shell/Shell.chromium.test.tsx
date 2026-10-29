@@ -109,6 +109,23 @@ describe("narrow", () => {
 		expectNameStartsWithText(bell.element());
 	});
 
+	// Kills a 320 px bar whose controls and gaps outgrow it, which squeezes the
+	// bell under its target.
+	test("at 320 px every control in the bar keeps its 44 px width", async () => {
+		await page.viewport(320, 700);
+		const root = mount();
+
+		const bar = root.querySelector(".bar") as HTMLElement;
+		expect(bar.scrollWidth).toBeLessThanOrEqual(bar.clientWidth);
+		const controls = [
+			...root.querySelectorAll<HTMLElement>(".bar a.bell, .bar button"),
+		].filter((control) => control.checkVisibility());
+		expect(controls.length).toBe(4);
+		for (const control of controls) {
+			expect(control.getBoundingClientRect().width).toBeGreaterThanOrEqual(44);
+		}
+	});
+
 	// Kills touch targets under 44 px, in the bar, the open menu, and the tab
 	// row, and a menu that opens off the screen, over the bar, or away from its
 	// button, such as without its insets (it falls below the screen), at the
@@ -304,6 +321,43 @@ describe("wide", () => {
 		expect(box(root)).toEqual(reserved);
 		html.setAttribute("data-theme", "light");
 		expect(box(root)).toEqual(reserved);
+	});
+
+	// Kills a long organization that leaves the project nothing, a short one cut
+	// while the long one beside it has room, and a crumb that squeezes Docs.
+	test("the crumb halves its room between two long names and keeps a short one whole, and Docs stays whole", async () => {
+		await page.viewport(768, 800);
+		const [organization, setOrganization] = createSignal("a".repeat(64));
+		const root = document.createElement("div");
+		root.className = "console";
+		document.body.append(root);
+		dispose = render(
+			() => (
+				<Shell
+					slug="hashbrown"
+					tab="runs"
+					organization={{ name: organization(), uuid: "org-uuid" }}
+					project={"Hashbrown ".repeat(7)}
+				/>
+			),
+			root,
+		);
+		const part = (shell: string) =>
+			root.querySelector(`.crumbbtn [data-shell="${shell}"]`) as HTMLElement;
+		const width = (shell: string) => part(shell).getBoundingClientRect().width;
+		const cut = (shell: string) => {
+			const text = part(shell).querySelector(".ui-trunc > span") as HTMLElement;
+			return text.scrollWidth > text.clientWidth;
+		};
+
+		expect(Math.abs(width("org") - width("project"))).toBeLessThan(1);
+		expect(width("project")).toBeGreaterThan(0);
+		setOrganization("Pompeii LLC");
+		expect(cut("org")).toBe(false);
+		expect(cut("project")).toBe(true);
+		const docs = document.createRange();
+		docs.selectNodeContents(root.querySelector(".docs") as Node);
+		expect(docs.getClientRects()).toHaveLength(1);
 	});
 
 	// Kills a crumb whose name does not start with the names it shows, which

@@ -1,3 +1,4 @@
+import Truncate from "@bencherdev/ui/Truncate";
 import { For, type JSX } from "solid-js";
 import { ORGANIZATIONS_PATH, organizationPath } from "../paths";
 
@@ -44,7 +45,9 @@ const Frame = (props: {
 	return (
 		<main class="page setwrap">
 			<nav class="rail" aria-label="Organization settings">
-				<span class="eyebrow">{props.name ?? props.organization}</span>
+				<span class="eyebrow">
+					<Truncate text={props.name ?? props.organization} reveal />
+				</span>
 				{links()}
 			</nav>
 			<nav class="railseg" aria-label="Organization settings sections">

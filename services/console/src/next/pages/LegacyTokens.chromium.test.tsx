@@ -102,9 +102,7 @@ test("Revoke asks first, then the token leaves, Profile's count drops, and focus
 	await confirm.getByRole("button", { name: "Revoke token" }).click();
 	expect(sent).toEqual([{ method: "DELETE", path: `${TOKENS}/uuid-ci-2024` }]);
 	await expect.element(table().getByText("ci-2024")).not.toBeInTheDocument();
-	await expect
-		.element(page.getByRole("status"))
-		.toHaveTextContent("Revoked ci-2024");
+	await expect.element(page.getByRole("status")).toHaveTextContent("Revoked");
 	await expect.poll(() => mounted.client.getQueryData(COUNT)).toBe(1);
 	await expect
 		.element(page.getByRole("heading", { level: 1, name: "Legacy tokens" }))
@@ -129,7 +127,7 @@ test("a refused revoke puts the token back and says why", async () => {
 		.click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not revoke ci-2024: Token not found");
+		.toHaveTextContent("Not revoked: Token not found");
 	await expect.element(table().getByText("ci-2024")).toBeVisible();
 	expect(mounted.client.getQueryData(COUNT)).toBe(2);
 });

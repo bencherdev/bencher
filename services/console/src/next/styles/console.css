@@ -99,17 +99,26 @@
 	color: var(--color-text-muted);
 	font-size: 14px;
 }
-.crumb-project {
+/* A line tall before the names arrive, so their arrival moves nothing but the chevron. */
+.crumbbtn > .ui-parts {
+	min-height: 1lh;
+	align-items: center;
+}
+/* The first paint fills these with plain text, cut here until the app's render. */
+.crumbbtn [data-shell] {
 	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.crumb-project {
 	color: var(--color-text-primary);
 	font-weight: var(--font-weight-semibold);
-	text-overflow: ellipsis;
 }
 .crumbbtn .ui-icon {
 	flex: none;
 	font-size: 13px;
 }
 .console .docs {
+	flex: none;
 	color: var(--color-text-muted);
 }
 .tools {
@@ -159,6 +168,7 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
+	min-width: 0;
 	margin-left: auto;
 	color: var(--color-text-muted);
 	font-size: 12.5px;
@@ -357,6 +367,7 @@
 /* settings: the sections, the project form, and the keys */
 
 .page.setwrap {
+	container: setwrap / inline-size;
 	display: grid;
 	grid-template-columns: 220px minmax(0, 1fr);
 	gap: 24px;
@@ -418,6 +429,19 @@
 	color: var(--color-text-primary);
 	font-weight: var(--font-weight-semibold);
 	box-shadow: inset 0 -2px 0 var(--color-stroke-accent);
+}
+/* Four sections are wider than this together, so they take two rows. */
+@container setwrap (width < 362px) {
+	.railseg:has(> :nth-child(4)) {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+	}
+	.console .railseg:has(> :nth-child(4)) a:nth-child(3) {
+		border-left: 0;
+	}
+	.console .railseg:has(> :nth-child(4)) a:nth-child(n + 3) {
+		border-top: var(--border-width) solid var(--color-border);
+	}
 }
 .setbody {
 	display: flex;
@@ -548,6 +572,7 @@
 	display: flex;
 	align-items: flex-start;
 	gap: 6px;
+	min-width: 0;
 	margin: 0;
 	font-size: 12.5px;
 }
@@ -556,6 +581,9 @@
 }
 .ferror {
 	color: var(--color-text-error);
+}
+.ferror > span {
+	min-width: 0;
 }
 .fwarn .ui-icon,
 .ferror .ui-icon {
@@ -567,7 +595,6 @@
 	align-items: center;
 	gap: 12px;
 	min-height: 36px;
-	overflow-wrap: anywhere;
 }
 .mono {
 	font-family: var(--font-family-code);
@@ -683,7 +710,6 @@
 	border-radius: 10px;
 	background: var(--color-accent-muted);
 	font: 13px var(--font-family-code);
-	overflow-wrap: anywhere;
 }
 .secret > span {
 	flex: 1;
@@ -699,7 +725,6 @@
 	color: var(--color-text-primary);
 	font: 12.5px / 1.6 var(--font-family-code);
 	white-space: pre-wrap;
-	overflow-wrap: anywhere;
 }
 .code > .ui-button {
 	position: absolute;
@@ -749,6 +774,9 @@
 	letter-spacing: 0.1em;
 	text-transform: uppercase;
 	color: var(--color-text-accent);
+}
+.ui-parts > .newtag {
+	margin-left: 0;
 }
 .lnk {
 	appearance: none;
@@ -959,5 +987,12 @@
 		--page-end: 24px;
 		padding: 12px 14px var(--page-end);
 		gap: 10px;
+	}
+}
+
+/* The bar's controls and their gaps are wider than this together. */
+@media (max-width: 327px) {
+	.bar {
+		gap: 4px;
 	}
 }

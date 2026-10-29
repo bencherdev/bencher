@@ -154,7 +154,7 @@ test.describe("from a project page", () => {
 		await crumb(page, `${seed.organization.name} / ${hashbrown.name}`).click();
 		await page
 			.getByRole("dialog", { name: "Switch project" })
-			.getByRole("link", { name: `${seed.organization.name} settings` })
+			.getByRole("link", { name: "Settings" })
 			.click();
 
 		await expect(page).toHaveURL(generalPath(seed.organization.uuid));

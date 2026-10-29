@@ -313,7 +313,7 @@ const Switcher = (props: {
 						<span class="spacer" />
 						<a href={organizationPath(organization().uuid)}>
 							<Glyph d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />
-							{organization().name} settings
+							Settings
 						</a>
 					</div>
 				)}
@@ -342,13 +342,22 @@ const count = (
 		: projects;
 };
 
+/**
+ * The match and what follows it never shrink, so a cut takes only the text
+ * before it; the parts are drawn apart, so the text is read whole.
+ */
 const Marked = (props: { split: Split }) => (
-	<span>
-		{props.split[0]}
-		<Show when={props.split[1]}>
-			<mark>{props.split[1]}</mark>
+	<span class="sw-marked">
+		<Show when={props.split[1]} fallback={<span>{props.split[0]}</span>}>
+			<span class="sr-only">{props.split.join("")}</span>
+			<Show when={props.split[0]}>
+				<span aria-hidden="true">{props.split[0]}</span>
+			</Show>
+			<span aria-hidden="true">
+				<mark>{props.split[1]}</mark>
+				{props.split[2]}
+			</span>
 		</Show>
-		{props.split[2]}
 	</span>
 );
 

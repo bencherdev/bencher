@@ -5,6 +5,7 @@ import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useNavigate, useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
@@ -106,8 +107,8 @@ const ProfileForm = (props: {
 	const [draft, setDraft] = createSignal<Draft>(saved());
 	const [failure, setFailure] = createSignal<string>();
 	const [justSaved, setJustSaved] = createSignal(false);
-	/** The email a confirm link went to, for a change that waits on it. */
-	const [linkSent, setLinkSent] = createSignal<string>();
+	/** A confirm link went out for an email change that waits on it. */
+	const [linkSent, setLinkSent] = createSignal(false);
 	const [confirming, setConfirming] = createSignal(false);
 	const [saving, setSaving] = createSignal(false);
 
@@ -130,7 +131,7 @@ const ProfileForm = (props: {
 	const edit = (change: Partial<Draft>) => {
 		setDraft((current) => ({ ...current, ...change }));
 		setJustSaved(false);
-		setLinkSent(undefined);
+		setLinkSent(false);
 		setFailure(undefined);
 	};
 	// Only a field the reader changed can hold them back.
@@ -178,7 +179,7 @@ const ProfileForm = (props: {
 			}
 			setDraft(draftOf(user));
 			setJustSaved(!waiting);
-			setLinkSent(waiting ? changes.email : undefined);
+			setLinkSent(waiting);
 			if (user.slug !== props.user.slug) {
 				// Relative to the router's base.
 				navigate(`/users/${user.slug}/settings`, { replace: true });
@@ -272,14 +273,12 @@ const ProfileForm = (props: {
 							<Icon name="check" />
 							Saved
 						</Show>
-						<Show when={linkSent()}>
-							{(email) => <>Confirm link sent to {email()}</>}
-						</Show>
+						<Show when={linkSent()}>Confirm link sent</Show>
 					</span>
 					<Show when={failure()}>
 						{(message) => (
 							<p class="ferror" role="alert">
-								{message()}
+								<Truncate text={message()} reveal />
 							</p>
 						)}
 					</Show>

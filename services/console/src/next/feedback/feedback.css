@@ -45,6 +45,11 @@
 .fb-attach {
 	align-self: flex-start;
 }
+.fb-attach > span {
+	display: flex;
+	min-width: 0;
+	white-space: nowrap;
+}
 .fb-message {
 	min-height: 112px;
 	resize: vertical;
@@ -53,6 +58,7 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
+	max-width: 100%;
 	padding-left: 10px;
 	border: var(--border-width) solid var(--color-border-emphasized);
 	border-radius: var(--radius-element);
@@ -89,7 +95,6 @@
 }
 .fb-v {
 	color: var(--color-text-muted);
-	overflow-wrap: anywhere;
 }
 .fb-ctx .off .fb-k,
 .fb-ctx .off .fb-v {
