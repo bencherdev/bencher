@@ -1,5 +1,6 @@
 /* explore: the query panel above the plot, and the lists blank Explore starts from */
 .ex-qp {
+	container-type: inline-size;
 	display: flex;
 	flex-direction: column;
 	border: var(--border-width) solid var(--color-border);
@@ -29,6 +30,12 @@
 }
 .ex-title .crumb-line {
 	flex-basis: 100%;
+}
+.ex-title > .ui-heading {
+	min-width: 0;
+}
+.ex-from {
+	column-gap: var(--spacing-1);
 }
 .ex-pill {
 	display: inline-flex;
@@ -72,7 +79,13 @@
 	align-items: center;
 	gap: 8px;
 }
-.ex-ctl .eyebrow:not(:first-child) {
+/* A label wraps with its control, never alone at a line's end. */
+.ex-pair {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+.ex-ctl > .ex-pair:not(:first-child) {
 	margin-left: 8px;
 }
 .ex-clear {
@@ -94,10 +107,26 @@
 }
 .ex-editor {
 	display: grid;
-	grid-template-columns:
-		repeat(3, minmax(0, 1fr)) minmax(0, 1.9fr)
-		repeat(2, minmax(0, 1fr));
+	grid-template-columns: minmax(0, 1fr);
 	gap: 10px;
+}
+/* Fewer boxes to a row where a value would fall under Explore's floor of 11.5ch (94.3px of Inter in WebKit) beside its box's 70px, the most that keeps six to a row at a 1280 window with a classic scrollbar; the panel's padding takes 28px, and a phone's 44px remove controls set the two- and three-box widths in the Query sheet. */
+@container (width >= 371px) {
+	.ex-editor {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+@container (width >= 561px) {
+	.ex-editor {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+@container (width >= 1212px) {
+	.ex-editor {
+		grid-template-columns:
+			repeat(3, minmax(0, 1fr)) minmax(0, 1.9fr)
+			repeat(2, minmax(0, 1fr));
+	}
 }
 .ex-box {
 	display: flex;
@@ -145,12 +174,6 @@
 	background: var(--color-overlay-hover);
 	font-size: 13px;
 }
-.ex-ellip {
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
 .ex-k,
 .ex-pc,
 .ex-n {
@@ -186,6 +209,10 @@
 .ex-pc.ex-zero {
 	color: var(--color-text-warning);
 }
+/* Long tags take a line of their own and the count drops under them. */
+.ex-set {
+	flex-wrap: wrap;
+}
 .ex-set.ex-covered {
 	background: transparent;
 	outline: var(--border-width) dashed var(--color-warning);
@@ -197,16 +224,12 @@
 	gap: 4px;
 	min-width: 0;
 }
-.ex-tag {
-	display: inline-flex;
-	align-items: center;
-	height: 18px;
+/* A set's tag, a size under a report's, grows to hold an opened key or value. */
+.lr-ptag.ex-tag {
+	height: auto;
+	min-height: 18px;
 	padding: 0 5px;
-	border-radius: 4px;
-	background: var(--color-background-blue);
-	color: var(--color-text-blue);
-	font: 500 11px var(--font-family-code);
-	white-space: nowrap;
+	font-size: 11px;
 }
 .ex-x {
 	display: inline-grid;
@@ -274,6 +297,11 @@
 	background: transparent;
 	color: var(--color-text-muted);
 	cursor: not-allowed;
+}
+/* A search option's name and detail share its width, the detail at the end. */
+.ex-opt {
+	flex: 1;
+	justify-content: space-between;
 }
 .ex-none {
 	margin: 0;
@@ -379,11 +407,33 @@
 	min-width: 0;
 }
 .ex-sline {
-	display: flex;
 	align-items: center;
-	gap: 4px 6px;
+	column-gap: 6px;
 	overflow: hidden;
+}
+/* An alert's benchmark gives way with its tags but never past its tail, which its unseen copy holds; its measure, then its tags in order, take what is left. */
+.ex-aline {
+	display: flex;
+	container-type: inline-size;
+}
+.ex-aname {
+	display: inline-grid;
+	flex-shrink: 1000;
+}
+.ex-hold {
+	max-width: 100cqi;
+	height: 0;
+	padding-left: 1px;
+	visibility: hidden;
 	white-space: nowrap;
+}
+.ex-stags {
+	display: flex;
+	gap: 4px;
+	overflow: hidden;
+}
+.ex-stags > * {
+	flex: none;
 }
 /* A run's hash keeps its full target on a phone, so its line clips nothing. */
 .ex-rhead > .grow > .ex-sline {
@@ -395,6 +445,9 @@
 	font-size: 11.5px;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+.ex-sub.ui-parts {
+	column-gap: var(--spacing-1);
 }
 /* A run's or report's row opens from anywhere on it; a run's hash, above that, opens the run. */
 .ex-rhead {
@@ -412,6 +465,9 @@
 	font: inherit;
 	text-align: left;
 	cursor: pointer;
+}
+.ex-rbtn > b {
+	min-width: 0;
 }
 .ex-rbtn::after {
 	content: "";
@@ -465,9 +521,6 @@
 	color: var(--color-text-warning);
 }
 @media (max-width: 767px) {
-	.ex-editor {
-		grid-template-columns: minmax(0, 1fr);
-	}
 	.ex-x {
 		width: 44px;
 		height: 44px;
@@ -502,11 +555,17 @@
 	}
 	.ex-chips {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-columns: minmax(0, 1fr);
 	}
 	/* Over both rows a two-axis plot heads with. */
 	.ex-plot:has(.pl[data-layout="dual"]) .load-error {
 		min-height: 68px;
+	}
+}
+/* Two chips to a row once each holds its widest key beside an 11.5ch value (192.3px). */
+@container (width >= 419px) {
+	.ex-chips {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
 .ex-val2 .ex-x {

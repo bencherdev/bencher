@@ -754,6 +754,7 @@
 	color: var(--color-text-muted);
 }
 .kv dd {
+	min-width: 0;
 	margin: 0;
 	font-weight: var(--font-weight-semibold);
 }
@@ -782,6 +783,23 @@
 }
 .ui-parts > .newtag {
 	margin-left: 0;
+}
+/* A parameter as a pill, on every page that draws one (tag.tsx); its key and value share it. */
+.lr-ptag {
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	height: 20px;
+	padding: 0 6px;
+	border-radius: 4px;
+	background: var(--color-background-blue);
+	font: 500 11.5px var(--font-family-code);
+	color: var(--color-text-blue);
+	white-space: nowrap;
+}
+.lr-ptag.ui-parts {
+	display: inline-grid;
+	column-gap: 0;
 }
 .lnk {
 	appearance: none;

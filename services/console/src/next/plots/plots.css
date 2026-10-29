@@ -51,23 +51,25 @@
 	padding: 0 6px 0 14px;
 	border-bottom: var(--border-width) solid var(--color-border);
 }
-.plots-ttl {
+/* An opened title takes the lines it needs. */
+.plots-thead:has([data-open]) {
+	height: auto;
+	min-height: 44px;
+}
+/* The title and the branches and testbeds it draws share the line fairly. */
+.plots-name {
+	align-items: center;
+	column-gap: 6px;
 	min-width: 0;
+}
+.plots-ttl {
 	margin: 0;
-	overflow: hidden;
 	font-size: 13.5px;
 	font-weight: var(--font-weight-bold);
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 .plots-meta {
-	flex: 0 1 auto;
-	min-width: 0;
-	overflow: hidden;
 	color: var(--color-text-muted);
 	font-size: 12px;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 .plots-alert {
 	flex: none;
@@ -236,11 +238,6 @@
 	flex-direction: column;
 	gap: 2px;
 	min-width: 0;
-}
-.plots-reo-name b {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 .plots-status {
 	min-height: 1.5em;

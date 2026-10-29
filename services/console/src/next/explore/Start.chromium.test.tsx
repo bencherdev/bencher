@@ -8,6 +8,7 @@ import type {
 	JsonConsoleReport,
 	JsonConsoleRun,
 	JsonConsoleRunSummary,
+	JsonVariant,
 } from "../../types/bencher";
 import type { Api } from "../api";
 import { formatWhen } from "../plot/format";
@@ -304,7 +305,7 @@ test("an opened run lists its reports in start order as Branch and Testbed rows"
 			.getByRole("button")
 			.elements()
 			.map((each) => each.textContent),
-	).toEqual(["1main· linux", "2main· macos", "3main· linux"]);
+	).toEqual(["1main·linux", "2main·macos", "3main·linux"]);
 	expect(asked.filter((path) => path.includes("/runs/"))).toEqual([
 		runReports(70),
 	]);
@@ -782,11 +783,11 @@ for (const width of [1280, 390] as const) {
 				...row.querySelectorAll(".ex-sline > *"),
 				row.querySelector(".rn-st"),
 			].map((part) => (part as Element).getBoundingClientRect());
-			expect(parts).toHaveLength(4);
+			expect(parts).toHaveLength(5);
 			const top = Math.max(...parts.map((box) => box.top));
 			const bottom = Math.min(...parts.map((box) => box.bottom));
 			expect(top).toBeLessThan(bottom);
-			const pill = parts[3] as DOMRect;
+			const pill = parts[4] as DOMRect;
 			expect(
 				row.getBoundingClientRect().right - pill.right,
 			).toBeLessThanOrEqual(
@@ -844,3 +845,192 @@ test("an opened run's running report moves its time on with each answer", async 
 	await client.refetchQueries();
 	await expect.element(reports().getByText("Running 3m")).toBeVisible();
 });
+
+const LONG_BRANCH = `release/${"subsystem/".repeat(23)}very-long-leaf`;
+
+/** An active alert on a benchmark whose tail is long beside eight 129 character tags, on a 256 byte branch. */
+const longAlert = (testbed: string) => ({
+	uuid: uuid(90),
+	benchmark: { uuid: uuid(91), name: `${"m".repeat(40)}::bench_fn_name_0002` },
+	variant: {
+		uuid: uuid(92),
+		parameters: Object.fromEntries(
+			Array.from({ length: 8 }, (_, n) => [
+				`k${n}${"k".repeat(62)}`,
+				"v".repeat(64),
+			]),
+		) as JsonVariant["parameters"],
+	},
+	value: 3,
+	threshold: {
+		uuid: uuid(93),
+		branch: { uuid: uuid(94), name: LONG_BRANCH },
+		testbed: { uuid: uuid(95), name: testbed },
+		measure: { uuid: uuid(96), name: "Latency" },
+	},
+	boundary: { baseline: 2 },
+});
+
+// Kills an alert row whose benchmark keeps its start and loses the part that
+// tells it apart, or gives way before its tags, whose measure gives way to its
+// tags, whose tags or measure push the line past its row, and whose long branch hides the testbed and the change
+// that are the reason it is listed.
+for (const width of [1024, 390, 320] as const) {
+	test(`an alerting row keeps its benchmark's end, its testbed, and its change at ${width} px`, async () => {
+		await page.viewport(width, 844);
+		for (const testbed of ["localhost", "a".repeat(64)]) {
+			const alerts: Api = {
+				get: async <T,>(path: string) => ({
+					data: (path.includes("/alerts?")
+						? [longAlert(testbed)]
+						: path.includes("/runs?")
+							? { total: 0, runs: [] }
+							: []) as T,
+					headers: new Headers(),
+				}),
+				send: api.send,
+			};
+			dispose = mount(() => <Start onQuery={() => {}} />, {
+				api: alerts,
+			}).dispose;
+			const row = page
+				.getByRole("region", { name: "Alerting now" })
+				.getByRole("link", { name: /^m{40}::/ });
+			await expect.element(row).toBeVisible();
+			await document.fonts.ready;
+			const [line, sub] = [
+				...row.element().querySelectorAll(".ex-sline, .ex-sub"),
+			] as HTMLElement[];
+			const name = line?.querySelector("b .ui-trunc") as HTMLElement;
+			await expect
+				.element(name)
+				.toHaveAttribute("data-tail", "bench_fn_name_0002");
+			// The tags give way first, so the benchmark keeps its whole tail.
+			const probe = document.createElement("span");
+			probe.style.cssText = `position: absolute; white-space: nowrap; font: ${getComputedStyle(name).font}`;
+			probe.textContent = "bench_fn_name_0002";
+			document.body.append(probe);
+			const tail = probe.getBoundingClientRect().width;
+			probe.remove();
+			expect(name.getBoundingClientRect().width).toBeGreaterThanOrEqual(tail);
+			// The measure comes before the tags, which give way after it.
+			const measure = line?.querySelector(
+				".ex-stags > .ui-trunc",
+			) as HTMLElement;
+			expect(measure.textContent).toBe("Latency");
+			expect(measure.hasAttribute("data-cut")).toBe(false);
+			expect(measure.getBoundingClientRect().right).toBeLessThanOrEqual(
+				(line as HTMLElement).getBoundingClientRect().right,
+			);
+			const box = row.element().getBoundingClientRect();
+			for (const part of [line, sub]) {
+				expect(part?.getBoundingClientRect().height).toBeLessThan(24);
+				expect(part?.scrollWidth).toBeLessThanOrEqual(
+					(part?.clientWidth ?? 0) + 1,
+				);
+				expect(part?.getBoundingClientRect().right).toBeLessThanOrEqual(
+					box.right,
+				);
+			}
+			const [, , bed, change] = [...(sub?.children ?? [])] as HTMLElement[];
+			const whole = (part: HTMLElement | undefined) =>
+				(part?.scrollWidth ?? 0) <= (part?.clientWidth ?? 0) + 1 &&
+				part?.dataset.cut === undefined;
+			expect(whole(change)).toBe(true);
+			expect(change?.textContent).toBe("· +50.0%");
+			if (testbed === "localhost") {
+				expect(whole(bed)).toBe(true);
+			} else {
+				expect(bed?.getBoundingClientRect().width).toBeGreaterThan(40);
+			}
+			dispose();
+			dispose = undefined;
+		}
+	});
+}
+
+// Kills an alert row whose benchmark's tail, wider than the line, holds the
+// line open past its row instead of ending in an ellipsis.
+test("an alerting row's tail wider than its line ellipsizes inside it at 320 px", async () => {
+	await page.viewport(320, 844);
+	const wide = longAlert("localhost");
+	wide.benchmark.name = `my_crate::${"x".repeat(60)}`;
+	const alerts: Api = {
+		get: async <T,>(path: string) => ({
+			data: (path.includes("/alerts?")
+				? [wide]
+				: path.includes("/runs?")
+					? { total: 0, runs: [] }
+					: []) as T,
+			headers: new Headers(),
+		}),
+		send: api.send,
+	};
+	dispose = mount(() => <Start onQuery={() => {}} />, { api: alerts }).dispose;
+	const row = page
+		.getByRole("region", { name: "Alerting now" })
+		.getByRole("link", { name: /^my_crate::x/ });
+	await expect.element(row).toBeVisible();
+	await document.fonts.ready;
+	const line = row.element().querySelector(".ex-sline") as HTMLElement;
+	const name = line.querySelector("b .ui-trunc") as HTMLElement;
+	await expect.element(name).toHaveAttribute("data-tail", "x".repeat(60));
+	// The name, held at most the line's width, ends inside it.
+	const held = line.querySelector(".ex-aname") as HTMLElement;
+	expect(held.getBoundingClientRect().width).toBeLessThanOrEqual(
+		line.clientWidth + 0.5,
+	);
+	expect(name.getBoundingClientRect().right).toBeLessThanOrEqual(
+		line.getBoundingClientRect().right,
+	);
+	expect(document.documentElement.scrollWidth).toBe(320);
+});
+
+// Kills an alert row whose long benchmark keeps more than its tail while its
+// measure, beside one short tag, ellipsizes.
+for (const width of [1024, 390, 320] as const) {
+	test(`a long benchmark gives up its head before the measure beside a short tag at ${width} px`, async () => {
+		await page.viewport(width, 844);
+		const short = longAlert("localhost");
+		short.benchmark.name = `${"my_crate::".repeat(101)}bench_fn`;
+		short.variant.parameters = { threads: 1 };
+		const alerts: Api = {
+			get: async <T,>(path: string) => ({
+				data: (path.includes("/alerts?")
+					? [short]
+					: path.includes("/runs?")
+						? { total: 0, runs: [] }
+						: []) as T,
+				headers: new Headers(),
+			}),
+			send: api.send,
+		};
+		dispose = mount(() => <Start onQuery={() => {}} />, {
+			api: alerts,
+		}).dispose;
+		const row = page
+			.getByRole("region", { name: "Alerting now" })
+			.getByRole("link", { name: /^my_crate::/ });
+		await expect.element(row).toBeVisible();
+		await document.fonts.ready;
+		const line = row.element().querySelector(".ex-sline") as HTMLElement;
+		const name = line.querySelector("b .ui-trunc") as HTMLElement;
+		await expect.element(name).toHaveAttribute("data-tail", "bench_fn");
+		const measure = line.querySelector(".ex-stags > .ui-trunc") as HTMLElement;
+		expect(measure.textContent).toBe("Latency");
+		expect(measure.hasAttribute("data-cut")).toBe(false);
+		const tag = line.querySelector(".ex-tag") as HTMLElement;
+		expect(tag.getBoundingClientRect().right).toBeLessThanOrEqual(
+			line.getBoundingClientRect().right + 0.5,
+		);
+		const probe = document.createElement("span");
+		probe.style.cssText = `position: absolute; white-space: nowrap; font: ${getComputedStyle(name).font}`;
+		probe.textContent = "bench_fn";
+		document.body.append(probe);
+		const tail = probe.getBoundingClientRect().width;
+		probe.remove();
+		expect(name.getBoundingClientRect().width).toBeGreaterThanOrEqual(tail);
+		dispose();
+		dispose = undefined;
+	});
+}

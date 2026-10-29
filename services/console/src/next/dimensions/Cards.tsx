@@ -2,6 +2,7 @@ import Button from "@bencherdev/ui/Button";
 import Segmented from "@bencherdev/ui/Segmented";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import Table from "@bencherdev/ui/Table";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useQueryClient } from "@tanstack/solid-query";
 import { For, type JSX, Show, createMemo, createSignal } from "solid-js";
 import type {
@@ -31,6 +32,7 @@ import { shortDate, shortDay } from "./time";
 import { varyingKeys } from "../plot/distinct";
 import { parametersInUse, shownTotal, shownVariants, tagsOf } from "./variants";
 import { formatCount } from "../plot/count";
+import Tag from "../tag";
 
 export interface ThresholdsState {
 	data: ThresholdsOn | undefined;
@@ -152,7 +154,7 @@ const RecentRuns = (props: {
 				<Show when={all()}>
 					{(href) => (
 						<a class="lnk" href={href()}>
-							All runs on {props.on.of?.name}
+							All runs
 						</a>
 					)}
 				</Show>
@@ -219,14 +221,14 @@ const RecentRuns = (props: {
 											</td>
 											<Show when={branch()}>
 												<td data-fold="l2" class="ui-table-name">
-													{run.testbeds[0]}
-													<Show when={run.testbed_count > 1}>
-														<span
-															class="rn-more rowlink-own"
-															title={allNames(run.testbeds, run.testbed_count)}
-														>
-															+{run.testbed_count - 1}
-														</span>
+													<Show
+														when={run.testbed_count > 1}
+														fallback={run.testbeds[0]}
+													>
+														<Truncate
+															text={allNames(run.testbeds, run.testbed_count)}
+															reveal
+														/>
 													</Show>
 												</td>
 											</Show>
@@ -413,10 +415,7 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 						);
 					}
 					setFailure(
-						failureOf(
-							error,
-							`Bencher did not ${archive ? "archive" : "unarchive"} the variant`,
-						),
+						failureOf(error, archive ? "Not archived" : "Not unarchived"),
 					);
 				}
 			});
@@ -452,7 +451,12 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 											<For each={parameter.values}>
 												{(value) => (
 													<span class="dm-value">
-														<span class="dm-tag">{value.value}</span>
+														<Truncate
+															class="dm-tag"
+															text={value.value}
+															tail
+															reveal
+														/>
 														{value.variants === 1
 															? "1 variant"
 															: `${formatCount(value.variants)} variants`}
@@ -504,7 +508,7 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 			>
 				<Show when={failure()}>
 					<p class="ferror dm-inset" role="alert">
-						{failure()}
+						<Truncate text={failure()} reveal />
 					</p>
 				</Show>
 				<Show
@@ -541,7 +545,9 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 												<td data-fold="l1" class="ui-table-name">
 													<span class="dm-tags">
 														<For each={tagsOf(variant)}>
-															{(tag) => <span class="dm-tag">{tag}</span>}
+															{(tag) => (
+																<Tag class="dm-tag" tag={tag} tail reveal />
+															)}
 														</For>
 														<Show when={tagsOf(variant).length === 0}>
 															<span class="muted">no parameters</span>
@@ -759,9 +765,7 @@ const Sets = (props: { threshold: JsonThreshold }) => (
 						<span class="dm-tags">
 							<For each={Object.keys(set).sort()}>
 								{(key) => (
-									<span class="dm-tag">
-										{key}={String(set[key])}
-									</span>
+									<Tag class="dm-tag" tag={`${key}=${String(set[key])}`} tail />
 								)}
 							</For>
 						</span>

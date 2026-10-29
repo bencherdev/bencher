@@ -55,40 +55,46 @@ const Controls = (props: {
 	return (
 		<>
 			<div class="ex-ctl">
-				<span class="eyebrow" aria-hidden="true">
-					X axis
+				<span class="ex-pair">
+					<span class="eyebrow" aria-hidden="true">
+						X axis
+					</span>
+					<Segmented
+						name="explore-x"
+						aria-label="X axis"
+						options={X_AXES}
+						value={props.query.xAxis}
+						onChange={(xAxis) => set({ xAxis })}
+					/>
 				</span>
-				<Segmented
-					name="explore-x"
-					aria-label="X axis"
-					options={X_AXES}
-					value={props.query.xAxis}
-					onChange={(xAxis) => set({ xAxis })}
-				/>
-				<span class="eyebrow" aria-hidden="true">
-					Y scale
+				<span class="ex-pair">
+					<span class="eyebrow" aria-hidden="true">
+						Y scale
+					</span>
+					<Segmented
+						name="explore-y"
+						aria-label="Y scale"
+						options={Y_SCALES}
+						value={props.query.yScale}
+						onChange={(yScale) => set({ yScale })}
+					/>
 				</span>
-				<Segmented
-					name="explore-y"
-					aria-label="Y scale"
-					options={Y_SCALES}
-					value={props.query.yScale}
-					onChange={(yScale) => set({ yScale })}
-				/>
-				<span class="eyebrow" aria-hidden="true">
-					Window
+				<span class="ex-pair">
+					<span class="eyebrow" aria-hidden="true">
+						Window
+					</span>
+					<Segmented
+						name="explore-window"
+						aria-label="Window"
+						options={props.presetsOnly ? WINDOWS.slice(0, -1) : WINDOWS}
+						value={
+							props.presetsOnly && props.query.window.end !== undefined
+								? undefined
+								: windowChoice(props.query.window)
+						}
+						onChange={pick}
+					/>
 				</span>
-				<Segmented
-					name="explore-window"
-					aria-label="Window"
-					options={props.presetsOnly ? WINDOWS.slice(0, -1) : WINDOWS}
-					value={
-						props.presetsOnly && props.query.window.end !== undefined
-							? undefined
-							: windowChoice(props.query.window)
-					}
-					onChange={pick}
-				/>
 				<Show when={"start" in props.query.window && props.query.window}>
 					{(window) => (
 						<CustomRange
@@ -99,16 +105,18 @@ const Controls = (props: {
 					)}
 				</Show>
 				<Show when={layout().control === "choice"}>
-					<span class="eyebrow" aria-hidden="true">
-						Measures
+					<span class="ex-pair">
+						<span class="eyebrow" aria-hidden="true">
+							Measures
+						</span>
+						<Segmented
+							name="explore-layout"
+							aria-label="Measures layout"
+							options={LAYOUTS}
+							value={layout().layout}
+							onChange={(next) => set({ layout: next })}
+						/>
 					</span>
-					<Segmented
-						name="explore-layout"
-						aria-label="Measures layout"
-						options={LAYOUTS}
-						value={layout().layout}
-						onChange={(next) => set({ layout: next })}
-					/>
 				</Show>
 				{props.children}
 			</div>

@@ -1,5 +1,7 @@
 import Menu, { MenuItem } from "@bencherdev/ui/Menu";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
+	Index,
 	Show,
 	createMemo,
 	createSignal,
@@ -105,12 +107,11 @@ const Tile = (props: {
 	const [focused, setFocused] = createSignal<string | null>();
 	const meta = () => {
 		const perf = props.tile?.perf;
-		if (!perf) {
-			return "";
-		}
-		return [perf.branches, perf.testbeds]
-			.map((names) => listed(names.map(({ name }) => name)))
-			.join(" · ");
+		return perf
+			? [perf.branches, perf.testbeds].map((names) =>
+					listed(names.map(({ name }) => name)),
+				)
+			: [];
 	};
 	const lines = () => data()?.lines.length;
 	// An alert still active, as the page holds its alerts' statuses.
@@ -150,10 +151,23 @@ const Tile = (props: {
 			aria-labelledby={heading}
 		>
 			<div class="plots-thead">
-				<h2 class="plots-ttl" id={heading}>
-					{props.title}
-				</h2>
-				<span class="plots-meta">{meta()}</span>
+				<div class="plots-name ui-parts">
+					<h2 class="plots-ttl" id={heading}>
+						<Truncate text={props.title} reveal />
+					</h2>
+					<Index each={meta()}>
+						{(part, index) => (
+							<>
+								<Show when={index > 0}>
+									<span class="plots-meta" data-fixed>
+										·
+									</span>
+								</Show>
+								<Truncate class="plots-meta" text={part()} tail />
+							</>
+						)}
+					</Index>
+				</div>
 				<span class="spacer" />
 				<Show when={alerting()}>
 					<span class="plots-alert" role="img" aria-label="has an alert" />

@@ -52,12 +52,13 @@ const plotsApi = (
 	count: number,
 	windows: readonly number[] = [],
 	alerting = false,
+	titleOf = (index: number) => `Pin ${index + 1}`,
 ) => {
 	const pins = new Map(
 		Array.from({ length: count }, (_, index) => {
 			const tile = testTile({
 				uuid: `plot-${index + 1}`,
-				title: `Pin ${index + 1}`,
+				title: titleOf(index),
 				alerting,
 				...(windows[index] === undefined ? {} : { window: windows[index] }),
 			});
@@ -414,6 +415,23 @@ test("a Reorder move keeps the focus on the pin's move buttons", async () => {
 		.element(reorder.getByRole("button", { name: "Move Pin 2 down" }))
 		.toBeDisabled();
 	expect(sent.map(({ body }) => body)).toEqual([{ index: 1 }, { index: 0 }]);
+});
+
+// Kills a Reorder title cut on a phone with no way to read the rest.
+test("a long title in Reorder opens in place on a phone", async () => {
+	await page.viewport(390, 844);
+	const long = "T".repeat(64);
+	const { api } = plotsApi(2, [], false, (index) =>
+		index === 0 ? long : `Pin ${index + 1}`,
+	);
+	mount(api, newClient(api, 2));
+	await page.getByRole("button", { name: "Reorder" }).click();
+	const title = page
+		.getByRole("region", { name: "Reorder" })
+		.getByRole("button", { name: long, exact: true });
+	await title.click();
+	await expect.element(title).toHaveAttribute("aria-expanded", "true");
+	expect(document.documentElement.scrollWidth).toBe(390);
 });
 
 // Kills a move from a tile's menu that drops the focus to the page, whether

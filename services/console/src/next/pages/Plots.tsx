@@ -4,6 +4,7 @@ import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Segmented from "@bencherdev/ui/Segmented";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useQueryClient } from "@tanstack/solid-query";
 import {
 	For,
@@ -541,8 +542,10 @@ const Plots = () => {
 												{at() + 1}
 											</span>
 											<span class="plots-reo-name">
-												<b>{title()}</b>
-												<span class="muted sm">{meta()}</span>
+												<b>
+													<Truncate text={title()} reveal />
+												</b>
+												<Truncate class="muted sm" text={meta()} reveal />
 											</span>
 											<Button
 												ref={up}
@@ -644,8 +647,9 @@ const Plots = () => {
 					<Show when={unloaded().length > 0}>
 						<Banner status="error" role="alert" class="load-error">
 							<span class="grow">
-								{listed(unloaded().map(({ title }) => title ?? "Untitled"))} did
-								not load
+								{unloaded().length === 1
+									? "1 plot did not load"
+									: `${formatCount(unloaded().length)} plots did not load`}
 							</span>
 							<Button
 								size="sm"

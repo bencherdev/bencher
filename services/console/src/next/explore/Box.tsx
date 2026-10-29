@@ -2,6 +2,7 @@ import Icon from "@bencherdev/ui/Icon";
 import Menu from "@bencherdev/ui/Menu";
 import TextInput from "@bencherdev/ui/TextInput";
 import Tooltip from "@bencherdev/ui/Tooltip";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	For,
 	Index,
@@ -123,7 +124,7 @@ const Box = (props: {
 			<Index each={props.values}>
 				{(value, index) => (
 					<div class="ex-val" classList={{ "ex-val2": props.twoLine }}>
-						<span class="ex-ellip">{value().label}</span>
+						<Truncate text={value().label} tail reveal />
 						<Show when={props.twoLine}>
 							<span class="ex-k">{value().detail}</span>
 						</Show>
@@ -261,10 +262,12 @@ export const SearchMenu = (props: {
 						class="ui-menu-item"
 						onClick={() => props.onPick(option)}
 					>
-						<span class="ex-ellip">{option.label}</span>
-						<Show when={option.detail}>
-							<span class="ex-n">{option.detail}</span>
-						</Show>
+						<span class="ui-parts ex-opt">
+							<Truncate text={option.label} tail />
+							<Show when={option.detail}>
+								{(detail) => <Truncate class="ex-n" text={detail()} />}
+							</Show>
+						</span>
 					</button>
 				)}
 			</For>
