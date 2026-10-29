@@ -1,3 +1,4 @@
+import { leafOf } from "../leaf";
 import type { ParameterValue, Parameters, QueryWindow } from "../query/query";
 
 /** A pinned line, named as a reader sees it. */
@@ -18,7 +19,8 @@ const ELLIPSIS = "…";
 
 /**
  * The benchmark with the parameters that vary across its variants, the measure, and the branch.
- * Several lines name what they share, and list at most two of anything.
+ * Several lines name what they share, and list at most two of anything. A title past the API's
+ * limit names its benchmarks and branches by their last segment, so pins of one module differ.
  */
 export const defaultPinTitle = (lines: readonly PinTitleLine[]): string => {
 	const [first] = lines;
@@ -33,14 +35,22 @@ export const defaultPinTitle = (lines: readonly PinTitleLine[]): string => {
 				varying.some((keys) => keys.has(key)),
 		)
 		.map(([key, value]) => `${key}=${String(value)}`);
-	const named = (name: (line: PinTitleLine) => string | undefined) =>
-		listed([...new Set(lines.flatMap((line) => name(line) ?? []))]);
-	const head = [named(({ benchmark }) => benchmark), ...tags].join(" ");
+	const named = (
+		name: (line: PinTitleLine) => string | undefined,
+		short: (name: string) => string = itself,
+	) =>
+		listed([...new Set(lines.flatMap((line) => name(line) ?? []))].map(short));
 	const what = [named(({ metric }) => metric), named(({ measure }) => measure)]
 		.filter((part) => part.length > 0)
 		.join(" ");
-	return withinLimit(`${head}, ${what} on ${named(({ branch }) => branch)}`);
+	const title = (short?: (name: string) => string) =>
+		// Not the measure, whose name often carries a unit such as `ops/s`.
+		`${[named(({ benchmark }) => benchmark, short), ...tags].join(" ")}, ${what} on ${named(({ branch }) => branch, short)}`;
+	const whole = title();
+	return withinLimit(bytes(whole) <= MAX_TITLE_BYTES ? whole : title(leafOf));
 };
+
+const itself = (name: string): string => name;
 
 const listed = (names: readonly string[]): string => {
 	const [first = "", second] = names;

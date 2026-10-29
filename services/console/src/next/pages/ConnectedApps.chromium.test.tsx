@@ -384,3 +384,60 @@ test("the revoke confirmation passes axe in both themes", async () => {
 		};
 	});
 });
+
+// Kills a host cut in either direction, a host that pushes Revoke out of its
+// card, a host that breaks inside a label while a dot is in reach, and a
+// client name cut by its row.
+test("a long host shows whole beside its Revoke, and the app's name wraps", async () => {
+	await page.viewport(320, 800);
+	const labels = [..."abcdefghijkl"].map((letter) => letter.repeat(19));
+	const host = `${labels.join(".")}.example`;
+	const name = "n".repeat(64);
+	const { api } = grantsApi(async () => ({
+		grants: [{ ...chatgpt, client: { ...chatgpt.client, host, name } }],
+	}));
+	dispose = mountAccount(ConnectedApps, "apps", { api }).dispose;
+	const revoke = page.getByRole("button", { name: `Revoke ${host}` });
+	await expect.element(revoke).toBeVisible();
+	const card = (revoke.element() as HTMLElement).closest(".setcard");
+	const heading = card?.querySelector("h2");
+	if (!(card && heading)) {
+		throw new Error("The app has no card");
+	}
+	const inside = card.getBoundingClientRect();
+	const button = revoke.element().getBoundingClientRect();
+	expect(button.left).toBeGreaterThanOrEqual(inside.left);
+	expect(button.right).toBeLessThanOrEqual(inside.right);
+	expect(heading.textContent).toBe(host);
+	expect(heading.scrollWidth).toBeLessThanOrEqual(heading.clientWidth);
+	// Each line ends at a dot: the character before each break is one.
+	const range = document.createRange();
+	const characters = [...heading.querySelectorAll("*"), heading]
+		.flatMap((element) => [...element.childNodes])
+		.filter((node): node is Text => node.nodeType === Node.TEXT_NODE)
+		.sort((a, b) =>
+			a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+		)
+		.flatMap((node) =>
+			[...node.data].map((character, at) => {
+				range.setStart(node, at);
+				range.setEnd(node, at + 1);
+				return { character, top: range.getBoundingClientRect().top };
+			}),
+		);
+	const lineEnds = new Set(
+		characters.flatMap(({ character, top }, at) =>
+			(characters[at + 1]?.top ?? top) > top ? [character] : [],
+		),
+	);
+	expect(lineEnds.size).toBeGreaterThan(0);
+	expect([...lineEnds]).toEqual(["."]);
+	const dd = card.querySelector(".kv dd");
+	expect(dd?.textContent).toBe(name);
+	expect((dd as HTMLElement).scrollWidth).toBeLessThanOrEqual(
+		(dd as HTMLElement).clientWidth,
+	);
+	expect((dd as HTMLElement).getBoundingClientRect().right).toBeLessThanOrEqual(
+		inside.right,
+	);
+});

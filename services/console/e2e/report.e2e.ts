@@ -269,13 +269,19 @@ test("a row toggles its plot from anywhere on it but its checkbox, and not from 
 });
 
 // Kills steps that leave the report's run for the branch's other reports, links
-// that lose the view, and a Previous on the run's first report.
+// that lose the view, a Previous on the run's first report, and a tab title
+// that names the report or its run by its tab rather than its branch and head.
 test("Previous and Next walk the run's reports", async ({ page, request }) => {
 	const newest = await newestMain(request);
 	await page.goto(reportPath(hashbrown.slug, newest, "?group=measure"));
 	await expect(
 		page.getByText(/^#1 of 2 · Sep 13, 2026, 21:16:00 · json/),
 	).toBeVisible();
+	await expect(page).toHaveTitle(
+		new RegExp(
+			`^main ([0-9a-f]{7}|v\\d+) \\| Report \\| ${hashbrown.name} \\| Bencher$`,
+		),
+	);
 	await expect(page.getByRole("button", { name: "Previous" })).toBeDisabled();
 
 	await page
@@ -296,6 +302,13 @@ test("Previous and Next walk the run's reports", async ({ page, request }) => {
 		new RegExp(`/reports/${newest}\\?group=measure$`),
 	);
 	await expect(page.getByText(/^#1 of 2 · /)).toBeVisible();
+
+	await page.locator(".crumb-line a").nth(1).click();
+	await expect(page).toHaveTitle(
+		new RegExp(
+			`^main ([0-9a-f]{7}|v\\d+) \\| Run \\| ${hashbrown.name} \\| Bencher$`,
+		),
+	);
 });
 
 // Kills a selection that opens more or fewer lines than chosen, loses the

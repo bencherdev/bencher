@@ -1,3 +1,5 @@
+import { MAX_URL_LENGTH, URI_TOO_LONG } from "../url";
+
 /** A failed read: the status the API answered with, if it answered. */
 export class Refusal extends Error {
 	readonly status: number | undefined;
@@ -12,9 +14,14 @@ export class Refusal extends Error {
 export const reads =
 	(apiUrl: string, token?: string) =>
 	async <T,>(path: string): Promise<T> => {
+		const target = `${apiUrl}${path}`;
+		// An edge's refusal carries no CORS headers, so the page would read it as no network.
+		if (target.length > MAX_URL_LENGTH) {
+			throw new Refusal(URI_TOO_LONG);
+		}
 		let response: Response;
 		try {
-			response = await fetch(`${apiUrl}${path}`, {
+			response = await fetch(target, {
 				headers: token ? { Authorization: `Bearer ${token}` } : {},
 			});
 		} catch {

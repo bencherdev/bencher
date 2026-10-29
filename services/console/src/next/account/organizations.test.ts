@@ -1,22 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { JsonConsoleUser } from "../../types/bencher";
-import { nameProblem, organizationRows, slugOf } from "./organizations";
-
-describe("slugOf", () => {
-	// Kills a slug that keeps capitals, accents, runs of separators, or
-	// separators at either end.
-	test("derives the slug the API would", () => {
-		expect(slugOf("Bagge Farm")).toBe("bagge-farm");
-		expect(slugOf("  ¡Café   Ñandú & Co.!  ")).toBe("cafe-nandu-co");
-	});
-
-	// Kills a slug past the API's 64 bytes, and one cut to end on a dash.
-	test("cuts a long name to 64 characters with no dash at the end", () => {
-		const slug = slugOf(`${"a".repeat(63)} b`);
-		expect(slug).toBe("a".repeat(63));
-		expect(slugOf("b".repeat(80))).toHaveLength(64);
-	});
-});
+import { nameProblem, organizationRows } from "./organizations";
 
 describe("nameProblem", () => {
 	// Kills a name counted in letters, which the API counts in bytes, and a

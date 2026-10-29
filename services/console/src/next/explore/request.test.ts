@@ -90,6 +90,21 @@ describe("perfSearch", () => {
 		expect(list("metrics")).toEqual(metrics);
 	});
 
+	// Kills every character of a set or a name encoded twice, which more than
+	// doubles a query of quotes or CJK past what a URL holds.
+	test("encode the rest of each entry once", () => {
+		const search = perfSearch(
+			{ ...QUERY, sets: [{ '引用"': "性能" }], metrics: ["延迟 p99"] },
+			NOW,
+		);
+		expect(search).not.toContain("%25");
+		const { list } = read(search);
+		expect(list("parameters")?.map((set) => JSON.parse(set))).toEqual([
+			{ '引用"': "性能" },
+		]);
+		expect(list("metrics")).toEqual(["延迟 p99"]);
+	});
+
 	// Kills a rolling window that ignores its end or measures in the wrong unit.
 	test("end a rolling window now, or at its own end", () => {
 		const rolling = (window: ExploreQuery["window"]) => {

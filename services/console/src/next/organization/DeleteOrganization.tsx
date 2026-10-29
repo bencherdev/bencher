@@ -101,8 +101,7 @@ const DeleteOrganization = (props: {
 						class="mono"
 						value={typed()}
 						onInput={(event) => setTyped(event.currentTarget.value)}
-						autocomplete="off"
-						spellcheck={false}
+						slug
 						autofocus
 					/>
 				</div>
@@ -124,7 +123,10 @@ const DeleteOrganization = (props: {
 				<Button onClick={props.onDismiss}>Cancel</Button>
 				<Button
 					variant="destructive"
-					disabled={typed() !== props.organization.slug || deleting()}
+					disabled={
+						typed().trim().toLowerCase() !== props.organization.slug ||
+						deleting()
+					}
 					onClick={remove}
 				>
 					Delete organization

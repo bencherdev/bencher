@@ -12,11 +12,8 @@ import { useQueryClient } from "@tanstack/solid-query";
 import { For, Show, createMemo, createSignal, useContext } from "solid-js";
 import type { JsonConsoleUser, JsonOrganization } from "../../types/bencher";
 import { useAccount } from "../account/context";
-import {
-	nameProblem,
-	organizationRows,
-	slugOf,
-} from "../account/organizations";
+import { nameProblem, organizationRows } from "../account/organizations";
+import { useSlugRule } from "../account/slug";
 import { FlushContext } from "../flush";
 import { ORGANIZATIONS_PATH, organizationPath } from "../paths";
 import { consoleUserQuery } from "../queries";
@@ -149,7 +146,7 @@ const Organizations = (props: {
 
 export default Organizations;
 
-export { nameProblem, slugOf } from "../account/organizations";
+export { nameProblem } from "../account/organizations";
 
 const NewOrganization = (props: {
 	onDismiss: () => void;
@@ -160,6 +157,7 @@ const NewOrganization = (props: {
 	const flush = useContext(FlushContext);
 	const [name, setName] = createSignal("");
 	const problem = () => nameProblem(name());
+	const slugOf = useSlugRule();
 	const [creating, setCreating] = createSignal(false);
 	const [failed, setFailed] = createSignal<{ error: unknown }>();
 	const create = async () => {
@@ -239,7 +237,7 @@ const NewOrganization = (props: {
 					</div>
 					<div class="field">
 						<span class="flab">Slug</span>
-						<span class="derived">{slugOf(name())}</span>
+						<span class="derived">{slugOf()?.(name()) || "\u00a0"}</span>
 					</div>
 					<Show when={failed()}>
 						{(failure) => (

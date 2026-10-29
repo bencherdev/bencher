@@ -21,7 +21,8 @@ import { privateQuery } from "../organization/visibility";
 import { projectPath } from "../paths";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
-import { nameProblem, slugOf } from "./Organizations";
+import { useSlugRule } from "../account/slug";
+import { nameProblem } from "./Organizations";
 import { failureOf } from "./Profile";
 
 /** A project for one of the reader's organizations, landing on its root. */
@@ -44,6 +45,7 @@ const NewProject = () => {
 	);
 
 	const [name, setName] = createSignal("");
+	const slugOf = useSlugRule();
 	const [url, setUrl] = createSignal("");
 	// Literals, not the generated enum, keep every enum's code out of the page.
 	const [chosen, setChosen] = createSignal<`${Visibility}`>("public");
@@ -121,8 +123,18 @@ const NewProject = () => {
 				<div class="sethead">
 					<div class="ph-title">
 						<div class="crumb-line">
-							{organization()?.name ?? key()}
-							<span aria-hidden="true">/</span>
+							{/* The name alone, once known: a slug it replaced would move the slash. */}
+							<Show
+								when={organization()}
+								fallback={<span aria-hidden="true">{"\u00a0"}</span>}
+							>
+								{(known) => (
+									<>
+										<span class="as-typed">{known().name}</span>
+										<span aria-hidden="true">/</span>
+									</>
+								)}
+							</Show>
 						</div>
 						<Heading level={1} size="xl">
 							New project
@@ -221,7 +233,9 @@ const NewProject = () => {
 										<span>Slug</span>
 									</div>
 									<div class="field">
-										<span class="derived">{slugOf(name())}</span>
+										<span class="derived">
+											{slugOf()?.(name()) || "\u00a0"}
+										</span>
 									</div>
 								</div>
 								<div class="formrow">

@@ -178,8 +178,8 @@ const OrgMembers = () => {
 						</div>
 						<div class="ui-dialog-body">
 							<p id="rm-desc" class="text2">
-								{member.name} loses access to every project in {name() ?? key()}
-								.
+								{member.name} ({member.email}) loses access to every project in{" "}
+								{name() ?? key()}.
 							</p>
 						</div>
 						<div class="ui-dialog-foot">
@@ -326,7 +326,7 @@ const MemberTable = (props: {
 										type="button"
 										class="lnk danger"
 										aria-haspopup="dialog"
-										aria-label={`Remove ${member.name}`}
+										aria-label={`Remove ${member.name} (${member.email})`}
 										onClick={() => props.onRemove(member)}
 									>
 										Remove

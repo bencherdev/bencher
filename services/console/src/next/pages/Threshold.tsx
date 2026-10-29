@@ -26,7 +26,7 @@ import { useNarrow } from "../plot/narrow";
 import type { PlotAlerts } from "../plot/Plot";
 import { FIRST, useAlertBatches } from "../alerts/batches";
 import { useFold } from "../alerts/fold";
-import { useProject, useProjectNavigate } from "../project";
+import { useEntityTitle, useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import LineTable from "../report/LineTable";
@@ -77,6 +77,8 @@ const Threshold = () => {
 		enabled: valid(),
 	}));
 	const data = () => threshold().data;
+	// The measure, whole: thresholds on one branch differ by it, and its name may carry a unit.
+	useEntityTitle("Threshold", () => data()?.measure.name);
 
 	const perPage = alertsBatch();
 	const { batches, loaded, next, first, busy, loading, nearEnd, reread } =

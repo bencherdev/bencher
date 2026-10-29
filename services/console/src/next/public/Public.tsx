@@ -20,7 +20,7 @@ import { plotData } from "../explore/data";
 import { measuresLayout } from "../explore/layout";
 import { parameterRows } from "../explore/parameters";
 import PlotFrame from "../explore/PlotFrame";
-import { drawable } from "../explore/request";
+import { TOO_LONG, drawable } from "../explore/request";
 import Share, { type Copied } from "../explore/Share";
 import { chipSummary } from "../explore/summary";
 import { projectPath } from "../paths";
@@ -211,13 +211,15 @@ const Plotted = (props: PublicProps) => {
 							<div class="ex-failed">
 								<Banner status="error" role="alert" class="load-error">
 									<span class="grow">{text()}</span>
-									<Button
-										size="lg"
-										disabled={props.busy}
-										onClick={() => props.onRetry?.()}
-									>
-										Retry
-									</Button>
+									<Show when={text() !== TOO_LONG}>
+										<Button
+											size="lg"
+											disabled={props.busy}
+											onClick={() => props.onRetry?.()}
+										>
+											Retry
+										</Button>
+									</Show>
 								</Banner>
 							</div>
 						)}

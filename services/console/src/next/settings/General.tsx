@@ -228,8 +228,7 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 								aria-invalid={
 									problem("slug") || refused("slug") ? true : undefined
 								}
-								autocomplete="off"
-								spellcheck={false}
+								slug
 							/>
 							<FieldError id="e-slug" message={problem("slug")} />
 							<Show when={refused("slug")}>

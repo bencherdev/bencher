@@ -487,6 +487,11 @@
 .console .crumb-line a:hover {
 	color: var(--color-text-primary);
 }
+/* A user's own name in an eyebrow keeps its case, so `main` and `MAIN` differ. */
+.as-typed {
+	letter-spacing: normal;
+	text-transform: none;
+}
 
 /* cards */
 .setcard {

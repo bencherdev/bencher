@@ -174,6 +174,7 @@ export const itself = (text: string): string => text;
 export const narrowingSets = (sets: readonly Parameters[]): Parameters[] =>
 	sets.some((set) => Object.keys(set).length === 0) ? [] : [...sets];
 
+/** The query's search, holding only what `decodeQuery` reads back, so a link stays as short as its caps allow. */
 export const encodeQuery = (query: ExploreQuery): string => {
 	const pairs: [string, string][] = [];
 	const add = (name: string, value: string) => pairs.push([name, value]);
@@ -182,7 +183,11 @@ export const encodeQuery = (query: ExploreQuery): string => {
 			add(name, values.join(","));
 		}
 	};
-	const { branches, testbeds, window } = query;
+	const capped = (values: readonly string[]) =>
+		distinct(values, itself, MAX_ENTRIES);
+	const { window } = query;
+	const branches = distinct(query.branches, ({ uuid }) => uuid, MAX_ENTRIES);
+	const testbeds = distinct(query.testbeds, ({ uuid }) => uuid, MAX_ENTRIES);
 	addList(
 		BRANCHES,
 		branches.map(({ uuid }) => uuid),
@@ -197,12 +202,14 @@ export const encodeQuery = (query: ExploreQuery): string => {
 	if (testbeds.some(({ spec }) => spec !== undefined)) {
 		add(SPECS, testbeds.map(({ spec }) => spec ?? "").join(","));
 	}
-	addList(BENCHMARKS, query.benchmarks);
-	for (const set of query.sets) {
+	addList(BENCHMARKS, capped(query.benchmarks));
+	for (const set of narrowingSets(
+		query.sets.filter((set) => Object.keys(set).length <= MAX_PARAMETER_KEYS),
+	).slice(0, MAX_ENTRIES)) {
 		add(PARAMETERS, canonicalParameters(set));
 	}
-	addList(MEASURES, query.measures);
-	for (const metric of query.metrics) {
+	addList(MEASURES, capped(query.measures));
+	for (const metric of capped(query.metrics)) {
 		add(METRICS, metric);
 	}
 	if ("start" in window) {

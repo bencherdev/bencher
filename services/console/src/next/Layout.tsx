@@ -8,6 +8,7 @@ import {
 	Switch,
 	createEffect,
 	createMemo,
+	createSignal,
 	on,
 } from "solid-js";
 import type { JsonAuthUser } from "../types/bencher";
@@ -20,7 +21,7 @@ import {
 	rememberVersion,
 } from "./memory";
 import { TABS, parseConsolePath, tabOf } from "./paths";
-import { ProjectContext } from "./project";
+import { type Entity, ProjectContext } from "./project";
 import { consoleProjectQuery } from "./queries";
 import { useQueryResult } from "./query";
 import Announcer from "./shell/Announcer";
@@ -83,8 +84,12 @@ const Layout = (
 			: undefined;
 	};
 
+	const [entity, setEntity] = createSignal<Entity>();
 	const title = createMemo(() => {
-		const label = TABS.find((entry) => entry.tab === tab())?.label;
+		const shown = entity();
+		const label = shown
+			? `${shown.name} | ${shown.kind}`
+			: TABS.find((entry) => entry.tab === tab())?.label;
 		const name = data()?.project.name ?? remembered()?.name ?? slug();
 		return label ? `${label} | ${name} | Bencher` : `${name} | Bencher`;
 	});
@@ -118,7 +123,13 @@ const Layout = (
 
 	return (
 		<ProjectContext.Provider
-			value={{ api: props.api, slug, host: props.host, route: props.route }}
+			value={{
+				api: props.api,
+				slug,
+				host: props.host,
+				route: props.route,
+				entity: setEntity,
+			}}
 		>
 			<Shell
 				slug={slug()}

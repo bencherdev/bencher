@@ -319,6 +319,42 @@ test("a refused plot query says so, keeps what was drawn, and Retry asks again",
 	await expect(failed).toHaveCount(0);
 });
 
+// Kills a query past what a URL holds sent anyway, which the API refuses with
+// no CORS headers, read as no network, or offered a Retry that cannot succeed.
+test("a query too long for a URL is never sent, and says so with no Retry", async ({
+	page,
+	request,
+}) => {
+	const { query } = await twoLines(request);
+	await page.goto(explore(hashbrown.slug, query));
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	const asked: string[] = [];
+	page.on("request", (sent) => {
+		if (sent.url().includes("/perf?")) {
+			asked.push(sent.url());
+		}
+	});
+	// Eight sets of eight CJK tags at the API's 64 bytes; a server would refuse
+	// so long a page URL, so the router moves to it in place.
+	const sets = Array.from({ length: 8 }, (_, set) =>
+		Object.fromEntries(
+			Array.from({ length: 8 }, (_, tag) => [
+				`${"键".repeat(19)}${set}${tag}`,
+				"值".repeat(21),
+			]),
+		),
+	);
+	const long = explore(hashbrown.slug, { ...query, sets });
+	await page.evaluate((href) => {
+		history.pushState(null, "", href);
+		dispatchEvent(new PopStateEvent("popstate"));
+	}, long);
+	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
+	await expect(failed).toContainText("Query too long");
+	await expect(failed.getByRole("button", { name: "Retry" })).toHaveCount(0);
+	expect(asked).toEqual([]);
+});
+
 // Kills a plot whose own code did not load leaving the frame loading for good
 // with no banner, a Retry that does not load it again or reads the whole page
 // again to do it, and one that throws.

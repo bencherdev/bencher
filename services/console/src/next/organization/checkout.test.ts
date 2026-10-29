@@ -28,4 +28,16 @@ describe("checkoutReturn", () => {
 	test("reads nothing from the pricing page's link", () => {
 		expect(checkoutReturn("?plan=pro")).toBeUndefined();
 	});
+
+	// Kills a level no plan has reaching the API and the page's banner.
+	test("reads nothing for a level no plan has", () => {
+		expect(
+			checkoutReturn(
+				"?checkout=cs_test_1&level=Free%20upgrade%20at%20evil.example",
+			),
+		).toBeUndefined();
+		expect(
+			checkoutReturn("?checkout=cs_test_1&level=toString"),
+		).toBeUndefined();
+	});
 });

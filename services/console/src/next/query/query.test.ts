@@ -151,6 +151,31 @@ describe("encodeQuery and decodeQuery", () => {
 		expect(encodeQuery(forward)).toBe(encodeQuery(backward));
 	});
 
+	// Kills a link longer than what it reads back: values past a box's eight,
+	// sets past eight or wider than eight tags, and a set list that holds the
+	// empty set.
+	test("write only what it reads back", () => {
+		const many = Array.from({ length: 9 }, (_, n) => uuid(n + 1));
+		const wide = Object.fromEntries(
+			Array.from({ length: 9 }, (_, n) => [`k${n}`, n]),
+		);
+		const query: ExploreQuery = {
+			...FULL,
+			branches: many.map((each) => ({ uuid: each, head: uuid(99) })),
+			testbeds: many.map((each) => ({ uuid: each })),
+			benchmarks: many,
+			measures: many,
+			metrics: many.map((_, n) => `m${n}`),
+			sets: [wide, ...many.map((_, n) => ({ n }))],
+		};
+		const search = encodeQuery(query);
+		expect(encodeQuery(decodeQuery(search))).toBe(search);
+		expect(decodeQuery(search).sets).toHaveLength(8);
+		expect(encodeQuery({ ...FULL, sets: [{ a: 1 }, {}] })).not.toContain(
+			"parameters",
+		);
+	});
+
 	// Kills merging or dropping a repeated set; the box keeps the sets as chosen.
 	test("keep a set chosen twice", () => {
 		const query = { ...FULL, sets: [{ a: 1 }, { a: 1 }] };

@@ -143,7 +143,9 @@ test.describe("signed in", () => {
 	test.use({ storageState: signedIn(seed.member), timezoneId: "UTC" });
 
 	// Kills an Alerts row whose name opens nothing, or opens another alert's
-	// page, a page under another tab, and a plot that opens with nothing pinned.
+	// page, a page under another tab, a plot that opens with nothing pinned, and
+	// a tab title that names the alert's tab rather than its benchmark, or keeps
+	// it after the page leaves.
 	test("an Alerts row's name opens its alert's page, pinned on the alert", async ({
 		page,
 		request,
@@ -159,6 +161,11 @@ test.describe("signed in", () => {
 		).toHaveAttribute("aria-current", "page");
 		await expect(readout(page)).toContainText("20.60 ns");
 		await expect(readout(page)).toHaveAttribute("aria-live", "polite");
+		await expect(page).toHaveTitle(
+			`blake3 | Alert | ${hashbrown.name} | Bencher`,
+		);
+		await page.goBack();
+		await expect(page).toHaveTitle(`Alerts | ${hashbrown.name} | Bencher`);
 	});
 
 	// Kills an alert page drawn as a failure, or as some alert, for a UUID no alert has.

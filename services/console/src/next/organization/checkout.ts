@@ -1,5 +1,6 @@
 import type { JsonNewPlan } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
+import { planLevel } from "./billing";
 
 /** What Billing shows of Stripe's return. */
 export interface Enrollment {
@@ -8,11 +9,11 @@ export interface Enrollment {
 	error?: unknown;
 }
 
-/** The plan Stripe's return to Billing names, for the API to record and check, or nothing for any other link. */
+/** The plan Stripe's return to Billing names, for the API to record and check, or nothing for any other link or level. */
 export const checkoutReturn = (search: string): JsonNewPlan | undefined => {
 	const params = new URLSearchParams(search);
 	const checkout = params.get("checkout");
-	const level = params.get("level");
+	const level = planLevel(params.get("level"));
 	if (!(checkout && level)) {
 		return undefined;
 	}
@@ -20,7 +21,7 @@ export const checkoutReturn = (search: string): JsonNewPlan | undefined => {
 	const selfHosted = params.get("self_hosted");
 	return {
 		checkout,
-		level: level as JsonNewPlan["level"],
+		level,
 		...(entitlements === null ? {} : { entitlements: Number(entitlements) }),
 		...(selfHosted === null ? {} : { self_hosted: selfHosted }),
 	};
