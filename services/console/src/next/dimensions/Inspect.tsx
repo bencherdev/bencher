@@ -429,11 +429,7 @@ const Inspect = (props: {
 						/>
 					</Match>
 					<Match when={props.dimension === "benchmarks"}>
-						<BenchmarkCards
-							benchmark={props.entry}
-							name={detail().data?.name}
-							edit={props.edit}
-						/>
+						<BenchmarkCards benchmark={props.entry} edit={props.edit} />
 					</Match>
 				</Switch>
 			</Match>

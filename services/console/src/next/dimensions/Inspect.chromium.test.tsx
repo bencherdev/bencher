@@ -675,11 +675,9 @@ test("a benchmark's variant archives at once from its row", async () => {
 		.element(page.getByRole("region", { name: "Parameters in use" }))
 		.toHaveTextContent(/input_bytes\s*10242 variants/);
 
-	await variants
-		.getByRole("button", { name: "Archive blake3 input_bytes=1024 threads=4" })
-		.click();
+	await variants.getByRole("button", { name: "Archive threads=4" }).click();
 	await page
-		.getByRole("group", { name: "Archive blake3 input_bytes=1024 threads=4" })
+		.getByRole("group", { name: "Archive threads=4" })
 		.getByRole("button", { name: "Archive variant" })
 		.click();
 	await expect
@@ -1012,10 +1010,10 @@ const variantRow = (tag: string) =>
 
 const archiveVariant = async (tag: string) => {
 	await variantsTable()
-		.getByRole("button", { name: `Archive blake3 ${tag}` })
+		.getByRole("button", { name: `Archive ${tag}` })
 		.click();
 	await page
-		.getByRole("group", { name: `Archive blake3 ${tag}` })
+		.getByRole("group", { name: `Archive ${tag}` })
 		.getByRole("button", { name: "Archive variant" })
 		.click();
 };
@@ -1063,7 +1061,7 @@ test("a landed variant archive keeps its row dimmed with Undo and rereads the ar
 	await expect
 		.element(
 			variantRow("threads=4").getByRole("button", {
-				name: "Undo, blake3 threads=4",
+				name: "Undo, threads=4",
 			}),
 		)
 		.toBeVisible();
@@ -1079,7 +1077,7 @@ test("a variant's Undo before its archive lands is sent after it, and a refused 
 	await expect.element(variantsTable().getByText("threads=4")).toBeVisible();
 	await archiveVariant("threads=4");
 	await variantsTable()
-		.getByRole("button", { name: "Undo, blake3 threads=4" })
+		.getByRole("button", { name: "Undo, threads=4" })
 		.click();
 	await new Promise((resolve) => setTimeout(resolve, 50));
 	expect(sent.length).toBe(1);
@@ -1094,7 +1092,7 @@ test("a variant's Undo before its archive lands is sent after it, and a refused 
 	await expect
 		.element(
 			variantRow("threads=4").getByRole("button", {
-				name: "Archive blake3 threads=4",
+				name: "Archive threads=4",
 			}),
 		)
 		.toBeVisible();
@@ -1109,7 +1107,7 @@ test("a refused variant archive leaves the variant to the later changes queued o
 	await expect.element(variantsTable().getByText("threads=4")).toBeVisible();
 	await archiveVariant("threads=4");
 	await variantsTable()
-		.getByRole("button", { name: "Undo, blake3 threads=4" })
+		.getByRole("button", { name: "Undo, threads=4" })
 		.click();
 	await archiveVariant("threads=4");
 	await expect.poll(() => sent.length).toBe(1);
@@ -1140,7 +1138,7 @@ test("a refused variant Undo after the archive landed shows it archived again", 
 	await archiveVariant("threads=4");
 	await expect.poll(() => calls).toBe(1);
 	await variantsTable()
-		.getByRole("button", { name: "Undo, blake3 threads=4" })
+		.getByRole("button", { name: "Undo, threads=4" })
 		.click();
 	await expect
 		.element(page.getByRole("alert"))
@@ -1165,7 +1163,7 @@ test("a refused variant archive puts the variant and its counts back", async () 
 	await expect
 		.element(
 			variantRow("threads=4").getByRole("button", {
-				name: "Archive blake3 threads=4",
+				name: "Archive threads=4",
 			}),
 		)
 		.toBeVisible();
@@ -1183,19 +1181,19 @@ test("the focus follows a variant through its impact line, Undo, Cancel, and Esc
 		document.activeElement?.textContent;
 
 	await archiveVariant("threads=4");
-	await expect.poll(focused).toBe("Undo, blake3 threads=4");
+	await expect.poll(focused).toBe("Undo, threads=4");
 	await variantsTable()
-		.getByRole("button", { name: "Undo, blake3 threads=4" })
+		.getByRole("button", { name: "Undo, threads=4" })
 		.click();
-	await expect.poll(focused).toBe("Archive blake3 threads=4");
+	await expect.poll(focused).toBe("Archive threads=4");
 
 	const archive = variantsTable().getByRole("button", {
-		name: "Archive blake3 threads=1",
+		name: "Archive threads=1",
 	});
 	for (const close of [
 		() =>
 			page
-				.getByRole("group", { name: "Archive blake3 threads=1" })
+				.getByRole("group", { name: "Archive threads=1" })
 				.getByRole("button", { name: "Cancel" })
 				.click(),
 		() => userEvent.keyboard("{Escape}"),

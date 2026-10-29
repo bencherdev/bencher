@@ -42,10 +42,10 @@ test("a link draws exactly its lines, the alerting one first", async ({
 
 	await expect(plot(page)).toHaveAccessibleName("4 lines");
 	await expect(keyEntries(page)).toHaveText([
-		/blake3\s*simd=avx2\s*main/,
-		/blake3\s*simd=avx2\s*feature-simd/,
-		/blake3\s*simd=sse4\.2\s*feature-simd/,
-		/blake3\s*simd=sse4\.2\s*main/,
+		/^\s*avx2\s*main$/,
+		/^\s*avx2\s*feature-simd$/,
+		/^\s*sse4\.2\s*feature-simd$/,
+		/^\s*sse4\.2\s*main$/,
 	]);
 	await expect(
 		box(page, "Branches").getByRole("button", { name: "Remove branch main" }),
@@ -595,11 +595,9 @@ test("hidden and focused lines travel in the link", async ({
 	const { query } = await twoLines(request);
 	await page.goto(explore(hashbrown.slug, query));
 	await page
-		.getByRole("button", { name: /^blake3 simd=sse4\.2.*: hide its line$/ })
+		.getByRole("button", { name: /^sse4\.2.*: hide its line$/ })
 		.click();
-	await page
-		.getByRole("button", { name: /^Focus line of blake3 simd=avx2/ })
-		.click();
+	await page.getByRole("button", { name: /^Focus line of avx2/ }).click();
 	await expect(page).toHaveURL(/hide=/);
 	await expect(page).toHaveURL(/focus=/);
 
@@ -607,11 +605,11 @@ test("hidden and focused lines travel in the link", async ({
 	await other.goto(page.url());
 	await expect(
 		other.getByRole("button", {
-			name: /^blake3 simd=sse4\.2.*: show its line$/,
+			name: /^sse4\.2.*: show its line$/,
 		}),
 	).toBeVisible();
 	await expect(
-		other.getByRole("button", { name: /^Clear focus of blake3 simd=avx2/ }),
+		other.getByRole("button", { name: /^Clear focus of avx2/ }),
 	).toBeVisible();
 });
 
@@ -850,9 +848,7 @@ test("Pin to Plots pins the shown line by its full name, and Undo removes it", a
 	const { project, query } = await pinnable(request);
 	await page.goto(explore(project.slug, { ...query, sets: [] }));
 	await expect(plot(page)).toHaveAccessibleName("2 lines");
-	await page
-		.getByRole("button", { name: /^hash size=2.*: hide its line$/ })
-		.click();
+	await page.getByRole("button", { name: /^2: hide its line$/ }).click();
 
 	await page.getByRole("button", { name: "Pin to Plots" }).click();
 	const confirmation = page.getByRole("status").filter({ hasText: "Pinned" });

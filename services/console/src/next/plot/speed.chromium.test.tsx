@@ -160,8 +160,8 @@ test("hides and shows a line from the key", async () => {
 	const root = mountYear(DATA);
 	await land(root);
 	const runs: number[] = [];
-	// The widest line, alerting so its key entry is in view, and each toggle rescales the axis and rebuilds every path.
-	const name = "blake3 threads=63";
+	// The widest line, alerting so its key entry is in view, and each toggle rescales the axis and rebuilds every path; its key names it by its threads alone.
+	const name = "63";
 	for (let run = 0; run < RUNS * 2; run++) {
 		const button = page
 			.getByRole("button", {

@@ -21,9 +21,11 @@ import {
 
 const { hashbrown } = seed.projects;
 
-const BLAKE3 = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
-const SHA256 = "sha256 input_bytes=65536 simd=avx2 threads=4 Latency";
-const line = (benchmark: string) => `${benchmark} n=0 Latency`;
+// A row's controls name its line by what tells it apart in the list shown:
+// the benchmark, and its threads beside the other line under All.
+const BLAKE3 = "blake3";
+const SHA256 = "sha256";
+const line = (benchmark: string) => benchmark;
 /** The seed's newest `main` report, which raised the blake3 alert. */
 const MAIN_REPORT = "main, ubuntu-latest, Sep 13, 21:16";
 // The reports `createAlerts` posts, by their branch, testbed, and time.
@@ -754,9 +756,9 @@ test.describe("a list longer than a batch", () => {
 			alerts(project.slug),
 			label,
 		);
-		expect(
-			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
-		).toEqual(manyAlertNames(60));
+		expect(await alertsTopToBottom(page, label, "bench-59")).toEqual(
+			manyAlertNames(60),
+		);
 		const [, size = 0] = offsets;
 		expect(offsets.slice(0, 3)).toEqual([0, size, size - 1]);
 	});
@@ -779,10 +781,8 @@ test.describe("a list longer than a batch", () => {
 			label,
 		);
 		expect(focus).toEqual([0]);
-		expect(
-			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
-		).toEqual(
-			manyAlertNames(60).filter((name) => name !== "bench-03 n=0 Latency"),
+		expect(await alertsTopToBottom(page, label, "bench-59")).toEqual(
+			manyAlertNames(60).filter((name) => name !== "bench-03"),
 		);
 		expect(reread()).toEqual([0, size, 2 * size, 3 * size]);
 	});
@@ -839,9 +839,11 @@ test.describe("a list longer than a batch", () => {
 				.slice(returned, returned + 2)
 				.map((batch) => Number(batch.get("offset"))),
 		).toEqual([0, size]);
-		expect(
-			await alertsTopToBottom(page, label, "bench-59 n=0 Latency"),
-		).toEqual([line("bench-00"), line("bench-01"), ...manyAlertNames(60)]);
+		expect(await alertsTopToBottom(page, label, "bench-59")).toEqual([
+			line("bench-00"),
+			line("bench-01"),
+			...manyAlertNames(60),
+		]);
 	});
 });
 

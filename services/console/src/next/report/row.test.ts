@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { iterationTag, lineLabel, rowNumbers } from "./row";
+import { iterationTag, lineLabel, rowNumbers, shortNames } from "./row";
 
 describe("iterationTag", () => {
 	// Kills an iteration counted from 0, a tag on a line run once, and a count taken from the iteration shown.
@@ -107,5 +107,65 @@ describe("rowNumbers", () => {
 			limit: null,
 		});
 		expect(rowNumbers({ value: 5 }, "upper", NS).limit).toBeNull();
+	});
+});
+
+describe("shortNames", () => {
+	const line = (
+		benchmark: string,
+		parameters: Record<string, string | number> = {},
+		measure = "Latency",
+		metric = "value",
+	) => ({ benchmark, parameters, measure, metric });
+
+	// Kills a control named by the whole path and every tag, the same few hundred characters on every row.
+	test("names each line by what its benchmark adds and the parameters that vary", () => {
+		const path = (leaf: number) =>
+			`my_crate::${"module::".repeat(100)}bench_fn_name_${leaf}`;
+		expect(
+			shortNames(
+				[
+					line(path(1), { k: "a".repeat(129), n: 1 }),
+					line(path(2), { k: "a".repeat(129), n: 2 }),
+				],
+				false,
+			),
+		).toEqual(["bench_fn_name_1 n=1", "bench_fn_name_2 n=2"]);
+	});
+
+	// Kills two controls with one name for two lines of one variant, or a measure on lines it cannot tell apart.
+	test("adds the measure, and the metric when the list shows it, where they tell two lines apart", () => {
+		expect(
+			shortNames(
+				[
+					line("a::x", { n: 1 }),
+					line("a::x", { n: 1 }, "Throughput"),
+					line("a::y", { n: 1 }),
+				],
+				false,
+			),
+		).toEqual(["x Latency", "x Throughput", "y"]);
+		expect(
+			shortNames([line("a::x", { n: 1 }), line("a::x", { n: 1 })], false),
+		).toEqual(["x", "x"]);
+		expect(
+			shortNames(
+				[line("x", {}, "Latency", "p50"), line("x", {}, "Latency", "p99")],
+				true,
+			),
+		).toEqual(["x p50", "x p99"]);
+	});
+
+	// Kills a lone line named by its whole path, or lines that share their benchmark named by nothing.
+	test("names a lone line, and lines that share their benchmark whole, by its last segment", () => {
+		expect(shortNames([line("a::b::blake3", { n: 0 })], false)).toEqual([
+			"blake3",
+		]);
+		expect(
+			shortNames(
+				[line("a::blake3", { n: 0 }), line("a::blake3", { n: 1 })],
+				false,
+			),
+		).toEqual(["blake3 n=0", "blake3 n=1"]);
 	});
 });

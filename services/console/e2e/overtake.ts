@@ -6,7 +6,7 @@ import { expect, seed, settle } from "./fixtures";
 export const manyAlertNames = (count: number) =>
 	Array.from(
 		{ length: count },
-		(_, index) => `bench-${String(index).padStart(2, "0")} n=0 Latency`,
+		(_, index) => `bench-${String(index).padStart(2, "0")}`,
 	);
 
 /**
@@ -51,7 +51,7 @@ export const dismissWhileNextBatchIsOut = async (
 	await expect(table).toBeVisible();
 	await toTable();
 	const first = table.getByRole("button", {
-		name: "Dismiss the alert on bench-00 n=0 Latency",
+		name: "Dismiss the alert on bench-00",
 	});
 	await expect(first).toBeVisible();
 	await expect(async () => {
@@ -174,7 +174,7 @@ export const refocusThenReread = async (
 	const asked = offsets.length;
 	await toTable();
 	const taken = patched();
-	await dismiss("bench-03 n=0 Latency").click();
+	await dismiss("bench-03").click();
 	expect((await taken).ok()).toBe(true);
 	await expect(page.getByText("Some alerts did not change")).toBeVisible();
 	await expect.poll(() => offsets.length).toBeGreaterThan(asked);

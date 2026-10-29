@@ -19,6 +19,7 @@ import type {
 	JsonConsoleTestbedRow,
 } from "../../types/bencher";
 import { PROJECTS_PATH } from "../paths";
+import { restsOf } from "../plot/distinct";
 import { type Range, visibleRange } from "../reports/rows";
 import { ROW_HEIGHT, type Row, thresholdsOf } from "./data";
 import { type Dimension, KINDS } from "./dimension";
@@ -104,6 +105,13 @@ const RowTable = (props: {
 	createEffect(on([() => props.rows.length, narrow], measure));
 
 	const shown = createMemo(() => props.rows.slice(range().start, range().end));
+	// A row's controls name it by what tells it apart from the rows listed.
+	const short = createMemo(() => {
+		const rests = restsOf(props.rows.map(({ name }) => name));
+		return new Map(
+			props.rows.map((row, index) => [row.uuid, rests[index] ?? row.name]),
+		);
+	});
 	createEffect(() => {
 		const open = props.arming;
 		if (open && !shown().some((row) => row.uuid === open)) {
@@ -159,6 +167,7 @@ const RowTable = (props: {
 								dimension={props.dimension}
 								listArchived={props.archived}
 								row={row}
+								name={short().get(row.uuid) ?? row.name}
 								index={range().start + index()}
 								edit={props.edit}
 								arming={props.arming === row.uuid}
@@ -174,7 +183,7 @@ const RowTable = (props: {
 								<tr class="dm-impact-row">
 									<td colSpan={columns()} data-fold="full">
 										<Impact
-											name={row.name}
+											name={short().get(row.uuid) ?? row.name}
 											text={archiveImpact(thresholdsOf(row))}
 											confirm="Archive"
 											onConfirm={() => {
@@ -240,6 +249,8 @@ const DimensionRow = (props: {
 	dimension: Dimension;
 	listArchived: boolean;
 	row: Row;
+	/** What the row's controls call it. */
+	name: string;
 	index: number;
 	edit: boolean;
 	arming: boolean;
@@ -290,7 +301,7 @@ const DimensionRow = (props: {
 			</Show>
 			<td data-fold="act" class="dm-act">
 				<Actions
-					name={row().name}
+					name={props.name}
 					archived={row().archived}
 					listArchived={props.listArchived}
 					changed={changed()}

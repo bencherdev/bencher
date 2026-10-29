@@ -503,12 +503,12 @@ test("an alert row opens its plot in place and its line in Explore from its repo
 	const { api } = fakeApi(() => ({ data: alerting() }));
 	mount(api);
 	await alerts()
-		.getByRole("button", { name: /^Expand blake3 / })
+		.getByRole("button", { name: /^Expand blake3/ })
 		.click();
 	await expect
-		.element(page.getByRole("region", { name: /^blake3 .*, full plot$/ }))
+		.element(page.getByRole("region", { name: /^blake3.*, full plot$/ }))
 		.toBeVisible();
-	const explore = page.getByRole("link", { name: /^Open in Explore: blake3 / });
+	const explore = page.getByRole("link", { name: /^Open in Explore: blake3/ });
 	await expect.element(explore).toBeVisible();
 	const href = new URL(
 		explore.element().getAttribute("href") ?? "",
@@ -657,16 +657,16 @@ const mountAlerting = (edit: boolean) => {
 /** Opens the first alert row's plot and pins its readout on the alert, the last point. */
 const pinAlert = async () => {
 	await alerts()
-		.getByRole("button", { name: /^Expand blake3 / })
+		.getByRole("button", { name: /^Expand blake3/ })
 		.click();
-	const region = page.getByRole("region", { name: /^blake3 .*, full plot$/ });
+	const region = page.getByRole("region", { name: /^blake3.*, full plot$/ });
 	const plot = region.getByRole("group", { name: /^1 line/ });
 	await expect.element(plot).toBeVisible();
 	(plot.element() as HTMLElement).focus();
 	await userEvent.keyboard("{End}");
 	const readout = region.getByRole("status");
 	await expect
-		.element(readout.getByRole("link", { name: /^Alert: blake3 / }))
+		.element(readout.getByRole("link", { name: /^Alert: blake3/ }))
 		.toBeVisible();
 	return readout;
 };
@@ -715,7 +715,7 @@ test("each alert cell sits under its header, and an opened plot spans the row", 
 	expect(under("Measure")).toBe("Latency");
 	expect(under("Report")).toMatch(/^#\d · /);
 	await alerts()
-		.getByRole("button", { name: /^Expand blake3 / })
+		.getByRole("button", { name: /^Expand blake3/ })
 		.click();
 	await expect
 		.poll(

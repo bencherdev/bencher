@@ -1,4 +1,5 @@
 import { formatMeasure, type Guard } from "../plot/format";
+import { restsOf, varyingKeys } from "../plot/distinct";
 
 export type ParameterSet = Readonly<Record<string, string | number | boolean>>;
 
@@ -29,6 +30,54 @@ export const lineLabel = (
 			...(metric ? [metric] : []),
 		].join(" "),
 	};
+};
+
+interface NamedLine {
+	benchmark: string;
+	parameters: ParameterSet;
+	measure: string;
+	metric: string;
+}
+
+/**
+ * Each line's name for the controls that act on it alone, among the lines of
+ * its list: what its benchmark adds to the one they share, or its last segment
+ * when it is alone or they share it whole, and the parameters that vary; then
+ * the measure, and the metric where the list shows it, where they tell apart
+ * two lines of one name.
+ */
+export const shortNames = (
+	lines: readonly NamedLine[],
+	manyMetrics: boolean,
+): string[] => {
+	const rests = restsOf(lines.map(({ benchmark }) => benchmark));
+	const varying = new Set(varyingKeys(lines));
+	const bases = lines.map((line, index) =>
+		[
+			rests[index] ?? line.benchmark,
+			...parameterEntries(line.parameters)
+				.filter(([key]) => varying.has(key))
+				.map(([key, value]) => `${key}=${value}`),
+		].join(" "),
+	);
+	// What else the lines that share a name differ in.
+	const differ = (part: (line: NamedLine) => string) => {
+		const seen = new Map<string, Set<string>>();
+		lines.forEach((line, index) => {
+			const base = bases[index] ?? "";
+			seen.set(base, (seen.get(base) ?? new Set()).add(part(line)));
+		});
+		return (index: number) => (seen.get(bases[index] ?? "")?.size ?? 0) > 1;
+	};
+	const measure = differ(({ measure }) => measure);
+	const metric = differ(({ metric }) => metric);
+	return lines.map((line, index) =>
+		[
+			bases[index] ?? "",
+			...(measure(index) ? [line.measure] : []),
+			...(manyMetrics && metric(index) ? [line.metric] : []),
+		].join(" "),
+	);
 };
 
 /** Which iteration a row shows, of how many, when its line ran more than once. */
