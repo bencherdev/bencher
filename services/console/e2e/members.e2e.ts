@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { createMember, createOrganization, unique } from "./api";
+import { createOrganization, unique } from "./api";
 import { axeInBothThemes } from "./axe";
 import { expect, seed, signedIn, test } from "./fixtures";
 
@@ -83,25 +83,6 @@ test.describe("accessibility", () => {
 			expect(
 				page.getByRole("region", { name: "Single sign-on" }),
 			).toBeVisible(),
-		);
-	});
-
-	test("the remove confirmation passes axe in both themes", async ({
-		page,
-		request,
-	}) => {
-		const organization = await createOrganization(request);
-		const member = await createMember(request, organization);
-		await axeInBothThemes(
-			page,
-			membersPath(organization.slug),
-			async () => {},
-			async () => {
-				await page
-					.getByRole("button", { name: `Remove ${member.user.name}` })
-					.click();
-				await expect(page.getByRole("alertdialog")).toBeVisible();
-			},
 		);
 	});
 });

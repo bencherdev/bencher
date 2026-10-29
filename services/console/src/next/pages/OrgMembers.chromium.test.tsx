@@ -6,6 +6,7 @@ import {
 	OrganizationRole,
 } from "../../types/bencher";
 import { ApiError } from "../api";
+import { axeInBothThemes } from "../axe/testing";
 import {
 	type MemberPage,
 	type Roles,
@@ -308,4 +309,17 @@ test("the rail marks Members current", async () => {
 	await expect
 		.element(link)
 		.toHaveAttribute("href", "/console/organizations/pompeii-llc/members");
+});
+
+// Kills a remove confirmation that fails axe in either theme.
+test("the remove confirmation passes axe in both themes", async () => {
+	await axeInBothThemes(async () => {
+		open();
+		await page.getByRole("button", { name: "Remove Eustace Bagge" }).click();
+		await expect.element(page.getByRole("alertdialog")).toBeVisible();
+		return () => {
+			dispose?.();
+			dispose = undefined;
+		};
+	});
 });

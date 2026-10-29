@@ -175,32 +175,4 @@ test.describe("accessibility", () => {
 	test("General passes axe in both themes", async ({ page }) => {
 		await axeInBothThemes(page, path, loaded(page));
 	});
-
-	test("the slug confirmation passes axe in both themes", async ({ page }) => {
-		await axeInBothThemes(
-			page,
-			path,
-			async () => {},
-			async () => {
-				await loaded(page)();
-				await textbox(page, "Slug").fill("pompeii-axe");
-				await save(page).click();
-				await expect(page.getByRole("alertdialog")).toBeVisible();
-			},
-		);
-	});
-
-	test("the delete confirmation passes axe in both themes", async ({
-		page,
-	}) => {
-		await axeInBothThemes(
-			page,
-			path,
-			async () => {},
-			async () => {
-				await page.getByRole("button", { name: "Delete organization" }).click();
-				await expect(page.getByRole("alertdialog")).toBeVisible();
-			},
-		);
-	});
 });

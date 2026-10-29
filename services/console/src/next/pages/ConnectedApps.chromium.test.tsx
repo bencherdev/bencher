@@ -3,6 +3,7 @@ import { page } from "vitest/browser";
 import { type JsonOAuthGrant, OAuthScope } from "../../types/bencher";
 import { type Api, ApiError, type Method } from "../api";
 import { mountAccount } from "../account/testing";
+import { axeInBothThemes } from "../axe/testing";
 import ConnectedApps from "./ConnectedApps";
 
 let dispose: (() => void) | undefined;
@@ -369,4 +370,23 @@ test("an app already revoked elsewhere is just gone", async () => {
 	await page.getByRole("button", { name: "Revoke app" }).click();
 	await expect.element(app("chatgpt.example")).not.toBeInTheDocument();
 	expect(page.getByRole("alert").elements()).toHaveLength(0);
+});
+
+// Kills a revoke confirmation that fails axe in either theme.
+test("the revoke confirmation passes axe in both themes", async () => {
+	await axeInBothThemes(async () => {
+		dispose = mountAccount(ConnectedApps, "apps", {
+			api: grantsApi().api,
+		}).dispose;
+		await page.getByRole("button", { name: "Revoke chatgpt.example" }).click();
+		await expect
+			.element(
+				page.getByRole("alertdialog", { name: "Revoke chatgpt.example?" }),
+			)
+			.toBeVisible();
+		return () => {
+			dispose?.();
+			dispose = undefined;
+		};
+	});
 });

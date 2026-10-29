@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import type { JsonConsoleUser } from "../../types/bencher";
 import { ApiError } from "../api";
+import { axeInBothThemes } from "../axe/testing";
 import { CLASSIC_ORGANIZATION } from "../memory";
 import { organizationQuery } from "../organization/data";
 import { ORGANIZATION, mount } from "../organization/testing";
@@ -269,3 +270,28 @@ describe("the sections", () => {
 			.toHaveAttribute("aria-current", "page");
 	});
 });
+
+// Kills a confirmation of General that fails axe in either theme.
+for (const [name, opens] of [
+	[
+		"slug",
+		async () => {
+			await textbox("Slug").fill("pompeii-axe");
+			await button("Save changes").click();
+		},
+	],
+	["delete", () => button("Delete organization").click()],
+] as const) {
+	test(`the ${name} confirmation passes axe in both themes`, async () => {
+		await axeInBothThemes(async () => {
+			open();
+			await expect.element(textbox("Name")).toHaveValue("Pompeii LLC");
+			await opens();
+			await expect.element(page.getByRole("alertdialog")).toBeVisible();
+			return () => {
+				dispose?.();
+				dispose = undefined;
+			};
+		});
+	});
+}

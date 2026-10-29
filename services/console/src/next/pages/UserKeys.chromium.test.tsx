@@ -3,6 +3,7 @@ import { page } from "vitest/browser";
 import type { JsonUserKey, JsonUserKeyCreated } from "../../types/bencher";
 import { type Api, ApiError, type Method } from "../api";
 import { mountAccount } from "../account/testing";
+import { axeInBothThemes } from "../axe/testing";
 import UserKeys from "./UserKeys";
 
 let dispose: (() => void) | undefined;
@@ -160,4 +161,19 @@ test("Revoke asks first, then revokes the user key", async () => {
 				.getByText("muriel-laptop"),
 		)
 		.toBeVisible();
+});
+
+// Kills a new key dialog that fails axe in either theme.
+test("the new key dialog passes axe in both themes", async () => {
+	await axeInBothThemes(async () => {
+		dispose = mountAccount(UserKeys, "keys", { api: keysApi().api }).dispose;
+		await page.getByRole("button", { name: "New key" }).click();
+		await expect
+			.element(page.getByRole("dialog", { name: "New key" }))
+			.toBeVisible();
+		return () => {
+			dispose?.();
+			dispose = undefined;
+		};
+	});
 });

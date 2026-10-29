@@ -1509,7 +1509,7 @@ test.describe("narrow", () => {
 });
 
 // Kills a contrast, name, or role failure on blank Explore's starting points,
-// or on a latest run's report opened to its benchmarks, in either theme.
+// a latest run's report opened to its benchmarks among them, in either theme.
 test("blank Explore passes axe in both themes", async ({ page }) => {
 	const runs = latestRuns(page);
 	await axeInBothThemes(
@@ -1522,12 +1522,6 @@ test("blank Explore passes axe in both themes", async ({ page }) => {
 					.getByRole("link", { name: /^blake3 / }),
 			).toHaveCount(1);
 			await expect(runs.getByRole("link")).not.toHaveCount(0);
-		},
-	);
-	await axeInBothThemes(
-		page,
-		consolePath(hashbrown.slug, "explore"),
-		async () => {
 			await expect(page.getByRole("menuitem").first()).toBeVisible();
 		},
 		async () => {
@@ -1579,18 +1573,10 @@ test("Explore opened from an alert or a report passes axe in both themes", async
 					.getByRole("link", { name: /^[0-9a-f]{7}$/ }),
 			).toBeVisible();
 			await expect(plot(page)).toHaveAccessibleName("2 lines");
+			// Pin turns primary once the plot answers.
+			await expect(
+				page.getByRole("button", { name: "Pin to Plots" }),
+			).toBeEnabled();
 		},
 	);
-});
-
-// Kills a contrast, name, or role failure on Explore in either theme.
-test("Explore passes axe in both themes", async ({ page, request }) => {
-	const { query } = await twoLines(request);
-	await axeInBothThemes(page, explore(hashbrown.slug, query), async () => {
-		await expect(plot(page)).toHaveAccessibleName("2 lines");
-		// Pin turns primary once the plot answers.
-		await expect(
-			page.getByRole("button", { name: "Pin to Plots" }),
-		).toBeEnabled();
-	});
 });

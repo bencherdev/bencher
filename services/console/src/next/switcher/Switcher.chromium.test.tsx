@@ -11,6 +11,7 @@ import type {
 	JsonConsoleUserProject,
 } from "../../types/bencher";
 import { AccountContext } from "../account/context";
+import { DESKTOP, axeInBothThemes } from "../axe/testing";
 import { budget } from "../budget";
 import { VERSION_KEY, recentSlugs } from "../memory";
 import { fakeApi, mount } from "../settings/testing";
@@ -404,3 +405,21 @@ test("opening it and typing in its search each fit in a frame", async () => {
 	expect(median(opens)).toBeLessThan(budget(FRAME_MS));
 	expect(median(types)).toBeLessThan(budget(FRAME_MS));
 });
+
+// Kills names, roles, contrast, or focus that axe finds wanting in either
+// theme, with rows or with none matching.
+for (const query of ["", "zeppelin"]) {
+	test(`the open switcher passes axe in both themes${query ? " with no match" : ""}`, async () => {
+		await axeInBothThemes(async () => {
+			await open();
+			await search().fill(query);
+			await expect
+				.element(query ? dialog().getByText("No matches") : search())
+				.toBeVisible();
+			return () => {
+				unmount?.();
+				unmount = undefined;
+			};
+		}, [DESKTOP]);
+	});
+}

@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
+import { AXE_OPTIONS, misnamed } from "../src/next/axe/checks";
 import { THEME_KEY, expect } from "./fixtures";
 
 type AxePage = ConstructorParameters<typeof AxeBuilder>[0]["page"];
@@ -8,11 +9,11 @@ type AxePage = ConstructorParameters<typeof AxeBuilder>[0]["page"];
 const PHONE = { width: 390, height: 844 };
 
 /**
- * Scan the page at `path` with axe in the dark and the light theme, at the
- * test's own width and on a phone, once `ready` resolves in each and no
- * animation runs: a control easing between two states shows a contrast it
- * never has at rest. With `arrive`, each scan opens `path` and goes on from
- * there, for a state no link holds.
+ * Scan the page at `path` with axe once `ready` resolves and no animation
+ * runs: a control easing between two states shows a contrast it never has at
+ * rest. At the test's own width it scans in the dark and the light theme; on
+ * a phone, in the theme a first visit gets, with none stored. With `arrive`,
+ * each scan opens `path` and goes on from there, for a state no link holds.
  */
 export const axeInBothThemes = async (
 	page: Page,
@@ -21,97 +22,56 @@ export const axeInBothThemes = async (
 	arrive?: () => Promise<void>,
 ) => {
 	const own = page.viewportSize();
-	const sizes = own && own.width > PHONE.width ? [own, PHONE] : [own ?? PHONE];
+	const passes: [{ width: number; height: number }, string | null][] =
+		own && own.width > PHONE.width
+			? [
+					[own, "dark"],
+					[own, "light"],
+					[PHONE, null],
+				]
+			: [[own ?? PHONE, null]];
 	await page.goto(path);
-	for (const size of sizes) {
+	for (const [size, theme] of passes) {
 		await page.setViewportSize(size);
-		for (const theme of ["dark", "light"]) {
-			await page.evaluate(([key, value]) => localStorage.setItem(key, value), [
-				THEME_KEY,
-				theme,
-			] as const);
-			if (arrive) {
-				await page.goto(path);
-				await arrive();
-			} else {
-				await page.reload();
-			}
-			await ready();
-			await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-			await page.waitForFunction(() =>
-				document
-					.getAnimations()
-					.every((animation) => animation.playState !== "running"),
-			);
-			// The axe integration types `page` against its own copy of Playwright.
-			const { violations } = await new AxeBuilder({
-				page: page as unknown as AxePage,
-			})
-				// Off by default in axe; a control's name starts with its visible label.
-				.options({
-					rules: { "label-content-name-mismatch": { enabled: true } },
-				})
-				.analyze();
-			expect(
-				[
-					...violations.map(
-						(violation) =>
-							`${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`,
-					),
-					...(await misnamed(page)),
-				].map((found) => `${size.width} ${theme} ${found}`),
-			).toEqual([]);
+		await page.evaluate(
+			([key, value]) =>
+				value === null
+					? localStorage.removeItem(key)
+					: localStorage.setItem(key, value),
+			[THEME_KEY, theme] as const,
+		);
+		if (arrive) {
+			await page.goto(path);
+			await arrive();
+		} else {
+			await page.reload();
 		}
+		await ready();
+		const html = page.locator("html");
+		await expect(html).toHaveAttribute("data-theme", theme ?? /^(dark|light)$/);
+		await page.waitForFunction(() =>
+			document
+				.getAnimations()
+				.every((animation) => animation.playState !== "running"),
+		);
+		// The axe integration types `page` against its own copy of Playwright.
+		const { violations } = await new AxeBuilder({
+			page: page as unknown as AxePage,
+		})
+			.options(AXE_OPTIONS)
+			.analyze();
+		const shown = await html.getAttribute("data-theme");
+		expect(
+			[
+				...violations.map(
+					(violation) =>
+						`${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`,
+				),
+				...(await page.evaluate(misnamed)),
+			].map((found) => `${size.width} ${shown} ${found}`),
+		).toEqual([]);
 	}
 	if (own) {
 		await page.setViewportSize(own);
 	}
 };
-
-/**
- * Each control whose accessible name does not start with the text it shows,
- * both read as words as axe reads them: its label-in-name rule only asks that
- * the name contain the text.
- */
-const misnamed = (page: Page) =>
-	page.evaluate(() => {
-		const hidden = (element: Element) =>
-			!element.checkVisibility({ visibilityProperty: true }) ||
-			element.closest(".sr-only") !== null;
-		const words = (text: string) =>
-			text
-				.replace(/[^\p{L}\p{N}]+/gu, " ")
-				.trim()
-				.toLowerCase();
-		const shown = (node: Node): string =>
-			node.nodeType === Node.TEXT_NODE
-				? (node.nodeValue ?? "")
-				: !(node instanceof Element) || hidden(node)
-					? ""
-					: node.nodeName === "BR"
-						? " "
-						: [...node.childNodes]
-								.map(shown)
-								.join("")
-								.replace(/\s+/g, " ")
-								.trim();
-		const controls = document.querySelectorAll(
-			'a[href], button, summary, [role="button"], [role="link"], [role="tab"], [role^="menuitem"], [role="checkbox"], [role="radio"], [role="switch"], [role="option"]',
-		);
-		return [...controls].flatMap((control) => {
-			const labelledBy = control.getAttribute("aria-labelledby");
-			const name = labelledBy
-				? labelledBy
-						.split(/\s+/)
-						.map((id) => document.getElementById(id)?.textContent ?? "")
-						.join(" ")
-				: control.getAttribute("aria-label");
-			const text = shown(control);
-			if (name === null || hidden(control) || words(text) === "") {
-				return [];
-			}
-			return `${words(name)} `.startsWith(`${words(text)} `)
-				? []
-				: [`name-starts-with-text: "${text}" is named "${name}"`];
-		});
-	});

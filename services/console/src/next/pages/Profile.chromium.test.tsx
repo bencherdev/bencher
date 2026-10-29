@@ -9,6 +9,7 @@ import { page } from "vitest/browser";
 import type { JsonAuthUser, JsonUser } from "../../types/bencher";
 import { AccountContext } from "../account/context";
 import { type Api, ApiError, type Method } from "../api";
+import { axeInBothThemes } from "../axe/testing";
 import Profile from "./Profile";
 
 const USER: JsonUser = {
@@ -477,5 +478,20 @@ describe("the sections", () => {
 			.toBeVisible();
 		expect(segments.query()).toBeNull();
 		await page.viewport(414, 896);
+	});
+});
+
+// Kills an email confirmation that fails axe in either theme.
+test("the email confirmation passes axe in both themes", async () => {
+	await axeInBothThemes(async () => {
+		mount(userApi(2).api);
+		await expect.element(legacyLink()).toHaveTextContent("2 legacy tokens");
+		await textbox("Email").fill("muriel@courage.example");
+		await save().click();
+		await expect.element(page.getByRole("alertdialog")).toBeVisible();
+		return () => {
+			dispose?.();
+			dispose = undefined;
+		};
 	});
 });

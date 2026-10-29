@@ -13,6 +13,7 @@ import type {
 } from "../../types/bencher";
 import { AccountContext } from "../account/context";
 import { type Api, ApiError, type Method } from "../api";
+import { axeInBothThemes } from "../axe/testing";
 import { FlushContext } from "../flush";
 import { organizationPath } from "../paths";
 import { consoleUserQuery } from "../queries";
@@ -364,5 +365,18 @@ describe("New organization", () => {
 
 		await expect.element(dialog()).not.toBeInTheDocument();
 		expect(history.get()).toBe("/organizations");
+	});
+});
+
+// Kills a New organization dialog that fails axe in either theme.
+test("New organization passes axe in both themes", async () => {
+	await axeInBothThemes(async () => {
+		mount(consoleApi().api, { path: "/organizations/add" });
+		await dialog().getByRole("textbox", { name: "Name" }).fill("Bagge Farm");
+		await expect.element(dialog()).toHaveTextContent("bagge-farm");
+		return () => {
+			dispose?.();
+			dispose = undefined;
+		};
 	});
 });

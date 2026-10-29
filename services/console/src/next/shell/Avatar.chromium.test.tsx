@@ -2,6 +2,7 @@ import "../switcher/switcher.css";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type { JsonConsoleUser } from "../../types/bencher";
+import { PHONE, axeInBothThemes } from "../axe/testing";
 import { fakeApi, mount } from "../settings/testing";
 import Shell from "./Shell";
 
@@ -266,4 +267,33 @@ describe("phone", () => {
 		await expect.element(menu()).toBeVisible();
 		expect(items()[0]).toBe("Profile");
 	});
+});
+
+// Kills a menu that fails axe in either theme, on a desktop or a phone.
+test("the avatar's menu passes axe in both themes", async () => {
+	await axeInBothThemes(async (width) => {
+		await open(width);
+		await avatar().click();
+		await expect.element(menu()).toBeVisible();
+		return () => {
+			unmount?.();
+			unmount = undefined;
+		};
+	});
+});
+
+// Kills a phone's switcher sheet that fails axe.
+test("the switcher's sheet passes axe on a phone", async () => {
+	await axeInBothThemes(async () => {
+		await open(PHONE);
+		await avatar().click();
+		await item(/^Switch project/).click();
+		await expect
+			.element(page.getByRole("combobox", { name: "Search projects" }))
+			.toHaveFocus();
+		return () => {
+			unmount?.();
+			unmount = undefined;
+		};
+	}, [PHONE]);
 });

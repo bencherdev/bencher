@@ -699,6 +699,9 @@ test("Runs at the project root with a run opened, and a run, pass axe in both th
 		await expect(
 			table(page).getByRole("link", { name: /, report 2, / }),
 		).toBeVisible();
+		await expect(
+			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
+		).toBeVisible();
 	});
 	await page.goto(consolePath(hashbrown.slug));
 	await rows(page)

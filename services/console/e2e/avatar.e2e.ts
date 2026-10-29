@@ -1,5 +1,4 @@
 import type { Page } from "@playwright/test";
-import { axeInBothThemes } from "./axe";
 import {
 	ORGANIZATION_KEY,
 	SHELL_KEY,
@@ -33,16 +32,6 @@ const openMenu = async (page: Page) => {
 	await avatar(page).click();
 	await expect(menu(page)).toBeVisible();
 };
-
-// Kills a menu that fails axe in either theme, on a desktop or a phone.
-test("the avatar's menu passes axe in both themes", async ({ page }) => {
-	await axeInBothThemes(
-		page,
-		RUNS,
-		() => expect(menu(page)).toBeVisible(),
-		() => openMenu(page),
-	);
-});
 
 // Kills a Sign out that keeps the reader, their organization, their names,
 // their landing, or their cache in this browser, or sends the next reader to
@@ -83,22 +72,17 @@ test("Sign out forgets the reader and all this browser remembers for them, then 
 test.describe("on a phone", () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
-	// Kills a phone with no way to switch projects, a sheet that fails axe, and
-	// a pick from the sheet that loads a new document rather than moving in the app.
+	// Kills a phone with no way to switch projects, and a pick from the sheet
+	// that loads a new document rather than moving in the app.
 	test("Switch project opens the switcher as a sheet, and a pick moves in the app", async ({
 		page,
 	}) => {
 		const search = () =>
 			sheet(page).getByRole("combobox", { name: "Search projects" });
-		await axeInBothThemes(
-			page,
-			RUNS,
-			() => expect(search()).toBeFocused(),
-			async () => {
-				await openMenu(page);
-				await page.getByRole("menuitem", { name: /^Switch project/ }).click();
-			},
-		);
+		await page.goto(RUNS);
+		await openMenu(page);
+		await page.getByRole("menuitem", { name: /^Switch project/ }).click();
+		await expect(search()).toBeFocused();
 		const documents: string[] = [];
 		page.on("request", (request) => {
 			if (request.resourceType() === "document") {

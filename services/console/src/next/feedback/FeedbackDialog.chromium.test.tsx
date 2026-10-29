@@ -4,6 +4,7 @@ import "./feedback.css";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import { axeInBothThemes } from "../axe/testing";
 import FeedbackDialog, { type FeedbackAbout } from "./FeedbackDialog";
 import type { Form } from "./report";
 import { send } from "./send";
@@ -189,3 +190,26 @@ test("Escape and Cancel close it", async () => {
 	await page.getByRole("button", { name: "Cancel" }).click();
 	expect(closed).toBe(2);
 });
+
+// Kills a sent or a failed dialog that fails axe in either theme.
+for (const sent of [true, false]) {
+	test(`the dialog passes axe in both themes, ${sent ? "sent" : "failed"}`, async () => {
+		await axeInBothThemes(async () => {
+			if (sent) {
+				vi.mocked(send).mockResolvedValue();
+			} else {
+				vi.mocked(send).mockRejectedValue(new Error("blocked"));
+			}
+			mount(ABOUT);
+			await userEvent.fill(message().element(), "Queued forever");
+			await sendButton().click();
+			await expect
+				.element(page.getByRole(sent ? "status" : "alert"))
+				.toBeVisible();
+			return () => {
+				dispose?.();
+				dispose = undefined;
+			};
+		});
+	});
+}

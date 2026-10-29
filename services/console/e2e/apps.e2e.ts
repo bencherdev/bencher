@@ -232,7 +232,7 @@ test.describe("the new console's Connected Apps", () => {
 	});
 
 	// Kills contrast, names, and roles that fail axe in either theme.
-	test("the page and its revoke dialog pass axe in both themes", async ({
+	test("the page passes axe in both themes", async ({
 		newContext,
 		request,
 	}) => {
@@ -241,12 +241,11 @@ test.describe("the new console's Connected Apps", () => {
 		const page = await (
 			await newContext({ storageState: signedIn(user) })
 		).newPage();
-		await axeInBothThemes(page, appsPath(user), async () => {
-			await page.getByRole("button", { name: "Revoke client.example" }).click();
-			await expect(
-				page.getByRole("alertdialog", { name: "Revoke client.example?" }),
-			).toBeVisible();
-		});
+		await axeInBothThemes(page, appsPath(user), () =>
+			expect(
+				page.getByRole("button", { name: "Revoke client.example" }),
+			).toBeVisible(),
+		);
 	});
 });
 

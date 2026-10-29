@@ -423,54 +423,15 @@ test.describe("accessibility", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
 	// Kills contrast, names, and roles that fail axe in either theme.
-	for (const opener of ["Change visibility", "Delete project"]) {
-		test(`General and its ${opener} dialog pass axe in both themes`, async ({
-			page,
-		}) => {
-			await axeInBothThemes(
-				page,
-				consolePath(hashbrown.slug, "settings"),
-				async () => {
-					await expect(general(page)).toBeVisible();
-					await page.getByRole("button", { name: opener }).click();
-					await expect(page.getByRole("alertdialog")).toBeVisible();
-				},
-			);
-		});
-	}
-
-	test("General and its slug confirmation pass axe in both themes", async ({
-		page,
-	}) => {
-		await axeInBothThemes(
-			page,
-			consolePath(hashbrown.slug, "settings"),
-			async () => {
-				await expect(general(page)).toBeVisible();
-				await page
-					.getByRole("textbox", { name: "Slug" })
-					.fill(`${hashbrown.slug}-moved`);
-				await save(page).click();
-				await expect(page.getByRole("alertdialog")).toBeVisible();
-			},
+	test("General passes axe in both themes", async ({ page }) => {
+		await axeInBothThemes(page, consolePath(hashbrown.slug, "settings"), () =>
+			expect(general(page)).toBeVisible(),
 		);
 	});
 
-	test("Keys and its new key dialog pass axe in both themes", async ({
-		page,
-	}) => {
-		await axeInBothThemes(
-			page,
-			consolePath(hashbrown.slug, "keys"),
-			async () => {
-				await expect(
-					page.getByRole("table", { name: "Active keys" }),
-				).toBeVisible();
-				await page.getByRole("button", { name: "New key" }).click();
-				await expect(
-					page.getByRole("dialog", { name: "New key" }),
-				).toBeVisible();
-			},
+	test("Keys passes axe in both themes", async ({ page }) => {
+		await axeInBothThemes(page, consolePath(hashbrown.slug, "keys"), () =>
+			expect(page.getByRole("table", { name: "Active keys" })).toBeVisible(),
 		);
 	});
 });

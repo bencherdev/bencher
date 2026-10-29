@@ -1,4 +1,3 @@
-import { axeInBothThemes } from "./axe";
 import {
 	THEME_KEY,
 	crumb,
@@ -6,7 +5,6 @@ import {
 	consolePath,
 	seed,
 	signedIn,
-	tabRow,
 	test,
 } from "./fixtures";
 
@@ -40,15 +38,6 @@ test("the theme toggle sets the theme, keeps it across a reload, and shares it w
 
 	await page.goto(`/console/users/${seed.member.user.slug}/help`);
 	await expect(html).toHaveAttribute("data-theme", "light");
-});
-
-// Kills contrast, naming, and landmark failures on the shell in either theme.
-test("the shell passes axe in both themes", async ({ page }) => {
-	await axeInBothThemes(page, consolePath(hashbrown.slug, "runs"), async () => {
-		await expect(
-			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
-		).toBeVisible();
-	});
 });
 
 test.describe("with the system set to light", () => {
