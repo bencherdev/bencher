@@ -17,6 +17,7 @@
 use bencher_api_tests::{
     TestServer,
     helpers::{TestToken, seed_token},
+    session_cookie,
 };
 use bencher_json::{
     JsonOrganization, JsonOrganizations, JsonProject, JsonUser, JsonUserKey, JsonUserKeyCreated,
@@ -187,6 +188,29 @@ async fn user_key_cannot_mint_another_user_key() {
     assert_eq!(resp.status(), StatusCode::OK);
     let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
     assert_eq!(keys.0.len(), 1);
+}
+
+// A browser session passes the key gate, as a session JWT does.
+#[tokio::test]
+async fn session_cookie_mints_a_user_key() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Cookie Key User", "cookie-key@example.com")
+        .await;
+    let session = server.session(&user);
+    let user_slug: &str = user.slug.as_ref();
+
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
+        .header(http::header::COOKIE, session_cookie(&session))
+        .header("Sec-Fetch-Site", "same-origin")
+        .json(&serde_json::json!({"name": "cookie-key"}))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
 }
 
 // User API token creation is deprecated for every credential,

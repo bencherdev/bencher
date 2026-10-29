@@ -7,7 +7,7 @@ use bencher_endpoint::Registrar as _;
 use bencher_rbac::init_rbac;
 use bencher_schema::{
     ApiContext,
-    context::{Database, DbConnection, Messenger},
+    context::{Database, DbConnection, Messenger, Relay},
     run_migrations,
 };
 use bencher_token::{DEFAULT_SECRET_KEY, TokenKey};
@@ -205,6 +205,7 @@ impl TestServer {
             github_client: None,
             github_app: None,
             google_client: None,
+            relay_secret: None,
         })
         .await
     }
@@ -231,31 +232,16 @@ impl TestServer {
             github_client,
             github_app,
             google_client,
+            relay_secret,
         } = options;
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
 
-        // Create a temporary database file
-        let db_file = NamedTempFile::new().expect("Failed to create temp db file");
-        let db_path = db_file.path().to_str().expect("Invalid db path").to_owned();
-
-        // Establish connection and run migrations
-        let mut conn =
-            DbConnection::establish(&db_path).expect("Failed to establish database connection");
-        set_busy_timeout(&mut conn).expect("Failed to set the busy timeout");
-        run_migrations(&mut conn).expect("Failed to run migrations");
+        let (database, db_path, db_file) = temp_database();
 
         // Build minimal ApiContext
         let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let rbac = init_rbac().expect("Failed to init RBAC").into();
-
-        let database = Database {
-            path: PathBuf::from(&db_path),
-            busy_timeout: BUSY_TIMEOUT_MS,
-            public_pool: connection_pool(&db_path),
-            auth_pool: connection_pool(&db_path),
-            connection: Arc::new(Mutex::new(conn)),
-        };
 
         let request_body_max_bytes = max_body_size.map_or(DEFAULT_MAX_BODY_SIZE, |s| {
             usize::try_from(s).expect("max_body_size exceeds usize")
@@ -282,6 +268,7 @@ impl TestServer {
             rbac,
             messenger: Messenger::default(),
             database,
+            relay: Relay::new(relay_secret.as_ref()),
             rate_limiting: Arc::new(
                 rate_limiting.unwrap_or_else(bencher_schema::context::RateLimiting::max),
             ),
@@ -347,31 +334,11 @@ impl TestServer {
     ) -> Self {
         let log = log.unwrap_or_else(stderr_logger);
 
-        // Create a temporary database file
-        let db_file = NamedTempFile::new().expect("Failed to create temp db file");
-        let db_path = db_file.path().to_str().expect("Invalid db path").to_owned();
-
-        // Establish connection and run migrations
-        let mut conn =
-            DbConnection::establish(&db_path).expect("Failed to establish database connection");
-        set_busy_timeout(&mut conn).expect("Failed to set the busy timeout");
-        run_migrations(&mut conn).expect("Failed to run migrations");
-
-        // Create connection pools
-        let public_pool = connection_pool(&db_path);
-        let auth_pool = connection_pool(&db_path);
+        let (database, db_path, db_file) = temp_database();
 
         // Build minimal ApiContext
         let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let rbac = init_rbac().expect("Failed to init RBAC").into();
-
-        let database = Database {
-            path: PathBuf::from(&db_path),
-            busy_timeout: BUSY_TIMEOUT_MS,
-            public_pool,
-            auth_pool,
-            connection: Arc::new(Mutex::new(conn)),
-        };
 
         let _ = (upload_timeout, max_body_size);
         let context = ApiContext {
@@ -381,6 +348,7 @@ impl TestServer {
             rbac,
             messenger: Messenger::default(),
             database,
+            relay: Relay::new(None),
             clock: bencher_json::Clock::System,
         };
 
@@ -523,6 +491,29 @@ pub struct TestServerOptions {
     pub github_client: Option<bencher_github_client::GitHubClient>,
     pub github_app: Option<Arc<bencher_github_client::GitHubApp>>,
     pub google_client: Option<bencher_google_client::GoogleClient>,
+    pub relay_secret: Option<bencher_json::Secret>,
+}
+
+/// A migrated database in a temporary file, with its path and the file that keeps it.
+#[expect(clippy::expect_used, reason = "test server setup with fallible init")]
+fn temp_database() -> (Database, String, NamedTempFile) {
+    let db_file = NamedTempFile::new().expect("Failed to create temp db file");
+    let db_path = db_file.path().to_str().expect("Invalid db path").to_owned();
+
+    // Establish connection and run migrations
+    let mut conn =
+        DbConnection::establish(&db_path).expect("Failed to establish database connection");
+    set_busy_timeout(&mut conn).expect("Failed to set the busy timeout");
+    run_migrations(&mut conn).expect("Failed to run migrations");
+
+    let database = Database {
+        path: PathBuf::from(&db_path),
+        busy_timeout: BUSY_TIMEOUT_MS,
+        public_pool: connection_pool(&db_path),
+        auth_pool: connection_pool(&db_path),
+        connection: Arc::new(Mutex::new(conn)),
+    };
+    (database, db_path, db_file)
 }
 
 /// Waits out a lock instead of failing at once, as the server's own pools do.
