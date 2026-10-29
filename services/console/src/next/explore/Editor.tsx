@@ -17,8 +17,7 @@ import {
 	type ParameterValue,
 } from "../query/query";
 import Box, { type BoxValue, Cross, type Option } from "./Box";
-import { metricNames } from "./data";
-import { withValue, withoutValue } from "./edit";
+import { exactFirst, metricNames, withValue, withoutValue } from "./edit";
 import { measuresLayout } from "./layout";
 import { matchedVariants, parameterRows } from "./parameters";
 import {
@@ -163,9 +162,13 @@ const Editor = (props: {
 				}
 				options={(text) => () => {
 					const chosen = new Set(props.query.metrics);
-					return (props.perf ? metricNames(props.perf) : [])
-						.filter((name) => !chosen.has(name) && name.includes(text()))
-						.map((name) => ({ value: name, label: name }));
+					return exactFirst(
+						(props.perf ? metricNames(props.perf) : []).filter(
+							(name) => !chosen.has(name) && name.includes(text()),
+						),
+						text(),
+						(name) => name,
+					).map((name) => ({ value: name, label: name }));
 				}}
 				empty="No other metrics"
 				onAdd={(option) =>
@@ -266,33 +269,47 @@ const Sets = (props: {
 				);
 				return () => {
 					const loaded = all().map((result) => result().data);
-					const variants = loaded.every((list) => list !== undefined)
-						? loaded.flat()
-						: drawn();
+					const lists = loaded.every((list) => list !== undefined)
+						? loaded
+						: [drawn()];
 					const singles = new Set(
 						props.query.sets
 							.filter((set) => Object.keys(set).length === 1)
 							.flatMap(tagsOf),
 					);
-					const counts = new Map<string, [string, ParameterValue, number]>();
-					for (const variant of variants) {
-						for (const entry of Object.entries(variant)) {
-							const label = tag(entry);
-							const [key, value] = entry;
-							const count = counts.get(label)?.[2] ?? 0;
-							counts.set(label, [key, value, count + 1]);
-						}
+					// Each tag's count, and the position of its most recent variant in any list.
+					const counts = new Map<
+						string,
+						[string, ParameterValue, number, number]
+					>();
+					for (const list of lists) {
+						list.forEach((variant, rank) => {
+							for (const entry of Object.entries(variant)) {
+								const label = tag(entry);
+								const [key, value] = entry;
+								const [, , count = 0, best = rank] = counts.get(label) ?? [];
+								counts.set(label, [
+									key,
+									value,
+									count + 1,
+									Math.min(best, rank),
+								]);
+							}
+						});
 					}
-					return [...counts.entries()]
-						.filter(([label]) => !singles.has(label) && label.includes(text()))
-						.sort(([a], [b]) =>
-							a.localeCompare(b, undefined, { numeric: true }),
-						)
-						.map(([label, [key, value, count]]) => ({
-							value: JSON.stringify({ [key]: value }),
-							label,
-							detail: plural(count, "variant", "variants"),
-						}));
+					return exactFirst(
+						[...counts.entries()]
+							.filter(
+								([label]) => !singles.has(label) && label.includes(text()),
+							)
+							.sort(([, [, , , a]], [, [, , , b]]) => a - b),
+						text(),
+						([label]) => label,
+					).map(([label, [key, value, count]]) => ({
+						value: JSON.stringify({ [key]: value }),
+						label,
+						detail: plural(count, "variant", "variants"),
+					}));
 				};
 			}}
 			empty="No parameters"

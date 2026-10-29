@@ -1,3 +1,4 @@
+import type { JsonConsolePerf } from "../../types/bencher";
 import { canonicalParameters } from "../query/parameters";
 import {
 	type ExploreQuery,
@@ -111,3 +112,36 @@ const boxesKey = (query: ExploreQuery): string =>
 		measures: query.measures,
 		metrics: query.metrics,
 	});
+
+/** The metric names the answer drew, each once, the one with the newest point first and those with none last. */
+export const metricNames = (
+	perf: Pick<JsonConsolePerf, "lines" | "points">,
+): string[] => {
+	const newest = new Map<string, number>();
+	for (const { metric, series } of perf.lines) {
+		newest.set(
+			metric,
+			series.y.reduce<number>(
+				(at, y, i) =>
+					y === null
+						? at
+						: Math.max(at, perf.points.x[series.index?.[i] ?? i] ?? at),
+				newest.get(metric) ?? Number.NEGATIVE_INFINITY,
+			),
+		);
+	}
+	return [...newest.entries()]
+		.sort(([, a], [, b]) => (a < b ? 1 : a > b ? -1 : 0))
+		.map(([metric]) => metric);
+};
+
+/** `items` with those named `text`, ignoring case, moved first, and in their order otherwise. */
+export const exactFirst = <T>(
+	items: readonly T[],
+	text: string,
+	name: (item: T) => string,
+): T[] => {
+	const lower = text.toLowerCase();
+	const exact = (item: T) => (name(item).toLowerCase() === lower ? 0 : 1);
+	return [...items].sort((a, b) => exact(a) - exact(b));
+};

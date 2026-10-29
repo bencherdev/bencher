@@ -139,16 +139,19 @@ test("values take their names from the plot, and ask only for those it drew no l
 	expect(asked).toEqual([`/v0/projects/hashbrown/measures/${uuid(8)}`]);
 });
 
-// Kills a search that offers what the box already holds, a typed search that
-// never reaches the API, and a pick that does not reach the query.
+// Kills a search that offers what the box already holds, a search that asks
+// anything but the console's most recently used, a typed search that never
+// reaches the API, and a pick that does not reach the query.
 test("the add control searches, leaves out what the box holds, and adds the pick", async () => {
 	const { api, asked } = reading((path) =>
 		path.includes("search=feat")
-			? [{ uuid: uuid(2), name: "feature" }]
-			: [
-					{ uuid: uuid(1), name: "main" },
-					{ uuid: uuid(2), name: "feature" },
-				],
+			? { branches: [{ uuid: uuid(2), name: "feature" }] }
+			: {
+					branches: [
+						{ uuid: uuid(1), name: "main" },
+						{ uuid: uuid(2), name: "feature" },
+					],
+				},
 	);
 	const edits = render(api, QUERY, { perf: PERF });
 	await page.getByRole("button", { name: "Add branch" }).click();
@@ -158,9 +161,10 @@ test("the add control searches, leaves out what the box holds, and adds the pick
 		page.getByRole("searchbox", { name: "Search branches" }),
 		"feat",
 	);
-	await expect
-		.poll(() => asked.some((path) => path.includes("search=feat")))
-		.toBe(true);
+	const searches =
+		"/v0/console/projects/hashbrown/branches?per_page=32&sort=last_used";
+	await expect.poll(() => asked).toContain(`${searches}&search=feat`);
+	expect(asked[0]).toBe(searches);
 	await menu.getByRole("menuitem", { name: "feature" }).click();
 	expect(edits.at(-1)?.branches).toEqual([
 		{ uuid: uuid(1) },
@@ -173,8 +177,9 @@ test("the add control searches, leaves out what the box holds, and adds the pick
 
 // Kills suggestions read from the drawn lines alone, which miss the
 // benchmark's other variants, a tag counted once however many variants carry
-// it, and a tag offered again when a set already holds it alone.
-test("the parameters box suggests every variant's tags, counted, but not one already chosen", async () => {
+// it, a tag offered again when a set already holds it alone, and tags not
+// ranked by their most recent variant.
+test("the parameters box suggests every variant's tags, counted and most recent first, but not one already chosen", async () => {
 	const { api, asked } = reading((path) =>
 		path.includes("/variants")
 			? [
@@ -192,7 +197,7 @@ test("the parameters box suggests every variant's tags, counted, but not one alr
 		.element(menu.getByRole("menuitem", { name: /^simd=neon/ }))
 		.toHaveTextContent("1 variant");
 	expect(asked).toEqual([
-		`/v0/projects/hashbrown/benchmarks/${uuid(5)}/variants?per_page=255`,
+		`/v0/projects/hashbrown/benchmarks/${uuid(5)}/variants?per_page=255&sort=last_used`,
 	]);
 	await expect
 		.element(menu.getByRole("menuitem", { name: /^threads=1\b/ }))
@@ -200,6 +205,12 @@ test("the parameters box suggests every variant's tags, counted, but not one alr
 	expect(
 		menu.getByRole("menuitem", { name: /^simd=avx2/ }).elements(),
 	).toHaveLength(0);
+	expect(
+		menu
+			.getByRole("menuitem")
+			.elements()
+			.map(({ firstChild }) => firstChild?.textContent),
+	).toEqual(["threads=1", "threads=4", "simd=sse", "simd=neon", "threads=8"]);
 });
 
 // Kills a set removed by keyboard taking focus with it to the page.
