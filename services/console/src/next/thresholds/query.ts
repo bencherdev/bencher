@@ -17,8 +17,8 @@ import {
 	thresholdsParams,
 } from "./search";
 
-/** The fixed height a list row is drawn at, wide and narrow. */
-export const ROW_HEIGHT = { wide: 40, narrow: 60 } as const;
+/** The fixed height a list row is drawn at, by the lines it takes. */
+export const ROW_HEIGHT = { 1: 40, 2: 60, 3: 78, 4: 96, 5: 114 } as const;
 /** The alerts endpoint pages at most this many. */
 const MAX_ALERTS = 64;
 /** The fixed height an alert's row is drawn at, wide and narrow, as a report's line rows are. */
@@ -26,7 +26,7 @@ const ALERT_HEIGHT = { wide: 44, narrow: 64 } as const;
 
 /** The size of every batch of the list on this screen: what fills it, plus a margin. */
 export const screenBatch = () =>
-	batchSize(window.innerHeight, narrow() ? ROW_HEIGHT.narrow : ROW_HEIGHT.wide);
+	batchSize(window.innerHeight, narrow() ? ROW_HEIGHT[2] : ROW_HEIGHT[1]);
 
 const narrow = () => window.matchMedia(NARROW).matches;
 

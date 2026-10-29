@@ -1,17 +1,25 @@
 import "../reports/reports.css";
 import "./dimensions.css";
 import { focusManager } from "@tanstack/solid-query";
+import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type { JsonConsoleBranchRow } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { type Sent, bootstrapOf, mount } from "../settings/testing";
 import {
+	FLOOR_WIDTHS,
+	STRESS,
 	columnEdges,
+	expectFoldAt,
 	expectNameStartsWithText,
 	expectRowOpens,
+	nameFloor,
+	sizeTo,
 } from "../ui/testing";
 import List from "./List";
+import type { Row } from "./data";
+import RowTable from "./RowTable";
 
 let dispose: (() => void) | undefined;
 
@@ -121,7 +129,7 @@ test("archiving dims the row at once, and a refusal puts it back and says why", 
 	await expect
 		.element(impact)
 		.toHaveTextContent("Hides its lines and archives 1 threshold");
-	await impact.getByRole("button", { name: "Archive feature-simd" }).click();
+	await impact.getByRole("button", { name: "Archive", exact: true }).click();
 
 	await expect
 		.element(rowOf("feature-simd"))
@@ -173,7 +181,7 @@ test("an Undo before the archive lands is sent after it", async () => {
 	await page.getByRole("button", { name: "Archive devel" }).click();
 	await page
 		.getByRole("group", { name: "Archive devel" })
-		.getByRole("button", { name: "Archive devel" })
+		.getByRole("button", { name: "Archive", exact: true })
 		.click();
 	// The confirm left with the impact line; the focus moves to the row's Undo.
 	await expect
@@ -323,7 +331,7 @@ test("a landed archive keeps its row dimmed with Undo, with no new read of the l
 	await page.getByRole("button", { name: "Archive main" }).click();
 	await page
 		.getByRole("group", { name: "Archive main" })
-		.getByRole("button", { name: "Archive main" })
+		.getByRole("button", { name: "Archive", exact: true })
 		.click();
 	await expect.poll(() => fake.sent.length).toBe(1);
 	// The change has landed and the page has had its chance to refetch.
@@ -473,7 +481,7 @@ const archiveRow = async (name: string) => {
 	await page.getByRole("button", { name: `Archive ${name}` }).click();
 	await page
 		.getByRole("group", { name: `Archive ${name}` })
-		.getByRole("button", { name: `Archive ${name}` })
+		.getByRole("button", { name: "Archive", exact: true })
 		.click();
 };
 
@@ -808,7 +816,7 @@ test("the focus follows the row through its impact line, Escape, and Undo", asyn
 		document.activeElement?.textContent;
 
 	await page.getByRole("button", { name: "Archive main" }).click();
-	await expect.poll(focused).toBe("Archive main");
+	await expect.poll(focused).toBe("Archive");
 	expect(
 		document.activeElement?.closest("fieldset")?.getAttribute("aria-label"),
 	).toBe("Archive main");
@@ -942,7 +950,7 @@ test("a row opens its branch from anywhere on it, and Archive keeps its own clic
 });
 
 // Kills a dimension list laid out by the rows drawn (an auto layout), whose
-// columns shift as rows of other widths scroll into view, at desktop and at 768 px.
+// columns shift as rows of other widths scroll into view, at desktop and on a small laptop.
 test("columns hold still as rows of other widths scroll into view", async () => {
 	const many = Array.from({ length: 300 }, (_, index) =>
 		index < 100
@@ -952,7 +960,7 @@ test("columns hold still as rows of other widths scroll into view", async () => 
 					start_point: "a-start-point-with-a-long-name",
 				}),
 	);
-	for (const width of [1280, 768]) {
+	for (const width of [1280, 1024]) {
 		await page.viewport(width, 720);
 		const fake = api({ lists: () => many });
 		dispose = mount(
@@ -1013,3 +1021,147 @@ test("on a phone, each row folds on its own, whatever rows are drawn beside it",
 		await firstRow(short),
 	);
 });
+
+// Kills a dimension list that keeps its columns where its name falls under 16
+// characters (a fold at a fixed screen width, or none), with its Thresholds
+// column and without, and one that scrolls sideways in its own track instead.
+test("a dimension list holds 16 characters of name, or folds", async () => {
+	const held: Record<string, unknown> = {};
+	for (const dimension of ["branches", "benchmarks"] as const) {
+		for (const width of FLOOR_WIDTHS) {
+			await page.viewport(width, 720);
+			const table = await showRows(dimension, rows(dimension));
+			held[`${dimension} ${width}`] = nameFloor(table, nameOf(dimension));
+			dispose?.();
+			dispose = undefined;
+			document.body.replaceChildren();
+		}
+	}
+	const folded = { name: "folded", sideways: false };
+	const fine = { name: "held", sideways: false };
+	expect(held).toEqual({
+		"branches 320": folded,
+		"branches 768": folded,
+		"branches 1024": fine,
+		"branches 1440": fine,
+		"benchmarks 320": folded,
+		"benchmarks 768": fine,
+		"benchmarks 1024": fine,
+		"benchmarks 1440": fine,
+	});
+});
+
+// Kills a dimension list that folds a pixel late or early, keeps its columns
+// beside a page's rail at 768, and keeps a branch's count on its name's line
+// where it leaves the name under 16 characters.
+test("a dimension list folds at its own width, and its count gives way to the name", async () => {
+	await page.viewport(1440, 720);
+	const branches = await showRows("branches", rows("branches"));
+	expectFoldAt(branches, "Branch", 874);
+	// 317 is the widest box where Chromium's two lines leave the name short; the band holds for WebKit's wider ch.
+	for (const width of [317, 322]) {
+		sizeTo(branches, width);
+		expect(nameFloor(branches, ""), `at ${width}`).toEqual({
+			name: "folded",
+			sideways: false,
+		});
+	}
+	document.body.style.width = "";
+	dispose?.();
+	document.body.replaceChildren();
+	const benchmarks = await showRows("benchmarks", rows("benchmarks"));
+	expectFoldAt(benchmarks, "Benchmark", 667);
+	sizeTo(benchmarks, 474);
+	expect(nameFloor(benchmarks, "")).toEqual({
+		name: "folded",
+		sideways: false,
+	});
+	document.body.style.width = "";
+});
+
+// Kills an impact line that keeps to its row's name column once folded.
+test("a folded row's impact line takes the whole row", async () => {
+	await page.viewport(320, 720);
+	const table = await showRows(
+		"branches",
+		rows("branches"),
+		rows("branches")[0]?.uuid,
+	);
+	const impact = table.querySelector('td[data-fold="full"]') as HTMLElement;
+	const row = impact.parentElement as HTMLElement;
+	const style = getComputedStyle(row);
+	expect(impact.getBoundingClientRect().width).toBeCloseTo(
+		row.clientWidth -
+			Number.parseFloat(style.paddingLeft) -
+			Number.parseFloat(style.paddingRight),
+		0,
+	);
+});
+
+// Kills a dimension list whose rows not drawn keep the height of rows that
+// no longer fold, once its own box narrows with the screen unchanged.
+test("rows not drawn follow a dimension list that folds", async () => {
+	await page.viewport(1440, 640);
+	const table = await showRows(
+		"branches",
+		Array.from({ length: 100 }, (_, index) => row(`branch-${index}`)),
+	);
+	const body = table.querySelector("tbody") as HTMLElement;
+	const box = table.closest(".ui-table-scroll")?.parentElement as HTMLElement;
+	box.style.width = "1000px";
+	await expect
+		.poll(() => Math.round(body.getBoundingClientRect().height))
+		.toBe(100 * 40);
+	box.style.width = "600px";
+	await expect
+		.poll(() => Math.round(body.getBoundingClientRect().height))
+		.toBe(100 * 60);
+});
+
+/** A dimension's rows in their table alone, `arming` one's impact line open. */
+const showRows = async (
+	dimension: "branches" | "benchmarks",
+	shown: Row[],
+	arming?: string,
+) => {
+	const root = document.body.appendChild(document.createElement("div"));
+	dispose = render(
+		() => (
+			<RowTable
+				slug="hashbrown"
+				dimension={dimension}
+				archived={false}
+				rows={shown}
+				total={shown.length}
+				edit={true}
+				arming={arming}
+				busy={false}
+				loading={false}
+				onRetry={undefined}
+				onRange={() => {}}
+				onArm={() => {}}
+				onChange={() => {}}
+			/>
+		),
+		root,
+	);
+	const table = page.getByRole("table", { name: /^Active / });
+	await expect.element(table).toBeVisible();
+	await expect
+		.poll(() => table.element().querySelectorAll("tr[aria-rowindex]").length)
+		.toBeGreaterThan(0);
+	await document.fonts.ready;
+	return table.element();
+};
+
+const nameOf = (dimension: "branches" | "benchmarks") =>
+	dimension === "branches" ? "Branch" : "Benchmark";
+
+/** Rows at the caps; a benchmark has no thresholds. */
+const rows = (dimension: "branches" | "benchmarks"): Row[] =>
+	[row(STRESS.branch, { thresholds: 999 }), row(STRESS.name)].map(
+		({ thresholds, held_thresholds, ...rest }) =>
+			dimension === "branches"
+				? { ...rest, thresholds, held_thresholds }
+				: { ...rest, variants: 999 },
+	);

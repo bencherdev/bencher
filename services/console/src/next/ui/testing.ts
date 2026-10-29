@@ -2,19 +2,21 @@ import { expect } from "vitest";
 
 /**
  * The text a node shows, read as voice control and axe's label-in-name check
- * read it: text nodes in order, each element's own text trimmed, so a space
+ * read it: the text nodes of what is drawn, in order, each element's own text trimmed, so a space
  * inside a child's edge is lost and two parts with none between them run together.
  */
 export const shownText = (node: Node): string =>
 	node.nodeType === Node.TEXT_NODE
 		? (node.nodeValue ?? "")
-		: node.nodeName === "BR"
-			? " "
-			: [...node.childNodes]
-					.map(shownText)
-					.join("")
-					.replace(/\s+/g, " ")
-					.trim();
+		: node instanceof Element && !node.checkVisibility()
+			? ""
+			: node.nodeName === "BR"
+				? " "
+				: [...node.childNodes]
+						.map(shownText)
+						.join("")
+						.replace(/\s+/g, " ")
+						.trim();
 
 /** Asserts that the element's accessible name starts with the text it shows. */
 export const expectNameStartsWithText = (element: Element | null) => {
@@ -80,4 +82,100 @@ export const columnEdges = (table: Element) => {
 			table.querySelector("tbody tr[aria-rowindex]")?.children ?? [],
 		),
 	};
+};
+
+/**
+ * How `table` holds its names: `held` with its name column at least 16
+ * characters (`--size-name-min`) wide, `folded` with every cut name in a
+ * folded row that wide, or the width a name falls to; and whether its own
+ * track scrolls sideways.
+ */
+export const nameFloor = (table: Element, column: string) => {
+	const scroll = table.closest(".ui-table-scroll") as HTMLElement;
+	const sideways = scroll.scrollWidth > scroll.clientWidth;
+	const names = [
+		...table.querySelectorAll<HTMLElement>('tbody td[data-fold="l1"]'),
+	];
+	if (names.length === 0) {
+		return { name: "no rows", sideways };
+	}
+	const probe = document.createElement("span");
+	probe.style.cssText =
+		"display: block; width: var(--size-name-min); font-weight: normal";
+	names[0]?.append(probe);
+	const floor = probe.getBoundingClientRect().width - 0.5;
+	probe.remove();
+	if (getComputedStyle(table).display === "block") {
+		const cut = names.filter((cell) => {
+			const text = document.createRange();
+			text.selectNodeContents(cell);
+			return text.getBoundingClientRect().width > cell.clientWidth + 0.5;
+		});
+		const width = Math.min(...cut.map((cell) => cell.clientWidth));
+		return {
+			name: width >= floor ? "folded" : `folded ${Math.round(width)}px`,
+			sideways,
+		};
+	}
+	const header = [...table.querySelectorAll("thead th")].find(
+		(th) => th.textContent?.trim() === column,
+	) as HTMLElement;
+	const style = getComputedStyle(header);
+	const width =
+		header.getBoundingClientRect().width -
+		Number.parseFloat(style.paddingLeft) -
+		Number.parseFloat(style.paddingRight);
+	return {
+		name: width >= floor ? "held" : `${Math.round(width)}px`,
+		sideways,
+	};
+};
+
+/** Sizes the page so `table`'s own box is `width` wide, the screen unchanged. */
+export const sizeTo = (table: Element, width: number) => {
+	const scroll = table.closest(".ui-table-scroll") as HTMLElement;
+	document.body.style.width = "";
+	document.body.style.width = `${document.body.clientWidth - scroll.clientWidth + width}px`;
+	expect(scroll.clientWidth).toBe(width);
+};
+
+/** The lines each of `table`'s rows takes, as `onLines` reads them. */
+export const linesOf = (table: Element) =>
+	Number(getComputedStyle(table).getPropertyValue("--ui-table-lines")) || 1;
+
+/** The widths every table family holds its name column at, or folds. */
+export const FLOOR_WIDTHS = [320, 768, 1024, 1440] as const;
+
+/** Names near their caps: a branch of 252 bytes in many segments, and 64 bytes with no break. */
+export const STRESS = {
+	branch: `release/${"subsystem/".repeat(23)}very-long-leaf`,
+	name: "a".repeat(64),
+} as const;
+
+/** Asserts `table` folds with its box a pixel under `fold` and holds its `column` at least 16 characters wide a pixel over. */
+export const expectFoldAt = (table: Element, column: string, fold: number) => {
+	sizeTo(table, fold - 1);
+	expect(getComputedStyle(table).display, `at ${fold - 1}`).toBe("block");
+	sizeTo(table, fold + 1);
+	expect(nameFloor(table, column), `at ${fold + 1}`).toEqual({
+		name: "held",
+		sideways: false,
+	});
+	document.body.style.width = "";
+};
+
+/** Asserts `table`'s folded rows take `lines` lines with its box `width` wide and one fewer a pixel wider, each holding 16 characters of name. */
+export const expectLinesAt = (table: Element, width: number, lines: number) => {
+	for (const [at, taken] of [
+		[width, lines],
+		[width + 1, lines - 1],
+	] as const) {
+		sizeTo(table, at);
+		expect(linesOf(table), `at ${at}`).toBe(taken);
+		expect(nameFloor(table, ""), `at ${at}`).toEqual({
+			name: "folded",
+			sideways: false,
+		});
+	}
+	document.body.style.width = "";
 };

@@ -141,15 +141,18 @@ test("the Latency threshold reads its model and counts its alerts in the window"
 	const row = rows(page).filter({
 		has: page.getByRole("link", { name: LATENCY }),
 	});
-	await expect(row.getByRole("cell")).toHaveText([
-		"main",
-		"ubuntu-latest",
-		"Latency",
-		"value",
-		"every variant",
-		"t_test · upper_boundary 0.99 · max_sample_size 64 · min_sample_size 4",
-		"1 active 2 raised",
-	]);
+	await expect(row.getByRole("cell")).toHaveText(
+		[
+			"main",
+			"ubuntu-latest",
+			"Latency",
+			"value",
+			"every variant",
+			"t_test · upper_boundary 0.99 · max_sample_size 64 · min_sample_size 4",
+			"1 active 2 raised",
+		],
+		{ useInnerText: true },
+	);
 
 	await page.getByRole("radio", { name: "Custom" }).click();
 	await expect(page).toHaveURL(/[?&]start_time=\d+&end_time=\d+/);
@@ -213,7 +216,8 @@ test("Archived lists a threshold whose branch was archived, and a measure filter
 	await expect(heading(page)).toHaveText("1 archived threshold");
 	await expect(rows(page)).toHaveCount(1);
 	await expect(rows(page).first().getByRole("cell").first()).toHaveText(
-		new RegExp(`^retired · archived ${stampedDay}$`),
+		new RegExp(`^retired\\s+· archived ${stampedDay}$`),
+		{ useInnerText: true },
 	);
 	await page.getByRole("button", { name: "branch any" }).click();
 	await expect(

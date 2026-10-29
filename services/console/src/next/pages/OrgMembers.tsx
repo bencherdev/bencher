@@ -286,7 +286,7 @@ const MemberTable = (props: {
 	reader: string;
 	onRemove: (member: JsonMember) => void;
 }) => (
-	<Table fold aria-label="Members">
+	<Table fold={369} aria-label="Members">
 		<thead>
 			<tr>
 				<th scope="col">Name</th>
@@ -302,7 +302,7 @@ const MemberTable = (props: {
 					const you = () => member.uuid === props.reader;
 					return (
 						<tr>
-							<td data-fold="l1">
+							<td data-fold="l1" class="ui-table-name">
 								<span class="ui-parts">
 									<b>
 										<Truncate text={member.name} reveal />
@@ -315,7 +315,7 @@ const MemberTable = (props: {
 									</Show>
 								</span>
 							</td>
-							<td data-fold="l2" class="muted">
+							<td data-fold="l2" class="muted ui-table-name">
 								<span class="ui-parts">
 									<Truncate text={member.email} reveal />
 								</span>

@@ -33,10 +33,16 @@
 	max-width: 360px;
 }
 /* Columns sized by their headers alone, so they hold still as rows come and go. */
-@media (min-width: 768px) {
+@container ui-table not (width <= 10em) {
 	.th-table {
 		table-layout: fixed;
-		min-width: 940px;
+	}
+	/* Unfolded, the link is the branch alone. */
+	.th-link.ui-parts {
+		display: inline;
+	}
+	.th-link.ui-parts > :not(:first-child) {
+		display: none;
 	}
 }
 .th-table tbody tr.th-spacer td {
@@ -291,6 +297,10 @@
 	.th-narrow {
 		display: flex;
 	}
+}
+
+/* A folded thresholds list, in step with the design system's Table fold. */
+@container ui-table (width <= 10em) {
 	.th-table.ui-table[data-fold] tbody tr.th-row {
 		box-sizing: border-box;
 		height: 60px;
@@ -301,10 +311,83 @@
 		max-width: none;
 		line-height: 1.4;
 	}
+	/* What archived the row, then its link's parts, which share the line. */
+	.th-table.ui-table[data-fold] tbody td.th-branch {
+		display: flex;
+	}
+	.th-branch > .th-from {
+		flex: none;
+		white-space: pre;
+	}
+	.th-branch > .th-link {
+		min-width: 0;
+	}
 	.th-table.ui-table[data-fold] tbody tr.th-spacer {
 		display: block;
 		min-height: 0;
 		padding: 0;
 		border: 0;
+	}
+}
+
+/* Where the sets and model leave the branch under 16 characters, they take a line of their own. The separator that would end a line stays in the text, unseen, so the link still reads as its name. */
+@container ui-table (width <= 457px) {
+	.th-table {
+		--ui-table-lines: 3;
+	}
+	.th-table.ui-table[data-fold] tbody tr.th-row {
+		height: 78px;
+		min-height: 78px;
+	}
+	.th-link.ui-parts {
+		grid-auto-flow: row;
+		grid-template-columns: repeat(3, minmax(auto, max-content));
+	}
+	.th-link.ui-parts > :is(:nth-child(3), :nth-child(4)) {
+		grid-area: 1 / 3;
+	}
+	.th-link.ui-parts > :nth-child(4) {
+		visibility: hidden;
+	}
+}
+
+/* Where the branch and testbed cannot share a line at 16 characters each, each takes its own. */
+@container ui-table (width <= 366px) {
+	.th-table {
+		--ui-table-lines: 4;
+	}
+	.th-table.ui-table[data-fold] tbody tr.th-row {
+		height: 96px;
+		min-height: 96px;
+	}
+	.th-link.ui-parts {
+		grid-template-columns: max-content max-content minmax(0, 1fr);
+	}
+	.th-link.ui-parts > :nth-child(1) {
+		grid-area: 1 / 1 / 2 / -1;
+	}
+	.th-link.ui-parts > :nth-child(2) {
+		grid-area: 1 / 1;
+		visibility: hidden;
+	}
+	.th-link.ui-parts > :nth-child(3) {
+		grid-area: 2 / 1 / 3 / -1;
+	}
+	.th-link.ui-parts > :nth-child(4) {
+		grid-area: 2 / 1;
+	}
+}
+
+/* Where the counts leave the measure under 16 characters, they take a line of their own too. */
+@container ui-table (width <= 363px) {
+	.th-table {
+		--ui-table-lines: 5;
+	}
+	.th-table.ui-table[data-fold] tbody tr.th-row {
+		height: 114px;
+		min-height: 114px;
+	}
+	.th-table.ui-table[data-fold] tbody tr.th-row > td[data-fold="n1"] {
+		grid-area: 3 / 1 / 4 / -1;
 	}
 }
