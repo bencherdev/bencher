@@ -18,7 +18,6 @@ plus = [
     "dep:bencher_oci_storage",
     "dep:bencher_rate_limiter",
     "dep:camino",
-    "dep:http",
     "dep:reqwest",
     "dep:serde",
     "dep:serde_json",
@@ -68,7 +67,7 @@ derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite", "32-column-tables"] }
 diesel_migrations.workspace = true
 dropshot.workspace = true
-http = { workspace = true, optional = true }
+http.workspace = true
 # The migrations mint JSONB with SQLite's own `jsonb()`, which needs SQLite 3.45
 # or later, so the crate that owns them pins the bundled amalgamation rather than
 # linking whatever the host happens to ship.
@@ -78,10 +77,12 @@ regex.workspace = true
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded.workspace = true
+sha2.workspace = true
 oso.workspace = true
 reqwest = { workspace = true, optional = true, features = ["query", "rustls-no-provider"] }
 sentry = { workspace = true, optional = true }
 slog.workspace = true
+subtle.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "time"] }
 tokio-rustls.workspace = true

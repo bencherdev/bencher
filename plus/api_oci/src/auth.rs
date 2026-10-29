@@ -14,7 +14,7 @@ use bencher_json::oci::{
 use bencher_json::{Jwt, OrganizationUuid, ProjectResourceId, ResourceName};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
-    context::{ApiContext, RateLimiting},
+    context::ApiContext,
     model::{
         organization::QueryOrganization,
         project::QueryProject,
@@ -588,7 +588,7 @@ pub fn apply_public_rate_limit(
     context: &ApiContext,
     rqctx: &RequestContext<ApiContext>,
 ) -> Result<(), HttpError> {
-    if let Some(remote_ip) = RateLimiting::remote_ip(log, rqctx.request.headers()) {
+    if let Some(remote_ip) = context.remote_ip(log, rqctx.request.headers()) {
         slog::debug!(log, "Applying OCI public request rate limit"; "remote_ip" => ?remote_ip);
         context.rate_limiting.public_request(remote_ip)?;
     }
@@ -676,7 +676,7 @@ async fn build_public_user(
     // Try as public OCI token (anonymous push) — must validate scope too.
     if let Ok(public_claims) = context.token_key.validate_oci_public(&token) {
         validate_oci_scope(&public_claims.oci, repository_str, &OciAction::Push)?;
-        let remote_ip = RateLimiting::remote_ip(log, rqctx.request.headers());
+        let remote_ip = context.remote_ip(log, rqctx.request.headers());
         slog::debug!(log, "OCI push with public token (anonymous)"; "remote_ip" => ?remote_ip);
         return Ok((PublicUser::Public(remote_ip), None));
     }

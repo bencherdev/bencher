@@ -266,6 +266,8 @@ async fn into_context(
         connection: Arc::new(tokio::sync::Mutex::new(database_connection)),
     };
 
+    let relay = bencher_schema::context::Relay::new(security.relay_secret.as_ref());
+
     info!(log, "Loading secret key");
     let token_key = TokenKey::new(
         security.issuer.unwrap_or_else(|| console_url.to_string()),
@@ -372,6 +374,7 @@ async fn into_context(
         rbac,
         messenger: smtp.into(),
         database,
+        relay,
         #[cfg(feature = "plus")]
         rate_limiting,
         #[cfg(feature = "plus")]

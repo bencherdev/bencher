@@ -57,4 +57,4 @@ pub use context::TestServerOptions;
 pub use log::LogCapture;
 #[cfg(feature = "plus")]
 pub use seed::TestProjectKey;
-pub use seed::{TestOrg, TestProject, TestUser};
+pub use seed::{TestOrg, TestProject, TestUser, session_cookie};

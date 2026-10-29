@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use async_trait::async_trait;
-use bencher_json::{Jwt, Sanitize, UserKey, UserKeyHash};
+use bencher_json::{DateTime, Jwt, Sanitize, SessionToken, UserKey, UserKeyHash};
 #[cfg(feature = "plus")]
 use bencher_json::{OAuthScopes, system::payment::JsonCustomer};
 use bencher_rbac::{
@@ -21,12 +21,18 @@ use oso::{PolarValue, ToPolar};
 use crate::context::OAuthServer;
 use crate::{
     context::{ApiContext, DbConnection, Rbac},
-    error::{BEARER_TOKEN_FORMAT, bad_request_error, issue_error, unauthorized_error},
+    error::{
+        BEARER_TOKEN_FORMAT, bad_request_error, forbidden_error, issue_error, unauthorized_error,
+    },
     model::{
         organization::OrganizationId,
         project::ProjectId,
         user::{
             key::{QueryUserKey, UserKeyId},
+            session::{
+                QuerySession, SessionId,
+                cookie::{CookieCredential, SessionCookie},
+            },
             token::QueryToken,
         },
     },
@@ -38,6 +44,8 @@ use super::QueryUser;
 use super::oauth::{authenticate, is_oauth_credential};
 
 const INVALID_USER_KEY: &str = "Invalid user key";
+const INVALID_SESSION: &str = "Invalid session";
+const CROSS_ORIGIN_SESSION: &str = "A session can change state only from the console's own origin";
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
@@ -59,21 +67,69 @@ impl AuthUser {
         context: &ApiContext,
         bearer_token: BearerToken,
     ) -> Result<Self, HttpError> {
-        // Check out a single connection for the entire auth flow:
-        // credential resolution and RBAC hydration share one pool checkout.
-        let conn = public_conn!(context);
-        let (query_user, credential) = match bearer_token {
-            BearerToken::Jwt(jwt) => Self::user_from_jwt(context, conn, &jwt)?,
-            BearerToken::UserKey(key) => {
-                let (query_user, query_key) = Self::user_from_user_key(context, conn, &key)?;
-                (query_user, AuthCredential::UserKey(query_key.id))
-            },
+        Self::from_pub_token(context, bearer_token)
+            .await?
+            .ok_or_else(|| dead_session(&context.console_url))
+    }
+
+    /// [`Self::from_token`] for a path open to the public, where a dead session cookie leaves the
+    /// request signed out, as `None`.
+    pub async fn from_pub_token(
+        context: &ApiContext,
+        bearer_token: BearerToken,
+    ) -> Result<Option<Self>, HttpError> {
+        let now = context.clock.now();
+        let (auth_user, renewal) = {
+            // Check out a single connection for the entire auth flow:
+            // credential resolution and RBAC hydration share one pool checkout.
+            let conn = public_conn!(context);
+            let (query_user, credential, renewal) = match bearer_token {
+                BearerToken::Jwt(jwt) => {
+                    let (query_user, credential) = Self::user_from_jwt(context, conn, &jwt)?;
+                    (query_user, credential, None)
+                },
+                BearerToken::UserKey(key) => {
+                    let (query_user, query_key) = Self::user_from_user_key(context, conn, &key)?;
+                    (query_user, AuthCredential::UserKey(query_key.id), None)
+                },
+                BearerToken::Session(cookie) => {
+                    let Some((query_user, query_session)) =
+                        Self::user_from_session(context, conn, &cookie, now)?
+                    else {
+                        return Ok(None);
+                    };
+                    let renewal = query_session.needs_renewal(now).then_some(query_session.id);
+                    (
+                        query_user,
+                        AuthCredential::Session(Some(query_session.id)),
+                        renewal,
+                    )
+                },
+            };
+
+            #[cfg(feature = "plus")]
+            context.rate_limiting.user_request(query_user.uuid)?;
+
+            (Self::load_inner(conn, query_user, credential)?, renewal)
         };
 
-        #[cfg(feature = "plus")]
-        context.rate_limiting.user_request(query_user.uuid)?;
+        // Written once the read connection is back in its pool.
+        if let Some(session_id) = renewal {
+            Self::renew_session(context, session_id, now);
+        }
 
-        Self::load_inner(conn, query_user, credential)
+        Ok(Some(auth_user))
+    }
+
+    /// Renew a session, unless the writer is busy or the write fails: a renewal never holds up
+    /// or fails the request, and a later use renews the session instead.
+    fn renew_session(context: &ApiContext, session_id: SessionId, now: DateTime) {
+        let Ok(mut conn) = context.database.connection.try_lock() else {
+            return;
+        };
+        if let Err(e) = QuerySession::renew(&mut conn, session_id, now) {
+            let _err = issue_error("Failed to renew a session", "Failed to renew a session:", e);
+        }
     }
 
     fn user_from_jwt(
@@ -110,11 +166,74 @@ impl AuthUser {
         }
 
         let credential = if claims.audience() == Audience::Client.as_str() {
-            AuthCredential::Session
+            AuthCredential::Session(None)
         } else {
             AuthCredential::ApiToken
         };
         Ok((query_user, credential))
+    }
+
+    /// Authenticate by a session cookie: one the API honors, from the console's own origin when
+    /// the request changes state, of a session that has not ended, whose user is not locked.
+    /// A session that is malformed, unknown, ended, or a locked user's is dead, as `None`.
+    fn user_from_session(
+        context: &ApiContext,
+        conn: &mut DbConnection,
+        cookie: &CookieCredential,
+        now: DateTime,
+    ) -> Result<Option<(QueryUser, QuerySession)>, HttpError> {
+        let console_url = &context.console_url;
+        let Some(value) = cookie.honored(console_url, &context.relay) else {
+            return Err(missing_credential());
+        };
+        if !cookie.is_allowed_origin(console_url) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SessionAuthFailed(
+                bencher_otel::SessionAuthFailureReason::CrossOrigin,
+            ));
+            return Err(forbidden_error(CROSS_ORIGIN_SESSION));
+        }
+
+        let Ok(token) = value.parse::<SessionToken>() else {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SessionAuthFailed(
+                bencher_otel::SessionAuthFailureReason::Invalid,
+            ));
+            return Ok(None);
+        };
+        let lookup = QuerySession::from_token(conn, &token)
+            .optional()
+            .inspect_err(|err| {
+                issue_error(
+                    "Failed to look up a session",
+                    "Failed to look up a session by its token's hash:",
+                    err,
+                );
+            })
+            .map_err(|_err| unauthorized_error(INVALID_SESSION))?;
+        let Some((query_user, query_session)) = lookup else {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SessionAuthFailed(
+                bencher_otel::SessionAuthFailureReason::NotFound,
+            ));
+            return Ok(None);
+        };
+        if query_session.is_expired(now) {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SessionAuthFailed(
+                bencher_otel::SessionAuthFailureReason::Expired,
+            ));
+            return Ok(None);
+        }
+        if query_user.locked {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SessionAuthFailed(
+                bencher_otel::SessionAuthFailureReason::Locked,
+            ));
+            return Ok(None);
+        }
+
+        Ok(Some((query_user, query_session)))
     }
 
     /// Authenticate via a `bencher_user_*` API key.
@@ -333,7 +452,16 @@ impl AuthUser {
 
     /// Whether the request authenticated with a login session rather than a token or key.
     pub fn is_session(&self) -> bool {
-        matches!(self.credential, AuthCredential::Session)
+        matches!(self.credential, AuthCredential::Session(_))
+    }
+
+    /// The browser session the request authenticated with, if it presented a session cookie.
+    pub fn session_id(&self) -> Option<SessionId> {
+        if let AuthCredential::Session(session_id) = self.credential {
+            session_id
+        } else {
+            None
+        }
     }
 
     pub fn user_key_id(&self) -> Option<UserKeyId> {
@@ -341,7 +469,7 @@ impl AuthUser {
             AuthCredential::UserKey(user_key_id) => Some(user_key_id),
             #[cfg(feature = "plus")]
             AuthCredential::OAuthGrant { user_key_id } => user_key_id,
-            AuthCredential::Session | AuthCredential::ApiToken => None,
+            AuthCredential::Session(_) | AuthCredential::ApiToken => None,
         }
     }
 
@@ -404,8 +532,8 @@ impl Sanitize for AuthUser {
 
 #[derive(Debug, Clone, Copy)]
 pub enum AuthCredential {
-    /// A `client` audience JWT from a login.
-    Session,
+    /// A browser session: a session cookie, or a `client` audience JWT from a login, which has none.
+    Session(Option<SessionId>),
     /// A deprecated user API token, or a user loaded internally.
     ApiToken,
     UserKey(UserKeyId),
@@ -417,13 +545,15 @@ pub enum AuthCredential {
 }
 
 // https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/bearer.rs
-/// A bearer credential extracted from the `Authorization` header.
+/// A credential extracted from the `Authorization` header, or, from a request without one,
+/// its session cookie.
 ///
-/// The two shapes are distinguished by prefix: `bencher_user_*` is a user API key,
+/// The two header shapes are distinguished by prefix: `bencher_user_*` is a user API key,
 /// anything else is parsed as a JWT.
 pub enum BearerToken {
     Jwt(Jwt),
     UserKey(UserKey),
+    Session(CookieCredential),
 }
 
 impl From<Jwt> for BearerToken {
@@ -472,6 +602,18 @@ impl BearerToken {
                 .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))
         }
     }
+
+    /// Whether the API honors the credential at all: a session cookie, only in the form the
+    /// console's URL calls for, and only from the relay once a relay secret is set.
+    pub fn is_honored(&self, context: &ApiContext) -> bool {
+        if let Self::Session(cookie) = self {
+            cookie
+                .honored(&context.console_url, &context.relay)
+                .is_some()
+        } else {
+            true
+        }
+    }
 }
 
 #[async_trait]
@@ -482,9 +624,9 @@ impl SharedExtractor for BearerToken {
         let headers = rqctx.request.headers();
 
         let Some(authorization) = headers.get(bencher_json::AUTHORIZATION) else {
-            return Err(bad_request_error(format!(
-                "Request is missing \"Authorization\" header. {BEARER_TOKEN_FORMAT}"
-            )));
+            return CookieCredential::from_request(&rqctx.request)
+                .map(Self::Session)
+                .ok_or_else(missing_credential);
         };
         let authorization_str = match authorization.to_str() {
             Ok(authorization_str) => authorization_str,
@@ -509,6 +651,21 @@ impl SharedExtractor for BearerToken {
             parameters: Vec::new(),
         }
     }
+}
+
+fn missing_credential() -> HttpError {
+    unauthorized_error(format!(
+        "Request is missing \"Authorization\" header. {BEARER_TOKEN_FORMAT}"
+    ))
+}
+
+fn dead_session(console_url: &url::Url) -> HttpError {
+    let mut error = unauthorized_error(INVALID_SESSION);
+    error.headers_mut().append(
+        http::header::SET_COOKIE,
+        SessionCookie::new(console_url).clear(),
+    );
+    error
 }
 
 #[derive(Debug, Clone, Copy)]

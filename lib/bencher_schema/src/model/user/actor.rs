@@ -5,6 +5,7 @@ use dropshot::{
     ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
     ServerContext, SharedExtractor,
 };
+use http::HeaderMap;
 use slog::Logger;
 
 use crate::{
@@ -19,7 +20,11 @@ use crate::{
     },
 };
 
-use super::public::{PubBearerToken, PublicUser};
+use super::{
+    auth::BearerToken,
+    public::{PubBearerToken, PublicUser},
+    session::cookie::CookieCredential,
+};
 
 const INVALID_PROJECT_KEY: &str = "Invalid project key";
 
@@ -51,21 +56,28 @@ impl From<super::auth::AuthUser> for ApiActor {
     }
 }
 
-pub struct PubProjectBearerToken(Option<String>);
+/// The request's `Authorization` bearer credential, or, from a request without that header,
+/// its session cookie.
+pub struct PubProjectBearerToken(Option<ActorCredential>);
+
+impl PubProjectBearerToken {
+    /// The request's bearer credential alone, never its session cookie.
+    pub fn bearer_only(headers: &HeaderMap) -> Self {
+        Self(bearer(headers).map(ActorCredential::Bearer))
+    }
+}
 
 #[async_trait]
 impl SharedExtractor for PubProjectBearerToken {
     async fn from_request<Context: ServerContext>(
         rqctx: &RequestContext<Context>,
     ) -> Result<Self, HttpError> {
-        let raw = rqctx
-            .request
-            .headers()
-            .get(bencher_json::AUTHORIZATION)
-            .and_then(|v| v.to_str().ok())
-            .and_then(bencher_json::strip_bearer_token)
-            .map(String::from);
-        Ok(Self(raw))
+        let headers = rqctx.request.headers();
+        Ok(if headers.contains_key(bencher_json::AUTHORIZATION) {
+            Self::bearer_only(headers)
+        } else {
+            Self(CookieCredential::from_request(&rqctx.request).map(ActorCredential::Session))
+        })
     }
 
     fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
@@ -85,6 +97,19 @@ impl ApiActor {
             #[cfg(feature = "plus")]
             rqctx.request.headers(),
             pub_project_bearer_token,
+        )
+        .await
+    }
+
+    /// [`Self::new`] for a path that takes bearer credentials alone and never reads a session
+    /// cookie.
+    pub async fn new_bearer_only(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
+        Self::from_token(
+            &rqctx.log,
+            rqctx.context(),
+            #[cfg(feature = "plus")]
+            rqctx.request.headers(),
+            PubProjectBearerToken::bearer_only(rqctx.request.headers()),
         )
         .await
     }
@@ -113,23 +138,22 @@ impl ApiActor {
     pub async fn from_token(
         log: &Logger,
         context: &ApiContext,
-        #[cfg(feature = "plus")] headers: &crate::HeaderMap,
+        #[cfg(feature = "plus")] headers: &HeaderMap,
         pub_project_bearer_token: PubProjectBearerToken,
     ) -> Result<Self, HttpError> {
-        let raw_bearer = pub_project_bearer_token.0.as_deref();
-
-        if let Some(raw) = raw_bearer.filter(|r| r.starts_with(ProjectKey::PREFIX)) {
-            return Self::authenticate_project_key(log, context, raw).await;
-        }
-
-        let pub_bearer_token = match raw_bearer {
-            Some(raw) => {
-                let bearer_token = super::auth::BearerToken::from_raw(raw)
+        let bearer_token = match pub_project_bearer_token.0 {
+            Some(ActorCredential::Bearer(raw)) => {
+                if raw.starts_with(ProjectKey::PREFIX) {
+                    return Self::authenticate_project_key(log, context, &raw).await;
+                }
+                let bearer_token = BearerToken::from_raw(&raw)
                     .map_err(|_err| unauthorized_error("Invalid authorization token"))?;
-                PubBearerToken::from(Some(bearer_token))
+                Some(bearer_token)
             },
-            None => PubBearerToken::from(None),
+            Some(ActorCredential::Session(cookie)) => Some(BearerToken::Session(cookie)),
+            None => None,
         };
+        let pub_bearer_token = PubBearerToken::from(bearer_token);
         let public_user = PublicUser::from_token(
             log,
             context,
@@ -186,4 +210,17 @@ impl ApiActor {
 
         Ok(Self::ProjectKey(ProjectKeyActor { key_id, project_id }))
     }
+}
+
+enum ActorCredential {
+    Bearer(String),
+    Session(CookieCredential),
+}
+
+fn bearer(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(bencher_json::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(bencher_json::strip_bearer_token)
+        .map(String::from)
 }

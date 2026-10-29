@@ -8,8 +8,8 @@
 )]
 //! Integration tests for user CRUD endpoints.
 
-use bencher_api_tests::{TestServer, TestUser, helpers::seed_token};
-use bencher_json::{JsonUser, JsonUserKeyCreated, UserKey};
+use bencher_api_tests::{TestServer, TestUser, helpers::seed_token, session_cookie};
+use bencher_json::{JsonUser, JsonUserKeyCreated, SessionToken, UserKey};
 use http::StatusCode;
 
 // GET /v0/users - admin can list all users
@@ -365,6 +365,32 @@ async fn users_update_admin_and_locked_resend_allowed() {
     assert_eq!(status, StatusCode::OK);
 }
 
+// Fails if locking a user leaves any of their sessions to work again once they are unlocked,
+// or ends another user's session.
+#[tokio::test]
+async fn users_lock_ends_their_sessions() {
+    let (server, admin, user) = setup_admin_and_user().await;
+    let sessions = [server.session(&user), server.session(&user)];
+    let admin_session = server.session(&admin);
+
+    for locked in [true, false] {
+        let body = serde_json::json!({ "locked": locked });
+        let status = patch_user(&server, &admin.token, &user, &body).await;
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    for session in &sessions {
+        assert_eq!(
+            view_with_session(&server, session, &user).await,
+            StatusCode::UNAUTHORIZED
+        );
+    }
+    assert_eq!(
+        view_with_session(&server, &admin_session, &admin).await,
+        StatusCode::OK
+    );
+}
+
 /// The first user to sign up is the server admin; the second is not.
 async fn setup_admin_and_user() -> (TestServer, TestUser, TestUser) {
     let server = TestServer::new().await;
@@ -428,4 +454,20 @@ async fn view_user(server: &TestServer, admin: &TestUser, user: &TestUser) -> Js
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::OK);
     resp.json().await.expect("Failed to parse response")
+}
+
+async fn view_with_session(
+    server: &TestServer,
+    session: &SessionToken,
+    user: &TestUser,
+) -> StatusCode {
+    let user_slug: &str = user.slug.as_ref();
+    server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}", user_slug)))
+        .header(http::header::COOKIE, session_cookie(session))
+        .send()
+        .await
+        .expect("Request failed")
+        .status()
 }

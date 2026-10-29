@@ -1,6 +1,11 @@
 /// HTTP `Authorization` header name.
 pub const AUTHORIZATION: &str = "Authorization";
 
+/// The header in which the console's server relays the secret it shares with the API.
+pub const RELAY_SECRET: &str = "Bencher-Relay-Secret";
+/// The header in which the console's server relays the reader's IP address.
+pub const RELAY_CLIENT_IP: &str = "Bencher-Client-IP";
+
 /// Format a bearer token for the HTTP `Authorization` header.
 ///
 /// Returns a value like `Bearer <token>` suitable for the `Authorization` header.

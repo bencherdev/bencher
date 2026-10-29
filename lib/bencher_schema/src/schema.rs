@@ -446,6 +446,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    session (id) {
+        id -> Integer,
+        uuid -> Text,
+        user_id -> Integer,
+        token_hash -> Text,
+        method -> Integer,
+        device -> Nullable<Text>,
+        created -> BigInt,
+        proved -> BigInt,
+        last_used -> BigInt,
+    }
+}
+
+diesel::table! {
     spec (id) {
         id -> Integer,
         uuid -> Text,
@@ -631,6 +645,7 @@ diesel::joinable!(series_last_seen -> organization (organization_id));
 diesel::joinable!(series_last_seen -> project (project_id));
 diesel::joinable!(series_last_seen -> testbed (testbed_id));
 diesel::joinable!(series_last_seen -> variant (variant_id));
+diesel::joinable!(session -> user (user_id));
 diesel::joinable!(sso -> organization (organization_id));
 diesel::joinable!(testbed -> project (project_id));
 diesel::joinable!(testbed -> spec (spec_id));
@@ -679,6 +694,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     runner_status,
     series_last_seen,
     server,
+    session,
     spec,
     sso,
     testbed,

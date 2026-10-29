@@ -18456,6 +18456,15 @@
             "nullable": true,
             "type": "string"
           },
+          "relay_secret": {
+            "nullable": true,
+            "description": "Shared with the console's server, which relays the browser's requests to the API.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Secret"
+              }
+            ]
+          },
           "secret_key": {
             "$ref": "#/components/schemas/Secret"
           }

@@ -3,6 +3,11 @@ use bencher_json::{
     JsonNewRun, JsonReport, ProjectResourceId, ProjectSlug, ResourceName, RunContext,
 };
 use bencher_rbac::project::Permission;
+#[cfg(feature = "plus")]
+use bencher_schema::model::{
+    project::{report::NewRunJob, testbed::RunTestbed},
+    runner::SourceIp,
+};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
@@ -18,14 +23,6 @@ use bencher_schema::{
         },
     },
     public_conn,
-};
-#[cfg(feature = "plus")]
-use bencher_schema::{
-    context::RateLimiting,
-    model::{
-        project::{report::NewRunJob, testbed::RunTestbed},
-        runner::SourceIp,
-    },
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use slog::Logger;
@@ -263,7 +260,7 @@ async fn create_run_report(
 
     #[cfg(feature = "plus")]
     let job = json_run.job.take().map(|run_job| {
-        let source_ip = if let Some(ip) = RateLimiting::remote_ip(log, headers) {
+        let source_ip = if let Some(ip) = context.remote_ip(log, headers) {
             SourceIp::new(ip)
         } else {
             slog::warn!(

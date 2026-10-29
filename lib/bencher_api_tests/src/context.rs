@@ -7,7 +7,7 @@ use bencher_endpoint::Registrar as _;
 use bencher_rbac::init_rbac;
 use bencher_schema::{
     ApiContext,
-    context::{Database, DbConnection, Messenger},
+    context::{Database, DbConnection, Messenger, Relay},
     run_migrations,
 };
 use bencher_token::{DEFAULT_SECRET_KEY, TokenKey};
@@ -186,6 +186,7 @@ impl TestServer {
             oauth: None,
             github_client: None,
             google_client: None,
+            relay_secret: None,
         })
         .await
     }
@@ -211,6 +212,7 @@ impl TestServer {
             oauth,
             github_client,
             google_client,
+            relay_secret,
         } = options;
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
@@ -265,6 +267,7 @@ impl TestServer {
             rbac,
             messenger: Messenger::default(),
             database,
+            relay: Relay::new(relay_secret.as_ref()),
             rate_limiting: Arc::new(
                 rate_limiting.unwrap_or_else(bencher_schema::context::RateLimiting::max),
             ),
@@ -363,6 +366,7 @@ impl TestServer {
             rbac,
             messenger: Messenger::default(),
             database,
+            relay: Relay::new(None),
             clock: bencher_json::Clock::System,
         };
 
@@ -498,6 +502,7 @@ pub struct TestServerOptions {
     pub oauth: Option<bencher_schema::context::OAuthServer>,
     pub github_client: Option<bencher_github_client::GitHubClient>,
     pub google_client: Option<bencher_google_client::GoogleClient>,
+    pub relay_secret: Option<bencher_json::Secret>,
 }
 
 /// Waits out a lock instead of failing at once, as the server's own pools do.

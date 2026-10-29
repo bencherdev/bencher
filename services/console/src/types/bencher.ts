@@ -2501,6 +2501,22 @@ export interface JsonRunnerKey {
 	key: RunnerKey;
 }
 
+/** How the reader signed in to a session. */
+export enum SessionMethod {
+	Email = "email",
+	Github = "github",
+	Google = "google",
+	Passkey = "passkey",
+}
+
+/** The signed-in reader's browser session. */
+export interface JsonSession {
+	user: JsonUser;
+	method: SessionMethod;
+	created: string;
+	expiration: string;
+}
+
 export interface JsonSignup {
 	name: UserName;
 	slug?: Slug;

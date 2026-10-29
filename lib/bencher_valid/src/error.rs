@@ -124,6 +124,11 @@ pub enum ValidError {
     UserKey(String),
     #[error("Failed to validate user key hash: {0}")]
     UserKeyHash(String),
+    // The token itself is left out: it is a credential.
+    #[error("Failed to validate session token")]
+    SessionToken,
+    #[error("Failed to validate session token hash: {0}")]
+    SessionTokenHash(String),
     #[error(
         "Failed to validate Bencher API key: {0}. Expected prefix `bencher_user_` or `bencher_run_`."
     )]
