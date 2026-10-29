@@ -17,6 +17,7 @@ use bencher_schema::{
     actor_conn,
     context::{ApiContext, DbConnection},
     error::{bad_request_error, resource_not_found_err, with_auth_hint},
+    macros::sql::lower,
     model::{
         project::{
             QueryProject, benchmark::BenchmarkId, branch::BranchId, measure::MeasureId,
@@ -84,6 +85,15 @@ macro_rules! page {
             all - archived
         };
         let mut query = filtered();
+        if let Some(search) = $query_params.search.as_ref() {
+            let text = search.as_ref();
+            query = query.then_order_by(
+                lower(schema::$table::name)
+                    .eq(lower(text))
+                    .or(lower(schema::$table::slug).eq(lower(text)))
+                    .desc(),
+            );
+        }
         query = match request.sort {
             ConsoleDimensionsSort::Name => query,
             ConsoleDimensionsSort::Created => match request.direction {
@@ -98,9 +108,12 @@ macro_rules! page {
                 }
             },
         };
-        query = match request.direction {
-            JsonDirection::Asc => query.then_order_by(schema::$table::name.asc()),
-            JsonDirection::Desc => query.then_order_by(schema::$table::name.desc()),
+        query = if let (ConsoleDimensionsSort::Name, JsonDirection::Desc) =
+            (request.sort, request.direction)
+        {
+            query.then_order_by(schema::$table::name.desc())
+        } else {
+            query.then_order_by(schema::$table::name.asc())
         };
         (
             Totals {

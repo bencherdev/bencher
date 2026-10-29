@@ -35,3 +35,8 @@ diesel::define_sql_function! {
     /// timestamps; see `DateTime`'s `ToSql`).
     fn max(a: diesel::sql_types::BigInt, b: diesel::sql_types::BigInt) -> diesel::sql_types::BigInt;
 }
+
+diesel::define_sql_function! {
+    /// `SQLite` `lower(x)`: folds ASCII letters to lowercase, as the `NOCASE` collation does.
+    fn lower(x: diesel::sql_types::Text) -> diesel::sql_types::Text;
+}

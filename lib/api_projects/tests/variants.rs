@@ -2508,6 +2508,69 @@ async fn variant_list_paginates_in_creation_order() {
     );
 }
 
+// Last used sorts by each variant's newest report, newest first unless asked otherwise, and puts
+// the never reported last either way, ties broken by creation.
+// Kills: ordering by a variant's first report or by its creation.
+#[tokio::test]
+async fn variant_list_sorts_by_last_used() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "list-last-used").await;
+    for (day, size_mb) in [(1, 16), (2, 32), (3, 16)] {
+        report(
+            &server,
+            &fixture,
+            day,
+            vec![v1(
+                "bench",
+                &[entry(
+                    &serde_json::json!({ "size_mb": size_mb }),
+                    &serde_json::json!({ "latency": { "value": 1.0 } }),
+                )],
+            )],
+            None,
+            None,
+            Some(1),
+        )
+        .await;
+    }
+    create_variant(
+        &server,
+        &fixture,
+        "bench",
+        &serde_json::json!({ "size_mb": 128 }),
+    )
+    .await;
+
+    let [small, large, huge, empty] = [
+        r#"{"size_mb":16}"#,
+        r#"{"size_mb":32}"#,
+        r#"{"size_mb":128}"#,
+        "{}",
+    ]
+    .map(parameters);
+    for (query, expected) in [
+        ("?sort=last_used", [&small, &large, &huge, &empty]),
+        (
+            "?sort=last_used&direction=desc",
+            [&small, &large, &huge, &empty],
+        ),
+        (
+            "?sort=last_used&direction=asc",
+            [&large, &small, &empty, &huge],
+        ),
+    ] {
+        let listed = variant_list(&server, &fixture, "bench", query).await;
+        assert_eq!(
+            listed
+                .iter()
+                .map(|variant| &variant.parameters)
+                .collect::<Vec<_>>(),
+            expected,
+            "{query}"
+        );
+    }
+}
+
 // The archived filter has the same two states a benchmark's does: archived variants are
 // out of the default list and are the only thing `archived=true` returns.
 #[tokio::test]
