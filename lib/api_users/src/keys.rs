@@ -40,6 +40,8 @@ pub enum UserKeysSort {
     /// Sort by key name.
     #[default]
     Name,
+    /// Sort by key creation date time.
+    Created,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -175,6 +177,15 @@ fn get_ls_query<'q>(
             Some(JsonDirection::Desc) => query.order((
                 schema::user_key::name.desc(),
                 schema::user_key::creation.desc(),
+            )),
+        },
+        UserKeysSort::Created => match pagination_params.direction {
+            Some(JsonDirection::Asc) | None => {
+                query.order((schema::user_key::creation.asc(), schema::user_key::id.asc()))
+            },
+            Some(JsonDirection::Desc) => query.order((
+                schema::user_key::creation.desc(),
+                schema::user_key::id.desc(),
             )),
         },
     }

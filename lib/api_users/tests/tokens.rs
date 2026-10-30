@@ -478,3 +478,46 @@ async fn tokens_revoke_double_rejected() {
         .expect("Request failed");
     assert_eq!(second.status(), StatusCode::CONFLICT);
 }
+
+// GET /v0/users/{user}/tokens?sort=created - oldest first, a page at a time
+#[tokio::test]
+async fn tokens_list_sort_created() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "tokenssort@example.com").await;
+    for name in ["charlie", "alpha", "bravo"] {
+        seed_token(&server, &user, name);
+    }
+
+    let user_slug: &str = user.slug.as_ref();
+    let names = |query: &'static str| {
+        let server = &server;
+        let token = &user.token;
+        async move {
+            let resp = server
+                .client
+                .get(server.api_url(&format!("/v0/users/{}/tokens?{}", user_slug, query)))
+                .header(
+                    bencher_json::AUTHORIZATION,
+                    bencher_json::bearer_header(token),
+                )
+                .send()
+                .await
+                .expect("Request failed");
+            assert_eq!(resp.status(), StatusCode::OK);
+            let tokens: JsonTokens = resp.json().await.expect("Failed to parse response");
+            tokens
+                .0
+                .into_iter()
+                .map(|token| token.name.to_string())
+                .collect::<Vec<_>>()
+        }
+    };
+
+    assert_eq!(names("per_page=2").await, ["alpha", "bravo"]);
+    assert_eq!(names("sort=created&per_page=2").await, ["charlie", "alpha"]);
+    assert_eq!(names("sort=created&per_page=2&page=2").await, ["bravo"]);
+    assert_eq!(
+        names("sort=created&direction=desc").await,
+        ["bravo", "alpha", "charlie"]
+    );
+}

@@ -21925,6 +21925,13 @@
             "enum": [
               "name"
             ]
+          },
+          {
+            "description": "Sort by key creation date time.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
           }
         ]
       },
@@ -22075,6 +22082,13 @@
             "enum": [
               "name"
             ]
+          },
+          {
+            "description": "Sort by key creation date time.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
           }
         ]
       },
@@ -22096,6 +22110,13 @@
             "type": "string",
             "enum": [
               "name"
+            ]
+          },
+          {
+            "description": "Sort by token creation date time.",
+            "type": "string",
+            "enum": [
+              "created"
             ]
           }
         ]
