@@ -275,7 +275,7 @@ async fn post_inner(
                 e,
             )
         })?;
-    let token_string = token.to_string();
+    let token_string = String::from(token);
 
     let org_name = &query_org.name;
     let org_role = json_new_member.role;

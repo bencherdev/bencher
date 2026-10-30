@@ -23,6 +23,7 @@ use bencher_json::{
     JsonOrganization, JsonOrganizations, JsonProject, JsonUser, JsonUserKey, JsonUserKeyCreated,
     JsonUserKeys, UserKey, UserKeyUuid,
 };
+use bencher_schema::error::INVALID_CREDENTIAL;
 use http::StatusCode;
 
 /// Mint a key for `user` in a session they signed in to now.
@@ -251,7 +252,7 @@ async fn malformed_user_key_rejected() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 #[tokio::test]
@@ -261,22 +262,16 @@ async fn refused_bearer_never_quoted() {
     let payload = "eyJhdWQiOiJjbGllbnQiLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20ifQ";
 
     let unsigned = format!("{header}.{payload}.");
-    for (refused, secret, message) in [
+    for (refused, secret) in [
         (
             "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
             "aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
-            "Malformed JSON Web Token",
         ),
         (
             "bencher_user_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fG",
             "aB3xY9mN2pQ7rS4tU8vW1zK5jL0fG",
-            "Malformed user API key",
         ),
-        (
-            unsigned.as_str(),
-            unsigned.as_str(),
-            "Malformed JSON Web Token",
-        ),
+        (unsigned.as_str(), unsigned.as_str()),
     ] {
         let resp = server
             .client
@@ -289,9 +284,9 @@ async fn refused_bearer_never_quoted() {
             .await
             .expect("Request failed");
 
-        assert_eq!(resp.status(), StatusCode::BAD_REQUEST, "{refused}");
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED, "{refused}");
         let body = resp.text().await.expect("Failed to read body");
-        assert!(body.contains(message), "{body}");
+        assert!(body.contains(INVALID_CREDENTIAL), "{body}");
         for part in secret.as_bytes().windows(6) {
             let part = std::str::from_utf8(part).expect("ASCII credential");
             assert!(!body.contains(part), "{body} quotes {part}");

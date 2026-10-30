@@ -271,12 +271,12 @@ describe("keys", () => {
 
 describe("keysPage", () => {
 	// Kills a list read from another path, status, order, or page, a legacy
-	// token's secret, which its list returns on every row, kept in the cache,
-	// and a revoked row that loses its revoked date.
+	// token's secret, which an older server's list returns on every row, kept in
+	// the cache, and a revoked row that loses its revoked date.
 	test("reads one page of one status, newest first, and keeps no secret", async () => {
 		const revokedAt = "2026-01-01T00:00:00Z";
 		const reads: string[] = [];
-		const token: JsonToken = {
+		const token: JsonToken & { token: string } = {
 			uuid: "t",
 			user: "u",
 			name: "ci-2024",

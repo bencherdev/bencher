@@ -5,9 +5,9 @@ use bencher_schema::{
     context::ApiContext,
     error::issue_error,
     model::user::{
+        actor::{ApiActor, PubProjectBearerToken},
         admin::AdminUser,
         auth::BearerToken,
-        public::{PubBearerToken, PublicUser},
     },
 };
 use dropshot::{HttpError, RequestContext, endpoint};
@@ -80,9 +80,9 @@ pub async fn server_config_console_options(
     }]
 pub async fn server_config_console_get(
     rqctx: RequestContext<ApiContext>,
-    bearer_token: PubBearerToken,
+    bearer_token: PubProjectBearerToken,
 ) -> Result<ResponseOk<JsonConsole>, HttpError> {
-    let public_user = PublicUser::from_token(
+    let api_actor = ApiActor::from_token(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
@@ -94,6 +94,6 @@ pub async fn server_config_console_get(
         JsonConsole {
             url: rqctx.context().console_url.clone().into(),
         },
-        public_user.is_auth(),
+        api_actor.is_auth(),
     ))
 }

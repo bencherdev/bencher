@@ -576,7 +576,12 @@ mod tests {
     #[test]
     fn verify_email_needs_the_current_address() {
         let mut conn = setup_test_db();
-        seed_users(&mut conn, 1);
+        conn.batch_execute(
+            "INSERT INTO user (id, uuid, name, slug, email, admin, locked, created, modified)
+                VALUES (1, '00000000-0000-4000-8000-000000000001', 'User 1', 'user-1',
+                    'user1@example.com', 0, 0, 1700000000, 1700000000)",
+        )
+        .unwrap();
         let email: Email = "user1@example.com".parse().unwrap();
         let id = QueryUser::get_id_from_email(&mut conn, &email).unwrap();
 
