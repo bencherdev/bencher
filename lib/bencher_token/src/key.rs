@@ -278,13 +278,7 @@ impl TokenKey {
     }
 
     pub fn validate_client(&self, token: &Jwt) -> Result<Claims, TokenError> {
-        Ok(self
-            .validate(token, &[Audience::Client, Audience::ApiKey])?
-            .claims)
-    }
-
-    pub fn validate_api_key(&self, token: &Jwt) -> Result<Claims, TokenError> {
-        Ok(self.validate(token, &[Audience::ApiKey])?.claims)
+        Ok(self.validate(token, &[Audience::Client])?.claims)
     }
 
     pub fn validate_invite(&self, token: &Jwt) -> Result<InviteClaims, TokenError> {
@@ -547,25 +541,12 @@ mod tests {
         secret_key.validate_client(&token).unwrap_err();
     }
 
+    // A deprecated user API token is checked by its row alone, never by its signature.
     #[test]
-    fn jwt_api_key() {
+    fn jwt_api_key_is_no_session() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
         let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
-
-        let claims = secret_key.validate_api_key(&token).unwrap();
-
-        assert_eq!(claims.aud, Audience::ApiKey.to_string());
-        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
-        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
-        assert_eq!(claims.sub, *EMAIL);
-    }
-
-    #[test]
-    fn jwt_api_key_expired() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = make_expired_token(&secret_key, Audience::ApiKey, None, None);
-        secret_key.validate_api_key(&token).unwrap_err();
+        secret_key.validate_client(&token).unwrap_err();
     }
 
     #[test]

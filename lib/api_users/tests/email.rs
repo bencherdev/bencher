@@ -65,6 +65,10 @@ async fn email_change_confirm() {
     let (server, capture) = server_with_log().await;
     let user = server.signup("Confirm User", "confirm@example.com").await;
     let api_token = seed_token(&server, &user, "Legacy Token");
+    assert_eq!(
+        view_status(&server, api_token.token.as_ref(), &user).await,
+        StatusCode::OK
+    );
     // A user whose email was never proven, as one from before proofs were recorded.
     diesel::update(schema::user::table.filter(schema::user::uuid.eq(user.uuid)))
         .set(schema::user::email_verified.eq(None::<DateTime>))
@@ -86,6 +90,10 @@ async fn email_change_confirm() {
         new_email
     );
     assert!(is_revoked(&server, session.as_ref(), &user, api_token.uuid).await);
+    assert_eq!(
+        view_status(&server, api_token.token.as_ref(), &user).await,
+        StatusCode::UNAUTHORIZED
+    );
     assert!(stored_email_verified(&server, &user).is_some());
 }
 
@@ -420,11 +428,11 @@ async fn email_change_admin_other_user() {
     );
     assert_eq!(stored_email_verified(&server, &user), None);
 
-    let session = server
+    let session: String = server
         .token_key()
         .new_client(new_email, u32::MAX)
         .expect("Failed to mint session")
-        .to_string();
+        .into();
     assert!(is_revoked(&server, &session, &user, api_token.uuid).await);
 }
 
@@ -567,7 +575,17 @@ async fn send_patch(
 }
 
 async fn view_user(server: &TestServer, bearer: &str, user: &TestUser) -> JsonUser {
-    let resp = server
+    let resp = view(server, bearer, user).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    resp.json().await.expect("Failed to parse user")
+}
+
+async fn view_status(server: &TestServer, bearer: &str, user: &TestUser) -> StatusCode {
+    view(server, bearer, user).await.status()
+}
+
+async fn view(server: &TestServer, bearer: &str, user: &TestUser) -> reqwest::Response {
+    server
         .client
         .get(server.api_url(&format!("/v0/users/{}", user.uuid)))
         .header(
@@ -576,9 +594,7 @@ async fn view_user(server: &TestServer, bearer: &str, user: &TestUser) -> JsonUs
         )
         .send()
         .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    resp.json().await.expect("Failed to parse user")
+        .expect("Request failed")
 }
 
 /// A link bound to the user's current `modified`, as a request that wrote the user last mints.

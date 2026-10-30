@@ -85,7 +85,7 @@ impl TestServer {
                 actions.to_vec(),
             )
             .expect("Failed to create OCI token")
-            .to_string()
+            .into()
     }
 
     /// Generate an OCI token for pull access to a project.
@@ -116,7 +116,7 @@ impl TestServer {
         self.token_key()
             .new_oci_public(u32::MAX, Some(repository.to_owned()), actions.to_vec())
             .expect("Failed to create public OCI token")
-            .to_string()
+            .into()
     }
 
     /// Generate a runner OCI token for pull access to a project.
@@ -135,7 +135,7 @@ impl TestServer {
                 vec![OciAction::Pull],
             )
             .expect("Failed to create runner OCI token")
-            .to_string()
+            .into()
     }
 
     /// Generate a runner OCI token with the specified repository and actions.
@@ -157,7 +157,7 @@ impl TestServer {
                 actions.to_vec(),
             )
             .expect("Failed to create runner OCI token")
-            .to_string()
+            .into()
     }
 
     /// Upload a single blob and return its digest.

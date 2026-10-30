@@ -6,8 +6,12 @@
 )]
 //! Integration tests for the OCI token endpoint (GET and POST /v0/auth/oci/token).
 
-use bencher_api_tests::{TestServer, TestUser, session_cookie};
-use bencher_json::{JsonUserKeyCreated, Jwt, ProjectKey, UserKey};
+use bencher_api_tests::{
+    TestServer, TestUser,
+    helpers::{seed_token, seed_token_jwt, token_last_used},
+    session_cookie,
+};
+use bencher_json::{DateTime, JsonUserKeyCreated, Jwt, ProjectKey, UserKey};
 use http::StatusCode;
 use serde_json::Value;
 
@@ -123,11 +127,7 @@ async fn oci_token_authenticated() {
     let org = server.create_org(&user, "Token Org").await;
     let project = server.create_project(&user, &org, "Token Project").await;
 
-    // The OCI token endpoint expects an API key (aud: "api_key"), not a client token
-    let api_key = server
-        .token_key()
-        .new_api_key(user.email.clone(), u32::MAX)
-        .expect("Failed to create API key");
+    let api_key = seed_token(&server, &user, "Docker Login").token;
 
     let project_slug: &str = project.slug.as_ref();
     let scope = format!("repository:{project_slug}:push");
@@ -167,15 +167,12 @@ async fn oci_token_authenticated() {
 async fn oci_token_bad_credentials() {
     let server = TestServer::new().await;
     let user = server.signup("BadCred User", "badcred@example.com").await;
+    let other = server
+        .signup("Other User", "badcred-other@example.com")
+        .await;
 
-    // Use the email but a garbage password — not a valid JWT so extract_basic_auth
-    // will fail to parse it and fall through to anonymous token issuance.
-    // To test actual credential rejection, we need a structurally valid JWT
-    // that fails validation.
-    let bad_api_key = server
-        .token_key()
-        .new_api_key("wrong@example.com".parse().unwrap(), u32::MAX)
-        .expect("Failed to create API key");
+    // A live token, presented under another user's email.
+    let bad_api_key = seed_token(&server, &other, "Other Token").token;
 
     let resp = server
         .client
@@ -201,10 +198,7 @@ async fn oci_token_multiple_scopes() {
         .create_project(&user, &org, "MultiScope Project")
         .await;
 
-    let api_key = server
-        .token_key()
-        .new_api_key(user.email.clone(), u32::MAX)
-        .expect("Failed to create API key");
+    let api_key = seed_token(&server, &user, "Docker Login").token;
 
     let project_slug: &str = project.slug.as_ref();
     let url = format!(
@@ -267,10 +261,7 @@ async fn oci_token_post_authenticated() {
     let org = server.create_org(&user, "PostAuth Org").await;
     let project = server.create_project(&user, &org, "PostAuth Project").await;
 
-    let api_key = server
-        .token_key()
-        .new_api_key(user.email.clone(), u32::MAX)
-        .expect("Failed to create API key");
+    let api_key = seed_token(&server, &user, "Docker Login").token;
 
     let project_slug: &str = project.slug.as_ref();
     let scope = format!("repository:{project_slug}:push");
@@ -374,11 +365,12 @@ async fn oci_token_post_project_key() {
 async fn oci_token_post_bad_credentials() {
     let server = TestServer::new().await;
     let user = server.signup("PostBad User", "postbad@example.com").await;
+    let other = server
+        .signup("Other User", "postbad-other@example.com")
+        .await;
 
-    let bad_api_key = server
-        .token_key()
-        .new_api_key("wrong@example.com".parse().unwrap(), u32::MAX)
-        .expect("Failed to create API key");
+    // A live token, presented under another user's email.
+    let bad_api_key = seed_token(&server, &other, "Other Token").token;
 
     let resp = server
         .client
@@ -705,4 +697,120 @@ async fn oci_token_user_key_malformed() {
 
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     assert!(resp.headers().contains_key("www-authenticate"));
+}
+
+// Kills a registry token minted for a legacy token that is revoked, past its row's expiration,
+// held by a locked user, or with no row, whatever its signature, by GET or by POST, or a live
+// one whose use goes unrecorded.
+#[tokio::test]
+async fn oci_token_dead_legacy_tokens() {
+    let server = TestServer::new().await;
+    let admin = server.signup("Root", "oci-legacy-root@example.com").await;
+    let user = server.signup("Legacy User", "oci-legacy@example.com").await;
+    let locked = server
+        .signup("Locked User", "oci-legacy-locked@example.com")
+        .await;
+    let org = server.create_org(&user, "Legacy Org").await;
+    let project = server.create_project(&user, &org, "Legacy Project").await;
+    let scope = format!("repository:{}:push", project.slug);
+
+    let live = seed_token(&server, &user, "Live");
+    assert_eq!(token_last_used(&server, live.uuid), None);
+    assert_eq!(
+        oci_token_status(&server, &scope, &user, &live.token).await,
+        [StatusCode::OK, StatusCode::OK]
+    );
+    assert!(token_last_used(&server, live.uuid).is_some());
+
+    let revoked = seed_token(&server, &user, "Revoked");
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/users/{}/tokens/{}", user.slug, revoked.uuid)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    let expired = server
+        .token_key()
+        .new_api_key(user.email.clone(), u32::MAX - 1)
+        .expect("Failed to mint a token");
+    let now = DateTime::now().timestamp();
+    seed_token_jwt(
+        &server,
+        &user,
+        "Expired",
+        &expired,
+        DateTime::try_from(now - 1).expect("Invalid time"),
+    );
+
+    let locked_token = seed_token(&server, &locked, "Locked").token;
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/users/{}", locked.slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .json(&serde_json::json!({ "locked": true }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let rowless = server
+        .token_key()
+        .new_api_key(user.email.clone(), u32::MAX - 2)
+        .expect("Failed to mint a token");
+
+    for (case, owner, token) in [
+        ("revoked", &user, &revoked.token),
+        ("expired", &user, &expired),
+        ("locked", &locked, &locked_token),
+        ("rowless", &user, &rowless),
+    ] {
+        assert_eq!(
+            oci_token_status(&server, &scope, owner, token).await,
+            [StatusCode::UNAUTHORIZED, StatusCode::UNAUTHORIZED],
+            "{case}"
+        );
+    }
+}
+
+/// The status of a registry token request for `scope` with `user`'s email and `token`, by GET
+/// and by POST.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn oci_token_status(
+    server: &TestServer,
+    scope: &str,
+    user: &TestUser,
+    token: &Jwt,
+) -> [StatusCode; 2] {
+    let get = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/auth/oci/token?scope={scope}&service=localhost"
+        )))
+        .basic_auth(user.email.as_ref(), Some(token.as_ref()))
+        .send()
+        .await
+        .expect("Request failed");
+    let post = server
+        .client
+        .post(server.api_url("/v0/auth/oci/token"))
+        .form(&[
+            ("grant_type", "password"),
+            ("username", user.email.as_ref()),
+            ("password", token.as_ref()),
+            ("scope", scope),
+            ("service", "localhost"),
+        ])
+        .send()
+        .await
+        .expect("Request failed");
+    [get.status(), post.status()]
 }

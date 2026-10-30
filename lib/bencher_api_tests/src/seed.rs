@@ -133,7 +133,7 @@ impl TestServer {
             name: auth_user.user.name,
             slug: auth_user.user.slug,
             email: auth_user.user.email,
-            token: auth_user.token.to_string(),
+            token: auth_user.token.into(),
         }
     }
 

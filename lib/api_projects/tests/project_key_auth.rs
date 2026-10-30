@@ -371,7 +371,7 @@ async fn project_key_cannot_list_keys() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // POST /v0/projects/{project}/branches - create branch with key
@@ -1289,7 +1289,7 @@ async fn project_key_cannot_delete_plot() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
     // The plot is not deleted.
     let resp = server
