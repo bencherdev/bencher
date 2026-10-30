@@ -6,6 +6,8 @@ use bencher_rate_limiter::snapshot::{
 };
 use serde::{Deserialize, Serialize};
 
+use super::EmailKey;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct RateLimitingSnapshot {
     pub public: PublicRateLimiterSnapshot,
@@ -13,6 +15,9 @@ pub(super) struct RateLimitingSnapshot {
     pub project: ProjectRateLimiterSnapshot,
     pub runner: RunnerRateLimiterSnapshot,
     pub bandwidth: BandwidthSnapshot<OrganizationUuid>,
+    /// Missing from a snapshot saved before the limit existed.
+    #[serde(default)]
+    pub email: GenericRateLimiterSnapshot<EmailKey>,
 }
 
 impl RateLimitingSnapshot {
@@ -22,6 +27,7 @@ impl RateLimitingSnapshot {
         project: ProjectRateLimiterSnapshot,
         runner: RunnerRateLimiterSnapshot,
         bandwidth: BandwidthSnapshot<OrganizationUuid>,
+        email: GenericRateLimiterSnapshot<EmailKey>,
     ) -> Self {
         Self {
             public,
@@ -29,6 +35,7 @@ impl RateLimitingSnapshot {
             project,
             runner,
             bandwidth,
+            email,
         }
     }
 }
@@ -124,6 +131,7 @@ mod tests {
             bandwidth: BandwidthSnapshot {
                 events: HashMap::new(),
             },
+            email: empty_limiter_snapshot(),
         };
 
         let json = serde_json::to_string(&snapshot).unwrap();
@@ -218,6 +226,7 @@ mod tests {
             bandwidth: BandwidthSnapshot {
                 events: HashMap::new(),
             },
+            email: empty_limiter_snapshot(),
         };
         let json = serde_json::to_string(&snapshot).unwrap();
         std::fs::write(&snapshot_path, json).unwrap();
@@ -271,6 +280,8 @@ mod tests {
         let project = ProjectUuid::from(uuid::Uuid::nil());
         let runner = RunnerUuid::from(uuid::Uuid::nil());
         let organization = OrganizationUuid::from(uuid::Uuid::nil());
+        let address: bencher_json::Email = "ada@example.com".parse().unwrap();
+        let email = EmailKey::from(&address);
 
         let snapshot = RateLimitingSnapshot {
             public: PublicRateLimiterSnapshot {
@@ -305,6 +316,7 @@ mod tests {
                     )],
                 )]),
             },
+            email: window_sized_limiter_snapshot(email, now_secs),
         };
         std::fs::write(&snapshot_path, serde_json::to_string(&snapshot).unwrap()).unwrap();
 
@@ -336,6 +348,7 @@ mod tests {
             bandwidth: BandwidthSnapshot {
                 events: HashMap::new(),
             },
+            email: empty_limiter_snapshot(),
         };
         let saved: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&snapshot_path).unwrap()).unwrap();
@@ -353,6 +366,73 @@ mod tests {
         limiter.project_request(project).unwrap();
         limiter.project_run(project).unwrap();
         limiter.runner_request(runner).unwrap();
+        limiter.sign_in_email(&address).unwrap();
+    }
+
+    // The snapshot keeps an address at its cap, keyed so that the file holds no address.
+    #[test]
+    fn email_cap_survives_a_restart_without_the_address() {
+        use crate::context::RateLimiting;
+
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("bencher.db");
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        let address: bencher_json::Email = "ada.lovelace@example.com".parse().unwrap();
+
+        let limiter = RateLimiting::default();
+        limiter.sign_in_email(&address).unwrap();
+        limiter.sign_in_email(&address).unwrap();
+        limiter.sign_in_email(&address).unwrap_err();
+        limiter.save(&db_path, &log).unwrap();
+
+        let json = std::fs::read_to_string(dir.path().join("rate_limiting.json")).unwrap();
+        assert!(!json.contains("ada.lovelace"), "{json}");
+        assert!(!json.contains("example.com"), "{json}");
+        let snapshot: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let keys = snapshot["email"]["minute"]["events"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        let sha256 = {
+            use sha2::Digest as _;
+            hex::encode(sha2::Sha256::digest(b"ada.lovelace@example.com"))
+        };
+        assert_eq!(keys, [sha256]);
+
+        let restored = RateLimiting::default();
+        restored.load(&db_path, &log).unwrap();
+        restored.sign_in_email(&address).unwrap_err();
+        let other: bencher_json::Email = "grace@example.com".parse().unwrap();
+        restored.sign_in_email(&other).unwrap();
+    }
+
+    // A snapshot saved before the per-address limit existed still loads.
+    #[test]
+    fn load_a_snapshot_without_the_email_limit() {
+        use crate::context::RateLimiting;
+
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("bencher.db");
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        let ip: IpAddr = "10.0.0.1".parse().unwrap();
+
+        let limiter = RateLimiting::default();
+        limiter.public_request(ip).unwrap();
+        limiter.save(&db_path, &log).unwrap();
+        let snapshot_path = dir.path().join("rate_limiting.json");
+        let mut json: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&snapshot_path).unwrap()).unwrap();
+        json.as_object_mut().unwrap().remove("email").unwrap();
+        std::fs::write(&snapshot_path, json.to_string()).unwrap();
+
+        let restored = RateLimiting::default();
+        restored.load(&db_path, &log).unwrap();
+        restored.save(&db_path, &log).unwrap();
+        let snap: RateLimitingSnapshot =
+            serde_json::from_str(&std::fs::read_to_string(&snapshot_path).unwrap()).unwrap();
+        assert!(snap.public.requests.minute.events.contains_key(&ip));
     }
 
     #[test]

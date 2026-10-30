@@ -1,17 +1,6 @@
 use slog::Logger;
 
-use super::FmtBody;
-
-static CSS_INLINER: std::sync::LazyLock<css_inline::CSSInliner<'static>> =
-    std::sync::LazyLock::new(|| {
-        css_inline::CSSInliner::new(
-            css_inline::InlineOptions::default()
-                .load_remote_stylesheets(false)
-                .extra_css(Some(std::borrow::Cow::Borrowed(include_str!(
-                    "bulma.min.css"
-                )))),
-        )
-    });
+use super::{FmtBody, inline_css};
 
 #[derive(Debug)]
 pub struct ButtonBody {
@@ -133,25 +122,6 @@ impl FmtBody for ButtonBody {
 "
         );
 
-        slog::debug!(log, "Inlining CSS into HTML");
-        if let Ok(inlined_html) = std::panic::catch_unwind(|| match CSS_INLINER.inline(&html) {
-            Ok(html) => Some(html),
-            Err(err) => {
-                slog::error!(log, "Failed to inline CSS: {err}");
-                #[cfg(feature = "sentry")]
-                sentry::capture_error(&err);
-                None
-            },
-        }) {
-            inlined_html.unwrap_or(html)
-        } else {
-            // This fails when run locally on macOS,
-            // but works when run in a Debian container.
-            let msg = "Panicked trying to inline CSS";
-            slog::error!(log, "{msg}");
-            #[cfg(feature = "sentry")]
-            sentry::capture_message(msg, sentry::Level::Error);
-            html
-        }
+        inline_css(log, html)
     }
 }

@@ -4,16 +4,20 @@ use bencher_json::{
 };
 use bencher_token::TokenKey;
 use diesel::{
-    AggregateExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
+    AggregateExpressionMethods as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
+    RunQueryDsl as _,
 };
 use dropshot::HttpError;
 use slog::Logger;
 use url::Url;
 
 use crate::{
-    ApiContext, auth_conn,
+    ApiContext,
     context::{Body, DbConnection, Message, Messenger, NewUserBody},
-    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
+    error::{
+        conflict_error, forbidden_error, issue_error, not_found_error, resource_conflict_err,
+        resource_not_found_err,
+    },
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
@@ -34,6 +38,7 @@ pub mod oauth;
 pub mod oauth_authorization;
 pub mod public;
 pub mod session;
+pub mod sign_in;
 pub mod token;
 
 crate::macros::typed_id::typed_id!(UserId);
@@ -50,7 +55,8 @@ macro_rules! same_user {
 pub use same_user;
 
 use super::organization::{
-    InsertOrganization, QueryOrganization, organization_role::InsertOrganizationRole,
+    InsertOrganization, QueryOrganization,
+    organization_role::{InsertOrganizationRole, QueryOrganizationRole},
 };
 
 #[derive(Debug, Clone, diesel::Queryable)]
@@ -114,6 +120,17 @@ impl QueryUser {
             .map_err(resource_not_found_err!(User, email))
     }
 
+    /// The user with `email`, if there is one.
+    pub fn find_with_email(
+        conn: &mut DbConnection,
+        email: &Email,
+    ) -> diesel::QueryResult<Option<Self>> {
+        schema::user::table
+            .filter(schema::user::email.eq(email))
+            .first(conn)
+            .optional()
+    }
+
     /// Record that the user proved they hold `email` at `now`, unless their email is no longer it.
     pub fn verify_email(
         conn: &mut DbConnection,
@@ -162,15 +179,54 @@ impl QueryUser {
         token_key: &TokenKey,
         invite: &Jwt,
     ) -> Result<(), HttpError> {
-        let insert_org_role =
-            InsertOrganizationRole::from_jwt(auth_conn!(context), token_key, invite, self.id)?;
+        let now = context.clock.now();
+        let invited = self.accept_invite_with(write_conn!(context), token_key, invite, now)?;
+        match invited {
+            Invited::Joined => Ok(()),
+            Invited::AlreadyMember => Err(conflict_error(
+                "The invited user is already a member of the organization",
+            )),
+            Invited::OrganizationGone => Err(not_found_error(
+                "The organization of the invitation no longer exists",
+            )),
+        }
+    }
 
-        diesel::insert_into(schema::organization_role::table)
-            .values(&insert_org_role)
-            .execute(write_conn!(context))
-            .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
-
-        Ok(())
+    /// Accept an invite on one connection, inside a write transaction, unless it no longer
+    /// applies: its organization is gone, or the user is already a member.
+    pub fn accept_invite_with(
+        &self,
+        conn: &mut DbConnection,
+        token_key: &TokenKey,
+        invite: &Jwt,
+        now: DateTime,
+    ) -> Result<Invited, HttpError> {
+        let (organization_uuid, role) =
+            InsertOrganizationRole::validate_invite(conn, token_key, invite, self.id)?;
+        let lookup_error = |e| {
+            issue_error(
+                "Failed to look up an invitation",
+                "Failed to look up the organization of an invitation:",
+                e,
+            )
+        };
+        let Some(organization) =
+            QueryOrganization::find(conn, organization_uuid).map_err(lookup_error)?
+        else {
+            return Ok(Invited::OrganizationGone);
+        };
+        if QueryOrganizationRole::exists(conn, self.id, organization.id).map_err(lookup_error)? {
+            return Ok(Invited::AlreadyMember);
+        }
+        InsertOrganizationRole {
+            user_id: self.id,
+            organization_id: organization.id,
+            role,
+            created: now,
+            modified: now,
+        }
+        .insert(conn)?;
+        Ok(Invited::Joined)
     }
 
     pub fn into_json(self) -> JsonUser {
@@ -209,6 +265,14 @@ impl Sanitize for QueryUser {
     }
 }
 
+/// What accepting an invite did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Invited {
+    Joined,
+    AlreadyMember,
+    OrganizationGone,
+}
+
 #[derive(Debug, Clone, diesel::Insertable)]
 #[diesel(table_name = user_table)]
 pub struct InsertUser {
@@ -244,29 +308,19 @@ impl InsertUser {
         json_signup: &JsonSignup,
     ) -> Result<Self, HttpError> {
         let JsonSignup {
-            name, slug, email, ..
+            name,
+            slug,
+            email,
+            invite,
+            claim,
+            ..
         } = json_signup.clone();
-        let mut insert_user = Self::new(conn, name, slug, email);
+        let (insert_user, query_user) = Self::sign_up(conn, name, slug, email)?;
 
-        let count = schema::user::table
-            .select(diesel::dsl::count(schema::user::id).aggregate_distinct())
-            .first::<i64>(conn)
-            .map_err(resource_not_found_err!(User, json_signup))?;
-        // The first user to signup is admin
-        if count == 0 {
-            insert_user.admin = true;
-        }
-
-        // Insert user
-        diesel::insert_into(schema::user::table)
-            .values(&insert_user)
-            .execute(conn)
-            .map_err(resource_conflict_err!(User, insert_user))?;
-        let query_user = QueryUser::from_uuid(conn, insert_user.uuid)?;
-
-        let insert_org_role = if let Some(invite) = &json_signup.invite {
+        if let Some(invite) = &invite {
             InsertOrganizationRole::from_jwt(conn, token_key, invite, query_user.id)?
-        } else if let Some(organization_uuid) = json_signup.claim
+                .insert(conn)?;
+        } else if let Some(organization_uuid) = claim
             && let organization_id = QueryOrganization::get_id(conn, organization_uuid)?
             && !QueryOrganization::get(conn, organization_id)?.is_claimed(conn)?
         {
@@ -278,32 +332,62 @@ impl InsertUser {
                 created: timestamp,
                 modified: timestamp,
             }
+            .insert(conn)?;
         } else {
-            // Create an organization for the user
-            let insert_organization = InsertOrganization::from_user(conn, &query_user);
-            diesel::insert_into(schema::organization::table)
-                .values(&insert_organization)
-                .execute(conn)
-                .map_err(resource_conflict_err!(Organization, insert_organization))?;
-            let organization_id = QueryOrganization::get_id(conn, insert_organization.uuid)?;
-
-            let timestamp = DateTime::now();
-            // Connect the user to the organization as a `Leader`
-            InsertOrganizationRole {
-                user_id: query_user.id,
-                organization_id,
-                role: OrganizationRole::Leader,
-                created: timestamp,
-                modified: timestamp,
-            }
-        };
-
-        diesel::insert_into(schema::organization_role::table)
-            .values(&insert_org_role)
-            .execute(conn)
-            .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
+            Self::personal_organization(conn, &query_user)?;
+        }
 
         Ok(insert_user)
+    }
+
+    /// Insert a user, the server's admin if it is the first, in no organization yet.
+    pub fn sign_up(
+        conn: &mut DbConnection,
+        name: UserName,
+        slug: Option<UserSlug>,
+        email: Email,
+    ) -> Result<(Self, QueryUser), HttpError> {
+        let mut insert_user = Self::new(conn, name, slug, email);
+
+        let count = schema::user::table
+            .select(diesel::dsl::count(schema::user::id).aggregate_distinct())
+            .first::<i64>(conn)
+            .map_err(resource_not_found_err!(User, insert_user))?;
+        // The first user to signup is admin
+        if count == 0 {
+            insert_user.admin = true;
+        }
+
+        // Insert user
+        diesel::insert_into(schema::user::table)
+            .values(&insert_user)
+            .execute(conn)
+            .map_err(resource_conflict_err!(User, insert_user))?;
+        let query_user = QueryUser::from_uuid(conn, insert_user.uuid)?;
+        Ok((insert_user, query_user))
+    }
+
+    /// Make the user the leader of a new personal organization.
+    pub fn personal_organization(
+        conn: &mut DbConnection,
+        query_user: &QueryUser,
+    ) -> Result<(), HttpError> {
+        let insert_organization = InsertOrganization::from_user(conn, query_user);
+        diesel::insert_into(schema::organization::table)
+            .values(&insert_organization)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Organization, insert_organization))?;
+        let organization_id = QueryOrganization::get_id(conn, insert_organization.uuid)?;
+
+        let timestamp = DateTime::now();
+        InsertOrganizationRole {
+            user_id: query_user.id,
+            organization_id,
+            role: OrganizationRole::Leader,
+            created: timestamp,
+            modified: timestamp,
+        }
+        .insert(conn)
     }
 
     /// Rate limit authentication attempts for this user
@@ -321,26 +405,39 @@ impl InsertUser {
         invited: bool,
         method: &str,
     ) -> Result<(), HttpError> {
-        if !self.admin {
-            let admins = QueryUser::get_admins(conn)?;
-            for admin in admins {
-                let message = Message {
-                    to_name: Some(admin.name.clone().into()),
-                    to_email: admin.email.into(),
-                    subject: Some("🐰 New Bencher User".into()),
-                    body: Some(Body::NewUser(NewUserBody {
-                        admin: admin.name.clone().into(),
-                        console_url: console_url.clone(),
-                        name: self.name.clone().into(),
-                        email: self.email.clone().into(),
-                        invited,
-                        method: method.to_owned(),
-                    })),
-                };
-                messenger.send(log, message);
-            }
+        for message in self.admin_notices(conn, console_url, invited, method)? {
+            messenger.send(log, message);
         }
         Ok(())
+    }
+
+    /// A notice of the new user to every admin, unless the user is the first admin.
+    pub fn admin_notices(
+        &self,
+        conn: &mut DbConnection,
+        console_url: &Url,
+        invited: bool,
+        method: &str,
+    ) -> Result<Vec<Message>, HttpError> {
+        if self.admin {
+            return Ok(Vec::new());
+        }
+        Ok(QueryUser::get_admins(conn)?
+            .into_iter()
+            .map(|admin| Message {
+                to_name: Some(admin.name.clone().into()),
+                to_email: admin.email.into(),
+                subject: Some("🐰 New Bencher User".into()),
+                body: Some(Body::NewUser(NewUserBody {
+                    admin: admin.name.into(),
+                    console_url: console_url.clone(),
+                    name: self.name.clone().into(),
+                    email: self.email.clone().into(),
+                    invited,
+                    method: method.to_owned(),
+                })),
+            })
+            .collect())
     }
 }
 

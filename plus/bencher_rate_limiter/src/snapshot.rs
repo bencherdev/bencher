@@ -16,6 +16,22 @@ pub struct RateLimiterSnapshot<K: Eq + Hash> {
     pub day: WindowSnapshot<K>,
 }
 
+impl<K: Eq + Hash> Default for RateLimiterSnapshot<K> {
+    fn default() -> Self {
+        Self {
+            minute: WindowSnapshot {
+                events: HashMap::new(),
+            },
+            hour: WindowSnapshot {
+                events: HashMap::new(),
+            },
+            day: WindowSnapshot {
+                events: HashMap::new(),
+            },
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BandwidthSnapshot<K: Eq + Hash> {
     pub events: HashMap<K, Vec<(EpochBucket, u64)>>,

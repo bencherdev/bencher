@@ -66,6 +66,41 @@ async fn blob_upload_start_unclaimed() {
     assert!(resp.headers().contains_key("location"));
 }
 
+// POST /v2/{name}/blobs/uploads - an authenticated push whose claim finds the project's organization
+// claimed by someone else since the push checked it is a conflict, not a server error
+#[tokio::test]
+async fn blob_upload_start_claim_of_an_organization_claimed_meanwhile_conflicts() {
+    let server = TestServer::new().await;
+    let slug = "claimed-meanwhile-blob-project";
+    let upload = |token: String| {
+        server
+            .client
+            .post(server.api_url(&format!("/v2/{slug}/blobs/uploads")))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&token),
+            )
+            .send()
+    };
+    let resp = upload(server.oci_public_token(slug, &[OciAction::Push]))
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::ACCEPTED, "an unclaimed project");
+
+    let user = server
+        .signup("Blob Claimer", "blobclaimmeanwhile@example.com")
+        .await;
+    server.claim_after_the_check().await;
+    let resp = upload(server.oci_token(&user, slug, &[OciAction::Push]))
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let body = resp.text().await.expect("Failed to read the response");
+    assert_eq!(status, StatusCode::CONFLICT, "{body}");
+    assert!(body.contains("DENIED"), "{body}");
+    assert!(body.contains("has already been claimed"), "{body}");
+}
+
 // POST /v2/{name}/blobs/uploads - Start upload with no Bearer token → 401
 #[tokio::test]
 async fn blob_upload_no_token_rejected() {

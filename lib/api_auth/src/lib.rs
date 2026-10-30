@@ -1,16 +1,16 @@
 // Dev dependencies used by integration tests
 #[cfg(test)]
+use async_trait as _;
+#[cfg(test)]
 use bencher_api_tests as _;
 #[cfg(test)]
-use diesel as _;
+use bencher_turnstile as _;
 #[cfg(test)]
 use reqwest as _;
 #[cfg(test)]
 use serde_json as _;
 #[cfg(test)]
 use tokio as _;
-#[cfg(test)]
-use url as _;
 
 #[cfg(feature = "plus")]
 use bencher_json::NonEmpty;
@@ -26,6 +26,7 @@ mod login;
 mod oauth;
 pub mod oci;
 mod session;
+mod sign_in;
 mod signup;
 
 #[cfg(feature = "plus")]
@@ -63,6 +64,19 @@ impl bencher_endpoint::Registrar for Api {
         }
         api_description.register(session::auth_session_get)?;
         api_description.register(session::auth_session_delete)?;
+
+        // Sign in by email
+        if http_options {
+            api_description.register(sign_in::email::auth_email_options)?;
+            api_description.register(sign_in::email::auth_email_resend_options)?;
+            api_description.register(sign_in::code::auth_code_options)?;
+            api_description.register(sign_in::link::auth_link_options)?;
+        }
+        api_description.register(sign_in::email::auth_email_post)?;
+        api_description.register(sign_in::email::auth_email_delete)?;
+        api_description.register(sign_in::email::auth_email_resend_post)?;
+        api_description.register(sign_in::code::auth_code_post)?;
+        api_description.register(sign_in::link::auth_link_post)?;
 
         #[cfg(feature = "plus")]
         {
