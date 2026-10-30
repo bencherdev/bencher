@@ -1,11 +1,11 @@
 import { QueryClient } from "@tanstack/solid-query";
 import { describe, expect, test } from "vitest";
 import type { JsonConsoleBranchRow, JsonVariant } from "../../types/bencher";
+import type { Page } from "../list/pages";
 import { fakeApi } from "../reports/testing";
 import {
 	type Row,
 	type RowBatch,
-	type Variants,
 	afterArchive,
 	listQuery,
 	markArchived,
@@ -177,6 +177,43 @@ describe("queries", () => {
 		expect(none).toBeNull();
 	});
 
+	// Kills a row missed because a page of looser matches came before it, and
+	// a search that reads on once the matches run out.
+	test("rowQuery reads on through the matches until its row turns up", async () => {
+		const looser = Array.from({ length: 255 }, (_, n) => row(`main-${n}`));
+		const { api, requests } = fakeApi((url) => ({
+			data: {
+				total: 300,
+				branches:
+					url.searchParams.get("page") === "1"
+						? looser
+						: [row("main-x"), row("main")],
+			},
+		}));
+		const signal = new AbortController().signal;
+		const found = await rowQuery(
+			api,
+			"hashbrown",
+			"branches",
+			"main",
+			false,
+		).queryFn({ signal });
+		expect(found?.slug).toBe("main");
+		expect(requests.map((url) => url.searchParams.get("page"))).toEqual([
+			"1",
+			"2",
+		]);
+		const none = await rowQuery(
+			api,
+			"hashbrown",
+			"branches",
+			"nope",
+			false,
+		).queryFn({ signal });
+		expect(none).toBeNull();
+		expect(requests).toHaveLength(4);
+	});
+
 	// Kills thresholds asked for under another dimension's name.
 	test.each([
 		["branches", "branch"],
@@ -197,6 +234,7 @@ describe("queries", () => {
 		expect(requests[0]?.pathname).toBe("/v0/projects/hashbrown/thresholds");
 		expect(requests[0]?.searchParams.get(param)).toBe("x");
 		expect(requests[0]?.searchParams.get("archived")).toBe("false");
+		expect(requests[0]?.searchParams.get("page")).toBe("1");
 	});
 
 	// Kills a list read from another dimension's rows, and a batch asked for
@@ -226,32 +264,23 @@ describe("queries", () => {
 
 // Kills a variant shown archived in its active list without the totals
 // moving, and totals that move whatever the variant showed.
-test("markVariantArchived moves a variant and both totals only when its shown state changes", () => {
+test("markVariantArchived moves a variant and both totals in every page only when its shown state changes", () => {
 	const cache = client();
-	const active = [
-		"console",
-		"benchmarks",
-		"hashbrown",
-		"variants",
-		"blake3",
-		false,
-	];
-	const archived = [
-		"console",
-		"benchmarks",
-		"hashbrown",
-		"variants",
-		"blake3",
-		true,
-	];
+	const prefix = ["console", "benchmarks", "hashbrown", "variants", "blake3"];
+	const active = [...prefix, false, 255, 1];
+	const later = [...prefix, false, 255, 2];
+	const archived = [...prefix, true, 255, 1];
 	const variant = {
 		uuid: "v1",
 		parameters: { threads: 4 },
 	} as unknown as JsonVariant;
-	cache.setQueryData<Variants>(active, { variants: [variant], total: 8 });
-	cache.setQueryData<Variants>(archived, { variants: [], total: 0 });
+	type Variants = Page<JsonVariant>;
+	cache.setQueryData<Variants>(active, { rows: [], total: 8, page: 1 });
+	cache.setQueryData<Variants>(later, { rows: [variant], total: 8, page: 2 });
+	cache.setQueryData<Variants>(archived, { rows: [], total: 0, page: 1 });
 	const totals = () => [
 		cache.getQueryData<Variants>(active)?.total,
+		cache.getQueryData<Variants>(later)?.total,
 		cache.getQueryData<Variants>(archived)?.total,
 	];
 
@@ -269,16 +298,16 @@ test("markVariantArchived moves a variant and both totals only when its shown st
 		"v1",
 		"2026-09-15T00:00:00Z",
 	);
-	expect(cache.getQueryData<Variants>(active)?.variants[0]?.archived).toBe(
+	expect(cache.getQueryData<Variants>(later)?.rows[0]?.archived).toBe(
 		"2026-09-15T00:00:00Z",
 	);
-	expect(totals()).toEqual([7, 1]);
+	expect(totals()).toEqual([7, 7, 1]);
 	markVariantArchived(cache, "hashbrown", "blake3", "v1", undefined);
 	markVariantArchived(cache, "hashbrown", "blake3", "v1", undefined);
 	expect(
-		cache.getQueryData<Variants>(active)?.variants[0]?.archived,
+		cache.getQueryData<Variants>(later)?.rows[0]?.archived,
 	).toBeUndefined();
-	expect(totals()).toEqual([8, 0]);
+	expect(totals()).toEqual([8, 8, 0]);
 });
 
 describe("withKept", () => {
@@ -295,7 +324,7 @@ describe("withKept", () => {
 	// Kills a kept row the list left out dropped, put at the end, or put before
 	// the row it followed.
 	test("a row the list no longer holds comes back after the row it followed", () => {
-		expect(names(withKept(without("c"), [kept("c", "b")]))).toEqual([
+		expect(names(withKept<Row>(without("c"), [kept("c", "b")]))).toEqual([
 			"a",
 			"b",
 			"c",
@@ -308,7 +337,10 @@ describe("withKept", () => {
 	test("rows kept one after another from the top keep their order", () => {
 		expect(
 			names(
-				withKept(without("a", "b"), [kept("b", "a"), kept("a", undefined)]),
+				withKept<Row>(without("a", "b"), [
+					kept("b", "a"),
+					kept("a", undefined),
+				]),
 			),
 		).toEqual(["a", "b", "c", "d"]);
 	});
@@ -316,7 +348,7 @@ describe("withKept", () => {
 	// Kills a kept row the list still holds drawn as the API answered rather
 	// than as the page last set it, or drawn twice.
 	test("a row the list still holds is drawn once, as the page last set it", () => {
-		const drawn = withKept(rows, [kept("b", "a")]);
+		const drawn = withKept<Row>(rows, [kept("b", "a")]);
 		expect(names(drawn)).toEqual(["a", "b", "c", "d"]);
 		expect(drawn[1]?.archived).toBe(5);
 	});

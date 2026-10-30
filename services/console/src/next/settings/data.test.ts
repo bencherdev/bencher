@@ -9,6 +9,8 @@ import {
 	Visibility,
 } from "../../types/bencher";
 import type { Api } from "../api";
+import type { Page } from "../list/pages";
+import type { KeyRow } from "./keys";
 import {
 	VERSION_KEY,
 	readShell,
@@ -17,12 +19,11 @@ import {
 } from "../memory";
 import { ORGANIZATIONS_PATH, projectPath } from "../paths";
 import {
-	type KeyPage,
 	addKey,
 	applyPatch,
 	forgetSlug,
 	newestHome,
-	keysQuery,
+	keysPage,
 	projectKeys,
 	revokeKey,
 	settleProject,
@@ -160,36 +161,53 @@ const key = (name: string, revoked?: string): JsonProjectKey => ({
 	...(revoked ? { revoked } : {}),
 });
 
-const keys = (client: QueryClient, status: "active" | "revoked") =>
-	client.getQueryData<KeyPage>(["console", "keys", "hashbrown", status]);
+const keyPage = (status: "active" | "revoked", page = 1) => [
+	"console",
+	"keys",
+	"hashbrown",
+	status,
+	2,
+	page,
+];
+const keys = (client: QueryClient, status: "active" | "revoked", page = 1) =>
+	client.getQueryData<Page<KeyRow>>(keyPage(status, page));
 
 describe("keys", () => {
-	// Kills a revoke that waits for the API, miscounts the toggle, or whose
-	// undo loses a key.
+	// Kills a revoke that waits for the API, miscounts the toggle, misses a
+	// key on a later page, or whose undo loses a key.
 	test("a revoke moves the key at once, and the undo moves it back", () => {
 		const client = new QueryClient();
-		const active = { keys: [key("a"), key("b")], total: 2 };
-		const revoked = { keys: [key("old", "2026-08-04T00:00:00Z")], total: 1 };
-		client.setQueryData(["console", "keys", "hashbrown", "active"], active);
-		client.setQueryData(["console", "keys", "hashbrown", "revoked"], revoked);
+		const first = { rows: [key("a"), key("b")], total: 3, page: 1 };
+		const second = { rows: [key("c")], total: 3, page: 2 };
+		const revoked = {
+			rows: [key("old", "2026-08-04T00:00:00Z")],
+			total: 1,
+			page: 1,
+		};
+		client.setQueryData(keyPage("active"), first);
+		client.setQueryData(keyPage("active", 2), second);
+		client.setQueryData(keyPage("revoked"), revoked);
 
 		const undo = revokeKey(
 			client,
 			projectKeys("hashbrown"),
-			"uuid-b",
+			"uuid-c",
 			"2026-09-13T00:00:00Z",
 		);
-		expect(keys(client, "active")).toEqual({ keys: [key("a")], total: 1 });
+		expect(keys(client, "active")).toEqual({ ...first, total: 2 });
+		expect(keys(client, "active", 2)).toEqual({ rows: [], total: 2, page: 2 });
 		expect(keys(client, "revoked")).toEqual({
-			keys: [
-				key("b", "2026-09-13T00:00:00Z"),
+			rows: [
+				key("c", "2026-09-13T00:00:00Z"),
 				key("old", "2026-08-04T00:00:00Z"),
 			],
 			total: 2,
+			page: 1,
 		});
 
 		undo();
-		expect(keys(client, "active")).toEqual(active);
+		expect(keys(client, "active")).toEqual(first);
+		expect(keys(client, "active", 2)).toEqual(second);
 		expect(keys(client, "revoked")).toEqual(revoked);
 	});
 
@@ -197,14 +215,12 @@ describe("keys", () => {
 	// own revoke the API accepted meanwhile.
 	test("the undo of one revoke leaves another standing", () => {
 		const client = new QueryClient();
-		client.setQueryData(["console", "keys", "hashbrown", "active"], {
-			keys: [key("alpha"), key("bravo")],
+		client.setQueryData(keyPage("active"), {
+			rows: [key("alpha"), key("bravo")],
 			total: 2,
+			page: 1,
 		});
-		client.setQueryData(["console", "keys", "hashbrown", "revoked"], {
-			keys: [],
-			total: 0,
-		});
+		client.setQueryData(keyPage("revoked"), { rows: [], total: 0, page: 1 });
 
 		const undoAlpha = revokeKey(
 			client,
@@ -219,19 +235,25 @@ describe("keys", () => {
 			"2026-09-13T00:01:00Z",
 		);
 		undoAlpha();
-		expect(keys(client, "active")).toEqual({ keys: [key("alpha")], total: 1 });
-		expect(keys(client, "revoked")).toEqual({
-			keys: [key("bravo", "2026-09-13T00:01:00Z")],
+		expect(keys(client, "active")).toEqual({
+			rows: [key("alpha")],
 			total: 1,
+			page: 1,
+		});
+		expect(keys(client, "revoked")).toEqual({
+			rows: [key("bravo", "2026-09-13T00:01:00Z")],
+			total: 1,
+			page: 1,
 		});
 	});
 
 	// Kills a new key missing from the list until a refetch, or kept with its secret.
 	test("a new key leads the active list without its secret", () => {
 		const client = new QueryClient();
-		client.setQueryData(["console", "keys", "hashbrown", "active"], {
-			keys: [key("a")],
+		client.setQueryData(keyPage("active"), {
+			rows: [key("a")],
 			total: 1,
+			page: 1,
 		});
 		addKey(client, projectKeys("hashbrown"), {
 			uuid: "uuid-new",
@@ -242,16 +264,16 @@ describe("keys", () => {
 		});
 		const page = keys(client, "active");
 		expect(page?.total).toBe(2);
-		expect(page?.keys.map(({ name }) => name)).toEqual(["new", "a"]);
+		expect(page?.rows.map(({ name }) => name)).toEqual(["new", "a"]);
 		expect(JSON.stringify(page)).not.toContain("bencher_run_secret");
 	});
 });
 
-describe("keysQuery", () => {
-	// Kills a list read from another path or status, a legacy token's
-	// secret, which its list returns on every row, kept in the cache, and a
-	// revoked row that loses its revoked date.
-	test("reads one status of a list, and keeps no secret", async () => {
+describe("keysPage", () => {
+	// Kills a list read from another path, status, order, or page, a legacy
+	// token's secret, which its list returns on every row, kept in the cache,
+	// and a revoked row that loses its revoked date.
+	test("reads one page of one status, newest first, and keeps no secret", async () => {
 		const revokedAt = "2026-01-01T00:00:00Z";
 		const reads: string[] = [];
 		const token: JsonToken = {
@@ -279,16 +301,16 @@ describe("keysQuery", () => {
 		};
 		const home = { path: "/v0/users/muriel-bagge/tokens", queryKey: ["t"] };
 		const signal = new AbortController().signal;
-		const page = await keysQuery(api, home, false).queryFn({ signal });
-		const revoked = await keysQuery(api, home, true).queryFn({ signal });
+		const page = await keysPage(api, home, false)(2, 16, signal);
+		const revoked = await keysPage(api, home, true)(1, 16, signal);
 		expect(reads).toEqual([
-			"/v0/users/muriel-bagge/tokens?revoked=false&per_page=255",
-			"/v0/users/muriel-bagge/tokens?revoked=true&per_page=255",
+			"/v0/users/muriel-bagge/tokens?revoked=false&sort=created&direction=desc&per_page=16&page=2",
+			"/v0/users/muriel-bagge/tokens?revoked=true&sort=created&direction=desc&per_page=16&page=1",
 		]);
 		expect(page.total).toBe(3);
-		expect(page.keys.map(({ name }) => name)).toEqual(["ci-2024"]);
+		expect(page.rows.map(({ name }) => name)).toEqual(["ci-2024"]);
 		expect(JSON.stringify(page)).not.toContain(token.token);
-		expect(revoked.keys.map((row) => row.revoked)).toEqual([revokedAt]);
+		expect(revoked.rows.map((row) => row.revoked)).toEqual([revokedAt]);
 	});
 });
 

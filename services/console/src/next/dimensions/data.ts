@@ -14,7 +14,8 @@ import type {
 } from "../../types/bencher";
 import type { Api } from "../api";
 import { NARROW } from "../plot/narrow";
-import { batchSize } from "../reports/rows";
+import { type FetchPage, type Page, pageQuery, totalOf } from "../list/pages";
+import { batchSize } from "../list/rows";
 import { type Dimension, KINDS } from "./dimension";
 import { type ListSearch, apiParams, encodeSearch } from "./search";
 
@@ -185,8 +186,8 @@ export const afterArchive = (
 };
 
 /** A row changed on the page, as the page last set it, and the row it followed then. */
-export interface KeptRow {
-	row: Row;
+export interface KeptRow<T extends { uuid: string } = Row> {
+	row: T;
 	after: string | undefined;
 }
 
@@ -194,20 +195,20 @@ export interface KeptRow {
  * The rows listed, each kept row as the page last set it, and each kept row
  * the list no longer holds back after the row it followed.
  */
-export const withKept = (
-	listed: readonly Row[],
-	kept: readonly KeptRow[],
-): Row[] => {
+export const withKept = <T extends { uuid: string }>(
+	listed: readonly T[],
+	kept: readonly KeptRow<T>[],
+): T[] => {
 	const shown = new Map(kept.map(({ row }) => [row.uuid, row]));
 	const held = new Set(listed.map(({ uuid }) => uuid));
-	const following = new Map<string | undefined, Row[]>();
+	const following = new Map<string | undefined, T[]>();
 	for (const { row, after } of kept) {
 		if (!held.has(row.uuid)) {
 			following.set(after, [...(following.get(after) ?? []), row]);
 		}
 	}
-	const drawn = new Map<string, Row>();
-	const place = (row: Row) => {
+	const drawn = new Map<string, T>();
+	const place = (row: T) => {
 		if (!drawn.has(row.uuid)) {
 			drawn.set(row.uuid, shown.get(row.uuid) ?? row);
 			for (const next of following.get(row.uuid) ?? []) {
@@ -272,13 +273,14 @@ export const markDetailArchived = (
 	return before;
 };
 
-// The API's largest page: past it the search no longer finds the exact row.
+// The API's largest page.
 const SEARCH_PAGE = 255;
 
 /**
  * A dimension's row in its list, with what it carries there: the last report,
  * the start point's name, and the thresholds that would archive with it. The
- * list only searches, so the exact row is picked from what it matches.
+ * list only searches, so the exact row is picked from what it matches, a page
+ * at a time until it turns up.
  */
 export const rowQuery = (
 	api: Api,
@@ -296,63 +298,73 @@ export const rowQuery = (
 		if (archived) {
 			search.set("archived", "true");
 		}
-		const { data } = await api.get<Partial<Record<Dimension, Row[]>>>(
-			`${consolePath(slug)}/${dimension}?${search}`,
-			signal,
-		);
-		return (
-			(data[dimension] ?? []).find(
-				(row) => row.slug === ref || row.uuid === ref,
-			) ?? null
-		);
+		for (let page = 1; ; page++) {
+			search.set("page", String(page));
+			const { data } = await api.get<
+				{ total: number } & Partial<Record<Dimension, Row[]>>
+			>(`${consolePath(slug)}/${dimension}?${search}`, signal);
+			const rows = data[dimension] ?? [];
+			const found = rows.find((row) => row.slug === ref || row.uuid === ref);
+			if (
+				found ||
+				rows.length < SEARCH_PAGE ||
+				page * SEARCH_PAGE >= data.total
+			) {
+				return found ?? null;
+			}
+		}
 	},
 	placeholderData: keepPrevious,
 });
 
 const keepPrevious = <T>(previous: T | undefined) => previous;
 
-export interface ThresholdsOn {
-	thresholds: JsonThreshold[];
-	total: number;
-}
+// A dimension carries a handful of thresholds: a page holds most lists whole.
+export const THRESHOLDS_PAGE = 64;
 
-// A dimension carries a handful of thresholds; the card's head counts them all.
-const THRESHOLDS_PAGE = 64;
+export const thresholdsKey = (
+	slug: string,
+	dimension: Dimension,
+	ref: string,
+	archived: boolean,
+) => ["console", "thresholds", slug, "on", dimension, ref, archived];
 
-/** The thresholds on a branch, testbed, or measure that share its archived state. */
+export const thresholdsPage =
+	(
+		api: Api,
+		slug: string,
+		dimension: Dimension,
+		ref: string,
+		archived: boolean,
+	): FetchPage<JsonThreshold> =>
+	async (page, perPage, signal) => {
+		const search = new URLSearchParams({
+			[KINDS[dimension].threshold ?? dimension]: ref,
+			archived: String(archived),
+			per_page: String(perPage),
+			page: String(page),
+		});
+		const { data, headers } = await api.get<JsonThreshold[]>(
+			`${project(slug)}/thresholds?${search}`,
+			signal,
+		);
+		return { rows: data, total: totalOf(headers, data) };
+	};
+
+/** The first page of the thresholds on a branch, testbed, or measure that share its archived state. */
 export const thresholdsQuery = (
 	api: Api,
 	slug: string,
 	dimension: Dimension,
 	ref: string,
 	archived: boolean,
-) => ({
-	queryKey: ["console", "thresholds", slug, "on", dimension, ref, archived],
-	queryFn: async ({
-		signal,
-	}: {
-		signal: AbortSignal;
-	}): Promise<ThresholdsOn> => {
-		const search = new URLSearchParams({
-			[KINDS[dimension].threshold ?? dimension]: ref,
-			archived: String(archived),
-			per_page: String(THRESHOLDS_PAGE),
-		});
-		const { data, headers } = await api.get<JsonThreshold[]>(
-			`${project(slug)}/thresholds?${search}`,
-			signal,
-		);
-		return { thresholds: data, total: totalOf(headers, data) };
-	},
-	placeholderData: keepPrevious,
-});
-
-const totalOf = (headers: Headers, data: unknown[]) => {
-	const total = Number(headers.get("X-Total-Count"));
-	return Number.isFinite(total) && headers.has("X-Total-Count")
-		? total
-		: data.length;
-};
+) =>
+	pageQuery(
+		thresholdsKey(slug, dimension, ref, archived),
+		THRESHOLDS_PAGE,
+		1,
+		thresholdsPage(api, slug, dimension, ref, archived),
+	);
 
 const RECENT_RUNS = 5;
 
@@ -378,12 +390,7 @@ export const recentRunsQuery = (
 	placeholderData: keepPrevious,
 });
 
-export interface Variants {
-	variants: JsonVariant[];
-	total: number;
-}
-
-const variantsPrefix = (slug: string, ref: string) => [
+export const variantsPrefix = (slug: string, ref: string) => [
 	"console",
 	"benchmarks",
 	slug,
@@ -391,23 +398,37 @@ const variantsPrefix = (slug: string, ref: string) => [
 	ref,
 ];
 
-/** A benchmark's variants with one archived state, as many as the API pages at once. */
+// The API's largest page.
+export const VARIANTS_PAGE = 255;
+
+export const variantsPage =
+	(
+		api: Api,
+		slug: string,
+		ref: string,
+		archived: boolean,
+	): FetchPage<JsonVariant> =>
+	async (page, perPage, signal) => {
+		const { data, headers } = await api.get<JsonVariant[]>(
+			`${project(slug)}/benchmarks/${encodeURIComponent(ref)}/variants?archived=${archived}&per_page=${perPage}&page=${page}`,
+			signal,
+		);
+		return { rows: data, total: totalOf(headers, data) };
+	};
+
+/** The first page of a benchmark's variants with one archived state. */
 export const variantsQuery = (
 	api: Api,
 	slug: string,
 	ref: string,
 	archived: boolean,
-) => ({
-	queryKey: [...variantsPrefix(slug, ref), archived],
-	queryFn: async ({ signal }: { signal: AbortSignal }): Promise<Variants> => {
-		const { data, headers } = await api.get<JsonVariant[]>(
-			`${project(slug)}/benchmarks/${encodeURIComponent(ref)}/variants?archived=${archived}&per_page=${SEARCH_PAGE}`,
-			signal,
-		);
-		return { variants: data, total: totalOf(headers, data) };
-	},
-	placeholderData: keepPrevious,
-});
+) =>
+	pageQuery(
+		[...variantsPrefix(slug, ref), archived],
+		VARIANTS_PAGE,
+		1,
+		variantsPage(api, slug, ref, archived),
+	);
 
 /**
  * Show a variant archived at `archived`, or active, in its benchmark's lists.
@@ -420,24 +441,24 @@ export const markVariantArchived = (
 	uuid: string,
 	archived: string | undefined,
 ) => {
-	const lists = client.getQueriesData<Variants>({
-		queryKey: variantsPrefix(slug, ref),
-	});
+	const prefix = variantsPrefix(slug, ref);
+	const pages = client.getQueriesData<Page<JsonVariant>>({ queryKey: prefix });
 	const before = Boolean(
-		lists
-			.flatMap(([, list]) => list?.variants ?? [])
+		pages
+			.flatMap(([, page]) => page?.rows ?? [])
 			.find((variant) => variant.uuid === uuid)?.archived,
 	);
 	const after = archived !== undefined;
-	for (const [key, list] of lists) {
-		if (list) {
-			const holdsArchived = key.at(-1) === true;
+	for (const [key, page] of pages) {
+		if (page) {
+			const holdsArchived = key[prefix.length] === true;
 			const moved = before === after ? 0 : after === holdsArchived ? 1 : -1;
-			client.setQueryData<Variants>(key, {
-				variants: list.variants.map((variant) =>
+			client.setQueryData<Page<JsonVariant>>(key, {
+				...page,
+				rows: page.rows.map((variant) =>
 					variant.uuid === uuid ? withArchived(variant, archived) : variant,
 				),
-				total: list.total + moved,
+				total: page.total + moved,
 			});
 		}
 	}

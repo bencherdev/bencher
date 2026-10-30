@@ -20,7 +20,7 @@ import type {
 } from "../../types/bencher";
 import { PROJECTS_PATH } from "../paths";
 import { restsOf } from "../plot/distinct";
-import { type Range, visibleRange } from "../reports/rows";
+import { type Range, visibleRange } from "../list/rows";
 import { ROW_HEIGHT, type Row, thresholdsOf } from "./data";
 import { type Dimension, KINDS } from "./dimension";
 import { archiveImpact } from "./impact";

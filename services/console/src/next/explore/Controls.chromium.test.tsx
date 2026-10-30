@@ -49,3 +49,25 @@ for (const width of [320, 390, 768] as const) {
 		expect(document.documentElement.scrollWidth).toBe(width);
 	});
 }
+
+// Kills a link's selection drawn short in silence, and one whose count of
+// the cross product's lines hides that the chosen lines were cut.
+test("a link's lines drawn short say how many of them the plot drew", async () => {
+	const root = document.createElement("div");
+	document.body.append(root);
+	dispose = render(
+		() => (
+			<Controls
+				query={blankQuery()}
+				total={72}
+				chosen={{ drew: 16, of: 17 }}
+				now={() => 0}
+				onQuery={() => {}}
+			/>
+		),
+		root,
+	);
+	await expect
+		.element(page.getByRole("status"))
+		.toHaveTextContent("16 of 17 lines");
+});

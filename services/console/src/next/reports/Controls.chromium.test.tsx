@@ -202,6 +202,24 @@ test("options stay while the next search loads, and a pick filters by slug", asy
 	expect(searches.at(-1)?.branch).toBe("412-merge");
 });
 
+// Kills a branch menu that stops at its first options with no word of the
+// rest, which the search reaches.
+test("a branch menu that stops says how many more its search reaches", async () => {
+	const { api } = fakeApi(() => ({
+		data: {
+			total: 207,
+			branches: Array.from({ length: 32 }, (_, n) =>
+				branch(`release/${n}`, `release-${n}`),
+			),
+		},
+	}));
+	mount(api);
+	await page.getByRole("button", { name: "branch any" }).click();
+	await expect
+		.element(page.getByRole("menuitem", { name: "175 more" }))
+		.toBeDisabled();
+});
+
 // Kills chips that show the slug of a branch or testbed whose name differs.
 test("the chips name the branch and the testbed", async () => {
 	await page.viewport(1280, 720);

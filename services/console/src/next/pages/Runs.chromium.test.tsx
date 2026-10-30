@@ -18,7 +18,7 @@ import { createQueryClient } from "../cache";
 import { ProjectContext } from "../project";
 import { DEFAULT_SEARCH } from "../reports/search";
 import { fakeApi, watchFallback } from "../reports/testing";
-import { screenBatch } from "../reports/virtual";
+import { screenBatch } from "../list/rows";
 import { screenBatch as reportScreenBatch } from "../report/query";
 import { type RunsBatch, batchKey } from "../runs/query";
 import { runReportsQuery } from "../runs/status";

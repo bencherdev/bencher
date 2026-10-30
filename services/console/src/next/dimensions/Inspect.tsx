@@ -38,7 +38,6 @@ import {
 	RecordCard,
 	type RunsState,
 	TestbedCards,
-	type ThresholdsState,
 } from "./Cards";
 import {
 	type Detail,
@@ -55,6 +54,7 @@ import {
 	variantsQuery,
 } from "./data";
 import { type Dimension, KINDS } from "./dimension";
+import { thresholdList } from "./lists";
 import { archiveImpact, archivedNote, unarchivedNote } from "./impact";
 import { Impact } from "./RowTable";
 import { shortDate } from "./time";
@@ -113,10 +113,16 @@ const Inspect = (props: {
 	const row = useQueryResult(() =>
 		rowQuery(api, slug(), props.dimension, props.entry, archived()),
 	);
-	const thresholds = useQueryResult(() => ({
-		...thresholdsQuery(api, slug(), props.dimension, props.entry, archived()),
-		enabled: kind().threshold !== undefined,
-	}));
+	const thresholds = thresholdList(
+		api,
+		() => ({
+			slug: slug(),
+			dimension: props.dimension,
+			ref: props.entry,
+			archived: archived(),
+		}),
+		() => kind().threshold !== undefined,
+	);
 	const runs = useQueryResult(() => ({
 		...recentRunsQuery(
 			api,
@@ -143,9 +149,12 @@ const Inspect = (props: {
 		if (
 			detail().isLoadingError ||
 			(settled(detail()) &&
-				[row(), thresholds(), runs(), ...variants.map((each) => each())].every(
-					settled,
-				))
+				[
+					row(),
+					thresholds.first(),
+					runs(),
+					...variants.map((each) => each()),
+				].every(settled))
 		) {
 			setPainted(true);
 		}
@@ -160,7 +169,7 @@ const Inspect = (props: {
 		if (found) {
 			return { back: thresholdsOf(found), held: heldOf(found) };
 		}
-		const total = thresholds().data?.total ?? 0;
+		const total = thresholds.total() ?? 0;
 		return { back: total, held: 0 };
 	};
 
@@ -243,11 +252,6 @@ const Inspect = (props: {
 	};
 
 	const list = () => `${PROJECTS_PATH}/${slug()}/${props.dimension}`;
-	const thresholdsState = (): ThresholdsState => ({
-		data: thresholds().data,
-		failed: thresholds().isLoadingError,
-		retry: () => thresholds().refetch(),
-	});
 	const runsState = (): RunsState => ({
 		data: runs().data,
 		failed: runs().isLoadingError,
@@ -406,7 +410,7 @@ const Inspect = (props: {
 							branch={detail().data as JsonBranch | undefined}
 							row={row().data as JsonConsoleBranchRow | null | undefined}
 							runs={runsState()}
-							thresholds={thresholdsState()}
+							thresholds={thresholds}
 						/>
 					</Match>
 					<Match when={props.dimension === "testbeds"}>
@@ -414,14 +418,14 @@ const Inspect = (props: {
 							slug={slug()}
 							testbed={detail().data as JsonTestbed | undefined}
 							runs={runsState()}
-							thresholds={thresholdsState()}
+							thresholds={thresholds}
 						/>
 					</Match>
 					<Match when={props.dimension === "measures"}>
 						<MeasureCards
 							slug={slug()}
 							measure={detail().data as JsonMeasure | undefined}
-							thresholds={thresholdsState()}
+							thresholds={thresholds}
 						/>
 					</Match>
 					<Match when={props.dimension === "benchmarks"}>

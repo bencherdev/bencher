@@ -297,9 +297,12 @@ const Filters = (props: {
 				search
 				options={(text) => () => {
 					const lower = text().toLowerCase();
-					return ADAPTERS.filter((adapter) => adapter.includes(lower))
-						.sort((a, b) => Number(b === lower) - Number(a === lower))
-						.map((adapter) => ({ value: adapter, label: adapter }));
+					return {
+						options: ADAPTERS.filter((adapter) => adapter.includes(lower))
+							.sort((a, b) => Number(b === lower) - Number(a === lower))
+							.map((adapter) => ({ value: adapter, label: adapter })),
+						more: 0,
+					};
 				}}
 				onPick={(adapter) =>
 					props.onSearch(
@@ -315,7 +318,10 @@ const Filters = (props: {
 				name="alerts"
 				value={props.search.alerts ? "active" : undefined}
 				anyLabel="Any"
-				options={() => () => [{ value: "active", label: "With active alerts" }]}
+				options={() => () => ({
+					options: [{ value: "active", label: "With active alerts" }],
+					more: 0,
+				})}
 				onPick={(alerts) =>
 					props.onSearch({ ...props.search, alerts: alerts === "active" })
 				}
@@ -356,6 +362,12 @@ export interface Option {
 	label: string;
 }
 
+/** A menu's options, and how many more its search reaches. */
+export interface Listed<T = Option> {
+	options: T[];
+	more: number;
+}
+
 /** A project's branches or testbeds whose name or slug matches `text`, the most recently reported first, by slug. */
 const useNamed = (resource: "branches" | "testbeds", text: () => string) => {
 	const { api, slug } = useProject();
@@ -363,7 +375,7 @@ const useNamed = (resource: "branches" | "testbeds", text: () => string) => {
 		queryKey: ["console", resource, slug(), text(), "last_used"],
 		// The last options stay while the next search loads, so the list never blinks empty.
 		placeholderData: (
-			previous: (JsonConsoleBranchRow | JsonConsoleTestbedRow)[] | undefined,
+			previous: (JsonConsoleBranches & JsonConsoleTestbeds) | undefined,
 		) => previous,
 		queryFn: async ({ signal }: { signal: AbortSignal }) => {
 			const params = new URLSearchParams({
@@ -378,14 +390,17 @@ const useNamed = (resource: "branches" | "testbeds", text: () => string) => {
 					`/v0/console/projects/${encodeURIComponent(slug())}/${resource}?${params}`,
 					signal,
 				)
-			).data[resource];
+			).data;
 		},
 	}));
-	return () =>
-		(result().data ?? []).map(({ slug, name }) => ({
-			value: slug,
-			label: name,
-		}));
+	return (): Listed => {
+		const rows: (JsonConsoleBranchRow | JsonConsoleTestbedRow)[] =
+			result().data?.[resource] ?? [];
+		return {
+			options: rows.map(({ slug, name }) => ({ value: slug, label: name })),
+			more: Math.max(0, (result().data?.total ?? 0) - rows.length),
+		};
+	};
 };
 
 export const FilterMenu = (props: {
@@ -397,7 +412,7 @@ export const FilterMenu = (props: {
 	search?: boolean;
 	anyLabel?: string;
 	/** Called once the menu opens, so its options load only then. */
-	options: (text: () => string) => () => Option[];
+	options: (text: () => string) => () => Listed;
 	onPick: (value: string | undefined, label?: string) => void;
 }) => {
 	const [open, setOpen] = createSignal(false);
@@ -432,7 +447,7 @@ const FilterOptions = (props: {
 	value: string | undefined;
 	search?: boolean;
 	anyLabel?: string;
-	options: (text: () => string) => () => Option[];
+	options: (text: () => string) => () => Listed;
 	onPick: (value: string | undefined, label?: string) => void;
 	anchor: HTMLElement | undefined;
 	onClose: () => void;
@@ -468,6 +483,7 @@ const FilterOptions = (props: {
 			anchor={props.anchor}
 			onClose={props.onClose}
 			header={header}
+			more={options().more}
 		>
 			<MenuItemRadio
 				checked={props.value === undefined}
@@ -475,7 +491,7 @@ const FilterOptions = (props: {
 			>
 				{props.anyLabel ?? `Any ${props.name}`}
 			</MenuItemRadio>
-			<For each={options()}>
+			<For each={options().options}>
 				{(option) => (
 					<MenuItemRadio
 						checked={option.value === props.value}

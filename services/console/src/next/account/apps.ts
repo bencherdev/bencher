@@ -1,18 +1,13 @@
 import type { QueryClient } from "@tanstack/solid-query";
 import type { JsonOAuthGrant } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
+import { createPaged } from "../list/paged";
+import { dropRow, totalOf } from "../list/pages";
 
 const USER_KEY_PREFIX = "bencher_user_";
 
-// The most the API lists at once.
-const PER_PAGE = 255;
-
-export interface GrantPage {
-	/** Newest first. */
-	grants: JsonOAuthGrant[];
-	/** Every app the reader has connected, which the list may stop short of. */
-	total: number;
-}
+// A page of apps: each is a card, so a screen holds a few.
+const PER_PAGE = 16;
 
 const grantsPath = (user: string) =>
 	`/v0/users/${encodeURIComponent(user)}/oauth/grants`;
@@ -20,53 +15,25 @@ const grantsPath = (user: string) =>
 export const grantPath = (user: string, grant: string) =>
 	`${grantsPath(user)}/${grant}`;
 
-export const grantsQuery = (api: Api, user: string) => ({
-	queryKey: ["account", "apps", user],
-	queryFn: async ({ signal }: { signal: AbortSignal }): Promise<GrantPage> => {
-		const { data, headers } = await api.get<JsonOAuthGrant[]>(
-			`${grantsPath(user)}?per_page=${PER_PAGE}&direction=desc`,
-			signal,
-		);
-		return {
-			grants: data,
-			total: Number(headers.get("X-Total-Count") ?? data.length),
-		};
-	},
-});
+export const grantsKey = (user: string) => ["account", "apps", user];
+
+/** The apps connected to the reader's account, newest first, a page at a time. */
+export const grantList = (api: Api, user: () => string) =>
+	createPaged<JsonOAuthGrant>({
+		queryKey: () => grantsKey(user()),
+		perPage: PER_PAGE,
+		fetchPage: async (page, perPage, signal) => {
+			const { data, headers } = await api.get<JsonOAuthGrant[]>(
+				`${grantsPath(user())}?per_page=${perPage}&page=${page}&direction=desc`,
+				signal,
+			);
+			return { rows: data, total: totalOf(headers, data) };
+		},
+	});
 
 /** Show `uuid` gone at once; returns the undo. */
-export const dropGrant = (
-	client: QueryClient,
-	api: Api,
-	user: string,
-	uuid: string,
-) => {
-	const { queryKey } = grantsQuery(api, user);
-	const before = client.getQueryData<GrantPage>(queryKey);
-	const index = before?.grants.findIndex((grant) => grant.uuid === uuid) ?? -1;
-	const grant = before?.grants[index];
-	if (!(before && grant)) {
-		return () => {};
-	}
-	client.setQueryData<GrantPage>(queryKey, {
-		grants: before.grants.filter((other) => other.uuid !== uuid),
-		total: before.total - 1,
-	});
-	// The undo puts back this app alone: another revoke may have landed since.
-	return () =>
-		client.setQueryData<GrantPage>(queryKey, (page) =>
-			!page || page.grants.some((other) => other.uuid === uuid)
-				? page
-				: {
-						grants: [
-							...page.grants.slice(0, index),
-							grant,
-							...page.grants.slice(index),
-						],
-						total: page.total + 1,
-					},
-		);
-};
+export const dropGrant = (client: QueryClient, user: string, uuid: string) =>
+	dropRow<JsonOAuthGrant>(client, grantsKey(user), uuid);
 
 /** Why the API will not list the apps, when no retry would change that. */
 export const refusalOf = (error: unknown, token: string) => {

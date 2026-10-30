@@ -5,6 +5,7 @@ import { type Api, ApiError, type Method } from "../api";
 import { mountAccount } from "../account/testing";
 import { axeInBothThemes } from "../axe/testing";
 import UserKeys from "./UserKeys";
+import { screenBatch } from "../list/rows";
 
 let dispose: (() => void) | undefined;
 
@@ -65,8 +66,8 @@ test("both lists start at once from the user's keys, under the page's head", asy
 	await expect
 		.poll(() => [...reads].sort())
 		.toEqual([
-			`${KEYS}?revoked=false&per_page=255`,
-			`${KEYS}?revoked=true&per_page=255`,
+			`${KEYS}?revoked=false&sort=created&direction=desc&per_page=${screenBatch()}&page=1`,
+			`${KEYS}?revoked=true&sort=created&direction=desc&per_page=${screenBatch()}&page=1`,
 		]);
 	await expect
 		.element(page.getByRole("heading", { level: 1, name: "Keys" }))

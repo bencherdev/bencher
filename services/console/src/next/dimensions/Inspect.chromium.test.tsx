@@ -637,6 +637,44 @@ test("a branch the project does not have says so", async () => {
 
 // Kills a variant archive that waits for the API, and the never reported
 // empty variant listed beside the reported ones.
+// Kills parameter counts taken over the variants loaded so far, and a table
+// that draws every variant before the reader scrolls to them.
+test("a benchmark's parameters count every variant, past the table's first page", async () => {
+	const all = Array.from({ length: 300 }, (_, n) =>
+		variant(`v${n}`, { threads: n, input_bytes: 1024 }),
+	);
+	const { api } = fakeApi(
+		(url) => {
+			if (url.pathname === "/v0/projects/hashbrown/benchmarks/blake3") {
+				return {
+					data: {
+						uuid: "blake3-uuid",
+						name: "blake3",
+						slug: "blake3",
+						created: "2026-09-12T10:00:00Z",
+					} as JsonBenchmark,
+				};
+			}
+			if (url.pathname.endsWith("/variants")) {
+				if (url.searchParams.get("archived") === "true") {
+					return { data: [], total: 0 };
+				}
+				const size = Number(url.searchParams.get("per_page"));
+				const at = Number(url.searchParams.get("page"));
+				return { data: all.slice((at - 1) * size, at * size), total: 300 };
+			}
+			return { data: { benchmarks: [] } };
+		},
+		() => new Promise(() => {}),
+	);
+	dispose = (await show(api, "benchmarks", "blake3")).dispose;
+	await expect
+		.element(page.getByRole("region", { name: "Parameters in use" }))
+		.toHaveTextContent(/input_bytes\s*1024300 variants/);
+	const variants = page.getByRole("table", { name: "Active variants" });
+	expect(variants.getByRole("row").elements().length).toBeLessThanOrEqual(256);
+});
+
 test("a benchmark's variant archives at once from its row", async () => {
 	const { api, sent } = fakeApi(
 		(url) => {
@@ -1038,10 +1076,10 @@ test("a benchmark's counts are the variants its table shows, each in its shown s
 	expect(variantCounts()).toEqual(["Active 1", "Archived 1"]);
 });
 
-// Kills a variant change that refetches the list on screen once it lands,
-// which drops the dimmed row and its Undo, and one that leaves the other
-// status's list stale.
-test("a landed variant archive keeps its row dimmed with Undo and rereads the archived list", async () => {
+// Kills a variant change whose reread of the list on screen drops the dimmed
+// row and its Undo, and one that leaves either status's pages stale, which
+// skips the row that moves up a page.
+test("a landed variant archive keeps its row dimmed with Undo and rereads both lists", async () => {
 	const { api, reads, sent } = benchmarkApi();
 	dispose = (await show(api, "benchmarks", "blake3")).dispose;
 	await expect.element(variantsTable().getByText("threads=4")).toBeVisible();
@@ -1055,8 +1093,8 @@ test("a landed variant archive keeps its row dimmed with Undo and rereads the ar
 	await archiveVariant("threads=4");
 	await expect.poll(() => sent.length).toBe(1);
 	await expect.poll(() => listed("true")).toBe(before.archived + 1);
+	await expect.poll(() => listed("false")).toBeGreaterThan(before.active);
 	await new Promise((resolve) => setTimeout(resolve, 100));
-	expect(listed("false")).toBe(before.active);
 	await expect
 		.element(
 			variantRow("threads=4").getByRole("button", {
@@ -1064,6 +1102,87 @@ test("a landed variant archive keeps its row dimmed with Undo and rereads the ar
 			}),
 		)
 		.toBeVisible();
+});
+
+// Kills an archive that moves the API's next page up by one, so the variant
+// that crosses onto the first page is never drawn.
+test("an archive while the next page of variants is out skips no variant", async () => {
+	const all = Array.from({ length: 300 }, (_, n) =>
+		variant(`v${n}`, { threads: n, input_bytes: 1024 }),
+	);
+	const archived = new Set<string>();
+	let release: (() => void) | undefined;
+	const held = new Promise<void>((resolve) => {
+		release = resolve;
+	});
+	const pages: string[] = [];
+	const { api } = fakeApi(
+		async (url) => {
+			if (url.pathname === "/v0/projects/hashbrown/benchmarks/blake3") {
+				return {
+					data: {
+						uuid: "blake3-uuid",
+						name: "blake3",
+						slug: "blake3",
+						created: "2026-09-12T10:00:00Z",
+					} as JsonBenchmark,
+				};
+			}
+			if (url.pathname.endsWith("/variants")) {
+				const wanted = url.searchParams.get("archived") === "true";
+				const size = Number(url.searchParams.get("per_page"));
+				const at = Number(url.searchParams.get("page"));
+				pages.push(`${wanted}:${at}`);
+				if (!wanted && at === 2) {
+					await held;
+				}
+				const listed = all
+					.filter(({ uuid }) => archived.has(uuid) === wanted)
+					.map((each) =>
+						archived.has(each.uuid)
+							? { ...each, archived: "2026-09-14T00:00:00Z" }
+							: each,
+					);
+				return {
+					data: listed.slice((at - 1) * size, at * size),
+					total: listed.length,
+				};
+			}
+			return { data: { benchmarks: [] } };
+		},
+		async (change) => {
+			archived.add(change.path.split("/").at(-1) ?? "");
+		},
+	);
+	dispose = (await show(api, "benchmarks", "blake3")).dispose;
+	const table = variantsTable();
+	await expect
+		.element(table.getByText("threads=4", { exact: true }))
+		.toBeVisible();
+	await expect.poll(() => pages.includes("false:2")).toBe(true);
+	await table
+		.getByRole("button", { name: "Archive threads=4", exact: true })
+		.click();
+	await page
+		.getByRole("group", { name: "Archive threads=4", exact: true })
+		.getByRole("button", { name: "Archive variant" })
+		.click();
+	await new Promise((resolve) => setTimeout(resolve, 100));
+	release?.();
+	for (let step = 0; step < 60; step++) {
+		window.scrollBy({ top: 2000, behavior: "instant" });
+		await new Promise((resolve) => setTimeout(resolve, 30));
+	}
+	await expect
+		.poll(
+			() =>
+				all.filter(
+					({ uuid }) =>
+						!table.element().querySelector(`tbody tr[data-uuid="${uuid}"]`),
+				).length,
+		)
+		.toBe(0);
+	window.scrollTo({ top: 0, behavior: "instant" });
 });
 
 // Kills a variant Undo sent before the archive it undoes, and a refusal that

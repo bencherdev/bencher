@@ -8,6 +8,7 @@ import type {
 	JsonVariant,
 } from "../../types/bencher";
 import type { Api } from "../api";
+import { totalOf } from "../list/pages";
 import type { ExploreQuery, Parameters } from "../query/query";
 import { perfSearch, requestKey } from "./request";
 
@@ -44,22 +45,37 @@ export const plotQuery = (api: Api, slug: string, plot: string) => ({
 		).data,
 });
 
-// The API's largest page: suggestions read every variant a benchmark has.
-const ALL = 255;
+// The API's largest page.
+const PAGE = 255;
 
-/** A benchmark's variants, the most recently reported first, which suggest the parameters box's tags and name a pin. */
+/** A benchmark's every variant, the most recently reported first, which suggest the parameters box's tags, count them, and name a pin. */
 export const variantsQuery = (api: Api, slug: string, benchmark: string) => ({
 	queryKey: ["console", "variants", slug, benchmark],
-	queryFn: async (): Promise<Parameters[]> =>
-		(
-			await api.get<JsonVariant[]>(
-				`${project(slug)}/benchmarks/${encodeURIComponent(benchmark)}/variants?per_page=${ALL}&sort=last_used`,
-			)
-		).data.map(({ parameters }) => parameters),
+	queryFn: async (): Promise<Parameters[]> => {
+		const read = (page: number) =>
+			api.get<JsonVariant[]>(
+				`${project(slug)}/benchmarks/${encodeURIComponent(benchmark)}/variants?per_page=${PAGE}&page=${page}&sort=last_used`,
+			);
+		// One page after another, so a benchmark with thousands of variants never floods the API.
+		const variants: JsonVariant[] = [];
+		for (let page = 1; ; page++) {
+			const { data, headers } = await read(page);
+			variants.push(...data);
+			if (data.length < PAGE || variants.length >= totalOf(headers, data)) {
+				return variants.map(({ parameters }) => parameters);
+			}
+		}
+	},
 	staleTime: 5 * 60_000,
 });
 
 export type Dimension = "branches" | "testbeds" | "benchmarks" | "measures";
+
+interface Matched {
+	rows: Named[];
+	/** Every value the search matches. */
+	total: number;
+}
 
 interface Named {
 	uuid: string;
@@ -88,7 +104,7 @@ export const nameQuery = (
 /** How many values an add control lists at once; its search finds the rest. */
 export const OPTIONS = 32;
 
-/** A project's branches, testbeds, benchmarks, or measures matching `text`, the most recently reported first. */
+/** A project's branches, testbeds, benchmarks, or measures matching `text`, the most recently reported first, and how many match. */
 export const searchQuery = (
 	api: Api,
 	slug: string,
@@ -97,8 +113,8 @@ export const searchQuery = (
 ) => ({
 	queryKey: ["console", "search", slug, dimension, text],
 	// The last options stay while the next search loads, so the list never blinks empty.
-	placeholderData: (previous: Named[] | undefined) => previous,
-	queryFn: async () => {
+	placeholderData: (previous: Matched | undefined) => previous,
+	queryFn: async (): Promise<Matched> => {
 		const params = new URLSearchParams({
 			per_page: String(OPTIONS),
 			sort: "last_used",
@@ -106,18 +122,20 @@ export const searchQuery = (
 		if (text) {
 			params.set("search", text);
 		}
-		const rows: Named[] = (
-			await api.get<
-				JsonConsoleBranches &
-					JsonConsoleTestbeds &
-					JsonConsoleBenchmarks &
-					JsonConsoleMeasures
-			>(`${consolePath(slug)}/${dimension}?${params}`)
-		).data[dimension];
-		return rows.map(({ uuid, name, units }) => ({
-			uuid,
-			name,
-			...(units === undefined ? {} : { units }),
-		}));
+		const { data } = await api.get<
+			JsonConsoleBranches &
+				JsonConsoleTestbeds &
+				JsonConsoleBenchmarks &
+				JsonConsoleMeasures
+		>(`${consolePath(slug)}/${dimension}?${params}`);
+		const rows: Named[] = data[dimension];
+		return {
+			rows: rows.map(({ uuid, name, units }) => ({
+				uuid,
+				name,
+				...(units === undefined ? {} : { units }),
+			})),
+			total: data.total,
+		};
 	},
 });

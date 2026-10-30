@@ -16,6 +16,9 @@ import {
 	onMount,
 } from "solid-js";
 import { restsOf } from "../plot/distinct";
+import type { Listed } from "../reports/Controls";
+import { MAX_ENTRIES } from "../query/query";
+import { OPTIONS } from "./queries";
 
 export interface BoxValue {
 	label: string;
@@ -28,6 +31,14 @@ export interface Option {
 	label: string;
 	detail?: string | undefined;
 }
+
+export type Choices = Listed<Option>;
+
+/** The first choices of a list held whole, with a count of the rest. */
+export const choicesOf = (options: Option[]): Choices => ({
+	options: options.slice(0, OPTIONS),
+	more: Math.max(0, options.length - OPTIONS),
+});
 
 const SEARCH_DELAY = 150;
 
@@ -56,13 +67,13 @@ const Box = (props: {
 	/** Each value keeps a second line for its detail, held before the detail arrives. */
 	twoLine?: boolean | undefined;
 	readOnly?: boolean | undefined;
-	/** The box holds as many values as the query reads. */
+	/** The box holds as many values as the query reads: its add control says so instead. */
 	full?: boolean | undefined;
 	/** Why nothing can be added, which its add control shows locked. */
 	locked?: string | undefined;
 	onRemove: (index: number) => void;
 	/** The add control's choices, read once it opens; `text` is what the reader searched. */
-	options: (text: () => string) => () => Option[];
+	options: (text: () => string) => () => Choices;
 	onAdd: (option: Option) => void;
 	/** The add control opened. */
 	onOpen?: (() => void) | undefined;
@@ -73,6 +84,7 @@ const Box = (props: {
 	children?: JSX.Element;
 }) => {
 	const [open, setOpen] = createSignal(false);
+	const held = () => props.values.length + (props.rows ?? 0);
 	// A remove control names its value by what tells it apart from the others.
 	const rests = createMemo(() =>
 		restsOf(props.values.map(({ label }) => label)),
@@ -158,6 +170,18 @@ const Box = (props: {
 					</span>
 				)}
 			</Show>
+			<Show when={props.full && !(props.readOnly || props.locked)}>
+				<span class="ex-anchor">
+					<button
+						type="button"
+						class="ex-add ex-locked"
+						aria-disabled="true"
+						aria-label={`Add ${props.noun}, ${held()} of ${MAX_ENTRIES}`}
+					>
+						{held()} of {MAX_ENTRIES}
+					</button>
+				</span>
+			</Show>
 			<Show when={!(props.readOnly || props.full || props.locked)}>
 				<span class="ex-anchor">
 					<button
@@ -217,7 +241,7 @@ export const SearchMenu = (props: {
 	search: string;
 	searchName?: string | undefined;
 	anchor: HTMLElement | undefined;
-	options: (text: () => string) => () => Option[];
+	options: (text: () => string) => () => Choices;
 	empty?: string | undefined;
 	onClose: () => void;
 	onPick: (option: Option) => void;
@@ -232,6 +256,7 @@ export const SearchMenu = (props: {
 			label={props.label}
 			anchor={props.anchor}
 			onClose={props.onClose}
+			more={options().more}
 			header={
 				<TextInput
 					type="search"
@@ -249,7 +274,7 @@ export const SearchMenu = (props: {
 			}
 		>
 			<For
-				each={options()}
+				each={options().options}
 				fallback={
 					<p class="ex-none">{text() ? "No matches" : (props.empty ?? "")}</p>
 				}

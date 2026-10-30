@@ -17,9 +17,9 @@ import type {
 } from "../../types/bencher";
 import { absoluteTime, duration, relativeTime } from "../reports/format";
 import { runPath } from "../paths";
-import type { Range } from "../reports/rows";
-import { MoreRows, Spacer } from "../reports/TableRows";
-import { useVirtualRows } from "../reports/virtual";
+import type { Range } from "../list/rows";
+import { MoreRows, Spacer } from "../list/TableRows";
+import { useVirtualRows } from "../list/virtual";
 import { allNames, runHead, secondsTime } from "./format";
 import { Alerts, Author, Dash } from "./cells";
 import {

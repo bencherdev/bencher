@@ -1,3 +1,15 @@
+import { NARROW } from "../plot/narrow";
+
+/** The fixed height a row is drawn at, by the lines it takes. */
+export const ROW_HEIGHT = { 1: 40, 2: 60, 3: 78 } as const;
+
+/** The size of every batch on this screen: what fills it, plus a margin. */
+export const screenBatch = () =>
+	batchSize(
+		window.innerHeight,
+		window.matchMedia(NARROW).matches ? ROW_HEIGHT[2] : ROW_HEIGHT[1],
+	);
+
 /** The API pages at most this many. */
 const MAX_BATCH = 255;
 /** Before the window has a height, a laptop screen. */

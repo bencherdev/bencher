@@ -6,7 +6,7 @@ import type {
 import type { Batch as AlertsBatch } from "../alerts/search";
 import type { Api } from "../api";
 import { NARROW } from "../plot/narrow";
-import { batchSize } from "../reports/rows";
+import { batchSize } from "../list/rows";
 import {
 	type Batch,
 	type ThresholdView,

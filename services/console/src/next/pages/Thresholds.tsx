@@ -20,7 +20,7 @@ import {
 import type { JsonConsoleThresholds } from "../../types/bencher";
 import { useProject, useProjectNavigate } from "../project";
 import { useQueryResult } from "../query";
-import { type Range, loadMore } from "../reports/rows";
+import { type Range, loadMore } from "../list/rows";
 import {
 	type Dimension,
 	type FilterNames,

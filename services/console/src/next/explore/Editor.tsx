@@ -16,7 +16,13 @@ import {
 	type Parameters,
 	type ParameterValue,
 } from "../query/query";
-import Box, { type BoxValue, Cross, type Option } from "./Box";
+import Box, {
+	type BoxValue,
+	type Choices,
+	Cross,
+	type Option,
+	choicesOf,
+} from "./Box";
 import { exactFirst, metricNames, withValue, withoutValue } from "./edit";
 import { measuresLayout } from "./layout";
 import { matchedVariants, parameterRows } from "./parameters";
@@ -75,19 +81,23 @@ const Editor = (props: {
 		);
 	const search =
 		(dimension: Dimension) =>
-		(text: () => string): (() => Option[]) => {
+		(text: () => string): (() => Choices) => {
 			const result = useQueryResult(() =>
 				searchQuery(api, slug(), dimension, text()),
 			);
 			return () => {
 				const chosen = new Set(uuids(dimension));
-				return (result().data ?? [])
-					.filter(({ uuid }) => !chosen.has(uuid))
-					.map(({ uuid, name, units }) => ({
-						value: uuid,
-						label: name,
-						detail: units,
-					}));
+				const rows = result().data?.rows ?? [];
+				return {
+					options: rows
+						.filter(({ uuid }) => !chosen.has(uuid))
+						.map(({ uuid, name, units }) => ({
+							value: uuid,
+							label: name,
+							detail: units,
+						})),
+					more: Math.max(0, (result().data?.total ?? 0) - rows.length),
+				};
 			};
 		};
 	const add = (dimension: Dimension, option: Option) => {
@@ -164,13 +174,17 @@ const Editor = (props: {
 				}
 				options={(text) => () => {
 					const chosen = new Set(props.query.metrics);
-					return exactFirst(
-						(props.perf ? metricNames(props.perf) : []).filter(
-							(name) => !chosen.has(name) && name.includes(text()),
-						),
-						text(),
-						(name) => name,
-					).map((name) => ({ value: name, label: name }));
+					const lower = text().toLowerCase();
+					return choicesOf(
+						exactFirst(
+							(props.perf ? metricNames(props.perf) : []).filter(
+								(name) =>
+									!chosen.has(name) && name.toLowerCase().includes(lower),
+							),
+							text(),
+							(name) => name,
+						).map((name) => ({ value: name, label: name })),
+					);
 				}}
 				empty="No other metrics"
 				onAdd={(option) =>
@@ -299,19 +313,23 @@ const Sets = (props: {
 							}
 						});
 					}
-					return exactFirst(
-						[...counts.entries()]
-							.filter(
-								([label]) => !singles.has(label) && label.includes(text()),
-							)
-							.sort(([, [, , , a]], [, [, , , b]]) => a - b),
-						text(),
-						([label]) => label,
-					).map(([label, [key, value, count]]) => ({
-						value: JSON.stringify({ [key]: value }),
-						label,
-						detail: plural(count, "variant", "variants"),
-					}));
+					const lower = text().toLowerCase();
+					return choicesOf(
+						exactFirst(
+							[...counts.entries()]
+								.filter(
+									([label]) =>
+										!singles.has(label) && label.toLowerCase().includes(lower),
+								)
+								.sort(([, [, , , a]], [, [, , , b]]) => a - b),
+							text(),
+							([label]) => label,
+						).map(([label, [key, value, count]]) => ({
+							value: JSON.stringify({ [key]: value }),
+							label,
+							detail: plural(count, "variant", "variants"),
+						})),
+					);
 				};
 			}}
 			empty="No parameters"
