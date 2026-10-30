@@ -63,6 +63,6 @@ pub struct JsonOciBandwidth {
     pub unclaimed: Option<u64>,
     /// Bytes per day for free (claimed, no paid plan) organizations
     pub free: Option<u64>,
-    /// Bytes per day for Plus (Team/Enterprise) organizations
+    /// Bytes per day for Plus (Pro/Enterprise) organizations
     pub plus: Option<u64>,
 }
