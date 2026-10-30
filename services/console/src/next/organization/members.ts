@@ -1,33 +1,39 @@
 import type { QueryClient } from "@tanstack/solid-query";
 import type { JsonMember } from "../../types/bencher";
 import type { Api } from "../api";
+import { createPaged } from "../list/paged";
+import { dropRow, totalOf } from "../list/pages";
+import { screenBatch } from "../list/rows";
 import { formatCount } from "../plot/count";
 
 const path = (organization: string) =>
 	`/v0/organizations/${encodeURIComponent(organization)}/members`;
 
-export interface MemberPage {
-	members: JsonMember[];
-	/** Every member, which the page counts. */
-	total: number;
-}
+export const membersKey = (organization: string) => [
+	"organization",
+	organization,
+	"members",
+];
 
-// The API's largest page, in name order.
-const PER_PAGE = 255;
-
-export const membersQuery = (api: Api, organization: string) => ({
-	queryKey: ["organization", organization, "members"],
-	queryFn: async ({ signal }: { signal: AbortSignal }): Promise<MemberPage> => {
+/** One page of the organization's members, in name order. */
+export const membersPage =
+	(api: Api, organization: string) =>
+	async (page: number, perPage: number, signal: AbortSignal) => {
 		const { data, headers } = await api.get<JsonMember[]>(
-			`${path(organization)}?per_page=${PER_PAGE}`,
+			`${path(organization)}?per_page=${perPage}&page=${page}`,
 			signal,
 		);
-		return {
-			members: data,
-			total: Number(headers.get("X-Total-Count") ?? data.length),
-		};
-	},
-});
+		return { rows: data, total: totalOf(headers, data) };
+	};
+
+/** The organization's members, a screen's worth at a time. */
+export const memberList = (api: Api, organization: () => string) =>
+	createPaged<JsonMember>({
+		queryKey: () => membersKey(organization()),
+		perPage: screenBatch(),
+		fetchPage: (page, perPage, signal) =>
+			membersPage(api, organization())(page, perPage, signal),
+	});
 
 /** Whether the reader may invite and remove members, as the API rules it. */
 export interface Roles {
@@ -64,14 +70,7 @@ export const removeMember = async (
 	uuid: string,
 ) => {
 	await api.send("DELETE", `${path(organization)}/${uuid}`);
-	client.setQueryData<MemberPage>(
-		membersQuery(api, organization).queryKey,
-		(page) =>
-			page && {
-				members: page.members.filter((member) => member.uuid !== uuid),
-				total: page.total - 1,
-			},
-	);
+	dropRow<JsonMember>(client, membersKey(organization), uuid);
 };
 
 /** The API refuses an address without a name before its `@`. */

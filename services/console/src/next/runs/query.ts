@@ -11,7 +11,7 @@ import {
 	decodeSearch,
 	encodeSearch,
 } from "../reports/search";
-import { screenBatch } from "../reports/virtual";
+import { screenBatch } from "../list/rows";
 import { live, unfinished } from "./status";
 
 export interface RunsBatch {

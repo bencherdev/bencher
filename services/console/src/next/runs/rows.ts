@@ -3,7 +3,7 @@ import type {
 	JsonConsoleRunReport,
 	JsonConsoleRunSummary,
 } from "../../types/bencher";
-import type { Range } from "../reports/rows";
+import type { Range } from "../list/rows";
 import { RUN_REPORTS } from "./status";
 
 /**

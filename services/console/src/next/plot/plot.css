@@ -314,6 +314,15 @@
 	white-space: nowrap;
 }
 
+.pl-rows {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-height: 0;
+	overflow: hidden auto;
+	overscroll-behavior: contain;
+}
+
 .pl-readout.pinned {
 	padding-right: var(--spacing-8);
 	pointer-events: auto;

@@ -10,7 +10,13 @@ const ITEMS = ["main", "feature-simd", "release"];
 let dispose: (() => void) | undefined;
 const picked: string[] = [];
 
-const mount = ({ search = false } = {}) => {
+const mount = ({
+	search = false,
+	more,
+}: {
+	search?: boolean;
+	more?: number;
+} = {}) => {
 	picked.length = 0;
 	const root = document.createElement("div");
 	document.body.append(root);
@@ -35,6 +41,7 @@ const mount = ({ search = false } = {}) => {
 							label="Branch"
 							anchor={anchor}
 							onClose={() => setOpen(false)}
+							more={more}
 							header={
 								search ? (
 									<input type="search" aria-label="Search branches" />
@@ -104,6 +111,27 @@ test("the arrow keys wrap, Enter chooses, and the focus returns to the trigger",
 	expect(picked).toEqual(["release"]);
 	await expect.element(page.getByRole("menu")).not.toBeInTheDocument();
 	await expect.element(trigger()).toHaveFocus();
+});
+
+// Kills a menu that stops with no word of the rest, a count without its
+// thousands grouped, and a count the keys can land on or choose.
+test("a menu that holds more says how many, in an item no key reaches", async () => {
+	mount({ more: 1234 });
+	await trigger().click();
+	const rest = page.getByRole("menuitem", { name: "1,234 more" });
+	await expect.element(rest).toBeDisabled();
+	await userEvent.keyboard("{End}");
+	await expect.element(item("release")).toHaveFocus();
+	await userEvent.keyboard("{ArrowDown}");
+	await expect.element(item("main")).toHaveFocus();
+});
+
+// Kills a "0 more" left in a menu that shows every choice.
+test("a menu that shows every choice says nothing more", async () => {
+	mount({ more: 0 });
+	await trigger().click();
+	await expect.element(item("main")).toBeVisible();
+	expect(page.getByRole("menuitem").elements()).toHaveLength(0);
 });
 
 // Kills a menu Escape cannot close, or that drops the focus when it closes.

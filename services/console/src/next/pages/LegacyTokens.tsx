@@ -5,19 +5,17 @@ import Skeleton from "@bencherdev/ui/Skeleton";
 import Truncate from "@bencherdev/ui/Truncate";
 import { useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
-import { Show, createMemo, createSignal } from "solid-js";
+import { Show, createSignal } from "solid-js";
 import { useAccount } from "../account/context";
 import { profilePath } from "../paths";
-import { useQueryResult } from "../query";
 import { Frame, legacyTokensQuery } from "./Profile";
 import {
 	type KeyRow,
 	KeyTable,
 	Revoke,
 	failureOf,
+	keyList,
 	keysKey,
-	keysQuery,
-	newestFirst,
 	revokeKey,
 } from "./Settings";
 import { Head, legacyTokenList } from "./UserKeys";
@@ -28,10 +26,7 @@ const LegacyTokens = () => {
 	const params = useParams();
 	const user = () => params.user ?? "";
 	const client = useQueryClient();
-	const list = useQueryResult(() =>
-		keysQuery(api, legacyTokenList(user()), false),
-	);
-	const shown = createMemo(() => newestFirst(list().data?.keys ?? []));
+	const list = keyList(api, () => legacyTokenList(user()), false);
 	const [target, setTarget] = createSignal<KeyRow>();
 	const [note, setNote] = createSignal("");
 	const [failure, setFailure] = createSignal("");
@@ -51,6 +46,7 @@ const LegacyTokens = () => {
 				legacyTokensQuery(api, user()).queryKey,
 				(count) => (count === undefined ? count : count - 1),
 			);
+			list.refill();
 		} catch (error) {
 			undo();
 			setNote("");
@@ -83,12 +79,12 @@ const LegacyTokens = () => {
 				)}
 			</Show>
 			<Show
-				when={list().data}
+				when={list.first().data}
 				fallback={
-					<Show when={list().error} fallback={<Skeleton size="card" />}>
+					<Show when={list.first().error} fallback={<Skeleton size="card" />}>
 						<Banner status="error" role="alert" class="load-error">
 							<span class="grow">The legacy tokens did not load</span>
-							<Button size="sm" onClick={() => list().refetch()}>
+							<Button size="sm" onClick={() => list.first().refetch()}>
 								Retry
 							</Button>
 						</Banner>
@@ -99,7 +95,11 @@ const LegacyTokens = () => {
 					status="active"
 					label="Legacy API tokens"
 					empty="No legacy tokens"
-					keys={shown()}
+					keys={list.rows()}
+					total={list.total()}
+					onRange={list.onRange}
+					loading={list.loading()}
+					onRetry={list.retry()}
 					made={new Set()}
 					onRevoke={setTarget}
 				/>

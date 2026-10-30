@@ -1,5 +1,5 @@
 import type { JSX } from "solid-js";
-import { onCleanup, onMount, splitProps } from "solid-js";
+import { onCleanup, onMount, Show, splitProps } from "solid-js";
 import Icon from "./Icon";
 import { TruncateChild } from "./Truncate";
 
@@ -13,9 +13,13 @@ export interface MenuProps extends JSX.HTMLAttributes<HTMLDivElement> {
 	header?: JSX.Element;
 	/** `end` lines the menu up with its anchor's right edge. */
 	align?: "start" | "end";
+	/** How many choices the menu holds past the items shown, said in a last item that cannot be chosen. */
+	more?: number | undefined;
 }
 
 const ITEMS = '[role^="menuitem"]:not([disabled])';
+
+const COUNT = new Intl.NumberFormat("en-US");
 
 /**
  * A menu anchored under the control that opened it; place both in an element
@@ -31,6 +35,7 @@ const Menu = (props: MenuProps) => {
 		"onClose",
 		"header",
 		"align",
+		"more",
 		"class",
 		"children",
 	]);
@@ -99,6 +104,11 @@ const Menu = (props: MenuProps) => {
 			{local.header}
 			<div ref={list} role="menu" aria-label={local.label} class="ui-menu-list">
 				{local.children}
+				<Show when={(local.more ?? 0) > 0}>
+					<button type="button" role="menuitem" class="ui-menu-item" disabled>
+						{COUNT.format(local.more ?? 0)} more
+					</button>
+				</Show>
 			</div>
 		</div>
 	);

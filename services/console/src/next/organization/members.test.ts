@@ -2,9 +2,10 @@ import { QueryClient } from "@tanstack/solid-query";
 import { describe, expect, test } from "vitest";
 import { type JsonMember, OrganizationRole } from "../../types/bencher";
 import type { Api } from "../api";
+import type { Page } from "../list/pages";
 import {
-	type MemberPage,
-	membersQuery,
+	membersKey,
+	membersPage,
 	removeMember,
 	rolesQuery,
 	sendable,
@@ -23,19 +24,27 @@ const MURIEL = member("u1", "Muriel");
 const EUSTACE = member("u2", "Eustace");
 const signal = new AbortController().signal;
 
-describe("membersQuery", () => {
-	// Kills a count taken from the page's length rather than the API's total.
+describe("membersPage", () => {
+	// Kills a count taken from the page's length rather than the API's total,
+	// and a page asked for by another number or size.
 	test("counts every member the API has, past one page", async () => {
+		const paths: string[] = [];
 		const api = {
-			get: async <T>() => ({
-				data: [MURIEL] as T,
-				headers: new Headers({ "X-Total-Count": "300" }),
-			}),
+			get: async <T>(path: string) => {
+				paths.push(path);
+				return {
+					data: [MURIEL] as T,
+					headers: new Headers({ "X-Total-Count": "300" }),
+				};
+			},
 		} as unknown as Api;
-		expect(await membersQuery(api, "pompeii-llc").queryFn({ signal })).toEqual({
-			members: [MURIEL],
+		expect(await membersPage(api, "pompeii-llc")(3, 16, signal)).toEqual({
+			rows: [MURIEL],
 			total: 300,
 		});
+		expect(paths).toEqual([
+			"/v0/organizations/pompeii-llc/members?per_page=16&page=3",
+		]);
 	});
 });
 
@@ -66,10 +75,11 @@ describe("removeMember", () => {
 			}) as Api["send"],
 		} as Api;
 		const client = new QueryClient();
-		const key = membersQuery(api, "pompeii-llc").queryKey;
-		client.setQueryData<MemberPage>(key, {
-			members: [MURIEL, EUSTACE],
+		const key = [...membersKey("pompeii-llc"), 16, 1];
+		client.setQueryData<Page<JsonMember>>(key, {
+			rows: [MURIEL, EUSTACE],
 			total: 2,
+			page: 1,
 		});
 		return { api, client, sent, page: () => client.getQueryData(key) };
 	};
@@ -83,7 +93,7 @@ describe("removeMember", () => {
 		}));
 		await removeMember(api, client, "pompeii-llc", "u2");
 		expect(sent).toEqual(["DELETE /v0/organizations/pompeii-llc/members/u2"]);
-		expect(page()).toEqual({ members: [MURIEL], total: 1 });
+		expect(page()).toEqual({ rows: [MURIEL], total: 1, page: 1 });
 	});
 
 	// Kills a remove that fails once the API agreed because no list was cached,
@@ -106,7 +116,7 @@ describe("removeMember", () => {
 		await expect(
 			removeMember(api, client, "pompeii-llc", "u2"),
 		).rejects.toThrow();
-		expect(page()).toEqual({ members: [MURIEL, EUSTACE], total: 2 });
+		expect(page()).toEqual({ rows: [MURIEL, EUSTACE], total: 2, page: 1 });
 	});
 });
 

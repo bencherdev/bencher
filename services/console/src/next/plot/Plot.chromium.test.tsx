@@ -2227,6 +2227,88 @@ describe("Plot iterations", () => {
 		await expect.poll(() => emphasized()?.textContent).toMatch(/^iteration 2/);
 	});
 
+	// Kills a readout of a report run hundreds of times that grows past the
+	// plots onto the key, one whose time and close leave with its rows, and
+	// one that scrolls the row it reads out of view.
+	test.each([320, 1440])(
+		"at %i px a readout of 500 iterations stays inside the plots and scrolls its rows",
+		async (width) => {
+			await page.viewport(width, 900);
+			const runs = 500;
+			const data: PlotData = {
+				...RAN_THRICE,
+				x: [START, ...Array.from({ length: runs }, () => START + DAY)],
+				report: [0, ...Array.from({ length: runs }, () => 1)],
+				iteration: [0, ...Array.from({ length: runs }, (_, n) => n)],
+				reports: RAN_THRICE.reports.slice(0, 2),
+				lines: [
+					// Iteration 400 alone alerted, so the line runs through it and the readout reads it.
+					testLine({
+						id: "ran",
+						alerting: true,
+						y: [
+							20,
+							...Array.from({ length: runs }, (_, n) =>
+								n === 399 ? 100 : 10 + (n % 7),
+							),
+						],
+						upper: Array.from({ length: runs + 1 }, () => 50),
+						alerts: [400],
+						raised: [{ index: 400, uuid: "alert-400", status: "active" }],
+					}),
+				],
+			};
+			// The pinned alert adds its own line, which takes room from the rows.
+			mount(
+				{
+					data,
+					alerts: {
+						href: (uuid) => `/alerts/${uuid}`,
+						change: () => () => {},
+					},
+				},
+				width - 32,
+			);
+			await settle();
+			const { over, box } = await plotArea();
+			const at = { position: { x: box.width - 4, y: 2 } };
+			const status = page.getByRole("status");
+			const focused = () =>
+				status.element().querySelector(".pl-rrow.focused") as HTMLElement;
+			const rows = () =>
+				status.element().querySelector(".pl-rows") as HTMLElement;
+			// Hovered, the readout scrolls just far enough: the row's bottom is the rows' bottom, to a scroll pixel.
+			await page.elementLocator(over).hover(at);
+			await expect.poll(() => focused()?.textContent).toMatch(/^iteration 400/);
+			expect(rows().scrollHeight).toBeGreaterThan(rows().clientHeight);
+			expect(
+				Math.abs(
+					focused().getBoundingClientRect().bottom -
+						rows().getBoundingClientRect().bottom,
+				),
+			).toBeLessThanOrEqual(1);
+			await page.elementLocator(over).click(at);
+			await expect.element(status).toHaveAttribute("aria-live", "polite");
+			await expect
+				.element(page.getByRole("link", { name: /^Alert:/ }))
+				.toBeVisible();
+			const card = status.element().querySelector(".pl-readout") as HTMLElement;
+			const body = over.closest(".pl-body") as HTMLElement;
+			expect(card.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+				body.getBoundingClientRect().bottom,
+			);
+			const row = focused().getBoundingClientRect();
+			const inside = rows().getBoundingClientRect();
+			expect(row.top).toBeGreaterThanOrEqual(inside.top);
+			expect(row.bottom).toBeLessThanOrEqual(inside.bottom + 0.5);
+			const close = page.getByRole("button", { name: "Close the readout" });
+			await expect.element(close).toBeInViewport();
+			expect(
+				close.element().getBoundingClientRect().bottom,
+			).toBeLessThanOrEqual(card.getBoundingClientRect().bottom);
+		},
+	);
+
 	// Kills a click on another iteration of the pinned report that unpins
 	// instead of pinning it, and a click on the pinned iteration that keeps it.
 	test("a click pins the iteration pointed at, another moves the pin, and the same one unpins it", async () => {

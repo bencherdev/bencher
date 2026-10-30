@@ -1,4 +1,5 @@
 import { ApiError } from "../api";
+import { formatCount } from "../plot/count";
 
 /** General's form as the reader has it. */
 export interface Draft {
@@ -38,10 +39,20 @@ export const problemsOf = (
 		: "Lowercase letters, numbers, and single dashes",
 });
 
+// The most projects the clause names; it counts the rest.
+const NAMED = 5;
+
 /** The delete confirmation's clause naming the projects deleted with the organization. */
 export const goneWith = (projects: readonly string[]) =>
 	projects.length
-		? `${new Intl.ListFormat("en").format(projects)} ${projects.length === 1 ? "goes" : "go"} with it.`
+		? `${new Intl.ListFormat("en").format(
+				projects.length > NAMED
+					? [
+							...projects.slice(0, NAMED),
+							`${formatCount(projects.length - NAMED)} more`,
+						]
+					: projects,
+			)} ${projects.length === 1 ? "goes" : "go"} with it.`
 		: undefined;
 
 const CONFLICT = 409;

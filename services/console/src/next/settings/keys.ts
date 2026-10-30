@@ -65,14 +65,6 @@ export const keyEnd = (
 		: { text: day, expired: false };
 };
 
-/** Keys by when they were made, newest first, so a new key leads. */
-export const newestFirst = (keys: readonly KeyRow[]) =>
-	[...keys].sort(
-		(a, b) =>
-			Date.parse(b.creation) - Date.parse(a.creation) ||
-			a.name.localeCompare(b.name),
-	);
-
 /** A key as the list holds it, without the secret a new key or a legacy token carries. */
 export const listed = ({
 	uuid,
@@ -87,21 +79,3 @@ export const listed = ({
 	expiration,
 	...(revoked ? { revoked } : {}),
 });
-
-export interface KeyLists {
-	active: KeyRow[];
-	revoked: KeyRow[];
-}
-
-/** The lists once `uuid` is revoked at `at`. */
-export const revoke = (
-	{ active, revoked }: KeyLists,
-	uuid: string,
-	at: string,
-): KeyLists => {
-	const key = active.find((candidate) => candidate.uuid === uuid);
-	return {
-		active: active.filter((candidate) => candidate.uuid !== uuid),
-		revoked: key ? [{ ...key, revoked: at }, ...revoked] : revoked,
-	};
-};

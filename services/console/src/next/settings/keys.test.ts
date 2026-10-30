@@ -3,15 +3,7 @@ import type {
 	JsonProjectKey,
 	JsonProjectKeyCreated,
 } from "../../types/bencher";
-import {
-	EXPIRIES,
-	expiresAt,
-	formatDay,
-	keyEnd,
-	listed,
-	newestFirst,
-	revoke,
-} from "./keys";
+import { EXPIRIES, expiresAt, formatDay, keyEnd, listed } from "./keys";
 
 const SEP_13 = Date.parse("2026-09-13T15:00:00Z");
 const NEVER_SECONDS = 2 ** 32 - 1;
@@ -88,23 +80,6 @@ describe("keyEnd", () => {
 	});
 });
 
-describe("newestFirst", () => {
-	// Kills the API's name order, which buries the key just made.
-	test("orders keys by when they were made, newest first, then by name", () => {
-		const keys = [
-			key("github-actions", "2026-06-17T00:00:00Z", "2027-06-17T00:00:00Z"),
-			key("everett-laptop", "2026-09-02T00:00:00Z", "2026-10-02T00:00:00Z"),
-			key("b-old", "2026-06-17T00:00:00Z", "2027-06-17T00:00:00Z"),
-		];
-		expect(newestFirst(keys).map(({ name }) => name)).toEqual([
-			"everett-laptop",
-			"b-old",
-			"github-actions",
-		]);
-		expect(keys[0]?.name).toBe("github-actions");
-	});
-});
-
 describe("listed", () => {
 	// Kills the shown-once secret written into the list, which the cache keeps.
 	test("a new key joins the list without its secret", () => {
@@ -124,29 +99,5 @@ describe("listed", () => {
 			creation: "2026-09-13T00:00:00Z",
 			expiration: "2026-12-12T00:00:00Z",
 		});
-	});
-});
-
-describe("revoke", () => {
-	// Kills a revoked key left among the active ones, or lost from both lists.
-	test("moves a key from the active list to the top of the revoked one", () => {
-		const a = key("a", "2026-09-02T00:00:00Z", "2026-10-02T00:00:00Z");
-		const b = key("b", "2026-08-04T00:00:00Z", "2026-10-02T00:00:00Z");
-		const old = key(
-			"old",
-			"2026-06-17T00:00:00Z",
-			"2027-06-17T00:00:00Z",
-			"2026-08-04T00:00:00Z",
-		);
-		const after = revoke(
-			{ active: [a, b], revoked: [old] },
-			"uuid-b",
-			"2026-09-13T00:00:00Z",
-		);
-		expect(after.active).toEqual([a]);
-		expect(after.revoked).toEqual([
-			{ ...b, revoked: "2026-09-13T00:00:00Z" },
-			old,
-		]);
 	});
 });

@@ -26,8 +26,8 @@ import { PROJECTS_PATH } from "../paths";
 import { useProject, useProjectNavigate } from "../project";
 import { useQueryResult } from "../query";
 import Controls, { nameKey } from "../reports/Controls";
-import { type Range, hasMore, loadMore } from "../reports/rows";
-import { screenBatch } from "../reports/virtual";
+import { type Range, hasMore, loadMore } from "../list/rows";
+import { screenBatch } from "../list/rows";
 import { type RunsBatch, batchQuery } from "../runs/query";
 import { runReportsQuery } from "../runs/status";
 

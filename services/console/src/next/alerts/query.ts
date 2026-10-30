@@ -1,6 +1,6 @@
 import type { JsonConsoleAlerts } from "../../types/bencher";
 import type { Api } from "../api";
-import { batchSize } from "../reports/rows";
+import { batchSize } from "../list/rows";
 import { NARROW } from "../plot/narrow";
 import {
 	type AlertsSearch,

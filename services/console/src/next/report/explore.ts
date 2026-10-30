@@ -1,4 +1,8 @@
-import { type SelectedLine, exploreSearch } from "../query/selection";
+import {
+	type SelectedLine,
+	exploreSearch,
+	keptLines,
+} from "../query/selection";
 import type { ReportLine } from "./lines";
 
 /** A line as Explore opens it, drawn from the report's head. */
@@ -24,3 +28,7 @@ export const exploreSearchOf = (
 		window: { seconds: days * DAY_SECONDS, end: report.end },
 		report: report.uuid,
 	});
+
+/** How many of these lines Explore opens. */
+export const openedOf = (lines: readonly ReportLine[]) =>
+	keptLines(lines.map(selectedLine)).length;
