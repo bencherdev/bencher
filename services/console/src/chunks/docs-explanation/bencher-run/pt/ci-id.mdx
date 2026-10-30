@@ -3,8 +3,17 @@
 <br />
 
 Opcional: ID personalizado para publicar resultados no CI.  
-Por padrão, o Bencher irá automaticamente segmentar os resultados pela combinação de: Projeto, Branch, Ambiente de Teste e [Adaptador](/pt/docs/explanation/adapters/).  
-Definir um ID personalizado é útil quando o Bencher está sendo executado várias vezes no mesmo fluxo de trabalho de CI para a mesma combinação de Projeto, Branch, Ambiente de Teste e Adaptador.  
+Todos os trabalhos de um Projeto em um pull request compartilham um único comentário, com uma linha de Relatório para cada trabalho.  
+Com um ID, o rótulo da linha é o seu número e o ID (ex: `2 (microbench)`).  
+Até que o Relatório do trabalho exista, sua linha mostra apenas o ID e nenhum número (ex: `(microbench)`), como `Pending` enquanto o trabalho é executado, e vem depois das linhas numeradas.  
+Sem um ID, o rótulo é apenas o número, e a linha aparece assim que o Relatório do trabalho existe.  
+Por padrão, os trabalhos compartilham uma linha quando têm a mesma combinação de: Branch, Ambiente de Teste e [Adaptador](/pt/docs/explanation/adapters/),  
+junto com [`--build-time`](#--build-time) e [`--file-size`](#--file-size-file), se definidos.  
+Definir um ID personalizado é útil quando o Bencher está sendo executado várias vezes no mesmo commit para a mesma combinação de Projeto, Branch, Ambiente de Teste e Adaptador,  
+para que cada execução tenha sua própria linha.  
+Por exemplo, uma execução de `push` e uma execução de `pull_request` no mesmo branch compartilham o commit head,  
+então dê a cada execução seu próprio ID, ou não use `--github-actions` na execução de `push`.  
+Caso contrário, as execuções compartilham uma linha, que mostra apenas uma delas, e uma execução mais antiga não escreve nada assim que uma execução mais recente ocupa a linha.  
 O ID também é usado no lugar do nome do Projeto no nome da Verificação do GitHub (ou seja, `Bencher Report (<ID>)`),  
 de modo que cada invocação recebe um nome estável que pode ser usado como uma verificação de status obrigatória separada.  
 Requer: `--github-actions`
