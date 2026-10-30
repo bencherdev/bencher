@@ -402,7 +402,7 @@ async fn bearer_decides_over_cookie() {
     let bad_bearer = [(bencher_json::AUTHORIZATION, "Bearer not-a-credential")];
 
     let resp = get(&server, &user_path(&user), Some(&token), &bad_bearer).await;
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     let project_path = format!("/v0/projects/{}", project.slug);
     let resp = get(&server, &project_path, Some(&token), &bad_bearer).await;
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);

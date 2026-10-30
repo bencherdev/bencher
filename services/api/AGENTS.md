@@ -63,6 +63,8 @@ Outputs to: [`services/console/src/types/bencher.ts`](../console/src/types/bench
 
 SQLite database at `services/api/data/bencher.db`. Migrations live in `lib/bencher_schema/migrations/`. If a migration is already in the `cloud` branch, it has been applied to production.
 
+Some migrations call SQL functions the API registers on its connection, such as `jwt_hash`, so the `diesel` CLI cannot run them. Any connection that runs the migrations needs `bencher_schema::register_migration_functions` first: `run_migrations` and the test server's `db_conn` call it, and a test that runs them on a connection of its own must too.
+
 ### Database Access Macros
 
 Three macros control database access patterns:

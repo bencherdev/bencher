@@ -1,4 +1,4 @@
-use bencher_valid::{DateTime, Jwt, ResourceName};
+use bencher_valid::{DateTime, ResourceName};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -35,7 +35,6 @@ pub struct JsonToken {
     pub uuid: TokenUuid,
     pub user: UserUuid,
     pub name: ResourceName,
-    pub token: Jwt,
     pub creation: DateTime,
     pub expiration: DateTime,
     /// The time at which the token was revoked, if any.

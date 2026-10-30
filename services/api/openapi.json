@@ -19678,9 +19678,6 @@
               }
             ]
           },
-          "token": {
-            "$ref": "#/components/schemas/Jwt"
-          },
           "user": {
             "$ref": "#/components/schemas/UserUuid"
           },
@@ -19692,7 +19689,6 @@
           "creation",
           "expiration",
           "name",
-          "token",
           "user",
           "uuid"
         ]

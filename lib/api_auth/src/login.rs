@@ -89,8 +89,8 @@ async fn post_inner(
                 ),
                 e,
             )
-        })?
-        .to_string();
+        })
+        .map(String::from)?;
 
     let body = Body::Button(Box::new(ButtonBody {
         title: "Confirm Bencher Login".into(),

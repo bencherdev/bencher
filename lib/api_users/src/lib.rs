@@ -4,6 +4,8 @@ use bencher_api_tests as _;
 #[cfg(test)]
 use http as _;
 #[cfg(test)]
+use reqwest as _;
+#[cfg(test)]
 use serde_json as _;
 #[cfg(test)]
 use tokio as _;

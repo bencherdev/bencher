@@ -40,3 +40,9 @@ diesel::define_sql_function! {
     /// `SQLite` `lower(x)`: folds ASCII letters to lowercase, as the `NOCASE` collation does.
     fn lower(x: diesel::sql_types::Text) -> diesel::sql_types::Text;
 }
+
+diesel::define_sql_function! {
+    /// The SHA-256 of text in hex, which for a JWT is its [`bencher_json::JwtHash`].
+    /// The migrations call it, on a connection [`crate::register_migration_functions`] gave it to.
+    fn jwt_hash(jwt: diesel::sql_types::Text) -> diesel::sql_types::Text;
+}

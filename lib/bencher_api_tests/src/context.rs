@@ -452,10 +452,14 @@ impl TestServer {
     }
 
     /// Get a database connection for test setup.
-    /// Use this to insert test data directly into the database.
+    /// Use this to insert test data directly into the database, or to run its migrations.
     #[expect(clippy::expect_used, reason = "test helper establishing DB connection")]
     pub fn db_conn(&self) -> DbConnection {
-        DbConnection::establish(&self.db_path).expect("Failed to establish database connection")
+        let mut conn = DbConnection::establish(&self.db_path)
+            .expect("Failed to establish database connection");
+        bencher_schema::register_migration_functions(&mut conn)
+            .expect("Failed to register the migration functions");
+        conn
     }
 
     /// Make every organization claimed in the eyes of the API's writer connection alone.

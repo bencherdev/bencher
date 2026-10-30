@@ -21,7 +21,6 @@ const token = (name: string, creation: string): JsonToken => ({
 	uuid: `uuid-${name}`,
 	user: "user-uuid",
 	name,
-	token: `jwt-of-${name}`,
 	creation,
 	expiration: "2028-11-20T00:00:00Z",
 });

@@ -278,6 +278,74 @@ async fn channel_wrong_runner() {
     }
 }
 
+// Kills a runner key refusal with any other message than every other credential's, or a missing
+// header answered as though a credential had been presented. The channel upgrades before it checks
+// the key, so a refusal reaches only the log.
+#[tokio::test]
+async fn channel_refusals_are_one_invalid_credential() {
+    const REFUSED: &str = "Error returned from handler";
+    let capture = LogCapture::default();
+    let server = TestServer::new_with_log(capture.logger()).await;
+    let admin = server.signup("Admin", "ws-refusals@example.com").await;
+    let runner = create_runner(&server, &admin.token, "Runner refused").await;
+    let other = create_runner(&server, &admin.token, "Runner other").await;
+    let other_key: &str = other.key.as_ref();
+
+    let url = ws_url(&server, &format!("/v0/runners/{}/channel", runner.uuid));
+    let presented = [
+        "Basic c29tZTp1c2Vy".to_owned(),
+        "Bearer bencher_runner_badbadbadbad".to_owned(),
+        bencher_json::bearer_header("bencher_runner_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh"),
+        bencher_json::bearer_header(other_key),
+    ];
+    for authorization in presented.iter().map(Some).chain([None]) {
+        let mut request = url
+            .clone()
+            .into_client_request()
+            .expect("Failed to build request");
+        if let Some(authorization) = authorization {
+            request.headers_mut().insert(
+                bencher_json::AUTHORIZATION,
+                authorization.parse().expect("Invalid header"),
+            );
+        }
+        if let Ok((mut ws, _)) = tokio_tungstenite::connect_async(request).await {
+            assert_ws_closed(&mut ws).await;
+        }
+    }
+
+    // The handler logs its refusal after it drops the connection.
+    let refusals = || {
+        capture
+            .lines()
+            .into_iter()
+            .filter(|line| line.contains(REFUSED))
+            .collect::<Vec<_>>()
+    };
+    for _ in 0..100 {
+        if refusals().len() == presented.len() + 1 {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    let refusals = refusals();
+    assert_eq!(refusals.len(), presented.len() + 1, "{refusals:?}");
+    let invalid = refusals
+        .iter()
+        .filter(|line| line.contains(bencher_schema::error::INVALID_CREDENTIAL))
+        .count();
+    assert_eq!(invalid, presented.len(), "{refusals:?}");
+    assert!(
+        refusals
+            .iter()
+            .any(|line| line.contains("Missing Authorization header")),
+        "{refusals:?}"
+    );
+    for line in capture.lines() {
+        assert!(!line.contains(other_key), "{line}");
+    }
+}
+
 // =============================================================================
 // Happy Path Tests
 // =============================================================================

@@ -5,11 +5,11 @@
 use bencher_github_client::GitHubClient;
 use bencher_google_client::GoogleClient;
 use bencher_json::{
-    BranchName, BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid,
-    OAuthAccessToken, OAuthAuthorizationUuid, OAuthGrantUuid, OAuthRefreshToken, OAuthResource,
-    OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet, PlanLevel, ReportUuid,
-    ResourceName, TestbedUuid, TokenUuid, UserKeyUuid, UserUuid, VariantUuid, VersionUuid,
-    system::config::JsonOAuthServer,
+    BranchName, BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, JwtHash, MetricName,
+    MetricUuid, OAuthAccessToken, OAuthAuthorizationUuid, OAuthGrantUuid, OAuthRefreshToken,
+    OAuthResource, OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet, PlanLevel,
+    ReportUuid, ResourceName, TestbedUuid, TokenUuid, UserKeyUuid, UserUuid, VariantUuid,
+    VersionUuid, system::config::JsonOAuthServer,
 };
 use bencher_rbac::project::Role;
 use bencher_schema::{
@@ -246,8 +246,32 @@ pub struct TestToken {
 /// Seed a user API token directly into the database.
 /// The `POST /v0/users/{user}/tokens` endpoint is deprecated and always fails,
 /// so tests for the remaining token endpoints must seed tokens at the DB layer.
-#[expect(clippy::expect_used, reason = "test helper inserting a user API token")]
+#[expect(clippy::expect_used, reason = "test helper minting a user API token")]
 pub fn seed_token(server: &TestServer, user: &TestUser, name: &str) -> TestToken {
+    // Each name mints its own JWT, so two tokens seeded for a user in one second differ.
+    let nonce = name.bytes().fold(0u32, |hash, byte| {
+        hash.wrapping_mul(31).wrapping_add(byte.into())
+    }) % 1_000_000;
+    let jwt = server
+        .token_key()
+        .new_api_key(user.email.clone(), u32::MAX - nonce)
+        .expect("Failed to mint user API token");
+    let now = server.context().clock.now().timestamp();
+    let expiration = DateTime::try_from(now + i64::from(u32::MAX)).expect("Invalid expiration");
+    let uuid = seed_token_jwt(server, user, name, &jwt, expiration);
+    TestToken { uuid, token: jwt }
+}
+
+/// Seed a user API token for `user` that holds `jwt` and expires at `expiration`,
+/// whatever the JWT itself says.
+#[expect(clippy::expect_used, reason = "test helper inserting a user API token")]
+pub fn seed_token_jwt(
+    server: &TestServer,
+    user: &TestUser,
+    name: &str,
+    jwt: &Jwt,
+    expiration: DateTime,
+) -> TokenUuid {
     let mut conn = server.db_conn();
 
     let name: ResourceName = name.parse().expect("Invalid token name");
@@ -257,29 +281,30 @@ pub fn seed_token(server: &TestServer, user: &TestUser, name: &str) -> TestToken
         .first(&mut conn)
         .expect("Failed to get user ID");
 
-    let jwt = server
-        .token_key()
-        .new_api_key(user.email.clone(), u32::MAX)
-        .expect("Failed to mint user API token");
-    let claims = server
-        .token_key()
-        .validate_api_key(&jwt)
-        .expect("Failed to validate user API token");
-
     let uuid = TokenUuid::new();
     diesel::insert_into(schema::token::table)
         .values((
             schema::token::uuid.eq(&uuid),
             schema::token::user_id.eq(user_id),
             schema::token::name.eq(&name),
-            schema::token::jwt.eq(&jwt),
-            schema::token::creation.eq(claims.issued_at()),
-            schema::token::expiration.eq(claims.expiration()),
+            schema::token::jwt_hash.eq(JwtHash::from(jwt)),
+            schema::token::creation.eq(server.context().clock.now()),
+            schema::token::expiration.eq(expiration),
         ))
         .execute(&mut conn)
         .expect("Failed to insert token");
 
-    TestToken { uuid, token: jwt }
+    uuid
+}
+
+/// When the user API token was last used, as its row records it.
+#[expect(clippy::expect_used, reason = "test helper reading a user API token")]
+pub fn token_last_used(server: &TestServer, token: TokenUuid) -> Option<DateTime> {
+    schema::token::table
+        .filter(schema::token::uuid.eq(token))
+        .select(schema::token::last_used)
+        .first(&mut server.db_conn())
+        .expect("Failed to read the token")
 }
 
 /// The issuer of the OAuth server that tests configure.

@@ -2748,7 +2748,6 @@ export interface JsonToken {
 	uuid: Uuid;
 	user: Uuid;
 	name: ResourceName;
-	token: Jwt;
 	creation: string;
 	expiration: string;
 	/**

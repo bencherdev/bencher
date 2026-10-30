@@ -1,7 +1,9 @@
 use std::ops::Deref;
 
 use async_trait::async_trait;
-use bencher_json::{DateTime, Jwt, Sanitize, SessionToken, SignInRefusal, UserKey, UserKeyHash};
+use bencher_json::{
+    DateTime, Jwt, JwtHash, Sanitize, SessionToken, SignInRefusal, UserKey, UserKeyHash,
+};
 #[cfg(feature = "plus")]
 use bencher_json::{OAuthScopes, system::payment::JsonCustomer};
 use bencher_rbac::{
@@ -9,7 +11,6 @@ use bencher_rbac::{
     server::Permission,
     user::{OrganizationRoles, ProjectRoles},
 };
-use bencher_token::Audience;
 use diesel::{ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{
     ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
@@ -23,7 +24,7 @@ use crate::{
     auth_conn,
     context::{ApiContext, DbConnection, Rbac},
     error::{
-        BEARER_TOKEN_FORMAT, bad_request_error, forbidden_error, issue_error, unauthorized_error,
+        BEARER_TOKEN_FORMAT, forbidden_error, invalid_credential, issue_error, unauthorized_error,
     },
     model::{
         organization::OrganizationId,
@@ -34,7 +35,7 @@ use crate::{
                 QuerySession, SessionId,
                 cookie::{CookieCredential, SessionCookie},
             },
-            token::QueryToken,
+            token::{QueryToken, TokenId},
         },
     },
     public_conn, schema,
@@ -44,8 +45,6 @@ use super::QueryUser;
 #[cfg(feature = "plus")]
 use super::oauth::{authenticate, is_oauth_credential};
 
-const INVALID_USER_KEY: &str = "Invalid user key";
-const INVALID_SESSION: &str = "Invalid session";
 const CROSS_ORIGIN_SESSION: &str = "A session can change state only from the console's own origin";
 const FRESH_SIGN_IN: &str = "This needs a browser session signed in within the last 10 minutes";
 
@@ -87,8 +86,12 @@ impl AuthUser {
             let conn = public_conn!(context);
             let (query_user, credential, renewal) = match bearer_token {
                 BearerToken::Jwt(jwt) => {
-                    let (query_user, credential) = Self::user_from_jwt(context, conn, &jwt)?;
-                    (query_user, credential, None)
+                    let (query_user, credential, query_token) =
+                        Self::user_from_jwt(context, conn, &jwt)?;
+                    let renewal = query_token
+                        .filter(|query_token| query_token.needs_use_recorded(now))
+                        .map(|query_token| Renewal::ApiToken(query_token.id));
+                    (query_user, credential, renewal)
                 },
                 BearerToken::UserKey(key) => {
                     let (query_user, query_key) = Self::user_from_user_key(context, conn, &key)?;
@@ -100,7 +103,9 @@ impl AuthUser {
                     else {
                         return Ok(None);
                     };
-                    let renewal = query_session.needs_renewal(now).then_some(query_session.id);
+                    let renewal = query_session
+                        .needs_renewal(now)
+                        .then_some(Renewal::Session(query_session.id));
                     (
                         query_user,
                         AuthCredential::Session(Some(query_session.id)),
@@ -116,63 +121,89 @@ impl AuthUser {
         };
 
         // Written once the read connection is back in its pool.
-        if let Some(session_id) = renewal {
-            Self::renew_session(context, session_id, now);
+        if let Some(renewal) = renewal {
+            Self::renew(context, renewal, now);
         }
 
         Ok(Some(auth_user))
     }
 
-    /// Renew a session, unless the writer is busy or the write fails: a renewal never holds up
-    /// or fails the request, and a later use renews the session instead.
-    fn renew_session(context: &ApiContext, session_id: SessionId, now: DateTime) {
+    /// Renew a session or record a token's use, unless the writer is busy or the write fails:
+    /// a renewal never holds up or fails the request, and a later use renews instead.
+    fn renew(context: &ApiContext, renewal: Renewal, now: DateTime) {
         let Ok(mut conn) = context.database.connection.try_lock() else {
             return;
         };
-        if let Err(e) = QuerySession::renew(&mut conn, session_id, now) {
-            let _err = issue_error("Failed to renew a session", "Failed to renew a session:", e);
+        let renewed = match renewal {
+            Renewal::Session(session_id) => QuerySession::renew(&mut conn, session_id, now),
+            Renewal::ApiToken(token_id) => QueryToken::record_use(&mut conn, token_id, now),
+        };
+        if let Err(e) = renewed {
+            let _err = issue_error(
+                "Failed to renew a credential",
+                "Failed to renew a credential:",
+                e,
+            );
         }
     }
 
+    /// Record a use of a deprecated user API token, at most once an hour.
+    pub fn record_api_token_use(context: &ApiContext, query_token: &QueryToken, now: DateTime) {
+        if query_token.needs_use_recorded(now) {
+            Self::renew(context, Renewal::ApiToken(query_token.id), now);
+        }
+    }
+
+    /// Authenticate by a JWT: a session from a login, by its signature, or else a deprecated
+    /// user API token, by its row.
     fn user_from_jwt(
         context: &ApiContext,
         conn: &mut DbConnection,
         jwt: &Jwt,
-    ) -> Result<(QueryUser, AuthCredential), HttpError> {
-        let claims = context
-            .token_key
-            .validate_client(jwt)
-            .map_err(|e| bad_request_error(format!("Failed to validate JSON Web Token: {e}")))?;
-        let email = claims.email();
+    ) -> Result<(QueryUser, AuthCredential, Option<QueryToken>), HttpError> {
+        if let Ok(claims) = context.token_key.validate_client(jwt) {
+            let query_user = QueryUser::get_with_email(conn, claims.email())
+                .map_err(|_err| invalid_credential())?;
+            if query_user.locked {
+                return Err(invalid_credential());
+            }
+            return Ok((query_user, AuthCredential::Session(None), None));
+        }
+        let (query_user, query_token) = Self::user_from_api_token(context, conn, jwt)?;
+        Ok((query_user, AuthCredential::ApiToken, Some(query_token)))
+    }
 
-        let query_user = QueryUser::get_with_email(conn, email)?;
-        query_user.check_is_locked()?;
-
-        // API keys created via `POST /tokens` are persisted in the `token` table and
-        // can be revoked. Reject any JWT whose row has `revoked` set. A JWT with no
-        // row (e.g. one issued before revocation tracking existed, or any
-        // externally-signed test fixture) is accepted — we only block tokens we know
-        // have been revoked. Short-lived client (browser session) JWTs are never
-        // persisted and skip this lookup.
-        if claims.audience() == Audience::ApiKey.as_str()
-            && let Some(row) = QueryToken::get_by_user_jwt(conn, query_user.id, jwt)
-                .optional()
-                .map_err(|e| unauthorized_error(format!("Failed to look up API token: {e}")))?
-            && row.revoked.is_some()
-        {
+    /// Authenticate by a deprecated user API token: the user its row belongs to, unless the row
+    /// is revoked or past its expiration, or the user is locked. Its signature and the email it
+    /// names count for nothing, and a token with no row fails.
+    /// Public so the OCI token endpoint (`api_auth`) checks `docker login` the same way.
+    pub fn user_from_api_token(
+        context: &ApiContext,
+        conn: &mut DbConnection,
+        jwt: &Jwt,
+    ) -> Result<(QueryUser, QueryToken), HttpError> {
+        let lookup = QueryToken::from_hash(conn, &JwtHash::from(jwt))
+            .optional()
+            .inspect_err(|err| {
+                issue_error(
+                    "Failed to look up an API token",
+                    "Failed to look up an API token by its hash:",
+                    err,
+                );
+            })
+            .map_err(|_err| invalid_credential())?;
+        let Some((query_user, query_token)) = lookup else {
+            return Err(invalid_credential());
+        };
+        if query_token.revoked.is_some() {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenRevokedUse);
-            return Err(unauthorized_error(
-                "This API token has been revoked and is no longer valid",
-            ));
+            return Err(invalid_credential());
         }
-
-        let credential = if claims.audience() == Audience::Client.as_str() {
-            AuthCredential::Session(None)
-        } else {
-            AuthCredential::ApiToken
-        };
-        Ok((query_user, credential))
+        if query_token.is_expired(context.clock.now()) || query_user.locked {
+            return Err(invalid_credential());
+        }
+        Ok((query_user, query_token))
     }
 
     /// Authenticate by a session cookie: one the API honors, from the console's own origin when
@@ -212,7 +243,7 @@ impl AuthUser {
                     err,
                 );
             })
-            .map_err(|_err| unauthorized_error(INVALID_SESSION))?;
+            .map_err(|_err| invalid_credential())?;
         let Some((query_user, query_session)) = lookup else {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::SessionAuthFailed(
@@ -242,7 +273,7 @@ impl AuthUser {
     /// Performs a single indexed lookup that returns the key row alongside its owning
     /// user. `revoked`, `expiration`, and `user.locked` are checked in Rust so each
     /// failure mode can be reported distinctly via `UserKeyAuthFailureReason` without
-    /// a second query. All adverse cases return the same opaque `INVALID_USER_KEY`
+    /// a second query. All adverse cases return the same opaque invalid credential
     /// message to avoid leaking which condition tripped.
     /// Public so the OCI token endpoint (`api_auth`) can validate `docker login`
     /// user-key credentials through the exact same checks and telemetry.
@@ -261,14 +292,14 @@ impl AuthUser {
                     err,
                 );
             })
-            .map_err(|_err| unauthorized_error(INVALID_USER_KEY))?;
+            .map_err(|_err| invalid_credential())?;
 
         let Some((query_user, query_key)) = lookup else {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
                 bencher_otel::UserKeyAuthFailureReason::NotFound,
             ));
-            return Err(unauthorized_error(INVALID_USER_KEY));
+            return Err(invalid_credential());
         };
 
         if query_key.revoked.is_some() {
@@ -276,7 +307,7 @@ impl AuthUser {
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
                 bencher_otel::UserKeyAuthFailureReason::Revoked,
             ));
-            return Err(unauthorized_error(INVALID_USER_KEY));
+            return Err(invalid_credential());
         }
 
         if query_key.expiration.timestamp() <= context.clock.now().timestamp() {
@@ -284,7 +315,7 @@ impl AuthUser {
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
                 bencher_otel::UserKeyAuthFailureReason::Expired,
             ));
-            return Err(unauthorized_error(INVALID_USER_KEY));
+            return Err(invalid_credential());
         }
 
         if query_user.locked {
@@ -292,7 +323,7 @@ impl AuthUser {
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
                 bencher_otel::UserKeyAuthFailureReason::Locked,
             ));
-            return Err(unauthorized_error(INVALID_USER_KEY));
+            return Err(invalid_credential());
         }
 
         Ok((query_user, query_key))
@@ -589,6 +620,13 @@ impl AuthCredential {
     }
 }
 
+/// A write a use of a credential leaves for after the request has read what it needs.
+#[derive(Debug, Clone, Copy)]
+enum Renewal {
+    Session(SessionId),
+    ApiToken(TokenId),
+}
+
 // https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/bearer.rs
 /// A credential extracted from the `Authorization` header, or, from a request without one,
 /// its session cookie.
@@ -630,21 +668,20 @@ impl BearerToken {
             ));
         }
         if raw.starts_with(UserKey::PREFIX) {
-            raw.parse::<UserKey>().map(Self::UserKey).map_err(|e| {
+            raw.parse::<UserKey>().map(Self::UserKey).map_err(|_err| {
                 // Mirror `ProjectKeyAuthFailureReason::Invalid` (emitted in
                 // `actor.rs::authenticate_project_key`) so crafted
-                // `bencher_user_*` probes are observable as a dedicated metric
-                // and not just `bad_request_error` log lines.
+                // `bencher_user_*` probes are observable as a dedicated metric.
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserKeyAuthFailed(
                     bencher_otel::UserKeyAuthFailureReason::Invalid,
                 ));
-                bad_request_error(format!("Malformed user API key: {e}"))
+                invalid_credential()
             })
         } else {
             raw.parse::<Jwt>()
                 .map(Self::Jwt)
-                .map_err(|e| bad_request_error(format!("Malformed JSON Web Token: {e}")))
+                .map_err(|_err| invalid_credential())
         }
     }
 
@@ -673,20 +710,11 @@ impl SharedExtractor for BearerToken {
                 .map(Self::Session)
                 .ok_or_else(missing_credential);
         };
-        let authorization_str = match authorization.to_str() {
-            Ok(authorization_str) => authorization_str,
-            Err(e) => {
-                return Err(bad_request_error(format!(
-                    "Request has an invalid \"Authorization\" header: {e}. {BEARER_TOKEN_FORMAT}"
-                )));
-            },
-        };
-        let Some(token) = bencher_json::strip_bearer_token(authorization_str) else {
-            return Err(bad_request_error(format!(
-                "Request is missing \"Authorization\" Bearer. {BEARER_TOKEN_FORMAT}"
-            )));
-        };
-
+        let token = authorization
+            .to_str()
+            .ok()
+            .and_then(bencher_json::strip_bearer_token)
+            .ok_or_else(invalid_credential)?;
         Self::from_raw(token)
     }
 
@@ -705,7 +733,7 @@ fn missing_credential() -> HttpError {
 }
 
 fn dead_session(console_url: &url::Url) -> HttpError {
-    let mut error = unauthorized_error(INVALID_SESSION);
+    let mut error = invalid_credential();
     error.headers_mut().append(
         http::header::SET_COOKIE,
         SessionCookie::new(console_url).clear(),

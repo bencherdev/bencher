@@ -6,6 +6,8 @@ use thiserror::Error;
 
 pub const BEARER_TOKEN_FORMAT: &str = "Expected format is `Authorization: Bearer <bencher.api.token>`. Where `<bencher.api.token>` is your Bencher API token (JWT) or user API key (`bencher_user_...`).";
 pub const BEARER_AUTH_FORMAT: &str = "Expected format is `Authorization: Bearer <token>`. Where `<token>` is your Bencher API token (JWT), user API key (`bencher_user_...`), or project API key (`bencher_run_...`).";
+/// The one answer to a presented credential that fails, whatever made it fail.
+pub const INVALID_CREDENTIAL: &str = "Invalid credential";
 
 #[derive(Debug, Clone, Copy)]
 pub enum BencherResource {
@@ -128,6 +130,10 @@ where
         ClientErrorStatusCode::UNAUTHORIZED,
         error.to_string(),
     ))
+}
+
+pub fn invalid_credential() -> HttpError {
+    unauthorized_error(INVALID_CREDENTIAL)
 }
 
 pub fn payment_required_error<E>(error: E) -> HttpError

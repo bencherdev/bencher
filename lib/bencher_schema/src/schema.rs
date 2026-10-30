@@ -589,9 +589,10 @@ diesel::table! {
         uuid -> Text,
         user_id -> Integer,
         name -> Text,
-        jwt -> Text,
+        jwt_hash -> Text,
         creation -> BigInt,
         expiration -> BigInt,
+        last_used -> Nullable<BigInt>,
         revoked -> Nullable<BigInt>,
     }
 }

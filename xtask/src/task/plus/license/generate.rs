@@ -49,7 +49,7 @@ impl Generate {
             self.entitlements,
             Some(PROD_BENCHER_URL_STR.to_owned()),
         )?;
-        println!("{license}");
+        println!("{}", license.as_ref());
         Ok(())
     }
 }
