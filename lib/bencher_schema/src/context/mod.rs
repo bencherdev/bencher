@@ -19,6 +19,7 @@ use url::Url;
 
 #[cfg(feature = "plus")]
 use crate::model::project::QueryProject;
+use crate::model::user::sign_in::CodeKey;
 
 #[cfg(feature = "plus")]
 mod callbacks;
@@ -42,13 +43,15 @@ mod stats;
 #[cfg(feature = "plus")]
 use bencher_recaptcha::RecaptchaClient;
 #[cfg(feature = "plus")]
+pub use bencher_turnstile::Turnstile;
+#[cfg(feature = "plus")]
 pub use callbacks::Callbacks;
 pub use database::{Database, DbConnection};
 #[cfg(feature = "plus")]
 pub use heartbeat_tasks::HeartbeatTasks;
 #[cfg(feature = "plus")]
 pub use indexer::{IndexError, Indexer};
-pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody};
+pub use messenger::{Body, ButtonBody, Email, Message, Messenger, NewUserBody, SignInBody};
 #[cfg(feature = "plus")]
 pub use messenger::{RunnerStatusBody, ServerStatsBody};
 #[cfg(feature = "plus")]
@@ -74,6 +77,8 @@ pub struct ApiContext {
     pub messenger: Messenger,
     pub database: Database,
     pub relay: Relay,
+    /// The key sign-in codes are hashed under.
+    pub code_key: CodeKey,
     #[cfg(feature = "plus")]
     pub rate_limiting: Arc<RateLimiting>,
     /// Join handle for the periodic rate limiting prune, so shutdown can wait for an in-flight save
@@ -96,6 +101,9 @@ pub struct ApiContext {
     pub licensor: Licensor,
     #[cfg(feature = "plus")]
     pub recaptcha_client: Option<RecaptchaClient>,
+    /// Cloudflare Turnstile, which guards starting a sign-in by email where it is configured.
+    #[cfg(feature = "plus")]
+    pub turnstile: Option<Turnstile>,
     #[cfg(feature = "plus")]
     pub is_bencher_cloud: bool,
     #[cfg(feature = "plus")]

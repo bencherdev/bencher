@@ -8,6 +8,7 @@ use bencher_rbac::init_rbac;
 use bencher_schema::{
     ApiContext,
     context::{Database, DbConnection, Messenger, Relay},
+    model::user::sign_in::CodeKey,
     run_migrations,
 };
 use bencher_token::{DEFAULT_SECRET_KEY, TokenKey};
@@ -206,6 +207,8 @@ impl TestServer {
             github_app: None,
             google_client: None,
             relay_secret: None,
+            turnstile: None,
+            messenger: None,
         })
         .await
     }
@@ -213,12 +216,37 @@ impl TestServer {
     /// Create a new test server with any of its settings changed from the defaults.
     #[cfg(feature = "plus")]
     #[expect(
-        clippy::expect_used,
         clippy::unused_async,
         clippy::unused_async_trait_impl,
-        reason = "test server setup with fallible init; async for API parity"
+        reason = "async for API parity"
     )]
     pub async fn new_with_options(options: TestServerOptions) -> Self {
+        let (database, db_path, db_file) = temp_database();
+        Self::with_database(options, database, db_path, db_file)
+    }
+
+    /// Stop this server and start another on the same database file, with these settings and
+    /// nothing else carried over, as the API's own restart does.
+    #[cfg(feature = "plus")]
+    pub async fn restart(self, options: TestServerOptions) -> Self {
+        let Self {
+            server,
+            db_path,
+            db_file,
+            ..
+        } = self;
+        Self::shut_down(server).await;
+        Self::with_database(options, database_at(&db_path), db_path, db_file)
+    }
+
+    #[cfg(feature = "plus")]
+    #[expect(clippy::expect_used, reason = "test server setup with fallible init")]
+    fn with_database(
+        options: TestServerOptions,
+        database: Database,
+        db_path: String,
+        db_file: NamedTempFile,
+    ) -> Self {
         let TestServerOptions {
             upload_timeout,
             max_body_size,
@@ -233,11 +261,11 @@ impl TestServer {
             github_app,
             google_client,
             relay_secret,
+            turnstile,
+            messenger,
         } = options;
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
-
-        let (database, db_path, db_file) = temp_database();
 
         // Build minimal ApiContext
         let token_key = TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
@@ -266,9 +294,10 @@ impl TestServer {
             request_body_max_bytes,
             token_key: TokenKey::new(ISSUER.to_owned(), &DEFAULT_SECRET_KEY),
             rbac,
-            messenger: Messenger::default(),
+            messenger: messenger.unwrap_or_default(),
             database,
             relay: Relay::new(relay_secret.as_ref()),
+            code_key: code_key(),
             rate_limiting: Arc::new(
                 rate_limiting.unwrap_or_else(bencher_schema::context::RateLimiting::max),
             ),
@@ -282,6 +311,7 @@ impl TestServer {
             biller: None,
             licensor: bencher_license::Licensor::self_hosted().expect("Failed to create licensor"),
             recaptcha_client: None,
+            turnstile,
             is_bencher_cloud: false,
             clock: clock.clone(),
             registry_url: bencher_json::LOCALHOST_BENCHER_REGISTRY_URL.clone(),
@@ -349,6 +379,7 @@ impl TestServer {
             messenger: Messenger::default(),
             database,
             relay: Relay::new(None),
+            code_key: code_key(),
             clock: bencher_json::Clock::System,
         };
 
@@ -427,6 +458,25 @@ impl TestServer {
         DbConnection::establish(&self.db_path).expect("Failed to establish database connection")
     }
 
+    /// Make every organization claimed in the eyes of the API's writer connection alone.
+    /// A claim counts the organization's roles on the writer, after a check that read them on
+    /// another connection, so this stands in for someone else's claim landing between the two.
+    #[expect(clippy::expect_used, reason = "test helper changing the writer's view")]
+    pub async fn claim_after_the_check(&self) {
+        self.context()
+            .database
+            .connection
+            .lock()
+            .await
+            .batch_execute(
+                "CREATE TEMP VIEW organization_role AS
+                SELECT 0 AS id, 0 AS user_id, id AS organization_id, 'leader' AS role,
+                    0 AS created, 0 AS modified
+                FROM main.organization",
+            )
+            .expect("Failed to claim every organization for the writer");
+    }
+
     /// Get the token key for generating test tokens
     pub fn token_key(&self) -> &TokenKey {
         &self.token_key
@@ -463,11 +513,15 @@ impl TestServer {
 
     /// Shut down the server gracefully
     pub async fn close(self) {
+        Self::shut_down(self.server).await;
+    }
+
+    async fn shut_down(server: HttpServer<ApiContext>) {
         #[cfg(feature = "plus")]
-        let callbacks = self.context().callbacks.clone();
+        let callbacks = server.app_private().callbacks.clone();
         #[cfg(feature = "plus")]
-        self.context().shutdown.cancel();
-        drop(self.server.close().await);
+        server.app_private().shutdown.cancel();
+        drop(server.close().await);
         #[cfg(feature = "plus")]
         callbacks
             .drain(&slog::Logger::root(slog::Discard, slog::o!()))
@@ -492,6 +546,8 @@ pub struct TestServerOptions {
     pub github_app: Option<Arc<bencher_github_client::GitHubApp>>,
     pub google_client: Option<bencher_google_client::GoogleClient>,
     pub relay_secret: Option<bencher_json::Secret>,
+    pub turnstile: Option<bencher_schema::context::Turnstile>,
+    pub messenger: Option<Messenger>,
 }
 
 /// A migrated database in a temporary file, with its path and the file that keeps it.
@@ -499,21 +555,29 @@ pub struct TestServerOptions {
 fn temp_database() -> (Database, String, NamedTempFile) {
     let db_file = NamedTempFile::new().expect("Failed to create temp db file");
     let db_path = db_file.path().to_str().expect("Invalid db path").to_owned();
+    (database_at(&db_path), db_path, db_file)
+}
 
-    // Establish connection and run migrations
+/// The database in the file at `db_path`, migrated, on new connections.
+#[expect(clippy::expect_used, reason = "test server setup with fallible init")]
+fn database_at(db_path: &str) -> Database {
     let mut conn =
-        DbConnection::establish(&db_path).expect("Failed to establish database connection");
+        DbConnection::establish(db_path).expect("Failed to establish database connection");
     set_busy_timeout(&mut conn).expect("Failed to set the busy timeout");
     run_migrations(&mut conn).expect("Failed to run migrations");
 
-    let database = Database {
-        path: PathBuf::from(&db_path),
+    Database {
+        path: PathBuf::from(db_path),
         busy_timeout: BUSY_TIMEOUT_MS,
-        public_pool: connection_pool(&db_path),
-        auth_pool: connection_pool(&db_path),
+        public_pool: connection_pool(db_path),
+        auth_pool: connection_pool(db_path),
         connection: Arc::new(Mutex::new(conn)),
-    };
-    (database, db_path, db_file)
+    }
+}
+
+#[expect(clippy::expect_used, reason = "test server setup with fallible init")]
+fn code_key() -> CodeKey {
+    CodeKey::new(&DEFAULT_SECRET_KEY).expect("Failed to derive the sign-in code key")
 }
 
 /// Waits out a lock instead of failing at once, as the server's own pools do.

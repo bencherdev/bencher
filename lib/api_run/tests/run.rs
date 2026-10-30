@@ -140,6 +140,51 @@ async fn run_post_unauthenticated() {
     );
 }
 
+// POST /v0/run - an authenticated run whose claim finds its organization claimed by someone else
+// since the run checked it is a conflict, not a failed credential
+#[tokio::test]
+async fn run_post_claim_of_an_organization_claimed_meanwhile_conflicts() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Claim User", "runclaimmeanwhile@example.com")
+        .await;
+    let project_slug = "claimed-meanwhile-project";
+    let body = serde_json::json!({
+        "project": project_slug,
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [bmf_results().to_string()],
+        "context": { "bencher.dev/v0/repo/name": project_slug },
+    });
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "an unclaimed project");
+
+    server.claim_after_the_check().await;
+    let resp = server
+        .client
+        .post(server.api_url("/v0/run"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let text = resp.text().await.expect("Failed to read the response");
+    assert_eq!(status, StatusCode::CONFLICT, "{text}");
+    assert!(text.contains("has already been claimed"), "{text}");
+}
+
 // POST /v0/run - a run made with a project key names that key on its report
 #[tokio::test]
 async fn run_post_with_a_project_key_names_the_key() {

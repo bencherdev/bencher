@@ -66,7 +66,24 @@ impl Email {
             .domain()
             .to_owned()
     }
+
+    pub fn local_part(&self) -> String {
+        EmailAddress::new_unchecked(self.as_ref())
+            .local_part()
+            .to_owned()
+    }
 }
+
+/// The SHA-256 of an [`Email`], for a record that must know an address again but hold none.
+#[derive(Display, Debug, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(
+    feature = "db",
+    derive(diesel::FromSqlRow, diesel::AsExpression),
+    diesel(sql_type = diesel::sql_types::Text)
+)]
+pub struct EmailHash(String);
+
+crate::keys::api_key_hash_impl!(EmailHash, Email, error = EmailHash);
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_email(email: &str) -> bool {

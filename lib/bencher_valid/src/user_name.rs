@@ -13,7 +13,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{REGEX_ERROR, Slug, ValidError, is_valid_len};
+use crate::{Email, REGEX_ERROR, Slug, ValidError, is_valid_len};
 
 #[expect(clippy::expect_used, reason = "regex is a constant and known valid")]
 static NAME_REGEX: LazyLock<Regex> =
@@ -70,6 +70,19 @@ impl From<UserName> for String {
 
 impl UserName {
     pub const MAX_LEN: usize = crate::MAX_LEN;
+    /// The name of an account whose address gives no name.
+    const FALLBACK: &str = "User";
+
+    /// A name from the local part of `email`, cut to the characters a name allows.
+    pub fn from_email(email: &Email) -> Self {
+        let name = email
+            .local_part()
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric() || matches!(c, ' ' | ',' | '.' | '-' | '\''))
+            .take(Self::MAX_LEN)
+            .collect::<String>();
+        Self::try_from(name.trim().to_owned()).unwrap_or_else(|_| Self(Self::FALLBACK.to_owned()))
+    }
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -119,6 +132,24 @@ mod tests {
             "Muriel! Bagge",
         ] {
             assert_eq!(false, is_valid_user_name(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn user_name_from_email() {
+        use super::UserName;
+
+        for (email, name) in [
+            ("ada@example.com", "ada"),
+            ("Ada.Lovelace@example.com", "ada.lovelace"),
+            ("o'brien-smith@example.com", "o'brien-smith"),
+            ("ada+bencher_dev@example.com", "adabencherdev"),
+            ("ada_lovelace@example.com", "adalovelace"),
+            ("+@example.com", "User"),
+            ("___@example.com", "User"),
+        ] {
+            let email = email.parse().unwrap();
+            assert_eq!(UserName::from_email(&email).as_ref(), name, "{email}");
         }
     }
 

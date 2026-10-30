@@ -17,7 +17,9 @@ plus = [
     "dep:bencher_google_index",
     "dep:bencher_oci_storage",
     "dep:bencher_rate_limiter",
+    "dep:bencher_turnstile",
     "dep:camino",
+    "dep:hex",
     "dep:reqwest",
     "dep:serde",
     "dep:serde_json",
@@ -34,12 +36,14 @@ plus = [
     "bencher_oci_storage/plus",
     "bencher_recaptcha/plus",
     "bencher_token/plus",
+    "bencher_turnstile/plus",
 ]
 sentry = ["dep:sentry"]
 otel = ["dep:bencher_otel", "bencher_recaptcha?/otel"]
 
 [dependencies]
 async-trait.workspace = true
+aws-lc-rs.workspace = true
 bencher_adapter.workspace = true
 bencher_billing = { workspace = true, optional = true }
 bencher_bing_index = { workspace = true, optional = true }
@@ -59,6 +63,7 @@ bencher_rank.workspace = true
 bencher_rbac.workspace = true
 bencher_recaptcha = { workspace = true, optional = true }
 bencher_token.workspace = true
+bencher_turnstile = { workspace = true, optional = true }
 camino = { workspace = true, optional = true }
 chrono.workspace = true
 css-inline.workspace = true
@@ -67,6 +72,7 @@ derive_more.workspace = true
 diesel = { workspace = true, features = ["chrono", "sqlite", "32-column-tables"] }
 diesel_migrations.workspace = true
 dropshot.workspace = true
+hex = { workspace = true, optional = true }
 http.workspace = true
 # The migrations mint JSONB with SQLite's own `jsonb()`, which needs SQLite 3.45
 # or later, so the crate that owns them pins the bundled amalgamation rather than
@@ -93,9 +99,10 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 [dev-dependencies]
 bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
 criterion.workspace = true
+futures-concurrency.workspace = true
 pretty_assertions.workspace = true
 tempfile.workspace = true
-tokio = { workspace = true, features = ["macros", "test-util"] }
+tokio = { workspace = true, features = ["io-util", "macros", "net", "sync", "test-util"] }
 
 [lints]
 workspace = true

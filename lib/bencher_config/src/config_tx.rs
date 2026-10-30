@@ -20,7 +20,10 @@ use bencher_json::{
     },
 };
 use bencher_rbac::init_rbac;
-use bencher_schema::context::{ApiContext, Database, DbConnection};
+use bencher_schema::{
+    context::{ApiContext, Database, DbConnection},
+    model::user::sign_in::{CodeKey, CodeKeyError},
+};
 #[cfg(feature = "plus")]
 use bencher_schema::{
     context::{Callbacks, RateLimiting},
@@ -91,6 +94,8 @@ pub enum ConfigTxError {
     #[cfg(feature = "plus")]
     #[error("{0}")]
     CallbackKey(bencher_callback::CallbackKeyError),
+    #[error("{0}")]
+    CodeKey(CodeKeyError),
     #[cfg(feature = "plus")]
     #[error("{0}")]
     OAuthSigningKey(bencher_token::OAuthSigningKeyError),
@@ -276,6 +281,7 @@ async fn into_context(
     #[cfg(feature = "plus")]
     let callback_key =
         CallbackKey::new(&security.secret_key).map_err(ConfigTxError::CallbackKey)?;
+    let code_key = CodeKey::new(&security.secret_key).map_err(ConfigTxError::CodeKey)?;
 
     #[cfg(feature = "plus")]
     let rate_limiting = plus.as_ref().and_then(|plus| plus.rate_limiting);
@@ -327,6 +333,7 @@ async fn into_context(
         licensor,
         indexer,
         recaptcha_client,
+        turnstile,
         registry_url,
         oci_storage,
     } = Plus::new(log, &console_url, plus, &database.path).map_err(ConfigTxError::Plus)?;
@@ -383,6 +390,7 @@ async fn into_context(
         messenger: smtp.into(),
         database,
         relay,
+        code_key,
         #[cfg(feature = "plus")]
         rate_limiting,
         #[cfg(feature = "plus")]
@@ -403,6 +411,8 @@ async fn into_context(
         indexer,
         #[cfg(feature = "plus")]
         recaptcha_client,
+        #[cfg(feature = "plus")]
+        turnstile,
         #[cfg(feature = "plus")]
         is_bencher_cloud,
         #[cfg(feature = "plus")]

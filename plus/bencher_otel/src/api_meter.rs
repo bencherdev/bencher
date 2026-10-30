@@ -145,6 +145,7 @@ pub enum ApiCounter {
     UserKeyAuthFailed(UserKeyAuthFailureReason),
 
     SessionAuthFailed(SessionAuthFailureReason),
+    SignInRefused(SignInRefusalReason),
 
     ProjectKeyAuthFailed(ProjectKeyAuthFailureReason),
 
@@ -175,6 +176,7 @@ pub enum ApiCounter {
 
     // Email
     EmailSend,
+    EmailSendFailed,
 
     // OCI Registry metrics
     OciBlobPush,
@@ -280,6 +282,7 @@ impl ApiCounter {
             Self::ProjectKeyAuthFailed(_)
             | Self::UserKeyAuthFailed(_)
             | Self::SessionAuthFailed(_)
+            | Self::SignInRefused(_)
             | Self::OAuthTokenAuthFailed(_) => "{auth_failure}",
             Self::OAuthGrantRevoke => "{grant}",
             Self::OAuthConsent(_) => "{consent}",
@@ -287,7 +290,7 @@ impl ApiCounter {
 
             Self::Create(_) | Self::CreateMax(_) => "{resource}",
 
-            Self::EmailSend => "{email}",
+            Self::EmailSend | Self::EmailSendFailed => "{email}",
 
             Self::OciBlobPush | Self::OciBlobPull => "{blob}",
             Self::OciManifestPush | Self::OciManifestPull => "{manifest}",
@@ -358,6 +361,7 @@ impl ApiCounter {
             Self::UserKeyRevokeBlocked => "user.key.revoke.blocked",
             Self::UserKeyAuthFailed(_) => "user.key.auth.failed",
             Self::SessionAuthFailed(_) => "session.auth.failed",
+            Self::SignInRefused(_) => "sign_in.refused",
             Self::OAuthGrantRevoke => "oauth.grant.revoke",
             Self::OAuthGrantBlocked => "oauth.grant.blocked",
             Self::OAuthTokenAuthFailed(_) => "oauth.token.auth.failed",
@@ -384,6 +388,7 @@ impl ApiCounter {
             Self::CreateMax(_) => "resource.create.max",
 
             Self::EmailSend => "email.send",
+            Self::EmailSendFailed => "email.send.failed",
 
             // OCI Registry metrics
             Self::OciBlobPush => "oci.blob.push",
@@ -506,6 +511,7 @@ impl ApiCounter {
             Self::SessionAuthFailed(_) => {
                 "Counts the number of session cookie authentication failures"
             },
+            Self::SignInRefused(_) => "Counts the number of email sign-in steps refused, by reason",
             Self::OAuthGrantRevoke => "Counts the number of OAuth grant revocations by their user",
             Self::OAuthGrantBlocked => {
                 "Counts the number of OAuth grant management attempts blocked because the caller did not authenticate with a user session"
@@ -552,6 +558,7 @@ impl ApiCounter {
             Self::CreateMax(_) => "Counts the number of resource creation maximums reached",
 
             Self::EmailSend => "Counts the number of sent emails",
+            Self::EmailSendFailed => "Counts the number of emails that failed to send",
 
             // OCI Registry metrics
             Self::OciBlobPush => "Counts the number of OCI blob pushes",
@@ -655,6 +662,7 @@ impl ApiCounter {
             | Self::ActiveSeriesBilled
             | Self::ActiveSeriesBilledFailed
             | Self::EmailSend
+            | Self::EmailSendFailed
             | Self::OciBlobPush
             | Self::OciBlobPull
             | Self::OciManifestPush
@@ -706,6 +714,7 @@ impl ApiCounter {
             Self::ProjectKeyAuthFailed(reason) => vec![reason.into()],
             Self::UserKeyAuthFailed(reason) => vec![reason.into()],
             Self::SessionAuthFailed(reason) => vec![reason.into()],
+            Self::SignInRefused(reason) => vec![reason.into()],
             Self::OAuthTokenAuthFailed(reason) => vec![reason.into()],
             Self::OAuthAuthorizeFailed(reason) => vec![reason.into()],
             Self::OAuthConsent(kind) => vec![kind.into()],
@@ -1044,6 +1053,35 @@ impl From<SessionAuthFailureReason> for opentelemetry::KeyValue {
 }
 
 impl SessionAuthFailureReason {
+    const KEY: &str = "reason";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SignInRefusalReason {
+    WrongCode,
+    CodesPaused,
+    TurnstileFailed,
+    AddressCapped,
+}
+
+impl fmt::Display for SignInRefusalReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::WrongCode => write!(f, "wrong_code"),
+            Self::CodesPaused => write!(f, "codes_paused"),
+            Self::TurnstileFailed => write!(f, "turnstile_failed"),
+            Self::AddressCapped => write!(f, "address_capped"),
+        }
+    }
+}
+
+impl From<SignInRefusalReason> for opentelemetry::KeyValue {
+    fn from(reason: SignInRefusalReason) -> Self {
+        Self::new(SignInRefusalReason::KEY, reason.to_string())
+    }
+}
+
+impl SignInRefusalReason {
     const KEY: &str = "reason";
 }
 
