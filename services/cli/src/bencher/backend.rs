@@ -196,6 +196,25 @@ impl Backend {
         })
     }
 
+    /// A single attempt, without the version check, for a request whose failure the caller passes over.
+    pub async fn send_once<F, R, T, Json, E>(&self, sender: F) -> Result<Json, BackendError>
+    where
+        F: Fn(bencher_client::Client) -> R,
+        R: Future<
+            Output = Result<
+                progenitor_client::ResponseValue<T>,
+                bencher_client::Error<bencher_client::types::Error>,
+            >,
+        >,
+        T: Serialize,
+        Json: DeserializeOwned + Serialize + TryFrom<T, Error = E>,
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        let mut client = self.client.clone();
+        client.attempts = 1;
+        client.send_with(sender).await.map_err(Into::into)
+    }
+
     pub async fn check_version(&self) -> Result<Option<VersionMismatch>, BackendError> {
         let json_api_version: JsonApiVersion = self
             .client

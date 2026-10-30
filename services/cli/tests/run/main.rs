@@ -9,6 +9,8 @@
 )]
 //! `bencher run` against a stand-in that answers as the API server and as the GitHub API, and records every request.
 
+mod pr_comment;
+
 use std::{
     io::{BufRead as _, BufReader, Read as _, Write as _},
     net::{SocketAddr, TcpListener, TcpStream},
@@ -60,9 +62,26 @@ const HEAD_SHA: &str = "f1e2d3c4b5a697887766554433221100ffeeddcc";
 const GITHUB_SHA: &str = "0011223344556677889900aabbccddeeff001122";
 // The check a detached run started, which its `repository_dispatch` names.
 const CHECK: u64 = 4242;
+// The app whose token the run has, as `GITHUB_TOKEN` does.
+const GITHUB_APP: u64 = 15368;
 // The ID of every check the stand-in creates.
 const NEW_CHECK: u64 = 5151;
 const CHECK_RUNS: &str = "/repos/owner/repo/check-runs";
+const CHECK_LIST: &str =
+    "/repos/owner/repo/commits/f1e2d3c4b5a697887766554433221100ffeeddcc/check-runs";
+const PULL: &str = "/repos/owner/repo/pulls/7";
+const COMMENTS: &str = "/repos/owner/repo/issues/7/comments";
+/// The first group write to pull request 7: the guard, the lists, the create and its race check,
+/// then, after the wait, the read back and the list again.
+const GROUP_WRITE: [(&str, &str); 7] = [
+    ("GET", PULL),
+    ("GET", CHECK_LIST),
+    ("GET", COMMENTS),
+    ("POST", COMMENTS),
+    ("GET", COMMENTS),
+    ("GET", "/repos/owner/repo/issues/comments/1"),
+    ("GET", CHECK_LIST),
+];
 const GITHUB_TOKEN: &str = "github-token-marker";
 const CALLBACK_TOKEN: &str = "callback-token-marker";
 
@@ -80,6 +99,8 @@ enum CheckRuns {
     Create,
     /// GitHub's validation error, which `octocrab` does not retry.
     Unprocessable,
+    /// The validation error for the in-progress check only.
+    StartFails,
 }
 
 /// How the stand-in answers the API version check.
@@ -117,13 +138,99 @@ enum JobRead {
 struct Request {
     method: String,
     path: String,
+    query: String,
     headers: Vec<(String, String)>,
     body: String,
+}
+
+/// The pull request's state on GitHub, and the reports that other sections name.
+struct Scene {
+    /// The pull request's head SHA, or `None` when the number names an issue.
+    pull_head: Option<&'static str>,
+    /// The comments on the pull request, in ID order.
+    comments: Vec<(u64, String)>,
+    /// The ID of the next comment the run creates.
+    next_comment: u64,
+    /// A comment that another job creates while the run creates its own.
+    race: Option<(u64, String)>,
+    /// The comments the run's token cannot delete.
+    undeletable: Vec<u64>,
+    /// The comments that a person wrote, rather than the bot of the run's app.
+    by_person: Vec<u64>,
+    /// The status every comment delete answers with, else the usual.
+    delete_status: Option<&'static str>,
+    /// The comments that are gone when the run updates them.
+    vanish_on_update: Vec<u64>,
+    /// The comment lists that succeed before a server error answers every list.
+    lists_before_failure: Option<usize>,
+    /// The app that check run responses name, else the app of `GITHUB_TOKEN`.
+    check_app: Option<serde_json::Value>,
+    /// The comment writes allowed before a secondary rate limit answers every write.
+    writes_before_limit: Option<usize>,
+    /// The body another job writes to a comment just before its first read.
+    overwrite_on_read: Option<String>,
+    /// On the first read of a single comment, it is gone and this comment is there instead.
+    replace_on_read: Option<(u64, String)>,
+    /// The status the pull request read answers with, else the usual.
+    pull_status: Option<&'static str>,
+    /// After this many reads of the pull request, its head moves to this SHA.
+    moved_head: Option<(usize, &'static str)>,
+    pull_reads: usize,
+    /// The answers to each list of the check runs on the head SHA in turn. The last repeats.
+    check_lists: Vec<CheckList>,
+    /// The check runs of the list being paged.
+    listing: Option<CheckList>,
+    /// The reports of other sections, by their `uuid`.
+    reports: Vec<serde_json::Value>,
+    /// The reports whose first fetch answers a server error, which a client may retry.
+    report_failures: Vec<&'static str>,
+    /// A report whose fetches succeed this many times, then fail.
+    report_ok_then_fail: Option<(&'static str, usize)>,
+    /// The name GitHub answers a check completion with, as if it normalized the request's.
+    completed_name: Option<&'static str>,
+}
+
+/// An answer to a list of the check runs on the head SHA.
+#[derive(Clone)]
+enum CheckList {
+    Runs(Vec<serde_json::Value>),
+    Forbidden,
+}
+
+impl Default for Scene {
+    fn default() -> Self {
+        Self {
+            pull_head: Some(HEAD_SHA),
+            comments: Vec::new(),
+            next_comment: 1,
+            race: None,
+            undeletable: Vec::new(),
+            by_person: Vec::new(),
+            delete_status: None,
+            vanish_on_update: Vec::new(),
+            lists_before_failure: None,
+            check_app: None,
+            writes_before_limit: None,
+            overwrite_on_read: None,
+            replace_on_read: None,
+            pull_status: None,
+            moved_head: None,
+            pull_reads: 0,
+            check_lists: Vec::new(),
+            listing: None,
+            reports: Vec::new(),
+            report_failures: Vec::new(),
+            report_ok_then_fail: None,
+            completed_name: None,
+        }
+    }
 }
 
 struct Run {
     output: Output,
     requests: Vec<Request>,
+    /// The pull request's state after the run.
+    scene: Scene,
     /// The GitHub API URL the run was given.
     github_api_url: Option<String>,
     /// What the run wrote to `GITHUB_STEP_SUMMARY`.
@@ -268,9 +375,20 @@ fn bencher_run_with(stand_in: StandIn, github: Option<&GitHub>, args: &[&str]) -
 }
 
 /// Run `bencher run` with `args` against the stand-in, with `env` and in the GitHub Actions environment if given.
-#[expect(clippy::expect_used, reason = "test helper")]
 fn bencher_run_in(
     stand_in: StandIn,
+    github: Option<&GitHub>,
+    env: &[(&str, &str)],
+    args: &[&str],
+) -> Run {
+    bencher_run_in_scene(stand_in, Scene::default(), github, env, args)
+}
+
+/// Run `bencher run` with `args` against the stand-in set to `scene`, with `env` and in the GitHub Actions environment if given.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn bencher_run_in_scene(
+    stand_in: StandIn,
+    mut scene: Scene,
     github: Option<&GitHub>,
     env: &[(&str, &str)],
     args: &[&str],
@@ -305,10 +423,13 @@ fn bencher_run_in(
         api_url
     });
     thread::scope(|scope| {
-        let server = scope.spawn(|| serve(&listener, stand_in));
+        let server = scope.spawn(move || {
+            let requests = serve(&listener, stand_in, &mut scene);
+            (requests, scene)
+        });
         let output = command.output();
         stop(addr);
-        let requests = server.join().expect("The stand-in server panicked");
+        let (requests, scene) = server.join().expect("The stand-in server panicked");
         let step_summary = std::fs::read_to_string(&summary_path).ok();
         for path in [&event_path, &summary_path] {
             // A run that writes no summary leaves no file to remove.
@@ -317,6 +438,7 @@ fn bencher_run_in(
         Run {
             output: output.expect("Failed to run `bencher`"),
             requests,
+            scene,
             github_api_url,
             step_summary,
         }
@@ -406,7 +528,7 @@ fn submitted() -> String {
 }
 
 /// Answer each request in turn until the test sends `STOP`.
-fn serve(listener: &TcpListener, stand_in: StandIn) -> Vec<Request> {
+fn serve(listener: &TcpListener, stand_in: StandIn, scene: &mut Scene) -> Vec<Request> {
     let mut requests = Vec::new();
     for stream in listener.incoming() {
         let Ok(mut stream) = stream else {
@@ -418,7 +540,7 @@ fn serve(listener: &TcpListener, stand_in: StandIn) -> Vec<Request> {
         if request.method == STOP {
             break;
         }
-        let (status, body) = respond(&request, stand_in);
+        let (status, body) = respond(&request, stand_in, scene);
         let response = format!(
             "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
             body.len()
@@ -443,13 +565,8 @@ fn read_request(stream: &TcpStream) -> Option<Request> {
     // The API client joins the host URL, which ends in a slash, to a path that starts with one.
     // The GitHub client pages its comment list with a query.
     let target = request_line.next().unwrap_or_default();
-    let path = format!(
-        "/{}",
-        target
-            .split_once('?')
-            .map_or(target, |(path, _)| path)
-            .trim_start_matches('/')
-    );
+    let (path, query) = target.split_once('?').unwrap_or((target, ""));
+    let path = format!("/{}", path.trim_start_matches('/'));
     let mut content_length = 0;
     let mut headers = Vec::new();
     loop {
@@ -472,6 +589,7 @@ fn read_request(stream: &TcpStream) -> Option<Request> {
     Some(Request {
         method,
         path,
+        query: query.to_owned(),
         headers,
         body: String::from_utf8(body).ok()?,
     })
@@ -484,7 +602,7 @@ fn stop(addr: SocketAddr) {
         .expect("Failed to stop the stand-in server");
 }
 
-fn respond(request: &Request, stand_in: StandIn) -> (&'static str, String) {
+fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static str, String) {
     const OK: &str = "200 OK";
     const CREATED: &str = "201 Created";
     const NOT_FOUND: &str = "404 Not Found";
@@ -504,7 +622,36 @@ fn respond(request: &Request, stand_in: StandIn) -> (&'static str, String) {
     } = stand_in;
     let (method, path) = (request.method.as_str(), request.path.as_str());
     if path.starts_with("/repos/owner/repo/") {
-        return respond_github(method, path, check_runs).unwrap_or_else(not_found);
+        return respond_github(request, check_runs, scene).unwrap_or_else(not_found);
+    }
+    if method == "GET"
+        && let Some(uuid) = path.strip_prefix("/v0/projects/project/reports/")
+        && let Some(position) = scene.report_failures.iter().position(|fail| *fail == uuid)
+    {
+        scene.report_failures.remove(position);
+        return error(SERVER_ERROR, "Internal Server Error");
+    }
+    if method == "GET"
+        && let Some(uuid) = path.strip_prefix("/v0/projects/project/reports/")
+        && let Some((fail, left)) = scene.report_ok_then_fail.as_mut()
+        && *fail == uuid
+    {
+        if *left == 0 {
+            return error(SERVER_ERROR, "Internal Server Error");
+        }
+        *left -= 1;
+    }
+    if method == "GET"
+        && let Some(report) = path
+            .strip_prefix("/v0/projects/project/reports/")
+            .and_then(|uuid| {
+                scene
+                    .reports
+                    .iter()
+                    .find(|report| report["uuid"].as_str() == Some(uuid))
+            })
+    {
+        return (OK, report.to_string());
     }
     match (method, path) {
         ("GET", VERSION_PATH) => match version {
@@ -545,37 +692,272 @@ fn respond(request: &Request, stand_in: StandIn) -> (&'static str, String) {
     }
 }
 
-/// The GitHub API: check runs and pull request comments.
+const OK: &str = "200 OK";
+const CREATED: &str = "201 Created";
+const FORBIDDEN: &str = "403 Forbidden";
+
+/// The GitHub API: check runs, the pull request, and its comments.
 fn respond_github(
-    method: &str,
-    path: &str,
+    request: &Request,
     check_runs: CheckRuns,
+    scene: &mut Scene,
 ) -> Option<(&'static str, String)> {
-    const OK: &str = "200 OK";
-    const CREATED: &str = "201 Created";
-    let comments = path
-        .strip_prefix("/repos/owner/repo/issues/")
-        .and_then(|path| path.strip_suffix("/comments"));
-    Some(match (method, path.strip_prefix(CHECK_RUNS), comments) {
-        ("POST", Some(""), _) => match check_runs {
-            CheckRuns::Create => (CREATED, check_run(NEW_CHECK).to_string()),
-            CheckRuns::Unprocessable => (
-                "422 Unprocessable Entity",
-                serde_json::json!({
-                    "message": "Validation Failed",
-                    "documentation_url": "https://docs.github.com/rest/checks/runs#create-a-check-run"
-                })
-                .to_string(),
+    let (method, path) = (request.method.as_str(), request.path.as_str());
+    let path = path.strip_prefix("/repos/owner/repo/")?;
+    if let Some(id) = path.strip_prefix("check-runs") {
+        return Some(match (method, id) {
+            ("POST", "") => {
+                if matches!(check_runs, CheckRuns::Unprocessable)
+                    || (matches!(check_runs, CheckRuns::StartFails)
+                        && request.body.contains("in_progress"))
+                {
+                    github_error("422 Unprocessable Entity", "Validation Failed")
+                } else {
+                    (CREATED, scene.check_run(NEW_CHECK, request).to_string())
+                }
+            },
+            ("PATCH", id) => (
+                OK,
+                scene
+                    .check_run(id.trim_start_matches('/').parse().ok()?, request)
+                    .to_string(),
             ),
+            _ => return None,
+        });
+    }
+    if method == "GET" && path.starts_with("commits/") && path.ends_with("/check-runs") {
+        return Some(list_check_runs(&request.query, scene));
+    }
+    if let Some(number) = path.strip_prefix("pulls/")
+        && method == "GET"
+    {
+        scene.pull_reads += 1;
+        if let Some((after, sha)) = scene.moved_head
+            && scene.pull_reads > after
+        {
+            scene.pull_head = Some(sha);
+        }
+        if let Some(status) = scene.pull_status {
+            return Some(github_error(
+                status,
+                "Resource not accessible by integration",
+            ));
+        }
+        return Some(match scene.pull_head {
+            Some(sha) => (
+                OK,
+                serde_json::json!({ "number": number.parse::<u64>().ok()?, "head": { "sha": sha } })
+                    .to_string(),
+            ),
+            None => github_error("404 Not Found", "Not Found"),
+        });
+    }
+    if let Some(id) = path.strip_prefix("issues/comments/") {
+        return respond_comment(request, id.parse().ok()?, scene);
+    }
+    path.strip_prefix("issues/")?.strip_suffix("/comments")?;
+    Some(match method {
+        "GET" if scene.lists_before_failure.is_some_and(|left| left == 0) => {
+            github_error("500 Internal Server Error", "Server Error")
         },
-        ("PATCH", Some(id), _) => (
-            OK,
-            check_run(id.trim_start_matches('/').parse().ok()?).to_string(),
-        ),
-        ("GET", _, Some(_)) => (OK, "[]".to_owned()),
-        ("POST", _, Some(_)) => (CREATED, comment().to_string()),
+        "GET" => {
+            if let Some(left) = scene.lists_before_failure.as_mut() {
+                *left -= 1;
+            }
+            (
+                OK,
+                serde_json::Value::from(
+                    scene
+                        .comments
+                        .iter()
+                        .map(|(id, body)| scene.comment(*id, body))
+                        .collect::<Vec<_>>(),
+                )
+                .to_string(),
+            )
+        },
+        "POST" => {
+            if let Some(limited) = scene.rate_limited() {
+                return Some(limited);
+            }
+            let id = scene.next_comment;
+            scene.next_comment += 1;
+            let body = comment_body(request)?;
+            let created = scene.comment(id, &body).to_string();
+            scene.comments.push((id, body));
+            if let Some(race) = scene.race.take() {
+                scene.comments.push(race);
+            }
+            scene.comments.sort_by_key(|(id, _)| *id);
+            (CREATED, created)
+        },
         _ => return None,
     })
+}
+
+/// The next answer the scene scripts for a list of the check runs on the head SHA,
+/// one page of it at a time.
+fn list_check_runs(query: &str, scene: &mut Scene) -> (&'static str, String) {
+    let page = query_value(query, "page").unwrap_or(1);
+    let per_page = query_value(query, "per_page").unwrap_or(30);
+    if page == 1 || scene.listing.is_none() {
+        let answer = if scene.check_lists.len() > 1 {
+            scene.check_lists.remove(0)
+        } else {
+            scene
+                .check_lists
+                .first()
+                .cloned()
+                .unwrap_or(CheckList::Runs(Vec::new()))
+        };
+        scene.listing = Some(answer);
+    }
+    match &scene.listing {
+        Some(CheckList::Runs(check_runs)) => {
+            let page = check_runs
+                .iter()
+                .skip((page - 1) * per_page)
+                .take(per_page)
+                .collect::<Vec<_>>();
+            (
+                OK,
+                serde_json::json!({ "total_count": check_runs.len(), "check_runs": page })
+                    .to_string(),
+            )
+        },
+        Some(CheckList::Forbidden) | None => {
+            github_error(FORBIDDEN, "Resource not accessible by integration")
+        },
+    }
+}
+
+fn query_value(query: &str, name: &str) -> Option<usize> {
+    query
+        .split('&')
+        .find_map(|pair| pair.strip_prefix(name)?.strip_prefix('='))?
+        .parse()
+        .ok()
+}
+
+/// A read, an update, or a delete of one pull request comment.
+fn respond_comment(
+    request: &Request,
+    id: u64,
+    scene: &mut Scene,
+) -> Option<(&'static str, String)> {
+    let position = scene
+        .comments
+        .iter()
+        .position(|(comment, _)| *comment == id)?;
+    Some(match request.method.as_str() {
+        "GET" => {
+            if let Some(replaced) = scene.replace_on_read.take() {
+                scene.comments.remove(position);
+                scene.comments.push(replaced);
+                scene.comments.sort_by_key(|(id, _)| *id);
+                return Some(github_error("404 Not Found", "Not Found"));
+            }
+            if let Some(body) = scene.overwrite_on_read.take() {
+                scene.comments.get_mut(position)?.1 = body;
+            }
+            (
+                OK,
+                scene
+                    .comment(id, &scene.comments.get(position)?.1)
+                    .to_string(),
+            )
+        },
+        "POST" | "PATCH" => {
+            if let Some(limited) = scene.rate_limited() {
+                return Some(limited);
+            }
+            if scene.vanish_on_update.contains(&id) {
+                scene.vanish_on_update.retain(|vanish| *vanish != id);
+                scene.comments.remove(position);
+                return Some(github_error("404 Not Found", "Not Found"));
+            }
+            let body = comment_body(request)?;
+            let updated = scene.comment(id, &body).to_string();
+            scene.comments.get_mut(position)?.1 = body;
+            (OK, updated)
+        },
+        "DELETE" => {
+            if let Some(status) = scene.delete_status {
+                github_error(status, "Server Error")
+            } else if scene.undeletable.contains(&id) {
+                github_error(FORBIDDEN, "Resource not accessible by integration")
+            } else {
+                scene.comments.remove(position);
+                ("204 No Content", String::new())
+            }
+        },
+        _ => return None,
+    })
+}
+
+impl Scene {
+    /// A check run as GitHub returns it after a create or an update: with the fields the request set.
+    #[expect(clippy::indexing_slicing, reason = "test helper")]
+    fn check_run(&self, id: u64, request: &Request) -> serde_json::Value {
+        let mut check_run = check_run(id);
+        if let Ok(serde_json::Value::Object(fields)) = serde_json::from_str(&request.body) {
+            for field in ["name", "status", "conclusion", "external_id"] {
+                if let Some(value) = fields.get(field) {
+                    check_run[field] = value.clone();
+                }
+            }
+        }
+        if let Some(app) = &self.check_app {
+            check_run["app"] = app.clone();
+        }
+        if let Some(name) = self.completed_name
+            && request.body.contains("conclusion")
+        {
+            check_run["name"] = name.into();
+        }
+        check_run
+    }
+
+    /// A comment, written by the bot of the run's app unless a person wrote it.
+    #[expect(clippy::indexing_slicing, reason = "test helper")]
+    fn comment(&self, id: u64, body: &str) -> serde_json::Value {
+        let mut comment = comment(id, body);
+        if self.by_person.contains(&id) {
+            comment["user"]["login"] = "octocat".into();
+            comment["user"]["type"] = "User".into();
+        }
+        comment
+    }
+
+    /// GitHub's secondary rate limit, once the scene's writes run out.
+    fn rate_limited(&mut self) -> Option<(&'static str, String)> {
+        let left = self.writes_before_limit.as_mut()?;
+        if *left == 0 {
+            return Some(github_error(
+                FORBIDDEN,
+                "You have exceeded a secondary rate limit",
+            ));
+        }
+        *left -= 1;
+        None
+    }
+}
+
+/// GitHub's error shape.
+fn github_error(status: &'static str, message: &str) -> (&'static str, String) {
+    (
+        status,
+        serde_json::json!({ "message": message, "documentation_url": "https://docs.github.com/rest" })
+            .to_string(),
+    )
+}
+
+fn comment_body(request: &Request) -> Option<String> {
+    serde_json::from_str::<serde_json::Value>(&request.body)
+        .ok()?
+        .get("body")?
+        .as_str()
+        .map(ToOwned::to_owned)
 }
 
 // Every field `octocrab` requires of a check run.
@@ -598,19 +980,20 @@ fn check_run(id: u64) -> serde_json::Value {
         "started_at": null,
         "completed_at": null,
         "name": "Bencher Report",
-        "pull_requests": []
+        "pull_requests": [],
+        "app": { "id": GITHUB_APP, "slug": "github-actions" }
     })
 }
 
 // Every field `octocrab` requires of an issue comment.
-fn comment() -> serde_json::Value {
+fn comment(id: u64, body: &str) -> serde_json::Value {
     let user = "https://api.github.com/users/github-actions";
     serde_json::json!({
-        "id": 1,
+        "id": id,
         "node_id": "IC_kwDOAAAAAA",
-        "url": "https://api.github.com/repos/owner/repo/issues/comments/1",
-        "html_url": "https://github.com/owner/repo/pull/7#issuecomment-1",
-        "body": "",
+        "url": format!("https://api.github.com/repos/owner/repo/issues/comments/{id}"),
+        "html_url": format!("https://github.com/owner/repo/pull/7#issuecomment-{id}"),
+        "body": body,
         "user": {
             "login": "github-actions[bot]",
             "id": 1,
@@ -1147,26 +1530,21 @@ fn attach_completes_the_dispatched_check() {
     // No new check, and none at `GITHUB_SHA`.
     assert_eq!(
         run.github(),
-        [
-            ("PATCH", check.as_str()),
-            ("GET", "/repos/owner/repo/issues/7/comments"),
-            ("POST", "/repos/owner/repo/issues/7/comments"),
-        ]
+        [&[("PATCH", check.as_str())][..], &GROUP_WRITE].concat()
     );
     let complete = run.body("PATCH", &check);
     assert_eq!(complete["conclusion"], "success");
     assert_eq!(complete["name"], "Bencher Report (suite)");
-    let comment = run.body("POST", "/repos/owner/repo/issues/7/comments");
+    let comment = run.body("POST", COMMENTS);
     assert!(
-        comment["body"]
-            .as_str()
-            .unwrap()
-            .ends_with(&comment_tag("suite")),
+        comment["body"].as_str().unwrap().ends_with(&format!(
+            r#"<div id="bencher.dev/projects/project/sha/{HEAD_SHA}"></div>"#
+        )),
         "{comment}"
     );
     assert!(
         run.step_summary
-            .is_some_and(|summary| summary.contains("Bencher Report"))
+            .is_some_and(|summary| summary.ends_with(&comment_tag("suite")))
     );
     for request in &run.requests {
         assert!(!request.body.contains(GITHUB_SHA), "{}", request.path);
@@ -1187,11 +1565,10 @@ fn attach_creates_the_check_at_the_dispatched_sha() {
     assert_eq!(
         run.github(),
         [
-            ("POST", CHECK_RUNS),
-            ("PATCH", check.as_str()),
-            ("GET", "/repos/owner/repo/issues/7/comments"),
-            ("POST", "/repos/owner/repo/issues/7/comments"),
+            &[("POST", CHECK_RUNS), ("PATCH", check.as_str())][..],
+            &GROUP_WRITE
         ]
+        .concat()
     );
     assert_eq!(run.body("POST", CHECK_RUNS)["head_sha"], HEAD_SHA);
     assert_eq!(run.body("PATCH", &check)["conclusion"], "success");
@@ -1230,21 +1607,24 @@ fn explicit_ci_number_and_ci_id_win_over_the_payload() {
     run.assert_success();
     let check = format!("{CHECK_RUNS}/{CHECK}");
     assert_eq!(
-        run.github(),
-        [
-            ("PATCH", check.as_str()),
-            ("GET", "/repos/owner/repo/issues/9/comments"),
-            ("POST", "/repos/owner/repo/issues/9/comments"),
-        ]
+        run.github().get(..6),
+        Some(
+            &[
+                ("PATCH", check.as_str()),
+                ("GET", "/repos/owner/repo/pulls/9"),
+                ("GET", CHECK_LIST),
+                ("GET", "/repos/owner/repo/issues/9/comments"),
+                ("POST", "/repos/owner/repo/issues/9/comments"),
+                ("GET", "/repos/owner/repo/issues/9/comments"),
+            ][..]
+        ),
+        "{:?}",
+        run.github()
     );
     assert_eq!(run.body("PATCH", &check)["name"], "Bencher Report (other)");
-    let comment = run.body("POST", "/repos/owner/repo/issues/9/comments");
     assert!(
-        comment["body"]
-            .as_str()
-            .unwrap()
-            .ends_with(&comment_tag("other")),
-        "{comment}"
+        run.step_summary
+            .is_some_and(|summary| summary.ends_with(&comment_tag("other")))
     );
 }
 
@@ -1258,13 +1638,13 @@ fn attach_tags_its_comment_as_the_detached_run() {
         &[],
     );
     run.assert_success();
-    let comment = run.body("POST", "/repos/owner/repo/issues/7/comments");
-    assert!(
-        comment["body"]
-            .as_str()
-            .unwrap()
-            .ends_with(&comment_tag("main/base/magic-build_time-file_size")),
-        "{comment}"
+    assert!(run.step_summary.as_ref().is_some_and(|summary| {
+        summary.ends_with(&comment_tag("main/base/magic-build_time-file_size"))
+    }));
+    // The section's key is the same tag ID, from the report and the flags its kind names.
+    assert_eq!(
+        run.body("PATCH", &format!("{CHECK_RUNS}/{CHECK}"))["external_id"],
+        format!("bencher:{UUID}:{UUID}:t-build_time-file_size")
     );
 }
 
@@ -1339,11 +1719,10 @@ fn attach_on_another_event_reads_no_payload() {
     assert_eq!(
         run.github(),
         [
-            ("POST", CHECK_RUNS),
-            ("PATCH", check.as_str()),
-            ("GET", "/repos/owner/repo/issues/7/comments"),
-            ("POST", "/repos/owner/repo/issues/7/comments"),
+            &[("POST", CHECK_RUNS), ("PATCH", check.as_str())][..],
+            &GROUP_WRITE
         ]
+        .concat()
     );
     assert_eq!(run.body("POST", CHECK_RUNS)["head_sha"], HEAD_SHA);
 }
@@ -1416,11 +1795,7 @@ fn attach_fails_the_dispatched_check_when_the_job_fails() {
         // The report still posts: the check completes, then the comment.
         assert_eq!(
             run.github(),
-            [
-                ("PATCH", check.as_str()),
-                ("GET", "/repos/owner/repo/issues/7/comments"),
-                ("POST", "/repos/owner/repo/issues/7/comments"),
-            ],
+            [&[("PATCH", check.as_str())][..], &GROUP_WRITE].concat(),
             "{status}"
         );
         let complete = run.body("PATCH", &check);
