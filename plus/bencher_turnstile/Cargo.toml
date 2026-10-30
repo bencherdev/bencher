@@ -1,0 +1,39 @@
+[package]
+name = "bencher_turnstile"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+plus = [
+    "dep:async-trait",
+    "dep:reqwest",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:slog",
+    "dep:thiserror",
+    "dep:tokio",
+    "dep:url",
+    "bencher_valid/plus",
+]
+
+[dependencies]
+async-trait = { workspace = true, optional = true }
+bencher_valid = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true, features = ["form", "rustls-no-provider"] }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+slog = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["time"] }
+url = { workspace = true, optional = true }
+
+[dev-dependencies]
+pretty_assertions.workspace = true
+tokio = { workspace = true, features = ["macros", "rt", "test-util", "time"] }
+
+[lints]
+workspace = true

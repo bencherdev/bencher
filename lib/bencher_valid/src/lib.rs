@@ -44,12 +44,14 @@ pub use benchmark_name::BenchmarkName;
 pub use bmf_version::{ACCEPTED_BMF_VERSIONS, BmfVersion, is_valid_bmf_version};
 pub use branch_name::BranchName;
 pub use date_time::{DateTime, DateTimeMillis};
-pub use email::Email;
+pub use email::{Email, EmailHash};
 pub use error::ValidError;
 pub use index::Index;
 pub use jwt::Jwt;
 pub use keys::{
-    BencherKey, ProjectKey, ProjectKeyHash, SessionToken, SessionTokenHash, UserKey, UserKeyHash,
+    BencherKey, BindingSecret, BindingSecretHash, LinkSecret, LinkSecretHash, ProjectKey,
+    ProjectKeyHash, SessionToken, SessionTokenHash, SignInCode, SignInCodeHash, UserKey,
+    UserKeyHash,
 };
 pub use metric_name::MetricName;
 pub use model::{

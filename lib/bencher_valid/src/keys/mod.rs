@@ -3,6 +3,7 @@ pub mod project_key;
 pub mod project_key_hash;
 pub mod session_token;
 pub mod session_token_hash;
+pub mod sign_in;
 pub mod user_key;
 pub mod user_key_hash;
 
@@ -11,8 +12,88 @@ pub use project_key::ProjectKey;
 pub use project_key_hash::ProjectKeyHash;
 pub use session_token::SessionToken;
 pub use session_token_hash::SessionTokenHash;
+pub use sign_in::{
+    BindingSecret, BindingSecretHash, LinkSecret, LinkSecretHash, SignInCode, SignInCodeHash,
+};
 pub use user_key::UserKey;
 pub use user_key_hash::UserKeyHash;
+
+/// The random bytes of a secret that [`secret_impl!`] emits.
+const SECRET_BYTES: usize = 32;
+/// The unpadded base64url length of [`SECRET_BYTES`].
+const SECRET_LEN: usize = 43;
+
+fn is_valid_secret(secret: &str) -> bool {
+    use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+
+    secret.len() == SECRET_LEN
+        && URL_SAFE_NO_PAD
+            .decode(secret)
+            .is_ok_and(|bytes| bytes.len() == SECRET_BYTES)
+}
+
+#[cfg(feature = "server")]
+fn generate_secret() -> Result<String, rand::rngs::SysError> {
+    use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+    use rand::TryRng as _;
+
+    let mut bytes = [0; SECRET_BYTES];
+    rand::rngs::SysRng.try_fill_bytes(&mut bytes)?;
+    Ok(URL_SAFE_NO_PAD.encode(bytes))
+}
+
+/// Emit the impl blocks (`generate`, a redacted `Debug`, `TryFrom`/`FromStr`, and `AsRef`) for a
+/// secret of [`SECRET_BYTES`] bytes from the operating system's random number generator,
+/// base64url without padding. The `pub struct $name(String);` declaration stays explicit in the
+/// caller, as for [`api_key_impl!`].
+macro_rules! secret_impl {
+    ($name:ident, error = $err:ident $(,)?) => {
+        impl $name {
+            #[cfg(feature = "server")]
+            pub fn generate() -> ::core::result::Result<Self, ::rand::rngs::SysError> {
+                $crate::keys::generate_secret().map(Self)
+            }
+        }
+
+        impl ::core::fmt::Debug for $name {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                f.write_str(concat!(stringify!($name), "(************)"))
+            }
+        }
+
+        impl ::core::convert::TryFrom<::std::string::String> for $name {
+            type Error = $crate::ValidError;
+
+            fn try_from(
+                secret: ::std::string::String,
+            ) -> ::core::result::Result<Self, Self::Error> {
+                if $crate::keys::is_valid_secret(&secret) {
+                    ::core::result::Result::Ok(Self(secret))
+                } else {
+                    ::core::result::Result::Err($crate::ValidError::$err)
+                }
+            }
+        }
+
+        impl ::core::str::FromStr for $name {
+            type Err = $crate::ValidError;
+
+            fn from_str(secret: &str) -> ::core::result::Result<Self, Self::Err> {
+                <Self as ::core::convert::TryFrom<::std::string::String>>::try_from(
+                    secret.to_owned(),
+                )
+            }
+        }
+
+        impl ::core::convert::AsRef<str> for $name {
+            fn as_ref(&self) -> &str {
+                &self.0
+            }
+        }
+    };
+}
+
+pub(crate) use secret_impl;
 
 /// ~178 bits of entropy.
 /// <https://github.blog/engineering/platform-security/behind-githubs-new-authentication-token-formats/>

@@ -3,7 +3,11 @@ use std::{
     sync::{Arc, Mutex, PoisonError},
 };
 
+use bencher_json::{LinkSecret, SignInCode};
 use slog::{Drain, KV as _, OwnedKVList, Record};
+
+const SIGN_IN_SUBJECT: &str = "Subject: Your Bencher code is ";
+const SIGN_IN_LINK: &str = "/auth/confirm#";
 
 /// Keeps every line the server logs, its message and every key-value pair, as text.
 #[derive(Clone, Default)]
@@ -40,6 +44,45 @@ impl LogCapture {
         let (_, rest) = email.split_once(&prefix).expect("No link in the email");
         let href = rest.split_once('\n').map_or(rest, |(href, _)| href);
         href.parse().expect("Invalid link in the email")
+    }
+}
+
+impl LogCapture {
+    /// Every sign-in email the server logged in place of sending it, with a code or without one.
+    pub fn sign_in_emails(&self) -> Vec<String> {
+        self.lines()
+            .into_iter()
+            .filter(|line| line.contains("\nSubject: Your Bencher "))
+            .collect()
+    }
+
+    /// The code and the link's secret in the last sign-in email the server logged.
+    #[expect(clippy::expect_used, reason = "test helper reading a logged email")]
+    pub fn sign_in(&self) -> (SignInCode, LinkSecret) {
+        let email = self
+            .lines()
+            .into_iter()
+            .rev()
+            .find(|line| line.contains(SIGN_IN_SUBJECT))
+            .expect("No sign-in email was logged");
+        let (_, rest) = email
+            .split_once(SIGN_IN_SUBJECT)
+            .expect("No code in the email");
+        let code = rest
+            .chars()
+            .take(6)
+            .collect::<String>()
+            .parse()
+            .expect("Invalid code in the email");
+        let (_, rest) = email
+            .split_once(SIGN_IN_LINK)
+            .expect("No link in the email");
+        let secret = rest
+            .split_once('\n')
+            .map_or(rest, |(secret, _)| secret)
+            .parse()
+            .expect("Invalid link in the email");
+        (code, secret)
     }
 }
 

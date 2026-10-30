@@ -14,6 +14,8 @@ pub struct JsonRateLimiting {
     pub project: Option<JsonProjectRateLimiter>,
     pub runner: Option<JsonRunnerRateLimiter>,
     pub oci_bandwidth: Option<JsonOciBandwidth>,
+    /// Sign-in emails to one address.
+    pub email: Option<JsonRateLimits>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
