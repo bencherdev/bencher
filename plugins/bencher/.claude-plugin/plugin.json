@@ -2,7 +2,7 @@
   "name": "bencher",
   "displayName": "Bencher",
   "description": "Catch performance regressions before they merge",
-  "version": "0.6.14",
+  "version": "0.6.15",
   "author": { "name": "Bencher", "url": "https://bencher.dev" },
   "homepage": "https://bencher.dev",
   "repository": "https://github.com/bencherdev/bencher",
