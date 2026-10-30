@@ -18,7 +18,7 @@ import { seed } from "./fixtures";
 /** A name no other test, or another run of this one, uses. */
 export const unique = (name: string) => `${name} ${randomUUID().slice(0, 8)}`;
 
-const send = async <T>(
+export const send = async <T>(
 	request: APIRequestContext,
 	method: "POST" | "PATCH",
 	path: string,
@@ -193,12 +193,13 @@ const inviteToken = (email: string, organization: string) => {
 export const createMember = async (
 	request: APIRequestContext,
 	organization: JsonOrganization,
+	reader?: JsonAuthUser,
 ) => {
-	const reader = await createReader(request);
-	await send(request, "POST", "/v0/auth/accept", reader.token, {
-		invite: inviteToken(reader.user.email, organization.uuid),
+	const member = reader ?? (await createReader(request));
+	await send(request, "POST", "/v0/auth/accept", member.token, {
+		invite: inviteToken(member.user.email, organization.uuid),
 	});
-	return reader;
+	return member;
 };
 
 /** The user as the API has it. */

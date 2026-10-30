@@ -20,10 +20,13 @@ export const mailedLink = async (email: string, subject: string) => {
 /** A user of the test's own, signed in with a session from the signup email. */
 export const signUp = async (
 	request: APIRequestContext,
+	{
+		name = unique("Le Quack"),
+		email = `${randomUUID()}@nowhere.com`,
+	}: { name?: string; email?: string } = {},
 ): Promise<JsonAuthUser> => {
-	const email = `${randomUUID()}@nowhere.com`;
 	const signup = await request.post(`${seed.api_url}/v0/auth/signup`, {
-		data: { name: unique("Le Quack"), email, i_agree: true },
+		data: { name, email, i_agree: true },
 	});
 	expect(signup.status()).toBe(202);
 	const link = await mailedLink(email, "Confirm Bencher Signup");
