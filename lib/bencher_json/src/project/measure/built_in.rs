@@ -72,6 +72,13 @@ pub mod default {
         "throughput",
         "operations / second (ops/s)"
     );
+    create_measure!(
+        BytesThroughput,
+        "Bytes Throughput",
+        "bytes-throughput",
+        "bytes / second (B/s)"
+    );
+    create_measure!(Cycles, "Cycles", "cycles", "cycles");
 }
 
 pub mod json {
@@ -125,7 +132,7 @@ pub mod noise {
 }
 
 pub mod gungraun {
-    use bencher_valid::BYTES;
+    use bencher_valid::{BYTES, NANOSECONDS};
 
     create_measure!(Unknown, "Unknown", "unknown-metric", "unknown");
 
@@ -207,6 +214,9 @@ pub mod gungraun {
     create_measure!(WritesBytes, "Writes bytes", "writes-bytes", BYTES);
     create_measure!(MaximumBytes, "Maximum bytes", "maximum-bytes", BYTES);
     create_measure!(MaximumBlocks, "Maximum blocks", "maximum-blocks", "blocks");
+
+    // The process time of one profile, one tool's run of the benchmark
+    create_measure!(ProfileTime, "Profile Time", "profile-time", NANOSECONDS);
 
     // Memcheck
     create_measure!(

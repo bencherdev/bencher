@@ -12,6 +12,7 @@ plus = ["bencher_json/plus"]
 
 [dependencies]
 bencher_json = { workspace = true, features = ["server"] }
+gungraun-runner.workspace = true
 gungraun-summary.workspace = true
 nom.workspace = true
 ordered-float.workspace = true

@@ -62,7 +62,19 @@ impl QueryMeasure {
         project_id: ProjectId,
         measure: &MeasureNameId,
     ) -> Result<MeasureId, HttpError> {
-        let mut query_measure = Self::get_or_create_inner(context, project_id, measure).await?;
+        Self::get_or_create_with_units(context, project_id, measure, None).await
+    }
+
+    /// [`Self::get_or_create`], creating a measure that is not built in with `units` when given,
+    /// and giving `units` to a measure that still has the generic unit.
+    pub async fn get_or_create_with_units(
+        context: &ApiContext,
+        project_id: ProjectId,
+        measure: &MeasureNameId,
+        units: Option<&ResourceName>,
+    ) -> Result<MeasureId, HttpError> {
+        let mut query_measure =
+            Self::get_or_create_inner(context, project_id, measure, units).await?;
 
         if query_measure.archived.is_some() {
             let update_measure = UpdateMeasure::unarchive();
@@ -73,6 +85,16 @@ impl QueryMeasure {
             query_measure.archived = None;
         }
 
+        if let Some(units) = units
+            && query_measure.units == JsonNewMeasure::generic_unit()
+        {
+            let update_measure = UpdateMeasure::units(units.clone());
+            diesel::update(schema::measure::table.filter(schema::measure::id.eq(query_measure.id)))
+                .set(&update_measure)
+                .execute(write_conn!(context))
+                .map_err(resource_conflict_err!(Measure, &query_measure))?;
+        }
+
         Ok(query_measure.id)
     }
 
@@ -80,6 +102,7 @@ impl QueryMeasure {
         context: &ApiContext,
         project_id: ProjectId,
         measure: &MeasureNameId,
+        units: Option<&ResourceName>,
     ) -> Result<Self, HttpError> {
         let query_measure = Self::from_name_id(auth_conn!(context), project_id, measure);
 
@@ -88,7 +111,7 @@ impl QueryMeasure {
             Err(e) => e,
         };
 
-        let Some(json_measure) = new_measure(measure) else {
+        let Some(json_measure) = new_measure_with_units(measure, units) else {
             return Err(http_error);
         };
 
@@ -195,20 +218,29 @@ pub enum MeasureIdentity {
 ///
 /// A built-in measure is created whole, which also recreates a deleted default measure.
 fn new_measure(measure: &MeasureNameId) -> Option<JsonNewMeasure> {
+    new_measure_with_units(measure, None)
+}
+
+/// [`new_measure`], in `units` when the measure is not built in, else in the generic unit.
+fn new_measure_with_units(
+    measure: &MeasureNameId,
+    units: Option<&ResourceName>,
+) -> Option<JsonNewMeasure> {
     if let Some(built_in) = built_in_measure(&measure.to_string()) {
         return Some(built_in);
     }
+    let units = units.cloned().unwrap_or_else(JsonNewMeasure::generic_unit);
     match measure.clone() {
         NameId::Uuid(_) => None,
         NameId::Slug(slug) => Some(JsonNewMeasure {
             name: slug.clone().into(),
             slug: Some(slug),
-            units: JsonNewMeasure::generic_unit(),
+            units,
         }),
         NameId::Name(name) => Some(JsonNewMeasure {
             name,
             slug: None,
-            units: JsonNewMeasure::generic_unit(),
+            units,
         }),
     }
 }
@@ -217,6 +249,8 @@ fn new_measure(measure: &MeasureNameId) -> Option<JsonNewMeasure> {
 fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
     built_in::default::Latency::from_str(measure_str)
         .or_else(|| built_in::default::Throughput::from_str(measure_str))
+        .or_else(|| built_in::default::BytesThroughput::from_str(measure_str))
+        .or_else(|| built_in::default::Cycles::from_str(measure_str))
         .or_else(|| built_in::json::BuildTime::from_str(measure_str))
         .or_else(|| built_in::json::FileSize::from_str(measure_str))
         .or_else(|| built_in::iai::Instructions::from_str(measure_str))
@@ -279,6 +313,7 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::gungraun::AtTEndBlocks::from_str(measure_str))
         .or_else(|| built_in::gungraun::ReadsBytes::from_str(measure_str))
         .or_else(|| built_in::gungraun::WritesBytes::from_str(measure_str))
+        .or_else(|| built_in::gungraun::ProfileTime::from_str(measure_str))
         // memcheck
         .or_else(|| built_in::gungraun::MemcheckErrors::from_str(measure_str))
         .or_else(|| built_in::gungraun::MemcheckContexts::from_str(measure_str))
@@ -395,6 +430,16 @@ impl UpdateMeasure {
             slug: None,
             units: None,
             archived: Some(false),
+        }
+        .into()
+    }
+
+    fn units(units: ResourceName) -> Self {
+        JsonUpdateMeasure {
+            name: None,
+            slug: None,
+            units: Some(units),
+            archived: None,
         }
         .into()
     }

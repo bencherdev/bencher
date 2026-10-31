@@ -703,6 +703,7 @@ version = "0.6.15"
 dependencies = [
  "bencher_json",
  "criterion",
+ "gungraun-runner",
  "gungraun-summary",
  "nom",
  "ordered-float",
@@ -3873,20 +3874,21 @@ dependencies = [
 
 [[package]]
 name = "gungraun-runner"
-version = "0.19.4"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47c68c92812da579a2510a2cc702d5aa3251992b9662d4a98502ca46e0cbe16e"
+checksum = "1e1460377fe936c3efbe8e27c422b745fa54ebaea81ffe4a53a6f17c7a478683"
 dependencies = [
  "either-or-both",
  "indexmap",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "gungraun-summary"
-version = "6.0.0"
+version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89f967da1beab0153f3f1e52408a71d3bd0fbea3c9e0bf0431f9a3a3c9e96130"
+checksum = "91ea70892430062b71f0802db9fcc68564fa40bdbf3d41bd632a62a0f97f1fe6"
 dependencies = [
  "either-or-both",
  "gungraun-runner",

@@ -309,7 +309,11 @@ const JSON_V0_INT: i32 = 11;
 const JSON_V1_INT: i32 = 12;
 const RUST_INT: i32 = 20;
 const RUST_BENCH_INT: i32 = 21;
+const RUST_BENCH_JSON_INT: i32 = 211;
+const RUST_BENCH_TEXT_INT: i32 = 212;
 const RUST_CRITERION_INT: i32 = 22;
+const RUST_CRITERION_JSON_INT: i32 = 221;
+const RUST_CRITERION_TEXT_INT: i32 = 222;
 const RUST_IAI_INT: i32 = 23;
 const RUST_GUNGRAUN_INT: i32 = 24;
 const RUST_GUNGRAUN_STDOUT_INT: i32 = 25;
@@ -354,7 +358,11 @@ pub enum Adapter {
     JsonV1 = JSON_V1_INT,
     Rust = RUST_INT,
     RustBench = RUST_BENCH_INT,
+    RustBenchJson = RUST_BENCH_JSON_INT,
+    RustBenchText = RUST_BENCH_TEXT_INT,
     RustCriterion = RUST_CRITERION_INT,
+    RustCriterionJson = RUST_CRITERION_JSON_INT,
+    RustCriterionText = RUST_CRITERION_TEXT_INT,
     RustIai = RUST_IAI_INT,
     // Iai-Callgrind was renamed to Gungraun
     // https://github.com/bencherdev/bencher/issues/619
@@ -410,7 +418,11 @@ impl Adapter {
             | Self::JsonV0
             | Self::JsonV1
             | Self::RustBench
+            | Self::RustBenchJson
+            | Self::RustBenchText
             | Self::RustCriterion
+            | Self::RustCriterionJson
+            | Self::RustCriterionText
             | Self::RustIai
             | Self::RustGungraun
             | Self::RustGungraunStdout
@@ -466,7 +478,11 @@ impl fmt::Display for Adapter {
             Self::JsonV1 => write!(f, "json_v1"),
             Self::Rust => write!(f, "rust"),
             Self::RustBench => write!(f, "rust_bench"),
+            Self::RustBenchJson => write!(f, "rust_bench_json"),
+            Self::RustBenchText => write!(f, "rust_bench_text"),
             Self::RustCriterion => write!(f, "rust_criterion"),
+            Self::RustCriterionJson => write!(f, "rust_criterion_json"),
+            Self::RustCriterionText => write!(f, "rust_criterion_text"),
             Self::RustIai => write!(f, "rust_iai"),
             Self::RustGungraun => write!(f, "rust_gungraun"),
             Self::RustGungraunStdout => write!(f, "rust_gungraun_stdout"),
@@ -506,9 +522,10 @@ mod adapter {
         DART_BENCHMARK_HARNESS_INT, DART_INT, GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
         JS_BENCHMARK_INT, JS_INT, JS_TIME_INT, JS_VITEST_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
         MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT,
-        RUST_BENCH_INT, RUST_CRITERION_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
-        RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
-        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
+        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_GUNGRAUN_INT,
+        RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT,
+        SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -533,7 +550,11 @@ mod adapter {
                 Self::JsonV1 => JSON_V1_INT.to_sql(out),
                 Self::Rust => RUST_INT.to_sql(out),
                 Self::RustBench => RUST_BENCH_INT.to_sql(out),
+                Self::RustBenchJson => RUST_BENCH_JSON_INT.to_sql(out),
+                Self::RustBenchText => RUST_BENCH_TEXT_INT.to_sql(out),
                 Self::RustCriterion => RUST_CRITERION_INT.to_sql(out),
+                Self::RustCriterionJson => RUST_CRITERION_JSON_INT.to_sql(out),
+                Self::RustCriterionText => RUST_CRITERION_TEXT_INT.to_sql(out),
                 Self::RustIai => RUST_IAI_INT.to_sql(out),
                 Self::RustGungraun => RUST_GUNGRAUN_INT.to_sql(out),
                 Self::RustGungraunStdout => RUST_GUNGRAUN_STDOUT_INT.to_sql(out),
@@ -579,7 +600,11 @@ mod adapter {
                 JSON_V1_INT => Ok(Self::JsonV1),
                 RUST_INT => Ok(Self::Rust),
                 RUST_BENCH_INT => Ok(Self::RustBench),
+                RUST_BENCH_JSON_INT => Ok(Self::RustBenchJson),
+                RUST_BENCH_TEXT_INT => Ok(Self::RustBenchText),
                 RUST_CRITERION_INT => Ok(Self::RustCriterion),
+                RUST_CRITERION_JSON_INT => Ok(Self::RustCriterionJson),
+                RUST_CRITERION_TEXT_INT => Ok(Self::RustCriterionText),
                 RUST_IAI_INT => Ok(Self::RustIai),
                 RUST_GUNGRAUN_INT => Ok(Self::RustGungraun),
                 RUST_GUNGRAUN_STDOUT_INT => Ok(Self::RustGungraunStdout),
@@ -1202,14 +1227,18 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 35] = [
+    const ADAPTERS: [Adapter; 39] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
         Adapter::JsonV1,
         Adapter::Rust,
         Adapter::RustBench,
+        Adapter::RustBenchJson,
+        Adapter::RustBenchText,
         Adapter::RustCriterion,
+        Adapter::RustCriterionJson,
+        Adapter::RustCriterionText,
         Adapter::RustIai,
         Adapter::RustGungraun,
         Adapter::RustGungraunStdout,
@@ -1249,7 +1278,11 @@ mod tests {
             | Adapter::JsonV1
             | Adapter::Rust
             | Adapter::RustBench
+            | Adapter::RustBenchJson
+            | Adapter::RustBenchText
             | Adapter::RustCriterion
+            | Adapter::RustCriterionJson
+            | Adapter::RustCriterionText
             | Adapter::RustIai
             | Adapter::RustGungraun
             | Adapter::RustGungraunStdout

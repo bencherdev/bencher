@@ -1966,9 +1966,9 @@ fn stored_parse(server: &TestServer, project_slug: &str) -> Parse {
 // version and the outcome
 //
 // Kills: a version taken from anything but the declared one, else the project's; a version 0
-// report that records a leaf; a version 1 report through `magic` or `json` that records none; an
-// outcome that calls results with no metric parsed; and a response that leaves out the stored
-// version or outcome.
+// report that records a leaf; a version 1 report through `magic`, `json`, or a harness node that
+// records none or the node; an outcome that calls results with no metric parsed; and a response
+// that leaves out the stored version or outcome.
 #[tokio::test]
 async fn reports_post_records_the_parse() {
     let server = TestServer::new().await;
@@ -1988,6 +1988,16 @@ async fn reports_post_records_the_parse() {
     for (adapter, results, bmf_version, expected) in [
         ("magic", vec![BMF_V0], None, parsed_v0),
         ("rust_bench", vec![RUST_BENCH], Some(0), parsed_v0),
+        (
+            "rust_bench",
+            vec![RUST_BENCH],
+            Some(1),
+            (
+                Some(BmfVersion::V1),
+                Some(Adapter::RustBenchText),
+                Some(ParseOutcome::Parsed),
+            ),
+        ),
         ("magic", vec![RUST_BENCH, BMF_V0], Some(0), parsed_v0),
         ("magic", vec![BMF_V1], Some(1), parsed_v1),
         ("json", vec![BMF_V1, BMF_V1], Some(1), parsed_v1),
@@ -2322,6 +2332,108 @@ async fn reports_post_keeps_an_existing_measure_listed_by_a_name_whose_slug_diff
         vec![row("bench", "{}", "wall", "value")]
     );
 }
+
+// POST /v0/projects/{project}/reports - a measure a version 1 leaf names at run time is created in
+// the unit its harness gives, and a measure the project already holds keeps its own unit
+//
+// Kills: a measure named at run time created with the generic unit, and a leaf's unit applied to
+// a measure the project already holds in a unit of its own.
+#[tokio::test]
+async fn reports_post_creates_a_measure_named_at_run_time_in_its_unit() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "units").await;
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/measures")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&serde_json::json!({ "name": "events", "slug": "events", "units": "branches" }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    for results in [CRITERION_CYCLES_PER_BYTE, CRITERION_PERF_EVENTS] {
+        post_report_body(
+            &server,
+            &token,
+            &project_slug,
+            &parse_report("rust_criterion", &[results], Some(1)),
+        )
+        .await;
+    }
+    assert_eq!(
+        measure_units(&server, &project_slug),
+        [("cpb", "cpb"), ("cycles", "cycles"), ("events", "branches")]
+            .map(|(slug, units)| (slug.to_owned(), units.to_owned()))
+    );
+}
+
+// POST /v0/projects/{project}/reports - a measure a threshold created in the generic unit takes the
+// unit a version 1 leaf gives it once the results parse
+//
+// Kills: a leaf's unit that never replaces the generic unit of a measure the project holds.
+#[tokio::test]
+async fn reports_post_replaces_the_generic_unit_of_a_measure_a_threshold_created() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "placeholder").await;
+    let mut report = parse_report("rust_criterion", &[CRITERION_CYCLES_PER_BYTE], Some(1));
+    report["thresholds"] = serde_json::json!({
+        "models": [{
+            "measure": "cpb",
+            "metric": "typical",
+            "model": { "test": "percentage", "upper_boundary": 0.25 },
+        }]
+    });
+    post_report_body(&server, &token, &project_slug, &report).await;
+    assert_eq!(
+        measure_units(&server, &project_slug),
+        [("cpb", "cpb"), ("cycles", "cycles")]
+            .map(|(slug, units)| (slug.to_owned(), units.to_owned()))
+    );
+}
+
+// POST /v0/projects/{project}/reports - a leaf that names a built-in measure in a unit of its own
+// creates the built-in in the built-in's unit
+//
+// Kills: a leaf's unit applied to a built-in measure.
+#[tokio::test]
+async fn reports_post_creates_a_built_in_measure_in_its_own_unit() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "builtin").await;
+    let results = "fib 15                  time:   [1.0 file-size 2.0 file-size 3.0 file-size]\n";
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report("rust_criterion", &[results], Some(1)),
+    )
+    .await;
+    let units = measure_units(&server, &project_slug);
+    assert!(
+        units.contains(&("file-size".to_owned(), "bytes (B)".to_owned())),
+        "{units:?}"
+    );
+}
+
+/// The slug and units of each measure a project holds that a version 1 Rust leaf names at run
+/// time or a criterion plugin reports, sorted by slug.
+fn measure_units(server: &TestServer, project_slug: &str) -> Vec<(String, String)> {
+    let project_id = get_project_id(server, project_slug);
+    schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any(["cpb", "cycles", "events", "file-size"]))
+        .order(schema::measure::slug)
+        .select((schema::measure::slug, schema::measure::units))
+        .load::<(String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures")
+}
+
+const CRITERION_CYCLES_PER_BYTE: &str =
+    include_str!("../../bencher_adapter/tool_output/rust/criterion/cycles_per_byte.txt");
+const CRITERION_PERF_EVENTS: &str =
+    include_str!("../../bencher_adapter/tool_output/rust/criterion/json_perf_events.txt");
 
 /// A report of `results` at `bmf_version` that keeps only `measures`.
 fn keeping(results: &serde_json::Value, bmf_version: u8, measures: &[&str]) -> serde_json::Value {
