@@ -15892,7 +15892,7 @@
           },
           "plus": {
             "nullable": true,
-            "description": "Bytes per day for Plus (Team/Enterprise) organizations",
+            "description": "Bytes per day for Plus (Pro/Enterprise) organizations",
             "type": "integer",
             "format": "uint64",
             "minimum": 0
