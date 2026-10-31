@@ -12,6 +12,12 @@ const restPointer: BrowserCommand<[]> = async ({ page }) => {
 	await page.mouse.move(0, 0);
 };
 
+/** The accessibility tree under `selector` as Playwright reads it, names and all. */
+const ariaSnapshot: BrowserCommand<[selector: string]> = async (
+	{ frame },
+	selector,
+) => (await frame()).locator(selector).ariaSnapshot();
+
 export default getViteConfig({
 	test: {
 		/* for example, use global to avoid globals imports (describe, test, expect): */
@@ -48,7 +54,7 @@ export default getViteConfig({
 						provider: playwright(),
 						headless: true,
 						instances: [{ browser: "chromium" }],
-						commands: { restPointer },
+						commands: { restPointer, ariaSnapshot },
 					},
 				},
 			},

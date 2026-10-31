@@ -25,6 +25,11 @@
 		background: var(--color-accent-muted);
 	}
 
+	.ui-chip > .ui-parts {
+		align-items: center;
+		column-gap: 6px;
+	}
+
 	.ui-chip-key {
 		color: var(--color-text-muted);
 		font: 11px var(--font-family-code);
