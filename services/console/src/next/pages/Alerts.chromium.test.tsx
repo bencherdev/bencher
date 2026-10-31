@@ -28,6 +28,7 @@ import { PROJECTS_PATH } from "../paths";
 import { ProjectContext } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { bootstrapOf } from "../settings/testing";
+import { STRESS } from "../ui/testing";
 import { linesDrawn, readLinesTopToBottom } from "../report/testing";
 import Alerts from "./Alerts";
 
@@ -859,7 +860,7 @@ test("after Reactivate under Dismissed the focus rests on the row now in its pla
 // Kills rows that fold only at phone width, which leaves a row's controls off
 // screen on a tablet, and a folded Reactivate that drops the focus with the
 // line it takes away.
-test("rows fold below 980 px, and a folded Reactivate leaves the focus on its row", async () => {
+test("on a tablet the rows fold, and a folded Reactivate leaves the focus on its row", async () => {
 	await page.viewport(900, 800);
 	const { api, answered } = fakeApi(() =>
 		alertsFixture([
@@ -1737,4 +1738,39 @@ test("each row's name links to its alert's page", async () => {
 	expect(links.elements().map((link) => link.getAttribute("href"))).toEqual(
 		[1, 2, 3].map((n) => `${PROJECTS_PATH}/hashbrown/alerts/${alertId(n)}`),
 	);
+});
+
+// Kills a report header whose testbed is cut at its end, or loses its share of
+// the line to a long branch.
+test("a report header keeps its testbed's end beside a long branch", async () => {
+	const leaf = "runner-ubuntu-latest-large";
+	for (const width of [1440, 390]) {
+		await page.viewport(width, 800);
+		const list = alertsFixture([{ report: 0, alerts: [{ alert: 1 }] }]);
+		const { api } = fakeApi(() => ({
+			...list,
+			branches: list.branches.map((branch, index) =>
+				index === 0 ? { ...branch, name: STRESS.branch } : branch,
+			),
+			testbeds: list.testbeds.map((testbed, index) =>
+				index === 0
+					? { ...testbed, name: `ci/${"linux/".repeat(30)}${leaf}` }
+					: testbed,
+			),
+		}));
+		mount(api);
+		await expect.poll(() => document.querySelector(".al-gname")).not.toBeNull();
+		const [branch, testbed] = document.querySelectorAll<HTMLElement>(
+			".al-gname .ui-trunc",
+		);
+		expect(branch?.dataset.tail).toBe("very-long-leaf");
+		expect(testbed?.dataset.tail).toBe(leaf);
+		expect(testbed?.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+			(branch?.getBoundingClientRect().width ?? 0) - 0.5,
+		);
+		expect(document.documentElement.scrollWidth).toBe(width);
+		dispose?.();
+		dispose = undefined;
+		document.body.replaceChildren();
+	}
 });

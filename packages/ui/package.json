@@ -10,6 +10,7 @@
 		"./styles.css": "./src/styles.css",
 		"./fonts/*": "./src/fonts/*",
 		"./tail": "./src/tail.ts",
+		"./resize": "./src/resize.ts",
 		"./*": "./src/*.tsx"
 	},
 	"scripts": {

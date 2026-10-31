@@ -1,7 +1,7 @@
 import type { JsonConsoleAlerts } from "../../types/bencher";
 import type { Api } from "../api";
 import { batchSize } from "../reports/rows";
-import { FOLD } from "./fold";
+import { NARROW } from "../plot/narrow";
 import {
 	type AlertsSearch,
 	type Batch,
@@ -22,7 +22,7 @@ export const alertsBatch = () =>
 		MAX_ALERTS,
 		batchSize(
 			window.innerHeight,
-			window.matchMedia(FOLD).matches ? ROW_HEIGHT.narrow : ROW_HEIGHT.wide,
+			window.matchMedia(NARROW).matches ? ROW_HEIGHT.narrow : ROW_HEIGHT.wide,
 		),
 	);
 

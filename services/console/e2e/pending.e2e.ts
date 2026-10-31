@@ -201,7 +201,7 @@ test("a page that shows a running job never stores what it hears", async ({
 });
 
 // Kills a runner report's page without its status or with a "No lines" card
-// while it runs, and a spec missing from its sub line or its tooltip.
+// while it runs, and a spec missing from its sub line or what it ran on.
 test("a running report says so in its heading and names its spec", async ({
 	page,
 }) => {
@@ -215,12 +215,10 @@ test("a running report says so in its heading and names its spec", async ({
 		.getByRole("link", { name: /report 2, .*Running 48s$/ })
 		.click();
 	await expect(page.locator(".rp-titlerow")).toContainText("Running 48s");
-	const spec = page.getByRole("button", { name: "Standard x86" });
-	await expect(spec).toBeVisible();
+	await expect(page.locator(".rp-sub")).toContainText(
+		/Standard x86 \(\w+, x86_64, \d+, 16 GiB\)/,
+	);
 	await expect(page.getByRole("heading", { name: "No lines" })).toHaveCount(0);
-	await spec.hover();
-	await expect(page.getByRole("tooltip")).toContainText("x86_64");
-	await expect(page.getByRole("tooltip")).toContainText("16 GiB");
 });
 
 // Kills blank Explore's latest runs drawn without their statuses, and an

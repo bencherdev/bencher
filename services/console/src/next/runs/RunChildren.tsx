@@ -1,4 +1,5 @@
 import Button from "@bencherdev/ui/Button";
+import Truncate from "@bencherdev/ui/Truncate";
 import { Show } from "solid-js";
 import type {
 	JsonConsoleRunReport,
@@ -125,7 +126,7 @@ const ReportRow = (props: {
 					onFocus={() => props.onIntent()}
 					onTouchStart={() => props.onIntent()}
 				>
-					{props.report.testbed.name}
+					<Truncate text={props.report.testbed.name} tail />
 				</a>
 			</td>
 			<td data-fold="hide">{props.report.adapter}</td>

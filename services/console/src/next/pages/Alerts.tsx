@@ -5,6 +5,7 @@ import Dialog from "@bencherdev/ui/Dialog";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import { type QueryKey, useQueryClient } from "@tanstack/solid-query";
 import {
 	type Accessor,
@@ -23,11 +24,11 @@ import type {
 	JsonConsoleProject,
 	JsonUpdateAlerts,
 } from "../../types/bencher";
+import Dot from "../dot";
 import { leafOf } from "../leaf";
 import AlertActions from "../alerts/AlertActions";
 import Controls from "../alerts/Controls";
 import { FIRST, useAlertBatches } from "../alerts/batches";
-import { useFold } from "../alerts/fold";
 import { type AlertsBatch, alertsBatch, alertsQuery } from "../alerts/query";
 import { type AlertLine, alertLinesOf } from "../alerts/lines";
 import {
@@ -72,6 +73,7 @@ import { useNarrow } from "../plot/narrow";
 import { useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
+import { FOLD } from "../report/fold";
 import LineTable from "../report/LineTable";
 import { type GroupRow, type ReportLine, plotOf } from "../report/lines";
 import { WINDOWS, windowPhrase } from "../reports/search";
@@ -89,7 +91,6 @@ const Alerts = () => {
 	const navigate = useProjectNavigate();
 	const client = useQueryClient();
 	const narrow = useNarrow();
-	const fold = useFold();
 	const search = createMemo(() =>
 		decodeSearch(new URLSearchParams(location.search)),
 	);
@@ -651,7 +652,7 @@ const Alerts = () => {
 							label="Alerts, grouped by the report that raised them"
 							slots={layout().slots}
 							rows={layout().slots.length}
-							narrow={fold()}
+							fold={FOLD.alerts}
 							metrics={metrics()}
 							history={`History, ${history()}`}
 							expanded={expanded()}
@@ -810,17 +811,22 @@ const ReportHeader = (props: {
 							onChange={() => props.onSelect()}
 						/>
 					</label>
-					<div class="al-gtitle">
-						<span class="al-gname">
+					<div class="al-gtitle ui-parts">
+						<b class="al-gname ui-parts">
 							<Show when={props.active}>
-								<svg class="lr-alertdot" viewBox="0 0 8 8" aria-hidden="true">
+								<svg
+									class="lr-alertdot"
+									viewBox="0 0 8 8"
+									aria-hidden="true"
+									data-fixed
+								>
 									<circle cx="4" cy="4" r="4" />
 								</svg>
 							</Show>
-							<b>
-								{props.group.branch.name} · {props.group.testbed.name}
-							</b>
-						</span>
+							<Truncate text={props.group.branch.name} tail />
+							<Dot />
+							<Truncate text={props.group.testbed.name} tail />
+						</b>
 						<span class="al-gmeta">{meta()}</span>
 					</div>
 				</div>

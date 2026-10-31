@@ -1,3 +1,5 @@
+import { tailOf } from "@bencherdev/ui/tail";
+import Truncate from "@bencherdev/ui/Truncate";
 import { For, type JSX, Show, Suspense, createMemo, lazy } from "solid-js";
 import InlineHistory from "../plot/InlineHistory";
 import { changeOf, type Guard } from "../plot/format";
@@ -5,6 +7,7 @@ import { inlineOf } from "../plot/inline";
 import type { AlignedSeries } from "./lines";
 import { type ParameterSet, iterationTag, lineLabel, rowNumbers } from "./row";
 import { rowClick } from "./rowClick";
+import Tag from "../tag";
 
 /** What a row draws of a line, as a report, an alert, or a threshold's page holds it. */
 interface RowLine {
@@ -30,8 +33,8 @@ interface RowLine {
 	chosen?: number;
 }
 
-/** The columns of a wide row; a narrow one folds them into four. */
-export const COLUMNS = { wide: 9, narrow: 4 } as const;
+/** The columns of a wide row; a narrow one folds them into four, and a stacked one, its numbers under its name, into three. */
+export const COLUMNS = { wide: 9, narrow: 4, stacked: 3 } as const;
 
 /** Loads once the page goes idle or the reader moves toward the lines, so no first paint waits on it. */
 export const RowExplore = lazy(() => import("./RowExplore"));
@@ -41,6 +44,8 @@ interface LineRowProps {
 	/** Names the metric, for a report with more than one metric name. */
 	metrics: boolean;
 	narrow: boolean;
+	/** Narrow, with the numbers on a line of their own under the measure. */
+	stacked?: boolean;
 	/** Its position among the table's rows, counting from 1. */
 	index: number;
 	/** Without it the row has no checkbox. */
@@ -98,7 +103,9 @@ const LineRow = (props: LineRowProps) => {
 	const alerting = () => props.line.alert !== undefined && !props.dimmed;
 	const columns = () =>
 		props.narrow
-			? COLUMNS.narrow
+			? props.stacked
+				? COLUMNS.stacked
+				: COLUMNS.narrow
 			: COLUMNS.wide +
 				(props.actions === undefined ? 0 : 1) +
 				(props.beside === undefined ? 0 : 1);
@@ -134,25 +141,35 @@ const LineRow = (props: LineRowProps) => {
 			</svg>
 		</button>
 	);
-	// The spaces read the name as words; between flex items they take no room.
+	// The spaces read the name as words; between grid items they take no room.
 	const words = () => (
 		<>
-			<b>{props.line.benchmark.name}</b>
-			<For each={label().tags}>
-				{(tag) => (
-					<>
-						{" "}
-						<span class="lr-ptag">{tag}</span>
-					</>
-				)}
-			</For>
-			<Show when={label().metric}>
-				{(metric) => (
-					<>
-						{" "}
-						<span class="lr-tag">{metric()}</span>
-					</>
-				)}
+			<b class="lr-name">
+				<Truncate text={props.line.benchmark.name} tail />
+				{/* Unseen, it holds the name at least as wide as its tail. */}
+				<span class="lr-hold" aria-hidden="true">
+					{tailOf(props.line.benchmark.name)[1]}
+				</span>
+			</b>
+			<Show when={label().tags.length > 0 || label().metric}>
+				{" "}
+				{/* One track for every tag, so many long ones never starve the name. */}
+				<span class="lr-tags">
+					<For each={label().tags}>
+						{(tag) => (
+							<>
+								<Tag tag={tag} />{" "}
+							</>
+						)}
+					</For>
+					<Show when={label().metric}>
+						{(metric) => (
+							<span class="lr-tag">
+								<Truncate text={metric()} />
+							</span>
+						)}
+					</Show>
+				</span>
 			</Show>
 		</>
 	);
@@ -183,7 +200,7 @@ const LineRow = (props: LineRowProps) => {
 				{(tag) => (
 					<>
 						{" "}
-						<span class="lr-tag">{tag()}</span>
+						<span class="lr-tag lr-fixed">{tag()}</span>
 					</>
 				)}
 			</Show>
@@ -200,7 +217,8 @@ const LineRow = (props: LineRowProps) => {
 			label={`${short()}, history`}
 		/>
 	);
-	const delta = () => (
+	// A stacked row leaves the delta's word to its arrow and color, and to screen readers.
+	const delta = (terse = false) => (
 		<Show
 			when={
 				props.line.guard &&
@@ -214,7 +232,9 @@ const LineRow = (props: LineRowProps) => {
 						<span aria-hidden="true">{delta().arrow} </span>
 					</Show>
 					{delta().text}
-					<Show when={delta().tone}> {delta().tone}</Show>
+					<Show when={delta().tone}>
+						<span classList={{ "sr-only": terse }}> {delta().tone}</span>
+					</Show>
 				</span>
 			)}
 		</Show>
@@ -227,6 +247,19 @@ const LineRow = (props: LineRowProps) => {
 				</Suspense>
 			)}
 		</Show>
+	);
+	// The value, its delta, and the limit, one under the other, or along one line when stacked.
+	const narrowNumbers = () => (
+		<>
+			<b class="lr-num ui-num">{numbers().value}</b>
+			<span class="lr-num">{delta(props.stacked === true)}</span>
+			<Show when={props.line.guard} fallback={noThreshold()}>
+				<span class="lr-num ui-num muted">
+					<span class="sr-only">limit </span>
+					{numbers().limit}
+				</span>
+			</Show>
+		</>
 	);
 	const toggle = (event: MouseEvent) => {
 		if (rowClick(event)) {
@@ -265,11 +298,11 @@ const LineRow = (props: LineRowProps) => {
 						<td>{select()}</td>
 						<td>{twist()}</td>
 						<td>
-							<div class="lr-line" title={label().name}>
-								{name()}
-							</div>
+							<div class="lr-line">{name()}</div>
 						</td>
-						<td>{props.aside ?? props.line.measure.name}</td>
+						<td>
+							{props.aside ?? <Truncate text={props.line.measure.name} />}
+						</td>
 						<Show when={props.beside}>{(beside) => <td>{beside()}</td>}</Show>
 						<td>{history()}</td>
 						<td class="lr-end lr-num ui-num">{numbers().value}</td>
@@ -299,7 +332,7 @@ const LineRow = (props: LineRowProps) => {
 					<td>{select()}</td>
 					<td>
 						<div class="lrn-top">
-							<div class="lrn-lines" title={label().name}>
+							<div class="lrn-lines">
 								<div class="lrn-l1">{name()}</div>
 								<div class="lrn-l2">
 									<Show when={props.beside}>
@@ -310,31 +343,33 @@ const LineRow = (props: LineRowProps) => {
 											</>
 										)}
 									</Show>
-									<span>{props.aside ?? props.line.measure.name}</span>
+									<span class="lrn-measure">
+										{props.aside ?? props.line.measure.name}
+									</span>
 									{history()}
-									<Show when={props.line.guard} fallback={noThreshold()}>
-										<span class="lr-num muted">limit {numbers().limit}</span>
-									</Show>
 								</div>
 							</div>
 							{go()}
 						</div>
+						<Show when={props.stacked}>
+							<div class="lrn-num lrn-l3">{narrowNumbers()}</div>
+						</Show>
 						<Show when={props.actions}>
 							{(actions) => <div class="lrn-l2 lr-act">{actions()()}</div>}
 						</Show>
 					</td>
-					<td>
-						<div class="lrn-num">
-							<b class="lr-num ui-num">{numbers().value}</b>
-							<span class="lr-num">{delta()}</span>
-						</div>
-					</td>
+					<Show when={!props.stacked}>
+						<td>
+							<div class="lrn-num">{narrowNumbers()}</div>
+						</td>
+					</Show>
 					<td>{twist()}</td>
 				</tr>
 			</Show>
 			<Show when={props.expanded}>
 				<tr class="lr-exrow" aria-rowindex={props.index + 1}>
 					<td colSpan={columns()}>
+						<WholeName line={props.line} metrics={props.metrics} />
 						<section id={region()} aria-label={`${short()}, full plot`}>
 							{props.children}
 						</section>
@@ -346,3 +381,47 @@ const LineRow = (props: LineRowProps) => {
 };
 
 export default LineRow;
+
+/** A line's whole name, at the top of its expansion, wrapped to as many lines as it takes. */
+export const WholeName = (props: { line: RowLine; metrics: boolean }) => {
+	const label = () =>
+		lineLabel(
+			{
+				benchmark: props.line.benchmark.name,
+				parameters: props.line.parameters,
+				measure: props.line.measure.name,
+				metric: props.line.metric,
+			},
+			props.metrics,
+		);
+	return (
+		<div class="lr-id">
+			<b>{props.line.benchmark.name}</b>
+			<For each={label().tags}>
+				{(tag) => (
+					<>
+						{" "}
+						<span class="lr-ptag">{tag}</span>
+					</>
+				)}
+			</For>{" "}
+			<span class="lr-tag">{props.line.measure.name}</span>
+			<Show when={label().metric}>
+				{(metric) => (
+					<>
+						{" "}
+						<span class="lr-tag">{metric()}</span>
+					</>
+				)}
+			</Show>
+			<Show when={iterationTag(props.line)}>
+				{(tag) => (
+					<>
+						{" "}
+						<span class="lr-tag">{tag()}</span>
+					</>
+				)}
+			</Show>
+		</div>
+	);
+};

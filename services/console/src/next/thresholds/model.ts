@@ -47,7 +47,6 @@ export const historySpan = (
 };
 
 interface Dimension {
-	name: string;
 	archived?: number | undefined;
 }
 
@@ -57,14 +56,14 @@ export const archivedBy = (dimensions: {
 	testbed: Dimension;
 	measure: Dimension;
 }) => {
-	let first: { kind: string; name: string; archived: number } | undefined;
+	let first: { kind: string; archived: number } | undefined;
 	for (const kind of ["branch", "testbed", "measure"] as const) {
-		const { name, archived } = dimensions[kind];
+		const { archived } = dimensions[kind];
 		if (
 			archived !== undefined &&
 			(first === undefined || archived < first.archived)
 		) {
-			first = { kind, name, archived };
+			first = { kind, archived };
 		}
 	}
 	return first;

@@ -4,6 +4,7 @@ import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	For,
 	type JSX,
@@ -19,6 +20,8 @@ import type { JsonConsoleAlertDetail } from "../../types/bencher";
 import { type AlertFacts, alertFacts, alertQuery } from "../alert/detail";
 import { useAlertChange } from "../alerts/change";
 import { ApiError } from "../api";
+import Dot from "../dot";
+import Tag from "../tag";
 import { plotData } from "../explore/data";
 import { projectPath, reportPath } from "../paths";
 import Plot from "../plot/Plot";
@@ -184,12 +187,12 @@ const Page = (props: {
 					<Crumb slug={props.slug} readOnly={props.readOnly} />
 					<div class="ap-titlerow">
 						<Heading level={1} size="xl">
-							<span>{props.facts.benchmark}</span>
+							<Truncate text={props.facts.benchmark} tail reveal />
 							<For each={props.facts.tags}>
 								{(tag) => (
 									<>
 										{" "}
-										<span class="lr-ptag ap-tag">{tag}</span>
+										<Tag tag={tag} reveal class="ap-tag" />
 									</>
 								)}
 							</For>
@@ -197,7 +200,9 @@ const Page = (props: {
 								{(metric) => (
 									<>
 										{" "}
-										<span class="lr-tag ap-tag">{metric()}</span>
+										<span class="lr-tag ap-tag">
+											<Truncate text={metric()} reveal />
+										</span>
 									</>
 								)}
 							</Show>
@@ -248,15 +253,13 @@ const Page = (props: {
 					)}
 				</Show>
 				<p class="ph-sub">
-					{props.facts.measure}
-					<span class="dotsep" aria-hidden="true">
-						·
+					<span class="ui-parts">
+						<Truncate text={props.facts.measure} tail reveal />
+						<Dot />
+						<Truncate text={props.facts.branch} tail reveal />
+						<Dot />
+						<Truncate text={props.facts.testbed} tail reveal />
 					</span>
-					{props.facts.branch}
-					<span class="dotsep" aria-hidden="true">
-						·
-					</span>
-					{props.facts.testbed}
 				</p>
 			</div>
 			<Show when={props.refused}>

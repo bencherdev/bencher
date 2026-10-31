@@ -156,16 +156,15 @@ describe("historySpan", () => {
 
 describe("archivedBy", () => {
 	const dims = {
-		branch: { name: "main" },
-		testbed: { name: "ubuntu-latest", archived: Date.UTC(2026, 7, 9) },
-		measure: { name: "Latency", archived: Date.UTC(2026, 8, 8) },
+		branch: {},
+		testbed: { archived: Date.UTC(2026, 7, 9) },
+		measure: { archived: Date.UTC(2026, 8, 8) },
 	};
 
 	// Kills an archive told by a dimension that is not archived, or by the later of two.
 	test("names the dimension archived first", () => {
 		expect(archivedBy(dims)).toEqual({
 			kind: "testbed",
-			name: "ubuntu-latest",
 			archived: Date.UTC(2026, 7, 9),
 		});
 	});
@@ -175,8 +174,8 @@ describe("archivedBy", () => {
 		expect(
 			archivedBy({
 				branch: dims.branch,
-				testbed: { name: "ubuntu-latest" },
-				measure: { name: "Latency" },
+				testbed: {},
+				measure: {},
 			}),
 		).toBeUndefined();
 	});
