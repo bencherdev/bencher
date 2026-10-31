@@ -93,6 +93,27 @@ const radio = (name: string) => page.getByRole("radio", { name });
 const organization = () => page.getByRole("combobox", { name: "Organization" });
 
 describe("the form", () => {
+	// Kills a slug preview by any rule but the API's own: a name it
+	// transliterates, folds, or names by its symbols shows an empty or a
+	// different slug, and one it gives a random slug shows a made-up one.
+	test("previews the slug the API makes from any name", async () => {
+		open();
+		const slug = () =>
+			document.querySelector(".formrow .derived")?.textContent?.trim() ?? "";
+		for (const [name, made] of [
+			["Hash Brown", "hash-brown"],
+			["性能测试", "xing-neng-ce-shi"],
+			["Straße", "strasse"],
+			["§ fund", "ss-fund"],
+			["€ fund", "eur-fund"],
+			["👩‍💻 Dev", "woman-computer-dev"],
+			["!!!", ""],
+		] as const) {
+			await textbox("Name").fill(name);
+			await expect.poll(slug).toBe(made);
+		}
+	});
+
 	// Kills a slug not derived from the name, a request to another
 	// organization, and one that sends an untrimmed name, a slug, an empty
 	// URL, a public visibility, or a version the API decides on its own.

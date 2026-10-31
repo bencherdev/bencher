@@ -9,6 +9,9 @@ import {
 	Show,
 } from "solid-js";
 import { watchSize } from "./resize";
+import { tailOf } from "./tail";
+
+export { tailOf };
 
 export interface TruncateProps {
 	text: string;
@@ -18,13 +21,6 @@ export interface TruncateProps {
 	reveal?: boolean;
 	class?: string;
 }
-
-/** Splits once after the last `::`, else after the last `/`; with neither, it is all tail. */
-export const tailOf = (text: string): [head: string, tail: string] => {
-	const at = text.lastIndexOf("::");
-	const cut = at < 0 ? text.lastIndexOf("/") + 1 : at + 2;
-	return [text.slice(0, cut), text.slice(cut)];
-};
 
 /** Measures a text's whole width, which its box's clip does not change. */
 const range =

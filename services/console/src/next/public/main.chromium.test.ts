@@ -2,6 +2,7 @@ import "@bencherdev/ui/styles.css";
 import "./page.css";
 import { afterEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
+import { decodeQuery, encodeQuery } from "../query/query";
 import { USER_KEY } from "../reader";
 import { boot } from "./main";
 
@@ -140,4 +141,50 @@ test("a member's refused query says so once the member's read of the project ans
 	await expect
 		.element(page.getByRole("heading", { level: 1, name: "Hashbrown" }))
 		.toBeVisible();
+});
+
+// Kills a query past what a URL holds sent anyway, read as any other failure,
+// or offered a Retry that cannot succeed.
+test("a query too long for a URL is never sent, and says so with no Retry", async () => {
+	const perf: string[] = [];
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async (input: string) => {
+			if (new URL(input).pathname.endsWith("/perf")) {
+				perf.push(input);
+				return new Response("{}");
+			}
+			return new Response(
+				JSON.stringify({
+					name: "Hashbrown",
+					slug: "hashbrown",
+					visibility: "public",
+					bmf_version: 1,
+				}),
+			);
+		}),
+	);
+	// Eight sets of eight CJK tags at the API's 64 bytes, as a link can carry.
+	const sets = Array.from({ length: 8 }, (_, set) =>
+		Object.fromEntries(
+			Array.from({ length: 8 }, (_, tag) => [
+				`${"键".repeat(19)}${set}${tag}`,
+				"值".repeat(21),
+			]),
+		),
+	);
+	const query = encodeQuery({ ...decodeQuery(DRAWABLE), sets });
+	history.replaceState(null, "", `${location.pathname}${query}`);
+	const mount = document.createElement("div");
+	mount.className = "console";
+	mount.dataset.apiUrl = "http://api.test";
+	mount.dataset.slug = "hashbrown";
+	document.body.append(mount);
+	boot(mount);
+
+	await expect
+		.element(page.getByRole("alert"))
+		.toHaveTextContent("Query too long");
+	expect(page.getByRole("button", { name: "Retry" }).query()).toBeNull();
+	expect(perf).toEqual([]);
 });

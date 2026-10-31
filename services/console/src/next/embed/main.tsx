@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import type { JsonConsolePerf, JsonProject } from "../../types/bencher";
-import { drawable, perfSearch } from "../explore/request";
+import { drawable, perfSearch, refusalOf } from "../explore/request";
 import { handOff } from "../handoff";
 import { type Refusal, reads } from "../public/read";
 import { decodeQuery } from "../query/query";
@@ -40,11 +40,7 @@ const boot = (mount: HTMLElement) => {
 		get<JsonConsolePerf>(
 			`/v0/console/projects/${encodeURIComponent(slug)}/perf${perfSearch(query(), Date.now())}`,
 		).then(setAnswer, (error: Refusal) =>
-			setRefused(
-				error.status && error.status < 500
-					? "The API refused this query"
-					: "The plot did not load",
-			),
+			setRefused(refusalOf(error.status) ?? "The plot did not load"),
 		);
 	}
 

@@ -80,8 +80,9 @@ const rows = () =>
 const email = () => page.getByRole("textbox", { name: "Email" });
 const send = () => page.getByRole("button", { name: "Send invite" });
 
-// Kills a Remove on the reader's own row or missing from another's, the
-// reader's row unmarked, and a count of the rows drawn rather than the API's.
+// Kills a Remove on the reader's own row or missing from another's, a Remove
+// named by a name two members can share, the reader's row unmarked, and a
+// count of the rows drawn rather than the API's.
 test("lists each member with Remove, and the reader's own row without it", async () => {
 	open({ members: { members: [MURIEL, EUSTACE], total: 260 } });
 	await expect.element(table()).toBeVisible();
@@ -90,7 +91,12 @@ test("lists each member with Remove, and the reader's own row without it", async
 		["Eustace Bagge", "eustace@nowhere.example", "Remove"],
 	]);
 	await expect
-		.element(page.getByRole("button", { name: "Remove Eustace Bagge" }))
+		.element(
+			page.getByRole("button", {
+				name: "Remove Eustace Bagge (eustace@nowhere.example)",
+				exact: true,
+			}),
+		)
 		.toBeVisible();
 	expect(
 		page.getByRole("button", { name: "Remove Muriel Bagge" }).query(),
@@ -156,8 +162,9 @@ describe("invite", () => {
 
 describe("remove", () => {
 	// Kills a remove sent without confirming, a Cancel that sends it, a remove
-	// for another member, a row or count left after it, focus lost with the
-	// row, and a list read again rather than kept.
+	// for another member, a confirm that names a member by name alone, a row
+	// or count left after it, focus lost with the row, and a list read again
+	// rather than kept.
 	test("confirms, sends, then drops the row", async () => {
 		const { sent, reads } = open();
 		const remove = page.getByRole("button", { name: "Remove Eustace Bagge" });
@@ -168,7 +175,7 @@ describe("remove", () => {
 		await expect
 			.element(dialog)
 			.toHaveAccessibleDescription(
-				"Eustace Bagge loses access to every project in Pompeii LLC.",
+				"Eustace Bagge (eustace@nowhere.example) loses access to every project in Pompeii LLC.",
 			);
 		await dialog.getByRole("button", { name: "Cancel" }).click();
 		await expect.element(dialog).not.toBeInTheDocument();

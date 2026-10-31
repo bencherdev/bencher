@@ -77,7 +77,8 @@ const Setup = (props: { poll: () => ReturnType<typeof batchQuery> }) => {
 					<section class="pu-setup" aria-labelledby="pu-setup">
 						<div class="pu-intro">
 							<div class="eyebrow">
-								{project().project.name} · {format()} · no reports yet
+								<span class="as-typed">{project().project.name}</span> ·{" "}
+								{format()} · no reports yet
 							</div>
 							<Heading level={1} size="xl" id="pu-setup">
 								Send the first report

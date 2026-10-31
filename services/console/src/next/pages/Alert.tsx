@@ -23,7 +23,8 @@ import { plotData } from "../explore/data";
 import { projectPath, reportPath } from "../paths";
 import Plot from "../plot/Plot";
 import { formatDate, formatWhen } from "../plot/format";
-import { useProject } from "../project";
+import { leafOf } from "../leaf";
+import { useEntityTitle, useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 
@@ -49,6 +50,10 @@ const Alert = () => {
 	const facts = createMemo(() => {
 		const current = detail();
 		return current && alertFacts(current);
+	});
+	useEntityTitle("Alert", () => {
+		const benchmark = facts()?.benchmark;
+		return benchmark && leafOf(benchmark);
 	});
 	const changes = useAlertChange();
 	const status = () => {

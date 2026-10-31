@@ -1,5 +1,17 @@
 import { canonicalParameters } from "../query/parameters";
 import { type ExploreQuery, blankQuery, encodeQuery } from "../query/query";
+import { URI_TOO_LONG } from "../url";
+
+/** A refusal no retry can answer: the query is past what a URL holds. */
+export const TOO_LONG = "Query too long";
+
+/** What a plot query the API answered with `status` says, if the API refused it. */
+export const refusalOf = (status: number | undefined): string | undefined =>
+	status === URI_TOO_LONG
+		? TOO_LONG
+		: status !== undefined && status < 500
+			? "The API refused this query"
+			: undefined;
 
 /** Whether the query names what the plot query needs: a branch, a testbed, a benchmark, and a measure. */
 export const drawable = (query: ExploreQuery): boolean =>
@@ -38,18 +50,15 @@ export const perfSearch = (query: ExploreQuery, now: number): string => {
 		params.set("specs", testbeds.map(({ spec }) => spec ?? "").join(","));
 	}
 	params.set("benchmarks", query.benchmarks.join(","));
-	// The API splits these lists on commas before it decodes each entry.
 	if (query.sets.length > 0) {
 		params.set(
 			"parameters",
-			query.sets
-				.map((set) => encodeURIComponent(canonicalParameters(set)))
-				.join(","),
+			query.sets.map((set) => element(canonicalParameters(set))).join(","),
 		);
 	}
 	params.set("measures", query.measures.join(","));
 	if (query.metrics.length > 0) {
-		params.set("metrics", query.metrics.map(encodeURIComponent).join(","));
+		params.set("metrics", query.metrics.map(element).join(","));
 	}
 	const end = window.end ?? now;
 	const start = "start" in window ? window.start : end - window.seconds * 1000;
@@ -57,3 +66,8 @@ export const perfSearch = (query: ExploreQuery, now: number): string => {
 	params.set("end_time", String(end));
 	return `?${params}`;
 };
+
+// The API splits a list on its commas, then decodes each entry, so only a
+// comma and a percent sign need a second encoding.
+const element = (entry: string): string =>
+	entry.replace(/[%,]/g, encodeURIComponent);

@@ -52,25 +52,19 @@ const open = (answer?: Parameters<typeof fakeApi>[0]) => {
 	};
 };
 
-// Kills a gate that takes a prefix, ignores case or spaces, or compares with
-// the name instead of the slug; a delete sent to the wrong project; a reader
-// left on a page for a project that is gone; and its cache and memories kept.
-test("Delete project stays off until the slug is typed exactly, then deletes and leaves", async () => {
+// Kills a gate that takes a prefix or another word, or one that refuses the
+// slug a touch keyboard capitalized or padded; a delete sent to the wrong
+// project; a reader left on a page for a project that is gone; and its cache
+// and memories kept.
+test("Delete project stays off until the slug is typed, then deletes and leaves", async () => {
 	localStorage.setItem(VERSION_KEY, JSON.stringify({ hashbrown: 1 }));
 	const { client, sent, left, typed, confirm } = open();
 	await expect.element(typed).toHaveFocus();
-	for (const text of [
-		"",
-		"hashbro",
-		"Hashbrown",
-		"hashbrown ",
-		" hashbrown",
-		"hashbrownx",
-	]) {
+	for (const text of ["", "hashbro", "hashbrownx"]) {
 		await typed.fill(text);
 		await expect.element(confirm).toBeDisabled();
 	}
-	await typed.fill("hashbrown");
+	await typed.fill(" Hashbrown ");
 	await expect.element(confirm).toBeEnabled();
 
 	await confirm.click();

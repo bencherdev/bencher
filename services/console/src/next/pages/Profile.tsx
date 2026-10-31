@@ -230,6 +230,7 @@ const ProfileForm = (props: {
 					aria-invalid={problem(id) ? true : undefined}
 					autocomplete={input.autocomplete}
 					spellcheck={false}
+					slug={id === "slug"}
 				/>
 				<Show when={problem(id)}>
 					{(message) => (
