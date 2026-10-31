@@ -47,7 +47,9 @@ use error::REGEX_ERROR;
 pub use error::ValidError;
 pub use index::Index;
 pub use jwt::Jwt;
-pub use keys::{BencherKey, ProjectKey, ProjectKeyHash, UserKey, UserKeyHash};
+pub use keys::{
+    BencherKey, ProjectKey, ProjectKeyHash, SessionToken, SessionTokenHash, UserKey, UserKeyHash,
+};
 pub use metric_name::MetricName;
 pub use model::{
     Model,

@@ -5,8 +5,8 @@ pub use bencher_valid::{
     BencherKey, BenchmarkName, BmfVersion, Boundary, BranchName, CdfBoundary, DateTime,
     DateTimeMillis, Email, GitHash, Index, IntoResourceId, IqrBoundary, Jwt, MetricName, Model,
     ModelTest, NameId, NonEmpty, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId,
-    ResourceName, SampleSize, Sanitize, Search, Secret, Slug, Units, Url, UserKey, UserKeyHash,
-    UserName, ValidError, Window,
+    ResourceName, SampleSize, Sanitize, Search, Secret, SessionToken, SessionTokenHash, Slug,
+    Units, Url, UserKey, UserKeyHash, UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
@@ -147,12 +147,13 @@ pub use user::{
         JsonNewUserKey, JsonUpdateUserKey, JsonUserKey, JsonUserKeyCreated, JsonUserKeys,
         UserKeyUuid,
     },
+    session::{JsonSession, SessionMethod, SessionUuid},
     token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
 };
 
 pub const BENCHER_API_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub use auth::{AUTHORIZATION, bearer_header, strip_bearer_token};
+pub use auth::{AUTHORIZATION, RELAY_CLIENT_IP, RELAY_SECRET, bearer_header, strip_bearer_token};
 
 pub const BENCHER_CONSOLE_PORT: u16 = 3000;
 pub const LOCALHOST_BENCHER_URL_STR: &str = "http://localhost:3000";

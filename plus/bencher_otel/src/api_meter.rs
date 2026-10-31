@@ -144,6 +144,8 @@ pub enum ApiCounter {
     UserKeyRevokeBlocked,
     UserKeyAuthFailed(UserKeyAuthFailureReason),
 
+    SessionAuthFailed(SessionAuthFailureReason),
+
     ProjectKeyAuthFailed(ProjectKeyAuthFailureReason),
 
     OAuthGrantRevoke,
@@ -272,6 +274,7 @@ impl ApiCounter {
             Self::UserKeyCreate | Self::UserKeyRevoke | Self::RunnerKeyRotate => "{key}",
             Self::ProjectKeyAuthFailed(_)
             | Self::UserKeyAuthFailed(_)
+            | Self::SessionAuthFailed(_)
             | Self::OAuthTokenAuthFailed(_) => "{auth_failure}",
             Self::OAuthGrantRevoke => "{grant}",
             Self::OAuthConsent(_) => "{consent}",
@@ -349,6 +352,7 @@ impl ApiCounter {
             Self::UserKeyRevoke => "user.key.revoke",
             Self::UserKeyRevokeBlocked => "user.key.revoke.blocked",
             Self::UserKeyAuthFailed(_) => "user.key.auth.failed",
+            Self::SessionAuthFailed(_) => "session.auth.failed",
             Self::OAuthGrantRevoke => "oauth.grant.revoke",
             Self::OAuthGrantBlocked => "oauth.grant.blocked",
             Self::OAuthTokenAuthFailed(_) => "oauth.token.auth.failed",
@@ -491,6 +495,9 @@ impl ApiCounter {
                 "Counts the number of user API key revocation attempts blocked because the caller authenticated with a different user API key"
             },
             Self::UserKeyAuthFailed(_) => "Counts the number of user key authentication failures",
+            Self::SessionAuthFailed(_) => {
+                "Counts the number of session cookie authentication failures"
+            },
             Self::OAuthGrantRevoke => "Counts the number of OAuth grant revocations by their user",
             Self::OAuthGrantBlocked => {
                 "Counts the number of OAuth grant management attempts blocked because the caller did not authenticate with a user session"
@@ -680,6 +687,7 @@ impl ApiCounter {
             },
             Self::ProjectKeyAuthFailed(reason) => vec![reason.into()],
             Self::UserKeyAuthFailed(reason) => vec![reason.into()],
+            Self::SessionAuthFailed(reason) => vec![reason.into()],
             Self::OAuthTokenAuthFailed(reason) => vec![reason.into()],
             Self::OAuthAuthorizeFailed(reason) => vec![reason.into()],
             Self::OAuthConsent(kind) => vec![kind.into()],
@@ -987,6 +995,37 @@ impl From<UserKeyAuthFailureReason> for opentelemetry::KeyValue {
 }
 
 impl UserKeyAuthFailureReason {
+    const KEY: &str = "reason";
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SessionAuthFailureReason {
+    Invalid,
+    NotFound,
+    Expired,
+    Locked,
+    CrossOrigin,
+}
+
+impl fmt::Display for SessionAuthFailureReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Invalid => write!(f, "invalid"),
+            Self::NotFound => write!(f, "not_found"),
+            Self::Expired => write!(f, "expired"),
+            Self::Locked => write!(f, "locked"),
+            Self::CrossOrigin => write!(f, "cross_origin"),
+        }
+    }
+}
+
+impl From<SessionAuthFailureReason> for opentelemetry::KeyValue {
+    fn from(reason: SessionAuthFailureReason) -> Self {
+        Self::new(SessionAuthFailureReason::KEY, reason.to_string())
+    }
+}
+
+impl SessionAuthFailureReason {
     const KEY: &str = "reason";
 }
 

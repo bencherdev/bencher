@@ -22,7 +22,7 @@ async fn organizations_list_requires_auth() {
         .await
         .expect("Request failed");
 
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // GET /v0/organizations - authenticated user sees their orgs

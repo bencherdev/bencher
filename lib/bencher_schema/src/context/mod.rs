@@ -33,6 +33,7 @@ mod oauth;
 #[cfg(feature = "plus")]
 mod rate_limiting;
 mod rbac;
+mod relay;
 #[cfg(feature = "plus")]
 mod runner_update;
 #[cfg(feature = "plus")]
@@ -57,6 +58,7 @@ pub use rate_limiting::{
     HeaderMap, OAuthCredential, RateLimiting, RateLimitingError, RateLimitingPruneTask,
 };
 pub use rbac::{Rbac, RbacError};
+pub use relay::Relay;
 #[cfg(feature = "plus")]
 pub use runner_update::RunnerUpdate;
 #[cfg(feature = "plus")]
@@ -71,6 +73,7 @@ pub struct ApiContext {
     pub rbac: Rbac,
     pub messenger: Messenger,
     pub database: Database,
+    pub relay: Relay,
     #[cfg(feature = "plus")]
     pub rate_limiting: Arc<RateLimiting>,
     /// Join handle for the periodic rate limiting prune, so shutdown can wait for an in-flight save
@@ -204,6 +207,16 @@ macro_rules! write_transaction {
 }
 
 impl ApiContext {
+    /// The reader's IP address, for every per-IP limit: as the relay forwards it on a relayed
+    /// request, and otherwise as the request's proxy headers name it.
+    #[cfg(feature = "plus")]
+    pub fn remote_ip(&self, log: &slog::Logger, headers: &HeaderMap) -> Option<std::net::IpAddr> {
+        let relayed = self
+            .relay
+            .is_relayed(headers.get(bencher_json::RELAY_SECRET));
+        RateLimiting::remote_ip(log, headers, relayed)
+    }
+
     #[cfg(feature = "plus")]
     pub fn biller(&self) -> Result<&Biller, HttpError> {
         self.biller.as_ref().ok_or_else(|| {

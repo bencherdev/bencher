@@ -182,9 +182,9 @@ async fn console_project_refuses_a_reader_who_is_not_signed_in() {
     let org = server.create_org(&owner, "Anon Org").await;
     let project = server.create_project(&owner, &org, "Anon Project").await;
 
-    // Like every endpoint that takes a bearer token, a missing one is a bad request.
+    // Like every endpoint that takes a credential, a missing one is unauthorized.
     let (status, _body) = get(&server, &project.slug, None).await;
-    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
 
 // The count is the active alerts the Alerts list counts, not every alert.

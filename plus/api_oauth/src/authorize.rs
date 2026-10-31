@@ -7,7 +7,7 @@ use bencher_json::{
     OAuthRedirectUri, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
 };
 use bencher_schema::{
-    context::{ApiContext, OAuthServer, RateLimiting},
+    context::{ApiContext, OAuthServer},
     error::issue_error,
     model::user::oauth_authorization::NewOAuthAuthorization,
     write_transaction,
@@ -76,7 +76,7 @@ pub async fn oauth_authorize_get(
 ) -> Result<Response<Body>, HttpError> {
     let context = rqctx.context();
     let oauth = oauth_server(context)?;
-    let remote_ip = RateLimiting::remote_ip(&rqctx.log, rqctx.request.headers());
+    let remote_ip = context.remote_ip(&rqctx.log, rqctx.request.headers());
     let query = rqctx.request.uri().query().unwrap_or_default();
     let location = match authorize(&rqctx.log, context, oauth, remote_ip, query).await {
         Ok(uuid) => {

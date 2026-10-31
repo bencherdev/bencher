@@ -13,7 +13,6 @@ plus = [
     "dep:bencher_rbac",
     "dep:bencher_token",
     "dep:chrono",
-    "dep:http",
     "dep:serde_json",
     "dep:serde_urlencoded",
     "bencher_endpoint/plus",
@@ -35,7 +34,7 @@ bencher_schema.workspace = true
 bencher_token = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 dropshot.workspace = true
-http = { workspace = true, optional = true }
+http.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, optional = true }
@@ -46,9 +45,9 @@ slog.workspace = true
 bencher_api_tests.workspace = true
 diesel.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema"] }
-http.workspace = true
+reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
 serde_json.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
 url.workspace = true
 
 [lints]
