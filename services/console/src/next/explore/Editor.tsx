@@ -27,6 +27,7 @@ import {
 	variantsQuery,
 } from "./queries";
 import { formatCount } from "../plot/count";
+import Tag from "../tag";
 
 const plural = (count: number, one: string, many: string) =>
 	`${formatCount(count)} ${count === 1 ? one : many}`;
@@ -324,8 +325,7 @@ const Sets = (props: {
 			>
 				{(set, index) => {
 					const row = () => rows()[index];
-					const tags = () => tagsOf(set());
-					const name = () => tags().join(" ");
+					const name = () => tagsOf(set()).join(" ");
 					const covering = () => {
 						const by = row()?.coveredBy;
 						return by === undefined ? undefined : props.query.sets[by];
@@ -342,8 +342,8 @@ const Sets = (props: {
 								classList={{ "ex-covered": covering() !== undefined }}
 							>
 								<span class="ex-tags">
-									<For each={tags()}>
-										{(text) => <span class="ex-tag">{text}</span>}
+									<For each={tagsOf(set())}>
+										{(text) => <Tag class="ex-tag" tag={text} tail reveal />}
 									</For>
 								</span>
 								<span

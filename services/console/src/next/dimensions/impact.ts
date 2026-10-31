@@ -6,24 +6,18 @@ export const archiveImpact = (thresholds: number | undefined) =>
 		? `Hides its lines and archives ${count(thresholds, "threshold")}`
 		: "Hides its lines";
 
-/** What archiving did, once it is done. */
-export const archivedNote = (name: string, thresholds: number | undefined) =>
-	thresholds
-		? `Archived ${name} and ${count(thresholds, "threshold")}`
-		: `Archived ${name}`;
+/** What archiving did, once it is done, beside the row that names it. */
+export const archivedNote = (thresholds: number | undefined) =>
+	thresholds ? `Archived with ${count(thresholds, "threshold")}` : "Archived";
 
 /**
  * What unarchiving did: `back` thresholds return with it, and `held` stay
  * archived because another of their dimensions is.
  */
-export const unarchivedNote = (
-	name: string,
-	back: number | undefined,
-	held: number,
-) => {
+export const unarchivedNote = (back: number | undefined, held: number) => {
 	const returned = back
-		? `Unarchived ${name} and ${count(back, "threshold")}`
-		: `Unarchived ${name}`;
+		? `Unarchived with ${count(back, "threshold")}`
+		: "Unarchived";
 	return held === 0
 		? returned
 		: `${returned} · ${count(held, "threshold")} still archived`;

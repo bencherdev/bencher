@@ -412,8 +412,7 @@
 .lr-better {
 	color: var(--color-better);
 }
-.lr-tag,
-.lr-ptag {
+.lr-tag {
 	display: inline-flex;
 	align-items: center;
 	max-width: 100%;
@@ -424,15 +423,6 @@
 	font: 500 11.5px var(--font-family-code);
 	color: var(--color-text-secondary);
 	white-space: nowrap;
-}
-.lr-ptag {
-	background: var(--color-background-blue);
-	color: var(--color-text-blue);
-}
-/* A parameter's key and value share its pill. */
-.lr-ptag.ui-parts {
-	display: inline-grid;
-	column-gap: 0;
 }
 /* A row's tags in one track beside its name, in order, each up to its own width; the track cuts the rest. */
 .lr-tags {

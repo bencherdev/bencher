@@ -4,7 +4,6 @@ import Icon from "@bencherdev/ui/Icon";
 
 /** Asked before leaving a pin with unsaved changes for another page. */
 const Leave = (props: {
-	title: string;
 	saving: boolean;
 	onStay: () => void;
 	onLeave: () => void;
@@ -32,9 +31,7 @@ const Leave = (props: {
 				<span class="ex-warn">
 					<Icon name="warning" />
 				</span>
-				<span>
-					<b>{props.title}</b> has unsaved changes
-				</span>
+				This pinned plot has unsaved changes
 			</p>
 		</div>
 		<div class="ui-dialog-foot">

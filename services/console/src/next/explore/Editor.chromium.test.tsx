@@ -1,5 +1,9 @@
+import "@bencherdev/ui/styles.css";
+import "../styles/console.css";
 import "./explore.css";
-import { createSignal } from "solid-js";
+import Chip from "@bencherdev/ui/Chip";
+import { type JSX, createSignal } from "solid-js";
+import { render as solidRender } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type { JsonConsolePerf } from "../../types/bencher";
@@ -250,7 +254,7 @@ test("the parameters box suggests every variant's tags, counted and most recent 
 		menu
 			.getByRole("menuitem")
 			.elements()
-			.map(({ firstChild }) => firstChild?.textContent),
+			.map((item) => item.querySelector(".ui-trunc")?.textContent),
 	).toEqual(["threads=1", "threads=4", "simd=sse", "simd=neon", "threads=8"]);
 });
 
@@ -349,3 +353,228 @@ test("on a version 0 project the parameters box is locked, and says why", async 
 	await open.click();
 	await expect.element(page.getByRole("menu")).toBeVisible();
 });
+
+/** A query at the caps: a 256 byte branch, a 64 byte testbed, a 1024 byte benchmark, and a set of a 64 byte key and value. */
+const LONG_PERF: JsonConsolePerf = {
+	...PERF,
+	branches: [
+		{
+			uuid: uuid(1),
+			name: `release/${"subsystem/".repeat(23)}very-long-leaf`,
+			slug: "b",
+			head: uuid(11),
+		},
+	],
+	testbeds: [{ uuid: uuid(3), name: "a".repeat(64), slug: "t" }],
+	benchmarks: [
+		{ uuid: uuid(5), name: `${"my_crate::".repeat(100)}bench_fn`, slug: "x" },
+	],
+};
+
+/** The width of Explore's 11.5 character floor in the font of `element`. */
+const floorIn = (element: Element) => {
+	const probe = document.createElement("span");
+	probe.style.cssText = `position: absolute; width: 11.5ch; font: ${getComputedStyle(element).font}`;
+	document.body.append(probe);
+	const width = probe.getBoundingClientRect().width;
+	probe.remove();
+	return width;
+};
+
+/** Asserts the editor's boxes per row in a container `panel` wide, each long value at least 11.5 characters, and a set's tags before its count or above it. */
+const expectRestack = async (
+	contain: (panel: number) => JSX.CSSProperties & { class?: string },
+	cases: readonly (readonly [number, number])[],
+) => {
+	const width = (box: Element) => box.getBoundingClientRect().width;
+	for (const [panel, perRow] of cases) {
+		const { class: name, ...style } = contain(panel);
+		const mounted = mount(
+			() => (
+				<section class={name} style={style}>
+					<Editor
+						query={{ ...QUERY, sets: [{ ["k".repeat(64)]: "v".repeat(64) }] }}
+						perf={LONG_PERF}
+						settled
+						onQuery={() => {}}
+					/>
+				</section>
+			),
+			{ api: reading(() => []).api },
+		);
+		try {
+			await document.fonts.ready;
+			const boxes = [...document.querySelectorAll(".ex-box")];
+			const top = boxes[0]?.getBoundingClientRect().top;
+			expect(
+				boxes.filter((box) => box.getBoundingClientRect().top === top),
+				`at ${panel}`,
+			).toHaveLength(perRow);
+			const values = [
+				...document.querySelectorAll(".ex-val > .ui-trunc"),
+			].filter((value) => (value.textContent?.length ?? 0) >= 64);
+			expect(values).toHaveLength(3);
+			for (const value of values) {
+				expect(width(value), `at ${panel}`).toBeGreaterThanOrEqual(
+					floorIn(value) - 0.5,
+				);
+			}
+			const tag = (
+				document.querySelector(".ex-set .ex-tag") as Element
+			).getBoundingClientRect();
+			const count = (
+				document.querySelector(".ex-set .ex-pc") as Element
+			).getBoundingClientRect();
+			expect(
+				tag.right <= count.left || tag.bottom <= count.top,
+				`at ${panel}`,
+			).toBe(true);
+		} finally {
+			mounted.dispose();
+		}
+	}
+};
+
+// Kills an editor that keeps six boxes to a row where a value falls under 11.5
+// characters, a restack a pixel late, and tags drawn over their count.
+test("the editor takes fewer boxes to a row before a value falls under 11.5 characters", async () => {
+	await page.viewport(1600, 900);
+	await expectRestack(
+		(panel) => ({ class: "ex-qp", width: `${panel + 2}px` }),
+		[
+			[370, 1],
+			[371, 2],
+			[560, 2],
+			[561, 3],
+			[1211, 3],
+			[1212, 6],
+		],
+	);
+});
+
+// Kills a set tag cut with no way to read it, and one whose pill keeps a
+// single line's height when its key opens.
+test("a long set tag opens its key in place and grows to hold it", async () => {
+	await page.viewport(390, 900);
+	render(
+		reading(() => []).api,
+		{ ...QUERY, sets: [{ ["k".repeat(64)]: "v".repeat(64) }] },
+		{ perf: LONG_PERF },
+	);
+	const parameters = page.getByRole("group", { name: "Parameters" });
+	const key = parameters.getByRole("button", {
+		name: "k".repeat(64),
+		exact: true,
+	});
+	await expect.element(key).toBeVisible();
+	const tag = () =>
+		(key.element().closest(".ex-tag") as HTMLElement).getBoundingClientRect();
+	const line = tag().height;
+	await key.click();
+	await expect.element(key).toHaveAttribute("aria-expanded", "true");
+	expect(tag().height).toBeGreaterThan(line);
+});
+
+// Kills a Query sheet whose restack leaves out a phone's 44 px remove controls.
+test("in the Query sheet on a phone the boxes restack before a value falls under 11.5 characters", async () => {
+	await page.viewport(700, 900);
+	await expectRestack(
+		(panel) => ({ "container-type": "inline-size", width: `${panel}px` }),
+		[
+			[370, 1],
+			[371, 2],
+			[560, 2],
+			[561, 3],
+		],
+	);
+});
+
+// Kills phone chips two to a row where a value falls under 11.5 characters,
+// and a restack a pixel late.
+test("the narrow chips take two to a row only while each value keeps 11.5 characters", async () => {
+	await page.viewport(700, 900);
+	const long = `${"my_crate::".repeat(20)}bench_fn`;
+	for (const [panel, perRow] of [
+		[418, 1],
+		[419, 2],
+	] as const) {
+		const root = document.createElement("div");
+		document.body.append(root);
+		const dispose = solidRender(
+			() => (
+				<section class="ex-qp" style={{ width: `${panel + 2}px` }}>
+					<div class="chips ex-chips">
+						{["branches", "testbeds", "benchmarks", "parameters"].map(
+							(label) => (
+								<Chip label={label}>{long}</Chip>
+							),
+						)}
+					</div>
+				</section>
+			),
+			root,
+		);
+		try {
+			await document.fonts.ready;
+			const chips = [...root.querySelectorAll(".ui-chip")];
+			const top = chips[0]?.getBoundingClientRect().top;
+			expect(
+				chips.filter((chip) => chip.getBoundingClientRect().top === top),
+				`at ${panel}`,
+			).toHaveLength(perRow);
+			for (const chip of chips) {
+				const value = chip.querySelector(".ui-trunc") as Element;
+				expect(
+					value.getBoundingClientRect().width,
+					`at ${panel}`,
+				).toBeGreaterThanOrEqual(floorIn(value) - 0.5);
+			}
+		} finally {
+			dispose();
+			root.remove();
+		}
+	}
+});
+
+// Kills search options that keep the start of a path and lose the end that
+// tells them apart, long units that squeeze the name to nothing, and a menu
+// that scrolls sideways.
+for (const width of [1280, 390] as const) {
+	test(`a search option keeps its name's end beside long units at ${width} px`, async () => {
+		await page.viewport(width, 900);
+		const name = (n: number) => `${"my_crate::".repeat(20)}latency_${n}`;
+		const { api } = reading(() => ({
+			measures: [
+				...[1, 2].map((n) => ({
+					uuid: uuid(40 + n),
+					name: name(n),
+					units: "u".repeat(64),
+				})),
+				{ uuid: uuid(43), name: "Latency", units: "ns" },
+			],
+		}));
+		render(api, { ...QUERY, measures: [] }, { perf: PERF });
+		await page.getByRole("button", { name: "Add measure" }).click();
+		const menu = page.getByRole("menu", { name: "Add measure" });
+		await expect.element(menu.getByRole("menuitem").nth(2)).toBeVisible();
+		await document.fonts.ready;
+		const [last, ...items] = menu.getByRole("menuitem").elements().reverse();
+		// A short name's units still end the option.
+		const short = last as HTMLElement;
+		expect(
+			(short.querySelector(".ex-n") as Element).getBoundingClientRect().right,
+		).toBeCloseTo(short.getBoundingClientRect().right - 12, 0);
+		for (const [n, item] of items.reverse().entries()) {
+			const [label, units] = [
+				...item.querySelectorAll(".ui-trunc"),
+			] as HTMLElement[];
+			await expect
+				.element(label as HTMLElement)
+				.toHaveAttribute("data-tail", `latency_${n + 1}`);
+			expect(units?.getBoundingClientRect().width).toBeGreaterThan(40);
+		}
+		const list = menu.element();
+		expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth);
+		expect(document.documentElement.scrollWidth).toBe(width);
+	});
+}

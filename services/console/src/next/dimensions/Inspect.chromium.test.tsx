@@ -240,7 +240,7 @@ test("a branch's page shows its start point, head, recent runs, and thresholds",
 	await expect
 		.element(page.getByRole("heading", { level: 1, name: "412/merge" }))
 		.toBeVisible();
-	await expect.element(page.getByText(/^from main/)).toBeInTheDocument();
+	await expect.element(page.getByText(/^from/)).toHaveTextContent("from main");
 	const head = page.getByRole("region", { name: "Head" });
 	await expect.element(head).toHaveTextContent(/version\s*9c1f2e4/);
 	await expect.element(head).toHaveTextContent(/main at 4e02c1d/);
@@ -271,17 +271,16 @@ test("a branch's page shows its start point, head, recent runs, and thresholds",
 	expectNameStartsWithText(run.element());
 	await expect
 		.element(recent.getByRole("row").nth(1))
-		.toHaveTextContent(/9c1f2e4\s*2\s*linux-x86-64\s*\+2\s*1 active/);
-	await expect
-		.element(recent.getByText("+2"))
-		.toHaveAttribute("title", "linux-x86-64, macos-arm64, and 1 more");
+		.toHaveTextContent(
+			/9c1f2e4\s*2\s*linux-x86-64, macos-arm64, and 1 more\s*1 active/,
+		);
 	expect(
 		reads
 			.filter(({ pathname }) => pathname.endsWith("/runs"))
 			.map(({ searchParams }) => searchParams.get("branch")),
 	).toEqual(["412-merge"]);
 	await expect
-		.element(page.getByRole("link", { name: "All runs on 412/merge" }))
+		.element(page.getByRole("link", { name: "All runs", exact: true }))
 		.toHaveAttribute(
 			"href",
 			"/console/projects/hashbrown/runs?branch=412-merge&window=all",
@@ -493,7 +492,7 @@ test("a testbed's page leads its spec with its name and slug and lists its recen
 		)
 		.toHaveAttribute("href", `/console/projects/hashbrown/runs/${RUN.uuid}`);
 	await expect
-		.element(page.getByRole("link", { name: "All runs on ubuntu-latest" }))
+		.element(page.getByRole("link", { name: "All runs", exact: true }))
 		.toHaveAttribute(
 			"href",
 			"/console/projects/hashbrown/runs?testbed=ubuntu-latest&window=all",
@@ -551,14 +550,14 @@ test("archiving from the page shows it at once, and a refusal puts it back", asy
 	await expect
 		.element(impact)
 		.toHaveTextContent("Hides its lines and archives 2 thresholds");
-	await impact.getByRole("button", { name: "Archive 412/merge" }).click();
+	await impact.getByRole("button", { name: "Archive", exact: true }).click();
 
 	await expect
 		.element(page.getByText("Archived", { exact: true }))
 		.toBeVisible();
 	await expect
 		.element(page.getByRole("status"))
-		.toHaveTextContent("Archived 412/merge and 2 thresholds");
+		.toHaveTextContent("Archived with 2 thresholds");
 	await expect
 		.element(page.getByRole("button", { name: "Unarchive" }))
 		.toBeVisible();
@@ -578,7 +577,7 @@ test("archiving from the page shows it at once, and a refusal puts it back", asy
 	refuse(new ApiError(503, "server", '{"message":"Busy"}'));
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not archive 412/merge: Busy");
+		.toHaveTextContent("Not archived: Busy");
 	await expect
 		.element(page.getByRole("button", { name: "Archive" }))
 		.toBeVisible();
@@ -613,7 +612,7 @@ test("an archived branch reads its archived thresholds and says which come back"
 	await expect
 		.element(page.getByRole("status"))
 		.toHaveTextContent(
-			"Unarchived 412/merge and 2 thresholds · 1 threshold still archived",
+			"Unarchived with 2 thresholds · 1 threshold still archived",
 		);
 });
 
@@ -704,7 +703,7 @@ const archivePage = async (name: string) => {
 	await page.getByRole("button", { name: "Archive", exact: true }).click();
 	await page
 		.getByRole("group", { name: `Archive ${name}` })
-		.getByRole("button", { name: `Archive ${name}` })
+		.getByRole("button", { name: "Archive", exact: true })
 		.click();
 };
 
@@ -726,7 +725,7 @@ test("a branch's page by its UUID shows what its row carries", async () => {
 	await expect
 		.element(page.getByRole("heading", { level: 1, name: "412/merge" }))
 		.toBeVisible();
-	await expect.element(page.getByText(/^from main/)).toBeInTheDocument();
+	await expect.element(page.getByText(/^from/)).toHaveTextContent("from main");
 	await expect
 		.element(page.getByRole("region", { name: "Head" }))
 		.toHaveTextContent(/version\s*9c1f2e4/);
@@ -750,7 +749,7 @@ test("the page paints once its row answers too", async () => {
 	await expect
 		.element(page.getByRole("heading", { level: 1, name: "412/merge" }))
 		.toBeVisible();
-	await expect.element(page.getByText(/^from main/)).toBeInTheDocument();
+	await expect.element(page.getByText(/^from/)).toHaveTextContent("from main");
 });
 
 // Kills a page that reads any failure as a missing branch.
@@ -827,7 +826,7 @@ test("a refused Undo on the page after the archive landed shows it archived agai
 	await page.getByRole("status").getByRole("button", { name: "Undo" }).click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not unarchive 412/merge: Busy");
+		.toHaveTextContent("Not unarchived: Busy");
 	await expect
 		.element(page.getByText("Archived", { exact: true }))
 		.toBeVisible();
@@ -898,7 +897,7 @@ test("a refused archive on the page puts the cached list back too", async () => 
 	await archivePage("412/merge");
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not archive 412/merge: Busy");
+		.toHaveTextContent("Not archived: Busy");
 	expect(listTotals(mounted.client)).toEqual({ active: 3, archived: 1 });
 	expect(
 		mounted.client.getQueryData<{ rows: { archived?: number }[] }>(LIST_KEY)
@@ -938,7 +937,7 @@ test("Cancel and Escape on the page's impact line give the focus back to Archive
 	]) {
 		await archive.click();
 		await expect
-			.poll(() => document.activeElement?.textContent)
+			.poll(() => document.activeElement?.closest("fieldset")?.ariaLabel)
 			.toBe("Archive 412/merge");
 		await close();
 		await expect
@@ -1142,7 +1141,7 @@ test("a refused variant Undo after the archive landed shows it archived again", 
 		.click();
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not unarchive the variant: Busy");
+		.toHaveTextContent("Not unarchived: Busy");
 	await expect
 		.element(variantRow("threads=4"))
 		.toHaveTextContent(/Archived just now/);
@@ -1159,7 +1158,7 @@ test("a refused variant archive puts the variant and its counts back", async () 
 	await archiveVariant("threads=4");
 	await expect
 		.element(page.getByRole("alert"))
-		.toHaveTextContent("Bencher did not archive the variant: Busy");
+		.toHaveTextContent("Not archived: Busy");
 	await expect
 		.element(
 			variantRow("threads=4").getByRole("button", {
@@ -1213,4 +1212,150 @@ test("a reader who cannot edit sees a benchmark's variants with no control", asy
 	expect(page.getByRole("button", { name: /Archive|Undo/ }).elements()).toEqual(
 		[],
 	);
+});
+
+/** The width of 16 characters in the font of `element`. */
+const floorIn = (element: Element) => {
+	const probe = document.createElement("span");
+	probe.style.cssText = `position: absolute; width: var(--size-name-min); font: ${getComputedStyle(element).font}`;
+	document.body.append(probe);
+	const width = probe.getBoundingClientRect().width;
+	probe.remove();
+	return width;
+};
+
+// Kills a long branch whose title, start point, slug, or recent run testbeds
+// push a phone's page sideways, wrap the title to lines, or cut with no way to
+// read the rest.
+test("a long branch keeps its page a phone's width, its title and start point on one line, each opening in place", async () => {
+	const long = { ...BRANCH, name: STRESS.branch, slug: STRESS.name };
+	const { api } = fakeApi((url) => {
+		const path = url.pathname;
+		if (path === "/v0/projects/hashbrown/branches/412-merge") {
+			return { data: long };
+		}
+		if (path === "/v0/console/projects/hashbrown/branches") {
+			return { data: { branches: [{ ...ROW, start_point: STRESS.branch }] } };
+		}
+		if (path === "/v0/projects/hashbrown/thresholds") {
+			return { data: [], total: 0 };
+		}
+		if (path === "/v0/console/projects/hashbrown/runs") {
+			return {
+				data: {
+					total: 1,
+					runs: [{ ...RUN, testbeds: [STRESS.name, STRESS.name] }],
+				},
+			};
+		}
+		return new ApiError(404, "not_found", "{}");
+	});
+	await page.viewport(320, 720);
+	dispose = mount(
+		() => <Inspect dimension="branches" entry="412-merge" edit={true} />,
+		{ api, path: "/hashbrown/branches/412-merge", bootstrap: bootstrapOf() },
+	).dispose;
+	const title = page.getByRole("heading", { level: 1 });
+	await expect.element(title).toBeVisible();
+	await expect.element(page.getByText(/^from/)).toBeVisible();
+	await expect
+		.element(page.getByRole("table", { name: "Recent runs" }))
+		.toBeVisible();
+	await document.fonts.ready;
+	expect(document.documentElement.scrollWidth).toBe(320);
+	const line = Number.parseFloat(getComputedStyle(title.element()).lineHeight);
+	expect(title.element().getBoundingClientRect().height).toBeLessThan(line * 2);
+	await expect
+		.element(title.element().querySelector(".ui-trunc") as HTMLElement)
+		.toHaveAttribute("data-tail", "very-long-leaf");
+	const from = page.getByText(/^from/).element();
+	expect(from.getBoundingClientRect().height).toBeLessThan(line);
+	const slug = page
+		.getByRole("region", { name: "Record" })
+		.getByText(STRESS.name);
+	expect(slug.element().getBoundingClientRect().right).toBeLessThanOrEqual(
+		page
+			.getByRole("region", { name: "Record" })
+			.element()
+			.getBoundingClientRect().right,
+	);
+	const testbeds = page
+		.getByRole("table", { name: "Recent runs" })
+		.getByRole("button", {
+			name: `${STRESS.name}, ${STRESS.name}, and 1 more`,
+		});
+	await testbeds.click();
+	await expect.element(testbeds).toHaveAttribute("aria-expanded", "true");
+	await title.getByRole("button").click();
+	expect(title.element().getBoundingClientRect().height).toBeGreaterThan(
+		line * 2,
+	);
+	expect(document.documentElement.scrollWidth).toBe(320);
+});
+
+// Kills a 64 byte parameter key that paints over its values, a value tag
+// that runs past its card, and a variant's cut tag with no way to read it.
+test("a long parameter key and value stay inside their tracks at 1280 and 320 px", async () => {
+	const key = "k".repeat(64);
+	const { api } = fakeApi((url) => {
+		if (url.pathname === "/v0/projects/hashbrown/benchmarks/blake3") {
+			return {
+				data: {
+					uuid: "blake3-uuid",
+					name: "blake3",
+					slug: "blake3",
+					created: "2026-09-12T10:00:00Z",
+				} as JsonBenchmark,
+			};
+		}
+		if (url.pathname.endsWith("/variants")) {
+			return {
+				data: [variant("one", { [key]: "v".repeat(64), threads: 1 })],
+				total: 1,
+			};
+		}
+		return new ApiError(404, "not_found", "{}");
+	});
+	for (const width of [1280, 320]) {
+		await page.viewport(width, 720);
+		dispose = mount(
+			() => <Inspect dimension="benchmarks" entry="blake3" edit={true} />,
+			{ api, path: "/hashbrown/benchmarks/blake3", bootstrap: bootstrapOf() },
+		).dispose;
+		const card = page.getByRole("region", { name: "Parameters in use" });
+		await expect.element(card.getByText("threads")).toBeVisible();
+		await document.fonts.ready;
+		const [param] = [...card.element().querySelectorAll(".dm-param")];
+		const [name, values] = [...(param?.children ?? [])] as HTMLElement[];
+		const tag = values?.querySelector(".dm-tag") as HTMLElement;
+		// The key's text ends inside its own track, ahead of the values.
+		expect(name?.scrollWidth).toBeLessThanOrEqual((name?.clientWidth ?? 0) + 1);
+		expect(name?.getBoundingClientRect().right).toBeLessThanOrEqual(
+			width === 320
+				? card.element().getBoundingClientRect().right
+				: (values?.getBoundingClientRect().left ?? 0),
+		);
+		expect(tag.getBoundingClientRect().right).toBeLessThanOrEqual(
+			card.element().getBoundingClientRect().right,
+		);
+		expect(tag.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+			Math.min(floorIn(tag), tag.scrollWidth) - 0.5,
+		);
+		expect(document.documentElement.scrollWidth).toBe(width);
+		if (width === 320) {
+			// A variant's cut tag opens its key in place and grows to hold it.
+			const variants = page.getByRole("table", { name: "Active variants" });
+			const reveal = variants.getByRole("button", { name: key, exact: true });
+			const pill = () =>
+				(
+					reveal.element().closest(".dm-tag") as HTMLElement
+				).getBoundingClientRect().height;
+			const line = pill();
+			await reveal.click();
+			await expect.element(reveal).toHaveAttribute("aria-expanded", "true");
+			expect(pill()).toBeGreaterThan(line);
+		}
+		dispose();
+		dispose = undefined;
+	}
 });

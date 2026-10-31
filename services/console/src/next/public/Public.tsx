@@ -4,6 +4,7 @@ import ButtonLink from "@bencherdev/ui/ButtonLink";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	For,
 	Index,
@@ -28,6 +29,7 @@ import { lineVisible, settleVisibility } from "../query/line";
 import { type ExploreQuery, encodeQuery } from "../query/query";
 import Tools from "../shell/Tools";
 import { formatCount } from "../plot/count";
+import Tag from "../tag";
 
 export type PlotView = typeof import("../plot/Plot").default;
 
@@ -151,7 +153,7 @@ const Plotted = (props: PublicProps) => {
 				<div class="pu-qhead">
 					<span class="eyebrow">Query</span>
 					{/* The names arrive with the plot, and a pill that grew would push the rest along. */}
-					<span class="pu-sum">
+					<span class="pu-sum ui-parts">
 						<Show when={!open()}>
 							<Show
 								when={
@@ -165,9 +167,10 @@ const Plotted = (props: PublicProps) => {
 									{([dimension, label]) => (
 										<span class="pu-pill">
 											<span class="pu-k">{label}</span>
-											<span class="ex-ellip">
-												{chipSummary(props.query, dimension, props.answer)}
-											</span>
+											<Truncate
+												text={chipSummary(props.query, dimension, props.answer)}
+												tail
+											/>
 										</span>
 									)}
 								</For>
@@ -319,7 +322,7 @@ const Boxes = (props: {
 										([key, value]) => `${key}=${String(value)}`,
 									)}
 								>
-									{(tag) => <span class="ex-tag">{tag}</span>}
+									{(tag) => <Tag class="ex-tag" tag={tag} tail reveal />}
 								</For>
 							</span>
 							<span class="ex-pc">
@@ -362,7 +365,7 @@ const Values = (props: { values: Value[]; twoLine?: boolean }) => (
 	<For each={props.values}>
 		{(value) => (
 			<div class="ex-val" classList={{ "ex-val2": props.twoLine }}>
-				<span class="ex-ellip">{value.label}</span>
+				<Truncate text={value.label} tail reveal />
 				<Show when={props.twoLine}>
 					<span class="ex-k">{value.detail}</span>
 				</Show>
