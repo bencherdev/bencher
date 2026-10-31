@@ -38,7 +38,7 @@ use crate::model::{
         series::count_active,
         testbed::{RunJob, RunTestbed},
     },
-    runner::{PendingInsertJob, SourceIp},
+    runner::{PendingInsertJob, SourceIp, check_minted_dispatch},
 };
 use crate::{
     actor_conn,
@@ -188,6 +188,16 @@ impl QueryReport {
         // Checked before the report creates anything, so a refused payload leaves nothing behind.
         let bmf_version = json_report.bmf_version.unwrap_or(query_project.bmf_version);
         check_report_thresholds_shape(bmf_version, json_report.thresholds.as_ref())?;
+        #[cfg(feature = "plus")]
+        if let Some(new_run_job) = &new_run_job {
+            check_minted_dispatch(
+                context,
+                query_project,
+                new_run_job.is_claimed,
+                new_run_job.run_job.callback.as_ref(),
+            )
+            .await?;
+        }
 
         #[cfg(all(feature = "plus", not(feature = "otel")))]
         let _ = is_claimed;

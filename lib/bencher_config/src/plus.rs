@@ -235,13 +235,8 @@ fn github(
 
 #[cfg(test)]
 mod tests {
-    use aws_lc_rs::{
-        encoding::{AsDer as _, Pkcs8V1Der},
-        rsa::{KeyPair, KeySize},
-    };
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use bencher_github_client::test_server::{app_key, install_crypto_provider};
     use bencher_json::system::config::{JsonGitHub, JsonGitHubApp};
-    use rustls::crypto::aws_lc_rs::default_provider;
 
     use super::{PlusError, github};
 
@@ -259,24 +254,14 @@ mod tests {
         }
     }
 
-    /// A fresh RSA private key, as a PKCS#8 PEM.
-    fn private_key() -> String {
-        let key_pair = KeyPair::generate(KeySize::Rsa2048).unwrap();
-        let der: Pkcs8V1Der<'static> = key_pair.as_der().unwrap();
-        format!(
-            "-----BEGIN PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
-            STANDARD.encode(der.as_ref())
-        )
-    }
-
     // Kills a config that never builds the app, that hands it any secret but the webhook secret,
     // or that drops a bad key's error.
     #[test]
     fn the_config_builds_the_app() {
-        // Another test in this process may have installed it already.
-        let _provider = default_provider().install_default();
+        install_crypto_provider();
+        let (private_key, _public_key) = app_key();
 
-        let (client, app) = github(Some(config(&private_key()))).unwrap();
+        let (client, app) = github(Some(config(private_key.as_ref()))).unwrap();
         let error = github(Some(config("not-a-key"))).unwrap_err();
 
         assert!(client.is_some());

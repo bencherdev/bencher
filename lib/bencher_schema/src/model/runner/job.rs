@@ -4,8 +4,8 @@ use bencher_callback::{CallbackKey, SealedRequest};
 use bencher_json::{
     BmfVersion, DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority,
     ReportUuid, Timeout,
-    project::report::JsonReportSettings,
-    runner::{JsonIterationOutput, JsonNewCallback, job::JsonNewRunJob},
+    project::{github::LinkedRepositoryStatus, report::JsonReportSettings},
+    runner::{GitHubDispatch, JsonIterationOutput, JsonNewCallback, job::JsonNewRunJob},
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -19,7 +19,7 @@ use slog::Logger;
 use crate::{
     auth_conn,
     context::{ApiContext, Callbacks, DbConnection},
-    error::{bad_request_error, issue_error, resource_not_found_err},
+    error::{bad_request_error, conflict_error, issue_error, resource_not_found_err},
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
         sql::last_insert_rowid,
@@ -28,6 +28,7 @@ use crate::{
         organization::{OrganizationId, plan::PlanKind},
         project::{
             ProjectId, QueryProject,
+            linked_repository::QueryLinkedRepository,
             report::{QueryReport, ReportId, warning::ReportWarnings},
         },
         runner::{InsertJobCallback, QueryJobCallbackView, QueryRunner, RunnerId, SourceIp},
@@ -544,6 +545,46 @@ impl PendingCallback {
     }
 }
 
+/// Refuse a run whose dispatch has no token of its own and could never get one minted.
+///
+/// That dispatch goes out only with a token that the server's GitHub App mints for the project's
+/// connected linked repository, so the refusal comes before the run creates anything or starts a
+/// check that only the dispatch can complete. An unclaimed project's callback is skipped instead.
+pub async fn check_minted_dispatch(
+    context: &ApiContext,
+    query_project: &QueryProject,
+    is_claimed: bool,
+    callback: Option<&JsonNewCallback>,
+) -> Result<(), HttpError> {
+    if !is_claimed
+        || callback.and_then(JsonNewCallback::github_dispatch) != Some(GitHubDispatch::Minted)
+    {
+        return Ok(());
+    }
+    if context.github_app.is_none() {
+        return Err(bad_request_error(NO_APP_TO_MINT));
+    }
+    let link = QueryLinkedRepository::get(auth_conn!(context), query_project.id)
+        .map_err(resource_not_found_err!(LinkedRepository, query_project))?;
+    let Some(link) = link else {
+        return Err(conflict_error(format!(
+            "Project ({slug}) has no linked GitHub repository, so Bencher cannot mint the token for this detached run's dispatch. {LINK_OR_TOKEN}",
+            slug = query_project.slug
+        )));
+    };
+    if link.status == LinkedRepositoryStatus::Disconnected {
+        return Err(conflict_error(format!(
+            "The GitHub repository ({full_name}) linked to project ({slug}) is disconnected, so Bencher cannot mint the token for this detached run's dispatch. {LINK_OR_TOKEN}",
+            full_name = link.full_name,
+            slug = query_project.slug
+        )));
+    }
+    Ok(())
+}
+
+const NO_APP_TO_MINT: &str = "This server has no GitHub App, so it cannot mint the token for this detached run's dispatch. Pass a fine-grained personal access token with contents write on the repository to `--ci-callback-token`.";
+const LINK_OR_TOKEN: &str = "Link the repository in the project's Settings, or pass a fine-grained personal access token with contents write on it to `--ci-callback-token`.";
+
 async fn resolve_digest(
     image: &bencher_json::ImageReference,
     project_uuid: &bencher_json::ProjectUuid,
@@ -932,13 +973,19 @@ mod tests {
 
     /// The GitHub Actions dispatch `bencher run` composes, but with `authorization` and `event_type`.
     fn dispatch(authorization: &str, event_type: &str) -> JsonNewCallback {
+        dispatch_with(Some(authorization), event_type)
+    }
+
+    fn dispatch_with(authorization: Option<&str>, event_type: &str) -> JsonNewCallback {
         JsonNewCallback::new(
             "https://api.github.com/repos/owner/repo/dispatches",
             [
-                ("Accept", "application/vnd.github+json"),
-                ("Authorization", authorization),
-                ("X-GitHub-Api-Version", "2022-11-28"),
+                Some(("Accept", "application/vnd.github+json")),
+                authorization.map(|authorization| ("Authorization", authorization)),
+                Some(("X-GitHub-Api-Version", "2022-11-28")),
             ]
+            .into_iter()
+            .flatten()
             .map(|(name, value)| (name.to_owned(), value.to_owned())),
             Some(serde_json::json!({
                 "event_type": event_type,
@@ -987,21 +1034,24 @@ mod tests {
         }
     }
 
+    // Kills a gate that admits only the dispatch with a token, so a tokenless one on a free
+    // plan would be skipped.
     #[test]
     fn an_unpaid_plan_seals_the_bencher_run_dispatch() {
         let key = callback_key();
         let job = JobUuid::new();
-        let dispatch = bencher_run_dispatch();
-        for plan_kind in unpaid_plans() {
-            let PendingCallback::Sealed(sealed) =
-                PendingCallback::new(&key, job, &plan_kind, true, &dispatch).unwrap()
-            else {
-                panic!("a claimed project seals the bencher_run dispatch on any plan");
-            };
-            assert_eq!(
-                key.open(job, &sealed).unwrap(),
-                serde_json::to_vec(&dispatch).unwrap()
-            );
+        for dispatch in [bencher_run_dispatch(), dispatch_with(None, "bencher_run")] {
+            for plan_kind in unpaid_plans() {
+                let PendingCallback::Sealed(sealed) =
+                    PendingCallback::new(&key, job, &plan_kind, true, &dispatch).unwrap()
+                else {
+                    panic!("a claimed project seals the bencher_run dispatch on any plan");
+                };
+                assert_eq!(
+                    key.open(job, &sealed).unwrap(),
+                    serde_json::to_vec(&dispatch).unwrap()
+                );
+            }
         }
     }
 
@@ -1017,6 +1067,10 @@ mod tests {
                 (
                     dispatch("Bearer token", "deploy"),
                     "a dispatch of another event",
+                ),
+                (
+                    dispatch_with(None, "deploy"),
+                    "a dispatch without a token of another event",
                 ),
             ] {
                 let pending = PendingCallback::new(

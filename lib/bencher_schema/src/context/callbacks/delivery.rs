@@ -4,12 +4,14 @@ use std::{sync::Arc, time::Duration};
 use bencher_callback::CallbackHost;
 use bencher_callback::{
     CallbackAttempt, CallbackBlock, CallbackCredential, CallbackFailure, CallbackFinish,
-    CallbackKey, CallbackRequest, CallbackSender, SealedRequest, error_chain,
+    CallbackKey, CallbackRequest, CallbackSender, RateLimit, SealedRequest, error_chain,
 };
+use bencher_github_client::{GitHubApiError, GitHubApp, GitHubAppError, GitHubInstallationToken};
 use bencher_json::{
     BENCHER_API_VERSION, CallbackContext, Clock, JobStatus, JobUuid, JsonNewCallback, JsonReport,
     OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName,
-    runner::{CALLBACK_JOB_STATUSES, JobCallbackState},
+    project::github::LinkedRepositoryReason,
+    runner::{CALLBACK_JOB_STATUSES, GitHubDispatch, JobCallbackState},
 };
 #[cfg(feature = "sentry")]
 use dashmap::{DashMap, Entry};
@@ -19,6 +21,7 @@ use diesel::{
     r2d2::{ConnectionManager, Pool, PooledConnection},
     result::QueryResult,
 };
+use http::HeaderMap;
 use http::StatusCode;
 use slog::Logger;
 use tokio::{
@@ -33,7 +36,11 @@ use super::governor::{Governor, rate_limit};
 use crate::{
     context::DbConnection,
     model::{
-        project::report::{QueryReport, ReportMode},
+        project::{
+            ProjectId,
+            linked_repository::QueryLinkedRepository,
+            report::{QueryReport, ReportMode},
+        },
         runner::{CallbackOutcome, JobId, QueryJobCallback},
     },
     schema,
@@ -54,6 +61,8 @@ pub(super) struct Delivery {
     sender: Arc<dyn CallbackSender>,
     shutdown: CancellationToken,
     clock: Clock,
+    /// Mints the token of a dispatch that goes out without its own.
+    github_app: Option<Arc<GitHubApp>>,
     report_builds: Semaphore,
     governor: Governor,
     #[cfg(feature = "sentry")]
@@ -65,6 +74,7 @@ struct Claim {
     job_id: JobId,
     job_uuid: JobUuid,
     organization: OrganizationUuid,
+    project_id: ProjectId,
     project: ProjectUuid,
     attempts: i32,
     claimed: Instant,
@@ -79,6 +89,12 @@ enum Unprepared {
     Parse,
     #[display("report")]
     Report,
+    /// A dispatch without a token, on a server that has no GitHub App to mint one.
+    #[display("app")]
+    NoApp,
+    /// A dispatch without a token, for a project with no connected linked repository.
+    #[display("link")]
+    NoLink,
     /// Shutdown cut the wait for a report build short, so the callback waits for the next start.
     #[display("shutdown")]
     Shutdown,
@@ -106,6 +122,7 @@ impl Unprepared {
         match self {
             Self::Open => Some(CallbackFailure::Open),
             Self::Parse | Self::Report => Some(CallbackFailure::Render),
+            Self::NoApp | Self::NoLink => Some(CallbackFailure::Unminted),
             Self::Shutdown => None,
         }
     }
@@ -119,6 +136,7 @@ impl Delivery {
         sender: Arc<dyn CallbackSender>,
         shutdown: CancellationToken,
         clock: Clock,
+        github_app: Option<Arc<GitHubApp>>,
     ) -> Self {
         Self {
             connection,
@@ -127,6 +145,7 @@ impl Delivery {
             sender,
             shutdown,
             clock,
+            github_app,
             report_builds: Semaphore::new(REPORT_BUILDS),
             governor: Governor::default(),
             #[cfg(feature = "sentry")]
@@ -146,14 +165,17 @@ impl Delivery {
             return;
         };
         match self.prepare(log, &claim, &sealed, &context, report).await {
-            Ok(request) => self.attempt(log, claim, &request).await,
-            Err(unprepared) => {
-                if let Some(failure) = unprepared.failure() {
-                    slog::warn!(log, "Callback request not sent"; "job" => %claim.job_uuid, "stage" => %unprepared);
-                    self.finish(log, &claim, CallbackFinish::Failed(failure))
-                        .await;
-                }
-            },
+            Ok(outgoing) => self.attempt(log, claim, outgoing).await,
+            Err(unprepared) => self.unsent(log, &claim, unprepared).await,
+        }
+    }
+
+    /// Settle a callback that no attempt sent, unless a later start can still send it.
+    async fn unsent(&self, log: &Logger, claim: &Claim, unprepared: Unprepared) {
+        if let Some(failure) = unprepared.failure() {
+            slog::warn!(log, "Callback request not sent"; "job" => %claim.job_uuid, "stage" => %unprepared);
+            self.finish(log, claim, CallbackFinish::Failed(failure))
+                .await;
         }
     }
 
@@ -181,6 +203,7 @@ impl Delivery {
                 schema::job::uuid,
                 schema::job::status,
                 QueryReport::as_select(),
+                schema::project::id,
                 schema::project::uuid,
                 schema::project::name,
                 schema::project::slug,
@@ -192,6 +215,7 @@ impl Delivery {
                 JobUuid,
                 JobStatus,
                 QueryReport,
+                ProjectId,
                 ProjectUuid,
                 ResourceName,
                 ProjectSlug,
@@ -204,6 +228,7 @@ impl Delivery {
             job_uuid,
             job_status,
             report,
+            project_id,
             project_uuid,
             project_name,
             project_slug,
@@ -220,6 +245,7 @@ impl Delivery {
             job_id,
             job_uuid,
             organization,
+            project_id,
             project: project_uuid,
             attempts,
             claimed,
@@ -242,7 +268,7 @@ impl Delivery {
         sealed: &SealedRequest,
         context: &CallbackContext,
         report: QueryReport,
-    ) -> Result<CallbackRequest, Unprepared> {
+    ) -> Result<Outgoing, Unprepared> {
         let Ok(opened) = self.key.open(claim.job_uuid, sealed) else {
             return Err(Unprepared::Open);
         };
@@ -250,8 +276,17 @@ impl Delivery {
         let Ok(callback) = serde_json::from_slice::<JsonNewCallback>(&opened) else {
             return Err(Unprepared::Parse);
         };
-        let Ok(headers) = callback.delivery_headers(BENCHER_API_VERSION) else {
-            return Err(Unprepared::Parse);
+        // A minted dispatch goes out with headers of its own, so it never builds the stored ones.
+        let route = if callback.github_dispatch() == Some(GitHubDispatch::Minted) {
+            let Some(app) = self.github_app.clone() else {
+                return Err(Unprepared::NoApp);
+            };
+            Route::Minted(app)
+        } else {
+            let Ok(headers) = callback.delivery_headers(BENCHER_API_VERSION) else {
+                return Err(Unprepared::Parse);
+            };
+            Route::Stored(headers)
         };
         let report = if callback.sends_report() {
             Some(self.report(log, claim.job_uuid, report).await?)
@@ -262,10 +297,13 @@ impl Delivery {
         let Ok(body) = callback.render(context, report.as_ref()) else {
             return Err(Unprepared::Report);
         };
-        Ok(CallbackRequest {
-            url: callback.url().clone(),
-            headers,
-            body,
+        Ok(match route {
+            Route::Stored(headers) => Outgoing::Stored(CallbackRequest {
+                url: callback.url().clone(),
+                headers,
+                body,
+            }),
+            Route::Minted(app) => Outgoing::Minted { app, body },
         })
     }
 
@@ -320,8 +358,7 @@ impl Delivery {
         }
     }
 
-    async fn attempt(&self, log: &Logger, mut claim: Claim, request: &CallbackRequest) {
-        let credential = CallbackCredential::of(request);
+    async fn attempt(&self, log: &Logger, mut claim: Claim, outgoing: Outgoing) {
         loop {
             let number = claim.attempts + 1;
             // A count at the limit, as a restart can find, never sends again.
@@ -343,6 +380,19 @@ impl Delivery {
             {
                 return;
             }
+            // A dispatch without a token goes to the project's link as it stands at each attempt.
+            let target = match &outgoing {
+                Outgoing::Stored(request) => Target::Stored(request),
+                Outgoing::Minted { app, body } => {
+                    let Some(link) = self.connected_link(log, &claim).await else {
+                        self.unsent(log, &claim, Unprepared::NoLink).await;
+                        return;
+                    };
+                    Target::Minted { app, link, body }
+                },
+            };
+            let credential = target.credential();
+            let host = target.host();
             let Some(Some(turn)) = self
                 .shutdown
                 .run_until_cancelled(self.governor.turn(&credential))
@@ -351,9 +401,9 @@ impl Delivery {
                 return;
             };
             let started = Instant::now();
-            let Some(attempt) = self
+            let Some((attempt, stage)) = self
                 .shutdown
-                .run_until_cancelled(self.sender.send(request))
+                .run_until_cancelled(self.send(log, &claim, target))
                 .await
             else {
                 return;
@@ -362,7 +412,7 @@ impl Delivery {
             log_attempt(
                 log,
                 &claim,
-                request,
+                Reached { host: &host, stage },
                 number,
                 &attempt,
                 started.elapsed(),
@@ -394,6 +444,139 @@ impl Delivery {
         }
     }
 
+    /// The project's connected link as it stands now, without which a dispatch with no token of
+    /// its own never goes out.
+    async fn connected_link(&self, log: &Logger, claim: &Claim) -> Option<QueryLinkedRepository> {
+        let link = QueryLinkedRepository::get_connected(
+            &mut *self.connection.lock().await,
+            claim.project_id,
+        );
+        link.unwrap_or_else(|e| {
+            slog::error!(log, "Failed to read a linked repository"; "job" => %claim.job_uuid, "error" => %e);
+            None
+        })
+    }
+
+    async fn send(
+        &self,
+        log: &Logger,
+        claim: &Claim,
+        target: Target<'_>,
+    ) -> (CallbackAttempt, Stage) {
+        match target {
+            Target::Stored(request) => (self.sender.send(request).await, Stage::Send),
+            Target::Minted { app, link, body } => self.dispatch(log, claim, app, link, body).await,
+        }
+    }
+
+    /// Mint a token for the linked repository, send the dispatch to that repository with it, and
+    /// keep the repository's current full name. The token is dropped with the request, sent or not.
+    async fn dispatch(
+        &self,
+        log: &Logger,
+        claim: &Claim,
+        app: &GitHubApp,
+        link: QueryLinkedRepository,
+        body: &str,
+    ) -> (CallbackAttempt, Stage) {
+        let (link, GitHubInstallationToken { token, full_name }) =
+            match self.mint(log, claim, app, link).await {
+                Ok(minted) => minted,
+                Err(unminted) => return unminted,
+            };
+        let Ok(headers) = GitHubDispatch::minted_headers(BENCHER_API_VERSION, &token) else {
+            return (CallbackAttempt::Unminted, Stage::Mint);
+        };
+        drop(token);
+        let request = CallbackRequest {
+            url: app.dispatch_url(&full_name),
+            headers,
+            body: body.to_owned(),
+        };
+        let attempt = self.sender.send(&request).await;
+        drop(request);
+        let written = link.write_full_name(&mut *self.connection.lock().await, &full_name);
+        if let Err(e) = written {
+            slog::error!(log, "Failed to write a linked repository's full name"; "job" => %claim.job_uuid, "error" => %e);
+        }
+        (attempt, Stage::Send)
+    }
+
+    /// Mint a token for the link. A refusal that says the repository left the installation looks
+    /// up the installation that holds it now: the link moves there and mints once more, or with
+    /// none, disconnects. A lookup that fails leaves the link as it is.
+    async fn mint(
+        &self,
+        log: &Logger,
+        claim: &Claim,
+        app: &GitHubApp,
+        link: QueryLinkedRepository,
+    ) -> Result<(QueryLinkedRepository, GitHubInstallationToken), (CallbackAttempt, Stage)> {
+        let now = self.clock.now();
+        let refusal = match app
+            .mint(now, link.installation_id, link.repository_id)
+            .await
+        {
+            Ok(token) => return Ok((link, token)),
+            Err(refusal) => refusal,
+        };
+        let Some(reason) = gone(&refusal) else {
+            return Err((refused(refusal), Stage::Mint));
+        };
+        let installation = match app.repository_installation(now, &link.full_name).await {
+            Ok(Some(installation)) => installation,
+            Ok(None) => {
+                self.disconnect(log, claim, &link, reason).await;
+                return Err((refused(refusal), Stage::Mint));
+            },
+            Err(lookup) => return Err((refused(lookup), Stage::Lookup)),
+        };
+        let moved = link.move_to(&mut *self.connection.lock().await, installation);
+        let link = match moved {
+            Ok(Some(moved)) => {
+                slog::info!(log, "Linked repository moved"; "job" => %claim.job_uuid, "project" => %claim.project, "installation" => %installation);
+                moved
+            },
+            // Replaced since, so it is no longer this link to mint for.
+            Ok(None) => return Err((refused(refusal), Stage::Mint)),
+            Err(e) => {
+                slog::error!(log, "Failed to move a linked repository"; "job" => %claim.job_uuid, "error" => %e);
+                return Err((refused(refusal), Stage::Mint));
+            },
+        };
+        match app
+            .mint(now, link.installation_id, link.repository_id)
+            .await
+        {
+            Ok(token) => Ok((link, token)),
+            Err(refusal) => {
+                if let Some(reason) = gone(&refusal) {
+                    self.disconnect(log, claim, &link, reason).await;
+                }
+                Err((refused(refusal), Stage::Mint))
+            },
+        }
+    }
+
+    async fn disconnect(
+        &self,
+        log: &Logger,
+        claim: &Claim,
+        link: &QueryLinkedRepository,
+        reason: LinkedRepositoryReason,
+    ) {
+        let disconnected = link.disconnect(&mut *self.connection.lock().await, reason);
+        match disconnected {
+            Ok(true) => {
+                slog::warn!(log, "Linked repository disconnected"; "job" => %claim.job_uuid, "project" => %claim.project, "reason" => ?reason);
+            },
+            Ok(false) => {},
+            Err(e) => {
+                slog::error!(log, "Failed to disconnect a linked repository"; "job" => %claim.job_uuid, "error" => %e);
+            },
+        }
+    }
+
     /// Settle the callback without an attempt.
     async fn finish(&self, log: &Logger, claim: &Claim, finish: CallbackFinish) {
         let finished = QueryJobCallback::finish(
@@ -421,6 +604,107 @@ impl Delivery {
                 project: claim.project,
             });
         }
+    }
+}
+
+/// A callback ready for its attempts.
+enum Outgoing {
+    /// Sent exactly as stored.
+    Stored(CallbackRequest),
+    /// A dispatch with no token of its own, which goes out only with a token minted for the
+    /// project's linked repository, to that repository.
+    Minted { app: Arc<GitHubApp>, body: String },
+}
+
+/// How a callback goes out: with its stored headers, or with a token the app mints.
+enum Route {
+    Stored(HeaderMap),
+    Minted(Arc<GitHubApp>),
+}
+
+/// Where one attempt goes.
+enum Target<'a> {
+    Stored(&'a CallbackRequest),
+    Minted {
+        app: &'a GitHubApp,
+        link: QueryLinkedRepository,
+        body: &'a str,
+    },
+}
+
+/// Where an attempt went, and how far it got.
+struct Reached<'a> {
+    host: &'a str,
+    stage: Stage,
+}
+
+/// What an attempt reached: the receiver, or the mint or the lookup before it.
+#[derive(Debug, Clone, Copy, derive_more::Display)]
+enum Stage {
+    #[display("send")]
+    Send,
+    #[display("mint")]
+    Mint,
+    #[display("lookup")]
+    Lookup,
+}
+
+impl Target<'_> {
+    /// A minted dispatch spends its installation's rate limit, whatever token each attempt mints.
+    fn credential(&self) -> CallbackCredential {
+        match self {
+            Self::Stored(request) => CallbackCredential::of(request),
+            Self::Minted { app, link, body: _ } => CallbackCredential::installation(
+                &app.dispatch_url(&link.full_name),
+                link.installation_id.into(),
+            ),
+        }
+    }
+
+    fn host(&self) -> String {
+        let url = match self {
+            Self::Stored(request) => request.url.clone(),
+            Self::Minted { app, link, body: _ } => app.dispatch_url(&link.full_name),
+        };
+        url.host_str().unwrap_or_default().to_owned()
+    }
+}
+
+/// Why a refused mint says the repository left the installation, if it says so.
+fn gone(refusal: &GitHubAppError) -> Option<LinkedRepositoryReason> {
+    if let GitHubAppError::Mint(GitHubApiError::NotFound) = refusal {
+        Some(LinkedRepositoryReason::Uninstalled)
+    } else if let GitHubAppError::Mint(GitHubApiError::RepositoryInaccessible) = refusal {
+        Some(LinkedRepositoryReason::Removed)
+    } else {
+        None
+    }
+}
+
+/// A failed mint or lookup as an attempt: GitHub's answer, as a refused send's would be, with its
+/// rate limit. No refusal holds the token, and a request error goes on without its URL.
+fn refused(failure: GitHubAppError) -> CallbackAttempt {
+    let (GitHubAppError::Mint(failure) | GitHubAppError::Installation(failure)) = failure else {
+        return CallbackAttempt::Unminted;
+    };
+    match failure {
+        GitHubApiError::NotFound => {
+            CallbackAttempt::Refused(StatusCode::NOT_FOUND, RateLimit::default())
+        },
+        GitHubApiError::RepositoryInaccessible | GitHubApiError::PermissionsNotGranted => {
+            CallbackAttempt::Refused(StatusCode::UNPROCESSABLE_ENTITY, RateLimit::default())
+        },
+        GitHubApiError::Status(status, headers) => {
+            CallbackAttempt::Refused(status, RateLimit::read(status, &headers))
+        },
+        GitHubApiError::Request(error) => {
+            if error.is_timeout() {
+                CallbackAttempt::TimedOut
+            } else {
+                CallbackAttempt::Connection(Arc::new(error.without_url()))
+            }
+        },
+        GitHubApiError::Json(_) | GitHubApiError::RepositoryName(_) => CallbackAttempt::Unminted,
     }
 }
 
@@ -519,6 +803,7 @@ fn verdict(attempt: &CallbackAttempt) -> Verdict {
         CallbackAttempt::Refused(..) => Verdict::Final(CallbackFailure::Refused),
         CallbackAttempt::TimedOut | CallbackAttempt::Connection(_) => Verdict::Retry,
         CallbackAttempt::Blocked(block) => Verdict::Final(CallbackFailure::Blocked(block.reason())),
+        CallbackAttempt::Unminted => Verdict::Final(CallbackFailure::Unminted),
     }
 }
 
@@ -532,7 +817,8 @@ fn response_status(attempt: &CallbackAttempt) -> Option<StatusCode> {
         CallbackAttempt::Delivered(status) | CallbackAttempt::Refused(status, _) => Some(*status),
         CallbackAttempt::TimedOut
         | CallbackAttempt::Connection(_)
-        | CallbackAttempt::Blocked(_) => None,
+        | CallbackAttempt::Blocked(_)
+        | CallbackAttempt::Unminted => None,
     }
 }
 
@@ -540,7 +826,7 @@ fn response_status(attempt: &CallbackAttempt) -> Option<StatusCode> {
 fn log_attempt(
     log: &Logger,
     claim: &Claim,
-    request: &CallbackRequest,
+    Reached { host, stage }: Reached<'_>,
     number: i32,
     attempt: &CallbackAttempt,
     duration: Duration,
@@ -554,13 +840,15 @@ fn log_attempt(
         CallbackAttempt::Delivered(_)
         | CallbackAttempt::Refused(..)
         | CallbackAttempt::TimedOut
-        | CallbackAttempt::Blocked(CallbackBlock::NotHttps) => (None, None),
+        | CallbackAttempt::Blocked(CallbackBlock::NotHttps)
+        | CallbackAttempt::Unminted => (None, None),
     };
     slog::info!(log, "Callback attempt";
         "job" => %claim.job_uuid,
         "organization" => %claim.organization,
         "project" => %claim.project,
-        "host" => request.url.host_str().unwrap_or_default(),
+        "host" => host,
+        "stage" => %stage,
         "attempt" => number,
         "outcome" => %attempt.class(),
         "status" => response_status(attempt).map(|status| status.as_u16()),

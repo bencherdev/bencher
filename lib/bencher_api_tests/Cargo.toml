@@ -11,7 +11,6 @@ default = ["plus", "sentry", "otel"]
 plus = [
     "dep:async-trait",
     "dep:aws-lc-rs",
-    "dep:base64",
     "bencher_api/plus",
     "bencher_callback/plus",
     "bencher_config/plus",
@@ -32,7 +31,6 @@ otel = ["bencher_api/otel"]
 [dependencies]
 async-trait = { workspace = true, optional = true }
 aws-lc-rs = { workspace = true, optional = true }
-base64 = { workspace = true, optional = true }
 bencher_api.workspace = true
 bencher_callback = { workspace = true, optional = true }
 bencher_config.workspace = true
