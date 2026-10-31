@@ -3,7 +3,7 @@ use bencher_billing::Biller;
 #[cfg(feature = "plus")]
 use bencher_callback::CallbackKey;
 #[cfg(feature = "plus")]
-use bencher_github_client::GitHubClient;
+use bencher_github_client::{GitHubApp, GitHubClient};
 #[cfg(feature = "plus")]
 use bencher_google_client::GoogleClient;
 #[cfg(feature = "plus")]
@@ -79,6 +79,8 @@ pub struct ApiContext {
     pub rate_limiting_prune: RateLimitingPruneTask,
     #[cfg(feature = "plus")]
     pub github_client: Option<GitHubClient>,
+    #[cfg(feature = "plus")]
+    pub github_app: Option<Arc<GitHubApp>>,
     #[cfg(feature = "plus")]
     pub google_client: Option<GoogleClient>,
     #[cfg(feature = "plus")]

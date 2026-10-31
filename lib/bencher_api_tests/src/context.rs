@@ -271,6 +271,7 @@ impl TestServer {
             // The test server never spawns the periodic prune, so the slot stays empty.
             rate_limiting_prune: bencher_schema::context::RateLimitingPruneTask::default(),
             github_client,
+            github_app: None,
             google_client,
             indexer: None,
             stats: bencher_schema::context::StatsSettings::default(),

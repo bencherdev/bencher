@@ -318,6 +318,7 @@ async fn into_context(
     #[cfg(feature = "plus")]
     let Plus {
         github_client,
+        github_app,
         google_client,
         stats,
         biller,
@@ -378,6 +379,8 @@ async fn into_context(
         rate_limiting_prune,
         #[cfg(feature = "plus")]
         github_client,
+        #[cfg(feature = "plus")]
+        github_app,
         #[cfg(feature = "plus")]
         google_client,
         #[cfg(feature = "plus")]

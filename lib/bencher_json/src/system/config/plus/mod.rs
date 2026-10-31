@@ -18,7 +18,7 @@ pub mod stats;
 
 pub use cloud::JsonCloud;
 pub use disaster_recovery::JsonDisasterRecovery;
-pub use github::JsonGitHub;
+pub use github::{JsonGitHub, JsonGitHubApp};
 pub use google::JsonGoogle;
 pub use mcp::JsonMcp;
 pub use oauth::{JsonOAuthServer, JsonOAuthServerClient};

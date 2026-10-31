@@ -929,6 +929,8 @@ dependencies = [
 name = "bencher_config"
 version = "0.6.15"
 dependencies = [
+ "aws-lc-rs",
+ "base64 0.23.1",
  "bencher_billing",
  "bencher_callback",
  "bencher_endpoint",
@@ -945,6 +947,7 @@ dependencies = [
  "diesel",
  "dropshot",
  "oso",
+ "rustls",
  "serde_json",
  "slog",
  "thiserror 2.0.21",
@@ -996,13 +999,19 @@ dependencies = [
 name = "bencher_github_client"
 version = "0.6.15"
 dependencies = [
+ "aws-lc-rs",
+ "base64 0.23.1",
  "bencher_valid",
+ "jsonwebtoken 11.1.0",
  "oauth2",
  "oauth2-reqwest",
  "octocrab",
  "reqwest",
+ "rustls",
  "serde",
+ "serde_json",
  "thiserror 2.0.21",
+ "tokio",
  "url",
 ]
 

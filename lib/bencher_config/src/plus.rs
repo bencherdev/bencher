@@ -1,13 +1,15 @@
 #![cfg(feature = "plus")]
 
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use bencher_billing::Biller;
-use bencher_github_client::GitHubClient;
+use bencher_github_client::{GitHubApp, GitHubClient};
 use bencher_google_client::GoogleClient;
 use bencher_json::{
     is_bencher_cloud,
-    system::config::{JsonCloud, JsonGitHub, JsonGoogle, JsonPlus, JsonRecaptcha, RegistryStorage},
+    system::config::{
+        JsonCloud, JsonGitHub, JsonGitHubApp, JsonGoogle, JsonPlus, JsonRecaptcha, RegistryStorage,
+    },
 };
 use bencher_license::Licensor;
 use bencher_oci_storage::OciStorage;
@@ -19,6 +21,7 @@ use url::Url;
 
 pub struct Plus {
     pub github_client: Option<GitHubClient>,
+    pub github_app: Option<Arc<GitHubApp>>,
     pub google_client: Option<GoogleClient>,
     pub indexer: Option<Indexer>,
     pub stats: StatsSettings,
@@ -35,6 +38,8 @@ pub enum PlusError {
     LicenseSelfHosted(bencher_license::LicenseError),
     #[error("Failed to handle Bencher Cloud licensing: {0}")]
     LicenseCloud(bencher_license::LicenseError),
+    #[error("Failed to set up the GitHub App: {0}")]
+    GitHubApp(bencher_github_client::GitHubAppError),
     #[error("Failed to create Google OAuth redirect URL: {0}")]
     RedirectUrl(url::ParseError),
     #[error("Tried to init Bencher Cloud for other Console URL: {0}")]
@@ -65,6 +70,7 @@ impl Plus {
             info!(log, "Using local filesystem registry storage");
             return Ok(Self {
                 github_client: None,
+                github_app: None,
                 google_client: None,
                 indexer: None,
                 stats: StatsSettings::default(),
@@ -114,12 +120,7 @@ impl Plus {
         )
         .map_err(PlusError::OciStorage)?;
 
-        let github_client = plus.github.map(
-            |JsonGitHub {
-                 client_id,
-                 client_secret,
-             }| GitHubClient::new(client_id, client_secret),
-        );
+        let (github_client, github_app) = github(plus.github)?;
 
         let google_client = plus
             .google
@@ -150,6 +151,7 @@ impl Plus {
         else {
             return Ok(Self {
                 github_client,
+                github_app,
                 google_client,
                 indexer: None,
                 stats,
@@ -181,6 +183,7 @@ impl Plus {
 
         Ok(Self {
             github_client,
+            github_app,
             google_client,
             indexer,
             stats,
@@ -198,5 +201,84 @@ fn default_registry_url(console_url: &Url) -> Url {
         bencher_json::BENCHER_REGISTRY_URL.clone()
     } else {
         bencher_json::LOCALHOST_BENCHER_REGISTRY_URL.clone()
+    }
+}
+
+fn github(
+    github: Option<JsonGitHub>,
+) -> Result<(Option<GitHubClient>, Option<Arc<GitHubApp>>), PlusError> {
+    let Some(JsonGitHub {
+        client_id,
+        client_secret,
+        app,
+    }) = github
+    else {
+        return Ok((None, None));
+    };
+    let github_app = app
+        .map(
+            |JsonGitHubApp {
+                 private_key,
+                 webhook_secret,
+             }| {
+                GitHubApp::new(client_id.clone(), &private_key, webhook_secret).map(Arc::new)
+            },
+        )
+        .transpose()
+        .map_err(PlusError::GitHubApp)?;
+    Ok((
+        Some(GitHubClient::new(client_id, client_secret)),
+        github_app,
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use aws_lc_rs::{
+        encoding::{AsDer as _, Pkcs8V1Der},
+        rsa::{KeyPair, KeySize},
+    };
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use bencher_json::system::config::{JsonGitHub, JsonGitHubApp};
+    use rustls::crypto::aws_lc_rs::default_provider;
+
+    use super::{PlusError, github};
+
+    const WEBHOOK_SECRET: &str = "webhook-secret-marker";
+
+    fn config(private_key: &str) -> JsonGitHub {
+        JsonGitHub {
+            client_id: "Iv1.0123456789abcdef".parse().unwrap(),
+            client_secret: "client-secret".parse().unwrap(),
+            app: Some(JsonGitHubApp {
+                private_key: private_key.parse().unwrap(),
+                webhook_secret: WEBHOOK_SECRET.parse().unwrap(),
+            }),
+        }
+    }
+
+    /// A fresh RSA private key, as a PKCS#8 PEM.
+    fn private_key() -> String {
+        let key_pair = KeyPair::generate(KeySize::Rsa2048).unwrap();
+        let der: Pkcs8V1Der<'static> = key_pair.as_der().unwrap();
+        format!(
+            "-----BEGIN PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----\n",
+            STANDARD.encode(der.as_ref())
+        )
+    }
+
+    // Kills a config that never builds the app, that hands it any secret but the webhook secret,
+    // or that drops a bad key's error.
+    #[test]
+    fn the_config_builds_the_app() {
+        // Another test in this process may have installed it already.
+        let _provider = default_provider().install_default();
+
+        let (client, app) = github(Some(config(&private_key()))).unwrap();
+        let error = github(Some(config("not-a-key"))).unwrap_err();
+
+        assert!(client.is_some());
+        assert_eq!(app.unwrap().webhook_secret().as_ref(), WEBHOOK_SECRET);
+        assert!(matches!(error, PlusError::GitHubApp(_)), "{error}");
     }
 }
