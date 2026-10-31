@@ -9,8 +9,14 @@ use crate::{
                 catch2::AdapterCppCatch2V1, catch2_text::AdapterCppCatch2Text,
                 catch2_xml::AdapterCppCatch2Xml, google::AdapterCppGoogleV1,
             },
+            dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::{AdapterGoBenchJson, AdapterGoBenchText, AdapterGoBenchV1},
             java::jmh::AdapterJavaJmhV1,
+            js::{
+                benchmark::AdapterJsBenchmarkV1,
+                time::AdapterJsTimeV1,
+                vitest::{AdapterJsVitestOutputJson, AdapterJsVitestReporter, AdapterJsVitestV1},
+            },
             rust::{
                 bench::{AdapterRustBenchJson, AdapterRustBenchText, AdapterRustBenchV1},
                 criterion::AdapterRustCriterionV1,
@@ -30,9 +36,11 @@ use crate::{
 
 pub mod c_sharp;
 pub mod cpp;
+pub mod dart;
 mod finite;
 pub mod go;
 pub mod java;
+pub mod js;
 mod leaf;
 mod magic;
 mod percentile;
@@ -68,6 +76,12 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::GoBenchText => AdapterGoBenchText::parse(input, settings),
         Adapter::JavaJmh => AdapterJavaJmhV1::parse(input, settings),
         Adapter::CSharpDotNet => AdapterCSharpDotNetV1::parse(input, settings),
+        Adapter::JsBenchmark => AdapterJsBenchmarkV1::parse(input, settings),
+        Adapter::JsTime => AdapterJsTimeV1::parse(input, settings),
+        Adapter::JsVitest => AdapterJsVitestV1::parse(input, settings),
+        Adapter::JsVitestV5 => AdapterJsVitestReporter::parse(input, settings),
+        Adapter::JsVitestV1 => AdapterJsVitestOutputJson::parse(input, settings),
+        Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarnessV1::parse(input, settings),
         Adapter::JsonV0
         | Adapter::Rust
         | Adapter::Cpp
@@ -75,9 +89,6 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         | Adapter::Java
         | Adapter::CSharp
         | Adapter::Js
-        | Adapter::JsBenchmark
-        | Adapter::JsTime
-        | Adapter::JsVitest
         | Adapter::Python
         | Adapter::PythonAsv
         | Adapter::PythonPytest
@@ -87,8 +98,7 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         | Adapter::ShellHyperfine
         | Adapter::ShellHyperfineV1
         | Adapter::ShellHyperfineV2
-        | Adapter::Dart
-        | Adapter::DartBenchmarkHarness => convert_v0(adapter, input, settings),
+        | Adapter::Dart => convert_v0(adapter, input, settings),
     }
 }
 
@@ -108,7 +118,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 43] = [
+    const ADAPTERS: [Adapter; 45] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -141,6 +151,8 @@ mod test_bmf_v1 {
         Adapter::JsBenchmark,
         Adapter::JsTime,
         Adapter::JsVitest,
+        Adapter::JsVitestV1,
+        Adapter::JsVitestV5,
         Adapter::Python,
         Adapter::PythonAsv,
         Adapter::PythonPytest,
@@ -249,6 +261,12 @@ mod test_bmf_v1 {
                 | Adapter::GoBenchText
                 | Adapter::JavaJmh
                 | Adapter::CSharpDotNet
+                | Adapter::JsBenchmark
+                | Adapter::JsTime
+                | Adapter::JsVitest
+                | Adapter::JsVitestV1
+                | Adapter::JsVitestV5
+                | Adapter::DartBenchmarkHarness
         )
     }
 

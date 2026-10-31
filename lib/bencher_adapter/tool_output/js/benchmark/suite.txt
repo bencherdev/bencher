@@ -1,0 +1,6 @@
+fib(10) x 3,624,585 ops/sec ±1.23% (96 runs sampled)
+fib(25) x 2,761 ops/sec ±0.21% (100 runs sampled)
+RegExp#test x 2 x 63,441,315 ops/sec ±1.68% (90 runs sampled)
+slow x 85.37 ops/sec ±0.00% (1 run sampled)
+throws: 
+Fastest is RegExp#test x 2,slow

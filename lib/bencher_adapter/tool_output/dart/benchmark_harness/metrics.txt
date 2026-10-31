@@ -1,0 +1,8 @@
+WithCustom(RunTime): 0.29072239785304416
+WithCustom(GC_Count): 12.0
+WithCustom(Heap Size): 3.5 MB
+WithCustom(AllocatedBytes): 4096.0 B
+WithCustom(Heap (MB)): 2.0
+Nanos(RunTime): 1234.5 ns
+Unmeasured(RunTime): NaN
+Unbounded(RunTime): Infinity

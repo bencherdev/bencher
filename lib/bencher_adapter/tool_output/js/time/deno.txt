@@ -1,0 +1,19 @@
+default: 0.859ms
+sum loop: 4.14ms
+ratio: a/b: 1504ms
+log: 0.041ms extra
+log: 0.386ms
+sleep 0: 4.85ms
+sleep 5: 6.13ms
+sleep 15: 16.1ms
+sleep 150: 151ms
+sleep 999: 1000ms
+sleep 1000: 1001ms
+sleep 9999: 9999ms
+sleep 12345: 12347ms
+sleep 61500: 62185ms
+sleep 600500: 600548ms
+sleep 3605000: 3605041ms
+loop: 0.807ms
+loop: 0.360ms
+loop: 0.776ms

@@ -1,0 +1,19 @@
+[1.16ms] default
+[1.91ms] sum loop
+[1.50s] ratio: a/b
+[0.00ms] log extra
+[0.21ms] log
+[1.24ms] sleep 0
+[5.07ms] sleep 5
+[15.07ms] sleep 15
+[150.23ms] sleep 150
+[1000.33ms] sleep 999
+[1000.86ms] sleep 1000
+[10.00s] sleep 9999
+[12.35s] sleep 12345
+[172.93s] sleep 61500
+[636.83s] sleep 600500
+[3619.05s] sleep 3605000
+[0.40ms] loop
+[0.14ms] loop
+[0.17ms] loop
