@@ -49,6 +49,8 @@ pub enum ProjKeysSort {
     /// Sort by key name.
     #[default]
     Name,
+    /// Sort by key creation date time.
+    Created,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -198,6 +200,16 @@ fn get_ls_query<'q>(
             Some(JsonDirection::Desc) => query.order((
                 schema::project_key::name.desc(),
                 schema::project_key::creation.desc(),
+            )),
+        },
+        ProjKeysSort::Created => match pagination_params.direction {
+            Some(JsonDirection::Asc) | None => query.order((
+                schema::project_key::creation.asc(),
+                schema::project_key::id.asc(),
+            )),
+            Some(JsonDirection::Desc) => query.order((
+                schema::project_key::creation.desc(),
+                schema::project_key::id.desc(),
             )),
         },
     }

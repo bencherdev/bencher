@@ -1787,3 +1787,58 @@ async fn setup_non_session() -> NonSession {
         ],
     }
 }
+
+// GET /v0/projects/{project}/keys?sort=created - oldest first, a page at a time
+#[tokio::test]
+async fn project_keys_sort_created() {
+    let server = TestServer::new().await;
+    let user = server.signup("Sort User", "keysort@example.com").await;
+    let org = server.create_org(&user, "Sort Org").await;
+    let project = server.create_project(&user, &org, "Sort Project").await;
+    let project_slug: &str = project.slug.as_ref();
+    for name in ["charlie", "alpha", "bravo"] {
+        let resp = server
+            .client
+            .post(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&serde_json::json!({ "name": name }))
+            .send()
+            .await
+            .expect("Failed to create project key");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    let names = |query: &'static str| {
+        let server = &server;
+        let token = &user.token;
+        async move {
+            let resp = server
+                .client
+                .get(server.api_url(&format!("/v0/projects/{}/keys?{}", project_slug, query)))
+                .header(
+                    bencher_json::AUTHORIZATION,
+                    bencher_json::bearer_header(token),
+                )
+                .send()
+                .await
+                .expect("Request failed");
+            assert_eq!(resp.status(), StatusCode::OK);
+            let keys: JsonProjectKeys = resp.json().await.expect("Failed to parse keys");
+            keys.0
+                .into_iter()
+                .map(|key| key.name.to_string())
+                .collect::<Vec<_>>()
+        }
+    };
+
+    assert_eq!(names("per_page=2").await, ["alpha", "bravo"]);
+    assert_eq!(names("sort=created&per_page=2").await, ["charlie", "alpha"]);
+    assert_eq!(names("sort=created&per_page=2&page=2").await, ["bravo"]);
+    assert_eq!(
+        names("sort=created&direction=desc").await,
+        ["bravo", "alpha", "charlie"]
+    );
+}
