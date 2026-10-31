@@ -60,7 +60,6 @@ jobs:
         if: steps.download_bench.outcome == 'success'
         env:
           BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
-          BENCHER_CALLBACK_TOKEN: ${{ secrets.BENCHER_CALLBACK_TOKEN }}
           GITHUB_EVENT_WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           bencher run \
@@ -78,5 +77,4 @@ jobs:
           --adapter rust_criterion \
           --detach \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --ci-callback-token "$BENCHER_CALLBACK_TOKEN" \
           --ci-number "$PR_NUMBER"
