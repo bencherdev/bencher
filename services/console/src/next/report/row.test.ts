@@ -21,6 +21,13 @@ describe("lineLabel", () => {
 		metric: "p99",
 	};
 
+	// Kills an empty value shown bare, which reads as no value.
+	test("tags an empty value as quotes", () => {
+		expect(lineLabel({ ...LINE, parameters: { env: "" } }, false).tags).toEqual(
+			['env=""'],
+		);
+	});
+
 	// Kills the object's own key order, which puts integer keys first by number.
 	test("tags every parameter in the API's key order", () => {
 		expect(lineLabel(LINE, false).tags).toEqual([

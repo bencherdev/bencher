@@ -1,4 +1,5 @@
 import type { Guard } from "../plot/format";
+import { parameterTag } from "../tag";
 
 export type ParameterSet = Readonly<Record<string, string | number | boolean>>;
 
@@ -24,8 +25,8 @@ export const lineLabel = (
 	},
 	manyMetrics: boolean,
 ) => {
-	const tags = parameterEntries(line.parameters).map(
-		([key, value]) => `${key}=${value}`,
+	const tags = parameterEntries(line.parameters).map(([key, value]) =>
+		parameterTag(key, value),
 	);
 	const metric = manyMetrics ? line.metric : null;
 	return {

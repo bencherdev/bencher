@@ -213,6 +213,30 @@ test("the parameters box suggests every variant's tags, counted and most recent 
 	).toEqual(["threads=1", "threads=4", "simd=sse", "simd=neon", "threads=8"]);
 });
 
+// Kills an empty value shown bare in a set and in a suggestion, which reads as no value.
+test("the parameters box shows an empty value as quotes", async () => {
+	const { api } = reading((path) =>
+		path.includes("/variants")
+			? [{ env: "" }, { env: "a" }].map((parameters, n) => ({
+					uuid: uuid(40 + n),
+					parameters,
+				}))
+			: [],
+	);
+	render(api, { ...QUERY, sets: [{ env: "a" }] }, { perf: PERF });
+	await expect
+		.element(page.getByRole("button", { name: "Remove set env=a" }))
+		.toBeVisible();
+	await page.getByRole("button", { name: "Add set" }).click();
+	await expect
+		.element(
+			page
+				.getByRole("menu", { name: "Add set" })
+				.getByRole("menuitem", { name: /^env=""/ }),
+		)
+		.toHaveTextContent("1 variant");
+});
+
 // Kills a set removed by keyboard taking focus with it to the page.
 test("removing a set by keyboard moves focus to the next set, then to Add", async () => {
 	render(reading(() => []).api, QUERY, { perf: PERF });

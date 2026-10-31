@@ -26,12 +26,13 @@ import {
 	searchQuery,
 	variantsQuery,
 } from "./queries";
+import { parameterTag } from "../tag";
 
 const plural = (count: number, one: string, many: string) =>
 	`${count} ${count === 1 ? one : many}`;
 
 const tag = ([key, value]: [string, ParameterValue]) =>
-	`${key}=${String(value)}`;
+	parameterTag(key, value);
 
 const tagsOf = (set: Parameters) => Object.entries(set).map(tag);
 

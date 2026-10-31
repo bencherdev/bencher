@@ -20,7 +20,7 @@ pub(super) fn insert_runs(
 }
 
 /// The mean, median, minimum, maximum, and sample standard deviation of two or more runs.
-fn statistics(mut values: Vec<f64>) -> Option<[(&'static str, f64); 5]> {
+pub(super) fn statistics(mut values: Vec<f64>) -> Option<[(&'static str, f64); 5]> {
     values.sort_by(f64::total_cmp);
     let count = f64::from(u32::try_from(values.len()).ok()?);
     let mean = values.iter().sum::<f64>() / count;

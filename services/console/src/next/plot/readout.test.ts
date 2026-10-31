@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { onlyIteration, withThrough } from "./iterations";
-import { clicked, readout, readoutLeft } from "./readout";
+import { clicked, fullName, readout, readoutLeft } from "./readout";
 import { DAY, START, testData, testLine } from "./testing";
 import type { PlotData } from "./types";
 
@@ -369,5 +369,14 @@ describe("clicked", () => {
 			...point(1, 1),
 			pinned: false,
 		});
+	});
+});
+
+describe("fullName", () => {
+	// Kills an empty value shown bare in a line's name, which reads as no value.
+	test("names an empty value as quotes", () => {
+		expect(fullName("bench", { env: "" }, "Latency", "value")).toBe(
+			'bench env="" Latency',
+		);
 	});
 });

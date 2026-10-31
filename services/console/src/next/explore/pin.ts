@@ -1,4 +1,5 @@
 import type { ParameterValue, Parameters, QueryWindow } from "../query/query";
+import { parameterTag } from "../tag";
 
 /** A pinned line, named as a reader sees it. */
 export interface PinTitleLine {
@@ -32,7 +33,7 @@ export const defaultPinTitle = (lines: readonly PinTitleLine[]): string => {
 				lines.every((line) => line.parameters[key] === value) &&
 				varying.some((keys) => keys.has(key)),
 		)
-		.map(([key, value]) => `${key}=${String(value)}`);
+		.map(([key, value]) => parameterTag(key, value));
 	const named = (name: (line: PinTitleLine) => string | undefined) =>
 		listed([...new Set(lines.flatMap((line) => name(line) ?? []))]);
 	const head = [named(({ benchmark }) => benchmark), ...tags].join(" ");

@@ -369,10 +369,11 @@ const readParameters = (text: string): Parameters[] => {
 		: [];
 };
 
+// Unlike a key, a string value may be empty: set to nothing is not unset.
 const isScalar = (value: unknown): value is ParameterValue =>
 	typeof value === "boolean" ||
 	(typeof value === "number" && Number.isFinite(value)) ||
-	(typeof value === "string" && isName(value));
+	(typeof value === "string" && (value === "" || isName(value)));
 
 const encoder = new TextEncoder();
 

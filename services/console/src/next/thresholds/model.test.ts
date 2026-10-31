@@ -96,6 +96,11 @@ describe("filterSets", () => {
 		]);
 	});
 
+	// Kills an empty value shown bare, which reads as no value.
+	test("tags an empty value as quotes", () => {
+		expect(filterSets([{ env: "" }])).toEqual([['env=""']]);
+	});
+
 	// Kills an absent filter read as a filter that matches nothing.
 	test("has no sets when the threshold checks every variant", () => {
 		expect(filterSets(undefined)).toEqual([]);

@@ -12629,6 +12629,8 @@
           "js_vitest_v5",
           "python",
           "python_asv",
+          "python_asv_json",
+          "python_asv_text",
           "python_pytest",
           "ruby",
           "ruby_benchmark",
@@ -20608,7 +20610,6 @@
             "anyOf": [
               {
                 "type": "string",
-                "minLength": 1,
                 "maxLength": 64
               },
               {
@@ -20630,7 +20631,6 @@
           "anyOf": [
             {
               "type": "string",
-              "minLength": 1,
               "maxLength": 64
             },
             {
