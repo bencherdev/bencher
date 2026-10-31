@@ -5,6 +5,7 @@ import Dialog from "@bencherdev/ui/Dialog";
 import Icon from "@bencherdev/ui/Icon";
 import Segmented from "@bencherdev/ui/Segmented";
 import TextArea from "@bencherdev/ui/TextArea";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	For,
 	Show,
@@ -190,7 +191,7 @@ const FeedbackDialog = (props: {
 						{(file) => (
 							<div class="fb-attach">
 								<span>
-									{file().name}, {sizeOf(file().size)}
+									<Truncate text={file().name} reveal />, {sizeOf(file().size)}
 								</span>
 								<Button
 									variant="ghost"

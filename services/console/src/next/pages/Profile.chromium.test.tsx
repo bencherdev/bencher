@@ -135,6 +135,27 @@ const textbox = (name: string) => page.getByRole("textbox", { name });
 const save = () => page.getByRole("button", { name: "Save changes" });
 const legacyLink = () => page.getByRole("link", { name: /legacy token/ });
 
+// Kills account sections cut off a 320 px phone, and sections that stack
+// where four fit on one row.
+test.each([
+	[320, 2],
+	[390, 1],
+])("at %i px the four sections fit, on %i rows", async (width, rows) => {
+	await page.viewport(width, 844);
+	mount(userApi(0).api);
+	const sections = page.getByRole("navigation", { name: "Account sections" });
+	await expect.element(sections).toBeVisible();
+
+	const box = sections.element() as HTMLElement;
+	expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth);
+	const tops = new Set(
+		[...box.querySelectorAll("a")].map((link) =>
+			Math.round(link.getBoundingClientRect().top),
+		),
+	);
+	expect(tops.size).toBe(rows);
+});
+
 describe("the form", () => {
 	// Kills a save sent anywhere but the user's update with only what changed,
 	// a form left dirty after the API accepts, and a Saved that never shows.
@@ -300,7 +321,7 @@ describe("legacy tokens", () => {
 
 		await expect
 			.element(page.getByRole("status"))
-			.toHaveTextContent("Confirm link sent to muriel@courage.example");
+			.toHaveTextContent("Confirm link sent");
 		expect(sent.map(({ body }) => body)).toEqual([
 			{ email: "muriel@courage.example" },
 		]);
@@ -357,7 +378,7 @@ describe("legacy tokens", () => {
 
 		await expect
 			.element(page.getByRole("status"))
-			.toHaveTextContent("Confirm link sent to muriel@courage.example");
+			.toHaveTextContent("Confirm link sent");
 		await expect
 			.element(page.getByRole("status"))
 			.not.toHaveTextContent("Saved");
@@ -453,7 +474,7 @@ describe("legacy tokens", () => {
 		await page.getByRole("button", { name: "Change email" }).click();
 		await expect
 			.element(page.getByRole("status"))
-			.toHaveTextContent("Confirm link sent to muriel@courage.example");
+			.toHaveTextContent("Confirm link sent");
 		expect(sent[1]?.body).toEqual({ email: "muriel@courage.example" });
 		expect(signedOut).toBe(0);
 	});

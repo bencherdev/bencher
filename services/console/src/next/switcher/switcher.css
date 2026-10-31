@@ -12,6 +12,7 @@
 	overflow: hidden;
 }
 .sw {
+	container-type: inline-size;
 	top: calc(100% + 6px);
 	left: -8px;
 	width: min(620px, calc(100vw - 202px));
@@ -104,10 +105,23 @@
 	white-space: nowrap;
 }
 .sw-title > span:first-child,
-.sw-org {
+.sw-org,
+.sw-marked > span {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+.sw-marked {
+	display: flex;
+}
+/* The visible parts copy as nothing, so a selection copies the name once. */
+.sw-marked > [aria-hidden] {
+	user-select: none;
+}
+/* An ellipsis narrower than the match, so the cut text before it always shows. */
+.sw-marked > [aria-hidden] + [aria-hidden] {
+	flex: none;
+	max-width: calc(100% - 1em);
 }
 .sw-org {
 	color: var(--color-text-muted);
@@ -182,6 +196,33 @@
 .sw-foot .ui-icon {
 	color: var(--color-text-muted);
 	font-size: 15px;
+}
+
+/* Below this width the name's track would fall under the name floor, so the
+   last run and the alerts move under the name, beside the organization. */
+@container (width < 468px) {
+	.console a.sw-row {
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		grid-template-areas:
+			"title title title"
+			"run org alerts";
+		row-gap: 0;
+	}
+	.sw-name {
+		display: contents;
+	}
+	.sw-title {
+		grid-area: title;
+	}
+	.sw-org {
+		grid-area: org;
+	}
+	.sw-run {
+		grid-area: run;
+	}
+	.sw-alerts {
+		grid-area: alerts;
+	}
 }
 
 /* On a phone it fills a sheet rather than floating under the crumb. */

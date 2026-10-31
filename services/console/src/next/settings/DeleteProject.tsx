@@ -2,6 +2,7 @@ import Button from "@bencherdev/ui/Button";
 import Dialog from "@bencherdev/ui/Dialog";
 import Icon from "@bencherdev/ui/Icon";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useNavigate } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { Show, createSignal, useContext } from "solid-js";
@@ -119,7 +120,13 @@ const DeleteProject = (props: {
 				<Show when={failed()}>
 					{(failure) => (
 						<p class="ferror" role="alert">
-							{failureOf(failure().error, "Bencher did not delete the project")}
+							<Truncate
+								text={failureOf(
+									failure().error,
+									"Bencher did not delete the project",
+								)}
+								reveal
+							/>
 						</p>
 					)}
 				</Show>

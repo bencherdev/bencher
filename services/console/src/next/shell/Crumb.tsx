@@ -1,4 +1,5 @@
 import Icon from "@bencherdev/ui/Icon";
+import Truncate from "@bencherdev/ui/Truncate";
 import { QueryClientContext } from "@tanstack/solid-query";
 import { Show, createSignal, useContext } from "solid-js";
 import { useApi } from "../project";
@@ -60,39 +61,41 @@ const Crumb = (props: {
 						.catch(() => {});
 				}}
 			>
-				<Show
-					when={props.organization}
-					fallback={
-						<span
-							class="ui-skeleton crumb-skel"
-							data-size="text"
-							data-shell="org"
-							aria-hidden="true"
-						/>
-					}
-				>
-					{(organization) => (
-						<span
-							class={props.project ? undefined : "crumb-project"}
-							data-shell="org"
-						>
-							{organization().name}
-						</span>
-					)}
-				</Show>
-				<Show when={props.project}>
-					{(project) => (
-						<>
-							{" "}
-							<span class="sep" aria-hidden="true">
-								/
-							</span>{" "}
-							<span class="crumb-project" data-shell="project">
-								{project()}
+				<span class="ui-parts">
+					<Show
+						when={props.organization}
+						fallback={
+							<span
+								class="ui-skeleton crumb-skel"
+								data-size="text"
+								data-shell="org"
+								aria-hidden="true"
+							/>
+						}
+					>
+						{(organization) => (
+							<span
+								class={props.project ? undefined : "crumb-project"}
+								data-shell="org"
+							>
+								<Truncate text={organization().name} tail />
 							</span>
-						</>
-					)}
-				</Show>
+						)}
+					</Show>
+					<Show when={props.project}>
+						{(project) => (
+							<>
+								{" "}
+								<span class="sep" aria-hidden="true" data-fixed>
+									/
+								</span>{" "}
+								<span class="crumb-project" data-shell="project">
+									<Truncate text={project()} tail />
+								</span>
+							</>
+						)}
+					</Show>
+				</span>
 				<Icon name="chevron-down" />
 			</button>
 			<Show when={open() && props.reader ? view() : undefined}>

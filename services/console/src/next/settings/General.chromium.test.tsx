@@ -339,6 +339,30 @@ describe("visibility", () => {
 		await expect.element(refusal).toHaveTextContent("Bad visibility");
 		expect(refusal.getByRole("link").elements()).toHaveLength(0);
 	});
+
+	// Kills a long refusal that scrolls the dialog sideways or wraps down it.
+	test("a long refusal holds one line in the dialog at 320 px", async () => {
+		await page.viewport(320, 700);
+		const { api } = fakeApi(async () => {
+			throw new ApiError(
+				400,
+				"client",
+				JSON.stringify({ message: `Bad ${"visibility".repeat(30)}` }),
+			);
+		});
+		dispose = mount(() => <General />, { api }).dispose;
+
+		await opener().click();
+		await page.getByRole("button", { name: "Make private" }).click();
+		const refusal = page.getByRole("alertdialog").getByRole("alert");
+		await expect.element(refusal).toHaveTextContent(/^Bencher did not/);
+		const body = refusal.element().closest(".ui-dialog-body") as HTMLElement;
+		expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth);
+		const text = refusal.element().querySelector("span") as HTMLElement;
+		expect(text.getBoundingClientRect().height).toBeLessThan(
+			Number.parseFloat(getComputedStyle(text).lineHeight) * 1.5,
+		);
+	});
 });
 
 describe("focus", () => {
