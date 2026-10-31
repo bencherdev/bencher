@@ -322,7 +322,6 @@ jobs:
     secrets:
       TEST_BILLING_KEY: ${{ secrets.TEST_BILLING_KEY }}
       BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
-      BENCHER_CALLBACK_TOKEN: ${{ secrets.BENCHER_CALLBACK_TOKEN }}
 
   console_e2e:
     name: Console E2E

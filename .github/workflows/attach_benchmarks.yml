@@ -1,7 +1,7 @@
 name: Attach Benchmarks
 
 on:
-  # Bencher sends this event when a job submitted with `bencher run --detach --ci-callback-token` finishes.
+  # Bencher sends this event to the project's linked repository when a job submitted with `bencher run --detach --github-actions` finishes.
   repository_dispatch:
     types: [bencher_run]
 
