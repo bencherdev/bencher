@@ -1,0 +1,15 @@
+---
+export const prerender = false;
+
+import AccountPage from "../../next/astro/AccountPage.astro";
+import GitHubReturn from "../../next/astro/GitHubReturn.astro";
+
+// GitHub sends the reader here with a code in the URL, which no referrer or
+// cache may keep.
+Astro.response.headers.set("Referrer-Policy", "no-referrer");
+Astro.response.headers.set("Cache-Control", "no-store");
+---
+
+<AccountPage>
+	<GitHubReturn slot="head" />
+</AccountPage>

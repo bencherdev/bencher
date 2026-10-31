@@ -1,0 +1,12 @@
+---
+import { RETURN_KEY } from "./githubReturn";
+
+// Runs first, for every reader: the sign-in guard and every sign out build
+// their way back from the URL, so GitHub's code and state leave it at once.
+---
+
+<script is:inline define:vars={{ RETURN_KEY }}>
+	const query = new URLSearchParams(location.search);
+	window[RETURN_KEY] = { code: query.get("code"), state: query.get("state") };
+	history.replaceState(history.state, "", location.pathname + location.hash);
+</script>

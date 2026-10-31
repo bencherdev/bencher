@@ -25,6 +25,7 @@ import "../feedback/feedback.css";
 import "../switcher/switcher.css";
 
 const page = accountPage(Astro.url.pathname);
+// The `head` slot holds a page's own inline step, which runs before the sign-in guard.
 ---
 
 <!doctype html>
@@ -34,6 +35,7 @@ const page = accountPage(Astro.url.pathname);
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>{page?.title ?? "Account"} | Bencher</title>
 		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+		<slot name="head" />
 		<NextHead />
 		<Head />
 		{modulePreloads(page?.page ?? "NotFound").map((href) => <link rel="modulepreload" href={href} />)}

@@ -22,8 +22,10 @@ import { sectionOf } from "../settings/section";
 // A static import would leave the account's key pages, which load this chunk,
 // reading NotFound through a namespace whose helper sits in a classic chunk.
 const NotFound = lazy(() => import("./NotFound"));
+const connections = () => import("../settings/Connections");
+const Connections = lazy(connections);
 
-/** General and Keys, with Dimensions beside them in the rail. */
+/** General, Keys, and Connections, with Dimensions beside them in the rail. */
 const Settings = () => {
 	const location = useLocation();
 	const { api, slug } = useProject();
@@ -33,14 +35,18 @@ const Settings = () => {
 	);
 	// A section paints once the shell's answer says what the reader may do.
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
-	// The key lists start beside the shell's request, not a round after it.
+	// The key lists and the GitHub link start beside the shell's request, not a round after it.
 	createComputed(() => {
-		if (
-			section() === "keys" &&
-			bootstrap().data?.permissions.manage !== false
-		) {
+		if (bootstrap().data?.permissions.manage === false) {
+			return;
+		}
+		if (section() === "keys") {
 			client.prefetchQuery(keysQuery(api, projectKeys(slug()), false));
 			client.prefetchQuery(keysQuery(api, projectKeys(slug()), true));
+		} else if (section() === "connections") {
+			connections()
+				.then(({ prefetch }) => prefetch(client, api, slug()))
+				.catch(() => {});
 		}
 	});
 	return (
@@ -56,6 +62,11 @@ const Settings = () => {
 						<Keys />
 					</Frame>
 				</Match>
+				<Match when={section() === "connections"}>
+					<Frame slug={slug()} section="connections">
+						<Connections />
+					</Frame>
+				</Match>
 			</Switch>
 		</Show>
 	);
@@ -63,7 +74,7 @@ const Settings = () => {
 
 export default Settings;
 
-// The account's key pages load this chunk rather than split it.
+// The account's key pages, the GitHub return page, and Connections load this chunk rather than split it.
 export { keysKey, keysQuery, revokeKey } from "../settings/data";
 export { failureOf } from "../settings/failure";
 export { KeyTable, default as KeyList, Revoke } from "../settings/KeyList";

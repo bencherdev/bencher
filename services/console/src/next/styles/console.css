@@ -621,6 +621,9 @@
 .danger-row p {
 	margin: 2px 0 0;
 }
+.repolist {
+	padding: 0;
+}
 .muted {
 	color: var(--color-text-muted);
 }
