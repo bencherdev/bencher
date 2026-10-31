@@ -86,7 +86,7 @@ const Organizations = (props: {
 				}
 			>
 				{(list) => (
-					<Table fold aria-label="Your organizations">
+					<Table fold={404} aria-label="Your organizations">
 						<thead>
 							<tr>
 								<th scope="col">Organization</th>
@@ -102,7 +102,7 @@ const Organizations = (props: {
 							<For each={list()}>
 								{(organization) => (
 									<tr class="rowlink">
-										<td data-fold="l1">
+										<td data-fold="l1" class="ui-table-name">
 											<span class="ui-parts">
 												<a
 													class="namelink rowlink-name"

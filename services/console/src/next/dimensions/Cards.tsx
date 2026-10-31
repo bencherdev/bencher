@@ -173,7 +173,7 @@ const RecentRuns = (props: {
 						when={runs().length > 0}
 						fallback={<p class="dm-none">No runs</p>}
 					>
-						<Table fold class="dm-inner" aria-labelledby="dm-runs">
+						<Table fold={533} class="dm-inner" aria-labelledby="dm-runs">
 							<thead>
 								<tr>
 									<th scope="col">When</th>
@@ -206,7 +206,9 @@ const RecentRuns = (props: {
 												</a>
 											</td>
 											<Show when={!branch()}>
-												<td data-fold="l2">{run.branch.name}</td>
+												<td data-fold="l2" class="ui-table-name">
+													{run.branch.name}
+												</td>
 											</Show>
 											<td data-fold="hide" class="mono muted">
 												{runHead(run)}
@@ -215,7 +217,7 @@ const RecentRuns = (props: {
 												{run.reports}
 											</td>
 											<Show when={branch()}>
-												<td data-fold="l2">
+												<td data-fold="l2" class="ui-table-name">
 													{run.testbeds[0]}
 													<Show when={run.testbed_count > 1}>
 														<span
@@ -508,7 +510,7 @@ export const BenchmarkCards = (props: {
 						fallback={<p class="dm-none">No variants</p>}
 					>
 						<Table
-							fold
+							fold={215}
 							class="dm-inner"
 							aria-label={archived() ? "Archived variants" : "Active variants"}
 						>
@@ -530,7 +532,7 @@ export const BenchmarkCards = (props: {
 												}}
 												data-uuid={variant.uuid}
 											>
-												<td data-fold="l1">
+												<td data-fold="l1" class="ui-table-name">
 													<span class="dm-tags">
 														<For each={tagsOf(variant)}>
 															{(tag) => <span class="dm-tag">{tag}</span>}
@@ -678,7 +680,7 @@ const ThresholdsCard = (props: {
 						when={on().thresholds.length > 0}
 						fallback={<p class="dm-none">No thresholds</p>}
 					>
-						<Table fold class="dm-inner" aria-labelledby="dm-thresholds">
+						<Table fold={615} class="dm-inner" aria-labelledby="dm-thresholds">
 							<thead>
 								<tr>
 									<th scope="col">{props.first.title}</th>
@@ -692,7 +694,7 @@ const ThresholdsCard = (props: {
 								<For each={on().thresholds}>
 									{(threshold) => (
 										<tr class="rowlink">
-											<td data-fold="l1">
+											<td data-fold="l1" class="ui-table-name">
 												<a
 													class="dm-link rowlink-name"
 													href={thresholdPath(props.slug, threshold.uuid)}
@@ -704,14 +706,20 @@ const ThresholdsCard = (props: {
 													{props.first.of(threshold)}
 												</a>
 											</td>
-											<td data-fold="l2">{props.second.of(threshold)}</td>
+											<td data-fold="l2" class="ui-table-name">
+												{props.second.of(threshold)}
+											</td>
 											<td data-fold="hide" class="mono">
 												{threshold.metric ?? "value"}
 											</td>
 											<td data-fold="hide">
 												<Sets threshold={threshold} />
 											</td>
-											<td data-fold="n1" class="mono">
+											<td
+												data-fold="hide"
+												class="mono ui-table-name"
+												title={modelText(threshold.model)}
+											>
 												{modelText(threshold.model)}
 											</td>
 										</tr>

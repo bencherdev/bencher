@@ -7,7 +7,7 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
-import { NARROW, useNarrow } from "../plot/narrow";
+import { NARROW } from "../plot/narrow";
 import { type Range, batchSize, visibleRange } from "./rows";
 
 /** Rows drawn above and below the screen, so a quick scroll never shows a gap. */
@@ -23,8 +23,8 @@ export const useVirtualRows = <T>(props: {
 	/** The rows on screen changed, not counting those drawn either side. */
 	onRange?: ((range: Range) => void) | undefined;
 }) => {
-	const narrow = useNarrow();
-	const [rowHeight, setRowHeight] = createSignal<number>(ROW_HEIGHT.wide);
+	const [lines, setLines] = createSignal(1);
+	const [rowHeight, setRowHeight] = createSignal<number>(ROW_HEIGHT[1]);
 	const [range, setRange] = createSignal<Range>({ start: 0, end: 0 });
 	let body: HTMLTableSectionElement | undefined;
 	let onScreen: Range = { start: 0, end: 0 };
@@ -39,12 +39,7 @@ export const useVirtualRows = <T>(props: {
 			first && second
 				? second.getBoundingClientRect().top - first.getBoundingClientRect().top
 				: first?.getBoundingClientRect().height;
-		const height =
-			drawn && drawn > 0
-				? drawn
-				: narrow()
-					? ROW_HEIGHT.narrow
-					: ROW_HEIGHT.wide;
+		const height = drawn && drawn > 0 ? drawn : heightOf(lines());
 		setRowHeight(height);
 		// Drawn at the expected height until a row exists to measure.
 		if (!drawn && props.rows().length > 0) {
@@ -86,9 +81,11 @@ export const useVirtualRows = <T>(props: {
 			}
 		});
 	});
-	createEffect(on([() => props.rows().length, narrow], measure));
+	createEffect(on([() => props.rows().length, lines], measure));
 
 	return {
+		/** Hand the table's `onLines` here. */
+		onLines: setLines,
 		/** Hand the table's body here. */
 		body: (element: HTMLTableSectionElement) => {
 			body = element;
@@ -101,12 +98,14 @@ export const useVirtualRows = <T>(props: {
 	};
 };
 
-/** The fixed height a row is drawn at, wide and narrow. */
-const ROW_HEIGHT = { wide: 40, narrow: 60 } as const;
+/** The fixed height a row is drawn at, by the lines it takes. */
+const ROW_HEIGHT = { 1: 40, 2: 60, 3: 78 } as const;
+const heightOf = (lines: number) =>
+	ROW_HEIGHT[lines as keyof typeof ROW_HEIGHT] ?? ROW_HEIGHT[1];
 
 /** The size of every batch on this screen: what fills it, plus a margin. */
 export const screenBatch = () =>
 	batchSize(
 		window.innerHeight,
-		window.matchMedia(NARROW).matches ? ROW_HEIGHT.narrow : ROW_HEIGHT.wide,
+		window.matchMedia(NARROW).matches ? ROW_HEIGHT[2] : ROW_HEIGHT[1],
 	);

@@ -37,6 +37,7 @@ import {
 	columnEdges,
 	expectNameStartsWithText,
 	expectRowOpens,
+	nameFloor,
 } from "../ui/testing";
 import RunReports from "../runs/RunReports";
 import Run from "./Run";
@@ -323,7 +324,7 @@ test("a run the API did not answer shows a banner whose Retry loads it", async (
 
 // Kills a phone row that keeps every column, is shorter than a touch target,
 // loses its number, or that only its text opens.
-test("phone rows fold into two lines beside their number and open the report anywhere", async () => {
+test("phone rows fold into three lines beside their number and open the report anywhere", async () => {
 	await page.viewport(390, 844);
 	const { api } = fakeApi(() => ({
 		data: runPageFixture([runReportFixture(0)]),
@@ -331,7 +332,7 @@ test("phone rows fold into two lines beside their number and open the report any
 	mount(api);
 	await expect.element(table()).toBeVisible();
 	const row = document.querySelector("tr[aria-rowindex='2']") as HTMLElement;
-	await expect.poll(() => row.getBoundingClientRect().height).toBe(60);
+	await expect.poll(() => row.getBoundingClientRect().height).toBe(78);
 	expect(document.querySelector("thead")?.checkVisibility()).toBe(false);
 	const order = row.querySelector(".rn-ord") as HTMLElement;
 	const link = row.querySelector("a") as HTMLElement;
@@ -788,9 +789,9 @@ const variedReports = (from: number, count: number, longFrom = 20) =>
 
 // Kills a run's reports table laid out by the rows drawn (an auto layout),
 // whose columns shift as rows of other widths scroll into view, at desktop and
-// at 768 px.
+// on a small laptop.
 test("the reports table's columns hold still as rows of other widths scroll into view", async () => {
-	for (const width of [1280, 768]) {
+	for (const width of [1280, 1024]) {
 		await page.viewport(width, 720);
 		const batch = screenBatch();
 		const { api } = fakeApi((url) => {
@@ -841,27 +842,20 @@ test("on a phone, each report row folds on its own, whatever rows are drawn besi
 	).toEqual(await firstRow(variedReports(0, 20)));
 });
 
-// Kills a run's reports table that needs more room than its columns do (a
-// minimum width past a likely report's), which scrolls sideways below a
-// laptop where every column fits, and one that cuts off a header at a
-// tablet's 768 px, where it scrolls rather than cut text (ruling 407).
-test("below a laptop the reports table scrolls only where its columns need the room", async () => {
-	for (const width of [768, 960]) {
-		await page.viewport(width, 1024);
-		const { api } = fakeApi(() => ({
-			data: runPageFixture(variedReports(0, 8, 4), { total: 8 }),
-		}));
-		mount(api);
-		await expect.element(table()).toBeVisible();
-		await document.fonts.ready;
-		expect(cutHeaders(table().element()), `at ${width} px`).toEqual([]);
-		const scroll = table().element().closest(".ui-table-scroll") as HTMLElement;
-		if (width === 960) {
-			expect(scroll.scrollWidth).toBe(scroll.clientWidth);
-		}
-		dispose?.();
-		document.body.replaceChildren();
-	}
+// Kills a run's reports table on a tablet that keeps its columns, whose
+// Testbed falls under 16 characters there, or scrolls sideways (ruling 407,
+// replaced by the name floor).
+test("on a tablet the reports table folds, never scrolling sideways", async () => {
+	await page.viewport(768, 1024);
+	const { api } = fakeApi(() => ({
+		data: runPageFixture(variedReports(0, 8, 4), { total: 8 }),
+	}));
+	mount(api);
+	await expect.element(table()).toBeVisible();
+	expect(nameFloor(table().element(), "Testbed")).toEqual({
+		name: "folded",
+		sideways: false,
+	});
 });
 
 const START = runReportFixture(0).start_time;
@@ -993,8 +987,8 @@ test("a run's first alerting lines fill its table directly", async () => {
 // Kills a Status column too narrow for its longest pills or given back its end
 // padding, any other column's share cut below what a likely report shows, and
 // a minimum width below a laptop too small for one, which cuts its text rather
-// than scroll, on the real page from 768 px up (ruling 407).
-test("a likely report's every cell is whole, with the longest Running and Failed pills, from 768 px up", async () => {
+// than scroll, on the real page wherever it does not fold (ruling 407).
+test("a likely report's every cell is whole, with the longest Running and Failed pills, wherever it does not fold", async () => {
 	vi.useFakeTimers({ toFake: ["Date"] });
 	vi.setSystemTime(START + 59 * 60_000);
 	const failed = (index: number, took: number) =>
@@ -1005,7 +999,7 @@ test("a likely report's every cell is whole, with the longest Running and Failed
 				completed: START + took,
 			}),
 		});
-	for (const width of [768, 1024, 1280]) {
+	for (const width of [1024, 1280]) {
 		await page.viewport(width, 1024);
 		const { api } = fakeApi(() => ({
 			data: runPageFixture([
@@ -1038,10 +1032,10 @@ test("a likely report's every cell is whole, with the longest Running and Failed
 	}
 });
 
-// Kills an Alerts column that cuts a four-digit total at 768 px further than
-// it did before the Status column held its pills.
-test("at 768 px a report's four-digit alerts total is cut no further than before", async () => {
-	await page.viewport(768, 1024);
+// Kills an Alerts column that cuts a four-digit total just above the table's
+// fold further than it did at 768 px before the Status column held its pills.
+test("just above its fold a report's four-digit alerts total is cut no further than before", async () => {
+	await page.viewport(880, 1024);
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);

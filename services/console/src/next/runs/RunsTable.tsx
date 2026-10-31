@@ -31,6 +31,8 @@ import StatusPill from "./StatusPill";
 import { landed, runStatus, statusText } from "./status";
 
 const COLUMNS = 10;
+/** The width below which the Branch column holds under 16 characters. */
+const RUNS_FOLD = 1145;
 
 const NONE: ReadonlySet<string> = new Set();
 
@@ -130,37 +132,38 @@ const RunsTable = (props: {
 			aria-label="Runs, newest first"
 			aria-rowcount={props.total + flat().length - props.runs.length + 1}
 			aria-busy={props.busy === true ? "true" : undefined}
-			data-fold=""
+			fold={RUNS_FOLD}
+			onLines={rows.onLines}
 		>
 			<thead>
 				<tr aria-rowindex={1}>
 					{/* Every share but the branch's is set, so the columns never follow the rows drawn. */}
-					<th scope="col" style="width:8.4%">
+					<th scope="col" style="width:7.3%">
 						When
 					</th>
 					<th scope="col">Branch</th>
-					<th scope="col" style="width:7.6%">
+					<th scope="col" style="width:6.4%">
 						Head
 					</th>
-					<th scope="col" style="width:8%" data-align="end">
+					<th scope="col" style="width:6.8%" data-align="end">
 						Reports
 					</th>
-					<th scope="col" style="width:9.1%">
+					<th scope="col" style="width:13.3%">
 						Testbed
 					</th>
-					<th scope="col" style="width:8.7%">
+					<th scope="col" style="width:8.9%">
 						Adapter
 					</th>
-					<th scope="col" style="width:5.85%" data-align="end">
+					<th scope="col" style="width:4.9%" data-align="end">
 						Lines
 					</th>
-					<th scope="col" style="width:18%">
+					<th scope="col" style="width:16.2%">
 						Alerts
 					</th>
 					<th scope="col" style="width:142px">
 						Status
 					</th>
-					<th scope="col" style="width:10.75%">
+					<th scope="col" style="width:10.6%">
 						By
 					</th>
 				</tr>

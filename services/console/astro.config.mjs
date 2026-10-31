@@ -51,6 +51,12 @@ const SHARED_FILES = [
 		name: "sheet",
 		test: /[\\/]packages[\\/]ui[\\/]src[\\/](Chip|Sheet)\.tsx$/,
 	},
+	// A Table shares the one size observer with Truncate, without Chip and Sheet.
+	{
+		name: "resize",
+		priority: 1,
+		test: /[\\/]packages[\\/]ui[\\/]src[\\/]resize\.ts$/,
+	},
 	{
 		name: "memory",
 		test: /[\\/]src[\\/]next[\\/](memory|paths)\.ts$/,

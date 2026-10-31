@@ -17,6 +17,7 @@ import { axeInBothThemes } from "../axe/testing";
 import { FlushContext } from "../flush";
 import { organizationPath } from "../paths";
 import { consoleUserQuery } from "../queries";
+import { FLOOR_WIDTHS, STRESS, expectFoldAt, nameFloor } from "../ui/testing";
 import Organizations from "./Organizations";
 
 const READER = {
@@ -164,6 +165,65 @@ const newOrganization = () =>
 	page.getByRole("button", { name: "New organization" });
 
 describe("the list", () => {
+	// Kills a list that keeps its columns where an organization's name falls
+	// under 16 characters, and a folded row whose links squeeze the name (S1.07)
+	// rather than take the line under it.
+	// Kills a list that folds a pixel late or early.
+	test("folds at its own width", async () => {
+		await page.viewport(1440, 720);
+		const { api } = consoleApi({
+			bootstrap: async () => ({
+				...BOOTSTRAP,
+				organizations: [{ uuid: "long", name: STRESS.name, slug: "long" }],
+				projects: [],
+			}),
+		});
+		mount(api);
+		const table = page.getByRole("table", { name: "Your organizations" });
+		await expect.element(table).toBeVisible();
+		await document.fonts.ready;
+		expectFoldAt(table.element(), "Organization", 404);
+	});
+
+	test("holds 16 characters of name, or folds with the links under it", async () => {
+		const { api } = consoleApi({
+			bootstrap: async () => ({
+				...BOOTSTRAP,
+				organizations: [{ uuid: "long", name: STRESS.name, slug: "long" }],
+				projects: [],
+			}),
+		});
+		const held: Record<number, unknown> = {};
+		for (const width of FLOOR_WIDTHS) {
+			await page.viewport(width, 720);
+			mount(api);
+			const table = page.getByRole("table", { name: "Your organizations" });
+			await expect.element(table).toBeVisible();
+			const floor = nameFloor(table.element(), "Organization");
+			const name = table.element().querySelector('td[data-fold="l1"]');
+			const links = table.element().querySelector('td[data-fold="act"]');
+			held[width] =
+				floor.name === "folded"
+					? {
+							...floor,
+							under:
+								(links?.getBoundingClientRect().top ?? 0) >=
+								(name?.getBoundingClientRect().bottom ?? 0),
+						}
+					: floor;
+			dispose?.();
+			dispose = undefined;
+			document.body.replaceChildren();
+		}
+		const fine = { name: "held", sideways: false };
+		expect(held).toEqual({
+			320: { name: "folded", sideways: false, under: true },
+			768: fine,
+			1024: fine,
+			1440: fine,
+		});
+	});
+
 	// Kills organizations in the API's order, projects counted across
 	// organizations, an organization with no projects left out, a count that
 	// misses one, and New project offered where projects already are.
