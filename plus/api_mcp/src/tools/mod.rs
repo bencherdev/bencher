@@ -349,7 +349,7 @@ impl McpTool {
             Self::ViewAlert => Box::pin(alerts::view(context, &api_actor, arguments)),
             Self::UpdateAlert => Box::pin(alerts::update(context, &api_actor, arguments)),
             Self::ViewMetric => Box::pin(metrics::view(context, &api_actor, arguments)),
-            Self::QueryPerf => Box::pin(perf::query(log, context, &api_actor, arguments)),
+            Self::QueryPerf => Box::pin(perf::query(context, &api_actor, arguments)),
             Self::ListPlots => Box::pin(plots::list(context, &api_actor, arguments)),
             Self::CreatePlot => Box::pin(plots::create(context, &api_actor, arguments)),
             Self::ViewPlot => Box::pin(plots::view(context, &api_actor, arguments)),

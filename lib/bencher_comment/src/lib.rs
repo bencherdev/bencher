@@ -8,8 +8,8 @@ use std::{
 
 use bencher_json::{
     AlertUuid, BenchmarkSlug, BranchSlug, JsonAlert, JsonBenchmark, JsonMeasure, JsonPerfQuery,
-    JsonReport, MeasureSlug, MetricName, ProjectSlug, ReportUuid, ResourceName, TestbedSlug,
-    ThresholdUuid, Units,
+    JsonReport, MeasureSlug, MetricName, ParameterSet, ProjectSlug, ReportUuid, ResourceName,
+    TestbedSlug, ThresholdUuid, Units,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -742,35 +742,35 @@ impl ReportComment {
 
     /// The plot of the line that alerted.
     fn alert_perf_url(&self, alert: &JsonAlert) -> Url {
-        let mut url = self.perf_url(&alert.benchmark, &alert.threshold.measure);
-        {
-            let mut query = url.query_pairs_mut();
-            // A threshold that names no metric checks `value`.
-            let metric = alert
-                .threshold
-                .metric
-                .clone()
-                .unwrap_or_else(MetricName::value);
-            query.append_pair("metrics", metric.as_ref());
-            // Explore reads one set to each pair, not the perf query's comma separated list.
-            if !alert.variant.parameters.is_empty() {
-                query.append_pair("parameters", &alert.variant.parameters.canonical());
-            }
-        }
-        url
+        // A threshold that names no metric checks `value`.
+        let metric = alert
+            .threshold
+            .metric
+            .clone()
+            .unwrap_or_else(MetricName::value);
+        let parameters = &alert.variant.parameters;
+        let parameters = (!parameters.is_empty()).then(|| vec![parameters.clone()]);
+        self.plot_url(
+            &alert.benchmark,
+            &alert.threshold.measure,
+            parameters,
+            &[metric],
+        )
+    }
+
+    /// The plot of every variant of the benchmark.
+    fn perf_url(&self, benchmark: &JsonBenchmark, measure: &JsonMeasure) -> Url {
+        self.plot_url(benchmark, measure, None, &[])
     }
 
     /// The public plot on a public project, or else Explore.
-    fn perf_url(&self, benchmark: &JsonBenchmark, measure: &JsonMeasure) -> Url {
-        let mut url = self.console_url.clone();
-
-        let path = if self.public_links {
-            format!("/perf/{}", self.project_slug)
-        } else {
-            format!("/console/projects/{}/explore", self.project_slug)
-        };
-        url.set_path(&path);
-
+    fn plot_url(
+        &self,
+        benchmark: &JsonBenchmark,
+        measure: &JsonMeasure,
+        parameters: Option<Vec<ParameterSet>>,
+        metrics: &[MetricName],
+    ) -> Url {
         let json_perf_query = JsonPerfQuery {
             branches: vec![self.json_report.branch.uuid],
             heads: vec![Some(self.json_report.branch.head.uuid)],
@@ -784,22 +784,20 @@ impl ReportComment {
                 .map(|spec| vec![Some(spec.uuid)])
                 .unwrap_or_default(),
             benchmarks: vec![benchmark.uuid],
-            // No filter, so the link plots every variant of the benchmark.
-            parameters: None,
+            parameters,
             measures: vec![measure.uuid],
             start_time: Some(
                 (self.json_report.start_time.into_inner() - DEFAULT_REPORT_HISTORY).into(),
             ),
             end_time: Some(self.json_report.end_time),
         };
-        let query_string = [("report", Some(self.json_report.uuid.to_string()))];
-        url.set_query(Some(
-            &json_perf_query
-                .to_query_string(&query_string)
-                .unwrap_or_default(),
-        ));
-
-        url
+        json_perf_query.to_console_url(
+            &self.console_url,
+            &self.project_slug,
+            self.public_links,
+            metrics,
+            Some(self.json_report.uuid),
+        )
     }
 }
 

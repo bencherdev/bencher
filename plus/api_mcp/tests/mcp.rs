@@ -11,7 +11,10 @@ use bencher_api_tests::{
     helpers::{oauth_server, set_job_status},
     oci::create_oci_manifest,
 };
-use bencher_json::{JobStatus, system::config::JsonRateLimiting};
+use bencher_json::{
+    BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, JobStatus, MeasureUuid, TestbedUuid,
+    system::config::JsonRateLimiting,
+};
 use bencher_schema::context::RateLimiting;
 use http::{StatusCode, header::WWW_AUTHENTICATE};
 use serde_json::{Value, json};
@@ -847,12 +850,15 @@ async fn seed_every_tool(
     let failed = call("view_job", json!({"job": job})).await;
     assert!(failed["output"].is_object(), "{failed}");
 
+    // The window holds the seeded runs, so the plot draws their threshold and alert
     let perf = json!({
         "project": project_slug,
         "branches": branch["uuid"],
         "testbeds": testbed["uuid"],
         "benchmarks": benchmark["uuid"],
-        "measures": measure["uuid"]
+        "measures": measure["uuid"],
+        "start_time": 1_735_603_200_000i64,
+        "end_time": 1_735_948_800_000i64
     });
     let mut every_tool = vec![
         ("list_projects", json!({"organization": org.slug})),
@@ -1032,6 +1038,341 @@ async fn mcp_anonymous_private_project() {
     .await;
     let error = tool_error(&result);
     assert!(error.starts_with("404"), "Expected 404 error: {error}");
+}
+
+// query_perf draws the console's plot, lines indexing into tables and aligned to shared points,
+// with the project and a link that opens the same query on the public plot
+#[tokio::test]
+async fn mcp_query_perf_draws_the_console_plot() {
+    let server = TestServer::new_at(at(PLOT_NOW)).await;
+    let (user, project) = plot_project(&server, "draws").await;
+    let arguments = seed_plot(&server, &user, &project).await;
+
+    let content = tool_content(
+        &mcp_result(
+            &server,
+            Some(&user.token),
+            &call_tool_request("query_perf", &arguments),
+        )
+        .await,
+    );
+
+    assert_eq!(
+        content["project"]["slug"], arguments["project"],
+        "{content}"
+    );
+    assert_eq!(content["total"], 2, "{content}");
+    assert_eq!(
+        plot_lines(&content),
+        [
+            ("p99".to_owned(), vec![12.0, 22.0]),
+            ("value".to_owned(), vec![10.0, 20.0])
+        ],
+        "{content}"
+    );
+    for (table, key) in [
+        ("branches", "branches"),
+        ("testbeds", "testbeds"),
+        ("benchmarks", "benchmarks"),
+        ("measures", "measures"),
+    ] {
+        assert_eq!(content[table][0]["uuid"], arguments[key], "{content}");
+    }
+    let reports = content["reports"].as_array().expect("Missing reports");
+    let versions = reports
+        .iter()
+        .map(|report| (report["version"].clone(), report["hash"].clone()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        versions,
+        [
+            (json!(0), json!(seed_hash(1))),
+            (json!(1), json!(seed_hash(2)))
+        ],
+        "{content}"
+    );
+
+    let url = plot_link(&content);
+    assert_eq!(url.origin().ascii_serialization(), "http://localhost:3000");
+    assert_eq!(url.path(), format!("/perf/{}", project.slug), "{url}");
+    let keys = url.query_pairs().map(|(key, _)| key.into_owned());
+    assert_eq!(
+        keys.collect::<Vec<_>>(),
+        ["branches", "testbeds", "benchmarks", "measures"],
+        "{url}"
+    );
+    for key in ["branches", "testbeds", "benchmarks", "measures"] {
+        assert_eq!(
+            link_values(&url, key),
+            [arguments[key].as_str().unwrap()],
+            "{url}"
+        );
+    }
+}
+
+// `metrics` draws only the names it lists, and the link carries each of them,
+// the parameters filter, and the window the call named
+#[tokio::test]
+async fn mcp_query_perf_metrics_pick_the_lines() {
+    let server = TestServer::new_at(at(PLOT_NOW)).await;
+    let (user, project) = plot_project(&server, "metrics").await;
+    let mut arguments = seed_plot(&server, &user, &project).await;
+    let (start_time, end_time) = (millis("2024-12-31T00:00:00Z"), millis(PLOT_NOW));
+    arguments["metrics"] = json!("p99");
+    arguments["parameters"] = json!(r#"{"threads":4}"#);
+    arguments["start_time"] = json!(start_time);
+    arguments["end_time"] = json!(end_time);
+
+    let content = tool_content(
+        &mcp_result(
+            &server,
+            Some(&user.token),
+            &call_tool_request("query_perf", &arguments),
+        )
+        .await,
+    );
+
+    assert_eq!(content["total"], 1, "{content}");
+    assert_eq!(
+        plot_lines(&content),
+        [("p99".to_owned(), vec![12.0, 22.0])],
+        "{content}"
+    );
+    let url = plot_link(&content);
+    assert_eq!(link_values(&url, "metrics"), ["p99"], "{url}");
+    assert_eq!(
+        link_values(&url, "parameters"),
+        [r#"{"threads":4}"#],
+        "{url}"
+    );
+    assert_eq!(
+        link_values(&url, "start_time"),
+        [start_time.to_string()],
+        "{url}"
+    );
+    assert_eq!(
+        link_values(&url, "end_time"),
+        [end_time.to_string()],
+        "{url}"
+    );
+}
+
+// A private project's plot links to Explore, and an anonymous caller cannot read it
+#[tokio::test]
+async fn mcp_query_perf_private_project() {
+    use bencher_json::project::Visibility;
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new_at(at(PLOT_NOW)).await;
+    let (user, project) = plot_project(&server, "private").await;
+    let arguments = seed_plot(&server, &user, &project).await;
+    {
+        let mut conn = server.db_conn();
+        diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+            .set(schema::project::visibility.eq(Visibility::Private))
+            .execute(&mut conn)
+            .expect("Failed to update project visibility");
+    }
+    let query_perf = call_tool_request("query_perf", &arguments);
+
+    let content = tool_content(&mcp_result(&server, Some(&user.token), &query_perf).await);
+    let url = plot_link(&content);
+    assert_eq!(
+        url.path(),
+        format!("/console/projects/{}/explore", project.slug),
+        "{url}"
+    );
+    assert_eq!(
+        link_values(&url, "branches"),
+        [arguments["branches"].as_str().unwrap()],
+        "{url}"
+    );
+
+    let error = tool_error(&mcp_result(&server, None, &query_perf).await);
+    assert!(error.starts_with("404"), "Expected 404 error: {error}");
+}
+
+// An anonymous plot reads at most the three months ending at its end, as over REST,
+// while a signed in caller reads the window it names
+#[tokio::test]
+async fn mcp_query_perf_clamps_an_anonymous_window() {
+    const PUBLIC_WINDOW_MILLIS: i64 = 92 * 24 * 60 * 60 * 1000;
+
+    let server = TestServer::new_at(at(PLOT_NOW)).await;
+    let (user, project) = plot_project(&server, "clamp").await;
+    let mut arguments = seed_plot(&server, &user, &project).await;
+    let (start_time, end_time) = (millis("2024-01-10T00:00:00Z"), millis(PLOT_NOW));
+    arguments["start_time"] = json!(start_time);
+    arguments["end_time"] = json!(end_time);
+    let query_perf = call_tool_request("query_perf", &arguments);
+
+    let anonymous = tool_content(&mcp_result(&server, None, &query_perf).await);
+    assert_eq!(
+        anonymous["window"],
+        json!({
+            "start_time": end_time - PUBLIC_WINDOW_MILLIS,
+            "end_time": end_time,
+            "clamped": true
+        }),
+        "{anonymous}"
+    );
+
+    let signed_in = tool_content(&mcp_result(&server, Some(&user.token), &query_perf).await);
+    assert_eq!(
+        signed_in["window"],
+        json!({"start_time": start_time, "end_time": end_time, "clamped": false}),
+        "{signed_in}"
+    );
+}
+
+// A plot query is charged to a project key's project once, by the plot query itself
+#[tokio::test]
+async fn mcp_query_perf_charged_once() {
+    let server = rate_limited_server(json!({"project": {"requests": {"minute": 3}}})).await;
+    let owner = server
+        .signup("MCP Plot Charged", "mcp-plot-charged@bencher.dev")
+        .await;
+    let org = server.create_org(&owner, "MCP Plot Charged Org").await;
+    let project = server
+        .create_project(&owner, &org, "MCP Plot Charged Project")
+        .await;
+    // Creating the key is the project's first charged request
+    let key = server.create_project_key(&owner, &project, "mcp-key").await;
+    let key: &str = key.key.as_ref();
+    let tools_list = json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"});
+
+    // Boxes the project lacks draw an empty plot, so only the plot query charges the project
+    let query_perf = call_tool_request(
+        "query_perf",
+        &json!({
+            "project": project.slug,
+            "branches": BranchUuid::new(),
+            "testbeds": TestbedUuid::new(),
+            "benchmarks": BenchmarkUuid::new(),
+            "measures": MeasureUuid::new()
+        }),
+    );
+    let content = tool_content(&mcp_result(&server, Some(key), &query_perf).await);
+    assert_eq!(content["total"], 0, "{content}");
+    assert_eq!(
+        mcp_post(&server, Some(key), &tools_list).await.status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        mcp_post(&server, Some(key), &tools_list).await.status(),
+        StatusCode::TOO_MANY_REQUESTS
+    );
+}
+
+/// The frozen clock of the plot tests, whose default window holds the seeded runs.
+const PLOT_NOW: &str = "2025-01-10T00:00:00Z";
+
+#[expect(clippy::expect_used, reason = "test helper parsing fixed times")]
+fn at(time: &str) -> DateTime {
+    serde_json::from_value(json!(time)).expect("Invalid time")
+}
+
+fn millis(time: &str) -> i64 {
+    DateTimeMillis::from(at(time)).into()
+}
+
+async fn plot_project(server: &TestServer, label: &str) -> (TestUser, TestProject) {
+    let user = server
+        .signup("MCP Plot", &format!("mcp-plot-{label}@bencher.dev"))
+        .await;
+    let org = server
+        .create_org(&user, &format!("MCP Plot Org {label}"))
+        .await;
+    let project = server
+        .create_project(&user, &org, &format!("MCP Plot Project {label}"))
+        .await;
+    (user, project)
+}
+
+/// Seed two runs of one variant whose latency reports `value` and `p99`,
+/// and return the `query_perf` arguments that plot them.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "test helper; indexing a serde_json value never panics"
+)]
+async fn seed_plot(server: &TestServer, user: &TestUser, project: &TestProject) -> Value {
+    let project_slug: &str = project.slug.as_ref();
+    let mut report = Value::Null;
+    for (day, value) in [(1, 10.0), (2, 20.0)] {
+        let results = json!({
+            "mcp_bench": [{
+                "parameters": {"threads": 4},
+                "measures": {"latency": {"value": value, "p99": value + 2.0}}
+            }]
+        });
+        let arguments = json!({
+            "project": project_slug,
+            "branch": "main",
+            "testbed": "localhost",
+            "hash": seed_hash(day),
+            "start_time": format!("2025-01-0{day}T00:00:00Z"),
+            "end_time": format!("2025-01-0{day}T00:01:00Z"),
+            "bmf_version": 1,
+            "results": [results.to_string()]
+        });
+        let request = call_tool_request("create_report", &arguments);
+        report = tool_content(&mcp_result(server, Some(&user.token), &request).await);
+    }
+    let result = &report["results"][0][0];
+    json!({
+        "project": project_slug,
+        "branches": report["branch"]["uuid"],
+        "testbeds": report["testbed"]["uuid"],
+        "benchmarks": result["benchmark"]["uuid"],
+        "measures": result["measures"][0]["measure"]["uuid"]
+    })
+}
+
+/// The git hash of the seeded run on `day`.
+fn seed_hash(day: u8) -> String {
+    format!("{day:0>40}")
+}
+
+/// Each line of a plot as its metric name and its values.
+#[expect(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "test helper; indexing a serde_json value never panics"
+)]
+fn plot_lines(content: &Value) -> Vec<(String, Vec<f64>)> {
+    content["lines"]
+        .as_array()
+        .expect("Missing lines")
+        .iter()
+        .map(|line| {
+            let metric = line["metric"].as_str().expect("Missing metric").to_owned();
+            let values = line["series"]["y"]
+                .as_array()
+                .expect("Missing values")
+                .iter()
+                .map(|value| value.as_f64().expect("Missing value"))
+                .collect();
+            (metric, values)
+        })
+        .collect()
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn plot_link(content: &Value) -> reqwest::Url {
+    content["url"]
+        .as_str()
+        .expect("Missing url")
+        .parse()
+        .expect("Invalid url")
+}
+
+/// Every value of `key` in the link, in order, as Explore reads each pair.
+fn link_values(url: &reqwest::Url, key: &str) -> Vec<String> {
+    url.query_pairs()
+        .filter(|(name, _)| name == key)
+        .map(|(_, value)| value.into_owned())
+        .collect()
 }
 
 // Malformed tool arguments are a tool error, not a protocol error

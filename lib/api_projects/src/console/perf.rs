@@ -111,18 +111,19 @@ pub async fn proj_console_perf_get(
         bearer_token,
     )
     .await?;
-    let json = get_inner(rqctx.context(), path_params.into_inner(), query, &api_actor)
+    let (_, json) = get_inner(rqctx.context(), path_params.into_inner(), query, &api_actor)
         .await
         .map_err(with_auth_hint)?;
     Ok(Get::response_ok(json, api_actor.is_auth()))
 }
 
-async fn get_inner(
+/// The plot query and the project it read.
+pub async fn get_inner(
     context: &ApiContext,
     path_params: ProjConsolePerfParams,
     query: JsonConsolePerfQuery,
     api_actor: &ApiActor,
-) -> Result<JsonConsolePerf, HttpError> {
+) -> Result<(QueryProject, JsonConsolePerf), HttpError> {
     let project = QueryProject::is_allowed_actor_pub(
         actor_conn!(context, api_actor),
         &context.rbac,
@@ -156,7 +157,8 @@ async fn get_inner(
         clamped,
     };
     let read_window = Window::new(start_time, end_time);
-    draw(conn, &project, query, read_window, window)
+    let json = draw(conn, &project, query, read_window, window)?;
+    Ok((project, json))
 }
 
 /// The lines of a plot query over a window already resolved, as `window` echoes it.

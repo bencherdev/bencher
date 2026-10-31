@@ -6,7 +6,7 @@ use ordered_float::OrderedFloat;
 use schemars::JsonSchema;
 use serde::ser::{self, SerializeStruct as _};
 use serde::{Deserialize, Serialize, Serializer};
-use url::Url;
+use url::{Url, form_urlencoded};
 
 #[cfg(feature = "plus")]
 use crate::SpecUuid;
@@ -17,7 +17,7 @@ use crate::urlencoded::{
 use crate::{
     BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, HeadUuid, JsonBenchmark, JsonBranch,
     JsonMeasure, JsonProject, JsonTestbed, JsonVariant, MAX_FILTER_SETS, MeasureUuid, ParameterSet,
-    ReportUuid, TestbedUuid,
+    ProjectSlug, ReportUuid, TestbedUuid,
 };
 
 use super::alert::JsonPerfAlert;
@@ -221,18 +221,6 @@ impl Serialize for JsonPerfQuery {
 }
 
 impl JsonPerfQuery {
-    pub fn to_url(
-        &self,
-        console_url: &str,
-        path: &str,
-        query: &[(&str, Option<String>)],
-    ) -> Result<Url, UrlEncodedError> {
-        let mut url = Url::parse(console_url)?;
-        url.set_path(path);
-        url.set_query(Some(&self.to_query_string(query)?));
-        Ok(url)
-    }
-
     pub fn to_query_string(
         &self,
         query: &[(&str, Option<String>)],
@@ -240,6 +228,55 @@ impl JsonPerfQuery {
         let urlencoded = self.urlencoded()?;
         let query = urlencoded.iter().chain(query).collect::<Vec<_>>();
         serde_urlencoded::to_string(query).map_err(Into::into)
+    }
+
+    /// The console page that draws this query with `metrics`: the public plot of a public project,
+    /// or else Explore, with each key written the way Explore reads it.
+    pub fn to_console_url(
+        &self,
+        console_url: &Url,
+        project: &ProjectSlug,
+        public: bool,
+        metrics: &[MetricName],
+        report: Option<ReportUuid>,
+    ) -> Url {
+        let mut url = console_url.clone();
+        let path = if public {
+            format!("/perf/{project}")
+        } else {
+            format!("/console/projects/{project}/explore")
+        };
+        url.set_path(&path);
+        let mut query = form_urlencoded::Serializer::new(String::new());
+        query.append_pair(BRANCHES, &self.branches());
+        if let Some(heads) = positional_list(&self.heads) {
+            query.append_pair(HEADS, &heads);
+        }
+        query.append_pair(TESTBEDS, &self.testbeds());
+        #[cfg(feature = "plus")]
+        if let Some(specs) = positional_list(&self.specs) {
+            query.append_pair(SPECS, &specs);
+        }
+        query.append_pair(BENCHMARKS, &self.benchmarks());
+        query.append_pair(MEASURES, &self.measures());
+        if let Some(start_time) = self.start_time_str() {
+            query.append_pair(START_TIME, &start_time);
+        }
+        if let Some(end_time) = self.end_time_str() {
+            query.append_pair(END_TIME, &end_time);
+        }
+        if let Some(report) = report {
+            query.append_pair(REPORT, &report.to_string());
+        }
+        // Explore reads one metric name or parameter set to each pair, where either may spell a comma.
+        for metric in metrics {
+            query.append_pair(METRICS, metric.as_ref());
+        }
+        for parameters in self.parameters.iter().flatten() {
+            query.append_pair(PARAMETERS, &parameters.canonical());
+        }
+        url.set_query(Some(&query.finish()));
+        url
     }
 
     fn urlencoded(&self) -> Result<[(&'static str, Option<String>); 9], UrlEncodedError> {
@@ -326,6 +363,21 @@ impl JsonPerfQuery {
     }
 }
 
+/// Each entry at its position, empty where there is none, as Explore writes heads and specs,
+/// or `None` when no entry names one.
+fn positional_list<T>(values: &[Option<T>]) -> Option<String>
+where
+    T: ToString,
+{
+    values.iter().any(Option::is_some).then(|| {
+        values
+            .iter()
+            .map(|value| value.as_ref().map(to_urlencoded).unwrap_or_default())
+            .collect::<Vec<_>>()
+            .join(",")
+    })
+}
+
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -354,6 +406,8 @@ pub const END_TIME: &str = "end_time";
 const QUERY_KEYS: [&str; 9] = [
     BRANCHES, HEADS, TESTBEDS, SPECS, BENCHMARKS, PARAMETERS, MEASURES, START_TIME, END_TIME,
 ];
+const METRICS: &str = "metrics";
+const REPORT: &str = "report";
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -441,9 +495,13 @@ pub struct JsonPerfBoundary {
 
 #[cfg(test)]
 mod tests {
+    use url::Url;
+
+    #[cfg(feature = "plus")]
+    use super::SpecUuid;
     use super::{
-        BenchmarkUuid, BranchUuid, JsonPerfQuery, JsonPerfQueryParams, MAX_FILTER_SETS,
-        MeasureUuid, TestbedUuid,
+        BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, HeadUuid, JsonPerfQuery,
+        JsonPerfQueryParams, MAX_FILTER_SETS, MeasureUuid, MetricName, ParameterSet, TestbedUuid,
     };
 
     fn query_params(parameters: String) -> JsonPerfQueryParams {
@@ -491,6 +549,104 @@ mod tests {
             query.parameters,
             Some(vec![r#"{"n":0}"#.parse().expect("Failed to parse")])
         );
+    }
+
+    // Read back the way `decodeQuery` in `services/console/src/next/query/query.ts` reads a
+    // link: a box is the first pair of its name split on commas, `heads` and `specs` pair
+    // with their boxes by position, every `parameters` pair is one JSON set, and every
+    // `metrics` pair is one name. A set or a name may spell a comma.
+    #[test]
+    fn console_url_reads_back_as_explore_decodes_it() {
+        let branches = vec![BranchUuid::new(), BranchUuid::new()];
+        let head = HeadUuid::new();
+        let testbeds = vec![TestbedUuid::new(), TestbedUuid::new()];
+        #[cfg(feature = "plus")]
+        let spec = SpecUuid::new();
+        let benchmarks = vec![BenchmarkUuid::new(), BenchmarkUuid::new()];
+        let measures = vec![MeasureUuid::new()];
+        let sets = [r#"{"op":"read, write","size":16}"#, r#"{"warm":true}"#];
+        let start_time = DateTime::try_from(1_720_000_000i64).expect("Failed to make a time");
+        let query = JsonPerfQuery {
+            branches: branches.clone(),
+            heads: vec![None, Some(head)],
+            testbeds: testbeds.clone(),
+            #[cfg(feature = "plus")]
+            specs: vec![None, Some(spec)],
+            benchmarks: benchmarks.clone(),
+            parameters: Some(
+                sets.iter()
+                    .map(|set| set.parse::<ParameterSet>().expect("Failed to parse"))
+                    .collect(),
+            ),
+            measures: measures.clone(),
+            start_time: Some(start_time),
+            end_time: None,
+        };
+        let metrics =
+            ["p99", "p50,p90"].map(|name| name.parse::<MetricName>().expect("Failed to parse"));
+
+        let url = query.to_console_url(
+            &"https://bencher.example.com"
+                .parse()
+                .expect("Failed to parse"),
+            &"my-project".parse().expect("Failed to parse"),
+            true,
+            &metrics,
+            None,
+        );
+
+        assert_eq!(url.path(), "/perf/my-project", "{url}");
+        assert_eq!(box_list(&url, "branches"), strings(&branches), "{url}");
+        assert_eq!(
+            box_list(&url, "heads"),
+            [String::new(), head.to_string()],
+            "{url}"
+        );
+        assert_eq!(box_list(&url, "testbeds"), strings(&testbeds), "{url}");
+        #[cfg(feature = "plus")]
+        assert_eq!(
+            box_list(&url, "specs"),
+            [String::new(), spec.to_string()],
+            "{url}"
+        );
+        assert_eq!(box_list(&url, "benchmarks"), strings(&benchmarks), "{url}");
+        assert_eq!(box_list(&url, "measures"), strings(&measures), "{url}");
+        let read_sets = every_pair(&url, "parameters")
+            .iter()
+            .map(|set| serde_json::from_str::<serde_json::Value>(set).expect("Failed to parse"))
+            .collect::<Vec<_>>();
+        let named_sets = sets
+            .iter()
+            .map(|set| serde_json::from_str::<serde_json::Value>(set).expect("Failed to parse"))
+            .collect::<Vec<_>>();
+        assert_eq!(read_sets, named_sets, "{url}");
+        assert_eq!(every_pair(&url, "metrics"), ["p99", "p50,p90"], "{url}");
+        let start_millis = i64::from(DateTimeMillis::from(start_time)).to_string();
+        assert_eq!(every_pair(&url, "start_time"), [start_millis], "{url}");
+        assert!(every_pair(&url, "end_time").is_empty(), "{url}");
+    }
+
+    fn strings<T>(values: &[T]) -> Vec<String>
+    where
+        T: ToString,
+    {
+        values.iter().map(ToString::to_string).collect()
+    }
+
+    /// `list` in `decodeQuery`: the first value of `name`, split on commas.
+    fn box_list(url: &Url, name: &str) -> Vec<String> {
+        every_pair(url, name)
+            .first()
+            .map(|list| list.split(',').map(str::to_owned).collect())
+            .unwrap_or_default()
+    }
+
+    /// `URLSearchParams.getAll`.
+    fn every_pair(url: &Url, name: &str) -> Vec<String> {
+        url.query_pairs()
+            .filter(|(key, _)| key == name)
+            .map(|(_, value)| value.into_owned())
+            .collect()
     }
 }
 

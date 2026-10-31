@@ -31,8 +31,6 @@ pub enum UrlEncodedError {
     Deserialize(#[from] serde_urlencoded::de::Error),
     #[error("UUID: {0}")]
     Uuid(#[from] uuid::Error),
-    #[error("URL: {0}")]
-    Url(#[from] url::ParseError),
     #[error("Vec: {0:#?}")]
     Vec(Vec<(&'static str, Option<String>)>),
     #[error("urlencoded: {0}")]
