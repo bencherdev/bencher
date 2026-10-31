@@ -11,20 +11,20 @@ import { For, Show, createSignal } from "solid-js";
 import { scopeText } from "../../components/auth/authorize/scope";
 import type { JsonOAuthGrant } from "../../types/bencher";
 import {
-	type GrantPage,
 	day,
 	dropGrant,
+	grantList,
 	grantPath,
-	grantsQuery,
+	grantsKey,
 	lastRefreshed,
 	refusalOf,
 } from "../account/apps";
 import { useAccount } from "../account/context";
 import { accountPath } from "../account/paths";
 import { ApiError } from "../api";
-import { useQueryResult } from "../query";
-import { Frame, failureOf } from "./Profile";
+import { loadNearEnd } from "../list/near";
 import { formatCount } from "../plot/count";
+import { Frame, failureOf } from "./Profile";
 
 /** The apps connected to the reader's account, each revoked after a confirmation. */
 const ConnectedApps = () => {
@@ -37,8 +37,8 @@ const ConnectedApps = () => {
 		navigate(`/users/${user()}/apps`, { replace: true });
 	}
 	const client = useQueryClient();
-	const list = useQueryResult(() => grantsQuery(api, user()));
-	const refusal = () => refusalOf(list().error, reader().token);
+	const list = grantList(api, user);
+	const refusal = () => refusalOf(list.first().error, reader().token);
 	const [target, setTarget] = createSignal<JsonOAuthGrant>();
 	const [note, setNote] = createSignal("");
 	const [failure, setFailure] = createSignal("");
@@ -48,8 +48,8 @@ const ConnectedApps = () => {
 		setFailure("");
 		setNote("Revoked");
 		// A read in flight would land over the change.
-		await client.cancelQueries({ queryKey: grantsQuery(api, user()).queryKey });
-		const undo = dropGrant(client, api, user(), grant.uuid);
+		await client.cancelQueries({ queryKey: grantsKey(user()) });
+		const undo = dropGrant(client, user(), grant.uuid);
 		// The app whose Revoke held focus is gone.
 		heading?.focus();
 		try {
@@ -63,13 +63,14 @@ const ConnectedApps = () => {
 				return;
 			}
 		}
-		// A list the API cut short has more apps to show in the room made.
-		const { queryKey } = grantsQuery(api, user());
-		const page = client.getQueryData<GrantPage>(queryKey);
-		if (page && page.total > page.grants.length) {
-			client.invalidateQueries({ queryKey });
-		}
+		list.refill();
 	};
+	let apps: HTMLDivElement | undefined;
+	loadNearEnd(
+		() => apps,
+		list.load,
+		() => list.rows().length,
+	);
 
 	return (
 		<Frame user={user()} section="apps">
@@ -106,15 +107,18 @@ const ConnectedApps = () => {
 				)}
 			</Show>
 			<Show
-				when={list().data}
+				when={list.first().data}
 				fallback={
 					<Show
 						when={refusal()}
 						fallback={
-							<Show when={list().error} fallback={<Skeleton size="card" />}>
+							<Show
+								when={list.first().error}
+								fallback={<Skeleton size="card" />}
+							>
 								<Banner status="error" role="alert" class="load-error">
 									<span class="grow">The connected apps did not load</span>
-									<Button size="sm" onClick={() => list().refetch()}>
+									<Button size="sm" onClick={() => list.first().refetch()}>
 										Retry
 									</Button>
 								</Banner>
@@ -129,41 +133,55 @@ const ConnectedApps = () => {
 					</Show>
 				}
 			>
-				{(page) => (
-					<div class="setbody tight">
-						<For
-							each={page().grants}
-							fallback={
-								// Emptied by revokes, a cut short list waits for the apps past it.
-								<Show
-									when={page().total === 0}
-									fallback={<Skeleton size="card" />}
-								>
-									<div class="setcard">
-										<p class="keys-empty">No connected apps</p>
-									</div>
-								</Show>
-							}
-						>
-							{(grant) => (
-								<App
-									grant={grant}
-									keys={accountPath(user(), "keys")}
-									onRevoke={() => setTarget(grant)}
-								/>
-							)}
-						</For>
-						<Show
-							when={
-								page().grants.length > 0 && page().total > page().grants.length
-							}
-						>
-							<p class="muted sm">
-								Newest {page().grants.length} of {formatCount(page().total)}
-							</p>
-						</Show>
-					</div>
-				)}
+				<div
+					class="setbody tight"
+					ref={(element: HTMLDivElement) => {
+						apps = element;
+					}}
+				>
+					<For
+						each={list.rows()}
+						fallback={
+							// Emptied by revokes, a cut short list waits for the apps past it.
+							<Show
+								when={list.total() === 0}
+								fallback={<Skeleton size="card" />}
+							>
+								<div class="setcard">
+									<p class="keys-empty">No connected apps</p>
+								</div>
+							</Show>
+						}
+					>
+						{(grant) => (
+							<App
+								grant={grant}
+								keys={accountPath(user(), "keys")}
+								onRevoke={() => setTarget(grant)}
+							/>
+						)}
+					</For>
+					<Show
+						when={list.rows().length > 0 && list.more() > 0 && !list.loading()}
+					>
+						<p class="muted sm">
+							Newest {list.rows().length} of {formatCount(list.total())}
+						</p>
+					</Show>
+					<Show when={list.loading()}>
+						<Skeleton size="card" />
+					</Show>
+					<Show when={list.retry()}>
+						{(retry) => (
+							<div class="reports-failed" role="alert">
+								<span>These apps did not load</span>
+								<Button size="sm" onClick={() => retry()()}>
+									Retry
+								</Button>
+							</div>
+						)}
+					</Show>
+				</div>
 			</Show>
 			<Show when={target()} keyed>
 				{(grant) => (

@@ -16,14 +16,18 @@ import type {
 } from "../../types/bencher";
 import { PROJECTS_PATH, projectPath, runPath } from "../paths";
 import { useProject } from "../project";
-import { useQueryResult } from "../query";
+import type { Paged } from "../list/paged";
+import { loadNearEnd } from "../list/near";
+import { MoreRows } from "../list/TableRows";
 import { failureOf } from "../settings/failure";
 import {
 	type Detail,
-	type ThresholdsOn,
+	type KeptRow,
 	markVariantArchived,
-	variantsQuery,
+	withArchived,
+	withKept,
 } from "./data";
+import { variantList } from "./lists";
 import { archiveImpact } from "./impact";
 import { Actions, Impact, focusRow } from "./RowTable";
 import { modelText } from "../thresholds/text";
@@ -34,11 +38,7 @@ import { parametersInUse, shownTotal, shownVariants, tagsOf } from "./variants";
 import { formatCount } from "../plot/count";
 import Tag from "../tag";
 
-export interface ThresholdsState {
-	data: ThresholdsOn | undefined;
-	failed: boolean;
-	retry: () => void;
-}
+export type ThresholdsState = Paged<JsonThreshold>;
 
 /** What every dimension carries: its slug, UUID, and when it was made. */
 export const RecordCard = (props: { detail: Detail | undefined }) => (
@@ -339,20 +339,34 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
 	const [archived, setArchived] = createSignal(false);
-	const active = useQueryResult(() =>
-		variantsQuery(api, slug(), props.benchmark, false),
-	);
-	const archivedList = useQueryResult(() =>
-		variantsQuery(api, slug(), props.benchmark, true),
-	);
-	const listed = () => (archived() ? archivedList() : active());
-	const shown = createMemo(() => shownVariants(listed().data?.variants ?? []));
-	const inUse = createMemo(() =>
-		parametersInUse(
-			shownVariants(active().data?.variants ?? []).filter(
-				(variant) => !variant.archived,
+	const on = (archived: boolean) => () => ({
+		slug: slug(),
+		ref: props.benchmark,
+		archived,
+	});
+	const active = variantList(api, on(false));
+	const archivedList = variantList(api, on(true));
+	// Parameters in use counts every active variant, so it reads them all.
+	const every = variantList(api, on(false), true);
+	const listed = () => (archived() ? archivedList : active);
+	// A variant changed on the page keeps its place in the list it was shown in until the reader leaves.
+	const [kept, setKept] = createSignal<
+		ReadonlyMap<string, KeptRow<JsonVariant> & { archived: boolean }>
+	>(new Map());
+	const shown = createMemo(() =>
+		shownVariants(
+			withKept(
+				listed().rows(),
+				[...kept().values()].filter((each) => each.archived === archived()),
 			),
 		),
+	);
+	const inUse = createMemo(() =>
+		every.total() === undefined || every.more() > 0
+			? undefined
+			: parametersInUse(
+					shownVariants(every.rows()).filter((variant) => !variant.archived),
+				),
 	);
 	const [arming, setArming] = createSignal<string>();
 	const [failure, setFailure] = createSignal("");
@@ -383,6 +397,17 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 			queryKey: ["console", "benchmarks", project, "variants", props.benchmark],
 		});
 		const at = archive ? new Date().toISOString() : undefined;
+		const rows = shown();
+		const before = kept().get(variant.uuid);
+		setKept((was) =>
+			new Map(was).set(variant.uuid, {
+				row: withArchived(variant, at),
+				after:
+					before?.after ??
+					rows[rows.findIndex(({ uuid }) => uuid === variant.uuid) - 1]?.uuid,
+				archived: before?.archived ?? archived(),
+			}),
+		);
 		markVariantArchived(client, project, props.benchmark, variant.uuid, at);
 		const path = `/v0/projects/${encodeURIComponent(project)}/benchmarks/${encodeURIComponent(props.benchmark)}/variants/${variant.uuid}`;
 		const sent: Promise<unknown> = (
@@ -393,6 +418,7 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 				try {
 					await api.send("PATCH", path, { archived: archive });
 					confirmed.set(variant.uuid, at);
+					// Both lists move by one past the variant, so every page of each is read again.
 					client.invalidateQueries({
 						queryKey: [
 							"console",
@@ -400,19 +426,28 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 							project,
 							"variants",
 							props.benchmark,
-							!archived(),
 						],
 					});
 				} catch (error) {
 					// A later change on the variant is on its way and says what it shows.
 					if (queue.get(variant.uuid) === sent) {
+						const back = confirmed.get(variant.uuid);
 						markVariantArchived(
 							client,
 							project,
 							props.benchmark,
 							variant.uuid,
-							confirmed.get(variant.uuid),
+							back,
 						);
+						setKept((was) => {
+							const each = was.get(variant.uuid);
+							return each
+								? new Map(was).set(variant.uuid, {
+										...each,
+										row: withArchived(each.row, back),
+									})
+								: was;
+						});
 					}
 					setFailure(
 						failureOf(error, archive ? "Not archived" : "Not unarchived"),
@@ -423,52 +458,56 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 	};
 	let body: HTMLTableSectionElement | undefined;
 	// The counts are of the variants the table shows, each in its shown state.
-	const activeCount = () => {
-		const list = active().data;
-		return list && shownTotal(list.variants, list.total);
+	const count = (list: typeof active) => {
+		const total = list.total();
+		return total === undefined ? undefined : shownTotal(list.rows(), total);
 	};
-	const archivedCount = () => {
-		const list = archivedList().data;
-		return list && shownTotal(list.variants, list.total);
-	};
+	let table: HTMLDivElement | undefined;
+	loadNearEnd(
+		() => table,
+		() => listed().load(),
+		() => listed().rows().length,
+	);
 	return (
 		<>
 			<Card id="dm-params" title="Parameters in use">
 				<Show
-					when={active().data}
+					when={inUse()}
 					fallback={<Skeleton size="card" class="dm-card-skel" />}
 				>
-					<Show
-						when={inUse().length > 0}
-						fallback={<p class="dm-none">No parameters</p>}
-					>
-						<div class="dm-params">
-							<For each={inUse()}>
-								{(parameter) => (
-									<div class="dm-param">
-										<b class="mono sm">{parameter.key}</b>
-										<span class="dm-values">
-											<For each={parameter.values}>
-												{(value) => (
-													<span class="dm-value">
-														<Truncate
-															class="dm-tag"
-															text={value.value}
-															tail
-															reveal
-														/>
-														{value.variants === 1
-															? "1 variant"
-															: `${formatCount(value.variants)} variants`}
-													</span>
-												)}
-											</For>
-										</span>
-									</div>
-								)}
-							</For>
-						</div>
-					</Show>
+					{(params) => (
+						<Show
+							when={params().length > 0}
+							fallback={<p class="dm-none">No parameters</p>}
+						>
+							<div class="dm-params">
+								<For each={params()}>
+									{(parameter) => (
+										<div class="dm-param">
+											<b class="mono sm">{parameter.key}</b>
+											<span class="dm-values">
+												<For each={parameter.values}>
+													{(value) => (
+														<span class="dm-value">
+															<Truncate
+																class="dm-tag"
+																text={value.value}
+																tail
+																reveal
+															/>
+															{value.variants === 1
+																? "1 variant"
+																: `${formatCount(value.variants)} variants`}
+														</span>
+													)}
+												</For>
+											</span>
+										</div>
+									)}
+								</For>
+							</div>
+						</Show>
+					)}
 				</Show>
 			</Card>
 			<Section
@@ -489,7 +528,7 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 								label: (
 									<>
 										Active{" "}
-										<span class="count">{formatCount(activeCount())}</span>
+										<span class="count">{formatCount(count(active))}</span>
 									</>
 								),
 							},
@@ -498,7 +537,9 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 								label: (
 									<>
 										Archived{" "}
-										<span class="count">{formatCount(archivedCount())}</span>
+										<span class="count">
+											{formatCount(count(archivedList))}
+										</span>
 									</>
 								),
 							},
@@ -512,94 +553,108 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 					</p>
 				</Show>
 				<Show
-					when={listed().data}
+					when={listed().first().data}
 					fallback={<Skeleton size="card" class="dm-card-skel" />}
 				>
 					<Show
 						when={shown().length > 0}
 						fallback={<p class="dm-none">No variants</p>}
 					>
-						<Table
-							fold={215}
-							class="dm-inner"
-							aria-label={archived() ? "Archived variants" : "Active variants"}
+						<div
+							ref={(element: HTMLDivElement) => {
+								table = element;
+							}}
 						>
-							<thead>
-								<tr>
-									<th scope="col">Variant</th>
-									<th scope="col">
-										<span class="sr-only">Actions</span>
-									</th>
-								</tr>
-							</thead>
-							<tbody ref={body}>
-								<For each={shown()}>
-									{(variant) => (
-										<>
-											<tr
-												classList={{
-													"dm-dim": !archived() && Boolean(variant.archived),
-												}}
-												data-uuid={variant.uuid}
-											>
-												<td data-fold="l1" class="ui-table-name">
-													<span class="dm-tags">
-														<For each={tagsOf(variant)}>
-															{(tag) => (
-																<Tag class="dm-tag" tag={tag} tail reveal />
-															)}
-														</For>
-														<Show when={tagsOf(variant).length === 0}>
-															<span class="muted">no parameters</span>
-														</Show>
-													</span>
-												</td>
-												<td data-fold="act" class="dm-act">
-													<Actions
-														name={label(variant)}
-														archived={variant.archived}
-														listArchived={archived()}
-														changed={Boolean(variant.archived) !== archived()}
-														edit={props.edit}
-														arming={arming() === variant.uuid}
-														onArm={() =>
-															setArming(
-																arming() === variant.uuid
-																	? undefined
-																	: variant.uuid,
-															)
-														}
-														onChange={(archive) => {
-															change(variant, archive);
-															focusRow(body, variant.uuid);
-														}}
-													/>
-												</td>
-											</tr>
-											<Show when={arming() === variant.uuid}>
-												<tr class="dm-impact-row">
-													<td colSpan={2} data-fold="full">
-														<Impact
+							<Table
+								fold={215}
+								class="dm-inner"
+								aria-label={
+									archived() ? "Archived variants" : "Active variants"
+								}
+							>
+								<thead>
+									<tr>
+										<th scope="col">Variant</th>
+										<th scope="col">
+											<span class="sr-only">Actions</span>
+										</th>
+									</tr>
+								</thead>
+								<tbody ref={body}>
+									<For each={shown()}>
+										{(variant) => (
+											<>
+												<tr
+													classList={{
+														"dm-dim": !archived() && Boolean(variant.archived),
+													}}
+													data-uuid={variant.uuid}
+												>
+													<td data-fold="l1" class="ui-table-name">
+														<span class="dm-tags">
+															<For each={tagsOf(variant)}>
+																{(tag) => (
+																	<Tag class="dm-tag" tag={tag} tail reveal />
+																)}
+															</For>
+															<Show when={tagsOf(variant).length === 0}>
+																<span class="muted">no parameters</span>
+															</Show>
+														</span>
+													</td>
+													<td data-fold="act" class="dm-act">
+														<Actions
 															name={label(variant)}
-															text={archiveImpact(undefined)}
-															confirm="Archive variant"
-															onConfirm={() => {
-																change(variant, true);
-																focusRow(body, variant.uuid);
-															}}
-															onCancel={() => {
-																setArming(undefined);
+															archived={variant.archived}
+															listArchived={archived()}
+															changed={Boolean(variant.archived) !== archived()}
+															edit={props.edit}
+															arming={arming() === variant.uuid}
+															onArm={() =>
+																setArming(
+																	arming() === variant.uuid
+																		? undefined
+																		: variant.uuid,
+																)
+															}
+															onChange={(archive) => {
+																change(variant, archive);
 																focusRow(body, variant.uuid);
 															}}
 														/>
 													</td>
 												</tr>
-											</Show>
-										</>
-									)}
-								</For>
-							</tbody>
-						</Table>
+												<Show when={arming() === variant.uuid}>
+													<tr class="dm-impact-row">
+														<td colSpan={2} data-fold="full">
+															<Impact
+																name={label(variant)}
+																text={archiveImpact(undefined)}
+																confirm="Archive variant"
+																onConfirm={() => {
+																	change(variant, true);
+																	focusRow(body, variant.uuid);
+																}}
+																onCancel={() => {
+																	setArming(undefined);
+																	focusRow(body, variant.uuid);
+																}}
+															/>
+														</td>
+													</tr>
+												</Show>
+											</>
+										)}
+									</For>
+									<MoreRows
+										columns={2}
+										loading={listed().loading()}
+										onRetry={listed().retry()}
+										failed="These variants"
+									/>
+								</tbody>
+							</Table>
+						</div>
 					</Show>
 				</Show>
 			</Section>
@@ -663,7 +718,13 @@ const ThresholdsCard = (props: {
 	second: { title: string; of: (threshold: JsonThreshold) => string };
 	state: ThresholdsState;
 }) => {
-	const total = () => props.state.data?.total;
+	const total = () => props.state.total();
+	let table: HTMLDivElement | undefined;
+	loadNearEnd(
+		() => table,
+		() => props.state.load(),
+		() => props.state.rows().length,
+	);
 	return (
 		<Section
 			id="dm-thresholds"
@@ -677,20 +738,27 @@ const ThresholdsCard = (props: {
 			}
 		>
 			<Show
-				when={props.state.data}
+				when={props.state.first().data}
 				fallback={
 					<Show
-						when={props.state.failed}
+						when={props.state.first().isLoadingError}
 						fallback={<Skeleton size="card" class="dm-card-skel" />}
 					>
-						<Failed what="The thresholds" retry={props.state.retry} />
+						<Failed
+							what="The thresholds"
+							retry={() => props.state.first().refetch()}
+						/>
 					</Show>
 				}
 			>
-				{(on) => (
-					<Show
-						when={on().thresholds.length > 0}
-						fallback={<p class="dm-none">No thresholds</p>}
+				<Show
+					when={props.state.rows().length > 0}
+					fallback={<p class="dm-none">No thresholds</p>}
+				>
+					<div
+						ref={(element: HTMLDivElement) => {
+							table = element;
+						}}
 					>
 						<Table fold={615} class="dm-inner" aria-labelledby="dm-thresholds">
 							<thead>
@@ -703,7 +771,7 @@ const ThresholdsCard = (props: {
 								</tr>
 							</thead>
 							<tbody>
-								<For each={on().thresholds}>
+								<For each={props.state.rows()}>
 									{(threshold) => (
 										<tr class="rowlink">
 											<td data-fold="l1" class="ui-table-name">
@@ -737,10 +805,16 @@ const ThresholdsCard = (props: {
 										</tr>
 									)}
 								</For>
+								<MoreRows
+									columns={5}
+									loading={props.state.loading()}
+									onRetry={props.state.retry()}
+									failed="These thresholds"
+								/>
 							</tbody>
 						</Table>
-					</Show>
-				)}
+					</div>
+				</Show>
 			</Show>
 		</Section>
 	);

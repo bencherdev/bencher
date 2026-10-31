@@ -29,7 +29,7 @@ import {
 } from "../report/testing";
 import { decodeQuery } from "../query/query";
 import { fakeApi, watchFallback } from "../reports/testing";
-import { screenBatch as runScreenBatch } from "../reports/virtual";
+import { screenBatch as runScreenBatch } from "../list/rows";
 import { bootstrapOf } from "../settings/testing";
 import { STRESS, expectNameStartsWithText } from "../ui/testing";
 import Report from "./Report";

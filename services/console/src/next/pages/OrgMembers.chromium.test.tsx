@@ -8,12 +8,8 @@ import {
 } from "../../types/bencher";
 import { ApiError } from "../api";
 import { axeInBothThemes } from "../axe/testing";
-import {
-	type MemberPage,
-	type Roles,
-	membersQuery,
-	rolesQuery,
-} from "../organization/members";
+import { screenBatch } from "../list/rows";
+import { type Roles, membersKey, rolesQuery } from "../organization/members";
 import { ORGANIZATION, mount } from "../organization/testing";
 import { KeyTable } from "../settings/KeyList";
 import { fakeApi } from "../settings/testing";
@@ -48,27 +44,40 @@ const MURIEL = member("u", "Muriel Bagge", "muriel@nowhere.example");
 const EUSTACE = member("u2", "Eustace Bagge", "eustace@nowhere.example");
 const LEADER: Roles = { invite: true, remove: true };
 
+interface MemberPage {
+	members: JsonMember[];
+	total: number;
+}
+
 /** Members of Pompeii LLC, the API answering each change with `answer`. */
 const open = ({
 	organization = ORGANIZATION,
 	members = { members: [MURIEL, EUSTACE], total: 2 },
 	roles = LEADER,
 	answer = async () => undefined,
+	read = () => new Promise<never>(() => {}),
 }: {
 	organization?: JsonOrganization | null;
-	members?: MemberPage;
+	/** The first page the cache holds, or none. */
+	members?: MemberPage | null;
 	roles?: Roles | null;
 	answer?: Parameters<typeof fakeApi>[0];
+	read?: (path: string) => Promise<never>;
 } = {}) => {
 	const reads: string[] = [];
 	const { api, sent } = fakeApi(answer, (path) => {
 		reads.push(path);
-		return new Promise<never>(() => {});
+		return read(path);
 	});
 	const key = "pompeii-llc";
-	const cached: [unknown[], unknown][] = [
-		[membersQuery(api, key).queryKey, members],
-	];
+	const cached: [unknown[], unknown][] = members
+		? [
+				[
+					[...membersKey(key), screenBatch(), 1],
+					{ rows: members.members, total: members.total, page: 1 },
+				],
+			]
+		: [];
 	if (roles) {
 		cached.push([rolesQuery(api, key).queryKey, roles]);
 	}
@@ -89,6 +98,97 @@ const rows = () =>
 	);
 const email = () => page.getByRole("textbox", { name: "Email" });
 const send = () => page.getByRole("button", { name: "Send invite" });
+
+// Kills a list that stops at its first page, one that draws every member it
+// has read, and a count of the rows read rather than the API's.
+test("a long list reads on as the reader nears its end, drawing only the rows on screen", async () => {
+	await page.viewport(1280, 800);
+	const all = Array.from({ length: 300 }, (_, n) =>
+		member(`m${n}`, `Member ${n}`, `m${n}@nowhere.example`),
+	);
+	const { reads } = open({
+		members: null,
+		read: async (path) => {
+			const url = new URL(path, "http://api.test");
+			if (!url.pathname.endsWith("/members")) {
+				return new Promise<never>(() => {});
+			}
+			const size = Number(url.searchParams.get("per_page"));
+			const at = Number(url.searchParams.get("page"));
+			return {
+				data: all.slice((at - 1) * size, at * size),
+				headers: new Headers({ "X-Total-Count": "300" }),
+			} as never;
+		},
+	});
+	await expect.element(table()).toBeVisible();
+	await expect.element(page.getByText("300 members")).toBeVisible();
+	const pages = () => reads.filter((path) => path.includes("/members?")).length;
+	expect(pages()).toBe(1);
+	for (
+		let step = 0;
+		step < 40 && !page.getByText("Member 299").query();
+		step++
+	) {
+		window.scrollTo({
+			top: document.documentElement.scrollHeight,
+			behavior: "instant",
+		});
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		expect(
+			document.querySelectorAll("tbody tr[aria-rowindex]").length,
+		).toBeLessThan(80);
+	}
+	await expect.element(page.getByText("Member 299")).toBeVisible();
+	expect(pages()).toBe(Math.ceil(300 / screenBatch()));
+	expect(table().element().getAttribute("aria-rowcount")).toBe("301");
+});
+
+// Kills a member's name opened in place that closes, and moves the rows on
+// screen, once the reader scrolls far down the list.
+test("a member's name opened in place stays open as the list scrolls away", async () => {
+	await page.viewport(390, 844);
+	const all = Array.from({ length: 300 }, (_, n) =>
+		member(
+			`m${n}`,
+			n === 0 ? "M".repeat(64) : `Member ${n}`,
+			`m${n}@nowhere.example`,
+		),
+	);
+	open({
+		members: null,
+		read: async (path) => {
+			const url = new URL(path, "http://api.test");
+			if (!url.pathname.endsWith("/members")) {
+				return new Promise<never>(() => {});
+			}
+			const size = Number(url.searchParams.get("per_page"));
+			const at = Number(url.searchParams.get("page"));
+			return {
+				data: all.slice((at - 1) * size, at * size),
+				headers: new Headers({ "X-Total-Count": "300" }),
+			} as never;
+		},
+	});
+	await expect.element(table()).toBeVisible();
+	await expect
+		.poll(() => document.querySelector("tbody button.ui-trunc"))
+		.not.toBeNull();
+	document.querySelector<HTMLElement>("tbody button.ui-trunc")?.click();
+	await new Promise((resolve) =>
+		requestAnimationFrame(() => setTimeout(resolve, 0)),
+	);
+	for (let step = 0; step < 60; step++) {
+		window.scrollBy({ top: 300, behavior: "instant" });
+		await new Promise((resolve) =>
+			requestAnimationFrame(() => setTimeout(resolve, 10)),
+		);
+	}
+	expect(
+		document.querySelector("tbody .ui-trunc[data-open]")?.textContent,
+	).toBe("M".repeat(64));
+	window.scrollTo({ top: 0, behavior: "instant" });
+});
 
 // Kills a Remove on the reader's own row or missing from another's, a Remove
 // named by a name two members can share, the reader's row unmarked, and a

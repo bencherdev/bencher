@@ -10,7 +10,7 @@ import type {
 	JsonConsoleRunJobs,
 	JsonConsoleRunSummary,
 } from "../../types/bencher";
-import type { Range } from "../reports/rows";
+import type { Range } from "../list/rows";
 import {
 	FLOOR_WIDTHS,
 	STRESS,

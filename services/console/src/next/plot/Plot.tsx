@@ -840,6 +840,27 @@ const Readout = (props: ReadoutProps) => {
 		observer.observe(box);
 		onCleanup(() => observer.disconnect());
 	});
+	let rows: HTMLDivElement | undefined;
+	// The row the cursor reads stays in view when the rows scroll; a pin reads
+	// out again, so it comes here too once the alert's line takes their room.
+	createEffect(
+		on(
+			() => props.readout,
+			() => {
+				const row = rows?.querySelector<HTMLElement>(".pl-rrow.focused");
+				if (!(rows && row) || rows.scrollHeight <= rows.clientHeight) {
+					return;
+				}
+				const box = rows.getBoundingClientRect();
+				const { top, bottom } = row.getBoundingClientRect();
+				if (top < box.top) {
+					rows.scrollTop -= box.top - top;
+				} else if (bottom > box.bottom) {
+					rows.scrollTop += bottom - box.bottom;
+				}
+			},
+		),
+	);
 	return (
 		<>
 			<Show when={props.placement?.ring}>
@@ -860,6 +881,8 @@ const Readout = (props: ReadoutProps) => {
 				style={{
 					left: `${props.left}px`,
 					top: `${props.placement?.top ?? 0}px`,
+					// Inside the plots, never over the key below them.
+					"max-height": `calc(100% - ${(props.placement?.top ?? 0) + 4}px)`,
 					// Placed by its width, so it shows once measured rather than move.
 					visibility: props.measured ? undefined : "hidden",
 				}}
@@ -869,103 +892,111 @@ const Readout = (props: ReadoutProps) => {
 						{(href) => <a href={href()}>{when()}</a>}
 					</Show>
 				</span>
-				<For each={props.readout.rows}>
-					{(row) => {
-						const name = () => (
-							<Show when={!props.single && props.styles[row.line]}>
-								{(current) => (
-									<span class="pl-rname ui-parts">
-										<Swatch
-											slot={current().slot}
-											shape={current().shape}
-											stroke={current().axis === 1 ? "dotted" : "solid"}
-										/>
-										<Show when={current().ordinal}>
-											{(ordinal) => (
-												<span
-													class="pl-ord"
-													data-fixed
-													data-ordinal={ordinal()}
-												/>
-											)}
-										</Show>
-										<Show when={props.names[row.line]}>
-											{(line) => <NameParts name={line()} />}
-										</Show>
-									</span>
-								)}
-							</Show>
-						);
-						const delta = () => (
-							<Show when={row.delta}>
-								{(delta) => (
-									<span class="pl-delta" data-tone={delta().tone ?? undefined}>
-										{delta().tone
-											? `${delta().text} ${delta().tone}`
-											: delta().text}
-									</span>
-								)}
-							</Show>
-						);
-						const limit = () => (
-							<Show when={row.limit}>
-								<span class="pl-limit">{row.limit}</span>
-							</Show>
-						);
-						return (
-							<Show
-								when={row.iterations}
-								fallback={
-									<div
-										class="pl-rrow ui-parts"
-										classList={{ focused: row.focused }}
-									>
-										{name()}
-										<b class="pl-mono">{row.value}</b>
-										{delta()}
-										{limit()}
-									</div>
-								}
-							>
-								{(iterations) => (
-									<>
-										<Show when={!props.single}>
-											<div class="pl-rrow ui-parts">{name()}</div>
-										</Show>
-										<For each={iterations()}>
-											{(each) => (
-												<div
-													class="pl-rrow"
-													classList={{ focused: each.emphasized }}
-												>
-													<span class="pl-it">iteration {each.iteration}</span>
-													<b class="pl-mono">{each.value}</b>
-													<Show when={each.alerted}>
-														<span
-															class="pl-alertdot"
-															role="img"
-															aria-label="alerted"
-														/>
-													</Show>
-													<Show when={each.emphasized}>{delta()}</Show>
-												</div>
-											)}
-										</For>
-										<Show when={row.limit}>
-											<div class="pl-rrow">{limit()}</div>
-										</Show>
-									</>
-								)}
-							</Show>
-						);
-					}}
-				</For>
-				<Show when={props.readout.more > 0}>
-					<span class="pl-more">
-						{props.readout.more} more{" "}
-						{props.readout.more === 1 ? "line" : "lines"}
-					</span>
-				</Show>
+				{/* Many lines or iterations scroll here, under the time and above the controls. */}
+				<div class="pl-rows" ref={rows}>
+					<For each={props.readout.rows}>
+						{(row) => {
+							const name = () => (
+								<Show when={!props.single && props.styles[row.line]}>
+									{(current) => (
+										<span class="pl-rname ui-parts">
+											<Swatch
+												slot={current().slot}
+												shape={current().shape}
+												stroke={current().axis === 1 ? "dotted" : "solid"}
+											/>
+											<Show when={current().ordinal}>
+												{(ordinal) => (
+													<span
+														class="pl-ord"
+														data-fixed
+														data-ordinal={ordinal()}
+													/>
+												)}
+											</Show>
+											<Show when={props.names[row.line]}>
+												{(line) => <NameParts name={line()} />}
+											</Show>
+										</span>
+									)}
+								</Show>
+							);
+							const delta = () => (
+								<Show when={row.delta}>
+									{(delta) => (
+										<span
+											class="pl-delta"
+											data-tone={delta().tone ?? undefined}
+										>
+											{delta().tone
+												? `${delta().text} ${delta().tone}`
+												: delta().text}
+										</span>
+									)}
+								</Show>
+							);
+							const limit = () => (
+								<Show when={row.limit}>
+									<span class="pl-limit">{row.limit}</span>
+								</Show>
+							);
+							return (
+								<Show
+									when={row.iterations}
+									fallback={
+										<div
+											class="pl-rrow ui-parts"
+											classList={{ focused: row.focused }}
+										>
+											{name()}
+											<b class="pl-mono">{row.value}</b>
+											{delta()}
+											{limit()}
+										</div>
+									}
+								>
+									{(iterations) => (
+										<>
+											<Show when={!props.single}>
+												<div class="pl-rrow ui-parts">{name()}</div>
+											</Show>
+											<For each={iterations()}>
+												{(each) => (
+													<div
+														class="pl-rrow"
+														classList={{ focused: each.emphasized }}
+													>
+														<span class="pl-it">
+															iteration {each.iteration}
+														</span>
+														<b class="pl-mono">{each.value}</b>
+														<Show when={each.alerted}>
+															<span
+																class="pl-alertdot"
+																role="img"
+																aria-label="alerted"
+															/>
+														</Show>
+														<Show when={each.emphasized}>{delta()}</Show>
+													</div>
+												)}
+											</For>
+											<Show when={row.limit}>
+												<div class="pl-rrow">{limit()}</div>
+											</Show>
+										</>
+									)}
+								</Show>
+							);
+						}}
+					</For>
+					<Show when={props.readout.more > 0}>
+						<span class="pl-more">
+							{props.readout.more} more{" "}
+							{props.readout.more === 1 ? "line" : "lines"}
+						</span>
+					</Show>
+				</div>
 				<Show when={props.alert}>
 					{(alert) => (
 						<div class="pl-ralert">

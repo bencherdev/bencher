@@ -38,9 +38,9 @@ import {
 } from "../runs/status";
 import StatusPill from "../runs/StatusPill";
 import Tag from "../tag";
-import { type Option, SearchMenu } from "./Box";
+import { type Option, SearchMenu, choicesOf } from "./Box";
 import { plotSearch } from "./pinned";
-import { type Dimension, OPTIONS, nameQuery } from "./queries";
+import { type Dimension, nameQuery } from "./queries";
 import {
 	type RunReport,
 	START,
@@ -514,7 +514,7 @@ const Picker = (props: {
 				searchName={`Search benchmarks in ${props.name}`}
 				anchor={props.anchor}
 				options={(text) => () =>
-					benchmarkOptions(result().data ?? [], text(), OPTIONS)
+					choicesOf(benchmarkOptions(result().data ?? [], text()))
 				}
 				empty={
 					result().data

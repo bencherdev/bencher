@@ -1295,8 +1295,8 @@ test("a query past 64 lines says so", async ({ page, request }) => {
 		}),
 	);
 	await expect(
-		page.getByRole("status").filter({ hasText: "of 64 lines" }),
-	).toContainText("72 of 64 lines");
+		page.getByRole("status").filter({ hasText: "of 72 lines" }),
+	).toContainText("64 of 72 lines");
 	await expect(plot(page)).toHaveAccessibleName("64 lines");
 });
 

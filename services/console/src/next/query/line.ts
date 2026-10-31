@@ -47,6 +47,19 @@ export const lineVisible = (
 	(query.only === undefined || query.only.includes(key)) &&
 	!query.hide.includes(key);
 
+/** How many of the lines a link chose were drawn, while fewer than all of them were. */
+export const chosenDrawn = (
+	only: readonly string[] | undefined,
+	drawn: readonly string[],
+) => {
+	if (!only) {
+		return undefined;
+	}
+	const ids = new Set(drawn);
+	const drew = only.filter((id) => ids.has(id)).length;
+	return drew < only.length ? { drew, of: only.length } : undefined;
+};
+
 /** Trade `only` for the hidden extras among the drawn lines, so lines a later edit adds are shown. */
 export const settleVisibility = (
 	query: ExploreQuery,

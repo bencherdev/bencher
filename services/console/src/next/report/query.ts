@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/solid-query";
 import type { JsonConsoleReport } from "../../types/bencher";
 import { NARROW } from "../plot/narrow";
 import type { Api } from "../api";
-import { batchSize } from "../reports/rows";
+import { batchSize } from "../list/rows";
 import { live, unfinished } from "../runs/status";
 import { type ParameterSet, parameterEntries } from "./row";
 import {

@@ -9,7 +9,9 @@ import { projectAt } from "../home";
 import { SHELL_KEY, VERSION_KEY, rememberVersion } from "../memory";
 import { ORGANIZATIONS_PATH } from "../paths";
 import { type Patch, patched } from "./general";
-import { type KeyRow, listed, revoke } from "./keys";
+import { dropRow, findRow, pageQuery, putRow, totalOf } from "../list/pages";
+import { screenBatch } from "../list/rows";
+import { type KeyRow, listed } from "./keys";
 
 // Console query keys put the project's slug third: ["console", kind, slug, ...].
 const projectKey = (slug: string) => ["console", "project", slug];
@@ -102,48 +104,37 @@ export const projectKeys = (slug: string): KeyHome => ({
 	queryKey: ["console", "keys", slug],
 });
 
-export interface KeyPage {
-	keys: KeyRow[];
-	/** Every key with this status, which the toggle counts. */
-	total: number;
-}
-
-// The API's largest page, in name order: past it, the first 255 keys by name.
-const PER_PAGE = 255;
-
 export const keysKey = (home: KeyHome, revoked: boolean) => [
 	...home.queryKey,
 	revoked ? "revoked" : "active",
 ];
 
-export const keysQuery = (api: Api, home: KeyHome, revoked: boolean) => ({
-	queryKey: keysKey(home, revoked),
-	queryFn: async ({ signal }: { signal: AbortSignal }): Promise<KeyPage> => {
+/** One page of the keys with a status, newest first, without a legacy token's secret. */
+export const keysPage =
+	(api: Api, home: KeyHome, revoked: boolean) =>
+	async (page: number, perPage: number, signal: AbortSignal) => {
 		const { data, headers } = await api.get<KeyRow[]>(
-			`${home.path}?revoked=${revoked}&per_page=${PER_PAGE}`,
+			`${home.path}?revoked=${revoked}&sort=created&direction=desc&per_page=${perPage}&page=${page}`,
 			signal,
 		);
-		return {
-			keys: data.map(listed),
-			total: Number(headers.get("X-Total-Count") ?? data.length),
-		};
-	},
-});
+		return { rows: data.map(listed), total: totalOf(headers, data) };
+	};
+
+/** The first page `keyList` asks for, which a visit starts before the list draws. */
+export const firstKeysQuery = (api: Api, home: KeyHome, revoked: boolean) =>
+	pageQuery(
+		keysKey(home, revoked),
+		screenBatch(),
+		1,
+		keysPage(api, home, revoked),
+	);
 
 /** A new key leads the active list, without its secret. */
 export const addKey = (
 	client: QueryClient,
 	home: KeyHome,
 	created: KeyRow & { key: string },
-) =>
-	client.setQueryData<KeyPage>(keysKey(home, false), (page) =>
-		page
-			? {
-					keys: [listed(created), ...page.keys],
-					total: page.total + 1,
-				}
-			: page,
-	);
+) => putRow(client, keysKey(home, false), listed(created));
 
 /** Show a key revoked at `at` at once; returns the undo. */
 export const revokeKey = (
@@ -154,47 +145,16 @@ export const revokeKey = (
 ) => {
 	const activeKey = keysKey(home, false);
 	const revokedKey = keysKey(home, true);
-	const active = client.getQueryData<KeyPage>(activeKey);
-	const revoked = client.getQueryData<KeyPage>(revokedKey);
-	const index = active?.keys.findIndex((key) => key.uuid === uuid) ?? -1;
-	const key = active?.keys[index];
-	if (active && key) {
-		const lists = revoke(
-			{ active: active.keys, revoked: revoked?.keys ?? [] },
-			uuid,
-			at,
-		);
-		client.setQueryData<KeyPage>(activeKey, {
-			keys: lists.active,
-			total: active.total - 1,
-		});
-		if (revoked) {
-			client.setQueryData<KeyPage>(revokedKey, {
-				keys: lists.revoked,
-				total: revoked.total + 1,
-			});
-		}
+	const key = findRow<KeyRow>(client, activeKey, uuid)?.row;
+	const undo = dropRow<KeyRow>(client, activeKey, uuid);
+	if (key) {
+		putRow(client, revokedKey, { ...key, revoked: at });
 	}
 	// The undo moves back this key alone: another revoke may have landed since.
 	return () => {
-		if (!key) {
-			return;
+		if (key) {
+			undo();
+			dropRow<KeyRow>(client, revokedKey, uuid);
 		}
-		client.setQueryData<KeyPage>(activeKey, (page) => {
-			if (!page || page.keys.some((other) => other.uuid === uuid)) {
-				return page;
-			}
-			const keys = [...page.keys];
-			keys.splice(index, 0, key);
-			return { keys, total: page.total + 1 };
-		});
-		client.setQueryData<KeyPage>(revokedKey, (page) =>
-			page?.keys.some((other) => other.uuid === uuid)
-				? {
-						keys: page.keys.filter((other) => other.uuid !== uuid),
-						total: page.total - 1,
-					}
-				: page,
-		);
 	};
 };

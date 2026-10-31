@@ -13,7 +13,7 @@ import { parseConsolePath } from "../paths";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
-import { keysQuery, projectKeys } from "../settings/data";
+import { firstKeysQuery, projectKeys } from "../settings/data";
 import Frame from "../settings/Frame";
 import General from "../settings/General";
 import Keys from "../settings/Keys";
@@ -41,8 +41,8 @@ const Settings = () => {
 			return;
 		}
 		if (section() === "keys") {
-			client.prefetchQuery(keysQuery(api, projectKeys(slug()), false));
-			client.prefetchQuery(keysQuery(api, projectKeys(slug()), true));
+			client.prefetchQuery(firstKeysQuery(api, projectKeys(slug()), false));
+			client.prefetchQuery(firstKeysQuery(api, projectKeys(slug()), true));
 		} else if (section() === "connections") {
 			connections()
 				.then(({ prefetch }) => prefetch(client, api, slug()))
@@ -75,7 +75,12 @@ const Settings = () => {
 export default Settings;
 
 // The account's key pages, the GitHub return page, and Connections load this chunk rather than split it.
-export { keysKey, keysQuery, revokeKey } from "../settings/data";
+export { keysKey, revokeKey } from "../settings/data";
 export { failureOf } from "../settings/failure";
-export { KeyTable, default as KeyList, Revoke } from "../settings/KeyList";
-export { type KeyRow, newestFirst } from "../settings/keys";
+export {
+	KeyTable,
+	default as KeyList,
+	Revoke,
+	keyList,
+} from "../settings/KeyList";
+export type { KeyRow } from "../settings/keys";
