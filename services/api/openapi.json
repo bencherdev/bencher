@@ -17607,6 +17607,15 @@
               "$ref": "#/components/schemas/JsonAlert"
             }
           },
+          "bmf_version": {
+            "nullable": true,
+            "description": "The BMF version the report's results were read at.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BmfVersion"
+              }
+            ]
+          },
           "branch": {
             "$ref": "#/components/schemas/JsonBranch"
           },
@@ -17636,6 +17645,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JobUuid"
+              }
+            ]
+          },
+          "parse_outcome": {
+            "nullable": true,
+            "description": "How the report's results parsed, once they are processed.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ParseOutcome"
               }
             ]
           },
@@ -20592,6 +20610,32 @@
         },
         "maxProperties": 8
       },
+      "ParseOutcome": {
+        "description": "How a report's results parsed.",
+        "oneOf": [
+          {
+            "description": "Every iteration parsed, and they hold at least one metric.",
+            "type": "string",
+            "enum": [
+              "parsed"
+            ]
+          },
+          {
+            "description": "An iteration failed to parse.",
+            "type": "string",
+            "enum": [
+              "failed"
+            ]
+          },
+          {
+            "description": "Every iteration parsed, and they hold no metric.",
+            "type": "string",
+            "enum": [
+              "empty"
+            ]
+          }
+        ]
+      },
       "PauseReason": {
         "description": "Why a runner is paused.",
         "oneOf": [
@@ -20846,6 +20890,13 @@
             "enum": [
               "skip"
             ]
+          },
+          {
+            "description": "The report received them and set them aside.",
+            "type": "string",
+            "enum": [
+              "ignore"
+            ]
           }
         ]
       },
@@ -20857,7 +20908,8 @@
           "variant",
           "measure",
           "metric",
-          "threshold"
+          "threshold",
+          "adapter"
         ]
       },
       "ResourceId": {

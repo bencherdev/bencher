@@ -5,8 +5,8 @@
 //! refer to them by index. Points are columns aligned to one shared x.
 
 use bencher_valid::{
-    BenchmarkName, Boundary, BranchName, DateTimeMillis, GitHash, MetricName, ModelTest,
-    ResourceName, SampleSize, Window,
+    BenchmarkName, BmfVersion, Boundary, BranchName, DateTimeMillis, GitHash, MetricName,
+    ModelTest, ResourceName, SampleSize, Window,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -30,7 +30,7 @@ use super::{
     head::{JsonVersion, VersionNumber},
     perf::{JsonPerfQueryParams, MAX_DIMENSION_ENTRIES},
     plot::{JsonPlot, PlotUuid},
-    report::{Adapter, Iteration, JsonReportAlertsCounts, ReportAlerts},
+    report::{Adapter, Iteration, JsonReportAlertsCounts, ParseOutcome, ReportAlerts},
 };
 
 /// How many lines a report page returns when the request does not say.
@@ -123,7 +123,16 @@ pub struct JsonConsoleReport {
     pub version: JsonVersion,
     pub start_time: DateTimeMillis,
     pub end_time: DateTimeMillis,
+    /// The BMF version the report's results were read at.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bmf_version: Option<BmfVersion>,
     pub adapter: Adapter,
+    /// The leaf adapter that parsed a version 1 report's results.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_adapter: Option<Adapter>,
+    /// How the report's results parsed, once they are processed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parse_outcome: Option<ParseOutcome>,
     pub counts: JsonConsoleReportCounts,
     /// Its runner job, until the job's results are in.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1038,7 +1047,16 @@ pub struct JsonConsoleRunReport {
     pub order: u32,
     pub uuid: ReportUuid,
     pub testbed: JsonConsoleTestbed,
+    /// The BMF version the report's results were read at.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bmf_version: Option<BmfVersion>,
     pub adapter: Adapter,
+    /// The leaf adapter that parsed a version 1 report's results.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_adapter: Option<Adapter>,
+    /// How the report's results parsed, once they are processed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parse_outcome: Option<ParseOutcome>,
     pub start_time: DateTimeMillis,
     pub end_time: DateTimeMillis,
     /// The most lines any of its iterations reported.

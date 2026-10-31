@@ -1317,6 +1317,16 @@ export interface JsonConsoleProject {
 	plots: number;
 }
 
+/** How a report's results parsed. */
+export enum ParseOutcome {
+	/** Every iteration parsed, and they hold at least one metric. */
+	Parsed = "parsed",
+	/** An iteration failed to parse. */
+	Failed = "failed",
+	/** Every iteration parsed, and they hold no metric. */
+	Empty = "empty",
+}
+
 /** Counts for the alerts of a report. */
 export interface JsonReportAlertsCounts {
 	/** The total number of alerts. */
@@ -1385,7 +1395,13 @@ export interface JsonConsoleReport {
 	version: JsonVersion;
 	start_time: DateTimeMillis;
 	end_time: DateTimeMillis;
+	/** The BMF version the report's results were read at. */
+	bmf_version?: BmfVersion;
 	adapter: Adapter;
+	/** The leaf adapter that parsed a version 1 report's results. */
+	resolved_adapter?: Adapter;
+	/** How the report's results parsed, once they are processed. */
+	parse_outcome?: ParseOutcome;
 	counts: JsonConsoleReportCounts;
 	/** Its runner job, until the job's results are in. */
 	job?: JsonConsoleJob;
@@ -1441,7 +1457,13 @@ export interface JsonConsoleRunReport {
 	order: number;
 	uuid: Uuid;
 	testbed: JsonConsoleTestbed;
+	/** The BMF version the report's results were read at. */
+	bmf_version?: BmfVersion;
 	adapter: Adapter;
+	/** The leaf adapter that parsed a version 1 report's results. */
+	resolved_adapter?: Adapter;
+	/** How the report's results parsed, once they are processed. */
+	parse_outcome?: ParseOutcome;
 	start_time: DateTimeMillis;
 	end_time: DateTimeMillis;
 	/** The most lines any of its iterations reported. */
@@ -2447,12 +2469,15 @@ export enum ReportWarningResource {
 	Measure = "measure",
 	Metric = "metric",
 	Threshold = "threshold",
+	Adapter = "adapter",
 }
 
 /** What a report did with the resources a warning counts. */
 export enum ReportWarningAction {
 	/** The report did not ingest them. */
 	Skip = "skip",
+	/** The report received them and set them aside. */
+	Ignore = "ignore",
 }
 
 /** How many of one resource a report handled with one action. */
@@ -2472,7 +2497,11 @@ export interface JsonReport {
 	testbed: JsonTestbed;
 	start_time: string;
 	end_time: string;
+	/** The BMF version the report's results were read at. */
+	bmf_version?: BmfVersion;
 	adapter: Adapter;
+	/** How the report's results parsed, once they are processed. */
+	parse_outcome?: ParseOutcome;
 	/**
 	 * The report results, one list of results per iteration.
 	 * Omitted by default from the reports list endpoint; use the `expand` query param to include them.

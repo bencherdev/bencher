@@ -28,7 +28,7 @@ use crate::{
         organization::{OrganizationId, plan::PlanKind},
         project::{
             ProjectId, QueryProject,
-            report::{QueryReport, ReportId, warning::ReportWarnings},
+            report::{QueryReport, ReportId, results::ReportBmfVersion, warning::ReportWarnings},
         },
         runner::{InsertJobCallback, QueryJobCallbackView, QueryRunner, RunnerId, SourceIp},
         spec::{QuerySpec, SpecId},
@@ -125,7 +125,7 @@ impl QueryJob {
         now: DateTime,
     ) -> Result<(), HttpError> {
         // Look up the report
-        let query_report: QueryReport = schema::report::table
+        let mut query_report: QueryReport = schema::report::table
             .filter(schema::report::id.eq(self.report_id))
             .first(auth_conn!(context))
             .map_err(resource_not_found_err!(Report, self.report_id))?;
@@ -175,8 +175,6 @@ impl QueryJob {
         };
 
         // Process results (adapter parsing, metrics, alerts, usage)
-        //
-        // The job parses at the version the run declared.
         query_report
             .process_results(
                 log,
@@ -185,7 +183,7 @@ impl QueryJob {
                 &results_array,
                 query_report.adapter,
                 settings,
-                self.config.bmf_version.unwrap_or_default(),
+                ReportBmfVersion::job(query_report.bmf_version, self.config.bmf_version),
                 ReportWarnings::default(),
                 plan_kind,
                 #[cfg(feature = "otel")]
