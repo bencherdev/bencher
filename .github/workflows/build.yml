@@ -159,6 +159,16 @@ jobs:
           npm install --include=dev
           npx playwright install --with-deps --only-shell chromium
           npx vitest run
+      - name: Build MCP App
+        working-directory: ./services/console
+        run: npm run mcp
+      - name: Check MCP App for changes
+        run: |
+          if ! git diff --quiet -- plus/api_mcp/ui/perf.html; then
+            git diff --stat -- plus/api_mcp/ui/perf.html
+            echo "::error file=plus/api_mcp/ui/perf.html::The MCP App is stale: run \`npm run mcp\` in services/console and commit plus/api_mcp/ui/perf.html"
+            exit 1
+          fi
 
   build_console:
     name: Build Console UI${{ matrix.artifact == 'bencher-console-prod' && ' (prod)' || '' }}

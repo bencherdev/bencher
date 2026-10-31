@@ -1,3 +1,4 @@
 text eol=lf
 
 services/console/diagrams/output/*.svg linguist-generated=true
+plus/api_mcp/ui/perf.html linguist-generated=true

@@ -1,0 +1,6 @@
+/* The MCP App's one stylesheet: the embed's, in a frame the host sizes to the page. */
+@import "../embed/page.css";
+
+body {
+	min-height: 0;
+}

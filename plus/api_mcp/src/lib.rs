@@ -38,6 +38,9 @@
 //! These endpoints are `unpublished`: they speak JSON-RPC, not REST,
 //! so they are intentionally excluded from the `OpenAPI` spec.
 //!
+//! A host that renders MCP Apps draws `query_perf`'s result with Explore's plot,
+//! a page served as the `ui://` resource that the tool's `_meta` names.
+//!
 //! Also serves `GET /.well-known/openai-apps-challenge` (`unpublished`).
 
 mod challenge;
@@ -45,6 +48,7 @@ mod endpoint;
 mod principal;
 mod server;
 mod tools;
+mod ui;
 
 use bencher_endpoint::Registrar;
 use bencher_schema::context::ApiContext;

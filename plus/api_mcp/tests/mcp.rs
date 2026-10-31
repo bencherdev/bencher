@@ -58,7 +58,10 @@ async fn mcp_post_2026(
     let mut request = mcp_request(server, bearer, body)
         .header("MCP-Protocol-Version", PROTOCOL_VERSION_2026)
         .header("Mcp-Method", method);
-    if let Some(name) = body["params"]["name"].as_str() {
+    if let Some(name) = body["params"]["name"]
+        .as_str()
+        .or_else(|| body["params"]["uri"].as_str())
+    {
         request = request.header("Mcp-Name", name);
     }
     request.send().await.expect("MCP request failed")
@@ -244,14 +247,12 @@ async fn mcp_batch_rejected() {
     assert_eq!(resp.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
 }
 
-// Methods outside the tools capability return JSON-RPC method not found
+// Methods outside the tools and resources capabilities return JSON-RPC method not found
 #[tokio::test]
 async fn mcp_method_not_found() {
     let server = TestServer::new().await;
 
     for (method, params) in [
-        ("resources/list", json!({})),
-        ("resources/templates/list", json!({})),
         ("prompts/list", json!({})),
         (
             "completion/complete",
@@ -272,6 +273,199 @@ async fn mcp_method_not_found() {
         let message: Value = resp.json().await.expect("Invalid JSON-RPC response");
         assert_eq!(message["error"]["code"], -32601, "{method}: {message}");
     }
+}
+
+// `query_perf` names the perf plot's MCP App, which the server lists and serves exactly as
+// committed, as an MCP App under a URI that each release renames
+#[tokio::test]
+async fn mcp_perf_app() {
+    let server = TestServer::new().await;
+
+    let initialized = mcp_result(&server, None, &initialize_request("2025-06-18")).await;
+    assert!(
+        initialized["capabilities"]["resources"].is_object(),
+        "{initialized}"
+    );
+    assert_eq!(
+        query_perf_tool(&server).await["_meta"],
+        perf_app_tool_meta()
+    );
+
+    let meta = json!({"ui": {"prefersBorder": true}, "openai/widgetPrefersBorder": true});
+    let listed = mcp_result(
+        &server,
+        None,
+        &resources_request("resources/list", &json!({})),
+    )
+    .await;
+    assert_eq!(
+        listed["resources"],
+        json!([{
+            "uri": PERF_APP_URI,
+            "name": "perf_plot",
+            "title": "Perf plot",
+            "mimeType": "text/html;profile=mcp-app",
+            "_meta": meta
+        }])
+    );
+    let read = mcp_result(
+        &server,
+        None,
+        &resources_request("resources/read", &json!({"uri": PERF_APP_URI})),
+    )
+    .await;
+    assert_eq!(
+        read["contents"],
+        json!([{
+            "uri": PERF_APP_URI,
+            "mimeType": "text/html;profile=mcp-app",
+            "text": include_str!("../ui/perf.html"),
+            "_meta": meta
+        }])
+    );
+
+    let templates = mcp_result(
+        &server,
+        None,
+        &resources_request("resources/templates/list", &json!({})),
+    )
+    .await;
+    assert_eq!(templates["resourceTemplates"], json!([]));
+    let unknown = resources_request("resources/read", &json!({"uri": UNKNOWN_URI}));
+    let message: Value = mcp_post(&server, None, &unknown)
+        .await
+        .json()
+        .await
+        .expect("Invalid JSON-RPC response");
+    assert_unknown_resource(&message, -32002);
+}
+
+// With OAuth on, `query_perf` keeps its MCP App beside how to sign in, and `ChatGPT` serves the page
+// from the origin of the canonical MCP endpoint, not the issuer's
+#[tokio::test]
+async fn mcp_perf_app_with_sign_in() {
+    use bencher_json::system::config::JsonOAuthServer;
+    use bencher_schema::context::OAuthServer;
+
+    let json: JsonOAuthServer = serde_json::from_value(json!({
+        "issuer": "https://api.example.com",
+        "resources": ["https://mcp.example.com/mcp", "https://api.example.com/mcp"],
+    }))
+    .expect("Invalid OAuth config");
+    let server = TestServer::new_with_options(TestServerOptions {
+        oauth: Some(OAuthServer::try_from(json).expect("Invalid OAuth server")),
+        ..TestServerOptions::default()
+    })
+    .await;
+
+    let mut meta = query_perf_tool(&server).await["_meta"].clone();
+    let schemes = meta
+        .as_object_mut()
+        .and_then(|meta| meta.remove("securitySchemes"))
+        .expect("Missing security schemes");
+    assert!(
+        schemes
+            .as_array()
+            .is_some_and(|schemes| !schemes.is_empty()),
+        "{schemes}"
+    );
+    assert_eq!(meta, perf_app_tool_meta());
+
+    let listed = mcp_result(
+        &server,
+        None,
+        &resources_request("resources/list", &json!({})),
+    )
+    .await;
+    let read = mcp_result(
+        &server,
+        None,
+        &resources_request("resources/read", &json!({"uri": PERF_APP_URI})),
+    )
+    .await;
+    for meta in [
+        &listed["resources"][0]["_meta"],
+        &read["contents"][0]["_meta"],
+    ] {
+        assert_eq!(
+            meta["openai/widgetDomain"], "https://mcp.example.com",
+            "{meta}"
+        );
+        assert!(meta["ui"].get("domain").is_none(), "{meta}");
+    }
+}
+
+// A `2026-07-28` client discovers the resources capability and reads the page without an
+// `initialize` handshake
+#[tokio::test]
+async fn mcp_perf_app_2026() {
+    let server = TestServer::new().await;
+
+    let discover = request_2026("server/discover", json!({}));
+    let discovered = mcp_result_2026(&server, None, &discover).await;
+    assert!(
+        discovered["capabilities"]["resources"].is_object(),
+        "{discovered}"
+    );
+    let read = request_2026("resources/read", json!({"uri": PERF_APP_URI}));
+    let read = mcp_result_2026(&server, None, &read).await;
+    assert_eq!(read["contents"][0]["text"], include_str!("../ui/perf.html"));
+    let unknown = request_2026("resources/read", json!({"uri": UNKNOWN_URI}));
+    let message: Value = mcp_post_2026(&server, None, &unknown)
+        .await
+        .json()
+        .await
+        .expect("Invalid JSON-RPC response");
+    assert_unknown_resource(&message, -32602);
+}
+
+const UNKNOWN_URI: &str = "ui://bencher/perf-v0.0.0.html";
+
+/// An unknown resource is the error `code` its protocol version names, with its URI.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "test helper; indexing a serde_json value never panics"
+)]
+fn assert_unknown_resource(message: &Value, code: i32) {
+    assert_eq!(message["error"]["code"], code, "{message}");
+    assert_eq!(
+        message["error"]["data"],
+        json!({"uri": UNKNOWN_URI}),
+        "{message}"
+    );
+}
+
+const PERF_APP_URI: &str = concat!("ui://bencher/perf-v", env!("CARGO_PKG_VERSION"), ".html");
+
+/// `query_perf`'s `_meta` naming its MCP App, under the MCP Apps key and `ChatGPT`'s.
+fn perf_app_tool_meta() -> Value {
+    json!({
+        "ui": {"resourceUri": PERF_APP_URI},
+        "openai/outputTemplate": PERF_APP_URI,
+        "openai/widgetAccessible": true
+    })
+}
+
+/// The `tools/list` entry for `query_perf`.
+#[expect(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "test helper; indexing a serde_json value never panics"
+)]
+async fn query_perf_tool(server: &TestServer) -> Value {
+    let body = json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list"});
+    let tools = mcp_result(server, None, &body).await;
+    tools["tools"]
+        .as_array()
+        .expect("Missing tools array")
+        .iter()
+        .find(|tool| tool["name"] == "query_perf")
+        .expect("Missing query_perf")
+        .clone()
+}
+
+fn resources_request(method: &str, params: &Value) -> Value {
+    json!({"jsonrpc": "2.0", "id": 5, "method": method, "params": params})
 }
 
 // tools/list returns the full tool surface with schemas, titles, and annotations
@@ -296,8 +490,12 @@ async fn mcp_tools_list() {
         assert!(names.contains(&name), "Missing tool: {name}");
     }
     for tool in tools {
-        // Sign-in requirements are only declared once OAuth is configured
-        assert!(tool.get("_meta").is_none(), "{tool}");
+        // Sign-in requirements are only declared once OAuth is configured, so only an MCP App has `_meta`
+        assert_eq!(
+            tool.get("_meta").is_some(),
+            tool["name"] == "query_perf",
+            "{tool}"
+        );
         assert_eq!(tool["inputSchema"]["type"], "object", "{tool}");
         assert!(tool["description"].is_string(), "{tool}");
         assert!(tool["title"].is_string(), "{tool}");

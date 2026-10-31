@@ -143,6 +143,14 @@ an inline style) of its own, so the console's page imports the design system's
 stylesheet and every page's styles, and the public plot imports only
 `src/next/public/page.css`, which gathers what it draws.
 
+## MCP App
+
+`src/next/mcp/` is the page that an MCP host draws for the MCP server's `query_perf`.
+`npm run mcp` builds it with `vite.mcp.config.ts` into one HTML file,
+`plus/api_mcp/ui/perf.html`, which the server embeds. The file is committed and CI
+rebuilds it, so a change to the page, the embed, the plot, or anything they import
+ships with the file `npm run mcp` rebuilds.
+
 ## Sentry
 
 The browser SDK loads from `sentry.client.config.ts` as a dynamic import, so no

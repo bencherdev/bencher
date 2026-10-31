@@ -243,7 +243,13 @@ impl McpTool {
         static LIST: LazyLock<ListToolsResult> = LazyLock::new(|| {
             ListToolsResult::with_all_items(
                 McpTool::iter()
-                    .map(|tool| tool.spec().with_meta(tool.security_schemes()))
+                    .map(|tool| {
+                        let mut spec = tool.spec();
+                        spec.meta
+                            .get_or_insert_default()
+                            .extend(tool.security_schemes());
+                        spec
+                    })
                     .collect(),
             )
         });
@@ -302,8 +308,16 @@ impl McpTool {
             Self::ListJobs => jobs::list_tool(self.name()),
             Self::ViewJob => jobs::view_tool(self.name()),
         };
-        tool.with_title(self.title())
-            .with_annotations(self.kind().annotations(self.title()))
+        let mut tool = tool
+            .with_title(self.title())
+            .with_annotations(self.kind().annotations(self.title()));
+        tool.meta = self.meta();
+        tool
+    }
+
+    /// The MCP App that draws the tool's result, for a host that renders one.
+    fn meta(self) -> Option<MetaObject> {
+        matches!(self, Self::QueryPerf).then(crate::ui::perf_tool_meta)
     }
 
     /// Run the tool, keeping a failure's status for the caller to decide how to answer it.
