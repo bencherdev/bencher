@@ -1,0 +1,153 @@
+{
+   "Title":"Dry.Once-20261024-021919",
+   "HostEnvironmentInfo":{
+      "BenchmarkDotNetCaption":"BenchmarkDotNet",
+      "BenchmarkDotNetVersion":"0.12.1",
+      "OsVersion":"ubuntu 24.04",
+      "ProcessorName":"Unknown processor",
+      "PhysicalProcessorCount":1,
+      "PhysicalCoreCount":16,
+      "LogicalCoreCount":16,
+      "RuntimeVersion":".NET Core 8.0.32 (CoreCLR 8.0.3226.50405, CoreFX 8.0.3226.50405)",
+      "Architecture":"X64",
+      "HasAttachedDebugger":false,
+      "HasRyuJit":true,
+      "Configuration":"RELEASE",
+      "DotNetCliVersion":"8.0.132",
+      "ChronometerFrequency":{
+         "Hertz":1000000000
+      },
+      "HardwareTimerKind":"Unknown"
+   },
+   "Benchmarks":[
+      {
+         "DisplayInfo":"Once.Alloc: Dry(IterationCount=1, LaunchCount=1, RunStrategy=ColdStart, UnrollFactor=1, WarmupCount=1)",
+         "Namespace":"Dry",
+         "Type":"Once",
+         "Method":"Alloc",
+         "MethodTitle":"Alloc",
+         "Parameters":"",
+         "FullName":"Dry.Once.Alloc",
+         "Statistics":{
+            "OriginalValues":[
+               159974
+            ],
+            "N":1,
+            "Min":159974,
+            "LowerFence":159974,
+            "Q1":159974,
+            "Median":159974,
+            "Mean":159974,
+            "Q3":159974,
+            "UpperFence":159974,
+            "Max":159974,
+            "InterquartileRange":0,
+            "LowerOutliers":[
+               
+            ],
+            "UpperOutliers":[
+               
+            ],
+            "AllOutliers":[
+               
+            ],
+            "StandardError":0,
+            "Variance":0,
+            "StandardDeviation":0,
+            "Skewness":NaN,
+            "Kurtosis":NaN,
+            "ConfidenceInterval":{
+               "N":1,
+               "Mean":159974,
+               "StandardError":0,
+               "Level":12,
+               "Margin":NaN,
+               "Lower":NaN,
+               "Upper":NaN
+            },
+            "Percentiles":{
+               "P0":159974,
+               "P25":159974,
+               "P50":159974,
+               "P67":159974,
+               "P80":159974,
+               "P85":159974,
+               "P90":159974,
+               "P95":159974,
+               "P100":159974
+            }
+         },
+         "Memory":{
+            "Gen0Collections":0,
+            "Gen1Collections":0,
+            "Gen2Collections":0,
+            "TotalOperations":1,
+            "BytesAllocatedPerOperation":760
+         },
+         "Measurements":[
+            {
+               "IterationMode":"Workload",
+               "IterationStage":"Actual",
+               "LaunchIndex":1,
+               "IterationIndex":1,
+               "Operations":1,
+               "Nanoseconds":159974
+            },{
+               "IterationMode":"Workload",
+               "IterationStage":"Result",
+               "LaunchIndex":1,
+               "IterationIndex":1,
+               "Operations":1,
+               "Nanoseconds":159974
+            }
+         ],
+         "Metrics":[
+            {
+               "Value":0,
+               "Descriptor":{
+                  "Id":"Gen0Collects",
+                  "DisplayName":"Gen 0",
+                  "Legend":"GC Generation 0 collects per 1000 operations",
+                  "NumberFormat":"#0.0000",
+                  "UnitType":0,
+                  "Unit":"Count",
+                  "TheGreaterTheBetter":false
+               }
+            },{
+               "Value":0,
+               "Descriptor":{
+                  "Id":"Gen1Collects",
+                  "DisplayName":"Gen 1",
+                  "Legend":"GC Generation 1 collects per 1000 operations",
+                  "NumberFormat":"#0.0000",
+                  "UnitType":0,
+                  "Unit":"Count",
+                  "TheGreaterTheBetter":false
+               }
+            },{
+               "Value":0,
+               "Descriptor":{
+                  "Id":"Gen2Collects",
+                  "DisplayName":"Gen 2",
+                  "Legend":"GC Generation 2 collects per 1000 operations",
+                  "NumberFormat":"#0.0000",
+                  "UnitType":0,
+                  "Unit":"Count",
+                  "TheGreaterTheBetter":false
+               }
+            },{
+               "Value":760,
+               "Descriptor":{
+                  "Id":"Allocated Memory",
+                  "DisplayName":"Allocated",
+                  "Legend":"Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)",
+                  "NumberFormat":"N0",
+                  "UnitType":2,
+                  "Unit":"B",
+                  "TheGreaterTheBetter":false
+               }
+            }
+         ]
+      }
+   ]
+}

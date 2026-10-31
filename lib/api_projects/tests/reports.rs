@@ -951,13 +951,13 @@ async fn try_post_v1_report(
     .await
 }
 
-/// A report that names eighteen metrics on one measure, two past the per measure cap of sixteen.
+/// A report that names 34 metrics on one measure, two past the per measure cap of 32.
 async fn post_report_past_the_metric_cap(
     server: &TestServer,
     token: &str,
     project_slug: &str,
 ) -> JsonReport {
-    let names = (1..=18)
+    let names = (1..=34)
         .map(|n| (format!("p{n}"), serde_json::json!(n)))
         .collect::<serde_json::Map<_, _>>();
     let body = post_v1_report(
@@ -1020,8 +1020,8 @@ async fn reports_post_over_the_license_keeps_its_warnings() {
         .expect("Failed to make the project private");
     let project_slug: &str = project.slug.as_ref();
 
-    // Two measured values pass the license of one, and two names pass the cap of sixteen.
-    let mut latency = (1..=17)
+    // Two measured values pass the license of one, and two names pass the cap of 32.
+    let mut latency = (1..=33)
         .map(|n| (format!("p{n}"), serde_json::json!(n)))
         .collect::<serde_json::Map<_, _>>();
     latency.insert("value".to_owned(), serde_json::json!(1.0));
@@ -2470,6 +2470,93 @@ async fn reports_post_creates_the_cpp_and_go_measures_in_their_units() {
         .map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
     );
 }
+
+// POST /v0/projects/{project}/reports - the JMH and BenchmarkDotNet leaves create their new
+// built-in measures and the measures they name at run time in their own units
+//
+// Kills: a new built-in measure missing from the server's built-ins, which creates it in the
+// generic unit, and a measure a leaf names at run time created without the unit its harness gives.
+#[tokio::test]
+async fn reports_post_creates_the_jmh_and_dot_net_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "jvmdotnet").await;
+    for (adapter, results) in [
+        ("java_jmh", JMH_MODES),
+        ("java_jmh", JMH_GC),
+        ("c_sharp_dot_net", DOT_NET_DIAGNOSERS),
+    ] {
+        post_report_body(
+            &server,
+            &token,
+            &project_slug,
+            &parse_report(adapter, &[results], Some(1)),
+        )
+        .await;
+    }
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any([
+            "allocated",
+            "exceptionfrequency",
+            "gc-alloc-rate",
+            "gen0-collects-per-1000-ops",
+            "sample-time",
+            "single-shot-time",
+        ]))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        [
+            ("allocated", "allocated", "bytes (B)"),
+            ("exceptionfrequency", "ExceptionFrequency", "Count"),
+            ("gc-alloc-rate", "gc.alloc.rate", "MB/sec"),
+            (
+                "gen0-collects-per-1000-ops",
+                "Gen0 Collects per 1000 Operations",
+                "collects / 1000 operations"
+            ),
+            ("sample-time", "Sample Time", "nanoseconds (ns)"),
+            ("single-shot-time", "Single Shot Time", "nanoseconds (ns)"),
+        ]
+        .map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
+// POST /v0/projects/{project}/reports - a JMH payload whose only variant has a parameter past the
+// limit is a report that warns of the skipped variant
+//
+// Kills: a leaf that returns no results when it skipped every variant, which refuses the report.
+#[tokio::test]
+async fn reports_post_warns_of_a_jmh_variant_past_the_parameter_limit() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "jmhlongparam").await;
+    let report = post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report("java_jmh", &[JMH_LONG_PARAM_ONLY], Some(1)),
+    )
+    .await;
+    assert_eq!(
+        report.warnings,
+        Some(vec![skipped(ReportWarningResource::Variant, 1)])
+    );
+}
+
+const JMH_MODES: &str = include_str!("../../bencher_adapter/tool_output/java/jmh/modes.json");
+const JMH_LONG_PARAM_ONLY: &str =
+    include_str!("../../bencher_adapter/tool_output/java/jmh/long_param_only.json");
+const JMH_GC: &str = include_str!("../../bencher_adapter/tool_output/java/jmh/gc_1_36.json");
+const DOT_NET_DIAGNOSERS: &str =
+    include_str!("../../bencher_adapter/tool_output/c_sharp/dot_net/diagnosers.json");
 
 const GOOGLE_MEMORY: &str =
     include_str!("../../bencher_adapter/tool_output/cpp/google/memory.json");

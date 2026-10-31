@@ -1,0 +1,55 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "bench.Hash.hash",
+        "mode" : "ss",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+        ],
+        "jdkVersion" : "21.0.12.1",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.12.1+1-1-24.04.4-Ubuntu",
+        "warmupIterations" : 0,
+        "warmupTime" : "single-shot",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 1,
+        "measurementTime" : "single-shot",
+        "measurementBatchSize" : 1,
+        "params" : {
+            "algorithm" : "fnv",
+            "size" : "16"
+        },
+        "primaryMetric" : {
+            "score" : 12.649,
+            "scoreError" : "NaN",
+            "scoreConfidence" : [
+                "NaN",
+                "NaN"
+            ],
+            "scorePercentiles" : {
+                "0.0" : 12.649,
+                "50.0" : 12.649,
+                "90.0" : 12.649,
+                "95.0" : 12.649,
+                "99.0" : 12.649,
+                "99.9" : 12.649,
+                "99.99" : 12.649,
+                "99.999" : 12.649,
+                "99.9999" : 12.649,
+                "100.0" : 12.649
+            },
+            "scoreUnit" : "us/op",
+            "rawData" : [
+                [
+                    12.649
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+
