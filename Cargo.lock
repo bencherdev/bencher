@@ -702,12 +702,14 @@ name = "bencher_adapter"
 version = "0.6.15"
 dependencies = [
  "bencher_json",
+ "bencher_valid",
  "criterion",
  "gungraun-runner",
  "gungraun-summary",
  "nom",
  "ordered-float",
  "pretty_assertions",
+ "quick-xml",
  "rust_decimal",
  "serde",
  "serde_json",

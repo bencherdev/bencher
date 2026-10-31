@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch name="shapes">
+  <Group name="shapes">
+    <TestCase name="Before" filename="shapes.cpp" line="7">
+      <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="132" clockResolution="21.0684" estimatedDuration="2.112e+06">
+        <!--All values in nano seconds-->
+        <mean value="155.526" lowerBound="154.936" upperBound="156.699" ci="0.95"/>
+        <standardDeviation value="4.06092" lowerBound="2.33674" upperBound="6.42978" ci="0.95"/>
+        <outliers variance="0.199893" lowMild="0" lowSevere="1" highMild="0" highSevere="4"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Throws before the samples" filename="shapes.cpp" line="11">
+      <BenchmarkResults name="throws early">
+        <failed message="boom"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="213" clockResolution="21.0684" estimatedDuration="2.0874e+06">
+        <!--All values in nano seconds-->
+        <mean value="99.125" lowerBound="98.3748" upperBound="101.726" ci="0.95"/>
+        <standardDeviation value="6.27206" lowerBound="1.95976" upperBound="14.0658" ci="0.95"/>
+        <outliers variance="0.595478" lowMild="0" lowSevere="1" highMild="1" highSevere="5"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Checks inside" filename="shapes.cpp" line="16">
+      <Section name="Inner section with a long name that wraps across the console width" filename="shapes.cpp" line="17">
+        <BenchmarkResults name="checked with a rather long name that wraps around" samples="100" resamples="100000" iterations="367" clockResolution="21.0684" estimatedDuration="2.0919e+06">
+          <!--All values in nano seconds-->
+          <mean value="57.0083" lowerBound="56.5354" upperBound="57.948" ci="0.95"/>
+          <standardDeviation value="3.26884" lowerBound="1.96158" upperBound="5.45425" ci="0.95"/>
+          <outliers variance="0.55456" lowMild="0" lowSevere="0" highMild="0" highSevere="8"/>
+        </BenchmarkResults>
+        <OverallResults successes="122" failures="0" expectedFailures="0"/>
+      </Section>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Throws in the samples" filename="shapes.cpp" line="25">
+      <BenchmarkResults name="throws late" samples="100" resamples="100000" iterations="1656" clockResolution="21.0684" estimatedDuration="1.9872e+06">
+        <!--All values in nano seconds-->
+        <failed message="late boom"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="595" clockResolution="21.0684" estimatedDuration="2.0825e+06">
+        <!--All values in nano seconds-->
+        <mean value="34.9451" lowerBound="34.777" upperBound="35.3023" ci="0.95"/>
+        <standardDeviation value="1.19635" lowerBound="0.635078" upperBound="1.91824" ci="0.95"/>
+        <outliers variance="0.306349" lowMild="0" lowSevere="0" highMild="1" highSevere="4"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="After" filename="shapes.cpp" line="34">
+      <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="53" clockResolution="21.0684" estimatedDuration="2.1041e+06">
+        <!--All values in nano seconds-->
+        <mean value="423.143" lowerBound="421.485" upperBound="426.425" ci="0.95"/>
+        <standardDeviation value="11.1744" lowerBound="6.01896" upperBound="16.931" ci="0.95"/>
+        <outliers variance="0.209156" lowMild="3" lowSevere="0" highMild="4" highSevere="6"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <OverallResults successes="122" failures="0" expectedFailures="0"/>
+    <OverallResultsCases successes="5" failures="0" expectedFailures="0"/>
+  </Group>
+  <OverallResults successes="122" failures="0" expectedFailures="0"/>
+  <OverallResultsCases successes="5" failures="0" expectedFailures="0"/>
+</Catch>

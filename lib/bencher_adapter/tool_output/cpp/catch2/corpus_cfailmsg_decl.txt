@@ -1,0 +1,101 @@
+Randomness seeded to: 3660997775
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cfailmsgP is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+cfailmsg.cpp:5
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 8                                    100          1602     1.9224 ms 
+                                        11.6661 ns    11.6045 ns     11.775 ns 
+                                       0.406746 ns   0.271001 ns   0.603983 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Paragraphs early
+-------------------------------------------------------------------------------
+cfailmsg.cpp:6
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws paragraphs                    Benchmark failed (first paragraph
+
+second paragraph) 
+
+cfailmsg.cpp:6: FAILED:
+due to unexpected exception with message:
+  first paragraph
+  
+second paragraph
+
+-------------------------------------------------------------------------------
+Paragraphs late
+-------------------------------------------------------------------------------
+cfailmsg.cpp:10
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws paragraphs late                         100          6992     1.3984 ms 
+Benchmark failed (late (1)
+
+late (2)) 
+cfailmsg.cpp:10: FAILED:
+due to unexpected exception with message:
+  late (1)
+  
+late (2)
+
+-------------------------------------------------------------------------------
+Trailing newline
+-------------------------------------------------------------------------------
+cfailmsg.cpp:18
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws a newline Benchmark failed (ends in a newline
+) 
+
+cfailmsg.cpp:18: FAILED:
+due to unexpected exception with message:
+  ends in a newline
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+cfailmsg.cpp:22
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 7                                    100          2009     1.8081 ms 
+                                        6.39481 ns    6.31493 ns    6.72202 ns 
+                                       0.669362 ns  0.0133246 ns    1.56231 ns 
+                                                                               
+Fibonacci 6                                    100          3470      1.735 ms 
+                                        5.24315 ns    5.14332 ns    5.56605 ns 
+                                       0.828792 ns   0.305216 ns    1.85404 ns 
+                                                                               
+
+===============================================================================
+test cases: 5 | 2 passed | 3 failed
+assertions: 3 | 3 failed
+

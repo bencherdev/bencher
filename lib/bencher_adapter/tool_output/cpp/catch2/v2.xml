@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch name="bench_v2">
+  <Group name="bench_v2">
+    <TestCase name="Fibonacci" filename="bench_v2.cpp" line="10">
+      <BenchmarkResults name="Fibonacci 10" samples="20" resamples="1000" iterations="771" clockResolution="20.2913" estimatedDuration="400920">
+        <!--All values in nano seconds-->
+        <mean value="29.7689" lowerBound="29.0955" upperBound="31.3283" ci="0.95"/>
+        <standardDeviation value="2.201" lowerBound="1.14336" upperBound="3.86936" ci="0.95"/>
+        <outliers variance="0.287138" lowMild="0" lowSevere="0" highMild="0" highSevere="1"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 20" samples="20" resamples="1000" iterations="5" clockResolution="20.2913" estimatedDuration="421500">
+        <!--All values in nano seconds-->
+        <mean value="4020.44" lowerBound="3953.42" upperBound="4353.3" ci="0.95"/>
+        <standardDeviation value="289.991" lowerBound="2.44481" upperBound="576.122" ci="0.95"/>
+        <outliers variance="0.286485" lowMild="2" lowSevere="0" highMild="1" highSevere="2"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Containers" filename="bench_v2.cpp" line="15">
+      <Section name="vector" filename="bench_v2.cpp" line="16">
+        <BenchmarkResults name="push 64" samples="20" resamples="1000" iterations="269" clockResolution="20.2913" estimatedDuration="403500">
+          <!--All values in nano seconds-->
+          <mean value="74.3835" lowerBound="70.3768" upperBound="81.9561" ci="0.95"/>
+          <standardDeviation value="12.8189" lowerBound="5.53031" upperBound="19.1033" ci="0.95"/>
+          <outliers variance="0.68711" lowMild="0" lowSevere="0" highMild="1" highSevere="3"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0"/>
+      </Section>
+      <OverallResult success="true"/>
+    </TestCase>
+    <OverallResults successes="0" failures="0" expectedFailures="0"/>
+    <OverallResultsCases successes="2" failures="0" expectedFailures="0"/>
+  </Group>
+  <OverallResults successes="0" failures="0" expectedFailures="0"/>
+  <OverallResultsCases successes="2" failures="0" expectedFailures="0"/>
+</Catch>
