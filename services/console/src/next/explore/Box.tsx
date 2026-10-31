@@ -8,11 +8,13 @@ import {
 	type JSX,
 	Show,
 	createEffect,
+	createMemo,
 	createSignal,
 	on,
 	onCleanup,
 	onMount,
 } from "solid-js";
+import { restsOf } from "../plot/distinct";
 
 export interface BoxValue {
 	label: string;
@@ -70,6 +72,10 @@ const Box = (props: {
 	children?: JSX.Element;
 }) => {
 	const [open, setOpen] = createSignal(false);
+	// A remove control names its value by what tells it apart from the others.
+	const rests = createMemo(() =>
+		restsOf(props.values.map(({ label }) => label)),
+	);
 	let box: HTMLFieldSetElement | undefined;
 	let add: HTMLButtonElement | undefined;
 	// A removed row takes its focused control with it: the next row's, or Add, takes focus back.
@@ -125,7 +131,7 @@ const Box = (props: {
 							<button
 								type="button"
 								class="ex-x"
-								aria-label={`Remove ${props.noun} ${value().label}`}
+								aria-label={`Remove ${props.noun} ${rests()[index] ?? value().label}`}
 								onClick={() => props.onRemove(index)}
 							>
 								<Cross />

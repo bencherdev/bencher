@@ -768,7 +768,8 @@ const dismissible = (
 };
 const dismissBench = (id: number) =>
 	alertsTable().getByRole("button", {
-		name: `Dismiss the alert on bench-${id} Latency`,
+		name: `Dismiss the alert on bench-${id}`,
+		exact: true,
 	});
 /** The rows' names, top to bottom, read a screen at a time. */
 const namesTopToBottom = async () => {
@@ -819,7 +820,7 @@ test("under Active, alerts dismissed before the next batch leave no alert skippe
 	]);
 	expect(lists().some((url) => url.searchParams.has("page"))).toBe(false);
 	expect(await namesTopToBottom()).toEqual(
-		Array.from({ length: total }, (_, id) => `${id + 2} bench-${id} Latency`),
+		Array.from({ length: total }, (_, id) => `${id + 2} bench-${id}`),
 	);
 });
 
@@ -865,7 +866,7 @@ const drawnOnce = async (ids: number[]) => {
 		.toBe(ids.length + 1);
 	await wait(200);
 	expect(await namesTopToBottom()).toEqual(
-		ids.map((id, index) => `${index + 2} bench-${id} Latency`),
+		ids.map((id, index) => `${index + 2} bench-${id}`),
 	);
 };
 /** Every alert once, top to bottom, the first one dismissed in its place. */
@@ -1102,7 +1103,7 @@ test("under Active, a batch asked again from an overtaken batch's offset never d
 	expect(lists()[2]?.searchParams.get("offset")).toBe(String(perPage - 1));
 	// The batch that replaced it is overtaken in turn, by the dismissal undone.
 	await alertsTable()
-		.getByRole("button", { name: "Reactivate the alert on bench-0 Latency" })
+		.getByRole("button", { name: "Reactivate the alert on bench-0" })
 		.click();
 	await expect.poll(landed).toBe(2);
 	reads[1]?.open();
@@ -1112,7 +1113,7 @@ test("under Active, a batch asked again from an overtaken batch's offset never d
 	expect(lists()[3]?.searchParams.get("offset")).toBe(String(perPage));
 	await wait(100);
 	expect(await namesTopToBottom()).toEqual(
-		Array.from({ length: perPage }, (_, id) => `${id + 2} bench-${id} Latency`),
+		Array.from({ length: perPage }, (_, id) => `${id + 2} bench-${id}`),
 	);
 	reads[2]?.open();
 

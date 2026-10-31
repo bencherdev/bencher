@@ -86,9 +86,36 @@
 	font-size: var(--font-size-xs);
 }
 
+/* The titles and the boundary grow from nothing to their whole width in equal steps, so none is cut while another holds more than its share. */
 .pl-pill.on,
 .pl-axt {
-	flex-shrink: 1;
+	flex: 1 1 0;
+	min-width: 0;
+	max-width: max-content;
+}
+
+/* The boundary never shrinks past its swatch and label; only the line and the model give way. */
+.pl-pill.on {
+	display: inline-grid;
+	grid-auto-flow: column;
+	grid-template-columns: auto auto minmax(0, max-content) minmax(0, max-content);
+	min-width: auto;
+}
+
+.pl-model {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.pl-pname,
+.pl-rname {
+	column-gap: var(--spacing-1);
+	align-items: center;
+	overflow: hidden;
+}
+
+.pl-axparts {
+	column-gap: 0;
 	min-width: 0;
 }
 
@@ -103,16 +130,22 @@
 	color: var(--color-text-error);
 }
 
-.pl-ellipsis {
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
+/* Whole unless the parts that never shrink overflow the row on their own. */
 .pl-note {
+	flex: 0 1 auto;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	color: var(--color-text-muted);
 	font-size: var(--font-size-xs);
+}
+
+/* What a line's swatch cannot tell apart once color and shape repeat, drawn only, so no name or copy repeats it. */
+.pl-ord::before {
+	content: attr(data-ordinal) / "";
+	color: var(--color-text-muted);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
 }
 
 .pl-alertdot {
@@ -149,24 +182,17 @@
 	white-space: nowrap;
 }
 
+.pl-axes > .pl-pill.alert,
+.pl-axes > .pl-axt:last-child:not(:first-child) {
+	margin-inline-start: auto;
+}
+
+.pl-axes > .pl-pill.alert ~ .pl-axt {
+	margin-inline-start: 0;
+}
+
 .pl[data-size="tile"] .pl-axes {
 	height: var(--spacing-6);
-}
-
-/* The room the titles and the alert count leave, for the boundary and the note: cut short, and hidden once too little is left. */
-.pl-status {
-	display: flex;
-	flex: 1;
-	align-items: center;
-	gap: var(--spacing-2);
-	overflow: hidden;
-	container-type: inline-size;
-}
-
-@container (width < 64px) {
-	.pl-status > * {
-		opacity: 0;
-	}
 }
 
 .pl-axglyph {
@@ -274,6 +300,8 @@
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
+	/* Its own width wherever it sits, so a move never resizes it. */
+	width: max-content;
 	min-width: 132px;
 	max-width: min(360px, calc(100% - var(--spacing-2)));
 	padding: 7px 10px;
@@ -303,6 +331,10 @@
 	min-width: 0;
 }
 
+.pl-rrow.ui-parts {
+	display: grid;
+}
+
 .pl-rrow b {
 	color: var(--color-text-primary);
 }
@@ -310,12 +342,6 @@
 .pl-rrow.focused b {
 	font-size: var(--font-size-sm);
 	font-weight: var(--font-weight-bold);
-}
-
-.pl-rname {
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
 }
 
 .pl-delta[data-tone="worse"] {
@@ -326,11 +352,34 @@
 	color: var(--color-better);
 }
 
+.pl-limit {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .pl-more,
 .pl-limit,
 .pl-pin,
 .pl-it {
 	color: var(--color-text-muted);
+}
+
+/* The focused row names its line on a line of its own, over its value, delta, and limit. */
+.pl-rrow.ui-parts.focused {
+	grid-auto-flow: row;
+	grid-template-columns: max-content max-content minmax(0, 1fr);
+}
+
+.pl-rrow.ui-parts.focused > .pl-rname {
+	grid-column: 1 / -1;
+}
+
+.pl-rrow.ui-parts.focused > .pl-delta {
+	grid-column: 2;
+}
+
+.pl-rrow.ui-parts.focused > .pl-limit {
+	grid-column: 3;
 }
 
 .pl-rrow.focused .pl-it {
@@ -385,14 +434,15 @@
 	padding: var(--spacing-1) var(--spacing-2) var(--spacing-2);
 }
 
+/* One line until a reveal opens what every line shares. */
 .pl-khead {
-	display: flex;
 	align-items: center;
-	height: 18px;
+	column-gap: 0;
+	min-height: 18px;
 	padding: 0 2px;
-	overflow: hidden;
 	color: var(--color-text-muted);
 	font-size: 11.5px;
+	line-height: 18px;
 	white-space: nowrap;
 }
 
@@ -431,10 +481,9 @@
 }
 
 .pl-ktog {
-	display: flex;
 	flex: 1;
 	align-items: center;
-	gap: var(--spacing-1);
+	column-gap: var(--spacing-1);
 	min-width: 0;
 	height: var(--pl-target);
 	padding: 2px 6px;
@@ -450,13 +499,17 @@
 	cursor: pointer;
 }
 
-.pl-ktog b {
+.pl-ktog .pl-rest {
 	color: var(--color-text-primary);
 	font-weight: var(--font-weight-semibold);
 }
 
 .pl-tag {
-	flex: none;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.pl-tag {
 	height: 18px;
 	padding: 0 5px;
 	border-radius: var(--radius-inner);
@@ -471,7 +524,7 @@
 }
 
 .pl-ke.off .pl-ktog,
-.pl-ke.off .pl-ktog b {
+.pl-ke.off .pl-ktog .pl-rest {
 	color: var(--color-text-muted);
 }
 
@@ -552,6 +605,12 @@
 
 	.pl[data-layout="dual"]:not([data-size="tile"]) .pl-axt {
 		order: -1;
+	}
+
+	/* Sized from nothing, so the second row never breaks again before the note can give way. */
+	.pl[data-layout="dual"]:not([data-size="tile"]) .pl-note {
+		flex: 1 1 0;
+		max-width: max-content;
 	}
 }
 

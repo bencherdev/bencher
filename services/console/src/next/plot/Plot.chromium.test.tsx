@@ -950,15 +950,15 @@ describe("Plot", () => {
 		for (const toggle of toggles.all()) {
 			expectNameStartsWithText(toggle.element());
 		}
-		expect(shownText(toggles.first().element())).toBe("hash size=1 linux");
+		expect(shownText(toggles.first().element())).toBe("1 linux");
 		await toggles.first().click();
 		const shown = page.getByRole("button", { name: /: show its line$/ });
 		await expect.element(shown).toBeVisible();
 		expectNameStartsWithText(shown.element());
 	});
 
-	// Kills a key control or the shared parameters losing the tooltip that says what they are, or the keyboard's way to it.
-	test("describes each key control and the shared parameters in a tooltip", async () => {
+	// Kills a key control losing the tooltip that says what it does.
+	test("describes each key control in a tooltip", async () => {
 		const data = testData([
 			testLine({
 				id: "one",
@@ -974,8 +974,8 @@ describe("Plot", () => {
 		mount({ data, focused: null });
 		await settle();
 		const controls = [
-			page.getByRole("button", { name: "blake3 threads=1: hide its line" }),
-			page.getByRole("button", { name: "Focus line of blake3 threads=1" }),
+			page.getByRole("button", { name: "1: hide its line" }),
+			page.getByRole("button", { name: "Focus line of 1" }),
 		];
 		for (const control of controls) {
 			await expect.element(control).toHaveAccessibleDescription(/\S/);
@@ -985,10 +985,50 @@ describe("Plot", () => {
 			);
 			expect(tip?.matches(":popover-open")).toBe(true);
 		}
-		const shared = page.getByText("simd=avx2", { exact: true });
-		await expect.element(shared).toHaveAccessibleDescription(/\S/);
-		(shared.element() as HTMLElement).focus();
-		expect(document.activeElement).toBe(shared.element());
+	});
+
+	// Kills a key that repeats what every line shares in each entry, a rest
+	// that gives way to a long value, or a shared head cut with no way to read
+	// it on a phone.
+	test("heads the key with what every line shares, which a tap opens in full", async () => {
+		await page.viewport(320, 844);
+		const shared = `my_crate::${Array.from({ length: 40 }, (_, at) => `module_${at}`).join("::")}`;
+		const data = testData(
+			Array.from({ length: 8 }, (_, at) =>
+				testLine({
+					id: `${at}`,
+					benchmark: `${shared}::bench_fn_name_${3000 + at}`,
+					parameters: { simd: "avx2", threads: `${at}-${"v".repeat(64)}` },
+					y: [at + 1, at + 2],
+				}),
+			),
+		);
+		mount({ data, focused: null }, 292);
+		await settle();
+		const entry = page.getByRole("button", {
+			name: /^bench_fn_name_3002 2-v+: hide its line$/,
+		});
+		await expect.element(entry).toBeVisible();
+		expect(shownText(entry.element())).toMatch(/^bench_fn_name_3002 2-v+$/);
+		const rest = entry.element().querySelector(".pl-rest") as HTMLElement;
+		expect(rest.textContent).toBe("bench_fn_name_3002");
+		const text = document.createRange();
+		text.selectNodeContents(rest);
+		expect(text.getBoundingClientRect().width).toBeLessThanOrEqual(
+			rest.getBoundingClientRect().width + 0.5,
+		);
+
+		const head = document.querySelector(".pl-khead") as HTMLElement;
+		const reveal = head.querySelector("button.ui-trunc") as HTMLButtonElement;
+		expect(reveal.textContent).toBe(shared);
+		expect(head.textContent).toContain("simd=avx2 threads=");
+		const height = head.getBoundingClientRect().height;
+		await userEvent.click(reveal);
+		await expect
+			.element(page.elementLocator(reveal))
+			.toHaveAttribute("aria-expanded", "true");
+		expect(head.getBoundingClientRect().height).toBeGreaterThan(height);
+		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
 	});
 
 	test("lists alerting lines first in the key", async () => {
@@ -1064,7 +1104,8 @@ const ALERTED = testData([
 		raised: [{ index: 2, uuid: "alert-2", status: "active" }],
 	}),
 ]);
-const ALERT_NAME = "blake3 simd=avx2 threads=1 Latency";
+// One line, so its name is its benchmark alone.
+const ALERT_NAME = "blake3";
 
 /** Whether the axes row counts an alert and the key marks a line alerting. */
 const alertMarks = () => ({
@@ -1386,6 +1427,163 @@ describe("Plot readout room", () => {
 		);
 		await settle();
 		expect(readoutBox().bottom).toBeLessThanOrEqual(box.bottom);
+	});
+
+	// Kills a readout or key that puts a whole name through one cut, so the
+	// tapped line reads `bench_f…` and a row loses its value; a tapped name
+	// that shares the value's line; and an alert dot or value that a long name
+	// squeezes out of its box.
+	test("on a 292 px phone the tapped line's name has a line of its own over a value, delta, and limit inside the readout, and every value, alert dot, and boundary rest stays whole or gives way", async () => {
+		await page.viewport(320, 844);
+		const shared = `my_crate::${Array.from({ length: 40 }, (_, at) => `module_${at}`).join("::")}`;
+		const data = testData(
+			Array.from({ length: 8 }, (_, at) =>
+				testLine({
+					id: `${at}`,
+					benchmark: `${shared}::bench_fn_name_${3000 + Math.floor(at / 4)}`,
+					parameters: { key: `${at % 4}-${"v".repeat(64)}` },
+					alerting: at === 0,
+					y: [100 + at, at === 0 ? -370_370_367.369 : 101 + at],
+					// The widest a value, delta, and two-sided limit print.
+					...(at === 0 && {
+						baseline: [-123_456_789.123, -123_456_789.123],
+						lower: [-1e300, -1e300],
+						upper: [1.5e300, 1.5e300],
+						alerts: [1],
+					}),
+				}),
+			),
+		);
+		mount({ data, focused: "0" }, 292);
+		await settle();
+		const entry = page
+			.getByRole("button", { name: /^bench_fn_name_3000 0-v+: hide its line$/ })
+			.element();
+		const dot = entry.querySelector(".pl-alertdot") as Element;
+		const inside = entry.getBoundingClientRect();
+		expect(dot.getBoundingClientRect().width).toBeGreaterThan(0);
+		expect(dot.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+			inside.left,
+		);
+		expect(dot.getBoundingClientRect().right).toBeLessThanOrEqual(inside.right);
+		// The boundary pill's short rest gives way with an ellipsis, not a clip.
+		const pname = document.querySelector(".pl-pill.on .pl-pname") as Element;
+		expect(
+			(pname.querySelector(".pl-rest") as Element).getBoundingClientRect()
+				.right,
+		).toBeLessThanOrEqual(pname.getBoundingClientRect().right + 0.5);
+
+		const { over, box } = await plotArea();
+		over.dispatchEvent(
+			new PointerEvent("click", {
+				clientX: box.right - 2,
+				clientY: box.top + 2,
+				bubbles: true,
+				pointerType: "touch",
+			}),
+		);
+		await settle();
+		const whole = (element: Element) => {
+			const text = document.createRange();
+			text.selectNodeContents(element);
+			return (
+				text.getBoundingClientRect().width <=
+				element.getBoundingClientRect().width + 0.5
+			);
+		};
+		const rows = [
+			...document.querySelectorAll(".pl-readout .pl-rrow"),
+		] as HTMLElement[];
+		const [tapped] = rows;
+		expect(tapped?.classList.contains("focused")).toBe(true);
+		const name = tapped?.querySelector(".pl-rname") as Element;
+		const rest = name.querySelector(".pl-rest") as Element;
+		expect(rest.textContent).toBe("bench_fn_name_3000");
+		expect(whole(rest)).toBe(true);
+		const value = tapped?.querySelector("b") as Element;
+		const delta = tapped?.querySelector(".pl-delta") as Element;
+		expect(name.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+			value.getBoundingClientRect().top,
+		);
+		expect(whole(value)).toBe(true);
+		expect(whole(delta)).toBe(true);
+		const card = tapped?.closest(".pl-readout") as HTMLElement;
+		const style = getComputedStyle(card);
+		const left =
+			card.getBoundingClientRect().left + Number.parseFloat(style.paddingLeft);
+		const right =
+			card.getBoundingClientRect().right -
+			Number.parseFloat(style.paddingRight);
+		const limit = tapped?.querySelector(".pl-limit") as Element;
+		expect(limit.getBoundingClientRect().width).toBeGreaterThan(0);
+		for (const part of [value, delta, limit]) {
+			expect(part.getBoundingClientRect().left).toBeGreaterThanOrEqual(left);
+			expect(part.getBoundingClientRect().right).toBeLessThanOrEqual(
+				right + 0.5,
+			);
+		}
+		expect(rows.length).toBeGreaterThan(2);
+		for (const row of rows.slice(1)) {
+			expect(whole(row.querySelector("b") as Element)).toBe(true);
+		}
+	});
+
+	// Kills a tapped name the readout does not grow for: alone among short
+	// names, it is cut in a card with room for it.
+	test("a pinned readout grows for its tapped line's name", async () => {
+		await page.viewport(1440, 900);
+		const data = testData([
+			testLine({
+				id: "a",
+				benchmark: "a::bench_with_a_long_name_of_forty_chars",
+				y: [100, 101, 102],
+				upper: [200, 200, 200],
+			}),
+			testLine({ id: "b", benchmark: "a::b", y: [110, 111, 112] }),
+		]);
+		mount({ data, focused: "a" }, 1100);
+		await settle();
+		const { over, box } = await plotArea();
+		over.dispatchEvent(
+			new PointerEvent("click", {
+				clientX: box.left + box.width * 0.95,
+				clientY: box.top + box.height / 2,
+				bubbles: true,
+				pointerType: "touch",
+			}),
+		);
+		await settle();
+		const rest = document.querySelector(
+			".pl-readout .pl-rrow.focused .pl-rest",
+		) as HTMLElement;
+		expect(rest.textContent).toBe("bench_with_a_long_name_of_forty_chars");
+		const text = document.createRange();
+		text.selectNodeContents(rest);
+		expect(text.getBoundingClientRect().width).toBeLessThanOrEqual(
+			rest.getBoundingClientRect().width + 0.5,
+		);
+	});
+
+	// Kills key details drawn whole up to the cut, so two lines that differ
+	// only in a long slash branch read the same.
+	test("draws each key detail by its tail, so branches that differ at the end read apart", async () => {
+		await page.viewport(320, 844);
+		const branch = (leaf: string) =>
+			`release/2026/q4/${"subsystem/".repeat(20)}very-long-leaf-${leaf}`;
+		const data = testData(
+			["000", "001"].map((leaf) =>
+				testLine({ id: leaf, branch: branch(leaf), y: [1, 2] }),
+			),
+		);
+		mount({ data, focused: null }, 292);
+		await settle();
+		await expect
+			.poll(() =>
+				[...document.querySelectorAll<HTMLElement>(".pl-ktog .pl-km")].map(
+					(detail) => detail.dataset.tail,
+				),
+			)
+			.toEqual(["very-long-leaf-000", "very-long-leaf-001"]);
 	});
 
 	// Kills the readout's whole report hash, which widens an alert page's pinned
@@ -1783,29 +1981,57 @@ describe("Plot axes row", () => {
 		},
 	);
 
-	// Kills a boundary cut to a sliver where too little room is left to read it.
-	test("a phone row with too little room for the boundary shows none of it", async () => {
-		await page.viewport(320, 844);
-		const data = testData(
-			[
-				testLine({
-					id: "a",
-					alerting: true,
-					y: [3000, 3000, 4000, 3000, 3000],
-					upper: [3500, 3500, 3500, 3500, 3500],
-					alerts: [2],
-				}),
-			],
-			[{ name: "Total throughput", units: "operations / second (ops/s)" }],
-		);
-		mount({ data, note: NOTE }, 292);
-		await settle();
-		await plotArea();
-		const room = textOf(NOTE).parentElement as HTMLElement;
-		expect(room.contains(textOf(BOUNDARY))).toBe(true);
-		expect(room.getBoundingClientRect().width).toBeLessThan(64);
-		expect(getComputedStyle(pillOf(BOUNDARY)).opacity).toBe("0");
-	});
+	// Kills a boundary or note that vanishes, a boundary label pushed out of
+	// its pill, or an alert count pushed off the row, beside a title at the
+	// caps on the narrowest phone: the title gives way, and the note only when
+	// the parts that never shrink overflow the row.
+	test.each([
+		["Cut to 3 months", true],
+		[NOTE, false],
+	] as const)(
+		"a phone row keeps the boundary and alert count, and the note %s whole when it fits, beside a title at the caps",
+		async (note, whole) => {
+			await page.viewport(320, 844);
+			const data = testData(
+				[
+					testLine({
+						id: "a",
+						benchmark: `my_crate::${"m".repeat(40)}::bench_fn_name_0002`,
+						alerting: true,
+						model: "percentage",
+						y: [3000, 3000, 4000, 3000, 3000],
+						upper: [3500, 3500, 3500, 3500, 3500],
+						alerts: [2],
+					}),
+				],
+				[{ name: "y".repeat(64), units: `custom (${"u".repeat(62)})` }],
+			);
+			mount({ data, note }, 292);
+			await settle();
+			await plotArea();
+			const label = textOf("boundary:");
+			const axes = label.closest(".pl-axes") as HTMLElement;
+			const row = axes.getBoundingClientRect();
+			for (const part of axes.children) {
+				const box = part.getBoundingClientRect();
+				expect(box.left).toBeGreaterThanOrEqual(row.left);
+				expect(box.right).toBeLessThanOrEqual(row.right);
+			}
+			const pill = pillOf(BOUNDARY).getBoundingClientRect();
+			expect(label.getBoundingClientRect().right).toBeLessThanOrEqual(
+				pill.right,
+			);
+			const count = textOf("1 alert");
+			expect(count.scrollWidth).toBeLessThanOrEqual(count.clientWidth);
+			const shown = textOf(note);
+			expect(shown.scrollWidth <= shown.clientWidth).toBe(whole);
+			expect(
+				(axes.querySelector(".pl-axt") as HTMLElement).getBoundingClientRect()
+					.right,
+			).toBeLessThan(pill.left);
+			expect(pill.right).toBeLessThan(shown.getBoundingClientRect().left);
+		},
+	);
 
 	// Kills a tile that draws the boundary, note, or alert count in its row.
 	test("an alerting tile's row holds its titles alone", async () => {

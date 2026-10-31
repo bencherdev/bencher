@@ -410,7 +410,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 		).toBeVisible();
 		const variants = page.getByRole("table", { name: "Active variants" });
 		await expect(variants.getByRole("row")).toHaveCount(3);
-		const label = "Archive blake3 input_bytes=1024 threads=4";
+		const label = "Archive threads=4";
 		await variants.getByRole("button", { name: label }).click();
 		await page
 			.getByRole("group", { name: label })

@@ -32,7 +32,8 @@ import { linesDrawn, readLinesTopToBottom } from "../report/testing";
 import Alerts from "./Alerts";
 
 const PATH = `${PROJECTS_PATH}/hashbrown/alerts`;
-const NAME = "blake3 n=0 Latency";
+// What a row's controls call its line: its benchmark, the one thing the list's lines differ in.
+const NAME = "blake3";
 const ALL = "the alerts in the report on main, ubuntu-latest, Sep 13, 21:16";
 
 let dispose: (() => void) | undefined;
@@ -488,7 +489,7 @@ test("a dismiss and its undo each redraw within a frame", async () => {
 	expect(median(undos)).toBeLessThan(budget(FRAME_MS));
 });
 
-const SHA256 = "sha256 n=0 Latency";
+const SHA256 = "sha256";
 const status = (name: string) =>
 	page.getByRole("radiogroup", { name: "Status" }).getByRole("radio", { name });
 const focusedName = () =>
@@ -1135,7 +1136,7 @@ test("a dismissal the API takes while the next batch is out skips and repeats no
 	await expect.poll(() => lists().length).toBe(2);
 	window.scrollTo({ top: 0, behavior: "instant" });
 	await page
-		.getByRole("button", { name: "Dismiss the alert on bench-1 n=0 Latency" })
+		.getByRole("button", { name: "Dismiss the alert on bench-1", exact: true })
 		.click();
 	await expect.poll(answered).toBe(1);
 	release();
@@ -1152,13 +1153,10 @@ test("a dismissal the API takes while the next batch is out skips and repeats no
 			},
 			{ timeout: 5_000 },
 		)
-		.toBe(`Dismiss the alert on bench-${total} n=0 Latency`);
+		.toBe(`Dismiss the alert on bench-${total}`);
 	await new Promise((resolve) => setTimeout(resolve, 200));
 	expect(await alertNamesTopToBottom()).toEqual(
-		Array.from(
-			{ length: total },
-			(_, index) => `bench-${index + 1} n=0 Latency`,
-		),
+		Array.from({ length: total }, (_, index) => `bench-${index + 1}`),
 	);
 	expect(
 		lists()
@@ -1187,10 +1185,10 @@ const drawnOnce = async (alerts: number[]) => {
 			},
 			{ timeout: 5_000 },
 		)
-		.toBe(`bench-${alerts.at(-1)} n=0 Latency`);
+		.toBe(`bench-${alerts.at(-1)}`);
 	await new Promise((resolve) => setTimeout(resolve, 200));
 	expect(await alertNamesTopToBottom()).toEqual(
-		alerts.map((alert) => `bench-${alert} n=0 Latency`),
+		alerts.map((alert) => `bench-${alert}`),
 	);
 };
 const numbered = (from: number, to: number) =>
@@ -1220,7 +1218,8 @@ test("returning to the window or the network after dismissals reads only the fir
 	for (const alert of [1, 2, 3]) {
 		await page
 			.getByRole("button", {
-				name: `Dismiss the alert on bench-${alert} n=0 Latency`,
+				name: `Dismiss the alert on bench-${alert}`,
+				exact: true,
 			})
 			.click();
 	}
@@ -1236,7 +1235,7 @@ test("returning to the window or the network after dismissals reads only the fir
 		focusManager.setFocused(undefined);
 	}
 	await page
-		.getByRole("button", { name: "Dismiss the alert on bench-4 n=0 Latency" })
+		.getByRole("button", { name: "Dismiss the alert on bench-4", exact: true })
 		.click();
 	await expect.poll(answered).toBe(4);
 	const back = lists().length;
@@ -1271,7 +1270,8 @@ test("a reread after a short change asks each later batch again from the offset 
 	for (const alert of [1, 2, 3]) {
 		await page
 			.getByRole("button", {
-				name: `Dismiss the alert on bench-${alert} n=0 Latency`,
+				name: `Dismiss the alert on bench-${alert}`,
+				exact: true,
 			})
 			.click();
 	}
@@ -1297,7 +1297,7 @@ test("a reread after a short change asks each later batch again from the offset 
 	holding = true;
 	const before = lists().length;
 	await page
-		.getByRole("button", { name: "Dismiss the alert on bench-5 n=0 Latency" })
+		.getByRole("button", { name: "Dismiss the alert on bench-5", exact: true })
 		.click();
 	await expect
 		.element(page.getByRole("alert"))
@@ -1348,7 +1348,7 @@ test("a reread whose first batch fails keeps the later batches as they were", as
 	failing = true;
 	const before = lists().length;
 	await page
-		.getByRole("button", { name: "Dismiss the alert on bench-5 n=0 Latency" })
+		.getByRole("button", { name: "Dismiss the alert on bench-5", exact: true })
 		.click();
 	await expect.poll(() => lists().length).toBeGreaterThan(before);
 	await new Promise((resolve) => setTimeout(resolve, 200));
@@ -1430,7 +1430,7 @@ test("returning to the window reads only the first batch again when nothing ahea
 	await away(client);
 	expect(await refocusAsking(lists, 1)).toEqual(["0"]);
 	await page
-		.getByRole("button", { name: "Dismiss the alert on bench-5 n=0 Latency" })
+		.getByRole("button", { name: "Dismiss the alert on bench-5", exact: true })
 		.click();
 	await expect.poll(answered).toBe(1);
 	arrive(61);
@@ -1730,7 +1730,9 @@ test("each row's name links to its alert's page", async () => {
 	const { api } = fakeApi(three);
 	mount(api);
 	await expect.element(heading()).toHaveTextContent("3 active");
-	const links = page.getByRole("link", { name: `${NAME}, open the alert` });
+	const links = page.getByRole("link", {
+		name: "blake3 n=0 Latency, open the alert",
+	});
 	await expect.element(links.first()).toBeVisible();
 	expect(links.elements().map((link) => link.getAttribute("href"))).toEqual(
 		[1, 2, 3].map((n) => `${PROJECTS_PATH}/hashbrown/alerts/${alertId(n)}`),

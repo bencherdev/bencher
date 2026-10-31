@@ -28,6 +28,7 @@ import { Actions, Impact, focusRow } from "./RowTable";
 import { modelText } from "../thresholds/text";
 import { thresholdLinkName } from "./threshold";
 import { shortDate, shortDay } from "./time";
+import { varyingKeys } from "../plot/distinct";
 import { parametersInUse, shownTotal, shownVariants, tagsOf } from "./variants";
 import { formatCount } from "../plot/count";
 
@@ -332,11 +333,7 @@ export const MeasureCards = (props: {
 );
 
 /** A benchmark's parameters in use and its variants, each of which archives on its own. */
-export const BenchmarkCards = (props: {
-	benchmark: string;
-	name: string | undefined;
-	edit: boolean;
-}) => {
+export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
 	const [archived, setArchived] = createSignal(false);
@@ -357,8 +354,17 @@ export const BenchmarkCards = (props: {
 	);
 	const [arming, setArming] = createSignal<string>();
 	const [failure, setFailure] = createSignal("");
-	const label = (variant: JsonVariant) =>
-		[props.name ?? props.benchmark, ...tagsOf(variant)].join(" ");
+	// The card names the benchmark, so a variant's controls name it by the parameters that tell it apart.
+	const varying = createMemo(() => new Set(varyingKeys(shown())));
+	const label = (variant: JsonVariant) => {
+		const keys = Object.keys(variant.parameters).sort();
+		const tags = keys.some((key) => varying().has(key))
+			? keys.filter((key) => varying().has(key))
+			: keys;
+		return tags.length > 0
+			? tags.map((key) => `${key}=${variant.parameters[key]}`).join(" ")
+			: "no parameters";
+	};
 	// Each variant's changes reach the API in the order they were made, and a
 	// refusal returns the variant to what the API last confirmed.
 	const queue = new Map<string, Promise<unknown>>();

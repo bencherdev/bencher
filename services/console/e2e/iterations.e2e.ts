@@ -8,8 +8,9 @@ import ceilings from "./speed-ceilings.json" with { type: "json" };
 // The seed's iterations project: six runs of three iterations on main, the
 // newest raising an alert on its second iteration's latency.
 const { iterations, hashbrown } = seed.projects;
-const LATENCY = "blake3 input_bytes=65536 Latency";
-const THROUGHPUT = "blake3 input_bytes=65536 Throughput";
+// The report's two lines differ only in their measure, which their controls name.
+const LATENCY = "blake3 Latency";
+const THROUGHPUT = "blake3 Throughput";
 const NEWEST = ["18.68 ns", "25.30 ns", "20.43 ns"];
 
 test.use({ storageState: signedIn(seed.member), timezoneId: "UTC" });
