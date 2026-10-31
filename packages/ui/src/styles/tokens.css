@@ -26,6 +26,9 @@
 		/* The narrowest a name column gets before its grid folds or restacks. */
 		--size-name-min: 16ch;
 
+		/* The width of the longest number the console prints, twelve characters. */
+		--size-number: 12ch;
+
 		/* Shape. Concentric by construction: inner < element < container. */
 		--radius-inner: 6px;
 		--radius-element: 8px;

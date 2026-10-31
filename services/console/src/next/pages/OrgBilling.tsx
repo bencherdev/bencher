@@ -34,7 +34,6 @@ import {
 	bareMetalUsd,
 	cardExpiry,
 	cardName,
-	count,
 	estimate,
 	fullDay,
 	manageQuery,
@@ -55,6 +54,7 @@ import {
 	organizationIn,
 	organizationQuery,
 } from "./OrgGeneral";
+import { formatCount } from "../plot/count";
 
 const CONTACT = "mailto:enterprise@bencher.dev";
 const PAYMENT_REQUIRED = 402;
@@ -247,7 +247,7 @@ const Meter = (props: { used: number; of: number; unit: string }) => (
 	<div
 		class="meter"
 		role="img"
-		aria-label={`${count(props.used)} of ${count(props.of)} ${props.unit}`}
+		aria-label={`${formatCount(props.used)} of ${formatCount(props.of)} ${props.unit}`}
 	>
 		<span
 			style={{ width: `${Math.min(100, (props.used / props.of) * 100)}%` }}
@@ -356,9 +356,9 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 					<div class="stats">
 						<Stat label={seriesBilled() ? "Active series" : "Metrics"}>
 							<span class="figure">
-								{count(used())}
+								{formatCount(used())}
 								<Show when={included()}>
-									{(of) => <small class="muted"> of {count(of())}</small>}
+									{(of) => <small class="muted"> of {formatCount(of())}</small>}
 								</Show>
 							</span>
 							<Show when={included()}>
@@ -367,7 +367,7 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 						</Stat>
 						<Stat label="Bare metal">
 							<span class="figure">
-								{count(minutes())} <small class="muted">min</small>
+								{formatCount(minutes())} <small class="muted">min</small>
 							</span>
 							<span class="muted sm">
 								{usd(bareMetalUsd(minutes()))} at {BARE_METAL_RATE}
@@ -677,11 +677,11 @@ const ThisMonth = (props: { usage: Usage }) => (
 		<div class="setcard-body">
 			<div class="stats">
 				<Stat label="Metrics">
-					<span class="figure">{count(props.usage.metrics ?? 0)}</span>
+					<span class="figure">{formatCount(props.usage.metrics ?? 0)}</span>
 				</Stat>
 				<Stat label="Bare metal">
 					<span class="figure">
-						{count(props.usage.runner_minutes ?? 0)}{" "}
+						{formatCount(props.usage.runner_minutes ?? 0)}{" "}
 						<small class="muted">min</small>
 					</span>
 				</Stat>
@@ -706,10 +706,10 @@ const License = (props: { usage: Usage; license: JsonLicense }) => (
 				<div class="stats">
 					<Stat label="Metrics this term">
 						<span class="figure">
-							{count(props.usage.metrics ?? 0)}
+							{formatCount(props.usage.metrics ?? 0)}
 							<small class="muted">
 								{" "}
-								of {count(props.license.entitlements)}
+								of {formatCount(props.license.entitlements)}
 							</small>
 						</span>
 						<Meter
@@ -720,7 +720,7 @@ const License = (props: { usage: Usage; license: JsonLicense }) => (
 					</Stat>
 					<Stat label="Bare metal">
 						<span class="figure">
-							{count(props.usage.runner_minutes ?? 0)}{" "}
+							{formatCount(props.usage.runner_minutes ?? 0)}{" "}
 							<small class="muted">min</small>
 						</span>
 					</Stat>

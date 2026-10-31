@@ -29,6 +29,7 @@ import {
 	keyEnd,
 	newestFirst,
 } from "./keys";
+import { formatCount } from "../plot/count";
 
 type Status = "active" | "revoked";
 
@@ -126,7 +127,10 @@ const KeyList = (props: {
 									value: "active",
 									label: (
 										<>
-											Active <span class="count">{active().data?.total}</span>
+											Active{" "}
+											<span class="count">
+												{formatCount(active().data?.total)}
+											</span>
 										</>
 									),
 								},
@@ -134,7 +138,10 @@ const KeyList = (props: {
 									value: "revoked",
 									label: (
 										<>
-											Revoked <span class="count">{revoked().data?.total}</span>
+											Revoked{" "}
+											<span class="count">
+												{formatCount(revoked().data?.total)}
+											</span>
 										</>
 									),
 								},

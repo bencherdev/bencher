@@ -9,8 +9,9 @@ import {
 	strokeRanges,
 } from "./draw";
 import {
+	type AxisTier,
 	formatDate,
-	formatTick,
+	formatTicks,
 	formatWhen,
 	formatWhenSeconds,
 } from "./format";
@@ -27,7 +28,6 @@ import type {
 	PlotSize,
 	PlotXAxis,
 } from "./types";
-import type { UnitScale } from "./units";
 
 // One uPlot per plot of a layout; bands, markers, focus, and the dual axis are drawn in its hooks.
 
@@ -53,9 +53,13 @@ const X_TICK_SPACING = 120;
 const MINUTE = 60_000;
 const DAY = 86_400_000;
 
+// Steps for uPlot to fit a y axis to, past its own, which stop near 1e32 and leave a larger range without labels.
+const Y_INCRS = Array.from({ length: 632 }, (_, index) => 10 ** (index - 323))
+	.flatMap((power) => [power, 2 * power, 5 * power])
+	.filter(Number.isFinite);
+
 export interface PanelAxis {
 	measure: number;
-	units: UnitScale;
 	/** Line indices on this axis. */
 	lines: readonly number[];
 }
@@ -92,6 +96,8 @@ export interface PanelState {
 	index: () => number | null;
 	/** An alert's status now, which mutes its marker once it is no longer active. */
 	status: (alert: PlotAlert) => PlotAlert["status"];
+	/** The tier a measure's axis prints its ticks in, from the lines it shows. */
+	tier: (measure: number) => AxisTier;
 }
 
 /** Where the pointer or the keys put the cursor: a data index, which on a line is its point nearest the pointer, the nearest line, and the x in CSS pixels inside the plot area. */
@@ -175,7 +181,7 @@ export const createPanel = (
 		},
 	});
 	const yAxis = (axis: number): uPlot.Axis => {
-		const { factor } = (axes[axis] as PanelAxis).units;
+		const { measure } = axes[axis] as PanelAxis;
 		return {
 			scale: axis === 0 ? "y" : "y2",
 			side: axis === 0 ? 3 : 1,
@@ -190,7 +196,9 @@ export const createPanel = (
 				width: 1,
 			},
 			ticks: { show: false },
+			incrs: Y_INCRS,
 			splits: (u, _, min, max) => {
+				const { factor } = state.tier(measure);
 				const count = Math.max(
 					3,
 					Math.min(5, Math.floor(u.bbox.height / pixelRatio() / TICK_SPACING)),
@@ -206,8 +214,14 @@ export const createPanel = (
 			},
 			// uPlot's default label filter past distr 3 is the log scale's, which blanks most ticks.
 			filter: (_, splits) => splits,
-			values: (_, splits) =>
-				splits.map((split) => formatTick(split / factor, steps[axis] ?? 0)),
+			values: (_, splits) => {
+				const tier = state.tier(measure);
+				return formatTicks(
+					splits.map((split) => split / tier.factor),
+					steps[axis] ?? 0,
+					tier,
+				);
+			},
 		};
 	};
 	const xLabel =

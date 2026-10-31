@@ -81,7 +81,11 @@ export const yRange = (
 	if (scale.kind !== "log" && min >= 0 && lo < 0) {
 		lo = 0;
 	}
-	return [lo, hi];
+	// Padding past the largest double, or to nothing on a log scale, stops at the values.
+	return [
+		Number.isFinite(lo) && (scale.kind !== "log" || lo > 0) ? lo : min,
+		Number.isFinite(hi) ? hi : max,
+	];
 };
 
 export interface Ticks {
@@ -115,11 +119,9 @@ const linearTicks = (lo: number, hi: number, count: number): Ticks => {
 	const raw = (hi - lo) / Math.max(1, count - 1);
 	const step = niceStep(raw > 0 ? raw : Math.abs(lo) * 0.1 || 1);
 	const ticks: number[] = [];
-	for (
-		let tick = Math.ceil(lo / step) * step;
-		tick <= hi + step * 1e-6;
-		tick += step
-	) {
+	// Capped, as a step near the largest double would carry the bound and the ticks to Infinity.
+	const end = Math.min(hi + step * 1e-6, Number.MAX_VALUE);
+	for (let tick = Math.ceil(lo / step) * step; tick <= end; tick += step) {
 		ticks.push(Number(tick.toPrecision(12)));
 	}
 	return { ticks, step };

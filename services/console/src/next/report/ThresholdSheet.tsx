@@ -10,6 +10,7 @@ import { countQuery } from "./query";
 import { lineLabel } from "./row";
 import { thresholdSnippets } from "./snippet";
 import { thresholdSnippetV0 } from "./snippetV0";
+import { formatCount } from "../plot/count";
 
 interface ThresholdSheetProps {
 	/** The line no threshold checks, while the sheet is open. */
@@ -144,7 +145,7 @@ const Count = (props: { count: QueryObserverResult<number> }) => (
 			<b>
 				{props.count.data === 1
 					? "1 line in this report"
-					: `${props.count.data} lines in this report`}
+					: `${formatCount(props.count.data)} lines in this report`}
 			</b>
 		</Match>
 		<Match when={props.count.isError}>

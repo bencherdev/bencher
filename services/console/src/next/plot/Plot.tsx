@@ -17,8 +17,10 @@ import {
 	type Panel,
 	type PanelAxis,
 } from "./chart";
+import { axisTicks, rangeTier } from "./axis";
 import { alignToAxis, extent } from "./columns";
-import { formatTick } from "./format";
+import { type AxisTier, axisTier, formatTicks } from "./format";
+import { formatCount } from "./count";
 import { onlyIteration, withThrough } from "./iterations";
 import { constantParameters, keyOrder, lineNames } from "./key";
 import { axisFont, axisWidth } from "./labels";
@@ -31,7 +33,6 @@ import {
 	readout,
 	readoutLeft,
 } from "./readout";
-import { yRange, yScale, yTicks } from "./scale";
 import { type Layout, layoutOf, lineStyles, measuresOf } from "./series";
 import { Swatch } from "./Swatch";
 import { returnSyncKey, takeSyncKey } from "./sync";
@@ -46,7 +47,6 @@ import type {
 	PlotSize,
 	PlotXAxis,
 } from "./types";
-import { type UnitScale, unitScale } from "./units";
 
 export interface PlotProps {
 	/** Undefined while the data loads: the plot holds its frame. */
@@ -95,15 +95,15 @@ export interface PlotAlerts {
 const KEY_MAX = { full: 12, row: 12, tile: 4 } as const;
 const NARROW_KEY_MAX = 6;
 
-const plural = (count: number) => `${count} ${count === 1 ? "line" : "lines"}`;
+const plural = (count: number) =>
+	`${formatCount(count)} ${count === 1 ? "line" : "lines"}`;
 
-const measureTitle = (measure: PlotMeasure | undefined, units: UnitScale) => {
+const measureTitle = (measure: PlotMeasure | undefined, tier: AxisTier) => {
 	if (!measure) {
 		return "";
 	}
-	return units.symbol &&
-		units.symbol.toLowerCase() !== measure.name.toLowerCase()
-		? `${measure.name}, ${units.symbol}`
+	return tier.symbol && tier.symbol.toLowerCase() !== measure.name.toLowerCase()
+		? `${measure.name}, ${tier.symbol}`
 		: measure.name;
 };
 
@@ -143,18 +143,6 @@ const Plot = (props: PlotProps) => {
 	const styles = createMemo(() => lineStyles(lines(), layout()));
 	const names = createMemo(() => lineNames(lines(), data()?.measures ?? []));
 	const order = createMemo(() => keyOrder(lines()));
-	const units = createMemo(() => {
-		const current = data();
-		if (!current) {
-			return [];
-		}
-		return current.measures.map((measure, index) => {
-			const values = current.lines
-				.filter((line) => line.measure === index)
-				.map(({ y }) => ({ y }));
-			return unitScale(extent(values)?.[0] ?? 0, measure.units);
-		});
-	});
 
 	const hidden = createMemo(() => {
 		const ids = new Set(props.hidden);
@@ -166,6 +154,23 @@ const Plot = (props: PlotProps) => {
 		});
 		return set;
 	});
+	// Each line's extent once per data, so a toggle only combines the shown ones.
+	const extents = createMemo(() => lines().map((line) => extent([line])));
+	const tiers = createMemo(
+		() => {
+			const current = data();
+			return current
+				? axisTiers(current, extents(), hidden(), props.scale ?? "auto")
+				: [];
+		},
+		[],
+		{ equals: sameTiers },
+	);
+	const tierOf = (measure: number) => tiers()[measure] ?? axisTier(0, "");
+	const titleOf = (axis: PanelAxis | undefined) =>
+		axis
+			? measureTitle(data()?.measures[axis.measure], tierOf(axis.measure))
+			: "";
 	const statusOf = (alert: PlotAlert) =>
 		props.alerts?.status?.(alert.uuid) ?? alert.status;
 	/** A line with an alert still active, as the page holds its alerts' statuses. */
@@ -234,18 +239,27 @@ const Plot = (props: PlotProps) => {
 				.filter((index) => group.includes(current.lines[index]?.measure ?? -1));
 			const axes: PanelAxis[] = group.map((measure) => ({
 				measure,
-				units: units()[measure] ?? { factor: 1, symbol: "" },
 				lines: panelLines.filter(
 					(index) => current.lines[index]?.measure === measure,
 				),
 			}));
 			return { lines: panelLines, axes };
 		});
-		// Reserved from every line, so hiding lines rarely widens an axis; stacked plots share one.
+		// Reserved from every line and from each alone, so hiding lines rarely widens an axis; stacked plots share one.
 		const font = axisFont(untrack(palette).code);
 		const widths = specs.map(({ axes }) =>
 			axes.map((axis) =>
-				reservedWidth(current, axis, props.scale ?? "auto", font),
+				Math.max(
+					...[axis.lines, ...axis.lines.map((line) => [line])].map((lines) =>
+						reservedWidth(
+							current,
+							lines,
+							current.measures[axis.measure]?.units ?? "",
+							props.scale ?? "auto",
+							font,
+						),
+					),
+				),
 			),
 		);
 		const reserved = [0, 1].map((axis) =>
@@ -258,9 +272,6 @@ const Plot = (props: PlotProps) => {
 			styles: drawn,
 			reserved,
 			showX: index === specs.length - 1,
-			titles: spec.axes.map((axis) =>
-				measureTitle(current.measures[axis.measure], axis.units),
-			),
 		}));
 	});
 
@@ -370,7 +381,6 @@ const Plot = (props: PlotProps) => {
 			current.index,
 			order().filter((line) => !hidden().has(line)),
 			focus(),
-			units(),
 			xAxis(),
 			undefined,
 			{ line: current.line, chosen: picked().iteration },
@@ -544,6 +554,7 @@ const Plot = (props: PlotProps) => {
 											pinned: () => cursor()?.pinned ?? false,
 											index: () => cursor()?.index ?? null,
 											status: statusOf,
+											tier: tierOf,
 										},
 										panelEvents(index()),
 									);
@@ -581,7 +592,7 @@ const Plot = (props: PlotProps) => {
 									<div class="pl-panel">
 										<div class="pl-axes">
 											<span class="pl-pill pl-axt">
-												<Show when={spec.titles.length > 1}>
+												<Show when={spec.axes.length > 1}>
 													<svg
 														class="pl-axglyph"
 														viewBox="0 0 12 8"
@@ -590,7 +601,7 @@ const Plot = (props: PlotProps) => {
 														<line x1="1" y1="4" x2="11" y2="4" />
 													</svg>
 												</Show>
-												<span class="pl-ellipsis">{spec.titles[0]}</span>
+												<span class="pl-ellipsis">{titleOf(spec.axes[0])}</span>
 											</span>
 											<span class="pl-status">
 												<Show when={lead(index())}>
@@ -616,12 +627,15 @@ const Plot = (props: PlotProps) => {
 											<Show when={lead(index()) && alerts() > 0}>
 												<span class="pl-pill alert">
 													<span class="pl-alertdot" aria-hidden="true" />
-													{alerts()} {alerts() === 1 ? "alert" : "alerts"}
+													{formatCount(alerts())}{" "}
+													{alerts() === 1 ? "alert" : "alerts"}
 												</span>
 											</Show>
-											<Show when={spec.titles[1]}>
+											<Show when={spec.axes[1]}>
 												<span class="pl-pill pl-axt">
-													<span class="pl-ellipsis">{spec.titles[1]}</span>
+													<span class="pl-ellipsis">
+														{titleOf(spec.axes[1])}
+													</span>
 													<svg
 														class="pl-axglyph"
 														data-stroke="dotted"
@@ -721,24 +735,60 @@ const Plot = (props: PlotProps) => {
 
 const reservedWidth = (
 	data: PlotData,
-	axis: PanelAxis,
+	lines: readonly number[],
+	units: string,
 	mode: PlotScale,
 	font: string,
 ) => {
-	const range = extent(axis.lines.flatMap((line) => data.lines[line] ?? []));
-	if (!range) {
-		return axisWidth([], font);
-	}
-	const [min, max] = range;
-	const kind = yScale(mode, min, max);
-	const [lo, hi] = yRange(kind, min, max);
-	const { factor } = axis.units;
-	const { ticks, step } = yTicks(kind, lo / factor, hi / factor, 5);
-	return axisWidth(
-		ticks.map((tick) => formatTick(tick, step)),
-		font,
+	const drawn = axisTicks(
+		lines.flatMap((line) => data.lines[line] ?? []),
+		units,
+		mode,
 	);
+	return drawn
+		? axisWidth(formatTicks(drawn.ticks, drawn.step, drawn.tier), font)
+		: axisWidth([], font);
 };
+
+/** Each measure's axis tier, from the lines it shows, or all its lines when none is shown. */
+const axisTiers = (
+	data: PlotData,
+	extents: readonly ([number, number] | undefined)[],
+	hidden: ReadonlySet<number>,
+	mode: PlotScale,
+): AxisTier[] =>
+	data.measures.map((measure, index) => {
+		let shown: [number, number] | undefined;
+		let all: [number, number] | undefined;
+		for (let at = 0; at < data.lines.length; at++) {
+			const range = extents[at];
+			if (data.lines[at]?.measure === index && range) {
+				all = widen(all, range);
+				if (!hidden.has(at)) {
+					shown = widen(shown, range);
+				}
+			}
+		}
+		const range = shown ?? all;
+		return range
+			? rangeTier(range[0], range[1], measure.units, mode)
+			: axisTier(0, measure.units);
+	});
+
+const widen = (
+	range: [number, number] | undefined,
+	[min, max]: [number, number],
+): [number, number] =>
+	range ? [Math.min(range[0], min), Math.max(range[1], max)] : [min, max];
+
+const sameTiers = (a: readonly AxisTier[], b: readonly AxisTier[]) =>
+	a.length === b.length &&
+	a.every(
+		(tier, index) =>
+			tier.factor === b[index]?.factor &&
+			tier.symbol === b[index]?.symbol &&
+			tier.exponent === b[index]?.exponent,
+	);
 
 interface ReadoutProps {
 	readout: NonNullable<ReturnType<typeof readout>>;

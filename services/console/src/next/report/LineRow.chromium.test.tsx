@@ -218,6 +218,30 @@ test("a narrow row's controls are 44 px targets", async () => {
 	}
 });
 
+// Kills a number cell that overflows at its start, where the sign and the magnitude are.
+test("a narrow row's numbers that overflow their cell keep their start", async () => {
+	await page.viewport(320, 800);
+	mount({ narrow: true });
+	const value = page.getByText("20.60 ns").element() as HTMLElement;
+	const delta = value.nextElementSibling as HTMLElement;
+	value.textContent = "-123,456,789.12";
+	delta.textContent = "↑ +999.9% better";
+	const cell = (value.closest("td") as HTMLElement).getBoundingClientRect();
+	// The value clips in its own box, so its cut is at the end however the cell aligns it.
+	expect(value.clientWidth).toBeLessThan(value.scrollWidth);
+	for (const number of [value, delta]) {
+		const start = document.createRange();
+		start.setStart(number.firstChild as Text, 0);
+		start.setEnd(number.firstChild as Text, 1);
+		const drawn = start.getBoundingClientRect();
+		expect(number.scrollWidth, number.textContent).toBeGreaterThan(cell.width);
+		expect(drawn.left, number.textContent).toBeGreaterThanOrEqual(cell.left);
+		expect(drawn.left, number.textContent).toBeGreaterThanOrEqual(
+			number.getBoundingClientRect().left,
+		);
+	}
+});
+
 // Kills an aside that only the wide row draws, or that leaves the measure beside it.
 test("an aside takes the measure's place in both layouts", async () => {
 	for (const narrow of [false, true]) {

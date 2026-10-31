@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { iterationTag, lineLabel, rowNumbers, type UnitsPort } from "./row";
+import { iterationTag, lineLabel, rowNumbers } from "./row";
 
 describe("iterationTag", () => {
 	// Kills an iteration counted from 0, a tag on a line run once, and a count taken from the iteration shown.
@@ -59,46 +59,25 @@ describe("lineLabel", () => {
 });
 
 describe("rowNumbers", () => {
-	// Thousands of a unit once the smallest number reaches a thousand.
-	const PORT: UnitsPort = {
-		unitScale: (min, units) =>
-			min >= 1000
-				? { factor: 1000, symbol: `k${units}` }
-				: { factor: 1, symbol: units },
-		formatValue: (value, scale) => `${value / scale.factor} ${scale.symbol}`,
-	};
+	const NS = "nanoseconds (ns)";
 
-	// Kills scaling from the value alone, which would print the limit in a unit it is under.
-	test("prints the value and the limit in one unit, fit to the smaller", () => {
+	// Kills a limit printed in the value's tier, where a negative or zero one used to drop both to the base unit.
+	test("prints the value and the limit each in its own tier", () => {
 		expect(
-			rowNumbers(
-				{ value: 2000, baseline: 1000, upper_limit: 900 },
-				"upper",
-				"ns",
-				PORT,
-			),
-		).toEqual({ value: "2000 ns", limit: "900 ns" });
-		expect(
-			rowNumbers(
-				{ value: 3000, baseline: 2500, upper_limit: 2600 },
-				"upper",
-				"ns",
-				PORT,
-			),
-		).toEqual({ value: "3 kns", limit: "2.6 kns" });
+			rowNumbers({ value: 5e9, baseline: 1e9, upper_limit: 0 }, "upper", NS),
+		).toEqual({ value: "5.00 s", limit: "0" });
 	});
 
 	// Kills reading the limit from the side the threshold does not guard.
 	test.each([
-		["upper", "110 ns"],
-		["lower", "90 ns"],
+		["upper", "110.00 ns"],
+		["lower", "90.00 ns"],
 	] as const)("a threshold guarding %s shows that limit", (guard, limit) => {
 		expect(
 			rowNumbers(
 				{ value: 100, baseline: 100, lower_limit: 90, upper_limit: 110 },
 				guard,
-				"ns",
-				PORT,
+				NS,
 			).limit,
 		).toBe(limit);
 	});
@@ -106,28 +85,27 @@ describe("rowNumbers", () => {
 	// Kills a two-sided limit that ignores which way the value moved, or which side alerted.
 	test("a two-sided threshold shows the limit the value moved toward, or the one it crossed", () => {
 		const limits = { lower_limit: 90, upper_limit: 110, baseline: 100 };
-		expect(
-			rowNumbers({ ...limits, value: 105 }, "both", "ns", PORT).limit,
-		).toBe("110 ns");
-		expect(rowNumbers({ ...limits, value: 95 }, "both", "ns", PORT).limit).toBe(
-			"90 ns",
+		expect(rowNumbers({ ...limits, value: 105 }, "both", NS).limit).toBe(
+			"110.00 ns",
+		);
+		expect(rowNumbers({ ...limits, value: 95 }, "both", NS).limit).toBe(
+			"90.00 ns",
 		);
 		expect(
 			rowNumbers(
 				{ ...limits, value: 105, alert: { limit: "lower" } },
 				"both",
-				"ns",
-				PORT,
+				NS,
 			).limit,
-		).toBe("90 ns");
+		).toBe("90.00 ns");
 	});
 
 	// Kills a limit printed for a line no threshold checks, or one whose threshold has none yet.
 	test("has no limit without a threshold or before it computes one", () => {
-		expect(rowNumbers({ value: 5 }, undefined, "ns", PORT)).toEqual({
-			value: "5 ns",
+		expect(rowNumbers({ value: 5 }, undefined, NS)).toEqual({
+			value: "5.00 ns",
 			limit: null,
 		});
-		expect(rowNumbers({ value: 5 }, "upper", "ns", PORT).limit).toBeNull();
+		expect(rowNumbers({ value: 5 }, "upper", NS).limit).toBeNull();
 	});
 });

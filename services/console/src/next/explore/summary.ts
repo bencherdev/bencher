@@ -1,5 +1,6 @@
 import type { JsonConsolePerf } from "../../types/bencher";
 import type { ExploreQuery } from "../query/query";
+import { formatCount } from "../plot/count";
 
 type Dimension =
 	| "branches"
@@ -21,7 +22,7 @@ export const chipSummary = (
 			return "every variant";
 		}
 		if (rest.length > 0) {
-			return `${query.sets.length} sets`;
+			return `${formatCount(query.sets.length)} sets`;
 		}
 		const tags = Object.entries(only).map(
 			([name, value]) => `${name}=${String(value)}`,
@@ -44,5 +45,5 @@ export const chipSummary = (
 	);
 	return names.every((name) => name !== undefined)
 		? names.join(", ")
-		: `${uuids.length} chosen`;
+		: `${formatCount(uuids.length)} chosen`;
 };
