@@ -5,9 +5,13 @@
 Opcional: Define o token de autenticação usado pelo callback de um [Job em hardware dedicado][job] desanexado.
 
 Ao usar [a flag `--detach`][detach] e [a opção `--github-actions`](#--github-actions-github_token),
-esta opção deve ser definida com um [token de acesso pessoal de granularidade fina][github fine-grained token]
+o servidor da API do Bencher dispara um workflow de [`repository_dispatch`][github repository dispatch] quando o Job termina.
+Para um Projeto com um [repositório vinculado][pull requests on bare metal], o Bencher cria o token, então esta opção não é necessária.
+Para usar seu próprio token em vez disso, defina esta opção com um [token de acesso pessoal de granularidade fina][github fine-grained token]
 para o repositório com pelo menos a permissão `contents: write`.
-Isso permitirá que o servidor da API do Bencher dispare um workflow de [`repository_dispatch`][github repository dispatch] usando o token.
+O Bencher então envia o evento `repository_dispatch` com este token, quer o Projeto tenha um repositório vinculado ou não.
+A CLI exige esta opção no GitHub Enterprise Server e com um servidor da API do Bencher anterior a `v0.6.16`.
+Sem ela, uma execução desanexada de um Projeto `claimed` é recusada se o servidor não tiver um aplicativo GitHub, se o Projeto não tiver um repositório vinculado ou se o seu repositório vinculado estiver desconectado.
 Veja [Pull Requests em hardware dedicado no GitHub Actions][pull requests on bare metal] para uma visão geral completa.
 
 > 🐰 Você não pode simplesmente usar o `GITHUB_TOKEN` aqui, pois ele expira assim que o workflow atual termina!

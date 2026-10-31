@@ -31,6 +31,5 @@ jobs:
           --image project-abc4567-wxyz123456789:latest \
           --detach \
           --github-actions '${{ secrets.GITHUB_TOKEN }}' \
-          --ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}' \
           bencher mock
 ```

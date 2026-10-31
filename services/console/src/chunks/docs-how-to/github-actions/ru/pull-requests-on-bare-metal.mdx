@@ -20,6 +20,25 @@ import PullRequestsOnBareMetalAttachCode from "../pull-requests-on-bare-metal-at
 workflow [Pull Requests из Fork][pull requests from forks] выше,
 чтобы запускать бенчмарки на выделенном оборудовании для PR из форков.
 
+Сначала один раз свяжите репозиторий с Проектом:
+
+1. В Bencher Console откройте `Settings` Проекта, затем `Connections`.
+2. На карточке GitHub нажмите `Link repository`.
+   GitHub вернет вас в `Connections`, где карточка покажет каждый репозиторий, в который вы можете делать push.
+3. Нажмите `Link` рядом с репозиторием.
+   Если его нет в списке, нажмите `Install on GitHub` и дайте приложению доступ к нему.
+   Если у него указано `Approval required`, нажмите `Approve on GitHub`, одобрите новые разрешения приложения,
+   затем снова откройте `Connections` и нажмите `Link repository`.
+
+Чтобы связать репозиторий, нужны роль Maintainer в Проекте, которая есть у Leader Организации и администраторов сервера, и доступ на push к репозиторию.
+Приложению GitHub от Bencher нужен доступ на чтение и запись к содержимому репозитория,
+потому что `repository_dispatch` не принимает ничего меньшего.
+Когда Job завершается, Bencher создает токен для связанного репозитория
+и отправляет с ним событие `repository_dispatch`.
+Если на карточке GitHub указано `Disconnected`, нажмите `Install on GitHub` и снова дайте приложению доступ к репозиторию
+или возобновите его приостановленную установку, и связь восстановится.
+Для Bencher Self-Hosted серверу нужны [собственное приложение GitHub][github app] и версия `v0.6.16` или новее.
+
 <PullRequestsOnBareMetalSubmitCode />
 
 1. Создайте первый файл `workflow` GitHub Actions.
@@ -78,14 +97,17 @@ workflow [Pull Requests из Fork][pull requests from forks] выше,
     [переменную окружения `GITHUB_TOKEN` GitHub Actions][github token].
     См. [документацию `--github-actions`][github actions option] для подробностей.
     (пример: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-20. Установите опцию `--ci-callback-token` на **секрет** репозитория `BENCHER_CALLBACK_TOKEN`,
-    чтобы Bencher мог отправить событие `repository_dispatch`, когда Job завершится.
-    См. [документацию `--ci-callback-token`][ci callback token option] для подробностей.
-    (пример: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-21. Укажите команду бенчмарка, которая выполняется в образе.
+20. Укажите команду бенчмарка, которая выполняется в образе.
     Команда передается точке входа образа, если она есть (см. [опцию `--entrypoint`][entrypoint option]).
     См. [команду бенчмарка][command argument] для полного обзора.
     (пример: `bencher mock`)
+
+На GitHub Enterprise Server или чтобы сохранить собственный токен, установите опцию `--ci-callback-token`
+на [детализированный персональный токен доступа][github fine-grained token]
+с доступом на чтение и запись к содержимому репозитория, сохраненный как **секрет** репозитория `BENCHER_CALLBACK_TOKEN`.
+Bencher отправляет событие `repository_dispatch` с этим токеном, есть ли у Проекта связанный репозиторий или нет.
+См. [документацию `--ci-callback-token`][ci callback token option] для подробностей.
+(пример: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
 
 <PullRequestsOnBareMetalAttachCode />
 
@@ -151,6 +173,7 @@ workflow [Pull Requests из Fork][pull requests from forks] выше,
 [github intermediate environment variable]: https://docs.github.com/ru/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
 
 [bare metal]: /ru/docs/explanation/bare-metal/
+[github app]: /ru/docs/how-to/github-app/
 [pricing]: /pricing
 [bencher run]: /ru/docs/explanation/bencher-run/
 [project option]: /ru/docs/explanation/bencher-run/#--project-project

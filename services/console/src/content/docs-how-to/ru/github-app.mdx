@@ -3,7 +3,7 @@ title: "Самостоятельно Размещенное Приложение
 description: "Создайте приложение GitHub для аутентификации Self-Hosted версии Bencher с GitHub"
 heading: "Как создать самостоятельно размещенное приложение GitHub"
 published: "2023-10-27T08:40:00Z"
-modified: "2025-04-09T03:04:20Z"
+modified: "2026-10-28T05:53:42Z"
 sortOrder: 9
 ---
 
@@ -53,6 +53,37 @@ sortOrder: 9
 
 ### API Сервер
 Добавьте `client_id` и `client_secret` в [раздел `plus.github` конфигурации сервера](/ru/docs/reference/server-config/#plusgithub). Если раздел GitHub отсутствует, то сервер не будет обрабатывать запросы аутентификации GitHub.
+
+## Связанные репозитории
+
+Перед изменением этих настроек обновите API-сервер и консоль Bencher Self-Hosted до `v0.6.16` или новее.
+
+Чтобы Проект мог [связать репозиторий GitHub][linked repository] для своих отсоединенных запусков,
+задайте также эти настройки приложения GitHub:
+
+- Идентификация и авторизация пользователей
+  - URL для обратного вызова
+    - Установите первый URL обратного вызова на URL вашей консоли Bencher Self-Hosted с путем `/console/github` (например: `https://bencher.example.com/console/github`).
+      GitHub отправляет пользователя на первый URL обратного вызова после установки приложения.
+    - Оставьте после него URL обратного вызова с путем `/auth/github` для входа (например: `https://bencher.example.com/auth/github`).
+      GitHub отклоняет вход, URL обратного вызова которого нет в списке.
+  - ✅ Запрос авторизации пользователя (OAuth) во время установки
+- Webhook
+  - ✅ Активный - поставьте эту галочку
+  - URL вебхука
+    - Установите его на URL вашего API-сервера Bencher Self-Hosted с путем `/v0/github/webhook` (например: `https://api.bencher.example.com/v0/github/webhook`)
+  - Секрет вебхука
+    - Введите случайный секрет и запишите его (например: `0123456789abcdef0123456789abcdef`)
+- Права доступа
+  - Права доступа к репозиторию
+    - Содержимое: `Чтение и запись`
+  - Подписка на события
+    - Оставьте все события неотмеченными
+- Запишите slug приложения, последнюю часть URL его публичной страницы (например: `my-bencher-app` в `https://github.com/apps/my-bencher-app`)
+
+Добавьте slug, приватный ключ и секрет вебхука как `app` в [раздел `plus.github` конфигурации сервера](/ru/docs/reference/server-config/#plusgithub).
+
+[linked repository]: /ru/docs/how-to/github-actions/#pull-requests-на-выделенном-оборудовании
 
 <br/>
 

@@ -3,7 +3,7 @@ title: "Self-Hosted GitHub App"
 description: "Create a GitHub App to allow Bencher Self-Hosted to authenticate with GitHub"
 heading: "How to Create a Self-Hosted GitHub App"
 published: "2023-08-12T16:07:00Z"
-modified: "2025-09-07T22:30:34Z"
+modified: "2026-10-28T05:53:42Z"
 sortOrder: 9
 ---
 
@@ -57,6 +57,37 @@ If the Client ID is missing, then the GitHub buttons will not appear in the UI.
 ### API Server
 Add the `client_id` and `client_secret` to [the `plus.github` section of the server config](/docs/reference/server-config/#plusgithub).
 If the GitHub section is missing, then the server will fail any GitHub authentication requests.
+
+## Linked Repositories
+
+Upgrade the Bencher Self-Hosted API server and Console to `v0.6.16` or later before you change these settings.
+
+For a Project to [link a GitHub repository][linked repository] for its detached runs,
+also set these for the GitHub App:
+
+- Identifying and authorizing users
+  - Callback URL
+    - Set the first callback URL to your Bencher Self-Hosted Console URL with the path `/console/github` (ex: `https://bencher.example.com/console/github`).
+      GitHub sends the user to the first callback URL after they install the app.
+    - Keep the callback URL with the path `/auth/github` after it, for sign in (ex: `https://bencher.example.com/auth/github`).
+      GitHub refuses a sign in whose callback URL is not listed.
+  - ✅ Request user authorization (OAuth) during installation
+- Webhook
+  - ✅ Active - Check this box
+  - Webhook URL
+    - Set it to your Bencher Self-Hosted API Server URL with the path `/v0/github/webhook` (ex: `https://api.bencher.example.com/v0/github/webhook`)
+  - Webhook secret
+    - Enter a random secret and note it (ex: `0123456789abcdef0123456789abcdef`)
+- Permissions
+  - Repository permissions
+    - Contents: `Read and write`
+  - Subscribe to events
+    - Leave every event unchecked
+- Note the app's slug, the last part of its public page URL (ex: `my-bencher-app` in `https://github.com/apps/my-bencher-app`)
+
+Add the slug, the private key, and the webhook secret as `app` in [the `plus.github` section of the server config](/docs/reference/server-config/#plusgithub).
+
+[linked repository]: /docs/how-to/github-actions/#pull-requests-on-bare-metal
 
 <br/>
 

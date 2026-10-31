@@ -3,7 +3,7 @@ title: "自己ホスト型 GitHub アプリ"
 description: "Bencher 自己ホスト型が GitHub で認証するための GitHub アプリを作成します"
 heading: "自己ホスト型 GitHub アプリの作成方法"
 published: "2023-10-27T08:40:00Z"
-modified: "2025-04-09T03:04:20Z"
+modified: "2026-10-28T05:53:42Z"
 sortOrder: 9
 ---
 
@@ -53,6 +53,36 @@ Bencher Self-Hostedを利用するには、[ベンチャー プラス エンタ�
 
 ### API サーバー
 サーバー設定の [`plus.github` セクション](/ja/docs/reference/server-config/#plusgithub) に `client_id` と `client_secret` を追加します。GitHub セクションが存在しない場合、サーバーは GitHub の認証リクエストすべてに対して失敗します。
+
+## リンクされたリポジトリ
+
+これらの設定を変更する前に、Bencher 自己ホスト型 API サーバーとコンソールを `v0.6.16` 以降にアップグレードします。
+
+プロジェクトがデタッチした実行のために[GitHubリポジトリをリンク][linked repository]できるようにするには、GitHub アプリに次の設定も行います。
+
+- ユーザの識別と認証
+  - コールバック URL
+    - 最初のコールバック URL を Bencher 自己ホスト型コンソールの URL に設定し、パスは `/console/github` にします (例：`https://bencher.example.com/console/github`)。
+      GitHub は、アプリをインストールしたユーザーを最初のコールバック URL に送ります。
+    - その後ろに、サインイン用のパス `/auth/github` のコールバック URL を残します (例：`https://bencher.example.com/auth/github`)。
+      GitHub は、コールバック URL が一覧にないサインインを拒否します。
+  - ✅インストール時にユーザー認証（OAuth）をリクエスト
+- Webhook
+  - ✅アクティブ - このボックスにチェックを入れます
+  - Webhook URL
+    - Bencher 自己ホスト型 API サーバーの URL に設定し、パスは `/v0/github/webhook` にします (例：`https://api.bencher.example.com/v0/github/webhook`)
+  - Webhook シークレット
+    - ランダムなシークレットを入力し、メモしておきます (例：`0123456789abcdef0123456789abcdef`)
+- 権限設定
+  - リポジトリの権限
+    - コンテンツ：`読み取りと書き込み`
+  - イベントのサブスクライブ
+    - すべてのイベントのチェックを外したままにします
+- アプリのスラッグ（公開ページの URL の最後の部分）をメモしておきます (例：`https://github.com/apps/my-bencher-app` の `my-bencher-app`)
+
+スラッグ、プライベートキー、Webhook シークレットを、サーバー設定の [`plus.github` セクション](/ja/docs/reference/server-config/#plusgithub) に `app` として追加します。
+
+[linked repository]: /ja/docs/how-to/github-actions/#ベアメタル上のプルリクエスト
 
 > 🐰 おめでとうございます！ GitHub アプリの設定方法を学びました！ 🎉
 

@@ -20,6 +20,25 @@ Use this pattern in conjunction with
 the [Pull Requests from Forks][pull requests from forks] workflow above
 to get bare metal benchmarking for fork PRs.
 
+First, link the repository to the Project, once:
+
+1. In the Bencher Console, open the Project's `Settings`, then `Connections`.
+2. On the GitHub card, click `Link repository`.
+   GitHub brings you back to `Connections`, where the card lists each repository you can push to.
+3. Click `Link` beside the repository.
+   If it is not listed, click `Install on GitHub` and give the app access to it.
+   If it shows `Approval required`, click `Approve on GitHub` and approve the app's new permissions,
+   then open `Connections` again and click `Link repository`.
+
+Linking needs the Maintainer role on the Project, which Organization Leaders and server admins hold, and push access to the repository.
+Bencher's GitHub App needs read and write access to the repository's contents,
+because `repository_dispatch` accepts nothing less.
+When a Job finishes, Bencher creates a token for the linked repository
+and sends the `repository_dispatch` event with it.
+If the GitHub card shows `Disconnected`, click `Install on GitHub` and give the app access to the repository again,
+or unsuspend its installation, and the link reconnects.
+For Bencher Self-Hosted, the server needs [its own GitHub App][github app] and version `v0.6.16` or later.
+
 <PullRequestsOnBareMetalSubmitCode />
 
 1. Create a first GitHub Actions `workflow` file.
@@ -78,14 +97,17 @@ to get bare metal benchmarking for fork PRs.
     [the GitHub Actions `GITHUB_TOKEN` environment variable][github token].
     See [the `--github-actions` docs][github actions option] for more details.
     (ex: `--github-actions '${{ secrets.GITHUB_TOKEN }}'`)
-20. Set the `--ci-callback-token` option to the `BENCHER_CALLBACK_TOKEN` **Repository** secret,
-    so that Bencher can send the `repository_dispatch` event when the Job finishes.
-    See [the `--ci-callback-token` docs][ci callback token option] for more details.
-    (ex: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
-21. Specify the benchmark command to run in the Image.
+20. Specify the benchmark command to run in the Image.
     The command is passed to the Image's entrypoint, if it has one (see [the `--entrypoint` option][entrypoint option]).
     See [benchmark command][command argument] for a full overview.
     (ex: `bencher mock`)
+
+On GitHub Enterprise Server, or to keep your own token, set the `--ci-callback-token` option
+to a [fine-grained personal access token][github fine-grained token]
+with read and write access to the repository's contents, stored as the `BENCHER_CALLBACK_TOKEN` **Repository** secret.
+Bencher sends the `repository_dispatch` event with that token, whether or not the Project has a linked repository.
+See [the `--ci-callback-token` docs][ci callback token option] for more details.
+(ex: `--ci-callback-token '${{ secrets.BENCHER_CALLBACK_TOKEN }}'`)
 
 <PullRequestsOnBareMetalAttachCode />
 
@@ -151,6 +173,7 @@ to get bare metal benchmarking for fork PRs.
 [github intermediate environment variable]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
 
 [bare metal]: /docs/explanation/bare-metal/
+[github app]: /docs/how-to/github-app/
 [pricing]: /pricing
 [bencher run]: /docs/explanation/bencher-run/
 [project option]: /docs/explanation/bencher-run/#--project-project

@@ -5,9 +5,13 @@
 Optional: Legt das Authentifizierungstoken fest, das der Callback eines abgelösten [Jobs auf dedizierter Hardware][job] verwendet.
 
 Wenn Sie [das Flag `--detach`][detach] und [die Option `--github-actions`](#--github-actions-github_token) verwenden,
-sollte diese Option auf ein [feingranulares persönliches Zugriffstoken][github fine-grained token]
-für das Repository mit mindestens der Berechtigung `contents: write` gesetzt werden.
-Damit kann der Bencher API-Server mit dem Token einen [`repository_dispatch`][github repository dispatch]-Workflow auslösen.
+löst der Bencher API-Server einen [`repository_dispatch`][github repository dispatch]-Workflow aus, wenn der Job beendet ist.
+Für ein Projekt mit einem [verknüpften Repository][pull requests on bare metal] erstellt Bencher das Token selbst, daher wird diese Option nicht benötigt.
+Um stattdessen Ihr eigenes Token zu verwenden, setzen Sie diese Option auf ein [feingranulares persönliches Zugriffstoken][github fine-grained token]
+für das Repository mit mindestens der Berechtigung `contents: write`.
+Bencher sendet das `repository_dispatch`-Ereignis dann mit diesem Token, ob das Projekt ein verknüpftes Repository hat oder nicht.
+Die CLI verlangt diese Option auf GitHub Enterprise Server und mit einem Bencher API-Server, der älter als `v0.6.16` ist.
+Ohne sie wird ein abgelöster Lauf eines `claimed` Projekts abgelehnt, wenn der Server keine GitHub App hat, das Projekt kein verknüpftes Repository hat oder sein verknüpftes Repository getrennt ist.
 Siehe [Pull Requests auf dedizierter Hardware in GitHub Actions][pull requests on bare metal] für einen vollständigen Überblick.
 
 > 🐰 Sie können hier nicht einfach das `GITHUB_TOKEN` verwenden, da es abläuft, sobald der aktuelle Workflow beendet ist!
