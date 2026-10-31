@@ -20,6 +20,8 @@ pub mod branch;
 pub mod console;
 pub mod console_project;
 pub mod dimension;
+#[cfg(feature = "plus")]
+pub mod github;
 pub mod head;
 pub mod key;
 pub mod measure;

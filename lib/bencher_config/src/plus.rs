@@ -218,10 +218,11 @@ fn github(
     let github_app = app
         .map(
             |JsonGitHubApp {
+                 slug,
                  private_key,
                  webhook_secret,
              }| {
-                GitHubApp::new(client_id.clone(), &private_key, webhook_secret).map(Arc::new)
+                GitHubApp::new(client_id.clone(), slug, &private_key, webhook_secret).map(Arc::new)
             },
         )
         .transpose()
@@ -251,6 +252,7 @@ mod tests {
             client_id: "Iv1.0123456789abcdef".parse().unwrap(),
             client_secret: "client-secret".parse().unwrap(),
             app: Some(JsonGitHubApp {
+                slug: "bencher-test".parse().unwrap(),
                 private_key: private_key.parse().unwrap(),
                 webhook_secret: WEBHOOK_SECRET.parse().unwrap(),
             }),

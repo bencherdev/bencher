@@ -1,13 +1,10 @@
-#[cfg(feature = "plus")]
-use bencher_json::OAuthAuthorizationUuid;
-#[cfg(feature = "plus")]
-use bencher_json::PlanLevel;
-#[cfg(feature = "plus")]
-use bencher_json::ProjectUuid;
-#[cfg(feature = "plus")]
-use bencher_json::RunnerUuid;
 use bencher_json::{
     DateTime, Email, Jwt, OrganizationUuid, UserUuid, organization::member::OrganizationRole,
+};
+#[cfg(feature = "plus")]
+use bencher_json::{
+    GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, OAuthAuthorizationUuid,
+    PlanLevel, ProjectUuid, RunnerUuid,
 };
 use chrono::Utc;
 use jsonwebtoken::errors::ErrorKind as JsonWebTokenErrorKind;
@@ -191,6 +188,35 @@ pub struct EmailChangeClaims {
     /// The user's email when the change was asked for
     pub email: Email,
     pub new_email: Email,
+}
+
+/// Claims for a trip to GitHub that links a repository to a project.
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GitHubStateClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    /// The user who started the trip
+    pub sub: UserUuid,
+    pub project: ProjectUuid,
+}
+
+/// Claims that let a user link one repository, which their own GitHub token showed they can
+/// push to, to the project their trip named.
+#[cfg(feature = "plus")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GitHubGrantClaims {
+    pub aud: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub iss: String,
+    pub sub: UserUuid,
+    pub project: ProjectUuid,
+    pub installation: GitHubInstallationId,
+    pub repository: GitHubRepositoryId,
+    pub full_name: GitHubRepositoryName,
 }
 
 /// Raw JWT claims for public (anonymous) OCI tokens (used for encoding/decoding).

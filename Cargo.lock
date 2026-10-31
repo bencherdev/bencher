@@ -267,6 +267,7 @@ version = "0.6.15"
 dependencies = [
  "bencher_api_tests",
  "bencher_endpoint",
+ "bencher_github_client",
  "bencher_json",
  "bencher_otel",
  "bencher_rbac",
@@ -276,12 +277,14 @@ dependencies = [
  "dropshot",
  "futures",
  "http",
+ "reqwest",
  "schemars 0.8.22",
  "sentry",
  "serde",
  "serde_json",
  "slog",
  "tokio",
+ "url",
  "uuid",
 ]
 
@@ -754,6 +757,8 @@ name = "bencher_api_tests"
 version = "0.6.15"
 dependencies = [
  "async-trait",
+ "aws-lc-rs",
+ "base64 0.23.1",
  "bencher_api",
  "bencher_callback",
  "bencher_config",
@@ -1002,6 +1007,7 @@ dependencies = [
  "aws-lc-rs",
  "base64 0.23.1",
  "bencher_valid",
+ "hex",
  "jsonwebtoken 11.1.0",
  "oauth2",
  "oauth2-reqwest",

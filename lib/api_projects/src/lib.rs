@@ -4,6 +4,8 @@ use bencher_api_tests as _;
 #[cfg(test)]
 use diesel_migrations as _;
 #[cfg(test)]
+use reqwest as _;
+#[cfg(test)]
 use serde_json as _;
 #[cfg(test)]
 use tokio as _;
@@ -16,6 +18,7 @@ pub mod benchmarks;
 pub mod branches;
 pub mod console;
 mod console_project;
+mod github;
 pub mod jobs;
 mod keys;
 pub mod measures;
@@ -92,6 +95,22 @@ impl bencher_endpoint::Registrar for Api {
             }
             api_description.register(jobs::proj_jobs_get)?;
             api_description.register(jobs::proj_job_get)?;
+        }
+
+        // GitHub
+        #[cfg(feature = "plus")]
+        {
+            if http_options {
+                api_description.register(github::proj_github_options)?;
+                api_description.register(github::proj_github_urls_options)?;
+                api_description.register(github::github_exchange_options)?;
+            }
+            api_description.register(github::proj_github_get)?;
+            api_description.register(github::proj_github_put)?;
+            api_description.register(github::proj_github_delete)?;
+            api_description.register(github::proj_github_urls_get)?;
+            api_description.register(github::github_exchange_post)?;
+            api_description.register(github::github_webhook_post)?;
         }
 
         // Console
