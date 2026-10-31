@@ -13874,6 +13874,15 @@
               }
             ]
           },
+          "measures": {
+            "nullable": true,
+            "description": "The measures to keep from the results",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MeasureFilter"
+              }
+            ]
+          },
           "project": {
             "description": "Project UUID for OCI authentication scoping",
             "allOf": [
@@ -17930,7 +17939,7 @@
           },
           "average": {
             "nullable": true,
-            "description": "Benchmark harness suggested central tendency (ie average). Some benchmarking harnesses provide multiple averages, such as mean and median.",
+            "description": "Benchmark harness suggested central tendency (ie average). Some benchmarking harnesses provide multiple averages, such as mean and median. It is ignored at BMF version 1, where every average is its own metric.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonAverage"
@@ -17943,6 +17952,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonFold"
+              }
+            ]
+          },
+          "measures": {
+            "nullable": true,
+            "description": "The measures to keep from the results, by UUID, slug, or name. Every other measure is dropped before anything is stored. A listed measure that the results do not contain is ignored. Only the first 64 listed are kept, and the report warns of the rest. If not set, or set to an empty list, every measure is kept.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MeasureFilter"
               }
             ]
           }
@@ -20345,6 +20363,12 @@
       "MdSyncAction": {
         "type": "string"
       },
+      "MeasureFilter": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/NameId"
+        }
+      },
       "MeasureSlug": {
         "$ref": "#/components/schemas/Slug"
       },
@@ -20909,7 +20933,8 @@
           "measure",
           "metric",
           "threshold",
-          "adapter"
+          "adapter",
+          "average"
         ]
       },
       "ResourceId": {

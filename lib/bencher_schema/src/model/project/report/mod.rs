@@ -11,7 +11,8 @@ use bencher_json::{
         report::{
             Adapter, Iteration, JsonReportAlerts, JsonReportBoundary, JsonReportMeasure,
             JsonReportMetric, JsonReportResult, JsonReportResults, JsonReportSettings,
-            JsonReportVariant, ParseOutcome, ReportIdempotencyKey,
+            JsonReportVariant, MeasureFilter, ParseOutcome, ReportIdempotencyKey,
+            ReportWarningResource,
         },
         threshold::JsonThresholdModel,
     },
@@ -249,6 +250,14 @@ impl QueryReport {
 
         let json_settings = json_report.settings.take().unwrap_or_default();
         let adapter = json_settings.adapter.unwrap_or_default().normalize();
+        // Recorded here, as a job's stored config holds only the measures kept.
+        warnings.ignore_with_count(
+            ReportWarningResource::Measure,
+            json_settings
+                .measures
+                .as_ref()
+                .map_or(0, MeasureFilter::cut),
+        );
 
         // Validate job before inserting report so that report + job creation is atomic:
         // if OCI resolution fails, neither the report nor the job is created.
