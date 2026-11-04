@@ -1,27 +1,30 @@
 #![expect(clippy::format_push_string, reason = "todo")]
 
-use std::{
-    collections::{BTreeMap, HashSet, btree_map::Entry},
-    ops::{BitOr, BitOrAssign},
-    time::Duration,
-};
+use std::{collections::HashSet, fmt, ops::BitOr, time::Duration};
 
 use bencher_json::{
     AlertUuid, BenchmarkSlug, BranchSlug, JsonAlert, JsonBenchmark, JsonMeasure, JsonPerfQuery,
-    JsonReport, MeasureSlug, MetricName, ParameterSet, ProjectSlug, ReportUuid, ResourceName,
-    TestbedSlug, ThresholdUuid, Units,
+    JsonReport, MeasureSlug, MetricName, ModelTest, ParameterSet, ProjectSlug, ReportUuid,
+    ResourceName, TestbedSlug, ThresholdUuid, Units,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
-        report::{JsonReportIteration, JsonReportMeasure, JsonReportResult},
+        report::{
+            JsonReportBoundary, JsonReportIteration, JsonReportMeasure, JsonReportMetric,
+            JsonReportResult, JsonReportWarning, ReportWarningAction, ReportWarningResource,
+        },
     },
 };
 use ordered_float::OrderedFloat;
 use url::Url;
 
 mod check;
+mod column;
 mod group;
 mod tag;
+
+use column::{ColumnGroup, DefaultMetrics};
+use group::escape;
 
 pub use check::SectionCheck;
 pub use group::{GroupComment, Section};
@@ -45,6 +48,7 @@ pub struct ReportComment {
     multiple_iterations: bool,
     benchmark_count: usize,
     missing_threshold: HashSet<Measure>,
+    default_metrics: DefaultMetrics,
     json_report: JsonReport,
     sub_adapter: SubAdapter,
     source: String,
@@ -71,6 +75,7 @@ impl ReportComment {
             multiple_iterations: results.len() > 1,
             benchmark_count: results.iter().map(Vec::len).sum(),
             missing_threshold: Measure::missing_threshold(&json_report),
+            default_metrics: DefaultMetrics::new(results),
             json_report,
             sub_adapter,
             source,
@@ -93,11 +98,16 @@ impl ReportComment {
         self.json_report.alerts.as_deref().unwrap_or_default()
     }
 
+    fn warnings(&self) -> &[JsonReportWarning] {
+        self.json_report.warnings.as_deref().unwrap_or_default()
+    }
+
     pub fn human(&self) -> String {
         let mut text = String::new();
         self.human_report_link(&mut text);
         self.human_no_benchmarks(&mut text);
         self.human_results_list(&mut text);
+        self.human_warnings(&mut text);
         self.human_alerts_list(&mut text);
         self.human_unclaimed(&mut text);
         text
@@ -133,14 +143,31 @@ impl ReportComment {
 
             for result in iteration {
                 for report_measure in &result.measures {
+                    let measure = Measure::from(report_measure.measure.clone());
                     text.push_str(&format!(
-                        "\n- {benchmark} ({measure}): {console_url}",
+                        "\n- {benchmark}{parameters} ({measure}): {console_url}",
                         benchmark = result.benchmark.name,
-                        measure = report_measure.measure.name,
+                        parameters = human_parameters(&result.variant.parameters),
+                        measure = metrics_label(&measure.name, self.default_metrics.get(&measure)),
                         console_url = self.perf_url(&result.benchmark, &report_measure.measure)
                     ));
                 }
             }
+        }
+    }
+
+    fn human_warnings(&self, text: &mut String) {
+        if self.warnings().is_empty() {
+            return;
+        }
+
+        text.push_str("\n\nWarnings:");
+        for warning in self.warnings() {
+            text.push_str(&format!(
+                "\n- {resources} {action}",
+                resources = counted(warning.count, resource_noun(warning.resource)),
+                action = action_verb(warning.action),
+            ));
         }
     }
 
@@ -152,9 +179,10 @@ impl ReportComment {
         text.push_str("\n\nView alerts:");
         for alert in self.alerts() {
             text.push_str(&format!(
-                "\n- {benchmark_name} ({measure_name}){iter}: {console_url}",
+                "\n- {benchmark_name}{parameters} ({measure_name}){iter}: {console_url}",
                 benchmark_name = alert.benchmark.name,
-                measure_name = alert.threshold.measure.name,
+                parameters = human_parameters(&alert.variant.parameters),
+                measure_name = metrics_label(&alert.threshold.measure.name, &[alert_metric(alert)]),
                 iter = if self.multiple_iterations {
                     format!(" (Iteration {iteration})", iteration = alert.iteration)
                 } else {
@@ -256,6 +284,11 @@ impl ReportComment {
         self.html_no_threshold(html, require_threshold, truncated);
         self.html_alerts(html, truncated);
         self.html_benchmark_details(html, require_threshold, truncated);
+        if truncated {
+            html_warnings_total(html, self.warnings_total());
+        } else {
+            self.html_warnings(html);
+        }
     }
 
     fn html_no_benchmarks(&self, html: &mut String, truncated: bool) {
@@ -358,14 +391,15 @@ impl ReportComment {
             html.push_str(&format!("<td>{}</td>", alert.iteration));
         }
         html.push_str(&format!(
-            "<td><a href=\"{url}\">{benchmark}</a></td>",
+            "<td><a href=\"{url}\">{benchmark}</a>{parameters}</td>",
             url = self.resource_url(Resource::Benchmark(alert.benchmark.slug.clone())),
             benchmark = alert.benchmark.name,
+            parameters = html_parameters(&alert.variant.parameters),
         ));
         html.push_str(&format!(
             "<td><a href=\"{url}\">{measure}<br />{units}</a></td>",
             url = self.resource_url(Resource::Measure(alert.threshold.measure.slug.clone())),
-            measure = alert.threshold.measure.name,
+            measure = metrics_label(&alert.threshold.measure.name, &[alert_metric(alert)]),
         ));
         self.html_alerts_table_view_cell(html, alert);
         value_cell(
@@ -447,48 +481,51 @@ impl ReportComment {
         iteration: &JsonReportIteration,
         require_threshold: bool,
     ) {
-        let mbl = boundary_limits_map(iteration, require_threshold);
+        let groups = self
+            .default_metrics
+            .column_groups(iteration, require_threshold);
 
         html.push_str("<table>");
-        self.html_iteration_table_header(html, &mbl);
-        self.html_iteration_table_body(html, iteration, &mbl);
+        self.html_iteration_table_header(html, &groups);
+        self.html_iteration_table_body(html, iteration, &groups);
         html.push_str("</table>");
     }
 
-    fn html_iteration_table_header(
-        &self,
-        html: &mut String,
-        mbl: &BTreeMap<Measure, BoundaryLimits>,
-    ) {
+    fn html_iteration_table_header(&self, html: &mut String, groups: &[ColumnGroup<'_>]) {
         html.push_str("<thead>");
         html.push_str("<tr>");
         html.push_str("<th>Benchmark</th>");
-        for (measure, boundary_limits) in mbl {
-            let units = Units::new(boundary_limits.min.into(), measure.units.clone()).scale_units();
+        for ColumnGroup {
+            measure,
+            metric,
+            limits,
+        } in groups
+        {
+            let units = Units::new(limits.min.into(), measure.units.clone()).scale_units();
 
             html.push_str(&format!(
-                "<th><a href=\"{url}\">{measure}</a></th>",
+                "<th><a href=\"{url}\">{label}</a></th>",
                 url = self.resource_url(Resource::Measure(measure.slug.clone())),
-                measure = measure.name,
+                label = metrics_label(&measure.name, std::slice::from_ref(*metric)),
             ));
 
             html.push_str("<th>");
-            if boundary_limits.has_limit() {
+            if limits.has_limit() {
                 html.push_str("Benchmark Result<br />");
             }
             html.push_str(units.as_ref());
-            if boundary_limits.has_limit() {
+            if limits.has_limit() {
                 html.push_str("<br />(Result Δ%)");
             }
             html.push_str("</th>");
 
-            if boundary_limits.lower {
+            if limits.lower {
                 html.push_str(&format!(
                     "<th>Lower Boundary<br />{units}<br />(Limit %)</th>"
                 ));
             }
 
-            if boundary_limits.upper {
+            if limits.upper {
                 html.push_str(&format!(
                     "<th>Upper Boundary<br />{units}<br />(Limit %)</th>"
                 ));
@@ -498,84 +535,119 @@ impl ReportComment {
         html.push_str("</thead>");
     }
 
+    /// A row per variant, and a sub-row per threshold when two or more checked one metric.
     fn html_iteration_table_body(
         &self,
         html: &mut String,
         iteration: &JsonReportIteration,
-        mbl: &BTreeMap<Measure, BoundaryLimits>,
+        groups: &[ColumnGroup<'_>],
     ) {
         html.push_str("<tbody>");
         for result in iteration {
-            html.push_str("<tr>");
-            html.push_str(&format!(
-                "<td><a href=\"{url}\">{name}</a></td>",
-                url = self.resource_url(Resource::Benchmark(result.benchmark.slug.clone())),
-                name = result.benchmark.name,
-            ));
-            for (measure, boundary_limits) in mbl {
-                let (factor, units_symbol) = {
-                    let units = Units::new(boundary_limits.min.into(), measure.units.clone());
-                    (units.scale_factor(), units.scale_units_symbol())
-                };
-
-                let report_measure = result
-                    .measures
-                    .iter()
-                    .find(|m| m.measure.slug == measure.slug);
-                // The point estimate. A measure that named no `value` has nothing for
-                // this table to draw, so its cells stay empty.
-                let point_estimate = report_measure.and_then(|m| m.metric.as_ref());
-                let alert = report_measure.and_then(|m| self.find_alert(result, m));
-
-                if let Some(report_measure) = report_measure {
-                    self.html_iteration_table_view_cell(html, result, report_measure, alert);
-                } else {
-                    html.push_str(EMPTY_CELL);
+            let cells = groups
+                .iter()
+                .map(|group| column::report_metric(result, group.measure, group.metric))
+                .collect::<Vec<_>>();
+            let sub_rows = cells
+                .iter()
+                .flatten()
+                .map(|(_, report_metric)| report_metric.boundaries.len())
+                .max()
+                .unwrap_or_default()
+                .max(1);
+            for sub_row in 0..sub_rows {
+                html.push_str("<tr>");
+                if sub_row == 0 {
+                    self.html_iteration_table_benchmark_cell(html, result, sub_rows);
                 }
-                if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
-                    value_cell(
-                        html,
-                        metric.value,
-                        report_measure.boundary.and_then(|b| b.baseline),
-                        factor,
-                        &units_symbol,
-                        alert.is_some(),
-                    );
-                } else {
-                    html.push_str(EMPTY_CELL);
-                }
-                if boundary_limits.lower {
-                    if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
-                        lower_limit_cell(
+                for (group, cell) in groups.iter().zip(cells.iter().copied()) {
+                    if let Some(cell) = cell.filter(|(_, report_metric)| {
+                        sub_row < report_metric.boundaries.len().max(1)
+                    }) {
+                        self.html_iteration_table_cells(
                             html,
-                            metric.value,
-                            report_measure.boundary.and_then(|b| b.lower_limit),
-                            factor,
-                            &units_symbol,
-                            alert.is_some_and(|a| a.limit == BoundaryLimit::Lower),
+                            result,
+                            group,
+                            cell,
+                            sub_row,
+                            sub_rows > 1,
                         );
                     } else {
-                        html.push_str(EMPTY_CELL);
+                        group.limits.html_empty_cells(html);
                     }
                 }
-                if boundary_limits.upper {
-                    if let (Some(report_measure), Some(metric)) = (report_measure, point_estimate) {
-                        upper_limit_cell(
-                            html,
-                            metric.value,
-                            report_measure.boundary.and_then(|b| b.upper_limit),
-                            factor,
-                            &units_symbol,
-                            alert.is_some_and(|a| a.limit == BoundaryLimit::Upper),
-                        );
-                    } else {
-                        html.push_str(EMPTY_CELL);
-                    }
-                }
+                html.push_str("</tr>");
             }
-            html.push_str("</tr>");
         }
         html.push_str("</tbody>");
+    }
+
+    fn html_iteration_table_benchmark_cell(
+        &self,
+        html: &mut String,
+        result: &JsonReportResult,
+        sub_rows: usize,
+    ) {
+        if sub_rows > 1 {
+            html.push_str(&format!("<td rowspan=\"{sub_rows}\">"));
+        } else {
+            html.push_str("<td>");
+        }
+        html.push_str(&format!(
+            "<a href=\"{url}\">{name}</a>{parameters}</td>",
+            url = self.resource_url(Resource::Benchmark(result.benchmark.slug.clone())),
+            name = result.benchmark.name,
+            parameters = html_parameters(&result.variant.parameters),
+        ));
+    }
+
+    /// One column group's cells for the threshold of a sub-row, or for none.
+    fn html_iteration_table_cells(
+        &self,
+        html: &mut String,
+        result: &JsonReportResult,
+        group: &ColumnGroup<'_>,
+        (report_measure, report_metric): (&JsonReportMeasure, &JsonReportMetric),
+        sub_row: usize,
+        named: bool,
+    ) {
+        let check = report_metric.boundaries.get(sub_row);
+        let (factor, units_symbol) = {
+            let units = Units::new(group.limits.min.into(), group.measure.units.clone());
+            (units.scale_factor(), units.scale_units_symbol())
+        };
+        let alert = check.and_then(|check| self.find_alert(result, check.threshold.uuid));
+        let boundary = check.map(|check| check.boundary);
+
+        self.html_iteration_table_view_cell(html, result, report_measure, check, alert, named);
+        value_cell(
+            html,
+            report_metric.value,
+            boundary.and_then(|b| b.baseline),
+            factor,
+            &units_symbol,
+            alert.is_some(),
+        );
+        if group.limits.lower {
+            lower_limit_cell(
+                html,
+                report_metric.value,
+                boundary.and_then(|b| b.lower_limit),
+                factor,
+                &units_symbol,
+                alert.is_some_and(|a| a.limit == BoundaryLimit::Lower),
+            );
+        }
+        if group.limits.upper {
+            upper_limit_cell(
+                html,
+                report_metric.value,
+                boundary.and_then(|b| b.upper_limit),
+                factor,
+                &units_symbol,
+                alert.is_some_and(|a| a.limit == BoundaryLimit::Upper),
+            );
+        }
     }
 
     fn html_iteration_table_view_cell(
@@ -583,18 +655,25 @@ impl ReportComment {
         html: &mut String,
         result: &JsonReportResult,
         report_measure: &JsonReportMeasure,
+        check: Option<&JsonReportBoundary>,
         alert: Option<&JsonAlert>,
+        named: bool,
     ) {
         html.push_str("<td>");
         html.push_str(&format!(
             "📈 <a href=\"{url}\">view plot</a>",
             url = self.perf_url(&result.benchmark, &report_measure.measure)
         ));
-        if let Some(threshold) = &report_measure.threshold {
+        if let Some(check) = check {
             html.push_str("<br />");
             html.push_str(&format!(
-                "🚷 <a href=\"{url}\">view threshold</a>",
-                url = self.resource_url(Resource::Threshold(threshold.uuid)),
+                "🚷 <a href=\"{url}\">view threshold{test}</a>",
+                url = self.resource_url(Resource::Threshold(check.threshold.uuid)),
+                test = if named {
+                    format!(" ({})", model_test_name(check.threshold.model.test))
+                } else {
+                    String::new()
+                },
             ));
         } else {
             html.push_str("<br />");
@@ -609,6 +688,37 @@ impl ReportComment {
             ));
         }
         html.push_str("</td>");
+    }
+
+    fn html_warnings(&self, html: &mut String) {
+        if self.warnings().is_empty() {
+            return;
+        }
+
+        html.push_str(&format!(
+            "<details><summary>⚠️ Warnings ({total})</summary><br />",
+            total = self.warnings_total(),
+        ));
+        html.push_str(
+            "<table><thead><tr><th>Resource</th><th>Action</th><th>Count</th></tr></thead><tbody>",
+        );
+        for warning in self.warnings() {
+            html.push_str(&format!(
+                "<tr><td>{resource}</td><td>{action}</td><td>{count}</td></tr>",
+                resource = capitalized(resource_noun(warning.resource)),
+                action = capitalized(action_verb(warning.action)),
+                count = warning.count,
+            ));
+        }
+        html.push_str("</tbody></table></details>");
+    }
+
+    /// The sum of the warnings' counts.
+    fn warnings_total(&self) -> u64 {
+        self.warnings()
+            .iter()
+            .map(|warning| u64::from(warning.count))
+            .sum()
     }
 
     fn html_footer(&self, html: &mut String) {
@@ -676,14 +786,17 @@ impl ReportComment {
         !self.alerts().is_empty()
     }
 
-    pub fn find_alert(
+    /// The threshold's alert on this iteration and variant. A threshold checks one metric of
+    /// one measure, so its UUID names the metric.
+    fn find_alert(
         &self,
         result: &JsonReportResult,
-        report_measure: &JsonReportMeasure,
+        threshold: ThresholdUuid,
     ) -> Option<&JsonAlert> {
-        let threshold = report_measure.threshold.as_ref()?;
         self.alerts().iter().find(|alert| {
-            alert.benchmark.slug == result.benchmark.slug && alert.threshold.uuid == threshold.uuid
+            alert.iteration == result.iteration
+                && alert.variant.uuid == result.variant.uuid
+                && alert.threshold.uuid == threshold
         })
     }
 
@@ -742,12 +855,7 @@ impl ReportComment {
 
     /// The plot of the line that alerted.
     fn alert_perf_url(&self, alert: &JsonAlert) -> Url {
-        // A threshold that names no metric checks `value`.
-        let metric = alert
-            .threshold
-            .metric
-            .clone()
-            .unwrap_or_else(MetricName::value);
+        let metric = alert_metric(alert);
         let parameters = &alert.variant.parameters;
         let parameters = (!parameters.is_empty()).then(|| vec![parameters.clone()]);
         self.plot_url(
@@ -863,12 +971,101 @@ impl Measure {
     }
 }
 
+/// Checked when a threshold wrote a boundary for one of its metrics, with or without a limit.
 fn is_checked(report_measure: &JsonReportMeasure) -> bool {
-    report_measure.threshold.is_some()
-        || report_measure
-            .metrics
-            .iter()
-            .any(|metric| !metric.boundaries.is_empty())
+    report_measure
+        .metrics
+        .iter()
+        .any(|metric| !metric.boundaries.is_empty())
+}
+
+/// The measure's name, then its metrics when they are not just `value`.
+fn metrics_label(measure: &ResourceName, metrics: &[MetricName]) -> String {
+    if metrics.iter().all(|metric| *metric == MetricName::value()) {
+        return measure.to_string();
+    }
+    let metrics = metrics
+        .iter()
+        .map(AsRef::as_ref)
+        .collect::<Vec<&str>>()
+        .join(", ");
+    format!("{measure}: {metrics}")
+}
+
+/// A threshold that names no metric checks `value`.
+fn alert_metric(alert: &JsonAlert) -> MetricName {
+    alert
+        .threshold
+        .metric
+        .clone()
+        .unwrap_or_else(MetricName::value)
+}
+
+/// The variant's `key=value` pairs, as the console's parameter chips print them.
+fn human_parameters(parameters: &ParameterSet) -> String {
+    parameters.tags().fold(String::new(), |mut text, tag| {
+        text.push(' ');
+        text.push_str(&tag);
+        text
+    })
+}
+
+fn html_parameters(parameters: &ParameterSet) -> String {
+    if parameters.is_empty() {
+        return String::new();
+    }
+    let tags = parameters
+        .tags()
+        .map(|tag| format!("<code>{}</code>", escape(&tag)))
+        .collect::<Vec<_>>()
+        .join(" ");
+    format!("<br />{tags}")
+}
+
+/// A truncated comment's one line in place of its warnings section.
+fn html_warnings_total(html: &mut String, total: u64) {
+    if total > 0 {
+        html.push_str(&format!("<p>⚠️ Warnings ({total})</p>"));
+    }
+}
+
+fn capitalized(word: &str) -> String {
+    let mut chars = word.chars();
+    chars.next().map_or_else(String::new, |first| {
+        first.to_uppercase().chain(chars).collect()
+    })
+}
+
+/// The test as `--threshold-test` spells it.
+fn model_test_name(test: ModelTest) -> &'static str {
+    match test {
+        ModelTest::Static => "static",
+        ModelTest::Percentage => "percentage",
+        ModelTest::ZScore => "z_score",
+        ModelTest::TTest => "t_test",
+        ModelTest::LogNormal => "log_normal",
+        ModelTest::Iqr => "iqr",
+        ModelTest::DeltaIqr => "delta_iqr",
+    }
+}
+
+fn resource_noun(resource: ReportWarningResource) -> &'static str {
+    match resource {
+        ReportWarningResource::Benchmark => "benchmark",
+        ReportWarningResource::Variant => "variant",
+        ReportWarningResource::Measure => "measure",
+        ReportWarningResource::Metric => "metric",
+        ReportWarningResource::Threshold => "threshold",
+        ReportWarningResource::Adapter => "adapter",
+        ReportWarningResource::Average => "average",
+    }
+}
+
+fn action_verb(action: ReportWarningAction) -> &'static str {
+    match action {
+        ReportWarningAction::Skip => "skipped",
+        ReportWarningAction::Ignore => "ignored",
+    }
 }
 
 fn alert_status(alert: &JsonAlert) -> &str {
@@ -888,8 +1085,8 @@ fn html_alerts_heading(html: &mut String, alerts_len: usize) {
     html.push_str(&format!("<h3>🚨 {}</h3>", counted(alerts_len, "Alert")));
 }
 
-fn counted(count: usize, noun: &str) -> String {
-    if count == 1 {
+fn counted<N: Copy + fmt::Display + PartialEq + From<u8>>(count: N, noun: &str) -> String {
+    if count == N::from(1) {
         format!("{count} {noun}")
     } else {
         format!("{count} {noun}s")
@@ -1107,64 +1304,42 @@ impl BitOr for BoundaryLimits {
     }
 }
 
-impl BitOrAssign for BoundaryLimits {
-    fn bitor_assign(&mut self, rhs: Self) {
-        *self = *self | rhs;
-    }
-}
-
 impl BoundaryLimits {
+    /// The smallest of the metric's value and every limit its thresholds set,
+    /// and whether any of them set a lower or an upper limit.
+    fn of(report_metric: &JsonReportMetric) -> Self {
+        let limits = report_metric
+            .boundaries
+            .iter()
+            .flat_map(|check| [check.boundary.lower_limit, check.boundary.upper_limit]);
+        Self {
+            min: limits.flatten().fold(report_metric.value, Ord::min),
+            lower: report_metric
+                .boundaries
+                .iter()
+                .any(|check| check.boundary.lower_limit.is_some()),
+            upper: report_metric
+                .boundaries
+                .iter()
+                .any(|check| check.boundary.upper_limit.is_some()),
+        }
+    }
+
     fn has_limit(self) -> bool {
         self.lower || self.upper
     }
-}
 
-fn boundary_limits_map(
-    iteration: &JsonReportIteration,
-    require_threshold: bool,
-) -> BTreeMap<Measure, BoundaryLimits> {
-    let mut map = BTreeMap::new();
-    for result in iteration {
-        for report_measure in &result.measures {
-            // A measure that named no point estimate has no row in this table.
-            let Some(metric) = report_measure.metric.as_ref() else {
-                continue;
-            };
-            let measure = Measure::from(report_measure.measure.clone());
-            let min = {
-                let mut min = metric.value;
-                if let Some(lower_limit) = report_measure.boundary.and_then(|b| b.lower_limit) {
-                    min = min.min(lower_limit);
-                }
-                if let Some(upper_limit) = report_measure.boundary.and_then(|b| b.upper_limit) {
-                    min = min.min(upper_limit);
-                }
-                min
-            };
-            let lower = report_measure
-                .boundary
-                .and_then(|b| b.lower_limit)
-                .is_some();
-            let upper = report_measure
-                .boundary
-                .and_then(|b| b.upper_limit)
-                .is_some();
-            let boundary_limits = BoundaryLimits { min, lower, upper };
-            if require_threshold && !boundary_limits.has_limit() {
-                continue;
-            }
-            match map.entry(measure) {
-                Entry::Occupied(mut entry) => {
-                    let entry = entry.get_mut();
-                    *entry |= boundary_limits;
-                },
-                Entry::Vacant(entry) => {
-                    entry.insert(boundary_limits);
-                },
-            }
+    /// The group's cells for a result or a sub-row with nothing to draw in it.
+    fn html_empty_cells(self, html: &mut String) {
+        html.push_str(EMPTY_CELL);
+        html.push_str(EMPTY_CELL);
+        if self.lower {
+            html.push_str(EMPTY_CELL);
+        }
+        if self.upper {
+            html.push_str(EMPTY_CELL);
         }
     }
-    map
 }
 
 #[cfg(test)]
@@ -1174,13 +1349,18 @@ mod tests {
         project::{
             Visibility,
             boundary::BoundaryLimit,
-            report::{Adapter, JsonReportResults},
+            report::{
+                Adapter, JsonReportResults, JsonReportWarning, ReportWarningAction,
+                ReportWarningResource,
+            },
         },
     };
     use ordered_float::OrderedFloat;
     use url::Url;
 
-    use crate::{ReportComment, SubAdapter, percent_difference, percent_of, value_cell};
+    use crate::{
+        ReportComment, SubAdapter, TRUNCATED_NOTICE, percent_difference, percent_of, value_cell,
+    };
 
     const CONSOLE_URL: &str = "https://bencher.example.com";
 
@@ -1529,11 +1709,11 @@ mod tests {
         report
     }
 
-    // A measure counts as checked when the deprecated singular threshold is present,
-    // and also when only a named or filtered threshold checked it, so a project whose
+    // A measure counts as checked when a threshold wrote a boundary for one of its metrics,
+    // whether or not the deprecated singular threshold describes it, so a project whose
     // thresholds are all narrow is not told it has none.
     #[test]
-    fn is_checked_reads_both_shapes() {
+    fn is_checked_reads_the_metrics_boundaries() {
         // The singular threshold is present.
         let report = named_alert_report();
         let comment = report_comment_for(report);
@@ -1600,7 +1780,7 @@ mod tests {
     }
 
     // A measure that named no point estimate reaches the comment with the deprecated
-    // `metric` absent. There is nothing for the table to draw, so it has no column,
+    // `metric` absent. Its column group is its default metric, so its value is drawn,
     // and rendering neither panics nor invents a zero.
     #[test]
     fn report_table_value_less_measure() {
@@ -1617,13 +1797,119 @@ mod tests {
             "unexpected table: {html}"
         );
         assert!(
-            !html.contains(">Throughput</a></th>"),
-            "the measure that named no point estimate has no column: {html}"
+            html.contains(">Throughput: p99</a></th>"),
+            "the measure that named only `p99` shows it: {html}"
+        );
+        assert!(
+            html.contains("<td>2.00 ns</td>"),
+            "unexpected table: {html}"
         );
         // It is still a measure of this report, so the threshold warning names it.
         assert!(
             html.contains("/measures/throughput\">Throughput"),
             "unexpected report: {html}"
+        );
+    }
+
+    pub(crate) fn warning(
+        resource: ReportWarningResource,
+        action: ReportWarningAction,
+        count: u32,
+    ) -> JsonReportWarning {
+        JsonReportWarning {
+            resource,
+            action,
+            count,
+        }
+    }
+
+    fn with_warnings(mut report: JsonReport) -> JsonReport {
+        report.warnings = Some(vec![
+            warning(
+                ReportWarningResource::Benchmark,
+                ReportWarningAction::Skip,
+                3,
+            ),
+            warning(
+                ReportWarningResource::Measure,
+                ReportWarningAction::Ignore,
+                1,
+            ),
+            warning(
+                ReportWarningResource::Threshold,
+                ReportWarningAction::Skip,
+                2,
+            ),
+        ]);
+        report
+    }
+
+    const WARNINGS_SECTION: &str = "<details><summary>⚠️ Warnings (6)</summary><br /><table><thead><tr><th>Resource</th><th>Action</th><th>Count</th></tr></thead><tbody><tr><td>Benchmark</td><td>Skipped</td><td>3</td></tr><tr><td>Measure</td><td>Ignored</td><td>1</td></tr><tr><td>Threshold</td><td>Skipped</td><td>2</td></tr></tbody></table></details>";
+    const WARNINGS_LINES: &str =
+        "\n\nWarnings:\n- 3 benchmarks skipped\n- 1 measure ignored\n- 2 thresholds skipped";
+
+    // Kills warnings missing from the run output or the comment, out of their place after the
+    // results and the tables, a summary that counts the rows rather than summing their counts,
+    // a plural on a count of 1 or none on others, swapped actions, and table cells without the
+    // console's capitalized labels.
+    #[test]
+    fn warnings_follow_the_results_and_the_tables() {
+        let comment = report_comment_for(with_warnings(named_alert_report()));
+
+        let human = comment.human();
+        let (results, warnings) = human.split_once(WARNINGS_LINES).expect(&human);
+        assert!(
+            results.contains("View results:\n- bench (Latency): "),
+            "{human}"
+        );
+        assert!(warnings.starts_with("\n\nView alerts:\n"), "{human}");
+
+        let html = comment.html(false, None);
+        assert!(
+            html.contains(&format!(
+                "</table></details>{WARNINGS_SECTION}<a href=\"https://bencher.example.com/console/projects/my-project/reports/"
+            )),
+            "{html}"
+        );
+    }
+
+    // Kills warnings dropped from a report with no benchmarks, where they say why, a truncated
+    // comment that keeps the collapsible section or drops the total, and a section or a total
+    // for a report whose warnings are empty.
+    #[test]
+    fn warnings_show_without_benchmarks_and_only_when_present() {
+        let comment = report_comment_for(with_warnings(json_report(Visibility::Public)));
+        let human = comment.human();
+        assert!(
+            human.contains(&format!("No benchmarks found!{WARNINGS_LINES}")),
+            "{human}"
+        );
+        let html = comment.html(false, None);
+        assert!(
+            html.contains(&format!(
+                "No benchmarks found!</h3></blockquote>{WARNINGS_SECTION}"
+            )),
+            "{html}"
+        );
+
+        let truncated = report_comment_for(with_warnings(named_alert_report()))
+            .html_with_max_length(false, None, 0);
+        assert!(truncated.contains(TRUNCATED_NOTICE), "{truncated}");
+        assert!(
+            truncated.contains("1 Alert</h3><p>⚠️ Warnings (6)</p><a href="),
+            "{truncated}"
+        );
+        assert_eq!(truncated.matches("Warnings").count(), 1, "{truncated}");
+
+        let mut report = named_alert_report();
+        report.warnings = Some(Vec::new());
+        let comment = report_comment_for(report);
+        assert!(!comment.human().contains("Warnings"));
+        assert!(!comment.html(false, None).contains("Warnings"));
+        assert!(
+            !comment
+                .html_with_max_length(false, None, 0)
+                .contains("Warnings")
         );
     }
 
@@ -1764,8 +2050,8 @@ mod tests {
         links.extend(
             alerts
                 .lines()
-                .filter_map(|line| line.strip_prefix("- bench (Latency): "))
-                .map(|link| link.parse::<Url>().unwrap()),
+                .filter_map(|line| line.split_once("): "))
+                .map(|(_, link)| link.parse::<Url>().unwrap()),
         );
         assert_eq!(links.len(), 2, "{links:#?}");
         links
@@ -1982,7 +2268,8 @@ mod tests {
         for section in [results, alerts] {
             let link = section
                 .lines()
-                .find_map(|line| line.strip_prefix("- bench (Latency): "))
+                .filter(|line| line.starts_with("- bench (Latency"))
+                .find_map(|line| line.split_once("): ").map(|(_, link)| link))
                 .unwrap_or_else(|| panic!("no plot link: {human}"));
             let url: Url = link.parse().unwrap();
             assert_eq!(url.path(), path, "{human}");

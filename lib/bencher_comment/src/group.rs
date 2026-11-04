@@ -4,7 +4,8 @@ use bencher_json::{GitHash, project::report::Adapter};
 
 use crate::{
     AlertColumns, BENCHER_REPORT_TITLE, EMPTY_CELL, ReportComment, Resource, SectionCheck,
-    TRUNCATED_NOTICE, counted, html_alerts_heading, html_link_row, tag::group_tag,
+    TRUNCATED_NOTICE, counted, html_alerts_heading, html_link_row, html_warnings_total,
+    tag::group_tag,
 };
 
 const SHORT_SHA_LEN: usize = 7;
@@ -87,13 +88,24 @@ impl<'r> GroupComment<'r> {
         if full.len() <= max_length {
             return full;
         }
-        let reduced = self.html_parts(all_rows, &alerts, TRUNCATED_NOTICE, &trailer);
+        let mut warnings_total = String::new();
+        html_warnings_total(
+            &mut warnings_total,
+            self.reports().map(ReportComment::warnings_total).sum(),
+        );
+        let reduced = self.html_parts(
+            all_rows,
+            &format!("{alerts}{warnings_total}"),
+            TRUNCATED_NOTICE,
+            &trailer,
+        );
         if reduced.len() <= max_length {
             return reduced;
         }
+        let summary_alerts = format!("{alerts_heading}{warnings_total}");
         let mut kept = all_rows;
         loop {
-            let summary = self.html_parts(kept, &alerts_heading, TRUNCATED_NOTICE, &trailer);
+            let summary = self.html_parts(kept, &summary_alerts, TRUNCATED_NOTICE, &trailer);
             if summary.len() <= max_length || kept == 0 {
                 return summary;
             }
@@ -320,7 +332,8 @@ struct Row<'r> {
 }
 
 impl Row<'_> {
-    /// The notices and the benchmark tables of the section's report, in a `<details>` block.
+    /// The notices, the benchmark tables, and the warnings of the section's report, in a
+    /// `<details>` block.
     /// Its alerts are in the alerts table.
     fn html_details(&self, require_threshold: bool) -> Option<String> {
         let report = self.section.report?;
@@ -340,6 +353,7 @@ impl Row<'_> {
         if report.benchmark_count > 0 {
             report.html_iteration_tables(&mut html, require_threshold);
         }
+        report.html_warnings(&mut html);
         html.push_str("</details>");
         Some(html)
     }
@@ -422,7 +436,7 @@ fn html_link_cell(html: &mut String, url: &str, text: &str) {
     html.push_str(&format!(r#"<td><a href="{url}">{text}</a></td>"#));
 }
 
-fn escape(text: &str) -> String {
+pub(crate) fn escape(text: &str) -> String {
     let mut escaped = String::with_capacity(text.len());
     for c in text.chars() {
         match c {
@@ -442,7 +456,11 @@ mod tests {
 
     use bencher_json::{
         DateTime, GitHash, JsonReport,
-        project::{Visibility, boundary::BoundaryLimit, report::Adapter},
+        project::{
+            Visibility,
+            boundary::BoundaryLimit,
+            report::{Adapter, ReportWarningAction, ReportWarningResource},
+        },
     };
 
     use super::{GroupComment, Section, escape};
@@ -450,7 +468,7 @@ mod tests {
         ReportComment, SectionCheck, TRUNCATED_NOTICE, group_tag,
         tests::{
             job_report, json_report, named_alert_report, named_alert_results, report_comment,
-            report_comment_for, report_on, value_less_results, with_alerts,
+            report_comment_for, report_on, value_less_results, warning, with_alerts,
         },
     };
 
@@ -1265,6 +1283,88 @@ mod tests {
         let strict = group.html(true, usize::MAX);
         assert!(!strict.contains("No Threshold found"), "{strict}");
         assert!(!strict.contains(">Latency</a></th>"), "{strict}");
+    }
+
+    // Kills a group comment that drops a section's warnings or shows them in another section.
+    #[test]
+    fn details_carry_their_report_s_warnings() {
+        let mut warned = report_on(REPORT_A, MAIN, TESTBED_A);
+        warned.warnings = Some(vec![warning(
+            ReportWarningResource::Variant,
+            ReportWarningAction::Skip,
+            1,
+        )]);
+        let warned = report_comment_for(warned);
+        let calm = report_comment_for(report_on(REPORT_B, MAIN, TESTBED_B));
+        let html =
+            group(None, &warned, vec![section(None, 2, Some(&calm))]).html(false, usize::MAX);
+        let (first, second) = html.split_once("<summary>Report 2: ").unwrap();
+        let (_, first) = first.split_once("<summary>Report 1: ").unwrap();
+        assert!(
+            first.ends_with("<details><summary>⚠️ Warnings (1)</summary><br /><table><thead><tr><th>Resource</th><th>Action</th><th>Count</th></tr></thead><tbody><tr><td>Variant</td><td>Skipped</td><td>1</td></tr></tbody></table></details></details><details>"),
+            "{first}"
+        );
+        assert!(!second.contains("Warnings"), "{second}");
+    }
+
+    // Kills a reduced or summary group comment that drops the warnings, keeps a collapsible
+    // section, or counts only the writer's warnings or only the rows.
+    #[test]
+    fn reduced_and_summary_keep_the_warnings_total() {
+        let warned = |report: JsonReport, count| {
+            let mut report = report;
+            report.warnings = Some(vec![
+                warning(
+                    ReportWarningResource::Benchmark,
+                    ReportWarningAction::Skip,
+                    count,
+                ),
+                warning(
+                    ReportWarningResource::Measure,
+                    ReportWarningAction::Ignore,
+                    1,
+                ),
+            ]);
+            report_comment_for(report)
+        };
+        let writer = warned(
+            with_alerts(
+                report_on(REPORT_A, MAIN, TESTBED_A),
+                BoundaryLimit::Upper,
+                1,
+            ),
+            3,
+        );
+        let other = warned(report_on(REPORT_B, MAIN, TESTBED_B), 2);
+        let calm = report_comment_for(report_on(REPORT_C, MAIN, TESTBED_C));
+        let group = group(
+            None,
+            &writer,
+            vec![
+                section(None, 2, Some(&other)),
+                section(None, 3, Some(&calm)),
+            ],
+        );
+        let full = group.html(false, usize::MAX);
+        assert_eq!(full.matches("<summary>⚠️ Warnings").count(), 2, "{full}");
+
+        let reduced = group.html(false, full.len() - 1);
+        assert!(
+            reduced.contains(&format!(
+                "</tbody></table><p>⚠️ Warnings (7)</p>{TRUNCATED_NOTICE}"
+            )),
+            "{reduced}"
+        );
+        let summary = group.html(false, 0);
+        assert!(
+            summary.contains(&format!(
+                "<h3>🚨 1 Alert</h3><p>⚠️ Warnings (7)</p>{TRUNCATED_NOTICE}"
+            )),
+            "{summary}"
+        );
+        for html in [reduced, summary] {
+            assert_eq!(html.matches("Warnings").count(), 1, "{html}");
+        }
     }
 
     // Kills a record parser that reads a record planted in a benchmark name,
