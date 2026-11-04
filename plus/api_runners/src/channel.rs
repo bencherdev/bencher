@@ -2659,7 +2659,7 @@ mod tests {
             .unwrap();
             assert!(matches!(outcome, ReadyOutcome::UpdateSent));
 
-            let expected_url = "https://github.com/bencherdev/bencher/releases/download/canary/runner-canary-linux-x86-64";
+            let expected_url = "https://download.bencher.dev/canary/runner-canary-linux-x86-64";
             let ServerMessage::Update {
                 version,
                 url,
