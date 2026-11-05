@@ -67,6 +67,7 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"python_asv_text",
 	"python_pytest",
 	"ruby_benchmark",
+	"ruby_benchmark_ips",
 	"rust_bench",
 	"rust_bench_json",
 	"rust_bench_text",

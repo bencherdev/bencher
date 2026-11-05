@@ -1,0 +1,12 @@
+[
+  {
+    "name": "job1",
+    "central_tendency": 10268390.235883243,
+    "ips": 10268390.235883243,
+    "error": 2793410,
+    "stddev": 2793410,
+    "microseconds": 579822.9189999104,
+    "iterations": 5953848,
+    "cycles": 992308
+  }
+]
