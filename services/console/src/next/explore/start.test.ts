@@ -175,9 +175,8 @@ describe("reportBenchmarkQuery", () => {
 });
 
 describe("benchmarkOptions", () => {
-	// Kills a search that heeds case, misses a name holding the text past its
-	// start, or lists more than a menu holds.
-	test("narrow by any part of the name, ignoring case, to at most a menu's worth", () => {
+	// Kills a search that heeds case or misses a name holding the text past its start.
+	test("narrow by any part of the name, ignoring case", () => {
 		const benchmarks = ["blake3", "sha256", "SHA512", "xxh3"].map(
 			(name, n) => ({
 				uuid: uuid(n),
@@ -186,16 +185,15 @@ describe("benchmarkOptions", () => {
 			}),
 		);
 		expect(
-			benchmarkOptions(benchmarks, "sha", 32).map(({ label }) => label),
+			benchmarkOptions(benchmarks, "sha").map(({ label }) => label),
 		).toEqual(["sha256", "SHA512"]);
-		expect(
-			benchmarkOptions(benchmarks, "3", 32).map(({ label }) => label),
-		).toEqual(["blake3", "xxh3"]);
-		expect(benchmarkOptions(benchmarks, "", 2)).toHaveLength(2);
+		expect(benchmarkOptions(benchmarks, "3").map(({ label }) => label)).toEqual(
+			["blake3", "xxh3"],
+		);
 	});
 
-	// Kills the benchmark named what is typed left where the list put it,
-	// past a menu's worth, or found by a match that heeds case.
+	// Kills the benchmark named what is typed left where the list put it, or
+	// found by a match that heeds case.
 	test("put the benchmark named what is typed first, ignoring case", () => {
 		const benchmarks = ["sha256", "sha512", "Sha"].map((name, n) => ({
 			uuid: uuid(n),
@@ -203,8 +201,8 @@ describe("benchmarkOptions", () => {
 			measures: [],
 		}));
 		expect(
-			benchmarkOptions(benchmarks, "SHA", 2).map(({ label }) => label),
-		).toEqual(["Sha", "sha256"]);
+			benchmarkOptions(benchmarks, "SHA").map(({ label }) => label),
+		).toEqual(["Sha", "sha256", "sha512"]);
 	});
 });
 

@@ -242,7 +242,7 @@ test("the parameters box suggests every variant's tags, counted and most recent 
 		.element(menu.getByRole("menuitem", { name: /^simd=neon/ }))
 		.toHaveTextContent("1 variant");
 	expect(asked).toEqual([
-		`/v0/projects/hashbrown/benchmarks/${uuid(5)}/variants?per_page=255&sort=last_used`,
+		`/v0/projects/hashbrown/benchmarks/${uuid(5)}/variants?per_page=255&page=1&sort=last_used`,
 	]);
 	await expect
 		.element(menu.getByRole("menuitem", { name: /^threads=1\b/ }))
@@ -256,6 +256,43 @@ test("the parameters box suggests every variant's tags, counted and most recent 
 			.elements()
 			.map((item) => item.querySelector(".ui-trunc")?.textContent),
 	).toEqual(["threads=1", "threads=4", "simd=sse", "simd=neon", "threads=8"]);
+});
+
+// Kills tag counts taken over the first page of variants alone, and a
+// search that heeds case, so "SIMD" finds nothing.
+test("the parameters box counts every page of variants, and its search ignores case", async () => {
+	const asked: string[] = [];
+	const variants = Array.from({ length: 300 }, (_, n) => ({
+		uuid: uuid(1000 + n),
+		parameters: { simd: "avx2", threads: n },
+	}));
+	const api: Api = {
+		get: async <T,>(path: string) => {
+			asked.push(path);
+			const at = Number(
+				new URL(path, "http://api.test").searchParams.get("page"),
+			);
+			return {
+				data: variants.slice((at - 1) * 255, at * 255) as T,
+				headers: new Headers({ "X-Total-Count": "300" }),
+			};
+		},
+		send: async () => {
+			throw new Error("The editor sends no changes");
+		},
+	};
+	render(api, { ...QUERY, sets: [] }, { perf: PERF });
+	await page.getByRole("button", { name: "Add set" }).click();
+	const menu = page.getByRole("menu", { name: "Add set" });
+	await expect
+		.element(menu.getByRole("menuitem", { name: /^simd=avx2/ }))
+		.toHaveTextContent("300 variants");
+	expect(asked.filter((path) => path.includes("/variants"))).toHaveLength(2);
+	await userEvent.type(
+		page.getByRole("searchbox", { name: "Search parameters" }),
+		"SIMD",
+	);
+	await expect.poll(() => menu.getByRole("menuitem").elements().length).toBe(1);
 });
 
 // Kills a set removed by keyboard taking focus with it to the page.

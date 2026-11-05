@@ -29,6 +29,8 @@ const Controls = (props: {
 	query: ExploreQuery;
 	/** The lines the query names, from the plot's last answer. */
 	total: number | undefined;
+	/** The lines a link chose that the plot drew, while it drew fewer than all of them. */
+	chosen?: { drew: number; of: number } | undefined;
 	now: () => number;
 	onQuery: (query: ExploreQuery) => void;
 	/** For a reader who has no custom window: the presets end now. */
@@ -39,7 +41,11 @@ const Controls = (props: {
 	const layout = () =>
 		measuresLayout(props.query.measures.length, props.query.layout);
 	const cap = () =>
-		props.total === undefined ? undefined : lineCapWarning(props.total);
+		props.chosen
+			? "over"
+			: props.total === undefined
+				? undefined
+				: lineCapWarning(props.total);
 	const set = (change: Partial<ExploreQuery>) =>
 		props.onQuery({ ...props.query, ...change });
 	const pick = (choice: WindowChoice) => {
@@ -137,7 +143,11 @@ const Controls = (props: {
 						<path d="M12 10v4M12 17v.5" />
 					</svg>
 					<b>
-						{formatCount(props.total)} of {LINE_CAP} lines
+						{props.chosen
+							? `${formatCount(props.chosen.drew)} of ${formatCount(props.chosen.of)} lines`
+							: cap() === "over"
+								? `${LINE_CAP} of ${formatCount(props.total)} lines`
+								: `${formatCount(props.total)} of ${LINE_CAP} lines`}
 					</b>
 				</p>
 			</Show>

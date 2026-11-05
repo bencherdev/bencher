@@ -201,11 +201,11 @@ const Report = () => {
 	>(new Map());
 	// Explore's query codec loads with the first selection or once the lines want their links, not with the page.
 	const [explorer, setExplorer] =
-		createSignal<typeof import("../report/explore")["exploreSearchOf"]>();
+		createSignal<typeof import("../report/explore")>();
 	const loadExplorer = () => {
 		if (!explorer()) {
 			import("../report/explore")
-				.then(({ exploreSearchOf }) => setExplorer(() => exploreSearchOf))
+				.then((codec) => setExplorer(() => codec))
 				.catch(() => {});
 		}
 	};
@@ -251,10 +251,10 @@ const Report = () => {
 	/** Explore's link for some of the report's lines, once the codec has arrived. */
 	const explore = () => {
 		const current = report();
-		const search = explorer();
-		return current && search
+		const codec = explorer();
+		return current && codec
 			? (lines: readonly ReportLine[]) =>
-					`${projectPath(slug(), "explore")}${search(
+					`${projectPath(slug(), "explore")}${codec.exploreSearchOf(
 						lines,
 						{ uuid: current.uuid, end: current.window.end_time },
 						windowDays(view().window),
@@ -361,6 +361,9 @@ const Report = () => {
 				/>
 				<Selection
 					count={selection().size}
+					opens={
+						explorer()?.openedOf([...selection().values()]) ?? selection().size
+					}
 					narrow={narrow()}
 					explore={explore()?.([...selection().values()])}
 					onClear={() => setSelection(new Map())}
@@ -667,6 +670,8 @@ const startTime = (time: number, narrow: boolean) =>
 
 const Selection = (props: {
 	count: number;
+	/** How many of the selected lines Explore opens. */
+	opens: number;
 	narrow: boolean;
 	explore: string | undefined;
 	onClear: () => void;
@@ -701,11 +706,11 @@ const Selection = (props: {
 					data-variant="primary"
 					data-size="sm"
 					href={href()}
-					aria-label={`Open ${formatCount(props.count)} in Explore`}
+					aria-label={`Open ${formatCount(props.opens)} in Explore`}
 				>
 					{props.narrow
-						? `Open ${formatCount(props.count)}`
-						: `Open ${formatCount(props.count)} in Explore`}
+						? `Open ${formatCount(props.opens)}`
+						: `Open ${formatCount(props.opens)} in Explore`}
 				</a>
 			)}
 		</Show>

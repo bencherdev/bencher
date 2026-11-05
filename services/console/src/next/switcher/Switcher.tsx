@@ -14,7 +14,7 @@ import { ORGANIZATIONS_PATH, organizationPath } from "../paths";
 import { useApi } from "../project";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
-import { visibleRange } from "../reports/rows";
+import { visibleRange } from "../list/rows";
 import {
 	type Split,
 	type SwitcherRow,

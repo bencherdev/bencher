@@ -12,9 +12,15 @@ import { useQueryClient } from "@tanstack/solid-query";
 import { For, Show, createMemo, createSignal, useContext } from "solid-js";
 import type { JsonConsoleUser, JsonOrganization } from "../../types/bencher";
 import { useAccount } from "../account/context";
-import { nameProblem, organizationRows } from "../account/organizations";
+import {
+	type OrganizationRow,
+	nameProblem,
+	organizationRows,
+} from "../account/organizations";
 import { useSlugRule } from "../account/slug";
 import { FlushContext } from "../flush";
+import { Spacer } from "../list/TableRows";
+import { useVirtualRows } from "../list/virtual";
 import { ORGANIZATIONS_PATH, organizationPath } from "../paths";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
@@ -85,54 +91,7 @@ const Organizations = (props: {
 					</Show>
 				}
 			>
-				{(list) => (
-					<Table fold={404} aria-label="Your organizations">
-						<thead>
-							<tr>
-								<th scope="col">Organization</th>
-								<th scope="col" data-align="end">
-									Projects
-								</th>
-								<th scope="col">
-									<span class="sr-only">Actions</span>
-								</th>
-							</tr>
-						</thead>
-						<tbody>
-							<For each={list()}>
-								{(organization) => (
-									<tr class="rowlink">
-										<td data-fold="l1" class="ui-table-name">
-											<span class="ui-parts">
-												<a
-													class="namelink rowlink-name"
-													href={organizationPath(organization.slug)}
-												>
-													<Truncate text={organization.name} />
-												</a>
-											</span>
-										</td>
-										<td data-fold="n1" data-align="end" class="muted">
-											{organization.projects
-												? counted(organization.projects, "project", "projects")
-												: "No projects"}
-										</td>
-										<td data-fold="act" class="act">
-											<Show when={!organization.projects}>
-												<a class="lnk" href={newProjectHref(organization.slug)}>
-													New project
-												</a>
-											</Show>
-											<a class="lnk" href={organizationPath(organization.slug)}>
-												Settings
-											</a>
-										</td>
-									</tr>
-								)}
-							</For>
-						</tbody>
-					</Table>
-				)}
+				{(list) => <OrganizationTable organizations={list()} />}
 			</Show>
 			<Show when={opened() || adding()}>
 				<NewOrganization
@@ -145,6 +104,66 @@ const Organizations = (props: {
 };
 
 export default Organizations;
+
+/** The reader's organizations, drawing only the rows on screen. */
+const OrganizationTable = (props: { organizations: OrganizationRow[] }) => {
+	const rows = useVirtualRows({ rows: () => props.organizations });
+	return (
+		<Table
+			fold={404}
+			aria-label="Your organizations"
+			aria-rowcount={props.organizations.length + 1}
+			onLines={rows.onLines}
+		>
+			<thead>
+				<tr aria-rowindex={1}>
+					<th scope="col">Organization</th>
+					<th scope="col" data-align="end">
+						Projects
+					</th>
+					<th scope="col">
+						<span class="sr-only">Actions</span>
+					</th>
+				</tr>
+			</thead>
+			<tbody ref={rows.body}>
+				<Spacer height={rows.above()} columns={3} />
+				<For each={rows.shown()}>
+					{(organization, index) => (
+						<tr class="rowlink" aria-rowindex={rows.start() + index() + 2}>
+							<td data-fold="l1" class="ui-table-name">
+								<span class="ui-parts">
+									<a
+										class="namelink rowlink-name"
+										href={organizationPath(organization.slug)}
+									>
+										<Truncate text={organization.name} />
+									</a>
+								</span>
+							</td>
+							<td data-fold="n1" data-align="end" class="muted">
+								{organization.projects
+									? counted(organization.projects, "project", "projects")
+									: "No projects"}
+							</td>
+							<td data-fold="act" class="act">
+								<Show when={!organization.projects}>
+									<a class="lnk" href={newProjectHref(organization.slug)}>
+										New project
+									</a>
+								</Show>
+								<a class="lnk" href={organizationPath(organization.slug)}>
+									Settings
+								</a>
+							</td>
+						</tr>
+					)}
+				</For>
+				<Spacer height={rows.below()} columns={3} />
+			</tbody>
+		</Table>
+	);
+};
 
 export { nameProblem } from "../account/organizations";
 

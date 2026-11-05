@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 const GRANTS = "/v0/users/muriel-bagge/oauth/grants";
-const LIST = `${GRANTS}?per_page=255&direction=desc`;
+const LIST = `${GRANTS}?per_page=16&page=1&direction=desc`;
 
 const chatgpt: JsonOAuthGrant = {
 	uuid: "grant-chatgpt",
@@ -440,4 +440,49 @@ test("a long host shows whole beside its Revoke, and the app's name wraps", asyn
 	expect((dd as HTMLElement).getBoundingClientRect().right).toBeLessThanOrEqual(
 		inside.right,
 	);
+});
+
+// Kills a list that stops at its first page of apps, and one that reads every
+// page before the reader scrolls to it.
+test("a long list reads its next page of apps as the reader nears its end", async () => {
+	await page.viewport(1280, 800);
+	const all = Array.from(
+		{ length: 40 },
+		(_, n) =>
+			({
+				...chatgpt,
+				uuid: `grant-${n}`,
+				client: { ...chatgpt.client, host: `app${n}.example` },
+			}) as JsonOAuthGrant,
+	);
+	const reads: string[] = [];
+	const api: Api = {
+		get: async <T,>(path: string) => {
+			reads.push(path);
+			const url = new URL(path, "http://api.test");
+			const size = Number(url.searchParams.get("per_page"));
+			const at = Number(url.searchParams.get("page"));
+			return {
+				data: all.slice((at - 1) * size, at * size) as T,
+				headers: new Headers({ "X-Total-Count": "40" }),
+			};
+		},
+		send: async () => {
+			throw new Error("no change expected");
+		},
+	};
+	dispose = mountAccount(ConnectedApps, "apps", { api }).dispose;
+	await expect.element(app("app0.example")).toBeVisible();
+	await expect.element(page.getByText("Newest 16 of 40")).toBeVisible();
+	expect(reads).toHaveLength(1);
+	for (let step = 0; step < 20 && !app("app39.example").query(); step++) {
+		window.scrollTo({
+			top: document.documentElement.scrollHeight,
+			behavior: "instant",
+		});
+		await new Promise((resolve) => setTimeout(resolve, 50));
+	}
+	await expect.element(app("app39.example")).toBeVisible();
+	expect(reads).toHaveLength(3);
+	expect(page.getByText(/^Newest/).elements()).toHaveLength(0);
 });

@@ -644,7 +644,7 @@ test("a cold load of General holds the speed ceilings", async ({ page }) => {
 const accountColdLoad = async (
 	page: Page,
 	path: string,
-	waits: string[],
+	waits: (string | RegExp)[],
 	shown: () => Promise<void>,
 	answer: (route: Route) => Promise<void> = (route) => route.continue(),
 ) => {
@@ -669,6 +669,12 @@ const holds = (cost: Cost, ceiling: Partial<Record<keyof Cost, number>>) => {
 };
 
 const USER = `${seed.api_url}/v0/users/${seed.member.user.slug}`;
+
+/** A list's first page, whatever page size the screen asks for. */
+const firstPage = (list: string, after = "") =>
+	new RegExp(
+		`^${list.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}per_page=\\d+&page=1${after}$`,
+	);
 const ACCOUNT = `/console/users/${seed.member.user.slug}`;
 
 // Kills a Profile that waits for the API to paint the reader's own account,
@@ -698,8 +704,8 @@ test("a cold load of the account's Keys holds the speed ceilings", async ({
 		page,
 		`${ACCOUNT}/keys`,
 		[
-			`${USER}/keys?revoked=false&per_page=255`,
-			`${USER}/keys?revoked=true&per_page=255`,
+			firstPage(`${USER}/keys?revoked=false&sort=created&direction=desc&`),
+			firstPage(`${USER}/keys?revoked=true&sort=created&direction=desc&`),
 		],
 		() =>
 			expect(page.getByRole("table", { name: "Active keys" })).toBeVisible(),
@@ -714,7 +720,9 @@ test("a cold load of the account's Keys holds the speed ceilings", async ({
 test("a cold load of legacy tokens holds the speed ceilings", async ({
 	page,
 }) => {
-	const list = `${USER}/tokens?revoked=false&per_page=255`;
+	const list = firstPage(
+		`${USER}/tokens?revoked=false&sort=created&direction=desc&`,
+	);
 	const cost = await accountColdLoad(
 		page,
 		`${ACCOUNT}/tokens`,
@@ -725,7 +733,7 @@ test("a cold load of legacy tokens holds the speed ceilings", async ({
 			).toBeVisible(),
 		async (route) => {
 			if (
-				route.request().url() !== list ||
+				!list.test(route.request().url()) ||
 				route.request().method() !== "GET"
 			) {
 				return route.continue();
@@ -760,7 +768,7 @@ test("a cold load of Connected Apps holds the speed ceilings", async ({
 	const cost = await accountColdLoad(
 		page,
 		`${ACCOUNT}/apps`,
-		[`${USER}/oauth/grants?per_page=255&direction=desc`],
+		[firstPage(`${USER}/oauth/grants?`, "&direction=desc")],
 		() => expect(page.getByText("No connected apps")).toBeVisible(),
 	);
 	report("connected apps cold load", cost);
@@ -823,7 +831,7 @@ test("a cold load of an organization's Members holds the speed ceilings", async 
 	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
 	const answered = Promise.all([
 		page.waitForResponse(organization),
-		page.waitForResponse(`${organization}/members?per_page=255`),
+		page.waitForResponse(firstPage(`${organization}/members?`)),
 		page.waitForResponse(`${organization}/allowed/create_role`),
 		page.waitForResponse(`${organization}/allowed/delete_role`),
 	]);

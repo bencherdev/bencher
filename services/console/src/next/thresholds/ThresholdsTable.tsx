@@ -12,7 +12,7 @@ import {
 	onMount,
 } from "solid-js";
 import { projectPath } from "../paths";
-import { type Range, visibleRange } from "../reports/rows";
+import { type Range, visibleRange } from "../list/rows";
 import { archivedBy, dayText, filterSets, filterSummary } from "./model";
 import { modelText } from "./text";
 import { ROW_HEIGHT } from "./query";

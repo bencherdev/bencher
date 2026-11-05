@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
 	type LineIdentity,
+	chosenDrawn,
 	lineKey,
 	lineVisible,
 	settleVisibility,
@@ -125,4 +126,16 @@ describe("settleVisibility", () => {
 		const query = { ...blankQuery(), hide: ["z"] };
 		expect(settleVisibility(query, ["a"])).toEqual(query);
 	});
+});
+
+// Kills a link's selection drawn short with no word of it, and a word for a
+// selection drawn whole or a query no link chose.
+test("chosenDrawn counts the chosen lines drawn, only while some were not", () => {
+	const chosen = Array.from({ length: 17 }, (_, n) => `line-${n}`);
+	expect(chosenDrawn(chosen, [...chosen.slice(0, 16), "other"])).toEqual({
+		drew: 16,
+		of: 17,
+	});
+	expect(chosenDrawn(chosen, chosen)).toBeUndefined();
+	expect(chosenDrawn(undefined, chosen)).toBeUndefined();
 });

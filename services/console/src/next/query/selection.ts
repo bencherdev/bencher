@@ -1,3 +1,4 @@
+import { LINE_CAP } from "../explore/layout";
 import { lineKey } from "./line";
 import { canonicalParameters } from "./parameters";
 import {
@@ -30,11 +31,47 @@ export interface SelectionContext {
 	readonly report?: string;
 }
 
-/** Explore's query string for exactly these lines: extras of the boxes' cross product start hidden. */
+/** Explore's query string for these lines, as many as it opens: extras of the boxes' cross product start hidden. */
 export const exploreSearch = (
 	lines: readonly SelectedLine[],
 	context: SelectionContext = {},
-): string => encodeQuery(selectionQuery(lines, context));
+): string => encodeQuery(selectionQuery(keptLines(lines), context));
+
+/** The lines of these that Explore opens: those in the first values of every box it reads, up to the lines a plot draws. */
+export const keptLines = <T extends SelectedLine>(lines: readonly T[]): T[] => {
+	const first = <V>(values: V[], id: (value: V) => string) =>
+		new Set(distinct(values, id, MAX_ENTRIES).map(id));
+	const branches = first(
+		lines.map(({ branch }) => branch.uuid),
+		itself,
+	);
+	const testbeds = first(
+		lines.map(({ testbed }) => testbed.uuid),
+		itself,
+	);
+	const benchmarks = first(
+		lines.map(({ benchmark }) => benchmark),
+		itself,
+	);
+	const measures = first(
+		lines.map(({ measure }) => measure),
+		itself,
+	);
+	const metrics = first(
+		lines.map(({ metric }) => metric),
+		itself,
+	);
+	const boxed = lines.filter(
+		(line) =>
+			branches.has(line.branch.uuid) &&
+			testbeds.has(line.testbed.uuid) &&
+			benchmarks.has(line.benchmark) &&
+			measures.has(line.measure) &&
+			metrics.has(line.metric),
+	);
+	const drawn = new Set(distinct(boxed.map(keyOf), itself, LINE_CAP));
+	return boxed.filter((line) => drawn.has(keyOf(line)));
+};
 
 const selectionQuery = (
 	lines: readonly SelectedLine[],

@@ -23,7 +23,7 @@ import { PROJECTS_PATH } from "../paths";
 import { ProjectContext } from "../project";
 import { fakeApi } from "../reports/testing";
 import { screenBatch as reportScreenBatch } from "../report/query";
-import { screenBatch } from "../reports/virtual";
+import { screenBatch } from "../list/rows";
 import {
 	cutCells,
 	cutHeaders,

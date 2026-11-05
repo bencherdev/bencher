@@ -72,7 +72,7 @@ import { useEntityTitle, useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { exploreSearchFromClassic } from "../query/classic";
-import { lineVisible, settleVisibility } from "../query/line";
+import { chosenDrawn, lineVisible, settleVisibility } from "../query/line";
 import {
 	type ExploreQuery,
 	type Parameters,
@@ -224,6 +224,12 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 		{ equals: (a, b) => a.lines === b.lines && a.measures === b.measures },
 	);
 	const hidden = () => drawn().filter((id) => !lineVisible(query(), id));
+	/** How many of the lines a link chose the answer drew, while it drew fewer. */
+	const chosen = createMemo(() =>
+		busy() || answer() === undefined
+			? undefined
+			: chosenDrawn(query().only, drawn()),
+	);
 	const settled = () => settleVisibility(query(), drawn());
 
 	const [confirmation, setConfirmation] = createSignal<{
@@ -624,6 +630,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 				<Controls
 					query={query()}
 					total={answer()?.total}
+					chosen={chosen()}
 					now={Date.now}
 					onQuery={(next) => edit(next)}
 				>

@@ -5,6 +5,7 @@ import { type Api, ApiError, type Method } from "../api";
 import { mountAccount } from "../account/testing";
 import { axeInBothThemes } from "../axe/testing";
 import LegacyTokens from "./LegacyTokens";
+import { screenBatch } from "../list/rows";
 
 let dispose: (() => void) | undefined;
 
@@ -30,7 +31,7 @@ const desktop = token("home-desktop", "2023-11-20T00:00:00Z");
 /** The tokens API: the list read by `list`, each change answered by `answer`. */
 const tokensApi = (
 	answer: () => Promise<unknown> = async () => undefined,
-	list: () => Promise<JsonToken[]> = async () => [desktop, ci],
+	list: () => Promise<JsonToken[]> = async () => [ci, desktop],
 ) => {
 	const reads: string[] = [];
 	const sent: { method: Method; path: string }[] = [];
@@ -55,15 +56,17 @@ const table = () => page.getByRole("table", { name: "Legacy API tokens" });
 const rows = () =>
 	[...document.querySelectorAll("tbody tr")].map((row) => row.textContent);
 
-// Kills revoked tokens listed, a list in the API's name order, a Create or
-// status toggle drawn, a rail that does not mark Profile, and a token's
-// secret kept in the cache.
+// Kills revoked tokens listed, a list asked for in the API's name order or
+// drawn out of the order it came in, a Create or status toggle drawn, a rail
+// that does not mark Profile, and a token's secret kept in the cache.
 test("lists the unrevoked tokens newest first, with Revoke alone", async () => {
 	const { api, reads } = tokensApi();
 	const mounted = mountAccount(LegacyTokens, "tokens", { api });
 	dispose = mounted.dispose;
 	await expect.element(table().getByText("ci-2024")).toBeVisible();
-	expect(reads).toEqual([`${TOKENS}?revoked=false&per_page=255`]);
+	expect(reads).toEqual([
+		`${TOKENS}?revoked=false&sort=created&direction=desc&per_page=${screenBatch()}&page=1`,
+	]);
 	expect(rows()[0]).toContain("ci-2024");
 	expect(rows()[1]).toContain("home-desktop");
 	expect(

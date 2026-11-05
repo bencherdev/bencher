@@ -17,11 +17,14 @@ import {
 	added,
 	invite,
 	memberCount,
-	membersQuery,
+	memberList,
 	removeMember,
 	rolesQuery,
 	sendable,
 } from "../organization/members";
+import type { Paged } from "../list/paged";
+import { MoreRows, Spacer } from "../list/TableRows";
+import { GAP, useKeptRows } from "../list/kept";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
 import {
@@ -38,7 +41,7 @@ const OrgMembers = () => {
 	const params = useParams();
 	const key = () => params.organization ?? "";
 	const organization = useQueryResult(() => organizationQuery(api, key()));
-	const members = useQueryResult(() => membersQuery(api, key()));
+	const members = memberList(api, key);
 	const roles = useQueryResult(() => rolesQuery(api, key()));
 	// Only read: an organization the reader has seen names the rail at once.
 	const bootstrap = useQueryResult(() => ({
@@ -50,10 +53,9 @@ const OrgMembers = () => {
 	// Single sign-on is only on the organization itself, so nothing draws before it.
 	const ready = () => {
 		const shown = organization().data;
-		const list = members().data;
 		const may = roles().data;
-		return shown && list && may
-			? { organization: shown, members: list.members, roles: may }
+		return shown && members.first().data && may
+			? { organization: shown, roles: may }
 			: undefined;
 	};
 	const [note, setNote] = createSignal("");
@@ -66,6 +68,7 @@ const OrgMembers = () => {
 		setFailure("");
 		try {
 			await removeMember(api, client, key(), member.uuid);
+			members.refill();
 			setNote("Removed");
 			// The row whose Remove held focus is gone.
 			heading?.focus();
@@ -92,8 +95,8 @@ const OrgMembers = () => {
 						Members
 					</Heading>
 					<p class="ph-sub">
-						{members().data
-							? memberCount(members().data?.total ?? 0)
+						{members.first().data
+							? memberCount(members.total() ?? 0)
 							: "\u00a0"}
 					</p>
 				</div>
@@ -117,7 +120,9 @@ const OrgMembers = () => {
 				when={ready()}
 				fallback={
 					<Show
-						when={organization().error ?? members().error ?? roles().error}
+						when={
+							organization().error ?? members.first().error ?? roles().error
+						}
 						fallback={<Skeleton size="card" />}
 					>
 						<Banner status="error" role="alert" class="load-error">
@@ -126,7 +131,7 @@ const OrgMembers = () => {
 								size="sm"
 								onClick={() => {
 									organization().refetch();
-									members().refetch();
+									members.first().refetch();
 									roles().refetch();
 								}}
 							>
@@ -148,7 +153,7 @@ const OrgMembers = () => {
 							/>
 						</Show>
 						<MemberTable
-							members={shown().members}
+							members={members}
 							roles={shown().roles}
 							reader={reader().user.uuid}
 							onRemove={setTarget}
@@ -281,65 +286,87 @@ const Invite = (props: { organization: string; onSent: () => void }) => {
 };
 
 const MemberTable = (props: {
-	members: JsonMember[];
+	members: Paged<JsonMember>;
 	roles: Roles;
 	reader: string;
 	onRemove: (member: JsonMember) => void;
-}) => (
-	<Table fold={369} aria-label="Members">
-		<thead>
-			<tr>
-				<th scope="col">Name</th>
-				<th scope="col">Email</th>
-				<th scope="col">
-					<span class="sr-only">Actions</span>
-				</th>
-			</tr>
-		</thead>
-		<tbody>
-			<For each={props.members}>
-				{(member) => {
-					const you = () => member.uuid === props.reader;
-					return (
-						<tr>
-							<td data-fold="l1" class="ui-table-name">
-								<span class="ui-parts">
-									<b>
-										<Truncate text={member.name} reveal />
-									</b>
-									<Show when={you()}>
-										{" "}
-										<span class="muted sm" data-fixed>
-											you
-										</span>
+}) => {
+	const rows = useKeptRows({
+		rows: props.members.rows,
+		onRange: props.members.onRange,
+	});
+	return (
+		<Table
+			fold={369}
+			aria-label="Members"
+			aria-rowcount={(props.members.total() ?? 0) + 1}
+			onLines={rows.onLines}
+		>
+			<thead>
+				<tr aria-rowindex={1}>
+					<th scope="col">Name</th>
+					<th scope="col">Email</th>
+					<th scope="col">
+						<span class="sr-only">Actions</span>
+					</th>
+				</tr>
+			</thead>
+			<tbody ref={rows.body}>
+				<Spacer height={rows.above()} columns={3} />
+				<For each={rows.drawn()}>
+					{(member, index) => {
+						if (member === GAP) {
+							return <Spacer height={rows.gap()} columns={3} />;
+						}
+						const you = () => member.uuid === props.reader;
+						return (
+							<tr aria-rowindex={rows.index(index()) + 2}>
+								<td data-fold="l1" class="ui-table-name">
+									<span class="ui-parts">
+										<b>
+											<Truncate text={member.name} reveal />
+										</b>
+										<Show when={you()}>
+											{" "}
+											<span class="muted sm" data-fixed>
+												you
+											</span>
+										</Show>
+									</span>
+								</td>
+								<td data-fold="l2" class="muted ui-table-name">
+									<span class="ui-parts">
+										<Truncate text={member.email} reveal />
+									</span>
+								</td>
+								<td data-fold="act" class="act">
+									<Show when={props.roles.remove && !you()}>
+										<button
+											type="button"
+											class="lnk danger"
+											aria-haspopup="dialog"
+											aria-label={`Remove ${member.name} (${member.email})`}
+											onClick={() => props.onRemove(member)}
+										>
+											Remove
+										</button>
 									</Show>
-								</span>
-							</td>
-							<td data-fold="l2" class="muted ui-table-name">
-								<span class="ui-parts">
-									<Truncate text={member.email} reveal />
-								</span>
-							</td>
-							<td data-fold="act" class="act">
-								<Show when={props.roles.remove && !you()}>
-									<button
-										type="button"
-										class="lnk danger"
-										aria-haspopup="dialog"
-										aria-label={`Remove ${member.name} (${member.email})`}
-										onClick={() => props.onRemove(member)}
-									>
-										Remove
-									</button>
-								</Show>
-							</td>
-						</tr>
-					);
-				}}
-			</For>
-		</tbody>
-	</Table>
-);
+								</td>
+							</tr>
+						);
+					}}
+				</For>
+				<Spacer height={rows.below()} columns={3} />
+				<MoreRows
+					columns={3}
+					loading={props.members.loading()}
+					onRetry={props.members.retry()}
+					failed="These members"
+				/>
+			</tbody>
+		</Table>
+	);
+};
 
 const SingleSignOn = (props: { organization: JsonOrganization }) => {
 	const domains = () => props.organization.sso ?? [];

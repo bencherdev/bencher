@@ -403,9 +403,10 @@ const savedKeys = (page: Page, slug: string) =>
 						const lists: Record<string, string[]> = {};
 						for (const { queryKey, state } of get.result?.state.queries ?? []) {
 							if (queryKey[1] === "keys" && queryKey[2] === slug) {
-								lists[queryKey[3]] = state.data.keys.map(
-									(key: { name: string }) => key.name,
-								);
+								lists[queryKey[3]] = [
+									...(lists[queryKey[3]] ?? []),
+									...state.data.rows.map((key: { name: string }) => key.name),
+								];
 							}
 						}
 						resolve(lists);

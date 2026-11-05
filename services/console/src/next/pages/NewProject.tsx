@@ -22,7 +22,7 @@ import { projectPath } from "../paths";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { useSlugRule } from "../account/slug";
-import { nameProblem } from "./Organizations";
+import { nameProblem } from "../account/organizations";
 import { failureOf } from "./Profile";
 
 /** A project for one of the reader's organizations, landing on its root. */

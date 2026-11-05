@@ -859,6 +859,32 @@
 	text-align: center;
 	color: var(--color-text-muted);
 }
+/* A long list draws only the rows on screen: a last row holds the next page, and spacer rows the height of the rest. */
+.reports-more td {
+	padding: 14px 10px;
+}
+.reports-more .ui-skeleton {
+	width: 40%;
+}
+.reports-failed {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 14px;
+	white-space: normal;
+}
+.ui-table tbody tr.reports-spacer td {
+	padding: 0;
+	border: 0;
+}
+@container ui-table (width <= 10em) {
+	.ui-table[data-fold] tbody tr.reports-spacer {
+		display: block;
+		min-height: 0;
+		padding: 0;
+		border: 0;
+	}
+}
 /* An address field and its button share a row; a phone stacks them. */
 .inrow .ui-input {
 	flex: 1 1 260px;

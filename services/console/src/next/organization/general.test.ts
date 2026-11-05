@@ -43,6 +43,17 @@ describe("goneWith", () => {
 			"Gizmo, Windmill, Lighthouse, and Cathode go with it.",
 		);
 	});
+
+	// Kills a clause that names a hundred projects, or loses count of the rest.
+	test("names five projects and counts the rest", () => {
+		const projects = Array.from({ length: 1005 }, (_, n) => `p${n}`);
+		expect(goneWith(projects.slice(0, 5))).toBe(
+			"p0, p1, p2, p3, and p4 go with it.",
+		);
+		expect(goneWith(projects)).toBe(
+			"p0, p1, p2, p3, p4, and 1,000 more go with it.",
+		);
+	});
 });
 
 describe("saveFailure", () => {

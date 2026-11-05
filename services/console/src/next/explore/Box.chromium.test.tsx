@@ -4,7 +4,7 @@ import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import Box, { type BoxValue } from "./Box";
+import Box, { type BoxValue, choicesOf } from "./Box";
 
 let dispose: (() => void) | undefined;
 afterEach(() => {
@@ -31,7 +31,7 @@ test("removing a value by keyboard keeps focus in the box", async () => {
 				onRemove={(index) =>
 					setValues((all) => all.filter((_, at) => at !== index))
 				}
-				options={() => () => []}
+				options={() => () => ({ options: [], more: 0 })}
 				onAdd={() => {}}
 			/>
 		);
@@ -71,7 +71,7 @@ test("a two-line value puts its units under its name and keeps its height until 
 				values={values()}
 				twoLine
 				onRemove={() => {}}
-				options={() => () => []}
+				options={() => () => ({ options: [], more: 0 })}
 				onAdd={() => {}}
 			/>
 		),
@@ -87,4 +87,68 @@ test("a two-line value puts its units under its name and keeps its height until 
 		name.getBoundingClientRect().bottom,
 	);
 	expect(value().getBoundingClientRect().height).toBe(before);
+});
+
+// Kills an add control that vanishes at the cap with no word of why, one a
+// press still opens, and a count that names no box.
+test("at the cap, the add control stays in place, disabled, and counts", async () => {
+	const root = document.createElement("div");
+	document.body.append(root);
+	let opened = 0;
+	dispose = render(
+		() => (
+			<Box
+				title="Branches"
+				noun="branch"
+				values={Array.from({ length: 8 }, (_, n) => ({ label: `b${n}` }))}
+				full
+				onRemove={() => {}}
+				options={() => () => ({ options: [], more: 0 })}
+				onOpen={() => {
+					opened += 1;
+				}}
+				onAdd={() => {}}
+			/>
+		),
+		root,
+	);
+	const add = page.getByRole("button", { name: "Add branch, 8 of 8" });
+	await expect.element(add).toHaveAttribute("aria-disabled", "true");
+	await expect.element(add).toHaveTextContent("8 of 8");
+	(add.element() as HTMLElement).click();
+	expect(page.getByRole("menu").elements()).toHaveLength(0);
+	expect(opened).toBe(0);
+});
+
+// Kills a menu that draws every choice it is handed, and one that stops at
+// its first choices with no word of the rest.
+test("a menu shows its first choices and counts the rest", async () => {
+	const root = document.createElement("div");
+	document.body.append(root);
+	dispose = render(
+		() => (
+			<Box
+				title="Parameters"
+				noun="set"
+				values={[]}
+				onRemove={() => {}}
+				options={() => () =>
+					choicesOf(
+						Array.from({ length: 16_000 }, (_, n) => ({
+							value: String(n),
+							label: `threads=${n}`,
+						})),
+					)
+				}
+				onAdd={() => {}}
+			/>
+		),
+		root,
+	);
+	await page.getByRole("button", { name: "Add set" }).click();
+	const menu = page.getByRole("menu", { name: "Add set" });
+	await expect
+		.element(menu.getByRole("menuitem", { name: "15,968 more" }))
+		.toBeDisabled();
+	expect(menu.getByRole("menuitem").elements()).toHaveLength(33);
 });

@@ -28,8 +28,8 @@ import { DIMENSIONS, PROJECTS_PATH } from "../paths";
 import { useProject, useProjectNavigate } from "../project";
 import { useQueryResult } from "../query";
 import { failureOf } from "../settings/failure";
-import { hasMore, loadMore } from "../reports/rows";
-import type { Range } from "../reports/rows";
+import { hasMore, loadMore } from "../list/rows";
+import type { Range } from "../list/rows";
 import {
 	type KeptRow,
 	type Row,

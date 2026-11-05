@@ -181,18 +181,15 @@ export const reportBenchmarkQuery = (
 	report: report.uuid,
 });
 
-/** The report's benchmarks whose names hold `text`, ignoring case, the one named `text` first, at most a menu's worth. */
+/** The report's benchmarks whose names hold `text`, ignoring case, the one named `text` first. */
 export const benchmarkOptions = (
 	benchmarks: readonly ReportBenchmark[],
 	text: string,
-	max: number,
 ): { value: string; label: string }[] => {
 	const lower = text.toLowerCase();
 	return exactFirst(
 		benchmarks.filter(({ name }) => name.toLowerCase().includes(lower)),
 		text,
 		({ name }) => name,
-	)
-		.slice(0, max)
-		.map(({ uuid, name }) => ({ value: uuid, label: name }));
+	).map(({ uuid, name }) => ({ value: uuid, label: name }));
 };

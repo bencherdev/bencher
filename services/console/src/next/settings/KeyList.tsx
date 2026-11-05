@@ -8,18 +8,14 @@ import Table from "@bencherdev/ui/Table";
 import TextInput from "@bencherdev/ui/TextInput";
 import Truncate from "@bencherdev/ui/Truncate";
 import { useQueryClient } from "@tanstack/solid-query";
-import {
-	For,
-	type JSX,
-	Match,
-	Show,
-	Switch,
-	createMemo,
-	createSignal,
-} from "solid-js";
+import { For, type JSX, Match, Show, Switch, createSignal } from "solid-js";
 import type { Api } from "../api";
-import { useQueryResult } from "../query";
-import { type KeyHome, addKey, keysKey, keysQuery, revokeKey } from "./data";
+import { MoreRows, Spacer } from "../list/TableRows";
+import type { Range } from "../list/rows";
+import { GAP, useKeptRows } from "../list/kept";
+import { createPaged } from "../list/paged";
+import { screenBatch } from "../list/rows";
+import { type KeyHome, addKey, keysKey, keysPage, revokeKey } from "./data";
 import { failureOf, overBytes, tooLong } from "./general";
 import {
 	DEFAULT_EXPIRY,
@@ -28,7 +24,6 @@ import {
 	expiresAt,
 	formatDay,
 	keyEnd,
-	newestFirst,
 } from "./keys";
 import { formatCount } from "../plot/count";
 
@@ -54,14 +49,8 @@ const KeyList = (props: {
 }) => {
 	const client = useQueryClient();
 	const manage = () => props.manage;
-	const active = useQueryResult(() => ({
-		...keysQuery(props.api, props.home, false),
-		enabled: manage() !== false,
-	}));
-	const revoked = useQueryResult(() => ({
-		...keysQuery(props.api, props.home, true),
-		enabled: manage() !== false,
-	}));
+	const active = keyList(props.api, () => props.home, false, manage);
+	const revoked = keyList(props.api, () => props.home, true, manage);
 
 	const [status, setStatus] = createSignal<Status>("active");
 	const [open, setOpen] = createSignal<Open>();
@@ -71,8 +60,7 @@ const KeyList = (props: {
 	const close = () => setOpen(undefined);
 	let statusGroup: HTMLDivElement | undefined;
 
-	const listed = () => (status() === "active" ? active() : revoked());
-	const shown = createMemo(() => newestFirst(listed().data?.keys ?? []));
+	const listed = () => (status() === "active" ? active : revoked);
 
 	const revoke = async (key: KeyRow) => {
 		const home = props.home;
@@ -80,7 +68,7 @@ const KeyList = (props: {
 		setNote("Revoked");
 		// A read of the active list in flight would land over the change.
 		await client.cancelQueries({ queryKey: keysKey(home, false) });
-		const unread = revoked().data === undefined;
+		const unread = revoked.first().data === undefined;
 		const undo = revokeKey(client, home, key.uuid, new Date().toISOString());
 		// The row whose Revoke opened the dialog, and held focus after it, is gone.
 		statusGroup?.querySelector<HTMLInputElement>("input:checked")?.focus();
@@ -92,6 +80,7 @@ const KeyList = (props: {
 				await client.cancelQueries(revokedKeys);
 				client.invalidateQueries(revokedKeys);
 			}
+			active.refill();
 		} catch (error) {
 			undo();
 			setNote("");
@@ -129,9 +118,7 @@ const KeyList = (props: {
 									label: (
 										<>
 											Active{" "}
-											<span class="count">
-												{formatCount(active().data?.total)}
-											</span>
+											<span class="count">{formatCount(active.total())}</span>
 										</>
 									),
 								},
@@ -140,9 +127,7 @@ const KeyList = (props: {
 									label: (
 										<>
 											Revoked{" "}
-											<span class="count">
-												{formatCount(revoked().data?.total)}
-											</span>
+											<span class="count">{formatCount(revoked.total())}</span>
 										</>
 									),
 								},
@@ -163,15 +148,15 @@ const KeyList = (props: {
 						</Show>
 					</div>
 					<Show
-						when={listed().data}
+						when={listed().first().data}
 						fallback={
 							<Show
-								when={manage() && listed().error}
+								when={manage() && listed().first().error}
 								fallback={<Skeleton size="card" />}
 							>
 								<Banner status="error" role="alert" class="load-error">
 									<span class="grow">The keys did not load</span>
-									<Button size="sm" onClick={() => listed().refetch()}>
+									<Button size="sm" onClick={() => listed().first().refetch()}>
 										Retry
 									</Button>
 								</Banner>
@@ -182,7 +167,11 @@ const KeyList = (props: {
 							status={status()}
 							label={status() === "active" ? "Active keys" : "Revoked keys"}
 							empty="No keys"
-							keys={shown()}
+							keys={listed().rows()}
+							total={listed().total()}
+							onRange={listed().onRange}
+							loading={listed().loading()}
+							onRetry={listed().retry()}
 							made={made()}
 							onRevoke={(key) => setOpen({ dialog: "revoke", key })}
 						/>
@@ -239,21 +228,53 @@ const KeyList = (props: {
 
 export default KeyList;
 
+/** The keys with a status, a screen's worth at a time; none are read while `manage` is false. */
+export const keyList = (
+	api: Api,
+	home: () => KeyHome,
+	revoked: boolean,
+	manage: () => boolean | undefined = () => true,
+) =>
+	createPaged<KeyRow>({
+		queryKey: () => keysKey(home(), revoked),
+		perPage: screenBatch(),
+		fetchPage: (page, perPage, signal) =>
+			keysPage(api, home(), revoked)(page, perPage, signal),
+		enabled: () => manage() !== false,
+	});
+
 /** Keys as rows: name, created, and when each ends or was revoked. */
 export const KeyTable = (props: {
 	status: Status;
 	label: string;
 	empty: string;
 	keys: KeyRow[];
+	/** Every key with this status, loaded or not. */
+	total?: number | undefined;
+	/** The keys on screen changed, not counting those drawn either side. */
+	onRange?: ((range: Range) => void) | undefined;
+	loading?: boolean | undefined;
+	/** The next keys failed; asks for them again. */
+	onRetry?: (() => void) | undefined;
 	made: ReadonlySet<string>;
 	onRevoke: (key: KeyRow) => void;
 }) => {
 	const now = Date.now();
 	const isActive = () => props.status === "active";
+	const rows = useKeptRows({
+		rows: () => props.keys,
+		onRange: (range) => props.onRange?.(range),
+	});
 	return (
-		<Table fold={407} class="keytbl" aria-label={props.label}>
+		<Table
+			fold={407}
+			class="keytbl"
+			aria-label={props.label}
+			aria-rowcount={(props.total ?? props.keys.length) + 1}
+			onLines={rows.onLines}
+		>
 			<thead>
-				<tr>
+				<tr aria-rowindex={1}>
 					<th scope="col">Name</th>
 					<th scope="col">Created</th>
 					<th scope="col">{isActive() ? "Expires" : "Revoked"}</th>
@@ -262,9 +283,10 @@ export const KeyTable = (props: {
 					</th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody ref={rows.body}>
+				<Spacer height={rows.above()} columns={4} />
 				<For
-					each={props.keys}
+					each={rows.drawn()}
 					fallback={
 						<tr>
 							<td colSpan={4} data-fold="l1">
@@ -273,53 +295,64 @@ export const KeyTable = (props: {
 						</tr>
 					}
 				>
-					{(key) => (
-						<tr>
-							<td data-fold="l1" class="ui-table-name">
-								<span class="ui-parts">
-									<b class="mono">
-										<Truncate text={key.name} reveal />
-									</b>
-									<Show when={props.made.has(key.uuid)}>
-										<span class="newtag" data-fixed>
-											New
-										</span>
-									</Show>
-								</span>
-							</td>
-							<td data-fold="l2" class="muted">
-								<span class="ui-fold-label">Created </span>
-								{formatDay(Date.parse(key.creation))}
-							</td>
-							<td data-fold="n1">
-								<Show
-									when={key.revoked}
-									fallback={<KeyEnd keyed={key} now={now} />}
-								>
-									{(at) => (
-										<span class="muted">
-											<span class="ui-fold-label">Revoked </span>
-											{formatDay(Date.parse(at()))}
-										</span>
-									)}
-								</Show>
-							</td>
-							<td data-fold="act" class="act">
-								<Show when={isActive()}>
-									<button
-										type="button"
-										class="lnk danger"
-										aria-haspopup="dialog"
-										aria-label={`Revoke ${key.name}`}
-										onClick={() => props.onRevoke(key)}
+					{(key, index) =>
+						key === GAP ? (
+							<Spacer height={rows.gap()} columns={4} />
+						) : (
+							<tr aria-rowindex={rows.index(index()) + 2}>
+								<td data-fold="l1" class="ui-table-name">
+									<span class="ui-parts">
+										<b class="mono">
+											<Truncate text={key.name} reveal />
+										</b>
+										<Show when={props.made.has(key.uuid)}>
+											<span class="newtag" data-fixed>
+												New
+											</span>
+										</Show>
+									</span>
+								</td>
+								<td data-fold="l2" class="muted">
+									<span class="ui-fold-label">Created </span>
+									{formatDay(Date.parse(key.creation))}
+								</td>
+								<td data-fold="n1">
+									<Show
+										when={key.revoked}
+										fallback={<KeyEnd keyed={key} now={now} />}
 									>
-										Revoke
-									</button>
-								</Show>
-							</td>
-						</tr>
-					)}
+										{(at) => (
+											<span class="muted">
+												<span class="ui-fold-label">Revoked </span>
+												{formatDay(Date.parse(at()))}
+											</span>
+										)}
+									</Show>
+								</td>
+								<td data-fold="act" class="act">
+									<Show when={isActive()}>
+										<button
+											type="button"
+											class="lnk danger"
+											aria-haspopup="dialog"
+											aria-label={`Revoke ${key.name}`}
+											onClick={() => props.onRevoke(key)}
+										>
+											Revoke
+										</button>
+									</Show>
+								</td>
+							</tr>
+						)
+					}
 				</For>
+				<Spacer height={rows.below()} columns={4} />
+				<MoreRows
+					columns={4}
+					loading={props.loading ?? false}
+					onRetry={props.onRetry}
+					failed="These keys"
+				/>
 			</tbody>
 		</Table>
 	);

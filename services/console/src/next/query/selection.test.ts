@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { lineKey, lineVisible } from "./line";
 import { decodeQuery } from "./query";
-import { type SelectedLine, exploreSearch } from "./selection";
+import { type SelectedLine, exploreSearch, keptLines } from "./selection";
 
 const uuid = (n: number) =>
 	`00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
@@ -126,5 +126,27 @@ describe("exploreSearch", () => {
 		expect(open(scattered).sets).toEqual([]);
 		const eight = nine.slice(0, 8);
 		expect(open(eight).sets).toEqual(eight.map(({ parameters }) => parameters));
+	});
+});
+
+describe("keptLines", () => {
+	// Kills a count of every line chosen when the query keeps only the first
+	// eight values of a box, or more lines than a plot draws, and a link that
+	// still names the lines it drops.
+	test("keep the lines in the first eight of every box, up to the lines a plot draws", () => {
+		const benchmarks = Array.from({ length: 12 }, (_, n) =>
+			line({ benchmark: uuid(100 + n) }),
+		);
+		expect(keptLines(benchmarks)).toEqual(benchmarks.slice(0, 8));
+		expect(open(benchmarks).only).toEqual(benchmarks.slice(0, 8).map(keyOf));
+
+		const threads = Array.from({ length: 70 }, (_, n) =>
+			line({ parameters: { threads: n } }),
+		);
+		expect(keptLines(threads)).toEqual(threads.slice(0, 64));
+		expect(open(threads).only).toHaveLength(64);
+
+		// Two alerts on one line both open.
+		expect(keptLines([ALERTING, ALERTING])).toHaveLength(2);
 	});
 });
