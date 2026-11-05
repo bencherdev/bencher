@@ -11,10 +11,12 @@ import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type {
-	JsonConsoleJob,
-	JsonConsoleRunJobs,
-	JsonConsoleRunReport,
+import {
+	type JsonConsoleJob,
+	type JsonConsoleRunJobs,
+	type JsonConsoleRunReport,
+	ReportWarningAction,
+	ReportWarningResource,
 } from "../../types/bencher";
 import { alertId, alertsFixture, reportId } from "../alerts/testing";
 import { type Api, ApiError } from "../api";
@@ -1210,4 +1212,206 @@ test("a run with nothing landed counts no lines in its sub line", async () => {
 	const sub = document.querySelector(".rp-sub")?.textContent ?? "";
 	expect(sub).toContain("2 reports");
 	expect(sub).not.toMatch(/\bline/);
+});
+
+const warnings = () =>
+	page.getByRole("table", { name: "Warnings in this run, by report" });
+/** Each row of the warnings table, its cells as text. */
+const warningRows = () =>
+	[...warnings().element().querySelectorAll("tbody tr")].map((row) =>
+		[...row.querySelectorAll("td")].map((cell) => cell.textContent),
+	);
+
+// Kills a section placed anywhere but between the reports and the run's
+// alerts, a section that holds only the loaded reports' warnings, a group
+// that links to another report or names another place in the run, rows read
+// from another report, a label that is not the drawn one, and a count of rows
+// rather than of what the warnings count.
+test("the run's warnings sit between its reports and its alerts, grouped by report, for every report of the run", async () => {
+	const macos = {
+		uuid: "m",
+		name: "macos-latest",
+		slug: "macos-latest",
+	} as never;
+	const { api } = fakeApi((url) => {
+		const page = Number(url.searchParams.get("page") ?? 1);
+		const from = (page - 1) * perPage;
+		const run = {
+			...alerting(),
+			total: 40,
+			reports: reports(from, Math.min(perPage, 40 - from)),
+		};
+		return {
+			data:
+				page === 1
+					? {
+							...run,
+							warnings: {
+								total: 7,
+								groups: [
+									{
+										order: 1,
+										uuid: runReportFixture(0).uuid,
+										testbed: runReportFixture(0).testbed,
+										warnings: [
+											{
+												resource: ReportWarningResource.Threshold,
+												action: ReportWarningAction.Skip,
+												count: 2,
+											},
+											{
+												resource: ReportWarningResource.Average,
+												action: ReportWarningAction.Ignore,
+												count: 1,
+											},
+										],
+									},
+									{
+										order: 30,
+										uuid: runReportFixture(29).uuid,
+										testbed: macos,
+										warnings: [
+											{
+												resource: ReportWarningResource.Measure,
+												action: ReportWarningAction.Ignore,
+												count: 4,
+											},
+										],
+									},
+								],
+							},
+						}
+					: run,
+		};
+	});
+	mount(api);
+	const section = page.getByRole("region", { name: "Warnings" });
+	await expect.element(warnings()).toBeVisible();
+	// The 30th report is on a later page than the first.
+	expect(perPage).toBeLessThan(30);
+	expect(section.element().querySelector(".dm-section-head")?.textContent).toBe(
+		"Warnings7",
+	);
+	const reportsSection = page
+		.getByRole("region", { name: "Reports" })
+		.element();
+	const alertsSection = page
+		.getByRole("region", { name: "Alerts in this run" })
+		.element();
+	expect(
+		reportsSection.compareDocumentPosition(section.element()) &
+			Node.DOCUMENT_POSITION_FOLLOWING,
+	).toBeTruthy();
+	expect(
+		section.element().compareDocumentPosition(alertsSection) &
+			Node.DOCUMENT_POSITION_FOLLOWING,
+	).toBeTruthy();
+	expect(warningRows()).toEqual([
+		["#1 · ubuntu-latest"],
+		["Threshold", "Skipped", "2"],
+		["Average", "Ignored", "1"],
+		["#30 · macos-latest"],
+		["Measure", "Ignored", "4"],
+	]);
+	await expect
+		.element(warnings().getByRole("link", { name: "#1 · ubuntu-latest" }))
+		.toHaveAttribute(
+			"href",
+			"/console/projects/hashbrown/reports/00000000-0000-4000-8000-000000001000",
+		);
+	await expect
+		.element(warnings().getByRole("link", { name: "#30 · macos-latest" }))
+		.toHaveAttribute(
+			"href",
+			"/console/projects/hashbrown/reports/00000000-0000-4000-8000-000000001029",
+		);
+});
+
+// Kills a warnings section drawn for a run whose reports have none.
+test("a run whose reports have no warnings draws no warnings section", async () => {
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0), runReportFixture(1)]),
+	}));
+	mount(api);
+	await expect.element(table()).toBeVisible();
+	expect(document.querySelector("[aria-label='Warnings']")).toBeNull();
+});
+
+// Kills a count of only the warnings drawn when the run holds more, and a
+// section that draws past the groups it was given.
+test("a run with more warnings than the section draws counts how many it draws", async () => {
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)], {
+			total: 80,
+			warnings: {
+				total: 90,
+				groups: [
+					{
+						order: 1,
+						uuid: runReportFixture(0).uuid,
+						testbed: runReportFixture(0).testbed,
+						warnings: [
+							{
+								resource: ReportWarningResource.Threshold,
+								action: ReportWarningAction.Skip,
+								count: 3,
+							},
+						],
+					},
+				],
+			},
+		}),
+	}));
+	mount(api);
+	await expect.element(warnings()).toBeVisible();
+	expect(
+		page
+			.getByRole("region", { name: "Warnings" })
+			.element()
+			.querySelector(".dm-section-head")?.textContent,
+	).toBe("Warnings3 of 90");
+	expect(warningRows()).toEqual([
+		["#1 · ubuntu-latest"],
+		["Threshold", "Skipped", "3"],
+	]);
+});
+
+// Kills a warnings group whose long testbed widens the table past a phone, out
+// of sight behind its own scroll, rather than giving way beside its place.
+test("a warnings group's long testbed gives way to its place on a phone", async () => {
+	await page.viewport(390, 844);
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)], {
+			total: 1,
+			warnings: {
+				total: 3,
+				groups: [
+					{
+						order: 1,
+						uuid: runReportFixture(0).uuid,
+						testbed: { ...runReportFixture(0).testbed, name: STRESS.name },
+						warnings: [
+							{
+								resource: ReportWarningResource.Threshold,
+								action: ReportWarningAction.Skip,
+								count: 3,
+							},
+						],
+					},
+				],
+			},
+		}),
+	}));
+	mount(api);
+	await expect.element(warnings()).toBeVisible();
+	const scroll = warnings().element().closest<HTMLElement>(".ui-table-scroll");
+	expect(scroll?.scrollWidth).toBeLessThanOrEqual(scroll?.clientWidth ?? 0);
+	const place = warnings()
+		.element()
+		.querySelector<HTMLElement>(".lr-group [data-fixed]");
+	expect(place?.textContent).toBe("#1");
+	expect(place?.scrollWidth).toBeLessThanOrEqual(place?.clientWidth ?? 0);
+	await expect
+		.element(warnings().getByRole("link", { name: `#1 · ${STRESS.name}` }))
+		.toBeVisible();
 });

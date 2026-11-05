@@ -55,6 +55,15 @@ describe("withValue", () => {
 		}
 		expect(query.measures).toHaveLength(8);
 	});
+
+	// Kills a metrics box held to the other boxes' eight, and a 33rd name, which the API would never read.
+	test("stop at 32 metric names", () => {
+		let query = QUERY;
+		for (let n = 0; n < 40; n++) {
+			query = withValue(query, "metrics", `m${n}`);
+		}
+		expect(query.metrics).toHaveLength(32);
+	});
 });
 
 describe("withoutValue", () => {

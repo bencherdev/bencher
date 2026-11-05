@@ -96,7 +96,8 @@ pub use project::{
         MeasureUuid,
     },
     metric::{
-        JsonMetricTriple, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap, MetricUuid,
+        JsonMetricTriple, JsonMetricsMap, JsonNewMetric, JsonOneMetric, JsonResultsMap,
+        MAX_METRIC_NAMES, MetricUuid,
     },
     model::{JsonModel, ModelUuid},
     parameter::{MAX_FILTER_SETS, MAX_PARAMETER_KEYS, ParameterFilter, ParameterSet},

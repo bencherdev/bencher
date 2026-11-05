@@ -3,6 +3,7 @@ import { canonicalParameters } from "../query/parameters";
 import {
 	type ExploreQuery,
 	MAX_ENTRIES,
+	MAX_METRICS,
 	type Parameters,
 	blankQuery,
 	encodeQuery,
@@ -34,13 +35,16 @@ export const withValue = <B extends Box>(
 			? { uuid: value as string }
 			: value;
 	if (
-		entries.length >= MAX_ENTRIES ||
+		entries.length >= capOf(box) ||
 		entries.some((other) => identity(box, other) === identity(box, entry))
 	) {
 		return query;
 	}
 	return { ...query, [box]: [...entries, entry] };
 };
+
+const capOf = (box: Box): number =>
+	box === "metrics" ? MAX_METRICS : MAX_ENTRIES;
 
 const identity = (box: Box, entry: Entry): string => {
 	if (box === "branches" || box === "testbeds") {

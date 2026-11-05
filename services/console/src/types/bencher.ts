@@ -1402,6 +1402,32 @@ export interface JsonConsoleReportRun {
 	next?: JsonConsoleRunReportLink;
 }
 
+/** The resource a report warning counts. */
+export enum ReportWarningResource {
+	Benchmark = "benchmark",
+	Variant = "variant",
+	Measure = "measure",
+	Metric = "metric",
+	Threshold = "threshold",
+	Adapter = "adapter",
+	Average = "average",
+}
+
+/** What a report did with the resources a warning counts. */
+export enum ReportWarningAction {
+	/** The report did not ingest them. */
+	Skip = "skip",
+	/** The report received them and set them aside. */
+	Ignore = "ignore",
+}
+
+/** How many of one resource a report handled with one action. */
+export interface JsonReportWarning {
+	resource: ReportWarningResource;
+	action: ReportWarningAction;
+	count: number;
+}
+
 /**
  * One report as the console's report page draws it: its identity, and one page
  * of its lines in drawing order, each with its history over the window that ends
@@ -1432,6 +1458,11 @@ export interface JsonConsoleReport {
 	 * archived branch or testbed.
 	 */
 	run?: JsonConsoleReportRun;
+	/**
+	 * What the report skipped or ignored, by resource and action, on the first
+	 * page only, and absent when it has none.
+	 */
+	warnings?: JsonReportWarning[];
 	/** The history window, which ends at this report. */
 	window: JsonConsoleWindow;
 	/** The number of lines in the report that match the search and filters. */
@@ -1469,6 +1500,23 @@ export interface JsonConsoleRunLink {
 	hash?: GitHash;
 	/** When its first report started. */
 	start_time: DateTimeMillis;
+}
+
+/** One report's warnings in its run, by resource and action. */
+export interface JsonConsoleWarningGroup {
+	/** The report's place in the run by start, from 1. */
+	order: number;
+	uuid: Uuid;
+	testbed: JsonConsoleTestbed;
+	warnings: JsonReportWarning[];
+}
+
+/** A run's warnings, grouped by report in start order. */
+export interface JsonConsoleRunWarnings {
+	/** What every report's warnings count, over the whole run. */
+	total: number;
+	/** The first reports with warnings, at most [`MAX_CONSOLE_RUN_WARNING_REPORTS`]. */
+	groups: JsonConsoleWarningGroup[];
 }
 
 export interface JsonConsoleRunReport {
@@ -1529,6 +1577,11 @@ export interface JsonConsoleRun {
 	 * [`MAX_CONSOLE_ALERTS_PER_PAGE`].
 	 */
 	alerting?: JsonConsoleAlerts;
+	/**
+	 * What its reports skipped or ignored, on the first page of a run whose
+	 * reports have any.
+	 */
+	warnings?: JsonConsoleRunWarnings;
 	reports: JsonConsoleRunReport[];
 }
 
@@ -2018,7 +2071,7 @@ export interface JsonNewPlot {
 	/**
 	 * The metrics to draw, by name.
 	 * If not set, or set to an empty list, the plot draws every metric.
-	 * At most 8 names may be specified.
+	 * At most 32 names may be specified.
 	 */
 	metrics?: string[];
 	/**
@@ -2548,32 +2601,6 @@ export interface JsonReportCounts {
 	results: JsonReportIterationCounts[];
 	/** Counts for the report alerts. */
 	alerts: JsonReportAlertsCounts;
-}
-
-/** The resource a report warning counts. */
-export enum ReportWarningResource {
-	Benchmark = "benchmark",
-	Variant = "variant",
-	Measure = "measure",
-	Metric = "metric",
-	Threshold = "threshold",
-	Adapter = "adapter",
-	Average = "average",
-}
-
-/** What a report did with the resources a warning counts. */
-export enum ReportWarningAction {
-	/** The report did not ingest them. */
-	Skip = "skip",
-	/** The report received them and set them aside. */
-	Ignore = "ignore",
-}
-
-/** How many of one resource a report handled with one action. */
-export interface JsonReportWarning {
-	resource: ReportWarningResource;
-	action: ReportWarningAction;
-	count: number;
 }
 
 export interface JsonReport {

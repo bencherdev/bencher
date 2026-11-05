@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use bencher_json::project::report::{
     JsonReportWarning, ReportWarningAction, ReportWarningResource,
@@ -91,15 +91,52 @@ pub fn get_report_warnings(
             (!warnings.is_empty()).then(|| {
                 warnings
                     .into_iter()
-                    .map(|(resource, action, count)| JsonReportWarning {
-                        resource,
-                        action,
-                        count: u32::try_from(count).unwrap_or_default(),
-                    })
+                    .map(|(resource, action, count)| json_warning(resource, action, count))
                     .collect()
             })
         })
         .map_err(resource_not_found_err!(Report, report_id))
+}
+
+/// The warnings of each of the reports that has any, read in one query.
+pub fn get_reports_warnings(
+    conn: &mut DbConnection,
+    report_ids: &[ReportId],
+) -> diesel::QueryResult<HashMap<ReportId, Vec<JsonReportWarning>>> {
+    let rows = schema::report_warning::table
+        .filter(schema::report_warning::report_id.eq_any(report_ids.to_vec()))
+        .order((
+            schema::report_warning::report_id,
+            schema::report_warning::resource,
+            schema::report_warning::action,
+        ))
+        .select((
+            schema::report_warning::report_id,
+            schema::report_warning::resource,
+            schema::report_warning::action,
+            schema::report_warning::count,
+        ))
+        .load::<(ReportId, ReportWarningResource, ReportWarningAction, i32)>(conn)?;
+    let mut warnings = HashMap::<ReportId, Vec<JsonReportWarning>>::new();
+    for (report_id, resource, action, count) in rows {
+        warnings
+            .entry(report_id)
+            .or_default()
+            .push(json_warning(resource, action, count));
+    }
+    Ok(warnings)
+}
+
+fn json_warning(
+    resource: ReportWarningResource,
+    action: ReportWarningAction,
+    count: i32,
+) -> JsonReportWarning {
+    JsonReportWarning {
+        resource,
+        action,
+        count: u32::try_from(count).unwrap_or_default(),
+    }
 }
 
 #[cfg(test)]
