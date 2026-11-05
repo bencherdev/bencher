@@ -12,10 +12,16 @@ import type {
 } from "../../types/bencher";
 import type { Range } from "../reports/rows";
 import {
+	FLOOR_WIDTHS,
+	STRESS,
 	columnEdges,
+	expectFoldAt,
+	expectLinesAt,
 	expectNameStartsWithText,
 	expectRowOpens,
+	nameFloor,
 } from "../ui/testing";
+import RunReports from "./RunReports";
 import type { RunReportsRead } from "./rows";
 import RunsTable from "./RunsTable";
 import {
@@ -280,11 +286,11 @@ test("a run without a hash reads as its version", async () => {
 		.toHaveAttribute("href", RUN);
 });
 
-// Kills a narrow row that keeps every column, is shorter than a touch target,
+// Kills a phone row that keeps every column, is shorter than a touch target,
 // drops the run's report count or its caret, or that only its text toggles,
 // and a head whose tap target is its text's line, reaches past its row, or
 // covers the caret.
-test("narrow rows fold into two lines that toggle the run anywhere, the head a touch target", async () => {
+test("phone rows fold into three lines that toggle the run anywhere, the head a touch target", async () => {
 	await page.viewport(390, 844);
 	mount([
 		runFixture(0, { reports: 3 }),
@@ -318,7 +324,7 @@ test("narrow rows fold into two lines that toggle the run anywhere, the head a t
 		).toBe(each.querySelector("button"));
 	}
 	const row = document.querySelector("tr[aria-rowindex='2']") as HTMLElement;
-	await expect.poll(() => row.getBoundingClientRect().height).toBe(60);
+	await expect.poll(() => row.getBoundingClientRect().height).toBe(78);
 	expect(document.querySelector("thead")?.checkVisibility()).toBe(false);
 	const count = row.querySelector(".rn-n") as HTMLElement;
 	expect(count.checkVisibility()).toBe(true);
@@ -421,9 +427,9 @@ const varied = () =>
 	);
 
 // Kills a table laid out by the rows drawn (an auto layout), whose columns
-// shift as rows of other widths scroll into view, at desktop and at 768 px.
+// shift as rows of other widths scroll into view, at desktop and just above its fold.
 test("columns hold still as rows of other widths scroll into view", async () => {
-	for (const width of [1280, 768]) {
+	for (const width of [1280, 1160]) {
 		await page.viewport(width, 720);
 		mount(varied());
 		await expect.element(table()).toBeVisible();
@@ -469,7 +475,7 @@ test("on a phone, each row folds on its own, whatever rows are drawn beside it",
 // pointer's reach (a name that does not give way), and an Alerts column that
 // cuts off three-digit counts, at desktop and on a small laptop.
 test("a long first name gives way to its +N, and three-digit alerts fit", async () => {
-	for (const width of [1280, 1024]) {
+	for (const width of [1280, 1160]) {
 		await page.viewport(width, 720);
 		mount([
 			runFixture(0, {
@@ -597,7 +603,7 @@ test("on a phone a pending run shows its status where a finished run shows its a
 	expect(shown(3, "td:nth-child(9)")).toBe(false);
 });
 
-/** The fixed-length columns, which hold their content whole from 768 px up (rulings 409 and 410). */
+/** The fixed-length columns, which hold their content whole wherever the list does not fold (rulings 409 and 410). */
 const FIXED = ["When", "Head", "Reports", "Lines", "Alerts", "Status"];
 const statuses = () =>
 	[...document.querySelectorAll("tbody .rn-st")].map(
@@ -605,33 +611,170 @@ const statuses = () =>
 	);
 const runRows = () => [...document.querySelectorAll("tbody tr[aria-rowindex]")];
 
-// Kills a list below a laptop that cuts a fixed-length cell (its time, head,
-// counts, alerts, or status) or a header rather than scroll, and a Status
-// column too narrow for its longest pills or given back its end padding
-// (ruling 410: from 768 to 1024 px the list keeps one layout).
-test("at 768 px the list scrolls sideways, its fixed-length cells and headers whole", async () => {
-	await page.viewport(768, 720);
-	mount(likelyRuns(NOW));
-	await expect.element(table()).toBeVisible();
-	await document.fonts.ready;
-	expect(table().element().getBoundingClientRect().width).toBeGreaterThan(
-		document.documentElement.clientWidth,
+// Kills a run list that keeps its columns where its name column falls under 16
+// characters (a fold at a fixed screen width, or none), a folded row whose
+// numbers squeeze a name under 16 characters rather than take a third line,
+// and one that scrolls sideways in its own track instead.
+test("the Runs list and a run's reports hold 16 characters of name, or fold", async () => {
+	const runs = [0, 1].map((index) =>
+		runFixture(index, {
+			branch: { ...runFixture(0).branch, name: STRESS.branch },
+			testbeds: [STRESS.name],
+			alerts: { total: 999, active: 999 },
+		}),
 	);
-	expect(statuses()).toEqual([
-		"Running 59m",
-		"Failed 59m 59s",
-		"Failed 25h 59m",
-	]);
-	expect(runRows().flatMap((row) => cutCells(row, FIXED))).toEqual([]);
-	expect(cutHeaders(table().element())).toEqual([]);
+	const reports = [0, 1].map((index) =>
+		likelyReport(index, {
+			testbed: { uuid: "long", name: STRESS.name, slug: "long" },
+			alerts: { total: 9999, active: 9999 },
+		}),
+	);
+	const held: Record<string, unknown> = {};
+	// A phone page's own padding.
+	document.body.style.paddingInline = "15px";
+	for (const width of FLOOR_WIDTHS) {
+		await page.viewport(width, 720);
+		mount(runs);
+		await expect.poll(drawn).toEqual([2, 3]);
+		await document.fonts.ready;
+		held[`runs ${width}`] = nameFloor(table().element(), "Branch");
+		dispose?.();
+		document.body.replaceChildren();
+		dispose = render(
+			() => (
+				<RunReports slug="hashbrown" reports={reports} total={2} now={NOW} />
+			),
+			document.body.appendChild(document.createElement("div")),
+		);
+		const reportsTable = page.getByRole("table", {
+			name: "Reports in this run, by start",
+		});
+		await expect.poll(drawn).toEqual([2, 3]);
+		await document.fonts.ready;
+		held[`reports ${width}`] = nameFloor(reportsTable.element(), "Testbed");
+		dispose?.();
+		document.body.replaceChildren();
+	}
+	const fine = { name: "held", sideways: false };
+	const folded = { name: "folded", sideways: false };
+	document.body.style.paddingInline = "";
+	expect(held).toEqual({
+		"runs 320": folded,
+		"runs 768": folded,
+		"runs 1024": folded,
+		"runs 1440": fine,
+		"reports 320": folded,
+		"reports 768": folded,
+		"reports 1024": fine,
+		"reports 1440": fine,
+	});
 });
 
-// Kills a list that scrolls sideways on a small laptop, and one that cuts a
+// Kills a run list or a run's reports that fold a pixel late or early, and a
+// third line that comes later than a likely row needs or earlier than it does.
+test("the Runs list and a run's reports fold and take a third line at their own widths", async () => {
+	await page.viewport(1440, 720);
+	mount([
+		...likelyRuns(NOW),
+		runFixture(9, {
+			branch: { ...runFixture(0).branch, name: STRESS.branch },
+			testbeds: [STRESS.name],
+			alerts: { total: 456, active: 123 },
+		}),
+	]);
+	await expect.poll(() => drawn().length).toBe(5);
+	await document.fonts.ready;
+	expectFoldAt(table().element(), "Branch", 1145);
+	expectLinesAt(table().element(), 443, 3);
+	dispose?.();
+	document.body.replaceChildren();
+	dispose = render(
+		() => (
+			<RunReports
+				slug="hashbrown"
+				reports={[
+					likelyReport(0, {
+						testbed: { uuid: "long", name: STRESS.name, slug: "long" },
+					}),
+					likelyReport(1, { lines: 9999 }),
+				]}
+				total={2}
+				now={NOW}
+			/>
+		),
+		document.body.appendChild(document.createElement("div")),
+	);
+	const reports = page.getByRole("table", {
+		name: "Reports in this run, by start",
+	});
+	await expect.poll(drawn).toEqual([2, 3]);
+	expectFoldAt(reports.element(), "Testbed", 864);
+	expectLinesAt(reports.element(), 371, 3);
+});
+
+// Kills a run's reports whose rows not drawn are held at another height than
+// the three lines its rows take once its own box narrows.
+test("a run's reports not drawn follow its list into three lines", async () => {
+	await page.viewport(1280, 640);
+	const root = document.body.appendChild(document.createElement("div"));
+	root.style.width = "600px";
+	dispose = render(
+		() => (
+			<RunReports
+				slug="hashbrown"
+				reports={Array.from({ length: 100 }, (_, index) => likelyReport(index))}
+				total={100}
+				now={NOW}
+			/>
+		),
+		root,
+	);
+	const body = document.querySelector("tbody") as HTMLElement;
+	const row = () =>
+		body.querySelector("tr[aria-rowindex]") as HTMLElement | null;
+	await expect.poll(() => row()?.getBoundingClientRect().height).toBe(60);
+	await expect
+		.poll(() => Math.round(body.getBoundingClientRect().height))
+		.toBe(100 * 60);
+	root.style.width = "320px";
+	await expect.poll(() => row()?.getBoundingClientRect().height).toBe(78);
+	await expect
+		.poll(() => Math.round(body.getBoundingClientRect().height))
+		.toBe(100 * 78);
+});
+
+// Kills a list whose rows not drawn are held at another height than the
+// three lines its rows take once its own box narrows, the screen unchanged,
+// which shifts the list as it scrolls.
+test("rows not drawn follow a list that narrows into three lines", async () => {
+	await page.viewport(1280, 640);
+	mount(
+		Array.from({ length: 100 }, (_, index) =>
+			runFixture(index, { alerts: { total: 999, active: 999 } }),
+		),
+	);
+	await expect.element(table()).toBeVisible();
+	const box = document.querySelector(".console") as HTMLElement;
+	box.style.width = "600px";
+	const body = table().element().querySelector("tbody") as HTMLElement;
+	const row = body.querySelector("tr[aria-rowindex]") as HTMLElement;
+	await expect.poll(() => row.getBoundingClientRect().height).toBe(60);
+	await expect
+		.poll(() => Math.round(body.getBoundingClientRect().height))
+		.toBe(100 * 60);
+	box.style.width = "320px";
+	await expect.poll(() => row.getBoundingClientRect().height).toBe(78);
+	await expect
+		.poll(() => Math.round(body.getBoundingClientRect().height))
+		.toBe(100 * 78);
+});
+
+// Kills a list just above its fold that scrolls sideways, and one that cuts a
 // fixed-length cell (its time, head, counts, alerts, or status) or a header
 // there; the branch, testbed, adapter, and author take the shortfall (ruling
 // 409).
-test("at 1024 px the list fits, its fixed-length cells and headers whole", async () => {
-	await page.viewport(1024, 720);
+test("just above its fold the list fits, its fixed-length cells and headers whole", async () => {
+	await page.viewport(1160, 720);
 	mount(likelyRuns(NOW));
 	await expect.element(table()).toBeVisible();
 	await document.fonts.ready;
@@ -859,7 +1002,7 @@ const runTops = () =>
 test("an opened run holds its reports' rows until they arrive, so their arrival moves nothing", async () => {
 	for (const [width, height] of [
 		[1280, 40],
-		[390, 60],
+		[390, 78],
 	] as const) {
 		await page.viewport(width, 844);
 		const [few, many] = [
@@ -1157,7 +1300,7 @@ test("on a phone an opened run's reports fold, the order beside two lines and th
 		) as HTMLElement;
 		const box = (selector: string) =>
 			(row.querySelector(selector) as HTMLElement).getBoundingClientRect();
-		expect(row.getBoundingClientRect().height).toBe(60);
+		expect(row.getBoundingClientRect().height).toBe(78);
 		const order = box(".rn-ord");
 		const testbed = box("a");
 		expect(order.right).toBeLessThanOrEqual(testbed.left);

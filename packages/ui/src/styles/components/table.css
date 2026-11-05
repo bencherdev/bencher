@@ -1,6 +1,10 @@
 @layer ui-components {
+	/* A container condition takes no variable, so the fold width rides in as this box's font size, where 10em is that width; the table sets its own. */
 	.ui-table-scroll {
-		container-type: inline-size;
+		container: ui-table / inline-size;
+		/* Holds the absolutely placed text of a cell, such as a hidden header, inside the track. */
+		position: relative;
+		font-size: calc(var(--ui-table-fold, 10em) / 10);
 		overflow-x: auto;
 		border: var(--border-width) solid var(--color-border-emphasized);
 		border-radius: var(--radius-container);
@@ -48,10 +52,22 @@
 		display: none;
 	}
 
-	/* A table with `data-fold` folds each row into two lines on a narrow screen:
-	   cells marked `l1` and `l2` on the left, the numbers in `n1` and `n2` on the
-	   right, `act` a column of its own, and `hide` dropped. */
-	@media (max-width: 767px) {
+	/* Until it folds, a table's name cells share the room left and keep at
+	   least the name floor. */
+	@container ui-table not (width <= 10em) {
+		.ui-table td.ui-table-name {
+			max-width: 0;
+			min-width: calc(var(--size-name-min) + 20px);
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
+
+	/* A table with `fold` folds each row into two lines once its container is
+	   that narrow: cells marked `l1` and `l2` on the left, the numbers in `n1`
+	   and `n2` on the right, `act` a column of its own, `full` the whole row,
+	   and `hide` dropped. */
+	@container ui-table (width <= 10em) {
 		.ui-table[data-fold] thead {
 			display: none;
 		}
@@ -59,6 +75,11 @@
 		.ui-table[data-fold],
 		.ui-table[data-fold] tbody {
 			display: block;
+		}
+
+		/* The lines a folded row takes, which `onLines` reads; a table that restacks its rows raises it. */
+		.ui-table[data-fold] {
+			--ui-table-lines: 2;
 		}
 
 		.ui-table[data-fold] tbody tr {
@@ -124,6 +145,30 @@
 		.ui-table[data-fold] td[data-fold="act"] {
 			grid-column: 3;
 			grid-row: 1 / span 2;
+		}
+
+		/* A row with no second line takes its actions there, so they leave the name its line. */
+		.ui-table[data-fold] tbody tr:not(:has(> td[data-fold="l2"])) {
+			grid-template-columns: minmax(0, 1fr) auto;
+		}
+
+		.ui-table[data-fold]
+			tbody
+			tr:not(:has(> td[data-fold="l2"]))
+			> td[data-fold="act"] {
+			grid-area: 2 / 1 / 3 / -1;
+		}
+
+		/* A second line with nothing beside it runs under the numbers too. */
+		.ui-table[data-fold]
+			tbody
+			tr:not(:has(> td:is([data-fold="n2"], [data-fold="act"])))
+			> td[data-fold="l2"] {
+			grid-column: 1 / -1;
+		}
+
+		.ui-table[data-fold] td[data-fold="full"] {
+			grid-column: 1 / -1;
 		}
 
 		.ui-table[data-fold] .ui-fold-label {

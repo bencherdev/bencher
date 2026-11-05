@@ -19,7 +19,6 @@ import type {
 	JsonConsoleTestbedRow,
 } from "../../types/bencher";
 import { PROJECTS_PATH } from "../paths";
-import { useNarrow } from "../plot/narrow";
 import { type Range, visibleRange } from "../reports/rows";
 import { ROW_HEIGHT, type Row, thresholdsOf } from "./data";
 import { type Dimension, KINDS } from "./dimension";
@@ -28,6 +27,8 @@ import { shortDate, shortDay } from "./time";
 
 /** Rows drawn above and below the screen, so a quick scroll never shows a gap. */
 const OVERSCAN = 8;
+/** The widths below which the name column holds under 16 characters, with the Thresholds column and without. */
+const FOLD = { counts: 874, plain: 667 } as const;
 
 /**
  * A dimension's rows, drawing only those on screen: rows above and below them
@@ -52,7 +53,7 @@ const RowTable = (props: {
 	/** Archive the row, or unarchive it with `false`. */
 	onChange: (row: Row, archive: boolean) => void;
 }) => {
-	const narrow = useNarrow();
+	const [narrow, setNarrow] = createSignal(false);
 	const kind = () => KINDS[props.dimension];
 	const counts = () => kind().threshold !== undefined;
 	const columns = () => (counts() ? 6 : 5);
@@ -116,7 +117,8 @@ const RowTable = (props: {
 
 	return (
 		<Table
-			fold
+			fold={counts() ? FOLD.counts : FOLD.plain}
+			onLines={(lines) => setNarrow(lines > 1)}
 			class="dm-table"
 			aria-label={label()}
 			aria-rowcount={props.total + 1}
@@ -174,7 +176,7 @@ const RowTable = (props: {
 										<Impact
 											name={row.name}
 											text={archiveImpact(thresholdsOf(row))}
-											confirm={`Archive ${row.name}`}
+											confirm="Archive"
 											onConfirm={() => {
 												props.onChange(row, true);
 												focusRow(body, row.uuid);

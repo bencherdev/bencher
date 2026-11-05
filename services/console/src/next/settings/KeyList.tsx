@@ -251,7 +251,7 @@ export const KeyTable = (props: {
 	const now = Date.now();
 	const isActive = () => props.status === "active";
 	return (
-		<Table fold class="keytbl" aria-label={props.label}>
+		<Table fold={407} class="keytbl" aria-label={props.label}>
 			<thead>
 				<tr>
 					<th scope="col">Name</th>
@@ -275,7 +275,7 @@ export const KeyTable = (props: {
 				>
 					{(key) => (
 						<tr>
-							<td data-fold="l1">
+							<td data-fold="l1" class="ui-table-name">
 								<span class="ui-parts">
 									<b class="mono">
 										<Truncate text={key.name} reveal />

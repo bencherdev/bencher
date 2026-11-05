@@ -13,6 +13,8 @@ import { onMoved } from "./Neighbor";
 import { reportStatus, statusText } from "./status";
 
 const COLUMNS = 8;
+/** The width below which the Testbed column holds under 16 characters. */
+const REPORTS_FOLD = 864;
 
 /** A run's reports in start order, drawing only the rows on screen. */
 const RunReports = (props: {
@@ -36,31 +38,32 @@ const RunReports = (props: {
 			class="reports-table rn-table"
 			aria-label="Reports in this run, by start"
 			aria-rowcount={props.total + 1}
-			data-fold=""
+			fold={REPORTS_FOLD}
+			onLines={rows.onLines}
 		>
 			<thead>
 				<tr aria-rowindex={1}>
 					{/* Every share but the testbed's is set, so the columns never follow the rows drawn. */}
-					<th scope="col" style="width:4%">
+					<th scope="col" style="width:3.4%">
 						#
 					</th>
 					<th scope="col">Testbed</th>
-					<th scope="col" style="width:13%">
+					<th scope="col" style="width:11.7%">
 						Adapter
 					</th>
-					<th scope="col" style="width:10%">
+					<th scope="col" style="width:9.1%">
 						Started
 					</th>
-					<th scope="col" style="width:7%" data-align="end">
+					<th scope="col" style="width:6.5%" data-align="end">
 						Lines
 					</th>
-					<th scope="col" style="width:21%">
+					<th scope="col" style="width:21.4%">
 						Alerts
 					</th>
 					<th scope="col" style="width:142px">
 						Status
 					</th>
-					<th scope="col" style="width:15%">
+					<th scope="col" style="width:14%">
 						By
 					</th>
 				</tr>

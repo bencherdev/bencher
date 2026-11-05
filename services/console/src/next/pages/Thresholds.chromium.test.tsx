@@ -16,9 +16,16 @@ import { fakeApi } from "../reports/testing";
 import { screenBatch } from "../thresholds/query";
 import { thresholdsFixture } from "../thresholds/testing";
 import {
+	FLOOR_WIDTHS,
+	STRESS,
 	columnEdges,
+	expectFoldAt,
+	expectLinesAt,
+	linesOf,
+	sizeTo,
 	expectNameStartsWithText,
 	expectRowOpens,
+	nameFloor,
 } from "../ui/testing";
 import Thresholds from "./Thresholds";
 
@@ -127,8 +134,13 @@ test("a row reads its threshold from the batch's tables", async () => {
 		.toHaveTextContent("2 thresholds");
 	const row = table().getByRole("row").nth(2);
 	await expect
-		.element(row.getByRole("cell").nth(0))
-		.toHaveTextContent(/^412\/merge from main · archived Sep 8$/);
+		.poll(() =>
+			(row.getByRole("cell").nth(0).element() as HTMLElement).innerText.replace(
+				/\s+/g,
+				" ",
+			),
+		)
+		.toMatch(/^412\/merge from main · archived Sep 8$/);
 	await expect
 		.element(row.getByRole("cell").nth(2))
 		.toHaveTextContent("Throughput");
@@ -559,9 +571,9 @@ test("under Archived, a filter menu lists archived branches too, in name order",
 });
 
 // Kills a thresholds table laid out by the rows drawn (an auto layout), whose
-// columns shift as rows of other widths scroll into view, at desktop and at 768 px.
+// columns shift as rows of other widths scroll into view, at desktop and on a small laptop.
 test("columns hold still as rows of other widths scroll into view", async () => {
-	for (const width of [1280, 768]) {
+	for (const width of [1280, 1024]) {
 		await page.viewport(width, 720);
 		const batchSize = screenBatch();
 		const total = 3 * batchSize;
@@ -593,6 +605,154 @@ test("columns hold still as rows of other widths scroll into view", async () => 
 		dispose?.();
 		document.body.replaceChildren();
 	}
+});
+
+// Kills a thresholds list that keeps its columns where its Branch falls under
+// 16 characters (a fold at a fixed screen width, or none), a folded row whose
+// counts squeeze its measure under 16 characters rather than take a third
+// line, and one that scrolls sideways in its own track instead.
+test("the thresholds list holds 16 characters of branch, or folds", async () => {
+	const { api } = fakeApi(() => ({
+		data: thresholdsFixture([{}, { active: 9999, raised: 9999 }], {
+			branches: [{ uuid: "long", name: STRESS.branch, slug: "long" }],
+			testbeds: [{ uuid: "long", name: STRESS.name, slug: "long" }],
+			measures: [
+				{ uuid: "latency-uuid", name: STRESS.name, slug: "long", units: "ns" },
+			],
+		}),
+	}));
+	const held: Record<number, unknown> = {};
+	// A phone page's own padding.
+	document.body.style.paddingInline = "15px";
+	for (const width of FLOOR_WIDTHS) {
+		await page.viewport(width, 720);
+		mount(api, client());
+		await expect.poll(drawn).toEqual([2, 3]);
+		await document.fonts.ready;
+		held[width] = nameFloor(table().element(), "Branch");
+		dispose?.();
+		document.body.replaceChildren();
+	}
+	const folded = { name: "folded", sideways: false };
+	document.body.style.paddingInline = "";
+	expect(held).toEqual({
+		320: folded,
+		768: folded,
+		1024: folded,
+		1440: { name: "held", sideways: false },
+	});
+});
+
+// Kills a list whose rows not drawn are held at another height than the four
+// or five lines its phone rows take, which shifts the list as it scrolls.
+test("on a phone the threshold rows not drawn hold the height of those drawn", async () => {
+	await page.viewport(1440, 900);
+	const { api } = fakeApi(() => batch(0, 100, 100));
+	mount(api, client());
+	await expect.element(table()).toBeVisible();
+	const body = table().element().querySelector("tbody") as HTMLElement;
+	for (const [width, height] of [
+		[365, 96],
+		[290, 114],
+	] as const) {
+		sizeTo(table().element(), width);
+		const row = () =>
+			body.querySelector("tr[aria-rowindex]") as HTMLElement | null;
+		await expect.poll(() => row()?.getBoundingClientRect().height).toBe(height);
+		await expect
+			.poll(() => Math.round(body.getBoundingClientRect().height))
+			.toBe(100 * height);
+	}
+	document.body.style.width = "";
+});
+
+// Kills a thresholds list that folds a pixel late or early, lines added later
+// than a likely row needs or earlier, a folded name line kept beside the
+// counts, sets and model kept on the names' line, and a branch and testbed
+// kept on one line where either falls under 16 characters.
+test("the thresholds list folds and adds its lines at its own widths", async () => {
+	await page.viewport(1440, 720);
+	const { api } = fakeApi(() => ({
+		data: thresholdsFixture([{ active: 999, raised: 9999 }, {}], {
+			branches: [{ uuid: "long", name: STRESS.branch, slug: "long" }],
+			testbeds: [{ uuid: "long", name: STRESS.name, slug: "long" }],
+			measures: [
+				{ uuid: "latency-uuid", name: STRESS.name, slug: "long", units: "ns" },
+			],
+		}),
+	}));
+	mount(api, client());
+	await expect.poll(drawn).toEqual([2, 3]);
+	await document.fonts.ready;
+	const element = table().element();
+	expectFoldAt(element, "Branch", 945);
+	expectLinesAt(element, 363, 5);
+	sizeTo(element, 458);
+	// The name line runs under the counts, the width of its row.
+	const row = element.querySelector("tr[aria-rowindex='2']") as HTMLElement;
+	const style = getComputedStyle(row);
+	const line = (element.querySelector('td[data-fold="l2"]') as HTMLElement)
+		.clientWidth;
+	expect(line).toBe(
+		Math.round(
+			row.clientWidth -
+				Number.parseFloat(style.paddingLeft) -
+				Number.parseFloat(style.paddingRight),
+		),
+	);
+	// The parts' lines, the narrowest name drawn, and whether any part seen covers another.
+	const parts = () => {
+		const children = [
+			...(element.querySelector(".th-link") as HTMLElement).children,
+		];
+		const [branch, , testbed, , sets] = children.map((part) =>
+			part.getBoundingClientRect(),
+		) as DOMRect[];
+		const seen = children
+			.filter((part) => part.checkVisibility({ visibilityProperty: true }))
+			.map((part) => part.getBoundingClientRect());
+		const overlap = seen.some((one, index) =>
+			seen
+				.slice(index + 1)
+				.some(
+					(other) =>
+						one.left < other.right &&
+						other.left < one.right &&
+						one.top < other.bottom &&
+						other.top < one.bottom,
+				),
+		);
+		const probe = document.createElement("span");
+		probe.style.cssText =
+			"display: block; width: var(--size-name-min); font-weight: normal";
+		element.querySelector('td[data-fold="l1"]')?.append(probe);
+		const floor = probe.getBoundingClientRect().width - 0.5;
+		probe.remove();
+		if (!branch || !testbed || !sets) {
+			throw new Error("The link has lost a part");
+		}
+		return {
+			lines: new Set([branch.top, testbed.top, sets.top]).size,
+			held: Math.min(branch.width, testbed.width) >= floor,
+			overlap,
+		};
+	};
+	for (const [at, lines, nameLines] of [
+		[458, 2, 1],
+		[457, 3, 2],
+		[367, 3, 2],
+		[366, 4, 3],
+		[363, 5, 3],
+	] as const) {
+		sizeTo(element, at);
+		expect(linesOf(element), `at ${at}`).toBe(lines);
+		expect(parts(), `at ${at}`).toEqual({
+			lines: nameLines,
+			held: true,
+			overlap: false,
+		});
+	}
+	document.body.style.width = "";
 });
 
 // Kills a thresholds table that does not fold on a phone (an auto layout
