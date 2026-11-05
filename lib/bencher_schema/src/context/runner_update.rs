@@ -1,18 +1,11 @@
-use bencher_json::{Architecture, Clock, Sha256};
+use bencher_json::{Architecture, Clock, DEFAULT_CANARY_BASE_URL, Sha256};
 use dashmap::DashMap;
 use url::Url;
 
 /// Base URL for stable channel runner downloads.
-// Trailing slash is required on both default base URLs: Url::join appends to
-// the last path segment, so without it the join would replace that segment
-// instead of extending it.
+// Trailing slash is required: Url::join appends to the last path segment, so
+// without it the join would replace that segment instead of extending it.
 const DEFAULT_STABLE_BASE_URL: &str = "https://github.com/bencherdev/bencher/releases/download/";
-
-/// Base URL for canary channel runner downloads.
-const DEFAULT_CANARY_BASE_URL: &str = "https://download.bencher.dev/";
-
-/// Path segment that holds the canary channel artifacts.
-const CANARY_PATH_SEGMENT: &str = "canary";
 
 /// How long a fetched canary channel checksum stays fresh.
 /// This is also the upper bound on rollout propagation delay: after a new
@@ -65,9 +58,7 @@ impl RunnerUpdate {
 
     /// Download URL for the canary channel runner binary.
     pub fn canary_url(&self, arch: Architecture) -> Result<Url, url::ParseError> {
-        let artifact = format!("runner-canary-{slug}", slug = arch.linux_artifact_slug());
-        self.canary_base_url
-            .join(&format!("{CANARY_PATH_SEGMENT}/{artifact}"))
+        bencher_json::canary_url(&self.canary_base_url, arch)
     }
 
     /// Return the cached canary channel checksum for `arch`, if still fresh.

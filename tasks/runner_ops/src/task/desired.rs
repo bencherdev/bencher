@@ -344,7 +344,7 @@ enum Row {
     /// The runner's own cgroup, which it sets up at startup.
     Cgroup(Cgroup),
     StateDir,
-    /// The installed runner binary, checked against the checksum its channel's release publishes.
+    /// The installed runner binary, checked against the checksum its channel publishes.
     Binary(UpdateChannel),
     /// A maintenance unit's own command, which its drop-in restates, so a package update that changes it shows.
     Vendor {
@@ -819,13 +819,19 @@ fn binary_problem(
     published: &mut dyn FnMut(UpdateChannel) -> anyhow::Result<Sha256>,
 ) -> Option<String> {
     let installed = text.split_whitespace().next().unwrap_or_default();
+    let source = publisher(channel);
     match published(channel) {
-        Ok(published) => (!installed.eq_ignore_ascii_case(published.as_ref())).then(|| {
-            format!("has sha256 {installed}, but the {channel} release publishes {published}")
-        }),
-        Err(error) => Some(format!(
-            "could not fetch the {channel} release checksum: {error:#}"
-        )),
+        Ok(published) => (!installed.eq_ignore_ascii_case(published.as_ref()))
+            .then(|| format!("has sha256 {installed}, but the {source} publishes {published}")),
+        Err(error) => Some(format!("could not fetch the {source} checksum: {error:#}")),
+    }
+}
+
+/// What publishes a channel's runner binary and the checksum beside it.
+fn publisher(channel: UpdateChannel) -> &'static str {
+    match channel {
+        UpdateChannel::Stable => "stable release",
+        UpdateChannel::Canary => "canary channel",
     }
 }
 
@@ -1012,7 +1018,7 @@ mod tests {
                 .problem(&installed, &mut no_checksum)
                 .as_deref(),
             Some(
-                "could not fetch the canary release checksum: the canary checksum was not fetched"
+                "could not fetch the canary channel checksum: the canary checksum was not fetched"
             )
         );
     }

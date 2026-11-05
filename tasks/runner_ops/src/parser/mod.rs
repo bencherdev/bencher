@@ -123,11 +123,11 @@ pub struct TaskDeploy {
     #[clap(long)]
     pub host: Option<url::Url>,
 
-    /// Update channel for automatic updates and the release to deploy (stable or canary)
+    /// Update channel for automatic updates and the binary to deploy (stable or canary)
     #[clap(long)]
     pub update_channel: Option<bencher_json::UpdateChannel>,
 
-    /// CI run ID of a `devel` push run to deploy instead of the update channel's release
+    /// CI run ID of a `devel` push run to deploy instead of the update channel's binary
     #[clap(long)]
     pub run_id: Option<u64>,
 }
