@@ -131,11 +131,7 @@
 	display: inline-flex;
 	max-width: 100%;
 }
-.rn-name {
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
+
 .rn-titlehash {
 	font-family: var(--font-family-code);
 	color: var(--color-text-secondary);

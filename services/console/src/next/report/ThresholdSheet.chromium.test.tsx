@@ -241,3 +241,24 @@ test("the sheet waits for the project's version, then teaches it", async () => {
 	expect(sheet.element().textContent).not.toContain("--threshold-metric");
 	await expect.element(exact()).not.toBeInTheDocument();
 });
+
+// Kills a sheet whose long benchmark or parameter scrolls its body sideways.
+test("on a phone a long benchmark and parameter stay inside the sheet", async () => {
+	await page.viewport(320, 700);
+	const [long] = linesOf(reportFixture([lineFixture()])) as [ReportLine];
+	const line = {
+		...long,
+		benchmark: {
+			...long.benchmark,
+			name: `my_crate::${"module_000::".repeat(80)}bench_fn_name_0002`,
+		},
+		parameters: { [`k${"k".repeat(63)}`]: "v".repeat(64) },
+	} as ReportLine;
+	mount({ line, lines: [line] });
+	await expect.element(exact()).toBeVisible();
+	const body = document.querySelector<HTMLElement>(".ui-sheet-body");
+	expect(body?.scrollWidth).toBeLessThanOrEqual(body?.clientWidth ?? 0);
+	await expect
+		.poll(() => document.querySelector(".rp-id b button.ui-trunc"))
+		.not.toBeNull();
+});

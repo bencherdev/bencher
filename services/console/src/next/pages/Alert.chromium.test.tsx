@@ -24,6 +24,7 @@ import { ProjectContext } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { decodeQuery } from "../query/query";
 import { bootstrapOf } from "../settings/testing";
+import { STRESS } from "../ui/testing";
 import Alert from "./Alert";
 
 const PATH = `${PROJECTS_PATH}/hashbrown/alerts/${ALERT}`;
@@ -414,5 +415,43 @@ test("on a phone the action is a full width 44 px target, and the facts fold int
 	expect(new Set(facts.map(({ left }) => Math.round(left))).size).toBe(1);
 	for (const fact of facts) {
 		expect(fact.height).toBeGreaterThanOrEqual(44);
+	}
+});
+
+// Kills facts that take the width of the widest one on a phone, which scrolls
+// every alert's page sideways, and a title or sub line whose long names do.
+test("on a phone the page never scrolls sideways, with long names or without", async () => {
+	const long = alertDetail();
+	const perf = long.perf as unknown as {
+		branches: { name: string }[];
+		testbeds: { name: string }[];
+		benchmarks: { name: string }[];
+		variants: { parameters: Record<string, string | number> }[];
+	};
+	(perf.branches[0] as { name: string }).name = STRESS.branch;
+	(perf.testbeds[0] as { name: string }).name = STRESS.name;
+	(perf.benchmarks[0] as { name: string }).name =
+		`my_crate::${"module_000::".repeat(80)}bench_fn_name_0002`;
+	(perf.variants[0] as { parameters: Record<string, string> }).parameters = {
+		[`k${"k".repeat(63)}`]: "v".repeat(64),
+	};
+	for (const detail of [alertDetail(), long]) {
+		for (const width of [320, 390]) {
+			await page.viewport(width, 844);
+			mount(fakeApi(answers(detail)).api);
+			await expect
+				.element(page.getByRole("region", { name: "The alert" }))
+				.toBeVisible();
+			expect(document.documentElement.scrollWidth).toBe(width);
+			const facts = page.getByRole("region", { name: "The alert" }).element();
+			for (const fact of facts.querySelectorAll(".ap-fact")) {
+				expect(fact.getBoundingClientRect().right).toBeLessThanOrEqual(
+					facts.getBoundingClientRect().right,
+				);
+			}
+			dispose?.();
+			dispose = undefined;
+			document.body.replaceChildren();
+		}
 	}
 });

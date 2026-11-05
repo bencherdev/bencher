@@ -3,6 +3,7 @@ import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Heading from "@bencherdev/ui/Heading";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	For,
 	Match,
@@ -19,16 +20,17 @@ import type {
 	JsonConsoleThreshold,
 } from "../../types/bencher";
 import { ApiError } from "../api";
+import Dot from "../dot";
 import { alertPath, projectPath, reportPath } from "../paths";
 import { formatDate, formatWhen } from "../plot/format";
 import { formatCount } from "../plot/count";
 import { useNarrow } from "../plot/narrow";
 import type { PlotAlerts } from "../plot/Plot";
 import { FIRST, useAlertBatches } from "../alerts/batches";
-import { useFold } from "../alerts/fold";
 import { useEntityTitle, useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
+import { FOLD } from "../report/fold";
 import LineTable from "../report/LineTable";
 import { type ReportLine, plotOf } from "../report/lines";
 import AlertControls from "../thresholds/AlertControls";
@@ -57,7 +59,6 @@ const Threshold = () => {
 	const params = useParams<{ threshold: string }>();
 	const location = useLocation();
 	const navigate = useProjectNavigate();
-	const fold = useFold();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
 	const view = createMemo(() =>
 		decodeView(new URLSearchParams(location.search)),
@@ -320,7 +321,6 @@ const Threshold = () => {
 											lines().length,
 											(first()?.total ?? 0) + lines().length - listed().length,
 										)}
-										narrow={fold()}
 										tableRef={(element) => {
 											table = element;
 										}}
@@ -392,14 +392,15 @@ const Title = (props: { threshold: JsonConsoleThreshold | undefined }) => (
 				}
 			>
 				{(threshold) => (
-					<>
-						{[
-							threshold().branch.name,
-							threshold().testbed.name,
-							threshold().measure.name,
-							threshold().metric ?? VALUE,
-						].join(" · ")}
-					</>
+					<span class="ui-parts">
+						<Truncate text={threshold().branch.name} tail reveal />
+						<Dot />
+						<Truncate text={threshold().testbed.name} tail reveal />
+						<Dot />
+						<Truncate text={threshold().measure.name} tail reveal />
+						<Dot />
+						<Truncate text={threshold().metric ?? VALUE} tail reveal />
+					</span>
 				)}
 			</Show>
 		</Heading>
@@ -433,7 +434,6 @@ const Alerts = (props: {
 	total: number | undefined;
 	/** The rows the list counts: the view's total and the rows kept or let go on this page. */
 	rows: number;
-	narrow: boolean;
 	tableRef: (element: HTMLElement) => void;
 	history: string;
 	expanded: ReadonlySet<string>;
@@ -474,7 +474,7 @@ const Alerts = (props: {
 					label="Alerts this threshold raised"
 					slots={props.lines}
 					rows={props.rows}
-					narrow={props.narrow}
+					fold={FOLD.threshold}
 					metrics={false}
 					history={`History, ${props.history}`}
 					expanded={props.expanded}

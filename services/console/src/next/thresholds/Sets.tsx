@@ -1,7 +1,8 @@
 import { For, Show } from "solid-js";
+import Tag from "../tag";
 
 /** A parameters filter's sets as tags, "or" between them. */
-const Sets = (props: { sets: string[][] }) => (
+const Sets = (props: { sets: string[][]; reveal?: boolean }) => (
 	<span class="th-sets">
 		<For each={props.sets}>
 			{(tags, set) => (
@@ -13,7 +14,7 @@ const Sets = (props: { sets: string[][] }) => (
 						{(tag, position) => (
 							<>
 								<Show when={position() > 0}> </Show>
-								<span class="lr-ptag">{tag}</span>
+								<Tag tag={tag} reveal={props.reveal === true} />
 							</>
 						)}
 					</For>

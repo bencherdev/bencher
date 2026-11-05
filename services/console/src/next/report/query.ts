@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/solid-query";
 import type { JsonConsoleReport } from "../../types/bencher";
-import { FOLD } from "../alerts/fold";
+import { NARROW } from "../plot/narrow";
 import type { Api } from "../api";
 import { batchSize } from "../reports/rows";
 import { live, unfinished } from "../runs/status";
@@ -19,7 +19,7 @@ const ROW_HEIGHT = { wide: 44, narrow: 64 } as const;
 export const screenBatch = () =>
 	batchSize(
 		window.innerHeight,
-		window.matchMedia(FOLD).matches ? ROW_HEIGHT.narrow : ROW_HEIGHT.wide,
+		window.matchMedia(NARROW).matches ? ROW_HEIGHT.narrow : ROW_HEIGHT.wide,
 	);
 
 /** Whether the API could name a report this way; it refuses anything else before looking. */

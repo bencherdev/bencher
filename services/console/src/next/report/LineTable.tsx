@@ -1,5 +1,8 @@
 import Button from "@bencherdev/ui/Button";
+import { watchSize } from "@bencherdev/ui/resize";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
+	type Accessor,
 	type Component,
 	For,
 	type JSX,
@@ -15,20 +18,24 @@ import {
 	untrack,
 } from "solid-js";
 import type { Settable } from "../alerts/status";
+import { NARROW } from "../plot/narrow";
+import { STACK } from "./fold";
 import type { PlotAlerts } from "../plot/Plot";
 import type { PlotData } from "../plot/types";
 import type { GroupRow, ReportLine } from "./lines";
-import LineRow, { COLUMNS, RowExplore } from "./LineRow";
+import LineRow, { COLUMNS, RowExplore, WholeName } from "./LineRow";
 import { shortNames } from "./row";
 import { type Slot, isGroup, offsetsOf, slotRange } from "./slots";
 import { formatCount } from "../plot/count";
+import Dot from "../dot";
 
 const RowPlot = lazy(() => import("./RowPlot"));
 
-/** The fixed heights the list lays out by, wide and narrow; report.css draws the same. */
+/** The fixed heights the list lays out by, wide, narrow, and stacked; report.css draws the same. An open line adds its whole name's measured height. */
 export const HEIGHTS = {
 	wide: { group: 38, line: 44, plot: 316, actions: 0 },
 	narrow: { group: 44, line: 64, plot: 342, actions: 44 },
+	stacked: { group: 44, line: 84, plot: 342, actions: 44 },
 } as const;
 
 /** Pixels drawn above and below the screen, so a quick scroll never shows a gap. */
@@ -39,7 +46,8 @@ interface LineTableProps {
 	slots: readonly Slot[];
 	/** Every report line and group header, loaded or not. */
 	rows: number;
-	narrow: boolean;
+	/** The table width, in px, at or below which the Line column holds under 16 characters, so the rows fold into two lines. */
+	fold: number;
 	metrics: boolean;
 	history: string;
 	expanded: ReadonlySet<string>;
@@ -99,33 +107,70 @@ interface LineTableProps {
  * the rows above and below them are spacers of the height they would take.
  */
 const LineTable = (props: LineTableProps) => {
-	const heights = () => (props.narrow ? HEIGHTS.narrow : HEIGHTS.wide);
+	let size: HTMLDivElement | undefined;
+	const layoutAt = (width: number) =>
+		width > props.fold
+			? "wide"
+			: width > STACK[props.selected === undefined ? "plain" : "select"]
+				? "narrow"
+				: "stacked";
+	// A phone's guess until the first layout, which reads the table's own width before it paints.
+	const [layout, setLayout] = createSignal<keyof typeof HEIGHTS>(
+		matchMedia(NARROW).matches ? "narrow" : "wide",
+	);
+	const narrow = () => layout() !== "wide";
+	const stacked = () => layout() === "stacked";
+	onMount(() => {
+		const element = size;
+		if (element === undefined) {
+			return;
+		}
+		const width = () => element.getBoundingClientRect().width;
+		setLayout(layoutAt(width()));
+		onCleanup(
+			watchSize(element, () => {
+				const next = layoutAt(width());
+				// The rows change height with their layout, which can move the page's scrollbar and so the table's width.
+				return next === layout()
+					? undefined
+					: () => requestAnimationFrame(() => setLayout(layoutAt(width())));
+			}),
+		);
+	});
+	/** Each open line's whole name, measured at the top of its expansion. */
+	const [identities, setIdentities] = createSignal<ReadonlyMap<string, number>>(
+		new Map(),
+	);
+	const heights = () => HEIGHTS[layout()];
 	const columns = () =>
-		props.narrow
-			? COLUMNS.narrow
+		narrow()
+			? stacked()
+				? COLUMNS.stacked
+				: COLUMNS.narrow
 			: COLUMNS.wide +
 				(props.actions === undefined ? 0 : 1) +
 				(props.beside === undefined ? 0 : 1);
 	const open = (slot: Slot) => !isGroup(slot) && props.expanded.has(slot.key);
 	/** Whether a line draws its controls: always in their column when wide, on a line of their own when narrow. */
 	const acts = (line: ReportLine) =>
-		props.actions !== undefined &&
-		(!props.narrow || props.actions.narrow(line));
+		props.actions !== undefined && (!narrow() || props.actions.narrow(line));
 	const offsets = createMemo(() =>
 		offsetsOf(
 			props.slots.map((slot) =>
 				isGroup(slot)
-					? (props.group?.height[props.narrow ? "narrow" : "wide"] ??
+					? (props.group?.height[narrow() ? "narrow" : "wide"] ??
 						heights().group)
 					: heights().line +
 						(acts(slot) ? heights().actions : 0) +
-						(open(slot) ? heights().plot : 0),
+						(open(slot)
+							? heights().plot + (identities().get(slot.key) ?? 0)
+							: 0),
 			),
 		),
 	);
 	/** Each slot's row index: an expanded line takes two rows, the header one. */
 	const indexes = createMemo(() => {
-		let index = props.narrow ? 1 : 2;
+		let index = narrow() ? 1 : 2;
 		return props.slots.map((slot) => {
 			const current = index;
 			index += open(slot) ? 2 : 1;
@@ -214,186 +259,208 @@ const LineTable = (props: LineTableProps) => {
 	);
 
 	return (
-		<table
-			class="lr-table"
-			classList={{ "lr-narrow": props.narrow }}
-			aria-label={props.label}
-			aria-rowcount={(props.narrow ? 0 : 1) + props.rows + opened()}
-			aria-busy={props.busy === true ? "true" : undefined}
-			onPointerMove={(event) => {
-				// A pointer still while the page changes under it is not the reader moving.
-				if (event.movementX || event.movementY) {
-					intend();
-				}
-			}}
-			onPointerDown={intend}
-			onFocusIn={intend}
-		>
-			<Show
-				when={props.narrow}
-				fallback={
-					<>
-						<colgroup>
-							<col class="lr-c-select" />
-							<col class="lr-c-twist" />
-							<col />
-							<col class={props.aside?.column ?? "lr-c-measure"} />
-							<Show when={props.beside}>
-								{(beside) => <col class={beside().column} />}
-							</Show>
-							<col class="lr-c-history" />
-							<col class="lr-c-value" />
-							<col class="lr-c-delta" />
-							<col class="lr-c-limit" />
-							<col class="lr-c-go" />
-							<Show when={props.actions}>
-								<col class="lr-c-act" />
-							</Show>
-						</colgroup>
-						<thead>
-							<tr class="lr-head" aria-rowindex={1}>
-								<th scope="col">
-									<span class="sr-only">Select</span>
-								</th>
-								<th scope="col">
-									<span class="sr-only">Expand</span>
-								</th>
-								<th scope="col">Line</th>
-								<th scope="col">{props.aside?.label ?? "Measure"}</th>
-								<Show when={props.beside}>
-									{(beside) => <th scope="col">{beside().label}</th>}
-								</Show>
-								<th scope="col">{props.history}</th>
-								<th scope="col" class="lr-end">
-									Value
-								</th>
-								<th scope="col">
-									<span aria-hidden="true">Δ</span>
-									<span class="sr-only">Delta</span>
-								</th>
-								<th scope="col" class="lr-end">
-									Limit
-								</th>
-								<th scope="col">
-									<span class="sr-only">Explore</span>
-								</th>
-								<Show when={props.actions}>
-									<th scope="col">
-										<span class="sr-only">Actions</span>
-									</th>
-								</Show>
-							</tr>
-						</thead>
-					</>
-				}
-			>
-				<colgroup>
-					<col class={props.selected === undefined ? "lr-c-gap" : "lr-c-hit"} />
-					<col />
-					<col class="lr-c-numbers" />
-					<col class="lr-c-hit" />
-				</colgroup>
-			</Show>
-			<tbody ref={body}>
-				<Spacer height={above()} columns={columns()} />
-				<For each={shown()}>
-					{(slot, position) => {
-						const index = () => indexes()[range().start + position()] ?? 0;
-						// Read once, so the plot keeps its data while the page around it changes.
-						let plot: ReturnType<LineTableProps["plot"]> | undefined;
-						const plotOf = (line: ReportLine) =>
-							(plot ??= untrack(() => props.plot(line)));
-						const aside = isGroup(slot)
-							? undefined
-							: untrack(() => props.aside?.cell(slot));
-						const beside = isGroup(slot)
-							? undefined
-							: untrack(() => props.beside?.cell(slot));
-						const Header = props.group?.row ?? Group;
-						return isGroup(slot) ? (
-							<Header group={slot} index={index()} columns={columns()} />
-						) : (
-							<LineRow
-								line={slot}
-								metrics={props.metrics}
-								narrow={props.narrow}
-								index={index()}
-								selected={props.selected?.has(slot.key) === true}
-								onSelect={
-									props.selected && props.onSelect
-										? (selected) => props.onSelect?.(slot, selected)
-										: undefined
-								}
-								expanded={props.expanded.has(slot.key)}
-								onExpand={(expanded) => props.onExpand(slot, expanded)}
-								onNoThreshold={
-									props.onNoThreshold && (props.declares?.(slot) ?? true)
-										? () => props.onNoThreshold?.(slot)
-										: undefined
-								}
-								aside={aside}
-								beside={beside}
-								dimmed={props.dimmed?.(slot) === true}
-								actions={
-									acts(slot)
-										? () =>
-												props.actions?.cell(
-													slot,
-													() => names().get(slot.key) ?? "",
-												)
-										: undefined
-								}
-								explore={intent() ? props.explore?.([slot]) : undefined}
-								name={names().get(slot.key)}
-								href={props.href?.(slot)}
-								onIntent={() => {
-									RowPlot.preload();
-								}}
-							>
-								<AfterPaint>
-									<Suspense>
-										<RowPlot {...plotOf(slot)} />
-									</Suspense>
-								</AfterPaint>
-							</LineRow>
-						);
-					}}
+		<div class="lr-box">
+			<div class="lr-size" ref={size} />
+			{/* Every open line's whole name, drawn unseen at the width of its expansion, so it is measured wherever its row is. */}
+			<div class="lr-measure" aria-hidden="true">
+				<For each={props.slots.filter(open) as ReportLine[]}>
+					{(line) => (
+						<Measured
+							onHeight={(height) =>
+								setIdentities(new Map(identities()).set(line.key, height))
+							}
+						>
+							<WholeName line={line} metrics={props.metrics} />
+						</Measured>
+					)}
 				</For>
-				<Spacer height={below()} columns={columns()} />
-				<Show when={props.loading}>
-					{/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: a placeholder row has nothing to focus or read */}
-					<tr class="lr-more" aria-hidden="true">
-						<td colSpan={columns()}>
-							<span class="ui-skeleton" data-size="text" />
-						</td>
-					</tr>
+			</div>
+			<table
+				class="lr-table"
+				classList={{ "lr-narrow": narrow(), "lr-stacked": stacked() }}
+				aria-label={props.label}
+				aria-rowcount={(narrow() ? 0 : 1) + props.rows + opened()}
+				aria-busy={props.busy === true ? "true" : undefined}
+				onPointerMove={(event) => {
+					// A pointer still while the page changes under it is not the reader moving.
+					if (event.movementX || event.movementY) {
+						intend();
+					}
+				}}
+				onPointerDown={intend}
+				onFocusIn={intend}
+			>
+				<Show
+					when={narrow()}
+					fallback={
+						<>
+							<colgroup>
+								<col class="lr-c-select" />
+								<col class="lr-c-twist" />
+								<col />
+								<col class={props.aside?.column ?? "lr-c-measure"} />
+								<Show when={props.beside}>
+									{(beside) => <col class={beside().column} />}
+								</Show>
+								<col class="lr-c-history" />
+								<col class="lr-c-value" />
+								<col class="lr-c-delta" />
+								<col class="lr-c-limit" />
+								<col class="lr-c-go" />
+								<Show when={props.actions}>
+									<col class="lr-c-act" />
+								</Show>
+							</colgroup>
+							<thead>
+								<tr class="lr-head" aria-rowindex={1}>
+									<th scope="col">
+										<span class="sr-only">Select</span>
+									</th>
+									<th scope="col">
+										<span class="sr-only">Expand</span>
+									</th>
+									<th scope="col">Line</th>
+									<th scope="col">{props.aside?.label ?? "Measure"}</th>
+									<Show when={props.beside}>
+										{(beside) => <th scope="col">{beside().label}</th>}
+									</Show>
+									<th scope="col">{props.history}</th>
+									<th scope="col" class="lr-end">
+										Value
+									</th>
+									<th scope="col">
+										<span aria-hidden="true">Δ</span>
+										<span class="sr-only">Delta</span>
+									</th>
+									<th scope="col" class="lr-end">
+										Limit
+									</th>
+									<th scope="col">
+										<span class="sr-only">Explore</span>
+									</th>
+									<Show when={props.actions}>
+										<th scope="col">
+											<span class="sr-only">Actions</span>
+										</th>
+									</Show>
+								</tr>
+							</thead>
+						</>
+					}
+				>
+					<colgroup>
+						<col
+							class={props.selected === undefined ? "lr-c-gap" : "lr-c-hit"}
+						/>
+						<col />
+						<Show when={!stacked()}>
+							<col class="lr-c-numbers" />
+						</Show>
+						<col class="lr-c-hit" />
+					</colgroup>
 				</Show>
-				<Show when={!props.loading && props.onRetry}>
-					{(retry) => (
-						<tr class="lr-more">
+				<tbody ref={body}>
+					<Spacer height={above()} columns={columns()} />
+					<For each={shown()}>
+						{(slot, position) => {
+							const index = () => indexes()[range().start + position()] ?? 0;
+							// Read once, so the plot keeps its data while the page around it changes.
+							let plot: ReturnType<LineTableProps["plot"]> | undefined;
+							const plotOf = (line: ReportLine) =>
+								(plot ??= untrack(() => props.plot(line)));
+							const aside = isGroup(slot)
+								? undefined
+								: untrack(() => props.aside?.cell(slot, narrow));
+							const beside = isGroup(slot)
+								? undefined
+								: untrack(() => props.beside?.cell(slot, narrow));
+							const Header = props.group?.row ?? Group;
+							return isGroup(slot) ? (
+								<Header group={slot} index={index()} columns={columns()} />
+							) : (
+								<LineRow
+									line={slot}
+									metrics={props.metrics}
+									narrow={narrow()}
+									stacked={stacked()}
+									index={index()}
+									selected={props.selected?.has(slot.key) === true}
+									onSelect={
+										props.selected && props.onSelect
+											? (selected) => props.onSelect?.(slot, selected)
+											: undefined
+									}
+									expanded={props.expanded.has(slot.key)}
+									onExpand={(expanded) => props.onExpand(slot, expanded)}
+									onNoThreshold={
+										props.onNoThreshold && (props.declares?.(slot) ?? true)
+											? () => props.onNoThreshold?.(slot)
+											: undefined
+									}
+									aside={aside}
+									beside={beside}
+									dimmed={props.dimmed?.(slot) === true}
+									actions={
+										acts(slot)
+											? () =>
+													props.actions?.cell(
+														slot,
+														() => names().get(slot.key) ?? "",
+													)
+											: undefined
+									}
+									explore={intent() ? props.explore?.([slot]) : undefined}
+									name={names().get(slot.key)}
+									href={props.href?.(slot)}
+									onIntent={() => {
+										RowPlot.preload();
+									}}
+								>
+									<AfterPaint>
+										<Suspense>
+											<RowPlot {...plotOf(slot)} />
+										</Suspense>
+									</AfterPaint>
+								</LineRow>
+							);
+						}}
+					</For>
+					<Spacer height={below()} columns={columns()} />
+					<Show when={props.loading}>
+						{/* biome-ignore lint/a11y/noAriaHiddenOnFocusable: a placeholder row has nothing to focus or read */}
+						<tr class="lr-more" aria-hidden="true">
 							<td colSpan={columns()}>
-								<div class="lr-failed" role="alert">
-									<span>These lines did not load</span>
-									<Button size="sm" onClick={() => retry()()}>
-										Retry
-									</Button>
-								</div>
+								<span class="ui-skeleton" data-size="text" />
 							</td>
 						</tr>
-					)}
-				</Show>
-			</tbody>
-		</table>
+					</Show>
+					<Show when={!props.loading && props.onRetry}>
+						{(retry) => (
+							<tr class="lr-more">
+								<td colSpan={columns()}>
+									<div class="lr-failed" role="alert">
+										<span>These lines did not load</span>
+										<Button size="sm" onClick={() => retry()()}>
+											Retry
+										</Button>
+									</div>
+								</td>
+							</tr>
+						)}
+					</Show>
+				</tbody>
+			</table>
+		</div>
 	);
 };
 
 export default LineTable;
 
-/** A column of a page's own: its header, its width's class, and each row's cell. */
+/** A column of a page's own: its header, its width's class, and each row's cell, which can tell whether the rows fold. */
 interface Column {
 	label: string;
 	column: string;
-	cell: (line: ReportLine) => JSX.Element;
+	cell: (line: ReportLine, narrow: Accessor<boolean>) => JSX.Element;
 }
 
 const Spacer = (props: { height: number; columns: number }) => (
@@ -412,28 +479,26 @@ const Spacer = (props: { height: number; columns: number }) => (
 const Group = (props: { group: GroupRow; index: number; columns: number }) => (
 	<tr class="lr-group" aria-rowindex={props.index}>
 		<td colSpan={props.columns}>
-			<b>{props.group.name}</b> <Dot />{" "}
-			{props.group.variants === 1
-				? "1 variant"
-				: `${formatCount(props.group.variants)} variants`}
-			,{" "}
-			{props.group.lines === 1
-				? "1 line"
-				: `${formatCount(props.group.lines)} lines`}
-			<Show when={props.group.alerts > 0}>
-				{" "}
-				<Dot />{" "}
-				<span class="lr-galert">
-					{props.group.alerts === 1
-						? "1 alert"
-						: `${formatCount(props.group.alerts)} alerts`}
-				</span>
-			</Show>
+			<div class="ui-parts">
+				<b>
+					<Truncate text={props.group.name} tail />
+				</b>
+				<Dot />
+				<Truncate
+					text={`${props.group.variants === 1 ? "1 variant" : `${formatCount(props.group.variants)} variants`}, ${props.group.lines === 1 ? "1 line" : `${formatCount(props.group.lines)} lines`}`}
+				/>
+				<Show when={props.group.alerts > 0}>
+					<Dot />
+					<span class="lr-galert" data-fixed>
+						{props.group.alerts === 1
+							? "1 alert"
+							: `${formatCount(props.group.alerts)} alerts`}
+					</span>
+				</Show>
+			</div>
 		</td>
 	</tr>
 );
-
-const Dot = () => <span aria-hidden="true">·</span>;
 
 /** The longest the row links wait for an idle moment, and their wait where the browser cannot say. */
 const IDLE_MS = 1_000;
@@ -462,4 +527,30 @@ const AfterPaint = (props: { children: JSX.Element }) => {
 		});
 	});
 	return <Show when={painted()}>{props.children}</Show>;
+};
+
+/** Its children, telling their height whenever it changes. */
+const Measured = (props: {
+	onHeight: (height: number) => void;
+	children: JSX.Element;
+}) => {
+	let block: HTMLDivElement | undefined;
+	onMount(() => {
+		const element = block;
+		if (element === undefined) {
+			return;
+		}
+		let height: number | undefined;
+		onCleanup(
+			watchSize(element, () => {
+				const now = element.offsetHeight;
+				if (now === height) {
+					return undefined;
+				}
+				height = now;
+				return () => props.onHeight(now);
+			}),
+		);
+	});
+	return <div ref={block}>{props.children}</div>;
 };

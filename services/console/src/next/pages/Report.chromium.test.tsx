@@ -31,7 +31,7 @@ import { decodeQuery } from "../query/query";
 import { fakeApi, watchFallback } from "../reports/testing";
 import { screenBatch as runScreenBatch } from "../reports/virtual";
 import { bootstrapOf } from "../settings/testing";
-import { expectNameStartsWithText } from "../ui/testing";
+import { STRESS, expectNameStartsWithText } from "../ui/testing";
 import Report from "./Report";
 
 const PATH = `${PROJECTS_PATH}/hashbrown/reports/${REPORT}`;
@@ -421,9 +421,9 @@ test("a row's Open in Explore is Open 1 for that row alone", async () => {
 		.toHaveAttribute("href", href as string);
 });
 
-// Kills a report that keeps its wide rows below 980 px, where the Explore
+// Kills a report that keeps its wide rows on a tablet, where the Explore
 // column leaves a line's name little room, and none at 768.
-test("between 768 and 980 px a report's rows fold so each line's name has room", async () => {
+test("at 768 and 900 px a report's rows fold so each line's name has room", async () => {
 	const { api } = fakeApi((url) =>
 		isReport(url) ? { data: threeLines() } : { data: bootstrapOf() },
 	);
@@ -1200,37 +1200,150 @@ const spec = {
 	disk: 100 * 1024 ** 3,
 } as JsonConsoleSpec;
 
-// Kills a runner report without its spec in the sub line, a tooltip that
-// leaves out what the spec runs on, and a phone given a control whose tooltip
-// never shows.
-test("a runner report's sub line names its spec, with what it ran on in a tooltip", async () => {
-	const { api } = fakeApi((url) =>
-		isReport(url)
-			? { data: reportFixture(undefined, { spec }) }
-			: { data: bootstrapOf() },
-	);
-	mount(api, impatient());
-	const name = page.getByRole("button", { name: "Standard x86" });
-	await expect.element(name).toBeVisible();
-	expect((document.querySelector(".rp-sub") as HTMLElement).innerText).toMatch(
-		/ · json · Standard x86 · /,
-	);
-	await userEvent.hover(name);
-	await expect
-		.element(page.getByRole("tooltip"))
-		.toHaveTextContent("OSlinuxArchitecturex86_64CPU8Memory16 GiB");
-	await expect
-		.element(name)
-		.toHaveAccessibleDescription(
-			/^OS\s*linux\s*Architecture\s*x86_64\s*CPU\s*8\s*Memory\s*16 GiB$/,
+// Kills a runner report without its spec in the sub line, or with what it ran
+// on only in a tooltip, which a phone never shows.
+test("a runner report's sub line names its spec and what it ran on, a reveal where it is cut", async () => {
+	const long = { ...spec, name: `Standard ${"x".repeat(56)}` };
+	for (const [width, shown, cut] of [
+		[1280, spec, false],
+		[390, long, true],
+	] as const) {
+		await page.viewport(width, 844);
+		const { api } = fakeApi((url) =>
+			isReport(url)
+				? { data: reportFixture(undefined, { spec: shown }) }
+				: { data: bootstrapOf() },
 		);
+		mount(api, impatient());
+		const text = `${shown.name} (linux, x86_64, 8, 16 GiB)`;
+		await expect
+			.element(page.getByText(text, { exact: true }))
+			.toBeInTheDocument();
+		const reveal = page.getByRole("button", { name: text });
+		if (cut) {
+			await reveal.click();
+			await expect.element(reveal).toHaveAttribute("aria-expanded", "true");
+		} else {
+			expect(reveal.elements()).toHaveLength(0);
+		}
+		expect(page.getByRole("tooltip").elements()).toHaveLength(0);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
 
-	dispose?.();
-	document.body.replaceChildren();
-	await page.viewport(390, 844);
+// Kills a phone head that grows when the report arrives, and a sub line that
+// cuts a part rather than wrapping it whole or scrolls the page sideways.
+test("on a phone the sub line wraps its parts whole in the two lines held for them", async () => {
+	for (const width of [320, 390]) {
+		await page.viewport(width, 844);
+		const answer = Promise.withResolvers<JsonConsoleReport>();
+		const { api } = fakeApi((url) =>
+			isReport(url)
+				? answer.promise.then((data) => ({ data }))
+				: { data: bootstrapOf() },
+		);
+		mount(api, impatient());
+		const sub = () => document.querySelector<HTMLElement>(".rp-sub");
+		await expect
+			.poll(() => sub()?.querySelector(".ui-skeleton"))
+			.not.toBeNull();
+		const held = sub()?.getBoundingClientRect().height;
+		answer.resolve(
+			reportFixture(undefined, {
+				spec,
+				run: { ...run(), order: 3, total: 8 },
+			} as never),
+		);
+		await expect.poll(() => sub()?.querySelector(".ui-skeleton")).toBeNull();
+		expect(sub()?.getBoundingClientRect().height).toBe(held);
+		for (const part of sub()?.querySelectorAll<HTMLElement>("[data-fixed]") ??
+			[]) {
+			expect(part.scrollWidth, part.textContent ?? "").toBeLessThanOrEqual(
+				part.clientWidth,
+			);
+		}
+		expect(document.documentElement.scrollWidth).toBe(width);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a hash Copy that copies the short hash or nothing, changes its width on
+// a press, or never says it copied.
+test("Copy beside a report's hash copies the whole hash", async () => {
+	const writes = vi
+		.spyOn(navigator.clipboard, "writeText")
+		.mockResolvedValue(undefined);
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: reportFixture() } : { data: bootstrapOf() },
+	);
 	mount(api, impatient());
-	await expect.element(page.getByText(/Standard x86/)).toBeVisible();
-	expect(
-		page.getByRole("button", { name: "Standard x86" }).elements(),
-	).toHaveLength(0);
+	const copy = page.getByRole("button", { name: "Copy hash" });
+	await expect.element(copy).toBeVisible();
+	const width = copy.element().getBoundingClientRect().width;
+	await copy.click();
+	expect(writes).toHaveBeenCalledWith(`9c1f2e4${"0".repeat(33)}`);
+	const copied = page.getByRole("button", { name: "Copied hash" });
+	await expect.element(copied).toBeVisible();
+	expect(copied.element().getBoundingClientRect().width).toBe(width);
+	// Both words hold one place, so neither press moves the head.
+	const [copyWord, copiedWord] = [".rn-copyto", ".rn-copied"].map(
+		(word) =>
+			copied.element().querySelector(word)?.getBoundingClientRect() ?? null,
+	);
+	expect(copyWord?.top).toBe(copiedWord?.top);
+	expect(copyWord?.left).toBe(copiedWord?.left);
+
+	await expect
+		.element(page.getByRole("status").filter({ hasText: "Copied the hash" }))
+		.toBeInTheDocument();
+});
+
+// Kills a title that gives its testbed less than a long branch's share of the
+// line, cuts it where it fits, or lets either push the page sideways, and a
+// crumb that breaks its own words beside the run's long link.
+test("a long branch shares the title with its testbed, whole where it fits", async () => {
+	for (const width of [320, 1280]) {
+		await page.viewport(width, 844);
+		const { api } = fakeApi((url) =>
+			isReport(url)
+				? {
+						data: reportFixture(undefined, {
+							branch: {
+								uuid: "branch",
+								name: STRESS.branch,
+								slug: "b",
+								head: "head",
+							},
+							run: run(),
+						} as never),
+					}
+				: { data: bootstrapOf() },
+		);
+		mount(api, impatient());
+		const heading = page.getByRole("heading", { level: 1 });
+		await expect.element(heading).toHaveTextContent(STRESS.branch);
+		const [branch, testbed] = heading
+			.element()
+			.querySelectorAll<HTMLElement>(".ui-trunc");
+		expect(branch?.dataset.tail).toBe("very-long-leaf");
+		if (width > 320) {
+			expect(testbed?.dataset.cut).toBeUndefined();
+		} else {
+			expect(testbed?.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+				(branch?.getBoundingClientRect().width ?? Number.NaN) - 0.5,
+			);
+		}
+		expect(document.documentElement.scrollWidth).toBe(width);
+		// The crumb's words stay whole on one line beside the run's long link.
+		const runs = page
+			.getByRole("link", { name: "Runs", exact: true })
+			.element();
+		const words = document.createRange();
+		words.selectNodeContents(runs);
+		expect(words.getClientRects()).toHaveLength(1);
+		dispose?.();
+		document.body.replaceChildren();
+	}
 });

@@ -198,7 +198,9 @@ test.each([
 		await page.getByRole("button", { name: `Expand ${NAME}` }).click();
 		await expect.element(page.getByText("The plot")).toBeVisible();
 		expect(height(0)).toBe(heights.line);
-		expect(height(1)).toBe(heights.plot);
+		const identity = document.querySelector<HTMLElement>(".lr-id");
+		expect(identity?.offsetHeight).toBeGreaterThan(0);
+		expect(height(1)).toBe(heights.plot + (identity?.offsetHeight ?? 0));
 	},
 );
 
@@ -216,6 +218,39 @@ test("a narrow row's controls are 44 px targets", async () => {
 		expect(width).toBeGreaterThanOrEqual(44);
 		expect(height).toBeGreaterThanOrEqual(44);
 	}
+});
+
+// Kills a narrow limit left on the measure's line, where a phone pushes it
+// off the row, rather than under the value in the numbers' cell.
+test("a narrow row's limit sits under its value, inside its cell", async () => {
+	await page.viewport(320, 800);
+	mount({ narrow: true });
+	const value = page.getByText("20.60 ns").element() as HTMLElement;
+	const limit = value.parentElement?.lastElementChild as HTMLElement;
+	expect(limit.textContent).toBe("limit 19.90 ns");
+	const cell = (value.closest("td") as HTMLElement).getBoundingClientRect();
+	const box = limit.getBoundingClientRect();
+	expect(box.top).toBeGreaterThan(value.getBoundingClientRect().bottom - 1);
+	expect(box.right).toBeLessThanOrEqual(cell.right);
+	expect(box.bottom).toBeLessThanOrEqual(cell.bottom);
+});
+
+// Kills a long measure that pushes the history off its line.
+test("a narrow row's long measure gives way to its history", async () => {
+	await page.viewport(390, 800);
+	mount({
+		narrow: true,
+		line: {
+			...checked,
+			measure: { ...checked?.measure, name: "m".repeat(64) },
+		} as never,
+	});
+	const line = document.querySelector<HTMLElement>(".lrn-l2") as HTMLElement;
+	expect(line.scrollWidth).toBeLessThanOrEqual(line.clientWidth);
+	const history = line.querySelector(".pl-inline") as Element;
+	expect(history.getBoundingClientRect().right).toBeLessThanOrEqual(
+		line.getBoundingClientRect().right,
+	);
 });
 
 // Kills a number cell that overflows at its start, where the sign and the magnitude are.

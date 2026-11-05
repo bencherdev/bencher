@@ -8,9 +8,12 @@ export const runHead = (run: { hash?: string | undefined; number: number }) =>
 /** A list the API names at most a few of, with how many it holds in all. */
 export const allNames = (names: readonly string[], count: number) => {
 	const rest = count - names.length;
-	return rest > 0
+	if (rest <= 0) {
+		return names.join(", ");
+	}
+	return names.length > 0
 		? `${names.join(", ")}, and ${formatCount(rest)} more`
-		: names.join(", ");
+		: `${formatCount(rest)} more`;
 };
 
 /** The time of day to the second, which tells reports started together apart. */
