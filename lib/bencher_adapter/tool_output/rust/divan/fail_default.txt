@@ -1,0 +1,3 @@
+fail         fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ a_before  0.016 ns      │ 0.021 ns      │ 0.02 ns       │ 0.02 ns       │ 100     │ 819200
+├─ b_panics  

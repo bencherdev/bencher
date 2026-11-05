@@ -1,0 +1,6 @@
+bench   fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ add  0.098 ns      │ 0.503 ns      │ 0.099 ns      │ 0.103 ns      │ 100     │ 819200
+
+bench   fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ add  0.095 ns      │ 0.097 ns      │ 0.097 ns      │ 0.097 ns      │ 100     │ 409600
+

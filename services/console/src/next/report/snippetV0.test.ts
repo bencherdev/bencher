@@ -48,6 +48,7 @@ const CLI_ADAPTERS = new Set([
 	"ruby_benchmark",
 	"rust_bench",
 	"rust_criterion",
+	"rust_divan",
 	"rust_iai",
 	"rust_gungraun",
 	"shell_hyperfine",

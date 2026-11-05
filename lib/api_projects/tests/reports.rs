@@ -2618,6 +2618,75 @@ async fn reports_post_creates_the_dart_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the Divan leaf creates its new built-in measures in their
+// units
+//
+// Kills: a new built-in measure missing from the server's built-ins, which creates it in the
+// generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_divan_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "divan").await;
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report(
+            "rust_divan",
+            &[DIVAN_ALLOC, DIVAN_MORE, DIVAN_BINARY_SHAPES],
+            Some(1),
+        ),
+    )
+    .await;
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any([
+            "chars-throughput",
+            "cycles-throughput",
+            "deallocated",
+            "deallocations",
+            "grown",
+            "grows",
+            "max-allocated",
+            "max-allocations",
+            "shrinks",
+            "shrunk",
+        ]))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        [
+            (
+                "chars-throughput",
+                "Chars Throughput",
+                "characters / second (char/s)"
+            ),
+            (
+                "cycles-throughput",
+                "Cycles Throughput",
+                "cycles / second (Hz)"
+            ),
+            ("deallocated", "Deallocated", "bytes (B)"),
+            ("deallocations", "Deallocations", "deallocations"),
+            ("grown", "Grown", "bytes (B)"),
+            ("grows", "Grows", "grows"),
+            ("max-allocated", "Max Allocated", "bytes (B)"),
+            ("max-allocations", "Max Allocations", "allocations"),
+            ("shrinks", "Shrinks", "shrinks"),
+            ("shrunk", "Shrunk", "bytes (B)"),
+        ]
+        .map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
 // POST /v0/projects/{project}/reports - the hyperfine and asv leaves create their new built-in
 // measures in their units
 //
@@ -2689,6 +2758,13 @@ const DOT_NET_DIAGNOSERS: &str =
 const GOOGLE_MEMORY: &str =
     include_str!("../../bencher_adapter/tool_output/cpp/google/memory.json");
 const GO_BENCHMEM: &str = include_str!("../../bencher_adapter/tool_output/go/bench/benchmem.txt");
+
+const DIVAN_ALLOC: &str =
+    include_str!("../../bencher_adapter/tool_output/rust/divan/alloc_default.txt");
+const DIVAN_MORE: &str =
+    include_str!("../../bencher_adapter/tool_output/rust/divan/more_default.txt");
+const DIVAN_BINARY_SHAPES: &str =
+    include_str!("../../bencher_adapter/tool_output/rust/divan/bytes_binary_shapes.txt");
 
 const CRITERION_CYCLES_PER_BYTE: &str =
     include_str!("../../bencher_adapter/tool_output/rust/criterion/cycles_per_byte.txt");
