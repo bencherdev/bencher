@@ -974,7 +974,7 @@ mod tests {
     }
 
     #[test]
-    fn the_binary_matches_its_channel_release() {
+    fn the_binary_matches_what_its_channel_publishes() {
         const CANARY: &str = "0000000000000000000000000000000000000000000000000000000000000002";
         const STABLE: &str = "0000000000000000000000000000000000000000000000000000000000000001";
         let installed = Output {

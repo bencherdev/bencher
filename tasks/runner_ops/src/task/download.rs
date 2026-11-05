@@ -1,5 +1,6 @@
 use std::io::Read as _;
 use std::process::Command;
+use std::time::Duration;
 
 use anyhow::Context as _;
 use bencher_json::{
@@ -14,11 +15,18 @@ use url::Url;
 const REPO: &str = "bencherdev/bencher";
 const DEVEL: &str = "devel";
 
-/// Every runner Bencher administers is x86-64.
+/// The architecture of the runner binary that a deploy downloads and installs.
 const DEPLOY_ARCH: Architecture = Architecture::X86_64;
 
 /// Cap on a downloaded canary channel file, an order of magnitude over the runner binary.
 const MAX_DOWNLOAD_SIZE: u64 = 512 * 1024 * 1024;
+
+/// Cap on one canary channel request, from its first byte sent to its last byte read.
+/// `MAX_DOWNLOAD_SIZE` within it needs under 1 MB/s, well inside a normal connection.
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
+
+/// Cap on reaching the host, so an unroutable one fails well inside `DOWNLOAD_TIMEOUT`.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Download the runner binary and check it against the checksum published beside it.
 ///
@@ -87,7 +95,8 @@ pub fn published_checksum(update_channel: UpdateChannel) -> anyhow::Result<Sha25
     match update_channel {
         UpdateChannel::Canary => {
             let checksum_url = canary_download(DEFAULT_CANARY_BASE_URL)?.checksum_url;
-            let published = ureq::get(checksum_url.as_str())
+            let published = agent()
+                .get(checksum_url.as_str())
                 .call()
                 .with_context(|| format!("failed to download {checksum_url}"))?
                 .body_mut()
@@ -126,8 +135,9 @@ fn download_canary(dir: &Utf8Path) -> anyhow::Result<String> {
         checksum_url,
     } = canary_download(DEFAULT_CANARY_BASE_URL)?;
     println!("Downloading {name} from {binary_url}...");
-    fetch(&binary_url, &dir.join(&name))?;
-    fetch(&checksum_url, &dir.join(format!("{name}.sha256")))?;
+    let agent = agent();
+    fetch(&agent, &binary_url, &dir.join(&name))?;
+    fetch(&agent, &checksum_url, &dir.join(format!("{name}.sha256")))?;
     Ok(name)
 }
 
@@ -153,9 +163,20 @@ fn canary_download(base_url: &str) -> anyhow::Result<CanaryDownload> {
     })
 }
 
+/// `ureq` sets no timeout of its own, so an unanswered canary channel request would
+/// hang a deploy or an audit forever.
+fn agent() -> ureq::Agent {
+    let config = ureq::Agent::config_builder()
+        .timeout_connect(Some(CONNECT_TIMEOUT))
+        .timeout_global(Some(DOWNLOAD_TIMEOUT))
+        .build();
+    ureq::Agent::new_with_config(config)
+}
+
 /// Write `url` to `path`, refusing a body over `MAX_DOWNLOAD_SIZE`.
-fn fetch(url: &Url, path: &Utf8Path) -> anyhow::Result<()> {
-    let mut body = ureq::get(url.as_str())
+fn fetch(agent: &ureq::Agent, url: &Url, path: &Utf8Path) -> anyhow::Result<()> {
+    let mut body = agent
+        .get(url.as_str())
         .call()
         .with_context(|| format!("failed to download {url}"))?
         .into_body()
@@ -173,7 +194,10 @@ fn fetch(url: &Url, path: &Utf8Path) -> anyhow::Result<()> {
 }
 
 fn binary_name(version: &str) -> String {
-    format!("runner-{version}-linux-x86-64")
+    format!(
+        "runner-{version}-{slug}",
+        slug = DEPLOY_ARCH.linux_artifact_slug()
+    )
 }
 
 /// `gh release view` with no tag returns the newest tagged release.
