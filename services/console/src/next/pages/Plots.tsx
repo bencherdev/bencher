@@ -39,6 +39,7 @@ import Tile, { listed } from "../plots/Tile";
 import { useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
+import { formatCount } from "../plot/count";
 
 const WINDOWS = [
 	...PRESETS.map(({ value }) => ({ value, label: value })),
@@ -56,7 +57,7 @@ const MOVED: Record<Move, string> = {
 const DAY = 24 * 60 * 60 * 1000;
 
 const plural = (count: number) =>
-	`${count} ${count === 1 ? "pinned plot" : "pinned plots"}`;
+	`${formatCount(count)} ${count === 1 ? "pinned plot" : "pinned plots"}`;
 
 /** A change shown before the API confirms it. */
 interface Pending {

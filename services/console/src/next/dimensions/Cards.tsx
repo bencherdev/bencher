@@ -29,6 +29,7 @@ import { modelText } from "../thresholds/text";
 import { thresholdLinkName } from "./threshold";
 import { shortDate, shortDay } from "./time";
 import { parametersInUse, shownTotal, shownVariants, tagsOf } from "./variants";
+import { formatCount } from "../plot/count";
 
 export interface ThresholdsState {
 	data: ThresholdsOn | undefined;
@@ -232,7 +233,9 @@ const RecentRuns = (props: {
 													fallback={<span class="muted">0</span>}
 												>
 													{(active) => (
-														<span class="dm-alerts">{active()} active</span>
+														<span class="dm-alerts">
+															{formatCount(active())} active
+														</span>
 													)}
 												</Show>
 											</td>
@@ -301,7 +304,9 @@ const GIB = 1024 ** 3;
 
 /** A size in bytes, in GiB when it is at least one. */
 const bytes = (size: number) =>
-	size >= GIB ? `${Math.round((size / GIB) * 10) / 10} GiB` : `${size} bytes`;
+	size >= GIB
+		? `${Math.round((size / GIB) * 10) / 10} GiB`
+		: `${formatCount(size)} bytes`;
 
 export const MeasureCards = (props: {
 	slug: string;
@@ -442,7 +447,7 @@ export const BenchmarkCards = (props: {
 														<span class="dm-tag">{value.value}</span>
 														{value.variants === 1
 															? "1 variant"
-															: `${value.variants} variants`}
+															: `${formatCount(value.variants)} variants`}
 													</span>
 												)}
 											</For>
@@ -471,7 +476,8 @@ export const BenchmarkCards = (props: {
 								value: "active",
 								label: (
 									<>
-										Active <span class="count">{activeCount()}</span>
+										Active{" "}
+										<span class="count">{formatCount(activeCount())}</span>
 									</>
 								),
 							},
@@ -479,7 +485,8 @@ export const BenchmarkCards = (props: {
 								value: "archived",
 								label: (
 									<>
-										Archived <span class="count">{archivedCount()}</span>
+										Archived{" "}
+										<span class="count">{formatCount(archivedCount())}</span>
 									</>
 								),
 							},
@@ -650,7 +657,7 @@ const ThresholdsCard = (props: {
 			aside={
 				<Show when={total() !== undefined}>
 					<span class="muted sm">
-						{total()} on this {props.one}
+						{formatCount(total())} on this {props.one}
 					</span>
 				</Show>
 			}
@@ -767,5 +774,5 @@ const runHead = (run: JsonConsoleRunSummary) =>
 
 const allNames = (names: readonly string[], count: number) =>
 	count > names.length
-		? `${names.join(", ")}, and ${count - names.length} more`
+		? `${names.join(", ")}, and ${formatCount(count - names.length)} more`
 		: names.join(", ");

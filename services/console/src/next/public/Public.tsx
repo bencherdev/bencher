@@ -27,6 +27,7 @@ import { projectPath } from "../paths";
 import { lineVisible, settleVisibility } from "../query/line";
 import { type ExploreQuery, encodeQuery } from "../query/query";
 import Tools from "../shell/Tools";
+import { formatCount } from "../plot/count";
 
 export type PlotView = typeof import("../plot/Plot").default;
 
@@ -369,7 +370,7 @@ const Values = (props: { values: Value[]; twoLine?: boolean }) => (
 );
 
 const plural = (count: number, one: string, many: string) =>
-	`${count} ${count === 1 ? one : many}`;
+	`${formatCount(count)} ${count === 1 ? one : many}`;
 
 /** The page a reader sees for a project they cannot read, which may not exist; a signed in reader is not asked to log in. */
 const Locked = (props: { signIn: string }) => (

@@ -39,6 +39,7 @@ import {
 	decodeSearch,
 	encodeSearch,
 } from "../reports/search";
+import { formatCount } from "../plot/count";
 
 /** Skeleton rows for a list never fetched, which show only once the wait is noticeable. */
 const SKELETON_ROWS = 8;
@@ -271,7 +272,7 @@ const Runs = () => {
 								</>
 							}
 						>
-							{total() === 1 ? "1 run" : `${total()} runs`}
+							{total() === 1 ? "1 run" : `${formatCount(total())} runs`}
 						</Show>
 					</Heading>
 				</div>

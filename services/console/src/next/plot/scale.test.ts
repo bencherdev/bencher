@@ -129,6 +129,15 @@ describe("yRange", () => {
 		const [lo, hi] = yRange({ kind: "linear" }, 1000, 1000.0001);
 		expect(hi - lo).toBeLessThan(0.001);
 	});
+
+	// Kills padding that overflows to Infinity or underflows to 0, where the ticks after it spin and then fail.
+	test("stays finite and positive on a log scale from 1e-300 to 1e300", () => {
+		const scale = yScale("log", 1e-300, 1e300);
+		const [lo, hi] = yRange(scale, 1e-300, 1e300);
+		expect(lo).toBeGreaterThan(0);
+		expect(Number.isFinite(hi)).toBe(true);
+		expect(yTicks(scale, lo, hi, 5).ticks.length).toBeGreaterThanOrEqual(3);
+	});
 });
 
 describe("yTicks", () => {

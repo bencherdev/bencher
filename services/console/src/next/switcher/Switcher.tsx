@@ -21,6 +21,7 @@ import {
 	searchRows,
 	switcherRows,
 } from "./model";
+import { BADGE_MAX, formatCount } from "../plot/count";
 
 /** In a sheet, the sheet is the dialog. */
 const DIALOG = { role: "dialog", "aria-label": "Switch project" } as const;
@@ -287,7 +288,7 @@ const Switcher = (props: {
 											<Show when={match.row.alerts > 0}>
 												<span class="reports-active">
 													<span class="reports-dot" aria-hidden="true" />
-													{match.row.alerts}
+													{formatCount(match.row.alerts, BADGE_MAX)}
 													<span class="sr-only"> active</span>{" "}
 													{match.row.alerts === 1 ? "alert" : "alerts"}
 												</span>
@@ -333,11 +334,11 @@ const count = (
 		return "";
 	}
 	if (query.trim()) {
-		return `${matched} of ${rows.length}`;
+		return `${formatCount(matched)} of ${formatCount(rows.length)}`;
 	}
-	const projects = `${rows.length} ${rows.length === 1 ? "project" : "projects"}`;
+	const projects = `${formatCount(rows.length)} ${rows.length === 1 ? "project" : "projects"}`;
 	return organizations > 1
-		? `${projects}, ${organizations} organizations`
+		? `${projects}, ${formatCount(organizations)} organizations`
 		: projects;
 };
 

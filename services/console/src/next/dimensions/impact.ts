@@ -1,3 +1,5 @@
+import { formatCount } from "../plot/count";
+
 /** What archiving a dimension does, said before it happens; a benchmark or a variant owns no thresholds, so it has no count. */
 export const archiveImpact = (thresholds: number | undefined) =>
 	thresholds
@@ -27,4 +29,5 @@ export const unarchivedNote = (
 		: `${returned} · ${count(held, "threshold")} still archived`;
 };
 
-const count = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
+const count = (n: number, one: string) =>
+	`${formatCount(n)} ${n === 1 ? one : `${one}s`}`;

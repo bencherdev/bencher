@@ -11,6 +11,7 @@ import type { secondsTime } from "./format";
 import type { RunsRow } from "./rows";
 import StatusPill from "./StatusPill";
 import { reportStatus, statusText } from "./status";
+import { formatCount } from "../plot/count";
 
 /** A row under an opened run, by its kind. */
 const ChildRow = (props: {
@@ -130,7 +131,7 @@ const ReportRow = (props: {
 			<td data-fold="hide">{props.report.adapter}</td>
 			<td data-fold={props.report.job ? "hide" : "n2"} data-align="end">
 				<Show when={!props.report.job} fallback={<Dash />}>
-					{props.report.lines}
+					{formatCount(props.report.lines)}
 					<span class="ui-fold-label">
 						{props.report.lines === 1 ? " line" : " lines"}
 					</span>
@@ -174,7 +175,7 @@ const AllRow = (props: {
 				onFocus={() => props.onIntent()}
 				onTouchStart={() => props.onIntent()}
 			>
-				All {props.total} reports
+				All {formatCount(props.total)} reports
 			</a>
 		</td>
 	</tr>

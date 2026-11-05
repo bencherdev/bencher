@@ -20,6 +20,7 @@ import type { PlotData } from "../plot/types";
 import type { GroupRow, ReportLine } from "./lines";
 import LineRow, { COLUMNS, RowExplore } from "./LineRow";
 import { type Slot, isGroup, offsetsOf, slotRange } from "./slots";
+import { formatCount } from "../plot/count";
 
 const RowPlot = lazy(() => import("./RowPlot"));
 
@@ -389,15 +390,18 @@ const Group = (props: { group: GroupRow; index: number; columns: number }) => (
 			<b>{props.group.name}</b> <Dot />{" "}
 			{props.group.variants === 1
 				? "1 variant"
-				: `${props.group.variants} variants`}
-			, {props.group.lines === 1 ? "1 line" : `${props.group.lines} lines`}
+				: `${formatCount(props.group.variants)} variants`}
+			,{" "}
+			{props.group.lines === 1
+				? "1 line"
+				: `${formatCount(props.group.lines)} lines`}
 			<Show when={props.group.alerts > 0}>
 				{" "}
 				<Dot />{" "}
 				<span class="lr-galert">
 					{props.group.alerts === 1
 						? "1 alert"
-						: `${props.group.alerts} alerts`}
+						: `${formatCount(props.group.alerts)} alerts`}
 				</span>
 			</Show>
 		</td>

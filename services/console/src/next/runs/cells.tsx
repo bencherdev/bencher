@@ -4,6 +4,7 @@ import type {
 	JsonConsoleAuthor,
 	JsonReportAlertsCounts,
 } from "../../types/bencher";
+import { formatCount } from "../plot/count";
 
 /** The active alerts, then every alert raised. */
 export const Alerts = (props: { alerts: JsonReportAlertsCounts }) => (
@@ -11,14 +12,14 @@ export const Alerts = (props: { alerts: JsonReportAlertsCounts }) => (
 		<Show when={props.alerts.active > 0}>
 			<span class="reports-active">
 				<span class="reports-dot" aria-hidden="true" />
-				{props.alerts.active} active
+				{formatCount(props.alerts.active)} active
 			</span>{" "}
 		</Show>
 		<Show
 			when={props.alerts.total > 0}
 			fallback={<span class="reports-quiet">0</span>}
 		>
-			<span class="reports-quiet">{props.alerts.total} total</span>
+			<span class="reports-quiet">{formatCount(props.alerts.total)} total</span>
 		</Show>
 	</span>
 );

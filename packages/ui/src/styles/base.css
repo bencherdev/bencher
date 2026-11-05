@@ -39,6 +39,16 @@
 		font-family: var(--font-family-code);
 	}
 
+	/* A number aligned on its last digit, which past its width loses its end and never its sign. */
+	.ui-num {
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: end;
+		width: var(--size-number);
+	}
+
 	:focus-visible {
 		outline: 2px solid var(--color-focus);
 		outline-offset: 2px;

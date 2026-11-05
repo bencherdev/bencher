@@ -181,7 +181,7 @@ test("a list already seen paints at once while it revalidates", async () => {
 	await expect.element(table()).toBeVisible();
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1000 runs");
+		.toHaveTextContent("1,000 runs");
 	expect(document.querySelector('[aria-busy="true"]')).toBeNull();
 	await expect.poll(() => requests.length).toBe(1);
 	expect(suspended()).toBe(false);
@@ -201,10 +201,10 @@ test("a revalidation that answers never takes the page out", async () => {
 
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1000 runs");
+		.toHaveTextContent("1,000 runs");
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1001 runs");
+		.toHaveTextContent("1,001 runs");
 	await cache.invalidateQueries();
 	await wait(200);
 	expect(stop()).toBe(false);
@@ -362,7 +362,7 @@ test("a window change keeps the rows on screen, dimmed and busy, until the new l
 	mount(api, client());
 	await expect
 		.element(page.getByRole("heading", { level: 1 }))
-		.toHaveTextContent("1000 runs");
+		.toHaveTextContent("1,000 runs");
 
 	await page.getByRole("radio", { name: "All" }).click();
 	await expect.element(table()).toHaveAttribute("aria-busy", "true");

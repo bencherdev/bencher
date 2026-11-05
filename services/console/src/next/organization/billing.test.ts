@@ -42,6 +42,16 @@ describe("bands", () => {
 		]);
 	});
 
+	// Kills a bound printed without its thousands grouped.
+	test("groups a band's bounds", () => {
+		expect(
+			bands([
+				{ up_to: 250_000, flat_amount: 0, unit_amount: 5 },
+				{ up_to: 1_000_000, flat_amount: 0, unit_amount: 5 },
+			]).map(({ range }) => range),
+		).toEqual(["0 to 250,000", "250,001 to 1,000,000"]);
+	});
+
 	// Kills a per series price dropped, or a zero part drawn.
 	test("a band's price adds its per series part and leaves out a zero", () => {
 		expect(

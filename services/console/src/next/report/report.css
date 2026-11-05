@@ -202,8 +202,10 @@
 .lr-c-history {
 	width: 164px;
 }
+/* The longest number the row prints, in the code font it sets numbers in, and the cell's padding. */
 .lr-c-value {
-	width: 100px;
+	width: calc(var(--size-number) + var(--spacing-2));
+	font-family: var(--font-family-code);
 }
 .lr-c-delta {
 	width: 132px;
@@ -226,9 +228,6 @@
 .lr-alerts .lr-c-measure,
 .lr-alerts .lr-c-limit {
 	width: 104px;
-}
-.lr-alerts .lr-c-value {
-	width: 92px;
 }
 .lr-alerts .lr-c-delta {
 	width: 124px;
@@ -495,10 +494,13 @@
 .lrn-num {
 	display: flex;
 	flex-direction: column;
-	align-items: flex-end;
 	gap: 3px;
 	font-size: 12.5px;
 	white-space: nowrap;
+}
+/* An auto margin ends each number at the cell's end, and gives way when it overflows, so the start is never what is cut. */
+.lrn-num > * {
+	margin-left: auto;
 }
 .lrn-num b {
 	font-size: 13.5px;
