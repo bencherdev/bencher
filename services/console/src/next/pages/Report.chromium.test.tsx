@@ -228,16 +228,17 @@ test("moving to the previous report redraws its identity and starts with nothing
 	mount(api, impatient());
 	const heading = page.getByRole("heading", { level: 1 });
 	await expect.element(heading).toHaveTextContent("main · ubuntu-latest");
-	await page.getByRole("checkbox", { name: `Select ${LATENCY}` }).click();
+	await page.getByRole("checkbox", { name: "Select blake3" }).click();
 	await expect.element(page.getByText("1 line selected")).toBeVisible();
 	await page.getByRole("link", { name: /^Previous #4/ }).click();
 	await expect.element(heading).toHaveTextContent("main · macos-latest");
 	await expect.element(page.getByText("0 lines selected")).toBeVisible();
 });
 
-const LATENCY = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
-const SMALL = "blake3 input_bytes=1024 simd=avx2 threads=1 Latency";
-const THROUGHPUT = "blake3 input_bytes=65536 simd=avx2 threads=1 Throughput";
+// What the rows' controls call the three lines: the parameter that varies, and the measure where it tells two apart.
+const LATENCY = "blake3 input_bytes=65536 Latency";
+const SMALL = "blake3 input_bytes=1024";
+const THROUGHPUT = "blake3 input_bytes=65536 Throughput";
 
 /** A report of three lines: two latencies a threshold checks, and a throughput none does. */
 const threeLines = (fields: Partial<JsonConsoleReport> = {}) =>
@@ -457,7 +458,7 @@ test("Previous and Open N are named first by what they show, at either width", a
 	for (const width of [1280, 390]) {
 		await page.viewport(width, 720);
 		mount(api, impatient());
-		await page.getByRole("checkbox", { name: `Select ${LATENCY}` }).click();
+		await page.getByRole("checkbox", { name: "Select blake3" }).click();
 		const open = page.getByRole("link", { name: "Open 1 in Explore" });
 		await expect.element(open).toBeVisible();
 		expectNameStartsWithText(open.element());
@@ -866,6 +867,9 @@ const ALERTED = {
 	status: "active",
 } as const;
 
+// The alerted report's one line, as its controls call it.
+const ALONE = "blake3";
+
 /** A report of one line that raised `ALERTED`, read as `bootstrap` permits, its changes answered by `change`. */
 const alertedReport = (
 	bootstrap = bootstrapOf(),
@@ -894,24 +898,24 @@ const alertedReport = (
 
 /** Opens the row's plot and pins its readout on the alert, the last point. */
 const pinAlert = async () => {
-	await page.getByRole("button", { name: `Expand ${LATENCY}` }).click();
-	const region = page.getByRole("region", { name: `${LATENCY}, full plot` });
+	await page.getByRole("button", { name: `Expand ${ALONE}` }).click();
+	const region = page.getByRole("region", { name: `${ALONE}, full plot` });
 	const plot = region.getByRole("group", { name: /^1 line/ });
 	await expect.element(plot).toBeVisible();
 	(plot.element() as HTMLElement).focus();
 	await userEvent.keyboard("{End}");
 	const readout = region.getByRole("status");
 	await expect
-		.element(readout.getByRole("link", { name: `Alert: ${LATENCY}` }))
+		.element(readout.getByRole("link", { name: `Alert: ${ALONE}` }))
 		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/alerts/alert-uuid`);
 	return readout;
 };
 
 type Scope = ReturnType<typeof page.getByRole>;
 const dismissIn = (readout: Scope) =>
-	readout.getByRole("button", { name: `Dismiss the alert on ${LATENCY}` });
+	readout.getByRole("button", { name: `Dismiss the alert on ${ALONE}` });
 const reactivateIn = (readout: Scope) =>
-	readout.getByRole("button", { name: `Reactivate the alert on ${LATENCY}` });
+	readout.getByRole("button", { name: `Reactivate the alert on ${ALONE}` });
 
 // Kills a report row that alerted whose name links nowhere or to another
 // alert, a readout on its alert with no link to it or no Dismiss, a Dismiss
@@ -920,7 +924,11 @@ const reactivateIn = (readout: Scope) =>
 test("a row that alerted links its alert, and its pinned readout dismisses it", async () => {
 	const sent = alertedReport();
 	await expect
-		.element(page.getByRole("link", { name: `${LATENCY}, open the alert` }))
+		.element(
+			page.getByRole("link", {
+				name: "blake3 input_bytes=65536 simd=avx2 threads=1 Latency, open the alert",
+			}),
+		)
 		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/alerts/alert-uuid`);
 	const readout = await pinAlert();
 	await dismissIn(readout).click();
@@ -932,7 +940,7 @@ test("a row that alerted links its alert, and its pinned readout dismisses it", 
 		body: { status: "dismissed", alerts: ["alert-uuid"] },
 	});
 
-	await page.getByRole("button", { name: `Collapse ${LATENCY}` }).click();
+	await page.getByRole("button", { name: `Collapse ${ALONE}` }).click();
 	await expect.element(readout).not.toBeInTheDocument();
 	await expect.element(reactivateIn(await pinAlert())).toBeVisible();
 });

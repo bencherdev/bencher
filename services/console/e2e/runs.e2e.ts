@@ -577,12 +577,12 @@ test("the newest run's alert names its report, opens its plot in place, and open
 	const alerts = section.getByRole("table", {
 		name: `Alerts in run ${seed.last_main_hash}, by report`,
 	});
-	await alerts.getByRole("button", { name: /^Expand blake3 / }).click();
+	await alerts.getByRole("button", { name: /^Expand blake3/ }).click();
 	await expect(
-		page.getByRole("region", { name: /^blake3 .*, full plot$/ }),
+		page.getByRole("region", { name: /^blake3.*, full plot$/ }),
 	).toBeVisible();
 	await expect(
-		alerts.getByRole("link", { name: /^Open in Explore: blake3 / }),
+		alerts.getByRole("link", { name: /^Open in Explore: blake3/ }),
 	).toHaveAttribute("href", /\/explore\?.*report=/);
 	await alerts.getByRole("link", { name: /^#1 · ubuntu-latest/ }).click();
 	await expect(heading(page)).toHaveText("main · ubuntu-latest");

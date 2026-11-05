@@ -23,6 +23,7 @@ import type {
 	JsonConsoleProject,
 	JsonUpdateAlerts,
 } from "../../types/bencher";
+import { leafOf } from "../leaf";
 import AlertActions from "../alerts/AlertActions";
 import Controls from "../alerts/Controls";
 import { FIRST, useAlertBatches } from "../alerts/batches";
@@ -73,7 +74,6 @@ import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import LineTable from "../report/LineTable";
 import { type GroupRow, type ReportLine, plotOf } from "../report/lines";
-import { lineLabel } from "../report/row";
 import { WINDOWS, windowPhrase } from "../reports/search";
 import { type FilterNames, nameQuery } from "../reports/DimensionFilters";
 
@@ -497,16 +497,6 @@ const Alerts = () => {
 		return preset ?? (window.kind === "all" ? "3m" : `${historyDays(window)}d`);
 	};
 	const phrase = () => windowText(search(), now());
-	const nameOf = (line: ReportLine) =>
-		lineLabel(
-			{
-				benchmark: line.benchmark.name,
-				parameters: line.parameters,
-				measure: line.measure.name,
-				metric: line.metric,
-			},
-			metrics(),
-		).name;
 	// Every row of this list is an alert's.
 	const alertOf = (line: ReportLine) => line as AlertLine;
 	const statusShown = (line: ReportLine) => statusOf(alertOf(line), changes());
@@ -681,9 +671,9 @@ const Alerts = () => {
 							explore={explore()}
 							onExploreIntent={loadExplorer}
 							actions={{
-								cell: (line) => (
+								cell: (line, name) => (
 									<AlertActions
-										name={nameOf(line)}
+										name={name()}
 										status={statusShown(line)}
 										justNow={changes().has(line.key)}
 										modified={alertOf(line).modified}
@@ -788,8 +778,9 @@ const ReportHeader = (props: {
 	state: "none" | "some" | "all";
 	onSelect: () => void;
 }) => {
+	// The end of each name, which the report's time tells apart from its neighbors.
 	const where = () =>
-		`${props.group.branch.name}, ${props.group.testbed.name}, ${formatWhen(props.group.report.start)}`;
+		`${leafOf(props.group.branch.name)}, ${leafOf(props.group.testbed.name)}, ${formatWhen(props.group.report.start)}`;
 	const meta = () =>
 		[
 			formatWhen(props.group.report.start),

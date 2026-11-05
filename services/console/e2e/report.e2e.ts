@@ -158,7 +158,7 @@ test.describe("a long report", () => {
 		expect(perPage).toBeGreaterThan(0);
 		expect(perPage).toBeLessThan(300);
 
-		const last = lineRow(page, "bench-19 n=14 Latency");
+		const last = lineRow(page, "bench-19 n=14");
 		await expect
 			.poll(
 				async () => {

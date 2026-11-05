@@ -16,8 +16,9 @@ import {
 
 const { hashbrown } = seed.projects;
 
-const BLAKE3 = "blake3 input_bytes=65536 simd=avx2 threads=1 Latency";
-const line = (benchmark: string) => `${benchmark} n=0 Latency`;
+// A control names its line by what tells it apart from the lines beside it.
+const BLAKE3 = "blake3";
+const line = (benchmark: string) => benchmark;
 
 const alertPage = (slug: string, alert: string) =>
 	`${consolePath(slug, "alerts")}/${alert}`;
@@ -152,7 +153,9 @@ test.describe("signed in", () => {
 	}) => {
 		const alert = await alertOf(request, hashbrown.slug, "blake3");
 		await page.goto(consolePath(hashbrown.slug, "alerts"));
-		await page.getByRole("link", { name: `${BLAKE3}, open the alert` }).click();
+		await page
+			.getByRole("link", { name: /^blake3 .*, open the alert$/ })
+			.click();
 		await expect(page).toHaveURL(alertPage(hashbrown.slug, alert.uuid));
 		await expect(heading(page)).toContainText("blake3");
 		await expect(dismiss(page, BLAKE3)).toBeVisible();

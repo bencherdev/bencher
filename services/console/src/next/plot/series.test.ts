@@ -25,6 +25,16 @@ describe("lineStyles", () => {
 		expect(shapes[32]).toBe("circle");
 	});
 
+	// Kills series 1 and 33, which share a color and a shape, told apart by nothing.
+	test("counts the series past 32, where color and shape repeat", () => {
+		const ordinals = lineStyles(lines(64), "single").map(
+			({ ordinal }) => ordinal,
+		);
+		expect(ordinals.slice(0, 32)).toEqual(Array(32).fill(undefined));
+		expect(ordinals[32]).toBe(33);
+		expect(ordinals[63]).toBe(64);
+	});
+
 	// Both measures of one variant read as one series in two places.
 	test("gives both measures of one variant one color", () => {
 		const styles = lineStyles(

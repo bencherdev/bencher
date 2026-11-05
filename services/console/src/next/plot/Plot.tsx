@@ -11,6 +11,7 @@ import {
 	Show,
 	untrack,
 } from "solid-js";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	type CursorEvent,
 	createPanel,
@@ -22,17 +23,11 @@ import { alignToAxis, extent } from "./columns";
 import { type AxisTier, axisTier, formatTicks } from "./format";
 import { formatCount } from "./count";
 import { onlyIteration, withThrough } from "./iterations";
-import { constantParameters, keyOrder, lineNames } from "./key";
+import { keyOrder, type LineName, lineNames } from "./key";
 import { axisFont, axisWidth } from "./labels";
 import { useNarrow } from "./narrow";
-import { PlotKey, PlotKeyReserve } from "./PlotKey";
-import {
-	type Cursor,
-	clicked,
-	fullName,
-	readout,
-	readoutLeft,
-} from "./readout";
+import { NameParts, PlotKey, PlotKeyReserve } from "./PlotKey";
+import { type Cursor, clicked, readout, readoutLeft } from "./readout";
 import { type Layout, layoutOf, lineStyles, measuresOf } from "./series";
 import { Swatch } from "./Swatch";
 import { returnSyncKey, takeSyncKey } from "./sync";
@@ -98,14 +93,25 @@ const NARROW_KEY_MAX = 6;
 const plural = (count: number) =>
 	`${formatCount(count)} ${count === 1 ? "line" : "lines"}`;
 
-const measureTitle = (measure: PlotMeasure | undefined, tier: AxisTier) => {
+/** The measure's name, and its unit's symbol where that says more. */
+const measureTitle = (
+	measure: PlotMeasure | undefined,
+	tier: AxisTier,
+): string[] => {
 	if (!measure) {
-		return "";
+		return [];
 	}
 	return tier.symbol && tier.symbol.toLowerCase() !== measure.name.toLowerCase()
-		? `${measure.name}, ${tier.symbol}`
-		: measure.name;
+		? [measure.name, `, ${tier.symbol}`]
+		: [measure.name];
 };
+
+/** An axis title whose name and unit share its room, so neither is cut first. */
+const AxisTitle = (props: { parts: string[] }) => (
+	<span class="ui-parts pl-axparts">
+		<For each={props.parts}>{(part) => <Truncate text={part} />}</For>
+	</span>
+);
 
 /** One plot for Explore, a pinned tile, the public plot, and a row expanded in place. */
 const Plot = (props: PlotProps) => {
@@ -141,7 +147,9 @@ const Plot = (props: PlotProps) => {
 		),
 	);
 	const styles = createMemo(() => lineStyles(lines(), layout()));
-	const names = createMemo(() => lineNames(lines(), data()?.measures ?? []));
+	// Once per line set, so a toggle or a hover names nothing anew.
+	const named = createMemo(() => lineNames(lines(), data()?.measures ?? []));
+	const names = () => named().names;
 	const order = createMemo(() => keyOrder(lines()));
 
 	const hidden = createMemo(() => {
@@ -170,7 +178,7 @@ const Plot = (props: PlotProps) => {
 	const titleOf = (axis: PanelAxis | undefined) =>
 		axis
 			? measureTitle(data()?.measures[axis.measure], tierOf(axis.measure))
-			: "";
+			: [];
 	const statusOf = (alert: PlotAlert) =>
 		props.alerts?.status?.(alert.uuid) ?? alert.status;
 	/** A line with an alert still active, as the page holds its alerts' statuses. */
@@ -428,10 +436,10 @@ const Plot = (props: PlotProps) => {
 		if (line === null || !current || (!current.lower && !current.upper)) {
 			return null;
 		}
-		const text = `boundary: ${names()[line]?.text ?? ""}`;
 		return {
 			slot: styles()[line]?.slot ?? 1,
-			text: current.model ? `${text} · ${current.model}` : text,
+			name: names()[line] as LineName,
+			model: current.model,
 		};
 	};
 	/** The first panel's axes row heads the plot, which a tile does without. */
@@ -459,12 +467,7 @@ const Plot = (props: PlotProps) => {
 				: undefined;
 		return href
 			? {
-					name: fullName(
-						line.benchmark,
-						line.parameters,
-						data()?.measures[line.measure]?.name,
-						line.metric,
-					),
+					name: names()[row.line]?.text ?? "",
 					href,
 					action,
 					refused: props.alerts.refused?.(alert.uuid) === true,
@@ -601,29 +604,31 @@ const Plot = (props: PlotProps) => {
 														<line x1="1" y1="4" x2="11" y2="4" />
 													</svg>
 												</Show>
-												<span class="pl-ellipsis">{titleOf(spec.axes[0])}</span>
+												<AxisTitle parts={titleOf(spec.axes[0])} />
 											</span>
-											<span class="pl-status">
-												<Show when={lead(index())}>
-													<Show when={boundary()}>
-														{(current) => (
-															<span class="pl-pill on">
-																<Swatch
-																	slot={current().slot}
-																	shape="circle"
-																	stroke="dashed"
-																/>
-																<span class="pl-ellipsis">
-																	{current().text}
-																</span>
-															</span>
-														)}
-													</Show>
-													<Show when={props.note}>
-														<span class="pl-note">{props.note}</span>
-													</Show>
-												</Show>
-											</span>
+											<Show when={lead(index()) && boundary()}>
+												{(current) => (
+													<span class="pl-pill on">
+														<Swatch
+															slot={current().slot}
+															shape="circle"
+															stroke="dashed"
+														/>
+														<span>boundary:</span>{" "}
+														<span class="pl-pname ui-parts">
+															<NameParts name={current().name} cut />
+														</span>
+														<Show when={current().model}>
+															{(model) => (
+																<span class="pl-model"> · {model()}</span>
+															)}
+														</Show>
+													</span>
+												)}
+											</Show>
+											<Show when={lead(index()) && props.note}>
+												<span class="pl-note">{props.note}</span>
+											</Show>
 											<Show when={lead(index()) && alerts() > 0}>
 												<span class="pl-pill alert">
 													<span class="pl-alertdot" aria-hidden="true" />
@@ -633,9 +638,7 @@ const Plot = (props: PlotProps) => {
 											</Show>
 											<Show when={spec.axes[1]}>
 												<span class="pl-pill pl-axt">
-													<span class="pl-ellipsis">
-														{titleOf(spec.axes[1])}
-													</span>
+													<AxisTitle parts={titleOf(spec.axes[1])} />
 													<svg
 														class="pl-axglyph"
 														data-stroke="dotted"
@@ -670,7 +673,7 @@ const Plot = (props: PlotProps) => {
 								pinned={cursor()?.pinned ?? false}
 								hint={!(cursor()?.pinned || byKeys())}
 								single={lines().length === 1}
-								names={names().map(({ text }) => text)}
+								names={names()}
 								styles={styles()}
 								hash={data()?.reports[current().report]?.hash?.slice(0, 7)}
 								href={reportLink(current().report)}
@@ -698,7 +701,7 @@ const Plot = (props: PlotProps) => {
 					order={order()}
 					hidden={hidden()}
 					focused={resolved()}
-					constants={constantParameters(lines())}
+					shared={named().shared}
 					alerting={(line) => alerting(lines()[line])}
 					max={keyMax()}
 					compact={size() === "tile"}
@@ -806,7 +809,7 @@ interface ReadoutProps {
 	/** A click would pin the readout, so it says so. */
 	hint: boolean;
 	single: boolean;
-	names: readonly string[];
+	names: readonly LineName[];
 	styles: ReturnType<typeof lineStyles>;
 	hash: string | undefined;
 	href: string | undefined;
@@ -871,14 +874,25 @@ const Readout = (props: ReadoutProps) => {
 						const name = () => (
 							<Show when={!props.single && props.styles[row.line]}>
 								{(current) => (
-									<>
+									<span class="pl-rname ui-parts">
 										<Swatch
 											slot={current().slot}
 											shape={current().shape}
 											stroke={current().axis === 1 ? "dotted" : "solid"}
 										/>
-										<span class="pl-rname">{props.names[row.line]}</span>
-									</>
+										<Show when={current().ordinal}>
+											{(ordinal) => (
+												<span
+													class="pl-ord"
+													data-fixed
+													data-ordinal={ordinal()}
+												/>
+											)}
+										</Show>
+										<Show when={props.names[row.line]}>
+											{(line) => <NameParts name={line()} />}
+										</Show>
+									</span>
 								)}
 							</Show>
 						);
@@ -902,7 +916,10 @@ const Readout = (props: ReadoutProps) => {
 							<Show
 								when={row.iterations}
 								fallback={
-									<div class="pl-rrow" classList={{ focused: row.focused }}>
+									<div
+										class="pl-rrow ui-parts"
+										classList={{ focused: row.focused }}
+									>
 										{name()}
 										<b class="pl-mono">{row.value}</b>
 										{delta()}
@@ -913,7 +930,7 @@ const Readout = (props: ReadoutProps) => {
 								{(iterations) => (
 									<>
 										<Show when={!props.single}>
-											<div class="pl-rrow">{name()}</div>
+											<div class="pl-rrow ui-parts">{name()}</div>
 										</Show>
 										<For each={iterations()}>
 											{(each) => (

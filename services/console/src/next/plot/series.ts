@@ -14,6 +14,8 @@ export interface LineStyle {
 	slot: number;
 	/** Past eight series, a repeated color changes its point shape. */
 	shape: Shape;
+	/** Counting from 1, once color and shape repeat. */
+	ordinal: number | undefined;
 	/** The plot of a stacked layout that draws the line. */
 	panel: number;
 	/** 1 for the right axis of a dual layout. */
@@ -50,6 +52,7 @@ export const lineStyles = (
 		return {
 			slot: (index % SLOTS) + 1,
 			shape: SHAPES[Math.floor(index / SLOTS) % SHAPES.length] as Shape,
+			ordinal: index < SLOTS * SHAPES.length ? undefined : index + 1,
 			panel: layout === "stacked" ? position : 0,
 			axis: layout === "dual" ? position : 0,
 		};

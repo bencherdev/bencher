@@ -19,6 +19,7 @@ import type { PlotAlerts } from "../plot/Plot";
 import type { PlotData } from "../plot/types";
 import type { GroupRow, ReportLine } from "./lines";
 import LineRow, { COLUMNS, RowExplore } from "./LineRow";
+import { shortNames } from "./row";
 import { type Slot, isGroup, offsetsOf, slotRange } from "./slots";
 import { formatCount } from "../plot/count";
 
@@ -60,7 +61,8 @@ interface LineTableProps {
 	};
 	/** Each line's own controls: a last column when wide, after the Explore links, and when narrow a third line for the lines `narrow` names. */
 	actions?: {
-		cell: (line: ReportLine) => JSX.Element;
+		/** `name` reads what the line's controls call it, short among the table's lines. */
+		cell: (line: ReportLine, name: () => string) => JSX.Element;
 		narrow: (line: ReportLine) => boolean;
 	};
 	/** The lines drawn dimmed. */
@@ -173,6 +175,22 @@ const LineTable = (props: LineTableProps) => {
 	createEffect(on(offsets, measure));
 
 	const shown = createMemo(() => props.slots.slice(range().start, range().end));
+	// Once per list, so each row's controls name its line by what tells it apart.
+	const names = createMemo(() => {
+		const lines = props.slots.filter(
+			(slot): slot is ReportLine => !isGroup(slot),
+		);
+		const short = shortNames(
+			lines.map((line) => ({
+				benchmark: line.benchmark.name,
+				parameters: line.parameters,
+				measure: line.measure.name,
+				metric: line.metric,
+			})),
+			props.metrics,
+		);
+		return new Map(lines.map((line, index) => [line.key, short[index] ?? ""]));
+	});
 	const above = () => offsets()[range().start] ?? 0;
 	const below = () => (offsets().at(-1) ?? 0) - (offsets()[range().end] ?? 0);
 	// Each row's link into Explore arrives at the first idle moment after the rows are drawn, or sooner when the reader moves toward the lines.
@@ -317,9 +335,16 @@ const LineTable = (props: LineTableProps) => {
 								beside={beside}
 								dimmed={props.dimmed?.(slot) === true}
 								actions={
-									acts(slot) ? () => props.actions?.cell(slot) : undefined
+									acts(slot)
+										? () =>
+												props.actions?.cell(
+													slot,
+													() => names().get(slot.key) ?? "",
+												)
+										: undefined
 								}
 								explore={intent() ? props.explore?.([slot]) : undefined}
+								name={names().get(slot.key)}
 								href={props.href?.(slot)}
 								onIntent={() => {
 									RowPlot.preload();
