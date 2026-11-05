@@ -823,3 +823,45 @@ async fn locked_user_key_rejected() {
         "locked user's key should be rejected"
     );
 }
+
+// GET /v0/users/{user}/keys?sort=created - oldest first, a page at a time
+#[tokio::test]
+async fn user_keys_sort_created() {
+    let server = TestServer::new().await;
+    let user = server.signup("Sort User", "userkey-sort@example.com").await;
+    let user_slug: &str = user.slug.as_ref();
+    for name in ["charlie", "alpha", "bravo"] {
+        mint_key(&server, user_slug, &user.token, name).await;
+    }
+
+    let names = |query: &'static str| {
+        let server = &server;
+        let token = &user.token;
+        async move {
+            let resp = server
+                .client
+                .get(server.api_url(&format!("/v0/users/{}/keys?{}", user_slug, query)))
+                .header(
+                    bencher_json::AUTHORIZATION,
+                    bencher_json::bearer_header(token),
+                )
+                .send()
+                .await
+                .expect("Request failed");
+            assert_eq!(resp.status(), StatusCode::OK);
+            let keys: JsonUserKeys = resp.json().await.expect("Failed to parse keys");
+            keys.0
+                .into_iter()
+                .map(|key| key.name.to_string())
+                .collect::<Vec<_>>()
+        }
+    };
+
+    assert_eq!(names("per_page=2").await, ["alpha", "bravo"]);
+    assert_eq!(names("sort=created&per_page=2").await, ["charlie", "alpha"]);
+    assert_eq!(names("sort=created&per_page=2&page=2").await, ["bravo"]);
+    assert_eq!(
+        names("sort=created&direction=desc").await,
+        ["bravo", "alpha", "charlie"]
+    );
+}

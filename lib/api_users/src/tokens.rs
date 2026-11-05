@@ -41,6 +41,8 @@ pub enum UserTokensSort {
     /// Sort by token name.
     #[default]
     Name,
+    /// Sort by token creation date time.
+    Created,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -172,6 +174,14 @@ fn get_ls_query<'q>(
             },
             Some(JsonDirection::Desc) => {
                 query.order((schema::token::name.desc(), schema::token::expiration.desc()))
+            },
+        },
+        UserTokensSort::Created => match pagination_params.direction {
+            Some(JsonDirection::Asc) | None => {
+                query.order((schema::token::creation.asc(), schema::token::id.asc()))
+            },
+            Some(JsonDirection::Desc) => {
+                query.order((schema::token::creation.desc(), schema::token::id.desc()))
             },
         },
     }
