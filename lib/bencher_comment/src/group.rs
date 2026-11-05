@@ -392,6 +392,7 @@ fn adapter_docs(adapter: Adapter) -> (&'static str, &'static str) {
         },
         Adapter::PythonPytest => ("Python Pytest", "-python-pytest"),
         Adapter::RubyBenchmark => ("Ruby Benchmark", "%EF%B8%8F-ruby-benchmark"),
+        Adapter::RubyBenchmarkIps => ("Ruby benchmark-ips", "%EF%B8%8F-ruby-benchmark-ips"),
         Adapter::ShellHyperfine | Adapter::ShellHyperfineV1 | Adapter::ShellHyperfineV2 => {
             ("Shell Hyperfine", "_%EF%B8%8F-shell-hyperfine")
         },

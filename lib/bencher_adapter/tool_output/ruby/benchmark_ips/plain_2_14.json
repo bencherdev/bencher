@@ -1,0 +1,52 @@
+[
+  {
+    "name": "addition",
+    "central_tendency": 49916551.92125073,
+    "ips": 49916551.92125073,
+    "error": 3573701,
+    "stddev": 3573701,
+    "microseconds": 5072730.645001888,
+    "iterations": 251863330,
+    "cycles": 4268870
+  },
+  {
+    "name": "addition2",
+    "central_tendency": 142626436.0746379,
+    "ips": 142626436.0746379,
+    "error": 7960401,
+    "stddev": 7960401,
+    "microseconds": 5021123.368999481,
+    "iterations": 714035560,
+    "cycles": 12750635
+  },
+  {
+    "name": "addition3",
+    "central_tendency": 141308105.939646,
+    "ips": 141308105.939646,
+    "error": 11307635,
+    "stddev": 11307635,
+    "microseconds": 5069876.265000105,
+    "iterations": 711888164,
+    "cycles": 13690157
+  },
+  {
+    "name": "symbol_label",
+    "central_tendency": 51372264.10817253,
+    "ips": 51372264.10817253,
+    "error": 1158502,
+    "stddev": 1158502,
+    "microseconds": 5066827.128000259,
+    "iterations": 260160200,
+    "cycles": 5203204
+  },
+  {
+    "name": "addition-test-long-label",
+    "central_tendency": 49583989.92555732,
+    "ips": 49583989.92555732,
+    "error": 1322711,
+    "stddev": 1322711,
+    "microseconds": 5015733.196998835,
+    "iterations": 248514129,
+    "cycles": 4359897
+  }
+]
