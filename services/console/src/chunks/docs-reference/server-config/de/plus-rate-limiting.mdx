@@ -111,4 +111,18 @@ Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
 |    free     | 10737418240  | 10737418240  |     Nein     | Maximale Bytes pro Tag für kostenlose (beansprucht, ohne bezahlten Plan) Organisationen. Standardmäßig 10 GiB. |
 |    plus     | 107374182400 | 107374182400 |     Nein     | Maximale Bytes pro Tag für Plus (Pro/Enterprise) Organisationen. Standardmäßig 100 GiB.   |
 
+#### `email`
+
+Der `email`-Ratenbegrenzer gilt pro E-Mail-Adresse für die E-Mails, die eine Anmeldung starten.
+Er enthält `minute`-, `hour`- und `day`-Limits.
+Der gesamte Abschnitt ist optional.
+Wenn nicht angegeben, werden die aufgelisteten Standardwerte verwendet.
+Eine Adresse an ihrem Limit erhält keine neue E-Mail, und ihre frühere Anmeldung funktioniert weiterhin.
+
+|       Name       | Beispiel | Standard | Erforderlich |                           Beschreibung                                      |
+| :--------------: | :------: | :------: | :----------: | :-------------------------------------------------------------------------: |
+|      minute      |    2     |    2     |     Nein     |           Maximale Anmelde-E-Mails pro Minute pro E-Mail-Adresse.           |
+|       hour       |    6     |    6     |     Nein     |           Maximale Anmelde-E-Mails pro Stunde pro E-Mail-Adresse.           |
+|       day        |    12    |    12    |     Nein     |             Maximale Anmelde-E-Mails pro Tag pro E-Mail-Adresse.            |
+
 [unclaimed projects]: /de/docs/how-to/claim/#unclaimed-projects

@@ -3,10 +3,17 @@ No entanto, alguns valores padrão podem ser personalizados para atender às sua
 usando as seguintes variáveis de ambiente:
 
 - `BENCHER_API_URL`: A URL para [o servidor da API do Bencher][server config].
+  O servidor do Console retransmite para ela cada requisição do navegador, sob `/api` na própria URL do Console.
   Por padrão, está definido como `http://localhost:6610`.
-- `INTERNAL_API_URL`: Ao usar redes baseadas em Docker, como com `docker compose`,
-  isto é necessário para a comunicação Docker-para-Docker ao usar um `BENCHER_API_URL` local.
-  Não defina esta variável quando estiver usando um `BENCHER_API_URL` remoto, como `https://bencher.example.com`.
+- `INTERNAL_API_URL`: A URL para a qual o servidor do Console retransmite no lugar de `BENCHER_API_URL`,
+  quando alcança o servidor da API por outro endereço.
+  O [Docker Compose][docker compose] a define como `http://bencher_api:6610`,
+  o contêiner do servidor da API na rede Docker que os dois compartilham,
+  assim como o [`bencher up`][bencher up] quando `BENCHER_API_URL` não está definido ou aponta para um endereço de loopback, como `localhost`.
+  Caso contrário, por padrão, não está definida.
+- `BENCHER_RELAY_SECRET`: O segredo que o servidor do Console compartilha com [o `security.relay_secret` do servidor da API][security].
+  Definido com o mesmo valor nos dois servidores, o servidor da API confia no endereço IP do navegador que o servidor do Console retransmite,
+  e aceita uma sessão somente em uma requisição que o servidor do Console retransmite.
   Por padrão, não está definida.
 - `OAUTH_GITHUB`: Defina como `true` para habilitar `Login with GitHub` usando um [App do GitHub auto-hospedado][github app].
   Isto requer um [plano Bencher Plus Enterprise][bencher plus enterprise]. Por padrão, não está definido.
@@ -14,6 +21,9 @@ usando as seguintes variáveis de ambiente:
   Isto requer um [plano Bencher Plus Enterprise][bencher plus enterprise]. Por padrão, não está definido.
 
 [server config]: /pt/docs/reference/server-config/
+[security]: /pt/docs/reference/server-config/#security
+[bencher up]: /pt/docs/reference/bencher-compose/#bencher-up
+[docker compose]: /pt/docs/reference/bencher-compose/#docker-compose
 [github app]: /pt/docs/how-to/github-app/
 [bencher plus enterprise]: /pricing/?level=enterprise
 [google oauth2]: /pt/docs/how-to/google-oauth/

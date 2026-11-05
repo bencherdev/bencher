@@ -149,6 +149,9 @@ const ADMIN_OLDER_REPORT: i64 = ADMIN_NEWEST_REPORT - 24 * 60 * 60;
 pub struct Seed {
     api_url: String,
     console_url: String,
+    /// A second console, whose relay secret is not the API's, and which reaches the API only
+    /// through `INTERNAL_API_URL`.
+    wrong_secret_console_url: String,
     /// The API's log, which holds every email it sends.
     api_log: String,
     now: DateTime,
@@ -217,6 +220,7 @@ impl Seed {
     pub async fn new(
         api_url: &str,
         console_url: &str,
+        wrong_secret_console_url: &str,
         db: &Utf8Path,
         api_log: &str,
     ) -> anyhow::Result<Self> {
@@ -280,6 +284,7 @@ impl Seed {
         Ok(Self {
             api_url: api_url.to_owned(),
             console_url: console_url.to_owned(),
+            wrong_secret_console_url: wrong_secret_console_url.to_owned(),
             api_log: api_log.to_owned(),
             now: DateTime::try_from(NOW)?,
             admin,

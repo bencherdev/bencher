@@ -124,6 +124,8 @@ COPY --from=packager /usr/src/bencher/services/console /usr/src/bencher
 ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV BENCHER_API_URL=http://localhost:6610
+# By default Node refuses past 16 KB of request line and headers, which a URL the console relays reaches with its cookies.
+ENV NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--max-http-header-size=32768"
 EXPOSE 3000
 
 CMD ["/usr/src/bencher/dist/server/entry.mjs"]

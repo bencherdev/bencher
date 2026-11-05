@@ -4,7 +4,15 @@ import { blankQuery, decodeQuery, encodeQuery } from "../src/next/query/query";
 import { createProject, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
 import { dimensions, explore } from "./explore";
-import { expect, seed, settle, signedIn, signedOut, test } from "./fixtures";
+import {
+	expect,
+	seed,
+	settle,
+	signedIn,
+	signedOut,
+	test,
+	RELAY,
+} from "./fixtures";
 import { createPin } from "./plots";
 import {
 	DAY,
@@ -20,7 +28,7 @@ test.use({ freezeClock: false });
 const apiRequests = (page: Page) => {
 	const asked: Request[] = [];
 	page.on("request", (sent) => {
-		if (sent.url().startsWith(seed.api_url)) {
+		if (sent.url().startsWith(RELAY)) {
 			asked.push(sent);
 		}
 	});
@@ -78,10 +86,13 @@ test.describe("signed out", () => {
 		await settle(page);
 		expect(sent(asked).sort((a, b) => a.route.localeCompare(b.route))).toEqual([
 			{
-				route: `GET /v0/console/projects/${project.slug}/perf`,
+				route: `GET /api/v0/console/projects/${project.slug}/perf`,
 				authorization: undefined,
 			},
-			{ route: `GET /v0/projects/${project.slug}`, authorization: undefined },
+			{
+				route: `GET /api/v0/projects/${project.slug}`,
+				authorization: undefined,
+			},
 		]);
 
 		const opened = context.waitForEvent("page");

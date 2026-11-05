@@ -9,6 +9,7 @@ import {
 	settle,
 	signedIn,
 	test,
+	RELAY,
 } from "./fixtures";
 
 const { hashbrown } = seed.projects;
@@ -58,7 +59,7 @@ const lineRequests = (page: Page) => {
 	page.on("request", (request) => {
 		const url = new URL(request.url());
 		if (
-			request.url().startsWith(seed.api_url) &&
+			request.url().startsWith(RELAY) &&
 			/\/v0\/console\/projects\/[^/]+\/reports\//.test(url.pathname)
 		) {
 			urls.push(url);

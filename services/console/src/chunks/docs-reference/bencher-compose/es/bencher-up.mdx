@@ -16,9 +16,17 @@ import Help from "./cli/help.mdx";
 Crea e inicia los contenedores autoalojados de Bencher.
 Esto es similar a ejecutar [`docker compose up`][docker compose up].
 
+Ambos contenedores se unen a una red de Docker llamada `bencher`, que `bencher up` crea, o reutiliza si una ejecución anterior la dejó.
+Se detiene con un error ante una red `bencher` que no creó,
+y `bencher up console` conecta un contenedor `bencher_api` en ejecución que aún no está en la red.
+Cuando el `BENCHER_API_URL` del servidor de la Consola no está configurado o nombra una dirección de loopback, como `localhost`, el servidor de la Consola reenvía allí al contenedor del servidor de la API:
+su `INTERNAL_API_URL` es `http://bencher_api:6610`, a menos que la establezca con [la opción `--console-env`][console env].
+De lo contrario, reenvía a `BENCHER_API_URL`.
+
 <BencherUpCmd />
 
 [docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[console env]: #--console-env-key_value
 
 <UpService />
 

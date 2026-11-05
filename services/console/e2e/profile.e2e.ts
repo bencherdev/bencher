@@ -6,7 +6,7 @@ import type {
 import type { JsonAuthUser } from "../src/types/bencher";
 import { createReader, readUser, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, consolePath, seed, signedIn, test } from "./fixtures";
+import { expect, consolePath, seed, signedIn, test, RELAY } from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
@@ -19,7 +19,7 @@ const save = (page: Page) => page.getByRole("button", { name: "Save changes" });
 
 /** The API says `user` has two legacy tokens, since no API makes one any more. */
 const twoLegacyTokens = (page: Page, user: string) =>
-	page.route(`${seed.api_url}/v0/users/${user}/tokens?*`, async (route) => {
+	page.route(`${RELAY}/v0/users/${user}/tokens?*`, async (route) => {
 		const response = await route.fetch();
 		await route.fulfill({
 			response,
@@ -101,7 +101,7 @@ test.describe("Profile", () => {
 		// A user key cannot change an email; the API holds a session's change for
 		// its confirm link and answers with the current email, as here.
 		const sent: unknown[] = [];
-		await page.route(`${seed.api_url}/v0/users/${uuid}`, async (route) => {
+		await page.route(`${RELAY}/v0/users/${uuid}`, async (route) => {
 			if (route.request().method() !== "PATCH") {
 				await route.fallback();
 				return;

@@ -17,7 +17,6 @@ const DEFAULT_PAGE = 1;
 export type RadioValue = string;
 
 export interface Props {
-	apiUrl: string;
 	value: FieldValue;
 	config: RadioConfig;
 	params: undefined | Params;
@@ -65,7 +64,7 @@ const Radio = (props: Props) => {
 		url: string;
 		token: undefined | string;
 	}) => {
-		return await httpGet(props.apiUrl, fetcher.url, fetcher.token)
+		return await httpGet(fetcher.url, fetcher.token)
 			.then((resp) => {
 				setTotalCount(resp?.headers?.[X_TOTAL_COUNT]);
 				return resp?.data;

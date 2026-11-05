@@ -8,6 +8,8 @@ Bencher Self-Hosted 컨테이너를 중지하고 제거합니다,
 `bencher up`이 [`--detach` 플래그][detach flag]로 실행된 경우.
 이는 [`docker compose down`][docker compose down]을 실행하는 것과 유사합니다.
 
+`bencher` 네트워크에 남은 컨테이너가 없으면, 그 네트워크도 제거합니다.
+
 <BencherDownCmd />
 
 [docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/

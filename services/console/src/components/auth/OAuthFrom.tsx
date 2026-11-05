@@ -6,7 +6,6 @@ import { AUTHORIZATION_PARAM, requestUuid } from "./authorize/path";
 import { startSignIn } from "./signIn";
 
 interface Props {
-	apiUrl: string;
 	newUser: boolean;
 	github: undefined | string;
 	google: undefined | string;
@@ -22,9 +21,7 @@ const OAuthForm = (props: Props) => {
 					type="button"
 					class="button is-fullwidth"
 					style="margin-top: 3rem;"
-					onMouseDown={() =>
-						authPath(props.apiUrl, "/v0/auth/github", searchParams)
-					}
+					onMouseDown={() => authPath("/v0/auth/github", searchParams)}
 				>
 					<span class="icon">
 						<i class="fab fa-github" />
@@ -37,9 +34,7 @@ const OAuthForm = (props: Props) => {
 					type="button"
 					class="button is-fullwidth"
 					style="margin-top: 1rem;"
-					onMouseDown={() =>
-						authPath(props.apiUrl, "/v0/auth/google", searchParams)
-					}
+					onMouseDown={() => authPath("/v0/auth/google", searchParams)}
 				>
 					<span class="icon">
 						<i class="fab fa-google" />
@@ -52,7 +47,6 @@ const OAuthForm = (props: Props) => {
 };
 
 const authPath = async (
-	apiUrl: string,
 	pathname: string,
 	searchParams: Record<string, string>,
 ) => {
@@ -71,7 +65,7 @@ const authPath = async (
 	if (authorization) {
 		path += `${path.includes("?") ? "&" : "?"}${AUTHORIZATION_PARAM}=${authorization}`;
 	}
-	await httpGet(apiUrl, path, null)
+	await httpGet(path, null)
 		.then((resp) => {
 			const navigate = useNavigate();
 			const state = new URL(resp.data.url).searchParams.get("state");

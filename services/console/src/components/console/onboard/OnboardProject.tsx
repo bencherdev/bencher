@@ -30,11 +30,7 @@ import CopyButton from "./CopyButton";
 import OnboardSteps from "./OnboardSteps";
 import { OnboardStep } from "./OnboardStepsInner";
 
-export interface Props {
-	apiUrl: string;
-}
-
-const OnboardProject = (props: Props) => {
+const OnboardProject = () => {
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -76,7 +72,7 @@ const OnboardProject = (props: Props) => {
 			return;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -122,7 +118,7 @@ const OnboardProject = (props: Props) => {
 			return;
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -177,7 +173,7 @@ const OnboardProject = (props: Props) => {
 		const data: JsonNewProject = {
 			name: `${user?.user?.name}'s project`,
 		};
-		return await httpPost(props.apiUrl, path, fetcher.token, data)
+		return await httpPost(path, fetcher.token, data)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -243,7 +239,7 @@ const OnboardProject = (props: Props) => {
 			name: fetcher.renameProject,
 			slug: new_slug(fetcher.renameProject),
 		};
-		return await httpPatch(props.apiUrl, path, fetcher.token, data)
+		return await httpPatch(path, fetcher.token, data)
 			.then((resp) => {
 				setSubmitting(false);
 				refetchProjects();

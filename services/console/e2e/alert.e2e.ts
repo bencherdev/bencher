@@ -12,6 +12,7 @@ import {
 	signedOut,
 	tabRow,
 	test,
+	RELAY,
 } from "./fixtures";
 
 const { hashbrown } = seed.projects;
@@ -223,7 +224,7 @@ test.describe("signed in", () => {
 		const alert = await alertOf(request, hashbrown.slug, "blake3");
 		await page.goto(await exploreOf(page, hashbrown.slug, alert.uuid));
 		await page.route(
-			`${seed.api_url}/v0/console/projects/${hashbrown.slug}/alerts`,
+			`${RELAY}/v0/console/projects/${hashbrown.slug}/alerts`,
 			(route) =>
 				route.request().method() === "PATCH"
 					? route.fulfill({ status: 500, json: {} })
@@ -290,7 +291,7 @@ test.describe("signed in", () => {
 				.toBe("dismissed");
 
 			const held: (() => void)[] = [];
-			const path = `${seed.api_url}/v0/console/projects/${project.slug}/alerts/${alert.uuid}`;
+			const path = `${RELAY}/v0/console/projects/${project.slug}/alerts/${alert.uuid}`;
 			await page.route(path, async (route) => {
 				await new Promise<void>((resolve) => held.push(resolve));
 				await route.fallback();
@@ -396,7 +397,7 @@ test.describe("signed in", () => {
 		await expect(heading(page)).toHaveText("2 active");
 
 		const held: (() => void)[] = [];
-		const perf = `${seed.api_url}/v0/console/projects/${project.slug}/perf**`;
+		const perf = `${RELAY}/v0/console/projects/${project.slug}/perf**`;
 		await page.route(perf, async (route) => {
 			await new Promise<void>((resolve) => held.push(resolve));
 			await route.fallback();
@@ -435,7 +436,7 @@ test.describe("signed in", () => {
 		await expect(heading(page)).toHaveText("3 active");
 
 		const held: (() => void)[] = [];
-		const perf = `${seed.api_url}/v0/console/projects/${project.slug}/perf**`;
+		const perf = `${RELAY}/v0/console/projects/${project.slug}/perf**`;
 		await page.route(perf, async (route) => {
 			await new Promise<void>((resolve) => held.push(resolve));
 			await route.fallback();

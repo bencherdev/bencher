@@ -1,8 +1,6 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
-
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { BENCHER_SITE_URL } from "../../util/ext";
 import Authorize from "../../components/auth/authorize/Authorize";
@@ -30,7 +28,7 @@ const description = "Approve or deny an app's request to connect to Bencher";
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-half">
-          <Authorize client:only="solid-js" apiUrl={BENCHER_API_URL} request={request} />
+          <Authorize client:only="solid-js" request={request} />
         </div>
       </div>
     </div>
