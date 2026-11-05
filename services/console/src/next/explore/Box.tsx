@@ -69,6 +69,8 @@ const Box = (props: {
 	readOnly?: boolean | undefined;
 	/** The box holds as many values as the query reads: its add control says so instead. */
 	full?: boolean | undefined;
+	/** How many values the query reads, when not the eight of the other boxes. */
+	cap?: number | undefined;
 	/** Why nothing can be added, which its add control shows locked. */
 	locked?: string | undefined;
 	onRemove: (index: number) => void;
@@ -176,9 +178,9 @@ const Box = (props: {
 						type="button"
 						class="ex-add ex-locked"
 						aria-disabled="true"
-						aria-label={`Add ${props.noun}, ${held()} of ${MAX_ENTRIES}`}
+						aria-label={`Add ${props.noun}, ${held()} of ${props.cap ?? MAX_ENTRIES}`}
 					>
-						{held()} of {MAX_ENTRIES}
+						{held()} of {props.cap ?? MAX_ENTRIES}
 					</button>
 				</span>
 			</Show>

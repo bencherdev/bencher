@@ -17,8 +17,8 @@ use bencher_valid::{Architecture, Cpu, Disk, Memory, OperatingSystem};
 
 use crate::{
     AlertUuid, BenchmarkSlug, BenchmarkUuid, BranchNameId, BranchSlug, BranchUuid, HeadUuid,
-    JsonPerfQuery, MeasureSlug, MeasureUuid, ModelUuid, ParameterSet, ReportUuid, TestbedNameId,
-    TestbedSlug, TestbedUuid, ThresholdUuid, VariantUuid, VersionUuid,
+    JsonPerfQuery, MAX_METRIC_NAMES, MeasureSlug, MeasureUuid, ModelUuid, ParameterSet, ReportUuid,
+    TestbedNameId, TestbedSlug, TestbedUuid, ThresholdUuid, VariantUuid, VersionUuid,
     urlencoded::{UrlEncodedError, from_urlencoded, from_urlencoded_list},
 };
 #[cfg(feature = "plus")]
@@ -28,9 +28,11 @@ use super::{
     alert::AlertStatus,
     boundary::BoundaryLimit,
     head::{JsonVersion, VersionNumber},
-    perf::{JsonPerfQueryParams, MAX_DIMENSION_ENTRIES},
+    perf::JsonPerfQueryParams,
     plot::{JsonPlot, PlotUuid},
-    report::{Adapter, Iteration, JsonReportAlertsCounts, ParseOutcome, ReportAlerts},
+    report::{
+        Adapter, Iteration, JsonReportAlertsCounts, JsonReportWarning, ParseOutcome, ReportAlerts,
+    },
 };
 
 /// How many lines a report page returns when the request does not say.
@@ -146,6 +148,10 @@ pub struct JsonConsoleReport {
     /// archived branch or testbed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub run: Option<JsonConsoleReportRun>,
+    /// What the report skipped or ignored, by resource and action, on the first
+    /// page only, and absent when it has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warnings: Option<Vec<JsonReportWarning>>,
     /// The history window, which ends at this report.
     pub window: JsonConsoleWindow,
     /// The number of lines in the report that match the search and filters.
@@ -686,7 +692,7 @@ pub struct JsonConsolePerfQueryParams {
     /// An optional comma separated list of URL encoded metric names to draw.
     /// Leaving this off draws each branch, testbed, variant, and measure with every
     /// metric name it reported in the window.
-    /// Only the first 8 are read.
+    /// Only the first 32 are read.
     pub metrics: Option<String>,
     /// The start of the window in milliseconds.
     /// Defaults to four weeks before its end.
@@ -738,7 +744,7 @@ impl TryFrom<JsonConsolePerfQueryParams> for JsonConsolePerfQuery {
             && !metrics.is_empty()
         {
             let mut metrics: Vec<MetricName> = from_urlencoded_list(metrics)?;
-            metrics.truncate(MAX_DIMENSION_ENTRIES);
+            metrics.truncate(MAX_METRIC_NAMES);
             Some(metrics)
         } else {
             None
@@ -1022,7 +1028,37 @@ pub struct JsonConsoleRun {
     /// [`MAX_CONSOLE_ALERTS_PER_PAGE`].
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub alerting: Option<JsonConsoleAlerts>,
+    /// What its reports skipped or ignored, on the first page of a run whose
+    /// reports have any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warnings: Option<JsonConsoleRunWarnings>,
     pub reports: Vec<JsonConsoleRunReport>,
+}
+
+/// The most reports whose warnings a run's first page holds.
+pub const MAX_CONSOLE_RUN_WARNING_REPORTS: usize = 64;
+
+/// A run's warnings, grouped by report in start order.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleRunWarnings {
+    /// What every report's warnings count, over the whole run.
+    pub total: u32,
+    /// The first reports with warnings, at most [`MAX_CONSOLE_RUN_WARNING_REPORTS`].
+    pub groups: Vec<JsonConsoleWarningGroup>,
+}
+
+/// One report's warnings in its run, by resource and action.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonConsoleWarningGroup {
+    /// The report's place in the run by start, from 1.
+    pub order: u32,
+    pub uuid: ReportUuid,
+    pub testbed: JsonConsoleTestbed,
+    pub warnings: Vec<JsonReportWarning>,
 }
 
 /// A run, with what a link to it shows: the run page's Previous or Next control.
@@ -1071,8 +1107,8 @@ pub struct JsonConsoleRunReport {
 
 #[cfg(test)]
 mod tests {
-    use super::{JsonConsolePerfQuery, JsonConsolePerfQueryParams, MAX_DIMENSION_ENTRIES};
-    use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, TestbedUuid};
+    use super::{JsonConsolePerfQuery, JsonConsolePerfQueryParams};
+    use crate::{BenchmarkUuid, BranchUuid, MAX_METRIC_NAMES, MeasureUuid, TestbedUuid};
 
     fn query_params(metrics: Option<String>) -> JsonConsolePerfQueryParams {
         JsonConsolePerfQueryParams {
@@ -1089,9 +1125,10 @@ mod tests {
         }
     }
 
+    // Kills a metrics list cut at the other boxes' cap rather than a measure's.
     #[test]
     fn truncates_the_metrics_list() {
-        let metrics = (0..MAX_DIMENSION_ENTRIES + 2)
+        let metrics = (0..MAX_METRIC_NAMES + 2)
             .map(|index| format!("p{index}"))
             .collect::<Vec<_>>()
             .join(",");
@@ -1101,7 +1138,7 @@ mod tests {
 
         assert_eq!(
             query.metrics.map(|metrics| metrics.len()),
-            Some(MAX_DIMENSION_ENTRIES)
+            Some(MAX_METRIC_NAMES)
         );
     }
 

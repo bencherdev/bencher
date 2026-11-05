@@ -639,3 +639,33 @@ for (const width of [1280, 390] as const) {
 		expect(document.documentElement.scrollWidth).toBe(width);
 	});
 }
+
+// Kills a metrics box full at the other boxes' eight, which keeps a reader from
+// a measure's every statistic, one that offers a 33rd name, and one that counts
+// its 32 against eight.
+test("the metrics box takes up to 32 names", async () => {
+	const names = (count: number) =>
+		Array.from({ length: count }, (_, n) => `m${n}`);
+	const metrics = () => page.getByRole("group", { name: "Metrics" });
+	render(
+		reading(() => []).api,
+		{ ...QUERY, metrics: names(8) },
+		{ perf: PERF },
+	);
+	await expect
+		.element(metrics().getByRole("button", { name: "Add metric", exact: true }))
+		.toBeVisible();
+	cleanup?.();
+
+	render(
+		reading(() => []).api,
+		{ ...QUERY, metrics: names(32) },
+		{ perf: PERF },
+	);
+	await expect
+		.element(metrics().getByRole("button", { name: "Remove metric m31" }))
+		.toBeVisible();
+	await expect
+		.element(metrics().getByRole("button", { name: "Add metric, 32 of 32" }))
+		.toHaveAttribute("aria-disabled", "true");
+});

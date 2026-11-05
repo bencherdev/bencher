@@ -14,8 +14,9 @@ use bencher_json::{
             ConsoleAuthorKind, ConsoleJobStatus, DEFAULT_CONSOLE_RUNS_PER_PAGE, JsonConsoleAlerts,
             JsonConsoleAuthor, JsonConsoleBranch, JsonConsoleJob, JsonConsoleRun,
             JsonConsoleRunJobs, JsonConsoleRunLink, JsonConsoleRunQueryParams,
-            JsonConsoleRunReport, JsonConsoleRunSummary, JsonConsoleRuns, JsonConsoleRunsQuery,
-            JsonConsoleRunsQueryParams, JsonConsoleTestbed, MAX_CONSOLE_RUN_NAMES,
+            JsonConsoleRunReport, JsonConsoleRunSummary, JsonConsoleRunWarnings, JsonConsoleRuns,
+            JsonConsoleRunsQuery, JsonConsoleRunsQueryParams, JsonConsoleTestbed,
+            JsonConsoleWarningGroup, MAX_CONSOLE_RUN_NAMES, MAX_CONSOLE_RUN_WARNING_REPORTS,
         },
         head::VersionNumber,
         report::{Adapter, Iteration, JsonReportAlertsCounts, ParseOutcome, ReportAlerts},
@@ -32,7 +33,7 @@ use bencher_schema::{
             ProjectId,
             branch::version::VersionId,
             key::ProjectKeyId,
-            report::ReportId,
+            report::{ReportId, warning::get_reports_warnings},
             testbed::{QueryTestbed, TestbedId},
         },
         user::{
@@ -46,7 +47,7 @@ use diesel::{
     BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, JoinOnDsl as _,
     NullableExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
     SelectableExpression,
-    dsl::{count, count_star, min},
+    dsl::{count, count_star, min, sum},
     sql_types::Bool,
     sqlite::Sqlite,
 };
@@ -910,8 +911,8 @@ async fn get_one_inner(
         .map(|row| row.testbed.uuid)
         .collect::<HashSet<_>>()
         .len();
-    // The heading's steps and the run's alerts belong to its first page.
-    let (previous, next, alerting) = if query_params.page.unwrap_or(1) <= 1 {
+    // The heading's steps and the run's alerts and warnings belong to its first page.
+    let (previous, next, alerting, warnings) = if query_params.page.unwrap_or(1) <= 1 {
         let (previous, next) = neighbors(
             conn,
             project.id,
@@ -924,9 +925,13 @@ async fn get_one_inner(
             (&project, path_params.version)
         ))?;
         let alerting = alerting(conn, context, project.id, version.0, &facts, &rows)?;
-        (previous, next, alerting)
+        let warnings = run_warnings(conn, &version_ids, &rows).map_err(resource_not_found_err!(
+            Report,
+            (&project, path_params.version)
+        ))?;
+        (previous, next, alerting, warnings)
     } else {
-        (None, None, None)
+        (None, None, None, None)
     };
     let (offset, page) = page_of(&rows, query_params.page, query_params.per_page);
     let reports = page
@@ -950,8 +955,57 @@ async fn get_one_inner(
         previous,
         next,
         alerting,
+        warnings,
         reports,
     })
+}
+
+/// The warnings of the run's first reports that have any, in run order, and what
+/// every report's warnings count, read by the run so a run of many reports binds
+/// one value; none when no report has any.
+fn run_warnings(
+    conn: &mut DbConnection,
+    version_ids: &[VersionId],
+    rows: &[ReportRow],
+) -> diesel::QueryResult<Option<JsonConsoleRunWarnings>> {
+    let sums = schema::report_warning::table
+        .filter(schema::report_warning::report_id.eq_any(visible_report_ids!(version_ids)))
+        .group_by(schema::report_warning::report_id)
+        .select((
+            schema::report_warning::report_id,
+            sum(schema::report_warning::count),
+        ))
+        .load::<(ReportId, Option<i64>)>(conn)?
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+    if sums.is_empty() {
+        return Ok(None);
+    }
+    let total = sums.values().fold(0u32, |total, sum| {
+        total.saturating_add(u32::try_from(sum.unwrap_or_default()).unwrap_or(u32::MAX))
+    });
+    let shown = rows
+        .iter()
+        .enumerate()
+        .filter(|(_, row)| sums.contains_key(&row.id))
+        .take(MAX_CONSOLE_RUN_WARNING_REPORTS)
+        .collect::<Vec<_>>();
+    let ids = shown.iter().map(|(_, row)| row.id).collect::<Vec<_>>();
+    let mut warnings = get_reports_warnings(conn, &ids)?;
+    let groups = shown
+        .into_iter()
+        .filter_map(|(index, row)| {
+            warnings
+                .remove(&row.id)
+                .map(|warnings| JsonConsoleWarningGroup {
+                    order: to_u32(index + 1),
+                    uuid: row.uuid,
+                    testbed: row.testbed.clone(),
+                    warnings,
+                })
+        })
+        .collect();
+    Ok(Some(JsonConsoleRunWarnings { total, groups }))
 }
 
 impl ReportRow {
