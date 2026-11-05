@@ -16,6 +16,7 @@ import {
 	signedOut,
 	test,
 	USER_KEY,
+	RELAY,
 } from "./fixtures";
 import { finishGitHub, startGitHub } from "./github";
 
@@ -61,7 +62,7 @@ const signsIn = async (page: Page, project: JsonProject) => {
  * answers is recorded; preflights go on to the API, which allows them.
  */
 const fakeGitHub = async (page: Page, project: JsonProject) => {
-	const path = `${seed.api_url}/v0/projects/${project.slug}/github`;
+	const path = `${RELAY}/v0/projects/${project.slug}/github`;
 	const sent: { method: string; url: string; body: unknown }[] = [];
 	let link: { linked_repository?: JsonLinkedRepository } = {};
 	const answer = (status: number, json: unknown) => ({
@@ -99,7 +100,7 @@ const fakeGitHub = async (page: Page, project: JsonProject) => {
 				)
 			: route.fallback(),
 	);
-	await page.route(`${seed.api_url}/v0/github/exchange`, (route) => {
+	await page.route(`${RELAY}/v0/github/exchange`, (route) => {
 		const request = route.request();
 		if (request.method() !== "POST") {
 			return route.fallback();
@@ -252,7 +253,7 @@ test.describe("as the project's Maintainer", () => {
 		request,
 	}) => {
 		const project = await createProject(request);
-		await page.route(`${seed.api_url}/v0/github/exchange`, (route) =>
+		await page.route(`${RELAY}/v0/github/exchange`, (route) =>
 			route.request().method() === "POST"
 				? route.fulfill({
 						status: 400,
@@ -381,7 +382,7 @@ for (const [reader, storageState] of [
 			const project = await createProject(request);
 			const exchanged: string[] = [];
 			page.on("request", (sent) => {
-				if (sent.url().startsWith(`${seed.api_url}/v0/github/exchange`)) {
+				if (sent.url().startsWith(`${RELAY}/v0/github/exchange`)) {
 					exchanged.push(sent.method());
 				}
 			});

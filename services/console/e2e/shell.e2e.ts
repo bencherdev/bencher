@@ -9,6 +9,7 @@ import {
 	signedIn,
 	tabRow,
 	test,
+	RELAY,
 } from "./fixtures";
 
 const { hashbrown } = seed.projects;
@@ -73,7 +74,7 @@ test.describe("signed in", () => {
 		page.on("request", (request) => {
 			if (request.resourceType() === "document") {
 				documents.push(request.url());
-			} else if (request.url().startsWith(seed.api_url)) {
+			} else if (request.url().startsWith(RELAY)) {
 				api.push(request.url());
 			}
 		});
@@ -106,7 +107,7 @@ test.describe("signed in", () => {
 		await expect.poll(() => persistedQueries(page)).toBeGreaterThan(0);
 
 		const held: Route[] = [];
-		await page.route(`${seed.api_url}/**`, (route) => {
+		await page.route(`${RELAY}/**`, (route) => {
 			held.push(route);
 		});
 		await page.reload();

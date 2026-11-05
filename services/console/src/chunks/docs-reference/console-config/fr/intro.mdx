@@ -3,10 +3,17 @@ Cependant, certains paramètres par défaut peuvent être personnalisés pour s'
 en utilisant les variables d'environnement suivantes :
 
 - `BENCHER_API_URL`: L'URL pour [le serveur API de Bencher][server config].
+  Le serveur Console relaie vers celle-ci chaque requête du navigateur, sous `/api` sur l'URL propre de la Console.
   Par défaut, cela est défini sur `http://localhost:6610`.
-- `INTERNAL_API_URL`: Lors de l'utilisation d'un réseau basé sur Docker, par exemple avec `docker compose`,
-  ceci est nécessaire pour la communication Docker-à-Docker lorsque vous utilisez une `BENCHER_API_URL` locale.
-  Ne le définissez pas lorsque vous utilisez une `BENCHER_API_URL` distante, telle que `https://bencher.example.com`.
+- `INTERNAL_API_URL`: L'URL vers laquelle le serveur Console relaie à la place de `BENCHER_API_URL`,
+  lorsqu'il atteint le serveur API par une autre adresse.
+  [Docker Compose][docker compose] la définit sur `http://bencher_api:6610`,
+  le conteneur du serveur API sur le réseau Docker que les deux partagent,
+  tout comme [`bencher up`][bencher up] lorsque `BENCHER_API_URL` n'est pas défini ou désigne une adresse de bouclage, comme `localhost`.
+  Sinon, par défaut, ceci n'est pas défini.
+- `BENCHER_RELAY_SECRET`: Le secret que le serveur Console partage avec [le `security.relay_secret` du serveur API][security].
+  Défini à la même valeur sur les deux serveurs, le serveur API fait confiance à l'adresse IP du navigateur que relaie le serveur Console,
+  et n'accepte une session que sur une requête que relaie le serveur Console.
   Par défaut, ceci n'est pas défini.
 - `OAUTH_GITHUB`: Définissez sur `true` pour activer `Login with GitHub` en utilisant une [Application GitHub auto-hébergée][github app].
   Cela nécessite un [plan Bencher Plus Enterprise][bencher plus enterprise]. Par défaut, ceci n'est pas défini.
@@ -14,6 +21,9 @@ en utilisant les variables d'environnement suivantes :
   Cela nécessite un [plan Bencher Plus Enterprise][bencher plus enterprise]. Par défaut, ceci n'est pas défini.
 
 [server config]: /fr/docs/reference/server-config/
+[security]: /fr/docs/reference/server-config/#security
+[bencher up]: /fr/docs/reference/bencher-compose/#bencher-up
+[docker compose]: /fr/docs/reference/bencher-compose/#docker-compose
 [github app]: /fr/docs/how-to/github-app/
 [bencher plus enterprise]: /pricing/?level=enterprise
 [google oauth2]: /fr/docs/how-to/google-oauth/

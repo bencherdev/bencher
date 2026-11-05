@@ -20,6 +20,7 @@ import {
 	signedIn,
 	signedOut,
 	test,
+	RELAY,
 } from "./fixtures";
 import {
 	DAY,
@@ -103,7 +104,7 @@ test.describe("signed out", () => {
 		const { project, search } = await twoRecentLines(request);
 		const changes: string[] = [];
 		page.on("request", (sent) => {
-			if (sent.url().startsWith(seed.api_url) && sent.method() !== "GET") {
+			if (sent.url().startsWith(RELAY) && sent.method() !== "GET") {
 				changes.push(`${sent.method()} ${sent.url()}`);
 			}
 		});
@@ -382,8 +383,8 @@ test.describe("signed out", () => {
 	});
 
 	// Kills a public plot whose document names the project only after a read
-	// on the server, one without the site's preview image, and one without the
-	// API URL the browser reads it from.
+	// on the server, one without the site's preview image, and one that tells
+	// the browser where the API lives, which it reads through the relay.
 	test("the document carries the preview image and reads nothing on the server", async ({
 		request,
 	}) => {
@@ -394,8 +395,7 @@ test.describe("signed out", () => {
 			/<meta property="og:image" content="https:\/\/s3\.amazonaws\.com\/public\.bencher\.dev\/img\/bencher-og-image\.png"/,
 		);
 		expect(html).not.toContain(hashbrown.name);
-		// The deploy check reads the build's API URL here.
-		expect(html).toContain(`data-api-url="${seed.api_url}"`);
+		expect(html).not.toContain(seed.api_url);
 	});
 
 	// Kills a private project drawn for nobody, a page that asks the API again
@@ -405,7 +405,7 @@ test.describe("signed out", () => {
 	}) => {
 		const asked: string[] = [];
 		page.on("request", (sent) => {
-			if (sent.url().startsWith(seed.api_url)) {
+			if (sent.url().startsWith(RELAY)) {
 				asked.push(sent.url());
 			}
 		});
@@ -419,7 +419,7 @@ test.describe("signed out", () => {
 		).toHaveAttribute("href", signInWayBack(path));
 		await page.waitForLoadState("networkidle");
 		expect(asked).toEqual([
-			`${seed.api_url}/v0/projects/${seed.projects.private.slug}`,
+			`${RELAY}/v0/projects/${seed.projects.private.slug}`,
 		]);
 	});
 
@@ -492,7 +492,7 @@ test.describe("a signed in member", () => {
 		const { private: locked } = seed.projects;
 		const reads: (string | undefined)[] = [];
 		page.on("request", (sent) => {
-			if (sent.url() === `${seed.api_url}/v0/projects/${locked.slug}`) {
+			if (sent.url() === `${RELAY}/v0/projects/${locked.slug}`) {
 				reads.push(sent.headers().authorization);
 			}
 		});

@@ -1,7 +1,15 @@
 import { createProject, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
 import { dimensions } from "./explore";
-import { expect, consolePath, seed, signedIn, tabRow, test } from "./fixtures";
+import {
+	expect,
+	consolePath,
+	seed,
+	signedIn,
+	tabRow,
+	test,
+	RELAY,
+} from "./fixtures";
 
 const { empty, hashbrown } = seed.projects;
 const DAY = 24 * 60 * 60 * 1000;
@@ -116,7 +124,7 @@ test.describe("a project's Maintainer", () => {
 			const url = new URL(sent.url());
 			// Each poll asks for the Runs list's first batch.
 			if (
-				url.pathname === `/v0/console/projects/${project.slug}/runs` &&
+				url.pathname === `/api/v0/console/projects/${project.slug}/runs` &&
 				url.searchParams.get("page") === "1" &&
 				url.searchParams.has("start_time")
 			) {
@@ -180,7 +188,7 @@ test.describe("a project's Maintainer", () => {
 					document.querySelector('main[aria-busy="true"]') !== null;
 			}).observe(document.body, { childList: true, subtree: true });
 		});
-		await page.route(`${seed.api_url}/**`, async (route) => {
+		await page.route(`${RELAY}/**`, async (route) => {
 			await new Promise((resolve) => setTimeout(resolve, 800));
 			await route.continue();
 		});
@@ -201,7 +209,7 @@ test.describe("a project's Maintainer", () => {
 	test("blank Explore draws when its latest runs fail", async ({ page }) => {
 		await page.route(
 			(url) =>
-				url.pathname === `/v0/console/projects/${hashbrown.slug}/runs` &&
+				url.pathname === `/api/v0/console/projects/${hashbrown.slug}/runs` &&
 				url.searchParams.get("per_page") === "4",
 			(route) => route.fulfill({ status: 500, json: {} }),
 		);

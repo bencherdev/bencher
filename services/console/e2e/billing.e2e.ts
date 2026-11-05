@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { createOrganization } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, seed, signedIn, test } from "./fixtures";
+import { expect, seed, signedIn, test, RELAY } from "./fixtures";
 
 const billingPath = (organization: string) =>
 	`/console/organizations/${organization}/billing`;
@@ -67,7 +67,7 @@ const checkoutReturn = (organization: string) =>
 /** Every plan Billing posts, answering each with `status`. */
 const planRequests = async (page: Page, status?: number) => {
 	const plans: unknown[] = [];
-	await page.route(`${seed.api_url}/v0/organizations/*/plan`, async (route) => {
+	await page.route(`${RELAY}/v0/organizations/*/plan`, async (route) => {
 		if (route.request().method() !== "POST") {
 			return route.fallback();
 		}
@@ -111,17 +111,14 @@ test.describe("Stripe's return", () => {
 		// A usage read from before the plan never answers, and every one after it waits for the test.
 		const held: (() => void)[] = [];
 		let reads = 0;
-		await page.route(
-			`${seed.api_url}/v0/organizations/*/usage`,
-			async (route) => {
-				reads += 1;
-				if (plans.length === 0) {
-					await new Promise<void>(() => {});
-				}
-				await new Promise<void>((resolve) => held.push(resolve));
-				await route.fallback();
-			},
-		);
+		await page.route(`${RELAY}/v0/organizations/*/usage`, async (route) => {
+			reads += 1;
+			if (plans.length === 0) {
+				await new Promise<void>(() => {});
+			}
+			await new Promise<void>((resolve) => held.push(resolve));
+			await route.fallback();
+		});
 		const enrolled = page.getByRole("status").filter({ hasText: "Enrolled" });
 		const license = page.getByRole("region", { name: "Enterprise License" });
 		await page.goto(checkoutReturn(seed.organization.slug));

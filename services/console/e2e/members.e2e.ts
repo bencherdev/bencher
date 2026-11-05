@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import { createOrganization, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, seed, signedIn, test } from "./fixtures";
+import { expect, seed, signedIn, test, RELAY } from "./fixtures";
 
 const membersPath = (organization: string) =>
 	`/console/organizations/${organization}/members`;
@@ -27,7 +27,7 @@ test.describe("Members", () => {
 				(response) =>
 					response.request().method() === "POST" &&
 					response.url() ===
-						`${seed.api_url}/v0/organizations/${organization.slug}/members`,
+						`${RELAY}/v0/organizations/${organization.slug}/members`,
 			),
 			page.getByRole("button", { name: "Send invite" }).click(),
 		]);

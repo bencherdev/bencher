@@ -8,6 +8,7 @@ import {
 	signedIn,
 	signedOut,
 	test,
+	RELAY,
 } from "./fixtures";
 import { finishGitHub, startGitHub } from "./github";
 import { mailedLink } from "./mail";
@@ -166,15 +167,12 @@ test.describe("signed in", () => {
 		await expect(page.getByText("Verified", { exact: true })).toBeVisible();
 		await expect(page.getByText("Bencher knows this app.")).toBeVisible();
 
-		await page.route(
-			`${seed.api_url}/v0/oauth/authorizations/*`,
-			async (route) => {
-				const response = await route.fetch();
-				const json = await response.json();
-				json.client.verified = false;
-				await route.fulfill({ response, json });
-			},
-		);
+		await page.route(`${RELAY}/v0/oauth/authorizations/*`, async (route) => {
+			const response = await route.fetch();
+			const json = await response.json();
+			json.client.verified = false;
+			await route.fulfill({ response, json });
+		});
 		await page.reload();
 		await expect(heading(page)).toHaveText("Connect client.example to Bencher");
 		await expect(page.getByText("Verified", { exact: true })).toHaveCount(0);
@@ -377,7 +375,7 @@ test.describe("signed out", () => {
 		page.on("request", (request) => {
 			if (
 				request.method() === "POST" &&
-				request.url().startsWith(`${seed.api_url}/v0/oauth/`)
+				request.url().startsWith(`${RELAY}/v0/oauth/`)
 			) {
 				answers.push(request.url());
 			}
@@ -402,7 +400,7 @@ test.describe("signed out", () => {
 	test("an unknown or malformed request is an error", async ({ page }) => {
 		const reads: string[] = [];
 		page.on("request", (request) => {
-			if (request.url().startsWith(`${seed.api_url}/v0/oauth/`)) {
+			if (request.url().startsWith(`${RELAY}/v0/oauth/`)) {
 				reads.push(request.url());
 			}
 		});

@@ -33,7 +33,6 @@ import { signInPath } from "./path";
 import { scopeText } from "./scope";
 
 export interface Props {
-	apiUrl: string;
 	request: ConsentRequest;
 }
 
@@ -45,11 +44,11 @@ const Authorize = (props: Props) => {
 	if ("error" in request) {
 		return <Ended text={consentErrorText(request.error)} />;
 	}
-	return <Consent apiUrl={props.apiUrl} uuid={request.uuid} />;
+	return <Consent uuid={request.uuid} />;
 };
 
-const Consent = (props: { apiUrl: string; uuid: string }) => {
-	const url = apiUrl(props.apiUrl, `/v0/oauth/authorizations/${props.uuid}`);
+const Consent = (props: { uuid: string }) => {
+	const url = apiUrl(`/v0/oauth/authorizations/${props.uuid}`);
 	const [loaded] = createResource(() => view(url));
 	const [user, setUser] = createSignal(signedInUser());
 	const [ended, setEnded] = createSignal<Refusal>();

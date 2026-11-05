@@ -31,11 +31,7 @@ import FieldKind from "../../field/kind";
 import OnboardSteps from "./OnboardSteps";
 import { OnboardStep } from "./OnboardStepsInner";
 
-export interface Props {
-	apiUrl: string;
-}
-
-const OnboardInvite = (props: Props) => {
+const OnboardInvite = () => {
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -77,7 +73,7 @@ const OnboardInvite = (props: Props) => {
 			return;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -164,7 +160,7 @@ const OnboardInvite = (props: Props) => {
 			email: fetcher.form?.email?.value,
 			role: OrganizationRole.Leader,
 		};
-		return await httpPost(props.apiUrl, path, fetcher.token, data)
+		return await httpPost(path, fetcher.token, data)
 			.then((resp) => {
 				setInvited([...invited, data]);
 				setForm(initForm());

@@ -1,8 +1,6 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
-
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import OnboardProject from "../../../components/console/onboard/OnboardProject";
 import OnboardStepsFallback from "../../../components/console/onboard/OnboardStepsFallback";
@@ -16,7 +14,7 @@ import ThemeScript from "../../../components/navbar/theme/ThemeScript.astro";
 >
   <div slot="navbar" />
 
-  <OnboardProject client:only="solid-js" apiUrl={BENCHER_API_URL}>
+  <OnboardProject client:only="solid-js">
     <div slot="fallback">
       <OnboardStepsFallback step={OnboardStep.PROJECT} />
       <section class="section">

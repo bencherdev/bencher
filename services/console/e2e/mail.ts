@@ -37,6 +37,18 @@ export const signUp = async (
 	return (await confirm.json()) as JsonAuthUser;
 };
 
+/** The code in the newest sign in email the API sent to `email`. */
+export const mailedCode = async (email: string) => {
+	let code: undefined | string;
+	await expect
+		.poll(() => {
+			code = newestCode(email);
+			return code;
+		})
+		.toBeDefined();
+	return code as string;
+};
+
 // The API logs each email it sends as one JSON line, its first link the email's button.
 const newestLink = (email: string, subject: string) => {
 	const lines = readFileSync(seed.api_log, "utf8").split("\n").reverse();
@@ -47,6 +59,20 @@ const newestLink = (email: string, subject: string) => {
 			if (url) {
 				return new URL(url);
 			}
+		}
+	}
+	return undefined;
+};
+
+const newestCode = (email: string) => {
+	const lines = readFileSync(seed.api_log, "utf8").split("\n").reverse();
+	for (const line of lines) {
+		const msg = message(line);
+		const code = msg?.includes(`<${email}>`)
+			? msg.match(/^Subject: Your Bencher code is (\d{6})$/m)?.[1]
+			: undefined;
+		if (code) {
+			return code;
 		}
 	}
 	return undefined;
