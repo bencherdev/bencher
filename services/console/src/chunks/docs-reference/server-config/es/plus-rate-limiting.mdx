@@ -114,4 +114,18 @@ Si no se especifica, se utilizarán los valores predeterminados enumerados.
 |    free     | 10737418240  | 10737418240  |    No     | Bytes máximos por día para organizaciones gratuitas (reclamadas, sin plan de pago). Por defecto 10 GiB. |
 |    plus     | 107374182400 | 107374182400 |    No     | Bytes máximos por día para organizaciones Plus (Pro/Enterprise). Por defecto 100 GiB.      |
 
+#### `email`
+
+El limitador de tasa `email` se aplica por dirección de correo electrónico, a los correos que inician un inicio de sesión.
+Contiene límites de `minute`, `hour` y `day`.
+Toda la sección es opcional.
+Si no se especifica, se utilizarán los valores predeterminados enumerados.
+Una dirección en su límite no recibe un correo nuevo, y su inicio de sesión anterior sigue funcionando.
+
+|       Nombre     | Ejemplo | Por defecto | Requerido |                           Descripción                                         |
+| :--------------: | :-----: | :---------: | :-------: | :---------------------------------------------------------------------------: |
+|      minute      |    2    |      2      |     No    | Correos máximos de inicio de sesión por minuto por dirección de correo electrónico. |
+|       hour       |    6    |      6      |     No    | Correos máximos de inicio de sesión por hora por dirección de correo electrónico. |
+|       day        |    12   |      12     |     No    | Correos máximos de inicio de sesión por día por dirección de correo electrónico. |
+
 [unclaimed projects]: /es/docs/how-to/claim/#unclaimed-projects

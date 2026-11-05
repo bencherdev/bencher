@@ -25,11 +25,7 @@ import { ORGANIZATIONS_PATH, organizationPath } from "../../../next/paths";
 import { PLAN_PARAM } from "../../auth/auth";
 import { consoleDestination } from "./destination";
 
-export interface Props {
-	apiUrl: string;
-}
-
-const ConsoleRedirect = (props: Props) => {
+const ConsoleRedirect = () => {
 	onMount(() => removeOnboardProjectKey());
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
@@ -79,7 +75,7 @@ const ConsoleRedirect = (props: Props) => {
 			return;
 		}
 		const path = `/v0/console/users/${user.user.uuid}`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				const reader: JsonConsoleUser = resp?.data;
 				const destination = consoleDestination(

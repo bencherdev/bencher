@@ -1,8 +1,6 @@
 use std::{thread, time::Duration};
 
-use bencher_json::{
-    DEV_BENCHER_API_URL_STR, DEVEL_BENCHER_URL_STR, PROD_BENCHER_API_URL_STR, PROD_BENCHER_URL_STR,
-};
+use bencher_json::{DEVEL_BENCHER_URL_STR, PROD_BENCHER_URL_STR};
 use serde::Serialize;
 
 use crate::{API_VERSION, parser::TaskTestConsole};
@@ -46,24 +44,17 @@ impl TestConsole {
     }
 
     pub async fn exec(&self) -> anyhow::Result<()> {
-        let (console_url, api_url) = if self.dev {
-            (DEVEL_BENCHER_URL_STR, DEV_BENCHER_API_URL_STR)
+        let console_url = if self.dev {
+            DEVEL_BENCHER_URL_STR
         } else {
-            (PROD_BENCHER_URL_STR, PROD_BENCHER_API_URL_STR)
+            PROD_BENCHER_URL_STR
         };
 
         // TODO replace this with some actual e2e tests
         let project_slug = if self.dev { "the-computer" } else { "bencher" };
         let mut result = Ok(());
         for i in 0..5 {
-            match test_ui_project(
-                console_url,
-                api_url,
-                project_slug,
-                self.agent_key.as_deref(),
-            )
-            .await
-            {
+            match test_ui_project(console_url, project_slug, self.agent_key.as_deref()).await {
                 Ok(()) => {
                     result = Ok(());
                     break;
@@ -76,6 +67,7 @@ impl TestConsole {
             }
         }
         result?;
+        test_ui_relay(console_url, self.agent_key.as_deref()).await?;
         test_ui_version(console_url, self.agent_key.as_deref()).await?;
 
         let notify = Notify::new(&self.ref_name, console_url);
@@ -87,18 +79,24 @@ impl TestConsole {
 
 async fn test_ui_project(
     console_url: &str,
-    api_url: &str,
     project_slug: &str,
     agent_key: Option<&str>,
 ) -> anyhow::Result<()> {
-    // The public plot reads nothing on the server, so its document names the project by its slug
-    // and carries the API URL the browser reads it from.
+    // The public plot reads nothing on the server, so its document names the project by its slug.
     let url = format!("{console_url}/perf/{project_slug}");
     let title = format!("<title>{project_slug} | Bencher</title>");
-    let api = format!("data-api-url=\"{api_url}\"");
     println!("Testing UI project {project_slug} at {url}");
 
-    fetch_and_check(&url, agent_key, &[&title, &api]).await
+    fetch_and_check(&url, agent_key, &[&title]).await
+}
+
+async fn test_ui_relay(console_url: &str, agent_key: Option<&str>) -> anyhow::Result<()> {
+    let url = format!("{console_url}/api/v0/server/version");
+    println!("Testing UI relays to the API at version {API_VERSION} at {url}");
+
+    let version = format!("\"version\":\"{API_VERSION}\"");
+
+    fetch_and_check(&url, agent_key, &[&version]).await
 }
 
 async fn test_ui_version(console_url: &str, agent_key: Option<&str>) -> anyhow::Result<()> {

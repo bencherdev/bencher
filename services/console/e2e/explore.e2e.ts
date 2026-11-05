@@ -1,4 +1,11 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import { perfSearch } from "../src/next/explore/request";
+import {
+	type ExploreQuery,
+	MAX_ENTRIES,
+	blankQuery,
+} from "../src/next/query/query";
+import { MAX_URL_LENGTH } from "../src/next/url";
 import { createProject, listPlots, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
 import {
@@ -8,7 +15,15 @@ import {
 	plotAtEnd,
 	twoLines,
 } from "./explore";
-import { expect, consolePath, seed, signedIn, tabRow, test } from "./fixtures";
+import {
+	expect,
+	consolePath,
+	seed,
+	signedIn,
+	tabRow,
+	test,
+	RELAY,
+} from "./fixtures";
 import { DAY } from "./public";
 
 const { hashbrown } = seed.projects;
@@ -169,13 +184,10 @@ test("the lines drawn stay, marked busy, until the edit's answer arrives", async
 	const held = new Promise<void>((resolve) => {
 		release = resolve;
 	});
-	await page.route(
-		`${seed.api_url}/v0/console/projects/*/perf?*`,
-		async (route) => {
-			await held;
-			await route.continue();
-		},
-	);
+	await page.route(`${RELAY}/v0/console/projects/*/perf?*`, async (route) => {
+		await held;
+		await route.continue();
+	});
 	// When the plot was first marked busy, on the page's clock.
 	await page.evaluate(() => {
 		const holder = window as Window & { __busy?: number };
@@ -290,7 +302,7 @@ test("a refused plot query says so, keeps what was drawn, and Retry asks again",
 	request,
 }) => {
 	const { query } = await twoLines(request);
-	const perf = `${seed.api_url}/v0/console/projects/*/perf?*`;
+	const perf = `${RELAY}/v0/console/projects/*/perf?*`;
 	const failed = page.getByRole("region", { name: "Plot" }).getByRole("alert");
 	const retry = failed.getByRole("button", { name: "Retry" });
 
@@ -319,8 +331,8 @@ test("a refused plot query says so, keeps what was drawn, and Retry asks again",
 	await expect(failed).toHaveCount(0);
 });
 
-// Kills a query past what a URL holds sent anyway, which the API refuses with
-// no CORS headers, read as no network, or offered a Retry that cannot succeed.
+// Kills a query past what a URL holds sent anyway, or offered a Retry that
+// cannot succeed.
 test("a query too long for a URL is never sent, and says so with no Retry", async ({
 	page,
 	request,
@@ -353,6 +365,85 @@ test("a query too long for a URL is never sent, and says so with no Retry", asyn
 	await expect(failed).toContainText("Query too long");
 	await expect(failed.getByRole("button", { name: "Retry" })).toHaveCount(0);
 	expect(asked).toEqual([]);
+});
+
+/** The plot query's target for `query`, as the console's server reads it. */
+const perfTarget = (query: Partial<ExploreQuery>) =>
+	`/api/v0/console/projects/${hashbrown.slug}/perf${perfSearch({ ...blankQuery(), ...query }, Date.now())}`;
+
+/** `query` with as many CJK tags no line carries as keep its plot query's target within what a URL holds. */
+const justUnder = (query: Partial<ExploreQuery>): Partial<ExploreQuery> => {
+	const tags = (MAX_ENTRIES - (query.sets?.length ?? 0)) * 8;
+	// Each tag's value takes up to 21 characters, 63 bytes, of `chars`.
+	const withChars = (chars: number) => {
+		const sets: Record<string, string>[] = [];
+		for (let tag = 0; tag * 21 < chars && tag < tags; tag++) {
+			const index = Math.floor(tag / 8);
+			const set = sets[index] ?? {};
+			set[`${"键".repeat(19)}${String(tag).padStart(2, "0")}`] = "值".repeat(
+				Math.min(chars - tag * 21, 21),
+			);
+			sets[index] = set;
+		}
+		return { ...query, sets: [...(query.sets ?? []), ...sets] };
+	};
+	let chars = 0;
+	while (
+		chars < tags * 21 &&
+		perfTarget(withChars(chars + 1)).length <= MAX_URL_LENGTH
+	) {
+		chars++;
+	}
+	return withChars(chars);
+};
+
+// Kills a console server that refuses a query just under what a URL holds once
+// the browser's cookies for the console ride with it, as Node does past 16 KB of
+// request line and headers by default, which the page reads as the API refusing
+// the query.
+test("a query just under what a URL holds reaches the API with the console's cookies, and draws", async ({
+	page,
+	request,
+}) => {
+	const { query, id } = await twoLines(request);
+	await page
+		.context()
+		.addCookies([
+			{ name: "ballast", value: "b".repeat(4000), url: seed.console_url },
+		]);
+	await page.goto(
+		explore(hashbrown.slug, {
+			...query,
+			branches: [
+				{ uuid: id.branch("main") },
+				{ uuid: id.branch("feature-simd") },
+			],
+		}),
+	);
+	await expect(plot(page)).toHaveAccessibleName("4 lines");
+	const long = justUnder(query);
+	const answered = page.waitForResponse(
+		(response) =>
+			response.url().includes("/perf?") &&
+			response.url().length > MAX_URL_LENGTH - 256,
+	);
+	// A server would refuse so long a page URL, so the router moves to it in place.
+	await page.evaluate(
+		(href) => {
+			history.pushState(null, "", href);
+			dispatchEvent(new PopStateEvent("popstate"));
+		},
+		explore(hashbrown.slug, long),
+	);
+	const response = await answered;
+	const { pathname, search } = new URL(response.url());
+	expect(`${pathname}${search}`.length).toBeLessThanOrEqual(MAX_URL_LENGTH);
+	expect(`${pathname}${search}`.length).toBeGreaterThan(MAX_URL_LENGTH - 256);
+	expect(response.status()).toBe(200);
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	await expect(
+		page.getByRole("region", { name: "Plot" }).getByRole("alert"),
+	).toHaveCount(0);
 });
 
 // Kills a plot whose own code did not load leaving the frame loading for good
@@ -464,7 +555,7 @@ for (const measures of [["Latency"], ["Latency", "Throughput"]]) {
 		);
 		const drawn = `${2 * measures.length} lines`;
 		await expect(plot(page)).toHaveAccessibleName(drawn);
-		await page.route(`${seed.api_url}/v0/console/projects/*/perf?*`, (route) =>
+		await page.route(`${RELAY}/v0/console/projects/*/perf?*`, (route) =>
 			route.fulfill({ status: 400, body: "{}" }),
 		);
 		await box(page, "Parameters")
@@ -707,7 +798,7 @@ test("a latest run opens to its reports, and a report to the benchmarks it ran; 
 		if (
 			/\/v0\/console\/projects\/[^/]+\/(runs|reports)\/[^/?]+/.test(sent.url())
 		) {
-			asked.push(new URL(sent.url()).pathname.split("/")[5] ?? "");
+			asked.push(new URL(sent.url()).pathname.split("/")[6] ?? "");
 		}
 	});
 	await page.goto(consolePath(hashbrown.slug, "explore"));

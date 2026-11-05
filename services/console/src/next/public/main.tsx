@@ -18,13 +18,13 @@ import { publicPlotPath } from "./query";
 import { type Refusal, reads } from "./read";
 
 export const boot = (mount: HTMLElement) => {
-	const { apiUrl = "", slug = "" } = mount.dataset;
+	const { slug = "" } = mount.dataset;
 	const reader = readReader(localStorage);
 	const token =
 		reader && isCurrent(reader, Date.now()) ? reader.token : undefined;
 	// Read as no one first, so a public project draws the same for everyone;
 	// only a project that refuses everyone is read again as the reader.
-	let get = reads(apiUrl);
+	let get = reads();
 	const project = `/v0/projects/${encodeURIComponent(slug)}`;
 
 	const initial = decodeQuery(location.search);
@@ -53,7 +53,7 @@ export const boot = (mount: HTMLElement) => {
 			(error: Refusal) => {
 				const refused = Boolean(error.status && error.status < 500);
 				if (refused && token && !asReader) {
-					get = reads(apiUrl, token);
+					get = reads(token);
 					setView("checking");
 					return readProject(true);
 				}

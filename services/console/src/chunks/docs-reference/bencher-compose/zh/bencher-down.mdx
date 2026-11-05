@@ -8,6 +8,8 @@ import Help from "./cli/help.mdx";
 如果 `bencher up` 时使用了[ `--detach` 标志][detach flag]。
 这类似于运行 [`docker compose down`][docker compose down]。
 
+当 `bencher` 网络上不再有容器时，也会移除该网络。
+
 <BencherDownCmd />
 
 [docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/

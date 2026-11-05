@@ -31,6 +31,17 @@ const SENTRY_NO_REPLAY: &str = "PUBLIC_SENTRY_NO_REPLAY";
 /// The debug defaults the test tokens are signed with.
 const ISSUER: &str = "http://localhost:3000/";
 const SECRET_KEY: &str = "DO_NOT_USE_THIS_IN_PRODUCTION";
+/// The secret the API and the suite's console share, as Bencher Cloud's do.
+const RELAY_SECRET: &str = "DO_NOT_USE_THIS_RELAY_SECRET_IN_PRODUCTION";
+/// The secret of a second console, which the API does not share.
+const WRONG_RELAY_SECRET: &str = "NOT_THE_RELAY_SECRET_THE_API_SHARES";
+/// An API URL nothing answers at, so the second console reaches the API only through
+/// `INTERNAL_API_URL`.
+const UNREACHABLE_API_URL: &str = "http://127.0.0.1:9";
+const NODE_OPTIONS: &str = "NODE_OPTIONS";
+/// What the console's image adds to `NODE_OPTIONS`: by default Node refuses past 16 KB of request
+/// line and headers, which a URL the console relays reaches with its cookies.
+const MAX_HTTP_HEADER_SIZE: &str = "--max-http-header-size=32768";
 /// The app the suite connects to Bencher, whose redirects the browser never really reaches.
 const OAUTH_CLIENT: &str = "https://client.example/oauth/client.json";
 /// A test key, so the suite can show the identity scopes.
@@ -97,6 +108,7 @@ impl E2e {
     ) -> anyhow::Result<()> {
         let api_url = format!("http://127.0.0.1:{}", free_port()?);
         let console_url = format!("http://127.0.0.1:{}", free_port()?);
+        let wrong_secret_console_url = format!("http://127.0.0.1:{}", free_port()?);
 
         servers.api = Some(spawn_api(
             api_bin,
@@ -110,6 +122,7 @@ impl E2e {
         let seed = seed::Seed::new(
             &api_url,
             &console_url,
+            &wrong_secret_console_url,
             &dir.join("bencher.db"),
             servers.api_log.as_str(),
         )
@@ -119,11 +132,25 @@ impl E2e {
 
         servers.console = Some(spawn_console(
             console_dir,
-            &api_url,
             &console_url,
+            &[
+                ("BENCHER_API_URL", &api_url),
+                ("BENCHER_RELAY_SECRET", RELAY_SECRET),
+            ],
             &servers.console_log,
         )?);
+        servers.wrong_secret_console = Some(spawn_console(
+            console_dir,
+            &wrong_secret_console_url,
+            &[
+                ("BENCHER_API_URL", UNREACHABLE_API_URL),
+                ("INTERNAL_API_URL", &api_url),
+                ("BENCHER_RELAY_SECRET", WRONG_RELAY_SECRET),
+            ],
+            &servers.wrong_secret_console_log,
+        )?);
         wait_until_up(&console_url).await?;
+        wait_until_up(&wrong_secret_console_url).await?;
 
         println!("Running Playwright against {console_url}");
         // Not through `npx`, whose child would outlive it when a stop kills it.
@@ -149,6 +176,8 @@ struct Servers {
     api_log: Utf8PathBuf,
     console: Option<Child>,
     console_log: Utf8PathBuf,
+    wrong_secret_console: Option<Child>,
+    wrong_secret_console_log: Utf8PathBuf,
 }
 
 impl Servers {
@@ -158,11 +187,17 @@ impl Servers {
             api_log: dir.join("api.log"),
             console: None,
             console_log: dir.join("console.log"),
+            wrong_secret_console: None,
+            wrong_secret_console_log: dir.join("wrong_secret_console.log"),
         }
     }
 
     fn print_logs(&self) {
-        for (name, path) in [("API", &self.api_log), ("Console", &self.console_log)] {
+        for (name, path) in [
+            ("API", &self.api_log),
+            ("Console", &self.console_log),
+            ("Wrong secret console", &self.wrong_secret_console_log),
+        ] {
             let Ok(log) = fs::read_to_string(path) else {
                 continue;
             };
@@ -178,9 +213,13 @@ impl Servers {
 
 impl Drop for Servers {
     fn drop(&mut self) {
-        for child in [self.console.as_mut(), self.api.as_mut()]
-            .into_iter()
-            .flatten()
+        for child in [
+            self.console.as_mut(),
+            self.wrong_secret_console.as_mut(),
+            self.api.as_mut(),
+        ]
+        .into_iter()
+        .flatten()
         {
             // A server that already exited has nothing left to kill or reap.
             if child.kill().is_ok() {
@@ -273,6 +312,7 @@ fn spawn_api(
         "security": {
             "issuer": ISSUER,
             "secret_key": SECRET_KEY,
+            "relay_secret": RELAY_SECRET,
         },
         "server": {
             "bind_address": bind_address,
@@ -314,31 +354,43 @@ fn spawn_api(
 
 fn spawn_console(
     console_dir: &Utf8Path,
-    api_url: &str,
     console_url: &str,
+    env: &[(&str, &str)],
     log: &Utf8Path,
 ) -> anyhow::Result<Child> {
     let port = console_url.rsplit(':').next().context("No console port")?;
     let log = File::create(log)?;
-    console_command(console_dir, api_url, port)
+    console_command(console_dir, port, env)
         .stdout(log.try_clone()?)
         .stderr(log)
         .spawn()
         .context("Failed to start the console")
 }
 
-fn console_command(console_dir: &Utf8Path, api_url: &str, port: &str) -> Command {
+fn console_command(console_dir: &Utf8Path, port: &str, env: &[(&str, &str)]) -> Command {
     let mut command = Command::new("node");
     command
         .arg("dist/server/entry.mjs")
         .current_dir(console_dir)
         .env("HOST", "127.0.0.1")
         .env("PORT", port)
-        .env("BENCHER_API_URL", api_url)
+        .env(
+            NODE_OPTIONS,
+            node_options(std::env::var(NODE_OPTIONS).ok().as_deref()),
+        )
+        .envs(env.iter().copied())
         // The sign in pages offer GitHub, so the suite can follow a sign in through it.
         .env("OAUTH_GITHUB", "true")
         .env(SENTRY_DSN, TEST_SENTRY_DSN);
     command
+}
+
+/// The `NODE_OPTIONS` the suite was `given`, and after them what the console's image adds.
+fn node_options(given: Option<&str>) -> String {
+    match given.map(str::trim).filter(|given| !given.is_empty()) {
+        Some(given) => format!("{given} {MAX_HTTP_HEADER_SIZE}"),
+        None => MAX_HTTP_HEADER_SIZE.to_owned(),
+    }
 }
 
 async fn wait_until_up(url: &str) -> anyhow::Result<()> {
@@ -403,7 +455,10 @@ mod tests {
 
     use camino::Utf8Path;
 
-    use super::{SENTRY_DSN, SENTRY_NO_REPLAY, TEST_SENTRY_DSN, console_command, npm_command};
+    use super::{
+        MAX_HTTP_HEADER_SIZE, NODE_OPTIONS, SENTRY_DSN, SENTRY_NO_REPLAY, TEST_SENTRY_DSN,
+        console_command, node_options, npm_command,
+    };
 
     fn env<'c>(command: &'c Command, name: &str) -> Option<&'c OsStr> {
         command
@@ -419,12 +474,24 @@ mod tests {
         let dir = Utf8Path::new("services/console");
         let test = Some(OsStr::new(TEST_SENTRY_DSN));
         assert_eq!(env(&npm_command(dir, &["run", "build"]), SENTRY_DSN), test);
+        assert_eq!(env(&console_command(dir, "3000", &[]), SENTRY_DSN), test);
+    }
+
+    // Kills a test server left at Node's 16 KB of request line and headers, one that drops the
+    // `NODE_OPTIONS` the suite was given, and one that leaves a blank in front of the flag.
+    #[test]
+    fn console_serves_the_headers_the_image_reads() {
+        let dir = Utf8Path::new("services/console");
+        assert!(
+            env(&console_command(dir, "3000", &[]), NODE_OPTIONS)
+                .and_then(OsStr::to_str)
+                .is_some_and(|options| options.ends_with(MAX_HTTP_HEADER_SIZE))
+        );
+        assert_eq!(node_options(None), "--max-http-header-size=32768");
+        assert_eq!(node_options(Some(" ")), "--max-http-header-size=32768");
         assert_eq!(
-            env(
-                &console_command(dir, "http://127.0.0.1:61016", "3000"),
-                SENTRY_DSN
-            ),
-            test
+            node_options(Some("--enable-source-maps")),
+            "--enable-source-maps --max-http-header-size=32768"
         );
     }
 

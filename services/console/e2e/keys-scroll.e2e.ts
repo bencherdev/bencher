@@ -1,4 +1,4 @@
-import { consolePath, expect, seed, signedIn, test } from "./fixtures";
+import { consolePath, expect, seed, signedIn, test, RELAY } from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
@@ -22,7 +22,7 @@ for (const width of [390, 768]) {
 	}) => {
 		await page.setViewportSize({ width, height: 844 });
 		await page.route(
-			`${seed.api_url}/v0/projects/${hashbrown.slug}/keys?*`,
+			`${RELAY}/v0/projects/${hashbrown.slug}/keys?*`,
 			async (route) => {
 				if (route.request().method() !== "GET") {
 					return route.continue();
@@ -31,7 +31,7 @@ for (const width of [390, 768]) {
 				const size = Number(url.searchParams.get("per_page"));
 				const at = Number(url.searchParams.get("page"));
 				const list = url.searchParams.get("revoked") === "true" ? [] : KEYS;
-				// The API's own answer, for its CORS headers.
+				// The API's own answer, for its headers.
 				const response = await route.fetch();
 				const { "content-length": _, ...headers } = response.headers();
 				await route.fulfill({

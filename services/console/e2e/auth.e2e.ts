@@ -6,6 +6,7 @@ import {
 	signedIn,
 	signedOut,
 	test,
+	RELAY,
 } from "./fixtures";
 
 const signInWayBack = (path: string) =>
@@ -46,7 +47,7 @@ test.describe("signed in", () => {
 	test("a token the API refuses sends the reader to sign in with the way back", async ({
 		page,
 	}) => {
-		await page.route(`${seed.api_url}/v0/console/projects/**`, (route) =>
+		await page.route(`${RELAY}/v0/console/projects/**`, (route) =>
 			route.fulfill({ status: 401, json: { message: "Unauthorized" } }),
 		);
 		const path = consolePath(seed.projects.hashbrown.slug, "alerts");

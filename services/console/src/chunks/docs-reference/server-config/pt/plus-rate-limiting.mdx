@@ -114,4 +114,18 @@ Se não especificado, os valores padrão listados serão usados.
 |    free     | 10737418240  | 10737418240  |     Não     | Bytes máximos por dia para organizações gratuitas (reivindicadas, sem plano pago). Padrão de 10 GiB. |
 |    plus     | 107374182400 | 107374182400 |     Não     | Bytes máximos por dia para organizações Plus (Pro/Enterprise). Padrão de 100 GiB.          |
 
+#### `email`
+
+O limitador de taxa `email` se aplica por endereço de e-mail, aos e-mails que iniciam um login.
+Contém limites de `minute`, `hour` e `day`.
+Toda a seção é opcional.
+Se não especificado, os valores padrão listados serão usados.
+Um endereço no seu limite não recebe um novo e-mail, e o login anterior continua funcionando.
+
+|       Nome       | Exemplo | Padrão | Obrigatório |                           Descrição                                          |
+| :--------------: | :-----: | :----: | :---------: | :--------------------------------------------------------------------------: |
+|      minute      |    2    |   2    |     Não     |         E-mails de login máximos por minuto por endereço de e-mail.          |
+|       hour       |    6    |   6    |     Não     |          E-mails de login máximos por hora por endereço de e-mail.           |
+|       day        |    12   |   12   |     Não     |           E-mails de login máximos por dia por endereço de e-mail.           |
+
 [unclaimed projects]: /pt/docs/how-to/claim/#unclaimed-projects

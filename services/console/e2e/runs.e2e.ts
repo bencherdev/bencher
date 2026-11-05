@@ -9,12 +9,13 @@ import {
 	signedIn,
 	tabRow,
 	test,
+	RELAY,
 } from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
 const runs = (search = "") => `${consolePath(hashbrown.slug, "runs")}${search}`;
-const listPath = `/v0/console/projects/${hashbrown.slug}/runs`;
+const listPath = `/api/v0/console/projects/${hashbrown.slug}/runs`;
 
 const heading = (page: Page) => page.getByRole("heading", { level: 1 });
 const table = (page: Page) =>
@@ -45,7 +46,7 @@ const listRequests = (page: Page) => {
 	const urls: URL[] = [];
 	page.on("request", (request) => {
 		const url = new URL(request.url());
-		if (request.url().startsWith(seed.api_url) && url.pathname === listPath) {
+		if (request.url().startsWith(RELAY) && url.pathname === listPath) {
 			urls.push(url);
 		}
 	});
@@ -615,7 +616,7 @@ test("a filter menu loading its options leaves the page and the typing alone", a
 }) => {
 	await page.goto(runs());
 	await expect(heading(page)).toHaveText("15 runs");
-	await page.route(`${seed.api_url}/**/branches**`, async (route) => {
+	await page.route(`${RELAY}/**/branches**`, async (route) => {
 		await new Promise((resolve) => setTimeout(resolve, 1_000));
 		await route.continue();
 	});

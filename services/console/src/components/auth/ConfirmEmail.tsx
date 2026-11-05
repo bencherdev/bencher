@@ -9,11 +9,7 @@ import { hiddenRedirect, useSearchParams } from "../../util/url";
 import { init_valid, validJwt, validUuid } from "../../util/valid";
 import { TOKEN_PARAM, USER_PARAM } from "./auth";
 
-export interface Props {
-	apiUrl: string;
-}
-
-const ConfirmEmail = (props: Props) => {
+const ConfirmEmail = () => {
 	const [searchParams] = useSearchParams();
 	const user = searchParams[USER_PARAM];
 	const token = searchParams[TOKEN_PARAM];
@@ -27,12 +23,7 @@ const ConfirmEmail = (props: Props) => {
 		() => valid() && intent(),
 		async () => {
 			const confirm: JsonConfirm = { token: token as Jwt };
-			return await httpPut(
-				props.apiUrl,
-				`/v0/users/${user}/email`,
-				null,
-				confirm,
-			)
+			return await httpPut(`/v0/users/${user}/email`, null, confirm)
 				.then((resp) => {
 					const authUser: JsonAuthUser = resp.data;
 					const stored = getUserRaw();

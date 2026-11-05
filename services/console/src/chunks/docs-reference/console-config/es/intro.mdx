@@ -2,10 +2,17 @@ La interfaz de Bencher Console no requiere ninguna configuración.
 Sin embargo, algunos valores predeterminados se pueden personalizar para adaptarse a sus necesidades mediante las siguientes variables de entorno:
 
 - `BENCHER_API_URL`: La URL del servidor de la API de Bencher ([the Bencher API server][server config]).
+  El servidor de la Consola reenvía a ella cada solicitud del navegador, bajo `/api` en la propia URL de la Consola.
   Por defecto, esto está establecido en `http://localhost:6610`.
-- `INTERNAL_API_URL`: Al usar redes basadas en Docker, como con `docker compose`,
-  esto es necesario para la comunicación Docker a Docker cuando se utiliza un `BENCHER_API_URL` local.
-  No establezca esto cuando use un `BENCHER_API_URL` remoto, como `https://bencher.example.com`.
+- `INTERNAL_API_URL`: La URL a la que el servidor de la Consola reenvía en lugar de `BENCHER_API_URL`,
+  cuando llega al servidor de la API por otra dirección.
+  [Docker Compose][docker compose] la establece en `http://bencher_api:6610`,
+  el contenedor del servidor de la API en la red de Docker que ambos comparten,
+  y también [`bencher up`][bencher up] cuando `BENCHER_API_URL` no está configurado o nombra una dirección de loopback, como `localhost`.
+  De lo contrario, de forma predeterminada, no está configurado.
+- `BENCHER_RELAY_SECRET`: El secreto que el servidor de la Consola comparte con [el `security.relay_secret` del servidor de la API][security].
+  Con el mismo valor en ambos servidores, el servidor de la API confía en la dirección IP del navegador que reenvía el servidor de la Consola,
+  y acepta una sesión solo en una solicitud que reenvía el servidor de la Consola.
   De forma predeterminada, no está configurado.
 - `OAUTH_GITHUB`: Establézcalo en `true` para habilitar `Login with GitHub` usando un [GitHub App autohospedado][github app].
   Esto requiere un [plan Bencher Plus Enterprise][bencher plus enterprise]. De forma predeterminada, no está configurado.
@@ -13,6 +20,9 @@ Sin embargo, algunos valores predeterminados se pueden personalizar para adaptar
   Esto requiere un [plan Bencher Plus Enterprise][bencher plus enterprise]. De forma predeterminada, no está configurado.
 
 [server config]: /es/docs/reference/server-config/
+[security]: /es/docs/reference/server-config/#security
+[bencher up]: /es/docs/reference/bencher-compose/#bencher-up
+[docker compose]: /es/docs/reference/bencher-compose/#docker-compose
 [github app]: /es/docs/how-to/github-app/
 [bencher plus enterprise]: /pricing/?level=enterprise
 [google oauth2]: /es/docs/how-to/google-oauth/
