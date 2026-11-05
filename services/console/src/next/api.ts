@@ -1,3 +1,5 @@
+import { MAX_URL_LENGTH, URI_TOO_LONG } from "./url";
+
 /** Why a request failed, which decides whether to retry or send the reader to sign in. */
 export type ApiErrorKind =
 	| "unauthorized"
@@ -58,6 +60,11 @@ export const createApi = ({
 		if (now() >= expiration) {
 			throw new ApiError(undefined, "unauthorized", "The session has ended");
 		}
+		const target = `${url}${path}`;
+		// An edge's refusal carries no CORS headers, so the page would read it as no network.
+		if (target.length > MAX_URL_LENGTH) {
+			throw new ApiError(URI_TOO_LONG, "client", "URI Too Long");
+		}
 		const headers: Record<string, string> = {
 			Authorization: `Bearer ${token}`,
 		};
@@ -66,7 +73,7 @@ export const createApi = ({
 		}
 		let response: Response;
 		try {
-			response = await fetch(`${url}${path}`, {
+			response = await fetch(target, {
 				...(init.method ? { method: init.method } : {}),
 				headers,
 				...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),

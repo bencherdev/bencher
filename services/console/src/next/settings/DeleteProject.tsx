@@ -33,7 +33,7 @@ const DeleteProject = (props: {
 	const navigate = useNavigate();
 	const reader = useContext(AccountContext)?.reader().user.uuid;
 	const [typed, setTyped] = createSignal("");
-	const matches = () => typed() === props.project.slug;
+	const matches = () => typed().trim().toLowerCase() === props.project.slug;
 	const [deleting, setDeleting] = createSignal(false);
 	const [failed, setFailed] = createSignal<{ error: unknown }>();
 	const remove = async () => {
@@ -112,8 +112,7 @@ const DeleteProject = (props: {
 						class="mono"
 						value={typed()}
 						onInput={(event) => setTyped(event.currentTarget.value)}
-						autocomplete="off"
-						spellcheck={false}
+						slug
 						autofocus
 					/>
 				</div>

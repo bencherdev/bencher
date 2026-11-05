@@ -259,6 +259,7 @@ const OrganizationForm = (props: { organization: Shown }) => {
 					aria-invalid={problem(id) ? true : undefined}
 					autocomplete="off"
 					spellcheck={false}
+					slug={id === "slug"}
 				/>
 				<Show when={problem(id)}>
 					{(message) => (

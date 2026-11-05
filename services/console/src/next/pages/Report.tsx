@@ -27,7 +27,8 @@ import { useFold } from "../alerts/fold";
 import { ApiError } from "../api";
 import { alertPath, projectPath, reportPath, runPath } from "../paths";
 import { useNarrow } from "../plot/narrow";
-import { useProject, useProjectNavigate } from "../project";
+import { leafOf } from "../leaf";
+import { useEntityTitle, useProject, useProjectNavigate } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import Controls from "../report/Controls";
@@ -137,6 +138,13 @@ const Report = () => {
 	const next = () => batches()[loaded().length];
 	const first = () => loaded()[0]?.data;
 	const report = () => first()?.report;
+	useEntityTitle("Report", () => {
+		const shown = report();
+		return (
+			shown &&
+			`${leafOf(shown.branch.name)} ${shortHash(shown.version.hash) ?? `v${shown.version.number}`}`
+		);
+	});
 	/** The rows on screen are the last view's, until the new one answers. */
 	const busy = () => batches()[0]?.isPlaceholderData === true;
 	const [now, setNow] = createSignal(Date.now());
@@ -488,6 +496,7 @@ const Crumb = (props: {
 				return (
 					<>
 						<a
+							class="as-typed"
 							href={runPath(props.slug, version())}
 							onPointerMove={onMoved(intent)}
 							onFocus={intent}

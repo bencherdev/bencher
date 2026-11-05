@@ -61,12 +61,13 @@ test("the confirmation names the projects that go with the organization", async 
 		.toHaveAccessibleDescription("Gizmo and Windmill go with it.");
 });
 
-// Kills a gate that takes a prefix, ignores case or spaces, or compares with
-// the name instead of the slug; a delete sent to the wrong organization; a
+// Kills a gate that takes a prefix or another word, or compares with the name
+// instead of the slug, or one that refuses the slug a touch keyboard
+// capitalized or padded; a delete sent to the wrong organization; a
 // reader left on a page for an organization that is gone; the organization,
 // its projects, or the classic console's memory of it kept; and another
 // organization's project forgotten with it.
-test("Delete organization stays off until the slug is typed exactly, then deletes and leaves", async () => {
+test("Delete organization stays off until the slug is typed, then deletes and leaves", async () => {
 	localStorage.setItem(
 		VERSION_KEY,
 		JSON.stringify({ gizmo: 1, windmill: 1, cathode: 1 }),
@@ -76,18 +77,11 @@ test("Delete organization stays off until the slug is typed exactly, then delete
 	client.setQueryData(["console", "project", "gizmo"], {});
 	client.setQueryData(["console", "project", "cathode"], {});
 	await expect.element(typed).toHaveFocus();
-	for (const text of [
-		"",
-		"pompeii-l",
-		"Pompeii-LLC",
-		"pompeii-llc ",
-		" pompeii-llc",
-		"Pompeii LLC",
-	]) {
+	for (const text of ["", "pompeii-l", "pompeii-llcx", "Pompeii LLC"]) {
 		await typed.fill(text);
 		await expect.element(confirm).toBeDisabled();
 	}
-	await typed.fill("pompeii-llc");
+	await typed.fill(" Pompeii-LLC ");
 	await expect.element(confirm).toBeEnabled();
 
 	await confirm.click();

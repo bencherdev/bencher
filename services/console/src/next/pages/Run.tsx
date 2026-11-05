@@ -33,7 +33,8 @@ import { projectPath, runPath } from "../paths";
 import { formatWhen } from "../plot/format";
 import { formatCount } from "../plot/count";
 import { useNarrow } from "../plot/narrow";
-import { useProject } from "../project";
+import { leafOf } from "../leaf";
+import { useEntityTitle, useProject } from "../project";
 import { useQueryResult } from "../query";
 import { absoluteTime, duration } from "../reports/format";
 import { type Range, hasMore, loadMore } from "../reports/rows";
@@ -94,6 +95,10 @@ const Run = () => {
 	/** The batch after the loaded ones, while it loads or once it failed. */
 	const next = () => batches()[loaded().length];
 	const run = () => loaded()[0]?.data;
+	useEntityTitle("Run", () => {
+		const shown = run();
+		return shown && `${leafOf(shown.branch.name)} ${runHead(shown)}`;
+	});
 	const reports = createMemo(() => {
 		const seen = new Set<string>();
 		const all: JsonConsoleRunReport[] = [];

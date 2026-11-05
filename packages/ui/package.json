@@ -9,6 +9,7 @@
 	"exports": {
 		"./styles.css": "./src/styles.css",
 		"./fonts/*": "./src/fonts/*",
+		"./tail": "./src/tail.ts",
 		"./*": "./src/*.tsx"
 	},
 	"scripts": {

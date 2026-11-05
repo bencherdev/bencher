@@ -68,6 +68,31 @@ test.describe("New project", () => {
 	});
 });
 
+test.describe("New project as a member", () => {
+	test.use({ storageState: signedIn(seed.member) });
+
+	// Kills a slug line that grows when the slug rule's code arrives after the
+	// reader typed, which moves every field below it.
+	test("the slug arriving late moves nothing", async ({ page }) => {
+		let release = () => {};
+		const held = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		await page.route("**/*.wasm", async (route) => {
+			await held;
+			await route.continue();
+		});
+		await page.goto(newProject(seed.organization.slug));
+		const url = textbox(page, "URL");
+		await expect(url).toBeVisible();
+		await textbox(page, "Name").fill("Hash Brown");
+		const before = await url.boundingBox();
+		release();
+		await expect(page.getByText("hash-brown", { exact: true })).toBeVisible();
+		expect(await url.boundingBox()).toEqual(before);
+	});
+});
+
 test.describe("New project for an organization with a license", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
