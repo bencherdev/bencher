@@ -268,6 +268,7 @@ jobs:
     name: Publish Runner Canary
     needs: [changes, fetch_devel_builds]
     if: ${{ !failure() && !cancelled() && github.ref == 'refs/heads/cloud' && needs.changes.outputs.runner == 'true' && needs.fetch_devel_builds.result == 'success' }}
+    environment: Canary
     runs-on: ubuntu-22.04
     steps:
       - name: Download Runner Artifacts
