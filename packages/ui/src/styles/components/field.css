@@ -73,10 +73,12 @@
 	.ui-select-wrap {
 		position: relative;
 		display: inline-flex;
+		max-width: 100%;
 	}
 
 	.ui-select {
 		appearance: none;
+		min-width: 0;
 		padding-inline-end: var(--spacing-8);
 	}
 
