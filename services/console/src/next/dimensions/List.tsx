@@ -5,6 +5,7 @@ import Icon from "@bencherdev/ui/Icon";
 import Segmented from "@bencherdev/ui/Segmented";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import {
 	type QueryObserverResult,
 	useQueryClient,
@@ -219,11 +220,10 @@ const List = (props: {
 		}
 		setArming(undefined);
 		setFailure("");
-		const name = row.name;
 		setNote(
 			archive
-				? archivedNote(name, thresholdsOf(row))
-				: unarchivedNote(name, thresholdsOf(row), heldOf(row)),
+				? archivedNote(thresholdsOf(row))
+				: unarchivedNote(thresholdsOf(row), heldOf(row)),
 		);
 		const dimension = props.dimension;
 		const project = slug();
@@ -283,10 +283,7 @@ const List = (props: {
 						setNote("");
 					}
 					setFailure(
-						failureOf(
-							error,
-							`Bencher did not ${archive ? "archive" : "unarchive"} ${name}`,
-						),
+						failureOf(error, archive ? "Not archived" : "Not unarchived"),
 					);
 					throw error;
 				}
@@ -442,7 +439,7 @@ const List = (props: {
 				</p>
 				<Show when={failure()}>
 					<p class="ferror" role="alert">
-						{failure()}
+						<Truncate text={failure()} reveal />
 					</p>
 				</Show>
 				<Switch>

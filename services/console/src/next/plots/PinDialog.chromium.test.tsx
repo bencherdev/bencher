@@ -7,6 +7,7 @@ import { ApiError } from "../api";
 import { fakeApi, mount } from "../settings/testing";
 import PinDialog from "./PinDialog";
 import { testTile } from "./testing";
+import { drawingOf } from "./Tile";
 
 const DAY = 86_400;
 
@@ -237,4 +238,47 @@ test("a refused order read says the order did not load, and Retry reads it", asy
 		.element(dialog.getByRole("radio", { name: "Top" }))
 		.toBeEnabled();
 	expect(orderReads(reads)).toHaveLength(2);
+});
+
+// Kills a focused line at the caps that pushes the dialog sideways, or keeps
+// the start of its benchmark and loses the end that tells it apart.
+test("a long focused line keeps the dialog's width and its benchmark's end", async () => {
+	await page.viewport(390, 800);
+	const tile = testTile();
+	const name = `${"my_crate::".repeat(101)}bench_fn`;
+	tile.perf.benchmarks = [{ uuid: "benchmark-1", name, slug: "b" }];
+	const plot = { ...tile.plot, focus: drawingOf(tile).lines[0]?.id ?? "" };
+	const { api } = fakeApi(
+		async () => plot,
+		async (path: string) =>
+			({
+				data: new URL(path, "http://api.test").pathname.endsWith(
+					"/v0/console/projects/hashbrown/plots",
+				)
+					? { order, plots: [] }
+					: tile.perf,
+				headers: new Headers(),
+			}) as never,
+	);
+	dispose = mount(
+		() => (
+			<PinDialog
+				plot={plot}
+				order={order}
+				onClose={() => {}}
+				onSaved={() => {}}
+			/>
+		),
+		{ api },
+	).dispose;
+	const dialog = page.getByRole("dialog", { name: "Edit pin" });
+	const focused = dialog
+		.getByRole("definition")
+		.filter({ hasText: /^my_crate::/ });
+	await expect.element(focused).toBeVisible();
+	await expect
+		.element(focused.element().querySelector(".ui-trunc") as HTMLElement)
+		.toHaveAttribute("data-tail", "bench_fn size=1");
+	const body = dialog.element().querySelector(".ui-dialog-body") as HTMLElement;
+	expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth);
 });

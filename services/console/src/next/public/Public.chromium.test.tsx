@@ -408,3 +408,60 @@ test("on a phone the bar keeps Log in and Sign up on one row down to 320 px", as
 		}
 	}
 });
+
+// Kills a summary where one long name starves the other pills to their labels,
+// or keeps the start of a benchmark and loses the end that tells it apart.
+for (const width of [1280, 390] as const) {
+	test(`a long benchmark leaves the other summary pills whole at ${width} px`, async () => {
+		await page.viewport(width, 900);
+		show({
+			answer: {
+				...PERF,
+				benchmarks: [
+					{
+						uuid: uuid(5),
+						name: `${"my_crate::".repeat(101)}bench_fn`,
+						slug: "b",
+					},
+				],
+			},
+		});
+		await expect
+			.element(region().getByText("Query", { exact: true }))
+			.toBeVisible();
+		await document.fonts.ready;
+		const pills = [...region().element().querySelectorAll(".pu-pill")];
+		expect(pills).toHaveLength(6);
+		await expect
+			.element(pills[2]?.querySelector(".ui-trunc") as HTMLElement)
+			.toHaveAttribute("data-tail", "bench_fn");
+		for (const pill of pills) {
+			const value = pill.querySelector(".ui-trunc") as HTMLElement;
+			const label = pill.querySelector(".pu-k")?.textContent;
+			if (label !== "benchmarks") {
+				expect(value.dataset.cut, `${label} at ${width}`).toBeUndefined();
+			}
+			expect(pill.scrollWidth).toBeLessThanOrEqual(pill.clientWidth + 1);
+		}
+		expect(document.documentElement.scrollWidth).toBe(width);
+	});
+}
+
+// Kills a public page whose set tags draw unstyled, as text with no pill, and
+// a long tag cut there with no way to read it.
+test("a set's tag on the public page is a code pill whose long key opens in place", async () => {
+	await page.viewport(390, 900);
+	const key = "k".repeat(64);
+	show({ query: { ...QUERY, sets: [{ [key]: "v".repeat(64) }] } });
+	await userEvent.click(page.getByRole("button", { name: "Show query" }));
+	const reveal = page
+		.getByRole("group", { name: "Parameters" })
+		.getByRole("button", { name: key, exact: true });
+	await expect.element(reveal).toBeVisible();
+	const pill = reveal.element().closest(".lr-ptag") as HTMLElement;
+	const style = getComputedStyle(pill);
+	expect(style.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+	expect(style.fontFamily).toContain("monospace");
+	await reveal.click();
+	await expect.element(reveal).toHaveAttribute("aria-expanded", "true");
+});

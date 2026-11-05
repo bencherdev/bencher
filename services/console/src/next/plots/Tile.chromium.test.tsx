@@ -225,3 +225,64 @@ test("a tile's pinned readout on an alert links to it and dismisses it", async (
 	expect(changes).toEqual([["alert-1", "dismissed"]]);
 	await expect.element(flagged).not.toBeInTheDocument();
 });
+
+// Kills a tile head where a long branch squeezes the plot's title, or the
+// title pushes the branch's end out.
+test("a tile's title and its branch and testbed share the head fairly", async () => {
+	const tile = testTile();
+	const branch = `release/${"subsystem/".repeat(23)}very-long-leaf`;
+	const long = {
+		...tile,
+		perf: {
+			...tile.perf,
+			branches: [{ ...tile.perf.branches[0], name: branch }],
+		},
+	} as JsonConsolePlot;
+	for (const width of [1280, 320]) {
+		await page.viewport(width, 900);
+		mount([long]);
+		const head = page
+			.getByRole("region", { name: "Pin 1" })
+			.element()
+			.querySelector(".plots-name") as HTMLElement;
+		const [title, cut, dot, testbed] = [...head.children] as HTMLElement[];
+		await expect
+			.element(cut as HTMLElement)
+			.toHaveAttribute("data-tail", "very-long-leaf");
+		// A short title and a short testbed stay whole beside the cut branch.
+		expect(
+			title?.querySelector(".ui-trunc")?.hasAttribute("data-cut"),
+			`at ${width}`,
+		).toBe(false);
+		expect(testbed?.hasAttribute("data-cut"), `at ${width}`).toBe(false);
+		expect(dot?.textContent).toBe("·");
+		expect(head.getBoundingClientRect().right).toBeLessThanOrEqual(
+			(head.parentElement as HTMLElement).getBoundingClientRect().right,
+		);
+		dispose?.();
+		dispose = undefined;
+		document.body.replaceChildren();
+	}
+});
+
+// Kills an opened title that spills out of its 44 px head over the plot.
+test("an opened tile title takes the lines it needs, above the plot", async () => {
+	await page.viewport(320, 900);
+	const tile = testTile({ title: "T".repeat(64) });
+	const root = document.createElement("div");
+	document.body.append(root);
+	dispose = render(
+		() => <Tile title={"T".repeat(64)} tile={tile} window="4w" openHref="#" />,
+		root,
+	);
+	const reveal = page.getByRole("button", { name: "T".repeat(64) });
+	await reveal.click();
+	await expect.element(reveal).toHaveAttribute("aria-expanded", "true");
+	const head = root.querySelector(".plots-thead") as HTMLElement;
+	const next = head.nextElementSibling as HTMLElement;
+	expect(head.getBoundingClientRect().height).toBeGreaterThan(44);
+	expect(head.scrollHeight).toBeLessThanOrEqual(head.clientHeight);
+	expect(head.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+		next.getBoundingClientRect().top,
+	);
+});

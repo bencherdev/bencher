@@ -1,5 +1,7 @@
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
+import { tailOf } from "@bencherdev/ui/tail";
 import {
 	type QueryObserverResult,
 	useQueryClient,
@@ -35,6 +37,7 @@ import {
 	statusText,
 } from "../runs/status";
 import StatusPill from "../runs/StatusPill";
+import Tag from "../tag";
 import { type Option, SearchMenu } from "./Box";
 import { plotSearch } from "./pinned";
 import { type Dimension, OPTIONS, nameQuery } from "./queries";
@@ -117,7 +120,8 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 									link.setAttribute(
 										"state",
 										JSON.stringify({
-											alert: `${branch.name} · ${testbed.name}`,
+											branch: branch.name,
+											testbed: testbed.name,
 											uuid: alert.uuid,
 										}),
 									)
@@ -125,16 +129,32 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 							>
 								<span class="ex-alertdot" aria-hidden="true" />
 								<span class="grow">
-									<span class="ex-sline">
-										<b>{alert.benchmark.name}</b>
-										<For each={tags}>
-											{(tag) => <span class="ex-tag">{tag}</span>}
-										</For>
-										<span class="muted">{measure.name}</span>
+									<span class="ex-sline ex-aline">
+										<b class="ex-aname">
+											<Truncate text={alert.benchmark.name} tail />
+											{/* Unseen, it holds the name at least as wide as its tail. */}
+											<span class="ex-hold" aria-hidden="true">
+												{tailOf(alert.benchmark.name)[1]}
+											</span>
+										</b>{" "}
+										<span class="ex-stags">
+											<Truncate class="muted" text={measure.name} tail />{" "}
+											<For each={tags}>
+												{(tag) => (
+													<>
+														<Tag class="ex-tag" tag={tag} tail />{" "}
+													</>
+												)}
+											</For>
+										</span>
 									</span>
-									<span class="ex-sub">
-										{branch.name} · {testbed.name}
-										{delta ? ` · ${delta}` : ""}
+									<span class="ex-sub ui-parts">
+										<Truncate text={branch.name} tail />
+										<span data-fixed>·</span>
+										<Truncate text={testbed.name} tail />
+										<Show when={delta}>
+											<span data-fixed>· {delta}</span>
+										</Show>
 									</span>
 								</span>
 							</a>
@@ -152,7 +172,9 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 					{(plot: JsonPlot) => (
 						<a class="ex-srow" href={`${explore()}${plotSearch(plot)}`}>
 							<span class="grow">
-								<b class="ex-ellip">{plot.title ?? "Untitled plot"}</b>
+								<b>
+									<Truncate text={plot.title ?? "Untitled plot"} />
+								</b>
 								<span class="ex-sub">{rollingName(plot.window)}</span>
 							</span>
 						</a>
@@ -231,7 +253,7 @@ const RunRow = (props: {
 		<div>
 			<div class="ex-rhead rowlink">
 				<span class="grow">
-					<span class="ex-sline">
+					<span class="ex-sline ui-parts">
 						<button
 							type="button"
 							class="ex-rbtn rowlink-name"
@@ -248,9 +270,15 @@ const RunRow = (props: {
 							onFocus={prefetch}
 							onClick={() => props.onOpen(!props.open)}
 						>
-							<b class="ex-ellip">{props.run.branch.name}</b>
+							<b>
+								<Truncate text={props.run.branch.name} tail />
+							</b>
 						</button>
-						<a class="ex-rhash" href={runHref(slug(), props.run.uuid)}>
+						<a
+							class="ex-rhash"
+							href={runHref(slug(), props.run.uuid)}
+							data-fixed
+						>
 							{name()}
 						</a>
 					</span>
@@ -321,11 +349,11 @@ const RunReports = (props: {
 										when={!report.job}
 										fallback={
 											<div class="ex-rhead">
-												<span class="ex-sline">
-													<span class="mono muted">{report.order}</span>
-													<b class="ex-ellip">{run().branch.name}</b>
-													<span class="muted">· {report.testbed.name}</span>
-												</span>
+												<ReportLine
+													order={report.order}
+													branch={run().branch.name}
+													testbed={report.testbed.name}
+												/>
 												<span class="spacer" />
 												<StatusPill
 													status={reportStatus(report, now(), runTime)}
@@ -362,6 +390,26 @@ const RunReports = (props: {
 	);
 };
 
+/** A report by its place in the run, its branch, and its testbed, which share the line fairly. */
+const ReportLine = (props: {
+	order: number;
+	branch: string;
+	testbed: string;
+}) => (
+	<span class="ex-sline ui-parts">
+		<span class="mono muted" data-fixed>
+			{props.order}
+		</span>
+		<b>
+			<Truncate text={props.branch} tail />
+		</b>
+		<span class="muted" data-fixed>
+			·
+		</span>
+		<Truncate class="muted" text={props.testbed} tail />
+	</span>
+);
+
 /** A report of an opened run, by its place in the run and its testbed, that opens to search the benchmarks it ran. */
 const ReportRow = (props: {
 	report: RunReport;
@@ -393,11 +441,11 @@ const ReportRow = (props: {
 					onFocus={prefetch}
 					onClick={() => props.onOpen(!props.open)}
 				>
-					<span class="ex-sline">
-						<span class="mono muted">{props.order}</span>
-						<b class="ex-ellip">{props.branch}</b>
-						<span class="muted">· {props.report.testbed.name}</span>
-					</span>
+					<ReportLine
+						order={props.order}
+						branch={props.branch}
+						testbed={props.report.testbed.name}
+					/>
 				</button>
 				<span class="spacer" />
 				<Icon name="chevron-down" class="ex-rcaret" />
