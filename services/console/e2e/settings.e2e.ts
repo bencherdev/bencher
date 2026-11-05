@@ -364,7 +364,7 @@ test.describe("Keys, as the project's Maintainer", () => {
 		await expect(confirm).toBeVisible();
 		await confirm.getByRole("button", { name: "Revoke key" }).click();
 		await expect(confirm).toBeHidden();
-		await expect(status(page)).toHaveText(`Revoked ${name}`);
+		await expect(status(page)).toHaveText("Revoked");
 		await expect(
 			active.getByRole("row", { name: new RegExp(name) }),
 		).toHaveCount(0);

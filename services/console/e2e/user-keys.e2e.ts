@@ -138,7 +138,7 @@ test.describe("Keys", () => {
 		await page.getByRole("button", { name: `Revoke ${name}` }).click();
 		const confirm = page.getByRole("alertdialog", { name: `Revoke ${name}?` });
 		await confirm.getByRole("button", { name: "Revoke key" }).click();
-		await expect(status(page)).toHaveText(`Revoked ${name}`);
+		await expect(status(page)).toHaveText("Revoked");
 		await expect(
 			active.getByRole("row", { name: new RegExp(name) }),
 		).toHaveCount(0);
@@ -190,9 +190,7 @@ test.describe("Legacy tokens", () => {
 		);
 		await confirm.getByRole("button", { name: "Revoke token" }).click();
 		await revoked;
-		await expect(page.getByRole("alert")).toContainText(
-			"Bencher did not revoke ci-2024",
-		);
+		await expect(page.getByRole("alert")).toContainText("Not revoked");
 		await expect(table.getByRole("row", { name: /ci-2024/ })).toBeVisible();
 
 		await settle(page, 1_500);

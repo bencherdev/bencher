@@ -1,6 +1,7 @@
 import Icon from "@bencherdev/ui/Icon";
 import Menu, { MenuItem as Item } from "@bencherdev/ui/Menu";
 import Sheet from "@bencherdev/ui/Sheet";
+import Truncate from "@bencherdev/ui/Truncate";
 import { QueryClientContext } from "@tanstack/solid-query";
 import { type JSX, Show, createSignal, useContext } from "solid-js";
 import { accountPath } from "../account/paths";
@@ -82,7 +83,7 @@ const AccountMenu = (props: AccountMenuProps) => {
 									<Glyph d="M7 7h11l-3-3M17 17H6l3 3" />
 									Switch project
 									<span class="end">
-										{props.project ?? at().slug}
+										<Truncate text={props.project ?? at().slug} tail />
 										<Glyph d="M9 6l6 6-6 6" />
 									</span>
 								</Item>

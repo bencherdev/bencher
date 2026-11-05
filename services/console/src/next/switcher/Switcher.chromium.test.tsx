@@ -4,7 +4,7 @@ import { MemoryRouter, Route } from "@solidjs/router";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { commands, page, userEvent } from "vitest/browser";
 import type {
 	JsonAuthUser,
 	JsonConsoleUser,
@@ -214,7 +214,7 @@ test("the footer holds New project and the current organization's Settings", asy
 		.element(dialog().getByRole("link", { name: "New project" }))
 		.toHaveAttribute("href", "/console/organizations/o1/projects/add");
 	await expect
-		.element(dialog().getByRole("link", { name: "Pompeii LLC settings" }))
+		.element(dialog().getByRole("link", { name: "Settings" }))
 		.toHaveAttribute("href", "/console/organizations/o1/settings");
 });
 
@@ -271,7 +271,7 @@ test("an organization's crumb opens the switcher on the reader's projects", asyn
 		.toEqual(["Hashbrown", "Gizmo", "Cathode", "Cornbread"]);
 	expect(document.querySelector(".sw-cur")).toBeNull();
 	await expect
-		.element(dialog().getByRole("link", { name: "Pompeii LLC settings" }))
+		.element(dialog().getByRole("link", { name: "Settings" }))
 		.toHaveAttribute("href", "/console/organizations/o1/settings");
 });
 
@@ -317,6 +317,58 @@ test("typing searches; with no match the list reads No matches, and Clear search
 	await expect.element(search()).toHaveValue("");
 	await expect.element(search()).toHaveFocus();
 	expect(names()).toHaveLength(4);
+});
+
+// Kills a match past the cut, which a long name of the same start hides, and
+// a match drawn apart that a screen reader then reads apart.
+test("a match near a long name's end stays in view, and the name reads whole", async () => {
+	const long =
+		"ProjectNameAlphaBetaGammaDeltaEpsilonZetaEtaThetaIotaKappaLambda";
+	await open({ ...READER, projects: [project(long), ...READER.projects] });
+
+	await userEvent.keyboard("kappa");
+	const option = document.querySelector('[role="option"]') as HTMLElement;
+	const mark = option.querySelector("mark")?.getBoundingClientRect();
+	const title = option.querySelector(".sw-title")?.getBoundingClientRect();
+	expect(mark?.right).toBeLessThanOrEqual(title?.right ?? 0);
+	const after = option.querySelector("mark")?.parentElement as HTMLElement;
+	expect(after.scrollWidth).toBeLessThanOrEqual(after.clientWidth);
+	expect(await commands.ariaSnapshot(`#${CSS.escape(option.id)}`)).toContain(
+		`option "${long} Pompeii LLC `,
+	);
+});
+
+// Kills a matched name that copies its hidden whole and its drawn parts both,
+// and a match so long that the text cut before it vanishes with no ellipsis.
+test("a matched name copies once, and a long match leaves an ellipsis before it", async () => {
+	const long = `Alpha${"Kappa".repeat(12)}`;
+	await open({ ...READER, projects: [project(long), ...READER.projects] });
+
+	await userEvent.keyboard("kappa");
+	const option = document.querySelector('[role="option"]') as HTMLElement;
+	const name = option.querySelector(".sw-marked") as HTMLElement;
+	getSelection()?.selectAllChildren(name);
+	expect(getSelection()?.toString()).toBe(long);
+	const before = option.querySelector(
+		".sw-marked > [aria-hidden]",
+	) as HTMLElement;
+	expect(before.getBoundingClientRect().width).toBeGreaterThan(0);
+	expect(before.scrollWidth).toBeGreaterThan(before.clientWidth);
+});
+
+// Kills a match at a name's start held short of the row, which leaves a blank
+// where its ellipsis would go.
+test("a match that starts a long name takes the whole width", async () => {
+	const long = `Kappa${"Alpha".repeat(12)}`;
+	await open({ ...READER, projects: [project(long), ...READER.projects] });
+
+	await userEvent.keyboard("kappa");
+	const option = document.querySelector('[role="option"]') as HTMLElement;
+	const name = option.querySelector(".sw-marked")?.getBoundingClientRect();
+	const match = option
+		.querySelector("mark")
+		?.parentElement?.getBoundingClientRect();
+	expect((name?.right ?? 0) - (match?.right ?? 0)).toBeLessThan(1);
 });
 
 // Kills a reader with no projects shown an empty box, or a search to clear.

@@ -2,6 +2,7 @@ import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
+import Truncate from "@bencherdev/ui/Truncate";
 import { useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { Show, createMemo, createSignal } from "solid-js";
@@ -39,7 +40,7 @@ const LegacyTokens = () => {
 	const revoke = async (token: KeyRow) => {
 		const home = legacyTokenList(user());
 		setFailure("");
-		setNote(`Revoked ${token.name}`);
+		setNote("Revoked");
 		await client.cancelQueries({ queryKey: keysKey(home, false) });
 		const undo = revokeKey(client, home, token.uuid, new Date().toISOString());
 		// The row whose Revoke held focus is gone.
@@ -53,7 +54,7 @@ const LegacyTokens = () => {
 		} catch (error) {
 			undo();
 			setNote("");
-			setFailure(failureOf(error, `Bencher did not revoke ${token.name}`));
+			setFailure(failureOf(error, "Not revoked"));
 		}
 	};
 
@@ -75,9 +76,11 @@ const LegacyTokens = () => {
 				}
 			/>
 			<Show when={failure()}>
-				<p class="ferror" role="alert">
-					{failure()}
-				</p>
+				{(message) => (
+					<p class="ferror" role="alert">
+						<Truncate text={message()} reveal />
+					</p>
+				)}
 			</Show>
 			<Show
 				when={list().data}

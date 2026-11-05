@@ -3,6 +3,7 @@ import Dialog from "@bencherdev/ui/Dialog";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import TextInput from "@bencherdev/ui/TextInput";
+import Truncate from "@bencherdev/ui/Truncate";
 import { type QueryClient, useQueryClient } from "@tanstack/solid-query";
 import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
 import {
@@ -234,7 +235,7 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 							<Show when={refused("slug")}>
 								{(message) => (
 									<p class="ferror" id="r-slug" role="alert">
-										{message()}
+										<Truncate text={message()} reveal />
 									</p>
 								)}
 							</Show>
@@ -281,7 +282,7 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 					<Show when={refused("form")}>
 						{(message) => (
 							<p class="ferror" role="alert">
-								{message()}
+								<Truncate text={message()} reveal />
 							</p>
 						)}
 					</Show>
@@ -527,9 +528,11 @@ const ChangeVisibility = (props: {
 						<p class="ferror" role="alert">
 							<Icon name="warning" />
 							<span>
-								{refused().message}
-								<Show when={refused().field === "visibility"}>
-									{" "}
+								<Show
+									when={refused().field === "visibility"}
+									fallback={<Truncate text={refused().message} reveal />}
+								>
+									{refused().message}{" "}
 									<a href={billing(props.data)}>See plans</a>
 								</Show>
 							</span>
