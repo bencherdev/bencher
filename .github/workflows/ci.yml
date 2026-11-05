@@ -310,6 +310,7 @@ jobs:
           # A green upload proves nothing about what the custom domain serves.
           CANARY_URL="https://download.bencher.dev/canary"
           for BUILD in linux-x86-64 linux-arm-64; do
+            curl -fsS -o /dev/null -r 0-0 "$CANARY_URL/runner-canary-$BUILD"
             curl -fsS "$CANARY_URL/runner-canary-$BUILD.sha256" \
               | diff - "runner-canary-$BUILD.sha256"
           done

@@ -200,7 +200,7 @@ fn binary_name(version: &str) -> String {
     )
 }
 
-/// `gh release view` with no tag returns the newest tagged release.
+/// `gh release view` with no tag returns the latest release, which excludes prereleases.
 fn latest_release_tag() -> anyhow::Result<String> {
     let stdout = gh(&[
         "release", "view", "--repo", REPO, "--json", "tagName", "--jq", ".tagName",
