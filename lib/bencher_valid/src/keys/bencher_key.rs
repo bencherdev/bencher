@@ -77,7 +77,7 @@ impl FromStr for BencherKey {
         } else if key.starts_with(ProjectKey::PREFIX) {
             key.parse::<ProjectKey>().map(Self::Project)
         } else {
-            Err(ValidError::BencherKey(key.to_owned()))
+            Err(ValidError::BencherKey(key.len()))
         }
     }
 }
@@ -118,6 +118,15 @@ mod tests {
             .parse::<BencherKey>()
             .unwrap_err();
         "".parse::<BencherKey>().unwrap_err();
+    }
+
+    #[test]
+    fn error_never_quotes_the_key() {
+        let body = "aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
+        let err = format!("bencher_other_{body}")
+            .parse::<BencherKey>()
+            .unwrap_err();
+        crate::keys::assert_never_quoted(&err, body);
     }
 
     #[test]

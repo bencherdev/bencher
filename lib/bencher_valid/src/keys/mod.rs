@@ -116,7 +116,7 @@ macro_rules! api_key_impl {
                 if Self::is_valid(&key) {
                     ::core::result::Result::Ok(Self(key))
                 } else {
-                    ::core::result::Result::Err($crate::ValidError::$err(key))
+                    ::core::result::Result::Err($crate::ValidError::$err(key.len()))
                 }
             }
         }
@@ -216,6 +216,13 @@ macro_rules! api_key_tests {
                 let mut key: $name = $sample.parse().unwrap();
                 $crate::Sanitize::sanitize(&mut key);
                 assert_eq!(key.as_ref(), $name::SANITIZED);
+            }
+
+            #[test]
+            fn error_never_quotes_the_key() {
+                let refused = &$sample[..$sample.len() - 1];
+                let err = refused.parse::<$name>().unwrap_err();
+                $crate::keys::assert_never_quoted(&err, &refused[$name::PREFIX.len()..]);
             }
         }
     };
@@ -324,3 +331,13 @@ pub(crate) use api_key_hash_impl;
 pub(crate) use api_key_hash_tests;
 pub(crate) use api_key_impl;
 pub(crate) use api_key_tests;
+
+#[cfg(test)]
+pub(crate) fn assert_never_quoted(err: &crate::ValidError, secret: &str) {
+    for printed in [err.to_string(), format!("{err:?}")] {
+        for part in secret.as_bytes().windows(6) {
+            let part = std::str::from_utf8(part).unwrap();
+            assert!(!printed.contains(part), "{printed} quotes {part}");
+        }
+    }
+}

@@ -64,7 +64,7 @@ impl TryFrom<String> for Jwt {
         if is_valid_jwt(&jwt) {
             Ok(Self(jwt))
         } else {
-            Err(ValidError::Jwt(jwt))
+            Err(ValidError::Jwt(jwt.len()))
         }
     }
 }
@@ -187,6 +187,16 @@ mod tests {
     #[test]
     fn jwt_test_token() {
         assert_eq!(true, is_valid_jwt(Jwt::test_token().as_ref()));
+    }
+
+    #[test]
+    fn jwt_error_never_quotes_the_token() {
+        let project_key = "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
+        let unsigned = format!("{HEADER}.{PAYLOAD}.");
+        for refused in [project_key, &unsigned] {
+            let err = refused.parse::<Jwt>().unwrap_err();
+            crate::keys::assert_never_quoted(&err, refused);
+        }
     }
 
     #[test]

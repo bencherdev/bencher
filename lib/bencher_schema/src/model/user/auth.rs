@@ -443,7 +443,7 @@ impl BearerToken {
     /// Centralized so the `SharedExtractor` impl and `ApiActor`'s dispatch agree on
     /// the prefix detection rules.
     pub fn from_raw(raw: &str) -> Result<Self, HttpError> {
-        // Refused before any parse, whose error would quote the token.
+        // Refused before the JWT parse so an OAuth token gets its own 401 and metric.
         #[cfg(feature = "plus")]
         if is_oauth_credential(raw) {
             #[cfg(feature = "otel")]

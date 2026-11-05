@@ -233,6 +233,51 @@ async fn malformed_user_key_rejected() {
 }
 
 #[tokio::test]
+async fn refused_bearer_never_quoted() {
+    let server = TestServer::new().await;
+    let header = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9";
+    let payload = "eyJhdWQiOiJjbGllbnQiLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20ifQ";
+
+    let unsigned = format!("{header}.{payload}.");
+    for (refused, secret, message) in [
+        (
+            "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
+            "aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
+            "Malformed JSON Web Token",
+        ),
+        (
+            "bencher_user_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fG",
+            "aB3xY9mN2pQ7rS4tU8vW1zK5jL0fG",
+            "Malformed user API key",
+        ),
+        (
+            unsigned.as_str(),
+            unsigned.as_str(),
+            "Malformed JSON Web Token",
+        ),
+    ] {
+        let resp = server
+            .client
+            .get(server.api_url("/v0/organizations"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(refused),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST, "{refused}");
+        let body = resp.text().await.expect("Failed to read body");
+        assert!(body.contains(message), "{body}");
+        for part in secret.as_bytes().windows(6) {
+            let part = std::str::from_utf8(part).expect("ASCII credential");
+            assert!(!body.contains(part), "{body} quotes {part}");
+        }
+    }
+}
+
+#[tokio::test]
 async fn unknown_user_key_rejected() {
     let server = TestServer::new().await;
     // Valid format, no row in `user_key` table.

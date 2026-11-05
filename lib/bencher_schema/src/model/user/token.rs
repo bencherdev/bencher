@@ -172,7 +172,7 @@ impl InsertToken {
         let claims = token_key.validate_api_key(&jwt).map_err(|e| {
             issue_error(
                 "Failed to validate new API key",
-                &format!("Failed to validate new API key: {jwt}"),
+                "Failed to validate new API key.",
                 e,
             )
         })?;

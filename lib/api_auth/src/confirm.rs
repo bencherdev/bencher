@@ -72,7 +72,7 @@ async fn post_inner(
     let claims = context.token_key.validate_client(&token).map_err(|e| {
         issue_error(
             "Failed to validate new client JWT",
-            &format!("Failed to validate new client JWT: {token}"),
+            "Failed to validate new client JWT",
             e,
         )
     })?;
