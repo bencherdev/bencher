@@ -1,0 +1,26 @@
+shapes                    fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ counter_all_four       8.567 ns      │ 51.13 ns      │ 9.149 ns      │ 9.442 ns      │ 100     │ 25600
+│                         111.3 GiB/s   │ 18.65 GiB/s   │ 104.2 GiB/s   │ 101 GiB/s     │         │
+│                         1.167 Gchar/s │ 195.5 Mchar/s │ 1.093 Gchar/s │ 1.059 Gchar/s │         │
+│                         116.7 GHz     │ 19.55 GHz     │ 109.3 GHz     │ 105.9 GHz     │         │
+│                         1.867 Gitem/s │ 312.9 Mitem/s │ 1.748 Gitem/s │ 1.694 Gitem/s │         │
+├─ counter_bytes          9.11 ns       │ 88.92 ns      │ 9.192 ns      │ 9.998 ns      │ 100     │ 25600
+│                         104.6 GiB/s   │ 10.72 GiB/s   │ 103.7 GiB/s   │ 95.38 GiB/s   │         │
+├─ counter_bytes_args                   │               │               │               │         │
+│  ├─ 64                  6.235 ns      │ 6.28 ns       │ 6.257 ns      │ 6.262 ns      │ 100     │ 51200
+│  │                      9.559 GiB/s   │ 9.491 GiB/s   │ 9.526 GiB/s   │ 9.518 GiB/s   │         │
+│  ├─ 4096                406.5 ns      │ 1.677 µs      │ 407.9 ns      │ 429.7 ns      │ 100     │ 800
+│  │                      9.383 GiB/s   │ 2.274 GiB/s   │ 9.351 GiB/s   │ 8.876 GiB/s   │         │
+│  ╰─ 1048576             103.4 µs      │ 119.3 µs      │ 103.5 µs      │ 105.1 µs      │ 100     │ 100
+│                         9.438 GiB/s   │ 8.184 GiB/s   │ 9.429 GiB/s   │ 9.287 GiB/s   │         │
+├─ counter_chars_of_str   2.579 ns      │ 2.599 ns      │ 2.589 ns      │ 2.589 ns      │ 100     │ 102400
+│                         4.265 Gchar/s │ 4.232 Gchar/s │ 4.248 Gchar/s │ 4.248 Gchar/s │         │
+├─ counter_huge_bytes     0.003 ns        │ 0.009 ns        │ 0.006 ns        │ 0.006 ns        │ 100     │ 1638400
+│                         325520833 PiB/s │ 108506944 PiB/s │ 162760416 PiB/s │ 162760416 PiB/s │         │
+├─ counter_per_input      34.2 ns         │ 769.1 ns        │ 371.1 ns        │ 390.6 ns        │ 100     │ 3200
+│                         4.002 GiB/s     │ 4.789 GiB/s     │ 4.745 GiB/s     │ 4.705 GiB/s     │         │
+├─ counter_runtime_items  0.437 ns        │ 0.449 ns        │ 0.442 ns        │ 0.443 ns        │ 100     │ 409600
+│                         2.288 Titem/s   │ 2.227 Titem/s   │ 2.262 Titem/s   │ 2.257 Titem/s   │         │
+╰─ counter_zero_items     0.001 ns        │ 0.329 ns        │ 0.007 ns        │ 0.016 ns        │ 100     │ 1638400
+                          0 item/s        │ 0 item/s        │ 0 item/s        │ 0 item/s        │         │
+

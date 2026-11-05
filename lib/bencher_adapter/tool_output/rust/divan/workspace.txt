@@ -1,0 +1,18 @@
+
+running 1 test
+test tests::adds ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+first_bench  fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ add       0.002 ns      │ 0.503 ns      │ 0.002 ns      │ 0.009 ns      │ 100     │ 819200
+
+
+running 1 test
+test tests::adds ... ignored
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+second_bench  fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ add        0.1 ns        │ 0.822 ns      │ 0.101 ns      │ 0.156 ns      │ 100     │ 819200
+
