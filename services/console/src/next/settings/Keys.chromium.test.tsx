@@ -631,7 +631,8 @@ const longList = async (
 test.each([390, 768])(
 	"at %i px opening a second name closes the first, and the open row moves nothing as the list scrolls away and back",
 	async (width) => {
-		const list = await longList(width);
+		// Enough keys that the opened row leaves the rows drawn for most of each sweep.
+		const list = await longList(width, [0, 1], 200);
 		await list.open(0);
 		await list.open(1);
 		expect(
