@@ -73,6 +73,8 @@ const Box = (props: {
 	cap?: number | undefined;
 	/** Why nothing can be added, which its add control shows locked. */
 	locked?: string | undefined;
+	/** What lifts the lock, under the locked add control. */
+	unlock?: JSX.Element;
 	onRemove: (index: number) => void;
 	/** The add control's choices, read once it opens; `text` is what the reader searched. */
 	options: (text: () => string) => () => Choices;
@@ -172,6 +174,7 @@ const Box = (props: {
 					</span>
 				)}
 			</Show>
+			<Show when={props.locked && !props.readOnly}>{props.unlock}</Show>
 			<Show when={props.full && !(props.readOnly || props.locked)}>
 				<span class="ex-anchor">
 					<button

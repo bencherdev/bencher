@@ -3271,7 +3271,7 @@
           "projects"
         ],
         "summary": "Update a project",
-        "description": "Update a project. The user must have `edit` permissions for the project. Setting the `bmf_version` field requires a server admin.",
+        "description": "Update a project. The user must have `edit` permissions for the project. A user who can edit the project can also move it to BMF version 1 with `bencher project update --bmf-version 1`. Setting the `bmf_version` field to any other version requires a server admin.",
         "operationId": "project_patch",
         "parameters": [
           {
@@ -17866,7 +17866,7 @@
         "properties": {
           "bmf_version": {
             "nullable": true,
-            "description": "Server admin only: Set the default BMF version for the project.",
+            "description": "Set the default BMF version for the project. A user who can edit the project can move it to BMF version 1. Any other version requires a server admin.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/BmfVersion"

@@ -71,36 +71,40 @@ pub(crate) fn convert_v0(
     input: &str,
     settings: Settings,
 ) -> Option<AdapterResults> {
-    match adapter {
-        Adapter::Magic => AdapterMagic::parse(input, settings),
-        Adapter::Json => AdapterJson::parse(input, settings),
-        Adapter::JsonV0 => AdapterJsonV0::parse(input, settings),
-        Adapter::JsonV1 => AdapterJsonV1::parse(input, settings),
-        Adapter::CSharp => AdapterCSharp::parse(input, settings),
-        Adapter::CSharpDotNet => AdapterCSharpDotNet::parse(input, settings),
-        Adapter::Cpp => AdapterCpp::parse(input, settings),
-        Adapter::CppCatch2 | Adapter::CppCatch2Text => AdapterCppCatch2::parse(input, settings),
-        Adapter::CppGoogle => AdapterCppGoogle::parse(input, settings),
-        Adapter::Dart => AdapterDart::parse(input, settings),
-        Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarness::parse(input, settings),
-        Adapter::Go => AdapterGo::parse(input, settings),
-        Adapter::GoBench | Adapter::GoBenchText => AdapterGoBench::parse(input, settings),
-        Adapter::Java => AdapterJava::parse(input, settings),
-        Adapter::JavaJmh => AdapterJavaJmh::parse(input, settings),
-        Adapter::Js => AdapterJs::parse(input, settings),
-        Adapter::JsBenchmark => AdapterJsBenchmark::parse(input, settings),
-        Adapter::JsTime => AdapterJsTime::parse(input, settings),
-        Adapter::JsVitest | Adapter::JsVitestV1 => AdapterJsVitest::parse(input, settings),
-        Adapter::Python => AdapterPython::parse(input, settings),
-        Adapter::PythonAsv | Adapter::PythonAsvText => AdapterPythonAsv::parse(input, settings),
-        Adapter::PythonPytest => AdapterPythonPytest::parse(input, settings),
-        Adapter::Ruby => AdapterRuby::parse(input, settings),
-        Adapter::RubyBenchmark => AdapterRubyBenchmark::parse(input, settings),
-        Adapter::Rust => AdapterRust::parse(input, settings),
-        Adapter::RustBench | Adapter::RustBenchText => AdapterRustBench::parse(input, settings),
-        Adapter::RustCriterion | Adapter::RustCriterionText => {
-            AdapterRustCriterion::parse(input, settings)
-        },
+    v0_parser(adapter)?(input, settings)
+}
+
+/// How the version 0 tree parses an adapter's results, or `None` for an adapter that reads
+/// results at version 1 only.
+pub(crate) fn v0_parser(adapter: Adapter) -> Option<V0Parser> {
+    Some(match adapter {
+        Adapter::Magic => AdapterMagic::parse,
+        Adapter::Json => AdapterJson::parse,
+        Adapter::JsonV0 => AdapterJsonV0::parse,
+        Adapter::JsonV1 => AdapterJsonV1::parse,
+        Adapter::CSharp => AdapterCSharp::parse,
+        Adapter::CSharpDotNet => AdapterCSharpDotNet::parse,
+        Adapter::Cpp => AdapterCpp::parse,
+        Adapter::CppCatch2 | Adapter::CppCatch2Text => AdapterCppCatch2::parse,
+        Adapter::CppGoogle => AdapterCppGoogle::parse,
+        Adapter::Dart => AdapterDart::parse,
+        Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarness::parse,
+        Adapter::Go => AdapterGo::parse,
+        Adapter::GoBench | Adapter::GoBenchText => AdapterGoBench::parse,
+        Adapter::Java => AdapterJava::parse,
+        Adapter::JavaJmh => AdapterJavaJmh::parse,
+        Adapter::Js => AdapterJs::parse,
+        Adapter::JsBenchmark => AdapterJsBenchmark::parse,
+        Adapter::JsTime => AdapterJsTime::parse,
+        Adapter::JsVitest | Adapter::JsVitestV1 => AdapterJsVitest::parse,
+        Adapter::Python => AdapterPython::parse,
+        Adapter::PythonAsv | Adapter::PythonAsvText => AdapterPythonAsv::parse,
+        Adapter::PythonPytest => AdapterPythonPytest::parse,
+        Adapter::Ruby => AdapterRuby::parse,
+        Adapter::RubyBenchmark => AdapterRubyBenchmark::parse,
+        Adapter::Rust => AdapterRust::parse,
+        Adapter::RustBench | Adapter::RustBenchText => AdapterRustBench::parse,
+        Adapter::RustCriterion | Adapter::RustCriterionText => AdapterRustCriterion::parse,
         // The version 0 tree reads no structured Rust, Catch2, or Go output, no Vitest 5 report,
         // no asv results file, no benchmark-ips export, and no Divan, tinybench, Deno, or mitata
         // output.
@@ -114,17 +118,19 @@ pub(crate) fn convert_v0(
         | Adapter::JsMitata
         | Adapter::JsTinybench
         | Adapter::PythonAsvJson
-        | Adapter::RubyBenchmarkIps => None,
-        Adapter::RustIai => AdapterRustIai::parse(input, settings),
-        Adapter::RustGungraun => AdapterRustGungraun::parse(input, settings),
-        Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse(input, settings),
-        Adapter::RustGungraunJson => AdapterRustGungraunJson::parse(input, settings),
-        Adapter::Shell => AdapterShell::parse(input, settings),
-        Adapter::ShellHyperfine => AdapterShellHyperfine::parse(input, settings),
-        Adapter::ShellHyperfineV1 => AdapterShellHyperfineV1::parse(input, settings),
-        Adapter::ShellHyperfineV2 => AdapterShellHyperfineV2::parse(input, settings),
-    }
+        | Adapter::RubyBenchmarkIps => return None,
+        Adapter::RustIai => AdapterRustIai::parse,
+        Adapter::RustGungraun => AdapterRustGungraun::parse,
+        Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse,
+        Adapter::RustGungraunJson => AdapterRustGungraunJson::parse,
+        Adapter::Shell => AdapterShell::parse,
+        Adapter::ShellHyperfine => AdapterShellHyperfine::parse,
+        Adapter::ShellHyperfineV1 => AdapterShellHyperfineV1::parse,
+        Adapter::ShellHyperfineV2 => AdapterShellHyperfineV2::parse,
+    })
 }
+
+pub(crate) type V0Parser = fn(&str, Settings) -> Option<AdapterResults>;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Settings {
