@@ -93,8 +93,6 @@ export enum Refusal {
 	Busy = "busy",
 	/** The session is no longer accepted, so the user signs in again. */
 	SessionEnded = "session_ended",
-	/** The account cannot approve, as when it is locked. */
-	AccountRefused = "account_refused",
 	KeyRefused = "key_refused",
 	/** Anything else, the network included. */
 	Failed = "failed",
@@ -111,15 +109,15 @@ export const refusal = (
 			return Refusal.Answered;
 		case 429:
 			return Refusal.Busy;
-		// A session token the API cannot validate is a `400`.
+		// A malformed key is a `400`; an ended, unknown, or locked user's session is a `401`.
 		case 400:
 		case 401:
 		case 403:
 			if (credential === Credential.Key) {
 				return Refusal.KeyRefused;
 			}
-			if (credential === Credential.Session) {
-				return status === 403 ? Refusal.AccountRefused : Refusal.SessionEnded;
+			if (credential === Credential.Session && status === 401) {
+				return Refusal.SessionEnded;
 			}
 			return Refusal.Failed;
 		default:
@@ -136,9 +134,7 @@ export const refusalText = (refusal: Refusal): string => {
 		case Refusal.Busy:
 			return "Too many requests. Wait a minute and try again.";
 		case Refusal.SessionEnded:
-			return "Your session ended. Log in again, or approve with a user API key.";
-		case Refusal.AccountRefused:
-			return "This account cannot connect apps. It may be locked.";
+			return "Your session ended. Sign in again, or approve with a user API key.";
 		case Refusal.KeyRefused:
 			return "That user API key was not accepted. Check that it is current and that its account is not locked.";
 		case Refusal.Failed:

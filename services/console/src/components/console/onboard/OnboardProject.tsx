@@ -12,6 +12,7 @@ import type {
 	JsonProject,
 	PlanLevel,
 } from "../../../types/bencher";
+import type { Reader } from "../../../next/reader";
 import { authUser } from "../../../util/auth";
 import { httpGet, httpPatch, httpPost } from "../../../util/http";
 import { getOrganization, setOrganization } from "../../../util/organization";
@@ -19,7 +20,6 @@ import { useSearchParams } from "../../../util/url";
 import {
 	type InitValid,
 	init_valid,
-	validJwt,
 	validPlanLevel,
 	validResourceName,
 } from "../../../util/valid";
@@ -54,12 +54,12 @@ const OnboardProject = () => {
 	const orgsFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 		};
 	});
 	const getOrganizations = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 	}) => {
 		const cachedOrganization = getOrganization();
 		if (cachedOrganization) {
@@ -68,11 +68,11 @@ const OnboardProject = () => {
 		if (!fetcher.bencher_valid) {
 			return;
 		}
-		if (!validJwt(fetcher.token)) {
+		if (!fetcher.reader) {
 			return;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -102,23 +102,23 @@ const OnboardProject = () => {
 	const projectsFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 			organization: organization(),
 		};
 	});
 	const getProjects = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 		organization: undefined | JsonOrganization;
 	}) => {
 		if (!fetcher.bencher_valid) {
 			return;
 		}
-		if (!validJwt(fetcher.token) || fetcher.organization === undefined) {
+		if (!fetcher.reader || fetcher.organization === undefined) {
 			return;
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -143,7 +143,7 @@ const OnboardProject = () => {
 	const projectFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 			organization: organization(),
 			projects: projects(),
 			project: organizationProject(),
@@ -151,7 +151,7 @@ const OnboardProject = () => {
 	});
 	const getProject = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 		organization: undefined | JsonOrganization;
 		projects: undefined | JsonProject[];
 		project: undefined | JsonProject;
@@ -160,7 +160,7 @@ const OnboardProject = () => {
 			return;
 		}
 		if (
-			!validJwt(fetcher.token) ||
+			!fetcher.reader ||
 			fetcher.organization === undefined ||
 			fetcher.projects === undefined
 		) {
@@ -171,9 +171,9 @@ const OnboardProject = () => {
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
 		const data: JsonNewProject = {
-			name: `${user?.user?.name}'s project`,
+			name: `${user?.name}'s project`,
 		};
-		return await httpPost(path, fetcher.token, data)
+		return await httpPost(path, data)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -205,7 +205,7 @@ const OnboardProject = () => {
 	const updateProjectFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 			project: project(),
 			renameProject: renameProject(),
 			renameValid: renameValid(),
@@ -214,7 +214,7 @@ const OnboardProject = () => {
 	});
 	const updateProject = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 		project: undefined | JsonProject;
 		renameProject: null | string;
 		renameValid: null | boolean;
@@ -225,7 +225,7 @@ const OnboardProject = () => {
 			return undefined;
 		}
 		if (
-			!validJwt(fetcher.token) ||
+			!fetcher.reader ||
 			fetcher.project === undefined ||
 			fetcher.renameProject === null ||
 			fetcher.renameValid === null ||
@@ -239,7 +239,7 @@ const OnboardProject = () => {
 			name: fetcher.renameProject,
 			slug: new_slug(fetcher.renameProject),
 		};
-		return await httpPatch(path, fetcher.token, data)
+		return await httpPatch(path, data)
 			.then((resp) => {
 				setSubmitting(false);
 				refetchProjects();

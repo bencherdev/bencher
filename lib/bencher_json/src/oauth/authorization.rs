@@ -1,4 +1,4 @@
-use bencher_valid::{DateTime, NonEmpty, OAuthClientId, OAuthScope};
+use bencher_valid::{DateTime, NonEmpty, OAuthClientId, OAuthScope, UserKey};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -49,6 +49,9 @@ pub struct JsonOAuthAuthorizationRedirect {
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonOAuthDecision {
     pub approve: bool,
+    /// A user API key to approve with, in place of the session.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<UserKey>,
 }
 
 /// Where to send the user's browser with the answer.

@@ -22,7 +22,7 @@ const heading = (page: Page) => page.getByRole("heading", { level: 1 });
 const box = (page: Page, name: string) => page.getByRole("group", { name });
 const lines = (page: Page) =>
 	page.getByRole("table", { name: /^Lines in report / });
-const headers = { Authorization: `Bearer ${seed.member.token}` };
+const headers = { Authorization: `Bearer ${seed.member.key}` };
 const read = async <T>(request: APIRequestContext, path: string) =>
 	(await (
 		await request.get(`${seed.api_url}${path}`, { headers })

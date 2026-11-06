@@ -97,8 +97,8 @@ export default defineConfig({
 				access: PUBLIC,
 				optional: true,
 			}),
-			// https://developers.google.com/recaptcha/docs/v3
-			RECAPTCHA_SITE_KEY: envField.string({
+			// https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/
+			TURNSTILE_SITE_KEY: envField.string({
 				context: CLIENT,
 				access: PUBLIC,
 				optional: true,

@@ -19,17 +19,12 @@ vi.mock("../../../util/http", () => ({ httpGet }));
 vi.mock("../../../util/valid", () => ({
 	// Any value but undefined: the wasm has loaded.
 	init_valid: async () => ({}),
-	validJwt: () => true,
 	validPlanLevel: (plan: undefined | null | string) => plan === "team",
 	validEmail: () => true,
 	validUserName: () => true,
 }));
 vi.mock("../../../util/auth", () => ({
-	authUser: () => ({
-		user: { uuid: "reader-uuid", slug: "reader" },
-		token: "token",
-	}),
-	removeUser: vi.fn(),
+	authUser: () => ({ uuid: "reader-uuid", slug: "reader", name: "Reader" }),
 }));
 vi.mock("../../../util/url", () => ({
 	useNavigate: () => navigate,

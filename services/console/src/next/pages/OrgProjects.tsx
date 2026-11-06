@@ -38,9 +38,7 @@ const OrgProjects = () => {
 	const key = () => params.organization ?? "";
 	// The bar asks for it too, so this answer is shared.
 	const organization = useQueryResult(() => organizationQuery(api, key()));
-	const bootstrap = useQueryResult(() =>
-		consoleUserQuery(api, reader().user.uuid),
-	);
+	const bootstrap = useQueryResult(() => consoleUserQuery(api, reader().uuid));
 	const source = createMemo(() => projectSource(bootstrap().data, key()));
 	// Only for an organization a current bootstrap lacks, once the API has shown it to the reader.
 	const listed = useQueryResult(() => ({

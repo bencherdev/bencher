@@ -6,6 +6,7 @@ import type {
 	JsonProject,
 	PlanLevel,
 } from "../../../types/bencher";
+import type { Reader } from "../../../next/reader";
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { getOnboardProjectKey } from "../../../util/onboard";
@@ -14,7 +15,6 @@ import { useSearchParams } from "../../../util/url";
 import {
 	type InitValid,
 	init_valid,
-	validJwt,
 	validPlanLevel,
 } from "../../../util/valid";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
@@ -51,12 +51,12 @@ const OnboardRun = (props: Props) => {
 	const orgsFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 		};
 	});
 	const getOrganizations = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 	}) => {
 		const cachedOrganization = getOrganization();
 		if (cachedOrganization) {
@@ -65,11 +65,11 @@ const OnboardRun = (props: Props) => {
 		if (!fetcher.bencher_valid) {
 			return undefined;
 		}
-		if (!validJwt(fetcher.token)) {
+		if (!fetcher.reader) {
 			return null;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -99,19 +99,19 @@ const OnboardRun = (props: Props) => {
 	const projectsFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 			organization: organization(),
 		};
 	});
 	const getProjects = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 		organization: undefined | JsonOrganization;
 	}) => {
 		if (!fetcher.bencher_valid) {
 			return undefined;
 		}
-		if (!validJwt(fetcher.token)) {
+		if (!fetcher.reader) {
 			return null;
 		}
 		if (organizations.loading) {
@@ -124,7 +124,7 @@ const OnboardRun = (props: Props) => {
 			return null;
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -145,9 +145,7 @@ const OnboardRun = (props: Props) => {
 			Array.isArray(orgProjects) && (orgProjects?.length ?? 0) > 0
 				? (orgProjects?.[0] as JsonProject)
 				: {
-						slug: bencher_valid()
-							? new_slug(`${user?.user?.name}'s project`)
-							: "",
+						slug: bencher_valid() ? new_slug(`${user?.name}'s project`) : "",
 					};
 		const key = getOnboardProjectKey() ?? "YOUR_KEY_HERE";
 		const host = props.isBencherCloud ? "" : `--host ${props.apiUrl} `;

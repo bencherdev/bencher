@@ -1,7 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
 import type {
-	JsonAuthUser,
 	JsonOrganization,
 	JsonPlot,
 	JsonProject,
@@ -10,7 +9,8 @@ import type {
 	JsonUser,
 	JsonUserKeyCreated,
 } from "../src/types/bencher";
-import { seed } from "./fixtures";
+import { type Reader, seed } from "./fixtures";
+import { inSession, signUpAs } from "./session";
 
 // Tests that change what they read make their own, since files run in
 // parallel and every test may run more than once.
@@ -50,7 +50,7 @@ export const createProject = async (
 		request,
 		"POST",
 		`/v0/organizations/${organization}/projects`,
-		seed.member.token,
+		seed.member.key,
 		{ name: unique("Rosti"), visibility: "public" },
 	);
 	if (version === 0) {
@@ -60,7 +60,7 @@ export const createProject = async (
 		request,
 		"PATCH",
 		`/v0/projects/${project.slug}`,
-		seed.admin.token,
+		seed.admin.key,
 		{ bmf_version: 1 },
 	);
 };
@@ -68,10 +68,10 @@ export const createProject = async (
 /** A version 1 project in `reader`'s own organization, which signing up made. */
 export const createOwnProject = async (
 	request: APIRequestContext,
-	reader: JsonAuthUser,
+	reader: Reader,
 ) => {
 	const own = await request.get(`${seed.api_url}/v0/organizations`, {
-		headers: { Authorization: `Bearer ${reader.token}` },
+		headers: { Authorization: `Bearer ${reader.key}` },
 	});
 	const [organization] = (await own.json()) as JsonOrganization[];
 	if (!organization) {
@@ -81,14 +81,14 @@ export const createOwnProject = async (
 		request,
 		"POST",
 		`/v0/organizations/${organization.slug}/projects`,
-		reader.token,
+		reader.key,
 		{ name: unique("Rosti"), visibility: "public" },
 	);
 	return send<JsonProject>(
 		request,
 		"PATCH",
 		`/v0/projects/${project.slug}`,
-		seed.admin.token,
+		seed.admin.key,
 		{ bmf_version: 1 },
 	);
 };
@@ -99,65 +99,38 @@ export const createOrganization = (request: APIRequestContext) =>
 		request,
 		"POST",
 		"/v0/organizations",
-		seed.member.token,
+		seed.member.key,
 		{ name: unique("Bagge Farm") },
 	);
 
-export const createKey = (
-	request: APIRequestContext,
-	project: string,
-	name: string,
-) =>
-	send<JsonProjectKeyCreated>(
-		request,
-		"POST",
-		`/v0/projects/${project}/keys`,
-		seed.member.token,
-		{ name },
-	);
+/** A project key the member makes, which only a browser's session may do. */
+export const createKey = async (project: string, name: string) =>
+	(
+		await inSession<JsonProjectKeyCreated>(
+			seed.member,
+			"POST",
+			`/v0/projects/${project}/keys`,
+			{ name },
+		)
+	).data;
 
-/** A user key the member makes for themselves. */
-export const createUserKey = (request: APIRequestContext, name: string) =>
-	send<JsonUserKeyCreated>(
-		request,
-		"POST",
-		`/v0/users/${seed.member.user.slug}/keys`,
-		seed.member.token,
-		{ name },
-	);
+/** A user key the member makes for themselves, which only a browser's session may do. */
+export const createUserKey = async (name: string) =>
+	(
+		await inSession<JsonUserKeyCreated>(
+			seed.member,
+			"POST",
+			`/v0/users/${seed.member.user.slug}/keys`,
+			{ name },
+		)
+	).data;
 
-/** A new user of nothing, signed in with a user key the admin makes for them. */
-export const createReader = async (
-	request: APIRequestContext,
-): Promise<JsonAuthUser> => {
-	const slug = `reader-${randomUUID().slice(0, 8)}`;
-	const signup = await request.post(`${seed.api_url}/v0/auth/signup`, {
-		data: {
-			name: "Courage Bagge",
-			slug,
-			email: `${slug}@nowhere.example`,
-			i_agree: true,
-		},
-	});
-	if (!signup.ok()) {
-		throw new Error(
-			`Signup answered ${signup.status()}: ${await signup.text()}`,
-		);
-	}
-	const key = await send<JsonUserKeyCreated>(
-		request,
-		"POST",
-		`/v0/users/${slug}/keys`,
-		seed.admin.token,
-		{ name: "console" },
+/** A new user of nothing, signed up by email. */
+export const createReader = (): Promise<Reader> =>
+	signUpAs(
+		`reader-${randomUUID().slice(0, 8)}@nowhere.example`,
+		"Courage Bagge",
 	);
-	return {
-		user: await readUser(request, slug, seed.admin.token),
-		token: key.key,
-		creation: key.creation,
-		expiration: key.expiration,
-	};
-};
 
 // The harness API's debug issuer and secret, which sign every token it trusts.
 const ISSUER = "http://localhost:3000/";
@@ -192,11 +165,11 @@ const inviteToken = (email: string, organization: string) => {
  */
 export const createMember = async (
 	request: APIRequestContext,
-	organization: JsonOrganization,
-	reader?: JsonAuthUser,
+	organization: Pick<JsonOrganization, "uuid">,
+	reader?: Reader,
 ) => {
-	const member = reader ?? (await createReader(request));
-	await send(request, "POST", "/v0/auth/accept", member.token, {
+	const member = reader ?? (await createReader());
+	await send(request, "POST", "/v0/auth/accept", member.key, {
 		invite: inviteToken(member.user.email, organization.uuid),
 	});
 	return member;
@@ -220,14 +193,14 @@ export const readOrganization = (
 	organization: string,
 ) =>
 	request.get(`${seed.api_url}/v0/organizations/${organization}`, {
-		headers: { Authorization: `Bearer ${seed.member.token}` },
+		headers: { Authorization: `Bearer ${seed.member.key}` },
 	});
 
 /** The API's answer to the member reading a project. */
 export const projectStatus = async (request: APIRequestContext, slug: string) =>
 	(
 		await request.get(`${seed.api_url}/v0/projects/${slug}`, {
-			headers: { Authorization: `Bearer ${seed.member.token}` },
+			headers: { Authorization: `Bearer ${seed.member.key}` },
 		})
 	).status();
 
@@ -252,7 +225,7 @@ export const createReport = (
 		request,
 		"POST",
 		`/v0/projects/${project}/reports`,
-		seed.member.token,
+		seed.member.key,
 		{
 			branch: "main",
 			hash: "1e2e000000000000000000000000000000000000",
@@ -287,7 +260,7 @@ export const postReport = (
 		request,
 		"POST",
 		`/v0/projects/${project}/reports`,
-		seed.member.token,
+		seed.member.key,
 		{
 			branch,
 			testbed,
@@ -303,7 +276,7 @@ export const postReport = (
 export const listPlots = async (request: APIRequestContext, project: string) =>
 	(await (
 		await request.get(`${seed.api_url}/v0/projects/${project}/plots`, {
-			headers: { Authorization: `Bearer ${seed.member.token}` },
+			headers: { Authorization: `Bearer ${seed.member.key}` },
 		})
 	).json()) as JsonPlot[];
 
@@ -370,7 +343,7 @@ export const createAlerts = async (request: APIRequestContext) => {
 			request,
 			"POST",
 			`/v0/projects/${project.slug}/reports`,
-			seed.member.token,
+			seed.member.key,
 			body,
 		);
 	await post(alertingReport("main", 300, []));
@@ -397,7 +370,7 @@ export const raiseAlerts = (
 		request,
 		"POST",
 		`/v0/projects/${slug}/reports`,
-		seed.member.token,
+		seed.member.key,
 		alertingReport("main", minutes, high),
 	);
 
@@ -412,7 +385,7 @@ export const createManyAlerts = async (
 			request,
 			"POST",
 			`/v0/projects/${project.slug}/reports`,
-			seed.member.token,
+			seed.member.key,
 			body,
 		);
 	await post(alertingReport("main", 120, [], {}, count));

@@ -7,7 +7,7 @@ const AuthWordmark = () => {
 		<a
 			class="navbar-item"
 			title="Bencher - Continuous Benchmarking"
-			href={authUser()?.token ? "/console" : "/"}
+			href={authUser() ? "/console" : "/"}
 		>
 			<ThemeWordmark id={BENCHER_WORDMARK_ID} />
 		</a>

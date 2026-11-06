@@ -1140,7 +1140,7 @@ test("a link to a pin opens its query, and one to a deleted pin is an unsaved pl
 
 	await request.delete(
 		`${seed.api_url}/v0/projects/${project.slug}/plots/${pin?.uuid}`,
-		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+		{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 	);
 	expect(await listPlots(request, project.slug)).toEqual([]);
 	// A fresh browser, since this one still holds the pin it read.
@@ -1725,7 +1725,7 @@ test("Explore opened from an alert or a report passes axe in both themes", async
 
 	const response = await request.get(
 		`${seed.api_url}/v0/projects/${hashbrown.slug}/reports?branch=main&testbed=ubuntu-latest&per_page=1`,
-		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+		{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 	);
 	const [newest] = (await response.json()) as { uuid: string }[];
 	const { query } = await twoLines(request);

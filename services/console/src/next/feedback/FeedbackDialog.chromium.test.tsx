@@ -1,10 +1,13 @@
 import "@bencherdev/ui/styles.css";
 import "../styles/console.css";
 import "./feedback.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
+import type { Api } from "../api";
 import { axeInBothThemes } from "../axe/testing";
+import { ProjectContext } from "../project";
 import FeedbackDialog, { type FeedbackAbout } from "./FeedbackDialog";
 import type { Form } from "./report";
 import { send } from "./send";
@@ -14,26 +17,45 @@ vi.mock("./send", () => ({ send: vi.fn() }));
 const ABOUT = {
 	project: "Muriel Bagge / Hashbrown",
 	slug: "hashbrown",
-	email: "muriel@nowhere.example",
+	reader: "muriel-bagge",
 };
+const EMAIL = "muriel@nowhere.example";
 
 let dispose: (() => void) | undefined;
 let closed = 0;
 
-const mount = (about: FeedbackAbout) => {
+/** The dialog, with the reader's account answered unless `asked` holds what it was asked. */
+const mount = (about: FeedbackAbout, asked?: string[]) => {
 	dispose?.();
 	document.body.replaceChildren();
 	const root = document.createElement("div");
 	root.className = "console";
 	document.body.append(root);
+	const client = new QueryClient({
+		defaultOptions: { queries: { retry: false } },
+	});
+	const api: Api = {
+		get: async <T,>(path: string) => {
+			if (asked) {
+				asked.push(path);
+				return new Promise<never>(() => {});
+			}
+			return { data: { email: EMAIL } as T, headers: new Headers() };
+		},
+		send: () => new Promise(() => {}),
+	};
 	dispose = render(
 		() => (
-			<FeedbackDialog
-				about={about}
-				onClose={() => {
-					closed += 1;
-				}}
-			/>
+			<QueryClientProvider client={client}>
+				<ProjectContext.Provider value={{ api, slug: () => "hashbrown" }}>
+					<FeedbackDialog
+						about={about}
+						onClose={() => {
+							closed += 1;
+						}}
+					/>
+				</ProjectContext.Provider>
+			</QueryClientProvider>
 		),
 		root,
 	);
@@ -64,6 +86,9 @@ test("Send waits for a message and sends it with the kind chosen", async () => {
 	await userEvent.fill(message().element(), "   ");
 	await expect.element(sendButton()).toBeDisabled();
 
+	await expect
+		.element(page.getByRole("checkbox", { name: /Your email/ }))
+		.toBeVisible();
 	await userEvent.fill(message().element(), "Pin a whole run to Plots");
 	await page.getByRole("radio", { name: "Feedback" }).click();
 	await sendButton().click();
@@ -75,8 +100,19 @@ test("Send waits for a message and sends it with the kind chosen", async () => {
 	expect(sentForm().off).toEqual(new Set());
 	expect(vi.mocked(send).mock.lastCall?.[1]).toMatchObject({
 		slug: "hashbrown",
-		email: "muriel@nowhere.example",
+		email: EMAIL,
 	});
+});
+
+// The browser keeps no email for the reader. Kills a dialog that offers an
+// email before the reader's account answers, never asks for it, or asks for
+// anyone else's.
+test("the reader's email is offered once their account answers", async () => {
+	const asked: string[] = [];
+	mount(ABOUT, asked);
+	await expect.element(message()).toBeVisible();
+	expect(asked).toEqual(["/v0/users/muriel-bagge"]);
+	expect(page.getByRole("checkbox", { name: /Your email/ }).query()).toBeNull();
 });
 
 // Kills an unticked item that still goes, and a box that cannot be unticked.
@@ -84,6 +120,9 @@ test("each item unticked stays out of the report", async () => {
 	vi.mocked(send).mockResolvedValue();
 	await userEvent.fill(message().element(), "Queued forever");
 	await expect.element(page.getByRole("radio", { name: "Bug" })).toBeChecked();
+	await expect
+		.element(page.getByRole("checkbox", { name: /Your email/ }))
+		.toBeVisible();
 	const boxes = page.getByRole("checkbox").elements();
 	expect(boxes).toHaveLength(6);
 	for (const box of boxes) {
@@ -100,7 +139,7 @@ test("each item unticked stays out of the report", async () => {
 
 // Kills a Project item offered on a page with no project, such as Profile.
 test("a page outside a project offers no Project item", async () => {
-	mount({ email: ABOUT.email });
+	mount({ reader: ABOUT.reader });
 	await expect
 		.element(page.getByRole("checkbox", { name: /Your email/ }))
 		.toBeVisible();

@@ -1,6 +1,6 @@
 ---
 import { SHELL_KEY } from "../memory";
-import { USER_KEY } from "../reader";
+import { READER_KEY } from "../reader";
 
 interface Props {
 	slug: string;
@@ -8,20 +8,20 @@ interface Props {
 
 const { slug } = Astro.props;
 
-// Runs right after the shell's markup, before the first paint: fills in what
-// this reader last saw of the project, so the app's render over it moves
-// nothing, and brings the current tab into view on a narrow screen.
+// Runs right after the shell's markup, before the first paint, which waits for
+// the marker after it: fills in what this reader last saw of the project, so
+// neither that paint nor the app's render over it moves anything, and brings
+// the current tab into view on a narrow screen.
 ---
 
-<script is:inline define:vars={{ slug, SHELL_KEY, USER_KEY }}>
+<script is:inline define:vars={{ slug, SHELL_KEY, READER_KEY }}>
 	try {
-		var user = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+		var reader = JSON.parse(localStorage.getItem(READER_KEY) || "null");
 		var record = JSON.parse(localStorage.getItem(SHELL_KEY) || "null");
 		var seen =
-			user &&
-			user.user &&
+			reader &&
 			record &&
-			record.reader === user.user.uuid &&
+			record.reader === reader.uuid &&
 			record.projects &&
 			record.projects[slug];
 		if (seen) {
@@ -60,3 +60,4 @@ const { slug } = Astro.props;
 		}
 	} catch (_) {}
 </script>
+<template id="shell-painted"></template>

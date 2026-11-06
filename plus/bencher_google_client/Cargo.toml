@@ -6,6 +6,9 @@ edition.workspace = true
 license-file.workspace = true
 publish = false
 
+[features]
+test-base-url = []
+
 [dependencies]
 bencher_valid.workspace = true
 oauth2.workspace = true

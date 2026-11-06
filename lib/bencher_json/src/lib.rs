@@ -135,7 +135,7 @@ pub use system::{
 };
 #[cfg(feature = "plus")]
 pub use system::{
-    auth::{JsonOAuth, JsonOAuthUrl, JsonOAuthUser},
+    auth::{JsonOAuth, JsonOAuthUrl},
     server::{
         BooleanParam, JsonServer, JsonServerStats, SelfHostedStartup, SelfHostedStats, ServerUuid,
     },

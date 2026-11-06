@@ -57,7 +57,7 @@ test("a restored opened run holds its rows' place until their code arrives", asy
 	document.body.append(root);
 	const dispose = render(
 		() => (
-			<QueryClientProvider client={createQueryClient(() => {})}>
+			<QueryClientProvider client={createQueryClient()}>
 				<MemoryRouter
 					history={history}
 					root={(props) => (

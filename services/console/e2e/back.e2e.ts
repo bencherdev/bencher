@@ -9,7 +9,7 @@ import {
 	test,
 } from "./fixtures";
 import { finishGitHub, startGitHub } from "./github";
-import { mailedLink } from "./mail";
+import { mailMark, mailedSignIn } from "./mail";
 
 const RETURN_KEY = "BENCHER_RETURN";
 // Fixed, since a test's title must read the same wherever it is collected.
@@ -37,39 +37,26 @@ test.describe("signed out", () => {
 
 	// Kills a sign in that forgets the page that sent the reader there, keeps it
 	// where a magic link opened in another tab cannot read it, or keeps it for a
-	// later sign in.
+	// later sign in; and a tab left on Check your inbox that never moves on.
 	test("a magic link opened in a new tab returns to the page", async ({
 		page,
-		request,
 	}) => {
 		const email = `${randomUUID().slice(0, 8)}@nowhere.com`;
-		const signup = await request.post(`${seed.api_url}/v0/auth/signup`, {
-			data: { name: "Le Quack", email, i_agree: true },
-		});
-		expect(signup.status()).toBe(202);
-		// The sign in forms ask for a reCAPTCHA token, which this API never checks.
-		await page.route("https://www.google.com/recaptcha/**", (route) =>
-			route.abort(),
-		);
 
 		await page.goto(alerts);
 		await expect(page).toHaveURL(logIn(alerts));
-		// The form replaces its placeholder once it loads, so fill until it takes.
-		const button = page.getByRole("button", { name: "Log in", exact: true });
-		await expect(async () => {
-			await page.getByPlaceholder("email@example.com").fill(email);
-			await expect(button).toBeEnabled({ timeout: 1_000 });
-		}).toPass();
-		await button.click();
-		await expect(page).toHaveURL((url) => url.pathname === "/auth/confirm");
+		await page.getByRole("textbox", { name: "Email" }).fill(email);
+		const mark = mailMark();
+		await page.getByRole("button", { name: "Continue with email" }).click();
+		await expect(page).toHaveURL("/auth/confirm");
 
-		const link = await mailedLink(email, "Confirm Bencher Login");
+		const { link } = await mailedSignIn(email, mark);
 		const tab = await page.context().newPage();
 		await tab.goto(link.href);
-		await tab.getByRole("button", { name: `Sign in as ${email}` }).click();
 		await expect(tab).toHaveURL(absolute(alerts));
 		await expect(tab.getByText("Read only", { exact: true })).toBeVisible();
 		expect(await keptReturn(tab)).toBeNull();
+		await expect(page).not.toHaveURL(/\/auth\//);
 	});
 
 	// Kills a provider sign in that lands on the console instead of the page,
@@ -82,22 +69,6 @@ test.describe("signed out", () => {
 		await finishGitHub(page, state);
 		await expect(page).toHaveURL(absolute(path));
 		expect(await keptReturn(page)).toBeNull();
-	});
-
-	// Kills a switch between log in and sign up that drops the way back, which
-	// the page switched to would then forget.
-	test("switching between log in and sign up keeps the way back", async ({
-		page,
-	}) => {
-		const back = new URLSearchParams({ back: base64(alerts) });
-		await page.goto(`/auth/login?${back}`);
-		await expect(
-			page.getByRole("link", { name: "sign up", exact: true }),
-		).toHaveAttribute("href", `/auth/signup?${back}`);
-		await page.goto(`/auth/signup?${back}`);
-		await expect(
-			page.getByRole("link", { name: "log in", exact: true }),
-		).toHaveAttribute("href", `/auth/login?${back}`);
 	});
 });
 
@@ -210,40 +181,43 @@ test.describe("signed in", () => {
 	});
 });
 
+/** A browser signed out, which another tab's sign in left `at` a page to return to. */
+const keptAt = (at: number) => ({
+	cookies: [],
+	origins: [
+		{
+			origin: seed.console_url,
+			localStorage: [{ name: RETURN_KEY, value: kept(alerts, at) }],
+		},
+	],
+});
+
+/** Finish a GitHub sign in as the admin that this tab did not start, which asks first. */
+const finishElsewhere = async (page: Page) => {
+	await finishGitHub(page, randomUUID(), undefined, seed.admin);
+	await page.getByRole("button", { name: "Continue with GitHub" }).click();
+};
+
 test.describe("with a kept page", () => {
-	test.use({
-		storageState: signedIn(seed.admin, {
-			[RETURN_KEY]: kept(alerts, Date.parse(seed.now)),
-		}),
-	});
+	test.use({ storageState: keptAt(Date.parse(seed.now)) });
 
-	// Kills a confirm page that ignores the page another tab kept, or a kept
-	// page used more than once.
-	test("a signed in reader is returned to it once", async ({ page }) => {
-		await page.goto("/auth/confirm");
-		await expect(page).toHaveURL(absolute(alerts));
-		await page.goto("/auth/confirm");
-		await expect(page).toHaveURL(mainProject);
-	});
-
-	// Kills a provider callback opened while signed in that drops the kept page.
-	test("a signed in provider callback returns to it", async ({ page }) => {
-		await page.goto("/auth/github");
+	// Kills a sign in finished in another tab that ignores the page the first
+	// tab kept, or a kept page used more than once.
+	test("a sign in is returned to it once", async ({ page }) => {
+		await finishElsewhere(page);
 		await expect(page).toHaveURL(absolute(alerts));
 		expect(await keptReturn(page)).toBeNull();
+		await finishElsewhere(page);
+		await expect(page).toHaveURL(mainProject);
 	});
 });
 
 test.describe("with a stale kept page", () => {
-	test.use({
-		storageState: signedIn(seed.admin, {
-			[RETURN_KEY]: kept(alerts, Date.parse(seed.now) - TTL - 1),
-		}),
-	});
+	test.use({ storageState: keptAt(Date.parse(seed.now) - TTL - 1) });
 
 	// Kills a kept page that outlives the sign in that asked for it.
-	test("a signed in reader lands on the main project", async ({ page }) => {
-		await page.goto("/auth/confirm");
+	test("a sign in lands on the main project", async ({ page }) => {
+		await finishElsewhere(page);
 		await expect(page).toHaveURL(mainProject);
 		expect(await keptReturn(page)).toBeNull();
 	});

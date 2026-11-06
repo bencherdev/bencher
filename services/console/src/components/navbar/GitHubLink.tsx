@@ -5,7 +5,7 @@ import { BENCHER_GITHUB_URL } from "../../util/ext";
 const GitHubLink = () => {
 	return (
 		<Show
-			when={authUser()?.token}
+			when={authUser()}
 			fallback={
 				<a
 					class="navbar-item"

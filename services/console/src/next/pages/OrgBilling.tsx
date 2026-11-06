@@ -79,7 +79,7 @@ const OrgBilling = () => {
 	}));
 	// Only read: an organization the reader has seen names the rail at once.
 	const bootstrap = useQueryResult(() => ({
-		...consoleUserQuery(api, reader().user.uuid),
+		...consoleUserQuery(api, reader().uuid),
 		enabled: false,
 	}));
 	const name = () =>

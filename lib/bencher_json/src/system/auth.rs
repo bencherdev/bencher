@@ -67,18 +67,6 @@ pub struct JsonOAuth {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonOAuthUser {
-    pub user: JsonAuthUser,
-    #[cfg(feature = "plus")]
-    pub plan: Option<PlanLevel>,
-    /// An app's pending request to connect, to return to now that the user is signed in.
-    #[cfg(feature = "plus")]
-    pub authorization: Option<OAuthAuthorizationUuid>,
-}
-
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConfirm {
     pub token: Jwt,
 }
