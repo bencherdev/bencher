@@ -33,13 +33,13 @@ import {
 	variantsQuery,
 } from "./queries";
 import { formatCount } from "../plot/count";
-import Tag from "../tag";
+import Tag, { parameterTag } from "../tag";
 
 const plural = (count: number, one: string, many: string) =>
 	`${formatCount(count)} ${count === 1 ? one : many}`;
 
 const tag = ([key, value]: [string, ParameterValue]) =>
-	`${key}=${String(value)}`;
+	parameterTag(key, value);
 
 const tagsOf = (set: Parameters) => Object.entries(set).map(tag);
 

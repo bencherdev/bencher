@@ -339,6 +339,8 @@ const JS_VITEST_V1_INT: i32 = 731;
 const JS_VITEST_V5_INT: i32 = 732;
 const PYTHON_INT: i32 = 80;
 const PYTHON_ASV_INT: i32 = 81;
+const PYTHON_ASV_JSON_INT: i32 = 811;
+const PYTHON_ASV_TEXT_INT: i32 = 812;
 const PYTHON_PYTEST_INT: i32 = 82;
 const RUBY_INT: i32 = 90;
 const RUBY_BENCHMARK_INT: i32 = 91;
@@ -397,6 +399,8 @@ pub enum Adapter {
     JsVitestV5 = JS_VITEST_V5_INT,
     Python = PYTHON_INT,
     PythonAsv = PYTHON_ASV_INT,
+    PythonAsvJson = PYTHON_ASV_JSON_INT,
+    PythonAsvText = PYTHON_ASV_TEXT_INT,
     PythonPytest = PYTHON_PYTEST_INT,
     Ruby = RUBY_INT,
     RubyBenchmark = RUBY_BENCHMARK_INT,
@@ -454,6 +458,8 @@ impl Adapter {
             | Self::JsVitestV1
             | Self::JsVitestV5
             | Self::PythonAsv
+            | Self::PythonAsvJson
+            | Self::PythonAsvText
             | Self::PythonPytest
             | Self::RubyBenchmark
             | Self::ShellHyperfine
@@ -526,6 +532,8 @@ impl fmt::Display for Adapter {
             Self::JsVitestV5 => write!(f, "js_vitest_v5"),
             Self::Python => write!(f, "python"),
             Self::PythonAsv => write!(f, "python_asv"),
+            Self::PythonAsvJson => write!(f, "python_asv_json"),
+            Self::PythonAsvText => write!(f, "python_asv_text"),
             Self::PythonPytest => write!(f, "python_pytest"),
             Self::Ruby => write!(f, "ruby"),
             Self::RubyBenchmark => write!(f, "ruby_benchmark"),
@@ -546,11 +554,12 @@ mod adapter {
         CPP_CATCH2_XML_INT, CPP_GOOGLE_INT, CPP_INT, DART_BENCHMARK_HARNESS_INT, DART_INT,
         GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
         JS_BENCHMARK_INT, JS_INT, JS_TIME_INT, JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT,
-        JSON_INT, JSON_V0_INT, JSON_V1_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT,
-        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT, RUST_BENCH_INT, RUST_BENCH_JSON_INT,
-        RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT,
-        RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT,
-        RUST_INT, SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        JSON_INT, JSON_V0_INT, JSON_V1_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT,
+        PYTHON_ASV_TEXT_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT,
+        RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
+        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_GUNGRAUN_INT,
+        RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT,
+        SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -605,6 +614,8 @@ mod adapter {
                 Self::JsVitestV5 => JS_VITEST_V5_INT.to_sql(out),
                 Self::Python => PYTHON_INT.to_sql(out),
                 Self::PythonAsv => PYTHON_ASV_INT.to_sql(out),
+                Self::PythonAsvJson => PYTHON_ASV_JSON_INT.to_sql(out),
+                Self::PythonAsvText => PYTHON_ASV_TEXT_INT.to_sql(out),
                 Self::PythonPytest => PYTHON_PYTEST_INT.to_sql(out),
                 Self::Ruby => RUBY_INT.to_sql(out),
                 Self::RubyBenchmark => RUBY_BENCHMARK_INT.to_sql(out),
@@ -661,6 +672,8 @@ mod adapter {
                 JS_VITEST_V5_INT => Ok(Self::JsVitestV5),
                 PYTHON_INT => Ok(Self::Python),
                 PYTHON_ASV_INT => Ok(Self::PythonAsv),
+                PYTHON_ASV_JSON_INT => Ok(Self::PythonAsvJson),
+                PYTHON_ASV_TEXT_INT => Ok(Self::PythonAsvText),
                 PYTHON_PYTEST_INT => Ok(Self::PythonPytest),
                 RUBY_INT => Ok(Self::Ruby),
                 RUBY_BENCHMARK_INT => Ok(Self::RubyBenchmark),
@@ -1264,7 +1277,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 45] = [
+    const ADAPTERS: [Adapter; 47] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1301,6 +1314,8 @@ mod tests {
         Adapter::JsVitestV5,
         Adapter::Python,
         Adapter::PythonAsv,
+        Adapter::PythonAsvJson,
+        Adapter::PythonAsvText,
         Adapter::PythonPytest,
         Adapter::Ruby,
         Adapter::RubyBenchmark,
@@ -1351,6 +1366,8 @@ mod tests {
             | Adapter::JsVitestV5
             | Adapter::Python
             | Adapter::PythonAsv
+            | Adapter::PythonAsvJson
+            | Adapter::PythonAsvText
             | Adapter::PythonPytest
             | Adapter::Ruby
             | Adapter::RubyBenchmark

@@ -60,6 +60,8 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"json_v1",
 	"magic",
 	"python_asv",
+	"python_asv_json",
+	"python_asv_text",
 	"python_pytest",
 	"ruby_benchmark",
 	"rust_bench",

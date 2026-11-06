@@ -1,6 +1,7 @@
 import { leafOf } from "../leaf";
 import { distinct, varyingKeys } from "./distinct";
 import type { PlotLine, PlotMeasure, PlotParameterValue } from "./types";
+import { parameterTag, shownValue } from "../tag";
 
 /** Line indices in key order: alerting lines first, then the given order. */
 export const keyOrder = (lines: readonly PlotLine[]): number[] => {
@@ -22,7 +23,7 @@ export const parameterKey = (
 	);
 
 const tag = (key: string, value: PlotParameterValue): string =>
-	`${key}=${String(value)}`;
+	parameterTag(key, value);
 
 /** The parameters every line carries with one value, which key entries leave out. */
 export const constantParameters = (lines: readonly PlotLine[]): string[] => {
@@ -76,7 +77,9 @@ export const lineNames = (
 		const given = rests[index] ?? line.benchmark;
 		const tags = Object.entries(line.parameters)
 			.filter(([key]) => varying.has(key))
-			.map(([key, value]) => (key === only ? String(value) : tag(key, value)));
+			.map(([key, value]) =>
+				key === only ? shownValue(value) : tag(key, value),
+			);
 		const detail = [
 			metric ? line.metric : undefined,
 			measure ? measures[line.measure]?.name : undefined,

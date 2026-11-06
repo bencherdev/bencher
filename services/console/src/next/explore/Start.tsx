@@ -37,7 +37,7 @@ import {
 	statusText,
 } from "../runs/status";
 import StatusPill from "../runs/StatusPill";
-import Tag from "../tag";
+import Tag, { parameterTag } from "../tag";
 import { type Option, SearchMenu, choicesOf } from "./Box";
 import { plotSearch } from "./pinned";
 import { type Dimension, nameQuery } from "./queries";
@@ -108,7 +108,7 @@ const Start = (props: { onQuery: (query: ExploreQuery) => void }) => {
 								? null
 								: formatChange(alert.value, alert.boundary.baseline);
 						const tags = Object.entries(alert.variant.parameters).map(
-							([key, value]) => `${key}=${String(value)}`,
+							([key, value]) => parameterTag(key, value),
 						);
 						const { branch, testbed, measure } = alert.threshold;
 						return (

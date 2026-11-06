@@ -453,8 +453,9 @@ pub(crate) mod test_json_v1 {
         );
     }
 
-    /// Parameters are bounded: at most `MAX_PARAMETER_KEYS` keys, and a key
-    /// or a string value that is non-empty, trimmed, and within `MAX_LEN` bytes.
+    /// Parameters are bounded: at most `MAX_PARAMETER_KEYS` keys, a key that is
+    /// non-empty, and a key or a string value that is trimmed and within
+    /// `MAX_LEN` bytes.
     ///
     /// An entry whose parameters break a bound is skipped and counted, never
     /// trimmed to fit, since a trimmed set could merge two variants.
@@ -480,16 +481,17 @@ pub(crate) mod test_json_v1 {
             r#"{"": 1}"#.to_owned(),
             r#"{" a": 1}"#.to_owned(),
             r#"{"a": " b"}"#.to_owned(),
-            r#"{"a": ""}"#.to_owned(),
         ] {
             assert_skips_the_variant(&parameters);
         }
 
-        // Every bound is inclusive, so a set sitting on each limit is kept.
+        // Every bound is inclusive, so a set sitting on each limit is kept, and an
+        // empty string value is a value of its own.
         for parameters in [
             keys(MAX_PARAMETER_KEYS),
             format!(r#"{{"{at_max_len}": 1}}"#),
             format!(r#"{{"a": "{at_max_len}"}}"#),
+            r#"{"a": ""}"#.to_owned(),
         ] {
             let results =
                 AdapterJsonV1::parse(&beside_a_good_entry(&parameters), Settings::default())

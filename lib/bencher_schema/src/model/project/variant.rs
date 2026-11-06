@@ -433,6 +433,7 @@ mod tests {
         ("str-tab", r#"{"s":"a\tb"}"#, Encode::Column),
         ("str-del", "{\"s\":\"a\u{7f}b\"}", Encode::Column),
         ("str-unicode", r#"{"s":"héllo"}"#, Encode::Column),
+        ("str-empty", r#"{"s":""}"#, Encode::Column),
         (
             "nonbmp-keys",
             "{\"\u{1f600}\":1,\"\u{fb33}\":2}",
