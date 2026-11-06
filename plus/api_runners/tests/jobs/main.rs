@@ -2961,11 +2961,31 @@ async fn reprocess_v1_output_with(
 }
 
 /// [`reprocess_v1_output_with`] for any stdout, logging to `log`.
-#[expect(clippy::expect_used, reason = "test helper")]
 async fn reprocess_output_with(
     report_version: Option<BmfVersion>,
     bmf_version: Option<u8>,
     results: &serde_json::Value,
+    log: &slog::Logger,
+    label: &str,
+) -> (JobStatus, i64, ReportParse) {
+    reprocess_stdout_with(
+        Adapter::Magic,
+        report_version,
+        bmf_version,
+        &results.to_string(),
+        log,
+        label,
+    )
+    .await
+}
+
+/// [`reprocess_output_with`] for any stdout as text, read by `adapter`.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn reprocess_stdout_with(
+    adapter: Adapter,
+    report_version: Option<BmfVersion>,
+    bmf_version: Option<u8>,
+    stdout: &str,
     log: &slog::Logger,
     label: &str,
 ) -> (JobStatus, i64, ReportParse) {
@@ -2987,14 +3007,17 @@ async fn reprocess_output_with(
         insert_test_job_with_bmf_version(&server, report_id, project.uuid, spec_id, bmf_version);
     set_job_status(&server, job_uuid, JobStatus::Completed);
     diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
-        .set(schema::report::bmf_version.eq(report_version))
+        .set((
+            schema::report::bmf_version.eq(report_version),
+            schema::report::adapter.eq(adapter),
+        ))
         .execute(&mut server.db_conn())
-        .expect("Failed to set the report's version");
+        .expect("Failed to set the report's version and adapter");
 
     let output = bencher_json::runner::JsonJobOutput {
         results: vec![bencher_json::runner::JsonIterationOutput {
             exit_code: 0,
-            stdout: Some(results.to_string()),
+            stdout: Some(stdout.to_owned()),
             stderr: None,
             output: None,
         }],
@@ -3247,29 +3270,33 @@ async fn reprocess_completed_job_parses_at_its_reports_version() {
 }
 
 /// A job whose results parse at the other version is refused by a message that says its version
-/// came from the remote job and names the fixes, in both directions.
+/// came from the remote job and names the fixes, in both directions: a user who can edit the
+/// project moves it up to version 1, and only a server admin moves it back.
 ///
 /// Kills: a job refusal that names a declaration or the project's version as where its version
-/// came from, or that names the fixes for the wrong direction.
+/// came from, that names the fixes for the wrong direction, or that names a server admin for the
+/// move up.
 #[tokio::test]
 async fn reprocess_completed_job_refusal_names_the_remote_job() {
     let v0 = serde_json::json!({ "bench_a": { "latency": { "value": 42.0 } } });
     let v1 = serde_json::json!({ "bench_a": [{ "measures": { "latency": { "value": 42.0 } } }] });
-    for (expected, results, parsed, label) in [(1, v0, 0, "job1"), (0, v1, 1, "job0")] {
+    let editor = "a user who can edit the project";
+    let admin = "a server admin";
+    for (expected, results, parsed, mover, other, label) in [
+        (1, v0, 0, admin, editor, "job1"),
+        (0, v1, 1, editor, admin, "job0"),
+    ] {
         let capture = LogCapture::default();
         let (status, _, _) =
             reprocess_output_with(None, Some(expected), &results, &capture.logger(), label).await;
         assert_eq!(status, JobStatus::Failed, "{label}");
-        let refusal = capture
-            .lines()
-            .into_iter()
-            .find(|line| line.contains("Failed to reprocess job results"))
-            .unwrap_or_else(|| panic!("expected the refusal to be logged: {label}"));
+        let refusal = refusal_logged(&capture);
         for phrase in [
             format!("parsed as BMF version {parsed}"),
             format!("the remote job was accepted at BMF version {expected}"),
             format!("Send BMF version {expected} results"),
             format!("declare `bmf_version` {parsed} through the API"),
+            format!("have {mover} move the project"),
             format!("`bencher project update --bmf-version {parsed}`"),
         ] {
             assert!(
@@ -3277,7 +3304,52 @@ async fn reprocess_completed_job_refusal_names_the_remote_job() {
                 "expected `{phrase}` in the refusal: {refusal}"
             );
         }
+        assert!(!refusal.contains(other), "{label}: {refusal}");
     }
+}
+
+/// A job at version 0 whose adapter reads results at version 1 only is refused by a message that
+/// names the adapter, the job's version, and the editors' move up.
+///
+/// Kills: the generic adapter refusal for a version 1 only adapter in a job, and a job refusal
+/// that names the project's version as where its version came from.
+#[tokio::test]
+async fn reprocess_completed_job_version_1_only_adapter_refuses_version_0() {
+    let stdout = include_str!("../../../../lib/bencher_adapter/tool_output/rust/bench/json.txt");
+    let capture = LogCapture::default();
+    let (status, metrics, _) = reprocess_stdout_with(
+        Adapter::RustBenchJson,
+        None,
+        None,
+        stdout,
+        &capture.logger(),
+        "v1only",
+    )
+    .await;
+    assert_eq!((status, metrics), (JobStatus::Failed, 0));
+    let refusal = refusal_logged(&capture);
+    for phrase in [
+        "`rust_bench_json` reads results at BMF version 1 only",
+        "the remote job was accepted at BMF version 0",
+        "declare `bmf_version` 1 through the API",
+        "have a user who can edit the project move the project to BMF version 1",
+    ] {
+        assert!(
+            refusal.contains(phrase),
+            "expected `{phrase}` in the refusal: {refusal}"
+        );
+    }
+    assert!(!refusal.contains("right adapter"), "{refusal}");
+}
+
+/// The logged refusal of a reprocessed job.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn refusal_logged(capture: &LogCapture) -> String {
+    capture
+        .lines()
+        .into_iter()
+        .find(|line| line.contains("Failed to reprocess job results"))
+        .expect("expected the refusal to be logged")
 }
 
 // =============================================================================

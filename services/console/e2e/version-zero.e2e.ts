@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
-import type { JsonPlot, JsonThreshold } from "../src/types/bencher";
+import type {
+	JsonPlot,
+	JsonProject,
+	JsonThreshold,
+} from "../src/types/bencher";
 import { createProject } from "./api";
 import { dimensions, explore } from "./explore";
 import {
@@ -13,6 +17,7 @@ import {
 	consolePath,
 	seed,
 	signedIn,
+	tabRow,
 	test,
 } from "./fixtures";
 
@@ -269,4 +274,59 @@ test("an empty version 0 project's setup card teaches a run that lands", async (
 		`/v0/projects/${project.slug}/thresholds`,
 	);
 	expect(thresholds.map(({ measure }) => measure.slug)).toEqual(["latency"]);
+});
+
+// Kills a move to version 1 an editor cannot reach from Explore, a link that
+// lands anywhere but the settings row's button, a move the API does not keep,
+// and an Explore still locked once the project is at version 1.
+test("an editor moves a version 0 project to version 1 from Explore's link", async ({
+	page,
+	request,
+}) => {
+	const project = await createProject(request, { version: 0 });
+	await page.goto(explore(project.slug));
+	await box(page, "Parameters")
+		.getByRole("link", { name: "Move to version 1" })
+		.click();
+	await expect(page).toHaveURL(/\/settings#bmf-version$/);
+	const move = page.getByRole("button", { name: "Move to version 1" });
+	await expect(move).toBeFocused();
+	await move.click();
+	const dialog = page.getByRole("alertdialog", {
+		name: `Move ${project.slug} to BMF version 1?`,
+	});
+	await dialog.getByRole("button", { name: "Move to version 1" }).click();
+	await expect(dialog).toHaveCount(0);
+	await expect(page.locator("#bmf-version")).toHaveText("BMF version1");
+	expect(
+		(await read<JsonProject>(request, `/v0/projects/${project.slug}`))
+			.bmf_version,
+	).toBe(1);
+
+	await tabRow(page).getByRole("link", { name: "Explore" }).click();
+	const parameters = box(page, "Parameters");
+	await expect(
+		parameters.getByRole("button", { name: "Add set" }),
+	).not.toHaveAttribute("aria-disabled");
+	await expect(parameters.getByRole("link")).toHaveCount(0);
+});
+
+test.describe("a reader who cannot edit the project", () => {
+	test.use({ storageState: signedIn(seed.outsider) });
+
+	// Kills Explore's link to the move offered to a reader the API refuses.
+	test("has no link to the move to version 1 in Explore", async ({
+		page,
+		request,
+	}) => {
+		const project = await createProject(request, { version: 0 });
+		await page.goto(explore(project.slug));
+		const parameters = box(page, "Parameters");
+		await expect(
+			parameters.getByRole("button", { name: "Add set" }),
+		).toHaveAttribute("aria-disabled", "true");
+		await expect(
+			parameters.getByRole("link", { name: "Move to version 1" }),
+		).toHaveCount(0);
+	});
 });

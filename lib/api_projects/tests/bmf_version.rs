@@ -13,11 +13,13 @@
 //! fixes. Fold is refused for every v1 payload, the empty payload included.
 //!
 //! The second section is the project's `bmf_version`: the version a payload that
-//! declares none is read as. It starts at 0, only a server admin moves it, and an
-//! explicit key wins over it in either direction.
+//! declares none is read as. It starts at 0, a user who can edit the project moves it
+//! to 1, only a server admin moves it back, and an explicit key wins over it in either
+//! direction.
 
-use bencher_api_tests::{TestServer, TestUser};
+use bencher_api_tests::{TestServer, TestUser, helpers::grant_project_role};
 use bencher_json::{BmfVersion, ProjectSlug};
+use bencher_rbac::project::Role;
 use http::StatusCode;
 
 /// A BMF v0 payload: a benchmark maps straight to its measures.
@@ -250,6 +252,11 @@ fn assert_refusal(body: &str, parsed: u8, expected: u8, source: Source) {
             ),
             format!("Send BMF version {expected} results"),
             format!("declare `bmf_version` {parsed} through the API"),
+            if parsed == 1 {
+                "A user who can edit the project can also move it to BMF version 1".to_owned()
+            } else {
+                "A server admin can also move the project to BMF version 0".to_owned()
+            },
             format!("`bencher project update --bmf-version {parsed}`"),
         ],
     };
@@ -267,6 +274,20 @@ fn assert_refusal(body: &str, parsed: u8, expected: u8, source: Source) {
         !body.contains("json_v0") && !body.contains("upgrade"),
         "expected no fix this server does not ship yet: {body}"
     );
+    assert!(
+        !body.contains(mover(expected)),
+        "expected no one named for the move the other way: {body}"
+    );
+}
+
+/// Who a refusal names to move a project to `to`: its editors move it up to version 1, and
+/// only a server admin moves it back.
+fn mover(to: u8) -> &'static str {
+    if to == 1 {
+        "user who can edit the project"
+    } else {
+        "server admin"
+    }
 }
 
 fn is_uuid(s: &str) -> bool {
@@ -500,6 +521,80 @@ async fn report_explicit_leaf_is_held_to_the_contract() {
     server.close().await;
 }
 
+/// libtest's JSON output, which only a version 1 leaf reads.
+const RUST_BENCH_JSON: &str = include_str!("../../bencher_adapter/tool_output/rust/bench/json.txt");
+
+/// An adapter with no version 0 tree refuses a version 0 report with a 400 that names the
+/// adapter and the version, and the fix for where the version came from; once its project
+/// is at version 1, the same report lands.
+///
+/// Kills: the generic adapter 400 for a version 1 only adapter, a refusal that names the
+/// project for a declared version, and a refusal that names a server admin for the move up.
+#[tokio::test]
+async fn report_version_1_only_adapter_refuses_version_0() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "v1only").await;
+    let post = |bmf_version| Post {
+        results: vec![RUST_BENCH_JSON],
+        bmf_version,
+        adapter: Some("rust_bench_json"),
+        ..Post::default()
+    };
+
+    let body = refused(&server, &fixture, post(None)).await;
+    assert!(
+        body.contains(
+            "`rust_bench_json` reads results at BMF version 1 only, and this project is at BMF version 0. A user who can edit the project can move it to BMF version 1 with `bencher project update --bmf-version 1`."
+        ),
+        "{body}"
+    );
+    assert!(!body.contains("right adapter"), "{body}");
+
+    let body = refused(&server, &fixture, post(Some(serde_json::json!(0)))).await;
+    for phrase in [
+        "`rust_bench_json` reads results at BMF version 1 only",
+        "the report declared `bmf_version` 0",
+        "Declare `bmf_version` 1",
+    ] {
+        assert!(body.contains(phrase), "expected `{phrase}`: {body}");
+    }
+    assert!(!body.contains("this project is at"), "{body}");
+
+    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+    let landed = report(&server, &fixture, post(None)).await;
+    assert_eq!(iterations(&landed), 1, "{landed}");
+
+    server.close().await;
+}
+
+/// An adapter with a version 0 tree that does not claim the output keeps the generic 400
+/// at version 0, with its adapter hint.
+///
+/// Kills: the version 1 only refusal for an adapter that has a version 0 tree.
+#[tokio::test]
+async fn report_unclaimed_output_keeps_the_adapter_hint() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "unclaimed").await;
+
+    let body = refused(
+        &server,
+        &fixture,
+        Post {
+            results: vec![RUST_BENCH_JSON],
+            adapter: Some("rust_bench"),
+            ..Post::default()
+        },
+    )
+    .await;
+    assert!(body.contains("right adapter"), "{body}");
+    assert!(
+        !body.contains("reads results at BMF version 1 only"),
+        "{body}"
+    );
+
+    server.close().await;
+}
+
 /// At version 0 an empty iteration folds beside the v0 iterations as it always
 /// has: one folded iteration, which is what the metric row count follows.
 #[tokio::test]
@@ -630,7 +725,7 @@ async fn try_patch(
     (status, body)
 }
 
-/// Move the project's `bmf_version` as `user`, who has to be the server admin.
+/// Move the project's `bmf_version` as its fixture's user, the server admin.
 async fn set_bmf_version(server: &TestServer, fixture: &Fixture, bmf_version: BmfVersion) {
     let (status, body) = try_patch(
         server,
@@ -795,12 +890,17 @@ async fn admin_moves_the_project_bmf_version_both_ways() {
     server.close().await;
 }
 
-/// Only a server admin can set the field, and the rest of the patch is unaffected.
+/// A user who can edit a project sends only `bmf_version: 1`: a refused patch applies
+/// nothing, the rest of it included, and the same patch without the field is the patch it
+/// has always been.
 ///
-/// The second user owns their own organization and project, so they are allowed to
-/// edit it. The only thing standing between them and the field is the admin check.
+/// The second user owns their own organization and project, so they are allowed to edit it.
+/// The only thing standing between them and version 0 is the admin check.
+///
+/// Kills: an editor allowed to send version 0 on a project already at 0, and a refused patch
+/// that applies the rest of its fields.
 #[tokio::test]
-async fn non_admin_cannot_set_the_project_bmf_version() {
+async fn editor_cannot_send_bmf_version_0() {
     let server = TestServer::new().await;
     // The first signup is the server admin, so the second one is not.
     let _admin = fixture(&server, "owner").await;
@@ -810,12 +910,11 @@ async fn non_admin_cannot_set_the_project_bmf_version() {
         .create_project(&user, &org, "Bmf Other Project")
         .await;
 
-    // The refused patch applies nothing, the rename included.
     let (status, body) = try_patch(
         &server,
         &user,
         &project.slug,
-        &serde_json::json!({ "name": "Bmf Renamed Project", "bmf_version": 1 }),
+        &serde_json::json!({ "name": "Bmf Renamed Project", "bmf_version": 0 }),
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
@@ -824,7 +923,6 @@ async fn non_admin_cannot_set_the_project_bmf_version() {
     assert_eq!(unchanged["name"], serde_json::json!("Bmf Other Project"));
     assert_eq!(unchanged["bmf_version"], serde_json::json!(0));
 
-    // The same patch without the field is the patch it has always been.
     let (status, body) = try_patch(
         &server,
         &user,
@@ -836,6 +934,68 @@ async fn non_admin_cannot_set_the_project_bmf_version() {
     let renamed = get_project(&server, &user, &project.slug).await;
     assert_eq!(renamed["name"], serde_json::json!("Bmf Renamed Project"));
     assert_eq!(renamed["bmf_version"], serde_json::json!(0));
+
+    server.close().await;
+}
+
+/// A user who can edit the project moves it to version 1, sends 1 again with nothing to
+/// move, and cannot move it back; a user who can only view it moves nothing.
+///
+/// Kills: an editor refused the move up, an editor refused the same version, an editor
+/// allowed the move back, and a viewer allowed the move up.
+#[tokio::test]
+async fn editor_moves_the_project_to_bmf_version_1() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "editor").await;
+    let developer = server
+        .signup("Developer User", "bmfdeveloper@example.com")
+        .await;
+    grant_project_role(
+        &server,
+        &developer,
+        fixture.project_slug.as_ref(),
+        Role::Developer,
+    );
+    let viewer = server.signup("Viewer User", "bmfviewer@example.com").await;
+    grant_project_role(
+        &server,
+        &viewer,
+        fixture.project_slug.as_ref(),
+        Role::Viewer,
+    );
+    let version = |project: serde_json::Value| project["bmf_version"].clone();
+
+    let (status, body) = try_patch(
+        &server,
+        &viewer,
+        &fixture.project_slug,
+        &serde_json::json!({ "bmf_version": 1 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "viewer: {body}");
+    let project = get_project(&server, &developer, &fixture.project_slug).await;
+    assert_eq!(version(project), serde_json::json!(0));
+
+    for (bmf_version, expected_status, expected_version) in [
+        (1, StatusCode::OK, 1),
+        (1, StatusCode::OK, 1),
+        (0, StatusCode::FORBIDDEN, 1),
+    ] {
+        let (status, body) = try_patch(
+            &server,
+            &developer,
+            &fixture.project_slug,
+            &serde_json::json!({ "bmf_version": bmf_version }),
+        )
+        .await;
+        assert_eq!(status, expected_status, "send {bmf_version}: {body}");
+        let project = get_project(&server, &developer, &fixture.project_slug).await;
+        assert_eq!(
+            version(project),
+            serde_json::json!(expected_version),
+            "send {bmf_version}"
+        );
+    }
 
     server.close().await;
 }

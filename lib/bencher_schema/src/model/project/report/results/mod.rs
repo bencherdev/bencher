@@ -137,6 +137,7 @@ impl ReportResults {
             .map_err(|e| match e {
                 // The adapter is right and the version is wrong, so no adapter hint.
                 AdapterError::BmfVersion { parsed, .. } => report_version.refusal(parsed),
+                AdapterError::V1Only(adapter) => report_version.v1_only(adapter),
                 AdapterError::Valid(_) | AdapterError::BenchmarkUnits(_) | AdapterError::Convert(_) => {
                     bad_request_error(format!(
                         "Failed to convert results with adapter ({adapter} | {settings:?}): {e}\n\nAre you sure {adapter} is the right adapter?\nRead more about adapters here: https://bencher.dev/docs/explanation/adapters/"
@@ -661,12 +662,47 @@ impl ReportBmfVersion {
                 "Results parsed as BMF version {parsed}, but the report declared `bmf_version` {version}. Send BMF version {version} results, or declare `bmf_version` {parsed}."
             ),
             BmfVersionSource::Project => format!(
-                "Results parsed as BMF version {parsed}, but the report declared no `bmf_version`, so it was read at its project's BMF version, {version}. Send BMF version {version} results, or declare `bmf_version` {parsed} through the API. A server admin can also move the project to BMF version {parsed} with `bencher project update --bmf-version {parsed}`."
+                "Results parsed as BMF version {parsed}, but the report declared no `bmf_version`, so it was read at its project's BMF version, {version}. Send BMF version {version} results, or declare `bmf_version` {parsed} through the API. {} to BMF version {parsed} with `bencher project update --bmf-version {parsed}`.",
+                if parsed == BmfVersion::V1 {
+                    "A user who can edit the project can also move it"
+                } else {
+                    "A server admin can also move the project"
+                }
             ),
             BmfVersionSource::Job => format!(
-                "Results parsed as BMF version {parsed}, but the remote job was accepted at BMF version {version}. Send BMF version {version} results, or run the job again at BMF version {parsed}: declare `bmf_version` {parsed} through the API, or, for a run that declares none, have a server admin move the project to BMF version {parsed} with `bencher project update --bmf-version {parsed}`."
+                "Results parsed as BMF version {parsed}, but the remote job was accepted at BMF version {version}. Send BMF version {version} results, or run the job again at BMF version {parsed}: declare `bmf_version` {parsed} through the API, or, for a run that declares none, have {} move the project to BMF version {parsed} with `bencher project update --bmf-version {parsed}`.",
+                mover(parsed)
             ),
         })
+    }
+
+    /// The 400 for an adapter that reads results at version 1 only, on a report read at
+    /// version 0.
+    fn v1_only(self, adapter: Adapter) -> HttpError {
+        let Self { version, source } = self;
+        let to = BmfVersion::V1;
+        bad_request_error(match source {
+            BmfVersionSource::Declared => format!(
+                "`{adapter}` reads results at BMF version {to} only, but the report declared `bmf_version` {version}. Declare `bmf_version` {to} to read them."
+            ),
+            BmfVersionSource::Project => format!(
+                "`{adapter}` reads results at BMF version {to} only, and this project is at BMF version {version}. A user who can edit the project can move it to BMF version {to} with `bencher project update --bmf-version {to}`."
+            ),
+            BmfVersionSource::Job => format!(
+                "`{adapter}` reads results at BMF version {to} only, and the remote job was accepted at BMF version {version}. Run the job again at BMF version {to}: declare `bmf_version` {to} through the API, or, for a run that declares none, have {} move the project to BMF version {to} with `bencher project update --bmf-version {to}`.",
+                mover(to)
+            ),
+        })
+    }
+}
+
+/// Who can move a project to `to`: a user who can edit it moves it to version 1, and only a
+/// server admin moves it anywhere else.
+fn mover(to: BmfVersion) -> &'static str {
+    if to == BmfVersion::V1 {
+        "a user who can edit the project"
+    } else {
+        "a server admin"
     }
 }
 

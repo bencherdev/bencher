@@ -136,7 +136,8 @@ pub struct CliProjectUpdate {
     #[clap(long)]
     pub visibility: Option<CliProjectVisibility>,
 
-    /// BMF version of the project. Server admins only.
+    /// BMF version of the project.
+    /// A user who can edit the project can move it to version 1. Any other version needs a server admin.
     #[clap(long)]
     pub bmf_version: Option<BmfVersion>,
 

@@ -5,6 +5,7 @@ use bencher_json::{BmfVersion, MeasureNameId, project::report::Adapter};
 use crate::{
     Adaptable as _, AdapterError, Settings,
     adapters::json::{v0::AdapterJsonV0, v1::AdapterJsonV1},
+    v0_parser,
 };
 
 pub mod adapter_metrics;
@@ -49,6 +50,9 @@ impl AdapterResultsArray {
     /// `magic` the other version's leaf is probed only to name the version and
     /// nothing ingests through it.
     fn refusal(results: &str, adapter: Adapter, expected: BmfVersion) -> AdapterError {
+        if expected == BmfVersion::V0 && v0_parser(adapter).is_none() {
+            return AdapterError::V1Only(adapter);
+        }
         let probe = if !matches!(adapter, Adapter::Json | Adapter::Magic) {
             None
         } else if expected == BmfVersion::V0 {
@@ -187,9 +191,61 @@ mod test_results_array {
                 assert_eq!(*error_expected, expected);
                 assert_eq!(*error_parsed, parsed);
             },
-            AdapterError::Valid(_) | AdapterError::BenchmarkUnits(_) | AdapterError::Convert(_) => {
+            AdapterError::Valid(_)
+            | AdapterError::BenchmarkUnits(_)
+            | AdapterError::Convert(_)
+            | AdapterError::V1Only(_) => {
                 panic!("expected the BMF version error: {error}")
             },
+        }
+    }
+
+    /// An adapter with no version 0 tree refuses version 0 by name, on output it reads at
+    /// version 1.
+    ///
+    /// Kills: a version 1 only adapter that falls through to the generic convert error at
+    /// version 0, and a refusal that names another adapter.
+    #[test]
+    fn results_array_version_1_only_adapter_refuses_version_0() {
+        for (adapter, suffix) in [
+            (Adapter::RustBenchJson, "rust/bench/json.txt"),
+            (Adapter::RustCriterionJson, "rust/criterion/json_flat.txt"),
+            (Adapter::CppCatch2Xml, "cpp/catch2/durations.xml"),
+            (Adapter::GoBenchJson, "go/bench/json_count.txt"),
+            (Adapter::JsVitestV5, "js/vitest/v5_basic.json"),
+            (Adapter::PythonAsvJson, "python/asv/kinds.json"),
+        ] {
+            let results = std::fs::read_to_string(format!("./tool_output/{suffix}"))
+                .expect("Failed to read test file");
+            AdapterResultsArray::new(&[&results], adapter, Settings::new(None, BmfVersion::V1))
+                .unwrap_or_else(|e| panic!("{adapter} {suffix} at version 1: {e}"));
+            let error = new_at(&results, adapter, BmfVersion::V0);
+            assert!(
+                matches!(error, AdapterError::V1Only(refused) if refused == adapter),
+                "expected {adapter} to refuse version 0 by name: {error}"
+            );
+        }
+    }
+
+    /// An adapter with a version 0 tree that does not claim the output keeps the generic
+    /// convert error at version 0, and so does a version 1 only adapter at version 1.
+    ///
+    /// Kills: the version 1 only refusal for every adapter that claims nothing at version 0,
+    /// and for a version 1 only adapter at version 1.
+    #[test]
+    fn results_array_unclaimed_output_keeps_the_convert_error() {
+        let results = std::fs::read_to_string("./tool_output/rust/bench/json.txt")
+            .expect("Failed to read test file");
+        for (adapter, bmf_version) in [
+            (Adapter::RustBench, BmfVersion::V0),
+            (Adapter::CppGoogle, BmfVersion::V0),
+            (Adapter::GoBenchJson, BmfVersion::V1),
+        ] {
+            let error = new_at(&results, adapter, bmf_version);
+            assert!(
+                matches!(error, AdapterError::Convert(_)),
+                "expected the convert error for {adapter} at version {bmf_version}: {error}"
+            );
         }
     }
 

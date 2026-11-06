@@ -4,10 +4,19 @@ import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import TextInput from "@bencherdev/ui/TextInput";
 import Truncate from "@bencherdev/ui/Truncate";
+import { useLocation } from "@solidjs/router";
 import { type QueryClient, useQueryClient } from "@tanstack/solid-query";
-import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
+import {
+	Show,
+	createEffect,
+	createMemo,
+	createSignal,
+	on,
+	onMount,
+} from "solid-js";
 import {
 	type JsonConsoleProject,
+	type JsonConsoleUser,
 	type JsonProject,
 	Visibility,
 } from "../../types/bencher";
@@ -34,6 +43,9 @@ import {
 import Head from "./Head";
 
 const FIELDS: readonly Field[] = ["name", "slug", "url"];
+
+/** The BMF version row's id, which Explore's link to the move opens. */
+const BMF_VERSION_ROW = "bmf-version";
 
 /** The project's name, slug, and URL, and the Danger section with its visibility. */
 const General = () => {
@@ -84,6 +96,7 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 
 	const [saving, setSaving] = createSignal(false);
 	const [confirming, setConfirming] = createSignal<typeof SlugDialog>();
+	const [moving, setMoving] = createSignal(false);
 	const save = async (patch: Patch) => {
 		const from = slug();
 		setConfirming(undefined);
@@ -146,6 +159,8 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 		!patch() || saving() || FIELDS.some((field) => problem(field));
 	let heading: HTMLHeadingElement | undefined;
 	let foot: HTMLDivElement | undefined;
+	let row: HTMLDivElement | undefined;
+	let move: HTMLButtonElement | undefined;
 	// Save disables itself and Discard goes away, so focus on either moves to
 	// the form's heading first rather than falling to the page.
 	const holdFocus = () => {
@@ -158,6 +173,19 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 		if (patch()?.slug !== undefined) {
 			slugDialog.preload();
 		}
+	};
+	// A link to the row lands on its button.
+	const location = useLocation();
+	onMount(() => {
+		if (location.hash === `#${BMF_VERSION_ROW}`) {
+			row?.scrollIntoView({ block: "center" });
+			move?.focus({ preventScroll: true });
+		}
+	});
+	// The button goes once the project moves, so the focus goes to the form's heading.
+	const closeMove = () => {
+		setMoving(false);
+		(move?.isConnected ? move : heading)?.focus();
 	};
 	const submit = (event: SubmitEvent) => {
 		event.preventDefault();
@@ -259,11 +287,31 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 						</div>
 					</div>
 
-					<div class="formrow">
+					<div
+						class="formrow"
+						id={BMF_VERSION_ROW}
+						ref={(element) => {
+							row = element;
+						}}
+					>
 						<div class="fl">
 							<span>BMF version</span>
 						</div>
-						<div class="fvalue mono">{props.data.project.bmf_version}</div>
+						<div class="fvalue">
+							<span class="mono">{props.data.project.bmf_version}</span>
+							<Show when={props.data.project.bmf_version === 0}>
+								<Button
+									size="sm"
+									aria-haspopup="dialog"
+									ref={(element) => {
+										move = element;
+									}}
+									onClick={() => setMoving(true)}
+								>
+									Move to version 1
+								</Button>
+							</Show>
+						</div>
 					</div>
 				</div>
 				<div
@@ -325,6 +373,17 @@ const ProjectForm = (props: { data: JsonConsoleProject }) => {
 						/>
 					);
 				}}
+			</Show>
+			<Show when={moving()}>
+				<ConfirmPatch
+					id="bmf-title"
+					title={`Move ${props.data.project.slug} to BMF version 1?`}
+					body="Only a server admin can move it back."
+					action="Move to version 1"
+					patch={{ bmf_version: 1 }}
+					onSent={(project) => settleVersion(client, project)}
+					onDismiss={closeMove}
+				/>
 			</Show>
 		</>
 	);
@@ -476,13 +535,38 @@ const ChangeVisibility = (props: {
 	data: JsonConsoleProject;
 	onDismiss: () => void;
 }) => {
-	const { api, slug } = useProject();
-	const client = useQueryClient();
 	// Held from the opening: the change shows at once, under the dialog.
 	const to =
 		props.data.project.visibility === Visibility.Private
 			? Visibility.Public
 			: Visibility.Private;
+	return (
+		<ConfirmPatch
+			id="vis-title"
+			title={`Make ${props.data.project.slug} ${to}?`}
+			action={`Make ${to}`}
+			patch={{ visibility: to }}
+			plans={billing(props.data)}
+			onDismiss={props.onDismiss}
+		/>
+	);
+};
+
+/** Asks, then sends `patch` alone, outside the form's Save. */
+const ConfirmPatch = (props: {
+	id: string;
+	title: string;
+	/** The one consequence the reader confirms. */
+	body?: string | undefined;
+	action: string;
+	patch: Patch;
+	/** Where a plan refusal links to. */
+	plans?: string | undefined;
+	onSent?: ((project: JsonProject) => void) | undefined;
+	onDismiss: () => void;
+}) => {
+	const { api, slug } = useProject();
+	const client = useQueryClient();
 	const [sending, setSending] = createSignal(false);
 	const [refusal, setRefusal] = createSignal<Refusal>();
 	// The button stays enabled while sending, so the focus on it is never dropped.
@@ -490,14 +574,14 @@ const ChangeVisibility = (props: {
 		if (sending()) {
 			return;
 		}
-		const patch = { visibility: to };
 		setSending(true);
 		setRefusal(undefined);
 		try {
-			await sendPatch(api, client, slug(), patch);
+			const project = await sendPatch(api, client, slug(), props.patch);
+			props.onSent?.(project);
 			props.onDismiss();
 		} catch (error) {
-			setRefusal(refusalOf(error, patch));
+			setRefusal(refusalOf(error, props.patch));
 		} finally {
 			setSending(false);
 		}
@@ -505,13 +589,12 @@ const ChangeVisibility = (props: {
 	return (
 		<Dialog
 			role="alertdialog"
-			aria-labelledby="vis-title"
+			aria-labelledby={props.id}
+			aria-describedby={props.body ? `${props.id}-desc` : undefined}
 			onDismiss={props.onDismiss}
 		>
 			<div class="ui-dialog-head">
-				<h2 id="vis-title">
-					Make {props.data.project.slug} {to}?
-				</h2>
+				<h2 id={props.id}>{props.title}</h2>
 				<Button
 					variant="ghost"
 					iconOnly
@@ -521,28 +604,36 @@ const ChangeVisibility = (props: {
 					<Icon name="close" />
 				</Button>
 			</div>
-			<Show when={refusal()}>
-				{(refused) => (
-					<div class="ui-dialog-body">
-						<p class="ferror" role="alert">
-							<Icon name="warning" />
-							<span>
-								<Show
-									when={refused().field === "visibility"}
-									fallback={<Truncate text={refused().message} reveal />}
-								>
-									{refused().message}{" "}
-									<a href={billing(props.data)}>See plans</a>
-								</Show>
-							</span>
-						</p>
-					</div>
-				)}
+			<Show when={props.body || refusal()}>
+				<div class="ui-dialog-body">
+					<Show when={props.body}>
+						{(body) => <p id={`${props.id}-desc`}>{body()}</p>}
+					</Show>
+					<Show when={refusal()}>
+						{(refused) => (
+							<p class="ferror" role="alert">
+								<Icon name="warning" />
+								<span>
+									<Show
+										when={refused().field === "visibility" && props.plans}
+										fallback={<Truncate text={refused().message} reveal />}
+									>
+										{(plans) => (
+											<>
+												{refused().message} <a href={plans()}>See plans</a>
+											</>
+										)}
+									</Show>
+								</span>
+							</p>
+						)}
+					</Show>
+				</div>
 			</Show>
 			<div class="ui-dialog-foot">
 				<Button onClick={props.onDismiss}>Cancel</Button>
 				<Button variant="primary" onClick={change}>
-					Make {to}
+					{props.action}
 				</Button>
 			</div>
 		</Dialog>
@@ -575,3 +666,18 @@ const sendPatch = async (
 		throw error;
 	}
 };
+
+/** Every cached list of the reader's projects holds the project at the BMF version the API kept. */
+const settleVersion = (client: QueryClient, project: JsonProject) =>
+	client.setQueriesData<JsonConsoleUser>(
+		{ queryKey: ["console", "user"] },
+		(user) =>
+			user && {
+				...user,
+				projects: user.projects.map((row) =>
+					row.uuid === project.uuid
+						? { ...row, bmf_version: project.bmf_version }
+						: row,
+				),
+			},
+	);
