@@ -55,4 +55,4 @@ const LANGUAGE = /^(rust|cpp|go|java|c_sharp|js|python|ruby|shell|dart)$/;
 export const cliAdapter = (adapter: Adapter): string =>
 	LANGUAGE.test(adapter)
 		? "magic"
-		: adapter.replace(/_(v\d|json|stdout|text)$/, "");
+		: adapter.replace(/_(v\d|json|stdout|text|xml)$/, "");

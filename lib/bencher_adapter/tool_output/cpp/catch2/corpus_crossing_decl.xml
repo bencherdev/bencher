@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="crossingP" rng-seed="3469573942" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="crossing.cpp" line="2">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1573" clockResolution="18.9578" estimatedDuration="1.8876e+06">
+      <!-- All values in nano seconds -->
+      <mean value="11.2773" lowerBound="11.1568" upperBound="11.4087" ci="0.95"/>
+      <standardDeviation value="0.63944" lowerBound="0.583454" upperBound="0.768013" ci="0.95"/>
+      <outliers variance="0.544759" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Crossing" filename="crossing.cpp" line="3">
+    <BenchmarkResults name="crossing" samples="100" resamples="100000" iterations="7030" clockResolution="18.9578" estimatedDuration="1.406e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68947" lowerBound="2.6773" upperBound="2.71395" ci="0.95"/>
+      <standardDeviation value="0.0837425" lowerBound="0.04706" upperBound="0.132748" ci="0.95"/>
+      <outliers variance="0.267365" lowMild="1" lowSevere="0" highMild="1" highSevere="5"/>
+    </BenchmarkResults>
+    <Expression success="false" type="CHECK" filename="crossing.cpp" line="5">
+      <Original>
+        fib(3) == 3
+      </Original>
+      <Expanded>
+        2 == 3
+      </Expanded>
+    </Expression>
+    <BenchmarkResults name="disturbed after" samples="100" resamples="100000" iterations="7027" clockResolution="18.9578" estimatedDuration="1.4054e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68789" lowerBound="2.67395" upperBound="2.71728" ci="0.95"/>
+      <standardDeviation value="0.0973788" lowerBound="0.052716" upperBound="0.167471" ci="0.95"/>
+      <outliers variance="0.326238" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="673" clockResolution="18.9578" estimatedDuration="1.8844e+06">
+      <!-- All values in nano seconds -->
+      <mean value="26.6889" lowerBound="26.4385" upperBound="26.9708" ci="0.95"/>
+      <standardDeviation value="1.34478" lowerBound="1.17828" upperBound="1.8845" ci="0.95"/>
+      <outliers variance="0.484614" lowMild="0" lowSevere="0" highMild="1" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Crossing a header" filename="crossing.cpp" line="9">
+    <BenchmarkResults name="crossing early" samples="100" resamples="100000" iterations="7027" clockResolution="18.9578" estimatedDuration="1.4054e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.67584" lowerBound="2.66247" upperBound="2.70375" ci="0.95"/>
+      <standardDeviation value="0.0943437" lowerBound="0.0508331" upperBound="0.153126" ci="0.95"/>
+      <outliers variance="0.316312" lowMild="1" lowSevere="0" highMild="2" highSevere="5"/>
+    </BenchmarkResults>
+    <Expression success="false" type="CHECK" filename="crossing.cpp" line="11">
+      <Original>
+        fib(3) == 3
+      </Original>
+      <Expanded>
+        2 == 3
+      </Expanded>
+    </Expression>
+    <BenchmarkResults name="disturbed next" samples="100" resamples="100000" iterations="7038" clockResolution="18.9578" estimatedDuration="1.4076e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.6849" lowerBound="2.67066" upperBound="2.71622" ci="0.95"/>
+      <standardDeviation value="0.100599" lowerBound="0.0518439" upperBound="0.180187" ci="0.95"/>
+      <outliers variance="0.345576" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="402" clockResolution="18.9578" estimatedDuration="1.8894e+06">
+      <!-- All values in nano seconds -->
+      <mean value="47.1306" lowerBound="46.6606" upperBound="47.7321" ci="0.95"/>
+      <standardDeviation value="2.69848" lowerBound="2.24211" upperBound="3.51216" ci="0.95"/>
+      <outliers variance="0.554514" lowMild="0" lowSevere="0" highMild="1" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="crossing.cpp" line="15">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2668" clockResolution="18.9578" estimatedDuration="1.8676e+06">
+      <!-- All values in nano seconds -->
+      <mean value="6.99238" lowerBound="6.95367" upperBound="7.05965" ci="0.95"/>
+      <standardDeviation value="0.254247" lowerBound="0.166741" upperBound="0.387957" ci="0.95"/>
+      <outliers variance="0.326338" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="2" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="2" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

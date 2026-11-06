@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="minstat" rng-seed="518419222" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Minutes long" filename="minstat.cpp" line="8">
+    <BenchmarkResults name="sleeps 61 s" samples="2" resamples="100000" iterations="1" clockResolution="19.1688" estimatedDuration="1.22e+11">
+      <!-- All values in nano seconds -->
+      <mean value="6.10001e+10" lowerBound="6.10001e+10" upperBound="6.10001e+10" ci="0.95"/>
+      <standardDeviation value="6531" lowerBound="0" upperBound="0" ci="0.95"/>
+      <outliers variance="0.25" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 9" samples="2" resamples="100000" iterations="1216" clockResolution="19.1688" estimatedDuration="36480">
+      <!-- All values in nano seconds -->
+      <mean value="16.5263" lowerBound="16.1924" upperBound="16.5263" ci="0.95"/>
+      <standardDeviation value="0.333882" lowerBound="0" upperBound="0" ci="0.95"/>
+      <outliers variance="0.25" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="1" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>
