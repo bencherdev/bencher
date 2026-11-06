@@ -160,7 +160,7 @@ async fn handle_oauth_user(
     let claims = context.token_key.validate_client(&token).map_err(|e| {
         issue_error(
             "Failed to validate new client JWT for OAuth2",
-            &format!("Failed to validate new client JWT for {provider} {auth_action}: {token}"),
+            &format!("Failed to validate new client JWT for {provider} {auth_action}"),
             e,
         )
     })?;

@@ -18,8 +18,8 @@ pub enum ValidError {
     DateTimeStr(std::num::ParseIntError),
     #[error("Failed to validate date time millis: {0}")]
     DateTimeMillis(i64),
-    #[error("Failed to validate JWT (JSON Web Token): {0}")]
-    Jwt(String),
+    #[error("Failed to validate JWT (JSON Web Token) of {0} characters")]
+    Jwt(usize),
     #[error("Failed to validate branch name: {0}")]
     BranchName(String),
     #[error("Failed to validate benchmark name: {0}")]
@@ -125,34 +125,33 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to validate update channel: {0}")]
     UpdateChannel(String),
-    #[error("Failed to validate project key: {0}")]
-    ProjectKey(String),
+    #[error("Failed to validate project key ({0} characters)")]
+    ProjectKey(usize),
     #[error("Failed to validate project key hash: {0}")]
     ProjectKeyHash(String),
-    #[error("Failed to validate user key: {0}")]
-    UserKey(String),
+    #[error("Failed to validate user key ({0} characters)")]
+    UserKey(usize),
     #[error("Failed to validate user key hash: {0}")]
     UserKeyHash(String),
     #[error(
-        "Failed to validate Bencher API key: {0}. Expected prefix `bencher_user_` or `bencher_run_`."
+        "Failed to validate Bencher API key ({0} characters). Expected prefix `bencher_user_` or `bencher_run_`."
     )]
-    BencherKey(String),
+    BencherKey(usize),
     #[cfg(feature = "plus")]
-    #[error("Failed to validate runner key: {0}")]
-    RunnerKey(String),
+    #[error("Failed to validate runner key ({0} characters)")]
+    RunnerKey(usize),
     #[cfg(feature = "plus")]
     #[error("Failed to validate runner key hash: {0}")]
     RunnerKeyHash(String),
-    // The token itself is left out of every OAuth token message: it is a credential.
     #[cfg(feature = "plus")]
     #[error("Failed to validate OAuth access token")]
-    OAuthAccessToken(String),
+    OAuthAccessToken(usize),
     #[cfg(feature = "plus")]
     #[error("Failed to validate OAuth refresh token")]
-    OAuthRefreshToken(String),
+    OAuthRefreshToken(usize),
     #[cfg(feature = "plus")]
     #[error("Failed to validate OAuth authorization code")]
-    OAuthCode(String),
+    OAuthCode(usize),
     #[cfg(feature = "plus")]
     #[error("Failed to validate OAuth token hash: {0}")]
     OAuthTokenHash(String),
