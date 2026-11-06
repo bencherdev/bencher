@@ -1,0 +1,83 @@
+{
+   "Title":"Probe.Paren-20261030-003839",
+   "HostEnvironmentInfo":{
+      "BenchmarkDotNetCaption":"BenchmarkDotNet",
+      "BenchmarkDotNetVersion":"0.15.8",
+      "OsVersion":"Linux Ubuntu 24.04.5 LTS (Noble Numbat)",
+      "ProcessorName":"Unknown processor",
+      "PhysicalProcessorCount":1,
+      "PhysicalCoreCount":16,
+      "LogicalCoreCount":16,
+      "RuntimeVersion":".NET 8.0.32 (8.0.32, 8.0.3226.50405)",
+      "Architecture":"X64",
+      "HasAttachedDebugger":false,
+      "HasRyuJit":true,
+      "Configuration":"RELEASE",
+      "DotNetCliVersion":"9.0.319",
+      "ChronometerFrequency":{
+         "Hertz":1000000000
+      },
+      "HardwareTimerKind":"Unknown"
+   },
+   "Benchmarks":[
+      {
+         "DisplayInfo":"Paren.Length: Dry(Runtime=.NET 8.0, IterationCount=1, LaunchCount=1, RunStrategy=ColdStart, UnrollFactor=1, WarmupCount=1) [P=a, Runtime=x) [b]",
+         "Namespace":"Probe",
+         "Type":"Paren",
+         "Method":"Length",
+         "MethodTitle":"Length",
+         "Parameters":"P=a, Runtime=x) [b",
+         "FullName":"Probe.Paren.Length(P: \"a, Runtime=x) [b\")",
+         "HardwareIntrinsics":"AVX512 IFMA+VBMI,AVX512 F+BW+CD+DQ+VL,AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL,AvxVnni VectorSize=256",
+         "Statistics":{
+            "OriginalValues":[
+               223502
+            ],
+            "N":1,
+            "Min":223502,
+            "LowerFence":223502,
+            "Q1":223502,
+            "Median":223502,
+            "Mean":223502,
+            "Q3":223502,
+            "UpperFence":223502,
+            "Max":223502,
+            "InterquartileRange":0,
+            "LowerOutliers":[
+               
+            ],
+            "UpperOutliers":[
+               
+            ],
+            "AllOutliers":[
+               
+            ],
+            "StandardError":0,
+            "Variance":0,
+            "StandardDeviation":0,
+            "Skewness":"",
+            "Kurtosis":"",
+            "ConfidenceInterval":{
+               "N":1,
+               "Mean":223502,
+               "StandardError":0,
+               "Level":12,
+               "Margin":"",
+               "Lower":"",
+               "Upper":""
+            },
+            "Percentiles":{
+               "P0":223502,
+               "P25":223502,
+               "P50":223502,
+               "P67":223502,
+               "P80":223502,
+               "P85":223502,
+               "P90":223502,
+               "P95":223502,
+               "P100":223502
+            }
+         }
+      }
+   ]
+}
