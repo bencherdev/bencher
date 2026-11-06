@@ -5,11 +5,11 @@ import { decodePath } from "../../util/url";
 const AuthButtons = () => {
 	return (
 		<Show
-			when={authUser()?.token}
+			when={authUser()}
 			fallback={
 				<div class="buttons">
 					<a class="button" href="/auth/login">
-						Log in
+						Sign in
 					</a>
 					<a class="button is-primary" href="/auth/signup">
 						<strong>Sign up</strong>

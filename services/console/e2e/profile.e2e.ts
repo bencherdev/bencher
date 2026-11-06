@@ -3,10 +3,17 @@ import type {
 	BrowserContextOptions,
 	Page,
 } from "@playwright/test";
-import type { JsonAuthUser } from "../src/types/bencher";
 import { createReader, readUser, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, consolePath, seed, signedIn, test, RELAY } from "./fixtures";
+import {
+	expect,
+	consolePath,
+	type Reader,
+	seed,
+	signedIn,
+	test,
+	RELAY,
+} from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
@@ -30,7 +37,7 @@ const twoLegacyTokens = (page: Page, user: string) =>
 /** A page of its own for a new reader, whom each test may change. */
 const readerPage = async (
 	newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>,
-	reader: JsonAuthUser,
+	reader: Reader,
 ) => (await newContext({ storageState: signedIn(reader) })).newPage();
 
 test.describe("Profile", () => {
@@ -39,7 +46,7 @@ test.describe("Profile", () => {
 		newContext,
 		request,
 	}) => {
-		const reader = await createReader(request);
+		const reader = await createReader();
 		const page = await readerPage(newContext, reader);
 		await page.goto(profilePath(reader.user.slug));
 		const renamed = unique("Courage");
@@ -50,7 +57,7 @@ test.describe("Profile", () => {
 		await expect(page.getByRole("main").getByRole("status")).toHaveText(
 			"Saved",
 		);
-		expect((await readUser(request, reader.user.slug, reader.token)).name).toBe(
+		expect((await readUser(request, reader.user.slug, reader.key)).name).toBe(
 			renamed,
 		);
 		await page.reload();
@@ -61,9 +68,8 @@ test.describe("Profile", () => {
 	// which leaves the avatar on a Profile that no longer answers.
 	test("a new slug moves Profile and the avatar, and survives a reload", async ({
 		newContext,
-		request,
 	}) => {
-		const reader = await createReader(request);
+		const reader = await createReader();
 		const page = await readerPage(newContext, reader);
 		await page.goto(profilePath(reader.user.slug));
 		const slug = `${reader.user.slug}-x`;
@@ -92,9 +98,8 @@ test.describe("Profile", () => {
 	// reader signed out while the change waits for its confirm link.
 	test("an email change with legacy tokens confirms before it is sent, then waits for its link", async ({
 		newContext,
-		request,
 	}) => {
-		const reader = await createReader(request);
+		const reader = await createReader();
 		const page = await readerPage(newContext, reader);
 		const { slug, uuid } = reader.user;
 		await twoLegacyTokens(page, slug);
@@ -132,9 +137,8 @@ test.describe("Profile", () => {
 	// Kills a link to legacy tokens drawn when there are none.
 	test("a reader without legacy tokens sees no link to them", async ({
 		newContext,
-		request,
 	}) => {
-		const reader = await createReader(request);
+		const reader = await createReader();
 		const page = await readerPage(newContext, reader);
 		await page.goto(profilePath(reader.user.slug));
 

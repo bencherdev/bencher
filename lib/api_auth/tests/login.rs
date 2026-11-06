@@ -180,7 +180,10 @@ async fn login_link_returns_to_a_pending_authorization() {
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(&user.token),
         )
-        .json(&JsonOAuthDecision { approve: true })
+        .json(&JsonOAuthDecision {
+            approve: true,
+            key: None,
+        })
         .send()
         .await
         .expect("Request failed");

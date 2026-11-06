@@ -9,9 +9,7 @@ const AuthHelp = () => {
 			<div class="container">
 				<div class="columns">
 					<div class="column">
-						<h4 class="title is-4">
-							Ahoy{user?.user?.name && ` ${user?.user?.name}`}!
-						</h4>
+						<h4 class="title is-4">Ahoy{user?.name && ` ${user?.name}`}!</h4>
 						<h4 class="subtitle is-4">There are many ways to get help</h4>
 						<br />
 

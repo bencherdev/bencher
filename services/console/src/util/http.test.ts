@@ -1,7 +1,5 @@
-import { AxiosError, AxiosHeaders } from "axios";
 import { describe, expect, test } from "vitest";
 import {
-	apiErrorMessage,
 	apiUrl,
 	getOptions,
 	postOptions,
@@ -17,41 +15,30 @@ describe("apiUrl", () => {
 });
 
 describe("getOptions", () => {
-	test("returns GET config with auth token", () => {
-		const opts = getOptions("/v0/projects", "my-token");
+	// Kills a classic page that sends a credential of its own: the session
+	// cookie travels by itself.
+	test("returns GET config with no Authorization", () => {
+		const opts = getOptions("/v0/projects");
 		expect(opts.method).toBe("GET");
 		expect(opts.url).toBe("/api/v0/projects");
-		expect(opts.headers).toEqual({
-			"Content-Type": "application/json",
-			Authorization: "Bearer my-token",
-		});
-	});
-
-	test("returns GET config without auth when token is null", () => {
-		const opts = getOptions("/v0/projects", null);
-		expect(opts.headers).toEqual({ "Content-Type": "application/json" });
-	});
-
-	test("returns GET config without auth when token is undefined", () => {
-		const opts = getOptions("/v0/projects", undefined);
 		expect(opts.headers).toEqual({ "Content-Type": "application/json" });
 	});
 });
 
 describe("postOptions", () => {
-	test("returns POST config with data", () => {
+	test("returns POST config with data and no Authorization", () => {
 		const data = { name: "test" };
-		const opts = postOptions("/v0/projects", "tok", data);
+		const opts = postOptions("/v0/projects", data);
 		expect(opts.method).toBe("POST");
 		expect(opts.data).toEqual(data);
-		expect(opts.headers.Authorization).toBe("Bearer tok");
+		expect(opts.headers).toEqual({ "Content-Type": "application/json" });
 	});
 });
 
 describe("putOptions", () => {
 	test("returns PUT config with data", () => {
 		const data = { name: "updated" };
-		const opts = putOptions("/v0/projects/slug", "tok", data);
+		const opts = putOptions("/v0/projects/slug", data);
 		expect(opts.method).toBe("PUT");
 		expect(opts.data).toEqual(data);
 	});
@@ -60,95 +47,8 @@ describe("putOptions", () => {
 describe("pathOptions", () => {
 	test("returns PATCH config", () => {
 		const data = { name: "patched" };
-		const opts = pathOptions("/v0/projects/slug", "tok", data);
+		const opts = pathOptions("/v0/projects/slug", data);
 		expect(opts.method).toBe("PATCH");
 		expect(opts.data).toEqual(data);
-	});
-});
-
-const FALLBACK = "Invalid user. Please, try again.";
-
-/** What axios hands a catch for a request the API refused with `data`. */
-const refused = (data: unknown) => {
-	const headers = new AxiosHeaders();
-	const config = { headers };
-	return new AxiosError(
-		"Request failed with status code 400",
-		"ERR_BAD_REQUEST",
-		config,
-		null,
-		{
-			status: 400,
-			statusText: "Bad Request",
-			headers,
-			config,
-			data,
-		},
-	);
-};
-
-describe("apiErrorMessage", () => {
-	test("returns the message the API sent", () => {
-		const error = refused({
-			request_id: "0",
-			error_code: "Locked",
-			message: "This user account has been locked",
-		});
-		expect(apiErrorMessage(error, FALLBACK)).toBe(
-			"This user account has been locked",
-		);
-	});
-
-	test("caps a very long message", () => {
-		const message = "no ".repeat(256);
-		const capped = apiErrorMessage(refused({ message }), FALLBACK);
-		expect(capped.length).toBe(256);
-		expect(message.startsWith(capped)).toBe(true);
-	});
-
-	test("keeps the first line of a message the API sent over two", () => {
-		const message =
-			"Failed to create client JWT for OAuth2: boom\nPlease report this issue: https://github.com/bencherdev/bencher/issues/new?title=Failed";
-		expect(apiErrorMessage(refused({ message }), FALLBACK)).toBe(
-			"Failed to create client JWT for OAuth2: boom",
-		);
-	});
-
-	test("caps on a whole character, never half of a surrogate pair", () => {
-		const message = `${"a".repeat(255)}\u{1F600} tail`;
-		const capped = apiErrorMessage(refused({ message }), FALLBACK);
-		expect(Array.from(capped)).toHaveLength(256);
-		expect(capped.endsWith("\u{1F600}")).toBe(true);
-	});
-
-	test("falls back when the message starts with a line break", () => {
-		const message =
-			"\nPlease report this issue: https://github.com/bencherdev/bencher/issues/new";
-		expect(apiErrorMessage(refused({ message }), FALLBACK)).toBe(FALLBACK);
-	});
-
-	test("falls back when the body carries no message", () => {
-		expect(apiErrorMessage(refused({ request_id: "0" }), FALLBACK)).toBe(
-			FALLBACK,
-		);
-	});
-
-	test("falls back when the message is not text", () => {
-		expect(apiErrorMessage(refused({ message: { why: "no" } }), FALLBACK)).toBe(
-			FALLBACK,
-		);
-	});
-
-	test("falls back when the message is blank", () => {
-		expect(apiErrorMessage(refused({ message: "  " }), FALLBACK)).toBe(
-			FALLBACK,
-		);
-	});
-
-	test("falls back when the request never reached the API", () => {
-		const error = new AxiosError("Network Error", "ERR_NETWORK", {
-			headers: new AxiosHeaders(),
-		});
-		expect(apiErrorMessage(error, FALLBACK)).toBe(FALLBACK);
 	});
 });

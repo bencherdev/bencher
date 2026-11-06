@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/astro";
-import { dataCollection } from "./src/util/sentry";
+import { dataCollection, scrubUrls } from "./src/util/sentry";
 
 Sentry.init({
 	dsn: import.meta.env.PUBLIC_SENTRY_DSN,
@@ -7,4 +7,7 @@ Sentry.init({
 	release: import.meta.env.PUBLIC_VERCEL_GIT_COMMIT_SHA,
 	tracesSampleRate: 1,
 	dataCollection,
+	beforeSend: scrubUrls,
+	beforeSendTransaction: scrubUrls,
+	beforeBreadcrumb: scrubUrls,
 });

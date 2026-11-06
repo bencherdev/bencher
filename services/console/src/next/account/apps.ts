@@ -4,8 +4,6 @@ import { type Api, ApiError } from "../api";
 import { createPaged } from "../list/paged";
 import { dropRow, totalOf } from "../list/pages";
 
-const USER_KEY_PREFIX = "bencher_user_";
-
 // A page of apps: each is a card, so a screen holds a few.
 const PER_PAGE = 16;
 
@@ -36,7 +34,7 @@ export const dropGrant = (client: QueryClient, user: string, uuid: string) =>
 	dropRow<JsonOAuthGrant>(client, grantsKey(user), uuid);
 
 /** Why the API will not list the apps, when no retry would change that. */
-export const refusalOf = (error: unknown, token: string) => {
+export const refusalOf = (error: unknown) => {
 	if (!(error instanceof ApiError)) {
 		return undefined;
 	}
@@ -45,9 +43,7 @@ export const refusalOf = (error: unknown, token: string) => {
 		case "not_found":
 			return "Not available on this server";
 		case "forbidden":
-			return token.startsWith(USER_KEY_PREFIX)
-				? "Not available with an API key"
-				: "No access";
+			return "No access";
 		default:
 			return undefined;
 	}

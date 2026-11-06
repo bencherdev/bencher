@@ -1,7 +1,7 @@
 import { Router } from "@solidjs/router";
 import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { Match, Suspense, Switch, createSignal } from "solid-js";
-import type { JsonAuthUser, JsonUser } from "../types/bencher";
+import type { JsonUser } from "../types/bencher";
 import { AccountContext } from "./account/context";
 import AccountLayout from "./account/Layout";
 import { accountPage } from "./account/paths";
@@ -9,22 +9,22 @@ import type { Api } from "./api";
 import { FlushContext } from "./flush";
 import Layout from "./Layout";
 import { CONSOLE_PATH, organizationOf } from "./paths";
-import { rememberReader } from "./reader";
+import { type Reader, rememberReader } from "./reader";
 import { CONSOLE_ROUTES, OrganizationLayout, PROJECTS_ROUTE } from "./routes";
 
 const App = (props: {
 	client: QueryClient;
 	api: Api;
-	reader: JsonAuthUser;
+	reader: Reader;
 	flush: () => Promise<void>;
-	/** Ends the session; a sign in comes back here unless `back` is false. */
-	signOut: (back?: boolean) => void;
+	/** Signs the reader out. */
+	signOut: () => void;
 	/** The API's URL. */
 	host: string;
 }) => {
 	const [reader, setReader] = createSignal(props.reader);
-	const keepUser = (user: JsonUser) => {
-		const next = { ...reader(), user };
+	const keepUser = ({ uuid, slug, name }: JsonUser) => {
+		const next = { uuid, slug, name };
 		setReader(next);
 		rememberReader(localStorage, next);
 	};

@@ -97,8 +97,8 @@ The console for every project lives under `src/next/`, built on the design
 system in [`packages/ui`](../../packages/ui/README.md), not Bulma. Every color
 is a token in `packages/ui/src/styles/theme.css`; a test fails when a color
 literal appears anywhere in `packages/ui/src`, `src/next`, or the console's
-pages under `src/pages/console` and `src/pages/perf`. Only sign-up, sign-in,
-onboarding (`/console/onboard/*`), and help stay classic.
+pages under `src/pages/console`, `src/pages/perf`, and `src/pages/auth`. Only
+onboarding (`/console/onboard/*`) and help stay classic.
 `src/next/Head.astro` belongs in the head of every new console page: it preloads
 Inter and sets the theme before the first paint.
 
@@ -107,10 +107,22 @@ Every path under a project is served by
 classic path with a permanent redirect from `src/next/classic.ts`, built from
 the path and query alone. Its inline scripts (`src/next/astro/`) run before any
 module loads and read `localStorage` keys that the classic pages also read or
-write: `BENCHER_USER`, `BENCHER_THEME`, and `BENCHER_CONSOLE_SHELL`
-(`src/next/memory.ts`). The landing reads `BENCHER_BMF_VERSIONS`, the recency
+write: `BENCHER_READER`, `BENCHER_THEME`, and `BENCHER_CONSOLE_SHELL`
+(`src/next/memory.ts`). `BENCHER_READER` is the reader hint
+(`src/next/reader.ts`): the signed in user's UUID, slug, and name, which
+authenticates nothing. The session rides in its HttpOnly cookie alone, so no
+request from the console carries `Authorization`, and a 401 from `/api` clears
+the hint and the cache and goes to sign in with `back`. The landing reads `BENCHER_BMF_VERSIONS`, the recency
 of the projects the browser has opened, the same way. Change a key or its
 shape on both sides at once.
+
+Every page under `/auth` (the door at `/auth/login` and `/auth/signup`, Check
+your inbox and a link's page at `/auth/confirm`, consent at `/auth/authorize`,
+the provider callbacks, sign out, and a new email's confirm) is drawn by
+`src/next/auth/` in the frame of `src/next/astro/AuthPage.astro`, one entry
+module a page. `src/middleware.ts` sends `Referrer-Policy: no-referrer` and
+`Cache-Control: no-store` with each, and only the door and Check your inbox
+load Turnstile, on a build with `TURNSTILE_SITE_KEY`.
 
 Every account page under `src/pages/console/users/[user]/` is served by
 `src/next/astro/AccountPage.astro`, Organizations by

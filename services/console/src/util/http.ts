@@ -1,5 +1,8 @@
 import type { AxiosError, InternalAxiosRequestConfig } from "axios";
 import axios from "axios";
+import { deleteCache } from "../next/idb";
+import { forgetReader } from "../next/memory";
+import { signInHref } from "../next/reader";
 import { ApiState, setApiState } from "./connectivity";
 
 export const X_TOTAL_COUNT = "x-total-count";
@@ -44,6 +47,10 @@ api.interceptors.response.use(
 		if (!config) {
 			return Promise.reject(error);
 		}
+		if (endsSession(error)) {
+			signInAgain();
+			return Promise.reject(error);
+		}
 
 		const retryCount = config.__retryCount ?? 0;
 
@@ -68,104 +75,62 @@ api.interceptors.response.use(
 	},
 );
 
+/** A 401 from anything but signing in, which answers one for a sign in that ended. */
+const endsSession = (error: AxiosError) =>
+	error.response?.status === 401 &&
+	!error.config?.url?.startsWith(apiUrl("/v0/auth/"));
+
+/** The session ended: forget the reader and what they saw, and sign in again, back here. */
+const signInAgain = () => {
+	forgetReader(localStorage);
+	deleteCache();
+	location.replace(
+		signInHref(`${location.pathname}${location.search}${location.hash}`),
+	);
+};
+
 export const apiUrl = (pathname: string): string => `/api${pathname}`;
 
-export const httpGet = async (
-	pathname: string,
-	token: undefined | null | string,
-) => api(getOptions(pathname, token));
-export const getOptions = (
-	pathname: string,
-	token: undefined | null | string,
-) => {
+export const httpGet = async (pathname: string) => api(getOptions(pathname));
+export const getOptions = (pathname: string) => {
 	return {
 		url: apiUrl(pathname),
 		method: HttpMethod.GET,
-		headers: headers(token),
+		headers: HEADERS_CONTENT_TYPE,
 	};
 };
 
-export const httpPost = async (
-	pathname: string,
-	token: undefined | null | string,
-	data: object,
-) => api(postOptions(pathname, token, data));
-export const postOptions = (
-	pathname: string,
-	token: undefined | null | string,
-	data: object,
-) => {
-	return dataOptions(pathname, HttpMethod.POST, token, data);
+export const httpPost = async (pathname: string, data: object) =>
+	api(postOptions(pathname, data));
+export const postOptions = (pathname: string, data: object) => {
+	return dataOptions(pathname, HttpMethod.POST, data);
 };
 
-export const httpPut = async (
-	pathname: string,
-	token: undefined | null | string,
-	data: object,
-) => api(putOptions(pathname, token, data));
-export const putOptions = (
-	pathname: string,
-	token: undefined | null | string,
-	data: object,
-) => {
-	return dataOptions(pathname, HttpMethod.PUT, token, data);
+export const httpPut = async (pathname: string, data: object) =>
+	api(putOptions(pathname, data));
+export const putOptions = (pathname: string, data: object) => {
+	return dataOptions(pathname, HttpMethod.PUT, data);
 };
 
-export const httpPatch = async (
-	pathname: string,
-	token: undefined | null | string,
-	data: object,
-) => api(pathOptions(pathname, token, data));
-export const pathOptions = (
-	pathname: string,
-	token: undefined | null | string,
-	data: object,
-) => {
-	return dataOptions(pathname, HttpMethod.PATCH, token, data);
+export const httpPatch = async (pathname: string, data: object) =>
+	api(pathOptions(pathname, data));
+export const pathOptions = (pathname: string, data: object) => {
+	return dataOptions(pathname, HttpMethod.PATCH, data);
 };
 
 const HEADERS_CONTENT_TYPE = {
 	"Content-Type": "application/json",
 };
 
-const headers = (token: undefined | null | string) => {
-	if (token) {
-		return {
-			...HEADERS_CONTENT_TYPE,
-			Authorization: `Bearer ${token}`,
-		};
-	}
-	return HEADERS_CONTENT_TYPE;
-};
-
 export const dataOptions = (
 	pathname: string,
 	method: HttpMethod,
-	token: undefined | null | string,
 	data: object,
 ) => {
 	return {
 		url: apiUrl(pathname),
 		method: method,
-		headers: headers(token),
+		headers: HEADERS_CONTENT_TYPE,
 		data: data,
 	};
-};
-
-const API_MESSAGE_MAX_LENGTH = 256;
-
-/** The first line of the API's reason for refusing a request, capped for a notification, or `fallback` when it sent none. */
-export const apiErrorMessage = (error: unknown, fallback: string): string => {
-	if (!axios.isAxiosError<{ message?: unknown }>(error)) {
-		return fallback;
-	}
-	const message = error.response?.data?.message;
-	if (typeof message !== "string") {
-		return fallback;
-	}
-	// A server error adds a report link on a second line, which a notification runs together with the first.
-	const firstLine = (message.split("\n")[0] ?? "").trim();
-	return firstLine.length === 0
-		? fallback
-		: Array.from(firstLine).slice(0, API_MESSAGE_MAX_LENGTH).join("");
 };

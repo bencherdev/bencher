@@ -165,7 +165,7 @@ export const refocusThenReread = async (
 		`${seed.api_url}/v0/console/projects/${slug}/alerts`,
 		{
 			method: "PATCH",
-			headers: { Authorization: `Bearer ${seed.member.token}` },
+			headers: { Authorization: `Bearer ${seed.member.key}` },
 			data: { status: "dismissed", alerts: [alerts.get("bench-03")] },
 		},
 	);

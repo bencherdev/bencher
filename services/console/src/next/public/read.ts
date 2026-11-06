@@ -10,9 +10,9 @@ export class Refusal extends Error {
 	}
 }
 
-/** Reads the API through the relay, as `token`'s reader or as no one; a failure is a `Refusal`. */
+/** Reads the API through the relay, as the signed in reader or as no one; a failure is a `Refusal`. */
 export const reads =
-	(token?: string) =>
+	(asReader = false) =>
 	async <T,>(path: string): Promise<T> => {
 		const target = `/api${path}`;
 		// A request past what every hop passes on would be refused, so it is never sent.
@@ -22,7 +22,7 @@ export const reads =
 		let response: Response;
 		try {
 			response = await fetch(target, {
-				headers: token ? { Authorization: `Bearer ${token}` } : {},
+				credentials: asReader ? "same-origin" : "omit",
 			});
 		} catch {
 			throw new Refusal(undefined);

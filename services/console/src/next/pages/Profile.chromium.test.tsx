@@ -6,7 +6,8 @@ import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
-import type { JsonAuthUser, JsonUser } from "../../types/bencher";
+import type { JsonUser } from "../../types/bencher";
+import type { Reader } from "../reader";
 import { AccountContext } from "../account/context";
 import { type Api, ApiError, type Method } from "../api";
 import { axeInBothThemes } from "../axe/testing";
@@ -21,18 +22,13 @@ const USER: JsonUser = {
 	locked: false,
 };
 
-const READER = { user: USER, token: "tok" } as JsonAuthUser;
+const READER: Reader = { uuid: USER.uuid, slug: USER.slug, name: USER.name };
 /** A server admin, who can edit other users. */
-const ADMIN = {
-	user: {
-		...USER,
-		uuid: "admin-uuid",
-		name: "Admin Bagge",
-		slug: "admin-bagge",
-		email: "admin@nowhere.example",
-	},
-	token: "tok",
-} as JsonAuthUser;
+const ADMIN: Reader = {
+	uuid: "admin-uuid",
+	name: "Admin Bagge",
+	slug: "admin-bagge",
+};
 
 interface Sent {
 	method: Method;
@@ -86,7 +82,7 @@ const mount = (
 	{
 		reader = READER,
 		user = USER.slug,
-	}: { reader?: JsonAuthUser; user?: string } = {},
+	}: { reader?: Reader; user?: string } = {},
 ) => {
 	const history = createMemoryHistory();
 	history.set({ value: `/users/${user}/settings`, replace: true });
@@ -179,12 +175,13 @@ describe("the form", () => {
 		await expect.element(textbox("Name")).toHaveValue("Muriel Courage");
 	});
 
-	// Kills a Discard that keeps the edit, and a form that paints only after
-	// the API answers when the reader's own account is already known.
-	test("paints the reader at once, and Discard puts it back", async () => {
+	// Kills a Discard that keeps the edit, and a form that waits on the API
+	// when the reader's own account is already in the cache.
+	test("paints the reader from the cache at once, and Discard puts it back", async () => {
 		const { api } = userApi(0);
 		api.get = () => new Promise(() => {});
-		mount(api);
+		const { client } = mount(api);
+		client.setQueryData(["account", "user", USER.slug], USER);
 
 		await expect.element(textbox("Email")).toHaveValue(USER.email);
 		await textbox("Slug").fill("muriel");
@@ -252,26 +249,35 @@ describe("what the page knows", () => {
 		return { api, heal: () => (fail = false) };
 	};
 
-	// Kills a form that waits for the API when the page is the reader's own,
-	// by slug or by uuid, and one that paints the reader for another user.
-	test("paints the reader's own account at once, by slug or uuid, and no one else's", async () => {
-		const held = userApi(0).api;
-		held.get = () => new Promise(() => {});
-		mount(held, { user: USER.uuid });
-		await expect.element(textbox("Email")).toHaveValue(USER.email);
-		dispose?.();
-
-		mount(held, { reader: ADMIN });
-		await expect
-			.element(page.getByRole("heading", { name: "Profile" }))
-			.toBeVisible();
-		expect(textbox("Email").query()).toBeNull();
+	// Kills a form painted from the reader's hint, which holds no email, before
+	// the API answers, by slug or by uuid.
+	test("with nothing cached, the form waits for the API, by slug or uuid", async () => {
+		for (const user of [USER.slug, USER.uuid]) {
+			const held = userApi(0).api;
+			const waiting: (() => void)[] = [];
+			const get = held.get;
+			held.get = <T,>(path: string, signal?: AbortSignal) =>
+				new Promise<{ data: T; headers: Headers }>((resolve) => {
+					waiting.push(() => resolve(get<T>(path, signal)));
+				});
+			mount(held, { user });
+			await expect
+				.element(page.getByRole("heading", { name: "Profile" }))
+				.toBeVisible();
+			expect(textbox("Email").query()).toBeNull();
+			for (const answer of waiting) {
+				answer();
+			}
+			await expect.element(textbox("Email")).toHaveValue(USER.email);
+			dispose?.();
+		}
 	});
 
-	// Kills a read failure that takes away the form the reader already sees.
-	test("a failed read keeps the reader's painted form", async () => {
+	// Kills a read failure that takes away the form the cache painted.
+	test("a failed read keeps the form the cache painted", async () => {
 		const { api } = failing(new ApiError(undefined, "network", "offline"));
-		mount(api);
+		const { client } = mount(api);
+		client.setQueryData(["account", "user", USER.slug], USER);
 
 		await expect.element(textbox("Email")).toHaveValue(USER.email);
 		await new Promise((resolve) => setTimeout(resolve, 50));

@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/astro";
 import { createEffect, createMemo, createResource } from "solid-js";
 import type { JsonOrganization, PlanLevel } from "../../../types/bencher";
+import type { Reader } from "../../../next/reader";
 import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { getOrganization, setOrganization } from "../../../util/organization";
@@ -8,7 +9,6 @@ import { useSearchParams } from "../../../util/url";
 import {
 	type InitValid,
 	init_valid,
-	validJwt,
 	validPlanLevel,
 } from "../../../util/valid";
 import { PLAN_PARAM } from "../../auth/auth";
@@ -44,12 +44,12 @@ const OnboardPlan = (props: Props) => {
 	const orgsFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 		};
 	});
 	const getOrganizations = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 	}) => {
 		const cachedOrganization = getOrganization();
 		if (cachedOrganization) {
@@ -58,11 +58,11 @@ const OnboardPlan = (props: Props) => {
 		if (!fetcher.bencher_valid) {
 			return;
 		}
-		if (!validJwt(fetcher.token)) {
+		if (!fetcher.reader) {
 			return;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				return resp?.data;
 			})

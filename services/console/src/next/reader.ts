@@ -1,39 +1,46 @@
-import type { JsonAuthUser } from "../types/bencher";
+/**
+ * Who is signed in, as the console paints them before the API answers. It
+ * authenticates nothing: the session is an HttpOnly cookie no script reads.
+ */
+export interface Reader {
+	uuid: string;
+	slug: string;
+	name: string;
+}
 
-/** The classic console stores the signed in user here; signing out removes it. */
-export const USER_KEY = "BENCHER_USER";
+export const READER_KEY = "BENCHER_READER";
 
 export const readReader = (
 	storage: Pick<Storage, "getItem">,
-): JsonAuthUser | undefined => {
+): Reader | undefined => {
 	try {
-		const reader = JSON.parse(storage.getItem(USER_KEY) ?? "null");
-		return typeof reader?.token === "string" &&
-			reader.token.length > 0 &&
-			typeof reader.user?.uuid === "string"
-			? reader
+		const { uuid, slug, name } =
+			JSON.parse(storage.getItem(READER_KEY) ?? "null") ?? {};
+		return typeof uuid === "string" &&
+			uuid &&
+			typeof slug === "string" &&
+			slug &&
+			typeof name === "string"
+			? { uuid, slug, name }
 			: undefined;
 	} catch {
 		return undefined;
 	}
 };
 
-/** Keep `reader` as the signed in user, as the classic console stores it. */
+/** Keep `user` as the reader. */
 export const rememberReader = (
 	storage: Pick<Storage, "setItem">,
-	reader: JsonAuthUser,
+	{ uuid, slug, name }: Reader,
 ) => {
 	try {
-		storage.setItem(USER_KEY, JSON.stringify(reader));
+		storage.setItem(READER_KEY, JSON.stringify({ uuid, slug, name }));
 	} catch {
-		// The next load reads the reader the API had at sign in.
+		// The next sign in keeps it.
 	}
 };
 
-export const isCurrent = (reader: JsonAuthUser, now: number) =>
-	Date.parse(reader.expiration) > now;
-
-/** Sign in, then come back to `path`: the classic console's `back` parameter. */
+/** Sign in, then come back to `path`. */
 export const signInHref = (path: string) =>
 	`/auth/login?${new URLSearchParams({ back: toBase64(path) })}`;
 

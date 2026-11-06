@@ -31,14 +31,14 @@ const ConnectedApps = () => {
 	const { api, reader } = useAccount();
 	const params = useParams();
 	const navigate = useNavigate();
-	const user = () => params.user ?? reader().user.slug;
+	const user = () => params.user ?? reader().slug;
 	// The shortcut names no user; the reader's own page has the same list.
 	if (!params.user) {
 		navigate(`/users/${user()}/apps`, { replace: true });
 	}
 	const client = useQueryClient();
 	const list = grantList(api, user);
-	const refusal = () => refusalOf(list.first().error, reader().token);
+	const refusal = () => refusalOf(list.first().error);
 	const [target, setTarget] = createSignal<JsonOAuthGrant>();
 	const [note, setNote] = createSignal("");
 	const [failure, setFailure] = createSignal("");

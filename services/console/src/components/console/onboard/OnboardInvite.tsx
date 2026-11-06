@@ -15,6 +15,7 @@ import {
 	OrganizationRole,
 	type PlanLevel,
 } from "../../../types/bencher";
+import type { Reader } from "../../../next/reader";
 import { authUser } from "../../../util/auth";
 import { httpGet, httpPost } from "../../../util/http";
 import { getOrganization, setOrganization } from "../../../util/organization";
@@ -22,7 +23,6 @@ import { useSearchParams } from "../../../util/url";
 import {
 	type InitValid,
 	init_valid,
-	validJwt,
 	validPlanLevel,
 } from "../../../util/valid";
 import { PLAN_PARAM, planParam } from "../../auth/auth";
@@ -55,12 +55,12 @@ const OnboardInvite = () => {
 	const orgsFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 		};
 	});
 	const getOrganizations = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 	}) => {
 		const cachedOrganization = getOrganization();
 		if (cachedOrganization) {
@@ -69,11 +69,11 @@ const OnboardInvite = () => {
 		if (!fetcher.bencher_valid) {
 			return;
 		}
-		if (!validJwt(fetcher.token)) {
+		if (!fetcher.reader) {
 			return;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -126,7 +126,7 @@ const OnboardInvite = () => {
 	const inviteFetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
+			reader: user,
 			organization: organization(),
 			form: form,
 			submitting: submitting(),
@@ -135,7 +135,7 @@ const OnboardInvite = () => {
 	});
 	const postInvite = async (fetcher: {
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 		organization: undefined | JsonOrganization;
 		form: object;
 		submitting: boolean;
@@ -146,7 +146,7 @@ const OnboardInvite = () => {
 			return;
 		}
 		if (
-			!validJwt(fetcher.token) ||
+			!fetcher.reader ||
 			!fetcher.organization ||
 			!fetcher.submitting ||
 			!fetcher.valid
@@ -160,7 +160,7 @@ const OnboardInvite = () => {
 			email: fetcher.form?.email?.value,
 			role: OrganizationRole.Leader,
 		};
-		return await httpPost(path, fetcher.token, data)
+		return await httpPost(path, data)
 			.then((resp) => {
 				setInvited([...invited, data]);
 				setForm(initForm());

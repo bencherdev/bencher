@@ -17,7 +17,7 @@ test.use({ storageState: signedIn(seed.member), timezoneId: "UTC" });
 const read = async (request: APIRequestContext, search: string) => {
 	const response = await request.get(
 		`${seed.api_url}/v0/console/projects/${hashbrown.slug}/perf${search}`,
-		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+		{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 	);
 	expect(response.status()).toBe(200);
 	return (await response.json()) as JsonConsolePerf;

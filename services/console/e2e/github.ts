@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
-import type { JsonOAuthUser } from "../src/types/bencher";
-import { expect, seed, RELAY } from "./fixtures";
+import type { JsonSignedIn } from "../src/types/bencher";
+import { expect, type Reader, RELAY, seed, sessionCookie } from "./fixtures";
 
 const CORS = { "Access-Control-Allow-Origin": "*" };
 const GITHUB = `${RELAY}/v0/auth/github`;
 
-/** Start a GitHub sign in from the login page at `login`, as far as GitHub, which the browser never really reaches. */
-export const startGitHub = async (page: Page, login: string) => {
+/** Start a GitHub sign in from the door at `door`, as far as GitHub, which the browser never really reaches. */
+export const startGitHub = async (page: Page, door: string) => {
 	const started: string[] = [];
 	const state = randomUUID();
 	await page.route(
@@ -28,47 +28,34 @@ export const startGitHub = async (page: Page, login: string) => {
 	await page.route("https://github.example/**", (route) =>
 		route.fulfill({ contentType: "text/plain", body: "GitHub" }),
 	);
-	await page.goto(login);
-	await page.getByRole("button", { name: "Log in with GitHub" }).click();
+	await page.goto(door);
+	await page.getByRole("button", { name: "Continue with GitHub" }).click();
 	await expect(page).toHaveURL(/^https:\/\/github\.example\//);
 	return { started, state };
 };
 
-/** Come back from GitHub with `state`, for a sign in the API refuses with `message`. */
-export const refuseGitHub = async (
-	page: Page,
-	state: string,
-	message: string,
-) => {
-	await page.route(GITHUB, (route) =>
-		route.request().method() === "POST"
-			? route.fulfill({
-					status: 400,
-					headers: CORS,
-					json: { request_id: "0", message },
-				})
-			: route.continue(),
-	);
-	await page.goto(
-		`/auth/github?${new URLSearchParams({ code: "code", state })}`,
-	);
-};
-
-/** Come back from GitHub with `state`, signed in as the member, for the request `authorization` when one. */
+/**
+ * Come back from GitHub with `state`, signed in as `reader`, the member unless
+ * named, for the request `authorization` when one. The exchange begins the
+ * reader's session as the API's would, in its cookie.
+ */
 export const finishGitHub = async (
 	page: Page,
 	state: string,
 	authorization?: string,
+	reader: Reader = seed.member,
 ) => {
-	const json: JsonOAuthUser = { user: seed.member };
+	const json: JsonSignedIn = { user: reader.user, new: false };
 	if (authorization) {
 		json.authorization = authorization;
 	}
-	await page.route(GITHUB, (route) =>
-		route.request().method() === "POST"
-			? route.fulfill({ status: 202, headers: CORS, json })
-			: route.continue(),
-	);
+	await page.route(GITHUB, async (route) => {
+		if (route.request().method() !== "POST") {
+			return route.continue();
+		}
+		await page.context().addCookies([sessionCookie(reader.session)]);
+		return route.fulfill({ status: 202, headers: CORS, json });
+	});
 	await page.goto(
 		`/auth/github?${new URLSearchParams({ code: "code", state })}`,
 	);

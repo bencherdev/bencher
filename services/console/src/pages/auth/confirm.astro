@@ -1,34 +1,17 @@
 ---
 export const prerender = false;
 
-import AuthLayout from "../../layouts/auth/AuthLayout.astro";
-import ConfirmForm from "../../components/auth/ConfirmForm";
-import AuthRedirect from "../../components/auth/AuthRedirect";
-
-// Using `meta.env` requires `prerender = false`
-const title = "Check your inbox";
-const description =
-	"Bencher uses a one-time token to confirm your email address instead of a password.";
+import AuthPage from "../../next/astro/AuthPage.astro";
+import AuthReturn from "../../next/astro/AuthReturn.astro";
+import Frame from "../../next/auth/Frame";
 ---
 
-<AuthLayout title={title} description={description}>
-  <AuthRedirect client:only="solid-js" accept path="/console" back="take" />
-
-  <div class="columns is-centered is-mobile">
-    <div class="column is-narrow">
-      <span class="icon is-large has-text-primary">
-        <i class="fas fa-inbox fa-3x" />
-      </span>
-    </div>
-  </div>
-  <div class="content has-text-centered">
-    <h1 class="title is-1">{title}</h1>
-    <h2 class="subtitle is-4">
-      We've sent a one-time token to your email.
-      <br />
-      Please click the link or paste the token here.
-    </h2>
-  </div>
-
-  <ConfirmForm client:only="solid-js" />
-</AuthLayout>
+<AuthPage title="Check your inbox">
+	<AuthReturn slot="head" />
+	<div id="auth" class="console">
+		<Frame />
+	</div>
+	<script>
+		import "../../next/auth/confirmPage";
+	</script>
+</AuthPage>

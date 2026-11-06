@@ -4,18 +4,21 @@ import Sheet from "@bencherdev/ui/Sheet";
 import Truncate from "@bencherdev/ui/Truncate";
 import { QueryClientContext } from "@tanstack/solid-query";
 import { type JSX, Show, createSignal, useContext } from "solid-js";
+import { AccountContext } from "../account/context";
 import { accountPath } from "../account/paths";
 import { ORGANIZATIONS_PATH, profilePath } from "../paths";
 import { NARROW } from "../plot/narrow";
 import { ProjectContext } from "../project";
-import { consoleUserQuery } from "../queries";
+import { consoleUserQuery, userQuery } from "../queries";
+import { useQueryResult } from "../query";
+import type { Reader } from "../reader";
 import { lazyView } from "./lazy";
 
 const switcher = lazyView(() => import("../switcher/Switcher"));
 
 export interface AccountMenuProps {
-	user: { name: string; slug: string; email: string };
-	signOut?: ((back?: boolean) => void) | undefined;
+	user: Omit<Reader, "uuid">;
+	signOut?: (() => void) | undefined;
 	/** The project on screen, which a phone's menu switches from. */
 	slug?: string | undefined;
 	project?: string | undefined;
@@ -43,6 +46,12 @@ const AccountMenu = (props: AccountMenuProps) => {
 			.query(consoleUserQuery(context.api, here.reader))
 			.catch(() => {});
 	}
+	// The reader's email is no hint the browser keeps, so the menu asks for their account.
+	const api = useContext(AccountContext)?.api ?? context?.api;
+	const account =
+		client && api
+			? useQueryResult(() => userQuery(api, props.user.slug))
+			: undefined;
 	const close = (refocus: boolean) => {
 		props.onClose();
 		if (refocus) {
@@ -63,7 +72,7 @@ const AccountMenu = (props: AccountMenuProps) => {
 						<>
 							<div class="menu-who">
 								<b>{props.user.name}</b>
-								<span>{props.user.email}</span>
+								<span>{account?.().data?.email}</span>
 							</div>
 							<hr class="ui-menu-sep" />
 						</>
@@ -122,7 +131,7 @@ const AccountMenu = (props: AccountMenuProps) => {
 						</span>
 					</Link>
 					<hr class="ui-menu-sep" />
-					<Item onClick={() => props.signOut?.(false)}>
+					<Item onClick={() => props.signOut?.()}>
 						<Glyph d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
 						Sign out
 					</Item>

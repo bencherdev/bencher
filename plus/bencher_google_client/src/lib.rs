@@ -27,6 +27,16 @@ static TOKEN_URL: LazyLock<TokenUrl> = LazyLock::new(|| {
         .expect("Invalid token endpoint URL")
 });
 
+#[expect(
+    clippy::expect_used,
+    reason = "constant URL literal, infallible at runtime"
+)]
+static USER_INFO_URL: LazyLock<Url> = LazyLock::new(|| {
+    "https://openidconnect.googleapis.com/v1/userinfo"
+        .parse()
+        .expect("Invalid UserInfo endpoint URL")
+});
+
 // Replaced deprecated plus.me scope with OpenID Connect scopes
 static OPENID_SCOPE: LazyLock<Scope> = LazyLock::new(|| Scope::new("openid".to_owned()));
 static EMAIL_SCOPE: LazyLock<Scope> = LazyLock::new(|| Scope::new("email".to_owned()));
@@ -36,6 +46,7 @@ static PROFILE_SCOPE: LazyLock<Scope> = LazyLock::new(|| Scope::new("profile".to
 pub struct GoogleClient {
     oauth2_client:
         BasicClient<EndpointSet, EndpointNotSet, EndpointNotSet, EndpointNotSet, EndpointSet>,
+    user_info_url: Url,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -75,7 +86,27 @@ impl GoogleClient {
             .set_token_uri(TOKEN_URL.clone())
             .set_redirect_uri(redirect_url);
 
-        Self { oauth2_client }
+        Self {
+            oauth2_client,
+            user_info_url: USER_INFO_URL.clone(),
+        }
+    }
+
+    /// Sends every code exchange and every `UserInfo` read to `base` instead of Google.
+    #[cfg(any(test, feature = "test-base-url"))]
+    #[must_use]
+    pub fn with_base_url(self, base: &Url) -> Self {
+        let at = |path: &str| {
+            let mut url = base.clone();
+            url.set_path(path);
+            url
+        };
+        Self {
+            oauth2_client: self
+                .oauth2_client
+                .set_token_uri(TokenUrl::from_url(at("/token"))),
+            user_info_url: at("/v1/userinfo"),
+        }
     }
 
     pub fn auth_url(&self, state: Jwt) -> Url {
@@ -108,7 +139,7 @@ impl GoogleClient {
 
         // Call OpenID Connect UserInfo endpoint
         let user_info_resp = reqwest_client
-            .get("https://openidconnect.googleapis.com/v1/userinfo")
+            .get(self.user_info_url.clone())
             .bearer_auth(access_token)
             .send()
             .await

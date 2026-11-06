@@ -23,11 +23,8 @@ const READER: JsonConsoleUser = {
 		},
 	],
 };
-const USER = {
-	name: "Muriel Bagge",
-	slug: "muriel-bagge",
-	email: "muriel@nowhere.example",
-};
+const USER = { name: "Muriel Bagge", slug: "muriel-bagge" };
+const EMAIL = "muriel@nowhere.example";
 
 let unmount: (() => void) | undefined;
 afterEach(() => {
@@ -87,6 +84,7 @@ const open = async (
 								projects: READER.projects.map((one) => ({ ...one, name })),
 							},
 						],
+						[["account", "user", USER.slug], { ...USER, email: EMAIL }],
 					],
 		},
 	).dispose;
@@ -158,17 +156,24 @@ describe("wide", () => {
 
 		await item("Sign out").click();
 
-		expect(signOut.mock.calls).toEqual([[false]]);
+		expect(signOut.mock.calls).toEqual([[]]);
 	});
 
-	// Kills the reader's projects asked for where the menu offers no switch.
-	test("opening the menu asks for nothing", async () => {
+	// The browser keeps no email for the reader. Kills a menu that names no
+	// email, the reader's projects asked for where the menu offers no switch,
+	// and the reader's account asked for before the menu opens.
+	test("opening the menu asks for the reader's account alone, and names its email", async () => {
 		const asked: string[] = [];
 		await open(1280, { asked });
+		expect(asked).toEqual([]);
 		await avatar().click();
 		await expect.element(menu()).toBeVisible();
+		expect(asked).toEqual([`/v0/users/${USER.slug}`]);
 
-		expect(asked).toEqual([]);
+		unmount?.();
+		await open(1280);
+		await avatar().click();
+		await expect.element(page.getByText(EMAIL)).toBeVisible();
 	});
 
 	// Kills a press on the avatar that cannot close what it opened.
@@ -248,7 +253,7 @@ describe("phone", () => {
 		await avatar().click();
 		await expect.element(menu()).toBeVisible();
 
-		expect(asked).toEqual(["/v0/console/users/u"]);
+		expect(asked).toEqual(["/v0/console/users/u", `/v0/users/${USER.slug}`]);
 	});
 
 	// Kills a Profile, Keys, or Connected Apps entry that leaves its menu open

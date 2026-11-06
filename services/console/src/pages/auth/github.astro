@@ -1,15 +1,17 @@
 ---
 export const prerender = false;
 
-import BaseLayout from "../../layouts/BaseLayout.astro";
-import AuthOAuth from "../../components/auth/AuthOAuth";
-
-const title = "Bencher GitHub App";
-const pathname = "/v0/auth/github";
+import AuthPage from "../../next/astro/AuthPage.astro";
+import AuthReturn from "../../next/astro/AuthReturn.astro";
+import Frame from "../../next/auth/Frame";
 ---
 
-<BaseLayout title={title} description={title}>
-  <div slot="navbar"></div>
-  <AuthOAuth client:only="solid-js" pathname={pathname} />
-  <div slot="footer"></div>
-</BaseLayout>
+<AuthPage title="Sign in">
+	<AuthReturn slot="head" />
+	<div id="auth" class="console" data-provider="github">
+		<Frame />
+	</div>
+	<script>
+		import "../../next/auth/callbackPage";
+	</script>
+</AuthPage>

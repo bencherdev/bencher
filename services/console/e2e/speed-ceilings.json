@@ -8,7 +8,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"deferredJsBytes": 112880,
-		"htmlBytes": 2650,
+		"htmlBytes": 2679,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -18,7 +18,7 @@
 		"cls": 0,
 		"jsBytes": 43628,
 		"stylesheets": 1,
-		"htmlBytes": 2650,
+		"htmlBytes": 2678,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -35,7 +35,7 @@
 		"jsBytes": 59920,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2750,
+		"htmlBytes": 2777,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -72,7 +72,7 @@
 		"jsBytes": 59869,
 		"deferredJsBytes": 132786,
 		"stylesheets": 1,
-		"htmlBytes": 2770,
+		"htmlBytes": 2815,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -136,7 +136,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1970,
-		"inlineScriptBytes": 910,
+		"inlineScriptBytes": 942,
 		"lateModules": 0
 	},
 	"settingsSectionSwitch": {
@@ -153,7 +153,7 @@
 		"jsBytes": 63419,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2760,
+		"htmlBytes": 2792,
 		"lateModules": 0
 	},
 	"branchColdLoad": {
@@ -164,7 +164,7 @@
 		"jsBytes": 63419,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2760,
+		"htmlBytes": 2792,
 		"lateModules": 0
 	},
 	"reportColdLoad": {
@@ -199,7 +199,7 @@
 		"jsBytes": 59587,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2760,
+		"htmlBytes": 2779,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -211,7 +211,7 @@
 		"jsBytes": 82050,
 		"deferredJsBytes": 117931,
 		"stylesheets": 1,
-		"htmlBytes": 2840,
+		"htmlBytes": 2879,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -222,7 +222,7 @@
 		"cls": 0.00025,
 		"jsBytes": 118680,
 		"deferredJsBytes": 112880,
-		"htmlBytes": 2900,
+		"htmlBytes": 2943,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -258,7 +258,7 @@
 		"jsBytes": 80373,
 		"deferredJsBytes": 117968,
 		"stylesheets": 1,
-		"htmlBytes": 2840,
+		"htmlBytes": 2885,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -270,7 +270,7 @@
 		"jsBytes": 96539,
 		"deferredJsBytes": 115690,
 		"stylesheets": 1,
-		"htmlBytes": 2800,
+		"htmlBytes": 2845,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -301,13 +301,13 @@
 		"cls": 0.00025,
 		"jsBytes": 107701,
 		"deferredJsBytes": 112880,
-		"htmlBytes": 2850,
+		"htmlBytes": 2899,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 78534,
+		"jsBytes": 78573,
 		"deferredJsBytes": 112880,
 		"cssBytes": 13138,
 		"htmlBytes": 2980,
@@ -320,6 +320,26 @@
 		"cssBytes": 11351,
 		"htmlBytes": 1560,
 		"inlineScriptBytes": 390
+	},
+	"doorColdLoad": {
+		"apiRequests": 0,
+		"cls": 0,
+		"jsBytes": 24124,
+		"stylesheets": 1,
+		"cssBytes": 9489,
+		"htmlBytes": 1814,
+		"inlineScriptBytes": 392,
+		"lateModules": 14
+	},
+	"consentColdLoad": {
+		"apiRequests": 2,
+		"cls": 0,
+		"jsBytes": 23735,
+		"stylesheets": 1,
+		"cssBytes": 9489,
+		"htmlBytes": 1110,
+		"inlineScriptBytes": 392,
+		"lateModules": 14
 	},
 	"classicHelpColdLoad": {
 		"jsBytes": 139872,
@@ -341,13 +361,13 @@
 		"jsBytes": 59920,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"htmlBytes": 2750,
+		"htmlBytes": 2778,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
 	"feedbackOpen": {
-		"apiRequests": 0,
-		"jsBytes": 3990,
+		"apiRequests": 1,
+		"jsBytes": 4139,
 		"scriptRounds": 1
 	},
 	"switcherOpen": {
@@ -367,7 +387,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1760,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"organizationGeneralColdLoad": {
@@ -381,7 +401,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1890,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"organizationsColdLoad": {
@@ -395,7 +415,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1820,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"userKeysColdLoad": {
@@ -409,7 +429,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1870,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"legacyTokensColdLoad": {
@@ -423,7 +443,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1900,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"connectedAppsColdLoad": {
@@ -437,7 +457,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1830,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"newProjectColdLoad": {
@@ -451,7 +471,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1910,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"organizationMembersColdLoad": {
@@ -465,7 +485,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1950,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"organizationProjectsColdLoad": {
@@ -479,7 +499,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1925,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"organizationBillingColdLoad": {
@@ -493,7 +513,7 @@
 		"stylesheets": 1,
 		"cssBytes": 19949,
 		"htmlBytes": 1900,
-		"inlineScriptBytes": 670,
+		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"metricLanding": {

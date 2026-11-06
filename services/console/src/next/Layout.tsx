@@ -11,7 +11,7 @@ import {
 	createSignal,
 	on,
 } from "solid-js";
-import type { JsonAuthUser } from "../types/bencher";
+import type { Reader } from "./reader";
 import { type Api, ApiError } from "./api";
 import ContentSkeleton from "./ContentSkeleton";
 import {
@@ -32,18 +32,18 @@ import { centerCurrentTab } from "./shell/scroll";
 const Layout = (
 	props: RouteSectionProps & {
 		api: Api;
-		reader: JsonAuthUser;
+		reader: Reader;
 		host?: string | undefined;
 		/** Where the router keeps project paths, under its base. */
 		route?: string | undefined;
-		signOut?: (back?: boolean) => void;
+		signOut?: () => void;
 	},
 ) => {
 	const location = useLocation();
 	const place = createMemo(() => parseConsolePath(location.pathname));
 	const slug = () => place()?.slug ?? "";
 	const tab = () => tabOf(place()?.rest ?? []);
-	const reader = () => props.reader.user.uuid;
+	const reader = () => props.reader.uuid;
 
 	const bootstrap = useQueryResult(() =>
 		consoleProjectQuery(props.api, slug()),
@@ -138,7 +138,7 @@ const Layout = (
 				project={data()?.project.name ?? remembered()?.name}
 				alerts={data()?.active_alerts ?? remembered()?.alerts}
 				reader={reader()}
-				user={props.reader.user}
+				user={props.reader}
 				signOut={props.signOut}
 				tabsRef={(el) => {
 					tabs = el;

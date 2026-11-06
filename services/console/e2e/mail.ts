@@ -1,8 +1,4 @@
-import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
-import type { APIRequestContext } from "@playwright/test";
-import type { JsonAuthUser } from "../src/types/bencher";
-import { unique } from "./api";
+import { readFileSync, statSync } from "node:fs";
 import { expect, seed } from "./fixtures";
 
 /** The link in the newest email the API sent to `email` with `subject`. */
@@ -17,37 +13,24 @@ export const mailedLink = async (email: string, subject: string) => {
 	return link as URL;
 };
 
-/** A user of the test's own, signed in with a session from the signup email. */
-export const signUp = async (
-	request: APIRequestContext,
-	{
-		name = unique("Le Quack"),
-		email = `${randomUUID()}@nowhere.com`,
-	}: { name?: string; email?: string } = {},
-): Promise<JsonAuthUser> => {
-	const signup = await request.post(`${seed.api_url}/v0/auth/signup`, {
-		data: { name, email, i_agree: true },
-	});
-	expect(signup.status()).toBe(202);
-	const link = await mailedLink(email, "Confirm Bencher Signup");
-	const confirm = await request.post(`${seed.api_url}/v0/auth/confirm`, {
-		data: { token: link.searchParams.get("token") },
-	});
-	expect(confirm.status()).toBe(200);
-	return (await confirm.json()) as JsonAuthUser;
-};
+/** Where the API's log ends now, so a read from it sees only the emails sent after. */
+export const mailMark = () => statSync(seed.api_log).size;
 
-/** The code in the newest sign in email the API sent to `email`. */
-export const mailedCode = async (email: string) => {
-	let code: undefined | string;
+/** The code and the link in the newest sign in email the API sent to `email`, after `mark`. */
+export const mailedSignIn = async (email: string, mark = 0) => {
+	let signIn: undefined | { code: string; link: URL };
 	await expect
 		.poll(() => {
-			code = newestCode(email);
-			return code;
+			signIn = newestSignIn(email, mark);
+			return signIn;
 		})
 		.toBeDefined();
-	return code as string;
+	return signIn as { code: string; link: URL };
 };
+
+/** The code in the newest sign in email the API sent to `email`, after `mark`. */
+export const mailedCode = async (email: string, mark = 0) =>
+	(await mailedSignIn(email, mark)).code;
 
 // The API logs each email it sends as one JSON line, its first link the email's button.
 const newestLink = (email: string, subject: string) => {
@@ -64,15 +47,20 @@ const newestLink = (email: string, subject: string) => {
 	return undefined;
 };
 
-const newestCode = (email: string) => {
-	const lines = readFileSync(seed.api_log, "utf8").split("\n").reverse();
+const newestSignIn = (email: string, mark: number) => {
+	const lines = readFileSync(seed.api_log)
+		.subarray(mark)
+		.toString("utf8")
+		.split("\n")
+		.reverse();
 	for (const line of lines) {
 		const msg = message(line);
 		const code = msg?.includes(`<${email}>`)
 			? msg.match(/^Subject: Your Bencher code is (\d{6})$/m)?.[1]
 			: undefined;
-		if (code) {
-			return code;
+		const link = msg?.match(/https?:\/\/\S+/)?.[0];
+		if (code && link) {
+			return { code, link: new URL(link) };
 		}
 	}
 	return undefined;
