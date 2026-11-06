@@ -1,7 +1,8 @@
 import * as Sentry from "@sentry/astro";
 import { createMemo, createResource, onMount } from "solid-js";
 import type { JsonConsoleUser } from "../../../types/bencher";
-import { authUser, removeUser } from "../../../util/auth";
+import { signInHref } from "../../../next/reader";
+import { authUser } from "../../../util/auth";
 import { httpGet } from "../../../util/http";
 import { removeOnboardProjectKey } from "../../../util/onboard";
 import {
@@ -9,16 +10,11 @@ import {
 	forwardParams,
 	navigateNotify,
 } from "../../../util/notify";
-import {
-	getOrganization,
-	removeOrganization,
-	setOrganization,
-} from "../../../util/organization";
+import { getOrganization, setOrganization } from "../../../util/organization";
 import { useNavigate, useSearchParams } from "../../../util/url";
 import {
 	type InitValid,
 	init_valid,
-	validJwt,
 	validPlanLevel,
 } from "../../../util/valid";
 import { ORGANIZATIONS_PATH, organizationPath } from "../../../next/paths";
@@ -41,16 +37,11 @@ const ConsoleRedirect = () => {
 			? forwardParams(`${ORGANIZATIONS_PATH}/${slug}/billing`, [PLAN_PARAM], [])
 			: organizationPath(slug);
 
-	const logout = () => {
-		removeUser();
-		removeOrganization();
-		navigate("/auth/login", { replace: true });
-	};
 	const help = () => {
 		navigateNotify(
 			NotifyKind.ERROR,
 			"Failed to load Bencher Console. This may be a bug. Please try again or contact support.",
-			`/console/users/${user?.user?.slug}/help`,
+			`/console/users/${user?.slug}/help`,
 			[PLAN_PARAM],
 			[],
 			true,
@@ -60,22 +51,18 @@ const ConsoleRedirect = () => {
 	const fetcher = createMemo(() => {
 		return {
 			bencher_valid: bencher_valid(),
-			token: user.token,
 		};
 	});
-	const redirect = async (fetcher: {
-		bencher_valid: InitValid;
-		token: string;
-	}) => {
+	const redirect = async (fetcher: { bencher_valid: InitValid }) => {
 		if (!fetcher.bencher_valid) {
 			return;
 		}
-		if (!validJwt(fetcher.token)) {
-			logout();
+		if (!user) {
+			location.replace(signInHref(`${location.pathname}${location.search}`));
 			return;
 		}
-		const path = `/v0/console/users/${user.user.uuid}`;
-		return await httpGet(path, fetcher.token)
+		const path = `/v0/console/users/${user.uuid}`;
+		return await httpGet(path)
 			.then((resp) => {
 				const reader: JsonConsoleUser = resp?.data;
 				const destination = consoleDestination(

@@ -13,13 +13,13 @@ import { afterEach, expect, test } from "vitest";
 import { page } from "vitest/browser";
 import {
 	GitHubInstallationPermission,
-	type JsonAuthUser,
 	type JsonGitHubRepositories,
 	type JsonProjectGitHub,
 	LinkedRepositoryReason,
 	LinkedRepositoryStatus,
 } from "../../types/bencher";
 import { AccountContext } from "../account/context";
+import type { Reader } from "../reader";
 import { ApiError } from "../api";
 import { RETURN_KEY } from "../astro/githubReturn";
 import { type CacheStore, persistCache } from "../cache";
@@ -46,17 +46,11 @@ afterEach(() => {
 	sessionStorage.clear();
 });
 
-const READER = {
-	user: {
-		uuid: "u",
-		name: "Muriel Bagge",
-		slug: "muriel-bagge",
-		email: "muriel@nowhere.example",
-		admin: false,
-		locked: false,
-	},
-	token: "tok",
-} as JsonAuthUser;
+const READER: Reader = {
+	uuid: "u",
+	name: "Muriel Bagge",
+	slug: "muriel-bagge",
+};
 
 const GRANT = "eyJhbGciOiJIUzI1NiJ9.eyJyZXBvIjoxfQ.Z3JhbnQ";
 const CODE = "github-code";
@@ -109,7 +103,7 @@ const open = (
 	}
 	const saved: string[] = [];
 	const persister = persisted
-		? persistCache(client, recording(saved), READER.user.uuid, "build", {
+		? persistCache(client, recording(saved), READER.uuid, "build", {
 				delay: 0,
 			})
 		: undefined;

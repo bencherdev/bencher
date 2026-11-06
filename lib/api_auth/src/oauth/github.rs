@@ -1,5 +1,5 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Post, ResponseAccepted, ResponseOk};
-use bencher_json::{JsonOAuthUrl, JsonOAuthUser, system::auth::JsonOAuth};
+use bencher_json::{JsonOAuthUrl, JsonSignedIn, system::auth::JsonOAuth};
 use bencher_schema::{
     HeaderMap,
     context::ApiContext,
@@ -11,7 +11,8 @@ use slog::Logger;
 
 use crate::oauth::{OAuthProvider, oauth_state::OAuthState};
 
-use super::{handle_oauth_user, is_allowed_oauth};
+use super::{ProviderSignIn, handle_oauth_user, is_allowed_oauth, sign_in};
+use crate::sign_in::check_same_origin;
 
 /// The console's sign-in page that GitHub sends the user back to.
 const SIGN_IN_PATH: &str = "/auth/github";
@@ -87,16 +88,18 @@ async fn get_inner(
 pub async fn auth_github_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonOAuth>,
-) -> Result<ResponseAccepted<JsonOAuthUser>, HttpError> {
-    let json = post_inner(&rqctx.log, rqctx.context(), body.into_inner()).await?;
-    Ok(Post::pub_response_accepted(json))
+) -> Result<ResponseAccepted<JsonSignedIn>, HttpError> {
+    let context = rqctx.context();
+    check_same_origin(context, &rqctx.request)?;
+    let signed_in = post_inner(&rqctx.log, context, body.into_inner()).await?;
+    sign_in(context, &rqctx.request, OAuthProvider::GitHub, signed_in).await
 }
 
 async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     json_oauth: JsonOAuth,
-) -> Result<JsonOAuthUser, HttpError> {
+) -> Result<ProviderSignIn, HttpError> {
     let Some(github_client) = &context.github_client else {
         let err = "GitHub OAuth2 is not configured";
         slog::info!(log, "{err}");

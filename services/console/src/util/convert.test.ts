@@ -4,14 +4,10 @@ import {
 	addToArray,
 	arrayFromString,
 	arrayToString,
-	base64ToBytes,
-	bytesToBase64,
 	currentSeriesTier,
 	currentSeriesTierIndex,
 	dateTimeMillis,
 	dateToTime,
-	decodeBase64,
-	encodeBase64,
 	fmtDate,
 	fmtTierPrice,
 	fmtUsd,
@@ -305,30 +301,6 @@ describe("fmtUsdPrecise", () => {
 
 	test("formats zero for undefined", () => {
 		expect(fmtUsdPrecise(undefined)).toBe("$0.00000");
-	});
-});
-
-describe("base64 round-trip", () => {
-	test("encodeBase64 and decodeBase64 are inverses", () => {
-		const input = "Hello, World!";
-		expect(decodeBase64(encodeBase64(input))).toBe(input);
-	});
-
-	test("handles unicode text", () => {
-		const input = "Unicode: éèê";
-		expect(decodeBase64(encodeBase64(input))).toBe(input);
-	});
-
-	test("base64ToBytes returns Uint8Array", () => {
-		const bytes = base64ToBytes(btoa("abc"));
-		expect(bytes).toBeInstanceOf(Uint8Array);
-		expect(bytes.length).toBe(3);
-	});
-
-	test("bytesToBase64 encodes bytes", () => {
-		const bytes = new TextEncoder().encode("test");
-		const b64 = bytesToBase64(bytes);
-		expect(atob(b64)).toBe("test");
 	});
 });
 

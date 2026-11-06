@@ -11,7 +11,7 @@ const PricingTable = () => {
 	// Logged-in visitors are routed through the console to their organization
 	// billing page to sign up for the plan. Logged-out visitors sign up first.
 	const handlePlan = (plan: PlanLevel) => {
-		if (authUser()?.token) {
+		if (authUser()) {
 			navigate(`/console?${PLAN_PARAM}=${plan}`);
 		} else if (plan === PlanLevel.Free) {
 			navigate("/auth/signup");

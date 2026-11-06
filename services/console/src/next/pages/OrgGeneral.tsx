@@ -47,7 +47,7 @@ const OrgGeneral = () => {
 	const allowed = useQueryResult(() => allowedQuery(api, key()));
 	// Only read: an organization the reader has seen paints at once.
 	const bootstrap = useQueryResult(() => ({
-		...consoleUserQuery(api, reader().user.uuid),
+		...consoleUserQuery(api, reader().uuid),
 		enabled: false,
 	}));
 	const known = () =>
@@ -198,7 +198,7 @@ const OrganizationForm = (props: { organization: Shown }) => {
 				client.getQueryData(allowedQuery(api, from).queryKey),
 			);
 			client.setQueryData<JsonConsoleUser>(
-				consoleUserQuery(api, reader().user.uuid).queryKey,
+				consoleUserQuery(api, reader().uuid).queryKey,
 				(user) => user && withOrganization(user, uuid, { uuid, name, slug }),
 			);
 			setDraft(draftOf(organization));
@@ -414,9 +414,7 @@ const Danger = (props: { organization: Shown }) => {
 	const [deleting, setDeleting] = createSignal(false);
 	// The confirmation names the organization's projects from the reader's bootstrap.
 	const intent = () => {
-		client
-			.prefetchQuery(consoleUserQuery(api, reader().user.uuid))
-			.catch(() => {});
+		client.prefetchQuery(consoleUserQuery(api, reader().uuid)).catch(() => {});
 	};
 	return (
 		<section class="setcard danger" aria-labelledby="sec-danger">

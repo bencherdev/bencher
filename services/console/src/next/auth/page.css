@@ -1,0 +1,4 @@
+/* The auth pages' one stylesheet: the design system, the console's frame, and the card. */
+@import "@bencherdev/ui/styles.css";
+@import "../styles/console.css";
+@import "./auth.css";

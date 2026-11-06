@@ -53,7 +53,7 @@ const mount = ({
 	api?: Api;
 	version?: () => number | undefined;
 } = {}) => {
-	const client = createQueryClient(() => {});
+	const client = createQueryClient();
 	client.setDefaultOptions({
 		queries: { ...client.getDefaultOptions().queries, retry: false },
 	});

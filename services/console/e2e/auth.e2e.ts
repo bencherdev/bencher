@@ -1,16 +1,22 @@
+import type { Page } from "@playwright/test";
+import { createReader } from "./api";
 import {
-	USER_KEY,
-	expect,
+	READER_KEY,
 	consolePath,
+	ended,
+	expect,
+	logInTo,
+	persistedQueries,
 	seed,
 	signedIn,
 	signedOut,
 	test,
 	RELAY,
 } from "./fixtures";
+import { inSession } from "./session";
 
-const signInWayBack = (path: string) =>
-	`/auth/login?${new URLSearchParams({ back: Buffer.from(path).toString("base64") })}`;
+const hint = (page: Page) =>
+	page.evaluate((key) => localStorage.getItem(key), READER_KEY);
 
 test.describe("signed out", () => {
 	test.use({ storageState: signedOut });
@@ -22,29 +28,16 @@ test.describe("signed out", () => {
 	}) => {
 		const path = consolePath(seed.projects.private.slug, "runs");
 		await page.goto(path);
-		await expect(page).toHaveURL(signInWayBack(path));
-	});
-
-	// Kills validators whose WASM never loads, which leaves Log in disabled for good.
-	test("a valid email enables Log in", async ({ page }) => {
-		await page.goto("/auth/login");
-		const logIn = page.getByRole("button", { name: "Log in", exact: true });
-		// The form replaces its placeholder once it loads, so fill until it takes.
-		await expect(async () => {
-			await page
-				.getByPlaceholder("email@example.com")
-				.fill("reader@example.com");
-			await expect(logIn).toBeEnabled({ timeout: 1_000 });
-		}).toPass();
+		await expect(page).toHaveURL(logInTo(path));
 	});
 });
 
 test.describe("signed in", () => {
 	test.use({ storageState: signedIn(seed.member) });
 
-	// Kills a client that treats a refused token as an empty project, and a
-	// reader left signed in with it.
-	test("a token the API refuses sends the reader to sign in with the way back", async ({
+	// Kills a client that treats a 401 as an empty project, and a reader left
+	// signed in after one.
+	test("a 401 sends the reader to sign in with the way back", async ({
 		page,
 	}) => {
 		await page.route(`${RELAY}/v0/console/projects/**`, (route) =>
@@ -52,27 +45,51 @@ test.describe("signed in", () => {
 		);
 		const path = consolePath(seed.projects.hashbrown.slug, "alerts");
 		await page.goto(path);
-		await expect(page).toHaveURL(signInWayBack(path));
-		expect(
-			await page.evaluate((key) => localStorage.getItem(key), USER_KEY),
-		).toBeNull();
+		await expect(page).toHaveURL(logInTo(path));
+		expect(await hint(page)).toBeNull();
 	});
 });
 
-test.describe("with a badly signed token", () => {
-	const [header, payload] = seed.member.token.split(".");
-	test.use({
-		storageState: signedIn({
-			...seed.member,
-			token: `${header}.${payload}.${"A".repeat(43)}`,
-		}),
-	});
+// Kills a console that keeps the hint or the cache of a session the API has
+// ended, or forgets where the reader was going.
+test("a session that ended clears the hint and the cache and asks for a sign in with the way back", async ({
+	newContext,
+}) => {
+	const reader = await createReader();
+	const page = await (
+		await newContext({ storageState: signedIn(reader) })
+	).newPage();
+	await page.goto(`/console/users/${reader.user.slug}/keys`);
+	await expect(
+		page.getByRole("heading", { level: 1, name: "Keys" }),
+	).toBeVisible();
+	await expect
+		.poll(() => persistedQueries(page, reader.user.uuid))
+		.toBeGreaterThan(0);
+	expect(
+		(await inSession(reader, "DELETE", "/v0/auth/session")).status,
+	).toBeLessThan(300);
 
-	// Kills a client that reads the API's 400 for a token it cannot validate as
-	// an empty project instead of a reader who must sign in again.
-	test("the reader is sent to sign in with the way back", async ({ page }) => {
-		const path = consolePath(seed.projects.hashbrown.slug, "alerts");
+	// A page the cache does not hold, so the console asks the API.
+	const path = `/console/users/${reader.user.slug}/settings`;
+	await page.goto(path);
+
+	await expect(page).toHaveURL(logInTo(path));
+	expect(await hint(page)).toBeNull();
+	await expect.poll(() => persistedQueries(page, reader.user.uuid)).toBe(0);
+});
+
+test.describe("signed in to a session that ended", () => {
+	test.use({ storageState: signedIn(ended(seed.member)) });
+
+	// Kills a classic page that reads a 401 as an empty page instead of a
+	// reader who must sign in again, or keeps the hint.
+	test("a classic page sends the reader to sign in with the way back", async ({
+		page,
+	}) => {
+		const path = "/console/onboard/project";
 		await page.goto(path);
-		await expect(page).toHaveURL(signInWayBack(path));
+		await expect(page).toHaveURL(logInTo(path));
+		expect(await hint(page)).toBeNull();
 	});
 });

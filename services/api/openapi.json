@@ -449,7 +449,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonOAuthUser"
+                  "$ref": "#/components/schemas/JsonSignedIn"
                 }
               }
             }
@@ -617,7 +617,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonOAuthUser"
+                  "$ref": "#/components/schemas/JsonSignedIn"
                 }
               }
             }
@@ -10912,7 +10912,7 @@
           "users"
         ],
         "summary": "Confirm a new email",
-        "description": "Change a user's email to the new email that a confirm link was sent to. A user who updates their own email is sent that link at the new email, and its token lasts as long as a login link's. No credential is needed, so the link works from any device. Any later update to the user ends the link, this confirm included. The response holds a new session for the new email. An invalid or expired token is refused with `401 Unauthorized`; a token for another user, or one sent before the user's latest update, with `403 Forbidden`; and a new email that another user has taken since with `409 Conflict`.",
+        "description": "Change a user's email to the new email that a confirm link was sent to. A user who updates their own email is sent that link at the new email, and its token lasts as long as a login link's. No credential is needed, so the link works from any device. Any later update to the user ends the link, this confirm included. The response holds the user, with no credential: the browser's session is unchanged. An invalid or expired token is refused with `401 Unauthorized`; a token for another user, or one sent before the user's latest update, with `403 Forbidden`; and a new email that another user has taken since with `409 Conflict`.",
         "operationId": "user_email_put",
         "parameters": [
           {
@@ -10978,7 +10978,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/JsonAuthUser"
+                  "$ref": "#/components/schemas/JsonUser"
                 }
               }
             }
@@ -16444,34 +16444,6 @@
           "url"
         ]
       },
-      "JsonOAuthUser": {
-        "type": "object",
-        "properties": {
-          "authorization": {
-            "nullable": true,
-            "description": "An app's pending request to connect, to return to now that the user is signed in.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OAuthAuthorizationUuid"
-              }
-            ]
-          },
-          "plan": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PlanLevel"
-              }
-            ]
-          },
-          "user": {
-            "$ref": "#/components/schemas/JsonAuthUser"
-          }
-        },
-        "required": [
-          "user"
-        ]
-      },
       "JsonOciBandwidth": {
         "type": "object",
         "properties": {
@@ -19394,6 +19366,40 @@
         "required": [
           "server",
           "timestamp"
+        ]
+      },
+      "JsonSignedIn": {
+        "description": "A finished sign-in, whose session rides in its cookie.",
+        "type": "object",
+        "properties": {
+          "authorization": {
+            "nullable": true,
+            "description": "An app's pending request to connect, which the sign-in returns to.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthAuthorizationUuid"
+              }
+            ]
+          },
+          "new": {
+            "description": "Whether the sign-in made the account.",
+            "type": "boolean"
+          },
+          "plan": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PlanLevel"
+              }
+            ]
+          },
+          "user": {
+            "$ref": "#/components/schemas/JsonUser"
+          }
+        },
+        "required": [
+          "new",
+          "user"
         ]
       },
       "JsonSignup": {

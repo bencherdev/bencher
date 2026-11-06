@@ -3,20 +3,25 @@
 //! Every report carries fixed start and end times, so a browser clock frozen at
 //! [`NOW`] sees the same project on every run.
 
+use std::time::{Duration, Instant};
+
 use anyhow::Context as _;
-use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use bencher_json::{
-    DateTime, Entitlements, JsonAuthUser, JsonOrganization, JsonProject, JsonProjectKeyCreated,
-    JsonUser, JsonUserKeyCreated, Jwt, PlanLevel, Secret,
+    DateTime, Entitlements, JsonOrganization, JsonProject, JsonProjectKeyCreated, JsonUser,
+    JsonUserKeyCreated, PlanLevel, Secret,
 };
 use bencher_license::Licensor;
-use bencher_token::TokenKey;
 use camino::Utf8Path;
 use serde::Serialize;
 
-use super::{ISSUER, SECRET_KEY, jobs};
+use super::{RELAY_SECRET, jobs};
 
-// The test tokens are signed for these two emails.
+/// The cookies a console on `http://127.0.0.1` gets: the session, and the sign-in that proves it.
+const SESSION_COOKIE: &str = "__Host-bencher_session";
+const PENDING_COOKIE: &str = "__Host-bencher_pending";
+/// The longest the seed waits for the API to log a sign-in's email.
+const MAIL_TIMEOUT: Duration = Duration::from_secs(10);
+
 const ADMIN: (&str, &str, &str) = (
     "Eustace Bagge",
     "eustace-bagge",
@@ -155,8 +160,8 @@ pub struct Seed {
     /// The API's log, which holds every email it sends.
     api_log: String,
     now: DateTime,
-    admin: JsonAuthUser,
-    member: JsonAuthUser,
+    admin: SeedReader,
+    member: SeedReader,
     outsider: SeedReader,
     organization: SeedOrganization,
     projects: SeedProjects,
@@ -170,14 +175,14 @@ pub struct Seed {
     held_hash: &'static str,
 }
 
-/// A signed in reader as the console stores one, holding a user key where
-/// [`JsonAuthUser`] holds a token: only two emails have test tokens.
+/// A reader the suite signs in as: a real session for the browser, and a user key for the
+/// suite's own requests, as a script would send them.
 #[derive(Debug, Serialize)]
 struct SeedReader {
     user: JsonUser,
-    token: String,
-    creation: DateTime,
-    expiration: DateTime,
+    /// The value of the session cookie a sign-in by email set.
+    session: String,
+    key: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -224,16 +229,14 @@ impl Seed {
         db: &Utf8Path,
         api_log: &str,
     ) -> anyhow::Result<Self> {
-        let api = Api::new(api_url);
+        let api = Api::new(api_url, Utf8Path::new(api_log));
 
         // The first user to sign up is the server admin.
-        let admin = api.sign_up(ADMIN, Jwt::test_admin_token()).await?;
-        api.sign_up(MEMBER, Jwt::test_token()).await?;
-        // Signed in with a session, not an API token, so the member can approve an app.
-        let member = api.session(MEMBER.2).await?;
-        let admin_token = admin.token.as_ref();
-        let outsider = api.sign_up_with_key(OUTSIDER, admin_token).await?;
-        let token = member.token.as_ref();
+        let admin = api.sign_up(ADMIN).await?;
+        let member = api.sign_up(MEMBER).await?;
+        let outsider = api.sign_up(OUTSIDER).await?;
+        let admin_token = admin.key.as_ref();
+        let token = member.key.as_ref();
 
         let organization: JsonOrganization = api
             .send(
@@ -271,7 +274,7 @@ impl Seed {
         }
 
         report_history(&api, &hashbrown, token).await?;
-        key_report(&api, &hashbrown, token).await?;
+        key_report(&api, &hashbrown, &member.session).await?;
         split_run(&api, &hashbrown, token).await?;
         check_alerts(&api, &hashbrown, token).await?;
         pins(&api, &hashbrown, token).await?;
@@ -452,13 +455,14 @@ fn report_body(
 }
 
 /// A run by a project key rather than a person: two variants with both measures, four lines.
-async fn key_report(api: &Api, project: &JsonProject, token: &str) -> anyhow::Result<()> {
+async fn key_report(api: &Api, project: &JsonProject, session: &str) -> anyhow::Result<()> {
     let path = format!("/v0/projects/{}/keys", project.slug);
+    // Only a browser's session makes a key.
     let key: JsonProjectKeyCreated = api
-        .send(
+        .send_in_session(
             Method::Post,
             &path,
-            token,
+            session,
             &serde_json::json!({ "name": KEY }),
         )
         .await?;
@@ -894,6 +898,8 @@ impl Variant {
 pub(super) struct Api {
     client: reqwest::Client,
     url: String,
+    /// The API's log, which holds every email it sends.
+    log: camino::Utf8PathBuf,
 }
 
 #[derive(Clone, Copy)]
@@ -903,75 +909,78 @@ pub(super) enum Method {
 }
 
 impl Api {
-    fn new(url: &str) -> Self {
+    fn new(url: &str, log: &Utf8Path) -> Self {
         Self {
             client: reqwest::Client::new(),
             url: url.to_owned(),
+            log: log.to_owned(),
         }
     }
 
-    /// Sign a user up and return them as the console stores a signed in user.
-    async fn sign_up(
-        &self,
-        (name, slug, email): (&str, &str, &str),
-        token: Jwt,
-    ) -> anyhow::Result<JsonAuthUser> {
-        let body =
-            serde_json::json!({ "name": name, "slug": slug, "email": email, "i_agree": true });
-        let _ack: serde_json::Value = self
-            .send(Method::Post, "/v0/auth/signup", "", &body)
+    /// Sign a user up as a browser does, by the email's code through the console's relay, then
+    /// name them and make the key the suite's own requests send.
+    async fn sign_up(&self, (name, slug, email): (&str, &str, &str)) -> anyhow::Result<SeedReader> {
+        let path = "/v0/auth/email";
+        let started = relayed(self.client.post(format!("{}{path}", self.url)), None)
+            .json(&serde_json::json!({ "email": email }))
+            .send()
             .await?;
-        let user: JsonUser = self
-            .get(&format!("/v0/users/{slug}"), token.as_ref())
-            .await?;
-        let Claims { iat, exp } = Claims::decode(&token)?;
-        Ok(JsonAuthUser {
-            user,
-            token,
-            creation: DateTime::try_from(iat)?,
-            expiration: DateTime::try_from(exp)?,
-        })
-    }
-
-    /// A sign in session for `email`, as its emailed link mints one.
-    async fn session(&self, email: &str) -> anyhow::Result<JsonAuthUser> {
-        let token = TokenKey::new(ISSUER.to_owned(), &SECRET_KEY.parse::<Secret>()?)
-            .new_auth(email.parse()?, 60)?;
-        self.send(
-            Method::Post,
-            "/v0/auth/confirm",
-            "",
-            &serde_json::json!({ "token": token }),
+        let pending = cookie(&started, PENDING_COOKIE)
+            .with_context(|| format!("{path} answered {}", started.status()))?;
+        let code = self.mailed_code(email).await?;
+        let path = "/v0/auth/code";
+        let proved = relayed(
+            self.client.post(format!("{}{path}", self.url)),
+            Some((PENDING_COOKIE, &pending)),
         )
-        .await
-    }
-
-    /// Sign a user up and sign them in with a user key the admin makes for them.
-    async fn sign_up_with_key(
-        &self,
-        (name, slug, email): (&str, &str, &str),
-        admin_token: &str,
-    ) -> anyhow::Result<SeedReader> {
-        let body =
-            serde_json::json!({ "name": name, "slug": slug, "email": email, "i_agree": true });
-        let _ack: serde_json::Value = self
-            .send(Method::Post, "/v0/auth/signup", "", &body)
+        .json(&serde_json::json!({ "code": code }))
+        .send()
+        .await?;
+        let session = cookie(&proved, SESSION_COOKIE)
+            .with_context(|| format!("{path} answered {}", proved.status()))?;
+        let signed_in: serde_json::Value = read_answer(proved, path).await?;
+        let uuid = signed_in
+            .get("user")
+            .and_then(|user| user.get("uuid"))
+            .and_then(serde_json::Value::as_str)
+            .context("The sign-in named no user")?;
+        let user: JsonUser = self
+            .send_in_session(
+                Method::Patch,
+                &format!("/v0/users/{uuid}"),
+                &session,
+                &serde_json::json!({ "name": name, "slug": slug }),
+            )
             .await?;
-        let user: JsonUser = self.get(&format!("/v0/users/{slug}"), admin_token).await?;
         let key: JsonUserKeyCreated = self
-            .send(
+            .send_in_session(
                 Method::Post,
                 &format!("/v0/users/{slug}/keys"),
-                admin_token,
-                &serde_json::json!({ "name": "console" }),
+                &session,
+                &serde_json::json!({ "name": "e2e" }),
             )
             .await?;
         Ok(SeedReader {
             user,
-            token: key.key.into(),
-            creation: key.creation,
-            expiration: key.expiration,
+            session,
+            key: key.key.into(),
         })
+    }
+
+    /// The code in the newest sign-in email the API logged for `email`.
+    async fn mailed_code(&self, email: &str) -> anyhow::Result<String> {
+        let deadline = Instant::now() + MAIL_TIMEOUT;
+        loop {
+            let log = std::fs::read_to_string(&self.log)?;
+            if let Some(code) = log.lines().rev().find_map(|line| code_in(line, email)) {
+                return Ok(code);
+            }
+            anyhow::ensure!(
+                Instant::now() < deadline,
+                "The API logged no sign-in email to {email}"
+            );
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
     }
 
     pub(super) async fn project(
@@ -1005,46 +1014,97 @@ impl Api {
         token: &str,
         body: &serde_json::Value,
     ) -> anyhow::Result<T> {
-        let url = format!("{}{path}", self.url);
-        let request = match method {
-            Method::Post => self.client.post(url),
-            Method::Patch => self.client.patch(url),
-        };
-        let request = if token.is_empty() {
-            request
-        } else {
-            request.bearer_auth(token)
-        };
+        read(
+            self.request(method, path).bearer_auth(token).json(body),
+            path,
+        )
+        .await
+    }
+
+    /// [`Api::send`] in a browser's session, for what only a session may do.
+    async fn send_in_session<T: serde::de::DeserializeOwned>(
+        &self,
+        method: Method,
+        path: &str,
+        session: &str,
+        body: &serde_json::Value,
+    ) -> anyhow::Result<T> {
+        let request = relayed(self.request(method, path), Some((SESSION_COOKIE, session)));
         read(request.json(body), path).await
     }
+
+    fn request(&self, method: Method, path: &str) -> reqwest::RequestBuilder {
+        let url = format!("{}{path}", self.url);
+        match method {
+            Method::Post => self.client.post(url),
+            Method::Patch => self.client.patch(url),
+        }
+    }
+}
+
+/// The value of the cookie `name` that `response` sets.
+/// `request` as the console's relay sends a page's own: from its origin, with the relay's
+/// secret, and with `cookie` when given.
+fn relayed(
+    request: reqwest::RequestBuilder,
+    cookie: Option<(&str, &str)>,
+) -> reqwest::RequestBuilder {
+    let request = request
+        .header("Sec-Fetch-Site", "same-origin")
+        .header(bencher_json::RELAY_SECRET, RELAY_SECRET);
+    if let Some((name, value)) = cookie {
+        request.header(reqwest::header::COOKIE, format!("{name}={value}"))
+    } else {
+        request
+    }
+}
+
+fn cookie(response: &reqwest::Response, name: &str) -> anyhow::Result<String> {
+    response
+        .headers()
+        .get_all(reqwest::header::SET_COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .find_map(|value| {
+            value
+                .split(';')
+                .next()?
+                .strip_prefix(name)?
+                .strip_prefix('=')
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned)
+        })
+        .with_context(|| format!("No {name} cookie was set"))
+}
+
+/// The code in a log line that holds the sign-in email to `email`.
+fn code_in(line: &str, email: &str) -> Option<String> {
+    const SUBJECT: &str = "Subject: Your Bencher code is ";
+    let message: serde_json::Value = serde_json::from_str(line).ok()?;
+    let message = message.get("msg")?.as_str()?;
+    if !message.contains(&format!("<{email}>")) {
+        return None;
+    }
+    let (_, rest) = message.split_once(SUBJECT)?;
+    let code = rest.get(..6)?;
+    code.bytes()
+        .all(|byte| byte.is_ascii_digit())
+        .then(|| code.to_owned())
 }
 
 async fn read<T: serde::de::DeserializeOwned>(
     request: reqwest::RequestBuilder,
     path: &str,
 ) -> anyhow::Result<T> {
-    let response = request.send().await?;
+    read_answer(request.send().await?, path).await
+}
+
+async fn read_answer<T: serde::de::DeserializeOwned>(
+    response: reqwest::Response,
+    path: &str,
+) -> anyhow::Result<T> {
     let status = response.status();
     let text = response.text().await?;
     anyhow::ensure!(status.is_success(), "{path} answered {status}: {text}");
     serde_json::from_str(&text).with_context(|| format!("{path} answered {text}"))
-}
-
-/// The issue and expiry times a token carries.
-#[derive(serde::Deserialize)]
-struct Claims {
-    iat: i64,
-    exp: i64,
-}
-
-impl Claims {
-    fn decode(token: &Jwt) -> anyhow::Result<Self> {
-        let payload = token
-            .as_ref()
-            .split('.')
-            .nth(1)
-            .context("The token has no claims")?;
-        let bytes = URL_SAFE_NO_PAD.decode(payload)?;
-        Ok(serde_json::from_slice(&bytes)?)
-    }
 }

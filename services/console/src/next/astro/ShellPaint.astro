@@ -1,6 +1,6 @@
 ---
 import { SHELL_KEY } from "../memory";
-import { USER_KEY } from "../reader";
+import { READER_KEY } from "../reader";
 
 interface Props {
 	slug: string;
@@ -13,15 +13,14 @@ const { slug } = Astro.props;
 // nothing, and brings the current tab into view on a narrow screen.
 ---
 
-<script is:inline define:vars={{ slug, SHELL_KEY, USER_KEY }}>
+<script is:inline define:vars={{ slug, SHELL_KEY, READER_KEY }}>
 	try {
-		var user = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+		var reader = JSON.parse(localStorage.getItem(READER_KEY) || "null");
 		var record = JSON.parse(localStorage.getItem(SHELL_KEY) || "null");
 		var seen =
-			user &&
-			user.user &&
+			reader &&
 			record &&
-			record.reader === user.user.uuid &&
+			record.reader === reader.uuid &&
 			record.projects &&
 			record.projects[slug];
 		if (seen) {

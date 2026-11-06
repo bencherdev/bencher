@@ -41,9 +41,7 @@ const Organizations = (props: {
 	const navigate = useNavigate();
 	const here = useLocation();
 	const adding = () => here.pathname.endsWith("/organizations/add");
-	const bootstrap = useQueryResult(() =>
-		consoleUserQuery(api, reader().user.uuid),
-	);
+	const bootstrap = useQueryResult(() => consoleUserQuery(api, reader().uuid));
 	const rows = createMemo(() => {
 		const data = bootstrap().data;
 		return data && organizationRows(data);
@@ -56,7 +54,7 @@ const Organizations = (props: {
 		}
 	};
 	return (
-		<Frame user={reader().user.slug} section="organizations">
+		<Frame user={reader().slug} section="organizations">
 			<div class="sethead">
 				<div class="ph-title">
 					<div class="crumb-line">
@@ -196,7 +194,7 @@ const NewOrganization = (props: {
 		}
 		const { uuid, name: madeName, slug } = made;
 		client.setQueryData<JsonConsoleUser>(
-			consoleUserQuery(api, reader().user.uuid).queryKey,
+			consoleUserQuery(api, reader().uuid).queryKey,
 			(user) =>
 				user && {
 					...user,

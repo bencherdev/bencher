@@ -63,7 +63,7 @@ const KEY = ["project", "hashbrown"];
 /** A cache that has seen `hashbrown`, saved for `reader`. */
 const saved = async (reader = "reader-a", buster = "v1", savedAt = NOW) => {
 	const { store, entries } = memoryStore();
-	const client = createQueryClient(() => {});
+	const client = createQueryClient();
 	const { stop } = persistCache(client, store, reader, buster, {
 		delay: 0,
 		now: () => savedAt,
@@ -80,7 +80,7 @@ const restored = async (
 	buster = "v1",
 	now = NOW,
 ) => {
-	const client = createQueryClient(() => {});
+	const client = createQueryClient();
 	await restoreCache(client, store, reader, buster, now);
 	return client.getQueryData(KEY);
 };
@@ -96,7 +96,7 @@ describe("the persisted cache", () => {
 	// misses the shell's round when the API answers within the boot wait.
 	test("what answered before saving began is saved too", async () => {
 		const { store, entries } = memoryStore();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		client.setQueryData(KEY, { name: "Hashbrown" });
 		const { stop } = persistCache(client, store, "reader-a", "v1", {
 			delay: 0,
@@ -131,7 +131,7 @@ describe("the persisted cache", () => {
 	// save a reload cancels, which leaves a deleted project at rest.
 	test("a removed query leaves storage at once", async () => {
 		const { store } = await saved();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		await restoreCache(client, store, "reader-a", "v1", NOW);
 		const { stop } = persistCache(client, store, "reader-a", "v1", {
 			delay: 60_000,
@@ -149,7 +149,7 @@ describe("the persisted cache", () => {
 	// a poll asks again and hears what it heard before.
 	test("an answer that changes nothing is not saved again", async () => {
 		const { store, writes } = countingStore();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		const { stop } = persistCache(client, store, "reader-a", "v1", {
 			delay: 0,
 			now: () => NOW,
@@ -183,7 +183,7 @@ describe("the persisted cache", () => {
 	// no save ever lands.
 	test("an answer that shows something unfinished never reaches the store", async () => {
 		const { store, entries, writes } = countingStore();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		const { stop, flush } = persistCache(client, store, "reader-a", "v1", {
 			delay: 0,
 			now: () => NOW,
@@ -222,7 +222,7 @@ describe("the persisted cache", () => {
 	// Kills a flush that leaves the change to a timer a navigation cancels.
 	test("a flush writes every change at once", async () => {
 		const { store, entries } = slowStore();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		const { flush, stop } = persistCache(client, store, "reader-a", "v1", {
 			delay: 60_000,
 			now: () => NOW,
@@ -237,7 +237,7 @@ describe("the persisted cache", () => {
 	// Kills a flush that returns while a save already under way is still writing.
 	test("a flush waits for a save already under way", async () => {
 		const { store, entries } = slowStore();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		client.setQueryData(KEY, { name: "Hashbrown" });
 		const { flush, stop } = persistCache(client, store, "reader-a", "v1", {
 			delay: 0,
@@ -254,7 +254,7 @@ describe("the persisted cache", () => {
 	// restores the data the reader's write replaced as fresh.
 	test("an invalidation is saved at once", async () => {
 		const { store, entries } = memoryStore();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		client.setQueryData(KEY, { name: "Hashbrown" });
 		const { stop } = persistCache(client, store, "reader-a", "v1", {
 			delay: 60_000,
@@ -264,7 +264,7 @@ describe("the persisted cache", () => {
 		await client.invalidateQueries({ queryKey: KEY, refetchType: "none" });
 		await vi.waitFor(() => expect(entries.has("reader-a")).toBe(true));
 		stop();
-		const reloaded = createQueryClient(() => {});
+		const reloaded = createQueryClient();
 		await restoreCache(reloaded, store, "reader-a", "v1", NOW);
 		expect(reloaded.getQueryState(KEY)?.isInvalidated).toBe(true);
 	});
@@ -276,7 +276,7 @@ describe("the persisted cache", () => {
 		const { store, writes } = countingStore();
 		const active = ["keys", "active"];
 		const revoked = ["keys", "revoked"];
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		client.setQueryData(active, ["ci"]);
 		client.setQueryData(revoked, []);
 		const { flush, stop } = persistCache(client, store, "reader-a", "v1", {
@@ -290,7 +290,7 @@ describe("the persisted cache", () => {
 		client.setQueryData(revoked, ["ci"]);
 		await new Promise((resolve) => setTimeout(resolve, 20));
 		stop();
-		const reloaded = createQueryClient(() => {});
+		const reloaded = createQueryClient();
 		await restoreCache(reloaded, store, "reader-a", "v1", NOW);
 		expect(reloaded.getQueryData(revoked)).toEqual(["ci"]);
 		expect(reloaded.getQueryData(active)).toEqual([]);
@@ -301,7 +301,7 @@ describe("the persisted cache", () => {
 	// cache again each time an undo or a seed repeats what is saved.
 	test("a write that changes nothing is not saved again", async () => {
 		const { store, writes } = countingStore();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		client.setQueryData(KEY, { name: "Hashbrown" });
 		const { flush, stop } = persistCache(client, store, "reader-a", "v1", {
 			delay: 60_000,
@@ -319,7 +319,7 @@ describe("the persisted cache", () => {
 	// again each time a page reads.
 	test("an answer waits for the delay", async () => {
 		const { store, entries } = memoryStore();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		const { stop } = persistCache(client, store, "reader-a", "v1", {
 			delay: 60_000,
 			now: () => NOW,
@@ -345,7 +345,7 @@ describe("the persisted cache", () => {
 	// Kills a sign out that leaves data in memory or at rest.
 	test("clearing empties memory and storage", async () => {
 		const { store, entries } = await saved();
-		const client = createQueryClient(() => {});
+		const client = createQueryClient();
 		client.setQueryData(KEY, { name: "Hashbrown" });
 		await clearCache(client, store);
 		expect(client.getQueryData(KEY)).toBeUndefined();
@@ -356,8 +356,7 @@ describe("the persisted cache", () => {
 describe("createQueryClient", () => {
 	const attempts = async (error: ApiError) => {
 		let calls = 0;
-		const unauthorized = vi.fn();
-		const client = createQueryClient(unauthorized);
+		const client = createQueryClient();
 		await client
 			.query({
 				queryKey: ["x"],
@@ -368,7 +367,7 @@ describe("createQueryClient", () => {
 				retryDelay: 0,
 			})
 			.catch(() => {});
-		return { calls, unauthorized };
+		return { calls };
 	};
 
 	// Kills retries that hammer an API that refused, and none for a flaky one.
@@ -381,15 +380,5 @@ describe("createQueryClient", () => {
 		expect((await attempts(new ApiError(401, "unauthorized", ""))).calls).toBe(
 			1,
 		);
-	});
-
-	// Kills a refused token that leaves the reader on a broken page.
-	test("a refused token sends the reader to sign in, and nothing else does", async () => {
-		expect(
-			(await attempts(new ApiError(401, "unauthorized", ""))).unauthorized,
-		).toHaveBeenCalledOnce();
-		expect(
-			(await attempts(new ApiError(404, "not_found", ""))).unauthorized,
-		).not.toHaveBeenCalled();
 	});
 });

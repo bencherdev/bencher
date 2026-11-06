@@ -160,7 +160,7 @@ const runReports = (page: Page) =>
 const newestRun = async (request: APIRequestContext) => {
 	const response = await request.get(
 		`${seed.api_url}/v0/console/projects/${hashbrown.slug}/runs?per_page=1`,
-		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+		{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 	);
 	const { runs } = (await response.json()) as { runs: { uuid: string }[] };
 	return `${RUNS}/${runs[0]?.uuid}`;
@@ -168,7 +168,7 @@ const newestRun = async (request: APIRequestContext) => {
 
 /** The newest run's first report, through the API. */
 const newestRunReport = async (request: APIRequestContext) => {
-	const headers = { Authorization: `Bearer ${seed.member.token}` };
+	const headers = { Authorization: `Bearer ${seed.member.key}` };
 	const listed = await request.get(
 		`${seed.api_url}/v0/console/projects/${hashbrown.slug}/runs?per_page=1`,
 		{ headers },
@@ -413,7 +413,8 @@ for (const [width, viewport] of [
 }
 
 // Kills a Feedback dialog whose code loads in more than one round, asks the
-// API for anything, or grows.
+// API for more than the reader's account, which holds the email it offers, or
+// grows.
 test("opening Feedback holds its speed ceilings", async ({ page }) => {
 	await page.goto(RUNS);
 	await ready(page);
@@ -576,7 +577,7 @@ const coldLoad = async (
 
 /** A metric of the seed's newest report, through the API. */
 const newestMetric = async (request: APIRequestContext) => {
-	const headers = { Authorization: `Bearer ${seed.member.token}` };
+	const headers = { Authorization: `Bearer ${seed.member.key}` };
 	const reports = `${seed.api_url}/v0/projects/${hashbrown.slug}/reports`;
 	const [newest] = (await (
 		await request.get(`${reports}?per_page=1`, { headers })
@@ -1160,7 +1161,7 @@ for (const [width, viewport] of [
 		}) => {
 			const response = await request.get(
 				`${seed.api_url}/v0/projects/${hashbrown.slug}/reports?branch=main&testbed=ubuntu-latest&per_page=1`,
-				{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+				{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 			);
 			const [newest] = (await response.json()) as { uuid: string }[];
 			const cost = await coldLoad(page, `${REPORTS}/${newest?.uuid}`, () =>
@@ -1244,7 +1245,7 @@ for (const [width, viewport] of [
 				}) => {
 					const response = await request.get(
 						`${seed.api_url}/v0/projects/${hashbrown.slug}/reports?branch=main&testbed=ubuntu-latest&per_page=1`,
-						{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+						{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 					);
 					const [newest] = (await response.json()) as { uuid: string }[];
 					const cost = await coldLoad(
@@ -1712,7 +1713,7 @@ for (const [width, viewport] of [
 		}) => {
 			const response = await request.get(
 				`${seed.api_url}/v0/console/projects/${hashbrown.slug}/thresholds`,
-				{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+				{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 			);
 			const {
 				thresholds: [threshold],
@@ -1740,7 +1741,7 @@ for (const [width, viewport] of [
 			test.skip(width === "390");
 			const response = await request.get(
 				`${seed.api_url}/v0/console/projects/${hashbrown.slug}/thresholds`,
-				{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+				{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 			);
 			const {
 				thresholds: [threshold],
@@ -1882,7 +1883,7 @@ for (const [width, viewport] of [
 const activeAlert = async (request: APIRequestContext) => {
 	const response = await request.get(
 		`${seed.api_url}/v0/projects/${hashbrown.slug}/alerts?status=active`,
-		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+		{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 	);
 	const [alert] = (await response.json()) as { uuid: string }[];
 	if (!alert) {
@@ -2215,6 +2216,49 @@ for (const [width, viewport] of [
 		});
 	});
 }
+
+test.describe("signed out", () => {
+	test.use({ storageState: signedOut });
+
+	// Kills a door that asks the API for anything as it loads, or grows.
+	test("a cold load of the door holds its byte ceilings", async ({ page }) => {
+		await page.goto("/auth/login");
+		await expect(
+			page.getByRole("button", { name: "Continue with email" }),
+		).toBeVisible();
+		await loadedAndIdle(page);
+		await settle(page);
+
+		const cost = await measure(page, RELAY);
+		report("door cold load", cost);
+		holds(cost, ceilings.doorColdLoad);
+	});
+});
+
+// Kills a consent page that asks the API for more than the request and the
+// session it is signed in with, or grows.
+test("a cold load of consent holds its byte ceilings", async ({ page }) => {
+	await page.goto(
+		`${seed.api_url}/oauth/authorize?${new URLSearchParams({
+			response_type: "code",
+			client_id: "https://client.example/oauth/client.json",
+			redirect_uri: "https://client.example/callback",
+			code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+			code_challenge_method: "S256",
+			scope: "projects:read",
+			state: "speed",
+		})}`,
+	);
+	await expect(
+		page.getByRole("button", { name: "Approve", exact: true }),
+	).toBeVisible();
+	await loadedAndIdle(page);
+	await settle(page);
+
+	const cost = await measure(page, RELAY);
+	report("consent cold load", cost);
+	holds(cost, ceilings.consentColdLoad);
+});
 
 // Kills code moved onto the pages that stay classic, which every one of them
 // would then load: a shared file the new console's groups fold more into.

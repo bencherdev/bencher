@@ -27,7 +27,7 @@ const call = async <T>(
 ): Promise<T> => {
 	const response = await request.fetch(`${seed.api_url}${path}`, {
 		method,
-		headers: { Authorization: `Bearer ${seed.member.token}` },
+		headers: { Authorization: `Bearer ${seed.member.key}` },
 		...(data === undefined ? {} : { data }),
 	});
 	if (!response.ok()) {

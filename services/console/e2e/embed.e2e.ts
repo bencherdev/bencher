@@ -140,7 +140,7 @@ test.describe("signed out", () => {
 		const patched = await request.patch(
 			`${seed.api_url}/v0/projects/${project.slug}`,
 			{
-				headers: { Authorization: `Bearer ${seed.admin.token}` },
+				headers: { Authorization: `Bearer ${seed.admin.key}` },
 				data: { bmf_version: 0 },
 			},
 		);
@@ -192,7 +192,7 @@ test.describe("signed out", () => {
 		const id = await dimensions(request, project.slug);
 		const measures = await request.get(
 			`${seed.api_url}/v0/projects/${project.slug}/measures?per_page=64`,
-			{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+			{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 		);
 		const uuids = ((await measures.json()) as { uuid: string; name: string }[])
 			.sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }))
@@ -384,7 +384,7 @@ test.describe("a signed in member", () => {
 		const patched = await request.patch(
 			`${seed.api_url}/v0/projects/${project.slug}`,
 			{
-				headers: { Authorization: `Bearer ${seed.member.token}` },
+				headers: { Authorization: `Bearer ${seed.member.key}` },
 				data: { visibility: "private" },
 			},
 		);

@@ -123,12 +123,9 @@ test.describe("Keys", () => {
 
 	// Kills a revoke without its confirmation, one that only hides the row, and
 	// one that a reload undoes.
-	test("Revoke asks first and moves the key to Revoked", async ({
-		page,
-		request,
-	}) => {
+	test("Revoke asks first and moves the key to Revoked", async ({ page }) => {
 		const name = unique("old-laptop");
-		await createUserKey(request, name);
+		await createUserKey(name);
 		await page.goto(keysPath);
 		const active = page.getByRole("table", { name: "Active keys" });
 		await expect(

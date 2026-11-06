@@ -156,7 +156,7 @@ const plotsApi = (
 };
 
 const newClient = (api: Api, count: number) => {
-	const client = createQueryClient(() => {});
+	const client = createQueryClient();
 	client.setDefaultOptions({
 		queries: { ...client.getDefaultOptions().queries, retry: false },
 	});

@@ -12,6 +12,7 @@ const ROOTS = [
 	"services/console/src/pages/console/organizations",
 	"services/console/src/pages/console/users",
 	"services/console/src/pages/perf",
+	"services/console/src/pages/auth",
 ];
 
 test("no color is written outside the theme", () => {

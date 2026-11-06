@@ -1,7 +1,6 @@
 import { afterEach, expect, test } from "vitest";
 import { page } from "vitest/browser";
 import type {
-	JsonAuthUser,
 	JsonConsoleUser,
 	JsonConsoleUserProject,
 } from "../../types/bencher";
@@ -10,15 +9,11 @@ import { ApiError } from "../api";
 import { FlushContext } from "../flush";
 import { VERSION_KEY, rememberedVersion } from "../memory";
 import { ORGANIZATIONS_PATH, projectPath } from "../paths";
-import { USER_KEY } from "../reader";
+import { READER_KEY, type Reader } from "../reader";
 import DeleteProject from "./DeleteProject";
 import { PROJECT, fakeApi, mount } from "./testing";
 
-const READER = {
-	token: "tok",
-	user: { uuid: "u" },
-	expiration: "2999-01-01T00:00:00Z",
-} as JsonAuthUser;
+const READER: Reader = { uuid: "u", slug: "muriel-bagge", name: "Muriel" };
 
 let dispose: (() => void) | undefined;
 
@@ -179,7 +174,7 @@ const listed = (slug: string, last_report: number) =>
 
 // Kills a delete that lands anywhere but the main project the browser remembers.
 test("Delete lands on the main project the browser remembers", async () => {
-	localStorage.setItem(USER_KEY, JSON.stringify(READER));
+	localStorage.setItem(READER_KEY, JSON.stringify(READER));
 	localStorage.setItem(VERSION_KEY, JSON.stringify({ gizmo: 1, hashbrown: 1 }));
 	const { left } = await deleteWith();
 	await expect.poll(() => left).toEqual([projectPath("gizmo")]);

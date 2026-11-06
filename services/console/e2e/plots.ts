@@ -17,7 +17,7 @@ export const createPin = async (
 	const response = await request.post(
 		`${seed.api_url}/v0/projects/${project}/plots`,
 		{
-			headers: { Authorization: `Bearer ${seed.member.token}` },
+			headers: { Authorization: `Bearer ${seed.member.key}` },
 			data: {
 				title,
 				lower_value: false,

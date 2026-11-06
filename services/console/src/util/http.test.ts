@@ -15,41 +15,30 @@ describe("apiUrl", () => {
 });
 
 describe("getOptions", () => {
-	test("returns GET config with auth token", () => {
-		const opts = getOptions("/v0/projects", "my-token");
+	// Kills a classic page that sends a credential of its own: the session
+	// cookie travels by itself.
+	test("returns GET config with no Authorization", () => {
+		const opts = getOptions("/v0/projects");
 		expect(opts.method).toBe("GET");
 		expect(opts.url).toBe("/api/v0/projects");
-		expect(opts.headers).toEqual({
-			"Content-Type": "application/json",
-			Authorization: "Bearer my-token",
-		});
-	});
-
-	test("returns GET config without auth when token is null", () => {
-		const opts = getOptions("/v0/projects", null);
-		expect(opts.headers).toEqual({ "Content-Type": "application/json" });
-	});
-
-	test("returns GET config without auth when token is undefined", () => {
-		const opts = getOptions("/v0/projects", undefined);
 		expect(opts.headers).toEqual({ "Content-Type": "application/json" });
 	});
 });
 
 describe("postOptions", () => {
-	test("returns POST config with data", () => {
+	test("returns POST config with data and no Authorization", () => {
 		const data = { name: "test" };
-		const opts = postOptions("/v0/projects", "tok", data);
+		const opts = postOptions("/v0/projects", data);
 		expect(opts.method).toBe("POST");
 		expect(opts.data).toEqual(data);
-		expect(opts.headers.Authorization).toBe("Bearer tok");
+		expect(opts.headers).toEqual({ "Content-Type": "application/json" });
 	});
 });
 
 describe("putOptions", () => {
 	test("returns PUT config with data", () => {
 		const data = { name: "updated" };
-		const opts = putOptions("/v0/projects/slug", "tok", data);
+		const opts = putOptions("/v0/projects/slug", data);
 		expect(opts.method).toBe("PUT");
 		expect(opts.data).toEqual(data);
 	});
@@ -58,7 +47,7 @@ describe("putOptions", () => {
 describe("pathOptions", () => {
 	test("returns PATCH config", () => {
 		const data = { name: "patched" };
-		const opts = pathOptions("/v0/projects/slug", "tok", data);
+		const opts = pathOptions("/v0/projects/slug", data);
 		expect(opts.method).toBe("PATCH");
 		expect(opts.data).toEqual(data);
 	});

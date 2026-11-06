@@ -128,7 +128,7 @@ const LISTED = {
 describe("relay", () => {
 	// Kills a relay that drops or rewrites the method, the path, its escapes, the
 	// query, the body, or a listed header, or that lets any other header through,
-	// such as one the API reads a client address from.
+	// such as one the API reads a client address from, or a credential.
 	test("forwards the method, path, query, body, and only the listed headers", async () => {
 		const { url, received } = await api();
 		const handed: Headers[] = [];
@@ -161,10 +161,7 @@ describe("relay", () => {
 		expect(sent?.method).toBe("POST");
 		expect(sent?.url).toBe("/v0/projects/a%2Fb/reports?branch=main&q=%2F%20");
 		expect(sent?.body).toBe(body);
-		for (const [name, value] of Object.entries({
-			...LISTED,
-			authorization: "Bearer bencher_user_key",
-		})) {
+		for (const [name, value] of Object.entries(LISTED)) {
 			expect(handed[0]?.get(name), name).toBe(value);
 			// Node's fetch puts its own Sec-Fetch-Mode on the wire.
 			if (name !== "sec-fetch-mode") {
@@ -172,6 +169,7 @@ describe("relay", () => {
 			}
 		}
 		for (const name of [
+			"authorization",
 			"x-forwarded-for",
 			"fly-client-ip",
 			"cf-connecting-ip",
@@ -185,10 +183,9 @@ describe("relay", () => {
 	});
 
 	// Kills a relay that sends a self-hosted console's Basic credentials, meant
-	// for the proxy in front of it, on to the API, one that finds "bearer "
-	// anywhere but the scheme, or one that drops a bearer credential whose
-	// scheme is not capitalized.
-	test("forwards `Authorization` only when its scheme is Bearer", async () => {
+	// for the proxy in front of it, on to the API, or any other credential: the
+	// console signs in with its session cookie alone.
+	test("never forwards `Authorization`", async () => {
 		const { url, received } = await api();
 		for (const authorization of [
 			"Basic dXNlcjpwYXNz",
@@ -203,7 +200,7 @@ describe("relay", () => {
 		}
 		expect(received.map((sent) => valuesOf(sent, "authorization"))).toEqual([
 			[],
-			["bearer bencher_user_key"],
+			[],
 			[],
 			[],
 		]);

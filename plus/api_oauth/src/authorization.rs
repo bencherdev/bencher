@@ -10,6 +10,7 @@ use bencher_schema::{
         QueryUser,
         auth::{AuthCredential, AuthUser, BearerToken},
         oauth_authorization::{OAuthAnswer, QueryOAuthAuthorization},
+        session::{QuerySession, cookie::CookieCredential},
     },
     public_conn, write_transaction,
 };
@@ -97,11 +98,11 @@ pub async fn oauth_authorization_post(
     let context = rqctx.context();
     let oauth = oauth_server(context)?;
     let OAuthAuthorizationParams { authorization } = path_params.into_inner();
-    let JsonOAuthDecision { approve } = body.into_inner();
+    let JsonOAuthDecision { approve, key } = body.into_inner();
     let now = context.clock.now();
 
     let (answer, code) = if approve {
-        let (auth_user, auth_time) = approver(&rqctx).await?;
+        let (auth_user, auth_time) = approver(&rqctx, key).await?;
         let code = OAuthCode::generate();
         let code_hash = OAuthCodeHash::from(&code);
         let answer = write_transaction!(context, |conn| {
@@ -205,43 +206,33 @@ fn redirect(
     json(&JsonOAuthRedirect { url })
 }
 
-/// The user approving a request, and when they signed in: a session JWT, or a pasted user API key,
-/// which proves no sign in and is charged as an attempt to sign in from the caller's address.
+/// The user approving a request, and when they last proved who they are: a user API key pasted in
+/// the decision or sent as a bearer, which proves no sign in and is charged as an attempt to sign
+/// in from the caller's address; a session JWT; or else the session cookie.
 /// No credential is ever quoted back.
 async fn approver(
     rqctx: &RequestContext<ApiContext>,
+    pasted: Option<UserKey>,
 ) -> Result<(AuthUser, Option<DateTime>), HttpError> {
     let context = rqctx.context();
     let headers = rqctx.request.headers();
-    let Some(token) = headers
+    let bearer_token = if let Some(key) = pasted {
+        charge_attempt(rqctx)?;
+        BearerToken::UserKey(key)
+    } else if let Some(token) = headers
         .get(bencher_json::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
         .and_then(bencher_json::strip_bearer_token)
-    else {
+    {
+        bearer(rqctx, token)?
+    } else if let Some(cookie) = CookieCredential::from_request(&rqctx.request) {
+        BearerToken::Session(cookie)
+    } else {
         return Err(unauthorized_error(
             "Approving a request to connect requires a session or a user API key",
         ));
     };
-    let is_project_key = token.starts_with(ProjectKey::PREFIX);
-    if (is_project_key || token.starts_with(UserKey::PREFIX))
-        && let Some(remote_ip) = context.remote_ip(&rqctx.log, headers)
-    {
-        context.rate_limiting.public_auth_attempt(remote_ip)?;
-    }
-    if is_project_key {
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsentBlocked);
-        return Err(forbidden_error(
-            "A project API key (bencher_run_) cannot approve a request to connect. Sign in, or use a user API key (bencher_user_) instead.",
-        ));
-    }
-    let bearer_token = if token.starts_with(UserKey::PREFIX) {
-        token.parse::<UserKey>().map(BearerToken::UserKey)
-    } else {
-        token.parse::<Jwt>().map(BearerToken::Jwt)
-    }
-    .map_err(|_err| unauthorized_error(INVALID_CREDENTIAL))?;
-    let auth_time = if let BearerToken::Jwt(jwt) = &bearer_token {
+    let jwt_auth_time = if let BearerToken::Jwt(jwt) = &bearer_token {
         context
             .token_key
             .validate_client(jwt)
@@ -251,17 +242,58 @@ async fn approver(
         None
     };
     let auth_user = AuthUser::from_token(context, bearer_token).await?;
-    if !matches!(
-        auth_user.credential,
-        AuthCredential::Session(_) | AuthCredential::UserKey(_)
-    ) {
+    let auth_time = match auth_user.credential {
+        AuthCredential::Session(Some(session_id)) => {
+            QuerySession::find(public_conn!(context), session_id)
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to read the approving session",
+                        "Failed to read the session approving a request to connect:",
+                        e,
+                    )
+                })?
+                .map(|session| session.proved)
+        },
+        AuthCredential::Session(None) | AuthCredential::UserKey(_) => jwt_auth_time,
+        AuthCredential::ApiToken | AuthCredential::OAuthGrant { .. } => {
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsentBlocked);
+            return Err(forbidden_error(
+                "An API token cannot approve a request to connect. Sign in, or use a user API key (bencher_user_) instead.",
+            ));
+        },
+    };
+    Ok((auth_user, auth_time))
+}
+
+/// The credential a bearer header names, refusing a project key, which cannot approve.
+fn bearer(rqctx: &RequestContext<ApiContext>, token: &str) -> Result<BearerToken, HttpError> {
+    let is_project_key = token.starts_with(ProjectKey::PREFIX);
+    if is_project_key || token.starts_with(UserKey::PREFIX) {
+        charge_attempt(rqctx)?;
+    }
+    if is_project_key {
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsentBlocked);
         return Err(forbidden_error(
-            "An API token cannot approve a request to connect. Sign in, or use a user API key (bencher_user_) instead.",
+            "A project API key (bencher_run_) cannot approve a request to connect. Sign in, or use a user API key (bencher_user_) instead.",
         ));
     }
-    Ok((auth_user, auth_time))
+    if token.starts_with(UserKey::PREFIX) {
+        token.parse::<UserKey>().map(BearerToken::UserKey)
+    } else {
+        token.parse::<Jwt>().map(BearerToken::Jwt)
+    }
+    .map_err(|_err| unauthorized_error(INVALID_CREDENTIAL))
+}
+
+/// Charge a pasted key as an attempt to sign in from the caller's address.
+fn charge_attempt(rqctx: &RequestContext<ApiContext>) -> Result<(), HttpError> {
+    let context = rqctx.context();
+    if let Some(remote_ip) = context.remote_ip(&rqctx.log, rqctx.request.headers()) {
+        context.rate_limiting.public_auth_attempt(remote_ip)?;
+    }
+    Ok(())
 }
 
 fn charge_public_request(rqctx: &RequestContext<ApiContext>) -> Result<(), HttpError> {

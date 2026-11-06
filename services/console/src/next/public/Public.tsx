@@ -84,7 +84,7 @@ const Public = (props: PublicProps) => (
 				</a>
 				<span class="pu-out pu-auth">
 					<ButtonLink size="sm" href={props.signIn}>
-						Log in
+						Sign in
 					</ButtonLink>
 					<ButtonLink size="sm" variant="primary" href="/auth/signup">
 						Sign up
@@ -377,7 +377,7 @@ const Values = (props: { values: Value[]; twoLine?: boolean }) => (
 const plural = (count: number, one: string, many: string) =>
 	`${formatCount(count)} ${count === 1 ? one : many}`;
 
-/** The page a reader sees for a project they cannot read, which may not exist; a signed in reader is not asked to log in. */
+/** The page a reader sees for a project they cannot read, which may not exist; a signed in reader is not asked to sign in. */
 const Locked = (props: { signIn: string }) => (
 	<main class="page pu-locked">
 		<section class="pu-lockcard" aria-labelledby="pu-locked">
@@ -389,7 +389,7 @@ const Locked = (props: { signIn: string }) => (
 			</Heading>
 			<div class="btnrow pu-out">
 				<ButtonLink variant="primary" href={props.signIn}>
-					Log in
+					Sign in
 				</ButtonLink>
 				<ButtonLink href="/auth/signup">Sign up</ButtonLink>
 			</div>

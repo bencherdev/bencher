@@ -8,7 +8,6 @@ import {
 } from "../src/next/query/query";
 import type {
 	JsonAlert,
-	JsonAuthUser,
 	JsonConsoleRuns,
 	JsonOrganization,
 	JsonProject,
@@ -25,8 +24,9 @@ import {
 	signedOut,
 	test,
 	RELAY,
+	type Reader,
 } from "./fixtures";
-import { signUp } from "./mail";
+import { inSession, signUp } from "./session";
 
 // Every page at the caps the API accepts: 64-byte names (CJK and RTL among
 // them), 256-byte slash branches, 1024-byte Rust paths, 8 parameter keys of 64
@@ -105,11 +105,11 @@ const seedAtCaps = async (request: APIRequestContext) => {
 	);
 	const email = (local: string) =>
 		`${fill(`${local}.${tag}.`, 64, "e")}@a-rather-long-subdomain.long-organization-domain.example`;
-	const reader = await signUp(request, {
+	const reader = await signUp({
 		name: spaced,
 		email: email("reader"),
 	});
-	const token = reader.token;
+	const token = reader.key;
 	const post = <T>(path: string, data: unknown) =>
 		send<T>(request, "POST", path, token, data);
 
@@ -128,7 +128,7 @@ const seedAtCaps = async (request: APIRequestContext) => {
 		request,
 		"PATCH",
 		`/v0/projects/${created.slug}`,
-		seed.admin.token,
+		seed.admin.key,
 		{ bmf_version: 1 },
 	);
 	const slug = project.slug;
@@ -285,14 +285,17 @@ const seedAtCaps = async (request: APIRequestContext) => {
 		});
 	await plot(fill(`${tag} pinned plot of sixty four lines`, 64, "t"));
 
-	await post(at("keys"), { name: fill(`${tag} project key`, 64, "k") });
-	await post(`/v0/users/${reader.user.slug}/keys`, {
+	// Only a browser's session makes a key.
+	await inSession(reader, "POST", at("keys"), {
+		name: fill(`${tag} project key`, 64, "k"),
+	});
+	await inSession(reader, "POST", `/v0/users/${reader.user.slug}/keys`, {
 		name: fill(`${tag} user key`, 64, "k"),
 	});
 	await createMember(
 		request,
 		organization,
-		await signUp(request, {
+		await signUp({
 			name: fill(`${tag} Member`, 64, "n"),
 			email: email("member"),
 		}),
@@ -361,6 +364,7 @@ const GROUPS = [
 	"project pages",
 	"settings and account",
 	"public pages",
+	"auth pages",
 ] as const;
 
 /** Each page state, by group, with its path and what to do once it has drawn. */
@@ -425,8 +429,31 @@ const groups = (
 			],
 			["Embed", `${embedPath(s.slug)}${s.namesQuery}`],
 		],
+		"auth pages": [
+			["Sign in", "/auth/login"],
+			[
+				"Sign up, invited at the caps",
+				`/auth/signup?${new URLSearchParams({ invite: shapedJwt(s.reader.user.email) })}`,
+			],
+			[
+				"Check your inbox, an old link at the caps",
+				`/auth/confirm?${new URLSearchParams({ token: shapedJwt(s.reader.user.email) })}`,
+			],
+			[
+				"Confirm a new email",
+				`/auth/email?${new URLSearchParams({ user: s.reader.user.uuid, token: shapedJwt(s.reader.user.email) })}`,
+			],
+			["Connect an app, gone", `/auth/authorize?request=${randomUUID()}`],
+		],
 	};
 };
+
+/** Shaped as a token for `email`, which the page reads and the API would refuse. */
+const shapedJwt = (email: string) =>
+	[{ alg: "HS256", typ: "JWT" }, { sub: email }]
+		.map((part) => Buffer.from(JSON.stringify(part)).toString("base64url"))
+		.concat("c2ln")
+		.join(".");
 
 const openRun = async (page: Page) => {
 	const toggle = page
@@ -568,7 +595,10 @@ for (const viewport of WIDTHS) {
 		}) => {
 			test.setTimeout(120_000);
 			const s = seeded;
-			const reader = group === "public pages" ? undefined : s.reader;
+			const reader =
+				group === "public pages" || group === "auth pages"
+					? undefined
+					: s.reader;
 			const context = await newContext({
 				viewport,
 				storageState: reader ? signedIn(reader) : signedOut,
@@ -597,7 +627,7 @@ for (const viewport of WIDTHS) {
 }
 
 /** Two legacy tokens with 64-byte names, since no API makes one any more. */
-const legacyTokens = (context: BrowserContext, reader: JsonAuthUser) =>
+const legacyTokens = (context: BrowserContext, reader: Reader) =>
 	context.route(
 		`${RELAY}/v0/users/${reader.user.slug}/tokens?*`,
 		async (route) => {

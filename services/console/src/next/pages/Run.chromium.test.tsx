@@ -80,7 +80,7 @@ const mount = (api: Api, path = PATH, base?: string) => {
 
 /** The production cache, but a refusal fails at once. */
 const client = (): QueryClient => {
-	const cache = createQueryClient(() => {});
+	const cache = createQueryClient();
 	cache.setDefaultOptions({
 		queries: { ...cache.getDefaultOptions().queries, retry: false },
 	});

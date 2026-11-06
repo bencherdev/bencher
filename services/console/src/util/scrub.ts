@@ -10,19 +10,19 @@ export const scrubber = (secrets: readonly string[]) => {
 				new RegExp(secret.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
 		),
 	];
-	return <T>(value: T): T => scrub(value, patterns, new WeakSet<object>()) as T;
+	const clean = (text: string) =>
+		patterns.reduce((done, pattern) => done.replace(pattern, FILTERED), text);
+	return <T>(value: T): T => scrub(value, clean, new WeakSet<object>()) as T;
 };
 
-const scrub = (
+/** Every string in `value`, at any depth, put through `clean`. */
+export const scrub = (
 	value: unknown,
-	patterns: readonly RegExp[],
+	clean: (text: string) => string,
 	seen: WeakSet<object>,
 ): unknown => {
 	if (typeof value === "string") {
-		return patterns.reduce(
-			(text, pattern) => text.replace(pattern, FILTERED),
-			value,
-		);
+		return clean(value);
 	}
 	if (typeof value !== "object" || value === null || seen.has(value)) {
 		return value;
@@ -30,10 +30,32 @@ const scrub = (
 	seen.add(value);
 	const fields = value as Record<string, unknown>;
 	for (const [name, field] of Object.entries(fields)) {
-		const scrubbed = scrub(field, patterns, seen);
+		const scrubbed = scrub(field, clean, seen);
 		if (scrubbed !== field) {
 			fields[name] = scrubbed;
 		}
 	}
 	return value;
+};
+
+/** Where a page names what its reports must never carry, for the reporter that loads after it. */
+const REPORT_SECRETS = "BENCHER_REPORT_SECRETS";
+
+/** Keep each of `secrets`, in any case, out of every report this page sends from now on. */
+export const keepOutOfReports = (
+	secrets: readonly string[],
+	memory: object = window,
+) => {
+	Reflect.set(memory, REPORT_SECRETS, [...secrets]);
+};
+
+/** What this page asked to keep out of its reports. */
+export const reportSecrets = (memory: object = globalThis): string[] => {
+	const kept: unknown = Reflect.get(memory, REPORT_SECRETS);
+	return Array.isArray(kept)
+		? kept.filter(
+				(secret): secret is string =>
+					typeof secret === "string" && secret.length > 0,
+			)
+		: [];
 };

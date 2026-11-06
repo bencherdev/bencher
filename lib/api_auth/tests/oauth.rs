@@ -122,6 +122,36 @@ async fn oauth_endpoints_exist() {
     assert!(google_resp.status().as_u16() > 0);
 }
 
+// The exchange now begins a session, so it takes a request only from the console's own pages, and
+// checks that before anything else. Kills an exchange from another site, and one that asks the
+// provider, or finds it unconfigured, first.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn provider_exchange_needs_the_console_origin() {
+    let server = TestServer::new().await;
+    for provider in ["github", "google"] {
+        for (site, status) in [
+            (None, http::StatusCode::FORBIDDEN),
+            (Some("cross-site"), http::StatusCode::FORBIDDEN),
+            (Some("same-site"), http::StatusCode::FORBIDDEN),
+            (Some("same-origin"), http::StatusCode::PAYMENT_REQUIRED),
+        ] {
+            let mut request = server
+                .client
+                .post(server.api_url(&format!("/v0/auth/{provider}")))
+                .json(&serde_json::json!({
+                    "code": "test-code",
+                    "state": bencher_json::Jwt::test_token(),
+                }));
+            if let Some(site) = site {
+                request = request.header("Sec-Fetch-Site", site);
+            }
+            let resp = request.send().await.expect("Request failed");
+            assert_eq!(resp.status(), status, "{provider} {site:?}");
+        }
+    }
+}
+
 // Kills a sign-in with GitHub or Google whose state drops the app's request to connect, or
 // carries one that does not wait for an answer.
 #[cfg(feature = "plus")]

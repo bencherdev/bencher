@@ -30,7 +30,8 @@ export interface About {
 	url: string;
 	/** The project's slug, on a project's page. */
 	slug?: string | undefined;
-	email: string;
+	/** Unknown when the reader's account did not answer. */
+	email?: string | undefined;
 	build: string;
 }
 
@@ -42,7 +43,7 @@ export const feedbackArgs = (form: Form, about: About) => {
 	const params: Params = {
 		message: form.message.trim(),
 		...(on("page") ? { url: about.url } : {}),
-		...(on("email") ? { email: about.email } : {}),
+		...(on("email") && about.email ? { email: about.email } : {}),
 		tags: {
 			kind: form.kind,
 			...(on("project") && about.slug ? { project: about.slug } : {}),

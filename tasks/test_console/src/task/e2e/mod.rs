@@ -28,7 +28,11 @@ const TEST_SENTRY_DSN: &str = "http://feedback@127.0.0.1:9/0";
 /// Set to `true`, the console records no Sentry Replay, whose compression
 /// worker can deadlock headless Chromium.
 const SENTRY_NO_REPLAY: &str = "PUBLIC_SENTRY_NO_REPLAY";
-/// The debug defaults the test tokens are signed with.
+const TURNSTILE_SITE_KEY: &str = "TURNSTILE_SITE_KEY";
+/// Cloudflare's site key for tests, so the console asks for a Turnstile token as Bencher Cloud's
+/// does; the suite answers in place of Cloudflare's script, and the API checks no token.
+const TEST_TURNSTILE_SITE_KEY: &str = "1x00000000000000000000AA";
+/// The API's debug defaults, which sign the invites the suite makes.
 const ISSUER: &str = "http://localhost:3000/";
 const SECRET_KEY: &str = "DO_NOT_USE_THIS_IN_PRODUCTION";
 /// The secret the API and the suite's console share, as Bencher Cloud's do.
@@ -291,7 +295,8 @@ fn npm_command(dir: &Utf8Path, args: &[&str]) -> Command {
         .args(args)
         .current_dir(dir)
         .env(SENTRY_DSN, TEST_SENTRY_DSN)
-        .env(SENTRY_NO_REPLAY, "true");
+        .env(SENTRY_NO_REPLAY, "true")
+        .env(TURNSTILE_SITE_KEY, TEST_TURNSTILE_SITE_KEY);
     command
 }
 
@@ -457,7 +462,7 @@ mod tests {
 
     use super::{
         MAX_HTTP_HEADER_SIZE, NODE_OPTIONS, SENTRY_DSN, SENTRY_NO_REPLAY, TEST_SENTRY_DSN,
-        console_command, node_options, npm_command,
+        TEST_TURNSTILE_SITE_KEY, TURNSTILE_SITE_KEY, console_command, node_options, npm_command,
     };
 
     fn env<'c>(command: &'c Command, name: &str) -> Option<&'c OsStr> {
@@ -492,6 +497,16 @@ mod tests {
         assert_eq!(
             node_options(Some("--enable-source-maps")),
             "--enable-source-maps --max-http-header-size=32768"
+        );
+    }
+
+    // Kills a test build with no Turnstile, which leaves the door's check untried.
+    #[test]
+    fn console_builds_with_the_test_turnstile_site_key() {
+        let dir = Utf8Path::new("services/console");
+        assert_eq!(
+            env(&npm_command(dir, &["run", "build"]), TURNSTILE_SITE_KEY),
+            Some(OsStr::new(TEST_TURNSTILE_SITE_KEY))
         );
     }
 

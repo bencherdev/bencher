@@ -45,7 +45,7 @@ const OrgMembers = () => {
 	const roles = useQueryResult(() => rolesQuery(api, key()));
 	// Only read: an organization the reader has seen names the rail at once.
 	const bootstrap = useQueryResult(() => ({
-		...consoleUserQuery(api, reader().user.uuid),
+		...consoleUserQuery(api, reader().uuid),
 		enabled: false,
 	}));
 	const name = () =>
@@ -155,7 +155,7 @@ const OrgMembers = () => {
 						<MemberTable
 							members={members}
 							roles={shown().roles}
-							reader={reader().user.uuid}
+							reader={reader().uuid}
 							onRemove={setTarget}
 						/>
 						<SingleSignOn organization={shown().organization} />

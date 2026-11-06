@@ -122,13 +122,13 @@ test("the window offers three presets, and a pick changes the query", async () =
 	]);
 });
 
-// Kills a member's action shown to a reader who is not signed in, Log in
+// Kills a member's action shown to a reader who is not signed in, Sign in
 // shown to one who is, and Open in console on another query than the one drawn.
 test("only a stored reader sees Open in console, on this query", async () => {
 	await page.viewport(1280, 900);
 	show();
 	await expect
-		.element(page.getByRole("link", { name: "Log in" }))
+		.element(page.getByRole("link", { name: "Sign in" }))
 		.toBeVisible();
 	await expect
 		.element(page.getByRole("link", { name: "Open in console" }))
@@ -138,7 +138,7 @@ test("only a stored reader sees Open in console, on this query", async () => {
 	const open = page.getByRole("link", { name: "Open in console" });
 	await expect.element(open).toBeVisible();
 	await expect
-		.element(page.getByRole("link", { name: "Log in" }))
+		.element(page.getByRole("link", { name: "Sign in" }))
 		.not.toBeInTheDocument();
 	const href = new URL(
 		open.element().getAttribute("href") ?? "",
@@ -310,9 +310,9 @@ test("Show query takes the summary away for the boxes and turns its chevron", as
 	expect(chevron()).toBe(closed);
 });
 
-// Kills a signed in reader the project refuses who is told to log in or sign
+// Kills a signed in reader the project refuses who is told to sign in or sign
 // up, and a reader who is not signed in who is not.
-test("a locked page asks only a reader who is not signed in to log in", async () => {
+test("a locked page asks only a reader who is not signed in to sign in", async () => {
 	await page.viewport(1280, 900);
 	show({ view: "locked" });
 	const locked = page.getByRole("heading", {
@@ -321,12 +321,12 @@ test("a locked page asks only a reader who is not signed in to log in", async ()
 	});
 	await expect.element(locked).toBeVisible();
 	await expect
-		.element(page.getByRole("main").getByRole("link", { name: "Log in" }))
+		.element(page.getByRole("main").getByRole("link", { name: "Sign in" }))
 		.toHaveAttribute("href", "/auth/login?back=x");
 
 	document.documentElement.setAttribute("data-reader", "");
 	await expect.element(locked).toBeVisible();
-	for (const name of ["Log in", "Sign up"]) {
+	for (const name of ["Sign in", "Sign up"]) {
 		expect(page.getByRole("link", { name }).elements()).toHaveLength(0);
 	}
 });
@@ -342,8 +342,8 @@ const held = () =>
 
 // Kills a bar that names the project (the link's slug may name nothing), a
 // phone bar that drops Sign up or leaves Docs and the theme toggle out of its
-// menu, and a reader who is asked to log in, or not, by the wrong bar.
-test("the bar holds the wordmark, Docs and the theme or the menu, and Log in and Sign up or the avatar", async () => {
+// menu, and a reader who is asked to sign in, or not, by the wrong bar.
+test("the bar holds the wordmark, Docs and the theme or the menu, and Sign in and Sign up or the avatar", async () => {
 	for (const view of ["plot", "locked"] as const) {
 		show({ view });
 		for (const [width, tools] of [
@@ -356,7 +356,7 @@ test("the bar holds the wordmark, Docs and the theme or the menu, and Log in and
 			expect(held(), `${view} at ${width}`).toEqual([
 				"Bencher, home",
 				...tools,
-				"Log in",
+				"Sign in",
 				"Sign up",
 			]);
 			document.documentElement.setAttribute("data-reader", "");
@@ -391,15 +391,15 @@ test("the wordmark follows the page's theme", async () => {
 });
 
 // Kills a phone bar that wraps to a second row, scrolls sideways, or pushes
-// Log in or Sign up off the screen.
-test("on a phone the bar keeps Log in and Sign up on one row down to 320 px", async () => {
+// Sign in or Sign up off the screen.
+test("on a phone the bar keeps Sign in and Sign up on one row down to 320 px", async () => {
 	show();
 	const bar = document.querySelector(".bar");
 	for (const width of [390, 320]) {
 		await page.viewport(width, 800);
 		expect(bar?.getBoundingClientRect().height).toBe(52);
 		expect(bar && bar.scrollWidth <= bar.clientWidth).toBe(true);
-		for (const name of ["Log in", "Sign up"]) {
+		for (const name of ["Sign in", "Sign up"]) {
 			const link = page.getByRole("link", { name }).element();
 			const { left, right, height } = link.getBoundingClientRect();
 			expect(left, `${name} at ${width}`).toBeGreaterThanOrEqual(0);

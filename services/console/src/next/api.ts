@@ -42,33 +42,23 @@ export interface Api {
 }
 
 export const createApi = ({
-	token,
-	expiration = Number.POSITIVE_INFINITY,
-	now = Date.now,
 	fetch = globalThis.fetch.bind(globalThis),
+	onUnauthorized,
 }: {
-	token: string;
-	/** When the session ends; past it nothing is sent. */
-	expiration?: number;
-	now?: () => number;
 	fetch?: typeof globalThis.fetch;
+	/** The session ended: the API refused a read or a change with a 401. */
+	onUnauthorized: () => void;
 }): Api => {
 	const request = async <T>(
 		path: string,
 		init: { method?: Method; body?: unknown; signal?: AbortSignal | undefined },
 	): Promise<ApiResponse<T>> => {
-		// The API answers an expired token with a 400, so the client does not ask.
-		if (now() >= expiration) {
-			throw new ApiError(undefined, "unauthorized", "The session has ended");
-		}
 		const target = `${API_PATH}${path}`;
 		// A request past what every hop passes on would be refused, so it is never sent.
 		if (target.length > MAX_URL_LENGTH) {
 			throw new ApiError(URI_TOO_LONG, "client", "URI Too Long");
 		}
-		const headers: Record<string, string> = {
-			Authorization: `Bearer ${token}`,
-		};
+		const headers: Record<string, string> = {};
 		if (init.body !== undefined) {
 			headers["Content-Type"] = "application/json";
 		}
@@ -88,7 +78,11 @@ export const createApi = ({
 		}
 		if (!response.ok) {
 			const body = await response.text().catch(() => "");
-			throw new ApiError(response.status, kindOf(response.status, body), body);
+			const kind = kindOf(response.status);
+			if (kind === "unauthorized") {
+				onUnauthorized();
+			}
+			throw new ApiError(response.status, kind, body);
 		}
 		const text = await response.text();
 		return {
@@ -102,14 +96,8 @@ export const createApi = ({
 	};
 };
 
-// The API answers a token it cannot validate, badly signed or expired, with a
-// 400 that says so, rather than a 401.
-const BAD_TOKEN = "Failed to validate JSON Web Token";
-
-const kindOf = (status: number, body: string): ApiErrorKind => {
+const kindOf = (status: number): ApiErrorKind => {
 	switch (status) {
-		case 400:
-			return isBadToken(body) ? "unauthorized" : "client";
 		case 401:
 			return "unauthorized";
 		case 403:
@@ -118,14 +106,5 @@ const kindOf = (status: number, body: string): ApiErrorKind => {
 			return "not_found";
 		default:
 			return status >= 500 ? "server" : "client";
-	}
-};
-
-const isBadToken = (body: string) => {
-	try {
-		const message = JSON.parse(body)?.message;
-		return typeof message === "string" && message.startsWith(BAD_TOKEN);
-	} catch {
-		return false;
 	}
 };
