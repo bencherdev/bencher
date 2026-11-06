@@ -335,6 +335,8 @@ const JS_INT: i32 = 70;
 const JS_BENCHMARK_INT: i32 = 71;
 const JS_TIME_INT: i32 = 72;
 const JS_VITEST_INT: i32 = 73;
+const JS_VITEST_V1_INT: i32 = 731;
+const JS_VITEST_V5_INT: i32 = 732;
 const PYTHON_INT: i32 = 80;
 const PYTHON_ASV_INT: i32 = 81;
 const PYTHON_PYTEST_INT: i32 = 82;
@@ -391,6 +393,8 @@ pub enum Adapter {
     JsBenchmark = JS_BENCHMARK_INT,
     JsTime = JS_TIME_INT,
     JsVitest = JS_VITEST_INT,
+    JsVitestV1 = JS_VITEST_V1_INT,
+    JsVitestV5 = JS_VITEST_V5_INT,
     Python = PYTHON_INT,
     PythonAsv = PYTHON_ASV_INT,
     PythonPytest = PYTHON_PYTEST_INT,
@@ -447,6 +451,8 @@ impl Adapter {
             | Self::JsBenchmark
             | Self::JsTime
             | Self::JsVitest
+            | Self::JsVitestV1
+            | Self::JsVitestV5
             | Self::PythonAsv
             | Self::PythonPytest
             | Self::RubyBenchmark
@@ -516,6 +522,8 @@ impl fmt::Display for Adapter {
             Self::JsBenchmark => write!(f, "js_benchmark"),
             Self::JsTime => write!(f, "js_time"),
             Self::JsVitest => write!(f, "js_vitest"),
+            Self::JsVitestV1 => write!(f, "js_vitest_v1"),
+            Self::JsVitestV5 => write!(f, "js_vitest_v5"),
             Self::Python => write!(f, "python"),
             Self::PythonAsv => write!(f, "python_asv"),
             Self::PythonPytest => write!(f, "python_pytest"),
@@ -537,12 +545,12 @@ mod adapter {
         Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_CATCH2_TEXT_INT,
         CPP_CATCH2_XML_INT, CPP_GOOGLE_INT, CPP_INT, DART_BENCHMARK_HARNESS_INT, DART_INT,
         GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
-        JS_BENCHMARK_INT, JS_INT, JS_TIME_INT, JS_VITEST_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
-        MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT,
-        RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
-        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_GUNGRAUN_INT,
-        RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT,
-        SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        JS_BENCHMARK_INT, JS_INT, JS_TIME_INT, JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT,
+        JSON_INT, JSON_V0_INT, JSON_V1_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT,
+        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT, RUST_BENCH_INT, RUST_BENCH_JSON_INT,
+        RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT,
+        RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT,
+        RUST_INT, SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -593,6 +601,8 @@ mod adapter {
                 Self::JsBenchmark => JS_BENCHMARK_INT.to_sql(out),
                 Self::JsTime => JS_TIME_INT.to_sql(out),
                 Self::JsVitest => JS_VITEST_INT.to_sql(out),
+                Self::JsVitestV1 => JS_VITEST_V1_INT.to_sql(out),
+                Self::JsVitestV5 => JS_VITEST_V5_INT.to_sql(out),
                 Self::Python => PYTHON_INT.to_sql(out),
                 Self::PythonAsv => PYTHON_ASV_INT.to_sql(out),
                 Self::PythonPytest => PYTHON_PYTEST_INT.to_sql(out),
@@ -647,6 +657,8 @@ mod adapter {
                 JS_BENCHMARK_INT => Ok(Self::JsBenchmark),
                 JS_TIME_INT => Ok(Self::JsTime),
                 JS_VITEST_INT => Ok(Self::JsVitest),
+                JS_VITEST_V1_INT => Ok(Self::JsVitestV1),
+                JS_VITEST_V5_INT => Ok(Self::JsVitestV5),
                 PYTHON_INT => Ok(Self::Python),
                 PYTHON_ASV_INT => Ok(Self::PythonAsv),
                 PYTHON_PYTEST_INT => Ok(Self::PythonPytest),
@@ -1252,7 +1264,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 43] = [
+    const ADAPTERS: [Adapter; 45] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1285,6 +1297,8 @@ mod tests {
         Adapter::JsBenchmark,
         Adapter::JsTime,
         Adapter::JsVitest,
+        Adapter::JsVitestV1,
+        Adapter::JsVitestV5,
         Adapter::Python,
         Adapter::PythonAsv,
         Adapter::PythonPytest,
@@ -1333,6 +1347,8 @@ mod tests {
             | Adapter::JsBenchmark
             | Adapter::JsTime
             | Adapter::JsVitest
+            | Adapter::JsVitestV1
+            | Adapter::JsVitestV5
             | Adapter::Python
             | Adapter::PythonAsv
             | Adapter::PythonPytest
