@@ -225,7 +225,7 @@ impl JsonSchema for JsonReportThresholdModels {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonReportSettings {
     /// The benchmark harness adapter for parsing the benchmark results.
@@ -233,10 +233,74 @@ pub struct JsonReportSettings {
     pub adapter: Option<Adapter>,
     /// Benchmark harness suggested central tendency (ie average).
     /// Some benchmarking harnesses provide multiple averages, such as mean and median.
+    /// It is ignored at BMF version 1, where every average is its own metric.
     pub average: Option<JsonAverage>,
     /// Fold multiple results into a single result using the selected operation.
     /// This can be useful for taking the min, max, mean, or median of the benchmark results.
     pub fold: Option<JsonFold>,
+    /// The measures to keep from the results, by UUID, slug, or name.
+    /// Every other measure is dropped before anything is stored.
+    /// A listed measure that the results do not contain is ignored.
+    /// Only the first 64 listed are kept, and the report warns of the rest.
+    /// If not set, or set to an empty list, every measure is kept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub measures: Option<MeasureFilter>,
+}
+
+/// The most measures a report keeps, enough for every measure one harness reports.
+pub const MAX_MEASURE_FILTER_LEN: usize = 64;
+
+/// The measures a report keeps, by UUID, slug, or name: the first `MAX_MEASURE_FILTER_LEN`
+/// listed, with the number of entries cut after them.
+///
+/// The empty list keeps every measure.
+#[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
+pub struct MeasureFilter {
+    measures: Vec<MeasureNameId>,
+    #[serde(skip)]
+    cut: usize,
+}
+
+impl MeasureFilter {
+    #[must_use]
+    pub fn measures(&self) -> &[MeasureNameId] {
+        &self.measures
+    }
+
+    #[must_use]
+    pub fn cut(&self) -> usize {
+        self.cut
+    }
+}
+
+impl From<Vec<MeasureNameId>> for MeasureFilter {
+    fn from(mut measures: Vec<MeasureNameId>) -> Self {
+        let cut = measures.len().saturating_sub(MAX_MEASURE_FILTER_LEN);
+        measures.truncate(MAX_MEASURE_FILTER_LEN);
+        Self { measures, cut }
+    }
+}
+
+impl<'de> Deserialize<'de> for MeasureFilter {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Vec::<MeasureNameId>::deserialize(deserializer).map(Self::from)
+    }
+}
+
+/// Written out by hand so the published schema names the list the wire carries.
+#[cfg(feature = "schema")]
+impl JsonSchema for MeasureFilter {
+    fn schema_name() -> String {
+        "MeasureFilter".to_owned()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        Vec::<MeasureNameId>::json_schema(generator)
+    }
 }
 
 const MAGIC_INT: i32 = 0;
@@ -748,6 +812,7 @@ const RESOURCE_MEASURE_INT: i32 = 2;
 const RESOURCE_METRIC_INT: i32 = 3;
 const RESOURCE_THRESHOLD_INT: i32 = 4;
 const RESOURCE_ADAPTER_INT: i32 = 5;
+const RESOURCE_AVERAGE_INT: i32 = 6;
 
 /// The resource a report warning counts.
 #[typeshare::typeshare]
@@ -764,6 +829,7 @@ pub enum ReportWarningResource {
     Metric = RESOURCE_METRIC_INT,
     Threshold = RESOURCE_THRESHOLD_INT,
     Adapter = RESOURCE_ADAPTER_INT,
+    Average = RESOURCE_AVERAGE_INT,
 }
 
 const ACTION_SKIP_INT: i32 = 0;
@@ -787,9 +853,9 @@ pub enum ReportWarningAction {
 #[cfg(feature = "db")]
 mod report_warning_db {
     use super::{
-        ACTION_IGNORE_INT, ACTION_SKIP_INT, RESOURCE_ADAPTER_INT, RESOURCE_BENCHMARK_INT,
-        RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT, RESOURCE_THRESHOLD_INT, RESOURCE_VARIANT_INT,
-        ReportWarningAction, ReportWarningResource,
+        ACTION_IGNORE_INT, ACTION_SKIP_INT, RESOURCE_ADAPTER_INT, RESOURCE_AVERAGE_INT,
+        RESOURCE_BENCHMARK_INT, RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT, RESOURCE_THRESHOLD_INT,
+        RESOURCE_VARIANT_INT, ReportWarningAction, ReportWarningResource,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -816,6 +882,7 @@ mod report_warning_db {
                 Self::Metric => RESOURCE_METRIC_INT.to_sql(out),
                 Self::Threshold => RESOURCE_THRESHOLD_INT.to_sql(out),
                 Self::Adapter => RESOURCE_ADAPTER_INT.to_sql(out),
+                Self::Average => RESOURCE_AVERAGE_INT.to_sql(out),
             }
         }
     }
@@ -833,6 +900,7 @@ mod report_warning_db {
                 RESOURCE_METRIC_INT => Ok(Self::Metric),
                 RESOURCE_THRESHOLD_INT => Ok(Self::Threshold),
                 RESOURCE_ADAPTER_INT => Ok(Self::Adapter),
+                RESOURCE_AVERAGE_INT => Ok(Self::Average),
                 value => Err(Box::new(ReportWarningError::Resource(value))),
             }
         }

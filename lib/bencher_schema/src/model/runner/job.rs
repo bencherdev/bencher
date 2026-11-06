@@ -4,7 +4,10 @@ use bencher_callback::{CallbackKey, SealedRequest};
 use bencher_json::{
     BmfVersion, DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority,
     ReportUuid, Timeout,
-    project::{github::LinkedRepositoryStatus, report::JsonReportSettings},
+    project::{
+        github::LinkedRepositoryStatus,
+        report::{Adapter, JsonReportSettings},
+    },
     runner::{GitHubDispatch, JsonIterationOutput, JsonNewCallback, job::JsonNewRunJob},
 };
 use diesel::{
@@ -168,12 +171,7 @@ impl QueryJob {
             .collect();
         let results_array: Vec<&str> = results_strings.iter().map(AsRef::as_ref).collect();
 
-        // Build settings from job config
-        let settings = JsonReportSettings {
-            adapter: Some(query_report.adapter),
-            average: self.config.average,
-            fold: self.config.fold,
-        };
+        let settings = self.report_settings(query_report.adapter);
 
         // Process results (adapter parsing, metrics, alerts, usage)
         query_report
@@ -247,6 +245,16 @@ impl QueryJob {
         }
 
         Ok(())
+    }
+
+    /// The settings the job's run reported with, from its config.
+    fn report_settings(&self, adapter: Adapter) -> JsonReportSettings {
+        JsonReportSettings {
+            adapter: Some(adapter),
+            average: self.config.average,
+            fold: self.config.fold,
+            measures: self.config.measures.clone(),
+        }
     }
 
     /// Convert to JSON for public API (config is not included); the caller selects `report_uuid`
@@ -418,6 +426,7 @@ impl PendingInsertJob {
             average: settings.average,
             iter,
             fold: settings.fold,
+            measures: settings.measures.clone(),
             bmf_version: Some(bmf_version),
             allow_failure,
             backdate,
