@@ -17,7 +17,8 @@ pub use bencher_valid::{
     Memory, MeteredPlanId, OAuthAccessToken, OAuthClientId, OAuthCode, OAuthCodeChallenge,
     OAuthCodeHash, OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce, OAuthRedirectUri,
     OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes, OAuthTokenHash,
-    PlanLevel, PlanStatus, PollTimeout, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash,
+    PkceVerifier, PlanLevel, PlanStatus, PollTimeout, ProviderAccountId, ProviderNonce,
+    ProviderState, ProviderStateHash, RecaptchaAction, RecaptchaScore, RunnerKey, RunnerKeyHash,
     Timeout,
 };
 #[cfg(feature = "schema")]
@@ -143,6 +144,10 @@ pub use system::{
 #[cfg(feature = "plus")]
 pub use user::oauth::{
     JsonOAuthClient, JsonOAuthGrant, JsonOAuthGrantKey, JsonOAuthGrants, OAuthGrantUuid,
+};
+#[cfg(feature = "plus")]
+pub use user::provider::{
+    JsonProviderFinish, JsonProviderInbox, JsonProviderSignIn, JsonProviderStart, SignInProvider,
 };
 pub use user::{
     JsonPubUser, JsonUpdateUser, JsonUser, JsonUsers, UserResourceId, UserSlug, UserUuid,

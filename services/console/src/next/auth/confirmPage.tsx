@@ -22,6 +22,7 @@ import {
 	type Carry,
 	type Door,
 	type Pending,
+	type Who,
 	doorPath,
 	forgetPending,
 	keepPending,
@@ -75,6 +76,7 @@ const boot = (mount: HTMLElement) => {
 									carry={pending().carry}
 									resendAt={pending().resendAt}
 									cappedUntil={pending().cappedUntil}
+									who={pending().who}
 								/>
 							)}
 						</Match>
@@ -130,14 +132,19 @@ const InboxApp = (props: {
 	resendAt?: number | undefined;
 	cappedUntil?: number | undefined;
 	status?: Status;
+	who?: Who | undefined;
 }) => {
+	// A sign-in begun again by email carries no provider account to pin.
+	const [who, setWho] = createSignal(props.who);
 	const keep = (dates: Pick<Pending, "resendAt" | "cappedUntil">) => {
 		if (props.email) {
+			const pinning = who();
 			keepPending(sessionStorage, {
 				email: props.email,
 				door: props.door,
 				carry: props.carry,
 				...dates,
+				...(pinning ? { who: pinning } : {}),
 			});
 		}
 	};
@@ -165,10 +172,11 @@ const InboxApp = (props: {
 				check,
 			);
 			// A sign-in that ended, by its tries or its time, starts again for the same address.
-			const sent =
-				!answer.ok && answer.refused.code === "sign_in_ended"
-					? await restart()
-					: answer;
+			const ended = !answer.ok && answer.refused.code === "sign_in_ended";
+			const sent = ended ? await restart() : answer;
+			if (ended && sent.ok) {
+				setWho(undefined);
+			}
 			if (sent.ok) {
 				keep(pendingOf(sent.data, props.door, props.carry, Date.now()));
 			}
@@ -189,6 +197,7 @@ const InboxApp = (props: {
 	return (
 		<Inbox
 			email={props.email}
+			who={who()}
 			resendAt={props.resendAt}
 			cappedUntil={props.cappedUntil}
 			status={props.status}

@@ -10,7 +10,7 @@ export const VERIFICATION_FAILED: Failure = {
 	text: "Verification failed",
 	retry: true,
 };
-const FAILED: Failure = { text: "Sign-in failed", retry: true };
+export const SIGN_IN_FAILED: Failure = { text: "Sign-in failed", retry: true };
 
 /** The door's words for a refusal to start a sign-in; any code it does not know is the generic failure. */
 export const doorFailure = ({ code, retryAfter }: Refused): Failure => {
@@ -28,7 +28,7 @@ export const doorFailure = ({ code, retryAfter }: Refused): Failure => {
 		case "unknown_organization":
 			return { text: "This organization no longer exists", retry: false };
 		default:
-			return FAILED;
+			return SIGN_IN_FAILED;
 	}
 };
 
@@ -42,16 +42,34 @@ export const inboxFailure = ({ code, retryAfter }: Refused): Failure => {
 		case "too_many_attempts":
 			return { text: tooManyAttempts(retryAfter), retry: false };
 		case "locked":
-			return { text: "This account is locked", retry: false };
+			return { text: LOCKED, retry: false };
 		default:
-			return FAILED;
+			return SIGN_IN_FAILED;
 	}
 };
+
+/**
+ * A provider callback's words for a refusal by the API, which is never the
+ * provider's own; any code it does not know is the generic failure.
+ */
+export const providerFailure = ({ code, retryAfter }: Refused): string => {
+	switch (code) {
+		case "locked":
+			return LOCKED;
+		case "too_many_attempts":
+			return tooManyAttempts(retryAfter);
+		default:
+			return SIGN_IN_FAILED.text;
+	}
+};
+
+export const refusedBy = (provider: string) => `Refused by ${provider}`;
 
 export const WRONG_CODE = "Wrong code";
 export const NO_TRIES_LEFT = "No tries left";
 export const EXPIRED = "Expired";
 export const CODES_PAUSED = "Too many wrong codes. Use the link in your email.";
+const LOCKED = "This account is locked";
 
 /** An address at its cap, with the real wait. */
 export const capped = (seconds: number) =>

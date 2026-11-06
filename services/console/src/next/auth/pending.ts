@@ -1,4 +1,5 @@
 import type { JsonSignInEmail } from "../../types/bencher";
+import type { Provider } from "./Door";
 
 /** Which door a sign-in began at, whose heading it keeps. */
 export type Door = "login" | "signup";
@@ -20,6 +21,14 @@ export interface Pending {
 	resendAt?: number;
 	/** When the address can get another email, while it is at its cap. */
 	cappedUntil?: number;
+	/** The provider account that the proof pins, when a provider's sign-in started it. */
+	who?: Who;
+}
+
+/** A provider account, as its owner knows it. */
+export interface Who {
+	provider: Provider;
+	handle: string;
 }
 
 /** The sign-in an email went out for, or the address at its cap, as of `now`. */
@@ -40,6 +49,7 @@ export const pendingOf = (
 
 const PENDING_KEY = "BENCHER_PENDING_SIGN_IN";
 const PREFILL_KEY = "BENCHER_DOOR_EMAIL";
+const STARTED_KEY = "BENCHER_PROVIDER_SIGN_IN";
 const CARRIED = ["invite", "claim", "plan", "authorization"] as const;
 
 type Store = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -62,6 +72,7 @@ export const readPending = (storage: Store): Pending | undefined => {
 		) {
 			return undefined;
 		}
+		const who = whoOf(kept.who);
 		return {
 			email: kept.email,
 			door: kept.door,
@@ -72,6 +83,7 @@ export const readPending = (storage: Store): Pending | undefined => {
 			...(time(kept.cappedUntil) === undefined
 				? {}
 				: { cappedUntil: time(kept.cappedUntil) }),
+			...(who === undefined ? {} : { who }),
 		};
 	} catch {
 		return undefined;
@@ -105,6 +117,34 @@ export const takePrefill = (storage: Store): string | undefined => {
 	}
 };
 
+/** Where this tab's sign-in with a provider began, for its return: the door and what it carries. */
+export interface Started {
+	door: Door;
+	carry: Carry;
+}
+
+export const keepStarted = (storage: Store, started: Started) => {
+	try {
+		storage.setItem(STARTED_KEY, JSON.stringify(started));
+	} catch {
+		// The return falls back to the sign-in door.
+	}
+};
+
+/** Where this tab's sign-in with a provider began, once: a second take finds the sign-in door. */
+export const takeStarted = (storage: Store): Started => {
+	try {
+		const kept = JSON.parse(storage.getItem(STARTED_KEY) ?? "null");
+		storage.removeItem(STARTED_KEY);
+		return {
+			door: kept?.door === "signup" ? "signup" : "login",
+			carry: carryOf(kept?.carry),
+		};
+	} catch {
+		return { door: "login", carry: {} };
+	}
+};
+
 /** The door's address for `carry`, so a sign-in begun again carries the same. */
 export const doorPath = (door: Door, carry: Carry) => {
 	const query = new URLSearchParams();
@@ -130,6 +170,19 @@ const carryOf = (value: unknown): Carry => {
 		}
 	}
 	return carry;
+};
+
+const whoOf = (value: unknown): Who | undefined => {
+	if (typeof value !== "object" || value === null) {
+		return undefined;
+	}
+	const provider: unknown = Reflect.get(value, "provider");
+	const handle: unknown = Reflect.get(value, "handle");
+	return (provider === "github" || provider === "google") &&
+		typeof handle === "string" &&
+		handle
+		? { provider, handle }
+		: undefined;
 };
 
 const time = (value: unknown) =>

@@ -11,7 +11,6 @@ use jsonwebtoken::{
     errors::ErrorKind as JsonWebTokenErrorKind,
 };
 use serde::{Serialize, de::DeserializeOwned};
-use uuid::Uuid;
 
 #[cfg(feature = "plus")]
 use bencher_json::{
@@ -24,8 +23,8 @@ use crate::claims::PublicOciTokenClaims;
 #[cfg(feature = "plus")]
 use crate::claims::RunnerOciTokenClaims;
 use crate::{
-    Audience, AuthOciClaims, Claims, EmailChangeClaims, InviteClaims, OAuthClaims, OciAction,
-    OciScopeClaims, OrgClaims, PublicOciClaims, StateClaims, TokenError,
+    Audience, AuthOciClaims, Claims, EmailChangeClaims, InviteClaims, OciAction, OciScopeClaims,
+    OrgClaims, PublicOciClaims, TokenError,
 };
 #[cfg(feature = "plus")]
 use crate::{GitHubGrantClaims, GitHubStateClaims, ProjectOciClaims, RunnerOciClaims};
@@ -56,7 +55,7 @@ impl TokenKey {
         org: Option<OrgClaims>,
         oci: Option<OciScopeClaims>,
     ) -> Result<Jwt, TokenError> {
-        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, None, oci);
+        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, oci);
         Jwt::from_str(
             &encode(&HEADER, &claims, &self.encoding)
                 .map_err(|e| TokenError::Encode { error: e })?,
@@ -88,26 +87,6 @@ impl TokenKey {
             role,
         };
         self.new_jwt(Audience::Invite, email, ttl, Some(org_claims), None)
-    }
-
-    pub fn new_oauth(&self, email: Email, ttl: u32, state: StateClaims) -> Result<Jwt, TokenError> {
-        let claims = Claims {
-            jti: Some(Uuid::new_v4()),
-            ..Claims::new(
-                Audience::OAuth,
-                self.issuer.clone(),
-                email,
-                ttl,
-                None,
-                Some(state),
-                None,
-            )
-        };
-        Jwt::from_str(
-            &encode(&HEADER, &claims, &self.encoding)
-                .map_err(|e| TokenError::Encode { error: e })?,
-        )
-        .map_err(TokenError::Parse)
     }
 
     pub fn new_email_change(
@@ -312,10 +291,6 @@ impl TokenKey {
         self.validate(token, &[Audience::Invite])?.claims.try_into()
     }
 
-    pub fn validate_oauth(&self, token: &Jwt) -> Result<OAuthClaims, TokenError> {
-        self.validate(token, &[Audience::OAuth])?.claims.try_into()
-    }
-
     pub fn validate_email_change(
         &self,
         token: &Jwt,
@@ -494,7 +469,7 @@ mod tests {
 
     use crate::{
         Audience, Claims, DEFAULT_SECRET_KEY, EmailChangeClaims, OciAction, OciScopeClaims,
-        OrgClaims, StateClaims,
+        OrgClaims,
     };
 
     use super::TokenKey;
@@ -524,9 +499,7 @@ mod tests {
             iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
             sub: EMAIL.clone(),
             org,
-            state: None,
             oci,
-            jti: None,
         };
         Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap())
             .unwrap()
@@ -626,31 +599,6 @@ mod tests {
         };
         let token = make_expired_token(&secret_key, Audience::Invite, Some(org), None);
         secret_key.validate_invite(&token).unwrap_err();
-    }
-
-    // Kills a state without its random claim, or with a constant one: two states for the same
-    // sign in each carry a JWT ID, and the two differ.
-    #[test]
-    fn jwt_oauth_states_differ() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let jti = || {
-            let state = StateClaims {
-                invite: None,
-                claim: None,
-                #[cfg(feature = "plus")]
-                plan: None,
-                #[cfg(feature = "plus")]
-                authorization: None,
-            };
-            let token = secret_key.new_oauth(EMAIL.clone(), TTL, state).unwrap();
-            secret_key
-                .validate(&token, &[Audience::OAuth])
-                .unwrap()
-                .claims
-                .jti
-                .expect("No JWT ID")
-        };
-        assert_ne!(jti(), jti());
     }
 
     // --- Email change tokens ---

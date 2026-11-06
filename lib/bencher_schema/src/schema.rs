@@ -269,6 +269,9 @@ diesel::table! {
         claim -> Nullable<Text>,
         plan -> Nullable<Text>,
         authorization -> Nullable<Text>,
+        pin_provider -> Nullable<Integer>,
+        pin_account -> Nullable<Text>,
+        pin_handle -> Nullable<Text>,
         created -> BigInt,
         expiration -> BigInt,
     }
@@ -380,6 +383,34 @@ diesel::table! {
         role -> Text,
         created -> BigInt,
         modified -> BigInt,
+    }
+}
+
+diesel::table! {
+    provider_pin (id) {
+        id -> Integer,
+        user_id -> Integer,
+        provider -> Integer,
+        account_id -> Text,
+        handle -> Text,
+        created -> BigInt,
+    }
+}
+
+diesel::table! {
+    provider_state (id) {
+        id -> Integer,
+        provider -> Integer,
+        state_hash -> Text,
+        binding_hash -> Text,
+        verifier -> Text,
+        nonce -> Nullable<Text>,
+        invite -> Nullable<Text>,
+        claim -> Nullable<Text>,
+        plan -> Nullable<Text>,
+        authorization -> Nullable<Text>,
+        created -> BigInt,
+        expiration -> BigInt,
     }
 }
 
@@ -666,6 +697,7 @@ diesel::joinable!(project_key -> project (project_id));
 diesel::joinable!(project_key -> user (creator_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
+diesel::joinable!(provider_pin -> user (user_id));
 diesel::joinable!(report -> head (head_id));
 diesel::joinable!(report -> project (project_id));
 diesel::joinable!(report -> project_key (project_key_id));
@@ -729,6 +761,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     project,
     project_key,
     project_role,
+    provider_pin,
+    provider_state,
     report,
     report_benchmark,
     report_warning,

@@ -125,6 +125,8 @@ dependencies = [
  "base64 0.23.1",
  "bencher_api_tests",
  "bencher_endpoint",
+ "bencher_github_client",
+ "bencher_google_client",
  "bencher_json",
  "bencher_otel",
  "bencher_rbac",
@@ -141,6 +143,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "slog",
+ "thiserror 2.0.21",
  "tokio",
  "url",
 ]
@@ -1025,11 +1028,14 @@ dependencies = [
 name = "bencher_google_client"
 version = "0.6.16"
 dependencies = [
+ "aws-lc-rs",
+ "base64 0.23.1",
  "bencher_valid",
  "oauth2",
  "oauth2-reqwest",
  "reqwest",
  "serde",
+ "serde_json",
  "thiserror 2.0.21",
  "url",
 ]
