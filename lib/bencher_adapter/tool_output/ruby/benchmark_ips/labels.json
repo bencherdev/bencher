@@ -1,0 +1,133 @@
+[
+  {
+    "name": "sort/10",
+    "central_tendency": 6647471.614468083,
+    "ips": 6647471.614468083,
+    "error": 67745,
+    "stddev": 67745,
+    "microseconds": 515787.0840001106,
+    "iterations": 3428680,
+    "cycles": 685736
+  },
+  {
+    "name": "sort_by size=10",
+    "central_tendency": 1732466.7270692072,
+    "ips": 1732466.7270692072,
+    "error": 3569,
+    "stddev": 3569,
+    "microseconds": 501654.65600037575,
+    "iterations": 869100,
+    "cycles": 173820
+  },
+  {
+    "name": "sort/1000",
+    "central_tendency": 58960.0112837145,
+    "ips": 58960.0112837145,
+    "error": 1371,
+    "stddev": 1371,
+    "microseconds": 591960.5380001068,
+    "iterations": 34902,
+    "cycles": 5817
+  },
+  {
+    "name": "sort_by size=1000",
+    "central_tendency": 13070.988990901307,
+    "ips": 13070.988990901307,
+    "error": 115,
+    "stddev": 115,
+    "microseconds": 500344.69499993324,
+    "iterations": 6540,
+    "cycles": 1308
+  },
+  {
+    "name": {
+      "version": "3.2.3",
+      "method": "inspect"
+    },
+    "central_tendency": 10700651.12965798,
+    "ips": 10700651.12965798,
+    "error": 106620,
+    "stddev": 106620,
+    "microseconds": 557396.3609998226,
+    "iterations": 5964504,
+    "cycles": 994084
+  },
+  {
+    "name": {
+      "n": 3,
+      "fast": true,
+      "ratio": 0.5,
+      "none": null
+    },
+    "central_tendency": 10589144.227410272,
+    "ips": 10589144.227410272,
+    "error": 104296,
+    "stddev": 104296,
+    "microseconds": 563729.9739999771,
+    "iterations": 5969418,
+    "cycles": 994903
+  },
+  {
+    "name": 42,
+    "central_tendency": 55154350.478919,
+    "ips": 55154350.478919,
+    "error": 330101,
+    "stddev": 330101,
+    "microseconds": 501099.09300017357,
+    "iterations": 27637795,
+    "cycles": 5527559
+  },
+  {
+    "name": [
+      "array",
+      1
+    ],
+    "central_tendency": 52313632.080370076,
+    "ips": 52313632.080370076,
+    "error": 214206,
+    "stddev": 214206,
+    "microseconds": 507960.90699982643,
+    "iterations": 26573280,
+    "cycles": 5314656
+  },
+  {
+    "name": "",
+    "central_tendency": 55168826.404264264,
+    "ips": 55168826.404264264,
+    "error": 430794,
+    "stddev": 430794,
+    "microseconds": 592885.3690001965,
+    "iterations": 32708790,
+    "cycles": 5451465
+  },
+  {
+    "name": "repeated",
+    "central_tendency": 1171078.6183666305,
+    "ips": 1171078.6183666305,
+    "error": 50144,
+    "stddev": 50144,
+    "microseconds": 602876.6890003681,
+    "iterations": 706016,
+    "cycles": 176504
+  },
+  {
+    "name": "threads x4",
+    "central_tendency": 17683.7608979918,
+    "ips": 17683.7608979918,
+    "error": 3258,
+    "stddev": 3258,
+    "microseconds": 517423.8700003624,
+    "iterations": 9150,
+    "cycles": 1830
+  },
+  {
+    "name": "unicode ✓ label",
+    "central_tendency": 54680543.800896965,
+    "ips": 54680543.800896965,
+    "error": 795177,
+    "stddev": 795177,
+    "microseconds": 595916.3120002747,
+    "iterations": 32585028,
+    "cycles": 5430838
+  }
+]

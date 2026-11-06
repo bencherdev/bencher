@@ -1,0 +1,32 @@
+[
+  {
+    "name": "empty",
+    "central_tendency": 57319032.36103609,
+    "ips": 57319032.36103609,
+    "error": 2120663,
+    "stddev": 2120663,
+    "microseconds": 1011285.739000082,
+    "iterations": 57965920,
+    "cycles": 5796592
+  },
+  {
+    "name": "sleep 1.5s",
+    "central_tendency": 0.6659729661381175,
+    "ips": 0.6659729661381175,
+    "error": 0,
+    "stddev": 0,
+    "microseconds": 1501562.4519999027,
+    "iterations": 1,
+    "cycles": 1
+  },
+  {
+    "name": "variable sleep",
+    "central_tendency": 131.5120760414676,
+    "ips": 131.5120760414676,
+    "error": 562,
+    "stddev": 562,
+    "microseconds": 1026521.7009990215,
+    "iterations": 135,
+    "cycles": 5
+  }
+]

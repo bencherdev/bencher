@@ -765,6 +765,7 @@ export enum Adapter {
 	PythonPytest = "python_pytest",
 	Ruby = "ruby",
 	RubyBenchmark = "ruby_benchmark",
+	RubyBenchmarkIps = "ruby_benchmark_ips",
 	Shell = "shell",
 	ShellHyperfine = "shell_hyperfine",
 	ShellHyperfineV1 = "shell_hyperfine_v1",
