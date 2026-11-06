@@ -1,0 +1,31 @@
+shapes                  fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ noop                 0.002 ns      │ 0.073 ns      │ 0.003 ns      │ 0.006 ns      │ 100     │ 819200
+│                       50 Titem/s    │ 1.369 Titem/s │ 33.33 Titem/s │ 16.66 Titem/s │         │
+├─ renamed with spaces  0.001 ns      │ 0.083 ns      │ 0.005 ns      │ 0.007 ns      │ 100     │ 1638400
+│                       100 Titem/s   │ 1.204 Titem/s │ 20 Titem/s    │ 14.28 Titem/s │         │
+├─ bool_consts                        │               │               │               │         │
+│  ├─ false             0 ns          │ 0.146 ns      │ 0.012 ns      │ 0.018 ns      │ 100     │ 1638400
+│  │                    inf item/s    │ 684.9 Gitem/s │ 8.333 Titem/s │ 5.555 Titem/s │         │
+│  ╰─ true              0 ns          │ 0.001 ns      │ 0.001 ns      │ 0.001 ns      │ 100     │ 1638400
+│                       inf item/s    │ 100 Titem/s   │ 100 Titem/s   │ 100 Titem/s   │         │
+├─ generic_consts                     │               │               │               │         │
+│  ├─ 1                 0 ns          │ 0.492 ns      │ 0.001 ns      │ 0.005 ns      │ 100     │ 1638400
+│  │                    inf item/s    │ 203.2 Gitem/s │ 100 Titem/s   │ 20 Titem/s    │         │
+│  ├─ 8                 0.001 ns      │ 0.387 ns      │ 0.001 ns      │ 0.005 ns      │ 100     │ 1638400
+│  │                    100 Titem/s   │ 258.3 Gitem/s │ 100 Titem/s   │ 20 Titem/s    │         │
+│  ├─ 64                0.55 ns       │ 1.982 ns      │ 0.552 ns      │ 0.567 ns      │ 100     │ 409600
+│  │                    181.8 Gitem/s │ 50.45 Gitem/s │ 181.1 Gitem/s │ 176.3 Gitem/s │         │
+│  ╰─ 1000              8.641 ns      │ 8.919 ns      │ 8.762 ns      │ 8.777 ns      │ 100     │ 25600
+│                       11.57 Gitem/s │ 11.21 Gitem/s │ 11.41 Gitem/s │ 11.39 Gitem/s │         │
+╰─ threads_types                      │               │               │               │         │
+   ├─ u8                              │               │               │               │         │
+   │  ├─ t=1            0.001 ns      │ 0.001 ns      │ 0.001 ns      │ 0.001 ns      │ 100     │ 1638400
+   │  │                 100 Titem/s   │ 100 Titem/s   │ 100 Titem/s   │ 100 Titem/s   │         │
+   │  ╰─ t=2            0.002 ns      │ 0.171 ns      │ 0.097 ns      │ 0.066 ns      │ 100     │ 819200
+   │                    50 Titem/s    │ 584.7 Gitem/s │ 1.03 Titem/s  │ 1.515 Titem/s │         │
+   ╰─ u64                             │               │               │               │         │
+      ├─ t=1            0.001 ns      │ 0.452 ns      │ 0.001 ns      │ 0.007 ns      │ 100     │ 1638400
+      │                 100 Titem/s   │ 221.2 Gitem/s │ 100 Titem/s   │ 14.28 Titem/s │         │
+      ╰─ t=2            0.141 ns      │ 0.176 ns      │ 0.155 ns      │ 0.154 ns      │ 100     │ 819200
+                        709.2 Gitem/s │ 568.1 Gitem/s │ 645.1 Gitem/s │ 649.3 Gitem/s │         │
+

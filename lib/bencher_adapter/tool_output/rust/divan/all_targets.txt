@@ -1,0 +1,101 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+alloc              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ big_alloc       51.86 µs      │ 2.301 ms      │ 51.91 µs      │ 89.46 µs      │ 100     │ 100
+│                  max alloc:    │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    8.388 MB    │ 8.388 MB      │ 8.388 MB      │ 8.388 MB      │         │
+│                  alloc:        │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    8.388 MB    │ 8.388 MB      │ 8.388 MB      │ 8.388 MB      │         │
+├─ box_alloc       7.466 ns      │ 25.81 ns      │ 7.861 ns      │ 8.029 ns      │ 100     │ 25600
+│                  max alloc:    │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    8 B         │ 8 B           │ 8 B           │ 8 B           │         │
+│                  alloc:        │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    8 B         │ 8 B           │ 8 B           │ 8 B           │         │
+├─ no_alloc        0 ns          │ 0.007 ns      │ 0.002 ns      │ 0.003 ns      │ 100     │ 1638400
+├─ string_format   30.6 ns       │ 156.2 ns      │ 30.94 ns      │ 32.36 ns      │ 100     │ 6400
+│                  359.4 MB/s    │ 70.38 MB/s    │ 355.4 MB/s    │ 339.8 MB/s    │         │
+│                  max alloc:    │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    16 B        │ 16 B          │ 16 B          │ 16 B          │         │
+│                  alloc:        │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    8 B         │ 8 B           │ 8 B           │ 8 B           │         │
+│                  grow:         │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    8 B         │ 8 B           │ 8 B           │ 8 B           │         │
+├─ threaded_alloc                │               │               │               │         │
+│  ├─ t=1          11.92 ns      │ 13.56 ns      │ 12.04 ns      │ 12.07 ns      │ 100     │ 25600
+│  │               max alloc:    │               │               │               │         │
+│  │                 1           │ 1             │ 1             │ 1             │         │
+│  │                 256 B       │ 256 B         │ 256 B         │ 256 B         │         │
+│  │               alloc:        │               │               │               │         │
+│  │                 1           │ 1             │ 1             │ 1             │         │
+│  │                 256 B       │ 256 B         │ 256 B         │ 256 B         │         │
+│  ╰─ t=4          29.4 ns       │ 4.001 µs      │ 59.4 ns       │ 117.6 ns      │ 100     │ 200
+│                  max alloc:    │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    256 B       │ 256 B         │ 256 B         │ 256 B         │         │
+│                  alloc:        │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    256 B       │ 256 B         │ 256 B         │ 256 B         │         │
+├─ vec_push_grow                 │               │               │               │         │
+│  ├─ 1            18.5 ns       │ 19.99 ns      │ 18.69 ns      │ 18.74 ns      │ 100     │ 12800
+│  │               max alloc:    │               │               │               │         │
+│  │                 1           │ 1             │ 1             │ 1             │         │
+│  │                 32 B        │ 32 B          │ 32 B          │ 32 B          │         │
+│  │               alloc:        │               │               │               │         │
+│  │                 1           │ 1             │ 1             │ 1             │         │
+│  │                 32 B        │ 32 B          │ 32 B          │ 32 B          │         │
+│  ├─ 100          115.5 ns      │ 724 ns        │ 142.4 ns      │ 148.9 ns      │ 100     │ 1600
+│  │               max alloc:    │               │               │               │         │
+│  │                 1           │ 1             │ 1             │ 1             │         │
+│  │                 1.024 KB    │ 1.024 KB      │ 1.024 KB      │ 1.024 KB      │         │
+│  │               alloc:        │               │               │               │         │
+│  │                 1           │ 1             │ 1             │ 1             │         │
+│  │                 32 B        │ 32 B          │ 32 B          │ 32 B          │         │
+│  │               grow:         │               │               │               │         │
+│  │                 5           │ 5             │ 5             │ 5             │         │
+│  │                 992 B       │ 992 B         │ 992 B         │ 992 B         │         │
+│  ╰─ 10000        3.888 µs      │ 9.356 µs      │ 4.019 µs      │ 4.075 µs      │ 100     │ 100
+│                  max alloc:    │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    131 KB      │ 131 KB        │ 131 KB        │ 131 KB        │         │
+│                  alloc:        │               │               │               │         │
+│                    1           │ 1             │ 1             │ 1             │         │
+│                    32 B        │ 32 B          │ 32 B          │ 32 B          │         │
+│                  grow:         │               │               │               │         │
+│                    12          │ 12            │ 12            │ 12            │         │
+│                    131 KB      │ 131 KB        │ 131 KB        │ 131 KB        │         │
+╰─ vec_shrink      29.28 ns      │ 69.58 ns      │ 29.43 ns      │ 29.81 ns      │ 100     │ 12800
+                   max alloc:    │               │               │               │         │
+                     1           │ 1             │ 1             │ 1             │         │
+                     71.93 B     │ 71.93 B       │ 71.93 B       │ 71.93 B       │         │
+                   alloc:        │               │               │               │         │
+                     1           │ 1             │ 1             │ 1             │         │
+                     8.192 KB    │ 8.192 KB      │ 8.192 KB      │ 8.192 KB      │         │
+                   shrink:       │               │               │               │         │
+                     1           │ 1             │ 1             │ 1             │         │
+                     8.184 KB    │ 8.184 KB      │ 8.184 KB      │ 8.184 KB      │         │
+
+edge                     fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ prints_once           hello from inside a benchmark
+19.79 ns      │ 13.15 µs      │ 19.79 ns      │ 152.4 ns      │ 100     │ 100
+├─ t=4                   0 ns          │ 0.283 ns      │ 0.002 ns      │ 0.005 ns      │ 100     │ 1638400
+├─ weird_args                          │               │               │               │         │
+│  ├─    padded          0.279 ns      │ 0.282 ns      │ 0.28 ns       │ 0.28 ns       │ 100     │ 819200
+│  ├─ fastest │ slowest  0.279 ns      │ 0.732 ns      │ 0.28 ns       │ 0.288 ns      │ 100     │ 819200
+│  ├─ line
+break         0.278 ns      │ 0.349 ns      │ 0.28 ns       │ 0.281 ns      │ 100     │ 819200
+│  ╰─ t=1                0.278 ns      │ 0.762 ns      │ 0.28 ns       │ 0.285 ns      │ 100     │ 819200
+╰─ ├─ fake branch        0 ns          │ 0.301 ns      │ 0.002 ns      │ 0.006 ns      │ 100     │ 1638400
+
+fail         fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ a_before  0.001 ns      │ 0.002 ns      │ 0.002 ns      │ 0.001 ns      │ 100     │ 1638400
+├─ b_panics  

@@ -371,6 +371,7 @@ fn adapter_docs(adapter: Adapter) -> (&'static str, &'static str) {
         Adapter::RustGungraun | Adapter::RustGungraunStdout | Adapter::RustGungraunJson => {
             ("Rust Gungraun", "-rust-gungraun")
         },
+        Adapter::RustDivan => ("Rust Divan", "-rust-divan"),
         Adapter::CppGoogle => ("C++ Google", "-c-google"),
         Adapter::CppCatch2 | Adapter::CppCatch2Xml | Adapter::CppCatch2Text => {
             ("C++ Catch2", "-c-catch2")

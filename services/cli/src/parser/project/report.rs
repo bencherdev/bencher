@@ -211,6 +211,8 @@ pub enum CliReportAdapter {
     RustBench,
     /// 🦀 Rust Criterion
     RustCriterion,
+    /// 🦀 Rust Divan
+    RustDivan,
     /// 🦀 Rust Iai
     RustIai,
     /// 🦀 Rust Gungraun
