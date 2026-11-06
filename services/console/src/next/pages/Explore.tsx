@@ -566,6 +566,11 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 			}
 			readOnly={props.readOnly}
 			versionZero={bootstrap().data?.project.bmf_version === 0}
+			upgrade={
+				!props.readOnly && bootstrap().data?.permissions.edit === true
+					? `${PROJECTS_PATH}/${slug()}/settings#bmf-version`
+					: undefined
+			}
 			onQuery={(next) => edit(settleFocus(query(), next))}
 			onBenchmarks={() => wantPlot()}
 		/>

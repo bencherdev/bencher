@@ -131,7 +131,9 @@ pub struct JsonProjectPatch {
     /// ➕ Bencher Plus: Set the new visibility of the project.
     /// Moving to a `private` project requires a valid Bencher Plus subscription.
     pub visibility: Option<Visibility>,
-    /// Server admin only: Set the default BMF version for the project.
+    /// Set the default BMF version for the project.
+    /// A user who can edit the project can move it to BMF version 1.
+    /// Any other version requires a server admin.
     pub bmf_version: Option<BmfVersion>,
 }
 

@@ -1,4 +1,4 @@
-import type { JsonProject, Visibility } from "../../types/bencher";
+import type { BmfVersion, JsonProject, Visibility } from "../../types/bencher";
 import { ApiError } from "../api";
 import { failureOf } from "./failure";
 
@@ -17,6 +17,7 @@ export interface Patch {
 	slug?: string;
 	url?: string | null;
 	visibility?: Visibility;
+	bmf_version?: BmfVersion;
 }
 
 export type Field = "name" | "slug" | "url";
@@ -94,7 +95,7 @@ export const patched = (project: JsonProject, patch: Patch): JsonProject => {
 };
 
 export interface Refusal {
-	/** Where the reader reads it: under the field, at the form's foot, or in the visibility dialog. */
+	/** Where the reader reads it: under the field, at the form's foot, or in the dialog that sent it. */
 	field: "visibility" | "slug" | "form";
 	message: string;
 }
