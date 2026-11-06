@@ -116,10 +116,10 @@ pub use project::{
 pub use run::JsonNewRun;
 #[cfg(feature = "plus")]
 pub use runner::{
-    CallbackContext, DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid, JsonClaimJob, JsonClaimedJob,
-    JsonJob, JsonJobConfig, JsonJobs, JsonNewCallback, JsonNewRunJob, JsonNewRunner, JsonRunner,
-    JsonRunnerKey, JsonRunners, JsonUpdateRunner, MAX_POLL_TIMEOUT, MIN_POLL_TIMEOUT,
-    RunnerResourceId, RunnerSlug, RunnerUuid,
+    CallbackContext, DEFAULT_CANARY_BASE_URL, DEFAULT_POLL_TIMEOUT, JobStatus, JobUuid,
+    JsonClaimJob, JsonClaimedJob, JsonJob, JsonJobConfig, JsonJobs, JsonNewCallback, JsonNewRunJob,
+    JsonNewRunner, JsonRunner, JsonRunnerKey, JsonRunners, JsonUpdateRunner, MAX_POLL_TIMEOUT,
+    MIN_POLL_TIMEOUT, RunnerResourceId, RunnerSlug, RunnerUuid, canary_artifact, canary_url,
 };
 #[cfg(feature = "plus")]
 pub use spec::{

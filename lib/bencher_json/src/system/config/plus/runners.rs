@@ -36,7 +36,7 @@ pub struct JsonRunners {
     #[serde(default = "default_job_timeout_grace_period")]
     pub job_timeout_grace_period: GracePeriod,
     /// Base URL for runner self-update downloads.
-    /// Defaults to the Bencher GitHub Releases download URL.
+    /// When set, it replaces the default base URL for both the stable and the canary channel.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub update_base_url: Option<Url>,
 }

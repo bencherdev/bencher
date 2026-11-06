@@ -17,10 +17,12 @@ bencher_runner.workspace = true
 camino.workspace = true
 clap.workspace = true
 hex.workspace = true
+rustls.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
 tempfile.workspace = true
+ureq.workspace = true
 url.workspace = true
 
 [lints]

@@ -10,6 +10,7 @@ pub mod health;
 pub mod job;
 pub mod job_status;
 pub mod status;
+pub mod update;
 pub mod websocket;
 
 pub use callback::{
@@ -26,6 +27,7 @@ pub use job::{
 };
 pub use job_status::JobStatus;
 pub use status::{JsonRunnerStatus, RunnerAvailability};
+pub use update::{DEFAULT_CANARY_BASE_URL, canary_artifact, canary_url};
 pub use websocket::{
     CloseReason, JsonPaused, JsonReady, JsonRunnerMetadata, MAX_PAUSE_REASONS,
     MAX_REPORT_STRING_LEN, MdSyncAction, PauseReason, RunnerMessage, ServerMessage,

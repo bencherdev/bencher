@@ -15,6 +15,12 @@ fn main() -> anyhow::Result<()> {
 
 #[cfg(feature = "plus")]
 fn exec() -> anyhow::Result<()> {
+    use rustls::crypto::aws_lc_rs;
+
+    aws_lc_rs::default_provider()
+        .install_default()
+        .map_err(|_err| anyhow::anyhow!("Failed to install the default TLS crypto provider"))?;
+
     let task = task::Task::new()?;
     task.exec()
 }

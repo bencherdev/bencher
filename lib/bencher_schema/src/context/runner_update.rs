@@ -1,24 +1,19 @@
-use bencher_json::{Architecture, Clock, Sha256};
+use bencher_json::{Architecture, Clock, DEFAULT_CANARY_BASE_URL, Sha256};
 use dashmap::DashMap;
 use url::Url;
 
-/// Base URL for stable channel runner downloads (GitHub Releases).
-// Trailing slash is required: Url::join appends to the last path segment,
-// so without it the join would replace "download" instead of extending it.
-const DEFAULT_UPDATE_BASE_URL: &str = "https://github.com/bencherdev/bencher/releases/download/";
-
-/// Rolling prerelease tag that tracks the `cloud` branch.
-/// A tag literally named `cloud` would be ambiguous with the `cloud` branch
-/// in git short-refname resolution, so the rolling tag is named `canary`.
-const CANARY_RELEASE_TAG: &str = "canary";
+/// Base URL for stable channel runner downloads.
+// Trailing slash is required: Url::join appends to the last path segment, so
+// without it the join would replace that segment instead of extending it.
+const DEFAULT_STABLE_BASE_URL: &str = "https://github.com/bencherdev/bencher/releases/download/";
 
 /// How long a fetched canary channel checksum stays fresh.
 /// This is also the upper bound on rollout propagation delay: after a new
 /// canary publish, runners may be offered the previous build until the cached
 /// checksum expires. A runner offered a stale checksum during that window
-/// downloads the newer clobbered binary, fails verification, and retries at
-/// its next `Ready`, so transient "checksum mismatch" runner logs right after
-/// a deploy are expected and self-healing. On expiry, concurrent `Ready`
+/// downloads the newer binary, fails verification, and retries at its next
+/// `Ready`, so transient "checksum mismatch" runner logs right after a deploy
+/// are expected and self-healing. On expiry, concurrent `Ready`
 /// polls may each re-fetch (no single-flight); the responses are tiny and
 /// the canary fleet is small, so the duplicate fetches are not worth
 /// guarding against.
@@ -27,24 +22,28 @@ const CANARY_CHECKSUM_TTL_SECS: i64 = 120;
 /// Runner self-update state: download URL construction and a TTL cache of the
 /// published canary channel checksums, one per architecture.
 pub struct RunnerUpdate {
-    base_url: Url,
+    stable_base_url: Url,
+    canary_base_url: Url,
     ttl_secs: i64,
     cache: DashMap<Architecture, CanaryChecksum>,
 }
 
 impl RunnerUpdate {
+    /// A configured `base_url` replaces the default base URL of both channels,
+    /// so one mirror can serve the stable and the canary artifacts.
     pub fn new(base_url: Option<Url>) -> Self {
-        #[expect(clippy::expect_used, reason = "constant URL literal, infallible")]
-        let base_url = base_url.map_or_else(
-            || {
-                DEFAULT_UPDATE_BASE_URL
-                    .parse()
-                    .expect("valid default update base URL")
-            },
-            ensure_trailing_slash,
-        );
+        let (stable_base_url, canary_base_url) = if let Some(base_url) = base_url {
+            let base_url = ensure_trailing_slash(base_url);
+            (base_url.clone(), base_url)
+        } else {
+            (
+                default_base_url(DEFAULT_STABLE_BASE_URL),
+                default_base_url(DEFAULT_CANARY_BASE_URL),
+            )
+        };
         Self {
-            base_url,
+            stable_base_url,
+            canary_base_url,
             ttl_secs: CANARY_CHECKSUM_TTL_SECS,
             cache: DashMap::new(),
         }
@@ -54,14 +53,12 @@ impl RunnerUpdate {
     pub fn stable_url(&self, version: &str, arch: Architecture) -> Result<Url, url::ParseError> {
         let tag = format!("v{version}");
         let artifact = format!("runner-{tag}-{slug}", slug = arch.linux_artifact_slug());
-        self.base_url.join(&format!("{tag}/{artifact}"))
+        self.stable_base_url.join(&format!("{tag}/{artifact}"))
     }
 
-    /// Download URL for the rolling canary channel runner binary.
+    /// Download URL for the canary channel runner binary.
     pub fn canary_url(&self, arch: Architecture) -> Result<Url, url::ParseError> {
-        let artifact = format!("runner-canary-{slug}", slug = arch.linux_artifact_slug());
-        self.base_url
-            .join(&format!("{CANARY_RELEASE_TAG}/{artifact}"))
+        bencher_json::canary_url(&self.canary_base_url, arch)
     }
 
     /// Return the cached canary channel checksum for `arch`, if still fresh.
@@ -86,6 +83,11 @@ impl RunnerUpdate {
 struct CanaryChecksum {
     checksum: Sha256,
     fetched: i64,
+}
+
+#[expect(clippy::expect_used, reason = "constant URL literal, infallible")]
+fn default_base_url(base_url: &str) -> Url {
+    base_url.parse().expect("valid default update base URL")
 }
 
 fn ensure_trailing_slash(mut url: Url) -> Url {
@@ -145,12 +147,12 @@ mod tests {
         let url = update.canary_url(Architecture::X86_64).unwrap();
         assert_eq!(
             url.as_str(),
-            "https://github.com/bencherdev/bencher/releases/download/canary/runner-canary-linux-x86-64"
+            "https://download.bencher.dev/canary/runner-canary-linux-x86-64"
         );
         let url = update.canary_url(Architecture::Aarch64).unwrap();
         assert_eq!(
             url.as_str(),
-            "https://github.com/bencherdev/bencher/releases/download/canary/runner-canary-linux-arm-64"
+            "https://download.bencher.dev/canary/runner-canary-linux-arm-64"
         );
     }
 
@@ -158,6 +160,11 @@ mod tests {
     fn custom_base_url_without_trailing_slash() {
         let base: Url = "http://localhost:8080/downloads".parse().unwrap();
         let update = RunnerUpdate::new(Some(base));
+        let url = update.stable_url("0.6.8", Architecture::X86_64).unwrap();
+        assert_eq!(
+            url.as_str(),
+            "http://localhost:8080/downloads/v0.6.8/runner-v0.6.8-linux-x86-64"
+        );
         let url = update.canary_url(Architecture::X86_64).unwrap();
         assert_eq!(
             url.as_str(),

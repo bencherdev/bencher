@@ -261,15 +261,14 @@ jobs:
             runner-canary-linux-arm-64.sha256
           if-no-files-found: error
 
-  # Publish devel's runner build of this commit to the rolling `canary` prerelease.
-  # Canary channel runners poll this release's checksums and self-update when
-  # the published binary changes.
+  # Publish devel's runner build of this commit to the canary channel keys that
+  # https://download.bencher.dev serves. Canary channel runners poll those
+  # checksums and self-update when the published binary changes.
   publish_runner_canary:
     name: Publish Runner Canary
-    permissions:
-      contents: write
     needs: [changes, fetch_devel_builds]
     if: ${{ !failure() && !cancelled() && github.ref == 'refs/heads/cloud' && needs.changes.outputs.runner == 'true' && needs.fetch_devel_builds.result == 'success' }}
+    environment: Canary
     runs-on: ubuntu-22.04
     steps:
       - name: Download Runner Artifacts
@@ -277,35 +276,45 @@ jobs:
         with:
           pattern: runner-canary-linux-*
           merge-multiple: true
-      - name: Publish to canary prerelease
+      - name: Publish to the canary channel
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_DOWNLOAD_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_DOWNLOAD_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: ${{ vars.R2_DOWNLOAD_ENDPOINT }}
+          AWS_DEFAULT_REGION: auto
+          # R2 rejects the integrity checksums that the AWS CLI sends by default.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
         run: |
           set -euo pipefail
-          if ! gh release view canary > /dev/null 2>&1; then
-            gh release create canary \
-              --prerelease \
-              --latest=false \
-              --target "$GITHUB_SHA" \
-              --title "Runner Canary" \
-              --notes "Rolling prerelease of the runner, published on cloud branch deploys."
-          fi
+          # Without an endpoint the AWS CLI would reach for a bucket on S3.
+          : "${AWS_ENDPOINT_URL:?R2_DOWNLOAD_ENDPOINT is not set}"
+          put_object() {
+            # no-cache: the keys are overwritten in place behind a custom domain.
+            aws s3api put-object \
+              --bucket download \
+              --key "canary/$1" \
+              --body "$1" \
+              --content-type "$2" \
+              --cache-control no-cache \
+              --metadata "commit=$GITHUB_SHA" > /dev/null
+          }
           # Binaries first, checksums last: the server triggers updates off
           # the .sha256 files, so a partial upload never advertises a binary
           # that is not yet in place.
-          gh release upload canary --clobber \
-            runner-canary-linux-x86-64 \
-            runner-canary-linux-arm-64
-          gh release upload canary --clobber \
-            runner-canary-linux-x86-64.sha256 \
-            runner-canary-linux-arm-64.sha256
-          # Keep the canary tag pointing at the commit the assets were built
-          # from. Downloads are by asset, so this is purely for humans
-          # inspecting the release; tag moves do not trigger CI (tags: v**).
-          gh api --method PATCH "repos/{owner}/{repo}/git/refs/tags/canary" \
-            -f "sha=$GITHUB_SHA" -F force=true > /dev/null
-          gh release edit canary --notes "Rolling prerelease of the runner, published on cloud branch deploys. Currently built from $GITHUB_SHA."
+          for BUILD in linux-x86-64 linux-arm-64; do
+            put_object "runner-canary-$BUILD" application/octet-stream
+          done
+          for BUILD in linux-x86-64 linux-arm-64; do
+            put_object "runner-canary-$BUILD.sha256" text/plain
+          done
+          # A green upload proves nothing about what the custom domain serves.
+          CANARY_URL="https://download.bencher.dev/canary"
+          for BUILD in linux-x86-64 linux-arm-64; do
+            curl -fsS -o /dev/null -r 0-0 "$CANARY_URL/runner-canary-$BUILD"
+            curl -fsS "$CANARY_URL/runner-canary-$BUILD.sha256" \
+              | diff - "runner-canary-$BUILD.sha256"
+          done
 
   test:
     name: Test

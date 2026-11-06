@@ -1,20 +1,37 @@
+use std::io::Read as _;
 use std::process::Command;
+use std::time::Duration;
 
 use anyhow::Context as _;
-use bencher_json::{Sha256, UpdateChannel};
+use bencher_json::{
+    Architecture, DEFAULT_CANARY_BASE_URL, Sha256, UpdateChannel, canary_artifact, canary_url,
+};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::Deserialize;
 use sha2::Digest as _;
 use tempfile::TempDir;
+use url::Url;
 
 const REPO: &str = "bencherdev/bencher";
-const CANARY: &str = "canary";
 const DEVEL: &str = "devel";
+
+/// The architecture of the runner binary that a deploy downloads and installs.
+const DEPLOY_ARCH: Architecture = Architecture::X86_64;
+
+/// Cap on a downloaded canary channel file, an order of magnitude over the runner binary.
+const MAX_DOWNLOAD_SIZE: u64 = 512 * 1024 * 1024;
+
+/// Cap on one canary channel request, from its first byte sent to its last byte read.
+/// `MAX_DOWNLOAD_SIZE` within it needs under 1 MB/s, well inside a normal connection.
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(600);
+
+/// Cap on reaching the host, so an unroutable one fails well inside `DOWNLOAD_TIMEOUT`.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Download the runner binary and check it against the checksum published beside it.
 ///
-/// Without `run_id` it is the release asset of the update channel: the `canary` release,
-/// or the latest tagged release for stable.
+/// Without `run_id` it is the published binary of the update channel: the canary channel
+/// artifact, or the asset of the latest tagged release for stable.
 /// With `run_id` it is the artifact of that `devel` push run of CI.
 /// Returns the path to the downloaded binary and the temp directory that owns it.
 pub fn download(
@@ -42,23 +59,28 @@ pub fn download(
         ])?;
         name
     } else {
-        let tag = release_tag(update_channel, latest_release_tag)?;
-        let name = binary_name(&tag);
-        println!("Downloading {name} from the {tag} release...");
-        gh(&[
-            "release",
-            "download",
-            &tag,
-            "--repo",
-            REPO,
-            "--pattern",
-            &name,
-            "--pattern",
-            &format!("{name}.sha256"),
-            "--dir",
-            temp_path.as_str(),
-        ])?;
-        name
+        match update_channel {
+            UpdateChannel::Canary => download_canary(&temp_path)?,
+            UpdateChannel::Stable => {
+                let tag = latest_release_tag()?;
+                let name = binary_name(&tag);
+                println!("Downloading {name} from the {tag} release...");
+                gh(&[
+                    "release",
+                    "download",
+                    &tag,
+                    "--repo",
+                    REPO,
+                    "--pattern",
+                    &name,
+                    "--pattern",
+                    &format!("{name}.sha256"),
+                    "--dir",
+                    temp_path.as_str(),
+                ])?;
+                name
+            },
+        }
     };
 
     let binary_path = temp_path.join(&name);
@@ -68,40 +90,117 @@ pub fn download(
     Ok((binary_path, temp_dir))
 }
 
-/// The sha256 the release of the update channel publishes for its runner binary.
+/// The sha256 the update channel publishes for its runner binary.
 pub fn published_checksum(update_channel: UpdateChannel) -> anyhow::Result<Sha256> {
-    let tag = release_tag(update_channel, latest_release_tag)?;
-    let name = format!("{}.sha256", binary_name(&tag));
-    let published = gh(&[
-        "release",
-        "download",
-        &tag,
-        "--repo",
-        REPO,
-        "--pattern",
-        &name,
-        "--output",
-        "-",
-    ])?;
-    let published = String::from_utf8_lossy(&published);
-    parse_checksum(&published).with_context(|| format!("invalid checksum in {name}: {published}"))
-}
-
-fn binary_name(version: &str) -> String {
-    format!("runner-{version}-linux-x86-64")
-}
-
-fn release_tag(
-    update_channel: UpdateChannel,
-    latest_release_tag: impl FnOnce() -> anyhow::Result<String>,
-) -> anyhow::Result<String> {
     match update_channel {
-        UpdateChannel::Canary => Ok(CANARY.to_owned()),
-        UpdateChannel::Stable => latest_release_tag(),
+        UpdateChannel::Canary => {
+            let checksum_url = canary_download(DEFAULT_CANARY_BASE_URL)?.checksum_url;
+            let published = agent()
+                .get(checksum_url.as_str())
+                .call()
+                .with_context(|| format!("failed to download {checksum_url}"))?
+                .body_mut()
+                .read_to_string()
+                .with_context(|| format!("failed to read {checksum_url}"))?;
+            parse_checksum(&published)
+                .with_context(|| format!("invalid checksum in {checksum_url}: {published}"))
+        },
+        UpdateChannel::Stable => {
+            let tag = latest_release_tag()?;
+            let name = format!("{}.sha256", binary_name(&tag));
+            let published = gh(&[
+                "release",
+                "download",
+                &tag,
+                "--repo",
+                REPO,
+                "--pattern",
+                &name,
+                "--output",
+                "-",
+            ])?;
+            let published = String::from_utf8_lossy(&published);
+            parse_checksum(&published)
+                .with_context(|| format!("invalid checksum in {name}: {published}"))
+        },
     }
 }
 
-/// GitHub's latest release is the newest tagged one, never the `canary` prerelease.
+/// Download the canary channel binary and the checksum published beside it into `dir`,
+/// and return the binary's file name.
+fn download_canary(dir: &Utf8Path) -> anyhow::Result<String> {
+    let CanaryDownload {
+        name,
+        binary_url,
+        checksum_url,
+    } = canary_download(DEFAULT_CANARY_BASE_URL)?;
+    println!("Downloading {name} from {binary_url}...");
+    let agent = agent();
+    fetch(&agent, &binary_url, &dir.join(&name))?;
+    fetch(&agent, &checksum_url, &dir.join(format!("{name}.sha256")))?;
+    Ok(name)
+}
+
+/// What the canary channel publishes for the runner binary under a base URL.
+struct CanaryDownload {
+    name: String,
+    binary_url: Url,
+    checksum_url: Url,
+}
+
+fn canary_download(base_url: &str) -> anyhow::Result<CanaryDownload> {
+    let base_url: Url = base_url
+        .parse()
+        .with_context(|| format!("invalid canary base URL {base_url}"))?;
+    let binary_url = canary_url(&base_url, DEPLOY_ARCH)?;
+    let checksum_url = format!("{binary_url}.sha256")
+        .parse()
+        .with_context(|| format!("invalid checksum URL for {binary_url}"))?;
+    Ok(CanaryDownload {
+        name: canary_artifact(DEPLOY_ARCH),
+        binary_url,
+        checksum_url,
+    })
+}
+
+/// `ureq` sets no timeout of its own, so an unanswered canary channel request would
+/// hang a deploy or an audit forever.
+fn agent() -> ureq::Agent {
+    let config = ureq::Agent::config_builder()
+        .timeout_connect(Some(CONNECT_TIMEOUT))
+        .timeout_global(Some(DOWNLOAD_TIMEOUT))
+        .build();
+    ureq::Agent::new_with_config(config)
+}
+
+/// Write `url` to `path`, refusing a body over `MAX_DOWNLOAD_SIZE`.
+fn fetch(agent: &ureq::Agent, url: &Url, path: &Utf8Path) -> anyhow::Result<()> {
+    let mut body = agent
+        .get(url.as_str())
+        .call()
+        .with_context(|| format!("failed to download {url}"))?
+        .into_body()
+        .into_reader()
+        .take(MAX_DOWNLOAD_SIZE + 1);
+    let mut file =
+        std::fs::File::create(path).with_context(|| format!("failed to create {path}"))?;
+    let downloaded = std::io::copy(&mut body, &mut file)
+        .with_context(|| format!("failed to write {url} to {path}"))?;
+    anyhow::ensure!(
+        downloaded <= MAX_DOWNLOAD_SIZE,
+        "{url} is over the {MAX_DOWNLOAD_SIZE} byte download limit"
+    );
+    Ok(())
+}
+
+fn binary_name(version: &str) -> String {
+    format!(
+        "runner-{version}-{slug}",
+        slug = DEPLOY_ARCH.linux_artifact_slug()
+    )
+}
+
+/// `gh release view` with no tag returns the latest release, which excludes prereleases.
 fn latest_release_tag() -> anyhow::Result<String> {
     let stdout = gh(&[
         "release", "view", "--repo", REPO, "--json", "tagName", "--jq", ".tagName",
@@ -194,12 +293,20 @@ mod tests {
     }
 
     #[test]
-    fn release_tag_follows_the_update_channel() {
-        let latest = || anyhow::Ok("v1.2.3".to_owned());
-        assert_eq!(release_tag(UpdateChannel::Canary, latest).unwrap(), CANARY);
+    fn the_canary_checksum_sits_beside_its_binary_under_the_base_url() {
+        let CanaryDownload {
+            name,
+            binary_url,
+            checksum_url,
+        } = canary_download("http://localhost:8080/downloads/").unwrap();
+        assert_eq!(name, "runner-canary-linux-x86-64");
         assert_eq!(
-            release_tag(UpdateChannel::Stable, latest).unwrap(),
-            "v1.2.3"
+            binary_url.as_str(),
+            "http://localhost:8080/downloads/canary/runner-canary-linux-x86-64"
+        );
+        assert_eq!(
+            checksum_url.as_str(),
+            "http://localhost:8080/downloads/canary/runner-canary-linux-x86-64.sha256"
         );
     }
 
