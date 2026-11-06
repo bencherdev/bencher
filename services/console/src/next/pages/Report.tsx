@@ -15,10 +15,13 @@ import {
 	Show,
 	Switch,
 	createComputed,
+	createEffect,
 	createMemo,
 	createSignal,
 	mapArray,
 	on,
+	onCleanup,
+	onMount,
 } from "solid-js";
 import type { JsonConsoleReport, JsonConsoleSpec } from "../../types/bencher";
 import type { Settable } from "../alerts/status";
@@ -53,6 +56,7 @@ export { prefetchLinkedReport as prefetch } from "../report/query";
 import { slotsOf } from "../report/slots";
 import { declaresThresholdV0 } from "../report/snippetV0";
 import ThresholdSheet from "../report/ThresholdSheet";
+import { WarningRows, WarningsTable, warningsTotal } from "../report/Warnings";
 import {
 	type ReportView,
 	parseReportView,
@@ -177,6 +181,7 @@ const Report = () => {
 		const last = loaded().at(-1)?.data?.report;
 		if (
 			last &&
+			!(atWarnings() && warnings()) &&
 			next() === undefined &&
 			lines().length < (report()?.total ?? 0) &&
 			last.lines.length === perPage
@@ -228,6 +233,7 @@ const Report = () => {
 			() => {
 				setSelection(new Map());
 				setSheet();
+				setAtWarnings(false);
 			},
 			{ defer: true },
 		),
@@ -248,6 +254,41 @@ const Report = () => {
 		return typeof window === "number" ? `${windowDays(window)}d` : window;
 	};
 	const hash = () => shortHash(report()?.version.hash);
+	const warnings = () => {
+		const all = report()?.warnings;
+		return all && all.length > 0 ? all : undefined;
+	};
+	const [warningsSection, setWarningsSection] = createSignal<HTMLElement>();
+	// A later batch of lines would push the warnings down from under the reader, so none loads until the reader scrolls back up.
+	const [atWarnings, setAtWarnings] = createSignal(
+		location.hash === `#${WARNINGS_ID}`,
+	);
+	const toWarnings = () => {
+		const section = warningsSection();
+		if (section) {
+			setAtWarnings(true);
+			section.scrollIntoView();
+		}
+	};
+	onMount(() => {
+		let last = window.scrollY;
+		const follow = () => {
+			if (window.scrollY < last) {
+				setAtWarnings(false);
+			}
+			last = window.scrollY;
+		};
+		window.addEventListener("scroll", follow, { passive: true });
+		onCleanup(() => window.removeEventListener("scroll", follow));
+	});
+	// The table arrives with the report, after the browser looked for the fragment, so the page scrolls to it.
+	createEffect(
+		on(
+			() =>
+				location.hash === `#${WARNINGS_ID}` ? warningsSection() : undefined,
+			(section) => section && toWarnings(),
+		),
+	);
 	/** Explore's link for some of the report's lines, once the codec has arrived. */
 	const explore = () => {
 		const current = report();
@@ -340,6 +381,15 @@ const Report = () => {
 											</Show>
 											{part.kind === "reveal" ? (
 												<Truncate text={part.text} reveal />
+											) : part.kind === "warnings" ? (
+												<a
+													data-fixed
+													href={`${reportPath(slug(), params.report)}${query(view())}#${WARNINGS_ID}`}
+													// The router ignores a link to the fragment the page is already at.
+													onClick={toWarnings}
+												>
+													{part.text}
+												</a>
 											) : (
 												<span data-fixed>{part.text}</span>
 											)}
@@ -443,6 +493,26 @@ const Report = () => {
 						</div>
 					</Match>
 				</Switch>
+				<Show when={warnings()}>
+					{(warnings) => (
+						<section
+							ref={setWarningsSection}
+							id={WARNINGS_ID}
+							class="dm-section"
+							aria-label="Warnings"
+						>
+							<div class="dm-section-head">
+								<h2 class="seclabel">Warnings</h2>
+								<span class="count">
+									{formatCount(warningsTotal(warnings()))}
+								</span>
+							</div>
+							<WarningsTable label="Warnings in this report">
+								<WarningRows warnings={warnings()} />
+							</WarningsTable>
+						</section>
+					)}
+				</Show>
 				<Show when={report()}>
 					{(report) => (
 						<ThresholdSheet
@@ -583,10 +653,13 @@ const GIB = 1024 ** 3;
 const specText = (spec: JsonConsoleSpec) =>
 	`${spec.name} (${spec.os}, ${spec.architecture}, ${spec.cpu}, ${Math.round((spec.memory / GIB) * 10) / 10} GiB)`;
 
+/** Where the sub line's warnings count links to their table. */
+const WARNINGS_ID = "warnings";
+
 interface SubPart {
 	text: string;
-	/** A part that gives way, to a reveal; the hash, with its whole for Copy; else a part kept whole. */
-	kind: "reveal" | "hash" | "fixed";
+	/** A part that gives way, to a reveal; the hash, with its whole for Copy; the warnings count, linking to their table; else a part kept whole. */
+	kind: "reveal" | "hash" | "warnings" | "fixed";
 	hash?: string;
 }
 
@@ -615,6 +688,15 @@ const subtitle = (
 		hash === undefined
 			? []
 			: [{ text: shortHash(hash) ?? hash, kind: "hash", hash }];
+	const warnings: SubPart[] =
+		(report.warnings?.length ?? 0) > 0
+			? [
+					{
+						text: plural(warningsTotal(report.warnings ?? []), "warning"),
+						kind: "warnings",
+					},
+				]
+			: [];
 	if (narrow) {
 		// The spec last, where it takes the rest of its line.
 		return [
@@ -623,6 +705,7 @@ const subtitle = (
 			...fixed(report.adapter),
 			...version,
 			...total.flatMap(fixed),
+			...warnings,
 			...spec,
 		];
 	}
@@ -647,6 +730,7 @@ const subtitle = (
 						kind: "reveal" as const,
 					},
 				]),
+		...warnings,
 		...fixed(
 			job ? undefined : `took ${duration(report.end_time - report.start_time)}`,
 		),

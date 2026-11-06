@@ -21,6 +21,13 @@ use super::{alert::JsonPerfAlert, report::Iteration, threshold::JsonThresholdMod
 
 crate::typed_uuid::typed_uuid!(MetricUuid);
 
+/// The most metric names one measure may carry, enough for every statistic a
+/// harness reports in one unit, and the most a plot may draw.
+///
+/// Deliberately low: raising the cap is a release note and lowering it is a
+/// breaking change, so the asymmetry runs one way.
+pub const MAX_METRIC_NAMES: usize = 32;
+
 #[typeshare::typeshare]
 pub type JsonResultsMap = HashMap<BenchmarkName, JsonMetricsMap>;
 

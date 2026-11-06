@@ -13,6 +13,7 @@ import { useQueryResult } from "../query";
 import {
 	type ExploreQuery,
 	MAX_ENTRIES,
+	MAX_METRICS,
 	type Parameters,
 	type ParameterValue,
 } from "../query/query";
@@ -168,7 +169,8 @@ const Editor = (props: {
 				noun="metric"
 				values={props.query.metrics.map((label) => ({ label }))}
 				readOnly={props.readOnly}
-				full={props.query.metrics.length >= MAX_ENTRIES}
+				full={props.query.metrics.length >= MAX_METRICS}
+				cap={MAX_METRICS}
 				onRemove={(index) =>
 					props.onQuery(withoutValue(props.query, "metrics", index))
 				}

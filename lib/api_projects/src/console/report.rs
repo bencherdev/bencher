@@ -26,7 +26,7 @@ use bencher_json::{
             MAX_CONSOLE_HISTORY_REPORTS, MAX_CONSOLE_WINDOW_DAYS,
         },
         head::{JsonVersion, VersionNumber},
-        report::{Iteration, JsonReportAlertsCounts},
+        report::{Iteration, JsonReportAlertsCounts, JsonReportWarning},
     },
 };
 use bencher_rbac::project::Permission;
@@ -40,7 +40,7 @@ use bencher_schema::{
             benchmark::BenchmarkId,
             measure::MeasureId,
             metric::MetricId,
-            report::{QueryReport, ReportId},
+            report::{QueryReport, ReportId, warning::get_reports_warnings},
             threshold::ThresholdId,
             variant::VariantId,
         },
@@ -167,13 +167,8 @@ async fn get_inner(
     let filters = Filters::new(&query_params)?;
     let (window_reports, window) = history_window(conn, &report, requested)
         .map_err(resource_not_found_err!(Report, (&project, report.uuid)))?;
-    // The page reads its run from its first batch alone.
-    let run = if query_params.page.unwrap_or(1) <= 1 && query_params.per_page != Some(0) {
-        report_run(conn, &report, version_uuid)
-            .map_err(resource_not_found_err!(Report, (&project, report.uuid)))?
-    } else {
-        None
-    };
+    let (run, warnings) = first_batch(conn, &report, version_uuid, &query_params)
+        .map_err(resource_not_found_err!(Report, (&project, report.uuid)))?;
 
     let rows = line_rows(conn, report.id)
         .map_err(resource_not_found_err!(Metric, (&project, report.uuid)))?;
@@ -229,6 +224,7 @@ async fn get_inner(
         #[cfg(feature = "plus")]
         spec,
         run,
+        warnings,
         window,
         total,
         groups,
@@ -517,6 +513,21 @@ fn report_job(
             disk,
         }),
     ))
+}
+
+/// The report's run and its warnings, which the page reads from its first batch alone.
+fn first_batch(
+    conn: &mut DbConnection,
+    report: &QueryReport,
+    version: VersionUuid,
+    query_params: &JsonConsoleReportQueryParams,
+) -> diesel::QueryResult<(Option<JsonConsoleReportRun>, Option<Vec<JsonReportWarning>>)> {
+    if query_params.page.unwrap_or(1) > 1 || query_params.per_page == Some(0) {
+        return Ok((None, None));
+    }
+    let run = report_run(conn, report, version)?;
+    let warnings = get_reports_warnings(conn, &[report.id])?.remove(&report.id);
+    Ok((run, warnings))
 }
 
 /// The report's run as the run page lists it, or none when that page lists none of its

@@ -8,7 +8,10 @@ use serde::{
     de::{self, Visitor},
 };
 
-use crate::{BenchmarkUuid, BranchUuid, MeasureUuid, ParameterFilter, ProjectUuid, TestbedUuid};
+use crate::{
+    BenchmarkUuid, BranchUuid, MAX_METRIC_NAMES, MeasureUuid, ParameterFilter, ProjectUuid,
+    TestbedUuid,
+};
 
 use super::perf::MAX_DIMENSION_ENTRIES;
 
@@ -77,7 +80,7 @@ pub struct JsonNewPlot {
     pub measures: Vec<MeasureUuid>,
     /// The metrics to draw, by name.
     /// If not set, or set to an empty list, the plot draws every metric.
-    /// At most 8 names may be specified.
+    /// At most 32 names may be specified.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metrics: Option<MetricFilter>,
     /// The keys of the lines to hide.
@@ -210,7 +213,7 @@ pub struct JsonPlotPatch {
     /// The metrics to draw, by name.
     /// Replaces the current metrics for the plot.
     /// Set to `null` or to an empty list to draw every metric again.
-    /// At most 8 names may be specified.
+    /// At most 32 names may be specified.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metrics: Option<MetricFilter>,
     /// The keys of the lines to hide.
@@ -785,9 +788,9 @@ impl<'de> Deserialize<'de> for MetricFilter {
     {
         // The cap bounds what was written, before duplicates collapse.
         let names = Vec::<MetricName>::deserialize(deserializer)?;
-        if names.len() > MAX_DIMENSION_ENTRIES {
+        if names.len() > MAX_METRIC_NAMES {
             return Err(de::Error::custom(format!(
-                "A plot may draw at most {MAX_DIMENSION_ENTRIES} metrics, found {}",
+                "A plot may draw at most {MAX_METRIC_NAMES} metrics, found {}",
                 names.len()
             )));
         }
@@ -898,9 +901,7 @@ mod list_schema {
         schema::{ArrayValidation, InstanceType, Schema, SchemaObject},
     };
 
-    use super::{
-        LineKey, LineKeys, MAX_DIMENSION_ENTRIES, MAX_HIDDEN_LINES, MetricFilter, MetricName,
-    };
+    use super::{LineKey, LineKeys, MAX_HIDDEN_LINES, MAX_METRIC_NAMES, MetricFilter, MetricName};
 
     fn array_of<T: JsonSchema>(generator: &mut SchemaGenerator, max_items: usize) -> Schema {
         SchemaObject {
@@ -921,7 +922,7 @@ mod list_schema {
         }
 
         fn json_schema(generator: &mut SchemaGenerator) -> Schema {
-            array_of::<MetricName>(generator, MAX_DIMENSION_ENTRIES)
+            array_of::<MetricName>(generator, MAX_METRIC_NAMES)
         }
     }
 
@@ -987,7 +988,7 @@ mod tests {
     use super::{
         JsonUpdatePlot, LineKey, LineKeys, MAX_HIDDEN_LINES, MetricFilter, PlotLayout, XAxis, YAxis,
     };
-    use crate::project::perf::MAX_DIMENSION_ENTRIES;
+    use crate::MAX_METRIC_NAMES;
 
     #[test]
     fn y_axis_serde_round_trip() {
@@ -1223,12 +1224,13 @@ mod tests {
         }
     }
 
+    // Kills a metrics filter capped at the other dimensions' cap rather than a measure's.
     #[test]
     fn view_lists_cap_before_duplicates_collapse() {
         let names = |n: usize| serde_json::to_string(&vec!["p99"; n]).unwrap();
-        let metrics: MetricFilter = serde_json::from_str(&names(MAX_DIMENSION_ENTRIES)).unwrap();
+        let metrics: MetricFilter = serde_json::from_str(&names(MAX_METRIC_NAMES)).unwrap();
         assert_eq!(metrics.names().len(), 1);
-        serde_json::from_str::<MetricFilter>(&names(MAX_DIMENSION_ENTRIES + 1)).unwrap_err();
+        serde_json::from_str::<MetricFilter>(&names(MAX_METRIC_NAMES + 1)).unwrap_err();
 
         let keys = |n: usize| serde_json::to_string(&vec!["k"; n]).unwrap();
         let hidden: LineKeys = serde_json::from_str(&keys(MAX_HIDDEN_LINES)).unwrap();
