@@ -36,6 +36,8 @@ pub mod key;
 pub mod oauth;
 #[cfg(feature = "plus")]
 pub mod oauth_authorization;
+#[cfg(feature = "plus")]
+pub mod provider;
 pub mod public;
 pub mod session;
 pub mod sign_in;

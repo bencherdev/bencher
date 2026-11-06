@@ -48,7 +48,10 @@ impl QuerySso {
         query_user: &QueryUser,
         #[cfg(feature = "otel")] auth_method: bencher_otel::AuthMethod,
     ) -> Result<(), HttpError> {
-        if let Some(organization_uuid) = Self::unjoined(auth_conn!(context), query_user)? {
+        let email_domain = query_user.email.domain();
+        if let Some(organization_uuid) =
+            Self::unjoined(auth_conn!(context), query_user, &email_domain)?
+        {
             QueryOrganization::join(context, organization_uuid, query_user).await?;
 
             #[cfg(feature = "otel")]
@@ -65,7 +68,18 @@ impl QuerySso {
         query_user: &QueryUser,
         now: DateTime,
     ) -> Result<bool, HttpError> {
-        let Some(organization_uuid) = Self::unjoined(conn, query_user)? else {
+        Self::join_domain_with(conn, query_user, &query_user.email.domain(), now)
+    }
+
+    /// Join the organization whose SSO domain is `domain`, unless the user is a member, on one
+    /// connection, inside a write transaction, returning whether the user joined it.
+    pub fn join_domain_with(
+        conn: &mut DbConnection,
+        query_user: &QueryUser,
+        domain: &str,
+        now: DateTime,
+    ) -> Result<bool, HttpError> {
+        let Some(organization_uuid) = Self::unjoined(conn, query_user, domain)? else {
             return Ok(false);
         };
         let insert_org_role = InsertOrganizationRole {
@@ -82,16 +96,15 @@ impl QuerySso {
         Ok(true)
     }
 
-    /// The organization whose SSO domain is the user's email domain, unless they are a member.
+    /// The organization whose SSO domain is `domain`, unless the user is a member.
     fn unjoined(
         conn: &mut DbConnection,
         query_user: &QueryUser,
+        domain: &str,
     ) -> Result<Option<OrganizationUuid>, HttpError> {
-        let email_domain = query_user.email.domain();
-
-        // Get all organizations IDs that match the domain of the user's email, where they are not already a member
+        // Get all organizations IDs that match the domain, where they are not already a member
         let organization_uuids = schema::sso::table
-            .filter(schema::sso::domain.eq(&email_domain))
+            .filter(schema::sso::domain.eq(domain))
             .inner_join(schema::organization::table)
             .filter(schema::organization::deleted.is_null())
             .left_join(
@@ -102,13 +115,13 @@ impl QuerySso {
             .filter(schema::organization_role::id.is_null())
             .select(schema::organization::uuid)
             .load::<OrganizationUuid>(conn)
-            .map_err(resource_not_found_err!(Sso, &email_domain))?;
+            .map_err(resource_not_found_err!(Sso, domain))?;
 
         if organization_uuids.len() > 1 {
             return Err(issue_error(
                 "Multiple SSO organizations found for user",
                 &format!(
-                    "Multiple SSO organizations found for user with email ({email}) at domain ({email_domain})",
+                    "Multiple SSO organizations found for user with email ({email}) at domain ({domain})",
                     email = query_user.email,
                 ),
                 format!("{}", organization_uuids.len()),

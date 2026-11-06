@@ -133,6 +133,8 @@ pub enum SignInRefusal {
     ResendWaiting,
     /// The account is locked.
     Locked,
+    /// A sign-in with GitHub or Google failed, for a reason it does not tell.
+    ProviderRefused,
 }
 
 impl AsRef<str> for SignInRefusal {
@@ -151,6 +153,7 @@ impl AsRef<str> for SignInRefusal {
             Self::CodesPaused => "codes_paused",
             Self::ResendWaiting => "resend_waiting",
             Self::Locked => "locked",
+            Self::ProviderRefused => "provider_refused",
         }
     }
 }

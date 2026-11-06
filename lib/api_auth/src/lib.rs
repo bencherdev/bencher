@@ -23,8 +23,8 @@ use serde as _;
 mod accept;
 mod confirm;
 mod login;
-mod oauth;
 pub mod oci;
+mod provider;
 mod session;
 mod sign_in;
 mod signup;
@@ -80,19 +80,13 @@ impl bencher_endpoint::Registrar for Api {
 
         #[cfg(feature = "plus")]
         {
-            // GitHub OAuth
+            // Sign in with GitHub or Google
             if http_options {
-                api_description.register(oauth::github::auth_github_options)?;
+                api_description.register(provider::auth_provider_start_options)?;
+                api_description.register(provider::auth_provider_finish_options)?;
             }
-            api_description.register(oauth::github::auth_github_get)?;
-            api_description.register(oauth::github::auth_github_post)?;
-
-            // Google OAuth
-            if http_options {
-                api_description.register(oauth::google::auth_google_options)?;
-            }
-            api_description.register(oauth::google::auth_google_get)?;
-            api_description.register(oauth::google::auth_google_post)?;
+            api_description.register(provider::auth_provider_start_post)?;
+            api_description.register(provider::auth_provider_finish_post)?;
 
             // OCI token endpoint
             if http_options {

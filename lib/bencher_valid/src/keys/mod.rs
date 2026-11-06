@@ -23,7 +23,7 @@ const SECRET_BYTES: usize = 32;
 /// The unpadded base64url length of [`SECRET_BYTES`].
 const SECRET_LEN: usize = 43;
 
-fn is_valid_secret(secret: &str) -> bool {
+pub(crate) fn is_valid_secret(secret: &str) -> bool {
     use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 
     secret.len() == SECRET_LEN
@@ -33,7 +33,7 @@ fn is_valid_secret(secret: &str) -> bool {
 }
 
 #[cfg(feature = "server")]
-fn generate_secret() -> Result<String, rand::rngs::SysError> {
+pub(crate) fn generate_secret() -> Result<String, rand::rngs::SysError> {
     use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
     use rand::TryRng as _;
 

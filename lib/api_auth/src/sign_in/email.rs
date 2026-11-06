@@ -19,7 +19,10 @@ use bencher_schema::{
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use http::header::{RETRY_AFTER, SET_COOKIE};
 
-use super::{Start, admit, admit_email, at_cap, binding, capped, end_replaced, ended, refused};
+use super::{
+    Emailed, Start, admit, admit_email, at_cap, binding, capped, email_sign_in, end_replaced,
+    ended, refused,
+};
 
 #[endpoint {
     method = OPTIONS,
@@ -71,7 +74,7 @@ pub async fn auth_email_post(
 
     let sign_in_context = sign_in_context(
         context,
-        &email,
+        Some(&email),
         invite,
         claim,
         #[cfg(feature = "plus")]
@@ -80,27 +83,17 @@ pub async fn auth_email_post(
         authorization,
     )
     .await?;
-    if let Some(wait) = at_cap(context, &email) {
-        return Ok(capped(email, wait));
+    match email_sign_in(log, context, &rqctx.request, email, sign_in_context).await? {
+        Emailed::Sent(sent) => sent.answer(context),
+        Emailed::Capped { email, wait } => Ok(capped(email, wait)),
     }
-
-    let sent = Start::insert(context, email, sign_in_context, context.clock.now())
-        .await?
-        .send(log, context)
-        .await?;
-    if let Some(earlier) = binding(context, &rqctx.request) {
-        end_replaced(context, |conn| {
-            QueryPendingSignIn::end_binding(conn, &earlier)
-        })
-        .await;
-    }
-    sent.answer(context)
 }
 
-/// What a sign-in carries to its proof, each part checked as it starts.
-async fn sign_in_context(
+/// What a sign-in carries to where it lands, each part checked as it starts: an invite must be
+/// valid, and, for a sign-in by `email`, for that address.
+pub(crate) async fn sign_in_context(
     context: &ApiContext,
-    email: &Email,
+    email: Option<&Email>,
     invite: Option<Jwt>,
     claim: Option<OrganizationUuid>,
     #[cfg(feature = "plus")] plan: Option<PlanLevel>,
@@ -114,7 +107,7 @@ async fn sign_in_context(
                 SignInRefusal::InvalidInvite,
             )
         })?;
-        if claims.email() != email {
+        if email.is_some_and(|email| claims.email() != email) {
             return Err(refused(
                 bad_request_error("The invitation is for another email"),
                 SignInRefusal::InviteForAnotherEmail,
@@ -133,6 +126,8 @@ async fn sign_in_context(
         plan,
         #[cfg(feature = "plus")]
         authorization: crate::pending_authorization(context, authorization).await?,
+        #[cfg(feature = "plus")]
+        pin: None,
     })
 }
 
