@@ -192,11 +192,9 @@ const keptAt = (at: number) => ({
 	],
 });
 
-/** Finish a GitHub sign in as the admin that this tab did not start, which asks first. */
-const finishElsewhere = async (page: Page) => {
-	await finishGitHub(page, randomUUID(), undefined, seed.admin);
-	await page.getByRole("button", { name: "Continue with GitHub" }).click();
-};
+/** Finish a GitHub sign in as the admin, which this tab did not start from the page it kept. */
+const finishElsewhere = (page: Page) =>
+	finishGitHub(page, randomUUID(), undefined, seed.admin);
 
 test.describe("with a kept page", () => {
 	test.use({ storageState: keptAt(Date.parse(seed.now)) });

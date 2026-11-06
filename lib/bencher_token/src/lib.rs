@@ -1,6 +1,8 @@
 use std::sync::LazyLock;
 
 use bencher_json::Secret;
+#[cfg(debug_assertions)]
+use uuid as _;
 
 mod audience;
 mod claims;
@@ -11,8 +13,8 @@ mod oauth;
 
 pub use audience::Audience;
 pub use claims::{
-    AuthOciClaims, Claims, EmailChangeClaims, InviteClaims, OAuthClaims, OciAction, OciScopeClaims,
-    OrgClaims, PublicOciClaims, StateClaims,
+    AuthOciClaims, Claims, EmailChangeClaims, InviteClaims, OciAction, OciScopeClaims, OrgClaims,
+    PublicOciClaims,
 };
 #[cfg(feature = "plus")]
 pub use claims::{GitHubGrantClaims, GitHubStateClaims, ProjectOciClaims, RunnerOciClaims};

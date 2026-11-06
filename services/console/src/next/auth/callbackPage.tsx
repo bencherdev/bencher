@@ -1,16 +1,22 @@
 import Banner from "@bencherdev/ui/Banner";
-import Button from "@bencherdev/ui/Button";
 import ButtonLink from "@bencherdev/ui/ButtonLink";
 import Heading from "@bencherdev/ui/Heading";
-import { Match, Switch, createSignal, onMount } from "solid-js";
+import { Show, createSignal, onMount } from "solid-js";
 import { render } from "solid-js/web";
-import { takeSignIn } from "../../components/auth/signIn";
-import type { JsonSignedIn } from "../../types/bencher";
+import type { JsonProviderSignIn } from "../../types/bencher";
 import { takeAuthReturn } from "../astro/authReturn";
 import { handOff } from "../handoff";
+import { SIGN_IN_FAILED, providerFailure, refusedBy } from "./copy";
 import type { Provider } from "./Door";
 import Frame, { GitHubMark, GoogleMark } from "./Frame";
 import { finish } from "./land";
+import {
+	type Started,
+	doorPath,
+	keepPending,
+	pendingOf,
+	takeStarted,
+} from "./pending";
 import { ask } from "./request";
 
 const NAMES: Record<Provider, string> = { github: "GitHub", google: "Google" };
@@ -19,11 +25,11 @@ const boot = (mount: HTMLElement) => {
 	const provider: Provider =
 		mount.dataset.provider === "google" ? "google" : "github";
 	const { code, state } = takeAuthReturn();
-	if (!code || !state) {
+	if (!state) {
 		location.replace("/auth/login");
 		return;
 	}
-	const started = takeSignIn(state);
+	const started = takeStarted(sessionStorage);
 	handOff(mount, () =>
 		render(
 			() => (
@@ -42,36 +48,46 @@ const boot = (mount: HTMLElement) => {
 };
 
 /**
- * The provider's answer, exchanged for a session: at once for the sign-in this
- * tab started, and only once asked for any other.
+ * The provider's answer, finished in the browser that started the sign-in:
+ * signed in, or on to Check your inbox for an account that proves its address
+ * first. A provider that sends no code back refused the sign-in itself.
  */
 const Callback = (props: {
 	provider: Provider;
-	code: string;
+	code: string | undefined;
 	state: string;
-	started: boolean;
+	started: Started;
 }) => {
-	const [phase, setPhase] = createSignal<"asking" | "working" | "refused">(
-		props.started ? "working" : "asking",
-	);
 	const name = NAMES[props.provider];
-	const exchange = () => {
-		setPhase("working");
-		ask<JsonSignedIn>("POST", `/v0/auth/${props.provider}`, {
-			code: props.code,
-			state: props.state,
+	const [refused, setRefused] = createSignal<string | undefined>(
+		props.code ? undefined : refusedBy(name),
+	);
+	onMount(() => {
+		const { code, provider, started, state } = props;
+		if (!code) {
+			return;
+		}
+		ask<JsonProviderSignIn>("POST", `/v0/auth/providers/${provider}/finish`, {
+			code,
+			state,
 		}).then((answer) => {
-			if (answer.ok) {
-				finish(answer.data);
+			if (!answer.ok) {
+				setRefused(providerFailure(answer.refused));
+				return;
+			}
+			const { signed_in, inbox } = answer.data;
+			if (signed_in) {
+				finish(signed_in);
+			} else if (inbox) {
+				keepPending(sessionStorage, {
+					...pendingOf(inbox, started.door, started.carry, Date.now()),
+					who: { provider, handle: inbox.handle },
+				});
+				location.replace("/auth/confirm");
 			} else {
-				setPhase("refused");
+				setRefused(SIGN_IN_FAILED.text);
 			}
 		});
-	};
-	onMount(() => {
-		if (props.started) {
-			exchange();
-		}
 	});
 	const Mark = props.provider === "github" ? GitHubMark : GoogleMark;
 	return (
@@ -79,33 +95,31 @@ const Callback = (props: {
 			<Heading level={1} size="xl">
 				Sign in to Bencher
 			</Heading>
-			<Switch>
-				<Match when={phase() === "asking"}>
-					<div class="au-stack">
-						<Button variant="primary" size="lg" full onClick={exchange}>
-							<Mark />
-							Continue with {name}
-						</Button>
-						<ButtonLink size="lg" full href="/auth/login">
-							Cancel
-						</ButtonLink>
-					</div>
-				</Match>
-				<Match when={phase() === "working"}>
+			<Show
+				when={refused()}
+				fallback={
 					<p class="au-busy" role="status">
 						<Mark />
 						Signing in with {name}
 					</p>
-				</Match>
-				<Match when={phase() === "refused"}>
-					<Banner status="error" role="alert">
-						Refused by {name}
-					</Banner>
-					<ButtonLink variant="primary" size="lg" full href="/auth/login">
-						Back to sign in
-					</ButtonLink>
-				</Match>
-			</Switch>
+				}
+			>
+				{(text) => (
+					<>
+						<Banner status="error" role="alert">
+							{text()}
+						</Banner>
+						<ButtonLink
+							variant="primary"
+							size="lg"
+							full
+							href={doorPath(props.started.door, props.started.carry)}
+						>
+							Back to sign in
+						</ButtonLink>
+					</>
+				)}
+			</Show>
 		</>
 	);
 };
