@@ -31,7 +31,7 @@ export const isNotifyText = (text: undefined | string) =>
 export const isNotifyTimeout = (timeout: undefined | string) =>
 	typeof timeout === "string" &&
 	timeout.length > 0 &&
-	Number.isInteger(Number.parseInt(timeout));
+	Number.isInteger(Number.parseInt(timeout, 10));
 
 export const forwardParams = (
 	pathname: string,

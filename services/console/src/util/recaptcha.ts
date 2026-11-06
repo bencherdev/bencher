@@ -6,7 +6,7 @@ let recaptchaWidgetId: number | null = null;
 export const loadRecaptcha = async () => {
 	if (!RECAPTCHA_SITE_KEY) return false;
 	if (typeof window === "undefined") return false;
-	// @ts-ignore
+	// @ts-expect-error
 	if (window.grecaptcha?.render) return true;
 	try {
 		await new Promise<void>((resolve, reject) => {
@@ -18,7 +18,7 @@ export const loadRecaptcha = async () => {
 			document.head.appendChild(script);
 		});
 
-		// @ts-ignore
+		// @ts-expect-error
 		await new Promise<void>((r) => window.grecaptcha?.ready(r));
 
 		// Create container element
@@ -31,7 +31,7 @@ export const loadRecaptcha = async () => {
 
 		// https://developers.google.com/recaptcha/docs/faq#can-i-customize-the-recaptcha-widget-or-badge
 		// https://developers.google.com/recaptcha/docs/invisible#js_api
-		// @ts-ignore
+		// @ts-expect-error
 		recaptchaWidgetId = window.grecaptcha.render(container, {
 			sitekey: RECAPTCHA_SITE_KEY,
 			size: "invisible",
@@ -50,12 +50,12 @@ export const getRecaptchaToken = async (
 	if (!RECAPTCHA_SITE_KEY) return null;
 	const ok = await loadRecaptcha();
 	if (!ok) return null;
-	// @ts-ignore
+	// @ts-expect-error
 	if (!window.grecaptcha) return null;
 	try {
-		// @ts-ignore
+		// @ts-expect-error
 		await new Promise<void>((r) => window.grecaptcha.ready(r));
-		// @ts-ignore
+		// @ts-expect-error
 		return window.grecaptcha.execute(recaptchaWidgetId, { action });
 	} catch (e) {
 		console.error("Error getting reCAPTCHA token:", e);

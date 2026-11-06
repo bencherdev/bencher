@@ -15,7 +15,7 @@ const Redirect = (props: { path: string }) => {
 		),
 	);
 
-	return <></>;
+	return null;
 };
 
 export default Redirect;

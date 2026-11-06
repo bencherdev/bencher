@@ -1,4 +1,4 @@
-import { type JsonPriceTier, ModelTest, PlanLevel } from "../types/bencher";
+import { type JsonPriceTier, PlanLevel } from "../types/bencher";
 
 export const dateTimeMillis = (date_str: undefined | string) => {
 	if (date_str === undefined) {
@@ -68,7 +68,7 @@ export const sizeArray = (
 
 export const timeToDate = (time_str: undefined | string): null | Date => {
 	if (typeof time_str === "string") {
-		const time = Number.parseInt(time_str);
+		const time = Number.parseInt(time_str, 10);
 		if (Number.isInteger(time)) {
 			const date = new Date(time);
 			if (date) {

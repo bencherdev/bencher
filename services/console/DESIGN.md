@@ -76,9 +76,11 @@ These are the ideas the landing and pricing redesign encode. Carry them forward.
 
 - **Body / UI:** Inter (Bulma's default body font).
 - **Monospace:** always use this exact stack:
+
   ```
   ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace
   ```
+
   Used for stat numbers, step numbers, terminal mocks, and code. (It is currently
   repeated inline in several components; see
   [consolidation](#known-inconsistencies-and-consolidation).)
@@ -87,14 +89,14 @@ These are the ideas the landing and pricing redesign encode. Carry them forward.
 
 The redesign uses Bulma's breakpoints plus two custom ones. Keep to this set:
 
-| Name             | Min width | Used for                                  |
-| ---------------- | --------- | ----------------------------------------- |
-| mobile (default) | 0         | single column                             |
-| custom-small     | 600px     | 2-up grids (footer, enterprise bullets)   |
-| tablet           | 769px     | 2 to 3 column layouts, larger type        |
-| custom-mid       | 900px     | pricing 3-up, FAQ 2-up, stewardship 2-up  |
-| desktop          | 1024px    | wider section padding, 5-up harness grid  |
-| widescreen       | 1216px    | widest section padding                    |
+| Name             | Min width | Used for                                 |
+| ---------------- | --------- | ---------------------------------------- |
+| mobile (default) | 0         | single column                            |
+| custom-small     | 600px     | 2-up grids (footer, enterprise bullets)  |
+| tablet           | 769px     | 2 to 3 column layouts, larger type       |
+| custom-mid       | 900px     | pricing 3-up, FAQ 2-up, stewardship 2-up |
+| desktop          | 1024px    | wider section padding, 5-up harness grid |
+| widescreen       | 1216px    | widest section padding                   |
 
 Note Bulma treats `max-width: 768px` as mobile and `min-width: 769px` as tablet.
 
@@ -111,22 +113,22 @@ prefix, these are the app-wide tokens; reuse them everywhere (and see the
 
 **Brand and semantic** (`:root`, same in both themes):
 
-| Token                  | Value     | Meaning                              |
-| ---------------------- | --------- | ------------------------------------ |
-| `--brand-orange`       | `#ed6704` | Primary accent / CTA fill            |
-| `--brand-orange-hover` | `#d25a00` | Hover state for orange fills         |
-| `--brand-alert`        | `#ef4444` | Regression / alert / "bad" (red)     |
+| Token                  | Value     | Meaning                                |
+| ---------------------- | --------- | -------------------------------------- |
+| `--brand-orange`       | `#ed6704` | Primary accent / CTA fill              |
+| `--brand-orange-hover` | `#d25a00` | Hover state for orange fills           |
+| `--brand-alert`        | `#ef4444` | Regression / alert / "bad" (red)       |
 | `--brand-success`      | `#22c55e` | Improvement / healthy / "good" (green) |
 
 **Neutrals and surfaces** (light value, then dark value):
 
-| Token                          | Light                | Dark                    | Use                          |
-| ------------------------------ | -------------------- | ----------------------- | ---------------------------- |
-| `--landing-muted`              | `#666`               | `#a0a0a0`               | Body and secondary text      |
-| `--landing-eyebrow`            | `#888`               | `#aaa`                  | Eyebrow / micro-label text   |
-| `--landing-card-border`        | `rgba(0,0,0,.08)`    | `rgba(255,255,255,.1)`  | Subtle dividers / card edges |
-| `--landing-card-border-strong` | `rgba(0,0,0,.25)`    | `rgba(255,255,255,.32)` | Defined card edges           |
-| `--landing-card-bg`            | `rgba(0,0,0,.02)`    | `rgba(255,255,255,.025)`| Faint card fill              |
+| Token                          | Light             | Dark                     | Use                          |
+| ------------------------------ | ----------------- | ------------------------ | ---------------------------- |
+| `--landing-muted`              | `#666`            | `#a0a0a0`                | Body and secondary text      |
+| `--landing-eyebrow`            | `#888`            | `#aaa`                   | Eyebrow / micro-label text   |
+| `--landing-card-border`        | `rgba(0,0,0,.08)` | `rgba(255,255,255,.1)`   | Subtle dividers / card edges |
+| `--landing-card-border-strong` | `rgba(0,0,0,.25)` | `rgba(255,255,255,.32)`  | Defined card edges           |
+| `--landing-card-bg`            | `rgba(0,0,0,.02)` | `rgba(255,255,255,.025)` | Faint card fill              |
 
 **Orange tints** (used directly, not yet tokens): the "popular / recommended /
 highlight" surfaces use `rgba(237, 103, 4, 0.04)` in light mode and
@@ -146,18 +148,18 @@ and dim text `#9ba4b0`, alerts `--brand-alert`.
 
 ### Typography scale
 
-| Role                | Spec                                                              | Where                          |
-| ------------------- | ---------------------------------------------------------------- | ------------------------------ |
-| Hero title          | Bulma `.title.is-1`                                               | landing hero `h1`              |
-| Section title       | Bulma `.title.is-1` (often `max-width: 900px`)                    | section `h2`                   |
-| Big block title     | `2rem`, weight 700, line-height 1.2 (to `2.5rem` at >= 769px)     | FAQ, Stewardship `h2`          |
-| Card title          | Bulma `.title.is-5`                                               | card / step `h3`               |
-| Subtitle / lede     | Bulma `.subtitle.is-4` or `.is-5`, color `--landing-muted`        | under section titles           |
-| **Eyebrow**         | `0.75`-`0.85rem`, weight 600-700, `letter-spacing: 0.14`-`0.15em`, uppercase, `line-height: 1`, color `--landing-eyebrow` | section labels |
-| Big stat number     | `2.25rem`, weight 600, monospace                                 | stat cards                     |
-| Price number        | `2.5rem`, weight 700, line-height 1                               | pricing cards                  |
-| Body                | line-height `1.5`-`1.6`, color `--landing-muted`                  | paragraphs                     |
-| Inline code chip    | `0.85`-`0.9em`, padding `~0.1em 0.35em`, radius `4px`, faint bg   | prose `code`                   |
+| Role             | Spec                                                                                                                      | Where                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| Hero title       | Bulma `.title.is-1`                                                                                                       | landing hero `h1`     |
+| Section title    | Bulma `.title.is-1` (often `max-width: 900px`)                                                                            | section `h2`          |
+| Big block title  | `2rem`, weight 700, line-height 1.2 (to `2.5rem` at >= 769px)                                                             | FAQ, Stewardship `h2` |
+| Card title       | Bulma `.title.is-5`                                                                                                       | card / step `h3`      |
+| Subtitle / lede  | Bulma `.subtitle.is-4` or `.is-5`, color `--landing-muted`                                                                | under section titles  |
+| **Eyebrow**      | `0.75`-`0.85rem`, weight 600-700, `letter-spacing: 0.14`-`0.15em`, uppercase, `line-height: 1`, color `--landing-eyebrow` | section labels        |
+| Big stat number  | `2.25rem`, weight 600, monospace                                                                                          | stat cards            |
+| Price number     | `2.5rem`, weight 700, line-height 1                                                                                       | pricing cards         |
+| Body             | line-height `1.5`-`1.6`, color `--landing-muted`                                                                          | paragraphs            |
+| Inline code chip | `0.85`-`0.9em`, padding `~0.1em 0.35em`, radius `4px`, faint bg                                                           | prose `code`          |
 
 Helper class: `.landing-eyebrow` (in `_landing.scss`) implements the eyebrow.
 Prefer it over re-declaring the styles.
@@ -167,12 +169,12 @@ Prefer it over re-declaring the styles.
 Section padding scales with the viewport. The canonical helper is
 `.landing-section`:
 
-| Breakpoint    | Padding (`.landing-section`) |
-| ------------- | ---------------------------- |
-| mobile        | `4rem 1.5rem`                |
-| >= 769px      | `5rem 2rem`                  |
-| >= 1024px     | `5rem 4rem`                  |
-| >= 1216px     | `5rem 6rem`                  |
+| Breakpoint | Padding (`.landing-section`) |
+| ---------- | ---------------------------- |
+| mobile     | `4rem 1.5rem`                |
+| >= 769px   | `5rem 2rem`                  |
+| >= 1024px  | `5rem 4rem`                  |
+| >= 1216px  | `5rem 6rem`                  |
 
 The site footer uses the same horizontal scale (`1.5` / `2` / `4` / `6rem`). The
 final call-to-action section is intentionally more generous (`6` / `7` / `8rem`
@@ -185,14 +187,14 @@ Center with `margin: 0 auto`.
 
 ### Border radius
 
-| Radius  | Applies to                                                  |
-| ------- | ----------------------------------------------------------- |
-| `4px`   | Code chips, small badges                                    |
-| `6px`   | Chart canvas                                                |
-| `8px`   | Buttons / CTAs, terminal card, spec highlight               |
-| `12px`  | Standard cards (problem, stat, deploy, testimonial, callout)|
-| `14px`  | Large cards (pricing, enterprise, stewardship)              |
-| `999px` | Pills / ribbons                                             |
+| Radius  | Applies to                                                   |
+| ------- | ------------------------------------------------------------ |
+| `4px`   | Code chips, small badges                                     |
+| `6px`   | Chart canvas                                                 |
+| `8px`   | Buttons / CTAs, terminal card, spec highlight                |
+| `12px`  | Standard cards (problem, stat, deploy, testimonial, callout) |
+| `14px`  | Large cards (pricing, enterprise, stewardship)               |
+| `999px` | Pills / ribbons                                              |
 
 ### Borders
 
@@ -456,16 +458,16 @@ extend the system so the rest of Bencher inherits one source of truth.
 Before shipping a new or restyled surface, confirm:
 
 - [ ] Colors come from tokens (`--brand-*`, `--landing-*`, `--bulma-*`), not new
-      hex literals.
+  hex literals.
 - [ ] It has a `[data-theme="dark"]` story (tokens used, or explicit dark
-      overrides via `:global([data-theme="dark"])`).
+  overrides via `:global([data-theme="dark"])`).
 - [ ] Sections follow eyebrow + title + muted-subtitle, with `.landing-section`
-      padding (or the documented scale).
+  padding (or the documented scale).
 - [ ] Cards use the radius scale (`12px` standard, `14px` large) and the
-      border-first (not shadow-heavy) style.
+  border-first (not shadow-heavy) style.
 - [ ] Orange is reserved for primary actions, the recommended choice, marks,
-      links, and hover. It is not a large background fill.
+  links, and hover. It is not a large background fill.
 - [ ] Numbers and code use the monospace stack; regressions read red, improvements
-      read green.
+  read green.
 - [ ] Motion uses the standard durations and honors `prefers-reduced-motion`.
 - [ ] No em dashes in any copy.

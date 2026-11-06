@@ -53,6 +53,7 @@ test.describe("a project's Maintainer", () => {
 		const secret = card(page).getByRole("status", {
 			name: "Your new project key",
 		});
+		// biome-ignore lint/performance/useDomNodeTextContent: the key is the rendered first line, which only innerText breaks off from the copy button after it
 		const key = (await secret.innerText()).split("\n")[0]?.trim() ?? "";
 		expect(key).toMatch(/^bencher_run_/);
 		await expect(

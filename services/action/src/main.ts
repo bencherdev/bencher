@@ -5,13 +5,13 @@ import { chmod } from "node:fs/promises";
 import spec from "../../api/openapi.json" with { type: "json" };
 
 const run = async () => {
-	const { bin, url, semVer } = getUrl();
+	const { url, semVer } = getUrl();
 	const toolPath = toolCache.find("bencher", semVer);
 	if (toolPath) {
 		core.addPath(toolPath);
 	} else {
 		core.info(`Downloading Bencher CLI v${semVer} from: ${url}`);
-		await install(bin, url, semVer);
+		await install(url, semVer);
 	}
 	core.info(`Bencher CLI v${semVer} installed!`);
 };
@@ -20,7 +20,7 @@ const getUrl = () => {
 	const semVer = getSemVer();
 	const bin = getBin(semVer);
 	const url = `https://github.com/bencherdev/bencher/releases/download/v${semVer}/${bin}`;
-	return { bin, url, semVer };
+	return { url, semVer };
 };
 
 const getSemVer = () => {
@@ -65,7 +65,7 @@ const getBin = (semVer: string) => {
 };
 
 const BENCHER_CLI = "bencher";
-const install = async (bin: string, url: string, semVer: string) => {
+const install = async (url: string, semVer: string) => {
 	const bencher = await toolCache.downloadTool(url);
 	await chmod(bencher, 0o755);
 	const cache = await toolCache.cacheFile(

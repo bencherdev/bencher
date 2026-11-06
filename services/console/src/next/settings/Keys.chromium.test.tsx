@@ -315,6 +315,7 @@ test("on a narrow screen, a key with no end reads Never expires", async () => {
 	});
 	dispose = mounted.dispose;
 	const row = mounted.root.querySelector<HTMLElement>("tbody tr");
+	// biome-ignore lint/performance/useDomNodeTextContent: the fold label shows only on a narrow screen, and innerText reads what the CSS shows
 	expect(row?.innerText).toContain("Never expires");
 });
 

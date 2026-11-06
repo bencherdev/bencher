@@ -5,11 +5,11 @@
 		// static assets, and standalone SVGs are not ours to lint or format.
 		"includes": [
 			"**",
-			"!**/.astro/**",
-			"!**/.wrangler/**",
-			"!**/dist/**",
-			"!**/public/**",
-			"!**/diagrams/output/**",
+			"!**/.astro",
+			"!**/.wrangler",
+			"!**/dist",
+			"!**/public",
+			"!**/diagrams/output",
 			"!**/test-results",
 			"!**/playwright-report",
 			"!**/*.svg"

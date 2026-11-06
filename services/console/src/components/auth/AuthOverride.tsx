@@ -14,7 +14,7 @@ const AuthOverride = (props: Props) => {
 			element.innerHTML = children.innerHTML;
 		}
 	}
-	return <></>;
+	return null;
 };
 
 export default AuthOverride;

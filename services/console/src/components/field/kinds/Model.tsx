@@ -429,9 +429,7 @@ const Model = (props: Props) => {
 			}
 
 			if (form?.[key]?.nullable && !value) {
-				// biome-ignore lint/style/noParameterAssign: TODO
 				value = null;
-				// biome-ignore lint/style/noParameterAssign: TODO
 				valid = true;
 			}
 
@@ -449,21 +447,19 @@ const Model = (props: Props) => {
 	};
 
 	return (
-		<>
-			<For each={fields()}>
-				{(field, _i) => (
-					<Field
-						kind={field?.kind}
-						label={form?.[field?.key]?.label}
-						fieldKey={field?.key}
-						value={form?.[field?.key]?.value}
-						valid={form?.[field?.key]?.valid}
-						config={field?.config}
-						handleField={handleField}
-					/>
-				)}
-			</For>
-		</>
+		<For each={fields()}>
+			{(field, _i) => (
+				<Field
+					kind={field?.kind}
+					label={form?.[field?.key]?.label}
+					fieldKey={field?.key}
+					value={form?.[field?.key]?.value}
+					valid={form?.[field?.key]?.valid}
+					config={field?.config}
+					handleField={handleField}
+				/>
+			)}
+		</For>
 	);
 };
 

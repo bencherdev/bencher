@@ -150,7 +150,6 @@ export function extractSearchParams(url: URL): Params {
 
 export function mergeSearchString(search: string, params: SetParams) {
 	const merged = new URLSearchParams(search);
-	// biome-ignore lint/complexity/noForEach: vendor solid-js
 	Object.entries(params).forEach(([key, value]) => {
 		if (value == null || value === "") {
 			merged.delete(key);

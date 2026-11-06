@@ -13,7 +13,7 @@ const Disclosure = (props: {
 		?.join("+")}`;
 	switch (lang) {
 		case Language.en:
-			return <></>;
+			return null;
 		case Language.de:
 			return <DisclosureDe page={page} />;
 		case Language.es:

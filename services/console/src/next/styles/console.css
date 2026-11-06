@@ -160,10 +160,6 @@
 .account-menu {
 	width: 288px;
 }
-.account-menu .ui-menu-item > .ui-icon {
-	color: var(--color-text-muted);
-	font-size: 16px;
-}
 .account-menu .end {
 	display: inline-flex;
 	align-items: center;
@@ -421,9 +417,6 @@
 	font-weight: var(--font-weight-medium);
 	white-space: nowrap;
 }
-.console .railseg a + a {
-	border-left: var(--border-width) solid var(--color-border);
-}
 .console .railseg a[aria-current="page"] {
 	background: var(--color-accent-muted);
 	color: var(--color-text-primary);
@@ -486,6 +479,9 @@
 }
 .console .crumb-line a:hover {
 	color: var(--color-text-primary);
+}
+.console .railseg a + a {
+	border-left: var(--border-width) solid var(--color-border);
 }
 /* A user's own name in an eyebrow keeps its case, so `main` and `MAIN` differ. */
 .as-typed {
@@ -619,6 +615,10 @@
 .notice > .ui-icon {
 	color: var(--color-text-muted);
 	font-size: 17px;
+}
+.account-menu .ui-menu-item > .ui-icon {
+	color: var(--color-text-muted);
+	font-size: 16px;
 }
 .set-status {
 	display: inline-flex;

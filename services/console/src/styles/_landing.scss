@@ -6,47 +6,48 @@
 // colors in its own scoped style block.
 
 :root {
-  --landing-muted: #666;
-  --landing-eyebrow: #888;
-  --landing-card-border: rgba(0, 0, 0, 0.08);
-  --landing-card-border-strong: rgba(0, 0, 0, 0.25);
-  --landing-card-bg: rgba(0, 0, 0, 0.02);
+	--landing-muted: #666;
+	--landing-eyebrow: #888;
+	--landing-card-border: rgba(0, 0, 0, 0.08);
+	--landing-card-border-strong: rgba(0, 0, 0, 0.25);
+	--landing-card-bg: rgba(0, 0, 0, 0.02);
 
-  // Brand / semantic colors used across landing components.
-  --brand-orange: #ed6704;
-  --brand-orange-hover: #d25a00;
-  --brand-alert: #ef4444;
-  --brand-success: #22c55e;
+	// Brand / semantic colors used across landing components.
+	--brand-orange: #ed6704;
+	--brand-orange-hover: #d25a00;
+	--brand-alert: #ef4444;
+	// biome-ignore lint/correctness/noUnknownUnit: a false positive, `#22c55e` is a hex color and not a number with a unit
+	--brand-success: #22c55e;
 }
 
 [data-theme="dark"] {
-  --landing-muted: #a0a0a0;
-  --landing-eyebrow: #aaa;
-  --landing-card-border: rgba(255, 255, 255, 0.1);
-  --landing-card-border-strong: rgba(255, 255, 255, 0.32);
-  --landing-card-bg: rgba(255, 255, 255, 0.025);
+	--landing-muted: #a0a0a0;
+	--landing-eyebrow: #aaa;
+	--landing-card-border: rgba(255, 255, 255, 0.1);
+	--landing-card-border-strong: rgba(255, 255, 255, 0.32);
+	--landing-card-bg: rgba(255, 255, 255, 0.025);
 }
 
 .landing-section {
-  padding: 4rem 1.5rem;
+	padding: 4rem 1.5rem;
 }
 
 @media screen and (min-width: 769px) {
-  .landing-section {
-    padding: 5rem 2rem;
-  }
+	.landing-section {
+		padding: 5rem 2rem;
+	}
 }
 
 @media screen and (min-width: 1024px) {
-  .landing-section {
-    padding: 5rem 4rem;
-  }
+	.landing-section {
+		padding: 5rem 4rem;
+	}
 }
 
 @media screen and (min-width: 1216px) {
-  .landing-section {
-    padding: 5rem 6rem;
-  }
+	.landing-section {
+		padding: 5rem 6rem;
+	}
 }
 
 // Cap the marketing sections on wide screens. 1344px total minus the 6rem
@@ -55,19 +56,19 @@
 .landing-section,
 .hero-landing,
 .cta-section {
-  max-width: 1344px;
-  margin-inline: auto;
+	max-width: 1344px;
+	margin-inline: auto;
 }
 
 .landing-eyebrow {
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: 0.15em;
-  color: var(--landing-eyebrow);
-  margin-bottom: 1.25rem;
-  line-height: 1;
+	font-size: 0.85rem;
+	font-weight: 600;
+	letter-spacing: 0.15em;
+	color: var(--landing-eyebrow);
+	margin-bottom: 1.25rem;
+	line-height: 1;
 }
 
 .landing-muted {
-  color: var(--landing-muted);
+	color: var(--landing-muted);
 }
