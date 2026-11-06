@@ -17,7 +17,7 @@
 	.ui-trunc[data-tail]::after {
 		content: attr(data-tail) / "";
 		flex: none;
-		max-width: calc(100% - 1.25em);
+		max-width: calc(100% - var(--size-ellipsis));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;

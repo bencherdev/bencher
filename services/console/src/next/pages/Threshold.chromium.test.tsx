@@ -1887,6 +1887,47 @@ test("at 320 px the title keeps the name floor", async () => {
 	);
 });
 
+// Kills a title that keeps its head more room than a title's ellipsis takes,
+// which cuts the branch's tail on a phone.
+test("at 390 px the title draws its branch's tail whole", async () => {
+	await page.viewport(390, 900);
+	const branch = `release/v0/2026/q4/team-platform${"/subsystem".repeat(22)}/leaf-0`;
+	const testbed = "0a1b2c3d".padEnd(64, "t");
+	const { api: answered } = fakeApi((url) =>
+		url.pathname.endsWith(
+			`/v0/console/projects/hashbrown/thresholds/${THRESHOLD}`,
+		)
+			? {
+					data: thresholdFixture({
+						branch: { uuid: "b", name: branch, slug: "b" },
+						testbed: { uuid: "t", name: testbed, slug: testbed },
+					}),
+				}
+			: new Promise<never>(() => {}),
+	);
+	mount(answered, client());
+	const title = page.getByRole("heading", { level: 1 });
+	const name = title.getByRole("button", { name: branch });
+	await expect.element(name).toHaveAttribute("data-tail", "leaf-0");
+	await document.fonts.ready;
+	const root = name.element() as HTMLElement;
+	const width = (text: string) => {
+		const probe = document.createElement("span");
+		probe.style.cssText = "position: absolute; white-space: nowrap";
+		probe.textContent = text;
+		root.after(probe);
+		const found = probe.getBoundingClientRect().width;
+		probe.remove();
+		return found;
+	};
+	expect(
+		Number.parseFloat(getComputedStyle(root, "::after").width),
+	).toBeGreaterThanOrEqual(width("leaf-0") - 0.5);
+	expect(
+		(root.firstElementChild as HTMLElement).getBoundingClientRect().width,
+	).toBeGreaterThanOrEqual(width("…"));
+});
+
 // Kills a readout on a row's alert that changes it outside its row, which
 // leaves the row, the counts, and the badge as they were, a readout that does
 // not link to the alert's page, and an alert row whose name links nowhere.

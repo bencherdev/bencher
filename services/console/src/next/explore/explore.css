@@ -423,7 +423,7 @@
 .ex-hold {
 	max-width: 100cqi;
 	height: 0;
-	padding-left: 1px;
+	padding-left: var(--size-ellipsis);
 	visibility: hidden;
 	white-space: nowrap;
 }

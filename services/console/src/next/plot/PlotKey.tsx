@@ -1,5 +1,5 @@
 import Tooltip from "@bencherdev/ui/Tooltip";
-import Truncate from "@bencherdev/ui/Truncate";
+import Truncate, { tailOf } from "@bencherdev/ui/Truncate";
 import { createSignal, For, Index, Show } from "solid-js";
 import type { LineName, LineNames } from "./key";
 import type { LineStyle } from "./series";
@@ -32,8 +32,35 @@ const plural = (count: number) => (count === 1 ? "line" : "lines");
 /** A rest this short never shrinks, so every entry keeps what tells it apart. */
 const FIXED_REST = 32;
 
-/** A line's name as parts of the label around it: its rest, whole when short unless `cut`, and the tags and details that give way first. */
-export const NameParts = (props: { name: LineName; cut?: boolean }) => (
+/** A part cut by its head; when `held`, its unseen copy keeps it at least as wide as the tail it draws. */
+const Part = (props: { class: string; text: string; held: boolean }) => {
+	const held = () => {
+		const [head, tail] = tailOf(props.text);
+		return props.held && head !== "" && tail !== "" ? tail : "";
+	};
+	return (
+		<Show
+			when={held()}
+			fallback={<Truncate class={props.class} text={props.text} tail />}
+		>
+			{(tail) => (
+				<span class={`pl-held ${props.class}`}>
+					<Truncate text={props.text} tail />
+					<span class="pl-hold" aria-hidden="true">
+						{tail()}
+					</span>
+				</span>
+			)}
+		</Show>
+	);
+};
+
+/** A line's name as parts of the label around it: its rest, whole when short unless `cut`, and the tags and details that give way first; `held` keeps each part's tail whole. */
+export const NameParts = (props: {
+	name: LineName;
+	cut?: boolean;
+	held?: boolean;
+}) => (
 	<>
 		<Show when={props.name.rest}>
 			{(rest) => (
@@ -45,7 +72,7 @@ export const NameParts = (props: { name: LineName; cut?: boolean }) => (
 						</span>
 					}
 				>
-					<Truncate class="pl-rest" text={rest()} tail />
+					<Part class="pl-rest" text={rest()} held={props.held === true} />
 				</Show>
 			)}
 		</Show>
@@ -61,7 +88,7 @@ export const NameParts = (props: { name: LineName; cut?: boolean }) => (
 			{(detail) => (
 				<>
 					{" "}
-					<Truncate class="pl-km" text={detail()} tail />
+					<Part class="pl-km" text={detail()} held={props.held === true} />
 				</>
 			)}
 		</Index>
@@ -135,7 +162,7 @@ export const PlotKey = (props: PlotKeyProps) => {
 								<Tooltip tip={hidden() ? "Show line" : "Hide line"}>
 									<button
 										type="button"
-										class="pl-ktog ui-parts"
+										class="pl-ktog"
 										aria-label={`${name().text}: ${hidden() ? "show" : "hide"} its line`}
 										onClick={() => props.onToggle(line)}
 									>
@@ -155,10 +182,11 @@ export const PlotKey = (props: PlotKeyProps) => {
 												/>
 											)}
 										</Show>
-										<NameParts name={name()} />
+										{/* Before the name, so a name too long for the entry clips only its own end. */}
 										<Show when={props.alerting(line)}>
 											<span class="pl-alertdot" aria-hidden="true" />
 										</Show>
+										<NameParts name={name()} held />
 									</button>
 								</Tooltip>
 								<Tooltip tip={target()}>

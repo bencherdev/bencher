@@ -10,7 +10,7 @@ import { middle, near, pixelAt, rowsOf, settle, tokenRgb } from "./pixels";
 import { returnSyncKey, takeSyncKey } from "./sync";
 import { expectNameStartsWithText, shownText } from "../ui/testing";
 import { DAY, START, testData, testLine } from "./testing";
-import type { PlotData } from "./types";
+import type { PlotData, PlotLine } from "./types";
 
 let dispose: (() => void) | undefined;
 
@@ -1579,12 +1579,251 @@ describe("Plot readout room", () => {
 		await settle();
 		await expect
 			.poll(() =>
-				[...document.querySelectorAll<HTMLElement>(".pl-ktog .pl-km")].map(
-					(detail) => detail.dataset.tail,
-				),
+				[
+					...document.querySelectorAll<HTMLElement>(
+						".pl-ktog .ui-trunc[data-tail]",
+					),
+				].map((detail) => detail.dataset.tail),
 			)
 			.toEqual(["very-long-leaf-000", "very-long-leaf-001"]);
 	});
+
+	/** The width a key part's tail takes drawn whole. */
+	const tailWidth = (part: HTMLElement) => {
+		const probe = document.createElement("span");
+		probe.style.cssText = `position: absolute; white-space: nowrap; font: ${getComputedStyle(part).font}`;
+		probe.textContent = part.dataset.tail ?? "";
+		document.body.append(probe);
+		const width = probe.getBoundingClientRect().width;
+		probe.remove();
+		return width;
+	};
+	const drawnTail = (part: HTMLElement) =>
+		Number.parseFloat(getComputedStyle(part, "::after").width);
+	const heldParts = () => [
+		...document.querySelectorAll<HTMLElement>(".pl-ktog .ui-trunc[data-tail]"),
+	];
+	/** Lines that differ in a Rust path and a slash branch at both ends. */
+	const longEnds = (extra: (at: number) => Partial<PlotLine> = () => ({})) =>
+		testData(
+			[0, 1, 2].map((at) =>
+				testLine({
+					id: `${at}`,
+					benchmark: `crate_${at}::${"module::".repeat(40)}bench_fn_${at}`,
+					branch: `release/v${at}/${"subsystem/".repeat(20)}leaf-${at}`,
+					y: [1, 2],
+					...extra(at),
+				}),
+			),
+		);
+
+	/** A key entry's content box, inside its padding. */
+	const contentOf = (entry: HTMLElement) => {
+		const box = entry.getBoundingClientRect();
+		const style = getComputedStyle(entry);
+		return {
+			left: box.left + Number.parseFloat(style.paddingLeft),
+			right: box.right - Number.parseFloat(style.paddingRight),
+		};
+	};
+
+	// Kills a key entry whose fair share leaves a part less room than its tail
+	// and its ellipsis, so lines that differ only at their ends read the same,
+	// and a held part drawn wider than its own place, over the part after it.
+	for (const width of [320, 768, 1024]) {
+		test(`at ${width} px every key part draws its tail whole`, async () => {
+			await page.viewport(width, 844);
+			const data = longEnds((at) => ({
+				metric: `metric_${at}`,
+				testbed: `testbed-${at}`.padEnd(64, "t"),
+			}));
+			mount({ data, focused: null }, width - 28);
+			await settle();
+			await expect.poll(() => heldParts().length).toBe(6);
+			for (const part of heldParts()) {
+				expect(drawnTail(part)).toBeGreaterThanOrEqual(tailWidth(part) - 0.5);
+				expect(part.getBoundingClientRect().right).toBeLessThanOrEqual(
+					(part.parentElement as Element).getBoundingClientRect().right + 0.5,
+				);
+			}
+			// The parts without a tail give way, so the entry holds them all, side by side.
+			for (const entry of document.querySelectorAll<HTMLElement>(
+				"button.pl-ktog",
+			)) {
+				let left = contentOf(entry).left;
+				for (const child of entry.children) {
+					const box = child.getBoundingClientRect();
+					expect(box.left).toBeGreaterThanOrEqual(left - 0.5);
+					left = box.right;
+				}
+				expect(left).toBeLessThanOrEqual(contentOf(entry).right + 0.5);
+			}
+		});
+	}
+
+	// Kills a key entry whose held parts take their tails and their share too,
+	// leaving the parts beside them less than an ellipsis.
+	test("at 320 px a key detail beside held parts keeps more than an ellipsis", async () => {
+		await page.viewport(320, 844);
+		const data = longEnds((at) => ({
+			metric: `metric_${at}`.padEnd(64, "m"),
+			testbed: `testbed-${at}`.padEnd(64, "t"),
+		}));
+		mount({ data, focused: null }, 292);
+		await settle();
+		await expect.poll(() => heldParts().length).toBe(6);
+		const details = [
+			...document.querySelectorAll<HTMLElement>(
+				"button.pl-ktog > .pl-km.ui-trunc",
+			),
+		];
+		expect(details).toHaveLength(6);
+		for (const detail of details) {
+			const probe = document.createElement("span");
+			probe.style.cssText = `position: absolute; white-space: nowrap; font: ${getComputedStyle(detail).font}`;
+			probe.textContent = "…";
+			document.body.append(probe);
+			const ellipsis = probe.getBoundingClientRect().width;
+			probe.remove();
+			expect(detail.getBoundingClientRect().width).toBeGreaterThan(ellipsis);
+		}
+	});
+
+	// Kills a held part wider than its entry, which clips its tail with no
+	// ellipsis, beside the swatch alone and beside an ordinal and an alert dot,
+	// in that order, and a swatch or ordinal that gives way when the entry
+	// overflows.
+	test("at 320 px a tail wider than its key entry ends in an ellipsis inside it", async () => {
+		await page.viewport(320, 844);
+		const long = "bench_serialize_large_payload_with_compression";
+		const data = testData(
+			Array.from({ length: 34 }, (_, at) =>
+				testLine({
+					id: `${at}`,
+					benchmark: `crate_${at}::${"module::".repeat(40)}${at === 0 || at === 33 ? long : "bench_fn"}_${at}`,
+					testbed:
+						at === 33 ? `pool/${"rack/".repeat(10)}runner-33` : "localhost",
+					alerting: at === 33,
+					y: [1, 2],
+				}),
+			),
+		);
+		mount({ data, focused: null }, 292);
+		await settle();
+		const entries = [
+			...document.querySelectorAll<HTMLElement>("button.pl-ktog"),
+		].filter((entry) => entry.textContent?.includes(long));
+		expect(entries).toHaveLength(2);
+		const [ordinal, plain] = entries as [HTMLElement, HTMLElement];
+		expect(
+			[...ordinal.children]
+				.slice(0, 3)
+				.map((child) => child.getAttribute("class")?.split(" ")[0]),
+		).toEqual(["pl-sw", "pl-ord", "pl-alertdot"]);
+		// Its held testbed overflows the entry, and the swatch and ordinal stay whole.
+		expect(
+			ordinal.querySelector(":scope > svg")?.getBoundingClientRect().width,
+		).toBe(24);
+		expect(
+			ordinal.querySelector(":scope > .pl-ord")?.getBoundingClientRect().width,
+		).toBe(14);
+		for (const entry of [plain, ordinal]) {
+			const part = entry.querySelector<HTMLElement>(".ui-trunc[data-tail]");
+			expect(part?.dataset.tail).toMatch(new RegExp(`^${long}_\\d+$`));
+			expect(drawnTail(part as HTMLElement)).toBeLessThan(
+				tailWidth(part as HTMLElement),
+			);
+			expect(part?.getBoundingClientRect().right).toBeLessThanOrEqual(
+				contentOf(entry).right + 0.5,
+			);
+		}
+	});
+
+	// Kills a short key part stretched past its text where the entry has room.
+	test("at 1440 px a short key part is as wide as its text", async () => {
+		await page.viewport(1440, 900);
+		const data = testData([
+			testLine({ id: "one", benchmark: "hash", y: [1, 2] }),
+			testLine({ id: "two", benchmark: "hash", testbed: "macos", y: [2, 3] }),
+		]);
+		mount({ data, focused: null }, 1412);
+		await settle();
+		const details = [
+			...document.querySelectorAll<HTMLElement>(
+				"button.pl-ktog > .pl-km.ui-trunc",
+			),
+		];
+		expect(details.map((detail) => detail.textContent)).toEqual([
+			"linux",
+			"macos",
+		]);
+		for (const detail of details) {
+			const text = document.createRange();
+			text.selectNodeContents(detail);
+			expect(detail.getBoundingClientRect().width).toBeCloseTo(
+				text.getBoundingClientRect().width,
+				0,
+			);
+		}
+	});
+
+	// Kills a swatch that gives way to the parts held at their tails, so a
+	// tight key entry no longer shows which line it toggles.
+	test("a key entry with just room for its tails keeps its swatch whole", async () => {
+		await page.viewport(320, 844);
+		const { root } = mount({ data: longEnds(), focused: null }, 292);
+		await settle();
+		await expect.poll(() => heldParts().length).toBe(6);
+		const entry = heldParts()[0]?.closest(".pl-ktog") as HTMLElement;
+		const style = getComputedStyle(entry);
+		const parts = [...entry.querySelectorAll<HTMLElement>(".pl-held")];
+		const floors = parts.reduce(
+			(sum, part) =>
+				sum +
+				tailWidth(part.firstElementChild as HTMLElement) +
+				Number.parseFloat(
+					getComputedStyle(part.lastElementChild as Element).paddingLeft,
+				),
+			0,
+		);
+		// The swatch's 24 px, its 2 px margin, a gap beside each part, and 10 px to spare.
+		const room =
+			floors + 26 + parts.length * Number.parseFloat(style.columnGap) + 10;
+		const content =
+			entry.clientWidth -
+			Number.parseFloat(style.paddingLeft) -
+			Number.parseFloat(style.paddingRight);
+		root.style.width = `${292 - (content - room)}px`;
+		await settle();
+		expect(entry.querySelector("svg")?.getBoundingClientRect().width).toBe(24);
+		for (const part of heldParts()) {
+			expect(drawnTail(part)).toBeGreaterThanOrEqual(tailWidth(part) - 0.5);
+		}
+	});
+
+	// Kills an alert dot drawn after the name, which a name held past the
+	// entry's end pushes out of sight.
+	for (const tail of [
+		"bench_serialize_json",
+		"bench_serialize_large_payload_with_compression",
+	]) {
+		test(`an alerting key entry keeps its dot whole beside a ${`${tail}_0`.length} character tail`, async () => {
+			await page.viewport(320, 844);
+			const data = longEnds((at) => ({
+				benchmark: `crate_${at}::${"module::".repeat(40)}${tail}_${at}`,
+				alerting: at === 0,
+			}));
+			mount({ data, focused: null }, 292);
+			await settle();
+			await expect.poll(() => heldParts().length).toBe(6);
+			const dot = document.querySelector(".pl-ktog .pl-alertdot") as Element;
+			const content = contentOf(dot.closest(".pl-ktog") as HTMLElement);
+			const { left, right, width } = dot.getBoundingClientRect();
+			expect(width).toBe(8);
+			expect(left).toBeGreaterThanOrEqual(content.left);
+			expect(right).toBeLessThanOrEqual(content.right);
+		});
+	}
 
 	// Kills the readout's whole report hash, which widens an alert page's pinned
 	// readout on a phone over the alert's own marker at the plot's newest point.

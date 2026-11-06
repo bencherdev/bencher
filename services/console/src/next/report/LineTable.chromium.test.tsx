@@ -778,9 +778,10 @@ const textWidth = (element: Element, text: string) => {
 };
 
 // Kills tags that each take a track of their own, or a name that gives way
-// before its tags, which cuts an alerting row's tail until every row reads the
-// same; a pill that cuts its value before its key; and, where the line has
-// room, a first tag that shows no text.
+// before its tags or is held short of its tail and its ellipsis, which cuts an
+// alerting row's tail until every row reads the same; a pill that cuts its
+// value before its key; and, where the line has room, a first tag that shows
+// no text.
 for (const [width, table] of [
 	[1440, 1392],
 	[1024, 976],
@@ -807,9 +808,9 @@ for (const [width, table] of [
 		)) {
 			const tail = name.dataset.tail ?? "";
 			expect(tail).toMatch(/^bench_fn_name_000[1-4]$/);
-			expect(name.getBoundingClientRect().width).toBeGreaterThan(
-				textWidth(name, tail),
-			);
+			expect(
+				Number.parseFloat(getComputedStyle(name, "::after").width),
+			).toBeGreaterThanOrEqual(textWidth(name, tail) - 0.5);
 		}
 		for (const tag of document.querySelectorAll<HTMLElement>(
 			".lr-tags .lr-ptag",

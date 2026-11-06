@@ -40,8 +40,26 @@
 	white-space: nowrap;
 }
 .pu-k {
+	min-width: 0;
+	overflow: hidden;
 	font-family: var(--font-family-code);
 	font-size: 10.5px;
+	text-overflow: ellipsis;
+}
+/* A value takes what its label leaves; the label gives way only once the value is down to its tail, which its unseen copy holds. */
+.pu-held {
+	display: inline-grid;
+	flex: 1 1 0;
+}
+.pu-hold {
+	height: 0;
+	padding-left: var(--size-ellipsis);
+	visibility: hidden;
+}
+/* A pill holding a tail keeps it from the other pills, and a tail too long for its column clips at its end. */
+.pu-pill:has(.pu-hold) {
+	min-width: auto;
+	overflow: clip;
 }
 .pu-sumskel {
 	width: 320px;
@@ -95,6 +113,16 @@
 	}
 	.pu-lockcard {
 		padding: 18px;
+	}
+}
+/* On one line the pills grow from nothing to their whole width in equal steps, so a pill holding a tail takes the larger of its tail and its share. */
+@media (min-width: 768px) {
+	.pu-sum {
+		display: flex;
+	}
+	.pu-sum > .pu-pill {
+		flex: 1 1 0;
+		max-width: max-content;
 	}
 }
 .pu-setup {

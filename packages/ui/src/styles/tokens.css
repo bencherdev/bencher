@@ -29,6 +29,9 @@
 		/* The width of the longest number the console prints, twelve characters. */
 		--size-number: 12ch;
 
+		/* The room a cut head keeps for one whole ellipsis, the widest in any weight or letter-spacing; unregistered, so `em` is the font where it is used. */
+		--size-ellipsis: 1.25em;
+
 		/* Shape. Concentric by construction: inner < element < container. */
 		--radius-inner: 6px;
 		--radius-element: 8px;

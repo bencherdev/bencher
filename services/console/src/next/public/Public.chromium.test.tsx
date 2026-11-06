@@ -447,6 +447,98 @@ for (const width of [1280, 390] as const) {
 	});
 }
 
+// Kills a summary whose benchmark pill keeps its label whole and cuts the
+// tail that tells the benchmark apart, or draws the tail past the pill, and
+// one that cuts a label while the line has room for every label.
+for (const width of [1440, 1024, 768, 390] as const) {
+	test(`the benchmark's summary pill draws its tail whole beside long parameters at ${width} px`, async () => {
+		await page.viewport(width, 900);
+		const sets = [
+			Object.fromEntries(
+				Array.from({ length: 7 }, (_, key) => [
+					`k${key}_`.padEnd(64, "k"),
+					`v${key}_`.padEnd(64, "v"),
+				]),
+			),
+		];
+		show({
+			query: { ...QUERY, sets },
+			answer: {
+				...PERF,
+				benchmarks: [
+					{
+						uuid: uuid(5),
+						name: `${"my_crate::".repeat(98)}bench_fn_64`,
+						slug: "b",
+					},
+				],
+			},
+		});
+		await expect
+			.element(region().getByText("Query", { exact: true }))
+			.toBeVisible();
+		await document.fonts.ready;
+		const pill = region().element().querySelectorAll(".pu-pill")[2];
+		const value = pill?.querySelector(".ui-trunc") as HTMLElement;
+		await expect.element(value).toHaveAttribute("data-tail", "bench_fn_64");
+		const probe = document.createElement("span");
+		probe.style.cssText = `position: absolute; white-space: nowrap; font: ${getComputedStyle(value).font}`;
+		probe.textContent = "bench_fn_64";
+		document.body.append(probe);
+		const tail = probe.getBoundingClientRect().width;
+		probe.remove();
+		expect(
+			Number.parseFloat(getComputedStyle(value, "::after").width),
+		).toBeGreaterThanOrEqual(tail - 0.5);
+		const box = (pill as HTMLElement).getBoundingClientRect();
+		const style = getComputedStyle(pill as HTMLElement);
+		expect(value.getBoundingClientRect().right).toBeLessThanOrEqual(
+			box.right -
+				Number.parseFloat(style.paddingRight) -
+				Number.parseFloat(style.borderRightWidth) +
+				0.5,
+		);
+		if (width >= 1024) {
+			const textWidth = (element: Element) => {
+				const text = document.createRange();
+				text.selectNodeContents(element);
+				return text.getBoundingClientRect().width;
+			};
+			const whole = (element: Element) =>
+				textWidth(element) <= element.getBoundingClientRect().width + 0.01;
+			for (const label of region().element().querySelectorAll(".pu-k")) {
+				expect(whole(label), `${label.textContent} at ${width}`).toBe(true);
+				// The shortest values take their whole width beside the benchmark's tail.
+				if (["branches", "testbeds"].includes(label.textContent ?? "")) {
+					const shown = label.parentElement?.querySelector(
+						".ui-trunc > span",
+					) as Element;
+					expect(
+						whole(shown),
+						`${label.textContent} value at ${width}`,
+					).toBe(true);
+					// Where the line has room, the pill is no wider than what it holds.
+					if (width === 1440) {
+						const short = label.parentElement as HTMLElement;
+						const style = getComputedStyle(short);
+						const edges = [
+							style.paddingLeft,
+							style.paddingRight,
+							style.borderLeftWidth,
+							style.borderRightWidth,
+							style.columnGap,
+						].reduce((sum, edge) => sum + Number.parseFloat(edge), 0);
+						expect(short.getBoundingClientRect().width).toBeCloseTo(
+							edges + textWidth(label) + textWidth(shown),
+							0,
+						);
+					}
+				}
+			}
+		}
+	});
+}
+
 // Kills a public page whose set tags draw unstyled, as text with no pill, and
 // a long tag cut there with no way to read it.
 test("a set's tag on the public page is a code pill whose long key opens in place", async () => {

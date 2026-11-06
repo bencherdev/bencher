@@ -912,7 +912,9 @@ for (const width of [1024, 390, 320] as const) {
 			document.body.append(probe);
 			const tail = probe.getBoundingClientRect().width;
 			probe.remove();
-			expect(name.getBoundingClientRect().width).toBeGreaterThanOrEqual(tail);
+			expect(
+				Number.parseFloat(getComputedStyle(name, "::after").width),
+			).toBeGreaterThanOrEqual(tail - 0.5);
 			// The measure comes before the tags, which give way after it.
 			const measure = line?.querySelector(
 				".ex-stags > .ui-trunc",
@@ -987,7 +989,7 @@ test("an alerting row's tail wider than its line ellipsizes inside it at 320 px"
 });
 
 // Kills an alert row whose long benchmark keeps more than its tail while its
-// measure, beside one short tag, ellipsizes.
+// measure, beside one short tag, ellipsizes, or draws less than its tail.
 for (const width of [1024, 390, 320] as const) {
 	test(`a long benchmark gives up its head before the measure beside a short tag at ${width} px`, async () => {
 		await page.viewport(width, 844);
@@ -1029,7 +1031,9 @@ for (const width of [1024, 390, 320] as const) {
 		document.body.append(probe);
 		const tail = probe.getBoundingClientRect().width;
 		probe.remove();
-		expect(name.getBoundingClientRect().width).toBeGreaterThanOrEqual(tail);
+		expect(
+			Number.parseFloat(getComputedStyle(name, "::after").width),
+		).toBeGreaterThanOrEqual(tail - 0.5);
 		dispose();
 		dispose = undefined;
 	});
