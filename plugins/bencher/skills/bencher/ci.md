@@ -1,7 +1,11 @@
 # CI Integration
 
 In CI, set `BENCHER_API_KEY` to a **project** API key (`bencher_run_*`) for least
-privilege. Create one in the Console and store it as a CI secret.
+privilege. Create one in the Console, store it as a CI secret, and have the job set
+`BENCHER_API_KEY` from that secret in its environment rather than passing `--key`.
+In the GitHub Actions examples, `<token>` stands for the workflow's `GITHUB_TOKEN`,
+which the step passes to `--github-actions` through its `env:`.
+See https://bencher.dev/docs/how-to/github-actions/ for the full workflow.
 
 ## GitHub Actions (Native)
 
@@ -22,8 +26,6 @@ as PR comments.
       --threshold-upper-boundary 0.99 \
       --error-on-alert \
       "cargo bench"
-  env:
-    BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
 ```
 
 ### Pull Request (runs on PR)
@@ -54,12 +56,10 @@ benchmark_pr:
           --start-point-reset \
           --testbed github-actions \
           --error-on-alert \
-          --github-actions "$GITHUB_TOKEN" \
+          --github-actions <token> \
           "cargo bench"
       env:
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 ```
 
@@ -67,7 +67,7 @@ benchmark_pr:
 
 | Flag | Purpose |
 |------|---------|
-| `--github-actions <token>` | Enable PR comments (pass `secrets.GITHUB_TOKEN` through `env:`) |
+| `--github-actions <token>` | Enable PR comments (`<token>` is the workflow's `GITHUB_TOKEN`, passed through the step's `env:`) |
 | `--ci-only-thresholds` | Only post if a threshold exists for the branch/testbed/measure |
 | `--ci-only-on-alert` | Only post when an alert is generated |
 | `--ci-public-links` | Use public URLs (no login required to view) |
@@ -102,10 +102,8 @@ submit_pr_benchmarks:
           --hash "$HEAD_SHA" \
           --image my-bench:latest \
           --detach \
-          --github-actions "$GITHUB_TOKEN"
+          --github-actions <token>
       env:
-        BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 ```
 
@@ -122,11 +120,9 @@ attach_pr_benchmarks:
         bencher run \
           --project my-project \
           --job "$JOB_UUID" \
-          --github-actions "$GITHUB_TOKEN" \
+          --github-actions <token> \
           --error-on-alert
       env:
-        BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         JOB_UUID: ${{ github.event.client_payload.bencher.job }}
 ```
 
@@ -148,6 +144,7 @@ Without a key, it is a public `unclaimed` project that anyone can view and post 
 ## GitLab CI/CD
 
 GitLab uses `--format html` to capture a report, then posts it as an MR note.
+See https://bencher.dev/docs/how-to/gitlab-ci-cd/ for the full benchmark jobs.
 
 ### Target Branch Job
 
@@ -198,29 +195,19 @@ benchmark_mr:
     when: always
     paths:
       - report.html
-
-post_mr_report:
-  stage: report
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: always
-  dependencies:
-    - benchmark_mr
-  environment:
-    name: mr-report
-    action: prepare
-  variables:
-    GIT_STRATEGY: none
-  script:
-    - '[ -s report.html ] || exit 0'
-    - |
-      curl --fail --request POST \
-        --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" \
-        --data-urlencode "body@report.html" \
-        "https://gitlab.com/api/v4/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes"
 ```
 
-`$GITLAB_ACCESS_TOKEN` is a project access token with the `api` scope, stored as a
+Post it from a `post_mr_report` job in the `report` stage that runs on
+`merge_request_event` with `when: always`, takes `report.html` from `benchmark_mr`
+through `dependencies:`, sets `GIT_STRATEGY: none` so it never checks out the MR,
+and runs in the `mr-report` environment with `action: prepare`. It exits early when
+`report.html` is missing or empty, and otherwise POSTs `report.html` as the note body
+to the merge request notes endpoint,
+`/api/v4/projects/<project id>/merge_requests/<MR iid>/notes` (`CI_PROJECT_ID` and
+`CI_MERGE_REQUEST_IID`, under `CI_API_V4_URL`), with a `PRIVATE-TOKEN` header
+carrying `GITLAB_ACCESS_TOKEN`, and fails the job on an HTTP error.
+
+`GITLAB_ACCESS_TOKEN` is a project access token with the `api` scope, stored as a
 masked CI/CD variable scoped to the `mr-report` environment, so the job that runs
 MR code does not receive it. The built-in `CI_JOB_TOKEN` cannot post MR notes.
 
@@ -250,7 +237,7 @@ When benchmarking a PR/MR branch:
 
 - `--start-point-clone-thresholds`: Copy threshold configuration from the base branch
 - `--start-point-reset`: Reset the branch head so only PR data is included
-- `--start-point-idempotency-key`: Share one reset branch head between the parallel jobs of one CI run. GitHub Actions sets it to the workflow run attempt. Elsewhere, use a pipeline ID (ex: `BENCHER_START_POINT_IDEMPOTENCY_KEY="$CI_PIPELINE_ID"`)
+- `--start-point-idempotency-key`: Share one reset branch head between the parallel jobs of one CI run. GitHub Actions sets it to the workflow run attempt. Elsewhere, use a pipeline ID (ex: `--start-point-idempotency-key "$CI_PIPELINE_ID"`)
 
 ## Branch Cleanup
 

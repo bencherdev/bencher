@@ -42,34 +42,14 @@ There are three ways to call it:
   signs in and approves the app. The agent never handles a key. A self-hosted
   server offers this only once its `plus.oauth` config section is set.
 - **API key**: the same `Authorization: Bearer` credentials as the REST API, a
-  project API key (`bencher_run_*`) or a user API key (`bencher_user_*`).
+  project API key (`bencher_run_*`) or a user API key (`bencher_user_*`). Set the
+  header in the client's own config; see https://bencher.dev/docs/how-to/mcp/.
 - **Anonymous**: public projects can be read without any credential.
 
 Claude Code without the connector, signing in with OAuth (run `/mcp` in
 Claude Code to sign in when a tool asks):
 ```bash
 claude mcp add --transport http bencher https://mcp.bencher.dev/mcp
-```
-
-Claude Code with an API key:
-```bash
-claude mcp add --transport http bencher https://mcp.bencher.dev/mcp \
-  --header "Authorization: Bearer $BENCHER_API_KEY"
-```
-
-Generic MCP client configuration with an API key:
-```json
-{
-  "mcpServers": {
-    "bencher": {
-      "type": "http",
-      "url": "https://mcp.bencher.dev/mcp",
-      "headers": {
-        "Authorization": "Bearer ${BENCHER_API_KEY}"
-      }
-    }
-  }
-}
 ```
 
 ## OAuth

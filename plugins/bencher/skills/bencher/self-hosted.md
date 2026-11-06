@@ -64,16 +64,10 @@ bencher down console
 
 ### Environment Variables
 
-Pass environment variables to containers. The API server is configured via
-`BENCHER_CONFIG` (a JSON string) or `BENCHER_CONFIG_PATH` (a path to a JSON
-file inside the container), not individual settings variables. The config holds
-secrets, so create `bencher.json` and mount it rather than passing its contents:
-```bash
-bencher up \
-  --api-volume "$PWD/bencher.json:/etc/bencher/bencher.json" \
-  --api-env BENCHER_CONFIG_PATH=/etc/bencher/bencher.json
-```
-
+Pass environment variables to containers. The API server is configured by a JSON
+config file, not individual settings variables. Write the config file, mount it
+into the container with `--api-volume`, and point `BENCHER_CONFIG_PATH` at its
+path inside the container with `--api-env`.
 See https://bencher.dev/docs/reference/server-config/ for the config JSON schema.
 
 ### Volumes
