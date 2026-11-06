@@ -17,11 +17,13 @@ use bencher_api_tests::{
     },
 };
 use bencher_json::{
-    BenchmarkName, BenchmarkUuid, BoundaryUuid, HeadUuid, JsonProjectKeyCreated, JsonReport,
-    JsonReports, MAX_PARAMETER_KEYS, MeasureUuid, MetricName, MetricUuid, ModelUuid, ParameterSet,
-    ProjectKeyUuid, ReportBenchmarkUuid, ReportUuid, Slug, ThresholdUuid, UserUuid, VersionUuid,
+    BenchmarkName, BenchmarkUuid, BmfVersion, BoundaryUuid, HeadUuid, JsonProjectKeyCreated,
+    JsonReport, JsonReports, MAX_PARAMETER_KEYS, MeasureUuid, MetricName, MetricUuid, ModelUuid,
+    ParameterSet, ProjectKeyUuid, ReportBenchmarkUuid, ReportUuid, Slug, ThresholdUuid, UserUuid,
+    VersionUuid,
     project::report::{
-        JsonReportIterationCounts, JsonReportWarning, ReportWarningAction, ReportWarningResource,
+        Adapter, JsonReportIterationCounts, JsonReportWarning, ParseOutcome, ReportWarningAction,
+        ReportWarningResource,
     },
 };
 #[cfg(feature = "plus")]
@@ -949,13 +951,13 @@ async fn try_post_v1_report(
     .await
 }
 
-/// A report that names ten metrics on one measure, two past the per measure cap of eight.
+/// A report that names eighteen metrics on one measure, two past the per measure cap of sixteen.
 async fn post_report_past_the_metric_cap(
     server: &TestServer,
     token: &str,
     project_slug: &str,
 ) -> JsonReport {
-    let names = (1..=10)
+    let names = (1..=18)
         .map(|n| (format!("p{n}"), serde_json::json!(n)))
         .collect::<serde_json::Map<_, _>>();
     let body = post_v1_report(
@@ -1018,8 +1020,8 @@ async fn reports_post_over_the_license_keeps_its_warnings() {
         .expect("Failed to make the project private");
     let project_slug: &str = project.slug.as_ref();
 
-    // Two measured values pass the license of one, and two names pass the cap of eight.
-    let mut latency = (1..=9)
+    // Two measured values pass the license of one, and two names pass the cap of sixteen.
+    let mut latency = (1..=17)
         .map(|n| (format!("p{n}"), serde_json::json!(n)))
         .collect::<serde_json::Map<_, _>>();
     latency.insert("value".to_owned(), serde_json::json!(1.0));
@@ -1916,4 +1918,172 @@ fn creator(report: &JsonReport) -> (Option<UserUuid>, Option<(ProjectKeyUuid, St
             .as_ref()
             .map(|key| (key.uuid, key.name.as_ref().to_owned())),
     )
+}
+
+const BMF_V1: &str = r#"{"bench_one": [{"measures": {"latency": {"median": 100.0}}}]}"#;
+
+/// A report of `results` declared at `bmf_version`, or at the project's when `None`.
+fn parse_report(adapter: &str, results: &[&str], bmf_version: Option<u8>) -> serde_json::Value {
+    let mut report = serde_json::json!({
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": results,
+        "settings": { "adapter": adapter },
+    });
+    if let Some(bmf_version) = bmf_version
+        && let Some(object) = report.as_object_mut()
+    {
+        object.insert("bmf_version".to_owned(), bmf_version.into());
+    }
+    report
+}
+
+type Parse = (Option<BmfVersion>, Option<Adapter>, Option<ParseOutcome>);
+
+fn parse_of(report: &JsonReport) -> (Option<BmfVersion>, Option<ParseOutcome>) {
+    (report.bmf_version, report.parse_outcome)
+}
+
+/// The parse the newest report of the project recorded.
+fn stored_parse(server: &TestServer, project_slug: &str) -> Parse {
+    let project_id = get_project_id(server, project_slug);
+    schema::report::table
+        .filter(schema::report::project_id.eq(project_id))
+        .order(schema::report::id.desc())
+        .select((
+            schema::report::bmf_version,
+            schema::report::resolved_adapter,
+            schema::report::parse_outcome,
+        ))
+        .first(&mut server.db_conn())
+        .expect("Failed to read the report")
+}
+
+// POST /v0/projects/{project}/reports - a report records the BMF version it was read at, the leaf a
+// version 1 report resolved to, and how its results parsed; its response and its read carry the
+// version and the outcome
+//
+// Kills: a version taken from anything but the declared one, else the project's; a version 0
+// report that records a leaf; a version 1 report through `magic` or `json` that records none; an
+// outcome that calls results with no metric parsed; and a response that leaves out the stored
+// version or outcome.
+#[tokio::test]
+async fn reports_post_records_the_parse() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "parse").await;
+    let parsed_v0 = (Some(BmfVersion::V0), None, Some(ParseOutcome::Parsed));
+    let parsed_v1 = (
+        Some(BmfVersion::V1),
+        Some(Adapter::JsonV1),
+        Some(ParseOutcome::Parsed),
+    );
+    let empty_v0 = (Some(BmfVersion::V0), None, Some(ParseOutcome::Empty));
+    let empty_v1 = (
+        Some(BmfVersion::V1),
+        Some(Adapter::JsonV1),
+        Some(ParseOutcome::Empty),
+    );
+    for (adapter, results, bmf_version, expected) in [
+        ("magic", vec![BMF_V0], None, parsed_v0),
+        ("rust_bench", vec![RUST_BENCH], Some(0), parsed_v0),
+        ("magic", vec![RUST_BENCH, BMF_V0], Some(0), parsed_v0),
+        ("magic", vec![BMF_V1], Some(1), parsed_v1),
+        ("json", vec![BMF_V1, BMF_V1], Some(1), parsed_v1),
+        ("json_v1", vec![BMF_V1], Some(1), parsed_v1),
+        ("magic", vec![], None, empty_v0),
+        ("json", vec!["{}"], Some(0), empty_v0),
+        ("json", vec![r#"{"bench_one": {}}"#], Some(0), empty_v0),
+        ("magic", vec!["{}"], Some(1), empty_v1),
+        (
+            "json",
+            vec![r#"{"bench_one": [{"measures": {}}]}"#],
+            Some(1),
+            empty_v1,
+        ),
+        (
+            "json",
+            vec![r#"{"bench_one": [{"measures": {"latency": {}}}]}"#],
+            Some(1),
+            empty_v1,
+        ),
+    ] {
+        let case = format!("{adapter} {results:?} at {bmf_version:?}");
+        let report = post_report_body(
+            &server,
+            &token,
+            &project_slug,
+            &parse_report(adapter, &results, bmf_version),
+        )
+        .await;
+        let (version, _, outcome) = expected;
+        assert_eq!(parse_of(&report), (version, outcome), "{case}");
+        assert_eq!(stored_parse(&server, &project_slug), expected, "{case}");
+        let read = get_report(&server, &token, &project_slug, report.uuid).await;
+        assert_eq!(parse_of(&read), (version, outcome), "{case}");
+    }
+}
+
+// POST /v0/projects/{project}/reports - results that fail to parse are refused as they always
+// were, and the report they leave behind records the failure
+//
+// Kills: a failed parse that records nothing, records the outcome of the iterations that did
+// parse, or records a leaf.
+#[tokio::test]
+async fn reports_post_records_a_failed_parse() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "parsefail").await;
+    let failed_v0 = (Some(BmfVersion::V0), None, Some(ParseOutcome::Failed));
+    let failed_v1 = (Some(BmfVersion::V1), None, Some(ParseOutcome::Failed));
+    for (adapter, results, bmf_version, expected) in [
+        ("magic", vec!["not benchmark output"], Some(0), failed_v0),
+        (
+            "magic",
+            vec![BMF_V0, "not benchmark output"],
+            Some(0),
+            failed_v0,
+        ),
+        (
+            "magic",
+            vec![BMF_V1, "not benchmark output"],
+            Some(1),
+            failed_v1,
+        ),
+        ("rust_bench", vec![BMF_V0], None, failed_v0),
+        ("magic", vec![BMF_V0], Some(1), failed_v1),
+    ] {
+        let case = format!("{adapter} {results:?} at {bmf_version:?}");
+        let (status, body) = try_post_ingest(
+            &server,
+            &token,
+            &project_slug,
+            &parse_report(adapter, &results, bmf_version),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{case}: {body}");
+        assert_eq!(stored_parse(&server, &project_slug), expected, "{case}");
+    }
+}
+
+async fn get_report(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    report_uuid: ReportUuid,
+) -> JsonReport {
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/projects/{project_slug}/reports/{report_uuid}"
+        )))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    resp.json().await.expect("Failed to parse the report")
 }

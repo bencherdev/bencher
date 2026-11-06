@@ -2,7 +2,10 @@ use std::collections::{BTreeMap, HashMap};
 
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BmfVersion, JsonNewMetric, ParameterSet,
-    project::measure::built_in::{self, BuiltInMeasure as _},
+    project::{
+        measure::built_in::{self, BuiltInMeasure as _},
+        report::Adapter,
+    },
 };
 
 use super::{
@@ -20,6 +23,8 @@ pub struct AdapterResults {
     /// The BMF version these results were parsed from.
     /// Fold is a v0 only operation, so this is what gates it.
     pub version: BmfVersion,
+    /// The leaf adapter that parsed these results, which only a version 1 leaf records.
+    pub resolved_adapter: Option<Adapter>,
     /// What the adapter skipped instead of parsing.
     /// The log line and the counter belong to ingest, where the providers are in scope.
     pub skipped: Skipped,
@@ -80,6 +85,7 @@ impl From<ResultsMap> for AdapterResults {
         Self {
             inner,
             version: BmfVersion::V0,
+            resolved_adapter: None,
             skipped: Skipped::default(),
         }
     }
@@ -629,6 +635,15 @@ impl AdapterResults {
         self.inner.is_empty()
     }
 
+    /// Whether any measure of any variant holds a metric.
+    pub fn has_metrics(&self) -> bool {
+        self.inner
+            .values()
+            .flat_map(BenchmarkEntries::values)
+            .flat_map(|metrics| metrics.inner.values())
+            .any(|metric| !metric.inner.is_empty())
+    }
+
     /// Whether these results are a BMF v0 payload, which is what fold operates on.
     pub(crate) fn is_foldable(&self) -> bool {
         self.version == BmfVersion::V0
@@ -649,5 +664,17 @@ impl AdapterResults {
             fold_map.insert(benchmark, metrics);
         }
         fold_map.into()
+    }
+
+    /// Cut every measure to the per measure cap, counting each name cut as skipped.
+    pub(crate) fn truncate(&mut self) {
+        for metric in self
+            .inner
+            .values_mut()
+            .flat_map(BTreeMap::values_mut)
+            .flat_map(|metrics| metrics.inner.values_mut())
+        {
+            self.skipped.metrics += metric.truncate();
+        }
     }
 }

@@ -22,10 +22,12 @@ use std::sync::{
 };
 
 use api_runners::{RunnerMessage, ServerMessage};
-use bencher_api_tests::TestServer;
+use bencher_api_tests::{LogCapture, TestServer};
 use bencher_json::{
-    DateTime, JobStatus, JsonJob, JsonReport, PollTimeout, Priority, ReportUuid,
-    project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
+    BmfVersion, DateTime, JobStatus, JsonJob, JsonReport, PollTimeout, Priority, ReportUuid,
+    project::report::{
+        Adapter, JsonReportWarning, ParseOutcome, ReportWarningAction, ReportWarningResource,
+    },
     runner::JsonReady,
 };
 use bencher_schema::{
@@ -2934,8 +2936,39 @@ async fn reprocess_completed_job_no_output_arms_deadline() {
 
 /// Complete a job whose config declares `bmf_version` with BMF v1 stdout, then
 /// reprocess it, returning the job's status and how many metrics it wrote.
-#[expect(clippy::expect_used, reason = "test helper")]
 async fn reprocess_v1_output_at(bmf_version: Option<u8>, label: &str) -> (JobStatus, i64) {
+    let (status, metrics, _) = reprocess_v1_output_with(None, bmf_version, label).await;
+    (status, metrics)
+}
+
+/// Complete a job whose report records `report_version`, as a report created before reports
+/// recorded their version does not, and whose config declares `bmf_version`, with BMF v1 stdout,
+/// then reprocess it, returning the job's status, how many metrics it wrote, and the parse its
+/// report recorded.
+async fn reprocess_v1_output_with(
+    report_version: Option<BmfVersion>,
+    bmf_version: Option<u8>,
+    label: &str,
+) -> (JobStatus, i64, ReportParse) {
+    let v1_results = serde_json::json!({
+        "bench_a": [{
+            "parameters": { "size_mb": 16 },
+            "measures": { "latency": { "value": 42.0 } },
+        }]
+    });
+    let log = slog::Logger::root(slog::Discard, slog::o!());
+    reprocess_output_with(report_version, bmf_version, &v1_results, &log, label).await
+}
+
+/// [`reprocess_v1_output_with`] for any stdout, logging to `log`.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn reprocess_output_with(
+    report_version: Option<BmfVersion>,
+    bmf_version: Option<u8>,
+    results: &serde_json::Value,
+    log: &slog::Logger,
+    label: &str,
+) -> (JobStatus, i64, ReportParse) {
     let server = TestServer::new().await;
     let admin = server
         .signup("Admin", &format!("reprocess-bmf-{label}@example.com"))
@@ -2953,17 +2986,15 @@ async fn reprocess_v1_output_at(bmf_version: Option<u8>, label: &str) -> (JobSta
     let job_uuid =
         insert_test_job_with_bmf_version(&server, report_id, project.uuid, spec_id, bmf_version);
     set_job_status(&server, job_uuid, JobStatus::Completed);
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::bmf_version.eq(report_version))
+        .execute(&mut server.db_conn())
+        .expect("Failed to set the report's version");
 
-    let v1_results = serde_json::json!({
-        "bench_a": [{
-            "parameters": { "size_mb": 16 },
-            "measures": { "latency": { "value": 42.0 } },
-        }]
-    });
     let output = bencher_json::runner::JsonJobOutput {
         results: vec![bencher_json::runner::JsonIterationOutput {
             exit_code: 0,
-            stdout: Some(v1_results.to_string()),
+            stdout: Some(results.to_string()),
             stderr: None,
             output: None,
         }],
@@ -2977,8 +3008,7 @@ async fn reprocess_v1_output_at(bmf_version: Option<u8>, label: &str) -> (JobSta
         .await
         .expect("Failed to store job output");
 
-    let log = slog::Logger::root(slog::Discard, slog::o!());
-    reprocess_completed_jobs(&log, server.context()).await;
+    reprocess_completed_jobs(log, server.context()).await;
 
     let mut conn = server.db_conn();
     let status: JobStatus = schema::job::table
@@ -2990,7 +3020,7 @@ async fn reprocess_v1_output_at(bmf_version: Option<u8>, label: &str) -> (JobSta
         .count()
         .get_result(&mut conn)
         .expect("Failed to count metrics");
-    (status, metrics)
+    (status, metrics, report_parse(&server, job_uuid))
 }
 
 /// A job's results are processed after its run returns, and what they skip is stored on its report.
@@ -3012,8 +3042,8 @@ async fn reprocess_completed_job_stores_its_warnings_on_its_report() {
         insert_test_job_with_bmf_version(&server, report_id, project.uuid, spec_id, Some(1));
     set_job_status(&server, job_uuid, JobStatus::Completed);
 
-    // Ten metric names on one measure, two past the per measure cap of eight.
-    let names = (1..=10)
+    // Eighteen metric names on one measure, two past the per measure cap of sixteen.
+    let names = (1..=18)
         .map(|n| (format!("p{n}"), serde_json::json!(n)))
         .collect::<serde_json::Map<_, _>>();
     let results = serde_json::json!({ "bench": [{ "measures": { "latency": names } }] });
@@ -3091,6 +3121,71 @@ async fn reprocess_completed_job_undeclared_refuses_v1_output() {
         "v1 output at version 0 is refused"
     );
     assert_eq!(metrics, 0, "a refused job writes no metrics");
+}
+
+/// A job's results parse at the version its report records, whatever its config declares, and
+/// its report records the leaf they resolved to and how they parsed.
+///
+/// Kills: a job parsed at its config's version ahead of its report's, and a job that records
+/// nothing of its parse.
+#[tokio::test]
+async fn reprocess_completed_job_parses_at_its_reports_version() {
+    let parsed = (Some(Adapter::JsonV1), Some(ParseOutcome::Parsed));
+    let failed = (None, Some(ParseOutcome::Failed));
+    for (report_version, bmf_version, label, expected) in [
+        (
+            Some(BmfVersion::V1),
+            None,
+            "report1",
+            (JobStatus::Processed, parsed),
+        ),
+        (
+            Some(BmfVersion::V0),
+            Some(1),
+            "report0",
+            (JobStatus::Failed, failed),
+        ),
+        // A report created before reports recorded their version falls back to its job config's.
+        (None, Some(1), "config1", (JobStatus::Processed, parsed)),
+        (None, None, "default", (JobStatus::Failed, failed)),
+    ] {
+        let (status, _, parse) = reprocess_v1_output_with(report_version, bmf_version, label).await;
+        assert_eq!((status, parse), expected, "{label}");
+    }
+}
+
+/// A job whose results parse at the other version is refused by a message that says its version
+/// came from the remote job and names the fixes, in both directions.
+///
+/// Kills: a job refusal that names a declaration or the project's version as where its version
+/// came from, or that names the fixes for the wrong direction.
+#[tokio::test]
+async fn reprocess_completed_job_refusal_names_the_remote_job() {
+    let v0 = serde_json::json!({ "bench_a": { "latency": { "value": 42.0 } } });
+    let v1 = serde_json::json!({ "bench_a": [{ "measures": { "latency": { "value": 42.0 } } }] });
+    for (expected, results, parsed, label) in [(1, v0, 0, "job1"), (0, v1, 1, "job0")] {
+        let capture = LogCapture::default();
+        let (status, _, _) =
+            reprocess_output_with(None, Some(expected), &results, &capture.logger(), label).await;
+        assert_eq!(status, JobStatus::Failed, "{label}");
+        let refusal = capture
+            .lines()
+            .into_iter()
+            .find(|line| line.contains("Failed to reprocess job results"))
+            .unwrap_or_else(|| panic!("expected the refusal to be logged: {label}"));
+        for phrase in [
+            format!("parsed as BMF version {parsed}"),
+            format!("the remote job was accepted at BMF version {expected}"),
+            format!("Send BMF version {expected} results"),
+            format!("declare `bmf_version` {parsed} through the API"),
+            format!("`bencher project update --bmf-version {parsed}`"),
+        ] {
+            assert!(
+                refusal.contains(&phrase),
+                "expected `{phrase}` in the refusal: {refusal}"
+            );
+        }
+    }
 }
 
 // =============================================================================
@@ -3219,6 +3314,22 @@ fn get_status(server: &TestServer, job_uuid: bencher_json::JobUuid) -> JobStatus
         .select(schema::job::status)
         .first(&mut server.db_conn())
         .expect("Failed to get job status")
+}
+
+/// The leaf adapter and the parse outcome a job's report recorded.
+type ReportParse = (Option<Adapter>, Option<ParseOutcome>);
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn report_parse(server: &TestServer, job_uuid: bencher_json::JobUuid) -> ReportParse {
+    schema::job::table
+        .inner_join(schema::report::table)
+        .filter(schema::job::uuid.eq(job_uuid))
+        .select((
+            schema::report::resolved_adapter,
+            schema::report::parse_outcome,
+        ))
+        .first(&mut server.db_conn())
+        .expect("Failed to read the job's report")
 }
 
 #[expect(clippy::expect_used, reason = "test helper")]

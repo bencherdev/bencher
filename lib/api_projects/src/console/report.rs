@@ -186,8 +186,7 @@ async fn get_inner(
     let total = to_u32(lines.len());
 
     let group = query_params.group.unwrap_or_default();
-    let sort = query_params.sort.unwrap_or_default();
-    let ordered = order(lines, group, sort);
+    let ordered = order(lines, group, query_params.sort.unwrap_or_default());
 
     let mut tables = Tables::default();
     let groups = groups_json(
@@ -221,7 +220,10 @@ async fn get_inner(
         version,
         start_time: report.start_time.into(),
         end_time: report.end_time.into(),
+        bmf_version: report.bmf_version,
         adapter: report.adapter.normalize(),
+        resolved_adapter: report.resolved_adapter,
+        parse_outcome: report.parse_outcome,
         counts,
         job,
         #[cfg(feature = "plus")]

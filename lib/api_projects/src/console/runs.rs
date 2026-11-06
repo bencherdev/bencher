@@ -5,9 +5,9 @@ use std::{
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid, NameId,
-    ProjectResourceId, ReportUuid, ResourceName, TestbedNameId, TestbedSlug, TestbedUuid, UserName,
-    VersionUuid,
+    BmfVersion, BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid,
+    NameId, ProjectResourceId, ReportUuid, ResourceName, TestbedNameId, TestbedSlug, TestbedUuid,
+    UserName, VersionUuid,
     project::{
         alert::AlertStatus,
         console::{
@@ -18,7 +18,7 @@ use bencher_json::{
             JsonConsoleRunsQueryParams, JsonConsoleTestbed, MAX_CONSOLE_RUN_NAMES,
         },
         head::VersionNumber,
-        report::{Adapter, Iteration, JsonReportAlertsCounts, ReportAlerts},
+        report::{Adapter, Iteration, JsonReportAlertsCounts, ParseOutcome, ReportAlerts},
     },
 };
 #[cfg(feature = "plus")]
@@ -369,7 +369,10 @@ pub(super) struct ReportRow {
     pub created: DateTime,
     pub branch: JsonConsoleBranch,
     pub testbed: JsonConsoleTestbed,
+    pub bmf_version: Option<BmfVersion>,
     pub adapter: Adapter,
+    pub resolved_adapter: Option<Adapter>,
+    pub parse_outcome: Option<ParseOutcome>,
     pub author: Option<Author>,
 }
 
@@ -406,7 +409,12 @@ type ReportRowColumns = (
     ),
     (BranchUuid, BranchName, BranchSlug, HeadUuid),
     (TestbedUuid, ResourceName, TestbedSlug),
-    Adapter,
+    (
+        Option<BmfVersion>,
+        Adapter,
+        Option<Adapter>,
+        Option<ParseOutcome>,
+    ),
     (Option<UserId>, Option<UserName>),
     (Option<ProjectKeyId>, Option<ResourceName>),
 );
@@ -454,7 +462,12 @@ pub(super) fn report_rows(
                 schema::testbed::name,
                 schema::testbed::slug,
             ),
-            schema::report::adapter,
+            (
+                schema::report::bmf_version,
+                schema::report::adapter,
+                schema::report::resolved_adapter,
+                schema::report::parse_outcome,
+            ),
             (schema::user::id.nullable(), schema::user::name.nullable()),
             (
                 schema::project_key::id.nullable(),
@@ -469,7 +482,7 @@ pub(super) fn report_rows(
                 (version_id, id, uuid, start_time, end_time, created),
                 (branch_uuid, branch_name, branch_slug, head),
                 (testbed_uuid, testbed_name, testbed_slug),
-                adapter,
+                (bmf_version, adapter, resolved_adapter, parse_outcome),
                 user,
                 key,
             )| {
@@ -500,7 +513,10 @@ pub(super) fn report_rows(
                         #[cfg(feature = "plus")]
                         spec: None,
                     },
+                    bmf_version,
                     adapter: adapter.normalize(),
+                    resolved_adapter,
+                    parse_outcome,
                     author,
                 }
             },
@@ -916,18 +932,7 @@ async fn get_one_inner(
     let reports = page
         .iter()
         .enumerate()
-        .map(|(index, row)| JsonConsoleRunReport {
-            order: to_u32(offset + index + 1),
-            uuid: row.uuid,
-            testbed: row.testbed.clone(),
-            adapter: row.adapter,
-            start_time: row.start_time.into(),
-            end_time: row.end_time.into(),
-            lines: lines.get(&row.id).copied().unwrap_or_default(),
-            alerts: alerts.get(&row.id).copied().unwrap_or_default(),
-            job: jobs.get(&row.id).copied(),
-            author: row.author.as_ref().map(Author::json),
-        })
+        .map(|(index, row)| row.run_report(to_u32(offset + index + 1), &lines, &alerts, &jobs))
         .collect();
     let (_, uuid, number, hash) = version;
     Ok(JsonConsoleRun {
@@ -947,6 +952,32 @@ async fn get_one_inner(
         alerting,
         reports,
     })
+}
+
+impl ReportRow {
+    fn run_report(
+        &self,
+        order: u32,
+        lines: &HashMap<ReportId, u32>,
+        alerts: &HashMap<ReportId, JsonReportAlertsCounts>,
+        jobs: &HashMap<ReportId, JsonConsoleJob>,
+    ) -> JsonConsoleRunReport {
+        JsonConsoleRunReport {
+            order,
+            uuid: self.uuid,
+            testbed: self.testbed.clone(),
+            bmf_version: self.bmf_version,
+            adapter: self.adapter,
+            resolved_adapter: self.resolved_adapter,
+            parse_outcome: self.parse_outcome,
+            start_time: self.start_time.into(),
+            end_time: self.end_time.into(),
+            lines: lines.get(&self.id).copied().unwrap_or_default(),
+            alerts: alerts.get(&self.id).copied().unwrap_or_default(),
+            job: jobs.get(&self.id).copied(),
+            author: self.author.as_ref().map(Author::json),
+        }
+    }
 }
 
 /// The alerts a run's reports raised, read only for a run whose facts count any.
