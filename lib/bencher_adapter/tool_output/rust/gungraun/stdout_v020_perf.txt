@@ -1,0 +1,92 @@
+gung::fib_group::bench_fib short:(10)
+  ======= CALLGRIND ===================================================================================
+  Instructions:                                       1802|1802                 (No change)
+  L1 Hits:                                            2572|2572                 (No change)
+  LL Hits:                                               1|1                    (No change)
+  RAM Hits:                                              2|2                    (No change)
+  Total read+write:                                   2575|2575                 (No change)
+  Estimated Cycles:                                   2647|2647                 (No change)
+  ======= PERF ========================================================================================
+  >> alpha: 0.05000, min_pcnt_running: 100.000
+  instructions/u:                                     3707|3707                 (+0.00000%) [+1.00000x]
+  cycles/u:                                          23122|24392                (-5.20663%) [-1.05493x]
+  task-clock [ms]:                                 5.59153|8.40400              (-33.4658%) [-1.50299x]
+  cpu-clock [ms]:                                  5.59014|8.41070              (-33.5354%) [-1.50456x]
+  faults:                                                5|5                    (+0.00000%) [+1.00000x]
+  context-switches:                                      0|1                    (-100.000%) [---inf---]
+  branch-misses:                                       908|1106                 (-17.9024%) [-1.21806x]
+  cache-misses:                                       5111|5520                 (-7.40942%) [-1.08002x]
+gung::fib_group::bench_fib long:(20)
+  ======= CALLGRIND ===================================================================================
+  Instructions:                                     221505|221505               (No change)
+  L1 Hits:                                          315842|315842               (No change)
+  LL Hits:                                               1|1                    (No change)
+  RAM Hits:                                              1|1                    (No change)
+  Total read+write:                                 315844|315844               (No change)
+  Estimated Cycles:                                 315882|315882               (No change)
+  ======= PERF ========================================================================================
+  >> alpha: 0.05000, min_pcnt_running: 100.000
+  instructions/u:                                   223248|222976               (+0.12199%) [+1.00122x]
+  cycles/u:                                          83188|71845                (+15.7882%) [+1.15788x]
+  task-clock [us]:                                 132.379|116.995              (+13.1493%) [+1.13149x]
+  cpu-clock [us]:                                  132.509|115.574              (+14.6529%) [+1.14653x]
+  faults:                                                5|3                    (+66.6667%) [+1.66667x]
+  context-switches:                                      0|0                    (+0.00000%) [+1.00000x]
+  branch-misses:                                       707|597                  (+18.4255%) [+1.18425x]
+  cache-misses:                                       1413|940                  (+50.3191%) [+1.50319x]
+gung::fib_group::bench_no_id
+  ======= CALLGRIND ===================================================================================
+  Instructions:                                       4719|4719                 (No change)
+  L1 Hits:                                            6729|6729                 (No change)
+  LL Hits:                                               1|1                    (No change)
+  RAM Hits:                                              3|3                    (No change)
+  Total read+write:                                   6733|6733                 (No change)
+  Estimated Cycles:                                   6839|6839                 (No change)
+  ======= PERF ========================================================================================
+  >> alpha: 0.05000, min_pcnt_running: 100.000
+  instructions/u:                                     7151|6459                 (+10.7137%) [+1.10714x]
+  cycles/u:                                          25004|20605                (+21.3492%) [+1.21349x]
+  task-clock [us]:                                 65.1380|115.183              (-43.4483%) [-1.76829x]
+  cpu-clock [us]:                                  86.5600|114.392              (-24.3304%) [-1.32153x]
+  faults:                                                5|5                    (+0.00000%) [+1.00000x]
+  context-switches:                                      0|0                    (+0.00000%) [+1.00000x]
+  branch-misses:                                       387|484                  (-20.0413%) [-1.25065x]
+  cache-misses:                                       1232|1320                 (-6.66667%) [-1.07143x]
+gung::fib_group::bench_text long_argument:("a deliberately long argument that the descriptio...
+  ======= CALLGRIND ===================================================================================
+  Instructions:                                        412|412                  (No change)
+  L1 Hits:                                             450|450                  (No change)
+  LL Hits:                                               0|0                    (No change)
+  RAM Hits:                                              8|8                    (No change)
+  Total read+write:                                    458|458                  (No change)
+  Estimated Cycles:                                    730|730                  (No change)
+  ======= PERF ========================================================================================
+  >> alpha: 0.05000, min_pcnt_running: 100.000
+  instructions/u:                                     1778|2157                 (-17.5707%) [-1.21316x]
+  cycles/u:                                          17555|18855                (-6.89472%) [-1.07405x]
+  task-clock [us]:                                 102.234|103.565              (-1.28518%) [-1.01302x]
+  cpu-clock [us]:                                  100.752|104.606              (-3.68430%) [-1.03825x]
+  faults:                                                3|5                    (-40.0000%) [-1.66667x]
+  context-switches:                                      0|0                    (+0.00000%) [+1.00000x]
+  branch-misses:                                       408|464                  (-12.0690%) [-1.13725x]
+  cache-misses:                                        961|1287                 (-25.3302%) [-1.33923x]
+gung::fib_group::bench_alloc allocate:(64)
+  ======= CALLGRIND ===================================================================================
+  Instructions:                                        245|245                  (No change)
+  L1 Hits:                                             320|320                  (No change)
+  LL Hits:                                               1|1                    (No change)
+  RAM Hits:                                              4|4                    (No change)
+  Total read+write:                                    325|325                  (No change)
+  Estimated Cycles:                                    465|465                  (No change)
+  ======= PERF ========================================================================================
+  >> alpha: 0.05000, min_pcnt_running: 100.000
+  instructions/u:                                     1924|1806                 (+6.53378%) [+1.06534x]
+  cycles/u:                                          18594|15808                (+17.6240%) [+1.17624x]
+  task-clock [us]:                                 103.886|107.181              (-3.07424%) [-1.03172x]
+  cpu-clock [us]:                                  102.364|105.899              (-3.33809%) [-1.03453x]
+  faults:                                                4|3                    (+33.3333%) [+1.33333x]
+  context-switches:                                      0|0                    (+0.00000%) [+1.00000x]
+  branch-misses:                                       418|411                  (+1.70316%) [+1.01703x]
+  cache-misses:                                        959|963                  (-0.41537%) [-1.00417x]
+
+Gungraun result: Ok. 5 without regressions; 0 regressed; 0 filtered; 5 benchmarks finished in 1.26362s

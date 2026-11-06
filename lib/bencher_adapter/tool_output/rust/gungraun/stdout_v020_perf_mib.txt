@@ -1,0 +1,6 @@
+metal::memory::sum mib_64:(buffer(8_388_608))
+  ======= PERF ========================================================================================
+  >> alpha: 0.05000, min_pcnt_running: 100.000
+  uncore_imc/data_reads [MiB]:                     59.7957|N/A                  (*********)
+
+Gungraun result: Ok. 1 without regressions; 0 regressed; 0 filtered; 1 benchmarks finished in 0.10520s

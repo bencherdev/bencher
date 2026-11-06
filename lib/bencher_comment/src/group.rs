@@ -361,8 +361,12 @@ fn adapter_docs(adapter: Adapter) -> (&'static str, &'static str) {
         | Adapter::Shell
         | Adapter::Dart => ("Magic", "-magic-default"),
         Adapter::Json | Adapter::JsonV0 | Adapter::JsonV1 => ("JSON", "-json"),
-        Adapter::RustBench => ("Rust Bench", "-rust-bench"),
-        Adapter::RustCriterion => ("Rust Criterion", "-rust-criterion"),
+        Adapter::RustBench | Adapter::RustBenchJson | Adapter::RustBenchText => {
+            ("Rust Bench", "-rust-bench")
+        },
+        Adapter::RustCriterion | Adapter::RustCriterionJson | Adapter::RustCriterionText => {
+            ("Rust Criterion", "-rust-criterion")
+        },
         Adapter::RustIai => ("Rust Iai", "-rust-iai"),
         Adapter::RustGungraun | Adapter::RustGungraunStdout | Adapter::RustGungraunJson => {
             ("Rust Gungraun", "-rust-gungraun")

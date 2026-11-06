@@ -1,0 +1,12 @@
+{ "type": "suite", "event": "started", "test_count": 5 }
+{ "type": "test", "event": "started", "name": "a_test" }
+{ "type": "test", "name": "a_test", "event": "ignored" }
+{ "type": "test", "event": "started", "name": "checksum_64_kib" }
+{ "type": "bench", "name": "checksum_64_kib", "median": 3550.331834532374, "deviation": 320.3432913669062, "mib_per_second": 18460 }
+{ "type": "test", "event": "started", "name": "copy_4_kib" }
+{ "type": "bench", "name": "copy_4_kib", "median": 61.74693136272545, "deviation": 0.8165618737474958, "mib_per_second": 67147 }
+{ "type": "test", "event": "started", "name": "fib_10" }
+{ "type": "bench", "name": "fib_10", "median": 93.60972184715095, "deviation": 15.895594788009703 }
+{ "type": "test", "event": "started", "name": "ignored_bench" }
+{ "type": "test", "name": "ignored_bench", "event": "ignored" }
+{ "type": "suite", "event": "ok", "passed": 0, "failed": 0, "ignored": 2, "measured": 3, "filtered_out": 0, "exec_time": 1.908236822 }
