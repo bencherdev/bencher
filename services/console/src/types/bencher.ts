@@ -576,6 +576,9 @@ export type ProjectKey = string;
 /** An project UUID or slug. */
 export type ProjectResourceId = Uuid | Slug;
 
+/** The state a provider's round trip carries, which finds the sign-in's row. */
+export type ProviderState = string;
+
 export type RunContext = Record<string, string>;
 
 export type RunnerKey = string;
@@ -2503,6 +2506,56 @@ export interface JsonProjectKeyCreated {
 	expiration: string;
 }
 
+/** Finish a sign-in with what the provider sent back. */
+export interface JsonProviderFinish {
+	code: Secret;
+	state: ProviderState;
+}
+
+/**
+ * The address a provider account must prove before it pins: either an email went out, or the
+ * address is at its cap and none did.
+ */
+export interface JsonProviderInbox {
+	/** The provider account, as its owner knows it. */
+	handle: NonEmpty;
+	email: Email;
+	/** Seconds until Resend opens, once an email went out. */
+	resend_after?: number;
+	/** Seconds until the address can get another email, while it is at its cap. */
+	wait?: number;
+}
+
+/** A finished sign-in, whose session rides in its cookie. */
+export interface JsonSignedIn {
+	user: JsonUser;
+	/** Whether the sign-in made the account. */
+	new: boolean;
+	plan?: PlanLevel;
+	/** An app's pending request to connect, which the sign-in returns to. */
+	authorization?: Uuid;
+}
+
+/**
+ * What a provider's sign-in did: signed in, or, for a provider account pinned to no one whose
+ * address has an account, emailed that address to prove it first.
+ */
+export interface JsonProviderSignIn {
+	signed_in?: JsonSignedIn;
+	inbox?: JsonProviderInbox;
+}
+
+/** Start a sign-in with a provider, carrying what it applies once it finishes. */
+export interface JsonProviderStart {
+	/** An invitation to an organization, accepted once an address it is for is proven. */
+	invite?: Jwt;
+	/** An unclaimed organization, claimed once the reader signs in. */
+	claim?: Uuid;
+	plan?: PlanLevel;
+	/** An app's pending request to connect, which the sign-in returns to. */
+	authorization?: Uuid;
+}
+
 /** A project key by name only, as a report names the key that created it. */
 export interface JsonPubProjectKey {
 	uuid: Uuid;
@@ -2605,16 +2658,6 @@ export interface JsonSession {
 	method: SessionMethod;
 	created: string;
 	expiration: string;
-}
-
-/** A finished sign-in, whose session rides in its cookie. */
-export interface JsonSignedIn {
-	user: JsonUser;
-	/** Whether the sign-in made the account. */
-	new: boolean;
-	plan?: PlanLevel;
-	/** An app's pending request to connect, which the sign-in returns to. */
-	authorization?: Uuid;
 }
 
 /**
@@ -2926,6 +2969,12 @@ export enum RecaptchaAction {
 	Login = "login",
 }
 
+/** A provider a reader signs in with. */
+export enum SignInProvider {
+	Github = "github",
+	Google = "google",
+}
+
 /** Why a sign-in endpoint refused a request, as the `error_code` of its error. */
 export enum SignInRefusal {
 	/** The request came from somewhere other than the console's own origin. */
@@ -2961,6 +3010,8 @@ export enum SignInRefusal {
 	ResendWaiting = "resend_waiting",
 	/** The account is locked. */
 	Locked = "locked",
+	/** A sign-in with GitHub or Google failed, for a reason it does not tell. */
+	ProviderRefused = "provider_refused",
 }
 
 export enum UpdateChannel {

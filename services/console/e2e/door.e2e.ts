@@ -509,17 +509,12 @@ test.describe("accessibility", () => {
 		);
 	});
 
-	test("a provider's return from another browser passes axe in both themes", async ({
-		page,
-	}) => {
-		// Each scan returns afresh: the page took the code out of its URL.
+	test("a provider's refusal passes axe in both themes", async ({ page }) => {
+		// Each scan returns afresh: the page took the state out of its URL.
 		await axeInBothThemes(
 			page,
-			"/auth/github?code=c0de&state=s7a7e",
-			() =>
-				expect(
-					page.getByRole("button", { name: "Continue with GitHub" }),
-				).toBeVisible(),
+			"/auth/google?error=access_denied&state=s7a7e",
+			() => expect(page.getByRole("alert")).toHaveText("Refused by Google"),
 			async () => {},
 		);
 	});

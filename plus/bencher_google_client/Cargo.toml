@@ -10,13 +10,18 @@ publish = false
 test-base-url = []
 
 [dependencies]
-bencher_valid.workspace = true
+base64.workspace = true
+bencher_valid = { workspace = true, features = ["plus", "server"] }
 oauth2.workspace = true
 oauth2-reqwest.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
 serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 url.workspace = true
+
+[dev-dependencies]
+aws-lc-rs.workspace = true
 
 [lints]
 workspace = true

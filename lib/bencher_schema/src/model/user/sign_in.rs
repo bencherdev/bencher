@@ -10,7 +10,9 @@ use bencher_json::{
     OrganizationUuid, PendingSignInUuid, Secret, SignInCode, SignInCodeHash,
 };
 #[cfg(feature = "plus")]
-use bencher_json::{OAuthAuthorizationUuid, PlanLevel};
+use bencher_json::{
+    NonEmpty, OAuthAuthorizationUuid, PlanLevel, ProviderAccountId, SignInProvider,
+};
 use chrono::TimeDelta;
 use diesel::{
     ExpressionMethods as _, OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
@@ -19,6 +21,8 @@ use diesel::{
 use dropshot::HttpError;
 use subtle::ConstantTimeEq as _;
 
+#[cfg(feature = "plus")]
+use crate::model::user::provider::ProviderPin;
 use crate::{
     context::DbConnection,
     error::issue_error,
@@ -56,6 +60,12 @@ pub struct QueryPendingSignIn {
     pub plan: Option<PlanLevel>,
     #[cfg(feature = "plus")]
     pub authorization: Option<OAuthAuthorizationUuid>,
+    #[cfg(feature = "plus")]
+    pub pin_provider: Option<SignInProvider>,
+    #[cfg(feature = "plus")]
+    pub pin_account: Option<ProviderAccountId>,
+    #[cfg(feature = "plus")]
+    pub pin_handle: Option<NonEmpty>,
     pub created: DateTime,
     pub expiration: DateTime,
 }
@@ -135,7 +145,19 @@ impl QueryPendingSignIn {
             plan: self.plan,
             #[cfg(feature = "plus")]
             authorization: self.authorization,
+            #[cfg(feature = "plus")]
+            pin: self.pin(),
         }
+    }
+
+    /// The provider account a proof pins in the asking browser, if a provider started the sign-in.
+    #[cfg(feature = "plus")]
+    pub fn pin(&self) -> Option<ProviderPin> {
+        Some(ProviderPin {
+            provider: self.pin_provider?,
+            account_id: self.pin_account.clone()?,
+            handle: self.pin_handle.clone()?,
+        })
     }
 }
 
@@ -148,6 +170,9 @@ pub struct SignInContext {
     pub plan: Option<PlanLevel>,
     #[cfg(feature = "plus")]
     pub authorization: Option<OAuthAuthorizationUuid>,
+    /// A provider account that the proof pins, in place of the user's pin for that provider.
+    #[cfg(feature = "plus")]
+    pub pin: Option<ProviderPin>,
 }
 
 #[derive(diesel::Insertable)]
@@ -165,6 +190,12 @@ pub struct InsertPendingSignIn {
     pub plan: Option<PlanLevel>,
     #[cfg(feature = "plus")]
     pub authorization: Option<OAuthAuthorizationUuid>,
+    #[cfg(feature = "plus")]
+    pub pin_provider: Option<SignInProvider>,
+    #[cfg(feature = "plus")]
+    pub pin_account: Option<ProviderAccountId>,
+    #[cfg(feature = "plus")]
+    pub pin_handle: Option<NonEmpty>,
     pub created: DateTime,
     pub expiration: DateTime,
 }
@@ -206,7 +237,18 @@ impl InsertPendingSignIn {
             plan,
             #[cfg(feature = "plus")]
             authorization,
+            #[cfg(feature = "plus")]
+            pin,
         } = context;
+        #[cfg(feature = "plus")]
+        let (pin_provider, pin_account, pin_handle) = pin.map_or((None, None, None), |pin| {
+            let ProviderPin {
+                provider,
+                account_id,
+                handle,
+            } = pin;
+            (Some(provider), Some(account_id), Some(handle))
+        });
         let pending_sign_in = Self {
             uuid: PendingSignInUuid::new(),
             email,
@@ -220,6 +262,12 @@ impl InsertPendingSignIn {
             plan,
             #[cfg(feature = "plus")]
             authorization,
+            #[cfg(feature = "plus")]
+            pin_provider,
+            #[cfg(feature = "plus")]
+            pin_account,
+            #[cfg(feature = "plus")]
+            pin_handle,
             created: now,
             expiration: now + PENDING_SIGN_IN_LIFETIME,
         };
