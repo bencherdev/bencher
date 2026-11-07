@@ -69,6 +69,7 @@ import { useNarrow } from "../plot/narrow";
 import EditPin from "../plots/EditPin";
 import { PLOTS_LIMIT, countPins } from "../plots/pins";
 import { useEntityTitle, useProject, useProjectNavigate } from "../project";
+import { publicPlotPath, publicUrl } from "../public/query";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { exploreSearchFromClassic } from "../query/classic";
@@ -416,19 +417,29 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 		go(queryFromPlot(plot), true);
 	};
 
+	const shared = (what: Copied) => {
+		switch (what) {
+			case "link":
+				return window.location.href;
+			case "public":
+				return publicUrl(
+					window.location.origin,
+					publicPlotPath(slug()),
+					query(),
+				);
+			case "embed":
+				return embedCode({
+					origin: window.location.origin,
+					slug: slug(),
+					query: query(),
+					name: bootstrap().data?.project.name ?? slug(),
+					title: pinned()?.title ?? undefined,
+				});
+		}
+	};
 	const copy = (what: Copied) =>
 		navigator.clipboard
-			.writeText(
-				what === "link"
-					? window.location.href
-					: embedCode({
-							origin: window.location.origin,
-							slug: slug(),
-							query: query(),
-							name: bootstrap().data?.project.name ?? slug(),
-							title: pinned()?.title ?? undefined,
-						}),
-			)
+			.writeText(shared(what))
 			.then(() => setCopied(what))
 			.catch(() => {});
 

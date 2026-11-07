@@ -112,6 +112,21 @@ export const boot = (mount: HTMLElement) => {
 	}
 
 	const [copied, setCopied] = createSignal<Copied>();
+	const shared = (what: Copied) => {
+		switch (what) {
+			// This page is the public plot, so its own link is the public one.
+			case "link":
+			case "public":
+				return location.href;
+			case "embed":
+				return embedCode({
+					origin: location.origin,
+					slug,
+					query: query(),
+					name: title(),
+				});
+		}
+	};
 	const edit = (next: ExploreQuery) => {
 		setCopied(undefined);
 		setQuery(next);
@@ -147,16 +162,7 @@ export const boot = (mount: HTMLElement) => {
 					onRetry={() => ask(query())}
 					onCopy={(what) =>
 						navigator.clipboard
-							.writeText(
-								what === "link"
-									? location.href
-									: embedCode({
-											origin: location.origin,
-											slug,
-											query: query(),
-											name: title(),
-										}),
-							)
+							.writeText(shared(what))
 							.then(() => setCopied(what))
 							.catch(() => {})
 					}

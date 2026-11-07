@@ -286,17 +286,27 @@ test.describe("a signed in member", () => {
 		).toEqual([]);
 	});
 
-	// Kills Explore's Share without the embed on a public project, or one that
-	// copies a frame of another query or of the pin the embed cannot read.
-	test("in Explore on a public project, Share copies the link or the embed code", async ({
+	// Kills Explore's Share without the public link or the embed on a public
+	// project, an item that copies another item's text, a public link to the
+	// console's own page or to another project's plot, and a public link or a
+	// frame that carries the pin only the console reads.
+	test("in Explore on a public project, Share copies the link, the public link, or the embed code", async ({
 		page,
 		context,
 		request,
 	}) => {
 		await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-		const { project, search } = await twoRecentLines(request);
-		await page.goto(explore(project.slug, decodeQuery(search)));
+		const { project } = await twoRecentLines(request);
+		const pin = await createPin(request, project.slug, { title: "Hash" });
+		await page.goto(explore(project.slug, { plot: pin.uuid }));
 		await twoLinesDrawn(page);
+		/** The page's query as a reader outside the console reads it: the pin is the console's alone. */
+		const shared = () => {
+			const query = decodeQuery(new URL(page.url()).search);
+			expect(query.plot).toBe(pin.uuid);
+			const { plot: _plot, ...rest } = query;
+			return rest;
+		};
 		const share = page.getByRole("button", { name: "Share" });
 		await expect(share).toHaveAttribute("aria-haspopup", "menu");
 		await share.click();
@@ -313,19 +323,41 @@ test.describe("a signed in member", () => {
 			page.getByRole("menuitem", { name: "Copy link" }),
 		).toBeFocused();
 		await page.keyboard.press("ArrowDown");
+		await expect(
+			page.getByRole("menuitem", { name: "Copy public link" }),
+		).toBeFocused();
+		await page.keyboard.press("Enter");
+		await expect(
+			page.getByRole("button", { name: "Public link copied" }),
+		).toBeFocused();
+		const link = new URL(
+			await page.evaluate(() => navigator.clipboard.readText()),
+		);
+		expect(link.origin).toBe(new URL(page.url()).origin);
+		expect(link.pathname).toBe(publicPath(project.slug));
+		expect(link.searchParams.has("plot")).toBe(false);
+		expect(decodeQuery(link.search)).toEqual(shared());
+
+		await page.keyboard.press("Enter");
+		await expect(
+			page.getByRole("menuitem", { name: "Copy link" }),
+		).toBeFocused();
+		await page.keyboard.press("ArrowDown");
+		await page.keyboard.press("ArrowDown");
+		await expect(
+			page.getByRole("menuitem", { name: "Copy embed code" }),
+		).toBeFocused();
 		await page.keyboard.press("Enter");
 		await expect(
 			page.getByRole("button", { name: "Embed code copied" }),
-		).toBeVisible();
+		).toBeFocused();
 		const snippet = await page.evaluate(() => navigator.clipboard.readText());
 		const src = new URL(
 			/src="([^"]*)"/.exec(snippet)?.[1]?.replaceAll("&amp;", "&") ?? "",
 		);
 		expect(src.pathname).toBe(embedLink(project.slug));
-		expect(decodeQuery(src.search)).toEqual(
-			decodeQuery(new URL(page.url()).search),
-		);
-		expect(snippet).toContain(`title="${project.name}"`);
+		expect(decodeQuery(src.search)).toEqual(shared());
+		expect(snippet).toContain(`title="Hash | ${project.name}"`);
 	});
 
 	// Kills a pin's embed code that loses the pin's title, or carries the pin

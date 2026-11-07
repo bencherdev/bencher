@@ -157,6 +157,7 @@ test.describe("signed out", () => {
 			.context()
 			.grantPermissions(["clipboard-read", "clipboard-write"]);
 		await page.getByRole("button", { name: "Share" }).click();
+		await expect(page.getByRole("menuitem")).toHaveCount(2);
 		await page.getByRole("menuitem", { name: "Copy link" }).click();
 		await expect(
 			page.getByRole("button", { name: "Link copied" }),

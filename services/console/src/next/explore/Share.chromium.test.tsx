@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 /** Share as a page holds it: each copy is recorded, and its confirmation shown. */
-const mount = (embeddable: boolean) => {
+const mount = (embeddable: boolean, hasPublicLink: boolean) => {
 	const copies: Copied[] = [];
 	const root = document.createElement("div");
 	document.body.append(root);
@@ -22,6 +22,7 @@ const mount = (embeddable: boolean) => {
 		return (
 			<Share
 				embeddable={embeddable}
+				hasPublicLink={hasPublicLink}
 				copied={copied()}
 				onCopy={(what) => {
 					copies.push(what);
@@ -35,11 +36,18 @@ const mount = (embeddable: boolean) => {
 
 const menu = () => page.getByRole("menu", { name: "Share" });
 
+const items = () =>
+	menu()
+		.getByRole("menuitem")
+		.elements()
+		.map((item) => item.textContent);
+
 // Kills a public project's Share that copies at once, a menu the keyboard
-// cannot open or walk, an item that copies the other thing, a confirmation
-// that names the wrong copy, and focus left in a closed menu.
-test("on a public project Share opens a menu of the link and the embed code", async () => {
-	const copies = mount(true);
+// cannot open or walk, items out of their order, an item that copies the
+// other thing, a confirmation that names the wrong copy, and focus left in a
+// closed menu.
+test("on the console Share opens a menu of the link, the public link, and the embed code", async () => {
+	const copies = mount(true, true);
 	const share = page.getByRole("button", { name: "Share" });
 	await expect.element(share).toHaveAttribute("aria-haspopup", "menu");
 	await expect.element(share).toHaveAttribute("aria-expanded", "false");
@@ -47,12 +55,7 @@ test("on a public project Share opens a menu of the link and the embed code", as
 	await userEvent.keyboard("{Enter}");
 	await expect.element(menu()).toBeVisible();
 	await expect.element(share).toHaveAttribute("aria-expanded", "true");
-	expect(
-		menu()
-			.getByRole("menuitem")
-			.elements()
-			.map((item) => item.textContent),
-	).toEqual(["Copy link", "Copy embed code"]);
+	expect(items()).toEqual(["Copy link", "Copy public link", "Copy embed code"]);
 	await expect
 		.element(page.getByRole("menuitem", { name: "Copy link" }))
 		.toHaveFocus();
@@ -60,25 +63,53 @@ test("on a public project Share opens a menu of the link and the embed code", as
 
 	await userEvent.keyboard("{ArrowDown}");
 	await expect
-		.element(page.getByRole("menuitem", { name: "Copy embed code" }))
+		.element(page.getByRole("menuitem", { name: "Copy public link" }))
 		.toHaveFocus();
 	await userEvent.keyboard("{Enter}");
-	expect(copies).toEqual(["embed"]);
+	expect(copies).toEqual(["public"]);
 	await expect.element(menu()).not.toBeInTheDocument();
-	const copied = page.getByRole("button", { name: "Embed code copied" });
+	const copied = page.getByRole("button", { name: "Public link copied" });
 	await expect.element(copied).toHaveFocus();
 
 	await userEvent.click(copied);
+	await userEvent.keyboard("{ArrowDown}{ArrowDown}");
+	await expect
+		.element(page.getByRole("menuitem", { name: "Copy embed code" }))
+		.toHaveFocus();
+	await userEvent.keyboard("{Enter}");
+	expect(copies).toEqual(["public", "embed"]);
+	await expect
+		.element(page.getByRole("button", { name: "Embed code copied" }))
+		.toBeVisible();
+
+	await userEvent.click(
+		page.getByRole("button", { name: "Embed code copied" }),
+	);
 	await userEvent.click(page.getByRole("menuitem", { name: "Copy link" }));
-	expect(copies).toEqual(["embed", "link"]);
+	expect(copies).toEqual(["public", "embed", "link"]);
 	await expect
 		.element(page.getByRole("button", { name: "Link copied" }))
 		.toBeVisible();
 });
 
+// Kills the public plot page offered a second link to itself, which its own
+// link already is, and a page whose menu drops the embed along with it.
+test("on the public plot page Share offers the link and the embed code alone", async () => {
+	const copies = mount(true, false);
+	await userEvent.click(page.getByRole("button", { name: "Share" }));
+	await expect.element(menu()).toBeVisible();
+	expect(items()).toEqual(["Copy link", "Copy embed code"]);
+	await userEvent.keyboard("{ArrowDown}");
+	await expect
+		.element(page.getByRole("menuitem", { name: "Copy embed code" }))
+		.toHaveFocus();
+	await userEvent.keyboard("{Enter}");
+	expect(copies).toEqual(["embed"]);
+});
+
 // Kills Escape that leaves the menu open or drops the focus to the page.
 test("Escape closes the menu and returns to Share", async () => {
-	const copies = mount(true);
+	const copies = mount(true, true);
 	await userEvent.click(page.getByRole("button", { name: "Share" }));
 	await expect.element(menu()).toBeVisible();
 	await userEvent.keyboard("{Escape}");
@@ -89,10 +120,10 @@ test("Escape closes the menu and returns to Share", async () => {
 	expect(copies).toEqual([]);
 });
 
-// Kills a private project offered its embed, which no one outside it can
-// load, or a Share that asks before it copies the link.
+// Kills a private project offered its embed or its public link, which no one
+// outside it can load, or a Share that asks before it copies the link.
 test("on a private project Share copies the link at once", async () => {
-	const copies = mount(false);
+	const copies = mount(false, true);
 	const share = page.getByRole("button", { name: "Share" });
 	await expect.element(share).not.toHaveAttribute("aria-haspopup");
 	await userEvent.click(share);
