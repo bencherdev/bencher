@@ -226,6 +226,32 @@ test("a tile's pinned readout on an alert links to it and dismisses it", async (
 	await expect.element(flagged).not.toBeInTheDocument();
 });
 
+// Kills a tile whose pinned readout offers no link to the report its point came from.
+test("a tile's pinned readout links to its point's report", async () => {
+	await page.viewport(1280, 900);
+	const root = document.createElement("div");
+	root.style.width = "560px";
+	document.body.append(root);
+	dispose = render(
+		() => (
+			<Tile
+				title="Pin 1"
+				tile={testTile({ lines: 1 })}
+				openHref="#"
+				reportHref={(uuid) => `/reports/${uuid}`}
+			/>
+		),
+		root,
+	);
+	const plot = page.getByRole("group", { name: /^1 line/ });
+	await expect.element(plot).toBeVisible();
+	const box = plot.element().getBoundingClientRect();
+	await plot.click({ position: { x: box.width - 4, y: box.height / 2 } });
+	await expect
+		.element(page.getByRole("status").getByRole("link"))
+		.toHaveAttribute("href", "/reports/report-4");
+});
+
 // Kills a tile head where a long branch squeezes the plot's title, or the
 // title pushes the branch's end out.
 test("a tile's title and its branch and testbed share the head fairly", async () => {

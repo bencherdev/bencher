@@ -718,3 +718,16 @@ test("a tile's pinned readout offers Dismiss only to an editor, and says when it
 	await expect.element(readout.getByRole("alert")).toBeVisible();
 	await expect.element(dismiss).toBeVisible();
 });
+
+// Kills a Plots page whose tiles' pinned readouts offer no link to their point's report.
+test("a tile's pinned readout links to its point's report", async () => {
+	const { api } = plotsApi(1);
+	mount(api, newClient(api, 1));
+	const plot = figure("Pin 1").getByRole("group", { name: /lines?,/ });
+	await expect.element(plot).toBeVisible();
+	const box = plot.element().getBoundingClientRect();
+	await plot.click({ position: { x: box.width - 4, y: box.height / 2 } });
+	await expect
+		.element(figure("Pin 1").getByRole("status").getByRole("link"))
+		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/reports/report-4`);
+});

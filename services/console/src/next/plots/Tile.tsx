@@ -68,6 +68,8 @@ const Tile = (props: {
 	class?: string;
 	/** What a pinned readout on an alert offers. */
 	alerts?: PlotAlerts | undefined;
+	/** Links the readout to the report a point came from. */
+	reportHref?: (uuid: string) => string;
 }) => {
 	const heading = createUniqueId();
 	let section: HTMLElement | undefined;
@@ -269,6 +271,7 @@ const Tile = (props: {
 							reserve={RESERVE}
 							label={label()}
 							alerts={props.alerts}
+							{...(props.reportHref && { reportHref: props.reportHref })}
 							failed={props.failed ?? false}
 						/>
 					);
