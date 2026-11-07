@@ -119,7 +119,7 @@ hex = "0.4"
 http = "1.4"
 http-body-util = "0.1"
 hyper = "1.8"
-jsonschema = { version = "0.59", default-features = false }
+jsonschema = { version = "0.60", default-features = false }
 jsonwebtoken = { version = "11.1", features = ["rust_crypto"] }
 libc = "0.2"
 # https://github.com/diesel-rs/diesel/blob/4007d771b1e808839f771a693f6bae9f821f0e64/diesel/Cargo.toml#L53
