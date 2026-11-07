@@ -544,6 +544,9 @@ export type LastFour = string;
 
 export type LicensedPlanId = string;
 
+/** The secret a sign-in email's link carries in its fragment. */
+export type LinkSecret = string;
+
 /** An measure UUID or slug. */
 export type MeasureResourceId = Uuid | Slug;
 
@@ -583,6 +586,9 @@ export type RunnerResourceId = Uuid | Slug;
 export type Secret = string;
 
 export type Sha256 = string;
+
+/** The 6-digit code a sign-in email carries. */
+export type SignInCode = string;
 
 export type Slug = string;
 
@@ -1711,6 +1717,33 @@ export interface JsonCustomer {
 	email: Email;
 }
 
+/** Resend the pending sign-in's email with a new code and link. */
+export interface JsonEmailResend {
+	/** A Cloudflare Turnstile token, where the server asks for one. */
+	turnstile?: NonEmpty;
+}
+
+export enum PlanLevel {
+	Free = "free",
+	Pro = "pro",
+	Team = "team",
+	Enterprise = "enterprise",
+}
+
+/** Start a sign-in by email, which signs in the address's account or makes one. */
+export interface JsonEmailSignIn {
+	email: Email;
+	/** An invitation to an organization, accepted once the address is proven. */
+	invite?: Jwt;
+	/** An unclaimed organization, claimed once the address is proven. */
+	claim?: Uuid;
+	plan?: PlanLevel;
+	/** An app's pending request to connect, which the sign-in returns to. */
+	authorization?: Uuid;
+	/** A Cloudflare Turnstile token, where the server asks for one. */
+	turnstile?: NonEmpty;
+}
+
 /** Where to send the user to link a repository, or to install the GitHub App first. */
 export interface JsonGitHubLinkUrls {
 	/** GitHub's authorize page. */
@@ -1742,13 +1775,6 @@ export interface JsonGitHubRepositories {
 	project: Slug;
 	/** Every repository the user can push to, in every installation of the app the user can see. */
 	repositories: JsonGitHubRepository[];
-}
-
-export enum PlanLevel {
-	Free = "free",
-	Pro = "pro",
-	Team = "team",
-	Enterprise = "enterprise",
 }
 
 export interface JsonLicense {
@@ -2586,6 +2612,49 @@ export interface JsonSession {
 	expiration: string;
 }
 
+/** A finished sign-in, whose session rides in its cookie. */
+export interface JsonSignedIn {
+	user: JsonUser;
+	/** Whether the sign-in made the account. */
+	new: boolean;
+	plan?: PlanLevel;
+	/** An app's pending request to connect, which the sign-in returns to. */
+	authorization?: Uuid;
+}
+
+/**
+ * What a link did: signed in, or, in a browser that did not ask for it, named the address it signs
+ * in to and changed nothing, until the reader confirms.
+ */
+export interface JsonSignInAs {
+	email: Email;
+	signed_in?: JsonSignedIn;
+}
+
+/** Sign in with the code from the email, in the browser that asked for it. */
+export interface JsonSignInCode {
+	code: SignInCode;
+}
+
+/**
+ * The address a sign-in emails: either an email went out, or the address is at its cap and none
+ * did.
+ */
+export interface JsonSignInEmail {
+	email: Email;
+	/** Seconds until Resend opens, once an email went out. */
+	resend_after?: number;
+	/** Seconds until the address can get another email, while it is at its cap. */
+	wait?: number;
+}
+
+/** Sign in with the link from the email. */
+export interface JsonSignInLink {
+	secret: LinkSecret;
+	/** Sign in this browser, though it did not ask for the link. */
+	confirm?: boolean;
+}
+
 export interface JsonSignup {
 	name: UserName;
 	slug?: Slug;
@@ -2860,6 +2929,43 @@ export enum ProjectPermission {
 export enum RecaptchaAction {
 	Signup = "signup",
 	Login = "login",
+}
+
+/** Why a sign-in endpoint refused a request, as the `error_code` of its error. */
+export enum SignInRefusal {
+	/** The request came from somewhere other than the console's own origin. */
+	CrossOrigin = "cross_origin",
+	/**
+	 * The reader's address made too many attempts. The `Retry-After` header holds the seconds
+	 * until it has room for another.
+	 */
+	TooManyAttempts = "too_many_attempts",
+	/** Turnstile refused the token, so the console needs a new one. */
+	TurnstileFailed = "turnstile_failed",
+	/** The invitation the sign-in carries is not valid. */
+	InvalidInvite = "invalid_invite",
+	/** The invitation the sign-in carries is for another address. */
+	InviteForAnotherEmail = "invite_for_another_email",
+	/** The organization the sign-in's invitation or claim names does not exist. */
+	UnknownOrganization = "unknown_organization",
+	/** The email could not be sent, so no sign-in started. */
+	EmailFailed = "email_failed",
+	/** The pending sign-in has expired, ended, or never was. */
+	SignInEnded = "sign_in_ended",
+	/** A wrong code, with tries left. The `Bencher-Tries-Left` header holds how many. */
+	WrongCode = "wrong_code",
+	/** A wrong code that used the last try, which ended the pending sign-in. */
+	NoTriesLeft = "no_tries_left",
+	/**
+	 * Too many wrong codes for the address in 24 hours, so its codes, the right one included,
+	 * are refused before they are compared; its link still works. The `Retry-After` header holds
+	 * the seconds until codes resume.
+	 */
+	CodesPaused = "codes_paused",
+	/** Resend is not open yet. The `Retry-After` header holds the seconds until it is. */
+	ResendWaiting = "resend_waiting",
+	/** The account is locked. */
+	Locked = "locked",
 }
 
 export enum UpdateChannel {

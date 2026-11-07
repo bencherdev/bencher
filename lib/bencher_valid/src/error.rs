@@ -138,6 +138,21 @@ pub enum ValidError {
     SessionToken,
     #[error("Failed to validate session token hash: {0}")]
     SessionTokenHash(String),
+    // The secrets of a sign-in are left out: each is a credential.
+    #[error("Failed to validate binding secret")]
+    BindingSecret,
+    #[error("Failed to validate binding secret hash: {0}")]
+    BindingSecretHash(String),
+    #[error("Failed to validate link secret")]
+    LinkSecret,
+    #[error("Failed to validate link secret hash: {0}")]
+    LinkSecretHash(String),
+    #[error("Failed to validate sign-in code")]
+    SignInCode,
+    #[error("Failed to validate sign-in code hash: {0}")]
+    SignInCodeHash(String),
+    #[error("Failed to validate email hash: {0}")]
+    EmailHash(String),
     #[error(
         "Failed to validate Bencher API key ({0} characters). Expected prefix `bencher_user_` or `bencher_run_`."
     )]
