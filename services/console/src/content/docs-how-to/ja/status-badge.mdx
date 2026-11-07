@@ -1,0 +1,59 @@
+---
+title: "ステータスバッジ"
+description: "プロジェクトにアクティブなアラートがあるかどうかを示す Bencher ステータスバッジを README に追加します"
+heading: "Bencher ステータスバッジの追加方法"
+published: "2026-11-07T00:00:00Z"
+modified: "2026-11-07T00:00:00Z"
+sortOrder: 12
+---
+
+Bencher ステータスバッジは、プロジェクトにアクティブなアラートがあるかどうかを示します:
+
+- プロジェクトにアクティブなアラートがない場合は `Bencher | passing`
+- プロジェクトにアクティブなアラートが 1 つ以上ある場合は `Bencher | failing`
+
+[アラート](/ja/docs/explanation/thresholds/#alerts)は、新しい結果が[しきい値](/ja/docs/explanation/thresholds/)を超えたときに生成されます。
+アラートは却下またはミュートされるまでアクティブなままです。
+アーカイブされたブランチ、テストベッド、またはメジャーのアラートは、
+Bencher コンソールのプロジェクトの Alerts タブと同じく、カウントされません。
+
+## README にバッジを追加する
+
+次の Markdown を README に追加します。`<project>` はプロジェクトのスラッグまたは UUID です:
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge)
+```
+
+1 つのブランチのアラートだけをカウントするには、ブランチの名前、スラッグ、または UUID を指定した `branch` クエリパラメータを追加します。
+同様に、`testbed` クエリパラメータは 1 つのテストベッドのアラートだけをカウントします。
+名前に含まれる `/` は `%2F` とエンコードできます（例: `?branch=release%2F1.0`）。
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)
+```
+
+バッジを Bencher コンソールのプロジェクトのアラートにリンクするには:
+
+```markdown
+[![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)](https://bencher.dev/console/projects/<project>/alerts)
+```
+
+## Bencher Self-Hosted
+
+Bencher Self-Hosted では、ご自身の API サーバーの URL を使用します:
+
+```markdown
+![Bencher](https://<api-host>/v0/projects/<project>/badge)
+```
+
+## プライベートプロジェクト
+
+プライベートプロジェクトのバッジには API キーが必要ですが、
+README の画像は API キーを送信できません。
+公開 README では、公開プロジェクトのバッジだけを使用してください。
+
+## 更新
+
+バッジは最大 5 分間キャッシュされることがあるため、
+アラートが生成または却下されてから約 5 分以内に更新されます。

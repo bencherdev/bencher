@@ -109,3 +109,9 @@ Use `--format json` on any command for machine-readable output.
 Without the CLI, the same data is available through the hosted MCP server
 (a Bencher Plus feature): see [mcp.md](./mcp.md). The CLI remains the
 recommended route when it is installed.
+
+For a README status badge that reads `failing` while the project has an active alert,
+use `![Bencher](https://api.bencher.dev/v0/projects/<project>/badge)`, optionally with
+`?branch=<branch>` or `?testbed=<testbed>` by name, slug, or UUID, with a `/` in a
+name encoded as `%2F` (public projects only).
+See https://bencher.dev/docs/how-to/status-badge/

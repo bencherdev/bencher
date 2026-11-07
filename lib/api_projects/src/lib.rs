@@ -14,6 +14,7 @@ use uuid as _;
 
 pub mod alerts;
 mod allowed;
+pub mod badge;
 pub mod benchmarks;
 pub mod branches;
 pub mod console;
@@ -230,6 +231,12 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(alerts::proj_alerts_get)?;
         api_description.register(alerts::proj_alert_get)?;
         api_description.register(alerts::proj_alert_patch)?;
+
+        // Badge
+        if http_options {
+            api_description.register(badge::proj_badge_options)?;
+        }
+        api_description.register(badge::proj_badge_get)?;
 
         // Console
         if http_options {

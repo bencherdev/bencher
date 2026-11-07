@@ -1,0 +1,59 @@
+---
+title: "Badge de statut"
+description: "Ajoutez à votre README un badge de statut Bencher qui indique si votre projet a des alertes actives"
+heading: "Comment ajouter un badge de statut Bencher"
+published: "2026-11-07T00:00:00Z"
+modified: "2026-11-07T00:00:00Z"
+sortOrder: 12
+---
+
+Un badge de statut Bencher indique si votre projet a des alertes actives :
+
+- `Bencher | passing` lorsque le projet n'a aucune alerte active
+- `Bencher | failing` lorsque le projet a au moins une alerte active
+
+Une [alerte](/fr/docs/explanation/thresholds/#alerts) est générée lorsqu'un nouveau résultat franchit un [seuil](/fr/docs/explanation/thresholds/).
+Une alerte reste active jusqu'à ce qu'elle soit ignorée ou mise en sourdine.
+Les alertes sur une branche, un banc d'essai ou une mesure archivés ne sont pas comptées,
+comme dans l'onglet Alerts de votre projet dans la Console Bencher.
+
+## Ajouter le badge à un README
+
+Ajoutez ce Markdown à votre README, où `<project>` est le slug ou l'UUID de votre projet :
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge)
+```
+
+Pour ne compter que les alertes d'une branche, ajoutez le paramètre de requête `branch` avec le nom, le slug ou l'UUID de la branche.
+De même, le paramètre de requête `testbed` ne compte que les alertes d'un banc d'essai.
+Un `/` dans un nom peut être encodé en `%2F`, par exemple `?branch=release%2F1.0`.
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)
+```
+
+Pour lier le badge aux alertes de votre projet dans la Console Bencher :
+
+```markdown
+[![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)](https://bencher.dev/console/projects/<project>/alerts)
+```
+
+## Bencher Self-Hosted
+
+Pour Bencher Self-Hosted, utilisez l'URL de votre propre serveur d'API :
+
+```markdown
+![Bencher](https://<api-host>/v0/projects/<project>/badge)
+```
+
+## Projets privés
+
+Le badge d'un projet privé nécessite une clé d'API,
+et une image dans un README ne peut pas en envoyer.
+N'utilisez le badge dans un README public que pour un projet public.
+
+## Mises à jour
+
+Le badge peut être mis en cache jusqu'à 5 minutes,
+il se met donc à jour dans les 5 minutes environ après qu'une alerte a été générée ou ignorée.

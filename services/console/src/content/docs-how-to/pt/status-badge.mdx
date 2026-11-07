@@ -1,0 +1,59 @@
+---
+title: "Selo de Status"
+description: "Adicione ao seu README um selo de status do Bencher que mostra se o seu projeto tem Alertas ativos"
+heading: "Como Adicionar um Selo de Status do Bencher"
+published: "2026-11-07T00:00:00Z"
+modified: "2026-11-07T00:00:00Z"
+sortOrder: 12
+---
+
+Um selo de status do Bencher mostra se o seu projeto tem Alertas ativos:
+
+- `Bencher | passing` quando o projeto não tem Alertas ativos
+- `Bencher | failing` quando o projeto tem pelo menos um Alerta ativo
+
+Um [Alerta](/pt/docs/explanation/thresholds/#alerts) é gerado quando um novo resultado ultrapassa um [Limite](/pt/docs/explanation/thresholds/).
+Um Alerta permanece ativo até ser descartado ou silenciado.
+Alertas em um Branch, Testbed ou Medida arquivados não são contados,
+assim como na aba Alerts do seu projeto no Console do Bencher.
+
+## Adicionar o Selo a um README
+
+Adicione este Markdown ao seu README, onde `<project>` é o slug ou UUID do seu projeto:
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge)
+```
+
+Para contar apenas os Alertas de um Branch, adicione o parâmetro de consulta `branch` com o nome, slug ou UUID do Branch.
+Da mesma forma, o parâmetro de consulta `testbed` conta apenas os Alertas de um Testbed.
+Uma `/` em um nome pode ser codificada como `%2F`, por exemplo `?branch=release%2F1.0`.
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)
+```
+
+Para vincular o selo aos Alertas do seu projeto no Console do Bencher:
+
+```markdown
+[![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)](https://bencher.dev/console/projects/<project>/alerts)
+```
+
+## Bencher Self-Hosted
+
+Para o Bencher Self-Hosted, use a URL do seu próprio servidor de API:
+
+```markdown
+![Bencher](https://<api-host>/v0/projects/<project>/badge)
+```
+
+## Projetos Privados
+
+O selo de um projeto privado exige uma chave de API,
+e uma imagem em um README não consegue enviá-la.
+Use o selo em um README público apenas para um projeto público.
+
+## Atualizações
+
+O selo pode ficar em cache por até 5 minutos,
+então ele é atualizado em até cerca de 5 minutos depois que um Alerta é gerado ou descartado.

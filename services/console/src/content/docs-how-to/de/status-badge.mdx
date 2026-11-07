@@ -1,0 +1,59 @@
+---
+title: "Status-Badge"
+description: "Fügen Sie Ihrer README ein Bencher-Status-Badge hinzu, das zeigt, ob Ihr Projekt aktive Alerts hat"
+heading: "So fügen Sie ein Bencher-Status-Badge hinzu"
+published: "2026-11-07T00:00:00Z"
+modified: "2026-11-07T00:00:00Z"
+sortOrder: 12
+---
+
+Ein Bencher-Status-Badge zeigt, ob Ihr Projekt aktive Alerts hat:
+
+- `Bencher | passing`, wenn das Projekt keine aktiven Alerts hat
+- `Bencher | failing`, wenn das Projekt mindestens einen aktiven Alert hat
+
+Ein [Alert](/de/docs/explanation/thresholds/#alerts) wird generiert, wenn ein neues Ergebnis einen [Schwellenwert](/de/docs/explanation/thresholds/) überschreitet.
+Ein Alert bleibt aktiv, bis er verworfen oder stummgeschaltet wird.
+Alerts auf einem archivierten Branch, Testbed oder Measure werden nicht gezählt,
+genau wie im Alerts-Tab Ihres Projekts in der Bencher Console.
+
+## Das Badge zu einer README hinzufügen
+
+Fügen Sie dieses Markdown zu Ihrer README hinzu, wobei `<project>` der Slug oder die UUID Ihres Projekts ist:
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge)
+```
+
+Um nur die Alerts auf einem Branch zu zählen, fügen Sie den Query-Parameter `branch` mit dem Namen, dem Slug oder der UUID des Branches hinzu.
+Ebenso zählt der Query-Parameter `testbed` nur die Alerts auf einem Testbed.
+Ein `/` in einem Namen kann als `%2F` kodiert werden, zum Beispiel `?branch=release%2F1.0`.
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)
+```
+
+Um das Badge mit den Alerts Ihres Projekts in der Bencher Console zu verlinken:
+
+```markdown
+[![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)](https://bencher.dev/console/projects/<project>/alerts)
+```
+
+## Bencher Self-Hosted
+
+Verwenden Sie für Bencher Self-Hosted die URL Ihres eigenen API-Servers:
+
+```markdown
+![Bencher](https://<api-host>/v0/projects/<project>/badge)
+```
+
+## Private Projekte
+
+Das Badge eines privaten Projekts erfordert einen API-Schlüssel,
+und ein Bild in einer README kann keinen senden.
+Verwenden Sie das Badge in einer öffentlichen README nur für ein öffentliches Projekt.
+
+## Aktualisierungen
+
+Das Badge kann bis zu 5 Minuten zwischengespeichert werden,
+daher wird es spätestens etwa 5 Minuten, nachdem ein Alert generiert oder verworfen wurde, aktualisiert.

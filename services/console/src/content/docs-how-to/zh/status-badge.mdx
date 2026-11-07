@@ -1,0 +1,59 @@
+---
+title: "状态徽章"
+description: "在 README 中添加 Bencher 状态徽章，显示您的项目是否有活动警报"
+heading: "如何添加 Bencher 状态徽章"
+published: "2026-11-07T00:00:00Z"
+modified: "2026-11-07T00:00:00Z"
+sortOrder: 12
+---
+
+Bencher 状态徽章显示您的项目是否有活动警报：
+
+- 项目没有活动警报时显示 `Bencher | passing`
+- 项目至少有一个活动警报时显示 `Bencher | failing`
+
+当新结果越过[阈值](/zh/docs/explanation/thresholds/)时，会生成[警报](/zh/docs/explanation/thresholds/#alerts)。
+警报在被忽略或静默之前一直保持活动状态。
+已归档的分支、测试台或度量上的警报不计入，
+与 Bencher 控制台中项目的 Alerts 标签页一致。
+
+## 将徽章添加到 README
+
+将以下 Markdown 添加到您的 README 中，其中 `<project>` 是您项目的 slug 或 UUID：
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge)
+```
+
+要只计算某个分支上的警报，请添加带有该分支名称、slug 或 UUID 的 `branch` 查询参数。
+同样，`testbed` 查询参数只计算某个测试台上的警报。
+名称中的 `/` 可以编码为 `%2F`，例如 `?branch=release%2F1.0`。
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)
+```
+
+要将徽章链接到 Bencher 控制台中项目的警报：
+
+```markdown
+[![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)](https://bencher.dev/console/projects/<project>/alerts)
+```
+
+## Bencher Self-Hosted
+
+对于 Bencher Self-Hosted，请使用您自己的 API 服务器的 URL：
+
+```markdown
+![Bencher](https://<api-host>/v0/projects/<project>/badge)
+```
+
+## 私有项目
+
+私有项目的徽章需要 API 密钥，
+而 README 中的图片无法发送 API 密钥。
+在公开的 README 中，只为公开项目使用徽章。
+
+## 更新
+
+徽章最多可能被缓存 5 分钟，
+因此在警报生成或被忽略后约 5 分钟内更新。
