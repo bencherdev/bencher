@@ -6,12 +6,9 @@ import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type {
-	JsonAuthUser,
-	JsonConsoleUser,
-	JsonOrganization,
-} from "../../types/bencher";
+import type { JsonConsoleUser, JsonOrganization } from "../../types/bencher";
 import { AccountContext } from "../account/context";
+import type { Reader } from "../reader";
 import { type Api, ApiError, type Method } from "../api";
 import { axeInBothThemes } from "../axe/testing";
 import { FlushContext } from "../flush";
@@ -20,15 +17,11 @@ import { consoleUserQuery } from "../queries";
 import { FLOOR_WIDTHS, STRESS, expectFoldAt, nameFloor } from "../ui/testing";
 import Organizations from "./Organizations";
 
-const READER = {
-	user: {
-		uuid: "user-uuid",
-		name: "Muriel Bagge",
-		slug: "muriel-bagge",
-		email: "muriel@nowhere.example",
-	},
-	token: "tok",
-} as JsonAuthUser;
+const READER: Reader = {
+	uuid: "user-uuid",
+	name: "Muriel Bagge",
+	slug: "muriel-bagge",
+};
 
 const project = (slug: string, organization: string) => ({
 	uuid: `${slug}-uuid`,
@@ -40,9 +33,9 @@ const project = (slug: string, organization: string) => ({
 });
 
 const BOOTSTRAP = {
-	uuid: READER.user.uuid,
-	name: READER.user.name,
-	slug: READER.user.slug,
+	uuid: READER.uuid,
+	name: READER.name,
+	slug: READER.slug,
 	organizations: [
 		{ uuid: "tw", name: "Tumbleweed Systems", slug: "tumbleweed" },
 		{ uuid: "nl", name: "Nowhere Labs", slug: "nowhere-labs" },
@@ -263,10 +256,7 @@ describe("the list", () => {
 	test("paints from the cached bootstrap at once", async () => {
 		const { api } = consoleApi({ bootstrap: () => new Promise(() => {}) });
 		const client = new QueryClient();
-		client.setQueryData(
-			consoleUserQuery(api, READER.user.uuid).queryKey,
-			BOOTSTRAP,
-		);
+		client.setQueryData(consoleUserQuery(api, READER.uuid).queryKey, BOOTSTRAP);
 		mount(api, { client });
 
 		await expect
@@ -350,7 +340,7 @@ describe("New organization", () => {
 			},
 		]);
 		const cached = client.getQueryData<JsonConsoleUser>(
-			consoleUserQuery(api, READER.user.uuid).queryKey,
+			consoleUserQuery(api, READER.uuid).queryKey,
 		);
 		expect(cached?.organizations).toContainEqual({
 			uuid: "new-uuid",

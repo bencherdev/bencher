@@ -21,23 +21,18 @@ import {
 	legacyTokensQuery,
 	patchOf,
 	problemsOf,
-	userQuery,
 } from "../account/profile";
 import { accountPath } from "../account/paths";
+import { userQuery } from "../queries";
 import { useQueryResult } from "../query";
 
 const FIELDS: readonly Field[] = ["name", "slug", "email"];
 
 /** The reader's name, slug, and email, and a link to any legacy tokens. */
 const Profile = () => {
-	const { api, reader } = useAccount();
+	const { api } = useAccount();
 	const params = useParams();
 	const slug = () => params.user ?? "";
-	// The reader's own account is already known, so it paints at once.
-	const known = () => {
-		const { user } = reader();
-		return slug() === user.slug || slug() === user.uuid ? user : undefined;
-	};
 	const user = useQueryResult(() => userQuery(api, slug()));
 	const tokens = useQueryResult(() => legacyTokensQuery(api, slug()));
 	return (
@@ -53,7 +48,7 @@ const Profile = () => {
 				</div>
 			</div>
 			<Show
-				when={user().data ?? known()}
+				when={user().data}
 				fallback={
 					<Show when={user().error} fallback={<Skeleton size="card" />}>
 						<Failed what="Profile" retry={() => user().refetch()} />
@@ -163,7 +158,7 @@ const ProfileForm = (props: {
 				`/v0/users/${props.user.uuid}`,
 				changes,
 			);
-			const own = user.uuid === reader().user.uuid;
+			const own = user.uuid === reader().uuid;
 			// The reader's own new email takes effect from the confirm link the API mails it.
 			const waiting =
 				own &&

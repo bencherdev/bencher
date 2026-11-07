@@ -18,9 +18,9 @@ test.describe("New project", () => {
 		newContext,
 		request,
 	}) => {
-		const reader = await createReader(request);
+		const reader = await createReader();
 		const own = await request.fetch(`${seed.api_url}/v0/organizations`, {
-			headers: { Authorization: `Bearer ${reader.token}` },
+			headers: { Authorization: `Bearer ${reader.key}` },
 		});
 		const [organization] = (await own.json()) as JsonOrganization[];
 		if (!organization) {
@@ -56,7 +56,7 @@ test.describe("New project", () => {
 		const slug = new URL(page.url()).pathname.split("/")[3] ?? "";
 		const project = (await (
 			await request.fetch(`${seed.api_url}/v0/projects/${slug}`, {
-				headers: { Authorization: `Bearer ${reader.token}` },
+				headers: { Authorization: `Bearer ${reader.key}` },
 			})
 		).json()) as JsonProject;
 		expect(project).toMatchObject({

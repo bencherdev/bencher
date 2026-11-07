@@ -40,7 +40,7 @@ const mount = (
 	dispose = render(() => {
 		const [search, setSearch] = createSignal(initial);
 		return (
-			<QueryClientProvider client={createQueryClient(() => {})}>
+			<QueryClientProvider client={createQueryClient()}>
 				<ProjectContext.Provider value={{ api, slug: () => "hashbrown" }}>
 					<Suspense fallback={<p>Suspended</p>}>
 						<main class="page">

@@ -12,16 +12,14 @@ import type { Copied } from "../explore/Share";
 import { handOff } from "../handoff";
 import { rememberVersion } from "../memory";
 import { type ExploreQuery, decodeQuery, encodeQuery } from "../query/query";
-import { isCurrent, readReader, signInHref } from "../reader";
+import { READER_KEY, readReader, signInHref } from "../reader";
 import Public, { type PlotView } from "./Public";
 import { publicPlotPath } from "./query";
 import { type Refusal, reads } from "./read";
 
 export const boot = (mount: HTMLElement) => {
 	const { slug = "" } = mount.dataset;
-	const reader = readReader(localStorage);
-	const token =
-		reader && isCurrent(reader, Date.now()) ? reader.token : undefined;
+	const signedIn = readReader(localStorage) !== undefined;
 	// Read as no one first, so a public project draws the same for everyone;
 	// only a project that refuses everyone is read again as the reader.
 	let get = reads();
@@ -37,6 +35,16 @@ export const boot = (mount: HTMLElement) => {
 	const [title, setTitle] = createSignal(slug);
 	const [embeddable, setEmbeddable] = createSignal(false);
 	const [view, setView] = createSignal<"plot" | "locked" | "checking">("plot");
+	// The API reads a session it has ended as no one's, so only it can say the
+	// hint is stale. The console forgets the rest when it next loads with none.
+	const checkSession = () =>
+		get("/v0/auth/session").catch((error: Refusal) => {
+			if (error.status === 401) {
+				localStorage.removeItem(READER_KEY);
+				document.documentElement.removeAttribute("data-reader");
+			}
+		});
+
 	const readProject = (asReader: boolean): Promise<boolean> =>
 		get<JsonProject>(project).then(
 			(read) => {
@@ -52,8 +60,11 @@ export const boot = (mount: HTMLElement) => {
 			},
 			(error: Refusal) => {
 				const refused = Boolean(error.status && error.status < 500);
-				if (refused && token && !asReader) {
-					get = reads(token);
+				if (refused && asReader) {
+					checkSession();
+				}
+				if (refused && signedIn && !asReader) {
+					get = reads(true);
 					setView("checking");
 					return readProject(true);
 				}

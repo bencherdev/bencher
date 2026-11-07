@@ -8,7 +8,7 @@ import { perfPreloads } from "../../../next/preloads";
 import Public from "../../../next/public/Public";
 import { publicPlotPath } from "../../../next/public/query";
 import { decodeQuery } from "../../../next/query/query";
-import { USER_KEY, signInHref } from "../../../next/reader";
+import { READER_KEY, signInHref } from "../../../next/reader";
 import { BENCHER_OG_IMAGE, BENCHER_SITE_URL } from "../../../util/ext";
 import "../../../next/public/page.css";
 
@@ -33,10 +33,10 @@ const title = `${slug} | Bencher`;
 		<meta property="og:image" content={BENCHER_OG_IMAGE} />
 		<meta name="twitter:card" content="summary_large_image" />
 		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
-		<script is:inline define:vars={{ USER_KEY }}>
+		<script is:inline define:vars={{ READER_KEY }}>
 			try {
-				var reader = JSON.parse(localStorage.getItem(USER_KEY) || "null");
-				if (reader && reader.token && Date.parse(reader.expiration) > Date.now()) {
+				var reader = JSON.parse(localStorage.getItem(READER_KEY) || "null");
+				if (reader && reader.uuid) {
 					document.documentElement.setAttribute("data-reader", "");
 				}
 			} catch (_) {}

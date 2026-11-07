@@ -3,7 +3,7 @@ import Redirect from "../../site/Redirect";
 import { authUser } from "../../../util/auth";
 
 const AnonRedirect = (props: { path: string }) => (
-	<Show when={!authUser()?.token}>
+	<Show when={!authUser()}>
 		<Redirect path={props.path} />
 	</Show>
 );

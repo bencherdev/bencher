@@ -73,7 +73,7 @@ const reactivate = (scope: Page | Locator, name: string) =>
 const apiCounts = async (request: APIRequestContext, slug: string) => {
 	const response = await request.get(
 		`${seed.api_url}/v0/console/projects/${slug}/alerts?status=all&per_page=0`,
-		{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+		{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 	);
 	return ((await response.json()) as { counts: Record<string, number> }).counts;
 };

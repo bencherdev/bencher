@@ -4,14 +4,10 @@ import type {
 	BrowserContextOptions,
 	Page,
 } from "@playwright/test";
-import type {
-	JsonAuthUser,
-	JsonOrganization,
-	JsonProject,
-} from "../src/types/bencher";
+import type { JsonOrganization, JsonProject } from "../src/types/bencher";
 import { createReader, unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, seed, signedIn, test, RELAY } from "./fixtures";
+import { expect, type Reader, seed, signedIn, test, RELAY } from "./fixtures";
 
 const ORGANIZATIONS = "/console/organizations";
 const heading = (page: Page) =>
@@ -24,13 +20,13 @@ const table = (page: Page) =>
 /** The API, as `reader`. */
 const send = async <T>(
 	request: APIRequestContext,
-	reader: JsonAuthUser,
+	reader: Reader,
 	path: string,
 	data?: unknown,
 ): Promise<T> => {
 	const response = await request.fetch(`${seed.api_url}${path}`, {
 		method: data === undefined ? "GET" : "POST",
-		headers: { Authorization: `Bearer ${reader.token}` },
+		headers: { Authorization: `Bearer ${reader.key}` },
 		...(data === undefined ? {} : { data }),
 	});
 	if (!response.ok()) {
@@ -42,7 +38,7 @@ const send = async <T>(
 /** A page of its own for a new reader, whom each test may change. */
 const readerPage = async (
 	newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>,
-	reader: JsonAuthUser,
+	reader: Reader,
 ) => (await newContext({ storageState: signedIn(reader) })).newPage();
 
 test.describe("Organizations", () => {
@@ -54,7 +50,7 @@ test.describe("Organizations", () => {
 		newContext,
 		request,
 	}) => {
-		const reader = await createReader(request);
+		const reader = await createReader();
 		const page = await readerPage(newContext, reader);
 		await page.goto(ORGANIZATIONS);
 		// Signing up made the reader an organization of their own.
@@ -102,7 +98,7 @@ test.describe("Organizations", () => {
 		newContext,
 		request,
 	}) => {
-		const reader = await createReader(request);
+		const reader = await createReader();
 		const empty = await send<JsonOrganization>(
 			request,
 			reader,

@@ -6,11 +6,7 @@ import {
 	createMemo,
 	createSignal,
 } from "solid-js";
-import {
-	type JsonAuthUser,
-	type JsonUsage,
-	PlanLevel,
-} from "../../../../types/bencher";
+import { type JsonUsage, PlanLevel } from "../../../../types/bencher";
 import { fmtDate } from "../../../../util/convert";
 import { BENCHER_CALENDLY_URL } from "../../../../util/ext";
 import { useNavigate, useSearchParams } from "../../../../util/url";
@@ -18,12 +14,13 @@ import { type InitValid, validPlanLevel } from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
 import InnerPricingTable from "../../../pricing/InnerPricingTable";
 import Checkout from "./Checkout";
+import type { Reader } from "../../../../next/reader";
 
 interface Props {
 	params: Params;
 	onboard: boolean;
 	bencher_valid: Resource<InitValid>;
-	user: JsonAuthUser;
+	user: undefined | Reader;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }

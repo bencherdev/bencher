@@ -1,5 +1,5 @@
-import { decodeBase64 } from "../../util/convert";
-import { isWebUrl, sameOriginUrl } from "../../util/url";
+import { decodeBase64 } from "../../util/base64";
+import { isWebUrl, sameOriginUrl } from "../../util/webUrl";
 import { consentPath } from "./authorize/path";
 
 /** The page a sign in returns to, kept where a magic link opened in another tab of this browser reads it. */

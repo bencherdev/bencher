@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
-import type { JsonAuthUser, JsonConsoleProject } from "../types/bencher";
+import type { JsonConsoleProject } from "../types/bencher";
+import type { Reader } from "./reader";
 import { type Api, ApiError } from "./api";
 import Layout from "./Layout";
 import { VERSION_KEY } from "./memory";
@@ -13,9 +14,11 @@ import { PROJECTS_PATH } from "./paths";
 import { consoleProjectQuery } from "./queries";
 import { PAGES, ROUTES } from "./routes";
 
-const reader = {
-	user: { uuid: "reader-uuid", slug: "muriel-bagge" },
-} as JsonAuthUser;
+const reader: Reader = {
+	uuid: "reader-uuid",
+	slug: "muriel-bagge",
+	name: "Muriel Bagge",
+};
 
 const bootstrap = (alerts: number) =>
 	({

@@ -2241,6 +2241,8 @@ export interface JsonOAuthClient {
 /** A user's answer to an app's request to connect. */
 export interface JsonOAuthDecision {
 	approve: boolean;
+	/** A user API key to approve with, in place of the session. */
+	key?: UserKey;
 }
 
 /** The user API key an OAuth grant was approved with. */
@@ -2272,13 +2274,6 @@ export interface JsonOAuthRedirect {
 
 export interface JsonOAuthUrl {
 	url: Url;
-}
-
-export interface JsonOAuthUser {
-	user: JsonAuthUser;
-	plan?: PlanLevel;
-	/** An app's pending request to connect, to return to now that the user is signed in. */
-	authorization?: Uuid;
 }
 
 /**

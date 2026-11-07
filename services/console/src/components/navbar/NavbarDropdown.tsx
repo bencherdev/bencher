@@ -8,22 +8,22 @@ const NavbarDropdown = () => {
 	return (
 		<div class="navbar-item has-dropdown is-hoverable">
 			<div class="navbar-link">
-				{(user?.user?.name ? user.user.name : "Account").padStart(12, "\xa0")}
+				{(user?.name ? user.name : "Account").padStart(12, "\xa0")}
 			</div>
 			<div class="navbar-dropdown">
 				<a class="navbar-item" href="/console/organizations">
 					Organizations
 				</a>
-				<a class="navbar-item" href={`/console/users/${user?.user?.slug}/keys`}>
+				<a class="navbar-item" href={`/console/users/${user?.slug}/keys`}>
 					Keys
 				</a>
-				<a class="navbar-item" href={`/console/users/${user?.user?.slug}/apps`}>
+				<a class="navbar-item" href={`/console/users/${user?.slug}/apps`}>
 					Connected Apps
 				</a>
 				<a
 					class="navbar-item"
 					href={`/console/users/${
-						user?.user?.slug
+						user?.slug
 					}/settings?${BACK_PARAM}=${encodePath()}`}
 				>
 					Settings
@@ -31,7 +31,7 @@ const NavbarDropdown = () => {
 				<hr class="navbar-divider" />
 				<div class="navbar-item">
 					<a class="button is-fullwidth" href="/auth/logout">
-						Log out
+						Sign out
 					</a>
 				</div>
 				<hr class="navbar-divider" />

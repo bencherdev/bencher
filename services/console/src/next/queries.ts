@@ -1,4 +1,8 @@
-import type { JsonConsoleProject, JsonConsoleUser } from "../types/bencher";
+import type {
+	JsonConsoleProject,
+	JsonConsoleUser,
+	JsonUser,
+} from "../types/bencher";
 import type { Api } from "./api";
 
 /**
@@ -27,4 +31,15 @@ export const consoleUserQuery = (api: Api, reader: string) => ({
 				signal,
 			)
 		).data,
+});
+
+/**
+ * A user's account, by slug or UUID: the email Profile edits, and the one the
+ * account menu and Feedback show, since the reader's hint holds none.
+ */
+export const userQuery = (api: Api, user: string) => ({
+	queryKey: ["account", "user", user],
+	queryFn: async ({ signal }: { signal: AbortSignal }) =>
+		(await api.get<JsonUser>(`/v0/users/${encodeURIComponent(user)}`, signal))
+			.data,
 });

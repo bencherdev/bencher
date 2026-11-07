@@ -7,15 +7,12 @@ import {
 	createEffect,
 	createSignal,
 } from "solid-js";
-import type {
-	JsonAuthUser,
-	JsonNewCheckout,
-	PlanLevel,
-} from "../../../../types/bencher";
+import type { JsonNewCheckout, PlanLevel } from "../../../../types/bencher";
+import type { Reader } from "../../../../next/reader";
 import { httpPost } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
 import { useNavigate } from "../../../../util/url";
-import { type InitValid, validJwt } from "../../../../util/valid";
+import type { InitValid } from "../../../../util/valid";
 import CheckoutLoading from "./CheckoutLoading";
 
 interface Props {
@@ -23,7 +20,7 @@ interface Props {
 	onboard: boolean;
 	autoSubmit?: boolean;
 	bencher_valid: Resource<InitValid>;
-	user: JsonAuthUser;
+	user: undefined | Reader;
 	organization: undefined | string;
 	plan: Accessor<PlanLevel>;
 	entitlements: Accessor<null | number>;
@@ -45,8 +42,7 @@ const Checkout = (props: Props) => {
 		if (!props.bencher_valid()) {
 			return;
 		}
-		const token = props.user?.token;
-		if (!validJwt(token)) {
+		if (!props.user) {
 			return;
 		}
 		if (!isSendable()) {
@@ -62,7 +58,7 @@ const Checkout = (props: Props) => {
 
 		setSubmitting(true);
 		setFailed(false);
-		httpPost("/v0/checkout", token, newCheckout)
+		httpPost("/v0/checkout", newCheckout)
 			.then((checkout) => {
 				navigate(checkout.data.url);
 				setSubmitting(false);
@@ -89,7 +85,7 @@ const Checkout = (props: Props) => {
 		if (!props.bencher_valid() || !props.organization) {
 			return;
 		}
-		if (!validJwt(props.user?.token)) {
+		if (!props.user) {
 			return;
 		}
 		autoSubmitted = true;

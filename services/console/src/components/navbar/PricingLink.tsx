@@ -4,7 +4,7 @@ import { authUser } from "../../util/auth";
 const PricingLink = () => {
 	return (
 		<Show
-			when={authUser()?.token}
+			when={authUser()}
 			fallback={
 				<a class="navbar-item" href="/pricing/">
 					Pricing

@@ -321,6 +321,26 @@
 		"htmlBytes": 1560,
 		"inlineScriptBytes": 390
 	},
+	"doorColdLoad": {
+		"apiRequests": 0,
+		"cls": 0,
+		"jsBytes": 23873,
+		"stylesheets": 1,
+		"cssBytes": 9464,
+		"htmlBytes": 1814,
+		"inlineScriptBytes": 392,
+		"lateModules": 14
+	},
+	"consentColdLoad": {
+		"apiRequests": 2,
+		"cls": 0,
+		"jsBytes": 23505,
+		"stylesheets": 1,
+		"cssBytes": 9464,
+		"htmlBytes": 1109,
+		"inlineScriptBytes": 392,
+		"lateModules": 14
+	},
 	"classicHelpColdLoad": {
 		"jsBytes": 139750,
 		"cssBytes": 68100
@@ -346,8 +366,8 @@
 		"lateModules": 0
 	},
 	"feedbackOpen": {
-		"apiRequests": 0,
-		"jsBytes": 3990,
+		"apiRequests": 1,
+		"jsBytes": 4132,
 		"scriptRounds": 1
 	},
 	"switcherOpen": {
