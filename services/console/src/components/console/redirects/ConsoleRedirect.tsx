@@ -123,7 +123,7 @@ const ConsoleRedirect = (props: Props) => {
 	};
 	createResource(fetcher, redirect);
 
-	return <></>;
+	return null;
 };
 
 export default ConsoleRedirect;

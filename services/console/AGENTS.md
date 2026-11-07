@@ -264,6 +264,7 @@ Pagefind runs as a post-build step against `dist/` and writes a static index int
 - In `npm run dev`, the search button renders but shows a stub message — the
   dev server does not build the Pagefind index.
 - To exercise real search locally, build and serve:
+
   ```bash
   IS_BENCHER_CLOUD=true npm run build && npm run pagefind:node && npm run preview
   ```

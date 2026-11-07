@@ -344,7 +344,8 @@
 	display: grid;
 }
 
-.pl-rrow b {
+.pl-rrow b,
+.pl-khead b {
 	color: var(--color-text-primary);
 }
 
@@ -453,10 +454,6 @@
 	font-size: 11.5px;
 	line-height: 18px;
 	white-space: nowrap;
-}
-
-.pl-khead b {
-	color: var(--color-text-primary);
 }
 
 .pl-dot {

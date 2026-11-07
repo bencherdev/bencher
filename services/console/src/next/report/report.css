@@ -277,6 +277,28 @@
 .lr > td {
 	height: 44px;
 }
+.lr-group > td {
+	height: 38px;
+	padding-left: 42px;
+	background: var(--color-background-muted);
+	font-size: 12.5px;
+	color: var(--color-text-muted);
+	white-space: nowrap;
+}
+/* The plot's space, held before it mounts: 1 px of border and the rest. */
+.lr-exrow > td {
+	padding: 0;
+	background: var(--color-background-surface);
+}
+.lr-more > td {
+	padding: 12px 10px;
+}
+.lrn > td {
+	height: 64px;
+}
+.lr-dim > td {
+	color: var(--color-text-muted);
+}
 .lr-head > th {
 	height: 36px;
 	border-top: 0;
@@ -348,30 +370,12 @@
 		var(--color-overlay-hover)
 	);
 }
-.lr-group > td {
-	height: 38px;
-	padding-left: 42px;
-	background: var(--color-background-muted);
-	font-size: 12.5px;
-	color: var(--color-text-muted);
-	white-space: nowrap;
-}
-.lr-table.lr-narrow .lr-group > td {
-	height: 44px;
-	padding-left: 44px;
-	font-size: 12px;
-}
 .lr-group b {
 	color: var(--color-text-primary);
 }
 
 .lr-galert {
 	color: var(--color-text-error);
-}
-/* The plot's space, held before it mounts: 1 px of border and the rest. */
-.lr-exrow > td {
-	padding: 0;
-	background: var(--color-background-surface);
 }
 /* A line's whole name above its plot, wrapped to as many lines as it takes. */
 .lr-id {
@@ -389,9 +393,6 @@
 .lr-table .lr-spacer > td {
 	padding: 0;
 	border: 0;
-}
-.lr-more > td {
-	padding: 12px 10px;
 }
 .lr-more .ui-skeleton {
 	width: 40%;
@@ -496,11 +497,13 @@
 }
 
 /* Narrow: two lines per row with the numbers on the right */
-.lrn > td {
-	height: 64px;
-}
 .lrn.lrn-act > td {
 	height: 108px;
+}
+.lr-table.lr-narrow .lr-group > td {
+	height: 44px;
+	padding-left: 44px;
+	font-size: 12px;
 }
 .lr-table.lr-stacked .lrn > td {
 	height: 84px;
@@ -576,7 +579,6 @@
 }
 
 /* A row no longer alerting, as a dismissed alert: muted by color, never faded. */
-.lr-dim > td,
 .lr-dim b,
 .lr-dim .lrn-l2,
 .lr-dim .lr-worse,

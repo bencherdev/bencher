@@ -1,4 +1,5 @@
 # Docs
+
 - How To:
   - How to Import Historical Data
     - Create github-action-benchmark importer `bencher import`
@@ -9,6 +10,7 @@
 # Learn
 
 ## Benchmark
+
 - Rust
   - The Ultimate Guide on how to Benchmark Rust Code
   - How to track Rust benchmarks in CI
@@ -52,6 +54,7 @@
   - How to track build times in CI
 
 ## Benchmarking
+
 - https://www.researchgate.net/publication/334047447_Pro_NET_Benchmarking_The_Art_of_Performance_Measurement
 - https://blog.nelhage.com/post/reflections-on-performance/
 
@@ -59,6 +62,7 @@
   - I'm confused about the part where you use the black box for the benchmark function. Is there a reason to profile unoptimized code?
 
 ## Keywords from users
+
 - benchmarks history
 - upload benchmarks
 - chart benchmarks results
@@ -66,25 +70,27 @@
 - "benchmark data visualization tools" and "software benchmark tooling".
 
 ## Continuous Benchmarking
+
 - The Ultimate Guide to Continuous Benchmarking
-    - https://launchdarkly.com/the-definitive-guide-to-feature-management/
-    - What is Continuous Benchmarking?
-    - Run
-      - Benchmark
-        - https://martinfowler.com/articles/practical-test-pyramid.html
-        - Micro Benchmarks
-        - Macro Benchmarks
-      - Bare metal server
-    - Track
-        - Which summary statistics to collect and compare
-    - Catch
-        - Which statistical analysis to apply
-    - Profile
-        - Debugging feature regressions
-    - Bencher
-        - All in continuous benchmarking suite
+  - https://launchdarkly.com/the-definitive-guide-to-feature-management/
+  - What is Continuous Benchmarking?
+  - Run
+    - Benchmark
+      - https://martinfowler.com/articles/practical-test-pyramid.html
+      - Micro Benchmarks
+      - Macro Benchmarks
+    - Bare metal server
+  - Track
+    - Which summary statistics to collect and compare
+  - Catch
+    - Which statistical analysis to apply
+  - Profile
+    - Debugging feature regressions
+  - Bencher
+    - All in continuous benchmarking suite
 
 # Profile
+
 - Profiled guided optimization:
   - https://doc.rust-lang.org/rustc/profile-guided-optimization.html
   - https://blog.rust-lang.org/inside-rust/2020/11/11/exploring-pgo-for-the-rust-compiler.html
@@ -96,15 +102,18 @@
 - https://www.martinfowler.com/ieeeSoftware/yetOptimization.pdf
 
 # Machine Learning
+
 - https://harvard-edge.github.io/cs249r_book/contents/benchmarking/benchmarking.html
 - https://www.neuraldesigner.com/blog/how-to-benchmark-the-performance-of-machine-learning-platforms/
 
 ## Case Study
+
 - Rustc Perf
 
 Intention + Obstacle
 
 ## Engineering
+
 - Engineering Bets Scorecard
   - https://mcfunley.com/choose-boring-technology
   - Rust
@@ -149,6 +158,7 @@ Intention + Obstacle
   - https://www.brentozar.com/archive/2018/05/the-dewitt-clause-why-you-rarely-see-database-benchmarks/
 
 ## Tools
+
 - Assembly viewer
   - https://godbolt.org/
   - https://cppinsights.io/
@@ -158,6 +168,7 @@ Intention + Obstacle
   - https://github.com/plotters-rs/plotters
 
 ## Programming
+
 - Create error message help pages for each supported programming language
   - https://kinsta.com/knowledgebase/dns-server-not-responding/
 

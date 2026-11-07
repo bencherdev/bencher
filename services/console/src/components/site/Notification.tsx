@@ -46,7 +46,10 @@ const Notification = (props: { suppress?: undefined | boolean }) => {
 	const notifyKind = createMemo(() => searchParams[NOTIFY_KIND_PARAM]);
 	const notifyText = createMemo(() => searchParams[NOTIFY_TEXT_PARAM]);
 	const notifyTimeout = createMemo(() =>
-		Number.parseInt(searchParams[NOTIFY_TIMEOUT_PARAM] ?? `${NOTIFY_TIMEOUT}`),
+		Number.parseInt(
+			searchParams[NOTIFY_TIMEOUT_PARAM] ?? `${NOTIFY_TIMEOUT}`,
+			10,
+		),
 	);
 	const notifyLinkUrl = createMemo(() =>
 		sameOriginUrl(searchParams[NOTIFY_LINK_URL_PARAM], window.location.origin),

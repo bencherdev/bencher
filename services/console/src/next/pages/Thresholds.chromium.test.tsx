@@ -135,6 +135,7 @@ test("a row reads its threshold from the batch's tables", async () => {
 	const row = table().getByRole("row").nth(2);
 	await expect
 		.poll(() =>
+			// biome-ignore lint/performance/useDomNodeTextContent: the table's CSS shows only the parts its width has room for, and innerText reads what it shows
 			(row.getByRole("cell").nth(0).element() as HTMLElement).innerText.replace(
 				/\s+/g,
 				" ",

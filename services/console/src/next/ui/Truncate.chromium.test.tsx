@@ -181,6 +181,7 @@ test.each([
 				? `- button "${value}"${open ? " [expanded]" : ""}`
 				: `- text: ${value}`,
 		);
+		// biome-ignore lint/performance/useDomNodeTextContent: the test kills a value that reads with a break, which only innerText's rendered text shows
 		expect(root.innerText).toBe(value);
 		const selection = getSelection();
 		selection?.selectAllChildren(root);

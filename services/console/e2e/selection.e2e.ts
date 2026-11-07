@@ -101,7 +101,7 @@ test("a selection past the perf API's cut says how many of its lines it drew", a
 	await page.goto(`${consolePath(hashbrown.slug, "explore")}${search}`);
 	const cap = page.locator(".ex-cap");
 	await expect(cap).toBeVisible();
-	const capText = await cap.innerText();
+	const capText = (await cap.textContent()) ?? "";
 	expect(capText).toContain(
 		`${kept.length - missing.length} of ${kept.length} lines`,
 	);

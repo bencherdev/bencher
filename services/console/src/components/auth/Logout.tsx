@@ -12,7 +12,7 @@ const Logout = () => {
 		true,
 	);
 
-	return <></>;
+	return null;
 };
 
 export default Logout;
