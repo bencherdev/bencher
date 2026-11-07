@@ -5,7 +5,7 @@ mod delete;
 mod list;
 mod view;
 
-pub use create::{Thresholds, ThresholdsError};
+pub use create::{Thresholds, ThresholdsError, measure_filter};
 
 #[derive(Debug)]
 pub enum Report {
