@@ -17,7 +17,7 @@ use bencher_schema::{
         user::{
             InsertUser, Invited, QueryUser,
             session::{
-                InsertSession, QuerySession,
+                InsertSession, QuerySession, SessionId,
                 cookie::{
                     CookieCredential, PendingCookie, SessionCookie, passes_same_origin_check,
                 },
@@ -35,6 +35,7 @@ use slog::Logger;
 
 pub mod code;
 pub mod email;
+pub mod fresh;
 pub mod link;
 
 /// One message for a pending sign-in that has expired, ended, or never was.
@@ -142,10 +143,42 @@ pub(crate) async fn email_sign_in(
     email: Email,
     sign_in_context: SignInContext,
 ) -> Result<Emailed, HttpError> {
+    email_pending(log, context, request, email, |email, now| {
+        InsertPendingSignIn::new(&context.code_key, email, sign_in_context, now)
+    })
+    .await
+}
+
+/// Start a fresh sign-in that proves `session_id` again by an email to `email`, as
+/// [`email_sign_in`] starts a sign-in.
+pub(crate) async fn email_fresh(
+    log: &Logger,
+    context: &ApiContext,
+    request: &RequestInfo,
+    email: Email,
+    session_id: SessionId,
+) -> Result<Emailed, HttpError> {
+    email_pending(log, context, request, email, |email, now| {
+        InsertPendingSignIn::fresh(&context.code_key, email, session_id, now)
+    })
+    .await
+}
+
+async fn email_pending<F>(
+    log: &Logger,
+    context: &ApiContext,
+    request: &RequestInfo,
+    email: Email,
+    pending: F,
+) -> Result<Emailed, HttpError>
+where
+    F: FnOnce(Email, DateTime) -> Result<(InsertPendingSignIn, SignInSecrets), HttpError>,
+{
     if let Some(wait) = at_cap(context, &email) {
         return Ok(Emailed::Capped { email, wait });
     }
-    let sent = Start::insert(context, email, sign_in_context, context.clock.now())
+    let now = context.clock.now();
+    let sent = Start::insert(context, pending(email, now)?, now)
         .await?
         .send(log, context)
         .await?;
@@ -187,15 +220,12 @@ struct Start {
 }
 
 impl Start {
-    /// Record a new pending sign-in for `email`.
+    /// Record a new pending sign-in.
     async fn insert(
         context: &ApiContext,
-        email: Email,
-        sign_in_context: SignInContext,
+        (insert, secrets): (InsertPendingSignIn, SignInSecrets),
         now: DateTime,
     ) -> Result<Self, HttpError> {
-        let (insert, secrets) =
-            InsertPendingSignIn::new(&context.code_key, email, sign_in_context, now)?;
         write_transaction!(context, |conn| insert.insert(conn, now)).map_err(|e| {
             issue_error("Failed to start a sign-in", "Failed to start a sign-in:", e)
         })?;
@@ -210,22 +240,9 @@ impl Start {
             link,
             code,
         } = secrets;
+        let fresh = insert.session_id.is_some();
         let email = insert.email;
-        let query_user =
-            QueryUser::find_with_email(public_conn!(context), &email).map_err(|e| {
-                issue_error(
-                    "Failed to look up a user",
-                    "Failed to look up a user to sign in:",
-                    e,
-                )
-            })?;
-        let body = if let Some(query_user) = &query_user
-            && query_user.locked
-        {
-            SignInBody::Locked {
-                support: support_url(context),
-            }
-        } else {
+        let link_url = || {
             let mut link_url = context.console_url.join("/auth/confirm").map_err(|e| {
                 issue_error(
                     "Failed to make a sign-in link",
@@ -234,10 +251,34 @@ impl Start {
                 )
             })?;
             link_url.set_fragment(Some(link.as_ref()));
-            SignInBody::Code {
-                sign_up: query_user.is_none(),
+            Ok::<_, HttpError>(link_url)
+        };
+        let body = if fresh {
+            SignInBody::Fresh {
                 code,
-                link: link_url,
+                link: link_url()?,
+            }
+        } else {
+            let query_user =
+                QueryUser::find_with_email(public_conn!(context), &email).map_err(|e| {
+                    issue_error(
+                        "Failed to look up a user",
+                        "Failed to look up a user to sign in:",
+                        e,
+                    )
+                })?;
+            if let Some(query_user) = &query_user
+                && query_user.locked
+            {
+                SignInBody::Locked {
+                    support: support_url(context),
+                }
+            } else {
+                SignInBody::Code {
+                    sign_up: query_user.is_none(),
+                    code,
+                    link: link_url()?,
+                }
             }
         };
         let message = Message {

@@ -1391,10 +1391,7 @@ async fn console_alerts_take_edit_permission() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/keys", a.slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&a.user.token),
-        )
+        .headers(server.fresh_session(&a.user))
         .json(&serde_json::json!({ "name": "bulk-key" }))
         .send()
         .await

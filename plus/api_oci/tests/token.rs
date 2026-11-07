@@ -6,7 +6,7 @@
 )]
 //! Integration tests for the OCI token endpoint (GET and POST /v0/auth/oci/token).
 
-use bencher_api_tests::{TestServer, session_cookie};
+use bencher_api_tests::{TestServer, TestUser, session_cookie};
 use bencher_json::{JsonUserKeyCreated, Jwt, ProjectKey, UserKey};
 use http::StatusCode;
 use serde_json::Value;
@@ -496,14 +496,11 @@ async fn oci_token_post_no_credentials() {
     clippy::missing_assert_message,
     reason = "test helper outside #[test] fns"
 )]
-async fn mint_user_key(server: &TestServer, user_slug: &str, token: &str) -> JsonUserKeyCreated {
+async fn mint_user_key(server: &TestServer, user: &TestUser) -> JsonUserKeyCreated {
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/users/{user_slug}/keys")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(token),
-        )
+        .post(server.api_url(&format!("/v0/users/{}/keys", user.slug)))
+        .headers(server.fresh_session(user))
         .json(&serde_json::json!({"name": "oci-login-key"}))
         .send()
         .await
@@ -521,8 +518,7 @@ async fn oci_token_user_key() {
         .await;
     let org = server.create_org(&user, "UserKey Org").await;
     let project = server.create_project(&user, &org, "UserKey Project").await;
-    let user_slug: &str = user.slug.as_ref();
-    let created = mint_user_key(&server, user_slug, &user.token).await;
+    let created = mint_user_key(&server, &user).await;
 
     assert!(
         created.key.as_ref().starts_with(UserKey::PREFIX),
@@ -573,8 +569,7 @@ async fn oci_token_post_user_key() {
     let project = server
         .create_project(&user, &org, "PostUserKey Project")
         .await;
-    let user_slug: &str = user.slug.as_ref();
-    let created = mint_user_key(&server, user_slug, &user.token).await;
+    let created = mint_user_key(&server, &user).await;
 
     let project_slug: &str = project.slug.as_ref();
     let scope = format!("repository:{project_slug}:push");
@@ -623,8 +618,7 @@ async fn oci_token_user_key_wrong_email() {
     let other = server
         .signup("OtherUser User", "otheruser-oci@example.com")
         .await;
-    let user_slug: &str = user.slug.as_ref();
-    let created = mint_user_key(&server, user_slug, &user.token).await;
+    let created = mint_user_key(&server, &user).await;
 
     let resp = server
         .client
@@ -646,7 +640,7 @@ async fn oci_token_user_key_revoked() {
         .signup("RevokedKey User", "revokedkey-oci@example.com")
         .await;
     let user_slug: &str = user.slug.as_ref();
-    let created = mint_user_key(&server, user_slug, &user.token).await;
+    let created = mint_user_key(&server, &user).await;
 
     let resp = server
         .client
