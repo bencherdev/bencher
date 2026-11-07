@@ -490,6 +490,7 @@
 }
 
 .pl-ktog {
+	container-type: inline-size;
 	flex: 1;
 	align-items: center;
 	column-gap: var(--spacing-1);
@@ -511,6 +512,41 @@
 .pl-ktog .pl-rest {
 	color: var(--color-text-primary);
 	font-weight: var(--font-weight-semibold);
+}
+
+/* A toggle's parts grow from nothing to their whole width in equal steps; the swatch, ordinal, alert dot, and a short rest stay whole. */
+button.pl-ktog {
+	display: flex;
+}
+
+.pl-key button.pl-ktog > * {
+	flex: 1 1 0;
+	min-width: 0;
+	max-width: max-content;
+}
+
+button.pl-ktog > :is(svg, .pl-alertdot, [data-fixed]) {
+	flex: none;
+	max-width: none;
+}
+
+/* A part never gives way past its tail, which its unseen copy holds. */
+button.pl-ktog > .pl-held {
+	display: inline-grid;
+	min-width: auto;
+}
+
+/* Never past the entry beside its swatch and alert dot (26 px, 8 px, and their 4 px gaps). */
+.pl-hold {
+	max-width: calc(100cqi - 42px);
+	height: 0;
+	padding-left: var(--size-ellipsis);
+	visibility: hidden;
+}
+
+/* Nor beside its ordinal, two digits in 14 px, and its gap. */
+.pl-ktog:has(> .pl-ord) .pl-hold {
+	max-width: calc(100cqi - 60px);
 }
 
 .pl-tag {

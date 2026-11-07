@@ -6,7 +6,7 @@
 		"cls": 0.00025,
 		"jsBytes": 43320,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2650,
 		"inlineScriptBytes": 2560,
@@ -134,7 +134,7 @@
 		"jsBytes": 64270,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1970,
 		"inlineScriptBytes": 910,
 		"lateModules": 0
@@ -188,7 +188,7 @@
 	"plotsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 60100,
+		"jsBytes": 60290,
 		"scriptRounds": 1
 	},
 	"thresholdsColdLoad": {
@@ -220,7 +220,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 114010,
+		"jsBytes": 114200,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2900,
 		"inlineScriptBytes": 2560,
@@ -235,7 +235,7 @@
 	"exploreLinkMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 37520,
+		"jsBytes": 37710,
 		"scriptRounds": 1
 	},
 	"blankExploreColdLoad": {
@@ -267,7 +267,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 92400,
+		"jsBytes": 92590,
 		"deferredJsBytes": 115690,
 		"stylesheets": 1,
 		"htmlBytes": 2800,
@@ -277,7 +277,7 @@
 	"alertMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 40040,
+		"jsBytes": 40230,
 		"deferredJsBytes": 360,
 		"scriptRounds": 1
 	},
@@ -299,7 +299,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 103080,
+		"jsBytes": 103270,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2850,
 		"inlineScriptBytes": 2560,
@@ -307,17 +307,17 @@
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 74520,
+		"jsBytes": 74780,
 		"deferredJsBytes": 112880,
-		"cssBytes": 12530,
+		"cssBytes": 12700,
 		"htmlBytes": 2980,
 		"inlineScriptBytes": 700
 	},
 	"embedColdLoad": {
 		"cls": 0,
-		"jsBytes": 65970,
+		"jsBytes": 66160,
 		"deferredJsBytes": 112880,
-		"cssBytes": 10820,
+		"cssBytes": 10940,
 		"htmlBytes": 1560,
 		"inlineScriptBytes": 390
 	},
@@ -365,7 +365,7 @@
 		"jsBytes": 47450,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1760,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -379,7 +379,7 @@
 		"jsBytes": 49510,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1890,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -393,7 +393,7 @@
 		"jsBytes": 54680,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1820,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -407,7 +407,7 @@
 		"jsBytes": 64150,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1870,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -421,7 +421,7 @@
 		"jsBytes": 65280,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1900,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -435,7 +435,7 @@
 		"jsBytes": 52430,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1830,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -449,7 +449,7 @@
 		"jsBytes": 53120,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1910,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -463,7 +463,7 @@
 		"jsBytes": 57740,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1950,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -477,7 +477,7 @@
 		"jsBytes": 56720,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19200,
+		"cssBytes": 19360,
 		"htmlBytes": 1900,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -485,7 +485,7 @@
 	"metricLanding": {
 		"apiRounds": 2,
 		"apiRequests": 3,
-		"jsBytes": 114790,
+		"jsBytes": 114970,
 		"lateModules": 2
 	}
 }

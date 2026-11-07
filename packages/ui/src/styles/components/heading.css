@@ -14,8 +14,9 @@
 		font-size: var(--font-size-lg);
 	}
 
-	/* A page title. */
+	/* A page title, whose widest ellipsis is 1.06em. */
 	.ui-heading[data-size="xl"] {
+		--size-ellipsis: 1.1em;
 		font-size: var(--font-size-xl);
 		font-weight: var(--font-weight-extrabold);
 		letter-spacing: -0.02em;

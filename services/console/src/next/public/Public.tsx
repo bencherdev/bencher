@@ -4,7 +4,7 @@ import ButtonLink from "@bencherdev/ui/ButtonLink";
 import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
-import Truncate from "@bencherdev/ui/Truncate";
+import Truncate, { tailOf } from "@bencherdev/ui/Truncate";
 import {
 	For,
 	Index,
@@ -164,15 +164,30 @@ const Plotted = (props: PublicProps) => {
 								fallback={<Skeleton size="text" class="pu-sumskel" />}
 							>
 								<For each={SUMMARY}>
-									{([dimension, label]) => (
-										<span class="pu-pill">
-											<span class="pu-k">{label}</span>
-											<Truncate
-												text={chipSummary(props.query, dimension, props.answer)}
-												tail
-											/>
-										</span>
-									)}
+									{([dimension, label]) => {
+										const text = () =>
+											chipSummary(props.query, dimension, props.answer);
+										const tail = () => {
+											const [head, rest] = tailOf(text());
+											return head !== "" && rest !== "" ? rest : "";
+										};
+										return (
+											<span class="pu-pill">
+												<span class="pu-k">{label}</span>
+												<span class="pu-held">
+													<Truncate text={text()} tail />
+													{/* Unseen, it holds the value at least as wide as its tail. */}
+													<Show when={tail()}>
+														{(held) => (
+															<span class="pu-hold" aria-hidden="true">
+																{held()}
+															</span>
+														)}
+													</Show>
+												</span>
+											</span>
+										);
+									}}
 								</For>
 							</Show>
 						</Show>
