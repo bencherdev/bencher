@@ -131,17 +131,73 @@ test.describe("General", () => {
 		expect(versions).toEqual({ [hashbrown.slug]: 1 });
 	});
 
-	// Kills the classic paths to an organization left with no page.
-	test("the organization's root and its projects open General", async ({
+	// Kills the classic path to an organization left with no page.
+	test("the organization's root opens General", async ({ page }) => {
+		await page.goto(`/console/organizations/${seed.organization.slug}`);
+		await expect(page).toHaveURL(generalPath(seed.organization.slug));
+		await expect(heading(page)).toBeVisible();
+	});
+});
+
+test.describe("Projects", () => {
+	const projectsPath = (organization: string) =>
+		`/console/organizations/${organization}/projects`;
+	const table = (page: Page) => page.getByRole("table", { name: "Projects" });
+
+	// Kills the classic path sent to General, a project left out or leading
+	// anywhere but its Runs, and a page titled for another section.
+	test("lists a member's projects, each leading to its Runs", async ({
 		page,
+		request,
 	}) => {
-		for (const path of ["", "/projects"]) {
-			await page.goto(
-				`/console/organizations/${seed.organization.slug}${path}`,
-			);
-			await expect(page).toHaveURL(generalPath(seed.organization.slug));
-			await expect(heading(page)).toBeVisible();
-		}
+		const organization = await createOrganization(request);
+		const project = await createProject(request, {
+			organization: organization.slug,
+		});
+		await page.goto(projectsPath(organization.slug));
+
+		await expect(page).toHaveURL(projectsPath(organization.slug));
+		await expect(
+			table(page).getByRole("link", { name: project.name }),
+		).toHaveAttribute("href", `/console/projects/${project.slug}/`);
+		await expect(page.getByText("1 project", { exact: true })).toBeVisible();
+		await expect(page).toHaveTitle(`Projects | ${organization.name} | Bencher`);
+	});
+
+	// Kills a server admin who is not a member shown an empty list, or the
+	// refusal a reader the API turns away gets.
+	test("a server admin who is not a member reads them from the API", async ({
+		newContext,
+		request,
+	}) => {
+		const organization = await createOrganization(request);
+		const project = await createProject(request, {
+			organization: organization.slug,
+		});
+		const page = await (
+			await newContext({ storageState: signedIn(seed.admin) })
+		).newPage();
+		await page.goto(projectsPath(organization.slug));
+
+		await expect(
+			table(page).getByRole("link", { name: project.name }),
+		).toHaveAttribute("href", `/console/projects/${project.slug}/`);
+		await expect(page.getByText("Organization not found")).toHaveCount(0);
+	});
+
+	// Kills a reader the API refuses shown a failure to retry.
+	test("a reader who is not a member is told it is not found", async ({
+		newContext,
+	}) => {
+		const page = await (
+			await newContext({ storageState: signedIn(seed.outsider) })
+		).newPage();
+		await page.goto(projectsPath(seed.organization.slug));
+
+		await expect(
+			page.getByRole("main").getByText("Organization not found"),
+		).toBeVisible();
+		await expect(page.getByRole("button", { name: "Retry" })).toHaveCount(0);
 	});
 });
 
@@ -174,5 +230,44 @@ test.describe("accessibility", () => {
 	// Kills contrast, names, and roles that fail axe in either theme.
 	test("General passes axe in both themes", async ({ page }) => {
 		await axeInBothThemes(page, path, loaded(page));
+	});
+
+	// Kills a list whose rows, links, or counts fail axe in either theme.
+	test("Projects passes axe in both themes", async ({ page }) => {
+		await axeInBothThemes(
+			page,
+			`/console/organizations/${seed.organization.slug}/projects`,
+			() =>
+				expect(
+					page
+						.getByRole("table", { name: "Projects" })
+						.getByRole("link", { name: hashbrown.name }),
+				).toBeVisible(),
+		);
+	});
+
+	test.describe("for a reader the API refuses", () => {
+		test.use({ storageState: signedIn(seed.outsider) });
+
+		// Kills a page that draws nothing, or a failure to retry, for a reader
+		// the API refuses, and a not found card that fails axe in either theme.
+		for (const section of ["projects", "settings", "members", "billing"]) {
+			test(`the not found card on ${section} passes axe in both themes`, async ({
+				page,
+			}) => {
+				await axeInBothThemes(
+					page,
+					`/console/organizations/${seed.organization.slug}/${section}`,
+					async () => {
+						await expect(
+							page.getByRole("main").getByText("Organization not found"),
+						).toBeVisible();
+						await expect(
+							page.getByRole("button", { name: "Retry" }),
+						).toHaveCount(0);
+					},
+				);
+			});
+		}
 	});
 });

@@ -93,6 +93,7 @@ export type PageName =
 	| "LegacyTokens"
 	| "OrgGeneral"
 	| "OrgMembers"
+	| "OrgProjects"
 	| "OrgBilling"
 	| "Organizations"
 	| "NewProject"

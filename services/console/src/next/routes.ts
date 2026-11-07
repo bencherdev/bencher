@@ -63,6 +63,7 @@ export const PAGES: Record<PageName, Page> = {
 	LegacyTokens: lazy(() => import("./pages/LegacyTokens")),
 	OrgGeneral: organizationPage(() => import("./pages/OrgGeneral")),
 	OrgMembers: organizationPage(() => import("./pages/OrgMembers")),
+	OrgProjects: organizationPage(() => import("./pages/OrgProjects")),
 	OrgBilling: organizationPage(() => import("./pages/OrgBilling")),
 	Organizations: lazy(() => import("./pages/Organizations")),
 	NewProject: organizationPage(() => import("./pages/NewProject")),
@@ -125,6 +126,10 @@ export const CONSOLE_ROUTES: RouteDefinition[] = [
 	{
 		path: "/organizations/:organization/members",
 		component: PAGES.OrgMembers,
+	},
+	{
+		path: "/organizations/:organization/projects",
+		component: PAGES.OrgProjects,
 	},
 	{
 		path: "/organizations/:organization/billing",

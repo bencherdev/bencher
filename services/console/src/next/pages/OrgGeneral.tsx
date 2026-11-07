@@ -7,7 +7,15 @@ import TextInput from "@bencherdev/ui/TextInput";
 import Truncate from "@bencherdev/ui/Truncate";
 import { useNavigate, useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
-import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
+import {
+	Match,
+	Show,
+	Switch,
+	createEffect,
+	createMemo,
+	createSignal,
+	on,
+} from "solid-js";
 import type {
 	JsonConsoleOrganization,
 	JsonConsoleUser,
@@ -18,10 +26,12 @@ import {
 	allowedQuery,
 	organizationIn,
 	organizationQuery,
+	refused,
 	withOrganization,
 } from "../organization/data";
 import DeleteOrganization from "../organization/DeleteOrganization";
 import Frame from "../organization/Frame";
+import OrganizationNotFound from "../organization/NotFound";
 import {
 	type Draft,
 	type Field,
@@ -72,23 +82,25 @@ const OrgGeneral = () => {
 			<Show
 				when={ready()}
 				fallback={
-					<Show
-						when={organization().error ?? allowed().error}
-						fallback={<Skeleton size="card" />}
-					>
-						<Banner status="error" role="alert" class="load-error">
-							<span class="grow">General did not load</span>
-							<Button
-								size="sm"
-								onClick={() => {
-									organization().refetch();
-									allowed().refetch();
-								}}
-							>
-								Retry
-							</Button>
-						</Banner>
-					</Show>
+					<Switch fallback={<Skeleton size="card" />}>
+						<Match when={refused(organization().error)}>
+							<OrganizationNotFound />
+						</Match>
+						<Match when={organization().error ?? allowed().error}>
+							<Banner status="error" role="alert" class="load-error">
+								<span class="grow">General did not load</span>
+								<Button
+									size="sm"
+									onClick={() => {
+										organization().refetch();
+										allowed().refetch();
+									}}
+								>
+									Retry
+								</Button>
+							</Banner>
+						</Match>
+					</Switch>
 				}
 			>
 				{(shown) => (
@@ -456,7 +468,12 @@ const Danger = (props: { organization: Shown }) => {
 	);
 };
 
-// Members and Billing load this chunk rather than split a shared one.
+// Members, Projects, and Billing load this chunk rather than split a shared one.
 export { default as Frame } from "../organization/Frame";
-export { organizationIn, organizationQuery } from "../organization/data";
+export { default as OrganizationNotFound } from "../organization/NotFound";
+export {
+	organizationIn,
+	organizationQuery,
+	refused,
+} from "../organization/data";
 export { failureOf } from "../organization/general";

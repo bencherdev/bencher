@@ -114,7 +114,7 @@ const organizationRedirect = (
 	if (more.length > 0) {
 		return undefined;
 	}
-	if (page === undefined || (page === "projects" && id === undefined)) {
+	if (page === undefined) {
 		return `${base}/settings`;
 	}
 	if (page === "members" && id !== undefined) {

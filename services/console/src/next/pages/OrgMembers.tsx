@@ -9,7 +9,7 @@ import TextInput from "@bencherdev/ui/TextInput";
 import Truncate from "@bencherdev/ui/Truncate";
 import { useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
-import { For, Show, createSignal } from "solid-js";
+import { For, Match, Show, Switch, createSignal } from "solid-js";
 import type { JsonMember, JsonOrganization } from "../../types/bencher";
 import { useAccount } from "../account/context";
 import {
@@ -29,9 +29,11 @@ import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
 import {
 	Frame,
+	OrganizationNotFound,
 	failureOf,
 	organizationIn,
 	organizationQuery,
+	refused,
 } from "./OrgGeneral";
 
 /** The organization's members, with Invite and Remove, and its single sign-on. */
@@ -119,26 +121,34 @@ const OrgMembers = () => {
 			<Show
 				when={ready()}
 				fallback={
-					<Show
-						when={
-							organization().error ?? members.first().error ?? roles().error
-						}
-						fallback={<Skeleton size="card" />}
-					>
-						<Banner status="error" role="alert" class="load-error">
-							<span class="grow">Members did not load</span>
-							<Button
-								size="sm"
-								onClick={() => {
-									organization().refetch();
-									members.first().refetch();
-									roles().refetch();
-								}}
-							>
-								Retry
-							</Button>
-						</Banner>
-					</Show>
+					<Switch fallback={<Skeleton size="card" />}>
+						<Match
+							when={
+								refused(organization().error) || refused(members.first().error)
+							}
+						>
+							<OrganizationNotFound />
+						</Match>
+						<Match
+							when={
+								organization().error ?? members.first().error ?? roles().error
+							}
+						>
+							<Banner status="error" role="alert" class="load-error">
+								<span class="grow">Members did not load</span>
+								<Button
+									size="sm"
+									onClick={() => {
+										organization().refetch();
+										members.first().refetch();
+										roles().refetch();
+									}}
+								>
+									Retry
+								</Button>
+							</Banner>
+						</Match>
+					</Switch>
 				}
 			>
 				{(shown) => (

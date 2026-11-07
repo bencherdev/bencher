@@ -412,6 +412,7 @@ const groups = (
 			["Organizations", "/console/organizations"],
 			["Organization", organization("settings")],
 			["Members", organization("members")],
+			["Projects", organization("projects")],
 			["Billing", organization("billing")],
 			["New project", organization("projects/add")],
 		],

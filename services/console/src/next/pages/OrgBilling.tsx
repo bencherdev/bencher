@@ -51,9 +51,11 @@ import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
 import {
 	Frame,
+	OrganizationNotFound,
 	failureOf,
 	organizationIn,
 	organizationQuery,
+	refused,
 } from "./OrgGeneral";
 import { formatCount } from "../plot/count";
 
@@ -115,6 +117,9 @@ const OrgBilling = () => {
 			<Switch fallback={<Skeleton size="card" />}>
 				<Match when={enrollment()?.status === "enrolling"}>
 					<Skeleton size="card" />
+				</Match>
+				<Match when={refused(organization().error)}>
+					<OrganizationNotFound />
 				</Match>
 				<Match when={manage().data === false}>{null}</Match>
 				<Match when={manage().data && usage().data}>

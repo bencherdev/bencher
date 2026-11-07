@@ -164,14 +164,13 @@ describe("classicRedirect", () => {
 	});
 
 	// Kills an organization's classic page sent anywhere but its replacement,
-	// checkout losing Stripe's return, and New organization's own page taken
-	// for an organization named "add".
+	// a page the console draws, Projects among them, sent away, checkout
+	// losing Stripe's return, and New organization's own page taken for an
+	// organization named "add".
 	test("sends each classic organization path to the page that replaced it", () => {
 		const organization = "/console/organizations/pompeii-llc";
 		expect(redirect(organization)).toBe(`${organization}/settings`);
-		expect(redirect(`${organization}/projects`)).toBe(
-			`${organization}/settings`,
-		);
+		expect(redirect(`${organization}/`)).toBe(`${organization}/settings`);
 		expect(redirect(`${organization}/members/invite`)).toBe(
 			`${organization}/members`,
 		);
@@ -181,12 +180,19 @@ describe("classicRedirect", () => {
 		expect(
 			redirect(`${organization}/checkout?checkout=cs_test&level=team`),
 		).toBe(`${organization}/billing?checkout=cs_test&level=team`);
-		for (const drawn of ["settings", "members", "billing", "projects/add"]) {
+		for (const drawn of [
+			"settings",
+			"members",
+			"billing",
+			"projects",
+			"projects/",
+			"projects/add",
+		]) {
 			expect(redirect(`${organization}/${drawn}`), drawn).toBeUndefined();
 		}
 		expect(redirect("/console/organizations/add")).toBeUndefined();
-		expect(redirect("/console/organizations/add/projects")).toBe(
-			"/console/organizations/add/settings",
+		expect(redirect("/console/organizations/add/members/invite")).toBe(
+			"/console/organizations/add/members",
 		);
 	});
 

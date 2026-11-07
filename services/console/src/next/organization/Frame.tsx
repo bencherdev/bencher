@@ -2,7 +2,7 @@ import Truncate from "@bencherdev/ui/Truncate";
 import { For, type JSX } from "solid-js";
 import { ORGANIZATIONS_PATH, organizationPath } from "../paths";
 
-type Section = "general" | "members" | "billing";
+type Section = "general" | "members" | "projects" | "billing";
 
 /** The organization's sections, as the account's rail. */
 const Frame = (props: {
@@ -23,6 +23,11 @@ const Frame = (props: {
 			section: "members",
 			label: "Members",
 			href: `${ORGANIZATIONS_PATH}/${props.organization}/members`,
+		},
+		{
+			section: "projects",
+			label: "Projects",
+			href: `${ORGANIZATIONS_PATH}/${props.organization}/projects`,
 		},
 		{
 			section: "billing",
