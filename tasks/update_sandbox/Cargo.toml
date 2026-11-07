@@ -17,5 +17,8 @@ hex.workspace = true
 sha2.workspace = true
 ureq.workspace = true
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true

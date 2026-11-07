@@ -44,31 +44,31 @@ use rustls::crypto::aws_lc_rs;
 use sha2::{Digest as _, Sha256};
 
 /// Default Firecracker version to download.
-const DEFAULT_FIRECRACKER_VERSION: &str = "v1.15.1";
+const DEFAULT_FIRECRACKER_VERSION: &str = "v1.17.0";
 
 /// Default kernel URL to download (per-architecture).
 ///
 /// Uses versioned CI build artifacts from the Firecracker project.
-const DEFAULT_KERNEL_URL_X86_64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20261008-40f3a4819490-0/x86_64/vmlinux-6.1.188";
-const DEFAULT_KERNEL_URL_AARCH64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20261008-40f3a4819490-0/aarch64/vmlinux-6.1.188";
+const DEFAULT_KERNEL_URL_X86_64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20261105-6ea6634994fa-0/x86_64/vmlinux-6.1.188";
+const DEFAULT_KERNEL_URL_AARCH64: &str = "https://s3.amazonaws.com/spec.ccfc.min/firecracker-ci/20261105-6ea6634994fa-0/aarch64/vmlinux-6.1.188";
 
 /// Expected SHA256 hashes for Firecracker `.tgz` archives.
 ///
 /// These MUST be updated whenever `DEFAULT_FIRECRACKER_VERSION` changes.
 /// Source: `firecracker-{version}-{arch}.tgz.sha256.txt` from the GitHub release.
 const FIRECRACKER_TGZ_SHA256_X86_64: &str =
-    "d4a32ab2322d887ca1bc4a4e7afa9cc35393e6362dfc2b3becb389d362e4275a";
+    "06094a1108ae9e82aa4c23a775aa92758f53f1175d422270d9d6162cb9ade558";
 const FIRECRACKER_TGZ_SHA256_AARCH64: &str =
-    "00654ac1e702a22744121ea9f10a4f792ebd7c3a744cba587dfac9fcb79b41a5";
+    "e351ebe4f7a16b5873bbd51005d2e6767103cff4d5ebc829df2d3f95a93e2256";
 
 /// Expected SHA256 hashes for vmlinux kernel binaries.
 ///
 /// These MUST be updated whenever `DEFAULT_KERNEL_URL_*` changes.
 /// Compute with: `curl -sL <url> | sha256sum`
 const KERNEL_SHA256_X86_64: &str =
-    "6e105082d617064296680262ddf53844f292da803165e74e1a4f051940de48ef";
+    "31fe88d6c72b93d5c9c63cca599ccadec49fd35673bbfd04850d6c00ff27f032";
 const KERNEL_SHA256_AARCH64: &str =
-    "3577bb870e2e62c544885832f120ca0ca775b3ee830cec631f18170189367448";
+    "f395ce9859add07c6ccf0e86be2f99a9ad4e3f9ca6f3d34729f4ed7677d6dc96";
 
 fn main() {
     let crypto_provider = aws_lc_rs::default_provider();

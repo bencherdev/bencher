@@ -11,9 +11,16 @@ pub struct TaskUpdateSandbox {
     #[clap(long)]
     pub build_rs: Option<Utf8PathBuf>,
 
-    /// Firecracker major.minor version to pin (e.g. "1.15")
-    #[clap(long, default_value = "1.15")]
-    pub firecracker_version: String,
+    /// Hold the Firecracker pin to one major.minor line (e.g. "1.16"),
+    /// instead of taking the newest release of the pinned major.
+    /// A new major may change the API, so moving to one is a manual step.
+    #[clap(long)]
+    pub firecracker_version: Option<String>,
+
+    /// Write the notice about a newer Firecracker major to this path, or
+    /// truncate the file to empty when the tracked major leads the releases
+    #[clap(long)]
+    pub newer_major_out: Option<Utf8PathBuf>,
 
     /// Linux kernel major.minor version to pin (e.g. "6.1")
     #[clap(long, default_value = "6.1")]
