@@ -1,4 +1,8 @@
-#![expect(clippy::print_stdout, reason = "CLI tool outputs to stdout")]
+#![expect(
+    clippy::print_stdout,
+    clippy::print_stderr,
+    reason = "CLI tool outputs to stdout, and notices to stderr"
+)]
 
 mod parser;
 mod task;

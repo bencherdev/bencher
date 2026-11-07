@@ -26,7 +26,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          output=$(cargo update-sandbox)
+          output=$(cargo update-sandbox --newer-major-out "$RUNNER_TEMP/firecracker-newer-major.txt")
           echo "$output"
           echo "summary<<EOF" >> "$GITHUB_OUTPUT"
           echo "$output" >> "$GITHUB_OUTPUT"
@@ -64,3 +64,16 @@ jobs:
               --label "dependencies" \
               --label "deploy"
           fi
+      # Last, so the pull request above still lands. Only a human takes a new
+      # Firecracker major, and only a failed run tells a human to.
+      - name: Fail on a newer Firecracker major
+        if: ${{ !cancelled() }}
+        run: |
+          notice_file="$RUNNER_TEMP/firecracker-newer-major.txt"
+          if [ ! -s "$notice_file" ]; then
+            exit 0
+          fi
+          notice=$(cat "$notice_file")
+          echo "::error::$notice"
+          echo "$notice" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
