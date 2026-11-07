@@ -1,4 +1,4 @@
-use bencher_valid::{Email, Jwt, NonEmpty, PlanLevel, ProviderState, Secret};
+use bencher_valid::{DateTime, Email, Jwt, NonEmpty, PlanLevel, ProviderState, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -65,6 +65,8 @@ pub struct JsonProviderFinish {
 
 /// What a provider's sign-in did: signed in, or, for a provider account pinned to no one whose
 /// address has an account, emailed that address to prove it first.
+///
+/// A fresh sign-in proves again the session that asked for it.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -73,6 +75,9 @@ pub struct JsonProviderSignIn {
     pub signed_in: Option<JsonSignedIn>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub inbox: Option<JsonProviderInbox>,
+    /// When a fresh sign-in proved the session again.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proved: Option<DateTime>,
 }
 
 /// The address a provider account must prove before it pins: either an email went out, or the

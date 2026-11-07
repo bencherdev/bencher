@@ -7,6 +7,10 @@ import { fileURLToPath } from "node:url";
 // on modules a page finds late, so a mismatch cannot go unnoticed.
 const PLACEHOLDER = "@@BENCHER_NEXT_PRELOADS@@";
 
+// A lazy import that carries no preload list, so every page that can open it
+// spares the names of chunks it seldom needs; they load when it opens.
+const LATE = /\/src\/next\/fresh\/dialog\.tsx$/;
+
 /**
  * Write the new console's client module graph into the server bundle, so its
  * document names every module a page loads and the browser fetches them in
@@ -21,6 +25,8 @@ const nextPreloads = () => {
 	let serverDir;
 	/** @type {Map<string, Set<string>> | undefined} */
 	let loadedBefore;
+	/** @type {Set<string> | undefined} */
+	let late;
 
 	const collect = {
 		name: "bencher-next-preloads",
@@ -35,6 +41,9 @@ const nextPreloads = () => {
 					modulePreload: {
 						/** @type {(file: string, deps: string[], context: { hostId: string }) => string[]} */
 						resolveDependencies: (file, deps, { hostId }) => {
+							if (late?.has(file)) {
+								return [];
+							}
 							const loaded = loadedBefore?.get(hostId);
 							if (!loaded) {
 								return deps;
@@ -72,6 +81,14 @@ const nextPreloads = () => {
 			};
 			loadedBefore = new Map(
 				[...chunks.keys()].map((fileName) => [fileName, closure(fileName)]),
+			);
+			late = new Set(
+				[...chunks.values()]
+					.filter(
+						(chunk) =>
+							chunk.isDynamicEntry && LATE.test(chunk.facadeModuleId ?? ""),
+					)
+					.map((chunk) => chunk.fileName),
 			);
 			/** @type {Set<string>} */
 			const entry = new Set();

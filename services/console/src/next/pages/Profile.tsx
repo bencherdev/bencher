@@ -5,7 +5,6 @@ import Heading from "@bencherdev/ui/Heading";
 import Icon from "@bencherdev/ui/Icon";
 import Skeleton from "@bencherdev/ui/Skeleton";
 import TextInput from "@bencherdev/ui/TextInput";
-import Truncate from "@bencherdev/ui/Truncate";
 import { useNavigate, useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
@@ -274,7 +273,7 @@ const ProfileForm = (props: {
 					<Show when={failure()}>
 						{(message) => (
 							<p class="ferror" role="alert">
-								<Truncate text={message()} reveal />
+								<span>{message()}</span>
 							</p>
 						)}
 					</Show>

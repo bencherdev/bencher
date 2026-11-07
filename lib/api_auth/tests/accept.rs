@@ -111,10 +111,7 @@ async fn accept_invite_that_no_longer_applies() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{}", org.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&leader.token),
-        )
+        .headers(server.fresh_session(&leader))
         .send()
         .await
         .expect("Request failed");

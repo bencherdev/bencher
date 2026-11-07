@@ -59,8 +59,61 @@ export interface InboxProps {
 	now?: () => number;
 }
 
-/** The address, six code boxes, Resend, and Use another email. */
-const Inbox = (props: InboxProps) => {
+/** The address, six code boxes, Resend, and Use another email, under Check your inbox. */
+const Inbox = (props: InboxProps) => (
+	<>
+		{/* The design system's token, by its classes, as consent draws one. */}
+		<Show when={props.who}>
+			{(who) => (
+				<span class="ui-token au-who">
+					{who().provider === "github" ? <GitHubMark /> : <GoogleMark />}
+					{who().handle}
+				</span>
+			)}
+		</Show>
+		<Heading level={1} size="xl">
+			Check your inbox
+		</Heading>
+		<CodeStep
+			email={props.email}
+			resendAt={props.resendAt}
+			cappedUntil={props.cappedUntil}
+			status={props.status}
+			effects={{
+				prove: (code) => props.effects.prove(code),
+				resend: () => props.effects.resend(),
+				proved: (signedIn) => props.effects.signedIn(signedIn),
+				dated: (dates) => props.effects.dated?.(dates),
+			}}
+			leave="Use another email"
+			onLeave={() => props.effects.another()}
+			now={props.now}
+		/>
+	</>
+);
+
+export default Inbox;
+
+/** What a code step does for the reader, whose proof answers with `T`. */
+export interface CodeEffects<T> {
+	prove: (code: string) => Promise<Answer<T>>;
+	resend: () => Promise<Answer<JsonSignInEmail>>;
+	proved: (proof: T) => void;
+	/** Each time the step dates Resend or the cap. */
+	dated?: (dates: { resendAt?: number; cappedUntil?: number }) => void;
+}
+
+/** The address, six code boxes, Resend, and the way back, named `leave`. */
+export const CodeStep = <T,>(props: {
+	email?: string | undefined;
+	resendAt?: number | undefined;
+	cappedUntil?: number | undefined;
+	status?: Status | undefined;
+	effects: CodeEffects<T>;
+	leave: string;
+	onLeave: () => void;
+	now?: (() => number) | undefined;
+}) => {
 	const now = props.now ?? Date.now;
 	const [clock, setClock] = createSignal(now());
 	const tick = setInterval(() => setClock(now()), 1_000);
@@ -114,7 +167,7 @@ const Inbox = (props: InboxProps) => {
 		setSent(false);
 		props.effects.prove(code).then((answer) => {
 			if (answer.ok) {
-				props.effects.signedIn(answer.data);
+				props.effects.proved(answer.data);
 				return;
 			}
 			setBusy(false);
@@ -206,18 +259,6 @@ const Inbox = (props: InboxProps) => {
 
 	return (
 		<>
-			{/* The design system's token, by its classes, as consent draws one. */}
-			<Show when={props.who}>
-				{(who) => (
-					<span class="ui-token au-who">
-						{who().provider === "github" ? <GitHubMark /> : <GoogleMark />}
-						{who().handle}
-					</span>
-				)}
-			</Show>
-			<Heading level={1} size="xl">
-				Check your inbox
-			</Heading>
 			<Show when={props.email}>
 				{(email) => <p class="au-addr">{email()}</p>}
 			</Show>
@@ -302,16 +343,10 @@ const Inbox = (props: InboxProps) => {
 						{resendLabel()}
 					</button>
 				</Show>
-				<button
-					type="button"
-					class="lnk"
-					onClick={() => props.effects.another()}
-				>
-					Use another email
+				<button type="button" class="lnk" onClick={() => props.onLeave()}>
+					{props.leave}
 				</button>
 			</div>
 		</>
 	);
 };
-
-export default Inbox;

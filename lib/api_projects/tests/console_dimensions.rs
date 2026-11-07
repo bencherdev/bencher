@@ -1313,10 +1313,7 @@ async fn create_key(server: &TestServer, user: &TestUser, slug: &str) -> String 
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{slug}/keys")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(user))
         .json(&json!({ "name": "dimension key" }))
         .send()
         .await

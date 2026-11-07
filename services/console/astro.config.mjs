@@ -61,6 +61,28 @@ const SHARED_FILES = [
 		name: "memory",
 		test: /[\\/]src[\\/]next[\\/](memory|paths)\.ts$/,
 	},
+	// The sign-in pages' shared code, which the fresh sign-in dialog loads too.
+	{
+		name: "auth",
+		test: /[\\/]src[\\/](components[\\/]auth[\\/]back|next[\\/]auth[\\/](copy|land|pending))\.ts$/,
+	},
+	// What that code imports, shared with pages that load none of it, so each
+	// stays a file of its own.
+	{
+		name: "url",
+		priority: 1,
+		test: /[\\/]src[\\/]util[\\/](base64|webUrl)\.ts$/,
+	},
+	{
+		name: "plan",
+		priority: 1,
+		test: /[\\/]src[\\/]components[\\/]auth[\\/]auth\.ts$/,
+	},
+	{
+		name: "consent",
+		priority: 1,
+		test: /[\\/]src[\\/]components[\\/]auth[\\/]authorize[\\/]path\.ts$/,
+	},
 ];
 
 // https://astro.build/config
