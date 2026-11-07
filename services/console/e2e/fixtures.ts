@@ -20,6 +20,8 @@ interface SeedProject {
 export interface Seed {
 	api_url: string;
 	console_url: string;
+	/** A second console, whose relay secret is not the API's, and which reaches the API only through `INTERNAL_API_URL`. */
+	wrong_secret_console_url: string;
 	/** The API's log, which holds every email it sends. */
 	api_log: string;
 	now: string;
@@ -59,6 +61,9 @@ if (!seedPath) {
 	throw new Error("Run the end-to-end suite with `cargo test-console e2e`");
 }
 export const seed: Seed = JSON.parse(readFileSync(seedPath, "utf8"));
+
+/** Where the browser reaches the API: the console's own relay. */
+export const RELAY = `${seed.console_url}/api`;
 
 export const USER_KEY = "BENCHER_USER";
 export const THEME_KEY = "BENCHER_THEME";
@@ -104,6 +109,8 @@ export const test = base.extend<{
 	freezeClock: boolean;
 	frozenClock: undefined;
 	trackedRequests: undefined;
+	/** Every request a page sent off its console's origin. */
+	strays: string[];
 	/** A browser of its own, at the same date as the test's. */
 	newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>;
 }>({
@@ -130,12 +137,23 @@ export const test = base.extend<{
 		},
 		{ auto: true },
 	],
-	newContext: async ({ browser, freezeClock }, use) => {
+	// Kills a page that reads the API anywhere but through the relay on its own origin.
+	strays: [
+		async ({ context }, use) => {
+			const strays: string[] = [];
+			watchOrigin(context, strays);
+			await use(strays);
+			expect(strays, "requests that left the console's origin").toEqual([]);
+		},
+		{ auto: true },
+	],
+	newContext: async ({ browser, freezeClock, strays }, use) => {
 		const contexts: BrowserContext[] = [];
 		await use(async (options) => {
 			const context = await browser.newContext(options);
 			contexts.push(context);
 			trackPages(context);
+			watchOrigin(context, strays);
 			if (freezeClock) {
 				await context.addInitScript(freezeDate, Date.parse(seed.now));
 			}
@@ -158,6 +176,68 @@ const freezeDate = (now: number) => {
 };
 
 export { expect };
+
+const CONSOLES = new Set(
+	[seed.console_url, seed.wrong_secret_console_url].map(
+		(url) => new URL(url).origin,
+	),
+);
+const API_ORIGIN = new URL(seed.api_url).origin;
+/** Requests a page makes from script, which a strict `connect-src 'self'` covers. */
+const CONNECT = new Set(["fetch", "xhr", "eventsource", "websocket"]);
+/** Where a console page sends what is not the API's: the suite's Sentry DSN, and Google Analytics until no console page loads it. */
+const THIRD_PARTIES = [
+	(url: URL) => url.origin === "http://127.0.0.1:9",
+	(url: URL) =>
+		/(^|\.)(google-analytics\.com|analytics\.google\.com|googletagmanager\.com)$/.test(
+			url.hostname,
+		),
+];
+
+/**
+ * Records every request a page in `context` sends to the API's own origin,
+ * but for an outside app sending the browser's top frame to the API's OAuth
+ * pages, and every request a console page's script sends off its origin to
+ * anyone but a third party it loads.
+ */
+const watchOrigin = (context: BrowserContext, strays: string[]) => {
+	context.on("request", (request) => {
+		const url = new URL(request.url());
+		if (url.origin === API_ORIGIN) {
+			if (!(isTopNavigation(request) && url.pathname.startsWith("/oauth/"))) {
+				strays.push(request.url());
+			}
+			return;
+		}
+		if (
+			request.isNavigationRequest() ||
+			!CONNECT.has(request.resourceType()) ||
+			CONSOLES.has(url.origin) ||
+			THIRD_PARTIES.some((third) => third(url))
+		) {
+			return;
+		}
+		let from: string;
+		try {
+			from = new URL(request.frame().url()).origin;
+		} catch {
+			return;
+		}
+		if (CONSOLES.has(from)) {
+			strays.push(request.url());
+		}
+	});
+};
+
+const isTopNavigation = (request: Request) => {
+	try {
+		return (
+			request.isNavigationRequest() && request.frame().parentFrame() === null
+		);
+	} catch {
+		return false;
+	}
+};
 
 export const tabRow = (page: Page) =>
 	page.getByRole("navigation", { name: "Project" });

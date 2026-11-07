@@ -8,9 +8,9 @@ import { decodeQuery } from "../query/query";
 import Embed, { type PlotView } from "./Embed";
 
 const boot = (mount: HTMLElement) => {
-	const { apiUrl = "", slug = "" } = mount.dataset;
+	const { slug = "" } = mount.dataset;
 	// Another site's frame has no reader: the embed shows what anyone sees.
-	const get = reads(apiUrl);
+	const get = reads();
 	const path = `/v0/projects/${encodeURIComponent(slug)}`;
 	const [query, setQuery] = createSignal(decodeQuery(location.search));
 	const [name, setName] = createSignal<string>();

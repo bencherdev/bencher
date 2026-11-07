@@ -17,6 +17,7 @@ import {
 	signedIn,
 	tabRow,
 	test,
+	RELAY,
 } from "./fixtures";
 
 const { hashbrown } = seed.projects;
@@ -80,7 +81,7 @@ const apiCounts = async (request: APIRequestContext, slug: string) => {
 const holdLists = async (page: Page, slug: string) => {
 	const held: (() => void)[] = [];
 	await page.route(
-		`${seed.api_url}/v0/console/projects/${slug}/alerts?*`,
+		`${RELAY}/v0/console/projects/${slug}/alerts?*`,
 		async (route) => {
 			await new Promise<void>((resolve) => held.push(resolve));
 			await route.fallback();
@@ -89,9 +90,7 @@ const holdLists = async (page: Page, slug: string) => {
 	return {
 		asked: () => held.length,
 		release: async () => {
-			await page.unroute(
-				`${seed.api_url}/v0/console/projects/${slug}/alerts?*`,
-			);
+			await page.unroute(`${RELAY}/v0/console/projects/${slug}/alerts?*`);
 			for (const resolve of held) {
 				resolve();
 			}
@@ -234,7 +233,7 @@ test.describe("on a project of its own", () => {
 	}) => {
 		const { project } = await createAlerts(request);
 		await page.route(
-			`${seed.api_url}/v0/console/projects/${project.slug}/alerts`,
+			`${RELAY}/v0/console/projects/${project.slug}/alerts`,
 			(route) =>
 				route.request().method() === "PATCH"
 					? route.fulfill({ status: 500, body: "{}" })
@@ -448,7 +447,7 @@ test.describe("Clear", () => {
 		const lists: URL[] = [];
 		page.on("request", (sent) => {
 			const url = new URL(sent.url());
-			if (url.pathname === `/v0/console/projects/${project.slug}/alerts`) {
+			if (url.pathname === `/api/v0/console/projects/${project.slug}/alerts`) {
 				lists.push(url);
 			}
 		});

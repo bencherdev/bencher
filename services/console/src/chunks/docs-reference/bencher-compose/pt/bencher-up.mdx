@@ -16,9 +16,17 @@ import Help from "./cli/help.mdx";
 Crie e inicie os contêineres Bencher Self-Hosted.
 Isso é semelhante a executar [`docker compose up`][docker compose up].
 
+Os dois contêineres entram em uma rede Docker chamada `bencher`, que o `bencher up` cria, ou reutiliza quando uma execução anterior a deixou.
+Ele para com um erro diante de uma rede `bencher` que não criou,
+e o `bencher up console` conecta um contêiner `bencher_api` em execução que ainda não está na rede.
+Quando o `BENCHER_API_URL` do servidor do Console não está definido ou aponta para um endereço de loopback, como `localhost`, o servidor do Console retransmite ali para o contêiner do servidor da API:
+seu `INTERNAL_API_URL` é `http://bencher_api:6610`, a menos que você o defina com [a opção `--console-env`][console env].
+Caso contrário, ele retransmite para `BENCHER_API_URL`.
+
 <BencherUpCmd />
 
 [docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[console env]: #--console-env-key_value
 
 <UpService />
 

@@ -20,7 +20,6 @@ const CODE_PARAM = "code";
 const STATE_PARAM = "state";
 
 interface Props {
-	apiUrl: string;
 	pathname: string;
 }
 
@@ -84,7 +83,7 @@ const AuthOAuth = (props: Props) => {
 			state: fetcher.state,
 			code: fetcher.code,
 		} as JsonOAuth;
-		return await httpPost(props.apiUrl, props.pathname, null, json)
+		return await httpPost(props.pathname, null, json)
 			.then((resp) => {
 				if (takeSignIn(fetcher.state)) {
 					signIn(resp.data);

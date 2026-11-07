@@ -8,6 +8,7 @@ import {
 	signedOut,
 	tabRow,
 	test,
+	RELAY,
 } from "./fixtures";
 
 const { hashbrown, version_zero } = seed.projects;
@@ -74,7 +75,7 @@ test.describe("a signed in reader with a remembered version 1 project", () => {
 		page.on("request", (request) => {
 			if (request.resourceType() === "document") {
 				order.push(new URL(request.url()).pathname);
-			} else if (request.url().startsWith(seed.api_url)) {
+			} else if (request.url().startsWith(RELAY)) {
 				order.push("api");
 			}
 		});

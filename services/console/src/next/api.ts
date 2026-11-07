@@ -1,5 +1,8 @@
 import { MAX_URL_LENGTH, URI_TOO_LONG } from "./url";
 
+/** Where the browser reaches the API: the console's own origin, which relays it. */
+export const API_PATH = "/api";
+
 /** Why a request failed, which decides whether to retry or send the reader to sign in. */
 export type ApiErrorKind =
 	| "unauthorized"
@@ -39,13 +42,11 @@ export interface Api {
 }
 
 export const createApi = ({
-	url,
 	token,
 	expiration = Number.POSITIVE_INFINITY,
 	now = Date.now,
 	fetch = globalThis.fetch.bind(globalThis),
 }: {
-	url: string;
 	token: string;
 	/** When the session ends; past it nothing is sent. */
 	expiration?: number;
@@ -60,8 +61,8 @@ export const createApi = ({
 		if (now() >= expiration) {
 			throw new ApiError(undefined, "unauthorized", "The session has ended");
 		}
-		const target = `${url}${path}`;
-		// An edge's refusal carries no CORS headers, so the page would read it as no network.
+		const target = `${API_PATH}${path}`;
+		// A request past what every hop passes on would be refused, so it is never sent.
 		if (target.length > MAX_URL_LENGTH) {
 			throw new ApiError(URI_TOO_LONG, "client", "URI Too Long");
 		}

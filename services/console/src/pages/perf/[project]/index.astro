@@ -2,8 +2,6 @@
 // The browser reads the project and its plot, so the server reads nothing.
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
-
 import Head from "../../../next/Head.astro";
 import { drawable } from "../../../next/explore/request";
 import { perfPreloads } from "../../../next/preloads";
@@ -47,7 +45,7 @@ const title = `${slug} | Bencher`;
 		{perfPreloads(drawable(query) ? ["plot/Plot"] : []).map((href) => <link rel="modulepreload" href={href} />)}
 	</head>
 	<body>
-		<div id="public" class="console" data-api-url={BENCHER_API_URL} data-slug={slug}>
+		<div id="public" class="console" data-slug={slug}>
 			<Public
 				slug={slug}
 				name={slug}

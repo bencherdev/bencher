@@ -20,7 +20,6 @@ import InnerPricingTable from "../../../pricing/InnerPricingTable";
 import Checkout from "./Checkout";
 
 interface Props {
-	apiUrl: string;
 	params: Params;
 	onboard: boolean;
 	bencher_valid: Resource<InitValid>;
@@ -67,7 +66,6 @@ const BillingForm = (props: Props) => {
 
 	const checkout = (planLevel: () => PlanLevel) => (
 		<Checkout
-			apiUrl={props.apiUrl}
 			params={props.params}
 			onboard={props.onboard}
 			autoSubmit={true}

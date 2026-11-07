@@ -33,8 +33,8 @@ services:
     environment:
       # Set the API URL to the localhost IPv4 address
       - BENCHER_API_URL=http://127.0.0.1:6610
-      # This is needed for Docker-to-Docker communication when using a local `BENCHER_API_URL`
-      # Do not set this when using a remote `BENCHER_API_URL`, such as https://bencher.example.com
-      - INTERNAL_API_URL=http://host.docker.internal:6610
+      # The Console server relays every browser request to the API container, over the network they share
+      # With a remote API server instead, such as https://api.bencher.example.com, set this to its URL
+      - INTERNAL_API_URL=http://bencher_api:6610
     depends_on:
       - bencher_api_compose

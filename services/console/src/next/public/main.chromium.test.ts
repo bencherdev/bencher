@@ -34,7 +34,7 @@ const refusedInOrder = () => {
 	vi.stubGlobal(
 		"fetch",
 		vi.fn(async (input: string, init?: RequestInit) => {
-			const url = new URL(input);
+			const url = new URL(input, location.href);
 			if (url.pathname.endsWith("/perf")) {
 				setTimeout(refuseProject, 50);
 				return refusal();
@@ -49,7 +49,6 @@ const refusedInOrder = () => {
 	history.replaceState(null, "", `${location.pathname}${DRAWABLE}`);
 	const mount = document.createElement("div");
 	mount.className = "console";
-	mount.dataset.apiUrl = "http://api.test";
 	mount.dataset.slug = "hashbrown";
 	document.body.append(mount);
 	const alerts: string[] = [];
@@ -112,7 +111,7 @@ test("a member's refused query says so once the member's read of the project ans
 		"fetch",
 		vi.fn(async (input: string, init?: RequestInit) => {
 			const member = new Headers(init?.headers).has("Authorization");
-			if (new URL(input).pathname.endsWith("/perf")) {
+			if (new URL(input, location.href).pathname.endsWith("/perf")) {
 				return member
 					? answer(400, { message: "Bad Request" })
 					: answer(404, { message: "Not Found" });
@@ -130,7 +129,6 @@ test("a member's refused query says so once the member's read of the project ans
 	history.replaceState(null, "", `${location.pathname}${DRAWABLE}`);
 	const mount = document.createElement("div");
 	mount.className = "console";
-	mount.dataset.apiUrl = "http://api.test";
 	mount.dataset.slug = "hashbrown";
 	document.body.append(mount);
 	boot(mount);
@@ -150,7 +148,7 @@ test("a query too long for a URL is never sent, and says so with no Retry", asyn
 	vi.stubGlobal(
 		"fetch",
 		vi.fn(async (input: string) => {
-			if (new URL(input).pathname.endsWith("/perf")) {
+			if (new URL(input, location.href).pathname.endsWith("/perf")) {
 				perf.push(input);
 				return new Response("{}");
 			}
@@ -177,7 +175,6 @@ test("a query too long for a URL is never sent, and says so with no Retry", asyn
 	history.replaceState(null, "", `${location.pathname}${query}`);
 	const mount = document.createElement("div");
 	mount.className = "console";
-	mount.dataset.apiUrl = "http://api.test";
 	mount.dataset.slug = "hashbrown";
 	document.body.append(mount);
 	boot(mount);

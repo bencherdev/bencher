@@ -68,80 +68,60 @@ api.interceptors.response.use(
 	},
 );
 
-// Due to how Astro works, this hostname, that is the `apiUrl`
-// must be explicitly passed down from each page.
-// You can't get `BENCHER_API_URL` anywhere other than the page frontmatter.
-export const apiHost = (hostname: string): string => {
-	if (hostname) {
-		return hostname;
-	}
-	const location = window.location;
-	return `${location.protocol}//${location.hostname}:6610`;
-};
-
-export const apiUrl = (hostname: string, pathname: string): string =>
-	`${apiHost(hostname)}${pathname}`;
+export const apiUrl = (pathname: string): string => `/api${pathname}`;
 
 export const httpGet = async (
-	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
-) => api(getOptions(hostname, pathname, token));
+) => api(getOptions(pathname, token));
 export const getOptions = (
-	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
 ) => {
 	return {
-		url: apiUrl(hostname, pathname),
+		url: apiUrl(pathname),
 		method: HttpMethod.GET,
 		headers: headers(token),
 	};
 };
 
 export const httpPost = async (
-	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
 	data: object,
-) => api(postOptions(hostname, pathname, token, data));
+) => api(postOptions(pathname, token, data));
 export const postOptions = (
-	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
 	data: object,
 ) => {
-	return dataOptions(hostname, pathname, HttpMethod.POST, token, data);
+	return dataOptions(pathname, HttpMethod.POST, token, data);
 };
 
 export const httpPut = async (
-	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
 	data: object,
-) => api(putOptions(hostname, pathname, token, data));
+) => api(putOptions(pathname, token, data));
 export const putOptions = (
-	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
 	data: object,
 ) => {
-	return dataOptions(hostname, pathname, HttpMethod.PUT, token, data);
+	return dataOptions(pathname, HttpMethod.PUT, token, data);
 };
 
 export const httpPatch = async (
-	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
 	data: object,
-) => api(pathOptions(hostname, pathname, token, data));
+) => api(pathOptions(pathname, token, data));
 export const pathOptions = (
-	hostname: string,
 	pathname: string,
 	token: undefined | null | string,
 	data: object,
 ) => {
-	return dataOptions(hostname, pathname, HttpMethod.PATCH, token, data);
+	return dataOptions(pathname, HttpMethod.PATCH, token, data);
 };
 
 const HEADERS_CONTENT_TYPE = {
@@ -159,14 +139,13 @@ const headers = (token: undefined | null | string) => {
 };
 
 export const dataOptions = (
-	hostname: string,
 	pathname: string,
 	method: HttpMethod,
 	token: undefined | null | string,
 	data: object,
 ) => {
 	return {
-		url: apiUrl(hostname, pathname),
+		url: apiUrl(pathname),
 		method: method,
 		headers: headers(token),
 		data: data,

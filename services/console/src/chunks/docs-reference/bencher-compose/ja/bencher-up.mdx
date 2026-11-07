@@ -16,9 +16,15 @@ import Help from "./cli/help.mdx";
 Bencher セルフホスト型コンテナを作成して開始します。
 これは [`docker compose up`][docker compose up] を実行するのと似ています。
 
+両方のコンテナは `bencher` という名前の Docker ネットワークに参加します。`bencher up` はこのネットワークを作成し、以前の実行で残っている場合は再利用します。
+自身が作成していない `bencher` ネットワークがある場合はエラーで停止し、`bencher up console` はまだネットワークに参加していない実行中の `bencher_api` コンテナを接続します。
+コンソールサーバーの `BENCHER_API_URL` が未設定か、`localhost` などのループバックアドレスを指す場合、コンソールサーバーはそこで API サーバーのコンテナに中継します。[`--console-env` オプション][console env] で設定しない限り、その `INTERNAL_API_URL` は `http://bencher_api:6610` です。
+それ以外の場合は `BENCHER_API_URL` に中継します。
+
 <BencherUpCmd />
 
 [docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[console env]: #--console-env-key_value
 
 <UpService />
 

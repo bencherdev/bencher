@@ -19,7 +19,6 @@ import { type InitValid, validJwt } from "../../../../util/valid";
 import CheckoutLoading from "./CheckoutLoading";
 
 interface Props {
-	apiUrl: string;
 	params: Params;
 	onboard: boolean;
 	autoSubmit?: boolean;
@@ -63,7 +62,7 @@ const Checkout = (props: Props) => {
 
 		setSubmitting(true);
 		setFailed(false);
-		httpPost(props.apiUrl, "/v0/checkout", token, newCheckout)
+		httpPost("/v0/checkout", token, newCheckout)
 			.then((checkout) => {
 				navigate(checkout.data.url);
 				setSubmitting(false);

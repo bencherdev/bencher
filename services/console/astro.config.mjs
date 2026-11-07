@@ -118,6 +118,12 @@ export default defineConfig({
 				access: SECRET,
 				optional: true,
 			}),
+			// Unlike the values above, a secret in the usual sense: the API shares it.
+			BENCHER_RELAY_SECRET: envField.string({
+				context: SERVER,
+				access: SECRET,
+				optional: true,
+			}),
 			// https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authenticating-to-the-rest-api-with-an-oauth-app
 			OAUTH_GITHUB: envField.string({
 				context: SERVER,
