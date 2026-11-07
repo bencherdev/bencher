@@ -21,11 +21,11 @@ Esto requiere que el token tenga [el alcance `pull-requests` con permisos de `wr
 Los resultados siempre se agregarán también al resumen del trabajo.
 Con [la bandera `--detach`](/es/docs/explanation/images/#--detach), la ejecución desacoplada no publica ningún comentario ni escribe el resumen del trabajo, y [la conexión con `--job`](/es/docs/explanation/images/#--job-uuid) completa la Verificación de GitHub que inició (consulte [la opción `--ci-callback-token`](#--ci-callback-token-token)).
 
-Con dos o más filas, el comentario muestra una tabla de resumen de cada Informe con su Banco de pruebas, su Adaptador y su estado (`Pending`, el número de Alertas, `No Alerts` o `Failed`).
+Con dos o más filas, el comentario muestra una tabla de resumen de cada Informe con cada uno de su Rama, su Banco de pruebas y su Adaptador que difiere entre los Informes, y su estado (`Pending`, el número de Alertas, `No Alerts` o `Failed`).
 Las filas están en el orden en que comenzaron los Informes, numeradas desde 1, como la Consola lista los Informes de una ejecución.
 La etiqueta de cada fila es su número, seguido del valor de [la opción `--ci-id`](#--ci-id-id) entre paréntesis si está configurada (ej: `2 (microbench)`).
-La etiqueta enlaza al Informe, el Banco de pruebas a su página en la Consola y el Adaptador a su parte de [la documentación de Adaptadores](/es/docs/explanation/adapters/).
-Cuando los trabajos usan más de una Rama, la tabla de resumen agrega una columna para la Rama.
+La etiqueta enlaza al Informe, una celda de Banco de pruebas a su página en la Consola y una celda de Adaptador a su parte de [la documentación de Adaptadores](/es/docs/explanation/adapters/).
+Una Rama, un Banco de pruebas o un Adaptador que todos los Informes comparten pasa de la tabla de resumen a la tabla al principio del comentario, que lo enlaza de la misma manera.
 A continuación, una tabla contiene las Alertas de todos los Informes, con una columna para el Informe.
 Luego siguen los resultados de cada Informe en un bloque desplegable (ej: `Report 2 (microbench): 14 benchmarks, 2 alerts`),
 que está abierto cuando el Informe tiene Alertas.

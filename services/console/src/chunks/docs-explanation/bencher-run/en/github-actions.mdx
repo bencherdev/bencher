@@ -21,11 +21,11 @@ This requires the token to have [the `pull-requests` scope with `write` permissi
 The results will always be added to the job summary as well.
 With [the `--detach` flag](/docs/explanation/images/#--detach), the detached run posts no comment and writes no job summary, and [the attach](/docs/explanation/images/#--job-uuid) completes the GitHub Check it started (see [the `--ci-callback-token` option](#--ci-callback-token-token)).
 
-With two or more rows, the comment shows a summary table of each Report with its Testbed, Adapter, and status (`Pending`, the number of Alerts, `No Alerts`, or `Failed`).
+With two or more rows, the comment shows a summary table of each Report with each of its Branch, Testbed, and Adapter that differs between the Reports, and its status (`Pending`, the number of Alerts, `No Alerts`, or `Failed`).
 The rows are in the order the Reports started, numbered from 1, as the Console lists the Reports of a run.
 Each row's label is its number, followed by the value of [the `--ci-id` option](#--ci-id-id) in parentheses if it is set (ex: `2 (microbench)`).
-The label links to the Report, the Testbed to its page in the Console, and the Adapter to its part of [the Adapters docs](/docs/explanation/adapters/).
-When the jobs use more than one Branch, the summary table adds a Branch column.
+The label links to the Report, a Testbed cell to its page in the Console, and an Adapter cell to its part of [the Adapters docs](/docs/explanation/adapters/).
+A Branch, Testbed, or Adapter that every Report shares moves out of the summary table and into the table at the top of the comment, which links it the same way.
 Next, one table holds the Alerts of every Report, with a Report column.
 Then the results of each Report follow in a collapsible block (ex: `Report 2 (microbench): 14 benchmarks, 2 alerts`),
 which is open when the Report has Alerts.

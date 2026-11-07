@@ -21,11 +21,11 @@ Cela nécessite que le jeton ait [le scope `pull-requests` avec les permissions 
 Les résultats seront également toujours ajoutés au résumé du travail.
 Avec [le drapeau `--detach`](/fr/docs/explanation/images/#--detach), l'exécution détachée ne publie aucun commentaire et n'écrit aucun résumé du travail, et [le rattachement avec `--job`](/fr/docs/explanation/images/#--job-uuid) complète la vérification GitHub qu'elle a démarrée (voir [l'option `--ci-callback-token`](#--ci-callback-token-token)).
 
-Avec deux lignes ou plus, le commentaire affiche un tableau de résumé de chaque Rapport avec son Banc d'essai, son Adaptateur et son statut (`Pending`, le nombre d'Alertes, `No Alerts` ou `Failed`).
+Avec deux lignes ou plus, le commentaire affiche un tableau de résumé de chaque Rapport avec chacun de sa Branche, de son Banc d'essai et de son Adaptateur qui diffère entre les Rapports, et son statut (`Pending`, le nombre d'Alertes, `No Alerts` ou `Failed`).
 Les lignes sont dans l'ordre de démarrage des Rapports, numérotées à partir de 1, comme la Console liste les Rapports d'une exécution.
 Le libellé de chaque ligne est son numéro, suivi de la valeur de [l'option `--ci-id`](#--ci-id-id) entre parenthèses si elle est définie (ex : `2 (microbench)`).
-Le libellé renvoie vers le Rapport, le Banc d'essai vers sa page dans la Console et l'Adaptateur vers sa partie de [la documentation des Adaptateurs](/fr/docs/explanation/adapters/).
-Lorsque les travaux utilisent plus d'une Branche, le tableau de résumé ajoute une colonne pour la Branche.
+Le libellé renvoie vers le Rapport, une cellule de Banc d'essai vers sa page dans la Console et une cellule d'Adaptateur vers sa partie de [la documentation des Adaptateurs](/fr/docs/explanation/adapters/).
+Une Branche, un Banc d'essai ou un Adaptateur que tous les Rapports partagent passe du tableau de résumé au tableau en haut du commentaire, qui le lie de la même façon.
 Ensuite, un tableau contient les Alertes de tous les Rapports, avec une colonne pour le Rapport.
 Puis les résultats de chaque Rapport suivent dans un bloc repliable (ex : `Report 2 (microbench): 14 benchmarks, 2 alerts`),
 qui est ouvert lorsque le Rapport a des Alertes.
