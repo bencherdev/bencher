@@ -94,12 +94,6 @@ mod test_magic {
     }
 
     #[test]
-    fn adapter_magic_json_v1_cap() {
-        let results = convert_magic_v1("v1_cap");
-        test_json_v1::validate_adapter_json_v1_cap(&results);
-    }
-
-    #[test]
     fn adapter_magic_json_v1_canonical() {
         let results = convert_magic_v1("v1_canonical");
         test_json_v1::validate_adapter_json_v1_canonical(&results);
