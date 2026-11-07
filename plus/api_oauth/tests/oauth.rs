@@ -23,6 +23,7 @@ use async_trait::async_trait;
 use bencher_api_tests::{
     TestServer, TestServerOptions, TestUser,
     helpers::{OAUTH_ISSUER, oauth_resource, seed_token},
+    session_cookie,
 };
 use bencher_egress::{EgressClient, EgressPolicy, EgressTimeouts, Lookup};
 use bencher_json::{
@@ -46,7 +47,7 @@ use diesel::{
 };
 use http::{
     Method, StatusCode,
-    header::{AUTHORIZATION, CONTENT_TYPE, HOST, LOCATION},
+    header::{AUTHORIZATION, CONTENT_TYPE, COOKIE, HOST, HeaderName, LOCATION},
 };
 use rustls::crypto::aws_lc_rs;
 use serde_json::{Value, json};
@@ -1521,6 +1522,60 @@ async fn revoke_tokens() {
     assert_oauth_error(resp, StatusCode::BAD_REQUEST, "invalid_request").await;
 }
 
+// The token and revocation endpoints take no session cookie: beside a credential it changes no
+// answer and revokes nothing, a code still exchanges beside it, and its session lives on.
+#[tokio::test]
+async fn token_and_revoke_ignore_the_session_cookie() {
+    let harness = Harness::new().await;
+    let user = harness
+        .server
+        .signup("OAuth Cookie", "oauth-cookie@example.com")
+        .await;
+    let cookie = session_cookie(&harness.server.session(&user));
+    let (access_token, _refresh_token) = harness.tokens(&user).await;
+    let unknown_code = OAuthCode::generate();
+
+    for (path, params) in [
+        ("/oauth/token", exchange(unknown_code.as_ref())),
+        (
+            "/oauth/revoke",
+            params(&[
+                ("token", access_token.as_str()),
+                ("client_id", LOOPBACK_CLIENT_ID),
+            ]),
+        ),
+    ] {
+        let mut answers = Vec::new();
+        for cookie in [None, Some(cookie.as_str())] {
+            let resp = harness.post_form_with_cookie(path, &params, cookie).await;
+            answers.push((resp.status(), resp.text().await.expect("Invalid body")));
+        }
+        assert_eq!(answers.first(), answers.last(), "{path}");
+    }
+    project_slugs(harness.list_projects(user.uuid, &access_token).await).await;
+
+    let code = harness.code(&request(), &user.token).await;
+    let resp = harness
+        .post_form_with_cookie("/oauth/token", &exchange(&code), Some(&cookie))
+        .await;
+    let tokens = token_body(resp).await;
+    project_slugs(
+        harness
+            .list_projects(user.uuid, &string(&tokens, "access_token"))
+            .await,
+    )
+    .await;
+
+    let resp = harness
+        .client
+        .get(harness.server.api_url("/v0/auth/session"))
+        .header(COOKIE, cookie)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
 // A token or revocation request for a live grant is charged to its user, and one refused for that
 // rate changes nothing: the code can still be exchanged, and the grant and its refresh token live on.
 #[tokio::test]
@@ -2315,12 +2370,37 @@ impl Harness {
         self.post_form("/oauth/revoke", params, None).await
     }
 
-    #[expect(clippy::expect_used, reason = "test helper")]
     async fn post_form(
         &self,
         path: &str,
         params: &[(String, String)],
         authorization: Option<&str>,
+    ) -> reqwest::Response {
+        let headers: Vec<_> = authorization
+            .map(|value| (AUTHORIZATION, value))
+            .into_iter()
+            .collect();
+        self.post_form_with(path, params, &headers).await
+    }
+
+    /// A form posted from the console's own origin, beside a session cookie if one is given.
+    async fn post_form_with_cookie(
+        &self,
+        path: &str,
+        params: &[(String, String)],
+        cookie: Option<&str>,
+    ) -> reqwest::Response {
+        let mut headers = vec![(HeaderName::from_static("sec-fetch-site"), "same-origin")];
+        headers.extend(cookie.map(|value| (COOKIE, value)));
+        self.post_form_with(path, params, &headers).await
+    }
+
+    #[expect(clippy::expect_used, reason = "test helper")]
+    async fn post_form_with(
+        &self,
+        path: &str,
+        params: &[(String, String)],
+        headers: &[(HeaderName, &str)],
     ) -> reqwest::Response {
         let body = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(params)
@@ -2330,8 +2410,8 @@ impl Harness {
             .post(self.server.api_url(path))
             .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
             .body(body);
-        if let Some(authorization) = authorization {
-            request = request.header(AUTHORIZATION, authorization);
+        for (name, value) in headers {
+            request = request.header(name, *value);
         }
         self.with_address(request)
             .send()

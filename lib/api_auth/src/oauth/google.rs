@@ -61,7 +61,7 @@ async fn get_inner(
     };
     is_allowed_oauth(context).await?;
 
-    if let Some(remote_ip) = bencher_schema::RateLimiting::remote_ip(log, headers) {
+    if let Some(remote_ip) = context.remote_ip(log, headers) {
         context.rate_limiting.public_auth_attempt(remote_ip)?;
     }
 

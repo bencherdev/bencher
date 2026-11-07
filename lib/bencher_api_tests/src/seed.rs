@@ -1,12 +1,21 @@
 use bencher_json::{
-    Email, JsonConfirm, JsonNewOrganization, JsonNewProject, JsonNewUserKey, JsonOrganization,
-    JsonProject, JsonSignup, JsonUserKeyCreated, OrganizationSlug, OrganizationUuid, ProjectSlug,
-    ProjectUuid, ResourceName, UserKey, UserName, UserSlug, UserUuid, system::auth::JsonAuthUser,
+    DateTime, Email, JsonConfirm, JsonNewOrganization, JsonNewProject, JsonNewUserKey,
+    JsonOrganization, JsonProject, JsonSignup, JsonUserKeyCreated, OrganizationSlug,
+    OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName, SessionMethod, SessionToken, UserKey,
+    UserName, UserSlug, UserUuid, system::auth::JsonAuthUser,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JsonProjectKeyCreated, ProjectKey};
+use bencher_schema::model::user::{
+    QueryUser,
+    session::{InsertSession, cookie::SessionCookie},
+};
 
 use crate::TestServer;
+
+/// The `User-Agent` a test session signs in with.
+const SESSION_USER_AGENT: &str =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.6; rv:131.0) Gecko/20100101 Firefox/131.0";
 
 /// A test user with their JWT token
 pub struct TestUser {
@@ -125,6 +134,25 @@ impl TestServer {
             email: auth_user.user.email,
             token: auth_user.token.to_string(),
         }
+    }
+
+    /// Sign the user in to a new browser session now, returning the session cookie's value.
+    pub fn session(&self, user: &TestUser) -> SessionToken {
+        self.session_at(user, self.context().clock.now())
+    }
+
+    /// Sign the user in to a new browser session at `now`, returning the session cookie's value.
+    #[expect(clippy::expect_used, reason = "test helper inserting a session")]
+    pub fn session_at(&self, user: &TestUser, now: DateTime) -> SessionToken {
+        let mut conn = self.db_conn();
+        let user_id = QueryUser::get_id(&mut conn, user.uuid).expect("Failed to get user ID");
+        let (session, token) =
+            InsertSession::new(user_id, SessionMethod::Email, Some(SESSION_USER_AGENT), now)
+                .expect("Failed to create session");
+        session
+            .insert(&mut conn, now)
+            .expect("Failed to insert session");
+        token
     }
 
     /// Create a new organization for the given user
@@ -282,4 +310,9 @@ impl TestServer {
         // In a full implementation, we'd insert directly into DB and skip email confirmation
         self.signup(name, email).await
     }
+}
+
+/// The `Cookie` header that presents a session, in the form the test server's console URL calls for.
+pub fn session_cookie(token: &SessionToken) -> String {
+    format!("{}={}", SessionCookie::Host.name(), token.as_ref())
 }
