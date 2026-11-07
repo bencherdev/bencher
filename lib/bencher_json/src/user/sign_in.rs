@@ -1,13 +1,13 @@
 #[cfg(feature = "plus")]
 use bencher_valid::PlanLevel;
-use bencher_valid::{Email, Jwt, LinkSecret, NonEmpty, SignInCode};
+use bencher_valid::{DateTime, Email, Jwt, LinkSecret, NonEmpty, SignInCode};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "plus")]
-use crate::OAuthAuthorizationUuid;
 use crate::{JsonUser, OrganizationUuid};
+#[cfg(feature = "plus")]
+use crate::{OAuthAuthorizationUuid, SignInProvider};
 
 crate::typed_uuid::typed_uuid!(PendingSignInUuid);
 
@@ -90,6 +90,8 @@ pub struct JsonSignedIn {
 
 /// What a link did: signed in, or, in a browser that did not ask for it, named the address it signs
 /// in to and changed nothing, until the reader confirms.
+///
+/// A fresh sign-in's link proves again the session that asked for it.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
@@ -97,9 +99,31 @@ pub struct JsonSignInAs {
     pub email: Email,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub signed_in: Option<JsonSignedIn>,
+    /// When a fresh sign-in's link proved the session again.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proved: Option<DateTime>,
 }
 
-/// Why a sign-in endpoint refused a request, as the `error_code` of its error.
+/// How the signed-in reader can sign in again: by an email to their address, always, and with
+/// each provider pinned to them that the server signs in with.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonFreshSignIn {
+    #[cfg(feature = "plus")]
+    pub providers: Vec<SignInProvider>,
+}
+
+/// A fresh sign-in, which proved the session again and changed nothing else.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonProved {
+    pub proved: DateTime,
+}
+
+/// Why a sign-in endpoint, or an action that needs a fresh sign-in, refused a request, as the
+/// `error_code` of its error.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -135,6 +159,12 @@ pub enum SignInRefusal {
     Locked,
     /// A sign-in with GitHub or Google failed, for a reason it does not tell.
     ProviderRefused,
+    /// The action needs a browser session whose reader proved who they are within the last 10
+    /// minutes, so the console asks the reader to sign in again.
+    FreshSignIn,
+    /// A fresh sign-in's link, opened in a browser other than the one that asked, which it never
+    /// proves.
+    AskedElsewhere,
 }
 
 impl AsRef<str> for SignInRefusal {
@@ -154,6 +184,8 @@ impl AsRef<str> for SignInRefusal {
             Self::ResendWaiting => "resend_waiting",
             Self::Locked => "locked",
             Self::ProviderRefused => "provider_refused",
+            Self::FreshSignIn => "fresh_sign_in",
+            Self::AskedElsewhere => "asked_elsewhere",
         }
     }
 }

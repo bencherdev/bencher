@@ -84,11 +84,21 @@ The API is accessible at [http://localhost:6610](http://localhost:6610).
 
 ### Seeding the Database
 
-To seed the database with sample data, run the following command:
+To seed the database with sample data, run the API with its output in a file:
 
 ```shell
-cargo test-api seed
+cd services/api
+cargo run > data/api.log 2>&1
 ```
+
+Then, in another terminal, run the following command:
+
+```shell
+cargo test-api seed --api-log services/api/data/api.log
+```
+
+A new key needs a browser session signed in within the last 10 minutes,
+so the seed signs in by the code in the sign-in email, which a server with no SMTP writes to its log.
 
 ### Accessing the Database
 

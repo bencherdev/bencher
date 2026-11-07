@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use async_trait::async_trait;
-use bencher_json::{DateTime, Jwt, Sanitize, SessionToken, UserKey, UserKeyHash};
+use bencher_json::{DateTime, Jwt, Sanitize, SessionToken, SignInRefusal, UserKey, UserKeyHash};
 #[cfg(feature = "plus")]
 use bencher_json::{OAuthScopes, system::payment::JsonCustomer};
 use bencher_rbac::{
@@ -20,6 +20,7 @@ use oso::{PolarValue, ToPolar};
 #[cfg(feature = "plus")]
 use crate::context::OAuthServer;
 use crate::{
+    auth_conn,
     context::{ApiContext, DbConnection, Rbac},
     error::{
         BEARER_TOKEN_FORMAT, bad_request_error, forbidden_error, issue_error, unauthorized_error,
@@ -46,6 +47,7 @@ use super::oauth::{authenticate, is_oauth_credential};
 const INVALID_USER_KEY: &str = "Invalid user key";
 const INVALID_SESSION: &str = "Invalid session";
 const CROSS_ORIGIN_SESSION: &str = "A session can change state only from the console's own origin";
+const FRESH_SIGN_IN: &str = "This needs a browser session signed in within the last 10 minutes";
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
@@ -455,6 +457,36 @@ impl AuthUser {
         matches!(self.credential, AuthCredential::Session(_))
     }
 
+    /// Refuse a browser session whose reader has not proved who they are within
+    /// [`super::session::FRESH_SIGN_IN_WINDOW`], so a stolen cookie alone cannot do what this
+    /// guards.
+    /// A bearer credential passes, and a `client` JWT, which holds no proof time, never does.
+    pub async fn check_fresh_sign_in(&self, context: &ApiContext) -> Result<(), HttpError> {
+        if !self.credential.is_windowed() {
+            return Ok(());
+        }
+        let fresh = if let Some(session_id) = self.session_id() {
+            QuerySession::find(auth_conn!(context), session_id)
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to read a session",
+                        "Failed to read a session's last proof:",
+                        e,
+                    )
+                })?
+                .is_some_and(|session| session.is_fresh(context.clock.now()))
+        } else {
+            false
+        };
+        if fresh {
+            Ok(())
+        } else {
+            let mut error = forbidden_error(FRESH_SIGN_IN);
+            error.error_code = Some(SignInRefusal::FreshSignIn.as_ref().to_owned());
+            Err(error)
+        }
+    }
+
     /// The browser session the request authenticated with, if it presented a session cookie.
     pub fn session_id(&self) -> Option<SessionId> {
         if let AuthCredential::Session(session_id) = self.credential {
@@ -542,6 +574,19 @@ pub enum AuthCredential {
     OAuthGrant {
         user_key_id: Option<UserKeyId>,
     },
+}
+
+impl AuthCredential {
+    /// Whether the fresh sign-in window holds it: a browser session does, and a bearer
+    /// credential does not.
+    fn is_windowed(self) -> bool {
+        match self {
+            Self::Session(_) => true,
+            Self::ApiToken | Self::UserKey(_) => false,
+            #[cfg(feature = "plus")]
+            Self::OAuthGrant { .. } => false,
+        }
+    }
 }
 
 // https://github.com/oxidecomputer/cio/blob/master/dropshot-verify-request/src/bearer.rs
@@ -686,5 +731,33 @@ impl From<OrgProjectId> for Project {
 impl ToPolar for &AuthUser {
     fn to_polar(self) -> PolarValue {
         self.rbac.clone().to_polar()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AuthCredential, SessionId, UserKeyId};
+
+    // A browser session, cookie or old login JWT, is held to the fresh sign-in window; a user
+    // key, a deprecated API token, and an OAuth grant do what they did before. No endpoint takes
+    // an OAuth grant but the MCP server's, whose tools do no guarded action.
+    // Kills a window that holds a bearer credential, or exempts a session.
+    #[test]
+    fn window_holds_browser_sessions_alone() {
+        for session_id in [Some(SessionId::from_raw(1)), None] {
+            assert!(
+                AuthCredential::Session(session_id).is_windowed(),
+                "{session_id:?}"
+            );
+        }
+        assert!(!AuthCredential::ApiToken.is_windowed());
+        assert!(!AuthCredential::UserKey(UserKeyId::from_raw(1)).is_windowed());
+        #[cfg(feature = "plus")]
+        for user_key_id in [None, Some(UserKeyId::from_raw(1))] {
+            assert!(
+                !AuthCredential::OAuthGrant { user_key_id }.is_windowed(),
+                "{user_key_id:?}"
+            );
+        }
     }
 }

@@ -197,6 +197,7 @@ async fn patch_inner(
 /// The user must have `manage` permissions for the project.
 /// By default, projects are soft-deleted.
 /// Set the `hard` query parameter to `true` to permanently delete the project (requires server admin).
+/// A user session needs a sign-in within the last 10 minutes.
 #[endpoint {
     method = DELETE,
     path =  "/v0/projects/{project}",
@@ -209,6 +210,7 @@ pub async fn project_delete(
     query_params: Query<ProjectDeleteQuery>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    auth_user.check_fresh_sign_in(rqctx.context()).await?;
     delete_inner(
         &rqctx.log,
         rqctx.context(),

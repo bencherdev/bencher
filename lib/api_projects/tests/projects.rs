@@ -6,7 +6,7 @@
 )]
 //! Integration tests for project CRUD endpoints.
 
-use bencher_api_tests::{TestServer, helpers::grant_project_role};
+use bencher_api_tests::{TestServer, TestUser, helpers::grant_project_role};
 use bencher_json::{JsonNewProject, JsonProject, JsonProjects, ParameterFilter, ProjectUuid};
 use bencher_rbac::project::Role;
 use http::StatusCode;
@@ -264,10 +264,7 @@ async fn projects_delete() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{}", project_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -346,14 +343,18 @@ async fn projects_delete_takes_the_maintainer_role() {
         .await,
         StatusCode::NO_CONTENT
     );
-    assert_eq!(
-        delete(format!("/v0/projects/{project_slug}"), &developer.token).await,
-        StatusCode::FORBIDDEN
-    );
-    assert_eq!(
-        delete(format!("/v0/projects/{project_slug}"), &maintainer.token).await,
-        StatusCode::NO_CONTENT
-    );
+    let delete_project = async |user: &TestUser| {
+        server
+            .client
+            .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
+            .headers(server.fresh_session(user))
+            .send()
+            .await
+            .expect("Request failed")
+            .status()
+    };
+    assert_eq!(delete_project(&developer).await, StatusCode::FORBIDDEN);
+    assert_eq!(delete_project(&maintainer).await, StatusCode::NO_CONTENT);
 }
 
 // Soft-delete removes project from list
@@ -371,10 +372,7 @@ async fn projects_soft_delete_not_in_list() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -417,10 +415,7 @@ async fn projects_soft_delete_slug_reuse() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -467,10 +462,7 @@ async fn projects_hard_delete_requires_admin() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}?hard=true")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -492,10 +484,7 @@ async fn projects_hard_delete_as_admin() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}?hard=true")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .send()
         .await
         .expect("Request failed");
@@ -528,10 +517,7 @@ async fn projects_soft_delete_get_by_uuid() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -568,10 +554,7 @@ async fn projects_soft_delete_idempotent() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -581,10 +564,7 @@ async fn projects_soft_delete_idempotent() {
     let resp2 = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -608,10 +588,7 @@ async fn projects_hard_delete_soft_deleted_project() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .send()
         .await
         .expect("Request failed");
@@ -621,10 +598,7 @@ async fn projects_hard_delete_soft_deleted_project() {
     let resp2 = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{}?hard=true", project.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .send()
         .await
         .expect("Request failed");
@@ -647,10 +621,7 @@ async fn projects_patch_after_soft_delete() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -682,10 +653,7 @@ async fn projects_hard_delete_nonexistent() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{fake_uuid}?hard=true")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .send()
         .await
         .expect("Request failed");
@@ -808,10 +776,7 @@ async fn projects_soft_delete_endpoints_inaccessible() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -1087,7 +1052,7 @@ async fn plot_patch_rejects_unknown_component() {
 #[expect(clippy::expect_used, reason = "test helper creating a plot")]
 async fn post_plot(
     server: &TestServer,
-    user: &bencher_api_tests::TestUser,
+    user: &TestUser,
     project_slug: &str,
     new_plot: &serde_json::Value,
 ) -> bencher_json::JsonPlot {
@@ -1111,7 +1076,7 @@ async fn post_plot(
 #[expect(clippy::expect_used, reason = "test helper patching a plot")]
 async fn patch_plot(
     server: &TestServer,
-    user: &bencher_api_tests::TestUser,
+    user: &TestUser,
     project_slug: &str,
     plot: bencher_json::PlotUuid,
     patch: &serde_json::Value,

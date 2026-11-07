@@ -9,7 +9,7 @@ use oauth2::{
     basic::{BasicClient, BasicTokenResponse},
 };
 use oauth2_reqwest::ReqwestClient;
-use octocrab::Octocrab;
+use octocrab::{Octocrab, service::middleware::retry::RetryConfig};
 use serde::Deserialize;
 use url::Url;
 
@@ -21,7 +21,7 @@ mod webhook;
 
 #[cfg(any(test, feature = "test-base-url"))]
 use api::join_path;
-use api::{GITHUB_API_URL, GitHubApi, TIMEOUT};
+use api::{CONNECT_TIMEOUT, GITHUB_API_URL, GitHubApi, TIMEOUT};
 pub use api::{GitHubApiError, GitHubRepository};
 pub use app::{GitHubApp, GitHubAppError, GitHubInstallationToken};
 pub use bencher_valid::GitHubInstallationPermission;
@@ -160,7 +160,11 @@ impl GitHubClient {
             refresh_token: None,
             refresh_token_expires_in: None,
         };
+        // No retries: a read that times out ends the sign-in, which the reader can start again.
         let github_client = Octocrab::builder()
+            .add_retry_config(RetryConfig::None)
+            .set_connect_timeout(Some(CONNECT_TIMEOUT))
+            .set_read_timeout(Some(TIMEOUT))
             .base_uri(self.api_url.as_str())
             .and_then(|builder| builder.oauth(oauth).build())
             .map_err(GitHubClientError::Auth)?;
@@ -269,13 +273,15 @@ struct GitHubUserEmail {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use aws_lc_rs::digest::{SHA256, digest};
     use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
     use bencher_valid::{GitHubInstallationId, GitHubRepositoryId, Jwt, PkceVerifier};
     use url::Url;
 
-    use super::{GitHubClient, GitHubInstallationPermission, GitHubRepository};
-    use crate::test_server::Server;
+    use super::{GitHubClient, GitHubClientError, GitHubInstallationPermission, GitHubRepository};
+    use crate::test_server::{HOLD, Server};
 
     const REDIRECT_URL: &str = "https://console.example/github/return";
     const SIGN_IN_URL: &str = "https://console.example/auth/github";
@@ -295,6 +301,16 @@ mod tests {
         (
             200,
             format!(r#"{{"access_token": "{USER_TOKEN}", "token_type": "bearer", "scope": ""}}"#),
+        )
+    }
+
+    fn user() -> (u16, String) {
+        let profile = "https://github.example/octo-cat";
+        (
+            200,
+            format!(
+                r#"{{"login": "octo-cat", "id": 1, "name": "Octo Cat", "node_id": "U_1", "avatar_url": "{profile}", "gravatar_id": "", "url": "{profile}", "html_url": "{profile}", "followers_url": "{profile}", "following_url": "{profile}", "gists_url": "{profile}", "starred_url": "{profile}", "subscriptions_url": "{profile}", "organizations_url": "{profile}", "repos_url": "{profile}", "events_url": "{profile}", "received_events_url": "{profile}", "type": "User", "site_admin": false}}"#
+            ),
         )
     }
 
@@ -364,15 +380,9 @@ mod tests {
     // exchange returned.
     #[tokio::test]
     async fn sign_in_proves_its_verifier_and_reads_the_user_from_the_base() {
-        let profile = "https://github.example/octo-cat";
         let server = Server::start(vec![
             exchanged(),
-            (
-                200,
-                format!(
-                    r#"{{"login": "octo-cat", "id": 1, "name": "Octo Cat", "node_id": "U_1", "avatar_url": "{profile}", "gravatar_id": "", "url": "{profile}", "html_url": "{profile}", "followers_url": "{profile}", "following_url": "{profile}", "gists_url": "{profile}", "starred_url": "{profile}", "subscriptions_url": "{profile}", "organizations_url": "{profile}", "repos_url": "{profile}", "events_url": "{profile}", "received_events_url": "{profile}", "type": "User", "site_admin": false}}"#
-                ),
-            ),
+            user(),
             primary_email("octo-cat@example.com"),
         ])
         .await;
@@ -450,6 +460,39 @@ mod tests {
             ),
             ("muriel_bagge", None, "muriel_bagge@example.com")
         );
+    }
+
+    // Kills a sign-in whose user or email read waits on a GitHub that never answers, or tries it
+    // again: each gives up after one read's timeout.
+    #[tokio::test]
+    async fn sign_in_gives_up_on_reads_that_never_answer() {
+        let held = || (200, vec![(HOLD, String::new())], String::new());
+        let answered = |(status, body): (u16, String)| (status, Vec::new(), body);
+        let user_held = Server::start_with_headers(vec![answered(exchanged()), held()]).await;
+        let emails_held =
+            Server::start_with_headers(vec![answered(exchanged()), answered(user()), held()]).await;
+        let sign_in = |server: &Server| {
+            let client = client().with_base_url(server.base());
+            async move {
+                client
+                    .sign_in_user(
+                        CODE.parse().unwrap(),
+                        &VERIFIER.parse().unwrap(),
+                        SIGN_IN_URL.parse().unwrap(),
+                    )
+                    .await
+            }
+        };
+
+        let (user_read, emails_read) = tokio::time::timeout(Duration::from_secs(15), async {
+            tokio::join!(sign_in(&user_held), sign_in(&emails_held))
+        })
+        .await
+        .expect("A read waited on GitHub past its timeout");
+        user_held.until_held().await;
+        emails_held.until_held().await;
+        assert!(matches!(user_read, Err(GitHubClientError::User(_))));
+        assert!(matches!(emails_read, Err(GitHubClientError::Emails(_))));
     }
 
     // Kills dropping the redirect from the exchange, moving the exchange or the listing anywhere

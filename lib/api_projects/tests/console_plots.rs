@@ -34,6 +34,8 @@ fn millis(time: &str) -> i64 {
 struct Fixture {
     slug: ProjectSlug,
     token: String,
+    /// The headers of the console in a session the owner signed in to as the fixture was made.
+    session: http::HeaderMap,
 }
 
 async fn fixture(server: &TestServer, label: &str) -> Fixture {
@@ -46,9 +48,11 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
     let project = server
         .create_project(&user, &org, &format!("Console Plots Project {label}"))
         .await;
+    let session = server.fresh_session(&user);
     Fixture {
         slug: project.slug,
         token: user.token,
+        session,
     }
 }
 
@@ -680,14 +684,16 @@ async fn console_plots_need_a_signed_in_reader() {
 }
 
 async fn create_key(server: &TestServer, fixture: &Fixture) -> String {
-    let (status, text) = send(
-        server,
-        http::Method::POST,
-        &format!("/v0/projects/{}/keys", fixture.slug),
-        Some(&fixture.token),
-        Some(serde_json::json!({ "name": "console-key" })),
-    )
-    .await;
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/keys", fixture.slug)))
+        .headers(fixture.session.clone())
+        .json(&serde_json::json!({ "name": "console-key" }))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let text = resp.text().await.expect("Failed to read the response");
     assert_eq!(status, StatusCode::CREATED, "create a project key: {text}");
     let key: JsonProjectKeyCreated = serde_json::from_str(&text).expect("a project key");
     key.key.as_ref().to_owned()

@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseOk};
-use bencher_json::{DateTime, JsonSignInCode, JsonSignedIn, SignInRefusal, TRIES_LEFT};
+use bencher_json::{DateTime, JsonSignInCode, JsonSignedIn, SignInCode, SignInRefusal, TRIES_LEFT};
 use bencher_schema::{
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     error::{forbidden_error, too_many_requests},
     model::user::{
         session::cookie::PendingCookie,
@@ -15,7 +15,7 @@ use http::{
     header::{RETRY_AFTER, SET_COOKIE},
 };
 
-use super::{Presented, Proof, TxError, admit, binding, ended, finish, prove, refused};
+use super::{Presented, TxError, admit, binding, ended, finish, prove, refused};
 
 #[endpoint {
     method = OPTIONS,
@@ -50,29 +50,16 @@ pub async fn auth_code_post(
     let presented = Presented::new(context, &rqctx.request);
     let now = context.clock.now();
 
-    let redeemed = write_transaction!(context, |conn| {
+    let proof = write_transaction!(context, |conn| {
         let Some(pending) = QueryPendingSignIn::from_binding(conn, &binding, now)? else {
             return Ok(Redeemed::Ended);
         };
-        // Before the code is compared, so a paused code tells nothing, right or wrong, and
-        // spends no try.
-        if let Some(resumes) = CodeBudget::paused_until(conn, &pending.email, now)? {
-            return Ok(Redeemed::Paused(resumes));
-        }
-        if !context.code_key.matches(&code, &pending.code_hash) {
-            CodeBudget::spend(conn, &pending.email, now)?;
-            return Ok(Redeemed::Wrong(pending.count_wrong_code(conn)?));
-        }
-        prove(conn, context, &pending, &presented, now).map(Redeemed::Proof)
+        redeem(conn, context, &pending, &code, now, |conn| {
+            prove(conn, context, &pending, &presented, now)
+        })
     })
-    .map_err(TxError::into_http)?;
-
-    let proof = match redeemed {
-        Redeemed::Ended => return Err(ended()),
-        Redeemed::Paused(resumes) => return Err(codes_paused(resumes, now)),
-        Redeemed::Wrong(tries_left) => return Err(wrong_code(context, tries_left)),
-        Redeemed::Proof(proof) => proof,
-    };
+    .map_err(TxError::into_http)?
+    .proof(context, now)?;
     let (json, cookies) = finish(log, context, proof).await?;
     let mut response = Post::pub_response_ok(json);
     for cookie in cookies {
@@ -81,13 +68,51 @@ pub async fn auth_code_post(
     Ok(response)
 }
 
-enum Redeemed {
+/// What a code did to its pending sign-in.
+pub(super) enum Redeemed<T> {
     Ended,
     /// Codes for the address are paused until then.
     Paused(DateTime),
     /// A wrong code, with the tries it left.
     Wrong(i32),
-    Proof(Proof),
+    Proof(T),
+}
+
+impl<T> Redeemed<T> {
+    /// The proof, or the refusal of a code that proved nothing.
+    pub(super) fn proof(self, context: &ApiContext, now: DateTime) -> Result<T, HttpError> {
+        match self {
+            Self::Ended => Err(ended()),
+            Self::Paused(resumes) => Err(codes_paused(resumes, now)),
+            Self::Wrong(tries_left) => Err(wrong_code(context, tries_left)),
+            Self::Proof(proof) => Ok(proof),
+        }
+    }
+}
+
+/// Compare `code` with the pending sign-in's, inside its write transaction, under its address's
+/// budget: a wrong code spends the budget and a try, and the right one is proven by `prove`.
+pub(super) fn redeem<T, F>(
+    conn: &mut DbConnection,
+    context: &ApiContext,
+    pending: &QueryPendingSignIn,
+    code: &SignInCode,
+    now: DateTime,
+    prove: F,
+) -> Result<Redeemed<T>, TxError>
+where
+    F: FnOnce(&mut DbConnection) -> Result<T, TxError>,
+{
+    // Before the code is compared, so a paused code tells nothing, right or wrong, and spends no
+    // try.
+    if let Some(resumes) = CodeBudget::paused_until(conn, &pending.email, now)? {
+        return Ok(Redeemed::Paused(resumes));
+    }
+    if !context.code_key.matches(code, &pending.code_hash) {
+        CodeBudget::spend(conn, &pending.email, now)?;
+        return Ok(Redeemed::Wrong(pending.count_wrong_code(conn)?));
+    }
+    prove(conn).map(Redeemed::Proof)
 }
 
 fn wrong_code(context: &ApiContext, tries_left: i32) -> HttpError {

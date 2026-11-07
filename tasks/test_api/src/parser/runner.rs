@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use bencher_json::{Jwt, Url};
 use clap::Parser;
 
@@ -23,4 +25,9 @@ pub struct TaskRunner {
     /// Start a runner daemon locally for the test
     #[clap(long)]
     pub with_daemon: bool,
+
+    /// The API's log, where a server that sends no email writes each sign-in email,
+    /// to make keys from a browser session signed in by its code rather than by the tokens
+    #[clap(long)]
+    pub api_log: Option<PathBuf>,
 }

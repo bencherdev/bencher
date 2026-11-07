@@ -27,6 +27,9 @@ pub const SESSION_IDLE_LIFETIME: TimeDelta = TimeDelta::days(30);
 pub const SESSION_LIFETIME: TimeDelta = TimeDelta::days(90);
 /// A use renews a session only once this long has passed since the last renewal.
 const RENEWAL_INTERVAL: TimeDelta = TimeDelta::hours(1);
+/// A session does what needs a fresh sign-in only this long after its reader last proved who they
+/// are.
+pub const FRESH_SIGN_IN_WINDOW: TimeDelta = TimeDelta::minutes(10);
 
 #[derive(Debug, Clone, diesel::Queryable)]
 pub struct QuerySession {
@@ -81,6 +84,21 @@ impl QuerySession {
 
     pub fn needs_renewal(&self, now: DateTime) -> bool {
         now.timestamp() >= (self.last_used + RENEWAL_INTERVAL).timestamp()
+    }
+
+    pub fn is_fresh(&self, now: DateTime) -> bool {
+        now.timestamp() < (self.proved + FRESH_SIGN_IN_WINDOW).timestamp()
+    }
+
+    /// Record that the session's reader proved who they are at `now`, and change nothing else.
+    pub fn prove(
+        conn: &mut DbConnection,
+        id: SessionId,
+        now: DateTime,
+    ) -> diesel::QueryResult<usize> {
+        diesel::update(schema::session::table.filter(schema::session::id.eq(id)))
+            .set(schema::session::proved.eq(now))
+            .execute(conn)
     }
 
     pub fn renew(

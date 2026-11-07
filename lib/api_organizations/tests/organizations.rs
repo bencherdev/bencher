@@ -218,10 +218,7 @@ async fn organizations_delete() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{}", org_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -255,10 +252,7 @@ async fn organizations_soft_delete_not_in_list() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -296,10 +290,7 @@ async fn organizations_soft_delete_cascades_to_projects() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -332,10 +323,7 @@ async fn organizations_soft_delete_slug_reuse() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -376,10 +364,7 @@ async fn organizations_hard_delete_requires_admin() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}?hard=true")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -398,10 +383,7 @@ async fn organizations_hard_delete_as_admin() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}?hard=true")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .send()
         .await
         .expect("Request failed");
@@ -433,10 +415,7 @@ async fn organizations_soft_delete_get_by_uuid() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -470,10 +449,7 @@ async fn organizations_soft_delete_idempotent() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -483,10 +459,7 @@ async fn organizations_soft_delete_idempotent() {
     let resp2 = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -507,10 +480,7 @@ async fn organizations_hard_delete_soft_deleted_org() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .send()
         .await
         .expect("Request failed");
@@ -520,10 +490,7 @@ async fn organizations_hard_delete_soft_deleted_org() {
     let resp2 = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{}?hard=true", org.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .send()
         .await
         .expect("Request failed");
@@ -543,10 +510,7 @@ async fn organizations_patch_after_soft_delete() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -578,10 +542,7 @@ async fn organizations_hard_delete_nonexistent() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{fake_uuid}?hard=true")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .send()
         .await
         .expect("Request failed");
@@ -617,10 +578,7 @@ async fn organizations_soft_delete_cascades_child_resources() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{org_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");

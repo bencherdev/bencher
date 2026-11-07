@@ -29,10 +29,7 @@ async fn setup() -> (TestServer, String, String, ProjectKey) {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({"name": "ci-key"}))
         .send()
         .await
@@ -275,10 +272,7 @@ async fn project_key_for_other_project_on_public_target_returns_403() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/keys", slug_a)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({"name": "a-key"}))
         .send()
         .await
@@ -334,10 +328,7 @@ async fn project_key_for_other_project_on_private_target_returns_404() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/keys", slug_a)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({"name": "a-key"}))
         .send()
         .await
@@ -587,10 +578,7 @@ async fn project_key_cannot_create_in_wrong_project() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/keys", slug_a)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({"name": "cross-key"}))
         .send()
         .await
@@ -648,10 +636,7 @@ async fn project_key_cannot_create_in_wrong_private_project_returns_404() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/keys", slug_a)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({"name": "cross-priv-key"}))
         .send()
         .await
@@ -693,10 +678,7 @@ async fn project_key_revoked() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({"name": "revoke-key"}))
         .send()
         .await
@@ -1557,8 +1539,15 @@ async fn project_key_create_requires_session() {
     assert_eq!(status, StatusCode::FORBIDDEN);
     let status = create_key(&server, project_slug, user_key.as_ref()).await;
     assert_eq!(status, StatusCode::FORBIDDEN);
-    let status = create_key(&server, project_slug, &user.token).await;
-    assert_eq!(status, StatusCode::CREATED);
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
+        .headers(server.fresh_session(&user))
+        .json(&serde_json::json!({"name": "session-key"}))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED);
 
     // Only the session created a key.
     let resp = server
@@ -1762,10 +1751,7 @@ async fn setup_non_session() -> NonSession {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({"name": "ci-key"}))
         .send()
         .await
@@ -1800,10 +1786,7 @@ async fn project_keys_sort_created() {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&user.token),
-            )
+            .headers(server.fresh_session(&user))
             .json(&serde_json::json!({ "name": name }))
             .send()
             .await

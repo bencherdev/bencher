@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use bencher_json::{Jwt, Url};
 use clap::{Parser, ValueEnum};
 
@@ -18,6 +20,10 @@ pub struct TaskSeedTest {
     /// Running outside of a git repo
     #[clap(long)]
     pub no_git: bool,
+    /// The API's log, where a server that sends no email writes each sign-in email,
+    /// to make keys from a browser session signed in by its code rather than by the test token
+    #[clap(long)]
+    pub api_log: Option<PathBuf>,
 }
 
 #[derive(Parser, Debug, Default)]

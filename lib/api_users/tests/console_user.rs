@@ -235,10 +235,7 @@ async fn console_user_lists_the_readers_organizations_and_projects() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/organizations/{third_slug}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&reader.token),
-        )
+        .headers(server.fresh_session(&reader))
         .send()
         .await
         .expect("Request failed");

@@ -1,6 +1,7 @@
 import { TURNSTILE_SITE_KEY } from "astro:env/client";
 import Banner from "@bencherdev/ui/Banner";
 import Button from "@bencherdev/ui/Button";
+import ButtonLink from "@bencherdev/ui/ButtonLink";
 import Heading from "@bencherdev/ui/Heading";
 import { Match, Show, Switch, createSignal, onMount } from "solid-js";
 import { render } from "solid-js/web";
@@ -13,7 +14,7 @@ import type {
 import { takeAuthReturn } from "../astro/authReturn";
 import { handOff } from "../handoff";
 import { READER_KEY, readReader } from "../reader";
-import { type Failure, inboxFailure } from "./copy";
+import { EXPIRED, type Failure, inboxFailure } from "./copy";
 import Frame from "./Frame";
 import Inbox, { type InboxEffects, type Status } from "./Inbox";
 import { finish, landing } from "./land";
@@ -30,6 +31,7 @@ import {
 	pendingOf,
 	readPending,
 } from "./pending";
+import { signalProved } from "./proved";
 import { type Answer, ask } from "./request";
 import SignInAs from "./SignInAs";
 import { loadTurnstile, turnstileToken } from "./turnstile";
@@ -210,9 +212,16 @@ type Link =
 	| { kind: "redeeming" }
 	| { kind: "asking"; email: string }
 	| { kind: "ended" }
+	| { kind: "elsewhere" }
 	| { kind: "failed"; failure: Failure };
 
-/** A link from the email: it signs in the browser that asked, and asks first in any other. */
+/**
+ * A link from the email: it signs in the browser that asked, and asks first in
+ * any other. A fresh sign-in's link proves the session of the browser that
+ * asked, whose open dialog hears it, and proves nothing anywhere else. An ended
+ * link leads a signed in reader back to the console, and anyone else to the
+ * door.
+ */
 const LinkApp = (props: { secret: string; pending: Pending | undefined }) => {
 	const [state, setState] = createSignal<Link>({ kind: "redeeming" });
 	const [busy, setBusy] = createSignal(false);
@@ -229,15 +238,23 @@ const LinkApp = (props: { secret: string; pending: Pending | undefined }) => {
 					finish(answer.data.signed_in);
 					return;
 				}
+				if (answer.data.proved) {
+					signalProved(localStorage);
+					location.replace(landing({}));
+					return;
+				}
 				setBusy(false);
 				setState({ kind: "asking", email: answer.data.email });
 				return;
 			}
 			setBusy(false);
+			const { code } = answer.refused;
 			setState(
-				answer.refused.code === "sign_in_ended"
+				code === "sign_in_ended"
 					? { kind: "ended" }
-					: { kind: "failed", failure: inboxFailure(answer.refused) },
+					: code === "asked_elsewhere"
+						? { kind: "elsewhere" }
+						: { kind: "failed", failure: inboxFailure(answer.refused) },
 			);
 		});
 	};
@@ -261,6 +278,25 @@ const LinkApp = (props: { secret: string; pending: Pending | undefined }) => {
 						cancel="/auth/login"
 					/>
 				)}
+			</Match>
+			<Match when={state().kind === "elsewhere"}>
+				<Heading level={1} size="xl">
+					Sign in again
+				</Heading>
+				<Banner status="error" role="alert">
+					Open this link on the device where you were asked
+				</Banner>
+			</Match>
+			<Match when={state().kind === "ended" && readReader(localStorage)}>
+				<Heading level={1} size="xl">
+					Sign in again
+				</Heading>
+				<Banner status="error" role="alert">
+					{EXPIRED}
+				</Banner>
+				<ButtonLink variant="primary" size="lg" full href={landing({})}>
+					Back to the console
+				</ButtonLink>
 			</Match>
 			<Match when={state().kind === "ended"}>
 				<InboxApp

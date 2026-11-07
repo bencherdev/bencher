@@ -194,6 +194,7 @@ async fn get_one_inner(
 /// Some fields can only be updated by an admin.
 /// Changing the email, admin, or locked field requires a user session, even for an admin:
 /// neither a user API key nor a deprecated user API token can change them.
+/// Changing the email or the admin field also needs a sign-in within the last 10 minutes.
 /// A user's new email for themselves takes effect only once it is confirmed
 /// from a link sent to that email, so until then the response shows the current email.
 /// Any later update to the user ends that link.
@@ -272,6 +273,9 @@ async fn patch_inner(
                 "Only a user session can lock or unlock a user.",
             ));
         }
+    }
+    if email_changed || admin_changed {
+        auth_user.check_fresh_sign_in(context).await?;
     }
 
     let mut update_user = UpdateUser::from(json_user.clone());

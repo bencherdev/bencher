@@ -12,8 +12,11 @@ const LOCKED: &str = "Your Bencher account is locked";
 const SOMEONE_ASKED: &str = "Someone asked to sign in with this address.";
 const ADMINISTRATOR: &str =
     "To unlock the account, contact the administrator of this Bencher server.";
+const FRESH_HEADING: &str = "Confirm it's you";
+const FRESH_BUTTON: &str = "Sign in again";
 
 /// The email a sign-in sends: its code and its link, or, to a locked account, how to unlock it.
+/// A fresh sign-in sends its code and its link to the signed-in reader.
 pub enum SignInBody {
     Code {
         /// Whether the address has no account yet.
@@ -25,12 +28,18 @@ pub enum SignInBody {
         /// Where to reach support, on Bencher Cloud.
         support: Option<Url>,
     },
+    Fresh {
+        code: SignInCode,
+        link: Url,
+    },
 }
 
 impl SignInBody {
     pub fn subject(&self) -> String {
         match self {
-            Self::Code { code, .. } => format!("Your Bencher code is {}", code.as_ref()),
+            Self::Code { code, .. } | Self::Fresh { code, .. } => {
+                format!("Your Bencher code is {}", code.as_ref())
+            },
             Self::Locked { .. } => LOCKED.to_owned(),
         }
     }
@@ -42,19 +51,8 @@ impl SignInBody {
                 sign_up,
                 code,
                 link,
-            } => format!(
-                "<h1 class=\"title\">{heading}</h1>
-          <p class=\"is-size-3 has-text-weight-bold has-text-centered\">{code}</p>
-          <div class=\"content has-text-centered\">
-            <a class=\"button is-medium is-responsive\" href=\"{link}\" target=\"_blank\" style=\"color:white;background-color:#fc7300;\">{button}</a>
-          </div>
-          <p>{EXPIRY}</p>
-          <p>{IGNORE}</p>",
-                heading = escape(heading(*sign_up)),
-                code = escape(code.as_ref()),
-                link = escape(link.as_str()),
-                button = escape(button(*sign_up)),
-            ),
+            } => code_content(heading(*sign_up), code, link, button(*sign_up)),
+            Self::Fresh { code, link } => code_content(FRESH_HEADING, code, link, FRESH_BUTTON),
             Self::Locked { support } => {
                 let unlock = if let Some(support) = support {
                     format!(
@@ -105,6 +103,7 @@ impl fmt::Debug for SignInBody {
         match self {
             Self::Code { .. } => f.write_str("SignInBody::Code"),
             Self::Locked { .. } => f.write_str("SignInBody::Locked"),
+            Self::Fresh { .. } => f.write_str("SignInBody::Fresh"),
         }
     }
 }
@@ -116,12 +115,8 @@ impl FmtBody for SignInBody {
                 sign_up,
                 code,
                 link,
-            } => format!(
-                "\n{heading}\n\n{code}\n\n{button}: {link}\n\n{EXPIRY}\n{IGNORE}\n",
-                heading = heading(*sign_up),
-                code = code.as_ref(),
-                button = button(*sign_up),
-            ),
+            } => code_text(heading(*sign_up), code, link, button(*sign_up)),
+            Self::Fresh { code, link } => code_text(FRESH_HEADING, code, link, FRESH_BUTTON),
             Self::Locked { support } => {
                 let unlock = if let Some(support) = support {
                     format!("To unlock the account, contact support: {support}")
@@ -136,6 +131,30 @@ impl FmtBody for SignInBody {
     fn html(&self, log: &Logger) -> String {
         inline_css(log, self.template())
     }
+}
+
+/// An email's code and the button behind its link, under its heading.
+fn code_content(heading: &str, code: &SignInCode, link: &Url, button: &str) -> String {
+    format!(
+        "<h1 class=\"title\">{heading}</h1>
+          <p class=\"is-size-3 has-text-weight-bold has-text-centered\">{code}</p>
+          <div class=\"content has-text-centered\">
+            <a class=\"button is-medium is-responsive\" href=\"{link}\" target=\"_blank\" style=\"color:white;background-color:#fc7300;\">{button}</a>
+          </div>
+          <p>{EXPIRY}</p>
+          <p>{IGNORE}</p>",
+        heading = escape(heading),
+        code = escape(code.as_ref()),
+        link = escape(link.as_str()),
+        button = escape(button),
+    )
+}
+
+fn code_text(heading: &str, code: &SignInCode, link: &Url, button: &str) -> String {
+    format!(
+        "\n{heading}\n\n{code}\n\n{button}: {link}\n\n{EXPIRY}\n{IGNORE}\n",
+        code = code.as_ref(),
+    )
 }
 
 fn heading(sign_up: bool) -> &'static str {

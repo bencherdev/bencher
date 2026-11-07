@@ -45,6 +45,7 @@ pub(super) async fn link(
             let mut response = Post::pub_response_ok(JsonProviderSignIn {
                 signed_in: Some(json),
                 inbox: None,
+                proved: None,
             });
             response.headers_mut().append(SET_COOKIE, session_cookie);
             Ok(response)
@@ -173,6 +174,7 @@ async fn prove_first(
     let mut response = Post::pub_response_ok(JsonProviderSignIn {
         signed_in: None,
         inbox: Some(inbox),
+        proved: None,
     });
     if let Some(cookie) = cookie {
         response.headers_mut().append(SET_COOKIE, cookie);

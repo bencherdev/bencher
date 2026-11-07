@@ -157,8 +157,9 @@ pub use user::{
     },
     session::{JsonSession, SessionMethod, SessionUuid},
     sign_in::{
-        JsonEmailResend, JsonEmailSignIn, JsonSignInAs, JsonSignInCode, JsonSignInEmail,
-        JsonSignInLink, JsonSignedIn, PendingSignInUuid, SignInRefusal, TRIES_LEFT,
+        JsonEmailResend, JsonEmailSignIn, JsonFreshSignIn, JsonProved, JsonSignInAs,
+        JsonSignInCode, JsonSignInEmail, JsonSignInLink, JsonSignedIn, PendingSignInUuid,
+        SignInRefusal, TRIES_LEFT,
     },
     token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
 };

@@ -916,10 +916,7 @@ async fn create_user_key_created(server: &TestServer, user: &TestUser) -> JsonUs
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{user_slug}/keys")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(user))
         .json(&json!({"name": "OAuth Key"}))
         .send()
         .await
