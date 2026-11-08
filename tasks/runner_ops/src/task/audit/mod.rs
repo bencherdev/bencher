@@ -2,7 +2,9 @@ mod health;
 mod snapshot;
 
 use std::collections::BTreeMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use anyhow::Context as _;
 use bencher_json::RunnerResourceId;
 
 use super::desired::{self, Desired};
@@ -165,7 +167,11 @@ impl Target {
     /// The snapshot sections and the desired state rows, read in one script.
     fn collect(&self) -> anyhow::Result<(Sections, BTreeMap<String, Output>)> {
         println!("Collecting an audit snapshot from {}...", self.label);
-        let script = framed::script(snapshot::frames().chain(self.desired.frames()));
+        let now_unix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .context("failed to read the clock")?
+            .as_secs();
+        let script = framed::script(snapshot::frames(now_unix).chain(self.desired.frames()));
         let mut frames = framed::parse(&self.ssh.run_quiet(&script)?);
         Ok((Sections::take(&mut frames), frames))
     }

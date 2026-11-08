@@ -2,40 +2,36 @@ pub const AUTOREMOVE_SIMULATION: &str = "LC_ALL=C apt-get -s autoremove";
 /// The last line of a security updates query that ran to its end.
 pub const SECURITY_UPDATES_END: &str = "checked";
 
-/// The most days the newest `Release` file of a `-security` archive may age before the security updates query fails.
-const SECURITY_LISTS_MAX_AGE_DAYS: u32 = 7;
+/// The most days the signed `Date:` of Ubuntu's own security pocket may age, by the operator's clock, before the security updates query fails.
+const SECURITY_LISTS_MAX_AGE_DAYS: u64 = 7;
 
-/// Each installed package with a newer version in an archive whose name ends in `-security`, or that dpkg has not finished installing, as `<package> <version>`, read from the package lists and the dpkg status, so no apt preference, hold, phasing, or dependency problem can hide one.
-/// It builds its cache in memory, so a broken list fails every run and nothing lands in `/var/cache/apt`.
-pub fn security_updates_query() -> String {
+/// Each installed package with a newer version in a `-security` archive, or not fully installed, as `<package> <version>`, failing unless the lists in use hold Ubuntu's own security pocket signed at most 7 days before `now_unix`.
+pub fn security_updates_query(now_unix: u64) -> String {
     format!(
         r#"python3 -I -c '
-import apt_pkg, glob, time
+import apt_pkg, glob, os, platform
 apt_pkg.init()
 apt_pkg.config.set("Dir::Cache::pkgcache", "")
 apt_pkg.config.set("Dir::Cache::srcpkgcache", "")
 cache = apt_pkg.Cache(None)
-if not any((pf.archive or "").endswith("-security") for pf in cache.file_list):
-    raise SystemExit("no package list comes from a -security archive")
-latest = None
-for path in glob.glob(apt_pkg.config.find_dir("Dir::State::lists") + "*Release"):
-    suite = date = None
-    with open(path, errors="replace") as release:
-        for line in release:
-            if line.startswith("Suite: ") and suite is None:
-                suite = line[7:].strip()
-            elif line.startswith("Date: ") and date is None:
-                date = line[6:].strip()
-    if (suite or "").endswith("-security"):
-        stamp = apt_pkg.str_to_time(date or "") or 0
-        if latest is None or stamp > latest[0]:
-            latest = (stamp, date)
-if latest is None:
-    raise SystemExit("no Release file comes from a -security archive")
-if latest[1] is None:
-    raise SystemExit("the newest -security Release file has no Date field")
-if time.time() - latest[0] > {SECURITY_LISTS_MAX_AGE_DAYS} * 86400:
-    raise SystemExit("the newest -security Release file is dated " + str(latest[1]) + ", more than {SECURITY_LISTS_MAX_AGE_DAYS} days ago")
+suite = platform.freedesktop_os_release()["VERSION_CODENAME"] + "-security"
+used = [pf.filename for pf in cache.file_list]
+dates = []
+lists = apt_pkg.config.find_dir("Dir::State::lists")
+for path in glob.glob(lists + "*_InRelease") + glob.glob(lists + "*_Release"):
+    if not any(name.startswith(path[:path.rindex("_") + 1]) for name in used):
+        continue
+    with os.fdopen(apt_pkg.open_maybe_clear_signed_file(path)) as body:
+        release = next(iter(apt_pkg.TagFile(body)), None) or dict()
+    if release.get("Origin") == "Ubuntu" and release.get("Suite") == suite:
+        dates.append((apt_pkg.str_to_time(release.get("Date", "")) or 0, release.get("Date")))
+if not dates:
+    raise SystemExit("no package list in use comes from the Ubuntu " + suite + " pocket")
+stamp, date = max(dates, key=lambda dated: dated[0])
+if not stamp:
+    raise SystemExit("the Ubuntu " + suite + " Release file has no valid signed Date field")
+if {now_unix} - stamp > {SECURITY_LISTS_MAX_AGE_DAYS} * 86400:
+    raise SystemExit("the Ubuntu " + suite + " Release file is signed with the date " + date + ", more than {SECURITY_LISTS_MAX_AGE_DAYS} days before the audit")
 rows = []
 for pkg in cache.packages:
     installed = pkg.current_ver
