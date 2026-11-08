@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 use super::snapshot::{Section, Sections};
-use crate::task::apt::autoremovable_packages;
+use crate::task::apt::{autoremovable_packages, security_upgrades};
 use crate::task::isolate::is_isolated;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -13,6 +13,7 @@ pub enum Check {
     RebootRequired,
     Raid,
     Autoremove,
+    SecurityUpgrades,
     Isolation,
 }
 
@@ -25,6 +26,7 @@ impl fmt::Display for Check {
             Self::RebootRequired => "no reboot is required",
             Self::Raid => "RAID arrays are in sync",
             Self::Autoremove => "no packages are auto-removable",
+            Self::SecurityUpgrades => "every security update is installed",
             Self::Isolation => "CPU isolation boot args are set",
         })
     }
@@ -69,6 +71,10 @@ pub fn check(sections: &Sections) -> Vec<Finding> {
         (
             Check::Autoremove,
             autoremove(sections.get(Section::Autoremove)),
+        ),
+        (
+            Check::SecurityUpgrades,
+            security_updates(sections.get(Section::SecurityUpgrades)),
         ),
         (Check::Isolation, isolation(sections.get(Section::Cmdline))),
     ]
@@ -177,6 +183,27 @@ fn autoremove(simulation: &str) -> Option<String> {
     (!packages.is_empty()).then(|| packages.join(" "))
 }
 
+/// An update fails this from the morning package list refresh that finds it until the upgrade run after that refresh ends.
+fn security_updates(simulation: &str) -> Option<String> {
+    if !simulation.contains(" to remove and ") {
+        return Some(format!(
+            "could not simulate a security upgrade: {}",
+            simulation.trim()
+        ));
+    }
+    let upgrades = security_upgrades(simulation);
+    (!upgrades.is_empty()).then(|| {
+        let packages: Vec<String> = upgrades
+            .into_iter()
+            .map(|(package, version)| format!("{package} {version}"))
+            .collect();
+        format!(
+            "{} not installed; the morning upgrade run installs what the 05:00 UTC package list refresh finds, so audit again after that run, and if one remains, read why in /var/log/unattended-upgrades/unattended-upgrades.log",
+            packages.join(", ")
+        )
+    })
+}
+
 fn isolation(cmdline: &str) -> Option<String> {
     (!is_isolated(cmdline)).then(|| "the kernel cmdline has no isolcpus= or nohz_full=".to_owned())
 }
@@ -207,7 +234,7 @@ pub fn healthy() -> Vec<(Section, &'static str)> {
                 Section::RunnerService => "active",
                 Section::RebootRequired => "none",
                 Section::Raid => MDSTAT_SYNCED,
-                Section::Autoremove => AUTOREMOVE_CLEAN,
+                Section::Autoremove | Section::SecurityUpgrades => AUTOREMOVE_CLEAN,
                 Section::Cmdline => {
                     "BOOT_IMAGE=/vmlinuz ro isolcpus=1-5 nohz_full=1-5 rcu_nocbs=1-5"
                 },
@@ -264,7 +291,7 @@ mod tests {
     #[test]
     fn healthy_runner_passes() {
         let findings = check(&Sections::parse(&fake_output(&healthy())));
-        assert_eq!(findings.len(), 7);
+        assert_eq!(findings.len(), 8);
         assert!(
             findings.iter().all(|finding| !finding.failed()),
             "{findings:?}"
@@ -437,6 +464,35 @@ Remv bpftrace [0.20.2-1ubuntu4]";
             [(
                 Check::Autoremove,
                 "could not simulate autoremove: E: broken".to_owned()
+            )]
+        );
+    }
+
+    #[test]
+    fn kept_back_security_update_fails() {
+        let simulation = "\
+NOTE: This is only a simulation!
+4 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+Inst linux-image-6.8.0-147-generic (6.8.0-147.147 Ubuntu:24.04/noble-updates, Ubuntu:24.04/noble-security [amd64])
+Inst linux-image-generic [6.8.0-146.146] (6.8.0-147.147 Ubuntu:24.04/noble-security [amd64]) []
+Inst linux-generic [6.8.0-146.146] (6.8.0-147.147 Ubuntu:24.04/noble-security [amd64]) []
+Inst snapd [2.76.3+ubuntu24.04] (2.77.1+ubuntu24.04 Ubuntu:24.04/noble-updates [amd64])";
+        assert_eq!(
+            problems(Section::SecurityUpgrades, simulation),
+            [(
+                Check::SecurityUpgrades,
+                "linux-image-generic 6.8.0-147.147, linux-generic 6.8.0-147.147 not installed; the morning upgrade run installs what the 05:00 UTC package list refresh finds, so audit again after that run, and if one remains, read why in /var/log/unattended-upgrades/unattended-upgrades.log".to_owned()
+            )]
+        );
+        assert_eq!(
+            problems(
+                Section::SecurityUpgrades,
+                "E: The package lists or status file could not be parsed or opened."
+            ),
+            [(
+                Check::SecurityUpgrades,
+                "could not simulate a security upgrade: E: The package lists or status file could not be parsed or opened."
+                    .to_owned()
             )]
         );
     }

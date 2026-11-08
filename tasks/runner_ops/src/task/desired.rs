@@ -109,8 +109,12 @@ const AUTO_UPGRADES_CONF: &str = "\
 APT::Periodic::Update-Package-Lists \"1\";
 APT::Periodic::Unattended-Upgrade \"1\";";
 
-// A new kernel reaches a runner only from the security pocket.
+// Kernels come only from the security pocket: apt takes a version's first matching stanza, and each security kernel is also in `noble-updates`.
 const KERNEL_PIN_CONF: &str = "\
+Package: linux-*
+Pin: release a=noble-security
+Pin-Priority: 500
+
 Package: linux-*
 Pin: release a=noble-updates
 Pin-Priority: -1";
