@@ -252,6 +252,38 @@ mod tests {
     }
 
     #[test]
+    fn the_audit_dates_the_security_lists_by_the_operators_clock() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(dir.path()).unwrap();
+        let ssh = Ssh::stand_in(
+            dir,
+            &format!("#!/bin/sh\nfor command; do :; done\nprintf %s \"$command\" > {dir}/script\n"),
+        )
+        .unwrap();
+        let target = Target {
+            label: "runner".to_owned(),
+            ssh,
+            desired: Desired::new(UpdateChannel::Stable, None, None, None),
+        };
+        let now = || {
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        };
+        let before = now();
+        target.collect().unwrap();
+        let after = now();
+        let script = fs::read_to_string(dir.join("script")).unwrap();
+        let (head, _) = script.split_once(" - stamp > ").unwrap();
+        let sent: u64 = head.rsplit(' ').next().unwrap().parse().unwrap();
+        assert!(
+            (before..=after).contains(&sent),
+            "{sent} is not in {before}..={after}"
+        );
+    }
+
+    #[test]
     fn the_audit_counts_each_desired_state_difference() {
         let dir = tempfile::tempdir().unwrap();
         let dir = Utf8Path::from_path(dir.path()).unwrap();

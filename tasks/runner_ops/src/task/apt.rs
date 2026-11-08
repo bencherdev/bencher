@@ -5,7 +5,7 @@ pub const SECURITY_UPDATES_END: &str = "checked";
 /// The most days the signed `Date:` of Ubuntu's own security pocket may age, by the operator's clock, before the security updates query fails.
 const SECURITY_LISTS_MAX_AGE_DAYS: u64 = 7;
 
-/// Each installed package with a newer version in a `-security` archive, or not fully installed, as `<package> <version>`, failing unless the lists in use hold Ubuntu's own security pocket signed at most 7 days before `now_unix`.
+/// Each installed package with a newer version in a `-security` archive, or not fully installed, as `<package> <version>`, failing unless the lists in use hold Ubuntu's own security pocket signed at most `SECURITY_LISTS_MAX_AGE_DAYS` days before `now_unix`.
 pub fn security_updates_query(now_unix: u64) -> String {
     format!(
         r#"python3 -I -c '
@@ -15,11 +15,16 @@ apt_pkg.config.set("Dir::Cache::pkgcache", "")
 apt_pkg.config.set("Dir::Cache::srcpkgcache", "")
 cache = apt_pkg.Cache(None)
 suite = platform.freedesktop_os_release()["VERSION_CODENAME"] + "-security"
-used = [pf.filename for pf in cache.file_list]
+used = set()
+for pf in cache.file_list:
+    if pf.origin == "Ubuntu" and pf.archive == suite:
+        tail = apt_pkg.uri_to_filename("file:/" + pf.component + "/binary-" + pf.architecture + "/Packages")
+        if pf.filename.endswith(tail):
+            used.add(pf.filename[:-len(tail)])
 dates = []
 lists = apt_pkg.config.find_dir("Dir::State::lists")
 for path in glob.glob(lists + "*_InRelease") + glob.glob(lists + "*_Release"):
-    if not any(name.startswith(path[:path.rindex("_") + 1]) for name in used):
+    if path[:path.rindex("_")] not in used:
         continue
     with os.fdopen(apt_pkg.open_maybe_clear_signed_file(path)) as body:
         release = next(iter(apt_pkg.TagFile(body)), None) or dict()
