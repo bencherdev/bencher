@@ -1,6 +1,6 @@
 import { measuresLayout } from "../explore/layout";
-import { embedPath } from "../public/query";
-import { type ExploreQuery, encodeQuery } from "../query/query";
+import { embedPath, publicUrl } from "../public/query";
+import type { ExploreQuery } from "../query/query";
 
 // Each height holds a full key at any width from 320 to 1280, as measured,
 // plus a margin; stacked panels grow by a phone's and a desktop's own step.
@@ -45,8 +45,7 @@ export const embedCode = (embed: {
 	/** The pinned plot's title, when the query is one. */
 	title?: string | undefined;
 }) => {
-	const { plot: _plot, ...query } = embed.query;
-	const src = `${embed.origin}${embedPath(embed.slug)}${encodeQuery(query)}`;
+	const src = publicUrl(embed.origin, embedPath(embed.slug), embed.query);
 	const title = embed.title ? `${embed.title} | ${embed.name}` : embed.name;
-	return `<iframe src="${escapeAttribute(src)}" title="${escapeAttribute(title)}" width="100%" height="${embedHeight(query)}" style="border: 0" loading="lazy"></iframe>`;
+	return `<iframe src="${escapeAttribute(src)}" title="${escapeAttribute(title)}" width="100%" height="${embedHeight(embed.query)}" style="border: 0" loading="lazy"></iframe>`;
 };

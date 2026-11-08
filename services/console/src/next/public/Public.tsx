@@ -214,6 +214,7 @@ const Plotted = (props: PublicProps) => {
 					<span class="spacer" />
 					<Share
 						embeddable={props.embeddable ?? false}
+						hasPublicLink={false}
 						copied={props.copied}
 						onCopy={(what) => props.onCopy?.(what)}
 					/>

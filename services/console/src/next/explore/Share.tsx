@@ -3,15 +3,21 @@ import Menu, { MenuItem } from "@bencherdev/ui/Menu";
 import { Show, createSignal } from "solid-js";
 import ShareIcon from "./ShareIcon";
 
-/** What Share copied: the page's link, or the embed's frame. */
-export type Copied = "link" | "embed";
+/** What Share copied: the page's link, the public plot's, or the embed's frame. */
+export type Copied = "link" | "public" | "embed";
 
-const COPIED = { link: "Link copied", embed: "Embed code copied" } as const;
+const COPIED = {
+	link: "Link copied",
+	public: "Public link copied",
+	embed: "Embed code copied",
+} as const;
 
-/** Share a plot: a public project's offers its link and its embed, a private one's copies the link. */
+/** Share a plot: a public project's offers its links and its embed, a private one's copies the link. */
 const Share = (props: {
 	/** The project is public, so anyone can load its embed. */
 	embeddable: boolean;
+	/** The page's own link is the console's, so the public plot's is another link to offer. */
+	hasPublicLink: boolean;
 	copied: Copied | undefined;
 	disabled?: boolean | undefined;
 	onCopy: (what: Copied) => void;
@@ -43,6 +49,9 @@ const Share = (props: {
 					onClose={() => setOpen(false)}
 				>
 					<MenuItem onClick={() => copy("link")}>Copy link</MenuItem>
+					<Show when={props.hasPublicLink}>
+						<MenuItem onClick={() => copy("public")}>Copy public link</MenuItem>
+					</Show>
 					<MenuItem onClick={() => copy("embed")}>Copy embed code</MenuItem>
 				</Menu>
 			</Show>

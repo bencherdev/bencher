@@ -3,8 +3,9 @@ import "../styles/console.css";
 import "./explore.css";
 import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 import Header from "./Header";
+import type { Copied } from "./Share";
 
 let dispose: (() => void) | undefined;
 afterEach(() => {
@@ -15,6 +16,7 @@ afterEach(() => {
 
 /** A pinned plot with unsaved changes, for a reader who may or may not pin. */
 const pinned = (canPin: boolean, title = "hash size=1, Latency on main") => {
+	const copies: Copied[] = [];
 	const root = document.createElement("div");
 	document.body.append(root);
 	dispose = render(
@@ -32,7 +34,7 @@ const pinned = (canPin: boolean, title = "hash size=1, Latency on main") => {
 				embeddable={true}
 				copied={undefined}
 				confirmation={undefined}
-				onCopy={() => {}}
+				onCopy={(what) => copies.push(what)}
 				onPin={() => {}}
 				onUndo={() => {}}
 				onEdit={() => {}}
@@ -43,6 +45,7 @@ const pinned = (canPin: boolean, title = "hash size=1, Latency on main") => {
 		),
 		root,
 	);
+	return copies;
 };
 
 const actions = () =>
@@ -82,4 +85,25 @@ test("a long pin title keeps one line on a phone and opens in place", async () =
 	await expect.element(reveal).toHaveAttribute("aria-expanded", "true");
 	expect(title.element().getBoundingClientRect().height).toBeGreaterThan(line);
 	expect(document.documentElement.scrollWidth).toBe(320);
+});
+
+// Kills a console header that offers only its own link and the embed, leaving
+// the public plot's link to be put together by hand.
+test("the header's Share offers the public plot's link", async () => {
+	const copies = pinned(true);
+	await userEvent.click(page.getByRole("button", { name: "Share" }));
+	const menu = page.getByRole("menu", { name: "Share" });
+	await expect.element(menu).toBeVisible();
+	expect(
+		menu
+			.getByRole("menuitem")
+			.elements()
+			.map((item) => item.textContent),
+	).toEqual(["Copy link", "Copy public link", "Copy embed code"]);
+
+	await userEvent.click(
+		page.getByRole("menuitem", { name: "Copy public link" }),
+	);
+	expect(copies).toEqual(["public"]);
+	await expect.element(menu).not.toBeInTheDocument();
 });

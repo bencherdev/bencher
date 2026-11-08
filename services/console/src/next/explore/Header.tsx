@@ -59,6 +59,7 @@ const Header = (props: {
 	const Shared = () => (
 		<Share
 			embeddable={props.embeddable}
+			hasPublicLink
 			copied={props.copied}
 			disabled={!props.hasLines}
 			onCopy={(what) => props.onCopy(what)}

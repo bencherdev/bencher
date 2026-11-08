@@ -220,7 +220,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 114200,
+		"jsBytes": 114325,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2900,
 		"inlineScriptBytes": 2560,
@@ -243,7 +243,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 76550,
+		"jsBytes": 76691,
 		"deferredJsBytes": 112880,
 		"lateModules": 0
 	},
@@ -307,7 +307,7 @@
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 74780,
+		"jsBytes": 74868,
 		"deferredJsBytes": 112880,
 		"cssBytes": 12700,
 		"htmlBytes": 2980,
@@ -485,7 +485,7 @@
 	"metricLanding": {
 		"apiRounds": 2,
 		"apiRequests": 3,
-		"jsBytes": 114970,
+		"jsBytes": 115100,
 		"lateModules": 2
 	}
 }
