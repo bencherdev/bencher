@@ -2,7 +2,9 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 use super::snapshot::{Section, Sections};
-use crate::task::apt::autoremovable_packages;
+#[cfg(test)]
+use crate::task::apt::SECURITY_UPDATES_END;
+use crate::task::apt::{autoremovable_packages, missing_security_updates};
 use crate::task::isolate::is_isolated;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -13,6 +15,7 @@ pub enum Check {
     RebootRequired,
     Raid,
     Autoremove,
+    SecurityUpdates,
     Isolation,
 }
 
@@ -25,6 +28,7 @@ impl fmt::Display for Check {
             Self::RebootRequired => "no reboot is required",
             Self::Raid => "RAID arrays are in sync",
             Self::Autoremove => "no packages are auto-removable",
+            Self::SecurityUpdates => "every security update is installed",
             Self::Isolation => "CPU isolation boot args are set",
         })
     }
@@ -69,6 +73,10 @@ pub fn check(sections: &Sections) -> Vec<Finding> {
         (
             Check::Autoremove,
             autoremove(sections.get(Section::Autoremove)),
+        ),
+        (
+            Check::SecurityUpdates,
+            security_updates(sections.get(Section::SecurityUpdates)),
         ),
         (Check::Isolation, isolation(sections.get(Section::Cmdline))),
     ]
@@ -177,6 +185,27 @@ fn autoremove(simulation: &str) -> Option<String> {
     (!packages.is_empty()).then(|| packages.join(" "))
 }
 
+/// An update fails this from the morning package list refresh that finds it until the upgrade run after that refresh ends.
+fn security_updates(output: &str) -> Option<String> {
+    let missing = match missing_security_updates(output) {
+        Ok(missing) => missing,
+        Err(line) => return Some(format!("could not check security updates: {line}")),
+    };
+    if missing.is_empty() {
+        return None;
+    }
+    let versions: Vec<String> = missing
+        .iter()
+        .map(|(package, version)| format!("{package} {version}"))
+        .collect();
+    let packages: Vec<&str> = missing.iter().map(|&(package, _)| package).collect();
+    Some(format!(
+        "not installed: {} (audit again after the morning upgrade run, then see apt-mark showhold, apt-get -s install {}, and /var/log/unattended-upgrades/unattended-upgrades.log)",
+        versions.join(", "),
+        packages.join(" ")
+    ))
+}
+
 fn isolation(cmdline: &str) -> Option<String> {
     (!is_isolated(cmdline)).then(|| "the kernel cmdline has no isolcpus= or nohz_full=".to_owned())
 }
@@ -208,6 +237,7 @@ pub fn healthy() -> Vec<(Section, &'static str)> {
                 Section::RebootRequired => "none",
                 Section::Raid => MDSTAT_SYNCED,
                 Section::Autoremove => AUTOREMOVE_CLEAN,
+                Section::SecurityUpdates => SECURITY_UPDATES_END,
                 Section::Cmdline => {
                     "BOOT_IMAGE=/vmlinuz ro isolcpus=1-5 nohz_full=1-5 rcu_nocbs=1-5"
                 },
@@ -264,7 +294,7 @@ mod tests {
     #[test]
     fn healthy_runner_passes() {
         let findings = check(&Sections::parse(&fake_output(&healthy())));
-        assert_eq!(findings.len(), 7);
+        assert_eq!(findings.len(), 8);
         assert!(
             findings.iter().all(|finding| !finding.failed()),
             "{findings:?}"
@@ -437,6 +467,33 @@ Remv bpftrace [0.20.2-1ubuntu4]";
             [(
                 Check::Autoremove,
                 "could not simulate autoremove: E: broken".to_owned()
+            )]
+        );
+    }
+
+    #[test]
+    fn missing_security_updates_fail() {
+        let output = "\
+linux-generic 6.8.0-147.147
+linux-image-generic 6.8.0-147.147
+checked";
+        assert_eq!(
+            problems(Section::SecurityUpdates, output),
+            [(
+                Check::SecurityUpdates,
+                "not installed: linux-generic 6.8.0-147.147, linux-image-generic 6.8.0-147.147 (audit again after the morning upgrade run, then see apt-mark showhold, apt-get -s install linux-generic linux-image-generic, and /var/log/unattended-upgrades/unattended-upgrades.log)".to_owned()
+            )]
+        );
+        let output = "\
+Traceback (most recent call last):
+  File \"<string>\", line 2, in <module>
+ModuleNotFoundError: No module named 'apt_pkg'";
+        assert_eq!(
+            problems(Section::SecurityUpdates, output),
+            [(
+                Check::SecurityUpdates,
+                "could not check security updates: ModuleNotFoundError: No module named 'apt_pkg'"
+                    .to_owned()
             )]
         );
     }

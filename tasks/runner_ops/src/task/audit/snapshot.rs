@@ -3,7 +3,7 @@ use std::fmt;
 
 use bencher_json::RunnerKey;
 
-use crate::task::apt::AUTOREMOVE_SIMULATION;
+use crate::task::apt::{AUTOREMOVE_SIMULATION, security_updates_query};
 use crate::task::desired::{
     AUTO_UPGRADES_PATH, BENCHER_CGROUP, SSH_HARDENING_PATH, UNATTENDED_UPGRADES_PATH,
 };
@@ -43,10 +43,11 @@ pub enum Section {
     RunnerService,
     RebootRequired,
     Autoremove,
+    SecurityUpdates,
 }
 
 impl Section {
-    pub const ALL: [Self; 21] = [
+    pub const ALL: [Self; 22] = [
         Self::Os,
         Self::Kernel,
         Self::KernelPackages,
@@ -68,6 +69,7 @@ impl Section {
         Self::RunnerService,
         Self::RebootRequired,
         Self::Autoremove,
+        Self::SecurityUpdates,
     ];
 
     fn name(self) -> &'static str {
@@ -93,10 +95,11 @@ impl Section {
             Self::RunnerService => "runner service",
             Self::RebootRequired => "reboot required",
             Self::Autoremove => "autoremove",
+            Self::SecurityUpdates => "security updates",
         }
     }
 
-    fn command(self) -> String {
+    fn command(self, now_unix: u64) -> String {
         match self {
             Self::Os => "cat /etc/os-release".to_owned(),
             Self::Kernel => "uname -r".to_owned(),
@@ -122,6 +125,7 @@ impl Section {
             Self::RunnerService => "systemctl is-active bencher-runner".to_owned(),
             Self::RebootRequired => "if [ -e /var/run/reboot-required ]; then echo required; cat /var/run/reboot-required.pkgs 2>/dev/null || true; else echo none; fi".to_owned(),
             Self::Autoremove => AUTOREMOVE_SIMULATION.to_owned(),
+            Self::SecurityUpdates => security_updates_query(now_unix),
         }
     }
 
@@ -129,7 +133,7 @@ impl Section {
     pub fn in_snapshot(self) -> bool {
         !matches!(
             self,
-            Self::RunnerService | Self::RebootRequired | Self::Autoremove
+            Self::RunnerService | Self::RebootRequired | Self::Autoremove | Self::SecurityUpdates
         )
     }
 
@@ -178,7 +182,8 @@ impl Section {
             | Self::Timezone
             | Self::RunnerService
             | Self::RebootRequired
-            | Self::Autoremove => lines.map(str::to_owned).collect(),
+            | Self::Autoremove
+            | Self::SecurityUpdates => lines.map(str::to_owned).collect(),
         };
         if self.sorted() {
             lines.sort_unstable();
@@ -193,11 +198,11 @@ impl fmt::Display for Section {
     }
 }
 
-/// Each section's name and its command, for the audit script.
-pub fn frames() -> impl Iterator<Item = (String, String)> {
+/// Each section's name and its command, for the audit script, with the operator's clock at `now_unix`.
+pub fn frames(now_unix: u64) -> impl Iterator<Item = (String, String)> {
     Section::ALL
         .into_iter()
-        .map(|section| (section.name().to_owned(), section.command()))
+        .map(move |section| (section.name().to_owned(), section.command(now_unix)))
 }
 
 /// Only allowlisted lines of the unit and its drop-ins, never `systemctl cat`, and no line holding a runner key leaves the server.
@@ -486,7 +491,7 @@ mod tests {
 
     #[test]
     fn script_prints_every_section_and_status() {
-        let script = framed::script(frames());
+        let script = framed::script(frames(0));
         for section in Section::ALL {
             assert!(script.contains(&marker(section.name())), "{section}");
         }

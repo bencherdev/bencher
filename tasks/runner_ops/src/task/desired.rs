@@ -109,10 +109,14 @@ const AUTO_UPGRADES_CONF: &str = "\
 APT::Periodic::Update-Package-Lists \"1\";
 APT::Periodic::Unattended-Upgrade \"1\";";
 
-// A new kernel reaches a runner only from the security pocket.
+// Kernels come only from the security pocket: apt takes a version's first matching stanza, and each security kernel is also in the updates pocket.
 const KERNEL_PIN_CONF: &str = "\
 Package: linux-*
-Pin: release a=noble-updates
+Pin: release a=*-security
+Pin-Priority: 500
+
+Package: linux-*
+Pin: release a=*-updates
 Pin-Priority: -1";
 
 /// The state a runner host must be in, one row per setting: `host` writes the rows it sets, and `audit` checks every row.

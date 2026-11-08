@@ -2,7 +2,9 @@ mod health;
 mod snapshot;
 
 use std::collections::BTreeMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use anyhow::Context as _;
 use bencher_json::RunnerResourceId;
 
 use super::desired::{self, Desired};
@@ -165,7 +167,11 @@ impl Target {
     /// The snapshot sections and the desired state rows, read in one script.
     fn collect(&self) -> anyhow::Result<(Sections, BTreeMap<String, Output>)> {
         println!("Collecting an audit snapshot from {}...", self.label);
-        let script = framed::script(snapshot::frames().chain(self.desired.frames()));
+        let now_unix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .context("failed to read the clock")?
+            .as_secs();
+        let script = framed::script(snapshot::frames(now_unix).chain(self.desired.frames()));
         let mut frames = framed::parse(&self.ssh.run_quiet(&script)?);
         Ok((Sections::take(&mut frames), frames))
     }
@@ -242,6 +248,38 @@ mod tests {
                 .frames()
                 .map(|(name, _)| name)
                 .collect::<BTreeSet<_>>()
+        );
+    }
+
+    #[test]
+    fn the_audit_dates_the_security_lists_by_the_operators_clock() {
+        let dir = tempfile::tempdir().unwrap();
+        let dir = Utf8Path::from_path(dir.path()).unwrap();
+        let ssh = Ssh::stand_in(
+            dir,
+            &format!("#!/bin/sh\nfor command; do :; done\nprintf %s \"$command\" > {dir}/script\n"),
+        )
+        .unwrap();
+        let target = Target {
+            label: "runner".to_owned(),
+            ssh,
+            desired: Desired::new(UpdateChannel::Stable, None, None, None),
+        };
+        let now = || {
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        };
+        let before = now();
+        target.collect().unwrap();
+        let after = now();
+        let script = fs::read_to_string(dir.join("script")).unwrap();
+        let (head, _) = script.split_once(" - stamp > ").unwrap();
+        let sent: u64 = head.rsplit(' ').next().unwrap().parse().unwrap();
+        assert!(
+            (before..=after).contains(&sent),
+            "{sent} is not in {before}..={after}"
         );
     }
 
