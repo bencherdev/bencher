@@ -3,7 +3,7 @@ use std::fmt;
 
 use bencher_json::RunnerKey;
 
-use crate::task::apt::{AUTOREMOVE_SIMULATION, SECURITY_UPGRADE_SIMULATION};
+use crate::task::apt::{AUTOREMOVE_SIMULATION, security_updates_query};
 use crate::task::desired::{
     AUTO_UPGRADES_PATH, BENCHER_CGROUP, SSH_HARDENING_PATH, UNATTENDED_UPGRADES_PATH,
 };
@@ -43,7 +43,7 @@ pub enum Section {
     RunnerService,
     RebootRequired,
     Autoremove,
-    SecurityUpgrades,
+    SecurityUpdates,
 }
 
 impl Section {
@@ -69,7 +69,7 @@ impl Section {
         Self::RunnerService,
         Self::RebootRequired,
         Self::Autoremove,
-        Self::SecurityUpgrades,
+        Self::SecurityUpdates,
     ];
 
     fn name(self) -> &'static str {
@@ -95,7 +95,7 @@ impl Section {
             Self::RunnerService => "runner service",
             Self::RebootRequired => "reboot required",
             Self::Autoremove => "autoremove",
-            Self::SecurityUpgrades => "security upgrades",
+            Self::SecurityUpdates => "security updates",
         }
     }
 
@@ -125,7 +125,7 @@ impl Section {
             Self::RunnerService => "systemctl is-active bencher-runner".to_owned(),
             Self::RebootRequired => "if [ -e /var/run/reboot-required ]; then echo required; cat /var/run/reboot-required.pkgs 2>/dev/null || true; else echo none; fi".to_owned(),
             Self::Autoremove => AUTOREMOVE_SIMULATION.to_owned(),
-            Self::SecurityUpgrades => SECURITY_UPGRADE_SIMULATION.to_owned(),
+            Self::SecurityUpdates => security_updates_query(),
         }
     }
 
@@ -133,7 +133,7 @@ impl Section {
     pub fn in_snapshot(self) -> bool {
         !matches!(
             self,
-            Self::RunnerService | Self::RebootRequired | Self::Autoremove | Self::SecurityUpgrades
+            Self::RunnerService | Self::RebootRequired | Self::Autoremove | Self::SecurityUpdates
         )
     }
 
@@ -183,7 +183,7 @@ impl Section {
             | Self::RunnerService
             | Self::RebootRequired
             | Self::Autoremove
-            | Self::SecurityUpgrades => lines.map(str::to_owned).collect(),
+            | Self::SecurityUpdates => lines.map(str::to_owned).collect(),
         };
         if self.sorted() {
             lines.sort_unstable();

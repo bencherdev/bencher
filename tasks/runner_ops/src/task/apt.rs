@@ -1,6 +1,27 @@
 pub const AUTOREMOVE_SIMULATION: &str = "LC_ALL=C apt-get -s autoremove";
-/// A full upgrade that prefers the security pockets and ignores apt preferences and holds, so no pin or hold can hide a security update.
-pub const SECURITY_UPGRADE_SIMULATION: &str = "LC_ALL=C apt-get -s -o Dir::Etc::Preferences=/dev/null -o Dir::Etc::PreferencesParts=/dev/null -o 'APT::Default-Release=*-security' -o APT::Ignore-Hold=true dist-upgrade";
+/// The last line of a security updates query that ran to its end.
+pub const SECURITY_UPDATES_END: &str = "checked";
+
+/// Each installed package with a newer version in an archive whose name ends in `-security`, as `<package> <version>`, read from the package lists alone, so no apt preference, hold, phasing, or dependency problem can hide one.
+pub fn security_updates_query() -> String {
+    format!(
+        r#"python3 -I -c '
+import apt_pkg
+apt_pkg.init()
+rows = []
+for pkg in apt_pkg.Cache(None).packages:
+    installed = pkg.current_ver
+    newest = None
+    for ver in pkg.version_list if installed else []:
+        if apt_pkg.version_compare(ver.ver_str, newest or installed.ver_str) > 0 and any((pf.archive or "").endswith("-security") for pf, _ in ver.file_list):
+            newest = ver.ver_str
+    if newest:
+        rows.append(pkg.get_fullname(True) + " " + newest)
+for row in sorted(rows):
+    print(row)
+print("{SECURITY_UPDATES_END}")'"#
+    )
+}
 
 /// Packages that `apt-get -s autoremove` would remove.
 pub fn autoremovable_packages(simulation: &str) -> Vec<&str> {
@@ -11,32 +32,26 @@ pub fn autoremovable_packages(simulation: &str) -> Vec<&str> {
         .collect()
 }
 
-/// Each installed package and the version an `apt-get -s` simulation upgrades it to from a security pocket.
-pub fn security_upgrades(simulation: &str) -> Vec<(&str, &str)> {
-    simulation
+/// Each package and version the security updates query lists, or the line that shows it did not run to its end.
+pub fn missing_security_updates(output: &str) -> Result<Vec<(&str, &str)>, &str> {
+    let mut lines: Vec<&str> = output
         .lines()
-        .filter_map(|line| {
-            // `Inst <package> [<installed>] (<version> <origin>, ... [<arch>])`, with no `[<installed>]` for a new package; an origin is `<label>:<release>/<archive>`, or `<label>:<archive>` when the release has no version.
-            let (package, rest) = line.strip_prefix("Inst ")?.split_once(' ')?;
-            let (_, candidate) = rest.strip_prefix('[')?.split_once("] (")?;
-            let (candidate, _) = candidate.split_once(')')?;
-            let mut fields = candidate.split_whitespace();
-            let version = fields.next()?;
-            fields
-                .any(|origin| origin.trim_end_matches(',').ends_with("-security"))
-                .then_some((package, version))
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .collect();
+    match lines.pop() {
+        Some(SECURITY_UPDATES_END) => {},
+        last => return Err(last.unwrap_or("no output")),
+    }
+    lines
+        .into_iter()
+        .map(|line| {
+            let mut fields = line.split_whitespace();
+            match (fields.next(), fields.next(), fields.next()) {
+                (Some(package), Some(version), None) => Ok((package, version)),
+                _ => Err(line),
+            }
         })
-        .collect()
-}
-
-/// Packages that an `apt-get -s` simulation keeps back; apt lists a phased update apart, never as kept back.
-pub fn kept_back_packages(simulation: &str) -> Vec<&str> {
-    simulation
-        .lines()
-        .skip_while(|line| *line != "The following packages have been kept back:")
-        .skip(1)
-        .take_while(|line| line.starts_with(' '))
-        .flat_map(str::split_whitespace)
         .collect()
 }
 
@@ -72,84 +87,47 @@ Reading package lists...
     }
 
     #[test]
-    fn security_upgrades_lists_installed_packages_from_a_security_pocket() {
-        let simulation = "\
-NOTE: This is only a simulation!
-Reading package lists...
-16 upgraded, 6 newly installed, 0 to remove and 0 not upgraded.
-Inst libapparmor1 [4.0.1really4.0.1-0ubuntu0.24.04.8] (4.0.1really4.0.1-0ubuntu0.24.04.9 Ubuntu:24.04/noble-updates [amd64]) []
-Inst linux-image-6.8.0-147-generic (6.8.0-147.147 Ubuntu:24.04/noble-updates, Ubuntu:24.04/noble-security [amd64])
-Inst linux-image-virtual [6.8.0-142.142] (6.8.0-147.147 Ubuntu:24.04/noble-security [amd64]) []
-Inst linux-tools-common [6.8.0-142.142] (6.8.0-147.147 Ubuntu:24.04/noble-updates, Ubuntu:24.04/noble-security [all])
-Inst linux-libc-dev [6.8.0-142.142] (6.8.0-147.147 Ubuntu:24.04/noble-security, Ubuntu:24.04/noble-updates [amd64]) []
-Inst linux-base [4.5ubuntu9] (4.5ubuntu9+24.04.1 Ubuntu:noble-security [all])
-Inst tmux [3.4-1ubuntu0.1] (3.4-1ubuntu0.2 Ubuntu:24.04/noble-updates [amd64])
-Conf linux-image-virtual (6.8.0-147.147 Ubuntu:24.04/noble-security [amd64])
+    fn missing_security_updates_lists_each_package() {
+        let output = "\
+libc6:i386 2.39-0ubuntu8.7
+linux-generic 6.8.0-147.147
+openssh-server 1:9.6p1-3ubuntu13.20
+checked
 ";
         assert_eq!(
-            security_upgrades(simulation),
-            [
-                ("linux-image-virtual", "6.8.0-147.147"),
-                ("linux-tools-common", "6.8.0-147.147"),
-                ("linux-libc-dev", "6.8.0-147.147"),
-                ("linux-base", "4.5ubuntu9+24.04.1"),
-            ]
+            missing_security_updates(output),
+            Ok(vec![
+                ("libc6:i386", "2.39-0ubuntu8.7"),
+                ("linux-generic", "6.8.0-147.147"),
+                ("openssh-server", "1:9.6p1-3ubuntu13.20"),
+            ])
         );
+        assert_eq!(missing_security_updates("checked\n"), Ok(Vec::new()));
     }
 
     #[test]
-    fn kept_back_packages_lists_every_wrapped_line() {
-        let simulation = "\
-Calculating upgrade...
-The following packages have been kept back:
-  kprctl linux-generic linux-headers-generic linux-image-generic
-  libheif-plugin-aomdec
-The following packages will be upgraded:
-  tmux
-1 upgraded, 0 newly installed, 0 to remove and 5 not upgraded.
-Inst tmux [3.4-1ubuntu0.1] (3.4-1ubuntu0.2 Ubuntu:24.04/noble-updates [amd64])
+    fn missing_security_updates_fails_without_its_end() {
+        let traceback = "\
+Traceback (most recent call last):
+  File \"<string>\", line 2, in <module>
+ModuleNotFoundError: No module named 'apt_pkg'
 ";
         assert_eq!(
-            kept_back_packages(simulation),
-            [
-                "kprctl",
-                "linux-generic",
-                "linux-headers-generic",
-                "linux-image-generic",
-                "libheif-plugin-aomdec",
-            ]
+            missing_security_updates(traceback),
+            Err("ModuleNotFoundError: No module named 'apt_pkg'")
         );
-    }
-
-    #[test]
-    fn kept_back_packages_skips_phased_updates() {
-        let simulation = "\
-Calculating upgrade...
-The following upgrades have been deferred due to phasing:
-  kprphase
-The following packages will be upgraded:
-  tmux
-1 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.
-Inst tmux [3.4-1ubuntu0.1] (3.4-1ubuntu0.2 Ubuntu:24.04/noble-updates [amd64])
-";
-        assert_eq!(kept_back_packages(simulation), Vec::<&str>::new());
-    }
-
-    #[test]
-    fn kept_back_packages_after_phased_updates() {
-        let simulation = "\
-Calculating upgrade...
-The following NEW packages will be installed:
-  linux-image-6.8.0-147-generic
-The following upgrades have been deferred due to phasing:
-  kprphase
-The following packages have been kept back:
-  kprctl
-The following packages will be upgraded:
-  linux-image-virtual tmux
-2 upgraded, 1 newly installed, 0 to remove and 2 not upgraded.
-Inst linux-image-6.8.0-147-generic (6.8.0-147.147 Ubuntu:24.04/noble-updates, Ubuntu:24.04/noble-security [amd64])
-";
-        assert_eq!(kept_back_packages(simulation), ["kprctl"]);
+        assert_eq!(
+            missing_security_updates("bash: line 1: python3: command not found\n"),
+            Err("bash: line 1: python3: command not found")
+        );
+        assert_eq!(missing_security_updates(""), Err("no output"));
+        assert_eq!(
+            missing_security_updates("linux-generic 6.8.0-147.147\n"),
+            Err("linux-generic 6.8.0-147.147")
+        );
+        assert_eq!(
+            missing_security_updates("W: an unexpected line\nchecked\n"),
+            Err("W: an unexpected line")
+        );
     }
 }

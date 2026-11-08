@@ -2,7 +2,9 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 use super::snapshot::{Section, Sections};
-use crate::task::apt::{autoremovable_packages, kept_back_packages, security_upgrades};
+#[cfg(test)]
+use crate::task::apt::SECURITY_UPDATES_END;
+use crate::task::apt::{autoremovable_packages, missing_security_updates};
 use crate::task::isolate::is_isolated;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -13,7 +15,7 @@ pub enum Check {
     RebootRequired,
     Raid,
     Autoremove,
-    SecurityUpgrades,
+    SecurityUpdates,
     Isolation,
 }
 
@@ -26,7 +28,7 @@ impl fmt::Display for Check {
             Self::RebootRequired => "no reboot is required",
             Self::Raid => "RAID arrays are in sync",
             Self::Autoremove => "no packages are auto-removable",
-            Self::SecurityUpgrades => "every security update is installed",
+            Self::SecurityUpdates => "every security update is installed",
             Self::Isolation => "CPU isolation boot args are set",
         })
     }
@@ -73,8 +75,8 @@ pub fn check(sections: &Sections) -> Vec<Finding> {
             autoremove(sections.get(Section::Autoremove)),
         ),
         (
-            Check::SecurityUpgrades,
-            security_updates(sections.get(Section::SecurityUpgrades)),
+            Check::SecurityUpdates,
+            security_updates(sections.get(Section::SecurityUpdates)),
         ),
         (Check::Isolation, isolation(sections.get(Section::Cmdline))),
     ]
@@ -184,34 +186,24 @@ fn autoremove(simulation: &str) -> Option<String> {
 }
 
 /// An update fails this from the morning package list refresh that finds it until the upgrade run after that refresh ends.
-fn security_updates(simulation: &str) -> Option<String> {
-    if !simulation.contains(" to remove and ") {
-        return Some(format!(
-            "could not simulate a security upgrade: {}",
-            simulation.trim()
-        ));
+fn security_updates(output: &str) -> Option<String> {
+    let missing = match missing_security_updates(output) {
+        Ok(missing) => missing,
+        Err(line) => return Some(format!("could not check security updates: {line}")),
+    };
+    if missing.is_empty() {
+        return None;
     }
-    let mut problems = Vec::new();
-    let upgrades = security_upgrades(simulation);
-    if !upgrades.is_empty() {
-        let packages: Vec<String> = upgrades
-            .into_iter()
-            .map(|(package, version)| format!("{package} {version}"))
-            .collect();
-        problems.push(format!(
-            "{} not installed; audit again after the morning upgrade run, and if one remains, see apt-mark showhold and /var/log/unattended-upgrades/unattended-upgrades.log",
-            packages.join(", ")
-        ));
-    }
-    // With holds and preferences ignored, apt keeps a package back only when it cannot resolve its upgrade.
-    let kept_back = kept_back_packages(simulation);
-    if !kept_back.is_empty() {
-        problems.push(format!(
-            "apt cannot resolve the upgrade of {}; apt-get -s install <package> shows why",
-            kept_back.join(", ")
-        ));
-    }
-    (!problems.is_empty()).then(|| problems.join("; "))
+    let versions: Vec<String> = missing
+        .iter()
+        .map(|(package, version)| format!("{package} {version}"))
+        .collect();
+    let packages: Vec<&str> = missing.iter().map(|&(package, _)| package).collect();
+    Some(format!(
+        "not installed: {} (audit again after the morning upgrade run, then see apt-mark showhold, apt-get -s install {}, and /var/log/unattended-upgrades/unattended-upgrades.log)",
+        versions.join(", "),
+        packages.join(" ")
+    ))
 }
 
 fn isolation(cmdline: &str) -> Option<String> {
@@ -244,7 +236,8 @@ pub fn healthy() -> Vec<(Section, &'static str)> {
                 Section::RunnerService => "active",
                 Section::RebootRequired => "none",
                 Section::Raid => MDSTAT_SYNCED,
-                Section::Autoremove | Section::SecurityUpgrades => AUTOREMOVE_CLEAN,
+                Section::Autoremove => AUTOREMOVE_CLEAN,
+                Section::SecurityUpdates => SECURITY_UPDATES_END,
                 Section::Cmdline => {
                     "BOOT_IMAGE=/vmlinuz ro isolcpus=1-5 nohz_full=1-5 rcu_nocbs=1-5"
                 },
@@ -479,57 +472,30 @@ Remv bpftrace [0.20.2-1ubuntu4]";
     }
 
     #[test]
-    fn kept_back_security_update_fails() {
-        let simulation = "\
-NOTE: This is only a simulation!
-4 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
-Inst linux-image-6.8.0-147-generic (6.8.0-147.147 Ubuntu:24.04/noble-updates, Ubuntu:24.04/noble-security [amd64])
-Inst linux-image-generic [6.8.0-146.146] (6.8.0-147.147 Ubuntu:24.04/noble-security [amd64]) []
-Inst linux-generic [6.8.0-146.146] (6.8.0-147.147 Ubuntu:24.04/noble-security [amd64]) []
-Inst snapd [2.76.3+ubuntu24.04] (2.77.1+ubuntu24.04 Ubuntu:24.04/noble-updates [amd64])";
+    fn missing_security_updates_fail() {
+        let output = "\
+linux-generic 6.8.0-147.147
+linux-image-generic 6.8.0-147.147
+checked";
         assert_eq!(
-            problems(Section::SecurityUpgrades, simulation),
+            problems(Section::SecurityUpdates, output),
             [(
-                Check::SecurityUpgrades,
-                "linux-image-generic 6.8.0-147.147, linux-generic 6.8.0-147.147 not installed; audit again after the morning upgrade run, and if one remains, see apt-mark showhold and /var/log/unattended-upgrades/unattended-upgrades.log".to_owned()
+                Check::SecurityUpdates,
+                "not installed: linux-generic 6.8.0-147.147, linux-image-generic 6.8.0-147.147 (audit again after the morning upgrade run, then see apt-mark showhold, apt-get -s install linux-generic linux-image-generic, and /var/log/unattended-upgrades/unattended-upgrades.log)".to_owned()
             )]
         );
+        let output = "\
+Traceback (most recent call last):
+  File \"<string>\", line 2, in <module>
+ModuleNotFoundError: No module named 'apt_pkg'";
         assert_eq!(
-            problems(
-                Section::SecurityUpgrades,
-                "E: The package lists or status file could not be parsed or opened."
-            ),
+            problems(Section::SecurityUpdates, output),
             [(
-                Check::SecurityUpgrades,
-                "could not simulate a security upgrade: E: The package lists or status file could not be parsed or opened."
+                Check::SecurityUpdates,
+                "could not check security updates: ModuleNotFoundError: No module named 'apt_pkg'"
                     .to_owned()
             )]
         );
-    }
-
-    #[test]
-    fn unresolvable_upgrade_fails() {
-        let simulation = "\
-The following upgrades have been deferred due to phasing:
-  kprphase
-The following packages have been kept back:
-  kprctl
-The following packages will be upgraded:
-  linux-kprtest
-1 upgraded, 0 newly installed, 0 to remove and 2 not upgraded.
-Inst linux-kprtest [1.0] (2.5 UbuntuESM:noble-infra-security [all])";
-        assert_eq!(
-            problems(Section::SecurityUpgrades, simulation),
-            [(
-                Check::SecurityUpgrades,
-                "linux-kprtest 2.5 not installed; audit again after the morning upgrade run, and if one remains, see apt-mark showhold and /var/log/unattended-upgrades/unattended-upgrades.log; apt cannot resolve the upgrade of kprctl; apt-get -s install <package> shows why".to_owned()
-            )]
-        );
-        let simulation = "\
-The following upgrades have been deferred due to phasing:
-  kprphase
-0 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.";
-        assert_eq!(problems(Section::SecurityUpgrades, simulation), Vec::new());
     }
 
     #[test]
