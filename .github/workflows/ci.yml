@@ -94,6 +94,8 @@ jobs:
             nix:
               - 'flake.nix'
               - 'flake.lock'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
             console_e2e:
               - '.github/workflows/console_e2e.yml'
               - '.github/actions/**'
