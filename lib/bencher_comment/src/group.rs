@@ -4,7 +4,8 @@ use bencher_json::{GitHash, project::report::Adapter};
 
 use crate::{
     AlertColumns, BENCHER_REPORT_TITLE, EMPTY_CELL, ReportComment, Resource, SectionCheck,
-    TRUNCATED_NOTICE, counted, html_alerts_heading, html_link_row, tag::group_tag,
+    TRUNCATED_NOTICE, counted, html_alerts_heading, html_link_row, html_link_row_with_href,
+    tag::group_tag,
 };
 
 const SHORT_SHA_LEN: usize = 7;
@@ -15,6 +16,7 @@ pub struct GroupComment<'r> {
     writer: &'r ReportComment,
     rows: Vec<Row<'r>>,
     head_sha: GitHash,
+    columns: Columns,
 }
 
 /// The section of one job: its `--ci-id`, the check run it ran under, and its report once fetched.
@@ -47,10 +49,12 @@ impl<'r> GroupComment<'r> {
             };
             rows.push(Row { label, section });
         }
+        let columns = Columns::new(report, &rows);
         Self {
             writer: report,
             rows,
             head_sha,
+            columns,
         }
     }
 
@@ -139,13 +143,25 @@ impl<'r> GroupComment<'r> {
             writer.json_report.project.name.as_ref(),
             &project_url,
         );
-        if !self.has_branch_column() {
+        if !self.columns.branch {
             html_link_row(
                 html,
                 "Branch",
                 writer.json_report.branch.name.as_ref(),
                 &writer.resource_url(Resource::Branch(writer.json_report.branch.slug.clone())),
             );
+        }
+        if !self.columns.testbed {
+            html_link_row(
+                html,
+                "Testbed",
+                writer.json_report.testbed.name.as_ref(),
+                &writer.resource_url(Resource::Testbed(writer.json_report.testbed.slug.clone())),
+            );
+        }
+        if !self.columns.adapter {
+            let (name, url) = adapter_link(writer);
+            html_link_row_with_href(html, "Adapter", name, &url);
         }
         let head_sha = self.head_sha.as_ref();
         html.push_str(&format!(
@@ -156,18 +172,24 @@ impl<'r> GroupComment<'r> {
     }
 
     fn html_summary(&self, html: &mut String, kept: usize) {
-        let branch_column = self.has_branch_column();
+        let columns = self.columns;
         html.push_str("<table><thead><tr><th>Report</th>");
-        if branch_column {
+        if columns.branch {
             html.push_str("<th>Branch</th>");
         }
-        html.push_str("<th>Testbed</th><th>Adapter</th><th>Status</th></tr></thead><tbody>");
+        if columns.testbed {
+            html.push_str("<th>Testbed</th>");
+        }
+        if columns.adapter {
+            html.push_str("<th>Adapter</th>");
+        }
+        html.push_str("<th>Status</th></tr></thead><tbody>");
         let (shown, cut) = self.rows.split_at(kept);
         for row in shown {
             html.push_str("<tr>");
             if let Some(report) = row.section.report {
                 html_link_cell(html, report.report_url().as_str(), &row.label);
-                if branch_column {
+                if columns.branch {
                     html_link_cell(
                         html,
                         report
@@ -176,47 +198,38 @@ impl<'r> GroupComment<'r> {
                         report.json_report.branch.name.as_ref(),
                     );
                 }
-                html_link_cell(
-                    html,
-                    report
-                        .resource_url(Resource::Testbed(report.json_report.testbed.slug.clone()))
-                        .as_str(),
-                    report.json_report.testbed.name.as_ref(),
-                );
-                let (name, fragment) = adapter_docs(report.json_report.adapter);
-                html_link_cell(
-                    html,
-                    &format!(
-                        "https://bencher.dev/docs/explanation/adapters/{utm}#{fragment}",
-                        utm = report.utm_query(),
-                    ),
-                    name,
-                );
+                if columns.testbed {
+                    html_link_cell(
+                        html,
+                        report
+                            .resource_url(Resource::Testbed(
+                                report.json_report.testbed.slug.clone(),
+                            ))
+                            .as_str(),
+                        report.json_report.testbed.name.as_ref(),
+                    );
+                }
+                if columns.adapter {
+                    let (name, url) = adapter_link(report);
+                    html_link_cell(html, &url, name);
+                }
             } else {
                 html.push_str(&format!("<td>{}</td>", row.label));
-                if branch_column {
+                for _ in 0..columns.count() {
                     html.push_str(EMPTY_CELL);
                 }
-                html.push_str(EMPTY_CELL);
-                html.push_str(EMPTY_CELL);
             }
             html.push_str(&format!("<td>{}</td>", row.section.status()));
             html.push_str("</tr>");
         }
         if !cut.is_empty() {
             html.push_str(&format!(
-                r#"<tr><td colspan="{columns}">and {more}</td></tr>"#,
-                columns = if branch_column { 5 } else { 4 },
+                r#"<tr><td colspan="{span}">and {more}</td></tr>"#,
+                span = columns.count() + 2,
                 more = counted(cut.len(), "more report"),
             ));
         }
         html.push_str("</tbody></table>");
-    }
-
-    fn has_branch_column(&self) -> bool {
-        let branch = self.writer.json_report.branch.uuid;
-        self.reports()
-            .any(|report| report.json_report.branch.uuid != branch)
     }
 
     /// Every alert of every section in one table.
@@ -343,6 +356,46 @@ impl Row<'_> {
         html.push_str("</details>");
         Some(html)
     }
+}
+
+/// The dimensions that differ between the Reports, and so stay columns of the summary table
+/// rather than moving to the header table.
+#[derive(Clone, Copy)]
+struct Columns {
+    branch: bool,
+    testbed: bool,
+    adapter: bool,
+}
+
+impl Columns {
+    fn new(writer: &ReportComment, rows: &[Row]) -> Self {
+        let writer = &writer.json_report;
+        let mut columns = Self {
+            branch: false,
+            testbed: false,
+            adapter: false,
+        };
+        for report in rows.iter().filter_map(|row| row.section.report) {
+            let report = &report.json_report;
+            columns.branch |= report.branch.uuid != writer.branch.uuid;
+            columns.testbed |= report.testbed.uuid != writer.testbed.uuid;
+            columns.adapter |= adapter_docs(report.adapter) != adapter_docs(writer.adapter);
+        }
+        columns
+    }
+
+    fn count(self) -> usize {
+        usize::from(self.branch) + usize::from(self.testbed) + usize::from(self.adapter)
+    }
+}
+
+fn adapter_link(report: &ReportComment) -> (&'static str, String) {
+    let (name, fragment) = adapter_docs(report.json_report.adapter);
+    let url = format!(
+        "https://bencher.dev/docs/explanation/adapters/{utm}#{fragment}",
+        utm = report.utm_query(),
+    );
+    (name, url)
 }
 
 /// The name of an adapter and the id of its heading on the docs adapters page, percent encoded.
@@ -514,13 +567,19 @@ mod tests {
     }
 
     /// `len` reports on Bencher Cloud as a large matrix makes them: each with a `--ci-id`,
-    /// and every fourth with an alert.
+    /// its own Testbed, one of two Adapters, and every fourth with an alert.
     fn matrix(len: u64) -> Vec<(String, SectionCheck, ReportComment)> {
         (1..=len)
             .map(|n| {
                 let uuid = format!("{n:08x}-1111-4111-8111-111111111111");
-                let mut report = report_on(&uuid, MAIN, (TESTBED_A.0, "ubuntu-latest"));
-                report.adapter = Adapter::RustCriterion;
+                let testbed = format!("{n:08x}-5555-4555-8555-555555555555");
+                let mut report =
+                    report_on(&uuid, MAIN, (&testbed, &format!("ubuntu-latest-{n:02}")));
+                report.adapter = if n % 2 == 0 {
+                    Adapter::RustCriterion
+                } else {
+                    Adapter::RustIai
+                };
                 report.results = Some(serde_json::from_value(named_alert_results()).unwrap());
                 let alerting = n % 4 == 0;
                 if alerting {
@@ -656,7 +715,7 @@ mod tests {
     // Kills rows in CI ID or check run order instead of start order,
     // rows with no report out of CI ID order or ahead of a report,
     // a number on a row with no report, a missing or unescaped ` (ID)`, a Report cell
-    // without its link, a link or a Testbed or Adapter cell on a row with no report,
+    // without its link, a link or a Testbed cell on a row with no report,
     // a Testbed cell that names or links anything but the testbed,
     // and hidden comments out of row order.
     #[test]
@@ -685,7 +744,7 @@ mod tests {
         assert_eq!(
             rows[0],
             format!(
-                r#"{}<td><a href="https://bencher.example.com/console/projects/my-project/testbeds/testbed-b">testbed-b</a></td><td><a href="https://bencher.dev/docs/explanation/adapters/#-magic-default">Magic</a></td><td>✅ No Alerts</td></tr>"#,
+                r#"{}<td><a href="https://bencher.example.com/console/projects/my-project/testbeds/testbed-b">testbed-b</a></td><td>✅ No Alerts</td></tr>"#,
                 report_cell(REPORT_B, "1")
             )
         );
@@ -696,14 +755,8 @@ mod tests {
         ]) {
             assert!(row.starts_with(&report_cell(report, label)), "{row}");
         }
-        assert_eq!(
-            rows[4],
-            "<td>(alpha)</td><td></td><td></td><td>⏳ Pending</td></tr>"
-        );
-        assert_eq!(
-            rows[5],
-            "<td>(beta)</td><td></td><td></td><td>⏳ Pending</td></tr>"
-        );
+        assert_eq!(rows[4], "<td>(alpha)</td><td></td><td>⏳ Pending</td></tr>");
+        assert_eq!(rows[5], "<td>(beta)</td><td></td><td>⏳ Pending</td></tr>");
 
         let ids = SectionCheck::parse_all(&html)
             .into_iter()
@@ -805,31 +858,45 @@ mod tests {
         }
     }
 
-    // Kills an Adapter link that drops the comment's usual UTM query.
+    // Kills an Adapter link that drops the comment's usual UTM query,
+    // in the summary cell or in the header row.
     #[cfg(feature = "plus")]
     #[test]
     fn adapter_link_carries_the_utm_query() {
         let writer = cloud(report_on(REPORT_A, MAIN, TESTBED_A));
-        let other = cloud(report_on(REPORT_B, MAIN, TESTBED_B));
-        let html =
-            group(None, &writer, vec![section(None, 2, Some(&other))]).html(false, usize::MAX);
+        let shared = cloud(report_on(REPORT_B, MAIN, TESTBED_B));
+        let mut differs = report_on(REPORT_C, MAIN, TESTBED_B);
+        differs.adapter = Adapter::RustCriterion;
+        let differs = cloud(differs);
+        let link = r#"<a href="https://bencher.dev/docs/explanation/adapters/?utm_medium=referral&utm_source=cli&utm_content=comment&utm_campaign=pr+comments&utm_term=my-project#-magic-default">Magic</a>"#;
+
+        let row =
+            group(None, &writer, vec![section(None, 2, Some(&shared))]).html(false, usize::MAX);
         assert!(
-            html.contains(r#"<a href="https://bencher.dev/docs/explanation/adapters/?utm_medium=referral&utm_source=cli&utm_content=comment&utm_campaign=pr+comments&utm_term=my-project#-magic-default">Magic</a>"#),
-            "{html}"
+            row.contains(&format!("<td>Adapter</td><td>{link}</td>")),
+            "{row}"
         );
+
+        let cell =
+            group(None, &writer, vec![section(None, 2, Some(&differs))]).html(false, usize::MAX);
+        assert!(cell.contains(&format!("<td>{link}</td>")), "{cell}");
+        assert!(!cell.contains("<td>Adapter</td>"), "{cell}");
     }
 
-    // Kills a header that links a report or a head, a Branch row or column that does not
-    // follow the number of branches, a section without a report that borrows a Branch cell,
-    // and an `and N more reports` line that does not span the Branch column.
+    // Kills a header that links a report or a head, a Branch, Testbed, or Adapter row or
+    // column that does not follow whether every Report shares it, a section without a
+    // report that borrows a dimension cell, and an `and N more reports` line that does not
+    // span every column.
     #[test]
-    fn branch_row_or_column() {
+    fn dimension_row_or_column() {
         let writer = report_comment_for(report_on(REPORT_A, MAIN, TESTBED_A));
-        let same = report_comment_for(report_on(REPORT_B, MAIN, TESTBED_B));
-        let other = report_comment_for(report_on(REPORT_C, FEATURE, TESTBED_C));
+        let testbed = report_comment_for(report_on(REPORT_B, MAIN, TESTBED_B));
+        let mut differs = report_on(REPORT_C, FEATURE, TESTBED_C);
+        differs.adapter = Adapter::RustCriterion;
+        let differs = report_comment_for(differs);
 
         let html =
-            group(None, &writer, vec![section(None, 2, Some(&same))]).html(false, usize::MAX);
+            group(None, &writer, vec![section(None, 2, Some(&testbed))]).html(false, usize::MAX);
         assert!(
             html.starts_with(
                 r#"<h2><a href="https://bencher.example.com/console/projects/my-project"><img"#
@@ -838,11 +905,25 @@ mod tests {
         );
         let (header, summary) = html.split_once("</table>").unwrap();
         assert!(
-            header.ends_with(r#"<tr><td>Branch</td><td><a href="https://bencher.example.com/console/projects/my-project/branches/main">main</a></td></tr><tr><td>Commit</td><td><code>0123456</code></td></tr>"#),
+            header.ends_with(r#"<tr><td>Branch</td><td><a href="https://bencher.example.com/console/projects/my-project/branches/main">main</a></td></tr><tr><td>Adapter</td><td><a href="https://bencher.dev/docs/explanation/adapters/#-magic-default">Magic</a></td></tr><tr><td>Commit</td><td><code>0123456</code></td></tr>"#),
             "{header}"
         );
         assert!(
-            summary.contains("<th>Report</th><th>Testbed</th><th>Adapter</th><th>Status</th>"),
+            summary.contains("<th>Report</th><th>Testbed</th><th>Status</th>"),
+            "{summary}"
+        );
+
+        let html =
+            group(None, &writer, vec![section(None, 2, Some(&differs))]).html(false, usize::MAX);
+        let (header, summary) = html.split_once("</table>").unwrap();
+        assert!(
+            header.ends_with("<tr><td>Commit</td><td><code>0123456</code></td></tr>"),
+            "{header}"
+        );
+        assert!(
+            summary.contains(
+                "<th>Report</th><th>Branch</th><th>Testbed</th><th>Adapter</th><th>Status</th>"
+            ),
             "{summary}"
         );
 
@@ -850,20 +931,16 @@ mod tests {
             None,
             &writer,
             vec![
-                section(None, 2, Some(&same)),
-                section(None, 3, Some(&other)),
+                section(None, 2, Some(&testbed)),
+                section(None, 3, Some(&differs)),
                 section(Some("d"), 4, None),
             ],
         );
         let html = group.html(false, usize::MAX);
         let (header, summary) = html.split_once("</table>").unwrap();
-        assert!(!header.contains("<td>Branch</td>"), "{header}");
-        assert!(
-            summary.contains(
-                "<th>Report</th><th>Branch</th><th>Testbed</th><th>Adapter</th><th>Status</th>"
-            ),
-            "{summary}"
-        );
+        for row in ["<td>Branch</td>", "<td>Testbed</td>", "<td>Adapter</td>"] {
+            assert!(!header.contains(row), "{row}: {header}");
+        }
         assert!(
             summary.contains(&format!(
                 r#"{}<td><a href="https://bencher.example.com/console/projects/my-project/branches/feature">feature</a></td>"#,
@@ -882,6 +959,199 @@ mod tests {
             [r#"<td colspan="5">and 4 more reports</td></tr>"#],
             "{cut}"
         );
+    }
+
+    // Kills a header table that leaves out a shared dimension or holds it out of the
+    // Project, Branch, Testbed, Adapter, Commit order, and a summary table that keeps a
+    // column every Report shares.
+    #[test]
+    fn every_dimension_shared_leaves_report_and_status() {
+        let writer = report_comment_for(report_on(REPORT_A, MAIN, TESTBED_A));
+        let other = report_comment_for(report_on(REPORT_B, MAIN, TESTBED_A));
+        let html =
+            group(None, &writer, vec![section(None, 2, Some(&other))]).html(false, usize::MAX);
+        let (header, summary) = html.split_once("</table>").unwrap();
+        let project = "https://bencher.example.com/console/projects/my-project";
+        assert!(
+            header.ends_with(&format!(
+                r#"<table><tr><td>Project</td><td><a href="{project}">My Project</a></td></tr><tr><td>Branch</td><td><a href="{project}/branches/main">main</a></td></tr><tr><td>Testbed</td><td><a href="{project}/testbeds/testbed-a">testbed-a</a></td></tr><tr><td>Adapter</td><td><a href="https://bencher.dev/docs/explanation/adapters/#-magic-default">Magic</a></td></tr><tr><td>Commit</td><td><code>0123456</code></td></tr>"#
+            )),
+            "{header}"
+        );
+        assert!(
+            summary.contains("<thead><tr><th>Report</th><th>Status</th></tr></thead>"),
+            "{summary}"
+        );
+        assert_eq!(summary_rows(&html).len(), 2, "{html}");
+    }
+
+    // Kills a row with no report that counts as a dimension of its own, so a shared
+    // dimension stays a column, or that draws other than one empty cell per column.
+    #[test]
+    fn a_row_with_no_report_shares_every_dimension() {
+        let writer = report_comment_for(report_on(REPORT_A, MAIN, TESTBED_A));
+        let other = report_comment_for(report_on(REPORT_B, MAIN, TESTBED_B));
+        let html = group(
+            None,
+            &writer,
+            vec![
+                section(None, 2, Some(&other)),
+                Section::new(Some("c".to_owned()), check(3, None), None),
+            ],
+        )
+        .html(false, usize::MAX);
+        let (header, summary) = html.split_once("</table>").unwrap();
+        assert!(header.contains("<td>Branch</td>"), "{header}");
+        assert!(header.contains("<td>Adapter</td>"), "{header}");
+        assert!(!header.contains("<td>Testbed</td>"), "{header}");
+        assert!(
+            summary.contains("<th>Report</th><th>Testbed</th><th>Status</th>"),
+            "{summary}"
+        );
+        assert!(
+            summary.contains("<td>(c)</td><td></td><td>⏳ Pending</td></tr>"),
+            "{summary}"
+        );
+    }
+
+    // Kills a group of two rows with one report that treats the row with no report as a
+    // differing dimension, and a two row group that renders as a single section.
+    #[test]
+    fn two_rows_with_one_report_share_every_dimension() {
+        let writer = report_comment_for(report_on(REPORT_A, MAIN, TESTBED_A));
+        let html = group(
+            None,
+            &writer,
+            vec![Section::new(Some("b".to_owned()), check(2, None), None)],
+        )
+        .html(false, usize::MAX);
+        let (header, summary) = html.split_once("</table>").unwrap();
+        let rows = ["Project", "Branch", "Testbed", "Adapter", "Commit"]
+            .map(|row| header.find(&format!("<td>{row}</td>")));
+        assert!(
+            rows.iter().all(Option::is_some) && rows.is_sorted(),
+            "{header}"
+        );
+        assert!(
+            summary.contains("<thead><tr><th>Report</th><th>Status</th></tr></thead>"),
+            "{summary}"
+        );
+        assert!(
+            summary.contains("<td>(b)</td><td>⏳ Pending</td></tr>"),
+            "{summary}"
+        );
+    }
+
+    // Kills a Branch, Testbed, or Adapter row or column that follows another dimension's
+    // flag, so one shared dimension moves the wrong row up or keeps the wrong column.
+    #[test]
+    fn one_shared_dimension_moves_up_alone() {
+        const PROJECT: &str = "https://bencher.example.com/console/projects/my-project";
+        let writer = report_comment_for(report_on(REPORT_A, MAIN, TESTBED_A));
+        let other = |branch, testbed, adapter| {
+            let mut report = report_on(REPORT_B, branch, testbed);
+            report.adapter = adapter;
+            report_comment_for(report)
+        };
+        let shared = [
+            (
+                other(MAIN, TESTBED_B, Adapter::RustCriterion),
+                format!(r#"<tr><td>Branch</td><td><a href="{PROJECT}/branches/main">main</a></td></tr>"#),
+                "<th>Report</th><th>Testbed</th><th>Adapter</th><th>Status</th>",
+            ),
+            (
+                other(FEATURE, TESTBED_A, Adapter::RustCriterion),
+                format!(r#"<tr><td>Testbed</td><td><a href="{PROJECT}/testbeds/testbed-a">testbed-a</a></td></tr>"#),
+                "<th>Report</th><th>Branch</th><th>Adapter</th><th>Status</th>",
+            ),
+            (
+                other(FEATURE, TESTBED_B, Adapter::Magic),
+                r#"<tr><td>Adapter</td><td><a href="https://bencher.dev/docs/explanation/adapters/#-magic-default">Magic</a></td></tr>"#.to_owned(),
+                "<th>Report</th><th>Branch</th><th>Testbed</th><th>Status</th>",
+            ),
+        ];
+        for (other, row, columns) in &shared {
+            let html =
+                group(None, &writer, vec![section(None, 2, Some(other))]).html(false, usize::MAX);
+            let (header, summary) = html.split_once("</table>").unwrap();
+            let (_, dimensions) = header.split_once("My Project</a></td></tr>").unwrap();
+            let (dimensions, _) = dimensions.split_once("<tr><td>Commit</td>").unwrap();
+            assert_eq!(dimensions, row, "{header}");
+            assert!(summary.contains(columns), "{summary}");
+        }
+    }
+
+    // Kills an Adapter compared by its variant instead of the name and docs heading its
+    // cell shows, which would make a format version its own Adapter.
+    #[test]
+    fn a_format_version_is_the_same_adapter() {
+        let report = |uuid, adapter| {
+            let mut report = report_on(uuid, MAIN, TESTBED_A);
+            report.adapter = adapter;
+            report_comment_for(report)
+        };
+        let writer = report(REPORT_A, Adapter::Json);
+        let v0 = report(REPORT_B, Adapter::JsonV0);
+        let v1 = report(REPORT_C, Adapter::JsonV1);
+        let html = group(
+            None,
+            &writer,
+            vec![section(None, 2, Some(&v0)), section(None, 3, Some(&v1))],
+        )
+        .html(false, usize::MAX);
+        let (header, summary) = html.split_once("</table>").unwrap();
+        assert!(
+            header.contains(
+                r#"<tr><td>Adapter</td><td><a href="https://bencher.dev/docs/explanation/adapters/#-json">JSON</a></td></tr>"#
+            ),
+            "{header}"
+        );
+        assert!(
+            summary.contains("<thead><tr><th>Report</th><th>Status</th></tr></thead>"),
+            "{summary}"
+        );
+    }
+
+    // Kills dimensions read from the rows a Summary comment keeps instead of every Report,
+    // which drops the column of a cut row, and an `and N more reports` line whose span is a
+    // literal rather than the number of columns.
+    #[test]
+    fn a_cut_row_keeps_its_column() {
+        let writer = report_comment_for(report_on(REPORT_A, MAIN, TESTBED_A));
+        let testbed = report_comment_for(report_on(REPORT_B, MAIN, TESTBED_B));
+        let every = report_comment_for({
+            let mut report = report_on(REPORT_B, FEATURE, TESTBED_B);
+            report.adapter = Adapter::RustCriterion;
+            report
+        });
+
+        for (cut, span) in [(&testbed, 3), (&every, 5)] {
+            let group = group(None, &writer, vec![section(None, 2, Some(cut))]);
+            let full = group.html(false, usize::MAX);
+            let reduced = group.html(false, full.len() - 1);
+            assert_ne!(reduced, full, "{reduced}");
+            let summary = group.html(false, reduced.len() - 1);
+            let rows = summary_rows(&summary);
+            assert_eq!(rows.len(), 2, "{summary}");
+            assert!(
+                rows[0].starts_with(&report_cell(REPORT_A, "1")),
+                "{summary}"
+            );
+            assert_eq!(
+                rows[1],
+                format!(r#"<td colspan="{span}">and 1 more report</td></tr>"#),
+                "{summary}"
+            );
+
+            let every_row_cut = group.html(false, 0);
+            assert_eq!(
+                summary_rows(&every_row_cut),
+                [format!(
+                    r#"<td colspan="{span}">and 2 more reports</td></tr>"#
+                )],
+                "{every_row_cut}"
+            );
+        }
     }
 
     // Kills alert columns taken from one section, an Iteration column from a section
@@ -1104,7 +1374,9 @@ mod tests {
         assert_eq!(group.html(false, every_row.len()), every_row);
 
         let mut max_length = every_row.len();
-        for (kept, more) in [(6, "1 more report"), (5, "2 more reports")] {
+        // The row with no report is one cell wide, so cutting it alone makes less room than
+        // the `and 1 more report` line takes, and the first cut drops two rows.
+        for (kept, more) in [(5, "2 more reports"), (4, "3 more reports")] {
             max_length -= 1;
             let html = group.html(false, max_length);
             assert!(html.len() <= max_length, "{max_length}: {html}");
@@ -1118,7 +1390,7 @@ mod tests {
                         "{row}"
                     );
                 } else {
-                    assert_eq!(*row, format!(r#"<td colspan="4">and {more}</td></tr>"#));
+                    assert_eq!(*row, format!(r#"<td colspan="2">and {more}</td></tr>"#));
                 }
             }
             max_length = html.len();
@@ -1127,7 +1399,7 @@ mod tests {
         let html = group.html(false, 0);
         assert_eq!(
             summary_rows(&html),
-            [r#"<td colspan="4">and 7 more reports</td></tr>"#],
+            [r#"<td colspan="2">and 7 more reports</td></tr>"#],
             "{html}"
         );
         assert!(html.ends_with(&tail), "{html}");

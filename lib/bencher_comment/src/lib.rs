@@ -879,8 +879,12 @@ fn alert_status(alert: &JsonAlert) -> &str {
 }
 
 fn html_link_row(html: &mut String, row: &str, name: &str, url: &Url) {
+    html_link_row_with_href(html, row, name, url.as_str());
+}
+
+fn html_link_row_with_href(html: &mut String, row: &str, name: &str, href: &str) {
     html.push_str(&format!(
-        r#"<tr><td>{row}</td><td><a href="{url}">{name}</a></td></tr>"#,
+        r#"<tr><td>{row}</td><td><a href="{href}">{name}</a></td></tr>"#,
     ));
 }
 

@@ -21,11 +21,11 @@ Dies erfordert, dass das Token [den `pull-requests` Bereich mit `write` Berechti
 Die Ergebnisse werden außerdem immer zur Zusammenfassung des Jobs hinzugefügt.
 Mit [dem Flag `--detach`](/de/docs/explanation/images/#--detach) veröffentlicht der abgelöste Lauf keinen Kommentar und schreibt keine Zusammenfassung des Jobs, und [die Verbindung mit `--job`](/de/docs/explanation/images/#--job-uuid) schließt die GitHub-Prüfung ab, die er gestartet hat (siehe [die Option `--ci-callback-token`](#--ci-callback-token-token)).
 
-Bei zwei oder mehr Zeilen zeigt der Kommentar eine Übersichtstabelle mit jedem Bericht, seinem Testbed, seinem Adapter und seinem Status (`Pending`, die Anzahl der Alerts, `No Alerts` oder `Failed`).
+Bei zwei oder mehr Zeilen zeigt der Kommentar eine Übersichtstabelle mit jedem Bericht, jedem seiner Werte für Branch, Testbed und Adapter, die sich zwischen den Berichten unterscheiden, und seinem Status (`Pending`, die Anzahl der Alerts, `No Alerts` oder `Failed`).
 Die Zeilen stehen in der Reihenfolge, in der die Berichte gestartet wurden, nummeriert ab 1, so wie die Console die Berichte eines Laufs auflistet.
 Die Beschriftung jeder Zeile ist ihre Nummer, gefolgt vom Wert [der Option `--ci-id`](#--ci-id-id) in Klammern, wenn sie gesetzt ist (z.B.: `2 (microbench)`).
-Die Beschriftung verlinkt auf den Bericht, das Testbed auf seine Seite in der Console und der Adapter auf seinen Teil [der Adapter-Dokumentation](/de/docs/explanation/adapters/).
-Wenn die Jobs mehr als einen Branch verwenden, erhält die Übersichtstabelle eine Spalte für den Branch.
+Die Beschriftung verlinkt auf den Bericht, eine Zelle für das Testbed auf seine Seite in der Console und eine Zelle für den Adapter auf seinen Teil [der Adapter-Dokumentation](/de/docs/explanation/adapters/).
+Ein Branch, ein Testbed oder ein Adapter, den alle Berichte gemeinsam haben, wandert aus der Übersichtstabelle in die Tabelle am Anfang des Kommentars, die ihn genauso verlinkt.
 Danach enthält eine Tabelle die Alerts aller Berichte, mit einer Spalte für den Bericht.
 Dann folgen die Ergebnisse jedes Berichts in einem einklappbaren Block (z.B.: `Report 2 (microbench): 14 benchmarks, 2 alerts`),
 der geöffnet ist, wenn der Bericht Alerts hat.

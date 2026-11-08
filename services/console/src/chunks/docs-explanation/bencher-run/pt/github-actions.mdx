@@ -21,11 +21,11 @@ Isso requer que o token tenha [o escopo de `pull-requests` com permissões de `w
 Os resultados também serão sempre adicionados ao resumo do trabalho.
 Com [a flag `--detach`](/pt/docs/explanation/images/#--detach), a execução desanexada não publica nenhum comentário nem escreve o resumo do trabalho, e [a conexão com `--job`](/pt/docs/explanation/images/#--job-uuid) conclui a Verificação do GitHub que ela iniciou (veja [a opção `--ci-callback-token`](#--ci-callback-token-token)).
 
-Com duas ou mais linhas, o comentário mostra uma tabela de resumo de cada Relatório com seu Ambiente de Teste, Adaptador e status (`Pending`, o número de Alertas, `No Alerts` ou `Failed`).
+Com duas ou mais linhas, o comentário mostra uma tabela de resumo de cada Relatório com cada um de seu Branch, Ambiente de Teste e Adaptador que difere entre os Relatórios, e seu status (`Pending`, o número de Alertas, `No Alerts` ou `Failed`).
 As linhas estão na ordem em que os Relatórios começaram, numeradas a partir de 1, como o Console lista os Relatórios de uma execução.
 O rótulo de cada linha é o seu número, seguido do valor da [opção `--ci-id`](#--ci-id-id) entre parênteses, se ela estiver definida (ex: `2 (microbench)`).
-O rótulo leva ao Relatório, o Ambiente de Teste à sua página no Console e o Adaptador à sua parte da [documentação de Adaptadores](/pt/docs/explanation/adapters/).
-Quando os trabalhos usam mais de um Branch, a tabela de resumo ganha uma coluna para o Branch.
+O rótulo leva ao Relatório, uma célula de Ambiente de Teste à sua página no Console e uma célula de Adaptador à sua parte da [documentação de Adaptadores](/pt/docs/explanation/adapters/).
+Um Branch, um Ambiente de Teste ou um Adaptador que todos os Relatórios compartilham sai da tabela de resumo e vai para a tabela no início do comentário, que o liga da mesma forma.
 Em seguida, uma tabela reúne os Alertas de todos os Relatórios, com uma coluna para o Relatório.
 Depois, os resultados de cada Relatório seguem em um bloco recolhível (ex: `Report 2 (microbench): 14 benchmarks, 2 alerts`),
 que fica aberto quando o Relatório tem Alertas.

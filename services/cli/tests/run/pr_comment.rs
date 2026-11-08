@@ -14,6 +14,8 @@ const REPORT_C: &str = "c0c0c0c0-c0c0-4c0c-8c0c-c0c0c0c0c0c0";
 const REPORT_D: &str = "d0d0d0d0-d0d0-4d0d-8d0d-d0d0d0d0d0d0";
 const OWN_NAME: &str = "Bencher Report (Project)";
 const OWN_TAG_ID: &str = "main/base/magic";
+/// A Testbed that is not the writer's.
+const OTHER_TESTBED: &str = "e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e5e5";
 
 /// An attach on a pull request event: it starts its check, then completes it with the report.
 fn attach_run(scene: Scene, args: &[&str]) -> Run {
@@ -102,11 +104,14 @@ fn group_body_at(head_sha: &str, checks: &[SectionCheck]) -> String {
     )
 }
 
-/// The report of another job on `testbed`.
+/// The report of another job on `testbed`, the writer's own Testbed only when it is `base`.
 #[expect(clippy::indexing_slicing, reason = "test helper")]
 fn report(uuid: &str, testbed: &str) -> serde_json::Value {
     let mut report = json_report();
     report["uuid"] = uuid.into();
+    if testbed != "base" {
+        report["testbed"]["uuid"] = OTHER_TESTBED.into();
+    }
     report["testbed"]["name"] = testbed.into();
     report["testbed"]["slug"] = testbed.into();
     report
@@ -333,13 +338,7 @@ fn a_pending_section_links_its_report() {
         "{body}"
     );
     assert!(
-        body.contains(
-            ">2 (detached)</a></td><td><a href=\"http://localhost:3000/console/projects/project/testbeds/base"
-        ),
-        "{body}"
-    );
-    assert!(
-        body.contains(">Magic</a></td><td>⏳ Pending</td></tr>"),
+        body.contains(">2 (detached)</a></td><td>⏳ Pending</td></tr>"),
         "{body}"
     );
     assert!(
