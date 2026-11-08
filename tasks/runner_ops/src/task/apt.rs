@@ -2,15 +2,46 @@ pub const AUTOREMOVE_SIMULATION: &str = "LC_ALL=C apt-get -s autoremove";
 /// The last line of a security updates query that ran to its end.
 pub const SECURITY_UPDATES_END: &str = "checked";
 
-/// Each installed package with a newer version in an archive whose name ends in `-security`, as `<package> <version>`, read from the package lists alone, so no apt preference, hold, phasing, or dependency problem can hide one.
+/// The most days the newest `Release` file of a `-security` archive may age before the security updates query fails.
+const SECURITY_LISTS_MAX_AGE_DAYS: u32 = 7;
+
+/// Each installed package with a newer version in an archive whose name ends in `-security`, or that dpkg has not finished installing, as `<package> <version>`, read from the package lists and the dpkg status, so no apt preference, hold, phasing, or dependency problem can hide one.
+/// It builds its cache in memory, so a broken list fails every run and nothing lands in `/var/cache/apt`.
 pub fn security_updates_query() -> String {
     format!(
         r#"python3 -I -c '
-import apt_pkg
+import apt_pkg, glob, time
 apt_pkg.init()
+apt_pkg.config.set("Dir::Cache::pkgcache", "")
+apt_pkg.config.set("Dir::Cache::srcpkgcache", "")
+cache = apt_pkg.Cache(None)
+if not any((pf.archive or "").endswith("-security") for pf in cache.file_list):
+    raise SystemExit("no package list comes from a -security archive")
+latest = None
+for path in glob.glob(apt_pkg.config.find_dir("Dir::State::lists") + "*Release"):
+    suite = date = None
+    with open(path, errors="replace") as release:
+        for line in release:
+            if line.startswith("Suite: ") and suite is None:
+                suite = line[7:].strip()
+            elif line.startswith("Date: ") and date is None:
+                date = line[6:].strip()
+    if (suite or "").endswith("-security"):
+        stamp = apt_pkg.str_to_time(date or "") or 0
+        if latest is None or stamp > latest[0]:
+            latest = (stamp, date)
+if latest is None:
+    raise SystemExit("no Release file comes from a -security archive")
+if latest[1] is None:
+    raise SystemExit("the newest -security Release file has no Date field")
+if time.time() - latest[0] > {SECURITY_LISTS_MAX_AGE_DAYS} * 86400:
+    raise SystemExit("the newest -security Release file is dated " + str(latest[1]) + ", more than {SECURITY_LISTS_MAX_AGE_DAYS} days ago")
 rows = []
-for pkg in apt_pkg.Cache(None).packages:
+for pkg in cache.packages:
     installed = pkg.current_ver
+    if installed and pkg.current_state != apt_pkg.CURSTATE_INSTALLED:
+        rows.append(pkg.get_fullname(True) + " " + installed.ver_str)
+        continue
     newest = None
     for ver in pkg.version_list if installed else []:
         if apt_pkg.version_compare(ver.ver_str, newest or installed.ver_str) > 0 and any((pf.archive or "").endswith("-security") for pf, _ in ver.file_list):
@@ -128,6 +159,10 @@ ModuleNotFoundError: No module named 'apt_pkg'
         assert_eq!(
             missing_security_updates("W: an unexpected line\nchecked\n"),
             Err("W: an unexpected line")
+        );
+        assert_eq!(
+            missing_security_updates("Warning\nchecked\n"),
+            Err("Warning")
         );
     }
 }
