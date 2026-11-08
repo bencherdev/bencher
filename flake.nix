@@ -13,30 +13,34 @@
     rust-overlay,
     flake-utils,
   }:
-    flake-utils.lib.eachDefaultSystem (
+    flake-utils.lib.eachSystem ["x86_64-linux" "aarch64-linux" "aarch64-darwin"] (
       system: let
         overlays = [(import rust-overlay)];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
 
-        rustToolchain = pkgs.rust-bin.stable.latest.minimal.override {
+        buildToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+        rustToolchain = buildToolchain.override {
           extensions = [
             "rust-src"
             "clippy"
             "rust-analyzer"
           ];
         };
+        rustPlatform = pkgs.makeRustPlatform {
+          cargo = buildToolchain;
+          rustc = buildToolchain;
+        };
 
         # Build inputs for the Rust project
-        buildInputs = with pkgs; [
-          rustToolchain
-          rust-bin.nightly.latest.rustfmt # Get nightly formatter.
+        packageInputs = with pkgs; [
           clang
           mold
           pkg-config
           binutils
         ];
+        buildInputs = [rustToolchain] ++ packageInputs;
         rust_tools = with pkgs; [
           cargo-nextest
         ];
@@ -46,15 +50,16 @@
           statix # Nix static code checker.
         ];
         mkPackage = pname:
-          pkgs.rustPlatform.buildRustPackage {
+          rustPlatform.buildRustPackage {
             name = pname;
             src = ./.;
             cargoBuildFlags = ["--bin" "${pname}"];
             cargoLock.lockFile = ./Cargo.lock;
             doCheck = false;
-            inherit buildInputs;
-            nativeBuildInputs = buildInputs;
-            LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath buildInputs}";
+            buildInputs = packageInputs;
+            nativeBuildInputs = packageInputs;
+            LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath packageInputs}";
+            disallowedReferences = [buildToolchain rustToolchain];
           };
       in {
         # Build package with `nix build` or more specifically for example `nix run .#bencher`
