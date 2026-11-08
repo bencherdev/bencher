@@ -4,6 +4,7 @@ import { afterEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import type { JsonPlot } from "../../types/bencher";
 import { ApiError } from "../api";
+import { PROJECTS_PATH } from "../paths";
 import { fakeApi, mount } from "../settings/testing";
 import PinDialog from "./PinDialog";
 import { testTile } from "./testing";
@@ -281,4 +282,16 @@ test("a long focused line keeps the dialog's width and its benchmark's end", asy
 		.toHaveAttribute("data-tail", "bench_fn size=1");
 	const body = dialog.element().querySelector(".ui-dialog-body") as HTMLElement;
 	expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth);
+});
+
+// Kills a preview whose pinned readout offers no link to its point's report, as the tile on Plots does.
+test("the preview's pinned readout links to its point's report", async () => {
+	const { dialog } = open();
+	const plot = dialog.getByRole("group", { name: /lines?,/ });
+	await expect.element(plot).toBeVisible();
+	const box = plot.element().getBoundingClientRect();
+	await plot.click({ position: { x: box.width - 4, y: box.height / 2 } });
+	await expect
+		.element(dialog.getByRole("status").getByRole("link"))
+		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/reports/report-4`);
 });

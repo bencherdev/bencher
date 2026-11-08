@@ -22,6 +22,7 @@ import {
 	rollingParts,
 	rollingSeconds,
 } from "../explore/window";
+import { reportPath } from "../paths";
 import { useProject } from "../project";
 import { useQueryResult } from "../query";
 import { type Position, placed, positionIndex, positionOf } from "./order";
@@ -159,6 +160,7 @@ const PinDialog = (props: {
 						tile={tile()}
 						window={rollingName(seconds())}
 						class="plots-preview"
+						reportHref={(report) => reportPath(slug(), report)}
 					/>
 				</div>
 				<div class="plots-dfields">

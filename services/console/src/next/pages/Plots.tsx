@@ -30,7 +30,7 @@ import CustomRange from "../explore/CustomRange";
 import { plotSearch, queryFromPlot } from "../explore/pinned";
 import { perfQuery, plotKey } from "../explore/queries";
 import { PRESETS, rollingName } from "../explore/window";
-import { projectPath } from "../paths";
+import { projectPath, reportPath } from "../paths";
 import EditPin from "../plots/EditPin";
 import { Down, Plus, Reorder, Up } from "../plots/glyphs";
 import { type Move, moveIndex, placed } from "../plots/order";
@@ -625,6 +625,7 @@ const Plots = () => {
 										}
 										openHref={openHref(tile(), uuid)}
 										alerts={alerts}
+										reportHref={(report) => reportPath(slug(), report)}
 										onOpen={() => seed(tile())}
 										onNear={() => want(uuid)}
 										menu={
