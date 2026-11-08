@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 use super::snapshot::{Section, Sections};
-use crate::task::apt::{autoremovable_packages, security_upgrades};
+use crate::task::apt::{autoremovable_packages, kept_back_packages, security_upgrades};
 use crate::task::isolate::is_isolated;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -191,17 +191,27 @@ fn security_updates(simulation: &str) -> Option<String> {
             simulation.trim()
         ));
     }
+    let mut problems = Vec::new();
     let upgrades = security_upgrades(simulation);
-    (!upgrades.is_empty()).then(|| {
+    if !upgrades.is_empty() {
         let packages: Vec<String> = upgrades
             .into_iter()
             .map(|(package, version)| format!("{package} {version}"))
             .collect();
-        format!(
-            "{} not installed; the morning upgrade run installs what the 05:00 UTC package list refresh finds, so audit again after that run, and if one remains, read why in /var/log/unattended-upgrades/unattended-upgrades.log",
+        problems.push(format!(
+            "{} not installed; audit again after the morning upgrade run, and if one remains, see apt-mark showhold and /var/log/unattended-upgrades/unattended-upgrades.log",
             packages.join(", ")
-        )
-    })
+        ));
+    }
+    // With holds and preferences ignored, apt keeps a package back only when it cannot resolve its upgrade.
+    let kept_back = kept_back_packages(simulation);
+    if !kept_back.is_empty() {
+        problems.push(format!(
+            "apt cannot resolve the upgrade of {}; apt-get -s install <package> shows why",
+            kept_back.join(", ")
+        ));
+    }
+    (!problems.is_empty()).then(|| problems.join("; "))
 }
 
 fn isolation(cmdline: &str) -> Option<String> {
@@ -481,7 +491,7 @@ Inst snapd [2.76.3+ubuntu24.04] (2.77.1+ubuntu24.04 Ubuntu:24.04/noble-updates [
             problems(Section::SecurityUpgrades, simulation),
             [(
                 Check::SecurityUpgrades,
-                "linux-image-generic 6.8.0-147.147, linux-generic 6.8.0-147.147 not installed; the morning upgrade run installs what the 05:00 UTC package list refresh finds, so audit again after that run, and if one remains, read why in /var/log/unattended-upgrades/unattended-upgrades.log".to_owned()
+                "linux-image-generic 6.8.0-147.147, linux-generic 6.8.0-147.147 not installed; audit again after the morning upgrade run, and if one remains, see apt-mark showhold and /var/log/unattended-upgrades/unattended-upgrades.log".to_owned()
             )]
         );
         assert_eq!(
@@ -495,6 +505,31 @@ Inst snapd [2.76.3+ubuntu24.04] (2.77.1+ubuntu24.04 Ubuntu:24.04/noble-updates [
                     .to_owned()
             )]
         );
+    }
+
+    #[test]
+    fn unresolvable_upgrade_fails() {
+        let simulation = "\
+The following upgrades have been deferred due to phasing:
+  kprphase
+The following packages have been kept back:
+  kprctl
+The following packages will be upgraded:
+  linux-kprtest
+1 upgraded, 0 newly installed, 0 to remove and 2 not upgraded.
+Inst linux-kprtest [1.0] (2.5 UbuntuESM:noble-infra-security [all])";
+        assert_eq!(
+            problems(Section::SecurityUpgrades, simulation),
+            [(
+                Check::SecurityUpgrades,
+                "linux-kprtest 2.5 not installed; audit again after the morning upgrade run, and if one remains, see apt-mark showhold and /var/log/unattended-upgrades/unattended-upgrades.log; apt cannot resolve the upgrade of kprctl; apt-get -s install <package> shows why".to_owned()
+            )]
+        );
+        let simulation = "\
+The following upgrades have been deferred due to phasing:
+  kprphase
+0 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.";
+        assert_eq!(problems(Section::SecurityUpgrades, simulation), Vec::new());
     }
 
     #[test]

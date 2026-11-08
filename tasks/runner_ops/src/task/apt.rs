@@ -29,6 +29,17 @@ pub fn security_upgrades(simulation: &str) -> Vec<(&str, &str)> {
         .collect()
 }
 
+/// Packages that an `apt-get -s` simulation keeps back; apt lists a phased update apart, never as kept back.
+pub fn kept_back_packages(simulation: &str) -> Vec<&str> {
+    simulation
+        .lines()
+        .skip_while(|line| *line != "The following packages have been kept back:")
+        .skip(1)
+        .take_while(|line| line.starts_with(' '))
+        .flat_map(str::split_whitespace)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -84,5 +95,61 @@ Conf linux-image-virtual (6.8.0-147.147 Ubuntu:24.04/noble-security [amd64])
                 ("linux-base", "4.5ubuntu9+24.04.1"),
             ]
         );
+    }
+
+    #[test]
+    fn kept_back_packages_lists_every_wrapped_line() {
+        let simulation = "\
+Calculating upgrade...
+The following packages have been kept back:
+  kprctl linux-generic linux-headers-generic linux-image-generic
+  libheif-plugin-aomdec
+The following packages will be upgraded:
+  tmux
+1 upgraded, 0 newly installed, 0 to remove and 5 not upgraded.
+Inst tmux [3.4-1ubuntu0.1] (3.4-1ubuntu0.2 Ubuntu:24.04/noble-updates [amd64])
+";
+        assert_eq!(
+            kept_back_packages(simulation),
+            [
+                "kprctl",
+                "linux-generic",
+                "linux-headers-generic",
+                "linux-image-generic",
+                "libheif-plugin-aomdec",
+            ]
+        );
+    }
+
+    #[test]
+    fn kept_back_packages_skips_phased_updates() {
+        let simulation = "\
+Calculating upgrade...
+The following upgrades have been deferred due to phasing:
+  kprphase
+The following packages will be upgraded:
+  tmux
+1 upgraded, 0 newly installed, 0 to remove and 1 not upgraded.
+Inst tmux [3.4-1ubuntu0.1] (3.4-1ubuntu0.2 Ubuntu:24.04/noble-updates [amd64])
+";
+        assert_eq!(kept_back_packages(simulation), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn kept_back_packages_after_phased_updates() {
+        let simulation = "\
+Calculating upgrade...
+The following NEW packages will be installed:
+  linux-image-6.8.0-147-generic
+The following upgrades have been deferred due to phasing:
+  kprphase
+The following packages have been kept back:
+  kprctl
+The following packages will be upgraded:
+  linux-image-virtual tmux
+2 upgraded, 1 newly installed, 0 to remove and 2 not upgraded.
+Inst linux-image-6.8.0-147-generic (6.8.0-147.147 Ubuntu:24.04/noble-updates, Ubuntu:24.04/noble-security [amd64])
+";
+        assert_eq!(kept_back_packages(simulation), ["kprctl"]);
     }
 }
