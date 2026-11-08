@@ -34,6 +34,7 @@ export class Method {
 export enum HeadersKind {
 	Pub = "pub",
 	Auth = "auth",
+	Svg = "svg",
 }
 
 export const getSchema = (schema) => getRef(parseSchemaRef(schema));

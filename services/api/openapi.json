@@ -3747,6 +3747,56 @@
         }
       }
     },
+    "/v0/projects/{project}/badge": {
+      "get": {
+        "tags": [
+          "projects",
+          "alerts"
+        ],
+        "summary": "View a status badge for a project",
+        "description": "View an SVG status badge for a project. The badge reads `passing` when the project has no active alerts, and `failing` when it has at least one. An alert counts when it is active and its branch, testbed, and measure are not archived. Use the `branch` and `testbed` query parameters to only count the alerts on a branch or testbed. If the project is public, then the user does not need to be authenticated. If the project is private, then the user must be authenticated and have `view` permissions for the project, or provide a valid project key for the project.",
+        "operationId": "proj_badge_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "description": "The slug or UUID for a project.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "branch",
+            "description": "The name, slug, or UUID for a branch. If set, only the alerts on this branch count.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "testbed",
+            "description": "The name, slug, or UUID for a testbed. If set, only the alerts on this testbed count.",
+            "schema": {
+              "nullable": true,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/v0/projects/{project}/benchmarks": {
       "get": {
         "tags": [

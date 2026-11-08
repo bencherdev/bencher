@@ -11,6 +11,8 @@ use bencher_schema::{
     model::{
         project::{
             QueryProject,
+            branch::BranchId,
+            testbed::TestbedId,
             threshold::alert::{QueryAlert, UpdateAlert, archived_filter},
         },
         user::actor::{ApiActor, PubProjectBearerToken},
@@ -166,22 +168,50 @@ pub(crate) fn active_count(
     conn: &mut DbConnection,
     query_project: &QueryProject,
 ) -> diesel::QueryResult<i64> {
-    get_ls_count(
-        conn,
-        query_project,
-        &ProjAlertsQuery {
-            status: Some(AlertStatus::Active),
-            archived: None,
-        },
-    )
+    get_ls_filter(query_project, &ACTIVE_ALERTS, None, None)
+        .count()
+        .get_result(conn)
 }
 
-/// Counts what `get_ls_query` lists, joining only what its filters read.
+/// Whether any of the active alerts the Alerts list shows by default is on the branch and the
+/// testbed, when given, stopping at the first.
+pub(crate) fn has_active(
+    conn: &mut DbConnection,
+    query_project: &QueryProject,
+    branch_id: Option<BranchId>,
+    testbed_id: Option<TestbedId>,
+) -> diesel::QueryResult<bool> {
+    diesel::select(diesel::dsl::exists(
+        get_ls_filter(query_project, &ACTIVE_ALERTS, branch_id, testbed_id)
+            .select(schema::alert::id),
+    ))
+    .get_result(conn)
+}
+
+const ACTIVE_ALERTS: ProjAlertsQuery = ProjAlertsQuery {
+    status: Some(AlertStatus::Active),
+    archived: None,
+};
+
+/// Counts what `get_ls_query` lists.
 fn get_ls_count(
     conn: &mut DbConnection,
     query_project: &QueryProject,
     query_params: &ProjAlertsQuery,
 ) -> diesel::QueryResult<i64> {
+    get_ls_filter(query_project, query_params, None, None)
+        .count()
+        .get_result(conn)
+}
+
+/// The alerts `get_ls_query` lists, joining only what its filters read,
+/// narrowed to the alerts on the branch and the testbed, when given.
+fn get_ls_filter<'q>(
+    query_project: &QueryProject,
+    query_params: &ProjAlertsQuery,
+    branch_id: Option<BranchId>,
+    testbed_id: Option<TestbedId>,
+) -> FilterQuery<'q> {
     let mut query = schema::alert::table
         .inner_join(
             schema::threshold::table
@@ -198,12 +228,30 @@ fn get_ls_count(
         // Holds SQLite to the status index, as the created order of `get_ls_query` does.
         query = query.filter(schema::alert::status.ge(AlertStatus::Active));
     }
+    if let Some(branch_id) = branch_id {
+        query = query.filter(schema::threshold::branch_id.eq(branch_id));
+    }
+    if let Some(testbed_id) = testbed_id {
+        query = query.filter(schema::threshold::testbed_id.eq(testbed_id));
+    }
 
-    query
-        .filter(archived_filter(query_params.archived))
-        .count()
-        .get_result(conn)
+    query.filter(archived_filter(query_params.archived))
 }
+
+type FilterQuery<'q> = diesel::dsl::IntoBoxed<
+    'q,
+    diesel::dsl::InnerJoin<
+        schema::alert::table,
+        diesel::dsl::InnerJoin<
+            diesel::dsl::InnerJoin<
+                diesel::dsl::InnerJoin<schema::threshold::table, schema::branch::table>,
+                schema::testbed::table,
+            >,
+            schema::measure::table,
+        >,
+    >,
+    diesel::sqlite::Sqlite,
+>;
 
 fn get_ls_query<'q>(
     query_project: &'q QueryProject,

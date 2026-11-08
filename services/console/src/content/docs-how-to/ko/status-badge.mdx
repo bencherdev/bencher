@@ -1,0 +1,59 @@
+---
+title: "상태 배지"
+description: "프로젝트에 활성 경고가 있는지 보여주는 Bencher 상태 배지를 README에 추가하세요"
+heading: "Bencher 상태 배지 추가 방법"
+published: "2026-11-07T00:00:00Z"
+modified: "2026-11-07T00:00:00Z"
+sortOrder: 12
+---
+
+Bencher 상태 배지는 프로젝트에 활성 경고가 있는지 보여줍니다:
+
+- 프로젝트에 활성 경고가 없으면 `Bencher | passing`
+- 프로젝트에 활성 경고가 하나 이상 있으면 `Bencher | failing`
+
+[경고](/ko/docs/explanation/thresholds/#alerts)는 새 결과가 [임계값](/ko/docs/explanation/thresholds/)을 넘을 때 생성됩니다.
+경고는 해제되거나 음소거될 때까지 활성 상태로 유지됩니다.
+보관된 브랜치, 테스트베드 또는 측정값의 경고는
+Bencher 콘솔에서 프로젝트의 Alerts 탭과 마찬가지로 집계되지 않습니다.
+
+## README에 배지 추가하기
+
+다음 Markdown을 README에 추가하세요. `<project>`는 프로젝트의 슬러그 또는 UUID입니다:
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge)
+```
+
+하나의 브랜치에 있는 경고만 집계하려면 브랜치의 이름, 슬러그 또는 UUID와 함께 `branch` 쿼리 매개변수를 추가하세요.
+마찬가지로 `testbed` 쿼리 매개변수는 하나의 테스트베드에 있는 경고만 집계합니다.
+이름에 있는 `/`는 `%2F`로 인코딩할 수 있습니다(예: `?branch=release%2F1.0`).
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)
+```
+
+배지를 Bencher 콘솔에 있는 프로젝트의 경고에 연결하려면:
+
+```markdown
+[![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)](https://bencher.dev/console/projects/<project>/alerts)
+```
+
+## Bencher Self-Hosted
+
+Bencher Self-Hosted에서는 자체 API 서버의 URL을 사용하세요:
+
+```markdown
+![Bencher](https://<api-host>/v0/projects/<project>/badge)
+```
+
+## 비공개 프로젝트
+
+비공개 프로젝트의 배지에는 API 키가 필요하지만,
+README의 이미지는 API 키를 보낼 수 없습니다.
+공개 README에서는 공개 프로젝트의 배지만 사용하세요.
+
+## 업데이트
+
+배지는 최대 5분 동안 캐시될 수 있으므로,
+경고가 생성되거나 해제된 후 약 5분 이내에 업데이트됩니다.

@@ -1,0 +1,59 @@
+---
+title: "Insignia de Estado"
+description: "Agregue a su README una insignia de estado de Bencher que muestra si su proyecto tiene Alertas activas"
+heading: "Cómo Agregar una Insignia de Estado de Bencher"
+published: "2026-11-07T00:00:00Z"
+modified: "2026-11-07T00:00:00Z"
+sortOrder: 12
+---
+
+Una insignia de estado de Bencher muestra si su proyecto tiene Alertas activas:
+
+- `Bencher | passing` cuando el proyecto no tiene Alertas activas
+- `Bencher | failing` cuando el proyecto tiene al menos una Alerta activa
+
+Se genera una [Alerta](/es/docs/explanation/thresholds/#alerts) cuando un nuevo resultado cruza un [Umbral](/es/docs/explanation/thresholds/).
+Una Alerta permanece activa hasta que se descarta o se silencia.
+Las Alertas en una Rama, un Testbed o una Medida archivados no se cuentan,
+igual que en la pestaña Alerts de su proyecto en la Consola de Bencher.
+
+## Agregar la Insignia a un README
+
+Agregue este Markdown a su README, donde `<project>` es el slug o UUID de su proyecto:
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge)
+```
+
+Para contar solo las Alertas de una Rama, agregue el parámetro de consulta `branch` con el nombre, slug o UUID de la Rama.
+Del mismo modo, el parámetro de consulta `testbed` solo cuenta las Alertas de un Testbed.
+Una `/` en un nombre puede codificarse como `%2F`, por ejemplo `?branch=release%2F1.0`.
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)
+```
+
+Para enlazar la insignia a las Alertas de su proyecto en la Consola de Bencher:
+
+```markdown
+[![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)](https://bencher.dev/console/projects/<project>/alerts)
+```
+
+## Bencher Self-Hosted
+
+Para Bencher Self-Hosted, use la URL de su propio servidor de API:
+
+```markdown
+![Bencher](https://<api-host>/v0/projects/<project>/badge)
+```
+
+## Proyectos Privados
+
+La insignia de un proyecto privado requiere una clave de API,
+y una imagen en un README no puede enviarla.
+Use la insignia en un README público solo para un proyecto público.
+
+## Actualizaciones
+
+La insignia puede almacenarse en caché hasta 5 minutos,
+por lo que se actualiza en unos 5 minutos como máximo después de que se genere o descarte una Alerta.

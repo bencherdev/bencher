@@ -1,0 +1,59 @@
+---
+title: "Status Badge"
+description: "Add a Bencher status badge to your README that shows whether your project has any active alerts"
+heading: "How to Add a Bencher Status Badge"
+published: "2026-11-07T00:00:00Z"
+modified: "2026-11-07T00:00:00Z"
+sortOrder: 12
+---
+
+A Bencher status badge shows whether your project has any active alerts:
+
+- `Bencher | passing` when the project has no active alerts
+- `Bencher | failing` when the project has at least one active alert
+
+An [Alert](/docs/explanation/thresholds/#alerts) is generated when a new result crosses a [Threshold](/docs/explanation/thresholds/).
+An Alert stays active until it is dismissed or silenced.
+Alerts on an archived Branch, Testbed, or Measure are not counted,
+the same as on the Alerts tab of your project in the Bencher Console.
+
+## Add the Badge to a README
+
+Add this Markdown to your README, where `<project>` is your project slug or UUID:
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge)
+```
+
+To only count the Alerts on one Branch, add the `branch` query parameter with the Branch name, slug, or UUID.
+Likewise, the `testbed` query parameter only counts the Alerts on one Testbed.
+A `/` in a name may be encoded as `%2F`, for example `?branch=release%2F1.0`.
+
+```markdown
+![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)
+```
+
+To link the badge to the Alerts of your project in the Bencher Console:
+
+```markdown
+[![Bencher](https://api.bencher.dev/v0/projects/<project>/badge?branch=main)](https://bencher.dev/console/projects/<project>/alerts)
+```
+
+## Bencher Self-Hosted
+
+For Bencher Self-Hosted, use the URL of your own API server:
+
+```markdown
+![Bencher](https://<api-host>/v0/projects/<project>/badge)
+```
+
+## Private Projects
+
+The badge of a private project requires an API key,
+and an image in a README cannot send one.
+Use the badge in a public README only for a public project.
+
+## Updates
+
+The badge may be cached for up to 5 minutes,
+so it updates within about 5 minutes of an Alert being generated or dismissed.
