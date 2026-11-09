@@ -3,7 +3,7 @@ use std::{future::Future, pin::Pin};
 #[cfg(feature = "plus")]
 use bencher_client::types::JsonNewRunJob;
 use bencher_client::types::{Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings};
-use bencher_comment::ReportComment;
+use bencher_comment::{GitHubApi, ReportComment};
 use bencher_json::{
     DateTime, JsonProject, JsonReport, ProjectResourceId, ProjectSlug, ReportUuid, RunContext,
     TestbedNameId, project::report::Iteration,
@@ -267,7 +267,7 @@ impl Run {
         let tokenless = self.ci.as_ref().is_some_and(|ci| !ci.has_callback_token())
             && self.submit_job().is_some_and(|job| job.detach);
         if tokenless
-            && !(mints_dispatch_token(server_version) && ci::mints_for_api_url(github_api_url))
+            && !(mints_dispatch_token(server_version) && ci::is_github_com_api(github_api_url))
         {
             Err(RunError::DetachNeedsCallback)
         } else {
@@ -800,13 +800,12 @@ impl Run {
         json_report: JsonReport,
         pending: bool,
     ) -> Result<ReportComment, RunError> {
-        let report_comment = ReportComment::new(
+        let report_comment = self.report_comment(
             console_url,
             json_report,
-            self.sub_adapter.into(),
-            self.source(),
-        )
-        .with_pending(pending);
+            pending,
+            ci::github_api_url(false).as_deref(),
+        );
 
         let report_str = match self.format {
             Format::Human => report_comment.human(),
@@ -816,6 +815,27 @@ impl Run {
         let newline_prefix = if self.log { "\n" } else { "" };
         cli_println!("{newline_prefix}{report_str}");
         Ok(report_comment)
+    }
+
+    fn report_comment(
+        &self,
+        console_url: Url,
+        json_report: JsonReport,
+        pending: bool,
+        github_api_url: Option<&str>,
+    ) -> ReportComment {
+        let github_api = self
+            .ci
+            .as_ref()
+            .map_or(GitHubApi::Other, |ci| ci.github_api(github_api_url));
+        ReportComment::new(
+            console_url,
+            json_report,
+            self.sub_adapter.into(),
+            self.source(),
+        )
+        .with_pending(pending)
+        .with_github_api(github_api)
     }
 
     fn source(&self) -> String {
@@ -1044,6 +1064,110 @@ mod tests {
                     Some(Timeout::try_from(7).unwrap())
                 )
             );
+        }
+    }
+
+    mod github_link {
+        use bencher_json::JsonReport;
+        use clap::Parser as _;
+
+        use super::super::Run;
+        use crate::parser::run::CliRun;
+
+        const LINE: &str = "Link this project to GitHub</a>";
+
+        fn run(args: &[&str]) -> Run {
+            let args = ["--project", "project"]
+                .iter()
+                .chain(args)
+                .chain(&["bencher", "mock"])
+                .copied()
+                .collect::<Vec<_>>();
+            Run::try_from(CliRun::try_parse_from(std::iter::once("run").chain(args)).unwrap())
+                .unwrap()
+        }
+
+        /// A report of a claimed project with no linked repository.
+        fn unlinked_report() -> JsonReport {
+            const UUID: &str = "4f6d1b2a-3c5e-4d7f-8a9b-0c1d2e3f4a5b";
+            const TIME: &str = "2026-01-01T00:00:00Z";
+            serde_json::from_value(serde_json::json!({
+                "uuid": UUID,
+                "project": {
+                    "uuid": UUID,
+                    "organization": UUID,
+                    "name": "Project",
+                    "slug": "project",
+                    "github_link": "unlinked",
+                    "visibility": "public",
+                    "bmf_version": 0,
+                    "created": TIME,
+                    "modified": TIME,
+                    "claimed": TIME
+                },
+                "branch": {
+                    "uuid": UUID,
+                    "project": UUID,
+                    "name": "main",
+                    "slug": "main",
+                    "head": { "uuid": UUID, "version": { "number": 1 }, "created": TIME },
+                    "created": TIME,
+                    "modified": TIME
+                },
+                "testbed": {
+                    "uuid": UUID,
+                    "project": UUID,
+                    "name": "base",
+                    "slug": "base",
+                    "created": TIME,
+                    "modified": TIME
+                },
+                "start_time": TIME,
+                "end_time": TIME,
+                "adapter": "magic",
+                "results": [],
+                "created": TIME
+            }))
+            .unwrap()
+        }
+
+        // Kills a comment that asks to link on GitHub Enterprise Server or on any API but
+        // github.com's, a prefix match on github.com's API URL, a comment that asks outside of a
+        // CI, and a run whose comment never learns its GitHub API.
+        #[test]
+        fn only_github_com_s_api_asks_to_link_in_the_comment() {
+            let github_actions = run(&["--github-actions", "token"]);
+            let no_ci = run(&[]);
+            for (run, api_url, asks) in [
+                (&github_actions, None, true),
+                (&github_actions, Some("https://api.github.com"), true),
+                (&github_actions, Some("https://api.github.com/"), true),
+                (
+                    &github_actions,
+                    Some("https://github.example.com/api/v3"),
+                    false,
+                ),
+                (
+                    &github_actions,
+                    Some("https://api.github.com/api/v3"),
+                    false,
+                ),
+                (&github_actions, Some("http://api.github.com"), false),
+                (&no_ci, None, false),
+            ] {
+                let comment = run.report_comment(
+                    "http://localhost:3000".parse().unwrap(),
+                    unlinked_report(),
+                    false,
+                    api_url,
+                );
+                let html = comment.html(false, None);
+                assert_eq!(html.contains(LINE), asks, "{api_url:?}: {html}");
+                assert!(
+                    comment.human().contains("Link this project to GitHub: "),
+                    "{api_url:?}"
+                );
+            }
         }
     }
 

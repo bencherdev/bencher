@@ -1,4 +1,4 @@
-use bencher_comment::ReportComment;
+use bencher_comment::{GitHubApi, ReportComment};
 #[cfg(feature = "plus")]
 use bencher_json::{JsonNewCallback, ResourceName};
 use bencher_json::{JsonProject, ProjectSlug, ProjectUuid, ReportUuid};
@@ -8,10 +8,8 @@ use crate::parser::run::CliRunCi;
 
 mod github_actions;
 
-#[cfg(feature = "plus")]
 pub(crate) use github_actions::github_api_url;
-#[cfg(feature = "plus")]
-pub use github_actions::mints_for_api_url;
+pub use github_actions::is_github_com_api;
 pub use github_actions::run_attempt_key;
 use github_actions::{CheckRunHandle, GitHubActions, GitHubError};
 
@@ -88,6 +86,18 @@ impl Ci {
     pub fn has_callback_token(&self) -> bool {
         match self {
             Self::GitHubActions(github_actions) => github_actions.callback_token.is_some(),
+        }
+    }
+
+    pub fn github_api(&self, github_api_url: Option<&str>) -> GitHubApi {
+        match self {
+            Self::GitHubActions(_) => {
+                if is_github_com_api(github_api_url) {
+                    GitHubApi::GitHubCom
+                } else {
+                    GitHubApi::Other
+                }
+            },
         }
     }
 

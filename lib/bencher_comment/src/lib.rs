@@ -11,6 +11,7 @@ use bencher_json::{
     JsonReport, MeasureSlug, MetricName, ParameterSet, ProjectSlug, ReportUuid, ResourceName,
     TestbedSlug, ThresholdUuid, Units,
     project::{
+        GitHubLinkStatus,
         alert::AlertStatus,
         boundary::BoundaryLimit,
         report::{JsonReportIteration, JsonReportMeasure, JsonReportResult},
@@ -49,6 +50,7 @@ pub struct ReportComment {
     sub_adapter: SubAdapter,
     source: String,
     pending: bool,
+    github_api: GitHubApi,
 }
 
 pub struct SubAdapter {
@@ -75,6 +77,7 @@ impl ReportComment {
             sub_adapter,
             source,
             pending: false,
+            github_api: GitHubApi::default(),
         }
     }
 
@@ -82,6 +85,14 @@ impl ReportComment {
     #[must_use]
     pub fn with_pending(mut self, pending: bool) -> Self {
         self.pending = pending;
+        self
+    }
+
+    /// The comment asks to link the project to GitHub
+    /// only when it is posted through github.com's API.
+    #[must_use]
+    pub fn with_github_api(mut self, github_api: GitHubApi) -> Self {
+        self.github_api = github_api;
         self
     }
 
@@ -100,6 +111,7 @@ impl ReportComment {
         self.human_results_list(&mut text);
         self.human_alerts_list(&mut text);
         self.human_unclaimed(&mut text);
+        self.human_github_link(&mut text);
         text
     }
 
@@ -178,6 +190,16 @@ impl ReportComment {
         text.push_str(&format!("\n\nClaim this project: {url}"));
     }
 
+    fn human_github_link(&self, text: &mut String) {
+        if let Some(github_link) = self.github_link() {
+            text.push_str(&format!(
+                "\n\n{label}: {url}",
+                label = github_link.label(),
+                url = self.resource_url_human(Resource::Connections),
+            ));
+        }
+    }
+
     pub fn json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(&self.json_report)
     }
@@ -211,6 +233,7 @@ impl ReportComment {
         self.html_report_table(html_mut);
         self.html_benchmarks(html_mut, require_threshold, truncated);
         self.html_footer(html_mut);
+        self.html_github_link(html_mut);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         html_mut.push_str(tag);
         html
@@ -618,6 +641,28 @@ impl ReportComment {
         ));
     }
 
+    fn html_github_link(&self, html: &mut String) {
+        if self.github_api == GitHubApi::GitHubCom
+            && let Some(github_link) = self.github_link()
+        {
+            html.push_str(&format!(
+                r#"<p><a href="{url}">🔗 {label}</a></p>"#,
+                url = self.resource_url(Resource::Connections),
+                label = github_link.label(),
+            ));
+        }
+    }
+
+    /// Only a claimed project has a Maintainer who could link it.
+    fn github_link(&self) -> Option<GitHubLink> {
+        let project = &self.json_report.project;
+        match project.claimed.and(project.github_link)? {
+            GitHubLinkStatus::Unlinked => Some(GitHubLink::Link),
+            GitHubLinkStatus::Disconnected => Some(GitHubLink::Reconnect),
+            GitHubLinkStatus::Connected => None,
+        }
+    }
+
     // The Bencher tag allows us to easily check whether a comment is a Bencher report when updating
     pub fn bencher_tag(&self, id: Option<&str>) -> String {
         tag::job_tag(&self.json_report.project.slug, &self.tag_id(id))
@@ -711,8 +756,8 @@ impl ReportComment {
     fn resource_url_inner(&self, resource: Resource, utm: bool) -> Url {
         let url = self.console_url.clone();
         let mut path = format!("/console/projects/{project}", project = self.project_slug);
-        if let Some((resource_name, id)) = resource.into_suffix() {
-            path.push_str(&format!("/{resource_name}/{id}"));
+        if let Some(suffix) = resource.into_suffix() {
+            path.push_str(&format!("/{suffix}"));
         }
         let mut url = url.join(&path).unwrap_or(url);
 
@@ -803,6 +848,7 @@ impl ReportComment {
 
 enum Resource {
     Project,
+    Connections,
     Report(ReportUuid),
     Branch(BranchSlug),
     Testbed(TestbedSlug),
@@ -813,16 +859,42 @@ enum Resource {
 }
 
 impl Resource {
-    fn into_suffix(self) -> Option<(&'static str, String)> {
+    fn into_suffix(self) -> Option<String> {
         match self {
             Self::Project => None,
-            Self::Report(uuid) => Some(("reports", uuid.to_string())),
-            Self::Branch(slug) => Some(("branches", slug.to_string())),
-            Self::Testbed(slug) => Some(("testbeds", slug.to_string())),
-            Self::Benchmark(slug) => Some(("benchmarks", slug.to_string())),
-            Self::Measure(slug) => Some(("measures", slug.to_string())),
-            Self::Threshold(uuid) => Some(("thresholds", uuid.to_string())),
-            Self::Alert(uuid) => Some(("alerts", uuid.to_string())),
+            Self::Connections => Some("connections".to_owned()),
+            Self::Report(uuid) => Some(format!("reports/{uuid}")),
+            Self::Branch(slug) => Some(format!("branches/{slug}")),
+            Self::Testbed(slug) => Some(format!("testbeds/{slug}")),
+            Self::Benchmark(slug) => Some(format!("benchmarks/{slug}")),
+            Self::Measure(slug) => Some(format!("measures/{slug}")),
+            Self::Threshold(uuid) => Some(format!("thresholds/{uuid}")),
+            Self::Alert(uuid) => Some(format!("alerts/{uuid}")),
+        }
+    }
+}
+
+/// The GitHub API that the comment is posted through,
+/// since the Bencher Cloud GitHub App links repositories on github.com alone.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum GitHubApi {
+    GitHubCom,
+    #[default]
+    Other,
+}
+
+/// What a claimed project's comment asks of its link to GitHub.
+#[derive(Clone, Copy)]
+enum GitHubLink {
+    Link,
+    Reconnect,
+}
+
+impl GitHubLink {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Link => "Link this project to GitHub",
+            Self::Reconnect => "Reconnect this project to GitHub",
         }
     }
 }
@@ -1176,7 +1248,7 @@ mod tests {
     use bencher_json::{
         DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonReportCounts, JsonTestbed,
         project::{
-            Visibility,
+            GitHubLinkStatus, Visibility,
             boundary::BoundaryLimit,
             report::{Adapter, JsonReportResults},
         },
@@ -1184,7 +1256,10 @@ mod tests {
     use ordered_float::OrderedFloat;
     use url::Url;
 
-    use crate::{ReportComment, SubAdapter, percent_difference, percent_of, value_cell};
+    use crate::{
+        GitHubApi, ReportComment, SubAdapter, TRUNCATED_NOTICE, percent_difference, percent_of,
+        value_cell,
+    };
 
     const CONSOLE_URL: &str = "https://bencher.example.com";
 
@@ -1997,9 +2072,12 @@ mod tests {
     #[cfg(feature = "plus")]
     #[test]
     fn cloud_links_keep_utm() {
-        let mut report = json_report(Visibility::Public);
+        let mut report = with_github_link(
+            json_report(Visibility::Public),
+            Some(GitHubLinkStatus::Unlinked),
+        );
         report.results = Some(value_less_results());
-        let html = ReportComment::new(
+        let comment = ReportComment::new(
             "https://bencher.dev".parse().unwrap(),
             report,
             SubAdapter {
@@ -2008,7 +2086,8 @@ mod tests {
             },
             "cli".to_owned(),
         )
-        .html(false, None);
+        .with_github_api(GitHubApi::GitHubCom);
+        let html = comment.html(false, None);
         let utm = "?utm_medium=referral&utm_source=cli&utm_content=comment&utm_campaign=pr%2Bcomments&utm_term=my-project";
         assert!(
             html.contains(&format!(
@@ -2022,6 +2101,135 @@ mod tests {
             )),
             "{html}"
         );
+        assert!(
+            html.contains(&format!(
+                r#"<p><a href="https://bencher.dev/console/projects/my-project/connections{utm}">🔗 Link this project to GitHub</a></p>"#
+            )),
+            "{html}"
+        );
+        // The run output's links carry no `utm_*` parameters.
+        let human = comment.human();
+        assert!(
+            human.ends_with(
+                "\n\nLink this project to GitHub: https://bencher.dev/console/projects/my-project/connections"
+            ),
+            "{human}"
+        );
+    }
+
+    pub(crate) const CONNECTIONS_URL: &str =
+        "https://bencher.example.com/console/projects/my-project/connections";
+
+    pub(crate) fn with_github_link(
+        mut report: JsonReport,
+        github_link: Option<GitHubLinkStatus>,
+    ) -> JsonReport {
+        report.project.github_link = github_link;
+        report
+    }
+
+    /// The comment's line that asks to link the project to GitHub.
+    pub(crate) fn github_link_line(label: &str) -> String {
+        format!(r#"<p><a href="{CONNECTIONS_URL}">🔗 {label}</a></p>"#)
+    }
+
+    // Kills a line for a connected project or an absent status, the labels swapped,
+    // a link to anything but the Connections settings,
+    // and a run output line that waits on the comment's GitHub API.
+    #[test]
+    fn github_link_line_by_status() {
+        for (github_link, label) in [
+            (
+                Some(GitHubLinkStatus::Unlinked),
+                Some("Link this project to GitHub"),
+            ),
+            (
+                Some(GitHubLinkStatus::Disconnected),
+                Some("Reconnect this project to GitHub"),
+            ),
+            (Some(GitHubLinkStatus::Connected), None),
+            (None, None),
+        ] {
+            let report = with_github_link(json_report(Visibility::Public), github_link);
+            for github_api in [GitHubApi::GitHubCom, GitHubApi::Other] {
+                let comment = report_comment_for(report.clone()).with_github_api(github_api);
+                let html = comment.html(false, None);
+                let human = comment.human();
+                if let Some(label) = label {
+                    assert!(
+                        human.ends_with(&format!("\n\n{label}: {CONNECTIONS_URL}")),
+                        "{github_link:?} {github_api:?}: {human}"
+                    );
+                } else {
+                    assert!(
+                        !human.contains("to GitHub"),
+                        "{github_link:?} {github_api:?}: {human}"
+                    );
+                }
+                if let (Some(label), GitHubApi::GitHubCom) = (label, github_api) {
+                    assert!(
+                        html.contains(&github_link_line(label)),
+                        "{github_link:?}: {html}"
+                    );
+                } else {
+                    assert!(
+                        !html.contains("to GitHub"),
+                        "{github_link:?} {github_api:?}: {html}"
+                    );
+                }
+            }
+        }
+    }
+
+    // Kills a comment that asks off github.com's API by default, since only the caller knows the API.
+    #[test]
+    fn github_link_line_off_by_default() {
+        let report = with_github_link(
+            json_report(Visibility::Public),
+            Some(GitHubLinkStatus::Unlinked),
+        );
+        let html = report_comment_for(report).html(false, None);
+        assert!(!html.contains("to GitHub"), "{html}");
+    }
+
+    // Kills a link line that skips the claim check, in the comment or in the run output.
+    #[test]
+    fn unclaimed_project_asks_for_a_claim_only() {
+        for github_link in [GitHubLinkStatus::Unlinked, GitHubLinkStatus::Disconnected] {
+            let mut report = with_github_link(json_report(Visibility::Public), Some(github_link));
+            report.project.claimed = None;
+            let comment = report_comment_for(report).with_github_api(GitHubApi::GitHubCom);
+            let html = comment.html(false, None);
+            assert!(!html.contains("to GitHub"), "{html}");
+            assert!(!html.contains("Claim this project"), "{html}");
+            let human = comment.human();
+            assert!(
+                human.ends_with(
+                    "\n\nClaim this project: https://bencher.example.com/auth/signup?claim=22222222-2222-2222-2222-222222222222"
+                ),
+                "{human}"
+            );
+            assert!(!human.contains("to GitHub"), "{human}");
+        }
+    }
+
+    // Kills a length budget that leaves the line out, so the full comment is kept over the limit,
+    // and a truncated comment that drops the line.
+    #[test]
+    fn truncated_comment_ends_with_the_github_link_line() {
+        let report = with_github_link(named_alert_report(), Some(GitHubLinkStatus::Unlinked));
+        let comment = report_comment_for(report).with_github_api(GitHubApi::GitHubCom);
+        let tag = comment.bencher_tag(None);
+        let line = github_link_line("Link this project to GitHub");
+        let full = comment.html_with_max_length(false, None, usize::MAX);
+        let truncated = comment.html_with_max_length(false, None, full.len() - 1);
+        assert!(!full.contains(TRUNCATED_NOTICE), "{full}");
+        assert!(truncated.contains(TRUNCATED_NOTICE), "{truncated}");
+        for html in [full, truncated] {
+            assert_eq!(html.matches("this project to GitHub").count(), 1, "{html}");
+            let body = html.strip_suffix(&tag).unwrap();
+            assert!(body.ends_with(&line), "{html}");
+        }
     }
 
     #[test]

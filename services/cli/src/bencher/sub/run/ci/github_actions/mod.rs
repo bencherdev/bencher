@@ -44,7 +44,6 @@ const PULL_REQUEST_TARGET: &str = "pull_request_target";
 #[cfg(feature = "plus")]
 const REPOSITORY_DISPATCH: &str = "repository_dispatch";
 
-#[cfg(feature = "plus")]
 const DEFAULT_GITHUB_API_URL: &str = "https://api.github.com";
 // The `repository_dispatch` that a detached run's callback sends, and that its attach reads.
 // https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#create-a-repository-dispatch-event
@@ -1232,10 +1231,10 @@ impl DispatchPayload {
     }
 }
 
-/// Whether Bencher can mint the token of a dispatch composed with `api_url`, the `GITHUB_API_URL`
-/// that `dispatch_callback` reads: only for github.com's API, which an unset one defaults to.
-#[cfg(feature = "plus")]
-pub fn mints_for_api_url(api_url: Option<&str>) -> bool {
+/// Whether `api_url`, the `GITHUB_API_URL` that both the dispatch and the comment use, is
+/// github.com's API, which an unset one defaults to: the only API where the Bencher Cloud GitHub
+/// App links a repository and mints the token of a dispatch.
+pub fn is_github_com_api(api_url: Option<&str>) -> bool {
     api_url.is_none_or(|api_url| api_url.trim_end_matches('/') == DEFAULT_GITHUB_API_URL)
 }
 

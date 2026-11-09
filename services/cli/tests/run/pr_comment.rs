@@ -1187,3 +1187,39 @@ fn the_own_record_is_github_s_check() {
     assert_eq!(records.len(), 1, "{body}");
     assert_eq!(records[0].name, "Bencher Report (normalized)", "{body}");
 }
+
+// Kills a comment, check summary, or job summary that asks to link the project to GitHub off
+// github.com's API, and a run output that waits on the GitHub API to ask.
+#[test]
+fn off_github_com_only_the_run_output_asks_to_link() {
+    let mut unlinked = report(UUID, "base");
+    unlinked["project"]["claimed"] = "2026-01-01T00:00:00Z".into();
+    unlinked["project"]["github_link"] = "unlinked".into();
+    let run = attach_run(
+        Scene {
+            reports: vec![unlinked],
+            ..Scene::default()
+        },
+        &[],
+    );
+    run.assert_success();
+
+    let (_, body) = only_comment(&run);
+    let check = run.body("PATCH", &format!("{CHECK_RUNS}/{NEW_CHECK}"));
+    let summary = run.step_summary.clone().unwrap();
+    for html in [
+        body,
+        check["output"]["summary"].as_str().unwrap(),
+        summary.as_str(),
+    ] {
+        assert!(html.contains("Bencher Report"), "{html}");
+        assert!(!html.contains("to GitHub"), "{html}");
+    }
+    assert!(
+        run.stdout().contains(
+            "\n\nLink this project to GitHub: http://localhost:3000/console/projects/project/connections"
+        ),
+        "{}",
+        run.stdout()
+    );
+}
