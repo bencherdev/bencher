@@ -25,6 +25,7 @@ use bencher_schema::{
         project::{
             QueryProject,
             branch::{head::HeadId, version::VersionId},
+            github_link::GitHubLink,
             report::{
                 NewRunReport, QueryReport, ReportId, ReportMode,
                 report_benchmark::ReportBenchmarkId,
@@ -155,10 +156,23 @@ pub async fn get_ls_inner(
     } else {
         ReportMode::Collapsed
     };
+    // Every report is the project's, so one read of its link serves them all.
+    let github_link = GitHubLink::get(
+        actor_conn!(context, api_actor),
+        context.github_linking(),
+        query_project.id,
+    )?;
     // Drop connection lock before iterating
     let json_reports = reports
         .into_iter()
-        .map(|report| async { report.into_json(log, actor_conn!(context, api_actor), mode) })
+        .map(|report| async {
+            report.into_json_with_github_link(
+                log,
+                actor_conn!(context, api_actor),
+                mode,
+                &github_link,
+            )
+        })
         .collect::<FuturesOrdered<_>>()
         .collect::<Vec<_>>()
         .await
@@ -449,7 +463,7 @@ pub async fn get_one_inner(
                 Report,
                 (&query_project, path_params.report)
             ))?
-            .into_json(log, conn, ReportMode::Full)
+            .into_json(log, conn, ReportMode::Full, context.github_linking())
     })
 }
 

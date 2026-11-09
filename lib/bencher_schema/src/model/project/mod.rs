@@ -37,9 +37,11 @@ use crate::{
 };
 
 use super::organization::OrganizationId;
+use github_link::{GitHubLink, GitHubLinking};
 
 pub mod benchmark;
 pub mod branch;
+pub mod github_link;
 pub mod key;
 #[cfg(feature = "plus")]
 pub mod linked_repository;
@@ -589,15 +591,31 @@ impl QueryProject {
         Ok(())
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonProject, HttpError> {
+    pub fn into_json(
+        self,
+        conn: &mut DbConnection,
+        github: GitHubLinking,
+    ) -> Result<JsonProject, HttpError> {
         let query_organization = self.organization(conn)?;
-        Ok(self.into_json_for_organization(conn, &query_organization))
+        self.into_json_for_organization(conn, &query_organization, github)
     }
 
     pub fn into_json_for_organization(
         self,
         conn: &mut DbConnection,
         query_organization: &QueryOrganization,
+        github: GitHubLinking,
+    ) -> Result<JsonProject, HttpError> {
+        let github_link = GitHubLink::get(conn, github, self.id)?;
+        Ok(self.into_json_with_github_link(conn, query_organization, &github_link))
+    }
+
+    /// The project, with the link to GitHub that the caller has read for it.
+    pub fn into_json_with_github_link(
+        self,
+        conn: &mut DbConnection,
+        query_organization: &QueryOrganization,
+        github_link: &GitHubLink,
     ) -> JsonProject {
         let Self {
             uuid,
@@ -624,6 +642,7 @@ impl QueryProject {
             name,
             slug,
             url,
+            github_link: github_link.status(),
             visibility,
             bmf_version,
             created,

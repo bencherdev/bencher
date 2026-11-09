@@ -20,7 +20,10 @@ use bencher_api_tests::{
 };
 use bencher_json::{
     BENCHER_API_VERSION, Clock, JobStatus, JobUuid, JsonReport,
-    project::github::{LinkedRepositoryReason, LinkedRepositoryStatus},
+    project::{
+        GitHubLinkStatus,
+        github::{LinkedRepositoryReason, LinkedRepositoryStatus},
+    },
     runner::JobCallbackState,
 };
 use bencher_schema::{
@@ -287,6 +290,96 @@ async fn a_dispatch_with_its_own_token_is_sent_as_stored_on_a_linked_project() {
         settled(&setup, job),
         (JobCallbackState::Delivered, 1, Some(200))
     );
+}
+
+// Kills a callback that builds its report as a server without the app would, so the project in
+// it carries no link status, and a report that names the linked repository.
+#[tokio::test]
+async fn a_dispatch_sends_the_report_with_the_link_status() {
+    let setup = setup(Vec::new()).await;
+    setup.server.link_repository(
+        &setup.project,
+        &setup.user,
+        INSTALLATION,
+        REPOSITORY,
+        FULL_NAME,
+    );
+    let mut callback = bearer_dispatch();
+    callback["body"]["client_payload"]["report"] = serde_json::json!("{{ report }}");
+    let job = submit_ok(&setup, &callback).await;
+
+    fire(&setup, job).await;
+
+    let [request] = setup
+        .server
+        .callback_requests()
+        .try_into()
+        .ok()
+        .expect("one dispatch");
+    let body: serde_json::Value =
+        serde_json::from_str(&request.body).expect("Invalid dispatch body");
+    let report: JsonReport =
+        serde_json::from_value(body["client_payload"]["report"].clone()).expect("No report");
+    assert_eq!(
+        report.project.github_link,
+        Some(GitHubLinkStatus::Connected)
+    );
+    assert!(!request.body.contains(FULL_NAME), "{}", request.body);
+}
+
+// Kills a report that a run, or its replay by idempotency key, returns as a server without the
+// app would build it.
+#[tokio::test]
+async fn a_run_and_its_replay_return_the_link_status() {
+    let setup = setup(Vec::new()).await;
+    setup.server.link_repository(
+        &setup.project,
+        &setup.user,
+        INSTALLATION,
+        REPOSITORY,
+        FULL_NAME,
+    );
+    let slug: &str = setup.project.slug.as_ref();
+    let run = serde_json::json!({
+        "project": slug,
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
+        "branch": "main",
+        "testbed": "localhost",
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [],
+    });
+
+    let mut reports = Vec::new();
+    for _ in 0..2 {
+        let response = setup
+            .server
+            .client
+            .post(setup.server.api_url("/v0/run"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&setup.user.token),
+            )
+            .json(&run)
+            .send()
+            .await
+            .expect("Request failed");
+        let status = response.status();
+        let body = response.text().await.expect("Failed to read the body");
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        let report: JsonReport = serde_json::from_str(&body).expect("Invalid report");
+        reports.push(report);
+    }
+
+    let [run, replay]: [JsonReport; 2] = reports.try_into().expect("two reports");
+    assert_eq!(run.uuid, replay.uuid);
+    for (name, report) in [("run", run), ("replay", replay)] {
+        assert_eq!(
+            report.project.github_link,
+            Some(GitHubLinkStatus::Connected),
+            "{name}"
+        );
+    }
 }
 
 // A refusal that says the repository left its installation, and a lookup that finds the one that

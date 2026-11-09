@@ -38,6 +38,7 @@ use crate::{
     model::{
         project::{
             ProjectId,
+            github_link::GitHubLinking,
             linked_repository::QueryLinkedRepository,
             report::{QueryReport, ReportMode},
         },
@@ -329,7 +330,8 @@ impl Delivery {
         else {
             return Err(Unprepared::Shutdown);
         };
-        let Ok(report) = report.into_json(log, &mut conn, ReportMode::Full) else {
+        let github = GitHubLinking::new(self.github_app.as_deref());
+        let Ok(report) = report.into_json(log, &mut conn, ReportMode::Full, github) else {
             return Err(Unprepared::Report);
         };
         Ok(report)

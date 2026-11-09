@@ -183,7 +183,10 @@ mod tests {
     use crate::{
         context::DbConnection,
         model::{
-            project::report::{QueryReport, ReportMode},
+            project::{
+                github_link::GitHubLinking,
+                report::{QueryReport, ReportMode},
+            },
             runner::{InsertJobCallback, JobId, QueryJob, QueryJobCallback},
         },
         run_migrations, schema,
@@ -469,8 +472,16 @@ mod tests {
                 .find(self.fixture.report_id)
                 .first(conn)
                 .unwrap();
-            serde_json::to_value(report.into_json(&self.log, conn, ReportMode::Full).unwrap())
-                .unwrap()
+            // The harness's callbacks have no GitHub App.
+            let report = report
+                .into_json(
+                    &self.log,
+                    conn,
+                    ReportMode::Full,
+                    GitHubLinking::Unavailable,
+                )
+                .unwrap();
+            serde_json::to_value(report).unwrap()
         }
 
         /// Delete the fixture's testbed behind its report's back, so the report no longer builds.

@@ -197,7 +197,7 @@ pub async fn get_inner(
     .await?;
 
     Ok(JsonPerf {
-        project: project.into_json(actor_conn!(context, api_actor))?,
+        project: project.into_json(actor_conn!(context, api_actor), context.github_linking())?,
         start_time,
         end_time,
         results,

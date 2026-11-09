@@ -50,6 +50,7 @@ use crate::{
             ProjectId, QueryProject,
             benchmark::QueryBenchmark,
             branch::version::{InsertVersion, QueryVersion},
+            github_link::{GitHubLink, GitHubLinking},
             key::{ProjectKeyId, QueryProjectKey},
             measure::QueryMeasure,
             metric::{QueryMetric, bound_join, metric_lower_value, metric_upper_value},
@@ -182,7 +183,12 @@ impl QueryReport {
         if let Some(existing) =
             Self::check_idempotency(actor_conn!(context, api_actor), project_id, idempotency_key)?
         {
-            return existing.into_json(log, actor_conn!(context, api_actor), ReportMode::Full);
+            return existing.into_json(
+                log,
+                actor_conn!(context, api_actor),
+                ReportMode::Full,
+                context.github_linking(),
+            );
         }
 
         // Checked before the report creates anything, so a refused payload leaves nothing behind.
@@ -471,7 +477,12 @@ impl QueryReport {
             );
         }
 
-        self.into_json(log, actor_conn!(context, api_actor), ReportMode::Full)
+        self.into_json(
+            log,
+            actor_conn!(context, api_actor),
+            ReportMode::Full,
+            context.github_linking(),
+        )
     }
 
     pub fn into_json(
@@ -479,6 +490,19 @@ impl QueryReport {
         log: &Logger,
         conn: &mut DbConnection,
         mode: ReportMode,
+        github: GitHubLinking,
+    ) -> Result<JsonReport, HttpError> {
+        let github_link = GitHubLink::get(conn, github, self.project_id)?;
+        self.into_json_with_github_link(log, conn, mode, &github_link)
+    }
+
+    /// The report, with the link to GitHub that the caller has read for its project.
+    pub fn into_json_with_github_link(
+        self,
+        log: &Logger,
+        conn: &mut DbConnection,
+        mode: ReportMode,
+        github_link: &GitHubLink,
     ) -> Result<JsonReport, HttpError> {
         let Self {
             id,
@@ -537,7 +561,9 @@ impl QueryReport {
         #[cfg(feature = "plus")]
         let job = get_report_job(conn, id)?;
 
-        let project = query_project.into_json(conn)?;
+        let query_organization = query_project.organization(conn)?;
+        let project =
+            query_project.into_json_with_github_link(conn, &query_organization, github_link);
         let adapter = adapter.normalize();
         Ok(JsonReport {
             uuid,
@@ -1379,8 +1405,8 @@ mod tests {
     };
 
     use super::{
-        QueryReport, ReportId, ReportMode, ResultsQuery, get_report_counts, report_counts,
-        report_results_query,
+        GitHubLinking, QueryReport, ReportId, ReportMode, ResultsQuery, get_report_counts,
+        report_counts, report_results_query,
     };
     use crate::macros::sql::last_insert_rowid;
     use crate::model::project::{
@@ -1813,14 +1839,24 @@ mod tests {
         };
 
         let full = load_report(&mut conn)
-            .into_json(&log, &mut conn, ReportMode::Full)
+            .into_json(
+                &log,
+                &mut conn,
+                ReportMode::Full,
+                GitHubLinking::Unavailable,
+            )
             .expect("Failed to convert full report");
         let results = full.results.as_ref().expect("Full report missing results");
         let alerts = full.alerts.as_ref().expect("Full report missing alerts");
         assert_eq!(full.counts, report_counts(results, alerts));
 
         let collapsed = load_report(&mut conn)
-            .into_json(&log, &mut conn, ReportMode::Collapsed)
+            .into_json(
+                &log,
+                &mut conn,
+                ReportMode::Collapsed,
+                GitHubLinking::Unavailable,
+            )
             .expect("Failed to convert collapsed report");
         assert!(collapsed.results.is_none());
         assert!(collapsed.alerts.is_none());
@@ -1908,10 +1944,20 @@ mod tests {
         };
 
         let full = load_report(&mut conn)
-            .into_json(&log, &mut conn, ReportMode::Full)
+            .into_json(
+                &log,
+                &mut conn,
+                ReportMode::Full,
+                GitHubLinking::Unavailable,
+            )
             .expect("Failed to convert full report");
         let collapsed = load_report(&mut conn)
-            .into_json(&log, &mut conn, ReportMode::Collapsed)
+            .into_json(
+                &log,
+                &mut conn,
+                ReportMode::Collapsed,
+                GitHubLinking::Unavailable,
+            )
             .expect("Failed to convert collapsed report");
 
         let returned = full

@@ -88,7 +88,7 @@ pub async fn get_one_inner(
             &path_params.project,
             api_actor,
         )?
-        .into_json(conn)
+        .into_json(conn, context.github_linking())
     })
 }
 
@@ -188,7 +188,7 @@ async fn patch_inner(
         context.update_index(log, &new_query_project).await;
     }
 
-    new_query_project.into_json(auth_conn!(context))
+    new_query_project.into_json(auth_conn!(context), context.github_linking())
 }
 
 /// Delete a project

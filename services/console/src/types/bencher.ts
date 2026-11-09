@@ -1288,6 +1288,12 @@ export interface JsonConsolePlots {
 	plots: JsonConsolePlot[];
 }
 
+export enum GitHubLinkStatus {
+	Unlinked = "unlinked",
+	Connected = "connected",
+	Disconnected = "disconnected",
+}
+
 export enum Visibility {
 	Public = "public",
 	Private = "private",
@@ -1299,6 +1305,8 @@ export interface JsonProject {
 	name: ResourceName;
 	slug: Slug;
 	url?: Url;
+	/** Whether the project has a linked GitHub repository, absent when the server cannot link one. */
+	github_link?: GitHubLinkStatus;
 	visibility: Visibility;
 	bmf_version: BmfVersion;
 	created: string;
@@ -1308,6 +1316,8 @@ export interface JsonProject {
 
 export interface JsonConsoleProject {
 	project: JsonProject;
+	/** The full name of the project's linked GitHub repository, connected or disconnected. */
+	github_repository?: string;
 	organization: JsonConsoleOrganization;
 	/** What the signed in reader may do with the project. */
 	permissions: JsonConsolePermissions;

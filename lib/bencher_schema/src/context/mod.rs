@@ -19,6 +19,7 @@ use url::Url;
 
 #[cfg(feature = "plus")]
 use crate::model::project::QueryProject;
+use crate::model::project::github_link::GitHubLinking;
 
 #[cfg(feature = "plus")]
 mod callbacks;
@@ -206,6 +207,16 @@ macro_rules! write_transaction {
 }
 
 impl ApiContext {
+    #[cfg(feature = "plus")]
+    pub fn github_linking(&self) -> GitHubLinking {
+        GitHubLinking::new(self.github_app.as_deref())
+    }
+
+    #[cfg(not(feature = "plus"))]
+    pub fn github_linking(&self) -> GitHubLinking {
+        GitHubLinking::Unavailable
+    }
+
     #[cfg(feature = "plus")]
     pub fn biller(&self) -> Result<&Biller, HttpError> {
         self.biller.as_ref().ok_or_else(|| {

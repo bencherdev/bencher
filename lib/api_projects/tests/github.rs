@@ -14,15 +14,19 @@ use bencher_api_tests::{
         GITHUB_APP_SLUG, GITHUB_CLIENT_SECRET, GITHUB_WEBHOOK_SECRET, GitHubServer, Received,
         github_signature,
     },
-    helpers::grant_project_role,
+    helpers::{create_test_report, get_project_id, grant_project_role},
 };
 use std::sync::Arc;
 
 use bencher_json::{
-    Clock, DateTime, GitHubInstallationId, GitHubInstallationPermission, GitHubRepositoryId, Jwt,
-    project::github::{
-        JsonGitHubLinkUrls, JsonGitHubRepositories, JsonLinkedRepository, JsonProjectGitHub,
-        LinkedRepositoryReason, LinkedRepositoryStatus,
+    BenchmarkUuid, BranchUuid, Clock, DateTime, GitHubInstallationId, GitHubInstallationPermission,
+    GitHubRepositoryId, Jwt, MeasureUuid, ReportUuid, TestbedUuid,
+    project::{
+        GitHubLinkStatus, Visibility,
+        github::{
+            JsonGitHubLinkUrls, JsonGitHubRepositories, JsonLinkedRepository, JsonProjectGitHub,
+            LinkedRepositoryReason, LinkedRepositoryStatus,
+        },
     },
 };
 use bencher_rbac::project::Role;
@@ -416,6 +420,72 @@ async fn a_put_replaces_the_link_and_a_delete_removes_it() {
     assert!(got.linked_repository.is_none());
 }
 
+// Kills a `PUT` that leaves a project with no URL without one, overwrites a URL already set, or
+// bumps `modified` for a URL it left alone, and a `DELETE` that clears the URL.
+#[tokio::test]
+async fn a_put_sets_a_missing_project_url_and_a_delete_keeps_it() {
+    let Setup {
+        server,
+        leader,
+        org,
+        project,
+        ..
+    } = setup(Vec::new()).await;
+    let homepage = server
+        .create_project(&leader, &org, "Homepage Project")
+        .await;
+    let set_url = "https://example.com/homepage";
+    let mut conn = server.db_conn();
+    for (project, url) in [(&project, None), (&homepage, Some(set_url))] {
+        diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+            .set((
+                schema::project::url.eq(url),
+                schema::project::modified.eq(at(NOW - TTL)),
+            ))
+            .execute(&mut conn)
+            .expect("Failed to reset the project");
+    }
+
+    for (project, repository) in [(&project, REPOSITORY), (&homepage, 4097)] {
+        link(
+            &server,
+            project,
+            &leader,
+            &grant(&server, &leader, project, at(NOW), INSTALLATION, repository),
+        )
+        .await;
+    }
+
+    let github_url = format!("https://github.com/octo-cat/repo-{REPOSITORY}");
+    assert_eq!(
+        url_and_modified(&server, &project),
+        (Some(github_url.clone()), at(NOW))
+    );
+    assert_eq!(
+        url_and_modified(&server, &homepage),
+        (Some(set_url.to_owned()), at(NOW - TTL))
+    );
+
+    // A second link keeps the URL the first one set.
+    link(
+        &server,
+        &project,
+        &leader,
+        &grant(&server, &leader, &project, at(NOW), INSTALLATION, 4098),
+    )
+    .await;
+    let response = request(&server, Method::DELETE, &github_path(&project, ""), &leader)
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert_eq!(
+        url_and_modified(&server, &project),
+        (Some(github_url), at(NOW))
+    );
+}
+
 // Kills a `PUT` that skips the grant's project, its expiry, or its user, any of which lets a
 // caller link a repository that their own GitHub token never showed they can push to, and a
 // refusal that repeats the grant.
@@ -560,6 +630,284 @@ async fn a_server_without_the_app_refuses_links_and_ignores_deliveries() {
     assert_eq!(response.status(), StatusCode::ACCEPTED);
     let link = stored(&server, &project).expect("No link");
     assert_eq!(link.status, LinkedRepositoryStatus::Connected);
+}
+
+// Kills a status or a full name served by a server that cannot link, so no surface ever asks for a
+// link it cannot make.
+#[tokio::test]
+async fn a_server_without_the_app_serves_no_link_status() {
+    let server = TestServer::new().await;
+    server.signup("Admin User", "admin@example.com").await;
+    let leader = server.signup("Leader User", "leader@example.com").await;
+    let org = server.create_org(&leader, "GitHub Org").await;
+    let project = server.create_project(&leader, &org, "GitHub Project").await;
+    insert_link(&server, &project, &leader);
+    let report = report(&server, &project);
+
+    let views = views(&server, &org, &project, report, &leader).await;
+
+    for (path, json) in views.projects() {
+        assert!(json.get("github_link").is_none(), "{path}: {json}");
+    }
+    assert!(
+        views.console.get("github_repository").is_none(),
+        "{}",
+        views.console
+    );
+}
+
+// Kills a status that ignores the link, calls no link unlinked, or reads a disconnected link as
+// connected, on any path that serves the project, and a project or report that carries the
+// repository's full name.
+#[tokio::test]
+async fn every_path_serves_the_project_with_its_link_status() {
+    let Setup {
+        server,
+        leader,
+        org,
+        project,
+        ..
+    } = setup(Vec::new()).await;
+    let report = report(&server, &project);
+    // A URL of its own, so a link leaves the repository's name out of the project.
+    diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+        .set(schema::project::url.eq("https://example.com/homepage"))
+        .execute(&mut server.db_conn())
+        .expect("Failed to set the project URL");
+
+    assert_link_status(
+        &server,
+        &org,
+        &project,
+        report,
+        &leader,
+        GitHubLinkStatus::Unlinked,
+    )
+    .await;
+    link(
+        &server,
+        &project,
+        &leader,
+        &grant(
+            &server,
+            &leader,
+            &project,
+            at(NOW),
+            INSTALLATION,
+            REPOSITORY,
+        ),
+    )
+    .await;
+    assert_link_status(
+        &server,
+        &org,
+        &project,
+        report,
+        &leader,
+        GitHubLinkStatus::Connected,
+    )
+    .await;
+    let body = installation_event("deleted", INSTALLATION, None);
+    let response = server
+        .github_webhook("installation", Some(&github_signature(&body)), &body)
+        .await;
+    assert_eq!(response.status(), StatusCode::ACCEPTED);
+    assert_link_status(
+        &server,
+        &org,
+        &project,
+        report,
+        &leader,
+        GitHubLinkStatus::Disconnected,
+    )
+    .await;
+}
+
+/// Every path serves the project with `expected`, and neither the project nor its report names
+/// the repository.
+async fn assert_link_status(
+    server: &TestServer,
+    org: &TestOrg,
+    project: &TestProject,
+    report: ReportUuid,
+    user: &TestUser,
+    expected: GitHubLinkStatus,
+) {
+    let views = views(server, org, project, report, user).await;
+    for (path, json) in views.projects() {
+        let status: Option<GitHubLinkStatus> = json
+            .get("github_link")
+            .map(|status| serde_json::from_value(status.clone()).expect("Invalid status"));
+        assert_eq!(status, Some(expected), "{path}: {json}");
+    }
+    for (path, json) in [("project", &views.project), ("report", &views.report)] {
+        assert!(!json.to_string().contains("octo-cat"), "{path}: {json}");
+    }
+}
+
+// Kills a project that a create, an update, or the perf query returns as a server without the
+// app would build it.
+#[tokio::test]
+async fn every_write_and_the_perf_query_return_the_link_status() {
+    let Setup {
+        server,
+        leader,
+        org,
+        project,
+        ..
+    } = setup(Vec::new()).await;
+    let org_slug: &str = org.slug.as_ref();
+    let slug: &str = project.slug.as_ref();
+
+    let created: serde_json::Value = ok(request(
+        &server,
+        Method::POST,
+        &format!("/v0/organizations/{org_slug}/projects"),
+        &leader,
+    )
+    .json(&serde_json::json!({ "name": "Created Project" })))
+    .await;
+    link(
+        &server,
+        &project,
+        &leader,
+        &grant(
+            &server,
+            &leader,
+            &project,
+            at(NOW),
+            INSTALLATION,
+            REPOSITORY,
+        ),
+    )
+    .await;
+    let updated: serde_json::Value = ok(request(
+        &server,
+        Method::PATCH,
+        &format!("/v0/projects/{slug}"),
+        &leader,
+    )
+    .json(&serde_json::json!({ "name": "Renamed Project" })))
+    .await;
+    let perf: serde_json::Value = ok(request(
+        &server,
+        Method::GET,
+        &format!(
+            "/v0/projects/{slug}/perf?branches={}&testbeds={}&benchmarks={}&measures={}",
+            BranchUuid::new(),
+            TestbedUuid::new(),
+            BenchmarkUuid::new(),
+            MeasureUuid::new(),
+        ),
+        &leader,
+    ))
+    .await;
+
+    for (path, json, expected) in [
+        ("created", &created, "unlinked"),
+        ("updated", &updated, "connected"),
+        ("perf", &perf["project"], "connected"),
+    ] {
+        assert_eq!(
+            json.get("github_link"),
+            Some(&serde_json::json!(expected)),
+            "{path}: {json}"
+        );
+    }
+}
+
+// A failed read of the link is the server's fault, so this kills mapping its error to a 404 that
+// says the project's link does not exist.
+#[tokio::test]
+async fn a_failed_link_read_is_a_server_error() {
+    let Setup {
+        server,
+        leader,
+        project,
+        ..
+    } = setup(Vec::new()).await;
+    let slug: &str = project.slug.as_ref();
+    diesel::sql_query("DROP TABLE linked_repository")
+        .execute(&mut server.db_conn())
+        .expect("Failed to drop the link table");
+
+    for path in [format!("/v0/projects/{slug}"), console_path(&project)] {
+        let response = request(&server, Method::GET, &path, &leader)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(
+            response.status(),
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "{path}"
+        );
+    }
+}
+
+// A public project shows its repository to every signed in reader, so this kills a full name
+// that needs a role, or that a disconnected link hides, and a private project's bootstrap that
+// opens to a reader who is not a member.
+#[tokio::test]
+async fn the_bootstrap_names_the_repository_to_every_reader() {
+    let Setup {
+        server,
+        leader,
+        org,
+        project,
+        ..
+    } = setup(Vec::new()).await;
+    let private = server
+        .create_project(&leader, &org, "Private Project")
+        .await;
+    let reader = server.signup("Reader User", "reader@example.com").await;
+    let full_name = format!("octo-cat/repo-{REPOSITORY}");
+    for project in [&project, &private] {
+        link(
+            &server,
+            project,
+            &leader,
+            &grant(&server, &leader, project, at(NOW), INSTALLATION, REPOSITORY),
+        )
+        .await;
+    }
+    diesel::update(schema::project::table.filter(schema::project::uuid.eq(private.uuid)))
+        .set(schema::project::visibility.eq(Visibility::Private))
+        .execute(&mut server.db_conn())
+        .expect("Failed to make the project private");
+
+    let connected = console(&server, &project, &reader).await;
+    let body = installation_event("deleted", INSTALLATION, None);
+    let response = server
+        .github_webhook("installation", Some(&github_signature(&body)), &body)
+        .await;
+    assert_eq!(response.status(), StatusCode::ACCEPTED);
+    let disconnected = console(&server, &project, &reader).await;
+    let refused = request(&server, Method::GET, &console_path(&private), &reader)
+        .send()
+        .await
+        .expect("Request failed");
+
+    for json in [&connected, &disconnected] {
+        assert_eq!(
+            json.get("github_repository").and_then(|name| name.as_str()),
+            Some(full_name.as_str()),
+            "{json}"
+        );
+    }
+    assert_eq!(
+        disconnected
+            .get("project")
+            .and_then(|project| project.get("github_link")),
+        Some(&serde_json::json!("disconnected"))
+    );
+    assert_eq!(refused.status(), StatusCode::NOT_FOUND);
+    assert_eq!(
+        console(&server, &private, &leader)
+            .await
+            .get("github_repository")
+            .and_then(|name| name.as_str()),
+        Some(full_name.as_str())
+    );
 }
 
 // Kills a webhook that writes before it checks the signature, accepts a delivery with no
@@ -1065,6 +1413,118 @@ async fn assert_refused(
     for credential in [CODE, USER_TOKEN].iter().chain(credentials) {
         assert!(!text.contains(credential), "{credential} in {text}");
     }
+}
+
+/// The project as each path that serves it serves it to `user`.
+struct Views {
+    project: serde_json::Value,
+    listed: serde_json::Value,
+    report: serde_json::Value,
+    reports: serde_json::Value,
+    console: serde_json::Value,
+}
+
+impl Views {
+    /// The project JSON from each path, by the path's name.
+    fn projects(&self) -> [(&'static str, &serde_json::Value); 5] {
+        [
+            ("project", &self.project),
+            ("listed", &self.listed),
+            ("report", report_project(&self.report)),
+            ("reports", report_project(&self.reports)),
+            ("console", console_project(&self.console)),
+        ]
+    }
+}
+
+/// The project on its own, in its organization's list, in `report` on its own and in the
+/// project's list, and in the console bootstrap.
+async fn views(
+    server: &TestServer,
+    org: &TestOrg,
+    project: &TestProject,
+    report: ReportUuid,
+    user: &TestUser,
+) -> Views {
+    let slug: &str = project.slug.as_ref();
+    let org_slug: &str = org.slug.as_ref();
+    let listed: Vec<serde_json::Value> = ok(request(
+        server,
+        Method::GET,
+        &format!("/v0/organizations/{org_slug}/projects"),
+        user,
+    ))
+    .await;
+    let listed = listed
+        .into_iter()
+        .find(|json| json.get("uuid") == Some(&serde_json::json!(project.uuid)))
+        .expect("Project not listed");
+    let reports: Vec<serde_json::Value> = ok(request(
+        server,
+        Method::GET,
+        &format!("/v0/projects/{slug}/reports"),
+        user,
+    ))
+    .await;
+    let reports = reports
+        .into_iter()
+        .find(|json| json.get("uuid") == Some(&serde_json::json!(report)))
+        .expect("Report not listed");
+    Views {
+        project: ok(request(
+            server,
+            Method::GET,
+            &format!("/v0/projects/{slug}"),
+            user,
+        ))
+        .await,
+        listed,
+        report: ok(request(
+            server,
+            Method::GET,
+            &format!("/v0/projects/{slug}/reports/{report}"),
+            user,
+        ))
+        .await,
+        reports,
+        console: console(server, project, user).await,
+    }
+}
+
+async fn console(server: &TestServer, project: &TestProject, user: &TestUser) -> serde_json::Value {
+    ok(request(server, Method::GET, &console_path(project), user)).await
+}
+
+/// A report on `project`, written straight to the database.
+fn report(server: &TestServer, project: &TestProject) -> ReportUuid {
+    let report_id = create_test_report(server, get_project_id(server, project.slug.as_ref()));
+    schema::report::table
+        .filter(schema::report::id.eq(report_id))
+        .select(schema::report::uuid)
+        .first(&mut server.db_conn())
+        .expect("No report")
+}
+
+fn console_path(project: &TestProject) -> String {
+    let project: &str = project.slug.as_ref();
+    format!("/v0/console/projects/{project}")
+}
+
+fn report_project(report: &serde_json::Value) -> &serde_json::Value {
+    report.get("project").expect("No project in the report")
+}
+
+fn console_project(console: &serde_json::Value) -> &serde_json::Value {
+    console.get("project").expect("No project in the bootstrap")
+}
+
+/// The project's URL and when it was last modified, as stored.
+fn url_and_modified(server: &TestServer, project: &TestProject) -> (Option<String>, DateTime) {
+    schema::project::table
+        .filter(schema::project::uuid.eq(project.uuid))
+        .select((schema::project::url, schema::project::modified))
+        .first(&mut server.db_conn())
+        .expect("No project")
 }
 
 fn github_path(project: &TestProject, rest: &str) -> String {

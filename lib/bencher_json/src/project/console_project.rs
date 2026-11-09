@@ -1,5 +1,7 @@
 //! What the console's shell shows for a project, served in one request.
 
+#[cfg(feature = "plus")]
+use bencher_valid::GitHubRepositoryName;
 use bencher_valid::ResourceName;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -12,6 +14,10 @@ use crate::{JsonProject, OrganizationSlug, OrganizationUuid};
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonConsoleProject {
     pub project: JsonProject,
+    /// The full name of the project's linked GitHub repository, connected or disconnected.
+    #[cfg(feature = "plus")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub github_repository: Option<GitHubRepositoryName>,
     pub organization: JsonConsoleOrganization,
     /// What the signed in reader may do with the project.
     pub permissions: JsonConsolePermissions,
