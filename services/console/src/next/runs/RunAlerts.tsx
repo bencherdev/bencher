@@ -6,6 +6,7 @@ import type { Settable } from "../alerts/status";
 import { alertPath, projectPath, reportPath } from "../paths";
 import Dot from "../dot";
 import { useProject } from "../project";
+import { consoleGitHub } from "../github";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { type ReportLine, plotOf } from "../report/lines";
@@ -28,6 +29,7 @@ const RunAlerts = (props: {
 	const { api } = useProject();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, props.slug));
 	const canChange = () => bootstrap().data?.permissions.edit === true;
+	const github = consoleGitHub(() => bootstrap().data);
 	const lines = createMemo(() =>
 		alertLinesOf(props.alerting).filter((line) => props.shown.has(line.key)),
 	);
@@ -124,6 +126,7 @@ const RunAlerts = (props: {
 					data: plotOf(line, line.branch.name, line.testbed.name),
 					note: "4w, ending at its report",
 					reportHref: (uuid) => reportPath(props.slug, uuid),
+					github,
 					kept,
 					canChange,
 				})}

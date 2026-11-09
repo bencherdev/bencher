@@ -1,4 +1,8 @@
 import type { Locator, Page } from "@playwright/test";
+import {
+	GitHubLinkStatus,
+	type JsonConsoleProject,
+} from "../src/types/bencher";
 import { axeInBothThemes } from "./axe";
 import {
 	consolePath,
@@ -217,6 +221,59 @@ test.describe("on a short screen", () => {
 		).toEqual(new Set([String(perPage)]));
 		await expect.poll(() => rows(page).count()).toBeLessThan(29);
 	});
+});
+
+// Kills a run page with no control to its commit from the linked repository,
+// one that opens it by its short hash, a Maintainer never asked to reconnect
+// GitHub, or asked toward anywhere but Connections, and a control or chip that
+// fails axe in either theme.
+test("a linked run opens its commit, and a disconnected link asks its Maintainer to reconnect", async ({
+	page,
+}) => {
+	// The suite's API has no GitHub App, so the bootstrap says what one would.
+	await page.route(
+		`${seed.api_url}/v0/console/projects/${hashbrown.slug}`,
+		async (route) => {
+			if (route.request().method() !== "GET") {
+				return route.fallback();
+			}
+			const response = await route.fetch();
+			const bootstrap: JsonConsoleProject = await response.json();
+			return route.fulfill({
+				response,
+				json: {
+					...bootstrap,
+					github_repository: "pompeii-llc/rosti",
+					project: {
+						...bootstrap.project,
+						github_link: GitHubLinkStatus.Disconnected,
+					},
+				},
+			});
+		},
+	);
+	await page.goto(runs());
+	await rows(page)
+		.first()
+		.getByRole("link", { name: seed.last_main_hash, exact: true })
+		.click();
+	const commit = page.getByRole("link", { name: "Open commit on GitHub" });
+	await expect(commit).toHaveAttribute(
+		"href",
+		new RegExp(
+			`^https://github\\.com/pompeii-llc/rosti/commit/${seed.last_main_hash}[0-9a-f]{33}$`,
+		),
+	);
+	await axeInBothThemes(page, page.url(), async () => {
+		await expect(
+			page.getByRole("link", { name: "Open commit on GitHub" }),
+		).toBeVisible();
+		await expect(
+			page.getByRole("link", { name: "Reconnect GitHub" }),
+		).toBeVisible();
+	});
+	await page.getByRole("link", { name: "Reconnect GitHub" }).click();
+	await expect(page).toHaveURL(consolePath(hashbrown.slug, "connections"));
 });
 
 // Kills a run's head that reloads the document, leads anywhere but its run, or

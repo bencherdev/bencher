@@ -23,7 +23,9 @@ import {
 import type { JsonConsoleReport, JsonConsoleSpec } from "../../types/bencher";
 import type { Settable } from "../alerts/status";
 import { ApiError } from "../api";
+import CommitLink from "../commit";
 import Dot from "../dot";
+import { type GitHubLinks, consoleGitHub } from "../github";
 import { alertPath, projectPath, reportPath, runPath } from "../paths";
 import { useNarrow } from "../plot/narrow";
 import { leafOf } from "../leaf";
@@ -62,6 +64,7 @@ import {
 import { duration, shortHash } from "../reports/format";
 import Neighbor, { onMoved } from "../runs/Neighbor";
 import { reportStatus } from "../runs/status";
+import AskGitHub from "../runs/AskGitHub";
 import CopyHash from "../runs/CopyHash";
 import StatusPill from "../runs/StatusPill";
 import { formatCount } from "../plot/count";
@@ -94,6 +97,7 @@ const Report = () => {
 	const kept = new Map<string, Settable>();
 	const canChange = () => bootstrap().data?.permissions.edit === true;
 	const version = () => bootstrap().data?.project.bmf_version;
+	const github = consoleGitHub(() => bootstrap().data);
 
 	const perPage = screenBatch();
 	const linesKey = createMemo(
@@ -304,7 +308,7 @@ const Report = () => {
 							readOnly={bootstrap().data?.permissions.edit === false}
 							onRunIntent={intendRun}
 						/>
-						<Title report={report()} now={now()} />
+						<Title report={report()} now={now()} github={github} />
 					</div>
 					<div class="ph-actions rp-actions">
 						<Neighbor
@@ -413,6 +417,7 @@ const Report = () => {
 									),
 									note: `${windowLabel()}, ending at this report`,
 									reportHref: (uuid) => reportPath(slug(), uuid),
+									github,
 									iteration: line.chosen,
 									kept,
 									canChange,
@@ -535,45 +540,58 @@ const Crumb = (props: {
 
 /**
  * The branch and testbed, and the report's alerts; before they arrive, a
- * placeholder of the same line box, so what arrives later moves nothing.
+ * placeholder of the same line box.
  */
 const Title = (props: {
 	report: JsonConsoleReport | undefined;
 	now: number;
+	github: GitHubLinks;
 }) => (
 	<div class="rp-titlerow">
-		<Heading level={1} size="xl">
-			<Show
-				when={props.report}
-				fallback={
-					<>
-						<Skeleton size="text" class="rp-title-skel" />
-						<span class="sr-only">Loading the report</span>
-					</>
-				}
-			>
+		<div class="rp-titlemain">
+			<Heading level={1} size="xl">
+				<Show
+					when={props.report}
+					fallback={
+						<>
+							<Skeleton size="text" class="rp-title-skel" />
+							<span class="sr-only">Loading the report</span>
+						</>
+					}
+				>
+					{(report) => (
+						<span class="ui-parts">
+							<Truncate text={report().branch.name} tail reveal />
+							<Dot />
+							<Truncate text={report().testbed.name} tail reveal />
+						</span>
+					)}
+				</Show>
+			</Heading>
+			<Show when={props.report?.version.hash}>
+				{(hash) => <CommitLink href={props.github.commit(hash())} />}
+			</Show>
+		</div>
+		{/* On a phone, pills too wide for their line wrap rather than push the page sideways. */}
+		<div class="rp-titlepills" style={{ "flex-wrap": "wrap" }}>
+			<Show when={(props.report?.counts.alerts.total ?? 0) > 0}>
+				<span class="rp-alerts">
+					<svg class="lr-alertdot" viewBox="0 0 8 8" aria-hidden="true">
+						<circle cx="4" cy="4" r="4" />
+					</svg>
+					{plural(props.report?.counts.alerts.total ?? 0, "alert")}
+				</span>
+			</Show>
+			<Show when={props.report?.job && props.report}>
 				{(report) => (
-					<span class="ui-parts">
-						<Truncate text={report().branch.name} tail reveal />
-						<Dot />
-						<Truncate text={report().testbed.name} tail reveal />
-					</span>
+					<StatusPill status={reportStatus(report(), props.now, duration)} />
 				)}
 			</Show>
-		</Heading>
-		<Show when={(props.report?.counts.alerts.total ?? 0) > 0}>
-			<span class="rp-alerts">
-				<svg class="lr-alertdot" viewBox="0 0 8 8" aria-hidden="true">
-					<circle cx="4" cy="4" r="4" />
-				</svg>
-				{plural(props.report?.counts.alerts.total ?? 0, "alert")}
-			</span>
-		</Show>
-		<Show when={props.report?.job && props.report}>
-			{(report) => (
-				<StatusPill status={reportStatus(report(), props.now, duration)} />
-			)}
-		</Show>
+			{/* Last, so its arrival with the bootstrap moves nothing. */}
+			<Show when={props.report}>
+				<AskGitHub ask={props.github.ask?.()} />
+			</Show>
+		</div>
 	</div>
 );
 

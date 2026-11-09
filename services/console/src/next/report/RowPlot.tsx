@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import { useAlertChange } from "../alerts/change";
 import type { Settable } from "../alerts/status";
+import type { GitHubLinks } from "../github";
 import Plot, { type PlotAlerts } from "../plot/Plot";
 import type { PlotData } from "../plot/types";
 
@@ -9,6 +10,7 @@ const RowPlot = (props: {
 	data: PlotData;
 	note: string;
 	reportHref: (uuid: string) => string;
+	github?: GitHubLinks | undefined;
 	alerts?: PlotAlerts | undefined;
 	kept?: Map<string, Settable> | undefined;
 	canChange?: (() => boolean) | undefined;
@@ -30,6 +32,7 @@ const RowPlot = (props: {
 			size="row"
 			note={props.note}
 			reportHref={props.reportHref}
+			github={props.github}
 			alerts={alerts}
 			iteration={props.iteration}
 		/>

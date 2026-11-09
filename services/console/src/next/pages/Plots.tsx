@@ -38,6 +38,7 @@ import { PLOTS_LIMIT, countPins } from "../plots/pins";
 import { type PageWindow, plotsQuery, screenTiles } from "../plots/queries";
 import Tile, { listed } from "../plots/Tile";
 import { useProject } from "../project";
+import { consoleGitHub } from "../github";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { formatCount } from "../plot/count";
@@ -69,6 +70,7 @@ const Plots = () => {
 	const { api, slug } = useProject();
 	const client = useQueryClient();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
+	const github = consoleGitHub(() => bootstrap().data);
 	const permissions = () => bootstrap().data?.permissions;
 	const plotsPath = () => `/v0/projects/${encodeURIComponent(slug())}/plots`;
 	const plotsCache = () => ({ queryKey: ["console", "plots", slug()] });
@@ -626,6 +628,7 @@ const Plots = () => {
 										openHref={openHref(tile(), uuid)}
 										alerts={alerts}
 										reportHref={(report) => reportPath(slug(), report)}
+										github={github}
 										onOpen={() => seed(tile())}
 										onNear={() => want(uuid)}
 										menu={

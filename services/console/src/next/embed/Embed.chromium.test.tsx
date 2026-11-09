@@ -79,6 +79,7 @@ const show = (props: Partial<EmbedProps> = {}) => {
 				slug={shown.slug}
 				name={shown.name}
 				nameless={shown.nameless}
+				url={shown.url}
 				query={query()}
 				view={shown.view}
 				answer={shown.answer}
@@ -358,4 +359,41 @@ test("actions end the line and move nothing, at a phone's width too", async () =
 		dispose = undefined;
 		document.body.replaceChildren();
 	}
+});
+
+// Kills an embed whose commit control reads anything but a GitHub project URL,
+// opens the commit by its short hash, or asks its reader to link GitHub.
+test("a pinned point opens its commit from a GitHub project URL, with no ask", async () => {
+	const hash = `9c1f2e4${"0".repeat(33)}`;
+	const answer = {
+		...PERF,
+		reports: [{ uuid: uuid(20), version: 1, hash }],
+	};
+	const pin = async () => {
+		const area = page.getByRole("group", { name: /lines?,/ });
+		await expect.element(area).toBeVisible();
+		const box = area.element().getBoundingClientRect();
+		await area.click({ position: { x: box.width / 2, y: box.height / 2 } });
+		const status = page
+			.getByRole("region", { name: "Plot" })
+			.getByRole("status");
+		await expect
+			.element(status.getByRole("button", { name: "Close the readout" }))
+			.toBeVisible();
+		return status;
+	};
+	show({ answer, url: "https://github.com/pompeii-llc/hashbrown" });
+	const status = await pin();
+	await expect
+		.element(status.getByRole("link", { name: "Open commit on GitHub" }))
+		.toHaveAttribute(
+			"href",
+			`https://github.com/pompeii-llc/hashbrown/commit/${hash}`,
+		);
+	expect(status.getByRole("link").elements()).toHaveLength(1);
+	dispose?.();
+	document.body.replaceChildren();
+
+	show({ answer, url: "https://hashbrown.example" });
+	expect((await pin()).getByRole("link").elements()).toHaveLength(0);
 });

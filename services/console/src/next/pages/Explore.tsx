@@ -70,6 +70,7 @@ import EditPin from "../plots/EditPin";
 import { PLOTS_LIMIT, countPins } from "../plots/pins";
 import { useEntityTitle, useProject, useProjectNavigate } from "../project";
 import { publicPlotPath, publicUrl } from "../public/query";
+import { consoleGitHub } from "../github";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { exploreSearchFromClassic } from "../query/classic";
@@ -117,6 +118,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 	});
 
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
+	const github = consoleGitHub(() => bootstrap().data);
 	const canPin = () =>
 		!props.readOnly && bootstrap().data?.permissions.create === true;
 	const alerts = useAlertChange().readout(
@@ -712,6 +714,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 									layout={layout()}
 									iteration={query().iteration}
 									reportHref={(uuid) => reportPath(slug(), uuid)}
+									github={github}
 									reserve={reserve()}
 									alerts={alerts}
 								/>

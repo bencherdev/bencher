@@ -35,6 +35,7 @@ export const boot = (mount: HTMLElement) => {
 	}
 
 	const [title, setTitle] = createSignal(slug);
+	const [url, setUrl] = createSignal<string>();
 	const [embeddable, setEmbeddable] = createSignal(false);
 	const [view, setView] = createSignal<"plot" | "locked" | "checking">("plot");
 	const readProject = (asReader: boolean): Promise<boolean> =>
@@ -42,6 +43,7 @@ export const boot = (mount: HTMLElement) => {
 			(read) => {
 				rememberVersion(localStorage, slug, read.bmf_version === 1 ? 1 : 0);
 				setTitle(read.name);
+				setUrl(read.url);
 				setEmbeddable(read.visibility === "public");
 				document.title = `${read.name} | Bencher`;
 				setView("plot");
@@ -149,6 +151,7 @@ export const boot = (mount: HTMLElement) => {
 				<Public
 					slug={slug}
 					name={title()}
+					url={url()}
 					query={query()}
 					signIn={signInHref(here())}
 					view={view()}

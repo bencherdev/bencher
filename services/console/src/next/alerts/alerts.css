@@ -199,7 +199,7 @@
 .ui-skeleton.ap-facts-skel {
 	height: 64px;
 }
-/* A pinned readout on an alert: its page and its action, on a line of their own. */
+/* A pinned readout's own lines: an alert's page and its action, or the ask to link GitHub. */
 .pl-ralert {
 	display: flex;
 	flex-wrap: wrap;

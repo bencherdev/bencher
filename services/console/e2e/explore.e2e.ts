@@ -1614,3 +1614,48 @@ test("Explore opened from an alert or a report passes axe in both themes", async
 		},
 	);
 });
+
+// Kills an Explore plot whose pinned readout never opens its point's commit
+// or never asks a Maintainer to link GitHub.
+test("a pinned readout opens its point's commit and asks a Maintainer to link GitHub", async ({
+	page,
+	request,
+}) => {
+	// The suite's API has no GitHub App, so the bootstrap says what one would.
+	await page.route(
+		`${seed.api_url}/v0/console/projects/${hashbrown.slug}`,
+		async (route) => {
+			if (route.request().method() !== "GET") {
+				return route.fallback();
+			}
+			const response = await route.fetch();
+			const bootstrap = await response.json();
+			return route.fulfill({
+				response,
+				json: {
+					...bootstrap,
+					project: {
+						...bootstrap.project,
+						url: "https://github.com/pompeii-llc/hashbrown",
+						github_link: "unlinked",
+					},
+				},
+			});
+		},
+	);
+	const { query } = await twoLines(request);
+	await page.goto(explore(hashbrown.slug, query));
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	await page.getByRole("group", { name: /lines?,/ }).focus();
+	await page.keyboard.press("End");
+	const readout = plot(page).getByRole("status");
+	await expect(
+		readout.getByRole("link", { name: "Open commit on GitHub" }),
+	).toHaveAttribute(
+		"href",
+		/^https:\/\/github\.com\/pompeii-llc\/hashbrown\/commit\/[0-9a-f]{40}$/,
+	);
+	await expect(
+		readout.getByRole("link", { name: "Link GitHub" }),
+	).toBeVisible();
+});

@@ -402,12 +402,138 @@ describe("Plot", () => {
 			.toBeInTheDocument();
 	});
 
+	// Kills a readout's commit control that grows its first line on a desktop,
+	// and one that reaches past the readout or over its value rows on a phone.
+	test("a pinned readout's commit control keeps its line on a desktop and stays inside the readout on a phone", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		const pin = async () => {
+			await settle();
+			const { over, box } = await plotArea();
+			await page.elementLocator(over).click({
+				position: { x: box.width / 4, y: box.height / 2 },
+			});
+			await expect
+				.element(page.getByRole("button", { name: "Close the readout" }))
+				.toBeVisible();
+			return page.getByRole("status").element();
+		};
+		const lineHeight = (status: Element) =>
+			status.querySelector(".pl-when")?.getBoundingClientRect().height;
+		mount({ data, github: { commit: () => undefined } });
+		const plain = lineHeight(await pin());
+		dispose?.();
+		document.body.replaceChildren();
+		mount({
+			data,
+			github: { commit: (hash) => `https://github.test/${hash}` },
+		});
+		const status = await pin();
+		expect(
+			status.querySelector('a[aria-label="Open commit on GitHub"]'),
+		).not.toBeNull();
+		expect(lineHeight(status)).toBe(plain);
+		dispose?.();
+		document.body.replaceChildren();
+
+		await page.viewport(375, 812);
+		mount(
+			{ data, github: { commit: (hash) => `https://github.test/${hash}` } },
+			343,
+		);
+		const phone = await pin();
+		const control = phone
+			.querySelector('a[aria-label="Open commit on GitHub"]')
+			?.getBoundingClientRect();
+		const card = readoutBox();
+		const row = phone.querySelector(".pl-rrow")?.getBoundingClientRect();
+		expect(control?.height).toBeGreaterThanOrEqual(44);
+		expect(control?.top).toBeGreaterThanOrEqual(card.top);
+		expect(control?.bottom).toBeLessThanOrEqual(card.bottom);
+		expect(control?.left).toBeGreaterThanOrEqual(card.left);
+		expect(control?.right).toBeLessThanOrEqual(card.right);
+		expect(control?.bottom).toBeLessThanOrEqual((row?.top ?? 0) + 0.5);
+	});
+
+	// Kills a commit control that opens anything but its whole hash's commit,
+	// and one that takes the report link's place or splits it.
+	test("a pinned readout keeps its report link and opens its commit beside it", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		const whole = (index: number) => `${index}`.padStart(40, "c");
+		data.reports = data.reports.map((report, index) => ({
+			...report,
+			hash: whole(index),
+		}));
+		mount({
+			data,
+			reportHref: (uuid) => `/reports/${uuid}`,
+			github: { commit: (hash) => `https://github.test/commit/${hash}` },
+		});
+		await settle();
+		const { over, box } = await plotArea();
+		await page.elementLocator(over).click({
+			position: { x: box.width / 4, y: box.height / 2 },
+		});
+
+		const status = page.getByRole("status");
+		await expect
+			.element(status.getByRole("link", { name: "Open commit on GitHub" }))
+			.toHaveAttribute("href", `https://github.test/commit/${whole(1)}`);
+		expect(
+			status
+				.getByRole("link")
+				.elements()
+				.map((link) => [link.textContent, link.getAttribute("href")]),
+		).toEqual([
+			[expect.stringMatching(/ · ccccccc$/), "/reports/report-1"],
+			["", `https://github.test/commit/${whole(1)}`],
+		]);
+	});
+
+	// Kills an ask in a readout that is not pinned, and a pinned readout that drops it.
+	test("only a pinned readout asks to link GitHub", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({
+			data,
+			github: {
+				commit: () => undefined,
+				ask: () => ({ label: "Link GitHub", href: "/connections" }),
+			},
+		});
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		const at = { position: { x: box.width / 4, y: box.height / 2 } };
+		await page.elementLocator(over).hover(at);
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		expect(status.element().textContent).not.toContain("Link GitHub");
+
+		await page.elementLocator(over).click(at);
+		await expect
+			.element(status.getByRole("link", { name: "Link GitHub" }))
+			.toHaveAttribute("href", "/connections");
+		await page.getByRole("button", { name: "Close the readout" }).click();
+		await expect.element(status).not.toHaveTextContent("Link GitHub");
+	});
+
 	// Kills an unpinned readout that takes the pointer or offers a link or a button, which keeps a mouse from the points beneath it, and a pinned readout the pointer passes through, whose link no mouse can reach.
 	test("an unpinned readout lets the pointer through to the plot, and a pinned one takes it", async () => {
 		const data = testData([
 			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
 		]);
-		mount({ data, reportHref: (uuid) => `/reports/${uuid}` });
+		mount({
+			data,
+			reportHref: (uuid) => `/reports/${uuid}`,
+			github: {
+				commit: (hash) => `https://github.test/commit/${hash}`,
+				ask: () => ({ label: "Link GitHub", href: "/connections" }),
+			},
+		});
 		await settle();
 		const { over, box } = await plotArea();
 		const status = page.getByRole("status");

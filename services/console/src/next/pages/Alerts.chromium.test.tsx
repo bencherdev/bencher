@@ -15,9 +15,10 @@ import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type {
-	JsonConsoleAlerts,
-	JsonConsoleProject,
+import {
+	GitHubLinkStatus,
+	type JsonConsoleAlerts,
+	type JsonConsoleProject,
 } from "../../types/bencher";
 import { perfHolding, perfStatusOf } from "../alert/testing";
 import { type Api, ApiError, type Method } from "../api";
@@ -27,7 +28,7 @@ import { createQueryClient } from "../cache";
 import { PROJECTS_PATH } from "../paths";
 import { ProjectContext } from "../project";
 import { consoleProjectQuery } from "../queries";
-import { bootstrapOf } from "../settings/testing";
+import { bootstrapOf, linkedBootstrap } from "../settings/testing";
 import { STRESS } from "../ui/testing";
 import { linesDrawn, readLinesTopToBottom } from "../report/testing";
 import Alerts from "./Alerts";
@@ -1704,6 +1705,36 @@ test("a change on the list is written into the other answers that hold the alert
 	await expect
 		.poll(() => perfStatusOf(client.getQueryData(perf)))
 		.toBe("dismissed");
+});
+
+// Kills the Alerts page's row plots that never open a pinned point's commit
+// or never ask a Maintainer to link GitHub.
+test("a row's pinned readout opens its commit and asks a Maintainer to link GitHub", async () => {
+	const { api } = fakeApi(three);
+	mount(api, {
+		...linkedBootstrap({
+			url: "https://github.com/pompeii-llc/hashbrown",
+			link: GitHubLinkStatus.Unlinked,
+		}),
+		active_alerts: 3,
+	});
+	await expect.element(heading()).toHaveTextContent("3 active");
+	await page
+		.getByRole("button", { name: `Expand ${NAME}` })
+		.nth(1)
+		.click();
+	const region = page.getByRole("region", { name: `${NAME}, full plot` });
+	await pinLast(region);
+	const readout = region.getByRole("status");
+	await expect
+		.element(readout.getByRole("link", { name: "Open commit on GitHub" }))
+		.toHaveAttribute(
+			"href",
+			`https://github.com/pompeii-llc/hashbrown/commit/9c1f2e4`,
+		);
+	await expect
+		.element(readout.getByRole("link", { name: "Link GitHub" }))
+		.toBeVisible();
 });
 
 // Kills a viewer offered a Dismiss in a pinned readout, which the API refuses.

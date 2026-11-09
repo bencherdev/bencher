@@ -7,7 +7,7 @@ import { type Refusal, reads } from "../public/read";
 import { decodeQuery } from "../query/query";
 import Embed, { type PlotView } from "./Embed";
 
-const boot = (mount: HTMLElement) => {
+export const boot = (mount: HTMLElement) => {
 	const { apiUrl = "", slug = "" } = mount.dataset;
 	// Another site's frame has no reader: the embed shows what anyone sees.
 	const get = reads(apiUrl);
@@ -15,6 +15,7 @@ const boot = (mount: HTMLElement) => {
 	const [query, setQuery] = createSignal(decodeQuery(location.search));
 	const [name, setName] = createSignal<string>();
 	const [nameless, setNameless] = createSignal(false);
+	const [url, setUrl] = createSignal<string>();
 	const [view, setView] = createSignal<"plot" | "locked">("plot");
 	const [answer, setAnswer] = createSignal<JsonConsolePerf>();
 	const [refused, setRefused] = createSignal<string>();
@@ -23,6 +24,7 @@ const boot = (mount: HTMLElement) => {
 	get<JsonProject>(path).then(
 		(project) => {
 			setName(project.name);
+			setUrl(project.url);
 			document.title = `${project.name} | Bencher`;
 		},
 		(error: Refusal) => {
@@ -51,6 +53,7 @@ const boot = (mount: HTMLElement) => {
 					slug={slug}
 					name={name()}
 					nameless={nameless()}
+					url={url()}
 					query={query()}
 					view={view()}
 					answer={answer()}

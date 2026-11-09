@@ -179,3 +179,92 @@ export const expectLinesAt = (table: Element, width: number, lines: number) => {
 	}
 	document.body.style.width = "";
 };
+
+/**
+ * Asserts that a title row keeps `first` side by side on its first line, in
+ * order, none over another and each at least a few pixels wide, inside the
+ * screen, with `wrapped` below the first part.
+ */
+export const expectTitleRow = (
+	first: readonly (Element | null | undefined)[],
+	wrapped: readonly (Element | null | undefined)[],
+) => {
+	const boxes = first.map((part, index) => {
+		expect(part, `title part ${index}`).toBeTruthy();
+		return (part as Element).getBoundingClientRect();
+	});
+	for (const [index, box] of boxes.entries()) {
+		expect(box.width, `title part ${index} width`).toBeGreaterThan(4);
+		expect(box.left, `title part ${index} left`).toBeGreaterThanOrEqual(0);
+		expect(box.right, `title part ${index} right`).toBeLessThanOrEqual(
+			document.documentElement.clientWidth,
+		);
+		const next = boxes[index + 1];
+		if (next) {
+			expect(
+				box.right,
+				`title part ${index} overlaps the next`,
+			).toBeLessThanOrEqual(next.left + 0.5);
+			expect(
+				Math.abs(box.top + box.height / 2 - (next.top + next.height / 2)),
+				`title part ${index + 1} on the first line`,
+			).toBeLessThan(box.height / 2);
+		}
+	}
+	const bottom = boxes[0]?.bottom ?? 0;
+	for (const [index, item] of wrapped.entries()) {
+		expect(item, `wrapped part ${index}`).toBeTruthy();
+		const box = (item as Element).getBoundingClientRect();
+		expect(
+			box.top,
+			`wrapped part ${index} below the title`,
+		).toBeGreaterThanOrEqual(bottom);
+	}
+};
+
+/** Asserts that a press anywhere in `element`'s rounded box lands on it, so nothing beside it covers its target. */
+export const expectTakesItsBox = (element: Element | null | undefined) =>
+	pressesIn(
+		element,
+		(hit) => hit !== null && (element as Element).contains(hit),
+	);
+
+/** Asserts that no press in `element`'s rounded box lands on `cover`. */
+export const expectUncoveredBy = (
+	element: Element | null | undefined,
+	cover: Element | null | undefined,
+) => {
+	expect(cover).toBeTruthy();
+	pressesIn(element, (hit) => !(hit && (cover as Element).contains(hit)));
+};
+
+/** Asserts `holds` of what a press lands on, at points every 2 px inside `element`'s rounded box. */
+const pressesIn = (
+	element: Element | null | undefined,
+	holds: (hit: Element | null) => boolean,
+) => {
+	expect(element).toBeTruthy();
+	const box = (element as Element).getBoundingClientRect();
+	const radius =
+		Number.parseFloat(
+			getComputedStyle(element as Element).borderTopLeftRadius,
+		) || 0;
+	// A point in a corner square but outside its arc is off the rounded box.
+	const inside = (x: number, y: number) => {
+		const dx = Math.max(box.left + radius - x, x - (box.right - radius), 0);
+		const dy = Math.max(box.top + radius - y, y - (box.bottom - radius), 0);
+		return dx * dx + dy * dy <= (radius - 1) * (radius - 1);
+	};
+	for (let x = box.left + 1; x < box.right - 0.5; x += 2) {
+		for (let y = box.top + 1; y < box.bottom - 0.5; y += 2) {
+			if (!inside(x, y)) {
+				continue;
+			}
+			const hit = document.elementFromPoint(x, y);
+			expect(
+				holds(hit),
+				`a press at ${x}, ${y} lands on ${hit?.outerHTML.slice(0, 80)}`,
+			).toBe(true);
+		}
+	}
+};

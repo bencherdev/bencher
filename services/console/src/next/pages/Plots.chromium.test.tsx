@@ -8,10 +8,11 @@ import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type {
-	JsonConsolePlot,
-	JsonConsolePlots,
-	JsonPlot,
+import {
+	GitHubLinkStatus,
+	type JsonConsolePlot,
+	type JsonConsolePlots,
+	type JsonPlot,
 } from "../../types/bencher";
 import { type Api, ApiError, type Method } from "../api";
 import { budget } from "../budget";
@@ -22,7 +23,7 @@ import { placed } from "../plots/order";
 import { testTile } from "../plots/testing";
 import { ProjectContext } from "../project";
 import { consoleProjectQuery } from "../queries";
-import { bootstrapOf } from "../settings/testing";
+import { bootstrapOf, linkedBootstrap } from "../settings/testing";
 import Plots from "./Plots";
 
 const PATH = `${PROJECTS_PATH}/hashbrown/plots`;
@@ -717,6 +718,57 @@ test("a tile's pinned readout offers Dismiss only to an editor, and says when it
 	await dismiss.click();
 	await expect.element(readout.getByRole("alert")).toBeVisible();
 	await expect.element(dismiss).toBeVisible();
+});
+
+// Kills a Plots page whose tiles' pinned readouts never open their point's
+// commit or never ask a Maintainer to link GitHub.
+test("a tile's pinned readout opens its point's commit and asks a Maintainer to link GitHub", async () => {
+	const { api: plain } = plotsApi(1);
+	// The tiles' reports, each with a whole hash.
+	const hashed = (value: unknown): unknown =>
+		Array.isArray(value)
+			? value.map(hashed)
+			: value && typeof value === "object"
+				? Object.fromEntries([
+						...Object.entries(value).map(([key, field]) => [
+							key,
+							hashed(field),
+						]),
+						...("version" in value && "uuid" in value
+							? [["hash", String(value.uuid).padStart(40, "c")]]
+							: []),
+					])
+				: value;
+	const api: Api = {
+		...plain,
+		get: async <T,>(path: string, signal?: AbortSignal) => {
+			const read = await plain.get<T>(path, signal);
+			return { ...read, data: hashed(read.data) as T };
+		},
+	};
+	const client = newClient(api, 1);
+	client.setQueryData(consoleProjectQuery(api, "hashbrown").queryKey, {
+		...linkedBootstrap({
+			url: "https://github.com/pompeii-llc/hashbrown",
+			link: GitHubLinkStatus.Unlinked,
+		}),
+		plots: 1,
+	});
+	mount(api, client);
+	const plot = figure("Pin 1").getByRole("group", { name: /lines?,/ });
+	await expect.element(plot).toBeVisible();
+	const box = plot.element().getBoundingClientRect();
+	await plot.click({ position: { x: box.width - 4, y: box.height / 2 } });
+	const readout = figure("Pin 1").getByRole("status");
+	await expect
+		.element(readout.getByRole("link", { name: "Open commit on GitHub" }))
+		.toHaveAttribute(
+			"href",
+			`https://github.com/pompeii-llc/hashbrown/commit/${"report-4".padStart(40, "c")}`,
+		);
+	await expect
+		.element(readout.getByRole("link", { name: "Link GitHub" }))
+		.toBeVisible();
 });
 
 // Kills a Plots page whose tiles' pinned readouts offer no link to their point's report.

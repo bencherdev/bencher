@@ -15,6 +15,7 @@ import { queryFromPlot } from "../explore/pinned";
 import { measuresLayout } from "../explore/layout";
 import { rollingName } from "../explore/window";
 import { loadPlot, loadedPlot } from "../plot/lazy";
+import type { GitHubLinks } from "../github";
 import type { PlotAlerts } from "../plot/Plot";
 import type { PlotData } from "../plot/types";
 import type { Move } from "./order";
@@ -70,6 +71,7 @@ const Tile = (props: {
 	alerts?: PlotAlerts | undefined;
 	/** Links the readout to the report a point came from. */
 	reportHref?: (uuid: string) => string;
+	github?: GitHubLinks | undefined;
 }) => {
 	const heading = createUniqueId();
 	let section: HTMLElement | undefined;
@@ -272,6 +274,7 @@ const Tile = (props: {
 							label={label()}
 							alerts={props.alerts}
 							{...(props.reportHref && { reportHref: props.reportHref })}
+							github={props.github}
 							failed={props.failed ?? false}
 						/>
 					);

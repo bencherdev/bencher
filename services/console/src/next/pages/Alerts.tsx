@@ -71,6 +71,7 @@ import { formatCount } from "../plot/count";
 import type { PlotAlerts } from "../plot/Plot";
 import { useNarrow } from "../plot/narrow";
 import { useProject, useProjectNavigate } from "../project";
+import { consoleGitHub } from "../github";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { FOLD } from "../report/fold";
@@ -102,6 +103,7 @@ const Alerts = () => {
 		});
 	};
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
+	const github = consoleGitHub(() => bootstrap().data);
 	const canEdit = () => bootstrap().data?.permissions.edit === true;
 	const names = useNames(search);
 
@@ -698,6 +700,7 @@ const Alerts = () => {
 								data: plotOf(line, line.branch.name, line.testbed.name),
 								note: `${history()}, ending at its report`,
 								reportHref: (uuid) => reportPath(slug(), uuid),
+								github,
 								alerts: readout,
 							})}
 							onNearEnd={nearEnd}

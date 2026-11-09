@@ -28,6 +28,7 @@ import { useNarrow } from "../plot/narrow";
 import type { PlotAlerts } from "../plot/Plot";
 import { FIRST, useAlertBatches } from "../alerts/batches";
 import { useEntityTitle, useProject, useProjectNavigate } from "../project";
+import { type GitHubLinks, consoleGitHub } from "../github";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { FOLD } from "../report/fold";
@@ -343,6 +344,7 @@ const Threshold = () => {
 										changed={rows.changed}
 										onChange={canEdit() ? rows.change : undefined}
 										readout={readout}
+										github={consoleGitHub(() => bootstrap().data)}
 									/>
 								</section>
 							</>
@@ -455,6 +457,7 @@ const Alerts = (props: {
 		| undefined;
 	/** What a pinned readout on an alert offers. */
 	readout: PlotAlerts;
+	github: GitHubLinks;
 }) => (
 	<Switch>
 		<Match
@@ -517,6 +520,7 @@ const Alerts = (props: {
 						),
 						note: `${props.history}, ending at its report`,
 						reportHref: (uuid) => reportPath(props.slug, uuid),
+						github: props.github,
 						alerts: props.readout,
 					})}
 					onNearEnd={props.onNearEnd}
