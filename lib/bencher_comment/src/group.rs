@@ -111,6 +111,7 @@ impl<'r> GroupComment<'r> {
         self.html_summary(&mut html, kept);
         html.push_str(alerts);
         html.push_str(notes);
+        self.writer.html_github_link(&mut html);
         // DO NOT MOVE: The Bencher tag must be the last thing in the HTML for updates to work
         html.push_str(trailer);
         html
@@ -480,15 +481,16 @@ mod tests {
 
     use bencher_json::{
         DateTime, GitHash, JsonReport,
-        project::{Visibility, boundary::BoundaryLimit, report::Adapter},
+        project::{GitHubLinkStatus, Visibility, boundary::BoundaryLimit, report::Adapter},
     };
 
     use super::{GroupComment, Section, escape};
     use crate::{
-        ReportComment, SectionCheck, TRUNCATED_NOTICE, group_tag,
+        GitHubApi, ReportComment, SectionCheck, TRUNCATED_NOTICE, group_tag,
         tests::{
-            job_report, json_report, named_alert_report, named_alert_results, report_comment,
-            report_comment_for, report_on, value_less_results, with_alerts,
+            github_link_line, job_report, json_report, named_alert_report, named_alert_results,
+            report_comment, report_comment_for, report_on, value_less_results, with_alerts,
+            with_github_link,
         },
     };
 
@@ -626,7 +628,7 @@ mod tests {
         format!(r#"<td><a href="{REPORTS}/{report}">{label}</a></td>"#)
     }
 
-    // Kills a single section that drifts from today's comment,
+    // Kills a single section that drifts from today's comment, its link line included,
     // or a cap that leaves the hidden comment and the tag out of the count.
     #[test]
     fn one_section_is_today_s_comment() {
@@ -652,6 +654,11 @@ mod tests {
                 BoundaryLimit::Lower,
                 2,
             )),
+            report_comment_for(with_github_link(
+                named_alert_report(),
+                Some(GitHubLinkStatus::Unlinked),
+            ))
+            .with_github_api(GitHubApi::GitHubCom),
         ];
         let mut boundaries = 0;
         for comment in &comments {
@@ -687,6 +694,50 @@ mod tests {
             }
         }
         assert!(boundaries > 0, "some fixture has a truncated form");
+    }
+
+    // Kills a line per section rather than one for the comment, a line that the reduced or the
+    // summary form drops or leaves out of its length, and a line between the records and the tag.
+    #[test]
+    fn github_link_line_once_above_the_records() {
+        let disconnected = |report| {
+            report_comment_for(with_github_link(
+                report,
+                Some(GitHubLinkStatus::Disconnected),
+            ))
+            .with_github_api(GitHubApi::GitHubCom)
+        };
+        let writer = disconnected(with_alerts(
+            report_on(REPORT_A, MAIN, TESTBED_A),
+            BoundaryLimit::Lower,
+            2,
+        ));
+        let b = disconnected(report_on(REPORT_B, MAIN, TESTBED_B));
+        let c = disconnected(report_on(REPORT_C, MAIN, TESTBED_C));
+        let group = group(
+            None,
+            &writer,
+            vec![section(None, 2, Some(&b)), section(None, 3, Some(&c))],
+        );
+        let line = github_link_line("Reconnect this project to GitHub");
+        let full = group.html(false, usize::MAX);
+        let reduced = group.html(false, full.len() - 1);
+        let summary = group.html(false, 0);
+        assert!(
+            !full.contains(TRUNCATED_NOTICE) && reduced.contains(TRUNCATED_NOTICE),
+            "{reduced}"
+        );
+        assert!(summary.contains("and 3 more reports"), "{summary}");
+        for html in [full, reduced, summary] {
+            assert_eq!(html.matches("this project to GitHub").count(), 1, "{html}");
+            let (body, records) = html.split_once("<!-- bencher.dev/section ").unwrap();
+            assert!(body.ends_with(&line), "{html}");
+            assert_eq!(
+                SectionCheck::parse_all(&html).len(),
+                3,
+                "the records follow the line: {records}"
+            );
+        }
     }
 
     // Kills a status order that puts alerts before an in-progress check,
