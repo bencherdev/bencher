@@ -34,6 +34,26 @@ export const startGitHub = async (page: Page, login: string) => {
 	return { started, state };
 };
 
+/** Come back from GitHub with `state`, for a sign in the API refuses with `message`. */
+export const refuseGitHub = async (
+	page: Page,
+	state: string,
+	message: string,
+) => {
+	await page.route(GITHUB, (route) =>
+		route.request().method() === "POST"
+			? route.fulfill({
+					status: 400,
+					headers: CORS,
+					json: { request_id: "0", message },
+				})
+			: route.continue(),
+	);
+	await page.goto(
+		`/auth/github?${new URLSearchParams({ code: "code", state })}`,
+	);
+};
+
 /** Come back from GitHub with `state`, signed in as the member, for the request `authorization` when one. */
 export const finishGitHub = async (
 	page: Page,

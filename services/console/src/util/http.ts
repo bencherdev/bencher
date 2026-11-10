@@ -172,3 +172,20 @@ export const dataOptions = (
 		data: data,
 	};
 };
+
+const API_MESSAGE_MAX_LENGTH = 256;
+
+/** The API's reason for refusing a request, capped for a notification, or `fallback` when it sent none. */
+export const apiErrorMessage = (error: unknown, fallback: string): string => {
+	if (!axios.isAxiosError<{ message?: unknown }>(error)) {
+		return fallback;
+	}
+	const message = error.response?.data?.message;
+	if (typeof message !== "string") {
+		return fallback;
+	}
+	const trimmed = message.trim();
+	return trimmed.length === 0
+		? fallback
+		: trimmed.slice(0, API_MESSAGE_MAX_LENGTH);
+};

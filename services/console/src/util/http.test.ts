@@ -1,5 +1,7 @@
+import { AxiosError, AxiosHeaders } from "axios";
 import { describe, expect, test } from "vitest";
 import {
+	apiErrorMessage,
 	apiUrl,
 	apiHost,
 	getOptions,
@@ -92,5 +94,71 @@ describe("pathOptions", () => {
 		);
 		expect(opts.method).toBe("PATCH");
 		expect(opts.data).toEqual(data);
+	});
+});
+
+const FALLBACK = "Invalid user. Please, try again.";
+
+/** What axios hands a catch for a request the API refused with `data`. */
+const refused = (data: unknown) => {
+	const headers = new AxiosHeaders();
+	const config = { headers };
+	return new AxiosError(
+		"Request failed with status code 400",
+		"ERR_BAD_REQUEST",
+		config,
+		null,
+		{
+			status: 400,
+			statusText: "Bad Request",
+			headers,
+			config,
+			data,
+		},
+	);
+};
+
+describe("apiErrorMessage", () => {
+	test("returns the message the API sent", () => {
+		const error = refused({
+			request_id: "0",
+			error_code: "Locked",
+			message: "This user account has been locked",
+		});
+		expect(apiErrorMessage(error, FALLBACK)).toBe(
+			"This user account has been locked",
+		);
+	});
+
+	test("caps a very long message", () => {
+		const message = "no ".repeat(256);
+		const capped = apiErrorMessage(refused({ message }), FALLBACK);
+		expect(capped.length).toBe(256);
+		expect(message.startsWith(capped)).toBe(true);
+	});
+
+	test("falls back when the body carries no message", () => {
+		expect(apiErrorMessage(refused({ request_id: "0" }), FALLBACK)).toBe(
+			FALLBACK,
+		);
+	});
+
+	test("falls back when the message is not text", () => {
+		expect(apiErrorMessage(refused({ message: { why: "no" } }), FALLBACK)).toBe(
+			FALLBACK,
+		);
+	});
+
+	test("falls back when the message is blank", () => {
+		expect(apiErrorMessage(refused({ message: "  " }), FALLBACK)).toBe(
+			FALLBACK,
+		);
+	});
+
+	test("falls back when the request never reached the API", () => {
+		const error = new AxiosError("Network Error", "ERR_NETWORK", {
+			headers: new AxiosHeaders(),
+		});
+		expect(apiErrorMessage(error, FALLBACK)).toBe(FALLBACK);
 	});
 });
