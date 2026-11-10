@@ -146,11 +146,12 @@ pub async fn get_ls_inner(
     ))?;
 
     // Drop connection lock before iterating
+    let github = context.github_linking();
     let json_projects = auth_conn!(context, |conn| {
         projects
             .into_iter()
-            .map(|project| project.into_json_for_organization(conn, &query_organization))
-            .collect()
+            .map(|project| project.into_json_for_organization(conn, &query_organization, github))
+            .collect::<Result<_, HttpError>>()?
     });
 
     let total_count = get_ls_query(
@@ -287,5 +288,5 @@ async fn post_inner(
 
     QueryProject::create(log, context, auth_user, &query_organization, insert_project)
         .await?
-        .into_json(auth_conn!(context))
+        .into_json(auth_conn!(context), context.github_linking())
 }

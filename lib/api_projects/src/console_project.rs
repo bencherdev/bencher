@@ -11,7 +11,7 @@ use bencher_schema::{
     context::ApiContext,
     error::{issue_error, with_token_hint},
     model::{
-        project::QueryProject,
+        project::{QueryProject, github_link::GitHubLink},
         user::auth::{AuthUser, BearerToken},
     },
     schema,
@@ -44,8 +44,9 @@ pub async fn proj_console_options(
 
 /// View a project as the console's shell shows it
 ///
-/// The project, its organization, what the reader may do with it, and its active
-/// alert count, in one request whose statement count does not grow.
+/// The project, its organization, what the reader may do with it, its active
+/// alert count, and the name of its linked GitHub repository, in one request whose
+/// statement count is fixed.
 /// The reader must be signed in, and the project must be public or the reader
 /// must have `view` permissions for it.
 #[endpoint {
@@ -126,8 +127,15 @@ async fn get_inner(
             name: query_organization.name.clone(),
             slug: query_organization.slug.clone(),
         };
+        let github_link = GitHubLink::get(conn, context.github_linking(), query_project.id)?;
         Ok(JsonConsoleProject {
-            project: query_project.into_json_for_organization(conn, &query_organization),
+            #[cfg(feature = "plus")]
+            github_repository: github_link.full_name().cloned(),
+            project: query_project.into_json_with_github_link(
+                conn,
+                &query_organization,
+                &github_link,
+            ),
             organization,
             permissions,
             active_alerts: u32::try_from(active_alerts).unwrap_or(u32::MAX),

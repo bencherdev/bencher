@@ -84,6 +84,9 @@ pub struct JsonProject {
     pub name: ResourceName,
     pub slug: ProjectSlug,
     pub url: Option<Url>,
+    /// Whether the project has a linked GitHub repository, absent when the server cannot link one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub github_link: Option<GitHubLinkStatus>,
     pub visibility: Visibility,
     pub bmf_version: BmfVersion,
     pub created: DateTime,
@@ -95,6 +98,16 @@ impl Display for JsonProject {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.name)
     }
+}
+
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum GitHubLinkStatus {
+    Unlinked,
+    Connected,
+    Disconnected,
 }
 
 // Unfortunately, we have to use a complex, custom type and deserializer here.

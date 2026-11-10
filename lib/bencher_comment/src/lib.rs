@@ -1200,6 +1200,7 @@ mod tests {
                 name: "My Project".parse().unwrap(),
                 slug: "my-project".parse().unwrap(),
                 url: None,
+                github_link: None,
                 visibility,
                 bmf_version: bencher_json::BmfVersion::default(),
                 created: DateTime::TEST,

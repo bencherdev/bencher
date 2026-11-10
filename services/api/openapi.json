@@ -5362,7 +5362,7 @@
           "github"
         ],
         "summary": "Link a repository to a project",
-        "description": "Link the GitHub repository that a grant from the GitHub code exchange names. The grant must be for this project and from this user, and it lasts ten minutes. A project links at most one repository, so this replaces any link it had. The user must have `manage` permissions for the project.",
+        "description": "Link the GitHub repository that a grant from the GitHub code exchange names. The grant must be for this project and from this user, and it lasts ten minutes. A project links at most one repository, so this replaces any link it had. A project with no URL takes the repository's URL on GitHub. The user must have `manage` permissions for the project.",
         "operationId": "proj_github_put",
         "parameters": [
           {
@@ -13233,6 +13233,14 @@
           }
         ]
       },
+      "GitHubLinkStatus": {
+        "type": "string",
+        "enum": [
+          "unlinked",
+          "connected",
+          "disconnected"
+        ]
+      },
       "GitHubRepositoryName": {
         "type": "string"
       },
@@ -17678,6 +17686,15 @@
           },
           "created": {
             "$ref": "#/components/schemas/DateTime"
+          },
+          "github_link": {
+            "nullable": true,
+            "description": "Whether the project has a linked GitHub repository, absent when the server cannot link one.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHubLinkStatus"
+              }
+            ]
           },
           "modified": {
             "$ref": "#/components/schemas/DateTime"

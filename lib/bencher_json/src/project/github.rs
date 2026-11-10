@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{JsonPubUser, ProjectSlug};
+use crate::{JsonPubUser, ProjectSlug, project::GitHubLinkStatus};
 
 const CONNECTED_INT: i32 = 0;
 const DISCONNECTED_INT: i32 = 1;
@@ -94,6 +94,15 @@ pub struct JsonLinkedRepository {
 pub enum LinkedRepositoryStatus {
     Connected = CONNECTED_INT,
     Disconnected = DISCONNECTED_INT,
+}
+
+impl From<LinkedRepositoryStatus> for GitHubLinkStatus {
+    fn from(status: LinkedRepositoryStatus) -> Self {
+        match status {
+            LinkedRepositoryStatus::Connected => Self::Connected,
+            LinkedRepositoryStatus::Disconnected => Self::Disconnected,
+        }
+    }
 }
 
 #[typeshare::typeshare]

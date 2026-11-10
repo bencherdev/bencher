@@ -7,7 +7,7 @@ use bencher_github_client::{
     GitHubApp, GitHubClient, GitHubInstallationPermission, GitHubRepository, GitHubWebhookError,
 };
 use bencher_json::{
-    ProjectResourceId, ResourceId,
+    GitHubRepositoryName, ProjectResourceId, ResourceId,
     project::github::{
         JsonGitHubLinkUrls, JsonGitHubRepositories, JsonGitHubRepository, JsonLinkedRepository,
         JsonNewLinkedRepository, JsonProjectGitHub,
@@ -26,8 +26,9 @@ use bencher_schema::{
         project::{QueryProject, linked_repository::QueryLinkedRepository},
         user::auth::{AuthUser, BearerToken},
     },
-    write_conn, write_transaction,
+    schema, write_conn, write_transaction,
 };
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, RequestContext, TypedBody, UntypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -101,6 +102,7 @@ async fn get_inner(
 /// Link the GitHub repository that a grant from the GitHub code exchange names.
 /// The grant must be for this project and from this user, and it lasts ten minutes.
 /// A project links at most one repository, so this replaces any link it had.
+/// A project with no URL takes the repository's URL on GitHub.
 /// The user must have `manage` permissions for the project.
 #[endpoint {
     method = PUT,
@@ -146,6 +148,7 @@ async fn put_inner(
         return Err(forbidden_error("This GitHub grant is for another user."));
     }
 
+    let repository_url = repository_url(&grant.full_name)?;
     let link = QueryLinkedRepository::connected(
         query_project.id,
         grant.installation,
@@ -154,8 +157,20 @@ async fn put_inner(
         auth_user.user.id,
         now,
     );
-    link.replace(write_conn!(context))
-        .map_err(resource_conflict_err!(LinkedRepository, query_project))?;
+    write_transaction!(context, |conn| {
+        link.replace(conn)?;
+        diesel::update(
+            schema::project::table
+                .filter(schema::project::id.eq(query_project.id))
+                .filter(schema::project::url.is_null()),
+        )
+        .set((
+            schema::project::url.eq(&repository_url),
+            schema::project::modified.eq(now),
+        ))
+        .execute(conn)
+    })
+    .map_err(resource_conflict_err!(LinkedRepository, query_project))?;
     link.into_json(auth_conn!(context))
 }
 
@@ -464,6 +479,18 @@ async fn is_allowed(
         auth_user,
         Permission::Manage,
     )
+}
+
+fn repository_url(full_name: &GitHubRepositoryName) -> Result<bencher_json::Url, HttpError> {
+    format!("https://github.com/{full_name}")
+        .parse()
+        .map_err(|e| {
+            issue_error(
+                "Failed to build a GitHub repository URL",
+                &format!("Failed to build the GitHub URL of repository ({full_name})."),
+                e,
+            )
+        })
 }
 
 fn return_url(context: &ApiContext) -> Result<Url, HttpError> {
