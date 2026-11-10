@@ -15,7 +15,7 @@ import {
 	RecaptchaAction,
 	type Uuid,
 } from "../../types/bencher";
-import { httpPost } from "../../util/http";
+import { apiErrorMessage, httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify, pageNotify } from "../../util/notify";
 import { getRecaptchaToken, loadRecaptcha } from "../../util/recaptcha";
 import { useSearchParams } from "../../util/url";
@@ -157,7 +157,7 @@ const AuthForm = (props: Props) => {
 				Sentry.captureException(error);
 				pageNotify(
 					NotifyKind.ERROR,
-					`Failed to ${props.newUser ? "signup" : "login"}: ${error?.response?.data?.message}`,
+					`Failed to ${props.newUser ? "signup" : "login"}: ${apiErrorMessage(error, "please try again")}`,
 				);
 			});
 	};

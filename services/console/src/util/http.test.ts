@@ -137,6 +137,27 @@ describe("apiErrorMessage", () => {
 		expect(message.startsWith(capped)).toBe(true);
 	});
 
+	test("keeps the first line of a message the API sent over two", () => {
+		const message =
+			"Failed to create client JWT for OAuth2: boom\nPlease report this issue: https://github.com/bencherdev/bencher/issues/new?title=Failed";
+		expect(apiErrorMessage(refused({ message }), FALLBACK)).toBe(
+			"Failed to create client JWT for OAuth2: boom",
+		);
+	});
+
+	test("caps on a whole character, never half of a surrogate pair", () => {
+		const message = `${"a".repeat(255)}\u{1F600} tail`;
+		const capped = apiErrorMessage(refused({ message }), FALLBACK);
+		expect(Array.from(capped)).toHaveLength(256);
+		expect(capped.endsWith("\u{1F600}")).toBe(true);
+	});
+
+	test("falls back when the message starts with a line break", () => {
+		const message =
+			"\nPlease report this issue: https://github.com/bencherdev/bencher/issues/new";
+		expect(apiErrorMessage(refused({ message }), FALLBACK)).toBe(FALLBACK);
+	});
+
 	test("falls back when the body carries no message", () => {
 		expect(apiErrorMessage(refused({ request_id: "0" }), FALLBACK)).toBe(
 			FALLBACK,
