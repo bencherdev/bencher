@@ -109,6 +109,7 @@ export const boot = async (mount: HTMLElement, transport: Transport) => {
 			<Embed
 				slug={result()?.project.slug ?? named(input())}
 				name={result()?.project.name}
+				url={result()?.project.url}
 				nameless={refused() !== undefined}
 				query={query()}
 				view="plot"

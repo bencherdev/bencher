@@ -6,7 +6,7 @@ import { type JobKind, LABELS, type Status } from "./status";
 const StatusPill = (props: { status: Status }) => (
 	<Show when={props.status.kind} fallback={props.status.time}>
 		{(kind) => (
-			<span class="rn-st" data-status={kind()}>
+			<span class="rn-st" style={HOLDS} data-status={kind()}>
 				{MARKS[kind()]()}
 				{LABELS[kind()]}
 				<Show when={props.status.time}>
@@ -30,3 +30,6 @@ const MARKS: Record<JobKind, () => JSX.Element> = {
 };
 
 export default StatusPill;
+
+/** A pill keeps its words on one line, so a long name beside it gives way first. */
+const HOLDS = { flex: "none" };

@@ -10,6 +10,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { type JSX, Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import {
+	type GitHubLinkStatus,
 	type JsonConsoleProject,
 	type JsonProject,
 	Visibility,
@@ -45,6 +46,28 @@ export const bootstrapOf = (
 	active_alerts: 1,
 	plots: 0,
 });
+
+/** The bootstrap of a project at `url`, linked as `link`, read by a reader who may or may not manage it. */
+export const linkedBootstrap = ({
+	url,
+	link,
+	manage = true,
+}: {
+	url?: string;
+	link?: GitHubLinkStatus;
+	manage?: boolean;
+}): JsonConsoleProject => {
+	const bootstrap = bootstrapOf({ manage });
+	const { url: _url, ...project } = bootstrap.project;
+	return {
+		...bootstrap,
+		project: {
+			...project,
+			...(url === undefined ? {} : { url }),
+			...(link === undefined ? {} : { github_link: link }),
+		},
+	};
+};
 
 export interface Sent {
 	method: Method;

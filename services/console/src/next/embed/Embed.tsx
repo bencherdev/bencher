@@ -2,6 +2,7 @@ import Skeleton from "@bencherdev/ui/Skeleton";
 import { type JSX, Match, Show, Switch, createMemo } from "solid-js";
 import type { JsonConsolePerf } from "../../types/bencher";
 import { plotData } from "../explore/data";
+import { publicGitHub } from "../commit";
 import { measuresLayout } from "../explore/layout";
 import PlotFrame from "../explore/PlotFrame";
 import { drawable } from "../explore/request";
@@ -17,6 +18,8 @@ export interface EmbedProps {
 	name?: string | undefined;
 	/** The project's read failed, so the line names it by its slug. */
 	nameless?: boolean | undefined;
+	/** The project's URL, which links each hash to its commit when it names a GitHub repository. */
+	url?: string | undefined;
 	query: ExploreQuery;
 	/** The plot, or a project the API refused, which may not exist. */
 	view: "plot" | "locked";
@@ -127,6 +130,7 @@ const Embed = (props: EmbedProps) => {
 										layout={layout()}
 										reserve={reserve()}
 										{...(props.links && { reportHref: props.links.report })}
+										github={publicGitHub(() => props.url)}
 										alerts={props.links && { href: props.links.alert }}
 										note={
 											props.answer?.window.clamped

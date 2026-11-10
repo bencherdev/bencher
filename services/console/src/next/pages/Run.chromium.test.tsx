@@ -11,10 +11,12 @@ import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type {
-	JsonConsoleJob,
-	JsonConsoleRunJobs,
-	JsonConsoleRunReport,
+import {
+	GitHubLinkStatus,
+	type JsonConsoleJob,
+	type JsonConsoleProject,
+	type JsonConsoleRunJobs,
+	type JsonConsoleRunReport,
 } from "../../types/bencher";
 import { alertId, alertsFixture, reportId } from "../alerts/testing";
 import { type Api, ApiError } from "../api";
@@ -32,10 +34,13 @@ import {
 	runPageFixture,
 	runReportFixture,
 } from "../runs/testing";
-import { bootstrapOf } from "../settings/testing";
+import { bootstrapOf, linkedBootstrap } from "../settings/testing";
 import {
 	STRESS,
 	columnEdges,
+	expectTakesItsBox,
+	expectTitleRow,
+	expectUncoveredBy,
 	expectNameStartsWithText,
 	expectRowOpens,
 	nameFloor,
@@ -49,7 +54,20 @@ const PATH = `/hashbrown/runs/${RUN}`;
 let dispose: (() => void) | undefined;
 let queryClient: QueryClient;
 
-const mount = (api: Api, path = PATH, base?: string) => {
+/** The run page at `path`, where `api` answers everything but the project's bootstrap, which the console shell reads. */
+const mount = (
+	fake: Api,
+	path = PATH,
+	base?: string,
+	bootstrap: JsonConsoleProject = bootstrapOf(),
+) => {
+	const api: Api = {
+		...fake,
+		get: <T,>(path: string, signal?: AbortSignal) =>
+			path === "/v0/console/projects/hashbrown"
+				? Promise.resolve({ data: bootstrap as T, headers: new Headers() })
+				: fake.get<T>(path, signal),
+	};
 	const history = createMemoryHistory();
 	history.set({ value: path });
 	const root = document.createElement("div");
@@ -116,8 +134,8 @@ afterEach(() => {
 	vi.useRealTimers();
 });
 
-// Kills a phone head that grows when the run arrives, a long branch that
-// takes the hash's place, and a sub line that pushes the page sideways.
+// Kills a phone head that grows when the run and its alert pill arrive, a
+// long branch that takes the hash's place, and a sub line that pushes the page sideways.
 test("on a phone the head holds its size and the hash stays whole beside a long branch", async () => {
 	for (const width of [320, 390]) {
 		await page.viewport(width, 844);
@@ -133,6 +151,7 @@ test("on a phone the head holds its size and the hash stays whole beside a long 
 			total: 8,
 			testbeds: 2,
 			lines: 96,
+			alerts: { total: 2, active: 1 },
 		});
 		answer.resolve({
 			...fixture,
@@ -143,6 +162,53 @@ test("on a phone the head holds its size and the hash stays whole beside a long 
 		const hash = document.querySelector<HTMLElement>(".rn-titlehash");
 		expect(hash?.scrollWidth).toBeLessThanOrEqual(hash?.clientWidth ?? 0);
 		expect(hash?.textContent).toBe("9c1f2e4");
+		expect(document.documentElement.scrollWidth).toBe(width);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a phone title row where Copy or the commit control lies over the hash,
+// a branch pushed out of view, a part past the screen's edge, and an alert pill
+// or Link GitHub that stays on the title's line, a long one or a short one.
+test("on a phone the title, hash, Copy, and commit control keep their line, and the pills wrap under it", async () => {
+	for (const [width, branch] of [
+		[320, STRESS.branch],
+		[390, STRESS.branch],
+		[390, "main"],
+	] as const) {
+		await page.viewport(width, 844);
+		const fixture = runPageFixture([runReportFixture(0)], {
+			alerts: { total: 2, active: 1 },
+		});
+		const { api } = fakeApi(() => ({
+			data: { ...fixture, branch: { ...fixture.branch, name: branch } },
+		}));
+		mount(
+			api,
+			PATH,
+			undefined,
+			linkedBootstrap({
+				url: "https://github.com/pompeii-llc/hashbrown",
+				link: GitHubLinkStatus.Unlinked,
+			}),
+		);
+		await expect
+			.element(page.getByRole("link", { name: "Link GitHub" }))
+			.toBeVisible();
+		const row = title();
+		expectTitleRow(
+			[
+				row?.querySelector("h1 .ui-trunc"),
+				row?.querySelector(".rn-titlehash"),
+				row?.querySelector(".rn-copy .ui-button"),
+				row?.querySelector(`a[aria-label="${COMMIT}"]`),
+			],
+			[
+				row?.querySelector(".rp-alerts"),
+				row?.querySelector("a[href$='/connections'] .ui-button"),
+			],
+		);
 		expect(document.documentElement.scrollWidth).toBe(width);
 		dispose?.();
 		document.body.replaceChildren();
@@ -682,13 +748,8 @@ test("the count counts the alerts drawn, several to a report", async () => {
 
 /** The run's alerts, read by a reader who may or may not change them. */
 const mountAlerting = (edit: boolean) => {
-	const { api } = fakeApi((url) => ({
-		data:
-			url.pathname === "/v0/console/projects/hashbrown"
-				? bootstrapOf({ edit })
-				: alerting(),
-	}));
-	mount(api);
+	const { api } = fakeApi(() => ({ data: alerting() }));
+	mount(api, PATH, undefined, bootstrapOf({ edit }));
 };
 
 /** Opens the first alert row's plot and pins its readout on the alert, the last point. */
@@ -707,6 +768,31 @@ const pinAlert = async () => {
 		.toBeVisible();
 	return readout;
 };
+
+// Kills a run's alert row plots that never open a pinned point's commit or
+// never ask a Maintainer to link GitHub.
+test("an alert row's pinned readout opens its commit and asks a Maintainer to link GitHub", async () => {
+	const { api } = fakeApi(() => ({ data: alerting() }));
+	mount(
+		api,
+		PATH,
+		undefined,
+		linkedBootstrap({
+			url: "https://github.com/pompeii-llc/hashbrown",
+			link: GitHubLinkStatus.Unlinked,
+		}),
+	);
+	const readout = await pinAlert();
+	await expect
+		.element(readout.getByRole("link", { name: "Open commit on GitHub" }))
+		.toHaveAttribute(
+			"href",
+			`https://github.com/pompeii-llc/hashbrown/commit/9c1f2e4`,
+		);
+	await expect
+		.element(readout.getByRole("link", { name: "Link GitHub" }))
+		.toBeVisible();
+});
 
 // Kills an alert row's readout that offers a change to a reader who may not
 // make it, or none to one who may.
@@ -1210,4 +1296,253 @@ test("a run with nothing landed counts no lines in its sub line", async () => {
 	const sub = document.querySelector(".rp-sub")?.textContent ?? "";
 	expect(sub).toContain("2 reports");
 	expect(sub).not.toMatch(/\bline/);
+});
+
+const title = () => document.querySelector<HTMLElement>(".rp-titlerow");
+
+const COMMIT = "Open commit on GitHub";
+
+// Kills a control that opens the commit by its short hash, one with no
+// repository to open it in, a hash that becomes a link itself, and a control
+// anywhere but beside Copy.
+test("the run's hash stays plain, with a control beside Copy that opens its commit", async () => {
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)]),
+	}));
+	mount(api);
+	await expect
+		.element(page.getByRole("link", { name: COMMIT }))
+		.toHaveAttribute(
+			"href",
+			`https://github.com/pompeii-llc/hashbrown/commit/9c1f2e4${"0".repeat(33)}`,
+		);
+	expect(title()?.querySelector(".rn-titlehash")?.tagName).toBe("SPAN");
+	expect(
+		title()?.querySelector(".rn-copy")?.nextElementSibling?.ariaLabel,
+	).toBe(COMMIT);
+	dispose?.();
+	document.body.replaceChildren();
+
+	// The chip shows once the bootstrap is in, which is when the control would.
+	mount(
+		api,
+		PATH,
+		undefined,
+		linkedBootstrap({ link: GitHubLinkStatus.Unlinked }),
+	);
+	await expect
+		.element(page.getByRole("link", { name: "Link GitHub" }))
+		.toBeVisible();
+	expect(title()?.querySelector(".rn-titlehash")?.textContent).toBe("9c1f2e4");
+	expect(title()?.querySelectorAll("a")).toHaveLength(1);
+});
+
+// Kills a chip for a reader who may not manage the project, one for a
+// connected link or a server that cannot link, and a chip that says the wrong
+// words or leads anywhere but Connections.
+test("a Maintainer's run asks to link or reconnect GitHub, by the link's status", async () => {
+	const { api } = fakeApi(() => ({
+		data: runPageFixture([runReportFixture(0)]),
+	}));
+	const asks = async (fields: Parameters<typeof linkedBootstrap>[0]) => {
+		mount(
+			api,
+			PATH,
+			undefined,
+			linkedBootstrap({
+				url: "https://github.com/pompeii-llc/rosti",
+				...fields,
+			}),
+		);
+		// The control shows once the bootstrap is in, which is when the chip would.
+		await expect
+			.element(page.getByRole("link", { name: COMMIT }))
+			.toBeVisible();
+		const chip = [
+			...(title()?.querySelectorAll("a[href$='/connections']") ?? []),
+		].map((link) => [link.textContent, link.getAttribute("href")]);
+		dispose?.();
+		document.body.replaceChildren();
+		return chip;
+	};
+	const connections = "/console/projects/hashbrown/connections";
+	expect(await asks({ link: GitHubLinkStatus.Unlinked })).toEqual([
+		["Link GitHub", connections],
+	]);
+	expect(await asks({ link: GitHubLinkStatus.Disconnected })).toEqual([
+		["Reconnect GitHub", connections],
+	]);
+	expect(await asks({ link: GitHubLinkStatus.Connected })).toEqual([]);
+	expect(await asks({})).toEqual([]);
+	expect(
+		await asks({ link: GitHubLinkStatus.Unlinked, manage: false }),
+	).toEqual([]);
+});
+
+// Kills a chip taller than the alert pill beside it, a phone target smaller
+// than a finger or reaching past its line, a desktop target larger than the
+// chip, and a target over Copy, the commit control, or a cut name's reveal,
+// with or without a status pill beside the chip.
+test("the Link GitHub chip is as tall as the alert pill, and its touch target covers nothing", async () => {
+	const jobs = {
+		queued: 1,
+		running: 1,
+		failed: 0,
+		canceled: 0,
+		since: Date.now(),
+	} as JsonConsoleRunJobs;
+	const testbed = (name: string) => ({ uuid: name, name, slug: name });
+	for (const width of [1280, 390]) {
+		for (const status of [false, true]) {
+			await page.viewport(width, 844);
+			const fixture = runPageFixture(
+				[
+					runReportFixture(0, {
+						testbed: testbed(`${STRESS.name}-1`),
+						...(status ? { job: job({}) } : {}),
+					}),
+					runReportFixture(1, { testbed: testbed(`${STRESS.name}-2`) }),
+				],
+				{
+					alerts: { total: 2, active: 1 },
+					testbeds: 2,
+					branch: { ...runPageFixture([]).branch, name: STRESS.branch },
+					...(status ? { jobs } : {}),
+				},
+			);
+			const { api } = fakeApi(() => ({ data: fixture }));
+			mount(
+				api,
+				PATH,
+				undefined,
+				linkedBootstrap({
+					url: "https://github.com/pompeii-llc/hashbrown",
+					link: GitHubLinkStatus.Unlinked,
+				}),
+			);
+			await expect
+				.element(page.getByRole("link", { name: "Link GitHub" }))
+				.toBeVisible();
+			if (status) {
+				await expect
+					.poll(() => title()?.querySelectorAll(".rp-titlepills > *").length)
+					.toBe(3);
+			}
+			const target = title()?.querySelector<HTMLElement>(
+				"a[href$='/connections']",
+			);
+			const shown = (
+				target?.querySelector(".ui-button") ?? target
+			)?.getBoundingClientRect();
+			const pill = title()
+				?.querySelector(".rp-alerts")
+				?.getBoundingClientRect();
+			const hit = target?.getBoundingClientRect();
+			expect(shown?.height).toBeLessThanOrEqual((pill?.height ?? 0) + 0.5);
+			if (width < 768) {
+				const line = title()
+					?.querySelector(".rp-titlepills")
+					?.getBoundingClientRect();
+				expect(hit?.height).toBeGreaterThanOrEqual(44);
+				expect(hit?.top).toBeGreaterThanOrEqual((line?.top ?? 0) - 0.5);
+				expect(hit?.bottom).toBeLessThanOrEqual((line?.bottom ?? 0) + 0.5);
+			} else {
+				expect(hit?.height).toBeLessThanOrEqual((shown?.height ?? 0) + 0.5);
+			}
+			const reveals = [
+				...document.querySelectorAll(".rp-sub button, .rp-titlerow h1 button"),
+			];
+			expect(reveals.length).toBeGreaterThan(0);
+			for (const reveal of reveals) {
+				expectUncoveredBy(reveal, target);
+			}
+			expectTakesItsBox(title()?.querySelector(".rn-copy .ui-button"));
+			expectTakesItsBox(title()?.querySelector(`a[aria-label="${COMMIT}"]`));
+			dispose?.();
+			document.body.replaceChildren();
+		}
+	}
+});
+
+// Kills a title row whose status pill gives way to a long branch, which
+// squeezes it into a column of its words.
+test("a running run's status pill keeps its one line beside a long branch", async () => {
+	await page.viewport(1280, 844);
+	const jobs = {
+		queued: 1,
+		running: 1,
+		failed: 0,
+		canceled: 0,
+		since: Date.now(),
+	} as JsonConsoleRunJobs;
+	const fixture = runPageFixture([runReportFixture(0, { job: job({}) })], {
+		alerts: { total: 2, active: 1 },
+		branch: { ...runPageFixture([]).branch, name: STRESS.branch },
+		jobs,
+	});
+	const { api } = fakeApi(() => ({ data: fixture }));
+	mount(api);
+	await expect.poll(() => title()?.querySelector(".rn-st")).not.toBeNull();
+	const pill = title()?.querySelector<HTMLElement>(".rn-st");
+	expect(pill?.getBoundingClientRect().height).toBeLessThanOrEqual(24.5);
+	expect(pill?.scrollWidth).toBeLessThanOrEqual(pill?.clientWidth ?? 0);
+});
+
+// Kills a phone pills line that runs past the screen and scrolls the page
+// sideways when Reconnect GitHub, a running status, and an alert pill share it,
+// with a few alerts or many and a short running time or a long one.
+test("on a phone the pills wrap rather than push the page sideways", async () => {
+	const HOUR = 60 * 60 * 1_000;
+	for (const width of [320, 360]) {
+		for (const [alerts, ran] of [
+			[2, 3 * 60 * 1_000],
+			[120, 23 * HOUR],
+		] as const) {
+			await page.viewport(width, 844);
+			const since = Date.now() - ran;
+			const fixture = runPageFixture(
+				[
+					runReportFixture(0, {
+						job: job({
+							status: "running" as JsonConsoleJob["status"],
+							started: since,
+						}),
+					}),
+				],
+				{
+					alerts: { total: alerts, active: alerts },
+					jobs: {
+						queued: 0,
+						running: 1,
+						failed: 0,
+						canceled: 0,
+						since,
+					} as JsonConsoleRunJobs,
+				},
+			);
+			const { api } = fakeApi(() => ({ data: fixture }));
+			mount(
+				api,
+				PATH,
+				undefined,
+				linkedBootstrap({
+					url: "https://github.com/pompeii-llc/hashbrown",
+					link: GitHubLinkStatus.Disconnected,
+				}),
+			);
+			await expect
+				.element(page.getByRole("link", { name: "Reconnect GitHub" }))
+				.toBeVisible();
+			await expect.poll(() => title()?.querySelector(".rn-st")).not.toBeNull();
+			expect(document.documentElement.scrollWidth).toBe(window.innerWidth);
+			for (const pill of title()?.querySelectorAll(".rp-titlepills > *") ??
+				[]) {
+				const box = pill.getBoundingClientRect();
+				expect(box.left).toBeGreaterThanOrEqual(0);
+				expect(box.right).toBeLessThanOrEqual(window.innerWidth);
+			}
+			dispose?.();
+			document.body.replaceChildren();
+		}
+	}
 });

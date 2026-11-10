@@ -7,7 +7,7 @@ import { Show, createSignal, onMount } from "solid-js";
 import type { JsonGitHubRepositories } from "../../types/bencher";
 import { useAccount } from "../account/context";
 import { takeGitHubReturn } from "../astro/githubReturn";
-import { PROJECTS_PATH } from "../paths";
+import { connectionsPath } from "../github";
 import { githubQuery, hold } from "../settings/Connections";
 import { failureOf } from "./Settings";
 
@@ -80,9 +80,6 @@ const GitHub = () => {
 };
 
 export default GitHub;
-
-const connectionsPath = (project: string) =>
-	`${PROJECTS_PATH}/${encodeURIComponent(project)}/connections`;
 
 /** The project a link state names, read but not verified: only the API trusts it. */
 const projectOf = (state: string | undefined) => {

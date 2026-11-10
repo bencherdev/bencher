@@ -30,6 +30,11 @@
 	min-width: 0;
 	min-height: 24px;
 }
+/* One row; on a phone, the title's line over the pills' line, which it holds before they arrive. */
+.rp-titlemain,
+.rp-titlepills {
+	display: contents;
+}
 .rp-titlerow h1 {
 	min-width: 0;
 	margin: 0;
@@ -638,6 +643,20 @@
 @media (max-width: 767px) {
 	.pagehead.rp-head {
 		grid-template-columns: minmax(0, 1fr);
+	}
+	.rp-titlerow {
+		flex-wrap: wrap;
+	}
+	.rp-titlemain,
+	.rp-titlepills {
+		display: flex;
+		flex-basis: 100%;
+		align-items: center;
+		gap: 10px;
+		min-width: 0;
+	}
+	.rp-titlepills {
+		min-height: 44px;
 	}
 	.ph-sub.rp-sub {
 		display: flex;

@@ -20,6 +20,7 @@ import {
 import type { Settable } from "../alerts/status";
 import { NARROW } from "../plot/narrow";
 import { STACK } from "./fold";
+import type { GitHubLinks } from "../github";
 import type { PlotAlerts } from "../plot/Plot";
 import type { PlotData } from "../plot/types";
 import type { GroupRow, ReportLine } from "./lines";
@@ -85,6 +86,7 @@ interface LineTableProps {
 		data: PlotData;
 		note: string;
 		reportHref: (uuid: string) => string;
+		github?: GitHubLinks;
 		/** Only this iteration of every report, counting from 1. */
 		iteration?: number | undefined;
 		/** What a pinned readout on an alert offers, when the page decides it. */

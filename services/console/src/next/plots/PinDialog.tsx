@@ -15,6 +15,7 @@ import {
 } from "../../types/bencher";
 import { queryFromPlot } from "../explore/pinned";
 import { perfQuery } from "../explore/queries";
+import { consoleGitHub } from "../github";
 import {
 	PRESETS,
 	type RollingUnit,
@@ -24,6 +25,7 @@ import {
 } from "../explore/window";
 import { reportPath } from "../paths";
 import { useProject } from "../project";
+import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 import { type Position, placed, positionIndex, positionOf } from "./order";
 import { PLOTS_LIMIT } from "./pins";
@@ -50,6 +52,7 @@ const PinDialog = (props: {
 	onSaved: (plot: JsonPlot, order: string[]) => void;
 }) => {
 	const { api, slug } = useProject();
+	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
 	const heading = createUniqueId();
 	const titleId = createUniqueId();
 	const titleHelp = createUniqueId();
@@ -161,6 +164,7 @@ const PinDialog = (props: {
 						window={rollingName(seconds())}
 						class="plots-preview"
 						reportHref={(report) => reportPath(slug(), report)}
+						github={consoleGitHub(() => bootstrap().data)}
 					/>
 				</div>
 				<div class="plots-dfields">

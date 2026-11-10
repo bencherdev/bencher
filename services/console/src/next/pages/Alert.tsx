@@ -28,6 +28,7 @@ import Plot from "../plot/Plot";
 import { formatDate, formatWhen } from "../plot/format";
 import { leafOf } from "../leaf";
 import { useEntityTitle, useProject } from "../project";
+import { type GitHubLinks, consoleGitHub } from "../github";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
 
@@ -44,6 +45,7 @@ const Alert = () => {
 	const { api, slug } = useProject();
 	const params = useParams<{ alert: string }>();
 	const bootstrap = useQueryResult(() => consoleProjectQuery(api, slug()));
+	const github = consoleGitHub(() => bootstrap().data);
 	const valid = () => UUID.test(params.alert);
 	const query = useQueryResult(() => ({
 		...alertQuery(api, slug(), params.alert),
@@ -126,6 +128,7 @@ const Alert = () => {
 							onChange={(next) => changes.change(current().uuid, next)}
 							plot={drawn()}
 							explore={explore()}
+							github={github}
 						/>
 					)}
 				</Match>
@@ -169,6 +172,7 @@ const Page = (props: {
 	onChange: (status: "active" | "dismissed") => void;
 	plot: ReturnType<typeof plotData> | undefined;
 	explore: string | undefined;
+	github: GitHubLinks;
 }) => {
 	const [hidden, setHidden] = createSignal<string[]>([]);
 	const [focused, setFocused] = createSignal<string | null>();
@@ -276,6 +280,7 @@ const Page = (props: {
 				note={NOTE}
 				label={`${props.facts.name}, 4 weeks ending at its report`}
 				reportHref={(uuid) => reportPath(props.slug, uuid)}
+				github={props.github}
 				pin={
 					props.detail.perf.lines[0]?.series.alerts.find(
 						({ uuid }) => uuid === props.detail.uuid,

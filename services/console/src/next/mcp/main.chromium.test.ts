@@ -182,3 +182,30 @@ test("a pinned readout links to its report and its alert in the console, through
 			`${CONSOLE}/console/projects/hashbrown/reports/${uuid(21)}`,
 		]);
 });
+
+// Kills a host's plot with no commit control on a pinned point, or one that
+// reads anything but the project's URL.
+test("a pinned point opens its commit from the project's GitHub URL, through the host", async () => {
+	const hash = `9c1f2e4${"0".repeat(33)}`;
+	const result = perf();
+	const shown = host({
+		first: success({
+			...result,
+			reports: result.reports.map((report) => ({ ...report, hash })),
+			project: {
+				...result.project,
+				url: "https://github.com/pompeii-llc/hashbrown",
+			},
+		}),
+	});
+	await mount(shown);
+	const area = page.getByRole("group", { name: /lines?,/ });
+	await expect.element(area).toBeVisible();
+	const box = area.element().getBoundingClientRect();
+	await area.click({ position: { x: box.width / 2, y: box.height / 2 } });
+	const commit = page.getByRole("link", { name: "Open commit on GitHub" });
+	await userEvent.click(commit);
+	await expect
+		.poll(() => shown.opened)
+		.toEqual([`https://github.com/pompeii-llc/hashbrown/commit/${hash}`]);
+});

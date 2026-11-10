@@ -8,12 +8,14 @@ import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
-import type {
-	JsonConsoleJob,
-	JsonConsoleReport,
-	JsonConsoleReportRun,
-	JsonConsoleRunReportLink,
-	JsonConsoleSpec,
+import {
+	GitHubLinkStatus,
+	type JsonConsoleJob,
+	type JsonConsoleProject,
+	type JsonConsoleReport,
+	type JsonConsoleReportRun,
+	type JsonConsoleRunReportLink,
+	type JsonConsoleSpec,
 } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
@@ -30,8 +32,14 @@ import {
 import { decodeQuery } from "../query/query";
 import { fakeApi, watchFallback } from "../reports/testing";
 import { screenBatch as runScreenBatch } from "../list/rows";
-import { bootstrapOf } from "../settings/testing";
-import { STRESS, expectNameStartsWithText } from "../ui/testing";
+import { bootstrapOf, linkedBootstrap } from "../settings/testing";
+import {
+	STRESS,
+	expectNameStartsWithText,
+	expectTakesItsBox,
+	expectTitleRow,
+	expectUncoveredBy,
+} from "../ui/testing";
 import Report from "./Report";
 
 const PATH = `${PROJECTS_PATH}/hashbrown/reports/${REPORT}`;
@@ -790,7 +798,10 @@ test("a viewer's title stays whole beside the Read only pill, and its alerts kee
 			return { x, y, width, height };
 		};
 		const before = box();
-		answer(bootstrapOf({ edit: false }));
+		// A project with no repository: a commit control arriving with the bootstrap does move the alerts.
+		const viewer = bootstrapOf({ edit: false });
+		const { url: _url, ...project } = viewer.project;
+		answer({ ...viewer, project });
 		await expect
 			.element(page.getByText("Read only", { exact: true }))
 			.toBeVisible();
@@ -1345,5 +1356,280 @@ test("a long branch shares the title with its testbed, whole where it fits", asy
 		expect(words.getClientRects()).toHaveLength(1);
 		dispose?.();
 		document.body.replaceChildren();
+	}
+});
+
+const HASH = `9c1f2e4${"0".repeat(33)}`;
+const COMMITS = "https://github.com/pompeii-llc/rosti/commit";
+const CONNECTIONS = "/console/projects/hashbrown/connections";
+const COMMIT = "Open commit on GitHub";
+
+/** Mounts `report` for a project at `url`, unlinked, so the chip says when the bootstrap is in. */
+const showLinked = async (report: JsonConsoleReport, url: string) => {
+	const { api } = fakeApi((path) =>
+		isReport(path)
+			? { data: report }
+			: {
+					data: linkedBootstrap({ url, link: GitHubLinkStatus.Unlinked }),
+				},
+	);
+	mount(api, impatient());
+	await expect.element(table()).toBeVisible();
+	await expect
+		.element(page.getByRole("link", { name: "Link GitHub" }))
+		.toBeVisible();
+};
+
+// Kills a title row with no control, one that opens the commit by its short
+// hash, one with no repository to open it in, one anywhere but right after the
+// title, and a control left in the breadcrumb or the subtitle.
+test("a report's title row opens its commit right after the title, and only there", async () => {
+	const control = (within: string) =>
+		document.querySelector<HTMLAnchorElement>(
+			`${within} a[aria-label="${COMMIT}"]`,
+		);
+	for (const report of [
+		reportFixture(undefined, { run: run() } as never),
+		reportFixture(),
+	]) {
+		await showLinked(report, "https://github.com/pompeii-llc/rosti/");
+		expect(control(".rp-titlerow")?.getAttribute("href")).toBe(
+			`${COMMITS}/${HASH}`,
+		);
+		expect(
+			document.querySelector(".rp-titlemain > h1")?.nextElementSibling,
+		).toBe(control(".rp-titlerow"));
+		expect(control(".rp-crumb")).toBeNull();
+		expect(control(".rp-sub")).toBeNull();
+		dispose?.();
+		document.body.replaceChildren();
+	}
+
+	await showLinked(reportFixture(), "https://rosti.example");
+	expect(control(".rp-head")).toBeNull();
+});
+
+// Kills a phone title row where the commit control lies over the title, a
+// title pushed out of view, a part past the screen's edge, and an alert pill
+// or Link GitHub that stays on the title's line, a long one or a short one.
+test("on a phone the title and commit control keep their line, and the pills wrap under it", async () => {
+	for (const [width, branch] of [
+		[320, STRESS.branch],
+		[390, STRESS.branch],
+		[390, "main"],
+	] as const) {
+		await page.viewport(width, 844);
+		const report = reportFixture(undefined, { run: run() } as never);
+		await showLinked(
+			{ ...report, branch: { ...report.branch, name: branch } },
+			"https://github.com/pompeii-llc/rosti",
+		);
+		const row = document.querySelector(".rp-titlerow");
+		expectTitleRow(
+			[
+				row?.querySelector("h1 .ui-trunc"),
+				row?.querySelectorAll("h1 .ui-trunc")[1],
+				row?.querySelector(`a[aria-label="${COMMIT}"]`),
+			],
+			[
+				row?.querySelector(".rp-alerts"),
+				row?.querySelector("a[href$='/connections'] .ui-button"),
+			],
+		);
+		expect(document.documentElement.scrollWidth).toBe(width);
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a chip taller than the alert pill, a phone target smaller than a
+// finger or reaching past its line, a desktop target larger than the chip,
+// and a target over the commit control, a cut name's reveal, or a run-less
+// report's Copy, with or without a status pill beside the chip.
+test("the report's chip is as tall as the alert pill, and its touch target covers nothing", async () => {
+	for (const width of [1280, 390]) {
+		for (const status of [false, true]) {
+			for (const ran of [true, false]) {
+				await page.viewport(width, 844);
+				const report = reportFixture(undefined, {
+					...(ran ? { run: run() } : {}),
+					spec: { ...spec, name: STRESS.name },
+					...(status
+						? {
+								job: {
+									status: "running",
+									created: STARTED,
+									started: STARTED,
+								} as JsonConsoleJob,
+							}
+						: {}),
+				} as never);
+				await showLinked(
+					{ ...report, branch: { ...report.branch, name: STRESS.branch } },
+					"https://github.com/pompeii-llc/rosti",
+				);
+				const row = document.querySelector(".rp-titlerow");
+				if (status) {
+					expect(row?.querySelectorAll(".rp-titlepills > *")).toHaveLength(3);
+				}
+				const target = row?.querySelector("a[href$='/connections']");
+				const shown = (
+					target?.querySelector(".ui-button") ?? target
+				)?.getBoundingClientRect();
+				const pill = row?.querySelector(".rp-alerts")?.getBoundingClientRect();
+				const hit = target?.getBoundingClientRect();
+				expect(shown?.height).toBeLessThanOrEqual((pill?.height ?? 0) + 0.5);
+				if (width < 768) {
+					const line = row
+						?.querySelector(".rp-titlepills")
+						?.getBoundingClientRect();
+					expect(hit?.height).toBeGreaterThanOrEqual(44);
+					expect(hit?.top).toBeGreaterThanOrEqual((line?.top ?? 0) - 0.5);
+					expect(hit?.bottom).toBeLessThanOrEqual((line?.bottom ?? 0) + 0.5);
+				} else {
+					expect(hit?.height).toBeLessThanOrEqual((shown?.height ?? 0) + 0.5);
+				}
+				const buttons = [
+					...document.querySelectorAll(
+						".rp-sub button, .rp-titlerow h1 button",
+					),
+				];
+				expect(buttons.length).toBeGreaterThan(ran ? 0 : 1);
+				for (const button of buttons) {
+					expectUncoveredBy(button, target);
+				}
+				expectTakesItsBox(row?.querySelector(`a[aria-label="${COMMIT}"]`));
+				dispose?.();
+				document.body.replaceChildren();
+			}
+		}
+	}
+});
+
+// Kills a title row whose status pill gives way to a long branch, which
+// squeezes it into a column of its words.
+test("a running report's status pill keeps its one line beside a long branch", async () => {
+	await page.viewport(1280, 844);
+	const report = reportFixture(undefined, {
+		run: run(),
+		job: {
+			status: "running",
+			created: STARTED,
+			started: STARTED,
+		} as JsonConsoleJob,
+	} as never);
+	await showLinked(
+		{ ...report, branch: { ...report.branch, name: STRESS.branch } },
+		"https://github.com/pompeii-llc/rosti",
+	);
+	const pill = document.querySelector<HTMLElement>(".rp-titlerow .rn-st");
+	expect(pill?.getBoundingClientRect().height).toBeLessThanOrEqual(24.5);
+	expect(pill?.scrollWidth).toBeLessThanOrEqual(pill?.clientWidth ?? 0);
+});
+
+// Kills a report page that asks a reader who may not manage the project, or
+// asks a Maintainer nothing, and a row plot whose pinned readout neither opens
+// its commit nor asks.
+test("a Maintainer's report and its row plots' pinned readouts ask to link GitHub", async () => {
+	const show = (bootstrap: JsonConsoleProject) => {
+		const { api } = fakeApi((url) =>
+			isReport(url) ? { data: threeLines() } : { data: bootstrap },
+		);
+		mount(api, impatient());
+	};
+	show(
+		linkedBootstrap({
+			url: "https://github.com/pompeii-llc/rosti",
+			link: GitHubLinkStatus.Disconnected,
+		}),
+	);
+	const chip = () =>
+		document.querySelector<HTMLAnchorElement>(
+			".rp-titlerow a[href$='/connections']",
+		);
+	await expect.poll(() => chip()?.textContent).toBe("Reconnect GitHub");
+	expect(chip()?.getAttribute("href")).toBe(CONNECTIONS);
+
+	await page.getByRole("button", { name: `Expand ${LATENCY}` }).click();
+	const region = page.getByRole("region", { name: `${LATENCY}, full plot` });
+	const plot = region.getByRole("group", { name: /^1 line/ });
+	await expect.element(plot).toBeVisible();
+	(plot.element() as HTMLElement).focus();
+	await userEvent.keyboard("{End}");
+	const readout = region.getByRole("status");
+	await expect
+		.element(readout.getByRole("link", { name: COMMIT }))
+		.toHaveAttribute("href", `${COMMITS}/9c1f2e4`);
+	await expect
+		.element(readout.getByRole("link", { name: "Reconnect GitHub" }))
+		.toHaveAttribute("href", CONNECTIONS);
+	dispose?.();
+	document.body.replaceChildren();
+
+	show(
+		linkedBootstrap({
+			url: "https://github.com/pompeii-llc/rosti",
+			link: GitHubLinkStatus.Disconnected,
+			manage: false,
+		}),
+	);
+	// The control shows once the bootstrap is in, which is when the chip would.
+	await expect.element(page.getByRole("link", { name: COMMIT })).toBeVisible();
+	expect(chip()).toBeNull();
+});
+
+// Kills a phone pills line that runs past the screen and scrolls the page
+// sideways when Reconnect GitHub, a running status, and an alert pill share it,
+// with a few alerts or many and a short running time or a long one.
+test("on a phone the report's pills wrap rather than push the page sideways", async () => {
+	const HOUR = 60 * 60 * 1_000;
+	for (const width of [320, 360]) {
+		for (const [alerts, ran] of [
+			[2, 3 * 60 * 1_000],
+			[120, 23 * HOUR],
+		] as const) {
+			await page.viewport(width, 844);
+			const since = Date.now() - ran;
+			const report = reportFixture(undefined, {
+				run: run(),
+				job: {
+					status: "running",
+					created: since,
+					started: since,
+				} as JsonConsoleJob,
+			} as never);
+			const { api } = fakeApi((url) =>
+				isReport(url)
+					? {
+							data: {
+								...report,
+								counts: {
+									...report.counts,
+									alerts: { total: alerts, active: alerts },
+								},
+							},
+						}
+					: {
+							data: linkedBootstrap({
+								url: "https://github.com/pompeii-llc/rosti",
+								link: GitHubLinkStatus.Disconnected,
+							}),
+						},
+			);
+			mount(api, impatient());
+			await expect
+				.element(page.getByRole("link", { name: "Reconnect GitHub" }))
+				.toBeVisible();
+			const row = document.querySelector(".rp-titlerow");
+			expect(row?.querySelector(".rn-st")).not.toBeNull();
+			expect(document.documentElement.scrollWidth).toBe(window.innerWidth);
+			for (const pill of row?.querySelectorAll(".rp-titlepills > *") ?? []) {
+				const box = pill.getBoundingClientRect();
+				expect(box.left).toBeGreaterThanOrEqual(0);
+				expect(box.right).toBeLessThanOrEqual(window.innerWidth);
+			}
+			dispose?.();
+			document.body.replaceChildren();
+		}
 	}
 });

@@ -19,6 +19,7 @@ import type { JsonConsolePerf } from "../../types/bencher";
 import Controls from "../explore/Controls";
 import { plotData } from "../explore/data";
 import { measuresLayout } from "../explore/layout";
+import { publicGitHub } from "../commit";
 import { parameterRows } from "../explore/parameters";
 import PlotFrame from "../explore/PlotFrame";
 import { TOO_LONG, drawable } from "../explore/request";
@@ -37,6 +38,8 @@ export interface PublicProps {
 	slug: string;
 	/** The project's name, or its slug until the project is read. */
 	name: string;
+	/** The project's URL, which links each hash to its commit when it names a GitHub repository. */
+	url?: string | undefined;
 	query: ExploreQuery;
 	/** Sign in, carrying this page as the place to return to. */
 	signIn: string;
@@ -269,6 +272,7 @@ const Plotted = (props: PublicProps) => {
 									scale={props.query.yScale}
 									layout={layout()}
 									reserve={reserve()}
+									github={publicGitHub(() => props.url)}
 									note={
 										props.answer?.window.clamped ? "Cut to 3 months" : undefined
 									}
