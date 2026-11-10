@@ -47,6 +47,7 @@ slug.workspace = true
 subtle = { workspace = true, optional = true }
 thiserror.workspace = true
 typeshare.workspace = true
+unicode-general-category.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["serde"] }
 wasm-bindgen = { workspace = true, optional = true }

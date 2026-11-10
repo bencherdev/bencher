@@ -2678,7 +2678,7 @@ export interface JsonUpdateUser {
 	/**
 	 * The new name of the user.
 	 * Maximum length is 64 characters.
-	 * May only contain alphanumeric characters, non-leading or trailing spaces, and the following characters: , . - '
+	 * May only contain letters, marks, and numbers of any script, non-leading or trailing spaces, and the following characters: _ , . - '
 	 */
 	name?: UserName;
 	/**

@@ -259,6 +259,25 @@ mod tests {
             .find_map(|(k, v)| (k == key).then(|| v.into_owned()))
     }
 
+    fn signed_in_user(login: &str) -> (u16, String) {
+        let profile = format!("https://github.example/{login}");
+        (
+            200,
+            format!(
+                r#"{{"login": "{login}", "id": 1, "node_id": "U_1", "avatar_url": "{profile}", "gravatar_id": "", "url": "{profile}", "html_url": "{profile}", "followers_url": "{profile}", "following_url": "{profile}", "gists_url": "{profile}", "starred_url": "{profile}", "subscriptions_url": "{profile}", "organizations_url": "{profile}", "repos_url": "{profile}", "events_url": "{profile}", "received_events_url": "{profile}", "type": "User", "site_admin": false}}"#
+            ),
+        )
+    }
+
+    fn primary_email(email: &str) -> (u16, String) {
+        (
+            200,
+            format!(
+                r#"[{{"email": "{email}", "primary": true, "verified": true, "visibility": null}}]"#
+            ),
+        )
+    }
+
     // Kills dropping the redirect from the authorize URL, or adding one to sign-in's.
     #[test]
     fn only_the_redirect_auth_url_names_a_redirect() {
@@ -283,20 +302,10 @@ mod tests {
     // the one the exchange returned.
     #[tokio::test]
     async fn sign_in_reads_the_user_from_the_base() {
-        let profile = "https://github.example/octo-cat";
         let server = Server::start(vec![
             exchanged(),
-            (
-                200,
-                format!(
-                    r#"{{"login": "octo-cat", "id": 1, "node_id": "U_1", "avatar_url": "{profile}", "gravatar_id": "", "url": "{profile}", "html_url": "{profile}", "followers_url": "{profile}", "following_url": "{profile}", "gists_url": "{profile}", "starred_url": "{profile}", "subscriptions_url": "{profile}", "organizations_url": "{profile}", "repos_url": "{profile}", "events_url": "{profile}", "received_events_url": "{profile}", "type": "User", "site_admin": false}}"#
-                ),
-            ),
-            (
-                200,
-                r#"[{"email": "octo-cat@example.com", "primary": true, "verified": true, "visibility": null}]"#
-                    .to_owned(),
-            ),
+            signed_in_user("octo-cat"),
+            primary_email("octo-cat@example.com"),
         ])
         .await;
         let client = client().with_base_url(server.base());
@@ -320,6 +329,26 @@ mod tests {
                 Some(format!("bearer {USER_TOKEN}").as_str())
             );
         }
+    }
+
+    // Kills a sign-in that refuses a login an account provider issues, such as the
+    // `handle_shortcode` login of a GitHub Enterprise Managed User, which holds an underscore.
+    #[tokio::test]
+    async fn sign_in_takes_a_login_with_an_underscore() {
+        let server = Server::start(vec![
+            exchanged(),
+            signed_in_user("muriel_bagge"),
+            primary_email("muriel_bagge@example.com"),
+        ])
+        .await;
+        let client = client().with_base_url(server.base());
+
+        let (user_name, email) = client.oauth_user(CODE.parse().unwrap()).await.unwrap();
+
+        assert_eq!(
+            (user_name.as_ref(), email.as_ref()),
+            ("muriel_bagge", "muriel_bagge@example.com")
+        );
     }
 
     // Kills dropping the redirect from the exchange, moving the exchange or the listing anywhere

@@ -1027,6 +1027,7 @@ dependencies = [
  "oauth2-reqwest",
  "reqwest",
  "serde",
+ "serde_json",
  "thiserror 2.0.21",
  "url",
 ]
@@ -1390,6 +1391,7 @@ dependencies = [
  "subtle",
  "thiserror 2.0.21",
  "typeshare",
+ "unicode-general-category",
  "url",
  "uuid",
  "wasm-bindgen",

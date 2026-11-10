@@ -129,16 +129,7 @@ impl GoogleClient {
             .ok_or(GoogleClientError::NoEmail)?;
         let email: Email = email_str.parse().map_err(GoogleClientError::BadEmail)?;
 
-        // Choose a username: name > given_name > email local-part
-        let candidate_name = user_info
-            .name
-            .as_deref()
-            .or(user_info.given_name.as_deref())
-            .or(user_info.family_name.as_deref())
-            .unwrap_or_else(|| email_str.split('@').next().unwrap_or(email_str));
-        let user_name: UserName = candidate_name
-            .parse()
-            .map_err(GoogleClientError::BadUserName)?;
+        let user_name = user_info.user_name(email_str)?;
 
         Ok((user_name, email))
     }
@@ -153,4 +144,57 @@ struct GoogleUserInfo {
     family_name: Option<String>,
     email: Option<String>,
     email_verified: bool,
+}
+
+impl GoogleUserInfo {
+    /// The name the account shows, falling back to the local part of `email` when it shows none.
+    fn user_name(&self, email: &str) -> Result<UserName, GoogleClientError> {
+        self.name
+            .as_deref()
+            .or(self.given_name.as_deref())
+            .or(self.family_name.as_deref())
+            .unwrap_or_else(|| email.split('@').next().unwrap_or(email))
+            .parse()
+            .map_err(GoogleClientError::BadUserName)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GoogleUserInfo;
+
+    const EMAIL: &str = "muriel.bagge@example.com";
+
+    fn user_info(json: &str) -> GoogleUserInfo {
+        serde_json::from_str(json).expect("Failed to parse the user info")
+    }
+
+    // Kills a sign-in that refuses the display name of an account whose name is not spelled in
+    // ASCII, and one that reads the name from any other field when the account shows one.
+    #[test]
+    fn sign_in_takes_a_display_name_of_any_script() {
+        for (json, name) in [
+            (
+                format!(
+                    r#"{{"name": "José Bagge", "given_name": "Jose", "email": "{EMAIL}", "email_verified": true}}"#
+                ),
+                "José Bagge",
+            ),
+            (
+                format!(r#"{{"given_name": "Zoë", "email": "{EMAIL}", "email_verified": true}}"#),
+                "Zoë",
+            ),
+            (
+                format!(r#"{{"family_name": "张伟", "email": "{EMAIL}", "email_verified": true}}"#),
+                "张伟",
+            ),
+            (
+                format!(r#"{{"email": "{EMAIL}", "email_verified": true}}"#),
+                "muriel.bagge",
+            ),
+        ] {
+            let user_name = user_info(&json).user_name(EMAIL).expect(&json);
+            assert_eq!(user_name.as_ref(), name, "{json}");
+        }
+    }
 }

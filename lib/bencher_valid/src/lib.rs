@@ -1,3 +1,5 @@
+#[cfg(all(feature = "client", not(feature = "plus")))]
+use regex_lite as _;
 #[cfg(feature = "server")]
 use regex as _;
 #[cfg(all(feature = "server", not(feature = "plus")))]
@@ -43,7 +45,6 @@ pub use bmf_version::{ACCEPTED_BMF_VERSIONS, BmfVersion, is_valid_bmf_version};
 pub use branch_name::BranchName;
 pub use date_time::{DateTime, DateTimeMillis};
 pub use email::Email;
-use error::REGEX_ERROR;
 pub use error::ValidError;
 pub use index::Index;
 pub use jwt::Jwt;
