@@ -35,6 +35,7 @@ email_address.workspace = true
 gix-hash.workspace = true
 git-validate.workspace = true
 hex = { workspace = true, optional = true }
+icu_properties.workspace = true
 ordered-float = { workspace = true, features = ["serde"] }
 rand = { workspace = true, optional = true }
 regex = { workspace = true, optional = true }
@@ -47,7 +48,6 @@ slug.workspace = true
 subtle = { workspace = true, optional = true }
 thiserror.workspace = true
 typeshare.workspace = true
-unicode-general-category.workspace = true
 url = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["serde"] }
 wasm-bindgen = { workspace = true, optional = true }

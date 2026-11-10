@@ -1,7 +1,7 @@
-#[cfg(all(feature = "client", not(feature = "plus")))]
-use regex_lite as _;
 #[cfg(feature = "server")]
 use regex as _;
+#[cfg(all(feature = "client", not(feature = "plus")))]
+use regex_lite as _;
 #[cfg(all(feature = "server", not(feature = "plus")))]
 use subtle as _;
 #[cfg(test)]

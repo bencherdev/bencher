@@ -119,6 +119,7 @@ hex = "0.4"
 http = "1.4"
 http-body-util = "0.1"
 hyper = "1.8"
+icu_properties = "2.4"
 jsonschema = { version = "0.60", default-features = false }
 jsonwebtoken = { version = "11.1", features = ["rust_crypto"] }
 libc = "0.2"
@@ -189,7 +190,6 @@ tokio-tungstenite = "0.30"
 tokio-util = { version = "0.7", features = ["io"] }
 tungstenite = { version = "0.30", features = ["rustls-tls-webpki-roots"] }
 typeshare = "1.0"
-unicode-general-category = "1.1"
 ureq = { version = "3.4.2", default-features = false, features = ["rustls-no-provider", "rustls-webpki-roots"] }
 url = "2.5"
 urlencoding = "2.1"

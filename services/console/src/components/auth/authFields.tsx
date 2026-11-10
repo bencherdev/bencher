@@ -3,7 +3,7 @@ export const USERNAME = {
 	type: "text",
 	placeholder: "Full Name",
 	icon: "fas fa-user",
-	help: "May only use: letters, numbers, contained spaces, apostrophes, periods, commas, and dashes",
+	help: "May only use: letters, numbers, contained spaces, underscores, apostrophes, periods, commas, and dashes",
 };
 export const EMAIL = {
 	label: "Email",

@@ -1,14 +1,22 @@
 use derive_more::Display;
+use icu_properties::{
+    CodePointMapData,
+    props::{GeneralCategory, GeneralCategoryGroup},
+};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::str::FromStr;
-use unicode_general_category::{GeneralCategory, get_general_category};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{Slug, ValidError, is_valid_len};
+
+/// A letter (`\p{L}`), a mark (`\p{M}`), and a number (`\p{N}`) of any script.
+const NAME_CATEGORIES: GeneralCategoryGroup = GeneralCategoryGroup::Letter
+    .union(GeneralCategoryGroup::Mark)
+    .union(GeneralCategoryGroup::Number);
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -75,20 +83,7 @@ fn is_valid_user_name_char(name_char: char) -> bool {
         return true;
     }
 
-    matches!(
-        get_general_category(name_char),
-        GeneralCategory::UppercaseLetter
-            | GeneralCategory::LowercaseLetter
-            | GeneralCategory::TitlecaseLetter
-            | GeneralCategory::ModifierLetter
-            | GeneralCategory::OtherLetter
-            | GeneralCategory::NonspacingMark
-            | GeneralCategory::SpacingMark
-            | GeneralCategory::EnclosingMark
-            | GeneralCategory::DecimalNumber
-            | GeneralCategory::LetterNumber
-            | GeneralCategory::OtherNumber
-    )
+    NAME_CATEGORIES.contains(CodePointMapData::<GeneralCategory>::new().get(name_char))
 }
 
 #[cfg(test)]
