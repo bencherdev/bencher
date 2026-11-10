@@ -52,7 +52,11 @@ export const axeInBothThemes = async (
 		await page.waitForFunction(() =>
 			document
 				.getAnimations()
-				.every((animation) => animation.playState !== "running"),
+				.every(
+					(animation) =>
+						animation.playState !== "running" ||
+						!(animation.timeline instanceof DocumentTimeline),
+				),
 		);
 		// The axe integration types `page` against its own copy of Playwright.
 		const { violations } = await new AxeBuilder({

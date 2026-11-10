@@ -52,7 +52,11 @@ export const axeInBothThemes = async (
 					expect(
 						document
 							.getAnimations()
-							.every((animation) => animation.playState !== "running"),
+							.every(
+								(animation) =>
+									animation.playState !== "running" ||
+									!(animation.timeline instanceof DocumentTimeline),
+							),
 					).toBe(true),
 				);
 				// The body, not the document: a page's own rules, such as its title and

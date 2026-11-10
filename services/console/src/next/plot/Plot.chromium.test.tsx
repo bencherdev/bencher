@@ -81,6 +81,21 @@ const plotArea = async (name: RegExp | string = /lines?,/) => {
 
 const series = (slot: number) => tokenRgb(`--color-data-categorical-${slot}`);
 
+/** The wordmark's images in the key, both themes'. */
+const markImages = () => [
+	...document.querySelectorAll<HTMLImageElement>(".pl-key .pl-mark img"),
+];
+
+/** The wordmark image the page's theme draws. */
+const shownMark = () =>
+	markImages().find((image) => image.getBoundingClientRect().width > 0);
+
+/** The texts of the pills in the key's head. */
+const pills = () =>
+	[...document.querySelectorAll(".pl-khead .pl-kpill")].map(
+		(pill) => pill.textContent,
+	);
+
 // Three flat lines at 10, 20, and 30 ns, one benchmark each so each takes its own slot.
 const FLAT = testData([
 	testLine({ id: "low", benchmark: "crc32c", y: [10, 10, 10, 10, 10] }),
@@ -1114,8 +1129,8 @@ describe("Plot", () => {
 	});
 
 	// Kills a key that repeats what every line shares in each entry, a rest
-	// that gives way to a long value, or a shared head cut with no way to read
-	// it on a phone.
+	// that gives way to a long value, a shared head cut with no way to read
+	// it on a phone, or a shared benchmark that leaves its parameters no room.
 	test("heads the key with what every line shares, which a tap opens in full", async () => {
 		await page.viewport(320, 844);
 		const shared = `my_crate::${Array.from({ length: 40 }, (_, at) => `module_${at}`).join("::")}`;
@@ -1147,7 +1162,13 @@ describe("Plot", () => {
 		const head = document.querySelector(".pl-khead") as HTMLElement;
 		const reveal = head.querySelector("button.ui-trunc") as HTMLButtonElement;
 		expect(reveal.textContent).toBe(shared);
-		expect(head.textContent).toContain("simd=avx2 threads=");
+		expect(pills()).toEqual(["simd=avx2", "threads="]);
+		// Cut short, so the row still shows the pills after it.
+		const row = page.getByRole("group", { name: "Key summary" }).element();
+		const [first] = head.querySelectorAll(".pl-kpill");
+		expect(first?.getBoundingClientRect().left).toBeLessThan(
+			row.getBoundingClientRect().right,
+		);
 		const height = head.getBoundingClientRect().height;
 		await userEvent.click(reveal);
 		await expect
@@ -1155,6 +1176,156 @@ describe("Plot", () => {
 			.toHaveAttribute("aria-expanded", "true");
 		expect(head.getBoundingClientRect().height).toBeGreaterThan(height);
 		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
+	});
+
+	// Kills a mark missing from a full plot or a tile, one on every row of a
+	// Report, a console mark that links away, or one in the other theme.
+	test("ends a full plot's and a tile's key with the wordmark in the page's theme, and no row's", async () => {
+		for (const size of ["full", "tile", "row"] as const) {
+			mount({ data: FLAT, size });
+			await settle();
+			const images = markImages();
+			expect(images.length, size).toBe(size === "row" ? 0 : 2);
+			if (size !== "row") {
+				expect(shownMark()?.getAttribute("src"), size).toBe(
+					"/wordmark-dark.svg",
+				);
+				document.documentElement.setAttribute(THEME_ATTRIBUTE, "light");
+				expect(shownMark()?.getAttribute("src"), size).toBe(
+					"/wordmark-light.svg",
+				);
+				document.documentElement.setAttribute(THEME_ATTRIBUTE, "dark");
+				expect(
+					images.every((image) => image.alt === ""),
+					size,
+				).toBe(true);
+			}
+			expect(
+				page.getByRole("link", { name: "Bencher" }).elements(),
+				size,
+			).toHaveLength(0);
+			dispose?.();
+			dispose = undefined;
+			document.body.replaceChildren();
+		}
+	});
+
+	// Kills a linked mark that opens anything but bencher.dev in a new tab,
+	// drops the images a page passes, or takes focus inside the hidden reserve.
+	test("a linked mark opens bencher.dev in a new tab, and its reserve draws the images alone", async () => {
+		const wordmarks = { dark: "/dark.svg", light: "/light.svg" };
+		const { setData } = mount({
+			data: undefined,
+			reserve: { lines: 3, measures: 1 },
+			mark: { wordmarks, link: true },
+		});
+		await settle();
+		expect(markImages().map((image) => image.getAttribute("src"))).toEqual([
+			wordmarks.dark,
+			wordmarks.light,
+		]);
+		expect(document.querySelectorAll(".pl-key a")).toHaveLength(0);
+
+		setData(FLAT);
+		await settle();
+		const link = page.getByRole("link", { name: "Bencher" });
+		await expect.element(link).toHaveAttribute("href", "https://bencher.dev");
+		await expect.element(link).toHaveAttribute("target", "_blank");
+		await expect.element(link).toHaveAttribute("rel", "noopener");
+		expect(markImages().map((image) => image.getAttribute("src"))).toEqual([
+			wordmarks.dark,
+			wordmarks.light,
+		]);
+	});
+
+	// Kills a head that grows or moves when the pills arrive, a mark that
+	// moves from the reserve to the key, or a constant joined into one text.
+	test("holds the key's head and its mark from the reserve to a row of pills", async () => {
+		const { setData } = mount({
+			data: undefined,
+			reserve: { lines: 3, measures: 1 },
+		});
+		await settle();
+		const head = () =>
+			(document.querySelector(".pl-khead") as HTMLElement)
+				.getBoundingClientRect()
+				.toJSON();
+		const before = {
+			head: head(),
+			mark: shownMark()?.getBoundingClientRect().toJSON(),
+		};
+
+		setData(
+			testData(
+				[1, 2, 3].map((threads) =>
+					testLine({
+						id: `${threads}`,
+						parameters: { input_bytes: 1024, simd: "avx2", threads },
+						y: [threads, threads],
+					}),
+				),
+			),
+		);
+		await settle();
+		await plotArea();
+		expect(pills()).toEqual(["input_bytes=1024", "simd=avx2", "threads="]);
+		expect({
+			head: head(),
+			mark: shownMark()?.getBoundingClientRect().toJSON(),
+		}).toEqual(before);
+	});
+
+	// Kills a full head that pushes the mark out of the key or squeezes it,
+	// scrolls the page sideways, wraps onto a second line, or cannot be
+	// scrolled from the keyboard.
+	test("at 390 px a crowded head scrolls beside a whole mark", async () => {
+		await page.viewport(390, 844);
+		const width = () => shownMark()?.getBoundingClientRect().width ?? 0;
+		mount({ data: FLAT }, 390);
+		await settle();
+		const whole = width();
+		const plain = (
+			document.querySelector(".pl-khead") as HTMLElement
+		).getBoundingClientRect().height;
+		dispose?.();
+		document.body.replaceChildren();
+
+		const constants = Object.fromEntries(
+			Array.from({ length: 12 }, (_, at) => [`parameter_${at}`, `value_${at}`]),
+		);
+		const lines = Array.from({ length: 9 }, (_, at) =>
+			testLine({
+				id: `${at}`,
+				benchmark: `my_crate::module_a::module_b::bench_${at}`,
+				parameters: { ...constants, threads: at },
+				y: [at + 1, at + 2],
+			}),
+		);
+		mount({ data: testData(lines), hidden: ["1", "2"] }, 390);
+		await settle();
+		const key = (
+			document.querySelector(".pl-key") as HTMLElement
+		).getBoundingClientRect();
+		const head = document.querySelector(".pl-khead") as HTMLElement;
+		const mark = shownMark()?.getBoundingClientRect();
+		expect(pills()).toHaveLength(13);
+		expect(head.textContent).toContain("2 hidden");
+		expect(mark?.right).toBeLessThanOrEqual(key.right);
+		expect(mark?.left).toBeGreaterThan(key.left);
+		expect(width()).toBe(whole);
+		expect(head.getBoundingClientRect().height).toBe(plain);
+		expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+
+		const row = page.getByRole("group", { name: "Key summary" });
+		const scroll = row.element() as HTMLElement;
+		expect(scroll.scrollWidth).toBeGreaterThan(scroll.clientWidth);
+		scroll.focus();
+		expect(document.activeElement).toBe(scroll);
+		await userEvent.keyboard("{ArrowRight}");
+		await expect.poll(() => scroll.scrollLeft).toBeGreaterThan(0);
+		expect(shownMark()?.getBoundingClientRect().toJSON()).toEqual(
+			mark?.toJSON(),
+		);
 	});
 
 	test("lists alerting lines first in the key", async () => {

@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import type { Wordmarks } from "../plot/Mark";
 import { useNarrow } from "../plot/narrow";
 import type { PlotLayout } from "../plot/types";
 
@@ -11,6 +12,8 @@ const PlotFrame = (props: {
 	layout: PlotLayout;
 	/** The plot is on its way, rather than refused. */
 	loading: boolean;
+	/** The key's wordmark images, in place of the site's own. */
+	wordmarks?: Wordmarks | undefined;
 }) => {
 	const narrow = useNarrow();
 	// The plot's own rule, kept here so its charting library stays in its chunk.
@@ -52,6 +55,11 @@ const PlotFrame = (props: {
 			<div class="pl-key" aria-hidden="true">
 				<div class="pl-khead">
 					<span class="pl-skel-text" />
+					{/* Images alone, as the key's reserve draws them, kept here so the mark's own module stays in the plot's chunk. */}
+					<span class="pl-mark">
+						<img src={props.wordmarks?.dark ?? "/wordmark-dark.svg"} alt="" />
+						<img src={props.wordmarks?.light ?? "/wordmark-light.svg"} alt="" />
+					</span>
 				</div>
 				<div class="pl-kgrid">
 					<For each={Array.from({ length: entries() })}>

@@ -16,6 +16,10 @@ const TEST = /\.test\.[jt]sx?$/;
 // A self-hosted install without internet serves its own docs, so no link is
 // built from bencher.dev's address.
 const ABSOLUTE_SITE = /(?:https?:)?\/\/(?:www\.)?bencher\.dev\b/;
+// The wordmark in an embedded plot's key opens the product's home, not its docs: that one link, whole, is the only one allowed.
+const HOME_LINKS: Readonly<Record<string, string>> = {
+	"src/next/plot/Mark.tsx": 'href="https://bencher.dev"',
+};
 
 const walk = (dir: string): string[] =>
 	readdirSync(join(CONSOLE, dir), { withFileTypes: true }).flatMap((entry) => {
@@ -34,7 +38,9 @@ test("every docs link in the new console is relative", () => {
 			readFileSync(join(CONSOLE, path), "utf8")
 				.split("\n")
 				.flatMap((line, index) =>
-					ABSOLUTE_SITE.test(line) ? [`${path}:${index + 1}`] : [],
+					ABSOLUTE_SITE.test(line) && line.trim() !== HOME_LINKS[path]
+						? [`${path}:${index + 1}`]
+						: [],
 				),
 		),
 	).toEqual([]);

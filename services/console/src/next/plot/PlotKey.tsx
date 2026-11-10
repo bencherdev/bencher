@@ -2,6 +2,7 @@ import Tooltip from "@bencherdev/ui/Tooltip";
 import Truncate, { tailOf } from "@bencherdev/ui/Truncate";
 import { createSignal, For, Index, Show } from "solid-js";
 import type { LineName, LineNames } from "./key";
+import Mark, { type PlotMark } from "./Mark";
 import type { LineStyle } from "./series";
 import { EyeOff, Swatch, Target } from "./Swatch";
 import type { PlotLine } from "./types";
@@ -21,6 +22,8 @@ export interface PlotKeyProps {
 	/** Entries shown before the rest fold behind Show all. */
 	max: number;
 	compact: boolean;
+	/** The wordmark at the end of the head; none when undefined. */
+	mark: PlotMark | undefined;
 	onToggle: (line: number) => void;
 	onFocus: (line: number) => void;
 	/** A line focused while its entry is hovered or holds keyboard focus. */
@@ -109,29 +112,43 @@ export const PlotKey = (props: PlotKeyProps) => {
 			: props.order.slice(0, props.max);
 	return (
 		<div class="pl-key" classList={{ compact: props.compact }}>
-			<div class="pl-khead ui-parts">
-				<span data-fixed>
-					<b>{props.lines.length}</b> {plural(props.lines.length)}
-				</span>
-				<Show when={props.hidden.size > 0}>
-					<Dot />
-					<span data-fixed>{props.hidden.size} hidden</span>
-				</Show>
-				<Show when={props.shared.benchmark}>
-					{(benchmark) => (
-						<>
-							<Dot />
-							<Truncate class="pl-mono" text={benchmark()} tail reveal />
-						</>
-					)}
-				</Show>
-				<Show when={props.shared.parameters.length > 0}>
-					<Dot />
-					<Truncate
-						class="pl-mono"
-						text={props.shared.parameters.join(" ")}
-						reveal
-					/>
+			<div class="pl-khead">
+				{/* biome-ignore lint/a11y/useSemanticElements: a row of text and pills, not a set of form controls */}
+				<div
+					class="pl-kscroll"
+					role="group"
+					aria-label="Key summary"
+					// biome-ignore lint/a11y/noNoninteractiveTabindex: focusable, so the keyboard scrolls what the head cuts off
+					tabIndex={0}
+				>
+					<span data-fixed>
+						<b>{props.lines.length}</b> {plural(props.lines.length)}
+					</span>
+					<Show when={props.hidden.size > 0}>
+						<Dot />
+						<span data-fixed>{props.hidden.size} hidden</span>
+					</Show>
+					<Show when={props.shared.benchmark}>
+						{(benchmark) => (
+							<>
+								<Dot />
+								<Truncate
+									class="pl-mono pl-kbench"
+									text={benchmark()}
+									tail
+									reveal
+								/>
+							</>
+						)}
+					</Show>
+					<For each={props.shared.parameters}>
+						{(parameter) => (
+							<span class="pl-pill pl-kpill pl-mono">{parameter}</span>
+						)}
+					</For>
+				</div>
+				<Show when={props.mark}>
+					{(mark) => <Mark wordmarks={mark().wordmarks} link={mark().link} />}
 				</Show>
 			</div>
 			<div class="pl-kgrid">
@@ -223,10 +240,15 @@ export const PlotKeyReserve = (props: {
 	lines: number;
 	max: number;
 	compact: boolean;
+	/** The wordmark's images alone: a link would take focus in a frame hidden from assistive technology. */
+	mark: PlotMark | undefined;
 }) => (
 	<div class="pl-key" classList={{ compact: props.compact }} aria-hidden="true">
 		<div class="pl-khead">
 			<span class="pl-skel-text" />
+			<Show when={props.mark}>
+				{(mark) => <Mark wordmarks={mark().wordmarks} />}
+			</Show>
 		</div>
 		<div class="pl-kgrid">
 			<For each={Array.from({ length: Math.min(props.lines, props.max) })}>
