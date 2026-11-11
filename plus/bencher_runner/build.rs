@@ -44,7 +44,7 @@ use rustls::crypto::aws_lc_rs;
 use sha2::{Digest as _, Sha256};
 
 /// Default Firecracker version to download.
-const DEFAULT_FIRECRACKER_VERSION: &str = "v1.17.0";
+const DEFAULT_FIRECRACKER_VERSION: &str = "v1.18.0";
 
 /// Default kernel URL to download (per-architecture).
 ///
@@ -57,9 +57,9 @@ const DEFAULT_KERNEL_URL_AARCH64: &str = "https://s3.amazonaws.com/spec.ccfc.min
 /// These MUST be updated whenever `DEFAULT_FIRECRACKER_VERSION` changes.
 /// Source: `firecracker-{version}-{arch}.tgz.sha256.txt` from the GitHub release.
 const FIRECRACKER_TGZ_SHA256_X86_64: &str =
-    "06094a1108ae9e82aa4c23a775aa92758f53f1175d422270d9d6162cb9ade558";
+    "1ac8eec866dd5eea14efecf6323e22b23eea24054545338a5b34bc5bca6623cd";
 const FIRECRACKER_TGZ_SHA256_AARCH64: &str =
-    "e351ebe4f7a16b5873bbd51005d2e6767103cff4d5ebc829df2d3f95a93e2256";
+    "2a6130ff0338901ff9d7fbd73ce046c6b1c6123889dc84a34d678aa53bd0c0c2";
 
 /// Expected SHA256 hashes for vmlinux kernel binaries.
 ///

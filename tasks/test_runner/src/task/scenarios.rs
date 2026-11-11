@@ -1466,7 +1466,7 @@ CMD ["printf", "%s_%s\\n", "TOO_MANY", "VCPUS"]"#,
                     output.exit_code == 1
                         && error.contains("exited (exit status: 1) before it booted the VM")
                         && error.contains("refused the VM's configuration")
-                        && error.contains("InvalidVcpuCount")
+                        && error.contains("TooManyVcpus")
                         && timed_out == Some(false)
                         && guest_printed(output, "TOO_MANY_VCPUS") == 0,
                     "Expected the run to fail at once on Firecracker's refusal, naming it, got exit code {}.\nstdout: {}\nstderr: {}",
