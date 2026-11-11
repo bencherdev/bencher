@@ -6,7 +6,7 @@ import type {
 	JsonOAuthUser,
 } from "../../types/bencher";
 import { authUser, setUser } from "../../util/auth";
-import { httpPost } from "../../util/http";
+import { apiErrorMessage, httpPost } from "../../util/http";
 import { NotifyKind, navigateNotify } from "../../util/notify";
 import { hiddenRedirect, useNavigate, useSearchParams } from "../../util/url";
 import { type InitValid, init_valid } from "../../util/valid";
@@ -18,6 +18,7 @@ import { takeSignIn } from "./signIn";
 
 const CODE_PARAM = "code";
 const STATE_PARAM = "state";
+const INVALID_USER = "Invalid user. Please, try again.";
 
 interface Props {
 	apiUrl: string;
@@ -37,13 +38,7 @@ const AuthOAuth = (props: Props) => {
 		// Taken before the reader is stored, so a tab that sees them first finds it gone.
 		const to = signedInPath(oauthUser?.authorization);
 		if (!setUser(oauthUser?.user)) {
-			navigateNotify(
-				NotifyKind.ERROR,
-				"Invalid user. Please, try again.",
-				"/auth/login",
-				null,
-				null,
-			);
+			navigateNotify(NotifyKind.ERROR, INVALID_USER, "/auth/login", null, null);
 			return;
 		}
 		const plan = oauthUser.plan;
@@ -97,7 +92,7 @@ const AuthOAuth = (props: Props) => {
 				Sentry.captureException(error);
 				navigateNotify(
 					NotifyKind.ERROR,
-					"Invalid user. Please, try again.",
+					apiErrorMessage(error, INVALID_USER),
 					"/auth/login",
 					null,
 					null,

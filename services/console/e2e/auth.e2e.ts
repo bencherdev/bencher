@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
 	USER_KEY,
 	expect,
@@ -7,6 +8,7 @@ import {
 	signedOut,
 	test,
 } from "./fixtures";
+import { refuseGitHub } from "./github";
 
 const signInWayBack = (path: string) =>
 	`/auth/login?${new URLSearchParams({ back: Buffer.from(path).toString("base64") })}`;
@@ -22,6 +24,22 @@ test.describe("signed out", () => {
 		const path = consolePath(seed.projects.private.slug, "runs");
 		await page.goto(path);
 		await expect(page).toHaveURL(signInWayBack(path));
+	});
+
+	// Kills a provider sign in that hides why the API refused it, and a reason
+	// the page would draw as markup instead of text.
+	test("a refused provider sign in shows the API's reason", async ({
+		page,
+	}) => {
+		const message = 'This user account has been locked <img src="x">';
+		await refuseGitHub(page, randomUUID(), message);
+		await expect(page).toHaveURL(
+			(url) =>
+				url.pathname === "/auth/login" &&
+				url.searchParams.get("notify_text") === message,
+		);
+		await expect(page.getByText(message)).toBeVisible();
+		await expect(page.locator('img[src="x"]')).toHaveCount(0);
 	});
 
 	// Kills validators whose WASM never loads, which leaves Log in disabled for good.

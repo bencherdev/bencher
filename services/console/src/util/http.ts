@@ -172,3 +172,21 @@ export const dataOptions = (
 		data: data,
 	};
 };
+
+const API_MESSAGE_MAX_LENGTH = 256;
+
+/** The first line of the API's reason for refusing a request, capped for a notification, or `fallback` when it sent none. */
+export const apiErrorMessage = (error: unknown, fallback: string): string => {
+	if (!axios.isAxiosError<{ message?: unknown }>(error)) {
+		return fallback;
+	}
+	const message = error.response?.data?.message;
+	if (typeof message !== "string") {
+		return fallback;
+	}
+	// A server error adds a report link on a second line, which a notification runs together with the first.
+	const firstLine = (message.split("\n")[0] ?? "").trim();
+	return firstLine.length === 0
+		? fallback
+		: Array.from(firstLine).slice(0, API_MESSAGE_MAX_LENGTH).join("");
+};
