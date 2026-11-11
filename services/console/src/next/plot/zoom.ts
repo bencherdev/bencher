@@ -69,3 +69,60 @@ export const zoomSpan = ([min, max]: XRange, axis: PlotXAxis): string => {
 		span < MINUTE ? formatWhenSeconds : span < DAY ? formatWhen : formatDate;
 	return `${format(min)} to ${format(max)}`;
 };
+
+/** The fraction of a range's width under which a narrower range is the same range: what the narrowest pinch's search leaves over. */
+const SLIVER = 1e-6;
+
+/** Whether `range` is narrower than `than` by more than a sliver. */
+export const narrower = (range: XRange, than: XRange): boolean =>
+	range[1] - range[0] < (than[1] - than[0]) * (1 - SLIVER);
+
+/** `range` scaled by `ratio` around the value at `at`, its fraction across the range, which keeps its place. */
+export const scaled = (
+	[min, max]: XRange,
+	at: number,
+	ratio: number,
+): XRange => {
+	const width = max - min;
+	const anchor = min + at * width;
+	return [anchor - at * width * ratio, anchor + (1 - at) * width * ratio];
+};
+
+/**
+ * The range a pinch shows: `start` scaled by `ratio` around `at`, never past
+ * `full`, and on a pinch in never narrower than the narrowest that holds 2
+ * points of a column, or `start` itself when that is no more than a sliver wider.
+ * None when `start` holds fewer.
+ */
+export const pinched = (
+	x: readonly number[],
+	columns: readonly (readonly (number | null)[])[],
+	start: XRange,
+	at: number,
+	ratio: number,
+	full: XRange,
+): XRange | null => {
+	let range = scaled(start, at, ratio);
+	if (ratio < 1 && !holdsTwo(x, columns, range)) {
+		if (!holdsTwo(x, columns, start)) {
+			return null;
+		}
+		// The range narrows as the ratio does, so halving the gap finds where it stops holding 2.
+		let low = ratio;
+		let high = 1;
+		for (let step = 0; step < 32; step++) {
+			const middle = (low + high) / 2;
+			if (holdsTwo(x, columns, scaled(start, at, middle))) {
+				high = middle;
+			} else {
+				low = middle;
+			}
+		}
+		range = scaled(start, at, high);
+		// Already at its narrowest, the search still finds a sliver narrower, which is no step at all.
+		if (!narrower(range, start)) {
+			range = start;
+		}
+	}
+	return [Math.max(range[0], full[0]), Math.min(range[1], full[1])];
+};

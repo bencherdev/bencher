@@ -47,7 +47,7 @@ import type {
 	PlotSize,
 	PlotXAxis,
 } from "./types";
-import { type XRange, holdsTwo, zoomSpan } from "./zoom";
+import { type XRange, holdsTwo, narrower, pinched, zoomSpan } from "./zoom";
 import ZoomBar from "./ZoomBar";
 
 export interface PlotProps {
@@ -252,22 +252,63 @@ const Plot = (props: PlotProps) => {
 
 	// Each zoom pushes its x range, and any new data clears them, even data drawn before, which a cache can hand back.
 	const [ranges, setRanges] = createSignal<readonly XRange[]>([]);
-	createComputed(on(data, () => setRanges([]), { defer: true }));
-	const view = createMemo(() => ranges().at(-1) ?? null);
-	const pushZoom = (range: XRange) => {
-		const current = data();
-		if (!current) {
-			return;
-		}
-		const shown = current.lines.flatMap((line, index) =>
+	// A pinch draws its range live, over the stack, until it ends.
+	const [live, setLive] = createSignal<{
+		start: XRange;
+		range: XRange;
+		ratio: number;
+	} | null>(null);
+	createComputed(
+		on(
+			data,
+			() =>
+				batch(() => {
+					setRanges([]);
+					setLive(null);
+				}),
+			{ defer: true },
+		),
+	);
+	const view = createMemo(() => live()?.range ?? ranges().at(-1) ?? null);
+	const shownColumns = (current: PlotData) =>
+		current.lines.flatMap((line, index) =>
 			hidden().has(index) ? [] : [line.y],
 		);
-		if (holdsTwo(current.x, shown, range)) {
+	const pushZoom = (range: XRange) => {
+		const current = data();
+		if (current && holdsTwo(current.x, shownColumns(current), range)) {
 			setRanges([...ranges(), range]);
 		}
 	};
 	const zoomOut = () => setRanges(ranges().slice(0, -1));
 	const resetZoom = () => setRanges([]);
+	const pinchTo = (start: XRange, at: number, ratio: number) => {
+		const current = data();
+		const range =
+			current &&
+			pinched(current.x, shownColumns(current), start, at, ratio, [
+				current.x[0] ?? 0,
+				current.x[current.x.length - 1] ?? 0,
+			]);
+		setLive(range ? { start, range, ratio } : null);
+	};
+	// The whole pinch is 1 step: in pushes where it ended, unless it could narrow nothing, and out past where it started pops 1.
+	const endPinch = (keep: boolean) => {
+		const ended = live();
+		batch(() => {
+			setLive(null);
+			if (keep && ended && ended.ratio > 1) {
+				zoomOut();
+			} else if (
+				keep &&
+				ended &&
+				ended.ratio < 1 &&
+				narrower(ended.range, ended.start)
+			) {
+				setRanges([...ranges(), ended.range]);
+			}
+		});
+	};
 	// Every panel draws the top range itself, as a stack's sync key carries only the cursor.
 	createEffect(
 		on(
@@ -285,7 +326,8 @@ const Plot = (props: PlotProps) => {
 			{ defer: true },
 		),
 	);
-	const zoomed = createMemo(() => view() !== null);
+	// Only a step the stack holds, so a pinch shows the bar once it ends.
+	const zoomed = createMemo(() => ranges().length > 0);
 	// Empty for the moment between the last step back and the bar going away.
 	const span = () => {
 		const range = view();
@@ -406,6 +448,8 @@ const Plot = (props: PlotProps) => {
 			}),
 		zoom: pushZoom,
 		unzoom: resetZoom,
+		pinch: pinchTo,
+		pinchEnd: endPinch,
 	});
 
 	// Each axis grows to fit the labels any plot draws, and stacked plots relay out to share the widest.
