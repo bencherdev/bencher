@@ -7,7 +7,7 @@ export const MEMBER_FIELDS = {
 		type: "text",
 		placeholder: "Member Name",
 		icon: MEMBER_ICON,
-		help: "May only use: letters, numbers, contained spaces, apostrophes, periods, commas, and dashes",
+		help: "May only use: letters, numbers, contained spaces, underscores, apostrophes, periods, commas, and dashes",
 		validate: validUserName,
 	},
 	slug: {

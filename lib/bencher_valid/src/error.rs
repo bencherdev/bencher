@@ -1,5 +1,6 @@
 use crate::{Boundary, ModelTest, SampleSize, Window};
 
+#[cfg(feature = "plus")]
 pub(crate) const REGEX_ERROR: &str = "Failed to compile regex.";
 
 #[derive(Debug, thiserror::Error)]

@@ -4,12 +4,12 @@ Input validation library for Bencher. Compiled to WASM for browser-side validati
 
 ## Feature Flags
 
-This crate requires selecting a regex engine feature to compile:
+This crate selects its regex engine with a feature:
 
 - **`client`** — Uses `regex-lite` for a smaller binary (suitable for WASM/browser builds)
 - **`server`** — Uses `regex` (full engine) and includes `rand` for server-side random generation
 
-At least one of `client` or `server` must be enabled, otherwise types that depend on regex validation (e.g. `UserName`, and with `plus` enabled: `CardCvc`, `LastFour`, `CardNumber`) will fail to compile.
+With `plus` enabled, at least one of `client` or `server` must be enabled, otherwise the types that depend on regex validation (`CardCvc`, `LastFour`, `CardNumber`) will fail to compile.
 
 ### Other Features
 

@@ -1,10 +1,8 @@
-use std::sync::LazyLock;
-
 use derive_more::Display;
-#[cfg(all(feature = "server", not(feature = "client")))]
-use regex::Regex;
-#[cfg(feature = "client")]
-use regex_lite::Regex;
+use icu_properties::{
+    CodePointMapData,
+    props::{GeneralCategory, GeneralCategoryGroup},
+};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::str::FromStr;
@@ -13,11 +11,12 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{REGEX_ERROR, Slug, ValidError, is_valid_len};
+use crate::{Slug, ValidError, is_valid_len};
 
-#[expect(clippy::expect_used, reason = "regex is a constant and known valid")]
-static NAME_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[0-9A-Za-z ,\.\-']{1,64}$").expect(REGEX_ERROR));
+/// A letter (`\p{L}`), a mark (`\p{M}`), and a number (`\p{N}`) of any script.
+const NAME_CATEGORIES: GeneralCategoryGroup = GeneralCategoryGroup::Letter
+    .union(GeneralCategoryGroup::Mark)
+    .union(GeneralCategoryGroup::Number);
 
 #[typeshare::typeshare]
 #[derive(Debug, Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -74,11 +73,17 @@ impl UserName {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_user_name(name: &str) -> bool {
-    if !is_valid_len(name) {
-        return false;
+    is_valid_len(name) && name.chars().all(is_valid_user_name_char)
+}
+
+/// A letter (`\p{L}`), a mark (`\p{M}`), or a number (`\p{N}`) of any script, and the punctuation
+/// a name is written with. A symbol, an emoji, and a control character are none of those.
+fn is_valid_user_name_char(name_char: char) -> bool {
+    if matches!(name_char, ' ' | '_' | ',' | '.' | '-' | '\'') {
+        return true;
     }
 
-    NAME_REGEX.is_match(name)
+    NAME_CATEGORIES.contains(CodePointMapData::<GeneralCategory>::new().get(name_char))
 }
 
 #[cfg(test)]
@@ -101,6 +106,15 @@ mod tests {
             "Muriel Linda-Bagge",
             "Muriel De'Bagge",
             "Mrs. Muriel Linda-De'Bagge",
+            // A GitHub Enterprise Managed User login always holds an underscore.
+            "muriel_bagge",
+            "José",
+            "Zoë",
+            // The same name with the diaeresis as a combining mark instead of one codepoint.
+            "Zoe\u{0308}",
+            "Жанна",
+            "张伟",
+            "مُرئيل",
             LEN_64_STR,
         ] {
             assert_eq!(true, is_valid_user_name(name), "{name}");
@@ -117,6 +131,11 @@ mod tests {
             " Muriel Bagge ",
             "Muriel!",
             "Muriel! Bagge",
+            "Muriel 🐄",
+            // A circled letter is a symbol, however much it reads as a letter.
+            "Ⓜuriel",
+            "Muriel\u{0}Bagge",
+            "Muriel\tBagge",
         ] {
             assert_eq!(false, is_valid_user_name(name), "{name}");
         }

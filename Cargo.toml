@@ -119,6 +119,7 @@ hex = "0.4"
 http = "1.4"
 http-body-util = "0.1"
 hyper = "1.8"
+icu_properties = "2.4"
 jsonschema = { version = "0.60", default-features = false }
 jsonwebtoken = { version = "11.1", features = ["rust_crypto"] }
 libc = "0.2"

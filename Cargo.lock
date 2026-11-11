@@ -1027,6 +1027,7 @@ dependencies = [
  "oauth2-reqwest",
  "reqwest",
  "serde",
+ "serde_json",
  "thiserror 2.0.21",
  "url",
 ]
@@ -1377,6 +1378,7 @@ dependencies = [
  "git-validate",
  "gix-hash",
  "hex",
+ "icu_properties",
  "ordered-float",
  "pretty_assertions",
  "rand 0.10.3",

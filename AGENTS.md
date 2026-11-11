@@ -64,7 +64,7 @@ cargo nextest run -p my_package
 cargo test --doc
 ```
 
-Crates that depend on `bencher_valid` will need to specify either:
+With `plus`, crates that depend on `bencher_valid` will need to specify either:
 
 1. `server` feature for server-side usage
 ```bash
