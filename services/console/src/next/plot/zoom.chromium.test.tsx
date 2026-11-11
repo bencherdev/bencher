@@ -6,7 +6,7 @@ import { render } from "solid-js/web";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { commands, page, userEvent } from "vitest/browser";
 import Plot, { type PlotProps } from "./Plot";
-import { settle } from "./pixels";
+import { canvasOf, drawnDuring, settle, xLabels, yValues } from "./pixels";
 import { testData, testLine } from "./testing";
 import type { PlotData } from "./types";
 
@@ -81,56 +81,6 @@ const drag = async (over: HTMLElement, from: number, to: number) => {
 	await commands.mouseUp();
 	await settle();
 };
-
-interface Drawn {
-	canvas: HTMLCanvasElement;
-	align: CanvasTextAlign;
-	text: string;
-}
-
-/** Every label the plots draw while `act` runs. */
-const drawnDuring = async (act: () => Promise<void>): Promise<Drawn[]> => {
-	const drawn: Drawn[] = [];
-	const fillText = CanvasRenderingContext2D.prototype.fillText;
-	CanvasRenderingContext2D.prototype.fillText = function (
-		this: CanvasRenderingContext2D,
-		...args: Parameters<typeof fillText>
-	) {
-		drawn.push({ canvas: this.canvas, align: this.textAlign, text: args[0] });
-		return fillText.apply(this, args);
-	};
-	try {
-		await act();
-		await settle();
-	} finally {
-		CanvasRenderingContext2D.prototype.fillText = fillText;
-	}
-	return drawn;
-};
-
-/** The x axis labels drawn, each once. */
-const xLabels = (drawn: Drawn[]) => [
-	...new Set(
-		drawn.filter(({ align }) => align === "center").map(({ text }) => text),
-	),
-];
-
-/** The values a y axis labels: the left one's labels align right, the right one's left. */
-const yValues = (
-	drawn: Drawn[],
-	side: "left" | "right",
-	canvas?: HTMLCanvasElement,
-) =>
-	drawn
-		.filter(
-			(label) =>
-				label.align === (side === "left" ? "right" : "left") &&
-				(canvas === undefined || label.canvas === canvas),
-		)
-		.map(({ text }) => Number(text));
-
-const canvasOf = (over: HTMLElement) =>
-	over.parentElement?.querySelector("canvas") as HTMLCanvasElement;
 
 const zoom = () => page.getByRole("group", { name: "Zoom" });
 const zoomOut = () => page.getByRole("button", { name: "Zoom out" });

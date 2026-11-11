@@ -6,6 +6,16 @@ declare module "vitest/browser" {
 		restPointer: () => Promise<void>;
 		mouseDown: () => Promise<void>;
 		mouseUp: () => Promise<void>;
+		/**
+		 * Real fingers, by difference from those already down: `touchStart`
+		 * presses only new points, `touchMove` moves the points given and
+		 * presses any not down, `touchEnd` lifts the points given or every
+		 * finger when given none, and `touchCancel` cancels every finger.
+		 */
+		touch: (
+			type: "touchStart" | "touchMove" | "touchEnd" | "touchCancel",
+			points: { id: number; x: number; y: number }[],
+		) => Promise<void>;
 	}
 }
 

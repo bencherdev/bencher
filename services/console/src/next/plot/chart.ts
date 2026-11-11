@@ -50,6 +50,8 @@ const MARK_SPACING = 10;
 const HOVER_REACH = 16;
 /** How far, in CSS pixels, a mouse or pen press moves before it is a drag rather than a click. */
 const DRAG_REACH = 5;
+/** The least spread, in CSS pixels, a pinch measures between its fingers, so fingers above one another never scale by a near zero. */
+const PINCH_SPREAD = 16;
 const X_AXIS_HEIGHT = 24;
 const TICK_SPACING = 50;
 const X_TICK_SPACING = 120;
@@ -125,6 +127,10 @@ export interface PanelEvents {
 	zoom: (range: XRange) => void;
 	/** A double click, which goes back to every point. */
 	unzoom: () => void;
+	/** A pinch from the x range `start`, its fingers' midpoint at `at` across it, their spread at `ratio` of the start's. */
+	pinch: (start: XRange, at: number, ratio: number) => void;
+	/** A pinch ends: a lifted finger keeps it, a cancel does not. */
+	pinchEnd: (keep: boolean) => void;
 }
 
 export interface Panel {
@@ -682,7 +688,59 @@ export const createPanel = (
 			then(left, top);
 		};
 	const onHover = pointer((left, top) => events.hover(cursorAt(left, top)));
+	// Each finger on the plot area, at its x. The first 2 down pinch, and once a
+	// pinch ends no other starts until every finger has lifted.
+	const fingers = new Map<number, number>();
+	let pinch: {
+		ids: readonly [number, number];
+		spread: number;
+		start: XRange;
+		at: number;
+	} | null = null;
+	let pinched = false;
+	const spreadOf = ([a, b]: readonly [number, number]) =>
+		Math.max(
+			PINCH_SPREAD,
+			Math.abs((fingers.get(a) ?? 0) - (fingers.get(b) ?? 0)),
+		);
+	const startPinch = () => {
+		const ids = [...fingers.keys()] as [number, number];
+		const [a, b] = ids.map((id) => fingers.get(id) ?? 0) as [number, number];
+		pinch = {
+			ids,
+			spread: spreadOf(ids),
+			start: xRange(),
+			at: Math.max(0, Math.min(1, (a + b) / 2 / u.rect.width)),
+		};
+		// The readout gives way to the pinch, a pinned one too.
+		hide();
+		events.close();
+	};
+	const endPinch = (keep: boolean) => {
+		if (pinch) {
+			pinch = null;
+			pinched = true;
+			events.pinchEnd(keep);
+		}
+	};
+	const lift = (id: number) => {
+		if (pinch?.ids.includes(id)) {
+			endPinch(true);
+		}
+		fingers.delete(id);
+		if (fingers.size === 0) {
+			pinched = false;
+		}
+	};
+
 	const onMove = (event: PointerEvent) => {
+		if (fingers.has(event.pointerId)) {
+			fingers.set(event.pointerId, local(event).left);
+			if (pinch?.ids.includes(event.pointerId)) {
+				events.pinch(pinch.start, pinch.at, pinch.spread / spreadOf(pinch.ids));
+			}
+			return;
+		}
 		// A press released off the plot area sends no release here, so a move without the button ends it.
 		if (press?.id === event.pointerId && (event.buttons & 1) === 0) {
 			endPress();
@@ -721,6 +779,11 @@ export const createPanel = (
 		band.hidden = true;
 	};
 	const onUp = (event: PointerEvent) => {
+		// The first of a pinch's fingers to lift ends it, and keeps where it zoomed.
+		if (fingers.has(event.pointerId)) {
+			lift(event.pointerId);
+			return;
+		}
 		if (press?.id !== event.pointerId) {
 			return;
 		}
@@ -738,6 +801,14 @@ export const createPanel = (
 	};
 	// A drag the browser ends drops the click that may follow it, as Escape does.
 	const onCancel = (event: PointerEvent) => {
+		// A finger the browser takes, as for a scroll, undoes the pinch it was in.
+		if (fingers.has(event.pointerId)) {
+			if (pinch?.ids.includes(event.pointerId)) {
+				endPinch(false);
+			}
+			lift(event.pointerId);
+			return;
+		}
 		if (press?.id === event.pointerId) {
 			dropClick = dragging;
 			endPress();
@@ -762,8 +833,13 @@ export const createPanel = (
 		dropClick = false;
 		// Whatever press came before ended somewhere this plot never heard.
 		endPress();
-		// A touch never drags, so a finger's swipe still scrolls the page.
-		if (!touch && event.isPrimary && event.button === 0) {
+		if (touch) {
+			fingers.set(event.pointerId, local(event).left);
+			if (!pinch && !pinched && fingers.size === 2) {
+				startPinch();
+			}
+		} else if (event.isPrimary && event.button === 0) {
+			// A touch never drags, so a finger's swipe still scrolls the page.
 			const { left, top } = local(event);
 			press = { id: event.pointerId, left, top };
 		}
