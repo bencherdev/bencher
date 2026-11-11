@@ -16,7 +16,7 @@ import { measuresLayout } from "../explore/layout";
 import { rollingName } from "../explore/window";
 import { loadPlot, loadedPlot } from "../plot/lazy";
 import type { GitHubLinks } from "../github";
-import type { PlotAlerts } from "../plot/Plot";
+import type { PlotAlerts, PlotZoom } from "../plot/Plot";
 import type { PlotData } from "../plot/types";
 import type { Move } from "./order";
 
@@ -51,7 +51,7 @@ const Tile = (props: {
 	tile: JsonConsolePlot | undefined;
 	/** Its batch failed, so no lines are on the way. */
 	failed?: boolean;
-	/** Its own window, such as "4w", while it draws at it. */
+	/** The window it draws at, such as "4w": its own, or the page's. */
 	window?: string | undefined;
 	openHref?: string;
 	menu?:
@@ -109,6 +109,7 @@ const Tile = (props: {
 	const query = createMemo(() => props.tile && queryFromPlot(props.tile.plot));
 	const [hidden, setHidden] = createSignal<string[]>();
 	const [focused, setFocused] = createSignal<string | null>();
+	const [zoom, setZoom] = createSignal<PlotZoom>();
 	const meta = () => {
 		const perf = props.tile?.perf;
 		return perf
@@ -276,13 +277,21 @@ const Tile = (props: {
 							{...(props.reportHref && { reportHref: props.reportHref })}
 							github={props.github}
 							failed={props.failed ?? false}
+							onZoom={setZoom}
 						/>
 					);
 				}}
 			</Show>
 			<div class="plots-tfoot">
-				<Show when={props.window}>
-					<span class="lr-tag">{props.window}</span>
+				<Show
+					when={zoom()}
+					fallback={
+						<Show when={props.window}>
+							<span class="lr-tag">{props.window}</span>
+						</Show>
+					}
+				>
+					{(current) => current().draw("lr-tag")}
 				</Show>
 				<span class="spacer" />
 				<Show when={props.openHref}>

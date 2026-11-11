@@ -1372,6 +1372,47 @@ test("a click pins the readout, and only a pinned readout's report link opens th
 	await expect(page).toHaveURL(new RegExp(`/reports/${second.uuid}`));
 });
 
+// Kills a zoom whose span and buttons sit anywhere but beside the Window
+// buttons, a zoom that changes the link, and one a new window keeps.
+test("a drag zooms the plot beside the Window buttons, and a new window clears it", async ({
+	page,
+	request,
+}) => {
+	const { query } = await twoLines(request);
+	const link = explore(hashbrown.slug, query);
+	await page.goto(link);
+	await expect(plot(page)).toHaveAccessibleName("2 lines");
+	const area = await page
+		.getByRole("group", { name: /^2 lines,/ })
+		.boundingBox();
+	if (!area) {
+		throw new Error("No plot area");
+	}
+	const y = area.y + area.height - 10;
+	const before = page.url();
+	await page.mouse.move(area.x + area.width * 0.3, y);
+	await page.mouse.down();
+	await page.mouse.move(area.x + area.width * 0.7, y, { steps: 4 });
+	await page.mouse.up();
+
+	const zoom = page.getByRole("group", { name: "Zoom" });
+	await expect(zoom).toContainText(/\w{3} \d+ to \w{3} \d+/);
+	const window = page.getByRole("radiogroup", { name: "Window" });
+	expect(
+		await zoom.evaluate(
+			(group, beside) =>
+				group.closest(".ex-pair") === beside?.closest(".ex-pair"),
+			await window.elementHandle(),
+		),
+	).toBe(true);
+	await expect(zoom.getByRole("button", { name: "Zoom out" })).toBeVisible();
+	await expect(zoom.getByRole("button", { name: "Reset zoom" })).toBeVisible();
+	expect(page.url()).toBe(before);
+
+	await window.getByText("1w", { exact: true }).click();
+	await expect(zoom).toHaveCount(0);
+});
+
 // Kills scroll room that leaves the plot's top short of the top of the screen
 // or lets it scroll past (a full screen of room under the page's padding),
 // whatever the key's height, on a link and on a pin.

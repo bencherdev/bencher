@@ -7,9 +7,20 @@ import type { BrowserCommand } from "vitest/node";
 
 const CHROMIUM_TESTS = "src/**/*.chromium.test.{ts,tsx}";
 
-/** Rest the mouse at the page's corner, where a fresh page has it. */
+/** Rest the mouse at the page's corner, where a fresh page has it, its button up. */
 const restPointer: BrowserCommand<[]> = async ({ page }) => {
+	await page.mouse.up();
 	await page.mouse.move(0, 0);
+};
+
+/** Press the mouse's main button where the mouse is. */
+const mouseDown: BrowserCommand<[]> = async ({ page }) => {
+	await page.mouse.down();
+};
+
+/** Release the mouse's main button where the mouse is. */
+const mouseUp: BrowserCommand<[]> = async ({ page }) => {
+	await page.mouse.up();
 };
 
 /** The accessibility tree under `selector` as Playwright reads it, names and all. */
@@ -55,7 +66,7 @@ export default getViteConfig({
 						provider: playwright(),
 						headless: true,
 						instances: [{ browser: "chromium" }],
-						commands: { restPointer, ariaSnapshot },
+						commands: { restPointer, mouseDown, mouseUp, ariaSnapshot },
 					},
 				},
 			},

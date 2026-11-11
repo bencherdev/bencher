@@ -66,6 +66,7 @@ import {
 import IterationSelect from "../plot/IterationSelect";
 import { loadPlot, loadedPlot } from "../plot/lazy";
 import { useNarrow } from "../plot/narrow";
+import type { PlotZoom } from "../plot/Plot";
 import EditPin from "../plots/EditPin";
 import { PLOTS_LIMIT, countPins } from "../plots/pins";
 import { useEntityTitle, useProject, useProjectNavigate } from "../project";
@@ -181,6 +182,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 	};
 	const [PlotView, setPlotView] = createSignal(loadedPlot());
 	const [plotMissing, setPlotMissing] = createSignal(false);
+	const [zoom, setZoom] = createSignal<PlotZoom>();
 	const wantPlot = (retry = false) => {
 		if (!PlotView()) {
 			setPlotMissing(false);
@@ -646,6 +648,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 					chosen={chosen()}
 					now={Date.now}
 					onQuery={(next) => edit(next)}
+					zoom={zoom()}
 				>
 					<Show when={drawable(query())}>
 						<IterationSelect
@@ -717,6 +720,7 @@ const Explore = (props: { readOnly?: boolean | undefined }) => {
 									github={github}
 									reserve={reserve()}
 									alerts={alerts}
+									onZoom={setZoom}
 								/>
 							);
 						}}
