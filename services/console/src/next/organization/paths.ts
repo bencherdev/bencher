@@ -4,6 +4,7 @@ import { ORGANIZATIONS_PATH, type PageName } from "../paths";
 const ORGANIZATION_PAGES = {
 	settings: { page: "OrgGeneral", title: "General" },
 	members: { page: "OrgMembers", title: "Members" },
+	projects: { page: "OrgProjects", title: "Projects" },
 	"projects/add": { page: "NewProject", title: "New project" },
 	billing: { page: "OrgBilling", title: "Billing" },
 } as const satisfies Record<string, { page: PageName; title: string }>;

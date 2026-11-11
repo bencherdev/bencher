@@ -413,6 +413,59 @@ describe("only what the reader can do", () => {
 	});
 });
 
+describe("an organization the API will not show the reader", () => {
+	// Kills a refusal drawn as a failure to retry, read from the organization
+	// or its members.
+	test.each([
+		[403, "forbidden", "/v0/organizations/pompeii-llc"],
+		[404, "not_found", "/v0/organizations/pompeii-llc"],
+		[404, "not_found", "/v0/organizations/pompeii-llc/members?"],
+	] as const)(
+		"a refusal (%i, %s) of %s is not found, with no Retry",
+		async (status, kind, refusing) => {
+			open({
+				organization: null,
+				members: null,
+				roles: null,
+				read: async (path) => {
+					if (
+						refusing.endsWith("pompeii-llc")
+							? path === refusing
+							: path.startsWith(refusing)
+					) {
+						throw new ApiError(status, kind, "{}");
+					}
+					return new Promise<never>(() => {});
+				},
+			});
+			await expect
+				.element(page.getByRole("main").getByText("Organization not found"))
+				.toBeVisible();
+			expect(page.getByRole("alert").query()).toBeNull();
+			expect(page.getByRole("button", { name: "Retry" }).query()).toBeNull();
+		},
+	);
+
+	// Kills every failure drawn as not found.
+	test("a server failure says Members did not load, and retries", async () => {
+		const { reads } = open({
+			organization: null,
+			members: null,
+			roles: null,
+			read: async () => {
+				throw new ApiError(500, "server", "{}");
+			},
+		});
+		await expect
+			.element(page.getByRole("alert"))
+			.toHaveTextContent("Members did not load");
+		expect(page.getByText("Organization not found").query()).toBeNull();
+		const before = reads.length;
+		await page.getByRole("button", { name: "Retry" }).click();
+		await expect.poll(() => reads.length).toBeGreaterThan(before);
+	});
+});
+
 // Kills a rail that leaves General current, or Members leading anywhere but here.
 test("the rail marks Members current", async () => {
 	await page.viewport(1280, 800);

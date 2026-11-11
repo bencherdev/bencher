@@ -142,9 +142,16 @@ const OrganizationTable = (props: { organizations: OrganizationRow[] }) => {
 								</span>
 							</td>
 							<td data-fold="n1" data-align="end" class="muted">
-								{organization.projects
-									? counted(organization.projects, "project", "projects")
-									: "No projects"}
+								<Show when={organization.projects} fallback="No projects">
+									{(projects) => (
+										<a
+											class="lnk"
+											href={`${ORGANIZATIONS_PATH}/${organization.slug}/projects`}
+										>
+											{counted(projects(), "project", "projects")}
+										</a>
+									)}
+								</Show>
 							</td>
 							<td data-fold="act" class="act">
 								<Show when={!organization.projects}>

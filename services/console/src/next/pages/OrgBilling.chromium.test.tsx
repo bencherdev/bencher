@@ -103,7 +103,8 @@ const open = (
 		answer?: Parameters<typeof fakeApi>[0];
 		read?: Parameters<typeof fakeApi>[1];
 		path?: string;
-		organization?: JsonOrganization;
+		/** The organization the cache holds, Pompeii LLC unless given; none when null. */
+		organization?: JsonOrganization | null;
 	} = {},
 ) => {
 	const { api, sent } = fakeApi(answer, read);
@@ -119,7 +120,7 @@ const open = (
 		api,
 		path,
 		cached,
-		...(organization ? { organization } : {}),
+		...(organization === undefined ? {} : { organization }),
 	});
 	dispose = mounted.dispose;
 	return { ...mounted, api, sent, left };
@@ -723,6 +724,64 @@ test("a usage that does not load says so, and Retry reads it again", async () =>
 	await expect
 		.poll(() => reads.filter((path) => path.endsWith("/usage")).length)
 		.toBe(2);
+});
+
+describe("an organization the API will not show the reader", () => {
+	// Kills a refusal drawn as a failure to retry, and one hidden behind the
+	// permission the API answers false, as it does for every reader it refuses.
+	test.each([
+		[403, "forbidden", false],
+		[404, "not_found", false],
+		[404, "not_found", null],
+	] as const)(
+		"a refusal (%i, %s) of the organization, manage %s, is not found, with no Retry",
+		async (status, kind, manage) => {
+			open(null, {
+				manage,
+				organization: null,
+				read: async (path) => {
+					if (path === "/v0/organizations/pompeii-llc") {
+						throw new ApiError(status, kind, "{}");
+					}
+					return new Promise<never>(() => {});
+				},
+			});
+			await expect
+				.element(page.getByRole("main").getByText("Organization not found"))
+				.toBeVisible();
+			expect(page.getByRole("alert").query()).toBeNull();
+			expect(page.getByRole("button", { name: "Retry" }).query()).toBeNull();
+		},
+	);
+
+	// Kills a usage the API will not give a manager, a plan it cannot find or
+	// a refusal, drawn as the organization not found.
+	test.each([
+		[403, "forbidden"],
+		[404, "not_found"],
+	] as const)(
+		"a usage the API refuses (%i, %s) says Billing did not load, and retries",
+		async (status, kind) => {
+			const reads: string[] = [];
+			open(null, {
+				read: async (path) => {
+					reads.push(path);
+					if (path.endsWith("/usage")) {
+						throw new ApiError(status, kind, "{}");
+					}
+					return new Promise<never>(() => {});
+				},
+			});
+			await expect
+				.element(page.getByRole("alert"))
+				.toHaveTextContent("Billing did not load");
+			expect(page.getByText("Organization not found").query()).toBeNull();
+			await button("Retry").click();
+			await expect
+				.poll(() => reads.filter((path) => path.endsWith("/usage")).length)
+				.toBe(2);
+		},
+	);
 });
 
 describe("only what the reader can do", () => {

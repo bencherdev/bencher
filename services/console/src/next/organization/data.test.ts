@@ -3,8 +3,13 @@ import type {
 	JsonConsoleUser,
 	JsonConsoleUserProject,
 } from "../../types/bencher";
-import type { Api } from "../api";
-import { allowedQuery, organizationIn, withOrganization } from "./data";
+import { type Api, ApiError } from "../api";
+import {
+	allowedQuery,
+	organizationIn,
+	refused,
+	withOrganization,
+} from "./data";
 
 const POMPEII = { uuid: "o1", name: "Pompeii LLC", slug: "pompeii-llc" };
 const DINER = { uuid: "o2", name: "Bagge Diner", slug: "bagge-diner" };
@@ -65,5 +70,17 @@ describe("allowedQuery", () => {
 				signal: new AbortController().signal,
 			}),
 		).toEqual({ edit: true, delete: false });
+	});
+});
+
+describe("refused", () => {
+	// Kills a refusal read as a failure worth retrying, and a failure worth
+	// retrying read as a refusal.
+	test("is the API's 403 or 404, nothing else", () => {
+		expect(refused(new ApiError(403, "forbidden", ""))).toBe(true);
+		expect(refused(new ApiError(404, "not_found", ""))).toBe(true);
+		expect(refused(new ApiError(500, "server", ""))).toBe(false);
+		expect(refused(new ApiError(undefined, "network", "offline"))).toBe(false);
+		expect(refused(null)).toBe(false);
 	});
 });

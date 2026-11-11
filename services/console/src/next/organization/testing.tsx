@@ -87,6 +87,11 @@ export const mount = (
 		bootstrap = BOOTSTRAP,
 		flush = async () => {},
 		cached = [],
+		client = new QueryClient({
+			defaultOptions: {
+				queries: { retry: false, staleTime: Number.POSITIVE_INFINITY },
+			},
+		}),
 	}: {
 		api: Api;
 		path?: string;
@@ -96,13 +101,10 @@ export const mount = (
 		flush?: () => Promise<void>;
 		/** More answers the cache already holds, by query key. */
 		cached?: [unknown[], unknown][];
+		/** The cache, when a test needs to set it up past what it holds. */
+		client?: QueryClient;
 	},
 ) => {
-	const client = new QueryClient({
-		defaultOptions: {
-			queries: { retry: false, staleTime: Number.POSITIVE_INFINITY },
-		},
-	});
 	const key = path.split("/")[2] ?? "";
 	if (organization) {
 		client.setQueryData(organizationQuery(api, key).queryKey, organization);

@@ -218,6 +218,61 @@ describe("only what the reader can do", () => {
 	});
 });
 
+describe("an organization the API will not show the reader", () => {
+	/** General with nothing cached, the API answering `error` to each read `failing` matches and never to the rest. */
+	const refusedBy = (
+		error: ApiError,
+		failing: (path: string) => boolean = () => true,
+	) => {
+		const reads: string[] = [];
+		const { api } = fakeApi(undefined, async (path) => {
+			reads.push(path);
+			if (failing(path)) {
+				throw error;
+			}
+			return new Promise<never>(() => {});
+		});
+		const mounted = mount(() => <OrgGeneral />, {
+			api,
+			path: "/organizations/nowhere-labs/settings",
+			organization: null,
+			allowed: null,
+			bootstrap: null,
+		});
+		dispose = mounted.dispose;
+		return reads;
+	};
+
+	// Kills a refusal of the organization drawn as a failure to retry.
+	test.each([
+		[403, "forbidden", "/v0/organizations/nowhere-labs"],
+		[404, "not_found", "/v0/organizations/nowhere-labs"],
+	] as const)(
+		"a refusal (%i, %s) of %s is not found, with no Retry",
+		async (status, kind, refusing) => {
+			refusedBy(new ApiError(status, kind, "{}"), (path) => path === refusing);
+			await expect
+				.element(page.getByRole("main").getByText("Organization not found"))
+				.toBeVisible();
+			expect(page.getByRole("alert").query()).toBeNull();
+			expect(page.getByRole("button", { name: "Retry" }).query()).toBeNull();
+		},
+	);
+
+	// Kills every failure drawn as not found, which would leave a reader with
+	// no way back from a passing outage.
+	test("a server failure says General did not load, and retries", async () => {
+		const reads = refusedBy(new ApiError(500, "server", "{}"));
+		await expect
+			.element(page.getByRole("alert"))
+			.toHaveTextContent("General did not load");
+		expect(page.getByText("Organization not found").query()).toBeNull();
+		const before = reads.length;
+		await button("Retry").click();
+		await expect.poll(() => reads.length).toBeGreaterThan(before);
+	});
+});
+
 // Kills a page that waits for the API to paint an organization the reader's
 // bootstrap already holds, by slug or by UUID.
 test("an organization the reader has seen paints at once", async () => {

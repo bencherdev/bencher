@@ -850,6 +850,30 @@ test("a cold load of an organization's Members holds the speed ceilings", async 
 	holds(cost, ceilings.organizationMembersColdLoad);
 });
 
+// Kills an organization's Projects that asks for more than the organization
+// and the reader's bootstrap, reads the organization's own list for a member,
+// chains a second round, or shifts as they arrive.
+test("a cold load of an organization's Projects holds the speed ceilings", async ({
+	page,
+}) => {
+	const cost = await accountColdLoad(
+		page,
+		`/console/organizations/${seed.organization.slug}/projects`,
+		[
+			`${seed.api_url}/v0/organizations/${seed.organization.slug}`,
+			`${seed.api_url}/v0/console/users/${seed.member.user.uuid}`,
+		],
+		() =>
+			expect(
+				page
+					.getByRole("table", { name: "Projects" })
+					.getByRole("link", { name: seed.projects.hashbrown.name }),
+			).toBeVisible(),
+	);
+	report("organization projects cold load", cost);
+	holds(cost, ceilings.organizationProjectsColdLoad);
+});
+
 // Kills an Organizations list that waits on more than the reader's bootstrap,
 // chains a second round, or shifts as it arrives.
 test("a cold load of Organizations holds the speed ceilings", async ({

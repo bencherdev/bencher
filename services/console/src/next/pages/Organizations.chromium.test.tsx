@@ -258,6 +258,24 @@ describe("the list", () => {
 		);
 	});
 
+	// Kills a count that leads anywhere but its organization's Projects, and
+	// "No projects" drawn as a link to an empty list.
+	test("each project count leads to its organization's Projects", async () => {
+		const { api } = consoleApi();
+		mount(api);
+
+		await expect
+			.element(page.getByRole("link", { name: "2 projects" }))
+			.toBeVisible();
+		expect(href("2 projects")).toBe(
+			"/console/organizations/nowhere-labs/projects",
+		);
+		expect(href("1 project")).toBe(
+			"/console/organizations/tumbleweed/projects",
+		);
+		expect(page.getByRole("link", { name: "No projects" }).query()).toBeNull();
+	});
+
 	// Kills a list that waits for the API when the reader's bootstrap is
 	// already in the cache, or reads it under another key than the shell's.
 	test("paints from the cached bootstrap at once", async () => {

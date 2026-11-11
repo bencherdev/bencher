@@ -3,7 +3,7 @@ import type {
 	JsonConsoleUser,
 	JsonOrganization,
 } from "../../types/bencher";
-import type { Api } from "../api";
+import { type Api, ApiError } from "../api";
 
 const path = (organization: string) =>
 	`/v0/organizations/${encodeURIComponent(organization)}`;
@@ -63,3 +63,7 @@ export const withOrganization = (
 		? user.projects
 		: user.projects.filter((project) => project.organization !== uuid),
 });
+
+/** Whether the API refused the reader the organization, rather than failed. */
+export const refused = (error: unknown) =>
+	error instanceof ApiError && (error.status === 403 || error.status === 404);
