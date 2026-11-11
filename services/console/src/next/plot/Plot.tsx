@@ -1,10 +1,12 @@
 import {
 	batch,
+	createComputed,
 	createEffect,
 	createMemo,
 	createSignal,
 	createUniqueId,
 	For,
+	type JSX,
 	on,
 	onCleanup,
 	onMount,
@@ -45,6 +47,8 @@ import type {
 	PlotSize,
 	PlotXAxis,
 } from "./types";
+import { type XRange, holdsTwo, zoomSpan } from "./zoom";
+import ZoomBar from "./ZoomBar";
 
 export interface PlotProps {
 	/** Undefined while the data loads: the plot holds its frame. */
@@ -79,6 +83,14 @@ export interface PlotProps {
 	pin?: number | undefined;
 	/** Only this iteration of every report, counting from 1; every iteration when undefined. */
 	iteration?: number | undefined;
+	/** Takes the zoom, while there is one, for the page to show beside its window; without it the plot shows the zoom in a footer of its own. */
+	onZoom?: (zoom: PlotZoom | undefined) => void;
+}
+
+/** A plot's zoom while it has one, which a page draws beside its window. */
+export interface PlotZoom {
+	/** The span in view, then Zoom out and Reset zoom; the span takes `spanClass` where the page names its window with one. */
+	draw: (spanClass?: string) => JSX.Element;
 }
 
 export interface PlotAlerts {
@@ -238,6 +250,62 @@ const Plot = (props: PlotProps) => {
 		}),
 	);
 
+	// Each zoom pushes its x range, and any new data clears them, even data drawn before, which a cache can hand back.
+	const [ranges, setRanges] = createSignal<readonly XRange[]>([]);
+	createComputed(on(data, () => setRanges([]), { defer: true }));
+	const view = createMemo(() => ranges().at(-1) ?? null);
+	const pushZoom = (range: XRange) => {
+		const current = data();
+		if (!current) {
+			return;
+		}
+		const shown = current.lines.flatMap((line, index) =>
+			hidden().has(index) ? [] : [line.y],
+		);
+		if (holdsTwo(current.x, shown, range)) {
+			setRanges([...ranges(), range]);
+		}
+	};
+	const zoomOut = () => setRanges(ranges().slice(0, -1));
+	const resetZoom = () => setRanges([]);
+	// Every panel draws the top range itself, as a stack's sync key carries only the cursor.
+	createEffect(
+		on(
+			view,
+			() => {
+				batch(() => {
+					setCursor(null);
+					setHover(null);
+				});
+				for (const panel of panels.values()) {
+					panel.clearCursor();
+					panel.rezoom();
+				}
+			},
+			{ defer: true },
+		),
+	);
+	const zoomed = createMemo(() => view() !== null);
+	// Empty for the moment between the last step back and the bar going away.
+	const span = () => {
+		const range = view();
+		return range ? zoomSpan(range, xAxis()) : "";
+	};
+	// One drawing for the page to place, whose span follows each step.
+	const zoom: PlotZoom = {
+		draw: (spanClass) => (
+			<ZoomBar
+				span={span()}
+				class={spanClass}
+				out={zoomOut}
+				reset={resetZoom}
+				focus={() => panels.get(0)?.focus()}
+			/>
+		),
+	};
+	createEffect(() => props.onZoom?.(zoomed() ? zoom : undefined));
+	onCleanup(() => props.onZoom?.(undefined));
+
 	const panelSpecs = createMemo(() => {
 		const current = data();
 		if (!current) {
@@ -336,6 +404,8 @@ const Plot = (props: PlotProps) => {
 				setCursor(null);
 				setHover(null);
 			}),
+		zoom: pushZoom,
+		unzoom: resetZoom,
 	});
 
 	// Each axis grows to fit the labels any plot draws, and stacked plots relay out to share the widest.
@@ -571,6 +641,7 @@ const Plot = (props: PlotProps) => {
 											index: () => cursor()?.index ?? null,
 											status: statusOf,
 											tier: tierOf,
+											view,
 										},
 										panelEvents(index()),
 									);
@@ -639,7 +710,8 @@ const Plot = (props: PlotProps) => {
 													</span>
 												)}
 											</Show>
-											<Show when={lead(index()) && props.note}>
+											{/* A zoom names its own span, which replaces the window a note names. */}
+											<Show when={lead(index()) && !zoomed() && props.note}>
 												<span class="pl-note">{props.note}</span>
 											</Show>
 											<Show when={lead(index()) && alerts() > 0}>
@@ -748,6 +820,9 @@ const Plot = (props: PlotProps) => {
 					}}
 					onPreview={setPreview}
 				/>
+			</Show>
+			<Show when={!props.onZoom && zoomed()}>
+				<div style={ZOOM_FOOTER}>{zoom.draw()}</div>
 			</Show>
 		</figure>
 	);
@@ -1092,6 +1167,12 @@ const Readout = (props: ReadoutProps) => {
 			</div>
 		</>
 	);
+};
+
+/** A zoom's own footer, under the key, styled here as only a plot's pages draw it. */
+const ZOOM_FOOTER = {
+	padding: "2px 10px",
+	"border-top": "var(--border-width) solid var(--color-border)",
 };
 
 /** Inside the readout: reaching into the space around the time on a desktop, and on a phone's 44 px target, growing the line to hold it. */

@@ -7,7 +7,7 @@ import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { Suspense } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { page, userEvent } from "vitest/browser";
+import { commands, page, userEvent } from "vitest/browser";
 import {
 	GitHubLinkStatus,
 	type JsonConsolePlot,
@@ -270,7 +270,7 @@ test("a page window keeps the tiles drawn and busy until its answer", async () =
 
 // Kills a page that opens at a page window rather than Per plot, a page window
 // left off some tiles or kept for the next view, tiles still tagged with their
-// own windows while they draw the page's, and a Per plot that asks again.
+// own windows while they draw the page's or with none, and a Per plot that asks again.
 test("Per plot draws each tile at its own window, and a page window draws them all for this view only", async () => {
 	const DAY = 86_400;
 	const { api, plotsReads } = plotsApi(3, [7 * DAY, 28 * DAY, 92 * DAY]);
@@ -302,14 +302,14 @@ test("Per plot draws each tile at its own window, and a page window draws them a
 	await drawnAtOwn();
 
 	await windowGroup.getByRole("radio", { name: "1w" }).click();
+	// Each footer names the page's window in place of its own.
 	for (const [title, window] of own) {
+		const region = page.getByRole("region", { name: title, exact: true });
 		await expect.element(figure(title)).toHaveAccessibleName("2 lines over 1w");
-		expect(
-			page
-				.getByRole("region", { name: title, exact: true })
-				.getByText(window, { exact: true })
-				.elements(),
-		).toEqual([]);
+		await expect.element(region.getByText("1w", { exact: true })).toBeVisible();
+		if (window !== "1w") {
+			expect(region.getByText(window, { exact: true }).elements()).toEqual([]);
+		}
 	}
 	const asked = plotsReads().length;
 	await windowGroup.getByRole("radio", { name: "Per plot" }).click();
@@ -782,4 +782,63 @@ test("a tile's pinned readout links to its point's report", async () => {
 	await expect
 		.element(figure("Pin 1").getByRole("status").getByRole("link"))
 		.toHaveAttribute("href", `${PROJECTS_PATH}/hashbrown/reports/report-4`);
+});
+
+// Kills a zoom kept for a tile's answer that a page window then brings back,
+// as the answer at its own window comes back from the cache.
+test("a tile zoomed at Per plot comes back unzoomed after a page window", async () => {
+	const { api } = plotsApi(1);
+	mount(api, newClient(api, 1));
+	await expect.element(figure("Pin 1")).toHaveAccessibleName("2 lines over 4w");
+	const plot = figure("Pin 1").getByRole("group", { name: /lines?,/ });
+	await expect.element(plot).toBeVisible();
+	const box = plot.element().getBoundingClientRect();
+	const spot = (fraction: number) => ({
+		position: { x: box.width * fraction, y: box.height - 8 },
+	});
+	await plot.hover(spot(0.15));
+	await commands.mouseDown();
+	await plot.hover(spot(0.85));
+	await commands.mouseUp();
+	const zoom = page
+		.getByRole("region", { name: "Pin 1", exact: true })
+		.getByRole("group", { name: "Zoom" });
+	await expect.element(zoom).toBeInTheDocument();
+	const windowGroup = page.getByRole("radiogroup", { name: "Window" });
+	await windowGroup.getByRole("radio", { name: "1w" }).click();
+	await expect.element(figure("Pin 1")).toHaveAccessibleName("2 lines over 1w");
+	expect(zoom.query()).toBeNull();
+	await windowGroup.getByRole("radio", { name: "Per plot" }).click();
+	await expect.element(figure("Pin 1")).toHaveAccessibleName("2 lines over 4w");
+	await new Promise((resolve) => setTimeout(resolve, 300));
+	expect(zoom.query()).toBeNull();
+});
+
+// Kills a custom page window that a tile's footer names as its own window, or by any other length than it draws.
+test("a custom page window names its length in every tile's footer", async () => {
+	const DAY = 86_400;
+	const { api } = plotsApi(3, [7 * DAY, 28 * DAY, 92 * DAY]);
+	mount(api, newClient(api, 3));
+	await expect.element(figure("Pin 3")).toHaveAccessibleName("2 lines over 3m");
+	await page
+		.getByRole("radiogroup", { name: "Window" })
+		.getByRole("radio", { name: "Custom" })
+		.click();
+	const from = page.getByLabelText("From");
+	await expect.element(from).toBeVisible();
+	const day = 86_400_000;
+	const start = new Date(Date.now() - 9 * day);
+	const pad = (n: number) => String(n).padStart(2, "0");
+	await from.fill(
+		`${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`,
+	);
+	for (const title of ["Pin 1", "Pin 2", "Pin 3"]) {
+		const region = page.getByRole("region", { name: title, exact: true });
+		await expect
+			.element(figure(title))
+			.toHaveAccessibleName("2 lines over 10 days");
+		await expect
+			.element(region.getByText("10 days", { exact: true }))
+			.toBeVisible();
+	}
 });

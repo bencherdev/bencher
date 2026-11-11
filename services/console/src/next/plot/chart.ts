@@ -28,6 +28,7 @@ import type {
 	PlotSize,
 	PlotXAxis,
 } from "./types";
+import { type XRange, within } from "./zoom";
 
 // One uPlot per plot of a layout; bands, markers, focus, and the dual axis are drawn in its hooks.
 
@@ -47,6 +48,8 @@ const NARROW_MARK_RADIUS = 2.3;
 const MARK_SPACING = 10;
 /** How near, in CSS pixels, the pointer must come to a line to focus it. */
 const HOVER_REACH = 16;
+/** How far, in CSS pixels, a mouse or pen press moves before it is a drag rather than a click. */
+const DRAG_REACH = 5;
 const X_AXIS_HEIGHT = 24;
 const TICK_SPACING = 50;
 const X_TICK_SPACING = 120;
@@ -98,6 +101,8 @@ export interface PanelState {
 	status: (alert: PlotAlert) => PlotAlert["status"];
 	/** The tier a measure's axis prints its ticks in, from the lines it shows. */
 	tier: (measure: number) => AxisTier;
+	/** The x range the plot is zoomed to, or null for every point. */
+	view: () => XRange | null;
 }
 
 /** Where the pointer or the keys put the cursor: a data index, which on a line is its point nearest the pointer, the nearest line, and the x in CSS pixels inside the plot area. */
@@ -116,6 +121,10 @@ export interface PanelEvents {
 	/** Enter or Space at the cursor's point. */
 	toggle: () => void;
 	close: () => void;
+	/** A drag across the x range `range`, in data values. */
+	zoom: (range: XRange) => void;
+	/** A double click, which goes back to every point. */
+	unzoom: () => void;
 }
 
 export interface Panel {
@@ -131,6 +140,10 @@ export interface Panel {
 	yOf: (line: number, index: number) => number | null;
 	/** Lays the axes out again, after another stacked plot changed the width they share. */
 	relayout: () => void;
+	/** Draws the x range the state's view holds, and fits each y axis to the points in it. */
+	rezoom: () => void;
+	/** Puts the focus on the plot area. */
+	focus: () => void;
 	destroy: () => void;
 }
 
@@ -158,16 +171,28 @@ export const createPanel = (
 	// Scale kinds follow the visible lines; units stay fixed so toggling never relabels an axis.
 	const kinds: YScale[] = axes.map(() => ({ kind: "linear" }));
 	const steps: number[] = axes.map(() => 0);
+	// The points in view, so a zoom fits each y axis to what it shows.
 	const domain = (axis: number): [number, number] => {
 		const onAxis = axes[axis]?.lines ?? [];
 		const visible = onAxis.filter((line) => !state.hidden().has(line));
-		return (
-			extent(
-				(visible.length ? visible : onAxis).map(
-					(line) => data.lines[line] as PlotLine,
-				),
-			) ?? [0, 1]
+		const drawn = (visible.length ? visible : onAxis).map(
+			(line) => data.lines[line] as PlotLine,
 		);
+		const view = state.view();
+		if (view) {
+			const [start, end] = within(x, view);
+			const shown = extent(
+				drawn.map(({ y, lower, upper }) => ({
+					y: y.slice(start, end),
+					...(lower && { lower: lower.slice(start, end) }),
+					...(upper && { upper: upper.slice(start, end) }),
+				})),
+			);
+			if (shown) {
+				return shown;
+			}
+		}
+		return extent(drawn) ?? [0, 1];
 	};
 	const yScaleOptions = (axis: number): uPlot.Scale => ({
 		distr: 100,
@@ -263,6 +288,14 @@ export const createPanel = (
 	const x = data.x as number[];
 	const first = x[0] ?? 0;
 	const last = x[x.length - 1] ?? 0;
+	// uPlot ranges x through this alone, whatever it is asked to set, so a zoom lives in the state's view.
+	const xRange = (): [number, number] => {
+		const view = state.view();
+		if (view) {
+			return [view[0], view[1]];
+		}
+		return first === last ? [first - 1, last + 1] : [first, last];
+	};
 	const opts: uPlot.Options = {
 		width: options.width,
 		height: options.height,
@@ -300,7 +333,7 @@ export const createPanel = (
 		scales: {
 			x: {
 				time: options.xAxis === "date",
-				range: () => (first === last ? [first - 1, last + 1] : [first, last]),
+				range: xRange,
 			},
 			y: yScaleOptions(0),
 			...(axes.length > 1 && { y2: yScaleOptions(1) }),
@@ -415,11 +448,18 @@ export const createPanel = (
 	};
 
 	// One per report, so a report's iterations, drawn at its one x, never thin out the marks.
-	const pointCounts = lines.map((line) => {
+	const pointCount = (line: number, start: number, end: number) => {
 		const drawn = data.lines[line];
-		return (drawn?.through ?? drawn?.y ?? []).filter((value) => value != null)
-			.length;
-	});
+		const column = drawn?.through ?? drawn?.y ?? [];
+		let count = 0;
+		for (let index = start; index < end; index++) {
+			if (column[index] != null) {
+				count++;
+			}
+		}
+		return count;
+	};
+	const pointCounts = lines.map((line) => pointCount(line, 0, x.length));
 
 	const ranges = lines.map((line) => {
 		const drawn = data.lines[line];
@@ -486,13 +526,18 @@ export const createPanel = (
 		}
 		const markRadius =
 			(narrow ? NARROW_MARK_RADIUS : MARK_RADIUS[size]) * ratio;
+		// Only the points in view: a zoom spreads them out, and draws none past the plot area.
+		const view = state.view();
+		const [start, end] = within(x, view);
 		for (const line of visible) {
-			const count = pointCounts[lines.indexOf(line)] ?? 0;
+			const count = view
+				? pointCount(line, start, end)
+				: (pointCounts[lines.indexOf(line)] ?? 0);
 			if (dimmed(line) || count * MARK_SPACING * ratio > u.bbox.width) {
 				continue;
 			}
 			const { y } = data.lines[line] as PlotLine;
-			for (let index = 0; index < y.length; index++) {
+			for (let index = start; index < Math.min(end, y.length); index++) {
 				const point = pointOf(u, line, index);
 				if (point) {
 					drawMark(
@@ -512,6 +557,9 @@ export const createPanel = (
 		for (const line of visible) {
 			const raised = data.lines[line]?.raised;
 			for (const index of data.lines[line]?.alerts ?? []) {
+				if (index < start || index >= end) {
+					continue;
+				}
 				const point = pointOf(u, line, index);
 				const alert = raised?.find((each) => each.index === index);
 				if (point) {
@@ -612,15 +660,97 @@ export const createPanel = (
 
 	const hide = () => moveCursor({ left: -10, top: -10 }, false, true);
 
+	// A mouse or pen press until it is released or cancelled; once it moves far enough it drags a band from where it pressed.
+	let press: { id: number; left: number; top: number } | null = null;
+	let dragging = false;
+	// The browser sends a click once a drag ends on the plot area, which zooms rather than pins.
+	let dropClick = false;
+	// Styled here, so the console's one stylesheet, which every page loads, does not carry it.
+	const band = document.createElement("div");
+	band.style.cssText =
+		"position:absolute;top:0;height:100%;border-inline:var(--border-width) solid var(--color-border-accent);background:var(--color-accent-muted);pointer-events:none";
+	band.hidden = true;
+	over.append(band);
+	const inside = (left: number) => Math.max(0, Math.min(u.rect.width, left));
+
 	const pointer =
 		(then: (left: number, top: number) => void) => (event: PointerEvent) => {
-			if (event.pointerType === "touch" || state.pinned()) {
+			if (event.pointerType === "touch" || state.pinned() || dragging) {
 				return;
 			}
 			const { left, top } = local(event);
 			then(left, top);
 		};
-	const onMove = pointer((left, top) => events.hover(cursorAt(left, top)));
+	const onHover = pointer((left, top) => events.hover(cursorAt(left, top)));
+	const onMove = (event: PointerEvent) => {
+		// A press released off the plot area sends no release here, so a move without the button ends it.
+		if (press?.id === event.pointerId && (event.buttons & 1) === 0) {
+			endPress();
+		}
+		if (press?.id === event.pointerId) {
+			const { left, top } = local(event);
+			if (
+				!dragging &&
+				Math.hypot(left - press.left, top - press.top) >= DRAG_REACH
+			) {
+				dragging = true;
+				over.setPointerCapture(event.pointerId);
+				addEventListener("keydown", onDragKey, true);
+				// The readout gives way to the band, a pinned one too.
+				hide();
+				events.close();
+			}
+			if (dragging) {
+				const from = inside(press.left);
+				const to = inside(left);
+				band.style.left = `${Math.min(from, to)}px`;
+				band.style.width = `${Math.abs(to - from)}px`;
+				band.hidden = false;
+				return;
+			}
+		}
+		onHover(event);
+	};
+	const endPress = () => {
+		if (press && over.hasPointerCapture(press.id)) {
+			over.releasePointerCapture(press.id);
+		}
+		removeEventListener("keydown", onDragKey, true);
+		press = null;
+		dragging = false;
+		band.hidden = true;
+	};
+	const onUp = (event: PointerEvent) => {
+		if (press?.id !== event.pointerId) {
+			return;
+		}
+		const from = inside(press.left);
+		const to = inside(local(event).left);
+		const dragged = dragging;
+		endPress();
+		if (dragged) {
+			dropClick = true;
+			if (from !== to) {
+				const ends = [u.posToVal(from, "x"), u.posToVal(to, "x")];
+				events.zoom([Math.min(...ends), Math.max(...ends)]);
+			}
+		}
+	};
+	// A drag the browser ends drops the click that may follow it, as Escape does.
+	const onCancel = (event: PointerEvent) => {
+		if (press?.id === event.pointerId) {
+			dropClick = dragging;
+			endPress();
+		}
+	};
+	const onDragKey = (event: KeyboardEvent) => {
+		if (event.key === "Escape") {
+			event.preventDefault();
+			event.stopPropagation();
+			dropClick = true;
+			endPress();
+		}
+	};
 	const onLeave = pointer(() => {
 		hide();
 		events.hover(null);
@@ -629,8 +759,21 @@ export const createPanel = (
 	let touch = false;
 	const onDown = (event: PointerEvent) => {
 		touch = event.pointerType === "touch";
+		dropClick = false;
+		// Whatever press came before ended somewhere this plot never heard.
+		endPress();
+		// A touch never drags, so a finger's swipe still scrolls the page.
+		if (!touch && event.isPrimary && event.button === 0) {
+			const { left, top } = local(event);
+			press = { id: event.pointerId, left, top };
+		}
 	};
+	const onDoubleClick = () => events.unzoom();
 	const onClick = (event: MouseEvent) => {
+		if (dropClick) {
+			dropClick = false;
+			return;
+		}
 		const { left, top } = local(event);
 		const cursor = cursorAt(left, top);
 		if (cursor) {
@@ -651,25 +794,29 @@ export const createPanel = (
 			return;
 		}
 		const current = state.index();
+		// The keys step through the points in view, so the readout never leaves the plot area.
+		const [start, end] = within(x, state.view());
 		let index: number;
 		switch (event.key) {
 			case "ArrowLeft":
-				index = current === null ? x.length - 1 : sameX(x, current)[0] - 1;
+				index = current === null ? end - 1 : sameX(x, current)[0] - 1;
 				break;
 			case "ArrowRight":
-				index = current === null ? 0 : sameX(x, current)[1];
+				index = current === null ? start : sameX(x, current)[1];
 				break;
 			case "Home":
-				index = 0;
+				index = start;
 				break;
 			case "End":
-				index = x.length - 1;
+				index = end - 1;
 				break;
 			default:
 				return;
 		}
 		event.preventDefault();
-		pinAt(Math.max(0, Math.min(x.length - 1, index)));
+		if (end > start) {
+			pinAt(Math.max(start, Math.min(end - 1, index)));
+		}
 	};
 	const pinAt = (index: number, line: number | null = null) => {
 		const left = u.valToPos(x[index] ?? 0, "x");
@@ -681,7 +828,11 @@ export const createPanel = (
 	over.addEventListener("pointermove", onMove);
 	over.addEventListener("pointerleave", onLeave);
 	over.addEventListener("pointerdown", onDown);
+	over.addEventListener("pointerup", onUp);
+	over.addEventListener("pointercancel", onCancel);
+	over.addEventListener("lostpointercapture", onCancel);
 	over.addEventListener("click", onClick);
+	over.addEventListener("dblclick", onDoubleClick);
 	over.addEventListener("keydown", onKey);
 
 	setStrokes();
@@ -717,6 +868,12 @@ export const createPanel = (
 			}
 		},
 		relayout: () => u.batch(() => u.redraw(false, true)),
+		rezoom: () => {
+			const [min, max] = xRange();
+			// Setting x sets every auto scale again, and each y range reads the view.
+			u.batch(() => u.setScale("x", { min, max }));
+		},
+		focus: () => over.focus({ preventScroll: true }),
 		yOf: (line, index) => {
 			const value = data.lines[line]?.y[index];
 			return value == null || !lines.includes(line)
@@ -724,11 +881,16 @@ export const createPanel = (
 				: u.valToPos(value, scaleKey(line));
 		},
 		destroy: () => {
+			removeEventListener("keydown", onDragKey, true);
 			over.removeEventListener("pointerenter", onEnter);
 			over.removeEventListener("pointermove", onMove);
 			over.removeEventListener("pointerleave", onLeave);
 			over.removeEventListener("pointerdown", onDown);
+			over.removeEventListener("pointerup", onUp);
+			over.removeEventListener("pointercancel", onCancel);
+			over.removeEventListener("lostpointercapture", onCancel);
 			over.removeEventListener("click", onClick);
+			over.removeEventListener("dblclick", onDoubleClick);
 			over.removeEventListener("keydown", onKey);
 			u.destroy();
 		},

@@ -5,7 +5,7 @@ import "./plots.css";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
-import { page } from "vitest/browser";
+import { commands, page } from "vitest/browser";
 import { middle, rowsOf, tokenRgb } from "../plot/pixels";
 import type { JsonConsolePlot } from "../../types/bencher";
 import { testTile } from "./testing";
@@ -311,4 +311,38 @@ test("an opened tile title takes the lines it needs, above the plot", async () =
 	expect(head.getBoundingClientRect().bottom).toBeLessThanOrEqual(
 		next.getBoundingClientRect().top,
 	);
+});
+
+// Kills a tile footer that drops its window, a zoom whose span and buttons sit
+// anywhere but beside it, and a Reset that leaves the span in the window's place.
+test("a tile's footer shows its window, and while zoomed the span and the buttons in its place", async () => {
+	await page.viewport(1280, 900);
+	mount([testTile({ lines: 1, points: 10 })]);
+	const region = page.getByRole("region", { name: "Pin 1" });
+	const footer = region.element().querySelector(".plots-tfoot") as HTMLElement;
+	const plot = region.getByRole("group", { name: /^1 line/ });
+	await expect.element(plot).toBeVisible();
+	await expect.element(region.getByText("4w", { exact: true })).toBeVisible();
+
+	const over = plot.element() as HTMLElement;
+	const box = over.getBoundingClientRect();
+	const spot = (fraction: number) => ({
+		position: { x: box.width * fraction, y: box.height - 8 },
+	});
+	await plot.hover(spot(2.8 / 9));
+	await commands.mouseDown();
+	await plot.hover(spot(5.2 / 9));
+	await commands.mouseUp();
+
+	const zoom = region.getByRole("group", { name: "Zoom" });
+	await expect.element(zoom).toHaveTextContent("Sep 4 to Sep 6");
+	expect(footer.contains(zoom.element())).toBe(true);
+	expect(
+		region.getByRole("button", { name: "Zoom out" }).elements(),
+	).toHaveLength(1);
+	expect(region.getByText("4w", { exact: true }).query()).toBeNull();
+
+	await region.getByRole("button", { name: "Reset zoom" }).click();
+	await expect.element(region.getByText("4w", { exact: true })).toBeVisible();
+	expect(zoom.query()).toBeNull();
 });

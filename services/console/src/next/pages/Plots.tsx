@@ -356,6 +356,15 @@ const Plots = () => {
 	};
 	const choice = (): WindowChoice =>
 		range() ? "custom" : ((pageWindow() as WindowChoice | undefined) ?? "own");
+	/** The page's window, as each tile's footer names it, while one is set. */
+	const windowName = (): string | undefined => {
+		const current = pageWindow();
+		if (typeof current !== "object") {
+			return current;
+		}
+		const days = Math.round((current.end - current.start) / DAY);
+		return rollingName((days * DAY) / 1000);
+	};
 	const pickWindow = (next: WindowChoice) => {
 		if (next === "own") {
 			setPageWindow(undefined);
@@ -621,9 +630,10 @@ const Plots = () => {
 										tile={tile()}
 										failed={failed()}
 										window={
-											pageWindow() === undefined && window() !== undefined
-												? rollingName(window() ?? 0)
-												: undefined
+											windowName() ??
+											(window() === undefined
+												? undefined
+												: rollingName(window() ?? 0))
 										}
 										openHref={openHref(tile(), uuid)}
 										alerts={alerts}
