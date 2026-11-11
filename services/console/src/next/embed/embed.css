@@ -31,15 +31,6 @@
 .em-skel {
 	max-width: 200px;
 }
-.em-line .brand {
-	display: inline-flex;
-	flex: none;
-	margin-inline-start: auto;
-}
-.em-line .brand img {
-	width: 106px;
-	height: 20px;
-}
 .em-plot {
 	position: relative;
 }

@@ -47,9 +47,9 @@ const theme = () => document.documentElement.getAttribute(THEME_ATTRIBUTE);
 
 // Kills a page that draws its own default theme over the host's, ignores the
 // host's later change, draws anything but the call's result, leaves the host
-// to guess its height, or lets a link leave the frame by itself rather than
-// through the host.
-test("draws the call's result in the host's theme, and opens its line through the host", async () => {
+// to guess its height, or lets a link, the key's wordmark included, leave the
+// frame by itself rather than through the host.
+test("draws the call's result in the host's theme, and opens its line and the wordmark through the host", async () => {
 	// The browser prefers light, so a page that ignores the host draws light.
 	expect(matchMedia("(prefers-color-scheme: light)").matches).toBe(true);
 	const shown = host({ theme: "dark", first: success(perf()) });
@@ -57,7 +57,9 @@ test("draws the call's result in the host's theme, and opens its line through th
 	expect(theme()).toBe("dark");
 	const figure = page.getByRole("figure");
 	await expect.element(figure).toHaveAccessibleName("2 lines");
-	const images = [...document.querySelectorAll<HTMLImageElement>(".brand img")];
+	const images = [
+		...document.querySelectorAll<HTMLImageElement>(".pl-mark img"),
+	];
 	expect(images.map(({ src }) => src.slice(0, 19))).toEqual([
 		"data:image/svg+xml,",
 		"data:image/svg+xml,",
@@ -69,7 +71,7 @@ test("draws the call's result in the host's theme, and opens its line through th
 
 	await userEvent.click(page.getByRole("link", { name: "Hashbrown" }));
 	await userEvent.click(page.getByRole("link", { name: "Bencher" }));
-	await expect.poll(() => shown.opened).toEqual([URL_, URL_]);
+	await expect.poll(() => shown.opened).toEqual([URL_, "https://bencher.dev/"]);
 
 	shown.notify("ui/notifications/host-context-changed", { theme: "light" });
 	await expect.poll(theme).toBe("light");

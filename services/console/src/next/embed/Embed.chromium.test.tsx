@@ -107,20 +107,26 @@ const linked = (name: string) => {
 };
 
 // Kills an embed that draws the bar, the query panel, or an action, a line
-// whose links open another page or query or leave the frame, and links that
-// keep a line the reader hid or miss the one they focused.
+// whose links open another page or query or leave the frame, links that
+// keep a line the reader hid or miss the one they focused, a wordmark left on
+// the line, and a key whose wordmark leads anywhere but bencher.dev.
 test("draws the plot and its key under one line that opens the public plot of this query", async () => {
 	await page.viewport(1280, 900);
 	show();
 	const figure = page.getByRole("figure");
 	await expect.element(figure).toHaveAccessibleName("2 lines");
-	for (const name of ["Hashbrown", "Bencher"]) {
-		expect(linked(name)).toEqual({
-			path: publicPlotPath("hashbrown"),
-			query: QUERY,
-			target: "_blank",
-		});
-	}
+	expect(linked("Hashbrown")).toEqual({
+		path: publicPlotPath("hashbrown"),
+		query: QUERY,
+		target: "_blank",
+	});
+	const line = document.querySelector(".em-line") as HTMLElement;
+	expect(line.querySelectorAll("img")).toHaveLength(0);
+	const mark = page.getByRole("link", { name: "Bencher", exact: true });
+	expect(figure.element().contains(mark.element())).toBe(true);
+	await expect.element(mark).toHaveAttribute("href", "https://bencher.dev");
+	await expect.element(mark).toHaveAttribute("target", "_blank");
+	await expect.element(mark).toHaveAttribute("rel", "noopener");
 	expect(page.getByRole("banner").elements()).toHaveLength(0);
 	expect(page.getByRole("region", { name: /Query/ }).elements()).toHaveLength(
 		0,
@@ -137,9 +143,7 @@ test("draws the plot and its key under one line that opens the public plot of th
 	await expect
 		.element(page.getByRole("button", { name: /show its line/ }))
 		.toBeVisible();
-	for (const name of ["Hashbrown", "Bencher"]) {
-		expect(linked(name).query.hide).toHaveLength(1);
-	}
+	expect(linked("Hashbrown").query.hide).toHaveLength(1);
 
 	await userEvent.click(
 		page.getByRole("button", { name: /^Focus line of / }).last(),
@@ -147,12 +151,10 @@ test("draws the plot and its key under one line that opens the public plot of th
 	await expect
 		.element(page.getByRole("button", { name: /^Clear focus of / }))
 		.toBeVisible();
-	for (const name of ["Hashbrown", "Bencher"]) {
-		expect(linked(name).query.focus).toBeDefined();
-	}
+	expect(linked("Hashbrown").query.focus).toBeDefined();
 });
 
-// Kills a line or plot that moves as the name and the plot arrive, at any width.
+// Kills a line, plot, or key wordmark that moves as the name and the plot arrive, at any width.
 test("nothing moves as the name and the plot arrive", async () => {
 	for (const width of [1280, 600, 390, 320]) {
 		await page.viewport(width, 900);
@@ -175,11 +177,15 @@ test("nothing moves as the name and the plot arrive", async () => {
 			root,
 		);
 		const place = () => {
-			const brand = page.getByRole("link", { name: "Bencher" }).element();
+			const line = document.querySelector(".em-line") as HTMLElement;
 			const figure = page.getByRole("figure").element();
+			const mark = [...document.querySelectorAll(".pl-key .pl-mark img")].find(
+				(image) => image.getBoundingClientRect().width > 0,
+			);
 			return {
-				brand: brand.getBoundingClientRect().toJSON(),
+				line: line.getBoundingClientRect().toJSON(),
 				figure: figure.getBoundingClientRect().top,
+				mark: mark?.getBoundingClientRect().toJSON(),
 			};
 		};
 		await expect.element(page.getByRole("figure")).toBeVisible();
@@ -276,20 +282,24 @@ const LINKS: EmbedLinks = {
 const svg = (fill: string) =>
 	`data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 1"><rect width="6" height="1" fill="${fill}"/></svg>`)}`;
 
-// Kills a link prop that only one of the line's links opens, a readout that
-// keeps no link to the report or the alert it pins, an alert the readout
-// offers to change, and wordmarks that still load from the site.
+// Kills a link prop the line does not open, a readout that keeps no link to
+// the report or the alert it pins, an alert the readout offers to change,
+// wordmarks that still load from the site, and a key wordmark the links move
+// off bencher.dev.
 test("links and wordmarks replace the line's and give the readout its links, with no alert action", async () => {
 	await page.viewport(1280, 900);
 	const wordmarks = { dark: svg("white"), light: svg("black") };
 	show({ answer: ALERTED, links: LINKS, wordmarks });
-	for (const name of ["Hashbrown", "Bencher"]) {
-		const link = page
-			.getByRole("link", { name, exact: true })
-			.element() as HTMLAnchorElement;
-		expect(link.href).toBe(LINKS.plot);
-	}
-	const images = [...document.querySelectorAll<HTMLImageElement>(".brand img")];
+	const line = page
+		.getByRole("link", { name: "Hashbrown", exact: true })
+		.element() as HTMLAnchorElement;
+	expect(line.href).toBe(LINKS.plot);
+	await expect
+		.element(page.getByRole("link", { name: "Bencher", exact: true }))
+		.toHaveAttribute("href", "https://bencher.dev");
+	const images = [
+		...document.querySelectorAll<HTMLImageElement>(".pl-mark img"),
+	];
 	expect(images.map(({ src }) => src)).toEqual([
 		wordmarks.dark,
 		wordmarks.light,

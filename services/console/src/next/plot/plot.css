@@ -444,10 +444,11 @@
 	padding: var(--spacing-1) var(--spacing-2) var(--spacing-2);
 }
 
-/* One line until a reveal opens what every line shares. */
+/* One line until a reveal opens what every line shares, and the wordmark at its end. */
 .pl-khead {
+	display: flex;
 	align-items: center;
-	column-gap: 0;
+	gap: var(--spacing-2);
 	min-height: 18px;
 	padding: 0 2px;
 	color: var(--color-text-muted);
@@ -456,8 +457,119 @@
 	white-space: nowrap;
 }
 
+/* What the wordmark leaves scrolls rather than pushing it out; the padding gives the focus rings inside it room the scroll would clip. */
+.pl-kscroll {
+	display: flex;
+	flex: 1;
+	min-width: 0;
+	margin: -4px;
+	padding: 4px;
+	overflow-x: auto;
+	scrollbar-width: none;
+	/* Fades the edge that cuts content off, from the scroll position alone; with no scroll timeline, the animation ends at once on no fade. */
+	mask-image: linear-gradient(
+		to left,
+		transparent,
+		currentColor var(--pl-kfade)
+	);
+	animation: pl-kfade linear both;
+}
+
+/* A rule of its own, so no minifier folds the timeline into the shorthand above, which no browser reads with it. */
+.pl-khead > .pl-kscroll {
+	animation-timeline: scroll(self inline);
+}
+
+/* The mask clips the row's own ring, so the head draws it. */
+.pl-kscroll:focus-visible {
+	outline: none;
+}
+
+.pl-khead:has(> .pl-kscroll:focus-visible) {
+	outline: 2px solid var(--color-focus);
+	outline-offset: 2px;
+}
+
+.pl-kscroll::-webkit-scrollbar {
+	display: none;
+}
+
+@property --pl-kfade {
+	syntax: "<length>";
+	inherits: false;
+	initial-value: 0px;
+}
+
+@keyframes pl-kfade {
+	from,
+	90% {
+		--pl-kfade: 24px;
+	}
+}
+
+.pl-kscroll > [data-fixed] {
+	flex: none;
+}
+
+/* Beside pills, the shared benchmark keeps at most 40% of the row, so the pills keep room; open, it takes a line of its own. */
+.pl-kscroll:has(> .pl-kpill) > .pl-kbench:not([data-open]) {
+	flex: none;
+	max-width: 40%;
+}
+
+.pl-kscroll:has(> [data-open]) {
+	flex-wrap: wrap;
+	row-gap: 2px;
+}
+
+.pl-kbench[data-open] {
+	flex-basis: 100%;
+}
+
+/* The pills above the plot, at the head's height. */
+.pl-kpill {
+	height: 18px;
+	margin-inline-start: 6px;
+	padding: 0 6px;
+	line-height: 16px;
+}
+
+/* Wrapped, each row of pills starts flush. */
+.pl-kscroll:has(> [data-open]) > .pl-kpill {
+	margin-inline: 0 6px;
+}
+
 .pl-dot {
 	padding: 0 6px;
+}
+
+/* The wordmark keeps its size, held before its image loads, in the page's theme. */
+.pl-mark {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	height: 18px;
+	margin-inline-start: auto;
+	opacity: 0.9;
+}
+
+.pl-mark img {
+	width: calc(10px * 600 / 113);
+	height: 10px;
+}
+
+.pl-mark img + img,
+[data-theme="light"] .pl-mark img {
+	display: none;
+}
+
+[data-theme="light"] .pl-mark img + img {
+	display: block;
+}
+
+/* Open, the head grows down, and the mark stays beside its first line. */
+.pl-khead:has([data-open]) > .pl-mark {
+	align-self: flex-start;
 }
 
 .pl-kgrid {

@@ -27,6 +27,7 @@ import { formatCount } from "./count";
 import { onlyIteration, withThrough } from "./iterations";
 import { keyOrder, type LineName, lineNames } from "./key";
 import { axisFont, axisWidth } from "./labels";
+import type { PlotMark } from "./Mark";
 import { useNarrow } from "./narrow";
 import { NameParts, PlotKey, PlotKeyReserve } from "./PlotKey";
 import { type Cursor, clicked, readout, readoutLeft } from "./readout";
@@ -59,6 +60,8 @@ export interface PlotProps {
 	/** Two measures share a dual axis unless stacked; three or more always stack. */
 	layout?: PlotLayout;
 	size?: PlotSize;
+	/** The wordmark that ends a full plot's or a tile's key; the site's own images, unlinked, when undefined. */
+	mark?: PlotMark | undefined;
 	/** Muted text in the first axes row, such as the window. */
 	note?: string | undefined;
 	label?: string;
@@ -429,6 +432,8 @@ const Plot = (props: PlotProps) => {
 		onCleanup(() => observer.disconnect());
 	});
 
+	// A Report draws a row per line, and a mark on each is noise.
+	const mark = () => (size() === "row" ? undefined : (props.mark ?? {}));
 	const keyMax = () =>
 		narrow() ? Math.min(NARROW_KEY_MAX, KEY_MAX[size()]) : KEY_MAX[size()];
 	const alerts = () =>
@@ -701,6 +706,7 @@ const Plot = (props: PlotProps) => {
 						lines={props.reserve?.lines ?? 0}
 						max={keyMax()}
 						compact={size() === "tile"}
+						mark={mark()}
 					/>
 				}
 			>
@@ -715,6 +721,7 @@ const Plot = (props: PlotProps) => {
 					alerting={(line) => alerting(lines()[line])}
 					max={keyMax()}
 					compact={size() === "tile"}
+					mark={mark()}
 					onToggle={(line) => {
 						const id = lines()[line]?.id;
 						if (id === undefined) {

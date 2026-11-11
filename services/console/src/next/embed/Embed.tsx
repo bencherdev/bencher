@@ -6,6 +6,7 @@ import { publicGitHub } from "../commit";
 import { measuresLayout } from "../explore/layout";
 import PlotFrame from "../explore/PlotFrame";
 import { drawable } from "../explore/request";
+import type { Wordmarks } from "../plot/Mark";
 import { publicPlotPath } from "../public/query";
 import { lineVisible, settleVisibility } from "../query/line";
 import { type ExploreQuery, encodeQuery } from "../query/query";
@@ -30,8 +31,8 @@ export interface EmbedProps {
 	onQuery?: (query: ExploreQuery) => void;
 	/** Where the line and the readout link to; without them, the line opens the public plot and the readout has no links. */
 	links?: EmbedLinks | undefined;
-	/** The wordmark's images, in place of the site's own. */
-	wordmarks?: { dark: string; light: string } | undefined;
+	/** The key's wordmark images, in place of the site's own. */
+	wordmarks?: Wordmarks | undefined;
 	/** Controls at the end of the line. */
 	actions?: JSX.Element;
 }
@@ -79,16 +80,6 @@ const Embed = (props: EmbedProps) => {
 						)}
 					</Show>
 				</h1>
-				<a
-					class="brand"
-					href={href()}
-					target="_blank"
-					rel="noopener"
-					aria-label="Bencher"
-				>
-					<img src={props.wordmarks?.dark ?? "/wordmark-dark.svg"} alt="" />
-					<img src={props.wordmarks?.light ?? "/wordmark-light.svg"} alt="" />
-				</a>
 				{props.actions}
 			</div>
 			<Switch
@@ -108,6 +99,7 @@ const Embed = (props: EmbedProps) => {
 									reserve={reserve()}
 									layout={layout()}
 									loading={!props.refused}
+									wordmarks={props.wordmarks}
 								/>
 							}
 						>
@@ -129,6 +121,7 @@ const Embed = (props: EmbedProps) => {
 										scale={props.query.yScale}
 										layout={layout()}
 										reserve={reserve()}
+										mark={{ wordmarks: props.wordmarks, link: true }}
 										{...(props.links && { reportHref: props.links.report })}
 										github={publicGitHub(() => props.url)}
 										alerts={props.links && { href: props.links.alert }}

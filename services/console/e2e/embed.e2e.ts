@@ -47,8 +47,9 @@ test.describe("signed out", () => {
 	test.use({ storageState: signedOut });
 
 	// Kills an embed that draws the bar, the query panel, or an action, reads
-	// the API as anything but no one or more than once a resource, and a line
-	// whose links open another page or query, or open it in the frame.
+	// the API as anything but no one or more than once a resource, a line
+	// whose links open another page or query, or open it in the frame, and a
+	// key whose wordmark leads anywhere but bencher.dev in a new tab.
 	test("the embed draws a public project's plot and key under a line that opens its public plot", async ({
 		page,
 		context,
@@ -59,15 +60,16 @@ test.describe("signed out", () => {
 		await page.goto(embedLink(project.slug, search));
 		await twoLinesDrawn(page);
 		await expect(page).toHaveTitle(`${project.name} | Bencher`);
-		for (const name of [project.name, "Bencher"]) {
-			await expect(
-				page.getByRole("link", { name, exact: true }),
-			).toHaveAttribute("target", "_blank");
-			expect(await linkedQuery(page, name)).toEqual({
-				path: publicPath(project.slug),
-				query: decodeQuery(search),
-			});
-		}
+		await expect(
+			page.getByRole("link", { name: project.name, exact: true }),
+		).toHaveAttribute("target", "_blank");
+		expect(await linkedQuery(page, project.name)).toEqual({
+			path: publicPath(project.slug),
+			query: decodeQuery(search),
+		});
+		const mark = page.getByRole("link", { name: "Bencher", exact: true });
+		await expect(mark).toHaveAttribute("href", "https://bencher.dev");
+		await expect(mark).toHaveAttribute("target", "_blank");
 		await expect(page.getByRole("banner")).toHaveCount(0);
 		await expect(page.getByRole("region", { name: /Query/ })).toHaveCount(0);
 		for (const absent of ["Share", "Feedback", "Show query", "Retry"]) {
@@ -391,6 +393,73 @@ test.describe("a signed in member", () => {
 		});
 		expect(frame.title).toBe(`${title} | ${project.name}`);
 		expect(decodeQuery(new URL(frame.src).search).plot).toBeUndefined();
+	});
+
+	// Kills a key head whose built stylesheet drops the fade at the edge it
+	// cuts off, or ties it to anything but the row's own scroll, on each sheet
+	// that draws a plot: the console's, the public plot's, and the embed's.
+	test("at 390 px a crowded key head fades its cut edge until it scrolls to the end", async ({
+		page,
+		request,
+	}) => {
+		const project = await createProject(request);
+		// Seven, as every line also has a size, under the eight keys a variant may have.
+		const constants = Object.fromEntries(
+			Array.from({ length: 7 }, (_, at) => [
+				`parameter_${at}`,
+				`a_long_value_${at}`,
+			]),
+		);
+		for (const daysAgo of [2, 1]) {
+			await postReport(request, project.slug, {
+				start: new Date(Date.now() - daysAgo * DAY).toISOString(),
+				results: {
+					hash: [1, 2, 3].map((size) => ({
+						parameters: { ...constants, size },
+						measures: { latency: { value: size } },
+					})),
+				},
+			});
+		}
+		const id = await dimensions(request, project.slug);
+		const search = `?${new URLSearchParams({
+			branches: id.branch("main"),
+			testbeds: id.testbed("ubuntu-latest"),
+			benchmarks: id.benchmark("hash"),
+			measures: id.measure("Latency"),
+		})}`;
+		await page.setViewportSize({ width: 390, height: 844 });
+		for (const path of [
+			explore(project.slug, decodeQuery(search)),
+			publicPath(project.slug, search),
+			embedLink(project.slug, search),
+		]) {
+			await page.goto(path);
+			await expect(page.getByRole("figure"), path).toHaveAccessibleName(
+				"3 lines",
+			);
+			const row = page.getByRole("group", { name: "Key summary" });
+			const read = () =>
+				row.evaluate((element) => ({
+					cut: element.scrollWidth > element.clientWidth,
+					scrolled: element
+						.getAnimations()
+						.some(
+							(animation) =>
+								animation.timeline?.constructor.name === "ScrollTimeline",
+						),
+					fade: getComputedStyle(element).getPropertyValue("--pl-kfade"),
+				}));
+			expect(await read(), path).toEqual({
+				cut: true,
+				scrolled: true,
+				fade: "24px",
+			});
+			await row.evaluate((element) => {
+				element.scrollLeft = element.scrollWidth;
+			});
+			await expect.poll(async () => (await read()).fade, path).toBe("0px");
+		}
 	});
 
 	// Kills a private project's Share that offers an embed no one can load, or
