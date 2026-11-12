@@ -752,7 +752,7 @@ mod tests {
 
     #[test]
     fn timeout_licensed_default() {
-        let plan = licensed_plan(PlanLevel::Team);
+        let plan = licensed_plan(PlanLevel::Enterprise);
         let timeout = resolve_timeout(None, &plan, true);
         assert_eq!(u32::from(timeout), u32::from(Timeout::PLUS_DEFAULT));
     }
@@ -793,14 +793,6 @@ mod tests {
         assert_eq!(
             licensed_plan(PlanLevel::Free).priority(true),
             Priority::Free
-        );
-    }
-
-    #[test]
-    fn priority_licensed_team() {
-        assert_eq!(
-            licensed_plan(PlanLevel::Team).priority(true),
-            Priority::Plus
         );
     }
 
@@ -1021,7 +1013,6 @@ mod tests {
         for plan_kind in [
             metered_plan(),
             licensed_plan(PlanLevel::Pro),
-            licensed_plan(PlanLevel::Team),
             licensed_plan(PlanLevel::Enterprise),
         ] {
             let PendingCallback::Sealed(sealed) =

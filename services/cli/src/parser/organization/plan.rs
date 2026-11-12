@@ -102,8 +102,43 @@ pub enum CliPlanLevel {
     Free,
     /// Pro
     Pro,
-    /// Team
-    Team,
     /// Enterprise
     Enterprise,
+}
+
+#[cfg(test)]
+mod tests {
+    use clap::Parser as _;
+
+    use crate::parser::{CliBencher, CliSub};
+
+    use super::{CliOrganizationPlan, CliPlanLevel};
+
+    fn plan_create(level: &str) -> Result<CliBencher, clap::Error> {
+        CliBencher::try_parse_from([
+            "bencher",
+            "plan",
+            "create",
+            "my-org",
+            "--checkout",
+            "cs_test",
+            "--level",
+            level,
+        ])
+    }
+
+    #[test]
+    fn plan_create_takes_enterprise() {
+        let cli = plan_create("enterprise").unwrap();
+        let CliSub::Plan(CliOrganizationPlan::Create(create)) = cli.sub else {
+            panic!("not a plan create");
+        };
+        assert!(matches!(create.level, CliPlanLevel::Enterprise));
+    }
+
+    #[test]
+    fn plan_create_rejects_team() {
+        let error = plan_create("team").unwrap_err();
+        assert_eq!(error.kind(), clap::error::ErrorKind::InvalidValue);
+    }
 }

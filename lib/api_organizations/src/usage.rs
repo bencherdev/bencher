@@ -149,7 +149,6 @@ async fn cloud_plan_usage(
         let start_time = json_plan.current_period_start;
         let end_time = json_plan.current_period_end;
         let MeteredUsage {
-            metrics,
             active_series,
             runner_minutes,
         } = metered_plan_usage(
@@ -166,7 +165,7 @@ async fn cloud_plan_usage(
             license: None,
             start_time,
             end_time,
-            metrics,
+            metrics: None,
             active_series,
             runner_minutes: Some(runner_minutes),
         })
@@ -238,20 +237,18 @@ fn free_plan_usage(
     })
 }
 
-/// The billable usage figures for a metered plan: exactly one of `metrics` (legacy
-/// Team/Enterprise) or `active_series` (Pro) is set, plus bare metal `runner_minutes`.
+/// The billable usage figures for a metered plan: its monthly-active series and its bare
+/// metal `runner_minutes`.
 struct MeteredUsage {
-    metrics: Option<u32>,
     active_series: Option<u32>,
     runner_minutes: u32,
 }
 
 /// Billable usage for a metered (Bencher Cloud) plan.
 ///
-/// Pro bills on monthly-active series (all visibilities), so `active_series` is populated
-/// and `metrics` is left `None`. Legacy Team (and metered Enterprise) plans bill on both
-/// Public and Private Project metrics, so `metrics` is populated and `active_series` is
-/// `None`. Bare metal runner minutes are metered regardless of visibility and plan level.
+/// A paid plan bills on monthly-active series (all visibilities), so `active_series` is
+/// populated. Bare metal runner minutes are metered regardless of visibility and plan
+/// level.
 fn metered_plan_usage(
     conn: &mut DbConnection,
     organization_id: OrganizationId,
@@ -259,19 +256,19 @@ fn metered_plan_usage(
     start_time: DateTime,
     end_time: DateTime,
 ) -> Result<MeteredUsage, HttpError> {
-    let (metrics, active_series) = if metered_bills_active_series(level) {
-        // Pro: billed on monthly-active series, not metrics.
-        let active_series = series::count_active(conn, organization_id, start_time, end_time)?;
-        (None, Some(active_series))
+    let active_series = if metered_bills_active_series(level) {
+        Some(series::count_active(
+            conn,
+            organization_id,
+            start_time,
+            end_time,
+        )?)
     } else {
-        // Team (and metered Enterprise): billed on all (public + private) metrics.
-        let metrics = QueryMetric::usage(conn, organization_id, start_time, end_time)?;
-        (Some(metrics), None)
+        None
     };
     let runner_minutes =
         QueryJob::runner_minutes_usage(conn, organization_id, start_time, end_time)?;
     Ok(MeteredUsage {
-        metrics,
         active_series,
         runner_minutes,
     })

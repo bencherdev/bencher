@@ -19,7 +19,7 @@ vi.mock("../../../util/http", () => ({ httpGet }));
 vi.mock("../../../util/valid", () => ({
 	// Any value but undefined: the wasm has loaded.
 	init_valid: async () => ({}),
-	validPlanLevel: (plan: undefined | null | string) => plan === "team",
+	validPlanLevel: (plan: undefined | null | string) => plan === "pro",
 	validEmail: () => true,
 	validUserName: () => true,
 }));
@@ -91,8 +91,8 @@ const redirect = async (
 // Kills onboarding sent to help, or a plan dropped on the way.
 test("a reader with no projects onboards with their plan", async () => {
 	expect(
-		await redirect({ organizations: [acme], projects: [] }, "?plan=team"),
-	).toBe("/console/onboard/project?plan=team");
+		await redirect({ organizations: [acme], projects: [] }, "?plan=pro"),
+	).toBe("/console/onboard/project?plan=pro");
 });
 
 // Kills a reader with a project sent anywhere but its root in the console.
@@ -119,11 +119,8 @@ test("a reader with no project lands on their remembered organization", async ()
 // Kills a plan that no longer leads to billing.
 test("a reader with a plan lands on their organization's billing", async () => {
 	expect(
-		await redirect(
-			{ organizations: [acme], projects: [classic] },
-			"?plan=team",
-		),
-	).toBe("/console/organizations/acme/billing?plan=team");
+		await redirect({ organizations: [acme], projects: [classic] }, "?plan=pro"),
+	).toBe("/console/organizations/acme/billing?plan=pro");
 });
 
 // Kills several organizations sent to one of them.
@@ -131,7 +128,7 @@ test("a reader of several organizations with a plan lands on the list", async ()
 	expect(
 		await redirect(
 			{ organizations: [acme, other], projects: [classic] },
-			"?plan=team",
+			"?plan=pro",
 		),
 	).toBe("/console/organizations");
 });

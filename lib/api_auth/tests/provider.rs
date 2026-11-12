@@ -517,7 +517,7 @@ async fn unknown_email_signs_up_pinned() {
     let resp = start_raw(
         &server,
         "github",
-        &json!({"plan": "team", "authorization": authorization}),
+        &json!({"plan": "pro", "authorization": authorization}),
         &[SAME_ORIGIN],
     )
     .await;
@@ -533,7 +533,7 @@ async fn unknown_email_signs_up_pinned() {
     let (json, _session) = signed_in(&server, resp, SessionMethod::Github).await;
 
     assert!(json.new);
-    assert_eq!(json.plan, Some(PlanLevel::Team));
+    assert_eq!(json.plan, Some(PlanLevel::Pro));
     assert_eq!(json.authorization, Some(authorization));
     assert_eq!(json.user.name.as_ref(), "Ada Lovelace");
     assert!(email_verified(&server, "ada@example.com"));

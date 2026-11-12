@@ -14,7 +14,6 @@ const path = (organization: string) =>
 const LEVELS: Record<`${PlanLevel}`, true> = {
 	free: true,
 	pro: true,
-	team: true,
 	enterprise: true,
 };
 
