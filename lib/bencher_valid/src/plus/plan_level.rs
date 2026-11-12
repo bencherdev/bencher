@@ -11,7 +11,6 @@ use crate::ValidError;
 
 const FREE: &str = "free";
 const PRO: &str = "pro";
-const TEAM: &str = "team";
 const ENTERPRISE: &str = "enterprise";
 
 #[typeshare::typeshare]
@@ -35,9 +34,6 @@ pub enum PlanLevel {
     #[default]
     Free,
     Pro,
-    // Legacy self-serve paid tier, retained for grandfathered customers.
-    // New self-serve signups use `Pro`.
-    Team,
     Enterprise,
 }
 
@@ -48,7 +44,6 @@ impl TryFrom<String> for PlanLevel {
         match plan_level.as_str() {
             FREE => Ok(Self::Free),
             PRO => Ok(Self::Pro),
-            TEAM => Ok(Self::Team),
             ENTERPRISE => Ok(Self::Enterprise),
             _ => Err(ValidError::PlanLevel(plan_level)),
         }
@@ -68,7 +63,6 @@ impl AsRef<str> for PlanLevel {
         match self {
             Self::Free => FREE,
             Self::Pro => PRO,
-            Self::Team => TEAM,
             Self::Enterprise => ENTERPRISE,
         }
     }
@@ -86,7 +80,7 @@ impl From<PlanLevel> for String {
     expect(dead_code, reason = "exported only for wasm and tests")
 )]
 pub fn is_valid_plan_level(plan_level: &str) -> bool {
-    matches!(plan_level, FREE | PRO | TEAM | ENTERPRISE)
+    matches!(plan_level, FREE | PRO | ENTERPRISE)
 }
 
 #[cfg(test)]
@@ -98,8 +92,9 @@ mod tests {
     fn plan_level() {
         assert_eq!(true, is_valid_plan_level("free"));
         assert_eq!(true, is_valid_plan_level("pro"));
-        assert_eq!(true, is_valid_plan_level("team"));
         assert_eq!(true, is_valid_plan_level("enterprise"));
+
+        assert_eq!(false, is_valid_plan_level("team"));
 
         // Stripe product names are no longer valid plan levels: the plan level is
         // resolved authoritatively, not by parsing a product name. These guard
@@ -122,10 +117,10 @@ mod tests {
     fn plan_level_serde_roundtrip() {
         use super::PlanLevel;
 
-        let level: PlanLevel = serde_json::from_str("\"team\"").unwrap();
-        assert_eq!(level, PlanLevel::Team);
+        let level: PlanLevel = serde_json::from_str("\"enterprise\"").unwrap();
+        assert_eq!(level, PlanLevel::Enterprise);
         let json = serde_json::to_string(&level).unwrap();
-        assert_eq!(json, "\"team\"");
+        assert_eq!(json, "\"enterprise\"");
 
         let level: PlanLevel = serde_json::from_str("\"pro\"").unwrap();
         assert_eq!(level, PlanLevel::Pro);
@@ -133,5 +128,13 @@ mod tests {
         assert_eq!(json, "\"pro\"");
 
         serde_json::from_str::<PlanLevel>("\"invalid\"").unwrap_err();
+    }
+
+    #[test]
+    fn plan_level_rejects_team() {
+        use super::PlanLevel;
+
+        serde_json::from_str::<PlanLevel>("\"team\"").unwrap_err();
+        "team".parse::<PlanLevel>().unwrap_err();
     }
 }

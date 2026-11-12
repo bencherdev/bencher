@@ -113,9 +113,8 @@ impl QueryMetric {
     }
 
     /// Count metric usage for an organization over a time window, across all project
-    /// visibilities. This is the billable figure for legacy Team (and metered
-    /// Enterprise) plans and the licensed entitlements check; Pro bills on active
-    /// series instead (see `series::count_active`).
+    /// visibilities. This is the licensed entitlements check; metered plans bill on
+    /// active series instead (see `series::count_active`).
     #[cfg(feature = "plus")]
     pub fn usage(
         conn: &mut DbConnection,

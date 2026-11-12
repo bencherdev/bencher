@@ -31,5 +31,11 @@ bencher_schema = { workspace = true, optional = true }
 dropshot = { workspace = true, optional = true }
 sentry = { workspace = true, optional = true }
 
+[dev-dependencies]
+bencher_api_tests.workspace = true
+http.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
 [lints]
 workspace = true

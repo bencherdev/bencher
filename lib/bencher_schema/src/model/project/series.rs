@@ -108,8 +108,8 @@ pub fn upsert_series_last_seen(
 /// Count an organization's monthly-active series in `[start_time, end_time]` (all
 /// project visibilities).
 ///
-/// This is the Pro billable figure: Pro is billed for all of its active series
-/// regardless of project visibility. Mirrors `QueryMetric::usage`.
+/// This is the billable figure for every metered plan: it is billed for all of its
+/// active series regardless of project visibility. Mirrors `QueryMetric::usage`.
 pub fn count_active(
     conn: &mut DbConnection,
     organization_id: OrganizationId,
@@ -122,8 +122,8 @@ pub fn count_active(
 /// Count an organization's monthly-active series in `[start_time, end_time]`,
 /// restricted to private projects.
 ///
-/// Not currently used for billing (Pro bills all visibilities via [`count_active`]);
-/// kept for a private-only view.
+/// Not currently used for billing (metered plans bill all visibilities via
+/// [`count_active`]); kept for a private-only view.
 pub fn count_active_private(
     conn: &mut DbConnection,
     organization_id: OrganizationId,

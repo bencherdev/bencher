@@ -146,13 +146,17 @@ dependencies = [
 name = "api_checkout"
 version = "0.6.17"
 dependencies = [
+ "bencher_api_tests",
  "bencher_endpoint",
  "bencher_json",
  "bencher_otel",
  "bencher_rbac",
  "bencher_schema",
  "dropshot",
+ "http",
  "sentry",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
