@@ -30,9 +30,9 @@ import {
 	isContactTier,
 	isFirstBillingPeriod,
 	planLevel,
+	planEstimateUsd,
 	runnerMinutePrice,
 	seriesTierRange,
-	tierEstimateUsd,
 } from "../../../util/convert";
 import { BENCHER_CALENDLY_URL } from "../../../util/ext";
 import { httpGet, httpPatch } from "../../../util/http";
@@ -219,6 +219,7 @@ const manageSubscription = (
 const CancelPlanButton = (props: {
 	user: undefined | Reader;
 	organization: undefined | string;
+	level: undefined | PlanLevel;
 	handleRefresh: () => void;
 }) => {
 	const [clicked, setClicked] = createSignal(false);
@@ -239,7 +240,7 @@ const CancelPlanButton = (props: {
 				props.handleRefresh();
 				pageNotify(
 					NotifyKind.OK,
-					"Your Pro plan will cancel at the end of the current billing period. You keep access until then.",
+					`Your ${planLevel(props.level)} plan will cancel at the end of the current billing period. You keep access until then.`,
 				);
 			})
 			.catch((error) => {
@@ -310,6 +311,7 @@ const CancelPlanButton = (props: {
 const ResumePlanButton = (props: {
 	user: undefined | Reader;
 	organization: undefined | string;
+	level: undefined | PlanLevel;
 	handleRefresh: () => void;
 }) => {
 	const [resuming, setResuming] = createSignal(false);
@@ -328,7 +330,7 @@ const ResumePlanButton = (props: {
 				props.handleRefresh();
 				pageNotify(
 					NotifyKind.OK,
-					"Your Pro plan has been resumed. It will keep renewing each billing period.",
+					`Your ${planLevel(props.level)} plan has been resumed. It will keep renewing each billing period.`,
 				);
 			})
 			.catch((error) => {
@@ -370,6 +372,7 @@ const PlanCancelResume = (props: {
 				<CancelPlanButton
 					user={props.user}
 					organization={props.usage()?.organization}
+					level={props.usage()?.plan?.level}
 					handleRefresh={props.handleRefresh}
 				/>
 			}
@@ -382,22 +385,26 @@ const PlanCancelResume = (props: {
 			<ResumePlanButton
 				user={props.user}
 				organization={props.usage()?.organization}
+				level={props.usage()?.plan?.level}
 				handleRefresh={props.handleRefresh}
 			/>
 		</Show>
 	);
 };
 
-// Bencher Cloud metered plans: billed a flat monthly fee per active-series band, read from
-// the Stripe price tiers (`usage.plan.tiers`). Bare metal runner minutes bill separately
-// on top, except during the first-month free trial, when the base fee is waived and
-// runner minutes are included (the whole bill is $0).
+// Bencher Cloud metered plans: billed on active series by the plan's own Stripe price tiers
+// (`usage.plan.tiers`), a flat monthly fee per band for Pro and a deal's own bands for
+// Enterprise. Bare metal runner minutes bill separately on top at the plan's own rate,
+// except during Pro's first-month free trial, when the base fee is waived and runner
+// minutes are included (the whole bill is $0).
 const CloudMeteredPanel = (props: {
 	user: undefined | Reader;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
-	const tiers = createMemo(() => props.usage()?.plan?.tiers);
+	const plan = createMemo(() => props.usage()?.plan);
+	const level = createMemo(() => plan()?.level);
+	const tiers = createMemo(() => plan()?.tiers);
 	const activeSeries = createMemo(() => props.usage()?.active_series ?? 0);
 	const currentTier = createMemo(() =>
 		currentSeriesTier(tiers(), activeSeries()),
@@ -407,25 +414,26 @@ const CloudMeteredPanel = (props: {
 		const index = currentSeriesTierIndex(tierList, activeSeries());
 		return tierList && index >= 0 ? seriesTierRange(tierList, index) : "";
 	});
-	const contactSales = createMemo(() => isContactTier(currentTier()));
-	const minutePrice = createMemo(() =>
-		runnerMinutePrice(props.usage()?.plan?.level),
-	);
+	const contactSales = createMemo(() => isContactTier(currentTier(), level()));
+	const minutePrice = createMemo(() => runnerMinutePrice(plan()));
 	const estRunnerCost = createMemo(
 		() => (props.usage()?.runner_minutes ?? 0) * minutePrice(),
 	);
-	const firstPeriod = createMemo(() =>
-		isFirstBillingPeriod(
-			props.usage()?.plan?.created,
-			props.usage()?.plan?.current_period_start,
-		),
-	);
-	// The standard estimate: the current band's flat fee plus runner cost. During the
-	// first-month trial the actual bill is $0 (base waived, runner minutes included);
-	// this estimate is still shown so trial users can see what a period will cost.
-	const estTotal = createMemo(
+	// Only Pro starts with a free trial.
+	const firstPeriod = createMemo(
 		() =>
-			(tierEstimateUsd(currentTier(), activeSeries()) ?? 0) + estRunnerCost(),
+			level() === PlanLevel.Pro &&
+			isFirstBillingPeriod(plan()?.created, plan()?.current_period_start),
+	);
+	// The standard estimate: the series charge plus runner cost. During the first-month
+	// trial the actual bill is $0 (base waived, runner minutes included); this estimate is
+	// still shown so trial users can see what a period will cost.
+	const estTotal = createMemo(() =>
+		planEstimateUsd(
+			plan() ?? {},
+			activeSeries(),
+			props.usage()?.runner_minutes ?? 0,
+		),
 	);
 
 	return (
@@ -440,7 +448,7 @@ const CloudMeteredPanel = (props: {
 			<h4>Active Benchmark Series: {activeSeries().toLocaleString()}</h4>
 			<Show when={currentTier()}>
 				<h4>
-					Series Tier: {currentRange()} ({fmtTierPrice(currentTier())})
+					Series Tier: {currentRange()} ({fmtTierPrice(currentTier(), level())})
 				</h4>
 			</Show>
 			<br />
@@ -474,7 +482,10 @@ const CloudMeteredPanel = (props: {
 					</p>
 				}
 			>
-				<h4>Current Estimated Total: {fmtUsd(estTotal())}</h4>
+				<h4>
+					Current Estimated Total:{" "}
+					{estTotal() === null ? "-" : fmtUsd(estTotal() ?? 0)}
+				</h4>
 				<Show when={firstPeriod()}>
 					<h4>
 						First Month Free Trial: base fee waived and runner minutes included
@@ -484,11 +495,13 @@ const CloudMeteredPanel = (props: {
 			</Show>
 			<Show when={tiers()?.length}>
 				<br />
-				<h3 class="subtitle is-4">Pro pricing</h3>
-				<p>
-					You are billed a flat monthly fee based on your number of active
-					benchmark series:
-				</p>
+				<h3 class="subtitle is-4">{planLevel(level())} pricing</h3>
+				<Show when={level() === PlanLevel.Pro}>
+					<p>
+						You are billed a flat monthly fee based on your number of active
+						benchmark series:
+					</p>
+				</Show>
 				<table class="table">
 					<thead>
 						<tr>
@@ -503,7 +516,7 @@ const CloudMeteredPanel = (props: {
 									<td>{seriesTierRange(tiers() ?? [], index())}</td>
 									<td>
 										<Show
-											when={!isContactTier(tier)}
+											when={!isContactTier(tier, level())}
 											fallback={
 												<a
 													href={BENCHER_CALENDLY_URL}
@@ -514,7 +527,7 @@ const CloudMeteredPanel = (props: {
 												</a>
 											}
 										>
-											{fmtTierPrice(tier)}
+											{fmtTierPrice(tier, level())}
 										</Show>
 									</td>
 								</tr>

@@ -1,13 +1,7 @@
 import * as Sentry from "@sentry/astro";
 import type { Params } from "astro";
-import {
-	type Accessor,
-	type Resource,
-	Show,
-	createEffect,
-	createSignal,
-} from "solid-js";
-import type { JsonNewCheckout, PlanLevel } from "../../../../types/bencher";
+import { type Resource, Show, createEffect, createSignal } from "solid-js";
+import type { JsonNewCheckout } from "../../../../types/bencher";
 import type { Reader } from "../../../../next/reader";
 import { httpPost } from "../../../../util/http";
 import { NotifyKind, pageNotify } from "../../../../util/notify";
@@ -22,10 +16,6 @@ interface Props {
 	bencher_valid: Resource<InitValid>;
 	user: undefined | Reader;
 	organization: undefined | string;
-	plan: Accessor<PlanLevel>;
-	entitlements: Accessor<null | number>;
-	organizationUuid: Accessor<null | string>;
-	organizationUuidValid: Accessor<boolean>;
 	handleRefresh: () => void;
 }
 
@@ -35,7 +25,7 @@ const Checkout = (props: Props) => {
 	const navigate = useNavigate();
 
 	const isSendable = (): boolean => {
-		return !submitting() && props.organizationUuidValid();
+		return !submitting();
 	};
 
 	const sendForm = () => {
@@ -51,9 +41,6 @@ const Checkout = (props: Props) => {
 
 		const newCheckout: JsonNewCheckout = {
 			organization: props.organization,
-			level: props.plan(),
-			entitlements: props.entitlements(),
-			self_hosted: props.organizationUuid(),
 		};
 
 		setSubmitting(true);
