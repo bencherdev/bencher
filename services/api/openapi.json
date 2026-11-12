@@ -17678,22 +17678,14 @@
           "enterprise": {
             "$ref": "#/components/schemas/JsonProduct"
           },
-          "metrics": {
-            "$ref": "#/components/schemas/JsonProduct"
-          },
           "pro": {
-            "$ref": "#/components/schemas/JsonProduct"
-          },
-          "team": {
             "$ref": "#/components/schemas/JsonProduct"
           }
         },
         "required": [
           "bare_metal",
           "enterprise",
-          "metrics",
-          "pro",
-          "team"
+          "pro"
         ]
       },
       "JsonProject": {
@@ -20679,7 +20671,7 @@
         "properties": {
           "active_series": {
             "nullable": true,
-            "description": "The active series usage amount. Populated for Pro metered plans, whose bill is based on monthly-active series (distinct testbed x benchmark x measure).",
+            "description": "The active series usage amount. Populated for metered plans, whose bill is based on monthly-active series (distinct testbed x benchmark x measure).",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -20711,7 +20703,7 @@
           },
           "metrics": {
             "nullable": true,
-            "description": "The metrics usage amount. Not populated for Pro metered plans, which bill on active series (see `active_series`) rather than metrics.",
+            "description": "The metrics usage amount. Not populated for metered plans, which bill on active series (see `active_series`) rather than metrics.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -21473,7 +21465,6 @@
         "enum": [
           "free",
           "pro",
-          "team",
           "enterprise"
         ]
       },
