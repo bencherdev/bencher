@@ -5,7 +5,7 @@ use std::time::Duration;
 use bencher_billing::Biller;
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    DateTime, OrganizationResourceId, PlanLevel,
+    DateTime, OrganizationResourceId,
     organization::usage::{JsonUsage, UsageKind},
 };
 use bencher_rbac::organization::Permission;
@@ -14,10 +14,7 @@ use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::{forbidden_error, issue_error, payment_required_error, resource_not_found_err},
     model::{
-        organization::{
-            OrganizationId, QueryOrganization,
-            plan::{QueryPlan, metered_bills_active_series},
-        },
+        organization::{OrganizationId, QueryOrganization, plan::QueryPlan},
         project::{metric::QueryMetric, series},
         runner::job::QueryJob,
         user::auth::{AuthUser, BearerToken},
@@ -154,7 +151,6 @@ async fn cloud_plan_usage(
         } = metered_plan_usage(
             auth_conn!(context),
             query_organization.id,
-            json_plan.level,
             start_time,
             end_time,
         )?;
@@ -166,7 +162,7 @@ async fn cloud_plan_usage(
             start_time,
             end_time,
             metrics: None,
-            active_series,
+            active_series: Some(active_series),
             runner_minutes: Some(runner_minutes),
         })
     // Licensed plan
@@ -240,32 +236,21 @@ fn free_plan_usage(
 /// The billable usage figures for a metered plan: its monthly-active series and its bare
 /// metal `runner_minutes`.
 struct MeteredUsage {
-    active_series: Option<u32>,
+    active_series: u32,
     runner_minutes: u32,
 }
 
 /// Billable usage for a metered (Bencher Cloud) plan.
 ///
-/// A paid plan bills on monthly-active series (all visibilities), so `active_series` is
-/// populated. Bare metal runner minutes are metered regardless of visibility and plan
-/// level.
+/// Every metered plan bills on monthly-active series (all visibilities). Bare metal
+/// runner minutes are metered regardless of visibility.
 fn metered_plan_usage(
     conn: &mut DbConnection,
     organization_id: OrganizationId,
-    level: PlanLevel,
     start_time: DateTime,
     end_time: DateTime,
 ) -> Result<MeteredUsage, HttpError> {
-    let active_series = if metered_bills_active_series(level) {
-        Some(series::count_active(
-            conn,
-            organization_id,
-            start_time,
-            end_time,
-        )?)
-    } else {
-        None
-    };
+    let active_series = series::count_active(conn, organization_id, start_time, end_time)?;
     let runner_minutes =
         QueryJob::runner_minutes_usage(conn, organization_id, start_time, end_time)?;
     Ok(MeteredUsage {

@@ -20,7 +20,7 @@ pub use plus::{
     JsonPlus, JsonRegistry, JsonRunners,
     cloud::{
         JsonCloud,
-        billing::{JsonBilling, JsonProduct, JsonProducts},
+        billing::{JsonBilling, JsonEnterpriseProduct, JsonProduct, JsonProducts},
         index::{JsonBingIndex, JsonGoogleIndex, JsonIndex},
         otel::{JsonOtel, OtelProtocol},
         recaptcha::JsonRecaptcha,

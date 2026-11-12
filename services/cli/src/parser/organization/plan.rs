@@ -1,7 +1,7 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{Entitlements, NonEmpty, OrganizationResourceId, OrganizationUuid};
-use clap::{ArgGroup, Parser, Subcommand, ValueEnum};
+use bencher_json::{NonEmpty, OrganizationResourceId};
+use clap::{ArgGroup, Parser, Subcommand};
 
 use crate::parser::CliBackend;
 
@@ -22,29 +22,23 @@ pub enum CliOrganizationPlan {
 }
 
 #[derive(Parser, Debug)]
+#[clap(group(
+    ArgGroup::new("plan")
+        .multiple(false)
+        .required(true)
+        .args(&["checkout", "subscription"]),
+))]
 pub struct CliPlanCreate {
     /// Organization slug or UUID
     pub organization: OrganizationResourceId,
 
-    /// Checkout session ID (subscription ID when `--skip-remote` is used)
+    /// Checkout session ID of a completed self-serve checkout
     #[clap(long)]
-    pub checkout: NonEmpty,
+    pub checkout: Option<NonEmpty>,
 
-    /// Plan level
-    #[clap(value_enum, long)]
-    pub level: CliPlanLevel,
-
-    /// License plan entitlements
+    /// Subscription ID to attach (server admin only)
     #[clap(long)]
-    pub entitlements: Option<Entitlements>,
-
-    /// Self-Hosted Organization UUID for license
-    #[clap(long, requires = "entitlements")]
-    pub self_hosted: Option<OrganizationUuid>,
-
-    /// Skip sending to remote provider
-    #[clap(long)]
-    pub skip_remote: bool,
+    pub subscription: Option<NonEmpty>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -95,50 +89,62 @@ pub struct CliPlanDelete {
     pub backend: CliBackend,
 }
 
-#[derive(ValueEnum, Debug, Clone)]
-#[clap(rename_all = "snake_case")]
-pub enum CliPlanLevel {
-    /// Free
-    Free,
-    /// Pro
-    Pro,
-    /// Enterprise
-    Enterprise,
-}
-
 #[cfg(test)]
 mod tests {
-    use clap::Parser as _;
+    use clap::{Parser as _, error::ErrorKind};
 
-    use crate::parser::{CliBencher, CliSub};
+    use crate::parser::CliBencher;
 
-    use super::{CliOrganizationPlan, CliPlanLevel};
-
-    fn plan_create(level: &str) -> Result<CliBencher, clap::Error> {
-        CliBencher::try_parse_from([
-            "bencher",
-            "plan",
-            "create",
-            "my-org",
-            "--checkout",
-            "cs_test",
-            "--level",
-            level,
-        ])
+    fn plan_create(args: &[&str]) -> Result<CliBencher, clap::Error> {
+        CliBencher::try_parse_from(
+            ["bencher", "plan", "create", "my-org"]
+                .iter()
+                .chain(args)
+                .copied(),
+        )
     }
 
+    // Fails if a checkout return or a subscription attach does not parse on its own.
     #[test]
-    fn plan_create_takes_enterprise() {
-        let cli = plan_create("enterprise").unwrap();
-        let CliSub::Plan(CliOrganizationPlan::Create(create)) = cli.sub else {
-            panic!("not a plan create");
-        };
-        assert!(matches!(create.level, CliPlanLevel::Enterprise));
+    fn plan_create_takes_checkout_or_subscription() {
+        plan_create(&["--checkout", "cs_test"]).unwrap();
+        plan_create(&["--subscription", "sub_test"]).unwrap();
     }
 
+    // Fails if a create that gives both a checkout and a subscription, or neither, parses.
     #[test]
-    fn plan_create_rejects_team() {
-        let error = plan_create("team").unwrap_err();
-        assert_eq!(error.kind(), clap::error::ErrorKind::InvalidValue);
+    fn plan_create_takes_exactly_one() {
+        assert_eq!(
+            plan_create(&["--checkout", "cs_test", "--subscription", "sub_test"])
+                .unwrap_err()
+                .kind(),
+            ErrorKind::ArgumentConflict
+        );
+        assert_eq!(
+            plan_create(&[]).unwrap_err().kind(),
+            ErrorKind::MissingRequiredArgument
+        );
+    }
+
+    // Fails if a retired create option still parses.
+    #[test]
+    fn plan_create_retired_options() {
+        for retired in [
+            ["--level", "pro"].as_slice(),
+            &["--entitlements", "1000"],
+            &["--self-hosted", "00000000-0000-4000-8000-000000000001"],
+            &["--skip-remote"],
+        ] {
+            let args: Vec<&str> = ["--checkout", "cs_test"]
+                .iter()
+                .chain(retired)
+                .copied()
+                .collect();
+            assert_eq!(
+                plan_create(&args).unwrap_err().kind(),
+                ErrorKind::UnknownArgument,
+                "{retired:?}"
+            );
+        }
     }
 }

@@ -1,20 +1,16 @@
-use bencher_client::types::{Entitlements, JsonNewPlan, NonEmpty, OrganizationUuid, PlanLevel};
-use bencher_json::OrganizationResourceId;
+use bencher_client::types::{JsonNewPlan, JsonPlanCheckout, JsonPlanSubscription};
+use bencher_json::{NonEmpty, OrganizationResourceId};
 
 use crate::{
     CliError,
     bencher::{backend::AuthBackend, sub::SubCmd},
-    parser::organization::plan::{CliPlanCreate, CliPlanLevel},
+    parser::organization::plan::CliPlanCreate,
 };
 
 #[derive(Debug, Clone)]
 pub struct Create {
     pub organization: OrganizationResourceId,
-    pub checkout: NonEmpty,
-    pub level: PlanLevel,
-    pub entitlements: Option<Entitlements>,
-    pub self_hosted: Option<OrganizationUuid>,
-    pub remote: Option<bool>,
+    pub plan: JsonNewPlan,
     pub backend: AuthBackend,
 }
 
@@ -25,51 +21,36 @@ impl TryFrom<CliPlanCreate> for Create {
         let CliPlanCreate {
             organization,
             checkout,
-            level,
-            entitlements,
-            self_hosted,
-            skip_remote,
+            subscription,
             backend,
         } = create;
         Ok(Self {
             organization,
-            checkout: checkout.into(),
-            level: level.into(),
-            entitlements: entitlements.map(Into::into),
-            self_hosted: self_hosted.map(Into::into),
-            remote: skip_remote.then_some(false),
+            plan: new_plan(checkout, subscription),
             backend: backend.try_into()?,
         })
     }
 }
 
-impl From<CliPlanLevel> for PlanLevel {
-    fn from(level: CliPlanLevel) -> Self {
-        match level {
-            CliPlanLevel::Free => Self::Free,
-            CliPlanLevel::Pro => Self::Pro,
-            CliPlanLevel::Enterprise => Self::Enterprise,
+/// The plan body for a self-serve checkout return or for a subscription to attach. The
+/// clap `ArgGroup` requires exactly one of them.
+fn new_plan(checkout: Option<NonEmpty>, subscription: Option<NonEmpty>) -> JsonNewPlan {
+    match (checkout, subscription) {
+        (Some(checkout), None) => JsonPlanCheckout {
+            checkout: checkout.into(),
         }
-    }
-}
-
-impl From<Create> for JsonNewPlan {
-    fn from(create: Create) -> Self {
-        let Create {
-            checkout,
-            level,
-            entitlements,
-            self_hosted,
-            remote,
-            ..
-        } = create;
-        Self {
-            checkout,
-            level,
-            entitlements,
-            self_hosted,
-            remote,
+        .into(),
+        (None, Some(subscription)) => JsonPlanSubscription {
+            subscription: subscription.into(),
         }
+        .into(),
+        #[expect(
+            clippy::unreachable,
+            reason = "clap ArgGroup requires exactly one of `checkout`/`subscription`"
+        )]
+        (Some(_), Some(_)) | (None, None) => {
+            unreachable!("Exactly one of `checkout` or `subscription` is required")
+        },
     }
 }
 
@@ -81,11 +62,30 @@ impl SubCmd for Create {
                 client
                     .org_plan_post()
                     .organization(self.organization.clone())
-                    .body(self.clone())
+                    .body(self.plan.clone())
                     .send()
                     .await
             })
             .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::new_plan;
+
+    // Fails if a checkout return is sent as an attach, an attach as a checkout return,
+    // or either body carries anything else.
+    #[test]
+    fn new_plan_sends_the_one_given() {
+        assert_eq!(
+            serde_json::to_value(new_plan(Some("cs_test".parse().unwrap()), None)).unwrap(),
+            serde_json::json!({ "checkout": "cs_test" })
+        );
+        assert_eq!(
+            serde_json::to_value(new_plan(None, Some("sub_test".parse().unwrap()))).unwrap(),
+            serde_json::json!({ "subscription": "sub_test" })
+        );
     }
 }

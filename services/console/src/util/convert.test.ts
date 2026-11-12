@@ -22,10 +22,11 @@ import {
 	planLevel,
 	prettyPrintFloat,
 	removeFromArray,
+	planEstimateUsd,
 	runnerMinutePrice,
+	seriesEstimateUsd,
 	seriesTierRange,
 	sizeArray,
-	tierEstimateUsd,
 	tierFlatUsd,
 	tierUnitUsd,
 	timeToDate,
@@ -232,13 +233,18 @@ describe("planLevel", () => {
 });
 
 describe("runnerMinutePrice", () => {
-	test("returns price for paid plans", () => {
-		expect(runnerMinutePrice(PlanLevel.Pro)).toBe(0.01666);
-		expect(runnerMinutePrice(PlanLevel.Enterprise)).toBe(0.01666);
+	// Kills bare metal priced at the published rate rather than the plan's own.
+	test("returns the plan's own rate in dollars a minute", () => {
+		expect(runnerMinutePrice({ runner_minute: 100 / 60 })).toBeCloseTo(
+			0.016_666_67,
+		);
+		expect(runnerMinutePrice({ runner_minute: 200 / 60 })).toBeCloseTo(
+			0.033_333_33,
+		);
 	});
 
-	test("returns 0.0 for free and undefined", () => {
-		expect(runnerMinutePrice(PlanLevel.Free)).toBe(0.0);
+	test("returns 0.0 for a plan without a rate, or no plan", () => {
+		expect(runnerMinutePrice({ runner_minute: null })).toBe(0.0);
 		expect(runnerMinutePrice(undefined)).toBe(0.0);
 	});
 });
@@ -341,6 +347,12 @@ const tier = (
 ): JsonPriceTier =>
 	({ up_to, flat_amount, unit_amount }) as unknown as JsonPriceTier;
 
+// A deal of 1,000 series for $2,500 a month, then $0.40 a series.
+const DEAL_TIERS: JsonPriceTier[] = [
+	tier(1_000, 250_000, null),
+	tier(null, null, 40),
+];
+
 // A representative Pro ladder: 0-250 $100, 251-375 $150, 376-500 $200, 501+ Get in Touch.
 // Every bounded tier leaves `unit_amount` null and the unbounded top tier carries a Stripe
 // placeholder ($0.40/series), exactly as the live API sends them.
@@ -362,8 +374,12 @@ describe("currentSeriesTier", () => {
 	});
 
 	test("returns the unbounded contact tier above the last bound", () => {
-		expect(isContactTier(currentSeriesTier(SERIES_TIERS, 501))).toBe(true);
-		expect(isContactTier(currentSeriesTier(SERIES_TIERS, 10_000))).toBe(true);
+		expect(
+			isContactTier(currentSeriesTier(SERIES_TIERS, 501), PlanLevel.Pro),
+		).toBe(true);
+		expect(
+			isContactTier(currentSeriesTier(SERIES_TIERS, 10_000), PlanLevel.Pro),
+		).toBe(true);
 	});
 
 	test("returns undefined when tiers are absent", () => {
@@ -404,14 +420,19 @@ describe("seriesTierRange", () => {
 });
 
 describe("isContactTier", () => {
-	test("true for the unbounded top tier, including a null `up_to`", () => {
-		expect(isContactTier(SERIES_TIERS[3])).toBe(true);
-		expect(isContactTier({})).toBe(true);
-		expect(isContactTier(undefined)).toBe(true);
+	test("true for Pro's unbounded top tier, including a null `up_to`", () => {
+		expect(isContactTier(SERIES_TIERS[3], PlanLevel.Pro)).toBe(true);
+		expect(isContactTier({}, PlanLevel.Pro)).toBe(true);
+		expect(isContactTier(undefined, PlanLevel.Pro)).toBe(true);
 	});
 
 	test("false for a bounded tier", () => {
-		expect(isContactTier(SERIES_TIERS[0])).toBe(false);
+		expect(isContactTier(SERIES_TIERS[0], PlanLevel.Pro)).toBe(false);
+	});
+
+	// Kills an Enterprise plan's own overage band drawn as a conversation.
+	test("false for an Enterprise plan's open tier", () => {
+		expect(isContactTier(DEAL_TIERS[1], PlanLevel.Enterprise)).toBe(false);
 	});
 });
 
@@ -428,43 +449,98 @@ describe("tierFlatUsd / tierUnitUsd", () => {
 });
 
 describe("fmtTierPrice", () => {
+	const pro = PlanLevel.Pro;
+
 	test("flat-only tier omits an absent per-series fee", () => {
-		expect(fmtTierPrice(SERIES_TIERS[0])).toBe("$100.00 / month");
+		expect(fmtTierPrice(SERIES_TIERS[0], pro)).toBe("$100.00 / month");
 	});
 
 	test("drops a $0.00 component rather than showing it", () => {
-		expect(fmtTierPrice(tier(250, 10_000, null))).toBe("$100.00 / month");
-		expect(fmtTierPrice(tier(250, 10_000, 0))).toBe("$100.00 / month");
+		expect(fmtTierPrice(tier(250, 10_000, null), pro)).toBe("$100.00 / month");
+		expect(fmtTierPrice(tier(250, 10_000, 0), pro)).toBe("$100.00 / month");
 	});
 
 	test("per-series-only tier", () => {
-		expect(fmtTierPrice(tier(250, null, 5))).toBe("$0.05 / series");
+		expect(fmtTierPrice(tier(250, null, 5), pro)).toBe("$0.05 / series");
 	});
 
 	test("tier with both a flat fee and a per-series fee", () => {
-		expect(fmtTierPrice(tier(250, 10_000, 5))).toBe(
+		expect(fmtTierPrice(tier(250, 10_000, 5), pro)).toBe(
 			"$100.00 / month + $0.05 / series",
 		);
 	});
 
-	test("unbounded tier is contact sales even with a placeholder price", () => {
-		expect(fmtTierPrice(SERIES_TIERS[3])).toBe("Get in Touch");
-		expect(fmtTierPrice({})).toBe("Get in Touch");
-		expect(fmtTierPrice(undefined)).toBe("Get in Touch");
+	test("Pro's unbounded tier is contact sales even with a placeholder price", () => {
+		expect(fmtTierPrice(SERIES_TIERS[3], pro)).toBe("Get in Touch");
+		expect(fmtTierPrice({}, pro)).toBe("Get in Touch");
+		expect(fmtTierPrice(undefined, pro)).toBe("Get in Touch");
+	});
+
+	// Kills an Enterprise plan's own overage band drawn as a conversation.
+	test("an Enterprise plan's unbounded tier shows its price", () => {
+		expect(fmtTierPrice(DEAL_TIERS[1], PlanLevel.Enterprise)).toBe(
+			"$0.40 / series",
+		);
+	});
+
+	// Kills a band without a price drawn as a conversation on a plan that is not Pro.
+	test("an Enterprise tier without a price shows a dash", () => {
+		expect(fmtTierPrice({}, PlanLevel.Enterprise)).toBe("-");
+		expect(fmtTierPrice(tier(1_000, 0, null), PlanLevel.Enterprise)).toBe("-");
 	});
 });
 
-describe("tierEstimateUsd", () => {
+describe("seriesEstimateUsd", () => {
+	const pro = (tiers: JsonPriceTier[]) => ({
+		level: PlanLevel.Pro,
+		tiers,
+		tiers_mode: "volume",
+	});
+	const deal = {
+		level: PlanLevel.Enterprise,
+		tiers: DEAL_TIERS,
+		tiers_mode: "graduated",
+	};
+
 	test("flat-only tier ignores the series count", () => {
-		expect(tierEstimateUsd(tier(250, 10_000, null), 200)).toBe(100);
+		expect(seriesEstimateUsd(pro([tier(250, 10_000, null)]), 200)).toBe(100);
 	});
 
 	test("adds the per-series fee times the series count", () => {
-		expect(tierEstimateUsd(tier(500, 10_000, 5), 300)).toBe(100 + 0.05 * 300);
+		expect(seriesEstimateUsd(pro([tier(500, 10_000, 5)]), 300)).toBe(
+			100 + 0.05 * 300,
+		);
 	});
 
-	test("returns null for the unbounded contact tier", () => {
-		expect(tierEstimateUsd(SERIES_TIERS[3], 600)).toBeNull();
-		expect(tierEstimateUsd({}, 600)).toBeNull();
+	test("returns null for Pro's unbounded contact tier, or no tiers", () => {
+		expect(seriesEstimateUsd(pro(SERIES_TIERS), 600)).toBeNull();
+		expect(seriesEstimateUsd({ level: PlanLevel.Pro }, 600)).toBeNull();
+	});
+
+	// Kills a graduated deal billed as a volume price, or its overage left out.
+	test("a graduated deal charges its fee, then each series above it", () => {
+		expect(seriesEstimateUsd(deal, 812)).toBe(2_500);
+		expect(seriesEstimateUsd(deal, 1_200)).toBeCloseTo(2_580);
+	});
+});
+
+describe("planEstimateUsd", () => {
+	// Kills a total drawn from the runner cost alone for a price the series estimate
+	// cannot read, or one that drops the series charge or the plan's own bare metal rate.
+	test("adds the plan's bare metal, or is null without a series estimate", () => {
+		const deal = {
+			level: PlanLevel.Enterprise,
+			tiers: DEAL_TIERS,
+			tiers_mode: "graduated",
+			runner_minute: 200 / 60,
+		};
+		expect(planEstimateUsd(deal, 1_200, 318)).toBeCloseTo(2_590.6);
+		expect(
+			planEstimateUsd(
+				{ level: PlanLevel.Enterprise, tiers: null, runner_minute: 200 / 60 },
+				1_200,
+				318,
+			),
+		).toBeNull();
 	});
 });
