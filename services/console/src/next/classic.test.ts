@@ -177,9 +177,9 @@ describe("classicRedirect", () => {
 		expect(redirect(`${organization}/members/${UUID}`)).toBe(
 			`${organization}/members`,
 		);
-		expect(
-			redirect(`${organization}/checkout?checkout=cs_test&level=pro`),
-		).toBe(`${organization}/billing?checkout=cs_test&level=pro`);
+		expect(redirect(`${organization}/checkout?checkout=cs_test`)).toBe(
+			`${organization}/billing?checkout=cs_test`,
+		);
 		for (const drawn of [
 			"settings",
 			"members",

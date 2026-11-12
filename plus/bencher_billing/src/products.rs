@@ -1,23 +1,26 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use bencher_json::system::config::{JsonProduct, JsonProducts};
-use bencher_json::{BigInt, JsonPriceTier};
+use bencher_json::system::config::{JsonEnterpriseProduct, JsonProduct, JsonProducts};
+use bencher_json::{BigInt, JsonPriceTier, PlanLevel};
 use stripe::Client as StripeClient;
 use stripe_product::{
-    Price as StripePrice, PriceId, Product as StripeProduct, ProductId, price::RetrievePrice,
-    product::RetrieveProduct,
+    Price as StripePrice, PriceId, ProductId, price::RetrievePrice, product::RetrieveProduct,
 };
 use stripe_shared::PriceTier;
 
 use crate::BillingError;
 
+/// The Stripe products a subscription's items belong to, with the prices a self-serve
+/// checkout sells.
 #[derive(Clone)]
 pub struct Products {
-    // Bencher Cloud self-serve tier. Its `metered` map holds the single tiered
-    // active-series price (tier 1 flat base fee plus per-series step-ups) that bills
-    // both the base monthly fee and the per-series overage.
+    /// The Pro product, whose prices are the tiered active-series prices a self-serve
+    /// checkout sells.
     pub pro: Product,
-    pub enterprise: Product,
+    /// The Enterprise product. Each deal has its own price on it.
+    pub enterprise: ProductId,
+    /// The bare metal product, whose prices a self-serve checkout adds for runner
+    /// minutes.
     pub bare_metal: Product,
 }
 
@@ -25,72 +28,43 @@ impl Products {
     pub async fn new(client: &StripeClient, products: JsonProducts) -> Result<Self, BillingError> {
         let JsonProducts {
             pro,
-            enterprise,
+            enterprise: JsonEnterpriseProduct { id: enterprise },
             bare_metal,
         } = products;
 
         Ok(Self {
             pro: Product::new(client, pro).await?,
-            enterprise: Product::new(client, enterprise).await?,
+            enterprise: retrieve_product(client, &enterprise).await?,
             bare_metal: Product::new(client, bare_metal).await?,
         })
     }
 
-    // The price IDs that identify a subscription's plan item (excluding bare_metal),
-    // used by `get_plan` to filter subscription items down to that one item. These are
-    // the metered + licensed prices across the `pro` (tiered active-series) and
-    // `enterprise` products.
-    pub fn plan_price_ids(&self) -> HashSet<&PriceId> {
-        [&self.pro, &self.enterprise]
-            .into_iter()
-            .flat_map(|product| product.metered.values().chain(product.licensed.values()))
-            .map(|price| &price.id)
-            .collect()
+    /// The plan level that a price on `product` bills, or `None` when `product` names
+    /// no plan.
+    pub fn plan_level(&self, product: &ProductId) -> Option<PlanLevel> {
+        if *product == self.pro.id {
+            Some(PlanLevel::Pro)
+        } else if *product == self.enterprise {
+            Some(PlanLevel::Enterprise)
+        } else {
+            None
+        }
     }
 
-    /// The base monthly fee (in cents) for a tiered price, read from its first tier's
-    /// `flat_amount`. The Pro tiered active-series price exposes no flat `unit_amount`,
-    /// so `get_plan` reports this as the plan's `unit_amount`. `None` if the price is
-    /// unknown or not tiered. Relies on prices being retrieved with `tiers` expanded
-    /// (see [`Product::pricing`]).
-    pub fn tier_base_fee_cents(&self, price_id: &PriceId) -> Option<i64> {
-        self.find_price(price_id)?
-            .tiers
-            .as_ref()?
-            .first()?
-            .flat_amount
-    }
-
-    /// The full tiered price ladder for `price_id`, mapped to JSON so the Console can
-    /// render it from the billed source of truth instead of hardcoding it. `None` if the
-    /// price is unknown or not tiered. Relies on prices retrieved with `tiers` expanded
-    /// (see [`Product::pricing`]).
-    pub fn price_tiers(&self, price_id: &PriceId) -> Option<Vec<JsonPriceTier>> {
-        self.find_price(price_id)?
-            .tiers
-            .as_ref()
-            .map(|tiers| tiers.iter().map(to_json_tier).collect())
-    }
-
-    /// The cached price with `price_id`, searched across all products' metered and
-    /// licensed prices.
-    fn find_price(&self, price_id: &PriceId) -> Option<&StripePrice> {
-        [&self.pro, &self.enterprise, &self.bare_metal]
-            .into_iter()
-            .flat_map(|product| product.metered.values().chain(product.licensed.values()))
-            .find(|price| &price.id == price_id)
+    pub fn is_bare_metal(&self, product: &ProductId) -> bool {
+        *product == self.bare_metal.id
     }
 }
 
 /// Map a Stripe price tier to its JSON form: `up_to` is the inclusive series upper bound
 /// (`None` is the unbounded top tier), and `unit_amount`/`flat_amount` are mapped
 /// independently from cents (a tier may carry both, additively).
-fn to_json_tier(tier: &PriceTier) -> JsonPriceTier {
+pub(crate) fn to_json_tier(tier: &PriceTier) -> JsonPriceTier {
     let cents = |amount: Option<i64>| amount.and_then(|c| u64::try_from(c).ok()).map(BigInt::from);
     JsonPriceTier {
         // An `up_to` outside `u32` maps to `None`, which downstream means the unbounded
-        // "Get in Touch" tier. Stripe bounds are far below `u32::MAX`, so this is
-        // unreachable in practice; a real ladder is never silently reshaped.
+        // top tier. Stripe bounds are far below `u32::MAX`, so this is unreachable in
+        // practice; a real ladder is never silently reshaped.
         up_to: tier.up_to.and_then(|n| u32::try_from(n).ok()),
         unit_amount: cents(tier.unit_amount),
         flat_amount: cents(tier.flat_amount),
@@ -99,34 +73,25 @@ fn to_json_tier(tier: &PriceTier) -> JsonPriceTier {
 
 #[derive(Clone)]
 pub struct Product {
-    #[expect(
-        dead_code,
-        clippy::struct_field_names,
-        reason = "retained for future Stripe API use"
-    )]
-    pub product: StripeProduct,
+    pub id: ProductId,
+    /// The product's prices by price name.
     pub metered: HashMap<String, StripePrice>,
-    pub licensed: HashMap<String, StripePrice>,
 }
 
 impl Product {
     async fn new(client: &StripeClient, product: JsonProduct) -> Result<Self, BillingError> {
-        let JsonProduct {
-            id,
-            metered,
-            licensed,
-        } = product;
-
-        let product_id: ProductId = id.as_str().into();
-        let product = RetrieveProduct::new(product_id).send(client).await?;
-        let metered = Self::pricing(client, metered).await?;
-        let licensed = Self::pricing(client, licensed).await?;
+        let JsonProduct { id, metered } = product;
 
         Ok(Self {
-            product,
-            metered,
-            licensed,
+            id: retrieve_product(client, &id).await?,
+            metered: Self::pricing(client, metered).await?,
         })
+    }
+
+    pub fn price(&self, price_name: &str) -> Result<&StripePrice, BillingError> {
+        self.metered
+            .get(price_name)
+            .ok_or_else(|| BillingError::PriceNotFound(price_name.to_owned()))
     }
 
     async fn pricing(
@@ -136,16 +101,17 @@ impl Product {
         let mut biller_pricing = HashMap::with_capacity(pricing.len());
         for (price_name, price_id) in pricing {
             let price_id: PriceId = price_id.as_str().into();
-            // Expand `tiers` so a tiered price (the Pro active-series price) exposes its
-            // tier `flat_amount` (the base monthly fee). Harmless for non-tiered prices.
-            let price = RetrievePrice::new(price_id)
-                .expand(vec!["tiers".to_owned()])
-                .send(client)
-                .await?;
+            let price = RetrievePrice::new(price_id).send(client).await?;
             biller_pricing.insert(price_name, price);
         }
         Ok(biller_pricing)
     }
+}
+
+/// The id of the Stripe product `id`, once Stripe has it.
+async fn retrieve_product(client: &StripeClient, id: &str) -> Result<ProductId, BillingError> {
+    let product_id: ProductId = id.into();
+    Ok(RetrieveProduct::new(product_id).send(client).await?.id)
 }
 
 #[cfg(test)]
@@ -195,7 +161,7 @@ mod tests {
 
     #[test]
     fn to_json_tier_unbounded_top() {
-        // The unbounded top tier (`up_to: None`) is presented as "Get in Touch".
+        // The unbounded top tier has no upper bound.
         let json = to_json_tier(&price_tier(None, None, Some(20_000)));
         assert_eq!(json.up_to, None);
         assert_eq!(json.flat_amount.map(u64::from), Some(20_000));

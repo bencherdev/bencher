@@ -1883,10 +1883,8 @@ export interface JsonNewCallback {
 }
 
 export interface JsonNewCheckout {
+	/** The organization a Pro checkout is for. */
 	organization: OrganizationResourceId;
-	level: PlanLevel;
-	entitlements?: Entitlements;
-	self_hosted?: Uuid;
 }
 
 export interface JsonNewClaim {
@@ -1909,14 +1907,6 @@ export interface JsonNewMember {
 	email: Email;
 	/** The organization role for the invitee. */
 	role: OrganizationRole;
-}
-
-export interface JsonNewPlan {
-	checkout: NonEmpty;
-	level: PlanLevel;
-	entitlements?: Entitlements;
-	self_hosted?: Uuid;
-	remote?: boolean;
 }
 
 export interface JsonNewPlot {
@@ -2397,6 +2387,14 @@ export interface JsonPerfQuery {
 	end_time?: string;
 }
 
+/** How Stripe collects each payment for a plan. */
+export enum CollectionMethod {
+	/** Stripe charges the plan's payment method. */
+	ChargeAutomatically = "charge_automatically",
+	/** Stripe sends an invoice, and the customer pays it. */
+	SendInvoice = "send_invoice",
+}
+
 /**
  * One tier of a Stripe tiered price, surfaced so the Console can render the price
  * ladder from the billed source of truth instead of hardcoding it.
@@ -2409,13 +2407,21 @@ export interface JsonPerfQuery {
 export interface JsonPriceTier {
 	/**
 	 * Inclusive upper bound (active-series count) for this tier. `None` is the
-	 * unbounded top tier, presented as "Get in Touch".
+	 * unbounded top tier.
 	 */
 	up_to?: number;
 	/** Per-series price (cents) charged within this tier. May coexist with `flat_amount`. */
 	unit_amount?: number;
 	/** Flat price (cents) for the whole tier. May coexist with `unit_amount`. */
 	flat_amount?: number;
+}
+
+/** How a tiered price charges for active series. */
+export enum TiersMode {
+	/** Each tier charges for the series inside it, and the charges add up. */
+	Graduated = "graduated",
+	/** The tier that holds the whole count charges for every series. */
+	Volume = "volume",
 }
 
 export enum PlanStatus {
@@ -2431,15 +2437,33 @@ export enum PlanStatus {
 
 export interface JsonPlan {
 	organization: Uuid;
-	customer: JsonCustomer;
-	card: JsonCardDetails;
+	/**
+	 * The Bencher user who pays for the plan. `None` when the Stripe customer was made
+	 * in Stripe, not by Bencher.
+	 */
+	customer?: JsonCustomer;
+	/**
+	 * The card that pays for the plan. `None` when the plan is billed by invoice, or by a
+	 * payment method that is not a card.
+	 */
+	card?: JsonCardDetails;
+	/** How Stripe collects each payment for the plan. */
+	collection_method: CollectionMethod;
 	level: PlanLevel;
 	unit_amount: number;
 	/**
-	 * The tiered price ladder for this plan, ordered ascending by `up_to`. Populated
-	 * for the Pro tiered active-series price; `None` for flat-priced or licensed plans.
+	 * The tiered price ladder of the plan's own price, ordered ascending by `up_to`.
+	 * `None` for a flat price.
 	 */
 	tiers?: JsonPriceTier[];
+	/** How the tiers price the active series. `None` for a flat price. */
+	tiers_mode?: TiersMode;
+	/**
+	 * The bare metal price per runner minute, in cents, from the subscription's own bare
+	 * metal item. `None` when the subscription has no bare metal item, or its price has
+	 * no per minute amount.
+	 */
+	runner_minute?: number;
 	/**
 	 * When the metered subscription was created. The first (free-trial) billing
 	 * period is the one that contains this timestamp.
@@ -2456,9 +2480,21 @@ export interface JsonPlan {
 	license?: JsonLicense;
 }
 
+/** The return from a self-serve checkout. */
+export interface JsonPlanCheckout {
+	/** The Stripe checkout session that created the subscription. */
+	checkout: NonEmpty;
+}
+
 /** A Stripe billing portal session where the plan's customer manages their payment method. */
 export interface JsonPlanPortal {
 	url: string;
+}
+
+/** A subscription that a server admin attaches. */
+export interface JsonPlanSubscription {
+	/** The Stripe subscription. */
+	subscription: NonEmpty;
 }
 
 /** A project's link to GitHub. */

@@ -62,7 +62,7 @@ test.describe("from General", () => {
 });
 
 const checkoutReturn = (organization: string) =>
-	`/console/organizations/${organization}/checkout?checkout=cs_test_e2e&level=pro`;
+	`/console/organizations/${organization}/checkout?checkout=cs_test_e2e`;
 
 /** Every plan Billing posts, answering each with `status`. */
 const planRequests = async (page: Page, status?: number) => {
@@ -97,7 +97,7 @@ test.describe("Stripe's return", () => {
 			seed.console_url,
 		);
 		expect(`${location.pathname}${location.search}`).toBe(
-			`${billingPath(seed.organization.slug)}?checkout=cs_test_e2e&level=pro`,
+			`${billingPath(seed.organization.slug)}?checkout=cs_test_e2e`,
 		);
 	});
 
@@ -138,7 +138,7 @@ test.describe("Stripe's return", () => {
 		await expect(enrolled).toHaveText("Enrolled in Pro");
 		await expect(license).toBeVisible();
 		await page.waitForLoadState("networkidle");
-		expect(plans).toEqual([{ checkout: "cs_test_e2e", level: "pro" }]);
+		expect(plans).toEqual([{ checkout: "cs_test_e2e" }]);
 		expect(reads).toBe(1);
 	});
 

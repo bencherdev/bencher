@@ -1,3 +1,8 @@
+#[cfg(feature = "plus")]
+use bencher_client::types::PlanLevel;
+
+#[cfg(feature = "plus")]
+use crate::parser::system::auth::CliPlanLevel;
 use crate::{CliError, bencher::sub::SubCmd, parser::system::auth::CliAuth};
 
 mod accept;
@@ -38,6 +43,17 @@ impl SubCmd for Auth {
             Self::Login(login) => login.exec().await,
             Self::Confirm(confirm) => confirm.exec().await,
             Self::Accept(accept) => accept.exec().await,
+        }
+    }
+}
+
+#[cfg(feature = "plus")]
+impl From<CliPlanLevel> for PlanLevel {
+    fn from(level: CliPlanLevel) -> Self {
+        match level {
+            CliPlanLevel::Free => Self::Free,
+            CliPlanLevel::Pro => Self::Pro,
+            CliPlanLevel::Enterprise => Self::Enterprise,
         }
     }
 }

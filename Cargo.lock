@@ -807,6 +807,7 @@ dependencies = [
  "pretty_assertions",
  "rand 0.10.3",
  "rustls",
+ "serde_json",
  "thiserror 2.0.21",
  "tokio",
  "uuid",

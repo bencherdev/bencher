@@ -3,25 +3,12 @@ import type {
 	JsonPlan,
 	JsonPriceTier,
 	JsonUsage,
-	PlanLevel,
 } from "../../types/bencher";
 import type { Api } from "../api";
 import { formatCount } from "../plot/count";
 
 const path = (organization: string) =>
 	`/v0/organizations/${encodeURIComponent(organization)}`;
-
-const LEVELS: Record<`${PlanLevel}`, true> = {
-	free: true,
-	pro: true,
-	enterprise: true,
-};
-
-/** `level` if it names a plan, so text from a link never reaches the page. */
-export const planLevel = (level: string | null): PlanLevel | undefined =>
-	level !== null && Object.hasOwn(LEVELS, level)
-		? (level as PlanLevel)
-		: undefined;
 
 /** A plan as the page keeps it: without the payer's name and email, which it never shows. */
 export type Plan = Omit<JsonPlan, "customer">;
@@ -91,11 +78,15 @@ export const period = (start: string, end: string, timeZone?: string) => {
 	return `${from.slice(-4) === to.slice(-4) ? shortDay(start, timeZone) : from} to ${to}`;
 };
 
-/** The top band has no bound; its price is a conversation. */
+/** The top band has no bound. */
 const isOpen = (tier: JsonPriceTier) => tier.up_to == null;
 
-const bandPrice = (tier: JsonPriceTier) => {
-	if (isOpen(tier)) {
+/** Pro's top band is a conversation; an Enterprise deal's top band has its own price. */
+const isContact = (tier: JsonPriceTier, level: string) =>
+	isOpen(tier) && level === "pro";
+
+const bandPrice = (tier: JsonPriceTier, level: string) => {
+	if (isContact(tier, level)) {
 		return undefined;
 	}
 	const parts: string[] = [];
@@ -108,14 +99,14 @@ const bandPrice = (tier: JsonPriceTier) => {
 	return parts.join(" plus ") || undefined;
 };
 
-export const bands = (tiers: JsonPriceTier[]) =>
+export const bands = (tiers: JsonPriceTier[], level: string) =>
 	tiers.map((tier, index) => {
 		const from = index === 0 ? 0 : (tiers[index - 1]?.up_to ?? 0) + 1;
 		return {
 			range: isOpen(tier)
 				? `${formatCount(from)} or more`
 				: `${formatCount(from)} to ${formatCount(tier.up_to ?? 0)}`,
-			price: bandPrice(tier),
+			price: bandPrice(tier, level),
 		};
 	});
 
@@ -123,9 +114,35 @@ export const bands = (tiers: JsonPriceTier[]) =>
 export const bandIndex = (tiers: JsonPriceTier[], series: number) =>
 	tiers.findIndex((tier) => isOpen(tier) || series <= (tier.up_to ?? 0));
 
-/** This period's bill in dollars, unless the usage is past the self serve bands. */
+/** A volume price charges every series at the rate of the band the count falls in. */
+const volumeCents = (tiers: JsonPriceTier[], level: string, series: number) => {
+	const tier = tiers[bandIndex(tiers, series)];
+	if (!tier || isContact(tier, level)) {
+		return undefined;
+	}
+	return (tier.flat_amount ?? 0) + (tier.unit_amount ?? 0) * series;
+};
+
+/** A graduated price charges each band the count reaches for the series inside it. */
+const graduatedCents = (tiers: JsonPriceTier[], series: number) =>
+	tiers.reduce((cents, tier, index) => {
+		const from = index === 0 ? 0 : (tiers[index - 1]?.up_to ?? 0);
+		if (index > 0 && series <= from) {
+			return cents;
+		}
+		const inside = Math.min(series, tier.up_to ?? series) - from;
+		return cents + (tier.flat_amount ?? 0) + (tier.unit_amount ?? 0) * inside;
+	}, 0);
+
+/** This period's bill in dollars, unless the usage is past Pro's self serve bands. */
 export const estimate = (
-	plan: { status: string; tiers?: JsonPriceTier[] },
+	plan: {
+		status: string;
+		level?: string;
+		tiers?: JsonPriceTier[] | null;
+		tiers_mode?: string | null;
+		runner_minute?: number | null;
+	},
 	series: number,
 	minutes: number,
 ) => {
@@ -135,19 +152,27 @@ export const estimate = (
 	if (!plan.tiers) {
 		return undefined;
 	}
-	const tier = plan.tiers[bandIndex(plan.tiers, series)];
-	if (!tier || isOpen(tier)) {
+	const cents =
+		plan.tiers_mode === "graduated"
+			? graduatedCents(plan.tiers, series)
+			: volumeCents(plan.tiers, plan.level ?? "", series);
+	if (cents === undefined) {
 		return undefined;
 	}
-	return (
-		((tier.flat_amount ?? 0) + (tier.unit_amount ?? 0) * series) / 100 +
-		bareMetalUsd(minutes)
-	);
+	return cents / 100 + bareMetalUsd(minutes, plan.runner_minute);
 };
 
-export const bareMetalUsd = (minutes: number) =>
-	(minutes / 60) * BARE_METAL_HOURLY_USD;
+/** The bare metal cost in dollars, at a rate in cents a runner minute. */
+export const bareMetalUsd = (
+	minutes: number,
+	centsPerMinute: number | null | undefined,
+) => (minutes * (centsPerMinute ?? 0)) / 100;
 
+/** A rate in cents a runner minute, named by the hour. */
+export const bareMetalRate = (centsPerMinute: number) =>
+	`${usd((centsPerMinute * 60) / 100)} an hour`;
+
+/** The published bare metal rate that a Pro plan starts with. */
 export const BARE_METAL_RATE = `${usd(BARE_METAL_HOURLY_USD)} an hour`;
 
 const BRANDS: Record<string, string> = {

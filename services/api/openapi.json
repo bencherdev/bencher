@@ -2142,6 +2142,8 @@
           "organizations",
           "plan"
         ],
+        "summary": "Create an organization's plan",
+        "description": "Attach a subscription to an organization: the return from a self-serve Pro checkout, which needs `manage` permission for the organization, or a subscription that only a server admin attaches.",
         "operationId": "org_plan_post",
         "parameters": [
           {
@@ -13154,6 +13156,25 @@
           "unknown"
         ]
       },
+      "CollectionMethod": {
+        "description": "How Stripe collects each payment for a plan.",
+        "oneOf": [
+          {
+            "description": "Stripe charges the plan's payment method.",
+            "type": "string",
+            "enum": [
+              "charge_automatically"
+            ]
+          },
+          {
+            "description": "Stripe sends an invoice, and the customer pays it.",
+            "type": "string",
+            "enum": [
+              "send_invoice"
+            ]
+          }
+        ]
+      },
       "Cpu": {
         "type": "integer",
         "format": "uint32",
@@ -13931,6 +13952,17 @@
         },
         "required": [
           "replica"
+        ]
+      },
+      "JsonEnterpriseProduct": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
         ]
       },
       "JsonFold": {
@@ -15025,31 +15057,16 @@
       "JsonNewCheckout": {
         "type": "object",
         "properties": {
-          "entitlements": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Entitlements"
-              }
-            ]
-          },
-          "level": {
-            "$ref": "#/components/schemas/PlanLevel"
-          },
           "organization": {
-            "$ref": "#/components/schemas/ResourceId"
-          },
-          "self_hosted": {
-            "nullable": true,
+            "description": "The organization a Pro checkout is for.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/OrganizationUuid"
+                "$ref": "#/components/schemas/ResourceId"
               }
             ]
           }
         },
         "required": [
-          "level",
           "organization"
         ]
       },
@@ -15175,38 +15192,14 @@
         ]
       },
       "JsonNewPlan": {
-        "type": "object",
-        "properties": {
-          "checkout": {
-            "$ref": "#/components/schemas/NonEmpty"
+        "description": "A plan to attach to an organization: the return from a self-serve checkout, or a subscription that a server admin attaches.",
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/JsonPlanCheckout"
           },
-          "entitlements": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/Entitlements"
-              }
-            ]
-          },
-          "level": {
-            "$ref": "#/components/schemas/PlanLevel"
-          },
-          "remote": {
-            "nullable": true,
-            "type": "boolean"
-          },
-          "self_hosted": {
-            "nullable": true,
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/OrganizationUuid"
-              }
-            ]
+          {
+            "$ref": "#/components/schemas/JsonPlanSubscription"
           }
-        },
-        "required": [
-          "checkout",
-          "level"
         ]
       },
       "JsonNewPlot": {
@@ -17006,7 +16999,21 @@
             "type": "boolean"
           },
           "card": {
-            "$ref": "#/components/schemas/JsonCardDetails"
+            "nullable": true,
+            "description": "The card that pays for the plan. `None` when the plan is billed by invoice, or by a payment method that is not a card.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCardDetails"
+              }
+            ]
+          },
+          "collection_method": {
+            "description": "How Stripe collects each payment for the plan.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CollectionMethod"
+              }
+            ]
           },
           "created": {
             "description": "When the metered subscription was created. The first (free-trial) billing period is the one that contains this timestamp.",
@@ -17023,7 +17030,13 @@
             "$ref": "#/components/schemas/DateTime"
           },
           "customer": {
-            "$ref": "#/components/schemas/JsonCustomer"
+            "nullable": true,
+            "description": "The Bencher user who pays for the plan. `None` when the Stripe customer was made in Stripe, not by Bencher.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonCustomer"
+              }
+            ]
           },
           "level": {
             "$ref": "#/components/schemas/PlanLevel"
@@ -17039,16 +17052,31 @@
           "organization": {
             "$ref": "#/components/schemas/OrganizationUuid"
           },
+          "runner_minute": {
+            "nullable": true,
+            "description": "The bare metal price per runner minute, in cents, from the subscription's own bare metal item. `None` when the subscription has no bare metal item, or its price has no per minute amount.",
+            "type": "number",
+            "format": "double"
+          },
           "status": {
             "$ref": "#/components/schemas/PlanStatus"
           },
           "tiers": {
             "nullable": true,
-            "description": "The tiered price ladder for this plan, ordered ascending by `up_to`. Populated for the Pro tiered active-series price; `None` for flat-priced or licensed plans.",
+            "description": "The tiered price ladder of the plan's own price, ordered ascending by `up_to`. `None` for a flat price.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/JsonPriceTier"
             }
+          },
+          "tiers_mode": {
+            "nullable": true,
+            "description": "How the tiers price the active series. `None` for a flat price.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TiersMode"
+              }
+            ]
           },
           "unit_amount": {
             "$ref": "#/components/schemas/BigInt"
@@ -17056,15 +17084,31 @@
         },
         "required": [
           "cancel_at_period_end",
-          "card",
+          "collection_method",
           "created",
           "current_period_end",
           "current_period_start",
-          "customer",
           "level",
           "organization",
           "status",
           "unit_amount"
+        ]
+      },
+      "JsonPlanCheckout": {
+        "description": "The return from a self-serve checkout.",
+        "type": "object",
+        "properties": {
+          "checkout": {
+            "description": "The Stripe checkout session that created the subscription.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          }
+        },
+        "required": [
+          "checkout"
         ]
       },
       "JsonPlanPortal": {
@@ -17077,6 +17121,23 @@
         },
         "required": [
           "url"
+        ]
+      },
+      "JsonPlanSubscription": {
+        "description": "A subscription that a server admin attaches.",
+        "type": "object",
+        "properties": {
+          "subscription": {
+            "description": "The Stripe subscription.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NonEmpty"
+              }
+            ]
+          }
+        },
+        "required": [
+          "subscription"
         ]
       },
       "JsonPlot": {
@@ -17611,7 +17672,7 @@
           },
           "up_to": {
             "nullable": true,
-            "description": "Inclusive upper bound (active-series count) for this tier. `None` is the unbounded top tier, presented as \"Get in Touch\".",
+            "description": "Inclusive upper bound (active-series count) for this tier. `None` is the unbounded top tier.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -17623,13 +17684,6 @@
         "properties": {
           "id": {
             "type": "string"
-          },
-          "licensed": {
-            "default": {},
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
           },
           "metered": {
             "default": {},
@@ -17644,16 +17698,32 @@
         ]
       },
       "JsonProducts": {
+        "description": "The Stripe products a subscription's items belong to. The product of a subscription's plan item names its plan level.",
         "type": "object",
         "properties": {
           "bare_metal": {
-            "$ref": "#/components/schemas/JsonProduct"
+            "description": "The bare metal product, with the prices a self-serve checkout adds.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonProduct"
+              }
+            ]
           },
           "enterprise": {
-            "$ref": "#/components/schemas/JsonProduct"
+            "description": "The Enterprise product. Each deal has its own price on it.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonEnterpriseProduct"
+              }
+            ]
           },
           "pro": {
-            "$ref": "#/components/schemas/JsonProduct"
+            "description": "The Pro product, with the prices a self-serve checkout sells.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonProduct"
+              }
+            ]
           }
         },
         "required": [
@@ -21684,6 +21754,25 @@
       "ThresholdUuid": {
         "type": "string",
         "format": "uuid"
+      },
+      "TiersMode": {
+        "description": "How a tiered price charges for active series.",
+        "oneOf": [
+          {
+            "description": "Each tier charges for the series inside it, and the charges add up.",
+            "type": "string",
+            "enum": [
+              "graduated"
+            ]
+          },
+          {
+            "description": "The tier that holds the whole count charges for every series.",
+            "type": "string",
+            "enum": [
+              "volume"
+            ]
+          }
+        ]
       },
       "Timeout": {
         "type": "integer",
