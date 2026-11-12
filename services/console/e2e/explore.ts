@@ -100,3 +100,43 @@ export const expectNameOverUnits = async (
 		(above?.y ?? 0) + (above?.height ?? 0),
 	);
 };
+
+/** The first report in view, as Home on the plot area named `name` reads it out. */
+export const firstInView = async (page: Page, name: RegExp) => {
+	// Away from the plot, so no hover names a report of its own.
+	await page.mouse.move(0, 0);
+	await page.getByRole("group", { name }).focus();
+	await page.keyboard.press("Home");
+	const status = page.getByRole("figure").getByRole("status");
+	await expect(status).toContainText(/\d/);
+	const text = await status.textContent();
+	await page.keyboard.press("Escape");
+	return text;
+};
+
+/** A mouse's drag across the plot area named `name`, from and to fractions of its width, which zooms it. */
+export const dragAcross = async (
+	page: Page,
+	name: RegExp,
+	from = 0.3,
+	to = 0.7,
+) => {
+	const area = page.getByRole("group", { name });
+	await area.scrollIntoViewIfNeeded();
+	const box = await area.boundingBox();
+	if (!box) {
+		throw new Error("No plot area");
+	}
+	const y = box.y + box.height - 10;
+	await page.mouse.move(box.x + box.width * from, y);
+	await page.mouse.down();
+	await page.mouse.move(box.x + box.width * to, y, { steps: 4 });
+	await page.mouse.up();
+};
+
+/** Asserts that the page shows no zoom control and names no zoomed span. */
+export const expectNoZoomReadout = async (page: Page) => {
+	await expect(page.getByRole("group", { name: "Zoom" })).toHaveCount(0);
+	await expect(page.getByRole("button", { name: /zoom/i })).toHaveCount(0);
+	await expect(page.getByText(/^\w{3} \d+(, [\d:]+)? to /)).toHaveCount(0);
+};

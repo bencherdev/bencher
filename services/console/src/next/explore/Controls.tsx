@@ -5,7 +5,6 @@ import CustomRange from "./CustomRange";
 import { LINE_CAP, lineCapWarning, measuresLayout } from "./layout";
 import { PRESETS, type WindowChoice, pickWindow, windowChoice } from "./window";
 import { formatCount } from "../plot/count";
-import type { PlotZoom } from "../plot/Plot";
 
 const X_AXES = [
 	{ value: "date", label: "Report date" },
@@ -36,8 +35,6 @@ const Controls = (props: {
 	onQuery: (query: ExploreQuery) => void;
 	/** For a reader who has no custom window: the presets end now. */
 	presetsOnly?: boolean;
-	/** The plot's zoom, which sits beside the window. */
-	zoom?: PlotZoom | undefined;
 	/** What ends the row. */
 	children?: JSX.Element;
 }) => {
@@ -103,7 +100,6 @@ const Controls = (props: {
 						}
 						onChange={pick}
 					/>
-					<Show when={props.zoom}>{(zoom) => zoom().draw()}</Show>
 				</span>
 				<Show when={"start" in props.query.window && props.query.window}>
 					{(window) => (

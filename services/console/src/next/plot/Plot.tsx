@@ -6,7 +6,6 @@ import {
 	createSignal,
 	createUniqueId,
 	For,
-	type JSX,
 	on,
 	onCleanup,
 	onMount,
@@ -47,8 +46,14 @@ import type {
 	PlotSize,
 	PlotXAxis,
 } from "./types";
-import { type XRange, holdsTwo, narrower, pinched, zoomSpan } from "./zoom";
-import ZoomBar from "./ZoomBar";
+import {
+	type XRange,
+	holdsTwo,
+	narrower,
+	pinched,
+	pointsIn,
+	within,
+} from "./zoom";
 
 export interface PlotProps {
 	/** Undefined while the data loads: the plot holds its frame. */
@@ -83,14 +88,6 @@ export interface PlotProps {
 	pin?: number | undefined;
 	/** Only this iteration of every report, counting from 1; every iteration when undefined. */
 	iteration?: number | undefined;
-	/** Takes the zoom, while there is one, for the page to show beside its window; without it the plot shows the zoom in a footer of its own. */
-	onZoom?: (zoom: PlotZoom | undefined) => void;
-}
-
-/** A plot's zoom while it has one, which a page draws beside its window. */
-export interface PlotZoom {
-	/** The span in view, then Zoom out and Reset zoom; the span takes `spanClass` where the page names its window with one. */
-	draw: (spanClass?: string) => JSX.Element;
 }
 
 export interface PlotAlerts {
@@ -181,23 +178,6 @@ const Plot = (props: PlotProps) => {
 		});
 		return set;
 	});
-	// Each line's extent once per data, so a toggle only combines the shown ones.
-	const extents = createMemo(() => lines().map((line) => extent([line])));
-	const tiers = createMemo(
-		() => {
-			const current = data();
-			return current
-				? axisTiers(current, extents(), hidden(), props.scale ?? "auto")
-				: [];
-		},
-		[],
-		{ equals: sameTiers },
-	);
-	const tierOf = (measure: number) => tiers()[measure] ?? axisTier(0, "");
-	const titleOf = (axis: PanelAxis | undefined) =>
-		axis
-			? measureTitle(data()?.measures[axis.measure], tierOf(axis.measure))
-			: [];
 	const statusOf = (alert: PlotAlert) =>
 		props.alerts?.status?.(alert.uuid) ?? alert.status;
 	/** A line with an alert still active, as the page holds its alerts' statuses. */
@@ -270,6 +250,39 @@ const Plot = (props: PlotProps) => {
 		),
 	);
 	const view = createMemo(() => live()?.range ?? ranges().at(-1) ?? null);
+	// Each line's extent once per data, so a toggle only combines the shown ones.
+	const extents = createMemo(() => lines().map((line) => extent([line])));
+	// While zoomed, each line's extent in view, so each axis prints its ticks in the tier of the points it fits.
+	const viewExtents = createMemo(() => {
+		const current = data();
+		const range = view();
+		if (!(current && range)) {
+			return undefined;
+		}
+		const [start, end] = within(current.x, range);
+		return current.lines.map((line) => extent([pointsIn(line, start, end)]));
+	});
+	const tiers = createMemo(
+		() => {
+			const current = data();
+			return current
+				? axisTiers(
+						current,
+						extents(),
+						hidden(),
+						props.scale ?? "auto",
+						viewExtents(),
+					)
+				: [];
+		},
+		[],
+		{ equals: sameTiers },
+	);
+	const tierOf = (measure: number) => tiers()[measure] ?? axisTier(0, "");
+	const titleOf = (axis: PanelAxis | undefined) =>
+		axis
+			? measureTitle(data()?.measures[axis.measure], tierOf(axis.measure))
+			: [];
 	const shownColumns = (current: PlotData) =>
 		current.lines.flatMap((line, index) =>
 			hidden().has(index) ? [] : [line.y],
@@ -281,7 +294,6 @@ const Plot = (props: PlotProps) => {
 		}
 	};
 	const zoomOut = () => setRanges(ranges().slice(0, -1));
-	const resetZoom = () => setRanges([]);
 	const pinchTo = (start: XRange, at: number, ratio: number) => {
 		const current = data();
 		const range =
@@ -326,27 +338,6 @@ const Plot = (props: PlotProps) => {
 			{ defer: true },
 		),
 	);
-	// Only a step the stack holds, so a pinch shows the bar once it ends.
-	const zoomed = createMemo(() => ranges().length > 0);
-	// Empty for the moment between the last step back and the bar going away.
-	const span = () => {
-		const range = view();
-		return range ? zoomSpan(range, xAxis()) : "";
-	};
-	// One drawing for the page to place, whose span follows each step.
-	const zoom: PlotZoom = {
-		draw: (spanClass) => (
-			<ZoomBar
-				span={span()}
-				class={spanClass}
-				out={zoomOut}
-				reset={resetZoom}
-				focus={() => panels.get(0)?.focus()}
-			/>
-		),
-	};
-	createEffect(() => props.onZoom?.(zoomed() ? zoom : undefined));
-	onCleanup(() => props.onZoom?.(undefined));
 
 	const panelSpecs = createMemo(() => {
 		const current = data();
@@ -447,7 +438,7 @@ const Plot = (props: PlotProps) => {
 				setHover(null);
 			}),
 		zoom: pushZoom,
-		unzoom: resetZoom,
+		zoomOut,
 		pinch: pinchTo,
 		pinchEnd: endPinch,
 	});
@@ -754,8 +745,7 @@ const Plot = (props: PlotProps) => {
 													</span>
 												)}
 											</Show>
-											{/* A zoom names its own span, which replaces the window a note names. */}
-											<Show when={lead(index()) && !zoomed() && props.note}>
+											<Show when={lead(index()) && props.note}>
 												<span class="pl-note">{props.note}</span>
 											</Show>
 											<Show when={lead(index()) && alerts() > 0}>
@@ -865,9 +855,6 @@ const Plot = (props: PlotProps) => {
 					onPreview={setPreview}
 				/>
 			</Show>
-			<Show when={!props.onZoom && zoomed()}>
-				<div style={ZOOM_FOOTER}>{zoom.draw()}</div>
-			</Show>
 		</figure>
 	);
 };
@@ -889,30 +876,36 @@ const reservedWidth = (
 		: axisWidth([], font);
 };
 
-/** Each measure's axis tier, from the lines it shows, or all its lines when none is shown. */
+/** Each measure's axis tier, from the lines it shows, or all its lines when none is shown; while zoomed, from the points in view, as the axis fits them. */
 const axisTiers = (
 	data: PlotData,
 	extents: readonly ([number, number] | undefined)[],
 	hidden: ReadonlySet<number>,
 	mode: PlotScale,
+	inView: readonly ([number, number] | undefined)[] | undefined,
 ): AxisTier[] =>
 	data.measures.map((measure, index) => {
-		let shown: [number, number] | undefined;
-		let all: [number, number] | undefined;
-		for (let at = 0; at < data.lines.length; at++) {
-			const range = extents[at];
-			if (data.lines[at]?.measure === index && range) {
-				all = widen(all, range);
-				if (!hidden.has(at)) {
-					shown = widen(shown, range);
-				}
-			}
-		}
-		const range = shown ?? all;
+		const all = data.lines.flatMap((line, at) =>
+			line.measure === index ? [at] : [],
+		);
+		const shown = all.filter((at) => !hidden.has(at));
+		const range =
+			(inView && rangeOf(shown.length ? shown : all, inView)) ??
+			rangeOf(shown, extents) ??
+			rangeOf(all, extents);
 		return range
 			? rangeTier(range[0], range[1], measure.units, mode)
 			: axisTier(0, measure.units);
 	});
+
+const rangeOf = (
+	lines: readonly number[],
+	extents: readonly ([number, number] | undefined)[],
+) =>
+	lines.reduce<[number, number] | undefined>((range, line) => {
+		const each = extents[line];
+		return each ? widen(range, each) : range;
+	}, undefined);
 
 const widen = (
 	range: [number, number] | undefined,
@@ -1211,12 +1204,6 @@ const Readout = (props: ReadoutProps) => {
 			</div>
 		</>
 	);
-};
-
-/** A zoom's own footer, under the key, styled here as only a plot's pages draw it. */
-const ZOOM_FOOTER = {
-	padding: "2px 10px",
-	"border-top": "var(--border-width) solid var(--color-border)",
 };
 
 /** Inside the readout: reaching into the space around the time on a desktop, and on a phone's 44 px target, growing the line to hold it. */
