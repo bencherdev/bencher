@@ -104,6 +104,18 @@ impl Licensor {
         issuer: &str,
         now: DateTime,
     ) -> Result<Claims, LicenseError> {
+        let claims = self.read_with_issuer(license, issuer)?;
+        claims.check_time(now)?;
+        Ok(claims)
+    }
+
+    /// The claims of `license` at any time: its key, format, audience, and issuer are checked,
+    /// and its dates are not, so a license past its expiration still reads.
+    pub fn read(&self, license: &Jwt) -> Result<Claims, LicenseError> {
+        self.read_with_issuer(license, BENCHER_URL_STR)
+    }
+
+    fn read_with_issuer(&self, license: &Jwt, issuer: &str) -> Result<Claims, LicenseError> {
         let mut validation = Validation::new(*ALGORITHM);
         validation.set_audience(&[Audience::Bencher]);
         validation.set_issuer(&[issuer]);
@@ -111,9 +123,7 @@ impl Licensor {
         // The expiration is checked against `now`, not the system clock.
         validation.validate_exp = false;
 
-        let claims = decode::<Claims>(license.as_ref(), self.decoding(), &validation)?.claims;
-        claims.check_time(now)?;
-        Ok(claims)
+        Ok(decode::<Claims>(license.as_ref(), self.decoding(), &validation)?.claims)
     }
 
     /// The claims of `license` when it is valid at `now` for `organization`.
@@ -134,10 +144,10 @@ impl Licensor {
         }
     }
 
-    pub fn into_json(&self, license: Jwt, now: DateTime) -> Result<JsonLicense, LicenseError> {
-        // Do not validate the organization here
-        // In the case of a Self-Hosted license, the organizations will not match
-        Ok(self.validate(&license, now)?.into_json(license))
+    /// The license JSON for a license Bencher Cloud keeps for a Self-Hosted organization, which is
+    /// not the organization that holds it. It reads at any time, so an expired license still shows.
+    pub fn into_json(&self, license: Jwt) -> Result<JsonLicense, LicenseError> {
+        Ok(self.read(&license)?.into_json(license))
     }
 }
 
@@ -164,7 +174,7 @@ mod tests {
     use pretty_assertions::assert_eq;
     use serde::Serialize;
 
-    use crate::{GRACE_PERIOD, ISSUED_AT_LEEWAY, LicenseError, Licensor};
+    use crate::{GRACE_PERIOD, ISSUED_AT_LEEWAY, LicenseClaims, LicenseError, Licensor};
 
     const PRIVATE_PEM: &str = include_str!("./test/private.pem");
     const FOREIGN_PEM: &str = include_str!("./test/foreign.pem");
@@ -251,6 +261,26 @@ mod tests {
             .unwrap();
     }
 
+    // Fails if a license is replaced by one whose term ends earlier, whatever its count, or is
+    // not replaced by one whose term ends later, or by one for the same term with another count.
+    #[test]
+    fn replaced_by_a_later_term_or_another_count() {
+        let licensor = licensor();
+        let held = licensor
+            .read(&sign(&licensor, OrganizationUuid::new()))
+            .unwrap();
+        let more = Entitlements::try_from(1_500).unwrap();
+        let later = term_end() + Duration::seconds(1);
+        let earlier = term_end() - Duration::seconds(1);
+
+        assert!(held.replaced_by(series(), later));
+        assert!(held.replaced_by(more, later));
+        assert!(held.replaced_by(more, term_end()));
+        assert!(!held.replaced_by(series(), term_end()));
+        assert!(!held.replaced_by(series(), earlier));
+        assert!(!held.replaced_by(more, earlier));
+    }
+
     /// The claims of the earlier per-metric license format.
     #[derive(Serialize)]
     struct EarlierClaims {
@@ -289,6 +319,7 @@ mod tests {
         licensor
             .validate_organization(&license, organization, now)
             .unwrap_err();
+        licensor.read(&license).unwrap_err();
         // The same key signs a license in the current format that verifies.
         licensor
             .validate(&sign(&licensor, organization), now)
@@ -379,17 +410,91 @@ mod tests {
         );
     }
 
+    // Fails if a license that Bencher Cloud keeps, signed by a key that no longer verifies, loses
+    // the organization, the count, or the term it was signed for, or if a key that is not a
+    // license in the current format reads at all.
+    #[test]
+    fn read_unverified_keeps_the_claims_of_any_key() {
+        let licensor = licensor();
+        let foreign = Licensor::bencher_cloud(&FOREIGN_PEM_SECRET).unwrap();
+        let organization = OrganizationUuid::new();
+        let license = sign(&foreign, organization);
+        licensor.read(&license).unwrap_err();
+
+        let claims = LicenseClaims::read_unverified(&license).unwrap();
+        assert_eq!(claims.organization(), organization);
+        assert_eq!(claims.series(), series());
+        assert_eq!(claims.issued_at(), issued_at());
+        assert_eq!(claims.term_end(), term_end());
+
+        let earlier = EarlierClaims {
+            aud: "bencher",
+            exp: term_end().timestamp(),
+            iat: issued_at().timestamp(),
+            iss: BENCHER_URL_STR,
+            sub: organization,
+            lvl: "enterprise",
+            ent: 1_000,
+        };
+        let key = EncodingKey::from_ec_pem(PRIVATE_PEM.as_bytes()).unwrap();
+        let earlier: Jwt = encode(&Header::new(jsonwebtoken::Algorithm::ES256), &earlier, &key)
+            .unwrap()
+            .parse()
+            .unwrap();
+        LicenseClaims::read_unverified(&earlier).unwrap_err();
+    }
+
+    // Fails if a license that Bencher Cloud keeps stops reading once it expires, or if a read
+    // takes a license that is signed by another key, in the earlier format, or not yet issued
+    // as anything but what it is.
+    #[test]
+    fn read_ignores_the_time_and_nothing_else() {
+        let licensor = licensor();
+        let organization = OrganizationUuid::new();
+        // Its term ended long ago, and its grace with it.
+        let expired = licensor
+            .new_license(
+                organization,
+                series(),
+                DateTime::TEST - Duration::days(400),
+                DateTime::TEST - Duration::days(365),
+            )
+            .unwrap();
+        licensor.validate(&expired, DateTime::TEST).unwrap_err();
+        let claims = licensor.read(&expired).unwrap();
+        assert_eq!(claims.organization(), organization);
+        assert_eq!(claims.term_end(), DateTime::TEST - Duration::days(365));
+        // Issued years from now.
+        let future = licensor
+            .new_license(
+                organization,
+                series(),
+                DateTime::TEST + Duration::days(3_650),
+                DateTime::TEST + Duration::days(4_015),
+            )
+            .unwrap();
+        assert_eq!(
+            licensor.read(&future).unwrap().issued_at(),
+            DateTime::TEST + Duration::days(3_650)
+        );
+
+        let foreign = Licensor::bencher_cloud(&FOREIGN_PEM_SECRET).unwrap();
+        licensor.read(&sign(&foreign, organization)).unwrap_err();
+        licensor.read(&sign(&licensor, organization)).unwrap();
+    }
+
     // Fails if the license JSON drops or changes a field, or still carries a level or
-    // metric entitlements.
+    // metric entitlements, or if a license past its expiration has no JSON.
     #[test]
     fn into_json_names_the_series_and_the_term() {
         let licensor = licensor();
         let organization = OrganizationUuid::new();
         let license = sign(&licensor, organization);
+        licensor
+            .validate(&license, term_end() + GRACE_PERIOD)
+            .unwrap_err();
 
-        let json = licensor
-            .into_json(license.clone(), issued_at() + Duration::days(1))
-            .unwrap();
+        let json = licensor.into_json(license.clone()).unwrap();
         assert_eq!(
             serde_json::to_value(&json).unwrap(),
             serde_json::json!({
