@@ -66,6 +66,34 @@ const RISING = testData([
 	testLine({ id: "rising", y: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100] }),
 ]);
 const FALLING = [95, 90, 85, 80, 75, 70, 65, 60, 55, 50];
+// Rising under a bound, its last report alerting, so its first axes row holds every chip.
+const BOUNDED = testData([
+	testLine({
+		id: "rising",
+		y: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+		upper: Array(10).fill(105),
+		alerting: true,
+		alerts: [9],
+	}),
+]);
+// The same on the left of a dual axis, with a second measure on the right.
+const DUAL = testData(
+	[
+		BOUNDED.lines[0] as PlotData["lines"][number],
+		testLine({ id: "falling", measure: 1, y: FALLING }),
+	],
+	[
+		{ name: "Latency", units: "nanoseconds (ns)" },
+		{ name: "Wait", units: "nanoseconds (ns)" },
+	],
+);
+/** A box's edges, which a DOMRect, having no own properties, does not compare by. */
+const edges = ({ left, top, right, bottom }: DOMRect) => ({
+	left,
+	top,
+	right,
+	bottom,
+});
 
 /** Near the plot area's foot, under where a readout pins. */
 const spot = (box: DOMRect, fraction: number) => ({
@@ -82,14 +110,25 @@ const drag = async (over: HTMLElement, from: number, to: number) => {
 	await settle();
 };
 
-const zoom = () => page.getByRole("group", { name: "Zoom" });
-const zoomOut = () => page.getByRole("button", { name: "Zoom out" });
-const reset = () => page.getByRole("button", { name: "Reset zoom" });
 const close = () => page.getByRole("button", { name: "Close the readout" });
 /** The band a drag sweeps, the plot area's last child, after uPlot's cursor. */
 const band = (over: HTMLElement) => over.lastElementChild as HTMLElement;
 const shown = (element: HTMLElement) =>
 	getComputedStyle(element).display !== "none";
+/** Asserts the first and last reports in view, as Home and End on the plot area read them out, then closes the readout. */
+const expectInView = async (over: HTMLElement, first: string, last: string) => {
+	const status = page.getByRole("status").first();
+	over.focus();
+	await userEvent.keyboard("{Home}");
+	await expect.element(status).toHaveTextContent(first);
+	await userEvent.keyboard("{End}");
+	await expect.element(status).toHaveTextContent(last);
+	await userEvent.keyboard("{Escape}");
+};
+const FULL = ["10.00 ns", "100.00 ns"] as const;
+/** A double click near the plot area's foot. */
+const doubleClick = (over: HTMLElement) =>
+	page.elementLocator(over).dblClick(spot(over.getBoundingClientRect(), 0.5));
 
 describe("Plot zoom", () => {
 	// Kills a press that zooms or that a small wobble keeps from pinning, a drag
@@ -108,8 +147,8 @@ describe("Plot zoom", () => {
 		});
 		await commands.mouseUp();
 		await expect.element(close()).toBeInTheDocument();
-		expect(zoom().query()).toBeNull();
 		await close().click();
+		await expectInView(over, ...FULL);
 
 		await page.elementLocator(over).hover(spot(box, at(2.8)));
 		await expect.element(status).toHaveTextContent("ns");
@@ -125,10 +164,10 @@ describe("Plot zoom", () => {
 		await commands.mouseUp();
 		await settle();
 
-		await expect.element(zoom()).toBeInTheDocument();
 		expect(shown(band(over))).toBe(false);
 		expect(close().query()).toBeNull();
 		await expect.element(status).toHaveAttribute("aria-live", "off");
+		await expectInView(over, "40.00 ns", "60.00 ns");
 	});
 
 	// Kills a zoom to a range that holds a single point, and a band left behind.
@@ -137,7 +176,6 @@ describe("Plot zoom", () => {
 		await settle();
 		const { over, box } = await plotArea();
 		await drag(over, at(3.7), at(4.3));
-		expect(zoom().query()).toBeNull();
 		expect(shown(band(over))).toBe(false);
 		expect(close().query()).toBeNull();
 		await page
@@ -148,10 +186,9 @@ describe("Plot zoom", () => {
 			.toHaveTextContent("10.00 ns");
 	});
 
-	// Kills a Zoom out that goes back to the full range or nowhere, a Reset or
-	// a double click that leaves the plot zoomed, and a readout that names
-	// anything but the span in view.
-	test("2 drags, then Zoom out, show the first range, and Reset and a double click show the full range", async () => {
+	// Kills a double click that goes back to the full range or nowhere, or
+	// leaves a readout pinned, and one at the full range that goes anywhere.
+	test("2 drags, then a double click, show the first range, and a second double click the full range", async () => {
 		let over!: HTMLElement;
 		const full = xLabels(
 			await drawnDuring(async () => {
@@ -163,52 +200,59 @@ describe("Plot zoom", () => {
 		const first = xLabels(
 			await drawnDuring(() => drag(over, at(1.8), at(7.2))),
 		);
-		await expect.element(zoom()).toHaveTextContent("Sep 3 to Sep 8");
 		expect(first).not.toEqual(full);
-		await expect.element(zoomOut()).toHaveAccessibleDescription("Zoom out");
-		await expect.element(reset()).toHaveAccessibleDescription("Reset zoom");
 
 		// Reports 3 to 5 of the 1.8 to 7.2 in view.
 		const second = xLabels(
 			await drawnDuring(() => drag(over, 1 / 5.4, 3.4 / 5.4)),
 		);
-		await expect.element(zoom()).toHaveTextContent("Sep 4 to Sep 6");
 		expect(second).not.toEqual(first);
+		await expectInView(over, "40.00 ns", "60.00 ns");
 
-		expect(xLabels(await drawnDuring(() => zoomOut().click()))).toEqual(first);
-		await expect.element(zoom()).toHaveTextContent("Sep 3 to Sep 8");
+		expect(xLabels(await drawnDuring(() => doubleClick(over)))).toEqual(first);
+		expect(close().query()).toBeNull();
+		await expectInView(over, "30.00 ns", "80.00 ns");
 
-		expect(xLabels(await drawnDuring(() => reset().click()))).toEqual(full);
-		expect(zoom().query()).toBeNull();
-		// The control that held the focus is gone, so the plot area takes it.
-		expect(document.activeElement).toBe(over);
+		expect(xLabels(await drawnDuring(() => doubleClick(over)))).toEqual(full);
+		expect(close().query()).toBeNull();
+		await expectInView(over, ...FULL);
 
-		await drag(over, at(1.8), at(7.2));
-		await expect.element(zoom()).toBeInTheDocument();
-		const box = over.getBoundingClientRect();
-		expect(
-			xLabels(
-				await drawnDuring(() =>
-					page.elementLocator(over).dblClick(spot(box, 0.5)),
-				),
-			),
-		).toEqual(full);
-		expect(zoom().query()).toBeNull();
+		await doubleClick(over);
+		expect(close().query()).toBeNull();
+		await expectInView(over, ...FULL);
 	});
 
-	// Kills a readout on the version axis that names dates or the drag's own ends.
-	test("names the versions in view on the version axis", async () => {
+	// Kills a run of 3 clicks that steps back twice, as every click after the
+	// first would, or that leaves a readout pinned.
+	test("a triple click steps back 1 step and pins nothing", async () => {
+		mount({ data: RISING });
+		await settle();
+		const { over } = await plotArea();
+		await drag(over, at(1.8), at(7.2));
+		await drag(over, 1 / 5.4, 3.4 / 5.4);
+		await page
+			.elementLocator(over)
+			.tripleClick(spot(over.getBoundingClientRect(), 0.5));
+		await settle();
+		expect(close().query()).toBeNull();
+		await expectInView(over, "30.00 ns", "80.00 ns");
+	});
+
+	// Kills a drag on the version axis that zooms to anything but the versions it covers.
+	test("a drag on the version axis zooms to the versions it covers", async () => {
 		mount({ data: RISING, xAxis: "version" });
 		await settle();
 		const { over } = await plotArea();
 		await drag(over, at(2.8), at(5.2));
-		await expect.element(zoom()).toHaveTextContent("103 to 105");
+		await expectInView(over, "40.00 ns", "60.00 ns");
+		await doubleClick(over);
+		await expectInView(over, ...FULL);
 	});
 
 	// Kills a zoom that reaches only the panel dragged, as the sync key would
-	// carry it, a y axis that keeps the full range, and a Zoom out that leaves
-	// a panel behind.
-	test("a drag on 1 panel of a stack zooms every panel, and Zoom out moves every panel back", async () => {
+	// carry it, a y axis that keeps the full range, and a double click that
+	// leaves a panel behind or goes back further than 1 step.
+	test("2 drags on 1 panel of a stack zoom every panel, and each double click moves every panel back 1 step", async () => {
 		const data = testData(
 			[
 				testLine({
@@ -229,7 +273,9 @@ describe("Plot zoom", () => {
 		const status = page.getByRole("status");
 		const leftEdge = { position: { x: 1, y: bottom.box.height / 2 } };
 
-		const drawn = await drawnDuring(() => drag(top.over, at(2.8), at(5.2)));
+		await drag(top.over, at(1.8), at(7.2));
+		// Reports 3 to 5 of the 1.8 to 7.2 in view.
+		const drawn = await drawnDuring(() => drag(top.over, 1 / 5.4, 3.4 / 5.4));
 		const latency = yValues(drawn, "left", canvasOf(top.over));
 		const wait = yValues(drawn, "left", canvasOf(bottom.over));
 		expect(latency.length).toBeGreaterThanOrEqual(2);
@@ -242,7 +288,11 @@ describe("Plot zoom", () => {
 		await page.elementLocator(bottom.over).hover(leftEdge);
 		await expect.element(status).toHaveTextContent("80.00 ns");
 
-		const back = await drawnDuring(() => zoomOut().click());
+		await doubleClick(bottom.over);
+		await expectInView(top.over, "30.00 ns", "80.00 ns");
+		await expectInView(bottom.over, "85.00 ns", "60.00 ns");
+
+		const back = await drawnDuring(() => doubleClick(top.over));
 		expect(
 			Math.max(...yValues(back, "left", canvasOf(top.over))),
 		).toBeGreaterThanOrEqual(90);
@@ -298,8 +348,8 @@ describe("Plot zoom", () => {
 		});
 		await expect.element(close()).toBeInTheDocument();
 		await drag(over, at(1.8), at(4.2));
-		await expect.element(zoom()).toBeInTheDocument();
 		expect(close().query()).toBeNull();
+		await expectInView(over, "30.00 ns", "50.00 ns");
 	});
 
 	// Kills a zoom kept over data it was not made on, and one a key toggle drops.
@@ -316,11 +366,10 @@ describe("Plot zoom", () => {
 		await settle();
 		const { over } = await plotArea();
 		await drag(over, at(2.8), at(5.2));
-		await expect.element(zoom()).toHaveTextContent("Sep 4 to Sep 6");
 
 		await page.getByRole("button", { name: "sha256: hide its line" }).click();
 		await settle();
-		await expect.element(zoom()).toHaveTextContent("Sep 4 to Sep 6");
+		await expectInView(over, "40.00 ns", "60.00 ns");
 
 		setData(
 			testData([
@@ -328,7 +377,7 @@ describe("Plot zoom", () => {
 			]),
 		);
 		await settle();
-		expect(zoom().query()).toBeNull();
+		await expectInView((await plotArea()).over, "1.00 ns", "5.00 ns");
 	});
 
 	// Kills an Escape that lets the drag go on to zoom, or leaves its band or a pin behind.
@@ -346,8 +395,8 @@ describe("Plot zoom", () => {
 		await commands.mouseUp();
 		await settle();
 		expect(shown(band(over))).toBe(false);
-		expect(zoom().query()).toBeNull();
 		expect(close().query()).toBeNull();
+		await expectInView(over, ...FULL);
 	});
 
 	// Kills a finger that drags a zoom, which a phone's swipe would start.
@@ -373,7 +422,7 @@ describe("Plot zoom", () => {
 		touch("pointerup", at(6));
 		await settle();
 		expect(shown(band(over))).toBe(false);
-		expect(zoom().query()).toBeNull();
+		await expectInView(over, ...FULL);
 	});
 
 	// Kills a press that inherits the drag of one before it whose release the
@@ -410,26 +459,38 @@ describe("Plot zoom", () => {
 		mouse("pointerup", at(7), 0);
 		mouse("click", at(7), 0);
 		await expect.element(close()).toBeInTheDocument();
-		expect(zoom().query()).toBeNull();
+		await close().click();
+		await expectInView(over, ...FULL);
 	});
 
-	// Kills a row's zoom footer that holds its room while not zoomed, or never shows.
-	test("a row's footer shows only while zoomed", async () => {
-		mount({ data: RISING, size: "row" });
-		await settle();
-		const { over } = await plotArea();
-		const figure = page.getByRole("figure").element();
-		const height = figure.getBoundingClientRect().height;
-		expect(zoom().query()).toBeNull();
+	// Kills a y axis that prints the points in view in the tier of a spike out of view, as "0" over "0".
+	test("after a zoom past a spike, the y axis labels the points in view", async () => {
+		const data = testData(
+			[
+				testLine({
+					id: "spike",
+					y: [6.8, 6.82, 6.84, 6.86, 6.88, 6.9, 6.92, 6.94, 6.96, 3.35e9],
+				}),
+			],
+			[{ name: "Screams", units: "dB" }],
+		);
+		let over!: HTMLElement;
+		const before = await drawnDuring(async () => {
+			mount({ data, size: "row" });
+			await settle();
+			over = (await plotArea()).over;
+		});
+		expect(Math.max(...yValues(before, "left"))).toBeGreaterThan(1e8);
 
-		await drag(over, at(2.8), at(5.2));
-		await expect.element(zoom()).toHaveTextContent("Sep 4 to Sep 6");
-		expect(figure.contains(zoom().element())).toBe(true);
-		expect(figure.getBoundingClientRect().height).toBeGreaterThan(height);
+		const after = await drawnDuring(() => drag(over, at(2.8), at(5.2)));
+		const left = yValues(after, "left");
+		expect(left.length).toBeGreaterThanOrEqual(2);
+		expect(new Set(left).size).toBe(left.length);
+		expect(Math.min(...left)).toBeGreaterThan(6);
+		expect(Math.max(...left)).toBeLessThan(8);
 
-		await reset().click();
-		expect(zoom().query()).toBeNull();
-		expect(figure.getBoundingClientRect().height).toBe(height);
+		const back = await drawnDuring(() => doubleClick(over));
+		expect(Math.max(...yValues(back, "left"))).toBeGreaterThan(1e8);
 	});
 
 	// Kills a press whose release off the plot area is never heard, so its band
@@ -454,7 +515,8 @@ describe("Plot zoom", () => {
 
 		await page.elementLocator(over).click(spot(box, at(6)));
 		await expect.element(close()).toBeInTheDocument();
-		expect(zoom().query()).toBeNull();
+		await close().click();
+		await expectInView(over, ...FULL);
 	});
 
 	// Kills a zoom hidden while other data is drawn, which comes back with the data it was made on.
@@ -463,15 +525,14 @@ describe("Plot zoom", () => {
 		await settle();
 		const { over } = await plotArea();
 		await drag(over, at(2.8), at(5.2));
-		await expect.element(zoom()).toBeInTheDocument();
+		await expectInView(over, "40.00 ns", "60.00 ns");
 
 		setData(testData([testLine({ id: "rising", y: [1, 2, 3, 4, 5] })]));
 		await settle();
-		expect(zoom().query()).toBeNull();
+		await expectInView((await plotArea()).over, "1.00 ns", "5.00 ns");
 		setData(RISING);
 		await settle();
-		await plotArea();
-		expect(zoom().query()).toBeNull();
+		await expectInView((await plotArea()).over, ...FULL);
 	});
 
 	// Kills a drag that must move well past 5 px before it zooms.
@@ -493,8 +554,8 @@ describe("Plot zoom", () => {
 		await commands.mouseUp();
 		await settle();
 		expect(of(41) - of(40) + 3).toBeLessThan(15);
-		await expect.element(zoom()).toBeInTheDocument();
 		expect(close().query()).toBeNull();
+		await expectInView(over, "41.00 ns", "42.00 ns");
 	});
 
 	// Kills a drag that goes on once the browser cancels the pointer or takes its capture away.
@@ -526,8 +587,8 @@ describe("Plot zoom", () => {
 			expect(shown(band(over))).toBe(false);
 			await commands.mouseUp();
 			await settle();
-			expect(zoom().query()).toBeNull();
 			expect(close().query()).toBeNull();
+			await expectInView(over, ...FULL);
 		}
 	});
 
@@ -558,7 +619,6 @@ describe("Plot zoom", () => {
 		await settle();
 		const { over } = await plotArea();
 		await drag(over, at(2.8), at(5.2));
-		await expect.element(zoom()).toHaveTextContent("Sep 4 to Sep 6");
 		const status = page.getByRole("status");
 		over.focus();
 
@@ -577,19 +637,37 @@ describe("Plot zoom", () => {
 		await expect.element(status).toHaveTextContent("60.00 ns");
 	});
 
-	// Kills a note, such as the window, that stays while a zoom names its own span, or never comes back.
-	test("the note hides while zoomed and comes back on Reset", async () => {
-		const note = "4w, ending at its report";
-		mount({ data: RISING, size: "row", note });
-		await settle();
-		const { over } = await plotArea();
-		await expect.element(page.getByText(note)).toBeVisible();
+	// Kills a zoom that moves a label, adds a control or a span, or hides the
+	// note, on a row and on a desktop two-axis plot.
+	test.each([
+		["a row", BOUNDED, "row"],
+		["a desktop two-axis plot", DUAL, "full"],
+	] as const)(
+		"zooming %s moves no label, keeps its note, and adds no control or span",
+		async (_, data, size) => {
+			const note = "Cut to 3 months";
+			mount({ data, size, note });
+			await settle();
+			const { over } = await plotArea();
+			const figure = page.getByRole("figure").element();
+			const chips = () =>
+				[
+					...figure.querySelectorAll(
+						".pl-axes > .pl-pill, .pl-axes > .pl-note, .pl-axes > .pl-axt",
+					),
+				].map((chip) => edges(chip.getBoundingClientRect()));
+			const before = chips();
+			expect(before.length).toBeGreaterThanOrEqual(data === DUAL ? 5 : 4);
+			const buttons = figure.querySelectorAll("button").length;
+			const text = figure.textContent;
 
-		await drag(over, at(2.8), at(5.2));
-		await expect.element(zoom()).toBeInTheDocument();
-		expect(page.getByText(note).query()).toBeNull();
-
-		await reset().click();
-		await expect.element(page.getByText(note)).toBeVisible();
-	});
+			await drag(over, at(2.8), at(5.2));
+			await expectInView(over, "40.00 ns", "60.00 ns");
+			expect(chips()).toEqual(before);
+			await expect.element(page.getByText(note)).toBeVisible();
+			expect(figure.querySelectorAll("button")).toHaveLength(buttons);
+			expect(figure.textContent).toBe(text);
+			expect(page.getByRole("button", { name: /zoom/i }).query()).toBeNull();
+		},
+	);
 });

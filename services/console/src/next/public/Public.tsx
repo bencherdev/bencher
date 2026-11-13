@@ -30,7 +30,6 @@ import { lineVisible, settleVisibility } from "../query/line";
 import { type ExploreQuery, encodeQuery } from "../query/query";
 import Tools from "../shell/Tools";
 import { formatCount } from "../plot/count";
-import type { PlotZoom } from "../plot/Plot";
 import Tag from "../tag";
 
 export type PlotView = typeof import("../plot/Plot").default;
@@ -122,7 +121,6 @@ export default Public;
 
 const Plotted = (props: PublicProps) => {
 	const [open, setOpen] = createSignal(false);
-	const [zoom, setZoom] = createSignal<PlotZoom>();
 	const edit = (next: ExploreQuery) => props.onQuery?.(next);
 	const data = createMemo(() => props.answer && plotData(props.answer));
 	const drawn = createMemo(() => data()?.lines.map(({ id }) => id) ?? []);
@@ -215,7 +213,6 @@ const Plotted = (props: PublicProps) => {
 					now={Date.now}
 					onQuery={edit}
 					presetsOnly
-					zoom={zoom()}
 				>
 					<span class="spacer" />
 					<Share
@@ -279,7 +276,6 @@ const Plotted = (props: PublicProps) => {
 									note={
 										props.answer?.window.clamped ? "Cut to 3 months" : undefined
 									}
-									onZoom={setZoom}
 								/>
 							);
 						}}

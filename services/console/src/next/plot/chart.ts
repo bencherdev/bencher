@@ -28,7 +28,7 @@ import type {
 	PlotSize,
 	PlotXAxis,
 } from "./types";
-import { type XRange, within } from "./zoom";
+import { type XRange, pointsIn, within } from "./zoom";
 
 // One uPlot per plot of a layout; bands, markers, focus, and the dual axis are drawn in its hooks.
 
@@ -50,6 +50,9 @@ const MARK_SPACING = 10;
 const HOVER_REACH = 16;
 /** How far, in CSS pixels, a mouse or pen press moves before it is a drag rather than a click. */
 const DRAG_REACH = 5;
+/** How soon, in milliseconds, and how near, in CSS pixels, a second tap follows the first to make a double tap. */
+const DOUBLE_MS = 500;
+const DOUBLE_REACH = 24;
 /** The least spread, in CSS pixels, a pinch measures between its fingers, so fingers above one another never scale by a near zero. */
 const PINCH_SPREAD = 16;
 const X_AXIS_HEIGHT = 24;
@@ -125,8 +128,8 @@ export interface PanelEvents {
 	close: () => void;
 	/** A drag across the x range `range`, in data values. */
 	zoom: (range: XRange) => void;
-	/** A double click, which goes back to every point. */
-	unzoom: () => void;
+	/** A double click or a double tap, which goes back 1 zoom step. */
+	zoomOut: () => void;
 	/** A pinch from the x range `start`, its fingers' midpoint at `at` across it, their spread at `ratio` of the start's. */
 	pinch: (start: XRange, at: number, ratio: number) => void;
 	/** A pinch ends: a lifted finger keeps it, a cancel does not. */
@@ -174,7 +177,7 @@ export const createPanel = (
 	const pixelRatio = () => window.devicePixelRatio || 1;
 	const font = axisFont(state.palette().code);
 
-	// Scale kinds follow the visible lines; units stay fixed so toggling never relabels an axis.
+	// Scale kinds follow the points each axis fits, as does the tier its ticks print in, which `state.tier` gives from the lines shown and the points in view.
 	const kinds: YScale[] = axes.map(() => ({ kind: "linear" }));
 	const steps: number[] = axes.map(() => 0);
 	// The points in view, so a zoom fits each y axis to what it shows.
@@ -187,13 +190,7 @@ export const createPanel = (
 		const view = state.view();
 		if (view) {
 			const [start, end] = within(x, view);
-			const shown = extent(
-				drawn.map(({ y, lower, upper }) => ({
-					y: y.slice(start, end),
-					...(lower && { lower: lower.slice(start, end) }),
-					...(upper && { upper: upper.slice(start, end) }),
-				})),
-			);
+			const shown = extent(drawn.map((line) => pointsIn(line, start, end)));
 			if (shown) {
 				return shown;
 			}
@@ -691,6 +688,13 @@ export const createPanel = (
 	// Each finger on the plot area, at its x. The first 2 down pinch, and once a
 	// pinch ends no other starts until every finger has lifted.
 	const fingers = new Map<number, number>();
+	// The tap a second one may pair with, as a browser counts a run of taps 1, 2, 3, then 1 again; a pinch or a press anywhere else between them breaks the pair.
+	let firstTap: { time: number; left: number; top: number } | null = null;
+	const onPressAnywhere = (event: PointerEvent) => {
+		if (!(event.target instanceof Node && over.contains(event.target))) {
+			firstTap = null;
+		}
+	};
 	let pinch: {
 		ids: readonly [number, number];
 		spread: number;
@@ -715,6 +719,7 @@ export const createPanel = (
 		// The readout gives way to the pinch, a pinned one too.
 		hide();
 		events.close();
+		firstTap = null;
 	};
 	const endPinch = (keep: boolean) => {
 		if (pinch) {
@@ -844,13 +849,28 @@ export const createPanel = (
 			press = { id: event.pointerId, left, top };
 		}
 	};
-	const onDoubleClick = () => events.unzoom();
 	const onClick = (event: MouseEvent) => {
 		if (dropClick) {
 			dropClick = false;
 			return;
 		}
 		const { left, top } = local(event);
+		// A mouse's every second click of a run, as the browser counts it, and a tap soon after and near the one before, step back 1 zoom step and close the readout the first pinned.
+		const first = firstTap;
+		const double = touch
+			? first !== null &&
+				event.timeStamp - first.time < DOUBLE_MS &&
+				Math.hypot(left - first.left, top - first.top) < DOUBLE_REACH
+			: event.detail > 1;
+		firstTap = touch && !double ? { time: event.timeStamp, left, top } : null;
+		if (double) {
+			if (touch || event.detail % 2 === 0) {
+				hide();
+				events.close();
+				events.zoomOut();
+			}
+			return;
+		}
 		const cursor = cursorAt(left, top);
 		if (cursor) {
 			events.click(cursor, touch);
@@ -908,8 +928,8 @@ export const createPanel = (
 	over.addEventListener("pointercancel", onCancel);
 	over.addEventListener("lostpointercapture", onCancel);
 	over.addEventListener("click", onClick);
-	over.addEventListener("dblclick", onDoubleClick);
 	over.addEventListener("keydown", onKey);
+	document.addEventListener("pointerdown", onPressAnywhere, true);
 
 	setStrokes();
 
@@ -966,8 +986,8 @@ export const createPanel = (
 			over.removeEventListener("pointercancel", onCancel);
 			over.removeEventListener("lostpointercapture", onCancel);
 			over.removeEventListener("click", onClick);
-			over.removeEventListener("dblclick", onDoubleClick);
 			over.removeEventListener("keydown", onKey);
+			document.removeEventListener("pointerdown", onPressAnywhere, true);
 			u.destroy();
 		},
 	};

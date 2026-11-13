@@ -3,7 +3,14 @@ import { decodeQuery } from "../src/next/query/query";
 import type { JsonConsolePerf } from "../src/types/bencher";
 import { createProject, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
-import { dimensions, expectNameOverUnits, plotAtEnd } from "./explore";
+import {
+	dimensions,
+	dragAcross,
+	expectNameOverUnits,
+	expectNoZoomReadout,
+	firstInView,
+	plotAtEnd,
+} from "./explore";
 import {
 	VERSION_KEY,
 	expect,
@@ -46,6 +53,45 @@ const perfRequests = (page: Page) => {
 
 test.describe("signed out", () => {
 	test.use({ storageState: signedOut });
+
+	// Kills a zoom on the public plot that adds a control or a span, and a
+	// double click that does not step back.
+	test("a drag zooms the public plot with no zoom control or span, and a double click steps back", async ({
+		page,
+		request,
+	}) => {
+		const project = await createProject(request);
+		for (const daysAgo of [5, 4, 3, 2, 1]) {
+			await postReport(request, project.slug, {
+				start: new Date(Date.now() - daysAgo * DAY).toISOString(),
+				results: {
+					hash: [1, 2].map((size) => ({
+						parameters: { size },
+						measures: { latency: { value: size * daysAgo } },
+					})),
+				},
+			});
+		}
+		const id = await dimensions(request, project.slug);
+		const search = `?${new URLSearchParams({
+			branches: id.branch("main"),
+			testbeds: id.testbed("ubuntu-latest"),
+			benchmarks: id.benchmark("hash"),
+			measures: id.measure("Latency"),
+		})}`;
+		await page.goto(publicPath(project.slug, search));
+		await twoLinesDrawn(page);
+		const area = /^2 lines,/;
+		const full = await firstInView(page, area);
+
+		// Over reports 2 to 4 of 5.
+		await dragAcross(page, area, 0.1, 0.8);
+		expect(await firstInView(page, area)).not.toBe(full);
+		await expectNoZoomReadout(page);
+
+		await page.getByRole("group", { name: area }).dblclick();
+		expect(await firstInView(page, area)).toBe(full);
+	});
 
 	// Kills a public page that draws nothing without a sign in, offers an
 	// edit, a pin, a tab, or a window it cannot draw, or names a member's

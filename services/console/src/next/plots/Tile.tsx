@@ -16,7 +16,7 @@ import { measuresLayout } from "../explore/layout";
 import { rollingName } from "../explore/window";
 import { loadPlot, loadedPlot } from "../plot/lazy";
 import type { GitHubLinks } from "../github";
-import type { PlotAlerts, PlotZoom } from "../plot/Plot";
+import type { PlotAlerts } from "../plot/Plot";
 import type { PlotData } from "../plot/types";
 import type { Move } from "./order";
 
@@ -109,7 +109,6 @@ const Tile = (props: {
 	const query = createMemo(() => props.tile && queryFromPlot(props.tile.plot));
 	const [hidden, setHidden] = createSignal<string[]>();
 	const [focused, setFocused] = createSignal<string | null>();
-	const [zoom, setZoom] = createSignal<PlotZoom>();
 	const meta = () => {
 		const perf = props.tile?.perf;
 		return perf
@@ -277,21 +276,13 @@ const Tile = (props: {
 							{...(props.reportHref && { reportHref: props.reportHref })}
 							github={props.github}
 							failed={props.failed ?? false}
-							onZoom={setZoom}
 						/>
 					);
 				}}
 			</Show>
 			<div class="plots-tfoot">
-				<Show
-					when={zoom()}
-					fallback={
-						<Show when={props.window}>
-							<span class="lr-tag">{props.window}</span>
-						</Show>
-					}
-				>
-					{(current) => current().draw("lr-tag")}
+				<Show when={props.window}>
+					<span class="lr-tag">{props.window}</span>
 				</Show>
 				<span class="spacer" />
 				<Show when={props.openHref}>

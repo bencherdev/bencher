@@ -125,7 +125,6 @@ const scrolled = () => {
 		.toBe(true);
 };
 
-const zoom = () => page.getByRole("group", { name: "Zoom" });
 const close = () => page.getByRole("button", { name: "Close the readout" });
 
 // From 0.15 and 0.35 of the width to 0.05 and 0.45: half the range, around the
@@ -134,13 +133,63 @@ const IN: [Pair, Pair] = [
 	[0.15, 0.35],
 	[0.05, 0.45],
 ];
-const IN_SPAN = "Sep 2 to Sep 7";
+// Reports 3 to 6, which that half of the range holds.
+const IN_VIEW = ["30.00 ns", "60.00 ns"] as const;
+const FULL = ["10.00 ns", "100.00 ns"] as const;
+
+/** Asserts the first and last reports in view, as Home and End on the plot area read them out, then closes the readout. */
+const expectInView = async (over: HTMLElement, first: string, last: string) => {
+	const status = page.getByRole("status").first();
+	over.focus({ preventScroll: true });
+	await userEvent.keyboard("{Home}");
+	await expect.element(status).toHaveTextContent(first);
+	await userEvent.keyboard("{End}");
+	await expect.element(status).toHaveTextContent(last);
+	await userEvent.keyboard("{Escape}");
+};
+
+/** 2 quick taps, the second `apart` CSS pixels right of the first, at `fraction` of the plot area's width. */
+const doubleTap = async (over: HTMLElement, fraction = 0.5, apart = 0) => {
+	const box = over.getBoundingClientRect();
+	await tap(over, fraction);
+	await tap(over, fraction + apart / box.width);
+	await settle();
+};
 
 describe("Plot pinch", () => {
+	// Kills a y axis that, while a pinch is still live, prints the points in
+	// view in the tier of a spike out of view, as "0" over "0".
+	test("while a pinch is live, the y axis labels the points in view", async () => {
+		mount({
+			data: testData(
+				[
+					testLine({
+						id: "spike",
+						y: [6.8, 6.82, 6.84, 6.86, 6.88, 6.9, 6.92, 6.94, 6.96, 3.35e9],
+					}),
+				],
+				[{ name: "Screams", units: "dB" }],
+			),
+		});
+		await settle();
+		const over = await plotArea();
+		await spread(over, ...IN);
+		const live = await drawnDuring(() =>
+			commands.touch("touchMove", [
+				finger(over, 1, 0.04),
+				finger(over, 2, 0.46),
+			]),
+		);
+		const left = yValues(live, "left");
+		expect(left.length).toBeGreaterThanOrEqual(2);
+		expect(Math.min(...left)).toBeGreaterThan(6);
+		expect(Math.max(...left)).toBeLessThan(8);
+	});
+
 	// Kills a pinch that zooms only once it ends, scales around the plot's
-	// middle rather than its fingers', or pushes a step per move, so 1 Zoom
-	// out leaves part of it.
-	test("a pinch zooms live around its midpoint, and 1 Zoom out undoes it", async () => {
+	// middle rather than its fingers', or pushes a step per move, so 1 double
+	// tap leaves part of it.
+	test("a pinch zooms live around its midpoint, and 1 double tap undoes it", async () => {
 		mount({ data: RISING });
 		await settle();
 		const over = await plotArea();
@@ -152,13 +201,129 @@ describe("Plot pinch", () => {
 			expect(day).toBeGreaterThanOrEqual(2);
 			expect(day).toBeLessThanOrEqual(7);
 		}
-		expect(zoom().query()).toBeNull();
 		await commands.touch("touchEnd", []);
-		await expect.element(zoom()).toHaveTextContent(IN_SPAN);
+		await settle();
+		await expectInView(over, ...IN_VIEW);
 
-		await page.getByRole("button", { name: "Zoom out" }).click();
-		expect(zoom().query()).toBeNull();
+		await doubleTap(over);
+		await expectInView(over, ...FULL);
 	});
+
+	/** A pinch in to reports 3 to 6, then a second to reports 4 and 5, which a tap a second later never pairs with. */
+	const twoSteps = async (over: HTMLElement) => {
+		await pinch(over, ...IN);
+		await pinch(over, [0.3, 0.7], [1 / 6, 5 / 6]);
+		await new Promise((resolve) => setTimeout(resolve, 600));
+	};
+
+	// Kills taps that pair however far apart they land, or however long apart they come.
+	test.each([
+		["30 px apart", 0.5, 30, 0],
+		["600 ms apart", 0.5, 0, 600],
+	] as const)(
+		"2 taps %s each pin and keep the zoom",
+		async (_, fraction, apart, wait) => {
+			mount({ data: RISING });
+			await settle();
+			const over = await plotArea();
+			await twoSteps(over);
+			const box = over.getBoundingClientRect();
+			await tap(over, fraction);
+			await expect.element(close()).toBeInTheDocument();
+			await new Promise((resolve) => setTimeout(resolve, wait));
+			await tap(over, fraction + apart / box.width);
+			await settle();
+			// A tap on the pinned point closes it, and a tap on another point moves it there.
+			if (apart === 0) {
+				expect(close().query()).toBeNull();
+			} else {
+				await expect.element(close()).toBeInTheDocument();
+				await close().click();
+			}
+			await expectInView(over, "40.00 ns", "50.00 ns");
+		},
+	);
+
+	// Kills a third quick tap that steps back again, as one that stayed the
+	// first of a pair would, or that pins nothing.
+	test("3 quick taps step back 1 step, and the third pins", async () => {
+		mount({ data: RISING });
+		await settle();
+		const over = await plotArea();
+		await twoSteps(over);
+		for (let count = 0; count < 3; count++) {
+			await tap(over, 0.5);
+		}
+		await settle();
+		await expect.element(close()).toBeInTheDocument();
+		await close().click();
+		await expectInView(over, ...IN_VIEW);
+	});
+
+	// Kills a tap after a pinch that pairs with the tap before it, which undoes the pinch.
+	test("a tap, a pinch, then a tap keeps the pinch's zoom, and the last tap pins", async () => {
+		mount({ data: RISING });
+		await settle();
+		const over = await plotArea();
+		await tap(over, 0.5);
+		await pinch(over, ...IN, 2);
+		await tap(over, 0.5);
+		await settle();
+		await expect.element(close()).toBeInTheDocument();
+		await close().click();
+		await expectInView(over, ...IN_VIEW);
+	});
+
+	// Kills a tap on the readout's close button that the plot never hears, so
+	// the tap after it pairs with the tap that pinned.
+	test("a tap pins, a tap closes the readout, and a tap after it pins again and keeps the zoom", async () => {
+		mount({ data: RISING });
+		await settle();
+		const over = await plotArea();
+		await twoSteps(over);
+		await tap(over, 0.5);
+		await expect.element(close()).toBeInTheDocument();
+		const button = close().element().getBoundingClientRect();
+		const middle = {
+			id: 8,
+			x: button.left + button.width / 2,
+			y: button.top + button.height / 2,
+		};
+		await commands.touch("touchStart", [middle]);
+		await commands.touch("touchEnd", []);
+		await expect.element(close()).not.toBeInTheDocument();
+		await tap(over, 0.5);
+		await settle();
+		await expect.element(close()).toBeInTheDocument();
+		await close().click();
+		await expectInView(over, "40.00 ns", "50.00 ns");
+	});
+
+	// Kills a double tap that goes back further than 1 step or nowhere, that
+	// leaves a readout pinned by either of its taps, and a single tap that no
+	// longer pins.
+	test.each([0, 20])(
+		"a double tap %d px apart pops 1 step and pins nothing, and a single tap still pins",
+		async (apart) => {
+			mount({ data: RISING });
+			await settle();
+			const over = await plotArea();
+			await pinch(over, ...IN);
+			await pinch(over, [0.3, 0.7], [1 / 6, 5 / 6]);
+			await expectInView(over, "40.00 ns", "50.00 ns");
+
+			await doubleTap(over, 0.5, apart);
+			expect(close().query()).toBeNull();
+			await expectInView(over, ...IN_VIEW);
+			await doubleTap(over, 0.5, apart);
+			expect(close().query()).toBeNull();
+			await expectInView(over, ...FULL);
+
+			await new Promise((resolve) => setTimeout(resolve, 600));
+			await tap(over, 0.5);
+			await expect.element(close()).toBeInTheDocument();
+		},
+	);
 
 	// Kills a pinch out that zooms out past the step before, pushes a step,
 	// or leaves the full range for a wider one.
@@ -170,22 +335,21 @@ describe("Plot pinch", () => {
 			await drawnDuring(() => pinch(over, [0.3, 0.7], [0.4, 0.6])),
 		);
 		expect(full.length).toBeGreaterThan(0);
-		expect(zoom().query()).toBeNull();
+		await expectInView(over, ...FULL);
 
 		await pinch(over, ...IN);
-		await expect.element(zoom()).toHaveTextContent(IN_SPAN);
+		await expectInView(over, ...IN_VIEW);
 		// From 0.3 and 0.7 to a sixth and five sixths: 0.6 of that range, around its middle.
 		await pinch(over, [0.3, 0.7], [1 / 6, 5 / 6]);
-		await expect.element(zoom()).toHaveTextContent("Sep 3 to Sep 6");
+		await expectInView(over, "40.00 ns", "50.00 ns");
 
 		await pinch(over, [0.2, 0.8], [0.3, 0.7]);
-		await expect.element(zoom()).toHaveTextContent(IN_SPAN);
+		await expectInView(over, ...IN_VIEW);
 		await pinch(over, [0.2, 0.8], [0.3, 0.7]);
-		expect(zoom().query()).toBeNull();
+		await expectInView(over, ...FULL);
 		expect(
 			xLabels(await drawnDuring(() => pinch(over, [0.2, 0.8], [0.3, 0.7]))),
 		).toEqual(full);
-		expect(zoom().query()).toBeNull();
 	});
 
 	// Kills a pinch that zooms to a range holding a single point, or none.
@@ -194,7 +358,6 @@ describe("Plot pinch", () => {
 		await settle();
 		const over = await plotArea();
 		await pinch(over, [0.45, 0.55], [0.02, 0.98]);
-		await expect.element(zoom()).toBeInTheDocument();
 
 		const status = page.getByRole("status");
 		over.focus();
@@ -247,7 +410,7 @@ describe("Plot pinch", () => {
 		await expect.element(close()).not.toBeInTheDocument();
 		await commands.touch("touchEnd", []);
 		await pinch(over, ...IN);
-		await expect.element(zoom()).toHaveTextContent(IN_SPAN);
+		await expectInView(over, ...IN_VIEW);
 	});
 
 	// Kills a third finger that takes over the pinch from one of its two.
@@ -274,7 +437,8 @@ describe("Plot pinch", () => {
 			]);
 		}
 		await commands.touch("touchEnd", []);
-		await expect.element(zoom()).toHaveTextContent(IN_SPAN);
+		await settle();
+		await expectInView(over, ...IN_VIEW);
 	});
 
 	// Kills a pinch that waits for both fingers, goes on with the one left,
@@ -286,13 +450,11 @@ describe("Plot pinch", () => {
 		await spread(over, ...IN);
 		// Lifts finger 2 alone; finger 1 stays down at 0.05.
 		await commands.touch("touchEnd", [finger(over, 2, IN[1][1])]);
-		await expect.element(zoom()).toHaveTextContent(IN_SPAN);
 
 		for (const fraction of [0.3, 0.6]) {
 			await commands.touch("touchMove", [finger(over, 1, fraction)]);
 		}
 		await settle();
-		await expect.element(zoom()).toHaveTextContent(IN_SPAN);
 
 		// A new finger beside the one left, then both spread apart.
 		await commands.touch("touchStart", [
@@ -310,8 +472,8 @@ describe("Plot pinch", () => {
 		}
 		await commands.touch("touchEnd", []);
 		await settle();
-		await expect.element(zoom()).toHaveTextContent(IN_SPAN);
 		expect(close().query()).toBeNull();
+		await expectInView(over, ...IN_VIEW);
 
 		await tap(over, 0.5);
 		await expect.element(close()).toBeInTheDocument();
@@ -319,10 +481,7 @@ describe("Plot pinch", () => {
 
 	// Kills a hard pinch from 2 points with room around them that stops where
 	// it started rather than narrow to them, as a gentler pinch does.
-	for (const [xAxis, span] of [
-		["date", "Sep 4 to Sep 5"],
-		["version", "103 to 104"],
-	] as const) {
+	for (const xAxis of ["date", "version"] as const) {
 		test(`a hard pinch from 2 points with room around them narrows to them on the ${xAxis} axis`, async () => {
 			mount({ data: RISING, xAxis });
 			await settle();
@@ -332,32 +491,40 @@ describe("Plot pinch", () => {
 			const at = (report: number) => ({
 				position: { x: (box.width * report) / 9, y: box.height - 12 },
 			});
-			await page.elementLocator(over).hover(at(2.6));
-			await commands.mouseDown();
-			await page.elementLocator(over).hover(at(4.4));
-			await commands.mouseUp();
-			await expect.element(zoom()).toBeInTheDocument();
+			const dragged = xLabels(
+				await drawnDuring(async () => {
+					await page.elementLocator(over).hover(at(2.6));
+					await commands.mouseDown();
+					await page.elementLocator(over).hover(at(4.4));
+					await commands.mouseUp();
+				}),
+			);
 
-			await pinch(over, [0.45, 0.55], [0.02, 0.98]);
-			await expect.element(zoom()).toHaveTextContent(span);
-			await page.getByRole("button", { name: "Zoom out" }).click();
-			await settle();
-			await expect.element(zoom()).toBeInTheDocument();
+			const pinched = xLabels(
+				await drawnDuring(() => pinch(over, [0.45, 0.55], [0.02, 0.98])),
+			);
+			// The version axis labels both ranges by the same 2 versions.
+			if (xAxis === "date") {
+				expect(pinched).not.toEqual(dragged);
+			}
+			await expectInView(over, "40.00 ns", "50.00 ns");
+			expect(xLabels(await drawnDuring(() => doubleTap(over)))).toEqual(
+				dragged,
+			);
+			await expectInView(over, "40.00 ns", "50.00 ns");
 		});
 	}
 
 	// Kills a pinch in at 2 points that pushes the range it started from again,
-	// so a Zoom out then changes nothing.
+	// so a double tap then changes nothing.
 	test("a pinch in at 2 points pushes no step that changes nothing", async () => {
 		mount({ data: RISING });
 		await settle();
 		const over = await plotArea();
 		await pinch(over, [0.45, 0.55], [0.02, 0.98]);
-		await expect.element(zoom()).toBeInTheDocument();
 		await pinch(over, [0.45, 0.55], [0.02, 0.98]);
-		await page.getByRole("button", { name: "Zoom out" }).click();
-		await settle();
-		expect(zoom().query()).toBeNull();
+		await doubleTap(over);
+		await expectInView(over, ...FULL);
 	});
 
 	// Kills a pinch whose fingers sit one above the other, whose spread near
@@ -378,7 +545,6 @@ describe("Plot pinch", () => {
 		}
 		await commands.touch("touchEnd", []);
 		await settle();
-		expect(zoom().query()).toBeNull();
 
 		const status = page.getByRole("status");
 		over.focus();
@@ -405,7 +571,6 @@ describe("Plot pinch", () => {
 		await settle();
 		await commands.touch("touchEnd", []);
 		await settle();
-		expect(zoom().query()).toBeNull();
 
 		const over = await plotArea();
 		const status = page.getByRole("status");
@@ -424,7 +589,6 @@ describe("Plot pinch", () => {
 		await spread(over, ...IN);
 		await commands.touch("touchCancel", []);
 		await settle();
-		expect(zoom().query()).toBeNull();
 
 		const status = page.getByRole("status");
 		over.focus();
@@ -455,7 +619,6 @@ describe("Plot pinch", () => {
 		await expect
 			.poll(() => document.scrollingElement?.scrollTop ?? 0)
 			.toBeGreaterThan(0);
-		expect(zoom().query()).toBeNull();
 
 		await scrolled();
 		document.scrollingElement?.scrollTo(0, 0);
@@ -473,10 +636,11 @@ describe("Plot pinch", () => {
 				{ timeout: 8000 },
 			)
 			.toBe(true);
-		expect(zoom().query()).toBeNull();
+		await close().click();
+		await expectInView(over, ...FULL);
 
 		// A pinch pairs its own 2 fingers, with none the swipe left behind.
 		await pinch(over, ...IN);
-		await expect.element(zoom()).toHaveTextContent(IN_SPAN);
+		await expectInView(over, ...IN_VIEW);
 	});
 });

@@ -3,12 +3,23 @@ import { createProject, listPlots, postReport } from "./api";
 import { axeInBothThemes } from "./axe";
 import {
 	dimensions,
+	dragAcross,
 	expectNameOverUnits,
+	expectNoZoomReadout,
 	explore,
+	firstInView,
 	plotAtEnd,
 	twoLines,
 } from "./explore";
-import { expect, consolePath, seed, signedIn, tabRow, test } from "./fixtures";
+import {
+	expect,
+	consolePath,
+	seed,
+	settle,
+	signedIn,
+	tabRow,
+	test,
+} from "./fixtures";
 import { DAY } from "./public";
 
 const { hashbrown } = seed.projects;
@@ -1372,45 +1383,41 @@ test("a click pins the readout, and only a pinned readout's report link opens th
 	await expect(page).toHaveURL(new RegExp(`/reports/${second.uuid}`));
 });
 
-// Kills a zoom whose span and buttons sit anywhere but beside the Window
-// buttons, a zoom that changes the link, and one a new window keeps.
-test("a drag zooms the plot beside the Window buttons, and a new window clears it", async ({
+// Kills a zoom that adds a control or a span, or changes the link, a
+// double click that does not step back, and a zoom a new window keeps.
+test("a drag zooms the plot with no zoom control or span, and a double click steps back", async ({
 	page,
 	request,
 }) => {
 	const { query } = await twoLines(request);
-	const link = explore(hashbrown.slug, query);
-	await page.goto(link);
+	await page.goto(explore(hashbrown.slug, query));
 	await expect(plot(page)).toHaveAccessibleName("2 lines");
-	const area = await page
-		.getByRole("group", { name: /^2 lines,/ })
-		.boundingBox();
-	if (!area) {
-		throw new Error("No plot area");
-	}
-	const y = area.y + area.height - 10;
+	const area = /^2 lines,/;
 	const before = page.url();
-	await page.mouse.move(area.x + area.width * 0.3, y);
-	await page.mouse.down();
-	await page.mouse.move(area.x + area.width * 0.7, y, { steps: 4 });
-	await page.mouse.up();
+	const full = await firstInView(page, area);
 
-	const zoom = page.getByRole("group", { name: "Zoom" });
-	await expect(zoom).toContainText(/\w{3} \d+ to \w{3} \d+/);
-	const window = page.getByRole("radiogroup", { name: "Window" });
-	expect(
-		await zoom.evaluate(
-			(group, beside) =>
-				group.closest(".ex-pair") === beside?.closest(".ex-pair"),
-			await window.elementHandle(),
-		),
-	).toBe(true);
-	await expect(zoom.getByRole("button", { name: "Zoom out" })).toBeVisible();
-	await expect(zoom.getByRole("button", { name: "Reset zoom" })).toBeVisible();
+	await dragAcross(page, area);
+	expect(await firstInView(page, area)).not.toBe(full);
+	await expectNoZoomReadout(page);
 	expect(page.url()).toBe(before);
 
-	await window.getByText("1w", { exact: true }).click();
-	await expect(zoom).toHaveCount(0);
+	await page.getByRole("group", { name: area }).dblclick();
+	expect(await firstInView(page, area)).toBe(full);
+
+	// A new window clears the zoom, so a double click there steps back nowhere.
+	await dragAcross(page, area);
+	const answered = page.waitForResponse((response) =>
+		response.url().includes("/perf?"),
+	);
+	await page
+		.getByRole("radiogroup", { name: "Window" })
+		.getByText("3m", { exact: true })
+		.click();
+	await answered;
+	await settle(page);
+	const wider = await firstInView(page, area);
+	await page.getByRole("group", { name: area }).dblclick();
+	expect(await firstInView(page, area)).toBe(wider);
 });
 
 // Kills scroll room that leaves the plot's top short of the top of the screen

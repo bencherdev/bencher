@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { holdsTwo, pinched, scaled, within, zoomSpan } from "./zoom";
+import { holdsTwo, pinched, scaled, within } from "./zoom";
 
 const X = [10, 20, 20, 30, 40];
 
@@ -30,26 +30,6 @@ describe("holdsTwo", () => {
 				[10, 20],
 			),
 		).toBe(false);
-	});
-});
-
-describe("zoomSpan", () => {
-	// Kills versions read out at the drag's own ends rather than the whole versions inside it.
-	test("names the versions inside a span on the version axis", () => {
-		expect(zoomSpan([101.4, 104.6], "version")).toBe("102 to 104");
-		expect(zoomSpan([101, 104], "version")).toBe("101 to 104");
-	});
-
-	// Kills a span of days read out with times, or one of hours read out as one date.
-	test("names a span of days by its dates, and a shorter one by its times", () => {
-		const noon = Date.UTC(2026, 9, 3, 12);
-		const day = 86_400_000;
-		expect(zoomSpan([noon, noon + 6 * day], "date")).toMatch(
-			/^Oct \d+ to Oct \d+$/,
-		);
-		expect(zoomSpan([noon, noon + day / 4], "date")).toMatch(
-			/^Oct \d+, \d\d:\d\d to Oct \d+, \d\d:\d\d$/,
-		);
 	});
 });
 

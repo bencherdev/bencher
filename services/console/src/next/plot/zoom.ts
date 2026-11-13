@@ -1,11 +1,7 @@
-import { formatDate, formatWhen, formatWhenSeconds } from "./format";
-import type { PlotXAxis } from "./types";
+import type { PlotLine } from "./types";
 
 /** An x range a plot is zoomed to, its smaller end first. */
 export type XRange = readonly [number, number];
-
-const MINUTE = 60_000;
-const DAY = 86_400_000;
 
 /** The span `[start, end)` of the indices of `x`, which ascends, inside `range`; every index when there is none. */
 export const within = (
@@ -36,6 +32,17 @@ const firstPast = (
 	return low;
 };
 
+/** A line's points at the indices `[start, end)`, with its lower and upper bounds at the same indices. */
+export const pointsIn = (
+	{ y, lower, upper }: Pick<PlotLine, "y" | "lower" | "upper">,
+	start: number,
+	end: number,
+): Pick<PlotLine, "y" | "lower" | "upper"> => ({
+	y: y.slice(start, end),
+	...(lower && { lower: lower.slice(start, end) }),
+	...(upper && { upper: upper.slice(start, end) }),
+});
+
 /** Whether any of the `columns` has points at 2 or more x inside `range`. */
 export const holdsTwo = (
 	x: readonly number[],
@@ -57,17 +64,6 @@ export const holdsTwo = (
 		}
 	}
 	return false;
-};
-
-/** The span a zoom shows: its dates, as the date axis labels them at that span, or the versions inside it. */
-export const zoomSpan = ([min, max]: XRange, axis: PlotXAxis): string => {
-	if (axis !== "date") {
-		return `${Math.ceil(min)} to ${Math.floor(max)}`;
-	}
-	const span = max - min;
-	const format =
-		span < MINUTE ? formatWhenSeconds : span < DAY ? formatWhen : formatDate;
-	return `${format(min)} to ${format(max)}`;
 };
 
 /** The fraction of a range's width under which a narrower range is the same range: what the narrowest pinch's search leaves over. */

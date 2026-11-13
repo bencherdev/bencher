@@ -18,7 +18,7 @@ import { type Api, ApiError, type Method } from "../api";
 import { budget } from "../budget";
 import { createQueryClient } from "../cache";
 import { PROJECTS_PATH } from "../paths";
-import { middle, rowsOf, tokenRgb } from "../plot/pixels";
+import { drawnDuring, middle, rowsOf, tokenRgb, xLabels } from "../plot/pixels";
 import { placed } from "../plots/order";
 import { testTile } from "../plots/testing";
 import { ProjectContext } from "../project";
@@ -788,30 +788,43 @@ test("a tile's pinned readout links to its point's report", async () => {
 // as the answer at its own window comes back from the cache.
 test("a tile zoomed at Per plot comes back unzoomed after a page window", async () => {
 	const { api } = plotsApi(1);
-	mount(api, newClient(api, 1));
-	await expect.element(figure("Pin 1")).toHaveAccessibleName("2 lines over 4w");
 	const plot = figure("Pin 1").getByRole("group", { name: /lines?,/ });
-	await expect.element(plot).toBeVisible();
+	const full = xLabels(
+		await drawnDuring(async () => {
+			mount(api, newClient(api, 1));
+			await expect
+				.element(figure("Pin 1"))
+				.toHaveAccessibleName("2 lines over 4w");
+			await expect.element(plot).toBeVisible();
+		}),
+	);
 	const box = plot.element().getBoundingClientRect();
 	const spot = (fraction: number) => ({
 		position: { x: box.width * fraction, y: box.height - 8 },
 	});
-	await plot.hover(spot(0.15));
-	await commands.mouseDown();
-	await plot.hover(spot(0.85));
-	await commands.mouseUp();
-	const zoom = page
-		.getByRole("region", { name: "Pin 1", exact: true })
-		.getByRole("group", { name: "Zoom" });
-	await expect.element(zoom).toBeInTheDocument();
+	const zoomed = xLabels(
+		await drawnDuring(async () => {
+			await plot.hover(spot(0.15));
+			await commands.mouseDown();
+			await plot.hover(spot(0.85));
+			await commands.mouseUp();
+		}),
+	);
+	expect(zoomed.length).toBeGreaterThan(0);
+	expect(zoomed).not.toEqual(full);
 	const windowGroup = page.getByRole("radiogroup", { name: "Window" });
 	await windowGroup.getByRole("radio", { name: "1w" }).click();
 	await expect.element(figure("Pin 1")).toHaveAccessibleName("2 lines over 1w");
-	expect(zoom.query()).toBeNull();
-	await windowGroup.getByRole("radio", { name: "Per plot" }).click();
-	await expect.element(figure("Pin 1")).toHaveAccessibleName("2 lines over 4w");
-	await new Promise((resolve) => setTimeout(resolve, 300));
-	expect(zoom.query()).toBeNull();
+	const back = xLabels(
+		await drawnDuring(async () => {
+			await windowGroup.getByRole("radio", { name: "Per plot" }).click();
+			await expect
+				.element(figure("Pin 1"))
+				.toHaveAccessibleName("2 lines over 4w");
+			await new Promise((resolve) => setTimeout(resolve, 300));
+		}),
+	);
+	expect(back).toEqual(full);
 });
 
 // Kills a custom page window that a tile's footer names as its own window, or by any other length than it draws.
