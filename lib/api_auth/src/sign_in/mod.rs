@@ -2,8 +2,8 @@
 
 use bencher_endpoint::{Post, ResponseAccepted};
 use bencher_json::{
-    BindingSecret, DateTime, Email, JsonSignInEmail, JsonSignedIn, Jwt, OrganizationUuid,
-    SessionMethod, SessionToken, SignInRefusal, UserName,
+    BindingSecret, DateTime, Email, JsonSignInEmail, JsonSignedIn, OrganizationUuid, SessionMethod,
+    SessionToken, SignInRefusal, UserName,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{NonEmpty, SignInProvider};
@@ -13,9 +13,12 @@ use bencher_schema::{
     context::{ApiContext, Body, DbConnection, Message, SignInBody},
     error::{forbidden_error, issue_error, service_unavailable_error, unauthorized_error},
     model::{
-        organization::QueryOrganization,
+        organization::{
+            QueryOrganization,
+            invite::{Accepted, InviteId, QueryInvite},
+        },
         user::{
-            InsertUser, Invited, QueryUser,
+            InsertUser, QueryUser,
             session::{
                 InsertSession, QuerySession, SessionId,
                 cookie::{
@@ -461,7 +464,6 @@ impl TxError {
 /// place of any the browser presented.
 fn prove(
     conn: &mut DbConnection,
-    context: &ApiContext,
     pending: &QueryPendingSignIn,
     presented: &Presented<'_>,
     now: DateTime,
@@ -478,14 +480,7 @@ fn prove(
             InsertUser::sign_up(conn, UserName::from_email(email), None, email.clone())?;
         (user, Some(insert_user))
     };
-    let (invited, claimed) = join(
-        conn,
-        context,
-        pending.invite.as_ref(),
-        pending.claim,
-        &user,
-        now,
-    )?;
+    let (invited, claimed) = join(conn, pending.invite_id, pending.claim, &user, now)?;
     if new.is_some() && !invited && !claimed {
         InsertUser::personal_organization(conn, &user)?;
     }
@@ -543,21 +538,26 @@ pub(crate) fn begin_session(
     Ok(token)
 }
 
-/// Join the organization the sign-in's invite or claim names, unless that no longer applies:
-/// the organization is gone, the user already belongs to it, or someone else claimed it.
-/// An invite, applied or not, keeps the claim from being considered.
-/// Returns whether the user joined by the invite, and whether by the claim.
+/// Join the organization the sign-in's invitation or claim names, unless that no longer applies:
+/// the invitation ended or expired, the organization is gone, the user already belongs to it, or
+/// someone else claimed it. An invitation, applied or not, keeps the claim from being considered.
+/// Returns whether the user joined by the invitation, and whether by the claim.
 pub(crate) fn join(
     conn: &mut DbConnection,
-    context: &ApiContext,
-    invite: Option<&Jwt>,
+    invite: Option<InviteId>,
     claim: Option<OrganizationUuid>,
     user: &QueryUser,
     now: DateTime,
 ) -> Result<(bool, bool), TxError> {
     if let Some(invite) = invite {
-        let invited = user.accept_invite_with(conn, &context.token_key, invite, now)?;
-        return Ok((invited == Invited::Joined, false));
+        let invited = if let Some((query_invite, _query_organization)) =
+            QueryInvite::find(conn, invite, now)?
+        {
+            query_invite.accept(conn, user, now)? == Accepted::Joined
+        } else {
+            false
+        };
+        return Ok((invited, false));
     }
     if let Some(claim) = claim
         && let Some(organization) = QueryOrganization::find(conn, claim)?

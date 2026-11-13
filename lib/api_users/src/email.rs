@@ -4,7 +4,7 @@ use bencher_json::{DateTime, Email, JsonConfirm, JsonUser};
 use bencher_schema::model::organization::sso::QuerySso;
 use bencher_schema::{
     AUTH_TOKEN_TTL, auth_conn,
-    context::{ApiContext, Body, ButtonBody, Message},
+    context::{ApiContext, Body, ButtonBody, Clipboard, Message},
     error::{
         BencherResource, forbidden_error, issue_error, resource_conflict_err,
         resource_conflict_error, resource_not_found_err, unauthorized_error,
@@ -185,8 +185,10 @@ pub fn confirm_message(
                 url.into()
             })
             .unwrap_or_default(),
-        clipboard_text: "New Email".into(),
-        clipboard_target: new_email.to_string(),
+        clipboard: Some(Clipboard {
+            text: "New Email".into(),
+            target: new_email.to_string(),
+        }),
         post_body: "If you did not ask for this, you can ignore this email.".into(),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),

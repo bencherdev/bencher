@@ -1,4 +1,4 @@
-use bencher_valid::{DateTime, Email, Jwt, NonEmpty, PlanLevel, ProviderState, Secret};
+use bencher_valid::{DateTime, Email, InviteSecret, NonEmpty, PlanLevel, ProviderState, Secret};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -45,8 +45,9 @@ impl From<SignInProvider> for SessionMethod {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonProviderStart {
-    /// An invitation to an organization, accepted once an address it is for is proven.
-    pub invite: Option<Jwt>,
+    /// The secret of an invitation to an organization, accepted once an address it is for is
+    /// proven.
+    pub invite: Option<InviteSecret>,
     /// An unclaimed organization, claimed once the reader signs in.
     pub claim: Option<OrganizationUuid>,
     pub plan: Option<PlanLevel>,

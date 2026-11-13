@@ -13,7 +13,7 @@ import type {
 	JsonProject,
 	JsonThreshold,
 } from "../src/types/bencher";
-import { createMember, send } from "./api";
+import { createMember, invite, send } from "./api";
 import {
 	consolePath,
 	crumb,
@@ -293,12 +293,18 @@ const seedAtCaps = async (request: APIRequestContext) => {
 		name: fill(`${tag} user key`, 64, "k"),
 	});
 	await createMember(
-		request,
 		organization,
+		reader,
 		await signUp({
 			name: fill(`${tag} Member`, 64, "n"),
 			email: email("member"),
 		}),
+	);
+	// One invitation waits, at the longest address, for the door and Members.
+	const { secret: invited } = await invite(
+		reader,
+		organization,
+		email("invitee"),
 	);
 
 	const alerts = await list<JsonAlert[]>("alerts?per_page=255");
@@ -335,6 +341,7 @@ const seedAtCaps = async (request: APIRequestContext) => {
 
 	return {
 		reader,
+		invited,
 		organization: organization.slug,
 		slug,
 		run: run.uuid,
@@ -432,10 +439,7 @@ const groups = (
 		],
 		"auth pages": [
 			["Sign in", "/auth/login"],
-			[
-				"Sign up, invited at the caps",
-				`/auth/signup?${new URLSearchParams({ invite: shapedJwt(s.reader.user.email) })}`,
-			],
+			["Sign up, invited at the caps", `/auth/signup#invite=${s.invited}`],
 			[
 				"Check your inbox, an old link at the caps",
 				`/auth/confirm?${new URLSearchParams({ token: shapedJwt(s.reader.user.email) })}`,

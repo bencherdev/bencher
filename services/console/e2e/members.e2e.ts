@@ -11,8 +11,9 @@ test.use({ storageState: signedIn(seed.member) });
 
 test.describe("Members", () => {
 	// Kills an invite that never reaches the API, goes without the Leader role,
-	// says nothing once sent, or lists someone who has not yet accepted.
-	test("an invite reaches the API and says it was sent, adding no row", async ({
+	// says nothing once sent, or lists someone who has not yet accepted among
+	// the members.
+	test("an invite reaches the API and says it was sent, adding no member", async ({
 		page,
 		request,
 	}) => {
@@ -35,7 +36,7 @@ test.describe("Members", () => {
 		expect(sent.status()).toBe(202);
 		expect(sent.request().postDataJSON()).toEqual({ email, role: "leader" });
 		await expect(page.getByRole("main").getByRole("status")).toHaveText(
-			"Invitation sent",
+			`Invitation sent to ${email}`,
 		);
 		// The header row and the reader's own.
 		await expect(table(page).getByRole("row")).toHaveCount(2);

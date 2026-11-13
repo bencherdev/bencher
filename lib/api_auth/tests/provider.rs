@@ -31,11 +31,9 @@ use bencher_json::{
     BindingSecret, BindingSecretHash, Clock, DateTime, JsonOAuthUrl, JsonProviderInbox,
     JsonProviderSignIn, JsonSession, JsonSignedIn, OAuthCodeChallenge, OAuthCodeVerifier,
     OrganizationUuid, PlanLevel, ProviderState, ProviderStateHash, SessionMethod, SessionToken,
-    SessionTokenHash, SignInCode, UserSlug, organization::member::OrganizationRole,
-    system::config::JsonRateLimiting,
+    SessionTokenHash, SignInCode, UserSlug, system::config::JsonRateLimiting,
 };
 use bencher_schema::{
-    INVITE_TOKEN_TTL,
     context::RateLimiting,
     model::user::session::cookie::{PendingCookie, ProviderCookie, SessionCookie},
     schema,
@@ -600,19 +598,11 @@ async fn invite_joins_only_for_the_address_the_provider_verified() {
     let org = server.create_org(&admin, "Invited").await;
 
     for (email, joins) in [("grace@example.com", true), ("bob@example.com", false)] {
-        let invite = server
-            .token_key()
-            .new_invite(
-                email.parse().expect("Invalid email"),
-                INVITE_TOKEN_TTL,
-                org.uuid,
-                OrganizationRole::Leader,
-            )
-            .expect("Failed to make an invite");
+        let invite = server.invite(&admin, &org, email);
         let resp = start_raw(
             &server,
             "github",
-            &json!({"invite": invite}),
+            &json!({"invite": invite.as_ref()}),
             &[SAME_ORIGIN],
         )
         .await;
@@ -655,20 +645,12 @@ async fn pinned_sign_in_skips_an_invite_for_the_providers_other_address() {
     let Harness { server, admin, .. } = harness(&github.base(), &google.base()).await;
     let org = server.create_org(&admin, "Invited").await;
     let (ada, _session) = sign_in(&server, "github", None).await;
-    let invite = server
-        .token_key()
-        .new_invite(
-            "ada@elsewhere.example".parse().expect("Invalid email"),
-            INVITE_TOKEN_TTL,
-            org.uuid,
-            OrganizationRole::Leader,
-        )
-        .expect("Failed to make an invite");
+    let invite = server.invite(&admin, &org, "ada@elsewhere.example");
 
     let resp = start_raw(
         &server,
         "github",
-        &json!({"invite": invite}),
+        &json!({"invite": invite.as_ref()}),
         &[SAME_ORIGIN],
     )
     .await;
@@ -684,6 +666,104 @@ async fn pinned_sign_in_skips_an_invite_for_the_providers_other_address() {
     let (json, _session) = signed_in(&server, resp, SessionMethod::Github).await;
     assert_eq!(json.user.uuid, ada.user.uuid);
     assert!(!user_organizations(&server, ada.user.uuid).contains(&org.uuid));
+
+    github.received().await;
+}
+
+// The same pinned account, now with an invite for its user's own address: the provider names
+// another address, so it did not verify the invited one, and the invite joins nothing.
+// Kills a pinned sign-in that accepts an invite for any address but the one the provider verified.
+#[tokio::test]
+async fn pinned_sign_in_skips_an_invite_for_the_users_unverified_address() {
+    let github = GitHubServer::start(
+        [
+            github_account(4, "ada", "ada@example.com"),
+            github_account(4, "ada", "ada@elsewhere.example"),
+        ]
+        .concat(),
+    )
+    .await;
+    let google = Unscripted::bind().await;
+    let Harness { server, admin, .. } = harness(&github.base(), &google.base()).await;
+    let org = server.create_org(&admin, "Invited").await;
+    let (ada, _session) = sign_in(&server, "github", None).await;
+    let invite = server.invite(&admin, &org, "ada@example.com");
+
+    let resp = start_raw(
+        &server,
+        "github",
+        &json!({"invite": invite.as_ref()}),
+        &[SAME_ORIGIN],
+    )
+    .await;
+    let started = Started::read(resp).await;
+    let resp = finish(
+        &server,
+        "github",
+        Some(&started.binding),
+        &started.state(),
+        None,
+    )
+    .await;
+    let (json, _session) = signed_in(&server, resp, SessionMethod::Github).await;
+    assert_eq!(json.user.uuid, ada.user.uuid);
+    assert!(!user_organizations(&server, ada.user.uuid).contains(&org.uuid));
+
+    github.received().await;
+}
+
+// A revoke during a provider sign-in drops the invite it carries and keeps the sign-in, which then
+// signs the reader in with an organization of their own.
+// Kills a revoke that ends the provider sign-ins carrying the invite.
+#[tokio::test]
+async fn revoke_during_a_provider_sign_in_drops_only_the_invite() {
+    let github = GitHubServer::start(github_account(1, "grace", "grace@example.com")).await;
+    let google = Unscripted::bind().await;
+    let Harness { server, admin, .. } = harness(&github.base(), &google.base()).await;
+    let org = server.create_org(&admin, "Invited").await;
+    let invite = server.invite(&admin, &org, "grace@example.com");
+    let resp = start_raw(
+        &server,
+        "github",
+        &json!({"invite": invite.as_ref()}),
+        &[SAME_ORIGIN],
+    )
+    .await;
+    let started = Started::read(resp).await;
+
+    let uuid: String = schema::invite::table
+        .select(schema::invite::uuid)
+        .first(&mut server.db_conn())
+        .expect("No invitation");
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{}/invites/{uuid}", org.slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&admin.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    let carried: Vec<Option<i32>> = schema::provider_state::table
+        .select(schema::provider_state::invite_id)
+        .load(&mut server.db_conn())
+        .expect("Failed to read the provider sign-ins");
+    assert_eq!(carried, [None]);
+
+    let resp = finish(
+        &server,
+        "github",
+        Some(&started.binding),
+        &started.state(),
+        None,
+    )
+    .await;
+    let (json, _session) = signed_in(&server, resp, SessionMethod::Github).await;
+    let organizations = user_organizations(&server, json.user.uuid);
+    assert!(!organizations.contains(&org.uuid));
+    assert!(organizations.contains(&OrganizationUuid::from(json.user.uuid)));
 
     github.received().await;
 }
@@ -866,19 +946,11 @@ async fn provider_email_carries_only_an_invite_for_its_address() {
     let org = server.create_org(&admin, "Invited").await;
 
     for (email, joins) in [("bob@example.com", false), ("ada@example.com", true)] {
-        let invite = server
-            .token_key()
-            .new_invite(
-                email.parse().expect("Invalid email"),
-                INVITE_TOKEN_TTL,
-                org.uuid,
-                OrganizationRole::Leader,
-            )
-            .expect("Failed to make an invite");
+        let invite = server.invite(&admin, &org, email);
         let resp = start_raw(
             &server,
             "github",
-            &json!({"invite": invite}),
+            &json!({"invite": invite.as_ref()}),
             &[SAME_ORIGIN],
         )
         .await;
@@ -1516,8 +1588,8 @@ async fn provider_endpoints_need_the_console_origin_and_charge_the_reader() {
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
-// The start checks what the sign-in carries before it makes anything: an invite must be valid and
-// a claim's organization must exist.
+// The start checks what the sign-in carries before it makes anything: an invitation must be one a
+// row holds, and a claim's organization must exist.
 // Kills a start that keeps an invalid invite or an unknown organization for the finish.
 #[tokio::test]
 async fn start_checks_what_the_sign_in_carries() {
@@ -1526,7 +1598,7 @@ async fn start_checks_what_the_sign_in_carries() {
     let Harness { server, .. } = harness(&github.base(), &google.base()).await;
     for (body, status, code) in [
         (
-            json!({"invite": bencher_json::Jwt::test_token()}),
+            json!({"invite": bencher_json::InviteSecret::generate().expect("Failed to make a secret").as_ref()}),
             StatusCode::BAD_REQUEST,
             "invalid_invite",
         ),

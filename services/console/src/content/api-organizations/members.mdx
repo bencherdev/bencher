@@ -24,4 +24,13 @@ paths:
     method: delete
     headers: auth
     cli: member remove ORGANIZATION USER
+  - path: /v0/organizations/{organization}/invites
+    method: get
+    headers: auth
+  - path: /v0/organizations/{organization}/invites/{invite}/resend
+    method: post
+    headers: auth
+  - path: /v0/organizations/{organization}/invites/{invite}
+    method: delete
+    headers: auth
 ---
