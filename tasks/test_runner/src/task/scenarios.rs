@@ -56,6 +56,9 @@ struct Scenario {
     cancelled_while_preparing: bool,
     /// Whether to use `--sandbox firecracker` (default: true).
     sandboxed: bool,
+    /// Run up to this many times while the scenario's run fails, each a full
+    /// run of its own (default: 1). A leak or a failed setup is never retried.
+    attempts: u8,
     setup: Option<fn() -> Result<()>>,
     /// Runs whatever the outcome, including after a `setup` that failed part way.
     teardown: Option<fn() -> Result<()>>,
@@ -133,6 +136,7 @@ impl Default for Scenario {
             control_marker: None,
             // Most scenarios are sandboxed, so the few that are not opt out.
             sandboxed: true,
+            attempts: 1,
             validate: |_output| Ok(()),
         }
     }
@@ -322,8 +326,26 @@ fn run_all_scenarios(scenarios: &[Scenario], runner_bin: &Utf8Path) -> Result<()
     Ok(())
 }
 
-/// Run a single scenario.
+/// Run a single scenario, again while it fails and attempts remain.
 fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
+    for attempt in 1..scenario.attempts {
+        match run_attempt(scenario, runner_bin)? {
+            Ok(()) => return Ok(()),
+            Err(e) => println!(
+                "\n  attempt {attempt} of {} failed, retrying: {e:#}",
+                scenario.attempts
+            ),
+        }
+    }
+    run_attempt(scenario, runner_bin)?
+}
+
+/// Run a scenario once.
+///
+/// The inner result is the scenario's own verdict, the only failure a retry may
+/// answer. The outer one is final, so a retry can never hide what an attempt
+/// left behind.
+fn run_attempt(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<Result<()>> {
     // Build the Docker image
     let image_path = build_test_image(scenario.name, scenario.dockerfile)
         .with_context(|| format!("Failed to build image for {}", scenario.name))?;
@@ -358,20 +380,17 @@ fn run_scenario(scenario: &Scenario, runner_bin: &Utf8Path) -> Result<()> {
                 .with_context(|| format!("Failed to reclaim what {} stranded", scenario.name))?,
         );
     }
-    outcome?;
-    anyhow::ensure!(
-        stranded.is_empty(),
-        "{} left behind: {}",
-        scenario.name,
-        stranded.join(", ")
-    );
+    if !stranded.is_empty() {
+        outcome?;
+        bail!("{} left behind: {}", scenario.name, stranded.join(", "));
+    }
+    if outcome.is_ok() {
+        drop(fs::remove_dir_all(
+            image_path.parent().unwrap_or(&image_path),
+        ));
+    }
 
-    // Cleanup
-    drop(fs::remove_dir_all(
-        image_path.parent().unwrap_or(&image_path),
-    ));
-
-    Ok(())
+    Ok(outcome)
 }
 
 /// The state directory the runner is pointed at, and the mount it needs if any.
@@ -1639,6 +1658,10 @@ CMD ["printf", "%s_%s\\n", "NEVER", "RUN"]"#,
             dockerfile: r#"FROM busybox
 CMD ["sh", "-c", "echo triple > /sys/kernel/reboot/type && printf '%s_%s\\n' REBOOT $(cat /sys/kernel/reboot/type)"]"#,
             extra_args: &["--timeout", "60"],
+            // Firecracker's vCPU writes its exit event before it sends its
+            // `Exited` response, so a VMM that reads the event first reports Ok
+            // on a triple fault.
+            attempts: 2,
             // The guest's results are on its drive before it resets, so the run
             // still reports them.
             validate: |output| {
