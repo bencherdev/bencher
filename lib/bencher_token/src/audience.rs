@@ -3,7 +3,6 @@ use std::fmt;
 const AUDIENCE_AUTH: &str = "auth";
 const AUDIENCE_CLIENT: &str = "client";
 const AUDIENCE_API_KEY: &str = "api_key";
-const AUDIENCE_EMAIL_CHANGE: &str = "email_change";
 const AUDIENCE_OCI_PUBLIC: &str = "oci_public";
 const AUDIENCE_OCI_AUTH: &str = "oci_auth";
 const AUDIENCE_OCI_PROJECT: &str = "oci_project";
@@ -16,7 +15,6 @@ pub enum Audience {
     Auth,
     Client,
     ApiKey,
-    EmailChange,
     OciPublic,
     OciAuth,
     OciProject,
@@ -31,7 +29,6 @@ impl Audience {
             Self::Auth => AUDIENCE_AUTH,
             Self::Client => AUDIENCE_CLIENT,
             Self::ApiKey => AUDIENCE_API_KEY,
-            Self::EmailChange => AUDIENCE_EMAIL_CHANGE,
             Self::OciPublic => AUDIENCE_OCI_PUBLIC,
             Self::OciAuth => AUDIENCE_OCI_AUTH,
             Self::OciProject => AUDIENCE_OCI_PROJECT,

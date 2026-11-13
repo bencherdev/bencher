@@ -217,10 +217,9 @@ test.describe("accessibility", () => {
 
 	// Kills contrast, names, and roles that fail axe in either theme.
 	test("Organizations passes axe in both themes", async ({ page }) => {
+		// Other tests add the member's organizations, so the seed's may sort past the rows drawn.
 		await axeInBothThemes(page, ORGANIZATIONS, () =>
-			expect(
-				table(page).getByRole("link", { name: seed.organization.name }),
-			).toBeVisible(),
+			expect(table(page).getByRole("row").nth(1)).toBeVisible(),
 		);
 	});
 });

@@ -1,15 +1,17 @@
 import { For, type JSX } from "solid-js";
-import { ORGANIZATIONS_PATH, profilePath } from "../paths";
+import { ORGANIZATIONS_PATH, SERVER_USERS_PATH, profilePath } from "../paths";
+import { useAccount } from "./context";
 import { accountPath } from "./paths";
 
-type Section = "profile" | "keys" | "apps" | "organizations";
+type Section = "profile" | "keys" | "apps" | "organizations" | "users";
 
-/** The account's sections, as Settings' rail. */
+/** The account's sections, as Settings' rail, and the server's users for a server admin. */
 const Frame = (props: {
 	user: string;
 	section: Section;
 	children: JSX.Element;
 }) => {
+	const { reader } = useAccount();
 	const sections = (): { section: Section; label: string; href: string }[] => [
 		{ section: "profile", label: "Profile", href: profilePath(props.user) },
 		{ section: "keys", label: "Keys", href: accountPath(props.user, "keys") },
@@ -23,6 +25,9 @@ const Frame = (props: {
 			label: "Organizations",
 			href: ORGANIZATIONS_PATH,
 		},
+		...(reader().admin
+			? [{ section: "users" as const, label: "Users", href: SERVER_USERS_PATH }]
+			: []),
 	];
 	const links = () => (
 		<For each={sections()}>
