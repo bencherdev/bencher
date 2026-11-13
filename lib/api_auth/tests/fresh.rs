@@ -22,8 +22,8 @@ use bencher_api_tests::{
 };
 use bencher_json::{
     Clock, DateTime, JsonFreshSignIn, JsonOAuthUrl, JsonProved, JsonProviderSignIn, JsonSignInAs,
-    JsonSignInEmail, PlanLevel, SessionToken, SessionTokenHash, SignInCode, SignInProvider,
-    TRIES_LEFT, UserKey,
+    JsonSignInEmail, SessionToken, SessionTokenHash, SignInCode, SignInProvider, TRIES_LEFT,
+    UserKey,
 };
 use bencher_schema::{
     context::RateLimiting,
@@ -1676,9 +1676,7 @@ impl Harness {
         .await;
         let admin = server.signup("Admin", "admin@license.example").await;
         let org = server.create_org(&admin, "Licensed").await;
-        server
-            .license_org(&admin, &org, PlanLevel::Enterprise)
-            .await;
+        server.license_org(&admin, &org).await;
         Self {
             server,
             clock,

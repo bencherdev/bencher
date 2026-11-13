@@ -191,6 +191,8 @@ struct Scene {
     report_ok_then_fail: Option<(&'static str, usize)>,
     /// The name GitHub answers a check completion with, as if it normalized the request's.
     completed_name: Option<&'static str>,
+    /// What the report that answers the run says about its organization's license.
+    run_license: Option<serde_json::Value>,
 }
 
 /// An answer to a list of the check runs on the head SHA.
@@ -225,6 +227,7 @@ impl Default for Scene {
             report_failures: Vec::new(),
             report_ok_then_fail: None,
             completed_name: None,
+            run_license: None,
         }
     }
 }
@@ -680,7 +683,13 @@ fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static
             OK,
             serde_json::json!({ "url": "http://localhost:3000" }).to_string(),
         ),
-        ("POST", "/v0/run") => (CREATED, json_report().to_string()),
+        ("POST", "/v0/run") => {
+            let mut report = json_report();
+            if let (Some(license), Some(report)) = (&scene.run_license, report.as_object_mut()) {
+                report.insert("license".to_owned(), license.clone());
+            }
+            (CREATED, report.to_string())
+        },
         ("GET", JOB_PATH) => match job_read {
             JobRead::Callback(state) => (
                 OK,
@@ -1185,6 +1194,48 @@ fn job_read_uses_the_report_project() {
     run.assert_success();
     assert_eq!(run.job_reads(), 1);
     assert_eq!(run.stderr_lines(), [submitted(), SKIPPED.to_owned()]);
+}
+
+/// A detached run against a stand-in whose run report says `license` about its organization.
+fn detach_with_license(license: serde_json::Value, args: &[&str]) -> Run {
+    bencher_run_in_scene(
+        StandIn {
+            job_read: JobRead::Callback("skipped"),
+            version: VersionRead::Current,
+            check_runs: CheckRuns::Create,
+        },
+        Scene {
+            run_license: Some(license),
+            ..Scene::default()
+        },
+        None,
+        &[],
+        &[&ATTEMPTS[..], &PROJECT, &DETACH, args].concat(),
+    )
+}
+
+// Fails if a run whose report says the organization is over its license prints nothing, or
+// prints it under `--quiet`.
+#[test]
+fn run_prints_the_license_warning_of_its_report() {
+    const OVER: &str = "Warning: The organization has 3 Benchmark Series active in the last 30 days, more than the 2 its Bencher Plus Enterprise license covers.";
+    let license = serde_json::json!({ "over": { "active_series": 3, "series": 2 } });
+
+    let run = detach_with_license(license.clone(), &[]);
+    run.assert_success();
+    assert!(
+        run.stderr_lines().iter().any(|line| line == OVER),
+        "{}",
+        run.stderr()
+    );
+
+    let run = detach_with_license(license, &["--quiet"]);
+    run.assert_success();
+    assert!(
+        !run.stderr().contains("Benchmark Series"),
+        "{}",
+        run.stderr()
+    );
 }
 
 #[test]

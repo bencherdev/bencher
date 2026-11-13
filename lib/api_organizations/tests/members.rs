@@ -11,7 +11,7 @@ use bencher_api_tests::{
     helpers::{grant_project_role, user_organizations},
 };
 use bencher_json::{
-    InviteSecret, JsonMembers, OrganizationUuid, PlanLevel, UserUuid,
+    InviteSecret, JsonMembers, OrganizationUuid, UserUuid,
     organization::member::{JsonNewMember, OrganizationRole},
 };
 use bencher_rbac::project::Role;
@@ -279,9 +279,7 @@ async fn removed_member_keeps_no_project_role() {
         .signup("Leader", "projectroleleader@example.com")
         .await;
     let org = server.create_org(&leader, "Project Role Org").await;
-    server
-        .license_org(&leader, &org, PlanLevel::Enterprise)
-        .await;
+    server.license_org(&leader, &org).await;
     let member = server
         .signup("Member", "projectrolemember@example.com")
         .await;
