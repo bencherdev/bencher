@@ -1,12 +1,12 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::{Biller, CustomerId};
+use bencher_billing::{Biller, CustomerId, HeldLicense, LicenseTerm, LicensedPlan};
 use bencher_json::{
     DateTime, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, Priority,
     organization::plan::JsonReportLicense, project::Visibility,
 };
-use bencher_license::{LicenseError, Licensor};
-use diesel::{BelongingToDsl as _, RunQueryDsl as _};
+use bencher_license::{LicenseClaims, LicenseError, Licensor};
+use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use slog::Logger;
 
@@ -23,6 +23,7 @@ use crate::{
         user::{actor::ApiActor, auth::AuthUser},
     },
     schema::{self, plan as plan_table},
+    write_transaction,
 };
 
 crate::macros::typed_id::typed_id!(PlanId);
@@ -55,37 +56,149 @@ impl QueryPlan {
             .map_err(resource_not_found_err!(Plan, self))
     }
 
+    /// The licensed plan, with the license that Bencher Cloud keeps for its Self-Hosted
+    /// organization to copy, expired or not. When the subscription is active and pays for a
+    /// later term than the license's, or for another count, a new license is signed and stored
+    /// in its place first.
+    ///
+    /// A staff error in Stripe or a change of Bencher Cloud's signing key never fails the read.
+    /// When an active subscription cannot pay for a new license, the license held stays and the
+    /// read logs why. A new license that does not verify, as when the private key does not match
+    /// the public key, is never stored, and the read logs why. A license that no longer verifies
+    /// is signed again by the same rule, and one that is not signed again is left out of the
+    /// plan, with a log line.
     pub async fn to_licensed_plan(
         &self,
+        log: &Logger,
+        context: &ApiContext,
         biller: &Biller,
-        licensor: &Licensor,
-        now: DateTime,
     ) -> Result<Option<JsonPlan>, HttpError> {
         let Some(licensed_plan_id) = &self.licensed_plan else {
             return Ok(None);
         };
 
-        let mut json_plan = biller
+        let licensed_plan = biller
             .get_licensed_plan(licensed_plan_id)
             .await
             .map_err(resource_not_found_err!(Plan, self))?;
 
-        let Some(license) = self.license.clone() else {
+        let Some(held) = self.license.clone() else {
             return Err(issue_error(
                 "Failed to find license for licensed plan",
                 &format!(
-                    "Failed to find license for plan ({self:?}) even though licensed plan exists ({json_plan:?}).",
+                    "Failed to find license for plan ({self:?}) even though licensed plan exists ({licensed_plan:?}).",
                 ),
                 "Failed to find license for licensed plan",
             ));
         };
+        let licensor = &context.licensor;
+        let (held_claims, verified) = match licensor.read(&held) {
+            Ok(claims) => (claims, true),
+            Err(error) => {
+                self.report(log, "The license held does not verify", &error);
+                // Bencher Cloud wrote the license itself, so its claims still name the
+                // Self-Hosted organization and the term it was signed for.
+                match LicenseClaims::read_unverified(&held) {
+                    Ok(claims) => (claims, false),
+                    Err(error) => {
+                        self.report(log, "The license held cannot be read", &error);
+                        return Ok(Some(licensed_plan.plan));
+                    },
+                }
+            },
+        };
+        let held_license = if verified {
+            HeldLicense::Verified(&held_claims)
+        } else {
+            HeldLicense::Unverified(&held_claims)
+        };
 
-        let json_license = licensor
-            .into_json(license, now)
-            .map_err(payment_required_error)?;
-        json_plan.license = Some(json_license);
+        let renewed = match licensed_plan.renewal(held_license) {
+            Ok(Some(term)) => {
+                let renewed = term
+                    .sign(licensor, held_claims.organization())
+                    .map_err(|e| {
+                        self.license_error("Failed to sign license for licensed plan", e)
+                    })?;
+                match licensor.read(&renewed) {
+                    Ok(_) => Some(self.store_renewal(context, renewed, term).await?),
+                    Err(error) => {
+                        self.report(
+                            log,
+                            "The new license does not verify, so Bencher Cloud stored none",
+                            &error,
+                        );
+                        None
+                    },
+                }
+            },
+            Ok(None) => None,
+            Err(error) => {
+                let what = if verified {
+                    "Bencher Cloud kept the license held and signed no new license"
+                } else {
+                    "Bencher Cloud signed no new license, and the plan shows none"
+                };
+                self.report(log, what, &error);
+                None
+            },
+        };
 
-        Ok(Some(json_plan))
+        let LicensedPlan { mut plan, .. } = licensed_plan;
+        plan.license = renewed
+            .or_else(|| verified.then_some(held))
+            .map(|license| licensor.into_json(license))
+            .transpose()
+            .map_err(|e| self.license_error("Failed to read license for licensed plan", e))?;
+        Ok(Some(plan))
+    }
+
+    /// Store `renewed`, the license signed for `term`, in place of the license the plan holds,
+    /// and return the license the plan holds after. The held license is read again under the
+    /// write lock, so of two reads that renew at once, one stores its license and the other
+    /// returns it, and a license for an earlier term never lands over a later one.
+    async fn store_renewal(
+        &self,
+        context: &ApiContext,
+        renewed: Jwt,
+        term: LicenseTerm,
+    ) -> Result<Jwt, HttpError> {
+        let now = context.clock.now();
+        let plan_query = schema::plan::table.filter(schema::plan::id.eq(self.id));
+        write_transaction!(context, |conn| {
+            let held: Option<Jwt> = plan_query.select(schema::plan::license).first(conn)?;
+            if let Some(held) = held
+                && context
+                    .licensor
+                    .read(&held)
+                    .is_ok_and(|claims| !claims.replaced_by(term.series, term.term_end))
+            {
+                return Ok(held);
+            }
+            diesel::update(plan_query)
+                .set((
+                    schema::plan::license.eq(&renewed),
+                    schema::plan::modified.eq(now),
+                ))
+                .execute(conn)?;
+            diesel::QueryResult::Ok(renewed)
+        })
+        .map_err(resource_conflict_err!(Plan, self))
+    }
+
+    fn license_error(&self, title: &str, error: LicenseError) -> HttpError {
+        issue_error(title, &format!("{title} for plan ({self:?})."), error)
+    }
+
+    /// Log `error`, which a read of this licensed plan works around, for staff.
+    fn report<E>(&self, log: &Logger, what: &str, error: &E)
+    where
+        E: std::error::Error + 'static,
+    {
+        let id = &self.licensed_plan;
+        slog::error!(log, "{what} for licensed plan ({id:?}): {error}");
+        #[cfg(feature = "sentry")]
+        sentry::capture_error(error);
     }
 
     pub async fn get_active_metered_plan(
@@ -140,6 +253,32 @@ pub struct InsertPlan {
 }
 
 impl InsertPlan {
+    /// The plan row for a Self-Hosted deal: its subscription, and the license that Bencher
+    /// Cloud signed for it. The organization that buys it holds no license of its own.
+    pub fn licensed_plan(
+        conn: &mut DbConnection,
+        licensed_plan_id: LicensedPlanId,
+        license: Jwt,
+        query_organization: &QueryOrganization,
+        now: DateTime,
+    ) -> Result<Self, HttpError> {
+        let insert_plan = Self {
+            organization_id: query_organization.id,
+            metered_plan: None,
+            licensed_plan: Some(licensed_plan_id),
+            license: Some(license),
+            created: now,
+            modified: now,
+        };
+
+        diesel::insert_into(schema::plan::table)
+            .values(&insert_plan)
+            .execute(conn)
+            .map_err(resource_conflict_err!(Plan, insert_plan))?;
+
+        Ok(insert_plan)
+    }
+
     pub fn metered_plan(
         conn: &mut DbConnection,
         metered_plan_id: MeteredPlanId,

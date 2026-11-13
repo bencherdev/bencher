@@ -30,6 +30,7 @@ use diesel::{BelongingToDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 
 // 30 days
 const DEFAULT_USAGE_HISTORY: Duration = Duration::from_hours(720);
@@ -71,11 +72,18 @@ pub async fn org_usage_get(
     path_params: Path<OrgUsageParams>,
 ) -> Result<ResponseOk<JsonUsage>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    let json = get_inner(
+        &rqctx.log,
+        rqctx.context(),
+        path_params.into_inner(),
+        &auth_user,
+    )
+    .await?;
     Ok(Get::auth_response_ok(json))
 }
 
 async fn get_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: OrgUsageParams,
     auth_user: &AuthUser,
@@ -92,7 +100,7 @@ async fn get_inner(
     let now = context.clock.now();
     // Bencher Cloud
     if let Ok(biller) = context.biller() {
-        cloud_plan_usage(context, biller, &query_organization).await
+        cloud_plan_usage(log, context, biller, &query_organization).await
     // Self-Hosted Licensed
     } else if let Some(license) =
         OrganizationLicense::get_valid(&context.licensor, &query_organization, now)
@@ -145,6 +153,7 @@ fn licensed_usage(
 /// Usage for a Bencher Cloud organization: a metered plan, a licensed plan managed via
 /// Bencher Cloud, or Cloud Free when the organization has no plan.
 async fn cloud_plan_usage(
+    log: &Logger,
     context: &ApiContext,
     biller: &Biller,
     query_organization: &QueryOrganization,
@@ -189,26 +198,20 @@ async fn cloud_plan_usage(
             runner_minutes: Some(runner_minutes),
         })
     // Licensed plan
-    } else if let Some(json_plan) = query_plan
-        .to_licensed_plan(biller, &context.licensor, context.clock.now())
-        .await?
-    {
-        let Some(json_license) = json_plan.license.clone() else {
-            return Err(issue_error(
-                "No license JSON found for licensed plan",
-                &format!(
-                    "Failed to find license for licensed plan ({query_plan:?}) as JSON ({json_plan:?})",
-                ),
-                "License JSON not found",
-            ));
-        };
-        let start_time = json_license.issued_at;
-        let end_time = json_license.expiration;
+    } else if let Some(json_plan) = query_plan.to_licensed_plan(log, context, biller).await? {
+        // Bencher Cloud counts nothing for a Self-Hosted server, so the usage runs from the
+        // license's issue, or the start of the period when the read left the license out, to the
+        // server's time, by which the console tells its grace.
+        let license = json_plan.license.clone();
+        let start_time = license
+            .as_ref()
+            .map_or(json_plan.current_period_start, |license| license.issued_at);
+        let end_time = context.clock.now();
         Ok(JsonUsage {
             organization: query_organization.uuid,
             kind: UsageKind::CloudSelfHostedLicensed,
             plan: Some(json_plan),
-            license: Some(json_license),
+            license,
             start_time,
             end_time,
             metrics: None,

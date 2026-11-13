@@ -2531,6 +2531,12 @@ export interface JsonPlanPortal {
 export interface JsonPlanSubscription {
 	/** The Stripe subscription. */
 	subscription: NonEmpty;
+	/**
+	 * The Self-Hosted organization that the subscription buys a license for. Bencher Cloud
+	 * signs the license, and the organization that the subscription is attached to keeps it
+	 * to copy.
+	 */
+	self_hosted?: Uuid;
 }
 
 /** A project's link to GitHub. */

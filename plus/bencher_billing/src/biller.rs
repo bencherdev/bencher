@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fmt};
 
 use bencher_json::{
-    DateTime, Email, JsonPriceTier, LicensedPlanId, MeteredPlanId, OrganizationUuid, PlanLevel,
-    PlanStatus,
+    DateTime, Email, Entitlements, JsonPriceTier, Jwt, LicensedPlanId, MeteredPlanId,
+    OrganizationUuid, PlanLevel, PlanStatus,
     organization::plan::{
         ACTIVE_SERIES_METER_NAME, CollectionMethod, JsonCardDetails, JsonNewPlan, JsonPlan,
         JsonPlanCheckout, JsonPlanSubscription, RUNNER_MINUTES_METER_NAME, TiersMode,
@@ -12,6 +12,7 @@ use bencher_json::{
         payment::{JsonCard, JsonCheckout, JsonCustomer},
     },
 };
+use bencher_license::{LicenseClaims, LicenseError, Licensor};
 use stripe::Client as StripeClient;
 use stripe_billing::{
     BillingMeterEvent, Subscription, SubscriptionId, SubscriptionItem, SubscriptionStatus,
@@ -44,12 +45,14 @@ use stripe_shared::{Customer, CustomerId, PriceTiersMode, SubscriptionCollection
 use stripe_types::{Currency, Expandable};
 
 use crate::{
-    AttachError, AttachRefusal, BillingError, PlanItemError,
+    AttachError, AttachRefusal, BillingError, LicenseTermError, PlanItemError, RenewalError,
     products::{Products, to_json_tier},
 };
 
 const METADATA_UUID: &str = "uuid";
 const METADATA_ORGANIZATION: &str = "organization";
+/// The Benchmark Series that a subscription for a Self-Hosted deal pays for.
+const METADATA_SERIES: &str = "series";
 
 /// What a plan read expands: the payer and its payment method for invoices, the
 /// subscription's own payment method, and the tiers of each item's price.
@@ -129,6 +132,81 @@ impl fmt::Display for PlanId {
     }
 }
 
+/// A subscription attached to an organization, and its plan as the attach read it.
+#[derive(Debug)]
+pub enum Attachment {
+    /// A Bencher Cloud plan for the organization.
+    Metered(MeteredPlanId, JsonPlan),
+    /// A Self-Hosted deal, with the first license that Bencher Cloud signed for it.
+    Licensed(LicensedPlanId, Jwt, JsonPlan),
+}
+
+/// A licensed plan as Stripe has it now, and the term of the license that its subscription pays
+/// for now.
+#[derive(Debug)]
+pub struct LicensedPlan {
+    pub plan: JsonPlan,
+    pub term: Result<LicenseTerm, LicenseTermError>,
+}
+
+impl LicensedPlan {
+    /// The term to sign a new license for, in place of the license `held`: none unless the
+    /// subscription is active and a license for its current term replaces `held`.
+    pub fn renewal(&self, held: HeldLicense<'_>) -> Result<Option<LicenseTerm>, RenewalError> {
+        renewal(self.plan.status, self.plan.level, &self.term, held)
+    }
+}
+
+/// The license that a licensed plan holds, by whether Bencher Cloud's key verifies it.
+#[derive(Debug, Clone, Copy)]
+pub enum HeldLicense<'a> {
+    Verified(&'a LicenseClaims),
+    /// A license whose key no longer verifies, for example after the signing key changed, which
+    /// a license for any term but an earlier one replaces.
+    Unverified(&'a LicenseClaims),
+}
+
+/// The Benchmark Series and the paid term of the Self-Hosted license that a subscription pays
+/// for: its `series` metadata, over its current period.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LicenseTerm {
+    pub series: Entitlements,
+    /// The start of the period, so a server whose clock runs behind still takes the license.
+    pub issued_at: DateTime,
+    pub term_end: DateTime,
+}
+
+impl LicenseTerm {
+    /// The term for `series` Benchmark Series over a period from `issued_at` to `term_end`.
+    /// A period that ends when or before it starts has already ended.
+    fn new(
+        series: Entitlements,
+        issued_at: DateTime,
+        term_end: DateTime,
+    ) -> Result<Self, LicenseTermError> {
+        if term_end.timestamp() <= issued_at.timestamp() {
+            return Err(LicenseTermError::Ended {
+                issued_at,
+                term_end,
+            });
+        }
+        Ok(Self {
+            series,
+            issued_at,
+            term_end,
+        })
+    }
+
+    /// Sign the license for this term, for the Self-Hosted `organization`.
+    pub fn sign(
+        self,
+        licensor: &Licensor,
+        organization: OrganizationUuid,
+    ) -> Result<Jwt, LicenseError> {
+        licensor.new_license(organization, self.series, self.issued_at, self.term_end)
+    }
+}
+
 impl Biller {
     pub async fn new(billing: JsonBilling) -> Result<Self, BillingError> {
         let JsonBilling {
@@ -139,6 +217,18 @@ impl Biller {
         let products = Products::new(&client, products).await?;
 
         Ok(Self { client, products })
+    }
+
+    /// A biller that sends every Stripe request to `stub`, for the stub's products. A rustls
+    /// crypto provider must be installed first.
+    #[cfg(any(test, feature = "test-stub"))]
+    pub fn for_stub(stub: &crate::stripe_stub::StripeStub) -> Result<Self, BillingError> {
+        Ok(Self {
+            client: stripe::ClientBuilder::new("sk_test_stub")
+                .url(stub.url())
+                .build()?,
+            products: crate::stripe_stub::products(),
+        })
     }
 
     /// A checkout session for a Pro subscription, the only plan a self-serve checkout
@@ -203,46 +293,120 @@ impl Biller {
     }
 
     /// Attach the subscription that `plan` names to `organization`: a checkout return must
-    /// pass `check_checkout`, and a subscription that staff made must pass `check_attach`.
-    /// The plan is read before anything is written, so a subscription that does not read
-    /// as a plan is never named for the organization. When staff left out the
-    /// subscription's `organization` metadata, it is written to name `organization`.
+    /// pass `check_checkout`, a subscription that staff made must pass `check_attach`, and one
+    /// for a Self-Hosted deal must pass `check_self_hosted_attach`, and gets its first license.
+    /// The plan is read and the license signed before anything is written, so a subscription
+    /// that does not read as a plan is never named for the organization. When staff left out
+    /// the subscription's `organization` metadata, it is written to name `organization`.
     pub async fn attach(
         &self,
         plan: &JsonNewPlan,
         organization: OrganizationUuid,
-    ) -> Result<(MeteredPlanId, JsonPlan), AttachError> {
-        let (subscription, Attachable { named, .. }) = match plan {
+        licensor: &Licensor,
+    ) -> Result<Attachment, AttachError> {
+        match plan {
             JsonNewPlan::Checkout(JsonPlanCheckout { checkout }) => {
                 let subscription = self
                     .get_checkout_subscription(checkout.as_ref())
                     .await
                     .map_err(read_error(checkout.as_ref()))?;
-                let attachable = check_checkout(
+                let Attachable { named, .. } = check_checkout(
                     &self.products,
                     Self::map_status(&subscription.status),
                     &subscription.items.data,
                     &subscription.metadata,
                     organization,
                 )?;
-                (subscription, attachable)
-            },
-            JsonNewPlan::Subscription(JsonPlanSubscription { subscription }) => {
-                let subscription = self
-                    .get_plan_subscription(&subscription.as_ref().into())
+                self.attach_metered(&subscription, named, organization)
                     .await
-                    .map_err(read_error(subscription.as_ref()))?;
-                let attachable = check_attach(
+            },
+            JsonNewPlan::Subscription(JsonPlanSubscription {
+                subscription,
+                self_hosted,
+            }) => {
+                let id = subscription.as_ref();
+                let subscription = self
+                    .get_plan_subscription(&id.into())
+                    .await
+                    .map_err(read_error(id))?;
+                if let Some(self_hosted) = self_hosted {
+                    return self
+                        .attach_licensed(&subscription, organization, *self_hosted, licensor)
+                        .await;
+                }
+                let Attachable { named, .. } = check_attach(
                     &self.products,
                     Self::map_status(&subscription.status),
                     &subscription.items.data,
                     &subscription.metadata,
                     organization,
                 )?;
-                (subscription, attachable)
+                self.attach_metered(&subscription, named, organization)
+                    .await
             },
-        };
-        let json_plan = json_plan(&self.products, &subscription, organization)?;
+        }
+    }
+
+    /// Attach `subscription`, for a Self-Hosted deal, to `organization`, the Bencher Cloud
+    /// organization that buys it, and sign its first license for the Self-Hosted organization
+    /// `self_hosted`.
+    async fn attach_licensed(
+        &self,
+        subscription: &Subscription,
+        organization: OrganizationUuid,
+        self_hosted: OrganizationUuid,
+        licensor: &Licensor,
+    ) -> Result<Attachment, AttachError> {
+        let SelfHostedAttachable { named, series } = check_self_hosted_attach(
+            &self.products,
+            Self::map_status(&subscription.status),
+            &subscription.items.data,
+            &subscription.metadata,
+            organization,
+        )?;
+        let mut json_plan = json_plan(&self.products, subscription, organization)?;
+        let term = LicenseTerm::new(
+            series,
+            json_plan.current_period_start,
+            json_plan.current_period_end,
+        )
+        .map_err(AttachRefusal::Term)?;
+        let license = term.sign(licensor, self_hosted)?;
+        json_plan.license = Some(licensor.into_json(license.clone())?);
+        self.name(subscription, named, organization).await?;
+        let licensed_plan_id = subscription
+            .id
+            .as_ref()
+            .parse()
+            .map_err(BillingError::from)?;
+        Ok(Attachment::Licensed(licensed_plan_id, license, json_plan))
+    }
+
+    /// Attach `subscription` as a Bencher Cloud plan for `organization`.
+    async fn attach_metered(
+        &self,
+        subscription: &Subscription,
+        named: bool,
+        organization: OrganizationUuid,
+    ) -> Result<Attachment, AttachError> {
+        let json_plan = json_plan(&self.products, subscription, organization)?;
+        self.name(subscription, named, organization).await?;
+        let metered_plan_id = subscription
+            .id
+            .as_ref()
+            .parse()
+            .map_err(BillingError::from)?;
+        Ok(Attachment::Metered(metered_plan_id, json_plan))
+    }
+
+    /// Write the `organization` metadata that staff left out of `subscription`, to name
+    /// `organization`. Nothing is written when it already names it.
+    async fn name(
+        &self,
+        subscription: &Subscription,
+        named: bool,
+        organization: OrganizationUuid,
+    ) -> Result<(), BillingError> {
         if !named {
             UpdateSubscription::new(subscription.id.clone())
                 .metadata(HashMap::from([(
@@ -250,15 +414,9 @@ impl Biller {
                     organization.to_string(),
                 )]))
                 .send(&self.client)
-                .await
-                .map_err(BillingError::from)?;
+                .await?;
         }
-        let metered_plan_id = subscription
-            .id
-            .as_ref()
-            .parse()
-            .map_err(BillingError::from)?;
-        Ok((metered_plan_id, json_plan))
+        Ok(())
     }
 
     /// The subscription that a completed checkout session created, read as a plan.
@@ -445,23 +603,35 @@ impl Biller {
         self.get_plan(&subscription_id).await
     }
 
+    /// A licensed plan, and the term of the license its subscription pays for now.
     pub async fn get_licensed_plan(
         &self,
         licensed_plan_id: &LicensedPlanId,
-    ) -> Result<JsonPlan, BillingError> {
+    ) -> Result<LicensedPlan, BillingError> {
         let subscription_id: SubscriptionId = licensed_plan_id.as_ref().into();
-        self.get_plan(&subscription_id).await
+        let subscription = self.get_plan_subscription(&subscription_id).await?;
+        let plan = self.plan(&subscription)?;
+        let term = series(&subscription.metadata).and_then(|series| {
+            LicenseTerm::new(series, plan.current_period_start, plan.current_period_end)
+        });
+        Ok(LicensedPlan { plan, term })
     }
 
     async fn get_plan(&self, subscription_id: &SubscriptionId) -> Result<JsonPlan, BillingError> {
         let subscription = self.get_plan_subscription(subscription_id).await?;
+        self.plan(&subscription)
+    }
+
+    /// The plan that `subscription`, read with [`PLAN_EXPAND`], bills the organization its
+    /// `organization` metadata names for.
+    fn plan(&self, subscription: &Subscription) -> Result<JsonPlan, BillingError> {
         let Some(organization) = subscription.metadata.get(METADATA_ORGANIZATION) else {
-            return Err(BillingError::NoOrganization(subscription_id.clone()));
+            return Err(BillingError::NoOrganization(subscription.id.clone()));
         };
         let organization = organization
             .parse()
             .map_err(|e| BillingError::BadOrganizationUuid(organization.clone(), e))?;
-        json_plan(&self.products, &subscription, organization)
+        json_plan(&self.products, subscription, organization)
     }
 
     /// The subscription with everything a plan read needs, in one request.
@@ -911,6 +1081,24 @@ fn check_attach(
     metadata: &HashMap<String, String>,
     organization: OrganizationUuid,
 ) -> Result<Attachable, AttachRefusal> {
+    let level = live_plan_level(products, status, items)?;
+    if !items
+        .iter()
+        .any(|item| products.is_bare_metal(item.price.product.id()))
+    {
+        return Err(AttachRefusal::NoBareMetal);
+    }
+    let named = named(metadata, organization)?;
+    Ok(Attachable { level, named })
+}
+
+/// The plan level of a subscription that still exists in Stripe (not canceled or expired), from
+/// its one plan item, whose price the plan can show.
+fn live_plan_level(
+    products: &Products,
+    status: PlanStatus,
+    items: &[SubscriptionItem],
+) -> Result<PlanLevel, AttachRefusal> {
     if matches!(status, PlanStatus::Canceled | PlanStatus::IncompleteExpired) {
         return Err(AttachRefusal::Terminal(status));
     }
@@ -918,21 +1106,92 @@ fn check_attach(
     if plan_price(&item.price).is_err() {
         return Err(AttachRefusal::Price(item.price.id.to_string()));
     }
-    if !items
-        .iter()
-        .any(|item| products.is_bare_metal(item.price.product.id()))
-    {
-        return Err(AttachRefusal::NoBareMetal);
-    }
-    let named = if let Some(named) = metadata.get(METADATA_ORGANIZATION) {
-        if named.parse::<OrganizationUuid>().ok() != Some(organization) {
-            return Err(AttachRefusal::OtherOrganization(named.clone()));
-        }
-        true
-    } else {
-        false
+    Ok(level)
+}
+
+/// Whether a subscription's `organization` metadata already names `organization`: refused when
+/// it names another, and `false` when it names none, for the attach to write.
+fn named(
+    metadata: &HashMap<String, String>,
+    organization: OrganizationUuid,
+) -> Result<bool, AttachRefusal> {
+    let Some(named) = metadata.get(METADATA_ORGANIZATION) else {
+        return Ok(false);
     };
-    Ok(Attachable { level, named })
+    if named.parse::<OrganizationUuid>().ok() == Some(organization) {
+        Ok(true)
+    } else {
+        Err(AttachRefusal::OtherOrganization(named.clone()))
+    }
+}
+
+/// A subscription for a Self-Hosted deal that may be attached to an organization.
+#[derive(Debug, PartialEq, Eq)]
+struct SelfHostedAttachable {
+    /// Whether the subscription's `organization` metadata already names the organization.
+    named: bool,
+    /// The Benchmark Series in the subscription's `series` metadata.
+    series: Entitlements,
+}
+
+/// Whether a subscription for a Self-Hosted deal may be attached to `organization`, the Bencher
+/// Cloud organization that buys it: it is active, since nothing can take back a license once it
+/// is signed, its one plan item is on the Enterprise product with a price the plan can show, its
+/// `series` metadata is a count of Benchmark Series, and no `organization` metadata names another
+/// organization. It needs no bare metal item, since the Self-Hosted server runs its own jobs.
+fn check_self_hosted_attach(
+    products: &Products,
+    status: PlanStatus,
+    items: &[SubscriptionItem],
+    metadata: &HashMap<String, String>,
+    organization: OrganizationUuid,
+) -> Result<SelfHostedAttachable, AttachRefusal> {
+    let level = live_plan_level(products, status, items)?;
+    if !status.is_active() {
+        return Err(AttachRefusal::NotActive(status));
+    }
+    if level != PlanLevel::Enterprise {
+        return Err(AttachRefusal::NotEnterprise(level));
+    }
+    let series = series(metadata).map_err(AttachRefusal::Term)?;
+    let named = named(metadata, organization)?;
+    Ok(SelfHostedAttachable { named, series })
+}
+
+/// The Benchmark Series in a subscription's `series` metadata.
+fn series(metadata: &HashMap<String, String>) -> Result<Entitlements, LicenseTermError> {
+    let series = metadata
+        .get(METADATA_SERIES)
+        .ok_or(LicenseTermError::NoSeries)?;
+    series
+        .parse()
+        .ok()
+        .ok_or_else(|| LicenseTermError::BadSeries(series.clone()))
+}
+
+/// The term to sign a new license for, in place of the license `held`, for a subscription in
+/// `status`, whose plan item is on the product of `level`, that pays for `term` now: none unless
+/// the subscription is active and a license for `term` replaces `held`, and an error when the
+/// subscription is active but no longer pays for an Enterprise license that Bencher Cloud can
+/// sign. A license never moves back a term.
+fn renewal(
+    status: PlanStatus,
+    level: PlanLevel,
+    term: &Result<LicenseTerm, LicenseTermError>,
+    held: HeldLicense<'_>,
+) -> Result<Option<LicenseTerm>, RenewalError> {
+    if !status.is_active() {
+        return Ok(None);
+    }
+    if level != PlanLevel::Enterprise {
+        return Err(RenewalError::NotEnterprise(level));
+    }
+    let term = term.clone().map_err(RenewalError::Term)?;
+    let replaces = match held {
+        HeldLicense::Verified(held) => held.replaced_by(term.series, term.term_end),
+        HeldLicense::Unverified(held) => held.trm <= term.term_end.timestamp(),
+    };
+    Ok(replaces.then_some(term))
 }
 
 /// Whether the subscription that a self-serve checkout created may be attached to
@@ -975,9 +1234,10 @@ mod tests {
     use std::collections::HashMap;
 
     use bencher_json::{
-        MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, UserUuid,
+        DateTime, Entitlements, MeteredPlanId, OrganizationUuid, PlanLevel, PlanStatus, Secret,
+        UserUuid,
         organization::plan::{
-            ACTIVE_SERIES_METER_NAME, CollectionMethod, DEFAULT_PRICE_NAME, JsonNewPlan,
+            ACTIVE_SERIES_METER_NAME, CollectionMethod, DEFAULT_PRICE_NAME, JsonNewPlan, JsonPlan,
             JsonPlanCheckout, JsonPlanSubscription, RUNNER_MINUTES_METER_NAME, TiersMode,
         },
         system::{
@@ -1000,34 +1260,29 @@ mod tests {
 
     use rustls::crypto::aws_lc_rs::default_provider;
 
+    use bencher_license::{Audience, GRACE_PERIOD, LicenseClaims, Licensor};
+
     use crate::{
-        AttachError, AttachRefusal, Biller, PlanItemError,
-        products::{Product, Products},
+        AttachError, AttachRefusal, Attachment, Biller, HeldLicense, LicenseTerm, LicenseTermError,
+        PlanItemError, RenewalError,
         stripe_stub::{
-            self as stub, BARE_METAL_PRODUCT, ENTERPRISE_PRODUCT, PRO_PRODUCT, StripeStub,
-            StubObjects,
+            self as stub, BARE_METAL_PRODUCT, DAY, ENTERPRISE_PRODUCT, NOW, PRO_PRODUCT,
+            StripeStub, StubObjects,
         },
     };
 
     use super::{
-        Attachable, METADATA_ORGANIZATION, METER_CUSTOMER_KEY, METER_VALUE_KEY, PlanPrice,
-        check_attach, check_checkout, plan_item, plan_price, runner_minute,
+        Attachable, METADATA_ORGANIZATION, METADATA_SERIES, METER_CUSTOMER_KEY, METER_VALUE_KEY,
+        PlanPrice, SelfHostedAttachable, check_attach, check_checkout, check_self_hosted_attach,
+        plan_item, plan_price, renewal, runner_minute, series,
     };
 
-    /// The products as the biller holds them, with no configured prices, so nothing
-    /// read from them can come from the configuration.
-    fn test_products() -> Products {
-        Products {
-            pro: Product {
-                id: PRO_PRODUCT.into(),
-                metered: HashMap::new(),
-            },
-            enterprise: ENTERPRISE_PRODUCT.into(),
-            bare_metal: Product {
-                id: BARE_METAL_PRODUCT.into(),
-                metered: HashMap::new(),
-            },
-        }
+    /// A licensor that signs as Bencher Cloud does, with the key that debug builds trust.
+    fn licensor() -> Licensor {
+        let key: Secret = include_str!("../../bencher_license/src/test/private.pem")
+            .parse()
+            .unwrap();
+        Licensor::bencher_cloud(&key).unwrap()
     }
 
     fn named(organization: OrganizationUuid) -> HashMap<String, String> {
@@ -1088,7 +1343,7 @@ mod tests {
     // product taken for it.
     #[test]
     fn plan_item_follows_the_product() {
-        let products = test_products();
+        let products = stub::products();
         let bare_metal = make_subscription_item("price_bare_metal", BARE_METAL_PRODUCT);
 
         let pro = [
@@ -1134,7 +1389,7 @@ mod tests {
     // own price, which for a per-deal Enterprise price is in no configuration.
     #[test]
     fn plan_price_comes_from_the_subscription() {
-        let products = test_products();
+        let products = stub::products();
         let mut deal = make_subscription_item("price_deal", ENTERPRISE_PRODUCT);
         deal.price.unit_amount = None;
         deal.price.billing_scheme = stripe_shared::PriceBillingScheme::Tiered;
@@ -1231,7 +1486,7 @@ mod tests {
     // metal, named for the organization or not named at all.
     #[test]
     fn check_attach_accepts() {
-        let products = test_products();
+        let products = stub::products();
         let organization = OrganizationUuid::new();
         let active = PlanStatus::Active;
         let bare_metal = make_subscription_item("price_bare_metal", BARE_METAL_PRODUCT);
@@ -1298,7 +1553,7 @@ mod tests {
     // organization.
     #[test]
     fn check_attach_refuses() {
-        let products = test_products();
+        let products = stub::products();
         let organization = OrganizationUuid::new();
         let active = PlanStatus::Active;
         let bare_metal = make_subscription_item("price_bare_metal", BARE_METAL_PRODUCT);
@@ -1387,7 +1642,7 @@ mod tests {
     // own organization.
     #[test]
     fn check_checkout_decides() {
-        let products = test_products();
+        let products = stub::products();
         let organization = OrganizationUuid::new();
         let active = PlanStatus::Active;
         let bare_metal = make_subscription_item("price_bare_metal", BARE_METAL_PRODUCT);
@@ -1438,16 +1693,361 @@ mod tests {
         );
     }
 
+    fn series_named(
+        organization: Option<OrganizationUuid>,
+        series: &str,
+    ) -> HashMap<String, String> {
+        let mut metadata = HashMap::from([(METADATA_SERIES.to_owned(), series.to_owned())]);
+        if let Some(organization) = organization {
+            metadata.insert(METADATA_ORGANIZATION.to_owned(), organization.to_string());
+        }
+        metadata
+    }
+
+    fn entitlements(series: u32) -> Entitlements {
+        Entitlements::try_from(series).unwrap()
+    }
+
+    // Fails if an active or trialing subscription for a Self-Hosted deal is refused when its
+    // plan item is on the Enterprise product with a price the plan can show and it carries a
+    // count of Benchmark Series, named for the organization or not, with or without a bare metal
+    // item.
+    #[test]
+    fn check_self_hosted_attach_accepts() {
+        let products = stub::products();
+        let organization = OrganizationUuid::new();
+        let deal = make_subscription_item("price_self_hosted", ENTERPRISE_PRODUCT);
+        let bare_metal = make_subscription_item("price_bare_metal", BARE_METAL_PRODUCT);
+        let accepted = |status, items: &[_], metadata: &HashMap<_, _>| {
+            check_self_hosted_attach(&products, status, items, metadata, organization)
+        };
+
+        assert_eq!(
+            accepted(
+                PlanStatus::Active,
+                std::slice::from_ref(&deal),
+                &series_named(Some(organization), "500")
+            ),
+            Ok(SelfHostedAttachable {
+                named: true,
+                series: entitlements(500),
+            })
+        );
+        assert_eq!(
+            accepted(
+                PlanStatus::Active,
+                &[deal.clone(), bare_metal],
+                &series_named(None, "1")
+            ),
+            Ok(SelfHostedAttachable {
+                named: false,
+                series: entitlements(1),
+            })
+        );
+        assert_eq!(
+            accepted(
+                PlanStatus::Trialing,
+                std::slice::from_ref(&deal),
+                &series_named(None, "4294967295")
+            ),
+            Ok(SelfHostedAttachable {
+                named: false,
+                series: Entitlements::MAX,
+            })
+        );
+    }
+
+    // Fails if a subscription for a Self-Hosted deal is attached in a terminal status or any
+    // other status that is not active, without its plan item on the Enterprise product, with a
+    // price the plan cannot show, without a count of Benchmark Series in its `series` metadata,
+    // or named for another organization.
+    #[test]
+    fn check_self_hosted_attach_refuses() {
+        let products = stub::products();
+        let organization = OrganizationUuid::new();
+        let active = PlanStatus::Active;
+        let deal = make_subscription_item("price_self_hosted", ENTERPRISE_PRODUCT);
+        let deal = std::slice::from_ref(&deal);
+        let metadata = series_named(None, "500");
+        let refused = |status, items: &[_], metadata: &HashMap<_, _>| {
+            check_self_hosted_attach(&products, status, items, metadata, organization).unwrap_err()
+        };
+
+        for terminal in [PlanStatus::Canceled, PlanStatus::IncompleteExpired] {
+            assert_eq!(
+                refused(terminal, deal, &metadata),
+                AttachRefusal::Terminal(terminal)
+            );
+        }
+        // A license cannot be taken back, so it is never signed for a subscription that may
+        // never be paid.
+        for inactive in [
+            PlanStatus::PastDue,
+            PlanStatus::Unpaid,
+            PlanStatus::Incomplete,
+            PlanStatus::Paused,
+        ] {
+            assert_eq!(
+                refused(inactive, deal, &metadata),
+                AttachRefusal::NotActive(inactive)
+            );
+        }
+        let pro = make_subscription_item("price_pro", PRO_PRODUCT);
+        assert_eq!(
+            refused(active, std::slice::from_ref(&pro), &metadata),
+            AttachRefusal::NotEnterprise(PlanLevel::Pro)
+        );
+        let bare_metal = make_subscription_item("price_bare_metal", BARE_METAL_PRODUCT);
+        assert_eq!(
+            refused(active, std::slice::from_ref(&bare_metal), &metadata),
+            AttachRefusal::PlanItem(PlanItemError::Missing)
+        );
+        let mut unpriced = deal[0].clone();
+        unpriced.price.unit_amount = None;
+        assert_eq!(
+            refused(active, &[unpriced], &metadata),
+            AttachRefusal::Price("price_self_hosted".to_owned())
+        );
+        assert_eq!(
+            refused(active, deal, &HashMap::new()),
+            AttachRefusal::Term(LicenseTermError::NoSeries)
+        );
+        for bad in ["", "0", "-5", "1.5", "500 series", "4294967296"] {
+            assert_eq!(
+                refused(active, deal, &series_named(None, bad)),
+                AttachRefusal::Term(LicenseTermError::BadSeries(bad.to_owned())),
+                "{bad}"
+            );
+        }
+        let other = OrganizationUuid::new();
+        assert_eq!(
+            refused(active, deal, &series_named(Some(other), "500")),
+            AttachRefusal::OtherOrganization(other.to_string())
+        );
+    }
+
+    // Fails if a Bencher Cloud attach, which a Self-Hosted deal's check leaves alone, starts to
+    // need `series` metadata or stops needing the bare metal item.
+    #[test]
+    fn check_attach_ignores_series() {
+        let products = stub::products();
+        let organization = OrganizationUuid::new();
+        let deal = make_subscription_item("price_deal", ENTERPRISE_PRODUCT);
+        let bare_metal = make_subscription_item("price_bare_metal", BARE_METAL_PRODUCT);
+        assert_eq!(
+            check_attach(
+                &products,
+                PlanStatus::Active,
+                &[deal.clone(), bare_metal],
+                &series_named(None, "not a count"),
+                organization
+            ),
+            Ok(Attachable {
+                level: PlanLevel::Enterprise,
+                named: false,
+            })
+        );
+        assert_eq!(
+            check_attach(
+                &products,
+                PlanStatus::Active,
+                std::slice::from_ref(&deal),
+                &series_named(None, "500"),
+                organization
+            ),
+            Err(AttachRefusal::NoBareMetal)
+        );
+    }
+
+    // Fails if a period that ends when or before it starts makes a term, or one that ends a
+    // second after it starts does not.
+    #[test]
+    fn license_term_ends_after_it_starts() {
+        let start = DateTime::try_from(NOW).unwrap();
+        for end in [start, DateTime::try_from(start.timestamp() - 1).unwrap()] {
+            assert_eq!(
+                LicenseTerm::new(entitlements(500), start, end),
+                Err(LicenseTermError::Ended {
+                    issued_at: start,
+                    term_end: end,
+                })
+            );
+        }
+        let end = DateTime::try_from(start.timestamp() + 1).unwrap();
+        assert_eq!(
+            LicenseTerm::new(entitlements(500), start, end),
+            Ok(LicenseTerm {
+                series: entitlements(500),
+                issued_at: start,
+                term_end: end,
+            })
+        );
+    }
+
+    // Fails if the `series` metadata reads as anything but a whole count above zero.
+    #[test]
+    fn series_reads_a_count() {
+        assert_eq!(series(&series_named(None, "1000")), Ok(entitlements(1_000)));
+        assert_eq!(series(&HashMap::new()), Err(LicenseTermError::NoSeries));
+        assert_eq!(
+            series(&series_named(None, "1,000")),
+            Err(LicenseTermError::BadSeries("1,000".to_owned()))
+        );
+    }
+
+    /// The claims of a license held for 1,000 Benchmark Series, whose term ends at `term_end`.
+    fn held(term_end: i64) -> LicenseClaims {
+        LicenseClaims {
+            aud: Audience::Bencher,
+            exp: term_end + GRACE_PERIOD.num_seconds(),
+            iat: term_end - 30 * DAY,
+            iss: bencher_json::BENCHER_URL_STR.to_owned(),
+            sub: OrganizationUuid::new(),
+            ser: entitlements(1_000),
+            trm: term_end,
+        }
+    }
+
+    fn term(series: u32, term_end: i64) -> LicenseTerm {
+        LicenseTerm {
+            series: entitlements(series),
+            issued_at: DateTime::try_from(term_end - 30 * DAY).unwrap(),
+            term_end: DateTime::try_from(term_end).unwrap(),
+        }
+    }
+
+    // Fails if a read of a licensed plan signs a new license for anything but an active
+    // subscription on the Enterprise product whose term ends later than the license held, or
+    // ends with it and covers another count, or ever signs one that moves the license back a
+    // term.
+    #[test]
+    fn renewal_signs_only_a_later_term_or_another_count() {
+        let held = held(NOW);
+        let verified = HeldLicense::Verified(&held);
+        let active = PlanStatus::Active;
+        let enterprise = PlanLevel::Enterprise;
+
+        // Renewed: the next period ends later.
+        let renewed = term(1_000, NOW + 30 * DAY);
+        assert_eq!(
+            renewal(active, enterprise, &Ok(renewed), verified),
+            Ok(Some(renewed))
+        );
+        assert_eq!(
+            renewal(PlanStatus::Trialing, enterprise, &Ok(renewed), verified),
+            Ok(Some(renewed))
+        );
+        // Upsold in the term: the same end, another count.
+        let upsold = term(1_500, NOW);
+        assert_eq!(
+            renewal(active, enterprise, &Ok(upsold), verified),
+            Ok(Some(upsold))
+        );
+        // Nothing changed.
+        assert_eq!(
+            renewal(active, enterprise, &Ok(term(1_000, NOW)), verified),
+            Ok(None)
+        );
+        // An earlier term, whatever its count.
+        for series in [1_000, 1_500] {
+            assert_eq!(
+                renewal(active, enterprise, &Ok(term(series, NOW - DAY)), verified),
+                Ok(None)
+            );
+        }
+        // Not active: canceled, or in any other status that is not active.
+        for status in [
+            PlanStatus::Canceled,
+            PlanStatus::IncompleteExpired,
+            PlanStatus::PastDue,
+            PlanStatus::Unpaid,
+            PlanStatus::Incomplete,
+            PlanStatus::Paused,
+        ] {
+            assert_eq!(
+                renewal(status, enterprise, &Ok(renewed), verified),
+                Ok(None),
+                "{status}"
+            );
+            assert_eq!(
+                renewal(
+                    status,
+                    PlanLevel::Pro,
+                    &Err(LicenseTermError::NoSeries),
+                    verified
+                ),
+                Ok(None),
+                "{status}"
+            );
+        }
+        // An active subscription whose term cannot be signed says why.
+        let ended = LicenseTermError::Ended {
+            issued_at: DateTime::try_from(NOW + DAY).unwrap(),
+            term_end: DateTime::try_from(NOW).unwrap(),
+        };
+        assert_eq!(
+            renewal(active, enterprise, &Err(ended.clone()), verified),
+            Err(RenewalError::Term(ended))
+        );
+        assert_eq!(
+            renewal(
+                active,
+                enterprise,
+                &Err(LicenseTermError::NoSeries),
+                verified
+            ),
+            Err(RenewalError::Term(LicenseTermError::NoSeries))
+        );
+        // A plan item moved off the Enterprise product signs nothing, whatever its term.
+        assert_eq!(
+            renewal(active, PlanLevel::Pro, &Ok(renewed), verified),
+            Err(RenewalError::NotEnterprise(PlanLevel::Pro))
+        );
+    }
+
+    // Fails if a license whose key no longer verifies is not replaced by a license for its own
+    // term or a later one, or is replaced by one that moves it back a term, or if the rest of
+    // the rule does not hold for it.
+    #[test]
+    fn renewal_replaces_an_unverified_license_with_any_term_but_an_earlier_one() {
+        let held = held(NOW);
+        let unverified = HeldLicense::Unverified(&held);
+        let active = PlanStatus::Active;
+        let enterprise = PlanLevel::Enterprise;
+
+        for kept in [
+            term(1_000, NOW),
+            term(1_000, NOW + 30 * DAY),
+            term(1_500, NOW),
+        ] {
+            assert_eq!(
+                renewal(active, enterprise, &Ok(kept), unverified),
+                Ok(Some(kept))
+            );
+        }
+        assert_eq!(
+            renewal(active, enterprise, &Ok(term(1_000, NOW - DAY)), unverified),
+            Ok(None)
+        );
+        assert_eq!(
+            renewal(
+                PlanStatus::Canceled,
+                enterprise,
+                &Ok(term(1_000, NOW)),
+                unverified
+            ),
+            Ok(None)
+        );
+        assert_eq!(
+            renewal(active, PlanLevel::Pro, &Ok(term(1_000, NOW)), unverified),
+            Err(RenewalError::NotEnterprise(PlanLevel::Pro))
+        );
+    }
+
     /// A biller that sends every Stripe request to `stub`.
     fn stub_biller(stub: &StripeStub) -> Biller {
         default_provider().install_default().unwrap_or_default();
-        Biller {
-            client: stripe::ClientBuilder::new("sk_test_stub")
-                .url(stub.url())
-                .build()
-                .unwrap(),
-            products: test_products(),
-        }
+        Biller::for_stub(stub).unwrap()
     }
 
     /// The bare metal item at two dollars an hour, in cents per minute.
@@ -1508,6 +2108,14 @@ mod tests {
             subscriptions: by_id(subscriptions),
             sessions: by_id(sessions),
         }
+    }
+
+    /// The Bencher Cloud plan that an attach made.
+    fn metered(attachment: Attachment) -> (MeteredPlanId, JsonPlan) {
+        let Attachment::Metered(metered_plan_id, json_plan) = attachment else {
+            panic!("not a Bencher Cloud plan: {attachment:?}");
+        };
+        (metered_plan_id, json_plan)
     }
 
     fn metadata_writes(stub: &StripeStub) -> Vec<(String, Vec<(String, String)>)> {
@@ -1695,7 +2303,7 @@ mod tests {
             checkout: "sub_raw".parse().unwrap(),
         });
         assert!(matches!(
-            biller.attach(&plan, organization).await.unwrap_err(),
+            biller.attach(&plan, organization, &licensor()).await.unwrap_err(),
             AttachError::NotFound(id) if id == "sub_raw"
         ));
         let paths: Vec<String> = stub.requests().into_iter().map(|r| r.path).collect();
@@ -1756,22 +2364,24 @@ mod tests {
 
         assert!(matches!(
             biller
-                .attach(&checkout("cs_enterprise"), organization)
+                .attach(&checkout("cs_enterprise"), organization, &licensor())
                 .await
                 .unwrap_err(),
             AttachError::Refused(AttachRefusal::NotPro(PlanLevel::Enterprise))
         ));
         assert!(matches!(
             biller
-                .attach(&checkout("cs_unnamed"), organization)
+                .attach(&checkout("cs_unnamed"), organization, &licensor())
                 .await
                 .unwrap_err(),
             AttachError::Refused(AttachRefusal::NoOrganization)
         ));
-        let (metered_plan_id, plan) = biller
-            .attach(&checkout("cs_pro"), organization)
-            .await
-            .unwrap();
+        let (metered_plan_id, plan) = metered(
+            biller
+                .attach(&checkout("cs_pro"), organization, &licensor())
+                .await
+                .unwrap(),
+        );
         assert_eq!(metered_plan_id.as_ref(), "sub_pro");
         assert_eq!(plan.level, PlanLevel::Pro);
         assert_eq!(plan.tiers_mode, Some(TiersMode::Volume));
@@ -1800,9 +2410,15 @@ mod tests {
         let biller = stub_biller(&stub);
         let plan = JsonNewPlan::Subscription(JsonPlanSubscription {
             subscription: "sub_deal".parse().unwrap(),
+            self_hosted: None,
         });
 
-        let (metered_plan_id, json_plan) = biller.attach(&plan, organization).await.unwrap();
+        let (metered_plan_id, json_plan) = metered(
+            biller
+                .attach(&plan, organization, &licensor())
+                .await
+                .unwrap(),
+        );
         assert_eq!(metered_plan_id.as_ref(), "sub_deal");
         assert_eq!(json_plan.organization, organization);
         assert_eq!(json_plan.level, PlanLevel::Enterprise);
@@ -1823,7 +2439,10 @@ mod tests {
             json!({ "series": "1000", "organization": organization.to_string() })
         );
 
-        biller.attach(&plan, organization).await.unwrap();
+        biller
+            .attach(&plan, organization, &licensor())
+            .await
+            .unwrap();
         assert_eq!(metadata_writes(&stub).len(), 1);
     }
 
@@ -1862,19 +2481,20 @@ mod tests {
         let attach = |subscription: &str| {
             JsonNewPlan::Subscription(JsonPlanSubscription {
                 subscription: subscription.parse().unwrap(),
+                self_hosted: None,
             })
         };
 
         assert!(matches!(
             biller
-                .attach(&attach("sub_canceled"), organization)
+                .attach(&attach("sub_canceled"), organization, &licensor())
                 .await
                 .unwrap_err(),
             AttachError::Refused(AttachRefusal::Terminal(PlanStatus::Canceled))
         ));
         assert!(matches!(
             biller
-                .attach(&attach("sub_unpriced"), organization)
+                .attach(&attach("sub_unpriced"), organization, &licensor())
                 .await
                 .unwrap_err(),
             AttachError::Refused(AttachRefusal::Price(price)) if price == "price_deal"
@@ -1902,11 +2522,12 @@ mod tests {
         let biller = stub_biller(&stub);
         let plan = JsonNewPlan::Subscription(JsonPlanSubscription {
             subscription: "sub_bad_customer".parse().unwrap(),
+            self_hosted: None,
         });
 
         assert!(matches!(
             biller
-                .attach(&plan, OrganizationUuid::new())
+                .attach(&plan, OrganizationUuid::new(), &licensor())
                 .await
                 .unwrap_err(),
             AttachError::Billing(crate::BillingError::BadUserUuid(..))
@@ -1922,12 +2543,255 @@ mod tests {
         let biller = stub_biller(&stub);
         let plan = JsonNewPlan::Subscription(JsonPlanSubscription {
             subscription: "sub_missing".parse().unwrap(),
+            self_hosted: None,
         });
 
         assert!(matches!(
-            biller.attach(&plan, OrganizationUuid::new()).await.unwrap_err(),
+            biller
+                .attach(&plan, OrganizationUuid::new(), &licensor())
+                .await
+                .unwrap_err(),
             AttachError::NotFound(id) if id == "sub_missing"
         ));
+    }
+
+    /// A Self-Hosted deal's flat price on the Enterprise product.
+    fn self_hosted_item() -> Value {
+        stub::item(&stub::price(
+            "price_self_hosted",
+            ENTERPRISE_PRODUCT,
+            "1200000",
+        ))
+    }
+
+    fn self_hosted_attach(subscription: &str, self_hosted: OrganizationUuid) -> JsonNewPlan {
+        JsonNewPlan::Subscription(JsonPlanSubscription {
+            subscription: subscription.parse().unwrap(),
+            self_hosted: Some(self_hosted),
+        })
+    }
+
+    // Fails if an attach for a Self-Hosted deal does not sign its first license for the
+    // Self-Hosted organization, for the Benchmark Series in its `series` metadata, issued at the
+    // start of its current period for a term that ends with the period, or does not name the
+    // subscription for the organization that buys it, once, after the license is signed.
+    #[tokio::test]
+    async fn attach_self_hosted_signs_the_first_license() {
+        let organization = OrganizationUuid::new();
+        let self_hosted = OrganizationUuid::new();
+        let stub = StripeStub::new(objects(
+            vec![stub::subscription(
+                "sub_self_hosted",
+                "active",
+                "send_invoice",
+                vec![self_hosted_item()],
+                json!({ "series": "500" }),
+                stripe_customer(),
+                None,
+            )],
+            vec![],
+        ))
+        .await;
+        let biller = stub_biller(&stub);
+        let licensor = licensor();
+
+        let attachment = biller
+            .attach(
+                &self_hosted_attach("sub_self_hosted", self_hosted),
+                organization,
+                &licensor,
+            )
+            .await
+            .unwrap();
+        let Attachment::Licensed(licensed_plan_id, license, json_plan) = attachment else {
+            panic!("not a Self-Hosted license: {attachment:?}");
+        };
+        assert_eq!(licensed_plan_id.as_ref(), "sub_self_hosted");
+        let claims = licensor.read(&license).unwrap();
+        assert_eq!(claims.sub, self_hosted);
+        assert_eq!(claims.ser, entitlements(500));
+        assert_eq!(claims.iat, NOW - DAY);
+        assert_eq!(claims.trm, NOW + DAY);
+        assert_eq!(claims.exp, NOW + DAY + GRACE_PERIOD.num_seconds());
+
+        assert_eq!(json_plan.organization, organization);
+        assert_eq!(json_plan.level, PlanLevel::Enterprise);
+        assert!(json_plan.runner_minute.is_none());
+        let json_license = json_plan.license.unwrap();
+        assert_eq!(json_license.key, license);
+        assert_eq!(json_license.organization, self_hosted);
+        assert_eq!(u32::from(json_license.series), 500);
+        assert_eq!(
+            stub.subscription("sub_self_hosted")["metadata"],
+            json!({ "series": "500", "organization": organization.to_string() })
+        );
+        assert_eq!(metadata_writes(&stub).len(), 1);
+    }
+
+    // Fails if an attach for a Self-Hosted deal writes to Stripe before it refuses a Pro
+    // subscription, one without a count in its `series` metadata, a canceled one, an incomplete
+    // one, or one whose current period has already ended, or if any of these refusals is not
+    // the one it is.
+    #[tokio::test]
+    async fn attach_self_hosted_refuses_before_any_write() {
+        let subscription = |id: &str, status: &str, items: Vec<Value>, metadata: Value| {
+            stub::subscription(
+                id,
+                status,
+                "send_invoice",
+                items,
+                metadata,
+                stripe_customer(),
+                None,
+            )
+        };
+        let series = json!({ "series": "500" });
+        let ended = stub::item_in(
+            &stub::price("price_self_hosted", ENTERPRISE_PRODUCT, "1200000"),
+            NOW,
+            NOW,
+        );
+        let stub = StripeStub::new(objects(
+            vec![
+                subscription(
+                    "sub_pro",
+                    "active",
+                    vec![pro_item(), bare_metal_item()],
+                    series.clone(),
+                ),
+                subscription(
+                    "sub_no_series",
+                    "active",
+                    vec![self_hosted_item()],
+                    json!({}),
+                ),
+                subscription(
+                    "sub_bad_series",
+                    "active",
+                    vec![self_hosted_item()],
+                    json!({ "series": "lots" }),
+                ),
+                subscription(
+                    "sub_canceled",
+                    "canceled",
+                    vec![self_hosted_item()],
+                    series.clone(),
+                ),
+                subscription("sub_ended", "active", vec![ended], series.clone()),
+                subscription(
+                    "sub_incomplete",
+                    "incomplete",
+                    vec![self_hosted_item()],
+                    series,
+                ),
+            ],
+            vec![],
+        ))
+        .await;
+        let biller = stub_biller(&stub);
+        let refusal = async |subscription: &str| {
+            let error = biller
+                .attach(
+                    &self_hosted_attach(subscription, OrganizationUuid::new()),
+                    OrganizationUuid::new(),
+                    &licensor(),
+                )
+                .await
+                .unwrap_err();
+            let AttachError::Refused(refusal) = error else {
+                panic!("not refused: {error}");
+            };
+            refusal
+        };
+
+        assert_eq!(
+            refusal("sub_pro").await,
+            AttachRefusal::NotEnterprise(PlanLevel::Pro)
+        );
+        assert_eq!(
+            refusal("sub_no_series").await,
+            AttachRefusal::Term(LicenseTermError::NoSeries)
+        );
+        assert_eq!(
+            refusal("sub_bad_series").await,
+            AttachRefusal::Term(LicenseTermError::BadSeries("lots".to_owned()))
+        );
+        assert_eq!(
+            refusal("sub_canceled").await,
+            AttachRefusal::Terminal(PlanStatus::Canceled)
+        );
+        assert_eq!(
+            refusal("sub_incomplete").await,
+            AttachRefusal::NotActive(PlanStatus::Incomplete)
+        );
+        let at = DateTime::try_from(NOW).unwrap();
+        assert_eq!(
+            refusal("sub_ended").await,
+            AttachRefusal::Term(LicenseTermError::Ended {
+                issued_at: at,
+                term_end: at,
+            })
+        );
+        assert_eq!(metadata_writes(&stub).len(), 0);
+    }
+
+    // Fails if a licensed plan does not read with the term its subscription pays for now, or
+    // does not read at all once staff remove its `series` metadata.
+    #[tokio::test]
+    async fn get_licensed_plan_reads_the_term() {
+        let organization = OrganizationUuid::new();
+        let renewed = stub::item_in(
+            &stub::price("price_self_hosted", ENTERPRISE_PRODUCT, "1200000"),
+            NOW + DAY,
+            NOW + 366 * DAY,
+        );
+        let stub = StripeStub::new(objects(
+            vec![
+                stub::subscription(
+                    "sub_renewed",
+                    "active",
+                    "send_invoice",
+                    vec![renewed],
+                    json!({ "series": "750", "organization": organization.to_string() }),
+                    stripe_customer(),
+                    None,
+                ),
+                stub::subscription(
+                    "sub_unseries",
+                    "canceled",
+                    "send_invoice",
+                    vec![self_hosted_item()],
+                    json!({ "organization": organization.to_string() }),
+                    stripe_customer(),
+                    None,
+                ),
+            ],
+            vec![],
+        ))
+        .await;
+        let biller = stub_biller(&stub);
+
+        let renewed = biller
+            .get_licensed_plan(&"sub_renewed".parse().unwrap())
+            .await
+            .unwrap();
+        assert_eq!(renewed.plan.organization, organization);
+        assert_eq!(renewed.plan.status, PlanStatus::Active);
+        assert_eq!(
+            renewed.term,
+            Ok(LicenseTerm {
+                series: entitlements(750),
+                issued_at: DateTime::try_from(NOW + DAY).unwrap(),
+                term_end: DateTime::try_from(NOW + 366 * DAY).unwrap(),
+            })
+        );
+
+        let unseries = biller
+            .get_licensed_plan(&"sub_unseries".parse().unwrap())
+            .await
+            .unwrap();
+        assert_eq!(unseries.plan.status, PlanStatus::Canceled);
+        assert_eq!(unseries.term, Err(LicenseTermError::NoSeries));
     }
 
     const TEST_BILLING_KEY: &str = "TEST_BILLING_KEY";
@@ -2098,15 +2962,21 @@ mod tests {
     ) -> MeteredPlanId {
         let plan = JsonNewPlan::Subscription(JsonPlanSubscription {
             subscription: subscription_id.as_ref().parse().unwrap(),
+            self_hosted: None,
         });
-        let (metered_plan_id, json_plan) = biller.attach(&plan, organization).await.unwrap();
+        let (metered_plan_id, json_plan) = metered(
+            biller
+                .attach(&plan, organization, &licensor())
+                .await
+                .unwrap(),
+        );
         assert_eq!(json_plan.tiers_mode, Some(TiersMode::Volume));
         assert!(json_plan.card.is_some());
         assert!(json_plan.customer.is_some());
         assert!(json_plan.runner_minute.is_some());
         assert!(matches!(
             biller
-                .attach(&plan, OrganizationUuid::new())
+                .attach(&plan, OrganizationUuid::new(), &licensor())
                 .await
                 .unwrap_err(),
             AttachError::Refused(AttachRefusal::OtherOrganization(_))
@@ -2210,6 +3080,7 @@ mod tests {
     fn attach_body(subscription_id: &stripe_billing::SubscriptionId) -> JsonNewPlan {
         JsonNewPlan::Subscription(JsonPlanSubscription {
             subscription: subscription_id.as_ref().parse().unwrap(),
+            self_hosted: None,
         })
     }
 
@@ -2233,10 +3104,12 @@ mod tests {
             .unwrap()
             .id;
 
-        let (metered_plan_id, json_plan) = biller
-            .attach(&attach_body(&subscription_id), organization)
-            .await
-            .unwrap();
+        let (metered_plan_id, json_plan) = metered(
+            biller
+                .attach(&attach_body(&subscription_id), organization, &licensor())
+                .await
+                .unwrap(),
+        );
         let subscription = biller.get_subscription(&subscription_id).await.unwrap();
         assert_eq!(
             subscription.metadata.get(METADATA_ORGANIZATION),
@@ -2286,10 +3159,12 @@ mod tests {
             .unwrap()
             .id;
 
-        let (metered_plan_id, json_plan) = biller
-            .attach(&attach_body(&subscription_id), organization)
-            .await
-            .unwrap();
+        let (metered_plan_id, json_plan) = metered(
+            biller
+                .attach(&attach_body(&subscription_id), organization, &licensor())
+                .await
+                .unwrap(),
+        );
         assert_eq!(json_plan.level, PlanLevel::Enterprise);
         assert!(json_plan.card.is_none());
         assert!(json_plan.customer.is_none());
@@ -2301,6 +3176,111 @@ mod tests {
 
         biller
             .cancel_metered_subscription(&metered_plan_id)
+            .await
+            .unwrap();
+    }
+
+    /// The test-mode price of a Self-Hosted deal, found again by this lookup key so runs share
+    /// it.
+    const SELF_HOSTED_LOOKUP_KEY: &str = "bencher_test_self_hosted_deal";
+
+    /// A Self-Hosted deal's price as staff make it on the Enterprise product: a flat fee a year,
+    /// licensed, since nothing on Bencher Cloud meters a Self-Hosted server.
+    async fn self_hosted_price(biller: &Biller) -> String {
+        let found = ListPrice::new()
+            .lookup_keys(vec![SELF_HOSTED_LOOKUP_KEY.to_owned()])
+            .active(true)
+            .send(&biller.client)
+            .await
+            .unwrap();
+        if let Some(price) = found.data.into_iter().next() {
+            return price.id.to_string();
+        }
+        let mut recurring = CreatePriceRecurring::new(CreatePriceRecurringInterval::Year);
+        recurring.usage_type = Some(CreatePriceRecurringUsageType::Licensed);
+        CreatePrice::new(Currency::USD)
+            .product(biller.products.enterprise.as_str())
+            .lookup_key(SELF_HOSTED_LOOKUP_KEY)
+            .transfer_lookup_key(true)
+            .unit_amount(1_200_000)
+            .recurring(recurring)
+            .send(&biller.client)
+            .await
+            .unwrap()
+            .id
+            .to_string()
+    }
+
+    /// A Self-Hosted deal as staff create it: billed by invoice, for a customer that staff made
+    /// in Stripe, on a licensed price on the Enterprise product, with `series` metadata and no
+    /// `organization` metadata, which the attach writes. The attach signs the first license
+    /// from Stripe's own period.
+    async fn self_hosted_subscription(biller: &Biller, organization: OrganizationUuid) {
+        let customer_id = CreateCustomer::new()
+            .name("Eustace")
+            .email(format!("eustace.{}@nowhere.com", rand::random::<u64>()))
+            .send(&biller.client)
+            .await
+            .unwrap()
+            .id;
+        let mut item = CreateSubscriptionItems::new();
+        item.price = Some(self_hosted_price(biller).await);
+        let subscription = CreateSubscription::new()
+            .customer(customer_id.to_string())
+            .items(vec![item])
+            .collection_method(stripe_shared::SubscriptionCollectionMethod::SendInvoice)
+            .days_until_due(30u32)
+            .metadata(HashMap::from([(
+                METADATA_SERIES.to_owned(),
+                "500".to_owned(),
+            )]))
+            .send(&biller.client)
+            .await
+            .unwrap();
+        let item = &subscription.items.data[0];
+        let (period_start, period_end) = (item.current_period_start, item.current_period_end);
+        let subscription_id = subscription.id;
+
+        let self_hosted = OrganizationUuid::new();
+        let licensor = licensor();
+        let plan = JsonNewPlan::Subscription(JsonPlanSubscription {
+            subscription: subscription_id.as_ref().parse().unwrap(),
+            self_hosted: Some(self_hosted),
+        });
+        let attachment = biller.attach(&plan, organization, &licensor).await.unwrap();
+        let Attachment::Licensed(licensed_plan_id, license, json_plan) = attachment else {
+            panic!("not a Self-Hosted license: {attachment:?}");
+        };
+        let claims = licensor.read(&license).unwrap();
+        assert_eq!(claims.sub, self_hosted);
+        assert_eq!(claims.ser, entitlements(500));
+        assert_eq!(claims.iat, period_start);
+        assert_eq!(claims.trm, period_end);
+        assert_eq!(claims.exp, period_end + GRACE_PERIOD.num_seconds());
+        assert_eq!(json_plan.level, PlanLevel::Enterprise);
+        // Stripe makes a subscription billed by invoice active at once, paid or not.
+        assert_eq!(json_plan.status, PlanStatus::Active);
+        assert!(json_plan.card.is_none());
+        let subscription = biller.get_subscription(&subscription_id).await.unwrap();
+        assert_eq!(
+            subscription.metadata.get(METADATA_ORGANIZATION),
+            Some(&organization.to_string())
+        );
+
+        // Nothing has changed since the attach, so a read signs nothing new.
+        let licensed = biller.get_licensed_plan(&licensed_plan_id).await.unwrap();
+        assert_eq!(
+            licensed.term,
+            Ok(LicenseTerm {
+                series: entitlements(500),
+                issued_at: DateTime::try_from(period_start).unwrap(),
+                term_end: DateTime::try_from(period_end).unwrap(),
+            })
+        );
+        assert_eq!(licensed.renewal(HeldLicense::Verified(&claims)), Ok(None));
+
+        biller
+            .cancel_licensed_subscription(&licensed_plan_id)
             .await
             .unwrap();
     }
@@ -2329,7 +3309,7 @@ mod tests {
         // Live Stripe test: a meter event needs a real, recent timestamp (a fixed
         // `DateTime::TEST` would be rejected as outside Stripe's accepted window).
         let event = biller
-            .record_series_usage(customer_id, quantity, bencher_json::DateTime::now())
+            .record_series_usage(customer_id, quantity, DateTime::now())
             .await
             .unwrap();
         assert_eq!(event.event_name, ACTIVE_SERIES_METER_NAME);
@@ -2476,5 +3456,8 @@ mod tests {
             OrganizationUuid::new(),
         ))
         .await;
+
+        // Enterprise Self-Hosted license, billed by invoice
+        Box::pin(self_hosted_subscription(&biller, OrganizationUuid::new())).await;
     }
 }

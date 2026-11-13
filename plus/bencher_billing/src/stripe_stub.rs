@@ -1,8 +1,14 @@
-//! A Stripe API on localhost for offline tests of the biller's calls.
+//! A Stripe API on localhost for offline tests of the biller's calls, in this crate's tests and,
+//! behind `test-stub`, in the API's.
 //!
 //! The stub holds Stripe objects fully expanded and answers a read with the fields the
 //! request did not expand collapsed to their ids, as Stripe does. It records every
 //! request, and a subscription update merges its `metadata` into the stored object.
+#![expect(
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    reason = "test support, where any error fails the test"
+)]
 
 use std::{
     collections::HashMap,
@@ -10,11 +16,14 @@ use std::{
 };
 
 use serde_json::{Value, json};
+use stripe_shared::ProductId;
 use tokio::{
     io::{AsyncReadExt as _, AsyncWriteExt as _},
     net::{TcpListener, TcpStream},
     task::JoinSet,
 };
+
+use crate::products::{Product, Products};
 
 /// One request the stub answered.
 #[derive(Debug, Clone)]
@@ -107,6 +116,34 @@ impl StripeStub {
     /// The subscription as the stub now holds it.
     pub fn subscription(&self, id: &str) -> Value {
         self.state.lock().unwrap().objects.subscriptions[id].clone()
+    }
+
+    /// Hold `subscription` in place of the one with its id, as Stripe does after a renewal or
+    /// an edit.
+    pub fn set_subscription(&self, subscription: Value) {
+        let id = subscription["id"].as_str().unwrap().to_owned();
+        self.state
+            .lock()
+            .unwrap()
+            .objects
+            .subscriptions
+            .insert(id, subscription);
+    }
+}
+
+/// The products as a biller for the stub holds them, with no configured prices, so nothing
+/// read from them can come from the configuration.
+pub(crate) fn products() -> Products {
+    Products {
+        pro: Product {
+            id: ProductId::from(PRO_PRODUCT),
+            metered: HashMap::new(),
+        },
+        enterprise: ProductId::from(ENTERPRISE_PRODUCT),
+        bare_metal: Product {
+            id: ProductId::from(BARE_METAL_PRODUCT),
+            metered: HashMap::new(),
+        },
     }
 }
 
@@ -283,7 +320,9 @@ pub const PRO_PRODUCT: &str = "prod_pro";
 pub const ENTERPRISE_PRODUCT: &str = "prod_enterprise";
 pub const BARE_METAL_PRODUCT: &str = "prod_bare_metal";
 /// A Stripe timestamp inside the current period of every fixture.
-const NOW: i64 = 1_790_000_000;
+pub const NOW: i64 = 1_790_000_000;
+/// Seconds in a day.
+pub const DAY: i64 = 86_400;
 
 /// A per unit price of `unit_amount_decimal` cents on `product`, with the whole cent
 /// `unit_amount` that Stripe sets beside it when there is one.
@@ -322,14 +361,20 @@ pub fn tiered_price(id: &str, product: &str, tiers_mode: &str, tiers: &Value) ->
     })
 }
 
+/// An item for `price`, in a current period from a day before [`NOW`] to a day after it.
 pub fn item(price: &Value) -> Value {
+    item_in(price, NOW - DAY, NOW + DAY)
+}
+
+/// An item for `price`, in a current period from `start` to `end`.
+pub fn item_in(price: &Value, start: i64, end: i64) -> Value {
     let id = format!("si_{}", price["id"].as_str().unwrap_or_default());
     json!({
         "id": id,
         "object": "subscription_item",
         "created": NOW,
-        "current_period_start": NOW - 86_400,
-        "current_period_end": NOW + 86_400,
+        "current_period_start": start,
+        "current_period_end": end,
         "discounts": [],
         "metadata": {},
         "plan": {
@@ -407,12 +452,12 @@ pub fn subscription(
         "id": id,
         "object": "subscription",
         "automatic_tax": { "enabled": false },
-        "billing_cycle_anchor": NOW - 86_400,
+        "billing_cycle_anchor": NOW - DAY,
         "billing_mode": { "type": "classic" },
         "billing_schedules": [],
         "cancel_at_period_end": false,
         "collection_method": collection_method,
-        "created": NOW - 86_400,
+        "created": NOW - DAY,
         "currency": "usd",
         "discounts": [],
         "invoice_settings": { "issuer": { "type": "self" } },
@@ -422,7 +467,7 @@ pub fn subscription(
             "url": format!("/v1/subscription_items?subscription={id}"),
         },
         "livemode": false,
-        "start_date": NOW - 86_400,
+        "start_date": NOW - DAY,
         "status": status,
     });
     subscription["customer"] = customer;
@@ -440,7 +485,7 @@ pub fn session(id: &str, subscription: &str) -> Value {
         "created": NOW,
         "custom_fields": [],
         "custom_text": {},
-        "expires_at": NOW + 86_400,
+        "expires_at": NOW + DAY,
         "livemode": false,
         "mode": "subscription",
         "payment_method_types": ["card"],

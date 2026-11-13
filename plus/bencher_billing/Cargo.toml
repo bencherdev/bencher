@@ -12,6 +12,7 @@ default = []
 # https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
 plus = [
     "dep:bencher_json",
+    "dep:bencher_license",
     "dep:thiserror",
     "dep:uuid",
     "dep:async-stripe",
@@ -23,6 +24,8 @@ plus = [
     "dep:async-stripe-shared",
     "dep:async-stripe-types",
 ]
+# A Stripe stand-in on localhost and a biller that calls it, for the API's tests
+test-stub = ["plus", "dep:serde_json", "dep:tokio"]
 
 [dependencies]
 async-stripe = { workspace = true, optional = true, features = ["rustls-aws-lc-rs", "rustls-tls-webpki-roots"] }
@@ -34,7 +37,10 @@ async-stripe-product = { workspace = true, optional = true, features = ["price",
 async-stripe-shared = { workspace = true, optional = true }
 async-stripe-types = { workspace = true, optional = true }
 bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
+bencher_license = { workspace = true, optional = true, features = ["plus"] }
+serde_json = { workspace = true, optional = true }
 thiserror = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["io-util", "net", "rt"] }
 uuid = { workspace = true, optional = true }
 
 [dev-dependencies]
