@@ -153,3 +153,177 @@ fn median(array: &mut [i64]) -> f64 {
         array[size / 2] as f64
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use bencher_json::DateTime;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    use crate::{
+        context::DbConnection,
+        macros::sql::last_insert_rowid,
+        model::organization::OrganizationId,
+        schema,
+        test_util::{
+            create_branch_with_head, create_report, create_testbed, create_version, setup_test_db,
+        },
+    };
+
+    use super::{JobStats, MetricsStats, ProjectState, ProjectsStats, ReportsStats};
+
+    /// An organization `n` with a licensed plan row when `licensed`, or else a metered one, and
+    /// one project with one report of `metrics` metrics and a job that ran `seconds`.
+    fn seed(conn: &mut DbConnection, n: u8, licensed: bool, metrics: i32, seconds: i32) {
+        let uuid = |kind: u8| format!("00000000-0000-4000-8000-0000000{kind:02}{n:03}");
+        diesel::insert_into(schema::organization::table)
+            .values((
+                schema::organization::uuid.eq(uuid(1)),
+                schema::organization::name.eq(format!("Organization {n}")),
+                schema::organization::slug.eq(format!("organization-{n}")),
+                schema::organization::created.eq(DateTime::TEST),
+                schema::organization::modified.eq(DateTime::TEST),
+            ))
+            .execute(conn)
+            .unwrap();
+        let organization_id: OrganizationId = diesel::select(last_insert_rowid())
+            .get_result(conn)
+            .unwrap();
+        diesel::insert_into(schema::project::table)
+            .values((
+                schema::project::uuid.eq(uuid(2)),
+                schema::project::organization_id.eq(organization_id),
+                schema::project::name.eq(format!("Project {n}")),
+                schema::project::slug.eq(format!("project-{n}")),
+                schema::project::visibility.eq(0),
+                schema::project::created.eq(DateTime::TEST),
+                schema::project::modified.eq(DateTime::TEST),
+            ))
+            .execute(conn)
+            .unwrap();
+        let project_id = schema::project::table
+            .filter(schema::project::uuid.eq(uuid(2)))
+            .select(schema::project::id)
+            .first(conn)
+            .unwrap();
+        let head_id =
+            create_branch_with_head(conn, project_id, &uuid(3), "main", "main", &uuid(4)).head_id;
+        let version_id = create_version(conn, project_id, &uuid(5), 1, None);
+        let testbed_id = create_testbed(conn, project_id, &uuid(6), "localhost", "localhost");
+        let report_id = create_report(conn, &uuid(7), project_id, head_id, version_id, testbed_id);
+        diesel::insert_into(schema::metric_count_by_report::table)
+            .values((
+                schema::metric_count_by_report::report_id.eq(report_id),
+                schema::metric_count_by_report::metric_count.eq(metrics),
+            ))
+            .execute(conn)
+            .unwrap();
+        diesel::insert_into(schema::job_duration_by_report::table)
+            .values((
+                schema::job_duration_by_report::report_id.eq(report_id),
+                schema::job_duration_by_report::job_duration.eq(seconds),
+            ))
+            .execute(conn)
+            .unwrap();
+        let plan = (
+            schema::plan::organization_id.eq(organization_id),
+            schema::plan::created.eq(DateTime::TEST),
+            schema::plan::modified.eq(DateTime::TEST),
+        );
+        if licensed {
+            diesel::insert_into(schema::plan::table)
+                .values((
+                    plan,
+                    schema::plan::licensed_plan.eq("sub_licensed"),
+                    schema::plan::license.eq("header.claims.signature"),
+                ))
+                .execute(conn)
+                .unwrap();
+        } else {
+            diesel::insert_into(schema::plan::table)
+                .values((plan, schema::plan::metered_plan.eq("sub_metered")))
+                .execute(conn)
+                .unwrap();
+        }
+    }
+
+    /// A count that a stat of paid projects reads.
+    type Count = fn(&mut DbConnection) -> u64;
+
+    // Fails if any stat of paid projects counts the organization that holds only a licensed plan
+    // row, the Bencher Cloud organization that buys a Self-Hosted license, or leaves out the one
+    // with a Bencher Cloud plan row.
+    #[test]
+    fn paid_stats_count_only_bencher_cloud_plans() {
+        let mut conn = setup_test_db();
+        seed(&mut conn, 1, false, 3, 60);
+        seed(&mut conn, 2, true, 5, 120);
+
+        let stats: [(&str, Count, u64); 6] = [
+            (
+                "projects",
+                |conn| {
+                    ProjectsStats::new(conn, 0, 0, ProjectState::Plus)
+                        .unwrap()
+                        .projects
+                        .total
+                },
+                1,
+            ),
+            (
+                "reports",
+                |conn| {
+                    ReportsStats::new(conn, 0, 0, ProjectState::Plus)
+                        .unwrap()
+                        .reports
+                        .total
+                },
+                1,
+            ),
+            (
+                "metrics",
+                |conn| {
+                    MetricsStats::new(conn, 0, 0, ProjectState::Plus)
+                        .unwrap()
+                        .metrics
+                        .total
+                },
+                3,
+            ),
+            (
+                "top projects by metrics",
+                |conn| {
+                    let top = MetricsStats::new(conn, 0, 0, ProjectState::Plus)
+                        .unwrap()
+                        .top_projects
+                        .total;
+                    top.iter().map(|project| project.metrics).sum()
+                },
+                3,
+            ),
+            (
+                "runner seconds",
+                |conn| {
+                    JobStats::new(conn, 0, 0, ProjectState::Plus)
+                        .unwrap()
+                        .seconds
+                        .total
+                },
+                60,
+            ),
+            (
+                "top projects by runner seconds",
+                |conn| {
+                    let top = JobStats::new(conn, 0, 0, ProjectState::Plus)
+                        .unwrap()
+                        .top_projects
+                        .total;
+                    top.iter().map(|project| project.seconds).sum()
+                },
+                60,
+            ),
+        ];
+        for (stat, count, expected) in stats {
+            assert_eq!(count(&mut conn), expected, "{stat}");
+        }
+    }
+}
