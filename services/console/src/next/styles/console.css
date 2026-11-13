@@ -436,6 +436,22 @@
 		border-top: var(--border-width) solid var(--color-border);
 	}
 }
+/* A server admin's five sections are wider than this together, so they take three rows. */
+@container setwrap (width < 424px) {
+	.railseg:has(> :nth-child(5)) {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+	}
+	.console .railseg:has(> :nth-child(5)) a:nth-child(odd) {
+		border-left: 0;
+	}
+	.console .railseg:has(> :nth-child(5)) a:nth-child(n + 3) {
+		border-top: var(--border-width) solid var(--color-border);
+	}
+	.console .railseg a:nth-child(5) {
+		grid-column: 1 / -1;
+	}
+}
 .setbody {
 	display: flex;
 	flex-direction: column;

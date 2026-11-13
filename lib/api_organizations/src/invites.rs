@@ -9,7 +9,7 @@ use bencher_json::{
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
     auth_conn,
-    context::{ApiContext, Body, ButtonBody, Message},
+    context::{ApiContext, Body, Button, ButtonBody, Message},
     error::{forbidden_error, issue_error, resource_not_found_err, service_unavailable_error},
     model::{
         organization::{
@@ -350,8 +350,10 @@ pub(crate) async fn email_invite(
             inviter_name = inviter.name,
             inviter_email = inviter.email,
         ),
-        button_text: format!("Join {org_name}"),
-        button_url: button_url.into(),
+        button: Some(Button {
+            text: format!("Join {org_name}"),
+            url: button_url.into(),
+        }),
         clipboard: None,
         post_body: format!(
             "The button works once, in the next {days} days.",

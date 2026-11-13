@@ -19,7 +19,6 @@ use crate::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
         slug::ok_slug,
-        sql::max,
     },
     schema::{self, user as user_table},
 };
@@ -27,6 +26,7 @@ use crate::{
 pub mod actor;
 pub mod admin;
 pub mod auth;
+pub mod email_change;
 pub mod key;
 #[cfg(feature = "plus")]
 pub mod oauth;
@@ -394,13 +394,6 @@ impl From<JsonUpdateUser> for UpdateUser {
             locked,
         }
     }
-}
-
-/// Set `modified` for a write to a user at `now`, strictly after the last write even within
-/// one second, so an email change link bound to it ends with any later update to the user.
-#[diesel::dsl::auto_type(no_type_alias)]
-pub fn bump_modified(now: DateTime) -> _ {
-    user_table::modified.eq(max(now, user_table::modified + 1i64))
 }
 
 #[cfg(test)]
