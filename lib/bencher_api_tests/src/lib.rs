@@ -43,7 +43,7 @@ pub mod github;
 #[cfg(feature = "plus")]
 pub mod helpers;
 #[cfg(feature = "plus")]
-mod license;
+pub mod license;
 mod log;
 #[cfg(feature = "plus")]
 pub mod oci;
@@ -56,6 +56,8 @@ pub use callbacks::RecordingSender;
 pub use context::TestServer;
 #[cfg(feature = "plus")]
 pub use context::TestServerOptions;
+#[cfg(feature = "plus")]
+pub use license::TestClock;
 pub use log::LogCapture;
 #[cfg(feature = "plus")]
 pub use seed::TestProjectKey;

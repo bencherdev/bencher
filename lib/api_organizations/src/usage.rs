@@ -12,9 +12,15 @@ use bencher_rbac::organization::Permission;
 use bencher_schema::{
     auth_conn,
     context::{ApiContext, DbConnection},
-    error::{forbidden_error, issue_error, payment_required_error, resource_not_found_err},
+    error::{forbidden_error, issue_error, resource_not_found_err},
     model::{
-        organization::{OrganizationId, QueryOrganization, plan::QueryPlan},
+        organization::{
+            OrganizationId, QueryOrganization,
+            license::{
+                ACTIVE_SERIES_WINDOW, OrganizationLicense, QueryLicensePeak, count_active_series,
+            },
+            plan::QueryPlan,
+        },
         project::{metric::QueryMetric, series},
         runner::job::QueryJob,
         user::auth::{AuthUser, BearerToken},
@@ -48,10 +54,12 @@ pub async fn org_usage_options(
 
 /// View organization usage
 ///
-/// View the metrics and bare metal runner minutes usage of an organization.
+/// View the active Benchmark Series, or the metrics on the Free plan,
+/// and the bare metal runner minutes usage of an organization.
 /// The user must have `manage` permissions for the organization.
-/// ➕ Bencher Plus: This endpoint offers an estimate of metered usage
-/// and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.
+/// ➕ Bencher Plus: This endpoint offers an estimate of metered usage on Bencher Cloud.
+/// On Bencher Self-Hosted, it offers the active Benchmark Series of the last 30 days
+/// against a valid license, and the highest count seen in its term and in the term before it.
 #[endpoint {
     method = GET,
     path = "/v0/organizations/{organization}/usage",
@@ -72,8 +80,6 @@ async fn get_inner(
     path_params: OrgUsageParams,
     auth_user: &AuthUser,
 ) -> Result<JsonUsage, HttpError> {
-    let licensor = &context.licensor;
-
     // Get the organization
     let query_organization =
         QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
@@ -83,41 +89,57 @@ async fn get_inner(
         .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
         .map_err(forbidden_error)?;
 
+    let now = context.clock.now();
     // Bencher Cloud
     if let Ok(biller) = context.biller() {
         cloud_plan_usage(context, biller, &query_organization).await
     // Self-Hosted Licensed
-    } else if let Some(license) = query_organization.license.clone() {
-        let json_license = licensor
-            .into_json(license)
-            .map_err(payment_required_error)?;
-        let start_time = json_license.issued_at;
-        let end_time = json_license.expiration;
-        let (metrics, runner_minutes) = query_usage(
-            auth_conn!(context),
-            query_organization.id,
-            start_time,
-            end_time,
-        )?;
-        Ok(JsonUsage {
-            organization: query_organization.uuid,
-            kind: UsageKind::SelfHostedLicensed,
-            plan: None,
-            license: Some(json_license),
-            start_time,
-            end_time,
-            metrics: Some(metrics),
-            active_series: None,
-            runner_minutes: Some(runner_minutes),
-        })
-    // Self-Hosted Free
+    } else if let Some(license) =
+        OrganizationLicense::get_valid(&context.licensor, &query_organization, now)
+    {
+        licensed_usage(auth_conn!(context), &query_organization, license, now)
+    // Self-Hosted Free, which a license that is not valid reads as
     } else {
-        free_plan_usage(
-            auth_conn!(context),
-            &query_organization,
-            UsageKind::SelfHostedFree,
-        )
+        auth_conn!(context, |conn| {
+            let usage = free_plan_usage(conn, &query_organization, UsageKind::SelfHostedFree, now)?;
+            Ok(JsonUsage {
+                previous_peak: QueryLicensePeak::previous(conn, query_organization.id, None)?,
+                ..usage
+            })
+        })
     }
+}
+
+/// Usage for a Self-Hosted organization with a valid license: its Benchmark Series active in the
+/// last 30 days against the license's, and the highest count seen in the license's term and in
+/// the term before it.
+fn licensed_usage(
+    conn: &mut DbConnection,
+    query_organization: &QueryOrganization,
+    license: OrganizationLicense,
+    now: DateTime,
+) -> Result<JsonUsage, HttpError> {
+    let start_time = now - ACTIVE_SERIES_WINDOW;
+    let end_time = now;
+    let active_series = count_active_series(conn, query_organization.id, now)?;
+    let term_end = license.claims.term_end();
+    let peak = QueryLicensePeak::for_term(conn, query_organization.id, term_end)?;
+    let previous_peak = QueryLicensePeak::previous(conn, query_organization.id, Some(term_end))?;
+    let runner_minutes =
+        QueryJob::runner_minutes_usage(conn, query_organization.id, start_time, end_time)?;
+    Ok(JsonUsage {
+        organization: query_organization.uuid,
+        kind: UsageKind::SelfHostedLicensed,
+        plan: None,
+        license: Some(license.into_json()),
+        start_time,
+        end_time,
+        metrics: None,
+        active_series: Some(active_series),
+        peak,
+        previous_peak,
+        runner_minutes: Some(runner_minutes),
+    })
 }
 
 /// Usage for a Bencher Cloud organization: a metered plan, a licensed plan managed via
@@ -127,8 +149,6 @@ async fn cloud_plan_usage(
     biller: &Biller,
     query_organization: &QueryOrganization,
 ) -> Result<JsonUsage, HttpError> {
-    let licensor = &context.licensor;
-
     let Ok(query_plan) = QueryPlan::belonging_to(query_organization)
         .first::<QueryPlan>(auth_conn!(context))
         .map_err(resource_not_found_err!(Plan, query_organization))
@@ -138,6 +158,7 @@ async fn cloud_plan_usage(
             auth_conn!(context),
             query_organization,
             UsageKind::CloudFree,
+            context.clock.now(),
         );
     };
 
@@ -163,10 +184,15 @@ async fn cloud_plan_usage(
             end_time,
             metrics: None,
             active_series: Some(active_series),
+            peak: None,
+            previous_peak: None,
             runner_minutes: Some(runner_minutes),
         })
     // Licensed plan
-    } else if let Some(json_plan) = query_plan.to_licensed_plan(biller, licensor).await? {
+    } else if let Some(json_plan) = query_plan
+        .to_licensed_plan(biller, &context.licensor, context.clock.now())
+        .await?
+    {
         let Some(json_license) = json_plan.license.clone() else {
             return Err(issue_error(
                 "No license JSON found for licensed plan",
@@ -187,6 +213,8 @@ async fn cloud_plan_usage(
             end_time,
             metrics: None,
             active_series: None,
+            peak: None,
+            previous_peak: None,
             runner_minutes: None,
         })
     } else {
@@ -216,8 +244,9 @@ fn free_plan_usage(
     conn: &mut DbConnection,
     query_organization: &QueryOrganization,
     kind: UsageKind,
+    now: DateTime,
 ) -> Result<JsonUsage, HttpError> {
-    let end_time = DateTime::now();
+    let end_time = now;
     let start_time = (end_time.into_inner() - DEFAULT_USAGE_HISTORY).into();
     let (metrics, runner_minutes) = query_usage(conn, query_organization.id, start_time, end_time)?;
     Ok(JsonUsage {
@@ -229,6 +258,8 @@ fn free_plan_usage(
         end_time,
         metrics: Some(metrics),
         active_series: None,
+        peak: None,
+        previous_peak: None,
         runner_minutes: Some(runner_minutes),
     })
 }

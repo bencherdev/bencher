@@ -10,8 +10,8 @@ use std::{
 use camino::{Utf8Path, Utf8PathBuf};
 
 use bencher_json::{
-    DateTime, OAuthAuthorizationUuid, OAuthGrantUuid, OrganizationUuid, PlanLevel, ProjectUuid,
-    RunnerUuid, UserUuid, system::config::JsonRateLimiting,
+    DateTime, OAuthAuthorizationUuid, OAuthGrantUuid, OrganizationUuid, ProjectUuid, RunnerUuid,
+    UserUuid, system::config::JsonRateLimiting,
 };
 use bencher_license::Licensor;
 #[cfg(feature = "otel")]
@@ -26,7 +26,7 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     error::{BencherResource, too_many_requests},
     model::{
-        organization::{QueryOrganization, plan::LicenseUsage},
+        organization::{QueryOrganization, license::any_valid_license},
         project::{QueryProject, branch::QueryBranch, threshold::QueryThreshold},
     },
 };
@@ -208,6 +208,7 @@ impl RateLimiting {
         log: &Logger,
         conn: &mut DbConnection,
         licensor: &Licensor,
+        now: DateTime,
         is_bencher_cloud: bool,
         rate_limiting: Option<JsonRateLimiting>,
     ) -> Self {
@@ -220,24 +221,22 @@ impl RateLimiting {
                 slog::info!(log, "Applying default rate limits for Bencher Cloud");
                 Self::default()
             },
-            (false, Some(json_rate_limiting)) => {
-                match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Enterprise)) {
-                    Ok(license_usages) if license_usages.is_empty() => {
-                        slog::warn!(
-                            log,
-                            "Custom rate limits provided, but there is no valid Bencher Plus license key! Please purchase a license key: https://bencher.dev/pricing"
-                        );
-                        Self::max()
-                    },
-                    Ok(_) => {
-                        slog::info!(log, "Applying custom rate limits for Bencher Self-Hosted");
-                        json_rate_limiting.into()
-                    },
-                    Err(e) => {
-                        slog::error!(log, "Failed to check license for custom rate limits: {e}");
-                        Self::max()
-                    },
-                }
+            (false, Some(json_rate_limiting)) => match any_valid_license(conn, licensor, now) {
+                Ok(false) => {
+                    slog::warn!(
+                        log,
+                        "Custom rate limits provided, but there is no valid Bencher Plus license key! Please purchase a license key: https://bencher.dev/pricing"
+                    );
+                    Self::max()
+                },
+                Ok(true) => {
+                    slog::info!(log, "Applying custom rate limits for Bencher Self-Hosted");
+                    json_rate_limiting.into()
+                },
+                Err(e) => {
+                    slog::error!(log, "Failed to check license for custom rate limits: {e}");
+                    Self::max()
+                },
             },
             (false, None) => {
                 slog::info!(log, "No rate limits applied for Bencher Self-Hosted");
@@ -679,7 +678,10 @@ fn interval_kind(interval: bencher_rate_limiter::Interval) -> bencher_otel::Inte
 mod tests {
     use std::net::IpAddr;
 
-    use bencher_json::{OrganizationUuid, PlanLevel, Secret, system::config::JsonRateLimiting};
+    use bencher_json::{
+        DateTime, Entitlements, OrganizationUuid, Secret, system::config::JsonRateLimiting,
+    };
+    use chrono::Duration;
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
     use super::{
@@ -700,9 +702,10 @@ mod tests {
         Logger::root(slog::Discard, slog::o!())
     }
 
-    /// The daily metrics limit a Self-Hosted server applies when it is configured
-    /// with custom rate limits and its one organization holds a license at `level`.
-    fn self_hosted_plus_limit(level: PlanLevel) -> u32 {
+    /// The daily metrics limit a Self-Hosted server applies at [`DateTime::TEST`] when it is
+    /// configured with custom rate limits and its one organization holds a license issued at
+    /// `issued_at` for a term that ends at `term_end`, or no license.
+    fn self_hosted_plus_limit(term: Option<(DateTime, DateTime)>) -> u32 {
         let mut conn = setup_test_db();
         let base = create_base_entities(&mut conn);
         let organization: OrganizationUuid = schema::organization::table
@@ -710,15 +713,17 @@ mod tests {
             .select(schema::organization::uuid)
             .first(&mut conn)
             .unwrap();
-        let key: Secret = TEST_LICENSE_KEY.parse().unwrap();
-        let license = Licensor::bencher_cloud(&key)
-            .unwrap()
-            .new_annual_license(organization, level, 1_000.try_into().unwrap())
-            .unwrap();
-        diesel::update(schema::organization::table.find(base.organization_id))
-            .set(schema::organization::license.eq(license))
-            .execute(&mut conn)
-            .unwrap();
+        if let Some((issued_at, term_end)) = term {
+            let key: Secret = TEST_LICENSE_KEY.parse().unwrap();
+            let license = Licensor::bencher_cloud(&key)
+                .unwrap()
+                .new_license(organization, Entitlements::MIN, issued_at, term_end)
+                .unwrap();
+            diesel::update(schema::organization::table.find(base.organization_id))
+                .set(schema::organization::license.eq(license))
+                .execute(&mut conn)
+                .unwrap();
+        }
 
         let custom = JsonRateLimiting {
             window: None,
@@ -735,28 +740,36 @@ mod tests {
             &test_log(),
             &mut conn,
             &Licensor::self_hosted().unwrap(),
+            DateTime::TEST,
             false,
             Some(custom),
         )
         .plus_limit
     }
 
+    // Fails if a valid license, its grace included, leaves the custom rate limits off.
     #[test]
-    fn enterprise_license_enables_custom_rate_limits() {
+    fn a_valid_license_enables_custom_rate_limits() {
+        let now = DateTime::TEST;
         assert_eq!(
-            self_hosted_plus_limit(PlanLevel::Enterprise),
+            self_hosted_plus_limit(Some((now, now + Duration::days(365)))),
+            CUSTOM_PLUS_LIMIT
+        );
+        assert_eq!(
+            self_hosted_plus_limit(Some((now - Duration::days(40), now - Duration::days(1)))),
             CUSTOM_PLUS_LIMIT
         );
     }
 
+    // Fails if no license, or only an expired one, turns the custom rate limits on.
     #[test]
-    fn free_license_keeps_rate_limits_off() {
-        assert_eq!(self_hosted_plus_limit(PlanLevel::Free), u32::MAX);
-    }
-
-    #[test]
-    fn pro_license_keeps_rate_limits_off() {
-        assert_eq!(self_hosted_plus_limit(PlanLevel::Pro), u32::MAX);
+    fn no_valid_license_keeps_rate_limits_off() {
+        let now = DateTime::TEST;
+        assert_eq!(self_hosted_plus_limit(None), u32::MAX);
+        assert_eq!(
+            self_hosted_plus_limit(Some((now - Duration::days(400), now - Duration::days(31)))),
+            u32::MAX
+        );
     }
 
     #[test]

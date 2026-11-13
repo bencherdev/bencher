@@ -9,7 +9,7 @@ use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::{TestOrg, TestServer, TestUser};
 use bencher_config::spawn_job_recovery;
 use bencher_json::{
-    JobStatus, JobUuid, PlanLevel, PollTimeout,
+    JobStatus, JobUuid, PollTimeout,
     runner::{JobCallbackState, JsonIterationOutput, JsonReady},
 };
 use bencher_schema::{
@@ -502,9 +502,7 @@ async fn submit_with_callback(suffix: &str, licensed: bool) -> Submitted {
         .await;
     let org = server.create_org(&admin, &format!("Submit {suffix}")).await;
     if licensed {
-        server
-            .license_org(&admin, &org, PlanLevel::Enterprise)
-            .await;
+        server.license_org(&admin, &org).await;
     }
     let project = server
         .create_project(&admin, &org, &format!("Submit {suffix} proj"))

@@ -1,15 +1,14 @@
-use bencher_json::{Entitlements, OrganizationUuid, PROD_BENCHER_URL_STR, PlanLevel, Secret};
-use bencher_license::{BillingCycle, Licensor};
+use bencher_json::{DateTime, Entitlements, OrganizationUuid, PROD_BENCHER_URL_STR, Secret};
+use bencher_license::Licensor;
 
-use crate::parser::{TaskBillingCycle, TaskLicenseGenerate};
+use crate::parser::TaskLicenseGenerate;
 
 #[derive(Debug)]
 pub struct Generate {
     organization: OrganizationUuid,
     pem: String,
-    billing_cycle: BillingCycle,
-    level: PlanLevel,
-    entitlements: Entitlements,
+    series: Entitlements,
+    term_end: DateTime,
 }
 
 impl TryFrom<TaskLicenseGenerate> for Generate {
@@ -19,20 +18,14 @@ impl TryFrom<TaskLicenseGenerate> for Generate {
         let TaskLicenseGenerate {
             organization,
             pem,
-            cycle,
-            level,
-            entitlements,
+            series,
+            term_end,
         } = generate;
-        let billing_cycle = match cycle {
-            TaskBillingCycle::Monthly => BillingCycle::Monthly,
-            TaskBillingCycle::Annual => BillingCycle::Annual,
-        };
         Ok(Self {
             organization,
             pem,
-            billing_cycle,
-            level,
-            entitlements,
+            series,
+            term_end,
         })
     }
 }
@@ -41,13 +34,12 @@ impl Generate {
     pub fn exec(&self) -> anyhow::Result<()> {
         let pem: Secret = self.pem.parse()?;
         let licensor = Licensor::bencher_cloud(&pem)?;
-        let license = licensor.new_license(
-            bencher_license::Audience::default(),
-            self.billing_cycle,
+        let license = licensor.new_license_with_issuer(
             self.organization,
-            self.level,
-            self.entitlements,
-            Some(PROD_BENCHER_URL_STR.to_owned()),
+            self.series,
+            DateTime::now(),
+            self.term_end,
+            PROD_BENCHER_URL_STR,
         )?;
         println!("{license}");
         Ok(())

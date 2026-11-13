@@ -1,62 +1,122 @@
-use bencher_json::{BENCHER_URL_STR, DateTime, Entitlements, OrganizationUuid, PlanLevel};
-use chrono::Utc;
+use bencher_json::{
+    DateTime, Entitlements, Jwt, OrganizationUuid, organization::plan::JsonLicense,
+};
+use chrono::Duration;
 use serde::{Deserialize, Serialize};
 
-use crate::{LicenseError, audience::Audience, billing_cycle::BillingCycle};
+use crate::{LicenseError, audience::Audience};
 
+/// How long a license stays valid after the end of its paid term.
+pub const GRACE_PERIOD: Duration = Duration::days(30);
+/// How far ahead of a server's clock a license may be issued,
+/// so a server whose clock runs a little behind Bencher Cloud's takes a license signed moments ago.
+pub const ISSUED_AT_LEEWAY: Duration = Duration::minutes(5);
+
+/// The claims of a Bencher Plus Enterprise license.
+///
+/// A license in the earlier format names a plan level and metric entitlements instead of
+/// Benchmark Series and a term, so it does not deserialize into these claims.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
-    pub aud: Audience,         // Audience
-    pub exp: i64,              // Expiration time (as UTC timestamp)
-    pub iat: i64,              // Issued at (as UTC timestamp)
-    pub iss: String,           // Issuer
-    pub sub: OrganizationUuid, // Subject (whom token refers to)
-    pub lvl: PlanLevel,        // Plan level
-    pub ent: Entitlements,     // Entitlements (max number of metrics allowed)
+    /// Audience
+    pub aud: Audience,
+    /// Expiration: the end of the paid term plus the grace period (as a UTC timestamp)
+    pub exp: i64,
+    /// Issued at (as a UTC timestamp)
+    pub iat: i64,
+    /// Issuer
+    pub iss: String,
+    /// Subject: the Self-Hosted organization the license is for
+    pub sub: OrganizationUuid,
+    /// The Benchmark Series the contract covers
+    pub ser: Entitlements,
+    /// The end of the paid term (as a UTC timestamp)
+    pub trm: i64,
 }
 
 impl Claims {
-    pub fn new(
-        audience: Audience,
-        billing_cycle: BillingCycle,
+    pub(crate) fn new(
         organization: OrganizationUuid,
-        plan_level: PlanLevel,
-        entitlements: Entitlements,
-        issuer: Option<String>,
+        series: Entitlements,
+        issued_at: DateTime,
+        term_end: DateTime,
+        issuer: &str,
     ) -> Result<Self, LicenseError> {
-        let now = Utc::now().timestamp();
+        if term_end.timestamp() <= issued_at.timestamp() {
+            return Err(LicenseError::Term {
+                issued_at,
+                term_end,
+            });
+        }
         Ok(Self {
-            aud: audience,
-            exp: now.checked_add(i64::from(billing_cycle)).unwrap_or(now),
-            iat: now,
-            iss: issuer.unwrap_or_else(|| BENCHER_URL_STR.into()),
+            aud: Audience::Bencher,
+            exp: (term_end + GRACE_PERIOD).timestamp(),
+            iat: issued_at.timestamp(),
+            iss: issuer.to_owned(),
             sub: organization,
-            lvl: plan_level,
-            ent: entitlements,
+            ser: series,
+            trm: term_end.timestamp(),
         })
+    }
+
+    /// Refuse a license that is not valid at `now`: one issued after `now`, past the leeway,
+    /// or one at or past its expiration.
+    pub(crate) fn check_time(&self, now: DateTime) -> Result<(), LicenseError> {
+        if (now + ISSUED_AT_LEEWAY).timestamp() < self.iat {
+            return Err(LicenseError::NotYetIssued {
+                issued_at: self.issued_at(),
+                now,
+            });
+        }
+        if self.exp <= now.timestamp() {
+            return Err(LicenseError::Expired {
+                expiration: self.expiration(),
+                now,
+            });
+        }
+        Ok(())
     }
 
     pub fn organization(&self) -> OrganizationUuid {
         self.sub
     }
 
-    pub fn level(&self) -> PlanLevel {
-        self.lvl
+    pub fn series(&self) -> Entitlements {
+        self.ser
     }
 
     pub fn issued_at(&self) -> DateTime {
-        let date_time = DateTime::try_from(self.iat);
-        debug_assert!(date_time.is_ok(), "Issued at time is invalid");
-        date_time.unwrap_or_default()
+        timestamp(self.iat)
+    }
+
+    pub fn term_end(&self) -> DateTime {
+        timestamp(self.trm)
     }
 
     pub fn expiration(&self) -> DateTime {
-        let date_time = DateTime::try_from(self.exp);
-        debug_assert!(date_time.is_ok(), "Expiration time is invalid");
-        date_time.unwrap_or_default()
+        timestamp(self.exp)
     }
 
-    pub fn entitlements(&self) -> Entitlements {
-        self.ent
+    /// The license JSON for `key`, the license these claims are of.
+    pub fn into_json(self, key: Jwt) -> JsonLicense {
+        JsonLicense {
+            key,
+            organization: self.organization(),
+            series: self.series(),
+            issued_at: self.issued_at(),
+            term_end: self.term_end(),
+            expiration: self.expiration(),
+        }
     }
+
+    /// Whether `now` is past the end of the paid term, in the grace before the expiration.
+    pub fn in_grace(&self, now: DateTime) -> bool {
+        self.trm <= now.timestamp()
+    }
+}
+
+fn timestamp(timestamp: i64) -> DateTime {
+    let date_time = DateTime::try_from(timestamp);
+    debug_assert!(date_time.is_ok(), "License timestamp is invalid");
+    date_time.unwrap_or_default()
 }
