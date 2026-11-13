@@ -1,10 +1,7 @@
 use std::str::FromStr as _;
 use std::sync::LazyLock;
 
-use bencher_json::{
-    DateTime, Email, Jwt, OrganizationUuid, Secret, UserUuid,
-    organization::member::OrganizationRole,
-};
+use bencher_json::{DateTime, Email, Jwt, Secret, UserUuid};
 use chrono::Utc;
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode,
@@ -23,8 +20,8 @@ use crate::claims::PublicOciTokenClaims;
 #[cfg(feature = "plus")]
 use crate::claims::RunnerOciTokenClaims;
 use crate::{
-    Audience, AuthOciClaims, Claims, EmailChangeClaims, InviteClaims, OciAction, OciScopeClaims,
-    OrgClaims, PublicOciClaims, TokenError,
+    Audience, AuthOciClaims, Claims, EmailChangeClaims, OciAction, OciScopeClaims, PublicOciClaims,
+    TokenError,
 };
 #[cfg(feature = "plus")]
 use crate::{GitHubGrantClaims, GitHubStateClaims, ProjectOciClaims, RunnerOciClaims};
@@ -52,10 +49,9 @@ impl TokenKey {
         audience: Audience,
         email: Email,
         ttl: u32,
-        org: Option<OrgClaims>,
         oci: Option<OciScopeClaims>,
     ) -> Result<Jwt, TokenError> {
-        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, org, oci);
+        let claims = Claims::new(audience, self.issuer.clone(), email, ttl, oci);
         Jwt::from_str(
             &encode(&HEADER, &claims, &self.encoding)
                 .map_err(|e| TokenError::Encode { error: e })?,
@@ -64,29 +60,15 @@ impl TokenKey {
     }
 
     pub fn new_auth(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Auth, email, ttl, None, None)
+        self.new_jwt(Audience::Auth, email, ttl, None)
     }
 
     pub fn new_client(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Client, email, ttl, None, None)
+        self.new_jwt(Audience::Client, email, ttl, None)
     }
 
     pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::ApiKey, email, ttl, None, None)
-    }
-
-    pub fn new_invite(
-        &self,
-        email: Email,
-        ttl: u32,
-        org_uuid: OrganizationUuid,
-        role: OrganizationRole,
-    ) -> Result<Jwt, TokenError> {
-        let org_claims = OrgClaims {
-            uuid: org_uuid,
-            role,
-        };
-        self.new_jwt(Audience::Invite, email, ttl, Some(org_claims), None)
+        self.new_jwt(Audience::ApiKey, email, ttl, None)
     }
 
     pub fn new_email_change(
@@ -146,7 +128,7 @@ impl TokenKey {
             repository,
             actions,
         };
-        self.new_jwt(Audience::OciAuth, email, ttl, None, Some(oci_claims))
+        self.new_jwt(Audience::OciAuth, email, ttl, Some(oci_claims))
     }
 
     #[cfg(feature = "plus")]
@@ -279,10 +261,6 @@ impl TokenKey {
 
     pub fn validate_client(&self, token: &Jwt) -> Result<Claims, TokenError> {
         Ok(self.validate(token, &[Audience::Client])?.claims)
-    }
-
-    pub fn validate_invite(&self, token: &Jwt) -> Result<InviteClaims, TokenError> {
-        self.validate(token, &[Audience::Invite])?.claims.try_into()
     }
 
     pub fn validate_email_change(
@@ -457,13 +435,10 @@ fn issued_and_expires(now: DateTime, ttl: u32) -> (i64, i64) {
 mod tests {
     use std::{str::FromStr as _, sync::LazyLock};
 
-    use bencher_json::{
-        DateTime, Email, Jwt, OrganizationUuid, UserUuid, organization::member::OrganizationRole,
-    };
+    use bencher_json::{DateTime, Email, Jwt, UserUuid};
 
     use crate::{
         Audience, Claims, DEFAULT_SECRET_KEY, EmailChangeClaims, OciAction, OciScopeClaims,
-        OrgClaims,
     };
 
     use super::TokenKey;
@@ -482,7 +457,6 @@ mod tests {
     fn make_expired_token(
         secret_key: &TokenKey,
         audience: Audience,
-        org: Option<OrgClaims>,
         oci: Option<OciScopeClaims>,
     ) -> Jwt {
         let now = chrono::Utc::now().timestamp();
@@ -492,7 +466,6 @@ mod tests {
             iat: now - 200,
             iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
             sub: EMAIL.clone(),
-            org,
             oci,
         };
         Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap())
@@ -516,7 +489,7 @@ mod tests {
     #[test]
     fn jwt_auth_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = make_expired_token(&secret_key, Audience::Auth, None, None);
+        let token = make_expired_token(&secret_key, Audience::Auth, None);
         secret_key.validate_auth(&token).unwrap_err();
     }
 
@@ -537,7 +510,7 @@ mod tests {
     #[test]
     fn jwt_client_expired() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = make_expired_token(&secret_key, Audience::Client, None, None);
+        let token = make_expired_token(&secret_key, Audience::Client, None);
         secret_key.validate_client(&token).unwrap_err();
     }
 
@@ -547,39 +520,6 @@ mod tests {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
         secret_key.validate_client(&token).unwrap_err();
-    }
-
-    #[test]
-    fn jwt_invite() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let org_uuid = OrganizationUuid::new();
-        let role = OrganizationRole::Leader;
-
-        let token = secret_key
-            .new_invite(EMAIL.clone(), TTL, org_uuid, role)
-            .unwrap();
-
-        let claims = secret_key.validate_invite(&token).unwrap();
-
-        assert_eq!(claims.aud, Audience::Invite.to_string());
-        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
-        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
-        assert_eq!(claims.sub, *EMAIL);
-
-        assert_eq!(claims.org.uuid, org_uuid);
-        assert_eq!(claims.org.role, role);
-    }
-
-    #[test]
-    fn jwt_invite_expired() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let org = OrgClaims {
-            uuid: OrganizationUuid::new(),
-            role: OrganizationRole::Leader,
-        };
-        let token = make_expired_token(&secret_key, Audience::Invite, Some(org), None);
-        secret_key.validate_invite(&token).unwrap_err();
     }
 
     // --- Email change tokens ---
@@ -853,7 +793,7 @@ mod tests {
             repository: None,
             actions: vec![OciAction::Pull],
         };
-        let token = make_expired_token(&secret_key, Audience::OciAuth, None, Some(oci));
+        let token = make_expired_token(&secret_key, Audience::OciAuth, Some(oci));
         secret_key.validate_oci_auth(&token).unwrap_err();
     }
 

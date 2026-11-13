@@ -74,13 +74,6 @@ pub struct JsonConfirm {
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonAccept {
-    pub invite: Jwt,
-}
-
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonAuthAck {
     pub email: Email,
 }

@@ -1,8 +1,7 @@
 use bencher_json::{
-    DateTime, Email, JsonPubUser, JsonSignup, JsonUpdateUser, JsonUser, Jwt, Sanitize, UserName,
+    DateTime, Email, JsonPubUser, JsonSignup, JsonUpdateUser, JsonUser, Sanitize, UserName,
     UserSlug, UserUuid, organization::member::OrganizationRole,
 };
-use bencher_token::TokenKey;
 use diesel::{
     AggregateExpressionMethods as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
     RunQueryDsl as _,
@@ -11,13 +10,11 @@ use dropshot::HttpError;
 use slog::Logger;
 use url::Url;
 
+#[cfg(feature = "plus")]
+use crate::ApiContext;
 use crate::{
-    ApiContext,
     context::{Body, DbConnection, Message, Messenger, NewUserBody},
-    error::{
-        conflict_error, forbidden_error, issue_error, not_found_error, resource_conflict_err,
-        resource_not_found_err,
-    },
+    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
@@ -25,7 +22,6 @@ use crate::{
         sql::max,
     },
     schema::{self, user as user_table},
-    write_conn,
 };
 
 pub mod actor;
@@ -57,8 +53,7 @@ macro_rules! same_user {
 pub use same_user;
 
 use super::organization::{
-    InsertOrganization, QueryOrganization,
-    organization_role::{InsertOrganizationRole, QueryOrganizationRole},
+    InsertOrganization, QueryOrganization, organization_role::InsertOrganizationRole,
 };
 
 #[derive(Debug, Clone, diesel::Queryable)]
@@ -175,62 +170,6 @@ impl QueryUser {
         context.rate_limiting.auth_attempt(self.uuid)
     }
 
-    pub async fn accept_invite(
-        &self,
-        context: &ApiContext,
-        token_key: &TokenKey,
-        invite: &Jwt,
-    ) -> Result<(), HttpError> {
-        let now = context.clock.now();
-        let invited = self.accept_invite_with(write_conn!(context), token_key, invite, now)?;
-        match invited {
-            Invited::Joined => Ok(()),
-            Invited::AlreadyMember => Err(conflict_error(
-                "The invited user is already a member of the organization",
-            )),
-            Invited::OrganizationGone => Err(not_found_error(
-                "The organization of the invitation no longer exists",
-            )),
-        }
-    }
-
-    /// Accept an invite on one connection, inside a write transaction, unless it no longer
-    /// applies: its organization is gone, or the user is already a member.
-    pub fn accept_invite_with(
-        &self,
-        conn: &mut DbConnection,
-        token_key: &TokenKey,
-        invite: &Jwt,
-        now: DateTime,
-    ) -> Result<Invited, HttpError> {
-        let (organization_uuid, role) =
-            InsertOrganizationRole::validate_invite(conn, token_key, invite, self.id)?;
-        let lookup_error = |e| {
-            issue_error(
-                "Failed to look up an invitation",
-                "Failed to look up the organization of an invitation:",
-                e,
-            )
-        };
-        let Some(organization) =
-            QueryOrganization::find(conn, organization_uuid).map_err(lookup_error)?
-        else {
-            return Ok(Invited::OrganizationGone);
-        };
-        if QueryOrganizationRole::exists(conn, self.id, organization.id).map_err(lookup_error)? {
-            return Ok(Invited::AlreadyMember);
-        }
-        InsertOrganizationRole {
-            user_id: self.id,
-            organization_id: organization.id,
-            role,
-            created: now,
-            modified: now,
-        }
-        .insert(conn)?;
-        Ok(Invited::Joined)
-    }
-
     pub fn into_json(self) -> JsonUser {
         let Self {
             uuid,
@@ -267,14 +206,6 @@ impl Sanitize for QueryUser {
     }
 }
 
-/// What accepting an invite did.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Invited {
-    Joined,
-    AlreadyMember,
-    OrganizationGone,
-}
-
 #[derive(Debug, Clone, diesel::Insertable)]
 #[diesel(table_name = user_table)]
 pub struct InsertUser {
@@ -304,25 +235,18 @@ impl InsertUser {
         }
     }
 
-    pub fn from_json(
-        conn: &mut DbConnection,
-        token_key: &TokenKey,
-        json_signup: &JsonSignup,
-    ) -> Result<Self, HttpError> {
+    /// Sign up the user an old sign up names, which carries no invitation.
+    pub fn from_json(conn: &mut DbConnection, json_signup: &JsonSignup) -> Result<Self, HttpError> {
         let JsonSignup {
             name,
             slug,
             email,
-            invite,
             claim,
             ..
         } = json_signup.clone();
         let (insert_user, query_user) = Self::sign_up(conn, name, slug, email)?;
 
-        if let Some(invite) = &invite {
-            InsertOrganizationRole::from_jwt(conn, token_key, invite, query_user.id)?
-                .insert(conn)?;
-        } else if let Some(organization_uuid) = claim
+        if let Some(organization_uuid) = claim
             && let organization_id = QueryOrganization::get_id(conn, organization_uuid)?
             && !QueryOrganization::get(conn, organization_id)?.is_claimed(conn)?
         {

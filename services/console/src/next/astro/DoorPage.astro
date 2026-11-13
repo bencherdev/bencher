@@ -2,9 +2,9 @@
 import { OAUTH_GITHUB, OAUTH_GOOGLE } from "astro:env/server";
 import Door from "../auth/Door";
 import Frame from "../auth/Frame";
-import { carryOf, tokenEmail } from "../auth/params";
 import type { Door as DoorName } from "../auth/pending";
 import AuthPage from "./AuthPage.astro";
+import InviteReturn from "./InviteReturn.astro";
 
 interface Props {
 	door: DoorName;
@@ -14,21 +14,19 @@ interface Props {
 const { door, title } = Astro.props;
 const github = OAUTH_GITHUB === "true";
 const google = OAUTH_GOOGLE === "true";
-// An invite's address is filled in.
-const email = tokenEmail(carryOf(Astro.url.searchParams).invite);
 ---
 
 <AuthPage title={title}>
+	<InviteReturn slot="head" />
 	<div
 		id="auth"
 		class="console"
 		data-door={door}
 		data-github={github ? "" : undefined}
 		data-google={google ? "" : undefined}
-		data-email={email}
 	>
 		<Frame>
-			<Door door={door} github={github} google={google} email={email} />
+			<Door door={door} github={github} google={google} />
 		</Frame>
 	</div>
 	<script>

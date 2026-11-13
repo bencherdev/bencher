@@ -11,7 +11,7 @@ use diesel::{
 use dropshot::HttpError;
 
 use crate::{
-    ApiContext, auth_conn,
+    ApiContext,
     context::DbConnection,
     error::issue_error,
     macros::fn_get::fn_from_uuid,
@@ -23,6 +23,7 @@ use crate::{
     },
     resource_conflict_err, resource_not_found_err,
     schema::{self, sso as sso_table},
+    write_conn,
 };
 
 crate::macros::typed_id::typed_id!(SsoId);
@@ -48,16 +49,13 @@ impl QuerySso {
         query_user: &QueryUser,
         #[cfg(feature = "otel")] auth_method: bencher_otel::AuthMethod,
     ) -> Result<(), HttpError> {
-        let email_domain = query_user.email.domain();
-        if let Some(organization_uuid) =
-            Self::unjoined(auth_conn!(context), query_user, &email_domain)?
-        {
-            QueryOrganization::join(context, organization_uuid, query_user).await?;
-
-            #[cfg(feature = "otel")]
+        let joined = Self::join_all_with(write_conn!(context), query_user, context.clock.now())?;
+        #[cfg(feature = "otel")]
+        if joined {
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserSsoJoin(auth_method));
         }
-
+        #[cfg(not(feature = "otel"))]
+        let _ = joined;
         Ok(())
     }
 

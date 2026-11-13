@@ -2,6 +2,7 @@ import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import {
+	type JsonInvite,
 	type JsonMember,
 	type JsonOrganization,
 	OrganizationRole,
@@ -9,7 +10,12 @@ import {
 import { ApiError } from "../api";
 import { axeInBothThemes } from "../axe/testing";
 import { screenBatch } from "../list/rows";
-import { type Roles, membersKey, rolesQuery } from "../organization/members";
+import {
+	type Roles,
+	invitesQuery,
+	membersKey,
+	rolesQuery,
+} from "../organization/members";
 import { ORGANIZATION, mount } from "../organization/testing";
 import { KeyTable } from "../settings/KeyList";
 import { fakeApi } from "../settings/testing";
@@ -44,6 +50,32 @@ const MURIEL = member("u", "Muriel Bagge", "muriel@nowhere.example");
 const EUSTACE = member("u2", "Eustace Bagge", "eustace@nowhere.example");
 const LEADER: Roles = { invite: true, remove: true };
 
+const pending = (
+	uuid: string,
+	email: string,
+	inviter: string,
+	expiration: string,
+): JsonInvite => ({
+	uuid,
+	email,
+	role: OrganizationRole.Leader,
+	inviter: { uuid: `u-${inviter}`, name: inviter, slug: inviter.toLowerCase() },
+	created: "2026-10-20T00:00:00Z",
+	expiration,
+});
+const GRACE = pending(
+	"i1",
+	"grace@nowhere.example",
+	"Muriel Bagge",
+	"2999-11-05T12:00:00Z",
+);
+const KATHERINE = pending(
+	"i2",
+	"katherine@nowhere.example",
+	"Eustace Bagge",
+	"2026-10-27T12:00:00Z",
+);
+
 interface MemberPage {
 	members: JsonMember[];
 	total: number;
@@ -54,6 +86,7 @@ const open = ({
 	organization = ORGANIZATION,
 	members = { members: [MURIEL, EUSTACE], total: 2 },
 	roles = LEADER,
+	invites = { invites: [], total: 0 },
 	answer = async () => undefined,
 	read = () => new Promise<never>(() => {}),
 }: {
@@ -61,6 +94,8 @@ const open = ({
 	/** The first page the cache holds, or none. */
 	members?: MemberPage | null;
 	roles?: Roles | null;
+	/** The pending invitations the cache holds, or none. */
+	invites?: { invites: JsonInvite[]; total: number } | null;
 	answer?: Parameters<typeof fakeApi>[0];
 	read?: (path: string) => Promise<never>;
 } = {}) => {
@@ -80,6 +115,9 @@ const open = ({
 		: [];
 	if (roles) {
 		cached.push([rolesQuery(api, key).queryKey, roles]);
+	}
+	if (invites) {
+		cached.push([invitesQuery(api, key).queryKey, invites]);
 	}
 	const mounted = mount(() => <OrgMembers />, {
 		api,
@@ -229,7 +267,7 @@ describe("invite", () => {
 
 		await expect
 			.element(page.getByRole("status"))
-			.toHaveTextContent("Invitation sent");
+			.toHaveTextContent("Invitation sent to courage@nowhere.example");
 		expect(sent).toEqual([
 			{
 				method: "POST",
@@ -267,6 +305,201 @@ describe("invite", () => {
 			.element(page.getByRole("alert"))
 			.toHaveTextContent("Bencher did not send the invitation: Invalid email");
 		await expect.element(email()).toHaveValue("courage@nowhere.example");
+	});
+});
+
+describe("pending invites", () => {
+	const card = () => page.getByRole("region", { name: "Pending invites" });
+	const invites = () => page.getByRole("table", { name: "Pending invites" });
+	const inviteRows = () =>
+		[...(invites().element().querySelectorAll("tbody tr") ?? [])].map((row) =>
+			[...row.querySelectorAll("td")].map((cell) => cell.textContent?.trim()),
+		);
+
+	// Kills an invitation left off the card, its inviter or its expiry left
+	// out, an expired one dropped or read as live, Resend or Revoke missing
+	// from any row, and a count of the rows drawn rather than the API's.
+	test("lists each invitation with who sent it, when it stops working, Resend, and Revoke", async () => {
+		open({ invites: { invites: [GRACE, KATHERINE], total: 3 } });
+		await expect.element(invites()).toBeVisible();
+		await expect.element(card()).toHaveTextContent("Pending invites3");
+		expect(inviteRows()).toEqual([
+			[
+				"grace@nowhere.example",
+				"Invited by Muriel Bagge",
+				"Expires Nov 5, 2999",
+				"ResendRevoke",
+			],
+			[
+				"katherine@nowhere.example",
+				"Invited by Eustace Bagge",
+				"Expired Oct 27, 2026",
+				"ResendRevoke",
+			],
+		]);
+		expect(
+			invites().element().querySelector("tbody tr:last-child .faint")
+				?.textContent,
+		).toBe("Expired Oct 27, 2026");
+		for (const email of [
+			"grace@nowhere.example",
+			"katherine@nowhere.example",
+		]) {
+			await expect
+				.element(
+					page.getByRole("button", {
+						name: `Resend the invitation to ${email}`,
+					}),
+				)
+				.toBeVisible();
+			await expect
+				.element(
+					page.getByRole("button", {
+						name: `Revoke the invitation to ${email}`,
+					}),
+				)
+				.toBeVisible();
+		}
+	});
+
+	// Kills a card drawn for a reader who may not invite, or with nothing on it.
+	test("only a reader who may invite sees it, and only when one waits", async () => {
+		open({
+			roles: { invite: false, remove: true },
+			invites: { invites: [GRACE], total: 1 },
+		});
+		await expect.element(table()).toBeVisible();
+		expect(card().query()).toBeNull();
+		dispose?.();
+
+		open();
+		await expect.element(table()).toBeVisible();
+		expect(card().query()).toBeNull();
+	});
+
+	// The card draws above the members, so members drawn before a late answer
+	// would move when it came.
+	// Kills a page that draws before its pending invites are in.
+	test("nothing draws until the pending invites are in, so their card moves nothing", async () => {
+		const late: { answer?: (invites: JsonInvite[]) => void } = {};
+		open({
+			invites: null,
+			read: (path) =>
+				new URL(path, "http://api.test").pathname.endsWith("/invites")
+					? (new Promise((resolve) => {
+							late.answer = (invites) =>
+								resolve({
+									data: invites,
+									headers: new Headers({
+										"X-Total-Count": String(invites.length),
+									}),
+								});
+						}) as Promise<never>)
+					: new Promise<never>(() => {}),
+		});
+		await expect.poll(() => late.answer).toBeDefined();
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		expect(table().query()).toBeNull();
+		expect(card().query()).toBeNull();
+
+		late.answer?.([GRACE]);
+		await expect.element(card()).toBeVisible();
+		await expect.element(table()).toBeVisible();
+	});
+
+	// The pending invites are read beside the permissions, so a reader who may
+	// not invite is refused them.
+	// Kills a refusal that blocks the members or says Members did not load.
+	test("a reader refused the pending invites sees the members and nothing else", async () => {
+		const { reads } = open({
+			roles: { invite: false, remove: false },
+			invites: null,
+			read: async (path) => {
+				if (new URL(path, "http://api.test").pathname.endsWith("/invites")) {
+					throw new ApiError(404, "not_found", "{}");
+				}
+				return new Promise<never>(() => {});
+			},
+		});
+		await expect
+			.poll(() => reads.filter((path) => path.includes("/invites")).length)
+			.toBe(1);
+		await expect.element(table()).toBeVisible();
+		expect(card().query()).toBeNull();
+		expect(page.getByRole("alert").query()).toBeNull();
+	});
+
+	// Kills a Resend or Revoke sent for another invitation, or one that says
+	// nothing, and a list left as it was.
+	test("Resend and Revoke each send their own change and say what happened", async () => {
+		const { sent, reads } = open({
+			invites: { invites: [GRACE, KATHERINE], total: 2 },
+		});
+		await page
+			.getByRole("button", {
+				name: "Resend the invitation to katherine@nowhere.example",
+			})
+			.click();
+		await expect
+			.element(page.getByRole("status"))
+			.toHaveTextContent("Invitation sent to katherine@nowhere.example");
+		await page
+			.getByRole("button", {
+				name: "Revoke the invitation to grace@nowhere.example",
+			})
+			.click();
+		await expect
+			.element(page.getByRole("status"))
+			.toHaveTextContent("Invitation to grace@nowhere.example revoked");
+		expect(sent).toEqual([
+			{
+				method: "POST",
+				path: "/v0/organizations/pompeii-llc/invites/i2/resend",
+				body: undefined,
+			},
+			{
+				method: "DELETE",
+				path: "/v0/organizations/pompeii-llc/invites/i1",
+				body: undefined,
+			},
+		]);
+		await expect
+			.poll(() => reads.filter((path) => path.includes("/invites?")).length)
+			.toBe(2);
+	});
+
+	// Kills a refused Resend that says nothing, or says it was sent.
+	test("a refused Resend says why", async () => {
+		open({
+			invites: { invites: [GRACE], total: 1 },
+			answer: async () => {
+				throw new ApiError(429, "client", '{"message":"Too many invites"}');
+			},
+		});
+		await page
+			.getByRole("button", {
+				name: "Resend the invitation to grace@nowhere.example",
+			})
+			.click();
+		await expect
+			.element(page.getByRole("alert"))
+			.toHaveTextContent(
+				"Bencher did not send the invitation: Too many invites",
+			);
+		expect(page.getByText(/^Invitation sent/).query()).toBeNull();
+	});
+
+	// Kills contrast, names, and roles that fail axe in either theme, the
+	// expired row's faint date among them.
+	test("the card passes axe in both themes", async () => {
+		await axeInBothThemes(async () => {
+			open({ invites: { invites: [GRACE, KATHERINE], total: 2 } });
+			await expect.element(invites()).toBeVisible();
+			return () => {
+				dispose?.();
+				dispose = undefined;
+			};
+		});
 	});
 });
 

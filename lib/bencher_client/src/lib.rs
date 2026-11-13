@@ -191,7 +191,6 @@ try_from_client!(
     JsonSignup,
     JsonLogin,
     JsonConfirm,
-    JsonAccept,
     JsonAuthAck,
     JsonAuthUser,
     JsonConfig,
