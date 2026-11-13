@@ -51,9 +51,6 @@ impl From<JsonSmtp> for Email {
 
 impl Email {
     pub fn send(&self, log: &Logger, message: Message) {
-        if let Some(body) = &message.body {
-            slog::debug!(log, "Setting email body: {body:?}");
-        }
         let from_email = self.from_email.clone();
         let to_email = message.to_email.clone();
         let message_builder = self.message_builder(log, message);
@@ -246,7 +243,7 @@ mod tests {
     };
 
     use super::{ClientBuilder, Email, SEND_TIMEOUT};
-    use crate::context::Message;
+    use crate::context::{Body, ButtonBody, Message, Messenger};
 
     /// A self-signed certificate for 127.0.0.1, for these tests alone, made with
     /// `openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -days 36500
@@ -336,6 +333,101 @@ mod tests {
             Some(Seen::Delivered(DELIVERED.to_owned()))
         );
         assert_eq!(seen.recv().await, None);
+    }
+
+    // An email's subject and body can carry a link's secret, so a send, whether it waits or not,
+    // logs neither, at any level.
+    #[tokio::test]
+    async fn sends_log_neither_subject_nor_body() {
+        const SECRET: &str = "a-link-secret-0123456789";
+        let (server, mut seen) = SmtpServer::bind().await;
+        let messenger = Messenger::Email(server.email());
+        let lines = Lines::default();
+        let log = slog::Logger::root(lines.clone(), slog::o!());
+        let with_secret = || Message {
+            to_name: None,
+            to_email: DELIVERED.to_owned(),
+            subject: Some(format!("Subject {SECRET}")),
+            body: Some(Body::Button(Box::new(ButtonBody {
+                title: SECRET.to_owned(),
+                preheader: String::new(),
+                greeting: String::new(),
+                pre_body: SECRET.to_owned(),
+                button_text: "Join".to_owned(),
+                button_url: format!("https://bencher.example/auth/login#invite={SECRET}"),
+                clipboard: None,
+                post_body: String::new(),
+                closing: String::new(),
+                signature: String::new(),
+                settings_url: String::new(),
+            }))),
+        };
+        let sends = async {
+            messenger.send(&log, with_secret());
+            assert_eq!(
+                seen.recv().await,
+                Some(Seen::Delivered(DELIVERED.to_owned()))
+            );
+            messenger.send_and_wait(&log, with_secret()).await.unwrap();
+        };
+        (server.serve(), sends).race().await;
+        drop(server);
+
+        assert_eq!(
+            seen.recv().await,
+            Some(Seen::Delivered(DELIVERED.to_owned()))
+        );
+        let logged = lines.0.lock().unwrap().clone();
+        assert!(
+            logged.iter().any(|line| line.contains(DELIVERED)),
+            "{logged:?}"
+        );
+        assert!(
+            logged.iter().all(|line| !line.contains(SECRET)),
+            "{logged:?}"
+        );
+    }
+
+    /// Every line logged, its message and its key-value pairs.
+    #[derive(Clone, Default)]
+    struct Lines(Arc<std::sync::Mutex<Vec<String>>>);
+
+    impl slog::Drain for Lines {
+        type Ok = ();
+        type Err = slog::Never;
+
+        fn log(
+            &self,
+            record: &slog::Record<'_>,
+            values: &slog::OwnedKVList,
+        ) -> Result<(), slog::Never> {
+            use slog::KV as _;
+
+            let mut line = Line(record.msg().to_string());
+            let _serialized = record
+                .kv()
+                .serialize(record, &mut line)
+                .and_then(|()| values.serialize(record, &mut line));
+            self.0
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .push(line.0);
+            Ok(())
+        }
+    }
+
+    struct Line(String);
+
+    impl slog::Serializer for Line {
+        fn emit_arguments(
+            &mut self,
+            key: slog::Key,
+            val: &std::fmt::Arguments<'_>,
+        ) -> slog::Result {
+            use std::fmt::Write as _;
+
+            write!(self.0, " {key}={val}").map_err(slog::Error::Fmt)
+        }
     }
 
     // A server that accepts the connection and never answers holds a send for no longer than the

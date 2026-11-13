@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::{JsonAuthAck, JsonLogin};
 use bencher_schema::{
-    context::{ApiContext, Body, ButtonBody, Message},
+    context::{ApiContext, Body, ButtonBody, Clipboard, Message},
     error::issue_error,
     model::user::QueryUser,
     public_conn,
@@ -32,12 +32,17 @@ pub async fn auth_login_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonLogin>,
 ) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
+    let json_login = body.into_inner();
+    // Invitations are accepted only through the sign-in that proves the address.
+    if json_login.invite.is_some() {
+        return Err(crate::invite::invalid_invite());
+    }
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        body.into_inner(),
+        json_login,
     )
     .await?;
     Ok(Post::pub_response_accepted(json))
@@ -63,17 +68,6 @@ async fn post_inner(
     query_user.check_is_locked()?;
     #[cfg(feature = "plus")]
     query_user.rate_limit_auth(context)?;
-
-    if let Some(invite) = &json_login.invite {
-        query_user
-            .accept_invite(context, &context.token_key, invite)
-            .await?;
-
-        #[cfg(feature = "otel")]
-        bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(Some(
-            bencher_otel::AuthMethod::Email,
-        )));
-    }
 
     #[cfg(feature = "plus")]
     let authorization = crate::pending_authorization(context, json_login.authorization).await?;
@@ -118,8 +112,10 @@ async fn post_inner(
                 url.into()
             })
             .unwrap_or_default(),
-        clipboard_text: "Confirmation Token".into(),
-        clipboard_target: token,
+        clipboard: Some(Clipboard {
+            text: "Confirmation Token".into(),
+            target: token,
+        }),
         #[cfg(feature = "plus")]
         post_body: authorization
             .map(|_| super::CONNECT_NOTICE.to_owned())

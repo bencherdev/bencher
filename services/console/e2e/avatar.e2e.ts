@@ -41,10 +41,9 @@ const openMenu = async (page: Page) => {
 // or their cache in this browser, or sends the next reader to this one's page.
 test("Sign out ends the session and forgets all this browser remembers for the reader, then asks for a sign in", async ({
 	newContext,
-	request,
 }) => {
 	// A reader of the test's own: signing out ends the session for every page that shares it.
-	const reader = await createMember(request, seed.organization);
+	const reader = await createMember(seed.organization, seed.member);
 	const context = await newContext({ storageState: signedIn(reader) });
 	const page = await context.newPage();
 	await page.goto(RUNS);

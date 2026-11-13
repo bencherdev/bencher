@@ -3,17 +3,21 @@ use bencher_endpoint::{
     ResponseOk, TotalCount,
 };
 use bencher_json::{
-    JsonAuthAck, JsonDirection, JsonMember, JsonMembers, JsonPagination, OrganizationResourceId,
-    Search, UserName, UserResourceId,
+    Email, JsonAuthAck, JsonDirection, JsonMember, JsonMembers, JsonPagination,
+    OrganizationResourceId, Search, UserName, UserResourceId,
     organization::member::{JsonNewMember, JsonUpdateMember},
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
-    INVITE_TOKEN_TTL, auth_conn,
-    context::{ApiContext, Body, ButtonBody, DbConnection, Message},
-    error::{forbidden_error, issue_error, resource_conflict_err, resource_not_found_err},
+    auth_conn,
+    context::{ApiContext, DbConnection},
+    error::{
+        conflict_error, forbidden_error, issue_error, resource_conflict_err, resource_not_found_err,
+    },
     model::{
-        organization::{OrganizationId, QueryOrganization, member::QueryMember},
+        organization::{
+            OrganizationId, QueryOrganization, invite::InsertInvite, member::QueryMember,
+        },
         user::{
             QueryUser, UserId,
             auth::{AuthUser, BearerToken},
@@ -29,6 +33,8 @@ use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
+
+use crate::invites::{check_inviter, email_invite};
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMembersParams {
@@ -206,6 +212,12 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 /// The user must have `create_role` permissions for the organization.
 /// The invitee is sent an email with a link to accept the invitation, and
 /// they are not added to the organization until they accept the invitation.
+/// The link works once, for 7 days, and only for the invited email.
+/// Inviting an email that the organization already invited sends a new link,
+/// and the link it sent before no longer works.
+/// An email that already belongs to a member of the organization is a conflict.
+/// This endpoint requires a user session signed in within the last 10 minutes:
+/// neither a user API key nor a deprecated user API token can send an invitation.
 #[endpoint {
     method = POST,
     path =  "/v0/organizations/{organization}/members",
@@ -218,6 +230,7 @@ pub async fn org_member_post(
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    check_inviter(rqctx.context(), &auth_user).await?;
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
@@ -233,7 +246,7 @@ async fn post_inner(
     log: &Logger,
     context: &ApiContext,
     path_params: OrgMembersParams,
-    mut json_new_member: JsonNewMember,
+    json_new_member: JsonNewMember,
     auth_user: &AuthUser,
 ) -> Result<JsonAuthAck, HttpError> {
     // Get the organization
@@ -249,83 +262,56 @@ async fn post_inner(
     #[cfg(feature = "plus")]
     auth_user.rate_limit_invites(context)?;
 
-    let email = json_new_member.email.clone();
-    // If a user already exists for the email then direct them to login.
-    // Otherwise, direct them to signup.
-    let (name, route): (Option<String>, &str) =
-        if let Ok(user) = QueryUser::get_with_email(auth_conn!(context), &email) {
-            (Some(user.name.into()), "/auth/login")
-        } else {
-            (json_new_member.name.take().map(Into::into), "/auth/signup")
-        };
+    let JsonNewMember { name, email, role } = json_new_member;
+    if is_member(auth_conn!(context), query_org.id, &email)? {
+        return Err(conflict_error(
+            "This email already belongs to a member of the organization",
+        ));
+    }
+    let (query_invite, secret) = InsertInvite::invite(
+        write_conn!(context),
+        query_org.id,
+        email,
+        role,
+        auth_user.id,
+        context.clock.now(),
+    )?;
+    email_invite(
+        log,
+        context,
+        &query_org,
+        &query_invite,
+        &secret,
+        auth_user,
+        name,
+    )
+    .await?;
 
-    // Create an invite token
-    let token = context
-        .token_key
-        .new_invite(
-            json_new_member.email,
-            INVITE_TOKEN_TTL,
-            query_org.uuid,
-            json_new_member.role,
+    Ok(JsonAuthAck {
+        email: query_invite.email,
+    })
+}
+
+/// Whether `email` belongs to a member of the organization.
+fn is_member(
+    conn: &mut DbConnection,
+    organization_id: OrganizationId,
+    email: &Email,
+) -> Result<bool, HttpError> {
+    diesel::select(diesel::dsl::exists(
+        schema::organization_role::table
+            .inner_join(schema::user::table)
+            .filter(schema::organization_role::organization_id.eq(organization_id))
+            .filter(schema::user::email.eq(email)),
+    ))
+    .get_result(conn)
+    .map_err(|e| {
+        issue_error(
+            "Failed to look up a member",
+            "Failed to look up whether an email belongs to a member:",
+            e,
         )
-        .map_err(|e| {
-            issue_error(
-                "Failed to create new invite token",
-                "Failed to create new invite token.",
-                e,
-            )
-        })?;
-    let token_string = String::from(token);
-
-    let org_name = &query_org.name;
-    let org_role = json_new_member.role;
-    let body = Body::Button(Box::new(ButtonBody {
-        title: format!("Invitation to join {org_name}"),
-        preheader: "Click the provided link to join.".into(),
-        greeting: if let Some(name) = name {
-            format!("Ahoy {name}!")
-        } else {
-            "Ahoy!".into()
-        },
-        pre_body: format!(
-            "Please, click the button below or use the provided token to accept the invitation from {user_name} ({user_email}) to join {org_name} as a {org_role} on Bencher.",
-            user_name = auth_user.user.name,
-            user_email = auth_user.user.email,
-        ),
-        button_text: format!("Join {org_name}"),
-        button_url: context
-            .console_url
-            .clone()
-            .join(route)
-            .map(|mut url| {
-                url.query_pairs_mut().append_pair("invite", &token_string);
-                url.into()
-            })
-            .unwrap_or_default(),
-        clipboard_text: "Invite Code".into(),
-        clipboard_target: token_string,
-        post_body: String::new(),
-        closing: "See you soon,".into(),
-        signature: "The Bencher Team".into(),
-        settings_url: context
-            .console_url
-            .clone()
-            .join("/help")
-            .map(Into::into)
-            .unwrap_or_default(),
-    }));
-    let message = Message {
-        to_name: None,
-        to_email: email.to_string(),
-        subject: Some(format!("Invitation to join {org_name}")),
-        body: Some(body),
-    };
-    context.messenger.send(log, message);
-
-    #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserInvite);
-
-    Ok(JsonAuthAck { email })
+    })
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -387,7 +373,10 @@ async fn get_one_inner(
 /// Update an organization member
 ///
 /// Update the role for a member of an organization.
-/// The user must have `edit_role` permissions for the organization.
+/// The user must have `edit_role` permissions for the organization to change a role,
+/// and `view_role` permissions to update nothing.
+/// Changing a role requires a user session signed in within the last 10 minutes:
+/// neither a user API key nor a deprecated user API token can grant a role.
 #[endpoint {
     method = PATCH,
     path =  "/v0/organizations/{organization}/members/{user}",
@@ -400,10 +389,20 @@ pub async fn org_member_patch(
     body: TypedBody<JsonUpdateMember>,
 ) -> Result<ResponseOk<JsonMember>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    let json_update = body.into_inner();
+    if json_update.role.is_some() {
+        // Checked only after authentication: an invalid credential still gets the opaque `401`.
+        if !auth_user.is_session() {
+            return Err(forbidden_error(
+                "Only a user session can change a member's role.",
+            ));
+        }
+        auth_user.check_fresh_sign_in(rqctx.context()).await?;
+    }
     let json = patch_inner(
         rqctx.context(),
         path_params.into_inner(),
-        body.into_inner(),
+        json_update,
         &auth_user,
     )
     .await?;
@@ -416,19 +415,21 @@ async fn patch_inner(
     json_update: JsonUpdateMember,
     auth_user: &AuthUser,
 ) -> Result<JsonMember, HttpError> {
-    let query_organization =
-        QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
+    let permission = if json_update.role.is_some() {
+        Permission::EditRole
+    } else {
+        Permission::ViewRole
+    };
+    let query_organization = QueryOrganization::is_allowed_resource_id(
+        auth_conn!(context),
+        &context.rbac,
+        &path_params.organization,
+        auth_user,
+        permission,
+    )?;
     let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
 
     if let Some(role) = json_update.role {
-        // Verify that the user is allowed to update member role
-        QueryOrganization::is_allowed_id(
-            auth_conn!(context),
-            &context.rbac,
-            query_organization.id,
-            auth_user,
-            Permission::EditRole,
-        )?;
         diesel::update(
             schema::organization_role::table
                 .filter(schema::organization_role::user_id.eq(query_user.id))

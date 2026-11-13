@@ -3,24 +3,27 @@
 
 use std::{
     fs,
-    path::Path,
+    path::{Path, PathBuf},
     thread,
     time::{Duration, Instant},
 };
 
-use bencher_json::{JsonProjectKeyCreated, JsonUserKeyCreated, Url};
+use bencher_json::{JsonOrganization, JsonProjectKeyCreated, JsonUserKeyCreated, Url};
 
 /// How long the API gets to log the email after it answers.
 const LOG_WAIT: Duration = Duration::from_secs(10);
 const LOG_POLL: Duration = Duration::from_millis(100);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const CODE_SUBJECT: &str = "Subject: Your Bencher code is ";
+/// Where an invitation's secret starts in its email's link.
+const INVITE_LINK: &str = "/auth/login#invite=";
 
-/// A session signed in within the last 10 minutes, which a new key needs.
+/// A session signed in within the last 10 minutes, which a new key and an invitation need.
 pub struct BrowserSession {
     agent: ureq::Agent,
     url: Url,
     cookie: String,
+    api_log: PathBuf,
 }
 
 impl BrowserSession {
@@ -51,7 +54,39 @@ impl BrowserSession {
             agent,
             url: url.clone(),
             cookie,
+            api_log: api_log.to_path_buf(),
         })
+    }
+
+    /// Invite `email` to `organization` as a leader, and return the secret in the invitation's
+    /// link, which the API writes to its log.
+    pub fn invite(&self, organization: &str, email: &str, name: &str) -> anyhow::Result<String> {
+        let mark = fs::metadata(&self.api_log)?.len();
+        let (_cookie, _invited) = post(
+            &self.agent,
+            &self.url,
+            &format!("/v0/organizations/{organization}/members"),
+            Some(&self.cookie),
+            &serde_json::json!({ "name": name, "email": email, "role": "leader" }),
+        )?;
+        logged(&self.api_log, mark, email, |message| {
+            message
+                .split_once(INVITE_LINK)
+                .and_then(|(_, rest)| rest.split_whitespace().next())
+                .map(ToOwned::to_owned)
+        })
+    }
+
+    /// Accept the invitation the secret names, as the session's user, and return its organization.
+    pub fn accept_invite(&self, secret: &str) -> anyhow::Result<JsonOrganization> {
+        let (_cookie, accepted) = post(
+            &self.agent,
+            &self.url,
+            "/v0/auth/invite/accept",
+            Some(&self.cookie),
+            &serde_json::json!({ "secret": secret }),
+        )?;
+        Ok(serde_json::from_str(&accepted)?)
     }
 
     pub fn create_project_key(
@@ -121,12 +156,25 @@ fn post(
 
 /// The code in the newest sign-in email to `email` that the API logged after `mark`.
 fn logged_code(api_log: &Path, mark: u64, email: &str) -> anyhow::Result<String> {
+    logged(api_log, mark, email, |message| {
+        message
+            .lines()
+            .find_map(|line| line.strip_prefix(CODE_SUBJECT))
+            .map(ToOwned::to_owned)
+    })
+}
+
+/// What `read` finds in the newest email to `email` that the API logged after `mark`.
+fn logged<F>(api_log: &Path, mark: u64, email: &str, read: F) -> anyhow::Result<String>
+where
+    F: Fn(&str) -> Option<String>,
+{
     let start = usize::try_from(mark)?;
     let recipient = format!("<{email}>");
     let deadline = Instant::now() + LOG_WAIT;
     loop {
         let logged = fs::read(api_log)?;
-        let code = String::from_utf8_lossy(logged.get(start..).unwrap_or_default())
+        let found = String::from_utf8_lossy(logged.get(start..).unwrap_or_default())
             .lines()
             .rev()
             .find_map(|line| {
@@ -135,17 +183,14 @@ fn logged_code(api_log: &Path, mark: u64, email: &str) -> anyhow::Result<String>
                 if !message.contains(&recipient) {
                     return None;
                 }
-                message
-                    .lines()
-                    .find_map(|line| line.strip_prefix(CODE_SUBJECT))
-                    .map(ToOwned::to_owned)
+                read(message)
             });
-        if let Some(code) = code {
-            return Ok(code);
+        if let Some(found) = found {
+            return Ok(found);
         }
         anyhow::ensure!(
             Instant::now() < deadline,
-            "No sign-in email to {email} in {}",
+            "No email to {email} in {}",
             api_log.display()
         );
         thread::sleep(LOG_POLL);

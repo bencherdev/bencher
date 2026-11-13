@@ -3,14 +3,18 @@
 //! a proof in the browser that ran the provider's sign-in pins the provider account.
 
 use bencher_endpoint::{Post, ResponseOk};
-use bencher_json::{DateTime, Email, JsonProviderInbox, JsonProviderSignIn, Jwt};
+use bencher_json::{DateTime, Email, JsonProviderInbox, JsonProviderSignIn};
 use bencher_schema::{
     context::{ApiContext, DbConnection},
+    error::issue_error,
     model::{
-        organization::sso::QuerySso,
+        organization::{
+            invite::{InviteId, QueryInvite},
+            sso::QuerySso,
+        },
         user::{InsertUser, QueryUser, sign_in::SignInContext},
     },
-    write_transaction,
+    public_conn, write_transaction,
 };
 use dropshot::{HttpError, RequestInfo};
 use http::header::SET_COOKIE;
@@ -31,7 +35,6 @@ pub(super) async fn link(
     carried: SignInContext,
 ) -> Result<ResponseOk<JsonProviderSignIn>, HttpError> {
     let rule = Rule {
-        context,
         presented: Presented::new(context, request),
         account: &account,
         carried: &carried,
@@ -65,7 +68,6 @@ enum Linked {
 
 /// The rule, for one provider account that signed in.
 struct Rule<'a> {
-    context: &'a ApiContext,
     presented: Presented<'a>,
     account: &'a ProviderAccount,
     carried: &'a SignInContext,
@@ -101,15 +103,14 @@ impl Rule<'_> {
         new: Option<InsertUser>,
     ) -> Result<Linked, TxError> {
         let Self {
-            context,
             presented,
             account,
             carried,
             now,
         } = self;
-        let invite = invite_for(context, carried.invite.as_ref(), &account.email)
-            .filter(|_| user.email == account.email);
-        let (invited, claimed) = join(conn, context, invite, carried.claim, &user, *now)?;
+        // A provider proves only the address it verified, which an invitation must be for.
+        let invite = carried.invite.filter(|_| user.email == account.email);
+        let (invited, claimed) = join(conn, invite, carried.claim, &user, *now)?;
         if new.is_some() && !invited && !claimed {
             InsertUser::personal_organization(conn, &user)?;
         }
@@ -134,14 +135,27 @@ impl Rule<'_> {
     }
 }
 
-/// The invite, if it is valid and for `email`: a provider proves only the address it verified.
-fn invite_for<'a>(context: &ApiContext, invite: Option<&'a Jwt>, email: &Email) -> Option<&'a Jwt> {
-    invite.filter(|invite| {
-        context
-            .token_key
-            .validate_invite(invite)
-            .is_ok_and(|claims| claims.email() == email)
-    })
+/// The invitation, if it still applies and is for `email`: a provider proves only the address it
+/// verified.
+async fn invite_for(
+    context: &ApiContext,
+    invite: Option<InviteId>,
+    email: &Email,
+) -> Result<Option<InviteId>, HttpError> {
+    let Some(invite) = invite else {
+        return Ok(None);
+    };
+    let found =
+        QueryInvite::find(public_conn!(context), invite, context.clock.now()).map_err(|e| {
+            issue_error(
+                "Failed to find an invitation",
+                "Failed to find the invitation a sign-in carries:",
+                e,
+            )
+        })?;
+    Ok(found
+        .filter(|(query_invite, _query_organization)| query_invite.email == *email)
+        .map(|(query_invite, _query_organization)| query_invite.id))
 }
 
 /// Email the address, to prove it before the provider account pins, carrying the pin and what the
@@ -156,7 +170,7 @@ async fn prove_first(
     let ProviderAccount { pin, email, .. } = account;
     let handle = pin.handle.clone();
     let sign_in_context = SignInContext {
-        invite: invite_for(context, carried.invite.as_ref(), &email).cloned(),
+        invite: invite_for(context, carried.invite, &email).await?,
         pin: Some(pin),
         ..carried
     };

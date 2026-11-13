@@ -8,7 +8,7 @@ import {
 	LinkedRepositoryReason,
 	LinkedRepositoryStatus,
 } from "../../types/bencher";
-import { ApiError } from "../api";
+import { ApiError, createApi } from "../api";
 import { axeInBothThemes } from "../axe/testing";
 import Connections, {
 	away,
@@ -259,6 +259,46 @@ test("Link sends the grant with PUT and shows the linked card", async () => {
 	]);
 	expect(button("Link pompeii-llc/hashbrown").query()).toBeNull();
 	await expect.element(button("Unlink")).toBeVisible();
+});
+
+// Kills a link the API refuses for a sign-in more than 10 minutes old that
+// only shows the refusal, never asking the reader to sign in again, and one
+// that needs a second press of Link once they have.
+test("a link the API holds for a fresh sign-in asks for one, then links", async () => {
+	hold(EXCHANGED);
+	const puts: string[] = [];
+	let asked = 0;
+	const api = createApi({
+		fetch: async (input, init) => {
+			if (init?.method === "PUT") {
+				puts.push(String(input));
+				return puts.length === 1
+					? new Response(JSON.stringify({ error_code: "fresh_sign_in" }), {
+							status: 403,
+						})
+					: new Response(JSON.stringify(LINKED));
+			}
+			return new Promise<never>(() => {});
+		},
+		onUnauthorized: () => {},
+		signInAgain: async () => {
+			asked += 1;
+			return true;
+		},
+	});
+	const mounted = mount(() => <Connections />, {
+		api,
+		path: "/hashbrown/connections",
+		cached: [[githubQuery(api, "hashbrown").queryKey, {}]],
+	});
+	dispose = mounted.dispose;
+	await button("Link pompeii-llc/hashbrown").click();
+	await expect.element(card()).toHaveTextContent("Connected");
+	expect(asked).toBe(1);
+	expect(puts).toEqual([
+		"/api/v0/projects/hashbrown/github",
+		"/api/v0/projects/hashbrown/github",
+	]);
 });
 
 // Kills repositories listed for a project other than the one they were

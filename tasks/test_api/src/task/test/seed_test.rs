@@ -31,6 +31,7 @@ const MEASURE_SLUG: &str = "screams";
 
 pub(crate) const ADMIN_EMAIL: &str = "eustace.bagge@nowhere.com";
 pub(crate) const USER_EMAIL: &str = "muriel.bagge@nowhere.com";
+const INVITEE_EMAIL: &str = "katz@nowhere.com";
 
 const REPO_NAME: &str = "bencher";
 const NO_GIT_NAME: &str = "Project";
@@ -89,9 +90,9 @@ impl TryFrom<TaskSeedTest> for SeedTest {
     }
 }
 
-/// Make a key with the test token, and where the server refuses it for want of a fresh sign-in,
-/// say how to give the seed one.
-fn key_by_token(cmd: &mut Command) -> anyhow::Result<Vec<u8>> {
+/// Run what only a fresh browser session may do with the test token, and where the server
+/// refuses it for want of a fresh sign-in, say how to give the seed one.
+fn by_token(cmd: &mut Command, what: &str) -> anyhow::Result<Vec<u8>> {
     let output = cmd.output()?;
     if output.status.success() {
         return Ok(output.stdout);
@@ -99,12 +100,12 @@ fn key_by_token(cmd: &mut Command) -> anyhow::Result<Vec<u8>> {
     let stderr = String::from_utf8_lossy(&output.stderr);
     if stderr.contains("fresh_sign_in") {
         anyhow::bail!(
-            "This server makes a key only for a browser session signed in within the last 10 \
-             minutes. Run the API with its output in a file, and pass that file to `--api-log`, \
+            "This server lets only a browser session signed in within the last 10 minutes \
+             {what}. Run the API with its output in a file, and pass that file to `--api-log`, \
              so the seed signs in by the emailed code.\n{stderr}"
         );
     }
-    anyhow::bail!("Failed to create a key:\n{stderr}")
+    anyhow::bail!("Failed to {what}:\n{stderr}")
 }
 
 impl SeedTest {
@@ -212,27 +213,39 @@ impl SeedTest {
         let muriel_bagge_org_uuid = json.uuid;
         assert_eq!(admin_muriel_bagge_org_uuid, muriel_bagge_org_uuid);
 
-        // cargo run -- member invite --host http://localhost:6610 --token $BENCHER_API_TOKEN --name Courage --email courage@nowhere.com --role leader muriel-bagge
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "member",
-            "invite",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            "--name",
-            "Courage",
-            "--email",
-            "courage@nowhere.com",
-            "--role",
-            "leader",
-            ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonAuthAck =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        // An invitation needs a browser session signed in within the last 10 minutes, and the
+        // invitee accepts it with a session of their own, each signed in by the emailed code.
+        if let Some(api_log) = &self.api_log {
+            let secret = BrowserSession::sign_in(&self.url, USER_EMAIL, api_log)?.invite(
+                ORG_SLUG,
+                INVITEE_EMAIL,
+                "Katz",
+            )?;
+            let organization = BrowserSession::sign_in(&self.url, INVITEE_EMAIL, api_log)?
+                .accept_invite(&secret)?;
+            assert_eq!(organization.slug.to_string(), ORG_SLUG);
+        } else {
+            // cargo run -- member invite --host http://localhost:6610 --token $BENCHER_API_TOKEN --name Katz --email katz@nowhere.com --role leader muriel-bagge
+            let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+            cmd.args([
+                "member",
+                "invite",
+                HOST_ARG,
+                host,
+                TOKEN_ARG,
+                token,
+                "--name",
+                "Katz",
+                "--email",
+                INVITEE_EMAIL,
+                "--role",
+                "leader",
+                ORG_SLUG,
+            ])
+            .current_dir(CLI_DIR);
+            let _json: bencher_json::JsonAuthAck =
+                serde_json::from_slice(&by_token(&mut cmd, "send an invitation")?)?;
+        }
 
         // cargo run -- project ls --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -625,7 +638,7 @@ impl SeedTest {
                     PROJECT_SLUG,
                 ])
                 .current_dir(CLI_DIR);
-                serde_json::from_slice(&key_by_token(&mut cmd)?)?
+                serde_json::from_slice(&by_token(&mut cmd, "create a key")?)?
             };
         let project_key = project_key_created.key.as_ref().to_owned();
         let project_key_uuid_str = project_key_created.uuid.to_string();
@@ -2223,7 +2236,7 @@ impl SeedTest {
                     ORG_SLUG,
                 ])
                 .current_dir(CLI_DIR);
-                serde_json::from_slice(&key_by_token(&mut cmd)?)?
+                serde_json::from_slice(&by_token(&mut cmd, "create a key")?)?
             };
         let user_key = user_key_created.key.as_ref().to_owned();
         let user_key_uuid_str = user_key_created.uuid.to_string();

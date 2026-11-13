@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
+import { invite } from "./api";
 import { axeInBothThemes } from "./axe";
 import { continueWithEmail, digit, pasteCode, typeCode } from "./door";
 import {
@@ -24,11 +25,11 @@ const heading = (page: Page, name: string) =>
 const hint = (page: Page) =>
 	page.evaluate((key) => localStorage.getItem(key), READER_KEY);
 
-/** Shaped as an invitation, for the door to read its address; the API never sees it. */
-const inviteFor = (email: string) =>
+/** Shaped as an old link's token, for the page to read its address; the API never sees it. */
+const tokenFor = (email: string) =>
 	[
 		{ alg: "HS256", typ: "JWT" },
-		{ aud: "invite", sub: email },
+		{ aud: "auth", sub: email },
 	]
 		.map((part) => Buffer.from(JSON.stringify(part)).toString("base64url"))
 		.concat("c2ln")
@@ -139,12 +140,13 @@ test.describe("signed out", () => {
 		).toEqual([]);
 	});
 
-	// Kills an invite whose address the reader must type again.
+	// Kills an invite whose address the reader must type again, or one read
+	// from anything but the API.
 	test("an invite's address is filled in", async ({ page }) => {
 		const email = newEmail();
-		await page.goto(
-			`/auth/signup?${new URLSearchParams({ invite: inviteFor(email) })}`,
-		);
+		const { link } = await invite(seed.member, seed.organization, email);
+		await page.goto(link.href.replace("/auth/login", "/auth/signup"));
+		await expect(heading(page, "Sign up for Bencher")).toBeVisible();
 		await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(
 			email,
 		);
@@ -323,7 +325,7 @@ test.describe("signed out", () => {
 	test("an old link with a token is expired", async ({ page }) => {
 		const email = newEmail();
 		await page.goto(
-			`/auth/confirm?${new URLSearchParams({ token: inviteFor(email) })}`,
+			`/auth/confirm?${new URLSearchParams({ token: tokenFor(email) })}`,
 		);
 		await expect(heading(page, "Check your inbox")).toBeVisible();
 		await expect(page.getByRole("alert")).toHaveText("Expired");
@@ -396,7 +398,7 @@ test.describe("Resend after a sign-in ended", () => {
 	}) => {
 		const email = newEmail();
 		await page.goto(
-			`/auth/confirm?${new URLSearchParams({ token: inviteFor(email) })}`,
+			`/auth/confirm?${new URLSearchParams({ token: tokenFor(email) })}`,
 		);
 		await expect(page.getByRole("alert")).toHaveText("Expired");
 
@@ -440,7 +442,7 @@ test("auth pages send no referrer, are never stored, and load Turnstile only whe
 		["/auth/github", false],
 		["/auth/google", false],
 		["/auth/logout", false],
-		[`/auth/confirm?${new URLSearchParams({ token: inviteFor(email) })}`, true],
+		[`/auth/confirm?${new URLSearchParams({ token: tokenFor(email) })}`, true],
 		["/auth/confirm#s3cr3t", false],
 	] as const;
 	for (const [path] of [...pages, ["/auth"]] as const) {
@@ -522,7 +524,7 @@ test.describe("accessibility", () => {
 	test("a new email's confirm passes axe in both themes", async ({ page }) => {
 		const params = new URLSearchParams({
 			user: seed.member.user.uuid,
-			token: inviteFor(seed.member.user.email),
+			token: tokenFor(seed.member.user.email),
 		});
 		// Each scan returns afresh: the page took the user and the token out of its URL.
 		await axeInBothThemes(

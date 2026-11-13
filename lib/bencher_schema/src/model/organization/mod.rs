@@ -22,7 +22,7 @@ use organization_role::{InsertOrganizationRole, QueryOrganizationRole};
 use sso::QuerySso;
 
 use crate::{
-    ApiContext, CLAIM_TOKEN_TTL, auth_conn,
+    ApiContext, auth_conn,
     context::{DbConnection, Rbac},
     error::{
         BencherResource, conflict_error, forbidden_error, issue_error, resource_not_found_error,
@@ -44,6 +44,7 @@ use crate::{actor_conn, model::user::actor::ApiActor};
 
 use super::user::{QueryUser, UserId};
 
+pub mod invite;
 pub mod member;
 pub mod organization_role;
 pub mod plan;
@@ -409,36 +410,6 @@ impl QueryOrganization {
             schema::job::modified.eq(now),
         ))
         .execute(conn)
-    }
-
-    pub async fn join(
-        context: &ApiContext,
-        organization_uuid: OrganizationUuid,
-        query_user: &QueryUser,
-    ) -> Result<(), HttpError> {
-        // Create an invite token to join the organization
-        let invite = context
-            .token_key
-            .new_invite(
-                query_user.email.clone(),
-                CLAIM_TOKEN_TTL,
-                organization_uuid,
-                OrganizationRole::Leader,
-            )
-            .map_err(|e| {
-                issue_error(
-                    "Failed to create new claim token",
-                    "Failed to create new claim token.",
-                    e,
-                )
-            })?;
-
-        // Accept the invite to join the organization
-        query_user
-            .accept_invite(context, &context.token_key, &invite)
-            .await?;
-
-        Ok(())
     }
 
     #[cfg(feature = "plus")]

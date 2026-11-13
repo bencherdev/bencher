@@ -33,9 +33,6 @@ pub const AUTH_TOKEN_TTL: u32 = 30 * 60;
 // TODO Custom max TTL
 // 30 days * 24 hours / day * 60 minutes / hour * 60 seconds / minute
 pub const CLIENT_TOKEN_TTL: u32 = 30 * 24 * 60 * 60;
-// TODO Custom max TTL
-pub const INVITE_TOKEN_TTL: u32 = u32::MAX;
-pub const CLAIM_TOKEN_TTL: u32 = 60;
 
 /// The page cache the migrations run with, in `SQLite`'s negative kibibyte form:
 /// 256 MiB.
@@ -141,9 +138,12 @@ pub fn register_migration_functions(
 mod tests {
     use std::collections::{BTreeMap, BTreeSet};
 
-    use diesel::{Connection as _, RunQueryDsl as _, connection::SimpleConnection as _};
+    use diesel::{
+        Connection as _, RunQueryDsl as _, connection::SimpleConnection as _,
+        migration::MigrationSource, sqlite::Sqlite,
+    };
 
-    use super::{cache_size, run_migrations};
+    use super::{MIGRATIONS, cache_size, run_migrations};
 
     #[derive(diesel::QueryableByName)]
     struct TableName {
@@ -260,6 +260,27 @@ mod tests {
             key.sort_unstable();
             leading == key
         })
+    }
+
+    // Pending migrations are keyed by version, so a second migration of a version is dropped
+    // without a word and never runs.
+    #[test]
+    fn migrations_have_unique_versions() {
+        let mut versions = BTreeMap::<String, Vec<String>>::new();
+        for migration in MigrationSource::<Sqlite>::migrations(&MIGRATIONS)
+            .expect("Failed to read the migrations")
+        {
+            let name = migration.name();
+            versions
+                .entry(name.version().to_string())
+                .or_default()
+                .push(name.to_string());
+        }
+        let shared: Vec<&Vec<String>> = versions.values().filter(|names| names.len() > 1).collect();
+        assert!(
+            shared.is_empty(),
+            "every migration has a version of its own, these share one: {shared:?}"
+        );
     }
 
     // The connection that runs the migrations is the connection the API then serves

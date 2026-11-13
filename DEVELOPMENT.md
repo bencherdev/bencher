@@ -97,8 +97,9 @@ Then, in another terminal, run the following command:
 cargo test-api seed --api-log services/api/data/api.log
 ```
 
-A new key needs a browser session signed in within the last 10 minutes,
-so the seed signs in by the code in the sign-in email, which a server with no SMTP writes to its log.
+A new key and an invitation each need a browser session signed in within the last 10 minutes,
+so the seed signs in by the code in the sign-in email, and the invitee accepts by the link in the invitation email,
+both of which a server with no SMTP writes to its log.
 
 ### Accessing the Database
 

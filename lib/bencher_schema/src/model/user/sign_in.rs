@@ -6,7 +6,7 @@ use aws_lc_rs::{
     hmac,
 };
 use bencher_json::{
-    BindingSecret, BindingSecretHash, DateTime, Email, EmailHash, Jwt, LinkSecret, LinkSecretHash,
+    BindingSecret, BindingSecretHash, DateTime, Email, EmailHash, LinkSecret, LinkSecretHash,
     OrganizationUuid, PendingSignInUuid, Secret, SignInCode, SignInCodeHash,
 };
 #[cfg(feature = "plus")]
@@ -26,7 +26,7 @@ use crate::model::user::provider::ProviderPin;
 use crate::{
     context::DbConnection,
     error::issue_error,
-    model::user::session::SessionId,
+    model::{organization::invite::InviteId, user::session::SessionId},
     schema::{self, pending_sign_in as pending_sign_in_table},
 };
 
@@ -57,7 +57,8 @@ pub struct QueryPendingSignIn {
     pub link_hash: LinkSecretHash,
     /// The wrong codes tried so far.
     pub tries: i32,
-    pub invite: Option<Jwt>,
+    /// The invitation the sign-in accepts at its proof, if it still applies then.
+    pub invite_id: Option<InviteId>,
     pub claim: Option<OrganizationUuid>,
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
@@ -176,7 +177,7 @@ impl QueryPendingSignIn {
 
     pub fn context(&self) -> SignInContext {
         SignInContext {
-            invite: self.invite.clone(),
+            invite: self.invite_id,
             claim: self.claim,
             #[cfg(feature = "plus")]
             plan: self.plan,
@@ -201,7 +202,8 @@ impl QueryPendingSignIn {
 /// What a pending sign-in carries from its start to its proof.
 #[derive(Clone, Default)]
 pub struct SignInContext {
-    pub invite: Option<Jwt>,
+    /// The invitation the sign-in accepts at its proof, if it still applies then.
+    pub invite: Option<InviteId>,
     pub claim: Option<OrganizationUuid>,
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
@@ -222,7 +224,8 @@ pub struct InsertPendingSignIn {
     pub code_hash: SignInCodeHash,
     pub link_hash: LinkSecretHash,
     pub tries: i32,
-    pub invite: Option<Jwt>,
+    /// The invitation the sign-in accepts at its proof, if it still applies then.
+    pub invite_id: Option<InviteId>,
     pub claim: Option<OrganizationUuid>,
     #[cfg(feature = "plus")]
     pub plan: Option<PlanLevel>,
@@ -322,7 +325,7 @@ impl InsertPendingSignIn {
             code_hash: code_key.hash(&secrets.code),
             link_hash: LinkSecretHash::from(&secrets.link),
             tries: 0,
-            invite,
+            invite_id: invite,
             claim,
             #[cfg(feature = "plus")]
             plan,

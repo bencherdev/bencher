@@ -61,6 +61,9 @@ export type ImageDigest = string;
 
 export type Index = number;
 
+/** The secret an invitation's link carries in its fragment, which names the invitation. */
+export type InviteSecret = string;
+
 export type Iteration = number;
 
 export type ResourceName = string;
@@ -612,10 +615,6 @@ export type UserName = string;
 export type UserResourceId = Uuid | Slug;
 
 export type Uuid = string;
-
-export interface JsonAccept {
-	invite: Jwt;
-}
 
 /**
  * The alerts that match every given field.
@@ -1746,8 +1745,8 @@ export enum PlanLevel {
 /** Start a sign-in by email, which signs in the address's account or makes one. */
 export interface JsonEmailSignIn {
 	email: Email;
-	/** An invitation to an organization, accepted once the address is proven. */
-	invite?: Jwt;
+	/** The secret of an invitation to an organization, accepted once the address is proven. */
+	invite?: InviteSecret;
 	/** An unclaimed organization, claimed once the address is proven. */
 	claim?: Uuid;
 	plan?: PlanLevel;
@@ -1804,6 +1803,57 @@ export interface JsonGitHubRepositories {
 	repositories: JsonGitHubRepository[];
 }
 
+/** The organization an invitation is to. */
+export interface JsonOrganizationName {
+	name: ResourceName;
+	slug: Slug;
+}
+
+export enum OrganizationRole {
+	/** The organization leader role. */
+	Leader = "leader",
+}
+
+/** What an invitation offers, read by the secret its link carries. */
+export interface JsonInvitation {
+	/** The email the invitation is for. */
+	email: Email;
+	organization: JsonOrganizationName;
+	/** The organization role the invitation grants. */
+	role: OrganizationRole;
+	/** The date time the invitation stops working. */
+	expiration: string;
+	/** Whether the invitation is for the signed-in reader, when a browser session reads it. */
+	for_you?: boolean;
+}
+
+export interface JsonPubUser {
+	uuid: Uuid;
+	name: UserName;
+	slug: Slug;
+}
+
+/** An invitation to an organization that waits to be accepted, or has expired unaccepted. */
+export interface JsonInvite {
+	/** The invitation UUID. */
+	uuid: InviteUuid;
+	/** The email the invitation is for. */
+	email: Email;
+	/** The organization role the invitation grants. */
+	role: OrganizationRole;
+	/** The user who sent the invitation. */
+	inviter: JsonPubUser;
+	/** The date time the invitation was sent. */
+	created: string;
+	/** The date time the invitation stops working. */
+	expiration: string;
+}
+
+/** An invitation, named by the secret its link carries. */
+export interface JsonInviteSecret {
+	secret: InviteSecret;
+}
+
 export interface JsonLicense {
 	key: Jwt;
 	organization: Uuid;
@@ -1827,12 +1877,6 @@ export enum LinkedRepositoryReason {
 	Removed = "removed",
 }
 
-export interface JsonPubUser {
-	uuid: Uuid;
-	name: UserName;
-	slug: Slug;
-}
-
 /** A project's linked repository, which its dispatches go to. */
 export interface JsonLinkedRepository {
 	full_name: string;
@@ -1851,11 +1895,6 @@ export interface JsonLogin {
 	recaptcha_token?: NonEmpty;
 	/** An app's pending request to connect, which the emailed link returns to. */
 	authorization?: Uuid;
-}
-
-export enum OrganizationRole {
-	/** The organization leader role. */
-	Leader = "leader",
 }
 
 export interface JsonMember {
@@ -2580,8 +2619,11 @@ export interface JsonProviderSignIn {
 
 /** Start a sign-in with a provider, carrying what it applies once it finishes. */
 export interface JsonProviderStart {
-	/** An invitation to an organization, accepted once an address it is for is proven. */
-	invite?: Jwt;
+	/**
+	 * The secret of an invitation to an organization, accepted once an address it is for is
+	 * proven.
+	 */
+	invite?: InviteSecret;
 	/** An unclaimed organization, claimed once the reader signs in. */
 	claim?: Uuid;
 	plan?: PlanLevel;

@@ -6,7 +6,7 @@
 		"cls": 0.00025,
 		"jsBytes": 43583,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2678,
 		"inlineScriptBytes": 2560,
@@ -134,7 +134,7 @@
 		"jsBytes": 65357,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1970,
 		"inlineScriptBytes": 942,
 		"lateModules": 0
@@ -309,7 +309,7 @@
 		"cls": 0,
 		"jsBytes": 78072,
 		"deferredJsBytes": 112880,
-		"cssBytes": 13062,
+		"cssBytes": 13101,
 		"htmlBytes": 2980,
 		"inlineScriptBytes": 700
 	},
@@ -317,18 +317,18 @@
 		"cls": 0,
 		"jsBytes": 69237,
 		"deferredJsBytes": 112880,
-		"cssBytes": 11289,
+		"cssBytes": 11326,
 		"htmlBytes": 1560,
 		"inlineScriptBytes": 390
 	},
 	"doorColdLoad": {
 		"apiRequests": 0,
 		"cls": 0,
-		"jsBytes": 24047,
+		"jsBytes": 24261,
 		"stylesheets": 1,
-		"cssBytes": 9505,
-		"htmlBytes": 1814,
-		"inlineScriptBytes": 392,
+		"cssBytes": 9541,
+		"htmlBytes": 1958,
+		"inlineScriptBytes": 681,
 		"lateModules": 14
 	},
 	"consentColdLoad": {
@@ -336,7 +336,7 @@
 		"cls": 0,
 		"jsBytes": 23658,
 		"stylesheets": 1,
-		"cssBytes": 9505,
+		"cssBytes": 9541,
 		"htmlBytes": 1111,
 		"inlineScriptBytes": 392,
 		"lateModules": 14
@@ -385,7 +385,7 @@
 		"jsBytes": 47674,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1760,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
@@ -399,7 +399,7 @@
 		"jsBytes": 49944,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1890,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
@@ -413,7 +413,7 @@
 		"jsBytes": 54986,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1820,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
@@ -427,7 +427,7 @@
 		"jsBytes": 64390,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1870,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
@@ -441,7 +441,7 @@
 		"jsBytes": 65520,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1900,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
@@ -455,7 +455,7 @@
 		"jsBytes": 52652,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1830,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
@@ -469,21 +469,21 @@
 		"jsBytes": 53453,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1910,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
 	},
 	"organizationMembersColdLoad": {
 		"apiAnswersBeforePaint": 0,
-		"apiRequests": 4,
+		"apiRequests": 5,
 		"apiRounds": 1,
 		"cls": 0,
 		"shellShift": 0.00001,
-		"jsBytes": 58223,
+		"jsBytes": 58981,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1950,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
@@ -497,7 +497,7 @@
 		"jsBytes": 55461,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1925,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
@@ -511,7 +511,7 @@
 		"jsBytes": 57190,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19838,
+		"cssBytes": 19883,
 		"htmlBytes": 1900,
 		"inlineScriptBytes": 672,
 		"lateModules": 0
