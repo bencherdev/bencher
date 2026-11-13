@@ -56,6 +56,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    email_change (id) {
+        id -> Integer,
+        user_id -> Integer,
+        session_id -> Nullable<Integer>,
+        email -> Text,
+        new_email -> Text,
+        secret_hash -> Text,
+        created -> BigInt,
+        expiration -> BigInt,
+        confirmed -> Nullable<BigInt>,
+    }
+}
+
+diesel::table! {
     head (id) {
         id -> Integer,
         uuid -> Text,
@@ -678,6 +692,8 @@ diesel::joinable!(boundary -> metric (metric_id));
 diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
+diesel::joinable!(email_change -> session (session_id));
+diesel::joinable!(email_change -> user (user_id));
 diesel::joinable!(head_version -> version (version_id));
 diesel::joinable!(invite -> organization (organization_id));
 diesel::joinable!(invite -> user (inviter_id));
@@ -759,6 +775,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     benchmark,
     boundary,
     branch,
+    email_change,
     head,
     head_version,
     invite,

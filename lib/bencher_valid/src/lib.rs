@@ -49,9 +49,10 @@ pub use error::ValidError;
 pub use index::Index;
 pub use jwt::Jwt;
 pub use keys::{
-    BencherKey, BindingSecret, BindingSecretHash, InviteSecret, InviteSecretHash, JwtHash,
-    LinkSecret, LinkSecretHash, ProjectKey, ProjectKeyHash, SessionToken, SessionTokenHash,
-    SignInCode, SignInCodeHash, UserKey, UserKeyHash,
+    BencherKey, BindingSecret, BindingSecretHash, EmailChangeSecret, EmailChangeSecretHash,
+    InviteSecret, InviteSecretHash, JwtHash, LinkSecret, LinkSecretHash, ProjectKey,
+    ProjectKeyHash, SessionToken, SessionTokenHash, SignInCode, SignInCodeHash, UserKey,
+    UserKeyHash,
 };
 pub use metric_name::MetricName;
 pub use model::{

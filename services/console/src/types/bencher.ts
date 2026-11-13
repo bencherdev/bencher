@@ -38,6 +38,9 @@ export type DateTimeMillis = number;
 
 export type Email = string;
 
+/** The secret an email change's link carries in its fragment, which names the change. */
+export type EmailChangeSecret = string;
+
 export type Entitlements = number;
 
 export type ExpirationMonth = number;
@@ -1729,6 +1732,19 @@ export interface JsonCustomer {
 	email: Email;
 }
 
+/** An email change that waits for its confirm, read by the secret its link carries. */
+export interface JsonEmailChange {
+	/** The user's email, which the confirm replaces. */
+	email: Email;
+	/** The email the confirm makes the user's. */
+	new_email: Email;
+}
+
+/** The secret an email change's link carries, which the console reads from the link's fragment. */
+export interface JsonEmailChangeSecret {
+	secret: EmailChangeSecret;
+}
+
 /** Resend the pending sign-in's email with a new code and link. */
 export interface JsonEmailResend {
 	/** A Cloudflare Turnstile token, where the server asks for one. */
@@ -3097,6 +3113,13 @@ export enum SignInRefusal {
 	 * proves.
 	 */
 	AskedElsewhere = "asked_elsewhere",
+	/**
+	 * The email change has expired, was replaced by a newer one, or never was, or the user's
+	 * email changed since it was asked for.
+	 */
+	EmailChangeExpired = "email_change_expired",
+	/** The email change was already confirmed. */
+	EmailChangeUsed = "email_change_used",
 }
 
 export enum UpdateChannel {

@@ -1,6 +1,6 @@
 use bencher_json::{
-    DateTime, Email, InviteSecret, JsonConfirm, JsonNewOrganization, JsonNewProject,
-    JsonNewUserKey, JsonOrganization, JsonProject, JsonSignup, JsonUserKeyCreated,
+    DateTime, Email, EmailChangeSecret, InviteSecret, JsonConfirm, JsonNewOrganization,
+    JsonNewProject, JsonNewUserKey, JsonOrganization, JsonProject, JsonSignup, JsonUserKeyCreated,
     OrganizationSlug, OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName, SessionMethod,
     SessionToken, UserKey, UserName, UserSlug, UserUuid, organization::member::OrganizationRole,
     system::auth::JsonAuthUser,
@@ -11,7 +11,8 @@ use bencher_schema::model::{
     organization::{QueryOrganization, invite::InsertInvite},
     user::{
         QueryUser,
-        session::{InsertSession, cookie::SessionCookie},
+        email_change::InsertEmailChange,
+        session::{InsertSession, QuerySession, cookie::SessionCookie},
     },
 };
 use reqwest::header::{COOKIE, HeaderMap, HeaderValue};
@@ -204,6 +205,49 @@ impl TestServer {
             now,
         )
         .expect("Failed to invite");
+        secret
+    }
+
+    /// Ask to change the user's email to `new_email` now, from `session` if any, as a user's own
+    /// change makes its row, and return the secret its link carries.
+    pub fn email_change(
+        &self,
+        user: &TestUser,
+        session: Option<&SessionToken>,
+        new_email: &str,
+    ) -> EmailChangeSecret {
+        self.email_change_at(user, session, new_email, self.context().clock.now())
+    }
+
+    /// [`Self::email_change`] at `now`.
+    #[expect(clippy::expect_used, reason = "test helper inserting an email change")]
+    pub fn email_change_at(
+        &self,
+        user: &TestUser,
+        session: Option<&SessionToken>,
+        new_email: &str,
+        now: DateTime,
+    ) -> EmailChangeSecret {
+        let mut conn = self.db_conn();
+        let user_id = QueryUser::get_id(&mut conn, user.uuid).expect("Failed to get user ID");
+        let query_user = QueryUser::get(&mut conn, user_id).expect("Failed to get user");
+        let session_id = session.map(|session| {
+            QuerySession::from_token(&mut conn, session)
+                .expect("Failed to find the session")
+                .1
+                .id
+        });
+        let (change, secret) = InsertEmailChange::new(
+            query_user.id,
+            session_id,
+            query_user.email,
+            new_email.parse().expect("Invalid email"),
+            now,
+        )
+        .expect("Failed to make an email change");
+        change
+            .upsert(&mut conn)
+            .expect("Failed to store an email change");
         secret
     }
 

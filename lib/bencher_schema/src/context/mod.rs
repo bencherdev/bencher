@@ -53,7 +53,7 @@ pub use heartbeat_tasks::HeartbeatTasks;
 #[cfg(feature = "plus")]
 pub use indexer::{IndexError, Indexer};
 pub use messenger::{
-    Body, ButtonBody, Clipboard, Email, Message, Messenger, NewUserBody, SignInBody,
+    Body, Button, ButtonBody, Clipboard, Email, Message, Messenger, NewUserBody, SignInBody,
 };
 #[cfg(feature = "plus")]
 pub use messenger::{RunnerStatusBody, ServerStatsBody};

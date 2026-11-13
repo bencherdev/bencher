@@ -7,6 +7,8 @@ import { VERSION_KEY } from "../memory";
 import { projectPath } from "../paths";
 import AuthReturn from "./AuthReturn.astro";
 import { takeAuthReturn } from "./authReturn";
+import EmailReturn from "./EmailReturn.astro";
+import { takeEmailChange } from "./emailReturn";
 import GitHubReturn from "./GitHubReturn.astro";
 import { takeGitHubReturn } from "./githubReturn";
 import InviteReturn from "./InviteReturn.astro";
@@ -230,17 +232,12 @@ describe("AuthReturn", () => {
 		const none = {
 			secret: undefined,
 			token: undefined,
-			user: undefined,
 			code: undefined,
 			state: undefined,
 		};
 		for (const [url, kept] of [
 			["https://bencher.dev/auth/confirm#s3cr3t", { secret: "s3cr3t" }],
 			["https://bencher.dev/auth/confirm?token=a.b.c", { token: "a.b.c" }],
-			[
-				"https://bencher.dev/auth/email?user=u&token=a.b.c",
-				{ user: "u", token: "a.b.c" },
-			],
 			[
 				"https://bencher.dev/auth/github?code=c0de&state=s7a7e",
 				{ code: "c0de", state: "s7a7e" },
@@ -295,6 +292,44 @@ describe("InviteReturn", () => {
 			const { replaced, memory } = await land(url);
 			expect(replaced, url).toEqual([]);
 			expect(takeInvite(memory), url).toBeUndefined();
+		}
+	});
+});
+
+describe("EmailReturn", () => {
+	/** The email change page's first script, run on a page at `url`. */
+	const land = async (url: string) => {
+		const page = new Window().document;
+		page.body.innerHTML = await container.renderToString(EmailReturn);
+		const source = page.querySelector("script")?.textContent ?? "";
+		const { pathname, search, hash } = new URL(url);
+		const replaced: string[] = [];
+		const memory = {};
+		new Function("window", "location", "history", source)(
+			memory,
+			{ pathname, search, hash },
+			{
+				state: null,
+				replaceState: (_state: unknown, _title: string, to: string) =>
+					replaced.push(to),
+			},
+		);
+		return { replaced, memory };
+	};
+
+	// Kills an email change's secret left in the address for history, a
+	// report, or a later script to read; an old link's token and user left
+	// there; a page that drops the secret, or keeps it once taken.
+	test("an email change's secret leaves the address at once, for the page alone", async () => {
+		for (const [url, secret] of [
+			["https://bencher.dev/auth/email#secret=s3cr3t", "s3cr3t"],
+			["https://bencher.dev/auth/email?user=u&token=a.b.c", undefined],
+			["https://bencher.dev/auth/email", undefined],
+		] as const) {
+			const { replaced, memory } = await land(url);
+			expect(replaced, url).toEqual(["/auth/email"]);
+			expect(takeEmailChange(memory), url).toBe(secret);
+			expect(takeEmailChange(memory), url).toBeUndefined();
 		}
 	});
 });

@@ -444,10 +444,7 @@ const groups = (
 				"Check your inbox, an old link at the caps",
 				`/auth/confirm?${new URLSearchParams({ token: shapedJwt(s.reader.user.email) })}`,
 			],
-			[
-				"Confirm a new email",
-				`/auth/email?${new URLSearchParams({ user: s.reader.user.uuid, token: shapedJwt(s.reader.user.email) })}`,
-			],
+			["Change email, expired", `/auth/email#secret=${"A".repeat(43)}`],
 			["Connect an app, gone", `/auth/authorize?request=${randomUUID()}`],
 		],
 	};

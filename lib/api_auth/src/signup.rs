@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::{JsonSignup, system::auth::JsonAuthAck};
 use bencher_schema::{
-    context::{ApiContext, Body, ButtonBody, Clipboard, Message},
+    context::{ApiContext, Body, Button, ButtonBody, Clipboard, Message},
     error::{forbidden_error, issue_error},
     model::user::InsertUser,
     public_conn, write_conn,
@@ -95,26 +95,28 @@ async fn post_inner(
         greeting: format!("Ahoy {},", insert_user.name),
         pre_body: "Please, click the button below or use the provided token to signup for Bencher."
             .into(),
-        button_text: "Confirm Email".into(),
-        button_url: context
-            .console_url
-            .clone()
-            .join("/auth/confirm")
-            .map(|mut url| {
-                #[cfg(feature = "plus")]
-                if let Some(plan) = json_signup.plan {
-                    url.query_pairs_mut()
-                        .append_pair(super::PLAN_ARG, plan.as_ref());
-                }
-                url.query_pairs_mut().append_pair(TOKEN_ARG, &token);
-                #[cfg(feature = "plus")]
-                if let Some(authorization) = authorization {
-                    url.query_pairs_mut()
-                        .append_pair(super::AUTHORIZATION_ARG, &authorization.to_string());
-                }
-                url.into()
-            })
-            .unwrap_or_default(),
+        button: Some(Button {
+            text: "Confirm Email".into(),
+            url: context
+                .console_url
+                .clone()
+                .join("/auth/confirm")
+                .map(|mut url| {
+                    #[cfg(feature = "plus")]
+                    if let Some(plan) = json_signup.plan {
+                        url.query_pairs_mut()
+                            .append_pair(super::PLAN_ARG, plan.as_ref());
+                    }
+                    url.query_pairs_mut().append_pair(TOKEN_ARG, &token);
+                    #[cfg(feature = "plus")]
+                    if let Some(authorization) = authorization {
+                        url.query_pairs_mut()
+                            .append_pair(super::AUTHORIZATION_ARG, &authorization.to_string());
+                    }
+                    url.into()
+                })
+                .unwrap_or_default(),
+        }),
         clipboard: Some(Clipboard {
             text: "Confirmation Token".into(),
             target: token,

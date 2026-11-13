@@ -1,0 +1,14 @@
+---
+import { EMAIL_RETURN_KEY } from "./emailReturn";
+
+// Runs first: an email change's secret, in the fragment, leaves the address
+// before any other script can read it, and so does all else the address
+// carried, which the page never reads.
+---
+
+<script is:inline define:vars={{ EMAIL_RETURN_KEY }}>
+	window[EMAIL_RETURN_KEY] = new URLSearchParams(location.hash.slice(1)).get(
+		"secret",
+	);
+	history.replaceState(history.state, "", location.pathname);
+</script>

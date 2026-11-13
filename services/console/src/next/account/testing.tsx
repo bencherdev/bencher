@@ -2,13 +2,13 @@ import "@bencherdev/ui/styles.css";
 import "../styles/console.css";
 import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
-import { type Component, Suspense } from "solid-js";
+import { type Component, Suspense, createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import type { Api } from "../api";
-import type { Reader } from "../reader";
+import { type Reader, readerOf } from "../reader";
 import { AccountContext } from "./context";
 
-const READER: Reader = {
+export const READER: Reader = {
 	uuid: "user-uuid",
 	name: "Muriel Bagge",
 	slug: "muriel-bagge",
@@ -18,7 +18,11 @@ const READER: Reader = {
 export const mountAccount = (
 	Page: Component,
 	segment: string,
-	{ api, cached = [] }: { api: Api; cached?: [unknown[], unknown][] },
+	{
+		api,
+		cached = [],
+		reader = READER,
+	}: { api: Api; cached?: [unknown[], unknown][]; reader?: Reader },
 ) => {
 	const client = new QueryClient({
 		defaultOptions: {
@@ -28,6 +32,7 @@ export const mountAccount = (
 	for (const [key, data] of cached) {
 		client.setQueryData(key, data);
 	}
+	const [kept, keep] = createSignal(reader);
 	const history = createMemoryHistory();
 	history.set({
 		value: `/users/${READER.slug}/${segment}`,
@@ -42,8 +47,8 @@ export const mountAccount = (
 				<AccountContext.Provider
 					value={{
 						api,
-						reader: () => READER,
-						keepUser: () => {},
+						reader: kept,
+						keepUser: (user) => keep(readerOf(user)),
 						signOut: () => {},
 					}}
 				>
@@ -64,6 +69,8 @@ export const mountAccount = (
 	);
 	return {
 		client,
+		/** The reader as the page last kept them. */
+		reader: kept,
 		dispose: () => {
 			stop();
 			root.remove();

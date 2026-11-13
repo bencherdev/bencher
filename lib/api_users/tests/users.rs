@@ -357,7 +357,7 @@ async fn users_update_admin_and_locked_resend_allowed() {
 
     // Lock the user so both of its values differ from the requester's.
     let body = serde_json::json!({ "locked": true });
-    let status = patch_user(&server, &admin.token, &user, &body).await;
+    let status = patch_user_in_session(&server, &admin, &user, &body).await;
     assert_eq!(status, StatusCode::OK);
 
     let body = serde_json::json!({ "admin": false, "locked": true });
@@ -375,7 +375,7 @@ async fn users_lock_ends_their_sessions() {
 
     for locked in [true, false] {
         let body = serde_json::json!({ "locked": locked });
-        let status = patch_user(&server, &admin.token, &user, &body).await;
+        let status = patch_user_in_session(&server, &admin, &user, &body).await;
         assert_eq!(status, StatusCode::OK);
     }
 

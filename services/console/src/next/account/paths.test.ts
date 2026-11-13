@@ -17,6 +17,8 @@ describe("accountPage", () => {
 			"Organizations",
 		);
 		expect(accountPage("/console/github")?.page).toBe("GitHub");
+		expect(accountPage("/console/server/users")?.page).toBe("Users");
+		expect(accountPage("/console/server/users/muriel-bagge")).toBeUndefined();
 		expect(accountPage("/console/github/hashbrown")).toBeUndefined();
 		expect(accountPage(`${users}/keys/everett-laptop`)).toBeUndefined();
 		expect(accountPage(`${users}/help`)).toBeUndefined();

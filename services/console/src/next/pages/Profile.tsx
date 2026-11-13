@@ -27,13 +27,23 @@ import { useQueryResult } from "../query";
 
 const FIELDS: readonly Field[] = ["name", "slug", "email"];
 
-/** The reader's name, slug, and email, and a link to any legacy tokens. */
+/**
+ * The reader's name, slug, and email, and a link to any legacy tokens; to a
+ * server admin, any user's, with their Admin and Locked switches.
+ */
 const Profile = () => {
-	const { api } = useAccount();
+	const { api, reader, keepUser } = useAccount();
 	const params = useParams();
 	const slug = () => params.user ?? "";
 	const user = useQueryResult(() => userQuery(api, slug()));
 	const tokens = useQueryResult(() => legacyTokensQuery(api, slug()));
+	// The reader's own account says whether they are a server admin, which the hint follows.
+	createEffect(() => {
+		const own = user().data;
+		if (own && own.uuid === reader().uuid && own.admin !== !!reader().admin) {
+			keepUser(own);
+		}
+	});
 	return (
 		<Frame user={slug()} section="profile">
 			<div class="sethead">
@@ -54,7 +64,15 @@ const Profile = () => {
 					</Show>
 				}
 			>
-				{(data) => <ProfileForm user={data()} tokens={tokens().data} />}
+				{(data) => (
+					<>
+						<ProfileForm user={data()} tokens={tokens().data} />
+						{/* Only a server admin reads another user, and the reader's own account says whether they are one. */}
+						<Show when={data().uuid !== reader().uuid || data().admin}>
+							<ServerCard user={data()} />
+						</Show>
+					</>
+				)}
 			</Show>
 			<Show when={tokens().error}>
 				<Failed what="Legacy tokens" retry={() => tokens().refetch()} />
@@ -105,6 +123,8 @@ const ProfileForm = (props: {
 	const [linkSent, setLinkSent] = createSignal(false);
 	const [confirming, setConfirming] = createSignal(false);
 	const [saving, setSaving] = createSignal(false);
+	/** The reader's own account, as opposed to another user's a server admin edits. */
+	const own = () => props.user.uuid === reader().uuid;
 
 	// A change made elsewhere reaches a form the reader has not touched.
 	createEffect(
@@ -157,10 +177,9 @@ const ProfileForm = (props: {
 				`/v0/users/${props.user.uuid}`,
 				changes,
 			);
-			const own = user.uuid === reader().uuid;
 			// The reader's own new email takes effect from the confirm link the API mails it.
 			const waiting =
-				own &&
+				own() &&
 				changes.email !== undefined &&
 				!sameEmail(user.email, changes.email);
 			client.setQueryData(userQuery(api, user.slug).queryKey, user);
@@ -168,7 +187,7 @@ const ProfileForm = (props: {
 				legacyTokensQuery(api, user.slug).queryKey,
 				props.tokens,
 			);
-			if (own) {
+			if (own()) {
 				keepUser(user);
 			}
 			setDraft(draftOf(user));
@@ -191,11 +210,11 @@ const ProfileForm = (props: {
 		if (!changes || blocked()) {
 			return;
 		}
-		// Emails differ by more than case before any legacy token is at stake.
+		// Emails differ by more than case before any legacy token or another user's session is at stake.
 		if (
 			changes.email !== undefined &&
 			!sameEmail(changes.email, saved().email) &&
-			props.tokens
+			(props.tokens || !own())
 		) {
 			setConfirming(true);
 			return;
@@ -302,7 +321,14 @@ const ProfileForm = (props: {
 					onDismiss={() => setConfirming(false)}
 				>
 					<div class="ui-dialog-head">
-						<h2 id="em-title">Change your email to {draft().email.trim()}?</h2>
+						<h2 id="em-title">
+							<Show
+								when={own()}
+								fallback={`Change ${props.user.name}'s email to ${draft().email.trim()}?`}
+							>
+								Change your email to {draft().email.trim()}?
+							</Show>
+						</h2>
 						<Button
 							variant="ghost"
 							iconOnly
@@ -314,7 +340,16 @@ const ProfileForm = (props: {
 					</div>
 					<div class="ui-dialog-body">
 						<p id="em-desc">
-							Your {legacyTokens(props.tokens ?? 0)} will be revoked.
+							<Show
+								when={own()}
+								fallback={
+									props.tokens
+										? `Every session of ${props.user.name} ends, and their ${legacyTokens(props.tokens)} are revoked.`
+										: `Every session of ${props.user.name} ends.`
+								}
+							>
+								Your {legacyTokens(props.tokens ?? 0)} will be revoked.
+							</Show>
 						</p>
 					</div>
 					<div class="ui-dialog-foot">
@@ -338,3 +373,64 @@ const ProfileForm = (props: {
 };
 
 const sameEmail = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
+/** A server admin's switches for the user: whether they are a server admin, and whether they are locked out. */
+const ServerCard = (props: { user: JsonUser }) => {
+	const { api, reader, keepUser } = useAccount();
+	const client = useQueryClient();
+	const [busy, setBusy] = createSignal(false);
+	const [failure, setFailure] = createSignal<string>();
+	const flip = async (field: "admin" | "locked") => {
+		setBusy(true);
+		setFailure(undefined);
+		try {
+			const { data: user } = await api.send<JsonUser>(
+				"PATCH",
+				`/v0/users/${props.user.uuid}`,
+				{ [field]: !props.user[field] },
+			);
+			client.setQueryData(userQuery(api, user.slug).queryKey, user);
+			if (user.uuid === reader().uuid) {
+				keepUser(user);
+			}
+		} catch (error) {
+			setFailure(failureOf(error));
+		} finally {
+			setBusy(false);
+		}
+	};
+	return (
+		<section class="setcard" aria-labelledby="sec-server">
+			<div class="setcard-head">
+				<h2 class="seclabel" id="sec-server">
+					Server
+				</h2>
+			</div>
+			<div class="setcard-body">
+				<div class="toolbar">
+					<Button
+						selected={props.user.admin}
+						disabled={busy()}
+						onClick={() => flip("admin")}
+					>
+						Admin
+					</Button>
+					<Button
+						selected={props.user.locked}
+						disabled={busy()}
+						onClick={() => flip("locked")}
+					>
+						Locked
+					</Button>
+				</div>
+				<Show when={failure()}>
+					{(message) => (
+						<p class="ferror" role="alert">
+							<span>{message()}</span>
+						</p>
+					)}
+				</Show>
+			</div>
+		</section>
+	);
+};

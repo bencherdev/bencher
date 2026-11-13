@@ -159,6 +159,11 @@ pub enum ValidError {
     InviteSecret,
     #[error("Failed to validate invitation secret hash: {0}")]
     InviteSecretHash(String),
+    // The secret of an email change is left out: it is a credential.
+    #[error("Failed to validate email change secret")]
+    EmailChangeSecret,
+    #[error("Failed to validate email change secret hash: {0}")]
+    EmailChangeSecretHash(String),
     #[error("Failed to validate email hash: {0}")]
     EmailHash(String),
     #[error(

@@ -13,6 +13,18 @@ export const mailedLink = async (email: string, subject: string) => {
 	return link as URL;
 };
 
+/** The newest email the API sent to `email` with `subject`, whole. */
+export const mailed = async (email: string, subject: string) => {
+	let found: undefined | string;
+	await expect
+		.poll(() => {
+			found = newest(email, subject);
+			return found;
+		})
+		.toBeDefined();
+	return found as string;
+};
+
 /** Where the API's log ends now, so a read from it sees only the emails sent after. */
 export const mailMark = () => statSync(seed.api_log).size;
 
@@ -34,14 +46,16 @@ export const mailedCode = async (email: string, mark = 0) =>
 
 // The API logs each email it sends as one JSON line, its first link the email's button.
 const newestLink = (email: string, subject: string) => {
+	const url = newest(email, subject)?.match(/https?:\/\/\S+/)?.[0];
+	return url ? new URL(url) : undefined;
+};
+
+const newest = (email: string, subject: string) => {
 	const lines = readFileSync(seed.api_log, "utf8").split("\n").reverse();
 	for (const line of lines) {
 		const msg = message(line);
 		if (msg?.includes(`<${email}>`) && msg.includes(`Subject: ${subject}\n`)) {
-			const url = msg.match(/https?:\/\/\S+/)?.[0];
-			if (url) {
-				return new URL(url);
-			}
+			return msg;
 		}
 	}
 	return undefined;

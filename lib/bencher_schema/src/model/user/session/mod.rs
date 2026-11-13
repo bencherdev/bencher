@@ -132,6 +132,20 @@ impl QuerySession {
             .execute(conn)
     }
 
+    /// End every session of the user but `keep`.
+    pub fn delete_all_but(
+        conn: &mut DbConnection,
+        user_id: UserId,
+        keep: SessionId,
+    ) -> diesel::QueryResult<usize> {
+        diesel::delete(
+            schema::session::table
+                .filter(schema::session::user_id.eq(user_id))
+                .filter(schema::session::id.ne(keep)),
+        )
+        .execute(conn)
+    }
+
     pub fn into_json(self, user: JsonUser) -> JsonSession {
         let expiration = self.expiration();
         let Self {
@@ -258,7 +272,10 @@ mod tests {
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
     use pretty_assertions::assert_eq;
 
-    use super::{InsertSession, SESSION_IDLE_LIFETIME, SESSION_LIFETIME, device_label};
+    use super::{
+        InsertSession, QuerySession, SESSION_IDLE_LIFETIME, SESSION_LIFETIME, SessionId,
+        device_label,
+    };
     use crate::{model::user::UserId, schema, test_util::setup_test_db};
 
     #[test]
@@ -331,6 +348,53 @@ mod tests {
             .load::<bencher_json::SessionUuid>(&mut conn)
             .unwrap();
         assert_eq!(left, vec![live.uuid, new.uuid]);
+    }
+
+    // Ending every session of a user but one keeps that one and every other user's.
+    // Kills a delete that keeps nothing, keeps more, or reaches past the user.
+    #[test]
+    fn delete_all_but_keeps_one_session_of_the_user() {
+        let mut conn = setup_test_db();
+        let ada = seed_user(&mut conn);
+        diesel::insert_into(schema::user::table)
+            .values((
+                schema::user::uuid.eq("00000000-0000-4000-8000-000000000002"),
+                schema::user::name.eq("Grace"),
+                schema::user::slug.eq("grace"),
+                schema::user::email.eq("grace@example.com"),
+                schema::user::admin.eq(false),
+                schema::user::locked.eq(false),
+                schema::user::created.eq(0i64),
+                schema::user::modified.eq(0i64),
+            ))
+            .execute(&mut conn)
+            .unwrap();
+        let grace = schema::user::table
+            .filter(schema::user::slug.eq("grace"))
+            .select(schema::user::id)
+            .first::<UserId>(&mut conn)
+            .unwrap();
+        let now = DateTime::TEST;
+        for user_id in [ada, ada, ada, grace] {
+            session(user_id, now, now).insert(&mut conn, now).unwrap();
+        }
+        let ids = |conn: &mut diesel::SqliteConnection| {
+            schema::session::table
+                .select(schema::session::id)
+                .order(schema::session::id)
+                .load::<SessionId>(conn)
+                .unwrap()
+        };
+        let made = ids(&mut conn);
+        let [_, keep, _, graces] = made[..] else {
+            panic!("Four sessions were not made: {made:?}");
+        };
+
+        assert_eq!(
+            QuerySession::delete_all_but(&mut conn, ada, keep).unwrap(),
+            2
+        );
+        assert_eq!(ids(&mut conn), vec![keep, graces]);
     }
 
     fn session(user_id: UserId, created: DateTime, last_used: DateTime) -> InsertSession {
