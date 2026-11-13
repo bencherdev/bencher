@@ -429,6 +429,8 @@ const Plot = (props: PlotProps) => {
 				const current = cursor();
 				if (current) {
 					setCursor({ ...current, pinned: !current.pinned });
+					// The point the keys pinned or let go sits at no pointer, whichever plot has the focus.
+					panels.get(current.panel)?.clearCrosshair();
 				}
 				setByKeys(true);
 			}),

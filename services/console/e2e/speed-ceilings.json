@@ -6,7 +6,7 @@
 		"cls": 0.00025,
 		"jsBytes": 43525,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2650,
 		"inlineScriptBytes": 2560,
@@ -134,7 +134,7 @@
 		"jsBytes": 65336,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1970,
 		"inlineScriptBytes": 910,
 		"lateModules": 0
@@ -188,7 +188,7 @@
 	"plotsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 63548,
+		"jsBytes": 63609,
 		"scriptRounds": 1
 	},
 	"thresholdsColdLoad": {
@@ -220,7 +220,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 117894,
+		"jsBytes": 117953,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2900,
 		"inlineScriptBytes": 2560,
@@ -235,7 +235,7 @@
 	"exploreLinkMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 39927,
+		"jsBytes": 39990,
 		"scriptRounds": 1
 	},
 	"blankExploreColdLoad": {
@@ -267,7 +267,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 95946,
+		"jsBytes": 96004,
 		"deferredJsBytes": 115690,
 		"stylesheets": 1,
 		"htmlBytes": 2800,
@@ -277,7 +277,7 @@
 	"alertMove": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 42485,
+		"jsBytes": 42545,
 		"deferredJsBytes": 360,
 		"scriptRounds": 1
 	},
@@ -299,7 +299,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 106747,
+		"jsBytes": 106806,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2850,
 		"inlineScriptBytes": 2560,
@@ -307,17 +307,17 @@
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 77981,
+		"jsBytes": 78043,
 		"deferredJsBytes": 112880,
-		"cssBytes": 13028,
+		"cssBytes": 13062,
 		"htmlBytes": 2980,
 		"inlineScriptBytes": 700
 	},
 	"embedColdLoad": {
 		"cls": 0,
-		"jsBytes": 69174,
+		"jsBytes": 69237,
 		"deferredJsBytes": 112880,
-		"cssBytes": 11254,
+		"cssBytes": 11289,
 		"htmlBytes": 1560,
 		"inlineScriptBytes": 390
 	},
@@ -365,7 +365,7 @@
 		"jsBytes": 47674,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1760,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -379,7 +379,7 @@
 		"jsBytes": 49911,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1890,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -393,7 +393,7 @@
 		"jsBytes": 54986,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1820,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -407,7 +407,7 @@
 		"jsBytes": 64390,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1870,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -421,7 +421,7 @@
 		"jsBytes": 65520,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1900,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -435,7 +435,7 @@
 		"jsBytes": 52652,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1830,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -449,7 +449,7 @@
 		"jsBytes": 53453,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1910,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -463,7 +463,7 @@
 		"jsBytes": 58206,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1950,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -477,7 +477,7 @@
 		"jsBytes": 55440,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1925,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -491,7 +491,7 @@
 		"jsBytes": 57162,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
-		"cssBytes": 19805,
+		"cssBytes": 19838,
 		"htmlBytes": 1900,
 		"inlineScriptBytes": 670,
 		"lateModules": 0
@@ -499,7 +499,7 @@
 	"metricLanding": {
 		"apiRounds": 2,
 		"apiRequests": 3,
-		"jsBytes": 118672,
+		"jsBytes": 118731,
 		"lateModules": 2
 	}
 }

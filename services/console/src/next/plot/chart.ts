@@ -144,6 +144,8 @@ export interface Panel {
 	/** Pins the cursor at a data index, on `line`'s point there when given, and on no line as the keys do. */
 	pinAt: (index: number, line?: number | null) => void;
 	clearCursor: () => void;
+	/** Takes away the horizontal line and leaves the cursor where it is, as a pin or unpin from the keys does. */
+	clearCrosshair: () => void;
 	setSize: (width: number, height: number) => void;
 	/** The y of a line's value at an index, in CSS pixels inside the plot area. */
 	yOf: (line: number, index: number) => number | null;
@@ -315,12 +317,22 @@ export const createPanel = (
 		],
 		cursor: {
 			x: true,
-			y: false,
+			y: true,
 			points: { show: false },
 			// With no drag, uPlot would still swallow a click it mistakes for the end of one.
 			drag: { x: false, y: false, setScale: false, click: () => {} },
 			...(options.syncKey !== null && {
-				sync: { key: options.syncKey, scales: ["x", null] },
+				sync: {
+					key: options.syncKey,
+					scales: ["x", null],
+					// A cursor another plot moves shares only its x, so this plot's horizontal line goes.
+					filters: {
+						sub: () => {
+							crosshair(false);
+							return true;
+						},
+					},
+				},
 			}),
 			// The plot listens for pointer events itself, for touch and the keyboard alike.
 			bind: {
@@ -661,7 +673,14 @@ export const createPanel = (
 		};
 	};
 
-	const hide = () => moveCursor({ left: -10, top: -10 }, false, true);
+	// The horizontal line shows only at a mouse or pen's own y on this plot, from a hover or a click's pin.
+	const crosshair = (show: boolean) =>
+		over.toggleAttribute("data-crosshair", show);
+
+	const hide = () => {
+		crosshair(false);
+		moveCursor({ left: -10, top: -10 }, false, true);
+	};
 
 	// A mouse or pen press until it is released or cancelled; once it moves far enough it drags a band from where it pressed.
 	let press: { id: number; left: number; top: number } | null = null;
@@ -684,7 +703,10 @@ export const createPanel = (
 			const { left, top } = local(event);
 			then(left, top);
 		};
-	const onHover = pointer((left, top) => events.hover(cursorAt(left, top)));
+	const onHover = pointer((left, top) => {
+		crosshair(true);
+		events.hover(cursorAt(left, top));
+	});
 	// Each finger on the plot area, at its x. The first 2 down pinch, and once a
 	// pinch ends no other starts until every finger has lifted.
 	const fingers = new Map<number, number>();
@@ -871,6 +893,7 @@ export const createPanel = (
 			}
 			return;
 		}
+		crosshair(!touch);
 		const cursor = cursorAt(left, top);
 		if (cursor) {
 			events.click(cursor, touch);
@@ -916,6 +939,7 @@ export const createPanel = (
 	};
 	const pinAt = (index: number, line: number | null = null) => {
 		const left = u.valToPos(x[index] ?? 0, "x");
+		crosshair(false);
 		moveCursor({ left, top: u.bbox.height / pixelRatio() / 2 }, false, true);
 		events.pin({ index, line, x: left });
 	};
@@ -958,6 +982,7 @@ export const createPanel = (
 		},
 		pinAt,
 		clearCursor: hide,
+		clearCrosshair: () => crosshair(false),
 		setSize: (width, height) => {
 			if (width !== u.width || height !== u.height) {
 				u.setSize({ width, height });
