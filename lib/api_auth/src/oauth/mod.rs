@@ -2,12 +2,12 @@
 
 use std::fmt;
 
-use bencher_json::{Email, JsonAuthUser, JsonOAuthUser, JsonSignup, PlanLevel, UserName};
+use bencher_json::{Email, JsonAuthUser, JsonOAuthUser, JsonSignup, UserName};
 use bencher_schema::{
     ApiContext, auth_conn,
     error::{issue_error, payment_required_error},
     model::{
-        organization::{QueryOrganization, plan::LicenseUsage, sso::QuerySso},
+        organization::{QueryOrganization, license::any_valid_license, sso::QuerySso},
         user::{InsertUser, QueryUser},
     },
     public_conn, write_conn,
@@ -47,12 +47,11 @@ impl fmt::Display for OAuthProvider {
 async fn is_allowed_oauth(context: &ApiContext) -> Result<(), HttpError> {
     // Either the server is Bencher Cloud, or at least one organization must have a valid Bencher Plus license
     let is_allowed = context.is_bencher_cloud
-        || !LicenseUsage::get_for_server(
+        || any_valid_license(
             public_conn!(context),
             &context.licensor,
-            Some(PlanLevel::Enterprise),
-        )?
-        .is_empty();
+            context.clock.now(),
+        )?;
 
     if is_allowed {
         Ok(())

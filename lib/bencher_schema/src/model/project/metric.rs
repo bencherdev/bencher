@@ -113,7 +113,7 @@ impl QueryMetric {
     }
 
     /// Count metric usage for an organization over a time window, across all project
-    /// visibilities. This is the licensed entitlements check; metered plans bill on
+    /// visibilities. This is the usage the Free plan shows; every plan and license counts
     /// active series instead (see `series::count_active`).
     #[cfg(feature = "plus")]
     pub fn usage(

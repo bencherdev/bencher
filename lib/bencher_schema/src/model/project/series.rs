@@ -109,7 +109,8 @@ pub fn upsert_series_last_seen(
 /// project visibilities).
 ///
 /// This is the billable figure for every metered plan: it is billed for all of its
-/// active series regardless of project visibility. Mirrors `QueryMetric::usage`.
+/// active series regardless of project visibility. A Self-Hosted license counts the
+/// same figure over the last 30 days. Mirrors `QueryMetric::usage`.
 pub fn count_active(
     conn: &mut DbConnection,
     organization_id: OrganizationId,

@@ -12,8 +12,8 @@ const keyBox = (page: Page) => page.locator('[aria-labelledby="sec-key"]');
 test.use({ storageState: signedIn(seed.member) });
 
 test.describe("Billing", () => {
-	// Kills a licensed install drawn without its license, or with the key
-	// before the organization's UUID.
+	// Kills a licensed install drawn without its license in active series, or
+	// with the key before the organization's UUID.
 	test("a licensed organization shows its license, then its UUID and key", async ({
 		page,
 	}) => {
@@ -21,7 +21,7 @@ test.describe("Billing", () => {
 
 		await expect(
 			page.getByRole("region", { name: "Enterprise License" }),
-		).toContainText("Metrics this term");
+		).toContainText("Active series");
 		await expect(keyBox(page).locator(".formrow").first()).toContainText(
 			seed.organization.uuid,
 		);

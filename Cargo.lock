@@ -778,6 +778,7 @@ dependencies = [
  "dropshot",
  "hex",
  "http",
+ "jsonwebtoken 11.1.0",
  "libsqlite3-sys",
  "reqwest",
  "rustls",
@@ -1097,6 +1098,7 @@ dependencies = [
  "jsonwebtoken 11.1.0",
  "pretty_assertions",
  "serde",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 

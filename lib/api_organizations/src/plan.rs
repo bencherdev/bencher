@@ -100,7 +100,7 @@ async fn get_one_inner(
     if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
         Ok(json_plan)
     } else if let Some(json_plan) = query_plan
-        .to_licensed_plan(biller, &context.licensor)
+        .to_licensed_plan(biller, &context.licensor, context.clock.now())
         .await?
     {
         Ok(json_plan)

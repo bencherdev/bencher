@@ -10,7 +10,7 @@ use bencher_api_tests::{
     LogCapture, TestServer,
     github::{GitHubServer, Received},
 };
-use bencher_json::{Clock, JsonOAuthUrl, JsonOAuthUser, PlanLevel, UserSlug};
+use bencher_json::{Clock, JsonOAuthUrl, JsonOAuthUser, UserSlug};
 
 const REDIRECT_URL: &str = "http://localhost:3000/auth/github";
 const CODE: &str = "code-marker";
@@ -57,9 +57,7 @@ async fn sign_in_names_its_redirect_on_authorize_and_exchange() {
     // A server that is not Bencher Cloud allows GitHub sign-in only with a license.
     let admin = server.signup("Admin User", "admin@example.com").await;
     let org = server.create_org(&admin, "Licensed Org").await;
-    server
-        .license_org(&admin, &org, PlanLevel::Enterprise)
-        .await;
+    server.license_org(&admin, &org).await;
 
     let response = server
         .client
@@ -119,9 +117,7 @@ async fn sign_up_takes_a_login_with_an_underscore() {
             .await;
     let admin = server.signup("Admin User", "admin@example.com").await;
     let org = server.create_org(&admin, "Licensed Org").await;
-    server
-        .license_org(&admin, &org, PlanLevel::Enterprise)
-        .await;
+    server.license_org(&admin, &org).await;
 
     let response = server
         .client

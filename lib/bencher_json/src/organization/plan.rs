@@ -169,15 +169,58 @@ pub struct JsonCardDetails {
     pub exp_year: ExpirationYear,
 }
 
+/// A Bencher Plus Enterprise license for a Self-Hosted organization.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonLicense {
+    /// The license key.
     pub key: Jwt,
+    /// The Self-Hosted organization the license is for.
     pub organization: OrganizationUuid,
-    pub level: PlanLevel,
-    pub entitlements: Entitlements,
+    /// The Benchmark Series the license covers.
+    pub series: Entitlements,
+    /// When the license was issued.
     pub issued_at: DateTime,
+    /// The end of the license's paid term.
+    pub term_end: DateTime,
+    /// When the license expires, at the end of its grace after the term ends.
+    pub expiration: DateTime,
+}
+
+/// What the organization of a new report needs to know about its license, on the response
+/// that created the report. Absent when there is nothing to know.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonReportLicense {
+    /// Present when the organization's active Benchmark Series are above the license's.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub over: Option<JsonLicenseOver>,
+    /// Present when the license is past the end of its paid term, in its grace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grace: Option<JsonLicenseGrace>,
+}
+
+/// An organization with more active Benchmark Series than its license covers.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonLicenseOver {
+    /// The organization's Benchmark Series active in the last 30 days.
+    pub active_series: u32,
+    /// The Benchmark Series the license covers.
+    pub series: Entitlements,
+}
+
+/// A license past the end of its paid term, in its grace.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+pub struct JsonLicenseGrace {
+    /// The end of the license's paid term.
+    pub term_end: DateTime,
+    /// When the license expires.
     pub expiration: DateTime,
 }
 

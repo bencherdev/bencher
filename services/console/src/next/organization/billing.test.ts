@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { JsonPriceTier } from "../../types/bencher";
+import type { JsonLicense, JsonPriceTier } from "../../types/bencher";
 import type { Api } from "../api";
 import {
 	bandIndex,
@@ -7,6 +7,7 @@ import {
 	bareMetalRate,
 	bareMetalUsd,
 	estimate,
+	inGrace,
 	period,
 	usageQuery,
 	usd,
@@ -32,6 +33,20 @@ const DEAL = JSON.parse(`[
 // Bare metal in cents a runner minute: the published dollar an hour, and a deal's two.
 const DOLLAR_AN_HOUR = 100 / 60;
 const TWO_DOLLARS_AN_HOUR = 200 / 60;
+
+describe("inGrace", () => {
+	const license = {
+		term_end: "2027-10-01T12:00:00Z",
+	} as unknown as JsonLicense;
+
+	// Kills a grace that starts after the term end, or before it: the API's grace starts at
+	// the term end, by the server's time.
+	test("a license is in its grace from its term end, by the server's time", () => {
+		expect(inGrace(license, "2027-10-01T11:59:59Z")).toBe(false);
+		expect(inGrace(license, "2027-10-01T12:00:00Z")).toBe(true);
+		expect(inGrace(license, "2027-10-20T12:00:00Z")).toBe(true);
+	});
+});
 
 describe("period", () => {
 	// Kills a period that repeats its year, drops the end's, or joins with a dash.

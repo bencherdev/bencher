@@ -1,4 +1,4 @@
-use bencher_json::{Jwt, PROD_BENCHER_URL_STR, Secret};
+use bencher_json::{DateTime, Jwt, PROD_BENCHER_URL_STR, Secret};
 use bencher_license::{Licensor, PublicKey};
 
 use crate::parser::TaskLicenseValidate;
@@ -22,7 +22,8 @@ impl Validate {
     pub fn exec(&self) -> anyhow::Result<()> {
         let pem: Secret = self.pem.parse()?;
         let licensor = Licensor::bencher_cloud_with_public_key(&pem, Some(PublicKey::Live))?;
-        let claims = licensor.validate_with_issuer(&self.license, PROD_BENCHER_URL_STR)?;
+        let claims =
+            licensor.validate_with_issuer(&self.license, PROD_BENCHER_URL_STR, DateTime::now())?;
         print!("{claims:#?}");
         Ok(())
     }

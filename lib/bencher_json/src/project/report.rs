@@ -6,14 +6,14 @@ use ordered_float::OrderedFloat;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, de, de::Visitor};
 
-#[cfg(feature = "plus")]
-use crate::runner::job::JobUuid;
 use crate::{
     BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure,
     JsonMetricTriple, JsonProject, JsonPubProjectKey, JsonPubUser, JsonTestbed, MeasureNameId,
     MetricUuid, ParameterFilter, ParameterSet, TestbedNameId, VariantUuid,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
+#[cfg(feature = "plus")]
+use crate::{organization::plan::JsonReportLicense, runner::job::JobUuid};
 
 use super::{branch::JsonUpdateStartPoint, threshold::JsonThresholdModel};
 
@@ -608,6 +608,11 @@ pub struct JsonReport {
     #[cfg(feature = "plus")]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub job: Option<JobUuid>,
+    /// What the organization needs to know about its Self-Hosted license,
+    /// only on the response that created the report, and omitted when there is nothing to know.
+    #[cfg(feature = "plus")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub license: Option<JsonReportLicense>,
     pub created: DateTime,
 }
 

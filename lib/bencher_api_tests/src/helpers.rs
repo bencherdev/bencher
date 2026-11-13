@@ -7,8 +7,8 @@ use bencher_google_client::GoogleClient;
 use bencher_json::{
     BranchName, BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid,
     OAuthAccessToken, OAuthAuthorizationUuid, OAuthGrantUuid, OAuthRefreshToken, OAuthResource,
-    OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet, PlanLevel, ReportUuid,
-    ResourceName, TestbedUuid, TokenUuid, UserKeyUuid, UserUuid, VariantUuid, VersionUuid,
+    OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet, ReportUuid, ResourceName,
+    TestbedUuid, TokenUuid, UserKeyUuid, UserUuid, VariantUuid, VersionUuid,
     system::config::JsonOAuthServer,
 };
 use bencher_rbac::{organization::Role as OrganizationRole, project::Role};
@@ -186,19 +186,44 @@ pub fn create_test_report(server: &TestServer, project_id: i32) -> i32 {
         .expect("Failed to get report ID")
 }
 
-/// A project of a claimed organization, licensed at `plan` if one is given.
+/// A project of a claimed organization, with a valid license if `licensed`.
 pub async fn plan_project(
     server: &TestServer,
     label: &str,
-    plan: Option<PlanLevel>,
+    licensed: bool,
 ) -> (TestUser, TestProject) {
     let user = server
         .signup("Test User", &format!("plan-{label}@example.com"))
         .await;
     let org = server.create_org(&user, &format!("Plan {label} Org")).await;
-    if let Some(level) = plan {
-        server.license_org(&user, &org, level).await;
+    if licensed {
+        server.license_org(&user, &org).await;
     }
+    let project = server
+        .create_project(&user, &org, &format!("Plan {label} Project"))
+        .await;
+    (user, project)
+}
+
+/// A project of a claimed organization whose license expired a day ago, written straight into
+/// the database since the API refuses an expired license.
+pub async fn expired_license_project(server: &TestServer, label: &str) -> (TestUser, TestProject) {
+    use crate::license::{DAY, TEST_LICENSE_SERIES, after, sign_license};
+
+    let user = server
+        .signup("Test User", &format!("plan-{label}@example.com"))
+        .await;
+    let org = server.create_org(&user, &format!("Plan {label} Org")).await;
+    let now = server.now();
+    server.store_license(
+        &org,
+        &sign_license(
+            org.uuid,
+            TEST_LICENSE_SERIES,
+            after(now, -400 * DAY),
+            after(now, -31 * DAY),
+        ),
+    );
     let project = server
         .create_project(&user, &org, &format!("Plan {label} Project"))
         .await;
@@ -235,6 +260,85 @@ pub async fn post_metrics(
         .expect("Request failed");
     let status = resp.status();
     (status, resp.text().await.expect("Failed to read response"))
+}
+
+/// Post a report of one iteration with `series` benchmarks of one measure, which is `series`
+/// Benchmark Series on the `localhost` testbed.
+#[expect(clippy::expect_used, reason = "test helper posting a report")]
+pub async fn post_series(
+    server: &TestServer,
+    user: &TestUser,
+    project: &TestProject,
+    series: usize,
+) -> (StatusCode, String) {
+    let project_slug: &str = project.slug.as_ref();
+    let now = server.now();
+    let results = (0..series)
+        .map(|index| {
+            (
+                format!("bench_{index}"),
+                serde_json::json!({ "latency": { "value": 1.0 } }),
+            )
+        })
+        .collect::<serde_json::Map<_, _>>();
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": now,
+            "end_time": now,
+            "results": [serde_json::Value::Object(results).to_string()],
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    (status, resp.text().await.expect("Failed to read response"))
+}
+
+/// A report of the project that ends at `end_time`, with a bare metal job that ran for
+/// `job_duration` seconds, seeded straight into the database. Once for each project, as
+/// [`create_test_report`] is.
+#[expect(clippy::expect_used, reason = "test helper seeding runner minutes")]
+pub fn seed_runner_minutes(
+    server: &TestServer,
+    project: &TestProject,
+    end_time: DateTime,
+    job_duration: i32,
+) {
+    let project_id = get_project_id(server, project.slug.as_ref());
+    let report_id = create_test_report(server, project_id);
+    let mut conn = server.db_conn();
+    diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+        .set(schema::report::end_time.eq(end_time))
+        .execute(&mut conn)
+        .expect("Failed to set the report end time");
+    diesel::insert_into(schema::job_duration_by_report::table)
+        .values((
+            schema::job_duration_by_report::report_id.eq(report_id),
+            schema::job_duration_by_report::job_duration.eq(job_duration),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert the job duration");
+}
+
+/// Set the project's visibility straight in the database.
+#[expect(clippy::expect_used, reason = "test helper setting a visibility")]
+pub fn set_visibility(
+    server: &TestServer,
+    project: &TestProject,
+    visibility: bencher_json::project::Visibility,
+) {
+    diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+        .set(schema::project::visibility.eq(visibility))
+        .execute(&mut server.db_conn())
+        .expect("Failed to set the project visibility");
 }
 
 /// A user API token seeded directly into the database.

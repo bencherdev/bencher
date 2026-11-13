@@ -117,7 +117,7 @@ impl QueryJob {
     /// Process benchmark results from a completed job into the report.
     ///
     /// Looks up the report and branch, parses benchmark output via the adapter,
-    /// creates metrics/alerts, checks plan usage, and updates the report timestamps.
+    /// creates metrics/alerts, counts a license's active series, and updates the report timestamps.
     pub async fn process_results(
         &self,
         log: &Logger,
@@ -188,12 +188,17 @@ impl QueryJob {
                 settings,
                 self.config.bmf_version.unwrap_or_default(),
                 ReportWarnings::default(),
-                plan_kind,
+                &plan_kind,
                 #[cfg(feature = "otel")]
                 self.priority,
                 &query_project,
             )
             .await?;
+        // The response for this report went out when the job was submitted,
+        // so the count only raises the peak of the license's term.
+        plan_kind
+            .license_after_report(log, context, query_project.organization_id)
+            .await;
 
         // Compute report times and job duration before acquiring write lock
         let started = self.started.unwrap_or(now);
@@ -658,13 +663,13 @@ fn insert_job_duration(
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, Entitlements, PlanLevel};
+    use bencher_json::DateTime;
     use pretty_assertions::assert_eq;
 
     use super::*;
     use crate::{
         macros::sql::last_insert_rowid,
-        model::organization::plan::{LicenseUsage, MeteredPlan},
+        model::organization::{license::OrganizationLicense, plan::MeteredPlan},
         test_util::{
             create_base_entities, create_branch_with_head, create_head_version, create_testbed,
             create_version, setup_test_db,
@@ -679,12 +684,8 @@ mod tests {
         })
     }
 
-    fn licensed_plan(level: PlanLevel) -> PlanKind {
-        PlanKind::Licensed(LicenseUsage {
-            entitlements: Entitlements::try_from(1000).unwrap(),
-            usage: 0,
-            level,
-        })
+    fn licensed_plan() -> PlanKind {
+        PlanKind::Licensed(OrganizationLicense::test())
     }
 
     // --- resolve_timeout tests ---
@@ -744,14 +745,14 @@ mod tests {
 
     #[test]
     fn timeout_licensed_default() {
-        let plan = licensed_plan(PlanLevel::Enterprise);
+        let plan = licensed_plan();
         let timeout = resolve_timeout(None, &plan, true);
         assert_eq!(u32::from(timeout), u32::from(Timeout::PLUS_DEFAULT));
     }
 
     #[test]
     fn timeout_licensed_custom() {
-        let plan = licensed_plan(PlanLevel::Enterprise);
+        let plan = licensed_plan();
         let requested = Timeout::try_from(86400).unwrap(); // 24 hours, no cap
         let timeout = resolve_timeout(Some(requested), &plan, true);
         assert_eq!(u32::from(timeout), 86400);
@@ -781,19 +782,8 @@ mod tests {
     }
 
     #[test]
-    fn priority_licensed_free() {
-        assert_eq!(
-            licensed_plan(PlanLevel::Free).priority(true),
-            Priority::Free
-        );
-    }
-
-    #[test]
-    fn priority_licensed_enterprise() {
-        assert_eq!(
-            licensed_plan(PlanLevel::Enterprise).priority(true),
-            Priority::Plus
-        );
+    fn priority_licensed() {
+        assert_eq!(licensed_plan().priority(true), Priority::Plus);
     }
 
     // --- runner_minutes_usage tests ---
@@ -990,8 +980,8 @@ mod tests {
         dispatch("Bearer token", "bencher_run")
     }
 
-    fn unpaid_plans() -> [PlanKind; 2] {
-        [PlanKind::None, licensed_plan(PlanLevel::Free)]
+    fn unpaid_plans() -> [PlanKind; 1] {
+        [PlanKind::None]
     }
 
     fn callback_key() -> CallbackKey {
@@ -1002,11 +992,7 @@ mod tests {
     fn a_paid_plan_seals_the_callback_to_its_job() {
         let key = callback_key();
         let job = JobUuid::new();
-        for plan_kind in [
-            metered_plan(),
-            licensed_plan(PlanLevel::Pro),
-            licensed_plan(PlanLevel::Enterprise),
-        ] {
+        for plan_kind in [metered_plan(), licensed_plan()] {
             let PendingCallback::Sealed(sealed) =
                 PendingCallback::new(&key, job, &plan_kind, true, &callback()).unwrap()
             else {
@@ -1078,11 +1064,7 @@ mod tests {
 
     #[test]
     fn an_unclaimed_project_skips_even_the_bencher_run_dispatch() {
-        for plan_kind in [
-            PlanKind::None,
-            licensed_plan(PlanLevel::Free),
-            metered_plan(),
-        ] {
+        for plan_kind in [PlanKind::None, licensed_plan(), metered_plan()] {
             for (callback, what) in [
                 (bencher_run_dispatch(), "the bencher_run dispatch"),
                 (callback(), "another URL"),

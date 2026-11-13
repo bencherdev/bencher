@@ -30,12 +30,12 @@ const made = (body: unknown, bmf_version: number): JsonProject => ({
 	modified: "2026-10-17T00:00:00Z",
 });
 
-/** Each organization's usage: Pompeii LLC holds a license with room, Bagge Diner nothing. */
+/** Each organization's usage: Pompeii LLC holds a valid license, Bagge Diner nothing. */
 const USAGE: Record<string, Partial<JsonUsage>> = {
 	"pompeii-llc": {
 		kind: UsageKind.SelfHostedLicensed,
-		license: { entitlements: 1000 } as NonNullable<JsonUsage["license"]>,
-		metrics: 10,
+		license: { series: 1000 } as NonNullable<JsonUsage["license"]>,
+		active_series: 10,
 	},
 	"bagge-diner": { kind: UsageKind.SelfHostedFree },
 };

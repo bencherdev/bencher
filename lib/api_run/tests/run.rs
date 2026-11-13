@@ -16,8 +16,7 @@ use bencher_json::{
 };
 #[cfg(feature = "plus")]
 use bencher_json::{
-    JsonJob, JsonRunners, JsonSpec, PlanLevel, project::threshold::MAX_ACTIVE_THRESHOLDS,
-    runner::JsonJobs,
+    JsonJob, JsonRunners, JsonSpec, project::threshold::MAX_ACTIVE_THRESHOLDS, runner::JsonJobs,
 };
 use bencher_schema::MIGRATIONS;
 #[cfg(feature = "plus")]
@@ -3056,7 +3055,7 @@ async fn run_post_with_job_priority_plus_for_a_licensed_org() {
         .signup("Job User", "runjob_licensed@example.com")
         .await;
     let org = server.create_org(&user, "Licensed Org").await;
-    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server.license_org(&user, &org).await;
     let project = server.create_project(&user, &org, "Licensed Project").await;
     create_fallback_spec(&server, &user).await;
 
@@ -3074,6 +3073,56 @@ async fn run_post_with_job_priority_plus_for_a_licensed_org() {
     assert_eq!(priority, bencher_json::Priority::Plus, "a licensed plan");
 }
 
+// The response to a job run for an organization whose license is in its grace warns with the
+// term end and the expiration, though the job's results come later
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn run_post_with_job_warns_of_a_license_in_its_grace() {
+    use bencher_api_tests::license::{DAY, TEST_LICENSE_SERIES, after, sign_license};
+    use bencher_json::organization::plan::{JsonLicenseGrace, JsonReportLicense};
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Job User", "runjob_license_grace@example.com")
+        .await;
+    let org = server.create_org(&user, "Grace License Org").await;
+    let now = server.now();
+    let term_end = after(now, -DAY);
+    server
+        .license_org_with(
+            &user,
+            &org,
+            &sign_license(
+                org.uuid,
+                TEST_LICENSE_SERIES,
+                after(now, -40 * DAY),
+                term_end,
+            ),
+        )
+        .await;
+    let project = server
+        .create_project(&user, &org, "Grace License Project")
+        .await;
+    create_fallback_spec(&server, &user).await;
+
+    let project_slug: &str = project.slug.as_ref();
+    let (status, body) =
+        post_job_run(&server, &user, project_slug, digest_job(project_slug, None)).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let report: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    assert!(report.job.is_some(), "a job run");
+    assert_eq!(
+        report.license,
+        Some(JsonReportLicense {
+            over: None,
+            grace: Some(JsonLicenseGrace {
+                term_end,
+                expiration: after(term_end, 30 * DAY),
+            }),
+        })
+    );
+}
+
 // POST /v0/run with a callback for a paid organization seals it to the job
 #[cfg(feature = "plus")]
 #[tokio::test]
@@ -3083,7 +3132,7 @@ async fn run_post_with_job_callback_is_sealed_for_a_paid_org() {
         .signup("Job User", "runjob_cb_paid@example.com")
         .await;
     let org = server.create_org(&user, "Callback Paid Org").await;
-    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server.license_org(&user, &org).await;
     let project = server
         .create_project(&user, &org, "Callback Paid Project")
         .await;
@@ -3336,28 +3385,35 @@ async fn run_post_that_claims_its_project_sends_the_dispatch() {
     assert_eq!(priority, bencher_json::Priority::Free, "Free priority");
 }
 
-// POST /v0/run with a callback for an organization licensed at the Free level skips it, as its job runs at Free priority.
-// The project is private, which no plan at all allows, so only the Free license gets the run accepted.
+// POST /v0/run with a callback for an organization whose license has expired skips it, as its job
+// runs at Free priority. An expired license is no license, so the project is public.
 #[cfg(feature = "plus")]
 #[tokio::test]
-async fn run_post_with_job_callback_is_skipped_for_a_free_license() {
-    use bencher_json::project::Visibility;
+async fn run_post_with_job_callback_is_skipped_for_an_expired_license() {
+    use bencher_api_tests::license::{DAY, TEST_LICENSE_SERIES, after, sign_license};
     use bencher_schema::schema;
-    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+    use diesel::{QueryDsl as _, RunQueryDsl as _};
 
     let server = TestServer::new().await;
     let user = server
-        .signup("Job User", "runjob_cb_free_license@example.com")
+        .signup("Job User", "runjob_cb_expired_license@example.com")
         .await;
-    let org = server.create_org(&user, "Callback Free License Org").await;
-    server.license_org(&user, &org, PlanLevel::Free).await;
+    let org = server
+        .create_org(&user, "Callback Expired License Org")
+        .await;
+    let now = server.now();
+    server.store_license(
+        &org,
+        &sign_license(
+            org.uuid,
+            TEST_LICENSE_SERIES,
+            after(now, -400 * DAY),
+            after(now, -31 * DAY),
+        ),
+    );
     let project = server
-        .create_project(&user, &org, "Callback Free License Project")
+        .create_project(&user, &org, "Callback Expired License Project")
         .await;
-    diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
-        .set(schema::project::visibility.eq(Visibility::Private))
-        .execute(&mut server.db_conn())
-        .expect("Failed to make the project private");
     create_fallback_spec(&server, &user).await;
 
     let project_slug: &str = project.slug.as_ref();
@@ -3405,7 +3461,7 @@ async fn run_post_with_job_callback_row_failure_creates_nothing() {
         .signup("Job User", "runjob_cb_rollback@example.com")
         .await;
     let org = server.create_org(&user, "Callback Rollback Org").await;
-    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server.license_org(&user, &org).await;
     let project = server
         .create_project(&user, &org, "Callback Rollback Project")
         .await;
@@ -3445,7 +3501,7 @@ async fn run_post_with_job_invalid_callback_creates_nothing() {
         .signup("Job User", "runjob_cb_invalid@example.com")
         .await;
     let org = server.create_org(&user, "Callback Invalid Org").await;
-    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server.license_org(&user, &org).await;
     let project = server
         .create_project(&user, &org, "Callback Invalid Project")
         .await;
@@ -3493,7 +3549,7 @@ async fn run_post_with_job_without_callback_stores_none() {
         .signup("Job User", "runjob_cb_none@example.com")
         .await;
     let org = server.create_org(&user, "Callback None Org").await;
-    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server.license_org(&user, &org).await;
     let project = server
         .create_project(&user, &org, "Callback None Project")
         .await;
@@ -3532,7 +3588,7 @@ async fn run_post_with_job_callback_stores_no_plaintext() {
     for (name, licensed) in [("Plaintext Paid", true), ("Plaintext Free", false)] {
         let org = server.create_org(&user, &format!("{name} Org")).await;
         if licensed {
-            server.license_org(&user, &org, PlanLevel::Enterprise).await;
+            server.license_org(&user, &org).await;
         }
         let project = server
             .create_project(&user, &org, &format!("{name} Project"))
@@ -3600,7 +3656,7 @@ async fn run_post_with_job_callback_is_never_echoed() {
         .signup("Job User", "runjob_cb_echo@example.com")
         .await;
     let org = server.create_org(&user, "Callback Echo Org").await;
-    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server.license_org(&user, &org).await;
     let project = server
         .create_project(&user, &org, "Callback Echo Project")
         .await;

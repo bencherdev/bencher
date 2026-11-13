@@ -7,7 +7,7 @@ use anyhow::Context as _;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use bencher_json::{
     DateTime, Entitlements, JsonAuthUser, JsonOrganization, JsonProject, JsonProjectKeyCreated,
-    JsonUser, JsonUserKeyCreated, Jwt, PlanLevel, Secret,
+    JsonUser, JsonUserKeyCreated, Jwt, Secret,
 };
 use bencher_license::Licensor;
 use bencher_token::TokenKey;
@@ -39,7 +39,9 @@ const ADMIN_OLDER: &str = "Potato Wedges";
 // Debug builds of the API trust this key's public half for self-hosted licenses.
 const TEST_LICENSE_KEY: &str =
     include_str!("../../../../../plus/bencher_license/src/test/private.pem");
-const TEST_LICENSE_ENTITLEMENTS: u32 = 1_000_000;
+const TEST_LICENSE_SERIES: u32 = 1_000_000;
+/// A year, the paid term of the seed's license.
+const TEST_LICENSE_TERM: i64 = 365 * 24 * 60 * 60;
 
 /// The time the browser clock is frozen at: 2026-09-14T00:00:00Z.
 pub(super) const NOW: i64 = 1_789_344_000;
@@ -365,10 +367,13 @@ async fn admin_project(
 /// A private project needs a plan, so the organization gets a self-hosted license.
 async fn license(api: &Api, organization: &JsonOrganization, token: &str) -> anyhow::Result<()> {
     let key: Secret = TEST_LICENSE_KEY.parse()?;
-    let license = Licensor::bencher_cloud(&key)?.new_annual_license(
+    // Signed now, so the API takes it whatever time the browser clock is frozen at.
+    let issued_at = DateTime::now();
+    let license = Licensor::bencher_cloud(&key)?.new_license(
         organization.uuid,
-        PlanLevel::Enterprise,
-        Entitlements::try_from(TEST_LICENSE_ENTITLEMENTS)?,
+        Entitlements::try_from(TEST_LICENSE_SERIES)?,
+        issued_at,
+        DateTime::try_from(issued_at.timestamp() + TEST_LICENSE_TERM)?,
     )?;
     let path = format!("/v0/organizations/{}", organization.slug);
     let _organization: JsonOrganization = api

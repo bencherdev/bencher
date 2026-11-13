@@ -26,6 +26,11 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 #[cfg(feature = "plus")]
+use bencher_schema::{
+    error::conflict_error, model::organization::license::held_term_end, write_transaction,
+};
+
+#[cfg(feature = "plus")]
 use crate::plan::cancel_and_remove_plan;
 
 pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
@@ -252,6 +257,8 @@ async fn get_one_inner(
 /// Update an organization where the user is a member.
 /// The user must have `edit` permissions for the organization.
 /// If updating the license, the user must have `manage` permissions for the organization.
+/// ➕ Bencher Plus: On Bencher Self-Hosted, a license whose term ends before the term of
+/// a valid license that the organization holds is refused.
 #[endpoint {
     method = PATCH,
     path =  "/v0/organizations/{organization}",
@@ -299,7 +306,9 @@ async fn patch_inner(
         permission,
     )?;
     #[cfg(feature = "plus")]
-    if let Some(license) = license {
+    let now = context.clock.now();
+    #[cfg(feature = "plus")]
+    let term_end = if let Some(license) = license {
         // If updating the license make sure that the server is not Bencher Cloud
         // All Bencher Cloud license updates should be handled via plans directly
         // Only Self-Hosted should be able to update the license
@@ -309,22 +318,49 @@ async fn patch_inner(
             ));
         }
         // If updating a Self-Hosted license make sure that it is actually valid for this particular organization
-        context
+        let claims = context
             .licensor
-            .validate_organization(license, query_organization.uuid)
+            .validate_organization(license, query_organization.uuid, now)
             .map_err(resource_not_found_err!(
                 Organization,
                 (license, &query_organization)
             ))?;
-    }
+        Some(claims.term_end())
+    } else {
+        None
+    };
 
     let organization_query =
         schema::organization::table.filter(schema::organization::id.eq(query_organization.id));
     let update_organization = UpdateOrganization::from(json_organization);
+    #[cfg(not(feature = "plus"))]
     diesel::update(organization_query)
         .set(&update_organization)
         .execute(write_conn!(context))
         .map_err(resource_conflict_err!(Organization, update_organization))?;
+    // A license whose term ends before the term of the valid license held would hide the newer
+    // term and its peak. The held license is read under the write lock, so of two licenses pasted
+    // at once, the older cannot land last. Clearing the license is not held to its term.
+    #[cfg(feature = "plus")]
+    let newer_held = write_transaction!(context, |conn| {
+        if let Some(term_end) = term_end
+            && let Some(held) = held_term_end(conn, &context.licensor, &query_organization, now)?
+            && term_end.timestamp() < held.timestamp()
+        {
+            return Ok(Some((held, term_end)));
+        }
+        diesel::update(organization_query)
+            .set(&update_organization)
+            .execute(conn)?;
+        diesel::QueryResult::Ok(None)
+    })
+    .map_err(resource_conflict_err!(Organization, update_organization))?;
+    #[cfg(feature = "plus")]
+    if let Some((held, term_end)) = newer_held {
+        return Err(conflict_error(format!(
+            "The organization holds a newer license, whose term ends ({held}) after the term of this license ends ({term_end})",
+        )));
+    }
 
     auth_conn!(context, |conn| {
         QueryOrganization::get(conn, query_organization.id)?.into_json_full(conn)

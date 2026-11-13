@@ -15,7 +15,7 @@ use bencher_schema::{
     model::{
         organization::{
             QueryOrganization,
-            plan::LicenseUsage,
+            license::OrganizationLicense,
             sso::{InsertSso, QuerySso},
         },
         user::{
@@ -172,8 +172,12 @@ async fn post_inner(
 
     // Either the server is Bencher Cloud or the organization must have a valid Bencher Plus license
     let is_allowed = context.is_bencher_cloud
-        || LicenseUsage::get(auth_conn!(context), &context.licensor, &query_organization)?
-            .is_some();
+        || OrganizationLicense::get_valid(
+            &context.licensor,
+            &query_organization,
+            context.clock.now(),
+        )
+        .is_some();
     if !is_allowed {
         return Err(payment_required_error(
             "You must have a valid Bencher Plus Enterprise license for the organization to add SSO",

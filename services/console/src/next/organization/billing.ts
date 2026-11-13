@@ -1,5 +1,6 @@
 import type {
 	JsonCardDetails,
+	JsonLicense,
 	JsonPlan,
 	JsonPriceTier,
 	JsonUsage,
@@ -70,6 +71,10 @@ export const fullDay = (time: string, timeZone?: string) =>
 /** "Oct 31", in the reader's time zone unless one is given. */
 export const shortDay = (time: string, timeZone?: string) =>
 	day(time, timeZone, false);
+
+/** Whether a license is past the end of its paid term, in its grace, at the server's time `now`. */
+export const inGrace = (license: JsonLicense, now: string) =>
+	Date.parse(license.term_end) <= Date.parse(now);
 
 /** "Oct 1 to Oct 31, 2026", with the start's year only when it differs. */
 export const period = (start: string, end: string, timeZone?: string) => {

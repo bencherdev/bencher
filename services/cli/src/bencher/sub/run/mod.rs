@@ -25,6 +25,8 @@ mod error;
 mod format;
 #[cfg(feature = "plus")]
 mod job;
+#[cfg(feature = "plus")]
+mod license;
 mod project;
 pub mod runner;
 mod sub_adapter;
@@ -349,6 +351,15 @@ impl Run {
             .send_with(sender)
             .await
             .map_err(RunError::SendReport)?;
+        #[cfg(feature = "plus")]
+        for warning in json_report
+            .license
+            .as_ref()
+            .map(license::license_warnings)
+            .unwrap_or_default()
+        {
+            cli_eprintln_quietable!(self.log, "{warning}");
+        }
 
         #[cfg(feature = "plus")]
         if let (Some(job_uuid), Some(job)) = (json_report.job, self.submit_job()) {

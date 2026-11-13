@@ -1,5 +1,8 @@
 #[cfg(feature = "plus")]
-use bencher_json::runner::job::{JobUuid, JsonNewRunJob};
+use bencher_json::{
+    organization::plan::JsonReportLicense,
+    runner::job::{JobUuid, JsonNewRunJob},
+};
 use std::collections::HashSet;
 
 use bencher_json::{
@@ -393,11 +396,15 @@ impl QueryReport {
         #[cfg(feature = "plus")]
         if is_job_run {
             // Job-based run: results will be processed in handle_completed()
+            let license = plan_kind
+                .license_after_report(log, context, query_project.organization_id)
+                .await;
             return query_report
                 .finish_create(
                     log,
                     context,
                     api_actor,
+                    license,
                     #[cfg(feature = "otel")]
                     create_start,
                 )
@@ -417,13 +424,17 @@ impl QueryReport {
                 bmf_version,
                 warnings,
                 #[cfg(feature = "plus")]
-                plan_kind,
+                &plan_kind,
                 #[cfg(all(feature = "plus", feature = "otel"))]
                 priority,
                 #[cfg(feature = "plus")]
                 query_project,
             )
             .await?;
+        #[cfg(feature = "plus")]
+        let license = plan_kind
+            .license_after_report(log, context, query_project.organization_id)
+            .await;
 
         // If the report was processed successfully, then return the report with the results
         query_report
@@ -431,6 +442,8 @@ impl QueryReport {
                 log,
                 context,
                 api_actor,
+                #[cfg(feature = "plus")]
+                license,
                 #[cfg(feature = "otel")]
                 create_start,
             )
@@ -465,6 +478,7 @@ impl QueryReport {
         log: &Logger,
         context: &ApiContext,
         api_actor: &ApiActor,
+        #[cfg(feature = "plus")] license: Option<JsonReportLicense>,
         #[cfg(feature = "otel")] create_start: DateTime,
     ) -> Result<JsonReport, HttpError> {
         #[cfg(feature = "otel")]
@@ -477,12 +491,18 @@ impl QueryReport {
             );
         }
 
-        self.into_json(
+        let json_report = self.into_json(
             log,
             actor_conn!(context, api_actor),
             ReportMode::Full,
             context.github_linking(),
-        )
+        )?;
+        #[cfg(feature = "plus")]
+        let json_report = JsonReport {
+            license,
+            ..json_report
+        };
+        Ok(json_report)
     }
 
     pub fn into_json(
@@ -581,6 +601,8 @@ impl QueryReport {
             warnings,
             #[cfg(feature = "plus")]
             job,
+            #[cfg(feature = "plus")]
+            license: None,
             created,
         })
     }
@@ -588,7 +610,7 @@ impl QueryReport {
     /// Process benchmark results and record metrics/alerts for this report.
     ///
     /// Shared between `create()` (local runs) and `handle_completed()` (job-based runs).
-    /// Includes plan usage tracking and validation.
+    /// Includes the active-series post for a metered plan.
     #[expect(clippy::too_many_arguments, reason = "cfg features add extra params")]
     pub async fn process_results(
         &self,
@@ -600,14 +622,13 @@ impl QueryReport {
         settings: JsonReportSettings,
         bmf_version: BmfVersion,
         mut warnings: ReportWarnings,
-        #[cfg(feature = "plus")] plan_kind: PlanKind,
+        #[cfg(feature = "plus")] plan_kind: &PlanKind,
         #[cfg(all(feature = "plus", feature = "otel"))] priority: bencher_json::Priority,
         #[cfg(feature = "plus")] query_project: &QueryProject,
     ) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
         let mut usage = 0;
-        // Capture the active-series billing context (customer + period) before
-        // `check_usage` consumes the plan kind; `None` for any plan without one.
+        // The active-series billing context (customer + period); `None` for any plan without one.
         #[cfg(feature = "plus")]
         let series_billing = plan_kind.metered_series_billing();
 
@@ -649,9 +670,6 @@ impl QueryReport {
                 u64::from(usage),
             );
         }
-
-        #[cfg(feature = "plus")]
-        plan_kind.check_usage(query_project, usage)?;
 
         // Active-series billing: once the report's metrics and series cache are
         // committed, count the organization's period-to-date active series on the request

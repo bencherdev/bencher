@@ -1340,7 +1340,7 @@
           "organizations"
         ],
         "summary": "Update an organization",
-        "description": "Update an organization where the user is a member. The user must have `edit` permissions for the organization. If updating the license, the user must have `manage` permissions for the organization.",
+        "description": "Update an organization where the user is a member. The user must have `edit` permissions for the organization. If updating the license, the user must have `manage` permissions for the organization. ➕ Bencher Plus: On Bencher Self-Hosted, a license whose term ends before the term of a valid license that the organization holds is refused.",
         "operationId": "organization_patch",
         "parameters": [
           {
@@ -3047,7 +3047,7 @@
           "usage"
         ],
         "summary": "View organization usage",
-        "description": "View the metrics and bare metal runner minutes usage of an organization. The user must have `manage` permissions for the organization. ➕ Bencher Plus: This endpoint offers an estimate of metered usage and exact usage for licensed organizations, both on Bencher Cloud and Bencher Self-Hosted.",
+        "description": "View the active Benchmark Series, or the metrics on the Free plan, and the bare metal runner minutes usage of an organization. The user must have `manage` permissions for the organization. ➕ Bencher Plus: This endpoint offers an estimate of metered usage on Bencher Cloud. On Bencher Self-Hosted, it offers the active Benchmark Series of the last 30 days against a valid license, and the highest count seen in its term and in the term before it.",
         "operationId": "org_usage_get",
         "parameters": [
           {
@@ -14555,34 +14555,148 @@
         }
       },
       "JsonLicense": {
+        "description": "A Bencher Plus Enterprise license for a Self-Hosted organization.",
         "type": "object",
         "properties": {
-          "entitlements": {
-            "$ref": "#/components/schemas/Entitlements"
-          },
           "expiration": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "When the license expires, at the end of its grace after the term ends.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "issued_at": {
-            "$ref": "#/components/schemas/DateTime"
+            "description": "When the license was issued.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           },
           "key": {
-            "$ref": "#/components/schemas/Jwt"
-          },
-          "level": {
-            "$ref": "#/components/schemas/PlanLevel"
+            "description": "The license key.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Jwt"
+              }
+            ]
           },
           "organization": {
-            "$ref": "#/components/schemas/OrganizationUuid"
+            "description": "The Self-Hosted organization the license is for.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationUuid"
+              }
+            ]
+          },
+          "series": {
+            "description": "The Benchmark Series the license covers.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Entitlements"
+              }
+            ]
+          },
+          "term_end": {
+            "description": "The end of the license's paid term.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
           }
         },
         "required": [
-          "entitlements",
           "expiration",
           "issued_at",
           "key",
-          "level",
-          "organization"
+          "organization",
+          "series",
+          "term_end"
+        ]
+      },
+      "JsonLicenseGrace": {
+        "description": "A license past the end of its paid term, in its grace.",
+        "type": "object",
+        "properties": {
+          "expiration": {
+            "description": "When the license expires.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "term_end": {
+            "description": "The end of the license's paid term.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          }
+        },
+        "required": [
+          "expiration",
+          "term_end"
+        ]
+      },
+      "JsonLicenseOver": {
+        "description": "An organization with more active Benchmark Series than its license covers.",
+        "type": "object",
+        "properties": {
+          "active_series": {
+            "description": "The organization's Benchmark Series active in the last 30 days.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "series": {
+            "description": "The Benchmark Series the license covers.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Entitlements"
+              }
+            ]
+          }
+        },
+        "required": [
+          "active_series",
+          "series"
+        ]
+      },
+      "JsonLicensePeak": {
+        "description": "The highest count of active series a Self-Hosted server has seen in one paid term of a license.",
+        "type": "object",
+        "properties": {
+          "active_series": {
+            "description": "The organization's Benchmark Series active in the 30 days before the count.",
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          },
+          "seen": {
+            "description": "When the server counted them.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "term_end": {
+            "description": "The end of the paid term.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          }
+        },
+        "required": [
+          "active_series",
+          "seen",
+          "term_end"
         ]
       },
       "JsonLinkedRepository": {
@@ -18367,6 +18481,15 @@
               }
             ]
           },
+          "license": {
+            "nullable": true,
+            "description": "What the organization needs to know about its Self-Hosted license, only on the response that created the report, and omitted when there is nothing to know.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonReportLicense"
+              }
+            ]
+          },
           "project": {
             "$ref": "#/components/schemas/JsonProject"
           },
@@ -18518,6 +18641,30 @@
           "benchmarks",
           "measures"
         ]
+      },
+      "JsonReportLicense": {
+        "description": "What the organization of a new report needs to know about its license, on the response that created the report. Absent when there is nothing to know.",
+        "type": "object",
+        "properties": {
+          "grace": {
+            "nullable": true,
+            "description": "Present when the license is past the end of its paid term, in its grace.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonLicenseGrace"
+              }
+            ]
+          },
+          "over": {
+            "nullable": true,
+            "description": "Present when the organization's active Benchmark Series are above the license's.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonLicenseOver"
+              }
+            ]
+          }
+        }
       },
       "JsonReportMeasure": {
         "type": "object",
@@ -20688,7 +20835,7 @@
         "properties": {
           "active_series": {
             "nullable": true,
-            "description": "The active series usage amount. Populated for metered plans, whose bill is based on monthly-active series (distinct testbed x benchmark x measure).",
+            "description": "The active series usage amount. Populated for metered plans, whose bill is based on monthly-active series (distinct testbed x benchmark x variant x measure) in the billing period, and for a Self-Hosted license, which counts them over the last 30 days.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -20720,7 +20867,7 @@
           },
           "metrics": {
             "nullable": true,
-            "description": "The metrics usage amount. Not populated for metered plans, which bill on active series (see `active_series`) rather than metrics.",
+            "description": "The metrics usage amount. Populated for the Free kinds only: every plan and license counts active series (see `active_series`) rather than metrics.",
             "type": "integer",
             "format": "uint32",
             "minimum": 0
@@ -20733,12 +20880,30 @@
               }
             ]
           },
+          "peak": {
+            "nullable": true,
+            "description": "The highest count of active series the server has seen in the term of a valid Self-Hosted license. `None` until a report in the term has been counted.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonLicensePeak"
+              }
+            ]
+          },
           "plan": {
             "nullable": true,
             "description": "The organization plan.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonPlan"
+              }
+            ]
+          },
+          "previous_peak": {
+            "nullable": true,
+            "description": "The peak of the latest term before the term of a valid Self-Hosted license, or of the latest term when the organization holds no valid license. `None` when the server has counted no such term.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonLicensePeak"
               }
             ]
           },

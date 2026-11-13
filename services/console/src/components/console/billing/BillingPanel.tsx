@@ -13,6 +13,7 @@ import {
 import billingConfig, { Host } from "../../../config/organization/billing";
 import {
 	type JsonAuthUser,
+	type JsonLicensePeak,
 	type JsonUsage,
 	type Jwt,
 	PlanLevel,
@@ -573,16 +574,14 @@ const CloudSelfHostedLicensedPanel = (props: {
 }) => {
 	return (
 		<div class="content">
-			<h2 class="title is-2">
-				{planLevel(props.usage()?.license?.level)} Tier (Self-Hosted Licensed)
-			</h2>
+			<h2 class="title is-2">Enterprise Tier (Self-Hosted Licensed)</h2>
 			<h3 class="subtitle is-3">
-				{fmtDate(props.usage()?.start_time)} -{" "}
-				{fmtDate(props.usage()?.end_time)}
+				{fmtDate(props.usage()?.license?.issued_at)} -{" "}
+				{fmtDate(props.usage()?.license?.term_end)}
 			</h3>
 			<h4>
-				Entitlements:{" "}
-				{props.usage()?.license?.entitlements?.toLocaleString() ?? 0}
+				Benchmark Series:{" "}
+				{props.usage()?.license?.series?.toLocaleString() ?? 0}
 			</h4>
 			<h4>
 				Self-Hosted Organization UUID:{" "}
@@ -790,33 +789,59 @@ const SelfHostedFreePanel = (props: {
 	);
 };
 
+/** The peak of the term before, which a renewal is trued up against. */
+const LastTermPeak = (props: { peak: undefined | JsonLicensePeak }) => (
+	<Show when={props.peak}>
+		{(peak) => (
+			<h4>
+				Last Term Peak: {peak().active_series.toLocaleString()} on{" "}
+				{fmtDate(peak().seen)} (term ended {fmtDate(peak().term_end)})
+			</h4>
+		)}
+	</Show>
+);
+
 const SelfHostedLicensedPanel = (props: {
 	usage: Resource<null | JsonUsage>;
 }) => {
+	// The server's time, as the report responses decide the grace by it.
+	const grace = () => {
+		const termEnd = props.usage()?.license?.term_end;
+		const now = props.usage()?.end_time;
+		return (
+			termEnd !== undefined &&
+			now !== undefined &&
+			Date.parse(termEnd) <= Date.parse(now)
+		);
+	};
 	return (
 		<div class="content">
-			<h2 class="title is-2">
-				{planLevel(props.usage()?.license?.level)} Tier (Self-Hosted Licensed)
-			</h2>
+			<h2 class="title is-2">Enterprise Tier (Self-Hosted Licensed)</h2>
 			<h3 class="subtitle is-3">
-				{fmtDate(props.usage()?.start_time)} -{" "}
-				{fmtDate(props.usage()?.end_time)}
+				{fmtDate(props.usage()?.license?.issued_at)} -{" "}
+				{fmtDate(props.usage()?.license?.term_end)}
 			</h3>
+			<Show when={grace()}>
+				<div class="notification is-warning">
+					The term ended {fmtDate(props.usage()?.license?.term_end)}. The
+					license expires {fmtDate(props.usage()?.license?.expiration)}.
+				</div>
+			</Show>
 			<h4>
-				Entitlements:{" "}
-				{props.usage()?.license?.entitlements?.toLocaleString() ?? 0}
+				Active Benchmark Series:{" "}
+				{props.usage()?.active_series?.toLocaleString() ?? 0} of{" "}
+				{props.usage()?.license?.series?.toLocaleString() ?? 0}
 			</h4>
-			<h4>Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}</h4>
+			<h4>
+				Peak:{" "}
+				{props.usage()?.peak
+					? `${props.usage()?.peak?.active_series.toLocaleString()} on ${fmtDate(props.usage()?.peak?.seen)}`
+					: "-"}
+			</h4>
+			<LastTermPeak peak={props.usage()?.previous_peak} />
 			<h4>
 				Runner Minutes Used:{" "}
 				{props.usage()?.runner_minutes?.toLocaleString() ?? 0}
-			</h4>
-			<h4>
-				Metrics Remaining:{" "}
-				{(
-					(props.usage()?.license?.entitlements ?? 0) -
-					(props.usage()?.metrics ?? 0)
-				).toLocaleString()}
 			</h4>
 			<br />
 			<h4>

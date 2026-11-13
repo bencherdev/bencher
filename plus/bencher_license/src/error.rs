@@ -1,3 +1,4 @@
+use bencher_json::DateTime;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -12,18 +13,20 @@ pub enum LicenseError {
     Licensor(#[from] jsonwebtoken::errors::Error),
     #[error("Failed to validate: {0}")]
     Valid(#[from] bencher_json::ValidError),
-    #[error("Failed to cast integer: {0}")]
-    IntError(#[from] std::num::TryFromIntError),
+    #[error("The license term end ({term_end}) is not after it is issued ({issued_at})")]
+    Term {
+        issued_at: DateTime,
+        term_end: DateTime,
+    },
+    #[error("The license is issued ({issued_at}) after now ({now})")]
+    NotYetIssued { issued_at: DateTime, now: DateTime },
+    #[error("The license expired ({expiration}) at or before now ({now})")]
+    Expired { expiration: DateTime, now: DateTime },
     #[error(
         "Provided organization ({provided}) does not match license subject organization ({license})"
     )]
     Subject {
         provided: bencher_json::OrganizationUuid,
         license: bencher_json::OrganizationUuid,
-    },
-    #[error("The usage ({usage}) exceeds the license entitlements ({entitlements})")]
-    Entitlements {
-        usage: u32,
-        entitlements: bencher_json::Entitlements,
     },
 }
