@@ -616,7 +616,7 @@ mod tests {
     }
 
     // Metrics collapse into their measure's series. Names are not billed, and the
-    // cap of eight is the guardrail on that.
+    // cap of sixteen is the guardrail on that.
     #[test]
     fn metrics_collapse_into_their_measure_series() {
         let mut conn = setup_test_db();

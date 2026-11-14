@@ -10,9 +10,11 @@ use bencher_adapter::{
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BmfVersion, DateTime, MeasureNameId, MetricName, ParameterSet,
     Slug,
-    project::report::{Adapter, Iteration, JsonReportSettings, ReportWarningResource},
+    project::report::{
+        Adapter, Iteration, JsonReportSettings, ParseOutcome, ReportWarningResource,
+    },
 };
-use diesel::RunQueryDsl as _;
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 use slog::Logger;
 
@@ -25,7 +27,7 @@ use crate::model::{
 };
 use crate::{
     auth_conn,
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     error::{bad_request_error, issue_error, past_the_ceiling},
     model::project::{
         ProjectId,
@@ -65,6 +67,8 @@ pub struct ReportResults {
     pub variant_cache: HashMap<(BenchmarkId, ParameterSet), Option<VariantId>>,
     pub measure_cache: HashMap<MeasureNameId, Option<MeasureId>>,
     pub threshold_cache: HashMap<MeasureId, Vec<Threshold>>,
+    /// How the results parsed, once [`Self::process`] has parsed them.
+    pub parse: Option<ParseRecord>,
 }
 
 impl ReportResults {
@@ -87,6 +91,7 @@ impl ReportResults {
             variant_cache: HashMap::new(),
             measure_cache: HashMap::new(),
             threshold_cache: HashMap::new(),
+            parse: None,
         }
     }
 
@@ -108,10 +113,11 @@ impl ReportResults {
         results_array: &[&str],
         adapter: Adapter,
         settings: JsonReportSettings,
-        bmf_version: BmfVersion,
+        report_version: ReportBmfVersion,
         warnings: &mut ReportWarnings,
         #[cfg(feature = "plus")] usage: &mut u32,
     ) -> Result<(), HttpError> {
+        let bmf_version = report_version.version;
         #[cfg(feature = "otel")]
         let process_start = context.clock.now();
 
@@ -126,15 +132,17 @@ impl ReportResults {
 
         let adapter_settings = AdapterSettings::new(settings.average, bmf_version);
         let results_array = AdapterResultsArray::new(results_array, adapter, adapter_settings)
+            .inspect_err(|_| self.parse = Some(ParseRecord::FAILED))
             .map_err(|e| match e {
-                // The adapter is right and the declared version is wrong, so no adapter hint.
-                AdapterError::BmfVersion { .. } => bad_request_error(e.to_string()),
+                // The adapter is right and the version is wrong, so no adapter hint.
+                AdapterError::BmfVersion { parsed, .. } => report_version.refusal(parsed),
                 AdapterError::Valid(_) | AdapterError::BenchmarkUnits(_) | AdapterError::Convert(_) => {
                     bad_request_error(format!(
                         "Failed to convert results with adapter ({adapter} | {settings:?}): {e}\n\nAre you sure {adapter} is the right adapter?\nRead more about adapters here: https://bencher.dev/docs/explanation/adapters/"
                     ))
                 },
             })?;
+        self.parse = Some(ParseRecord::parsed(&results_array, warnings));
 
         // The adapter counts; the log line and the counter are here because this is
         // where the providers are in scope.
@@ -388,12 +396,13 @@ impl ReportResults {
 
             let mut detections: HashMap<MetricName, Vec<PreparedDetection>> = HashMap::new();
             for threshold in self.threshold_cache.get(&measure_id).into_iter().flatten() {
-                let Some(value) = named.get(&threshold.metric).copied() else {
-                    continue;
-                };
                 if !threshold.checks(&parameters) {
                     continue;
                 }
+                let Some(value) = named.get(&threshold.metric).copied() else {
+                    warnings.skip(ReportWarningResource::Threshold);
+                    continue;
+                };
                 let name = threshold.metric.clone();
                 let detector = Detector {
                     head_id: self.head_id,
@@ -485,6 +494,112 @@ impl ReportResults {
     }
 }
 
+/// How a report's results parsed, as the report records it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ParseRecord {
+    pub resolved_adapter: Option<Adapter>,
+    pub outcome: ParseOutcome,
+}
+
+impl ParseRecord {
+    const FAILED: Self = Self {
+        resolved_adapter: None,
+        outcome: ParseOutcome::Failed,
+    };
+
+    /// The record of results that parsed, which keeps the first iteration's leaf
+    /// adapter and warns of every iteration that resolved to another.
+    fn parsed(results_array: &AdapterResultsArray, warnings: &mut ReportWarnings) -> Self {
+        warnings.ignore_with_count(
+            ReportWarningResource::Adapter,
+            results_array.mixed_adapters(),
+        );
+        Self {
+            resolved_adapter: results_array.resolved_adapter(),
+            outcome: if results_array.has_metrics() {
+                ParseOutcome::Parsed
+            } else {
+                ParseOutcome::Empty
+            },
+        }
+    }
+
+    pub fn update(self, conn: &mut DbConnection, report_id: ReportId) -> diesel::QueryResult<()> {
+        let Self {
+            resolved_adapter,
+            outcome,
+        } = self;
+        diesel::update(schema::report::table.filter(schema::report::id.eq(report_id)))
+            .set((
+                schema::report::resolved_adapter.eq(resolved_adapter),
+                schema::report::parse_outcome.eq(outcome),
+            ))
+            .execute(conn)?;
+        Ok(())
+    }
+}
+
+/// The BMF version a report reads its results at, and where that version came from.
+#[derive(Debug, Clone, Copy)]
+pub struct ReportBmfVersion {
+    pub version: BmfVersion,
+    pub source: BmfVersionSource,
+}
+
+impl ReportBmfVersion {
+    /// The version a report declared, or else its project's.
+    pub fn new(declared: Option<BmfVersion>, project: BmfVersion) -> Self {
+        if let Some(version) = declared {
+            Self {
+                version,
+                source: BmfVersionSource::Declared,
+            }
+        } else {
+            Self {
+                version: project,
+                source: BmfVersionSource::Project,
+            }
+        }
+    }
+
+    /// The version a remote job's results are read at: its report's, then its job config's, then
+    /// version 0.
+    pub fn job(report: Option<BmfVersion>, config: Option<BmfVersion>) -> Self {
+        Self {
+            version: report.or(config).unwrap_or_default(),
+            source: BmfVersionSource::Job,
+        }
+    }
+
+    /// The 400 for results that parsed at the other version, naming only the fixes this server
+    /// takes.
+    fn refusal(self, parsed: BmfVersion) -> HttpError {
+        let Self { version, source } = self;
+        bad_request_error(match source {
+            BmfVersionSource::Declared => format!(
+                "Results parsed as BMF version {parsed}, but the report declared `bmf_version` {version}. Send BMF version {version} results, or declare `bmf_version` {parsed}."
+            ),
+            BmfVersionSource::Project => format!(
+                "Results parsed as BMF version {parsed}, but the report declared no `bmf_version`, so it was read at its project's BMF version, {version}. Send BMF version {version} results, or declare `bmf_version` {parsed} through the API. A server admin can also move the project to BMF version {parsed} with `bencher project update --bmf-version {parsed}`."
+            ),
+            BmfVersionSource::Job => format!(
+                "Results parsed as BMF version {parsed}, but the remote job was accepted at BMF version {version}. Send BMF version {version} results, or run the job again at BMF version {parsed}: declare `bmf_version` {parsed} through the API, or, for a run that declares none, have a server admin move the project to BMF version {parsed} with `bencher project update --bmf-version {parsed}`."
+            ),
+        })
+    }
+}
+
+/// Where a report's BMF version came from.
+#[derive(Debug, Clone, Copy)]
+pub enum BmfVersionSource {
+    /// The report declared it.
+    Declared,
+    /// The report declared none, so it is its project's.
+    Project,
+    /// A remote job's run pinned it when the run was accepted.
+    Job,
+}
+
 /// Pre-computed data for a single variant within a report iteration.
 struct PreparedVariant {
     insert_report_benchmark: InsertReportBenchmark,
@@ -513,7 +628,7 @@ impl PreparedVariant {
 ///
 /// Runs inside the ingest write transaction and opens none of its own.
 fn write_variant(
-    conn: &mut crate::context::DbConnection,
+    conn: &mut DbConnection,
     prepared: PreparedVariant,
     report_created: DateTime,
 ) -> diesel::QueryResult<()> {
@@ -601,8 +716,110 @@ fn strip_ignore_suffix(benchmark: BenchmarkNameId) -> (BenchmarkNameId, bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::strip_ignore_suffix;
-    use bencher_json::BenchmarkNameId;
+    use bencher_adapter::{AdapterResults, AdapterResultsArray};
+    use bencher_json::{
+        BenchmarkNameId,
+        project::report::{
+            Adapter, JsonReportWarning, ParseOutcome, ReportWarningAction, ReportWarningResource,
+        },
+    };
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    use super::{ParseRecord, strip_ignore_suffix};
+    use crate::{
+        model::project::report::warning::{ReportWarnings, get_report_warnings},
+        schema,
+        test_util::{
+            create_base_entities, create_branch_with_head, create_head_version, create_report,
+            create_testbed, create_version, setup_test_db,
+        },
+    };
+
+    /// A report whose iterations resolve to different leaves records the first,
+    /// and warns once for each iteration whose leaf it set aside.
+    #[test]
+    fn parse_record_keeps_the_first_leaf_and_warns_of_the_rest() {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let branch = create_branch_with_head(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000010",
+            "main",
+            "main",
+            "00000000-0000-0000-0000-000000000020",
+        );
+        let testbed_id = create_testbed(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000030",
+            "localhost",
+            "localhost",
+        );
+        let version_id = create_version(
+            &mut conn,
+            base.project_id,
+            "00000000-0000-0000-0000-000000000040",
+            0,
+            None,
+        );
+        create_head_version(&mut conn, branch.head_id, version_id);
+        let report_id = create_report(
+            &mut conn,
+            "00000000-0000-0000-0000-000000000050",
+            base.project_id,
+            branch.head_id,
+            version_id,
+            testbed_id,
+        );
+
+        let results_array = AdapterResultsArray::from_iterations(
+            [
+                Adapter::JsonV1,
+                Adapter::RustBench,
+                Adapter::JsonV1,
+                Adapter::RustCriterion,
+            ]
+            .map(|leaf| AdapterResults {
+                resolved_adapter: Some(leaf),
+                ..AdapterResults::default()
+            })
+            .to_vec(),
+        );
+        let mut warnings = ReportWarnings::default();
+        let parse = ParseRecord::parsed(&results_array, &mut warnings);
+        assert_eq!(
+            parse,
+            ParseRecord {
+                resolved_adapter: Some(Adapter::JsonV1),
+                outcome: ParseOutcome::Empty,
+            }
+        );
+
+        parse
+            .update(&mut conn, report_id)
+            .expect("Failed to record the parse");
+        warnings
+            .insert(&mut conn, report_id)
+            .expect("Failed to write the warnings");
+        let recorded: (Option<Adapter>, Option<ParseOutcome>) = schema::report::table
+            .filter(schema::report::id.eq(report_id))
+            .select((
+                schema::report::resolved_adapter,
+                schema::report::parse_outcome,
+            ))
+            .first(&mut conn)
+            .expect("Failed to read the report");
+        assert_eq!(recorded, (Some(Adapter::JsonV1), Some(ParseOutcome::Empty)));
+        assert_eq!(
+            get_report_warnings(&mut conn, report_id).expect("Failed to read the warnings"),
+            Some(vec![JsonReportWarning {
+                resource: ReportWarningResource::Adapter,
+                action: ReportWarningAction::Ignore,
+                count: 2,
+            }])
+        );
+    }
 
     #[test]
     fn strip_ignore_suffix_with_suffix() {

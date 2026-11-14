@@ -708,7 +708,7 @@ mod tests {
     }
 
     // The cap is deliberately low, so raising it stays easy and lowering it never
-    // has to happen. Eight is where the metric cap starts too.
+    // has to happen.
     #[test]
     fn rejects_more_than_the_key_cap() {
         keys(8)

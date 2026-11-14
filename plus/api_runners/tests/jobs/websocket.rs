@@ -5,10 +5,12 @@ use super::common::{
     plan_project, post_metrics, recv_server_msg as recv_msg, runner_metadata,
     send_runner_msg as send_msg, set_job_runner_id, set_job_status, ws_url,
 };
+use super::report_parse;
 use api_runners::{RunnerMessage, ServerMessage};
 use bencher_api_tests::{LogCapture, TestProject, TestServer, TestUser};
 use bencher_json::{
     BranchName, JobStatus, JobUuid, JsonRunnerKey, PlanLevel, PollTimeout, RunnerUuid,
+    project::report::ParseOutcome,
     runner::{JsonIterationOutput, JsonPaused, JsonReady, PauseReason},
 };
 use bencher_schema::schema;
@@ -485,6 +487,8 @@ async fn channel_lifecycle_failed() {
     let resp = recv_msg(&mut ws).await;
     assert!(matches!(resp, ServerMessage::Ack { .. }));
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+    // A job that ends without results leaves its report's parse unrecorded.
+    assert_eq!(report_parse(&server, job_uuid), (None, None));
 
     // Connection stays open. Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");
@@ -1335,6 +1339,10 @@ async fn channel_completed_result_processing_failure() {
     // Job is marked Failed (not Processed) because process_results failed
     // (the adapter could not parse the output).
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Failed);
+    assert_eq!(
+        report_parse(&server, job_uuid),
+        (None, Some(ParseOutcome::Failed))
+    );
 
     // Connection stays open. Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");
@@ -1391,6 +1399,10 @@ async fn channel_completed_multiple_iterations() {
     assert!(matches!(resp, ServerMessage::Ack { .. }));
     // Empty results -> adapter succeeds (no benchmarks to parse) -> Processed
     assert_eq!(get_job_status(&server, job_uuid), JobStatus::Processed);
+    assert_eq!(
+        report_parse(&server, job_uuid),
+        (None, Some(ParseOutcome::Empty))
+    );
 
     // Connection stays open. Close from client side.
     ws.close(None).await.expect("Failed to close WebSocket");

@@ -15,8 +15,8 @@
 
 use bencher_api_tests::TestServer;
 use bencher_json::{
-    DateTime, DateTimeMillis, JsonProjectKeyCreated, JsonReport, ProjectSlug, ReportUuid,
-    VersionUuid,
+    BmfVersion, DateTime, DateTimeMillis, JsonProjectKeyCreated, JsonReport, ProjectSlug,
+    ReportUuid, VersionUuid,
     project::{
         alert::AlertStatus,
         console::{
@@ -24,7 +24,7 @@ use bencher_json::{
             JsonConsoleRunLink, JsonConsoleRunReportLink, JsonConsoleRunSummary, JsonConsoleRuns,
             MAX_CONSOLE_ALERTS_PER_PAGE,
         },
-        report::Adapter,
+        report::{Adapter, ParseOutcome},
     },
 };
 use bencher_schema::schema;
@@ -1896,4 +1896,30 @@ mod jobs {
             "a report its own job posted has no job and no spec"
         );
     }
+}
+
+// Kills: a run's report or a report page that leaves out the version the report was read at, the
+// leaf adapter its results resolved to, or how they parsed.
+#[tokio::test]
+async fn run_and_report_page_carry_the_parse() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "parse").await;
+    let report = post(&server, &fixture, Post::new("2024-02-01T00:00:00Z", None)).await;
+    let expected = (
+        Some(BmfVersion::V1),
+        Some(Adapter::JsonV1),
+        Some(ParseOutcome::Parsed),
+    );
+
+    let run = run(&server, &fixture, version_of(&server, &report), "").await;
+    let row = &run.reports[0];
+    assert_eq!(
+        (row.bmf_version, row.resolved_adapter, row.parse_outcome),
+        expected
+    );
+    let page = report_page(&server, &fixture, &report).await;
+    assert_eq!(
+        (page.bmf_version, page.resolved_adapter, page.parse_outcome),
+        expected
+    );
 }
