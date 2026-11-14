@@ -113,6 +113,11 @@ pub struct CliReportCreate {
     #[clap(value_enum, long)]
     pub fold: Option<CliReportFold>,
 
+    /// Measure name, slug, or UUID to keep from the results, repeatable.
+    /// Every other measure is dropped before it is stored. If not set, every measure is kept.
+    #[clap(long)]
+    pub measure: Vec<MeasureNameId>,
+
     #[clap(flatten)]
     pub backend: CliBackend,
 }

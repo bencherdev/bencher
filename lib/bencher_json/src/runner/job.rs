@@ -12,7 +12,7 @@ use super::RunnerUuid;
 use super::callback::{JsonJobCallback, JsonNewCallback};
 use super::job_status::JobStatus;
 use crate::ProjectUuid;
-use crate::project::report::{Iteration, JsonAverage, JsonFold, ReportUuid};
+use crate::project::report::{Iteration, JsonAverage, JsonFold, MeasureFilter, ReportUuid};
 use crate::spec::{JsonSpec, SpecResourceId};
 
 crate::typed_uuid::typed_uuid!(JobUuid);
@@ -299,6 +299,7 @@ struct JsonUncheckedJobConfig {
     pub average: Option<JsonAverage>,
     pub iter: Option<Iteration>,
     pub fold: Option<JsonFold>,
+    pub measures: Option<MeasureFilter>,
     pub bmf_version: Option<BmfVersion>,
     pub allow_failure: Option<bool>,
     pub backdate: Option<DateTime>,
@@ -323,6 +324,7 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             average,
             iter,
             fold,
+            measures,
             bmf_version,
             allow_failure,
             backdate,
@@ -348,6 +350,7 @@ impl TryFrom<JsonUncheckedJobConfig> for JsonJobConfig {
             average,
             iter,
             fold,
+            measures,
             bmf_version,
             allow_failure,
             backdate,
@@ -407,6 +410,9 @@ pub struct JsonJobConfig {
     /// Fold operation for combining multiple iteration results
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fold: Option<JsonFold>,
+    /// The measures to keep from the results
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub measures: Option<MeasureFilter>,
     /// The Bencher Metric Format (BMF) version the run's results are read as
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bmf_version: Option<BmfVersion>,
