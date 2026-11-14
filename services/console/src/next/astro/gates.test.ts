@@ -225,19 +225,19 @@ describe("AuthReturn", () => {
 		return { replaced, memory };
 	};
 
-	// Kills a link's secret, an old link's token, or a provider's code or state
-	// left in the address for history, a report, or a later script to read, and
-	// a page that drops what it needs, or keeps it once taken.
+	// Kills a link's secret, a provider's code or state, or an old link's token
+	// left in the address for history, a report, or a later script to read; a
+	// page that drops what it needs, or keeps it once taken; and an old link's
+	// token kept for the page at all.
 	test("what the address carried leaves it at once, for the page alone", async () => {
 		const none = {
 			secret: undefined,
-			token: undefined,
 			code: undefined,
 			state: undefined,
 		};
 		for (const [url, kept] of [
 			["https://bencher.dev/auth/confirm#s3cr3t", { secret: "s3cr3t" }],
-			["https://bencher.dev/auth/confirm?token=a.b.c", { token: "a.b.c" }],
+			["https://bencher.dev/auth/confirm?token=a.b.c", {}],
 			[
 				"https://bencher.dev/auth/github?code=c0de&state=s7a7e",
 				{ code: "c0de", state: "s7a7e" },

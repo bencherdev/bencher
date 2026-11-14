@@ -335,8 +335,8 @@ test("a locked account says so, with no Try again", async () => {
 		.not.toBeInTheDocument();
 });
 
-// Kills a Use another email that does nothing, and an old link's page,
-// which knows no address, offering Resend.
+// Kills a Use another email that does nothing, and an ended link's page in a
+// browser that did not ask, which knows no address, offering Resend.
 test("Use another email leaves, and with no address there is no Resend", async () => {
 	const fx = effects();
 	mount({ effects: fx, email: undefined, status: { kind: "expired" } });

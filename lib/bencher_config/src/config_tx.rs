@@ -333,7 +333,6 @@ async fn into_context(
         biller,
         licensor,
         indexer,
-        recaptcha_client,
         turnstile,
         registry_url,
         oci_storage,
@@ -420,8 +419,6 @@ async fn into_context(
         licensor,
         #[cfg(feature = "plus")]
         indexer,
-        #[cfg(feature = "plus")]
-        recaptcha_client,
         #[cfg(feature = "plus")]
         turnstile,
         #[cfg(feature = "plus")]

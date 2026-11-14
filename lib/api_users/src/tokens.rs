@@ -1,28 +1,26 @@
 use bencher_endpoint::{
-    CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
-    TotalCount,
+    CorsResponse, Delete, Endpoint, Get, ResponseDeleted, ResponseOk, TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonNewToken, JsonPagination, JsonToken, JsonTokens, ResourceName, Search,
-    UserResourceId, user::token::JsonUpdateToken,
+    JsonDirection, JsonPagination, JsonTokens, ResourceName, Search, UserResourceId,
 };
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{conflict_error, forbidden_error, resource_conflict_err, resource_not_found_err},
+    error::{conflict_error, resource_conflict_err, resource_not_found_err},
     model::user::{
         QueryUser, UserId,
         auth::{AuthUser, BearerToken},
         same_user,
-        token::{QueryToken, UpdateToken},
+        token::QueryToken,
     },
-    schema, write_conn, write_transaction,
+    schema, write_transaction,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
     TextExpressionMethods as _,
 };
-use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
+use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -67,7 +65,7 @@ pub async fn user_tokens_options(
     _pagination_params: Query<UserTokensPagination>,
     _query_params: Query<UserTokensQuery>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Post.into()]))
+    Ok(Endpoint::cors(&[Get.into()]))
 }
 
 /// List tokens for a user
@@ -187,34 +185,6 @@ fn get_ls_query<'q>(
     }
 }
 
-/// Create a token
-///
-/// DEPRECATED: User API tokens have been deprecated in favor of user API keys,
-/// so this endpoint always fails with a `403 Forbidden` error.
-/// Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.
-/// Existing API tokens continue to work and can still be viewed, updated, and revoked.
-#[endpoint {
-    method = POST,
-    path =  "/v0/users/{user}/tokens",
-    tags = ["users", "tokens"],
-    deprecated = true,
-}]
-pub async fn user_token_post(
-    rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
-    _path_params: Path<UserTokensParams>,
-    _body: TypedBody<JsonNewToken>,
-) -> Result<ResponseCreated<JsonToken>, HttpError> {
-    // Authenticate first: invalid credentials still get a 401,
-    // while valid credentials get a 403 that explains the deprecation.
-    let _auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    #[cfg(feature = "otel")]
-    bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserTokenCreateBlocked);
-    Err(forbidden_error(
-        "User API tokens are deprecated and can no longer be created. Create a user API key instead: https://bencher.dev/docs/explanation/bencher-run/#--key-key",
-    ))
-}
-
 #[derive(Deserialize, JsonSchema)]
 pub struct UserTokenParams {
     /// The slug or UUID for a user.
@@ -232,106 +202,7 @@ pub async fn user_token_options(
     _rqctx: RequestContext<ApiContext>,
     _path_params: Path<UserTokenParams>,
 ) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Get.into(), Patch.into(), Delete.into()]))
-}
-
-/// View a token
-///
-/// DEPRECATED: User API tokens have been deprecated in favor of user API keys.
-/// This endpoint remains available to manage existing API tokens.
-/// Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.
-///
-/// View an API token for a user.
-/// Only the authenticated user themselves and server admins have access to this endpoint.
-#[endpoint {
-    method = GET,
-    path =  "/v0/users/{user}/tokens/{token}",
-    tags = ["users", "tokens"],
-    deprecated = true,
-}]
-pub async fn user_token_get(
-    rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
-    path_params: Path<UserTokenParams>,
-) -> Result<ResponseOk<JsonToken>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
-    Ok(Get::auth_response_ok(json))
-}
-
-async fn get_one_inner(
-    context: &ApiContext,
-    path_params: UserTokenParams,
-    auth_user: &AuthUser,
-) -> Result<JsonToken, HttpError> {
-    let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
-    same_user!(auth_user, context.rbac, query_user.uuid);
-
-    auth_conn!(context, |conn| {
-        QueryToken::get_user_token(conn, query_user.id, &path_params.token.to_string())?
-            .into_json(conn)
-            .map_err(resource_not_found_err!(
-                Token,
-                (&query_user, path_params.token)
-            ))
-    })
-}
-
-/// Update a token
-///
-/// DEPRECATED: User API tokens have been deprecated in favor of user API keys.
-/// This endpoint remains available to manage existing API tokens.
-/// Create a [user API key](https://bencher.dev/docs/explanation/bencher-run/#--key-key) instead.
-///
-/// Update an API token for a user.
-/// Only the authenticated user themselves and server admins have access to this endpoint.
-#[endpoint {
-    method = PATCH,
-    path =  "/v0/users/{user}/tokens/{token}",
-    tags = ["users", "tokens"],
-    deprecated = true,
-}]
-pub async fn user_token_patch(
-    rqctx: RequestContext<ApiContext>,
-    bearer_token: BearerToken,
-    path_params: Path<UserTokenParams>,
-    body: TypedBody<JsonUpdateToken>,
-) -> Result<ResponseOk<JsonToken>, HttpError> {
-    let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = patch_inner(
-        rqctx.context(),
-        path_params.into_inner(),
-        body.into_inner(),
-        &auth_user,
-    )
-    .await?;
-    Ok(Patch::auth_response_ok(json))
-}
-
-async fn patch_inner(
-    context: &ApiContext,
-    path_params: UserTokenParams,
-    json_token: JsonUpdateToken,
-    auth_user: &AuthUser,
-) -> Result<JsonToken, HttpError> {
-    let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
-    same_user!(auth_user, context.rbac, query_user.uuid);
-
-    let query_token = QueryToken::get_user_token(
-        auth_conn!(context),
-        query_user.id,
-        &path_params.token.to_string(),
-    )?;
-
-    let update_token = UpdateToken::from(json_token);
-    diesel::update(schema::token::table.filter(schema::token::id.eq(query_token.id)))
-        .set(&update_token)
-        .execute(write_conn!(context))
-        .map_err(resource_conflict_err!(Token, (&query_user, &query_token)))?;
-
-    auth_conn!(context, |conn| {
-        QueryToken::get(conn, query_token.id)?.into_json(conn)
-    })
+    Ok(Endpoint::cors(&[Delete.into()]))
 }
 
 /// Revoke a token

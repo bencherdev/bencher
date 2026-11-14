@@ -1,16 +1,15 @@
 ---
 import { AUTH_RETURN_KEY } from "./authReturn";
 
-// Runs first: a link's secret, in the fragment, and an old link's token and a
-// provider's code and state, in the query, leave the address before any other
-// script can read them.
+// Runs first: a link's secret, in the fragment, and a provider's code and
+// state, in the query, leave the address before any other script can read
+// them, with whatever else the address carried.
 ---
 
 <script is:inline define:vars={{ AUTH_RETURN_KEY }}>
 	const query = new URLSearchParams(location.search);
 	window[AUTH_RETURN_KEY] = {
 		secret: location.hash.slice(1),
-		token: query.get("token"),
 		code: query.get("code"),
 		state: query.get("state"),
 	};

@@ -1,20 +1,19 @@
 use bencher_json::{
-    DateTime, Email, JsonPubUser, JsonSignup, JsonUpdateUser, JsonUser, Sanitize, UserName,
-    UserSlug, UserUuid, organization::member::OrganizationRole,
+    DateTime, Email, JsonPubUser, JsonUpdateUser, JsonUser, Sanitize, UserName, UserSlug, UserUuid,
+    organization::member::OrganizationRole,
 };
 use diesel::{
     AggregateExpressionMethods as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
     RunQueryDsl as _,
 };
 use dropshot::HttpError;
-use slog::Logger;
 use url::Url;
 
 #[cfg(feature = "plus")]
 use crate::ApiContext;
 use crate::{
-    context::{Body, DbConnection, Message, Messenger, NewUserBody},
-    error::{forbidden_error, resource_conflict_err, resource_not_found_err},
+    context::{Body, DbConnection, Message, NewUserBody},
+    error::{resource_conflict_err, resource_not_found_err},
     macros::{
         fn_get::{fn_get, fn_get_id, fn_get_uuid},
         resource_id::{fn_eq_resource_id, fn_from_resource_id},
@@ -151,19 +150,6 @@ impl QueryUser {
             .map_err(resource_not_found_err!(User, true))
     }
 
-    /// Check to see if the user account has been locked
-    pub fn check_is_locked(&self) -> Result<(), HttpError> {
-        if self.locked {
-            let mut query_user = self.clone();
-            query_user.sanitize();
-            Err(forbidden_error(format!(
-                "Your account has been locked. Please contact support: {query_user:?}",
-            )))
-        } else {
-            Ok(())
-        }
-    }
-
     /// Rate limit authentication attempts for this user
     #[cfg(feature = "plus")]
     pub fn rate_limit_auth(&self, context: &ApiContext) -> Result<(), HttpError> {
@@ -235,37 +221,6 @@ impl InsertUser {
         }
     }
 
-    /// Sign up the user an old sign up names, which carries no invitation.
-    pub fn from_json(conn: &mut DbConnection, json_signup: &JsonSignup) -> Result<Self, HttpError> {
-        let JsonSignup {
-            name,
-            slug,
-            email,
-            claim,
-            ..
-        } = json_signup.clone();
-        let (insert_user, query_user) = Self::sign_up(conn, name, slug, email)?;
-
-        if let Some(organization_uuid) = claim
-            && let organization_id = QueryOrganization::get_id(conn, organization_uuid)?
-            && !QueryOrganization::get(conn, organization_id)?.is_claimed(conn)?
-        {
-            let timestamp = DateTime::now();
-            InsertOrganizationRole {
-                user_id: query_user.id,
-                organization_id,
-                role: OrganizationRole::Leader,
-                created: timestamp,
-                modified: timestamp,
-            }
-            .insert(conn)?;
-        } else {
-            Self::personal_organization(conn, &query_user)?;
-        }
-
-        Ok(insert_user)
-    }
-
     /// Insert a user, the server's admin if it is the first, in no organization yet.
     pub fn sign_up(
         conn: &mut DbConnection,
@@ -314,27 +269,6 @@ impl InsertUser {
             modified: timestamp,
         }
         .insert(conn)
-    }
-
-    /// Rate limit authentication attempts for this user
-    #[cfg(feature = "plus")]
-    pub fn rate_limit_auth(&self, context: &ApiContext) -> Result<(), HttpError> {
-        context.rate_limiting.auth_attempt(self.uuid)
-    }
-
-    pub fn notify(
-        &self,
-        log: &Logger,
-        conn: &mut DbConnection,
-        messenger: &Messenger,
-        console_url: &Url,
-        invited: bool,
-        method: &str,
-    ) -> Result<(), HttpError> {
-        for message in self.admin_notices(conn, console_url, invited, method)? {
-            messenger.send(log, message);
-        }
-        Ok(())
     }
 
     /// A notice of the new user to every admin, unless the user is the first admin.

@@ -194,7 +194,8 @@ async fn accept_joins_with_the_rows_role_and_ends_it() {
 }
 
 // An invitation for another account's email refuses it and stays for its own address; a key, a
-// deprecated API token, an old session token, and no credential at all accept nothing.
+// deprecated API token, an old session token, which is no credential at all, and no credential
+// accept nothing.
 // Kills an accept by an account the invitation is not for, or by any credential but a browser
 // session.
 #[tokio::test]
@@ -214,8 +215,16 @@ async fn accept_needs_the_invited_accounts_browser_session() {
 
     let key = server.create_user_key(&grace, "Key").await;
     let token = seed_token(&server, &grace, "Token").token;
-    let session_jwt = server.session_jwt(&grace);
-    for bearer in [key.as_ref(), token.as_ref(), session_jwt.as_ref()] {
+    let session_jwt = server.old_session_jwt(&grace);
+    for (credential, bearer, status) in [
+        ("user key", key.as_ref(), StatusCode::FORBIDDEN),
+        ("API token", token.as_ref(), StatusCode::FORBIDDEN),
+        (
+            "old session",
+            session_jwt.as_ref(),
+            StatusCode::UNAUTHORIZED,
+        ),
+    ] {
         let resp = server
             .client
             .post(server.api_url("/v0/auth/invite/accept"))
@@ -228,7 +237,7 @@ async fn accept_needs_the_invited_accounts_browser_session() {
             .send()
             .await
             .expect("Request failed");
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        assert_eq!(resp.status(), status, "{credential}");
     }
     assert_eq!(
         accept(&server, &secret, None).await.0,
@@ -318,46 +327,6 @@ async fn already_a_member_ends_it_and_expired_or_revoked_refuse() {
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(json["error_code"], "invalid_invite");
     assert!(!user_organizations(&server, grace.uuid).contains(&org.uuid));
-}
-
-// The legacy sign up and sign in refuse an invitation, which only the new sign-in carries.
-#[tokio::test]
-async fn legacy_routes_refuse_an_invite() {
-    // Any invite in a JWT's shape, which is what the legacy routes take.
-    const INVITE: &str = "aGVhZGVy.cGF5bG9hZA.c2lnbmF0dXJl";
-    let server = TestServer::new().await;
-    server.signup("Leader", "leader@example.com").await;
-    for (path, body) in [
-        (
-            "/v0/auth/signup",
-            json!({
-                "name": "Grace",
-                "email": "grace@example.com",
-                "invite": INVITE,
-                "i_agree": true,
-            }),
-        ),
-        (
-            "/v0/auth/login",
-            json!({"email": "leader@example.com", "invite": INVITE}),
-        ),
-    ] {
-        let resp = server
-            .client
-            .post(server.api_url(path))
-            .json(&body)
-            .send()
-            .await
-            .expect("Request failed");
-        assert_eq!(resp.status(), StatusCode::BAD_REQUEST, "{path}");
-        let json: Value = resp.json().await.expect("Invalid body");
-        assert_eq!(json["error_code"], "invalid_invite", "{path}");
-    }
-    let users: i64 = schema::user::table
-        .count()
-        .get_result(&mut server.db_conn())
-        .expect("Failed to count");
-    assert_eq!(users, 1);
 }
 
 // The console names an organization before its Claim press only while no one has claimed it: a

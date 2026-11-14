@@ -44,8 +44,6 @@ mod runner_update;
 mod stats;
 
 #[cfg(feature = "plus")]
-use bencher_recaptcha::RecaptchaClient;
-#[cfg(feature = "plus")]
 pub use bencher_turnstile::Turnstile;
 #[cfg(feature = "plus")]
 pub use callbacks::Callbacks;
@@ -106,8 +104,6 @@ pub struct ApiContext {
     pub biller: Option<Biller>,
     #[cfg(feature = "plus")]
     pub licensor: Licensor,
-    #[cfg(feature = "plus")]
-    pub recaptcha_client: Option<RecaptchaClient>,
     /// Cloudflare Turnstile, which guards starting a sign-in by email where it is configured.
     #[cfg(feature = "plus")]
     pub turnstile: Option<Turnstile>,

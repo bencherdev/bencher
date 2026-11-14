@@ -28,7 +28,8 @@ const UNKNOWN_PROJECT_KEY: &str = "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh";
 
 // Kills any failing credential answered with another status or message, on any kind of path,
 // a malformed one read as anonymous on a public path, a dead cookie that is not read as
-// anonymous there, or a project key refused by a public path the CLI reads before a run.
+// anonymous there, a project key refused by a public path the CLI reads before a run, or a
+// session JWT from the old sign-in still taken, at REST or at `/mcp`.
 #[tokio::test]
 async fn failing_credentials_are_one_unauthorized() {
     let server = TestServer::new().await;
@@ -172,9 +173,7 @@ struct Fixture {
     expired_legacy: Jwt,
     locked_legacy: Jwt,
     live_legacy: Jwt,
-    unsigned_session: Jwt,
-    unknown_session: Jwt,
-    locked_session: String,
+    old_session: Jwt,
 }
 
 impl Fixture {
@@ -213,18 +212,7 @@ impl Fixture {
         seed_token_jwt(server, &user, "expired", &expired_legacy, now(server));
         let locked_legacy = seed_token(server, &locked, "locked").token;
         let live_legacy = seed_token(server, &user, "live").token;
-
-        let session = server.session_jwt(&user);
-        let other = mint(server, &user.email, 3);
-        let unsigned_session = with_signature_of(&session, &other);
-        let unknown_session = server
-            .token_key()
-            .new_client(
-                "nobody@example.com".parse().expect("Invalid email"),
-                u32::MAX,
-            )
-            .expect("Failed to mint a session");
-        let locked_session = server.session_jwt(&locked).into();
+        let old_session = server.old_session_jwt(&user);
 
         diesel::update(schema::user::table.filter(schema::user::uuid.eq(locked.uuid)))
             .set(schema::user::locked.eq(true))
@@ -246,9 +234,7 @@ impl Fixture {
             expired_legacy,
             locked_legacy,
             live_legacy,
-            unsigned_session,
-            unknown_session,
-            locked_session,
+            old_session,
         }
     }
 
@@ -275,12 +261,7 @@ impl Fixture {
             ("revoked token", self.revoked_legacy.as_ref().to_owned()),
             ("expired token", self.expired_legacy.as_ref().to_owned()),
             ("locked token", self.locked_legacy.as_ref().to_owned()),
-            (
-                "unsigned session",
-                self.unsigned_session.as_ref().to_owned(),
-            ),
-            ("unknown session", self.unknown_session.as_ref().to_owned()),
-            ("locked session", self.locked_session.clone()),
+            ("old session", self.old_session.as_ref().to_owned()),
         ]
     }
 
@@ -376,15 +357,6 @@ fn mint(server: &TestServer, email: &Email, nonce: u32) -> Jwt {
         .token_key()
         .new_api_key(email.clone(), u32::MAX - nonce)
         .expect("Failed to mint a token")
-}
-
-/// `jwt` with the signature of `other`, so it is well formed but not signed.
-fn with_signature_of(jwt: &Jwt, other: &Jwt) -> Jwt {
-    let (message, _) = jwt.as_ref().rsplit_once('.').expect("JWT signature");
-    let (_, signature) = other.as_ref().rsplit_once('.').expect("JWT signature");
-    format!("{message}.{signature}")
-        .parse()
-        .expect("Invalid JWT")
 }
 
 fn set_user_key<V>(server: &TestServer, key: &UserKey, value: V)

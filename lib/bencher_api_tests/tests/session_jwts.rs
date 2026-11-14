@@ -3,8 +3,8 @@
     clippy::tests_outside_test_module,
     reason = "integration test file"
 )]
-//! Only the tests that pin how the API treats a session JWT, the `client` audience the old sign-in
-//! confirms with, mint or send one, so no other test rests on what goes with the old sign-in.
+//! Nothing mints, accepts, or holds a session JWT, the `client` audience the old sign-in confirmed
+//! with, but the one forger the tests that pin its refusal call.
 
 use std::{
     fs,
@@ -14,68 +14,40 @@ use std::{
 use bencher_api_tests::TestServer;
 use bencher_json::UserKey;
 
-/// Each way to come by a session JWT, and the only files that may hold it: where it is defined,
-/// the old sign-in that mints one, and the tests that pin how the API treats one.
-const SESSION_JWTS: [(&str, &[&str]); 7] = [
-    (
-        "new_client(",
-        &[
-            "lib/bencher_token/src/key.rs",
-            "lib/api_auth/src/confirm.rs",
-            "lib/bencher_api_tests/src/seed.rs",
-            "lib/api_auth/tests/credentials.rs",
-        ],
-    ),
-    (
-        "session_jwt(",
-        &[
-            "lib/bencher_api_tests/src/seed.rs",
-            "lib/api_auth/tests/credentials.rs",
-            "lib/api_auth/tests/fresh.rs",
-            "lib/api_auth/tests/invite.rs",
-            "lib/api_auth/tests/session.rs",
-        ],
-    ),
-    ("::test_token", &["lib/bencher_valid/src/jwt.rs"]),
-    ("::test_admin_token", &["lib/bencher_valid/src/jwt.rs"]),
-    (
-        "/v0/auth/confirm\"",
-        &[
-            "lib/api_auth/src/confirm.rs",
-            "lib/api_auth/tests/confirm.rs",
-            // The API client, which its build generates with every route.
-            "lib/bencher_client/codegen.rs",
-        ],
-    ),
+/// The forger, the only file that may name the `client` audience.
+const FORGER: &str = "lib/bencher_api_tests/src/seed.rs";
+
+/// Each way to mint, accept, or hold a session JWT, and the only files that may hold it.
+const SESSION_JWTS: [(&str, &[&str]); 9] = [
+    ("new_client(", &[]),
+    ("validate_client(", &[]),
+    ("Audience::Client", &[]),
+    ("::test_token", &[]),
+    ("::test_admin_token", &[]),
+    ("aud: \"client\"", &[FORGER]),
+    ("\"aud\": \"client\"", &[]),
+    ("\"aud\":\"client\"", &[]),
     // A JWT whose payload opens with `{"aud":"client"`, as every session JWT's does.
-    (
-        "eyJhdWQiOiJjbGllbnQi",
-        &[
-            "lib/bencher_valid/src/jwt.rs",
-            "lib/api_users/tests/user_key_auth.rs",
-        ],
-    ),
-    ("\"aud\": \"client\"", &["plus/api_oauth/tests/oidc.rs"]),
+    ("eyJhdWQiOiJjbGllbnQi", &[]),
 ];
 
-/// The directories that hold the workspace's code, its tests, and its tasks.
-const ROOTS: [&str; 4] = ["lib", "plus", "services", "tasks"];
 /// What no source lives under.
 const SKIPPED: [&str; 5] = ["target", "node_modules", "dist", "pkg", ".git"];
-/// The files code and scripts are written in.
-const EXTENSIONS: [&str; 3] = ["rs", "sh", "ps1"];
+/// The files code, scripts, configs, and docs are written in.
+const EXTENSIONS: [&str; 15] = [
+    "rs", "sh", "ps1", "ts", "tsx", "js", "mjs", "astro", "md", "mdx", "json", "yml", "yaml",
+    "toml", "html",
+];
 /// This file, which names every pattern.
 const THIS_FILE: &str = "lib/bencher_api_tests/tests/session_jwts.rs";
 
-// Kills a test that mints or sends a session JWT anywhere but where one is pinned, which would
-// keep working only as long as the old sign-in does.
+// Kills a way back for the old sign-in's session JWT: a mint, an audience that accepts one, or a
+// test or a doc that holds one, which would keep working only as long as the API took it.
 #[test]
-fn session_jwts_stay_in_the_tests_that_pin_them() {
+fn no_session_jwt_outside_its_forger() {
     let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut files = Vec::new();
-    for root in ROOTS {
-        sources(&workspace.join(root), &mut files);
-    }
+    sources(&workspace, &mut files);
     assert!(
         files.len() > 100,
         "Found only {} source files under {}",
@@ -104,13 +76,13 @@ fn session_jwts_stay_in_the_tests_that_pin_them() {
     }
     assert!(
         strays.is_empty(),
-        "A session JWT outside the tests that pin one:\n{}",
+        "A session JWT outside its forger:\n{}",
         strays.join("\n")
     );
 }
 
-// The check above trusts the harness to make test users without a session JWT, as its own
-// definitions are among the files it allows.
+// The check above trusts the harness to make test users without a session JWT, as its forger is
+// among the files it allows.
 // Kills a harness that gives a test user anything but a user API key to send.
 #[tokio::test]
 async fn a_test_user_sends_a_user_api_key() {

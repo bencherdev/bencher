@@ -8,13 +8,11 @@ use bencher_google_client::GoogleClient;
 use bencher_json::{
     is_bencher_cloud,
     system::config::{
-        JsonCloud, JsonGitHub, JsonGitHubApp, JsonGoogle, JsonPlus, JsonRecaptcha, JsonTurnstile,
-        RegistryStorage,
+        JsonCloud, JsonGitHub, JsonGitHubApp, JsonGoogle, JsonPlus, JsonTurnstile, RegistryStorage,
     },
 };
 use bencher_license::Licensor;
 use bencher_oci_storage::OciStorage;
-use bencher_recaptcha::RecaptchaClient;
 use bencher_schema::context::{Indexer, StatsSettings, Turnstile};
 use slog::{Logger, info};
 use tokio::runtime::Handle;
@@ -28,7 +26,6 @@ pub struct Plus {
     pub stats: StatsSettings,
     pub biller: Option<Biller>,
     pub licensor: Licensor,
-    pub recaptcha_client: Option<RecaptchaClient>,
     pub turnstile: Option<Turnstile>,
     pub registry_url: Url,
     pub oci_storage: OciStorage,
@@ -78,7 +75,6 @@ impl Plus {
                 stats: StatsSettings::default(),
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
-                recaptcha_client: None,
                 turnstile: None,
                 registry_url: default_registry_url(console_url),
                 oci_storage: OciStorage::try_from_config(
@@ -148,7 +144,6 @@ impl Plus {
             billing,
             license_pem,
             index,
-            recaptcha,
             turnstile,
             ..
         }) = plus.cloud
@@ -161,7 +156,6 @@ impl Plus {
                 stats,
                 biller: None,
                 licensor: Licensor::self_hosted().map_err(PlusError::LicenseSelfHosted)?,
-                recaptcha_client: None,
                 turnstile: None,
                 registry_url,
                 oci_storage,
@@ -183,8 +177,6 @@ impl Plus {
         );
         let licensor = Licensor::bencher_cloud(&license_pem).map_err(PlusError::LicenseCloud)?;
 
-        let recaptcha_client = recaptcha
-            .map(|JsonRecaptcha { secret, min_score }| RecaptchaClient::new(secret, min_score));
         let turnstile =
             turnstile.map(|JsonTurnstile { secret }| Turnstile::new(secret, console_url));
 
@@ -196,7 +188,6 @@ impl Plus {
             stats,
             biller,
             licensor,
-            recaptcha_client,
             turnstile,
             registry_url,
             oci_storage,

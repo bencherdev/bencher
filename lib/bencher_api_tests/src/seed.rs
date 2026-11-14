@@ -9,7 +9,6 @@ use bencher_json::{JsonProjectKeyCreated, ProjectKey};
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::sso::QuerySso;
 use bencher_schema::{
-    CLIENT_TOKEN_TTL,
     context::DbConnection,
     model::{
         organization::{QueryOrganization, invite::InsertInvite},
@@ -25,7 +24,9 @@ use bencher_schema::{
     },
     schema,
 };
+use bencher_token::Claims;
 use diesel::RunQueryDsl as _;
+use jsonwebtoken::Header;
 use reqwest::{
     StatusCode,
     header::{CONTENT_TYPE, COOKIE, HeaderMap, HeaderValue, SET_COOKIE},
@@ -38,6 +39,9 @@ const SESSION_USER_AGENT: &str =
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.6; rv:131.0) Gecko/20100101 Firefox/131.0";
 /// The name of the user API key every test user is made with.
 pub const TEST_USER_KEY_NAME: &str = "Test User Key";
+/// When an old session JWT expires: 2159-12-06, past any clock a test sets, so nothing but its
+/// audience can be why it is refused.
+const OLD_SESSION_EXPIRATION: i64 = 5_993_643_609;
 
 /// A test user, with the user API key their bearer requests send.
 pub struct TestUser {
@@ -69,24 +73,14 @@ pub struct TestProjectKey {
 
 impl TestServer {
     /// Sign up a new user, the server admin if they are the first, with a user API key.
-    pub async fn signup(&self, name: &str, email: &str) -> TestUser {
-        self.signup_with_claim(name, email, None).await
-    }
-
-    /// Sign up a new user who claims the organization, if it is unclaimed, with a user API key.
     /// The account is made as a sign-in that proves the email makes one, on the API's own writer.
     #[expect(clippy::expect_used, reason = "test helper for user signup flow")]
-    pub async fn signup_with_claim(
-        &self,
-        name: &str,
-        email: &str,
-        claim: Option<OrganizationUuid>,
-    ) -> TestUser {
+    pub async fn signup(&self, name: &str, email: &str) -> TestUser {
         let email: Email = email.parse().expect("Invalid email");
         let name: UserName = name.parse().expect("Invalid name");
         let now = self.context().clock.now();
         let mut conn = self.context().database.connection.lock().await;
-        let user = sign_up(&mut conn, name, &email, claim, now);
+        let user = sign_up(&mut conn, name, &email, now);
         let (insert_key, key) = InsertUserKey::from_json(
             user.id,
             JsonNewUserKey {
@@ -110,13 +104,23 @@ impl TestServer {
         }
     }
 
-    /// A session JWT for the user, as the old sign-in's confirmation minted one, for the tests that
-    /// pin how the API treats one.
-    #[expect(clippy::expect_used, reason = "test helper minting a session JWT")]
-    pub fn session_jwt(&self, user: &TestUser) -> Jwt {
-        self.token_key()
-            .new_client(user.email.clone(), CLIENT_TOKEN_TTL)
-            .expect("Failed to mint a session JWT")
+    /// A session JWT for the user, signed with the server's key as the old sign-in's confirmation
+    /// signed one, for the tests that pin that the API refuses one.
+    #[expect(clippy::expect_used, reason = "test helper forging a session JWT")]
+    pub fn old_session_jwt(&self, user: &TestUser) -> Jwt {
+        let token_key = self.token_key();
+        let claims = Claims {
+            aud: "client".to_owned(),
+            exp: OLD_SESSION_EXPIRATION,
+            iat: self.context().clock.now().timestamp(),
+            iss: token_key.issuer.clone(),
+            sub: user.email.clone(),
+            oci: None,
+        };
+        jsonwebtoken::encode(&Header::default(), &claims, &token_key.encoding)
+            .expect("Failed to sign a session JWT")
+            .parse()
+            .expect("Invalid session JWT")
     }
 
     /// Sign the user in to a new browser session now, returning the session cookie's value.
@@ -404,33 +408,14 @@ impl TestServer {
 }
 
 /// Make the account a sign-in that proves `email` makes: the user, the server admin if the first,
-/// who claims the organization if it is unclaimed or else leads a personal one, with the email
-/// verified and every organization its SSO domain names joined.
+/// who leads a personal organization, with the email verified and every organization its SSO
+/// domain names joined.
 #[expect(clippy::expect_used, reason = "test helper making an account")]
-fn sign_up(
-    conn: &mut DbConnection,
-    name: UserName,
-    email: &Email,
-    claim: Option<OrganizationUuid>,
-    now: DateTime,
-) -> QueryUser {
+fn sign_up(conn: &mut DbConnection, name: UserName, email: &Email, now: DateTime) -> QueryUser {
     let (_insert_user, user) =
         InsertUser::sign_up(conn, name, None, email.clone()).expect("Failed to sign up");
-    let claimed = if let Some(claim) = claim
-        && let Some(organization) =
-            QueryOrganization::find(conn, claim).expect("Failed to find the organization")
-    {
-        organization
-            .claim_with(conn, user.id, now)
-            .expect("Failed to claim the organization")
-            .is_some()
-    } else {
-        false
-    };
-    if !claimed {
-        InsertUser::personal_organization(conn, &user)
-            .expect("Failed to make the personal organization");
-    }
+    InsertUser::personal_organization(conn, &user)
+        .expect("Failed to make the personal organization");
     QueryUser::verify_email(conn, user.id, email, now).expect("Failed to verify the email");
     #[cfg(feature = "plus")]
     QuerySso::join_all_with(conn, &user, now).expect("Failed to join by SSO");

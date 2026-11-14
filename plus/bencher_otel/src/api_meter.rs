@@ -123,16 +123,12 @@ pub enum ApiCounter {
     UserIpNotFound,
     UserSignup(AuthMethod),
     UserLogin(AuthMethod),
-    UserRecaptchaFailure,
     UserInvite,
     UserAccept(Option<AuthMethod>),
-    UserConfirm,
     UserClaim,
     UserSsoJoin(AuthMethod),
     UserCheckout,
 
-    UserTokenCreate,
-    UserTokenCreateBlocked,
     UserTokenRevoke,
     UserTokenRevokedUse,
 
@@ -253,19 +249,16 @@ impl ApiCounter {
 
             Self::UserSignup(_) => "{signup}",
             Self::UserLogin(_) => "{login}",
-            Self::UserRecaptchaFailure
-            | Self::RunnerSelfUpdateCheckFailed(_)
+            Self::RunnerSelfUpdateCheckFailed(_)
             | Self::GitHubWebhookRefused
             | Self::GitHubCommitTitlesFailed(_) => "{failure}",
             Self::UserInvite | Self::UserInviteMax(_) => "{invite}",
             Self::UserAccept(_) => "{accept}",
-            Self::UserConfirm => "{confirmation}",
             Self::UserClaim => "{claim}",
             Self::UserSsoJoin(_) => "{join}",
             Self::UserCheckout => "{checkout}",
 
             Self::UserAttemptMax(_, _)
-            | Self::UserTokenCreateBlocked
             | Self::UserTokenRevokedUse
             | Self::UserKeyCreateBlocked
             | Self::UserKeyViewBlocked
@@ -276,7 +269,6 @@ impl ApiCounter {
             | Self::OrganizationPlanUpdateBlocked
             | Self::CallbackAttempt(_) => "{attempt}",
             Self::UserCredentialMax(_)
-            | Self::UserTokenCreate
             | Self::UserTokenRevoke
             | Self::OAuthTokenIssue(_)
             | Self::OAuthRevoke(_) => "{token}",
@@ -342,16 +334,12 @@ impl ApiCounter {
 
             Self::UserSignup(_) => "user.signup",
             Self::UserLogin(_) => "user.login",
-            Self::UserRecaptchaFailure => "user.recaptcha_failure",
             Self::UserInvite => "user.invite",
             Self::UserAccept(_) => "user.accept",
-            Self::UserConfirm => "user.confirm",
             Self::UserClaim => "user.claim",
             Self::UserSsoJoin(_) => "user.sso.join",
             Self::UserCheckout => "user.checkout",
 
-            Self::UserTokenCreate => "user.token.create",
-            Self::UserTokenCreateBlocked => "user.token.create.blocked",
             Self::UserTokenRevoke => "user.token.revoke",
             Self::UserTokenRevokedUse => "user.token.revoked.use",
 
@@ -479,18 +467,12 @@ impl ApiCounter {
 
             Self::UserSignup(_) => "Counts the number of user signups",
             Self::UserLogin(_) => "Counts the number of user logins",
-            Self::UserRecaptchaFailure => "Counts the number of user recaptcha failures",
             Self::UserInvite => "Counts the number of user invitations",
             Self::UserAccept(_) => "Counts the number of user acceptances",
-            Self::UserConfirm => "Counts the number of user confirmations",
             Self::UserClaim => "Counts the number of user claims",
             Self::UserSsoJoin(_) => "Counts the number of user SSO joins",
             Self::UserCheckout => "Counts the number of user checkouts",
 
-            Self::UserTokenCreate => "Counts the number of user API token creations",
-            Self::UserTokenCreateBlocked => {
-                "Counts the number of user API token creation attempts blocked because user API tokens are deprecated"
-            },
             Self::UserTokenRevoke => "Counts the number of user API token revocations",
             Self::UserTokenRevokedUse => {
                 "Counts the number of authentication attempts with a revoked API token"
@@ -639,13 +621,10 @@ impl ApiCounter {
             | Self::ThresholdCeilingSkip
             | Self::UserIp
             | Self::UserIpNotFound
-            | Self::UserRecaptchaFailure
             | Self::GitHubWebhookRefused
             | Self::UserInvite
             | Self::UserClaim
             | Self::UserCheckout
-            | Self::UserTokenCreate
-            | Self::UserTokenCreateBlocked
             | Self::UserTokenRevoke
             | Self::UserTokenRevokedUse
             | Self::UserKeyCreate
@@ -687,7 +666,6 @@ impl ApiCounter {
             | Self::UserLogin(auth_method)
             | Self::UserSsoJoin(auth_method) => auth_method.attributes(),
             Self::UserAccept(auth_method) => AuthMethod::nullable_attributes(auth_method),
-            Self::UserConfirm => AuthMethod::Email.attributes(),
             Self::RequestMax(interval_kind, authorization_kind)
             | Self::UserAttemptMax(interval_kind, authorization_kind) => {
                 vec![interval_kind.into(), authorization_kind.into()]

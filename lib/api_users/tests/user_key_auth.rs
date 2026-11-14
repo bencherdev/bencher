@@ -237,27 +237,6 @@ async fn session_cookie_mints_a_user_key() {
     assert_eq!(resp.status(), StatusCode::CREATED);
 }
 
-// User API token creation is deprecated for every credential,
-// so a user key cannot mint a JWT API token that outlives its own revocation.
-#[tokio::test]
-async fn user_key_cannot_mint_user_jwt_token() {
-    let (server, user_slug, _token, key) = setup().await;
-
-    let resp = server
-        .client
-        .post(server.api_url(&format!("/v0/users/{}/tokens", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(key.as_ref()),
-        )
-        .json(&serde_json::json!({"name": "minted-by-key"}))
-        .send()
-        .await
-        .expect("Request failed");
-
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-}
-
 // --- Negative cases: malformed / unknown / revoked ---------------------------
 
 #[tokio::test]
@@ -284,7 +263,7 @@ async fn malformed_user_key_rejected() {
 async fn refused_bearer_never_quoted() {
     let server = TestServer::new().await;
     let header = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9";
-    let payload = "eyJhdWQiOiJjbGllbnQiLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20ifQ";
+    let payload = "eyJhdWQiOiJhcGlfa2V5Iiwic3ViIjoibXVyaWVsLmJhZ2dlQG5vd2hlcmUuY29tIn0";
 
     let unsigned = format!("{header}.{payload}.");
     for (refused, secret) in [

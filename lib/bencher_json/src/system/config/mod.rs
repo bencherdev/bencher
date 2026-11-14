@@ -23,7 +23,6 @@ pub use plus::{
         billing::{JsonBilling, JsonProduct, JsonProducts},
         index::{JsonBingIndex, JsonGoogleIndex, JsonIndex},
         otel::{JsonOtel, OtelProtocol},
-        recaptcha::JsonRecaptcha,
         turnstile::JsonTurnstile,
     },
     disaster_recovery::{JsonCheckpoint, JsonDisasterRecovery, JsonReplica},
