@@ -1,30 +1,18 @@
-import type { JsonNewPlan } from "../../types/bencher";
+import type { JsonPlanCheckout } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
-import { planLevel } from "./billing";
 
-/** What Billing shows of Stripe's return. */
+/** What Billing shows of Stripe's return, from a checkout that sells only Pro. */
 export interface Enrollment {
 	status: "enrolling" | "enrolled" | "failed";
-	level: string;
 	error?: unknown;
 }
 
-/** The plan Stripe's return to Billing names, for the API to record and check, or nothing for any other link or level. */
-export const checkoutReturn = (search: string): JsonNewPlan | undefined => {
-	const params = new URLSearchParams(search);
-	const checkout = params.get("checkout");
-	const level = planLevel(params.get("level"));
-	if (!(checkout && level)) {
-		return undefined;
-	}
-	const entitlements = params.get("entitlements");
-	const selfHosted = params.get("self_hosted");
-	return {
-		checkout,
-		level,
-		...(entitlements === null ? {} : { entitlements: Number(entitlements) }),
-		...(selfHosted === null ? {} : { self_hosted: selfHosted }),
-	};
+/** The checkout session Stripe's return to Billing names, for the API to record and check, or nothing for any other link. */
+export const checkoutReturn = (
+	search: string,
+): JsonPlanCheckout | undefined => {
+	const checkout = new URLSearchParams(search).get("checkout");
+	return checkout ? { checkout } : undefined;
 };
 
 const CONFLICT = 409;
@@ -60,10 +48,10 @@ export const recordCheckout = async (
 		await api.send("POST", `/v0/organizations/${organization}/plan`, plan);
 	} catch (error) {
 		if (!hasPlan(error)) {
-			show({ status: "failed", level: plan.level, error });
+			show({ status: "failed", error });
 			return;
 		}
 	}
 	await reread();
-	show({ status: "enrolled", level: plan.level });
+	show({ status: "enrolled" });
 };

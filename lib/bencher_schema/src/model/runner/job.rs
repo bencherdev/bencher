@@ -674,7 +674,6 @@ mod tests {
     fn metered_plan() -> PlanKind {
         PlanKind::Metered(MeteredPlan {
             customer_id: "cus_test".into(),
-            level: PlanLevel::Pro,
             current_period_start: DateTime::TEST,
             current_period_end: DateTime::TEST,
         })

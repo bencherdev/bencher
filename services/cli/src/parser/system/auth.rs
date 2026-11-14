@@ -1,9 +1,9 @@
 use bencher_json::{Email, Jwt, OrganizationUuid, UserName, UserSlug};
+#[cfg(feature = "plus")]
+use clap::ValueEnum;
 use clap::{Parser, Subcommand};
 
 use crate::parser::CliBackend;
-#[cfg(feature = "plus")]
-use crate::parser::organization::plan::CliPlanLevel;
 
 #[derive(Subcommand, Debug)]
 pub enum CliAuth {
@@ -93,4 +93,40 @@ pub struct CliAuthAccept {
 
     #[clap(flatten)]
     pub backend: CliBackend,
+}
+
+#[cfg(feature = "plus")]
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+pub enum CliPlanLevel {
+    /// Free
+    Free,
+    /// Pro
+    Pro,
+    /// Enterprise
+    Enterprise,
+}
+
+#[cfg(all(test, feature = "plus"))]
+mod tests {
+    use clap::{Parser as _, error::ErrorKind};
+
+    use crate::parser::CliBencher;
+
+    // Fails if a log in takes a plan level that does not exist, or refuses one that does.
+    #[test]
+    fn auth_login_plan_levels() {
+        let login = |plan: &str| {
+            CliBencher::try_parse_from([
+                "bencher",
+                "auth",
+                "login",
+                "muriel@nowhere.com",
+                "--plan",
+                plan,
+            ])
+        };
+        login("enterprise").unwrap();
+        assert_eq!(login("team").unwrap_err().kind(), ErrorKind::InvalidValue);
+    }
 }

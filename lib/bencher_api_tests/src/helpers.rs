@@ -11,7 +11,7 @@ use bencher_json::{
     ResourceName, TestbedUuid, TokenUuid, UserKeyUuid, UserUuid, VariantUuid, VersionUuid,
     system::config::JsonOAuthServer,
 };
-use bencher_rbac::project::Role;
+use bencher_rbac::{organization::Role as OrganizationRole, project::Role};
 use bencher_schema::{
     context::{DbConnection, OAuthServer},
     model::user::{
@@ -28,7 +28,7 @@ use http::StatusCode;
 use crate::{
     TestServer,
     github::{GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET},
-    seed::{TestProject, TestUser},
+    seed::{TestOrg, TestProject, TestUser},
 };
 
 /// Fixed base timestamp for deterministic tests (Unix epoch + 1 billion seconds).
@@ -470,6 +470,41 @@ pub fn grant_project_role(server: &TestServer, user: &TestUser, project_slug: &s
         ))
         .execute(&mut conn)
         .expect("Failed to grant the project role");
+}
+
+/// Give a user a role in an organization directly in the database.
+#[expect(
+    clippy::expect_used,
+    reason = "test helper granting an organization role"
+)]
+pub fn grant_organization_role(
+    server: &TestServer,
+    user: &TestUser,
+    organization: &TestOrg,
+    role: OrganizationRole,
+) {
+    let mut conn = server.db_conn();
+    let user_id: UserId = schema::user::table
+        .filter(schema::user::uuid.eq(&user.uuid))
+        .select(schema::user::id)
+        .first(&mut conn)
+        .expect("Failed to get user ID");
+    let organization_id: i32 = schema::organization::table
+        .filter(schema::organization::uuid.eq(organization.uuid.to_string()))
+        .select(schema::organization::id)
+        .first(&mut conn)
+        .expect("Failed to get organization ID");
+    let now = base_timestamp();
+    diesel::insert_into(schema::organization_role::table)
+        .values((
+            schema::organization_role::user_id.eq(user_id),
+            schema::organization_role::organization_id.eq(organization_id),
+            schema::organization_role::role.eq(role.to_string()),
+            schema::organization_role::created.eq(&now),
+            schema::organization_role::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to grant the organization role");
 }
 
 /// The organizations a user holds a role in.

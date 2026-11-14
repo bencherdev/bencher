@@ -1,17 +1,36 @@
-import type { Resource } from "solid-js";
+import { type Resource, Show } from "solid-js";
 import { CardBrand, type JsonUsage } from "../../../../types/bencher";
 
 const PaymentMethod = (props: { usage: Resource<null | JsonUsage> }) => {
+	// Compared as text, so the generated enum stays out of every page's shared chunk.
+	const collectionMethod = (): string | undefined =>
+		props.usage()?.plan?.collection_method;
 	return (
 		<>
 			<h4 class="title is-4">Payment Method</h4>
-			<CreditCard brand={props.usage()?.plan?.card?.brand} />
-			<p>Name: {props.usage()?.plan?.customer?.name}</p>
-			<p>Last Four: {props.usage()?.plan?.card?.last_four}</p>
-			<p>
-				Expiration: {props.usage()?.plan?.card?.exp_month}/
-				{(props.usage()?.plan?.card?.exp_year ?? 2000) - 2000}
-			</p>
+			<Show
+				when={props.usage()?.plan?.card}
+				fallback={
+					<p>
+						{collectionMethod() === "send_invoice"
+							? "Invoice"
+							: "Automatic payment"}
+					</p>
+				}
+			>
+				{(card) => (
+					<>
+						<CreditCard brand={card().brand} />
+						<Show when={props.usage()?.plan?.customer?.name}>
+							{(name) => <p>Name: {name()}</p>}
+						</Show>
+						<p>Last Four: {card().last_four}</p>
+						<p>
+							Expiration: {card().exp_month}/{card().exp_year - 2000}
+						</p>
+					</>
+				)}
+			</Show>
 		</>
 	);
 };

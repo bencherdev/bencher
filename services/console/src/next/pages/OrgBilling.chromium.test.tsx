@@ -29,6 +29,7 @@ const PLAN = {
 		email: "muriel@nowhere.example",
 	},
 	card: { brand: "visa", last_four: "0417", exp_month: 8, exp_year: 2028 },
+	collection_method: "charge_automatically",
 	level: "pro",
 	unit_amount: 0,
 	// As the API sends them: an absent amount or bound is null.
@@ -38,11 +39,27 @@ const PLAN = {
 		{ "up_to": 500, "unit_amount": null, "flat_amount": 20000 },
 		{ "up_to": null, "unit_amount": null, "flat_amount": 0 }
 	]`),
+	tiers_mode: "volume",
+	// A dollar an hour, in cents a runner minute.
+	runner_minute: 100 / 60,
 	created: "2026-09-01T12:00:00Z",
 	current_period_start: PERIOD.start_time,
 	current_period_end: PERIOD.end_time,
 	status: "active",
 	cancel_at_period_end: false,
+};
+
+// A deal of 1,000 series for $2,500 a month, then $0.40 a series, with bare metal at
+// two dollars an hour.
+const ENTERPRISE = {
+	...PLAN,
+	level: "enterprise",
+	tiers: JSON.parse(`[
+		{ "up_to": 1000, "unit_amount": null, "flat_amount": 250000 },
+		{ "up_to": null, "unit_amount": 40, "flat_amount": null }
+	]`),
+	tiers_mode: "graduated",
+	runner_minute: 200 / 60,
 };
 
 const PRO = {
@@ -366,6 +383,130 @@ describe("a paid plan", () => {
 			.element(region("Pro Plan"))
 			.toHaveTextContent("Estimated bill$0.00");
 	});
+
+	// Kills an Enterprise plan drawn as Pro, its own overage band drawn as a
+	// conversation, its bill estimated as a volume price, or its bare metal billed at
+	// the published rate.
+	test("an Enterprise plan prices its own bands, bill, and bare metal", async () => {
+		open({
+			...PRO,
+			active_series: 1_200,
+			plan: ENTERPRISE,
+		} as JsonUsage);
+		const plan = region("Enterprise Plan");
+		await expect
+			.element(plan.getByRole("img", { name: "1,200 of 1,000 active series" }))
+			.toBeVisible();
+		await expect.element(plan).toHaveTextContent("$10.60 at $2.00 an hour");
+		await expect.element(plan).toHaveTextContent("Estimated bill$2,590.60");
+		const rows = page
+			.getByRole("table", { name: "Enterprise price bands" })
+			.getByRole("row")
+			.elements()
+			.slice(1)
+			.map((row) => row.textContent);
+		expect(rows).toEqual([
+			"0 to 1,000$2,500 a month",
+			"1,001 or more$0.40 a seriesThis period",
+		]);
+		await expect
+			.element(region("Danger"))
+			.toHaveTextContent(
+				"Enterprise ends with this period on Nov 1, 2026, and Pompeii LLC moves to the Free plan.",
+			);
+		expect(region("Pro Plan").query()).toBeNull();
+	});
+
+	// Kills an Enterprise price without bands estimated as a conversation, which only
+	// Pro's open band is.
+	test("an Enterprise plan without bands shows no estimate", async () => {
+		open({
+			...PRO,
+			plan: { ...ENTERPRISE, tiers: null, tiers_mode: null },
+		} as unknown as JsonUsage);
+		const plan = region("Enterprise Plan");
+		await expect.element(plan).toHaveTextContent("Estimated bill-");
+		expect(plan.getByRole("link", { name: "Get in touch" }).query()).toBeNull();
+	});
+
+	// Kills an Enterprise band without a price drawn as a conversation, which only
+	// Pro's open band is.
+	test("an Enterprise band without a price shows a dash", async () => {
+		open({
+			...PRO,
+			plan: {
+				...ENTERPRISE,
+				tiers: JSON.parse(`[
+					{ "up_to": 100, "unit_amount": null, "flat_amount": null },
+					{ "up_to": null, "unit_amount": 40, "flat_amount": null }
+				]`),
+			},
+		} as unknown as JsonUsage);
+		const bands = page.getByRole("table", { name: "Enterprise price bands" });
+		await expect.element(bands).toBeVisible();
+		const rows = bands
+			.getByRole("row")
+			.elements()
+			.slice(1)
+			.map((row) => row.textContent);
+		expect(rows).toEqual(["0 to 100-", "101 or more$0.40 a seriesThis period"]);
+		expect(
+			bands.getByRole("link", { name: "Get in touch" }).query(),
+		).toBeNull();
+	});
+
+	// Kills a plan billed by invoice drawn with a card it does not have, or left with no
+	// way to the billing portal.
+	test("a plan billed by invoice names the invoice and opens the portal", async () => {
+		const { sent, left } = open(
+			{
+				...PRO,
+				plan: {
+					...ENTERPRISE,
+					card: null,
+					customer: null,
+					collection_method: "send_invoice",
+				},
+			} as unknown as JsonUsage,
+			{
+				answer: async () => ({ url: "https://billing.stripe.com/p/session/y" }),
+			},
+		);
+		const payment = region("Payment method");
+		await expect.element(payment).toHaveTextContent("Invoice");
+		expect(payment.element().textContent).not.toContain("Expires");
+		await button("Manage billing").click();
+
+		await expect
+			.poll(() => left.mock.calls)
+			.toEqual([["https://billing.stripe.com/p/session/y"]]);
+		expect(sent).toEqual([
+			{
+				method: "POST",
+				path: "/v0/organizations/o1/plan/portal",
+				body: undefined,
+			},
+		]);
+	});
+});
+
+describe("a paid plan without a card", () => {
+	// Kills a plan that Stripe charges with no card, such as by a bank debit, drawn as
+	// billed by invoice.
+	test("a plan charged without a card names automatic payment", async () => {
+		open({
+			...PRO,
+			plan: {
+				...ENTERPRISE,
+				card: null,
+				collection_method: "charge_automatically",
+			},
+		} as unknown as JsonUsage);
+		const payment = region("Payment method");
+		await expect.element(payment).toHaveTextContent("Automatic payment");
+		expect(payment.element().textContent).not.toContain("Invoice");
+		await expect.element(button("Manage billing")).toBeVisible();
+	});
 });
 
 describe("the Free plan", () => {
@@ -392,8 +533,8 @@ describe("the Free plan", () => {
 		await expect.element(month).toHaveTextContent("Bare metal42 min");
 	});
 
-	// Kills an upgrade sent for another organization or plan, or one that
-	// stays on the page once Stripe answers.
+	// Kills an upgrade sent for another organization, one that still names a
+	// level, or one that stays on the page once Stripe answers.
 	test("Pro's card starts a checkout and leaves for it", async () => {
 		const { sent, left } = open(FREE, {
 			answer: async () => ({
@@ -410,7 +551,7 @@ describe("the Free plan", () => {
 			{
 				method: "POST",
 				path: "/v0/checkout",
-				body: { organization: "o1", level: "pro" },
+				body: { organization: "o1" },
 			},
 		]);
 	});
@@ -472,9 +613,27 @@ describe("the Free plan", () => {
 });
 
 describe("Stripe's return", () => {
-	const RETURN = "/organizations/pompeii-llc/billing?checkout=cs_x&level=pro";
+	const RETURN = "/organizations/pompeii-llc/billing?checkout=cs_x";
 	const USAGE = "/v0/organizations/pompeii-llc/usage";
 	const enrolled = () => page.getByRole("status").getByText("Enrolled in Pro");
+
+	// Kills a return that sends anything but its session, or none at all.
+	test("records the plan with the return's session alone", async () => {
+		const { sent } = open(FREE, {
+			path: RETURN,
+			read: async () => answered(PRO),
+			answer: async () => PLAN,
+		});
+
+		await expect.element(enrolled()).toBeVisible();
+		expect(sent).toEqual([
+			{
+				method: "POST",
+				path: "/v0/organizations/pompeii-llc/plan",
+				body: { checkout: "cs_x" },
+			},
+		]);
+	});
 
 	// Kills "Enrolled" drawn over the plan from before the checkout, with its
 	// Start trial still live, before the usage read after the plan answers, and

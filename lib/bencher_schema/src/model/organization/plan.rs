@@ -2,11 +2,11 @@
 
 use bencher_billing::{Biller, CustomerId};
 use bencher_json::{
-    DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, OrganizationUuid,
-    PlanLevel, Priority, project::Visibility,
+    DateTime, Entitlements, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, PlanLevel, Priority,
+    project::Visibility,
 };
 use bencher_license::Licensor;
-use diesel::{BelongingToDsl as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+use diesel::{BelongingToDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
 use crate::{
@@ -17,7 +17,7 @@ use crate::{
         resource_conflict_err, resource_not_found_err,
     },
     model::{
-        organization::{OrganizationId, QueryOrganization, UpdateOrganization},
+        organization::{OrganizationId, QueryOrganization},
         project::{QueryProject, metric::QueryMetric},
         user::{actor::ApiActor, auth::AuthUser},
     },
@@ -117,7 +117,6 @@ impl QueryPlan {
         if billing.status.is_active() {
             Ok(Some(MeteredPlan {
                 customer_id: billing.customer_id,
-                level: billing.level,
                 current_period_start: billing.current_period_start,
                 current_period_end: billing.current_period_end,
             }))
@@ -161,69 +160,15 @@ impl InsertPlan {
 
         Ok(insert_plan)
     }
-
-    pub fn licensed_plan(
-        conn: &mut DbConnection,
-        licensor: &Licensor,
-        licensed_plan_id: LicensedPlanId,
-        query_organization: &QueryOrganization,
-        plan_level: PlanLevel,
-        entitlements: Entitlements,
-        self_hosted: Option<OrganizationUuid>,
-    ) -> Result<Self, HttpError> {
-        // If license organization is not given, then use the current organization (Bencher Cloud license)
-        let organization_uuid = self_hosted.unwrap_or(query_organization.uuid);
-        let license = licensor
-            .new_annual_license(organization_uuid, plan_level, entitlements)
-            .map_err(|e| issue_error(
-                "Failed to create license",
-                &format!("Failed to create license for organization ({query_organization:?}) with entitlements ({entitlements})."),
-                e,
-            ))?;
-
-        let timestamp = DateTime::now();
-        let insert_plan = Self {
-            organization_id: query_organization.id,
-            metered_plan: None,
-            licensed_plan: Some(licensed_plan_id),
-            license: Some(license.clone()),
-            created: timestamp,
-            modified: timestamp,
-        };
-
-        diesel::insert_into(schema::plan::table)
-            .values(&insert_plan)
-            .execute(conn)
-            .map_err(resource_conflict_err!(Plan, insert_plan))?;
-
-        // If the license is for this organization is not given, then update the current organization (Bencher Cloud license)
-        if self_hosted.is_none() {
-            let organization_query = schema::organization::table
-                .filter(schema::organization::id.eq(query_organization.id));
-            let update_organization = UpdateOrganization {
-                name: None,
-                slug: None,
-                license: Some(Some(license)),
-                modified: timestamp,
-            };
-            diesel::update(organization_query)
-                .set(&update_organization)
-                .execute(conn)
-                .map_err(resource_conflict_err!(Organization, update_organization))?;
-        }
-
-        Ok(insert_plan)
-    }
 }
 
 /// An active metered (Stripe) subscription's billing context, carried by
 /// [`PlanKind::Metered`].
 ///
-/// It holds who to bill (`customer_id`), the tier (`level`), and the current billing
-/// period (the active-series count window for the post-report series push).
+/// It holds who to bill (`customer_id`) and the current billing period (the active-series
+/// count window for the post-report series push).
 pub struct MeteredPlan {
     pub customer_id: CustomerId,
-    pub level: PlanLevel,
     pub current_period_start: DateTime,
     pub current_period_end: DateTime,
 }
@@ -276,22 +221,20 @@ impl PlanKind {
         }
     }
 
-    /// For a paid metered plan, the Stripe customer and current billing period needed to
-    /// post the post-report active-series usage. `None` for any other plan. Pairs with
-    /// [`metered_bills_active_series`].
+    /// For a metered plan, the Stripe customer and current billing period needed to post
+    /// the post-report active-series usage. `None` for any other plan.
     pub fn metered_series_billing(&self) -> Option<(CustomerId, DateTime, DateTime)> {
         match self {
             Self::Metered(MeteredPlan {
                 customer_id,
-                level,
                 current_period_start,
                 current_period_end,
-            }) if metered_bills_active_series(*level) => Some((
+            }) => Some((
                 customer_id.clone(),
                 *current_period_start,
                 *current_period_end,
             )),
-            Self::Metered(_) | Self::Licensed(_) | Self::None => None,
+            Self::Licensed(_) | Self::None => None,
         }
     }
 
@@ -501,18 +444,6 @@ impl From<&PlanKind> for bencher_otel::PlanKind {
     }
 }
 
-/// Whether a metered (Stripe) subscription at `level` is billed on the active-series
-/// meter. This gates the post-report series push and the active series the usage
-/// endpoint reports.
-///
-/// Matched exhaustively so a new `PlanLevel` variant forces a decision here.
-pub fn metered_bills_active_series(level: PlanLevel) -> bool {
-    match level {
-        PlanLevel::Pro | PlanLevel::Enterprise => true,
-        PlanLevel::Free => false,
-    }
-}
-
 pub struct LicenseUsage {
     pub entitlements: Entitlements,
     pub usage: u32,
@@ -582,25 +513,20 @@ mod tests {
 
     use super::{LicenseUsage, MeteredPlan, PlanKind};
 
+    // Fails if a metered plan does not post its active series for its own customer and
+    // period, or any other plan does.
     #[test]
-    fn metered_series_billing_every_paid_level() {
+    fn metered_series_billing_every_metered_plan() {
         let period_end = DateTime::try_from(DateTime::TEST.timestamp() + 1).unwrap();
-        let metered = |level| {
-            PlanKind::Metered(MeteredPlan {
-                customer_id: "cus_test".into(),
-                level,
-                current_period_start: DateTime::TEST,
-                current_period_end: period_end,
-            })
-        };
-        for level in [PlanLevel::Pro, PlanLevel::Enterprise] {
-            assert_eq!(
-                metered(level).metered_series_billing(),
-                Some(("cus_test".into(), DateTime::TEST, period_end)),
-                "{level}"
-            );
-        }
-        assert!(metered(PlanLevel::Free).metered_series_billing().is_none());
+        let metered = PlanKind::Metered(MeteredPlan {
+            customer_id: "cus_test".into(),
+            current_period_start: DateTime::TEST,
+            current_period_end: period_end,
+        });
+        assert_eq!(
+            metered.metered_series_billing(),
+            Some(("cus_test".into(), DateTime::TEST, period_end)),
+        );
 
         let licensed = PlanKind::Licensed(LicenseUsage {
             entitlements: Entitlements::MIN,
