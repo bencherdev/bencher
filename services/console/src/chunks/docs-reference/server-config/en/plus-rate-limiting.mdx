@@ -2,7 +2,11 @@
 
 This section specifies the rate limiting for the API server.
 The entire section is optional.
-If not specified, the listed default values will be used.
+On Bencher Self-Hosted, custom rate limits require a valid Bencher Plus _Enterprise_ license for at least one organization on the server.
+The API server only checks for a valid license when it starts,
+so restart the API server after you add a license.
+Without this section or without a valid license, Bencher Self-Hosted does not apply any rate limits.
+Otherwise, any value that is not specified uses the listed default value.
 
 To prevent [`unclaimed` projects][unclaimed projects] from being created,
 set the `unclaimed_limit` to `0`.
@@ -11,7 +15,7 @@ set the `unclaimed_limit` to `0`.
 | :--------------------: | :----------: | :----------: | :------: | :---------------------------------------------------------------------------------------------------------------------------------------------------: |
 |         window         |    86400     |    86400     |    No    |                                       Specifies the rate limiting window in seconds. Set to one day by default.                                       |
 |    unclaimed_limit     |     255      |     255      |    No    | Controls the rate limiting for [`unclaimed` projects][unclaimed projects]. To prevent `unclaimed` projects from being created, set this value to `0`. |
-|     claimed_limit      |    65536     |    65536     |    No    |                                                  Controls the rate limiting for `claimed` projects.                                                   |
+|     claimed_limit      |    65535     |    65535     |    No    |                                                  Controls the rate limiting for `claimed` projects.                                                   |
 |       plus_limit       |   1048576    |   1048576    |    No    |                                   Controls the rate limiting of metrics for organizations with a Bencher Plus plan.                                   |
 
 #### `public`

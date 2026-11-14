@@ -41,7 +41,7 @@ pub enum CliOrganization {
     Allowed(CliOrganizationAllowed),
 
     #[cfg(feature = "plus")]
-    /// Check organization metrics usage
+    /// Check organization usage
     Usage(CliOrganizationUsage),
 }
 

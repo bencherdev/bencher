@@ -6,7 +6,7 @@ import { IS_BENCHER_CLOUD } from "astro:env/client";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import PricingTable from "../components/pricing/PricingTable";
 import FallbackPricingTable from "../components/pricing/FallbackPricingTable";
-import { BENCHER_CALENDLY_URL } from "../util/ext";
+import { BENCHER_CALENDLY_URL, BENCHER_ENTERPRISE_URL } from "../util/ext";
 import SelfHostedRedirect from "../components/site/SelfHostedRedirct";
 import CallToAction from "../components/landing/CallToAction.astro";
 import TrustedBy from "../components/landing/TrustedBy.astro";
@@ -65,7 +65,8 @@ const description =
         <span class="pricing-callout-icon" aria-hidden="true">💡</span>
         <p class="pricing-callout-body">
           <strong>What is a benchmark series?</strong>
-          A series is a unique combination of benchmark, measure, and testbed.
+          A series is a unique combination of benchmark variant, measure, and testbed.
+          A benchmark without parameters is one variant, and each set of parameter values it reports, such as an input size, is a variant of its own.
           5 benchmarks × 2 measures × 1 testbed = 10 series,
           no matter how many times you run them.
           Pro is a flat monthly fee based on how many series are active that month, across both public and private projects.
@@ -80,10 +81,10 @@ const description =
         <div class="pricing-faq-eyebrow">SERIES & BILLING</div>
         <div class="pricing-faq-grid">
           <FaqItem id="faq-benchmark-series" q="What is a benchmark series?">
-            A benchmark series is a unique combination of benchmark, measure, and testbed. It is the unit the Pro plan is billed on. A series is active in a month if it reports at least one result that month, no matter how many results or runs. So 5 benchmarks × 2 measures × 1 testbed is 10 series whether you run them once or a thousand times. Active series are counted across both public and private projects.
+            A benchmark series is a unique combination of <a href="#faq-benchmark-measure-testbed">benchmark variant, measure, and testbed</a>. It is the unit that Pro and Enterprise are billed on. A series is active in a month if it reports at least one result that month, no matter how many results or runs. So 5 benchmarks × 2 measures × 1 testbed is 10 series whether you run them once or a thousand times. Active series are counted across both public and private projects.
           </FaqItem>
-          <FaqItem id="faq-benchmark-measure-testbed" q="What is a benchmark, measure, and testbed?">
-            A <strong>benchmark</strong> is a named performance test. A <strong>measure</strong> is the unit a benchmark reports, such as latency or throughput. A benchmark can report one or more measures. A <strong>testbed</strong> is the environment the benchmark runs on, like a specific machine or class of CI runner.
+          <FaqItem id="faq-benchmark-measure-testbed" q="What is a benchmark, variant, measure, and testbed?">
+            A <strong>benchmark</strong> is a named performance test. A <strong>variant</strong> is a benchmark with one set of parameter values, such as an input size. A benchmark without parameters has a single variant. A <strong>measure</strong> is the unit a benchmark reports, such as latency or throughput. A benchmark can report one or more measures. A <strong>testbed</strong> is the environment the benchmark runs on, like a specific machine or class of CI runner.
           </FaqItem>
           <FaqItem id="faq-public-private" q="What is a Public vs. Private Project?">
             A Public Project is visible to anyone who can reach your Bencher instance. A Private Project is only visible to members of your organization and requires a paid plan (Pro or Enterprise).
@@ -98,22 +99,23 @@ const description =
                 <tr><td>0 to 250</td><td>$100 / month</td></tr>
                 <tr><td>251 to 375</td><td>$150 / month</td></tr>
                 <tr><td>376 to 500</td><td>$200 / month</td></tr>
-                <tr><td>501 or more</td><td><a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Get in touch</a></td></tr>
+                <tr><td>501 or more</td><td><a href={BENCHER_ENTERPRISE_URL}>Get in touch</a></td></tr>
               </tbody>
             </table>
-            <p>Bencher Bare Metal runner time ($1.00/hour) is billed separately on top, except during your first month free trial. Bencher Self-Hosted is billed annually based on a licensed quantity.</p>
+            <p>Bencher Bare Metal runner time ($1.00/hour) is billed separately on top, except during your first month free trial. Bencher Self-Hosted has no Pro plan. Its only paid plan is <a href="#faq-self-hosted-license">Enterprise</a>, licensed by the benchmark series it covers.</p>
           </FaqItem>
           <FaqItem id="faq-trial" q="Is there a free trial for Pro?">
             Yes. Pro starts with a 1-month free trial: your first month's base fee is waived and Bencher Bare Metal runner minutes are included, so your first month is free. A credit card is required to start the trial. After 30 days it converts to the standard monthly fee for your active series. There is no per-seat pricing on any plan.
           </FaqItem>
           <FaqItem id="faq-public-projects" q="Do Public Projects count toward my plan?">
-            The Free plan supports Public Projects only, free of charge, with <a href="#faq-rate-limiting">daily rate limits</a>. On the Pro plan, your active benchmark series are counted across all your projects, both public and private.
+            The Free plan supports Public Projects only, free of charge, with <a href="#faq-rate-limiting">daily rate limits</a>. On Pro and Enterprise, your active benchmark series are counted across all your projects, both public and private.
           </FaqItem>
           <FaqItem id="faq-rate-limiting" q="Is there rate limiting?">
+            <p>On Bencher Cloud:</p>
             <ul>
               <li>Unclaimed Project: 255 Metrics per day</li>
               <li>Free plan: 65,535 Metrics per day</li>
-              <li>Bencher Plus plan: No rate limit</li>
+              <li>Bencher Plus plan (Pro and Enterprise): 1,048,576 Metrics per day</li>
             </ul>
           </FaqItem>
           <FaqItem id="faq-support" q="What support do I get with each plan?">
@@ -122,17 +124,22 @@ const description =
             <p><strong>Dedicated support</strong> (Enterprise): Dedicated Slack channel with direct access to Bencher engineering, priority on bug fixes and feature requests, and dedicated onboarding.</p>
           </FaqItem>
           <FaqItem id="faq-change-plan" q="Can I change or cancel my plan?">
-            Yes. You can upgrade, downgrade, or cancel your plan at any time. On Bencher Cloud, metered billing stops at the end of the current period. Bencher Self-Hosted licenses aren't refunded mid-term, but you can downgrade or cancel before your next renewal.
+            Yes. You can upgrade, downgrade, or cancel your plan at any time. On Bencher Cloud, metered billing stops at the end of the current period. Bencher Self-Hosted licenses aren't refunded mid-term, but you can downgrade or cancel before your next renewal. After you cancel, your license is not renewed, and it expires 30 days after the end of its term.
           </FaqItem>
           <FaqItem id="faq-data-on-cancel" q="What happens to my data if I cancel?">
             Your Projects and benchmark results (called Metrics) remain accessible after cancellation. Public Projects stay publicly visible unless you delete them, and Private Projects stay private. You can export your data via the <a href="/docs/api/">Bencher API</a> at any time.
           </FaqItem>
           <FaqItem id="faq-self-hosted-license" q="How does the Bencher License work for Self-Hosted?">
             <p>The <a href="/legal/license/">Bencher License</a> is heavily inspired by the <a href="https://gitlab.com/gitlab-org/gitlab/-/blob/master/LICENSE" target="_blank" rel="noreferrer">GitLab License</a>. You can use Bencher Self-Hosted in development, testing, and production without a Bencher Plus license, equivalent to Bencher Cloud on the Free plan.</p>
-            <p>Bencher Plus features for Self-Hosted are available on the Enterprise (On-Prem) plan. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> to set up a license.</p>
+            <p>Bencher Plus features for Self-Hosted are available on the Enterprise (On-Prem) plan, the only paid plan for Bencher Self-Hosted. An Enterprise license covers an agreed number of benchmark series, counted across public and private projects. On Bencher Self-Hosted, a series is active if it has reported a result in the last 30 days. Bencher Cloud signs the license, and your server verifies it offline. <a href={BENCHER_ENTERPRISE_URL}>Contact us</a> to set up a license.</p>
+            <p>Add the license key on the Billing page of your Self-Hosted organization. When your subscription renews, Bencher Cloud signs a new license for the new term. Copy it from your organization's Billing page on Bencher Cloud to your Self-Hosted organization.</p>
+            <p>GitHub sign-in, Google sign-in, custom rate limits, and the usage statistics opt-out apply to the whole server. They need a valid license on at least one organization on the server.</p>
           </FaqItem>
-          <FaqItem id="faq-license-quantity-limit" q="What happens if I reach my licensed quantity on Self-Hosted?">
-            On Bencher Self-Hosted, new Metrics stop being accepted once you hit your licensed quantity limit. You can increase your licensed quantity at any time. We recommend setting your quantity with an extra margin to avoid interruption.
+          <FaqItem id="faq-license-quantity-limit" q="What happens if I go over my licensed benchmark series on Self-Hosted?">
+            Bencher Self-Hosted keeps accepting every report. When an organization has more active series than its license covers, each report response warns with both counts, <code>bencher run</code> prints the warning, and the Billing page shows the count. The server also records the peak of each license term: the highest count it sees while the organization holds a license for that term, its 30 days of grace included. The Billing page shows it. At renewal, your new contract covers that peak.
+          </FaqItem>
+          <FaqItem id="faq-license-expiry" q="What happens when my Self-Hosted license expires?">
+            A license has 30 days of grace after the end of its term. During the grace, the organization keeps every Enterprise feature, and the Billing page and each report response warn with both dates. After the grace, the organization falls back to Free: Public Projects keep working, Private Projects stop accepting new results, and all of your data stays readable. A license that is expired or not valid never blocks a Public Project.
           </FaqItem>
         </div>
       </div>
@@ -149,11 +156,11 @@ const description =
             No. You can run benchmarks right away without creating an account, with a 1 minute timeout per run. A Free account raises that timeout to 5 minutes and increases your <a href="#faq-rate-limiting">daily rate limits</a>. No credit card required either way. Check out the <a href="/docs/tutorial/bare-metal/">Bencher Bare Metal Quickstart</a> to run your first benchmark in minutes.
           </FaqItem>
           <FaqItem id="faq-bare-metal-hardware" q="What hardware do Bencher Bare Metal runners use?">
-            <p>Bencher Cloud On-Demand runners use the <code>intel-v1</code> Spec: Linux on x86_64 with 4 CPUs, 48 GiB of memory, and 128 GiB of disk. Code runs in a Firecracker microVM sandbox for isolation. See the full <a href="/docs/explanation/testbeds/#--spec-spec">Spec reference</a> for details. Bencher Cloud Enterprise customers can request Dedicated and Custom runners. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> for more details.</p>
+            <p>Bencher Cloud On-Demand runners use the <code>intel-v1</code> Spec: Linux on x86_64 with 4 CPUs, 48 GiB of memory, and 128 GiB of disk. Code runs in a Firecracker microVM sandbox for isolation. See the full <a href="/docs/explanation/testbeds/#--spec-spec">Spec reference</a> for details. Bencher Cloud Enterprise customers can request Dedicated and Custom runners. <a href={BENCHER_ENTERPRISE_URL}>Contact us</a> for more details.</p>
             <p>On Bencher Self-Hosted, you can create server-scoped Bare Metal runners, and Enterprise (On-Prem) users can also create organization-scoped runners.</p>
           </FaqItem>
           <FaqItem id="faq-bare-metal-os" q="What OSes and architectures does Bencher Bare Metal support?">
-            <p>Bencher Cloud On-Demand runners support Linux x86_64 and (coming soon) ARM64, sandboxed in Firecracker. Dedicated and Custom runners can run without the Firecracker sandbox on Linux (x86_64 or ARM64), macOS, and Windows. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> for more details.</p>
+            <p>Bencher Cloud On-Demand runners support Linux x86_64 and (coming soon) ARM64, sandboxed in Firecracker. Dedicated and Custom runners can run without the Firecracker sandbox on Linux (x86_64 or ARM64), macOS, and Windows. <a href={BENCHER_ENTERPRISE_URL}>Contact us</a> for more details.</p>
             <p>Bencher Self-Hosted runners can run on Linux (x86_64 or ARM64), macOS, and Windows.</p>
             <p>See the <a href="/docs/explanation/bare-metal/#runner">bare metal runner reference</a> for details.</p>
           </FaqItem>
@@ -168,7 +175,7 @@ const description =
               <li><strong>Dedicated</strong> (Enterprise): flat monthly rate</li>
               <li><strong>Custom</strong> (Enterprise): usage-based</li>
             </ul>
-            <p>Bencher Self-Hosted users do not pay for runner minutes. <a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">Contact us</a> for more details.</p>
+            <p>Bencher Self-Hosted users do not pay for runner minutes. <a href={BENCHER_ENTERPRISE_URL}>Contact us</a> for more details.</p>
           </FaqItem>
           <FaqItem id="faq-bare-metal-free-tier" q="What's included in the Free tier?">
             <p>Free users get one concurrent Bare Metal job with a 5 minute timeout and Standard queue priority. This is the same for both Bencher Cloud and Bencher Self-Hosted.</p>
