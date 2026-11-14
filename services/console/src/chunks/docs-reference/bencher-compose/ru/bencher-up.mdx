@@ -16,9 +16,17 @@ import Help from "./cli/help.mdx";
 Создание и запуск контейнеров Bencher с самостоятелной хостингом.
 Это похоже на выполнение команды [`docker compose up`][docker compose up].
 
+Оба контейнера подключаются к сети Docker с именем `bencher`, которую `bencher up` создаёт или использует повторно, если она осталась от прошлого запуска.
+На сети `bencher`, которую он не создавал, он останавливается с ошибкой,
+а `bencher up console` подключает работающий контейнер `bencher_api`, который ещё не в этой сети.
+Когда `BENCHER_API_URL` сервера Console не задан или указывает на loopback-адрес, например `localhost`, сервер Console передаёт запросы контейнеру сервера API в этой сети:
+его `INTERNAL_API_URL` равен `http://bencher_api:6610`, если вы не зададите его с помощью [опции `--console-env`][console env].
+Иначе он передаёт запросы на `BENCHER_API_URL`.
+
 <BencherUpCmd />
 
 [docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[console env]: #--console-env-key_value
 
 <UpService />
 

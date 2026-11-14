@@ -80,10 +80,7 @@ const redirect = async (
 	httpGet.mockResolvedValue({ data: { uuid: "reader-uuid", ...reader } });
 	const container = document.createElement("div");
 	document.body.append(container);
-	dispose = render(
-		() => <ConsoleRedirect apiUrl="http://api.test" />,
-		container,
-	);
+	dispose = render(() => <ConsoleRedirect />, container);
 	await vi.waitFor(() =>
 		expect(navigate.mock.calls.length + hiddenRedirect.mock.calls.length).toBe(
 			1,

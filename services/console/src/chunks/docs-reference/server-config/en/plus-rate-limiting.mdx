@@ -114,4 +114,18 @@ If not specified, the listed default values will be used.
 |    free     | 10737418240  | 10737418240  |    No    | Maximum bytes per day for free (claimed, no paid plan) organizations. Defaults to 10 GiB. |
 |    plus     | 107374182400 | 107374182400 |    No    | Maximum bytes per day for Plus (Pro/Enterprise) organizations. Defaults to 100 GiB.  |
 
+#### `email`
+
+The `email` rate limiter applies per email address, to the emails that start a sign in.
+It contains `minute`, `hour`, and `day` limits.
+The entire section is optional.
+If not specified, the listed default values will be used.
+An address at its limit gets no new email, and its earlier sign in still works.
+
+|       Name       | Example | Default | Required |                           Description                            |
+| :--------------: | :-----: | :-----: | :------: | :--------------------------------------------------------------: |
+|      minute      |    2    |    2    |    No    |       Maximum sign in emails per minute per email address.       |
+|       hour       |    6    |    6    |    No    |        Maximum sign in emails per hour per email address.        |
+|       day        |    12   |    12   |    No    |        Maximum sign in emails per day per email address.         |
+
 [unclaimed projects]: /docs/how-to/claim/#unclaimed-projects

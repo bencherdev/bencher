@@ -1,11 +1,5 @@
 import * as Sentry from "@sentry/astro";
-import {
-	Show,
-	createEffect,
-	createMemo,
-	createResource,
-	createSignal,
-} from "solid-js";
+import { Show, createEffect, createResource, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 import {
 	type JsonLogin,
@@ -33,7 +27,6 @@ import { AUTHORIZATION_PARAM, requestUuid } from "./authorize/path";
 import { startSignIn } from "./signIn";
 
 export interface Props {
-	apiUrl: string;
 	newUser: boolean;
 }
 
@@ -44,8 +37,6 @@ const AuthForm = (props: Props) => {
 	const [_recaptcha] = createResource(loadRecaptcha);
 
 	const [searchParams, setSearchParams] = useSearchParams();
-
-	const apiUrl = createMemo(() => props.apiUrl);
 
 	const plan = () => searchParams[PLAN_PARAM]?.trim() as PlanLevel;
 	const invite = () => searchParams[INVITE_PARAM]?.trim() as Jwt;
@@ -133,12 +124,7 @@ const AuthForm = (props: Props) => {
 		}
 
 		startSignIn(authForm.email.toLowerCase());
-		httpPost(
-			apiUrl(),
-			`/v0/auth/${props.newUser ? "signup" : "login"}`,
-			null,
-			authForm,
-		)
+		httpPost(`/v0/auth/${props.newUser ? "signup" : "login"}`, null, authForm)
 			.then((_resp) => {
 				setSubmitting(false);
 				navigateNotify(

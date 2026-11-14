@@ -8,6 +8,8 @@ Detener y eliminar los contenedores de Bencher Self-Hosted,
 si `bencher up` se ejecutó con [la opción `--detach`][detach flag].
 Esto es similar a ejecutar [`docker compose down`][docker compose down].
 
+Cuando ningún contenedor queda en la red `bencher`, también elimina esa red.
+
 <BencherDownCmd />
 
 [docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/

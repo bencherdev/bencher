@@ -1,8 +1,6 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
-
 import AuthLayout from "../../layouts/auth/AuthLayout.astro";
 import ConfirmEmail from "../../components/auth/ConfirmEmail";
 
@@ -12,5 +10,5 @@ const description = "Confirm the new email for your Bencher account.";
 ---
 
 <AuthLayout title={title} description={description}>
-  <ConfirmEmail client:only="solid-js" apiUrl={BENCHER_API_URL} />
+  <ConfirmEmail client:only="solid-js" />
 </AuthLayout>

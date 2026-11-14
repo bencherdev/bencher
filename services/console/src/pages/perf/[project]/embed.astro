@@ -2,8 +2,6 @@
 // The browser reads the project and its plot, so the server reads nothing.
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
-
 import Embed from "../../../next/embed/Embed";
 import { drawable } from "../../../next/explore/request";
 import Head from "../../../next/Head.astro";
@@ -29,7 +27,7 @@ const query = decodeQuery(Astro.url.search);
 		{embedPreloads(drawable(query) ? ["plot/Plot"] : []).map((href) => <link rel="modulepreload" href={href} />)}
 	</head>
 	<body>
-		<div id="embed" data-api-url={BENCHER_API_URL} data-slug={slug}>
+		<div id="embed" data-slug={slug}>
 			<Embed slug={slug} query={query} view="plot" />
 		</div>
 		<script>
