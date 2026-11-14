@@ -563,7 +563,7 @@ mod job_spec {
 // =============================================================================
 //
 // These tests verify the tier-based priority scheduling system:
-// - Enterprise / Team: Unlimited concurrent jobs
+// - Plus: Unlimited concurrent jobs
 // - Free: 1 concurrent job per organization
 // - Unclaimed: 1 concurrent job per source IP
 
@@ -826,7 +826,7 @@ mod priority_scheduling {
         );
     }
 
-    // Test Enterprise/Team tier unlimited concurrency
+    // Test Plus tier unlimited concurrency
     #[tokio::test]
     async fn enterprise_tier_unlimited() {
         let server = TestServer::new().await;
@@ -946,64 +946,6 @@ mod priority_scheduling {
         assert_eq!(
             claimed.uuid, enterprise_job,
             "Expected Enterprise job to be claimed, skipping blocked Free tier job"
-        );
-    }
-
-    // Test Team tier (200-299) unlimited concurrency
-    #[tokio::test]
-    async fn team_tier_unlimited() {
-        let server = TestServer::new().await;
-        let admin = server.signup("Admin", "teamtier1@example.com").await;
-        let org = server.create_org(&admin, "Team Tier Org").await;
-        let project = server
-            .create_project(&admin, &org, "Team Tier Project")
-            .await;
-
-        let (_, spec_id) = insert_test_spec(&server);
-        let runner = create_runner(&server, &admin.token, "Team Tier Runner").await;
-        let runner_key: &str = runner.key.as_ref();
-        let runner_id = get_runner_id(&server, runner.uuid);
-        associate_runner_spec(&server, runner_id, spec_id);
-
-        let project_id = get_project_id(&server, project.slug.as_ref());
-        let org_id = get_organization_id(&server, project_id);
-        let report_id = create_test_report(&server, project_id);
-
-        // Insert multiple Team tier jobs for the same org and IP
-        let job1 = insert_test_job_full(
-            &server,
-            report_id,
-            project.uuid,
-            org_id,
-            "10.0.0.1",
-            Priority::Plus,
-            spec_id,
-        );
-        let job2 = insert_test_job_full(
-            &server,
-            report_id,
-            project.uuid,
-            org_id,
-            "10.0.0.1",
-            Priority::Plus,
-            spec_id,
-        );
-
-        // Claim first job
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
-        let first_claimed = claimed.expect("Expected to claim first job");
-
-        // Mark job as running
-        set_job_status(&server, first_claimed.uuid, JobStatus::Running);
-
-        // Claim second job - should succeed because Team tier has no limit
-        let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
-        let second_claimed = claimed.expect("Team tier should allow concurrent jobs");
-
-        assert!(
-            (first_claimed.uuid == job1 && second_claimed.uuid == job2)
-                || (first_claimed.uuid == job2 && second_claimed.uuid == job1),
-            "Expected both Team tier jobs to be claimed concurrently"
         );
     }
 
@@ -1235,9 +1177,9 @@ mod priority_scheduling {
         );
     }
 
-    // Test that Free tier is blocked while Team tier is not for the same org
+    // Test that Free tier is blocked while Plus tier is not for the same org
     #[tokio::test]
-    async fn free_blocked_team_unblocked() {
+    async fn free_blocked_plus_unblocked() {
         let server = TestServer::new().await;
         let admin = server.signup("Admin", "boundary1@example.com").await;
         let org = server.create_org(&admin, "Boundary Org").await;
@@ -1281,8 +1223,8 @@ mod priority_scheduling {
             spec_id,
         );
 
-        // Insert a Team tier job (should NOT be blocked)
-        let team_job = insert_test_job_full(
+        // Insert a Plus tier job (should NOT be blocked)
+        let plus_job = insert_test_job_full(
             &server,
             report_id,
             project.uuid,
@@ -1292,12 +1234,12 @@ mod priority_scheduling {
             spec_id,
         );
 
-        // Try to claim - should get the Team tier job, not the blocked Free tier job
+        // Try to claim - should get the Plus tier job, not the blocked Free tier job
         let (_ws, claimed) = claim_via_channel(&server, runner.uuid, runner_key, 1).await;
-        let claimed = claimed.expect("Expected to claim Team tier job");
+        let claimed = claimed.expect("Expected to claim Plus tier job");
         assert_eq!(
-            claimed.uuid, team_job,
-            "Team tier should be unlimited, not blocked like Free tier"
+            claimed.uuid, plus_job,
+            "Plus tier should be unlimited, not blocked like Free tier"
         );
     }
 
@@ -1739,7 +1681,7 @@ async fn user_jwt_rejected_on_runner_endpoint() {
 // =============================================================================
 
 /// A runner associated with multiple specs can claim jobs requiring any of them.
-/// Uses Team priority to avoid per-IP concurrency limits on the unclaimed tier.
+/// Uses Plus priority to avoid per-IP concurrency limits on the unclaimed tier.
 #[tokio::test]
 async fn runner_multiple_specs_claims_matching_jobs() {
     use bencher_json::Priority;
@@ -1779,7 +1721,7 @@ async fn runner_multiple_specs_claims_matching_jobs() {
     associate_runner_spec(&server, runner_id, spec_x86_id);
     associate_runner_spec(&server, runner_id, spec_arm_id);
 
-    // Insert jobs with Team priority (unlimited concurrency) to avoid IP limits
+    // Insert jobs with Plus priority (unlimited concurrency) to avoid IP limits
     let project_id = get_project_id(&server, project.slug.as_ref());
     let report_id = create_test_report(&server, project_id);
     let org_id = common::get_organization_id(&server, project_id);
@@ -1972,7 +1914,7 @@ async fn free_tier_blocked_same_org_different_runner() {
     );
 }
 
-/// Enterprise/Team tier: mixed scenario where free is blocked but enterprise is claimable.
+/// Plus tier: mixed scenario where free is blocked but enterprise is claimable.
 #[tokio::test]
 async fn mixed_tier_free_blocked_enterprise_claimable() {
     let server = TestServer::new().await;

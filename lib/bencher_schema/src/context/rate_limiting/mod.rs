@@ -221,7 +221,7 @@ impl RateLimiting {
                 Self::default()
             },
             (false, Some(json_rate_limiting)) => {
-                match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Team)) {
+                match LicenseUsage::get_for_server(conn, licensor, Some(PlanLevel::Enterprise)) {
                     Ok(license_usages) if license_usages.is_empty() => {
                         slog::warn!(
                             log,
@@ -679,12 +679,84 @@ fn interval_kind(interval: bencher_rate_limiter::Interval) -> bencher_otel::Inte
 mod tests {
     use std::net::IpAddr;
 
+    use bencher_json::{OrganizationUuid, PlanLevel, Secret, system::config::JsonRateLimiting};
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
     use super::{
-        Arc, CancellationToken, Logger, RateLimiting, RateLimitingPruneTask, RateLimitingSnapshot,
+        Arc, CancellationToken, Licensor, Logger, RateLimiting, RateLimitingPruneTask,
+        RateLimitingSnapshot,
     };
+    use crate::{
+        schema,
+        test_util::{create_base_entities, setup_test_db},
+    };
+
+    // Debug builds trust this key's public half for Self-Hosted licenses.
+    const TEST_LICENSE_KEY: &str =
+        include_str!("../../../../../plus/bencher_license/src/test/private.pem");
+    const CUSTOM_PLUS_LIMIT: u32 = 7;
 
     fn test_log() -> Logger {
         Logger::root(slog::Discard, slog::o!())
+    }
+
+    /// The daily metrics limit a Self-Hosted server applies when it is configured
+    /// with custom rate limits and its one organization holds a license at `level`.
+    fn self_hosted_plus_limit(level: PlanLevel) -> u32 {
+        let mut conn = setup_test_db();
+        let base = create_base_entities(&mut conn);
+        let organization: OrganizationUuid = schema::organization::table
+            .find(base.organization_id)
+            .select(schema::organization::uuid)
+            .first(&mut conn)
+            .unwrap();
+        let key: Secret = TEST_LICENSE_KEY.parse().unwrap();
+        let license = Licensor::bencher_cloud(&key)
+            .unwrap()
+            .new_annual_license(organization, level, 1_000.try_into().unwrap())
+            .unwrap();
+        diesel::update(schema::organization::table.find(base.organization_id))
+            .set(schema::organization::license.eq(license))
+            .execute(&mut conn)
+            .unwrap();
+
+        let custom = JsonRateLimiting {
+            window: None,
+            unclaimed_limit: None,
+            claimed_limit: None,
+            plus_limit: Some(CUSTOM_PLUS_LIMIT),
+            public: None,
+            user: None,
+            project: None,
+            runner: None,
+            oci_bandwidth: None,
+        };
+        RateLimiting::new(
+            &test_log(),
+            &mut conn,
+            &Licensor::self_hosted().unwrap(),
+            false,
+            Some(custom),
+        )
+        .plus_limit
+    }
+
+    #[test]
+    fn enterprise_license_enables_custom_rate_limits() {
+        assert_eq!(
+            self_hosted_plus_limit(PlanLevel::Enterprise),
+            CUSTOM_PLUS_LIMIT
+        );
+    }
+
+    #[test]
+    fn free_license_keeps_rate_limits_off() {
+        assert_eq!(self_hosted_plus_limit(PlanLevel::Free), u32::MAX);
+    }
+
+    #[test]
+    fn pro_license_keeps_rate_limits_off() {
+        assert_eq!(self_hosted_plus_limit(PlanLevel::Pro), u32::MAX);
     }
 
     #[test]

@@ -347,12 +347,13 @@ describe.skipIf(!wasmReady)("WASM validators", () => {
 	describe("validPlanLevel", () => {
 		test("accepts valid plan levels", () => {
 			expect(validPlanLevel("free")).toBe(true);
-			expect(validPlanLevel("team")).toBe(true);
+			expect(validPlanLevel("pro")).toBe(true);
 			expect(validPlanLevel("enterprise")).toBe(true);
 		});
 
 		test("rejects invalid level", () => {
 			expect(validPlanLevel("premium")).toBe(false);
+			expect(validPlanLevel("team")).toBe(false);
 		});
 
 		test("rejects null", () => {

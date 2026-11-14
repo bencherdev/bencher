@@ -1387,8 +1387,8 @@ async fn v0_measure_response_is_unchanged() {
 
 // `--fold` is deprecated, not deleted: a BMF v0 report folds exactly as it always
 // has. The iterations collapse into one `report_benchmark` row on the benchmark's
-// empty variant, carrying the folded triple, and the metric count meter that
-// bills Team, Enterprise, and licences reads exactly what it read before.
+// empty variant, carrying the folded triple, and the metric count a license is
+// held to is exactly what it was before.
 //
 // The whole fold path was rewritten by this layer to speak variants, so this
 // is the test that a pipeline running `bencher run --fold min` today sees no change

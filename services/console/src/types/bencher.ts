@@ -1757,7 +1757,6 @@ export interface JsonGitHubRepositories {
 export enum PlanLevel {
 	Free = "free",
 	Pro = "pro",
-	Team = "team",
 	Enterprise = "enterprise",
 }
 
@@ -2744,12 +2743,12 @@ export interface JsonUsage {
 	/** The end time of the usage. */
 	end_time: string;
 	/**
-	 * The metrics usage amount. Not populated for Pro metered plans, which bill on
+	 * The metrics usage amount. Not populated for metered plans, which bill on
 	 * active series (see `active_series`) rather than metrics.
 	 */
 	metrics?: number;
 	/**
-	 * The active series usage amount. Populated for Pro metered plans, whose bill is
+	 * The active series usage amount. Populated for metered plans, whose bill is
 	 * based on monthly-active series (distinct testbed x benchmark x measure).
 	 */
 	active_series?: number;

@@ -220,7 +220,7 @@ impl InsertPlan {
 /// [`PlanKind::Metered`].
 ///
 /// It holds who to bill (`customer_id`), the tier (`level`), and the current billing
-/// period (the active-series count window for the post-report Pro series push).
+/// period (the active-series count window for the post-report series push).
 pub struct MeteredPlan {
     pub customer_id: CustomerId,
     pub level: PlanLevel,
@@ -244,8 +244,6 @@ pub enum PlanKindError {
     },
     #[error("No plan (subscription or license) found for organization ({uuid}) with private project", uuid = organization.uuid)]
     NoPlan { organization: QueryOrganization },
-    #[error("No Biller has been configured for the server")]
-    NoBiller,
     #[error("License usage exceeded for project ({uuid}). {prior_usage} + {usage} > {entitlements}", uuid = project.uuid)]
     Overage {
         project: QueryProject,
@@ -261,7 +259,7 @@ impl PlanKind {
             Self::Metered(_) => true,
             Self::Licensed(license_usage) => match license_usage.level {
                 PlanLevel::Free => false,
-                PlanLevel::Pro | PlanLevel::Team | PlanLevel::Enterprise => true,
+                PlanLevel::Pro | PlanLevel::Enterprise => true,
             },
             Self::None => false,
         }
@@ -278,9 +276,9 @@ impl PlanKind {
         }
     }
 
-    /// For a Pro metered plan, the Stripe customer and current billing period needed to
-    /// post the post-report active-series usage. `None` for any non-Pro plan, so only
-    /// Pro triggers a series post. Pairs with [`metered_bills_active_series`].
+    /// For a paid metered plan, the Stripe customer and current billing period needed to
+    /// post the post-report active-series usage. `None` for any other plan. Pairs with
+    /// [`metered_bills_active_series`].
     pub fn metered_series_billing(&self) -> Option<(CustomerId, DateTime, DateTime)> {
         match self {
             Self::Metered(MeteredPlan {
@@ -467,45 +465,10 @@ impl PlanKind {
         Ok(())
     }
 
-    pub async fn check_usage(
-        self,
-        biller: Option<&Biller>,
-        project: &QueryProject,
-        usage: u32,
-    ) -> Result<(), HttpError> {
+    /// Hold a licensed plan to its entitlements. A metered plan bills on active series,
+    /// which the report posts once its metrics are committed, so it records nothing here.
+    pub fn check_usage(self, project: &QueryProject, usage: u32) -> Result<(), HttpError> {
         match self {
-            Self::Metered(MeteredPlan {
-                customer_id, level, ..
-            }) => {
-                // Pro bills on active series via its tiered price (posted after each
-                // report), not per-metric, so it records no metrics usage. Legacy Team
-                // (and metered Enterprise) plans bill all metrics on the `metrics`
-                // meter. Bare metal runner time is metered separately via the runner
-                // channel.
-                if metered_bills_active_series(level) {
-                    return Ok(());
-                }
-                let Some(biller) = biller else {
-                    return Err(issue_error(
-                        "No Biller when checking usage",
-                        "Failed to find Biller in Bencher Cloud when checking usage.",
-                        PlanKindError::NoBiller,
-                    ));
-                };
-                if let Err(e) = biller.record_metrics_usage(&customer_id, usage).await {
-                    #[cfg(feature = "otel")]
-                    bencher_otel::ApiMeter::increment(
-                        bencher_otel::ApiCounter::MetricsBilledFailed,
-                    );
-                    return Err(issue_error(
-                        "Failed to record usage",
-                        &format!("Failed to record usage ({usage}) for project ({project:?})."),
-                        e,
-                    ));
-                }
-                #[cfg(feature = "otel")]
-                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::MetricsBilled);
-            },
             Self::Licensed(LicenseUsage {
                 entitlements,
                 usage: prior_usage,
@@ -520,7 +483,7 @@ impl PlanKind {
                     }));
                 }
             },
-            Self::None => {},
+            Self::Metered(_) | Self::None => {},
         }
 
         Ok(())
@@ -538,22 +501,15 @@ impl From<&PlanKind> for bencher_otel::PlanKind {
     }
 }
 
-/// Whether a metered (Stripe) subscription is billed on the active-series meter.
-///
-/// Active-series billing is the Pro plan only: Pro's tiered price bills the base fee and
-/// the per-series step-ups on the `active_series` meter, and Pro records no per-metric
-/// `metrics` usage (see [`PlanKind::check_usage`]). Legacy Team and metered Enterprise
-/// plans stay on the `metrics` meter and have no series usage recorded.
-///
-/// Also gates the post-report series push: after a Pro report we count the
-/// organization's active series and post the period-to-date total to the
-/// `active_series` meter.
+/// Whether a metered (Stripe) subscription at `level` is billed on the active-series
+/// meter. This gates the post-report series push and the active series the usage
+/// endpoint reports.
 ///
 /// Matched exhaustively so a new `PlanLevel` variant forces a decision here.
 pub fn metered_bills_active_series(level: PlanLevel) -> bool {
     match level {
-        PlanLevel::Pro => true,
-        PlanLevel::Free | PlanLevel::Team | PlanLevel::Enterprise => false,
+        PlanLevel::Pro | PlanLevel::Enterprise => true,
+        PlanLevel::Free => false,
     }
 }
 
@@ -622,38 +578,36 @@ impl LicenseUsage {
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::{DateTime, PlanLevel};
+    use bencher_json::{DateTime, Entitlements, PlanLevel};
 
-    use super::{MeteredPlan, PlanKind, metered_bills_active_series};
-
-    #[test]
-    fn bills_active_series_pro_only() {
-        // Active-series billing is the Pro plan only.
-        assert!(metered_bills_active_series(PlanLevel::Pro));
-        assert!(!metered_bills_active_series(PlanLevel::Free));
-        assert!(!metered_bills_active_series(PlanLevel::Team));
-        assert!(!metered_bills_active_series(PlanLevel::Enterprise));
-    }
+    use super::{LicenseUsage, MeteredPlan, PlanKind};
 
     #[test]
-    fn metered_series_billing_pro_only() {
+    fn metered_series_billing_every_paid_level() {
+        let period_end = DateTime::try_from(DateTime::TEST.timestamp() + 1).unwrap();
         let metered = |level| {
             PlanKind::Metered(MeteredPlan {
                 customer_id: "cus_test".into(),
                 level,
                 current_period_start: DateTime::TEST,
-                current_period_end: DateTime::TEST,
+                current_period_end: period_end,
             })
         };
-        // Only Pro resolves a post-report series-billing context; other metered tiers
-        // and the non-metered kinds do not.
-        assert!(metered(PlanLevel::Pro).metered_series_billing().is_some());
-        assert!(metered(PlanLevel::Team).metered_series_billing().is_none());
-        assert!(
-            metered(PlanLevel::Enterprise)
-                .metered_series_billing()
-                .is_none()
-        );
+        for level in [PlanLevel::Pro, PlanLevel::Enterprise] {
+            assert_eq!(
+                metered(level).metered_series_billing(),
+                Some(("cus_test".into(), DateTime::TEST, period_end)),
+                "{level}"
+            );
+        }
+        assert!(metered(PlanLevel::Free).metered_series_billing().is_none());
+
+        let licensed = PlanKind::Licensed(LicenseUsage {
+            entitlements: Entitlements::MIN,
+            usage: 0,
+            level: PlanLevel::Enterprise,
+        });
+        assert!(licensed.metered_series_billing().is_none());
         assert!(PlanKind::None.metered_series_billing().is_none());
     }
 }

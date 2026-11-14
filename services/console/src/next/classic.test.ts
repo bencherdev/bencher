@@ -178,8 +178,8 @@ describe("classicRedirect", () => {
 			`${organization}/members`,
 		);
 		expect(
-			redirect(`${organization}/checkout?checkout=cs_test&level=team`),
-		).toBe(`${organization}/billing?checkout=cs_test&level=team`);
+			redirect(`${organization}/checkout?checkout=cs_test&level=pro`),
+		).toBe(`${organization}/billing?checkout=cs_test&level=pro`);
 		for (const drawn of [
 			"settings",
 			"members",

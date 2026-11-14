@@ -114,8 +114,6 @@ pub enum ApiCounter {
 
     MetricsCreate(Priority),
     MetricNamesDropped,
-    MetricsBilled,
-    MetricsBilledFailed,
     ActiveSeriesBilled,
     ActiveSeriesBilledFailed,
 
@@ -230,10 +228,7 @@ impl ApiCounter {
 
             Self::ThresholdCapSkip | Self::ThresholdCeilingSkip => "{threshold}",
 
-            Self::MetricsCreate(_)
-            | Self::MetricNamesDropped
-            | Self::MetricsBilled
-            | Self::MetricsBilledFailed => "{metric}",
+            Self::MetricsCreate(_) | Self::MetricNamesDropped => "{metric}",
 
             Self::ActiveSeriesBilled | Self::ActiveSeriesBilledFailed => "{series}",
 
@@ -324,8 +319,6 @@ impl ApiCounter {
 
             Self::MetricsCreate(_) => "metrics.create",
             Self::MetricNamesDropped => "metrics.names.dropped",
-            Self::MetricsBilled => "metrics.billed",
-            Self::MetricsBilledFailed => "metrics.billed.failed",
             Self::ActiveSeriesBilled => "active_series.billed",
             Self::ActiveSeriesBilledFailed => "active_series.billed.failed",
 
@@ -457,8 +450,6 @@ impl ApiCounter {
             Self::MetricNamesDropped => {
                 "Counts the named metric values dropped over the per measure cap"
             },
-            Self::MetricsBilled => "Counts the number of metrics successfully billed",
-            Self::MetricsBilledFailed => "Counts the number of metrics billing failures",
             Self::ActiveSeriesBilled => "Counts the number of active series successfully billed",
             Self::ActiveSeriesBilledFailed => "Counts the number of active series billing failures",
 
@@ -639,8 +630,6 @@ impl ApiCounter {
             | Self::OAuthAuthorize
             | Self::OAuthConsentBlocked
             | Self::MetricNamesDropped
-            | Self::MetricsBilled
-            | Self::MetricsBilledFailed
             | Self::ActiveSeriesBilled
             | Self::ActiveSeriesBilledFailed
             | Self::EmailSend

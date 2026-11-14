@@ -20,7 +20,6 @@ import {
 	isContactTier,
 	isFirstBillingPeriod,
 	planLevel,
-	planLevelPrice,
 	prettyPrintFloat,
 	removeFromArray,
 	runnerMinutePrice,
@@ -223,7 +222,6 @@ describe("isBoolParam", () => {
 describe("planLevel", () => {
 	test("returns correct name for each level", () => {
 		expect(planLevel(PlanLevel.Free)).toBe("Free");
-		expect(planLevel(PlanLevel.Team)).toBe("Team");
 		expect(planLevel(PlanLevel.Pro)).toBe("Pro");
 		expect(planLevel(PlanLevel.Enterprise)).toBe("Enterprise");
 	});
@@ -233,22 +231,8 @@ describe("planLevel", () => {
 	});
 });
 
-describe("planLevelPrice", () => {
-	test("returns correct price for each level", () => {
-		expect(planLevelPrice(PlanLevel.Free)).toBe(0.0);
-		expect(planLevelPrice(PlanLevel.Team)).toBe(0.01);
-		expect(planLevelPrice(PlanLevel.Pro)).toBe(0.01);
-		expect(planLevelPrice(PlanLevel.Enterprise)).toBe(0.05);
-	});
-
-	test("returns 0.0 for undefined", () => {
-		expect(planLevelPrice(undefined)).toBe(0.0);
-	});
-});
-
 describe("runnerMinutePrice", () => {
 	test("returns price for paid plans", () => {
-		expect(runnerMinutePrice(PlanLevel.Team)).toBe(0.01666);
 		expect(runnerMinutePrice(PlanLevel.Pro)).toBe(0.01666);
 		expect(runnerMinutePrice(PlanLevel.Enterprise)).toBe(0.01666);
 	});

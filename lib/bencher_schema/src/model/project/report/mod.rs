@@ -606,8 +606,8 @@ impl QueryReport {
     ) -> Result<(), HttpError> {
         #[cfg(feature = "plus")]
         let mut usage = 0;
-        // Capture the Pro active-series billing context (customer + period) before
-        // `check_usage` consumes the plan kind; `None` for any non-Pro plan.
+        // Capture the active-series billing context (customer + period) before
+        // `check_usage` consumes the plan kind; `None` for any plan without one.
         #[cfg(feature = "plus")]
         let series_billing = plan_kind.metered_series_billing();
 
@@ -651,11 +651,9 @@ impl QueryReport {
         }
 
         #[cfg(feature = "plus")]
-        plan_kind
-            .check_usage(context.biller.as_ref(), query_project, usage)
-            .await?;
+        plan_kind.check_usage(query_project, usage)?;
 
-        // Pro active-series billing: once the report's metrics and series cache are
+        // Active-series billing: once the report's metrics and series cache are
         // committed, count the organization's period-to-date active series on the request
         // connection and post it to Stripe in a detached task (only the Stripe post is
         // off the hot path). Skipped if processing failed (the cache rolled back).
@@ -678,9 +676,10 @@ impl QueryReport {
     }
 }
 
-/// Post a Pro organization's period-to-date active-series count to the `active_series`
-/// meter after a report. Counts on the request connection (a single indexed range scan);
-/// only the Stripe meter post is detached, so it never blocks returning the report.
+/// Post a metered organization's period-to-date active-series count to the
+/// `active_series` meter after a report. Counts on the request connection (a single
+/// indexed range scan); only the Stripe meter post is detached, so it never blocks
+/// returning the report.
 /// Best-effort: a count or post failure is logged (and reported via
 /// `ActiveSeriesBilledFailed`) but never surfaced. The next report re-posts the
 /// cumulative count, so a dropped post self-heals within the period. The one gap is a

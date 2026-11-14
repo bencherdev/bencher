@@ -2,6 +2,7 @@
 
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseCreated};
 use bencher_json::{
+    Entitlements, PlanLevel,
     organization::plan::DEFAULT_PRICE_NAME,
     system::payment::{JsonCheckout, JsonNewCheckout},
 };
@@ -56,7 +57,6 @@ async fn checkouts_post_inner(
     json_checkout: JsonNewCheckout,
     auth_user: &AuthUser,
 ) -> Result<JsonCheckout, HttpError> {
-    let biller = context.biller()?;
     let JsonNewCheckout {
         organization,
         level,
@@ -69,6 +69,19 @@ async fn checkouts_post_inner(
             "Licensed plans are only available for Bencher Self-Hosted",
         ));
     }
+    let checkout_plan = match (level, entitlements) {
+        (PlanLevel::Free, _) => {
+            return Err(bad_request_error("The Free plan has no checkout"));
+        },
+        (PlanLevel::Pro, _) => CheckoutPlan::Pro,
+        (PlanLevel::Enterprise, Some(entitlements)) => CheckoutPlan::Licensed(entitlements),
+        (PlanLevel::Enterprise, None) => {
+            return Err(bad_request_error(
+                "Enterprise checkout is only available for a Bencher Self-Hosted license",
+            ));
+        },
+    };
+    let biller = context.biller()?;
 
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserCheckout);
@@ -101,20 +114,40 @@ async fn checkouts_post_inner(
         ))
         .unwrap_or_else(|_| context.console_url.clone());
 
-    biller
-        .new_checkout_session(
-            query_organization.uuid,
-            &customer,
-            level,
-            price_name.to_owned(),
-            entitlements,
-            return_url.as_ref(),
-        )
-        .await.map_err(|e| {
+    match checkout_plan {
+        CheckoutPlan::Pro => {
+            biller
+                .new_metered_checkout_session(
+                    query_organization.uuid,
+                    &customer,
+                    price_name.to_owned(),
+                    return_url.as_ref(),
+                )
+                .await
+        },
+        CheckoutPlan::Licensed(entitlements) => {
+            biller
+                .new_licensed_checkout_session(
+                    query_organization.uuid,
+                    &customer,
+                    price_name.to_owned(),
+                    entitlements,
+                    return_url.as_ref(),
+                )
+                .await
+        },
+    }
+    .map_err(|e| {
             issue_error(
                 "Failed to create checkout session",
                 &format!("Failed to create checkout session for {customer:?} at {level:?} using {price_name} with {entitlements:?}."),
                 e,
             )
         })
+}
+
+/// A plan that checkout sells.
+enum CheckoutPlan {
+    Pro,
+    Licensed(Entitlements),
 }

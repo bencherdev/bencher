@@ -39,5 +39,6 @@ describe("checkoutReturn", () => {
 		expect(
 			checkoutReturn("?checkout=cs_test_1&level=toString"),
 		).toBeUndefined();
+		expect(checkoutReturn("?checkout=cs_test_1&level=team")).toBeUndefined();
 	});
 });

@@ -17,12 +17,7 @@ pub struct Products {
     // active-series price (tier 1 flat base fee plus per-series step-ups) that bills
     // both the base monthly fee and the per-series overage.
     pub pro: Product,
-    // Legacy self-serve paid tier, retained for grandfathered customers.
-    pub team: Product,
     pub enterprise: Product,
-    // Shared metered metrics product for legacy Team/Enterprise plans. Pro bills on
-    // its own tiered active-series price, not on this meter.
-    pub metrics: Product,
     pub bare_metal: Product,
 }
 
@@ -30,29 +25,23 @@ impl Products {
     pub async fn new(client: &StripeClient, products: JsonProducts) -> Result<Self, BillingError> {
         let JsonProducts {
             pro,
-            team,
             enterprise,
-            metrics,
             bare_metal,
         } = products;
 
         Ok(Self {
             pro: Product::new(client, pro).await?,
-            team: Product::new(client, team).await?,
             enterprise: Product::new(client, enterprise).await?,
-            metrics: Product::new(client, metrics).await?,
             bare_metal: Product::new(client, bare_metal).await?,
         })
     }
 
     // The price IDs that identify a subscription's plan item (excluding bare_metal),
     // used by `get_plan` to filter subscription items down to that one item. These are
-    // the metered + licensed prices across the `pro` (tiered active-series), `metrics`
-    // (shared metered metrics), `team`, and `enterprise` products. The Team and
-    // Enterprise metered prices are retained so a subscription still on its own
-    // product (not yet moved to `metrics`) continues to resolve.
+    // the metered + licensed prices across the `pro` (tiered active-series) and
+    // `enterprise` products.
     pub fn plan_price_ids(&self) -> HashSet<&PriceId> {
-        [&self.pro, &self.metrics, &self.team, &self.enterprise]
+        [&self.pro, &self.enterprise]
             .into_iter()
             .flat_map(|product| product.metered.values().chain(product.licensed.values()))
             .map(|price| &price.id)
@@ -86,16 +75,10 @@ impl Products {
     /// The cached price with `price_id`, searched across all products' metered and
     /// licensed prices.
     fn find_price(&self, price_id: &PriceId) -> Option<&StripePrice> {
-        [
-            &self.pro,
-            &self.metrics,
-            &self.team,
-            &self.enterprise,
-            &self.bare_metal,
-        ]
-        .into_iter()
-        .flat_map(|product| product.metered.values().chain(product.licensed.values()))
-        .find(|price| &price.id == price_id)
+        [&self.pro, &self.enterprise, &self.bare_metal]
+            .into_iter()
+            .flat_map(|product| product.metered.values().chain(product.licensed.values()))
+            .find(|price| &price.id == price_id)
     }
 }
 
