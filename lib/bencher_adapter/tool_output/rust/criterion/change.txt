@@ -1,0 +1,52 @@
+fib 15                  time:   [986.31 ns 992.52 ns 999.29 ns]
+                        change: [+2.0654% +2.9424% +3.9055%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild
+
+checksum/fold/1024      time:   [43.095 ns 43.352 ns 43.644 ns]
+                        thrpt:  [21.851 GiB/s 21.998 GiB/s 22.130 GiB/s]
+                 change:
+                        time:   [−5.0417% −2.6895% −0.7362%] (p = 0.01 < 0.05)
+                        thrpt:  [+0.7417% +2.7638% +5.3094%]
+                        Change within noise threshold.
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) high mild
+  3 (3.00%) high severe
+checksum/fold/16384     time:   [765.75 ns 768.64 ns 772.29 ns]
+                        thrpt:  [19.758 GiB/s 19.852 GiB/s 19.927 GiB/s]
+                 change:
+                        time:   [−1.7584% −0.9177% −0.1087%] (p = 0.03 < 0.05)
+                        thrpt:  [+0.1089% +0.9262% +1.7899%]
+                        Change within noise threshold.
+Found 8 outliers among 100 measurements (8.00%)
+  4 (4.00%) high mild
+  4 (4.00%) high severe
+checksum/sort/elements  time:   [1.0176 µs 1.0203 µs 1.0233 µs]
+                        thrpt:  [4.0027 Gelem/s 4.0145 Gelem/s 4.0250 Gelem/s]
+                 change:
+                        time:   [−1.9524% −1.2921% −0.7386%] (p = 0.00 < 0.05)
+                        thrpt:  [+0.7441% +1.3090% +1.9913%]
+                        Change within noise threshold.
+Found 12 outliers among 100 measurements (12.00%)
+  5 (5.00%) high mild
+  7 (7.00%) high severe
+checksum/decimal        time:   [48.300 ns 48.865 ns 49.510 ns]
+                        thrpt:  [20.198 GB/s 20.464 GB/s 20.704 GB/s]
+                 change:
+                        time:   [−1.0411% +0.8721% +3.0941%] (p = 0.41 > 0.05)
+                        thrpt:  [−3.0013% −0.8646% +1.0521%]
+                        No change in performance detected.
+Found 10 outliers among 100 measurements (10.00%)
+  10 (10.00%) high mild
+checksum/bits           time:   [48.233 ns 48.736 ns 49.270 ns]
+                        thrpt:  [162.37 Gb/s 164.15 Gb/s 165.86 Gb/s]
+                 change:
+                        time:   [−1.7673% −0.6020% +0.6463%] (p = 0.32 > 0.05)
+                        thrpt:  [−0.6422% +0.6056% +1.7991%]
+                        No change in performance detected.
+
+slow/fib 30             time:   [1.3680 ms 1.4003 ms 1.4652 ms]
+                        change: [−4.2990% +0.3213% +5.0770%] (p = 0.91 > 0.05)
+                        No change in performance detected.
+

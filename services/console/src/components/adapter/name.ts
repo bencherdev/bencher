@@ -9,8 +9,12 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.JsonV1:
 			return "JSON";
 		case Adapter.RustBench:
+		case Adapter.RustBenchJson:
+		case Adapter.RustBenchText:
 			return "libtest bench";
 		case Adapter.RustCriterion:
+		case Adapter.RustCriterionJson:
+		case Adapter.RustCriterionText:
 			return "Criterion";
 		case Adapter.RustIai:
 			return "Iai";
@@ -54,8 +58,12 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 
 	switch (adapter) {
 		case Adapter.RustBench:
+		case Adapter.RustBenchJson:
+		case Adapter.RustBenchText:
 			return `bencher run${host} "cargo +nightly bench"`;
 		case Adapter.RustCriterion:
+		case Adapter.RustCriterionJson:
+		case Adapter.RustCriterionText:
 		case Adapter.RustIai:
 		case Adapter.RustGungraun:
 		case Adapter.RustGungraunStdout:
