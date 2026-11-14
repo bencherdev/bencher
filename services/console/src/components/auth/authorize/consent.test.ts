@@ -63,15 +63,16 @@ describe("pastedKey", () => {
 });
 
 describe("refusal", () => {
-	// Kills a page that shows one state for every refusal, or a key's refusal as a
-	// session that ended.
+	// Kills a page that shows one state for every refusal, a key's refusal as a
+	// session that ended, and a session's refusal for anything but its end, a
+	// locked user's included, read as one.
 	test("names each refusal by status and credential", () => {
 		expect(refusal(404, undefined)).toBe(Refusal.Gone);
 		expect(refusal(409, Credential.Session)).toBe(Refusal.Answered);
 		expect(refusal(429, Credential.Key)).toBe(Refusal.Busy);
-		expect(refusal(400, Credential.Session)).toBe(Refusal.SessionEnded);
 		expect(refusal(401, Credential.Session)).toBe(Refusal.SessionEnded);
-		expect(refusal(403, Credential.Session)).toBe(Refusal.AccountRefused);
+		expect(refusal(400, Credential.Session)).toBe(Refusal.Failed);
+		expect(refusal(403, Credential.Session)).toBe(Refusal.Failed);
 		expect(refusal(401, Credential.Key)).toBe(Refusal.KeyRefused);
 		expect(refusal(403, Credential.Key)).toBe(Refusal.KeyRefused);
 		expect(refusal(400, undefined)).toBe(Refusal.Failed);

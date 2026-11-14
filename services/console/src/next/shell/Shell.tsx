@@ -25,7 +25,7 @@ interface ShellProps {
 	reader?: string | undefined;
 	/** The reader's account, unknown to the server's render. */
 	user?: AccountMenuProps["user"] | undefined;
-	signOut?: ((back?: boolean) => void) | undefined;
+	signOut?: (() => void) | undefined;
 	tabsRef?: (tabs: HTMLElement) => void;
 }
 
@@ -103,7 +103,7 @@ const Shell = (props: ShellProps) => {
 								? `${props.organization.name} / ${props.project ?? props.slug}`
 								: (props.project ?? props.slug),
 							slug: props.slug,
-							email: props.user?.email ?? "",
+							reader: props.user?.slug,
 						})}
 					/>
 				</Tools>

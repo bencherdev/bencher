@@ -1,13 +1,6 @@
 import type { JsonUser } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 
-export const userQuery = (api: Api, user: string) => ({
-	queryKey: ["account", "user", user],
-	queryFn: async ({ signal }: { signal: AbortSignal }) =>
-		(await api.get<JsonUser>(`/v0/users/${encodeURIComponent(user)}`, signal))
-			.data,
-});
-
 /** How many legacy tokens the user has not revoked: the tokens list's total. */
 export const legacyTokensQuery = (api: Api, user: string) => ({
 	queryKey: ["account", "tokens", user],

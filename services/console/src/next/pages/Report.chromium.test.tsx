@@ -82,7 +82,7 @@ const mount = (
 
 /** The production cache, but a refused request fails at once. */
 const impatient = () => {
-	const cache = createQueryClient(() => {});
+	const cache = createQueryClient();
 	cache.setDefaultOptions({
 		queries: { ...cache.getDefaultOptions().queries, retry: false },
 	});

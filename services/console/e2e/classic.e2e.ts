@@ -236,6 +236,40 @@ test.describe("a classic public page, signed out", () => {
 	});
 });
 
+test.describe("the classic bar", () => {
+	test.describe("signed out", () => {
+		test.use({ storageState: signedOut });
+
+		// Kills a classic bar that asks a reader to log in, in words other than
+		// the door's, before its script runs or after.
+		test("offers Sign in and Sign up", async ({ page, request }) => {
+			const served = await (await request.get("/pricing")).text();
+			expect(served).toMatch(/href="\/auth\/login"[^>]*>\s*Sign in\s*</);
+			await page.goto("/pricing");
+			const signIn = page.locator('a[href="/auth/login"]').first();
+			await expect(signIn).toHaveText("Sign in");
+			await page.waitForLoadState("networkidle");
+			await expect(signIn).toHaveText("Sign in");
+			await expect(page.locator('a[href="/auth/signup"]').first()).toHaveText(
+				"Sign up",
+			);
+			await expect(page.getByText("Log in", { exact: true })).toHaveCount(0);
+		});
+	});
+
+	test.describe("signed in", () => {
+		test.use({ storageState: signedIn(seed.member) });
+
+		// Kills a classic account menu that signs out in other words.
+		test("signs out with Sign out", async ({ page }) => {
+			await page.goto(`/console/users/${seed.member.user.slug}/help`);
+			await expect(page.locator('a[href="/auth/logout"]')).toHaveText(
+				"Sign out",
+			);
+		});
+	});
+});
+
 test.describe("the public surface", () => {
 	// Kills a robots.txt that hides the public plot or its embed, with or
 	// without a query, from crawlers, or opens the console and the classic

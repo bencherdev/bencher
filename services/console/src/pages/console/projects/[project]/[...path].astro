@@ -1,6 +1,8 @@
 ---
 // Every path under a project answers with this one document: the shell and a
-// skeleton, painted before any script runs. The app routes from there.
+// skeleton, painted before any module runs. The app routes from there. The
+// first paint waits for `ShellPaint`'s marker, so it shows the shell filled,
+// never empty.
 export const prerender = false;
 
 import { BENCHER_API_URL } from "astro:env/server";
@@ -70,6 +72,7 @@ const preloads =
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>{slug} | Bencher</title>
 		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+		<link rel="expect" href="#shell-painted" blocking="render" />
 		<NextHead />
 		<Head />
 		{preloads.map((href) => <link rel="modulepreload" href={href} />)}

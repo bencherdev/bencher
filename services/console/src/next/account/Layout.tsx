@@ -17,7 +17,7 @@ const AccountLayout = (props: { children?: JSX.Element }) => {
 	});
 	return (
 		<>
-			<Shell user={reader().user} signOut={signOut} />
+			<Shell user={reader()} signOut={signOut} />
 			<Announcer path={location.pathname} title={title()} />
 			<Suspense fallback={<ContentSkeleton />}>{props.children}</Suspense>
 		</>

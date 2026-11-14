@@ -341,12 +341,9 @@ test.describe("Keys, as the project's Maintainer", () => {
 	// Kills a revoke without its confirmation, one that only hides the row, a
 	// Revoked list that does not hold it, and a revoke that a reload at once
 	// undoes.
-	test("Revoke asks first and moves the key to Revoked", async ({
-		page,
-		request,
-	}) => {
+	test("Revoke asks first and moves the key to Revoked", async ({ page }) => {
 		const name = unique("pr-preview");
-		await createKey(request, hashbrown.slug, name);
+		await createKey(hashbrown.slug, name);
 		await page.goto(consolePath(hashbrown.slug, "keys"));
 		const active = page.getByRole("table", { name: "Active keys" });
 		await expect(
@@ -449,10 +446,9 @@ test.describe("narrow", () => {
 	// under 44 px.
 	test("the sections become a segmented control and every target is 44 px", async ({
 		page,
-		request,
 	}) => {
 		const key = unique("narrow");
-		await createKey(request, hashbrown.slug, key);
+		await createKey(hashbrown.slug, key);
 		await page.goto(consolePath(hashbrown.slug, "settings"));
 		await expect(general(page)).toBeVisible();
 		await expect(
@@ -553,7 +549,7 @@ const projectVisibility = async (request: APIRequestContext, slug: string) =>
 	(
 		(await (
 			await request.get(`${seed.api_url}/v0/projects/${slug}`, {
-				headers: { Authorization: `Bearer ${seed.member.token}` },
+				headers: { Authorization: `Bearer ${seed.member.key}` },
 			})
 		).json()) as { visibility: string }
 	).visibility;

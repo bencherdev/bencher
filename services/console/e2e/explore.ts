@@ -18,7 +18,7 @@ export const dimensions = async (
 	const read = async (dimension: Dimension) => {
 		const response = await request.get(
 			`${seed.api_url}/v0/projects/${project}/${dimension}?per_page=64`,
-			{ headers: { Authorization: `Bearer ${seed.member.token}` } },
+			{ headers: { Authorization: `Bearer ${seed.member.key}` } },
 		);
 		const list = (await response.json()) as { uuid: string; name: string }[];
 		return (name: string) => {

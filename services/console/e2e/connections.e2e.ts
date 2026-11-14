@@ -8,14 +8,16 @@ import { createProject } from "./api";
 import { axeInBothThemes } from "./axe";
 import {
 	consolePath,
+	ended,
 	expect,
 	logInTo,
+	READER_KEY,
 	seed,
+	sessionCookie,
 	settle,
 	signedIn,
 	signedOut,
 	test,
-	USER_KEY,
 	RELAY,
 } from "./fixtures";
 import { finishGitHub, startGitHub } from "./github";
@@ -36,6 +38,17 @@ const stateFor = (project: JsonProject) =>
 
 const returnUrl = (project: JsonProject) =>
 	`${RETURN}?${new URLSearchParams({ code: CODE, state: stateFor(project) })}`;
+
+/**
+ * The exchange as an API with a GitHub App answers a session that has ended;
+ * the suite's API, with none, says so before it reads the session.
+ */
+const refuseExchange = (page: Page) =>
+	page.route(`${RELAY}/v0/github/exchange`, (route) =>
+		route.request().method() === "POST"
+			? route.fulfill({ status: 401, json: { message: "Unauthorized" } })
+			: route.fallback(),
+	);
 
 /** Sign in, then come back to the return page with no code or state. */
 const LOG_IN = logInTo(RETURN);
@@ -283,14 +296,23 @@ test.describe("as the project's Maintainer", () => {
 	// Kills a return page that leaves GitHub's code and state in its URL for
 	// the console to read when its session ends, or is ended in another tab,
 	// after the page's first script ran and before the console's code loads.
-	for (const [ended, session] of [
-		["signs out", null],
+	for (const [leaves, end] of [
 		[
-			"has their session expire",
-			JSON.stringify({ ...seed.member, expiration: "2000-01-01T00:00:00Z" }),
+			"signs out",
+			(page: Page) =>
+				page.evaluate((key) => localStorage.removeItem(key), READER_KEY),
+		],
+		[
+			"has their session end",
+			async (page: Page) => {
+				await page
+					.context()
+					.addCookies([sessionCookie(ended(seed.member).session)]);
+				await refuseExchange(page);
+			},
 		],
 	] as const) {
-		test(`a reader who ${ended} as the return page loads leaves without the code or the state`, async ({
+		test(`a reader who ${leaves} as the return page loads leaves without the code or the state`, async ({
 			page,
 			request,
 		}) => {
@@ -309,16 +331,7 @@ test.describe("as the project's Maintainer", () => {
 			);
 			await page.goto(returnUrl(project), { waitUntil: "commit" });
 			await page.waitForFunction(() => document.readyState !== "loading");
-			await page.evaluate(
-				([key, value]) => {
-					if (value === null) {
-						localStorage.removeItem(key);
-					} else {
-						localStorage.setItem(key, value);
-					}
-				},
-				[USER_KEY, session] as const,
-			);
+			await end(page);
 			release();
 			await signsIn(page, project);
 		});
@@ -361,12 +374,9 @@ test.describe("as the project's Maintainer", () => {
 	});
 });
 
-for (const [reader, storageState] of [
-	["signed out", signedOut],
-	[
-		"signed in with an expired token",
-		signedIn({ ...seed.member, expiration: "2000-01-01T00:00:00Z" }),
-	],
+for (const [reader, storageState, refused] of [
+	["signed out", signedOut, []],
+	["signed in to a session that ended", signedIn(ended(seed.member)), ["POST"]],
 ] as const) {
 	test.describe(reader, () => {
 		test.use({ storageState });
@@ -380,6 +390,7 @@ for (const [reader, storageState] of [
 			request,
 		}) => {
 			const project = await createProject(request);
+			await refuseExchange(page);
 			const exchanged: string[] = [];
 			page.on("request", (sent) => {
 				if (sent.url().startsWith(`${RELAY}/v0/github/exchange`)) {
@@ -388,6 +399,9 @@ for (const [reader, storageState] of [
 			});
 			await page.goto(returnUrl(project));
 			await signsIn(page, project);
+			// Only the API knows a session has ended, so the page asks it once.
+			expect(exchanged).toEqual(refused);
+			exchanged.length = 0;
 
 			const { state } = await startGitHub(page, LOG_IN);
 			await finishGitHub(page, state);

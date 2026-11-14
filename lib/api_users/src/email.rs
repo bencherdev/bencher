@@ -1,9 +1,9 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Put, ResponseOk};
-use bencher_json::{DateTime, Email, JsonConfirm, system::auth::JsonAuthUser};
+use bencher_json::{DateTime, Email, JsonConfirm, JsonUser};
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::sso::QuerySso;
 use bencher_schema::{
-    AUTH_TOKEN_TTL, CLIENT_TOKEN_TTL, auth_conn,
+    AUTH_TOKEN_TTL, auth_conn,
     context::{ApiContext, Body, ButtonBody, Message},
     error::{
         BencherResource, forbidden_error, issue_error, resource_conflict_err,
@@ -40,7 +40,7 @@ pub async fn user_email_options(
 /// and its token lasts as long as a login link's.
 /// No credential is needed, so the link works from any device.
 /// Any later update to the user ends the link, this confirm included.
-/// The response holds a new session for the new email.
+/// The response holds the user, with no credential: the browser's session is unchanged.
 /// An invalid or expired token is refused with `401 Unauthorized`;
 /// a token for another user, or one sent before the user's latest update, with `403 Forbidden`;
 /// and a new email that another user has taken since with `409 Conflict`.
@@ -53,7 +53,7 @@ pub async fn user_email_put(
     rqctx: RequestContext<ApiContext>,
     path_params: Path<UserParams>,
     body: TypedBody<JsonConfirm>,
-) -> Result<ResponseOk<JsonAuthUser>, HttpError> {
+) -> Result<ResponseOk<JsonUser>, HttpError> {
     let json = put_inner(rqctx.context(), path_params.into_inner(), body.into_inner()).await?;
     Ok(Put::pub_response_ok(json))
 }
@@ -62,7 +62,7 @@ async fn put_inner(
     context: &ApiContext,
     path_params: UserParams,
     json_confirm: JsonConfirm,
-) -> Result<JsonAuthUser, HttpError> {
+) -> Result<JsonUser, HttpError> {
     let now = context.clock.now();
     let claims = context
         .token_key
@@ -113,32 +113,7 @@ async fn put_inner(
     )
     .await?;
 
-    let token = context
-        .token_key
-        .new_client(new_email.clone(), CLIENT_TOKEN_TTL)
-        .map_err(|e| {
-            issue_error(
-                "Failed to create client JWT",
-                &format!(
-                    "Failed to create client JWT for a new email ({new_email} | {CLIENT_TOKEN_TTL})"
-                ),
-                e,
-            )
-        })?;
-    let client_claims = context.token_key.validate_client(&token).map_err(|e| {
-        issue_error(
-            "Failed to validate new client JWT",
-            &format!("Failed to validate new client JWT for a new email ({new_email})"),
-            e,
-        )
-    })?;
-
-    Ok(JsonAuthUser {
-        user: query_user.into_json(),
-        token,
-        creation: client_claims.issued_at(),
-        expiration: client_claims.expiration(),
-    })
+    Ok(query_user.into_json())
 }
 
 /// Refuse `new_email` for the user while another user has it.

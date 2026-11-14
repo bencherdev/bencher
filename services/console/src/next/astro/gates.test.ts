@@ -1,10 +1,12 @@
 import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import { Window } from "happy-dom";
 import { describe, expect, test } from "vitest";
-import { decodeBase64 } from "../../util/convert";
-import { USER_KEY } from "../reader";
+import { decodeBase64 } from "../../util/base64";
+import { READER_KEY } from "../reader";
 import { VERSION_KEY } from "../memory";
 import { projectPath } from "../paths";
+import AuthReturn from "./AuthReturn.astro";
+import { takeAuthReturn } from "./authReturn";
 import GitHubReturn from "./GitHubReturn.astro";
 import { takeGitHubReturn } from "./githubReturn";
 import Landing from "./Landing.astro";
@@ -28,7 +30,12 @@ const run = (html: string, url: string, storage: Record<string, string>) => {
 	return { replaced };
 };
 
-const SIGNED_IN = { [USER_KEY]: '{"token":"tok","user":{"uuid":"u"}}' };
+const HINT = JSON.stringify({
+	uuid: "u",
+	slug: "muriel-bagge",
+	name: "Muriel",
+});
+const SIGNED_IN = { [READER_KEY]: HINT };
 const versions = (slug: string, version: number) => ({
 	[VERSION_KEY]: JSON.stringify({ [slug]: version }),
 });
@@ -72,13 +79,7 @@ describe("Landing", () => {
 		storage: Record<string, string>,
 		url = "https://bencher.dev/",
 	) => run(await container.renderToString(Landing), url, storage).replaced;
-	const reader = {
-		[USER_KEY]: JSON.stringify({
-			token: "tok",
-			user: { uuid: "u" },
-			expiration: "2999-01-01T00:00:00Z",
-		}),
-	};
+	const reader = SIGNED_IN;
 
 	// Kills a root page that waits for its own code to send a signed in reader
 	// on, or a script that reads other keys than the landing's.
@@ -110,18 +111,6 @@ describe("Landing", () => {
 			),
 		).toEqual([]);
 	});
-
-	// Kills a script that checks the token against any time but now.
-	test("a reader whose token has expired stays", async () => {
-		const expired = {
-			[USER_KEY]: JSON.stringify({
-				token: "tok",
-				user: { uuid: "u" },
-				expiration: new Date(Date.now() - 60_000).toISOString(),
-			}),
-		};
-		expect(await land({ ...expired, ...versions("hashbrown", 1) })).toEqual([]);
-	});
 });
 
 describe("Shortcut", () => {
@@ -131,12 +120,7 @@ describe("Shortcut", () => {
 			url,
 			storage,
 		).replaced;
-	const reader = {
-		[USER_KEY]: JSON.stringify({
-			token: "tok",
-			user: { slug: "muriel-bagge" },
-		}),
-	};
+	const reader = SIGNED_IN;
 
 	// Kills a shortcut that names no user sent anywhere but the reader's own
 	// page of the same kind.
@@ -198,16 +182,7 @@ describe("GitHubReturn", () => {
 	// keeps; and a page that drops what the exchange needs, or keeps it in
 	// memory once the exchange took it.
 	test("the code and the state leave the URL at once, for the exchange alone", async () => {
-		for (const storage of [
-			{
-				[USER_KEY]: JSON.stringify({
-					token: "tok",
-					user: { uuid: "u" },
-					expiration: "2999-01-01T00:00:00Z",
-				}),
-			},
-			{},
-		]) {
+		for (const storage of [SIGNED_IN, {}]) {
 			const { replaced, memory } = await land(
 				"https://bencher.dev/console/github?code=c0de&state=s7a7e",
 				storage,
@@ -221,6 +196,58 @@ describe("GitHubReturn", () => {
 				code: undefined,
 				state: undefined,
 			});
+		}
+	});
+});
+
+describe("AuthReturn", () => {
+	/** An auth page's first script, run on a page at `url`. */
+	const land = async (url: string) => {
+		const page = new Window().document;
+		page.body.innerHTML = await container.renderToString(AuthReturn);
+		const source = page.querySelector("script")?.textContent ?? "";
+		const { pathname, search, hash } = new URL(url);
+		const replaced: string[] = [];
+		const memory = {};
+		new Function("window", "location", "history", source)(
+			memory,
+			{ pathname, search, hash },
+			{
+				state: null,
+				replaceState: (_state: unknown, _title: string, to: string) =>
+					replaced.push(to),
+			},
+		);
+		return { replaced, memory };
+	};
+
+	// Kills a link's secret, an old link's token, or a provider's code or state
+	// left in the address for history, a report, or a later script to read, and
+	// a page that drops what it needs, or keeps it once taken.
+	test("what the address carried leaves it at once, for the page alone", async () => {
+		const none = {
+			secret: undefined,
+			token: undefined,
+			user: undefined,
+			code: undefined,
+			state: undefined,
+		};
+		for (const [url, kept] of [
+			["https://bencher.dev/auth/confirm#s3cr3t", { secret: "s3cr3t" }],
+			["https://bencher.dev/auth/confirm?token=a.b.c", { token: "a.b.c" }],
+			[
+				"https://bencher.dev/auth/email?user=u&token=a.b.c",
+				{ user: "u", token: "a.b.c" },
+			],
+			[
+				"https://bencher.dev/auth/github?code=c0de&state=s7a7e",
+				{ code: "c0de", state: "s7a7e" },
+			],
+		] as const) {
+			const { replaced, memory } = await land(url);
+			expect(replaced).toEqual([new URL(url).pathname]);
+			expect(takeAuthReturn(memory)).toEqual({ ...none, ...kept });
+			expect(takeAuthReturn(memory)).toEqual(none);
 		}
 	});
 });

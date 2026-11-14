@@ -1,7 +1,7 @@
 ---
 import { shortcutPage } from "../account/paths";
 import { USERS_PATH } from "../paths";
-import { USER_KEY } from "../reader";
+import { READER_KEY } from "../reader";
 import NextHead from "./NextHead.astro";
 
 const page = shortcutPage(Astro.url.pathname) ?? "settings";
@@ -17,11 +17,11 @@ const page = shortcutPage(Astro.url.pathname) ?? "settings";
 		<title>Bencher</title>
 		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
 		<NextHead />
-		<script is:inline define:vars={{ page, USERS_PATH, USER_KEY }}>
+		<script is:inline define:vars={{ page, USERS_PATH, READER_KEY }}>
 			try {
-				var reader = JSON.parse(localStorage.getItem(USER_KEY) || "null");
-				if (reader && reader.user && reader.user.slug) {
-					location.replace(USERS_PATH + "/" + reader.user.slug + "/" + page);
+				var reader = JSON.parse(localStorage.getItem(READER_KEY) || "null");
+				if (reader && reader.slug) {
+					location.replace(USERS_PATH + "/" + reader.slug + "/" + page);
 				}
 			} catch (_) {}
 		</script>

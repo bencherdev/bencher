@@ -1,6 +1,5 @@
 import type { QueryClient } from "@tanstack/solid-query";
 import { render } from "solid-js/web";
-import type { JsonAuthUser } from "../types/bencher";
 import App from "./App";
 import { createApi } from "./api";
 import {
@@ -16,7 +15,7 @@ import { idbStore } from "./idb";
 import { forgetReader } from "./memory";
 import { type PageName, pageName, parseConsolePath } from "./paths";
 import { consoleProjectQuery } from "./queries";
-import { USER_KEY, isCurrent, readReader, signInHref } from "./reader";
+import { READER_KEY, type Reader, readReader, signInHref } from "./reader";
 import { PAGES } from "./routes";
 
 /** The longest the first render waits on the cache and the page's code. */
@@ -25,17 +24,14 @@ const BOOT_WAIT = 100;
 const boot = async (mount: HTMLElement) => {
 	const store = idbStore();
 	const reader = readReader(localStorage);
-	if (!reader || !isCurrent(reader, Date.now())) {
+	if (!reader) {
 		await signOut(store);
 		return;
 	}
 
-	const client = createQueryClient(() => signOut(store, client));
+	const client = createQueryClient();
 	const host = mount.dataset.apiUrl ?? "";
-	const api = createApi({
-		token: reader.token,
-		expiration: Date.parse(reader.expiration),
-	});
+	const api = createApi({ onUnauthorized: () => signOut(store, client) });
 	const place = parseConsolePath(location.pathname);
 	// The shell's one request starts before anything else, so the cache restore
 	// never delays it.
@@ -55,12 +51,12 @@ const boot = async (mount: HTMLElement) => {
 	await within(
 		BOOT_WAIT,
 		Promise.all([
-			restoreCache(client, store, reader.user.uuid, buster, Date.now()),
-			purgeOtherReaders(store, reader.user.uuid),
+			restoreCache(client, store, reader.uuid, buster, Date.now()),
+			purgeOtherReaders(store, reader.uuid),
 			page.preload(),
 		]),
 	);
-	const persister = persistCache(client, store, reader.user.uuid, buster);
+	const persister = persistCache(client, store, reader.uuid, buster);
 	stopSaving = persister.stop;
 	watchReader(reader, store, client);
 
@@ -72,7 +68,7 @@ const boot = async (mount: HTMLElement) => {
 					api={api}
 					reader={reader}
 					flush={persister.flush}
-					signOut={(back) => signOut(store, client, back)}
+					signOut={() => signOut(store, client, true)}
 					host={host}
 				/>
 			),
@@ -85,41 +81,48 @@ const boot = async (mount: HTMLElement) => {
 let stopSaving = () => {};
 let signingOut = false;
 
-/** Forget the reader and everything they saw, then sign in, coming back here when `back`. */
+/**
+ * Forget the reader and everything they saw, then sign in again, coming back
+ * here; or, when the reader signs out, end the session first and open the door.
+ */
 const signOut = async (
 	store: CacheStore,
 	client?: QueryClient,
-	back = true,
+	end = false,
 ) => {
 	if (signingOut) {
 		return;
 	}
 	signingOut = true;
 	stopSaving();
+	if (end) {
+		// Loaded only to sign out, which no page needs to paint; the reader is
+		// forgotten here even when it does not load.
+		await import("./session")
+			.then(({ endSession }) => endSession())
+			.catch(() => {});
+	}
 	forgetReader(localStorage);
 	await within(BOOT_WAIT, client ? clearCache(client, store) : store.clear());
 	location.replace(
-		back
-			? signInHref(`${location.pathname}${location.search}${location.hash}`)
-			: "/auth/login",
+		end
+			? "/auth/login"
+			: signInHref(`${location.pathname}${location.search}${location.hash}`),
 	);
 };
 
 /** Signing out, or in as someone else, in another tab ends this session too. */
 const watchReader = (
-	reader: JsonAuthUser,
+	reader: Reader,
 	store: CacheStore,
 	client: QueryClient,
 ) => {
 	window.addEventListener("storage", (event) => {
-		if (event.key !== USER_KEY && event.key !== null) {
+		if (event.key !== READER_KEY && event.key !== null) {
 			return;
 		}
 		const current = readReader(localStorage);
-		if (
-			current?.user.uuid === reader.user.uuid &&
-			current.token === reader.token
-		) {
+		if (current?.uuid === reader.uuid) {
 			return;
 		}
 		if (current) {
