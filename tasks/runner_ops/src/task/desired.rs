@@ -69,7 +69,7 @@ const MASKED_UNITS: [&str; 34] = [
 /// Has a maintenance unit take turns with the runner's Jobs; `zz-` sorts it after any other drop-in.
 const QUIET_DROP_IN: &str = "zz-bencher-quiet.conf";
 /// Each maintenance unit and its own command, which the drop-in runs under the runner's job lock.
-const QUIET_UNITS: [(&str, &str); 5] = [
+const QUIET_UNITS: [(&str, &str); 7] = [
     ("apt-daily.service", "/usr/lib/apt/apt.systemd.daily update"),
     (
         "apt-daily-upgrade.service",
@@ -86,6 +86,11 @@ const QUIET_UNITS: [(&str, &str); 5] = [
     (
         "mdcheck_continue.service",
         "/usr/share/mdadm/mdcheck --continue --duration ${MDADM_CHECK_DURATION}",
+    ),
+    ("dpkg-db-backup.service", "/usr/libexec/dpkg/dpkg-db-backup"),
+    (
+        "logrotate.service",
+        "/usr/sbin/logrotate /etc/logrotate.conf",
     ),
 ];
 const ABSENT: &str = "absent";
@@ -1238,6 +1243,8 @@ mod tests {
                 "/etc/systemd/system/fstrim.service.d/zz-bencher-quiet.conf",
                 "/etc/systemd/system/mdcheck_start.service.d/zz-bencher-quiet.conf",
                 "/etc/systemd/system/mdcheck_continue.service.d/zz-bencher-quiet.conf",
+                "/etc/systemd/system/dpkg-db-backup.service.d/zz-bencher-quiet.conf",
+                "/etc/systemd/system/logrotate.service.d/zz-bencher-quiet.conf",
             ]
         );
         assert_eq!(reloads, ["systemctl daemon-reload"]);
