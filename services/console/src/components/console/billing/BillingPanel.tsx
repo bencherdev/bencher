@@ -568,73 +568,89 @@ const CloudMeteredPanel = (props: {
 	);
 };
 
-const CloudSelfHostedLicensedPanel = (props: {
+export const CloudSelfHostedLicensedPanel = (props: {
 	onboard: boolean;
 	usage: Resource<null | JsonUsage>;
 }) => {
 	return (
 		<div class="content">
 			<h2 class="title is-2">Enterprise Tier (Self-Hosted Licensed)</h2>
-			<h3 class="subtitle is-3">
-				{fmtDate(props.usage()?.license?.issued_at)} -{" "}
-				{fmtDate(props.usage()?.license?.term_end)}
-			</h3>
-			<h4>
-				Benchmark Series:{" "}
-				{props.usage()?.license?.series?.toLocaleString() ?? 0}
-			</h4>
-			<h4>
-				Self-Hosted Organization UUID:{" "}
+			<Show
+				when={props.usage()?.license}
+				fallback={
+					<>
+						<h3 class="subtitle is-3">
+							{fmtDate(props.usage()?.plan?.current_period_start)} -{" "}
+							{fmtDate(props.usage()?.plan?.current_period_end)}
+						</h3>
+						<h4>Self-Hosted License Key: No license</h4>
+					</>
+				}
+			>
+				<h3 class="subtitle is-3">
+					{fmtDate(props.usage()?.license?.issued_at)} -{" "}
+					{fmtDate(props.usage()?.license?.term_end)}
+				</h3>
+				<h4>
+					Benchmark Series:{" "}
+					{props.usage()?.license?.series?.toLocaleString() ?? 0}
+				</h4>
+				<h4>Expires: {fmtDate(props.usage()?.license?.expiration)}</h4>
+				<h4>
+					Self-Hosted Organization UUID:{" "}
+					<code style="word-break: break-word;">
+						{props.usage()?.license?.organization}
+					</code>
+				</h4>
+				<h4>Self-Hosted License Key:</h4>
 				<code style="word-break: break-word;">
-					{props.usage()?.license?.organization}
+					{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
+					<a
+						title="Copy to clipboard"
+						onMouseDown={(_) =>
+							navigator.clipboard.writeText(props.usage()?.license?.key ?? "")
+						}
+					>
+						{props.usage()?.license?.key}
+					</a>
 				</code>
-			</h4>
-			<h4>Self-Hosted License Key:</h4>
-			<code style="word-break: break-word;">
-				{/* biome-ignore lint/a11y/useValidAnchor: action on press */}
-				<a
-					title="Copy to clipboard"
-					onMouseDown={(_) =>
-						navigator.clipboard.writeText(props.usage()?.license?.key ?? "")
-					}
-				>
-					{props.usage()?.license?.key}
-				</a>
-			</code>
-			<h2 class="title is-2">
-				What to do with your Bencher Self-Hosted License Key
-			</h2>
-			<h4>
-				<ol>
-					<li>
-						{/* biome-ignore lint/a11y/useValidAnchor: copy to clipboard */}
-						<a
-							title="Copy to clipboard"
-							onMouseDown={(_) =>
-								navigator.clipboard.writeText(props.usage()?.license?.key ?? "")
-							}
-						>
-							Click here to copy your Self-Hosted license key
-						</a>
-					</li>
-					{props.onboard ? (
+				<h2 class="title is-2">
+					What to do with your Bencher Self-Hosted License Key
+				</h2>
+				<h4>
+					<ol>
 						<li>
-							Navigate to the Organization Billing page in your Bencher
-							Self-Hosted account
+							{/* biome-ignore lint/a11y/useValidAnchor: copy to clipboard */}
+							<a
+								title="Copy to clipboard"
+								onMouseDown={(_) =>
+									navigator.clipboard.writeText(
+										props.usage()?.license?.key ?? "",
+									)
+								}
+							>
+								Click here to copy your Self-Hosted license key
+							</a>
 						</li>
-					) : (
+						{props.onboard ? (
+							<li>
+								Navigate to the Organization Billing page in your Bencher
+								Self-Hosted account
+							</li>
+						) : (
+							<li>
+								Navigate to this same page on your Bencher Self-Hosted account,
+								Organization Billing
+							</li>
+						)}
+						<li>Enter your license key in the "Self-Hosted License Key" box</li>
 						<li>
-							Navigate to this same page on your Bencher Self-Hosted account,
-							Organization Billing
+							🎉 Lettuce turnip the beet! You now have a Bencher Plus
+							Self-Hosted License!
 						</li>
-					)}
-					<li>Enter your license key in the "Self-Hosted License Key" box</li>
-					<li>
-						🎉 Lettuce turnip the beet! You now have a Bencher Plus Self-Hosted
-						License!
-					</li>
-				</ol>
-			</h4>
+					</ol>
+				</h4>
+			</Show>
 			<br />
 			<PaymentMethod usage={props.usage} />
 			<br />

@@ -45,11 +45,16 @@ pub struct JsonPlanCheckout {
 pub struct JsonPlanSubscription {
     /// The Stripe subscription.
     pub subscription: NonEmpty,
+    /// The Self-Hosted organization that the subscription buys a license for. Bencher Cloud
+    /// signs the license, and the organization that the subscription is attached to keeps it
+    /// to copy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub self_hosted: Option<OrganizationUuid>,
 }
 
 /// Hand written so a body that gives both `checkout` and `subscription`, or neither, is
-/// refused rather than read as whichever variant matches first. Any other field is
-/// ignored.
+/// refused rather than read as whichever variant matches first, and so is a checkout that
+/// names a Self-Hosted organization. Any other field is ignored.
 impl<'de> Deserialize<'de> for JsonNewPlan {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -59,21 +64,29 @@ impl<'de> Deserialize<'de> for JsonNewPlan {
         struct NewPlan {
             checkout: Option<NonEmpty>,
             subscription: Option<NonEmpty>,
+            self_hosted: Option<OrganizationUuid>,
         }
 
         let NewPlan {
             checkout,
             subscription,
+            self_hosted,
         } = NewPlan::deserialize(deserializer)?;
-        match (checkout, subscription) {
-            (Some(checkout), None) => Ok(Self::Checkout(JsonPlanCheckout { checkout })),
-            (None, Some(subscription)) => {
-                Ok(Self::Subscription(JsonPlanSubscription { subscription }))
+        match (checkout, subscription, self_hosted) {
+            (Some(checkout), None, None) => Ok(Self::Checkout(JsonPlanCheckout { checkout })),
+            (Some(_), None, Some(_)) => Err(de::Error::custom(
+                "expected `self_hosted` only with `subscription`, since a checkout sells Bencher Cloud's Pro plan",
+            )),
+            (None, Some(subscription), self_hosted) => {
+                Ok(Self::Subscription(JsonPlanSubscription {
+                    subscription,
+                    self_hosted,
+                }))
             },
-            (Some(_), Some(_)) => Err(de::Error::custom(
+            (Some(_), Some(_), _) => Err(de::Error::custom(
                 "expected one of `checkout` or `subscription`, not both",
             )),
-            (None, None) => Err(de::Error::custom(
+            (None, None, _) => Err(de::Error::custom(
                 "expected one of `checkout` or `subscription`",
             )),
         }
@@ -249,6 +262,7 @@ mod tests {
     use bencher_valid::{ExpirationMonth, ExpirationYear};
 
     use super::{JsonNewPlan, JsonPlanCheckout, JsonPlanSubscription};
+    use crate::OrganizationUuid;
 
     #[test]
     fn expiration_month_parse() {
@@ -271,15 +285,76 @@ mod tests {
         assert_eq!(checkout.as_ref(), "cs_test");
 
         let plan: JsonNewPlan = serde_json::from_str(r#"{"subscription":"sub_test"}"#).unwrap();
-        let JsonNewPlan::Subscription(JsonPlanSubscription { subscription }) = plan else {
+        let JsonNewPlan::Subscription(JsonPlanSubscription {
+            subscription,
+            self_hosted,
+        }) = plan
+        else {
             panic!("not a subscription: {plan:?}");
         };
         assert_eq!(subscription.as_ref(), "sub_test");
+        assert_eq!(self_hosted, None);
 
         serde_json::from_str::<JsonNewPlan>(r#"{"checkout":"cs_test","subscription":"sub_test"}"#)
             .unwrap_err();
         serde_json::from_str::<JsonNewPlan>("{}").unwrap_err();
         serde_json::from_str::<JsonNewPlan>(r#"{"checkout":""}"#).unwrap_err();
+    }
+
+    // Fails if an attach for a Self-Hosted organization loses the organization, takes one that
+    // is not a UUID, or if a checkout return that names one is taken, since a self-serve
+    // checkout sells Pro on Bencher Cloud only.
+    #[test]
+    fn new_plan_takes_self_hosted_with_a_subscription_only() {
+        let self_hosted = OrganizationUuid::new();
+        let plan: JsonNewPlan = serde_json::from_value(serde_json::json!({
+            "subscription": "sub_test",
+            "self_hosted": self_hosted,
+        }))
+        .unwrap();
+        let JsonNewPlan::Subscription(JsonPlanSubscription {
+            subscription,
+            self_hosted: named,
+        }) = plan
+        else {
+            panic!("not a subscription: {plan:?}");
+        };
+        assert_eq!(subscription.as_ref(), "sub_test");
+        assert_eq!(named, Some(self_hosted));
+
+        serde_json::from_value::<JsonNewPlan>(serde_json::json!({
+            "subscription": "sub_test",
+            "self_hosted": "not-a-uuid",
+        }))
+        .unwrap_err();
+        let error = serde_json::from_value::<JsonNewPlan>(serde_json::json!({
+            "checkout": "cs_test",
+            "self_hosted": self_hosted,
+        }))
+        .unwrap_err();
+        assert!(error.to_string().contains("self_hosted"), "{error}");
+    }
+
+    // Fails if an attach for a Self-Hosted organization is sent without it, or one for Bencher
+    // Cloud is sent naming one.
+    #[test]
+    fn new_plan_sends_self_hosted_only_when_given() {
+        let self_hosted = OrganizationUuid::new();
+        let plan = |self_hosted| {
+            serde_json::to_value(JsonNewPlan::Subscription(JsonPlanSubscription {
+                subscription: "sub_test".parse().unwrap(),
+                self_hosted,
+            }))
+            .unwrap()
+        };
+        assert_eq!(
+            plan(Some(self_hosted)),
+            serde_json::json!({ "subscription": "sub_test", "self_hosted": self_hosted })
+        );
+        assert_eq!(
+            plan(None),
+            serde_json::json!({ "subscription": "sub_test" })
+        );
     }
 
     // Fails if a return from an earlier console, which still names its level, is refused.

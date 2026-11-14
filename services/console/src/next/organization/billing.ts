@@ -76,6 +76,10 @@ export const shortDay = (time: string, timeZone?: string) =>
 export const inGrace = (license: JsonLicense, now: string) =>
 	Date.parse(license.term_end) <= Date.parse(now);
 
+/** Whether a license is at or past its expiration, at the server's time `now`. */
+export const expired = (license: JsonLicense, now: string) =>
+	Date.parse(license.expiration) <= Date.parse(now);
+
 /** "Oct 1 to Oct 31, 2026", with the start's year only when it differs. */
 export const period = (start: string, end: string, timeZone?: string) => {
 	const from = fullDay(start, timeZone);

@@ -164,6 +164,18 @@ impl TestServer {
         .await
     }
 
+    /// Create a new test server for Bencher Cloud, with its plan routes, whose every Stripe
+    /// request goes to `stub`, and which signs licenses with the key that debug builds trust.
+    #[cfg(feature = "plus")]
+    pub async fn new_with_stripe(stub: &bencher_billing::stripe_stub::StripeStub) -> Self {
+        Self::new_with_options(TestServerOptions {
+            cloud_routes: true,
+            cloud: Some(crate::license::stripe_cloud(stub)),
+            ..TestServerOptions::default()
+        })
+        .await
+    }
+
     /// Create a new test server with the GitHub App, whose every GitHub request goes to `base`,
     /// with an injectable clock that logs to `log`.
     #[cfg(feature = "plus")]
@@ -205,6 +217,7 @@ impl TestServer {
             github_client: None,
             github_app: None,
             google_client: None,
+            cloud: None,
         })
         .await
     }
@@ -231,6 +244,7 @@ impl TestServer {
             github_client,
             github_app,
             google_client,
+            cloud,
         } = options;
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
@@ -292,10 +306,10 @@ impl TestServer {
             google_client,
             indexer: None,
             stats: bencher_schema::context::StatsSettings::default(),
-            biller: None,
-            licensor: bencher_license::Licensor::self_hosted().expect("Failed to create licensor"),
+            is_bencher_cloud: cloud.is_some(),
+            biller: cloud.as_ref().map(|cloud| cloud.biller.clone()),
+            licensor: cloud.map_or_else(self_hosted_licensor, |cloud| cloud.licensor),
             recaptcha_client: None,
-            is_bencher_cloud: false,
             clock: clock.clone(),
             registry_url: bencher_json::LOCALHOST_BENCHER_REGISTRY_URL.clone(),
             oci_storage: bencher_oci_storage::OciStorage::try_from_config(
@@ -523,6 +537,21 @@ pub struct TestServerOptions {
     pub github_client: Option<bencher_github_client::GitHubClient>,
     pub github_app: Option<Arc<bencher_github_client::GitHubApp>>,
     pub google_client: Option<bencher_google_client::GoogleClient>,
+    /// With which the server is Bencher Cloud.
+    pub cloud: Option<TestCloud>,
+}
+
+/// Bencher Cloud's biller, and the licensor that signs its licenses.
+#[cfg(feature = "plus")]
+pub struct TestCloud {
+    pub biller: bencher_billing::Biller,
+    pub licensor: bencher_license::Licensor,
+}
+
+#[cfg(feature = "plus")]
+#[expect(clippy::expect_used, reason = "test server setup with fallible init")]
+fn self_hosted_licensor() -> bencher_license::Licensor {
+    bencher_license::Licensor::self_hosted().expect("Failed to create licensor")
 }
 
 /// Waits out a lock instead of failing at once, as the server's own pools do.

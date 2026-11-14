@@ -1,7 +1,7 @@
 use bencher_json::system::server::JsonCohort;
 use diesel::{
-    AggregateExpressionMethods as _, BoolExpressionMethods as _, ExpressionMethods as _,
-    JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _,
+    AggregateExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
+    RunQueryDsl as _,
 };
 use dropshot::HttpError;
 
@@ -97,11 +97,7 @@ fn get_project_count(
                             .on(schema::plan::organization_id.eq(schema::organization::id)),
                     ),
                 )
-                .filter(
-                    schema::plan::metered_plan
-                        .is_not_null()
-                        .or(schema::plan::licensed_plan.is_not_null()),
-                )
+                .filter(schema::plan::metered_plan.is_not_null())
                 .select(diesel::dsl::count(schema::project::id))
                 .into_boxed();
 

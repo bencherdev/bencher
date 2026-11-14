@@ -2143,7 +2143,7 @@
           "plan"
         ],
         "summary": "Create an organization's plan",
-        "description": "Attach a subscription to an organization: the return from a self-serve Pro checkout, which needs `manage` permission for the organization, or a subscription that only a server admin attaches.",
+        "description": "Attach a subscription to an organization: the return from a self-serve Pro checkout, which needs `manage` permission for the organization, or a subscription that only a server admin attaches. A subscription for a Self-Hosted deal names the Self-Hosted organization, and Bencher Cloud signs its first license, which the plan keeps to copy.",
         "operationId": "org_plan_post",
         "parameters": [
           {
@@ -17241,6 +17241,15 @@
         "description": "A subscription that a server admin attaches.",
         "type": "object",
         "properties": {
+          "self_hosted": {
+            "nullable": true,
+            "description": "The Self-Hosted organization that the subscription buys a license for. Bencher Cloud signs the license, and the organization that the subscription is attached to keeps it to copy.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationUuid"
+              }
+            ]
+          },
           "subscription": {
             "description": "The Stripe subscription.",
             "allOf": [

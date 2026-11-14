@@ -7,6 +7,7 @@ import {
 	bareMetalRate,
 	bareMetalUsd,
 	estimate,
+	expired,
 	inGrace,
 	period,
 	usageQuery,
@@ -45,6 +46,20 @@ describe("inGrace", () => {
 		expect(inGrace(license, "2027-10-01T11:59:59Z")).toBe(false);
 		expect(inGrace(license, "2027-10-01T12:00:00Z")).toBe(true);
 		expect(inGrace(license, "2027-10-20T12:00:00Z")).toBe(true);
+	});
+});
+
+describe("expired", () => {
+	const license = {
+		expiration: "2027-10-31T12:00:00Z",
+	} as unknown as JsonLicense;
+
+	// Kills an expiration that comes before the license's, or after it: a license expires at
+	// its expiration, by the server's time.
+	test("a license expires at its expiration, by the server's time", () => {
+		expect(expired(license, "2027-10-31T11:59:59Z")).toBe(false);
+		expect(expired(license, "2027-10-31T12:00:00Z")).toBe(true);
+		expect(expired(license, "2028-01-01T12:00:00Z")).toBe(true);
 	});
 });
 

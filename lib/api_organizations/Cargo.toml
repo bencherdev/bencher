@@ -35,7 +35,9 @@ slog.workspace = true
 [dev-dependencies]
 bencher_api_tests.workspace = true
 bencher_json = { workspace = true, features = ["server", "schema"] }
+bencher_license = { workspace = true, features = ["plus"] }
 http.workspace = true
+reqwest.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 

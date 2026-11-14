@@ -1,5 +1,5 @@
 use bencher_client::types::{JsonNewPlan, JsonPlanCheckout, JsonPlanSubscription};
-use bencher_json::{NonEmpty, OrganizationResourceId};
+use bencher_json::{NonEmpty, OrganizationResourceId, OrganizationUuid};
 
 use crate::{
     CliError,
@@ -22,19 +22,26 @@ impl TryFrom<CliPlanCreate> for Create {
             organization,
             checkout,
             subscription,
+            self_hosted,
             backend,
         } = create;
         Ok(Self {
             organization,
-            plan: new_plan(checkout, subscription),
+            plan: new_plan(checkout, subscription, self_hosted),
             backend: backend.try_into()?,
         })
     }
 }
 
-/// The plan body for a self-serve checkout return or for a subscription to attach. The
-/// clap `ArgGroup` requires exactly one of them.
-fn new_plan(checkout: Option<NonEmpty>, subscription: Option<NonEmpty>) -> JsonNewPlan {
+/// The plan body for a self-serve checkout return or for a subscription to attach, which may
+/// name the Self-Hosted organization it buys a license for. The clap `ArgGroup` requires
+/// exactly one of a checkout or a subscription, and a Self-Hosted organization requires a
+/// subscription.
+fn new_plan(
+    checkout: Option<NonEmpty>,
+    subscription: Option<NonEmpty>,
+    self_hosted: Option<OrganizationUuid>,
+) -> JsonNewPlan {
     match (checkout, subscription) {
         (Some(checkout), None) => JsonPlanCheckout {
             checkout: checkout.into(),
@@ -42,6 +49,7 @@ fn new_plan(checkout: Option<NonEmpty>, subscription: Option<NonEmpty>) -> JsonN
         .into(),
         (None, Some(subscription)) => JsonPlanSubscription {
             subscription: subscription.into(),
+            self_hosted: self_hosted.map(Into::into),
         }
         .into(),
         #[expect(
@@ -73,19 +81,32 @@ impl SubCmd for Create {
 
 #[cfg(test)]
 mod tests {
+    use bencher_json::OrganizationUuid;
+
     use super::new_plan;
 
     // Fails if a checkout return is sent as an attach, an attach as a checkout return,
-    // or either body carries anything else.
+    // either body carries anything else, or an attach for a Self-Hosted organization does not
+    // name it.
     #[test]
     fn new_plan_sends_the_one_given() {
         assert_eq!(
-            serde_json::to_value(new_plan(Some("cs_test".parse().unwrap()), None)).unwrap(),
+            serde_json::to_value(new_plan(Some("cs_test".parse().unwrap()), None, None)).unwrap(),
             serde_json::json!({ "checkout": "cs_test" })
         );
         assert_eq!(
-            serde_json::to_value(new_plan(None, Some("sub_test".parse().unwrap()))).unwrap(),
+            serde_json::to_value(new_plan(None, Some("sub_test".parse().unwrap()), None)).unwrap(),
             serde_json::json!({ "subscription": "sub_test" })
+        );
+        let self_hosted = OrganizationUuid::new();
+        assert_eq!(
+            serde_json::to_value(new_plan(
+                None,
+                Some("sub_test".parse().unwrap()),
+                Some(self_hosted)
+            ))
+            .unwrap(),
+            serde_json::json!({ "subscription": "sub_test", "self_hosted": self_hosted })
         );
     }
 }

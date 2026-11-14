@@ -1,7 +1,7 @@
 use bencher_json::system::server::{JsonCohort, JsonCohortAvg};
 use diesel::{
-    AggregateExpressionMethods as _, BoolExpressionMethods as _, ExpressionMethods as _,
-    JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _,
+    AggregateExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
+    RunQueryDsl as _,
 };
 use dropshot::HttpError;
 
@@ -119,11 +119,7 @@ fn get_reports_by_project(
                         ),
                     ),
                 )
-                .filter(
-                    schema::plan::metered_plan
-                        .is_not_null()
-                        .or(schema::plan::licensed_plan.is_not_null()),
-                )
+                .filter(schema::plan::metered_plan.is_not_null())
                 .group_by(schema::report::project_id)
                 .select(diesel::dsl::count(schema::report::id))
                 .into_boxed();

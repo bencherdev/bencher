@@ -9,8 +9,12 @@ pub use stripe_shared::CustomerId;
 mod biller;
 mod error;
 mod products;
-#[cfg(test)]
-mod stripe_stub;
+#[cfg(any(test, feature = "test-stub"))]
+pub mod stripe_stub;
 
-pub use biller::{Biller, MeteredPlanBilling, PlanId};
-pub use error::{AttachError, AttachRefusal, BillingError, PlanItemError};
+pub use biller::{
+    Attachment, Biller, HeldLicense, LicenseTerm, LicensedPlan, MeteredPlanBilling, PlanId,
+};
+pub use error::{
+    AttachError, AttachRefusal, BillingError, LicenseTermError, PlanItemError, RenewalError,
+};

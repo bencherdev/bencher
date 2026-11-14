@@ -12,6 +12,7 @@ plus = [
     "dep:async-trait",
     "dep:aws-lc-rs",
     "bencher_api/plus",
+    "dep:bencher_billing",
     "bencher_callback/plus",
     "bencher_config/plus",
     "bencher_oci_storage/plus",
@@ -33,6 +34,7 @@ otel = ["bencher_api/otel"]
 async-trait = { workspace = true, optional = true }
 aws-lc-rs = { workspace = true, optional = true }
 bencher_api.workspace = true
+bencher_billing = { workspace = true, optional = true, features = ["plus", "test-stub"] }
 bencher_callback = { workspace = true, optional = true }
 bencher_config.workspace = true
 bencher_endpoint.workspace = true
