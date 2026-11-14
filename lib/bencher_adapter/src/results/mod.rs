@@ -241,13 +241,13 @@ mod test_results_array {
     /// so its output at version 1 breaks the contract.
     #[test]
     fn results_array_non_bmf_adapter_refuses_version_1() {
-        let results = std::fs::read_to_string("./tool_output/go/bench/five.txt")
+        let results = std::fs::read_to_string("./tool_output/java/jmh/six.json")
             .expect("Failed to read test file");
-        let error = new_at(&results, Adapter::GoBench, BmfVersion::V1);
+        let error = new_at(&results, Adapter::JavaJmh, BmfVersion::V1);
         assert_contract(&error, BmfVersion::V1, BmfVersion::V0);
         AdapterResultsArray::new(
             &[&results],
-            Adapter::GoBench,
+            Adapter::JavaJmh,
             Settings::new(None, BmfVersion::V0),
         )
         .expect("a non-BMF adapter parses at version 0");

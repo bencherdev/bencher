@@ -36,10 +36,14 @@ export const adapterIcon = (adapter: Adapter) => {
 			return RUST_ICON;
 		case Adapter.CppGoogle:
 		case Adapter.CppCatch2:
+		case Adapter.CppCatch2Xml:
+		case Adapter.CppCatch2Text:
 			return CPP_ICON;
 		case Adapter.DartBenchmarkHarness:
 			return DART_ICON;
 		case Adapter.GoBench:
+		case Adapter.GoBenchJson:
+		case Adapter.GoBenchText:
 			return GO_ICON;
 		case Adapter.JavaJmh:
 			return JAVA_ICON;
@@ -83,10 +87,14 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.CppGoogle:
 			return `bencher run${host} "make benchmarks --benchmark_format=json"`;
 		case Adapter.CppCatch2:
+		case Adapter.CppCatch2Xml:
+		case Adapter.CppCatch2Text:
 			return `bencher run${host} "make benchmarks"`;
 		case Adapter.DartBenchmarkHarness:
 			return `bencher run${host} --adapter dart_benchmark_harness "dart run benchmark/benchmark.dart"`;
 		case Adapter.GoBench:
+		case Adapter.GoBenchJson:
+		case Adapter.GoBenchText:
 			return `bencher run${host} "go test -bench"`;
 		case Adapter.JavaJmh:
 			return `bencher run${host} --file results.json "java -jar benchmarks.jar -rf json -rff results.json"`;

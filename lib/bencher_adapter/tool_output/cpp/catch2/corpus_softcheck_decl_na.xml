@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="softcheck" rng-seed="629498043" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="softcheck.cpp" line="9">
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="759" clockResolution="22.3031" estimatedDuration="2.2011e+06">
+      <!-- All values in nano seconds -->
+      <mean value="28.6184" lowerBound="28.6184" upperBound="28.6184" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Soft check in the samples" filename="softcheck.cpp" line="10">
+    <BenchmarkResults name="checks late" samples="100" resamples="100000" iterations="6402" clockResolution="22.3031" estimatedDuration="1.9206e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="CHECK" filename="softcheck.cpp" line="13">
+        <Original>
+          ++calls != at("FAIL_AT", 60)
+        </Original>
+        <Expanded>
+          60 != 60
+        </Expanded>
+      </Expression>
+      <mean value="3.66693" lowerBound="3.66693" upperBound="3.66693" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1109" clockResolution="22.3031" estimatedDuration="2.218e+06">
+      <!-- All values in nano seconds -->
+      <mean value="20.5037" lowerBound="20.5037" upperBound="20.5037" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Soft check first" filename="softcheck.cpp" line="18">
+    <BenchmarkResults name="checks first">
+      <Expression success="false" type="CHECK" filename="softcheck.cpp" line="21">
+        <Original>
+          ++calls != 1
+        </Original>
+        <Expanded>
+          1 != 1
+        </Expanded>
+      </Expression> samples="100" resamples="100000" iterations="6390" clockResolution="22.3031" estimatedDuration="1.917e+06"      <!-- All values in nano seconds -->
+      <mean value="3.45467" lowerBound="3.45467" upperBound="3.45467" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="softcheck.cpp" line="25">
+    <BenchmarkResults name="Fibonacci 15" samples="100" resamples="100000" iterations="50" clockResolution="22.3031" estimatedDuration="2.265e+06">
+      <!-- All values in nano seconds -->
+      <mean value="372.465" lowerBound="372.465" upperBound="372.465" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="356" clockResolution="22.3031" estimatedDuration="2.2072e+06">
+      <!-- All values in nano seconds -->
+      <mean value="63.2274" lowerBound="63.2274" upperBound="63.2274" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="250" failures="2" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="2" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

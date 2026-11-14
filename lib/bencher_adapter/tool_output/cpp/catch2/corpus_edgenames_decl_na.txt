@@ -1,0 +1,88 @@
+Randomness seeded to: 2207541783
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+edgenames is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Clean
+-------------------------------------------------------------------------------
+edgenames.cpp:28
+...............................................................................
+
+benchmark name                            samples    iterations          mean
+-------------------------------------------------------------------------------
+Name of exactly thirty four chars!             100          8065     3.0565 ns 
+Name of exactly thirty five chars!!            100          7057    4.07727 ns 
+Name of exactly thirty six                                                     
+chars!!!!                                      100          7651    2.97737 ns 
+Name of exactly thirty seven                                                   
+chars!!!                                       100          7768    3.10983 ns 
+Name of exactly thirty eight                                                   
+chars!!!!                                      100          7687    2.88734 ns 
+Averyveryverylongsinglewordthatcan-                                            
+notwrapatanyspaceatall                         100          8275    2.88912 ns 
+Twelve chars                                   100          7607    2.89068 ns 
+Thirteen char                                  100          8071    2.89564 ns 
+Fourteen chars                                 100          8306     3.0911 ns 
+Fifteen chars!!                                100          8155    2.90967 ns 
+100                                            100          7629     2.9954 ns 
+5 ns                                           100          7830    3.73707 ns 
+Größe ÄÖÜ äöü ß µs mit Umlauten und                                           
+Länge                                         100          7797    2.95959 ns 
+日本語のベンチマーク名前           100          7987    2.89154 ns 
+Name with  double  spaces that is                                              
+long enough to wrap around                     100          7060    2.89992 ns 
+
+-------------------------------------------------------------------------------
+Fails in the samples
+-------------------------------------------------------------------------------
+edgenames.cpp:29
+...............................................................................
+
+benchmark name                            samples    iterations          mean
+-------------------------------------------------------------------------------
+fails late                                     100          8236 
+
+edgenames.cpp:32: FAILED:
+  REQUIRE( ++calls < at("FAIL_AT", 60) )
+with expansion:
+  60 < 60
+
+benchmark name                            samples    iterations          mean
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+Shifted
+-------------------------------------------------------------------------------
+edgenames.cpp:36
+...............................................................................
+
+benchmark name                            samples    iterations          mean
+-------------------------------------------------------------------------------
+Name of exactly thirty four chars!           100          7514 
+3.00089 ns                           Name of exactly thirty five chars!!           100          8496 
+3.55905 ns                           Name of exactly thirty six                             
+                                         chars!!!!           100          8153 
+3.16937 ns                           Name of exactly thirty seven                             
+                                          chars!!!           100          8118 
+2.93934 ns                           Name of exactly thirty eight                             
+                                         chars!!!!           100          8040 
+2.87642 ns                           Averyveryverylongsinglewordthatcan-                             
+                                     notwrapatanyspaceatall           100          6327 
+3.42251 ns                            Twelve chars           100          7585 
+3.04738 ns                           Thirteen char           100          6845 
+4.69231 ns                           Fourteen chars           100          5804 
+4.50681 ns                           Fifteen chars!!           100          5409 
+4.86065 ns                                     100           100          5990 
+4.74669 ns                                    5 ns           100          5832 
+4.63195 ns                           Größe ÄÖÜ äöü ß µs mit Umlauten und                             
+                                            Länge           100          5500 
+4.74852 ns                           日本語のベンチマーク名前           100          6256 
+4.18478 ns                           Name with  double  spaces that is                             
+                                     long enough to wrap around           100          6392 
+3.64449 ns                           
+===============================================================================
+test cases:  3 |  2 passed | 1 failed
+assertions: 60 | 59 passed | 1 failed
+

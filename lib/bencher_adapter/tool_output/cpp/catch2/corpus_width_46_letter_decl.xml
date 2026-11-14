@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="letter" rng-seed="644408256" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="One letter" filename="letter.cpp" line="4">
+    <BenchmarkResults name="f" samples="100" resamples="100000" iterations="603" clockResolution="22.3197" estimatedDuration="2.2311e+06">
+      <!-- All values in nano seconds -->
+      <mean value="35.5812" lowerBound="35.3796" upperBound="35.9602" ci="0.95"/>
+      <standardDeviation value="1.36363" lowerBound="0.794766" upperBound="2.17991" ci="0.95"/>
+      <outliers variance="0.355436" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="g" samples="100" resamples="100000" iterations="234" clockResolution="22.3197" estimatedDuration="2.223e+06">
+      <!-- All values in nano seconds -->
+      <mean value="96.3762" lowerBound="95.8389" upperBound="97.1435" ci="0.95"/>
+      <standardDeviation value="3.24088" lowerBound="2.39251" upperBound="4.49025" ci="0.95"/>
+      <outliers variance="0.296721" lowMild="0" lowSevere="0" highMild="1" highSevere="3"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="letter.cpp" line="8">
+    <BenchmarkResults name="h" samples="100" resamples="100000" iterations="1547" clockResolution="22.3197" estimatedDuration="2.1658e+06">
+      <!-- All values in nano seconds -->
+      <mean value="12.3168" lowerBound="12.2396" upperBound="12.4422" ci="0.95"/>
+      <standardDeviation value="0.492104" lowerBound="0.339305" upperBound="0.788484" ci="0.95"/>
+      <outliers variance="0.375112" lowMild="0" lowSevere="0" highMild="3" highSevere="1"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

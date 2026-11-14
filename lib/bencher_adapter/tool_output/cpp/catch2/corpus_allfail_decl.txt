@@ -1,0 +1,32 @@
+Randomness seeded to: 2970285980
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+allfail is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Only fails
+-------------------------------------------------------------------------------
+allfail.cpp:6
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late                                     100          6539     1.9617 ms 
+
+allfail.cpp:9: FAILED:
+  REQUIRE( ++calls < 60 )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+===============================================================================
+test cases:  1 |  0 passed | 1 failed
+assertions: 60 | 59 passed | 1 failed
+

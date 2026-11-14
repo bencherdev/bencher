@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="blankfailmsgP" rng-seed="2824004614" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="blankfailmsg.cpp" line="2">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1530" clockResolution="19.0017" estimatedDuration="1.836e+06">
+      <!-- All values in nano seconds -->
+      <mean value="12.5314" lowerBound="12.438" upperBound="12.6435" ci="0.95"/>
+      <standardDeviation value="0.519982" lowerBound="0.427426" upperBound="0.680579" ci="0.95"/>
+      <outliers variance="0.38548" lowMild="0" lowSevere="0" highMild="2" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Blank then a failure on lines" filename="blankfailmsg.cpp" line="3">
+    <BenchmarkResults name="Fibonacci 13" samples="100" resamples="100000" iterations="151" clockResolution="19.0017" estimatedDuration="1.9026e+06">
+      <!-- All values in nano seconds -->
+      <mean value="126.633" lowerBound="125.758" upperBound="127.728" ci="0.95"/>
+      <standardDeviation value="4.9451" lowerBound="3.97404" upperBound="6.42273" ci="0.95"/>
+      <outliers variance="0.355973" lowMild="0" lowSevere="0" highMild="4" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="throws paragraphs">
+      <failed message="first paragraph
+
+second paragraph"/>
+    </BenchmarkResults>
+    <Exception filename="blankfailmsg.cpp" line="3">
+      first paragraph
+
+second paragraph
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Spaced name after a disturbed one" filename="blankfailmsg.cpp" line="8">
+    <BenchmarkResults name="disturbed" samples="100" resamples="100000" iterations="6497" clockResolution="19.0017" estimatedDuration="1.2994e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68303" lowerBound="2.67111" upperBound="2.70621" ci="0.95"/>
+      <standardDeviation value="0.0790243" lowerBound="0.0403246" upperBound="0.120041" ci="0.95"/>
+      <outliers variance="0.238743" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="   " samples="100" resamples="100000" iterations="1078" clockResolution="19.0017" estimatedDuration="1.8326e+06">
+      <!-- All values in nano seconds -->
+      <mean value="17.5038" lowerBound="17.3063" upperBound="17.7678" ci="0.95"/>
+      <standardDeviation value="1.16408" lowerBound="0.926904" upperBound="1.60166" ci="0.95"/>
+      <outliers variance="0.62553" lowMild="0" lowSevere="0" highMild="2" highSevere="1"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 15" samples="100" resamples="100000" iterations="52" clockResolution="19.0017" estimatedDuration="1.9292e+06">
+      <!-- All values in nano seconds -->
+      <mean value="370.904" lowerBound="368.788" upperBound="374.141" ci="0.95"/>
+      <standardDeviation value="13.1852" lowerBound="9.37114" upperBound="18.9621" ci="0.95"/>
+      <outliers variance="0.316535" lowMild="0" lowSevere="0" highMild="2" highSevere="2"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="blankfailmsg.cpp" line="13">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2393" clockResolution="19.0017" estimatedDuration="1.6751e+06">
+      <!-- All values in nano seconds -->
+      <mean value="6.42277" lowerBound="6.34185" upperBound="6.72917" ci="0.95"/>
+      <standardDeviation value="0.717723" lowerBound="0.137978" upperBound="1.67094" ci="0.95"/>
+      <outliers variance="0.831171" lowMild="0" lowSevere="0" highMild="0" highSevere="3"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="1" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="3" failures="1" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

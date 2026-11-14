@@ -1,0 +1,9 @@
+goos: linux
+goarch: amd64
+pkg: example.com/bench/fib
+cpu: Intel(R) Xeon(R) CPU @ 2.20GHz
+BenchmarkFib10     	    2000	       163.8 ns/op
+BenchmarkFib10-2   	    2000	       164.1 ns/op
+BenchmarkFib10-4   	    2000	       151.6 ns/op
+PASS
+ok  	example.com/bench/fib	0.004s

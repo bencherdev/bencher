@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="wrap3" rng-seed="6" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Long names" filename="wrap3.cpp" line="16">
+    <BenchmarkResults name="A benchmark with a really very long name that wraps onto three lines of the console table at least once more" samples="100" resamples="100000" iterations="773" clockResolution="20.0176" estimatedDuration="1.9325e+06">
+      <!-- All values in nano seconds -->
+      <mean value="24.3037" lowerBound="24.3037" upperBound="24.3037" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Copy 8 16" samples="100" resamples="100000" iterations="1812" clockResolution="20.0176" estimatedDuration="1.9932e+06">
+      <!-- All values in nano seconds -->
+      <mean value="10.9537" lowerBound="10.9537" upperBound="10.9537" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Sizes 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576 2097152" samples="100" resamples="100000" iterations="1092" clockResolution="20.0176" estimatedDuration="1.9656e+06">
+      <!-- All values in nano seconds -->
+      <mean value="17.9784" lowerBound="17.9784" upperBound="17.9784" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Units 3 ns 4 ms and then some more words to force a wrap here 5 6" samples="100" resamples="100000" iterations="2789" clockResolution="20.0176" estimatedDuration="1.9523e+06">
+      <!-- All values in nano seconds -->
+      <mean value="9.2962" lowerBound="9.2962" upperBound="9.2962" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="12 34" samples="100" resamples="100000" iterations="4056" clockResolution="20.0176" estimatedDuration="1.6224e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.4861" lowerBound="4.4861" upperBound="4.4861" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Fails first" filename="wrap3.cpp" line="9">
+    <BenchmarkResults name="fails late" samples="100" resamples="100000" iterations="7107" clockResolution="20.0176" estimatedDuration="1.4214e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="REQUIRE" filename="wrap3.cpp" line="12">
+        <Original>
+          ++calls &lt; at("FAIL_AT", 60)
+        </Original>
+        <Expanded>
+          60 &lt; 60
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Last" filename="wrap3.cpp" line="23">
+    <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="429" clockResolution="20.0176" estimatedDuration="1.9734e+06">
+      <!-- All values in nano seconds -->
+      <mean value="53.1703" lowerBound="53.1703" upperBound="53.1703" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="59" failures="1" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="1" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

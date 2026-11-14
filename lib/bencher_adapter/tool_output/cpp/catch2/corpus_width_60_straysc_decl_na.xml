@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="straysc" rng-seed="1469780638" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="straysc.cpp" line="7">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1698" clockResolution="20.4613" estimatedDuration="2.0376e+06">
+      <!-- All values in nano seconds -->
+      <mean value="10.5738" lowerBound="10.5738" upperBound="10.5738" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Trailing space" filename="straysc.cpp" line="8">
+    <BenchmarkResults name="prints with a trailing space" samples="100" resamples="100000" iterations="7529" clockResolution="20.4613" estimatedDuration="1.5058e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.90144" lowerBound="2.90144" upperBound="2.90144" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1227" clockResolution="20.4613" estimatedDuration="1.9632e+06">
+      <!-- All values in nano seconds -->
+      <mean value="16.1273" lowerBound="16.1273" upperBound="16.1273" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Blank line" filename="straysc.cpp" line="16">
+    <BenchmarkResults name="prints a blank line" samples="100" resamples="100000" iterations="6987" clockResolution="20.4613" estimatedDuration="1.3974e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.686" lowerBound="2.686" upperBound="2.686" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="802" clockResolution="20.4613" estimatedDuration="2.005e+06">
+      <!-- All values in nano seconds -->
+      <mean value="25.1032" lowerBound="25.1032" upperBound="25.1032" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Two newlines" filename="straysc.cpp" line="24">
+    <BenchmarkResults name="prints two newlines" samples="100" resamples="100000" iterations="7509" clockResolution="20.4613" estimatedDuration="1.5018e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.69545" lowerBound="2.69545" upperBound="2.69545" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="483" clockResolution="20.4613" estimatedDuration="2.0286e+06">
+      <!-- All values in nano seconds -->
+      <mean value="43.1005" lowerBound="43.1005" upperBound="43.1005" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Early trailing space" filename="straysc.cpp" line="32">
+    <BenchmarkResults name="prints early with a space" samples="100" resamples="100000" iterations="7543" clockResolution="20.4613" estimatedDuration="1.5086e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.70155" lowerBound="2.70155" upperBound="2.70155" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="320" clockResolution="20.4613" estimatedDuration="2.048e+06">
+      <!-- All values in nano seconds -->
+      <mean value="62.4734" lowerBound="62.4734" upperBound="62.4734" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Value-like output" filename="straysc.cpp" line="40">
+    <BenchmarkResults name="prints a number" samples="100" resamples="100000" iterations="7541" clockResolution="20.4613" estimatedDuration="1.5082e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.70842" lowerBound="2.70842" upperBound="2.70842" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 13" samples="100" resamples="100000" iterations="174" clockResolution="20.4613" estimatedDuration="2.0358e+06">
+      <!-- All values in nano seconds -->
+      <mean value="116.694" lowerBound="116.694" upperBound="116.694" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="No newline" filename="straysc.cpp" line="48">
+    <BenchmarkResults name="prints no newline" samples="100" resamples="100000" iterations="7530" clockResolution="20.4613" estimatedDuration="1.506e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.69995" lowerBound="2.69995" upperBound="2.69995" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 14" samples="100" resamples="100000" iterations="116" clockResolution="20.4613" estimatedDuration="2.0416e+06">
+      <!-- All values in nano seconds -->
+      <mean value="176.508" lowerBound="176.508" upperBound="176.508" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="straysc.cpp" line="56">
+    <BenchmarkResults name="Fibonacci 15" samples="100" resamples="100000" iterations="59" clockResolution="20.4613" estimatedDuration="2.0768e+06">
+      <!-- All values in nano seconds -->
+      <mean value="354.121" lowerBound="354.121" upperBound="354.121" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2469" clockResolution="20.4613" estimatedDuration="1.9752e+06">
+      <!-- All values in nano seconds -->
+      <mean value="6.40955" lowerBound="6.40955" upperBound="6.40955" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="8" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

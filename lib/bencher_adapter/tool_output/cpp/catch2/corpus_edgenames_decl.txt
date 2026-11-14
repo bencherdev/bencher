@@ -1,0 +1,186 @@
+Randomness seeded to: 1547472115
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+edgenames is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Clean
+-------------------------------------------------------------------------------
+edgenames.cpp:28
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Name of exactly thirty four chars!             100          6244     1.8732 ms 
+                                        2.71393 ns    2.69225 ns    2.75648 ns 
+                                       0.146467 ns  0.0775311 ns   0.228953 ns 
+                                                                               
+Name of exactly thirty five chars!!            100          8440      1.688 ms 
+                                        2.74689 ns    2.71917 ns    2.80216 ns 
+                                        0.19166 ns   0.115871 ns   0.324373 ns 
+                                                                               
+Name of exactly thirty six                                                     
+chars!!!!                                      100          7507     2.2521 ms 
+                                        2.82795 ns    2.76643 ns     2.9257 ns 
+                                       0.390083 ns   0.275055 ns     0.5205 ns 
+                                                                               
+Name of exactly thirty seven                                                   
+chars!!!                                       100          7948     2.3844 ms 
+                                        3.21499 ns    2.96067 ns    4.12478 ns 
+                                        2.09284 ns   0.258838 ns    4.71754 ns 
+                                                                               
+Name of exactly thirty eight                                                   
+chars!!!!                                      100          7068     2.1204 ms 
+                                        2.91156 ns    2.89365 ns    2.94552 ns 
+                                       0.119231 ns  0.0635298 ns   0.182331 ns 
+                                                                               
+Averyveryverylongsinglewordthatcan-                                            
+notwrapatanyspaceatall                         100          7827     2.3481 ms 
+                                        3.00052 ns    2.93764 ns    3.12472 ns 
+                                       0.435795 ns   0.258868 ns   0.701478 ns 
+                                                                               
+Twelve chars                                   100          7865     2.3595 ms 
+                                        2.95562 ns    2.91292 ns    3.07747 ns 
+                                       0.335026 ns   0.143092 ns   0.712626 ns 
+                                                                               
+Thirteen char                                  100          7735     2.3205 ms 
+                                         2.9038 ns    2.88922 ns    2.93322 ns 
+                                       0.097412 ns  0.0549275 ns   0.165383 ns 
+                                                                               
+Fourteen chars                                 100          7739     2.3217 ms 
+                                        2.91879 ns    2.89852 ns    2.95157 ns 
+                                       0.126058 ns  0.0782864 ns   0.174653 ns 
+                                                                               
+Fifteen chars!!                                100          7812     2.3436 ms 
+                                        2.93229 ns    2.90479 ns    2.98808 ns 
+                                       0.190275 ns   0.100293 ns   0.313052 ns 
+                                                                               
+100                                            100          7574     2.2722 ms 
+                                        3.12967 ns    3.04323 ns    3.25812 ns 
+                                        0.52935 ns    0.39007 ns   0.696312 ns 
+                                                                               
+5 ns                                           100          7810      2.343 ms 
+                                        2.91249 ns    2.89869 ns    2.93846 ns 
+                                      0.0915251 ns  0.0469431 ns   0.138768 ns 
+                                                                               
+Größe ÄÖÜ äöü ß µs mit Umlauten und                                           
+Länge                                         100          8095      1.619 ms 
+                                        2.92828 ns    2.89519 ns    3.04677 ns 
+                                       0.283329 ns  0.0773096 ns   0.645002 ns 
+                                                                               
+日本語のベンチマーク名前           100          8141     1.6282 ms 
+                                        2.96971 ns    2.92716 ns    3.05722 ns 
+                                       0.298442 ns   0.173848 ns   0.516742 ns 
+                                                                               
+Name with  double  spaces that is                                              
+long enough to wrap around                     100          7901     2.3703 ms 
+                                        3.37531 ns    3.20912 ns    3.58151 ns 
+                                       0.943322 ns   0.794715 ns    1.08697 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Fails in the samples
+-------------------------------------------------------------------------------
+edgenames.cpp:29
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late                                     100          7566     2.2698 ms 
+
+edgenames.cpp:32: FAILED:
+  REQUIRE( ++calls < at("FAIL_AT", 60) )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+Shifted
+-------------------------------------------------------------------------------
+edgenames.cpp:36
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Name of exactly thirty four chars!           100          7744 
+2.3232 ms                                             2.91579 ns    2.90209 ns 
+2.94631 ns                                          0.0987499 ns  0.0517687 ns 
+0.160452 ns                                                                    
+                                     Name of exactly thirty five chars!!           100          7708 
+2.3124 ms                                             2.93084 ns    2.91405 ns 
+2.96378 ns                                           0.116233 ns  0.0682945 ns 
+0.177518 ns                                                                    
+                                     Name of exactly thirty six                             
+                                         chars!!!!           100          8046 
+1.6092 ms                                             2.93318 ns    2.90927 ns 
+2.99864 ns                                           0.185841 ns  0.0828088 ns 
+0.387717 ns                                                                    
+                                     Name of exactly thirty seven                             
+                                          chars!!!           100          5895 
+2.358 ms                                              2.79313 ns     2.7411 ns 
+2.89382 ns                                           0.357882 ns   0.211565 ns 
+0.563132 ns                                                                    
+                                     Name of exactly thirty eight                             
+                                         chars!!!!           100          6081 
+1.8243 ms                                             3.86685 ns    3.64237 ns 
+4.10689 ns                                            1.18498 ns    1.08914 ns 
+1.30538 ns                                                                     
+                                     Averyveryverylongsinglewordthatcan-                             
+                                     notwrapatanyspaceatall           100          5540 
+2.216 ms                                              3.81001 ns    3.59128 ns 
+4.03962 ns                                            1.14842 ns    1.06602 ns 
+1.22823 ns                                                                     
+                                      Twelve chars           100          5804 
+2.3216 ms                                             4.87555 ns    4.69703 ns 
+5.01727 ns                                           0.805166 ns   0.647357 ns 
+0.973299 ns                                                                    
+                                     Thirteen char           100          4762 
+2.381 ms                                              4.95582 ns    4.78378 ns 
+5.10033 ns                                           0.805665 ns   0.660717 ns 
+0.969554 ns                                                                    
+                                     Fourteen chars           100          4886 
+1.9544 ms                                             4.48425 ns    4.30925 ns 
+4.63933 ns                                           0.840221 ns   0.747362 ns 
+0.938194 ns                                                                    
+                                     Fifteen chars!!           100          4879 
+1.9516 ms                                              4.9765 ns    4.83875 ns 
+5.08474 ns                                           0.619748 ns   0.477685 ns 
+0.798186 ns                                                                    
+                                               100           100          4847 
+1.9388 ms                                             4.90516 ns    4.77596 ns 
+5.01098 ns                                           0.596989 ns    0.47255 ns 
+0.771432 ns                                                                    
+                                              5 ns           100          5031 
+2.0124 ms                                             3.88413 ns    3.70728 ns 
+4.05738 ns                                           0.892091 ns   0.831777 ns 
+0.977959 ns                                                                    
+                                     Größe ÄÖÜ äöü ß µs mit Umlauten und                             
+                                            Länge           100          5276 
+2.1104 ms                                             3.82757 ns    3.65015 ns 
+4.01595 ns                                           0.934575 ns    0.85298 ns 
+1.04912 ns                                                                     
+                                     日本語のベンチマーク名前           100          5728 
+2.2912 ms                                             3.73041 ns    3.57196 ns 
+3.90575 ns                                           0.848878 ns   0.755547 ns 
+0.998375 ns                                                                    
+                                     Name with  double  spaces that is                             
+                                     long enough to wrap around           100          5572 
+2.2288 ms                                             3.54093 ns    3.37911 ns 
+3.71668 ns                                           0.857227 ns    0.78006 ns 
+0.951004 ns                                                                    
+                                     
+===============================================================================
+test cases:  3 |  2 passed | 1 failed
+assertions: 60 | 59 passed | 1 failed
+

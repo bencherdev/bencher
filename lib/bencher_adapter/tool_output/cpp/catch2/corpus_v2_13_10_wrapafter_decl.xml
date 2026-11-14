@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch name="wrapafter">
+  <Group name="wrapafter">
+    <TestCase name="Before" filename="wrapafter.cpp" line="6">
+      <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="360" clockResolution="23.9568" estimatedDuration="2.376e+06">
+        <!--All values in nano seconds-->
+        <mean value="65.902" lowerBound="65.5138" upperBound="66.6452" ci="0.95"/>
+        <standardDeviation value="2.65328" lowerBound="1.54967" upperBound="4.03775" ci="0.95"/>
+        <outliers variance="0.375338" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Failure before a wrapped name" filename="wrapafter.cpp" line="7">
+      <BenchmarkResults name="throws early">
+        <failed message="boom"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Wrapping benchmark name of fib(10) with more" samples="100" resamples="100000" iterations="135" clockResolution="23.9568" estimatedDuration="2.3895e+06">
+        <!--All values in nano seconds-->
+        <mean value="178.329" lowerBound="176.976" upperBound="180.969" ci="0.95"/>
+        <standardDeviation value="9.34373" lowerBound="5.57518" upperBound="14.307" ci="0.95"/>
+        <outliers variance="0.50461" lowMild="0" lowSevere="0" highMild="0" highSevere="7"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="221" clockResolution="23.9568" estimatedDuration="2.3868e+06">
+        <!--All values in nano seconds-->
+        <mean value="115.579" lowerBound="114.682" upperBound="117.147" ci="0.95"/>
+        <standardDeviation value="5.87893" lowerBound="3.80428" upperBound="8.36677" ci="0.95"/>
+        <outliers variance="0.494292" lowMild="1" lowSevere="0" highMild="0" highSevere="7"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="After" filename="wrapafter.cpp" line="12">
+      <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="600" clockResolution="23.9568" estimatedDuration="2.34e+06">
+        <!--All values in nano seconds-->
+        <mean value="41.2057" lowerBound="40.534" upperBound="43.2826" ci="0.95"/>
+        <standardDeviation value="5.4337" lowerBound="2.01045" upperBound="11.8063" ci="0.95"/>
+        <outliers variance="0.873042" lowMild="0" lowSevere="0" highMild="0" highSevere="6"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <OverallResults successes="0" failures="0" expectedFailures="0"/>
+    <OverallResultsCases successes="3" failures="0" expectedFailures="0"/>
+  </Group>
+  <OverallResults successes="0" failures="0" expectedFailures="0"/>
+  <OverallResultsCases successes="3" failures="0" expectedFailures="0"/>
+</Catch>

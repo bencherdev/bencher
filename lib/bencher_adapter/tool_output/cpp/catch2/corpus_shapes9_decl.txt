@@ -1,0 +1,80 @@
+Randomness seeded to: 2646494534
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+shapes9 is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Leading spaces split
+-------------------------------------------------------------------------------
+shapes9.cpp:2
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-                                            
+xxxxxxxxxxxxxxxxxxxxxx                         100          1802      1.802 ms 
+                                        10.3813 ns    10.3294 ns    10.4778 ns 
+                                       0.350673 ns   0.224059 ns    0.54288 ns 
+                                                                               
+ yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy-                                            
+yyyyyyyyyyyyyyyyyyyy                           100          1178     1.8848 ms 
+                                        16.8741 ns    16.7478 ns    17.0521 ns 
+                                       0.759626 ns   0.551799 ns    1.10791 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+: a test case whose name starts with a colon and runs long enough to wrap onto
+  a second line
+  inner
+-------------------------------------------------------------------------------
+shapes9.cpp:7
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 10                                   100           758      1.895 ms 
+                                        25.8134 ns    25.5928 ns    26.1153 ns 
+                                        1.30347 ns   0.997545 ns    1.76708 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Long section colon
+  a section whose colon sits well past a quarter: of the width so the wrap goes
+  back to two spaces
+-------------------------------------------------------------------------------
+shapes9.cpp:10
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 11                                   100           450       1.89 ms 
+                                        45.3001 ns    44.7315 ns    46.0186 ns 
+                                        3.24469 ns    2.63289 ns     4.1361 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+shapes9.cpp:12
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 7                                    100          2054     1.8486 ms 
+                                        6.80064 ns    6.72051 ns    7.05703 ns 
+                                       0.651568 ns   0.232856 ns    1.41071 ns 
+                                                                               
+
+===============================================================================
+test cases: 4 | 4 passed
+assertions: - none -
+

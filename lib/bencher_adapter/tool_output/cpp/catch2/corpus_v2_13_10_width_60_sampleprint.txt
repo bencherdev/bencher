@@ -1,0 +1,141 @@
+Filters: Sample multiline throw
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+s2_w60 is a Catch v2.13.10 host application.
+Run with -? for options
+
+Randomness seeded to: 1
+
+-----------------------------------------------------------
+Sample multiline throw
+-----------------------------------------------------------
+probe4.cpp:23
+...........................................................
+
+benchmark name   samples       iterations    estimated
+                 mean          low mean      high mean
+                 std dev       low std dev   high std dev
+-----------------------------------------------------------
+throws in                                                  
+samples                     10           364     203.84 us 
+Benchmark failed (late
+second line (2)
+third) abcdefghijklm            10           364 
+203.84 us                         56.0481 ns    56.0346 ns 
+56.0618 ns                      0.0236726 ns  0.0129588 ns 
+0.0324839 ns                                               
+                  abcdefghijkl            10           364 
+203.84 us                          55.825 ns    55.8143 ns 
+55.8363 ns                      0.0175931 ns  0.0129908 ns 
+0.0228683 ns                                               
+                 abcdefghijklmn            10           360 
+201.6 us                          57.8011 ns    56.4178 ns 
+59.8369 ns                        2.77652 ns  0.0215614 ns 
+3.60825 ns                                                 
+                 printing after log line 700
+log line 1400
+log line 2100
+log line 2800
+log line 3500
+log line 4200
+log line 4900
+log line 5600
+log line 6300
+log line 7000
+log line 7700
+log line 8400
+log line 9100
+log line 9800
+log line 10500
+log line 11200
+log line 11900
+log line 12600
+log line 13300
+log line 14000
+log line 14700
+log line 15400
+log line 16100
+log line 16800
+log line 17500
+log line 18200
+log line 18900
+log line 19600
+log line 20300
+log line 21000
+log line 21700
+log line 22400
+log line 23100
+log line 23800
+log line 24500
+log line 25200
+log line 25900
+log line 26600
+log line 27300
+log line 28000
+log line 28700
+log line 29400
+log line 30100
+log line 30800
+log line 31500
+log line 32200
+log line 32900
+log line 33600
+log line 34300
+log line 35000
+log line 35700
+log line 36400
+log line 37100
+log line 37800
+log line 38500
+log line 39200
+log line 39900
+log line 40600
+log line 41300
+log line 42000
+log line 42700
+log line 43400
+log line 44100
+log line 44800
+log line 45500
+log line 46200
+log line 46900
+log line 47600
+log line 48300
+log line 49000
+log line 49700
+log line 50400
+log line 51100
+log line 51800
+log line 52500
+log line 53200
+log line 53900
+log line 54600
+log line 55300
+log line 56000
+log line 56700
+log line 57400
+log line 58100
+log line 58800
+log line 59500
+log line 60200
+log line 60900
+log line 61600
+log line 62300
+log line 63000
+log line 63700
+log line 64400
+log line 65100
+           10           360 
+201.6 us         log line 65800
+log line 66500
+log line 67200
+log line 67900
+log line 68600
+                 56.7244 ns    56.6764 ns 
+56.7692 ns                      0.0772881 ns  0.0566122 ns 
+0.0983961 ns                                               
+                 
+===========================================================
+test cases: 1 | 1 passed
+assertions: - none -
+

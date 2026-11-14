@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="afterprintP" rng-seed="1983252038" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="afterprint.cpp" line="2">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1841" clockResolution="19.1732" estimatedDuration="1.841e+06">
+      <!-- All values in nano seconds -->
+      <mean value="10.573" lowerBound="10.516" upperBound="10.6717" ci="0.95"/>
+      <standardDeviation value="0.370838" lowerBound="0.25067" upperBound="0.561708" ci="0.95"/>
+      <outliers variance="0.316168" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Last" filename="afterprint.cpp" line="3">
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1222" clockResolution="19.1732" estimatedDuration="1.833e+06">
+      <!-- All values in nano seconds -->
+      <mean value="15.6195" lowerBound="15.5464" upperBound="15.7402" ci="0.95"/>
+      <standardDeviation value="0.468374" lowerBound="0.300522" upperBound="0.667828" ci="0.95"/>
+      <outliers variance="0.248253" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="781" clockResolution="19.1732" estimatedDuration="1.8744e+06">
+      <!-- All values in nano seconds -->
+      <mean value="24.5026" lowerBound="24.3387" upperBound="24.794" ci="0.95"/>
+      <standardDeviation value="1.08986" lowerBound="0.670132" upperBound="1.58682" ci="0.95"/>
+      <outliers variance="0.42471" lowMild="0" lowSevere="0" highMild="6" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Print after the last table" filename="afterprint.cpp" line="4">
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="3" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

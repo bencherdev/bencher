@@ -1,0 +1,89 @@
+Randomness seeded to: 6
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+shapes is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Throws in the samples
+-------------------------------------------------------------------------------
+shapes.cpp:25
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws late                                    100          7158     1.4316 ms 
+Benchmark failed (late boom)         
+shapes.cpp:25: FAILED:
+due to unexpected exception with message:
+  late boom
+
+-------------------------------------------------------------------------------
+Checks inside
+  Inner section with a long name that wraps across the console width
+-------------------------------------------------------------------------------
+shapes.cpp:17
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+checked with a rather long name                             
+                                     that wraps around           100          1488 
+1.9344 ms                                             12.7394 ns    12.6381 ns 
+12.8991 ns                                           0.639149 ns   0.440761 ns 
+0.894583 ns                                                                    
+                                     
+-------------------------------------------------------------------------------
+Throws before the samples
+-------------------------------------------------------------------------------
+shapes.cpp:11
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+ throws early Benchmark failed (boom) 
+
+shapes.cpp:11: FAILED:
+due to unexpected exception with message:
+  boom
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+shapes.cpp:34
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 12                                   100           222     1.9536 ms 
+                                        87.0507 ns    85.7223 ns    89.2901 ns 
+                                        8.62301 ns    5.77227 ns      13.05 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+shapes.cpp:7
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 10                                   100           630      1.953 ms 
+                                          32.06 ns     31.862 ns    32.4138 ns 
+                                        1.31915 ns   0.810509 ns    1.97874 ns 
+                                                                               
+
+===============================================================================
+test cases:   5 |   3 passed | 2 failed
+assertions: 126 | 124 passed | 2 failed
+

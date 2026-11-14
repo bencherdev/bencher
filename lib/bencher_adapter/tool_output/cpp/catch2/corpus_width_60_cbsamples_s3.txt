@@ -1,0 +1,68 @@
+Randomness seeded to: 4086289636
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cbsamplesP is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-----------------------------------------------------------
+Before
+-----------------------------------------------------------
+cbsamples.cpp:4
+...........................................................
+
+benchmark name   samples       iterations    est run time
+                 mean          low mean      high mean
+                 std dev       low std dev   high std dev
+-----------------------------------------------------------
+Fibonacci 8                  3          1503     54.108 us 
+                    12.1756 ns    12.0559 ns    12.2843 ns 
+                   0.146475 ns          0 ns   0.153685 ns 
+                                                           
+
+-----------------------------------------------------------
+Names
+-----------------------------------------------------------
+cbsamples.cpp:5
+...........................................................
+
+benchmark name   samples       iterations    est run time
+                 mean          low mean      high mean
+                 std dev       low std dev   high std dev
+-----------------------------------------------------------
+benchmark name                                             
+samples                      3          4008     48.096 us 
+                    4.80556 ns    4.76322 ns    4.84714 ns 
+                  0.0582859 ns          0 ns  0.0588079 ns 
+                                                           
+Fibonacci 9                  3           927      55.62 us 
+                    19.7515 ns    19.4811 ns    19.9896 ns 
+                   0.316255 ns          0 ns   0.336645 ns 
+                                                           
+Fibonacci 10                 3           660      57.42 us 
+                    28.2581 ns    27.8636 ns    28.6273 ns 
+                   0.505208 ns          0 ns   0.522116 ns 
+                                                           
+
+-----------------------------------------------------------
+After
+-----------------------------------------------------------
+cbsamples.cpp:6
+...........................................................
+
+benchmark name   samples       iterations    est run time
+                 mean          low mean      high mean
+                 std dev       low std dev   high std dev
+-----------------------------------------------------------
+Fibonacci 7                  3          2659     55.839 us 
+                    7.37169 ns    7.31854 ns    7.42083 ns 
+                  0.0668405 ns          0 ns  0.0694963 ns 
+                                                           
+Fibonacci 6                  3          3708      55.62 us 
+                     4.9964 ns    4.94606 ns    5.04585 ns 
+                  0.0692955 ns          0 ns  0.0699225 ns 
+                                                           
+
+===========================================================
+test cases: 3 | 3 passed
+assertions: - none -
+

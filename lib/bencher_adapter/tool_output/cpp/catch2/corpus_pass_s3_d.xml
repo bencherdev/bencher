@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="pass" rng-seed="1224087683" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Fibonacci" filename="pass.cpp" line="6">
+    <BenchmarkResults name="Fibonacci 10" samples="3" resamples="100000" iterations="601" clockResolution="19.3235" estimatedDuration="57696">
+      <!-- All values in nano seconds -->
+      <mean value="30.3028" lowerBound="29.797" upperBound="30.7804" ci="0.95"/>
+      <standardDeviation value="0.656254" lowerBound="3.55271e-15" upperBound="0.67534" ci="0.95"/>
+      <outliers variance="0.222222" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 12" samples="3" resamples="100000" iterations="231" clockResolution="19.3235" estimatedDuration="57519">
+      <!-- All values in nano seconds -->
+      <mean value="79.4906" lowerBound="77.7835" upperBound="81.1097" ci="0.95"/>
+      <standardDeviation value="2.23004" lowerBound="0" upperBound="2.28968" ci="0.95"/>
+      <outliers variance="0.222222" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0" durationInSeconds="3.79434"/>
+  </TestCase>
+  <TestCase name="More Fibonacci" filename="pass.cpp" line="11">
+    <BenchmarkResults name="Fibonacci 11" samples="3" resamples="100000" iterations="436" clockResolution="19.3235" estimatedDuration="57552">
+      <!-- All values in nano seconds -->
+      <mean value="68.1185" lowerBound="64.4128" upperBound="71.2729" ci="0.95"/>
+      <standardDeviation value="4.12686" lowerBound="0" upperBound="4.46104" ci="0.95"/>
+      <outliers variance="0.222222" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0" durationInSeconds="0.78543"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

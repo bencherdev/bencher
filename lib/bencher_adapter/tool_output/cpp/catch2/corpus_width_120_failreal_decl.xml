@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="failrealP" rng-seed="246832019" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="failreal.cpp" line="7">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1754" clockResolution="20.6952" estimatedDuration="1.9294e+06">
+      <!-- All values in nano seconds -->
+      <mean value="11.0931" lowerBound="11.0013" upperBound="11.3131" ci="0.95"/>
+      <standardDeviation value="0.677331" lowerBound="0.349748" upperBound="1.33346" ci="0.95"/>
+      <outliers variance="0.584912" lowMild="0" lowSevere="0" highMild="0" highSevere="9"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Paren space first line" filename="failreal.cpp" line="8">
+    <BenchmarkResults name="paren space" samples="100" resamples="100000" iterations="6673" clockResolution="20.6952" estimatedDuration="2.0019e+06">
+      <!-- All values in nano seconds -->
+      <failed message="expected f(1) 
+actual 2"/>
+    </BenchmarkResults>
+    <Exception filename="failreal.cpp" line="8">
+      expected f(1) 
+actual 2
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Paren at line end" filename="failreal.cpp" line="9">
+    <BenchmarkResults name="paren end" samples="100" resamples="100000" iterations="6749" clockResolution="20.6952" estimatedDuration="2.0247e+06">
+      <!-- All values in nano seconds -->
+      <failed message="g(x)
+then h(y)"/>
+    </BenchmarkResults>
+    <Exception filename="failreal.cpp" line="9">
+      g(x)
+then h(y)
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Three lines" filename="failreal.cpp" line="10">
+    <BenchmarkResults name="three lines" samples="100" resamples="100000" iterations="6782" clockResolution="20.6952" estimatedDuration="2.0346e+06">
+      <!-- All values in nano seconds -->
+      <failed message="one
+two
+three"/>
+    </BenchmarkResults>
+    <Exception filename="failreal.cpp" line="10">
+      one
+two
+three
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Trailing newline" filename="failreal.cpp" line="11">
+    <BenchmarkResults name="trailing newline" samples="100" resamples="100000" iterations="6569" clockResolution="20.6952" estimatedDuration="1.9707e+06">
+      <!-- All values in nano seconds -->
+      <failed message="boom
+"/>
+    </BenchmarkResults>
+    <Exception filename="failreal.cpp" line="11">
+      boom
+
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Early paren space" filename="failreal.cpp" line="12">
+    <BenchmarkResults name="early paren space">
+      <failed message="a(b) 
+c"/>
+    </BenchmarkResults>
+    <Exception filename="failreal.cpp" line="12">
+      a(b) 
+c
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="failreal.cpp" line="13">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2349" clockResolution="20.6952" estimatedDuration="1.8792e+06">
+      <!-- All values in nano seconds -->
+      <mean value="6.75365" lowerBound="6.68846" upperBound="6.92831" ci="0.95"/>
+      <standardDeviation value="0.513947" lowerBound="0.240975" upperBound="1.05111" ci="0.95"/>
+      <outliers variance="0.686779" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 6" samples="100" resamples="100000" iterations="3336" clockResolution="20.6952" estimatedDuration="2.0016e+06">
+      <!-- All values in nano seconds -->
+      <mean value="5.18304" lowerBound="5.10728" upperBound="5.42971" ci="0.95"/>
+      <standardDeviation value="0.624559" lowerBound="0.230719" upperBound="1.38551" ci="0.95"/>
+      <outliers variance="0.852041" lowMild="0" lowSevere="0" highMild="2" highSevere="1"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="5" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="5" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

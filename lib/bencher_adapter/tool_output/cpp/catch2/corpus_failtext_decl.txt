@@ -1,0 +1,106 @@
+Randomness seeded to: 1616986349
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+failtextP is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+failtext.cpp:2
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 8                                    100          1848      1.848 ms 
+                                        10.9774 ns    10.6049 ns    11.5367 ns 
+                                        2.28906 ns    1.66192 ns    2.94738 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Failure text before a failure
+-------------------------------------------------------------------------------
+failtext.cpp:3
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 13                                   100           146     1.9272 ms 
+                                        130.377 ns    128.391 ns    134.351 ns 
+                                        13.8086 ns    8.25658 ns    23.3036 ns 
+                                                                               Benchmark failed (x)
+
+throws early                         Benchmark failed (boom) 
+
+failtext.cpp:3: FAILED:
+due to unexpected exception with message:
+  boom
+
+-------------------------------------------------------------------------------
+Failure text sampling
+-------------------------------------------------------------------------------
+failtext.cpp:9
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+failure text sampling                          100          6083     1.8249 ms Benchmark failed (y)
+
+                                        3.04926 ns    2.99823 ns    3.15623 ns 
+                                       0.359827 ns   0.177935 ns    0.60862 ns 
+                                                                               
+throws again                         Benchmark failed (bang) 
+
+failtext.cpp:9: FAILED:
+due to unexpected exception with message:
+  bang
+
+-------------------------------------------------------------------------------
+Paren print
+-------------------------------------------------------------------------------
+failtext.cpp:14
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 11                                   100           418     1.9228 ms 
+                                          46.34 ns    45.7829 ns    47.1984 ns 
+                                        3.47411 ns    2.53903 ns    4.74599 ns 
+                                                                               note (a) 
+
+Fibonacci 12                                   100           307     1.9341 ms 
+                                        66.8563 ns    65.1375 ns     69.451 ns 
+                                        10.6326 ns    7.63578 ns    13.8978 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+failtext.cpp:19
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 7                                    100          2696     1.8872 ms 
+                                        7.36106 ns    7.21887 ns    7.61816 ns 
+                                       0.943246 ns   0.603108 ns    1.41375 ns 
+                                                                               
+Fibonacci 6                                    100          4058     1.6232 ms 
+                                        4.70733 ns    4.58219 ns    4.89534 ns 
+                                        0.77468 ns   0.568503 ns     1.0095 ns 
+                                                                               
+
+===============================================================================
+test cases: 5 | 3 passed | 2 failed
+assertions: 2 | 2 failed
+

@@ -1,0 +1,104 @@
+Randomness seeded to: 3737397246
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+earlyafter is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Fails in the samples
+-------------------------------------------------------------------------------
+earlyafter.cpp:9
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late                                     100          6729     1.3458 ms 
+
+earlyafter.cpp:12: FAILED:
+  REQUIRE( ++calls < at("FAIL_AT", 60) )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+Throws early
+-------------------------------------------------------------------------------
+earlyafter.cpp:16
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+ throws early Benchmark failed (boom) 
+
+earlyafter.cpp:16: FAILED:
+due to unexpected exception with message:
+  boom
+
+-------------------------------------------------------------------------------
+Middle
+-------------------------------------------------------------------------------
+earlyafter.cpp:19
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 12                                   100           266     1.9152 ms 
+                                        73.3071 ns    70.0939 ns    77.3818 ns 
+                                        18.4026 ns    15.0317 ns    21.8857 ns 
+                                                                               
+Fibonacci 13                                   100           146     1.9126 ms 
+                                        120.056 ns    118.818 ns    122.281 ns 
+                                        8.22109 ns    5.25497 ns     12.767 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Requires early
+-------------------------------------------------------------------------------
+earlyafter.cpp:20
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+requires early                       
+earlyafter.cpp:22: FAILED:
+  REQUIRE( fib(3) == 5 )
+with expansion:
+  2 == 5
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+
+-------------------------------------------------------------------------------
+End
+-------------------------------------------------------------------------------
+earlyafter.cpp:26
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 11                                   100           446     1.8732 ms 
+                                        41.4489 ns    41.0314 ns     41.921 ns 
+                                        2.26232 ns    1.93232 ns    2.84935 ns 
+                                                                               
+
+===============================================================================
+test cases:  5 |  2 passed | 3 failed
+assertions: 62 | 59 passed | 3 failed
+

@@ -1,0 +1,76 @@
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+bdd is a Catch v2.13.10 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Scenario: Short scenario
+      Given: a cache
+       When: it is warm
+       Then: lookups are fast
+-------------------------------------------------------------------------------
+bdd.cpp:9
+...............................................................................
+
+benchmark name                       samples       iterations    estimated
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+lookup                                         100           970      2.134 ms 
+                                        22.5534 ns    22.4387 ns     22.751 ns 
+                                        0.74202 ns   0.471418 ns    1.05894 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Scenario: A scenario with a name long enough that the console reporter has to
+          wrap it twice over
+      Given: a given clause with a name long enough that the console reporter
+             has to wrap it
+-------------------------------------------------------------------------------
+bdd.cpp:14
+...............................................................................
+
+benchmark name                       samples       iterations    estimated
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 7                                    100           601     2.1636 ms 
+                                        37.5989 ns    36.9327 ns    38.7358 ns 
+                                        4.33022 ns    2.93735 ns    6.32489 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Parser: a test case with a colon and a long name that the console wraps
+  Lexer: a section with a colon and a long name that the console wraps too
+-------------------------------------------------------------------------------
+bdd.cpp:19
+...............................................................................
+
+benchmark name                       samples       iterations    estimated
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 8                                    100           368      2.208 ms 
+                                        57.4097 ns    56.8817 ns    58.3755 ns 
+                                        3.52008 ns    2.24972 ns     5.2731 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Plain
+-------------------------------------------------------------------------------
+bdd.cpp:23
+...............................................................................
+
+benchmark name                       samples       iterations    estimated
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 9                                    100           238     2.1896 ms 
+                                        94.8242 ns    93.9797 ns    96.3447 ns 
+                                        5.63259 ns    3.51562 ns     8.2109 ns 
+                                                                               
+
+===============================================================================
+test cases: 4 | 4 passed
+assertions: - none -
+

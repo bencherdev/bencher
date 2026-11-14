@@ -42,9 +42,13 @@ export const WINDOWS = [
 export const ADAPTERS: readonly AdapterName[] = [
 	"c_sharp_dot_net",
 	"cpp_catch2",
+	"cpp_catch2_text",
+	"cpp_catch2_xml",
 	"cpp_google",
 	"dart_benchmark_harness",
 	"go_bench",
+	"go_bench_json",
+	"go_bench_text",
 	"java_jmh",
 	"js_benchmark",
 	"js_time",

@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="valprintP" rng-seed="2246234250" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="valprint.cpp" line="2">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1835" clockResolution="20.4637" estimatedDuration="2.0185e+06">
+      <!-- All values in nano seconds -->
+      <mean value="11.2255" lowerBound="11.154" upperBound="11.4245" ci="0.95"/>
+      <standardDeviation value="0.559368" lowerBound="0.226722" upperBound="1.17995" ci="0.95"/>
+      <outliers variance="0.484268" lowMild="1" lowSevere="15" highMild="0" highSevere="6"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Count early" filename="valprint.cpp" line="3">
+    <BenchmarkResults name="count early" samples="100" resamples="100000" iterations="6009" clockResolution="20.4637" estimatedDuration="1.8027e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.20429" lowerBound="3.18314" upperBound="3.24634" ci="0.95"/>
+      <standardDeviation value="0.140539" lowerBound="0.0686618" upperBound="0.222226" ci="0.95"/>
+      <outliers variance="0.414981" lowMild="4" lowSevere="0" highMild="1" highSevere="7"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1062" clockResolution="20.4637" estimatedDuration="2.0178e+06">
+      <!-- All values in nano seconds -->
+      <mean value="19.9854" lowerBound="19.4129" upperBound="20.8431" ci="0.95"/>
+      <standardDeviation value="3.52944" lowerBound="2.57809" upperBound="4.64115" ci="0.95"/>
+      <outliers variance="0.925667" lowMild="0" lowSevere="0" highMild="1" highSevere="12"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Duration sampling" filename="valprint.cpp" line="4">
+    <BenchmarkResults name="duration sampling" samples="100" resamples="100000" iterations="6129" clockResolution="20.4637" estimatedDuration="1.8387e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.2127" lowerBound="3.19221" upperBound="3.25088" ci="0.95"/>
+      <standardDeviation value="0.138976" lowerBound="0.0807279" upperBound="0.206416" ci="0.95"/>
+      <outliers variance="0.405271" lowMild="0" lowSevere="0" highMild="1" highSevere="10"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="763" clockResolution="20.4637" estimatedDuration="1.9838e+06">
+      <!-- All values in nano seconds -->
+      <mean value="26.0605" lowerBound="25.8458" upperBound="26.5593" ci="0.95"/>
+      <standardDeviation value="1.581" lowerBound="0.834581" upperBound="3.04836" ci="0.95"/>
+      <outliers variance="0.575222" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Count sampling" filename="valprint.cpp" line="5">
+    <BenchmarkResults name="count sampling" samples="100" resamples="100000" iterations="6046" clockResolution="20.4637" estimatedDuration="1.8138e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.19394" lowerBound="3.17332" upperBound="3.23404" ci="0.95"/>
+      <standardDeviation value="0.138904" lowerBound="0.0688608" upperBound="0.21668" ci="0.95"/>
+      <outliers variance="0.414725" lowMild="3" lowSevere="0" highMild="5" highSevere="7"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="409" clockResolution="20.4637" estimatedDuration="2.045e+06">
+      <!-- All values in nano seconds -->
+      <mean value="49.9187" lowerBound="49.155" upperBound="51.3511" ci="0.95"/>
+      <standardDeviation value="5.16453" lowerBound="3.13124" upperBound="8.37701" ci="0.95"/>
+      <outliers variance="0.800422" lowMild="0" lowSevere="0" highMild="0" highSevere="6"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Cell duration early" filename="valprint.cpp" line="6">
+    <BenchmarkResults name="cell duration early" samples="100" resamples="100000" iterations="6092" clockResolution="20.4637" estimatedDuration="1.8276e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.22168" lowerBound="3.20503" upperBound="3.25358" ci="0.95"/>
+      <standardDeviation value="0.110097" lowerBound="0.0569625" upperBound="0.166707" ci="0.95"/>
+      <outliers variance="0.297143" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="292" clockResolution="20.4637" estimatedDuration="2.044e+06">
+      <!-- All values in nano seconds -->
+      <mean value="68.1464" lowerBound="67.6988" upperBound="69.0846" ci="0.95"/>
+      <standardDeviation value="3.15929" lowerBound="1.71086" upperBound="5.25318" ci="0.95"/>
+      <outliers variance="0.444617" lowMild="0" lowSevere="0" highMild="8" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Cell duration sampling" filename="valprint.cpp" line="7">
+    <BenchmarkResults name="cell duration sampling" samples="100" resamples="100000" iterations="6099" clockResolution="20.4637" estimatedDuration="1.8297e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.28901" lowerBound="3.2309" upperBound="3.39815" ci="0.95"/>
+      <standardDeviation value="0.394149" lowerBound="0.244645" upperBound="0.622533" ci="0.95"/>
+      <outliers variance="0.851953" lowMild="0" lowSevere="0" highMild="1" highSevere="10"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 13" samples="100" resamples="100000" iterations="148" clockResolution="20.4637" estimatedDuration="2.0572e+06">
+      <!-- All values in nano seconds -->
+      <mean value="139.395" lowerBound="138.297" upperBound="141.317" ci="0.95"/>
+      <standardDeviation value="7.22166" lowerBound="4.68018" upperBound="10.6562" ci="0.95"/>
+      <outliers variance="0.504259" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Two cells sampling" filename="valprint.cpp" line="8">
+    <BenchmarkResults name="two cells sampling" samples="100" resamples="100000" iterations="5777" clockResolution="20.4637" estimatedDuration="1.7331e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.20706" lowerBound="3.188" upperBound="3.24498" ci="0.95"/>
+      <standardDeviation value="0.12886" lowerBound="0.0743282" upperBound="0.205221" ci="0.95"/>
+      <outliers variance="0.375279" lowMild="10" lowSevere="1" highMild="0" highSevere="8"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 14" samples="100" resamples="100000" iterations="104" clockResolution="20.4637" estimatedDuration="2.0488e+06">
+      <!-- All values in nano seconds -->
+      <mean value="205.123" lowerBound="203.855" upperBound="207.384" ci="0.95"/>
+      <standardDeviation value="8.39977" lowerBound="5.27016" upperBound="12.5188" ci="0.95"/>
+      <outliers variance="0.385092" lowMild="13" lowSevere="0" highMild="12" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Three cells early" filename="valprint.cpp" line="9">
+    <BenchmarkResults name="three cells early" samples="100" resamples="100000" iterations="6070" clockResolution="20.4637" estimatedDuration="1.821e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.17871" lowerBound="3.16624" upperBound="3.20811" ci="0.95"/>
+      <standardDeviation value="0.0932435" lowerBound="0.0358361" upperBound="0.162163" ci="0.95"/>
+      <outliers variance="0.238651" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 15" samples="100" resamples="100000" iterations="50" clockResolution="20.4637" estimatedDuration="2.06e+06">
+      <!-- All values in nano seconds -->
+      <mean value="414.048" lowerBound="410.822" upperBound="418.984" ci="0.95"/>
+      <standardDeviation value="20" lowerBound="14.0644" upperBound="27.8191" ci="0.95"/>
+      <outliers variance="0.464571" lowMild="0" lowSevere="0" highMild="1" highSevere="3"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Duration no newline" filename="valprint.cpp" line="10">
+    <BenchmarkResults name="duration no newline" samples="100" resamples="100000" iterations="5838" clockResolution="20.4637" estimatedDuration="1.7514e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.19273" lowerBound="3.17313" upperBound="3.23056" ci="0.95"/>
+      <standardDeviation value="0.131667" lowerBound="0.0711833" upperBound="0.20145" ci="0.95"/>
+      <outliers variance="0.3853" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 16" samples="100" resamples="100000" iterations="37" clockResolution="20.4637" estimatedDuration="2.0979e+06">
+      <!-- All values in nano seconds -->
+      <mean value="579.293" lowerBound="574.269" upperBound="586.667" ci="0.95"/>
+      <standardDeviation value="30.6354" lowerBound="21.7193" upperBound="43.4768" ci="0.95"/>
+      <outliers variance="0.514306" lowMild="1" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Count no newline early" filename="valprint.cpp" line="11">
+    <BenchmarkResults name="count no newline early" samples="100" resamples="100000" iterations="5820" clockResolution="20.4637" estimatedDuration="1.746e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.21091" lowerBound="3.17857" upperBound="3.30336" ci="0.95"/>
+      <standardDeviation value="0.252282" lowerBound="0.102354" upperBound="0.524755" ci="0.95"/>
+      <outliers variance="0.697241" lowMild="0" lowSevere="0" highMild="1" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 17" samples="100" resamples="100000" iterations="17" clockResolution="20.4637" estimatedDuration="2.091e+06">
+      <!-- All values in nano seconds -->
+      <mean value="1218.09" lowerBound="1210.28" upperBound="1232.23" ci="0.95"/>
+      <standardDeviation value="52.0647" lowerBound="32.4777" upperBound="78.9394" ci="0.95"/>
+      <outliers variance="0.404913" lowMild="0" lowSevere="0" highMild="0" highSevere="10"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="valprint.cpp" line="12">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2787" clockResolution="20.4637" estimatedDuration="1.9509e+06">
+      <!-- All values in nano seconds -->
+      <mean value="7.34679" lowerBound="7.26972" upperBound="7.46218" ci="0.95"/>
+      <standardDeviation value="0.475533" lowerBound="0.355132" upperBound="0.723852" ci="0.95"/>
+      <outliers variance="0.615198" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 6" samples="100" resamples="100000" iterations="3746" clockResolution="20.4637" estimatedDuration="1.873e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.82111" lowerBound="4.79301" upperBound="4.8779" ci="0.95"/>
+      <standardDeviation value="0.194822" lowerBound="0.118856" upperBound="0.30589" ci="0.95"/>
+      <outliers variance="0.375447" lowMild="0" lowSevere="0" highMild="1" highSevere="19"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="11" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

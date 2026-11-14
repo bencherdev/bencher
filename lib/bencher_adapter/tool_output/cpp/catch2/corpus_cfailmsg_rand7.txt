@@ -1,0 +1,101 @@
+Randomness seeded to: 7
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cfailmsgP is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+cfailmsg.cpp:5
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 8                                    100          1593     1.9116 ms 
+                                        12.1411 ns    11.9622 ns    12.4925 ns 
+                                        1.23123 ns   0.743773 ns    2.16721 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+cfailmsg.cpp:22
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 7                                    100          2026     1.8234 ms 
+                                        7.16512 ns    6.96483 ns     7.5252 ns 
+                                        1.33028 ns   0.879451 ns    2.19492 ns 
+                                                                               
+Fibonacci 6                                    100          3771     1.8855 ms 
+                                        5.21754 ns    5.17288 ns    5.26706 ns 
+                                       0.239255 ns   0.201734 ns   0.304925 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Paragraphs early
+-------------------------------------------------------------------------------
+cfailmsg.cpp:6
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws paragraphs                    Benchmark failed (first paragraph
+
+second paragraph) 
+
+cfailmsg.cpp:6: FAILED:
+due to unexpected exception with message:
+  first paragraph
+  
+second paragraph
+
+-------------------------------------------------------------------------------
+Trailing newline
+-------------------------------------------------------------------------------
+cfailmsg.cpp:18
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws a newline                     Benchmark failed (ends in a newline
+) 
+
+cfailmsg.cpp:18: FAILED:
+due to unexpected exception with message:
+  ends in a newline
+
+-------------------------------------------------------------------------------
+Paragraphs late
+-------------------------------------------------------------------------------
+cfailmsg.cpp:10
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+throws paragraphs late                         100          6556     1.3112 ms 
+Benchmark failed (late (1)
+
+late (2)) 
+cfailmsg.cpp:10: FAILED:
+due to unexpected exception with message:
+  late (1)
+  
+late (2)
+
+===============================================================================
+test cases: 5 | 2 passed | 3 failed
+assertions: 3 | 3 failed
+

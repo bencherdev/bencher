@@ -1,0 +1,160 @@
+{
+  "context": {
+    "date": "2026-10-29T21:51:26+00:00",
+    "host_name": "localhost",
+    "executable": "./microseconds",
+    "num_cpus": 16,
+    "mhz_per_cpu": 4194,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 16777216,
+        "num_sharing": 16
+      }
+    ],
+    "load_avg": [0.160156,0.0366211,0.0107422],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "BM_fib/20/repeats:3",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_fib/20/repeats:3",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 130774,
+      "real_time": 5.3561706990658600e+00,
+      "cpu_time": 5.3559558780797403e+00,
+      "time_unit": "us"
+    },
+    {
+      "name": "BM_fib/20/repeats:3",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_fib/20/repeats:3",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 1,
+      "threads": 1,
+      "iterations": 130774,
+      "real_time": 5.3883593298308083e+00,
+      "cpu_time": 5.3878375976876143e+00,
+      "time_unit": "us"
+    },
+    {
+      "name": "BM_fib/20/repeats:3",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_fib/20/repeats:3",
+      "run_type": "iteration",
+      "repetitions": 3,
+      "repetition_index": 2,
+      "threads": 1,
+      "iterations": 130774,
+      "real_time": 5.3479732056851708e+00,
+      "cpu_time": 5.3473890222827158e+00,
+      "time_unit": "us"
+    },
+    {
+      "name": "BM_fib/20/repeats:3_mean",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_fib/20/repeats:3",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "mean",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 5.3641677448606124e+00,
+      "cpu_time": 5.3637274993500235e+00,
+      "time_unit": "us"
+    },
+    {
+      "name": "BM_fib/20/repeats:3_median",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_fib/20/repeats:3",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "median",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 5.3561706990658600e+00,
+      "cpu_time": 5.3559558780797403e+00,
+      "time_unit": "us"
+    },
+    {
+      "name": "BM_fib/20/repeats:3_stddev",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_fib/20/repeats:3",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "stddev",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 2.1347700390509195e-02,
+      "cpu_time": 2.1314792655502752e-02,
+      "time_unit": "us"
+    },
+    {
+      "name": "BM_fib/20/repeats:3_cv",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_fib/20/repeats:3",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "cv",
+      "aggregate_unit": "percentage",
+      "iterations": 3,
+      "real_time": 3.9796854621040401e-03,
+      "cpu_time": 3.9738768716504856e-03,
+      "time_unit": "us"
+    },
+    {
+      "name": "BM_fib/20/repeats:3_slowest_repetition_with_a_name_longer_than_a_metric_name_may_hold",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_fib/20/repeats:3",
+      "run_type": "aggregate",
+      "repetitions": 3,
+      "threads": 1,
+      "aggregate_name": "slowest_repetition_with_a_name_longer_than_a_metric_name_may_hold",
+      "aggregate_unit": "time",
+      "iterations": 3,
+      "real_time": 5.3883593298308092e+00,
+      "cpu_time": 5.3878375976876143e+00,
+      "time_unit": "us"
+    }
+  ]
+}

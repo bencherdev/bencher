@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="longfail" rng-seed="4282493645" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="longfail.cpp" line="7">
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="732" clockResolution="22.0573" estimatedDuration="2.196e+06">
+      <!-- All values in nano seconds -->
+      <mean value="30.1892" lowerBound="29.9915" upperBound="30.5081" ci="0.95"/>
+      <standardDeviation value="1.25705" lowerBound="0.854484" upperBound="1.77384" ci="0.95"/>
+      <outliers variance="0.394851" lowMild="0" lowSevere="0" highMild="0" highSevere="6"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Fails in the samples" filename="longfail.cpp" line="9">
+    <BenchmarkResults name="fails late" samples="100" resamples="100000" iterations="7274" clockResolution="22.0573" estimatedDuration="2.1822e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="REQUIRE" filename="longfail.cpp" line="12">
+        <Original>
+          ++calls &lt; 60
+        </Original>
+        <Expanded>
+          60 &lt; 60
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Throws early" filename="longfail.cpp" line="17">
+    <BenchmarkResults name="throws early, long name">
+      <failed message="boom"/>
+    </BenchmarkResults>
+    <Exception filename="longfail.cpp" line="17">
+      boom
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Fails again in the samples" filename="longfail.cpp" line="21">
+    <BenchmarkResults name="fails late again" samples="100" resamples="100000" iterations="4240" clockResolution="22.0573" estimatedDuration="2.12e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="REQUIRE" filename="longfail.cpp" line="24">
+        <Original>
+          ++calls &lt; 60
+        </Original>
+        <Expanded>
+          60 &lt; 60
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Requires early" filename="longfail.cpp" line="29">
+    <BenchmarkResults name="requires early, long name">
+      <Expression success="false" type="REQUIRE" filename="longfail.cpp" line="31">
+        <Original>
+          fib(3) == 5
+        </Original>
+        <Expanded>
+          2 == 5
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="End" filename="longfail.cpp" line="36">
+    <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="500" clockResolution="22.0573" estimatedDuration="2.2e+06">
+      <!-- All values in nano seconds -->
+      <mean value="53.4742" lowerBound="53.1307" upperBound="53.9422" ci="0.95"/>
+      <standardDeviation value="2.03908" lowerBound="1.51984" upperBound="2.85951" ci="0.95"/>
+      <outliers variance="0.346073" lowMild="0" lowSevere="0" highMild="1" highSevere="3"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="118" failures="4" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="4" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

@@ -1,0 +1,114 @@
+Randomness seeded to: 748653383
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+breaks is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Clean
+-------------------------------------------------------------------------------
+breaks.cpp:17
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+std::vector<int>::push_back/                                                   
+reserve=1024,clear                             100          6380      1.276 ms 
+                                        2.69228 ns    2.67487 ns    2.72649 ns 
+                                       0.115877 ns  0.0614155 ns   0.175817 ns 
+                                                                               
+parse(json),then:validate;finally+                                             
+serialize=done                                 100          6598     1.3196 ms 
+                                        2.74224 ns    2.66826 ns    3.08341 ns 
+                                       0.690862 ns  0.0650977 ns    1.63905 ns 
+                                                                               
+lookup_table_with_long_identifier                                              
+[index_of_entry]                               100          6624     1.3248 ms 
+                                        2.68404 ns    2.66762 ns    2.71603 ns 
+                                       0.110718 ns  0.0610639 ns     0.1709 ns 
+                                                                               
+hash_map_insert_and_find_operation-                                            
+s_combined{many}                               100          6995      1.399 ms 
+                                        2.69148 ns    2.67942 ns    2.71598 ns 
+                                      0.0830466 ns  0.0473463 ns   0.131249 ns 
+                                                                               
+a_rather_long_snake_case_identifie-                                            
+r_name|with_pipe                               100          7055      1.411 ms 
+                                        2.69095 ns    2.67747 ns     2.7171 ns 
+                                      0.0909182 ns  0.0510289 ns   0.140751 ns 
+                                                                               
+Averyveryverylongsinglewordthatcan-                                            
+notbreakanywhere                               100          6001     1.8003 ms 
+                                        2.68862 ns    2.67537 ns    2.71595 ns 
+                                       0.092399 ns  0.0516746 ns   0.150903 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Fails in the samples
+-------------------------------------------------------------------------------
+breaks.cpp:18
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late                                     100          7079     1.4158 ms 
+
+breaks.cpp:21: FAILED:
+  REQUIRE( ++calls < at("FAIL_AT", 60) )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+Shifted
+-------------------------------------------------------------------------------
+breaks.cpp:25
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+std::vector<int>::push_back/                             
+                                     reserve=1024,clear           100          6658 
+1.3316 ms                                             2.76924 ns    2.66789 ns 
+3.03101 ns                                           0.726538 ns  0.0775146 ns 
+1.45205 ns                                                                     
+                                     parse(json),then:validate;finally+                             
+                                     serialize=done           100          6617 
+1.3234 ms                                             2.69225 ns    2.68244 ns 
+2.71392 ns                                          0.0715606 ns  0.0377005 ns 
+0.118469 ns                                                                    
+                                     lookup_table_with_long_identifier                             
+                                     [index_of_entry]           100          7050 
+1.41 ms                                               2.89665 ns    2.87045 ns 
+2.94318 ns                                           0.174447 ns   0.113795 ns 
+0.264383 ns                                                                    
+                                     hash_map_insert_and_find_operation-                             
+                                     s_combined{many}           100          6628 
+1.3256 ms                                             2.68184 ns    2.67052 ns 
+2.70439 ns                                          0.0774633 ns  0.0382662 ns 
+0.122688 ns                                                                    
+                                     a_rather_long_snake_case_identifie-                             
+                                     r_name|with_pipe           100          6819 
+1.3638 ms                                             2.68178 ns    2.66329 ns 
+2.71767 ns                                           0.121851 ns  0.0623149 ns 
+0.183978 ns                                                                    
+                                     Averyveryverylongsinglewordthatcan-                             
+                                     notbreakanywhere           100          6114 
+1.8342 ms                                             2.67489 ns    2.65937 ns 
+2.71519 ns                                           0.111466 ns  0.0137465 ns 
+0.216471 ns                                                                    
+                                     
+===============================================================================
+test cases:  3 |  2 passed | 1 failed
+assertions: 60 | 59 passed | 1 failed
+

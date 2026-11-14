@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="fail" rng-seed="4025396408" xml-format-version="3" catch2-version="3.16.1" filters="&quot;Before&quot;,&quot;Fails at once&quot;,&quot;After&quot;">
+  <TestCase name="Before" filename="fail.cpp" line="8">
+    <BenchmarkResults name="Fibonacci 10" samples="20" resamples="1000" iterations="621" clockResolution="18.9508" estimatedDuration="372600">
+      <!-- All values in nano seconds -->
+      <mean value="26.1679" lowerBound="25.9043" upperBound="27.1239" ci="0.95"/>
+      <standardDeviation value="1.00946" lowerBound="0.17546" upperBound="1.98834" ci="0.95"/>
+      <outliers variance="0.138188" lowMild="0" lowSevere="0" highMild="0" highSevere="1"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Fails at once" filename="fail.cpp" line="12">
+    <BenchmarkResults name="requires false">
+      <Expression success="false" type="REQUIRE" filename="fail.cpp" line="14">
+        <Original>
+          false
+        </Original>
+        <Expanded>
+          false
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="fail.cpp" line="28">
+    <BenchmarkResults name="Fibonacci 15" samples="20" resamples="1000" iterations="54" clockResolution="18.9508" estimatedDuration="382320">
+      <!-- All values in nano seconds -->
+      <mean value="347.005" lowerBound="340.524" upperBound="360.282" ci="0.95"/>
+      <standardDeviation value="21.0617" lowerBound="8.08786" upperBound="34.8134" ci="0.95"/>
+      <outliers variance="0.236746" lowMild="0" lowSevere="0" highMild="0" highSevere="2"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="1" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="1" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

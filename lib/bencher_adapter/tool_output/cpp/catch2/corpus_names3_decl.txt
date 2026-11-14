@@ -1,0 +1,46 @@
+Randomness seeded to: 3791401557
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+names3 is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Splits
+-------------------------------------------------------------------------------
+names3.cpp:6
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+(averyveryverylongunbrokenwordwith-                                            
+outanybreakpointsatall)                        100          6306     1.8918 ms 
+                                        2.73678 ns    2.67087 ns    2.97141 ns 
+                                       0.551835 ns   0.110932 ns    1.23152 ns 
+                                                                               
+short-                                                                         
+averyveryverylongunbrokenwordthate-                                            
+xceedsthecolumnwidth                           100          6594     1.3188 ms 
+                                        3.58601 ns    3.39574 ns     3.8216 ns 
+                                        1.07249 ns    0.91059 ns    1.57262 ns 
+                                                                               
+a/bcdefghijklmnopqrstuvwxyzabcdefg-                                            
+hijklmnop                                      100          6919     1.3838 ms 
+                                        2.77347 ns    2.71728 ns    2.88755 ns 
+                                       0.391431 ns    0.22024 ns   0.627659 ns 
+                                                                               
+Größenordnungsvergleichsmessungsdu-                                           
+rchführungsfunktion                           100          6932     1.3864 ms 
+                                        2.72708 ns    2.67986 ns    2.92913 ns 
+                                       0.425792 ns  0.0651159 ns   0.998552 ns 
+                                                                               
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ           100          6143     1.8429 ms 
+                                         2.7247 ns    2.66989 ns     2.9654 ns 
+                                       0.499491 ns  0.0702949 ns     1.1765 ns 
+                                                                               
+
+===============================================================================
+test cases: 1 | 1 passed
+assertions: - none -
+

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="cfailmsgP" rng-seed="7" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="cfailmsg.cpp" line="5">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1593" clockResolution="19.2169" estimatedDuration="1.9116e+06">
+      <!-- All values in nano seconds -->
+      <mean value="12.1411" lowerBound="11.9622" upperBound="12.4925" ci="0.95"/>
+      <standardDeviation value="1.23123" lowerBound="0.743773" upperBound="2.16721" ci="0.95"/>
+      <outliers variance="0.800031" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="cfailmsg.cpp" line="22">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2026" clockResolution="19.2169" estimatedDuration="1.8234e+06">
+      <!-- All values in nano seconds -->
+      <mean value="7.16512" lowerBound="6.96483" upperBound="7.5252" ci="0.95"/>
+      <standardDeviation value="1.33028" lowerBound="0.879451" upperBound="2.19492" ci="0.95"/>
+      <outliers variance="0.935995" lowMild="0" lowSevere="0" highMild="0" highSevere="18"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 6" samples="100" resamples="100000" iterations="3771" clockResolution="19.2169" estimatedDuration="1.8855e+06">
+      <!-- All values in nano seconds -->
+      <mean value="5.21754" lowerBound="5.17288" upperBound="5.26706" ci="0.95"/>
+      <standardDeviation value="0.239255" lowerBound="0.201734" upperBound="0.304925" ci="0.95"/>
+      <outliers variance="0.434953" lowMild="0" lowSevere="0" highMild="2" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Paragraphs early" filename="cfailmsg.cpp" line="6">
+    <BenchmarkResults name="throws paragraphs">
+      <failed message="first paragraph
+
+second paragraph"/>
+    </BenchmarkResults>
+    <Exception filename="cfailmsg.cpp" line="6">
+      first paragraph
+
+second paragraph
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Trailing newline" filename="cfailmsg.cpp" line="18">
+    <BenchmarkResults name="throws a newline">
+      <failed message="ends in a newline
+"/>
+    </BenchmarkResults>
+    <Exception filename="cfailmsg.cpp" line="18">
+      ends in a newline
+
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Paragraphs late" filename="cfailmsg.cpp" line="10">
+    <BenchmarkResults name="throws paragraphs late" samples="100" resamples="100000" iterations="6556" clockResolution="19.2169" estimatedDuration="1.3112e+06">
+      <!-- All values in nano seconds -->
+      <failed message="late (1)
+
+late (2)"/>
+    </BenchmarkResults>
+    <Exception filename="cfailmsg.cpp" line="10">
+      late (1)
+
+late (2)
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="3" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="2" failures="3" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="fakefail" rng-seed="3268965565" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Fake" filename="fakefail.cpp" line="6">
+    <BenchmarkResults name="Benchmark failed (not really)" samples="100" resamples="100000" iterations="5743" clockResolution="20.7849" estimatedDuration="1.7229e+06">
+      <!-- All values in nano seconds -->
+      <mean value="3.37511" lowerBound="3.22024" upperBound="3.63745" ci="0.95"/>
+      <standardDeviation value="1.00911" lowerBound="0.69102" upperBound="1.61435" ci="0.95"/>
+      <outliers variance="0.978321" lowMild="0" lowSevere="0" highMild="0" highSevere="19"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="967" clockResolution="20.7849" estimatedDuration="2.0307e+06">
+      <!-- All values in nano seconds -->
+      <mean value="24.1782" lowerBound="22.6816" upperBound="25.8252" ci="0.95"/>
+      <standardDeviation value="8.00915" lowerBound="7.36929" upperBound="8.70369" ci="0.95"/>
+      <outliers variance="0.978632" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="1" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

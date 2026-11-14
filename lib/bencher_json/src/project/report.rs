@@ -321,8 +321,12 @@ const RUST_GUNGRAUN_JSON_INT: i32 = 26;
 const CPP_INT: i32 = 30;
 const CPP_GOOGLE_INT: i32 = 31;
 const CPP_CATCH2_INT: i32 = 32;
+const CPP_CATCH2_XML_INT: i32 = 321;
+const CPP_CATCH2_TEXT_INT: i32 = 322;
 const GO_INT: i32 = 40;
 const GO_BENCH_INT: i32 = 41;
+const GO_BENCH_JSON_INT: i32 = 411;
+const GO_BENCH_TEXT_INT: i32 = 412;
 const JAVA_INT: i32 = 50;
 const JAVA_JMH_INT: i32 = 51;
 const C_SHARP_INT: i32 = 60;
@@ -373,8 +377,12 @@ pub enum Adapter {
     Cpp = CPP_INT,
     CppGoogle = CPP_GOOGLE_INT,
     CppCatch2 = CPP_CATCH2_INT,
+    CppCatch2Xml = CPP_CATCH2_XML_INT,
+    CppCatch2Text = CPP_CATCH2_TEXT_INT,
     Go = GO_INT,
     GoBench = GO_BENCH_INT,
+    GoBenchJson = GO_BENCH_JSON_INT,
+    GoBenchText = GO_BENCH_TEXT_INT,
     Java = JAVA_INT,
     JavaJmh = JAVA_JMH_INT,
     CSharp = C_SHARP_INT,
@@ -429,7 +437,11 @@ impl Adapter {
             | Self::RustGungraunJson
             | Self::CppGoogle
             | Self::CppCatch2
+            | Self::CppCatch2Xml
+            | Self::CppCatch2Text
             | Self::GoBench
+            | Self::GoBenchJson
+            | Self::GoBenchText
             | Self::JavaJmh
             | Self::CSharpDotNet
             | Self::JsBenchmark
@@ -490,8 +502,12 @@ impl fmt::Display for Adapter {
             Self::Cpp => write!(f, "cpp"),
             Self::CppGoogle => write!(f, "cpp_google"),
             Self::CppCatch2 => write!(f, "cpp_catch2"),
+            Self::CppCatch2Xml => write!(f, "cpp_catch2_xml"),
+            Self::CppCatch2Text => write!(f, "cpp_catch2_text"),
             Self::Go => write!(f, "go"),
             Self::GoBench => write!(f, "go_bench"),
+            Self::GoBenchJson => write!(f, "go_bench_json"),
+            Self::GoBenchText => write!(f, "go_bench_text"),
             Self::Java => write!(f, "java"),
             Self::JavaJmh => write!(f, "java_jmh"),
             Self::CSharp => write!(f, "c_sharp"),
@@ -518,8 +534,9 @@ impl fmt::Display for Adapter {
 #[cfg(feature = "db")]
 mod adapter {
     use super::{
-        Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_GOOGLE_INT, CPP_INT,
-        DART_BENCHMARK_HARNESS_INT, DART_INT, GO_BENCH_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
+        Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_CATCH2_TEXT_INT,
+        CPP_CATCH2_XML_INT, CPP_GOOGLE_INT, CPP_INT, DART_BENCHMARK_HARNESS_INT, DART_INT,
+        GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
         JS_BENCHMARK_INT, JS_INT, JS_TIME_INT, JS_VITEST_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
         MAGIC_INT, PYTHON_ASV_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT,
         RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
@@ -562,8 +579,12 @@ mod adapter {
                 Self::Cpp => CPP_INT.to_sql(out),
                 Self::CppGoogle => CPP_GOOGLE_INT.to_sql(out),
                 Self::CppCatch2 => CPP_CATCH2_INT.to_sql(out),
+                Self::CppCatch2Xml => CPP_CATCH2_XML_INT.to_sql(out),
+                Self::CppCatch2Text => CPP_CATCH2_TEXT_INT.to_sql(out),
                 Self::Go => GO_INT.to_sql(out),
                 Self::GoBench => GO_BENCH_INT.to_sql(out),
+                Self::GoBenchJson => GO_BENCH_JSON_INT.to_sql(out),
+                Self::GoBenchText => GO_BENCH_TEXT_INT.to_sql(out),
                 Self::Java => JAVA_INT.to_sql(out),
                 Self::JavaJmh => JAVA_JMH_INT.to_sql(out),
                 Self::CSharp => C_SHARP_INT.to_sql(out),
@@ -612,8 +633,12 @@ mod adapter {
                 CPP_INT => Ok(Self::Cpp),
                 CPP_GOOGLE_INT => Ok(Self::CppGoogle),
                 CPP_CATCH2_INT => Ok(Self::CppCatch2),
+                CPP_CATCH2_XML_INT => Ok(Self::CppCatch2Xml),
+                CPP_CATCH2_TEXT_INT => Ok(Self::CppCatch2Text),
                 GO_INT => Ok(Self::Go),
                 GO_BENCH_INT => Ok(Self::GoBench),
+                GO_BENCH_JSON_INT => Ok(Self::GoBenchJson),
+                GO_BENCH_TEXT_INT => Ok(Self::GoBenchText),
                 JAVA_INT => Ok(Self::Java),
                 JAVA_JMH_INT => Ok(Self::JavaJmh),
                 C_SHARP_INT => Ok(Self::CSharp),
@@ -1227,7 +1252,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 39] = [
+    const ADAPTERS: [Adapter; 43] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1246,8 +1271,12 @@ mod tests {
         Adapter::Cpp,
         Adapter::CppGoogle,
         Adapter::CppCatch2,
+        Adapter::CppCatch2Xml,
+        Adapter::CppCatch2Text,
         Adapter::Go,
         Adapter::GoBench,
+        Adapter::GoBenchJson,
+        Adapter::GoBenchText,
         Adapter::Java,
         Adapter::JavaJmh,
         Adapter::CSharp,
@@ -1290,8 +1319,12 @@ mod tests {
             | Adapter::Cpp
             | Adapter::CppGoogle
             | Adapter::CppCatch2
+            | Adapter::CppCatch2Xml
+            | Adapter::CppCatch2Text
             | Adapter::Go
             | Adapter::GoBench
+            | Adapter::GoBenchJson
+            | Adapter::GoBenchText
             | Adapter::Java
             | Adapter::JavaJmh
             | Adapter::CSharp

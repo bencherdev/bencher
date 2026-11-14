@@ -251,6 +251,8 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::default::Throughput::from_str(measure_str))
         .or_else(|| built_in::default::BytesThroughput::from_str(measure_str))
         .or_else(|| built_in::default::Cycles::from_str(measure_str))
+        .or_else(|| built_in::default::CpuTime::from_str(measure_str))
+        .or_else(|| built_in::default::Allocations::from_str(measure_str))
         .or_else(|| built_in::json::BuildTime::from_str(measure_str))
         .or_else(|| built_in::json::FileSize::from_str(measure_str))
         .or_else(|| built_in::iai::Instructions::from_str(measure_str))

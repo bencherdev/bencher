@@ -1,0 +1,115 @@
+Randomness seeded to: 1652628022
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+wrapfail is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+wrapfail.cpp:6
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 10                                   100           742     2.0034 ms 
+                                        28.1312 ns    27.9285 ns    28.3887 ns 
+                                        1.16281 ns   0.928869 ns    1.55816 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Fails in the samples
+-------------------------------------------------------------------------------
+wrapfail.cpp:10
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late                                     100          6903     1.3806 ms 
+
+wrapfail.cpp:14: FAILED:
+  REQUIRE( calls < 60 )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+wrapfail.cpp:19
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 15 with a rather long                             
+                                     name that wraps onto more lines           100            55 
+2.0955 ms                                             382.445 ns    380.266 ns 
+386.207 ns                                            14.2778 ns    9.38715 ns 
+20.7485 ns                                                                     
+                                     Matrix product of sizes 1024 2048                             
+                                     then some more words here           100           300 
+2.07 ms                                               68.2517 ns    67.1327 ns 
+71.1773 ns                                            8.57909 ns    3.93198 ns 
+17.5914 ns                                                                     
+                                      Fibonacci 13           100           175 
+2.065 ms                                              162.495 ns    153.838 ns 
+171.108 ns                                             44.196 ns    42.4458 ns 
+46.535 ns                                                                      
+                                     
+-------------------------------------------------------------------------------
+Fails again
+-------------------------------------------------------------------------------
+wrapfail.cpp:25
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+fails late again           100          6124 
+1.8372 ms                            
+wrapfail.cpp:29: FAILED:
+  REQUIRE( again < 60 )
+with expansion:
+  60 < 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Benchmark failed ({ nested assertion failed }) 
+
+-------------------------------------------------------------------------------
+Final
+-------------------------------------------------------------------------------
+wrapfail.cpp:34
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 14                                   100           108     2.0736 ms 
+                                        195.115 ns    194.249 ns    196.429 ns 
+                                        5.33088 ns    3.71077 ns    7.49669 ns 
+                                                                               
+Fibonacci 16 with a rather long                                                
+name that also wraps around                    100            36     2.0952 ms 
+                                        500.556 ns    497.922 ns    506.194 ns 
+                                         18.756 ns    8.80027 ns     31.695 ns 
+                                                                               
+
+===============================================================================
+test cases:   5 |   3 passed | 2 failed
+assertions: 120 | 118 passed | 2 failed
+

@@ -1,0 +1,61 @@
+{
+  "context": {
+    "date": "2026-10-22T02:12:09+00:00",
+    "host_name": "localhost",
+    "executable": "./nan",
+    "num_cpus": 16,
+    "mhz_per_cpu": 4194,
+    "cpu_scaling_enabled": false,
+    "aslr_enabled": false,
+    "caches": [
+      {
+        "type": "Data",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Instruction",
+        "level": 1,
+        "size": 65536,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 2,
+        "size": 524288,
+        "num_sharing": 1
+      },
+      {
+        "type": "Unified",
+        "level": 3,
+        "size": 16777216,
+        "num_sharing": 16
+      }
+    ],
+    "load_avg": [0.259766,0.418457,0.239746],
+    "library_version": "v1.10.0",
+    "library_build_type": "release",
+    "json_schema_version": 1
+  },
+  "benchmarks": [
+    {
+      "name": "BM_ratio",
+      "family_index": 0,
+      "per_family_instance_index": 0,
+      "run_name": "BM_ratio",
+      "run_type": "iteration",
+      "repetitions": 1,
+      "repetition_index": 0,
+      "threads": 1,
+      "iterations": 66919655,
+      "real_time": 2.5149418358506581e-01,
+      "cpu_time": 2.5152188844966406e-01,
+      "time_unit": "ns",
+      "below": -Infinity,
+      "hits": 7.0000000000000000e+00,
+      "unbounded": Infinity,
+      "undefined": NaN
+    }
+  ]
+}

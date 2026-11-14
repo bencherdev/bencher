@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="afterprintP" rng-seed="4187465910" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="afterprint.cpp" line="2">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1720" clockResolution="18.8893" estimatedDuration="1.72e+06">
+      <!-- All values in nano seconds -->
+      <mean value="10.6427" lowerBound="10.6427" upperBound="10.6427" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Last" filename="afterprint.cpp" line="3">
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1207" clockResolution="18.8893" estimatedDuration="1.8105e+06">
+      <!-- All values in nano seconds -->
+      <mean value="15.2093" lowerBound="15.2093" upperBound="15.2093" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="770" clockResolution="18.8893" estimatedDuration="1.848e+06">
+      <!-- All values in nano seconds -->
+      <mean value="24.1436" lowerBound="24.1436" upperBound="24.1436" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Print after the last table" filename="afterprint.cpp" line="4">
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="3" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>
