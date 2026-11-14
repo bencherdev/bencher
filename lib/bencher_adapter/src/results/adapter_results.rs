@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, BmfVersion, JsonNewMetric, ParameterSet,
+    BenchmarkName, BenchmarkNameId, BmfVersion, JsonNewMetric, MeasureNameId, ParameterSet,
     project::{
         measure::built_in::{self, BuiltInMeasure as _},
         report::Adapter,
@@ -642,6 +642,28 @@ impl AdapterResults {
             .flat_map(BenchmarkEntries::values)
             .flat_map(|metrics| metrics.inner.values())
             .any(|metric| !metric.inner.is_empty())
+    }
+
+    pub(crate) fn measures(&self) -> impl Iterator<Item = &MeasureNameId> {
+        self.inner
+            .values()
+            .flat_map(BenchmarkEntries::values)
+            .flat_map(|metrics| metrics.inner.keys())
+    }
+
+    pub(crate) fn retain_measures<F>(&mut self, keep: &F)
+    where
+        F: Fn(&MeasureNameId) -> bool,
+    {
+        self.inner.retain(|_, entries| {
+            let held = !entries.is_empty();
+            entries.retain(|_, metrics| {
+                let held = !metrics.inner.is_empty();
+                metrics.inner.retain(|measure, _| keep(measure));
+                !held || !metrics.inner.is_empty()
+            });
+            !held || !entries.is_empty()
+        });
     }
 
     /// Whether these results are a BMF v0 payload, which is what fold operates on.

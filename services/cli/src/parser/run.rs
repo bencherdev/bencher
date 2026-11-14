@@ -1,7 +1,7 @@
 #[cfg(feature = "plus")]
 use bencher_json::SpecResourceId;
 use bencher_json::{
-    BranchNameId, DateTime, GitHash, ProjectResourceId, Secret, TestbedNameId,
+    BranchNameId, DateTime, GitHash, MeasureNameId, ProjectResourceId, Secret, TestbedNameId,
     project::{branch::START_POINT_MAX_VERSIONS, report::Iteration},
 };
 #[cfg(feature = "plus")]
@@ -63,6 +63,11 @@ pub struct CliRun {
     /// Fold multiple results into a single result using an aggregate function
     #[clap(value_enum, long, requires = "iter", value_name = "AGGREGATE_FUNCTION")]
     pub fold: Option<CliReportFold>,
+
+    /// Measure name, slug, or UUID to keep from the results, repeatable.
+    /// Every other measure is dropped before it is stored. If not set, every measure is kept.
+    #[clap(long)]
+    pub measure: Vec<MeasureNameId>,
 
     /// Backdate the report (seconds since epoch)
     /// NOTE: This will NOT effect the ordering of past reports
@@ -320,6 +325,7 @@ pub struct CliRunJob {
             "average",
             "iter",
             "fold",
+            "measure",
             "backdate",
             "allow_failure",
             "threshold_measure",
@@ -461,6 +467,7 @@ mod tests {
         ("average", &["--average", "median"]),
         ("iter", &["--iter", "3"]),
         ("fold", &["--fold", "min"]),
+        ("measure", &["--measure", "latency"]),
         ("backdate", &["--backdate", "1700000000"]),
         ("allow_failure", &["--allow-failure"]),
         ("threshold_measure", &["--threshold-measure", "latency"]),
