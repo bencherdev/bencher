@@ -4,11 +4,13 @@ use crate::{
     Adaptable as _, Settings,
     adapters::{
         bmf_v1::{
+            c_sharp::dot_net::AdapterCSharpDotNetV1,
             cpp::{
                 catch2::AdapterCppCatch2V1, catch2_text::AdapterCppCatch2Text,
                 catch2_xml::AdapterCppCatch2Xml, google::AdapterCppGoogleV1,
             },
             go::bench::{AdapterGoBenchJson, AdapterGoBenchText, AdapterGoBenchV1},
+            java::jmh::AdapterJavaJmhV1,
             rust::{
                 bench::{AdapterRustBenchJson, AdapterRustBenchText, AdapterRustBenchV1},
                 criterion::AdapterRustCriterionV1,
@@ -26,10 +28,14 @@ use crate::{
     results::adapter_results::AdapterResults,
 };
 
+pub mod c_sharp;
 pub mod cpp;
+mod finite;
 pub mod go;
+pub mod java;
 mod leaf;
 mod magic;
+mod percentile;
 mod runs;
 pub mod rust;
 
@@ -60,14 +66,14 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::GoBench => AdapterGoBenchV1::parse(input, settings),
         Adapter::GoBenchJson => AdapterGoBenchJson::parse(input, settings),
         Adapter::GoBenchText => AdapterGoBenchText::parse(input, settings),
+        Adapter::JavaJmh => AdapterJavaJmhV1::parse(input, settings),
+        Adapter::CSharpDotNet => AdapterCSharpDotNetV1::parse(input, settings),
         Adapter::JsonV0
         | Adapter::Rust
         | Adapter::Cpp
         | Adapter::Go
         | Adapter::Java
-        | Adapter::JavaJmh
         | Adapter::CSharp
-        | Adapter::CSharpDotNet
         | Adapter::Js
         | Adapter::JsBenchmark
         | Adapter::JsTime
@@ -241,6 +247,8 @@ mod test_bmf_v1 {
                 | Adapter::GoBench
                 | Adapter::GoBenchJson
                 | Adapter::GoBenchText
+                | Adapter::JavaJmh
+                | Adapter::CSharpDotNet
         )
     }
 
@@ -286,6 +294,23 @@ pub(crate) mod test_util {
         adapter
             .convert(&input, Settings::new(None, BmfVersion::V1))
             .unwrap_or_else(|| panic!("expected {adapter} to parse {path}"))
+    }
+
+    /// [`convert_v1`] of the fixture after `edit`.
+    pub(crate) fn convert_edited_v1<F: FnOnce(&mut serde_json::Value)>(
+        adapter: Adapter,
+        suffix: &str,
+        edit: F,
+    ) -> AdapterResults {
+        let path = format!("./tool_output/{suffix}");
+        let input =
+            std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("Failed to read {path}: {e}"));
+        let mut json = serde_json::from_str::<serde_json::Value>(&input)
+            .unwrap_or_else(|e| panic!("Failed to parse {path}: {e}"));
+        edit(&mut json);
+        adapter
+            .convert(&json.to_string(), Settings::new(None, BmfVersion::V1))
+            .unwrap_or_else(|| panic!("expected {adapter} to parse the edited {path}"))
     }
 
     /// The fixture through `adapter` at version 1 parses the same with either average
