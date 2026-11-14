@@ -4,7 +4,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use dashmap::DashMap;
+use dashmap::{DashMap, mapref::one::RefMut};
 
 use crate::Buckets;
 use crate::snapshot::{EpochBucket, RateLimiterSnapshot, WindowSnapshot};
@@ -71,6 +71,58 @@ where
         } else {
             None
         }
+    }
+
+    /// Count an event for `key` only if every window has room for it.
+    /// Otherwise count nothing, and return how long until every window has room.
+    pub fn acquire(&self, key: K) -> Result<(), Duration> {
+        self.acquire_at(key, SystemTime::now())
+    }
+
+    fn acquire_at(&self, key: K, now: SystemTime) -> Result<(), Duration> {
+        // Every acquire and every wait locks the windows in this order and no other caller holds
+        // two at once, so the three locks never deadlock.
+        let mut minute = self.minute.events(key, now);
+        let mut hour = self.hour.events(key, now);
+        let mut day = self.day.events(key, now);
+        if let Some(wait) = self.longest_wait(&minute, &hour, &day, now) {
+            return Err(wait);
+        }
+        minute.record(self.minute.buckets.now_bucket(now));
+        hour.record(self.hour.buckets.now_bucket(now));
+        day.record(self.day.buckets.now_bucket(now));
+        Ok(())
+    }
+
+    /// How long until every window has room for another event for `key`, if one is full.
+    /// Counts nothing.
+    pub fn wait(&self, key: K) -> Option<Duration> {
+        self.wait_at(key, SystemTime::now())
+    }
+
+    fn wait_at(&self, key: K, now: SystemTime) -> Option<Duration> {
+        let minute = self.minute.events(key, now);
+        let hour = self.hour.events(key, now);
+        let day = self.day.events(key, now);
+        self.longest_wait(&minute, &hour, &day, now)
+    }
+
+    /// The longest wait of the windows the key's events fill, if they fill any.
+    fn longest_wait(
+        &self,
+        minute: &BucketedEvents,
+        hour: &BucketedEvents,
+        day: &BucketedEvents,
+        now: SystemTime,
+    ) -> Option<Duration> {
+        [
+            self.minute.wait(minute, now),
+            self.hour.wait(hour, now),
+            self.day.wait(day, now),
+        ]
+        .into_iter()
+        .flatten()
+        .max()
     }
 
     /// Compact all 3 windows, dropping every key whose events have all aged out.
@@ -182,6 +234,33 @@ where
 
     fn check(&self, key: K) -> bool {
         self.check_at(key, SystemTime::now())
+    }
+
+    /// The key's events still in the window ending at `now`, locked until the guard drops.
+    fn events(&self, key: K, now: SystemTime) -> RefMut<'_, K, BucketedEvents> {
+        let mut events = self
+            .event_map
+            .entry(key)
+            .or_insert_with(|| BucketedEvents::with_capacity(DEFAULT_CAPACITY));
+        events.prune(self.buckets.cutoff_bucket(now));
+        events
+    }
+
+    /// How long until `events` leave room for one more, if they fill the window.
+    fn wait(&self, events: &BucketedEvents, now: SystemTime) -> Option<Duration> {
+        if events.total < self.limit {
+            return None;
+        }
+        let excess = events.total.saturating_sub(self.limit).saturating_add(1);
+        let mut released = 0;
+        let bucket = events.buckets.iter().find_map(|&(bucket, count)| {
+            released += count as usize;
+            (released >= excess).then_some(bucket)
+        });
+        // A limit of zero never has room.
+        Some(bucket.map_or(self.buckets.window(), |bucket| {
+            self.buckets.until_released(bucket, now)
+        }))
     }
 
     fn check_at(&self, key: K, now: SystemTime) -> bool {
@@ -411,6 +490,155 @@ mod tests {
         };
         assert!(limited_at(evening + DAY - Duration::from_secs(1)));
         assert!(!limited_at(evening + DAY + Duration::from_hours(2)));
+    }
+
+    // `test_now()` starts a bucket of every window, so an event at it stops counting exactly one
+    // window and one bucket later.
+    #[test]
+    fn acquire_waits_until_the_window_has_room() {
+        let limiter = RateLimiter::new(RateLimits {
+            minute: 2,
+            hour: 100,
+            day: 1000,
+        });
+        let start = test_now();
+        assert_eq!(limiter.acquire_at(1u32, start), Ok(()));
+        assert_eq!(limiter.acquire_at(1, start), Ok(()));
+        let released = start + MINUTE + Duration::from_secs(5);
+        let probe = start + Duration::from_secs(30);
+        assert_eq!(
+            limiter.acquire_at(1, probe),
+            Err(released.duration_since(probe).unwrap())
+        );
+        let last_second = released - Duration::from_secs(1);
+        assert_eq!(
+            limiter.acquire_at(1, last_second),
+            Err(Duration::from_secs(1))
+        );
+        assert_eq!(limiter.acquire_at(1, released), Ok(()));
+    }
+
+    // A refusal counts nothing, so refusals never push the wait out.
+    #[test]
+    fn refused_acquire_counts_nothing() {
+        let limiter = RateLimiter::new(RateLimits {
+            minute: 2,
+            hour: 100,
+            day: 1000,
+        });
+        let start = test_now();
+        assert_eq!(limiter.acquire_at(1u32, start), Ok(()));
+        assert_eq!(limiter.acquire_at(1, start), Ok(()));
+        for _ in 0..3 {
+            assert!(
+                limiter
+                    .acquire_at(1, start + Duration::from_secs(30))
+                    .is_err()
+            );
+        }
+        let released = start + MINUTE + Duration::from_secs(5);
+        assert_eq!(limiter.acquire_at(1, released), Ok(()));
+        assert_eq!(limiter.acquire_at(1, released), Ok(()));
+    }
+
+    // The wait is the longest of the full windows, and a window with room counts nothing while
+    // another refuses.
+    #[test]
+    fn acquire_waits_for_every_window() {
+        let limiter = RateLimiter::new(RateLimits {
+            minute: 3,
+            hour: 2,
+            day: 1000,
+        });
+        let start = test_now();
+        assert_eq!(limiter.acquire_at(1u32, start), Ok(()));
+        assert_eq!(limiter.acquire_at(1, start), Ok(()));
+        let probe = start + Duration::from_secs(10);
+        let released = start + HOUR + Duration::from_mins(5);
+        assert_eq!(
+            limiter.acquire_at(1, probe),
+            Err(released.duration_since(probe).unwrap())
+        );
+        assert_eq!(limiter.minute.event_map.get(&1).unwrap().total, 2);
+        assert_eq!(limiter.day.event_map.get(&1).unwrap().total, 2);
+    }
+
+    // With two windows full at once, the wait is the longer of the two.
+    #[test]
+    fn acquire_waits_for_the_longest_full_window() {
+        let limiter = RateLimiter::new(RateLimits {
+            minute: 1,
+            hour: 1,
+            day: 1000,
+        });
+        let start = test_now();
+        assert_eq!(limiter.acquire_at(1u32, start), Ok(()));
+        let probe = start + Duration::from_secs(10);
+        let released = start + HOUR + Duration::from_mins(5);
+        assert_eq!(
+            limiter.acquire_at(1, probe),
+            Err(released.duration_since(probe).unwrap())
+        );
+    }
+
+    // A key over a limit the configuration lowered waits out its whole excess, oldest first.
+    #[test]
+    fn acquire_waits_out_every_event_over_the_limit() {
+        let limiter = RateLimiter::new(RateLimits {
+            minute: 1,
+            hour: 100,
+            day: 1000,
+        });
+        let start = test_now();
+        limiter.minute.restore_at(
+            WindowSnapshot {
+                events: HashMap::from([(
+                    1u32,
+                    vec![
+                        (Buckets::new(MINUTE).now_bucket(start), 2),
+                        (
+                            Buckets::new(MINUTE).now_bucket(start + Duration::from_secs(10)),
+                            1,
+                        ),
+                    ],
+                )]),
+            },
+            start,
+        );
+        let probe = start + Duration::from_secs(20);
+        let released = start + Duration::from_secs(10) + MINUTE + Duration::from_secs(5);
+        assert_eq!(
+            limiter.acquire_at(1, probe),
+            Err(released.duration_since(probe).unwrap())
+        );
+    }
+
+    // A wait holds until every full window has room, and asking for it counts nothing.
+    #[test]
+    fn wait_counts_nothing_and_holds_until_every_window_has_room() {
+        let limiter = RateLimiter::new(RateLimits {
+            minute: 2,
+            hour: 3,
+            day: 1000,
+        });
+        let start = test_now();
+        assert_eq!(limiter.wait_at(1u32, start), None);
+        assert_eq!(limiter.acquire_at(1, start), Ok(()));
+        assert_eq!(limiter.acquire_at(1, start), Ok(()));
+        let probe = start + Duration::from_secs(30);
+        let minute_room = start + MINUTE + Duration::from_secs(5);
+        for _ in 0..3 {
+            assert_eq!(
+                limiter.wait_at(1, probe),
+                Some(minute_room.duration_since(probe).unwrap())
+            );
+        }
+        assert_eq!(limiter.acquire_at(1, minute_room), Ok(()));
+        let hour_room = start + HOUR + Duration::from_mins(5);
+        assert_eq!(
+            limiter.wait_at(1, minute_room),
+            Some(hour_room.duration_since(minute_room).unwrap())
+        );
     }
 
     #[test]

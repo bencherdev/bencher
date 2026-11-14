@@ -25,7 +25,8 @@ use crate::{
     ApiContext, CLAIM_TOKEN_TTL, auth_conn,
     context::{DbConnection, Rbac},
     error::{
-        BencherResource, forbidden_error, issue_error, resource_not_found_error, unauthorized_error,
+        BencherResource, conflict_error, forbidden_error, issue_error, resource_not_found_error,
+        unauthorized_error,
     },
     macros::{
         fn_get::{fn_from_uuid, fn_get, fn_get_id, fn_get_uuid},
@@ -41,7 +42,7 @@ use crate::{
 #[cfg(feature = "plus")]
 use crate::{actor_conn, model::user::actor::ApiActor};
 
-use super::user::QueryUser;
+use super::user::{QueryUser, UserId};
 
 pub mod member;
 pub mod organization_role;
@@ -76,6 +77,18 @@ impl QueryOrganization {
     fn_get_id!(organization, OrganizationId, OrganizationUuid, not_deleted);
     fn_get_uuid!(organization, OrganizationId, OrganizationUuid, not_deleted);
     fn_from_uuid!(organization, OrganizationUuid, Organization, not_deleted);
+
+    /// The organization with `uuid`, unless it is gone.
+    pub fn find(
+        conn: &mut DbConnection,
+        uuid: OrganizationUuid,
+    ) -> diesel::QueryResult<Option<Self>> {
+        schema::organization::table
+            .filter(schema::organization::uuid.eq(uuid))
+            .filter(schema::organization::deleted.is_null())
+            .first(conn)
+            .optional()
+    }
 
     pub async fn get_or_create_from_user(
         context: &ApiContext,
@@ -311,26 +324,63 @@ impl QueryOrganization {
         QueryOrganizationRole::claimed_at(conn, self.id)
     }
 
+    /// Make the user the organization's leader, unless it has been claimed, and move its pending
+    /// unclaimed jobs up to free priority, on one connection inside a write transaction.
+    /// Returns the number of jobs moved, or `None` if the organization was already claimed.
+    pub fn claim_with(
+        &self,
+        conn: &mut DbConnection,
+        user_id: UserId,
+        now: DateTime,
+    ) -> diesel::QueryResult<Option<usize>> {
+        if QueryOrganizationRole::count_query(conn, self.id)? > 0 {
+            return Ok(None);
+        }
+        diesel::insert_into(schema::organization_role::table)
+            .values(&InsertOrganizationRole {
+                user_id,
+                organization_id: self.id,
+                role: OrganizationRole::Leader,
+                created: now,
+                modified: now,
+            })
+            .execute(conn)?;
+        #[cfg(feature = "plus")]
+        let upgraded = self.upgrade_pending_jobs(conn, now)?;
+        #[cfg(not(feature = "plus"))]
+        let upgraded = 0;
+        Ok(Some(upgraded))
+    }
+
     pub async fn claim(
         &self,
         log: &slog::Logger,
         context: &ApiContext,
         query_user: &QueryUser,
     ) -> Result<(), HttpError> {
-        if self.is_claimed(auth_conn!(context))? {
-            return Err(unauthorized_error(format!(
-                "This organization ({}) has already been claimed.",
-                self.uuid
-            )));
-        }
+        let now = context.clock.now();
+        let upgraded =
+            write_transaction!(context, |conn| self.claim_with(conn, query_user.id, now))
+                .map_err(|e| {
+                    issue_error(
+                        "Failed to claim an organization",
+                        &format!("Failed to claim organization ({}).", self.uuid),
+                        e,
+                    )
+                })?
+                .ok_or_else(|| {
+                    conflict_error(format!(
+                        "This organization ({}) has already been claimed.",
+                        self.uuid
+                    ))
+                })?;
 
-        Self::join(context, self.uuid, query_user).await?;
-
-        // Upgrade any pending Unclaimed jobs for this organization to Free priority
-        #[cfg(feature = "plus")]
-        self.upgrade_pending_jobs(log, context).await?;
-        #[cfg(not(feature = "plus"))]
-        let _ = log;
+        slog::info!(
+            log,
+            "Upgraded {upgraded} pending job(s) from Unclaimed to Free priority";
+            "organization" => %self.uuid,
+            "count" => upgraded,
+        );
 
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
@@ -341,14 +391,14 @@ impl QueryOrganization {
     /// When an organization is claimed, upgrade all of its pending jobs
     /// from `Unclaimed` priority to `Free` priority.
     #[cfg(feature = "plus")]
-    async fn upgrade_pending_jobs(
+    fn upgrade_pending_jobs(
         &self,
-        log: &slog::Logger,
-        context: &ApiContext,
-    ) -> Result<(), HttpError> {
+        conn: &mut DbConnection,
+        now: DateTime,
+    ) -> diesel::QueryResult<usize> {
         use bencher_json::{JobStatus, Priority};
 
-        let count = diesel::update(
+        diesel::update(
             schema::job::table
                 .filter(schema::job::organization_id.eq(self.id))
                 .filter(schema::job::status.eq(JobStatus::Pending))
@@ -356,28 +406,9 @@ impl QueryOrganization {
         )
         .set((
             schema::job::priority.eq(Priority::Free),
-            schema::job::modified.eq(DateTime::now()),
+            schema::job::modified.eq(now),
         ))
-        .execute(write_conn!(context))
-        .map_err(|e| {
-            issue_error(
-                "Failed to upgrade pending job priorities",
-                &format!(
-                    "Failed to upgrade pending Unclaimed jobs to Free for organization ({}).",
-                    self.uuid,
-                ),
-                e,
-            )
-        })?;
-
-        slog::info!(
-            log,
-            "Upgraded {count} pending job(s) from Unclaimed to Free priority";
-            "organization" => %self.uuid,
-            "count" => count,
-        );
-
-        Ok(())
+        .execute(conn)
     }
 
     pub async fn join(
@@ -801,5 +832,76 @@ mod tests {
             .first(&mut conn)
             .expect("Failed to get first organization id");
         assert_ne!(rowid, first_id);
+    }
+
+    // A claim makes the user the leader and moves the organization's pending unclaimed jobs to
+    // free priority, but once the organization is claimed, another claim does nothing.
+    #[cfg(feature = "plus")]
+    #[test]
+    fn claim_with_claims_only_an_unclaimed_organization() {
+        use bencher_json::{JobStatus, Priority};
+
+        use super::QueryOrganization;
+        use crate::{
+            model::user::UserId,
+            test_util::{create_job, create_job_fixture},
+        };
+
+        let mut conn = setup_test_db();
+        let fixture = create_job_fixture(&mut conn);
+        let job = create_job(&mut conn, fixture, JobStatus::Pending);
+        diesel::update(schema::job::table.filter(schema::job::id.eq(job)))
+            .set(schema::job::priority.eq(Priority::Unclaimed))
+            .execute(&mut conn)
+            .unwrap();
+        let user = |conn: &mut diesel::SqliteConnection, n: i32| -> UserId {
+            diesel::insert_into(schema::user::table)
+                .values((
+                    schema::user::uuid.eq(format!("00000000-0000-4000-8000-00000000000{n}")),
+                    schema::user::name.eq(format!("User {n}")),
+                    schema::user::slug.eq(format!("user-{n}")),
+                    schema::user::email.eq(format!("user{n}@example.com")),
+                    schema::user::admin.eq(false),
+                    schema::user::locked.eq(false),
+                    schema::user::created.eq(0i64),
+                    schema::user::modified.eq(0i64),
+                ))
+                .execute(conn)
+                .unwrap();
+            diesel::select(last_insert_rowid())
+                .get_result(conn)
+                .unwrap()
+        };
+        let first = user(&mut conn, 1);
+        let second = user(&mut conn, 2);
+        let organization = QueryOrganization::get(&mut conn, fixture.organization_id).unwrap();
+
+        assert_eq!(
+            organization
+                .claim_with(&mut conn, first, DateTime::TEST)
+                .unwrap(),
+            Some(1)
+        );
+        assert_eq!(
+            organization
+                .claim_with(&mut conn, second, DateTime::TEST)
+                .unwrap(),
+            None
+        );
+        let roles = schema::organization_role::table
+            .filter(schema::organization_role::organization_id.eq(fixture.organization_id))
+            .select((
+                schema::organization_role::user_id,
+                schema::organization_role::role,
+            ))
+            .load::<(UserId, String)>(&mut conn)
+            .unwrap();
+        assert_eq!(roles, [(first, "leader".to_owned())]);
+        let priority = schema::job::table
+            .filter(schema::job::id.eq(job))
+            .select(schema::job::priority)
+            .first::<Priority>(&mut conn)
+            .unwrap();
+        assert_eq!(priority, Priority::Free);
     }
 }

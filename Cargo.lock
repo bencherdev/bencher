@@ -121,6 +121,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 name = "api_auth"
 version = "0.6.17"
 dependencies = [
+ "async-trait",
  "base64 0.23.1",
  "bencher_api_tests",
  "bencher_endpoint",
@@ -129,6 +130,7 @@ dependencies = [
  "bencher_rbac",
  "bencher_schema",
  "bencher_token",
+ "bencher_turnstile",
  "chrono",
  "diesel",
  "dropshot",
@@ -1305,6 +1307,7 @@ name = "bencher_schema"
 version = "0.6.17"
 dependencies = [
  "async-trait",
+ "aws-lc-rs",
  "bencher_adapter",
  "bencher_billing",
  "bencher_bing_index",
@@ -1324,6 +1327,7 @@ dependencies = [
  "bencher_rbac",
  "bencher_recaptcha",
  "bencher_token",
+ "bencher_turnstile",
  "camino",
  "chrono",
  "criterion",
@@ -1333,6 +1337,8 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dropshot",
+ "futures-concurrency",
+ "hex",
  "http",
  "libsqlite3-sys",
  "mail-send",
@@ -1366,6 +1372,22 @@ dependencies = [
  "serde",
  "thiserror 2.0.21",
  "uuid",
+]
+
+[[package]]
+name = "bencher_turnstile"
+version = "0.6.17"
+dependencies = [
+ "async-trait",
+ "bencher_valid",
+ "pretty_assertions",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "slog",
+ "thiserror 2.0.21",
+ "tokio",
+ "url",
 ]
 
 [[package]]

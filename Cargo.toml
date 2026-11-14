@@ -70,6 +70,7 @@ bencher_otel_provider = { path = "plus/bencher_otel_provider" }
 bencher_oci_storage = { path = "plus/bencher_oci_storage" }
 bencher_rate_limiter = { path = "plus/bencher_rate_limiter" }
 bencher_recaptcha = { path = "plus/bencher_recaptcha" }
+bencher_turnstile = { path = "plus/bencher_turnstile" }
 # plus - runner
 bencher_runner = { path = "plus/bencher_runner" }
 bencher_oci = { path = "plus/bencher_oci" }

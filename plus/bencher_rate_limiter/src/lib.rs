@@ -39,6 +39,19 @@ impl Buckets {
             self.bucket_secs,
         )
     }
+
+    /// How long after `now` the events in `bucket` stop counting.
+    pub(crate) fn until_released(self, bucket: EpochBucket, now: SystemTime) -> Duration {
+        let released = bucket
+            .saturating_add(1)
+            .saturating_mul(self.bucket_secs)
+            .saturating_add(self.window_secs);
+        Duration::from_secs(released.saturating_sub(epoch_secs(now)))
+    }
+
+    pub(crate) fn window(self) -> Duration {
+        Duration::from_secs(self.window_secs)
+    }
 }
 
 fn epoch_secs(time: SystemTime) -> u64 {
