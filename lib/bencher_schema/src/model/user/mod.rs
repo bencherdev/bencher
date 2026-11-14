@@ -33,6 +33,7 @@ pub mod oauth;
 #[cfg(feature = "plus")]
 pub mod oauth_authorization;
 pub mod public;
+pub mod session;
 pub mod token;
 
 crate::macros::typed_id::typed_id!(UserId);

@@ -6,8 +6,8 @@
 )]
 //! Integration tests for the OCI token endpoint (GET and POST /v0/auth/oci/token).
 
-use bencher_api_tests::TestServer;
-use bencher_json::{JsonUserKeyCreated, ProjectKey, UserKey};
+use bencher_api_tests::{TestServer, session_cookie};
+use bencher_json::{JsonUserKeyCreated, Jwt, ProjectKey, UserKey};
 use http::StatusCode;
 use serde_json::Value;
 
@@ -53,6 +53,48 @@ async fn oci_token_anonymous() {
         .expect("Request failed");
 
     assert_eq!(v2_resp.status(), StatusCode::OK);
+}
+
+// Only a session cookie → an anonymous token: the registry's token endpoint takes Basic
+// credentials alone
+#[tokio::test]
+async fn oci_token_ignores_session_cookie() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Token Cookie", "tokencookie@example.com")
+        .await;
+    let org = server.create_org(&user, "Token Cookie Org").await;
+    let project = server
+        .create_project(&user, &org, "Token Cookie Project")
+        .await;
+    let session = server.session(&user);
+
+    let project_slug: &str = project.slug.as_ref();
+    let resp = server
+        .client
+        .get(server.api_url(&format!(
+            "/v0/auth/oci/token?scope=repository:{project_slug}:push&service=localhost"
+        )))
+        .header(http::header::COOKIE, session_cookie(&session))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body: Value = resp.json().await.expect("Invalid JSON");
+    let token: Jwt = body["token"]
+        .as_str()
+        .expect("Missing token")
+        .parse()
+        .expect("Invalid token");
+    server
+        .token_key()
+        .validate_oci_public(&token)
+        .expect("Expected an anonymous token");
+    server
+        .token_key()
+        .validate_oci_auth(&token)
+        .expect_err("Expected no user behind the token");
 }
 
 // Anonymous token request without scope → returns a valid token (base endpoint only)

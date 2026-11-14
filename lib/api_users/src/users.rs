@@ -12,6 +12,7 @@ use bencher_schema::{
         admin::AdminUser,
         auth::{AuthUser, BearerToken},
         bump_modified, same_user,
+        session::QuerySession,
         token::QueryToken,
     },
     schema, write_transaction,
@@ -300,6 +301,9 @@ async fn patch_inner(
             .execute(conn)?;
         if email_changed && !confirm {
             QueryToken::revoke_all(conn, query_user.id, now)?;
+        }
+        if update_user.locked == Some(true) {
+            QuerySession::delete_all(conn, query_user.id)?;
         }
         schema::user::table
             .filter(schema::user::id.eq(query_user.id))
