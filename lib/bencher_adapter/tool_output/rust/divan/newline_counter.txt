@@ -1,0 +1,10 @@
+args              fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ counted                      │               │               │               │         │
+   ├─ first       0.161 ns      │ 1.187 ns      │ 0.163 ns      │ 0.175 ns      │ 100     │ 819200
+   │              31.05 GB/s    │ 4.212 GB/s    │ 30.67 GB/s    │ 28.57 GB/s    │         │
+   ├─ line
+break  0.159 ns      │ 0.783 ns      │ 0.162 ns      │ 0.172 ns      │ 100     │ 819200
+   │              62.89 GB/s    │ 12.77 GB/s    │ 61.72 GB/s    │ 58.13 GB/s    │         │
+   ╰─ next        0.16 ns       │ 1.118 ns      │ 0.162 ns      │ 0.172 ns      │ 100     │ 819200
+                  25 GB/s       │ 3.577 GB/s    │ 24.69 GB/s    │ 23.25 GB/s    │         │
+

@@ -70,6 +70,7 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"rust_criterion",
 	"rust_criterion_json",
 	"rust_criterion_text",
+	"rust_divan",
 	"rust_gungraun",
 	"rust_gungraun_json",
 	"rust_gungraun_stdout",

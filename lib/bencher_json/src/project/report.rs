@@ -318,6 +318,7 @@ const RUST_IAI_INT: i32 = 23;
 const RUST_GUNGRAUN_INT: i32 = 24;
 const RUST_GUNGRAUN_STDOUT_INT: i32 = 25;
 const RUST_GUNGRAUN_JSON_INT: i32 = 26;
+const RUST_DIVAN_INT: i32 = 27;
 const CPP_INT: i32 = 30;
 const CPP_GOOGLE_INT: i32 = 31;
 const CPP_CATCH2_INT: i32 = 32;
@@ -378,6 +379,7 @@ pub enum Adapter {
     RustGungraun = RUST_GUNGRAUN_INT,
     RustGungraunStdout = RUST_GUNGRAUN_STDOUT_INT,
     RustGungraunJson = RUST_GUNGRAUN_JSON_INT,
+    RustDivan = RUST_DIVAN_INT,
     Cpp = CPP_INT,
     CppGoogle = CPP_GOOGLE_INT,
     CppCatch2 = CPP_CATCH2_INT,
@@ -443,6 +445,7 @@ impl Adapter {
             | Self::RustGungraun
             | Self::RustGungraunStdout
             | Self::RustGungraunJson
+            | Self::RustDivan
             | Self::CppGoogle
             | Self::CppCatch2
             | Self::CppCatch2Xml
@@ -511,6 +514,7 @@ impl fmt::Display for Adapter {
             Self::RustGungraun => write!(f, "rust_gungraun"),
             Self::RustGungraunStdout => write!(f, "rust_gungraun_stdout"),
             Self::RustGungraunJson => write!(f, "rust_gungraun_json"),
+            Self::RustDivan => write!(f, "rust_divan"),
             Self::Cpp => write!(f, "cpp"),
             Self::CppGoogle => write!(f, "cpp_google"),
             Self::CppCatch2 => write!(f, "cpp_catch2"),
@@ -557,7 +561,7 @@ mod adapter {
         JSON_INT, JSON_V0_INT, JSON_V1_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT,
         PYTHON_ASV_TEXT_INT, PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT,
         RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
-        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_GUNGRAUN_INT,
+        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT,
         RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT,
         SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
@@ -593,6 +597,7 @@ mod adapter {
                 Self::RustGungraun => RUST_GUNGRAUN_INT.to_sql(out),
                 Self::RustGungraunStdout => RUST_GUNGRAUN_STDOUT_INT.to_sql(out),
                 Self::RustGungraunJson => RUST_GUNGRAUN_JSON_INT.to_sql(out),
+                Self::RustDivan => RUST_DIVAN_INT.to_sql(out),
                 Self::Cpp => CPP_INT.to_sql(out),
                 Self::CppGoogle => CPP_GOOGLE_INT.to_sql(out),
                 Self::CppCatch2 => CPP_CATCH2_INT.to_sql(out),
@@ -651,6 +656,7 @@ mod adapter {
                 RUST_GUNGRAUN_INT => Ok(Self::RustGungraun),
                 RUST_GUNGRAUN_STDOUT_INT => Ok(Self::RustGungraunStdout),
                 RUST_GUNGRAUN_JSON_INT => Ok(Self::RustGungraunJson),
+                RUST_DIVAN_INT => Ok(Self::RustDivan),
                 CPP_INT => Ok(Self::Cpp),
                 CPP_GOOGLE_INT => Ok(Self::CppGoogle),
                 CPP_CATCH2_INT => Ok(Self::CppCatch2),
@@ -1277,7 +1283,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 47] = [
+    const ADAPTERS: [Adapter; 48] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1293,6 +1299,7 @@ mod tests {
         Adapter::RustGungraun,
         Adapter::RustGungraunStdout,
         Adapter::RustGungraunJson,
+        Adapter::RustDivan,
         Adapter::Cpp,
         Adapter::CppGoogle,
         Adapter::CppCatch2,
@@ -1345,6 +1352,7 @@ mod tests {
             | Adapter::RustGungraun
             | Adapter::RustGungraunStdout
             | Adapter::RustGungraunJson
+            | Adapter::RustDivan
             | Adapter::Cpp
             | Adapter::CppGoogle
             | Adapter::CppCatch2

@@ -14,7 +14,7 @@ use crate::{
             ruby::benchmark::AdapterRubyBenchmarkV1,
             rust::{
                 bench::AdapterRustBenchV1, criterion::AdapterRustCriterionV1,
-                gungraun::AdapterRustGungraunV1, iai::AdapterRustIaiV1,
+                divan::AdapterRustDivan, gungraun::AdapterRustGungraunV1, iai::AdapterRustIaiV1,
             },
             shell::hyperfine::AdapterShellHyperfineV1,
         },
@@ -24,7 +24,8 @@ use crate::{
 };
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
-/// its structured format before its text.
+/// its structured format before its text, and Divan before criterion, since criterion's text leaf
+/// also claims a run that prints both and drops Divan's tree.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -43,6 +44,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterPythonPytestV1::parse(input, settings))
             .or_else(|| AdapterRubyBenchmarkV1::parse(input, settings))
             .or_else(|| AdapterRustBenchV1::parse(input, settings))
+            .or_else(|| AdapterRustDivan::parse(input, settings))
             .or_else(|| AdapterRustCriterionV1::parse(input, settings))
             .or_else(|| AdapterRustIaiV1::parse(input, settings))
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
@@ -64,7 +66,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 26] = [
+    const LEAVES: [Adapter; 27] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -84,6 +86,7 @@ mod test_magic_v1 {
         Adapter::RubyBenchmark,
         Adapter::RustBenchJson,
         Adapter::RustBenchText,
+        Adapter::RustDivan,
         Adapter::RustCriterionJson,
         Adapter::RustCriterionText,
         Adapter::RustIai,
@@ -115,17 +118,37 @@ mod test_magic_v1 {
         ("rust/gungraun/json_not_v6.txt", None),
     ];
 
-    /// Every fixture is claimed by its own leaf alone, and `magic` reads it exactly as that leaf.
+    /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
+    /// leaf.
+    const LATER_CLAIMANTS: [(&str, Adapter); 2] = [
+        // A nightly `cargo bench` of a libtest `#[bench]` and Divan prints both, and libtest's
+        // text leaf reads its line where Divan's leaf counts it.
+        ("rust/bench/divan_mixed.txt", Adapter::RustDivan),
+        // A `cargo bench` of criterion and Divan prints both, and Divan's leaf counts criterion's
+        // line where criterion's text leaf drops Divan's tree.
+        (
+            "rust/divan/mixed_crit_divan.txt",
+            Adapter::RustCriterionText,
+        ),
+    ];
+
+    /// Every fixture is claimed by its own leaf alone, but for the later claimants listed, and
+    /// `magic` reads it exactly as that leaf.
     ///
     /// Kills: a leaf that claims another harness's output or refuses its own, a leaf that records
     /// another leaf or another version, and a `magic` that skips a harness, reads with another
-    /// leaf, or claims what every leaf refuses.
+    /// leaf, claims what every leaf refuses, or tries a later claimant first, such as Divan before
+    /// libtest or criterion before Divan.
     #[test]
     fn magic_v1_every_fixture_is_claimed_by_its_owner_alone() {
         let settings = Settings::new(None, BmfVersion::V1);
         let mut fixtures = fixtures(Path::new(FIXTURES));
         fixtures.sort();
-        for (exception, _) in EXCEPTIONS {
+        for exception in EXCEPTIONS
+            .iter()
+            .map(|(exception, _)| exception)
+            .chain(LATER_CLAIMANTS.iter().map(|(fixture, _)| fixture))
+        {
             assert!(
                 fixtures.iter().any(|(fixture, _)| fixture == exception),
                 "no fixture {exception}"
@@ -139,7 +162,13 @@ mod test_magic_v1 {
                 .into_iter()
                 .filter(|leaf| leaf.convert(&input, settings).is_some())
                 .collect();
-            assert_eq!(claimants, Vec::from_iter(owner), "{fixture}");
+            let expected: Vec<Adapter> = LEAVES
+                .into_iter()
+                .filter(|leaf| {
+                    owner == Some(*leaf) || LATER_CLAIMANTS.contains(&(fixture.as_str(), *leaf))
+                })
+                .collect();
+            assert_eq!(claimants, expected, "{fixture}");
             let read = owner.and_then(|owner| owner.convert(&input, settings));
             if let Some(results) = &read {
                 assert_eq!(
@@ -208,6 +237,7 @@ mod test_magic_v1 {
             "python/pytest" => return Some(Adapter::PythonPytest),
             "ruby/benchmark" => return Some(Adapter::RubyBenchmark),
             "rust/iai" => return Some(Adapter::RustIai),
+            "rust/divan" => return Some(Adapter::RustDivan),
             "json" => return name.starts_with("report_v1_").then_some(Adapter::JsonV1),
             "cpp/catch2" => (
                 extension == Some("xml"),

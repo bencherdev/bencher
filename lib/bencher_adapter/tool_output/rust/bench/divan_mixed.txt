@@ -1,0 +1,11 @@
+
+running 1 test
+test benches::bench_add ... bench:           0.30 ns/iter (+/- 0.02)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in 0.23s
+
+ovf   fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ a                │               │               │               │         │
+   ├─ t=1  0.002 ns      │ 1.477 ns      │ 0.002 ns      │ 0.02 ns       │ 100     │ 819200
+   ╰─ t=16  0.004 ns      │ 1.412 ns      │ 0.238 ns      │ 0.202 ns      │ 112     │ 458752
+

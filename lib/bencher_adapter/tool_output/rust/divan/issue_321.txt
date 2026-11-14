@@ -1,0 +1,8 @@
+scratch        fastest  │ slowest  │ median   │ mean     │ samples │ iters
+├─ from_str             │          │          │          │         │
+│  ├─ &str     0.738 ns │ 0.799 ns │ 0.759 ns │ 0.757 ns │ 100     │ 409600
+│  ╰─ String   26.8 ns  │ 32.18 ns │ 30.39 ns │ 30.42 ns │ 100     │ 25600
+╰─ init_array           │          │          │          │         │
+   ├─ 1000     572.5 ns │ 598.6 ns │ 583 ns   │ 584.5 ns │ 100     │ 800
+   ├─ 2000     1.155 µs │ 1.197 µs │ 1.166 µs │ 1.165 µs │ 100     │ 400
+   ╰─ 3000     1.759 µs │ 1.801 µs │ 1.77 µs  │ 1.77 µs  │ 100     │ 400
