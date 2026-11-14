@@ -26,10 +26,10 @@ use project::{
 use run::CliRun;
 #[cfg(feature = "plus")]
 use system::runner::CliRunner;
+use system::server::CliServer;
 #[cfg(feature = "plus")]
 use system::spec::CliSpec;
-use system::{auth::CliAuth, server::CliServer};
-use user::{CliUser, token::CliToken};
+use user::CliUser;
 
 /// Bencher CLI
 #[derive(Parser, Debug)]
@@ -119,11 +119,6 @@ pub enum CliSub {
     /// Manage user
     #[clap(subcommand)]
     User(CliUser),
-    /// Manage user API tokens. Deprecated: prefer user API keys
-    /// (`bencher user key`); existing tokens can still be managed.
-    #[clap(subcommand)]
-    Token(CliToken),
-
     #[cfg(feature = "plus")]
     /// Manage runners
     #[clap(subcommand)]
@@ -136,10 +131,6 @@ pub enum CliSub {
     /// Server commands
     #[clap(subcommand)]
     Server(CliServer),
-
-    /// Server authentication & authorization
-    #[clap(subcommand, hide = true)]
-    Auth(CliAuth),
 }
 
 #[derive(Args, Debug)]

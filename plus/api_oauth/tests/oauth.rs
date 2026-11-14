@@ -544,6 +544,27 @@ async fn approve_refuses_an_api_token() {
     assert!(!harness.authorization(uuid).is_answered());
 }
 
+// A session JWT from the old sign-in is no credential at all, so it approves nothing and is
+// answered with the one 401, as any credential with no row.
+// Kills an approval by the old sign-in's session JWT.
+#[tokio::test]
+async fn approve_refuses_an_old_session_jwt() {
+    let harness = Harness::new().await;
+    let user = harness
+        .server
+        .signup("Old", "old-session@example.com")
+        .await;
+    let jwt = harness.server.old_session_jwt(&user);
+    let uuid = consent_request(&harness.authorize(&request()).await);
+
+    let resp = harness.answer(uuid, true, Some(jwt.as_ref())).await;
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let body = resp.text().await.expect("Invalid body");
+    assert!(body.contains(INVALID_CREDENTIAL), "{body}");
+    assert!(!body.contains(jwt.as_ref()), "{body}");
+    assert!(!harness.authorization(uuid).is_answered());
+}
+
 // Kills a consent page that cannot approve with the session its reader signed in with, and an
 // approval with a session cookie sent from another origin, or from no origin at all.
 #[tokio::test]

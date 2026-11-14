@@ -76,8 +76,8 @@ pub use plus::{
     OAuthCodeChallenge, OAuthCodeHash, OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce,
     OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
     OAuthTokenHash, OperatingSystem, PkceVerifier, PlanLevel, PlanStatus, PollTimeout,
-    ProviderAccountId, ProviderNonce, ProviderState, ProviderStateHash, RecaptchaAction,
-    RecaptchaScore, RunnerKey, RunnerKeyHash, Sandbox, Sha256, Timeout, UpdateChannel,
+    ProviderAccountId, ProviderNonce, ProviderState, ProviderStateHash, RunnerKey, RunnerKeyHash,
+    Sandbox, Sha256, Timeout, UpdateChannel,
 };
 pub use resource_id::{IntoResourceId, ResourceId};
 pub use resource_name::ResourceName;

@@ -1,4 +1,3 @@
-pub mod auth;
 #[cfg(feature = "plus")]
 pub mod runner;
 pub mod server;

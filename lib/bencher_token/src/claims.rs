@@ -1,4 +1,4 @@
-use bencher_json::{DateTime, Email};
+use bencher_json::Email;
 #[cfg(feature = "plus")]
 use bencher_json::{
     GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, ProjectUuid, RunnerUuid,
@@ -55,26 +55,6 @@ impl Claims {
             sub: email,
             oci,
         }
-    }
-
-    pub fn audience(&self) -> &str {
-        &self.aud
-    }
-
-    pub fn email(&self) -> &Email {
-        &self.sub
-    }
-
-    pub fn issued_at(&self) -> DateTime {
-        let date_time = DateTime::try_from(self.iat);
-        debug_assert!(date_time.is_ok(), "Issued at time is invalid");
-        date_time.unwrap_or_default()
-    }
-
-    pub fn expiration(&self) -> DateTime {
-        let date_time = DateTime::try_from(self.exp);
-        debug_assert!(date_time.is_ok(), "Expiration time is invalid");
-        date_time.unwrap_or_default()
     }
 }
 

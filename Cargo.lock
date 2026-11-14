@@ -785,6 +785,7 @@ dependencies = [
  "dropshot",
  "hex",
  "http",
+ "jsonwebtoken 11.1.0",
  "libsqlite3-sys",
  "reqwest",
  "rustls",
@@ -955,7 +956,6 @@ dependencies = [
  "bencher_logger",
  "bencher_oci_storage",
  "bencher_rbac",
- "bencher_recaptcha",
  "bencher_schema",
  "bencher_token",
  "diesel",
@@ -1240,20 +1240,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bencher_recaptcha"
-version = "0.6.17"
-dependencies = [
- "bencher_otel",
- "bencher_valid",
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
- "slog",
- "thiserror 2.0.21",
-]
-
-[[package]]
 name = "bencher_rootfs"
 version = "0.6.17"
 dependencies = [
@@ -1335,7 +1321,6 @@ dependencies = [
  "bencher_rank",
  "bencher_rate_limiter",
  "bencher_rbac",
- "bencher_recaptcha",
  "bencher_token",
  "bencher_turnstile",
  "camino",

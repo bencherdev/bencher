@@ -149,7 +149,7 @@ async fn legacy_token_expires_at_its_rows_expiration() {
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
-// Kills a list or view that carries any part of a token's JWT.
+// Kills a list that carries any part of a token's JWT.
 #[tokio::test]
 async fn token_reads_carry_no_jwt() {
     let server = TestServer::new().await;
@@ -158,30 +158,25 @@ async fn token_reads_carry_no_jwt() {
     let (header, claims) = seeded.token.as_ref().split_once('.').expect("JWT header");
     let (payload, signature) = claims.split_once('.').expect("JWT payload");
 
-    let list = format!("/v0/users/{}/tokens", user.slug);
-    let view = format!("{list}/{}", seeded.uuid);
-    for path in [list, view] {
-        let resp = server
-            .client
-            .get(server.api_url(&path))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&user.token),
-            )
-            .send()
-            .await
-            .expect("Request failed");
-        assert_eq!(resp.status(), StatusCode::OK, "{path}");
-        let body = resp.text().await.expect("Failed to read the body");
-        assert!(body.contains(&seeded.uuid.to_string()), "{body}");
-        for part in [header, payload, signature] {
-            assert!(!body.contains(part), "{path}: {body}");
-        }
-        let json: serde_json::Value = serde_json::from_str(&body).expect("Failed to parse");
-        let rows = json.as_array().cloned().unwrap_or_else(|| vec![json]);
-        for row in rows {
-            assert!(row.get("token").is_none(), "{path}: {row}");
-        }
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/users/{}/tokens", user.slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    let body = resp.text().await.expect("Failed to read the body");
+    assert!(body.contains(&seeded.uuid.to_string()), "{body}");
+    for part in [header, payload, signature] {
+        assert!(!body.contains(part), "{body}");
+    }
+    let json: serde_json::Value = serde_json::from_str(&body).expect("Failed to parse");
+    for row in json.as_array().expect("Not a list") {
+        assert!(row.get("token").is_none(), "{row}");
     }
 }
 

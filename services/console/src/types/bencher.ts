@@ -652,27 +652,6 @@ export interface JsonAuthAck {
 	email: Email;
 }
 
-export interface JsonUser {
-	uuid: Uuid;
-	name: UserName;
-	slug: Slug;
-	email: Email;
-	admin: boolean;
-	locked: boolean;
-	/**
-	 * The time at which the user account was created.
-	 * Optional for backwards compatibility with older servers.
-	 */
-	created?: string;
-}
-
-export interface JsonAuthUser {
-	user: JsonUser;
-	token: Jwt;
-	creation: string;
-	expiration: string;
-}
-
 export enum CardBrand {
 	Amex = "amex",
 	Diners = "diners",
@@ -721,10 +700,6 @@ export interface JsonClaimedJob {
 	timeout: Timeout;
 	/** Job creation timestamp */
 	created: string;
-}
-
-export interface JsonConfirm {
-	token: Jwt;
 }
 
 export interface JsonConsoleAlert {
@@ -2008,15 +1983,6 @@ export interface JsonLinkedRepository {
 	linked: string;
 }
 
-export interface JsonLogin {
-	email: Email;
-	plan?: PlanLevel;
-	invite?: Jwt;
-	recaptcha_token?: NonEmpty;
-	/** An app's pending request to connect, which the emailed link returns to. */
-	authorization?: Uuid;
-}
-
 export interface JsonMember {
 	/** The member UUID. */
 	uuid: Uuid;
@@ -2334,24 +2300,6 @@ export interface JsonNewSso {
 	 * For example: example.com
 	 */
 	domain: NonEmpty;
-}
-
-/**
- * DEPRECATED: User API tokens have been deprecated in favor of user API keys,
- * so creating a new token always fails with a `403 Forbidden` error.
- * Create a user API key instead.
- */
-export interface JsonNewToken {
-	/**
-	 * The name of the token.
-	 * Maximum length is 64 characters.
-	 */
-	name: ResourceName;
-	/**
-	 * The time-to-live (TTL) for the token in seconds.
-	 * If not provided, the token will not expire for over 128 years.
-	 */
-	ttl?: number;
 }
 
 export interface JsonNewUserKey {
@@ -2714,6 +2662,20 @@ export interface JsonProviderInbox {
 	wait?: number;
 }
 
+export interface JsonUser {
+	uuid: Uuid;
+	name: UserName;
+	slug: Slug;
+	email: Email;
+	admin: boolean;
+	locked: boolean;
+	/**
+	 * The time at which the user account was created.
+	 * Optional for backwards compatibility with older servers.
+	 */
+	created?: string;
+}
+
 /** A finished sign-in, whose session rides in its cookie. */
 export interface JsonSignedIn {
 	user: JsonUser;
@@ -2872,20 +2834,6 @@ export interface JsonSignInLink {
 	secret: LinkSecret;
 	/** Sign in this browser, though it did not ask for the link. */
 	confirm?: boolean;
-}
-
-export interface JsonSignup {
-	name: UserName;
-	slug?: Slug;
-	email: Email;
-	plan?: PlanLevel;
-	invite?: Jwt;
-	claim?: Uuid;
-	/** I agree to the Bencher Terms of Use (https://bencher.dev/legal/terms-of-use), Privacy Policy (https://bencher.dev/legal/privacy), and License Agreement (https://bencher.dev/legal/license) */
-	i_agree: boolean;
-	recaptcha_token?: NonEmpty;
-	/** An app's pending request to connect, which the emailed link returns to. */
-	authorization?: Uuid;
 }
 
 export interface JsonToken {
@@ -3141,12 +3089,6 @@ export enum ProjectPermission {
 	CreateRole = "create_role",
 	EditRole = "edit_role",
 	DeleteRole = "delete_role",
-}
-
-/** <https://docs.cloud.google.com/recaptcha/docs/actions-website> */
-export enum RecaptchaAction {
-	Signup = "signup",
-	Login = "login",
 }
 
 /**

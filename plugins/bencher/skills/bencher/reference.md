@@ -162,15 +162,8 @@ API keys, both user API keys (`bencher_user_*`) and project API keys (`bencher_r
 preferred for `bencher run` in CI), are created and managed in the Console.
 The plaintext key is shown only once, at creation time.
 
-```bash
-# User API tokens (deprecated: existing tokens only, none can be created)
-bencher token list <user>
-bencher token view <user> <uuid>
-bencher token update <user> <uuid> --name <name>
-bencher token revoke <user> <uuid>
-```
-
-Aliases: `get` (view), `edit` (update), `rm` (revoke), `ls` (list).
+Deprecated user API tokens can no longer be created; existing ones are listed and
+revoked in the Console.
 
 ## Utility Commands
 

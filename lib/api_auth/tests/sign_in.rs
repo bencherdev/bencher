@@ -1564,6 +1564,47 @@ async fn code_budget_stores_a_hash_of_the_address() {
     }
 }
 
+// The old sign-in's routes are gone: each answers a request it once took with the plain 404 of
+// any removed route, and sends no email and makes no account.
+// Kills an old sign up, sign in, or confirm left in place.
+#[tokio::test]
+async fn old_sign_in_routes_are_gone() {
+    let (server, log) = test_server(TestServerOptions::default()).await;
+    server.signup("Leader", "leader@example.com").await;
+
+    for (path, body) in [
+        (
+            "/v0/auth/signup",
+            json!({"name": "Grace", "email": "grace@example.com", "i_agree": true}),
+        ),
+        ("/v0/auth/login", json!({"email": "leader@example.com"})),
+        (
+            "/v0/auth/confirm",
+            json!({"token": "aGVhZGVy.cGF5bG9hZA.c2lnbmF0dXJl"}),
+        ),
+    ] {
+        let resp = server
+            .client
+            .post(server.api_url(path))
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND, "{path}");
+    }
+    let emails = log
+        .lines()
+        .into_iter()
+        .filter(|line| line.contains("\nSubject: "))
+        .count();
+    assert_eq!(emails, 0);
+    let users: i64 = schema::user::table
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count the users");
+    assert_eq!(users, 1);
+}
+
 /// Answers every Turnstile check the same way, and keeps the address each was for.
 struct Answer {
     answer: Box<dyn Fn() -> Result<String, TurnstileError> + Send + Sync>,

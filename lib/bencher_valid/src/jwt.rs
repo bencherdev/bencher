@@ -1,6 +1,3 @@
-#[cfg(debug_assertions)]
-use std::sync::LazyLock;
-
 use base64::{
     Engine as _,
     engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
@@ -14,30 +11,6 @@ use wasm_bindgen::prelude::wasm_bindgen;
 use serde::{Deserialize, Serialize};
 
 use crate::{ValidError, secret::SANITIZED_SECRET};
-
-#[cfg(debug_assertions)]
-// Valid until 2159-12-06T18:53:44Z
-const TEST_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjU5OTM2NDM2MDksImlhdCI6MTY5ODY3NjMxNCwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDozMDAwLyIsInN1YiI6ImV1c3RhY2UuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.5krKtLMI4WezKfWICdy2u6t4FoGdq6bjgObjFzyYnE8";
-
-#[cfg(debug_assertions)]
-// Valid until 2159-12-06T18:53:44Z
-const TEST_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjU5OTM2MzYwMjQsImlhdCI6MTY5ODY2ODcyOSwiaXNzIjoiaHR0cDovL2xvY2FsaG9zdDozMDAwLyIsInN1YiI6Im11cmllbC5iYWdnZUBub3doZXJlLmNvbSIsIm9yZyI6bnVsbH0.wH9H44bRui5awHpj2Z0RYsp-6czbhQe6rr1vx_DPywA";
-
-#[cfg(debug_assertions)]
-#[expect(clippy::expect_used, reason = "constant test token is known valid")]
-static TEST_ADMIN_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
-    TEST_ADMIN_BENCHER_API_TOKEN_STR
-        .parse()
-        .expect("Invalid test JWT")
-});
-
-#[cfg(debug_assertions)]
-#[expect(clippy::expect_used, reason = "constant test token is known valid")]
-static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
-    TEST_BENCHER_API_TOKEN_STR
-        .parse()
-        .expect("Invalid test JWT")
-});
 
 #[typeshare::typeshare]
 #[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -107,19 +80,6 @@ impl AsRef<str> for Jwt {
 impl From<Jwt> for String {
     fn from(jwt: Jwt) -> Self {
         jwt.0
-    }
-}
-
-#[cfg(debug_assertions)]
-impl Jwt {
-    /// Create a valid admin test token
-    pub fn test_admin_token() -> Self {
-        TEST_ADMIN_BENCHER_API_TOKEN.clone()
-    }
-
-    /// Create a valid test token
-    pub fn test_token() -> Self {
-        TEST_BENCHER_API_TOKEN.clone()
     }
 }
 
@@ -198,16 +158,6 @@ mod tests {
         ] {
             assert_eq!(false, is_valid_jwt(jwt), "{jwt}");
         }
-    }
-
-    #[test]
-    fn jwt_test_admin_token() {
-        assert_eq!(true, is_valid_jwt(Jwt::test_admin_token().as_ref()));
-    }
-
-    #[test]
-    fn jwt_test_token() {
-        assert_eq!(true, is_valid_jwt(Jwt::test_token().as_ref()));
     }
 
     #[test]

@@ -60,14 +60,6 @@ impl TokenKey {
         .map_err(TokenError::Parse)
     }
 
-    pub fn new_auth(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Auth, email, ttl, None)
-    }
-
-    pub fn new_client(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
-        self.new_jwt(Audience::Client, email, ttl, None)
-    }
-
     pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
         self.new_jwt(Audience::ApiKey, email, ttl, None)
     }
@@ -232,14 +224,6 @@ impl TokenKey {
         } else {
             Ok(token_data)
         }
-    }
-
-    pub fn validate_auth(&self, token: &Jwt) -> Result<Claims, TokenError> {
-        Ok(self.validate(token, &[Audience::Auth])?.claims)
-    }
-
-    pub fn validate_client(&self, token: &Jwt) -> Result<Claims, TokenError> {
-        Ok(self.validate(token, &[Audience::Client])?.claims)
     }
 
     #[cfg(feature = "plus")]
@@ -437,56 +421,6 @@ mod tests {
         };
         Jwt::from_str(&jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap())
             .unwrap()
-    }
-
-    #[test]
-    fn jwt_auth() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
-
-        let claims = secret_key.validate_auth(&token).unwrap();
-
-        assert_eq!(claims.aud, Audience::Auth.to_string());
-        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
-        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
-        assert_eq!(claims.sub, *EMAIL);
-    }
-
-    #[test]
-    fn jwt_auth_expired() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = make_expired_token(&secret_key, Audience::Auth, None);
-        secret_key.validate_auth(&token).unwrap_err();
-    }
-
-    #[test]
-    fn jwt_client() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-
-        let token = secret_key.new_client(EMAIL.clone(), TTL).unwrap();
-
-        let claims = secret_key.validate_client(&token).unwrap();
-
-        assert_eq!(claims.aud, Audience::Client.to_string());
-        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
-        assert_eq!(claims.iat, claims.exp - i64::from(TTL));
-        assert_eq!(claims.sub, *EMAIL);
-    }
-
-    #[test]
-    fn jwt_client_expired() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = make_expired_token(&secret_key, Audience::Client, None);
-        secret_key.validate_client(&token).unwrap_err();
-    }
-
-    // A deprecated user API token is checked by its row alone, never by its signature.
-    #[test]
-    fn jwt_api_key_is_no_session() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
-        secret_key.validate_client(&token).unwrap_err();
     }
 
     #[cfg(feature = "plus")]
@@ -807,19 +741,10 @@ mod tests {
     // --- Cross-type rejection: each OCI token type rejected by the other ---
 
     #[test]
-    fn jwt_auth_token_rejected_as_oci_auth() {
+    fn jwt_api_key_rejected_as_oci_auth() {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = secret_key.new_auth(EMAIL.clone(), TTL).unwrap();
+        let token = secret_key.new_api_key(EMAIL.clone(), TTL).unwrap();
         secret_key.validate_oci_auth(&token).unwrap_err();
-    }
-
-    #[test]
-    fn jwt_oci_auth_token_rejected_as_auth() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = secret_key
-            .new_oci_auth(EMAIL.clone(), TTL, None, vec![OciAction::Pull])
-            .unwrap();
-        secret_key.validate_auth(&token).unwrap_err();
     }
 
     #[test]

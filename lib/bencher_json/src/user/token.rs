@@ -7,21 +7,6 @@ use crate::UserUuid;
 
 crate::typed_uuid::typed_uuid!(TokenUuid);
 
-/// DEPRECATED: User API tokens have been deprecated in favor of user API keys,
-/// so creating a new token always fails with a `403 Forbidden` error.
-/// Create a user API key instead.
-#[typeshare::typeshare]
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonNewToken {
-    /// The name of the token.
-    /// Maximum length is 64 characters.
-    pub name: ResourceName,
-    /// The time-to-live (TTL) for the token in seconds.
-    /// If not provided, the token will not expire for over 128 years.
-    pub ttl: Option<u32>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonTokens(pub Vec<JsonToken>);
@@ -41,12 +26,4 @@ pub struct JsonToken {
     /// `None` means the token is active.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub revoked: Option<DateTime>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(JsonSchema))]
-pub struct JsonUpdateToken {
-    /// The new name of the token.
-    /// Maximum length is 64 characters.
-    pub name: Option<ResourceName>,
 }

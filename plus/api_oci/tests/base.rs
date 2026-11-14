@@ -142,6 +142,28 @@ async fn oci_base_invalid_token_rejected() {
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
+// GET /v2/ - the old sign-in's session JWT, signed with the server's key → 401
+// Pins that an old session JWT is not a registry token.
+#[tokio::test]
+async fn oci_base_old_session_jwt_rejected() {
+    let server = TestServer::new().await;
+    let user = server.signup("OCI Old", "ociold@example.com").await;
+
+    let resp = server
+        .client
+        .get(server.api_url("/v2/"))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(server.old_session_jwt(&user).as_ref()),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
+}
+
 // OPTIONS /v2/ - CORS preflight
 #[tokio::test]
 async fn oci_base_options() {
