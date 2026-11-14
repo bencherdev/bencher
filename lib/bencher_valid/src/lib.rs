@@ -49,7 +49,7 @@ pub use error::ValidError;
 pub use index::Index;
 pub use jwt::Jwt;
 pub use keys::{
-    BencherKey, BindingSecret, BindingSecretHash, LinkSecret, LinkSecretHash, ProjectKey,
+    BencherKey, BindingSecret, BindingSecretHash, JwtHash, LinkSecret, LinkSecretHash, ProjectKey,
     ProjectKeyHash, SessionToken, SessionTokenHash, SignInCode, SignInCodeHash, UserKey,
     UserKeyHash,
 };

@@ -84,7 +84,7 @@ async fn post_inner(
                 &format!("Failed failed to create auth JWT ({insert_user:?} | {AUTH_TOKEN_TTL}) at signup"),
                 e,
             )
-        })?.to_string();
+        }).map(String::from)?;
 
     let body = Body::Button(Box::new(ButtonBody {
         title: "Confirm Bencher Signup".into(),

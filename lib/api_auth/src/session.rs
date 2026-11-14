@@ -3,7 +3,7 @@ use bencher_json::JsonSession;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{forbidden_error, issue_error, unauthorized_error},
+    error::{forbidden_error, invalid_credential, issue_error},
     model::user::{
         auth::{AuthUser, BearerToken},
         session::{QuerySession, SessionId, cookie::SessionCookie},
@@ -43,7 +43,7 @@ pub async fn auth_session_get(
     let session_id = session_id(&auth_user)?;
     let query_session = QuerySession::find(auth_conn!(context), session_id)
         .map_err(|e| issue_error("Failed to view a session", "Failed to view a session:", e))?
-        .ok_or_else(|| unauthorized_error("Invalid session"))?;
+        .ok_or_else(invalid_credential)?;
     let json = query_session.into_json(auth_user.user.into_json());
     Ok(Get::auth_response_ok(json))
 }

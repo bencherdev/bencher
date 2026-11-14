@@ -21,6 +21,8 @@ pub enum ValidError {
     DateTimeMillis(i64),
     #[error("Failed to validate JWT (JSON Web Token) of {0} characters")]
     Jwt(usize),
+    #[error("Failed to validate JWT hash: {0}")]
+    JwtHash(String),
     #[error("Failed to validate branch name: {0}")]
     BranchName(String),
     #[error("Failed to validate benchmark name: {0}")]

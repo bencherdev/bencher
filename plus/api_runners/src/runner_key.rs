@@ -2,7 +2,7 @@ use bencher_json::{RunnerKey, RunnerKeyHash, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{resource_not_found_err, unauthorized_error},
+    error::{invalid_credential, resource_not_found_err, unauthorized_error},
     model::runner::{QueryRunner, RunnerId},
     schema,
 };
@@ -22,12 +22,15 @@ impl RunnerAuth {
         rqctx: &RequestContext<ApiContext>,
         expected_runner: &RunnerResourceId,
     ) -> Result<Self, HttpError> {
-        let auth_header = rqctx
-            .request
-            .headers()
-            .get(bencher_json::AUTHORIZATION)
-            .and_then(|v| v.to_str().ok());
-        Self::from_header(rqctx.context(), auth_header, expected_runner).await
+        let Some(authorization) = rqctx.request.headers().get(bencher_json::AUTHORIZATION) else {
+            return Err(unauthorized_error("Missing Authorization header"));
+        };
+        Self::from_header(
+            rqctx.context(),
+            authorization.to_str().ok(),
+            expected_runner,
+        )
+        .await
     }
 
     async fn from_header(
@@ -37,11 +40,9 @@ impl RunnerAuth {
     ) -> Result<Self, HttpError> {
         let key_str = auth_header
             .and_then(bencher_json::strip_bearer_token)
-            .ok_or_else(|| unauthorized_error("Missing or invalid Authorization header"))?;
+            .ok_or_else(invalid_credential)?;
 
-        let runner_key: RunnerKey = key_str
-            .parse()
-            .map_err(|_err| unauthorized_error("Invalid runner key format"))?;
+        let runner_key: RunnerKey = key_str.parse().map_err(|_err| invalid_credential())?;
 
         let key_hash = RunnerKeyHash::from(&runner_key);
 
@@ -64,7 +65,7 @@ impl RunnerAuth {
             .first(auth_conn!(context))
             .optional()
             .map_err(resource_not_found_err!(Runner))?
-            .ok_or_else(|| unauthorized_error("Invalid runner key"))?;
+            .ok_or_else(invalid_credential)?;
 
         Ok(Self {
             runner_id: runner.id,

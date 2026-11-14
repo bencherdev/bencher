@@ -4,10 +4,10 @@ pub use bencher_context::RunContext;
 pub use bencher_valid::{
     BencherKey, BenchmarkName, BindingSecret, BindingSecretHash, BmfVersion, Boundary, BranchName,
     CdfBoundary, DateTime, DateTimeMillis, Email, EmailHash, GitHash, Index, IntoResourceId,
-    IqrBoundary, Jwt, LinkSecret, LinkSecretHash, MetricName, Model, ModelTest, NameId, NonEmpty,
-    PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId, ResourceName, SampleSize, Sanitize,
-    Search, Secret, SessionToken, SessionTokenHash, SignInCode, SignInCodeHash, Slug, Units, Url,
-    UserKey, UserKeyHash, UserName, ValidError, Window,
+    IqrBoundary, Jwt, JwtHash, LinkSecret, LinkSecretHash, MetricName, Model, ModelTest, NameId,
+    NonEmpty, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId, ResourceName, SampleSize,
+    Sanitize, Search, Secret, SessionToken, SessionTokenHash, SignInCode, SignInCodeHash, Slug,
+    Units, Url, UserKey, UserKeyHash, UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{

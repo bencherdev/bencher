@@ -6,7 +6,7 @@
 //! - POST /v0/auth/oci/token - `OAuth2` token exchange (Docker 29+ / containerd)
 //!
 //! This endpoint implements the Docker Registry Auth specification.
-//! Clients authenticate using Basic auth with their Bencher API token (JWT),
+//! Clients authenticate using Basic auth with their deprecated Bencher API token (JWT),
 //! user API key (`bencher_user_*`), or project API key (`bencher_run_*`)
 //! as the password, and receive a short-lived JWT for OCI operations.
 //!
@@ -141,7 +141,7 @@ pub async fn auth_oci_token_get(
         dispatch_oci_token(&rqctx, context, scope_str, repository, actions, credentials).await?;
 
     let response = TokenResponse {
-        token: jwt.to_string(),
+        token: jwt.into(),
         expires_in: OCI_TOKEN_TTL,
         issued_at: Utc::now().to_rfc3339(),
     };
@@ -255,7 +255,7 @@ pub async fn auth_oci_token_post(
     .await?;
 
     let response = OAuthTokenResponse {
-        access_token: jwt.to_string(),
+        access_token: jwt.into(),
         expires_in: OCI_TOKEN_TTL,
         scope: form.scope,
         issued_at: Utc::now().to_rfc3339(),
@@ -333,7 +333,7 @@ async fn dispatch_oci_token(
     }
 }
 
-/// Issue an authenticated OCI token after validating an API token (JWT).
+/// Issue an authenticated OCI token after checking a deprecated user API token (JWT) by its row.
 async fn auth_oci_token(
     rqctx: &RequestContext<ApiContext>,
     context: &ApiContext,
@@ -343,16 +343,26 @@ async fn auth_oci_token(
     repository: Option<String>,
     actions: Vec<OciAction>,
 ) -> Result<Jwt, HttpError> {
-    // Validate the API token
-    let claims = context
-        .token_key
-        .validate_api_key(api_token)
-        .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
+    // Not found, revoked, expired, and locked all fail closed inside `user_from_api_token`.
+    let now = context.clock.now();
+    let (query_user, query_token) =
+        AuthUser::user_from_api_token(context, public_conn!(context), api_token)
+            .map_err(|e| log_unauthorized_with_www_authenticate(rqctx, scope, &e))?;
 
-    // Verify the email matches the token subject
-    if claims.email() != email {
+    // Verify the email matches the token's owner
+    if query_user.email != *email {
         return Err(unauthorized_with_www_authenticate(rqctx, scope));
     }
+
+    context.rate_limiting.user_request(query_user.uuid)?;
+    AuthUser::record_api_token_use(context, &query_token, now);
+
+    slog::info!(
+        &rqctx.log,
+        "Issuing OCI user token via API token";
+        "token_uuid" => %query_token.uuid,
+        "user_uuid" => %query_user.uuid
+    );
 
     user_oci_token(rqctx, context, scope, email, repository, actions).await
 }

@@ -5,7 +5,6 @@ use base64::{
     Engine as _,
     engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
 };
-use derive_more::Display;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use std::{fmt, str::FromStr};
@@ -41,7 +40,7 @@ static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
 });
 
 #[typeshare::typeshare]
-#[derive(Display, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(try_from = "String")]
 #[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
@@ -49,7 +48,29 @@ static TEST_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
 pub struct Jwt(String);
 
 #[cfg(feature = "db")]
-crate::typed_string!(Jwt);
+impl<DB> diesel::serialize::ToSql<diesel::sql_types::Text, DB> for Jwt
+where
+    DB: diesel::backend::Backend,
+    str: diesel::serialize::ToSql<diesel::sql_types::Text, DB>,
+{
+    fn to_sql<'b>(
+        &'b self,
+        out: &mut diesel::serialize::Output<'b, '_, DB>,
+    ) -> diesel::serialize::Result {
+        self.0.as_str().to_sql(out)
+    }
+}
+
+#[cfg(feature = "db")]
+impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Text, DB> for Jwt
+where
+    DB: diesel::backend::Backend,
+    String: diesel::deserialize::FromSql<diesel::sql_types::Text, DB>,
+{
+    fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+        Ok(String::from_sql(bytes)?.parse()?)
+    }
+}
 
 impl fmt::Debug for Jwt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -196,6 +217,15 @@ mod tests {
         for refused in [project_key, &unsigned] {
             let err = refused.parse::<Jwt>().unwrap_err();
             crate::keys::assert_never_quoted(&err, refused);
+        }
+    }
+
+    #[test]
+    fn jwt_debug_never_prints_the_token() {
+        let jwt: Jwt = format!("{HEADER}.{PAYLOAD}.{SIGNATURE}").parse().unwrap();
+        let printed = format!("{jwt:?}");
+        for part in [HEADER, PAYLOAD, SIGNATURE] {
+            assert!(!printed.contains(part), "{printed}");
         }
     }
 

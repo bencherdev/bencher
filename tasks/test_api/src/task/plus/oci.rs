@@ -6,13 +6,12 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use bencher_json::{Jwt, Url};
+use bencher_json::{Jwt, Url, UserKey};
 
-use super::unwrap_admin_legacy_token;
+use super::create_user_key;
 use crate::parser::TaskOci;
-use crate::task::is_dev;
-use crate::task::test::seed_test::ADMIN_EMAIL;
-use crate::task::unwrap_url;
+use crate::task::test::seed_test::{ADMIN_EMAIL, ADMIN_SLUG};
+use crate::task::{is_dev, unwrap_admin_token, unwrap_url};
 
 #[derive(Debug)]
 pub struct Oci {
@@ -25,7 +24,9 @@ pub struct Oci {
     output_dir: PathBuf,
     spec_dir: PathBuf,
     username: String,
-    password: Jwt,
+    password: Option<UserKey>,
+    admin_token: Jwt,
+    api_log: Option<PathBuf>,
 }
 
 impl TryFrom<TaskOci> for Oci {
@@ -43,6 +44,7 @@ impl TryFrom<TaskOci> for Oci {
             spec_dir,
             username,
             password,
+            api_log,
         } = task;
 
         let is_dev = is_dev(url.as_ref());
@@ -68,7 +70,7 @@ impl TryFrom<TaskOci> for Oci {
 
         // In order to run pull tests, we need to be an admin
         let username = username.unwrap_or_else(|| ADMIN_EMAIL.to_owned());
-        let password = unwrap_admin_legacy_token(password, is_dev);
+        let admin_token = unwrap_admin_token(None, is_dev);
 
         Ok(Self {
             url,
@@ -81,6 +83,8 @@ impl TryFrom<TaskOci> for Oci {
             spec_dir,
             username,
             password,
+            admin_token,
+            api_log,
         })
     }
 }
@@ -97,6 +101,19 @@ impl Oci {
         // Check if API is running
         self.check_api_connectivity()?;
 
+        let password = if let Some(password) = &self.password {
+            password.clone()
+        } else {
+            create_user_key(
+                &self.url,
+                ADMIN_EMAIL,
+                &self.admin_token,
+                self.api_log.as_deref(),
+                ADMIN_SLUG,
+                "oci-conformance",
+            )?
+        };
+
         // Clone/update conformance tests if needed
         self.ensure_spec_cloned()?;
 
@@ -107,7 +124,7 @@ impl Oci {
         fs::create_dir_all(&self.output_dir)?;
 
         // Run the tests
-        let result = self.run_conformance_tests();
+        let result = self.run_conformance_tests(&password);
 
         // Copy results
         self.copy_results()?;
@@ -247,7 +264,7 @@ impl Oci {
         Ok(())
     }
 
-    fn run_conformance_tests(&self) -> anyhow::Result<()> {
+    fn run_conformance_tests(&self, password: &UserKey) -> anyhow::Result<()> {
         let conformance_dir = self.spec_dir.join("conformance");
         let conformance_binary = self.conformance_binary_path();
 
@@ -286,7 +303,7 @@ impl Oci {
             .env("OCI_DEBUG", if self.debug { "1" } else { "0" })
             .env("OCI_REPORT_DIR", &self.output_dir)
             .env("OCI_USERNAME", &self.username)
-            .env("OCI_PASSWORD", self.password.as_ref())
+            .env("OCI_PASSWORD", password.as_ref())
             .env("OCI_AUTOMATIC_CROSSMOUNT", "0");
 
         if self.pull_only {

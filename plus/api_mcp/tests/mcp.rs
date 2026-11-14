@@ -1573,6 +1573,71 @@ fn link_values(url: &reqwest::Url, key: &str) -> Vec<String> {
         .collect()
 }
 
+// Kills a legacy token at `/mcp` that is not its row's user, or one accepted when revoked, past
+// its row's expiration, held by a locked user, or with no row, whatever its signature.
+#[tokio::test]
+async fn mcp_legacy_token_by_its_row() {
+    use bencher_api_tests::helpers::{seed_token, seed_token_jwt};
+    use bencher_json::{DateTime, project::Visibility};
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let server = TestServer::new().await;
+    let user = server.signup("MCP Legacy", "mcp-legacy@bencher.dev").await;
+    let locked = server
+        .signup("MCP Locked", "mcp-legacy-locked@bencher.dev")
+        .await;
+    let org = server.create_org(&user, "MCP Legacy Org").await;
+    let project = server
+        .create_project(&user, &org, "MCP Legacy Project")
+        .await;
+    diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+        .set(schema::project::visibility.eq(Visibility::Private))
+        .execute(&mut server.db_conn())
+        .expect("Failed to make the project private");
+    let view = call_tool_request("view_project", &json!({"project": project.slug}));
+
+    let live = seed_token(&server, &user, "Live");
+    let content = tool_content(&mcp_result(&server, Some(live.token.as_ref()), &view).await);
+    assert_eq!(content["uuid"], project.uuid.to_string());
+
+    let revoked = seed_token(&server, &user, "Revoked");
+    diesel::update(schema::token::table.filter(schema::token::uuid.eq(revoked.uuid)))
+        .set(schema::token::revoked.eq(Some(server.context().clock.now())))
+        .execute(&mut server.db_conn())
+        .expect("Failed to revoke the token");
+    let expired = server
+        .token_key()
+        .new_api_key(user.email.clone(), u32::MAX - 1)
+        .expect("Failed to mint a token");
+    seed_token_jwt(
+        &server,
+        &user,
+        "Expired",
+        &expired,
+        DateTime::try_from(server.context().clock.now().timestamp() - 1).expect("Invalid time"),
+    );
+    let locked_token = seed_token(&server, &locked, "Locked").token;
+    diesel::update(schema::user::table.filter(schema::user::uuid.eq(locked.uuid)))
+        .set(schema::user::locked.eq(true))
+        .execute(&mut server.db_conn())
+        .expect("Failed to lock the user");
+    let rowless = server
+        .token_key()
+        .new_api_key(user.email.clone(), u32::MAX - 2)
+        .expect("Failed to mint a token");
+
+    for (case, token) in [
+        ("revoked", &revoked.token),
+        ("expired", &expired),
+        ("locked", &locked_token),
+        ("rowless", &rowless),
+    ] {
+        let resp = mcp_post(&server, Some(token.as_ref()), &view).await;
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED, "{case}");
+    }
+}
+
 // Malformed tool arguments are a tool error, not a protocol error
 #[tokio::test]
 async fn mcp_invalid_tool_arguments() {

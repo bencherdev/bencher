@@ -213,7 +213,7 @@ pub async fn user_key_post(
 ) -> Result<ResponseCreated<JsonUserKeyCreated>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     // Check only after successful authentication: an invalid or revoked key
-    // still gets the opaque `Invalid user key` 401, while a valid key gets a
+    // still gets the opaque `Invalid credential` 401, while a valid key gets a
     // 403 that explains the policy.
     if !auth_user.is_session() {
         #[cfg(feature = "otel")]

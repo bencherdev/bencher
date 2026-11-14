@@ -461,7 +461,10 @@ mod tests {
 
         assert_eq!(
             url.as_str(),
-            format!("https://github.com/apps/{SLUG}/installations/new?state={state}")
+            format!(
+                "https://github.com/apps/{SLUG}/installations/new?state={}",
+                state.as_ref()
+            )
         );
     }
 

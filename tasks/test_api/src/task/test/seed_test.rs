@@ -17,6 +17,8 @@ const ORG_SLUG: &str = "muriel-bagge";
 /// Muriel's personal org slug doubles as her user slug.
 #[cfg(feature = "plus")]
 pub(crate) const USER_SLUG: &str = ORG_SLUG;
+#[cfg(feature = "plus")]
+pub(crate) const ADMIN_SLUG: &str = "eustace-bagge";
 const PROJECT_ARG: &str = "--project";
 pub(crate) const PROJECT_SLUG: &str = "the-computer";
 const BRANCH_ARG: &str = "--branch";

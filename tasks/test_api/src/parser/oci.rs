@@ -1,4 +1,6 @@
-use bencher_json::{Jwt, Url};
+use std::path::PathBuf;
+
+use bencher_json::{Url, UserKey};
 use clap::Parser;
 
 /// Run OCI Distribution Spec conformance tests
@@ -40,7 +42,12 @@ pub struct TaskOci {
     #[clap(long)]
     pub username: Option<String>,
 
-    /// Password for OCI authentication (API token)
+    /// Password for OCI authentication (user API key), or one the admin creates when unset
     #[clap(long)]
-    pub password: Option<Jwt>,
+    pub password: Option<UserKey>,
+
+    /// The API's log, where a server that sends no email writes each sign-in email,
+    /// to make the admin's key from a browser session signed in by its code
+    #[clap(long)]
+    pub api_log: Option<PathBuf>,
 }

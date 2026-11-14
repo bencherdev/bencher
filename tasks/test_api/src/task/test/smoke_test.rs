@@ -321,6 +321,7 @@ fn test(
                 // Run OCI conformance tests
                 let oci = Oci::try_from(TaskOci {
                     url: Some(registry_url.clone()),
+                    api_log: api_log.map(Path::to_path_buf),
                     ..Default::default()
                 })?;
                 oci.exec()?;
