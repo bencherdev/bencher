@@ -17,13 +17,13 @@ const ORG_SLUG: &str = "muriel-bagge";
 /// Muriel's personal org slug doubles as her user slug.
 #[cfg(feature = "plus")]
 pub(crate) const USER_SLUG: &str = ORG_SLUG;
-const PROJECT_ARG: &str = "--project";
+pub(crate) const PROJECT_ARG: &str = "--project";
 pub(crate) const PROJECT_SLUG: &str = "the-computer";
-const BRANCH_ARG: &str = "--branch";
-const BRANCH_SLUG: &str = "master";
+pub(crate) const BRANCH_ARG: &str = "--branch";
+pub(crate) const BRANCH_SLUG: &str = "master";
 const HASH_ARG: &str = "--hash";
-const TESTBED_ARG: &str = "--testbed";
-const TESTBED_SLUG: &str = "base";
+pub(crate) const TESTBED_ARG: &str = "--testbed";
+pub(crate) const TESTBED_SLUG: &str = "base";
 const MEASURE_ARG: &str = "--measure";
 const MEASURE_SLUG: &str = "screams";
 
