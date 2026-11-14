@@ -589,7 +589,13 @@ pub struct JsonReport {
     pub testbed: JsonTestbed,
     pub start_time: DateTime,
     pub end_time: DateTime,
+    /// The BMF version the report's results were read at.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bmf_version: Option<BmfVersion>,
     pub adapter: Adapter,
+    /// How the report's results parsed, once they are processed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parse_outcome: Option<ParseOutcome>,
     /// The report results, one list of results per iteration.
     /// Omitted by default from the reports list endpoint; use the `expand` query param to include them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -741,6 +747,7 @@ const RESOURCE_VARIANT_INT: i32 = 1;
 const RESOURCE_MEASURE_INT: i32 = 2;
 const RESOURCE_METRIC_INT: i32 = 3;
 const RESOURCE_THRESHOLD_INT: i32 = 4;
+const RESOURCE_ADAPTER_INT: i32 = 5;
 
 /// The resource a report warning counts.
 #[typeshare::typeshare]
@@ -756,9 +763,11 @@ pub enum ReportWarningResource {
     Measure = RESOURCE_MEASURE_INT,
     Metric = RESOURCE_METRIC_INT,
     Threshold = RESOURCE_THRESHOLD_INT,
+    Adapter = RESOURCE_ADAPTER_INT,
 }
 
 const ACTION_SKIP_INT: i32 = 0;
+const ACTION_IGNORE_INT: i32 = 1;
 
 /// What a report did with the resources a warning counts.
 #[typeshare::typeshare]
@@ -771,13 +780,16 @@ const ACTION_SKIP_INT: i32 = 0;
 pub enum ReportWarningAction {
     /// The report did not ingest them.
     Skip = ACTION_SKIP_INT,
+    /// The report received them and set them aside.
+    Ignore = ACTION_IGNORE_INT,
 }
 
 #[cfg(feature = "db")]
 mod report_warning_db {
     use super::{
-        ACTION_SKIP_INT, RESOURCE_BENCHMARK_INT, RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT,
-        RESOURCE_THRESHOLD_INT, RESOURCE_VARIANT_INT, ReportWarningAction, ReportWarningResource,
+        ACTION_IGNORE_INT, ACTION_SKIP_INT, RESOURCE_ADAPTER_INT, RESOURCE_BENCHMARK_INT,
+        RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT, RESOURCE_THRESHOLD_INT, RESOURCE_VARIANT_INT,
+        ReportWarningAction, ReportWarningResource,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -803,6 +815,7 @@ mod report_warning_db {
                 Self::Measure => RESOURCE_MEASURE_INT.to_sql(out),
                 Self::Metric => RESOURCE_METRIC_INT.to_sql(out),
                 Self::Threshold => RESOURCE_THRESHOLD_INT.to_sql(out),
+                Self::Adapter => RESOURCE_ADAPTER_INT.to_sql(out),
             }
         }
     }
@@ -819,6 +832,7 @@ mod report_warning_db {
                 RESOURCE_MEASURE_INT => Ok(Self::Measure),
                 RESOURCE_METRIC_INT => Ok(Self::Metric),
                 RESOURCE_THRESHOLD_INT => Ok(Self::Threshold),
+                RESOURCE_ADAPTER_INT => Ok(Self::Adapter),
                 value => Err(Box::new(ReportWarningError::Resource(value))),
             }
         }
@@ -835,6 +849,7 @@ mod report_warning_db {
         ) -> diesel::serialize::Result {
             match self {
                 Self::Skip => ACTION_SKIP_INT.to_sql(out),
+                Self::Ignore => ACTION_IGNORE_INT.to_sql(out),
             }
         }
     }
@@ -847,7 +862,74 @@ mod report_warning_db {
         fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
             match i32::from_sql(bytes)? {
                 ACTION_SKIP_INT => Ok(Self::Skip),
+                ACTION_IGNORE_INT => Ok(Self::Ignore),
                 value => Err(Box::new(ReportWarningError::Action(value))),
+            }
+        }
+    }
+}
+
+const PARSE_OUTCOME_PARSED_INT: i32 = 0;
+const PARSE_OUTCOME_FAILED_INT: i32 = 1;
+const PARSE_OUTCOME_EMPTY_INT: i32 = 2;
+
+/// How a report's results parsed.
+#[typeshare::typeshare]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
+#[cfg_attr(feature = "db", derive(diesel::FromSqlRow, diesel::AsExpression))]
+#[cfg_attr(feature = "db", diesel(sql_type = diesel::sql_types::Integer))]
+#[serde(rename_all = "snake_case")]
+#[repr(i32)]
+pub enum ParseOutcome {
+    /// Every iteration parsed, and they hold at least one metric.
+    Parsed = PARSE_OUTCOME_PARSED_INT,
+    /// An iteration failed to parse.
+    Failed = PARSE_OUTCOME_FAILED_INT,
+    /// Every iteration parsed, and they hold no metric.
+    Empty = PARSE_OUTCOME_EMPTY_INT,
+}
+
+#[cfg(feature = "db")]
+mod parse_outcome_db {
+    use super::{
+        PARSE_OUTCOME_EMPTY_INT, PARSE_OUTCOME_FAILED_INT, PARSE_OUTCOME_PARSED_INT, ParseOutcome,
+    };
+
+    #[derive(Debug, thiserror::Error)]
+    pub enum ParseOutcomeError {
+        #[error("Invalid parse outcome value: {0}")]
+        Invalid(i32),
+    }
+
+    impl<DB> diesel::serialize::ToSql<diesel::sql_types::Integer, DB> for ParseOutcome
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::serialize::ToSql<diesel::sql_types::Integer, DB>,
+    {
+        fn to_sql<'b>(
+            &'b self,
+            out: &mut diesel::serialize::Output<'b, '_, DB>,
+        ) -> diesel::serialize::Result {
+            match self {
+                Self::Parsed => PARSE_OUTCOME_PARSED_INT.to_sql(out),
+                Self::Failed => PARSE_OUTCOME_FAILED_INT.to_sql(out),
+                Self::Empty => PARSE_OUTCOME_EMPTY_INT.to_sql(out),
+            }
+        }
+    }
+
+    impl<DB> diesel::deserialize::FromSql<diesel::sql_types::Integer, DB> for ParseOutcome
+    where
+        DB: diesel::backend::Backend,
+        i32: diesel::deserialize::FromSql<diesel::sql_types::Integer, DB>,
+    {
+        fn from_sql(bytes: DB::RawValue<'_>) -> diesel::deserialize::Result<Self> {
+            match i32::from_sql(bytes)? {
+                PARSE_OUTCOME_PARSED_INT => Ok(Self::Parsed),
+                PARSE_OUTCOME_FAILED_INT => Ok(Self::Failed),
+                PARSE_OUTCOME_EMPTY_INT => Ok(Self::Empty),
+                value => Err(Box::new(ParseOutcomeError::Invalid(value))),
             }
         }
     }
