@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BmfVersion, JsonNewMetric, MeasureNameId, ParameterSet,
+    ResourceName,
     project::{
         measure::built_in::{self, BuiltInMeasure as _},
         report::Adapter,
@@ -28,9 +29,13 @@ pub struct AdapterResults {
     /// What the adapter skipped instead of parsing.
     /// The log line and the counter belong to ingest, where the providers are in scope.
     pub skipped: Skipped,
+    /// The unit of each measure a leaf named at run time, which only a new measure takes.
+    pub units: MeasureUnits,
 }
 
 pub type ResultsMap = HashMap<BenchmarkNameId, BenchmarkEntries>;
+
+pub type MeasureUnits = HashMap<MeasureNameId, ResourceName>;
 
 /// How many of each resource a payload skipped: a benchmark whose name fails
 /// validation, a variant whose parameters do, a measure or a metric whose name
@@ -87,6 +92,7 @@ impl From<ResultsMap> for AdapterResults {
             version: BmfVersion::V0,
             resolved_adapter: None,
             skipped: Skipped::default(),
+            units: MeasureUnits::new(),
         }
     }
 }
@@ -240,9 +246,36 @@ pub enum GungraunMeasure {
     DrdSuppressedContexts(JsonNewMetric),
 
     /*
+     * Perf tool: an event, as the output labels it
+     */
+    Perf(String, JsonNewMetric, PerfStatistic),
+
+    /*
      * Unknown
      */
     Unknown,
+}
+
+/// What a perf event's number is: one measurement, or the mean of the samples
+/// gungraun took.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PerfStatistic {
+    Value,
+    Mean,
+}
+
+/// The gungraun tool that ran a benchmark.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GungraunTool {
+    Callgrind,
+    Cachegrind,
+    Dhat,
+    Memcheck,
+    Helgrind,
+    Drd,
+    Massif,
+    Bbv,
+    Perf,
 }
 
 impl AdapterResults {
@@ -328,23 +361,7 @@ impl AdapterResults {
         for (benchmark_name, metrics) in benchmark_metrics {
             let metrics_value = empty_set(&mut results_map, benchmark_name);
             for metric in metrics {
-                let (resource_id, metric) = match metric {
-                    IaiMeasure::Instructions(json_metric) => {
-                        (built_in::iai::Instructions::name_id(), json_metric)
-                    },
-                    IaiMeasure::L1Accesses(json_metric) => {
-                        (built_in::iai::L1Accesses::name_id(), json_metric)
-                    },
-                    IaiMeasure::L2Accesses(json_metric) => {
-                        (built_in::iai::L2Accesses::name_id(), json_metric)
-                    },
-                    IaiMeasure::RamAccesses(json_metric) => {
-                        (built_in::iai::RamAccesses::name_id(), json_metric)
-                    },
-                    IaiMeasure::EstimatedCycles(json_metric) => {
-                        (built_in::iai::EstimatedCycles::name_id(), json_metric)
-                    },
-                };
+                let (resource_id, metric) = metric.into_measure();
                 metrics_value.inner.insert(resource_id, metric.into());
             }
         }
@@ -388,10 +405,6 @@ impl AdapterResults {
         Some(results_map.into())
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "exhaustive match over all GungraunMeasure variants"
-    )]
     pub fn new_gungraun(
         benchmark_metrics: Vec<(BenchmarkName, Vec<GungraunMeasure>)>,
     ) -> Option<Self> {
@@ -403,213 +416,9 @@ impl AdapterResults {
         for (benchmark_name, metrics) in benchmark_metrics {
             let metrics_value = empty_set(&mut results_map, benchmark_name);
             for metric in metrics {
-                let (resource_id, metric) = match metric {
-                    // Callgrind/Cachgrind
-                    GungraunMeasure::Instructions(json_metric) => {
-                        (built_in::gungraun::Instructions::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L1Hits(json_metric) => {
-                        (built_in::gungraun::L1Hits::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L2Hits(json_metric) => {
-                        (built_in::gungraun::L2Hits::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLHits(json_metric) => {
-                        (built_in::gungraun::LLHits::name_id(), json_metric)
-                    },
-                    GungraunMeasure::RamHits(json_metric) => {
-                        (built_in::gungraun::RamHits::name_id(), json_metric)
-                    },
-                    GungraunMeasure::TotalReadWrite(json_metric) => {
-                        (built_in::gungraun::TotalReadWrite::name_id(), json_metric)
-                    },
-                    GungraunMeasure::EstimatedCycles(json_metric) => {
-                        (built_in::gungraun::EstimatedCycles::name_id(), json_metric)
-                    },
-                    GungraunMeasure::GlobalBusEvents(json_metric) => {
-                        (built_in::gungraun::GlobalBusEvents::name_id(), json_metric)
-                    },
-                    GungraunMeasure::DataCacheReads(json_metric) => {
-                        (built_in::gungraun::Dr::name_id(), json_metric)
-                    },
-                    GungraunMeasure::DataCacheWrites(json_metric) => {
-                        (built_in::gungraun::Dw::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L1InstrCacheReadMisses(json_metric) => {
-                        (built_in::gungraun::I1mr::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L1DataCacheReadMisses(json_metric) => {
-                        (built_in::gungraun::D1mr::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L1DataCacheWriteMisses(json_metric) => {
-                        (built_in::gungraun::D1mw::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLInstrCacheReadMisses(json_metric) => {
-                        (built_in::gungraun::ILmr::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLDataCacheReadMisses(json_metric) => {
-                        (built_in::gungraun::DLmr::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLDataCacheWriteMisses(json_metric) => {
-                        (built_in::gungraun::DLmw::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L1InstrCacheMissRate(json_metric) => {
-                        (built_in::gungraun::I1MissRate::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLInstrCacheMissRate(json_metric) => {
-                        (built_in::gungraun::LLiMissRate::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L1DataCacheMissRate(json_metric) => {
-                        (built_in::gungraun::D1MissRate::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLDataCacheMissRate(json_metric) => {
-                        (built_in::gungraun::LLdMissRate::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLCacheMissRate(json_metric) => {
-                        (built_in::gungraun::LLMissRate::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L1HitRate(json_metric) => {
-                        (built_in::gungraun::L1HitRate::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLHitRate(json_metric) => {
-                        (built_in::gungraun::LLHitRate::name_id(), json_metric)
-                    },
-                    GungraunMeasure::RamHitRate(json_metric) => {
-                        (built_in::gungraun::RamHitRate::name_id(), json_metric)
-                    },
-                    GungraunMeasure::NumberSystemCalls(json_metric) => {
-                        (built_in::gungraun::SysCount::name_id(), json_metric)
-                    },
-                    GungraunMeasure::TimeSystemCalls(json_metric) => {
-                        (built_in::gungraun::SysTime::name_id(), json_metric)
-                    },
-                    GungraunMeasure::CpuTimeSystemCalls(json_metric) => {
-                        (built_in::gungraun::SysCpuTime::name_id(), json_metric)
-                    },
-                    GungraunMeasure::ExecutedConditionalBranches(json_metric) => {
-                        (built_in::gungraun::Bc::name_id(), json_metric)
-                    },
-                    GungraunMeasure::MispredictedConditionalBranches(json_metric) => {
-                        (built_in::gungraun::Bcm::name_id(), json_metric)
-                    },
-                    GungraunMeasure::ExecutedIndirectBranches(json_metric) => {
-                        (built_in::gungraun::Bi::name_id(), json_metric)
-                    },
-                    GungraunMeasure::MispredictedIndirectBranches(json_metric) => {
-                        (built_in::gungraun::Bim::name_id(), json_metric)
-                    },
-                    GungraunMeasure::DirtyMissInstructionRead(json_metric) => {
-                        (built_in::gungraun::ILdmr::name_id(), json_metric)
-                    },
-                    GungraunMeasure::DirtyMissDataRead(json_metric) => {
-                        (built_in::gungraun::DLdmr::name_id(), json_metric)
-                    },
-                    GungraunMeasure::DirtyMissDataWrite(json_metric) => {
-                        (built_in::gungraun::DLdmw::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L1BadTemporalLocality(json_metric) => {
-                        (built_in::gungraun::AcCost1::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLBadTemporalLocality(json_metric) => {
-                        (built_in::gungraun::AcCost2::name_id(), json_metric)
-                    },
-                    GungraunMeasure::L1BadSpatialLocality(json_metric) => {
-                        (built_in::gungraun::SpLoss1::name_id(), json_metric)
-                    },
-                    GungraunMeasure::LLBadSpatialLocality(json_metric) => {
-                        (built_in::gungraun::SpLoss2::name_id(), json_metric)
-                    },
-                    // DHAT
-                    GungraunMeasure::TotalBytes(json_metric) => {
-                        (built_in::gungraun::TotalBytes::name_id(), json_metric)
-                    },
-                    GungraunMeasure::TotalBlocks(json_metric) => {
-                        (built_in::gungraun::TotalBlocks::name_id(), json_metric)
-                    },
-                    GungraunMeasure::TotalUnits(json_metric) => {
-                        (built_in::gungraun::TotalUnits::name_id(), json_metric)
-                    },
-                    GungraunMeasure::TotalEvents(json_metric) => {
-                        (built_in::gungraun::TotalEvents::name_id(), json_metric)
-                    },
-                    GungraunMeasure::TotalLifetimes(json_metric) => {
-                        (built_in::gungraun::TotalLifetimes::name_id(), json_metric)
-                    },
-                    GungraunMeasure::AtTGmaxBytes(json_metric) => {
-                        (built_in::gungraun::AtTGmaxBytes::name_id(), json_metric)
-                    },
-                    GungraunMeasure::AtTGmaxBlocks(json_metric) => {
-                        (built_in::gungraun::AtTGmaxBlocks::name_id(), json_metric)
-                    },
-                    GungraunMeasure::AtTEndBytes(json_metric) => {
-                        (built_in::gungraun::AtTEndBytes::name_id(), json_metric)
-                    },
-                    GungraunMeasure::AtTEndBlocks(json_metric) => {
-                        (built_in::gungraun::AtTEndBlocks::name_id(), json_metric)
-                    },
-                    GungraunMeasure::ReadsBytes(json_metric) => {
-                        (built_in::gungraun::ReadsBytes::name_id(), json_metric)
-                    },
-                    GungraunMeasure::WritesBytes(json_metric) => {
-                        (built_in::gungraun::WritesBytes::name_id(), json_metric)
-                    },
-                    GungraunMeasure::MaximumBytes(json_metric) => {
-                        (built_in::gungraun::MaximumBytes::name_id(), json_metric)
-                    },
-                    GungraunMeasure::MaximumBlocks(json_metric) => {
-                        (built_in::gungraun::MaximumBlocks::name_id(), json_metric)
-                    },
-                    // Memcheck
-                    GungraunMeasure::MemcheckErrors(json_metric) => {
-                        (built_in::gungraun::MemcheckErrors::name_id(), json_metric)
-                    },
-                    GungraunMeasure::MemcheckContexts(json_metric) => {
-                        (built_in::gungraun::MemcheckContexts::name_id(), json_metric)
-                    },
-                    GungraunMeasure::MemcheckSuppressedErrors(json_metric) => (
-                        built_in::gungraun::MemcheckSuppressedErrors::name_id(),
-                        json_metric,
-                    ),
-                    GungraunMeasure::MemcheckSuppressedContexts(json_metric) => (
-                        built_in::gungraun::MemcheckSuppressedContexts::name_id(),
-                        json_metric,
-                    ),
-                    // Helgrind
-                    GungraunMeasure::HelgrindErrors(json_metric) => {
-                        (built_in::gungraun::HelgrindErrors::name_id(), json_metric)
-                    },
-                    GungraunMeasure::HelgrindContexts(json_metric) => {
-                        (built_in::gungraun::HelgrindContexts::name_id(), json_metric)
-                    },
-                    GungraunMeasure::HelgrindSuppressedErrors(json_metric) => (
-                        built_in::gungraun::HelgrindSuppressedErrors::name_id(),
-                        json_metric,
-                    ),
-                    GungraunMeasure::HelgrindSuppressedContexts(json_metric) => (
-                        built_in::gungraun::HelgrindSuppressedContexts::name_id(),
-                        json_metric,
-                    ),
-                    // Drd
-                    GungraunMeasure::DrdErrors(json_metric) => {
-                        (built_in::gungraun::DrdErrors::name_id(), json_metric)
-                    },
-                    GungraunMeasure::DrdContexts(json_metric) => {
-                        (built_in::gungraun::DrdContexts::name_id(), json_metric)
-                    },
-                    GungraunMeasure::DrdSuppressedErrors(json_metric) => (
-                        built_in::gungraun::DrdSuppressedErrors::name_id(),
-                        json_metric,
-                    ),
-                    GungraunMeasure::DrdSuppressedContexts(json_metric) => (
-                        built_in::gungraun::DrdSuppressedContexts::name_id(),
-                        json_metric,
-                    ),
-                    // Unknown
-                    GungraunMeasure::Unknown => {
-                        continue;
-                    },
-                };
-                metrics_value.inner.insert(resource_id, metric.into());
+                if let Some((resource_id, metric)) = metric.into_measure() {
+                    metrics_value.inner.insert(resource_id, metric.into());
+                }
             }
         }
 
@@ -697,6 +506,246 @@ impl AdapterResults {
             .flat_map(|metrics| metrics.inner.values_mut())
         {
             self.skipped.metrics += metric.truncate();
+        }
+    }
+}
+
+impl IaiMeasure {
+    pub(crate) fn into_measure(self) -> (MeasureNameId, JsonNewMetric) {
+        match self {
+            Self::Instructions(json_metric) => {
+                (built_in::iai::Instructions::name_id(), json_metric)
+            },
+            Self::L1Accesses(json_metric) => (built_in::iai::L1Accesses::name_id(), json_metric),
+            Self::L2Accesses(json_metric) => (built_in::iai::L2Accesses::name_id(), json_metric),
+            Self::RamAccesses(json_metric) => (built_in::iai::RamAccesses::name_id(), json_metric),
+            Self::EstimatedCycles(json_metric) => {
+                (built_in::iai::EstimatedCycles::name_id(), json_metric)
+            },
+        }
+    }
+}
+
+impl GungraunMeasure {
+    /// The built-in measure and metric of a known counter, or `None` for any other.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "exhaustive match over all GungraunMeasure variants"
+    )]
+    pub(crate) fn into_measure(self) -> Option<(MeasureNameId, JsonNewMetric)> {
+        match self {
+            // Callgrind/Cachgrind
+            Self::Instructions(json_metric) => {
+                Some((built_in::gungraun::Instructions::name_id(), json_metric))
+            },
+            Self::L1Hits(json_metric) => Some((built_in::gungraun::L1Hits::name_id(), json_metric)),
+            Self::L2Hits(json_metric) => Some((built_in::gungraun::L2Hits::name_id(), json_metric)),
+            Self::LLHits(json_metric) => Some((built_in::gungraun::LLHits::name_id(), json_metric)),
+            Self::RamHits(json_metric) => {
+                Some((built_in::gungraun::RamHits::name_id(), json_metric))
+            },
+            Self::TotalReadWrite(json_metric) => {
+                Some((built_in::gungraun::TotalReadWrite::name_id(), json_metric))
+            },
+            Self::EstimatedCycles(json_metric) => {
+                Some((built_in::gungraun::EstimatedCycles::name_id(), json_metric))
+            },
+            Self::GlobalBusEvents(json_metric) => {
+                Some((built_in::gungraun::GlobalBusEvents::name_id(), json_metric))
+            },
+            Self::DataCacheReads(json_metric) => {
+                Some((built_in::gungraun::Dr::name_id(), json_metric))
+            },
+            Self::DataCacheWrites(json_metric) => {
+                Some((built_in::gungraun::Dw::name_id(), json_metric))
+            },
+            Self::L1InstrCacheReadMisses(json_metric) => {
+                Some((built_in::gungraun::I1mr::name_id(), json_metric))
+            },
+            Self::L1DataCacheReadMisses(json_metric) => {
+                Some((built_in::gungraun::D1mr::name_id(), json_metric))
+            },
+            Self::L1DataCacheWriteMisses(json_metric) => {
+                Some((built_in::gungraun::D1mw::name_id(), json_metric))
+            },
+            Self::LLInstrCacheReadMisses(json_metric) => {
+                Some((built_in::gungraun::ILmr::name_id(), json_metric))
+            },
+            Self::LLDataCacheReadMisses(json_metric) => {
+                Some((built_in::gungraun::DLmr::name_id(), json_metric))
+            },
+            Self::LLDataCacheWriteMisses(json_metric) => {
+                Some((built_in::gungraun::DLmw::name_id(), json_metric))
+            },
+            Self::L1InstrCacheMissRate(json_metric) => {
+                Some((built_in::gungraun::I1MissRate::name_id(), json_metric))
+            },
+            Self::LLInstrCacheMissRate(json_metric) => {
+                Some((built_in::gungraun::LLiMissRate::name_id(), json_metric))
+            },
+            Self::L1DataCacheMissRate(json_metric) => {
+                Some((built_in::gungraun::D1MissRate::name_id(), json_metric))
+            },
+            Self::LLDataCacheMissRate(json_metric) => {
+                Some((built_in::gungraun::LLdMissRate::name_id(), json_metric))
+            },
+            Self::LLCacheMissRate(json_metric) => {
+                Some((built_in::gungraun::LLMissRate::name_id(), json_metric))
+            },
+            Self::L1HitRate(json_metric) => {
+                Some((built_in::gungraun::L1HitRate::name_id(), json_metric))
+            },
+            Self::LLHitRate(json_metric) => {
+                Some((built_in::gungraun::LLHitRate::name_id(), json_metric))
+            },
+            Self::RamHitRate(json_metric) => {
+                Some((built_in::gungraun::RamHitRate::name_id(), json_metric))
+            },
+            Self::NumberSystemCalls(json_metric) => {
+                Some((built_in::gungraun::SysCount::name_id(), json_metric))
+            },
+            Self::TimeSystemCalls(json_metric) => {
+                Some((built_in::gungraun::SysTime::name_id(), json_metric))
+            },
+            Self::CpuTimeSystemCalls(json_metric) => {
+                Some((built_in::gungraun::SysCpuTime::name_id(), json_metric))
+            },
+            Self::ExecutedConditionalBranches(json_metric) => {
+                Some((built_in::gungraun::Bc::name_id(), json_metric))
+            },
+            Self::MispredictedConditionalBranches(json_metric) => {
+                Some((built_in::gungraun::Bcm::name_id(), json_metric))
+            },
+            Self::ExecutedIndirectBranches(json_metric) => {
+                Some((built_in::gungraun::Bi::name_id(), json_metric))
+            },
+            Self::MispredictedIndirectBranches(json_metric) => {
+                Some((built_in::gungraun::Bim::name_id(), json_metric))
+            },
+            Self::DirtyMissInstructionRead(json_metric) => {
+                Some((built_in::gungraun::ILdmr::name_id(), json_metric))
+            },
+            Self::DirtyMissDataRead(json_metric) => {
+                Some((built_in::gungraun::DLdmr::name_id(), json_metric))
+            },
+            Self::DirtyMissDataWrite(json_metric) => {
+                Some((built_in::gungraun::DLdmw::name_id(), json_metric))
+            },
+            Self::L1BadTemporalLocality(json_metric) => {
+                Some((built_in::gungraun::AcCost1::name_id(), json_metric))
+            },
+            Self::LLBadTemporalLocality(json_metric) => {
+                Some((built_in::gungraun::AcCost2::name_id(), json_metric))
+            },
+            Self::L1BadSpatialLocality(json_metric) => {
+                Some((built_in::gungraun::SpLoss1::name_id(), json_metric))
+            },
+            Self::LLBadSpatialLocality(json_metric) => {
+                Some((built_in::gungraun::SpLoss2::name_id(), json_metric))
+            },
+            // DHAT
+            Self::TotalBytes(json_metric) => {
+                Some((built_in::gungraun::TotalBytes::name_id(), json_metric))
+            },
+            Self::TotalBlocks(json_metric) => {
+                Some((built_in::gungraun::TotalBlocks::name_id(), json_metric))
+            },
+            Self::TotalUnits(json_metric) => {
+                Some((built_in::gungraun::TotalUnits::name_id(), json_metric))
+            },
+            Self::TotalEvents(json_metric) => {
+                Some((built_in::gungraun::TotalEvents::name_id(), json_metric))
+            },
+            Self::TotalLifetimes(json_metric) => {
+                Some((built_in::gungraun::TotalLifetimes::name_id(), json_metric))
+            },
+            Self::AtTGmaxBytes(json_metric) => {
+                Some((built_in::gungraun::AtTGmaxBytes::name_id(), json_metric))
+            },
+            Self::AtTGmaxBlocks(json_metric) => {
+                Some((built_in::gungraun::AtTGmaxBlocks::name_id(), json_metric))
+            },
+            Self::AtTEndBytes(json_metric) => {
+                Some((built_in::gungraun::AtTEndBytes::name_id(), json_metric))
+            },
+            Self::AtTEndBlocks(json_metric) => {
+                Some((built_in::gungraun::AtTEndBlocks::name_id(), json_metric))
+            },
+            Self::ReadsBytes(json_metric) => {
+                Some((built_in::gungraun::ReadsBytes::name_id(), json_metric))
+            },
+            Self::WritesBytes(json_metric) => {
+                Some((built_in::gungraun::WritesBytes::name_id(), json_metric))
+            },
+            Self::MaximumBytes(json_metric) => {
+                Some((built_in::gungraun::MaximumBytes::name_id(), json_metric))
+            },
+            Self::MaximumBlocks(json_metric) => {
+                Some((built_in::gungraun::MaximumBlocks::name_id(), json_metric))
+            },
+            // Memcheck
+            Self::MemcheckErrors(json_metric) => {
+                Some((built_in::gungraun::MemcheckErrors::name_id(), json_metric))
+            },
+            Self::MemcheckContexts(json_metric) => {
+                Some((built_in::gungraun::MemcheckContexts::name_id(), json_metric))
+            },
+            Self::MemcheckSuppressedErrors(json_metric) => Some((
+                built_in::gungraun::MemcheckSuppressedErrors::name_id(),
+                json_metric,
+            )),
+            Self::MemcheckSuppressedContexts(json_metric) => Some((
+                built_in::gungraun::MemcheckSuppressedContexts::name_id(),
+                json_metric,
+            )),
+            // Helgrind
+            Self::HelgrindErrors(json_metric) => {
+                Some((built_in::gungraun::HelgrindErrors::name_id(), json_metric))
+            },
+            Self::HelgrindContexts(json_metric) => {
+                Some((built_in::gungraun::HelgrindContexts::name_id(), json_metric))
+            },
+            Self::HelgrindSuppressedErrors(json_metric) => Some((
+                built_in::gungraun::HelgrindSuppressedErrors::name_id(),
+                json_metric,
+            )),
+            Self::HelgrindSuppressedContexts(json_metric) => Some((
+                built_in::gungraun::HelgrindSuppressedContexts::name_id(),
+                json_metric,
+            )),
+            // Drd
+            Self::DrdErrors(json_metric) => {
+                Some((built_in::gungraun::DrdErrors::name_id(), json_metric))
+            },
+            Self::DrdContexts(json_metric) => {
+                Some((built_in::gungraun::DrdContexts::name_id(), json_metric))
+            },
+            Self::DrdSuppressedErrors(json_metric) => Some((
+                built_in::gungraun::DrdSuppressedErrors::name_id(),
+                json_metric,
+            )),
+            Self::DrdSuppressedContexts(json_metric) => Some((
+                built_in::gungraun::DrdSuppressedContexts::name_id(),
+                json_metric,
+            )),
+            Self::Perf(..) | Self::Unknown => None,
+        }
+    }
+}
+
+impl GungraunTool {
+    /// gungraun's own name for the tool.
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::Callgrind => "callgrind",
+            Self::Cachegrind => "cachegrind",
+            Self::Dhat => "dhat",
+            Self::Memcheck => "memcheck",
+            Self::Helgrind => "helgrind",
+            Self::Drd => "drd",
+            Self::Massif => "massif",
+            Self::Bbv => "bbv",
+            Self::Perf => "perf",
         }
     }
 }

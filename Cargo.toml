@@ -114,7 +114,9 @@ futures-util = "0.3"
 gix = { version = "0.90", default-features = false, features = ["sha1"] }
 gix-hash = { version = "0.28", features = ["sha1"] }
 git-validate = "0.7"
-gungraun-summary = { version = "6" }
+# gungraun-summary 7 re-exports the summary model of whichever gungraun-runner resolves.
+gungraun-runner = { version = "0.20", default-features = false, features = ["summary"] }
+gungraun-summary = { version = "7" }
 hex = "0.4"
 http = "1.4"
 http-body-util = "0.1"

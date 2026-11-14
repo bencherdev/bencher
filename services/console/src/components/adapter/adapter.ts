@@ -24,7 +24,11 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.JsonV1:
 			return JSON_ICON;
 		case Adapter.RustBench:
+		case Adapter.RustBenchJson:
+		case Adapter.RustBenchText:
 		case Adapter.RustCriterion:
+		case Adapter.RustCriterionJson:
+		case Adapter.RustCriterionText:
 		case Adapter.RustIai:
 		case Adapter.RustGungraun:
 		case Adapter.RustGungraunStdout:
@@ -65,8 +69,12 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 
 	switch (adapter) {
 		case Adapter.RustBench:
+		case Adapter.RustBenchJson:
+		case Adapter.RustBenchText:
 			return `bencher run${host} "cargo +nightly bench"`;
 		case Adapter.RustCriterion:
+		case Adapter.RustCriterionJson:
+		case Adapter.RustCriterionText:
 		case Adapter.RustIai:
 		case Adapter.RustGungraun:
 		case Adapter.RustGungraunStdout:

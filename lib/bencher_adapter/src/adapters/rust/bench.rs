@@ -6,6 +6,7 @@ use nom::{
     combinator::{eof, map, map_res},
     sequence::delimited,
 };
+use ordered_float::OrderedFloat;
 
 use crate::{
     Adaptable, Settings,
@@ -39,6 +40,27 @@ impl Adaptable for AdapterRustBench {
 }
 
 fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
+    map(
+        (parse_cargo_line, eof),
+        |((benchmark_name, median, range), _)| {
+            (
+                benchmark_name,
+                JsonNewMetric {
+                    value: median,
+                    lower_value: Some(median - range),
+                    upper_value: Some(median + range),
+                },
+            )
+        },
+    )
+    .parse(input)
+}
+
+/// A libtest bench line up to its closing parenthesis: the benchmark name, then
+/// the median and the spread of its samples, each in nanoseconds.
+pub(crate) fn parse_cargo_line(
+    input: &str,
+) -> IResult<&str, (BenchmarkName, OrderedFloat<f64>, OrderedFloat<f64>)> {
     map_res(
         (
             tag("test"),
@@ -48,18 +70,17 @@ fn parse_cargo(input: &str) -> IResult<&str, (BenchmarkName, JsonNewMetric)> {
             tag("..."),
             space1,
             parse_cargo_bench,
-            eof,
         ),
-        |(_, _, name, _, _, _, json_metric, _)| -> Result<(BenchmarkName, JsonNewMetric), NomError> {
+        |(_, _, name, _, _, _, (median, range))| -> Result<_, NomError> {
             let benchmark_name = parse_benchmark_name(name)?;
-            Ok((benchmark_name, json_metric))
+            Ok((benchmark_name, median, range))
         },
-    ).parse(input)
+    )
+    .parse(input)
 }
 
 // cargo bench
-// TODO cargo test -- -Z unstable-options --format json
-fn parse_cargo_bench(input: &str) -> IResult<&str, JsonNewMetric> {
+fn parse_cargo_bench(input: &str) -> IResult<&str, (OrderedFloat<f64>, OrderedFloat<f64>)> {
     map(
         (
             tag("bench:"),
@@ -75,14 +96,11 @@ fn parse_cargo_bench(input: &str) -> IResult<&str, JsonNewMetric> {
                 tag(")"),
             ),
         ),
-        |(_, _, duration, _, units, _, _, (_, _, variance))| {
-            let value = latency_as_nanos(duration, units);
-            let variance = Some(latency_as_nanos(variance, units));
-            JsonNewMetric {
-                value,
-                lower_value: variance.map(|v| value - v),
-                upper_value: variance.map(|v| value + v),
-            }
+        |(_, _, duration, _, units, _, _, (_, _, range))| {
+            (
+                latency_as_nanos(duration, units),
+                latency_as_nanos(range, units),
+            )
         },
     )
     .parse(input)

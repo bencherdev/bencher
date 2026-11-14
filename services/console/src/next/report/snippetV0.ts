@@ -53,4 +53,6 @@ const LANGUAGE = /^(rust|cpp|go|java|c_sharp|js|python|ruby|shell|dart)$/;
 
 /** The adapter as `bencher run --adapter` spells it, which takes no language and no format revision. */
 export const cliAdapter = (adapter: Adapter): string =>
-	LANGUAGE.test(adapter) ? "magic" : adapter.replace(/_(v\d|json|stdout)$/, "");
+	LANGUAGE.test(adapter)
+		? "magic"
+		: adapter.replace(/_(v\d|json|stdout|text)$/, "");
