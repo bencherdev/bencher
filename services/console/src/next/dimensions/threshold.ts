@@ -1,4 +1,5 @@
 import type { JsonThreshold } from "../../types/bencher";
+import { parameterTag } from "../tag";
 
 /**
  * A threshold link's accessible name: the text the link shows, then which
@@ -13,9 +14,9 @@ export const thresholdLinkName = (shown: string, threshold: JsonThreshold) =>
 			? [
 					threshold.parameters
 						.map((set) =>
-							Object.keys(set)
-								.sort()
-								.map((key) => `${key}=${String(set[key])}`)
+							Object.entries(set)
+								.sort(([a], [b]) => (a < b ? -1 : 1))
+								.map(([key, value]) => parameterTag(key, value))
 								.join(" "),
 						)
 						.join(" or "),

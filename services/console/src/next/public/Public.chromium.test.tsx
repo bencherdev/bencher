@@ -103,6 +103,20 @@ test("the query shows read only, named from the plot", async () => {
 		.toHaveAttribute("aria-expanded", "true");
 });
 
+// Kills an empty value shown bare in a read-only set, which reads as no value.
+test("the parameters box shows an empty value as quotes", async () => {
+	await page.viewport(1280, 900);
+	show({ query: { ...QUERY, sets: [{ env: "" }] } });
+	await userEvent.click(page.getByRole("button", { name: "Show query" }));
+	await expect
+		.element(
+			page
+				.getByRole("group", { name: "Parameters" })
+				.getByText('env=""', { exact: true }),
+		)
+		.toBeVisible();
+});
+
 // Kills a custom window the API would cut short, and a view change lost
 // rather than handed back as the query.
 test("the window offers three presets, and a pick changes the query", async () => {

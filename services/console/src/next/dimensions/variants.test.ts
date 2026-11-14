@@ -41,6 +41,22 @@ test("a variant's tags read in key order", () => {
 	]);
 });
 
+// Kills an empty value shown bare, as a tag or as a value in use, which reads as no value.
+test("an empty value shows as quotes", () => {
+	expect(tagsOf(variant({ env: "" }))).toEqual(['env=""']);
+	expect(
+		parametersInUse([variant({ env: "b" }), variant({ env: "" })]),
+	).toEqual([
+		{
+			key: "env",
+			values: [
+				{ value: '""', variants: 1 },
+				{ value: "b", variants: 1 },
+			],
+		},
+	]);
+});
+
 // Kills the empty variant every benchmark is born with listed beside the
 // variants a run reported, and a benchmark without parameters left empty.
 test("the empty variant shows only when it is the benchmark's only one", () => {

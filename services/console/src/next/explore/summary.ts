@@ -1,6 +1,7 @@
 import type { JsonConsolePerf } from "../../types/bencher";
 import type { ExploreQuery } from "../query/query";
 import { formatCount } from "../plot/count";
+import { parameterTag } from "../tag";
 
 type Dimension =
 	| "branches"
@@ -24,8 +25,8 @@ export const chipSummary = (
 		if (rest.length > 0) {
 			return `${formatCount(query.sets.length)} sets`;
 		}
-		const tags = Object.entries(only).map(
-			([name, value]) => `${name}=${String(value)}`,
+		const tags = Object.entries(only).map(([name, value]) =>
+			parameterTag(name, value),
 		);
 		return tags.join(" ");
 	}

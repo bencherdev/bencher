@@ -60,7 +60,7 @@ impl ParameterSet {
         canonical
     }
 
-    /// Each key with its value, as `key=value`, in key order.
+    /// Each key with its value, as `key=value`, in key order, and an empty string as `key=""`.
     pub fn tags(&self) -> impl Iterator<Item = String> + '_ {
         self.0.iter().map(|(key, value)| {
             let value = match value {
@@ -68,7 +68,14 @@ impl ParameterSet {
                 ParameterScalar::Number(number) => {
                     ryu_js::Buffer::new().format(number.into_inner()).to_owned()
                 },
-                ParameterScalar::String(string) => AsRef::<str>::as_ref(string).to_owned(),
+                ParameterScalar::String(string) => {
+                    let string: &str = string.as_ref();
+                    if string.is_empty() {
+                        r#""""#.to_owned()
+                    } else {
+                        string.to_owned()
+                    }
+                },
             };
             format!("{}={value}", key.as_ref())
         })
@@ -173,13 +180,12 @@ impl JsonSchema for ParameterSet {
             InstanceType, ObjectValidation, SchemaObject, StringValidation, SubschemaValidation,
         };
 
-        // A string value is non-empty and length bound, so the schema says so rather
-        // than leaving a generated client to find out. The same bound on a key is
-        // `propertyNames`, which OpenAPI 3.0 has no keyword for.
+        // A string value is length bound, and may be empty, so the schema says so
+        // rather than leaving a generated client to find out. The non-empty bound on a
+        // key is `propertyNames`, which OpenAPI 3.0 has no keyword for.
         let string = SchemaObject {
             instance_type: Some(InstanceType::String.into()),
             string: Some(Box::new(StringValidation {
-                min_length: Some(1),
                 max_length: u32::try_from(ParameterValue::MAX_LEN).ok(),
                 ..Default::default()
             })),
@@ -790,14 +796,23 @@ mod tests {
     }
 
     #[test]
-    fn rejects_empty_or_untrimmed_string_values() {
-        for value in ["", " ", "\\r", "\\n", "\\t", " a", "a "] {
+    fn rejects_untrimmed_string_values() {
+        for value in [" ", "\\r", "\\n", "\\t", " a", "a "] {
             let parameters = format!(r#"{{"a": "{value}"}}"#);
             assert!(
                 parameters.parse::<ParameterSet>().is_err(),
                 "expected {parameters} to be rejected"
             );
         }
+    }
+
+    // An empty string is a value of its own, where unset is no key at all, so its
+    // tag shows the quotes a bare value would leave out.
+    #[test]
+    fn accepts_an_empty_string_value() {
+        let parameters = parse(r#"{"a": ""}"#);
+        assert_eq!(parameters.canonical(), r#"{"a":""}"#);
+        assert_eq!(parameters.tags().collect::<Vec<_>>(), vec![r#"a="""#]);
     }
 
     // Numbers and booleans are untouched: their canonical spellings are inherently

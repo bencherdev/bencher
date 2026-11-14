@@ -17,6 +17,11 @@ use crate::{
                 time::AdapterJsTimeV1,
                 vitest::{AdapterJsVitestOutputJson, AdapterJsVitestReporter, AdapterJsVitestV1},
             },
+            python::{
+                asv::{AdapterPythonAsvJson, AdapterPythonAsvText, AdapterPythonAsvV1},
+                pytest::AdapterPythonPytestV1,
+            },
+            ruby::benchmark::AdapterRubyBenchmarkV1,
             rust::{
                 bench::{AdapterRustBenchJson, AdapterRustBenchText, AdapterRustBenchV1},
                 criterion::AdapterRustCriterionV1,
@@ -26,6 +31,9 @@ use crate::{
                 gungraun_json::AdapterRustGungraunJsonV1,
                 gungraun_stdout::AdapterRustGungraunStdoutV1,
                 iai::AdapterRustIaiV1,
+            },
+            shell::hyperfine::{
+                AdapterShellHyperfine1, AdapterShellHyperfine2, AdapterShellHyperfineV1,
             },
         },
         json::v1::AdapterJsonV1,
@@ -44,8 +52,11 @@ pub mod js;
 mod leaf;
 mod magic;
 mod percentile;
+pub mod python;
+pub mod ruby;
 mod runs;
 pub mod rust;
+pub mod shell;
 
 use magic::AdapterMagicV1;
 
@@ -82,6 +93,14 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::JsVitestV5 => AdapterJsVitestReporter::parse(input, settings),
         Adapter::JsVitestV1 => AdapterJsVitestOutputJson::parse(input, settings),
         Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarnessV1::parse(input, settings),
+        Adapter::PythonAsv => AdapterPythonAsvV1::parse(input, settings),
+        Adapter::PythonAsvJson => AdapterPythonAsvJson::parse(input, settings),
+        Adapter::PythonAsvText => AdapterPythonAsvText::parse(input, settings),
+        Adapter::PythonPytest => AdapterPythonPytestV1::parse(input, settings),
+        Adapter::RubyBenchmark => AdapterRubyBenchmarkV1::parse(input, settings),
+        Adapter::ShellHyperfine => AdapterShellHyperfineV1::parse(input, settings),
+        Adapter::ShellHyperfineV1 => AdapterShellHyperfine1::parse(input, settings),
+        Adapter::ShellHyperfineV2 => AdapterShellHyperfine2::parse(input, settings),
         Adapter::JsonV0
         | Adapter::Rust
         | Adapter::Cpp
@@ -90,14 +109,8 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         | Adapter::CSharp
         | Adapter::Js
         | Adapter::Python
-        | Adapter::PythonAsv
-        | Adapter::PythonPytest
         | Adapter::Ruby
-        | Adapter::RubyBenchmark
         | Adapter::Shell
-        | Adapter::ShellHyperfine
-        | Adapter::ShellHyperfineV1
-        | Adapter::ShellHyperfineV2
         | Adapter::Dart => convert_v0(adapter, input, settings),
     }
 }
@@ -118,7 +131,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 45] = [
+    const ADAPTERS: [Adapter; 47] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -155,6 +168,8 @@ mod test_bmf_v1 {
         Adapter::JsVitestV5,
         Adapter::Python,
         Adapter::PythonAsv,
+        Adapter::PythonAsvJson,
+        Adapter::PythonAsvText,
         Adapter::PythonPytest,
         Adapter::Ruby,
         Adapter::RubyBenchmark,
@@ -267,6 +282,14 @@ mod test_bmf_v1 {
                 | Adapter::JsVitestV1
                 | Adapter::JsVitestV5
                 | Adapter::DartBenchmarkHarness
+                | Adapter::PythonAsv
+                | Adapter::PythonAsvJson
+                | Adapter::PythonAsvText
+                | Adapter::PythonPytest
+                | Adapter::RubyBenchmark
+                | Adapter::ShellHyperfine
+                | Adapter::ShellHyperfineV1
+                | Adapter::ShellHyperfineV2
         )
     }
 
@@ -365,6 +388,44 @@ pub(crate) mod test_util {
     /// How many variants the results hold across every benchmark.
     pub(crate) fn variants(results: &AdapterResults) -> usize {
         results.inner.values().map(BTreeMap::len).sum()
+    }
+
+    /// The variant's metric is the expected value to within floating point rounding.
+    pub(crate) fn assert_value(
+        results: &AdapterResults,
+        (benchmark, parameters): (&str, &str),
+        (measure, metric): (&str, &str),
+        expected: f64,
+    ) {
+        let actual = value(results, benchmark, parameters, measure, metric)
+            .unwrap_or_else(|| panic!("no {measure} {metric} of {benchmark} {parameters}"));
+        assert!(
+            (actual - expected).abs() <= expected.abs() * 1e-9,
+            "{benchmark} {parameters} {measure} {metric}: {actual} != {expected}"
+        );
+    }
+
+    /// The value of one metric of a variant, if the results hold it.
+    pub(crate) fn value(
+        results: &AdapterResults,
+        benchmark: &str,
+        parameters: &str,
+        measure: &str,
+        metric: &str,
+    ) -> Option<f64> {
+        let benchmark: BenchmarkName = benchmark.parse().expect("Failed to parse benchmark");
+        let parameters: ParameterSet = parameters.parse().expect("Failed to parse parameters");
+        let measure: MeasureNameId = measure.parse().expect("Failed to parse measure");
+        let metric = metric.parse().expect("Failed to parse metric");
+        results
+            .inner
+            .get(&BenchmarkNameId::new_name(benchmark))?
+            .get(&parameters)?
+            .inner
+            .get(&measure)?
+            .inner
+            .get(&metric)
+            .map(|value| value.into_inner())
     }
 
     /// A statistic with its interval, all three in one measure.

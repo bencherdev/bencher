@@ -237,17 +237,17 @@ mod test_results_array {
         assert_contract(&error, BmfVersion::V1, BmfVersion::V0);
     }
 
-    /// A harness adapter the version 1 tree does not hold yet parses as version 0,
-    /// so its output at version 1 breaks the contract.
+    /// An adapter the version 1 tree does not hold yet, a language's node, parses as
+    /// version 0, so its output at version 1 breaks the contract.
     #[test]
     fn results_array_non_bmf_adapter_refuses_version_1() {
         let results = std::fs::read_to_string("./tool_output/ruby/benchmark/five.txt")
             .expect("Failed to read test file");
-        let error = new_at(&results, Adapter::RubyBenchmark, BmfVersion::V1);
+        let error = new_at(&results, Adapter::Ruby, BmfVersion::V1);
         assert_contract(&error, BmfVersion::V1, BmfVersion::V0);
         AdapterResultsArray::new(
             &[&results],
-            Adapter::RubyBenchmark,
+            Adapter::Ruby,
             Settings::new(None, BmfVersion::V0),
         )
         .expect("a non-BMF adapter parses at version 0");

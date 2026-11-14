@@ -92,7 +92,7 @@ pub(crate) fn convert_v0(
         Adapter::JsTime => AdapterJsTime::parse(input, settings),
         Adapter::JsVitest | Adapter::JsVitestV1 => AdapterJsVitest::parse(input, settings),
         Adapter::Python => AdapterPython::parse(input, settings),
-        Adapter::PythonAsv => AdapterPythonAsv::parse(input, settings),
+        Adapter::PythonAsv | Adapter::PythonAsvText => AdapterPythonAsv::parse(input, settings),
         Adapter::PythonPytest => AdapterPythonPytest::parse(input, settings),
         Adapter::Ruby => AdapterRuby::parse(input, settings),
         Adapter::RubyBenchmark => AdapterRubyBenchmark::parse(input, settings),
@@ -101,12 +101,14 @@ pub(crate) fn convert_v0(
         Adapter::RustCriterion | Adapter::RustCriterionText => {
             AdapterRustCriterion::parse(input, settings)
         },
-        // The version 0 tree reads no structured Rust, Catch2, or Go output, and no Vitest 5 report.
+        // The version 0 tree reads no structured Rust, Catch2, or Go output, no Vitest 5 report,
+        // and no asv results file.
         Adapter::RustBenchJson
         | Adapter::RustCriterionJson
         | Adapter::CppCatch2Xml
         | Adapter::GoBenchJson
-        | Adapter::JsVitestV5 => None,
+        | Adapter::JsVitestV5
+        | Adapter::PythonAsvJson => None,
         Adapter::RustIai => AdapterRustIai::parse(input, settings),
         Adapter::RustGungraun => AdapterRustGungraun::parse(input, settings),
         Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse(input, settings),

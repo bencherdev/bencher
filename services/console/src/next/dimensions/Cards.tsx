@@ -36,7 +36,7 @@ import { shortDate, shortDay } from "./time";
 import { varyingKeys } from "../plot/distinct";
 import { parametersInUse, shownTotal, shownVariants, tagsOf } from "./variants";
 import { formatCount } from "../plot/count";
-import Tag from "../tag";
+import Tag, { parameterTag } from "../tag";
 
 export type ThresholdsState = Paged<JsonThreshold>;
 
@@ -373,12 +373,14 @@ export const BenchmarkCards = (props: { benchmark: string; edit: boolean }) => {
 	// The card names the benchmark, so a variant's controls name it by the parameters that tell it apart.
 	const varying = createMemo(() => new Set(varyingKeys(shown())));
 	const label = (variant: JsonVariant) => {
-		const keys = Object.keys(variant.parameters).sort();
-		const tags = keys.some((key) => varying().has(key))
-			? keys.filter((key) => varying().has(key))
-			: keys;
+		const entries = Object.entries(variant.parameters).sort(([a], [b]) =>
+			a < b ? -1 : 1,
+		);
+		const tags = entries.some(([key]) => varying().has(key))
+			? entries.filter(([key]) => varying().has(key))
+			: entries;
 		return tags.length > 0
-			? tags.map((key) => `${key}=${variant.parameters[key]}`).join(" ")
+			? tags.map(([key, value]) => parameterTag(key, value)).join(" ")
 			: "no parameters";
 	};
 	// Each variant's changes reach the API in the order they were made, and a
@@ -837,9 +839,11 @@ const Sets = (props: { threshold: JsonThreshold }) => (
 							<span class="dm-or">or</span>
 						</Show>
 						<span class="dm-tags">
-							<For each={Object.keys(set).sort()}>
-								{(key) => (
-									<Tag class="dm-tag" tag={`${key}=${String(set[key])}`} tail />
+							<For
+								each={Object.entries(set).sort(([a], [b]) => (a < b ? -1 : 1))}
+							>
+								{([key, value]) => (
+									<Tag class="dm-tag" tag={parameterTag(key, value)} tail />
 								)}
 							</For>
 						</span>

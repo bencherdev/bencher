@@ -26,6 +26,14 @@ describe("defaultPinTitle", () => {
 		);
 	});
 
+	// Kills an empty value shown bare in the title, which reads as no value.
+	test("name an empty value as quotes", () => {
+		const variants = [{ env: "" }, { env: "a" }];
+		expect(
+			defaultPinTitle([{ ...LINE, parameters: { env: "" }, variants }]),
+		).toBe('blake3 env="", Latency on main');
+	});
+
 	// Kills naming every parameter the variant carries.
 	test("leave out a parameter every variant shares", () => {
 		const variants = BLAKE3_VARIANTS.map((variant) => ({

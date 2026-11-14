@@ -1526,6 +1526,35 @@ async fn reports_post_skips_a_variant_whose_parameters_fail_validation() {
     );
 }
 
+// POST /v0/projects/{project}/reports - an empty string is a parameter value of its own
+//
+// Kills: an empty string value rejected, which skips its variant with a warning, or stored as if
+// the key were unset.
+#[tokio::test]
+async fn reports_post_ingests_an_empty_parameter_value() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "emptyvalue").await;
+
+    let measures = serde_json::json!({ "latency": { "value": 1.0 } });
+    let results = serde_json::json!({
+        "bench": [
+            { "parameters": { "env": "" }, "measures": measures },
+            { "measures": measures },
+        ]
+    });
+    let report = ingest_report(&[results.to_string()], 1);
+    let warnings = post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(warnings, None);
+    assert_eq!(
+        ingested(&server, &project_slug),
+        vec![
+            row("bench", r#"{"env":""}"#, "latency", "value"),
+            row("bench", "{}", "latency", "value"),
+        ]
+    );
+}
+
 // POST /v0/projects/{project}/reports - a metric whose name fails validation is skipped and warned
 // of, and the rest of its measure is ingested
 #[tokio::test]
@@ -2589,7 +2618,66 @@ async fn reports_post_creates_the_dart_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the hyperfine and asv leaves create their new built-in
+// measures in their units
+//
+// Kills: a new built-in measure missing from the server's built-ins, which creates it in the
+// generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_hyperfine_and_asv_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "hyperfineasv").await;
+    for (adapter, results) in [
+        ("shell_hyperfine", HYPERFINE_COUNTERS),
+        ("python_asv", ASV_PARAMS),
+    ] {
+        post_report_body(
+            &server,
+            &token,
+            &project_slug,
+            &parse_report(adapter, &[results], Some(1)),
+        )
+        .await;
+    }
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any([
+            "branch-misses",
+            "cache-misses",
+            "cache-references",
+            "memory",
+            "peak-memory",
+            "system-time",
+            "user-time",
+        ]))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        [
+            ("branch-misses", "Branch Misses", "misses"),
+            ("cache-misses", "Cache Misses", "misses"),
+            ("cache-references", "Cache References", "references"),
+            ("memory", "Memory", "bytes (B)"),
+            ("peak-memory", "Peak Memory", "bytes (B)"),
+            ("system-time", "System Time", "nanoseconds (ns)"),
+            ("user-time", "User Time", "nanoseconds (ns)"),
+        ]
+        .map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
 const JMH_MODES: &str = include_str!("../../bencher_adapter/tool_output/java/jmh/modes.json");
+const HYPERFINE_COUNTERS: &str =
+    include_str!("../../bencher_adapter/tool_output/shell/hyperfine/v2_counters.json");
+const ASV_PARAMS: &str = include_str!("../../bencher_adapter/tool_output/python/asv/params.txt");
 const DART_EMITTERS: &str =
     include_str!("../../bencher_adapter/tool_output/dart/benchmark_harness/emitters.txt");
 const JMH_LONG_PARAM_ONLY: &str =
