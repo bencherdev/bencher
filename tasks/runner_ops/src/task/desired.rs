@@ -93,8 +93,8 @@ const QUIET_UNITS: [(&str, &str); 7] = [
         "/usr/sbin/logrotate /etc/logrotate.conf",
     ),
 ];
-/// Has needrestart defer a restart of each maintenance unit; `zz-` sorts it after any other snippet, which could
-/// replace needrestart's whole table of overrides.
+/// Has needrestart defer a restart of each maintenance unit; `zz-` sorts it after the snippets that packages ship,
+/// any of which could replace needrestart's whole table of overrides.
 const NEEDRESTART_QUIET_PATH: &str = "/etc/needrestart/conf.d/zz-bencher-quiet.conf";
 const ABSENT: &str = "absent";
 const FRAME: &str = "desired ";
@@ -1272,6 +1272,7 @@ mod tests {
         assert_eq!(reloads, ["systemctl daemon-reload"]);
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn needrestart_defers_each_quiet_unit_by_its_exact_name_alone() {
         // Kills a pattern that matches a timer or another unit, a dot that
