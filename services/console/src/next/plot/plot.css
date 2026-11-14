@@ -281,7 +281,19 @@
 	will-change: transform;
 }
 
+.pl .u-cursor-y {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	border-bottom: var(--border-width) dashed var(--color-text-muted);
+	pointer-events: none;
+	will-change: transform;
+}
+
 .pl .u-cursor-x.u-off,
+.pl .u-cursor-y.u-off,
+.pl .u-over:not([data-crosshair]) .u-cursor-y,
 .pl .u-select {
 	display: none;
 }

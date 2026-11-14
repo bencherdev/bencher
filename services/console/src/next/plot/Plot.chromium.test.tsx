@@ -81,6 +81,12 @@ const plotArea = async (name: RegExp | string = /lines?,/) => {
 
 const series = (slot: number) => tokenRgb(`--color-data-categorical-${slot}`);
 
+/** The horizontal line across a plot area, its top and width on the page, or null when it is not drawn. */
+const crosshair = (over: HTMLElement) => {
+	const box = over.querySelector(".u-cursor-y")?.getBoundingClientRect();
+	return box?.width ? { top: box.top, width: box.width } : null;
+};
+
 /** The wordmark's images in the key, both themes'. */
 const markImages = () => [
 	...document.querySelectorAll<HTMLImageElement>(".pl-key .pl-mark img"),
@@ -102,6 +108,18 @@ const FLAT = testData([
 	testLine({ id: "mid", benchmark: "sha256", y: [20, 20, 20, 20, 20] }),
 	testLine({ id: "high", benchmark: "xxh3", y: [30, 30, 30, 30, 30] }),
 ]);
+
+// One rising line on each of two measures, which a stacked layout draws one plot each.
+const STACKED = testData(
+	[
+		testLine({ id: "lat", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		testLine({ id: "thr", measure: 1, y: [1, 2, 3, 4, 5] }),
+	],
+	[
+		{ name: "Latency", units: "nanoseconds (ns)" },
+		{ name: "Throughput", units: "operations (ops)" },
+	],
+);
 
 describe("Plot", () => {
 	// Kills a wrong slot color, a missing line, or an inverted or nonlinear y scale.
@@ -693,6 +711,129 @@ describe("Plot", () => {
 		await expect.element(status).not.toHaveTextContent("µs");
 	});
 
+	// Kills a horizontal line missing from a hover, snapped to a point rather than the pointer, short of the plot area, or left behind once the pointer leaves.
+	test("a mouse hover draws a horizontal line across the plot at the pointer until it leaves", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({ data });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 4, y: box.height / 3 },
+		});
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		expect(crosshair(over)?.top).toBeCloseTo(box.top + box.height / 3, -0.5);
+		expect(crosshair(over)?.width).toBeCloseTo(box.width, 0);
+
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 4, y: (box.height * 3) / 4 },
+		});
+		expect(crosshair(over)?.top).toBeCloseTo(
+			box.top + (box.height * 3) / 4,
+			-0.5,
+		);
+
+		await page.getByRole("button", { name: "blake3: hide its line" }).hover();
+		await expect.element(status).not.toHaveTextContent("µs");
+		expect(crosshair(over)).toBeNull();
+	});
+
+	// Kills a click's pin that drops its horizontal line once the pinned readout takes the pointer, one that follows the pointer while pinned, and one that outlives its readout.
+	test("a click pins the horizontal line at its y until the readout closes", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({ data });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		const y = box.top + box.height / 3;
+
+		await page.elementLocator(over).click({
+			position: { x: box.width / 4, y: box.height / 3 },
+		});
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		const card = status.element().querySelector(".pl-readout") as HTMLElement;
+		await page.elementLocator(card).hover();
+		await settle();
+		expect(over.matches(":hover")).toBe(false);
+		expect(crosshair(over)?.top).toBeCloseTo(y, -0.5);
+
+		await page.getByRole("button", { name: "blake3: hide its line" }).hover();
+		await settle();
+		expect(crosshair(over)?.top).toBeCloseTo(y, -0.5);
+
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 2, y: (box.height * 3) / 4 },
+		});
+		expect(crosshair(over)?.top).toBeCloseTo(y, -0.5);
+
+		await page.getByRole("button", { name: "Close the readout" }).click();
+		await expect.element(status).not.toHaveTextContent("µs");
+		expect(crosshair(over)).toBeNull();
+	});
+
+	// Kills a horizontal line the keys draw, whether they move the readout or pin a hovered point, which sits at no pointer.
+	test("the keys draw no horizontal line", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({ data });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 4, y: box.height / 3 },
+		});
+		expect(crosshair(over)).not.toBeNull();
+		over.focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		expect(crosshair(over)).toBeNull();
+
+		await userEvent.keyboard("{Enter}");
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 2, y: box.height / 3 },
+		});
+		expect(crosshair(over)).not.toBeNull();
+		await userEvent.keyboard("{ArrowRight}");
+		await expect.element(status).toHaveTextContent("40.00 µs");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		expect(crosshair(over)).toBeNull();
+	});
+
+	// Kills a tap that draws a horizontal line, or keeps the one a mouse drew before it.
+	test("a tap draws no horizontal line", async () => {
+		const data = testData([
+			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
+		]);
+		mount({ data });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 4, y: box.height / 3 },
+		});
+		expect(crosshair(over)).not.toBeNull();
+		const at = {
+			clientX: box.left + box.width * 0.75,
+			clientY: box.top + box.height / 2,
+			bubbles: true,
+			pointerType: "touch",
+		};
+		over.dispatchEvent(new PointerEvent("pointerdown", at));
+		over.dispatchEvent(new PointerEvent("pointerup", at));
+		over.dispatchEvent(new PointerEvent("click", at));
+		await expect.element(status).toHaveTextContent("40.00 µs");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		expect(crosshair(over)).toBeNull();
+	});
+
 	// Kills Enter or Space that does nothing, only pins, scrolls the page, or holds the page's Space with nothing to pin, an unpin that loses the point, and a readout the keys unpinned that offers a click.
 	test("Enter or Space pins the cursor's point and unpins it", async () => {
 		const data = testData([
@@ -926,6 +1067,92 @@ describe("Plot", () => {
 		const guide = (over: HTMLElement) =>
 			over.querySelector(".u-cursor-x")?.getBoundingClientRect().left;
 		expect(guide(throughput.over)).toBeCloseTo(guide(latency.over) ?? 0, 0);
+	});
+
+	// Kills a horizontal line synced to every stacked plot, where its y means nothing, and a pinned one left on a plot once a click moves the pin to another.
+	test("draws the horizontal line on the stacked plot the pointer is on alone", async () => {
+		mount({ data: STACKED, layout: "stacked" });
+		await settle();
+		const latency = await plotArea("1 line, Latency");
+		const throughput = await plotArea("1 line, Throughput");
+		const status = page.getByRole("status");
+
+		await page.elementLocator(latency.over).hover({
+			position: { x: latency.box.width / 4, y: latency.box.height / 3 },
+		});
+		await expect.element(status).toHaveTextContent("2.00 ops");
+		expect(crosshair(latency.over)?.top).toBeCloseTo(
+			latency.box.top + latency.box.height / 3,
+			-0.5,
+		);
+		expect(crosshair(throughput.over)).toBeNull();
+
+		await page.elementLocator(latency.over).click({
+			position: { x: latency.box.width / 4, y: latency.box.height / 3 },
+		});
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await page.elementLocator(throughput.over).click({
+			position: { x: throughput.box.width / 2, y: throughput.box.height / 4 },
+		});
+		await expect.element(status).toHaveTextContent("3.00 ops");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		expect(crosshair(throughput.over)?.top).toBeCloseTo(
+			throughput.box.top + throughput.box.height / 4,
+			-0.5,
+		);
+		expect(crosshair(latency.over)).toBeNull();
+	});
+
+	// Kills a pin from the keys of one stacked plot that leaves the line a mouse drew on the plot holding the cursor.
+	test("the keys of another stacked plot pin a hovered point with no horizontal line", async () => {
+		mount({ data: STACKED, layout: "stacked" });
+		await settle();
+		const latency = await plotArea("1 line, Latency");
+		const throughput = await plotArea("1 line, Throughput");
+		const status = page.getByRole("status");
+
+		await page.elementLocator(latency.over).hover({
+			position: { x: latency.box.width / 4, y: latency.box.height / 3 },
+		});
+		expect(crosshair(latency.over)).not.toBeNull();
+		throughput.over.focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		expect(crosshair(latency.over)).toBeNull();
+
+		await page
+			.getByRole("button", { name: /: hide its line$/ })
+			.first()
+			.hover();
+		await settle();
+		expect(crosshair(latency.over)).toBeNull();
+		expect(crosshair(throughput.over)).toBeNull();
+	});
+
+	// Kills the line of a click's pin on one stacked plot that outlives the unpin from another plot's keys.
+	test("the keys of another stacked plot unpin a click's point and take its horizontal line", async () => {
+		mount({ data: STACKED, layout: "stacked" });
+		await settle();
+		const latency = await plotArea("1 line, Latency");
+		const throughput = await plotArea("1 line, Throughput");
+		const status = page.getByRole("status");
+
+		await page.elementLocator(latency.over).click({
+			position: { x: latency.box.width / 4, y: latency.box.height / 3 },
+		});
+		await expect.element(status).toHaveAttribute("aria-live", "polite");
+		await page
+			.getByRole("button", { name: /: hide its line$/ })
+			.first()
+			.hover();
+		await settle();
+		expect(crosshair(latency.over)).not.toBeNull();
+
+		throughput.over.focus();
+		await userEvent.keyboard("{Enter}");
+		await expect.element(status).toHaveAttribute("aria-live", "off");
+		expect(crosshair(latency.over)).toBeNull();
+		expect(crosshair(throughput.over)).toBeNull();
 	});
 
 	// Kills a dual axis drawn as two plots, or the dots put on the wrong measure.
