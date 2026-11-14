@@ -213,6 +213,8 @@ pub enum CliReportAdapter {
     PythonPytest,
     /// ♦️ Ruby Benchmark
     RubyBenchmark,
+    /// ♦️ Ruby benchmark-ips
+    RubyBenchmarkIps,
     /// 🦀 Rust Bench
     RustBench,
     /// 🦀 Rust Criterion

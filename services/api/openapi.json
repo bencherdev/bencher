@@ -13071,6 +13071,7 @@
           "python_pytest",
           "ruby",
           "ruby_benchmark",
+          "ruby_benchmark_ips",
           "shell",
           "shell_hyperfine",
           "shell_hyperfine_v1",
