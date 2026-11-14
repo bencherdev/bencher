@@ -63,7 +63,7 @@ macro_rules! create_measure {
 }
 
 pub mod default {
-    use bencher_valid::NANOSECONDS;
+    use bencher_valid::{BYTES, NANOSECONDS};
 
     create_measure!(Latency, "Latency", "latency", NANOSECONDS);
     create_measure!(
@@ -82,6 +82,18 @@ pub mod default {
     create_measure!(CpuTime, "CPU Time", "cpu-time", NANOSECONDS);
     create_measure!(Allocations, "Allocations", "allocations", "allocations");
     create_measure!(PageFaults, "Page Faults", "page-faults", "faults");
+    create_measure!(UserTime, "User Time", "user-time", NANOSECONDS);
+    create_measure!(SystemTime, "System Time", "system-time", NANOSECONDS);
+    create_measure!(Memory, "Memory", "memory", BYTES);
+    create_measure!(PeakMemory, "Peak Memory", "peak-memory", BYTES);
+    create_measure!(
+        CacheReferences,
+        "Cache References",
+        "cache-references",
+        "references"
+    );
+    create_measure!(CacheMisses, "Cache Misses", "cache-misses", "misses");
+    create_measure!(BranchMisses, "Branch Misses", "branch-misses", "misses");
 }
 
 pub mod json {

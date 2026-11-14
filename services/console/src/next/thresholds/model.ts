@@ -1,4 +1,5 @@
 import type { ParameterSet } from "../report/row";
+import { parameterTag } from "../tag";
 
 /** Each set of a parameters filter as its tags, in the API's key order. */
 export const filterSets = (sets: readonly ParameterSet[] | undefined) =>
@@ -6,7 +7,7 @@ export const filterSets = (sets: readonly ParameterSet[] | undefined) =>
 		// The API's key order, as `parameterEntries` sorts; that module stays out of the list's code.
 		Object.entries(set)
 			.sort(([a], [b]) => (a < b ? -1 : 1))
-			.map(([key, value]) => `${key}=${value}`),
+			.map(([key, value]) => parameterTag(key, value)),
 	);
 
 /** What a parameters filter lets through, in a few words. */

@@ -47,6 +47,8 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.JsVitestV5:
 			return "Vitest";
 		case Adapter.PythonAsv:
+		case Adapter.PythonAsvJson:
+		case Adapter.PythonAsvText:
 			return "airspeed velocity";
 		case Adapter.PythonPytest:
 			return "pytest-benchmark";
@@ -100,6 +102,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.JsVitestV5:
 			return `bencher run${host} --file results.json "vitest bench --run --reporter=json --outputFile results.json"`;
 		case Adapter.PythonAsv:
+		case Adapter.PythonAsvJson:
+		case Adapter.PythonAsvText:
 			return `bencher run${host} "asv run"`;
 		case Adapter.PythonPytest:
 			return `bencher run${host} --file results.json "pytest --benchmark-json results.json benchmarks.py"`;

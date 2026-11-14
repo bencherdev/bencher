@@ -31,6 +31,7 @@ import { type Position, placed, positionIndex, positionOf } from "./order";
 import { PLOTS_LIMIT } from "./pins";
 import { plotsQuery } from "./queries";
 import Tile, { drawingOf, listed } from "./Tile";
+import { parameterTag } from "../tag";
 
 type Choice = (typeof PRESETS)[number]["value"] | "custom";
 
@@ -358,7 +359,7 @@ const SavedWith = (props: {
 				: sets
 						.map((set) =>
 							Object.entries(set)
-								.map(([key, value]) => `${key}=${String(value)}`)
+								.map(([key, value]) => parameterTag(key, value))
 								.join(" "),
 						)
 						.join(", "),
@@ -374,8 +375,8 @@ const SavedWith = (props: {
 		if (!line) {
 			return props.plot.focus === undefined ? "none" : "a line not drawn now";
 		}
-		const tags = Object.entries(line.parameters).map(
-			([key, value]) => `${key}=${String(value)}`,
+		const tags = Object.entries(line.parameters).map(([key, value]) =>
+			parameterTag(key, value),
 		);
 		return [line.benchmark, ...tags].join(" ");
 	};

@@ -35,6 +35,18 @@ describe("thresholdLinkName", () => {
 		]);
 	});
 
+	// Kills an empty value shown bare in a set, which reads as no value.
+	test("names an empty value as quotes", () => {
+		expect(
+			thresholdLinkName(
+				"ubuntu-latest",
+				threshold({ parameters: [{ env: "" }] }),
+			),
+		).toBe(
+			'ubuntu-latest, threshold for Latency on main, ubuntu-latest, env=""',
+		);
+	});
+
 	// Kills a name that tells the metric before the parameter sets.
 	test("tells the parameter sets before the metric", () => {
 		expect(

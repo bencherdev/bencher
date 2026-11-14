@@ -1,0 +1,165 @@
+{
+    "benchmarks.MemSuite.mem_list": {
+        "code": "class MemSuite:\n    def mem_list(self):\n        return [0] * 256",
+        "name": "benchmarks.MemSuite.mem_list",
+        "param_names": [],
+        "params": [],
+        "type": "memory",
+        "unit": "bytes",
+        "version": "abe86bab484550a681c61d7bb6eb081fbd37eb6d5009eba1df85c935530577b9"
+    },
+    "benchmarks.Params.time_join": {
+        "code": "class Params:\n    def time_join(self, size, kind):\n        \"\".join([kind] * size)",
+        "min_run_count": 2,
+        "name": "benchmarks.Params.time_join",
+        "number": 0,
+        "param_names": [
+            "size",
+            "kind"
+        ],
+        "params": [
+            [
+                "10",
+                "100"
+            ],
+            [
+                "'a'",
+                "'b c'"
+            ]
+        ],
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "23de9fba6470ef62fac6069195e44780d7c04d86c171be30246aed2b6c0a7ab9",
+        "warmup_time": -1
+    },
+    "benchmarks.TimeSuite.time_iterkeys": {
+        "code": "class TimeSuite:\n    def time_iterkeys(self):\n        for k in iter(self.d):\n            pass\n\n    def setup(self):\n        self.d = {i: i for i in range(500)}",
+        "min_run_count": 2,
+        "name": "benchmarks.TimeSuite.time_iterkeys",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "b3e740a17be82fae349b9f9d1c7708c949fc780f16b6563b7cafdacd89d87936",
+        "warmup_time": -1
+    },
+    "benchmarks.TimeSuite.time_keys": {
+        "code": "class TimeSuite:\n    def time_keys(self):\n        for k in self.d.keys():\n            pass\n\n    def setup(self):\n        self.d = {i: i for i in range(500)}",
+        "min_run_count": 2,
+        "name": "benchmarks.TimeSuite.time_keys",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "fa4ed7c2706749a9ac091966e7ed32f3b0b7ec2d8f3b4b35af8ec4137ef592d2",
+        "warmup_time": -1
+    },
+    "benchmarks.Wide.time_wide": {
+        "code": "class Wide:\n    def time_wide(self, n, scale, label):\n        if n == 2 and label == \"x\":\n            raise ValueError(\"boom\")\n        sum(range(n * 10))",
+        "min_run_count": 2,
+        "name": "benchmarks.Wide.time_wide",
+        "number": 0,
+        "param_names": [
+            "n",
+            "scale",
+            "label"
+        ],
+        "params": [
+            [
+                "1",
+                "2"
+            ],
+            [
+                "0.5",
+                "1e-05"
+            ],
+            [
+                "'x'",
+                "'y / z'"
+            ]
+        ],
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "1498aeeda7c0a483be927bc10485563e79614d30dc0f645476c4fbb36dd84641",
+        "warmup_time": -1
+    },
+    "benchmarks.peakmem_list": {
+        "code": "def peakmem_list():\n    return [0] * 100000",
+        "name": "benchmarks.peakmem_list",
+        "param_names": [],
+        "params": [],
+        "type": "peakmemory",
+        "unit": "bytes",
+        "version": "73dc2c5973c0fa0834b147682d4b26cd7ac0cb38139a39aa508734dd7dd297a9"
+    },
+    "benchmarks.time_fails": {
+        "code": "def time_fails():\n    raise ValueError(\"boom\")",
+        "min_run_count": 2,
+        "name": "benchmarks.time_fails",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "76771699252041997503837b2375fcdc10209c7aa80f11ce164c5f3a1d470d0e",
+        "warmup_time": -1
+    },
+    "benchmarks.time_single_param": {
+        "code": "def time_single_param(n):\n    sum(range(n))",
+        "min_run_count": 2,
+        "name": "benchmarks.time_single_param",
+        "number": 0,
+        "param_names": [
+            "param1"
+        ],
+        "params": [
+            [
+                "1",
+                "1000"
+            ]
+        ],
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "8f9fd9f9ba5406c7407f2c95057f9e1888d94180d92ba27de7cca09345cc84af",
+        "warmup_time": -1
+    },
+    "benchmarks.time_slow": {
+        "code": "def time_slow():\n    import time\n    time.sleep(0.002)",
+        "min_run_count": 2,
+        "name": "benchmarks.time_slow",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "ed1a343969c72eadd43fbf76d8d457997f1e71970417540fa6818003aecdc7b7",
+        "warmup_time": -1
+    },
+    "benchmarks.track_count": {
+        "code": "def track_count():\n    return 42",
+        "name": "benchmarks.track_count",
+        "param_names": [],
+        "params": [],
+        "type": "track",
+        "unit": "widgets",
+        "version": "b3823c38b0e95639aea76ffb18647614ce4d6a0cecf6021fe902e09deba5eadf"
+    },
+    "version": 2
+}

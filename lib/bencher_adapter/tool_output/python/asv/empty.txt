@@ -1,0 +1,16 @@
+· Discovering benchmarks
+· Running 1 total benchmarks (1 commits * 1 environments * 1 benchmarks)
+[ 0.00%] · For demo commit 10e71648 <main>:
+[ 0.00%] ·· Building for existing-py_tmp_venv_bin_python3
+[ 0.00%] ·· Benchmarking existing-py_tmp_venv_bin_python3
+[50.00%] ··· Running (benchmarks.Params.time_join--).
+[100.00%] ··· benchmarks.Params.time_join                                     ok
+[100.00%] ··· ====== ========== ========== =========
+              --                   kind             
+              ------ -------------------------------
+               size      a          ''       "it's" 
+              ====== ========== ========== =========
+                10    213±60ns   194±50ns   152±5ns 
+               100    532±40ns   391±20ns   524±4ns 
+              ====== ========== ========== =========
+
