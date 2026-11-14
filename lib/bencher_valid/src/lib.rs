@@ -72,7 +72,8 @@ pub use plus::{
     LastFour, LicensedPlanId, Memory, MeteredPlanId, OAuthAccessToken, OAuthClientId, OAuthCode,
     OAuthCodeChallenge, OAuthCodeHash, OAuthCodeVerifier, OAuthIssuer, OAuthMaxAge, OAuthNonce,
     OAuthRedirectUri, OAuthRefreshToken, OAuthRequestState, OAuthResource, OAuthScope, OAuthScopes,
-    OAuthTokenHash, OperatingSystem, PlanLevel, PlanStatus, PollTimeout, RecaptchaAction,
+    OAuthTokenHash, OperatingSystem, PkceVerifier, PlanLevel, PlanStatus, PollTimeout,
+    ProviderAccountId, ProviderNonce, ProviderState, ProviderStateHash, RecaptchaAction,
     RecaptchaScore, RunnerKey, RunnerKeyHash, Sandbox, Sha256, Timeout, UpdateChannel,
 };
 pub use resource_id::{IntoResourceId, ResourceId};

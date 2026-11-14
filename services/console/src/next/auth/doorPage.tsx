@@ -3,7 +3,6 @@ import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { planParam } from "../../components/auth/auth";
 import { keepBack } from "../../components/auth/back";
-import { startSignIn } from "../../components/auth/signIn";
 import type {
 	JsonOAuthUrl,
 	JsonProject,
@@ -14,7 +13,12 @@ import { handOff } from "../handoff";
 import { forgetReader } from "../memory";
 import { projectPath } from "../paths";
 import { readReader } from "../reader";
-import { type Failure, VERIFICATION_FAILED, doorFailure } from "./copy";
+import {
+	type Failure,
+	SIGN_IN_FAILED,
+	VERIFICATION_FAILED,
+	doorFailure,
+} from "./copy";
 import Door, { type Provider } from "./Door";
 import Frame from "./Frame";
 import { landing } from "./land";
@@ -23,6 +27,7 @@ import {
 	type Carry,
 	type Door as DoorName,
 	keepPending,
+	keepStarted,
 	pendingOf,
 	takePrefill,
 } from "./pending";
@@ -116,8 +121,6 @@ const signedIn = async (carry: Carry): Promise<boolean> => {
 	return true;
 };
 
-const FAILED: Failure = { text: "Sign-in failed", retry: true };
-
 const DoorApp = (props: {
 	door: DoorName;
 	github: boolean;
@@ -142,7 +145,7 @@ const DoorApp = (props: {
 				}
 			},
 			() => {
-				setFailure(FAILED);
+				setFailure(SIGN_IN_FAILED);
 				setBusy(false);
 			},
 		);
@@ -177,16 +180,14 @@ const DoorApp = (props: {
 	const withProvider = (provider: Provider) =>
 		attempt(async () => {
 			const answer = await ask<JsonOAuthUrl>(
-				"GET",
-				`/v0/auth/${provider}${providerQuery(props.carry)}`,
+				"POST",
+				`/v0/auth/providers/${provider}/start`,
+				props.carry,
 			);
 			if (!answer.ok) {
 				return doorFailure(answer.refused);
 			}
-			const state = new URL(answer.data.url).searchParams.get("state");
-			if (state) {
-				startSignIn(state);
-			}
+			keepStarted(sessionStorage, { door: props.door, carry: props.carry });
 			location.assign(answer.data.url);
 			return undefined;
 		});
@@ -205,23 +206,6 @@ const DoorApp = (props: {
 			onRetry={() => retry()}
 		/>
 	);
-};
-
-/** What a provider's sign-in carries: an invite, else a claim, else a plan, and any app's request. */
-const providerQuery = (carry: Carry) => {
-	const query = new URLSearchParams();
-	if (carry.invite) {
-		query.set("invite", carry.invite);
-	} else if (carry.claim) {
-		query.set("claim", carry.claim);
-	} else if (carry.plan) {
-		query.set("plan", carry.plan);
-	}
-	if (carry.authorization) {
-		query.set("authorization", carry.authorization);
-	}
-	const search = query.toString();
-	return search ? `?${search}` : "";
 };
 
 const mount = document.getElementById("auth");

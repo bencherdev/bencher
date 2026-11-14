@@ -23,6 +23,8 @@ import {
 	inboxFailure,
 	resendIn,
 } from "./copy";
+import { GitHubMark, GoogleMark } from "./Frame";
+import type { Who } from "./pending";
 import type { Answer } from "./request";
 
 /** What Check your inbox shows under the code. */
@@ -48,6 +50,8 @@ export interface InboxEffects {
 export interface InboxProps {
 	/** Unknown for a link opened in a tab that did not ask for it. */
 	email?: string | undefined;
+	/** The provider account that the proof pins, above the heading so the reader sees which asks. */
+	who?: Who | undefined;
 	resendAt?: number | undefined;
 	cappedUntil?: number | undefined;
 	status?: Status | undefined;
@@ -202,6 +206,15 @@ const Inbox = (props: InboxProps) => {
 
 	return (
 		<>
+			{/* The design system's token, by its classes, as consent draws one. */}
+			<Show when={props.who}>
+				{(who) => (
+					<span class="ui-token au-who">
+						{who().provider === "github" ? <GitHubMark /> : <GoogleMark />}
+						{who().handle}
+					</span>
+				)}
+			</Show>
 			<Heading level={1} size="xl">
 				Check your inbox
 			</Heading>

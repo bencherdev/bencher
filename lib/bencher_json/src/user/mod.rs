@@ -2,6 +2,8 @@ pub mod console_user;
 pub mod key;
 #[cfg(feature = "plus")]
 pub mod oauth;
+#[cfg(feature = "plus")]
+pub mod provider;
 pub mod session;
 pub mod sign_in;
 pub mod token;

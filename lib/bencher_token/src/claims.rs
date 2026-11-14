@@ -1,15 +1,13 @@
 use bencher_json::{
-    DateTime, Email, Jwt, OrganizationUuid, UserUuid, organization::member::OrganizationRole,
+    DateTime, Email, OrganizationUuid, UserUuid, organization::member::OrganizationRole,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{
-    GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, OAuthAuthorizationUuid,
-    PlanLevel, ProjectUuid, RunnerUuid,
+    GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, ProjectUuid, RunnerUuid,
 };
 use chrono::Utc;
 use jsonwebtoken::errors::ErrorKind as JsonWebTokenErrorKind;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use super::{TokenError, audience::Audience};
 
@@ -21,11 +19,7 @@ pub struct Claims {
     pub iss: String,                 // Issuer
     pub sub: Email,                  // Subject (whom token refers to)
     pub org: Option<OrgClaims>,      // Organization (for invitation)
-    pub state: Option<StateClaims>,  // State (for OAuth)
     pub oci: Option<OciScopeClaims>, // OCI scope (for registry access)
-    // JWT ID, set only on an OAuth state so that no two states are alike.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub jti: Option<Uuid>,
 }
 
 /// OCI registry action
@@ -52,18 +46,6 @@ pub struct OrgClaims {
     pub role: OrganizationRole,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StateClaims {
-    pub invite: Option<Jwt>,
-    pub claim: Option<OrganizationUuid>,
-    #[cfg(feature = "plus")]
-    pub plan: Option<PlanLevel>,
-    // Left out when absent, so a state without it is the token it always was.
-    #[cfg(feature = "plus")]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authorization: Option<OAuthAuthorizationUuid>,
-}
-
 impl Claims {
     pub fn new(
         audience: Audience,
@@ -71,7 +53,6 @@ impl Claims {
         email: Email,
         ttl: u32,
         org: Option<OrgClaims>,
-        state: Option<StateClaims>,
         oci: Option<OciScopeClaims>,
     ) -> Self {
         let now = Utc::now().timestamp();
@@ -82,9 +63,7 @@ impl Claims {
             iss: issuer,
             sub: email,
             org,
-            state,
             oci,
-            jti: None,
         }
     }
 
@@ -142,36 +121,6 @@ impl TryFrom<Claims> for InviteClaims {
 impl InviteClaims {
     pub fn email(&self) -> &Email {
         &self.sub
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct OAuthClaims {
-    pub aud: String,
-    pub exp: i64,
-    pub iat: i64,
-    pub iss: String,
-    pub sub: Email,
-    pub state: StateClaims,
-}
-
-impl TryFrom<Claims> for OAuthClaims {
-    type Error = TokenError;
-
-    fn try_from(claims: Claims) -> Result<Self, Self::Error> {
-        match claims.state {
-            Some(state) => Ok(Self {
-                aud: claims.aud,
-                exp: claims.exp,
-                iat: claims.iat,
-                iss: claims.iss,
-                sub: claims.sub,
-                state,
-            }),
-            None => Err(TokenError::OAuthState {
-                error: JsonWebTokenErrorKind::MissingRequiredClaim("state".into()).into(),
-            }),
-        }
     }
 }
 

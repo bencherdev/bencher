@@ -213,6 +213,22 @@ pub enum ValidError {
     #[cfg(feature = "plus")]
     #[error("Failed to validate OAuth max age: expected a number of seconds")]
     OAuthMaxAge,
+    // The secrets of a provider's sign-in are left out: each is a credential.
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate provider state")]
+    ProviderState,
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate provider state hash: {0}")]
+    ProviderStateHash(String),
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate PKCE verifier")]
+    PkceVerifier,
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate provider nonce")]
+    ProviderNonce,
+    #[cfg(feature = "plus")]
+    #[error("Failed to validate provider account ID: {0}")]
+    ProviderAccountId(String),
     #[cfg(feature = "plus")]
     #[error("Failed to validate SHA-256 hash: {0}")]
     Sha256(String),

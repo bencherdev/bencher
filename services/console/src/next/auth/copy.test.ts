@@ -5,6 +5,7 @@ import {
 	doorFailure,
 	duration,
 	inboxFailure,
+	providerFailure,
 } from "./copy";
 import type { Refused, RefusalCode } from "./request";
 
@@ -67,6 +68,26 @@ describe("Check your inbox's failures", () => {
 			text: "Sign-in failed",
 			retry: true,
 		});
+	});
+});
+
+describe("a provider callback's failures", () => {
+	// Kills a refusal by the API that reads as the provider's own, a locked
+	// account or a wait the reader cannot see, and a code this page does not
+	// know read as anything but the generic failure.
+	test("each refusal says what went wrong, and any other is the generic failure", () => {
+		expect(providerFailure(refused("locked"))).toBe("This account is locked");
+		expect(providerFailure(refused("too_many_attempts", 90))).toBe(
+			"Too many attempts. Try again in 2 minutes.",
+		);
+		for (const code of [
+			"provider_refused",
+			undefined,
+			"cross_origin",
+			"wrong_code",
+		] as const) {
+			expect(providerFailure(refused(code))).toBe("Sign-in failed");
+		}
 	});
 });
 
