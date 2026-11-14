@@ -1,5 +1,6 @@
 use std::sync::LazyLock;
 use std::{
+    collections::BTreeSet,
     net::TcpStream,
     process::{Child, Command},
     thread,
@@ -9,9 +10,9 @@ use std::{
 use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
 use bencher_json::{
     BENCHER_API_PORT, BmfVersion, DEV_BENCHER_API_URL, DEV_BENCHER_REGISTRY_URL, JsonApiVersion,
-    JsonProject, Jwt, LOCALHOST_BENCHER_API_URL, LOCALHOST_BENCHER_REGISTRY_URL,
-    PROD_BENCHER_API_URL, PROD_BENCHER_REGISTRY_URL, TEST_BENCHER_API_URL,
-    TEST_BENCHER_REGISTRY_URL, Url,
+    JsonProject, JsonReport, JsonReportIterationCounts, Jwt, LOCALHOST_BENCHER_API_URL,
+    LOCALHOST_BENCHER_REGISTRY_URL, PROD_BENCHER_API_URL, PROD_BENCHER_REGISTRY_URL,
+    TEST_BENCHER_API_URL, TEST_BENCHER_REGISTRY_URL, Url, project::report::ParseOutcome,
 };
 
 use crate::{
@@ -19,7 +20,10 @@ use crate::{
     parser::{TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
     task::test::{
         examples::Examples,
-        seed_test::{BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, SeedTest, TOKEN_ARG},
+        seed_test::{
+            BENCHER_CMD, BRANCH_ARG, BRANCH_SLUG, CLI_DIR, HOST_ARG, PROJECT_ARG, PROJECT_SLUG,
+            SeedTest, TESTBED_ARG, TESTBED_SLUG, TOKEN_ARG,
+        },
     },
 };
 #[cfg(feature = "plus")]
@@ -257,7 +261,8 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
                 runner_test.exec()?;
             }
 
-            move_project_to_bmf_v1(&seed_test)
+            move_project_to_bmf_v1(&seed_test)?;
+            send_bmf_v1_report(&seed_test)
         },
         MockSetup::SelfHosted { examples, runner } => {
             let task = TaskSeedTest {
@@ -297,7 +302,8 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
                 examples.exec()?;
             }
 
-            move_project_to_bmf_v1(&seed_test)
+            move_project_to_bmf_v1(&seed_test)?;
+            send_bmf_v1_report(&seed_test)
         },
     }
 }
@@ -326,6 +332,130 @@ fn move_project_to_bmf_v1(seed_test: &SeedTest) -> anyhow::Result<()> {
     );
     Ok(())
 }
+
+fn send_bmf_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
+    let mut cmd = assert_cmd::Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "run",
+        HOST_ARG,
+        seed_test.url.as_ref(),
+        TOKEN_ARG,
+        seed_test.token.as_ref(),
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        BRANCH_ARG,
+        BRANCH_SLUG,
+        TESTBED_ARG,
+        TESTBED_SLUG,
+        "--adapter",
+        "json",
+        "--format",
+        "json",
+        "--quiet",
+    ])
+    .current_dir(CLI_DIR)
+    .write_stdin(BMF_V1_REPORT);
+    let assert = cmd.assert().success();
+    let report: JsonReport = serde_json::from_slice(&assert.get_output().stdout)?;
+    anyhow::ensure!(
+        report.bmf_version == Some(BmfVersion::V1),
+        "Report on {PROJECT_SLUG} was read at BMF version {:?}, not 1",
+        report.bmf_version
+    );
+    anyhow::ensure!(
+        report.parse_outcome == Some(ParseOutcome::Parsed),
+        "Report on {PROJECT_SLUG} has parse outcome {:?}, not parsed",
+        report.parse_outcome
+    );
+    anyhow::ensure!(
+        report.warnings.is_none(),
+        "Report on {PROJECT_SLUG} has warnings {:?}",
+        report.warnings
+    );
+    let metrics = report
+        .results
+        .iter()
+        .flatten()
+        .flatten()
+        .flat_map(|result| {
+            result.measures.iter().flat_map(move |measure| {
+                measure.metrics.iter().map(move |metric| {
+                    format!(
+                        "{} {} {} {} {}",
+                        result.benchmark.name,
+                        result.variant.parameters,
+                        measure.measure.slug,
+                        metric.name,
+                        metric.value
+                    )
+                })
+            })
+        })
+        .collect::<BTreeSet<_>>();
+    let payload_metrics = BTreeSet::from(BMF_V1_METRICS.map(String::from));
+    anyhow::ensure!(
+        metrics == payload_metrics,
+        "Report on {PROJECT_SLUG} holds {metrics:#?}, not the payload's {payload_metrics:#?}"
+    );
+    let payload_counts = vec![JsonReportIterationCounts {
+        benchmarks: 4,
+        measures: 1,
+        lines: 12,
+    }];
+    anyhow::ensure!(
+        report.counts.results == payload_counts,
+        "Report on {PROJECT_SLUG} counts {:?}, not the payload's {payload_counts:?}",
+        report.counts.results
+    );
+    Ok(())
+}
+
+const BMF_V1_REPORT: &str = r#"{
+    "bmf_v1::hash": [
+        {
+            "measures": {
+                "latency": { "mean": 41.5, "median": 40.0, "std_dev": 2.25 }
+            }
+        }
+    ],
+    "bmf_v1::search": [
+        {
+            "parameters": { "hit": true },
+            "measures": {
+                "latency": { "mean": 96.5, "median": 95.0, "std_dev": 4.25 }
+            }
+        }
+    ],
+    "bmf_v1::sort": [
+        {
+            "parameters": { "length": 1024, "order": "random" },
+            "measures": {
+                "latency": { "mean": 3125.5, "median": 3050.0, "std_dev": 112.75 }
+            }
+        },
+        {
+            "parameters": { "length": 1024, "order": "sorted" },
+            "measures": {
+                "latency": { "mean": 812.25, "median": 800.0, "std_dev": 18.5 }
+            }
+        }
+    ]
+}"#;
+
+const BMF_V1_METRICS: [&str; 12] = [
+    "bmf_v1::hash {} latency mean 41.5",
+    "bmf_v1::hash {} latency median 40",
+    "bmf_v1::hash {} latency std_dev 2.25",
+    r#"bmf_v1::search {"hit":true} latency mean 96.5"#,
+    r#"bmf_v1::search {"hit":true} latency median 95"#,
+    r#"bmf_v1::search {"hit":true} latency std_dev 4.25"#,
+    r#"bmf_v1::sort {"length":1024,"order":"random"} latency mean 3125.5"#,
+    r#"bmf_v1::sort {"length":1024,"order":"random"} latency median 3050"#,
+    r#"bmf_v1::sort {"length":1024,"order":"random"} latency std_dev 112.75"#,
+    r#"bmf_v1::sort {"length":1024,"order":"sorted"} latency mean 812.25"#,
+    r#"bmf_v1::sort {"length":1024,"order":"sorted"} latency median 800"#,
+    r#"bmf_v1::sort {"length":1024,"order":"sorted"} latency std_dev 18.5"#,
+];
 
 fn kill_child(child: Option<Child>) -> anyhow::Result<()> {
     child
