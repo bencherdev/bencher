@@ -298,6 +298,10 @@
 	color: var(--color-text-muted);
 	cursor: not-allowed;
 }
+.ex-upgrade {
+	align-self: flex-start;
+	margin-top: 4px;
+}
 /* A search option's name and detail share its width, the detail at the end. */
 .ex-opt {
 	flex: 1;

@@ -79,6 +79,7 @@ const render = (
 		settled?: boolean;
 		readOnly?: boolean;
 		versionZero?: boolean;
+		upgrade?: string;
 	} = {},
 ) => {
 	const edits: ExploreQuery[] = [];
@@ -92,6 +93,7 @@ const render = (
 					settled={options.settled ?? true}
 					readOnly={options.readOnly}
 					versionZero={options.versionZero}
+					upgrade={options.upgrade}
 					onQuery={(next) => {
 						edits.push(next);
 						setQuery(next);
@@ -668,4 +670,29 @@ test("the metrics box takes up to 32 names", async () => {
 	await expect
 		.element(metrics().getByRole("button", { name: "Add metric, 32 of 32" }))
 		.toHaveAttribute("aria-disabled", "true");
+});
+
+// Kills a link to the move drawn without a place to move to, one drawn above
+// the locked Add set, or one that opens anything but the settings row.
+test("under the locked Add set, an editor has a link to the move to version 1", async () => {
+	await page.viewport(1280, 800);
+	const { api } = reading(() => []);
+	const upgrade = "/console/projects/hashbrown/settings#bmf-version";
+	render(api, { ...QUERY, sets: [] }, { perf: PERF, versionZero: true });
+	const parameters = page.getByRole("group", { name: "Parameters" });
+	expect(parameters.getByRole("link").elements()).toHaveLength(0);
+	cleanup?.();
+
+	render(
+		api,
+		{ ...QUERY, sets: [] },
+		{ perf: PERF, versionZero: true, upgrade },
+	);
+	const link = parameters.getByRole("link", { name: "Move to version 1" });
+	await expect.element(link).toHaveAttribute("href", upgrade);
+	const add = parameters.getByRole("button", { name: "Add set" });
+	expect(
+		add.element().compareDocumentPosition(link.element()) &
+			Node.DOCUMENT_POSITION_FOLLOWING,
+	).toBeTruthy();
 });
