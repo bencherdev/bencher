@@ -62,6 +62,8 @@ const MAX_WINDOW = 2 ** 32 - 1;
 
 /** The perf query reads at most eight values of each box and eight sets. */
 export const MAX_ENTRIES = 8;
+/** The plot query reads at most a measure's 32 metric names. */
+export const MAX_METRICS = 32;
 const MAX_PARAMETER_KEYS = 8;
 const MAX_NAME_BYTES = 64;
 
@@ -294,7 +296,7 @@ export const decodeQuery = (search: string): ExploreQuery => {
 		).slice(0, MAX_ENTRIES),
 		measures: uuids(MEASURES),
 		metrics: params.has(METRICS)
-			? distinct(params.getAll(METRICS).filter(isName), itself, MAX_ENTRIES)
+			? distinct(params.getAll(METRICS).filter(isName), itself, MAX_METRICS)
 			: classicMetrics(params),
 		xAxis:
 			X_AXES.get(params.get(X_AXIS)) ?? X_AXES.get(params.get(RANGE)) ?? "date",

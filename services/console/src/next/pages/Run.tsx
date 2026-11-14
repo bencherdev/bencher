@@ -28,12 +28,13 @@ import type {
 	JsonConsoleRun,
 	JsonConsoleRunLink,
 	JsonConsoleRunReport,
+	JsonConsoleRunWarnings,
 } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import CommitLink from "../commit";
 import Dot from "../dot";
 import { type GitHubLinks, consoleGitHub } from "../github";
-import { projectPath, runPath } from "../paths";
+import { projectPath, reportPath, runPath } from "../paths";
 import { formatWhen } from "../plot/format";
 import { formatCount } from "../plot/count";
 import { useNarrow } from "../plot/narrow";
@@ -41,13 +42,14 @@ import { leafOf } from "../leaf";
 import { useEntityTitle, useProject } from "../project";
 import { consoleProjectQuery } from "../queries";
 import { useQueryResult } from "../query";
+import { WarningRows, WarningsTable, warningsTotal } from "../report/Warnings";
 import { absoluteTime, duration } from "../reports/format";
 import { type Range, hasMore, loadMore } from "../list/rows";
 import { screenBatch } from "../list/rows";
 import AskGitHub from "../runs/AskGitHub";
 import CopyHash from "../runs/CopyHash";
 import { allNames, runHead } from "../runs/format";
-import Neighbor from "../runs/Neighbor";
+import Neighbor, { onMoved } from "../runs/Neighbor";
 import { isRunId, runBatchQuery } from "../runs/run";
 import RunReports from "../runs/RunReports";
 import StatusPill from "../runs/StatusPill";
@@ -293,6 +295,45 @@ const Run = () => {
 						</Match>
 					</Switch>
 				</section>
+				<Show when={run()?.warnings}>
+					{(warned) => (
+						<section class="dm-section" aria-label="Warnings">
+							<div class="dm-section-head">
+								<h2 class="seclabel">Warnings</h2>
+								<span class="count">{warningCount(warned())}</span>
+							</div>
+							<WarningsTable label="Warnings in this run, by report">
+								<For each={warned().groups}>
+									{(report) => (
+										<>
+											<tr class="lr-group">
+												<td colspan="3" class="ui-table-name">
+													<a
+														class="reports-link ui-parts"
+														href={reportPath(slug(), report.uuid)}
+														aria-label={`#${report.order} · ${report.testbed.name}`}
+														onPointerMove={onMoved(() =>
+															intendReport(report.uuid),
+														)}
+														onFocus={() => intendReport(report.uuid)}
+														onTouchStart={() => intendReport(report.uuid)}
+													>
+														<b data-fixed>#{report.order}</b>
+														<Dot />
+														<b>
+															<Truncate text={report.testbed.name} tail />
+														</b>
+													</a>
+												</td>
+											</tr>
+											<WarningRows warnings={report.warnings} />
+										</>
+									)}
+								</For>
+							</WarningsTable>
+						</section>
+					)}
+				</Show>
 				<Show when={run()}>
 					{(run) => (
 						<Show
@@ -491,6 +532,16 @@ const alertCount = (alerting: JsonConsoleAlerts) => {
 	return drawn < alerting.total
 		? `${formatCount(drawn)} of ${formatCount(alerting.total)}`
 		: formatCount(alerting.total);
+};
+
+/** What the run's warnings count, and what the section draws when that is less. */
+const warningCount = (warnings: JsonConsoleRunWarnings) => {
+	const drawn = warningsTotal(
+		warnings.groups.flatMap((group) => group.warnings),
+	);
+	return drawn < warnings.total
+		? `${formatCount(drawn)} of ${formatCount(warnings.total)}`
+		: formatCount(warnings.total);
 };
 
 const NotFound = (props: { slug: string }) => (

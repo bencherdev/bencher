@@ -22,12 +22,17 @@ use bencher_json::{
         console::{
             ConsoleAuthorKind, JsonConsoleAlerts, JsonConsoleReport, JsonConsoleRun,
             JsonConsoleRunLink, JsonConsoleRunReportLink, JsonConsoleRunSummary, JsonConsoleRuns,
-            MAX_CONSOLE_ALERTS_PER_PAGE,
+            MAX_CONSOLE_ALERTS_PER_PAGE, MAX_CONSOLE_RUN_WARNING_REPORTS,
         },
-        report::{Adapter, ParseOutcome},
+        report::{
+            Adapter, JsonReportWarning, ParseOutcome, ReportWarningAction, ReportWarningResource,
+        },
     },
 };
-use bencher_schema::schema;
+use bencher_schema::{
+    model::project::report::{ReportId, warning::ReportWarnings},
+    schema,
+};
 use diesel::{ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
@@ -1922,4 +1927,273 @@ async fn run_and_report_page_carry_the_parse() {
         (page.bmf_version, page.resolved_adapter, page.parse_outcome),
         expected
     );
+}
+
+const WARNED: &str = "7000000000000000000000000000000000000007";
+
+/// Write a report's warnings, as processing its results would.
+fn warn(server: &TestServer, report: &JsonReport, warnings: &ReportWarnings) {
+    let mut conn = server.db_conn();
+    let report_id: ReportId = schema::report::table
+        .filter(schema::report::uuid.eq(report.uuid))
+        .select(schema::report::id)
+        .first(&mut conn)
+        .expect("Failed to find the report");
+    warnings
+        .insert(&mut conn, report_id)
+        .expect("Failed to write the warnings");
+}
+
+fn warning(
+    resource: ReportWarningResource,
+    action: ReportWarningAction,
+    count: u32,
+) -> JsonReportWarning {
+    JsonReportWarning {
+        resource,
+        action,
+        count,
+    }
+}
+
+// Kills: a run's warnings read for its page of reports alone, given to another
+// report or another place in the run, carried past the first page, or an empty
+// list rather than none for a run with no warnings; rows out of resource and
+// action order; and a report page that carries its warnings past its first batch
+// or reads another report's.
+#[tokio::test]
+async fn run_and_report_page_carry_the_warnings() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "warnings").await;
+    let quiet = |time| Post {
+        thresholds: false,
+        ..Post::new(time, Some(WARNED))
+    };
+    // The third by start is sent first, so the reports' ids follow neither their start nor their place.
+    let third = post(&server, &fixture, quiet("2024-02-01T00:00:10Z")).await;
+    let first = post(&server, &fixture, quiet("2024-02-01T00:00:00Z")).await;
+    let second = post(&server, &fixture, quiet("2024-02-01T00:00:05Z")).await;
+    // Written out of order and between reports, so the rows' ids follow neither.
+    let mut many = ReportWarnings::default();
+    many.ignore_with_count(ReportWarningResource::Average, 1);
+    many.skip_with_count(ReportWarningResource::Threshold, 2);
+    warn(&server, &first, &many);
+    let mut one = ReportWarnings::default();
+    one.ignore_with_count(ReportWarningResource::Measure, 4);
+    warn(&server, &third, &one);
+    let mut late = ReportWarnings::default();
+    late.skip_with_count(ReportWarningResource::Benchmark, 3);
+    warn(&server, &first, &late);
+    let first_warnings = vec![
+        warning(
+            ReportWarningResource::Benchmark,
+            ReportWarningAction::Skip,
+            3,
+        ),
+        warning(
+            ReportWarningResource::Threshold,
+            ReportWarningAction::Skip,
+            2,
+        ),
+        warning(
+            ReportWarningResource::Average,
+            ReportWarningAction::Ignore,
+            1,
+        ),
+    ];
+    let third_warnings = vec![warning(
+        ReportWarningResource::Measure,
+        ReportWarningAction::Ignore,
+        4,
+    )];
+
+    let version = version_of(&server, &first);
+    let groups_of = |run: JsonConsoleRun| {
+        run.warnings.map(|warnings| {
+            let groups = warnings
+                .groups
+                .into_iter()
+                .map(|group| (group.order, group.uuid, group.warnings))
+                .collect::<Vec<_>>();
+            (warnings.total, groups)
+        })
+    };
+    // The first page holds one report, and the section still holds the third's.
+    assert_eq!(
+        groups_of(run(&server, &fixture, version, "?per_page=1").await),
+        Some((
+            10,
+            vec![
+                (1, first.uuid, first_warnings.clone()),
+                (3, third.uuid, third_warnings),
+            ]
+        ))
+    );
+    assert!(
+        groups_of(run(&server, &fixture, version, "?per_page=1&page=2").await).is_none(),
+        "only the first page carries the run's warnings"
+    );
+    let quiet_run = post(
+        &server,
+        &fixture,
+        Post {
+            thresholds: false,
+            ..Post::new("2024-02-02T00:00:00Z", Some(H1))
+        },
+    )
+    .await;
+    assert!(
+        groups_of(run(&server, &fixture, version_of(&server, &quiet_run), "").await).is_none(),
+        "a run with no warnings has none"
+    );
+
+    let page = report_page(&server, &fixture, &first).await;
+    assert_eq!(page.warnings, Some(first_warnings));
+    let page = report_page(&server, &fixture, &second).await;
+    assert!(
+        page.warnings.is_none(),
+        "a report with no warnings has none"
+    );
+    for query in ["?per_page=1&page=2", "?per_page=0"] {
+        let page = report_page_with(&server, &fixture, &first, query).await;
+        assert!(page.warnings.is_none(), "{query} reads no warnings");
+    }
+}
+
+const CAPPED: &str = "8000000000000000000000000000000000000008";
+
+// Kills: a run's warnings past the cap, groups in the order of the reports' ids
+// rather than their starts, numbered by anything but their place in the run, and
+// a total over the groups drawn rather than the whole run.
+#[tokio::test]
+async fn run_warnings_hold_at_most_the_cap() {
+    const REPORTS: usize = MAX_CONSOLE_RUN_WARNING_REPORTS + 3;
+    // The 7th report by start has no warnings, so the places skip one.
+    const QUIET: usize = 7;
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "warningcap").await;
+    // Each report starts a second before the one sent before it, so start order
+    // is the reverse of id order.
+    let mut reports = Vec::with_capacity(REPORTS);
+    for index in 0..REPORTS {
+        let seconds = REPORTS - index;
+        let time: &'static str = Box::leak(
+            format!(
+                "2024-02-01T00:{:02}:{:02}Z",
+                seconds.div_euclid(60),
+                seconds % 60
+            )
+            .into_boxed_str(),
+        );
+        let report = post(
+            &server,
+            &fixture,
+            Post {
+                thresholds: false,
+                ..Post::new(time, Some(CAPPED))
+            },
+        )
+        .await;
+        reports.push(report);
+    }
+    let mut total = 0;
+    for (index, report) in reports.iter().enumerate() {
+        if REPORTS - index == QUIET {
+            continue;
+        }
+        let mut warnings = ReportWarnings::default();
+        warnings.skip_with_count(ReportWarningResource::Benchmark, index + 1);
+        warn(&server, report, &warnings);
+        total += index + 1;
+    }
+
+    let warnings = run(
+        &server,
+        &fixture,
+        version_of(&server, &reports[0]),
+        "?per_page=1",
+    )
+    .await
+    .warnings
+    .expect("the run's reports warned");
+    let groups = warnings
+        .groups
+        .iter()
+        .map(|group| {
+            let counts = group.warnings.iter().map(|warning| warning.count);
+            (group.order, group.uuid, counts.collect::<Vec<_>>())
+        })
+        .collect::<Vec<_>>();
+    let expected = (1..=REPORTS)
+        .filter(|order| *order != QUIET)
+        .take(MAX_CONSOLE_RUN_WARNING_REPORTS)
+        .map(|order| {
+            let index = REPORTS - order;
+            (
+                u32::try_from(order).expect("a place fits a u32"),
+                reports[index].uuid,
+                vec![u32::try_from(index + 1).expect("a count fits a u32")],
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(groups, expected);
+    assert_eq!(
+        warnings.total,
+        u32::try_from(total).expect("the total fits a u32")
+    );
+}
+
+/// Copy a report `copies` times into its run, each starting a moment later.
+fn copy_report(server: &TestServer, report: &JsonReport, copies: usize) {
+    let report_id: i32 = schema::report::table
+        .filter(schema::report::uuid.eq(report.uuid))
+        .select(schema::report::id)
+        .first(&mut server.db_conn())
+        .expect("Failed to find the report");
+    diesel::sql_query(format!(
+        "WITH RECURSIVE copy(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM copy WHERE n < {copies})
+        INSERT INTO report (uuid, project_id, head_id, version_id, testbed_id, bmf_version,
+            adapter, resolved_adapter, parse_outcome, start_time, end_time, created)
+        SELECT printf('00000000-0000-4000-8000-%012x', n), project_id, head_id, version_id,
+            testbed_id, bmf_version, adapter, resolved_adapter, parse_outcome,
+            start_time + n, end_time + n, created + n
+        FROM report, copy WHERE report.id = {report_id}"
+    ))
+    .execute(&mut server.db_conn())
+    .expect("Failed to copy the report");
+}
+
+// Kills a run's warnings read through a bound list of every report's id, which
+// SQLite refuses past its 32,766 bound values.
+#[tokio::test]
+async fn run_of_more_reports_than_sqlite_binds_loads_its_warnings() {
+    const COPIES: usize = 33_000;
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "binds").await;
+    let report = post(
+        &server,
+        &fixture,
+        Post {
+            thresholds: false,
+            ..Post::new("2024-02-01T00:00:00Z", Some(CAPPED))
+        },
+    )
+    .await;
+    let mut warnings = ReportWarnings::default();
+    warnings.skip(ReportWarningResource::Threshold);
+    warn(&server, &report, &warnings);
+    copy_report(&server, &report, COPIES);
+
+    let run = run(
+        &server,
+        &fixture,
+        version_of(&server, &report),
+        "?per_page=1",
+    )
+    .await;
+    assert_eq!(
+        run.total,
+        u32::try_from(COPIES + 1).expect("the reports fit a u32")
+    );
+    assert_eq!(run.warnings.map(|warnings| warnings.total), Some(1));
 }

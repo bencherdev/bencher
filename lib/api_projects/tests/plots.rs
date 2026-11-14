@@ -419,8 +419,11 @@ async fn plot_view_limits_are_refused() {
     let metrics = |n: usize| (0..n).map(|i| format!("m{i}")).collect::<Vec<_>>();
     let keys = |n: usize| (0..n).map(|i| format!("k{i}")).collect::<Vec<_>>();
     let refused = [
-        (json!({ "metrics": metrics(9) }), "at most 8 metrics"),
-        (json!({ "metrics": vec!["value"; 9] }), "at most 8 metrics"),
+        (json!({ "metrics": metrics(33) }), "at most 32 metrics"),
+        (
+            json!({ "metrics": vec!["value"; 33] }),
+            "at most 32 metrics",
+        ),
         (json!({ "metrics": [""] }), "metric name"),
         (json!({ "hidden": keys(65) }), "at most 64 lines"),
         (json!({ "hidden": vec!["k"; 65] }), "at most 64 lines"),
@@ -441,7 +444,7 @@ async fn plot_view_limits_are_refused() {
     }
 
     let at_caps = json!({
-        "metrics": metrics(8),
+        "metrics": metrics(32),
         "hidden": keys(64),
         "focus": "0123456789abcdef",
     });

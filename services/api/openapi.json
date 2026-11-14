@@ -15308,7 +15308,7 @@
           },
           "metrics": {
             "nullable": true,
-            "description": "The metrics to draw, by name. If not set, or set to an empty list, the plot draws every metric. At most 8 names may be specified.",
+            "description": "The metrics to draw, by name. If not set, or set to an empty list, the plot draws every metric. At most 32 names may be specified.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/MetricFilter"
@@ -17315,7 +17315,7 @@
           },
           "metrics": {
             "nullable": true,
-            "description": "The metrics to draw, by name. Replaces the current metrics for the plot. Set to `null` or to an empty list to draw every metric again. At most 8 names may be specified.",
+            "description": "The metrics to draw, by name. Replaces the current metrics for the plot. Set to `null` or to an empty list to draw every metric again. At most 32 names may be specified.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/MetricFilter"
@@ -21101,7 +21101,7 @@
         "items": {
           "$ref": "#/components/schemas/MetricName"
         },
-        "maxItems": 8
+        "maxItems": 32
       },
       "MetricName": {
         "description": "The name of a single scalar inside a metric.\n\nEvery name is equal on the wire. `value`, `lower_value`, and `upper_value` are conventional, not privileged: they are the names the metric triple maps onto, and the names the console knows well enough to draw a band.",
