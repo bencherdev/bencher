@@ -2,7 +2,11 @@
 
 Cette section spécifie la limitation de débit pour le serveur API.
 Toute la section est facultative.
-Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utilisées.
+Sur Bencher Self-Hosted, les limites de débit personnalisées nécessitent une licence Bencher Plus _Enterprise_ valide pour au moins une organisation sur le serveur.
+Le serveur API ne vérifie la présence d'une licence valide qu'à son démarrage,
+redémarrez donc le serveur API après avoir ajouté une licence.
+Sans cette section ou sans licence valide, Bencher Self-Hosted n'applique aucune limite de débit.
+Sinon, toute valeur non spécifiée utilise la valeur par défaut énumérée.
 
 Pour empêcher la création de projets [`unclaimed`][unclaimed projects], définissez la `unclaimed_limit` à `0`.
 
@@ -10,7 +14,7 @@ Pour empêcher la création de projets [`unclaimed`][unclaimed projects], défin
 | :--------------------: | :----------: | :----------: | :----: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 |         window         |    86400     |    86400     |  Non   |                                       Spécifie la période de limitation de débit en secondes. Défini par défaut à une journée.                                       |
 |    unclaimed_limit     |     255      |     255      |  Non   | Contrôle la limitation de débit pour les projets [`unclaimed`][unclaimed projects]. Pour empêcher la création de projets `unclaimed`, définissez cette valeur à `0`. |
-|     claimed_limit      |    65536     |    65536     |  Non   |                                                     Contrôle la limitation de débit pour les projets `claimed`.                                                      |
+|     claimed_limit      |    65535     |    65535     |  Non   |                                                     Contrôle la limitation de débit pour les projets `claimed`.                                                      |
 |       plus_limit       |   1048576    |   1048576    |  Non   |                                   Contrôle la limitation de débit des métriques pour les organisations avec un plan Bencher Plus.                                    |
 
 #### `public`
@@ -113,4 +117,4 @@ Si elle n'est pas spécifiée, les valeurs par défaut énumérées seront utili
 |    free     | 10737418240  | 10737418240  |  Non   | Octets maximum par jour pour les organisations gratuites (réclamées, sans plan payant). Par défaut 10 Gio. |
 |    plus     | 107374182400 | 107374182400 |  Non   | Octets maximum par jour pour les organisations Plus (Pro/Enterprise). Par défaut 100 Gio.  |
 
-[unclaimed projects]: /fr/docs/how-to/claim/#unclaimed-projects
+[unclaimed projects]: /fr/docs/how-to/claim/#projets-unclaimed

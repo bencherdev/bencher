@@ -1,3 +1,17 @@
+## Pending `v0.6.18`
+- **BREAKING CHANGE** Remove the Team plan, so the plan levels are Free, Pro, and Enterprise
+- A Bencher Self-Hosted license is now always Enterprise and counts the Benchmark Series active in the last 30 days
+- Over its license's count, a Bencher Self-Hosted server keeps accepting every report, warns, and records the peak of each license term, the highest count it sees while the organization holds a license for that term, its 30 days of grace included. `GET /v0/organizations/{organization}/usage` and the Console's Billing page show the peak
+- A Bencher Self-Hosted license has 30 days of grace after its term, then the organization falls back to Free, and a license that is not valid never blocks a public project
+- **BREAKING CHANGE** A Bencher Self-Hosted license in the earlier per-metric format no longer verifies
+- Bencher Self-Hosted refuses a license whose term ends before the term of a valid license the organization already holds
+- GitHub sign-in, Google sign-in, custom rate limits, and the server statistics opt-out on Bencher Self-Hosted need a valid license on at least one organization on the server
+- **BREAKING CHANGE** `bencher plan create` takes `--checkout`, or `--subscription` with an optional `--self-hosted`, and drops `--level`, `--entitlements`, and `--skip-remote`
+- A report's `license` field warns when its organization's Bencher Self-Hosted license is over its count or in its grace, and `bencher run` prints the warnings
+- **BREAKING CHANGE** For a Bencher Self-Hosted license, `GET /v0/organizations/{organization}/usage` returns `active_series`, `peak`, and `previous_peak` instead of `metrics`, and its `license` has `series` and `term_end` instead of `level` and `entitlements`
+- **BREAKING CHANGE** `POST /v0/checkout` takes only an `organization`, and `POST /v0/organizations/{organization}/plan` takes a `checkout`, or a `subscription` with an optional `self_hosted`
+- **BREAKING CHANGE** `GET`, `POST`, and `PATCH /v0/organizations/{organization}/plan` return a `card` and a `customer` that can be `null`, a new required `collection_method`, and a `license` with `series` and `term_end` instead of `level` and `entitlements`
+
 ## `v0.6.17`
 - **BREAKING CHANGE** The MCP `query_perf` tool now returns the plot the console draws, at most 64 lines with a `total` of every line the query names, takes an optional `metrics` list of the metric names to draw, and links to the plot in Bencher; MCP Apps hosts, such as Claude and ChatGPT, show it as an interactive plot
 - Add `sort=created` to `GET /v0/projects/{project}/keys`, `GET /v0/users/{user}/keys`, and `GET /v0/users/{user}/tokens`, oldest first unless `direction=desc`

@@ -2,7 +2,11 @@
 
 本节指定 API 服务器的速率限制。
 整节内容是可选的。
-如果未指定，将使用列出的默认值。
+在 Bencher 自托管中，自定义速率限制需要服务器上至少有一个组织拥有有效的 Bencher Plus _企业版_ 许可证。
+API 服务器仅在启动时检查是否存在有效许可证，
+因此添加许可证后请重启 API 服务器。
+如果没有本节或没有有效许可证，Bencher 自托管不会应用任何速率限制。
+否则，任何未指定的值都将使用列出的默认值。
 
 为防止创建[`unclaimed`项目][unclaimed projects]，请将`unclaimed_limit`设置为`0`。
 
@@ -10,7 +14,7 @@
 | :--------------------: | :----------: | :----------: | :------: | :---------------------------------------------------------------------------------------------------: |
 |         window         |    86400     |    86400     |    否    |                            指定以秒为单位的速率限制窗口。默认设置为一天。                             |
 |    unclaimed_limit     |     255      |     255      |    否    | 控制[`unclaimed`项目][unclaimed projects]的速率限制。为了防止创建`unclaimed`项目，请将此值设置为`0`。 |
-|     claimed_limit      |    65536     |    65536     |    否    |                                     控制`claimed`项目的速率限制。                                     |
+|     claimed_limit      |    65535     |    65535     |    否    |                                     控制`claimed`项目的速率限制。                                     |
 |       plus_limit       |   1048576    |   1048576    |    否    |                           控制拥有 Bencher Plus 计划的组织的指标速率限制。                            |
 
 #### `public`
@@ -113,4 +117,4 @@
 |    free     | 10737418240  | 10737418240  |    否    | 免费（已认领，无付费计划）组织每天的最大字节数。默认为10 GiB。                                |
 |    plus     | 107374182400 | 107374182400 |    否    | Plus（Pro/Enterprise）组织每天的最大字节数。默认为100 GiB。                                  |
 
-[unclaimed projects]: /zh/docs/how-to/claim/#unclaimed-projects
+[unclaimed projects]: /zh/docs/how-to/claim/#unclaimed-项目
