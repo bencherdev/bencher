@@ -1757,6 +1757,20 @@ export interface JsonEmailSignIn {
 	turnstile?: NonEmpty;
 }
 
+/** A provider a reader signs in with. */
+export enum SignInProvider {
+	Github = "github",
+	Google = "google",
+}
+
+/**
+ * How the signed-in reader can sign in again: by an email to their address, always, and with
+ * each provider pinned to them that the server signs in with.
+ */
+export interface JsonFreshSignIn {
+	providers: SignInProvider[];
+}
+
 /** Where to send the user to link a repository, or to install the GitHub App first. */
 export interface JsonGitHubLinkUrls {
 	/** GitHub's authorize page. */
@@ -2516,6 +2530,11 @@ export interface JsonProjectKeyCreated {
 	expiration: string;
 }
 
+/** A fresh sign-in, which proved the session again and changed nothing else. */
+export interface JsonProved {
+	proved: string;
+}
+
 /** Finish a sign-in with what the provider sent back. */
 export interface JsonProviderFinish {
 	code: Secret;
@@ -2549,10 +2568,14 @@ export interface JsonSignedIn {
 /**
  * What a provider's sign-in did: signed in, or, for a provider account pinned to no one whose
  * address has an account, emailed that address to prove it first.
+ * 
+ * A fresh sign-in proves again the session that asked for it.
  */
 export interface JsonProviderSignIn {
 	signed_in?: JsonSignedIn;
 	inbox?: JsonProviderInbox;
+	/** When a fresh sign-in proved the session again. */
+	proved?: string;
 }
 
 /** Start a sign-in with a provider, carrying what it applies once it finishes. */
@@ -2673,10 +2696,14 @@ export interface JsonSession {
 /**
  * What a link did: signed in, or, in a browser that did not ask for it, named the address it signs
  * in to and changed nothing, until the reader confirms.
+ * 
+ * A fresh sign-in's link proves again the session that asked for it.
  */
 export interface JsonSignInAs {
 	email: Email;
 	signed_in?: JsonSignedIn;
+	/** When a fresh sign-in's link proved the session again. */
+	proved?: string;
 }
 
 /** Sign in with the code from the email, in the browser that asked for it. */
@@ -2979,13 +3006,10 @@ export enum RecaptchaAction {
 	Login = "login",
 }
 
-/** A provider a reader signs in with. */
-export enum SignInProvider {
-	Github = "github",
-	Google = "google",
-}
-
-/** Why a sign-in endpoint refused a request, as the `error_code` of its error. */
+/**
+ * Why a sign-in endpoint, or an action that needs a fresh sign-in, refused a request, as the
+ * `error_code` of its error.
+ */
 export enum SignInRefusal {
 	/** The request came from somewhere other than the console's own origin. */
 	CrossOrigin = "cross_origin",
@@ -3022,6 +3046,16 @@ export enum SignInRefusal {
 	Locked = "locked",
 	/** A sign-in with GitHub or Google failed, for a reason it does not tell. */
 	ProviderRefused = "provider_refused",
+	/**
+	 * The action needs a browser session whose reader proved who they are within the last 10
+	 * minutes, so the console asks the reader to sign in again.
+	 */
+	FreshSignIn = "fresh_sign_in",
+	/**
+	 * A fresh sign-in's link, opened in a browser other than the one that asked, which it never
+	 * proves.
+	 */
+	AskedElsewhere = "asked_elsewhere",
 }
 
 export enum UpdateChannel {

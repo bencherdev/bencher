@@ -260,6 +260,7 @@ diesel::table! {
     pending_sign_in (id) {
         id -> Integer,
         uuid -> Text,
+        session_id -> Nullable<Integer>,
         email -> Text,
         binding_hash -> Text,
         code_hash -> Text,
@@ -400,6 +401,7 @@ diesel::table! {
 diesel::table! {
     provider_state (id) {
         id -> Integer,
+        session_id -> Nullable<Integer>,
         provider -> Integer,
         state_hash -> Text,
         binding_hash -> Text,
@@ -683,6 +685,7 @@ diesel::joinable!(oauth_grant -> user_key (user_key_id));
 diesel::joinable!(oauth_token -> oauth_grant (grant_id));
 diesel::joinable!(organization_role -> organization (organization_id));
 diesel::joinable!(organization_role -> user (user_id));
+diesel::joinable!(pending_sign_in -> session (session_id));
 diesel::joinable!(plot -> project (project_id));
 diesel::joinable!(plot_benchmark -> benchmark (benchmark_id));
 diesel::joinable!(plot_benchmark -> plot (plot_id));
@@ -698,6 +701,7 @@ diesel::joinable!(project_key -> user (creator_id));
 diesel::joinable!(project_role -> project (project_id));
 diesel::joinable!(project_role -> user (user_id));
 diesel::joinable!(provider_pin -> user (user_id));
+diesel::joinable!(provider_state -> session (session_id));
 diesel::joinable!(report -> head (head_id));
 diesel::joinable!(report -> project (project_id));
 diesel::joinable!(report -> project_key (project_key_id));

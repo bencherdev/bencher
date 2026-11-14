@@ -320,7 +320,7 @@ async fn users_update_other_email_admin_api_token_forbidden() {
     assert_eq!(view_user(&server, &admin, &user).await.email, user.email);
 
     let body = serde_json::json!({ "email": "moved@example.com" });
-    let status = patch_user(&server, &admin.token, &user, &body).await;
+    let status = patch_user_in_session(&server, &admin, &user, &body).await;
     assert_eq!(status, StatusCode::OK);
 }
 
@@ -345,7 +345,7 @@ async fn users_update_admin_and_locked_session_only() {
     assert!(!viewed.locked);
 
     let body = serde_json::json!({ "admin": true, "locked": true });
-    let status = patch_user(&server, &admin.token, &user, &body).await;
+    let status = patch_user_in_session(&server, &admin, &user, &body).await;
     assert_eq!(status, StatusCode::OK);
 }
 
@@ -406,10 +406,7 @@ async fn mint_key(server: &TestServer, owner: &TestUser) -> UserKey {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/keys", owner_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&owner.token),
-        )
+        .headers(server.fresh_session(owner))
         .json(&serde_json::json!({ "name": "test-key" }))
         .send()
         .await
@@ -433,6 +430,24 @@ async fn patch_user(
             bencher_json::AUTHORIZATION,
             bencher_json::bearer_header(bearer),
         )
+        .json(body)
+        .send()
+        .await
+        .expect("Request failed")
+        .status()
+}
+
+/// Patch the user in a session `actor` signed in to now.
+async fn patch_user_in_session(
+    server: &TestServer,
+    actor: &TestUser,
+    user: &TestUser,
+    body: &serde_json::Value,
+) -> StatusCode {
+    server
+        .client
+        .patch(server.api_url(&format!("/v0/users/{}", user.slug)))
+        .headers(server.fresh_session(actor))
         .json(body)
         .send()
         .await

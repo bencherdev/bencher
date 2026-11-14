@@ -580,6 +580,30 @@ async fn approve_with_the_session_cookie() {
     assert_eq!(authorization.code_hash, Some(OAuthCodeHash::from(&code)));
 }
 
+// Kills consent that asks for a fresh sign-in: a session whose reader last proved who they are a
+// day ago still approves, as every action but the sensitive ones does.
+#[tokio::test]
+async fn approve_needs_no_fresh_sign_in() {
+    let harness = Harness::new().await;
+    let user = harness.server.signup("Stale", "stale@example.com").await;
+    let cookie = session_cookie(&harness.server.session(&user));
+    harness.advance(24 * 60 * 60);
+
+    let uuid = consent_request(&harness.authorize(&request()).await);
+    let resp = harness
+        .decide(
+            uuid,
+            &json!({ "approve": true }),
+            &[(COOKIE.as_str(), &cookie), SAME_ORIGIN],
+        )
+        .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(
+        harness.authorization(uuid).user_id,
+        Some(harness.user_id(&user))
+    );
+}
+
 // Kills an approval by a session that has ended, never was, or is a locked user's, and one by a
 // cookie the API does not honor because it did not come through the relay.
 #[tokio::test]
@@ -2534,10 +2558,7 @@ impl Harness {
             .server
             .client
             .post(self.server.api_url(&format!("/v0/users/{user_slug}/keys")))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&user.token),
-            )
+            .headers(self.server.fresh_session(user))
             .json(&json!({"name": "Pasted Key", "ttl": ttl}))
             .send()
             .await

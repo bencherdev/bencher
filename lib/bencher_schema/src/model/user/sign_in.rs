@@ -26,6 +26,7 @@ use crate::model::user::provider::ProviderPin;
 use crate::{
     context::DbConnection,
     error::issue_error,
+    model::user::session::SessionId,
     schema::{self, pending_sign_in as pending_sign_in_table},
 };
 
@@ -48,6 +49,8 @@ pub const CODE_BUDGET_WINDOW: TimeDelta = TimeDelta::hours(24);
 pub struct QueryPendingSignIn {
     pub id: PendingSignInId,
     pub uuid: PendingSignInUuid,
+    /// The session a fresh sign-in proves again, or none for a sign-in.
+    pub session_id: Option<SessionId>,
     pub email: Email,
     pub binding_hash: BindingSecretHash,
     pub code_hash: SignInCodeHash,
@@ -71,7 +74,8 @@ pub struct QueryPendingSignIn {
 }
 
 impl QueryPendingSignIn {
-    /// The pending sign-in a browser's binding secret names, unless it has ended.
+    /// The pending sign-in a browser's binding secret names, unless it has ended or is a fresh
+    /// sign-in.
     pub fn from_binding(
         conn: &mut DbConnection,
         binding: &BindingSecret,
@@ -79,13 +83,30 @@ impl QueryPendingSignIn {
     ) -> diesel::QueryResult<Option<Self>> {
         schema::pending_sign_in::table
             .filter(schema::pending_sign_in::binding_hash.eq(BindingSecretHash::from(binding)))
+            .filter(schema::pending_sign_in::session_id.is_null())
             .filter(schema::pending_sign_in::expiration.gt(now))
             .select(Self::as_select())
             .first(conn)
             .optional()
     }
 
-    /// The pending sign-in a link's secret names, unless it has ended.
+    /// The fresh sign-in a browser's binding secret names for `session_id`, unless it has ended.
+    pub fn fresh_from_binding(
+        conn: &mut DbConnection,
+        binding: &BindingSecret,
+        session_id: SessionId,
+        now: DateTime,
+    ) -> diesel::QueryResult<Option<Self>> {
+        schema::pending_sign_in::table
+            .filter(schema::pending_sign_in::binding_hash.eq(BindingSecretHash::from(binding)))
+            .filter(schema::pending_sign_in::session_id.eq(session_id))
+            .filter(schema::pending_sign_in::expiration.gt(now))
+            .select(Self::as_select())
+            .first(conn)
+            .optional()
+    }
+
+    /// The pending sign-in a link's secret names, a fresh one included, unless it has ended.
     pub fn from_link(
         conn: &mut DbConnection,
         link: &LinkSecret,
@@ -137,6 +158,22 @@ impl QueryPendingSignIn {
         self.created + RESEND_WAIT
     }
 
+    /// Another pending sign-in for its address, starting at `now`, that carries what it carries
+    /// or proves again the session it does, and its secrets.
+    pub fn again(
+        &self,
+        code_key: &CodeKey,
+        now: DateTime,
+    ) -> Result<(InsertPendingSignIn, SignInSecrets), HttpError> {
+        InsertPendingSignIn::with_session(
+            code_key,
+            self.email.clone(),
+            self.context(),
+            self.session_id,
+            now,
+        )
+    }
+
     pub fn context(&self) -> SignInContext {
         SignInContext {
             invite: self.invite.clone(),
@@ -179,6 +216,7 @@ pub struct SignInContext {
 #[diesel(table_name = pending_sign_in_table)]
 pub struct InsertPendingSignIn {
     pub uuid: PendingSignInUuid,
+    pub session_id: Option<SessionId>,
     pub email: Email,
     pub binding_hash: BindingSecretHash,
     pub code_hash: SignInCodeHash,
@@ -218,6 +256,33 @@ impl InsertPendingSignIn {
         context: SignInContext,
         now: DateTime,
     ) -> Result<(Self, SignInSecrets), HttpError> {
+        Self::with_session(code_key, email, context, None, now)
+    }
+
+    /// A fresh sign-in that proves `session_id` again by an email to `email`, starting at `now`,
+    /// and its secrets.
+    pub fn fresh(
+        code_key: &CodeKey,
+        email: Email,
+        session_id: SessionId,
+        now: DateTime,
+    ) -> Result<(Self, SignInSecrets), HttpError> {
+        Self::with_session(
+            code_key,
+            email,
+            SignInContext::default(),
+            Some(session_id),
+            now,
+        )
+    }
+
+    fn with_session(
+        code_key: &CodeKey,
+        email: Email,
+        context: SignInContext,
+        session_id: Option<SessionId>,
+        now: DateTime,
+    ) -> Result<(Self, SignInSecrets), HttpError> {
         let generate_error = |e| {
             issue_error(
                 "Failed to generate a sign-in secret",
@@ -251,6 +316,7 @@ impl InsertPendingSignIn {
         });
         let pending_sign_in = Self {
             uuid: PendingSignInUuid::new(),
+            session_id,
             email,
             binding_hash: BindingSecretHash::from(&secrets.binding),
             code_hash: code_key.hash(&secrets.code),

@@ -30,7 +30,7 @@ pub(crate) const USER_AGENT: &str = concat!("Bencher/", env!("CARGO_PKG_VERSION"
 /// GitHub's largest page.
 const PER_PAGE: usize = 100;
 pub(crate) const TIMEOUT: Duration = Duration::from_secs(10);
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+pub(crate) const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 /// From GitHub's 422 for a repository outside the installation.
 const REPOSITORY_INACCESSIBLE: &str = "not accessible to the parent installation";
 /// From GitHub's 422 for a permission the installation has not approved.

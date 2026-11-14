@@ -44,14 +44,21 @@ export interface Api {
 export const createApi = ({
 	fetch = globalThis.fetch.bind(globalThis),
 	onUnauthorized,
+	signInAgain,
 }: {
 	fetch?: typeof globalThis.fetch;
 	/** The session ended: the API refused a read or a change with a 401. */
 	onUnauthorized: () => void;
+	/**
+	 * A change needs a fresh sign-in: asks the reader to sign in again, and
+	 * whether they did, so the change goes again, once.
+	 */
+	signInAgain?: () => Promise<boolean>;
 }): Api => {
 	const request = async <T>(
 		path: string,
 		init: { method?: Method; body?: unknown; signal?: AbortSignal | undefined },
+		asked = false,
 	): Promise<ApiResponse<T>> => {
 		const target = `${API_PATH}${path}`;
 		// A request past what every hop passes on would be refused, so it is never sent.
@@ -81,6 +88,15 @@ export const createApi = ({
 			const kind = kindOf(response.status);
 			if (kind === "unauthorized") {
 				onUnauthorized();
+			} else if (
+				kind === "forbidden" &&
+				init.method &&
+				!asked &&
+				signInAgain &&
+				needsFreshSignIn(body) &&
+				(await signInAgain())
+			) {
+				return request<T>(path, init, true);
 			}
 			throw new ApiError(response.status, kind, body);
 		}
@@ -94,6 +110,15 @@ export const createApi = ({
 		get: (path, signal) => request(path, { signal }),
 		send: (method, path, body) => request(path, { method, body }),
 	};
+};
+
+/** Whether the API refused a change for a sign-in more than 10 minutes old. */
+const needsFreshSignIn = (body: string) => {
+	try {
+		return JSON.parse(body)?.error_code === "fresh_sign_in";
+	} catch {
+		return false;
+	}
 };
 
 const kindOf = (status: number): ApiErrorKind => {

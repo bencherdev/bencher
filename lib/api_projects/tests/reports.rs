@@ -11,7 +11,7 @@
 #[cfg(feature = "plus")]
 use bencher_api_tests::helpers::{plan_project, post_metrics};
 use bencher_api_tests::{
-    TestServer,
+    TestServer, TestUser,
     helpers::{
         base_timestamp, create_empty_variant, create_test_report, get_empty_variant, get_project_id,
     },
@@ -1823,7 +1823,7 @@ async fn reports_name_the_project_key_that_created_them() {
         .create_project(&user, &org, "Report Key Project")
         .await;
     let project_slug: &str = project.slug.as_ref();
-    let key = create_project_key(&server, &user.token, project_slug, "ci-key").await;
+    let key = create_project_key(&server, &user, project_slug, "ci-key").await;
     let named_key = Some((key.uuid, "ci-key".to_owned()));
 
     let by_key = post_report(&server, key.key.as_ref(), project_slug).await;
@@ -1888,17 +1888,14 @@ async fn reports_name_the_project_key_that_created_them() {
 
 async fn create_project_key(
     server: &TestServer,
-    token: &str,
+    user: &TestUser,
     project_slug: &str,
     name: &str,
 ) -> JsonProjectKeyCreated {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{project_slug}/keys")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(token),
-        )
+        .headers(server.fresh_session(user))
         .json(&serde_json::json!({ "name": name }))
         .send()
         .await

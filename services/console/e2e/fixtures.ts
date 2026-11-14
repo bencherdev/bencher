@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
 import {
 	type BrowserContext,
 	type BrowserContextOptions,
@@ -32,6 +34,8 @@ export interface Seed {
 	wrong_secret_console_url: string;
 	/** The API's log, which holds every email it sends. */
 	api_log: string;
+	/** The API's database, where the suite sets when a session last proved its reader. */
+	db: string;
 	now: string;
 	admin: Reader;
 	member: Reader;
@@ -146,8 +150,42 @@ export const logInTo = (back: string) =>
 export const consolePath = (slug: string, tab = "") =>
 	`/console/projects/${slug}/${tab}`;
 
+/**
+ * Set when the session `session` names last proved its reader, `seconds` ago,
+ * as the API records a sign-in: the suite's own clock for the window that
+ * guards the sensitive actions, which no request can turn back. Only a test's
+ * own reader ages, since the seeded readers' sessions serve every worker at
+ * once.
+ */
+export const provedAgo = (session: string, seconds: number) => {
+	if (seeded().includes(session)) {
+		throw new Error(
+			"A seeded reader's session serves every test: age a reader of the test's own",
+		);
+	}
+	setProved(session, seconds);
+};
+
+const seeded = () =>
+	[seed.admin, seed.member, seed.outsider].map(({ session }) => session);
+
+const setProved = (session: string, seconds: number) => {
+	const db = new DatabaseSync(seed.db);
+	try {
+		db.exec("PRAGMA busy_timeout = 10000");
+		db.prepare("UPDATE session SET proved = ? WHERE token_hash = ?").run(
+			Math.floor(Date.now() / 1_000) - seconds,
+			createHash("sha256").update(session).digest("hex"),
+		);
+	} finally {
+		db.close();
+	}
+};
+
 export const test = base.extend<{
 	freezeClock: boolean;
+	/** The seeded readers signed in moments ago, as every test but the fresh sign-in's assumes. */
+	seedProved: undefined;
 	turnstile: undefined;
 	frozenClock: undefined;
 	trackedRequests: undefined;
@@ -159,6 +197,17 @@ export const test = base.extend<{
 	newContext: (options?: BrowserContextOptions) => Promise<BrowserContext>;
 }>({
 	freezeClock: [true, { option: true }],
+	// The suite runs longer than the 10 minutes a sign-in lets a session make a key or delete,
+	// so each test starts with the seeded sessions proved now.
+	seedProved: [
+		async ({ browserName: _ }, use) => {
+			for (const session of seeded()) {
+				setProved(session, 0);
+			}
+			await use(undefined);
+		},
+		{ auto: true },
+	],
 	// The console asks Cloudflare's Turnstile for a token, as Bencher Cloud's does; the suite
 	// answers in its place, refusing where a test sets `TURNSTILE_REFUSES`.
 	turnstile: [

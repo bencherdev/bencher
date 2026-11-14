@@ -1,9 +1,12 @@
 use std::sync::LazyLock;
 use std::{
+    env, fs,
+    fs::File,
     net::TcpStream,
-    process::{Child, Command},
+    path::{Path, PathBuf},
+    process::{self, Child, Command},
     thread,
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
@@ -81,11 +84,15 @@ impl From<TaskTestEnvironment> for Environment {
 
 impl SmokeTest {
     pub fn exec(&self) -> anyhow::Result<()> {
-        let child = match self.environment {
-            Environment::Ci | Environment::Localhost => Some(api_run()?),
-            Environment::Docker => bencher_up().map(|()| None)?,
-            Environment::Dev | Environment::Test | Environment::Prod => None,
+        let (child, api_log) = match self.environment {
+            Environment::Ci | Environment::Localhost => {
+                let (api_log, file) = ApiLog::create()?;
+                (Some(api_run(file)?), Some(api_log))
+            },
+            Environment::Docker => (bencher_up().map(|()| None)?, None),
+            Environment::Dev | Environment::Test | Environment::Prod => (None, None),
         };
+        let api_log = api_log.as_ref().map(ApiLog::path);
 
         let api_url = self.environment.as_url();
         let registry_url = self.environment.as_registry_url();
@@ -100,6 +107,7 @@ impl SmokeTest {
                         examples: false,
                         runner: true,
                     },
+                    api_log,
                 )?;
                 kill_child(child)?;
             },
@@ -111,11 +119,12 @@ impl SmokeTest {
                         examples: true,
                         runner: false,
                     },
+                    api_log,
                 )?;
                 kill_child(child)?;
             },
             Environment::Docker => bencher_down()?,
-            Environment::Dev => test(&api_url, &registry_url, MockSetup::BencherCloud)?,
+            Environment::Dev => test(&api_url, &registry_url, MockSetup::BencherCloud, None)?,
             Environment::Test | Environment::Prod => {},
         }
 
@@ -145,10 +154,44 @@ impl Environment {
     }
 }
 
-fn api_run() -> anyhow::Result<Child> {
+/// The log of the API this test runs, where a server that sends no email writes each sign-in
+/// email, shown with the test's own output once the test ends, however it ends.
+struct ApiLog(PathBuf);
+
+impl ApiLog {
+    /// A new file of this run's own, never one already there, nor anything a link points to.
+    fn create() -> anyhow::Result<(Self, File)> {
+        let started = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+        let path = env::temp_dir().join(format!(
+            "bencher_smoke_test_api_{}_{started}.log",
+            process::id()
+        ));
+        let file = File::options().write(true).create_new(true).open(&path)?;
+        Ok((Self(path), file))
+    }
+
+    fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
+impl Drop for ApiLog {
+    fn drop(&mut self) {
+        if let Ok(log) = fs::read_to_string(&self.0) {
+            println!("==== API log ({}) ====\n{log}", self.0.display());
+        }
+        if let Err(error) = fs::remove_file(&self.0) {
+            eprintln!("Failed to remove {}: {error}", self.0.display());
+        }
+    }
+}
+
+fn api_run(log: File) -> anyhow::Result<Child> {
     let mut child = Command::new("cargo")
         .args(["run"])
         .current_dir("./services/api")
+        .stdout(log.try_clone()?)
+        .stderr(log)
         .spawn()?;
 
     while TcpStream::connect(("localhost", BENCHER_API_PORT)).is_err() {
@@ -226,7 +269,12 @@ enum MockSetup {
     SelfHosted { examples: bool, runner: bool },
 }
 
-fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Result<()> {
+fn test(
+    api_url: &Url,
+    registry_url: &Url,
+    mock_setup: MockSetup,
+    api_log: Option<&Path>,
+) -> anyhow::Result<()> {
     #[cfg(not(feature = "plus"))]
     let _unused = registry_url;
     match mock_setup {
@@ -262,6 +310,7 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
         MockSetup::SelfHosted { examples, runner } => {
             let task = TaskSeedTest {
                 url: Some(api_url.clone()),
+                api_log: api_log.map(Path::to_path_buf),
                 ..Default::default()
             };
             let seed_test = SeedTest::try_from(task)?;
@@ -281,6 +330,7 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
                     let runner_test = runner::RunnerTest::try_from(TaskRunner {
                         url: Some(api_url.clone()),
                         with_daemon: true,
+                        api_log: api_log.map(Path::to_path_buf),
                         ..Default::default()
                     })?;
                     runner_test.exec()?;

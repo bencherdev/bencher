@@ -10,6 +10,7 @@ use bencher_schema::model::user::{
     QueryUser,
     session::{InsertSession, cookie::SessionCookie},
 };
+use reqwest::header::{COOKIE, HeaderMap, HeaderValue};
 
 use crate::TestServer;
 
@@ -141,6 +142,22 @@ impl TestServer {
         self.session_at(user, self.context().clock.now())
     }
 
+    /// The headers of a request from the console in a session the user signed in to now, which may
+    /// do what needs a fresh sign-in.
+    #[expect(clippy::expect_used, reason = "test helper building headers")]
+    pub fn fresh_session(&self, user: &TestUser) -> HeaderMap {
+        let token = self.session(user);
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            COOKIE,
+            session_cookie(&token)
+                .parse()
+                .expect("Invalid session cookie"),
+        );
+        headers.insert("Sec-Fetch-Site", HeaderValue::from_static("same-origin"));
+        headers
+    }
+
     /// Sign the user in to a new browser session at `now`, returning the session cookie's value.
     #[expect(clippy::expect_used, reason = "test helper inserting a session")]
     pub fn session_at(&self, user: &TestUser, now: DateTime) -> SessionToken {
@@ -249,10 +266,7 @@ impl TestServer {
         let resp = self
             .client
             .post(self.api_url(&format!("/v0/projects/{project_slug}/keys")))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&user.token),
-            )
+            .headers(self.fresh_session(user))
             .json(&serde_json::json!({"name": name}))
             .send()
             .await
@@ -272,7 +286,7 @@ impl TestServer {
         }
     }
 
-    /// Create a user API key with the user's session.
+    /// Create a user API key in a session the user signed in to now.
     #[expect(clippy::expect_used, reason = "test helper for user key creation")]
     pub async fn create_user_key(&self, user: &TestUser, name: &str) -> UserKey {
         let user_slug: &str = user.slug.as_ref();
@@ -284,10 +298,7 @@ impl TestServer {
         let resp = self
             .client
             .post(self.api_url(&format!("/v0/users/{user_slug}/keys")))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&user.token),
-            )
+            .headers(self.fresh_session(user))
             .json(&body)
             .send()
             .await

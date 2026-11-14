@@ -7771,6 +7771,7 @@ dependencies = [
  "clap",
  "pretty_assertions",
  "serde_json",
+ "ureq",
  "url",
 ]
 

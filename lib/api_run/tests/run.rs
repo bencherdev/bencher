@@ -197,10 +197,7 @@ async fn run_post_with_a_project_key_names_the_key() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{project_slug}/keys")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({ "name": "run-key" }))
         .send()
         .await

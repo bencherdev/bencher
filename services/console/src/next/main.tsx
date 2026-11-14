@@ -31,7 +31,10 @@ const boot = async (mount: HTMLElement) => {
 
 	const client = createQueryClient();
 	const host = mount.dataset.apiUrl ?? "";
-	const api = createApi({ onUnauthorized: () => signOut(store, client) });
+	const api = createApi({
+		onUnauthorized: () => signOut(store, client),
+		signInAgain,
+	});
 	const place = parseConsolePath(location.pathname);
 	// The shell's one request starts before anything else, so the cache restore
 	// never delays it.
@@ -135,6 +138,12 @@ const watchReader = (
 		}
 	});
 };
+
+/** Ask the reader to sign in again, loading the dialog only then. */
+const signInAgain = () =>
+	import("./fresh/dialog")
+		.then(({ signInAgain }) => signInAgain())
+		.catch(() => false);
 
 /** Wait for `work`, but no longer than `ms`; a failure only ends the wait. */
 const within = (ms: number, work: Promise<unknown>) =>

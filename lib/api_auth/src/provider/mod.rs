@@ -10,13 +10,15 @@ use bencher_json::{
     NonEmpty, PlanLevel, Secret, SignInProvider, SignInRefusal, UserName,
 };
 use bencher_schema::{
+    auth_conn,
     context::ApiContext,
     error::{issue_error, payment_required_error, unauthorized_error},
     model::{
         organization::plan::LicenseUsage,
         user::{
+            auth::AuthUser,
             provider::{InsertProviderState, ProviderPin, ProviderSecrets, QueryProviderState},
-            session::cookie::ProviderCookie,
+            session::{QuerySession, SessionId, cookie::ProviderCookie},
         },
     },
     public_conn, write_transaction,
@@ -31,7 +33,7 @@ use serde::Deserialize;
 use slog::Logger;
 use url::Url;
 
-use crate::sign_in::{admit, email::sign_in_context, refused};
+use crate::sign_in::{admit, email::sign_in_context, fresh::session_of, refused};
 
 mod link;
 
@@ -82,9 +84,67 @@ pub async fn auth_provider_start_post(
         authorization,
     } = body.into_inner();
     let carried = sign_in_context(context, None, invite, claim, plan, authorization).await?;
-
     let now = context.clock.now();
-    let (insert, secrets) = InsertProviderState::new(provider, carried, now)?;
+    start(
+        context,
+        &client,
+        InsertProviderState::new(provider, carried, now)?,
+        now,
+    )
+    .await
+}
+
+#[endpoint {
+    method = OPTIONS,
+    path = "/v0/auth/fresh/providers/{provider}/start",
+    unpublished = true,
+}]
+pub async fn auth_fresh_provider_start_options(
+    _rqctx: RequestContext<ApiContext>,
+    _path_params: Path<ProviderParams>,
+) -> Result<CorsResponse, HttpError> {
+    Ok(Endpoint::cors(&[Post.into()]))
+}
+
+/// Sign in again with a provider
+///
+/// Bind a fresh sign-in of the signed-in reader's session to this browser by its cookie, and
+/// answer with the provider's authorize URL. Its finish proves the session again only for the
+/// provider account pinned to the session's user.
+#[endpoint {
+    method = POST,
+    path = "/v0/auth/fresh/providers/{provider}/start",
+    unpublished = true,
+}]
+pub async fn auth_fresh_provider_start_post(
+    rqctx: RequestContext<ApiContext>,
+    path_params: Path<ProviderParams>,
+) -> Result<ResponseOk<JsonOAuthUrl>, HttpError> {
+    let log = &rqctx.log;
+    let context = rqctx.context();
+    let ProviderParams { provider } = path_params.into_inner();
+    admit(log, context, &rqctx.request)?;
+    let auth_user = AuthUser::new(&rqctx).await?;
+    let session_id = session_of(&auth_user)?;
+    let client = Client::new(log, context, provider).await?;
+    let now = context.clock.now();
+    start(
+        context,
+        &client,
+        InsertProviderState::fresh(provider, session_id, now)?,
+        now,
+    )
+    .await
+}
+
+/// Record the sign-in, and answer with the provider's URL and the cookie that binds it to this
+/// browser.
+async fn start(
+    context: &ApiContext,
+    client: &Client<'_>,
+    (insert, secrets): (InsertProviderState, ProviderSecrets),
+    now: DateTime,
+) -> Result<ResponseOk<JsonOAuthUrl>, HttpError> {
     write_transaction!(context, |conn| insert.insert(conn, now)).map_err(|e| {
         issue_error(
             "Failed to start a sign-in",
@@ -126,7 +186,8 @@ pub async fn auth_provider_finish_options(
 ///
 /// In the browser that started it, and only once, exchange the provider's code for the account it
 /// names. An account pinned to a user signs that user in; a new address signs up, pinned; and an
-/// address that has an account is emailed, to prove it before the account pins.
+/// address that has an account is emailed, to prove it before the account pins. A fresh sign-in
+/// proves its session again only by the account pinned to the session's user.
 #[endpoint {
     method = POST,
     path = "/v0/auth/providers/{provider}/finish",
@@ -161,7 +222,13 @@ pub async fn auth_provider_finish_post(
 
     // The sign-in has ended, so whatever it answers clears its cookie.
     let finished = match client.account(context, &started, code, now).await {
-        Ok(account) => link::link(log, context, &rqctx.request, account, started.context()).await,
+        Ok(account) => {
+            if let Some(session_id) = started.session_id {
+                prove_again(context, session_id, &account).await
+            } else {
+                link::link(log, context, &rqctx.request, account, started.context()).await
+            }
+        },
         Err(error) => {
             slog::warn!(log, "{} refused a sign-in: {error}", provider.name());
             Err(provider_refused())
@@ -177,6 +244,65 @@ pub async fn auth_provider_finish_post(
             Err(error)
         },
     }
+}
+
+/// Prove the session again by the provider account, only if it is pinned to the session's user,
+/// who is not locked. A fresh sign-in never pins, links, or makes anything.
+async fn prove_again(
+    context: &ApiContext,
+    session_id: SessionId,
+    account: &ProviderAccount,
+) -> Result<ResponseOk<JsonProviderSignIn>, HttpError> {
+    let now = context.clock.now();
+    let proved = write_transaction!(context, |conn| {
+        let Some(user) = account.pin.user(conn)? else {
+            return Ok(false);
+        };
+        let Some(session) = QuerySession::find(conn, session_id)? else {
+            return Ok(false);
+        };
+        if user.id != session.user_id || user.locked {
+            return Ok(false);
+        }
+        QuerySession::prove(conn, session_id, now).map(|proved| proved == 1)
+    })
+    .map_err(|e: diesel::result::Error| {
+        issue_error(
+            "Failed to sign in again",
+            "Failed to prove a session again by a provider:",
+            e,
+        )
+    })?;
+    if proved {
+        Ok(Post::pub_response_ok(JsonProviderSignIn {
+            signed_in: None,
+            inbox: None,
+            proved: Some(now),
+        }))
+    } else {
+        Err(provider_refused())
+    }
+}
+
+/// The providers pinned to the reader that this server signs in with.
+pub(crate) async fn pinned(
+    context: &ApiContext,
+    auth_user: &AuthUser,
+) -> Result<Vec<SignInProvider>, HttpError> {
+    let pinned = ProviderPin::providers_of(auth_conn!(context), auth_user.id).map_err(|e| {
+        issue_error(
+            "Failed to read the pinned providers",
+            "Failed to read the providers pinned to a user:",
+            e,
+        )
+    })?;
+    if pinned.is_empty() || !is_licensed(context).await? {
+        return Ok(Vec::new());
+    }
+    Ok(pinned
+        .into_iter()
+        .filter(|provider| Client::configured(context, *provider).is_some())
+        .collect())
 }
 
 /// The one refusal of a provider's sign-in, whatever failed.
@@ -202,29 +328,25 @@ impl<'a> Client<'a> {
         context: &'a ApiContext,
         provider: SignInProvider,
     ) -> Result<Self, HttpError> {
-        let client = match provider {
-            SignInProvider::Github => context.github_client.as_ref().map(Self::GitHub),
-            SignInProvider::Google => context.google_client.as_ref().map(Self::Google),
-        };
-        let Some(client) = client else {
+        let Some(client) = Self::configured(context, provider) else {
             let err = format!("{} sign-in is not configured", provider.name());
             slog::warn!(log, "{err}");
             return Err(payment_required_error(err));
         };
-        let is_allowed = context.is_bencher_cloud
-            || !LicenseUsage::get_for_server(
-                public_conn!(context),
-                &context.licensor,
-                Some(PlanLevel::Enterprise),
-            )?
-            .is_empty();
-        if is_allowed {
+        if is_licensed(context).await? {
             Ok(client)
         } else {
             Err(payment_required_error(format!(
                 "You must have a valid Bencher Plus Enterprise license for at least one organization on the server to sign in with {}",
                 provider.name()
             )))
+        }
+    }
+
+    fn configured(context: &'a ApiContext, provider: SignInProvider) -> Option<Self> {
+        match provider {
+            SignInProvider::Github => context.github_client.as_ref().map(Self::GitHub),
+            SignInProvider::Google => context.google_client.as_ref().map(Self::Google),
         }
     }
 
@@ -308,6 +430,18 @@ impl<'a> Client<'a> {
             },
         }
     }
+}
+
+/// Whether the server may sign in with a provider: on Bencher Cloud, or with an Enterprise license
+/// for an organization on the server.
+async fn is_licensed(context: &ApiContext) -> Result<bool, HttpError> {
+    Ok(context.is_bencher_cloud
+        || !LicenseUsage::get_for_server(
+            public_conn!(context),
+            &context.licensor,
+            Some(PlanLevel::Enterprise),
+        )?
+        .is_empty())
 }
 
 /// The console's page that GitHub sends the reader back to, named on both the authorize URL and

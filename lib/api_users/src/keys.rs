@@ -199,6 +199,7 @@ fn get_ls_query<'q>(
 /// This endpoint requires a user session:
 /// neither a user API key nor a deprecated user API token can create a key,
 /// so neither can mint a user API key that outlives its own revocation.
+/// A user session needs a sign-in within the last 10 minutes.
 #[endpoint {
     method = POST,
     path =  "/v0/users/{user}/keys",
@@ -221,6 +222,7 @@ pub async fn user_key_post(
             "Only a user session can create a user API key.",
         ));
     }
+    auth_user.check_fresh_sign_in(rqctx.context()).await?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),

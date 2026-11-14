@@ -474,13 +474,9 @@ const NewKey = (props: {
 					<Show when={failed()}>
 						{(failure) => (
 							<p class="ferror" role="alert">
-								<Truncate
-									text={failureOf(
-										failure().error,
-										"Bencher did not make the key",
-									)}
-									reveal
-								/>
+								<span>
+									{failureOf(failure().error, "Bencher did not make the key")}
+								</span>
 							</p>
 						)}
 					</Show>

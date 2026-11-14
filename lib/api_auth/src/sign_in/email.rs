@@ -1,6 +1,7 @@
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Post, ResponseAccepted, ResponseDeleted};
 use bencher_json::{
-    Email, JsonEmailResend, JsonEmailSignIn, JsonSignInEmail, Jwt, OrganizationUuid, SignInRefusal,
+    DateTime, Email, JsonEmailResend, JsonEmailSignIn, JsonSignInEmail, Jwt, OrganizationUuid,
+    SignInRefusal,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{OAuthAuthorizationUuid, PlanLevel};
@@ -18,6 +19,7 @@ use bencher_schema::{
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
 use http::header::{RETRY_AFTER, SET_COOKIE};
+use slog::Logger;
 
 use super::{
     Emailed, Start, admit, admit_email, at_cap, binding, capped, email_sign_in, end_replaced,
@@ -212,6 +214,16 @@ pub async fn auth_email_resend_post(
             )
         })?
         .ok_or_else(ended)?;
+    resend(log, context, pending, now).await
+}
+
+/// End the pending sign-in and email another, which carries what it carries, once Resend opens.
+pub(super) async fn resend(
+    log: &Logger,
+    context: &ApiContext,
+    pending: QueryPendingSignIn,
+    now: DateTime,
+) -> Result<ResponseAccepted<JsonSignInEmail>, HttpError> {
     let wait = pending.resend_opens().timestamp() - now.timestamp();
     if wait > 0 {
         return Err(resend_waiting(wait));
@@ -220,7 +232,7 @@ pub async fn auth_email_resend_post(
         return Ok(capped(pending.email, wait));
     }
 
-    let sent = Start::insert(context, pending.email.clone(), pending.context(), now)
+    let sent = Start::insert(context, pending.again(&context.code_key, now)?, now)
         .await?
         .send(log, context)
         .await?;

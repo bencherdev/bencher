@@ -46,6 +46,8 @@ struct Fixture {
     slug: ProjectSlug,
     token: String,
     user: String,
+    /// The headers of the console in a session the owner signed in to as the fixture was made.
+    session: http::HeaderMap,
 }
 
 async fn fixture(server: &TestServer, label: &str) -> Fixture {
@@ -56,10 +58,12 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
     let project = server
         .create_project(&user, &org, &format!("Runs Project {label}"))
         .await;
+    let session = server.fresh_session(&user);
     Fixture {
         slug: project.slug,
         token: user.token.clone(),
         user: "Test User".to_owned(),
+        session,
     }
 }
 
@@ -214,10 +218,7 @@ async fn project_key(server: &TestServer, fixture: &Fixture, name: &str) -> Stri
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/keys", fixture.slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&fixture.token),
-        )
+        .headers(fixture.session.clone())
         .json(&serde_json::json!({ "name": name }))
         .send()
         .await
