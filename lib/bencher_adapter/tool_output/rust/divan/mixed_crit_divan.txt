@@ -1,0 +1,7 @@
+crit_add                time:   [190.06 ps 191.30 ps 192.77 ps]
+
+ovf   fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ a                │               │               │               │         │
+   ├─ t=1  0.001 ns      │ 0.006 ns      │ 0.002 ns      │ 0.002 ns      │ 100     │ 1638400
+   ╰─ t=16  0.002 ns      │ 0.812 ns      │ 0.006 ns      │ 0.025 ns      │ 112     │ 917504
+

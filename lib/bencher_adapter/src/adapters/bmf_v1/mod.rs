@@ -27,6 +27,7 @@ use crate::{
                 criterion::AdapterRustCriterionV1,
                 criterion_json::AdapterRustCriterionJson,
                 criterion_text::AdapterRustCriterionText,
+                divan::AdapterRustDivan,
                 gungraun::AdapterRustGungraunV1,
                 gungraun_json::AdapterRustGungraunJsonV1,
                 gungraun_stdout::AdapterRustGungraunStdoutV1,
@@ -87,6 +88,7 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::RustGungraun => AdapterRustGungraunV1::parse(input, settings),
         Adapter::RustGungraunJson => AdapterRustGungraunJsonV1::parse(input, settings),
         Adapter::RustGungraunStdout => AdapterRustGungraunStdoutV1::parse(input, settings),
+        Adapter::RustDivan => AdapterRustDivan::parse(input, settings),
         Adapter::CppGoogle => AdapterCppGoogleV1::parse(input, settings),
         Adapter::CppCatch2 => AdapterCppCatch2V1::parse(input, settings),
         Adapter::CppCatch2Xml => AdapterCppCatch2Xml::parse(input, settings),
@@ -130,7 +132,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 47] = [
+    const ADAPTERS: [Adapter; 48] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -146,6 +148,7 @@ mod test_bmf_v1 {
         Adapter::RustGungraun,
         Adapter::RustGungraunStdout,
         Adapter::RustGungraunJson,
+        Adapter::RustDivan,
         Adapter::Cpp,
         Adapter::CppGoogle,
         Adapter::CppCatch2,

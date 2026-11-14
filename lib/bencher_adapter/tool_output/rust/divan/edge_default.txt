@@ -1,0 +1,12 @@
+edge                     fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ prints_once           hello from inside a benchmark
+19.73 ns      │ 10.06 µs      │ 19.73 ns      │ 121.2 ns      │ 100     │ 100
+├─ t=4                   0.001 ns      │ 0.001 ns      │ 0.001 ns      │ 0.001 ns      │ 100     │ 819200
+├─ weird_args                          │               │               │               │         │
+│  ├─    padded          0.263 ns      │ 0.269 ns      │ 0.269 ns      │ 0.268 ns      │ 100     │ 204800
+│  ├─ fastest │ slowest  0.263 ns      │ 0.273 ns      │ 0.269 ns      │ 0.268 ns      │ 100     │ 204800
+│  ├─ line
+break         0.312 ns      │ 0.323 ns      │ 0.317 ns      │ 0.318 ns      │ 100     │ 204800
+│  ╰─ t=1                0.312 ns      │ 1.745 ns      │ 0.317 ns      │ 0.332 ns      │ 100     │ 204800
+╰─ ├─ fake branch        0.001 ns      │ 0.001 ns      │ 0.001 ns      │ 0.001 ns      │ 100     │ 819200
+

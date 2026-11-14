@@ -2,6 +2,7 @@ pub mod bench;
 pub mod criterion;
 pub mod criterion_json;
 pub mod criterion_text;
+pub mod divan;
 pub mod gungraun;
 pub mod gungraun_json;
 pub mod gungraun_stdout;

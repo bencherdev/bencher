@@ -136,6 +136,41 @@ pub mod dotnet {
     );
 }
 
+pub mod divan {
+    use bencher_valid::BYTES;
+
+    create_measure!(
+        CharsThroughput,
+        "Chars Throughput",
+        "chars-throughput",
+        "characters / second (char/s)"
+    );
+    create_measure!(
+        CyclesThroughput,
+        "Cycles Throughput",
+        "cycles-throughput",
+        "cycles / second (Hz)"
+    );
+    create_measure!(
+        Deallocations,
+        "Deallocations",
+        "deallocations",
+        "deallocations"
+    );
+    create_measure!(Deallocated, "Deallocated", "deallocated", BYTES);
+    create_measure!(Grows, "Grows", "grows", "grows");
+    create_measure!(Grown, "Grown", "grown", BYTES);
+    create_measure!(Shrinks, "Shrinks", "shrinks", "shrinks");
+    create_measure!(Shrunk, "Shrunk", "shrunk", BYTES);
+    create_measure!(
+        MaxAllocations,
+        "Max Allocations",
+        "max-allocations",
+        "allocations"
+    );
+    create_measure!(MaxAllocated, "Max Allocated", "max-allocated", BYTES);
+}
+
 pub mod jmh {
     use bencher_valid::NANOSECONDS;
 

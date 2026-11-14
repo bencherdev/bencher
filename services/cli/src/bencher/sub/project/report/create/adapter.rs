@@ -21,6 +21,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::RubyBenchmark => Self::RubyBenchmark,
             CliReportAdapter::RustBench => Self::RustBench,
             CliReportAdapter::RustCriterion => Self::RustCriterion,
+            CliReportAdapter::RustDivan => Self::RustDivan,
             CliReportAdapter::RustIai => Self::RustIai,
             CliReportAdapter::RustGungraun => Self::RustGungraun,
             CliReportAdapter::ShellHyperfine => Self::ShellHyperfine,

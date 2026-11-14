@@ -1,0 +1,7 @@
+fail         fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ a_before  0.002 ns      │ 0.233 ns      │ 0.002 ns      │ 0.005 ns      │ 100     │ 819200
+├─ b_panics  ovf   fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ a                │               │               │               │         │
+   ├─ t=1  0 ns          │ 0.476 ns      │ 0.001 ns      │ 0.01 ns       │ 100     │ 1638400
+   ╰─ t=16  0.001 ns      │ 1.221 ns      │ 0.125 ns      │ 0.109 ns      │ 112     │ 917504
+

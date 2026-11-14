@@ -1,0 +1,12 @@
+
+running 2 tests
+test tests::adds ... ignored
+test tests::slow ... ignored, too slow
+
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+ovf   fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ a                │               │               │               │         │
+   ├─ t=1  0 ns          │ 0.793 ns      │ 0.001 ns      │ 0.024 ns      │ 100     │ 1638400
+   ╰─ t=16  0.002 ns      │ 0.233 ns      │ 0.099 ns      │ 0.083 ns      │ 112     │ 917504
+

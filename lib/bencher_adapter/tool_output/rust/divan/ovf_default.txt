@@ -1,0 +1,5 @@
+ovf   fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ a                │               │               │               │         │
+   ├─ t=1  0.001 ns      │ 0.001 ns      │ 0.001 ns      │ 0.001 ns      │ 100     │ 819200
+   ╰─ t=16  0.004 ns      │ 0.295 ns      │ 0.134 ns      │ 0.135 ns      │ 112     │ 229376
+
