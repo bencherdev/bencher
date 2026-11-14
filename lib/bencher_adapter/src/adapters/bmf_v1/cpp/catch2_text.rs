@@ -21,13 +21,19 @@ use crate::{
 /// one, else counts as a benchmark of its own, so that no benchmark is lost uncounted. A print
 /// that is byte for byte a row of Catch2's, a value cell padded as Catch2 pads one, or a line of
 /// dashes as long as the rule reads as Catch2's own. Colour codes are read past, and where the
-/// console is too narrow for the table's title, every benchmark is counted and none kept.
+/// console is too narrow for the table's title, every benchmark is counted and none kept. Text
+/// without a table header is not Catch2's.
 pub struct AdapterCppCatch2Text;
 
 impl Adaptable for AdapterCppCatch2Text {
     fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
+        let input = strip_ansi(input);
+        let printer = Printer::new(&input);
+        if !printer.has_table() {
+            return None;
+        }
         let mut results = LeafResults::default();
-        for benchmark in reading(input).benchmarks {
+        for benchmark in printer.read().benchmarks {
             if let Some(Benchmark {
                 path,
                 name,
@@ -44,6 +50,7 @@ impl Adaptable for AdapterCppCatch2Text {
 }
 
 /// The reading of Catch2's console output, with its colour codes taken out.
+#[cfg(test)]
 fn reading(input: &str) -> Reading {
     let input = strip_ansi(input);
     Printer::new(&input).read()
@@ -244,6 +251,11 @@ impl<'a> Printer<'a> {
             #[cfg(test)]
             exhausted: self.steps > self.budget,
         }
+    }
+
+    /// Whether Catch2 printed a table header anywhere in the text.
+    fn has_table(&self) -> bool {
+        (0..self.lines.len()).any(|line| self.table_header(line).is_some())
     }
 
     /// Whether a line can only go on with a benchmark started before it: the rest of a row on a

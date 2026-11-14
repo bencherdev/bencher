@@ -62,11 +62,20 @@ use magic::AdapterMagicV1;
 
 /// The BMF version 1 adapter tree.
 ///
-/// An adapter it does not hold yet parses with the version 0 tree, whose results
-/// the declared version then refuses, exactly as before this tree existed.
+/// `json_v0` parses with the version 0 tree, whose results the declared version then refuses.
 pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Option<AdapterResults> {
     match adapter {
-        Adapter::Magic => AdapterMagicV1::parse(input, settings),
+        Adapter::Magic
+        | Adapter::Rust
+        | Adapter::Cpp
+        | Adapter::Go
+        | Adapter::Java
+        | Adapter::CSharp
+        | Adapter::Js
+        | Adapter::Python
+        | Adapter::Ruby
+        | Adapter::Shell
+        | Adapter::Dart => AdapterMagicV1::parse(input, settings),
         Adapter::Json | Adapter::JsonV1 => AdapterJsonV1::parse(input, settings),
         Adapter::RustBench => AdapterRustBenchV1::parse(input, settings),
         Adapter::RustBenchJson => AdapterRustBenchJson::parse(input, settings),
@@ -101,17 +110,7 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::ShellHyperfine => AdapterShellHyperfineV1::parse(input, settings),
         Adapter::ShellHyperfineV1 => AdapterShellHyperfine1::parse(input, settings),
         Adapter::ShellHyperfineV2 => AdapterShellHyperfine2::parse(input, settings),
-        Adapter::JsonV0
-        | Adapter::Rust
-        | Adapter::Cpp
-        | Adapter::Go
-        | Adapter::Java
-        | Adapter::CSharp
-        | Adapter::Js
-        | Adapter::Python
-        | Adapter::Ruby
-        | Adapter::Shell
-        | Adapter::Dart => convert_v0(adapter, input, settings),
+        Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
 }
 
@@ -181,6 +180,19 @@ mod test_bmf_v1 {
         Adapter::DartBenchmarkHarness,
     ];
 
+    const LANGUAGES: [Adapter; 10] = [
+        Adapter::Rust,
+        Adapter::Cpp,
+        Adapter::Go,
+        Adapter::Java,
+        Adapter::CSharp,
+        Adapter::Js,
+        Adapter::Python,
+        Adapter::Ruby,
+        Adapter::Shell,
+        Adapter::Dart,
+    ];
+
     /// Every adapter that parses a v1 payload at version 1 resolves it through
     /// the `json_v1` leaf, and records that leaf.
     #[test]
@@ -229,8 +241,8 @@ mod test_bmf_v1 {
         }
     }
 
-    /// Every fixture through every adapter the version 1 tree does not hold yet
-    /// parses at either version exactly as the version 0 tree parses it.
+    /// Every fixture through every adapter at version 0, and through `json_v0` at
+    /// version 1, parses exactly as the version 0 tree parses it.
     #[test]
     fn bmf_v1_every_payload_parses_as_the_version_0_tree() {
         let fixtures = fixtures(Path::new("./tool_output"));
@@ -240,7 +252,7 @@ mod test_bmf_v1 {
             for bmf_version in [BmfVersion::V0, BmfVersion::V1] {
                 let settings = version_settings(bmf_version);
                 for adapter in ADAPTERS {
-                    if bmf_version == BmfVersion::V1 && is_ported(adapter) {
+                    if bmf_version == BmfVersion::V1 && adapter != Adapter::JsonV0 {
                         continue;
                     }
                     assert_eq!(
@@ -254,43 +266,24 @@ mod test_bmf_v1 {
         }
     }
 
-    fn is_ported(adapter: Adapter) -> bool {
-        matches!(
-            adapter,
-            Adapter::RustBench
-                | Adapter::RustBenchJson
-                | Adapter::RustBenchText
-                | Adapter::RustCriterion
-                | Adapter::RustCriterionJson
-                | Adapter::RustCriterionText
-                | Adapter::RustIai
-                | Adapter::RustGungraun
-                | Adapter::RustGungraunJson
-                | Adapter::RustGungraunStdout
-                | Adapter::CppGoogle
-                | Adapter::CppCatch2
-                | Adapter::CppCatch2Xml
-                | Adapter::CppCatch2Text
-                | Adapter::GoBench
-                | Adapter::GoBenchJson
-                | Adapter::GoBenchText
-                | Adapter::JavaJmh
-                | Adapter::CSharpDotNet
-                | Adapter::JsBenchmark
-                | Adapter::JsTime
-                | Adapter::JsVitest
-                | Adapter::JsVitestV1
-                | Adapter::JsVitestV5
-                | Adapter::DartBenchmarkHarness
-                | Adapter::PythonAsv
-                | Adapter::PythonAsvJson
-                | Adapter::PythonAsvText
-                | Adapter::PythonPytest
-                | Adapter::RubyBenchmark
-                | Adapter::ShellHyperfine
-                | Adapter::ShellHyperfineV1
-                | Adapter::ShellHyperfineV2
-        )
+    /// A language's node at version 1 reads every fixture exactly as `magic` does.
+    ///
+    /// Kills: a language node left on the version 0 tree, or read with one harness.
+    #[test]
+    fn bmf_v1_language_nodes_read_with_magic() {
+        let settings = version_settings(BmfVersion::V1);
+        for path in &fixtures(Path::new("./tool_output")) {
+            let input = read(path);
+            let magic = Adapter::Magic.convert(&input, settings);
+            for adapter in LANGUAGES {
+                assert_eq!(
+                    adapter.convert(&input, settings),
+                    magic,
+                    "{adapter}: {}",
+                    path.display()
+                );
+            }
+        }
     }
 
     fn read(path: &Path) -> String {

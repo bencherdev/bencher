@@ -158,6 +158,11 @@ mod test_adapter {
                 BmfVersion::V1,
                 Some(Adapter::JsonV1),
             ),
+            (
+                "./tool_output/rust/bench/many.txt",
+                BmfVersion::V1,
+                Some(Adapter::RustBenchText),
+            ),
             ("./tool_output/rust/bench/many.txt", BmfVersion::V0, None),
         ] {
             let input = std::fs::read_to_string(file_path).expect("Failed to read test file");

@@ -237,31 +237,43 @@ mod test_results_array {
         assert_contract(&error, BmfVersion::V1, BmfVersion::V0);
     }
 
-    /// An adapter the version 1 tree does not hold yet, a language's node, parses as
-    /// version 0, so its output at version 1 breaks the contract.
+    /// Harness output through `magic` or a language's node meets the contract at
+    /// either version, and records its harness's leaf at version 1.
+    ///
+    /// Kills: `magic` or a language's node that reads harness output with the
+    /// version 0 tree at version 1.
     #[test]
-    fn results_array_non_bmf_adapter_refuses_version_1() {
-        let results = std::fs::read_to_string("./tool_output/ruby/benchmark/five.txt")
-            .expect("Failed to read test file");
-        let error = new_at(&results, Adapter::Ruby, BmfVersion::V1);
-        assert_contract(&error, BmfVersion::V1, BmfVersion::V0);
-        AdapterResultsArray::new(
-            &[&results],
-            Adapter::Ruby,
-            Settings::new(None, BmfVersion::V0),
-        )
-        .expect("a non-BMF adapter parses at version 0");
-    }
-
-    /// A harness payload declared at version 1 is refused by the contract
-    /// through `magic` too, since the version 1 tree falls back to the version 0
-    /// tree for every harness it does not hold yet.
-    #[test]
-    fn results_array_magic_refuses_a_harness_payload_at_version_1() {
-        let results = std::fs::read_to_string("./tool_output/rust/bench/many.txt")
-            .expect("Failed to read test file");
-        let error = new_at(&results, Adapter::Magic, BmfVersion::V1);
-        assert_contract(&error, BmfVersion::V1, BmfVersion::V0);
+    fn results_array_harness_output_meets_either_version() {
+        for (suffix, adapter, leaf) in [
+            (
+                "rust/bench/many.txt",
+                Adapter::Magic,
+                Adapter::RustBenchText,
+            ),
+            (
+                "ruby/benchmark/five.txt",
+                Adapter::Ruby,
+                Adapter::RubyBenchmark,
+            ),
+        ] {
+            let results = std::fs::read_to_string(format!("./tool_output/{suffix}"))
+                .expect("Failed to read test file");
+            for (bmf_version, resolved_adapter) in
+                [(BmfVersion::V1, Some(leaf)), (BmfVersion::V0, None)]
+            {
+                let array = AdapterResultsArray::new(
+                    &[&results],
+                    adapter,
+                    Settings::new(None, bmf_version),
+                )
+                .unwrap_or_else(|e| panic!("{adapter} {suffix} at version {bmf_version}: {e}"));
+                assert_eq!(
+                    array.resolved_adapter(),
+                    resolved_adapter,
+                    "{adapter} {suffix} at version {bmf_version}"
+                );
+            }
+        }
     }
 
     /// The report records the first iteration's leaf, and counts every later
