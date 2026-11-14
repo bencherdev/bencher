@@ -241,13 +241,13 @@ mod test_results_array {
     /// so its output at version 1 breaks the contract.
     #[test]
     fn results_array_non_bmf_adapter_refuses_version_1() {
-        let results = std::fs::read_to_string("./tool_output/java/jmh/six.json")
+        let results = std::fs::read_to_string("./tool_output/js/benchmark/four.txt")
             .expect("Failed to read test file");
-        let error = new_at(&results, Adapter::JavaJmh, BmfVersion::V1);
+        let error = new_at(&results, Adapter::JsBenchmark, BmfVersion::V1);
         assert_contract(&error, BmfVersion::V1, BmfVersion::V0);
         AdapterResultsArray::new(
             &[&results],
-            Adapter::JavaJmh,
+            Adapter::JsBenchmark,
             Settings::new(None, BmfVersion::V0),
         )
         .expect("a non-BMF adapter parses at version 0");
@@ -426,7 +426,7 @@ mod test_results_array {
     /// The cap cuts results no leaf built, and counts the cut on their own iteration.
     #[test]
     fn results_array_cuts_results_built_directly() {
-        let metric = (1..=14u8)
+        let metric = (1..=30u8)
             .map(|number| format!("a{number:02}"))
             .chain(["value", "lower_value", "upper_value"].map(str::to_owned))
             .zip(1u8..)
@@ -458,7 +458,7 @@ mod test_results_array {
     }
 
     /// The cap keeps the three conventional names regardless of where they sort,
-    /// keeps the rest lexicographically up to sixteen, and counts what it dropped,
+    /// keeps the rest lexicographically up to 32, and counts what it dropped,
     /// whichever adapter reached the leaf.
     #[test]
     fn results_array_metric_cap() {
@@ -471,12 +471,12 @@ mod test_results_array {
         }
     }
 
-    /// Sixteen names, the most a measure keeps, all kept and none counted.
+    /// 32 names, the most a measure keeps, all kept and none counted.
     #[test]
-    fn results_array_cap_keeps_sixteen() {
+    fn results_array_cap_keeps_32() {
         let results = format!(
             r#"{{"tests::full": [{{"measures": {{"latency": {}}}}}]}}"#,
-            numbered(1..=13, &["value", "lower_value", "upper_value"]),
+            numbered(1..=29, &["value", "lower_value", "upper_value"]),
         );
         let full = only(&v1_array(&results, Adapter::JsonV1));
 
@@ -489,7 +489,7 @@ mod test_results_array {
     #[test]
     fn results_array_cap_cuts_every_measure() {
         let over = serde_json::from_str::<serde_json::Value>(&numbered(
-            1..=14,
+            1..=30,
             &["value", "lower_value", "upper_value"],
         ))
         .unwrap();
@@ -525,7 +525,7 @@ mod test_results_array {
     #[test]
     fn results_array_counts_skips_and_cuts_together() {
         let mut latency = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(
-            &numbered(1..=14, &["value", "lower_value", "upper_value"]),
+            &numbered(1..=30, &["value", "lower_value", "upper_value"]),
         )
         .unwrap();
         latency.insert(
@@ -553,7 +553,7 @@ mod test_results_array {
                 {{"measures": {{"latency": {}}}}}
             ]}}"#,
             numbered(1..=10, &[]),
-            numbered(11..=14, &["value", "lower_value", "upper_value"]),
+            numbered(11..=30, &["value", "lower_value", "upper_value"]),
         );
         let capped = only(&v1_array(&results, Adapter::JsonV1));
 
@@ -562,8 +562,8 @@ mod test_results_array {
         assert_eq!(capped.skipped.metrics, 1);
     }
 
-    /// A name written by two entries is one name, never a drop: seventeen metrics
-    /// across two entries are sixteen names and nothing is counted.
+    /// A name written by two entries is one name, never a drop: 33 metrics
+    /// across two entries are 32 names and nothing is counted.
     #[test]
     fn results_array_overwrite_is_not_a_drop() {
         let results = format!(
@@ -571,12 +571,12 @@ mod test_results_array {
                 {{"measures": {{"latency": {}}}}},
                 {{"measures": {{"latency": {{"value": 99, "lower_value": 98, "upper_value": 97}}}}}}
             ]}}"#,
-            numbered(1..=13, &["value"]),
+            numbered(1..=29, &["value"]),
         );
         let overwritten = only(&v1_array(&results, Adapter::JsonV1));
 
         let metrics = variant(&overwritten, "tests::overwritten", "{}");
-        assert_eq!(names(metrics, "latency").len(), 16);
+        assert_eq!(names(metrics, "latency").len(), 32);
         assert_eq!(named(metrics, "latency", "a01"), Some(1.0.into()));
         assert_eq!(named(metrics, "latency", "value"), Some(99.0.into()));
         assert_eq!(overwritten.skipped.metrics, 0);
@@ -625,17 +625,17 @@ mod test_results_array {
             .chain(
                 conventional
                     .iter()
-                    .zip(15u8..)
+                    .zip(31u8..)
                     .map(|(name, number)| ((*name).to_owned(), serde_json::json!(number))),
             )
             .collect::<serde_json::Map<_, _>>();
         serde_json::Value::Object(metrics).to_string()
     }
 
-    /// The sixteen names the cap keeps out of `a01` to `a14` and the conventional trio:
-    /// the trio, and the rest lexicographically, so `a14` is the one cut.
+    /// The 32 names the cap keeps out of `a01` to `a30` and the conventional trio:
+    /// the trio, and the rest lexicographically, so `a30` is the one cut.
     fn capped_names() -> Vec<MetricName> {
-        (1..=13u8)
+        (1..=29u8)
             .map(|number| format!("a{number:02}"))
             .chain(["lower_value", "upper_value", "value"].map(str::to_owned))
             .map(|name| name.parse().unwrap())

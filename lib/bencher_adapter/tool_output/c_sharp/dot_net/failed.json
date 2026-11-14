@@ -1,0 +1,45 @@
+{
+   "Title":"Samples.Diagnosed-20261024-015832",
+   "HostEnvironmentInfo":{
+      "BenchmarkDotNetCaption":"BenchmarkDotNet",
+      "BenchmarkDotNetVersion":"0.15.8",
+      "OsVersion":"Linux Ubuntu 24.04.5 LTS (Noble Numbat)",
+      "ProcessorName":"Unknown processor",
+      "PhysicalProcessorCount":1,
+      "PhysicalCoreCount":16,
+      "LogicalCoreCount":16,
+      "RuntimeVersion":".NET 8.0.32 (8.0.32, 8.0.3226.50405)",
+      "Architecture":"X64",
+      "HasAttachedDebugger":false,
+      "HasRyuJit":true,
+      "Configuration":"RELEASE",
+      "DotNetCliVersion":"8.0.132",
+      "ChronometerFrequency":{
+         "Hertz":1000000000
+      },
+      "HardwareTimerKind":"Unknown"
+   },
+   "Benchmarks":[
+      {
+         "DisplayInfo":"Diagnosed.Throw: ShortRun(IterationCount=3, LaunchCount=1, WarmupCount=3)",
+         "Namespace":"Samples",
+         "Type":"Diagnosed",
+         "Method":"Throw",
+         "MethodTitle":"Throw",
+         "Parameters":"",
+         "FullName":"Samples.Diagnosed.Throw",
+         "HardwareIntrinsics":"",
+         "Statistics":null,
+         "Memory":{
+            "Gen0Collections":0,
+            "Gen1Collections":0,
+            "Gen2Collections":0,
+            "TotalOperations":0,
+            "BytesAllocatedPerOperation":null
+         },
+         "Measurements":[
+            
+         ]
+      }
+   ]
+}

@@ -36,6 +36,27 @@ impl LeafResults {
         }
     }
 
+    /// A benchmark's variant the leaf has not built yet, or `None`, counted as skipped, if it has.
+    pub(crate) fn new_variant(
+        &mut self,
+        benchmark: BenchmarkName,
+        parameters: ParameterSet,
+    ) -> Option<Variant<'_>> {
+        let variants = self
+            .inner
+            .entry(BenchmarkNameId::new_name(benchmark))
+            .or_default();
+        if variants.contains_key(&parameters) {
+            self.skipped.variants += 1;
+            return None;
+        }
+        Some(Variant {
+            metrics: variants.entry(parameters).or_default(),
+            skipped: &mut self.skipped,
+            units: &mut self.units,
+        })
+    }
+
     pub(crate) fn skip_benchmark(&mut self) {
         self.skipped.benchmarks += 1;
     }
@@ -50,10 +71,11 @@ impl LeafResults {
         (!self.inner.is_empty()).then(|| self.into_results(adapter))
     }
 
-    /// [`Self::finish`], also when the input held benchmarks of this leaf's harness that it
-    /// could only skip, so that their count still reaches the report.
+    /// [`Self::finish`], also when the input held benchmarks or variants of this leaf's harness
+    /// that it could only skip, so that their count still reaches the report.
     pub(crate) fn finish_with_skips(self, adapter: Adapter) -> Option<AdapterResults> {
-        (!self.inner.is_empty() || self.skipped.benchmarks > 0).then(|| self.into_results(adapter))
+        (!self.inner.is_empty() || self.skipped.benchmarks > 0 || self.skipped.variants > 0)
+            .then(|| self.into_results(adapter))
     }
 
     fn into_results(self, adapter: Adapter) -> AdapterResults {

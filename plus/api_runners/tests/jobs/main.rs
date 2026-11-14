@@ -3042,8 +3042,8 @@ async fn reprocess_completed_job_stores_its_warnings_on_its_report() {
         insert_test_job_with_bmf_version(&server, report_id, project.uuid, spec_id, Some(1));
     set_job_status(&server, job_uuid, JobStatus::Completed);
 
-    // Eighteen metric names on one measure, two past the per measure cap of sixteen.
-    let names = (1..=18)
+    // 34 metric names on one measure, two past the per measure cap of 32.
+    let names = (1..=34)
         .map(|n| (format!("p{n}"), serde_json::json!(n)))
         .collect::<serde_json::Map<_, _>>();
     let results = serde_json::json!({ "bench": [{ "measures": { "latency": names } }] });

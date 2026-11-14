@@ -1,7 +1,4 @@
-use std::{
-    borrow::Cow,
-    collections::{BTreeMap, HashSet},
-};
+use std::collections::{BTreeMap, HashSet};
 
 use bencher_json::project::{
     measure::built_in::{
@@ -17,6 +14,7 @@ use crate::{
     Adaptable, Settings,
     adapters::{
         bmf_v1::{
+            finite::finite_json,
             leaf::{LeafResults, Variant},
             runs::insert_runs,
         },
@@ -113,52 +111,6 @@ fn insert_memory(variant: &mut Variant<'_>, field: &str, values: Vec<f64>) {
 }
 
 const ALLOCS_PER_ITER: &str = "allocs_per_iter";
-
-/// The input with each bare `NaN`, `Infinity`, and `-Infinity` outside a string, which Google
-/// Benchmark writes for a value that is not finite but JSON has no token for, as `null`.
-fn finite_json(input: &str) -> Cow<'_, str> {
-    let bytes = input.as_bytes();
-    let mut output = String::new();
-    let (mut copied, mut index) = (0, 0);
-    let (mut in_string, mut escaped) = (false, false);
-    while let Some(byte) = bytes.get(index) {
-        let token = (!in_string)
-            .then(|| {
-                [b"NaN".as_slice(), b"Infinity", b"-Infinity"]
-                    .into_iter()
-                    .find(|token| {
-                        bytes
-                            .get(index..)
-                            .is_some_and(|rest| rest.starts_with(token))
-                    })
-            })
-            .flatten();
-        if let Some(token) = token {
-            output.push_str(input.get(copied..index).unwrap_or_default());
-            output.push_str("null");
-            index += token.len();
-            copied = index;
-            continue;
-        }
-        if in_string {
-            if escaped {
-                escaped = false;
-            } else if *byte == b'\\' {
-                escaped = true;
-            } else if *byte == b'"' {
-                in_string = false;
-            }
-        } else if *byte == b'"' {
-            in_string = true;
-        }
-        index += 1;
-    }
-    if copied == 0 {
-        return Cow::Borrowed(input);
-    }
-    output.push_str(input.get(copied..).unwrap_or_default());
-    Cow::Owned(output)
-}
 
 /// The run name without its arguments and its `threads:` segment, which become parameters: a
 /// named argument by its name, a positional one as `@arg` and its index, and `@threads`, with

@@ -1,0 +1,81 @@
+[
+    {
+        "jmhVersion" : "1.37",
+        "benchmark" : "bench.Partial.run",
+        "mode" : "thrpt",
+        "threads" : 1,
+        "forks" : 1,
+        "jvm" : "/usr/lib/jvm/java-21-openjdk-amd64/bin/java",
+        "jvmArgs" : [
+        ],
+        "jdkVersion" : "21.0.12.1",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "21.0.12.1+1-1-24.04.4-Ubuntu",
+        "warmupIterations" : 0,
+        "warmupTime" : "10 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 3,
+        "measurementTime" : "100 ms",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 3.0330069579039097E9,
+            "scoreError" : 1.3764003468861393E10,
+            "scoreConfidence" : [
+                -1.0730996510957483E10,
+                1.6797010426765303E10
+            ],
+            "scorePercentiles" : {
+                "0.0" : 2.162331162380112E9,
+                "50.0" : 3.4430511418177223E9,
+                "90.0" : 3.4936385695138946E9,
+                "95.0" : 3.4936385695138946E9,
+                "99.0" : 3.4936385695138946E9,
+                "99.9" : 3.4936385695138946E9,
+                "99.99" : 3.4936385695138946E9,
+                "99.999" : 3.4936385695138946E9,
+                "99.9999" : 3.4936385695138946E9,
+                "100.0" : 3.4936385695138946E9
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    3.4936385695138946E9,
+                    2.162331162380112E9,
+                    3.4430511418177223E9
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+            "drift" : {
+                "score" : "NaN",
+                "scoreError" : "NaN",
+                "scoreConfidence" : [
+                    "NaN",
+                    "NaN"
+                ],
+                "scorePercentiles" : {
+                    "0.0" : "NaN",
+                    "50.0" : 1.0,
+                    "90.0" : 1.0,
+                    "95.0" : 1.0,
+                    "99.0" : 1.0,
+                    "99.9" : 1.0,
+                    "99.99" : 1.0,
+                    "99.999" : 1.0,
+                    "99.9999" : 1.0,
+                    "100.0" : 1.0
+                },
+                "scoreUnit" : "#",
+                "rawData" : [
+                    [
+                        1.0,
+                        "NaN",
+                        1.0
+                    ]
+                ]
+            }
+        }
+    }
+]
+
+

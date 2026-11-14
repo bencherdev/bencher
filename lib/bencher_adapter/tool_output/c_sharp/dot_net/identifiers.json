@@ -1,0 +1,141 @@
+{
+   "Title":"BenchmarkRun-joined-2026-10-25-04-29-39",
+   "HostEnvironmentInfo":{
+      "BenchmarkDotNetCaption":"BenchmarkDotNet",
+      "BenchmarkDotNetVersion":"0.15.8",
+      "OsVersion":"Linux Ubuntu 24.04.5 LTS (Noble Numbat)",
+      "ProcessorName":"Unknown processor",
+      "PhysicalProcessorCount":1,
+      "PhysicalCoreCount":16,
+      "LogicalCoreCount":16,
+      "RuntimeVersion":".NET 8.0.32 (8.0.32, 8.0.3226.50405)",
+      "Architecture":"X64",
+      "HasAttachedDebugger":false,
+      "HasRyuJit":true,
+      "Configuration":"RELEASE",
+      "DotNetCliVersion":"9.0.319",
+      "ChronometerFrequency":{
+         "Hertz":1000000000
+      },
+      "HardwareTimerKind":"Unknown"
+   },
+   "Benchmarks":[
+      {
+         "DisplayInfo":"Unicode.Run: Dry(IterationCount=1, LaunchCount=1, RunStrategy=ColdStart, UnrollFactor=1, WarmupCount=1) [A=1, a‿b=2, cé=3, Zed=4]",
+         "Namespace":"Probe",
+         "Type":"Unicode",
+         "Method":"Run",
+         "MethodTitle":"Run",
+         "Parameters":"A=1&a‿b=2&cé=3&Zed=4",
+         "FullName":"Probe.Unicode.Run(A: 1, a‿b: \"2\", cé: \"3\", Zed: 4)",
+         "HardwareIntrinsics":"AVX512 IFMA+VBMI,AVX512 F+BW+CD+DQ+VL,AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL,AvxVnni VectorSize=256",
+         "Statistics":{
+            "OriginalValues":[
+               103841
+            ],
+            "N":1,
+            "Min":103841,
+            "LowerFence":103841,
+            "Q1":103841,
+            "Median":103841,
+            "Mean":103841,
+            "Q3":103841,
+            "UpperFence":103841,
+            "Max":103841,
+            "InterquartileRange":0,
+            "LowerOutliers":[
+               
+            ],
+            "UpperOutliers":[
+               
+            ],
+            "AllOutliers":[
+               
+            ],
+            "StandardError":0,
+            "Variance":0,
+            "StandardDeviation":0,
+            "Skewness":"",
+            "Kurtosis":"",
+            "ConfidenceInterval":{
+               "N":1,
+               "Mean":103841,
+               "StandardError":0,
+               "Level":12,
+               "Margin":"",
+               "Lower":"",
+               "Upper":""
+            },
+            "Percentiles":{
+               "P0":103841,
+               "P25":103841,
+               "P50":103841,
+               "P67":103841,
+               "P80":103841,
+               "P85":103841,
+               "P90":103841,
+               "P95":103841,
+               "P100":103841
+            }
+         }
+      },{
+         "DisplayInfo":"Names.Run: Dry(IterationCount=1, LaunchCount=1, RunStrategy=ColdStart, UnrollFactor=1, WarmupCount=1) [S=a&1=2, step_size=1, _lead=2, Été=3, größe=5, n2=6]",
+         "Namespace":"Probe",
+         "Type":"Names",
+         "Method":"Run",
+         "MethodTitle":"Run",
+         "Parameters":"S=a&1=2&step_size=1&_lead=2&Été=3&größe=5&n2=6",
+         "FullName":"Probe.Names.Run(S: \"a&1=2\", step_size: 1, _lead: 2, Été: 3, größe: 5, n2: 6)",
+         "HardwareIntrinsics":"AVX512 IFMA+VBMI,AVX512 F+BW+CD+DQ+VL,AVX2+BMI1+BMI2+F16C+FMA+LZCNT+MOVBE,AVX,SSE3+SSSE3+SSE4.1+SSE4.2+POPCNT,X86Base+SSE+SSE2,AES+PCLMUL,AvxVnni VectorSize=256",
+         "Statistics":{
+            "OriginalValues":[
+               106384
+            ],
+            "N":1,
+            "Min":106384,
+            "LowerFence":106384,
+            "Q1":106384,
+            "Median":106384,
+            "Mean":106384,
+            "Q3":106384,
+            "UpperFence":106384,
+            "Max":106384,
+            "InterquartileRange":0,
+            "LowerOutliers":[
+               
+            ],
+            "UpperOutliers":[
+               
+            ],
+            "AllOutliers":[
+               
+            ],
+            "StandardError":0,
+            "Variance":0,
+            "StandardDeviation":0,
+            "Skewness":"",
+            "Kurtosis":"",
+            "ConfidenceInterval":{
+               "N":1,
+               "Mean":106384,
+               "StandardError":0,
+               "Level":12,
+               "Margin":"",
+               "Lower":"",
+               "Upper":""
+            },
+            "Percentiles":{
+               "P0":106384,
+               "P25":106384,
+               "P50":106384,
+               "P67":106384,
+               "P80":106384,
+               "P85":106384,
+               "P90":106384,
+               "P95":106384,
+               "P100":106384
+            }
+         }
+      }
+   ]
+}
