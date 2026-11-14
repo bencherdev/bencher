@@ -49,6 +49,7 @@ const CLI_ADAPTERS = new Set([
 	"python_asv",
 	"python_pytest",
 	"ruby_benchmark",
+	"ruby_benchmark_ips",
 	"rust_bench",
 	"rust_criterion",
 	"rust_divan",

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "dup",
+    "central_tendency": 48259682.347551174,
+    "ips": 48259682.347551174,
+    "error": 3626397,
+    "stddev": 3626397,
+    "microseconds": 312570.0640001297,
+    "iterations": 15084532,
+    "cycles": 3771133
+  },
+  {
+    "name": "dup",
+    "central_tendency": 15113461.731994694,
+    "ips": 15113461.731994694,
+    "error": 307095,
+    "stddev": 307095,
+    "microseconds": 324323.5789999962,
+    "iterations": 4901652,
+    "cycles": 1225413
+  }
+]

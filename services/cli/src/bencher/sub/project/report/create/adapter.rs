@@ -22,6 +22,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::PythonAsv => Self::PythonAsv,
             CliReportAdapter::PythonPytest => Self::PythonPytest,
             CliReportAdapter::RubyBenchmark => Self::RubyBenchmark,
+            CliReportAdapter::RubyBenchmarkIps => Self::RubyBenchmarkIps,
             CliReportAdapter::RustBench => Self::RustBench,
             CliReportAdapter::RustCriterion => Self::RustCriterion,
             CliReportAdapter::RustDivan => Self::RustDivan,

@@ -12,7 +12,7 @@ use crate::{
                 time::AdapterJsTimeV1, tinybench::AdapterJsTinybench, vitest::AdapterJsVitestV1,
             },
             python::{asv::AdapterPythonAsvV1, pytest::AdapterPythonPytestV1},
-            ruby::benchmark::AdapterRubyBenchmarkV1,
+            ruby::{benchmark::AdapterRubyBenchmarkV1, benchmark_ips::AdapterRubyBenchmarkIps},
             rust::{
                 bench::AdapterRustBenchV1, criterion::AdapterRustCriterionV1,
                 divan::AdapterRustDivan, gungraun::AdapterRustGungraunV1, iai::AdapterRustIaiV1,
@@ -47,6 +47,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterPythonAsvV1::parse(input, settings))
             .or_else(|| AdapterPythonPytestV1::parse(input, settings))
             .or_else(|| AdapterRubyBenchmarkV1::parse(input, settings))
+            .or_else(|| AdapterRubyBenchmarkIps::parse(input, settings))
             .or_else(|| AdapterRustBenchV1::parse(input, settings))
             .or_else(|| AdapterRustDivan::parse(input, settings))
             .or_else(|| AdapterRustCriterionV1::parse(input, settings))
@@ -70,7 +71,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 30] = [
+    const LEAVES: [Adapter; 31] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -91,6 +92,7 @@ mod test_magic_v1 {
         Adapter::PythonAsvText,
         Adapter::PythonPytest,
         Adapter::RubyBenchmark,
+        Adapter::RubyBenchmarkIps,
         Adapter::RustBenchJson,
         Adapter::RustBenchText,
         Adapter::RustDivan,
@@ -105,7 +107,7 @@ mod test_magic_v1 {
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 10] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 11] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -123,6 +125,8 @@ mod test_magic_v1 {
         ("json/report_latency.json", None),
         // Neither BMF version: it mixes the two.
         ("json/report_mixed_versions.json", None),
+        // benchmark-ips ran no benchmark.
+        ("ruby/benchmark_ips/empty.json", None),
         // libtest ran no benchmark.
         ("rust/bench/zero.txt", None),
         // libtest ran no benchmark, and gungraun's summary is of a schema no leaf reads.
@@ -250,6 +254,7 @@ mod test_magic_v1 {
             "js/tinybench" => return Some(Adapter::JsTinybench),
             "python/pytest" => return Some(Adapter::PythonPytest),
             "ruby/benchmark" => return Some(Adapter::RubyBenchmark),
+            "ruby/benchmark_ips" => return Some(Adapter::RubyBenchmarkIps),
             "rust/iai" => return Some(Adapter::RustIai),
             "rust/divan" => return Some(Adapter::RustDivan),
             "json" => return name.starts_with("report_v1_").then_some(Adapter::JsonV1),

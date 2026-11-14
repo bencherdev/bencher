@@ -102,7 +102,8 @@ pub(crate) fn convert_v0(
             AdapterRustCriterion::parse(input, settings)
         },
         // The version 0 tree reads no structured Rust, Catch2, or Go output, no Vitest 5 report,
-        // no asv results file, and no Divan, tinybench, Deno, or mitata output.
+        // no asv results file, no benchmark-ips export, and no Divan, tinybench, Deno, or mitata
+        // output.
         Adapter::RustBenchJson
         | Adapter::RustCriterionJson
         | Adapter::RustDivan
@@ -112,7 +113,8 @@ pub(crate) fn convert_v0(
         | Adapter::JsDeno
         | Adapter::JsMitata
         | Adapter::JsTinybench
-        | Adapter::PythonAsvJson => None,
+        | Adapter::PythonAsvJson
+        | Adapter::RubyBenchmarkIps => None,
         Adapter::RustIai => AdapterRustIai::parse(input, settings),
         Adapter::RustGungraun => AdapterRustGungraun::parse(input, settings),
         Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse(input, settings),

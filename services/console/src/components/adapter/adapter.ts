@@ -65,6 +65,7 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.PythonPytest:
 			return PYTHON_ICON;
 		case Adapter.RubyBenchmark:
+		case Adapter.RubyBenchmarkIps:
 			return RUBY_ICON;
 		case Adapter.ShellHyperfine:
 		case Adapter.ShellHyperfineV1:
@@ -130,6 +131,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} --file results.json "pytest --benchmark-json results.json benchmarks.py"`;
 		case Adapter.RubyBenchmark:
 			return `bencher run${host} "ruby benchmarks.rb"`;
+		case Adapter.RubyBenchmarkIps:
+			return `bencher run${host} --file results.json "ruby benchmarks.rb"`;
 		case Adapter.ShellHyperfine:
 		case Adapter.ShellHyperfineV1:
 		case Adapter.ShellHyperfineV2:

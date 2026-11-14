@@ -1,0 +1,22 @@
+[
+  {
+    "name": "without",
+    "central_tendency": 10312916.300229339,
+    "ips": 10312916.300229339,
+    "error": 683346,
+    "stddev": 683346,
+    "microseconds": 537260.2509996891,
+    "iterations": 5540720,
+    "cycles": 1108144
+  },
+  {
+    "name": "with",
+    "central_tendency": 9462207.997138573,
+    "ips": 9462207.997138573,
+    "error": 892692,
+    "stddev": 892692,
+    "microseconds": 555287.4130001068,
+    "iterations": 5254245,
+    "cycles": 1050849
+  }
+]

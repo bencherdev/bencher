@@ -348,6 +348,7 @@ const PYTHON_ASV_TEXT_INT: i32 = 812;
 const PYTHON_PYTEST_INT: i32 = 82;
 const RUBY_INT: i32 = 90;
 const RUBY_BENCHMARK_INT: i32 = 91;
+const RUBY_BENCHMARK_IPS_INT: i32 = 92;
 const SHELL_INT: i32 = 100;
 const SHELL_HYPERFINE_INT: i32 = 101;
 const SHELL_HYPERFINE_V1_INT: i32 = 102;
@@ -412,6 +413,7 @@ pub enum Adapter {
     PythonPytest = PYTHON_PYTEST_INT,
     Ruby = RUBY_INT,
     RubyBenchmark = RUBY_BENCHMARK_INT,
+    RubyBenchmarkIps = RUBY_BENCHMARK_IPS_INT,
     Shell = SHELL_INT,
     ShellHyperfine = SHELL_HYPERFINE_INT,
     ShellHyperfineV1 = SHELL_HYPERFINE_V1_INT,
@@ -474,6 +476,7 @@ impl Adapter {
             | Self::PythonAsvText
             | Self::PythonPytest
             | Self::RubyBenchmark
+            | Self::RubyBenchmarkIps
             | Self::ShellHyperfine
             | Self::ShellHyperfineV1
             | Self::ShellHyperfineV2
@@ -553,6 +556,7 @@ impl fmt::Display for Adapter {
             Self::PythonPytest => write!(f, "python_pytest"),
             Self::Ruby => write!(f, "ruby"),
             Self::RubyBenchmark => write!(f, "ruby_benchmark"),
+            Self::RubyBenchmarkIps => write!(f, "ruby_benchmark_ips"),
             Self::Shell => write!(f, "shell"),
             Self::ShellHyperfine => write!(f, "shell_hyperfine"),
             Self::ShellHyperfineV1 => write!(f, "shell_hyperfine_v1"),
@@ -572,11 +576,11 @@ mod adapter {
         JS_BENCHMARK_INT, JS_DENO_INT, JS_INT, JS_MITATA_INT, JS_TIME_INT, JS_TINYBENCH_INT,
         JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
         MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT, PYTHON_INT,
-        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_INT, RUST_BENCH_INT, RUST_BENCH_JSON_INT,
-        RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT,
-        RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT,
-        RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT,
-        SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT, RUST_BENCH_INT,
+        RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT,
+        RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
+        RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
+        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -640,6 +644,7 @@ mod adapter {
                 Self::PythonPytest => PYTHON_PYTEST_INT.to_sql(out),
                 Self::Ruby => RUBY_INT.to_sql(out),
                 Self::RubyBenchmark => RUBY_BENCHMARK_INT.to_sql(out),
+                Self::RubyBenchmarkIps => RUBY_BENCHMARK_IPS_INT.to_sql(out),
                 Self::Shell => SHELL_INT.to_sql(out),
                 Self::ShellHyperfine => SHELL_HYPERFINE_INT.to_sql(out),
                 Self::ShellHyperfineV1 => SHELL_HYPERFINE_V1_INT.to_sql(out),
@@ -702,6 +707,7 @@ mod adapter {
                 PYTHON_PYTEST_INT => Ok(Self::PythonPytest),
                 RUBY_INT => Ok(Self::Ruby),
                 RUBY_BENCHMARK_INT => Ok(Self::RubyBenchmark),
+                RUBY_BENCHMARK_IPS_INT => Ok(Self::RubyBenchmarkIps),
                 SHELL_INT => Ok(Self::Shell),
                 SHELL_HYPERFINE_INT => Ok(Self::ShellHyperfine),
                 SHELL_HYPERFINE_V1_INT => Ok(Self::ShellHyperfineV1),
@@ -1302,7 +1308,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 51] = [
+    const ADAPTERS: [Adapter; 52] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1348,6 +1354,7 @@ mod tests {
         Adapter::PythonPytest,
         Adapter::Ruby,
         Adapter::RubyBenchmark,
+        Adapter::RubyBenchmarkIps,
         Adapter::Shell,
         Adapter::ShellHyperfine,
         Adapter::ShellHyperfineV1,
@@ -1404,6 +1411,7 @@ mod tests {
             | Adapter::PythonPytest
             | Adapter::Ruby
             | Adapter::RubyBenchmark
+            | Adapter::RubyBenchmarkIps
             | Adapter::Shell
             | Adapter::ShellHyperfine
             | Adapter::ShellHyperfineV1

@@ -1,0 +1,52 @@
+[
+  {
+    "name": "addition",
+    "central_tendency": 52262003.66139742,
+    "ips": 52262003.66139742,
+    "error": 726873,
+    "stddev": 726873,
+    "microseconds": 5059939.334000826,
+    "iterations": 264442568,
+    "cycles": 5085434
+  },
+  {
+    "name": "addition2",
+    "central_tendency": 145552932.10052848,
+    "ips": 145552932.10052848,
+    "error": 9055758,
+    "stddev": 9055758,
+    "microseconds": 5033042.243999839,
+    "iterations": 732574056,
+    "cycles": 13822152
+  },
+  {
+    "name": "addition3",
+    "central_tendency": 142928367.15178922,
+    "ips": 142928367.15178922,
+    "error": 10228038,
+    "stddev": 10228038,
+    "microseconds": 5078913.0560001135,
+    "iterations": 725920750,
+    "cycles": 12515875
+  },
+  {
+    "name": "symbol_label",
+    "central_tendency": 51406516.85313687,
+    "ips": 51406516.85313687,
+    "error": 922510,
+    "stddev": 922510,
+    "microseconds": 5052206.721999526,
+    "iterations": 259716350,
+    "cycles": 5194327
+  },
+  {
+    "name": "addition-test-long-label",
+    "central_tendency": 50655311.14542284,
+    "ips": 50655311.14542284,
+    "error": 2906285,
+    "stddev": 2906285,
+    "microseconds": 5064986.339999676,
+    "iterations": 256568459,
+    "cycles": 5236091
+  }
+]
