@@ -253,12 +253,12 @@ async fn projects_create_duplicate_slug() {
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn projects_create_private_for_a_paid_org_past_its_daily_metrics_limit() {
-    use bencher_json::{JsonNewProject, PlanLevel, project::Visibility};
+    use bencher_json::{JsonNewProject, project::Visibility};
 
     let server = TestServer::new_with_creation_and_plus_limits(u32::MAX, u32::MAX, 0).await;
     let user = server.signup("Test User", "projprivpaid@example.com").await;
     let org = server.create_org(&user, "Private Paid Org").await;
-    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server.license_org(&user, &org).await;
 
     let body = JsonNewProject {
         name: "Private Paid Project"

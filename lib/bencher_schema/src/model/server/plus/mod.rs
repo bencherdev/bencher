@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 use bencher_json::system::server::SelfHostedStats;
 use bencher_json::{
     BENCHER_API_URL, BENCHER_API_VERSION, BooleanParam, DateTime, JsonServer, JsonServerStats,
-    PlanLevel, SelfHostedStartup, ServerUuid,
+    SelfHostedStartup, ServerUuid,
 };
 use bencher_license::Licensor;
 use chrono::{Duration, Utc};
@@ -22,7 +22,7 @@ use crate::{
     context::{Body, DbConnection, Message, Messenger, ServerStatsBody},
     error::{request_timeout_error, resource_conflict_err},
     macros::fn_get::fn_get,
-    model::{organization::plan::LicenseUsage, user::QueryUser},
+    model::{organization::license::any_valid_license, user::QueryUser},
     schema::{self, server as server_table},
 };
 
@@ -104,7 +104,7 @@ impl QueryServer {
                 }
             }
 
-            let mut violations = 0;
+            let mut grace = LicenseGrace::default();
             loop {
                 let now = Utc::now().naive_utc().time();
                 let sleep_time = match now.cmp(&offset) {
@@ -135,38 +135,36 @@ impl QueryServer {
                         "Sending stats is disabled, but running on Bencher Cloud"
                     );
                 } else {
-                    match LicenseUsage::get_for_server(
-                        &mut conn,
-                        &licensor,
-                        Some(PlanLevel::Enterprise),
-                    ) {
-                        Ok(license_usages) if license_usages.is_empty() => {
-                            violations += 1;
-                            // Be kind. Allow for a seven day grace period.
+                    let licensed = match any_valid_license(&mut conn, &licensor, DateTime::now()) {
+                        Ok(licensed) => licensed,
+                        Err(e) => {
+                            slog::error!(log, "Failed to check stats: {e}");
+                            continue;
+                        },
+                    };
+                    match grace.check(licensed) {
+                        OptOut::Licensed => {
+                            slog::debug!(log, "Sending stats is disabled");
+                            continue;
+                        },
+                        OptOut::Grace {
+                            violations,
+                            remaining,
+                        } => {
+                            warn_violation(&log, violations);
                             slog::warn!(
                                 log,
-                                "Sending stats is disabled, but there is no valid Bencher Plus license key! This is violation #{violations} of the Bencher License: https://bencher.dev/legal/license"
+                                "You have {remaining} days remaining in your Bencher License grace period. Please purchase a license key: https://bencher.dev/pricing"
                             );
-                            if let Some(remaining) = LICENSE_GRACE_PERIOD.checked_sub(violations) {
-                                slog::warn!(
-                                    log,
-                                    "You have {remaining} days remaining in your Bencher License grace period. Please purchase a license key: https://bencher.dev/pricing"
-                                );
-                                continue;
-                            }
+                            continue;
+                        },
+                        OptOut::Send { violations } => {
+                            warn_violation(&log, violations);
                             slog::warn!(
                                 log,
                                 "Sending stats at {}. Please purchase a license key: https://bencher.dev/pricing",
                                 Utc::now()
                             );
-                        },
-                        Ok(_) => {
-                            slog::debug!(log, "Sending stats is disabled");
-                            continue;
-                        },
-                        Err(e) => {
-                            slog::error!(log, "Failed to check stats: {e}");
-                            continue;
                         },
                     }
                 }
@@ -332,6 +330,54 @@ impl Default for InsertServer {
     }
 }
 
+/// What the daily stats loop does on a Self-Hosted server that has turned sending them off.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OptOut {
+    /// A valid license allows it: skip the stats, and the grace starts again from the beginning.
+    Licensed,
+    /// No valid license: count a violation, and skip the stats while days of grace remain.
+    Grace { violations: usize, remaining: usize },
+    /// No valid license and no grace left: count a violation, and send the stats.
+    Send { violations: usize },
+}
+
+/// The grace the daily stats loop gives a Self-Hosted server that has turned sending them off.
+#[derive(Debug, Default)]
+struct LicenseGrace {
+    /// The days without a valid license since the last day with one.
+    violations: usize,
+}
+
+impl LicenseGrace {
+    /// Check today's license: a valid one starts the grace again from the beginning, and
+    /// without one the day counts as a violation.
+    fn check(&mut self, licensed: bool) -> OptOut {
+        if licensed {
+            self.violations = 0;
+            return OptOut::Licensed;
+        }
+        self.violations = self.violations.saturating_add(1);
+        // Be kind. Allow for a seven day grace period.
+        if let Some(remaining) = LICENSE_GRACE_PERIOD.checked_sub(self.violations) {
+            OptOut::Grace {
+                violations: self.violations,
+                remaining,
+            }
+        } else {
+            OptOut::Send {
+                violations: self.violations,
+            }
+        }
+    }
+}
+
+fn warn_violation(log: &Logger, violations: usize) {
+    slog::warn!(
+        log,
+        "Sending stats is disabled, but there is no valid Bencher Plus license key! This is violation #{violations} of the Bencher License: https://bencher.dev/legal/license"
+    );
+}
+
 pub(super) fn configure_standalone_connection(
     conn: &mut DbConnection,
     busy_timeout: u32,
@@ -340,4 +386,40 @@ pub(super) fn configure_standalone_connection(
     conn.batch_execute("PRAGMA synchronous = NORMAL")?;
     conn.batch_execute("PRAGMA extended_result_codes = ON")?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use pretty_assertions::assert_eq;
+
+    use super::{LICENSE_GRACE_PERIOD, LicenseGrace, OptOut};
+
+    // Fails if a server without a valid license skips its stats for more or fewer days than the
+    // grace period, a valid license does not stop the count, or the grace does not start again
+    // from the beginning once a valid license appears and then lapses.
+    #[test]
+    fn the_stats_grace_starts_again_when_a_license_appears_and_lapses() {
+        assert_eq!(LICENSE_GRACE_PERIOD, 7);
+        let mut grace = LicenseGrace::default();
+        for (day, remaining) in (0..LICENSE_GRACE_PERIOD).rev().enumerate() {
+            assert_eq!(
+                grace.check(false),
+                OptOut::Grace {
+                    violations: day + 1,
+                    remaining,
+                }
+            );
+        }
+        assert_eq!(grace.check(false), OptOut::Send { violations: 8 });
+        assert_eq!(grace.check(false), OptOut::Send { violations: 9 });
+
+        assert_eq!(grace.check(true), OptOut::Licensed);
+        assert_eq!(
+            grace.check(false),
+            OptOut::Grace {
+                violations: 1,
+                remaining: LICENSE_GRACE_PERIOD - 1,
+            }
+        );
+    }
 }

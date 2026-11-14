@@ -8,7 +8,7 @@ pub use live::TaskLive;
 pub use plus::{
     email_list::TaskEmailList,
     index::{TaskIndex, TaskIndexDelete, TaskIndexDocs, TaskIndexUpdate, TaskSearchEngine},
-    license::{TaskBillingCycle, TaskLicense, TaskLicenseGenerate, TaskLicenseValidate},
+    license::{TaskLicense, TaskLicenseGenerate, TaskLicenseValidate},
     stats::TaskStats,
 };
 

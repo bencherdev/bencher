@@ -13,8 +13,8 @@ const usage = (overrides: Partial<JsonUsage>): JsonUsage => ({
 const plan = (status: PlanStatus) =>
 	({ status }) as unknown as NonNullable<JsonUsage["plan"]>;
 
-const license = (entitlements: number) =>
-	({ entitlements }) as unknown as NonNullable<JsonUsage["license"]>;
+const license = (series: number) =>
+	({ series }) as unknown as NonNullable<JsonUsage["license"]>;
 
 describe("allowsPrivate", () => {
 	// Kills a metered plan that never allows private, and one that still does
@@ -30,18 +30,20 @@ describe("allowsPrivate", () => {
 		expect(metered(PlanStatus.PastDue)).toBe(false);
 	});
 
-	// Kills a license that allows private past its entitlements, or not at all.
-	test("a self-hosted license allows private while its usage is under its entitlements", () => {
-		const licensed = (metrics: number) =>
+	// Kills a license that allows private only under its Benchmark Series, or not at all:
+	// the API accepts every report from a valid license and only warns over the count.
+	test("a valid self-hosted license allows private, whatever its count", () => {
+		const licensed = (active_series: number) =>
 			allowsPrivate(
 				usage({
 					kind: UsageKind.SelfHostedLicensed,
 					license: license(1000),
-					metrics,
+					active_series,
 				}),
 			);
 		expect(licensed(999)).toBe(true);
-		expect(licensed(1000)).toBe(false);
+		expect(licensed(1000)).toBe(true);
+		expect(licensed(5000)).toBe(true);
 	});
 
 	// Kills a free organization offered private, and a Bencher Cloud license

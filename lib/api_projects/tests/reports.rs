@@ -9,13 +9,15 @@
 //! Integration tests for project report endpoints.
 
 #[cfg(feature = "plus")]
-use bencher_api_tests::helpers::{plan_project, post_metrics};
+use bencher_api_tests::helpers::{expired_license_project, plan_project, post_metrics};
 use bencher_api_tests::{
     TestServer,
     helpers::{
         base_timestamp, create_empty_variant, create_test_report, get_empty_variant, get_project_id,
     },
 };
+#[cfg(feature = "plus")]
+use bencher_json::BranchName;
 use bencher_json::{
     BenchmarkName, BenchmarkUuid, BoundaryUuid, HeadUuid, JsonProjectKeyCreated, JsonReport,
     JsonReports, MAX_PARAMETER_KEYS, MeasureUuid, MetricName, MetricUuid, ModelUuid, ParameterSet,
@@ -24,8 +26,6 @@ use bencher_json::{
         JsonReportIterationCounts, JsonReportWarning, ReportWarningAction, ReportWarningResource,
     },
 };
-#[cfg(feature = "plus")]
-use bencher_json::{BranchName, PlanLevel};
 use bencher_schema::{
     context::DbConnection,
     model::project::report::{ReportId, upsert_metric_count},
@@ -871,7 +871,7 @@ async fn reports_ingest_empty_variants() {
 async fn reports_post_refuses_a_paid_org_past_its_daily_metrics_limit() {
     let server = TestServer::new_with_creation_and_plus_limits(u32::MAX, u32::MAX, 4).await;
     let branch: BranchName = "main".parse().expect("Invalid branch name");
-    let (user, project) = plan_project(&server, "paid", Some(PlanLevel::Enterprise)).await;
+    let (user, project) = plan_project(&server, "paid", true).await;
 
     let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
@@ -890,29 +890,29 @@ async fn reports_post_admits_a_paid_org_past_the_claimed_limit() {
     let server = TestServer::new_with_creation_and_plus_limits(4, 4, 8).await;
     let branch: BranchName = "main".parse().expect("Invalid branch name");
 
-    let (user, project) = plan_project(&server, "free", None).await;
+    let (user, project) = plan_project(&server, "free", false).await;
     let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
     assert_eq!(status, StatusCode::TOO_MANY_REQUESTS, "{body}");
     assert!(body.contains("pricing"), "{body}");
 
-    let (user, project) = plan_project(&server, "paid", Some(PlanLevel::Enterprise)).await;
+    let (user, project) = plan_project(&server, "paid", true).await;
     let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let (status, body) = post_metrics(&server, &user, &project, &branch, 1).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
 }
 
-// POST /v0/projects/{project}/reports - an organization licensed at the Free level is
-// not paid, so it is held to the claimed limit and not the daily metrics limit of a paid
+// POST /v0/projects/{project}/reports - an organization whose license has expired is not
+// paid, so it is held to the claimed limit and not the daily metrics limit of a paid
 // organization
 #[cfg(feature = "plus")]
 #[tokio::test]
-async fn reports_post_holds_a_free_license_to_the_claimed_limit() {
+async fn reports_post_holds_an_expired_license_to_the_claimed_limit() {
     let server = TestServer::new_with_creation_and_plus_limits(4, 4, 0).await;
     let branch: BranchName = "main".parse().expect("Invalid branch name");
-    let (user, project) = plan_project(&server, "free-license", Some(PlanLevel::Free)).await;
+    let (user, project) = expired_license_project(&server, "expired-license").await;
 
     let (status, body) = post_metrics(&server, &user, &project, &branch, 4).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
@@ -996,18 +996,30 @@ async fn reports_post_warns_of_metric_names_past_the_cap() {
     );
 }
 
+// POST /v0/projects/{project}/reports - a report over its organization's license is accepted
+// with both its skip warnings and its license warning, and only the skip warnings are kept
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn reports_post_over_the_license_keeps_its_warnings() {
-    use bencher_json::{Entitlements, PlanLevel, project::Visibility};
+    use bencher_api_tests::license::{DAY, after, sign_license};
+    use bencher_json::{
+        Entitlements,
+        organization::plan::{JsonLicenseOver, JsonReportLicense},
+        project::Visibility,
+    };
 
     let server = TestServer::new().await;
     let user = server
         .signup("Test User", "reportlicensewarn@example.com")
         .await;
     let org = server.create_org(&user, "Report License Warn Org").await;
+    let now = server.now();
     server
-        .license_org_with_entitlements(&user, &org, PlanLevel::Enterprise, Entitlements::MIN)
+        .license_org_with(
+            &user,
+            &org,
+            &sign_license(org.uuid, 1, now, after(now, 365 * DAY)),
+        )
         .await;
     let project = server
         .create_project(&user, &org, "Report License Warn Project")
@@ -1018,14 +1030,30 @@ async fn reports_post_over_the_license_keeps_its_warnings() {
         .expect("Failed to make the project private");
     let project_slug: &str = project.slug.as_ref();
 
-    // Two measured values pass the license of one, and two names pass the cap of eight.
+    // Two measures are two Benchmark Series, past the license of one, and two names pass the
+    // cap of eight.
     let mut latency = (1..=9)
         .map(|n| (format!("p{n}"), serde_json::json!(n)))
         .collect::<serde_json::Map<_, _>>();
     latency.insert("value".to_owned(), serde_json::json!(1.0));
     let measures = serde_json::json!({ "latency": latency, "throughput": { "value": 1.0 } });
     let (status, body) = try_post_v1_report(&server, &user.token, project_slug, measures).await;
-    assert_eq!(status, StatusCode::PAYMENT_REQUIRED, "{body}");
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let created: JsonReport = serde_json::from_str(&body).expect("Failed to parse the report");
+    assert_eq!(
+        created.warnings,
+        Some(vec![skipped(ReportWarningResource::Metric, 2)])
+    );
+    assert_eq!(
+        created.license,
+        Some(JsonReportLicense {
+            over: Some(JsonLicenseOver {
+                active_series: 2,
+                series: Entitlements::MIN,
+            }),
+            grace: None,
+        })
+    );
 
     let report_uuid: ReportUuid = schema::report::table
         .select(schema::report::uuid)
@@ -1049,6 +1077,7 @@ async fn reports_post_over_the_license_keeps_its_warnings() {
         report.warnings,
         Some(vec![skipped(ReportWarningResource::Metric, 2)])
     );
+    assert_eq!(report.license, None);
 }
 
 // POST /v0/projects/{project}/reports - a report that skipped nothing has no `warnings` key, so

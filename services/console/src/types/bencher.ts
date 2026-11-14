@@ -1754,19 +1754,49 @@ export interface JsonGitHubRepositories {
 	repositories: JsonGitHubRepository[];
 }
 
-export enum PlanLevel {
-	Free = "free",
-	Pro = "pro",
-	Enterprise = "enterprise",
+/** A Bencher Plus Enterprise license for a Self-Hosted organization. */
+export interface JsonLicense {
+	/** The license key. */
+	key: Jwt;
+	/** The Self-Hosted organization the license is for. */
+	organization: Uuid;
+	/** The Benchmark Series the license covers. */
+	series: Entitlements;
+	/** When the license was issued. */
+	issued_at: string;
+	/** The end of the license's paid term. */
+	term_end: string;
+	/** When the license expires, at the end of its grace after the term ends. */
+	expiration: string;
 }
 
-export interface JsonLicense {
-	key: Jwt;
-	organization: Uuid;
-	level: PlanLevel;
-	entitlements: Entitlements;
-	issued_at: string;
+/** A license past the end of its paid term, in its grace. */
+export interface JsonLicenseGrace {
+	/** The end of the license's paid term. */
+	term_end: string;
+	/** When the license expires. */
 	expiration: string;
+}
+
+/** An organization with more active Benchmark Series than its license covers. */
+export interface JsonLicenseOver {
+	/** The organization's Benchmark Series active in the last 30 days. */
+	active_series: number;
+	/** The Benchmark Series the license covers. */
+	series: Entitlements;
+}
+
+/**
+ * The highest count of active series a Self-Hosted server has seen in one paid term of a
+ * license.
+ */
+export interface JsonLicensePeak {
+	/** The end of the paid term. */
+	term_end: string;
+	/** The organization's Benchmark Series active in the 30 days before the count. */
+	active_series: number;
+	/** When the server counted them. */
+	seen: string;
 }
 
 export enum LinkedRepositoryStatus {
@@ -1798,6 +1828,12 @@ export interface JsonLinkedRepository {
 	/** The user who linked it. */
 	user: JsonPubUser;
 	linked: string;
+}
+
+export enum PlanLevel {
+	Free = "free",
+	Pro = "pro",
+	Enterprise = "enterprise",
 }
 
 export interface JsonLogin {
@@ -2576,6 +2612,17 @@ export interface JsonReportWarning {
 	count: number;
 }
 
+/**
+ * What the organization of a new report needs to know about its license, on the response
+ * that created the report. Absent when there is nothing to know.
+ */
+export interface JsonReportLicense {
+	/** Present when the organization's active Benchmark Series are above the license's. */
+	over?: JsonLicenseOver;
+	/** Present when the license is past the end of its paid term, in its grace. */
+	grace?: JsonLicenseGrace;
+}
+
 export interface JsonReport {
 	uuid: Uuid;
 	user?: JsonPubUser;
@@ -2605,6 +2652,11 @@ export interface JsonReport {
 	 */
 	warnings?: JsonReportWarning[];
 	job?: Uuid;
+	/**
+	 * What the organization needs to know about its Self-Hosted license,
+	 * only on the response that created the report, and omitted when there is nothing to know.
+	 */
+	license?: JsonReportLicense;
 	created: string;
 }
 
@@ -2779,15 +2831,28 @@ export interface JsonUsage {
 	/** The end time of the usage. */
 	end_time: string;
 	/**
-	 * The metrics usage amount. Not populated for metered plans, which bill on
-	 * active series (see `active_series`) rather than metrics.
+	 * The metrics usage amount. Populated for the Free kinds only: every plan and license
+	 * counts active series (see `active_series`) rather than metrics.
 	 */
 	metrics?: number;
 	/**
 	 * The active series usage amount. Populated for metered plans, whose bill is
-	 * based on monthly-active series (distinct testbed x benchmark x measure).
+	 * based on monthly-active series (distinct testbed x benchmark x variant x measure)
+	 * in the billing period, and for a Self-Hosted license, which counts them over the
+	 * last 30 days.
 	 */
 	active_series?: number;
+	/**
+	 * The highest count of active series the server has seen in the term of a valid
+	 * Self-Hosted license. `None` until a report in the term has been counted.
+	 */
+	peak?: JsonLicensePeak;
+	/**
+	 * The peak of the latest term before the term of a valid Self-Hosted license,
+	 * or of the latest term when the organization holds no valid license.
+	 * `None` when the server has counted no such term.
+	 */
+	previous_peak?: JsonLicensePeak;
 	/** The runner minutes usage amount. */
 	runner_minutes?: number;
 }

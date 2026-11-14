@@ -183,14 +183,10 @@ async fn organizations_update() {
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn organizations_update_invalid_license() {
-    use bencher_json::PlanLevel;
-
     let server = TestServer::new().await;
     let user = server.signup("Test User", "orglicense@example.com").await;
     let licensed = server.create_org(&user, "Licensed Org").await;
-    server
-        .license_org(&user, &licensed, PlanLevel::Enterprise)
-        .await;
+    server.license_org(&user, &licensed).await;
     let other_license = view_org(&server, &user, licensed.uuid)
         .await
         .license
@@ -205,6 +201,61 @@ async fn organizations_update_invalid_license() {
         patch_license(&server, &user, org.uuid, serde_json::json!(other_license)).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
     assert!(view_org(&server, &user, org.uuid).await.license.is_none());
+}
+
+// PATCH /v0/organizations/{organization} - a license is saved only when it is valid now
+// for this organization: an expired one, one signed by another key, and one in the earlier
+// per-metric format are refused and leave the saved license as it was.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn organizations_update_refuses_an_invalid_license() {
+    use bencher_api_tests::license::{
+        DAY, TEST_LICENSE_SERIES, after, sign_earlier_license, sign_foreign_license, sign_license,
+    };
+
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "orgbadlicense@example.com")
+        .await;
+    let org = server.create_org(&user, "Bad License Org").await;
+    let now = server.now();
+    // In its grace, a license is still valid.
+    let in_grace = sign_license(
+        org.uuid,
+        TEST_LICENSE_SERIES,
+        after(now, -40 * DAY),
+        after(now, -DAY),
+    );
+    let (status, body) = server.patch_license(&user, &org, &in_grace).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let valid = server.sign_license(&org);
+    server.license_org_with(&user, &org, &valid).await;
+    assert_eq!(
+        view_org(&server, &user, org.uuid).await.license,
+        Some(valid.clone())
+    );
+
+    let expired = sign_license(
+        org.uuid,
+        TEST_LICENSE_SERIES,
+        after(now, -400 * DAY),
+        after(now, -31 * DAY),
+    );
+    let foreign = sign_foreign_license(org.uuid, TEST_LICENSE_SERIES, now, after(now, 365 * DAY));
+    let earlier = sign_earlier_license(org.uuid, now, after(now, 365 * DAY));
+    for (license, what) in [
+        (expired, "an expired license"),
+        (foreign, "a license signed by another key"),
+        (earlier, "a license in the earlier format"),
+    ] {
+        let (status, body) = server.patch_license(&user, &org, &license).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{what}: {body}");
+        assert_eq!(
+            view_org(&server, &user, org.uuid).await.license,
+            Some(valid.clone()),
+            "{what}"
+        );
+    }
 }
 
 // DELETE /v0/organizations/{organization} - delete org

@@ -119,6 +119,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    license_peak (organization_id, term_end) {
+        organization_id -> Integer,
+        term_end -> BigInt,
+        active_series -> Integer,
+        seen -> BigInt,
+    }
+}
+
+diesel::table! {
     linked_repository (project_id) {
         project_id -> Integer,
         installation_id -> BigInt,
@@ -598,6 +607,7 @@ diesel::joinable!(job -> runner (runner_id));
 diesel::joinable!(job -> spec (spec_id));
 diesel::joinable!(job_callback -> job (job_id));
 diesel::joinable!(job_duration_by_report -> report (report_id));
+diesel::joinable!(license_peak -> organization (organization_id));
 diesel::joinable!(linked_repository -> project (project_id));
 diesel::joinable!(linked_repository -> user (user_id));
 diesel::joinable!(measure -> project (project_id));
@@ -668,6 +678,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     job,
     job_callback,
     job_duration_by_report,
+    license_peak,
     linked_repository,
     measure,
     metric,
