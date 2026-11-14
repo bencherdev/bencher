@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "runtime": "Deno/2.9.8 x86_64-unknown-linux-gnu",
+  "cpu": "Example CPU",
+  "benches": [
+    {
+      "origin": "file:///srv/bench/deno/quiet/quiet_bench.ts",
+      "group": null,
+      "name": "noop",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 17211,
+            "min": 2.4137,
+            "max": 11.748,
+            "avg": 2.906608982627418,
+            "p75": 2.9055,
+            "p99": 4.2105,
+            "p995": 4.4389,
+            "p999": 5.5065,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/quiet/quiet_bench.ts",
+      "group": null,
+      "name": "sleep 2ms",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 171,
+            "min": 2106895.0,
+            "max": 3222709.0,
+            "avg": 3109566.0,
+            "p75": 3128372.0,
+            "p99": 3193454.0,
+            "p995": 3222709.0,
+            "p999": 3222709.0,
+            "highPrecision": true,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/quiet/quiet_bench.ts",
+      "group": "parsing",
+      "name": "url parse",
+      "baseline": true,
+      "results": [
+        {
+          "ok": {
+            "n": 807,
+            "min": 56.1913,
+            "max": 133.3628,
+            "avg": 62.752823667905815,
+            "p75": 63.8981,
+            "p99": 108.115,
+            "p995": 120.3538,
+            "p999": 133.3628,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/quiet/quiet_bench.ts",
+      "group": "parsing",
+      "name": "json parse",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 520,
+            "min": 93.0177,
+            "max": 165.1665,
+            "avg": 97.98293480769226,
+            "p75": 97.9805,
+            "p99": 153.0651,
+            "p995": 160.4143,
+            "p999": 165.1665,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    }
+  ]
+}

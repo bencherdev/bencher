@@ -125,7 +125,7 @@ struct Task {
 }
 
 /// The length of the longest directory, with its trailing `/`, that holds every path.
-fn common_directory<'a>(mut paths: impl Iterator<Item = &'a str>) -> usize {
+pub(super) fn common_directory<'a>(mut paths: impl Iterator<Item = &'a str>) -> usize {
     let Some(first) = paths.next() else {
         return 0;
     };

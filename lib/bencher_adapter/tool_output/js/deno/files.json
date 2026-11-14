@@ -1,0 +1,426 @@
+{
+  "version": 1,
+  "runtime": "Deno/2.9.8 x86_64-unknown-linux-gnu",
+  "cpu": "Example CPU",
+  "benches": [
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "noop",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 15865,
+            "min": 2.599,
+            "max": 12.376,
+            "avg": 3.153751049479921,
+            "p75": 3.1608,
+            "p99": 4.3637,
+            "p995": 4.7523,
+            "p999": 6.2737,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "sort 1000",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 5377,
+            "min": 87244.0,
+            "max": 3877385.0,
+            "avg": 93186.0,
+            "p75": 92121.0,
+            "p99": 133725.0,
+            "p995": 148929.0,
+            "p999": 222772.0,
+            "highPrecision": true,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "sleep 20ms",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 34,
+            "min": 20243958.0,
+            "max": 21486314.0,
+            "avg": 21190594.0,
+            "p75": 21302444.0,
+            "p99": 21486314.0,
+            "p995": 21486314.0,
+            "p999": 21486314.0,
+            "highPrecision": true,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "throws",
+      "baseline": false,
+      "results": [
+        {
+          "failed": {
+            "name": "Error",
+            "message": "boom",
+            "stack": "Error: boom\n    at file:///srv/bench/deno/bench/main_bench.ts:13:9\n    at benchMeasure (ext:cli/40_bench.js:260:7)\n    at outerWrapped (ext:cli/40_bench.js:479:27)",
+            "cause": null,
+            "exceptionMessage": "Uncaught Error: boom",
+            "frames": [
+              {
+                "typeName": null,
+                "functionName": null,
+                "methodName": null,
+                "fileName": "file:///srv/bench/deno/bench/main_bench.ts",
+                "lineNumber": 13,
+                "columnNumber": 9,
+                "evalOrigin": null,
+                "isToplevel": true,
+                "isEval": false,
+                "isNative": false,
+                "isConstructor": false,
+                "isAsync": false,
+                "isPromiseAll": false,
+                "isWasm": false,
+                "promiseIndex": null
+              },
+              {
+                "typeName": null,
+                "functionName": "benchMeasure",
+                "methodName": null,
+                "fileName": "ext:cli/40_bench.js",
+                "lineNumber": 260,
+                "columnNumber": 7,
+                "evalOrigin": null,
+                "isToplevel": true,
+                "isEval": false,
+                "isNative": false,
+                "isConstructor": false,
+                "isAsync": false,
+                "isPromiseAll": false,
+                "isWasm": false,
+                "promiseIndex": null
+              },
+              {
+                "typeName": null,
+                "functionName": "outerWrapped",
+                "methodName": null,
+                "fileName": "ext:cli/40_bench.js",
+                "lineNumber": 479,
+                "columnNumber": 27,
+                "evalOrigin": null,
+                "isToplevel": true,
+                "isEval": false,
+                "isNative": false,
+                "isConstructor": false,
+                "isAsync": false,
+                "isPromiseAll": false,
+                "isWasm": false,
+                "promiseIndex": null
+              }
+            ],
+            "sourceLine": "  throw new Error(\"boom\");",
+            "sourceLineFrameIndex": 0,
+            "aggregated": null,
+            "additionalProperties": [],
+            "stackIsCustom": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "explicit timers",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 493,
+            "min": 711303.0,
+            "max": 1383375.0,
+            "avg": 805980.0,
+            "p75": 803446.0,
+            "p99": 1222028.0,
+            "p995": 1295720.0,
+            "p999": 1383375.0,
+            "highPrecision": true,
+            "usedExplicitTimers": true
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "explicit timers fast",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 7647,
+            "min": 5.3722,
+            "max": 19.8796,
+            "avg": 6.5474122400941575,
+            "p75": 6.7885,
+            "p99": 10.4491,
+            "p995": 11.0871,
+            "p999": 15.0451,
+            "highPrecision": false,
+            "usedExplicitTimers": true
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "n and warmup",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 25,
+            "min": 66.9648,
+            "max": 140.7262,
+            "avg": 78.39915599999999,
+            "p75": 74.0197,
+            "p99": 140.7262,
+            "p995": 140.7262,
+            "p999": 140.7262,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "fill size=10",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 1578,
+            "min": 28.8012,
+            "max": 65.2642,
+            "avg": 31.904632192648968,
+            "p75": 32.1524,
+            "p99": 49.8346,
+            "p995": 56.664,
+            "p999": 64.8085,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "fill size=100",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 696,
+            "min": 64.7936,
+            "max": 144.0101,
+            "avg": 72.82440948275861,
+            "p75": 73.1124,
+            "p99": 116.8485,
+            "p995": 118.4429,
+            "p999": 144.0101,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "fill size=1000",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 104,
+            "min": 495.1085,
+            "max": 694.7573,
+            "avg": 546.3222749999999,
+            "p75": 561.4604,
+            "p99": 692.0841,
+            "p995": 694.7573,
+            "p999": 694.7573,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "duplicate",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 18613,
+            "min": 2.1903,
+            "max": 31.317,
+            "avg": 2.6878658088433665,
+            "p75": 2.7052,
+            "p99": 3.4733,
+            "p995": 3.8209,
+            "p999": 5.8981,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        },
+        {
+          "ok": {
+            "n": 1755,
+            "min": 27.8417,
+            "max": 51.8516,
+            "avg": 28.673019316239362,
+            "p75": 28.683,
+            "p99": 34.7222,
+            "p995": 40.7417,
+            "p999": 45.2847,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": null,
+      "name": "logs",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 16707,
+            "min": 2.4758,
+            "max": 46.5305,
+            "avg": 2.9945966540971423,
+            "p75": 2.9806,
+            "p99": 3.4353,
+            "p995": 3.5614,
+            "p999": 4.0471,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": "parsing",
+      "name": "url parse",
+      "baseline": true,
+      "results": [
+        {
+          "ok": {
+            "n": 856,
+            "min": 56.6249,
+            "max": 68.3301,
+            "avg": 59.17476915887856,
+            "p75": 59.825,
+            "p99": 63.3063,
+            "p995": 65.844,
+            "p999": 68.3301,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/main_bench.ts",
+      "group": "parsing",
+      "name": "json parse",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 494,
+            "min": 94.8386,
+            "max": 194.8593,
+            "avg": 103.36183360323889,
+            "p75": 104.2061,
+            "p99": 154.5645,
+            "p995": 168.0211,
+            "p999": 194.8593,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/sub/deep_bench.ts",
+      "group": null,
+      "name": "noop",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 18213,
+            "min": 2.2624,
+            "max": 35.78,
+            "avg": 2.74688201284802,
+            "p75": 2.7153,
+            "p99": 3.9571,
+            "p995": 5.8009,
+            "p999": 6.5351,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///srv/bench/deno/bench/sub/deep_bench.ts",
+      "group": "parsing",
+      "name": "url parse",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 922,
+            "min": 49.8246,
+            "max": 239.0512,
+            "avg": 55.44802386117146,
+            "p75": 54.6709,
+            "p99": 108.708,
+            "p995": 116.514,
+            "p999": 239.0512,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    }
+  ]
+}

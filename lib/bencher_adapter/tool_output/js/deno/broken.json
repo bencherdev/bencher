@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "runtime": "Deno/2.9.8 x86_64-unknown-linux-gnu",
+  "cpu": "Example CPU",
+  "benches": []
+}

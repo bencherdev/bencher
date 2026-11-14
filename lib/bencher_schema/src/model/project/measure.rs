@@ -276,6 +276,13 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::divan::MaxAllocated::from_str(measure_str))
         .or_else(|| built_in::jmh::SampleTime::from_str(measure_str))
         .or_else(|| built_in::jmh::SingleShotTime::from_str(measure_str))
+        .or_else(|| built_in::mitata::Heap::from_str(measure_str))
+        .or_else(|| built_in::mitata::GcTime::from_str(measure_str))
+        .or_else(|| built_in::mitata::Branches::from_str(measure_str))
+        .or_else(|| built_in::mitata::StallCycles::from_str(measure_str))
+        .or_else(|| built_in::mitata::LoadsAndStores::from_str(measure_str))
+        .or_else(|| built_in::mitata::L1LoadMisses::from_str(measure_str))
+        .or_else(|| built_in::mitata::L1StoreMisses::from_str(measure_str))
         .or_else(|| built_in::json::BuildTime::from_str(measure_str))
         .or_else(|| built_in::json::FileSize::from_str(measure_str))
         .or_else(|| built_in::iai::Instructions::from_str(measure_str))
@@ -289,9 +296,13 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::noise::IoJitter::from_str(measure_str))
         .or_else(|| built_in::noise::CpuSteal::from_str(measure_str))
         .or_else(|| built_in::noise::NoiseScore::from_str(measure_str))
-        // Gungraun:
-        // callgrind/cachegrind
-        .or_else(|| built_in::gungraun::Instructions::from_str(measure_str))
+        .or_else(|| built_in_gungraun_measure(measure_str))
+}
+
+/// The built-in gungraun measure a measure name or slug names, if any.
+fn built_in_gungraun_measure(measure_str: &str) -> Option<JsonNewMeasure> {
+    // callgrind/cachegrind
+    built_in::gungraun::Instructions::from_str(measure_str)
         .or_else(|| built_in::gungraun::L1Hits::from_str(measure_str))
         .or_else(|| built_in::gungraun::L2Hits::from_str(measure_str))
         .or_else(|| built_in::gungraun::LLHits::from_str(measure_str))

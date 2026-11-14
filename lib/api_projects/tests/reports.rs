@@ -2743,7 +2743,71 @@ async fn reports_post_creates_the_hyperfine_and_asv_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the mitata leaf creates its new built-in measures in their
+// units
+//
+// Kills: `heap`, `gc-time`, or a counter's measure missing from the server's built-ins, which
+// creates it in the generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_mitata_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "mitata").await;
+    let mut counters: serde_json::Value =
+        serde_json::from_str(MITATA_COUNTERS).expect("Failed to parse the counters");
+    let event = serde_json::json!({ "min": 1.0, "max": 9.0, "avg": 5.0 });
+    counters["benchmarks"][0]["runs"][0]["stats"]["counters"] = serde_json::json!({
+        "l1": { "miss_loads": event, "miss_stores": event },
+        "cycles": { "min": 1.0, "max": 9.0, "avg": 5.0, "stalls": event },
+        "branches": { "min": 1.0, "max": 9.0, "avg": 5.0, "mispredicted": event },
+        "instructions": { "min": 1.0, "max": 9.0, "avg": 5.0, "loads_and_stores": event },
+    });
+    let counters = counters.to_string();
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report("js_mitata", &[MITATA_GC, &counters], Some(1)),
+    )
+    .await;
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any([
+            "branches",
+            "gc-time",
+            "heap",
+            "l1-load-misses",
+            "l1-store-misses",
+            "loads-and-stores",
+            "stall-cycles",
+        ]))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        [
+            ("branches", "Branches", "branches"),
+            ("gc-time", "GC Time", "nanoseconds (ns)"),
+            ("heap", "Heap", "bytes (B)"),
+            ("l1-load-misses", "L1 Load Misses", "misses"),
+            ("l1-store-misses", "L1 Store Misses", "misses"),
+            ("loads-and-stores", "Loads and Stores", "instructions"),
+            ("stall-cycles", "Stall Cycles", "cycles"),
+        ]
+        .map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
 const JMH_MODES: &str = include_str!("../../bencher_adapter/tool_output/java/jmh/modes.json");
+const MITATA_GC: &str = include_str!("../../bencher_adapter/tool_output/js/mitata/default_gc.json");
+const MITATA_COUNTERS: &str =
+    include_str!("../../bencher_adapter/tool_output/js/mitata/counters.json");
 const HYPERFINE_COUNTERS: &str =
     include_str!("../../bencher_adapter/tool_output/shell/hyperfine/v2_counters.json");
 const ASV_PARAMS: &str = include_str!("../../bencher_adapter/tool_output/python/asv/params.txt");

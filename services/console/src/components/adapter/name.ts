@@ -48,6 +48,12 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.JsVitestV1:
 		case Adapter.JsVitestV5:
 			return "Vitest";
+		case Adapter.JsDeno:
+			return "Deno bench";
+		case Adapter.JsMitata:
+			return "mitata";
+		case Adapter.JsTinybench:
+			return "tinybench";
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:
@@ -104,6 +110,11 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} --file results.json "vitest bench --run --outputJson results.json"`;
 		case Adapter.JsVitestV5:
 			return `bencher run${host} --file results.json "vitest bench --run --reporter=json --outputFile results.json"`;
+		case Adapter.JsDeno:
+			return `bencher run${host} "deno bench --json"`;
+		case Adapter.JsMitata:
+		case Adapter.JsTinybench:
+			return `bencher run${host} "node bench.mjs"`;
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:

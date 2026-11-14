@@ -14,7 +14,10 @@ use crate::{
             java::jmh::AdapterJavaJmhV1,
             js::{
                 benchmark::AdapterJsBenchmarkV1,
+                deno::AdapterJsDeno,
+                mitata::AdapterJsMitata,
                 time::AdapterJsTimeV1,
+                tinybench::AdapterJsTinybench,
                 vitest::{AdapterJsVitestOutputJson, AdapterJsVitestReporter, AdapterJsVitestV1},
             },
             python::{
@@ -103,6 +106,9 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::JsVitest => AdapterJsVitestV1::parse(input, settings),
         Adapter::JsVitestV5 => AdapterJsVitestReporter::parse(input, settings),
         Adapter::JsVitestV1 => AdapterJsVitestOutputJson::parse(input, settings),
+        Adapter::JsDeno => AdapterJsDeno::parse(input, settings),
+        Adapter::JsMitata => AdapterJsMitata::parse(input, settings),
+        Adapter::JsTinybench => AdapterJsTinybench::parse(input, settings),
         Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarnessV1::parse(input, settings),
         Adapter::PythonAsv => AdapterPythonAsvV1::parse(input, settings),
         Adapter::PythonAsvJson => AdapterPythonAsvJson::parse(input, settings),
@@ -132,7 +138,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 48] = [
+    const ADAPTERS: [Adapter; 51] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -168,6 +174,9 @@ mod test_bmf_v1 {
         Adapter::JsVitest,
         Adapter::JsVitestV1,
         Adapter::JsVitestV5,
+        Adapter::JsDeno,
+        Adapter::JsMitata,
+        Adapter::JsTinybench,
         Adapter::Python,
         Adapter::PythonAsv,
         Adapter::PythonAsvJson,

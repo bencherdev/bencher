@@ -17,6 +17,7 @@ gungraun-runner.workspace = true
 gungraun-summary.workspace = true
 nom.workspace = true
 ordered-float.workspace = true
+percent-encoding.workspace = true
 quick-xml.workspace = true
 rust_decimal = { workspace = true, features = ["serde-with-float"] }
 serde.workspace = true
