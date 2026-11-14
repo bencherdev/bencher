@@ -62,6 +62,8 @@ const Editor = (props: {
 	readOnly?: boolean | undefined;
 	/** The project is on BMF version 0, whose variants have no parameters to filter by. */
 	versionZero?: boolean | undefined;
+	/** Where the reader moves the project to version 1, for one who can. */
+	upgrade?: string | undefined;
 	onQuery: (query: ExploreQuery) => void;
 	/** The reader reached for a benchmark: the plot is likely next. */
 	onBenchmarks?: (() => void) | undefined;
@@ -142,6 +144,7 @@ const Editor = (props: {
 				perf={props.perf}
 				readOnly={props.readOnly}
 				versionZero={props.versionZero}
+				upgrade={props.upgrade}
 				onQuery={props.onQuery}
 			/>
 			<Box
@@ -245,6 +248,7 @@ const Sets = (props: {
 	perf: JsonConsolePerf | undefined;
 	readOnly?: boolean | undefined;
 	versionZero?: boolean | undefined;
+	upgrade?: string | undefined;
 	onQuery: (query: ExploreQuery) => void;
 }) => {
 	const { api, slug } = useProject();
@@ -274,6 +278,15 @@ const Sets = (props: {
 				props.versionZero
 					? "Filtering by parameters needs a version 1 project."
 					: undefined
+			}
+			unlock={
+				<Show when={props.upgrade}>
+					{(href) => (
+						<a class="lnk ex-upgrade" href={href()}>
+							Move to version 1
+						</a>
+					)}
+				</Show>
 			}
 			onRemove={() => {}}
 			options={(text) => {

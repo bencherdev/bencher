@@ -24,7 +24,7 @@
 	},
 	"tabSwitch": {
 		"apiRequests": 0,
-		"jsBytes": 17246,
+		"jsBytes": 17638,
 		"scriptRounds": 1
 	},
 	"runsColdLoad": {
@@ -101,7 +101,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 60403,
+		"jsBytes": 60860,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"lateModules": 0
@@ -111,7 +111,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 60403,
+		"jsBytes": 60860,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"lateModules": 0
@@ -121,7 +121,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 63651,
+		"jsBytes": 64060,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"lateModules": 0
@@ -131,7 +131,7 @@
 		"apiRequests": 3,
 		"apiRounds": 2,
 		"cls": 0,
-		"jsBytes": 65506,
+		"jsBytes": 65914,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19838,
@@ -182,7 +182,7 @@
 	"thresholdsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 16267,
+		"jsBytes": 16319,
 		"scriptRounds": 1
 	},
 	"plotsTabSwitch": {
@@ -220,7 +220,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 118235,
+		"jsBytes": 118367,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2900,
 		"inlineScriptBytes": 2560,
@@ -243,7 +243,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 78263,
+		"jsBytes": 78395,
 		"deferredJsBytes": 112880,
 		"lateModules": 0
 	},
@@ -267,7 +267,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 96174,
+		"jsBytes": 96226,
 		"deferredJsBytes": 115690,
 		"stylesheets": 1,
 		"htmlBytes": 2800,
@@ -404,7 +404,7 @@
 		"apiRounds": 1,
 		"cls": 0,
 		"shellShift": 0,
-		"jsBytes": 64511,
+		"jsBytes": 64971,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19838,
@@ -418,7 +418,7 @@
 		"apiRounds": 1,
 		"cls": 0,
 		"shellShift": 0,
-		"jsBytes": 65640,
+		"jsBytes": 66099,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19838,
@@ -499,7 +499,7 @@
 	"metricLanding": {
 		"apiRounds": 2,
 		"apiRequests": 3,
-		"jsBytes": 119011,
+		"jsBytes": 119143,
 		"lateModules": 2
 	}
 }

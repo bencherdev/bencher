@@ -1,5 +1,7 @@
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, ResponseDeleted, ResponseOk};
-use bencher_json::{JsonProject, ProjectResourceId, Sanitize as _, project::JsonUpdateProject};
+use bencher_json::{
+    BmfVersion, JsonProject, ProjectResourceId, Sanitize as _, project::JsonUpdateProject,
+};
 use bencher_rbac::project::Permission;
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::plan::PlanKind;
@@ -96,7 +98,8 @@ pub async fn get_one_inner(
 ///
 /// Update a project.
 /// The user must have `edit` permissions for the project.
-/// Setting the `bmf_version` field requires a server admin.
+/// A user who can edit the project can also move it to BMF version 1 with `bencher project update --bmf-version 1`.
+/// Setting the `bmf_version` field to any other version requires a server admin.
 #[endpoint {
     method = PATCH,
     path =  "/v0/projects/{project}",
@@ -141,12 +144,15 @@ async fn patch_inner(
         Permission::Edit,
     )?;
 
-    // Only a server admin can move the project's BMF version.
-    if json_project.bmf_version().is_some() && !auth_user.is_admin(&context.rbac) {
+    // An editor may move the project to BMF version 1, and only a server admin may move it back.
+    if let Some(bmf_version) = json_project.bmf_version()
+        && bmf_version != BmfVersion::V1
+        && !auth_user.is_admin(&context.rbac)
+    {
         let mut auth_user = auth_user.clone();
         auth_user.sanitize();
         return Err(forbidden_error(format!(
-            "Only admins can update the `bmf_version` field for a project. User is not an admin: {auth_user:?}",
+            "Only admins can update the `bmf_version` field for a project to {bmf_version}. User is not an admin: {auth_user:?}",
         )));
     }
 

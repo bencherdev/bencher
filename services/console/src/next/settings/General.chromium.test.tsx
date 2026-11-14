@@ -1,4 +1,8 @@
-import { type JsonConsoleProject, Visibility } from "../../types/bencher";
+import {
+	type JsonConsoleProject,
+	type JsonConsoleUser,
+	Visibility,
+} from "../../types/bencher";
 import { afterEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { ApiError } from "../api";
@@ -365,6 +369,160 @@ describe("visibility", () => {
 	});
 });
 
+describe("BMF version", () => {
+	const VERSION_ZERO = { ...PROJECT, bmf_version: 0 };
+	const atZero = (
+		permissions: Partial<JsonConsoleProject["permissions"]> = {},
+	) => ({ ...bootstrapOf(permissions), project: VERSION_ZERO });
+	const mover = () => page.getByRole("button", { name: "Move to version 1" });
+	const confirm = () =>
+		page.getByRole("alertdialog", {
+			name: "Move hashbrown to BMF version 1?",
+		});
+	const row = () => document.getElementById("bmf-version");
+	const USER: JsonConsoleUser = {
+		uuid: "reader-uuid",
+		name: "Muriel Bagge",
+		slug: "muriel-bagge",
+		organizations: [],
+		projects: [
+			{
+				uuid: PROJECT.uuid,
+				name: PROJECT.name,
+				slug: PROJECT.slug,
+				organization: PROJECT.organization,
+				bmf_version: 0,
+				active_alerts: 0,
+			},
+		],
+	};
+
+	// Kills the move shown to an editor of a version 1 project, or to a reader
+	// who cannot edit the project, whom the API refuses.
+	test("is offered beside the version only to an editor of a version 0 project", () => {
+		for (const [bootstrap, offered] of [
+			[atZero(), 1],
+			[bootstrapOf(), 0],
+			[atZero({ create: false, edit: false, delete: false, manage: false }), 0],
+		] as const) {
+			dispose = mount(() => <General />, {
+				api: fakeApi().api,
+				bootstrap,
+			}).dispose;
+			expect(mover().elements()).toHaveLength(offered);
+			if (offered) {
+				expect(mover().element().closest("#bmf-version")?.textContent).toBe(
+					"BMF version0Move to version 1",
+				);
+			}
+			dispose();
+		}
+		dispose = undefined;
+	});
+
+	// Kills a move sent before the reader confirms, a Cancel that sends it, a
+	// move that sends the form's unsaved fields or saves them, a confirm that
+	// says more than its one consequence, a move that waits for the API before
+	// the row says it, a cached view of the project left at version 0, and a
+	// focus dropped to the page when the button goes.
+	test("asks first, sends the version alone, and every cached view reads version 1", async () => {
+		let answer: (project: unknown) => void = () => {};
+		const { api, sent } = fakeApi(
+			() =>
+				new Promise((resolve) => {
+					answer = resolve;
+				}),
+		);
+		const mounted = mount(() => <General />, {
+			api,
+			bootstrap: atZero(),
+			cached: [[["console", "user", USER.uuid], USER]],
+		});
+		dispose = mounted.dispose;
+		await page.getByRole("textbox", { name: "Name" }).fill("Hash Browns");
+
+		await mover().click();
+		await expect
+			.element(confirm())
+			.toHaveAccessibleDescription("Only a server admin can move it back.");
+		await expect
+			.element(confirm())
+			.toHaveTextContent(
+				"Move hashbrown to BMF version 1?Only a server admin can move it back.CancelMove to version 1",
+			);
+		expect(sent).toEqual([]);
+		await confirm().getByRole("button", { name: "Cancel" }).click();
+		await expect.element(confirm()).not.toBeInTheDocument();
+		expect(sent).toEqual([]);
+
+		await mover().click();
+		await confirm().getByRole("button", { name: "Move to version 1" }).click();
+		expect(sent).toEqual([
+			{
+				method: "PATCH",
+				path: "/v0/projects/hashbrown",
+				body: { bmf_version: 1 },
+			},
+		]);
+		expect(project(mounted.client)?.bmf_version).toBe(1);
+		expect(row()?.textContent).toBe("BMF version1");
+
+		answer({ ...PROJECT, bmf_version: 1 });
+		await expect.element(confirm()).not.toBeInTheDocument();
+		expect(project(mounted.client)?.bmf_version).toBe(1);
+		expect(
+			mounted.client.getQueryData<JsonConsoleUser>([
+				"console",
+				"user",
+				USER.uuid,
+			])?.projects[0]?.bmf_version,
+		).toBe(1);
+		await expect
+			.element(page.getByRole("heading", { level: 2, name: "Project" }))
+			.toHaveFocus();
+		await expect
+			.element(page.getByRole("textbox", { name: "Name" }))
+			.toHaveValue("Hash Browns");
+		await expect.element(save()).toBeEnabled();
+	});
+
+	// Kills a refusal said outside the dialog, a refused move left showing, and
+	// a dialog closed on a refusal.
+	test("a refusal is said in the dialog, and the project stays at version 0", async () => {
+		const { api } = fakeApi(async () => {
+			throw new ApiError(
+				403,
+				"client",
+				'{"message":"Only admins can update the bmf_version field"}',
+			);
+		});
+		const mounted = mount(() => <General />, { api, bootstrap: atZero() });
+		dispose = mounted.dispose;
+
+		await mover().click();
+		await confirm().getByRole("button", { name: "Move to version 1" }).click();
+		await expect
+			.element(confirm().getByRole("alert"))
+			.toHaveTextContent("Only admins can update the bmf_version field");
+		expect(project(mounted.client)?.bmf_version).toBe(0);
+		expect(row()?.textContent).toBe("BMF version0Move to version 1");
+
+		await confirm().getByRole("button", { name: "Cancel" }).click();
+		await expect.element(mover()).toHaveFocus();
+	});
+
+	// Kills a link from Explore that lands at the top of the page, or on the
+	// row without the focus on its button.
+	test("arriving at the row focuses its button", async () => {
+		dispose = mount(() => <General />, {
+			api: fakeApi().api,
+			bootstrap: atZero(),
+			path: "/hashbrown/settings#bmf-version",
+		}).dispose;
+		await expect.element(mover()).toHaveFocus();
+	});
+});
+
 describe("focus", () => {
 	const answered = () =>
 		fakeApi(async () => ({ ...PROJECT, name: "Hash Browns" }));
@@ -524,6 +682,10 @@ for (const [name, opens] of [
 		() => page.getByRole("button", { name: "Delete project" }).click(),
 	],
 	[
+		"Move to version 1",
+		() => page.getByRole("button", { name: "Move to version 1" }).click(),
+	],
+	[
 		"slug",
 		async () => {
 			await page.getByRole("textbox", { name: "Slug" }).fill("hashbrown-moved");
@@ -533,7 +695,13 @@ for (const [name, opens] of [
 ] as const) {
 	test(`the ${name} confirmation passes axe in both themes`, async () => {
 		await axeInBothThemes(async () => {
-			dispose = mount(() => <General />, { api: fakeApi().api }).dispose;
+			dispose = mount(() => <General />, {
+				api: fakeApi().api,
+				bootstrap: {
+					...bootstrapOf(),
+					project: { ...PROJECT, bmf_version: 0 },
+				},
+			}).dispose;
 			await opens();
 			await expect.element(page.getByRole("alertdialog")).toBeVisible();
 			return () => {

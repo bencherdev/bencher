@@ -1,4 +1,4 @@
-use bencher_json::BmfVersion;
+use bencher_json::{BmfVersion, project::report::Adapter};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -14,4 +14,6 @@ pub enum AdapterError {
         expected: BmfVersion,
         parsed: BmfVersion,
     },
+    #[error("{0} reads results at BMF version 1 only")]
+    V1Only(Adapter),
 }
