@@ -246,15 +246,17 @@ describe("decodeQuery", () => {
 		}
 	});
 
-	// Kills a box holding more than the API reads, which draws less than the box shows.
-	test("read at most eight values a box and eight sets", () => {
+	// Kills a box holding more than the API reads, which draws less than the box
+	// shows, and a metrics box cut at the other boxes' eight.
+	test("read at most eight values a box, eight sets, and 32 metrics", () => {
 		const many = Array.from({ length: 9 }, (_, n) => uuid(n + 1));
+		const names = Array.from({ length: 33 }, (_, n) => `m${n}`);
 		const search = [
 			`branches=${many.join(",")}`,
 			`testbeds=${many.join(",")}`,
 			`benchmarks=${many.join(",")}`,
 			`measures=${many.join(",")}`,
-			...many.map((_, n) => `metrics=m${n}`),
+			...names.map((name) => `metrics=${name}`),
 			...many.map((_, n) => `parameters={"n":${n}}`),
 		].join("&");
 		const query = decodeQuery(search);
@@ -262,7 +264,7 @@ describe("decodeQuery", () => {
 		expect(query.testbeds.map(({ uuid }) => uuid)).toEqual(many.slice(0, 8));
 		expect(query.benchmarks).toEqual(many.slice(0, 8));
 		expect(query.measures).toEqual(many.slice(0, 8));
-		expect(query.metrics).toEqual(many.slice(0, 8).map((_, n) => `m${n}`));
+		expect(query.metrics).toEqual(names.slice(0, 32));
 		expect(query.sets).toEqual(many.slice(0, 8).map((_, n) => ({ n })));
 	});
 

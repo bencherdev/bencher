@@ -9,6 +9,7 @@ import { render } from "solid-js/web";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import {
+	Adapter,
 	GitHubLinkStatus,
 	type JsonConsoleJob,
 	type JsonConsoleProject,
@@ -16,6 +17,8 @@ import {
 	type JsonConsoleReportRun,
 	type JsonConsoleRunReportLink,
 	type JsonConsoleSpec,
+	ReportWarningAction,
+	ReportWarningResource,
 } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
 import { createQueryClient } from "../cache";
@@ -1632,4 +1635,226 @@ test("on a phone the report's pills wrap rather than push the page sideways", as
 			document.body.replaceChildren();
 		}
 	}
+});
+
+const WARNINGS = [
+	{
+		resource: ReportWarningResource.Benchmark,
+		action: ReportWarningAction.Skip,
+		count: 3,
+	},
+	{
+		resource: ReportWarningResource.Threshold,
+		action: ReportWarningAction.Skip,
+		count: 1,
+	},
+];
+/** A report long enough that its warnings sit below the screen. */
+const warned = () => ({ ...longReport(100), warnings: WARNINGS });
+const warningsTable = () =>
+	page.getByRole("table", { name: "Warnings in this report" });
+const warningsInView = () => {
+	const { top } = warningsTable().element().getBoundingClientRect();
+	return top >= 0 && top < window.innerHeight;
+};
+
+// Kills a count of rows rather than of what the warnings count, a count that
+// leads anywhere but the report's own table, a table above the lines, labels
+// other than the drawn ones, and a link that scrolls nowhere, the second time
+// it is followed included.
+test("a report's warnings count in its sub line jumps to their table below the lines", async () => {
+	window.scrollTo({ top: 0, behavior: "instant" });
+	const { api } = pagedApi(warned());
+	const history = mount(api, impatient(), `${PATH}?window=1w`);
+	await expect.element(warningsTable()).toBeInTheDocument();
+	expect(subLine()).toMatch(/ · 4 warnings · took /);
+	const section = page.getByRole("region", { name: "Warnings" }).element();
+	expect(section.querySelector(".dm-section-head")?.textContent).toBe(
+		"Warnings4",
+	);
+	expect(
+		table().element().compareDocumentPosition(section) &
+			Node.DOCUMENT_POSITION_FOLLOWING,
+	).toBeTruthy();
+	expect(
+		[...warningsTable().element().querySelectorAll("tbody tr")].map((row) =>
+			[...row.querySelectorAll("td")].map((cell) => cell.textContent),
+		),
+	).toEqual([
+		["Benchmark", "Skipped", "3"],
+		["Threshold", "Skipped", "1"],
+	]);
+	expect(warningsInView()).toBe(false);
+
+	const link = page.getByRole("link", { name: "4 warnings" });
+	await link.click();
+	await expect.poll(warningsInView).toBe(true);
+	expect(history.get()).toBe(`${PATH}?window=1w#warnings`);
+	await new Promise((resolve) => setTimeout(resolve, 300));
+	expect(warningsInView()).toBe(true);
+	window.scrollTo({ top: 0, behavior: "instant" });
+	await expect.poll(warningsInView).toBe(false);
+	await link.click();
+	await expect.poll(warningsInView).toBe(true);
+	window.scrollTo({ top: 0, behavior: "instant" });
+});
+
+// Kills later batches that load under a reader on the warnings, which push the
+// table off the screen, and lines that never load once the reader leaves them.
+test("the lines load their later batches only once the reader leaves the warnings", async () => {
+	window.scrollTo({ top: 0, behavior: "instant" });
+	const { api, requests } = pagedApi(warned());
+	mount(api, impatient(), `${PATH}#warnings`);
+	await expect.poll(warningsInView).toBe(true);
+	await new Promise((resolve) => setTimeout(resolve, 300));
+	expect(warningsInView()).toBe(true);
+	expect(requests.filter(isReport).map(pageOf)).toEqual(["1"]);
+
+	window.scrollTo({ top: 0, behavior: "instant" });
+	await expect.poll(warningsInView).toBe(false);
+	// The scroll back up reaches the page before the next one down.
+	await frame();
+	await frame();
+	await expect
+		.poll(
+			() => {
+				bottom();
+				return requests.filter(isReport).map(pageOf);
+			},
+			{ timeout: 5_000 },
+		)
+		.toContain("2");
+	window.scrollTo({ top: 0, behavior: "instant" });
+});
+
+// Kills a shared link to the warnings that opens at the top of the page,
+// since the table arrives after the browser looked for it.
+test("arriving at a report's warnings by its link scrolls to their table", async () => {
+	window.scrollTo({ top: 0, behavior: "instant" });
+	const { api } = pagedApi(warned());
+	mount(api, impatient(), `${PATH}#warnings`);
+	await expect.element(warningsTable()).toBeInTheDocument();
+	await expect.poll(warningsInView).toBe(true);
+	await new Promise((resolve) => setTimeout(resolve, 300));
+	expect(warningsInView()).toBe(true);
+	window.scrollTo({ top: 0, behavior: "instant" });
+});
+
+// Kills a count or a table drawn for a report with no warnings.
+test("a report with no warnings counts none and draws no table", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: reportFixture() } : { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	await expect.element(table()).toBeVisible();
+	expect(subLine()).toMatch(/ · took /);
+	expect(subLine()).not.toContain("warning");
+	expect(document.querySelector("[aria-label='Warnings']")).toBeNull();
+});
+
+// Kills a phone sub line that leaves the warnings out.
+test("a phone sub line ends with the report's warnings", async () => {
+	await page.viewport(414, 896);
+	const { api } = pagedApi(warned());
+	mount(api, impatient());
+	await expect.element(warningsTable()).toBeInTheDocument();
+	expect(subLine()).toMatch(/ · 4 warnings$/);
+});
+
+// Ruling 234: kills a warnings count that is not a whole part, which the
+// one-line sub line breaks; a phone holds it in its two lines beside every
+// adapter name.
+test("the sub line keeps its warnings count whole beside every adapter name", async () => {
+	const long = { ...spec, name: `Standard ${"x".repeat(56)}` };
+	for (const [width, lines] of [
+		[390, 2],
+		[375, 2],
+		[768, 1],
+	] as const) {
+		await page.viewport(width, 844);
+		for (const adapter of Object.values(Adapter)) {
+			const { api } = fakeApi((url) =>
+				isReport(url)
+					? {
+							data: reportFixture(undefined, {
+								adapter,
+								spec: long,
+								warnings: WARNINGS,
+							}),
+						}
+					: { data: bootstrapOf() },
+			);
+			mount(api, impatient());
+			const link = page.getByRole("link", { name: "4 warnings" });
+			await expect.element(link).toBeVisible();
+			const sub = document.querySelector(".rp-sub") as HTMLElement;
+			const held = lines * Number.parseFloat(getComputedStyle(sub).lineHeight);
+			const line = sub.getBoundingClientRect();
+			const count = link.element() as HTMLElement;
+			const { top, bottom, right } = count.getBoundingClientRect();
+			expect(line.height, adapter).toBeCloseTo(held, 0);
+			expect(top, adapter).toBeGreaterThanOrEqual(line.top);
+			expect(bottom, adapter).toBeLessThanOrEqual(line.bottom);
+			expect(right, adapter).toBeLessThanOrEqual(width);
+			expect(count.getClientRects(), adapter).toHaveLength(1);
+			expect(count.scrollWidth, adapter).toBeLessThanOrEqual(count.clientWidth);
+			dispose?.();
+			document.body.replaceChildren();
+		}
+	}
+}, 60_000);
+
+// Kills a hold on a report with no warnings, whose lines would never load past
+// their first batch when its link names the warnings.
+test("arriving at the warnings of a report that has none still loads its later batches", async () => {
+	window.scrollTo({ top: 0, behavior: "instant" });
+	const { api, requests } = pagedApi(longReport(100));
+	mount(api, impatient(), `${PATH}#warnings`);
+	await expect.element(table()).toBeVisible();
+	await expect
+		.poll(
+			() => {
+				bottom();
+				return requests.filter(isReport).map(pageOf);
+			},
+			{ timeout: 5_000 },
+		)
+		.toContain("2");
+	window.scrollTo({ top: 0, behavior: "instant" });
+});
+
+// Kills a hold carried from one report to the next, whose lines would never
+// load past their first batch.
+test("moving to another report lets go of the warnings hold", async () => {
+	// A page the first report fits on, so nothing scrolls back up to let go of the hold.
+	await page.viewport(1280, 1000);
+	window.scrollTo({ top: 0, behavior: "instant" });
+	const OTHER = "00000000-0000-4000-8000-000000000099";
+	const { api, requests } = fakeApi((url) => {
+		if (!isReport(url)) {
+			return { data: bootstrapOf() };
+		}
+		return {
+			data: url.pathname.includes(OTHER)
+				? batchOf(warned(), url)
+				: { ...reportFixture(), warnings: WARNINGS },
+		};
+	});
+	const history = mount(api, impatient(), `${PATH}#warnings`);
+	await expect.element(warningsTable()).toBeInTheDocument();
+	expect(window.scrollY).toBe(0);
+	history.set({ value: `${PROJECTS_PATH}/hashbrown/reports/${OTHER}` });
+	const other = () =>
+		requests.filter((url) => isReport(url) && url.pathname.includes(OTHER));
+	await expect.poll(() => other().length).toBeGreaterThan(0);
+	await expect
+		.poll(
+			() => {
+				bottom();
+				return other().map(pageOf);
+			},
+			{ timeout: 5_000 },
+		)
+		.toContain("2");
+	window.scrollTo({ top: 0, behavior: "instant" });
 });
