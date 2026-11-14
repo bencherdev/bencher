@@ -1,13 +1,12 @@
 import { createContext, useContext } from "solid-js";
-import type { JsonUser } from "../../types/bencher";
 import type { Api } from "../api";
-import type { Reader } from "../reader";
+import type { Reader, ReaderOf } from "../reader";
 
 interface Account {
 	api: Api;
 	reader: () => Reader;
 	/** The reader's own account as the API now has it. */
-	keepUser: (user: JsonUser) => void;
+	keepUser: (user: ReaderOf) => void;
 	/** Sign the reader out. */
 	signOut: () => void;
 }

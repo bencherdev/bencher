@@ -852,10 +852,7 @@ async fn locked_user_key_rejected() {
     let lock_resp = server
         .client
         .patch(server.api_url(&format!("/v0/users/{}", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .json(&serde_json::json!({"locked": true}))
         .send()
         .await

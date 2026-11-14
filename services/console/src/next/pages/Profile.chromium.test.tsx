@@ -7,7 +7,7 @@ import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page } from "vitest/browser";
 import type { JsonUser } from "../../types/bencher";
-import type { Reader } from "../reader";
+import type { Reader, ReaderOf } from "../reader";
 import { AccountContext } from "../account/context";
 import { type Api, ApiError, type Method } from "../api";
 import { axeInBothThemes } from "../axe/testing";
@@ -28,6 +28,7 @@ const ADMIN: Reader = {
 	uuid: "admin-uuid",
 	name: "Admin Bagge",
 	slug: "admin-bagge",
+	admin: true,
 };
 
 interface Sent {
@@ -66,7 +67,7 @@ const userApi = (
 
 let dispose: (() => void) | undefined;
 /** The users the console kept as the reader's own, and how often it signed out. */
-let kept: JsonUser[] = [];
+let kept: ReaderOf[] = [];
 let signedOut = 0;
 
 afterEach(() => {
@@ -132,13 +133,15 @@ const save = () => page.getByRole("button", { name: "Save changes" });
 const legacyLink = () => page.getByRole("link", { name: /legacy token/ });
 
 // Kills account sections cut off a 320 px phone, and sections that stack
-// where four fit on one row.
+// where they fit on one row, a server admin's five included.
 test.each([
-	[320, 2],
-	[390, 1],
-])("at %i px the four sections fit, on %i rows", async (width, rows) => {
+	[320, 2, READER],
+	[390, 1, READER],
+	[320, 3, ADMIN],
+	[390, 3, ADMIN],
+])("at %i px the sections fit, on %i rows", async (width, rows, reader) => {
 	await page.viewport(width, 844);
-	mount(userApi(0).api);
+	mount(userApi(0).api, { reader });
 	const sections = page.getByRole("navigation", { name: "Account sections" });
 	await expect.element(sections).toBeVisible();
 
@@ -428,11 +431,49 @@ describe("legacy tokens", () => {
 
 		await textbox("Email").fill("muriel@courage.example");
 		await save().click();
+		await page.getByRole("button", { name: "Change email" }).click();
 
 		await expect.element(page.getByRole("status")).toHaveTextContent("Saved");
 		expect(sent).toHaveLength(1);
 		expect(signedOut).toBe(0);
 		expect(kept).toEqual([]);
+	});
+
+	// Kills another user's email changed without asking, a confirmation that
+	// does not say every session of theirs ends and their tokens are revoked,
+	// and a Cancel that sends it anyway.
+	test("another user's email change asks first, naming what happens to them", async () => {
+		for (const [tokens, said] of [
+			[
+				2,
+				"Every session of Muriel Bagge ends, and their 2 legacy tokens are revoked.",
+			],
+			[0, "Every session of Muriel Bagge ends."],
+		] as const) {
+			const { api, sent } = userApi(tokens);
+			mount(api, { reader: ADMIN });
+
+			await expect.element(textbox("Email")).toHaveValue(USER.email);
+			await textbox("Email").fill("muriel@courage.example");
+			await save().click();
+			const dialog = page.getByRole("alertdialog");
+			await expect
+				.element(dialog)
+				.toHaveTextContent(
+					"Change Muriel Bagge's email to muriel@courage.example?",
+				);
+			await expect.element(dialog).toHaveTextContent(said);
+			await dialog.getByRole("button", { name: "Cancel" }).click();
+			expect(sent).toEqual([]);
+
+			await save().click();
+			await page.getByRole("button", { name: "Change email" }).click();
+			await expect
+				.poll(() => sent.map(({ body }) => body))
+				.toEqual([{ email: "muriel@courage.example" }]);
+			dispose?.();
+			dispose = undefined;
+		}
 	});
 
 	// Kills a link that waits for nothing, counts wrong, or is under 44 px on
@@ -483,6 +524,134 @@ describe("legacy tokens", () => {
 			.toHaveTextContent("Confirm link sent");
 		expect(sent[1]?.body).toEqual({ email: "muriel@courage.example" });
 		expect(signedOut).toBe(0);
+	});
+});
+
+describe("a server admin's switches", () => {
+	const switchOf = (name: string) =>
+		page.getByRole("button", { name, exact: true });
+
+	// Kills a switch that sends anything but its own field flipped, one that
+	// does not show the API's answer, and switches missing for a server admin
+	// on another user's Profile.
+	test("on another user's Profile, each switch flips its own field", async () => {
+		const { api, sent } = userApi(0);
+		mount(api, { reader: ADMIN });
+
+		await expect
+			.element(switchOf("Admin"))
+			.toHaveAttribute("aria-pressed", "false");
+		await expect
+			.element(switchOf("Locked"))
+			.toHaveAttribute("aria-pressed", "false");
+		await switchOf("Admin").click();
+		await expect
+			.element(switchOf("Admin"))
+			.toHaveAttribute("aria-pressed", "true");
+		await switchOf("Locked").click();
+		await expect
+			.element(switchOf("Locked"))
+			.toHaveAttribute("aria-pressed", "true");
+		await switchOf("Locked").click();
+		await expect
+			.element(switchOf("Locked"))
+			.toHaveAttribute("aria-pressed", "false");
+		expect(sent).toEqual([
+			{
+				method: "PATCH",
+				path: `/v0/users/${USER.uuid}`,
+				body: { admin: true },
+			},
+			{
+				method: "PATCH",
+				path: `/v0/users/${USER.uuid}`,
+				body: { locked: true },
+			},
+			{
+				method: "PATCH",
+				path: `/v0/users/${USER.uuid}`,
+				body: { locked: false },
+			},
+		]);
+		expect(kept).toEqual([]);
+	});
+
+	// Kills a refused switch said nowhere, or shown as flipped.
+	test("a refused switch says why and stays as it was", async () => {
+		const { api } = userApi(0, async () => {
+			throw new ApiError(403, "forbidden", '{"message":"Not allowed"}');
+		});
+		mount(api, { reader: ADMIN });
+
+		await switchOf("Admin").click();
+		await expect
+			.element(page.getByRole("alert"))
+			.toHaveTextContent("Not allowed");
+		await expect
+			.element(switchOf("Admin"))
+			.toHaveAttribute("aria-pressed", "false");
+	});
+
+	// Kills switches or a Users section shown to a reader who is not a server
+	// admin, by their hint or their account.
+	test("a reader who is not a server admin sees neither", async () => {
+		mount(userApi(0).api);
+		await expect.element(textbox("Email")).toHaveValue(USER.email);
+		expect(switchOf("Admin").query()).toBeNull();
+		expect(switchOf("Locked").query()).toBeNull();
+		expect(page.getByRole("link", { name: "Users" }).query()).toBeNull();
+		expect(kept).toEqual([]);
+	});
+
+	// Kills a reader's own account that does not decide their switches, and a
+	// hint left behind the account's word on whether they are a server admin.
+	test("the reader's own account decides, and the hint follows it", async () => {
+		const own = { ...USER, admin: true };
+		const { api, sent } = userApi(0, async (change) => ({
+			...own,
+			...(change.body as object),
+		}));
+		api.get = async <T,>(path: string) =>
+			path.endsWith("/tokens?per_page=1")
+				? { data: [] as T, headers: new Headers({ "X-Total-Count": "0" }) }
+				: { data: own as T, headers: new Headers() };
+		mount(api);
+
+		await expect
+			.element(switchOf("Admin"))
+			.toHaveAttribute("aria-pressed", "true");
+		await expect.poll(() => kept.map(({ admin }) => admin)).toEqual([true]);
+
+		await switchOf("Admin").click();
+		await expect
+			.poll(() => kept.map(({ admin }) => admin))
+			.toEqual([true, false]);
+		expect(sent.map(({ body }) => body)).toEqual([{ admin: false }]);
+		await expect.poll(() => switchOf("Admin").query()).toBeNull();
+	});
+
+	// Kills a Users section missing for a server admin, or leading elsewhere.
+	test("a server admin's sections lead to Users", async () => {
+		mount(userApi(0).api, { reader: ADMIN });
+		await expect
+			.element(
+				page
+					.getByRole("navigation", { name: "Account sections" })
+					.getByRole("link", { name: "Users" }),
+			)
+			.toHaveAttribute("href", "/console/server/users");
+	});
+
+	// Kills switches that fail axe in either theme.
+	test("pass axe in both themes", async () => {
+		await axeInBothThemes(async () => {
+			mount(userApi(0).api, { reader: ADMIN });
+			await expect.element(switchOf("Admin")).toBeVisible();
+			return () => {
+				dispose?.();
+				dispose = undefined;
+			};
+		});
 	});
 });
 

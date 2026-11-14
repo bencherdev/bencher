@@ -1,17 +1,19 @@
 use std::str::FromStr as _;
 use std::sync::LazyLock;
 
-use bencher_json::{DateTime, Email, Jwt, Secret, UserUuid};
+use bencher_json::{Email, Jwt, Secret};
 use chrono::Utc;
 use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode,
     errors::ErrorKind as JsonWebTokenErrorKind,
 };
+#[cfg(feature = "plus")]
 use serde::{Serialize, de::DeserializeOwned};
 
 #[cfg(feature = "plus")]
 use bencher_json::{
-    GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, ProjectUuid, RunnerUuid,
+    DateTime, GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, ProjectUuid,
+    RunnerUuid, UserUuid,
 };
 
 #[cfg(feature = "plus")]
@@ -20,8 +22,7 @@ use crate::claims::PublicOciTokenClaims;
 #[cfg(feature = "plus")]
 use crate::claims::RunnerOciTokenClaims;
 use crate::{
-    Audience, AuthOciClaims, Claims, EmailChangeClaims, OciAction, OciScopeClaims, PublicOciClaims,
-    TokenError,
+    Audience, AuthOciClaims, Claims, OciAction, OciScopeClaims, PublicOciClaims, TokenError,
 };
 #[cfg(feature = "plus")]
 use crate::{GitHubGrantClaims, GitHubStateClaims, ProjectOciClaims, RunnerOciClaims};
@@ -69,28 +70,6 @@ impl TokenKey {
 
     pub fn new_api_key(&self, email: Email, ttl: u32) -> Result<Jwt, TokenError> {
         self.new_jwt(Audience::ApiKey, email, ttl, None)
-    }
-
-    pub fn new_email_change(
-        &self,
-        now: DateTime,
-        ttl: u32,
-        user: UserUuid,
-        modified: DateTime,
-        email: Email,
-        new_email: Email,
-    ) -> Result<Jwt, TokenError> {
-        let (iat, exp) = issued_and_expires(now, ttl);
-        self.encode_claims(&EmailChangeClaims {
-            aud: Audience::EmailChange.into(),
-            exp,
-            iat,
-            iss: self.issuer.clone(),
-            sub: user,
-            modified,
-            email,
-            new_email,
-        })
     }
 
     pub fn new_oci_public(
@@ -263,19 +242,6 @@ impl TokenKey {
         Ok(self.validate(token, &[Audience::Client])?.claims)
     }
 
-    pub fn validate_email_change(
-        &self,
-        token: &Jwt,
-        now: DateTime,
-    ) -> Result<EmailChangeClaims, TokenError> {
-        self.validate_at(
-            token,
-            Audience::EmailChange,
-            now,
-            |claims: &EmailChangeClaims| claims.exp,
-        )
-    }
-
     #[cfg(feature = "plus")]
     pub fn validate_github_state(
         &self,
@@ -379,6 +345,7 @@ impl TokenKey {
         }
     }
 
+    #[cfg(feature = "plus")]
     fn encode_claims<C>(&self, claims: &C) -> Result<Jwt, TokenError>
     where
         C: Serialize,
@@ -391,6 +358,7 @@ impl TokenKey {
     }
 
     /// The claims of a token for `audience` that has not expired by `now`.
+    #[cfg(feature = "plus")]
     fn validate_at<C>(
         &self,
         token: &Jwt,
@@ -426,6 +394,7 @@ impl TokenKey {
 }
 
 /// The issue and expiry times of a token issued at `now` that lasts `ttl` seconds.
+#[cfg(feature = "plus")]
 fn issued_and_expires(now: DateTime, ttl: u32) -> (i64, i64) {
     let now = now.timestamp();
     (now, now.checked_add(i64::from(ttl)).unwrap_or(now))
@@ -435,11 +404,11 @@ fn issued_and_expires(now: DateTime, ttl: u32) -> (i64, i64) {
 mod tests {
     use std::{str::FromStr as _, sync::LazyLock};
 
-    use bencher_json::{DateTime, Email, Jwt, UserUuid};
+    #[cfg(feature = "plus")]
+    use bencher_json::{DateTime, UserUuid};
+    use bencher_json::{Email, Jwt};
 
-    use crate::{
-        Audience, Claims, DEFAULT_SECRET_KEY, EmailChangeClaims, OciAction, OciScopeClaims,
-    };
+    use crate::{Audience, Claims, DEFAULT_SECRET_KEY, OciAction, OciScopeClaims};
 
     use super::TokenKey;
 
@@ -447,12 +416,10 @@ mod tests {
     const TTL: u32 = u32::MAX;
 
     static EMAIL: LazyLock<Email> = LazyLock::new(|| "info@bencher.dev".parse().unwrap());
-    static NEW_EMAIL: LazyLock<Email> = LazyLock::new(|| "new@bencher.dev".parse().unwrap());
 
     /// Long past, so only the `now` a validation is given can accept a token issued then.
-    const EMAIL_CHANGE_NOW: i64 = 1_789_344_000;
-    const EMAIL_CHANGE_MODIFIED: i64 = EMAIL_CHANGE_NOW - 1;
-    const EMAIL_CHANGE_TTL: u32 = 30 * 60;
+    #[cfg(feature = "plus")]
+    const NOW: i64 = 1_789_344_000;
 
     fn make_expired_token(
         secret_key: &TokenKey,
@@ -522,80 +489,7 @@ mod tests {
         secret_key.validate_client(&token).unwrap_err();
     }
 
-    // --- Email change tokens ---
-
-    // Fails if an email change token loses the user, the user's `modified`, or either email,
-    // or expires by the system clock.
-    #[test]
-    fn jwt_email_change() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let user = UserUuid::new();
-
-        let token = email_change_token(&secret_key, user);
-
-        let claims = secret_key
-            .validate_email_change(&token, at(EMAIL_CHANGE_NOW))
-            .unwrap();
-        assert_eq!(claims.aud, Audience::EmailChange.to_string());
-        assert_eq!(claims.iss, BENCHER_DOT_DEV_ISSUER.to_owned());
-        assert_eq!(claims.sub, user);
-        assert_eq!(claims.modified, at(EMAIL_CHANGE_MODIFIED));
-        assert_eq!(claims.email, *EMAIL);
-        assert_eq!(claims.new_email, *NEW_EMAIL);
-    }
-
-    // Fails if an email change token expires by the system clock instead of the given time.
-    #[test]
-    fn jwt_email_change_expired() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let token = email_change_token(&secret_key, UserUuid::new());
-        let expiration = EMAIL_CHANGE_NOW + i64::from(EMAIL_CHANGE_TTL);
-
-        secret_key
-            .validate_email_change(&token, at(expiration))
-            .unwrap();
-        secret_key
-            .validate_email_change(&token, at(expiration + 1))
-            .unwrap_err();
-    }
-
-    // Fails if an email change token is accepted without its own audience.
-    #[test]
-    fn jwt_email_change_other_audience() {
-        let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
-        let claims = EmailChangeClaims {
-            aud: Audience::Auth.to_string(),
-            exp: EMAIL_CHANGE_NOW + i64::from(EMAIL_CHANGE_TTL),
-            iat: EMAIL_CHANGE_NOW,
-            iss: BENCHER_DOT_DEV_ISSUER.to_owned(),
-            sub: UserUuid::new(),
-            modified: at(EMAIL_CHANGE_MODIFIED),
-            email: EMAIL.clone(),
-            new_email: NEW_EMAIL.clone(),
-        };
-        let token = Jwt::from_str(
-            &jsonwebtoken::encode(&super::HEADER, &claims, &secret_key.encoding).unwrap(),
-        )
-        .unwrap();
-
-        secret_key
-            .validate_email_change(&token, at(EMAIL_CHANGE_NOW))
-            .unwrap_err();
-    }
-
-    fn email_change_token(secret_key: &TokenKey, user: UserUuid) -> Jwt {
-        secret_key
-            .new_email_change(
-                at(EMAIL_CHANGE_NOW),
-                EMAIL_CHANGE_TTL,
-                user,
-                at(EMAIL_CHANGE_MODIFIED),
-                EMAIL.clone(),
-                NEW_EMAIL.clone(),
-            )
-            .unwrap()
-    }
-
+    #[cfg(feature = "plus")]
     fn at(timestamp: i64) -> DateTime {
         DateTime::try_from(timestamp).unwrap()
     }
@@ -609,15 +503,13 @@ mod tests {
     fn github_state(secret_key: &TokenKey) -> (Jwt, crate::GitHubStateClaims) {
         let token = secret_key
             .new_github_state(
-                at(EMAIL_CHANGE_NOW),
+                at(NOW),
                 GITHUB_TTL,
                 UserUuid::new(),
                 bencher_json::ProjectUuid::new(),
             )
             .unwrap();
-        let claims = secret_key
-            .validate_github_state(&token, at(EMAIL_CHANGE_NOW))
-            .unwrap();
+        let claims = secret_key.validate_github_state(&token, at(NOW)).unwrap();
         (token, claims)
     }
 
@@ -625,7 +517,7 @@ mod tests {
     fn github_grant(secret_key: &TokenKey, state: &crate::GitHubStateClaims) -> Jwt {
         secret_key
             .new_github_grant(
-                at(EMAIL_CHANGE_NOW),
+                at(NOW),
                 GITHUB_TTL,
                 state,
                 bencher_json::GitHubInstallationId::try_from(2048).unwrap(),
@@ -644,12 +536,10 @@ mod tests {
         let project = bencher_json::ProjectUuid::new();
 
         let token = secret_key
-            .new_github_state(at(EMAIL_CHANGE_NOW), GITHUB_TTL, user, project)
+            .new_github_state(at(NOW), GITHUB_TTL, user, project)
             .unwrap();
 
-        let claims = secret_key
-            .validate_github_state(&token, at(EMAIL_CHANGE_NOW))
-            .unwrap();
+        let claims = secret_key.validate_github_state(&token, at(NOW)).unwrap();
         assert_eq!(claims.aud, Audience::GitHubState.to_string());
         assert_eq!(claims.sub, user);
         assert_eq!(claims.project, project);
@@ -665,9 +555,7 @@ mod tests {
 
         let token = github_grant(&secret_key, &state);
 
-        let claims = secret_key
-            .validate_github_grant(&token, at(EMAIL_CHANGE_NOW))
-            .unwrap();
+        let claims = secret_key.validate_github_grant(&token, at(NOW)).unwrap();
         assert_eq!(claims.aud, Audience::GitHubGrant.to_string());
         assert_eq!(claims.sub, state.sub);
         assert_eq!(claims.project, state.project);
@@ -683,7 +571,7 @@ mod tests {
         let secret_key = TokenKey::new(BENCHER_DOT_DEV_ISSUER.to_owned(), &DEFAULT_SECRET_KEY);
         let (state_token, state) = github_state(&secret_key);
         let grant_token = github_grant(&secret_key, &state);
-        let expiration = EMAIL_CHANGE_NOW + i64::from(GITHUB_TTL);
+        let expiration = NOW + i64::from(GITHUB_TTL);
 
         secret_key
             .validate_github_state(&state_token, at(expiration))
@@ -708,16 +596,16 @@ mod tests {
         let (_state_token, state) = github_state(&secret_key);
         let grant_token = github_grant(&secret_key, &state);
         let mut claims = secret_key
-            .validate_github_grant(&grant_token, at(EMAIL_CHANGE_NOW))
+            .validate_github_grant(&grant_token, at(NOW))
             .unwrap();
         claims.aud = Audience::GitHubState.to_string();
         let grant_as_state = secret_key.encode_claims(&claims).unwrap();
 
         secret_key
-            .validate_github_state(&grant_token, at(EMAIL_CHANGE_NOW))
+            .validate_github_state(&grant_token, at(NOW))
             .unwrap_err();
         secret_key
-            .validate_github_grant(&grant_as_state, at(EMAIL_CHANGE_NOW))
+            .validate_github_grant(&grant_as_state, at(NOW))
             .unwrap_err();
     }
 

@@ -5,13 +5,14 @@ use bencher_json::{
 };
 use bencher_schema::{
     auth_conn,
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     error::{forbidden_error, resource_conflict_err, resource_not_found_err},
     model::user::{
-        QueryUser, UpdateUser,
+        QueryUser, UpdateUser, UserId,
         admin::AdminUser,
         auth::{AuthUser, BearerToken},
-        bump_modified, same_user,
+        email_change::{InsertEmailChange, QueryEmailChange},
+        same_user,
         session::QuerySession,
         token::QueryToken,
     },
@@ -26,7 +27,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use slog::Logger;
 
-use crate::email::{check_new_email, confirm_message};
+use crate::email::{check_new_email, send_asked, send_changed, taken};
 
 pub type UsersPagination = JsonPagination<UsersSort>;
 
@@ -194,11 +195,17 @@ async fn get_one_inner(
 /// Some fields can only be updated by an admin.
 /// Changing the email, admin, or locked field requires a user session, even for an admin:
 /// neither a user API key nor a deprecated user API token can change them.
-/// Changing the email or the admin field also needs a sign-in within the last 10 minutes.
+/// Changing any of them also needs a sign-in within the last 10 minutes.
 /// A user's new email for themselves takes effect only once it is confirmed
-/// from a link sent to that email, so until then the response shows the current email.
-/// Any later update to the user ends that link.
-/// A server admin's change to another user's email takes effect at once.
+/// from a link sent to that email, good once in the next 30 minutes,
+/// so until then the response shows the current email; the current email is told of it at once.
+/// Asking again ends the earlier link.
+/// Confirming revokes the user's deprecated API tokens and ends every session of theirs
+/// but the one that asked.
+/// A server admin's change to another user's email takes effect at once:
+/// both emails are told of it, the user's deprecated API tokens are revoked,
+/// and every session of theirs ends.
+/// That change, or a lock, also ends any email change the user asked for.
 /// To manage users within your organization, use the organization members endpoints.
 #[endpoint {
     method = PATCH,
@@ -274,7 +281,7 @@ async fn patch_inner(
             ));
         }
     }
-    if email_changed || admin_changed {
+    if email_changed || admin_changed || locked_changed {
         auth_user.check_fresh_sign_in(context).await?;
     }
 
@@ -283,43 +290,87 @@ async fn patch_inner(
     if !email_changed {
         update_user.email = None;
     }
-    let confirm = email_changed && auth_user.uuid() == query_user.uuid;
-    let new_email = if confirm {
+    let now = context.clock.now();
+    // A user's own new email waits for its confirm link; a server admin's for another user is set
+    // here.
+    let asked = if email_changed && auth_user.uuid() == query_user.uuid {
         update_user.email.take()
     } else {
         None
     };
-    if let Some(new_email) = &new_email {
-        check_new_email(context, &query_user, new_email).await?;
+    let asked = if let Some(new_email) = asked {
+        check_new_email(context, &query_user, &new_email).await?;
+        Some(InsertEmailChange::new(
+            query_user.id,
+            auth_user.session_id(),
+            query_user.email.clone(),
+            new_email,
+            now,
+        )?)
+    } else {
+        None
+    };
+
+    let written = write_transaction!(context, |conn| write_update(
+        conn,
+        query_user.id,
+        &update_user,
+        asked.as_ref().map(|(change, _secret)| change),
+        now
+    ))
+    .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
+    if !written && let Some(new_email) = &update_user.email {
+        return Err(taken(&query_user, new_email));
+    }
+    let user = QueryUser::get(auth_conn!(context), query_user.id)?;
+
+    if let Some((change, secret)) = &asked {
+        send_asked(log, context, &user, &change.new_email, secret).await?;
+    }
+    if update_user.email.is_some() {
+        send_changed(log, context, &user, &query_user.email).await?;
     }
 
-    let now = context.clock.now();
+    Ok(user.into_json())
+}
+
+/// Write the update to the user, and the user's own email change if they asked for one, unless
+/// the email a server admin sets is another user's.
+///
+/// A server admin's change of the email ends every session of the user, their pending email
+/// change, and their deprecated API tokens, as a lock ends every session and the pending change.
+fn write_update(
+    conn: &mut DbConnection,
+    user_id: UserId,
+    update_user: &UpdateUser,
+    change: Option<&InsertEmailChange>,
+    now: DateTime,
+) -> diesel::QueryResult<bool> {
+    if let Some(new_email) = &update_user.email
+        && diesel::select(diesel::dsl::exists(
+            schema::user::table.filter(schema::user::email.eq(new_email)),
+        ))
+        .get_result::<bool>(conn)?
+    {
+        return Ok(false);
+    }
     // An email set here, by an admin for another user, is unproven.
     let unverified = update_user
         .email
         .is_some()
         .then_some(schema::user::email_verified.eq(None::<DateTime>));
-    let modified = write_transaction!(context, |conn| {
-        diesel::update(schema::user::table.filter(schema::user::id.eq(query_user.id)))
-            .set((&update_user, bump_modified(now), unverified))
-            .execute(conn)?;
-        if email_changed && !confirm {
-            QueryToken::revoke_all(conn, query_user.id, now)?;
-        }
-        if update_user.locked == Some(true) {
-            QuerySession::delete_all(conn, query_user.id)?;
-        }
-        schema::user::table
-            .filter(schema::user::id.eq(query_user.id))
-            .select(schema::user::modified)
-            .first::<DateTime>(conn)
-    })
-    .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
-
-    if let Some(new_email) = new_email {
-        let message = confirm_message(context, &query_user, modified, new_email)?;
-        context.messenger.send(log, message);
+    diesel::update(schema::user::table.filter(schema::user::id.eq(user_id)))
+        .set((update_user, schema::user::modified.eq(now), unverified))
+        .execute(conn)?;
+    if let Some(change) = change {
+        change.upsert(conn)?;
     }
-
-    Ok(QueryUser::get(auth_conn!(context), query_user.id)?.into_json())
+    if update_user.email.is_some() {
+        QueryToken::revoke_all(conn, user_id, now)?;
+    }
+    if update_user.email.is_some() || update_user.locked == Some(true) {
+        QuerySession::delete_all(conn, user_id)?;
+        QueryEmailChange::end(conn, user_id)?;
+    }
+    Ok(true)
 }

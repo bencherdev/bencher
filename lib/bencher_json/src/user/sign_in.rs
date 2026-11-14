@@ -165,6 +165,11 @@ pub enum SignInRefusal {
     /// A fresh sign-in's link, opened in a browser other than the one that asked, which it never
     /// proves.
     AskedElsewhere,
+    /// The email change has expired, was replaced by a newer one, or never was, or the user's
+    /// email changed since it was asked for.
+    EmailChangeExpired,
+    /// The email change was already confirmed.
+    EmailChangeUsed,
 }
 
 impl AsRef<str> for SignInRefusal {
@@ -186,6 +191,8 @@ impl AsRef<str> for SignInRefusal {
             Self::ProviderRefused => "provider_refused",
             Self::FreshSignIn => "fresh_sign_in",
             Self::AskedElsewhere => "asked_elsewhere",
+            Self::EmailChangeExpired => "email_change_expired",
+            Self::EmailChangeUsed => "email_change_used",
         }
     }
 }

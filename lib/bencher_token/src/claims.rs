@@ -1,7 +1,8 @@
-use bencher_json::{DateTime, Email, UserUuid};
+use bencher_json::{DateTime, Email};
 #[cfg(feature = "plus")]
 use bencher_json::{
     GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, ProjectUuid, RunnerUuid,
+    UserUuid,
 };
 use chrono::Utc;
 use jsonwebtoken::errors::ErrorKind as JsonWebTokenErrorKind;
@@ -75,21 +76,6 @@ impl Claims {
         debug_assert!(date_time.is_ok(), "Expiration time is invalid");
         date_time.unwrap_or_default()
     }
-}
-
-/// Claims for the link that confirms a user's new email.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EmailChangeClaims {
-    pub aud: String,
-    pub exp: i64,
-    pub iat: i64,
-    pub iss: String,
-    pub sub: UserUuid,
-    /// The user's `modified` when the change was asked for, which any later update to the user moves
-    pub modified: DateTime,
-    /// The user's email when the change was asked for
-    pub email: Email,
-    pub new_email: Email,
 }
 
 /// Claims for a trip to GitHub that links a repository to a project.

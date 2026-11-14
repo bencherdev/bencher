@@ -12,9 +12,7 @@ mod key;
 mod oauth;
 
 pub use audience::Audience;
-pub use claims::{
-    AuthOciClaims, Claims, EmailChangeClaims, OciAction, OciScopeClaims, PublicOciClaims,
-};
+pub use claims::{AuthOciClaims, Claims, OciAction, OciScopeClaims, PublicOciClaims};
 #[cfg(feature = "plus")]
 pub use claims::{GitHubGrantClaims, GitHubStateClaims, ProjectOciClaims, RunnerOciClaims};
 pub use error::TokenError;

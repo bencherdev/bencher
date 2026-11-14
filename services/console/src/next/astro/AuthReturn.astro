@@ -1,9 +1,9 @@
 ---
 import { AUTH_RETURN_KEY } from "./authReturn";
 
-// Runs first: a link's secret, in the fragment, and an old link's or a new
-// email's token, its user, and a provider's code and state, in the query,
-// leave the address before any other script can read them.
+// Runs first: a link's secret, in the fragment, and an old link's token and a
+// provider's code and state, in the query, leave the address before any other
+// script can read them.
 ---
 
 <script is:inline define:vars={{ AUTH_RETURN_KEY }}>
@@ -11,7 +11,6 @@ import { AUTH_RETURN_KEY } from "./authReturn";
 	window[AUTH_RETURN_KEY] = {
 		secret: location.hash.slice(1),
 		token: query.get("token"),
-		user: query.get("user"),
 		code: query.get("code"),
 		state: query.get("state"),
 	};

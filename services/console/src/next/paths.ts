@@ -11,6 +11,9 @@ export const ORGANIZATIONS_PATH = `${CONSOLE_PATH}/organizations`;
 export const organizationPath = (organization: string) =>
 	`${ORGANIZATIONS_PATH}/${organization}/settings`;
 
+/** Every user on the server, which only a server admin lists. */
+export const SERVER_USERS_PATH = `${CONSOLE_PATH}/server/users`;
+
 /** The first segment under `base`, if `pathname` is beneath it. */
 const segmentUnder = (base: string, pathname: string) =>
 	pathname.startsWith(`${base}/`)
@@ -96,6 +99,7 @@ export type PageName =
 	| "OrgProjects"
 	| "OrgBilling"
 	| "Organizations"
+	| "Users"
 	| "NewProject"
 	| "GitHub"
 	| "NotFound";

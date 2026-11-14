@@ -752,10 +752,7 @@ async fn oci_token_dead_legacy_tokens() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/users/{}", locked.slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&admin.token),
-        )
+        .headers(server.fresh_session(&admin))
         .json(&serde_json::json!({ "locked": true }))
         .send()
         .await
