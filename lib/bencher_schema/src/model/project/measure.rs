@@ -253,6 +253,7 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::default::Cycles::from_str(measure_str))
         .or_else(|| built_in::default::CpuTime::from_str(measure_str))
         .or_else(|| built_in::default::Allocations::from_str(measure_str))
+        .or_else(|| built_in::default::PageFaults::from_str(measure_str))
         .or_else(|| built_in::dotnet::Gen0CollectsPer1000Ops::from_str(measure_str))
         .or_else(|| built_in::dotnet::Gen1CollectsPer1000Ops::from_str(measure_str))
         .or_else(|| built_in::dotnet::Gen2CollectsPer1000Ops::from_str(measure_str))

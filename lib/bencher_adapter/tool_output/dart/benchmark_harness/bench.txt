@@ -1,0 +1,28 @@
+
+JIT - RUN
+dart benchmark/small.dart
+
+Template(RunTime): 0.003471176 us.
+List.filled(100)(RunTime): 0.51083625 us.
+
+AOT - COMPILE
+dart compile exe benchmark/small.dart -o /tmp/bench_1792943683565_QJBLGM/out.exe
+
+Generated: /tmp/bench_1792943683565_QJBLGM/out.exe
+
+AOT - RUN
+/tmp/bench_1792943683565_QJBLGM/out.exe 
+
+Template(RunTime): 0.005788705994211294 us.
+List.filled(100)(RunTime): 0.41381600057680196 us.
+
+JS - COMPILE
+dart compile js benchmark/small.dart -O4 -o /tmp/bench_1792943689473_BPJVEU/out.js
+
+Compiled 10,745,936 input bytes (5,325,870 characters source) to 34,366 characters JavaScript in 0.29 seconds
+
+JS - RUN
+node /tmp/bench_1792943689473_BPJVEU/out.js
+
+Template(RunTime): 0.009437999959888501 us.
+List.filled(100)(RunTime): 0.59525 us.
