@@ -14,7 +14,7 @@ use bencher_json::{
     JsonProject, JsonProjectKey, JsonProjectKeyCreated, JsonProjectKeys, JsonReport, JsonTestbed,
     JsonThreshold, ProjectKey, ProjectKeyUuid,
 };
-use http::StatusCode;
+use http::{HeaderMap, StatusCode};
 
 async fn setup() -> (TestServer, String, String, ProjectKey) {
     let server = TestServer::new().await;
@@ -89,7 +89,7 @@ async fn project_key_list_branches() {
 async fn project_key_get_branch() {
     let (server, project_slug, token, key) = setup().await;
 
-    // Create a branch using JWT auth
+    // Create a branch with the user's key, not the project key
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
@@ -471,7 +471,7 @@ async fn project_key_can_create_measure() {
 async fn project_key_can_create_threshold() {
     let (server, project_slug, token, key) = setup().await;
 
-    // Create branch, testbed, and measure using JWT auth
+    // Create branch, testbed, and measure with the user's key, not the project key
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/projects/{}/branches", project_slug)))
@@ -707,10 +707,7 @@ async fn project_key_revoked() {
             "/v0/projects/{}/keys/{}",
             project_slug, key_created.uuid
         )))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Failed to revoke key");
@@ -1553,10 +1550,7 @@ async fn project_key_create_requires_session() {
     let resp = server
         .client
         .get(server.api_url(&format!("/v0/projects/{}/keys", project_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");
@@ -1652,10 +1646,7 @@ async fn project_key_rename_requires_session() {
         .server
         .client
         .get(fixture.key_url())
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&fixture.token),
-        )
+        .headers(fixture.session.clone())
         .send()
         .await
         .expect("Request failed");
@@ -1668,10 +1659,7 @@ async fn project_key_rename_requires_session() {
         .server
         .client
         .patch(fixture.key_url())
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&fixture.token),
-        )
+        .headers(fixture.session.clone())
         .json(&serde_json::json!({"name": "renamed"}))
         .send()
         .await
@@ -1724,7 +1712,8 @@ async fn project_key_revoke_requires_session() {
 struct NonSession {
     server: TestServer,
     project_slug: String,
-    token: String,
+    /// A session of the project's manager.
+    session: HeaderMap,
     key: ProjectKey,
     key_uuid: ProjectKeyUuid,
     /// A user API key and a deprecated user API token for the project's manager.
@@ -1761,10 +1750,11 @@ async fn setup_non_session() -> NonSession {
 
     let user_key = server.create_user_key(&user, "user-key").await;
     let api_token = seed_token(&server, &user, "legacy-token");
+    let session = server.fresh_session(&user);
     NonSession {
         server,
         project_slug,
-        token: user.token,
+        session,
         key: created.key,
         key_uuid: created.uuid,
         bearers: [
@@ -1796,15 +1786,12 @@ async fn project_keys_sort_created() {
 
     let names = |query: &'static str| {
         let server = &server;
-        let token = &user.token;
+        let session = server.fresh_session(&user);
         async move {
             let resp = server
                 .client
                 .get(server.api_url(&format!("/v0/projects/{}/keys?{}", project_slug, query)))
-                .header(
-                    bencher_json::AUTHORIZATION,
-                    bencher_json::bearer_header(token),
-                )
+                .headers(session)
                 .send()
                 .await
                 .expect("Request failed");

@@ -143,10 +143,7 @@ async fn plan_patch_requires_session() {
     let resp = server
         .client
         .patch(server.api_url(&format!("/v0/organizations/{}/plan", org_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&body)
         .send()
         .await
@@ -158,22 +155,19 @@ async fn plan_patch_requires_session() {
 #[expect(clippy::expect_used, reason = "test helpers")]
 mod portal {
     use bencher_api_tests::{
-        TestOrg, TestServer, TestUser,
+        TestOrg, TestServer, TestUser, bearer,
         helpers::{base_timestamp, seed_token},
     };
     use bencher_schema::{model::user::UserId, schema};
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-    use http::StatusCode;
+    use http::{HeaderMap, StatusCode};
 
-    async fn post_portal(server: &TestServer, org: &TestOrg, token: &str) -> StatusCode {
+    async fn post_portal(server: &TestServer, org: &TestOrg, credential: HeaderMap) -> StatusCode {
         let org_slug: &str = org.slug.as_ref();
         server
             .client
             .post(server.api_url(&format!("/v0/organizations/{org_slug}/plan/portal")))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(token),
-            )
+            .headers(credential)
             .send()
             .await
             .expect("Request failed")
@@ -232,7 +226,7 @@ mod portal {
         insert_plan(&server, &org);
 
         assert_eq!(
-            post_portal(&server, &org, &user.token).await,
+            post_portal(&server, &org, server.fresh_session(&user)).await,
             StatusCode::NOT_FOUND
         );
     }
@@ -248,7 +242,7 @@ mod portal {
         insert_plan(&server, &org);
         let api_token = seed_token(&server, &user, "Legacy Token");
         assert_eq!(
-            post_portal(&server, &org, api_token.token.as_ref()).await,
+            post_portal(&server, &org, bearer(api_token.token.as_ref())).await,
             StatusCode::FORBIDDEN
         );
 
@@ -265,7 +259,7 @@ mod portal {
         let created: bencher_json::JsonUserKeyCreated =
             resp.json().await.expect("Failed to parse user key");
         assert_eq!(
-            post_portal(&server, &org, created.key.as_ref()).await,
+            post_portal(&server, &org, bearer(created.key.as_ref())).await,
             StatusCode::FORBIDDEN
         );
     }
@@ -281,14 +275,14 @@ mod portal {
             .signup("Outsider", "portaloutsider@example.com")
             .await;
         assert_eq!(
-            post_portal(&server, &org, &outsider.token).await,
+            post_portal(&server, &org, server.fresh_session(&outsider)).await,
             StatusCode::FORBIDDEN
         );
 
         let member = server.signup("Member", "portalmember@example.com").await;
         insert_member(&server, &org, &member);
         assert_eq!(
-            post_portal(&server, &org, &member.token).await,
+            post_portal(&server, &org, server.fresh_session(&member)).await,
             StatusCode::FORBIDDEN
         );
     }
@@ -300,14 +294,14 @@ mod portal {
         let user = server.signup("Test User", "portalplan@example.com").await;
         let org = server.create_org(&user, "Portal Plan Org").await;
         assert_eq!(
-            post_portal(&server, &org, &user.token).await,
+            post_portal(&server, &org, server.fresh_session(&user)).await,
             StatusCode::NOT_FOUND
         );
 
         insert_plan(&server, &org);
         // The test server has no biller, so a request that gets this far is refused there.
         assert_eq!(
-            post_portal(&server, &org, &user.token).await,
+            post_portal(&server, &org, server.fresh_session(&user)).await,
             StatusCode::LOCKED
         );
     }

@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, net::IpAddr};
 
 use bencher_json::{BENCHER_API_PORT, BENCHER_CONSOLE_PORT};
 use url::{Host, Url};
@@ -88,14 +88,21 @@ fn named<'env>(env: &'env [String], name: &str) -> Option<&'env str> {
 }
 
 /// Whether `url` names this machine, which inside the console's container is the container.
+/// An unspecified address connects to this machine too.
 fn is_loopback(url: &str) -> bool {
     Url::parse(url)
         .ok()
         .and_then(|url| {
             url.host().map(|host| match host {
-                Host::Domain(domain) => domain.eq_ignore_ascii_case("localhost"),
-                Host::Ipv4(ip) => ip.is_loopback(),
-                Host::Ipv6(ip) => ip.is_loopback(),
+                Host::Domain(domain) => domain
+                    .strip_suffix('.')
+                    .unwrap_or(domain)
+                    .eq_ignore_ascii_case("localhost"),
+                Host::Ipv4(ip) => ip.is_loopback() || ip.is_unspecified(),
+                Host::Ipv6(ip) => {
+                    let ip = IpAddr::V6(ip).to_canonical();
+                    ip.is_loopback() || ip.is_unspecified()
+                },
             })
         })
         .unwrap_or_default()

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use bencher_json::{Jwt, Url};
+use bencher_json::{Url, UserKey};
 use clap::{Parser, ValueEnum};
 
 #[derive(Parser, Debug, Default)]
@@ -8,21 +8,15 @@ pub struct TaskSeedTest {
     /// Test API URL
     #[clap(long)]
     pub url: Option<Url>,
-    /// Admin test token
-    #[clap(long)]
-    pub admin_token: Option<Jwt>,
-    /// Test token
-    #[clap(long)]
-    pub token: Option<Jwt>,
     /// Is Bencher Cloud
     #[clap(long)]
     pub is_bencher_cloud: bool,
     /// Running outside of a git repo
     #[clap(long)]
     pub no_git: bool,
-    /// The API's log, where a server that sends no email writes each email,
-    /// to make keys and send invitations from a browser session signed in by its code rather than
-    /// by the test token, and to accept an invitation by its link
+    /// The API's log, where a server that sends no email writes each email, to sign the seed's
+    /// users in by its code and to accept an invitation by its link.
+    /// Dev's API is read from its Fly.io logs.
     #[clap(long)]
     pub api_log: Option<PathBuf>,
 }
@@ -32,9 +26,9 @@ pub struct TaskExamples {
     /// Test API URL
     #[clap(long)]
     pub url: Option<Url>,
-    /// Test token
+    /// A user API key of the seed's user
     #[clap(long)]
-    pub token: Option<Jwt>,
+    pub key: Option<UserKey>,
     /// Example to run (default: all)
     pub example: Option<TaskExample>,
 }

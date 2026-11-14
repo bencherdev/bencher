@@ -35,11 +35,10 @@ const memory = (entries: Record<string, string> = {}) => ({
 	},
 });
 
-// Kills a sign-in that keeps more of the reader than the hint, leaves the
-// user and session token the console stored before the cookie, keeps this
+// Kills a sign-in that keeps more of the reader than the hint, keeps this
 // tab's pending sign-in, or lands anywhere but where a sign-in goes.
 test("a finished sign-in keeps the hint alone and lands", () => {
-	const local = memory({ BENCHER_USER: '{"token":"tok"}' });
+	const local = memory();
 	const session = memory({ BENCHER_PENDING_SIGN_IN: "{}" });
 	const went: string[] = [];
 	finish(

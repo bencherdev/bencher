@@ -1,23 +1,23 @@
-use std::{path::PathBuf, process::Command};
+use std::process::Command;
 
 use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
-use bencher_json::{Jwt, Url};
+use bencher_json::Url;
 use pretty_assertions::assert_eq;
 
 use crate::{
     parser::TaskSeedTest,
-    task::{is_dev, session::BrowserSession, unwrap_admin_token, unwrap_url, unwrap_user_token},
+    task::{
+        session::{ApiLog, BrowserSession, Readers},
+        unwrap_url,
+    },
 };
 
 pub(crate) const BENCHER_CMD: &str = "bencher";
 pub(crate) const HOST_ARG: &str = "--host";
-pub(crate) const TOKEN_ARG: &str = "--token";
-const KEY_ARG: &str = "--key";
+pub(crate) const KEY_ARG: &str = "--key";
 const ORG_SLUG: &str = "muriel-bagge";
 /// Muriel's personal org slug doubles as her user slug.
-#[cfg(feature = "plus")]
 pub(crate) const USER_SLUG: &str = ORG_SLUG;
-#[cfg(feature = "plus")]
 pub(crate) const ADMIN_SLUG: &str = "eustace-bagge";
 pub(crate) const PROJECT_ARG: &str = "--project";
 pub(crate) const PROJECT_SLUG: &str = "the-computer";
@@ -30,7 +30,9 @@ const MEASURE_ARG: &str = "--measure";
 const MEASURE_SLUG: &str = "screams";
 
 pub(crate) const ADMIN_EMAIL: &str = "eustace.bagge@nowhere.com";
+pub(crate) const ADMIN_NAME: &str = "Eustace Bagge";
 pub(crate) const USER_EMAIL: &str = "muriel.bagge@nowhere.com";
+pub(crate) const USER_NAME: &str = "Muriel Bagge";
 const INVITEE_EMAIL: &str = "katz@nowhere.com";
 
 const REPO_NAME: &str = "bencher";
@@ -54,11 +56,9 @@ const GITHUB_ACTIONS: &str = "GITHUB_ACTIONS";
 #[derive(Debug)]
 pub struct SeedTest {
     pub url: Url,
-    pub admin_token: Jwt,
-    pub token: Jwt,
     pub is_bencher_cloud: bool,
     pub no_git: bool,
-    pub api_log: Option<PathBuf>,
+    pub api_log: ApiLog,
 }
 
 impl TryFrom<TaskSeedTest> for SeedTest {
@@ -67,22 +67,16 @@ impl TryFrom<TaskSeedTest> for SeedTest {
     fn try_from(test: TaskSeedTest) -> Result<Self, Self::Error> {
         let TaskSeedTest {
             url,
-            admin_token,
-            token,
             is_bencher_cloud,
             no_git,
             api_log,
         } = test;
 
-        let is_dev = is_dev(url.as_ref());
         let url = unwrap_url(url);
-        let admin_token = unwrap_admin_token(admin_token, is_dev);
-        let token = unwrap_user_token(token, is_dev);
+        let api_log = ApiLog::new(&url, api_log)?;
 
         Ok(Self {
             url,
-            admin_token,
-            token,
             is_bencher_cloud,
             no_git,
             api_log,
@@ -90,27 +84,23 @@ impl TryFrom<TaskSeedTest> for SeedTest {
     }
 }
 
-/// Run what only a fresh browser session may do with the test token, and where the server
-/// refuses it for want of a fresh sign-in, say how to give the seed one.
-fn by_token(cmd: &mut Command, what: &str) -> anyhow::Result<Vec<u8>> {
-    let output = cmd.output()?;
-    if output.status.success() {
-        return Ok(output.stdout);
-    }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if stderr.contains("fresh_sign_in") {
-        anyhow::bail!(
-            "This server lets only a browser session signed in within the last 10 minutes \
-             {what}. Run the API with its output in a file, and pass that file to `--api-log`, \
-             so the seed signs in by the emailed code.\n{stderr}"
-        );
-    }
-    anyhow::bail!("Failed to {what}:\n{stderr}")
-}
-
 impl SeedTest {
     fn project_name(&self) -> &str {
         if self.no_git { NO_GIT_NAME } else { REPO_NAME }
+    }
+
+    /// Seed the server, and return its readers, each signed in with a key of their own.
+    pub fn exec(&self) -> anyhow::Result<Readers> {
+        if self.is_bencher_cloud {
+            println!("Running seed test as Bencher Cloud: {}", self.url);
+        } else {
+            println!("Running seed test as Bencher Self-Hosted: {}", self.url);
+        }
+
+        // Eustace Bagge signs in first, so he is the server admin.
+        let readers = Readers::sign_in(&self.url, &self.api_log)?;
+        self.exec_with(&readers)?;
+        Ok(readers)
     }
 
     #[expect(
@@ -119,93 +109,36 @@ impl SeedTest {
         clippy::too_many_lines,
         reason = "seed test exercises full API workflow"
     )]
-    pub fn exec(&self) -> anyhow::Result<()> {
+    fn exec_with(&self, readers: &Readers) -> anyhow::Result<()> {
         let host = self.url.as_ref();
-        let admin_token = self.admin_token.as_ref();
-        let token = self.token.as_ref();
+        let admin_key = readers.admin.key.as_ref();
+        let key = readers.user.key.as_ref();
         let bencher_cmd = Command::cargo_bin(BENCHER_CMD)?
             .get_program()
             .to_string_lossy()
             .to_string();
 
-        if self.is_bencher_cloud {
-            println!("Running seed test as Bencher Cloud: {host}");
-        } else {
-            println!("Running seed test as Bencher Self-Hosted: {host}");
-        }
-
-        // Signup Eustace Bagge first so he is admin
-        // cargo run -- auth signup --host http://localhost:6610 --name "Eustace Bagge" eustace.bagge@nowhere.com
+        // cargo run -- org ls --host http://localhost:6610 --key $BENCHER_API_KEY
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "auth",
-            "signup",
-            HOST_ARG,
-            host,
-            "--name",
-            "Eustace Bagge",
-            "--i-agree",
-            ADMIN_EMAIL,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonAuthAck =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
-        // cargo run -- auth signup --host http://localhost:6610 --name "Muriel Bagge" muriel.bagge@nowhere.com
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "auth",
-            "signup",
-            HOST_ARG,
-            host,
-            "--name",
-            "Muriel Bagge",
-            "--i-agree",
-            USER_EMAIL,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonAuthAck =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
-        // cargo run -- auth login --host http://localhost:6610 muriel.bagge@nowhere.com
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["auth", "login", HOST_ARG, host, USER_EMAIL])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonAuthAck =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
-        // cargo run -- org ls --host http://localhost:6610 --token $BENCHER_API_TOKEN
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["org", "ls", HOST_ARG, host, TOKEN_ARG, token])
+        cmd.args(["org", "ls", HOST_ARG, host, KEY_ARG, key])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let organizations: bencher_json::JsonOrganizations =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(organizations.0.len(), 1);
 
-        // cargo run -- org view --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
+        // cargo run -- org view --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "org",
-            "view",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            admin_token,
-            ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["org", "view", HOST_ARG, host, KEY_ARG, admin_key, ORG_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let json: bencher_json::JsonOrganization =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         let admin_muriel_bagge_org_uuid = json.uuid;
 
-        // cargo run -- org view --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
+        // cargo run -- org view --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["org", "view", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
+        cmd.args(["org", "view", HOST_ARG, host, KEY_ARG, key, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let json: bencher_json::JsonOrganization =
@@ -214,57 +147,33 @@ impl SeedTest {
         assert_eq!(admin_muriel_bagge_org_uuid, muriel_bagge_org_uuid);
 
         // An invitation needs a browser session signed in within the last 10 minutes, and the
-        // invitee accepts it with a session of their own, each signed in by the emailed code.
-        if let Some(api_log) = &self.api_log {
-            let secret = BrowserSession::sign_in(&self.url, USER_EMAIL, api_log)?.invite(
-                ORG_SLUG,
-                INVITEE_EMAIL,
-                "Katz",
-            )?;
-            let organization = BrowserSession::sign_in(&self.url, INVITEE_EMAIL, api_log)?
-                .accept_invite(&secret)?;
-            assert_eq!(organization.slug.to_string(), ORG_SLUG);
-        } else {
-            // cargo run -- member invite --host http://localhost:6610 --token $BENCHER_API_TOKEN --name Katz --email katz@nowhere.com --role leader muriel-bagge
-            let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-            cmd.args([
-                "member",
-                "invite",
-                HOST_ARG,
-                host,
-                TOKEN_ARG,
-                token,
-                "--name",
-                "Katz",
-                "--email",
-                INVITEE_EMAIL,
-                "--role",
-                "leader",
-                ORG_SLUG,
-            ])
-            .current_dir(CLI_DIR);
-            let _json: bencher_json::JsonAuthAck =
-                serde_json::from_slice(&by_token(&mut cmd, "send an invitation")?)?;
-        }
+        // invitee accepts it with a session of their own, signed in by the emailed code.
+        let secret = readers
+            .user
+            .session
+            .invite(ORG_SLUG, INVITEE_EMAIL, "Katz")?;
+        let organization = BrowserSession::sign_in(&self.url, INVITEE_EMAIL, &self.api_log)?
+            .accept_invite(&secret)?;
+        assert_eq!(organization.slug.to_string(), ORG_SLUG);
 
-        // cargo run -- project ls --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
+        // cargo run -- project ls --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["project", "ls", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
+        cmd.args(["project", "ls", HOST_ARG, host, KEY_ARG, key, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let projects: bencher_json::JsonProjects =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(projects.0.len(), 0);
 
-        // cargo run -- project create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name "The Computer" --slug the-computer muriel-bagge
+        // cargo run -- project create --host http://localhost:6610 --key $BENCHER_API_KEY --name "The Computer" --slug the-computer muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "project",
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             "--name",
             "The Computer",
             "--slug",
@@ -276,9 +185,9 @@ impl SeedTest {
         let _json: bencher_json::JsonProject =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- project ls --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
+        // cargo run -- project ls --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["project", "ls", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
+        cmd.args(["project", "ls", HOST_ARG, host, KEY_ARG, key, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let projects: bencher_json::JsonProjects =
@@ -293,15 +202,15 @@ impl SeedTest {
         let _json: bencher_json::JsonProject =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- project view --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- project view --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "project",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_SLUG,
         ])
         .current_dir(CLI_DIR);
@@ -318,32 +227,24 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(branches.0.len(), 0);
 
-        // cargo run -- branch ls --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- branch ls --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "branch",
-            "ls",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["branch", "ls", HOST_ARG, host, KEY_ARG, key, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let branches: bencher_json::JsonBranches =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(branches.0.len(), 0);
 
-        // cargo run -- branch create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name master --slug master the-computer
+        // cargo run -- branch create --host http://localhost:6610 --key $BENCHER_API_KEY --name master --slug master the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "branch",
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             "--name",
             "master",
             "--slug",
@@ -364,18 +265,10 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(branches.0.len(), 1);
 
-        // cargo run -- branch ls --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- branch ls --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "branch",
-            "ls",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["branch", "ls", HOST_ARG, host, KEY_ARG, key, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let branches: bencher_json::JsonBranches =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -389,15 +282,15 @@ impl SeedTest {
         let _json: bencher_json::JsonBranch =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- branch view --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer master
+        // cargo run -- branch view --host http://localhost:6610 --key $BENCHER_API_KEY the-computer master
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "branch",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_SLUG,
             BRANCH_SLUG,
         ])
@@ -415,18 +308,10 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(testbeds.0.len(), 0);
 
-        // cargo run -- testbed ls --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- testbed ls --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "testbed",
-            "ls",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["testbed", "ls", HOST_ARG, host, KEY_ARG, key, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let testbeds: bencher_json::JsonTestbeds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -439,8 +324,8 @@ impl SeedTest {
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             "--name",
             "Base",
             "--slug",
@@ -461,18 +346,10 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(testbeds.0.len(), 1);
 
-        // cargo run -- testbed ls --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- testbed ls --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "testbed",
-            "ls",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["testbed", "ls", HOST_ARG, host, KEY_ARG, key, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let testbeds: bencher_json::JsonTestbeds =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -493,15 +370,15 @@ impl SeedTest {
         let _json: bencher_json::JsonTestbed =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- testbed view --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer base
+        // cargo run -- testbed view --host http://localhost:6610 --key $BENCHER_API_KEY the-computer base
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "testbed",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_SLUG,
             TESTBED_SLUG,
         ])
@@ -519,32 +396,24 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(measures.0.len(), 0);
 
-        // cargo run -- measure ls --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- measure ls --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "measure",
-            "ls",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["measure", "ls", HOST_ARG, host, KEY_ARG, key, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let measures: bencher_json::JsonMeasures =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(measures.0.len(), 0);
 
-        // cargo run -- measure create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name Screams --slug screams --units "Decibels (dB)" the-computer
+        // cargo run -- measure create --host http://localhost:6610 --key $BENCHER_API_KEY --name Screams --slug screams --units "Decibels (dB)" the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "measure",
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             "--name",
             "Screams",
             "--slug",
@@ -567,18 +436,10 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(measures.0.len(), 1);
 
-        // cargo run -- measure ls --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- measure ls --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "measure",
-            "ls",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["measure", "ls", HOST_ARG, host, KEY_ARG, key, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let measures: bencher_json::JsonMeasures =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -599,15 +460,15 @@ impl SeedTest {
         let _json: bencher_json::JsonMeasure =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- measure view --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer screams
+        // cargo run -- measure view --host http://localhost:6610 --key $BENCHER_API_KEY the-computer screams
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "measure",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_SLUG,
             MEASURE_SLUG,
         ])
@@ -616,30 +477,11 @@ impl SeedTest {
         let _json: bencher_json::JsonMeasure =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // A new key needs a browser session signed in within the last 10 minutes: one signed in
-        // by the emailed code where the API's log is at hand, else the test token's session.
-        let project_key_created: bencher_json::JsonProjectKeyCreated =
-            if let Some(api_log) = &self.api_log {
-                BrowserSession::sign_in(&self.url, USER_EMAIL, api_log)?
-                    .create_project_key(PROJECT_SLUG, PROJECT_KEY_NAME)?
-            } else {
-                // cargo run -- project key create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name seed-test-key the-computer
-                let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-                cmd.args([
-                    "project",
-                    "key",
-                    "create",
-                    HOST_ARG,
-                    host,
-                    TOKEN_ARG,
-                    token,
-                    "--name",
-                    PROJECT_KEY_NAME,
-                    PROJECT_SLUG,
-                ])
-                .current_dir(CLI_DIR);
-                serde_json::from_slice(&by_token(&mut cmd, "create a key")?)?
-            };
+        // A new key needs a browser session signed in within the last 10 minutes.
+        let project_key_created = readers
+            .user
+            .session
+            .create_project_key(PROJECT_SLUG, PROJECT_KEY_NAME)?;
         let project_key = project_key_created.key.as_ref().to_owned();
         let project_key_uuid_str = project_key_created.uuid.to_string();
 
@@ -714,15 +556,15 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(thresholds.0.len(), 0);
 
-        // cargo run -- threshold ls --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- threshold ls --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "threshold",
             "ls",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_SLUG,
         ])
         .current_dir(CLI_DIR);
@@ -731,15 +573,15 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(thresholds.0.len(), 0);
 
-        // cargo run -- threshold create --host http://localhost:6610 --token $BENCHER_API_TOKEN --branch master --testbed base --measure latency --test t --upper-boundary 0.99 the-computer
+        // cargo run -- threshold create --host http://localhost:6610 --key $BENCHER_API_KEY --branch master --testbed base --measure latency --test t --upper-boundary 0.99 the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "threshold",
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             BRANCH_ARG,
             BRANCH_SLUG,
             TESTBED_ARG,
@@ -766,15 +608,15 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(thresholds.0.len(), 1);
 
-        // cargo run -- threshold ls --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- threshold ls --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "threshold",
             "ls",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_SLUG,
         ])
         .current_dir(CLI_DIR);
@@ -798,15 +640,15 @@ impl SeedTest {
         let _json: bencher_json::JsonThreshold =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- threshold view --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer [threshold.uuid]
+        // cargo run -- threshold view --host http://localhost:6610 --key $BENCHER_API_KEY the-computer [threshold.uuid]
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "threshold",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_SLUG,
             &threshold.uuid.to_string(),
         ])
@@ -824,18 +666,10 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(alerts.0.len(), 0);
 
-        // cargo run -- alert ls --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
+        // cargo run -- alert ls --host http://localhost:6610 --key $BENCHER_API_KEY the-computer
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "alert",
-            "ls",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
+        cmd.args(["alert", "ls", HOST_ARG, host, KEY_ARG, key, PROJECT_SLUG])
+            .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let alerts: bencher_json::JsonAlerts =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
@@ -871,8 +705,8 @@ impl SeedTest {
                     "run",
                     HOST_ARG,
                     host,
-                    TOKEN_ARG,
-                    token,
+                    KEY_ARG,
+                    key,
                     PROJECT_ARG,
                     PROJECT_SLUG,
                     BRANCH_ARG,
@@ -897,8 +731,8 @@ impl SeedTest {
                     "run",
                     HOST_ARG,
                     host,
-                    TOKEN_ARG,
-                    token,
+                    KEY_ARG,
+                    key,
                     PROJECT_ARG,
                     PROJECT_SLUG,
                     BRANCH_ARG,
@@ -956,14 +790,14 @@ impl SeedTest {
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock
+        // cargo run -- run --host http://localhost:6610 --key $BENCHER_API_KEY --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1057,14 +891,14 @@ impl SeedTest {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // This shouldn't generate any alerts because we reset the thresholds on the start point branch
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
+        // cargo run -- run --host http://localhost:6610 --key $BENCHER_API_KEY --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1105,14 +939,14 @@ impl SeedTest {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // This should generate alerts because we are using the measure that has a thresholds set for it on the start point branch
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
+        // cargo run -- run --host http://localhost:6610 --key $BENCHER_API_KEY --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1204,14 +1038,14 @@ impl SeedTest {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // Reset the feature branch
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock
+        // cargo run -- run --host http://localhost:6610 --key $BENCHER_API_KEY --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1280,14 +1114,14 @@ impl SeedTest {
         assert_eq!(alerts.0.len(), 5);
 
         // Archive the `feature-branch` branch
-        // cargo run -- archive --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch
+        // cargo run -- archive --host http://localhost:6610 --key $BENCHER_API_KEY --project the-computer --branch feature-branch
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "archive",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1363,14 +1197,14 @@ impl SeedTest {
         assert_eq!(alerts.0.len(), 5);
 
         // Unarchive the `feature-branch` branch
-        // cargo run -- archive --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch
+        // cargo run -- archive --host http://localhost:6610 --key $BENCHER_API_KEY --project the-computer --branch feature-branch
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "unarchive",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1459,14 +1293,14 @@ impl SeedTest {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // Generate alerts on the master branch using already defined Thresholds
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch master --testbed base --quiet bencher mock --pow 10
+        // cargo run -- run --host http://localhost:6610 --key $BENCHER_API_KEY --project the-computer --branch master --testbed base --quiet bencher mock --pow 10
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1543,15 +1377,15 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(alerts.0.len(), 5);
 
-        // cargo run -- alert get --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer [alert.uuid]
+        // cargo run -- alert get --host http://localhost:6610 --key $BENCHER_API_KEY the-computer [alert.uuid]
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "alert",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_SLUG,
             #[expect(clippy::indexing_slicing, reason = "test asserts alerts exist above")]
             alerts.0[0].uuid.to_string().as_str(),
@@ -1566,14 +1400,14 @@ impl SeedTest {
         // If the start point hash is missing, fall back to the start point branch's latest version
         // https://github.com/bencherdev/bencher/issues/450
         // https://github.com/bencherdev/bencher/issues/774
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-hash --branch-start-point master --branch-start-point-hash badbadbadbadbadbadbadbadbadbadbadbadbad1 --testbed base --quiet bencher mock
+        // cargo run -- run --host http://localhost:6610 --key $BENCHER_API_KEY --project the-computer --branch feature-hash --branch-start-point master --branch-start-point-hash badbadbadbadbadbadbadbadbadbadbadbadbad1 --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1608,8 +1442,8 @@ impl SeedTest {
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1655,8 +1489,8 @@ impl SeedTest {
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1693,8 +1527,8 @@ impl SeedTest {
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             BRANCH_ARG,
@@ -1817,8 +1651,8 @@ impl SeedTest {
             "claim",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             &organization_uuid_str,
         ])
         .current_dir(CLI_DIR);
@@ -1838,8 +1672,8 @@ impl SeedTest {
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             UNCLAIMED_SLUG,
             "--format",
@@ -1867,8 +1701,8 @@ impl SeedTest {
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             // This is needed to run in CI
             "--ci-on-the-fly",
             "--format",
@@ -1897,8 +1731,8 @@ impl SeedTest {
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             CLAIMED_SLUG,
             "--format",
@@ -1927,8 +1761,8 @@ impl SeedTest {
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             bencher_one,
             "--format",
@@ -1958,8 +1792,8 @@ impl SeedTest {
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             bencher_two,
             "--format",
@@ -1980,23 +1814,13 @@ impl SeedTest {
         assert!(json.project.claimed.is_some(), "{json:?}");
 
         // ========== Project Key CRUD Lifecycle ==========
+        // Only a browser session lists, views, renames, or revokes a key.
+        let session = &readers.user.session;
+        let project_keys_path = format!("/v0/projects/{PROJECT_SLUG}/keys");
+        let project_key_path = format!("{project_keys_path}/{project_key_uuid_str}");
 
-        // cargo run -- project key list --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "project",
-            "key",
-            "list",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
         let keys: bencher_json::JsonProjectKeys =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            serde_json::from_str(&session.get(&project_keys_path)?)?;
         assert_eq!(
             keys.0.len(),
             1,
@@ -2014,23 +1838,8 @@ impl SeedTest {
             );
         }
 
-        // cargo run -- project key view --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer <uuid>
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "project",
-            "key",
-            "view",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-            project_key_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
         let key_view: bencher_json::JsonProjectKey =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            serde_json::from_str(&session.get(&project_key_path)?)?;
         assert_eq!(key_view.uuid, project_key_created.uuid);
         assert_eq!(key_view.name.as_ref(), PROJECT_KEY_NAME);
         assert!(
@@ -2038,25 +1847,11 @@ impl SeedTest {
             "key should not be revoked: {key_view:?}"
         );
 
-        // cargo run -- project key update --host http://localhost:6610 --token $BENCHER_API_TOKEN --name seed-test-key-updated the-computer <uuid>
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "project",
-            "key",
-            "update",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            "--name",
-            PROJECT_KEY_UPDATED_NAME,
-            PROJECT_SLUG,
-            project_key_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let key_updated: bencher_json::JsonProjectKey =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let key_updated: bencher_json::JsonProjectKey = serde_json::from_str(&session.send_json(
+            "PATCH",
+            &project_key_path,
+            &serde_json::json!({ "name": PROJECT_KEY_UPDATED_NAME }),
+        )?)?;
         assert_eq!(key_updated.uuid, project_key_created.uuid);
         assert_eq!(key_updated.name.as_ref(), PROJECT_KEY_UPDATED_NAME);
 
@@ -2083,21 +1878,7 @@ impl SeedTest {
         let _json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- project key revoke --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer <uuid>
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "project",
-            "key",
-            "revoke",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-            project_key_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        cmd.assert().success();
+        assert_eq!(session.delete(&project_key_path)?, 204);
 
         // The revoked key must NOT authenticate a bencher run
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -2126,68 +1907,32 @@ impl SeedTest {
         );
 
         // Default list must hide the revoked key
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "project",
-            "key",
-            "list",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
         let keys: bencher_json::JsonProjectKeys =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            serde_json::from_str(&session.get(&project_keys_path)?)?;
         assert!(
             keys.0.iter().all(|k| k.uuid != project_key_created.uuid),
             "default list should hide revoked keys: {keys:?}"
         );
 
-        // --revoked flag must surface the revoked key
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "project",
-            "key",
-            "list",
-            "--revoked",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
+        // `revoked=true` must surface the revoked key
         let keys: bencher_json::JsonProjectKeys =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            serde_json::from_str(&session.get(&format!("{project_keys_path}?revoked=true"))?)?;
         let revoked_entry = keys
             .0
             .iter()
             .find(|k| k.uuid == project_key_created.uuid)
-            .expect("revoked key should appear when --revoked is set");
+            .expect("revoked key should appear when revoked keys are asked for");
         assert!(
             revoked_entry.revoked.is_some(),
             "revoked key must carry a revoked timestamp: {revoked_entry:?}"
         );
 
         // Revoking the same key again should fail (already revoked)
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "project",
-            "key",
-            "revoke",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            PROJECT_SLUG,
-            project_key_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        cmd.assert().failure();
+        assert_eq!(
+            session.delete(&project_key_path)?,
+            409,
+            "a revoked project key should not be revoked again"
+        );
 
         // A project key without `--project` must fail fast in the CLI,
         // before any request is made (so the revoked state above is irrelevant).
@@ -2216,30 +1961,11 @@ impl SeedTest {
 
         // ========== User Key CRUD Lifecycle ==========
 
-        let user_key_created: bencher_json::JsonUserKeyCreated =
-            if let Some(api_log) = &self.api_log {
-                BrowserSession::sign_in(&self.url, USER_EMAIL, api_log)?
-                    .create_user_key(ORG_SLUG, USER_KEY_NAME)?
-            } else {
-                // cargo run -- user key create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name seed-test-user-key muriel-bagge
-                let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-                cmd.args([
-                    "user",
-                    "key",
-                    "create",
-                    HOST_ARG,
-                    host,
-                    TOKEN_ARG,
-                    token,
-                    "--name",
-                    USER_KEY_NAME,
-                    ORG_SLUG,
-                ])
-                .current_dir(CLI_DIR);
-                serde_json::from_slice(&by_token(&mut cmd, "create a key")?)?
-            };
+        let user_key_created = session.create_user_key(ORG_SLUG, USER_KEY_NAME)?;
         let user_key = user_key_created.key.as_ref().to_owned();
         let user_key_uuid_str = user_key_created.uuid.to_string();
+        let user_keys_path = format!("/v0/users/{ORG_SLUG}/keys");
+        let user_key_path = format!("{user_keys_path}/{user_key_uuid_str}");
 
         // cargo run -- run --host http://localhost:6610 --key $USER_KEY --project the-computer --quiet bencher mock --seed 6
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -2301,49 +2027,26 @@ impl SeedTest {
             "user key creating a user key should 403: {output:?}"
         );
 
-        // cargo run -- user key list --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user", "key", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
+        // Muriel's own key, which the seed's requests send, and the new one.
         let keys: bencher_json::JsonUserKeys =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            serde_json::from_str(&session.get(&user_keys_path)?)?;
         assert_eq!(
             keys.0.len(),
-            1,
-            "should have exactly one active user key: {keys:?}"
+            2,
+            "should have two active user keys: {keys:?}"
         );
-        #[expect(
-            clippy::indexing_slicing,
-            reason = "test asserts exactly one key above"
-        )]
-        {
-            assert_eq!(keys.0[0].uuid, user_key_created.uuid);
-            assert!(
-                keys.0[0].revoked.is_none(),
-                "key should not be revoked: {keys:?}"
-            );
-        }
+        let listed = keys
+            .0
+            .iter()
+            .find(|k| k.uuid == user_key_created.uuid)
+            .expect("the new user key should be listed");
+        assert!(
+            listed.revoked.is_none(),
+            "key should not be revoked: {keys:?}"
+        );
 
-        // cargo run -- user key view --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge <uuid>
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user",
-            "key",
-            "view",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            ORG_SLUG,
-            user_key_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
         let key_view: bencher_json::JsonUserKey =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            serde_json::from_str(&session.get(&user_key_path)?)?;
         assert_eq!(key_view.uuid, user_key_created.uuid);
         assert_eq!(key_view.name.as_ref(), USER_KEY_NAME);
         assert!(
@@ -2351,25 +2054,11 @@ impl SeedTest {
             "key should not be revoked: {key_view:?}"
         );
 
-        // cargo run -- user key update --host http://localhost:6610 --token $BENCHER_API_TOKEN --name seed-test-user-key-updated muriel-bagge <uuid>
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user",
-            "key",
-            "update",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            "--name",
-            USER_KEY_UPDATED_NAME,
-            ORG_SLUG,
-            user_key_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let key_updated: bencher_json::JsonUserKey =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        let key_updated: bencher_json::JsonUserKey = serde_json::from_str(&session.send_json(
+            "PATCH",
+            &user_key_path,
+            &serde_json::json!({ "name": USER_KEY_UPDATED_NAME }),
+        )?)?;
         assert_eq!(key_updated.uuid, user_key_created.uuid);
         assert_eq!(key_updated.name.as_ref(), USER_KEY_UPDATED_NAME);
 
@@ -2418,21 +2107,7 @@ impl SeedTest {
             "user key revoking itself should 403: {output:?}"
         );
 
-        // cargo run -- user key revoke --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge <uuid>
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user",
-            "key",
-            "revoke",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            ORG_SLUG,
-            user_key_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        cmd.assert().success();
+        assert_eq!(session.delete(&user_key_path)?, 204);
 
         // The revoked key must NOT authenticate a bencher run
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -2461,88 +2136,59 @@ impl SeedTest {
         );
 
         // Default list must hide the revoked key
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user", "key", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
         let keys: bencher_json::JsonUserKeys =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            serde_json::from_str(&session.get(&user_keys_path)?)?;
         assert!(
             keys.0.iter().all(|k| k.uuid != user_key_created.uuid),
             "default list should hide revoked keys: {keys:?}"
         );
 
-        // --revoked flag must surface the revoked key
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user",
-            "key",
-            "list",
-            "--revoked",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
+        // `revoked=true` must surface the revoked key
         let keys: bencher_json::JsonUserKeys =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            serde_json::from_str(&session.get(&format!("{user_keys_path}?revoked=true"))?)?;
         let revoked_entry = keys
             .0
             .iter()
             .find(|k| k.uuid == user_key_created.uuid)
-            .expect("revoked key should appear when --revoked is set");
+            .expect("revoked key should appear when revoked keys are asked for");
         assert!(
             revoked_entry.revoked.is_some(),
             "revoked key must carry a revoked timestamp: {revoked_entry:?}"
         );
 
         // Revoking the same key again should fail (already revoked)
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user",
-            "key",
-            "revoke",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            ORG_SLUG,
-            user_key_uuid_str.as_str(),
-        ])
-        .current_dir(CLI_DIR);
-        cmd.assert().failure();
+        assert_eq!(
+            session.delete(&user_key_path)?,
+            409,
+            "a revoked user key should not be revoked again"
+        );
 
         #[cfg(feature = "plus")]
-        self.plus_exec()?;
+        self.plus_exec(readers)?;
 
         Ok(())
     }
 
     #[cfg(feature = "plus")]
-    fn plus_exec(&self) -> anyhow::Result<()> {
+    fn plus_exec(&self, readers: &Readers) -> anyhow::Result<()> {
         if self.is_bencher_cloud {
-            self.bencher_cloud_exec()?;
+            self.bencher_cloud_exec(readers)?;
         } else {
-            self.bencher_self_hosted_exec()?;
+            self.bencher_self_hosted_exec(readers)?;
         }
 
         let host = self.url.as_ref();
-        let admin_token = self.admin_token.as_ref();
+        let admin_key = readers.admin.key.as_ref();
 
-        // cargo run -- server stats --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN
+        // cargo run -- server stats --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["server", "stats", HOST_ARG, host, TOKEN_ARG, admin_token])
+        cmd.args(["server", "stats", HOST_ARG, host, KEY_ARG, admin_key])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let _json: bencher_json::JsonServerStats =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        self.runner_spec_exec()?;
+        self.runner_spec_exec(readers)?;
 
         Ok(())
     }
@@ -2553,20 +2199,20 @@ impl SeedTest {
         clippy::too_many_lines,
         reason = "integration test exercises full spec workflow"
     )]
-    fn runner_spec_exec(&self) -> anyhow::Result<()> {
+    fn runner_spec_exec(&self, readers: &Readers) -> anyhow::Result<()> {
         let host = self.url.as_ref();
-        let admin_token = self.admin_token.as_ref();
+        let admin_key = readers.admin.key.as_ref();
 
         // Create a spec
-        // cargo run -- spec create --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN --name "Test Spec" --architecture x86_64 --sandbox firecracker --cpu 4 --memory 8589934592 --disk 1073741824
+        // cargo run -- spec create --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY --name "Test Spec" --architecture x86_64 --sandbox firecracker --cpu 4 --memory 8589934592 --disk 1073741824
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "spec",
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--name",
             "Test Spec",
             "--os",
@@ -2591,9 +2237,9 @@ impl SeedTest {
         let spec_uuid = spec.uuid;
 
         // List specs
-        // cargo run -- spec list --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN
+        // cargo run -- spec list --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["spec", "list", HOST_ARG, host, TOKEN_ARG, admin_token])
+        cmd.args(["spec", "list", HOST_ARG, host, KEY_ARG, admin_key])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let specs: bencher_json::JsonSpecs =
@@ -2601,15 +2247,15 @@ impl SeedTest {
         assert_eq!(specs.0.len(), 1);
 
         // View spec
-        // cargo run -- spec view --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN test-spec
+        // cargo run -- spec view --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY test-spec
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "spec",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "test-spec",
         ])
         .current_dir(CLI_DIR);
@@ -2619,15 +2265,15 @@ impl SeedTest {
         assert_eq!(spec.uuid, spec_uuid);
 
         // Create a runner
-        // cargo run -- runner create --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN --name "Test Runner"
+        // cargo run -- runner create --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY --name "Test Runner"
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--name",
             "Test Runner",
         ])
@@ -2638,9 +2284,9 @@ impl SeedTest {
         let runner_uuid = runner_key.uuid;
 
         // List runners
-        // cargo run -- runner list --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN
+        // cargo run -- runner list --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["runner", "list", HOST_ARG, host, TOKEN_ARG, admin_token])
+        cmd.args(["runner", "list", HOST_ARG, host, KEY_ARG, admin_key])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let runners: bencher_json::JsonRunners =
@@ -2648,15 +2294,15 @@ impl SeedTest {
         assert_eq!(runners.0.len(), 1);
 
         // View runner (no specs assigned yet)
-        // cargo run -- runner view --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        // cargo run -- runner view --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY test-runner
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "test-runner",
         ])
         .current_dir(CLI_DIR);
@@ -2668,7 +2314,7 @@ impl SeedTest {
         assert!(runner.specs.is_empty(), "Expected no specs for new runner");
 
         // Add spec to runner
-        // cargo run -- runner spec add --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN --spec test-spec test-runner
+        // cargo run -- runner spec add --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY --spec test-spec test-runner
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
@@ -2676,8 +2322,8 @@ impl SeedTest {
             "add",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--spec",
             "test-spec",
             "test-runner",
@@ -2693,15 +2339,15 @@ impl SeedTest {
         );
 
         // View runner again (spec should now be assigned)
-        // cargo run -- runner view --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        // cargo run -- runner view --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY test-runner
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "test-runner",
         ])
         .current_dir(CLI_DIR);
@@ -2722,8 +2368,8 @@ impl SeedTest {
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--name",
             "No Sandbox Spec",
             "--os",
@@ -2749,8 +2395,8 @@ impl SeedTest {
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--name",
             "Test Runner No Sandbox",
         ])
@@ -2767,8 +2413,8 @@ impl SeedTest {
             "add",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--spec",
             "no-sandbox-spec",
             "test-runner-no-sandbox",
@@ -2777,15 +2423,15 @@ impl SeedTest {
         cmd.assert().success();
 
         // Rotate runner key
-        // cargo run -- runner key --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN test-runner
+        // cargo run -- runner key --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY test-runner
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
             "key",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "test-runner",
         ])
         .current_dir(CLI_DIR);
@@ -2795,15 +2441,15 @@ impl SeedTest {
         assert_eq!(new_key.uuid, runner_uuid);
 
         // Update runner name
-        // cargo run -- runner update --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN --name "Updated Runner" test-runner
+        // cargo run -- runner update --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY --name "Updated Runner" test-runner
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "runner",
             "update",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--name",
             "Updated Runner",
             "test-runner",
@@ -2815,15 +2461,15 @@ impl SeedTest {
         assert_eq!(runner.name.as_ref(), "Updated Runner");
 
         // Update spec name
-        // cargo run -- spec update --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN --name "Updated Spec" test-spec
+        // cargo run -- spec update --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY --name "Updated Spec" test-spec
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "spec",
             "update",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--name",
             "Updated Spec",
             "test-spec",
@@ -2835,16 +2481,16 @@ impl SeedTest {
         assert_eq!(spec.name.as_ref(), "Updated Spec");
 
         // Assign spec to testbed via testbed update
-        // cargo run -- testbed update --host http://localhost:6610 --token $BENCHER_API_TOKEN --spec test-spec the-computer base
-        let token = self.token.as_ref();
+        // cargo run -- testbed update --host http://localhost:6610 --key $BENCHER_API_KEY --spec test-spec the-computer base
+        let key = readers.user.key.as_ref();
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "testbed",
             "update",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             "--spec",
             "test-spec",
             PROJECT_SLUG,
@@ -2860,7 +2506,7 @@ impl SeedTest {
         );
 
         // Run with --spec-reset to clear the spec
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --testbed base --spec-reset --quiet bencher mock
+        // cargo run -- run --host http://localhost:6610 --key $BENCHER_API_KEY --project the-computer --testbed base --spec-reset --quiet bencher mock
         let bencher_cmd = Command::cargo_bin(BENCHER_CMD)?
             .get_program()
             .to_string_lossy()
@@ -2870,8 +2516,8 @@ impl SeedTest {
             "run",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_ARG,
             PROJECT_SLUG,
             "--testbed",
@@ -2889,15 +2535,15 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
         // Verify testbed spec is cleared
-        // cargo run -- testbed view --host http://localhost:6610 --token $BENCHER_API_TOKEN the-computer base
+        // cargo run -- testbed view --host http://localhost:6610 --key $BENCHER_API_KEY the-computer base
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "testbed",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             PROJECT_SLUG,
             "base",
         ])
@@ -2919,10 +2565,10 @@ impl SeedTest {
         clippy::too_many_lines,
         reason = "integration test exercises full cloud workflow"
     )]
-    fn bencher_cloud_exec(&self) -> anyhow::Result<()> {
+    fn bencher_cloud_exec(&self, readers: &Readers) -> anyhow::Result<()> {
         let host = self.url.as_ref();
-        let admin_token = self.admin_token.as_ref();
-        let token = self.token.as_ref();
+        let admin_key = readers.admin.key.as_ref();
+        let key = readers.user.key.as_ref();
         let bencher_cmd = Command::cargo_bin(BENCHER_CMD)?
             .get_program()
             .to_string_lossy()
@@ -2983,64 +2629,28 @@ impl SeedTest {
             "{output:?}"
         );
 
-        // Hit the rate limit for auth attempts for a user
-        // Signup Courage as a new user
-        // cargo run -- auth signup --host http://localhost:6610 --name "Courage" courage@nowhere.com
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "auth",
-            "signup",
-            HOST_ARG,
-            host,
-            "--name",
-            "Courage",
-            "--i-agree",
-            "courage@nowhere.com",
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonAuthAck =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        // An address at its cap of sign-in emails still lands on Check your inbox, with the wait,
+        // and no email goes out.
+        self.sign_in_email_caps("courage@nowhere.com")?;
 
-        // Attempt to login Courage one more time
-        // cargo run -- auth login --host http://localhost:6610 courage@nowhere.com
+        // cargo run -- sso list --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["auth", "login", HOST_ARG, host, "courage@nowhere.com"])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let _json: bencher_json::JsonAuthAck =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-
-        // Third attempt should hit rate limit
-        // cargo run -- auth login --host http://localhost:6610 courage@nowhere
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["auth", "login", HOST_ARG, host, "courage@nowhere.com"])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().failure();
-        let output = assert.get_output();
-        assert!(
-            String::from_utf8_lossy(&output.stderr).contains("Status: 429 Too Many Requests"),
-            "{output:?}"
-        );
-
-        // cargo run -- sso list --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["sso", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
+        cmd.args(["sso", "list", HOST_ARG, host, KEY_ARG, key, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let json: bencher_json::JsonSsos =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.0.len(), 0);
 
-        // cargo run -- sso create --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN --domain nowhere.com muriel-bagge
+        // cargo run -- sso create --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY --domain nowhere.com muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "sso",
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--domain",
             "nowhere.com",
             ORG_SLUG,
@@ -3051,24 +2661,24 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         let sso_uuid = json.uuid;
 
-        // cargo run -- sso list --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
+        // cargo run -- sso list --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["sso", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
+        cmd.args(["sso", "list", HOST_ARG, host, KEY_ARG, key, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let json: bencher_json::JsonSsos =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.0.len(), 1);
 
-        // cargo run -- sso view --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge [sso_uuid]
+        // cargo run -- sso view --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge [sso_uuid]
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "sso",
             "view",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             ORG_SLUG,
             &sso_uuid.to_string(),
         ])
@@ -3081,19 +2691,67 @@ impl SeedTest {
         Ok(())
     }
 
+    /// Start sign-ins for `email` back to back until the address is at its cap, which must be its
+    /// cap for the minute, since that is the lowest: the start at the cap answers with the minute's
+    /// wait, and only the starts before it email the address.
+    #[cfg(feature = "plus")]
+    fn sign_in_email_caps(&self, email: &str) -> anyhow::Result<()> {
+        /// More sign-ins than the default daily cap of an address allows.
+        const ATTEMPTS: usize = 13;
+        /// The longest wait the cap for the minute gives, in seconds: an email counts for the
+        /// minute and at most a twelfth of a minute longer.
+        const MINUTE_CAP_WAIT: u32 = 65;
+        /// An address emailed after the start at the cap, so that once its email is in the log, so
+        /// is any email that start sent.
+        const AFTER_THE_CAP: &str = "shirley@nowhere.com";
+        let mark = self.api_log.mark()?;
+        let mut sent = 0;
+        let wait = loop {
+            anyhow::ensure!(
+                sent < ATTEMPTS,
+                "{email} never reached its cap of sign-in emails in {ATTEMPTS} sign-ins"
+            );
+            let started = BrowserSession::start_sign_in(&self.url, email).map_err(|e| {
+                anyhow::anyhow!(
+                    "Sign-in {sent} for {email} was refused before the address reached its cap: \
+                     {e}"
+                )
+            })?;
+            match started.wait {
+                Some(wait) => break wait,
+                None => sent += 1,
+            }
+        };
+        anyhow::ensure!(sent > 0, "{email} was at a cap before any email");
+        anyhow::ensure!(
+            (1..=MINUTE_CAP_WAIT).contains(&wait),
+            "{email} reached a cap other than the minute's after {sent} emails: it waits {wait} \
+             seconds"
+        );
+        let after = BrowserSession::start_sign_in(&self.url, AFTER_THE_CAP)?;
+        anyhow::ensure!(after.wait.is_none(), "{AFTER_THE_CAP} was at its cap");
+        self.api_log.sign_in_code(&mark, AFTER_THE_CAP)?;
+        let emailed = self.api_log.sign_in_emails(&mark, email)?;
+        anyhow::ensure!(
+            emailed == sent,
+            "{email} got {emailed} sign-in emails from {sent} sign-ins before its cap and 1 at it"
+        );
+        Ok(())
+    }
+
     #[cfg(feature = "plus")]
     #[expect(
         clippy::panic_in_result_fn,
         reason = "integration test exercises full self-hosted workflow"
     )]
-    fn bencher_self_hosted_exec(&self) -> anyhow::Result<()> {
+    fn bencher_self_hosted_exec(&self, readers: &Readers) -> anyhow::Result<()> {
         let host = self.url.as_ref();
-        let admin_token = self.admin_token.as_ref();
-        let token = self.token.as_ref();
+        let admin_key = readers.admin.key.as_ref();
+        let key = readers.user.key.as_ref();
 
-        // cargo run -- sso list --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
+        // cargo run -- sso list --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["sso", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
+        cmd.args(["sso", "list", HOST_ARG, host, KEY_ARG, key, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let json: bencher_json::JsonSsos =
@@ -3101,15 +2759,15 @@ impl SeedTest {
         assert_eq!(json.0.len(), 0);
 
         // This should error for the self-hosted admin, since the organization doesn't have a valid license
-        // cargo run -- sso create --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN --domain nowhere.com muriel-bagge
+        // cargo run -- sso create --host http://localhost:6610 --key $ADMIN_BENCHER_API_KEY --domain nowhere.com muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "sso",
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            admin_token,
+            KEY_ARG,
+            admin_key,
             "--domain",
             "nowhere.com",
             ORG_SLUG,
@@ -3122,9 +2780,9 @@ impl SeedTest {
             "{output:?}"
         );
 
-        // cargo run -- sso list --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
+        // cargo run -- sso list --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["sso", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
+        cmd.args(["sso", "list", HOST_ARG, host, KEY_ARG, key, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let json: bencher_json::JsonSsos =
@@ -3135,15 +2793,15 @@ impl SeedTest {
         // pointing at user API keys. The full token lifecycle (list/view/update/revoke)
         // is covered by the `api_users` integration tests with DB-seeded tokens;
         // the user key lifecycle is exercised above.
-        // cargo run -- token create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name "seed-deprecated" muriel-bagge
+        // cargo run -- token create --host http://localhost:6610 --key $BENCHER_API_KEY --name "seed-deprecated" muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "token",
             "create",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            token,
+            KEY_ARG,
+            key,
             "--name",
             "seed-deprecated",
             ORG_SLUG,
@@ -3157,9 +2815,9 @@ impl SeedTest {
         );
 
         // Existing tokens can still be listed; this user never got one.
-        // cargo run -- token list --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
+        // cargo run -- token list --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["token", "list", HOST_ARG, host, TOKEN_ARG, token, ORG_SLUG])
+        cmd.args(["token", "list", HOST_ARG, host, KEY_ARG, key, ORG_SLUG])
             .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
         let tokens: bencher_json::JsonTokens =

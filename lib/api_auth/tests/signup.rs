@@ -266,10 +266,7 @@ async fn signup_claim_unclaimed_organization() {
         .execute(&mut server.db_conn())
         .unwrap();
 
-    let user = server
-        .signup_with_claim("Claim User", "claim@example.com", Some(organization.uuid))
-        .await
-        .uuid;
+    let user = signup_with_claim(&server, organization.uuid).await;
     assert_eq!(user_organizations(&server, user), [organization.uuid]);
 }
 
@@ -283,12 +280,47 @@ async fn signup_claim_claimed_organization() {
     let leader = server.signup("Leader", "leader@example.com").await;
     let organization = server.create_org(&leader, "Claimed").await;
 
-    let user = server
-        .signup_with_claim("Claim User", "claim@example.com", Some(organization.uuid))
-        .await
-        .uuid;
+    let user = signup_with_claim(&server, organization.uuid).await;
     assert_eq!(
         user_organizations(&server, user),
         [OrganizationUuid::from(user)]
     );
+}
+
+/// Sign up `claim@example.com` with a claim on `organization`, and return the user it made.
+#[expect(clippy::expect_used, reason = "test helper")]
+async fn signup_with_claim(
+    server: &TestServer,
+    organization: bencher_json::OrganizationUuid,
+) -> bencher_json::UserUuid {
+    use bencher_schema::schema;
+    use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
+
+    let body = JsonSignup {
+        name: "Claim User".parse().expect("Invalid name"),
+        slug: None,
+        email: "claim@example.com".parse().expect("Invalid email"),
+        #[cfg(feature = "plus")]
+        plan: None,
+        invite: None,
+        claim: Some(organization),
+        i_agree: true,
+        #[cfg(feature = "plus")]
+        recaptcha_token: None,
+        #[cfg(feature = "plus")]
+        authorization: None,
+    };
+    let resp = server
+        .client
+        .post(server.api_url("/v0/auth/signup"))
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::ACCEPTED, "Signup failed");
+    schema::user::table
+        .filter(schema::user::email.eq("claim@example.com"))
+        .select(schema::user::uuid)
+        .first(&mut server.db_conn())
+        .expect("No user signed up")
 }

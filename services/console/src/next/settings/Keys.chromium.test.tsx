@@ -108,6 +108,37 @@ test("a long refusal holds one line and opens whole in place", async () => {
 	expect(height()).toBeGreaterThan(line * 2);
 });
 
+// A server error's message carries a link to file an issue, one long word,
+// which wraps inside the new key form rather than running out of it.
+// Kills a refusal in a form that runs sideways off a phone.
+test("a server error's issue link wraps inside the new key form", async () => {
+	await page.viewport(390, 844);
+	const link = `https://github.com/bencherdev/bencher/issues/new?title=${"x".repeat(300)}`;
+	const { api } = fakeApi(async () => {
+		throw new ApiError(
+			500,
+			"server",
+			JSON.stringify({ message: `Failed to create a key: ${link}` }),
+		);
+	});
+	dispose = mount(() => <Keys />, { api, cached: cached() }).dispose;
+	await page.getByRole("button", { name: "New key" }).click();
+	const form = page.getByRole("dialog", { name: "New key" });
+	await form.getByRole("textbox", { name: "Name" }).fill("ci");
+	await form.getByRole("button", { name: "Create key" }).click();
+
+	const alert = form.getByRole("alert");
+	await expect.element(alert).toHaveTextContent(link);
+	const box = alert.element();
+	expect(box.scrollWidth).toBeLessThanOrEqual(box.clientWidth);
+	expect(box.getBoundingClientRect().right).toBeLessThanOrEqual(
+		form.element().getBoundingClientRect().right,
+	);
+	expect(box.getBoundingClientRect().height).toBeGreaterThan(
+		Number.parseFloat(getComputedStyle(box).lineHeight) * 2,
+	);
+});
+
 // Kills a long key name that runs out of its cell, wraps down it, or pushes
 // the New tag away from it.
 test.each([320, 1024])(

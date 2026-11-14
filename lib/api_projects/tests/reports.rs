@@ -1890,10 +1890,7 @@ async fn reports_name_the_project_key_that_created_them() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/projects/{project_slug}/keys/{}", key.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Request failed");

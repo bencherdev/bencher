@@ -6,12 +6,13 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use bencher_json::{Jwt, Url, UserKey};
+use bencher_json::{Url, UserKey};
 
 use super::create_user_key;
 use crate::parser::TaskOci;
+use crate::task::session::ApiLog;
 use crate::task::test::seed_test::{ADMIN_EMAIL, ADMIN_SLUG};
-use crate::task::{is_dev, unwrap_admin_token, unwrap_url};
+use crate::task::unwrap_url;
 
 #[derive(Debug)]
 pub struct Oci {
@@ -25,7 +26,6 @@ pub struct Oci {
     spec_dir: PathBuf,
     username: String,
     password: Option<UserKey>,
-    admin_token: Jwt,
     api_log: Option<PathBuf>,
 }
 
@@ -47,7 +47,6 @@ impl TryFrom<TaskOci> for Oci {
             api_log,
         } = task;
 
-        let is_dev = is_dev(url.as_ref());
         let url = unwrap_url(url);
         let namespace = namespace.unwrap_or_else(|| "namespace".to_owned());
         let crossmount_namespace =
@@ -70,7 +69,6 @@ impl TryFrom<TaskOci> for Oci {
 
         // In order to run pull tests, we need to be an admin
         let username = username.unwrap_or_else(|| ADMIN_EMAIL.to_owned());
-        let admin_token = unwrap_admin_token(None, is_dev);
 
         Ok(Self {
             url,
@@ -83,7 +81,6 @@ impl TryFrom<TaskOci> for Oci {
             spec_dir,
             username,
             password,
-            admin_token,
             api_log,
         })
     }
@@ -107,8 +104,7 @@ impl Oci {
             create_user_key(
                 &self.url,
                 ADMIN_EMAIL,
-                &self.admin_token,
-                self.api_log.as_deref(),
+                &ApiLog::new(&self.url, self.api_log.clone())?,
                 ADMIN_SLUG,
                 "oci-conformance",
             )?

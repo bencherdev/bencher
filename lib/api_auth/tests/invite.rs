@@ -214,7 +214,8 @@ async fn accept_needs_the_invited_accounts_browser_session() {
 
     let key = server.create_user_key(&grace, "Key").await;
     let token = seed_token(&server, &grace, "Token").token;
-    for bearer in [key.as_ref(), token.as_ref(), grace.token.as_str()] {
+    let session_jwt = server.session_jwt(&grace);
+    for bearer in [key.as_ref(), token.as_ref(), session_jwt.as_ref()] {
         let resp = server
             .client
             .post(server.api_url("/v0/auth/invite/accept"))
@@ -322,6 +323,8 @@ async fn already_a_member_ends_it_and_expired_or_revoked_refuse() {
 // The legacy sign up and sign in refuse an invitation, which only the new sign-in carries.
 #[tokio::test]
 async fn legacy_routes_refuse_an_invite() {
+    // Any invite in a JWT's shape, which is what the legacy routes take.
+    const INVITE: &str = "aGVhZGVy.cGF5bG9hZA.c2lnbmF0dXJl";
     let server = TestServer::new().await;
     server.signup("Leader", "leader@example.com").await;
     for (path, body) in [
@@ -330,13 +333,13 @@ async fn legacy_routes_refuse_an_invite() {
             json!({
                 "name": "Grace",
                 "email": "grace@example.com",
-                "invite": bencher_json::Jwt::test_token(),
+                "invite": INVITE,
                 "i_agree": true,
             }),
         ),
         (
             "/v0/auth/login",
-            json!({"email": "leader@example.com", "invite": bencher_json::Jwt::test_token()}),
+            json!({"email": "leader@example.com", "invite": INVITE}),
         ),
     ] {
         let resp = server
