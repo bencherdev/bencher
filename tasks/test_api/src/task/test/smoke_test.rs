@@ -1,4 +1,3 @@
-use std::sync::LazyLock;
 use std::{
     collections::BTreeSet,
     env, fs,
@@ -13,7 +12,7 @@ use std::{
 use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
 use bencher_json::{
     BENCHER_API_PORT, BmfVersion, DEV_BENCHER_API_URL, DEV_BENCHER_REGISTRY_URL, JsonApiVersion,
-    JsonProject, JsonReport, JsonReportIterationCounts, Jwt, LOCALHOST_BENCHER_API_URL,
+    JsonProject, JsonReport, JsonReportIterationCounts, LOCALHOST_BENCHER_API_URL,
     LOCALHOST_BENCHER_REGISTRY_URL, PROD_BENCHER_API_URL, PROD_BENCHER_REGISTRY_URL,
     TEST_BENCHER_API_URL, TEST_BENCHER_REGISTRY_URL, Url, project::report::ParseOutcome,
 };
@@ -21,31 +20,22 @@ use bencher_json::{
 use crate::{
     API_VERSION,
     parser::{TaskExamples, TaskSeedTest, TaskSmokeTest, TaskTestEnvironment},
-    task::test::{
-        examples::Examples,
-        seed_test::{
-            BENCHER_CMD, BRANCH_ARG, BRANCH_SLUG, CLI_DIR, HOST_ARG, PROJECT_ARG, PROJECT_SLUG,
-            SeedTest, TESTBED_ARG, TESTBED_SLUG, TOKEN_ARG,
+    task::{
+        session::Readers,
+        test::{
+            examples::Examples,
+            seed_test::{
+                BENCHER_CMD, BRANCH_ARG, BRANCH_SLUG, CLI_DIR, HOST_ARG, KEY_ARG, PROJECT_ARG,
+                PROJECT_SLUG, SeedTest, TESTBED_ARG, TESTBED_SLUG,
+            },
         },
     },
 };
 #[cfg(feature = "plus")]
 use crate::{
-    parser::{TaskOci, TaskRunner},
+    parser::TaskOci,
     task::plus::{oci::Oci, runner},
 };
-
-const DEV_ADMIN_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjYwNjAwMjk0MTQsImlhdCI6MTc2NTA2MjExOSwiaXNzIjoiaHR0cHM6Ly9kZXZlbC0tYmVuY2hlci5uZXRsaWZ5LmFwcC8iLCJzdWIiOiJldXN0YWNlLmJhZ2dlQG5vd2hlcmUuY29tIiwib3JnIjpudWxsLCJzdGF0ZSI6bnVsbH0.0OXSTC4glSFFX5SIKUOg4mgD3z5bd2YyhE0rhMN7eRI";
-const DEV_BENCHER_API_TOKEN_STR: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjbGllbnQiLCJleHAiOjU5OTM2NDIxNTYsImlhdCI6MTY5ODY3NDg2MSwiaXNzIjoiaHR0cHM6Ly9kZXZlbC0tYmVuY2hlci5uZXRsaWZ5LmFwcC8iLCJzdWIiOiJtdXJpZWwuYmFnZ2VAbm93aGVyZS5jb20iLCJvcmciOm51bGx9.-JVsL3aj610rm2O29ZN1UzHtVQL116hE5JtJfj55E5M";
-
-pub(crate) static DEV_ADMIN_BENCHER_API_TOKEN: LazyLock<Jwt> = LazyLock::new(|| {
-    DEV_ADMIN_BENCHER_API_TOKEN_STR
-        .parse()
-        .expect("Invalid test JWT")
-});
-
-pub(crate) static DEV_BENCHER_API_TOKEN: LazyLock<Jwt> =
-    LazyLock::new(|| DEV_BENCHER_API_TOKEN_STR.parse().expect("Invalid test JWT"));
 
 #[derive(Debug)]
 pub struct SmokeTest {
@@ -279,96 +269,62 @@ fn test(
     mock_setup: MockSetup,
     api_log: Option<&Path>,
 ) -> anyhow::Result<()> {
-    #[cfg(not(feature = "plus"))]
-    let _unused = registry_url;
-    match mock_setup {
-        MockSetup::BencherCloud => {
-            let task = TaskSeedTest {
-                url: Some(api_url.clone()),
-                is_bencher_cloud: true,
-                ..Default::default()
-            };
-            let seed_test = SeedTest::try_from(task)?;
-            seed_test.exec()?;
+    let (is_bencher_cloud, examples, runner) = match mock_setup {
+        MockSetup::BencherCloud => (true, false, true),
+        MockSetup::SelfHosted { examples, runner } => (false, examples, runner),
+    };
+    // Every step signs in through one log: the file the local API writes, or dev's Fly.io logs.
+    let seed_test = SeedTest::try_from(TaskSeedTest {
+        url: Some(api_url.clone()),
+        is_bencher_cloud,
+        api_log: api_log.map(Path::to_path_buf),
+        ..Default::default()
+    })?;
+    // The seed's readers sign in once, so no address gets more sign-in emails than its cap.
+    let readers = seed_test.exec()?;
 
-            #[cfg(feature = "plus")]
-            {
-                // Run OCI conformance tests
-                let oci = Oci::try_from(TaskOci {
-                    url: Some(registry_url.clone()),
-                    ..Default::default()
-                })?;
-                oci.exec()?;
+    #[cfg(feature = "plus")]
+    {
+        // Run OCI conformance tests, as the admin with his key
+        let oci = Oci::try_from(TaskOci {
+            url: Some(registry_url.clone()),
+            password: Some(readers.admin.key.clone()),
+            api_log: api_log.map(Path::to_path_buf),
+            ..Default::default()
+        })?;
+        oci.exec()?;
 
-                // Run runner smoke test (requires Docker + KVM for the runner daemon)
-                let runner_test = runner::RunnerTest::try_from(TaskRunner {
-                    url: Some(api_url.clone()),
-                    with_daemon: true,
-                    ..Default::default()
-                })?;
-                runner_test.exec()?;
-            }
-
-            move_project_to_bmf_v1(&seed_test)?;
-            send_bmf_v1_report(&seed_test)
-        },
-        MockSetup::SelfHosted { examples, runner } => {
-            let task = TaskSeedTest {
-                url: Some(api_url.clone()),
-                api_log: api_log.map(Path::to_path_buf),
-                ..Default::default()
-            };
-            let seed_test = SeedTest::try_from(task)?;
-            seed_test.exec()?;
-
-            #[cfg(feature = "plus")]
-            {
-                // Run OCI conformance tests
-                let oci = Oci::try_from(TaskOci {
-                    url: Some(registry_url.clone()),
-                    api_log: api_log.map(Path::to_path_buf),
-                    ..Default::default()
-                })?;
-                oci.exec()?;
-
-                // Run runner smoke test (requires Docker + KVM for the runner daemon)
-                if runner {
-                    let runner_test = runner::RunnerTest::try_from(TaskRunner {
-                        url: Some(api_url.clone()),
-                        with_daemon: true,
-                        api_log: api_log.map(Path::to_path_buf),
-                        ..Default::default()
-                    })?;
-                    runner_test.exec()?;
-                }
-            }
-            #[cfg(not(feature = "plus"))]
-            let _ = runner;
-
-            if examples {
-                let examples = Examples::try_from(TaskExamples {
-                    url: Some(api_url.clone()),
-                    ..Default::default()
-                })?;
-                examples.exec()?;
-            }
-
-            move_project_to_bmf_v1(&seed_test)?;
-            send_bmf_v1_report(&seed_test)
-        },
+        // Run runner smoke test (requires Docker + KVM for the runner daemon)
+        if runner {
+            runner::RunnerTest::new(api_url.clone(), &readers).exec()?;
+        }
     }
+    #[cfg(not(feature = "plus"))]
+    let _ = (registry_url, runner);
+
+    if examples {
+        let examples = Examples::try_from(TaskExamples {
+            url: Some(api_url.clone()),
+            key: Some(readers.user.key.clone()),
+            ..Default::default()
+        })?;
+        examples.exec()?;
+    }
+
+    move_project_to_bmf_v1(&seed_test, &readers)?;
+    send_bmf_v1_report(&seed_test, &readers)
 }
 
 // The dev deploy leaves a BMF v1 project to look at in the new console.
-fn move_project_to_bmf_v1(seed_test: &SeedTest) -> anyhow::Result<()> {
+fn move_project_to_bmf_v1(seed_test: &SeedTest, readers: &Readers) -> anyhow::Result<()> {
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "project",
         "update",
         HOST_ARG,
         seed_test.url.as_ref(),
-        TOKEN_ARG,
-        seed_test.admin_token.as_ref(),
+        KEY_ARG,
+        readers.admin.key.as_ref(),
         "--bmf-version",
         "1",
         PROJECT_SLUG,
@@ -384,14 +340,14 @@ fn move_project_to_bmf_v1(seed_test: &SeedTest) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn send_bmf_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
+fn send_bmf_v1_report(seed_test: &SeedTest, readers: &Readers) -> anyhow::Result<()> {
     let mut cmd = assert_cmd::Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "run",
         HOST_ARG,
         seed_test.url.as_ref(),
-        TOKEN_ARG,
-        seed_test.token.as_ref(),
+        KEY_ARG,
+        readers.user.key.as_ref(),
         PROJECT_ARG,
         PROJECT_SLUG,
         BRANCH_ARG,

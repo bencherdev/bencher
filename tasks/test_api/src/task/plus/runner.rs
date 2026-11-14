@@ -2,23 +2,20 @@ use std::process::Command;
 
 use assert_cmd::cargo::CommandCargoExt as _;
 use bencher_json::{
-    JobStatus, JobUuid, JsonJob, JsonProjectKeyCreated, Jwt, Url,
+    JobStatus, JobUuid, JsonJob, JsonProjectKeyCreated, Url, UserKey,
     runner::{JobCallbackState, JsonJobCallback},
 };
 use pretty_assertions::assert_eq;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt as _;
 
-use super::create_user_key;
 use crate::parser::TaskRunner;
+use crate::task::session::{ApiLog, Reader, Readers};
 use crate::task::test::seed_test::{
-    ADMIN_EMAIL, BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL, USER_SLUG,
+    BENCHER_CMD, CLI_DIR, HOST_ARG, KEY_ARG, PROJECT_SLUG, USER_EMAIL, USER_SLUG,
 };
-use crate::task::{
-    is_dev, session::BrowserSession, unwrap_admin_token, unwrap_url, unwrap_user_token,
-};
+use crate::task::unwrap_url;
 
-const KEY_ARG: &str = "--key";
 const DOCKER_IMAGE: &str = "ghcr.io/bencherdev/bencher:latest";
 const IMAGE_TAG: &str = "runner-test";
 const MOCK_IMAGE_TAG: &str = "runner-test-mock";
@@ -42,11 +39,10 @@ const SKIPPED_CALLBACK: [&str; 2] = [
 #[derive(Debug)]
 pub struct RunnerTest {
     url: Url,
-    admin_token: Jwt,
     username: String,
-    token: Jwt,
+    /// The seed's admin, who manages runners, and its user, whom the tests run as.
+    readers: Readers,
     with_daemon: bool,
-    api_log: Option<std::path::PathBuf>,
 }
 
 impl TryFrom<TaskRunner> for RunnerTest {
@@ -55,34 +51,42 @@ impl TryFrom<TaskRunner> for RunnerTest {
     fn try_from(runner: TaskRunner) -> Result<Self, Self::Error> {
         let TaskRunner {
             url,
-            admin_token,
             username,
-            token,
             with_daemon,
             api_log,
         } = runner;
 
-        let is_dev = is_dev(url.as_ref());
         let url = unwrap_url(url);
-        let admin_token = unwrap_admin_token(admin_token, is_dev);
+        let readers = Readers::sign_in(&url, &ApiLog::new(&url, api_log)?)?;
         // Run tests as a normal user
         let username = username.unwrap_or_else(|| USER_EMAIL.to_owned());
-        let token = unwrap_user_token(token, is_dev);
 
         Ok(Self {
             url,
-            admin_token,
             username,
-            token,
+            readers,
             with_daemon,
-            api_log,
         })
     }
 }
 
 impl RunnerTest {
-    fn api_log(&self) -> Option<&std::path::Path> {
-        self.api_log.as_deref()
+    /// The runner test of the API at `url`, run with the daemon by the seed's signed-in `readers`.
+    pub fn new(url: Url, readers: &Readers) -> Self {
+        Self {
+            url,
+            username: USER_EMAIL.to_owned(),
+            readers: readers.clone(),
+            with_daemon: true,
+        }
+    }
+
+    fn user(&self) -> &Reader {
+        &self.readers.user
+    }
+
+    fn key(&self) -> &UserKey {
+        &self.readers.user.key
     }
 
     pub fn exec(&self) -> anyhow::Result<()> {
@@ -99,10 +103,10 @@ impl RunnerTest {
             } else {
                 "no-sandbox-spec"
             };
-            run_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)?;
-            run_image_project_runner_test(&self.url, &self.token, spec)?;
-            run_user_key_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)?;
-            run_project_key_runner_test(&self.url, &self.admin_token, self.api_log(), spec)
+            run_runner_test(&self.url, &self.username, self.user(), spec)?;
+            run_image_project_runner_test(&self.url, self.key(), spec)?;
+            run_user_key_runner_test(&self.url, &self.username, self.user(), spec)?;
+            run_project_key_runner_test(&self.url, &self.readers.admin, spec)
         }
     }
 
@@ -127,8 +131,8 @@ impl RunnerTest {
             "key",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            self.admin_token.as_ref(),
+            KEY_ARG,
+            self.readers.admin.key.as_ref(),
             "test-runner",
         ])
         .current_dir(CLI_DIR);
@@ -147,8 +151,8 @@ impl RunnerTest {
             "key",
             HOST_ARG,
             host,
-            TOKEN_ARG,
-            self.admin_token.as_ref(),
+            KEY_ARG,
+            self.readers.admin.key.as_ref(),
             "test-runner-no-sandbox",
         ])
         .current_dir(CLI_DIR);
@@ -248,70 +252,70 @@ impl RunnerTest {
             "no-sandbox-spec"
         };
         let result = if unclaimed_result.is_ok() {
-            run_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)
+            run_runner_test(&self.url, &self.username, self.user(), spec)
         } else {
             Ok(())
         };
 
         // Run the image-derived project runner test
         let image_project_result = if result.is_ok() {
-            run_image_project_runner_test(&self.url, &self.token, spec)
+            run_image_project_runner_test(&self.url, self.key(), spec)
         } else {
             Ok(())
         };
 
         // Run the no-sandbox runner test
         let no_sandbox_result = if image_project_result.is_ok() {
-            run_no_sandbox_runner_test(&self.url, &self.token)
+            run_no_sandbox_runner_test(&self.url, self.key())
         } else {
             Ok(())
         };
 
         // Run the detach runner test
         let detach_result = if no_sandbox_result.is_ok() {
-            run_detach_runner_test(&self.url, &self.token)
+            run_detach_runner_test(&self.url, self.key())
         } else {
             Ok(())
         };
 
         // Run the detach runner test with a failing benchmark
         let detach_failed_result = if detach_result.is_ok() {
-            run_detach_failed_attach_test(&self.url, &self.token)
+            run_detach_failed_attach_test(&self.url, self.key())
         } else {
             Ok(())
         };
 
         // Run a test using a user key for authentication
         let user_key_result = if detach_failed_result.is_ok() {
-            run_user_key_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)
+            run_user_key_runner_test(&self.url, &self.username, self.user(), spec)
         } else {
             Ok(())
         };
 
         // Run a test using a project key for authentication
         let project_key_result = if user_key_result.is_ok() {
-            run_project_key_runner_test(&self.url, &self.admin_token, self.api_log(), spec)
+            run_project_key_runner_test(&self.url, &self.readers.admin, spec)
         } else {
             Ok(())
         };
 
         // Run the image-only runner test (no --exec, ENTRYPOINT baked into image)
         let image_only_result = if project_key_result.is_ok() {
-            run_image_only_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)
+            run_image_only_runner_test(&self.url, &self.username, self.user(), spec)
         } else {
             Ok(())
         };
 
         // Run the callback runner test
         let callback_result = if image_only_result.is_ok() {
-            run_callback_runner_test(&self.url, &self.token)
+            run_callback_runner_test(&self.url, self.key())
         } else {
             Ok(())
         };
 
         // Only the elevated daemon's log is kept, to check the Job against.
         let build_time_result = if elevated_runner.is_some() && callback_result.is_ok() {
-            run_build_time_runner_test(&self.url, &self.token, spec).map(Some)
+            run_build_time_runner_test(&self.url, self.key(), spec).map(Some)
         } else {
             Ok(None)
         };
@@ -622,14 +626,9 @@ pub fn docker_available() -> bool {
 /// Run the runner smoke test: pull a prebuilt image, push it to the API's OCI
 /// registry via Docker, then submit a job with `bencher run --image`.
 #[expect(clippy::panic_in_result_fn, reason = "test harness")]
-pub fn run_runner_test(
-    url: &Url,
-    username: &str,
-    token: &Jwt,
-    api_log: Option<&std::path::Path>,
-    spec: &str,
-) -> anyhow::Result<()> {
+pub fn run_runner_test(url: &Url, username: &str, user: &Reader, spec: &str) -> anyhow::Result<()> {
     let host = url.as_ref();
+    let key = &user.key;
 
     println!("Running runner smoke test against: {host}");
 
@@ -668,14 +667,10 @@ pub fn run_runner_test(
 
     // Step 3: Log in to the local OCI registry
     println!("Step 3: Logging in to {registry}...");
-    let docker_key = create_user_key(
-        url,
-        username,
-        token,
-        api_log,
-        USER_SLUG,
-        "runner-test-login",
-    )?;
+    let docker_key = user
+        .session
+        .create_user_key(USER_SLUG, "runner-test-login")?
+        .key;
     docker_login(&registry, username, docker_key.as_ref())?;
 
     // Step 4: Push the image to the local registry
@@ -690,8 +685,8 @@ pub fn run_runner_test(
         "run",
         HOST_ARG,
         host,
-        TOKEN_ARG,
-        token.as_ref(),
+        KEY_ARG,
+        key.as_ref(),
         "--project",
         PROJECT_SLUG,
         "--branch",
@@ -736,7 +731,7 @@ pub fn run_runner_test(
 /// time its report holds.
 fn run_build_time_runner_test(
     url: &Url,
-    token: &Jwt,
+    key: &UserKey,
     spec: &str,
 ) -> anyhow::Result<(JobUuid, f64)> {
     use bencher_json::project::measure::built_in::{BuiltInMeasure as _, json::BuildTime};
@@ -751,8 +746,8 @@ fn run_build_time_runner_test(
         "run",
         HOST_ARG,
         host,
-        TOKEN_ARG,
-        token.as_ref(),
+        KEY_ARG,
+        key.as_ref(),
         "--project",
         PROJECT_SLUG,
         "--branch",
@@ -811,7 +806,7 @@ fn run_build_time_runner_test(
 /// the project is derived from the unqualified image repository.
 /// The project key variant covers the registry-qualified form.
 #[expect(clippy::panic_in_result_fn, reason = "test harness")]
-fn run_image_project_runner_test(url: &Url, token: &Jwt, spec: &str) -> anyhow::Result<()> {
+fn run_image_project_runner_test(url: &Url, key: &UserKey, spec: &str) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running image-derived project runner smoke test against: {host}");
@@ -824,8 +819,8 @@ fn run_image_project_runner_test(url: &Url, token: &Jwt, spec: &str) -> anyhow::
         "run",
         HOST_ARG,
         host,
-        TOKEN_ARG,
-        token.as_ref(),
+        KEY_ARG,
+        key.as_ref(),
         "--branch",
         "master",
         "--testbed",
@@ -872,7 +867,7 @@ fn run_image_project_runner_test(url: &Url, token: &Jwt, spec: &str) -> anyhow::
 /// Similar to `run_runner_test` but submits to the `no-sandbox-spec` spec
 /// which does not use Firecracker sandboxing.
 #[expect(clippy::panic_in_result_fn, reason = "test harness")]
-fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+fn run_no_sandbox_runner_test(url: &Url, key: &UserKey) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running no-sandbox runner smoke test against: {host}");
@@ -884,8 +879,8 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
         "run",
         HOST_ARG,
         host,
-        TOKEN_ARG,
-        token.as_ref(),
+        KEY_ARG,
+        key.as_ref(),
         "--project",
         PROJECT_SLUG,
         "--branch",
@@ -931,20 +926,20 @@ fn run_no_sandbox_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 /// it returns immediately with a `JsonReport` containing a job UUID,
 /// attach to the job with `bencher run --job` and verify it prints the processed report,
 /// then read the job once with `bencher job view`.
-fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+fn run_detach_runner_test(url: &Url, key: &UserKey) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running detach runner smoke test against: {host}");
 
     // Submit the job with --detach (returns immediately)
-    let json = submit_detached(host, token, &["--exec", "mock"])?;
+    let json = submit_detached(host, key, &["--exec", "mock"])?;
     assert_eq!(json.project.slug.to_string(), PROJECT_SLUG);
     let job_uuid = json
         .job
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {json:?}"))?;
 
-    attach_detached_job(host, token, json.uuid, job_uuid)?;
-    let job = view_job(host, token, job_uuid)?;
+    attach_detached_job(host, key, json.uuid, job_uuid)?;
+    let job = view_job(host, key, job_uuid)?;
     anyhow::ensure!(
         job.status == JobStatus::Processed,
         "Expected detached job {job_uuid} to be processed: {job:?}"
@@ -954,7 +949,7 @@ fn run_detach_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn view_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<JsonJob> {
+fn view_job(host: &str, key: &UserKey, job_uuid: JobUuid) -> anyhow::Result<JsonJob> {
     let job_uuid_str = job_uuid.to_string();
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
@@ -962,8 +957,8 @@ fn view_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<JsonJo
         "view",
         HOST_ARG,
         host,
-        TOKEN_ARG,
-        token.as_ref(),
+        KEY_ARG,
+        key.as_ref(),
         PROJECT_SLUG,
         &job_uuid_str,
     ])
@@ -982,11 +977,11 @@ fn view_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<JsonJo
 /// and verify it waits for the job and prints its processed report.
 fn attach_detached_job(
     host: &str,
-    token: &Jwt,
+    key: &UserKey,
     report_uuid: bencher_json::ReportUuid,
     job_uuid: JobUuid,
 ) -> anyhow::Result<()> {
-    let output = attach_job(host, token, job_uuid)?;
+    let output = attach_job(host, key, job_uuid)?;
     anyhow::ensure!(
         output.status.success(),
         "bencher run --job failed:\nstdout: {}\nstderr: {}",
@@ -1011,17 +1006,17 @@ fn attach_detached_job(
 /// Run a failed detach runner smoke test: submit a job with `--detach` whose benchmark fails,
 /// then attach to the job with `bencher run --job` and verify it prints the report
 /// and exits with the job failed error.
-fn run_detach_failed_attach_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+fn run_detach_failed_attach_test(url: &Url, key: &UserKey) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running failed detach runner smoke test against: {host}");
 
-    let json = submit_detached(host, token, &["--exec", "mock", "--fail"])?;
+    let json = submit_detached(host, key, &["--exec", "mock", "--fail"])?;
     let job_uuid = json
         .job
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {json:?}"))?;
 
-    let output = attach_job(host, token, job_uuid)?;
+    let output = attach_job(host, key, job_uuid)?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     anyhow::ensure!(
@@ -1044,7 +1039,7 @@ fn run_detach_failed_attach_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 /// and ends with the command.
 fn submit_detached(
     host: &str,
-    token: &Jwt,
+    key: &UserKey,
     extra: &[&str],
 ) -> anyhow::Result<bencher_json::JsonReport> {
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -1053,8 +1048,8 @@ fn submit_detached(
         "run",
         HOST_ARG,
         host,
-        TOKEN_ARG,
-        token.as_ref(),
+        KEY_ARG,
+        key.as_ref(),
         "--project",
         PROJECT_SLUG,
         "--branch",
@@ -1085,15 +1080,19 @@ fn submit_detached(
 }
 
 /// Attach to a submitted job with `bencher run --job`, which waits for the job and prints its report.
-fn attach_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<std::process::Output> {
+fn attach_job(
+    host: &str,
+    key: &UserKey,
+    job_uuid: JobUuid,
+) -> anyhow::Result<std::process::Output> {
     let job_uuid = job_uuid.to_string();
     let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
     cmd.args([
         "run",
         HOST_ARG,
         host,
-        TOKEN_ARG,
-        token.as_ref(),
+        KEY_ARG,
+        key.as_ref(),
         "--project",
         PROJECT_SLUG,
         "--job",
@@ -1110,13 +1109,13 @@ fn attach_job(host: &str, token: &Jwt, job_uuid: JobUuid) -> anyhow::Result<std:
 
 /// Run the callback runner smoke test on an organization without a plan: a custom callback is
 /// skipped, and the GitHub Actions dispatch settles with the answer of its real `https` receiver.
-fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
+fn run_callback_runner_test(url: &Url, key: &UserKey) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running callback runner smoke test against: {host}");
 
-    let job_uuid = submit_callback_job(host, token, &SKIPPED_CALLBACK)?;
-    let job = view_job(host, token, job_uuid)?;
+    let job_uuid = submit_callback_job(host, key, &SKIPPED_CALLBACK)?;
+    let job = view_job(host, key, job_uuid)?;
     anyhow::ensure!(
         job.callback
             == Some(JsonJobCallback {
@@ -1128,8 +1127,8 @@ fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
     );
     println!("Custom callback of job {job_uuid} skipped without a plan");
 
-    let job_uuid = submit_callback_job(host, token, &DISPATCH_CALLBACK)?;
-    let callback = wait_for_settled_callback(host, token, job_uuid)?;
+    let job_uuid = submit_callback_job(host, key, &DISPATCH_CALLBACK)?;
+    let callback = wait_for_settled_callback(host, key, job_uuid)?;
     anyhow::ensure!(
         callback.state == JobCallbackState::Failed
             && callback
@@ -1142,12 +1141,12 @@ fn run_callback_runner_test(url: &Url, token: &Jwt) -> anyhow::Result<()> {
 }
 
 /// Submit a detached job with `callback`, and wait for it through the attach.
-fn submit_callback_job(host: &str, token: &Jwt, callback: &[&str]) -> anyhow::Result<JobUuid> {
-    let report = submit_detached(host, token, &[callback, &["--exec", "mock"]].concat())?;
+fn submit_callback_job(host: &str, key: &UserKey, callback: &[&str]) -> anyhow::Result<JobUuid> {
+    let report = submit_detached(host, key, &[callback, &["--exec", "mock"]].concat())?;
     let job_uuid = report
         .job
         .ok_or_else(|| anyhow::anyhow!("Expected job UUID in detach report: {report:?}"))?;
-    let output = attach_job(host, token, job_uuid)?;
+    let output = attach_job(host, key, job_uuid)?;
     anyhow::ensure!(
         output.status.success(),
         "bencher run --job failed:\nstdout: {}\nstderr: {}",
@@ -1160,7 +1159,7 @@ fn submit_callback_job(host: &str, token: &Jwt, callback: &[&str]) -> anyhow::Re
 /// Poll `bencher job view` until the job's callback settles.
 fn wait_for_settled_callback(
     host: &str,
-    token: &Jwt,
+    key: &UserKey,
     job_uuid: JobUuid,
 ) -> anyhow::Result<JsonJobCallback> {
     // A final answer settles at once. A retried one takes up to three 10 s attempts
@@ -1169,7 +1168,7 @@ fn wait_for_settled_callback(
     let start = std::time::Instant::now();
 
     loop {
-        let job = view_job(host, token, job_uuid)?;
+        let job = view_job(host, key, job_uuid)?;
         let Some(callback) = job.callback else {
             anyhow::bail!("Expected job {job_uuid} to have a callback: {job:?}");
         };
@@ -1194,8 +1193,7 @@ fn wait_for_settled_callback(
 fn run_user_key_runner_test(
     url: &Url,
     email: &str,
-    token: &Jwt,
-    api_log: Option<&std::path::Path>,
+    user: &Reader,
     spec: &str,
 ) -> anyhow::Result<()> {
     let host = url.as_ref();
@@ -1204,14 +1202,10 @@ fn run_user_key_runner_test(
 
     // Step 1: Create a user key
     println!("Step 1: Creating user key...");
-    let user_key = create_user_key(
-        url,
-        email,
-        token,
-        api_log,
-        USER_SLUG,
-        "runner-test-user-key",
-    )?;
+    let user_key = user
+        .session
+        .create_user_key(USER_SLUG, "runner-test-user-key")?
+        .key;
 
     // Step 2: Docker login with the user's email as username and the user key as password
     let registry = if cfg!(target_os = "macos") {
@@ -1294,45 +1288,16 @@ fn run_user_key_runner_test(
     clippy::too_many_lines,
     reason = "test harness"
 )]
-fn run_project_key_runner_test(
-    url: &Url,
-    admin_token: &Jwt,
-    api_log: Option<&std::path::Path>,
-    spec: &str,
-) -> anyhow::Result<()> {
+fn run_project_key_runner_test(url: &Url, admin: &Reader, spec: &str) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running project key runner smoke test against: {host}");
 
     // Step 1: Create a project key
     println!("Step 1: Creating project key...");
-    let project_key_created: JsonProjectKeyCreated = if let Some(api_log) = api_log {
-        BrowserSession::sign_in(url, ADMIN_EMAIL, api_log)?
-            .create_project_key(PROJECT_SLUG, "runner-test-key")?
-    } else {
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "project",
-            "key",
-            "create",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            admin_token.as_ref(),
-            "--name",
-            "runner-test-key",
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let output = cmd.output()?;
-        anyhow::ensure!(
-            output.status.success(),
-            "Failed to create project key:\nstdout: {}\nstderr: {}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-        serde_json::from_slice(&output.stdout)?
-    };
+    let project_key_created: JsonProjectKeyCreated = admin
+        .session
+        .create_project_key(PROJECT_SLUG, "runner-test-key")?;
     let project_key = project_key_created.key;
 
     // Step 2: Docker login with project slug as username and project key as password
@@ -1468,11 +1433,11 @@ fn run_project_key_runner_test(
 fn run_image_only_runner_test(
     url: &Url,
     username: &str,
-    token: &Jwt,
-    api_log: Option<&std::path::Path>,
+    user: &Reader,
     spec: &str,
 ) -> anyhow::Result<()> {
     let host = url.as_ref();
+    let key = &user.key;
 
     println!("Running image-only runner smoke test against: {host}");
 
@@ -1496,7 +1461,10 @@ fn run_image_only_runner_test(
     docker_build_mock_image(&local_ref)?;
 
     println!("Logging in to {registry}...");
-    let docker_key = create_user_key(url, username, token, api_log, USER_SLUG, "image-only-login")?;
+    let docker_key = user
+        .session
+        .create_user_key(USER_SLUG, "image-only-login")?
+        .key;
     docker_login(&registry, username, docker_key.as_ref())?;
 
     println!("Pushing mock image to {registry}...");
@@ -1509,8 +1477,8 @@ fn run_image_only_runner_test(
         "run",
         HOST_ARG,
         host,
-        TOKEN_ARG,
-        token.as_ref(),
+        KEY_ARG,
+        key.as_ref(),
         "--project",
         PROJECT_SLUG,
         "--branch",
@@ -1815,7 +1783,7 @@ fn run_unclaimed_push_and_run(
         "run",
         HOST_ARG,
         host,
-        // No TOKEN_ARG — fully unauthenticated
+        // No KEY_ARG: fully unauthenticated
         "--project",
         slug,
         "--branch",

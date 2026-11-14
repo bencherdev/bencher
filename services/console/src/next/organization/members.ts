@@ -68,9 +68,13 @@ const invitesPath = (organization: string) =>
 /** The most invitations the API answers at once, as many as a Leader sends. */
 const INVITES_PER_PAGE = 255;
 
-/** The organization's pending invitations, newest first, and how many there are. */
+/**
+ * The organization's pending invitations, newest first, and how many there are.
+ * Their card is optional, so a failed read is not retried while the page waits.
+ */
 export const invitesQuery = (api: Api, organization: string) => ({
 	queryKey: ["organization", organization, "invites"],
+	retry: false,
 	queryFn: async ({ signal }: { signal: AbortSignal }) => {
 		const { data, headers } = await api.get<JsonInvite[]>(
 			`${invitesPath(organization)}?per_page=${INVITES_PER_PAGE}`,

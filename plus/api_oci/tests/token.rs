@@ -637,10 +637,7 @@ async fn oci_token_user_key_revoked() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/users/{user_slug}/keys/{}", created.uuid)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Failed to revoke user key");

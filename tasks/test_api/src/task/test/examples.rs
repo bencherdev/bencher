@@ -1,13 +1,13 @@
 use std::process::Command;
 
-use bencher_json::{Jwt, LOCALHOST_BENCHER_API_URL, Url};
+use bencher_json::{LOCALHOST_BENCHER_API_URL, Url, UserKey};
 
 use crate::parser::{TaskExample, TaskExamples};
 
 #[derive(Debug)]
 pub struct Examples {
     pub url: Url,
-    pub token: Jwt,
+    pub key: UserKey,
     pub example: Option<Example>,
 }
 
@@ -28,14 +28,12 @@ impl TryFrom<TaskExamples> for Examples {
     type Error = anyhow::Error;
 
     fn try_from(examples: TaskExamples) -> Result<Self, Self::Error> {
-        let TaskExamples {
-            url,
-            token,
-            example,
-        } = examples;
+        let TaskExamples { url, key, example } = examples;
         Ok(Self {
             url: url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into()),
-            token: token.unwrap_or_else(Jwt::test_token),
+            key: key.ok_or_else(|| {
+                anyhow::anyhow!("Pass `--key`, a user API key of the seed's user")
+            })?,
             example: example.map(Into::into),
         })
     }
@@ -72,10 +70,10 @@ impl Examples {
         assert!(status.success(), "{status}");
 
         if let Some(example) = self.example {
-            run_example(&self.url, &self.token, example)
+            run_example(&self.url, &self.key, example)
         } else {
             for &example in Example::all() {
-                run_example(&self.url, &self.token, example)?;
+                run_example(&self.url, &self.key, example)?;
             }
             Ok(())
         }
@@ -168,7 +166,7 @@ impl Example {
 }
 
 #[expect(clippy::panic_in_result_fn, reason = "test harness")]
-fn run_example(api_url: &Url, token: &Jwt, example: Example) -> anyhow::Result<()> {
+fn run_example(api_url: &Url, key: &UserKey, example: Example) -> anyhow::Result<()> {
     println!("Running example: {example:?}");
 
     example.require()?;
@@ -177,8 +175,8 @@ fn run_example(api_url: &Url, token: &Jwt, example: Example) -> anyhow::Result<(
         "run",
         "--host",
         api_url.as_ref(),
-        "--token",
-        token.as_ref(),
+        "--key",
+        key.as_ref(),
         "--project",
         "the-computer",
         "--branch",

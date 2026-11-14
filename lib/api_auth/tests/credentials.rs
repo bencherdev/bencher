@@ -214,7 +214,7 @@ impl Fixture {
         let locked_legacy = seed_token(server, &locked, "locked").token;
         let live_legacy = seed_token(server, &user, "live").token;
 
-        let session: Jwt = user.token.parse().expect("Invalid session");
+        let session = server.session_jwt(&user);
         let other = mint(server, &user.email, 3);
         let unsigned_session = with_signature_of(&session, &other);
         let unknown_session = server
@@ -224,7 +224,7 @@ impl Fixture {
                 u32::MAX,
             )
             .expect("Failed to mint a session");
-        let locked_session = locked.token.clone();
+        let locked_session = server.session_jwt(&locked).into();
 
         diesel::update(schema::user::table.filter(schema::user::uuid.eq(locked.uuid)))
             .set(schema::user::locked.eq(true))

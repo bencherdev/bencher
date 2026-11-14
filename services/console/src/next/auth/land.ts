@@ -14,12 +14,9 @@ export const landing = (
 	kept: (authorization: unknown) => string | undefined = signedInPath,
 ) => kept(authorization) ?? `/console${planParam(plan)}`;
 
-/** Where the console kept the signed in user and its session token before the cookie. */
-const LEGACY_USER_KEY = "BENCHER_USER";
-
 /**
- * Keep the reader's hint in place of any user and session token stored before
- * the cookie, forget this tab's sign-in, and go where a finished sign-in goes.
+ * Keep the reader's hint, forget this tab's sign-in, and go where a finished
+ * sign-in goes.
  */
 export const finish = (
 	signedIn: JsonSignedIn,
@@ -29,13 +26,12 @@ export const finish = (
 		go = (to: string) => location.replace(to),
 		kept = signedInPath,
 	}: {
-		local?: Pick<Storage, "setItem" | "removeItem">;
+		local?: Pick<Storage, "setItem">;
 		session?: Pick<Storage, "getItem" | "setItem" | "removeItem">;
 		go?: (to: string) => void;
 		kept?: (authorization: unknown) => string | undefined;
 	} = {},
 ) => {
-	local.removeItem(LEGACY_USER_KEY);
 	rememberReader(local, signedIn.user);
 	forgetPending(session);
 	go(landing(signedIn, kept));

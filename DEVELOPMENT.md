@@ -45,9 +45,11 @@ prerequisites installed on your machine.
     cd services/console
     npm run dev
     ```
-7. Configure the CLI environment
+7. Configure the CLI environment, with a user API key made in the Console
+   (see [Accessing the Console](#accessing-the-console))
    ```shell
    cd ./services/cli
+   export BENCHER_API_KEY=bencher_user_...
    . ./env.sh
    ```
 
@@ -56,13 +58,14 @@ prerequisites installed on your machine.
 Once the application is running, you can access it by visiting
 [http://localhost:3000](http://localhost:3000) in your browser.
 
-1. Sign up for an account by entering your name and email address.
-2. Click on the "Confirm Email" link that is provided in the API logs.
+1. Sign up for an account by entering your email address.
+2. Enter the code from the sign-in email that is provided in the API logs.
+3. Make a user API key for the CLI under your account's Keys.
 
 ### Running the Console Against the Dev API
 
 The steps above run the Console against an API on your own machine, which is
-what you want when you are changing the API or need the "Confirm Email" link
+what you want when you are changing the API or need the sign-in code
 from its logs.
 
 To work on the Console alone, you can skip running the API and point the
@@ -97,8 +100,7 @@ Then, in another terminal, run the following command:
 cargo test-api seed --api-log services/api/data/api.log
 ```
 
-A new key and an invitation each need a browser session signed in within the last 10 minutes,
-so the seed signs in by the code in the sign-in email, and the invitee accepts by the link in the invitation email,
+The seed signs its users in by the code in the sign-in email, and the invitee accepts by the link in the invitation email,
 both of which a server with no SMTP writes to its log.
 
 ### Accessing the Database
@@ -135,5 +137,5 @@ To test the application using Docker, follow these steps:
    ARCH=arm64 docker compose up --file docker/docker-compose.yml --build
    ```
 2. Open the console in your browser [http://localhost:3000](http://localhost:3000).
-3. Sign up for an account by entering your name and email address.
-4. Click on the "Confirm Email" link that is provided in the docker compose logs.
+3. Sign up for an account by entering your email address.
+4. Enter the code from the sign-in email that is provided in the docker compose logs.

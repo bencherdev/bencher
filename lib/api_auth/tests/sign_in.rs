@@ -13,7 +13,7 @@ use std::{
     net::IpAddr,
     sync::{
         Arc, Mutex,
-        atomic::{AtomicI64, Ordering},
+        atomic::{AtomicI64, AtomicUsize, Ordering},
     },
 };
 
@@ -795,8 +795,7 @@ async fn proof_joins_the_sso_organization() {
 }
 
 // Where Turnstile is configured, it guards a start and a Resend, with the address the relay
-// forwards, and refuses a missing token, a failure, an error, another host, and an answer it cannot
-// read.
+// forwards, and refuses a missing token.
 #[tokio::test]
 async fn turnstile_guards_starting_and_resending() {
     let clock = TestClock::new();
@@ -832,26 +831,39 @@ async fn turnstile_guards_starting_and_resending() {
     let resp = send_json(&server, path, Some(&pending), &reader, &token).await;
     assert_eq!(resp.status(), StatusCode::ACCEPTED);
     assert_eq!(log.sign_in_emails().len(), 2);
+}
 
-    for answer in [
-        Answer::new(|| {
-            Ok(r#"{"success":false,"error-codes":["invalid-input-response"]}"#.to_owned())
-        }),
-        Answer::new(|| Err(TurnstileError::Status(StatusCode::INTERNAL_SERVER_ERROR))),
-        Answer::new(success("bencher.dev")),
-        Answer::new(|| Ok("not json".to_owned())),
-    ] {
-        let (server, log) = test_server(TestServerOptions {
-            turnstile: Some(turnstile(answer)),
-            ..TestServerOptions::default()
-        })
-        .await;
+// Turnstile refuses a start on a failure, an error, another host, and an answer it cannot read.
+#[tokio::test]
+async fn turnstile_refuses_every_answer_but_a_success_for_its_host() {
+    type Check = Box<dyn Fn() -> Result<String, TurnstileError> + Send + Sync>;
+    let checks: [Check; 4] = [
+        Box::new(|| Ok(r#"{"success":false,"error-codes":["invalid-input-response"]}"#.to_owned())),
+        Box::new(|| Err(TurnstileError::Status(StatusCode::INTERNAL_SERVER_ERROR))),
+        Box::new(success("bencher.dev")),
+        Box::new(|| Ok("not json".to_owned())),
+    ];
+    let next = AtomicUsize::new(0);
+    let answer = Answer::new(move || {
+        checks
+            .get(next.fetch_add(1, Ordering::SeqCst))
+            .map_or_else(|| Ok("no check left".to_owned()), |check| check())
+    });
+    let (server, log) = test_server(TestServerOptions {
+        turnstile: Some(turnstile(answer.clone())),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let with = json!({"email": "ada@example.com", "turnstile": "a-turnstile-token"});
+
+    for check in 0..4 {
         let resp = send_json(&server, "/v0/auth/email", None, &[SAME_ORIGIN], &with).await;
-        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
-        assert_eq!(error(resp).await.0, "turnstile_failed");
-        assert_eq!(log.sign_in_emails(), Vec::<String>::new());
-        assert_eq!(pending_sign_ins(&server), 0);
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN, "{check}");
+        assert_eq!(error(resp).await.0, "turnstile_failed", "{check}");
     }
+    assert_eq!(answer.remote_ips.lock().expect("Poisoned").len(), 4);
+    assert_eq!(log.sign_in_emails(), Vec::<String>::new());
+    assert_eq!(pending_sign_ins(&server), 0);
 }
 
 // Where Turnstile is not configured, no token is asked for.
@@ -1485,6 +1497,7 @@ async fn code_budget_survives_a_restart() {
 
 // Wrong codes sent at once never get past the budget: of 30 across 6 sign-ins, 10 count and the
 // other 20 are paused.
+// Kills a budget checked before the proof's transaction, which lets codes past it as they race.
 #[tokio::test(flavor = "multi_thread")]
 async fn parallel_wrong_codes_stop_at_the_budget() {
     let (server, log) = test_server(TestServerOptions::default()).await;
@@ -1513,6 +1526,26 @@ async fn parallel_wrong_codes_stop_at_the_budget() {
         "{statuses:?}"
     );
     assert_eq!(wrong_codes(&server).len(), 10);
+}
+
+// A proof reads the budget on the writer, so wrong codes that landed after any read another
+// connection made still stop the next code: with the budget spent as the writer sees it, a wrong
+// code and the right one are both paused, and neither spends a try or the budget.
+// Kills a budget read on any connection but the writer.
+#[tokio::test]
+async fn codes_meet_the_budget_the_writer_sees() {
+    let (server, log) = test_server(TestServerOptions::default()).await;
+    let pending = start(&server, "ada@example.com", None).await;
+    let (code, _link) = log.sign_in();
+    server
+        .spend_code_budget_on_the_writer("ada@example.com")
+        .await;
+
+    for code in [wrong_code(&code), code] {
+        assert_codes_paused(redeem_code(&server, Some(&pending), &code).await).await;
+    }
+    assert_eq!(wrong_codes(&server).len(), 0);
+    assert_eq!(pending_sign_ins(&server), 1);
 }
 
 // The budget holds the SHA-256 of the normalized address in place of the address.
