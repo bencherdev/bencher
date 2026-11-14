@@ -12,7 +12,7 @@ import {
 	PlanLevel,
 } from "../../../../types/bencher";
 import { fmtDate } from "../../../../util/convert";
-import { BENCHER_CALENDLY_URL } from "../../../../util/ext";
+import { BENCHER_ENTERPRISE_URL } from "../../../../util/ext";
 import { useNavigate, useSearchParams } from "../../../../util/url";
 import { type InitValid, validPlanLevel } from "../../../../util/valid";
 import { PLAN_PARAM } from "../../../auth/auth";
@@ -89,9 +89,7 @@ const BillingForm = (props: Props) => {
 							<InnerPricingTable
 								handleFree={() => setPlanLevel(PlanLevel.Free)}
 								handlePro={() => setCheckingOut(true)}
-								handleEnterprise={() =>
-									window.open(BENCHER_CALENDLY_URL, "_blank", "noreferrer")
-								}
+								handleEnterprise={() => navigate(BENCHER_ENTERPRISE_URL)}
 							/>
 							<Show when={plan() === PlanLevel.Free}>
 								<FreeUsage usage={props.usage} />
@@ -112,10 +110,7 @@ const BillingForm = (props: Props) => {
 						freeCtaText="Continue with Free"
 						handleFree={() => navigate("/console")}
 						handlePro={() => setCheckingOut(true)}
-						handleEnterprise={() => {
-							window.open(BENCHER_CALENDLY_URL, "_blank", "noreferrer");
-							navigate("/console");
-						}}
+						handleEnterprise={() => navigate(BENCHER_ENTERPRISE_URL)}
 					/>
 				}
 			>

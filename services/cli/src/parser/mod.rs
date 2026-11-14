@@ -68,7 +68,7 @@ pub enum CliSub {
     #[clap(subcommand)]
     Member(CliMember),
     #[cfg(feature = "plus")]
-    /// Organization metered subscription plan
+    /// Organization subscription plan
     #[clap(subcommand)]
     Plan(organization::plan::CliOrganizationPlan),
     #[cfg(feature = "plus")]
