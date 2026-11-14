@@ -8,7 +8,8 @@ use crate::{
             go::bench::AdapterGoBenchV1,
             java::jmh::AdapterJavaJmhV1,
             js::{
-                benchmark::AdapterJsBenchmarkV1, time::AdapterJsTimeV1, vitest::AdapterJsVitestV1,
+                benchmark::AdapterJsBenchmarkV1, deno::AdapterJsDeno, mitata::AdapterJsMitata,
+                time::AdapterJsTimeV1, tinybench::AdapterJsTinybench, vitest::AdapterJsVitestV1,
             },
             python::{asv::AdapterPythonAsvV1, pytest::AdapterPythonPytestV1},
             ruby::benchmark::AdapterRubyBenchmarkV1,
@@ -40,6 +41,9 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterJsBenchmarkV1::parse(input, settings))
             .or_else(|| AdapterJsTimeV1::parse(input, settings))
             .or_else(|| AdapterJsVitestV1::parse(input, settings))
+            .or_else(|| AdapterJsDeno::parse(input, settings))
+            .or_else(|| AdapterJsMitata::parse(input, settings))
+            .or_else(|| AdapterJsTinybench::parse(input, settings))
             .or_else(|| AdapterPythonAsvV1::parse(input, settings))
             .or_else(|| AdapterPythonPytestV1::parse(input, settings))
             .or_else(|| AdapterRubyBenchmarkV1::parse(input, settings))
@@ -66,7 +70,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 27] = [
+    const LEAVES: [Adapter; 30] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -80,6 +84,9 @@ mod test_magic_v1 {
         Adapter::JsTime,
         Adapter::JsVitestV5,
         Adapter::JsVitestV1,
+        Adapter::JsDeno,
+        Adapter::JsMitata,
+        Adapter::JsTinybench,
         Adapter::PythonAsvJson,
         Adapter::PythonAsvText,
         Adapter::PythonPytest,
@@ -98,7 +105,7 @@ mod test_magic_v1 {
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 8] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 10] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -106,6 +113,10 @@ mod test_magic_v1 {
         ),
         // asv's benchmark list holds no results.
         ("python/asv/benchmarks.json", None),
+        // Deno ran no bench, as when a module fails to load.
+        ("js/deno/broken.json", None),
+        // A program's own print before Deno's report.
+        ("js/deno/text_before.json", None),
         // BMF version 0.
         ("json/report_bmf_mixed.json", None),
         ("json/report_dhat.json", None),
@@ -233,7 +244,10 @@ mod test_magic_v1 {
             "dart/benchmark_harness" => return Some(Adapter::DartBenchmarkHarness),
             "java/jmh" => return Some(Adapter::JavaJmh),
             "js/benchmark" => return Some(Adapter::JsBenchmark),
+            "js/deno" => return Some(Adapter::JsDeno),
+            "js/mitata" => return Some(Adapter::JsMitata),
             "js/time" => return Some(Adapter::JsTime),
+            "js/tinybench" => return Some(Adapter::JsTinybench),
             "python/pytest" => return Some(Adapter::PythonPytest),
             "ruby/benchmark" => return Some(Adapter::RubyBenchmark),
             "rust/iai" => return Some(Adapter::RustIai),

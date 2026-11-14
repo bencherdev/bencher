@@ -197,8 +197,14 @@ pub enum CliReportAdapter {
     JavaJmh,
     /// 🕸 JavaScript Benchmark
     JsBenchmark,
+    /// 🕸 JavaScript Deno
+    JsDeno,
+    /// 🕸 JavaScript mitata
+    JsMitata,
     /// 🕸 JavaScript Time
     JsTime,
+    /// 🕸 JavaScript tinybench
+    JsTinybench,
     /// 🕸 JavaScript Vitest
     JsVitest,
     /// 🐍 Python ASV

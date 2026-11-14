@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "runtime": "Deno/2.9.8 x86_64-unknown-linux-gnu",
+  "cpu": "Example CPU",
+  "benches": [
+    {
+      "origin": "file:///tmp/bench/my%20project%20%C3%A9/plain/plain_bench.ts",
+      "group": null,
+      "name": "noop",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 16403,
+            "min": 2.1252,
+            "max": 31.5053,
+            "avg": 3.049861610680959,
+            "p75": 3.6185,
+            "p99": 4.4997,
+            "p995": 5.1927,
+            "p999": 6.0981,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    },
+    {
+      "origin": "file:///tmp/bench/my%20project%20%C3%A9/sub%20dir/space%20%C3%A9_bench.ts",
+      "group": null,
+      "name": "noop",
+      "baseline": false,
+      "results": [
+        {
+          "ok": {
+            "n": 15887,
+            "min": 2.1452,
+            "max": 19.1719,
+            "avg": 3.1490976458739928,
+            "p75": 3.7065,
+            "p99": 4.6069,
+            "p995": 5.0025,
+            "p999": 6.8623,
+            "highPrecision": false,
+            "usedExplicitTimers": false
+          }
+        }
+      ]
+    }
+  ]
+}

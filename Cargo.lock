@@ -711,6 +711,7 @@ dependencies = [
  "gungraun-summary",
  "nom",
  "ordered-float",
+ "percent-encoding",
  "pretty_assertions",
  "quick-xml",
  "rust_decimal",

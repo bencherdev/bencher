@@ -183,6 +183,28 @@ pub mod jmh {
     );
 }
 
+pub mod mitata {
+    use bencher_valid::{BYTES, NANOSECONDS};
+
+    create_measure!(Heap, "Heap", "heap", BYTES);
+    create_measure!(GcTime, "GC Time", "gc-time", NANOSECONDS);
+    create_measure!(Branches, "Branches", "branches", "branches");
+    create_measure!(StallCycles, "Stall Cycles", "stall-cycles", "cycles");
+    create_measure!(
+        LoadsAndStores,
+        "Loads and Stores",
+        "loads-and-stores",
+        "instructions"
+    );
+    create_measure!(L1LoadMisses, "L1 Load Misses", "l1-load-misses", "misses");
+    create_measure!(
+        L1StoreMisses,
+        "L1 Store Misses",
+        "l1-store-misses",
+        "misses"
+    );
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");
