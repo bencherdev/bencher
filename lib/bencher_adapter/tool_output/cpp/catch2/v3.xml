@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="bench" rng-seed="2119020161" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="A test case with a name long enough that the console reporter has to wrap it" filename="bench.cpp" line="31">
+    <BenchmarkResults name="A benchmark with a name long enough that the console reporter wraps it" samples="20" resamples="1000" iterations="7818" clockResolution="19.3303" estimatedDuration="312720">
+      <!-- All values in nano seconds -->
+      <mean value="2.59346" lowerBound="2.57228" upperBound="2.67213" ci="0.95"/>
+      <standardDeviation value="0.0826905" lowerBound="0.0117386" upperBound="0.164084" ci="0.95"/>
+      <outliers variance="0.0923151" lowMild="2" lowSevere="0" highMild="0" highSevere="2"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Containers" filename="bench.cpp" line="14">
+    <Section name="vector" filename="bench.cpp" line="15">
+      <Section name="small" filename="bench.cpp" line="16">
+        <BenchmarkResults name="push 16" samples="20" resamples="1000" iterations="435" clockResolution="19.3303" estimatedDuration="382800">
+          <!-- All values in nano seconds -->
+          <mean value="46.5289" lowerBound="45.432" upperBound="49.4866" ci="0.95"/>
+          <standardDeviation value="3.70243" lowerBound="0.0667597" upperBound="7.04777" ci="0.95"/>
+          <outliers variance="0.334885" lowMild="0" lowSevere="0" highMild="2" highSevere="2"/>
+        </BenchmarkResults>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <BenchmarkResults name="push 64" samples="20" resamples="1000" iterations="252" clockResolution="19.3303" estimatedDuration="383040">
+        <!-- All values in nano seconds -->
+        <mean value="78.4679" lowerBound="75.945" upperBound="82.65" ci="0.95"/>
+        <standardDeviation value="7.27893" lowerBound="5.07172" upperBound="10.0078" ci="0.95"/>
+        <outliers variance="0.385474" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Failing" filename="bench.cpp" line="37">
+    <BenchmarkResults name="throws">
+      <failed message="boom"/>
+    </BenchmarkResults>
+    <Exception filename="bench.cpp" line="37">
+      boom
+    </Exception>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Fibonacci" filename="bench.cpp" line="9">
+    <BenchmarkResults name="Fibonacci 10" samples="20" resamples="1000" iterations="750" clockResolution="19.3303" estimatedDuration="375000">
+      <!-- All values in nano seconds -->
+      <mean value="24.4795" lowerBound="24.109" upperBound="26.1772" ci="0.95"/>
+      <standardDeviation value="1.51736" lowerBound="0.211782" upperBound="3.01349" ci="0.95"/>
+      <outliers variance="0.237291" lowMild="0" lowSevere="0" highMild="0" highSevere="1"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 20" samples="20" resamples="1000" iterations="5" clockResolution="19.3303" estimatedDuration="401300">
+      <!-- All values in nano seconds -->
+      <mean value="3946.89" lowerBound="3920.75" upperBound="4100.11" ci="0.95"/>
+      <standardDeviation value="112.032" lowerBound="2.83639" upperBound="223.166" ci="0.95"/>
+      <outliers variance="0.0748858" lowMild="2" lowSevere="0" highMild="0" highSevere="2"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="1" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="3" failures="1" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

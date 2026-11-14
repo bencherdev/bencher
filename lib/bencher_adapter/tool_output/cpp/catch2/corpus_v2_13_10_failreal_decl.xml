@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch name="failrealP">
+  <Group name="failrealP">
+    <TestCase name="Before" filename="failreal.cpp" line="7">
+      <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="361" clockResolution="20.6724" estimatedDuration="2.0577e+06">
+        <!--All values in nano seconds-->
+        <mean value="57.0308" lowerBound="56.6845" upperBound="57.6993" ci="0.95"/>
+        <standardDeviation value="2.30385" lowerBound="1.17287" upperBound="3.52564" ci="0.95"/>
+        <outliers variance="0.375437" lowMild="0" lowSevere="0" highMild="1" highSevere="5"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Paren space first line" filename="failreal.cpp" line="8">
+      <BenchmarkResults name="paren space" samples="100" resamples="100000" iterations="1648" clockResolution="20.6724" estimatedDuration="1.9776e+06">
+        <!--All values in nano seconds-->
+        <failed message="expected f(1) 
+actual 2"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Paren at line end" filename="failreal.cpp" line="9">
+      <BenchmarkResults name="paren end" samples="100" resamples="100000" iterations="1632" clockResolution="20.6724" estimatedDuration="1.9584e+06">
+        <!--All values in nano seconds-->
+        <failed message="g(x)
+then h(y)"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Three lines" filename="failreal.cpp" line="10">
+      <BenchmarkResults name="three lines" samples="100" resamples="100000" iterations="1620" clockResolution="20.6724" estimatedDuration="1.944e+06">
+        <!--All values in nano seconds-->
+        <failed message="one
+two
+three"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Trailing newline" filename="failreal.cpp" line="11">
+      <BenchmarkResults name="trailing newline" samples="100" resamples="100000" iterations="1619" clockResolution="20.6724" estimatedDuration="1.9428e+06">
+        <!--All values in nano seconds-->
+        <failed message="boom
+"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="Early paren space" filename="failreal.cpp" line="12">
+      <BenchmarkResults name="early paren space">
+        <failed message="a(b) 
+c"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <TestCase name="After" filename="failreal.cpp" line="13">
+      <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="548" clockResolution="20.6724" estimatedDuration="2.0276e+06">
+        <!--All values in nano seconds-->
+        <mean value="34.1638" lowerBound="33.9741" upperBound="34.5322" ci="0.95"/>
+        <standardDeviation value="1.26936" lowerBound="0.691423" upperBound="1.9326" ci="0.95"/>
+        <outliers variance="0.336135" lowMild="0" lowSevere="0" highMild="1" highSevere="5"/>
+      </BenchmarkResults>
+      <BenchmarkResults name="Fibonacci 6" samples="100" resamples="100000" iterations="986" clockResolution="20.6724" estimatedDuration="1.972e+06">
+        <!--All values in nano seconds-->
+        <mean value="20.7988" lowerBound="20.5869" upperBound="21.1887" ci="0.95"/>
+        <standardDeviation value="1.42093" lowerBound="0.867972" upperBound="2.13946" ci="0.95"/>
+        <outliers variance="0.635856" lowMild="0" lowSevere="0" highMild="0" highSevere="9"/>
+      </BenchmarkResults>
+      <OverallResult success="true"/>
+    </TestCase>
+    <OverallResults successes="0" failures="0" expectedFailures="0"/>
+    <OverallResultsCases successes="7" failures="0" expectedFailures="0"/>
+  </Group>
+  <OverallResults successes="0" failures="0" expectedFailures="0"/>
+  <OverallResultsCases successes="7" failures="0" expectedFailures="0"/>
+</Catch>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="bdd" rng-seed="3702742547" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Scenario: Short scenario" filename="ev/r8/progs/bdd.cpp" line="6">
+    <Section name="Given: a cache" filename="ev/r8/progs/bdd.cpp" line="7">
+      <Section name="When: it is warm" filename="ev/r8/progs/bdd.cpp" line="8">
+        <Section name="Then: lookups are fast" filename="ev/r8/progs/bdd.cpp" line="9">
+          <BenchmarkResults name="lookup" samples="100" resamples="100000" iterations="3546" clockResolution="22.2928" estimatedDuration="2.1276e+06">
+            <!-- All values in nano seconds -->
+            <mean value="4.81869" lowerBound="4.77934" upperBound="4.92254" ci="0.95"/>
+            <standardDeviation value="0.308653" lowerBound="0.130283" upperBound="0.596448" ci="0.95"/>
+            <outliers variance="0.605361" lowMild="1" lowSevere="0" highMild="1" highSevere="5"/>
+          </BenchmarkResults>
+          <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+        </Section>
+        <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+      </Section>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Scenario: A scenario with a name long enough that the console reporter has to wrap it twice over" filename="ev/r8/progs/bdd.cpp" line="13">
+    <Section name="Given: a given clause with a name long enough that the console reporter has to wrap it" filename="ev/r8/progs/bdd.cpp" line="14">
+      <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="1810" clockResolution="22.2928" estimatedDuration="2.172e+06">
+        <!-- All values in nano seconds -->
+        <mean value="15.7101" lowerBound="15.4846" upperBound="16.0404" ci="0.95"/>
+        <standardDeviation value="1.36901" lowerBound="0.960533" upperBound="2.03712" ci="0.95"/>
+        <outliers variance="0.738426" lowMild="0" lowSevere="0" highMild="1" highSevere="2"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Parser: a test case with a colon and a long name that the console wraps" filename="ev/r8/progs/bdd.cpp" line="18">
+    <Section name="Lexer: a section with a colon and a long name that the console wraps too" filename="ev/r8/progs/bdd.cpp" line="19">
+      <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1319" clockResolution="22.2928" estimatedDuration="2.1104e+06">
+        <!-- All values in nano seconds -->
+        <mean value="11.796" lowerBound="11.674" upperBound="12.0759" ci="0.95"/>
+        <standardDeviation value="0.891262" lowerBound="0.338202" upperBound="1.54535" ci="0.95"/>
+        <outliers variance="0.686589" lowMild="0" lowSevere="0" highMild="0" highSevere="21"/>
+      </BenchmarkResults>
+      <OverallResults successes="0" failures="0" expectedFailures="0" skipped="false"/>
+    </Section>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Plain" filename="ev/r8/progs/bdd.cpp" line="23">
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1061" clockResolution="22.2928" estimatedDuration="2.2281e+06">
+      <!-- All values in nano seconds -->
+      <mean value="20.312" lowerBound="19.9136" upperBound="21.2349" ci="0.95"/>
+      <standardDeviation value="2.91872" lowerBound="1.50336" upperBound="5.5216" ci="0.95"/>
+      <outliers variance="0.893871" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="4" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

@@ -1,0 +1,57 @@
+{"Time":"2026-10-21T22:44:02.331673977Z","Action":"start","Package":"example.com/bench/copy"}
+{"Time":"2026-10-21T22:44:02.333359795Z","Action":"output","Package":"example.com/bench/copy","Output":"goos: linux\n"}
+{"Time":"2026-10-21T22:44:02.333424064Z","Action":"output","Package":"example.com/bench/copy","Output":"goarch: amd64\n"}
+{"Time":"2026-10-21T22:44:02.333427158Z","Action":"output","Package":"example.com/bench/copy","Output":"pkg: example.com/bench/copy\n"}
+{"Time":"2026-10-21T22:44:02.333431355Z","Action":"output","Package":"example.com/bench/copy","Output":"cpu: Intel(R) Xeon(R) CPU @ 2.20GHz\n"}
+{"Time":"2026-10-21T22:44:02.333435381Z","Action":"run","Package":"example.com/bench/copy","Test":"BenchmarkCopy"}
+{"Time":"2026-10-21T22:44:02.333436522Z","Action":"output","Package":"example.com/bench/copy","Test":"BenchmarkCopy","Output":"=== RUN   BenchmarkCopy\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.333438755Z","Action":"output","Package":"example.com/bench/copy","Test":"BenchmarkCopy","Output":"BenchmarkCopy\n"}
+{"Time":"2026-10-21T22:44:02.3352528Z","Action":"output","Package":"example.com/bench/copy","Test":"BenchmarkCopy","Output":"BenchmarkCopy-16     \t"}
+{"Time":"2026-10-21T22:44:02.33527935Z","Action":"output","Package":"example.com/bench/copy","Test":"BenchmarkCopy","Output":"    2000\t       776.8 ns/op\t5273.23 MB/s\t    4101 B/op\t       1 allocs/op\n"}
+{"Time":"2026-10-21T22:44:02.335285871Z","Action":"run","Package":"example.com/bench/copy","Test":"BenchmarkAlloc"}
+{"Time":"2026-10-21T22:44:02.335287442Z","Action":"output","Package":"example.com/bench/copy","Test":"BenchmarkAlloc","Output":"=== RUN   BenchmarkAlloc\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.335289436Z","Action":"output","Package":"example.com/bench/copy","Test":"BenchmarkAlloc","Output":"BenchmarkAlloc\n"}
+{"Time":"2026-10-21T22:44:02.335604057Z","Action":"output","Package":"example.com/bench/copy","Test":"BenchmarkAlloc","Output":"BenchmarkAlloc-16    \t    2000\t         1.347 ns/op\t       0 B/op\t       0 allocs/op\n"}
+{"Time":"2026-10-21T22:44:02.335608223Z","Action":"output","Package":"example.com/bench/copy","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.335908482Z","Action":"output","Package":"example.com/bench/copy","Output":"ok  \texample.com/bench/copy\t0.004s\n"}
+{"Time":"2026-10-21T22:44:02.335936706Z","Action":"pass","Package":"example.com/bench/copy","Elapsed":0.004}
+{"Time":"2026-10-21T22:44:02.336493137Z","Action":"start","Package":"example.com/bench/fib"}
+{"Time":"2026-10-21T22:44:02.338057589Z","Action":"output","Package":"example.com/bench/fib","Output":"goos: linux\n"}
+{"Time":"2026-10-21T22:44:02.338086132Z","Action":"output","Package":"example.com/bench/fib","Output":"goarch: amd64\n"}
+{"Time":"2026-10-21T22:44:02.338088215Z","Action":"output","Package":"example.com/bench/fib","Output":"pkg: example.com/bench/fib\n"}
+{"Time":"2026-10-21T22:44:02.338093564Z","Action":"output","Package":"example.com/bench/fib","Output":"cpu: Intel(R) Xeon(R) CPU @ 2.20GHz\n"}
+{"Time":"2026-10-21T22:44:02.3380976Z","Action":"run","Package":"example.com/bench/fib","Test":"BenchmarkFib10"}
+{"Time":"2026-10-21T22:44:02.338100304Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib10","Output":"=== RUN   BenchmarkFib10\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.338105202Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib10","Output":"BenchmarkFib10\n"}
+{"Time":"2026-10-21T22:44:02.338793023Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib10","Output":"BenchmarkFib10-16         \t    2000\t       183.8 ns/op\t       0 B/op\t       0 allocs/op\n"}
+{"Time":"2026-10-21T22:44:02.338801366Z","Action":"run","Package":"example.com/bench/fib","Test":"BenchmarkFib"}
+{"Time":"2026-10-21T22:44:02.338802668Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib","Output":"=== RUN   BenchmarkFib\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.33880468Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib","Output":"BenchmarkFib\n"}
+{"Time":"2026-10-21T22:44:02.339088565Z","Action":"run","Package":"example.com/bench/fib","Test":"BenchmarkFib/n=10"}
+{"Time":"2026-10-21T22:44:02.339090928Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/n=10","Output":"=== RUN   BenchmarkFib/n=10\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.33909256Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/n=10","Output":"BenchmarkFib/n=10\n"}
+{"Time":"2026-10-21T22:44:02.339635532Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/n=10","Output":"BenchmarkFib/n=10-16      \t    2000\t       160.8 ns/op\t       0 B/op\t       0 allocs/op\n"}
+{"Time":"2026-10-21T22:44:02.339637995Z","Action":"run","Package":"example.com/bench/fib","Test":"BenchmarkFib/n=15"}
+{"Time":"2026-10-21T22:44:02.339639017Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/n=15","Output":"=== RUN   BenchmarkFib/n=15\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.339640379Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/n=15","Output":"BenchmarkFib/n=15\n"}
+{"Time":"2026-10-21T22:44:02.34368302Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/n=15","Output":"BenchmarkFib/n=15-16      \t    2000\t      1877 ns/op\t       0 B/op\t       0 allocs/op\n"}
+{"Time":"2026-10-21T22:44:02.343694248Z","Action":"run","Package":"example.com/bench/fib","Test":"BenchmarkFib/label/n=5"}
+{"Time":"2026-10-21T22:44:02.343696Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/label/n=5","Output":"=== RUN   BenchmarkFib/label/n=5\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.343697863Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/label/n=5","Output":"BenchmarkFib/label/n=5\n"}
+{"Time":"2026-10-21T22:44:02.343984752Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/label/n=5","Output":"BenchmarkFib/label/n=5-16 \t    2000\t        13.56 ns/op\t       0 B/op\t       0 allocs/op\n"}
+{"Time":"2026-10-21T22:44:02.344008338Z","Action":"run","Package":"example.com/bench/fib","Test":"BenchmarkFib/label/n=5#01"}
+{"Time":"2026-10-21T22:44:02.344011032Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/label/n=5#01","Output":"=== RUN   BenchmarkFib/label/n=5#01\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.344014747Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/label/n=5#01","Output":"BenchmarkFib/label/n=5#01\n"}
+{"Time":"2026-10-21T22:44:02.344288727Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkFib/label/n=5#01","Output":"BenchmarkFib/label/n=5#01-16         \t    2000\t        13.55 ns/op\t       0 B/op\t       0 allocs/op\n"}
+{"Time":"2026-10-21T22:44:02.344300755Z","Action":"run","Package":"example.com/bench/fib","Test":"BenchmarkCustom"}
+{"Time":"2026-10-21T22:44:02.344301897Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkCustom","Output":"=== RUN   BenchmarkCustom\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.344303299Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkCustom","Output":"BenchmarkCustom\n"}
+{"Time":"2026-10-21T22:44:02.344848782Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkCustom","Output":"BenchmarkCustom-16                   \t    2000\t       149.7 ns/op\t       177.0 calls/op\t         3.000 depth\t       0 B/op\t       0 allocs/op\n"}
+{"Time":"2026-10-21T22:44:02.344878147Z","Action":"run","Package":"example.com/bench/fib","Test":"BenchmarkSuppressed"}
+{"Time":"2026-10-21T22:44:02.344879249Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkSuppressed","Output":"=== RUN   BenchmarkSuppressed\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.344881012Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkSuppressed","Output":"BenchmarkSuppressed\n"}
+{"Time":"2026-10-21T22:44:02.345245499Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkSuppressed","Output":"BenchmarkSuppressed-16               \t"}
+{"Time":"2026-10-21T22:44:02.345251559Z","Action":"output","Package":"example.com/bench/fib","Test":"BenchmarkSuppressed","Output":"    2000\t        42.00 widgets/op\t       0 B/op\t       0 allocs/op\n"}
+{"Time":"2026-10-21T22:44:02.345266241Z","Action":"output","Package":"example.com/bench/fib","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-21T22:44:02.345522212Z","Action":"output","Package":"example.com/bench/fib","Output":"ok  \texample.com/bench/fib\t0.009s\n"}
+{"Time":"2026-10-21T22:44:02.345534251Z","Action":"pass","Package":"example.com/bench/fib","Elapsed":0.009}

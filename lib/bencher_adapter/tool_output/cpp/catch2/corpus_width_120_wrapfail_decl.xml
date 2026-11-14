@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="wrapfail" rng-seed="1269586795" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="wrapfail.cpp" line="6">
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="746" clockResolution="22.0717" estimatedDuration="2.1634e+06">
+      <!-- All values in nano seconds -->
+      <mean value="28.3844" lowerBound="28.2235" upperBound="28.6456" ci="0.95"/>
+      <standardDeviation value="1.02703" lowerBound="0.678507" upperBound="1.46935" ci="0.95"/>
+      <outliers variance="0.326203" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Fails in the samples" filename="wrapfail.cpp" line="10">
+    <BenchmarkResults name="fails late" samples="100" resamples="100000" iterations="7071" clockResolution="22.0717" estimatedDuration="2.1213e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="REQUIRE" filename="wrapfail.cpp" line="14">
+        <Original>
+          calls &lt; 60
+        </Original>
+        <Expanded>
+          60 &lt; 60
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="wrapfail.cpp" line="19">
+    <BenchmarkResults name="Fibonacci 15 with a rather long name that wraps onto more lines" samples="100" resamples="100000" iterations="55" clockResolution="22.0717" estimatedDuration="2.2385e+06">
+      <!-- All values in nano seconds -->
+      <mean value="404.415" lowerBound="402.153" upperBound="408.501" ci="0.95"/>
+      <standardDeviation value="14.987" lowerBound="9.37352" upperBound="22.8261" ci="0.95"/>
+      <outliers variance="0.336063" lowMild="4" lowSevere="0" highMild="1" highSevere="22"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Matrix product of sizes 1024 2048 then some more words here" samples="100" resamples="100000" iterations="305" clockResolution="22.0717" estimatedDuration="2.196e+06">
+      <!-- All values in nano seconds -->
+      <mean value="73.3449" lowerBound="72.2726" upperBound="77.0817" ci="0.95"/>
+      <standardDeviation value="9.11716" lowerBound="2.69696" upperBound="20.6746" ci="0.95"/>
+      <outliers variance="0.852521" lowMild="0" lowSevere="0" highMild="0" highSevere="6"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 13" samples="100" resamples="100000" iterations="171" clockResolution="22.0717" estimatedDuration="2.2059e+06">
+      <!-- All values in nano seconds -->
+      <mean value="113.86" lowerBound="112.951" upperBound="115.189" ci="0.95"/>
+      <standardDeviation value="5.51498" lowerBound="4.17349" upperBound="7.84127" ci="0.95"/>
+      <outliers variance="0.464655" lowMild="0" lowSevere="0" highMild="20" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Fails again" filename="wrapfail.cpp" line="25">
+    <BenchmarkResults name="fails late again" samples="100" resamples="100000" iterations="7805" clockResolution="22.0717" estimatedDuration="1.561e+06">
+      <!-- All values in nano seconds -->
+      <Expression success="false" type="REQUIRE" filename="wrapfail.cpp" line="29">
+        <Original>
+          again &lt; 60
+        </Original>
+        <Expanded>
+          60 &lt; 60
+        </Expanded>
+      </Expression>
+      <failed message="{ nested assertion failed }"/>
+    </BenchmarkResults>
+    <OverallResult success="false" skips="0"/>
+  </TestCase>
+  <TestCase name="Final" filename="wrapfail.cpp" line="34">
+    <BenchmarkResults name="Fibonacci 14" samples="100" resamples="100000" iterations="128" clockResolution="22.0717" estimatedDuration="2.2144e+06">
+      <!-- All values in nano seconds -->
+      <mean value="175.428" lowerBound="174.372" upperBound="176.829" ci="0.95"/>
+      <standardDeviation value="6.15775" lowerBound="4.74355" upperBound="8.58981" ci="0.95"/>
+      <outliers variance="0.31619" lowMild="0" lowSevere="0" highMild="2" highSevere="1"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 16 with a rather long name that also wraps around" samples="100" resamples="100000" iterations="45" clockResolution="22.0717" estimatedDuration="2.223e+06">
+      <!-- All values in nano seconds -->
+      <mean value="503.851" lowerBound="501.572" upperBound="507.379" ci="0.95"/>
+      <standardDeviation value="14.2577" lowerBound="10.1227" upperBound="20.6819" ci="0.95"/>
+      <outliers variance="0.22876" lowMild="0" lowSevere="0" highMild="0" highSevere="4"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="118" failures="2" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="3" failures="2" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

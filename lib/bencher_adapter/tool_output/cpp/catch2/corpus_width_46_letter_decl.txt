@@ -1,0 +1,44 @@
+Randomness seeded to: 644408256
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+letter is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+---------------------------------------------
+One letter
+---------------------------------------------
+letter.cpp:4
+.............................................
+
+   samples       iterations    est run time
+   mean          low mean      high mean
+   std dev       low std dev   high std dev
+---------------------------------------------
+f            100           603     2.2311 ms 
+      35.5812 ns    35.3796 ns    35.9602 ns 
+      1.36363 ns   0.794766 ns    2.17991 ns 
+                                             
+g            100           234      2.223 ms 
+      96.3762 ns    95.8389 ns    97.1435 ns 
+      3.24088 ns    2.39251 ns    4.49025 ns 
+                                             
+
+---------------------------------------------
+After
+---------------------------------------------
+letter.cpp:8
+.............................................
+
+   samples       iterations    est run time
+   mean          low mean      high mean
+   std dev       low std dev   high std dev
+---------------------------------------------
+h            100          1547     2.1658 ms 
+      12.3168 ns    12.2396 ns    12.4422 ns 
+     0.492104 ns   0.339305 ns   0.788484 ns 
+                                             
+
+=============================================
+test cases: 2 | 2 passed
+assertions: - none -
+

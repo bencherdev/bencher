@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="fakeheaderP" rng-seed="4142555386" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Header with no rule" filename="fakeheader.cpp" line="7">
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Before" filename="fakeheader.cpp" line="8">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1749" clockResolution="19.2088" estimatedDuration="1.749e+06">
+      <!-- All values in nano seconds -->
+      <mean value="10.2381" lowerBound="10.1762" upperBound="10.3652" ci="0.95"/>
+      <standardDeviation value="0.429732" lowerBound="0.239924" upperBound="0.684317" ci="0.95"/>
+      <outliers variance="0.395092" lowMild="0" lowSevere="0" highMild="0" highSevere="5"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Failure text between" filename="fakeheader.cpp" line="9">
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="fakeheader.cpp" line="10">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="2783" clockResolution="19.2088" estimatedDuration="1.6698e+06">
+      <!-- All values in nano seconds -->
+      <mean value="7.09245" lowerBound="6.97478" upperBound="7.25463" ci="0.95"/>
+      <standardDeviation value="0.704785" lowerBound="0.553255" upperBound="1.13211" ci="0.95"/>
+      <outliers variance="0.789873" lowMild="0" lowSevere="0" highMild="0" highSevere="1"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="4" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

@@ -79,6 +79,8 @@ pub mod default {
         "bytes / second (B/s)"
     );
     create_measure!(Cycles, "Cycles", "cycles", "cycles");
+    create_measure!(CpuTime, "CPU Time", "cpu-time", NANOSECONDS);
+    create_measure!(Allocations, "Allocations", "allocations", "allocations");
 }
 
 pub mod json {

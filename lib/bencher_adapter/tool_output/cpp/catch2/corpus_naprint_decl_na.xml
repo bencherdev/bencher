@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Catch2TestRun name="naprintP" rng-seed="184304572" xml-format-version="3" catch2-version="3.16.1">
+  <TestCase name="Before" filename="naprint.cpp" line="2">
+    <BenchmarkResults name="Fibonacci 8" samples="100" resamples="100000" iterations="1719" clockResolution="19.0663" estimatedDuration="1.8909e+06">
+      <!-- All values in nano seconds -->
+      <mean value="10.7682" lowerBound="10.7682" upperBound="10.7682" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Two lines early" filename="naprint.cpp" line="3">
+    <BenchmarkResults name="two lines early" samples="100" resamples="100000" iterations="6988" clockResolution="19.0663" estimatedDuration="1.3976e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.68787" lowerBound="2.68787" upperBound="2.68787" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 9" samples="100" resamples="100000" iterations="1156" clockResolution="19.0663" estimatedDuration="1.8496e+06">
+      <!-- All values in nano seconds -->
+      <mean value="16.1846" lowerBound="16.1846" upperBound="16.1846" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Two lines sampling" filename="naprint.cpp" line="4">
+    <BenchmarkResults name="two lines sampling" samples="100" resamples="100000" iterations="6483" clockResolution="19.0663" estimatedDuration="1.2966e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.78603" lowerBound="2.78603" upperBound="2.78603" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 10" samples="100" resamples="100000" iterations="719" clockResolution="19.0663" estimatedDuration="1.8694e+06">
+      <!-- All values in nano seconds -->
+      <mean value="27.7441" lowerBound="27.7441" upperBound="27.7441" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Spaced lines sampling" filename="naprint.cpp" line="5">
+    <BenchmarkResults name="spaced lines sampling" samples="100" resamples="100000" iterations="6768" clockResolution="19.0663" estimatedDuration="1.3536e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.71505" lowerBound="2.71505" upperBound="2.71505" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 11" samples="100" resamples="100000" iterations="439" clockResolution="19.0663" estimatedDuration="1.8877e+06">
+      <!-- All values in nano seconds -->
+      <mean value="42.4153" lowerBound="42.4153" upperBound="42.4153" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Blank lines sampling" filename="naprint.cpp" line="6">
+    <BenchmarkResults name="blank lines sampling" samples="100" resamples="100000" iterations="6177" clockResolution="19.0663" estimatedDuration="1.8531e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.70734" lowerBound="2.70734" upperBound="2.70734" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 12" samples="100" resamples="100000" iterations="293" clockResolution="19.0663" estimatedDuration="1.9045e+06">
+      <!-- All values in nano seconds -->
+      <mean value="62.1866" lowerBound="62.1866" upperBound="62.1866" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Value lines sampling" filename="naprint.cpp" line="7">
+    <BenchmarkResults name="value lines sampling" samples="100" resamples="100000" iterations="6401" clockResolution="19.0663" estimatedDuration="1.2802e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.98663" lowerBound="2.98663" upperBound="2.98663" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 13" samples="100" resamples="100000" iterations="146" clockResolution="19.0663" estimatedDuration="1.898e+06">
+      <!-- All values in nano seconds -->
+      <mean value="122.947" lowerBound="122.947" upperBound="122.947" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Value lines early" filename="naprint.cpp" line="8">
+    <BenchmarkResults name="value lines early" samples="100" resamples="100000" iterations="5955" clockResolution="19.0663" estimatedDuration="1.7865e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.92276" lowerBound="2.92276" upperBound="2.92276" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 14" samples="100" resamples="100000" iterations="94" clockResolution="19.0663" estimatedDuration="1.9082e+06">
+      <!-- All values in nano seconds -->
+      <mean value="194.813" lowerBound="194.813" upperBound="194.813" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Indented lines sampling" filename="naprint.cpp" line="9">
+    <BenchmarkResults name="indented lines sampling" samples="100" resamples="100000" iterations="6012" clockResolution="19.0663" estimatedDuration="1.8036e+06">
+      <!-- All values in nano seconds -->
+      <mean value="2.8899" lowerBound="2.8899" upperBound="2.8899" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 15" samples="100" resamples="100000" iterations="50" clockResolution="19.0663" estimatedDuration="1.905e+06">
+      <!-- All values in nano seconds -->
+      <mean value="378.448" lowerBound="378.448" upperBound="378.448" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="Lines between" filename="naprint.cpp" line="10">
+    <BenchmarkResults name="Fibonacci 16" samples="100" resamples="100000" iterations="35" clockResolution="19.0663" estimatedDuration="1.9565e+06">
+      <!-- All values in nano seconds -->
+      <mean value="559.9" lowerBound="559.9" upperBound="559.9" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 17" samples="100" resamples="100000" iterations="17" clockResolution="19.0663" estimatedDuration="1.9312e+06">
+      <!-- All values in nano seconds -->
+      <mean value="1178" lowerBound="1178" upperBound="1178" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <TestCase name="After" filename="naprint.cpp" line="11">
+    <BenchmarkResults name="Fibonacci 7" samples="100" resamples="100000" iterations="1964" clockResolution="19.0663" estimatedDuration="1.7676e+06">
+      <!-- All values in nano seconds -->
+      <mean value="6.284" lowerBound="6.284" upperBound="6.284" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <BenchmarkResults name="Fibonacci 6" samples="100" resamples="100000" iterations="3186" clockResolution="19.0663" estimatedDuration="1.593e+06">
+      <!-- All values in nano seconds -->
+      <mean value="4.66768" lowerBound="4.66768" upperBound="4.66768" ci="0"/>
+      <standardDeviation value="0" lowerBound="0" upperBound="0" ci="0"/>
+      <outliers variance="0" lowMild="0" lowSevere="0" highMild="0" highSevere="0"/>
+    </BenchmarkResults>
+    <OverallResult success="true" skips="0"/>
+  </TestCase>
+  <OverallResults successes="0" failures="0" expectedFailures="0" skips="0"/>
+  <OverallResultsCases successes="10" failures="0" expectedFailures="0" skips="0"/>
+</Catch2TestRun>

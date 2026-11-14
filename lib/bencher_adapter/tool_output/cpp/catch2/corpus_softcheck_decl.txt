@@ -1,0 +1,98 @@
+Randomness seeded to: 2066718801
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+softcheck is a Catch2 v3.16.1 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Before
+-------------------------------------------------------------------------------
+softcheck.cpp:9
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 10                                   100           715      1.859 ms 
+                                        26.7199 ns    26.5279 ns    27.0745 ns 
+                                        1.29245 ns   0.792351 ns     1.9753 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Soft check in the samples
+-------------------------------------------------------------------------------
+softcheck.cpp:10
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+checks late                                    100          6368     1.9104 ms 
+
+softcheck.cpp:13: FAILED:
+  CHECK( ++calls != at("FAIL_AT", 60) )
+with expansion:
+  60 != 60
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+                                        2.95761 ns    2.94286 ns     2.9951 ns 
+                                       0.112065 ns  0.0433265 ns   0.201241 ns 
+                                                                               
+Fibonacci 9                                    100          1073     1.8241 ms 
+                                        17.3979 ns    17.2588 ns    17.6018 ns 
+                                       0.849036 ns   0.595693 ns    1.17521 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+Soft check first
+-------------------------------------------------------------------------------
+softcheck.cpp:18
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+checks first                         
+softcheck.cpp:21: FAILED:
+  CHECK( ++calls != 1 )
+with expansion:
+  1 != 1
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+          100          6215     1.8645 ms 
+                                        3.21623 ns    3.17835 ns    3.28917 ns 
+                                       0.261296 ns   0.153763 ns   0.402779 ns 
+                                                                               
+
+-------------------------------------------------------------------------------
+After
+-------------------------------------------------------------------------------
+softcheck.cpp:25
+...............................................................................
+
+benchmark name                       samples       iterations    est run time
+                                     mean          low mean      high mean
+                                     std dev       low std dev   high std dev
+-------------------------------------------------------------------------------
+Fibonacci 15                                   100            44     1.9228 ms 
+                                        387.857 ns    382.679 ns    399.962 ns 
+                                         37.999 ns    14.2161 ns    66.5719 ns 
+                                                                               
+Fibonacci 12                                   100           278     1.9182 ms 
+                                        66.1326 ns    64.6474 ns    68.4387 ns 
+                                        9.26043 ns     6.6071 ns    12.3047 ns 
+                                                                               
+
+===============================================================================
+test cases:   4 |   2 passed | 2 failed
+assertions: 252 | 250 passed | 2 failed
+
