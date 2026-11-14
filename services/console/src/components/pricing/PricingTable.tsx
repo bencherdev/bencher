@@ -1,6 +1,6 @@
 import { PlanLevel } from "../../types/bencher";
 import { authUser } from "../../util/auth";
-import { BENCHER_CALENDLY_URL } from "../../util/ext";
+import { BENCHER_ENTERPRISE_URL } from "../../util/ext";
 import { useNavigate } from "../../util/url";
 import { PLAN_PARAM } from "../auth/auth";
 import InnerPricingTable from "./InnerPricingTable";
@@ -26,7 +26,7 @@ const PricingTable = () => {
 			handlePro={() => handlePlan(PlanLevel.Pro)}
 			handleEnterprise={() => {
 				// Enterprise is "Contact us" (custom hardware), not self-serve.
-				navigate(BENCHER_CALENDLY_URL);
+				navigate(BENCHER_ENTERPRISE_URL);
 			}}
 		/>
 	);

@@ -9,6 +9,7 @@ export const BENCHER_GITHUB_URL: string =
 	"https://github.com/bencherdev/bencher";
 
 export const BENCHER_CALENDLY_URL: string = "https://calendly.com/bencher/demo";
+export const BENCHER_ENTERPRISE_URL: string = "mailto:enterprise@bencher.dev";
 
 export const BENCHER_CHAT_URL: string = "https://discord.gg/yGEsdUh7R4";
 
