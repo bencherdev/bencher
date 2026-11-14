@@ -4,9 +4,13 @@ import { type JsonMember, OrganizationRole } from "../../types/bencher";
 import type { Api } from "../api";
 import type { Page } from "../list/pages";
 import {
+	expires,
+	invitesQuery,
 	membersKey,
 	membersPage,
 	removeMember,
+	resendInvite,
+	revokeInvite,
 	rolesQuery,
 	sendable,
 } from "./members";
@@ -126,5 +130,53 @@ describe("sendable", () => {
 		expect(sendable("courage@nowhere.example")).toBe(true);
 		expect(sendable("@nowhere.example")).toBe(false);
 		expect(sendable("courage")).toBe(false);
+	});
+});
+
+describe("invitations", () => {
+	// Kills a count of the invitations read rather than the API's, a list read
+	// a page at a time or from elsewhere, and a Resend or Revoke sent for
+	// another invitation or organization.
+	test("reads every invitation once, and sends each change to its own", async () => {
+		const paths: string[] = [];
+		const api = {
+			get: async <T>(path: string) => {
+				paths.push(`GET ${path}`);
+				return {
+					data: [] as T,
+					headers: new Headers({ "X-Total-Count": "3" }),
+				};
+			},
+			send: (async (method: string, path: string) => {
+				paths.push(`${method} ${path}`);
+				return { data: undefined, headers: new Headers() };
+			}) as Api["send"],
+		} as Api;
+		expect(await invitesQuery(api, "pompeii-llc").queryFn({ signal })).toEqual({
+			invites: [],
+			total: 3,
+		});
+		await resendInvite(api, "pompeii-llc", "i1");
+		await revokeInvite(api, "pompeii-llc", "i1");
+		expect(paths).toEqual([
+			"GET /v0/organizations/pompeii-llc/invites?per_page=255",
+			"POST /v0/organizations/pompeii-llc/invites/i1/resend",
+			"DELETE /v0/organizations/pompeii-llc/invites/i1",
+		]);
+	});
+
+	// Kills an invitation read as live at its expiration or after, and one read
+	// as expired before it.
+	test("an invitation reads as expired from its expiration on", () => {
+		const expiration = "2026-11-05T12:00:00Z";
+		const at = Date.parse(expiration);
+		expect(expires(expiration, at - 1_000)).toEqual({
+			text: "Nov 5, 2026",
+			expired: false,
+		});
+		expect(expires(expiration, at)).toEqual({
+			text: "Expired Nov 5, 2026",
+			expired: true,
+		});
 	});
 });

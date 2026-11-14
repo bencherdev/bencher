@@ -84,7 +84,7 @@ pub async fn auth_link_post(
                 ..pending
             }
         };
-        prove(conn, context, &pending, &presented, now).map(Some)
+        prove(conn, &pending, &presented, now).map(Some)
     })
     .map_err(TxError::into_http)?
     .ok_or_else(ended)?;

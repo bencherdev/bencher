@@ -71,6 +71,26 @@ describe("the pending sign-in", () => {
 			cappedUntil: PENDING.cappedUntil,
 		});
 	});
+
+	// Kills a tab that reads an invitation's secret back from storage, where an
+	// earlier console may have kept one.
+	test("an invitation kept by an earlier console is never read back", () => {
+		const kept = memory({
+			BENCHER_PENDING_SIGN_IN: JSON.stringify({
+				...PENDING,
+				carry: { ...PENDING.carry, invite: "a.b.c" },
+			}),
+			BENCHER_PROVIDER_SIGN_IN: JSON.stringify({
+				door: "login",
+				carry: { invite: "a.b.c", plan: "pro" },
+			}),
+		});
+		expect(readPending(kept)).toEqual(PENDING);
+		expect(takeStarted(kept)).toEqual({
+			door: "login",
+			carry: { plan: "pro" },
+		});
+	});
 });
 
 describe("a provider's pending sign-in", () => {
@@ -141,13 +161,12 @@ describe("the door's address", () => {
 		expect(doorPath("login", {})).toBe("/auth/login");
 		expect(
 			doorPath("signup", {
-				invite: "a.b.c",
 				claim: "c1a1d000-0000-4000-8000-000000000000",
 				plan: "pro",
 				authorization: PENDING.carry.authorization,
 			}),
 		).toBe(
-			`/auth/signup?invite=a.b.c&claim=c1a1d000-0000-4000-8000-000000000000&plan=pro&authorization=${PENDING.carry.authorization}`,
+			`/auth/signup?claim=c1a1d000-0000-4000-8000-000000000000&plan=pro&authorization=${PENDING.carry.authorization}`,
 		);
 	});
 

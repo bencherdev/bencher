@@ -3,7 +3,7 @@ mod email;
 mod message;
 
 use bencher_json::system::config::JsonSmtp;
-pub use body::{Body, ButtonBody, NewUserBody, SignInBody};
+pub use body::{Body, ButtonBody, Clipboard, NewUserBody, SignInBody};
 #[cfg(feature = "plus")]
 pub use body::{RunnerStatusBody, ServerStatsBody};
 pub use email::Email;

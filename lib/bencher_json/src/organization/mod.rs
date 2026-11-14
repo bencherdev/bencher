@@ -12,6 +12,7 @@ use serde::{
 use crate::{ProjectSlug, UserSlug, UserUuid};
 
 pub mod claim;
+pub mod invite;
 pub mod member;
 pub mod plan;
 pub mod sso;

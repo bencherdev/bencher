@@ -3,6 +3,7 @@ import type {
 	BrowserContextOptions,
 	Page,
 } from "@playwright/test";
+import type { JsonOrganization } from "../src/types/bencher";
 import { createOwnProject, unique } from "./api";
 import { axeInBothThemes } from "./axe";
 import { typeCode } from "./door";
@@ -17,7 +18,7 @@ import {
 	test,
 } from "./fixtures";
 import { mailMark, mailedSignIn } from "./mail";
-import { signUp } from "./session";
+import { inSession, signUp } from "./session";
 
 const HOUR = 60 * 60;
 
@@ -250,6 +251,34 @@ test.describe("Sign in again", () => {
 			{ headers: { Authorization: `Bearer ${reader.key}` } },
 		);
 		expect(read.status()).toBe(404);
+	});
+
+	// Kills an invitation, which grants Leader, that a sign-in more than 10
+	// minutes old sends, and one that the dialog's proof leaves unsent.
+	test("an invite asks to sign in again, then sends", async ({
+		newContext,
+	}) => {
+		const { reader, page } = await stale(newContext);
+		const [own] = (
+			await inSession<JsonOrganization[]>(reader, "GET", "/v0/organizations")
+		).data;
+		const email = `${unique("courage").replace(" ", "-")}@nowhere.example`;
+		const mark = mailMark();
+		await page.goto(`/console/organizations/${own?.slug}/members`);
+		await page.getByRole("textbox", { name: "Email" }).fill(email);
+		await page.getByRole("button", { name: "Send invite" }).click();
+
+		await again(page).getByRole("button", { name: "Email a code" }).click();
+		const { code } = await mailedSignIn(reader.user.email, mark);
+		await typeCode(page, code);
+		await expect(page.getByRole("main").getByRole("status")).toHaveText(
+			`Invitation sent to ${email}`,
+		);
+		await expect(
+			page
+				.getByRole("table", { name: "Pending invites" })
+				.getByRole("row", { name: new RegExp(email) }),
+		).toHaveCount(1);
 	});
 
 	// Kills a dialog, or its code step, that fails axe in either theme.

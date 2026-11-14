@@ -55,7 +55,7 @@ pub async fn auth_code_post(
             return Ok(Redeemed::Ended);
         };
         redeem(conn, context, &pending, &code, now, |conn| {
-            prove(conn, context, &pending, &presented, now)
+            prove(conn, &pending, &presented, now)
         })
     })
     .map_err(TxError::into_http)?

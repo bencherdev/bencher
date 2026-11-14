@@ -824,6 +824,21 @@
 .ui-table td.act .lnk + .lnk {
 	margin-left: 16px;
 }
+/* A folded row with two actions stacks them, so its name keeps its width, and a first line with no
+   number beside it runs across both columns. */
+@container ui-table (width <= 10em) {
+	.ui-table[data-fold] td.act.two {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+	}
+	.ui-table[data-fold] td.act.two .lnk + .lnk {
+		margin-left: 0;
+	}
+	.ui-table[data-fold] td.wide[data-fold="l1"] {
+		grid-column: 1 / span 2;
+	}
+}
 .console a.namelink {
 	color: var(--color-text-primary);
 	font-weight: var(--font-weight-semibold);

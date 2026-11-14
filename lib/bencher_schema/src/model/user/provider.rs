@@ -2,9 +2,9 @@
 //! started it can finish, once; and the pins that tie a provider account to one user.
 
 use bencher_json::{
-    BindingSecret, BindingSecretHash, DateTime, Jwt, NonEmpty, OAuthAuthorizationUuid,
-    OrganizationUuid, PkceVerifier, PlanLevel, ProviderAccountId, ProviderNonce, ProviderState,
-    ProviderStateHash, SignInProvider,
+    BindingSecret, BindingSecretHash, DateTime, NonEmpty, OAuthAuthorizationUuid, OrganizationUuid,
+    PkceVerifier, PlanLevel, ProviderAccountId, ProviderNonce, ProviderState, ProviderStateHash,
+    SignInProvider,
 };
 use chrono::TimeDelta;
 use diesel::{
@@ -17,7 +17,10 @@ use subtle::ConstantTimeEq as _;
 use crate::{
     context::DbConnection,
     error::issue_error,
-    model::user::{QueryUser, UserId, session::SessionId, sign_in::SignInContext},
+    model::{
+        organization::invite::InviteId,
+        user::{QueryUser, UserId, session::SessionId, sign_in::SignInContext},
+    },
     schema::{self, provider_state as provider_state_table},
 };
 
@@ -38,7 +41,7 @@ pub struct QueryProviderState {
     pub verifier: PkceVerifier,
     /// Google's, which its ID token must carry.
     pub nonce: Option<ProviderNonce>,
-    pub invite: Option<Jwt>,
+    pub invite_id: Option<InviteId>,
     pub claim: Option<OrganizationUuid>,
     pub plan: Option<PlanLevel>,
     pub authorization: Option<OAuthAuthorizationUuid>,
@@ -89,7 +92,7 @@ impl QueryProviderState {
     /// What the sign-in carries to where it lands.
     pub fn context(&self) -> SignInContext {
         SignInContext {
-            invite: self.invite.clone(),
+            invite: self.invite_id,
             claim: self.claim,
             plan: self.plan,
             authorization: self.authorization,
@@ -107,7 +110,7 @@ pub struct InsertProviderState {
     pub binding_hash: BindingSecretHash,
     pub verifier: PkceVerifier,
     pub nonce: Option<ProviderNonce>,
-    pub invite: Option<Jwt>,
+    pub invite_id: Option<InviteId>,
     pub claim: Option<OrganizationUuid>,
     pub plan: Option<PlanLevel>,
     pub authorization: Option<OAuthAuthorizationUuid>,
@@ -130,7 +133,7 @@ impl InsertProviderState {
     /// A sign-in with `provider` that starts at `now`, carrying `context`, and its secrets.
     pub fn new(
         provider: SignInProvider,
-        context: SignInContext,
+        context: &SignInContext,
         now: DateTime,
     ) -> Result<(Self, ProviderSecrets), HttpError> {
         Self::with_session(provider, context, None, now)
@@ -143,12 +146,12 @@ impl InsertProviderState {
         session_id: SessionId,
         now: DateTime,
     ) -> Result<(Self, ProviderSecrets), HttpError> {
-        Self::with_session(provider, SignInContext::default(), Some(session_id), now)
+        Self::with_session(provider, &SignInContext::default(), Some(session_id), now)
     }
 
     fn with_session(
         provider: SignInProvider,
-        context: SignInContext,
+        context: &SignInContext,
         session_id: Option<SessionId>,
         now: DateTime,
     ) -> Result<(Self, ProviderSecrets), HttpError> {
@@ -174,7 +177,7 @@ impl InsertProviderState {
             plan,
             authorization,
             pin: _,
-        } = context;
+        } = *context;
         let insert = Self {
             session_id,
             provider,
@@ -182,7 +185,7 @@ impl InsertProviderState {
             binding_hash: BindingSecretHash::from(&secrets.binding),
             verifier: secrets.verifier.clone(),
             nonce: secrets.nonce.clone(),
-            invite,
+            invite_id: invite,
             claim,
             plan,
             authorization,
@@ -307,7 +310,7 @@ mod tests {
         let mut conn = setup_test_db();
         let now = DateTime::TEST;
         let started = |at: DateTime| {
-            InsertProviderState::new(SignInProvider::Github, SignInContext::default(), at)
+            InsertProviderState::new(SignInProvider::Github, &SignInContext::default(), at)
                 .unwrap()
                 .0
         };

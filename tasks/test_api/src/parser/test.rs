@@ -20,8 +20,9 @@ pub struct TaskSeedTest {
     /// Running outside of a git repo
     #[clap(long)]
     pub no_git: bool,
-    /// The API's log, where a server that sends no email writes each sign-in email,
-    /// to make keys from a browser session signed in by its code rather than by the test token
+    /// The API's log, where a server that sends no email writes each email,
+    /// to make keys and send invitations from a browser session signed in by its code rather than
+    /// by the test token, and to accept an invitation by its link
     #[clap(long)]
     pub api_log: Option<PathBuf>,
 }

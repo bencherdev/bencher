@@ -10,6 +10,7 @@ use tokio as _;
 
 mod allowed;
 mod claim;
+mod invites;
 mod members;
 mod organizations;
 mod plan;
@@ -58,6 +59,16 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(members::org_member_get)?;
         api_description.register(members::org_member_patch)?;
         api_description.register(members::org_member_delete)?;
+
+        // Organization Invites
+        if http_options {
+            api_description.register(invites::org_invites_options)?;
+            api_description.register(invites::org_invite_options)?;
+            api_description.register(invites::org_invite_resend_options)?;
+        }
+        api_description.register(invites::org_invites_get)?;
+        api_description.register(invites::org_invite_delete)?;
+        api_description.register(invites::org_invite_resend_post)?;
 
         // Organization Projects
         if http_options {

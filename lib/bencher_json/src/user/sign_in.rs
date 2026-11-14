@@ -1,6 +1,6 @@
 #[cfg(feature = "plus")]
 use bencher_valid::PlanLevel;
-use bencher_valid::{DateTime, Email, Jwt, LinkSecret, NonEmpty, SignInCode};
+use bencher_valid::{DateTime, Email, InviteSecret, LinkSecret, NonEmpty, SignInCode};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -17,8 +17,8 @@ crate::typed_uuid::typed_uuid!(PendingSignInUuid);
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonEmailSignIn {
     pub email: Email,
-    /// An invitation to an organization, accepted once the address is proven.
-    pub invite: Option<Jwt>,
+    /// The secret of an invitation to an organization, accepted once the address is proven.
+    pub invite: Option<InviteSecret>,
     /// An unclaimed organization, claimed once the address is proven.
     pub claim: Option<OrganizationUuid>,
     #[cfg(feature = "plus")]

@@ -154,6 +154,11 @@ pub enum ValidError {
     SignInCode,
     #[error("Failed to validate sign-in code hash: {0}")]
     SignInCodeHash(String),
+    // The secret of an invitation is left out: it is a credential.
+    #[error("Failed to validate invitation secret")]
+    InviteSecret,
+    #[error("Failed to validate invitation secret hash: {0}")]
+    InviteSecretHash(String),
     #[error("Failed to validate email hash: {0}")]
     EmailHash(String),
     #[error(

@@ -148,80 +148,6 @@
         }
       }
     },
-    "/v0/auth/accept": {
-      "post": {
-        "tags": [
-          "auth",
-          "organizations"
-        ],
-        "operationId": "auth_accept_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JsonAccept"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "description": "successfully enqueued operation",
-            "headers": {
-              "access-control-allow-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-methods": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-allow-origin": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "access-control-expose-headers": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "x-total-count": {
-                "style": "simple",
-                "required": true,
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JsonAuthAck"
-                }
-              }
-            }
-          },
-          "4XX": {
-            "$ref": "#/components/responses/Error"
-          },
-          "5XX": {
-            "$ref": "#/components/responses/Error"
-          }
-        }
-      }
-    },
     "/v0/auth/confirm": {
       "post": {
         "tags": [
@@ -436,7 +362,7 @@
           "auth"
         ],
         "summary": "When a user signs up, a new personal organization is automatically created.",
-        "description": "Except when a user signs up with an invitation, then the user is just added to the inviting organization.",
+        "description": "A sign up that carries an invitation is refused: invitations are accepted in the console.",
         "operationId": "auth_signup_post",
         "requestBody": {
           "content": {
@@ -1254,6 +1180,286 @@
         }
       }
     },
+    "/v0/organizations/{organization}/invites": {
+      "get": {
+        "tags": [
+          "organizations",
+          "invites"
+        ],
+        "summary": "List pending invitations",
+        "description": "List the invitations to an organization that have not been accepted or revoked, expired ones included. The user must have `create_role` permissions for the organization. By default, the newest invitations come first. The HTTP response header `X-Total-Count` contains the total number of invitations.",
+        "operationId": "org_invites_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "organization",
+            "description": "The slug or UUID for an organization.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "description": "The direction to sort by. If not specified, the default sort direction is used.",
+            "schema": {
+              "$ref": "#/components/schemas/JsonDirection"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "description": "The page number to return. If not specified, the first page is returned.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "per_page",
+            "description": "The number of items to return per page. If not specified, the default number of items per page (8) is used.",
+            "schema": {
+              "nullable": true,
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "description": "The field to sort by. If not specified, the default sort field is used.",
+            "schema": {
+              "$ref": "#/components/schemas/OrgInvitesSort"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonInvites"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/organizations/{organization}/invites/{invite}": {
+      "delete": {
+        "tags": [
+          "organizations",
+          "invites"
+        ],
+        "summary": "Revoke an invitation",
+        "description": "End a pending invitation, so its link no longer works. The user must have `delete_role` permissions for the organization.",
+        "operationId": "org_invite_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite",
+            "description": "The UUID for an invitation.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/InviteUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization",
+            "description": "The slug or UUID for an organization.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "successful deletion",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v0/organizations/{organization}/invites/{invite}/resend": {
+      "post": {
+        "tags": [
+          "organizations",
+          "invites"
+        ],
+        "summary": "Resend an invitation",
+        "description": "Email a pending invitation again, expired or not, with a new link that works for 7 days. The link it sent before no longer works. The user must have `create_role` permissions for the organization. This endpoint requires a user session signed in within the last 10 minutes: neither a user API key nor a deprecated user API token can send an invitation.",
+        "operationId": "org_invite_resend_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite",
+            "description": "The UUID for an invitation.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/InviteUuid"
+            }
+          },
+          {
+            "in": "path",
+            "name": "organization",
+            "description": "The slug or UUID for an organization.",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/ResourceId"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "successfully enqueued operation",
+            "headers": {
+              "access-control-allow-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-methods": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-allow-origin": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "access-control-expose-headers": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "x-total-count": {
+                "style": "simple",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonInvite"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "$ref": "#/components/responses/Error"
+          },
+          "5XX": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
     "/v0/organizations/{organization}/members": {
       "get": {
         "tags": [
@@ -1390,7 +1596,7 @@
           "members"
         ],
         "summary": "Invite a user to an organization",
-        "description": "Invite another user to become a member of an organization. The user must have `create_role` permissions for the organization. The invitee is sent an email with a link to accept the invitation, and they are not added to the organization until they accept the invitation.",
+        "description": "Invite another user to become a member of an organization. The user must have `create_role` permissions for the organization. The invitee is sent an email with a link to accept the invitation, and they are not added to the organization until they accept the invitation. The link works once, for 7 days, and only for the invited email. Inviting an email that the organization already invited sends a new link, and the link it sent before no longer works. An email that already belongs to a member of the organization is a conflict. This endpoint requires a user session signed in within the last 10 minutes: neither a user API key nor a deprecated user API token can send an invitation.",
         "operationId": "org_member_post",
         "parameters": [
           {
@@ -1638,7 +1844,7 @@
           "members"
         ],
         "summary": "Update an organization member",
-        "description": "Update the role for a member of an organization. The user must have `edit_role` permissions for the organization.",
+        "description": "Update the role for a member of an organization. The user must have `edit_role` permissions for the organization to change a role, and `view_role` permissions to update nothing. Changing a role requires a user session signed in within the last 10 minutes: neither a user API key nor a deprecated user API token can grant a role.",
         "operationId": "org_member_patch",
         "parameters": [
           {
@@ -5026,7 +5232,7 @@
           "github"
         ],
         "summary": "Link a repository to a project",
-        "description": "Link the GitHub repository that a grant from the GitHub code exchange names. The grant must be for this project and from this user, and it lasts ten minutes. A project links at most one repository, so this replaces any link it had. A project with no URL takes the repository's URL on GitHub. The user must have `manage` permissions for the project.",
+        "description": "Link the GitHub repository that a grant from the GitHub code exchange names. The grant must be for this project and from this user, and it lasts ten minutes. A project links at most one repository, so this replaces any link it had. A project with no URL takes the repository's URL on GitHub. The user must have `manage` permissions for the project. A user session needs a sign-in within the last 10 minutes.",
         "operationId": "proj_github_put",
         "parameters": [
           {
@@ -12952,6 +13158,10 @@
         "format": "uint8",
         "minimum": 0
       },
+      "InviteUuid": {
+        "type": "string",
+        "format": "uuid"
+      },
       "Iteration": {
         "type": "integer",
         "format": "uint32",
@@ -12984,17 +13194,6 @@
       "JobUuid": {
         "type": "string",
         "format": "uuid"
-      },
-      "JsonAccept": {
-        "type": "object",
-        "properties": {
-          "invite": {
-            "$ref": "#/components/schemas/Jwt"
-          }
-        },
-        "required": [
-          "invite"
-        ]
       },
       "JsonAlert": {
         "type": "object",
@@ -13864,6 +14063,74 @@
           "bing",
           "google"
         ]
+      },
+      "JsonInvite": {
+        "description": "An invitation to an organization that waits to be accepted, or has expired unaccepted.",
+        "type": "object",
+        "properties": {
+          "created": {
+            "description": "The date time the invitation was sent.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "email": {
+            "description": "The email the invitation is for.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Email"
+              }
+            ]
+          },
+          "expiration": {
+            "description": "The date time the invitation stops working.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ]
+          },
+          "inviter": {
+            "description": "The user who sent the invitation.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonPubUser"
+              }
+            ]
+          },
+          "role": {
+            "description": "The organization role the invitation grants.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrganizationRole"
+              }
+            ]
+          },
+          "uuid": {
+            "description": "The invitation UUID.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/InviteUuid"
+              }
+            ]
+          }
+        },
+        "required": [
+          "created",
+          "email",
+          "expiration",
+          "inviter",
+          "role",
+          "uuid"
+        ]
+      },
+      "JsonInvites": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/JsonInvite"
+        }
       },
       "JsonIterationOutput": {
         "description": "Output from a single benchmark iteration.",
@@ -21530,6 +21797,17 @@
           "delete_role"
         ]
       },
+      "OrgInvitesSort": {
+        "oneOf": [
+          {
+            "description": "Sort by when the invitation was sent, newest first unless the direction is `asc`.",
+            "type": "string",
+            "enum": [
+              "created"
+            ]
+          }
+        ]
+      },
       "OrgMembersSort": {
         "oneOf": [
           {
@@ -21890,6 +22168,9 @@
     {
       "name": "github",
       "description": "GitHub"
+    },
+    {
+      "name": "invites"
     },
     {
       "name": "jobs",

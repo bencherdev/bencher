@@ -1,4 +1,5 @@
 pub mod bencher_key;
+pub mod invite;
 pub mod jwt_hash;
 pub mod project_key;
 pub mod project_key_hash;
@@ -9,6 +10,7 @@ pub mod user_key;
 pub mod user_key_hash;
 
 pub use bencher_key::BencherKey;
+pub use invite::{InviteSecret, InviteSecretHash};
 pub use jwt_hash::JwtHash;
 pub use project_key::ProjectKey;
 pub use project_key_hash::ProjectKeyHash;

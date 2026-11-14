@@ -1,0 +1,14 @@
+---
+import { INVITE_RETURN_KEY } from "./inviteReturn";
+
+// Runs first: an invitation's secret, in the fragment, leaves the address
+// before any other script can read it, and the rest of the address stays.
+---
+
+<script is:inline define:vars={{ INVITE_RETURN_KEY }}>
+	const invite = new URLSearchParams(location.hash.slice(1)).get("invite");
+	if (invite !== null) {
+		window[INVITE_RETURN_KEY] = invite;
+		history.replaceState(history.state, "", location.pathname + location.search);
+	}
+</script>

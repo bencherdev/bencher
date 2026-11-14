@@ -18,7 +18,7 @@ import { EXPIRED, type Failure, inboxFailure } from "./copy";
 import Frame from "./Frame";
 import Inbox, { type InboxEffects, type Status } from "./Inbox";
 import { finish, landing } from "./land";
-import { tokenEmail } from "./params";
+import { tokenEmail } from "./oldLink";
 import {
 	type Carry,
 	type Door,

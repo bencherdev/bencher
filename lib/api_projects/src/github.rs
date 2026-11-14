@@ -104,6 +104,7 @@ async fn get_inner(
 /// A project links at most one repository, so this replaces any link it had.
 /// A project with no URL takes the repository's URL on GitHub.
 /// The user must have `manage` permissions for the project.
+/// A user session needs a sign-in within the last 10 minutes.
 #[endpoint {
     method = PUT,
     path =  "/v0/projects/{project}/github",
@@ -117,6 +118,7 @@ pub async fn proj_github_put(
 ) -> Result<ResponseOk<JsonLinkedRepository>, HttpError> {
     github_app(rqctx.context())?;
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    auth_user.check_fresh_sign_in(rqctx.context()).await?;
     let json = put_inner(
         rqctx.context(),
         path_params.into_inner(),

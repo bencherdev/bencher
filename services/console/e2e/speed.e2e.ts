@@ -12,7 +12,7 @@ import {
 	test,
 	RELAY,
 } from "./fixtures";
-import { listPlots } from "./api";
+import { createOrganization, invite, listPlots } from "./api";
 import { explore, twoLines } from "./explore";
 import { embedLink, publicPath, twoLinesDrawn, twoRecentLines } from "./public";
 import ceilings from "./speed-ceilings.json" with { type: "json" };
@@ -820,8 +820,9 @@ test("a cold load of an organization's General holds the speed ceilings", async 
 	expect(cost.lateModules).toBeLessThanOrEqual(ceiling.lateModules);
 });
 
-// Kills Members chaining the list or the reader's permissions after the
-// organization, asking for more than those, or shifting as they arrive.
+// Kills Members chaining the list, the pending invites, or the reader's
+// permissions after the organization, asking for more than those, or
+// shifting as they arrive.
 test("a cold load of an organization's Members holds the speed ceilings", async ({
 	page,
 }) => {
@@ -834,6 +835,9 @@ test("a cold load of an organization's Members holds the speed ceilings", async 
 	const answered = Promise.all([
 		page.waitForResponse(organization),
 		page.waitForResponse(firstPage(`${organization}/members?`)),
+		page.waitForResponse((answer) =>
+			answer.url().startsWith(`${organization}/invites?`),
+		),
 		page.waitForResponse(`${organization}/allowed/create_role`),
 		page.waitForResponse(`${organization}/allowed/delete_role`),
 	]);
@@ -851,6 +855,48 @@ test("a cold load of an organization's Members holds the speed ceilings", async 
 	report("organization members cold load", cost);
 	holds(cost, ceilings.organizationMembersColdLoad);
 });
+
+// The pending invites draw above the members, so members drawn before a late
+// answer would move when it came.
+// Kills Members drawn before its pending invites are in, at either width.
+for (const width of [1280, 390]) {
+	test(`Members holds still at ${width} px when its pending invites answer last`, async ({
+		page,
+		request,
+	}) => {
+		await page.setViewportSize({ width, height: 800 });
+		const organization = await createOrganization(request);
+		await invite(
+			seed.member,
+			organization,
+			`late-${width}-${Date.now()}@nowhere.example`,
+		);
+		await observeLayoutShift(page);
+		await page.route(`${RELAY}/**`, async (route) => {
+			const late = route.request().url().includes("/invites?") ? 1000 : 0;
+			await new Promise((resolve) => setTimeout(resolve, 500 + late));
+			await route.continue();
+		});
+		const invited = page.waitForResponse((answer) =>
+			answer.url().includes("/invites?"),
+		);
+		await page.goto(`/console/organizations/${organization.slug}/members`);
+		await invited;
+		await expect(
+			page.getByRole("region", { name: "Pending invites" }),
+		).toBeVisible();
+		await expect(page.getByRole("table", { name: "Members" })).toBeVisible();
+		await loadedAndIdle(page);
+		await settle(page);
+
+		const cost = await measure(page, RELAY);
+		report(`organization members late invites ${width}`, cost);
+		expect(cost.cls).toBeLessThanOrEqual(
+			ceilings.organizationMembersColdLoad.cls,
+		);
+		expect(cost.apiRounds).toBe(ceilings.organizationMembersColdLoad.apiRounds);
+	});
+}
 
 // Kills an organization's Projects that asks for more than the organization
 // and the reader's bootstrap, reads the organization's own list for a member,

@@ -13,6 +13,7 @@ pub const INVALID_CREDENTIAL: &str = "Invalid credential";
 pub enum BencherResource {
     Organization,
     OrganizationRole,
+    Invite,
     Project,
     ProjectRole,
     ProjectKey,
@@ -63,6 +64,7 @@ impl fmt::Display for BencherResource {
             match self {
                 Self::Organization => "Organization",
                 Self::OrganizationRole => "Organization Role",
+                Self::Invite => "Invite",
                 Self::Project => "Project",
                 Self::ProjectRole => "Project Role",
                 Self::ProjectKey => "Project Key",

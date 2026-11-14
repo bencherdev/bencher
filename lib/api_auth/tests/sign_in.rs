@@ -24,14 +24,12 @@ use bencher_api_tests::{
     session_cookie,
 };
 use bencher_json::{
-    Clock, DateTime, Email, EmailHash, JsonSession, JsonSignInAs, JsonSignInEmail, JsonSignedIn,
-    Jwt, LinkSecret, OAuthAuthorizationUuid, OrganizationUuid, PlanLevel, Secret, SessionMethod,
-    SessionToken, SessionTokenHash, SignInCode, SignInCodeHash, TRIES_LEFT,
-    organization::member::OrganizationRole,
+    Clock, DateTime, Email, EmailHash, InviteSecret, JsonSession, JsonSignInAs, JsonSignInEmail,
+    JsonSignedIn, LinkSecret, OAuthAuthorizationUuid, OrganizationUuid, PlanLevel, Secret,
+    SessionMethod, SessionToken, SessionTokenHash, SignInCode, SignInCodeHash, TRIES_LEFT,
     system::config::{JsonRateLimiting, JsonSmtp},
 };
 use bencher_schema::{
-    INVITE_TOKEN_TTL,
     context::{Messenger, RateLimiting, Turnstile},
     model::user::{
         session::cookie::{PendingCookie, SessionCookie},
@@ -573,15 +571,7 @@ async fn context_is_carried_to_the_proof() {
     let authorization = seed_oauth_authorization(&server, DateTime::now());
 
     for email in ["new@example.com", "member@example.com"] {
-        let invite = server
-            .token_key()
-            .new_invite(
-                email.parse().expect("Invalid email"),
-                INVITE_TOKEN_TTL,
-                invited.uuid,
-                OrganizationRole::Leader,
-            )
-            .expect("Failed to make an invite");
+        let invite = server.invite(&leader, &invited, email);
         let user = prove_with(
             &server,
             &log,
@@ -660,7 +650,7 @@ async fn proof_rolls_back_whole() {
     let org = server.create_org(&leader, "Invited").await;
     let body = json!({
         "email": "grace@example.com",
-        "invite": invite_for(&server, "grace@example.com", org.uuid).as_ref(),
+        "invite": server.invite(&leader, &org, "grace@example.com").as_ref(),
     });
     let resp = send_json(&server, "/v0/auth/email", None, &[SAME_ORIGIN], &body).await;
     let pending = pending_cookie(resp.headers()).expect("No pending cookie");
@@ -692,15 +682,7 @@ async fn invite_for_another_address_is_refused_at_the_start() {
     let (server, log) = test_server(TestServerOptions::default()).await;
     let leader = server.signup("Leader", "leader@example.com").await;
     let org = server.create_org(&leader, "Invited").await;
-    let invite = server
-        .token_key()
-        .new_invite(
-            "invited@example.com".parse().expect("Invalid email"),
-            INVITE_TOKEN_TTL,
-            org.uuid,
-            OrganizationRole::Leader,
-        )
-        .expect("Failed to make an invite");
+    let invite = server.invite(&leader, &org, "invited@example.com");
     let resp = send(
         &server,
         Method::POST,
@@ -716,17 +698,47 @@ async fn invite_for_another_address_is_refused_at_the_start() {
     assert_eq!(pending_sign_ins(&server), 0);
 }
 
-// A token that is no invite, carried as one, is refused as the sign-in starts.
+// An invitation no row holds, one that has ended, one that has expired, and one whose earlier link
+// a second invitation replaced are each the one refusal as the sign-in starts, and the
+// invitation's own email starts the sign-in.
 #[tokio::test]
 async fn invalid_invite_is_refused_at_the_start() {
     let (server, log) = test_server(TestServerOptions::default()).await;
-    let user = server.signup("Ada", "ada@example.com").await;
-    let body = json!({"email": "ada@example.com", "invite": user.token});
-    let resp = send_json(&server, "/v0/auth/email", None, &[SAME_ORIGIN], &body).await;
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
-    assert_eq!(error(resp).await.0, "invalid_invite");
+    let leader = server.signup("Leader", "leader@example.com").await;
+    let org = server.create_org(&leader, "Invited").await;
+    let unknown = InviteSecret::generate().expect("Failed to make a secret");
+    let ended = server.invite(&leader, &org, "ended@example.com");
+    diesel::delete(schema::invite::table.filter(schema::invite::email.eq("ended@example.com")))
+        .execute(&mut server.db_conn())
+        .expect("Failed to end the invitation");
+    let now = DateTime::now();
+    let expired = server.invite_at(
+        &leader,
+        &org,
+        "expired@example.com",
+        DateTime::try_from(now.timestamp() - 7 * DAY).expect("Invalid time"),
+    );
+    let replaced = server.invite(&leader, &org, "replaced@example.com");
+    let again = server.invite(&leader, &org, "replaced@example.com");
+    for (email, invite) in [
+        ("ada@example.com", &unknown),
+        ("ended@example.com", &ended),
+        ("expired@example.com", &expired),
+        ("replaced@example.com", &replaced),
+    ] {
+        let body = json!({"email": email, "invite": invite.as_ref()});
+        let resp = send_json(&server, "/v0/auth/email", None, &[SAME_ORIGIN], &body).await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST, "{email}");
+        let (refusal, message) = error(resp).await;
+        assert_eq!(refusal, "invalid_invite", "{email}");
+        assert_eq!(message, "This invitation is not valid", "{email}");
+    }
     assert_eq!(log.sign_in_emails(), Vec::<String>::new());
     assert_eq!(pending_sign_ins(&server), 0);
+
+    let body = json!({"email": "replaced@example.com", "invite": again.as_ref()});
+    let resp = send_json(&server, "/v0/auth/email", None, &[SAME_ORIGIN], &body).await;
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
 }
 
 // An account locked after its sign-in started is refused at the proof, which ends the sign-in and
@@ -1168,13 +1180,14 @@ async fn stale_invite_or_claim_is_skipped() {
     );
 
     let member_of = server.create_org(&leader, "Member Of").await;
-    let invite = invite_for(&server, "leader@example.com", member_of.uuid);
+    let invite = server.invite(&leader, &member_of, "leader@example.com");
     prove_with(
         &server,
         &log,
         &json!({"email": "leader@example.com", "invite": invite.as_ref()}),
     )
     .await;
+    assert_eq!(invites(&server), 0, "a member's proof ends the invitation");
 
     let gone = server.create_org(&leader, "Gone").await;
     let unclaimed = unclaimed_organization(&server, "unclaimed@example.com");
@@ -1182,7 +1195,7 @@ async fn stale_invite_or_claim_is_skipped() {
     for email in ["fresh@example.com", "grace@example.com"] {
         let body = json!({
             "email": email,
-            "invite": invite_for(&server, email, gone.uuid).as_ref(),
+            "invite": server.invite(&leader, &gone, email).as_ref(),
             "claim": unclaimed,
         });
         let resp = send_json(&server, "/v0/auth/email", None, &[SAME_ORIGIN], &body).await;
@@ -1213,20 +1226,91 @@ async fn stale_invite_or_claim_is_skipped() {
     assert_eq!(user_organizations(&server, existing.uuid).len(), 1);
 }
 
-// An invite or a claim whose organization does not exist is refused as the sign-in starts.
+// An invitation joins at the proof by link as by code, and a second invitation to the address
+// keeps it for a sign-in its earlier link started. One revoked or expired while the sign-in waits is
+// skipped, and the reader signs in, with an organization of their own.
+#[tokio::test]
+async fn invite_joins_at_its_proof_only_while_it_applies() {
+    let clock = TestClock::new();
+    let (server, log) = test_server(TestServerOptions {
+        clock: Some(clock.clock()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let started = clock.now();
+    let leader = server.signup("Leader", "leader@example.com").await;
+    let org = server.create_org(&leader, "Invited").await;
+
+    let earlier = server.invite(&leader, &org, "grace@example.com");
+    let grace = start_with(&server, "grace@example.com", &earlier).await;
+    let (_code, link) = log.sign_in();
+    server.invite(&leader, &org, "grace@example.com");
+    let session = assert_signed_in(
+        &server,
+        &redeem_link(&server, Some(&grace), &link, false).await,
+    )
+    .await;
+    assert_eq!(user_organizations(&server, session.user.uuid), [org.uuid]);
+    assert_eq!(invites(&server), 0);
+
+    let revoked = server.invite(&leader, &org, "alan@example.com");
+    let alan = start_with(&server, "alan@example.com", &revoked).await;
+    let (code, _link) = log.sign_in();
+    let uuid: String = schema::invite::table
+        .filter(schema::invite::email.eq("alan@example.com"))
+        .select(schema::invite::uuid)
+        .first(&mut server.db_conn())
+        .expect("No invitation");
+    let resp = server
+        .client
+        .delete(server.api_url(&format!("/v0/organizations/{}/invites/{uuid}", org.slug)))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&leader.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    let carried: Option<i32> = schema::pending_sign_in::table
+        .filter(schema::pending_sign_in::email.eq("alan@example.com"))
+        .select(schema::pending_sign_in::invite_id)
+        .first(&mut server.db_conn())
+        .expect("No pending sign-in");
+    assert_eq!(
+        carried, None,
+        "a revoke drops the invitation the sign-in carries"
+    );
+    let user = signed_in(&server, redeem_code(&server, Some(&alan), &code).await).await;
+    assert_eq!(
+        user_organizations(&server, user.user.uuid),
+        [OrganizationUuid::from(user.user.uuid)]
+    );
+
+    let expiring = server.invite_at(
+        &leader,
+        &org,
+        "katherine@example.com",
+        DateTime::try_from(started.timestamp() - 7 * DAY + 10 * MINUTE).expect("Invalid time"),
+    );
+    let katherine = start_with(&server, "katherine@example.com", &expiring).await;
+    let (code, _link) = log.sign_in();
+    clock.set(started, 10 * MINUTE);
+    let user = signed_in(&server, redeem_code(&server, Some(&katherine), &code).await).await;
+    assert_eq!(
+        user_organizations(&server, user.user.uuid),
+        [OrganizationUuid::from(user.user.uuid)]
+    );
+}
+
+// A claim whose organization does not exist is refused as the sign-in starts.
 #[tokio::test]
 async fn unknown_organization_is_refused_at_the_start() {
     let (server, log) = test_server(TestServerOptions::default()).await;
-    let unknown = OrganizationUuid::new();
-    let invite = invite_for(&server, "ada@example.com", unknown);
-    for body in [
-        json!({"email": "ada@example.com", "claim": unknown}),
-        json!({"email": "ada@example.com", "invite": invite.as_ref()}),
-    ] {
-        let resp = send_json(&server, "/v0/auth/email", None, &[SAME_ORIGIN], &body).await;
-        assert_eq!(resp.status(), StatusCode::NOT_FOUND, "{body}");
-        assert_eq!(error(resp).await.0, "unknown_organization", "{body}");
-    }
+    let body = json!({"email": "ada@example.com", "claim": OrganizationUuid::new()});
+    let resp = send_json(&server, "/v0/auth/email", None, &[SAME_ORIGIN], &body).await;
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    assert_eq!(error(resp).await.0, "unknown_organization");
     assert_eq!(log.sign_in_emails(), Vec::<String>::new());
     assert_eq!(pending_sign_ins(&server), 0);
 }
@@ -1559,6 +1643,14 @@ async fn start_raw(
     .await
 }
 
+/// Start a sign-in for `email` that carries `invite`, and return its pending cookie.
+async fn start_with(server: &TestServer, email: &str, invite: &InviteSecret) -> String {
+    let body = json!({"email": email, "invite": invite.as_ref()});
+    let resp = send_json(server, "/v0/auth/email", None, &[SAME_ORIGIN], &body).await;
+    assert_eq!(resp.status(), StatusCode::ACCEPTED, "{body}");
+    pending_cookie(resp.headers()).expect("No pending cookie")
+}
+
 /// A whole sign-in by code with `body` as its start, returning what the proof answers.
 async fn prove_with(
     server: &TestServer,
@@ -1809,16 +1901,12 @@ fn wrong_code(code: &SignInCode) -> SignInCode {
     wrong.parse().expect("Invalid code")
 }
 
-fn invite_for(server: &TestServer, email: &str, organization: OrganizationUuid) -> Jwt {
-    server
-        .token_key()
-        .new_invite(
-            email.parse().expect("Invalid email"),
-            INVITE_TOKEN_TTL,
-            organization,
-            OrganizationRole::Leader,
-        )
-        .expect("Failed to make an invite")
+/// The invitations not yet accepted or revoked.
+fn invites(server: &TestServer) -> i64 {
+    schema::invite::table
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count")
 }
 
 /// A pending sign-in for `email` that started `ago` seconds ago, recorded directly, with its
