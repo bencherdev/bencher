@@ -1,0 +1,8 @@
+Template(RunTime): 0.003467445333333333 us.
+List.filled(100)(RunTime): 0.557751820247679 us.
+TemplateV2(RunTime): 0.005592896988814206
+Delayed(RunTime): 0.25530025671717316 us.
+Perf(MajorPageFaults): 0.00009268144517467603
+Perf(CpuCycles): 1879.243654920285
+Perf.totalIterations(Count): 10002002.0
+Perf(RunTime): 0.36260116666666664 us.

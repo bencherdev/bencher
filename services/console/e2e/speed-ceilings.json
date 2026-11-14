@@ -24,7 +24,7 @@
 	},
 	"tabSwitch": {
 		"apiRequests": 0,
-		"jsBytes": 17125,
+		"jsBytes": 17186,
 		"scriptRounds": 1
 	},
 	"runsColdLoad": {
@@ -49,7 +49,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"jsBytes": 24685,
-		"deferredJsBytes": 5059,
+		"deferredJsBytes": 5115,
 		"scriptRounds": 1
 	},
 	"runExpand": {
