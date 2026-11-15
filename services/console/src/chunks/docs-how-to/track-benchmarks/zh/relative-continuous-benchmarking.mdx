@@ -61,11 +61,12 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
    1. 将`--start-point`选项设置为特性分支起始点。有关完整概述，请参阅[`--start-point`文档][start point]。（例如：`--start-point main`）
    2. 设置`--start-point-reset`标志以始终将分支重置为起始点。这将仅使用最新的相对基准结果。有关完整概述，请参阅[`--start-point-reset`文档][start point reset]。（例如：`--start-point-reset`）
 5. 将`--testbed`选项设置为 CI 运行器测试平台名称。有关详细信息，请参阅[`--testbed`文档][testbed option]。（例如：`--testbed ci-runner`）
-6. 设置`feature-branch`分支、`ci-runner`测试平台和`latency`测量的阈值：
-   1. 将`--threshold-measure`选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的内置`latency`测量。有关详细信息，请参阅[`--threshold-measure`文档][threshold measure option]。（例如：`--threshold-measure latency`）
-   2. 将`--threshold-test`选项设置为基本百分比(`percentage`)。有关完整概述，请参阅[`--threshold-test`文档][threshold test option]。（例如：`--threshold-test percentage`）
-   3. 将`--threshold-upper-boundary`选项设置为上限`0.25`。有关详细信息，请参阅[`--threshold-upper-boundary`文档][threshold upper boundary]。（例如：`--threshold-upper-boundary 0.25`）
-   4. 设置`--thresholds-reset`标志，以便仅激活指定的阈值。有关完整概述，请参阅[`--thresholds-reset`文档][thresholds reset]。（例如：`--thresholds-reset`）
+6. 设置`feature-branch`分支、`ci-runner`测试平台、`latency`度量和`value`指标的阈值：
+   1. 将`--threshold-measure`选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的内置`latency`度量。有关详细信息，请参阅[`--threshold-measure`文档][threshold measure option]。（例如：`--threshold-measure latency`）
+   2. 将`--threshold-metric`选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的`value`指标。对于你自己的基准测试工具，请使用[其适配器][adapters]建议首先设置阈值的指标。有关详细信息，请参阅[`--threshold-metric`文档][threshold metric option]。（例如：`--threshold-metric value`）
+   3. 将`--threshold-test`选项设置为基本百分比(`percentage`)。有关完整概述，请参阅[`--threshold-test`文档][threshold test option]。（例如：`--threshold-test percentage`）
+   4. 将`--threshold-upper-boundary`选项设置为上限`0.25`。有关详细信息，请参阅[`--threshold-upper-boundary`文档][threshold upper boundary]。（例如：`--threshold-upper-boundary 0.25`）
+   5. 设置`--thresholds-reset`标志，以便仅激活指定的阈值。有关完整概述，请参阅[`--thresholds-reset`文档][thresholds reset]。（例如：`--thresholds-reset`）
 7. 设置`--error-on-alert`标志以便在生成警报时命令失败。有关完整概述，请参阅[`--error-on-alert`文档][alert err]。（例如：`--error-on-alert`）
 8. 将`--adapter`选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的[Bencher Metric Format JSON（`json`）][bmf]。有关完整概述，请参阅[基准测试适配器][adapter json]。（例如：`--adapter json`）
 9. 指定基准命令参数。有关完整概述，请参阅[基准命令][command argument]。（例如：`bencher mock`）
@@ -75,6 +76,8 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 [start point]: /zh/docs/explanation/branches/#--start-point-branch
 [start point reset]: /zh/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /zh/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /zh/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /zh/docs/explanation/adapters/
 [threshold test option]: /zh/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /zh/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /zh/docs/explanation/thresholds/#--thresholds-reset

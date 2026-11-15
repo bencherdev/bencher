@@ -1,16 +1,20 @@
-如果你有一个位于 `./my_build_script.sh` 的脚本，用于构建位于 `./path/to/my_binary` 路径的二进制文件，那么你可以使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 和 [json 适配器][json adapter] 来跟踪这个二进制文件的大小。无论是使用 [benchmark 命令][bencher run] 还是不使用都可以。
+import CmdExample from "../cmd-example.mdx";
+import NoCmdExample from "../no-cmd-example.mdx";
+import JsonExample from "../json-example.mdx";
 
-使用 benchmark 命令时：
+如果你有一个位于 `./my_build_script.sh` 的脚本，用于构建位于 `./path/to/my_binary` 路径的二进制文件，那么你可以使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> 和 [`json` 适配器][json adapter] 来跟踪这个二进制文件的大小。无论是使用 [基准测试命令][bencher run] 还是不使用都可以。
+
+使用基准测试命令时：
 <CmdExample />
 
-不使用 benchmark 命令时：
+不使用基准测试命令时：
 <NoCmdExample />
 
 在任何情况下，如果 `my_binary` 的大小为 `42` 字节，生成的 BMF JSON 将如下所示：
 
 <JsonExample />
 
-在此示例中，键 `my_binary` 是二进制文件名。它被用作 [Benchmark][benchmark] 的名称。`my_binary` 对象包含 `file-size` 键。`file-size` 是内置文件大小 [Measure][measure] 的别名。文件大小 Measure 默认不为所有项目创建。然而，当你使用文件大小 Measure 时，它将自动为你的项目创建。文件大小 Measure 对象包含有文件大小 `value`（以字节为单位，`42.0`）的 [Metric][metric]。
+在此示例中，键 `my_binary` 是二进制文件名。它被用作[基准测试][benchmark]的名称。`my_binary` 键对应一个只有一个条目的列表，该条目的 `measures` 对象包含 `file-size` 键。`file-size` 是内置 File Size [度量][measure]的 slug。File Size 度量默认不为所有项目创建。然而，当你使用 File Size 度量时，它将自动为你的项目创建。File Size 度量对象包含 `value` [指标][metric]，即以字节为单位的文件大小 `42.0`。
 
 文件大小总是以整字节增量计算。
 也就是说，它 _绝不会_ 有像 `42.5` 这样的十进制数。
@@ -21,4 +25,4 @@
 
 [benchmark]: /zh/docs/explanation/benchmarking/#benchmark
 [measure]: /zh/docs/explanation/benchmarking/#measure
-[metric]: /zh/docs/explanation/benchmarking/#metrics
+[metric]: /zh/docs/explanation/benchmarking/#metric

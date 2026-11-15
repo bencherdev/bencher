@@ -1,14 +1,22 @@
 ```json
 {
-  "/bin/sh -c ./my_build_script.sh": {
-    "build-time": {
-      "value": 87.0
+  "/bin/sh -c ./my_build_script.sh": [
+    {
+      "measures": {
+        "build-time": {
+          "value": 87.0
+        }
+      }
     }
-  },
-  "my_binary": {
-    "file-size": {
-      "value": 42.0
+  ],
+  "my_binary": [
+    {
+      "measures": {
+        "file-size": {
+          "value": 42.0
+        }
+      }
     }
-  }
+  ]
 }
 ```

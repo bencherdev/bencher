@@ -29,13 +29,14 @@ import ExecJsonExample from "../exec-json-example.mdx";
 <ExecJsonExample />
 
 이제 [벤치마크][benchmark] 이름은 단순히 `./my_build_script.sh`입니다.
-`./my_build_script.sh` 객체에는 `build-time` 키가 포함되어 있습니다.
-`build-time`은 내장된 빌드 시간 [측정][measure]를 위한 슬러그입니다.
-빌드 시간 측정은 모든 프로젝트에 기본적으로 생성되지 않습니다.
-그러나 빌드 시간 측정을 사용하면,
+`./my_build_script.sh` 키는 항목이 하나인 목록에 대응하며,
+그 항목의 `measures` 객체에는 `build-time` 키가 포함되어 있습니다.
+`build-time`은 내장된 Build Time [측정][measure]의 슬러그입니다.
+Build Time 측정은 모든 프로젝트에 기본적으로 생성되지 않습니다.
+그러나 Build Time 측정을 사용하면,
 당신의 프로젝트에 자동으로 생성됩니다.
-빌드 시간 측정 객체는
-초 단위의 빌드 시간 `value`를 가진 [메트릭][metric]을 포함하며, 예시로 `87.0`과 `86.98`이 있습니다.
+Build Time 측정 객체는
+초 단위의 빌드 시간을 담은 `value` [메트릭][metric]을 포함하며, 예시에서는 `87.0`과 `86.98`입니다.
 
 빌드 시간은 항상 소수점 둘째 자리까지 반올림됩니다.
 즉, `42.666666`과 같은 긴 소수는 _절대_ 되지 않습니다.
@@ -45,4 +46,4 @@ import ExecJsonExample from "../exec-json-example.mdx";
 
 [benchmark]: /ko/docs/explanation/benchmarking/#benchmark
 [measure]: /ko/docs/explanation/benchmarking/#measure
-[metric]: /ko/docs/explanation/benchmarking/#metrics
+[metric]: /ko/docs/explanation/benchmarking/#metric

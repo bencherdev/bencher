@@ -40,25 +40,29 @@ import BaseBranchCode from "../base-branch-code.mdx";
    (예: `--branch main`)
 13. `--testbed` 옵션을 테스트베드 이름으로 설정하세요.
     이는 아마도 `runs-on`에 선택된 머신과 일치해야 합니다.
-    자세한 내용은 [`--tested` 문서][testbed option]를 참조하세요.
+    자세한 내용은 [`--testbed` 문서][testbed option]를 참조하세요.
     (예: `--testbed ubuntu-latest`)
-14. `main` 브랜치, `ubuntu-latest` 테스트베드, `latency` 측정을 위한 임계값을 설정하세요:
-    1. `--threshold-measure` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 기본 `latency` 측정값으로 설정하세요.
+14. `main` 브랜치, `ubuntu-latest` 테스트베드, `latency` 측정, `value` 메트릭을 위한 임계값을 설정하세요:
+    1. `--threshold-measure` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 기본 `latency` 측정으로 설정하세요.
        자세한 내용은 [`--threshold-measure` 문서][threshold measure option]를 참조하세요.
        (예: `--threshold-measure latency`)
-    2. `--threshold-test` 옵션을 Student의 t-test (`t_test`)로 설정하세요.
+    2. `--threshold-metric` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성되는 `value` 메트릭으로 설정하세요.
+       자체 벤치마크 하네스를 사용하는 경우, [해당 어댑터][adapters]가 먼저 임계값을 설정하도록 권장하는 메트릭을 사용하세요.
+       자세한 내용은 [`--threshold-metric` 문서][threshold metric option]를 참조하세요.
+       (예: `--threshold-metric value`)
+    3. `--threshold-test` 옵션을 Student의 t-test (`t_test`)로 설정하세요.
        전체 개요는 [`--threshold-test` 문서][threshold test option]를 참조하세요.
        (예: `--threshold-test t_test`)
-    3. `--threshold-max-sample-size` 옵션을 최대 샘플 크기 `64`로 설정하세요.
+    4. `--threshold-max-sample-size` 옵션을 최대 샘플 크기 `64`로 설정하세요.
        자세한 내용은 [`--threshold-max-sample-size` 문서][threshold max sample size]를 참조하세요.
        (예: `--threshold-max-sample-size 64`)
-    4. `--threshold-upper-boundary` 옵션을 `0.99`의 상한으로 설정하세요.
+    5. `--threshold-upper-boundary` 옵션을 `0.99`의 상한으로 설정하세요.
        자세한 내용은 [`--threshold-upper-boundary` 문서][threshold upper boundary]를 참조하세요.
        (예: `--threshold-upper-boundary 0.99`)
-    5. `--thresholds-reset` 플래그를 설정하여 지정된 임계값만 활성 상태가 되도록 하세요.
+    6. `--thresholds-reset` 플래그를 설정하여 지정된 임계값만 활성 상태가 되도록 하세요.
        전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하세요.
        (예: `--thresholds-reset`)
-15. 알림이 생성되면 명령을 실패하도록 `--error-on-alert` 플래그를 설정하세요.
+15. 경고가 생성되면 명령을 실패하도록 `--error-on-alert` 플래그를 설정하세요.
    전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
    (예: `--error-on-alert`)
 16. [Bencher Metric Format JSON (`json`)][bmf]에 대해 `--adapter` 옵션을 설정하세요. 이 형식은 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성됩니다.
@@ -78,15 +82,17 @@ import BaseBranchCode from "../base-branch-code.mdx";
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github token]: https://docs.github.com/ko/actions/security-guides/automatic-token-authentication
 
-[statistical continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#통계적-지속적-벤치마킹
 [bencher run]: /ko/docs/explanation/bencher-run/
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
 [key option]: /ko/docs/explanation/bencher-run/#--key-key
 [branch option]: /ko/docs/explanation/branches/#--branch-branch
 [testbed option]: /ko/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ko/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ko/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ko/docs/explanation/adapters/
 [threshold test option]: /ko/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /ko/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /ko/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /ko/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ko/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /ko/docs/explanation/thresholds/#--error-on-alert

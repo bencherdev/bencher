@@ -6,22 +6,27 @@ This is an example of BMF JSON:
 
 In this example, the key `benchmark_name` would be the name of a [Benchmark][benchmark].
 A Benchmark can be identified by its name, slug, or UUID.
-The `benchmark_name` object can contain multiple [Measure][measure] names, slugs, or UUIDs as keys.
+The `benchmark_name` key maps to a list of entries,
+and each entry has a `measures` object.
+The `measures` object can contain multiple [Measure][measure] names, slugs, or UUIDs as keys.
 If the value specified is a name or slug and the Measure does not already exist, it will be created for you.
 However, if the value specified is a UUID then the Measure must already exist.
 In this example, `latency` is the slug for the built-in Latency Measure.
 Each Project by default has a Latency (ie `latency`) and Throughput (ie `throughput`) Measure,
 which are measured in `nanosecond (ns)` and `operations / second (ops/s)` respectively.
-The Measure object contains a [Metric][metric] with up to three values:
-`value`, `lower_value`, and `upper_value`.
-The `lower_value` and `upper_value` values are optional.
+Each Measure object maps [Metric][metric] names to their values.
+When your benchmark harness reports a single result for a Measure,
+name its Metric `value`.
 
-In this example, the `latency` Measure object contains the following values:
+In this example, the `latency` Measure object contains a `value` Metric of `88.0`.
 
-- A `value` of `88.0`
-- A `lower_value` of `87.42`
-- An `upper_value` of `88.88`
+An entry may also have a `parameters` object, such as `{"size": 64}`.
+Each set of [Parameters][parameters] is its own [Variant][variant] of the Benchmark,
+so one Benchmark can have several Variants.
+An entry without `parameters` is the Benchmark's Variant with no Parameters.
 
 [benchmark]: /docs/explanation/benchmarking/#benchmark
 [measure]: /docs/explanation/benchmarking/#measure
-[metric]: /docs/explanation/benchmarking/#metrics
+[metric]: /docs/explanation/benchmarking/#metric
+[parameters]: /docs/explanation/benchmarking/#parameters
+[variant]: /docs/explanation/benchmarking/#parameters

@@ -38,20 +38,24 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 4. `--testbed`オプションをCIランナーテストベッド名に設定します。
    詳細については[テストベッドオプション][testbed option]を参照してください。
    (例: `--testbed ci-runner`)
-5. `main`ブランチ、`ci-runner`テストベッド、`latency`メジャーのしきい値を設定します:
+5. `main`ブランチ、`ci-runner`テストベッド、`latency`メジャー、`value`メトリックのしきい値を設定します:
    1. `--threshold-measure`オプションは、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>で生成されるビルトイン`latency`メジャーに設定します。
    詳細については[しきい値メジャーオプション][threshold measure option]を参照してください。
    (例: `--threshold-measure latency`)
-   2. `--threshold-test`オプションをスチューデントのt検定（`t_test`）に設定します。
+   2. `--threshold-metric`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される`value`メトリックに設定します。
+   独自のベンチマークハーネスでは、[そのアダプタ][adapters]が最初にしきい値を設定するよう推奨しているメトリックを使用してください。
+   詳細については[`--threshold-metric` ドキュメント][threshold metric option]を参照してください。
+   (例: `--threshold-metric value`)
+   3. `--threshold-test`オプションをスチューデントのt検定（`t_test`）に設定します。
    詳細については[しきい値テストオプション][threshold test option]を参照してください。
    (例: `--threshold-test t_test`)
-   3. `--threshold-max-sample-size`オプションを`64`の最大サンプルサイズに設定します。
+   4. `--threshold-max-sample-size`オプションを`64`の最大サンプルサイズに設定します。
    詳細については[しきい値最大サンプルサイズ][threshold max sample size]を参照してください。
    (例: `--threshold-max-sample-size 64`)
-   4. `--threshold-upper-boundary`オプションを`0.99`の上限に設定します。
+   5. `--threshold-upper-boundary`オプションを`0.99`の上限に設定します。
    詳細については[しきい値上限][threshold upper boundary]を参照してください。
    (例: `--threshold-upper-boundary 0.99`)
-   5. `--thresholds-reset`フラグを設定し、指定されたしきい値のみを有効にします。
+   6. `--thresholds-reset`フラグを設定し、指定されたしきい値のみを有効にします。
    詳細については[しきい値リセット][thresholds reset]を参照してください。
    (例: `--thresholds-reset`)
 6. アラートが生成された場合にコマンドを失敗させるために`--error-on-alert`フラグを設定します。
@@ -67,7 +71,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 このコマンドがCIで初めて実行されると、
 存在しない場合は`main`ブランチが作成されます。
 新しい`main`には開始点や既存データはありません。
-`main`ブランチ、`ci-runner`テストベッド、および`latency`メジャーに対するしきい値が作成されます。
+`main`ブランチ、`ci-runner`テストベッド、`latency`メジャー、および`value`メトリックに対するしきい値が作成されます。
 その後の実行では、新しいデータが`main`ブランチに追加されます。
 指定されたしきい値が使用されてパフォーマンスの低下を検出します。
 
@@ -76,8 +80,10 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 [branch option]: /ja/docs/explanation/branches/#--branch-branch
 [testbed option]: /ja/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ja/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ja/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ja/docs/explanation/adapters/
 [threshold test option]: /ja/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /ja/docs/explanation/thresholds/#--error-on-alert

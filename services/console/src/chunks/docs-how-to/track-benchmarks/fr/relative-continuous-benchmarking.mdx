@@ -5,7 +5,7 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 
 ## Benchmarking Continu Relatif
 
-En reprenant là où nous nous étions arrêtés dans les tutoriels [Démarrage Rapide][quickstart] et [Docker Auto-Hébergé][docker self-hosted], ajoutons le [Benchmarking Continu][continuous benchmarking] Relatif à notre projet `Sauvegarder Walter White`.
+En reprenant là où nous nous étions arrêtés dans les tutoriels [Démarrage Rapide][quickstart] et [Docker Auto-Hébergé][docker self-hosted], ajoutons le [Benchmarking Continu][continuous benchmarking] Relatif à notre projet `claimed`.
 
 > 🐰 Assurez-vous d'avoir créé une clé API de projet et de l'avoir définie comme variable d'environnement `BENCHER_API_KEY` avant de continuer !
 
@@ -61,12 +61,13 @@ Enfin, nous sommes prêts à exécuter nos benchmarks de `feature-branch` dans C
    1. Définissez l'option `--start-point` au point de départ de la Branche fonctionnelle. Voir [un aperçu complet des docs `--start-point`][start point]. (ex : `--start-point main`)
    2. Définissez l'indicateur `--start-point-reset` pour toujours réinitialiser la Branche au point de départ. Cela n'utilisera que les derniers résultats de benchmark relatifs. Voir [un aperçu complet des docs `--start-point-reset`][start point reset]. (ex : `--start-point-reset`)
 5. Définissez l'option `--testbed` au nom du Testbed de l'exécuteur CI. Voir [les détails des docs `--testbed`][testbed option]. (ex : `--testbed ci-runner`)
-6. Définissez le Seuil pour la Branche `feature-branch`, le Testbed `ci-runner`, et la Mesure `latency` :
+6. Définissez le Seuil pour la Branche `feature-branch`, le Testbed `ci-runner`, la Mesure `latency` et la Métrique `value` :
    1. Définissez l'option `--threshold-measure` à la Mesure intégrée `latency` générée par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Voir [les détails des docs `--threshold-measure`][threshold measure option]. (ex : `--threshold-measure latency`)
-   2. Définissez l'option `--threshold-test` à un pourcentage de base (`percentage`). Voir [un aperçu complet des docs `--threshold-test`][threshold test option]. (ex : `--threshold-test percentage`)
-   3. Définissez l'option `--threshold-upper-boundary` à la Limite Supérieure de `0.25`. Voir [les détails des docs `--threshold-upper-boundary`][threshold upper boundary]. (ex : `--threshold-upper-boundary 0.25`)
-   4. Définissez l'indicateur `--thresholds-reset` pour que seul le Seuil spécifié soit actif. Voir [un aperçu complet des docs `--thresholds-reset`][thresholds reset]. (ex : `--thresholds-reset`)
-7. Définissez l'indicateur `--error-on-alert` pour échouer à la commande si une Alarme est générée. Voir [un aperçu complet des docs `--error-on-alert`][alert err]. (ex : `--error-on-alert`)
+   2. Définissez l'option `--threshold-metric` à la Métrique `value` générée par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Avec votre propre harnais de benchmark, utilisez la Métrique sur laquelle [son adaptateur][adapters] recommande de placer un Seuil en premier. Voir [les détails des docs `--threshold-metric`][threshold metric option]. (ex : `--threshold-metric value`)
+   3. Définissez l'option `--threshold-test` à un pourcentage de base (`percentage`). Voir [un aperçu complet des docs `--threshold-test`][threshold test option]. (ex : `--threshold-test percentage`)
+   4. Définissez l'option `--threshold-upper-boundary` à la Limite Supérieure de `0.25`. Voir [les détails des docs `--threshold-upper-boundary`][threshold upper boundary]. (ex : `--threshold-upper-boundary 0.25`)
+   5. Définissez l'indicateur `--thresholds-reset` pour que seul le Seuil spécifié soit actif. Voir [un aperçu complet des docs `--thresholds-reset`][thresholds reset]. (ex : `--thresholds-reset`)
+7. Définissez l'indicateur `--error-on-alert` pour échouer à la commande si une Alerte est générée. Voir [un aperçu complet des docs `--error-on-alert`][alert err]. (ex : `--error-on-alert`)
 8. Définissez l'option `--adapter` au [Format de Métrique Bencher JSON (`json`)][bmf] généré par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>. Voir [un aperçu complet des adaptateurs de harnais de benchmark][adapter json]. (ex : `--adapter json`)
 9. Spécifiez les arguments de la commande de benchmark. Voir [un aperçu complet de la commande de benchmark][command argument]. (ex : `bencher mock`)
 
@@ -75,6 +76,8 @@ Chaque fois que cette commande est exécutée dans CI, elle compare les résulta
 [start point]: /fr/docs/explanation/branches/#--start-point-branch
 [start point reset]: /fr/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /fr/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /fr/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /fr/docs/explanation/adapters/
 [threshold test option]: /fr/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /fr/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /fr/docs/explanation/thresholds/#--thresholds-reset

@@ -22,15 +22,16 @@ se `my_binary` tivesse um tamanho de `42` bytes:
 
 Neste exemplo, a chave `my_binary` é o nome do arquivo binário.
 É usada como o nome do [Benchmark][benchmark].
-O objeto `my_binary` contém a chave `file-size`.
-`file-size` é o slug para a Medida de Tamanho de Arquivo integrada [Measure][measure].
-A Medida de Tamanho de Arquivo não é criada por padrão para todos os Projetos.
-No entanto, quando você usa a Medida de Tamanho de Arquivo,
+A chave `my_binary` aponta para uma lista com uma entrada,
+e o objeto `measures` dessa entrada contém a chave `file-size`.
+`file-size` é o slug para a [Medida][measure] File Size integrada.
+A Medida File Size não é criada por padrão para todos os Projetos.
+No entanto, quando você usa a Medida File Size,
 ela será automaticamente criada para seu Projeto.
-O objeto Medida de Tamanho de Arquivo contém uma [Métrica][metric]
-com o `valor` do tamanho do arquivo em bytes, `42.0`.
+O objeto Medida File Size contém a [Métrica][metric] `value`
+com o tamanho do arquivo em bytes, `42.0`.
 
-O Tamanho do Arquivo será sempre um incremento de byte inteiro.
+O tamanho do arquivo será sempre um incremento de byte inteiro.
 Ou seja, _nunca_ terá um decimal como `42.5`.
 No entanto, BMF JSON precisa suportar uma ampla gama de valores possíveis,
 então ele usa floats em vez de inteiros.
@@ -40,4 +41,4 @@ então ele usa floats em vez de inteiros.
 
 [benchmark]: /pt/docs/explanation/benchmarking/#benchmark
 [measure]: /pt/docs/explanation/benchmarking/#measure
-[metric]: /pt/docs/explanation/benchmarking/#metrics
+[metric]: /pt/docs/explanation/benchmarking/#metric

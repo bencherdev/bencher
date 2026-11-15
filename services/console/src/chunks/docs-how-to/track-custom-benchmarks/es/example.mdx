@@ -6,22 +6,27 @@ Este es un ejemplo de JSON de BMF:
 
 En este ejemplo, la clave `benchmark_name` sería el nombre de un [Benchmark][benchmark].
 Un Benchmark puede identificarse por su nombre, slug o UUID.
-El objeto `benchmark_name` puede contener múltiples nombres, slugs o UUIDs de [Measure][measure] como claves.
-Si el valor especificado es un nombre o slug y la Measure no existe, se creará automáticamente.
-Sin embargo, si el valor especificado es un UUID, entonces la Measure ya debe existir.
-En este ejemplo, `latency` es el slug de la Measure integrada Latency.
-Cada Proyecto tiene por defecto una Measure Latency (es decir, `latency`) y una Measure Throughput (es decir, `throughput`),
+La clave `benchmark_name` apunta a una lista de entradas,
+y cada entrada tiene un objeto `measures`.
+El objeto `measures` puede contener múltiples nombres, slugs o UUIDs de [Medida][measure] como claves.
+Si el valor especificado es un nombre o slug y la Medida no existe, se creará automáticamente.
+Sin embargo, si el valor especificado es un UUID, entonces la Medida ya debe existir.
+En este ejemplo, `latency` es el slug de la Medida integrada Latency.
+Cada Proyecto tiene por defecto una Medida Latency (es decir, `latency`) y una Medida Throughput (es decir, `throughput`),
 que se miden en `nanosecond (ns)` y `operations / second (ops/s)` respectivamente.
-El objeto Measure contiene un [Metric][metric] con hasta tres valores:
-`value`, `lower_value` y `upper_value`.
-Los valores `lower_value` y `upper_value` son opcionales.
+Cada objeto de Medida asocia nombres de [Métrica][metric] con sus valores.
+Cuando tu arnés de benchmark informa un único resultado para una Medida,
+nombra su Métrica `value`.
 
-En este ejemplo, el objeto Measure `latency` contiene los siguientes valores:
+En este ejemplo, el objeto de Medida `latency` contiene una Métrica `value` de `88.0`.
 
-- Un `value` de `88.0`
-- Un `lower_value` de `87.42`
-- Un `upper_value` de `88.88`
+Una entrada también puede tener un objeto `parameters`, como `{"size": 64}`.
+Cada conjunto de [Parámetros][parameters] es su propia [Variante][variant] del Benchmark,
+así que un Benchmark puede tener varias Variantes.
+Una entrada sin `parameters` es la Variante del Benchmark sin Parámetros.
 
 [benchmark]: /es/docs/explanation/benchmarking/#benchmark
 [measure]: /es/docs/explanation/benchmarking/#measure
-[metric]: /es/docs/explanation/benchmarking/#metrics
+[metric]: /es/docs/explanation/benchmarking/#metric
+[parameters]: /es/docs/explanation/benchmarking/#parameters
+[variant]: /es/docs/explanation/benchmarking/#parameters

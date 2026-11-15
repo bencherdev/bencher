@@ -30,21 +30,22 @@ import ExecJsonExample from "../exec-json-example.mdx";
 <ExecJsonExample />
 
 现在，[基准][benchmark]名称只是 `./my_build_script.sh`。
-`./my_build_script.sh` 对象包含 `build-time` 键。
-`build-time` 是内置构建时间[度量][measure]的 slug。
-构建时间度量不会为所有项目默认创建。
-但是，当您使用构建时间度量时，
+`./my_build_script.sh` 键对应一个只有一个条目的列表，
+该条目的 `measures` 对象包含 `build-time` 键。
+`build-time` 是内置 Build Time [度量][measure]的 slug。
+Build Time 度量不会为所有项目默认创建。
+但是，当您使用 Build Time 度量时，
 它将为您的项目自动创建。
-构建时间度量对象包含一个[指标][metric]，
-其构建时间 `value` 以秒为单位，
+Build Time 度量对象包含 `value` [指标][metric]，
+即以秒为单位的构建时间，
 在我们的示例中是 `87.0` 和 `86.98`。
 
 构建时间将始终四舍五入到最接近的两位小数。
-也就是说，它_永远不会_是像 `42.666666` 这样的长小数。
+也就是说，它*永远不会*是像 `42.666666` 这样的长小数。
 
 [json adapter]: /zh/docs/explanation/adapters/#-json
 [bencher run]: /zh/docs/explanation/bencher-run/#benchmark-command
 
 [benchmark]: /zh/docs/explanation/benchmarking/#benchmark
 [measure]: /zh/docs/explanation/benchmarking/#measure
-[metric]: /zh/docs/explanation/benchmarking/#metrics
+[metric]: /zh/docs/explanation/benchmarking/#metric

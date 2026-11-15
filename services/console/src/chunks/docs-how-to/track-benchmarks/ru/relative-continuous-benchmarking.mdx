@@ -105,17 +105,21 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 5. Установите опцию `--testbed` на имя Testbed CI-раннера.
    Смотрите [документацию по `--testbed`][testbed option] для более подробной информации.
    (например: `--testbed ci-runner`)
-6. Установите Порог для ветки `feature-branch`, Testbed `ci-runner` и Меры `latency`:
-   1. Установите опцию `--threshold-measure` на встроенную Меру `latency`, которая генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+6. Установите Порог для ветки `feature-branch`, тестовой среды `ci-runner`, измерения `latency` и метрики `value`:
+   1. Установите опцию `--threshold-measure` на встроенное измерение `latency`, которое генерируется <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Смотрите [документацию по `--threshold-measure`][threshold measure option] для более подробной информации.
    (например: `--threshold-measure latency`)
-   2. Установите опцию `--threshold-test` на основной процент (`percentage`).
+   2. Установите опцию `--threshold-metric` на метрику `value`, которая создается <code><a href="/ru/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Для собственной оболочки бенчмаркинга используйте метрику, для которой [ее адаптер][adapters] рекомендует задать порог в первую очередь.
+   Смотрите [документацию по `--threshold-metric`][threshold metric option] для более подробной информации.
+   (например: `--threshold-metric value`)
+   3. Установите опцию `--threshold-test` на основной процент (`percentage`).
    Смотрите [документацию по `--threshold-test`][threshold test option] для полного обзора.
    (например: `--threshold-test percentage`)
-   3. Установите опцию `--threshold-upper-boundary` на Верхнюю Границу `0.25`.
+   4. Установите опцию `--threshold-upper-boundary` на Верхнюю Границу `0.25`.
    Смотрите [документацию по `--threshold-upper-boundary`][threshold upper boundary] для более подробной информации.
    (например: `--threshold-upper-boundary 0.25`)
-   4. Установите флаг `--thresholds-reset`, так чтобы был активен только указанный Порог.
+   5. Установите флаг `--thresholds-reset`, так чтобы был активен только указанный Порог.
    Смотрите [документацию по `--thresholds-reset`][thresholds reset] для полного обзора.
    (например: `--thresholds-reset`)
 7. Установите флаг `--error-on-alert`, чтобы команда завершалась с ошибкой, если генерируется Предупреждение.
@@ -135,6 +139,8 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 [start point]: /ru/docs/explanation/branches/#--start-point-branch
 [start point reset]: /ru/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /ru/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ru/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ru/docs/explanation/adapters/
 [threshold test option]: /ru/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /ru/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ru/docs/explanation/thresholds/#--thresholds-reset

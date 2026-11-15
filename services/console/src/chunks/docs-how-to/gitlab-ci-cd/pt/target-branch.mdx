@@ -39,20 +39,24 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
     Isso provavelmente deve coincidir com a máquina selecionada em `image`.
     Veja [a documentação de `--testbed`][testbed option] para mais detalhes.
     (ex: `--testbed debian:bullseye`)
-11. Defina o Limite para a Ramificação `main`, Testbed `debian:bullseye` e Medida `latency`:
+11. Defina o Limiar para a Ramificação `main`, Testbed `debian:bullseye`, Medida `latency` e Métrica `value`:
     1. Defina a opção `--threshold-measure` para a Medida `latency` incorporada que é gerada por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     Veja a [documentação de `--threshold-measure`][threshold measure option] para mais detalhes.
     (ex: `--threshold-measure latency`)
-    2. Defina a opção `--threshold-test` para um teste t de Student (`t_test`).
+    2. Defina a opção `--threshold-metric` para a Métrica `value` que é gerada por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+    Com seu próprio harness de benchmark, use a Métrica na qual [o adaptador dele][adapters] recomenda definir um Limiar primeiro.
+    Veja a [documentação de `--threshold-metric`][threshold metric option] para mais detalhes.
+    (ex: `--threshold-metric value`)
+    3. Defina a opção `--threshold-test` para um teste t de Student (`t_test`).
     Veja a [documentação de `--threshold-test`][threshold test option] para uma visão geral completa.
     (ex: `--threshold-test t_test`)
-    3. Defina a opção `--threshold-max-sample-size` para o tamanho máximo da amostra de `64`.
+    4. Defina a opção `--threshold-max-sample-size` para o tamanho máximo da amostra de `64`.
     Veja a [documentação de `--threshold-max-sample-size`][threshold max sample size] para mais detalhes.
     (ex: `--threshold-max-sample-size 64`)
-    4. Defina a opção `--threshold-upper-boundary` para o Limite Superior de `0.99`.
+    5. Defina a opção `--threshold-upper-boundary` para o Limite Superior de `0.99`.
     Veja a [documentação de `--threshold-upper-boundary`][threshold upper boundary] para mais detalhes.
     (ex: `--threshold-upper-boundary 0.99`)
-    5. Defina a flag `--thresholds-reset` para que apenas o Limite especificado esteja ativo.
+    6. Defina a flag `--thresholds-reset` para que apenas o Limiar especificado esteja ativo.
     Veja a [documentação de `--thresholds-reset`][thresholds reset] para uma visão geral completa.
     (ex: `--thresholds-reset`)
 12. Defina a flag `--error-on-alert` para falhar o comando se um Alerta for gerado.
@@ -69,7 +73,7 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
 [gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
 
-[statistical continuous benchmarking]: /pt/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /pt/docs/how-to/track-benchmarks/#benchmarking-contínuo-estatístico
 [install bencher cli]: /pt/docs/how-to/install-cli/#install-cli-with-script
 [bencher run]: /pt/docs/explanation/bencher-run/
 [project option]: /pt/docs/explanation/bencher-run/#--project-project
@@ -77,8 +81,10 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
 [branch option]: /pt/docs/explanation/branches/#--branch-branch
 [testbed option]: /pt/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /pt/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /pt/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /pt/docs/explanation/adapters/
 [threshold test option]: /pt/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /pt/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /pt/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /pt/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /pt/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /pt/docs/explanation/thresholds/#--error-on-alert

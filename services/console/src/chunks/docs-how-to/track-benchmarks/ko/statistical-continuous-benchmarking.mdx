@@ -38,26 +38,30 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 4. `--testbed` 옵션을 CI 러너 테스트베드 이름으로 설정합니다.
    더 자세한 내용은 [`--testbed` 문서][testbed option]를 참조하세요.
    (예: `--testbed ci-runner`)
-5. `main` 브랜치, `ci-runner` 테스트베드 및 `latency` 측정을 위한 임계값을 설정합니다:
+5. `main` 브랜치, `ci-runner` 테스트베드, `latency` 측정 및 `value` 메트릭을 위한 임계값을 설정합니다:
    1. `--threshold-measure` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성되는 기본 `latency` 측정으로 설정합니다.
      자세한 내용은 [`--threshold-measure` 문서][threshold measure option]를 참조하세요.
      (예: `--threshold-measure latency`)
-   2. `--threshold-test` 옵션을 스튜던트 t-테스트 (`t_test`)로 설정합니다.
+   2. `--threshold-metric` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성되는 `value` 메트릭으로 설정합니다.
+     자체 벤치마크 하네스를 사용하는 경우, [해당 어댑터][adapters]가 먼저 임계값을 설정하도록 권장하는 메트릭을 사용하세요.
+     자세한 내용은 [`--threshold-metric` 문서][threshold metric option]를 참조하세요.
+     (예: `--threshold-metric value`)
+   3. `--threshold-test` 옵션을 스튜던트 t-테스트 (`t_test`)로 설정합니다.
      전체 개요는 [`--threshold-test` 문서][threshold test option]를 참조하세요.
      (예: `--threshold-test t_test`)
-   3. `--threshold-max-sample-size` 옵션을 `64`의 최대 샘플 크기로 설정합니다.
+   4. `--threshold-max-sample-size` 옵션을 `64`의 최대 샘플 크기로 설정합니다.
      더 자세한 내용은 [`--threshold-max-sample-size` 문서][threshold max sample size]를 참조하세요.
      (예: `--threshold-max-sample-size 64`)
-   4. `--threshold-upper-boundary` 옵션을 `0.99`의 상한으로 설정합니다.
+   5. `--threshold-upper-boundary` 옵션을 `0.99`의 상한으로 설정합니다.
      더 자세한 내용은 [`--threshold-upper-boundary` 문서][threshold upper boundary]를 참조하세요.
      (예: `--threshold-upper-boundary 0.99`)
-   5. 지정된 임계값만 활성화되도록 `--thresholds-reset` 플래그를 설정합니다.
+   6. 지정된 임계값만 활성화되도록 `--thresholds-reset` 플래그를 설정합니다.
      전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하세요.
      (예: `--thresholds-reset`)
-6. 경보가 생성되면 명령을 실패하게 하려면 `--error-on-alert` 플래그를 설정합니다.
+6. 경고가 생성되면 명령을 실패하게 하려면 `--error-on-alert` 플래그를 설정합니다.
    전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
    (예: `--error-on-alert`)
-7. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [벤처 메트릭 형식 JSON (`json`)][bmf]을 `--adapter` 옵션으로 설정합니다.
+7. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [Bencher Metric Format JSON (`json`)][bmf]을 `--adapter` 옵션으로 설정합니다.
    벤치마크 하네스 어댑터에 대한 전체 개요는 [어댑터 JSON][adapter json]를 참조하세요.
    (예: `--adapter json`)
 8. 벤치마크 명령 인수를 지정합니다.
@@ -67,7 +71,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 처음 이 명령을 CI에서 실행하면,
 `main` 브랜치가 아직 존재하지 않을 경우 생성됩니다.
 새로운 `main`은 시작점이나 기존 데이터가 없습니다.
-`main` 브랜치, `ci-runner` 테스트베드 및 `latency` 측정을 위한 임계값이 생성됩니다.
+`main` 브랜치, `ci-runner` 테스트베드, `latency` 측정 및 `value` 메트릭을 위한 임계값이 생성됩니다.
 후속 실행에서는 새로운 데이터가 `main` 브랜치에 추가됩니다.
 지정된 임계값은 성능 퇴보를 감지하는 데 사용됩니다.
 
@@ -76,8 +80,10 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 [branch option]: /ko/docs/explanation/branches/#--branch-branch
 [testbed option]: /ko/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ko/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ko/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ko/docs/explanation/adapters/
 [threshold test option]: /ko/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /ko/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /ko/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /ko/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ko/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /ko/docs/explanation/thresholds/#--error-on-alert
@@ -114,12 +120,12 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
      전체 개요는 [`--start-point-reset` 문서][start point reset]를 참조하세요.
      (예: `--start-point-reset`)
 5. `--testbed` 옵션을 테스트베드 이름으로 설정합니다.
-   더 자세한 내용은 [`--tested` 문서][testbed option]를 참조하세요.
+   더 자세한 내용은 [`--testbed` 문서][testbed option]를 참조하세요.
    (예: `--testbed ci-runner`)
-6. 경보가 생성되면 명령을 실패하게 하려면 `--error-on-alert` 플래그를 설정합니다.
+6. 경고가 생성되면 명령을 실패하게 하려면 `--error-on-alert` 플래그를 설정합니다.
    전체 개요는 [`--error-on-alert` 문서][alert err]를 참조하세요.
    (예: `--error-on-alert`)
-7. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [벤처 메트릭 형식 JSON (`json`)][bmf]을 `--adapter` 옵션으로 설정합니다.
+7. <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 [Bencher Metric Format JSON (`json`)][bmf]을 `--adapter` 옵션으로 설정합니다.
    벤치마크 하네스 어댑터에 대한 전체 개요는 [어댑터 JSON][adapter json]를 참조하세요.
    (예: `--adapter json`)
 8. 벤치마크 명령 인수를 지정합니다.
@@ -127,12 +133,12 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
    (예: `bencher mock`)
 
 처음 이 명령을 CI에서 실행하면,
-벤처는 아직 존재하지 않는 `feature-branch` 브랜치를 생성합니다.
+Bencher는 아직 존재하지 않는 `feature-branch` 브랜치를 생성합니다.
 새 `feature-branch`는 해시 `32aea434d751648726097ed3ac760b57107edd8b`에 있는 
 `main` 브랜치를 시작점으로 사용합니다.
 이는 `feature-branch`가 `bencher mock`의 결과와 비교할 수 있도록 
 `main` 브랜치의 모든 데이터 및 [임계값][thresholds]의 복사본을 갖게 된다는 것을 의미합니다.
-모든 후속 실행 시, 벤처는 `feature-branch` 브랜치를 시작점으로 재설정하고,
+모든 후속 실행 시, Bencher는 `feature-branch` 브랜치를 시작점으로 재설정하고,
 `main` 브랜치 데이터 및 임계값을 사용하여 성능 퇴보를 감지할 것입니다.
 
 [start point]: /ko/docs/explanation/branches/#--start-point-branch

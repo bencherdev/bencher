@@ -1,0 +1,22 @@
+import ThresholdCmdExample from "../threshold-cmd-example.mdx";
+
+## しきい値
+
+カスタムベンチマークでパフォーマンスの回帰を検出するには、[しきい値][threshold]を追加します。
+しきい値はメジャーの1つのメトリックをチェックするため、
+[`--threshold-metric` オプション][threshold metric option]を
+カスタムベンチマークハーネスが報告するメトリックの名前に設定します。
+次のコマンドは、`latency` メジャーの `value` メトリックに対するしきい値を作成します:
+
+<ThresholdCmdExample />
+
+一部の[バリアント][variant]のみをチェックするには、
+[`--threshold-parameters` オプション][threshold parameters option]も
+それらが共有する[パラメータ][parameters]の JSON オブジェクトに設定します。
+（例: `--threshold-parameters '{"size": 64}'`）
+
+[threshold]: /ja/docs/explanation/thresholds/
+[threshold metric option]: /ja/docs/explanation/thresholds/#--threshold-metric-metric
+[threshold parameters option]: /ja/docs/explanation/thresholds/#--threshold-parameters-parameters
+[parameters]: /ja/docs/explanation/benchmarking/#parameters
+[variant]: /ja/docs/explanation/benchmarking/#parameters

@@ -19,13 +19,13 @@ import ExecJsonExample from "../exec-json-example.mdx";
 
 <ExecJsonExample />
 
-ここでの[ベンチマーク][benchmark]名は単に `./my_build_script.sh` です。`./my_build_script.sh` オブジェクトには `build-time` キーが含まれています。`build-time` は組み込みのビルド時間[メジャー][measure]のスラッグです。ビルド時間メジャーは、すべてのプロジェクトでデフォルトで作成されるわけではありません。しかし、ビルド時間メジャーを使用すると、プロジェクトに自動的に作成されます。ビルド時間メジャーオブジェクトには、ビルド時間の`値`（秒単位）を持つ[メトリック][metric]が含まれており、我々の例では `87.0` と `86.98` です。
+ここでの[ベンチマーク][benchmark]名は単に `./my_build_script.sh` です。`./my_build_script.sh` キーは1つのエントリを持つリストに対応し、そのエントリの `measures` オブジェクトには `build-time` キーが含まれています。`build-time` は組み込みの Build Time [メジャー][measure]のスラッグです。Build Time メジャーは、すべてのプロジェクトでデフォルトで作成されるわけではありません。しかし、Build Time メジャーを使用すると、プロジェクトに自動的に作成されます。Build Time メジャーオブジェクトには、ビルド時間を秒単位で持つ `value` [メトリック][metric]が含まれており、我々の例では `87.0` と `86.98` です。
 
-ビルド時間は常に小数点以下二桁に丸められます。つまり、`42.666666` のような長い小数になることは_決して_ありません。
+ビルド時間は常に小数点以下二桁に丸められます。つまり、`42.666666` のような長い小数になることは*決して*ありません。
 
 [json adapter]: /ja/docs/explanation/adapters/#-json
 [bencher run]: /ja/docs/explanation/bencher-run/#benchmark-command
 
 [benchmark]: /ja/docs/explanation/benchmarking/#benchmark
 [measure]: /ja/docs/explanation/benchmarking/#measure
-[metric]: /ja/docs/explanation/benchmarking/#metrics
+[metric]: /ja/docs/explanation/benchmarking/#metric

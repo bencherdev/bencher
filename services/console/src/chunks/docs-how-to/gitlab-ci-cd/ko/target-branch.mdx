@@ -35,20 +35,24 @@ import TargetBranchCode from "../target-branch-code.mdx";
     이는 `image`에서 선택된 기계와 일치해야 합니다.
     자세한 내용은 [`--testbed` 문서][testbed option]를 참조하십시오.
     (예: `--testbed debian:bullseye`)
-11. `main` 브랜치, `debian:bullseye` 테스트베드, 및 `latency` 측정을 위한 임계값 설정:
-    1. `--threshold-measure` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 내장 `latency` 측정 값으로 설정합니다.
+11. `main` 브랜치, `debian:bullseye` 테스트베드, `latency` 측정 및 `value` 메트릭을 위한 임계값 설정:
+    1. `--threshold-measure` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성된 내장 `latency` 측정으로 설정합니다.
     자세한 내용은 [`--threshold-measure` 문서][threshold measure option]를 참조하십시오.
     (예: `--threshold-measure latency`)
-    2. `--threshold-test` 옵션을 Student's t-test (`t_test`)로 설정합니다.
+    2. `--threshold-metric` 옵션을 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>에 의해 생성되는 `value` 메트릭으로 설정합니다.
+    자체 벤치마크 하네스를 사용하는 경우, [해당 어댑터][adapters]가 먼저 임계값을 설정하도록 권장하는 메트릭을 사용하세요.
+    자세한 내용은 [`--threshold-metric` 문서][threshold metric option]를 참조하십시오.
+    (예: `--threshold-metric value`)
+    3. `--threshold-test` 옵션을 스튜던트 t-테스트 (`t_test`)로 설정합니다.
     전체 개요는 [`--threshold-test` 문서][threshold test option]를 참조하십시오.
     (예: `--threshold-test t_test`)
-    3. `--threshold-max-sample-size` 옵션을 최대 샘플 크기 `64`로 설정합니다.
+    4. `--threshold-max-sample-size` 옵션을 최대 샘플 크기 `64`로 설정합니다.
     자세한 내용은 [`--threshold-max-sample-size` 문서][threshold max sample size]를 참조하십시오.
     (예: `--threshold-max-sample-size 64`)
-    4. `--threshold-upper-boundary` 옵션을 상한 `0.99`로 설정합니다.
+    5. `--threshold-upper-boundary` 옵션을 상한 `0.99`로 설정합니다.
     자세한 내용은 [`--threshold-upper-boundary` 문서][threshold upper boundary]를 참조하십시오.
     (예: `--threshold-upper-boundary 0.99`)
-    5. `--thresholds-reset` 플래그를 설정하여 지정된 임계값만 활성화되도록 합니다.
+    6. `--thresholds-reset` 플래그를 설정하여 지정된 임계값만 활성화되도록 합니다.
     전체 개요는 [`--thresholds-reset` 문서][thresholds reset]를 참조하십시오.
     (예: `--thresholds-reset`)
 12. 경고가 생성될 경우 명령이 실패하도록 `--error-on-alert` 플래그를 설정합니다.
@@ -65,7 +69,7 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
 [gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
 
-[statistical continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /ko/docs/how-to/track-benchmarks/#통계적-지속적-벤치마킹
 [install bencher cli]: /ko/docs/how-to/install-cli/#install-cli-with-script
 [bencher run]: /ko/docs/explanation/bencher-run/
 [project option]: /ko/docs/explanation/bencher-run/#--project-project
@@ -73,8 +77,10 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [branch option]: /ko/docs/explanation/branches/#--branch-branch
 [testbed option]: /ko/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ko/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ko/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ko/docs/explanation/adapters/
 [threshold test option]: /ko/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /ko/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /ko/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /ko/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ko/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /ko/docs/explanation/thresholds/#--error-on-alert

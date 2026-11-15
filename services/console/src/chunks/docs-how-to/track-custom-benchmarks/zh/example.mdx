@@ -4,23 +4,29 @@ import BmfExample from "../bmf-example.mdx";
 
 <BmfExample />
 
-在此示例中，键 `benchmark_name` 表示 [Benchmark][benchmark] 的名称。
-Benchmark 可以通过名称、slug 或 UUID 来标识。
-`benchmark_name` 对象可以包含多个 [Measure][measure] 的名称、slug 或 UUID 作为键。
-如果指定的值是名称或 slug 且该 Measure 尚不存在，则会为你创建它。
-但是，如果指定的值是 UUID，那么该 Measure 必须已存在。
-在此示例中，`latency` 是内置 Latency Measure 的 slug。
-每个 Project 默认都有一个 Latency（即 `latency`）和一个 Throughput（即 `throughput`）Measure，
-分别以 `nanosecond (ns)` 和 `operations / second (ops/s)` 为单位进行度量。
-Measure 对象包含一个 [Metric][metric]，最多可包含三个值：`value`、`lower_value` 和 `upper_value`。
-`lower_value` 和 `upper_value` 是可选的。
+在此示例中，键 `benchmark_name` 是[基准测试][benchmark]的名称。
+基准测试可以通过名称、slug 或 UUID 来标识。
+`benchmark_name` 键对应一个条目列表，
+每个条目都有一个 `measures` 对象。
+`measures` 对象可以包含多个[度量][measure]的名称、slug 或 UUID 作为键。
+如果指定的值是名称或 slug 且该度量尚不存在，则会为你创建它。
+但是，如果指定的值是 UUID，那么该度量必须已存在。
+在此示例中，`latency` 是内置 Latency 度量的 slug。
+每个项目默认都有 Latency（即 `latency`）和 Throughput（即 `throughput`）度量，
+分别以 `nanosecond (ns)` 和 `operations / second (ops/s)` 为单位。
+每个度量对象将[指标][metric]名称映射到其值。
+当你的基准测试工具为一个度量报告单个结果时，
+请将其指标命名为 `value`。
 
-在此示例中，`latency` Measure 对象包含以下值：
+在此示例中，`latency` 度量对象包含一个值为 `88.0` 的 `value` 指标。
 
-- `value` 值为 `88.0`
-- `lower_value` 值为 `87.42`
-- `upper_value` 值为 `88.88`
+条目还可以有一个 `parameters` 对象，例如 `{"size": 64}`。
+每组[参数][parameters]都是该基准测试的一个[变体][variant]，
+因此一个基准测试可以有多个变体。
+没有 `parameters` 的条目是该基准测试不带参数的变体。
 
 [benchmark]: /zh/docs/explanation/benchmarking/#benchmark
 [measure]: /zh/docs/explanation/benchmarking/#measure
-[metric]: /zh/docs/explanation/benchmarking/#metrics
+[metric]: /zh/docs/explanation/benchmarking/#metric
+[parameters]: /zh/docs/explanation/benchmarking/#parameters
+[variant]: /zh/docs/explanation/benchmarking/#parameters

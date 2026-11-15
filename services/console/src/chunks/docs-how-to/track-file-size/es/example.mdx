@@ -22,13 +22,14 @@ si `my_binary` tuviera un tamaño de `42` bytes:
 
 En este ejemplo, la clave `my_binary` es el nombre del archivo binario.
 Se utiliza como el nombre del [Benchmark][benchmark].
-El objeto `my_binary` contiene la clave `file-size`.
-`file-size` es el identificador para la [Medida][measure] de Tamaño de Archivo incorporada.
-La Medida de Tamaño de Archivo no se crea por defecto para todos los Proyectos.
-Sin embargo, cuando usas la Medida de Tamaño de Archivo,
+La clave `my_binary` apunta a una lista con una entrada,
+y el objeto `measures` de esa entrada contiene la clave `file-size`.
+`file-size` es el identificador para la [Medida][measure] File Size incorporada.
+La Medida File Size no se crea por defecto para todos los Proyectos.
+Sin embargo, cuando usas la Medida File Size,
 se creará automáticamente para tu Proyecto.
-El objeto de la Medida de Tamaño de Archivo contiene una [Métrica][metric]
-con el `valor` del tamaño de archivo en bytes, `42.0`.
+El objeto de la Medida File Size contiene la [Métrica][metric] `value`
+con el tamaño de archivo en bytes, `42.0`.
 
 El tamaño del archivo siempre será un incremento completo de byte.
 Es decir, _nunca_ tendrá un decimal como `42.5`.
@@ -40,4 +41,4 @@ por lo que utiliza flotantes en lugar de enteros.
 
 [benchmark]: /es/docs/explanation/benchmarking/#benchmark
 [measure]: /es/docs/explanation/benchmarking/#measure
-[metric]: /es/docs/explanation/benchmarking/#metrics
+[metric]: /es/docs/explanation/benchmarking/#metric
