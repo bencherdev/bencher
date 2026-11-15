@@ -207,6 +207,7 @@ pub enum ApiCounter {
 
     // GitHub App metrics
     GitHubWebhookRefused,
+    GitHubCommitTitlesFailed(CommitTitlesFailureReason),
 
     // Self-hosted specific metrics
     SelfHostedServerStartup(Uuid),
@@ -250,7 +251,8 @@ impl ApiCounter {
             Self::UserLogin(_) => "{login}",
             Self::UserRecaptchaFailure
             | Self::RunnerSelfUpdateCheckFailed(_)
-            | Self::GitHubWebhookRefused => "{failure}",
+            | Self::GitHubWebhookRefused
+            | Self::GitHubCommitTitlesFailed(_) => "{failure}",
             Self::UserInvite | Self::UserInviteMax(_) => "{invite}",
             Self::UserAccept(_) => "{accept}",
             Self::UserConfirm => "{confirmation}",
@@ -417,6 +419,7 @@ impl ApiCounter {
 
             // GitHub App metrics
             Self::GitHubWebhookRefused => "github.webhook_refused",
+            Self::GitHubCommitTitlesFailed(_) => "github.commit_titles_failed",
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "self_hosted.server.startup",
@@ -598,6 +601,9 @@ impl ApiCounter {
             Self::GitHubWebhookRefused => {
                 "Counts the number of GitHub webhook deliveries refused for their signature"
             },
+            Self::GitHubCommitTitlesFailed(_) => {
+                "Counts the number of commit title fetches that stored nothing, by reason"
+            },
 
             // Self-hosted specific metrics
             Self::SelfHostedServerStartup(_) => "Counts the number of self-hosted server startups",
@@ -661,9 +667,7 @@ impl ApiCounter {
             | Self::RunnerDisconnect => Vec::new(),
             Self::Run(priority)
             | Self::MetricsCreate(priority)
-            | Self::OciBandwidthMax(priority) => {
-                vec![priority_attribute(priority)]
-            },
+            | Self::OciBandwidthMax(priority) => vec![priority_attribute(priority)],
             Self::UserSignup(auth_method)
             | Self::UserLogin(auth_method)
             | Self::UserSsoJoin(auth_method) => auth_method.attributes(),
@@ -684,14 +688,13 @@ impl ApiCounter {
                 vec![plan_kind.into()]
             },
             Self::CallbackAttempt(class) => attempt_attributes(class),
+            Self::GitHubCommitTitlesFailed(reason) => vec![reason.into()],
             Self::RunnerRequestMax(interval_kind)
             | Self::RunUnclaimedMax(interval_kind)
             | Self::RunClaimedMax(interval_kind)
             | Self::UserCredentialMax(interval_kind)
             | Self::UserOrganizationMax(interval_kind)
-            | Self::UserInviteMax(interval_kind) => {
-                vec![interval_kind.into()]
-            },
+            | Self::UserInviteMax(interval_kind) => vec![interval_kind.into()],
             Self::ProjectKeyAuthFailed(reason) => vec![reason.into()],
             Self::UserKeyAuthFailed(reason) => vec![reason.into()],
             Self::OAuthTokenAuthFailed(reason) => vec![reason.into()],
@@ -919,6 +922,43 @@ impl From<UpdateChannelKind> for opentelemetry::KeyValue {
 
 impl UpdateChannelKind {
     const KEY: &str = "update.channel";
+}
+
+/// Why a fetch of commit titles stored nothing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommitTitlesFailureReason {
+    /// GitHub rate limited the installation.
+    RateLimited,
+    /// GitHub refused to mint a read token.
+    Mint,
+    /// GitHub did not answer for every commit.
+    Fetch,
+    /// The titles did not store.
+    Store,
+    /// The queue was full, so the work waits for the next sweep.
+    Dropped,
+}
+
+impl fmt::Display for CommitTitlesFailureReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::RateLimited => write!(f, "rate_limited"),
+            Self::Mint => write!(f, "mint"),
+            Self::Fetch => write!(f, "fetch"),
+            Self::Store => write!(f, "store"),
+            Self::Dropped => write!(f, "dropped"),
+        }
+    }
+}
+
+impl From<CommitTitlesFailureReason> for opentelemetry::KeyValue {
+    fn from(reason: CommitTitlesFailureReason) -> Self {
+        Self::new(CommitTitlesFailureReason::KEY, reason.to_string())
+    }
+}
+
+impl CommitTitlesFailureReason {
+    const KEY: &str = "commit_titles.failure";
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

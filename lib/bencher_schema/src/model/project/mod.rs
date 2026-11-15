@@ -41,6 +41,7 @@ use github_link::{GitHubLink, GitHubLinking};
 
 pub mod benchmark;
 pub mod branch;
+pub mod commit;
 pub mod github_link;
 pub mod key;
 #[cfg(feature = "plus")]

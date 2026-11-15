@@ -126,9 +126,10 @@ Notes:
   branches, testbeds, benchmarks, variants, measures, and threshold models,
   with values aligned to shared `points`. `points.x` holds each point's report
   start time in milliseconds, and `points.report` indexes into `reports`, which
-  carry each report's version number and git hash, when it has one. A plot
-  holds at most 64 lines, and `total` counts every line the query names. The
-  result also carries the `project` and a `url` that opens the plot in Bencher.
+  carry each report's version number, and its git hash and commit title when
+  it has them. A plot holds at most 64 lines, and `total` counts every line
+  the query names. The result also carries the `project` and a `url` that opens
+  the plot in Bencher.
 - Tool errors carry the REST status code and message
   (e.g. `403: Project keys cannot rename testbeds`).
 

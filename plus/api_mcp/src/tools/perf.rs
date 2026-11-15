@@ -51,7 +51,7 @@ pub fn query_tool(name: &'static str) -> Tool {
          and `series.alerts` names the points that alerted. \
          `points.x` holds each point's report start time in milliseconds, \
          and `points.report` indexes into `reports`, \
-         which carry each report's version number and git hash, when it has one. \
+         which carry each report's version number, and its git hash and commit title when it has them. \
          A plot holds at most 64 lines, and `total` counts every line the query names. \
          `url` opens the plot in Bencher.",
         json_schema::<QueryPerfInput>(),

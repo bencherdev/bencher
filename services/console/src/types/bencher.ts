@@ -30,6 +30,9 @@ export type CardCvc = string;
 
 export type CardNumber = string;
 
+/** The first line of a commit's message. */
+export type CommitTitle = string;
+
 export type Cpu = number;
 
 export type DateTime = string;
@@ -868,6 +871,8 @@ export interface JsonConsolePointReport {
 	uuid: Uuid;
 	version: VersionNumber;
 	hash?: GitHash;
+	/** The title of the hash's commit, once GitHub has given it. */
+	title?: CommitTitle;
 }
 
 export interface JsonConsoleBranch {
@@ -1449,6 +1454,8 @@ export interface JsonConsoleReport {
 	branch: JsonConsoleBranch;
 	testbed: JsonConsoleTestbed;
 	version: JsonVersion;
+	/** The title of the version's commit, once GitHub has given it. */
+	title?: CommitTitle;
 	start_time: DateTimeMillis;
 	end_time: DateTimeMillis;
 	/** The BMF version the report's results were read at. */
@@ -1561,6 +1568,8 @@ export interface JsonConsoleRun {
 	uuid: Uuid;
 	number: VersionNumber;
 	hash?: GitHash;
+	/** The title of the hash's commit, once GitHub has given it. */
+	title?: CommitTitle;
 	branch: JsonConsoleBranch;
 	/** When its first report started. */
 	start_time: DateTimeMillis;

@@ -56,6 +56,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    commit (id) {
+        id -> Integer,
+        project_id -> Integer,
+        hash -> Text,
+        title -> Nullable<Text>,
+        created -> BigInt,
+    }
+}
+
+diesel::table! {
     head (id) {
         id -> Integer,
         uuid -> Text,
@@ -593,6 +603,7 @@ diesel::joinable!(boundary -> metric (metric_id));
 diesel::joinable!(boundary -> model (model_id));
 diesel::joinable!(boundary -> threshold (threshold_id));
 diesel::joinable!(branch -> project (project_id));
+diesel::joinable!(commit -> project (project_id));
 diesel::joinable!(head_version -> version (version_id));
 diesel::joinable!(job -> organization (organization_id));
 diesel::joinable!(job -> project (project_id));
@@ -666,6 +677,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     benchmark,
     boundary,
     branch,
+    commit,
     head,
     head_version,
     job,

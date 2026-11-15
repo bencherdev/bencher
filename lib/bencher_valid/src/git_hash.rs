@@ -47,6 +47,14 @@ impl AsRef<str> for GitHash {
     }
 }
 
+impl GitHash {
+    /// The same hash in lower case, as GitHub and `git` print it.
+    #[must_use]
+    pub fn to_ascii_lowercase(&self) -> Self {
+        Self(self.0.to_ascii_lowercase())
+    }
+}
+
 impl From<GitHash> for String {
     fn from(git_hash: GitHash) -> Self {
         git_hash.0

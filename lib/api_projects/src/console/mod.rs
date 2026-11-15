@@ -11,8 +11,8 @@ use bencher_json::{
     ParameterFilter, ParameterSet, ResourceName, SampleSize, VariantUuid, Window,
 };
 use bencher_json::{
-    BenchmarkUuid, DateTime, DateTimeMillis, GitHash, ModelTest, ModelUuid, ReportUuid,
-    ThresholdUuid,
+    BenchmarkUuid, CommitTitle, DateTime, DateTimeMillis, GitHash, ModelTest, ModelUuid,
+    ReportUuid, ThresholdUuid,
     project::{
         alert::AlertStatus,
         boundary::BoundaryLimit,
@@ -29,8 +29,10 @@ use bencher_schema::{
     context::DbConnection,
     model::{
         project::{
+            ProjectId,
             benchmark::BenchmarkId,
             branch::BranchId,
+            commit,
             measure::MeasureId,
             report::ReportId,
             testbed::TestbedId,
@@ -81,6 +83,7 @@ struct PointReport {
     created: DateTime,
     version: VersionNumber,
     hash: Option<GitHash>,
+    title: Option<CommitTitle>,
 }
 
 /// Points run along x by report start time; the rest only breaks ties.
@@ -140,6 +143,7 @@ impl PointsBuilder {
                     uuid: report.uuid,
                     version: report.version,
                     hash: report.hash.clone(),
+                    title: report.title.clone(),
                 });
                 to_index(table.len() - 1)
             });
@@ -157,6 +161,26 @@ impl PointsBuilder {
             index,
         }
     }
+}
+
+/// Give each report the title of its hash's commit, read for every report of a response at once.
+fn fill_titles(
+    conn: &mut DbConnection,
+    project_id: ProjectId,
+    reports: &mut [JsonConsolePointReport],
+) -> diesel::QueryResult<()> {
+    let titles = commit::titles(
+        conn,
+        project_id,
+        reports.iter().filter_map(|report| report.hash.as_ref()),
+    )?;
+    for report in reports {
+        report.title = report
+            .hash
+            .as_ref()
+            .and_then(|hash| titles.get(&hash.to_ascii_lowercase()).cloned());
+    }
+    Ok(())
 }
 
 fn millis(timestamp: i64) -> DateTimeMillis {

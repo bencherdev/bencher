@@ -36,6 +36,7 @@ use crate::model::spec::SpecId;
 use crate::model::{
     organization::plan::PlanKind,
     project::{
+        commit,
         series::count_active,
         testbed::{RunJob, RunTestbed},
     },
@@ -390,6 +391,20 @@ impl QueryReport {
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::CallbackSkip(
                     otel_plan_kind,
                 ));
+            }
+        }
+
+        // Only once the report has committed, and never waiting on GitHub.
+        #[cfg(feature = "plus")]
+        if let Some(hash) = &json_report.hash
+            && context.commit_titles.is_running()
+        {
+            match commit::wants_title(actor_conn!(context, api_actor), project_id, hash) {
+                Ok(true) => context.commit_titles.ingest(project_id, hash.clone()),
+                Ok(false) => {},
+                Err(e) => {
+                    slog::error!(log, "Failed to check a report's commit for its title"; "project_id" => ?project_id, "error" => %e);
+                },
             }
         }
 

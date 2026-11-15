@@ -13,6 +13,7 @@ use url::Url;
 
 mod api;
 mod app;
+mod graphql;
 #[cfg(any(test, feature = "test-base-url"))]
 pub mod test_server;
 mod webhook;
@@ -21,8 +22,9 @@ mod webhook;
 use api::join_path;
 use api::{GITHUB_API_URL, GitHubApi};
 pub use api::{GitHubApiError, GitHubRepository};
-pub use app::{GitHubApp, GitHubAppError, GitHubInstallationToken};
+pub use app::{GitHubApp, GitHubAppError, GitHubInstallationToken, GitHubReadToken};
 pub use bencher_valid::GitHubInstallationPermission;
+pub use graphql::GitHubCommitsError;
 pub use webhook::{GitHubInstallationChange, GitHubWebhookError};
 
 #[expect(

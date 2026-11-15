@@ -699,6 +699,10 @@ fn refused(failure: GitHubAppError) -> CallbackAttempt {
         GitHubApiError::Status(status, headers) => {
             CallbackAttempt::Refused(status, RateLimit::read(status, &headers))
         },
+        GitHubApiError::SecondaryRateLimit(headers) => CallbackAttempt::Refused(
+            StatusCode::FORBIDDEN,
+            RateLimit::read(StatusCode::FORBIDDEN, &headers),
+        ),
         GitHubApiError::Request(error) => {
             if error.is_timeout() {
                 CallbackAttempt::TimedOut

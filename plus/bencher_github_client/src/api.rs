@@ -35,6 +35,8 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 const REPOSITORY_INACCESSIBLE: &str = "not accessible to the parent installation";
 /// From GitHub's 422 for a permission the installation has not approved.
 const PERMISSIONS_NOT_GRANTED: &str = "permissions requested are not granted";
+/// From GitHub's 403 for a secondary rate limit, which may carry no rate-limit header.
+pub(crate) const SECONDARY_RATE_LIMIT: &str = "secondary rate limit";
 /// What a 403 or a 429 says about when to try again.
 const RATE_LIMIT_HEADERS: [&str; 3] = ["retry-after", "x-ratelimit-remaining", "x-ratelimit-reset"];
 
@@ -56,6 +58,9 @@ pub enum GitHubApiError {
     RepositoryInaccessible,
     #[error("The GitHub App installation has not granted the permissions requested")]
     PermissionsNotGranted,
+    /// A 403 that says a secondary rate limit stopped the request, with its rate-limit headers.
+    #[error("The GitHub API stopped the request at a secondary rate limit")]
+    SecondaryRateLimit(HeaderMap),
     /// Any other answer, and for a 403 or a 429, its rate-limit headers.
     #[error("The GitHub API answered {0}")]
     Status(StatusCode, HeaderMap),
@@ -189,6 +194,30 @@ impl GitHubApi {
         .await
     }
 
+    /// POST `path`, and with its answer, the rate-limit headers that it carries whatever its
+    /// status, since a GraphQL answer says that the rate limit is spent with a 200.
+    pub(crate) async fn post_counted<B, T>(
+        &self,
+        path: &[&str],
+        bearer: &str,
+        body: &B,
+    ) -> Result<(T, HeaderMap), GitHubApiError>
+    where
+        B: Serialize,
+        T: DeserializeOwned,
+    {
+        let response = self
+            .http
+            .post(self.url(path))
+            .bearer_auth(bearer)
+            .json(body)
+            .send()
+            .await
+            .map_err(GitHubApiError::Request)?;
+        let headers = rate_limit_headers(response.headers());
+        answer(response).await.map(|answer| (answer, headers))
+    }
+
     async fn every_page<T>(
         &self,
         path: &[&str],
@@ -244,10 +273,12 @@ where
         response.json().await.map_err(GitHubApiError::Json)
     } else if status == StatusCode::NOT_FOUND {
         Err(GitHubApiError::NotFound)
-    } else if status == StatusCode::UNPROCESSABLE_ENTITY
-        && let Some(refusal) = refusal(response).await
-    {
-        Err(refusal)
+    } else if status == StatusCode::UNPROCESSABLE_ENTITY {
+        Err(refusal(response)
+            .await
+            .unwrap_or(GitHubApiError::Status(status, rate_limit)))
+    } else if status == StatusCode::FORBIDDEN && secondary_rate_limit(response).await {
+        Err(GitHubApiError::SecondaryRateLimit(rate_limit))
     } else {
         Err(GitHubApiError::Status(status, rate_limit))
     }
@@ -258,6 +289,11 @@ fn rate_limit(status: StatusCode, headers: &HeaderMap) -> HeaderMap {
     if status != StatusCode::FORBIDDEN && status != StatusCode::TOO_MANY_REQUESTS {
         return HeaderMap::new();
     }
+    rate_limit_headers(headers)
+}
+
+/// The rate-limit headers alone.
+fn rate_limit_headers(headers: &HeaderMap) -> HeaderMap {
     RATE_LIMIT_HEADERS
         .into_iter()
         .filter_map(|name| {
@@ -277,6 +313,14 @@ async fn refusal(response: Response) -> Option<GitHubApiError> {
     } else {
         None
     }
+}
+
+/// Whether a 403 says a secondary rate limit stopped the request.
+async fn secondary_rate_limit(response: Response) -> bool {
+    response
+        .json::<JsonRefusal>()
+        .await
+        .is_ok_and(|JsonRefusal { message }| message.to_lowercase().contains(SECONDARY_RATE_LIMIT))
 }
 
 /// `base` with each of `path` appended as one escaped path segment.

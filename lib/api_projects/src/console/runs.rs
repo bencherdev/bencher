@@ -5,9 +5,9 @@ use std::{
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    BmfVersion, BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid,
-    NameId, ProjectResourceId, ReportUuid, ResourceName, TestbedNameId, TestbedSlug, TestbedUuid,
-    UserName, VersionUuid,
+    BmfVersion, BranchName, BranchSlug, BranchUuid, CommitTitle, DateTime, DateTimeMillis, GitHash,
+    HeadUuid, NameId, ProjectResourceId, ReportUuid, ResourceName, TestbedNameId, TestbedSlug,
+    TestbedUuid, UserName, VersionUuid,
     project::{
         alert::AlertStatus,
         console::{
@@ -32,6 +32,7 @@ use bencher_schema::{
         project::{
             ProjectId,
             branch::version::VersionId,
+            commit,
             key::ProjectKeyId,
             report::{ReportId, warning::get_reports_warnings},
             testbed::{QueryTestbed, TestbedId},
@@ -866,14 +867,18 @@ async fn get_one_inner(
 ) -> Result<JsonConsoleRun, HttpError> {
     let conn = actor_conn!(context, api_actor);
     let project = readable_project(conn, context, &path_params.project, api_actor)?;
-    let version: VersionRow = schema::version::table
+    let (version, title): (VersionRow, Option<CommitTitle>) = schema::version::table
+        .left_join(schema::commit::table.on(commit::of_version()))
         .filter(schema::version::project_id.eq(project.id))
         .filter(schema::version::uuid.eq(path_params.version))
         .select((
-            schema::version::id,
-            schema::version::uuid,
-            schema::version::number,
-            schema::version::hash,
+            (
+                schema::version::id,
+                schema::version::uuid,
+                schema::version::number,
+                schema::version::hash,
+            ),
+            schema::commit::title.nullable(),
         ))
         .first(conn)
         .map_err(resource_not_found_err!(
@@ -944,6 +949,7 @@ async fn get_one_inner(
         uuid,
         number,
         hash,
+        title,
         branch: facts.branch,
         start_time: facts.start_time,
         end_time: facts.end_time,
