@@ -1,10 +1,13 @@
-use bencher_client::types::JsonNewThreshold;
-use bencher_json::{BranchNameId, MeasureNameId, ProjectResourceId, TestbedNameId};
+use bencher_client::types::{JsonNewThreshold, ParameterFilter};
+use bencher_json::{BranchNameId, MeasureNameId, MetricName, ProjectResourceId, TestbedNameId};
 
-use super::model::Model;
+use super::{ThresholdError, model::Model};
 use crate::{
     CliError,
-    bencher::{backend::AuthBackend, sub::SubCmd},
+    bencher::{
+        backend::AuthBackend,
+        sub::{SubCmd, project::parameter_filter},
+    },
     parser::project::threshold::CliThresholdCreate,
 };
 
@@ -14,6 +17,8 @@ pub struct Create {
     pub branch: BranchNameId,
     pub testbed: TestbedNameId,
     pub measure: MeasureNameId,
+    pub metric: Option<MetricName>,
+    pub parameters: Option<ParameterFilter>,
     pub model: Model,
     pub backend: AuthBackend,
 }
@@ -27,14 +32,22 @@ impl TryFrom<CliThresholdCreate> for Create {
             branch,
             testbed,
             measure,
+            metric,
+            parameters,
             model,
             backend,
         } = create;
+        let parameters = parameters
+            .map(|set| parameter_filter(vec![set]))
+            .transpose()
+            .map_err(ThresholdError::BadParameters)?;
         Ok(Self {
             project,
             branch,
             testbed,
             measure,
+            metric,
+            parameters,
             model: model.try_into()?,
             backend: backend.try_into()?,
         })
@@ -46,8 +59,10 @@ impl From<Create> for JsonNewThreshold {
         let Create {
             branch,
             testbed,
-            model,
             measure,
+            metric,
+            parameters,
+            model,
             ..
         } = create;
         let Model {
@@ -61,12 +76,9 @@ impl From<Create> for JsonNewThreshold {
         Self {
             branch: branch.into(),
             testbed: testbed.into(),
-            // The CLI creates the bare threshold: the conventional `value` name of
-            // every variant. A threshold that checks a name or only some variants
-            // is created through the API.
-            parameters: None,
+            parameters,
             measure: measure.into(),
-            metric: None,
+            metric: metric.map(Into::into),
             test,
             min_sample_size,
             max_sample_size,
@@ -91,5 +103,52 @@ impl SubCmd for Create {
             })
             .await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bencher_client::types::JsonNewThreshold;
+    use clap::Parser as _;
+
+    use super::Create;
+    use crate::parser::project::threshold::CliThresholdCreate;
+
+    const THRESHOLD: [&str; 13] = [
+        "create",
+        "my-project",
+        "--branch",
+        "main",
+        "--testbed",
+        "localhost",
+        "--measure",
+        "latency",
+        "--test",
+        "t_test",
+        "--upper-boundary",
+        "0.99",
+        "--key=bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
+    ];
+
+    /// Kills: a `--metric` or `--parameters` the conversion drops, which sends the bare `value`
+    /// threshold of every variant, and parameters sent as a bare set instead of a filter of one.
+    #[test]
+    fn threshold_create_sends_its_metric_and_parameters() {
+        let body = body(&[
+            "--metric",
+            "p99",
+            "--parameters",
+            r#"{"size": 64, "mode": "fast"}"#,
+        ]);
+        assert_eq!(body["metric"], serde_json::json!("p99"));
+        assert_eq!(
+            body["parameters"],
+            serde_json::json!([{ "mode": "fast", "size": 64.0 }])
+        );
+    }
+
+    fn body(flags: &[&str]) -> serde_json::Value {
+        let cli = CliThresholdCreate::try_parse_from(THRESHOLD.iter().chain(flags)).unwrap();
+        serde_json::to_value(JsonNewThreshold::from(Create::try_from(cli).unwrap())).unwrap()
     }
 }

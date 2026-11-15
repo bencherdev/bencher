@@ -35,6 +35,7 @@ use project::{
 };
 pub use project::{
     archive::ArchiveError,
+    plot::PlotError,
     report::{BmfVersionError, ThresholdsError},
     threshold::ThresholdError,
 };
