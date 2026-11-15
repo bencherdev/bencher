@@ -94,12 +94,6 @@ pub struct JsonTestbed {
     pub archived: Option<DateTime>,
 }
 
-impl fmt::Display for JsonTestbed {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
-}
-
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[serde(untagged)]

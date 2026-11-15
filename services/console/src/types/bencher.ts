@@ -2403,12 +2403,6 @@ export interface JsonOneMetric {
 	 * triple around any other row would assert numbers the address does not name.
 	 */
 	metric?: JsonMetricTriple;
-	/** The threshold that checked the addressed row, if any. */
-	threshold?: JsonThresholdModel;
-	/** The boundary computed for the addressed row, if any. */
-	boundary?: JsonBoundary;
-	/** The alert raised on the addressed row's boundary, if any. */
-	alert?: JsonPerfAlert;
 }
 
 export interface JsonSso {

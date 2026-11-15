@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashMap, fmt, iter::Sum, ops::Add};
+use std::{cmp::Ordering, collections::HashMap, iter::Sum, ops::Add};
 
 use bencher_valid::{BenchmarkName, DateTime, MetricName};
 use ordered_float::OrderedFloat;
@@ -13,11 +13,10 @@ pub use mean::Mean;
 pub use median::Median;
 
 use crate::{
-    JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure, JsonTestbed, JsonVariant, MeasureNameId,
-    ReportUuid,
+    JsonBenchmark, JsonBranch, JsonMeasure, JsonTestbed, JsonVariant, MeasureNameId, ReportUuid,
 };
 
-use super::{alert::JsonPerfAlert, report::Iteration, threshold::JsonThresholdModel};
+use super::report::Iteration;
 
 crate::typed_uuid::typed_uuid!(MetricUuid);
 
@@ -175,12 +174,6 @@ pub struct JsonMetricTriple {
     pub upper_value: Option<OrderedFloat<f64>>,
 }
 
-impl fmt::Display for JsonMetricTriple {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
 /// Exactly one `metric` row: the metric the UUID addresses, and everything that
 /// named it.
 ///
@@ -215,10 +208,4 @@ pub struct JsonOneMetric {
     /// triple around any other row would assert numbers the address does not name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metric: Option<JsonMetricTriple>,
-    /// The threshold that checked the addressed row, if any.
-    pub threshold: Option<JsonThresholdModel>,
-    /// The boundary computed for the addressed row, if any.
-    pub boundary: Option<JsonBoundary>,
-    /// The alert raised on the addressed row's boundary, if any.
-    pub alert: Option<JsonPerfAlert>,
 }

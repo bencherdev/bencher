@@ -28,7 +28,6 @@ mod benchmarks;
 mod branches;
 mod jobs;
 mod measures;
-mod metrics;
 mod perf;
 mod plots;
 mod projects;
@@ -75,7 +74,6 @@ pub enum McpTool {
     ListAlerts,
     ViewAlert,
     UpdateAlert,
-    ViewMetric,
     QueryPerf,
     ListPlots,
     CreatePlot,
@@ -121,7 +119,6 @@ impl McpTool {
             Self::ListAlerts => "list_alerts",
             Self::ViewAlert => "view_alert",
             Self::UpdateAlert => "update_alert",
-            Self::ViewMetric => "view_metric",
             Self::QueryPerf => "query_perf",
             Self::ListPlots => "list_plots",
             Self::CreatePlot => "create_plot",
@@ -163,7 +160,6 @@ impl McpTool {
             Self::ListAlerts => "List alerts",
             Self::ViewAlert => "View alert",
             Self::UpdateAlert => "Update alert",
-            Self::ViewMetric => "View metric",
             Self::QueryPerf => "Query perf",
             Self::ListPlots => "List plots",
             Self::CreatePlot => "Create plot",
@@ -192,7 +188,6 @@ impl McpTool {
             | Self::ViewThreshold
             | Self::ListAlerts
             | Self::ViewAlert
-            | Self::ViewMetric
             | Self::QueryPerf
             | Self::ListPlots
             | Self::ViewPlot
@@ -299,7 +294,6 @@ impl McpTool {
             Self::ListAlerts => alerts::list_tool(self.name()),
             Self::ViewAlert => alerts::view_tool(self.name()),
             Self::UpdateAlert => alerts::update_tool(self.name()),
-            Self::ViewMetric => metrics::view_tool(self.name()),
             Self::QueryPerf => perf::query_tool(self.name()),
             Self::ListPlots => plots::list_tool(self.name()),
             Self::CreatePlot => plots::create_tool(self.name()),
@@ -362,7 +356,6 @@ impl McpTool {
             Self::ListAlerts => Box::pin(alerts::list(context, &api_actor, arguments)),
             Self::ViewAlert => Box::pin(alerts::view(context, &api_actor, arguments)),
             Self::UpdateAlert => Box::pin(alerts::update(context, &api_actor, arguments)),
-            Self::ViewMetric => Box::pin(metrics::view(context, &api_actor, arguments)),
             Self::QueryPerf => Box::pin(perf::query(context, &api_actor, arguments)),
             Self::ListPlots => Box::pin(plots::list(context, &api_actor, arguments)),
             Self::CreatePlot => Box::pin(plots::create(context, &api_actor, arguments)),

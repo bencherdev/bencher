@@ -183,7 +183,6 @@ strum = { version = "0.28", features = ["derive"] }
 subtle = "2.6"
 syn = "3.0"
 sync_wrapper = "1.0"
-tabled = "0.22"
 tar = "0.4"
 tempfile = "3"
 thiserror = "2.0"

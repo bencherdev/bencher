@@ -3,15 +3,11 @@ use bencher_json::SpecUuid;
 use bencher_json::{
     BenchmarkUuid, BranchUuid, DateTime, HeadUuid, MeasureUuid, ProjectResourceId, TestbedUuid,
 };
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 
 use crate::parser::{CliBackend, ElidedOption};
 
 #[derive(Parser, Debug)]
-#[expect(
-    clippy::option_option,
-    reason = "None = not specified, Some(None) = explicitly unset"
-)]
 pub struct CliPerf {
     /// Project slug or UUID
     pub project: ProjectResourceId,
@@ -51,40 +47,36 @@ pub struct CliPerf {
     #[clap(long, value_name = "SECONDS")]
     pub end_time: Option<DateTime>,
 
-    /// Output results in a table
-    #[clap(long)]
-    pub table: Option<Option<CliPerfTableStyle>>,
-
     #[clap(flatten)]
     pub backend: CliBackend,
 }
 
-/// Supported Table Formats
-#[derive(ValueEnum, Debug, Clone)]
-#[clap(rename_all = "snake_case")]
-pub enum CliPerfTableStyle {
-    /// No styling options
-    Empty,
-    /// Analog of `empty` but with a vertical space (` `) line
-    Blank,
-    /// Style which relays only on ASCII charset
-    Ascii,
-    /// Analog of `ascii` but with rounded corners and without horizontal lines
-    AsciiRounded,
-    /// Analog of `ascii` which uses UTF-8 charset
-    Modern,
-    /// Analog of `modern` but without horizontal lines except a header
-    Sharp,
-    /// Analog of `sharp` but with rounded corners
-    Rounded,
-    /// Mimics a `PostgreSQL` table style
-    Psql,
-    /// Mimics a Markdown table style
-    Markdown,
-    /// Mimics a `ReStructuredText` table style
-    ReStructuredText,
-    /// Style using chars which resembles 2 lines
-    Extended,
-    /// Style using only ‘.’ and ‘:’ chars with vertical and horizontal split lines
-    Dots,
+#[cfg(test)]
+mod tests {
+    use clap::{Parser as _, error::ErrorKind};
+
+    use crate::parser::CliBencher;
+
+    const UUID: &str = "00000000-0000-4000-8000-000000000001";
+    const PERF: [&str; 11] = [
+        "bencher",
+        "perf",
+        "my-project",
+        "--branches",
+        UUID,
+        "--testbeds",
+        UUID,
+        "--benchmarks",
+        UUID,
+        "--measures",
+        UUID,
+    ];
+
+    // `bencher perf` prints JSON only, so a script that asks for a table is refused.
+    #[test]
+    fn perf_table_is_an_unknown_argument() {
+        CliBencher::try_parse_from(PERF).unwrap();
+        let err = CliBencher::try_parse_from(PERF.into_iter().chain(["--table"])).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::UnknownArgument, "{err}");
+    }
 }

@@ -19,7 +19,7 @@ use bencher_schema::context::RateLimiting;
 use http::{StatusCode, header::WWW_AUTHENTICATE};
 use serde_json::{Value, json};
 
-const MCP_TOOL_COUNT: usize = 37;
+const MCP_TOOL_COUNT: usize = 36;
 const PROTOCOL_VERSION_2026: &str = "2026-07-28";
 
 /// Build a JSON-RPC POST to /mcp, optionally with a bearer credential.
@@ -489,6 +489,7 @@ async fn mcp_tools_list() {
     for name in ["submit_run", "query_perf", "list_alerts", "view_project"] {
         assert!(names.contains(&name), "Missing tool: {name}");
     }
+    assert!(!names.contains(&"view_metric"), "view_metric is removed");
     for tool in tools {
         // Sign-in requirements are only declared once OAuth is configured, so only an MCP App has `_meta`
         assert_eq!(
@@ -1075,10 +1076,6 @@ async fn seed_every_tool(
         ("view_threshold", json!({"threshold": threshold["uuid"]})),
         ("list_alerts", json!({})),
         ("view_alert", json!({"alert": alert["uuid"]})),
-        (
-            "view_metric",
-            json!({"metric": result["measures"][0]["metrics"][0]["uuid"]}),
-        ),
         ("query_perf", perf),
         ("list_plots", json!({})),
         ("view_plot", json!({"plot": plot["uuid"]})),
