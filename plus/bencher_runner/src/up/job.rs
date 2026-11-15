@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use bencher_json::JsonClaimedJob;
 use bencher_json::runner::{JsonIterationOutput, RunnerMessage, ServerMessage};
+use bencher_json::{BmfVersion, JsonClaimedJob};
 use camino::Utf8PathBuf;
 use slog::{Logger, error, info, o, warn};
 
@@ -112,6 +112,8 @@ fn run_job(
         return Iterations::default();
     }
     let allow_failure = job.config.allow_failure.unwrap_or_default();
+    // Pinned when the server accepted the run; a config from before the pin is version 0.
+    let bmf_version = job.config.bmf_version.unwrap_or_default();
     let benchmark_name = if job_config.build_time {
         match build_benchmark_name(job) {
             Ok(name) => Some(name),
@@ -147,6 +149,7 @@ fn run_job(
                 job_config.build_time,
                 job_config.file_size,
                 benchmark_name.as_ref(),
+                bmf_version,
             ))
         },
     )
@@ -283,6 +286,7 @@ fn output_to_iteration(
     build_time: bool,
     file_size: bool,
     benchmark_name: Option<&bencher_json::BenchmarkName>,
+    bmf_version: BmfVersion,
 ) -> JsonIterationOutput {
     let file_output = build_metric_output(
         log,
@@ -291,6 +295,7 @@ fn output_to_iteration(
         output.output_files,
         // As in `bencher run`, a command that failed has no build time.
         benchmark_name.filter(|_| output.exit_code == 0),
+        bmf_version,
     );
     JsonIterationOutput {
         exit_code: output.exit_code,
@@ -314,11 +319,12 @@ fn build_metric_output(
     file_size: bool,
     output_files: Option<Vec<(Utf8PathBuf, Vec<u8>)>>,
     benchmark_name: Option<&bencher_json::BenchmarkName>,
+    bmf_version: BmfVersion,
 ) -> Option<BTreeMap<Utf8PathBuf, String>> {
     use bencher_json::{
         JsonNewMetric,
         project::measure::built_in::{self, BuiltInMeasure as _},
-        project::metric::MetricResults,
+        project::metric::{JsonNewResults, MetricResults},
     };
 
     let has_metrics = build_time.is_some() || file_size;
@@ -385,7 +391,7 @@ fn build_metric_output(
         return build_time.map(|_| BTreeMap::new());
     }
 
-    let results = JsonNewMetric::results(metric_results);
+    let results = JsonNewResults::new(metric_results, bmf_version);
     let bmf_json = match serde_json::to_string(&results) {
         Ok(json) => json,
         Err(e) => {
@@ -1457,7 +1463,7 @@ pub(crate) mod tests {
     #[test]
     fn output_no_metrics_no_files() {
         let output = test_output("hello stdout", None);
-        let result = output_to_iteration(&discard(), output, false, false, None);
+        let result = output_to_iteration(&discard(), output, false, false, None, BmfVersion::V0);
         assert_eq!(result.exit_code, 0);
         assert_eq!(result.stdout.as_deref(), Some("hello stdout"));
         assert_eq!(result.stderr.as_deref(), Some("some stderr"));
@@ -1467,7 +1473,7 @@ pub(crate) mod tests {
     #[test]
     fn output_no_metrics_with_files() {
         let output = test_output("hello", Some(vec![("/tmp/out.json", b"{\"data\":1}")]));
-        let result = output_to_iteration(&discard(), output, false, false, None);
+        let result = output_to_iteration(&discard(), output, false, false, None, BmfVersion::V0);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         assert_eq!(files.len(), 1);
@@ -1484,7 +1490,8 @@ pub(crate) mod tests {
             duration: Duration::from_millis(3140),
             ..test_output("hello", None)
         };
-        let result = output_to_iteration(&discard(), output, true, false, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, false, Some(&name), BmfVersion::V0);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         assert_eq!(files.len(), 1);
@@ -1508,7 +1515,8 @@ pub(crate) mod tests {
             duration: Duration::from_secs(1),
             ..test_output("hello", Some(vec![("/tmp/out.json", b"file data")]))
         };
-        let result = output_to_iteration(&discard(), output, true, false, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, false, Some(&name), BmfVersion::V0);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         assert!(files.values().any(|v| v.contains("build-time")));
@@ -1518,7 +1526,7 @@ pub(crate) mod tests {
     #[test]
     fn output_file_size_with_files() {
         let output = test_output("hello", Some(vec![("/tmp/out.bin", &[0u8; 1024])]));
-        let result = output_to_iteration(&discard(), output, false, true, None);
+        let result = output_to_iteration(&discard(), output, false, true, None, BmfVersion::V0);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
@@ -1547,6 +1555,7 @@ pub(crate) mod tests {
             false,
             true,
             None,
+            BmfVersion::V0,
         );
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
@@ -1571,7 +1580,7 @@ pub(crate) mod tests {
     #[test]
     fn output_file_size_no_files() {
         let output = test_output("hello", None);
-        let result = output_to_iteration(&discard(), output, false, true, None);
+        let result = output_to_iteration(&discard(), output, false, true, None, BmfVersion::V0);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         assert!(result.output.is_none());
     }
@@ -1583,7 +1592,8 @@ pub(crate) mod tests {
             duration: Duration::from_millis(2500),
             ..test_output("hello", Some(vec![("/tmp/result.bin", &[0u8; 512])]))
         };
-        let result = output_to_iteration(&discard(), output, true, true, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, true, Some(&name), BmfVersion::V0);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
@@ -1605,7 +1615,8 @@ pub(crate) mod tests {
             duration: Duration::from_secs(2),
             ..test_output("hello", Some(vec![("/out/make", b"binary")]))
         };
-        let result = output_to_iteration(&discard(), output, true, true, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, true, Some(&name), BmfVersion::V0);
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
@@ -1621,13 +1632,37 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn output_build_time_and_file_size_at_version_1() {
+        // Kills a version 1 Job's build time or file size written at version 0,
+        // which the server refuses.
+        let name: bencher_json::BenchmarkName = "-c cargo bench".parse().unwrap();
+        let output = crate::RunOutput {
+            duration: Duration::from_millis(2500),
+            ..test_output("hello", Some(vec![("/tmp/result.bin", &[0u8; 512])]))
+        };
+        let result =
+            output_to_iteration(&discard(), output, true, true, Some(&name), BmfVersion::V1);
+        let files = result.output.unwrap();
+        let bmf_json = files.values().next().unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
+        assert_eq!(
+            parsed,
+            serde_json::json!({
+                "-c cargo bench": [{ "measures": { "build-time": { "value": 2.5 } } }],
+                "result.bin": [{ "measures": { "file-size": { "value": 512.0 } } }],
+            })
+        );
+    }
+
+    #[test]
     fn output_build_time_and_file_size_no_files() {
         let name = default_benchmark_name();
         let output = crate::RunOutput {
             duration: Duration::from_secs(5),
             ..test_output("hello", None)
         };
-        let result = output_to_iteration(&discard(), output, true, true, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, true, Some(&name), BmfVersion::V0);
         assert_eq!(result.stdout.as_deref(), Some("hello"));
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
@@ -1643,7 +1678,8 @@ pub(crate) mod tests {
             duration: Duration::from_secs(1),
             ..test_output("hello", None)
         };
-        let result = output_to_iteration(&discard(), output, true, true, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, true, Some(&name), BmfVersion::V0);
         assert_eq!(result.exit_code, 42);
     }
 
@@ -1659,7 +1695,8 @@ pub(crate) mod tests {
             duration: Duration::from_secs(1),
             ..test_output("hello", Some(vec![("/tmp/out.json", b"file data")]))
         };
-        let result = output_to_iteration(&discard(), output, true, false, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, false, Some(&name), BmfVersion::V0);
         assert_eq!(result.exit_code, 1);
         assert_eq!(result.output, Some(BTreeMap::new()));
     }
@@ -1671,7 +1708,8 @@ pub(crate) mod tests {
             duration: Duration::from_secs(1),
             ..test_output("hello", None)
         };
-        let result = output_to_iteration(&discard(), output, true, false, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, false, Some(&name), BmfVersion::V0);
         assert_eq!(result.stderr.as_deref(), Some("some stderr"));
     }
 
@@ -1682,7 +1720,8 @@ pub(crate) mod tests {
             duration: Duration::from_millis(1500),
             ..test_output("hello", None)
         };
-        let result = output_to_iteration(&discard(), output, true, false, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, false, Some(&name), BmfVersion::V0);
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
@@ -1697,7 +1736,8 @@ pub(crate) mod tests {
             duration: Duration::from_millis(1500),
             ..test_output("hello", None)
         };
-        let result = output_to_iteration(&discard(), output, true, false, Some(&name));
+        let result =
+            output_to_iteration(&discard(), output, true, false, Some(&name), BmfVersion::V0);
         let files = result.output.unwrap();
         let bmf_json = files.values().next().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(bmf_json).unwrap();
@@ -1710,7 +1750,7 @@ pub(crate) mod tests {
             duration: Duration::from_millis(1500),
             ..test_output("hello", None)
         };
-        let result = output_to_iteration(&discard(), output, true, false, None);
+        let result = output_to_iteration(&discard(), output, true, false, None, BmfVersion::V0);
         // No build time without a name, and an empty map, so the stdout is not parsed.
         assert_eq!(result.output, Some(BTreeMap::new()));
     }
@@ -1745,6 +1785,46 @@ pub(crate) mod tests {
                 blobs: 2
             }
         );
+    }
+
+    #[test]
+    fn a_jobs_build_time_is_at_the_version_it_was_accepted_at() {
+        // Kills a Job's parts built at one version whatever its config pinned,
+        // and a config with no version read as version 1.
+        let v0 = serde_json::json!({
+            "build-time": { "value": 0.0, "lower_value": null, "upper_value": null },
+        });
+        let v1 = serde_json::json!([{ "measures": { "build-time": { "value": 0.0 } } }]);
+        for (bmf_version, payload, value) in [
+            (None, &v0, "/build-time/value"),
+            (Some(BmfVersion::V0), &v0, "/build-time/value"),
+            (Some(BmfVersion::V1), &v1, "/0/measures/build-time/value"),
+        ] {
+            let registry = TestRegistry::start(None);
+            let mut job = registry.job(1, false);
+            job.config.build_time = Some(true);
+            job.config.bmf_version = bmf_version;
+
+            let iterations = run_test_job(&discard(), &job, &AtomicBool::new(false));
+
+            registry.stop();
+            let [iteration] = iterations.results.as_slice() else {
+                panic!("one iteration: {:?}", iterations.failure);
+            };
+            let metrics = iteration.output.as_ref().unwrap();
+            let mut parsed: serde_json::Value =
+                serde_json::from_str(metrics.values().next().unwrap()).unwrap();
+            let benchmark = format!("{}@{}", job.config.project, job.config.digest);
+            // The command's duration varies, so only the payload's shape is compared.
+            if let Some(duration) = parsed.pointer_mut(&format!("/{benchmark}{value}")) {
+                *duration = serde_json::json!(0.0);
+            }
+            assert_eq!(
+                parsed,
+                serde_json::json!({ benchmark: payload }),
+                "{bmf_version:?}"
+            );
+        }
     }
 
     #[test]
