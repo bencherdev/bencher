@@ -1,40 +1,43 @@
 ---
-// Terminal mock based on real `bencher run --image` output from the
-// bare-metal CI workflow (services/api github action logs). Benchmark names
-// match the PRComment section so the two mocks tell the same story.
+// Terminal mock of `bencher run --image` output at BMF version 1, with the
+// links the run output writes for a public project. Benchmark names match the
+// PRComment section so the two mocks tell the same story.
 const jobUuid = "e2215f33-824c-4aa9-925b-8056526b1a07";
 
-// Criterion time lines: [low mean high] — baseline ~5 µs, Adapter::Json spike ~22 µs.
+// Criterion time lines: [low typical high].
 const criterionLines = [
-	{ name: "Adapter::Magic (JSON)", low: "5.02", mean: "5.03", high: "5.04" },
-	{ name: "Adapter::Json", low: "21.82", mean: "21.83", high: "21.84" },
-	{ name: "Adapter::Magic (Rust)", low: "4.97", mean: "4.98", high: "4.99" },
-	{ name: "Adapter::Rust", low: "5.01", mean: "5.02", high: "5.03" },
-	{ name: "Adapter::RustBench", low: "4.98", mean: "4.99", high: "5.00" },
+	{ name: "Adapter::Magic (JSON)", low: "5.02", typical: "5.03", high: "5.04" },
+	{ name: "Adapter::Json", low: "21.82", typical: "21.83", high: "21.84" },
+	{ name: "Adapter::Magic (Rust)", low: "4.97", typical: "4.98", high: "4.99" },
+	{ name: "Adapter::Rust", low: "5.01", typical: "5.02", high: "5.03" },
+	{ name: "Adapter::RustBench", low: "4.98", typical: "4.99", high: "5.00" },
 ];
 
-const reportUrl =
-	"https://bencher.dev/perf/bencher/reports/36a1eeff-57f5-4b99-b058-8c9c240a9f2c";
+const reportUuid = "36a1eeff-57f5-4b99-b058-8c9c240a9f2c";
+const reportUrl = `https://bencher.dev/console/projects/bencher/reports/${reportUuid}`;
 
-const resultsBase = "https://bencher.dev/perf/bencher/benchmarks/";
+// A measure no threshold checks names its default metric, and an alert names the metric its threshold checks.
+const measure = "Latency: typical";
 
-const viewResults = [
-	"Adapter::Json",
-	"Adapter::Magic (JSON)",
-	"Adapter::Magic (Rust)",
-	"Adapter::Rust",
-	"Adapter::RustBench",
-].map((name, i) => ({
+const plotUrl = (benchmark: string, metric?: string) =>
+	`https://bencher.dev/perf/bencher?branches=bdcbbf3c-9073-4006-b194-b11aff2f94c1&heads=e7c9a1d4-3f2b-4c8e-9d61-5a0b7f2e8c13&testbeds=0d991aac-b241-493a-8b0f-8d41419455d2&specs=a4b2c6d8-1e3f-4a5b-8c7d-9e0f1a2b3c4d&benchmarks=${benchmark}&measures=4358146b-b647-4869-9d24-bd22bb0c49b5&start_time=1760777887000&end_time=1763197087000&report=${reportUuid}${metric ? `&metrics=${metric}` : ""}`;
+
+const benchmarks: [string, string][] = [
+	["Adapter::Json", "e93b3d71-8499-4fae-bb7c-4e540b775714"],
+	["Adapter::Magic (JSON)", "3bfd5887-83ec-4e62-8690-02855a38fbc9"],
+	["Adapter::Magic (Rust)", "3525f177-fc8f-4a92-bd2f-dda7c4e15699"],
+	["Adapter::Rust", "5655ed2a-3e45-4622-bdbd-39cdd9837af8"],
+	["Adapter::RustBench", "1db23e93-f909-40aa-bf42-838cc7ae05f5"],
+];
+
+const viewResults = benchmarks.map(([name, uuid]) => ({
 	name,
-	url: `${resultsBase}${["e93b3d71-8499-4fae-bb7c-4e540b775714", "3bfd5887-83ec-4e62-8690-02855a38fbc9", "3525f177-fc8f-4a92-bd2f-dda7c4e15699", "5655ed2a-3e45-4622-bdbd-39cdd9837af8", "1db23e93-f909-40aa-bf42-838cc7ae05f5"][i]}`,
+	url: plotUrl(uuid),
 }));
 
-const viewAlerts = [
-	{
-		name: "Adapter::Json",
-		url: "https://bencher.dev/perf/bencher/alerts/91ee27a7-2aee-41fe-b037-80b786f26cd5",
-	},
-];
+const viewAlerts = benchmarks
+	.filter(([name]) => name === "Adapter::Json")
+	.map(([name, uuid]) => ({ name, url: plotUrl(uuid, "typical") }));
 ---
 
 <section class="landing-section">
@@ -83,19 +86,19 @@ Job status: <span class="term-status-done">Processed</span>
 
 <span class="term-label">Job stdout:</span>
 {criterionLines.map((b) => (
-  <>{b.name.padEnd(22)} time:   [<span class="term-number">{b.low} µs</span> <span class="term-number">{b.mean} µs</span> <span class="term-number">{b.high} µs</span>]
+  <>{b.name.padEnd(22)} time:   [<span class="term-number">{b.low} µs</span> <span class="term-number">{b.typical} µs</span> <span class="term-number">{b.high} µs</span>]
 </>
 ))}
 <span class="term-label">View report:</span> <span class="term-link">{reportUrl}</span>
 
 <span class="term-label">View results:</span>
 {viewResults.map((r) => (
-  <>- <span class="term-bench">{r.name}</span> (<span class="term-dim">Latency</span>): <span class="term-link">{r.url}</span>
+  <>- <span class="term-bench">{r.name}</span> (<span class="term-dim">{measure}</span>): <span class="term-link">{r.url}</span>
 </>
 ))}
 <span class="term-alert-label">View alerts:</span>
 {viewAlerts.map((a) => (
-  <>- <span class="term-alert-bench">{a.name}</span> (<span class="term-alert-dim">Latency</span>): <span class="term-alert-link">{a.url}</span>
+  <>- <span class="term-alert-bench">{a.name}</span> (<span class="term-alert-dim">{measure}</span>): <span class="term-alert-link">{a.url}</span>
 </>
 ))}</code></pre>
         </div></div>
