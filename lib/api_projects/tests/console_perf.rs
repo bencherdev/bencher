@@ -89,6 +89,7 @@ fn results(variants: &[(String, serde_json::Value)]) -> String {
 struct Post<'a> {
     time: &'a str,
     branch: &'a str,
+    start_point: Option<serde_json::Value>,
     testbed: &'a str,
     hash: String,
     results: String,
@@ -100,6 +101,7 @@ impl<'a> Post<'a> {
         Self {
             time,
             branch: "main",
+            start_point: None,
             testbed: "localhost",
             hash: format!("{:0>40x}", at(time).timestamp()),
             results,
@@ -112,6 +114,7 @@ async fn post(server: &TestServer, fixture: &Fixture, post: Post<'_>) -> JsonRep
     let Post {
         time,
         branch,
+        start_point,
         testbed,
         hash,
         results,
@@ -121,6 +124,7 @@ async fn post(server: &TestServer, fixture: &Fixture, post: Post<'_>) -> JsonRep
     let end_time = DateTime::try_from(start_time.timestamp() + 60).expect("Failed to end the run");
     let body = serde_json::json!({
         "branch": branch,
+        "start_point": start_point,
         "testbed": testbed,
         "hash": hash,
         "start_time": start_time,
@@ -1328,6 +1332,108 @@ async fn console_perf_alerted_threshold_wins() {
     assert_eq!(line.series.alerts.len(), 1);
     let model = &perf.models[line.model.expect("checked") as usize];
     assert_eq!(model.upper_boundary.map(f64::from), Some(0.25));
+}
+
+// Kills: a pull request branch's line drawn with limits only on the branch's own run,
+// because the runs it inherited from its start point carry the boundaries of the start
+// point's threshold rather than its clone; inherited limits dropped where the start
+// point's threshold used another model; and the start point's own alert drawn on it.
+#[tokio::test]
+async fn console_perf_pull_request_draws_its_start_points_limits() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "pullrequest").await;
+    let thresholds = |upper_boundary: f64| {
+        serde_json::json!({ "models": [{
+            "measure": "latency",
+            "metric": "value",
+            "model": { "test": "percentage", "upper_boundary": upper_boundary },
+        }]})
+    };
+    let payload = |value: f64| {
+        results(&[variant(
+            "alpha",
+            serde_json::json!({ "size": 10 }),
+            latency(value),
+        )])
+    };
+    // `main` changes its model after its second run and alerts on its last; the pull
+    // request inherits all four runs and clones the newer model.
+    let mut main_alerts = Vec::new();
+    for (time, value, upper_boundary) in [
+        ("2024-02-10T00:00:00Z", 200.0, 0.5),
+        ("2024-02-11T00:00:00Z", 200.0, 0.5),
+        ("2024-02-12T00:00:00Z", 200.0, 0.25),
+        ("2024-02-13T00:00:00Z", 400.0, 0.25),
+    ] {
+        let report = post(
+            &server,
+            &fixture,
+            Post {
+                thresholds: Some(thresholds(upper_boundary)),
+                ..Post::main(time, payload(value))
+            },
+        )
+        .await;
+        main_alerts.extend(report.alerts.into_iter().flatten());
+    }
+    assert_eq!(main_alerts.len(), 1, "main alerts on its last run");
+    let pull_request = post(
+        &server,
+        &fixture,
+        Post {
+            branch: "feature",
+            start_point: Some(serde_json::json!({
+                "branch": "main",
+                "clone_thresholds": true,
+                "reset": true,
+            })),
+            ..Post::main("2024-02-14T00:00:00Z", payload(400.0))
+        },
+    )
+    .await;
+    let alerts = pull_request.alerts.as_ref().expect("the report's alerts");
+    assert_eq!(alerts.len(), 1);
+    let alert = &alerts[0];
+    assert_ne!(alert.threshold.uuid, main_alerts[0].threshold.uuid);
+
+    let perf = console_perf(
+        &server,
+        &fixture,
+        &Query {
+            start_time: Some("2024-02-01T00:00:00Z"),
+            ..alpha_latency(&pull_request)
+        },
+    )
+    .await;
+
+    assert_eq!(
+        names(&perf),
+        vec![r#"feature localhost alpha {"size":10} Latency value"#]
+    );
+    let line = &perf.lines[0];
+    assert_eq!(x(&perf).len(), 5, "the four inherited runs and its own");
+    assert_eq!(
+        line.series.upper,
+        Some(vec![
+            None,
+            Some(300.0),
+            Some(250.0),
+            Some(250.0),
+            Some(312.5)
+        ]),
+        "the start point's limits under both of its models"
+    );
+    assert_eq!(
+        line.series
+            .alerts
+            .iter()
+            .map(|point| (point.index, point.uuid))
+            .collect::<Vec<_>>(),
+        vec![(4, alert.uuid)],
+        "main's alert on the fourth run is not the pull request's"
+    );
+    let model = &perf.models[line.model.expect("checked") as usize];
+    assert_eq!(model.threshold, alert.threshold.uuid);
 }
 
 // Kills: a line that follows a threshold from an earlier point rather than the

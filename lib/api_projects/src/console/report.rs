@@ -62,7 +62,7 @@ use serde::Deserialize;
 #[cfg(feature = "plus")]
 use super::runs::{JobRow, console_job};
 use super::{
-    AlertRow, BenchmarkRow, Check, Limits, MeasureRow, ModelRow, PointReport, Points,
+    AlertRow, BenchmarkRow, Check, Counterparts, Limits, MeasureRow, ModelRow, PointReport, Points,
     PointsBuilder, SeriesBuilder, Tables, Thinned, VariantRow, alert_json, before,
     runs::report_rows, thin, unique,
 };
@@ -1128,8 +1128,8 @@ pub(super) fn line_json(
     }
 }
 
-/// Each metric of the page's lines in the window's reports, with the boundary
-/// and alert of the threshold its line follows.
+/// Each metric of the page's lines in the window's reports, once per threshold
+/// that checked it, with that threshold's boundary and alert.
 pub(super) type HistoryRow = (
     ReportId,
     Iteration,
@@ -1157,23 +1157,21 @@ pub(super) fn windows_history_rows(
     conn: &mut DbConnection,
     windows: &[(&[PointReport], &[Line])],
 ) -> diesel::QueryResult<Vec<HistoryRow>> {
-    let lines = || windows.iter().flat_map(|(_, lines)| lines.iter());
-    let measure_ids = unique(lines().map(|line| line.measure.0));
-    let threshold_ids =
-        unique(lines().filter_map(|line| line.check.as_ref().map(|check| check.threshold_id)));
+    let measure_ids = unique(
+        windows
+            .iter()
+            .flat_map(|(_, lines)| lines.iter())
+            .map(|line| line.measure.0),
+    );
     let mut query = schema::metric::table
         .inner_join(
             schema::report_benchmark::table
                 .on(schema::report_benchmark::id.eq(schema::metric::report_benchmark_id)),
         )
-        // The threshold filter belongs in the join, so a point with no boundary
-        // from these thresholds still comes back; `+ 0` reads a metric's few
-        // boundaries instead of seeking every threshold.
-        .left_join(
-            schema::boundary::table.on(schema::boundary::metric_id
-                .eq(schema::metric::id)
-                .and((schema::boundary::threshold_id + 0).eq_any(threshold_ids))),
-        )
+        // Every threshold's boundary of a metric, since a line also draws the limits of
+        // its threshold's counterparts. Flat, with explicit `ON` clauses, so SQLite
+        // seeks each metric's few boundaries instead of scanning the boundary table.
+        .left_join(schema::boundary::table.on(schema::boundary::metric_id.eq(schema::metric::id)))
         .left_join(schema::alert::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
         .select((
             schema::report_benchmark::report_id,
@@ -1228,9 +1226,25 @@ fn page_history(
         History::default()
     } else {
         let rows = history_rows(conn, window_reports, lines)?;
-        History::new(window_reports, lines, rows)
+        let counterparts = history_counterparts(conn, lines, &rows)?;
+        History::new(window_reports, lines, rows, &counterparts)
     };
     Ok(thin(x, series, report_id, points))
+}
+
+/// The thresholds the lines follow and those that drew a boundary on the rows.
+pub(super) fn history_counterparts(
+    conn: &mut DbConnection,
+    lines: &[Line],
+    rows: &[HistoryRow],
+) -> diesel::QueryResult<Counterparts> {
+    let followed = lines
+        .iter()
+        .filter_map(|line| line.check.as_ref().map(|check| check.threshold_id));
+    let checked = rows
+        .iter()
+        .filter_map(|(.., boundary, _)| boundary.map(|(threshold_id, ..)| threshold_id));
+    Counterparts::read(conn, followed.chain(checked))
 }
 
 #[derive(Default)]
@@ -1240,10 +1254,13 @@ pub(super) struct History {
 }
 
 impl History {
+    /// Each line follows its row's threshold, with the limits of that threshold's
+    /// counterparts where it has none of its own.
     pub(super) fn new(
         window_reports: &[PointReport],
         lines: &[Line],
         rows: Vec<HistoryRow>,
+        counterparts: &Counterparts,
     ) -> Self {
         let reports = window_reports
             .iter()
@@ -1286,19 +1303,20 @@ impl History {
                     continue;
                 };
                 builder.value(point, value);
-                let followed = line.check.as_ref().map(|check| check.threshold_id);
-                if let Some((threshold_id, baseline, lower_limit, upper_limit)) = boundary
-                    && followed == Some(threshold_id)
-                {
-                    builder.limits(
-                        point,
-                        Limits {
-                            baseline,
-                            lower_limit,
-                            upper_limit,
-                        },
-                        alert_json(alert),
-                    );
+                let (Some(check), Some((threshold_id, baseline, lower_limit, upper_limit))) =
+                    (&line.check, boundary)
+                else {
+                    continue;
+                };
+                let limits = Limits {
+                    baseline,
+                    lower_limit,
+                    upper_limit,
+                };
+                if threshold_id == check.threshold_id {
+                    builder.limits(point, limits, alert_json(alert));
+                } else if counterparts.of(check.threshold_id, threshold_id) {
+                    builder.counterpart_limits(point, limits);
                 }
             }
         }

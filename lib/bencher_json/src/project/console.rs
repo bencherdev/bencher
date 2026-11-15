@@ -400,7 +400,8 @@ pub struct JsonConsoleSeries {
     pub index: Option<Vec<u32>>,
     #[typeshare(typescript(type = "(number | null)[]"))]
     pub y: Vec<Option<f64>>,
-    /// The baseline the threshold compared each point with.
+    /// The baseline each point was compared with: by the threshold the line follows,
+    /// or where it has none, by a threshold on another branch with the same dimensions.
     /// Absent when there is none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[typeshare(typescript(type = "(number | null)[]"))]

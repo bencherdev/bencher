@@ -161,6 +161,8 @@ fn thresholds() -> serde_json::Value {
 
 struct Post {
     time: &'static str,
+    branch: &'static str,
+    start_point: serde_json::Value,
     testbed: &'static str,
     hash: &'static str,
     iterations: Vec<String>,
@@ -171,10 +173,27 @@ impl Post {
     fn main(time: &'static str, hash: &'static str, values: Values) -> Self {
         Self {
             time,
+            branch: "main",
+            start_point: serde_json::Value::Null,
             testbed: "localhost",
             hash,
             iterations: vec![results(values)],
             thresholds: thresholds(),
+        }
+    }
+
+    /// A report on a pull request branch, as CI tracks one: a fresh head from `main`
+    /// that clones `main`'s thresholds, with no thresholds of its own.
+    fn pull_request(time: &'static str, hash: &'static str, values: Values) -> Self {
+        Self {
+            branch: "feature",
+            start_point: serde_json::json!({
+                "branch": "main",
+                "clone_thresholds": true,
+                "reset": true,
+            }),
+            thresholds: serde_json::Value::Null,
+            ..Self::main(time, hash, values)
         }
     }
 }
@@ -184,6 +203,8 @@ impl Post {
 async fn post(server: &TestServer, fixture: &Fixture, post: Post) -> JsonReport {
     let Post {
         time,
+        branch,
+        start_point,
         testbed,
         hash,
         iterations,
@@ -192,7 +213,8 @@ async fn post(server: &TestServer, fixture: &Fixture, post: Post) -> JsonReport 
     let start_time = at(time);
     let end_time = DateTime::try_from(start_time.timestamp() + 60).expect("Failed to end the run");
     let body = serde_json::json!({
-        "branch": "main",
+        "branch": branch,
+        "start_point": start_point,
         "testbed": testbed,
         "hash": hash,
         "start_time": start_time,
@@ -1665,6 +1687,276 @@ async fn console_alert_follows_the_threshold_that_raised_it() {
             "the other threshold's alert on the point is not this line's"
         );
     }
+}
+
+/// `main`'s runs of `alpha` at size 10, the last of which alerted, then a run on a pull
+/// request branch that started from `main` and cloned its thresholds, and alerted too.
+struct Inherited {
+    fixture: Fixture,
+    main: JsonReport,
+    pull_request: JsonReport,
+}
+
+async fn pull_request(
+    server: &TestServer,
+    label: &str,
+    thresholds: &serde_json::Value,
+    main: [f64; 4],
+    pull_request: f64,
+) -> Inherited {
+    let fixture = fixture(server, label).await;
+    let mut last = None;
+    for ((time, hash), alpha_10_latency) in [
+        (
+            "2024-02-01T00:00:00Z",
+            "4000000000000000000000000000000000000001",
+        ),
+        (
+            "2024-02-05T00:00:00Z",
+            "4000000000000000000000000000000000000002",
+        ),
+        (
+            "2024-02-10T00:00:00Z",
+            "4000000000000000000000000000000000000003",
+        ),
+        (
+            "2024-02-15T00:00:00Z",
+            "4000000000000000000000000000000000000004",
+        ),
+    ]
+    .into_iter()
+    .zip(main)
+    {
+        let values = Values {
+            alpha_10_latency,
+            ..STEADY
+        };
+        last = Some(
+            post(
+                server,
+                &fixture,
+                Post {
+                    thresholds: thresholds.clone(),
+                    ..Post::main(time, hash, values)
+                },
+            )
+            .await,
+        );
+    }
+    let pull_request = post(
+        server,
+        &fixture,
+        Post::pull_request(
+            "2024-02-20T00:00:00Z",
+            "4000000000000000000000000000000000000005",
+            Values {
+                alpha_10_latency: pull_request,
+                ..STEADY
+            },
+        ),
+    )
+    .await;
+    Inherited {
+        fixture,
+        main: last.expect("a report on main"),
+        pull_request,
+    }
+}
+
+/// `main` alerts on its last run: its history's mean is 200, so its upper limit is 250. The
+/// pull request inherits all four runs, whose mean is 250, so its upper limit is 312.5.
+async fn alerting_pull_request(server: &TestServer, label: &str) -> Inherited {
+    pull_request(
+        server,
+        label,
+        &thresholds(),
+        [200.0, 200.0, 200.0, 400.0],
+        400.0,
+    )
+    .await
+}
+
+const PULL_REQUEST_UPPER: [Option<f64>; 5] =
+    [None, Some(250.0), Some(250.0), Some(250.0), Some(312.5)];
+
+// Kills: a pull request alert drawn with limits only on the pull request's own run, because
+// the runs it inherited from its start point carry the boundaries of the start point's
+// threshold rather than its clone; and the start point's own alert drawn on the line.
+#[tokio::test]
+async fn console_alert_pull_request_draws_its_start_points_limits() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let Inherited {
+        fixture,
+        main,
+        pull_request,
+    } = alerting_pull_request(&server, "prdetail").await;
+    let main_alert = raised(&main, "alpha", r#"{"size":10}"#, "latency", false);
+    let alert = raised(&pull_request, "alpha", r#"{"size":10}"#, "latency", false);
+    assert_ne!(
+        main_alert.threshold.uuid, alert.threshold.uuid,
+        "the pull request alerts on its clone of main's threshold"
+    );
+
+    let detail = console_alert(&server, &fixture, alert.uuid).await;
+
+    let perf = &detail.perf;
+    let line = &perf.lines[0];
+    assert_eq!(
+        perf.branches[line.branch as usize].uuid,
+        pull_request.branch.uuid
+    );
+    assert_eq!(
+        perf.points
+            .x
+            .iter()
+            .copied()
+            .map(i64::from)
+            .collect::<Vec<_>>(),
+        millis_of(&[
+            "2024-02-01T00:00:00Z",
+            "2024-02-05T00:00:00Z",
+            "2024-02-10T00:00:00Z",
+            "2024-02-15T00:00:00Z",
+            "2024-02-20T00:00:00Z",
+        ])
+    );
+    assert_eq!(line.series.upper, Some(PULL_REQUEST_UPPER.to_vec()));
+    assert_eq!(
+        line.series.baseline,
+        Some(vec![
+            None,
+            Some(200.0),
+            Some(200.0),
+            Some(200.0),
+            Some(250.0)
+        ])
+    );
+    assert_eq!(
+        line.series
+            .alerts
+            .iter()
+            .map(|point| (point.index, point.uuid))
+            .collect::<Vec<_>>(),
+        vec![(4, alert.uuid)],
+        "main's alert on the fourth run is not the pull request's"
+    );
+    let model = &perf.models[line.model.expect("the threshold's model") as usize];
+    assert_eq!(model.threshold, alert.threshold.uuid);
+}
+
+// Kills: a pull request alert's row in the list drawn with limits only on the pull request's
+// own run, the start point's alert drawn on it, and a row that differs from its report page.
+#[tokio::test]
+async fn console_alerts_pull_request_rows_draw_their_start_points_limits() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let Inherited {
+        fixture,
+        main,
+        pull_request,
+    } = alerting_pull_request(&server, "prlist").await;
+    let alert = raised(&pull_request, "alpha", r#"{"size":10}"#, "latency", false);
+
+    let alerts = console_alerts(&server, &fixture, "").await;
+
+    assert_eq!(
+        alerts
+            .groups
+            .iter()
+            .map(|group| group.uuid)
+            .collect::<Vec<_>>(),
+        vec![pull_request.uuid, main.uuid]
+    );
+    let row = &alerts.groups[0].alerts[0].line;
+    assert_eq!(row.alert.map(|alert| alert.uuid), Some(alert.uuid));
+    assert_eq!(row.history.upper, Some(PULL_REQUEST_UPPER.to_vec()));
+    assert_eq!(
+        row.history
+            .alerts
+            .iter()
+            .map(|point| (point.index, point.uuid))
+            .collect::<Vec<_>>(),
+        vec![(4, alert.uuid)],
+        "main's alert on the fourth run is not the pull request's"
+    );
+    assert_rows_are_report_lines(&server, &fixture, &alerts, "").await;
+}
+
+// Kills: an inherited point that draws the limits of a threshold with other dimensions than
+// the one the line follows, such as the bare threshold's beside the filtered one's clone, or
+// a match on the measure alone.
+#[tokio::test]
+async fn console_alert_pull_request_takes_the_matching_threshold() {
+    let server = TestServer::new_at(at(NOW)).await;
+    // The bare threshold is the older and the looser; both alert on the pull request.
+    let both = serde_json::json!({ "models": [
+        {
+            "measure": "latency",
+            "metric": "value",
+            "model": { "test": "percentage", "upper_boundary": 0.5 },
+        },
+        {
+            "parameters": [{ "size": 10 }],
+            "measure": "latency",
+            "metric": "value",
+            "model": { "test": "percentage", "upper_boundary": 0.25 },
+        },
+    ]});
+    let Inherited {
+        fixture,
+        pull_request,
+        ..
+    } = pull_request(&server, "prmatch", &both, [200.0; 4], 400.0).await;
+    let filtered = raised(&pull_request, "alpha", r#"{"size":10}"#, "latency", true);
+    let bare = raised(&pull_request, "alpha", r#"{"size":10}"#, "latency", false);
+    let upper = |limit: f64| {
+        Some(vec![
+            None,
+            Some(limit),
+            Some(limit),
+            Some(limit),
+            Some(limit),
+        ])
+    };
+
+    for (alert, limit) in [(filtered, 250.0), (bare, 300.0)] {
+        let detail = console_alert(&server, &fixture, alert.uuid).await;
+        let line = &detail.perf.lines[0];
+        assert_eq!(line.series.upper, upper(limit));
+        assert_eq!(
+            line.series
+                .alerts
+                .iter()
+                .map(|point| (point.index, point.uuid))
+                .collect::<Vec<_>>(),
+            vec![(4, alert.uuid)]
+        );
+    }
+
+    let alerts = console_alerts(&server, &fixture, "").await;
+    let group = alerts
+        .groups
+        .iter()
+        .find(|group| group.uuid == pull_request.uuid)
+        .expect("the pull request raised alerts");
+    let mut rows = group
+        .alerts
+        .iter()
+        .map(|row| {
+            (
+                row.line.alert.map(|alert| alert.uuid),
+                row.line.history.upper.clone(),
+            )
+        })
+        .collect::<Vec<_>>();
+    rows.sort_by_key(|(uuid, _)| *uuid != Some(filtered.uuid));
+    assert_eq!(
+        rows,
+        vec![
+            (Some(filtered.uuid), upper(250.0)),
+            (Some(bare.uuid), upper(300.0)),
+        ],
+        "one row per threshold, each with its own counterpart's limits"
+    );
 }
 
 // Kills: a dismissed alert answered as active, a change time read from when it was

@@ -66,8 +66,8 @@ use super::{
     alert_json, before,
     perf::{BranchRow, LineDimensions, PointCheck, TestbedRow, Window, draw_line},
     report::{
-        BoundaryRow, History, HistoryRow, Line, LineKey, WindowSource, history_points, line_json,
-        window_holds, window_length, windows_history_rows,
+        BoundaryRow, History, HistoryRow, Line, LineKey, WindowSource, history_counterparts,
+        history_points, line_json, window_holds, window_length, windows_history_rows,
     },
     thresholds::readable_project,
 };
@@ -748,6 +748,7 @@ impl Page {
             })
             .collect::<Vec<_>>();
         let rows = windows_history_rows(conn, &reads)?;
+        let counterparts = history_counterparts(conn, &self.lines, &rows)?;
         let mut rows_by_line: HashMap<LineKey, Vec<HistoryRow>> = HashMap::new();
         for row in rows {
             rows_by_line
@@ -776,7 +777,7 @@ impl Page {
                     .collect();
                 GroupHistory {
                     window,
-                    thinned: History::new(&window_reports, lines, group_rows)
+                    thinned: History::new(&window_reports, lines, group_rows, &counterparts)
                         .thin(group.report.id, points),
                 }
             })
@@ -1152,7 +1153,8 @@ pub async fn proj_console_alert_options(
 /// View an alert for the console
 ///
 /// An alert of a project with the report that raised it and the line it raised on, drawn over
-/// the four weeks that end at the report with the boundary of the threshold that raised it.
+/// the four weeks that end at the report with the limits of the threshold that raised it, and
+/// of its counterparts where it has none.
 /// The user must be signed in and allowed to view the project,
 /// or provide a valid project key for the project.
 #[endpoint {

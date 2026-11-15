@@ -168,6 +168,7 @@ fn thresholds() -> serde_json::Value {
 struct Post {
     time: &'static str,
     branch: &'static str,
+    start_point: Option<serde_json::Value>,
     testbed: &'static str,
     hash: &'static str,
     iterations: Vec<String>,
@@ -180,6 +181,7 @@ impl Post {
         Self {
             time,
             branch: "main",
+            start_point: None,
             testbed: "localhost",
             hash,
             iterations: vec![results(values)],
@@ -193,6 +195,7 @@ async fn post(server: &TestServer, fixture: &Fixture, post: Post) -> JsonReport 
     let Post {
         time,
         branch,
+        start_point,
         testbed,
         hash,
         iterations,
@@ -204,6 +207,7 @@ async fn post(server: &TestServer, fixture: &Fixture, post: Post) -> JsonReport 
         DateTime::try_from(start_time.timestamp() + seconds).expect("Failed to end the run");
     let body = serde_json::json!({
         "branch": branch,
+        "start_point": start_point,
         "testbed": testbed,
         "hash": hash,
         "start_time": start_time,
@@ -729,6 +733,7 @@ async fn console_report_benchmark_groups_name_their_measures() {
         Post {
             time: "2024-02-28T00:00:00Z",
             branch: "main",
+            start_point: None,
             testbed: "localhost",
             hash: "2000000000000000000000000000000000000001",
             iterations: vec![alpha(&[
@@ -801,6 +806,111 @@ async fn console_report_line_threshold_and_alert() {
         report.models.len(),
         2,
         "the two thresholds each appear once"
+    );
+}
+
+// Kills: a pull request report's history drawn with limits only on its own run, because the
+// runs it inherited from its start point carry the boundaries of the start point's thresholds
+// rather than their clones; and the start point's own alert drawn on the row.
+#[tokio::test]
+async fn console_report_pull_request_draws_its_start_points_limits() {
+    let server = TestServer::new_at(at(NOW)).await;
+    let fixture = fixture(&server, "pullrequest").await;
+    // `main` alerts on its last run; the pull request inherits all four runs.
+    let mut main_alerts = Vec::new();
+    for (time, hash, alpha_10_latency) in [
+        (
+            "2024-02-01T00:00:00Z",
+            "5000000000000000000000000000000000000001",
+            200.0,
+        ),
+        (
+            "2024-02-05T00:00:00Z",
+            "5000000000000000000000000000000000000002",
+            200.0,
+        ),
+        (
+            "2024-02-10T00:00:00Z",
+            "5000000000000000000000000000000000000003",
+            200.0,
+        ),
+        (
+            "2024-02-15T00:00:00Z",
+            "5000000000000000000000000000000000000004",
+            400.0,
+        ),
+    ] {
+        let values = Values {
+            alpha_10_latency,
+            ..STEADY
+        };
+        let report = post(&server, &fixture, Post::main(time, hash, values)).await;
+        main_alerts.extend(report.alerts.into_iter().flatten());
+    }
+    assert_eq!(main_alerts.len(), 1, "main alerts on its last run");
+    let pull_request = post(
+        &server,
+        &fixture,
+        Post {
+            branch: "feature",
+            start_point: Some(serde_json::json!({
+                "branch": "main",
+                "clone_thresholds": true,
+                "reset": true,
+            })),
+            thresholds: None,
+            ..Post::main(
+                "2024-02-20T00:00:00Z",
+                "5000000000000000000000000000000000000005",
+                Values {
+                    alpha_10_latency: 400.0,
+                    ..STEADY
+                },
+            )
+        },
+    )
+    .await;
+    let alerts = pull_request.alerts.as_ref().expect("the report's alerts");
+    assert_eq!(alerts.len(), 1);
+    let alert = &alerts[0];
+    assert_ne!(alert.threshold.uuid, main_alerts[0].threshold.uuid);
+
+    let report = console_report(&server, &fixture, &pull_request, "").await;
+
+    assert_eq!(
+        report.points.x.len(),
+        5,
+        "the four inherited runs and its own"
+    );
+    let alerting = line(&report, ALPHA_10_LATENCY);
+    assert_eq!(alerting.alert.map(|alert| alert.uuid), Some(alert.uuid));
+    let model = &report.models[alerting.model.expect("a threshold checked it") as usize];
+    assert_eq!(model.threshold, alert.threshold.uuid);
+    assert_eq!(
+        alerting.history.upper,
+        Some(vec![
+            None,
+            Some(250.0),
+            Some(250.0),
+            Some(250.0),
+            Some(312.5)
+        ])
+    );
+    assert_eq!(
+        alerting
+            .history
+            .alerts
+            .iter()
+            .map(|point| (point.index, point.uuid))
+            .collect::<Vec<_>>(),
+        vec![(4, alert.uuid)],
+        "main's alert on the fourth run is not the pull request's"
+    );
+    let falling = line(&report, r#"alpha {"size":2} Throughput value"#);
+    assert_eq!(
+        falling.history.lower,
+        Some(vec![None, Some(37.5), Some(37.5), Some(37.5), Some(37.5)]),
+        "the lower side of another of the start point's thresholds"
     );
 }
 
