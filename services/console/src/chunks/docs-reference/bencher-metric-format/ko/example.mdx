@@ -1,18 +1,46 @@
 import BmfExample from "../bmf-example.mdx";
 
-## 벤처 메트릭 형식 (BMF) JSON 예제
+## Bencher Metric Format (BMF) JSON 예제
 
 <BmfExample />
 
-이 예제에는 세 개의 [벤치마크][benchmark]가 있습니다:
+BMF 버전 1은 각 [벤치마크][benchmark] 이름을 벤치마크의 [변형(Variant)][parameters]마다 하나씩인 항목 목록에 대응시킵니다.
+각 항목은 다음을 담습니다:
 
-- `benchmark_name` 벤치마크에는 두 개의 [측정치][measure]:
-  - 지연 시간 (`latency`)
-  - 처리량 (`throughput`)
-- `/bin/sh -c ./my_build_script.sh` 벤치마크는 [빌드 시간 추적][track build time]을 위한 하나의 측정치 (`build-time`)
-- `my_binary` 벤치마크는 [파일 크기 추적][track file size]을 위한 하나의 측정치 (`file-size`)
+- `parameters` (선택 사항): 변형이 실행될 때 사용된 [매개변수(Parameters)][parameters]로, 값이 문자열, 숫자 또는 불리언인 객체입니다.
+  `parameters`가 없는 항목은 빈 매개변수를 가진 변형이며, `{}`와 같습니다.
+- `measures`: 변형의 각 [측정][measure]과 그에 대응하는 [메트릭][metric].
+  메트릭은 `"median": 88.0`처럼 이름을 숫자에 대응시킨 것입니다.
+
+이 예제에는 세 개의 벤치마크가 있습니다:
+
+- `benchmark_name` 벤치마크는 `size` `64`와 `size` `512`의 두 변형을 가지며, 각각 두 개의 측정이 있습니다:
+  - Latency (`latency`): `median`, `mean`, `p99` 메트릭
+  - Throughput (`throughput`): `mean` 메트릭
+- `/bin/sh -c ./my_build_script.sh` 벤치마크는 하나의 변형과 [빌드 시간 추적][track build time]을 위한 하나의 측정 (`build-time`)을 가지며, `value` 메트릭이 있습니다
+- `my_binary` 벤치마크는 하나의 변형과 [파일 크기 추적][track file size]을 위한 하나의 측정 (`file-size`)을 가지며, `value` 메트릭이 있습니다
+
+매개변수가 같은 두 항목은 하나의 변형이며, 그 메트릭은 병합됩니다.
+두 항목이 같은 측정에 대해 같은 메트릭을 가지면 나중 항목이 우선합니다.
+측정이 없는 항목은 아무것도 기록하지 않습니다.
+
+### Metric Names
+
+Bencher는 모든 메트릭 이름을 같은 방식으로 저장하지만, 측정의 기본 메트릭은 이름으로 선택합니다.
+따라서 각 통계에는 표준 이름을 붙이세요:
+`mean`, `median`, `min`, `max`, `std_dev`, 그리고 백분위수 `p25`, `p75`, `p90`, `p95`, `p99`, `p99_9`.
+신뢰 구간에는 `mean_ci_lower`와 `mean_ci_upper`처럼 그 구간이 범위를 정하는 통계의 이름을 붙이고,
+알고 있다면 `mean_ci95_lower`처럼 신뢰 수준을 덧붙이세요.
+개수나 빌드 시간처럼 통계가 아닌 단일 숫자에는 `value`라는 이름을 붙이세요.
+
+측정을 검사하는 [임계값][threshold]이 없으면, pull request 댓글과 `bencher run` 출력은 그 기본 메트릭을 보여줍니다:
+`value`, 그다음 `median`, 그다음 `mean`, 그다음 알파벳순으로 첫 번째 이름입니다.
+신뢰 구간 이름은 다른 모든 이름 뒤에 옵니다.
 
 [benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+[parameters]: /ko/docs/explanation/benchmarking/#parameters
 [measure]: /ko/docs/explanation/benchmarking/#measure
+[metric]: /ko/docs/explanation/benchmarking/#metric
+[threshold]: /ko/docs/explanation/thresholds/
 [track build time]: /ko/docs/how-to/track-build-time/
 [track file size]: /ko/docs/how-to/track-file-size/

@@ -1,7 +1,7 @@
 import ShellForm from "../shell-form.mdx";
 import ExecForm from "../exec-form.mdx";
 
-## Comando de benchmark
+## Benchmark Command
 
 El primer argumento de `bencher run` es el comando de benchmark opcional.
 Este es el comando que se ejecutará para invocar tu harness de benchmark.
@@ -24,7 +24,7 @@ Forma Exec:
 <ExecForm />
 
 El comando de benchmark puede ejecutarse múltiples veces usando la opción [`--iter`][iter option],
-y esos resultados pueden combinarse en un único resultado usando la opción [`--fold`][fold option].
+y en la versión 0 de BMF esos resultados pueden combinarse en un único resultado usando la opción [`--fold`][fold option].
 Si alguna de las iteraciones falla, entonces se considera que todo el comando ha fallado
 a menos que se haya establecido la bandera [`--allow-failure`][allow failure flag].
 
@@ -40,15 +40,15 @@ Las opciones `--file` y `--file-size` pueden especificarse varias veces para lee
   La opción <code>-&#8288;-file</code> se puede usar para leer resultados de benchmark desde un archivo.
   Puedes especificar la opción <code>-&#8288;-file</code> varias veces para leer desde múltiples archivos.
   Si especificas la opción <code>-&#8288;-file</code> varias veces,
-  entonces cada archivo se considerará una <code>iteración</code> separada del comando de benchmark.
+  entonces cada archivo se considerará una <code>iteration</code> separada del comando de benchmark.
   Cuando se muestren, estos resultados aparecerán en tablas separadas.
 
-  Si deseas combinar estos resultados en una sola <code>iteración</code>,
+  En la versión 0 de BMF, si deseas combinar estos resultados en una sola <code>iteration</code>,
   puedes establecer la opción <code>-&#8288;-iter</code> en <code>1</code>
   y establecer la opción <code>-&#8288;-fold</code> en una de las funciones de agregación <code>min</code>, <code>max</code> o <code>median</code>.
-  Esto plegará los resultados en una sola <code>iteración</code>
+  Esto plegará los resultados en una sola <code>iteration</code>
   y los mostrará en una única tabla.
-  No establezcas la opción <code>-&#8288;-fold</code> en <code>mean</code>.
+  <b>No</b> establezcas la opción <code>-&#8288;-fold</code> en <code>mean</code>.
 </details>
 </blockquote>
 
@@ -64,6 +64,6 @@ Esto te permite guardar la salida de otro comando en un archivo o encadenarla (p
 [adapter option]: #--adapter-adapter
 [file option]: #--file-file
 [file size option]: #--file-size-file
-[iter option]: #--iter-iter
-[fold option]: #--fold-fold
+[iter option]: #--iter-count
+[fold option]: #--fold-aggregate_function
 [allow failure flag]: #--allow-failure

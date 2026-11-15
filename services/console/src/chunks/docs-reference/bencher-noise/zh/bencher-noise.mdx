@@ -9,7 +9,7 @@
 - **Cache Jitter**：通过对 L3 缓存大小的缓冲区执行顺序读取，测量内存缓存访问一致性。
 - **I/O Jitter**：通过写入和读取临时文件并跟踪时间变化，测量文件系统 I/O 一致性。
 - **CPU Steal**：在虚拟化平台上，检测虚拟机管理程序占用了多少 CPU 时间。
-- **Noise Score**：将所有测量组合为环境噪声级别单一指标的综合评分（0–100 dB）。
+- **Noise Score**：将所有测量组合为环境噪声级别单一指标的综合评分（0 到 100 dB）。
 
 ### `bencher noise` 用法
 
@@ -23,7 +23,7 @@ bencher noise [OPTIONS]
 
 总测量持续时间（秒）。
 
-默认值：`60`
+默认值：`30`
 
 #### `--format <FORMAT>`
 
@@ -31,8 +31,27 @@ bencher noise [OPTIONS]
 
 - `human`：带有可视噪声条和建议的人类可读终端输出。
 - `json`：BMF（Bencher Metric Format）JSON 输出，适合通过管道传递给 `bencher run`。
+  其版本由 [`--bmf-version` 选项](#--bmf-version-bmf_version) 设置。
 
 默认值：`human`
+
+#### `--bmf-version <BMF_VERSION>`
+
+`json` 输出格式的 [BMF 版本][bmf versions]，`0` 或 `1`。
+`bencher noise` 不会读取您项目的版本，因此版本 0 的项目需要 `--bmf-version 0`。
+
+在版本 1 中，输出包含以下[基准测试][benchmark]：
+
+- `bencher::noise::compute_jitter`、`bencher::noise::cache_jitter` 和 `bencher::noise::io_jitter`，每个都有两个[度量][measure]：
+  - 其抖动度量（`compute-jitter`、`cache-jitter` 或 `io-jitter`），带有 `cov` [指标][metric]，即以百分比表示的变异系数
+  - `latency` 度量，带有同一批样本的 `mean`、`std_dev` 和 `p99` 指标，单位为纳秒
+- `bencher::noise::cpu_steal`，当平台报告 CPU 窃取时出现，带有 `cpu-steal` 度量及其 `value` 指标
+- `bencher::noise::composite`，带有 `noise-score` 度量及其 `value` 指标
+
+在版本 0 中，每个度量只有一个 `value`，对于每个抖动度量而言它就是变异系数，并且没有 `latency` 度量。
+从版本 0 迁移到版本 1 的项目，每个抖动度量都会开始新的历史记录，因为其指标现在是 `cov`。
+
+默认值：`1`
 
 #### `--quiet`
 
@@ -42,3 +61,8 @@ bencher noise [OPTIONS]
 #### `--help`
 
 打印帮助信息。
+
+[bmf versions]: /zh/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+[measure]: /zh/docs/explanation/benchmarking/#measure
+[metric]: /zh/docs/explanation/benchmarking/#metric

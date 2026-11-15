@@ -1,11 +1,13 @@
-### Measure（度量）
+### Measure
 Measure 是指标（Metric）的计量单位。
 
 默认情况下，所有项目（Projects）都会以 `Latency` 和 `Throughput` 两个 Measure（度量）开始，单位分别为 `nanoseconds (ns)` 和 `operations / second (ops/s)`。
 
-Measure（度量）由 [基准测试框架适配器][adapters] 决定。
+[基准测试框架适配器][adapters] 会写入您的基准测试框架报告的每个 Measure（度量），
+而 `bencher run` 的 [`--measure` 选项][measure option] 只保留其列出的 Measure（度量）。
 
 如果您使用 [Bencher Metric Format (BMF)][bmf]，则可以使用名称、slug 或 UUID 来标识 Measure（度量）。
 
 [adapters]: /zh/docs/explanation/adapters/
+[measure option]: /zh/docs/explanation/bencher-run/#--measure-measure
 [bmf]: /zh/docs/reference/bencher-metric-format/

@@ -2,28 +2,31 @@ import ThresholdCode from "../threshold-code.mdx";
 
 Пороги помогают фиксировать ухудшения производительности с Bencher.
 Порог назначается уникальной комбинации:
-[ветка][branch], [тестовый стенд][testbed] и [показатель][measure].
+[ветка][branch], [тестовый стенд][testbed], фильтр параметров, [Измерение][measure] и [метрика][metric].
 Порог использует конкретный [тест][tests] для обнаружения ухудшений производительности.
 Комбинация теста и его параметров называется моделью.
 Модель должна иметь нижнюю границу, верхнюю границу или обе.
 
 - Нижняя граница
   - Нижняя граница используется, когда меньшее значение указывает на ухудшение производительности,
-  например, с показателем пропускной способности.
+  например, с Измерением Throughput.
 - Верхняя граница
   - Верхняя граница используется, когда большее значение указывает на ухудшение производительности,
-  например, с показателем задержки.
+  например, с Измерением Latency.
 
 Каждая граница используется для расчета предельного значения границы.
-Затем каждый новый [метрика][metric] проверяется на соответствие каждому предельному значению границы.
+Затем каждая новая метрика, которую проверяет порог, сравнивается с каждым предельным значением границы
+с использованием истории этой метрики для того же [варианта][variant].
 Оповещение создается, когда новая метрика ниже предельного значения нижней границы или выше предельного значения верхней границы.
 
 При [непрерывном тестировании производительности] (то есть при тестировании в CI) вам нужно будет создать пороги.
 Используя подкоманду CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code>,
 вы уже указываете ветку с [опцией `--branch`][branch option]
 и тестовый стенд с [опцией `--testbed`][testbed option].
-Таким образом, единственное измерение, которое вам нужно указать, — это показатель с опцией `--threshold-measure`.
-Затем вы можете использовать опцию `--threshold-test` для указания теста, который будет использоваться для этого показателя.
+Таким образом, другие измерения, которые вам нужно указать, это Измерение с опцией `--threshold-measure`
+и метрика этого Измерения для проверки с опцией `--threshold-metric`.
+Чтобы проверять только некоторые варианты, добавьте фильтр параметров с опцией `--threshold-parameters`.
+Затем вы можете использовать опцию `--threshold-test` для указания теста, который будет использоваться для этой метрики.
 Опции `--threshold-min-sample-size`, `--threshold-max-sample-size` и `--threshold-window`
 позволяют вам контролировать, какие данные используются в тесте.
 Наконец, опции `--threshold-lower-boundary` и `--threshold-upper-boundary`
@@ -36,7 +39,7 @@ import ThresholdCode from "../threshold-code.mdx";
 - Если порог существует, и указанная модель другая, тогда для порога создается новая модель.
 - Если порог существует и сброшен, текущая модель удаляется из порога.
 
-Например, чтобы использовать только порог для показателя задержки,
+Например, чтобы использовать только порог для метрики `value` Измерения Latency,
 используя [тест Стьюдента][t-test]
 с максимальным размером выборки `64`
 и верхней границей `0.99`, вы можете написать что-то подобное:
@@ -45,17 +48,29 @@ import ThresholdCode from "../threshold-code.mdx";
 
 > 🐰 При работе с функциональными ветками вы можете захотеть скопировать существующие пороги из базовой, [начальной][start point] ветки.
 > Это возможно с помощью флага [`--start-point-clone-thresholds`][start point clone thresholds flag].
-Обратите внимание, что флаг `--thresholds-reset` все равно удалит все склонированные пороги, которые не указаны явно.
+> Обратите внимание, что флаг `--thresholds-reset` все равно удалит все склонированные пороги, которые не указаны явно.
+
+<details>
+<summary>BMF версия 0</summary>
+
+В [BMF версии 0][bmf versions] порог назначается ветке, тестовому стенду и Измерению, и он проверяет метрику `value` каждого бенчмарка.
+Используйте `--threshold-measure` без `--threshold-metric`:
+`--threshold-metric` и `--threshold-parameters` останавливают `bencher run` с ошибкой до того, как что-либо будет отправлено,
+и эта ошибка называет `bencher project update --bmf-version 1` для перевода Проекта на версию 1.
+
+</details>
 
 [branch]: /ru/docs/explanation/benchmarking/#branch
 [testbed]: /ru/docs/explanation/benchmarking/#testbed
 [measure]: /ru/docs/explanation/benchmarking/#measure
 [metric]: /ru/docs/explanation/benchmarking/#metric
+[variant]: /ru/docs/explanation/benchmarking/#parameters
 [continuous benchmarking]: /ru/docs/explanation/continuous-benchmarking/
 [branch option]: /ru/docs/explanation/branches/#--branch-branch
 [testbed option]: /ru/docs/explanation/testbeds/#--testbed-testbed
 [start point]: /ru/docs/explanation/benchmarking/#start-point
 [start point clone thresholds flag]: /ru/docs/explanation/branches/#--start-point-clone-thresholds
+[bmf versions]: /ru/docs/reference/bencher-metric-format/#bmf-versions
 
 [tests]: #--threshold-test-test
 [t-test]: #t-test

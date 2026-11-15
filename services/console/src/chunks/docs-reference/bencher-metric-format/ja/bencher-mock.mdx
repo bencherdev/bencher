@@ -1,6 +1,10 @@
 ## `bencher mock`
 
 `bencher mock` CLIサブコマンドは、モックの Bencher Metric Format (BMF) JSON データを生成するために使用します。
+特に指定しない限り、[BMF バージョン 1][bmf versions] を書き出します。
+各[ベンチマーク][benchmark]の各[メジャー][measure]は1つの[メトリック][metric]、`value` を持ち、
+各ベンチマークはパラメータのない1つのバリアントを持ちます。
+プロジェクトのバージョンは読み取らないため、バージョン 0 のプロジェクトには [`--bmf-version 0`](#--bmf-version-bmf_version) が必要です。
 
 ### `--seed <SEED>`
 
@@ -9,25 +13,33 @@
 
 ### `--count <COUNT>`
 
-生成するモックの[Benchmarks][benchmark]の数。
-
-[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+生成するモックの[ベンチマーク][benchmark]の数。
 
 ### `--measure <MEASURE>`
 
-各[Benchmark][benchmark]に使用する[Measure][measure]。
-`--measure`オプションを複数回使用することで、複数の Measure を指定できます。
-デフォルトは組み込みの `latency` Measure です。
+各[ベンチマーク][benchmark]に使用する[メジャー][measure]。
+`--measure`オプションを複数回使用することで、複数のメジャーを指定できます。
+デフォルトは組み込みの `latency` メジャーです。
 
-[measure]: /ja/docs/explanation/benchmarking/#measure
-[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+### `--parameters <PARAMETERS>`
+
+すべてのベンチマークについて生成するバリアントの[パラメータ][parameters]を、JSON オブジェクトとして指定します（例：`--parameters '{"size": 64}'`）。
+パラメータの各組は、すべてのベンチマークのバリアントを1つずつ作成し、
+`--parameters` オプションを複数回使用することで複数の組を指定できます。
+指定しない場合、各ベンチマークはパラメータのない1つのバリアントを持ちます。
+`bencher run` の [`--threshold-parameters` オプション][threshold parameters]と同じ JSON を受け取り、
+`--bmf-version 0` とは併用できません。
+
+### `--bmf-version <BMF_VERSION>`
+
+書き出す BMF のバージョンで、`0` または `1` のいずれかです。
+デフォルトは `1` です。
+バージョン 0 では、各メジャーは `value`、`lower_value`、`upper_value` を持ちます。
 
 ### `--pow <POW>`
 
-モックの[Metrics][metric]に使用する 10 の冪指数。
+モックの[メトリック][metric]に使用する 10 の冪指数。
 デフォルトは `1` です。
-
-[metric]: /ja/docs/explanation/benchmarking/#metric
 
 ### `--fail`
 
@@ -40,3 +52,10 @@
 ### `--help`
 
 ヘルプメッセージを表示します。
+
+[bmf versions]: /ja/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+[measure]: /ja/docs/explanation/benchmarking/#measure
+[metric]: /ja/docs/explanation/benchmarking/#metric
+[parameters]: /ja/docs/explanation/benchmarking/#parameters
+[threshold parameters]: /ja/docs/explanation/thresholds/#--threshold-parameters-parameters

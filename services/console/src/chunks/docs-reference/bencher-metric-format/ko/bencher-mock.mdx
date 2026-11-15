@@ -1,6 +1,10 @@
 ## `bencher mock`
 
 `bencher mock` CLI 하위 명령은 모의 Bencher Metric Format (BMF) JSON 데이터를 생성하는 데 사용됩니다.
+따로 지정하지 않으면 [BMF 버전 1][bmf versions]을 출력합니다.
+각 [벤치마크][benchmark]의 각 [측정][measure]은 하나의 [메트릭][metric]인 `value`를 가지며,
+각 벤치마크는 매개변수가 없는 하나의 변형(Variant)을 가집니다.
+프로젝트의 버전을 읽지 않으므로, 버전 0 프로젝트에는 [`--bmf-version 0`](#--bmf-version-bmf_version)이 필요합니다.
 
 ### `--seed <SEED>`
 
@@ -11,23 +15,31 @@
 
 생성할 모의 [벤치마크][benchmark]의 수입니다.
 
-[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
-
 ### `--measure <MEASURE>`
 
-각 [벤치마크][benchmark]에 사용할 [Measure][measure]입니다.
-`--measure` 옵션을 여러 번 사용하여 여러 Measure를 지정할 수 있습니다.
-기본값은 내장 `latency` Measure입니다.
+각 [벤치마크][benchmark]에 사용할 [측정][measure]입니다.
+`--measure` 옵션을 여러 번 사용하여 여러 측정을 지정할 수 있습니다.
+기본값은 내장 `latency` 측정입니다.
 
-[measure]: /ko/docs/explanation/benchmarking/#measure
-[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+### `--parameters <PARAMETERS>`
+
+모든 벤치마크에 대해 생성할 변형의 [매개변수][parameters]를 JSON 객체로 지정합니다(예: `--parameters '{"size": 64}'`).
+매개변수의 각 세트는 모든 벤치마크의 변형을 하나씩 만들며,
+`--parameters` 옵션을 여러 번 사용하여 여러 세트를 지정할 수 있습니다.
+지정하지 않으면 각 벤치마크는 매개변수가 없는 하나의 변형을 가집니다.
+`bencher run`의 [`--threshold-parameters` 옵션][threshold parameters]과 같은 JSON을 받으며,
+`--bmf-version 0`과 함께 사용할 수 없습니다.
+
+### `--bmf-version <BMF_VERSION>`
+
+출력할 BMF 버전으로, `0` 또는 `1`입니다.
+기본값은 `1`입니다.
+버전 0에서는 각 측정이 `value`, `lower_value`, `upper_value`를 가집니다.
 
 ### `--pow <POW>`
 
 모의 [메트릭][metric]에 사용할 10의 거듭제곱입니다.
 기본값은 `1`입니다.
-
-[metric]: /ko/docs/explanation/benchmarking/#metric
 
 ### `--fail`
 
@@ -40,3 +52,10 @@
 ### `--help`
 
 도움말 메시지를 출력합니다.
+
+[bmf versions]: /ko/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /ko/docs/explanation/benchmarking/#benchmark
+[measure]: /ko/docs/explanation/benchmarking/#measure
+[metric]: /ko/docs/explanation/benchmarking/#metric
+[parameters]: /ko/docs/explanation/benchmarking/#parameters
+[threshold parameters]: /ko/docs/explanation/thresholds/#--threshold-parameters-parameters

@@ -1,0 +1,20 @@
+## `--threshold-metric <METRIC>`
+
+<br />
+
+指定された[メトリック][metric]の名前をしきい値に使用します。
+BMF バージョン 1 では、しきい値は `median`、`p99`、`value` のように、名前でそのメジャーの1つのメトリックをチェックします。
+たとえば、Latency メジャーの中央値にしきい値を使用するには、
+`--threshold-measure latency --threshold-metric median` と書くことができます。
+最初にどのメトリックをチェックするかを選ぶには、[各ベンチマークハーネスアダプタ][adapters]が書き込むメトリックを参照してください。
+メジャーのしきい値がチェックするメトリックは、[プルリクエストのコメント][github actions]と `bencher run` の出力におけるそのメジャーの列になります。
+
+いずれかのしきい値にメトリックまたはパラメータフィルタがある場合は、すべてのしきい値にメトリックが必要であり、
+`bencher run` はメトリックが欠けているしきい値を示すエラーで停止します。
+`--threshold-metric` がまったくない `--threshold-measure` はしきい値を設定しません。
+その実行は引き続き記録され、そのレポートはしきい値がスキップされたことを `--threshold-metric` を使うようにというヒントとともに警告します。
+BMF バージョン 0 では、`--threshold-metric` は何かを送信する前にエラーで `bencher run` を停止させます。
+
+[metric]: /ja/docs/explanation/benchmarking/#metric
+[adapters]: /ja/docs/explanation/adapters/
+[github actions]: /ja/docs/explanation/bencher-run/#--github-actions-github_token

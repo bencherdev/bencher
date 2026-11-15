@@ -9,7 +9,7 @@
 - **Cache Jitter**: L3キャッシュサイズのバッファに対してシーケンシャルリードを実行することで、メモリキャッシュアクセスの一貫性を測定します。
 - **I/O Jitter**: 一時ファイルの書き込みと読み取りを行い、タイミングのばらつきを追跡することで、ファイルシステムI/Oの一貫性を測定します。
 - **CPU Steal**: 仮想化プラットフォームで、ハイパーバイザーによってどれだけのCPU時間が奪われているかを検出します。
-- **Noise Score**: すべての測定を環境ノイズレベルの単一の指標に組み合わせた複合スコア（0〜100 dB）。
+- **Noise Score**: すべての測定を環境ノイズレベルの単一の指標に組み合わせた複合スコア（0から100 dB）。
 
 ### `bencher noise` 使用方法
 
@@ -23,7 +23,7 @@ bencher noise [OPTIONS]
 
 合計測定時間（秒単位）。
 
-デフォルト: `60`
+デフォルト: `30`
 
 #### `--format <FORMAT>`
 
@@ -31,8 +31,27 @@ bencher noise [OPTIONS]
 
 - `human`: 視覚的なノイズバーとアドバイス付きの人間が読めるターミナル出力。
 - `json`: BMF（Bencher Metric Format）JSON出力。`bencher run`にパイプするのに適しています。
+  そのバージョンは [`--bmf-version` オプション](#--bmf-version-bmf_version) で設定します。
 
 デフォルト: `human`
+
+#### `--bmf-version <BMF_VERSION>`
+
+`json` 出力形式の [BMF バージョン][bmf versions]で、`0` または `1` のいずれかです。
+`bencher noise` はプロジェクトのバージョンを読み取らないため、バージョン 0 のプロジェクトには `--bmf-version 0` が必要です。
+
+バージョン 1 では、出力には次の[ベンチマーク][benchmark]が含まれます：
+
+- `bencher::noise::compute_jitter`、`bencher::noise::cache_jitter`、`bencher::noise::io_jitter`。それぞれ2つの[メジャー][measure]を持ちます：
+  - そのジッターのメジャー（`compute-jitter`、`cache-jitter`、または `io-jitter`）と `cov` [メトリック][metric]。変動係数をパーセンテージで表したものです
+  - 同じサンプルの `mean`、`std_dev`、`p99` メトリックをナノ秒単位で持つ `latency` メジャー
+- `bencher::noise::cpu_steal`。プラットフォームが CPU スチールを報告する場合に、`cpu-steal` メジャーとその `value` メトリックを持ちます
+- `bencher::noise::composite`。`noise-score` メジャーとその `value` メトリックを持ちます
+
+バージョン 0 では、各メジャーは `value` のみを持ち、これは各ジッターのメジャーでは変動係数であり、`latency` メジャーはありません。
+バージョン 0 からバージョン 1 に移行したプロジェクトでは、メトリックが `cov` になるため、各ジッターのメジャーの履歴が新たに始まります。
+
+デフォルト: `1`
 
 #### `--quiet`
 
@@ -42,3 +61,8 @@ bencher noise [OPTIONS]
 #### `--help`
 
 ヘルプを表示します。
+
+[bmf versions]: /ja/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+[measure]: /ja/docs/explanation/benchmarking/#measure
+[metric]: /ja/docs/explanation/benchmarking/#metric

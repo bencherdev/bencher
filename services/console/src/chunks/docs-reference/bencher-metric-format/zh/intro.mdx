@@ -2,6 +2,12 @@
 自定义基准测试工具应输出其结果为 BMF JSON 格式，
 并使用[`json` 适配器][json adapter]。
 查看[如何跟踪自定义基准测试][custom benchmarks]以获得完整概述。
+要生成模拟 BMF JSON 数据，请使用 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> CLI 子命令。
+
+BMF 有两个版本，每个项目都使用其中之一。
+版本 1 是新项目开始时使用的格式，也是本页所描述的格式。
+版本 0 是较早的版本，版本 0 的项目仍在使用它。
+关于如何选择报告的版本以及版本 0，请参阅 [BMF 版本](#bmf-versions)。
 
 [adapters]: /zh/docs/explanation/adapters/
 [json adapter]: /zh/docs/explanation/adapters/#-json

@@ -1,4 +1,6 @@
 ### `--threshold-measure <MEASURE>`
+### `--threshold-metric <METRIC>`
+### `--threshold-parameters <PARAMETERS>`
 ### `--threshold-test <TEST>`
 ### `--threshold-min-sample-size <SAMPLE_SIZE>`
 ### `--threshold-max-sample-size <SAMPLE_SIZE>`
@@ -9,5 +11,9 @@
 ### `--error-on-alert`
 
 <br />
+
+En la versión 1 de BMF, un Umbral comprueba una Métrica de una Medida, que `--threshold-metric` nombra.
+Un `--threshold-measure` sin ningún `--threshold-metric` no establece ningún Umbral:
+la ejecución se registra igualmente, y su Informe advierte que el Umbral se omitió, con una sugerencia para usar `--threshold-metric`.
 
 Consulta [umbrales y alertas](/es/docs/explanation/thresholds/) para una descripción completa.

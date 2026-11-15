@@ -1,0 +1,12 @@
+### `--measure <MEASURE>`
+
+<br />
+
+可选：仅保留结果中指定名称、slug 或 UUID 的[度量][measure]。
+所有其他度量都会在存储任何内容之前被丢弃。
+可以多次使用 `--measure` 选项来保留多个度量。
+只保留前 `64` 个，其余的会在报告中给出警告。
+结果中不包含的度量会被忽略。
+如果未设置，则保留所有度量。
+
+[measure]: /zh/docs/explanation/benchmarking/#measure

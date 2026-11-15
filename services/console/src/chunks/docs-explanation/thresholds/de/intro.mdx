@@ -2,28 +2,31 @@ import ThresholdCode from "../threshold-code.mdx";
 
 Thresholds sind, wie Sie mit Bencher Leistungsregressionen erkennen.
 Ein Threshold wird einer eindeutigen Kombination von:
-[Branch][branch], [Testbed][testbed], und [Measure][measure] zugewiesen.
+[Branch][branch], [Testbed][testbed], Parameterfilter, [Measure][measure] und [Metrik][metric] zugewiesen.
 Ein Threshold verwendet einen spezifischen [Test][tests], um Leistungsregressionen zu erkennen.
 Die Kombination eines Tests und seiner Parameter wird als Modell bezeichnet.
 Ein Modell muss eine Untergrenze, eine Obergrenze oder beides haben.
 
 - Untergrenze
   - Eine Untergrenze wird verwendet, wenn ein kleinerer Wert auf eine Leistungsregression hindeuten würde,
-  wie zum Beispiel bei der Durchsatz-Messung.
+  wie zum Beispiel bei der Throughput-Measure.
 - Obergrenze
   - Eine Obergrenze wird verwendet, wenn ein größerer Wert auf eine Leistungsregression hindeuten würde,
-  wie zum Beispiel bei der Latenz-Messung.
+  wie zum Beispiel bei der Latency-Measure.
 
 Jede Grenze wird verwendet, um ein Grenzwert zu berechnen.
-Dann wird jede neue [Metrik][metric] gegen jede Grenze überprüft.
+Dann wird jede neue Metrik, die der Threshold prüft, mit jedem Grenzwert verglichen,
+anhand der Historie dieser Metrik für dieselbe [Variante][variant].
 Ein Alarm wird ausgelöst, wenn eine neue Metrik unterhalb eines unteren Grenzwertes oder oberhalb eines oberen Grenzwertes liegt.
 
 Bei der [kontinuierlichen Benchmarking], also dem Benchmarking in CI, sollten Sie Thresholds erstellen.
 Mit dem <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Subkommando
 geben Sie bereits mit [der `--branch` Option][branch option] einen Branch
 und mit [der `--testbed` Option][testbed option] ein Testbed an.
-Die einzige weitere Dimension, die Sie angeben müssen, ist ein Measure, mit der `--threshold-measure` Option.
-Dann können Sie die `--threshold-test` Option verwenden, um den Test für dieses Measure anzugeben.
+Die weiteren Dimensionen, die Sie angeben müssen, sind eine Measure, mit der `--threshold-measure` Option,
+und die zu prüfende Metrik dieser Measure, mit der `--threshold-metric` Option.
+Um nur einige Varianten zu prüfen, fügen Sie mit der `--threshold-parameters` Option einen Parameterfilter hinzu.
+Dann können Sie die `--threshold-test` Option verwenden, um den Test für diese Metrik anzugeben.
 Die `--threshold-min-sample-size`, `--threshold-max-sample-size` und `--threshold-window` Optionen
 ermöglichen es Ihnen, zu steuern, welche Daten vom Test verwendet werden.
 Schließlich ermöglichen die Optionen `--threshold-lower-boundary` und `--threshold-upper-boundary` es Ihnen,
@@ -36,26 +39,38 @@ können Sie dies mit dem `--thresholds-reset` Flag tun.
 - Wenn der Threshold existiert und das angegebene Modell anders ist, wird ein neues Modell für den Threshold erstellt.
 - Wenn ein Threshold existiert und er zurückgesetzt wird, wird das aktuelle Modell aus dem Threshold entfernt.
 
-Zum Beispiel, um nur einen Threshold für die Latenz-Messung zu verwenden
+Zum Beispiel, um nur einen Threshold für die Metrik `value` der Latency-Measure zu verwenden
 mit [einem Student's t-test Test][t-test]
 mit einer maximalen Stichprobengröße von `64`
-und einer Obergrenze von `0,99`, könnten Sie so etwas schreiben:
+und einer Obergrenze von `0.99`, könnten Sie so etwas schreiben:
 
 <ThresholdCode />
 
 > 🐰 Wenn Sie mit Feature-Branches arbeiten, möchten Sie möglicherweise die bestehenden Thresholds vom Basis-, [Startpunkt][start point] Branch kopieren.
 > Dies ist möglich mit [dem `--start-point-clone-thresholds` Flag][start point clone thresholds flag].
-Beachten Sie, dass das `--thresholds-reset` Flag weiterhin alle geklonten Thresholds entfernt, die nicht explizit angegeben sind.
+> Beachten Sie, dass das `--thresholds-reset` Flag weiterhin alle geklonten Thresholds entfernt, die nicht explizit angegeben sind.
+
+<details>
+<summary>BMF Version 0</summary>
+
+In [BMF Version 0][bmf versions] wird ein Threshold einem Branch, Testbed und einer Measure zugewiesen, und er prüft die Metrik `value` jedes Benchmarks.
+Verwenden Sie `--threshold-measure` ohne `--threshold-metric`:
+`--threshold-metric` und `--threshold-parameters` stoppen `bencher run` mit einem Fehler, bevor etwas gesendet wird,
+der `bencher project update --bmf-version 1` nennt, um das Projekt auf Version 1 umzustellen.
+
+</details>
 
 [branch]: /de/docs/explanation/benchmarking/#branch
 [testbed]: /de/docs/explanation/benchmarking/#testbed
 [measure]: /de/docs/explanation/benchmarking/#measure
 [metric]: /de/docs/explanation/benchmarking/#metric
+[variant]: /de/docs/explanation/benchmarking/#parameters
 [continuous benchmarking]: /de/docs/explanation/continuous-benchmarking/
 [branch option]: /de/docs/explanation/branches/#--branch-branch
 [testbed option]: /de/docs/explanation/testbeds/#--testbed-testbed
 [start point]: /de/docs/explanation/benchmarking/#start-point
 [start point clone thresholds flag]: /de/docs/explanation/branches/#--start-point-clone-thresholds
+[bmf versions]: /de/docs/reference/bencher-metric-format/#bmf-versions
 
 [tests]: #--threshold-test-test
 [t-test]: #t-test

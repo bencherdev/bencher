@@ -10,7 +10,7 @@ où la sortie du cadre de benchmark est analysée à l'aide d'un [adaptateur de 
 L'adaptateur de cadre de benchmark détecte tous les Benchmarks présents ainsi que leurs Metrics correspondants.
 Ces Benchmarks et Metrics sont ensuite enregistrés avec le Rapport.
 S'il y a un [Seuil](/fr/docs/explanation/thresholds/) défini,
-alors les nouvelles Metrics sont comparées aux Metrics historiques pour chaque Benchmark présent dans le Rapport.
+alors chaque nouvelle Metric qu'il vérifie est comparée aux Metrics historiques de la même Variante, de la même Mesure et de la même Metric.
 Si une régression est détectée, alors une Alerte sera générée.
 
 Désormais, nous nous référerons à vos "benchmarks" comme "tests de régression des performances" pour éviter toute confusion.

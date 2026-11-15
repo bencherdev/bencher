@@ -5,13 +5,22 @@ import MultipleThresholdsCode from "../multiple-thresholds-code.mdx";
 Es posible crear múltiples Umbrales con la misma invocación de <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>.
 Al especificar múltiples Umbrales, se deben utilizar las mismas opciones para cada Umbral.
 Para ignorar una opción para un Umbral específico, utiliza un guion bajo (`_`).
+La excepción es `--threshold-metric`: cada Umbral necesita su propia Métrica, así que un guion bajo no puede omitirla.
 
 Por ejemplo, si solo deseas utilizar dos Umbrales,
-uno para la Medida de Latencia y otro para la Medida de Rendimiento,
-entonces probablemente querrás establecer un Límite Superior para la Medida de Latencia
-y un Límite Inferior para la Medida de Rendimiento.
-Por lo tanto, utilizarías `--threshold-lower-boundary _` para la Medida de Latencia
-y `--threshold-upper-boundary _` para la Medida de Rendimiento.
+uno para la Medida Latency y otro para la Medida Throughput,
+entonces probablemente querrás establecer un Límite Superior para la Medida Latency
+y un Límite Inferior para la Medida Throughput.
+Por lo tanto, utilizarías `--threshold-lower-boundary _` para la Medida Latency
+y `--threshold-upper-boundary _` para la Medida Throughput.
 Podrías escribir algo así:
 
 <MultipleThresholdsCode />
+
+Una Medida también puede tener varios Umbrales que difieren en la Métrica o en el filtro de parámetros,
+como uno para la `median` y otro para el `p99` de la Medida Latency.
+Cada Umbral que coincide con una Variante la comprueba,
+así que un Umbral sin filtro y un Umbral con filtro para la misma Métrica comprueban ambos las Variantes que coinciden con el filtro,
+y ambos generan una Alerta para la misma regresión.
+Un Umbral que se especifica dos veces en la misma invocación es un solo Umbral,
+con el Modelo de su última aparición.

@@ -29,6 +29,13 @@ Una Rama, un Banco de pruebas o un Adaptador que todos los Informes comparten pa
 A continuación, una tabla contiene las Alertas de todos los Informes, con una columna para el Informe.
 Luego siguen los resultados de cada Informe en un bloque desplegable (ej: `Report 2 (microbench): 14 benchmarks, 2 alerts`),
 que está abierto cuando el Informe tiene Alertas.
+Cada fila de los resultados es una [Variante][variant]: el Benchmark, seguido de sus Parámetros como pares `key=value`.
+Cada Medida tiene un grupo de columnas por cada Métrica que comprueban sus Umbrales,
+o si no, para su Métrica predeterminada: `value`, luego `median`, luego `mean` y luego el primer nombre en orden alfabético,
+con el nombre de un intervalo de confianza como `mean_ci_lower` después de todos los demás nombres.
+Si un Informe tiene advertencias, una sección contraída `⚠️ Warnings (N)` sigue a sus resultados, donde `N` es su número total.
+Enumera el Resource, la Action y el Count de cada advertencia,
+y un Hint que nombra [la opción `--threshold-metric`](/es/docs/explanation/thresholds/#--threshold-metric-metric) para los Umbrales omitidos.
 Cada trabajo conserva su propia Verificación de GitHub y su propio resumen del trabajo,
 por lo que los nombres de las Verificaciones de GitHub y las verificaciones de estado requeridas no cambian.
 Un trabajo cuyo commit ya no es el commit de encabezado de la solicitud de extracción deja el comentario tal como está.
@@ -41,6 +48,8 @@ Un comentario de GitHub tiene un límite de tamaño, por lo que el comentario us
 3. Cada fila de resumen y el número total de Alertas, sin las filas de Alertas
 4. Como último recurso, las primeras filas de resumen, y luego `and N more reports` para el resto
 
+Cada forma después de la primera conserva de las advertencias solo la línea `⚠️ Warnings (N)`.
+
 Con una sola fila, el comentario es el mismo que antes, y si es demasiado grande, enlaza al Informe completo.
 
 Para encontrar los demás trabajos, `bencher run` lista las Verificaciones de GitHub del commit de encabezado,
@@ -52,6 +61,7 @@ el primer trabajo que escribe el comentario compartido actualiza el más antiguo
 Al escribir el comentario compartido, un trabajo solo actualiza o elimina los comentarios publicados por la GitHub App propietaria de su Verificación de GitHub,
 que con el `GITHUB_TOKEN` es el bot `github-actions`.
 
+[variant]: /es/docs/explanation/benchmarking/#parameters
 [github token]: https://docs.github.com/es/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/es/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
 

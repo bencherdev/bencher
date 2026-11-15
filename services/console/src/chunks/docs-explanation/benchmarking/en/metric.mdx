@@ -1,5 +1,17 @@
 ### Metric
-A Metric is a single, point-in-time performance regression test result.
-Up to three Values may be collected for a single Metric: `value`, `lower_value`, and `upper_value`.
+A Metric is a single, point-in-time performance regression test result:
+one named value collected for a Measure, such as `median` or `p99`.
+The [benchmark harness adapter](/docs/explanation/adapters/) writes each statistic that your benchmark harness reports as its own Metric, under the name of that statistic.
+A single number that is not a statistic, such as an instruction count or a build time, is the `value` Metric.
+A Measure holds at most `32` Metrics.
+
+<details>
+<summary>BMF version 0</summary>
+
+At [BMF version 0][bmf versions], up to three Values may be collected for a single Metric: `value`, `lower_value`, and `upper_value`.
 The `value` is required for all Metrics while the `lower_value` and `upper_value` are independently optional.
-Which Values are collected is determined by the [benchmark harness adapter](/docs/explanation/adapters/).
+This is the Metric Triple, which version 0 Projects still use.
+
+</details>
+
+[bmf versions]: /docs/reference/bencher-metric-format/#bmf-versions

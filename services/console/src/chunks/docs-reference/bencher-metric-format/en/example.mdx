@@ -4,15 +4,43 @@ import BmfExample from "../bmf-example.mdx";
 
 <BmfExample />
 
-In this example, there are three [Benchmarks][benchmark]:
+BMF version 1 maps each [Benchmark][benchmark] name to a list of entries, one for each [Variant][parameters] of the Benchmark.
+Each entry holds:
 
-- `benchmark_name` Benchmark with two [Measures][measure]:
-  - Latency (`latency`)
-  - Throughput (`throughput`)
-- `/bin/sh -c ./my_build_script.sh` Benchmark with one Measure to [track build time][track build time] (`build-time`)
-- `my_binary` Benchmark with one Measure to [track file size][track file size] (`file-size`)
+- `parameters` (optional): the [Parameters][parameters] that the Variant ran with, as an object whose values are strings, numbers, or booleans.
+  An entry with no `parameters` is the Variant with empty Parameters, the same as `{}`.
+- `measures`: each [Measure][measure] of the Variant, mapped to its [Metrics][metric].
+  A Metric is a name mapped to a number, such as `"median": 88.0`.
+
+In this example, there are three Benchmarks:
+
+- `benchmark_name` Benchmark with two Variants, `size` `64` and `size` `512`, each with two Measures:
+  - Latency (`latency`) with the `median`, `mean`, and `p99` Metrics
+  - Throughput (`throughput`) with the `mean` Metric
+- `/bin/sh -c ./my_build_script.sh` Benchmark with one Variant and one Measure to [track build time][track build time] (`build-time`), with the `value` Metric
+- `my_binary` Benchmark with one Variant and one Measure to [track file size][track file size] (`file-size`), with the `value` Metric
+
+Two entries whose Parameters are equal are one Variant, and their Metrics are merged.
+If both entries hold the same Metric for the same Measure, the later entry wins.
+An entry with no Measures writes nothing.
+
+### Metric Names
+
+Bencher stores every Metric name the same way, but it picks a Measure's default Metric by name,
+so name each statistic with its canonical name:
+`mean`, `median`, `min`, `max`, `std_dev`, and the percentiles `p25`, `p75`, `p90`, `p95`, `p99`, and `p99_9`.
+Name a confidence interval for the statistic it bounds, such as `mean_ci_lower` and `mean_ci_upper`,
+and add its level when you know it, such as `mean_ci95_lower`.
+Name a single number that is not a statistic, such as a count or a build time, `value`.
+
+When no [Threshold][threshold] checks a Measure, the pull request comment and the `bencher run` output show its default Metric:
+`value`, then `median`, then `mean`, then the first name in alphabetical order.
+A confidence interval name comes after every other name.
 
 [benchmark]: /docs/explanation/benchmarking/#benchmark
+[parameters]: /docs/explanation/benchmarking/#parameters
 [measure]: /docs/explanation/benchmarking/#measure
+[metric]: /docs/explanation/benchmarking/#metric
+[threshold]: /docs/explanation/thresholds/
 [track build time]: /docs/how-to/track-build-time/
 [track file size]: /docs/how-to/track-file-size/

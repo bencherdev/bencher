@@ -1,6 +1,12 @@
 내장된 [벤치마크 하네스 어댑터][adapters]는 벤치마크 출력을 Bencher Metric Format (BMF) JSON으로 변환합니다.
-사용자 정의 벤치마킹 하네스는 BMF JSON으로 결과를 출력하고 [json 어댑터][json adapter]를 사용해야 합니다.
+사용자 정의 벤치마킹 하네스는 BMF JSON으로 결과를 출력하고 [`json` 어댑터][json adapter]를 사용해야 합니다.
 전체 개요에 대해서는 [사용자 정의 벤치마크 추적 방법][custom benchmarks]을 참조하세요.
+모의 BMF JSON 데이터를 생성하려면 <code><a href="/ko/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> CLI 서브커맨드를 사용하세요.
+
+BMF에는 두 가지 버전이 있으며, 모든 프로젝트는 그중 하나를 가집니다.
+버전 1은 새 프로젝트가 시작할 때 사용하는 형식이며, 이 페이지에서 설명하는 형식입니다.
+버전 0은 이전 버전으로, 버전 0 프로젝트에서 여전히 사용됩니다.
+보고서의 버전이 어떻게 선택되는지와 버전 0에 대해서는 [BMF 버전](#bmf-versions)을 참조하세요.
 
 [adapters]: /ko/docs/explanation/adapters/
 [json adapter]: /ko/docs/explanation/adapters/#-json

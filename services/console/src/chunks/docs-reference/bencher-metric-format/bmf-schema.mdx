@@ -3,26 +3,28 @@
 	"$id": "https://bencher.dev/bmf.json",
 	"$schema": "http://json-schema.org/draft-07/schema",
 	"type": "object",
-	"patternProperties": {
-		".+": {
+	"additionalProperties": {
+		"type": "array",
+		"items": {
 			"type": "object",
-			"patternProperties": {
-				".+": {
+			"properties": {
+				"parameters": {
 					"type": "object",
-					"properties": {
-						"value": {
-							"type": "number"
-						},
-						"lower_value": {
-							"type": "number"
-						},
-						"upper_value": {
+					"additionalProperties": {
+						"type": ["string", "number", "boolean"]
+					}
+				},
+				"measures": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"additionalProperties": {
 							"type": "number"
 						}
-					},
-					"required": ["value"]
+					}
 				}
-			}
+			},
+			"required": ["measures"]
 		}
 	}
 }

@@ -1,13 +1,13 @@
-### Modèle
+### Model
 Un Modèle est la combinaison d'un Test et de ses paramètres pour un Seuil.
 Un Modèle doit avoir une Limite Inférieure, une Limite Supérieure, ou les deux.
 
 - Limite Inférieure
   - Une Limite Inférieure est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance,
-  comme avec la Mesure de `Débit`.
+  comme avec la Mesure de `Throughput`.
 - Limite Supérieure
   - Une Limite Supérieure est utilisée lorsqu'une valeur plus grande indiquerait une régression de performance,
-  comme avec la Mesure de `Latence`.
+  comme avec la Mesure de `Latency`.
 
 Chaque Limite est utilisée pour calculer une Limite de Borne.
 Ensuite, chaque nouvelle Mesure est vérifiée par rapport à chaque Limite de Borne.

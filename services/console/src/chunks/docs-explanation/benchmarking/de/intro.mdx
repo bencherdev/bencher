@@ -10,7 +10,7 @@ wo die Benchmark-Harness-Ausgabe mit einem [Benchmark-Harness-Adapter](/de/docs/
 Der Benchmark-Harness-Adapter erkennt alle vorhandenen Benchmarks und deren entsprechende Metriken.
 Diese Benchmarks und Metriken werden dann zusammen mit dem Report gespeichert.
 Wenn ein [Schwellenwert](/de/docs/explanation/thresholds/) festgelegt ist,
-werden die neuen Metriken mit den historischen Metriken für jedes im Report vorhandene Benchmark verglichen.
-Wenn ein Rückschritt festgestellt wird, wird eine Warnung generiert.
+wird jede neue Metrik, die er prüft, mit den historischen Metriken derselben Variante, Measure und Metrik verglichen.
+Wenn ein Rückschritt festgestellt wird, wird ein Alert generiert.
 
 Von jetzt an werden wir Ihre "Benchmarks" als "Leistungsregressionstests" bezeichnen, um Verwirrung zu vermeiden.

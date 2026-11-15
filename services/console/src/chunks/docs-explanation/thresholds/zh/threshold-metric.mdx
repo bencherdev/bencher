@@ -1,0 +1,19 @@
+## `--threshold-metric <METRIC>`
+
+<br />
+
+使用指定的[指标][metric]名称作为阈值。
+在 BMF 版本 1 中，阈值按名称检查其度量的一个指标，例如 `median`、`p99` 或 `value`。
+例如，要为 Latency 度量的中位数使用阈值，你可以输入 `--threshold-measure latency --threshold-metric median`。
+要选择首先检查哪个指标，请参阅[每个基准测试工具适配器][adapters]写入的指标。
+一个度量的阈值所检查的指标，就是它在[拉取请求评论][github actions]和 `bencher run` 输出中的列。
+
+一旦任何阈值带有指标或参数过滤器，每个阈值都需要一个指标，
+`bencher run` 会以错误终止，并指出缺少指标的阈值。
+完全没有 `--threshold-metric` 的 `--threshold-measure` 不会设置阈值：
+运行仍会被记录，其报告会警告该阈值已被跳过，并提示使用 `--threshold-metric`。
+在 BMF 版本 0 中，`--threshold-metric` 会在发送任何内容之前以错误终止 `bencher run`。
+
+[metric]: /zh/docs/explanation/benchmarking/#metric
+[adapters]: /zh/docs/explanation/adapters/
+[github actions]: /zh/docs/explanation/bencher-run/#--github-actions-github_token

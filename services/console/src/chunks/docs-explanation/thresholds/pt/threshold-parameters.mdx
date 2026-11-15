@@ -1,0 +1,23 @@
+import ThresholdsPayloadCode from "../thresholds-payload-code.mdx";
+
+## `--threshold-parameters <PARAMETERS>`
+
+<br />
+
+Use o filtro de parâmetros especificado para um Limiar, como um objeto JSON (ex: `--threshold-parameters '{"size": 512}'`).
+O Limiar verifica toda [Variante][variant] cujos Parâmetros contêm cada chave do objeto com o mesmo valor,
+então `{"size": 512}` corresponde tanto a `{"op": "read", "size": 512}` quanto a `{"op": "write", "size": 512}`.
+O valor é JSON, não a forma `size=512` que o comentário do pull request e o Console mostram.
+Se não for definida, ou for definida como `{}`, o Limiar verifica todas as Variantes.
+Para ignorar esta opção para um Limiar específico, use um sublinhado (`_`).
+Um Limiar com um filtro de parâmetros também precisa da [opção `--threshold-metric`](#--threshold-metric-metric).
+Na versão 0 do BMF, `--threshold-parameters` interrompe o `bencher run` com um erro antes de enviar qualquer coisa.
+
+Cada opção `--threshold-parameters` contém um conjunto de Parâmetros.
+Para verificar as Variantes que correspondem a qualquer um de vários conjuntos, use a API:
+na versão 1 do BMF, os `thresholds` de um Relatório listam cada Limiar com seu filtro `parameters` como uma lista de conjuntos.
+Por exemplo:
+
+<ThresholdsPayloadCode />
+
+[variant]: /pt/docs/explanation/benchmarking/#parameters

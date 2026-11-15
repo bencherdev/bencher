@@ -3,3 +3,7 @@
 <br />
 
 Opcional: Permita falha no teste de benchmark.
+Se uma iteração do comando de benchmark falhar, o `bencher run` imprime a falha e ignora essa iteração:
+sua saída não é analisada, então nenhum de seus resultados é enviado.
+Um harness de benchmark que termina com um erro quando qualquer benchmark falha, como asv ou Catch2,
+perde os resultados de toda essa iteração.

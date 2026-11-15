@@ -10,7 +10,7 @@ donde la salida del marco de pruebas de rendimiento se analiza utilizando un [ad
 El adaptador del marco de pruebas de rendimiento detecta todos los Benchmarks que están presentes y sus Métricas correspondientes.
 Estos Benchmarks y Métricas se guardan junto con el Reporte.
 Si hay un [Umbral](/es/docs/explanation/thresholds/) establecido,
-las nuevas Métricas se comparan con las Métricas históricas para cada Benchmark presente en el Reporte.
+cada nueva Métrica que comprueba se compara con las Métricas históricas de la misma Variante, Medida y Métrica.
 Si se detecta una regresión, se generará una Alerta.
 
 De aquí en adelante nos referiremos a tus "benchmarks" como "pruebas de regresión de rendimiento" para evitar cualquier confusión.

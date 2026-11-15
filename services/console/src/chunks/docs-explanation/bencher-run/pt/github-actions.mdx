@@ -29,6 +29,13 @@ Um Branch, um Ambiente de Teste ou um Adaptador que todos os Relatórios compart
 Em seguida, uma tabela reúne os Alertas de todos os Relatórios, com uma coluna para o Relatório.
 Depois, os resultados de cada Relatório seguem em um bloco recolhível (ex: `Report 2 (microbench): 14 benchmarks, 2 alerts`),
 que fica aberto quando o Relatório tem Alertas.
+Cada linha dos resultados é uma [Variante][variant]: o Benchmark, seguido de seus Parâmetros como pares `key=value`.
+Cada Medida tem um grupo de colunas para cada Métrica que seus Limiares verificam,
+ou, caso contrário, para sua Métrica padrão: `value`, depois `median`, depois `mean` e depois o primeiro nome em ordem alfabética,
+com o nome de um intervalo de confiança como `mean_ci_lower` depois de todos os outros nomes.
+Se um Relatório tiver avisos, uma seção recolhida `⚠️ Warnings (N)` segue seus resultados, em que `N` é a contagem total deles.
+Ela lista o Resource, a Action e o Count de cada aviso,
+e um Hint que nomeia [a opção `--threshold-metric`](/pt/docs/explanation/thresholds/#--threshold-metric-metric) para Limiares ignorados.
 Cada trabalho mantém sua própria Verificação do GitHub e seu próprio resumo do trabalho,
 então os nomes das Verificações do GitHub e as verificações de status obrigatórias não mudam.
 Um trabalho cujo commit não é mais o commit head do pull request deixa o comentário como está.
@@ -41,6 +48,8 @@ Um comentário do GitHub tem um limite de tamanho, então o comentário usa a pr
 3. Todas as linhas de resumo e o número total de Alertas, sem as linhas de Alertas
 4. Como último recurso, as primeiras linhas de resumo, e depois `and N more reports` para o restante
 
+Toda forma após a primeira mantém dos avisos apenas a linha `⚠️ Warnings (N)`.
+
 Com uma única linha, o comentário é o mesmo de antes e, se for grande demais, leva ao Relatório completo.
 
 Para encontrar os outros trabalhos, o `bencher run` lista as Verificações do GitHub do commit head,
@@ -52,6 +61,7 @@ o primeiro trabalho a escrever o comentário compartilhado atualiza o mais antig
 Ao escrever o comentário compartilhado, um trabalho só atualiza ou exclui comentários publicados pela GitHub App dona da sua Verificação do GitHub,
 o que com o `GITHUB_TOKEN` é o bot `github-actions`.
 
+[variant]: /pt/docs/explanation/benchmarking/#parameters
 [github token]: https://docs.github.com/pt/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/pt/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
 

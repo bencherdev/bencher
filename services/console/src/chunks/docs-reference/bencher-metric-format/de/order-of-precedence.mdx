@@ -15,6 +15,28 @@ Die Reihenfolge der Priorität zur Identifizierung einer [Messgröße][measure] 
 2. `slug` (maximale Länge `64` Zeichen)
 3. `name` (maximale Länge `64` Zeichen)
 
+<br />
+
+Für [Metriken][metric] und [Parameter][parameters] gelten diese Grenzen:
+
+- Ein Metrikname hat `1` bis `64` Zeichen, ohne Leerraum am Anfang oder Ende.
+  `value`, `lower_value` und `upper_value` sind übliche Namen, keine besonderen.
+- Eine Measure enthält höchstens `32` Metriknamen.
+  Über `32` hinaus werden `value`, `lower_value` und `upper_value` behalten, dann die anderen Namen in alphabetischer Reihenfolge, und der Rest wird übersprungen.
+- Die Parameter einer Variante enthalten höchstens `8` Schlüssel.
+  Ein Schlüssel hat `1` bis `64` Zeichen, ohne Leerraum am Anfang oder Ende.
+  Ein Wert ist ein Boolean, eine Zahl oder ein String mit höchstens `64` Zeichen, der leer sein darf.
+- Parameter werden nach [RFC 8785][rfc 8785] kanonisiert,
+  daher spielt die Reihenfolge ihrer Schlüssel keine Rolle, und `16`, `16.0` und `1.6e1` sind derselbe Wert.
+
+Ein Benchmark-, Measure- oder Metrikname, der seine Grenzen verletzt, wird übersprungen,
+ebenso eine Variante, deren Parameter ihre Grenzen verletzen,
+und der Bericht zählt jeden davon in seinen Warnungen.
+Eine Metrik, deren Wert keine Zahl ist, lässt die gesamte Nutzlast scheitern.
+
 [benchmark]: /de/docs/explanation/benchmarking/#benchmark
 [suppressing alerts]: /de/docs/explanation/thresholds/#suppressing-alerts
 [measure]: /de/docs/explanation/benchmarking/#measure
+[metric]: /de/docs/explanation/benchmarking/#metric
+[parameters]: /de/docs/explanation/benchmarking/#parameters
+[rfc 8785]: https://www.rfc-editor.org/rfc/rfc8785

@@ -9,7 +9,7 @@ Se realizan las siguientes mediciones:
 - **Cache Jitter**: Mide la consistencia del acceso a la caché de memoria realizando lecturas secuenciales a través de un búfer del tamaño de la caché L3.
 - **I/O Jitter**: Mide la consistencia de E/S del sistema de archivos escribiendo y leyendo archivos temporales y rastreando la variación del tiempo.
 - **CPU Steal**: En plataformas virtualizadas, detecta cuánto tiempo de CPU está siendo tomado por el hipervisor.
-- **Noise Score**: Una puntuación compuesta (0–100 dB) que combina todas las mediciones en un único indicador del nivel de ruido del entorno.
+- **Noise Score**: Una puntuación compuesta (de 0 a 100 dB) que combina todas las mediciones en un único indicador del nivel de ruido del entorno.
 
 ### Uso de `bencher noise`
 
@@ -23,7 +23,7 @@ bencher noise [OPTIONS]
 
 Duración total de la medición en segundos.
 
-Por defecto: `60`
+Por defecto: `30`
 
 #### `--format <FORMAT>`
 
@@ -31,8 +31,27 @@ Formato de salida para el informe de ruido.
 
 - `human`: Salida de terminal legible con barras de ruido visuales y consejos.
 - `json`: Salida JSON en formato BMF (Bencher Metric Format), adecuada para canalizar a `bencher run`.
+  Su versión se establece con [la opción `--bmf-version`](#--bmf-version-bmf_version).
 
 Por defecto: `human`
+
+#### `--bmf-version <BMF_VERSION>`
+
+La [versión de BMF][bmf versions] del formato de salida `json`, `0` o `1`.
+`bencher noise` no lee la versión de tu Proyecto, así que un Proyecto de versión 0 necesita `--bmf-version 0`.
+
+En la versión 1, la salida tiene estos [Benchmarks][benchmark]:
+
+- `bencher::noise::compute_jitter`, `bencher::noise::cache_jitter` y `bencher::noise::io_jitter`, cada uno con dos [Medidas][measure]:
+  - Su Medida de jitter (`compute-jitter`, `cache-jitter` o `io-jitter`) con la [Métrica][metric] `cov`, el coeficiente de variación como porcentaje
+  - La Medida `latency` con las Métricas `mean`, `std_dev` y `p99` de las mismas muestras, en nanosegundos
+- `bencher::noise::cpu_steal`, cuando la plataforma informa del CPU steal, con la Medida `cpu-steal` y su Métrica `value`
+- `bencher::noise::composite` con la Medida `noise-score` y su Métrica `value`
+
+En la versión 0, cada Medida tiene solo un `value`, que es el coeficiente de variación para cada Medida de jitter, y no hay Medida `latency`.
+Un Proyecto que pasa de la versión 0 a la versión 1 empieza un nuevo historial para cada Medida de jitter, ya que su Métrica ahora es `cov`.
+
+Por defecto: `1`
 
 #### `--quiet`
 
@@ -42,3 +61,8 @@ Suprimir la salida de progreso y solo imprimir el resultado final.
 #### `--help`
 
 Imprimir ayuda.
+
+[bmf versions]: /es/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /es/docs/explanation/benchmarking/#benchmark
+[measure]: /es/docs/explanation/benchmarking/#measure
+[metric]: /es/docs/explanation/benchmarking/#metric

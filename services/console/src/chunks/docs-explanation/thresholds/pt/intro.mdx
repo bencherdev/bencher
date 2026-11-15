@@ -2,28 +2,31 @@ import ThresholdCode from "../threshold-code.mdx";
 
 Limiares são como você detecta regressões de desempenho com o Bencher.
 Um Limiar é atribuído a uma combinação única de:
-[Ramo][branch], [bancada de testes][testbed] e [medida][measure].
+[Ramo][branch], [bancada de testes][testbed], filtro de parâmetros, [medida][measure] e [métrica][metric].
 Um Limiar usa um [teste específico][tests] para detectar regressões de desempenho.
 A combinação de um teste e seus parâmetros é chamada de Modelo.
 Um Modelo deve ter um Limite Inferior, Superior, ou ambos.
 
 - Limite Inferior
   - Um Limite Inferior é usado quando um valor menor indicaria uma regressão de desempenho,
-  como na Medida de Vazão.
+  como na Medida Throughput.
 - Limite Superior
   - Um Limite Superior é usado quando um valor maior indicaria uma regressão de desempenho,
-  como na Medida de Latência.
+  como na Medida Latency.
 
 Cada Limite é usado para calcular um Limite de Fronteira.
-Então, cada novo [métrica][metric] é verificada em relação a cada Limite de Fronteira.
+Então, cada nova Métrica que o Limiar verifica é comparada com cada Limite de Fronteira,
+usando o histórico dessa Métrica para a mesma [Variante][variant].
 Um alerta é gerado quando uma nova Métrica está abaixo de um Limite Inferior de Fronteira ou acima de um Limite Superior de Fronteira.
 
 Quando [Benchmarking Contínuo], ou seja, benchmarking em CI, você vai querer criar Limiares.
 Usando o subcomando de CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>,
 você já especifica um Ramo com [a opção `--branch`][branch option]
 e uma bancada de testes com [a opção `--testbed`][testbed option].
-Assim, a única outra dimensão que você precisa especificar é uma Medida, com a opção `--threshold-measure`.
-Então, você pode usar a opção `--threshold-test` para especificar o Teste a ser usado para essa Medida.
+Assim, as outras dimensões que você precisa especificar são uma Medida, com a opção `--threshold-measure`,
+e a Métrica dessa Medida a ser verificada, com a opção `--threshold-metric`.
+Para verificar apenas algumas Variantes, adicione um filtro de parâmetros com a opção `--threshold-parameters`.
+Então, você pode usar a opção `--threshold-test` para especificar o Teste a ser usado para essa Métrica.
 As opções `--threshold-min-sample-size`, `--threshold-max-sample-size` e `--threshold-window`
 permitem controlar quais dados são usados pelo Teste.
 Finalmente, as opções `--threshold-lower-boundary` e `--threshold-upper-boundary`
@@ -36,7 +39,7 @@ pode fazer isso com a flag `--thresholds-reset`.
 - Se o Limiar existir e o Modelo especificado for diferente, então um novo Modelo é criado para o Limiar.
 - Se um Limiar existir e for redefinido, então o Modelo atual é removido do Limiar.
 
-Por exemplo, para usar apenas um Limiar para a Medida de Latência
+Por exemplo, para usar apenas um Limiar para a Métrica `value` da Medida Latency
 usando [um Teste t de Student][t-test]
 com um tamanho máximo de amostra de `64`
 e um Limite Superior de `0.99`, você poderia escrever algo assim:
@@ -45,17 +48,29 @@ e um Limite Superior de `0.99`, você poderia escrever algo assim:
 
 > 🐰 Quando estiver trabalhando com branches de recursos, você pode querer copiar os Limiares existentes do Ramo base, [Ponto de Partida][start point].
 > Isso é possível com [a flag `--start-point-clone-thresholds`][start point clone thresholds flag].
-Note que a flag `--thresholds-reset` ainda removerá quaisquer Limiares clonados que não sejam explicitamente especificados.
+> Note que a flag `--thresholds-reset` ainda removerá quaisquer Limiares clonados que não sejam explicitamente especificados.
+
+<details>
+<summary>BMF versão 0</summary>
+
+Na [versão 0 do BMF][bmf versions], um Limiar é atribuído a um Ramo, uma bancada de testes e uma Medida, e verifica a Métrica `value` de cada Benchmark.
+Use `--threshold-measure` sem `--threshold-metric`:
+`--threshold-metric` e `--threshold-parameters` interrompem o `bencher run` com um erro antes de enviar qualquer coisa,
+que nomeia `bencher project update --bmf-version 1` para mover o Projeto para a versão 1.
+
+</details>
 
 [branch]: /pt/docs/explanation/benchmarking/#branch
 [testbed]: /pt/docs/explanation/benchmarking/#testbed
 [measure]: /pt/docs/explanation/benchmarking/#measure
 [metric]: /pt/docs/explanation/benchmarking/#metric
+[variant]: /pt/docs/explanation/benchmarking/#parameters
 [continuous benchmarking]: /pt/docs/explanation/continuous-benchmarking/
 [branch option]: /pt/docs/explanation/branches/#--branch-branch
 [testbed option]: /pt/docs/explanation/testbeds/#--testbed-testbed
 [start point]: /pt/docs/explanation/benchmarking/#start-point
 [start point clone thresholds flag]: /pt/docs/explanation/branches/#--start-point-clone-thresholds
+[bmf versions]: /pt/docs/reference/bencher-metric-format/#bmf-versions
 
 [tests]: #--threshold-test-test
 [t-test]: #t-test

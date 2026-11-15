@@ -1,16 +1,20 @@
-## `---thresholds-reset`
+## `--thresholds-reset`
 
 <br />
 
-주어진 [Branch][branch] 및 [Testbed][testbed]에 대해 지정되지 않은 모든 Threshold를 재설정합니다. Threshold가 이미 존재하고 지정되지 않은 경우, 현재의 [Model][model]이 제거됩니다.
+주어진 [Branch][branch] 및 [Testbed][testbed]에 대해 지정되지 않은 모든 임계값을 재설정합니다. 임계값이 이미 존재하고 지정되지 않은 경우, 그 [측정][measure], [메트릭][metric] 또는 매개변수 필터와 관계없이 현재의 [Model][model]이 제거됩니다.
 
-예를 들어, `main` Branch와 `localhost` Testbed에 두 개의 Threshold가 있었을 경우:
-- `main` Branch, `localhost` Testbed, `latency` [Measure][measure]
-- `main` Branch, `localhost` Testbed, `throughput` [Measure][measure]
+예를 들어, `main` Branch와 `localhost` Testbed에 두 개의 임계값이 있었을 경우:
+- `main` Branch, `localhost` Testbed, `latency` 측정, `median` 메트릭
+- `main` Branch, `localhost` Testbed, `latency` 측정, `p99` 메트릭
 
-만약 `bencher run` 하위 명령어에서 `latency` Measure만 지정되고 `--thresholds-reset`이 사용되면, `throughput` Measure의 Model은 제거됩니다.
+만약 `bencher run` 하위 명령어에서 `latency` 측정의 `median` 메트릭만 지정되고 `--thresholds-reset`이 사용되면, `p99` 메트릭의 Model은 제거됩니다.
+
+BMF 버전 1에서는 `--threshold-metric`이 없어 건너뛴 `--threshold-measure`는 임계값을 지정하지 않으므로,
+`--thresholds-reset`은 실행이 메트릭과 함께 지정하지 않은 모든 임계값의 Model을 여전히 제거합니다.
 
 [branch]: /ko/docs/explanation/branches/#--branch-branch
 [testbed]: /ko/docs/explanation/testbeds/#--testbed-testbed
 [model]: /ko/docs/explanation/benchmarking/#model
 [measure]: /ko/docs/explanation/benchmarking/#measure
+[metric]: /ko/docs/explanation/benchmarking/#metric

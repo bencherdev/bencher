@@ -29,6 +29,13 @@ A Branch, Testbed, or Adapter that every Report shares moves out of the summary 
 Next, one table holds the Alerts of every Report, with a Report column.
 Then the results of each Report follow in a collapsible block (ex: `Report 2 (microbench): 14 benchmarks, 2 alerts`),
 which is open when the Report has Alerts.
+Each row of the results is a [Variant][variant]: the Benchmark, followed by its Parameters as `key=value` pairs.
+Each Measure has a group of columns for each Metric that its Thresholds check,
+or else for its default Metric: `value`, then `median`, then `mean`, then the first name in alphabetical order,
+with a confidence interval name such as `mean_ci_lower` after every other name.
+If a Report has warnings, a collapsed `⚠️ Warnings (N)` section follows its results, where `N` is their total count.
+It lists the Resource, Action, and Count of each warning,
+and a Hint that names [the `--threshold-metric` option](/docs/explanation/thresholds/#--threshold-metric-metric) for skipped Thresholds.
 Each job keeps its own GitHub Check and job summary,
 so GitHub Check names and required status checks do not change.
 A job whose commit is no longer the head of the pull request leaves the comment as it is.
@@ -41,6 +48,8 @@ A GitHub comment has a size limit, so the comment uses the first of these forms 
 3. Every summary row and the total number of Alerts, without the Alert rows
 4. As a last resort, the first summary rows, then `and N more reports` for the rest
 
+Every form after the first keeps only the `⚠️ Warnings (N)` line of the warnings.
+
 With one row, the comment is the same as before, and if it is too large, it links to the full Report.
 
 To find the other jobs, `bencher run` lists the GitHub Checks on the head commit,
@@ -52,6 +61,7 @@ the first job to write the shared comment updates the oldest of them and deletes
 When writing the shared comment, a job only updates or deletes comments posted by the GitHub App that owns its GitHub Check,
 which with the `GITHUB_TOKEN` is the `github-actions` bot.
 
+[variant]: /docs/explanation/benchmarking/#parameters
 [github token]: https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/en/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
 

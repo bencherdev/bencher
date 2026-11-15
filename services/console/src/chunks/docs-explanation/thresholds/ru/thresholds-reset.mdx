@@ -1,18 +1,23 @@
-## `---thresholds-reset`
+## `--thresholds-reset`
 
 <br />
 
-Сбросьте все неуказанные Пороги для данного [Ветки][branch] и [Тестового окружения][testbed]. Если Порог уже существует и не указан, его текущая [Модель][model] будет удалена.
+Сбросьте все неуказанные Пороги для заданных [Ветки][branch] и [Тестового окружения][testbed]. Если Порог уже существует и не указан, его текущая [Модель][model] будет удалена,
+какими бы ни были его [Измерение][measure], [Метрика][metric] или фильтр параметров.
 
 Например, если для Ветки `main` и Тестового окружения `localhost` было два Порога:
-- Ветка `main`, Тестовое окружение `localhost`, `latency` [Мера][measure]
-- Ветка `main`, Тестовое окружение `localhost`, `throughput` [Мера][measure]
+- Ветка `main`, Тестовое окружение `localhost`, Измерение `latency`, Метрика `median`
+- Ветка `main`, Тестовое окружение `localhost`, Измерение `latency`, Метрика `p99`
 
-Если указана только Мера `latency` в подкоманде `bencher run`
+Если указана только Метрика `median` Измерения `latency` в подкоманде `bencher run`
 и используется `--thresholds-reset`,
-тогда Мера `throughput` будет очищена от своей Модели.
+тогда Метрика `p99` будет очищена от своей Модели.
+
+В BMF версии 1 `--threshold-measure`, который пропущен из-за отсутствия `--threshold-metric`, не указывает Порог,
+поэтому `--thresholds-reset` все равно удаляет Модель каждого Порога, который запуск не указал с Метрикой.
 
 [branch]: /ru/docs/explanation/branches/#--branch-branch
 [testbed]: /ru/docs/explanation/testbeds/#--testbed-testbed
 [model]: /ru/docs/explanation/benchmarking/#model
 [measure]: /ru/docs/explanation/benchmarking/#measure
+[metric]: /ru/docs/explanation/benchmarking/#metric

@@ -2,28 +2,31 @@ import ThresholdCode from "../threshold-code.mdx";
 
 Les seuils sont la façon dont vous détectez les régressions de performance avec Bencher.
 Un seuil est attribué à une combinaison unique de :
-[Branch][branch], [Testbed][testbed], et [Measure][measure].
+[Branch][branch], [Testbed][testbed], filtre de paramètres, [Measure][measure] et [Métrique][metric].
 Un seuil utilise un [Test][tests] spécifique pour détecter les régressions de performance.
 La combinaison d'un test et de ses paramètres est appelée un Modèle.
 Un modèle doit avoir une Limite Inférieure, une Limite Supérieure, ou les deux.
 
 - Limite Inférieure
   - Une Limite Inférieure est utilisée lorsqu'une valeur plus petite indiquerait une régression de performance,
-  comme avec la Mesure de Débit.
+  comme avec la Mesure Throughput.
 - Limite Supérieure
   - Une Limite Supérieure est utilisée lorsqu'une valeur plus grande indiquerait une régression de performance,
-  comme avec la Mesure de Latence.
+  comme avec la Mesure Latency.
 
 Chaque limite est utilisée pour calculer une Limite de Seuil.
-Ensuite, chaque nouvelle [Métrique][metric] est vérifiée par rapport à chaque Limite de Seuil.
+Ensuite, chaque nouvelle Métrique que le seuil vérifie est comparée à chaque Limite de Seuil,
+en utilisant l'historique de cette Métrique pour la même [Variante][variant].
 Une alerte est générée lorsqu'une nouvelle métrique est en dessous d'une Limite Inférieure de Seuil ou au-dessus d'une Limite Supérieure de Seuil.
 
 Lors du [Benchmarking Continu], c'est-à-dire du benchmarking en CI, vous voudrez créer des seuils.
 En utilisant la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>,
 vous spécifiez déjà une branche avec [l'option `--branch`][branch option]
 et un Testbed avec [l'option `--testbed`][testbed option].
-Donc la seule autre dimension que vous devez spécifier est une Mesure, avec l'option `--threshold-measure`.
-Ensuite, vous pouvez utiliser l'option `--threshold-test` pour spécifier le Test à utiliser pour cette Mesure.
+Donc les autres dimensions que vous devez spécifier sont une Mesure, avec l'option `--threshold-measure`,
+et la Métrique de cette Mesure à vérifier, avec l'option `--threshold-metric`.
+Pour ne vérifier que certaines Variantes, ajoutez un filtre de paramètres avec l'option `--threshold-parameters`.
+Ensuite, vous pouvez utiliser l'option `--threshold-test` pour spécifier le Test à utiliser pour cette Métrique.
 Les options `--threshold-min-sample-size`, `--threshold-max-sample-size`, et `--threshold-window`
 vous permettent de contrôler les données utilisées par le Test.
 Enfin, les options `--threshold-lower-boundary` et `--threshold-upper-boundary`
@@ -36,7 +39,7 @@ vous pouvez le faire avec le drapeau `--thresholds-reset`.
 - Si le seuil existe et que le modèle spécifié est différent, alors un nouveau modèle est créé pour le seuil.
 - Si un seuil existe et qu'il est réinitialisé, alors le modèle actuel est retiré du seuil.
 
-Par exemple, pour n'utiliser qu'un seuil pour la Mesure de Latence
+Par exemple, pour n'utiliser qu'un seuil pour la Métrique `value` de la Mesure Latency
 en utilisant [un test de Student][t-test]
 avec une taille d'échantillon maximale de `64`
 et une Limite Supérieure de `0.99`, vous pourriez écrire quelque chose comme ceci :
@@ -45,17 +48,29 @@ et une Limite Supérieure de `0.99`, vous pourriez écrire quelque chose comme c
 
 > 🐰 Lorsqu'on travaille avec des branches de fonctionnalités, vous pourriez vouloir copier les seuils existants à partir de la branche de base, [Point de Départ][start point].
 > C'est possible avec [le drapeau `--start-point-clone-thresholds`][start point clone thresholds flag].
-Notez que le drapeau `--thresholds-reset` retirera toujours les seuils clonés qui ne sont pas explicitement spécifiés.
+> Notez que le drapeau `--thresholds-reset` retirera toujours les seuils clonés qui ne sont pas explicitement spécifiés.
+
+<details>
+<summary>BMF version 0</summary>
+
+En [version 0 de BMF][bmf versions], un seuil est attribué à une Branche, un Banc d'essai et une Mesure, et il vérifie la Métrique `value` de chaque Benchmark.
+Utilisez `--threshold-measure` sans `--threshold-metric` :
+`--threshold-metric` et `--threshold-parameters` arrêtent `bencher run` avec une erreur avant tout envoi,
+qui nomme `bencher project update --bmf-version 1` pour faire passer le Projet en version 1.
+
+</details>
 
 [branch]: /fr/docs/explanation/benchmarking/#branch
 [testbed]: /fr/docs/explanation/benchmarking/#testbed
 [measure]: /fr/docs/explanation/benchmarking/#measure
 [metric]: /fr/docs/explanation/benchmarking/#metric
+[variant]: /fr/docs/explanation/benchmarking/#parameters
 [continuous benchmarking]: /fr/docs/explanation/continuous-benchmarking/
 [branch option]: /fr/docs/explanation/branches/#--branch-branch
 [testbed option]: /fr/docs/explanation/testbeds/#--testbed-testbed
 [start point]: /fr/docs/explanation/benchmarking/#start-point
 [start point clone thresholds flag]: /fr/docs/explanation/branches/#--start-point-clone-thresholds
+[bmf versions]: /fr/docs/reference/bencher-metric-format/#bmf-versions
 
 [tests]: #--threshold-test-test
 [t-test]: #t-test

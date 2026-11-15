@@ -6,13 +6,22 @@ Il est possible de créer plusieurs seuils avec la même invocation de
 <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>.
 Lors de la spécification de plusieurs seuils, toutes les mêmes options doivent être utilisées pour chaque seuil.
 Pour ignorer une option pour un seuil spécifique, utilisez un tiret bas (`_`).
+L'exception est `--threshold-metric` : chaque seuil a besoin de sa propre Métrique, donc un tiret bas ne peut pas l'ignorer.
 
 Par exemple, si vous ne souhaitez utiliser que deux seuils,
-un pour la mesure de latence et un pour la mesure de débit,
-vous voudrez probablement définir une limite supérieure pour la mesure de latence
-et une limite inférieure pour la mesure de débit.
-Par conséquent, vous utiliseriez `--threshold-lower-boundary _` pour la mesure de latence
-et `--threshold-upper-boundary _` pour la mesure de débit.
+un pour la mesure Latency et un pour la mesure Throughput,
+vous voudrez probablement définir une limite supérieure pour la mesure Latency
+et une limite inférieure pour la mesure Throughput.
+Par conséquent, vous utiliseriez `--threshold-lower-boundary _` pour la mesure Latency
+et `--threshold-upper-boundary _` pour la mesure Throughput.
 Vous pourriez écrire ceci :
 
 <MultipleThresholdsCode />
+
+Une même mesure peut aussi avoir plusieurs seuils qui diffèrent par la Métrique ou par le filtre de paramètres,
+comme un pour la `median` et un pour le `p99` de la mesure Latency.
+Chaque seuil qui correspond à une Variante la vérifie,
+donc un seuil sans filtre et un seuil filtré pour la même Métrique vérifient tous les deux les Variantes auxquelles le filtre correspond,
+et tous les deux génèrent une Alerte pour la même régression.
+Un seuil spécifié deux fois dans la même invocation est un seul seuil,
+avec le Modèle de sa dernière occurrence.

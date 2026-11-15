@@ -1,26 +1,50 @@
 ```json
 {
-  "benchmark_name": {
-    "latency": {
-      "value": 88.0,
-      "lower_value": 87.42,
-      "upper_value": 88.88
+  "benchmark_name": [
+    {
+      "parameters": { "size": 64 },
+      "measures": {
+        "latency": {
+          "median": 88.0,
+          "mean": 88.42,
+          "p99": 97.5
+        },
+        "throughput": {
+          "mean": 5.55
+        }
+      }
     },
-    "throughput": {
-      "value": 5.55,
-      "lower_value": 3.14,
-      "upper_value": 6.30
+    {
+      "parameters": { "size": 512 },
+      "measures": {
+        "latency": {
+          "median": 412.0,
+          "mean": 415.13,
+          "p99": 470.25
+        },
+        "throughput": {
+          "mean": 1.21
+        }
+      }
     }
-  },
-  "/bin/sh -c ./my_build_script.sh": {
-    "build-time": {
-      "value": 87.0
+  ],
+  "/bin/sh -c ./my_build_script.sh": [
+    {
+      "measures": {
+        "build-time": {
+          "value": 87.0
+        }
+      }
     }
-  },
-  "my_binary": {
-    "file-size": {
-      "value": 42.0
+  ],
+  "my_binary": [
+    {
+      "measures": {
+        "file-size": {
+          "value": 42.0
+        }
+      }
     }
-  }
+  ]
 }
 ```

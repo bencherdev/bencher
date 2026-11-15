@@ -1,0 +1,23 @@
+import ThresholdsPayloadCode from "../thresholds-payload-code.mdx";
+
+## `--threshold-parameters <PARAMETERS>`
+
+<br />
+
+Use the specified parameters filter for a Threshold, as a JSON object (ex: `--threshold-parameters '{"size": 512}'`).
+The Threshold checks every [Variant][variant] whose Parameters hold each key in the object with the same value,
+so `{"size": 512}` matches both `{"op": "read", "size": 512}` and `{"op": "write", "size": 512}`.
+The value is JSON, not the `size=512` form that the pull request comment and the Console show.
+If not set, or set to `{}`, the Threshold checks every Variant.
+To ignore this option for a specific Threshold, use an underscore (`_`).
+A Threshold with a parameters filter also needs [the `--threshold-metric` option](#--threshold-metric-metric).
+At BMF version 0, `--threshold-parameters` stops `bencher run` with an error before it sends anything.
+
+Each `--threshold-parameters` option holds one set of Parameters.
+To check the Variants that match any one of several sets, use the API:
+at BMF version 1, the `thresholds` of a Report list each Threshold with its `parameters` filter as a list of sets.
+For example:
+
+<ThresholdsPayloadCode />
+
+[variant]: /docs/explanation/benchmarking/#parameters

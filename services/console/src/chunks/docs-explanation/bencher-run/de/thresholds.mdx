@@ -1,4 +1,6 @@
 ### `--threshold-measure <MEASURE>`
+### `--threshold-metric <METRIC>`
+### `--threshold-parameters <PARAMETERS>`
 ### `--threshold-test <TEST>`
 ### `--threshold-min-sample-size <SAMPLE_SIZE>`
 ### `--threshold-max-sample-size <SAMPLE_SIZE>`
@@ -9,5 +11,9 @@
 ### `--error-on-alert`
 
 <br />
+
+In BMF Version 1 prüft ein Schwellenwert eine Metrik einer Measure, die `--threshold-metric` benennt.
+Ein `--threshold-measure` ganz ohne `--threshold-metric` legt keinen Schwellenwert fest:
+Der Lauf wird trotzdem gespeichert, und sein Bericht warnt, dass der Schwellenwert übersprungen wurde, mit dem Hinweis, `--threshold-metric` zu verwenden.
 
 Siehe [Schwellenwerte und Benachrichtigungen](/de/docs/explanation/thresholds/) für einen vollständigen Überblick.

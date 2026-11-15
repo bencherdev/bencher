@@ -10,7 +10,7 @@ onde a saída do framework de benchmark é analisada usando um [adaptador de fra
 O adaptador de framework de benchmark detecta todos os Benchmarks que estão presentes e seus Métricas correspondentes.
 Esses Benchmarks e Métricas são então salvos junto com o Relatório.
 Se houver um [Limite](/pt/docs/explanation/thresholds/) definido,
-então as novas Métricas são comparadas com as Métricas históricas para cada Benchmark presente no Relatório.
+então cada nova Métrica que ele verifica é comparada com as Métricas históricas da mesma Variante, Medida e Métrica.
 Se uma regressão for detectada, um Alerta será gerado.
 
 Daqui em diante, nos referiremos aos seus "benchmarks" como "testes de regressão de desempenho" para evitar qualquer confusão.

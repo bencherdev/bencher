@@ -1,19 +1,24 @@
-## `---thresholds-reset`
+## `--thresholds-reset`
 
 <br />
 
 Réinitialiser tous les seuils non spécifiés pour la [branche][branch] et le [banc d'essai][testbed] donnés.
-Si un seuil existe déjà et n'est pas spécifié, son [modèle][model] actuel sera supprimé.
+Si un seuil existe déjà et n'est pas spécifié, son [modèle][model] actuel sera supprimé,
+quels que soient sa [mesure][measure], sa [métrique][metric] ou son filtre de paramètres.
 
 Par exemple, s'il y avait deux seuils pour la branche `main` et banc d'essai `localhost` :
-- Branche `main`, banc d'essai `localhost`, [mesure][measure] de `latence`
-- Branche `main`, banc d'essai `localhost`, [mesure][measure] de `débit`
+- Branche `main`, banc d'essai `localhost`, mesure `latency`, métrique `median`
+- Branche `main`, banc d'essai `localhost`, mesure `latency`, métrique `p99`
 
-Si seule la mesure de `latence` est spécifiée dans la sous-commande `bencher run`
+Si seule la métrique `median` de la mesure `latency` est spécifiée dans la sous-commande `bencher run`
 et `--thresholds-reset` est utilisé,
-alors la mesure de `débit` aurait son modèle supprimé.
+alors la métrique `p99` aurait son modèle supprimé.
+
+En version 1 de BMF, un `--threshold-measure` ignoré faute de `--threshold-metric` ne spécifie aucun seuil,
+donc `--thresholds-reset` supprime quand même le modèle de chaque seuil que l'exécution ne spécifie pas avec une métrique.
 
 [branch]: /fr/docs/explanation/branches/#--branch-branch
 [testbed]: /fr/docs/explanation/testbeds/#--testbed-testbed
 [model]: /fr/docs/explanation/benchmarking/#model
 [measure]: /fr/docs/explanation/benchmarking/#measure
+[metric]: /fr/docs/explanation/benchmarking/#metric

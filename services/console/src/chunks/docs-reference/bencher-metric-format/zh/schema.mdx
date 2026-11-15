@@ -1,14 +1,26 @@
 import BmfSchema from "../bmf-schema.mdx";
+import BmfV0Schema from "../bmf-v0-schema.mdx";
 
 ## Bencher 指标格式 (BMF) 的 JSON 模式
 
-以下是 Bencher 指标格式 (BMF) JSON 的 [JSON 模式][json schema]：
+以下是 Bencher 指标格式 (BMF) 版本 1 JSON 的 [JSON 模式][json schema]：
 
 <BmfSchema />
 
+该模式检查负载的结构。
+名称和参数的限制会在读取报告时检查。
+
 ### 模式版本：
 
-- 最新：[`https://bencher.dev/bmf.json`](https://bencher.dev/bmf.json)
-- `v0`（最新）：[`https://bencher.dev/v0/bmf.json`](https://bencher.dev/v0/bmf.json)
+- 最新（`v1`）：[`https://bencher.dev/bmf.json`](https://bencher.dev/bmf.json)
+- `v1`：[`https://bencher.dev/v1/bmf.json`](https://bencher.dev/v1/bmf.json)
+- `v0`：[`https://bencher.dev/v0/bmf.json`](https://bencher.dev/v0/bmf.json)
+
+<details>
+<summary>BMF 版本 0 JSON 模式</summary>
+
+<BmfV0Schema />
+
+</details>
 
 [json schema]: https://json-schema.org/draft-07/json-schema-release-notes

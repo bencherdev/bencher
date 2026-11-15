@@ -2,7 +2,7 @@ import ThresholdCode from "../threshold-code.mdx";
 
 Thresholds are how you catch performance regressions with Bencher.
 A Threshold is assigned to a unique combination of:
-[Branch][branch], [Testbed][testbed], and [Measure][measure].
+[Branch][branch], [Testbed][testbed], parameters filter, [Measure][measure], and [Metric][metric].
 A Threshold uses a specific [Test][tests] to detect performance regressions.
 The combination of a Test and its parameters is called a Model.
 A Model must have a Lower Boundary, Upper Boundary, or both.
@@ -15,15 +15,18 @@ A Model must have a Lower Boundary, Upper Boundary, or both.
   such as with the Latency Measure.
 
 Each Boundary is used to calculate a Boundary Limit.
-Then every new [Metric][metric] is checked against each Boundary Limit.
+Then each new Metric that the Threshold checks is compared against each Boundary Limit,
+using the history of that Metric for the same [Variant][variant].
 An Alert is generated when a new Metric is below a Lower Boundary Limit or above an Upper Boundary Limit.
 
 When [Continuous Benchmarking], that is benchmarking in CI you will want to create Thresholds.
 Using the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand,
 you already specify a Branch with [the `--branch` option][branch option]
 and a Testbed with [the `--testbed` option][testbed option].
-So the only other dimension you need to specify is a Measure, with the `--threshold-measure` option.
-Then you can use the `--threshold-test` option to specify the Test to use for that Measure.
+So the other dimensions you need to specify are a Measure, with the `--threshold-measure` option,
+and the Metric of that Measure to check, with the `--threshold-metric` option.
+To check only some Variants, add a parameters filter with the `--threshold-parameters` option.
+Then you can use the `--threshold-test` option to specify the Test to use for that Metric.
 The `--threshold-min-sample-size`, `--threshold-max-sample-size`, and `--threshold-window` options
 allow you to control what data is used by the Test.
 Finally, the `--threshold-lower-boundary` and `--threshold-upper-boundary` options
@@ -31,12 +34,12 @@ allow you to set the Lower Boundary and Upper Boundary.
 If you want to remove all Models that are not specified,
 you can do so with the `--thresholds-reset` flag.
 
-- If the Threshold does not exits, it will be created for you.
+- If the Threshold does not exist, it will be created for you.
 - If the Threshold does exist and the specified Model is the same, then the Model is ignored.
 - If the Threshold does exist and the specified Model is different, then a new Model is created for the Threshold.
 - If a Threshold does exist and it is reset, then the current Model is removed from the Threshold.
 
-For example, to only use a Threshold for the Latency Measure
+For example, to only use a Threshold for the `value` Metric of the Latency Measure
 using [a Student's t-test Test][t-test]
 with a maximum sample size of `64`
 and an Upper Boundary of `0.99`, you could write something like this:
@@ -45,17 +48,29 @@ and an Upper Boundary of `0.99`, you could write something like this:
 
 > 🐰 When working with feature branches, you may want to copy the existing Thresholds from the base, [Start Point][start point] Branch.
 > This is possible with [the `--start-point-clone-thresholds` flag][start point clone thresholds flag].
-Note that the `--thresholds-reset` flag will still remove any cloned Thresholds that are not explicitly specified.
+> Note that the `--thresholds-reset` flag will still remove any cloned Thresholds that are not explicitly specified.
+
+<details>
+<summary>BMF version 0</summary>
+
+At [BMF version 0][bmf versions], a Threshold is assigned to a Branch, Testbed, and Measure, and it checks the `value` Metric of every Benchmark.
+Use `--threshold-measure` without `--threshold-metric`:
+`--threshold-metric` and `--threshold-parameters` stop `bencher run` with an error before it sends anything,
+which names `bencher project update --bmf-version 1` to move the Project to version 1.
+
+</details>
 
 [branch]: /docs/explanation/benchmarking/#branch
 [testbed]: /docs/explanation/benchmarking/#testbed
 [measure]: /docs/explanation/benchmarking/#measure
 [metric]: /docs/explanation/benchmarking/#metric
+[variant]: /docs/explanation/benchmarking/#parameters
 [continuous benchmarking]: /docs/explanation/continuous-benchmarking/
 [branch option]: /docs/explanation/branches/#--branch-branch
 [testbed option]: /docs/explanation/testbeds/#--testbed-testbed
 [start point]: /docs/explanation/benchmarking/#start-point
 [start point clone thresholds flag]: /docs/explanation/branches/#--start-point-clone-thresholds
+[bmf versions]: /docs/reference/bencher-metric-format/#bmf-versions
 
 [tests]: #--threshold-test-test
 [t-test]: #t-test

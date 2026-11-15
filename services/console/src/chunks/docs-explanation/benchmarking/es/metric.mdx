@@ -1,2 +1,17 @@
-### Métrica
-Una Métrica es un resultado único de prueba de regresión de rendimiento en un punto en el tiempo. Se pueden recopilar hasta tres Valores para una sola Métrica: `value`, `lower_value` y `upper_value`. El `value` es obligatorio para todas las Métricas, mientras que el `lower_value` y el `upper_value` son opcionales de manera independiente. Los Valores que se recopilan se determinan por el [adaptador de marco de referencia de benchmark](/es/docs/explanation/adapters/).
+### Metric
+Una Métrica es un resultado único de prueba de regresión de rendimiento en un punto en el tiempo:
+un valor con nombre recopilado para una Medida, como `median` o `p99`.
+El [adaptador de marco de referencia de benchmark](/es/docs/explanation/adapters/) escribe cada estadística que informa tu arnés de benchmark como su propia Métrica, con el nombre de esa estadística.
+Un número único que no es una estadística, como un conteo de instrucciones o un tiempo de construcción, es la Métrica `value`.
+Una Medida contiene como máximo `32` Métricas.
+
+<details>
+<summary>BMF versión 0</summary>
+
+En la [versión 0 de BMF][bmf versions], se pueden recopilar hasta tres Valores para una sola Métrica: `value`, `lower_value` y `upper_value`.
+El `value` es obligatorio para todas las Métricas, mientras que el `lower_value` y el `upper_value` son opcionales de manera independiente.
+Este es el triple de Métrica, que los Proyectos de versión 0 todavía usan.
+
+</details>
+
+[bmf versions]: /es/docs/reference/bencher-metric-format/#bmf-versions

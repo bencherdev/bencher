@@ -3,3 +3,7 @@
 <br />
 
 Optionnel : Autorise l'échec du test de benchmark.
+Si une itération de la commande de benchmark échoue, `bencher run` affiche l'échec et ignore cette itération :
+sa sortie n'est pas analysée, donc aucun de ses résultats n'est envoyé.
+Un harnais de benchmark qui se termine avec une erreur dès qu'un seul benchmark échoue, comme asv ou Catch2,
+perd les résultats de toute cette itération.

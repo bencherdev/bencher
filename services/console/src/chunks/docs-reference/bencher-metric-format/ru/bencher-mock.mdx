@@ -1,33 +1,45 @@
 ## `bencher mock`
 
 Подкоманда CLI `bencher mock` используется для генерации макетных JSON-данных в формате Bencher Metric Format (BMF).
+Если не указано иное, она записывает [BMF версии 1][bmf versions]:
+у каждого [измерения][measure] каждого [бенчмарка][benchmark] есть одна [метрика][metric], `value`,
+и у каждого бенчмарка есть один Вариант без Параметров.
+Она не считывает версию вашего Проекта, поэтому Проекту версии 0 нужен [`--bmf-version 0`](#--bmf-version-bmf_version).
 
 ### `--seed <SEED>`
 
-Начальное значение (seed) для генератора псевдослучайных чис.
+Начальное значение (seed) для генератора псевдослучайных чисел.
 Если не указано, будет использовано случайное значение.
 
 ### `--count <COUNT>`
 
 Количество макетных [бенчмарков][benchmark], которые нужно сгенерировать.
 
-[benchmark]: /ru/docs/explanation/benchmarking/#benchmark
-
 ### `--measure <MEASURE>`
 
-Какую [меру][measure] использовать для каждого [бенчмарка][benchmark].
-Можно указать несколько мер, используя опцию `--measure` несколько раз.
-По умолчанию используется встроенная мера `latency`.
+Какое [измерение][measure] использовать для каждого [бенчмарка][benchmark].
+Можно указать несколько измерений, используя опцию `--measure` несколько раз.
+По умолчанию используется встроенное измерение `latency`.
 
-[measure]: /ru/docs/explanation/benchmarking/#measure
-[benchmark]: /ru/docs/explanation/benchmarking/#benchmark
+### `--parameters <PARAMETERS>`
+
+[Параметры][parameters] Варианта, который нужно сгенерировать для каждого бенчмарка, в виде объекта JSON (пример: `--parameters '{"size": 64}'`).
+Каждый набор Параметров создает один Вариант каждого бенчмарка,
+и можно указать несколько наборов, используя опцию `--parameters` несколько раз.
+Если не указано, у каждого бенчмарка есть один Вариант без Параметров.
+Она принимает тот же JSON, что и [опция `--threshold-parameters`][threshold parameters] команды `bencher run`,
+и ее нельзя использовать вместе с `--bmf-version 0`.
+
+### `--bmf-version <BMF_VERSION>`
+
+Версия BMF для записи, `0` или `1`.
+По умолчанию используется `1`.
+В версии 0 у каждого измерения есть `value`, `lower_value` и `upper_value`.
 
 ### `--pow <POW>`
 
 Степень десяти, используемая для макетных [метрик][metric].
-По умолчанию — `1`.
-
-[metric]: /ru/docs/explanation/benchmarking/#metric
+По умолчанию используется `1`.
 
 ### `--fail`
 
@@ -40,3 +52,10 @@
 ### `--help`
 
 Вывести справку.
+
+[bmf versions]: /ru/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /ru/docs/explanation/benchmarking/#benchmark
+[measure]: /ru/docs/explanation/benchmarking/#measure
+[metric]: /ru/docs/explanation/benchmarking/#metric
+[parameters]: /ru/docs/explanation/benchmarking/#parameters
+[threshold parameters]: /ru/docs/explanation/thresholds/#--threshold-parameters-parameters

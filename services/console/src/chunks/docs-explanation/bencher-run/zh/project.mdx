@@ -20,8 +20,12 @@
 如果用户未认证，则该项目会在一个新的 `unclaimed` 组织下创建。
 该组织随后可以通过 `bencher run` 输出中的 `Claim this project` 链接进行 `claimed`，或在后续已认证的 `bencher run` 调用中使用项目 slug 来认领。
 
+新项目从 [Bencher Metric Format (BMF) 版本 1][bmf versions] 开始。
+已有项目保留其 BMF 版本，`bencher run` 会在每次运行前读取它。
+
 > 🐰 重要：如果 `CI` 环境变量被设置为 `true`，
 > 那么你需要要么指定项目，
 > 要么设置[`--ci-on-the-fly` 标志][即时 CI]。
 
 [即时 CI]: #--ci-on-the-fly
+[bmf versions]: /zh/docs/reference/bencher-metric-format/#bmf-versions

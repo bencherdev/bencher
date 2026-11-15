@@ -1,18 +1,23 @@
-## `---thresholds-reset`
+## `--thresholds-reset`
 
 <br />
 
-Redefina todos os Limiares não especificados para o [Branch][branch] e [Testbed][testbed] dados. Se um Limiar já existe e não for especificado, seu [Modelo][model] atual será removido.
+Redefina todos os Limiares não especificados para o [Branch][branch] e [Testbed][testbed] dados. Se um Limiar já existe e não for especificado, seu [Modelo][model] atual será removido,
+qualquer que seja sua [Medida][measure], sua [Métrica][metric] ou seu filtro de parâmetros.
 
 Por exemplo, se houver dois Limiares para o Branch `main` e Testbed `localhost`:
-- Branch `main`, Testbed `localhost`, [Métrica][measure] de `latência`
-- Branch `main`, Testbed `localhost`, [Métrica][measure] de `throughput`
+- Branch `main`, Testbed `localhost`, Medida `latency`, Métrica `median`
+- Branch `main`, Testbed `localhost`, Medida `latency`, Métrica `p99`
 
-Se apenas a Métrica de `latência` for especificada no subcomando `bencher run`
+Se apenas a Métrica `median` da Medida `latency` for especificada no subcomando `bencher run`
 e `--thresholds-reset` for usado,
-então a Métrica de `throughput` terá seu Modelo removido.
+então a Métrica `p99` terá seu Modelo removido.
+
+Na versão 1 do BMF, um `--threshold-measure` que é ignorado por não ter `--threshold-metric` não especifica nenhum Limiar,
+então `--thresholds-reset` ainda remove o Modelo de todo Limiar que a execução não especifica com uma Métrica.
 
 [branch]: /pt/docs/explanation/branches/#--branch-branch
 [testbed]: /pt/docs/explanation/testbeds/#--testbed-testbed
 [model]: /pt/docs/explanation/benchmarking/#model
 [measure]: /pt/docs/explanation/benchmarking/#measure
+[metric]: /pt/docs/explanation/benchmarking/#metric
