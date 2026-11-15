@@ -1,9 +1,39 @@
 import MakeCppGoogle from "../make-cpp-google.mdx";
 
-## ➕ C++ 구글
+## ➕ C++ Google
 
-C++ 구글 어댑터(`cpp_google`)는 [Google Benchmark](https://github.com/google/benchmark) 출력을 [JSON 형식(`--benchmark_format=json`을 통해)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats)으로 기대합니다.
-`지연 시간` 측정(즉, `나노초(ns)`)이 수집됩니다.
-평균(즉, `값`)만 사용 가능합니다. `lower_value`와 `upper_value`는 없습니다.
+C++ Google 어댑터(`cpp_google`)는 [JSON 형식(즉, `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats)의 [Google Benchmark](https://github.com/google/benchmark) 출력을 입력으로 받습니다.
 
 <MakeCppGoogle />
+
+벤치마크 이름은 인수를 뺀 실행 이름입니다.
+인수는 매개변수가 됩니다:
+이름이 있는 인수(즉, `size:64`)는 그 이름을 유지하고,
+위치 인수는 위치에 따라 `@arg0`, `@arg1` 등이 되며,
+`Threads()`로 생긴 끝의 `threads:N` 부분은 `@threads`가 됩니다.
+이 키들과 철자가 같은 이름의 인수는 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+
+`latency`(실제 시간)와 `cpu-time` 측정은 나노초(ns) 단위로 수집됩니다.
+`bytes_per_second`와 `items_per_second` 처리율은 `bytes-throughput`과 `throughput` 측정으로 수집되며,
+각 사용자 카운터는 그 카운터의 이름을 딴 측정으로 수집됩니다.
+단일 실행에서는 각 시간이 `mean`이고, 각 처리율과 카운터는 `value`입니다.
+반복(즉, `--benchmark_repetitions`)을 사용하면 대신 집계값이 수집됩니다:
+`mean`, `median`, `std_dev`, 그리고 `ComputeStatistics`로 추가한 시간 통계입니다.
+백분율 집계값(즉, `cv`)은 수집되지 않습니다.
+메모리 관리자를 사용하면 `allocations` 측정(반복당)은 `mean`이며,
+`max_bytes_used`, `total_allocated_bytes`, `net_heap_growth`는 바이트 단위의 측정으로 각각 `value`입니다.
+반복을 사용하면 각 메모리 측정은 반복들의 `mean`, `median`, `min`, `max`, `std_dev`를 가집니다.
+
+BigO 및 RMS 행, 오류가 나거나 건너뛴 실행, 그리고 유한하지 않은 모든 값(즉, `NaN` 또는 `Infinity`)도 건너뛴 것으로 집계됩니다.
+
+반복을 사용하는 경우 먼저 `median` 메트릭에 임계값을 설정하세요(`--threshold-metric median`).
+단일 실행에서는 시간과 할당에는 `mean`, 처리율, 카운터, 바이트 수에는 `value`에 먼저 임계값을 설정하세요.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+BMF 버전 0에서는 `latency` 측정(즉, `nanoseconds (ns)`)만 수집되며, Google Benchmark가 기록한 이름이 그대로 벤치마크 이름이 됩니다.
+평균(즉, `value`)만 사용할 수 있습니다.
+`lower_value`와 `upper_value`는 모두 수집되지 않습니다.
+
+</details>

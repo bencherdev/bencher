@@ -1,23 +1,22 @@
-### ⚖️ Tamanho do Arquivo
+### ⚖️ File Size
 
 O subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-pode ser utilizado para acompanhar o tamanho do arquivo (ou seja, tamanho do binário) de seus entregáveis com a opção `--file-size`.
-A opção `--file-size` espera um caminho de arquivo para o arquivo cujo tamanho será medido.
+pode ser usado para acompanhar o tamanho de arquivo (ou seja, o tamanho do binário) dos seus entregáveis com a opção `--file-size`.
+A opção `--file-size` espera o caminho do arquivo cujo tamanho será medido.
 Por baixo dos panos, <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-exibe os resultados como[Formato de Métrica Bencher (BMF) JSON][bmf].
-Portanto, é uma boa prática utilizar explicitamente [o adaptador `json`][json].
-Para mais detalhes, veja [como acompanhar o tamanho do arquivo][file size].
+gera os resultados como [Bencher Metric Format (BMF) JSON][bmf] na versão do BMF do Projeto.
+Por isso, é uma boa prática usar explicitamente [o adaptador `json`][json].
+Para mais detalhes, veja [como acompanhar o tamanho de arquivo][file size].
 
-A Medida `file-size` (ou seja, `bytes (B)`) é coletada.
-Apenas o valor do tamanho do arquivo (ou seja, `valor`) está disponível.
-Nem `lower_value` nem `upper_value` são coletados.
+A Medida `file-size` (ou seja, `bytes (B)`) é coletada como uma única Métrica `value`,
+que é a Métrica para a qual definir um Limiar primeiro.
 A Medida `file-size` não é criada por padrão para todos os Projetos.
-No entanto, quando você usa a opção `--file-size`, essa Medida será automaticamente criada para o seu Projeto.
-A opção `--file-size` pode ser usada várias vezes para rastrear múltiplos tamanhos de arquivo.
+No entanto, quando você usa a opção `--file-size`, esta Medida será criada automaticamente para o seu Projeto.
+A opção `--file-size` pode ser usada várias vezes para acompanhar vários tamanhos de arquivo.
 
 {props.children}
 
-[json]: #-json
+[json]: /pt/docs/explanation/adapters/#-json
 
 [bmf]: /pt/docs/reference/bencher-metric-format/
 [file size]: /pt/docs/how-to/track-file-size/

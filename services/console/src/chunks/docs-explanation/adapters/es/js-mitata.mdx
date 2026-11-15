@@ -1,0 +1,33 @@
+import MitataJson from "../mitata-json.mdx";
+import NodeJsMitata from "../node-js-mitata.mdx";
+
+## 🕸 JavaScript mitata
+
+El adaptador JavaScript mitata (`js_mitata`) espera la salida de [mitata](https://github.com/evanwashere/mitata) en formato JSON.
+El JSON de mitata contiene todas las muestras por defecto, lo que puede hacerlo demasiado grande para enviarlo,
+así que deja fuera las muestras y la información de depuración:
+
+<MitataJson />
+
+No imprimas nada más en `stdout`, para que el JSON sea todo lo que lee el adaptador.
+
+<NodeJsMitata />
+
+Cada Benchmark se nombra por el nombre de su grupo (cuando tiene uno) y su nombre tal como está escrito, unidos con ` > `.
+Sus `args` son sus Parámetros, así que `bench("fill $size", ...).args("size", [64, 128])`
+da al Benchmark `fill $size` dos Variantes, con los Parámetros `{"size": 64}` y `{"size": 128}`.
+Un argumento que no es una cadena, un número o un booleano se almacena como su texto JSON compacto.
+Una ejecución que lanza un error se cuenta como omitida en las advertencias del Informe.
+
+Se recogen estas Medidas:
+- `latency` (es decir, `nanoseconds (ns)`): `mean`, `median`, `min`, `max` y los percentiles `p25`, `p75`, `p99` y `p99_9`
+- `heap` (es decir, `bytes (B)`): la estimación de mitata del heap usado por iteración, como `mean`, `min` y `max`
+- `gc-time` (es decir, `nanoseconds (ns)`): el tiempo de una recolección de basura, como `mean`, `min` y `max`
+- Con [`@mitata/counters`](https://www.npmjs.com/package/@mitata/counters), los contadores de hardware por iteración, cada uno como `mean`, `min` y `max`:
+  `cycles`, `instructions`, `cache-references`, `cache-misses`, `branches`, `branch-misses`, `stall-cycles`, `loads-and-stores`, `l1-load-misses` y `l1-store-misses`
+
+Pon un Umbral primero a la Métrica `median` para `latency`, con `--threshold-metric median`,
+y a la Métrica `mean` para cada otra Medida.
+
+El adaptador JavaScript mitata solo lee resultados en la versión 1 de BMF.
+Un Informe para un Proyecto en la versión 0 de BMF se rechaza con un error que explica cómo pasar el Proyecto a la versión 1 de BMF.

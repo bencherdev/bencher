@@ -1,9 +1,28 @@
 import NodeJsTime from "../node-js-time.mdx";
 
-## 🕸 Время в JavaScript
+## 🕸 JavaScript Time
 
-Адаптер времени JavaScript (`js_time`) ожидает вывод [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd).
-Собирается мера `latency` (то есть `наносекунды (ns)`).
-Доступно только время операции (то есть `value`). Нет `lower_value` и `upper_value`.
+Адаптер JavaScript Time (`js_time`) ожидает вывод [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd)
+из Firefox, Node.js, Deno или Bun.
+Bun печатает свои таймеры в `stderr`, поэтому запускайте его с `2>&1`.
+Каждый Бенчмарк называется по метке своего таймера, без Параметров.
+Измерение `latency` (то есть `nanoseconds (ns)`) собирается с одной Метрикой `value`, то есть длительностью таймера.
+В первую очередь задайте Порог для Метрики `value` с помощью `--threshold-metric value`.
+
+Если метка печатается более одного раза, как это делает `console.timeLog`, сохраняется только ее последняя строка,
+а каждая предыдущая строка учитывается как пропущенная в замечаниях Отчета.
+Node.js и Deno печатают таймер в виде `label: duration`,
+поэтому любая другая строка такого вида, например `retry in: 5s`, тоже читается как таймер.
+Точно так же дополнительные данные, которые печатает вызов `console.timeLog` в Bun, могут быть прочитаны как отдельный таймер.
+Не допускайте никакого другого вывода в `stdout` команды бенчмарка.
 
 <NodeJsTime />
+
+<details>
+<summary>BMF версия 0</summary>
+
+Читаются только строки Firefox вида `label: duration - timer ended`.
+Доступно только время операции (то есть `value`).
+Ни `lower_value`, ни `upper_value` не собираются.
+
+</details>

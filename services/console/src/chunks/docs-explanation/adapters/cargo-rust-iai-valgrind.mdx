@@ -1,0 +1,4 @@
+```sh
+rm -rf target/iai
+bencher run --adapter rust_iai "VALGRIND_OPTS=--cache-sim=yes cargo bench"
+```

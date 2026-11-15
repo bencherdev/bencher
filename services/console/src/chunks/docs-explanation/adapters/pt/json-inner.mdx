@@ -3,12 +3,32 @@ import BencherMock from "../bencher-mock.mdx";
 ## \{...\} JSON
 
 O Adaptador JSON (`json`) espera [Bencher Metric Format (BMF) JSON][bmf].
-É perfeito para integrar sistemas de benchmark personalizados com o Bencher.
-Para mais detalhes, veja [como rastrear benchmarks personalizados][custom benchmarks]
-e a [referência BMF JSON][bmf].
+Ele é perfeito para integrar harnesses de benchmark personalizados com o Bencher.
+Para mais detalhes, veja [como acompanhar benchmarks personalizados][custom benchmarks]
+e a [referência do BMF JSON][bmf].
 
 {props.children}
 
+O adaptador `json` lê a carga na versão do BMF do Relatório,
+que é a versão do BMF do Projeto, a menos que o Relatório declare uma.
+Na versão 1 do BMF, cada Medida de uma Variante contém suas Métricas nomeadas.
+Para declarar a versão da sua carga em qualquer Projeto, use uma das duas versões do adaptador `json`:
+- `json_v1`: `bencher run --adapter json_v1` declara a versão 1 do BMF
+- `json_v0`: `bencher run --adapter json_v0` declara a versão 0 do BMF
+
+Uma carga que não é interpretada na versão esperada é recusada
+com um erro que nomeia a versão em que ela foi interpretada e de onde veio a versão esperada.
+A Métrica para a qual definir um Limiar primeiro é `value`, se uma Medida a tiver,
+depois `median`, depois `mean` e, caso contrário, o primeiro nome de Métrica em ordem alfabética,
+com uma estatística simples antes de um limite de intervalo como `mean_ci_lower`.
+
+<details>
+<summary>BMF versão 0</summary>
+
+Na versão 0 do BMF, cada Medida contém um `value`, com um `lower_value` e um `upper_value` opcionais.
+Qualquer outro nome em uma Medida é ignorado.
+
+</details>
+
 [bmf]: /pt/docs/reference/bencher-metric-format/
-[bencher run]: /pt/docs/explanation/bencher-run/#benchmark-command
 [custom benchmarks]: /pt/docs/how-to/track-custom-benchmarks/

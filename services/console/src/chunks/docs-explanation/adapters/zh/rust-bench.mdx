@@ -1,9 +1,33 @@
 import CargoRustBench from "../cargo-rust-bench.mdx";
+import CargoRustBenchJson from "../cargo-rust-bench-json.mdx";
 
-## 🦀 Rust 基准测试
+## 🦀 Rust Bench
 
-Rust 基准测试适配器（`rust_bench`）期望 [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) 输出。
-收集的`延迟`度量（即`纳秒（ns）`）。
-`lower_value` 和 `upper_value` 分别是低于和高于中位数（即`value`）的偏差。
+Rust Bench 适配器（`rust_bench`）接受 [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) 的输出。
 
 <CargoRustBench />
+
+在 nightly Rust 上，libtest 还可以将结果输出为 JSON（即 `-Z unstable-options --format json`），
+适配器会先于文本输出读取它：
+
+<CargoRustBenchJson />
+
+每个基准测试以其测试名称命名，没有参数。
+`latency` 度量（即 `nanoseconds (ns)`）以两个指标收集：
+- `median`：每次迭代时间的中位数
+- `range`：libtest 的 `+/-` 值，即其样本中最快与最慢之间的差距
+
+当基准测试设置了每次迭代的字节数（即 `b.bytes`）时，
+还会将 `bytes-throughput` 度量（即 `bytes / second (B/s)`）作为其 `median` 收集。
+请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`。
+
+Criterion 的 `--output-format bencher` 输出打印的行与 libtest 相同，
+因此该适配器也会读取它，并以 Criterion 的标准差作为 `range`。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+只读取文本输出，并且只收集 `latency` 度量。
+`lower_value` 和 `upper_value` 分别是低于和高于中位数（即 `value`）的偏差。
+
+</details>

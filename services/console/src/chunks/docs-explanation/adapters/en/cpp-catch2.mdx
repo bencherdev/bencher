@@ -1,10 +1,41 @@
+import CppCatch2Xml from "../cpp-catch2-xml.mdx";
 import MakeCppCatch2 from "../make-cpp-catch2.mdx";
 
 ## ➕ C++ Catch2
 
 The C++ Catch2 Adapter (`cpp_catch2`) expects [Catch2](https://github.com/catchorg/Catch2) output.
-The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
-The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
-For a Project at BMF version 1, Catch2's XML reporter (`-r xml`) is also read and gives the most reliable results, while its console output is read on a best-effort basis.
+Catch2's XML reporter (ie `-r xml`) is read first and gives the most reliable results, so it is recommended:
+
+<CppCatch2Xml />
+
+Catch2's console output is also read, on a best-effort basis:
 
 <MakeCppCatch2 />
+
+Your program's own output inside Catch2's table cannot always be told apart from Catch2's,
+so the benchmark it falls in is counted as skipped in the Report's warnings.
+Print to `stderr` or use the XML reporter instead.
+On a console narrower than 59 columns, Catch2 wraps the table's title, so every benchmark is counted as skipped.
+
+The Benchmark name is the test case, each section, and the benchmark, separated by slashes (ie `Case / Section / Bench`).
+There are no Parameters.
+The `latency` Measure is gathered in nanoseconds (ns),
+with the `mean` and the `std_dev`, each with the bounds of its bootstrap interval.
+The XML names each interval with its confidence level (ie `mean_ci95_lower` and `mean_ci95_upper`),
+while the console output states no level (ie `mean_ci_lower` and `mean_ci_upper`).
+With `--benchmark-no-analysis`, only the `mean` is gathered.
+
+Threshold the `mean` Metric first, with `--threshold-metric mean`.
+
+Catch2 exits with an error when a benchmark fails, and then `bencher run` fails too.
+With the `--allow-failure` flag, `bencher run` continues, but it discards that iteration's output,
+so none of its results are sent.
+
+<details>
+<summary>BMF version 0</summary>
+
+At BMF version 0, only Catch2's console output is read.
+The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
+The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
+
+</details>

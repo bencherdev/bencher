@@ -1,9 +1,31 @@
 import Dart from "../dart.mdx";
+import DartFlavor from "../dart-flavor.mdx";
 
 ## 🎯 Dart benchmark_harness
 
-Dart benchmark_harnessアダプター (`dart_benchmark_harness`) は Dart [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) パッケージの出力（デフォルトの `PrintEmitter` 行: `Name(RunTime): <マイクロ秒> us.`）を期待しています。
-`latency` 測定値（すなわち `ナノ秒 (ns)`）が収集されます。
-報告された値（すなわち `value`）のみが利用可能です。`lower_value` と `upper_value` はありません。
+Dart benchmark_harness アダプター（`dart_benchmark_harness`）は、Dart の [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) パッケージの出力を想定しています。
+つまり、その `PrintEmitter` の行（つまり `Name(RunTime): <microseconds> us.`）と `PrintEmitterV2` の行です。
 
 <Dart />
+
+ベンチマーク名は出力されたとおりの名前です。
+`dart run benchmark_harness:bench` で実行すると、各フレーバーの結果は `@flavor` パラメータを持ちます（つまり `jit`、`aot`、`js`、`wasm`）:
+
+<DartFlavor />
+
+`latency` メジャー（つまり `RunTime`）はナノ秒（ns）で収集されます。
+`PerfBenchmarkBase` からは、`cycles`（つまり `CpuCycles`）と `page-faults`（つまり `MajorPageFaults`）のメジャーも収集されます。
+いずれも、ベンチマークの一回の実行（exercise）あたりの `mean` です。
+別の単位の `RunTime`（つまりカスタムエミッターによるもの）、その他の指標、既に読み取った行を繰り返す行は、レポートの警告でスキップとして数えられます。
+
+まず `mean` メトリックにしきい値を設定してください（`--threshold-metric mean`）。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+BMF バージョン 0 では、`PrintEmitter` の行のみが読み取られます。
+`latency` メジャー（つまり `nanoseconds (ns)`）が収集されます。
+報告された値（つまり `value`）のみが利用可能です。
+`lower_value` も `upper_value` も収集されません。
+
+</details>

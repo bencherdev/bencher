@@ -1,0 +1,30 @@
+import CargoRustDivan from "../cargo-rust-divan.mdx";
+
+## 🦀 Rust Divan
+
+Der Rust Divan Adapter (`rust_divan`) erwartet Ausgaben von [Divan](https://github.com/nvzqz/divan).
+
+<CargoRustDivan />
+
+Jeder Benchmark wird nach seinem Pfad in Divans Baum benannt, vom Benchmark-Ziel bis hinunter zu seiner Zeile, verbunden mit `::`.
+Zum Beispiel `shapes::generic_args::Vec<u32>::4` oder `alloc::threaded_alloc::t=2`.
+Divan gibt einen Typ, eine Konstante, ein Argument und eine Thread-Anzahl genauso aus wie ein Modul,
+daher bleibt jedes davon im Namen, und es gibt keine Parameter.
+Der Name eines Typs stammt aus Rusts `std::any::type_name`, der sich zwischen Rust-Toolchains ändern kann,
+und dann ändert sich auch der Name des Benchmarks.
+
+Die `latency` Measure (d.h. `nanoseconds (ns)`) wird mit den Metriken `min`, `max`, `median` und `mean` erfasst.
+Divans Raten und Allokationszähler werden jeweils als eigene Measure erfasst:
+- Raten: `bytes-throughput`, `throughput` (Elemente), `chars-throughput` und `cycles-throughput`, jeweils pro Sekunde
+- Allokationen: `allocations` und `allocated`, `deallocations` und `deallocated`, `grows` und `grown`, `shrinks` und `shrunk` sowie `max-allocations` und `max-allocated`, jeweils eine Anzahl und ihre Bytes
+
+Diese Measures behalten Divans eigene Spaltennamen als Metriken: `fastest`, `slowest`, `median` und `mean`.
+Ihre Werte `fastest` und `slowest` sind die Werte bei der nach Zeit schnellsten und langsamsten Stichprobe,
+nicht die niedrigsten und höchsten Werte der Measure.
+Legen Sie zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`.
+
+Eine Zeile innerhalb von Divans Baum, die Divan nicht ausgegeben hat, zum Beispiel die eigene Ausgabe Ihres Benchmarks, wird in den Warnungen des Berichts als übersprungen gezählt.
+Geben Sie stattdessen auf `stderr` aus, und führen Sie pro `bencher run` nur einen Benchmark-Harness aus.
+
+Der Rust Divan Adapter liest Ergebnisse nur in BMF Version 1.
+Ein Bericht für ein Projekt in BMF Version 0 wird mit einem Fehler abgelehnt, der erklärt, wie das Projekt auf BMF Version 1 umgestellt wird.

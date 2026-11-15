@@ -2,8 +2,38 @@ import MakeCppGoogle from "../make-cpp-google.mdx";
 
 ## ➕ C++ Google
 
-C++ Googleアダプター（`cpp_google`）は、[Google Benchmark](https://github.com/google/benchmark)の出力を[JSON形式（すなわち`--benchmark_format=json`）](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats)で受け取ることを期待しています。
-`latency`測定値（すなわち`ナノ秒(ns)`）が収集されます。
-平均値（すなわち`value`）のみが利用可能です。`lower_value`と`upper_value`はありません。
+C++ Google アダプター（`cpp_google`）は、[JSON 形式（つまり `--benchmark_format=json`）](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats)の [Google Benchmark](https://github.com/google/benchmark) の出力を想定しています。
 
 <MakeCppGoogle />
+
+ベンチマーク名は、引数を除いた実行名です。
+引数はパラメータになります:
+名前付きの引数（つまり `size:64`）はその名前を保持し、
+位置引数はその位置に応じて `@arg0`、`@arg1` のようになり、
+`Threads()` による末尾の `threads:N` セグメントは `@threads` になります。
+これらのキーと同じ綴りの名前付き引数は、レポートの警告でスキップとして数えられます。
+
+`latency`（実時間）と `cpu-time` のメジャーはナノ秒（ns）で収集されます。
+`bytes_per_second` と `items_per_second` のレートは `bytes-throughput` と `throughput` のメジャーとして収集され、
+各ユーザーカウンターはそのカウンターにちなんで名付けられたメジャーとして収集されます。
+単一の実行では、各時間は `mean`、各レートとカウンターは `value` です。
+繰り返し（つまり `--benchmark_repetitions`）を使用すると、代わりに集計値が収集されます:
+`mean`、`median`、`std_dev`、および `ComputeStatistics` で追加された時間の統計量です。
+パーセンテージの集計値（つまり `cv`）は収集されません。
+メモリマネージャーを使用すると、`allocations` メジャー（反復あたり）は `mean` になり、
+`max_bytes_used`、`total_allocated_bytes`、`net_heap_growth` はバイト単位のメジャーで、それぞれ `value` になります。
+繰り返しを使用すると、各メモリのメジャーは繰り返しの `mean`、`median`、`min`、`max`、`std_dev` を持ちます。
+
+BigO と RMS の行、エラーになった実行とスキップされた実行、および有限でないすべての値（つまり `NaN` や `Infinity`）も、スキップとして数えられます。
+
+繰り返しを使用する場合は、まず `median` メトリックにしきい値を設定してください（`--threshold-metric median`）。
+単一の実行では、時間と割り当てについては `mean`、レート、カウンター、バイト数については `value` に最初にしきい値を設定してください。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+BMF バージョン 0 では、`latency` メジャー（つまり `nanoseconds (ns)`）のみが収集され、Google Benchmark が出力する名前がそのままベンチマーク名になります。
+平均（つまり `value`）のみが利用可能です。
+`lower_value` も `upper_value` も収集されません。
+
+</details>

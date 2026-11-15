@@ -1,9 +1,22 @@
 import NodeJsBenchmark from "../node-js-benchmark.mdx";
 
-## 🕸 JavaScript-бенчмарк
+## 🕸 JavaScript Benchmark
 
-Адаптер JavaScript-бенчмарка (`js_benchmark`) ожидает вывод [Benchmark.js](https://github.com/bestiejs/benchmark.js).
-Измеряется `пропускная способность` (т. е. `операции в секунду (ops/sec)`).
-`lower_value` и `upper_value` - это относительные погрешности ниже и выше медианы (т.е. `value`) соответственно.
+Адаптер JavaScript Benchmark (`js_benchmark`) ожидает вывод [Benchmark.js](https://github.com/bestiejs/benchmark.js).
+Каждый Бенчмарк называется так, как его печатает Benchmark.js, без Параметров.
+Измерение `throughput` (то есть `operations / second (ops/s)`) собирается со следующими Метриками:
+- `mean`: скорость, которую печатает Benchmark.js
+- `mean_ci95_lower` и `mean_ci95_upper`: 95% доверительный интервал, вычисленный по относительной погрешности, которую Benchmark.js печатает рядом со скоростью
+
+У Бенчмарка из одного запуска есть только `mean`.
+В первую очередь задайте Порог для Метрики `mean` с помощью `--threshold-metric mean`.
 
 <NodeJsBenchmark />
+
+<details>
+<summary>BMF версия 0</summary>
+
+Собирается Измерение `throughput` (то есть `operations / second (ops/s)`).
+`lower_value` и `upper_value` находятся на величину относительной погрешности ниже и выше медианы (то есть `value`) соответственно.
+
+</details>

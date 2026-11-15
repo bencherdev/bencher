@@ -1,9 +1,47 @@
+import AsvJson from "../asv-json.mdx";
 import Asv from "../asv.mdx";
 
 ## 🐍 Python ASV
 
-Python ASV 어댑터(`python_asv`)는 [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) 출력을 기대합니다.
-`latency` 측정치(즉, `나노초(ns)`)가 수집됩니다.
-`lower_value`와 `upper_value`는 각각 중앙값(즉, `value`) 아래와 위의 사분위범위입니다.
+Python ASV 어댑터(`python_asv`)는 [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) 출력을 입력으로 받습니다.
+가장 완전한 결과를 얻으려면 `asv run`이 커밋과 환경별로 기록하는 결과 파일을
+`bencher run` CLI의 `--file` 옵션으로 읽으세요:
+
+<AsvJson />
+
+이 파일은 asv의 `results_dir`(기본값은 `results`) 아래,
+머신 이름을 딴 디렉터리에 있으며, 파일 이름은 커밋 해시의 처음 8자로 시작합니다.
+
+결과 파일은 단독으로, asv 0.5 이상이 기록하는 형식으로 읽습니다.
+이전 asv가 기록한 결과를 변환하려면 `asv update`를 실행하세요.
+`asv run`이 출력하는 텍스트도 읽습니다:
 
 <Asv />
+
+각 벤치마크의 이름은 `benchmarks.TimeSuite.time_sort`처럼 점으로 구분된 이름입니다.
+매개변수화된 벤치마크는 그 매개변수의 조합마다 변형을 가집니다.
+결과 파일에서는 매개변수의 키가 `@param0`, `@param1`처럼 위치입니다.
+텍스트에서는 키가 asv가 출력하는 매개변수 이름입니다.
+따라서 두 형식은 같은 벤치마크에 서로 다른 변형을 줍니다. 하나를 골라 계속 사용하세요.
+
+다음 측정이 수집됩니다:
+- `latency`(즉, `nanoseconds (ns)`), `time_` 벤치마크의 경우: 결과 파일에서는 `median`, `p25`, `p75`, 그리고 중앙값의 99% 신뢰 구간인 `median_ci99_lower`와 `median_ci99_upper`. 텍스트에서는 `median`과 사분위 범위인 `iqr`
+- `memory`(즉, `bytes (B)`), `mem_` 벤치마크의 경우: `value`
+- `peak-memory`(즉, `bytes (B)`), `peakmem_` 벤치마크의 경우: `value`
+
+`track_` 벤치마크는 그 단위가 결과 파일에도 텍스트에도 없으므로 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+`latency`에는 먼저 `median` 메트릭에 임계값을 설정하고(`--threshold-metric median`),
+`memory`와 `peak-memory`에는 `value` 메트릭에 설정하세요.
+
+`asv run`은 벤치마크가 하나라도 실패하면 0이 아닌 코드로 종료하며, 그러면 `bencher run`도 실패합니다.
+`bencher run` CLI의 `--allow-failure` 플래그를 사용하면 실행은 계속되지만,
+실패한 명령의 출력은 전송되지 않으므로 보고서에는 그 명령의 결과가 없습니다.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+`asv run`이 출력하는 텍스트만 읽습니다.
+`latency` 측정(즉, `nanoseconds (ns)`)이 수집됩니다.
+`lower_value`와 `upper_value`는 각각 중앙값(즉, `value`)보다 사분위 범위만큼 아래와 위의 값입니다.
+
+</details>

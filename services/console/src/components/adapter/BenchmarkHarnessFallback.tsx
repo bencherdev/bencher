@@ -33,7 +33,14 @@ const BenchmarkHarnessFallback = () => (
 			<LanguageBox
 				icon="devicon-javascript-plain"
 				name="JavaScript"
-				adapters={[Adapter.JsBenchmark, Adapter.JsTime, Adapter.JsVitest]}
+				adapters={[
+					Adapter.JsBenchmark,
+					Adapter.JsTime,
+					Adapter.JsVitest,
+					Adapter.JsDeno,
+					Adapter.JsMitata,
+					Adapter.JsTinybench,
+				]}
 			/>
 		</div>
 		<div class="column is-half">
@@ -45,13 +52,14 @@ const BenchmarkHarnessFallback = () => (
 			<LanguageBox
 				icon="devicon-ruby-plain"
 				name="Ruby"
-				adapters={[Adapter.RubyBenchmark]}
+				adapters={[Adapter.RubyBenchmark, Adapter.RubyBenchmarkIps]}
 			/>
 			<LanguageBox
 				icon="devicon-rust-plain"
 				name="Rust"
 				adapters={[
 					Adapter.RustBench,
+					Adapter.RustDivan,
 					Adapter.RustCriterion,
 					Adapter.RustGungraun,
 					Adapter.RustIai,

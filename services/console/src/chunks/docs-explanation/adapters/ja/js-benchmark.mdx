@@ -1,9 +1,22 @@
 import NodeJsBenchmark from "../node-js-benchmark.mdx";
 
-## 🕸 JavaScript ベンチマーク
+## 🕸 JavaScript Benchmark
 
-JavaScript ベンチマークアダプター（`js_benchmark`）は [Benchmark.js](https://github.com/bestiejs/benchmark.js) の出力を期待しています。
-`throughput` 測定 （つまり `operations / second (ops/sec)`）が収集されます。
-`lower_value` と `upper_value` はそれぞれ中央値（つまり `value`）より下と上の相対的な誤差の幅です。
+JavaScript Benchmark アダプター（`js_benchmark`）は [Benchmark.js](https://github.com/bestiejs/benchmark.js) の出力を想定しています。
+各ベンチマークは Benchmark.js が出力するとおりに命名され、パラメータはありません。
+`throughput` メジャー（つまり `operations / second (ops/s)`）は次のメトリックで収集されます:
+- `mean`: Benchmark.js が出力するレート
+- `mean_ci95_lower` と `mean_ci95_upper`: 95% 信頼区間。Benchmark.js がレートの横に出力する相対誤差範囲から求めます
+
+一回の実行のみのベンチマークは `mean` のみを持ちます。
+まず `mean` メトリックにしきい値を設定してください（`--threshold-metric mean`）。
 
 <NodeJsBenchmark />
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+`throughput` メジャー（つまり `operations / second (ops/s)`）が収集されます。
+`lower_value` と `upper_value` は、それぞれ中央値（つまり `value`）から相対誤差範囲分下と上の値です。
+
+</details>

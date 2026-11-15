@@ -1,0 +1,33 @@
+import MitataJson from "../mitata-json.mdx";
+import NodeJsMitata from "../node-js-mitata.mdx";
+
+## 🕸 JavaScript mitata
+
+O Adaptador JavaScript mitata (`js_mitata`) espera a saída do [mitata](https://github.com/evanwashere/mitata) em formato JSON.
+O JSON do mitata contém todas as amostras por padrão, o que pode deixá-lo grande demais para ser enviado,
+então deixe de fora as amostras e as informações de depuração:
+
+<MitataJson />
+
+Não imprima mais nada em `stdout`, para que o JSON seja tudo o que o adaptador lê.
+
+<NodeJsMitata />
+
+Cada Benchmark é nomeado pelo nome do seu grupo (quando tem um) e seu nome como escrito, unidos com ` > `.
+Seus `args` são seus Parâmetros, então `bench("fill $size", ...).args("size", [64, 128])`
+dá ao Benchmark `fill $size` duas Variantes, com os Parâmetros `{"size": 64}` e `{"size": 128}`.
+Um argumento que não é uma string, um número ou um booleano é armazenado como seu texto JSON compacto.
+Uma execução que lança um erro é contada como ignorada nos avisos do Relatório.
+
+Estas Medidas são coletadas:
+- `latency` (ou seja, `nanoseconds (ns)`): `mean`, `median`, `min`, `max` e os percentis `p25`, `p75`, `p99` e `p99_9`
+- `heap` (ou seja, `bytes (B)`): a estimativa do mitata do heap usado por iteração, como `mean`, `min` e `max`
+- `gc-time` (ou seja, `nanoseconds (ns)`): o tempo de uma coleta de lixo, como `mean`, `min` e `max`
+- Com [`@mitata/counters`](https://www.npmjs.com/package/@mitata/counters), os contadores de hardware por iteração, cada um como `mean`, `min` e `max`:
+  `cycles`, `instructions`, `cache-references`, `cache-misses`, `branches`, `branch-misses`, `stall-cycles`, `loads-and-stores`, `l1-load-misses` e `l1-store-misses`
+
+Defina primeiro um Limiar para a Métrica `median` em `latency`, com `--threshold-metric median`,
+e para a Métrica `mean` em qualquer outra Medida.
+
+O Adaptador JavaScript mitata lê resultados apenas na versão 1 do BMF.
+Um Relatório para um Projeto na versão 0 do BMF é recusado com um erro que explica como mudar o Projeto para a versão 1 do BMF.

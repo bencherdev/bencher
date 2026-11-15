@@ -1,0 +1,24 @@
+import DenoBench from "../deno-bench.mdx";
+
+## 🕸 JavaScript Deno
+
+Der JavaScript Deno Adapter (`js_deno`) erwartet Ausgaben von [`deno bench`](https://docs.deno.com/runtime/reference/cli/bench/) im JSON-Format (d.h. `--json`).
+Geben Sie nichts von der obersten Ebene einer Benchmark-Datei aus, damit das JSON alles ist, was der Adapter liest.
+
+<DenoBench />
+
+Jeder Benchmark wird nach seiner Datei benannt, relativ zum gemeinsamen Verzeichnis aller Dateien in der JSON-Ausgabe,
+dann nach seiner Gruppe (wenn er eine hat) und seinem Namen, verbunden mit ` > `.
+Zum Beispiel `sub/deep_bench.ts > noop`.
+Es gibt keine Parameter.
+Die `latency` Measure (d.h. `nanoseconds (ns)`) wird mit diesen Metriken erfasst:
+- `mean`, `min` und `max`
+- `p75`, `p99`, `p99_5` und `p99_9`: das 75., 99., 99,5. und 99,9. Perzentil
+
+Deno meldet keinen Median, legen Sie also zuerst für die Metrik `mean` einen Schwellenwert fest, mit `--threshold-metric mean`.
+Ein Benchmark, der fehlschlägt, wird in den Warnungen des Berichts als übersprungen gezählt.
+Wenn zwei Benchmarks denselben Namen haben, meldet Deno beide unter dem ersten, daher wird nur das erste Ergebnis behalten und das andere als übersprungen gezählt.
+Nur Version 1 des JSON-Formats von Deno wird gelesen.
+
+Der JavaScript Deno Adapter liest Ergebnisse nur in BMF Version 1.
+Ein Bericht für ein Projekt in BMF Version 0 wird mit einem Fehler abgelehnt, der erklärt, wie das Projekt auf BMF Version 1 umgestellt wird.

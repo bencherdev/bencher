@@ -1,12 +1,29 @@
 import CargoRustIai from "../cargo-rust-iai.mdx";
+import CargoRustIaiValgrind from "../cargo-rust-iai-valgrind.mdx";
 
 ## 🦀 Rust Iai
 
 The Rust Iai Adapter (`rust_iai`) expects [Iai](https://github.com/bheisler/iai) output.
+
+<CargoRustIai />
+
+Each Benchmark is named by its function name, with no Parameters.
 The `instructions`, `l1-accesses`, `l2-accesses`, `ram-accesses`, and `estimated-cycles` Measures are gathered.
-Only the reported value (ie `value`) is available is available for these Measures.
-Neither `lower_value` nor `upper_value` are collected.
+Each is an exact count, gathered as a single `value` Metric, which is the Metric to threshold first.
 The Measures for this adapter are not created by default for all projects.
 However, when you use this adapter, these Measures will be automatically created for your Project.
 
-<CargoRustIai />
+Iai 0.1.1 panics with Valgrind 3.21 and later (for example on Ubuntu 24.04),
+unless Valgrind's cache simulation is turned on.
+Set `VALGRIND_OPTS=--cache-sim=yes` for the benchmark command,
+and delete `target/iai` before the first run with it:
+
+<CargoRustIaiValgrind />
+
+<details>
+<summary>BMF version 0</summary>
+
+The same five Measures are gathered, each as `value`.
+Neither `lower_value` nor `upper_value` are collected.
+
+</details>

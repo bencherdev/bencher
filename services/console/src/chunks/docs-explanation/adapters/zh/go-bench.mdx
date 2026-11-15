@@ -1,9 +1,39 @@
 import Go from "../go.mdx";
+import GoJson from "../go-json.mdx";
 
-## 🕳 Go 基准测试
+## 🕳 Go Bench
 
-Go 基准测试适配器（`go_bench`）预期的输出是 [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks)。
-收集的是`延迟`度量（即`纳秒 (ns)`）。
-只提供均值（即`值`），没有`最小值`和`最大值`。
+Go Bench 适配器（`go_bench`）接受 [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks) 的输出。
 
 <Go />
+
+它的 JSON 输出（即 `go test -json`）也会被读取，并且会被首先尝试：
+
+<GoJson />
+
+基准测试名称由包、一个 `.` 和基准测试组成（即 `example.com/sort.BenchmarkSort`），
+不含其 `-N` 后缀和 `key=value` 部分。
+`-N` 后缀成为 `@gomaxprocs` 参数，当 Go 不打印后缀时为 `1`；
+子基准测试名称中的每个 `key=value` 部分成为该键的参数，数值会作为数字存储。
+键为 `@gomaxprocs` 的部分会在报告的警告中计为已跳过。
+在 `GOMAXPROCS=1` 时，Go 不打印后缀，因此本身以 `-N` 结尾的子基准测试名称会被读作该 `@gomaxprocs`。
+
+`latency` 度量（即 `ns/op`）以纳秒（ns）为单位收集。
+使用 `-benchmem` 时，还会收集 `allocated`（即 `B/op`）和 `allocations`（即 `allocs/op`）度量；
+使用 `b.SetBytes` 时，会以每秒字节数收集 `bytes-throughput` 度量（即 `MB/s`）。
+来自 `b.ReportMetric` 的每个自定义单位都是一个以 Go 打印的单位命名的度量。
+对于单次运行，每个按操作计的值（即以 `/op` 结尾的单位）和 `MB/s` 速率都是 `mean`，任何其他单位的值都是 `value`。
+使用 `-count` 时，每个变体的多次运行会合并为其 `mean`、`median`、`min`、`max` 和 `std_dev`。
+
+使用 `-count` 时，请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`。
+对于单次运行，请首先为 `mean` 设置阈值；对于不以 `/op` 结尾的自定义单位，则为 `value`。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+在 BMF 版本 0 中，只读取文本输出，并以 Go 打印的名称作为基准测试名称。
+只收集 `latency` 度量（即 `nanoseconds (ns)`）。
+只有平均值（即 `value`）可用。
+`lower_value` 和 `upper_value` 都不会被收集。
+
+</details>

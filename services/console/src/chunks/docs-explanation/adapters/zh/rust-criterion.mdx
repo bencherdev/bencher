@@ -1,9 +1,46 @@
 import CargoRustCriterion from "../cargo-rust-criterion.mdx";
+import CargoRustCriterionJson from "../cargo-rust-criterion-json.mdx";
 
 ## 🦀 Rust Criterion
 
-Rust Criterion 适配器（`rust_criterion`）期待 [Criterion](https://github.com/bheisler/criterion.rs) 的输出。
-会收集 `latency` 测量（即 `纳秒 (ns)`）。
-`lower_value` 和 `upper_value` 分别是斜率（如果可用）或平均值（如果不可用）的下限和上限（即 `值`）。
+Rust Criterion 适配器（`rust_criterion`）接受 [Criterion](https://github.com/bheisler/criterion.rs) 的输出。
+要获得最完整的结果，请使用 [cargo-criterion](https://github.com/bheisler/cargo-criterion) 的 JSON 消息（即 `--message-format=json`），
+适配器会先于文本输出读取它：
+
+<CargoRustCriterionJson />
+
+Criterion 的文本输出也会被读取：
 
 <CargoRustCriterion />
+
+每个基准测试以其 Criterion 基准测试 ID 命名，例如 `fib 20` 或 `checksum/fold/1024`，没有参数。
+从 JSON 消息中，`latency` 度量（即 `nanoseconds (ns)`）以下列指标收集，
+每个指标都带有其置信区间的边界（即 `mean_ci_lower` 和 `mean_ci_upper`）：
+- `typical`：Criterion 自己的估计值，Criterion 计算了 `slope` 时为 `slope`，否则为 `mean`
+- `mean` 和 `median`，以及 Criterion 计算了的 `slope`
+- `median_abs_dev`：中位数绝对偏差
+
+从文本输出中，`latency` 度量作为 `typical` 收集，并带有 `typical_ci_lower` 和 `typical_ci_upper`。
+使用 `--verbose` 时，Criterion 还会打印 `slope`、`mean`、`std_dev`、`median` 和 `median_abs_dev` 的区间，
+它们作为各自的边界（即 `mean_ci_lower` 和 `mean_ci_upper`）收集。
+
+带有吞吐量的基准测试会将其速率连同区间边界作为 `typical` 收集：
+字节收集到 `bytes-throughput` 度量（即 `bytes / second (B/s)`），
+元素收集到 `throughput` 度量（即 `operations / second (ops/s)`）。
+计数周期的 Criterion 测量插件会写入 `cycles` 度量，
+任何其他单位都会写入以该单位命名的独立度量。
+
+对于 JSON 消息，请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`；
+对于文本输出，请首先为 `typical` 指标设置阈值，使用 `--threshold-metric typical`。
+速率只有 `typical` 及其边界，因此对于 `bytes-throughput` 和 `throughput` 度量，请为 `typical` 设置阈值。
+
+[Rust Divan](/zh/docs/explanation/adapters/#-rust-divan) 适配器会先于 Criterion 的文本输出被尝试，
+因此请每次 `bencher run` 只运行一个基准测试工具。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+只读取文本输出，并且只收集 `latency` 度量。
+`lower_value` 和 `upper_value` 分别是斜率（如果可用）或平均值（如果不可用）（即 `value`）的下界和上界。
+
+</details>

@@ -1,11 +1,29 @@
 import CargoRustIai from "../cargo-rust-iai.mdx";
+import CargoRustIaiValgrind from "../cargo-rust-iai-valgrind.mdx";
 
 ## 🦀 Rust Iai
 
-Rust Iai アダプター（`rust_iai`）は[Iai](https://github.com/bheisler/iai)の出力を想定しています。
-`instructions`、`l1-accesses`、`l2-accesses`、`ram-accesses`、`estimated-cycles`のメジャーが収集されます。
-これらのメジャー（つまり`value`）のみが利用可能です。`lower_value`と`upper_value`のメジャーはありません。
-このアダプターのメジャーは、すべてのプロジェクトについてデフォルトで作成されるわけではありません。
-しかし、このアダプターを使用すると、これらのメジャーがプロジェクトに自動的に作成されます。
+Rust Iai アダプター（`rust_iai`）は [Iai](https://github.com/bheisler/iai) の出力を想定しています。
 
 <CargoRustIai />
+
+各ベンチマークは関数名で命名され、パラメータはありません。
+`instructions`、`l1-accesses`、`l2-accesses`、`ram-accesses`、`estimated-cycles` の各メジャーが収集されます。
+それぞれは正確なカウントで、単一の `value` メトリックとして収集され、これが最初にしきい値を設定するメトリックです。
+このアダプターのメジャーは、すべてのプロジェクトにデフォルトで作成されるわけではありません。
+ただし、このアダプターを使用すると、これらのメジャーはプロジェクトに自動的に作成されます。
+
+Iai 0.1.1 は、Valgrind のキャッシュシミュレーションを有効にしない限り、
+Valgrind 3.21 以降（例えば Ubuntu 24.04）でパニックします。
+ベンチマークコマンドに `VALGRIND_OPTS=--cache-sim=yes` を設定し、
+それを使った最初の実行の前に `target/iai` を削除してください:
+
+<CargoRustIaiValgrind />
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+同じ五つのメジャーが、それぞれ `value` として収集されます。
+`lower_value` も `upper_value` も収集されません。
+
+</details>

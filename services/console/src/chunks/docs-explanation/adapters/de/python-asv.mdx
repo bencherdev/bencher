@@ -1,9 +1,47 @@
+import AsvJson from "../asv-json.mdx";
 import Asv from "../asv.mdx";
 
 ## 🐍 Python ASV
 
-Der Python ASV-Adapter (`python_asv`) erwartet die Ausgabe des [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI-Befehls [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run).
-Die `latency`-Messung (d.h. `Nanosekunden (ns)`) wird erfasst.
-Die `lower_value` und `upper_value` sind das untere und obere Interquartil, jeweils unterhalb und oberhalb des Medians (d.h. `value`).
+Der Python ASV Adapter (`python_asv`) erwartet Ausgaben von [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run).
+Für die vollständigsten Ergebnisse lesen Sie die Ergebnisdatei, die `asv run` für den Commit und die Umgebung schreibt,
+mit der Option `--file` des `bencher run` CLI:
+
+<AsvJson />
+
+Die Datei liegt unter dem `results_dir` von asv (standardmäßig `results`),
+in einem Verzeichnis, das nach der Maschine benannt ist, und ihr Name beginnt mit den ersten 8 Zeichen des Commit-Hashes.
+
+Die Ergebnisdatei wird für sich allein gelesen, im Format, das asv 0.5 und neuer schreiben.
+Führen Sie `asv update` aus, um Ergebnisse zu konvertieren, die von einem älteren asv geschrieben wurden.
+Der Text, den `asv run` ausgibt, wird ebenfalls gelesen:
 
 <Asv />
+
+Jeder Benchmark wird nach seinem Namen mit Punkten benannt, zum Beispiel `benchmarks.TimeSuite.time_sort`.
+Ein parametrisierter Benchmark hat eine Variante für jede Kombination seiner Parameter.
+Aus der Ergebnisdatei werden die Parameter nach Position benannt, als `@param0`, `@param1` und so weiter.
+Aus dem Text werden sie nach den Parameternamen benannt, die asv ausgibt.
+Die beiden Formate geben demselben Benchmark also unterschiedliche Varianten: Wählen Sie eines und bleiben Sie dabei.
+
+Diese Measures werden erfasst:
+- `latency` (d.h. `nanoseconds (ns)`), für einen `time_` Benchmark: aus der Ergebnisdatei `median`, `p25`, `p75` und das 99-%-Konfidenzintervall des Medians als `median_ci99_lower` und `median_ci99_upper`; aus dem Text `median` und `iqr`, der Interquartilsabstand
+- `memory` (d.h. `bytes (B)`), für einen `mem_` Benchmark: `value`
+- `peak-memory` (d.h. `bytes (B)`), für einen `peakmem_` Benchmark: `value`
+
+Ein `track_` Benchmark wird in den Warnungen des Berichts als übersprungen gezählt, da seine Einheit weder in der Ergebnisdatei noch im Text steht.
+Legen Sie für `latency` zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`,
+und für `memory` und `peak-memory` für die Metrik `value`.
+
+`asv run` beendet sich mit einem Exit-Code ungleich null, wenn irgendein Benchmark fehlschlägt, und dann schlägt auch `bencher run` fehl.
+Mit dem Flag `--allow-failure` des `bencher run` CLI läuft der Lauf weiter,
+aber die Ausgabe des fehlgeschlagenen Befehls wird nicht gesendet, sodass der Bericht keine Ergebnisse daraus enthält.
+
+<details>
+<summary>BMF Version 0</summary>
+
+Nur der Text, den `asv run` ausgibt, wird gelesen.
+Die `latency` Measure (d.h. `nanoseconds (ns)`) wird erfasst.
+Die `lower_value` und `upper_value` liegen um den Interquartilsabstand unterhalb bzw. oberhalb des Medians (d.h. `value`).
+
+</details>

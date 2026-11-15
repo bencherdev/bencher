@@ -1,0 +1,26 @@
+import BenchmarkIpsJson from "../benchmark-ips-json.mdx";
+import RubyBenchmarkIps from "../ruby-benchmark-ips.mdx";
+
+## ♦️ Ruby benchmark-ips
+
+The Ruby benchmark-ips Adapter (`ruby_benchmark_ips`) expects [benchmark-ips](https://github.com/evanphx/benchmark-ips) output in JSON format.
+Write it to a file with `x.json!`:
+
+<BenchmarkIpsJson />
+
+This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
+
+<RubyBenchmarkIps />
+
+Each Benchmark is named by its label.
+A label that is not a string, such as a Hash, is named by its compact JSON text.
+Every Benchmark has one Parameter, `@stats`, the statistics mode the run used: `sd` (the default) or `bootstrap` (ie `x.config(stats: :bootstrap)`).
+The `throughput` Measure (ie `operations / second (ops/s)`) is gathered with these Metrics:
+- `mean`: the rate benchmark-ips reports
+- With `@stats` `sd`, `std_dev`: the standard deviation of the rate
+- With `@stats` `bootstrap`, `mean_ci_lower` and `mean_ci_upper`: the rate's bootstrap confidence interval
+
+Threshold the `mean` Metric first, with `--threshold-metric mean`.
+
+The Ruby benchmark-ips Adapter reads results at BMF version 1 only.
+A Report for a Project at BMF version 0 is refused with an error that says how to move the Project to BMF version 1.

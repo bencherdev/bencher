@@ -2,9 +2,27 @@ import NodeJsTime from "../node-js-time.mdx";
 
 ## 🕸 JavaScript Time
 
-The JavaScript Time Adapter (`js_time`) expects [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd) output.
-The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
+The JavaScript Time Adapter (`js_time`) expects [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd) output
+from Firefox, Node.js, Deno, or Bun.
+Bun prints its timers to `stderr`, so run it with `2>&1`.
+Each Benchmark is named by its timer's label, with no Parameters.
+The `latency` Measure (ie `nanoseconds (ns)`) is gathered with a single Metric, `value`: the duration of the timer.
+Threshold the `value` Metric first, with `--threshold-metric value`.
+
+When a label is printed more than once, as `console.timeLog` does, only its last line is kept,
+and each earlier line is counted as skipped in the Report's warnings.
+Node.js and Deno print a timer as `label: duration`,
+so any other line in that shape, such as `retry in: 5s`, is also read as a timer.
+Likewise, the extra data a Bun `console.timeLog` call prints can be read as a timer of its own.
+Keep any other output out of the benchmark command's `stdout`.
+
+<NodeJsTime />
+
+<details>
+<summary>BMF version 0</summary>
+
+Only Firefox's `label: duration - timer ended` lines are read.
 Only the operation time (ie `value`) is available.
 Neither `lower_value` nor `upper_value` are collected.
 
-<NodeJsTime />
+</details>

@@ -2,12 +2,38 @@ import Hyperfine from "../hyperfine.mdx";
 
 ## ❯_️ Shell Hyperfine
 
-Shell Hyperfine 适配器（`shell_hyperfine`）期望 [Hyperfine](https://github.com/sharkdp/hyperfine) 的输出以 [JSON格式（即 `--export-json results.json`）](https://github.com/sharkdp/hyperfine/tree/master/scripts#example) 出现。这个 JSON 输出会被保存到一个文件中，因此你必须使用 `bencher run` CLI 的 `--file` 参数来指定该文件路径。将会收集到 `latency` 测量值（即 `纳秒 (ns)`）。
+Shell Hyperfine 适配器（`shell_hyperfine`）接受 [JSON 格式（即 `--export-json results.json`）](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)的 [Hyperfine](https://github.com/sharkdp/hyperfine) 输出。
+此 JSON 输出保存在文件中，因此您必须使用 `bencher run` CLI 的 `--file` 选项来指定该文件路径。
+支持 Hyperfine v1 和 v2 的 JSON 输出。
 
 <Hyperfine />
 
-对于指标有两个选项：
-- `mean`（默认）：`lower_value` 和 `upper_value` 分别为标准差以下和以上的平均值（即 `value`）。
-- `median`：`lower_value` 和 `upper_value` 分别为 `min` 和 `max` 值。
+每个基准测试以其 `--command-name` 命名，否则以其命令命名。
+其 `--parameter-scan` 或 `--parameter-list` 的值以及 `--env` 变量就是它的参数，均为字符串。
+例如，`--command-name sleep --parameter-list n 1,2 'sleep 0.00{n}'` 会给基准测试 `sleep` 两个变体，
+其参数分别为 `{"n": "1"}` 和 `{"n": "2"}`。
+没有 `--command-name` 时，每个值对应的命令都是一个独立的基准测试，例如 `sleep 0.001`。
+设置为空的变量（例如 `--env 'MODE='`）是参数 `{"MODE": ""}`。
 
-这可以在 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令中使用 `--average` 选项来指定。
+收集以下度量，每个都带有 `mean`、`median`、`min`、`max` 和 `std_dev` 指标：
+- `latency`（即 `nanoseconds (ns)`）：挂钟时间
+- `user-time` 和 `system-time`（即 `nanoseconds (ns)`）
+- 使用 Hyperfine v2 时：`cpu-time`（即 `nanoseconds (ns)`）和 `peak-memory`（即 `bytes (B)`），
+  使用 `--metrics all` 时，还有硬件计数器 `cycles`、`instructions`、`cache-references`、`cache-misses` 和 `branch-misses`
+
+使用 Hyperfine v1 时，`user-time` 和 `system-time` 只有其 `mean`，
+并且当导出文件中包含 `peak-memory` 时才会收集它。
+请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`，
+但 Hyperfine v1 的 `user-time` 和 `system-time` 除外，它们应首先为 `mean` 设置阈值。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+收集 `latency` 度量（即 `nanoseconds (ns)`）。
+指标有两个选项：
+- `mean`（默认）：`lower_value` 和 `upper_value` 分别是低于和高于平均值（即 `value`）一个标准差。
+- `median`：`lower_value` 和 `upper_value` 分别是 `min` 和 `max` 值。
+
+这可以在 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令中通过 `--average` 选项指定。
+
+</details>

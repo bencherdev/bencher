@@ -2,14 +2,35 @@ import Pytest from "../pytest.mdx";
 
 ## 🐍 Python Pytest
 
-Python Pytest アダプタ (`python_pytest`) は、[pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) の出力を [JSON 形式 (つまり `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options) で期待します。
-この JSON 出力はファイルに保存されるため、ファイルパスを指定するために `bencher run` CLI の `--file` 引数を使用する必要があります。
-`latency` 測定（つまり `ナノ秒 (ns)`）が収集されます。
+Python Pytest アダプター（`python_pytest`）は、[JSON 形式（つまり `--benchmark-json results.json`）](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options)の [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) の出力を想定しています。
+この JSON 出力はファイルに保存されるため、`bencher run` CLI の `--file` オプションでそのファイルパスを指定する必要があります。
+JSON はすべてのラウンドの時間を保持するため、長い実行では API サーバーのリクエストボディの上限（デフォルトで 4 MiB）を超える場合があります。
+ファイルを小さく保つには、`--benchmark-max-time` で各ベンチマークに費やす時間を制限してください:
 
 <Pytest />
 
-メトリックには2つのオプションがあります：
-- `mean` (デフォルト)：`lower_value` と `upper_value` はそれぞれ平均値 (つまり `value`) の1標準偏差以下と上になります。
-- `median`：`lower_value` と `upper_value` はそれぞれ中央値 (つまり `value`) の1四分位範囲以下と上になります。
+各ベンチマークは、`benchmarks.py::test_sort` のように `[param]` サフィックスを除いた完全な名前で命名され、
+パラメータ化されたテストの `params` は、`{"size": 64}` のようにそのパラメータになります。
+`params` 内の値が文字列、数値、ブール値のいずれでもない場合、またはその数が 8 を超える場合は、
+ベンチマークは完全な名前を保持し、パラメータを持ちません。
 
-これは、オプションの `--average` 引数を使用して <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドで指定できます。
+次のメジャーが収集されます:
+- `latency`（つまり `nanoseconds (ns)`）: `mean`、`median`、`min`、`max`、`std_dev`、四分位数 `p25` と `p75`、`iqr`（四分位範囲）、
+  pytest-benchmark が計算する `lower_whisker` と `upper_whisker`、およびすべてのラウンドの合計時間である `sum`
+- `throughput`（つまり `operations / second (ops/s)`）: pytest-benchmark が `ops` として報告するレートである `mean`
+
+一ラウンドのみのベンチマークには `std_dev` がありません。
+`latency` では `median` メトリックに（`--threshold-metric median`）、
+`throughput` では `mean` メトリックに、最初にしきい値を設定してください。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+`latency` メジャー（つまり `nanoseconds (ns)`）が収集されます。
+メトリックには二つのオプションがあります:
+- `mean`（デフォルト）: `lower_value` と `upper_value` は、それぞれ平均（つまり `value`）から標準偏差一つ分下と上の値です。
+- `median`: `lower_value` と `upper_value` は、それぞれ中央値（つまり `value`）から四分位範囲一つ分下と上の値です。
+
+これは、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドの `--average` オプションで指定できます。
+
+</details>

@@ -4,6 +4,13 @@ The Magic Adapter (`magic`) is a superset of all other adapters.
 For that reason, it is the default adapter for `bencher run`.
 However, the `magic` adapter should be used for exploration only.
 
+At BMF version 1, the `magic` adapter first tries [the `json` adapter](#-json),
+then each harness adapter in the order of the list below,
+reading a harness's structured output before its text output.
+The first adapter that reads any results is used,
+so run only one benchmark harness per `bencher run`.
+A BMF version 0 payload for a Project at BMF version 1 is refused with an error that names both versions.
+
 For best results, you should specify a benchmark harness adapter:
 
 - [\{...\} JSON](#-json)
@@ -16,10 +23,15 @@ For best results, you should specify a benchmark harness adapter:
 - [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
 - [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
 - [🕸 JavaScript Vitest](#-javascript-vitest)
+- [🕸 JavaScript Deno bench](#-javascript-deno)
+- [🕸 JavaScript mitata](#-javascript-mitata)
+- [🕸 JavaScript tinybench](#-javascript-tinybench)
 - [🐍 Python airspeed velocity (asv)](#-python-asv)
 - [🐍 Python pytest-benchmark](#-python-pytest)
 - [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [♦️ Ruby benchmark-ips](#%EF%B8%8F-ruby-benchmark-ips)
 - [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Divan](#-rust-divan)
 - [🦀 Rust Criterion](#-rust-criterion)
 - [🦀 Rust Iai](#-rust-iai)
 - [🦀 Rust Gungraun](#-rust-gungraun)

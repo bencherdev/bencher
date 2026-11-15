@@ -1,0 +1,33 @@
+import MitataJson from "../mitata-json.mdx";
+import NodeJsMitata from "../node-js-mitata.mdx";
+
+## 🕸 JavaScript mitata
+
+L'adaptateur JavaScript mitata (`js_mitata`) attend une sortie [mitata](https://github.com/evanwashere/mitata) au format JSON.
+Le JSON de mitata contient chaque échantillon par défaut, ce qui peut le rendre trop volumineux pour être envoyé,
+laissez donc de côté les échantillons et les informations de débogage :
+
+<MitataJson />
+
+N'affichez rien d'autre sur `stdout`, afin que le JSON soit tout ce que lit l'adaptateur.
+
+<NodeJsMitata />
+
+Chaque Benchmark est nommé d'après le nom de son groupe (lorsqu'il en a un) et son nom tel qu'écrit, joints par ` > `.
+Ses `args` sont ses Paramètres, donc `bench("fill $size", ...).args("size", [64, 128])`
+donne au Benchmark `fill $size` deux Variantes, avec les Paramètres `{"size": 64}` et `{"size": 128}`.
+Un argument qui n'est ni une chaîne, ni un nombre, ni un booléen est stocké sous forme de son texte JSON compact.
+Une exécution qui lève une erreur est comptée comme ignorée dans les avertissements du Rapport.
+
+Ces Mesures sont recueillies :
+- `latency` (c.-à-d. `nanoseconds (ns)`) : `mean`, `median`, `min`, `max`, et les percentiles `p25`, `p75`, `p99` et `p99_9`
+- `heap` (c.-à-d. `bytes (B)`) : l'estimation par mitata du heap utilisé par itération, comme `mean`, `min` et `max`
+- `gc-time` (c.-à-d. `nanoseconds (ns)`) : le temps d'un ramasse-miettes, comme `mean`, `min` et `max`
+- Avec [`@mitata/counters`](https://www.npmjs.com/package/@mitata/counters), les compteurs matériels par itération, chacun comme `mean`, `min` et `max` :
+  `cycles`, `instructions`, `cache-references`, `cache-misses`, `branches`, `branch-misses`, `stall-cycles`, `loads-and-stores`, `l1-load-misses` et `l1-store-misses`
+
+Placez d'abord un Seuil sur la Métrique `median` pour `latency`, avec `--threshold-metric median`,
+et sur la Métrique `mean` pour toute autre Mesure.
+
+L'adaptateur JavaScript mitata ne lit les résultats qu'en version 1 de BMF.
+Un Rapport pour un Projet en version 0 de BMF est refusé avec une erreur qui explique comment passer le Projet en version 1 de BMF.

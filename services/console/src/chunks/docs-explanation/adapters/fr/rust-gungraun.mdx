@@ -1,14 +1,42 @@
 import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+import CargoRustGungraunJson from "../cargo-rust-gungraun-json.mdx";
 
 ## 🦀 Rust Gungraun
 
-L'adaptateur Rust Gungraun (`rust_gungraun`) attend une sortie produite par [Gungraun](https://github.com/gungraun/gungraun).
-Les mesures `instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write` et `estimated-cycles` sont collectées par défaut. Les métriques supplémentaires Callgrind, Cachegrind et DHAT que Gungraun peut produire sont également prises en charge.
-Seule la valeur rapportée (c.-à-d. `value`) est disponible pour ces mesures.
-Ni `lower_value` ni `upper_value` ne sont collectées.
-Les mesures pour cet adaptateur ne sont pas créées par défaut pour tous les projets.
-Cependant, lorsque vous utilisez cet adaptateur, ces mesures seront automatiquement créées pour votre projet.
+L'adaptateur Rust Gungraun (`rust_gungraun`) attend une sortie [Gungraun](https://github.com/gungraun/gungraun).
+Pour les résultats les plus complets, faites afficher à Gungraun ses résumés JSON (c.-à-d. `GUNGRAUN_OUTPUT_FORMAT=json`),
+que l'adaptateur lit avant la sortie texte.
+Les schémas de résumé 6 et 7 sont lus.
 
-Gungraun est le successeur renommé de Iai-Callgrind.
+<CargoRustGungraunJson />
+
+La sortie texte de Gungraun est aussi lue :
 
 <CargoRustGungraun />
+
+À partir des résumés JSON, chaque Benchmark est nommé par son chemin de module, et son `id` est le Paramètre `@id`.
+À partir de la sortie texte, chaque Benchmark est nommé par sa première ligne entière.
+Les deux formats donnent donc des noms différents au même benchmark : choisissez-en un et gardez-le.
+Chaque outil qui exécute un benchmark (comme `callgrind`, `cachegrind` ou `dhat`) est sa propre Variante, avec le Paramètre `@tool`.
+Une section de la sortie texte sans en-tête d'outil est `callgrind`.
+
+Les Mesures `instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write` et `estimated-cycles` sont recueillies par défaut.
+Tout autre compteur que rapportent Callgrind, Cachegrind, DHAT, Memcheck, Helgrind ou DRD est aussi recueilli comme sa propre Mesure.
+Chaque compteur est un compte exact, recueilli comme une seule Métrique `value`, qui est la Métrique sur laquelle placer un Seuil en premier.
+Un événement `perf` est recueilli comme la `mean` de ses échantillons, ou comme une seule `value`, et c'est cette Métrique sur laquelle placer un Seuil en premier.
+Le schéma 7 recueille aussi le temps d'exécution de chaque outil comme la Mesure `profile-time` (c.-à-d. `nanoseconds (ns)`).
+Le temps passé dans les appels système est ignoré, car la sortie n'indique pas son unité.
+Les Mesures de cet adaptateur ne sont pas créées par défaut pour tous les Projets.
+Cependant, lorsque vous utilisez cet adaptateur, ces Mesures seront automatiquement créées pour votre Projet.
+
+Gungraun est le successeur renommé d'Iai-Callgrind.
+
+<details>
+<summary>BMF version 0</summary>
+
+La sortie texte et les résumés JSON du schéma 6 sont lus.
+À partir des résumés JSON, chaque Benchmark est nommé par son chemin de module et son `id`, joints par `::`.
+Chaque compteur est recueilli comme `value`, et ni `lower_value` ni `upper_value` ne sont recueillies.
+Lorsque plus d'un outil exécute un benchmark, un compteur que partagent les outils ne garde que la valeur d'un seul outil.
+
+</details>

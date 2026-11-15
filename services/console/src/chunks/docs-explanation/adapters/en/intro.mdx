@@ -5,8 +5,32 @@ An adapter can be specified for [the `bencher run` CLI subcommand][bencher run]
 with the `--adapter` option.
 If no adapter is specified, [the `magic` adapter][magic adapter] is used by default.
 
+Every adapter writes its results at the Report's BMF version,
+which is the Project's BMF version unless the Report declares one.
+A new Project starts at BMF version 1.
+At BMF version 1, an adapter writes:
+- every statistic the harness reports as its own named Metric, such as `mean`, `median`, or `p99`
+- Parameters from the harness's own structure, so one Benchmark can have several Variants
+- every Measure the harness reports
+
+To store only some of those Measures, list them with the `bencher run` CLI `--measure` option.
+The API server drops every other Measure before it stores the Report.
+Only the first 64 Measures listed are kept, and the Report warns of the rest.
+
+Each adapter below names the Metric to threshold first.
+It is the Metric that the run output and the pull request comment show for a Measure that no Threshold checks yet.
+Name it with the `--threshold-metric` option when you [create a Threshold][thresholds].
+The `--average` and `--fold` options are for BMF version 0 only.
+At BMF version 1, both are ignored with a warning in the Report.
+
+The Rust Divan, JavaScript tinybench, JavaScript Deno, JavaScript mitata, and Ruby benchmark-ips adapters read results at BMF version 1 only.
+A Benchmark's name at BMF version 1 can differ from its name at BMF version 0,
+so a Project that moves from BMF version 0 to BMF version 1 can start some of its Benchmarks anew.
+Where an adapter also reads results at BMF version 0, its section ends with how it does.
+
 [bmf]: /docs/reference/bencher-metric-format/
 [benchmarking overview]: /docs/explanation/benchmarking/
 [bencher run]: /docs/explanation/bencher-run/
+[thresholds]: /docs/explanation/thresholds/
 
 [magic adapter]: #-magic-default

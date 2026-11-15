@@ -1,7 +1,36 @@
-适配器将基准测试工具的输出转换为 [Bencher Metric Format (BMF) JSON][bmf]。当API服务器收到一份新报告时，适配器会运行。更多细节请参见[基准测试概览][benchmarking overview]。可以为[`bencher run` CLI 子命令][bencher run]通过`--adapter`选项指定一个适配器。如果没有指定适配器，那么默认使用[ `magic` 适配器][magic adapter]。
+适配器将基准测试工具的输出转换为 [Bencher Metric Format (BMF) JSON][bmf]。
+当 API 服务器收到新的报告时，适配器会在服务器上运行。
+更多详情请参见[基准测试概述][benchmarking overview]。
+可以为 [`bencher run` CLI 子命令][bencher run]
+通过 `--adapter` 选项指定适配器。
+如果未指定适配器，则默认使用 [`magic` 适配器][magic adapter]。
+
+每个适配器都按照报告的 BMF 版本写入结果，
+除非报告声明了版本，否则即为项目的 BMF 版本。
+新项目从 BMF 版本 1 开始。
+在 BMF 版本 1 中，适配器会写入：
+- 基准测试工具报告的每个统计量，各自作为一个具名指标，例如 `mean`、`median` 或 `p99`
+- 来自基准测试工具自身结构的参数，因此一个基准测试可以有多个变体
+- 基准测试工具报告的每个度量
+
+如果只想存储其中部分度量，请使用 `bencher run` CLI 的 `--measure` 选项列出它们。
+API 服务器会在存储报告之前丢弃所有其他度量。
+只保留列出的前 64 个度量，报告会对其余的发出警告。
+
+下面的每个适配器都会指明应首先设置阈值的指标。
+对于尚无任何阈值检查的度量，运行输出和拉取请求评论显示的就是这个指标。
+[创建阈值][thresholds]时，请使用 `--threshold-metric` 选项指定它。
+`--average` 和 `--fold` 选项仅适用于 BMF 版本 0。
+在 BMF 版本 1 中，两者都会被忽略，并在报告中给出警告。
+
+Rust Divan、JavaScript tinybench、JavaScript Deno、JavaScript mitata 和 Ruby benchmark-ips 适配器仅读取 BMF 版本 1 的结果。
+基准测试在 BMF 版本 1 中的名称可能与其在 BMF 版本 0 中的名称不同，
+因此从 BMF 版本 0 迁移到 BMF 版本 1 的项目，其部分基准测试可能会重新开始。
+如果某个适配器也读取 BMF 版本 0 的结果，其章节末尾会说明读取方式。
 
 [bmf]: /zh/docs/reference/bencher-metric-format/
 [benchmarking overview]: /zh/docs/explanation/benchmarking/
 [bencher run]: /zh/docs/explanation/bencher-run/
+[thresholds]: /zh/docs/explanation/thresholds/
 
 [magic adapter]: #-magic-default

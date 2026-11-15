@@ -1,0 +1,26 @@
+import BenchmarkIpsJson from "../benchmark-ips-json.mdx";
+import RubyBenchmarkIps from "../ruby-benchmark-ips.mdx";
+
+## ♦️ Ruby benchmark-ips
+
+Ruby benchmark-ips 适配器（`ruby_benchmark_ips`）接受 JSON 格式的 [benchmark-ips](https://github.com/evanphx/benchmark-ips) 输出。
+请使用 `x.json!` 将其写入文件：
+
+<BenchmarkIpsJson />
+
+此 JSON 输出保存在文件中，因此您必须使用 `bencher run` CLI 的 `--file` 选项来指定该文件路径。
+
+<RubyBenchmarkIps />
+
+每个基准测试以其标签命名。
+不是字符串的标签（例如 Hash）以其紧凑的 JSON 文本命名。
+每个基准测试都有一个参数 `@stats`，即运行所使用的统计模式：`sd`（默认）或 `bootstrap`（即 `x.config(stats: :bootstrap)`）。
+`throughput` 度量（即 `operations / second (ops/s)`）以下列指标收集：
+- `mean`：benchmark-ips 报告的速率
+- 当 `@stats` 为 `sd` 时，`std_dev`：速率的标准差
+- 当 `@stats` 为 `bootstrap` 时，`mean_ci_lower` 和 `mean_ci_upper`：速率的自助法置信区间
+
+请首先为 `mean` 指标设置阈值，使用 `--threshold-metric mean`。
+
+Ruby benchmark-ips 适配器仅读取 BMF 版本 1 的结果。
+对于 BMF 版本 0 的项目，其报告会被拒绝，错误信息会说明如何将项目迁移到 BMF 版本 1。

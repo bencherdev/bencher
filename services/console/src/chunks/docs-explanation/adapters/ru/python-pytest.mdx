@@ -3,13 +3,34 @@ import Pytest from "../pytest.mdx";
 ## 🐍 Python Pytest
 
 Адаптер Python Pytest (`python_pytest`) ожидает вывод [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) в [формате JSON (то есть `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
-Этот вывод в формате JSON сохраняется в файл, поэтому вы должны использовать аргумент `--file` командной строки `bencher run`, чтобы указать путь к этому файлу.
-Собирается мера `latency` (то есть `наносекунды (ns)`).
+Этот JSON-вывод сохраняется в файл, поэтому вы должны использовать опцию `--file` команды CLI `bencher run`, чтобы указать путь к этому файлу.
+JSON содержит время каждого раунда, поэтому долгий запуск может превысить ограничение сервера API на тело запроса (по умолчанию 4 MiB).
+Ограничьте время на каждый бенчмарк с помощью `--benchmark-max-time`, чтобы файл оставался небольшим:
 
 <Pytest />
 
-Существует два варианта для Метрики:
-- `mean` (по умолчанию): `lower_value` и `upper_value` находятся на одно стандартное отклонение ниже и выше среднего значения (то есть `value`) соответственно.
-- `median`: `lower_value` и `upper_value` находятся в одном межквартильном интервале ниже и выше медианы (то есть `value`) соответственно.
+Каждый Бенчмарк называется по своему полному имени без суффикса `[param]`, например `benchmarks.py::test_sort`,
+а `params` параметризованного теста являются его Параметрами, например `{"size": 64}`.
+Если значение в `params` не является строкой, числом или логическим значением, или их больше 8,
+Бенчмарк сохраняет свое полное имя и не имеет Параметров.
 
-Это может быть указано в подкоманде CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> с помощью необязательного аргумента `--average`.
+Собираются следующие Измерения:
+- `latency` (то есть `nanoseconds (ns)`): `mean`, `median`, `min`, `max`, `std_dev`, квартили `p25` и `p75`, `iqr` (межквартильный размах),
+  `lower_whisker` и `upper_whisker` в том виде, в каком их вычисляет pytest-benchmark, и `sum`, общее время всех раундов
+- `throughput` (то есть `operations / second (ops/s)`): `mean`, скорость, которую pytest-benchmark сообщает как `ops`
+
+У бенчмарка из одного раунда нет `std_dev`.
+В первую очередь задайте Порог для Метрики `median` у `latency` с помощью `--threshold-metric median`,
+а для Метрики `mean` у `throughput`.
+
+<details>
+<summary>BMF версия 0</summary>
+
+Собирается Измерение `latency` (то есть `nanoseconds (ns)`).
+Для Метрики есть два варианта:
+- `mean` (по умолчанию): `lower_value` и `upper_value` находятся на одно стандартное отклонение ниже и выше среднего (то есть `value`) соответственно.
+- `median`: `lower_value` и `upper_value` находятся на один межквартильный размах ниже и выше медианы (то есть `value`) соответственно.
+
+Это можно указать в подкоманде CLI <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> с помощью опции `--average`.
+
+</details>

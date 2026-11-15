@@ -1,21 +1,20 @@
 ### ⏱️ Build Time
 
-O subcomando de CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-pode ser usado para rastrear o tempo de build (ou seja, tempo de compilação) dos seus entregáveis com a flag `--build-time`.
-Nos bastidores, <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
-produz os resultados como [Bencher Metric Format (BMF) JSON][bmf].
-Portanto, é uma boa prática usar explicitamente o [adaptador `json`][json].
-Para mais detalhes, veja [como rastrear o tempo de build][build time].
+O subcomando CLI <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+pode ser usado para acompanhar o tempo de build (ou seja, o tempo de compilação) dos seus entregáveis com a flag `--build-time`.
+Por baixo dos panos, <code><a href="/pt/docs/explanation/bencher-run/">bencher run</a></code>
+gera os resultados como [Bencher Metric Format (BMF) JSON][bmf] na versão do BMF do Projeto.
+Por isso, é uma boa prática usar explicitamente [o adaptador `json`][json].
+Para mais detalhes, veja [como acompanhar o tempo de build][build time].
 
-A Medida `build-time` (ou seja, `segundos (s)`) é coletada.
-Apenas o valor do tempo de build (ou seja, `value`) está disponível.
-Nem `lower_value` nem `upper_value` são coletados.
+A Medida `build-time` (ou seja, `seconds (s)`) é coletada como uma única Métrica `value`,
+que é a Métrica para a qual definir um Limiar primeiro.
 A Medida `build-time` não é criada por padrão para todos os Projetos.
 No entanto, quando você usa a flag `--build-time`, esta Medida será criada automaticamente para o seu Projeto.
 
 {props.children}
 
-[json]: #-json
+[json]: /pt/docs/explanation/adapters/#-json
 
 [bmf]: /pt/docs/reference/bencher-metric-format/
 [build time]: /pt/docs/how-to/track-build-time/

@@ -2,14 +2,45 @@ import Dotnet from "../dotnet.mdx";
 
 ## #️⃣ C# DotNet
 
-C# DotNet 适配器 (`c_sharp_dot_net`) 期望[BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)的输出为[JSON格式（即使用 `--exporters json` 选项）](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)。
-会收集`延迟`度量（即 `纳秒 (ns)`）。
-这个 JSON 输出被保存到一个文件中，因此你必须使用 `bencher run` CLI 的 `--file` 参数来指定该文件路径。
+C# DotNet 适配器（`c_sharp_dot_net`）接受 [JSON 格式（即 `--exporters json`）](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)的 [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) 输出。
+简要（brief）和完整（full）两种 JSON 导出都会被读取。
+此 JSON 输出保存在文件中，因此您必须使用 `bencher run` CLI 的 `--file` 选项来指定该文件路径。
+BenchmarkDotNet 以基准测试类及其命名空间来命名该文件，因此请将 `Benchmarks` 替换为您的类的完整名称。
 
 <Dotnet />
 
-度量有两个选项：
-- `mean`（默认）：`lower_value` 和 `upper_value` 分别是标准差下方和上方的平均值（即 `value`）。
-- `median`：`lower_value` 和 `upper_value` 分别是四分位距下方和上方的中位数（即 `value`）。
+基准测试名称是到其实参之前的完整名称（即 `Namespace.Type.Method`），嵌套类型保留其 `+`（即 `Namespace.Outer+Type.Method`）。
+每个 `[Params]` 和 `[Arguments]` 值都成为一个参数，其值为 BenchmarkDotNet 打印的字符串。
+作业成为 `@job` 参数，其值为 BenchmarkDotNet 摘要中显示的作业 Id（即 `DefaultJob` 或 `ShortRun`），
+指定了运行时的作业会添加 `@runtime` 参数。
+BenchmarkDotNet 打印得与已读取的用例相同的用例，会在报告的警告中计为已跳过。
 
-这可以在 <code><a href="/zh/docs/explanation/bencher-run/">bencher运行</a></code> CLI 子命令中用 `--average` 选项来指定。
+`latency` 度量以纳秒（ns）为单位收集，包含 BenchmarkDotNet 报告的每个统计量：
+`mean`、`median`、`min`、`max`、`std_dev`、`std_err`、`p25`、`p75`、`iqr`、`lower_fence`、`upper_fence`，
+百分位数（即 `p67`、`p80`、`p85`、`p90` 和 `p95`），
+以及带有置信水平的平均值区间（即 `mean_ci99_9_lower`、`mean_ci99_9_upper` 和 `mean_ci99_9_margin`）。
+使用内存诊断器时，还会收集 `allocated` 度量（每次操作的字节数）
+以及 `gen0-collects-per-1000-ops`、`gen1-collects-per-1000-ops` 和 `gen2-collects-per-1000-ops` 度量，各为 `mean`。
+完整导出中的其他每个指标项（例如诊断器的指标项）都是一个以其 id 命名的度量，作为 `value` 收集。
+
+对于 `latency`，请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`；对于内存度量为 `mean`；对于完整导出的其他指标项为 `value`。
+
+BenchmarkDotNet 打印的内容不做任何转义，因此少数情况读取得不精确：
+包含 `&Name=` 的值会被读作两个参数，
+过长的值会按 BenchmarkDotNet 显示的方式截断（即 `head(...)tail [len]`），
+包含 `, Runtime=` 的字符串可能被读作 `@runtime`。
+在 BenchmarkDotNet 0.15.2 之前，没有 Id 的作业每次运行都会获得一个随机 Id，
+因此每次都会开始新的变体：请使用 `WithId` 为作业指定 Id。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+在 BMF 版本 0 中，基准测试名称为 `Namespace.Method`，并收集 `latency` 度量（即 `nanoseconds (ns)`）。
+使用内存诊断器时，还会收集 `allocated`、`gen0-collects`、`gen1-collects`、`gen2-collects` 和 `total-operations` 度量，各为 `value`。
+`latency` 指标有两个选项：
+- `mean`（默认）：`lower_value` 和 `upper_value` 分别是低于和高于平均值（即 `value`）一个标准差。
+- `median`：`lower_value` 和 `upper_value` 分别是低于和高于中位数（即 `value`）一个四分位距。
+
+这可以在 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令中通过 `--average` 选项指定。
+
+</details>

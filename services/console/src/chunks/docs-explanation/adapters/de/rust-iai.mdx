@@ -1,11 +1,29 @@
 import CargoRustIai from "../cargo-rust-iai.mdx";
+import CargoRustIaiValgrind from "../cargo-rust-iai-valgrind.mdx";
 
 ## 🦀 Rust Iai
 
-Der Rust Iai-Adapter (`rust_iai`) erwartet die Ausgabe von [Iai](https://github.com/bheisler/iai).
-Die Maße `instructions`, `l1-accesses`, `l2-accesses`, `ram-accesses` und `estimated-cycles` werden erfasst.
-Nur diese Maße (d.h. `value`) sind verfügbar. Es gibt keine Maße für `lower_value` und `upper_value`.
-Die Maße für diesen Adapter werden nicht standardmäßig für alle Projekte erstellt.
-Wenn Sie jedoch diesen Adapter verwenden, werden diese Maße automatisch für Ihr Projekt erstellt.
+Der Rust Iai Adapter (`rust_iai`) erwartet Ausgaben von [Iai](https://github.com/bheisler/iai).
 
 <CargoRustIai />
+
+Jeder Benchmark wird nach seinem Funktionsnamen benannt, ohne Parameter.
+Die Measures `instructions`, `l1-accesses`, `l2-accesses`, `ram-accesses` und `estimated-cycles` werden erfasst.
+Jede ist eine exakte Anzahl, erfasst als einzelne Metrik `value`, die die Metrik ist, für die Sie zuerst einen Schwellenwert festlegen sollten.
+Die Measures für diesen Adapter werden nicht standardmäßig für alle Projekte erstellt.
+Wenn Sie jedoch diesen Adapter verwenden, werden diese Measures automatisch für Ihr Projekt erstellt.
+
+Iai 0.1.1 bricht mit Valgrind 3.21 und neuer (zum Beispiel unter Ubuntu 24.04) mit einem Panic ab,
+sofern die Cache-Simulation von Valgrind nicht eingeschaltet ist.
+Setzen Sie `VALGRIND_OPTS=--cache-sim=yes` für den Benchmark-Befehl
+und löschen Sie `target/iai` vor dem ersten Lauf damit:
+
+<CargoRustIaiValgrind />
+
+<details>
+<summary>BMF Version 0</summary>
+
+Dieselben fünf Measures werden erfasst, jeweils als `value`.
+Weder `lower_value` noch `upper_value` werden erfasst.
+
+</details>

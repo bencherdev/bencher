@@ -1,9 +1,47 @@
+import AsvJson from "../asv-json.mdx";
 import Asv from "../asv.mdx";
 
 ## 🐍 Python ASV
 
 The Python ASV Adapter (`python_asv`) expects [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) output.
+For the most complete results, read the results file `asv run` writes for the commit and environment,
+with the `bencher run` CLI `--file` option:
+
+<AsvJson />
+
+The file is under asv's `results_dir` (`results` by default),
+in a directory named for the machine, and its name starts with the first 8 characters of the commit hash.
+
+The results file is read on its own, in the format asv 0.5 and later write.
+Run `asv update` to convert results written by an older asv.
+The text `asv run` prints is also read:
+
+<Asv />
+
+Each Benchmark is named by its dotted name, such as `benchmarks.TimeSuite.time_sort`.
+A parametrized benchmark has a Variant for each combination of its parameters.
+From the results file, the Parameters are keyed by position, as `@param0`, `@param1`, and so on.
+From the text, they are keyed by the parameter names asv prints.
+So the two formats give the same benchmark different Variants: pick one and keep it.
+
+These Measures are gathered:
+- `latency` (ie `nanoseconds (ns)`), for a `time_` benchmark: from the results file, `median`, `p25`, `p75`, and the median's 99% confidence interval as `median_ci99_lower` and `median_ci99_upper`; from the text, `median` and `iqr`, the interquartile range
+- `memory` (ie `bytes (B)`), for a `mem_` benchmark: `value`
+- `peak-memory` (ie `bytes (B)`), for a `peakmem_` benchmark: `value`
+
+A `track_` benchmark is counted as skipped in the Report's warnings, since its unit is not in the results file or the text.
+Threshold the `median` Metric first for `latency`, with `--threshold-metric median`,
+and the `value` Metric for `memory` and `peak-memory`.
+
+`asv run` exits with a non-zero code when any benchmark fails, and then `bencher run` fails too.
+With the `bencher run` CLI `--allow-failure` flag, the run goes on,
+but the output of the failed command is not sent, so the Report holds no results from it.
+
+<details>
+<summary>BMF version 0</summary>
+
+Only the text `asv run` prints is read.
 The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 The `lower_value` and `upper_value` are the interquartile range below and above the median (ie `value`) respectively.
 
-<Asv />
+</details>

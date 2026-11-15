@@ -1,9 +1,41 @@
+import CppCatch2Xml from "../cpp-catch2-xml.mdx";
 import MakeCppCatch2 from "../make-cpp-catch2.mdx";
 
 ## ➕ C++ Catch2
 
-C++ Catch2 어댑터(`cpp_catch2`)는 [Catch2](https://github.com/catchorg/Catch2) 출력을 예상합니다.
-`지연시간` 측정(즉 `나노초(ns)`)이 수집됩니다.
-`lower_value`와 `upper_value`는 각각 평균(즉 `value`)보다 한 표준 편차 아래와 위입니다.
+C++ Catch2 어댑터(`cpp_catch2`)는 [Catch2](https://github.com/catchorg/Catch2) 출력을 입력으로 받습니다.
+Catch2의 XML 리포터(즉, `-r xml`)를 먼저 읽으며 가장 신뢰할 수 있는 결과를 주므로 이를 권장합니다:
+
+<CppCatch2Xml />
+
+Catch2의 콘솔 출력도 최선의 노력(best effort) 방식으로 읽습니다:
 
 <MakeCppCatch2 />
+
+Catch2 표 안에 들어간 프로그램 자체의 출력은 Catch2의 출력과 항상 구별할 수 있는 것은 아니므로,
+그 출력이 들어간 벤치마크는 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+대신 `stderr`로 출력하거나 XML 리포터를 사용하세요.
+콘솔 너비가 59열보다 좁으면 Catch2가 표의 제목을 줄바꿈하므로, 모든 벤치마크가 건너뛴 것으로 집계됩니다.
+
+벤치마크 이름은 테스트 케이스, 각 섹션, 벤치마크를 슬래시로 구분한 것입니다(즉, `Case / Section / Bench`).
+매개변수는 없습니다.
+`latency` 측정은 나노초(ns) 단위로 수집되며,
+`mean`과 `std_dev`를 각각의 부트스트랩 구간 경계와 함께 가집니다.
+XML은 각 구간의 이름에 신뢰 수준을 붙이며(즉, `mean_ci95_lower`와 `mean_ci95_upper`),
+콘솔 출력은 수준을 밝히지 않습니다(즉, `mean_ci_lower`와 `mean_ci_upper`).
+`--benchmark-no-analysis`를 사용하면 `mean`만 수집됩니다.
+
+먼저 `mean` 메트릭에 임계값을 설정하세요(`--threshold-metric mean`).
+
+Catch2는 벤치마크가 실패하면 오류와 함께 종료하며, 그러면 `bencher run`도 실패합니다.
+`--allow-failure` 플래그를 사용하면 `bencher run`은 계속 진행하지만 그 반복의 출력을 버리므로,
+그 결과는 하나도 전송되지 않습니다.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+BMF 버전 0에서는 Catch2의 콘솔 출력만 읽습니다.
+`latency` 측정(즉, `nanoseconds (ns)`)이 수집됩니다.
+`lower_value`와 `upper_value`는 각각 평균(즉, `value`)보다 표준 편차 하나만큼 아래와 위의 값입니다.
+
+</details>

@@ -1,11 +1,36 @@
-アダプタはベンチマークハーネスの出力を [Bencher Metric Format (BMF) JSON][bmf] に変換します。
-新しいレポートが受け取られた時、アダプタはAPIサーバー上で実行されます。
-詳細については[ベンチマーキングの概要][benchmarking overview]を参照してください。
-アダプタは[`bencher run` CLIサブコマンド][bencher run]で `--adapter` オプションを使用して指定することができます。
-アダプタが指定されていない場合、[デフォルトの`magic` アダプタ][magic adapter]が使用されます。
+アダプターは、ベンチマークハーネスの出力を [Bencher Metric Format (BMF) JSON][bmf] に変換します。
+アダプターは、新しいレポートを受け取ったときに API サーバー上で実行されます。
+詳細については、[ベンチマーキングの概要][benchmarking overview]を参照してください。
+アダプターは、[`bencher run` CLI サブコマンド][bencher run]の
+`--adapter` オプションで指定できます。
+アダプターを指定しない場合は、デフォルトで [`magic` アダプター][magic adapter]が使用されます。
+
+すべてのアダプターは、レポートの BMF バージョンで結果を書き込みます。
+レポートがバージョンを宣言しない限り、それはプロジェクトの BMF バージョンです。
+新しいプロジェクトは BMF バージョン 1 から始まります。
+BMF バージョン 1 では、アダプターは次のものを書き込みます:
+- ハーネスが報告するすべての統計量。`mean`、`median`、`p99` などのそれぞれ名前付きのメトリックとして
+- ハーネス自身の構造から得たパラメータ。これにより、一つのベンチマークが複数のバリアントを持てます
+- ハーネスが報告するすべてのメジャー
+
+それらのメジャーの一部だけを保存するには、`bencher run` CLI の `--measure` オプションで列挙してください。
+API サーバーは、レポートを保存する前にそれ以外のすべてのメジャーを破棄します。
+保持されるのは列挙された最初の 64 個のメジャーだけで、残りについてはレポートが警告します。
+
+以下の各アダプターでは、最初にしきい値を設定するメトリックを示しています。
+これは、まだどのしきい値もチェックしていないメジャーについて、実行の出力とプルリクエストのコメントが表示するメトリックです。
+[しきい値を作成する][thresholds]ときに、`--threshold-metric` オプションでそのメトリックを指定してください。
+`--average` と `--fold` オプションは BMF バージョン 0 専用です。
+BMF バージョン 1 では、どちらもレポート内の警告とともに無視されます。
+
+Rust Divan、JavaScript tinybench、JavaScript Deno、JavaScript mitata、Ruby benchmark-ips の各アダプターは、BMF バージョン 1 の結果のみを読み取ります。
+BMF バージョン 1 でのベンチマーク名は BMF バージョン 0 での名前と異なる場合があるため、
+BMF バージョン 0 から BMF バージョン 1 に移行するプロジェクトでは、一部のベンチマークが新しく始まることがあります。
+アダプターが BMF バージョン 0 の結果も読み取る場合は、そのセクションの最後にその読み取り方を記載しています。
 
 [bmf]: /ja/docs/reference/bencher-metric-format/
 [benchmarking overview]: /ja/docs/explanation/benchmarking/
 [bencher run]: /ja/docs/explanation/bencher-run/
+[thresholds]: /ja/docs/explanation/thresholds/
 
 [magic adapter]: #-magic-default

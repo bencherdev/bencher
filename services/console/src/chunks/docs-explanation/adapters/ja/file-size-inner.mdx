@@ -1,13 +1,22 @@
-### ⚖️ ファイルサイズ
+### ⚖️ File Size
 
-<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLIサブコマンドは、`--file-size` オプションを使用して、納品物のファイルサイズ（つまりバイナリーサイズ）を追跡するために使用できます。`--file-size` オプションは、サイズが測定されるファイルのファイルパスを期待します。内部的に、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code>は結果を[Bencher Metric Format (BMF) JSON][bmf]として出力します。したがって、明示的に[the `json` adapter][json]を使用することが良い習慣です。詳細については、[ファイルサイズを追跡する方法][file size]を参照してください。
+<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドは、
+`--file-size` オプションを使用して、成果物のファイルサイズ（つまりバイナリサイズ）を追跡するために使用できます。
+`--file-size` オプションには、サイズを測定するファイルのファイルパスを指定します。
+内部的には、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> は、
+結果をプロジェクトの BMF バージョンの [Bencher Metric Format (BMF) JSON][bmf] として出力します。
+そのため、明示的に [`json` アダプター][json]を使用することをお勧めします。
+詳細については、[ファイルサイズを追跡する方法][file size]を参照してください。
 
-`file-size` 測定（つまり `bytes (B)`）が収集されます。利用可能なのはファイルサイズ値（つまり `value`）のみです。`lower_value` や `upper_value` は収集されません。`file-size` 測定は、すべてのプロジェクトにデフォルトで作成されるわけではありません。しかし、`--file-size` オプションを使用した場合、この測定はプロジェクトに自動的に作成されます。
-`--file-size`オプションは、複数回使用して複数のファイルサイズを追跡することができます。
+`file-size` メジャー（つまり `bytes (B)`）は単一の `value` メトリックとして収集され、
+これが最初にしきい値を設定するメトリックです。
+`file-size` メジャーは、すべてのプロジェクトにデフォルトで作成されるわけではありません。
+ただし、`--file-size` オプションを使用すると、このメジャーはプロジェクトに自動的に作成されます。
+`--file-size` オプションを複数回使用して、複数のファイルサイズを追跡できます。
 
 {props.children}
 
-[json]: #-json
+[json]: /ja/docs/explanation/adapters/#-json
 
 [bmf]: /ja/docs/reference/bencher-metric-format/
 [file size]: /ja/docs/how-to/track-file-size/

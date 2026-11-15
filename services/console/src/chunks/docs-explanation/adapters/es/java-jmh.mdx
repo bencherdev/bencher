@@ -2,9 +2,35 @@ import Java from "../java.mdx";
 
 ## ☕️ Java JMH
 
-El Adaptador Java JMH (`java_jmh`) espera la salida de [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) en [formato JSON (es decir, `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
-Esta salida JSON se guarda en un archivo, por lo que debes usar el argumento `--file` de la CLI `bencher run` para especificar la ruta de ese archivo.
-Se pueden recoger medidas de `latencia` y `rendimiento` (es decir, `nanosegundos (ns)` y `operaciones / segundo (ops/sec)`).
-El `lower_value` y `upper_value` son los intervalos de confianza inferior y superior para la media (es decir, `value`) respectivamente.
+El adaptador Java JMH (`java_jmh`) espera la salida de [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) en [formato JSON (es decir, `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
+Esta salida JSON se guarda en un archivo, así que debes usar la opción `--file` de la CLI `bencher run` para especificar la ruta de ese archivo.
 
 <Java />
+
+El nombre del Benchmark es el benchmark tal como lo nombra JMH (es decir, `org.example.MyBenchmark.hash`).
+Cada `@Param` se convierte en un Parámetro, con su valor como cadena,
+y el modo se convierte en el Parámetro `@mode` (es decir, `thrpt`, `avgt`, `sample` o `ss`).
+Una Variante con más de 8 Parámetros se cuenta como omitida en las advertencias del Informe.
+
+La puntuación principal se recoge en la Medida de su modo:
+`throughput` (es decir, `operations / second (ops/s)`) para `thrpt`,
+y `latency`, `sample-time` y `single-shot-time` (es decir, `nanoseconds (ns)`) para `avgt`, `sample` y `ss` respectivamente.
+Sus Métricas son la `mean` con el intervalo del 99,9 % de JMH (es decir, `mean_ci99_9_lower` y `mean_ci99_9_upper`),
+y los percentiles que informa JMH: `min`, `median`, `p90`, `p95`, `p99`, `p99_9`, `p99_99`, `p99_999`, `p99_9999` y `max`.
+
+Un resultado secundario en la unidad de la puntuación principal, un contador de operaciones `@AuxCounters` o un miembro de `@Group`,
+se recoge en la misma Medida en su propia Variante, con su etiqueta como el Parámetro `@label`.
+Cualquier otro resultado secundario, como los de `-prof gc`, es una Medida nombrada por su etiqueta, en su unidad tal como la escribe JMH.
+Un resultado secundario que JMH suma tiene una Métrica `sum` en lugar de la `mean` y su intervalo.
+Un resultado secundario sin ningún valor finito se descarta,
+y uno etiquetado como una Medida de la puntuación principal (es decir, `latency`) se cuenta como omitido.
+
+Pon un Umbral primero a la Métrica `median`, con `--threshold-metric median`.
+
+<details>
+<summary>BMF versión 0</summary>
+
+En la versión 0 de BMF, se pueden recoger las Medidas `latency` y `throughput` (es decir, `nanoseconds (ns)` y `operations / second (ops/s)`).
+El `lower_value` y el `upper_value` son los límites inferior y superior del intervalo de confianza de la media (es decir, `value`) respectivamente.
+
+</details>

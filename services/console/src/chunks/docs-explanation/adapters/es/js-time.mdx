@@ -1,9 +1,28 @@
 import NodeJsTime from "../node-js-time.mdx";
 
-## 🕸 Tiempo en JavaScript
+## 🕸 JavaScript Time
 
-El Adaptador de Tiempo JavaScript (`js_time`) espera la salida de [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd).
-La medida de `latencia` (es decir, `nanosegundos (ns)`) es recopilada.
-Solo el tiempo de operación (es decir, `valor`) está disponible. No hay `lower_value` ni `upper_value`.
+El adaptador JavaScript Time (`js_time`) espera la salida de [console.time](https://developer.mozilla.org/en-US/docs/Web/API/console/time)/[console.timeEnd](https://developer.mozilla.org/en-US/docs/Web/API/console/timeEnd)
+de Firefox, Node.js, Deno o Bun.
+Bun imprime sus temporizadores en `stderr`, así que ejecútalo con `2>&1`.
+Cada Benchmark se nombra por la etiqueta de su temporizador, sin Parámetros.
+La Medida `latency` (es decir, `nanoseconds (ns)`) se recoge con una sola Métrica, `value`: la duración del temporizador.
+Pon un Umbral primero a la Métrica `value`, con `--threshold-metric value`.
+
+Cuando una etiqueta se imprime más de una vez, como hace `console.timeLog`, solo se conserva su última línea,
+y cada línea anterior se cuenta como omitida en las advertencias del Informe.
+Node.js y Deno imprimen un temporizador como `label: duration`,
+así que cualquier otra línea con esa forma, como `retry in: 5s`, también se lee como un temporizador.
+Del mismo modo, los datos adicionales que imprime una llamada a `console.timeLog` de Bun pueden leerse como un temporizador propio.
+Mantén cualquier otra salida fuera del `stdout` del comando de benchmark.
 
 <NodeJsTime />
+
+<details>
+<summary>BMF versión 0</summary>
+
+Solo se leen las líneas `label: duration - timer ended` de Firefox.
+Solo el tiempo de la operación (es decir, `value`) está disponible.
+No se recogen ni `lower_value` ni `upper_value`.
+
+</details>

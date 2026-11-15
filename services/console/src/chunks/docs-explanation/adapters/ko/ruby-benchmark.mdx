@@ -1,10 +1,30 @@
 import Ruby from "../ruby.mdx";
 
-## ♦️ 루비 벤치마크
+## ♦️ Ruby Benchmark
 
-루비 벤치마크 어댑터(`ruby_benchmark`)는 `#bm`, `#bmbm`, `#benchmark` 메소드에 대한 [Benchmark 모듈](https://github.com/ruby/benchmark) 출력을 예상합니다.
+Ruby Benchmark 어댑터(`ruby_benchmark`)는 `#bm`, `#bmbm`, `#benchmark` 메서드의 [Benchmark 모듈](https://github.com/ruby/benchmark) 출력을 입력으로 받습니다.
 각 벤치마크에는 레이블이 필요합니다.
-`latency` 측정값(즉 `나노초(ns)`)이 수집됩니다.
-보고된 값(즉 `value`)만 사용할 수 있습니다. `lower_value`와 `upper_value`는 없습니다.
+각 벤치마크의 이름은 그 레이블이며, 매개변수는 없습니다.
+다음 측정이 수집되며, 각각 하나의 메트릭인 `value`, 즉 Ruby가 그 열에 출력한 시간을 가집니다.
+- `latency`(즉, `nanoseconds (ns)`): `real` 시간
+- `user-time`(즉, `nanoseconds (ns)`): `user` 시간
+- `system-time`(즉, `nanoseconds (ns)`): `system` 시간
+- `cpu-time`(즉, `nanoseconds (ns)`): `total` 시간
+
+먼저 `value` 메트릭에 임계값을 설정하세요(`--threshold-metric value`).
+
+출력은 최선의 노력(best effort) 방식으로 읽습니다.
+Ruby는 행의 레이블을 출력하고, 블록을 실행한 다음, 시간을 출력하므로,
+무언가를 출력하는 블록은 그 행을 둘로 나눕니다. 그 행은 보고서의 warning에서 건너뛴 것으로 집계되며, 그 뒤의 행은 계속 읽습니다.
+모든 행을 유지하려면 벤치마크 안에서는 `stderr`로 출력하세요.
 
 <Ruby />
+
+<details>
+<summary>BMF 버전 0</summary>
+
+`latency` 측정(즉, `nanoseconds (ns)`)이 수집됩니다.
+보고된 값(즉, `value`)만 사용할 수 있습니다.
+`lower_value`와 `upper_value`는 모두 수집되지 않습니다.
+
+</details>

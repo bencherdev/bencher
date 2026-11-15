@@ -1,0 +1,22 @@
+import TinybenchJson from "../tinybench-json.mdx";
+import NodeJsTinybench from "../node-js-tinybench.mdx";
+
+## 🕸 JavaScript tinybench
+
+JavaScript tinybench アダプター（`js_tinybench`）は、JSON 形式の [tinybench](https://github.com/tinylibs/tinybench) 6 のタスクを想定しています。
+tinybench は自身では何も出力しないため、`await bench.run()` の後に、次の一行でタスクを出力してください:
+
+<TinybenchJson />
+
+アダプターが読み取るのが JSON だけになるように、`stdout` には他に何も出力しないでください。
+
+<NodeJsTinybench />
+
+各ベンチマークはタスクの名前で命名され、パラメータはありません。
+既に読み取った名前を繰り返すタスクや、統計量を持たないタスクは、レポートの警告でスキップとして数えられます。
+`latency` メジャー（つまり `nanoseconds (ns)`）と `throughput` メジャー（つまり `operations / second (ops/s)`）の両方が、
+[Vitest 5](#-javascript-vitest) と同じメトリックで収集されます。
+まず `median` メトリックにしきい値を設定してください（`--threshold-metric median`）。
+
+JavaScript tinybench アダプターは BMF バージョン 1 の結果のみを読み取ります。
+BMF バージョン 0 のプロジェクトのレポートは、プロジェクトを BMF バージョン 1 に移行する方法を示すエラーで拒否されます。

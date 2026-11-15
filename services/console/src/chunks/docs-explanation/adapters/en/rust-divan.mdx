@@ -1,0 +1,30 @@
+import CargoRustDivan from "../cargo-rust-divan.mdx";
+
+## 🦀 Rust Divan
+
+The Rust Divan Adapter (`rust_divan`) expects [Divan](https://github.com/nvzqz/divan) output.
+
+<CargoRustDivan />
+
+Each Benchmark is named by its path in Divan's tree, from the benchmark target down to its row, joined with `::`.
+For example, `shapes::generic_args::Vec<u32>::4` or `alloc::threaded_alloc::t=2`.
+Divan prints a type, a constant, an argument, and a thread count the same way as a module,
+so each of them stays in the name, and there are no Parameters.
+A type's name comes from Rust's `std::any::type_name`, which can change between Rust toolchains,
+and then the Benchmark's name changes with it.
+
+The `latency` Measure (ie `nanoseconds (ns)`) is gathered with the `min`, `max`, `median`, and `mean` Metrics.
+Divan's rates and allocation counts are each gathered as their own Measure:
+- rates: `bytes-throughput`, `throughput` (items), `chars-throughput`, and `cycles-throughput`, each per second
+- allocations: `allocations` and `allocated`, `deallocations` and `deallocated`, `grows` and `grown`, `shrinks` and `shrunk`, and `max-allocations` and `max-allocated`, each a count and its bytes
+
+These Measures keep Divan's own column names as Metrics: `fastest`, `slowest`, `median`, and `mean`.
+Their `fastest` and `slowest` are the values at the fastest and slowest sample by time,
+not the lowest and highest values of the Measure.
+Threshold the `median` Metric first, with `--threshold-metric median`.
+
+A line inside Divan's tree that Divan did not print, such as your benchmark's own output, is counted as skipped in the Report's warnings.
+Print to `stderr` instead, and run only one benchmark harness per `bencher run`.
+
+The Rust Divan Adapter reads results at BMF version 1 only.
+A Report for a Project at BMF version 0 is refused with an error that says how to move the Project to BMF version 1.

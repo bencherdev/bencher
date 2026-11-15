@@ -9,6 +9,26 @@ and the [BMF JSON reference][bmf].
 
 {props.children}
 
+The `json` adapter reads the payload at the Report's BMF version,
+which is the Project's BMF version unless the Report declares one.
+At BMF version 1, each Measure of a Variant holds its named Metrics.
+To declare the version of your payload on any Project, use one of the two versions of the `json` adapter:
+- `json_v1`: `bencher run --adapter json_v1` declares BMF version 1
+- `json_v0`: `bencher run --adapter json_v0` declares BMF version 0
+
+A payload that does not parse at the expected version is refused
+with an error that names the version it parsed as and where the expected version came from.
+The Metric to threshold first is `value` if a Measure has it,
+then `median`, then `mean`, and otherwise the first Metric name in alphabetical order,
+with a bare statistic before an interval bound such as `mean_ci_lower`.
+
+<details>
+<summary>BMF version 0</summary>
+
+At BMF version 0, each Measure holds a `value`, with an optional `lower_value` and `upper_value`.
+Any other name in a Measure is ignored.
+
+</details>
+
 [bmf]: /docs/reference/bencher-metric-format/
-[bencher run]: /docs/explanation/bencher-run/#benchmark-command
 [custom benchmarks]: /docs/how-to/track-custom-benchmarks/

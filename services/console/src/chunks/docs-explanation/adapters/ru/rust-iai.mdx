@@ -1,11 +1,29 @@
 import CargoRustIai from "../cargo-rust-iai.mdx";
+import CargoRustIaiValgrind from "../cargo-rust-iai-valgrind.mdx";
 
 ## 🦀 Rust Iai
 
 Адаптер Rust Iai (`rust_iai`) ожидает вывод [Iai](https://github.com/bheisler/iai).
-Собираются показатели `instructions`, `l1-accesses`, `l2-accesses`, `ram-accesses` и `estimated-cycles`.
-Доступны только эти показатели (т.е. `value`). Нет показателей `lower_value` и `upper_value`.
-Показатели для этого адаптера не создаются по умолчанию для всех проектов.
-Однако, когда вы используете этот адаптер, эти показатели будут автоматически созданы для вашего проекта.
 
 <CargoRustIai />
+
+Каждый Бенчмарк называется по имени своей функции, без Параметров.
+Собираются Измерения `instructions`, `l1-accesses`, `l2-accesses`, `ram-accesses` и `estimated-cycles`.
+Каждое из них является точным счетом и собирается как одна Метрика `value`, для которой и стоит в первую очередь задать Порог.
+Измерения этого адаптера не создаются по умолчанию для всех проектов.
+Однако при использовании этого адаптера эти Измерения будут автоматически созданы для вашего Проекта.
+
+Iai 0.1.1 аварийно завершается (panic) с Valgrind 3.21 и новее (например, в Ubuntu 24.04),
+если не включена симуляция кэша Valgrind.
+Задайте `VALGRIND_OPTS=--cache-sim=yes` для команды бенчмарка
+и удалите `target/iai` перед первым запуском с этой настройкой:
+
+<CargoRustIaiValgrind />
+
+<details>
+<summary>BMF версия 0</summary>
+
+Собираются те же пять Измерений, каждое как `value`.
+Ни `lower_value`, ни `upper_value` не собираются.
+
+</details>

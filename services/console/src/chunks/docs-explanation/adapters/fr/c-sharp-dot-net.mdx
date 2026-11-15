@@ -2,14 +2,45 @@ import Dotnet from "../dotnet.mdx";
 
 ## #️⃣ C# DotNet
 
-L'adaptateur C# DotNet (`c_sharp_dot_net`) attend une sortie [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) au format [JSON (c'est-à-dire `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
-La mesure de `latence` (c'est-à-dire `nanosecondes (ns)`) est recueillie.
-Cette sortie JSON est sauvegardée dans un fichier, vous devez donc utiliser l'argument `--file` du CLI `bencher run` pour spécifier le chemin de ce fichier.
+L'adaptateur C# DotNet (`c_sharp_dot_net`) attend une sortie [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) au [format JSON (c.-à-d. `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
+Les exports JSON bref et complet sont tous deux lus.
+Cette sortie JSON est enregistrée dans un fichier, vous devez donc utiliser l'option `--file` de la CLI `bencher run` pour spécifier le chemin de ce fichier.
+BenchmarkDotNet nomme ce fichier d'après la classe de benchmark et son espace de noms, remplacez donc `Benchmarks` par le nom complet de votre classe.
 
 <Dotnet />
 
-Il existe deux options pour la métrique :
-- `moyenne` (par défaut) : Les valeurs `inferieure` et `superieure` sont une déviation standard en dessous et au-dessus de la moyenne (c'est-à-dire `valeur`) respectivement.
-- `mediane` : Les valeurs `inferieure` et `superieure` sont un écart interquartile en dessous et au-dessus de la médiane (c'est-à-dire `valeur`) respectivement.
+Le nom du Benchmark est le nom complet jusqu'à ses arguments (c.-à-d. `Namespace.Type.Method`), et un type imbriqué garde son `+` (c.-à-d. `Namespace.Outer+Type.Method`).
+Chaque valeur de `[Params]` et `[Arguments]` devient un Paramètre, sous forme de chaîne telle que BenchmarkDotNet l'affiche.
+Le job devient le Paramètre `@job`, son Id tel que le résumé de BenchmarkDotNet l'affiche (c.-à-d. `DefaultJob` ou `ShortRun`),
+et un job qui nomme son runtime ajoute le Paramètre `@runtime`.
+Un cas que BenchmarkDotNet affiche à l'identique d'un cas déjà lu est compté comme ignoré dans les avertissements du Rapport.
 
-Cela peut être spécifié dans la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">exécution du banc d'essai</a></code> avec l'option `--average`.
+La Mesure `latency` est recueillie en nanosecondes (ns), avec chaque statistique que BenchmarkDotNet rapporte :
+`mean`, `median`, `min`, `max`, `std_dev`, `std_err`, `p25`, `p75`, `iqr`, `lower_fence`, `upper_fence`,
+les percentiles (c.-à-d. `p67`, `p80`, `p85`, `p90` et `p95`),
+et l'intervalle de la moyenne avec son niveau (c.-à-d. `mean_ci99_9_lower`, `mean_ci99_9_upper` et `mean_ci99_9_margin`).
+Avec un diagnostiqueur de mémoire, la Mesure `allocated` (octets par opération)
+et les Mesures `gen0-collects-per-1000-ops`, `gen1-collects-per-1000-ops` et `gen2-collects-per-1000-ops` sont aussi recueillies, chacune comme `mean`.
+Chaque autre métrique de l'export complet, comme celle d'un diagnostiqueur, est une Mesure nommée d'après son id, comme `value`.
+
+Placez d'abord un Seuil sur la Métrique `median` pour `latency`, avec `--threshold-metric median`, sur `mean` pour les Mesures de mémoire, et sur `value` pour les autres métriques de l'export complet.
+
+BenchmarkDotNet n'échappe rien de ce qu'il affiche, donc quelques cas sont lus de façon inexacte :
+une valeur qui contient `&Name=` est lue comme deux Paramètres,
+une valeur longue est coupée telle que BenchmarkDotNet l'affiche (c.-à-d. `head(...)tail [len]`),
+et une chaîne qui contient `, Runtime=` peut être lue comme le `@runtime`.
+Avant BenchmarkDotNet 0.15.2, un job sans Id en reçoit un aléatoire à chaque exécution,
+il démarre donc de nouvelles Variantes à chaque fois : donnez un Id au job avec `WithId`.
+
+<details>
+<summary>BMF version 0</summary>
+
+En version 0 de BMF, le nom du Benchmark est `Namespace.Method`, et la Mesure `latency` (c.-à-d. `nanoseconds (ns)`) est recueillie.
+Avec un diagnostiqueur de mémoire, les Mesures `allocated`, `gen0-collects`, `gen1-collects`, `gen2-collects` et `total-operations` sont aussi recueillies, chacune comme `value`.
+Il y a deux options pour la Métrique de `latency` :
+- `mean` (par défaut) : Les `lower_value` et `upper_value` sont à un écart type en dessous et au-dessus de la moyenne (c.-à-d. `value`) respectivement.
+- `median` : Les `lower_value` et `upper_value` sont à un écart interquartile en dessous et au-dessus de la médiane (c.-à-d. `value`) respectivement.
+
+Cela peut être spécifié dans la sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> avec l'option `--average`.
+
+</details>

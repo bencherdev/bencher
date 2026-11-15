@@ -1,0 +1,30 @@
+import CargoRustDivan from "../cargo-rust-divan.mdx";
+
+## 🦀 Rust Divan
+
+Rust Divan 适配器（`rust_divan`）接受 [Divan](https://github.com/nvzqz/divan) 的输出。
+
+<CargoRustDivan />
+
+每个基准测试以其在 Divan 树中的路径命名，即从基准测试目标到其所在行，用 `::` 连接。
+例如 `shapes::generic_args::Vec<u32>::4` 或 `alloc::threaded_alloc::t=2`。
+Divan 打印类型、常量、实参和线程数的方式与打印模块相同，
+因此它们都保留在名称中，没有参数。
+类型的名称来自 Rust 的 `std::any::type_name`，它可能因 Rust 工具链而变化，
+此时基准测试的名称也会随之变化。
+
+`latency` 度量（即 `nanoseconds (ns)`）以 `min`、`max`、`median` 和 `mean` 指标收集。
+Divan 的速率和分配计数各自作为独立的度量收集：
+- 速率：`bytes-throughput`、`throughput`（项）、`chars-throughput` 和 `cycles-throughput`，均为每秒的值
+- 分配：`allocations` 和 `allocated`、`deallocations` 和 `deallocated`、`grows` 和 `grown`、`shrinks` 和 `shrunk`，以及 `max-allocations` 和 `max-allocated`，各为一个计数及其字节数
+
+这些度量保留 Divan 自己的列名作为指标：`fastest`、`slowest`、`median` 和 `mean`。
+其中 `fastest` 和 `slowest` 是按时间计最快和最慢样本处的值，
+而不是该度量的最低值和最高值。
+请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`。
+
+Divan 树中并非由 Divan 打印的行（例如基准测试自身的输出）会在报告的警告中计为已跳过。
+请改为打印到 `stderr`，并且每次 `bencher run` 只运行一个基准测试工具。
+
+Rust Divan 适配器仅读取 BMF 版本 1 的结果。
+对于 BMF 版本 0 的项目，其报告会被拒绝，错误信息会说明如何将项目迁移到 BMF 版本 1。
