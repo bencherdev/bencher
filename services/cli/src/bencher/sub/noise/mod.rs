@@ -19,13 +19,14 @@ impl From<CliNoise> for Noise {
         let CliNoise {
             duration,
             format,
+            bmf_version,
             quiet,
         } = cli;
         Self {
             duration,
             format: match format {
                 CliNoiseFormat::Human => bencher_noise::NoiseFormat::Human,
-                CliNoiseFormat::Json => bencher_noise::NoiseFormat::Json,
+                CliNoiseFormat::Json => bencher_noise::NoiseFormat::Json(bmf_version),
             },
             quiet,
         }
