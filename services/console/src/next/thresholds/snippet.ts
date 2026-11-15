@@ -1,5 +1,5 @@
 import type { ParameterSet } from "../report/row";
-import { json, quote } from "../report/snippet";
+import { json, quote } from "../report/command";
 import type { ModelLike } from "./text";
 
 /** A threshold as a run declares it: `measure` is the measure's slug. */
@@ -38,7 +38,6 @@ export const declarationSnippet = (
 		...(place.host ? [row(`  --host ${quote(place.host)}`)] : []),
 		row(`  --branch ${quote(place.branch)}`),
 		row(`  --testbed ${quote(place.testbed)}`),
-		row("  --adapter json"),
 		row(`  --threshold-measure ${quote(declaration.measure)}`, true),
 		row(`  --threshold-metric ${quote(declaration.metric)}`, true),
 		...sets.map((set) =>

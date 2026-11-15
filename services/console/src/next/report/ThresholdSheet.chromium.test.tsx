@@ -70,7 +70,7 @@ const mount = ({
 						report={REPORT}
 						branch="main"
 						testbed="ubuntu-latest"
-						adapter={Adapter.Json}
+						adapter={Adapter.RustCriterionJson}
 						version={version()}
 						host={host}
 						onClose={() => {}}
@@ -119,7 +119,8 @@ test("a self-hosted API is named in both commands, and Bencher Cloud in neither"
 	await expect.element(simple()).not.toHaveTextContent("--host");
 });
 
-// Kills a Copy that copies nothing, or one command in place of the other.
+// Kills a Copy that copies nothing, one command in place of the other, or a
+// command that names `json` in place of the report's adapter.
 test("each Copy puts its own command on the clipboard", async () => {
 	const writeText = vi
 		.spyOn(navigator.clipboard, "writeText")
@@ -144,7 +145,7 @@ test("each Copy puts its own command on the clipboard", async () => {
 			"  --project hashbrown \\",
 			"  --branch main \\",
 			"  --testbed ubuntu-latest \\",
-			"  --adapter json \\",
+			"  --adapter rust_criterion \\",
 			"  --threshold-measure throughput \\",
 			"  --threshold-metric value \\",
 			`  --threshold-parameters '{"input_bytes": 65536, "simd": "avx2", "threads": 1}' \\`,
@@ -237,7 +238,7 @@ test("the sheet waits for the project's version, then teaches it", async () => {
 	await expect.element(simple()).not.toBeInTheDocument();
 	expect(sheet.element().textContent).not.toContain("bencher run");
 	setVersion(0);
-	await expect.element(simple()).toHaveTextContent("--adapter json");
+	await expect.element(simple()).toHaveTextContent("--adapter rust_criterion");
 	expect(sheet.element().textContent).not.toContain("--threshold-metric");
 	await expect.element(exact()).not.toBeInTheDocument();
 });

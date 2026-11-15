@@ -1,14 +1,10 @@
-import type { Adapter } from "../../types/bencher";
-import { type SnippetLine, commandOf, guardFor, quote } from "./snippet";
-
-/** Where the run reports, and the adapter of the report the line is in. */
-interface SnippetPlace {
-	project: string;
-	branch: string;
-	testbed: string;
-	host?: string | undefined;
-	adapter: Adapter;
-}
+import { commandOf, quote } from "./command";
+import {
+	type SnippetLine,
+	type SnippetPlace,
+	cliAdapter,
+	guardFor,
+} from "./snippet";
 
 /** On a version 0 project a threshold checks `value`, so only a `value` line can declare one. */
 export const declaresThresholdV0 = (line: Pick<SnippetLine, "metric">) =>
@@ -47,12 +43,3 @@ export const thresholdSnippetV0 = <L extends SnippetLine>(
 		),
 	};
 };
-
-// A language's adapter tries each of its harnesses, as `magic` does.
-const LANGUAGE = /^(rust|cpp|go|java|c_sharp|js|python|ruby|shell|dart)$/;
-
-/** The adapter as `bencher run --adapter` spells it, which takes no language and no format revision. */
-export const cliAdapter = (adapter: Adapter): string =>
-	LANGUAGE.test(adapter)
-		? "magic"
-		: adapter.replace(/_(v\d|json|stdout|text|xml)$/, "");
