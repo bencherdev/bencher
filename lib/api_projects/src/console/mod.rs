@@ -7,8 +7,8 @@ use std::{
 };
 
 use bencher_json::{
-    AlertUuid, BenchmarkName, BenchmarkSlug, Boundary, MeasureSlug, MeasureUuid, ParameterSet,
-    ResourceName, SampleSize, VariantUuid, Window,
+    AlertUuid, BenchmarkName, BenchmarkSlug, Boundary, MeasureSlug, MeasureUuid, MetricName,
+    ParameterFilter, ParameterSet, ResourceName, SampleSize, VariantUuid, Window,
 };
 use bencher_json::{
     BenchmarkUuid, DateTime, DateTimeMillis, GitHash, ModelTest, ModelUuid, ReportUuid,
@@ -25,13 +25,23 @@ use bencher_json::{
         report::Iteration,
     },
 };
-use bencher_schema::model::{
-    project::{
-        benchmark::BenchmarkId, measure::MeasureId, report::ReportId, threshold::ThresholdId,
-        variant::VariantId,
+use bencher_schema::{
+    context::DbConnection,
+    model::{
+        project::{
+            benchmark::BenchmarkId,
+            branch::BranchId,
+            measure::MeasureId,
+            report::ReportId,
+            testbed::TestbedId,
+            threshold::{ThresholdDimensions, ThresholdId},
+            variant::VariantId,
+        },
+        user::actor::ApiActor,
     },
-    user::actor::ApiActor,
+    schema,
 };
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
 pub mod alerts;
 pub mod dimensions;
@@ -170,6 +180,8 @@ struct SeriesBuilder {
     lower: Vec<Option<f64>>,
     upper: Vec<Option<f64>>,
     alerts: Vec<JsonConsoleAlertPoint>,
+    /// The points the followed threshold's own boundary drew.
+    followed: Vec<bool>,
 }
 
 impl SeriesBuilder {
@@ -180,6 +192,7 @@ impl SeriesBuilder {
             lower: vec![None; points],
             upper: vec![None; points],
             alerts: Vec::new(),
+            followed: vec![false; points],
         }
     }
 
@@ -189,21 +202,12 @@ impl SeriesBuilder {
         }
     }
 
+    /// The followed threshold's own boundary at a point, and its alert.
     fn limits(&mut self, point: usize, limits: Limits, alert: Option<JsonConsoleAlert>) {
-        let Limits {
-            baseline,
-            lower_limit,
-            upper_limit,
-        } = limits;
-        for (column, value) in [
-            (&mut self.baseline, baseline),
-            (&mut self.lower, lower_limit),
-            (&mut self.upper, upper_limit),
-        ] {
-            if let Some(cell) = column.get_mut(point) {
-                *cell = value;
-            }
+        if let Some(followed) = self.followed.get_mut(point) {
+            *followed = true;
         }
+        self.set_limits(point, limits);
         if let Some(JsonConsoleAlert {
             uuid,
             limit,
@@ -219,6 +223,31 @@ impl SeriesBuilder {
         }
     }
 
+    /// A counterpart's boundary at a point the followed threshold did not check. Its alert
+    /// is the counterpart's own, so it stays off the line.
+    fn counterpart_limits(&mut self, point: usize, limits: Limits) {
+        if self.followed.get(point) == Some(&false) {
+            self.set_limits(point, limits);
+        }
+    }
+
+    fn set_limits(&mut self, point: usize, limits: Limits) {
+        let Limits {
+            baseline,
+            lower_limit,
+            upper_limit,
+        } = limits;
+        for (column, value) in [
+            (&mut self.baseline, baseline),
+            (&mut self.lower, lower_limit),
+            (&mut self.upper, upper_limit),
+        ] {
+            if let Some(cell) = column.get_mut(point) {
+                *cell = value;
+            }
+        }
+    }
+
     fn build(self) -> JsonConsoleSeries {
         let Self {
             y,
@@ -226,6 +255,7 @@ impl SeriesBuilder {
             lower,
             upper,
             mut alerts,
+            followed: _,
         } = self;
         alerts.sort_by_key(|alert| alert.index);
         let present =
@@ -247,6 +277,68 @@ struct Limits {
     baseline: Option<f64>,
     lower_limit: Option<f64>,
     upper_limit: Option<f64>,
+}
+
+/// The dimensions of the thresholds a read drew boundaries from, so a line that follows one
+/// threshold also draws the limits of its counterparts: the thresholds on other branches that
+/// check the same testbed, parameters, measure, and metric, such as the thresholds a branch
+/// cloned from its start point, whose boundaries the history it inherited carries.
+#[derive(Default)]
+struct Counterparts(HashMap<ThresholdId, ThresholdDimensions>);
+
+type DimensionsRow = (
+    ThresholdId,
+    BranchId,
+    TestbedId,
+    Option<ParameterFilter>,
+    MeasureId,
+    Option<MetricName>,
+);
+
+impl Counterparts {
+    /// Each threshold by its primary key, read only when there are two to tell apart.
+    fn read<I: Iterator<Item = ThresholdId>>(
+        conn: &mut DbConnection,
+        threshold_ids: I,
+    ) -> diesel::QueryResult<Self> {
+        let threshold_ids = unique(threshold_ids);
+        if threshold_ids.len() < 2 {
+            return Ok(Self::default());
+        }
+        Ok(Self(
+            schema::threshold::table
+                .filter(schema::threshold::id.eq_any(threshold_ids))
+                .select((
+                    schema::threshold::id,
+                    schema::threshold::branch_id,
+                    schema::threshold::testbed_id,
+                    schema::threshold::parameters,
+                    schema::threshold::measure_id,
+                    schema::threshold::metric,
+                ))
+                .load::<DimensionsRow>(conn)?
+                .into_iter()
+                .map(
+                    |(id, branch_id, testbed_id, parameters, measure_id, metric)| {
+                        (
+                            id,
+                            ThresholdDimensions::new(
+                                branch_id, testbed_id, parameters, measure_id, metric,
+                            ),
+                        )
+                    },
+                )
+                .collect(),
+        ))
+    }
+
+    /// Whether `other` is a counterpart of `followed`: the same dimensions on any branch.
+    fn of(&self, followed: ThresholdId, other: ThresholdId) -> bool {
+        let (Some(followed), Some(other)) = (self.0.get(&followed), self.0.get(&other)) else {
+            return false;
+        };
+        other.clone().on_branch(followed.branch_id) == *followed
+    }
 }
 
 /// One threshold's check of one value: the boundary it computed, the model it
@@ -607,5 +699,36 @@ fn keep_series(
         lower: lower.map(keep),
         upper: upper.map(keep),
         alerts,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Limits, SeriesBuilder};
+
+    fn upper(upper_limit: Option<f64>) -> Limits {
+        Limits {
+            baseline: None,
+            lower_limit: None,
+            upper_limit,
+        }
+    }
+
+    // Kills: a counterpart's limits drawn over the followed threshold's own boundary at a
+    // point that has both, in either order the rows come in, even where the followed
+    // threshold's boundary has no limits yet.
+    #[test]
+    fn followed_limits_win_over_a_counterparts() {
+        let mut builder = SeriesBuilder::new(3);
+        builder.counterpart_limits(0, upper(Some(1.0)));
+        builder.limits(0, upper(Some(2.0)), None);
+        builder.limits(1, upper(Some(2.0)), None);
+        builder.counterpart_limits(1, upper(Some(1.0)));
+        builder.limits(2, upper(None), None);
+        builder.counterpart_limits(2, upper(Some(1.0)));
+        assert_eq!(
+            builder.build().upper,
+            Some(vec![Some(2.0), Some(2.0), None])
+        );
     }
 }

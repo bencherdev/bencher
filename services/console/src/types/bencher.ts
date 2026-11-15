@@ -814,7 +814,8 @@ export interface JsonConsoleSeries {
 	index?: number[];
 	y: (number | null)[];
 	/**
-	 * The baseline the threshold compared each point with.
+	 * The baseline each point was compared with: by the threshold the line follows,
+	 * or where it has none, by a threshold on another branch with the same dimensions.
 	 * Absent when there is none.
 	 */
 	baseline?: (number | null)[];

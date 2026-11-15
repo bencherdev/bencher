@@ -49,8 +49,9 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 use super::{
-    AlertRow, BenchmarkRow, Limits, MeasureRow, ModelRow, PointReport, PointsBuilder, ReportOrder,
-    SeriesBuilder, Tables, VariantRow, alert_json, before, clamp_start, model_json, unique,
+    AlertRow, BenchmarkRow, Counterparts, Limits, MeasureRow, ModelRow, PointReport, PointsBuilder,
+    ReportOrder, SeriesBuilder, Tables, VariantRow, alert_json, before, clamp_start, model_json,
+    unique,
 };
 use crate::perf::DEFAULT_REPORT_HISTORY;
 
@@ -226,7 +227,9 @@ pub(super) fn draw(
             .map_err(resource_not_found_err!(Metric, project))?
     };
 
-    let plot = Plot::new(&boxes, read_series, &names, rows);
+    let counterparts = Counterparts::read(conn, checked_thresholds(&rows))
+        .map_err(resource_not_found_err!(Threshold, project))?;
+    let plot = Plot::new(&boxes, read_series, &names, rows, &counterparts);
     let models =
         plot_models(conn, &plot.model_ids()).map_err(resource_not_found_err!(Model, project))?;
     Ok(plot.into_json(&boxes, &models, window, total))
@@ -276,7 +279,12 @@ pub(super) fn draw_line(
         .map_err(resource_not_found_err!(Metric, project))?;
     let end = read_window.end_time.timestamp();
     rows.retain(|row| row.report.end_time.timestamp() < end || row.report.id <= report);
-    let plot = Plot::following(&boxes, &series, &names, rows, |_, lines| {
+    let counterparts = Counterparts::read(
+        conn,
+        checked_thresholds(&rows).chain([followed.threshold_id]),
+    )
+    .map_err(resource_not_found_err!(Threshold, project))?;
+    let plot = Plot::following(&boxes, &series, &names, rows, &counterparts, |_, lines| {
         vec![Some(followed); lines]
     });
     let models =
@@ -897,6 +905,12 @@ fn plot_rows(
         .collect())
 }
 
+/// The thresholds that drew a boundary on the rows.
+fn checked_thresholds(rows: &[PlotRow]) -> impl Iterator<Item = ThresholdId> {
+    rows.iter()
+        .filter_map(|row| row.check.map(|check| check.threshold_id))
+}
+
 fn plot_row(row: PlotRowTuple) -> PlotRow {
     let (
         (id, uuid, start_time, end_time, created, spec_id, version, hash),
@@ -1064,17 +1078,25 @@ struct Plot {
 }
 
 impl Plot {
-    fn new(boxes: &Boxes, series: &[Series], names: &Names, rows: Vec<PlotRow>) -> Self {
-        Self::following(boxes, series, names, rows, followed_checks)
+    fn new(
+        boxes: &Boxes,
+        series: &[Series],
+        names: &Names,
+        rows: Vec<PlotRow>,
+        counterparts: &Counterparts,
+    ) -> Self {
+        Self::following(boxes, series, names, rows, counterparts, followed_checks)
     }
 
     /// The drawn lines, each following the threshold of the check that `follow`
-    /// picks for it from the rows it draws.
+    /// picks for it from the rows it draws, with the limits of that threshold's
+    /// counterparts where it has none of its own.
     fn following<F>(
         boxes: &Boxes,
         series: &[Series],
         names: &Names,
         rows: Vec<PlotRow>,
+        counterparts: &Counterparts,
         follow: F,
     ) -> Self
     where
@@ -1115,10 +1137,13 @@ impl Plot {
                 .get(position)
                 .and_then(Option::as_ref)
                 .map(|check| check.threshold_id);
-            if let Some(check) = row.check
-                && followed == Some(check.threshold_id)
-            {
+            let (Some(check), Some(followed)) = (row.check, followed) else {
+                continue;
+            };
+            if check.threshold_id == followed {
                 builder.limits(point, check.limits, check.alert);
+            } else if counterparts.of(followed, check.threshold_id) {
+                builder.counterpart_limits(point, check.limits);
             }
         }
 
