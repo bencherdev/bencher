@@ -3,7 +3,7 @@ title: "pytest-benchmark"
 description: "pytest-benchmarkを使用してPythonコードをベンチマークするステップバイステップガイド"
 heading: "pytest-benchmarkを使用してPythonコードをベンチマークする方法"
 published: "2024-10-09T16:30:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 1
 ---
 
@@ -97,6 +97,8 @@ Fibonacciシーケンスのコードが機能的には正しいのに、どこ�
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 `pytest-benchmark`は、実行したすべてのラウンドをJSON結果に保存します。デフォルトの`max_time`である1秒では、私たちのような高速なベンチマークは、Bencher APIサーバーがデフォルトで受け付ける4 MiBのリクエストボディよりも大きなファイルを書き出します。`--benchmark-max-time 0.02`を指定すると、ファイルはその上限を十分に下回ります。
 
 <CatchInCiPlot />
 

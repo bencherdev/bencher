@@ -1,8 +1,8 @@
 ```
-$ bencher run --adapter python_pytest --file results.json "pytest --benchmark-json results.json game.py"
+$ bencher run --adapter python_pytest --file results.json "pytest --benchmark-max-time 0.02 --benchmark-json results.json game.py"
 ======================================================= test session starts ========================================================
 platform darwin -- Python 3.12.7, pytest-8.3.3, pluggy-1.5.0
-benchmark: 4.0.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+benchmark: 4.0.0 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=0.02 calibration_precision=10 warmup=False warmup_iterations=100000)
 rootdir: /usr/bencher/examples/python/pytest_benchmark
 plugins: benchmark-4.0.0
 collected 3 items                                                                                                                  
@@ -11,8 +11,13 @@ game.py ...
 
 ...
 
+View report: https://bencher.dev/console/projects/game/reports/01a1de23-1369-7220-88a8-ac762306cdb3
+
 View results:
-- test_game (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=077449e5-5b45-4c00-bdfb-3a277413180d&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
-- test_game_100 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=96508869-4fa2-44ac-8e60-b635b83a17b7&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
-- test_game_1_000_000 (Latency): https://bencher.dev/console/projects/game/perf?measures=52507e04-ffd9-4021-b141-7d4b9f1e9194&branches=3a27b3ce-225c-4076-af7c-75adbc34ef9a&testbeds=bc05ed88-74c1-430d-b96a-5394fdd18bb0&benchmarks=ff014217-4570-42ea-8813-6ed0284500a4&start_time=1697224006000&end_time=1699816009000&upper_boundary=true
+- game.py::test_game (Latency: median): https://bencher.dev/perf/game?branches=01a1de22-27b5-7442-b87a-44641fcf5f8b&heads=01a1de22-27b5-7442-b87a-4465b66fa3b7&testbeds=01a1de22-27b5-7442-b87a-44667e8a5a06&benchmarks=01a1de23-137e-75c0-8bec-be2b0a3adb22&measures=01a1de22-27b8-75c3-921f-5d13e2f9366a&start_time=1792309002000&end_time=1794728203000&report=01a1de23-1369-7220-88a8-ac762306cdb3
+- game.py::test_game (Throughput: mean): https://bencher.dev/perf/game?branches=01a1de22-27b5-7442-b87a-44641fcf5f8b&heads=01a1de22-27b5-7442-b87a-4465b66fa3b7&testbeds=01a1de22-27b5-7442-b87a-44667e8a5a06&benchmarks=01a1de23-137e-75c0-8bec-be2b0a3adb22&measures=01a1de23-137e-75c0-8bec-be2785e1cb21&start_time=1792309002000&end_time=1794728203000&report=01a1de23-1369-7220-88a8-ac762306cdb3
+- game.py::test_game_100 (Latency: median): https://bencher.dev/perf/game?branches=01a1de22-27b5-7442-b87a-44641fcf5f8b&heads=01a1de22-27b5-7442-b87a-4465b66fa3b7&testbeds=01a1de22-27b5-7442-b87a-44667e8a5a06&benchmarks=01a1de23-137d-7575-b65a-0278f64cfbfe&measures=01a1de22-27b8-75c3-921f-5d13e2f9366a&start_time=1792309002000&end_time=1794728203000&report=01a1de23-1369-7220-88a8-ac762306cdb3
+- game.py::test_game_100 (Throughput: mean): https://bencher.dev/perf/game?branches=01a1de22-27b5-7442-b87a-44641fcf5f8b&heads=01a1de22-27b5-7442-b87a-4465b66fa3b7&testbeds=01a1de22-27b5-7442-b87a-44667e8a5a06&benchmarks=01a1de23-137d-7575-b65a-0278f64cfbfe&measures=01a1de23-137e-75c0-8bec-be2785e1cb21&start_time=1792309002000&end_time=1794728203000&report=01a1de23-1369-7220-88a8-ac762306cdb3
+- game.py::test_game_1_000_000 (Latency: median): https://bencher.dev/perf/game?branches=01a1de22-27b5-7442-b87a-44641fcf5f8b&heads=01a1de22-27b5-7442-b87a-4465b66fa3b7&testbeds=01a1de22-27b5-7442-b87a-44667e8a5a06&benchmarks=01a1de23-137e-75c0-8bec-be28cfd65ab9&measures=01a1de22-27b8-75c3-921f-5d13e2f9366a&start_time=1792309002000&end_time=1794728203000&report=01a1de23-1369-7220-88a8-ac762306cdb3
+- game.py::test_game_1_000_000 (Throughput: mean): https://bencher.dev/perf/game?branches=01a1de22-27b5-7442-b87a-44641fcf5f8b&heads=01a1de22-27b5-7442-b87a-4465b66fa3b7&testbeds=01a1de22-27b5-7442-b87a-44667e8a5a06&benchmarks=01a1de23-137e-75c0-8bec-be28cfd65ab9&measures=01a1de23-137e-75c0-8bec-be2785e1cb21&start_time=1792309002000&end_time=1794728203000&report=01a1de23-1369-7220-88a8-ac762306cdb3
 ```

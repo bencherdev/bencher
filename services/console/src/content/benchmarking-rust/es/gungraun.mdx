@@ -3,7 +3,7 @@ title: "Gungraun"
 description: "Una guía paso a paso sobre cómo hacer benchmarks de código Rust con Gungraun"
 heading: "Cómo hacer benchmarks de código Rust con Gungraun"
 published: "2026-05-17T00:00:00Z"
-modified: "2026-06-03T00:00:00Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 4
 ---
 
@@ -181,6 +181,8 @@ Ahora volvamos a ejecutar esos benchmarks y veamos cómo nos fue:
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 Con `GUNGRAUN_OUTPUT_FORMAT=json`, Gungraun imprime su resumen como JSON, y [Bencher también lee esa salida](/es/docs/explanation/adapters/#-rust-gungraun). Allí, `play_game::bench_play_game_group::bench_play_game` es un solo benchmark, y cada uno de sus casos es una variante con su propio parámetro `@id`, `play_0` o `play_1`.
 
 <CatchInCiPlot />
 

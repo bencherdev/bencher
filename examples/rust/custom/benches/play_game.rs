@@ -36,7 +36,10 @@ impl CustomBenchmark {
             },
         });
         let mut benchmark_map = serde_json::Map::new();
-        benchmark_map.insert(self.name.to_string(), measures);
+        benchmark_map.insert(
+            self.name.to_string(),
+            serde_json::json!([{ "measures": measures }]),
+        );
         benchmark_map.into()
     }
 }

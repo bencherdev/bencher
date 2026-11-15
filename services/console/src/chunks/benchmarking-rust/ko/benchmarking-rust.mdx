@@ -1,8 +1,9 @@
 ## 러스트에서의 벤치마킹
 
-러스트에서 벤치마킹을 위한 세 가지 인기 있는 옵션은 다음과 같습니다:
+러스트에서 벤치마킹을 위한 네 가지 인기 있는 옵션은 다음과 같습니다:
 [libtest bench](/ko/learn/benchmarking/rust/libtest-bench/),
-[Criterion](/ko/learn/benchmarking/rust/criterion/), 그리고
+[Criterion](/ko/learn/benchmarking/rust/criterion/),
+[Gungraun](/ko/learn/benchmarking/rust/gungraun/), 그리고
 [Iai](/ko/learn/benchmarking/rust/iai/).
 
 libtest는 러스트의 내장 단위 테스트 및 벤치마킹 프레임워크입니다.
@@ -17,7 +18,6 @@ libtest는 러스트의 내장 단위 테스트 및 벤치마킹 프레임워크
 러스트 커뮤니티 내에서 사실상의 표준이 되었습니다.
 Criterion은 libtest 벤치에 비해 훨씬 더 많은 기능을 제공합니다.
 
-Criterion의 실험적 대안은 같은 제작자로부터 나온 Iai입니다.
-그러나 이는 월드 시계 시간을 대신하여 명령어 수를 사용합니다:
-CPU 명령어, L1 접근, L2 접근 및 RAM 접근.
-이로 인해 이러한 메트릭은 실행 간에 거의 동일하게 유지되므로 단일 샷 벤치마킹이 가능합니다.
+Criterion의 대안은 Gungraun입니다. 그러나 이는 벽시계 시간 대신 명령어 수를 사용합니다:
+CPU 명령어, L1 Hits와 RAM Hits 같은 캐시 메트릭 등 많은 것들...
+이러한 메트릭은 실행 간에 거의 동일하게 유지되므로 단일 샷 벤치마킹이 가능합니다.

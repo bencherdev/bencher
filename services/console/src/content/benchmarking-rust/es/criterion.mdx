@@ -3,7 +3,7 @@ title: "Criterion"
 description: "Una guía paso a paso sobre cómo hacer un benchmarking del código Rust con Criterion"
 heading: "Cómo hacer un benchmarking del código Rust con Criterion"
 published: "2024-01-28T14:20:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 2
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/es/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-Los tres están [soportados por Bencher](/es/docs/explanation/adapters/). Entonces, ¿por qué elegir Criterion?
+Los cuatro están [soportados por Bencher](/es/docs/explanation/adapters/). Entonces, ¿por qué elegir Criterion?
 Criterion es la herramienta estándar de facto para hacer benchmarking en la comunidad Rust.
 Yo sugeriría usar Criterion para hacer benchmarking del tiempo de latencia de tu código.
 Es decir, Criterion es excelente para medir el tiempo en tiempo real.
@@ -153,6 +153,8 @@ Y el benchmark `bench_play_game_1_000_000` ha bajado más de 10,000x! ¡De `9,59
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 Con [`cargo-criterion`](https://github.com/bheisler/cargo-criterion), `cargo criterion --message-format=json` imprime como JSON la media, la mediana y la desviación absoluta mediana junto a la estimación típica, cada una con su intervalo de confianza, y [Bencher también lee esa salida](/es/docs/explanation/adapters/#-rust-criterion).
 
 <CatchInCiPlot />
 

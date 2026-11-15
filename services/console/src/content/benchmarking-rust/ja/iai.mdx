@@ -3,7 +3,7 @@ title: "Iai"
 description: "RustコードをIaiでベンチマークするためのステップバイステップガイド"
 heading: "Iaiを使用してRustコードをベンチマークする方法"
 published: "2024-02-13T06:50:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 3
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/ja/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-すべてが[ベンチャーによってサポートされています](/ja/docs/explanation/adapters/)。なぜIaiを選ぶのでしょうか？
+4つすべてが[Bencherによってサポートされています](/ja/docs/explanation/adapters/)。なぜIaiを選ぶのでしょうか？
 Iaiは壁掛け時間ではなく、命令数を使用します。
 これは、CIでのベンチマーク、つまり[連続的なベンチマーキング](/ja/docs/explanation/continuous-benchmarking/)に理想的です。
 特に共有ランナーを使用している場合、CIでの連続的なベンチマーキングにはIaiを使用することをお勧めします。
@@ -66,6 +66,8 @@ ValgrindはLinux、Solaris、FreeBSD、macOSをサポートしています。
 Debianでの実行：`sudo apt-get install valgrind`
 
 macOS（x86_64/Intelチップのみ）：`brew install valgrind`
+
+> 🐰 Valgrind 3.21以降ではキャッシュシミュレーションがデフォルトで無効になっており、それがないとIaiは`no entry found for key`でパニックします。ベンチマークを実行する前に`export VALGRIND_OPTS=--cache-sim=yes`で再び有効にしてください。すでにパニックした実行がある場合は、先に`target/iai`を削除してください。
 
 <FizzBuzzRefactor />
 

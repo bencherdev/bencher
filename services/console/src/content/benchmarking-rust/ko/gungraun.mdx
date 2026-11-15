@@ -3,7 +3,7 @@ title: "Gungraun"
 description: "Gungraun으로 Rust 코드를 벤치마크하는 방법에 대한 단계별 가이드"
 heading: "Gungraun으로 Rust 코드를 벤치마크하는 방법"
 published: "2026-05-17T00:00:00Z"
-modified: "2026-06-03T00:00:00Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 4
 ---
 
@@ -181,6 +181,8 @@ macOS에서 (x86_64/Intel 칩만): `brew install valgrind`
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 `GUNGRAUN_OUTPUT_FORMAT=json`을 설정하면 Gungraun은 요약을 JSON으로 출력하며, [Bencher는 그 출력도 읽습니다](/ko/docs/explanation/adapters/#-rust-gungraun). 이때 `play_game::bench_play_game_group::bench_play_game`은 하나의 벤치마크이고, 그 각 케이스는 자체 `@id` 매개변수(`play_0` 또는 `play_1`)를 가진 변형입니다.
 
 <CatchInCiPlot />
 

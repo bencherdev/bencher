@@ -3,7 +3,7 @@ title: "Criterion"
 description: "Criterionを使用してRustコードをベンチマークする方法についてのステップバイステップガイド"
 heading: "Criterionを使ってRustコードをベンチマークする方法"
 published: "2024-01-28T14:20:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 2
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/ja/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-全てが[Bencherによってサポートされています](/ja/docs/explanation/adapters/)。それならばなぜCriterionを選ぶのでしょうか？
+4つすべてが[Bencherによってサポートされています](/ja/docs/explanation/adapters/)。それならばなぜCriterionを選ぶのでしょうか？
 Criterionは、Rustコミュニティにおける事実上の標準ベンチマーキングハーネスです。
 私は、コードのレイテンシをベンチマーキングするためにCriterionを使用することをお勧めします。
 つまり、Criterionは壁時計時間の測定に適しています。
@@ -152,6 +152,8 @@ Criterionは、Rustコミュニティにおける事実上の標準ベンチマ�
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 [`cargo-criterion`](https://github.com/bheisler/cargo-criterion)を使うと、`cargo criterion --message-format=json`は典型的な推定値に加えて平均値、中央値、中央絶対偏差を、それぞれの信頼区間とともにJSONとして出力し、[Bencherはその出力も読み取ります](/ja/docs/explanation/adapters/#-rust-criterion)。
 
 <CatchInCiPlot />
 

@@ -9,7 +9,7 @@ A custom benchmark harness is really just a binary
 that runs all of our benchmarks for us and reports its results.
 The benchmark runner is what orchestrates all of that.
 
-We want our results to be output in [Bencher Metric Format (BMF) JSON][bmf json].
+We want our results to be output in [Bencher Metric Format (BMF) JSON][bmf json], version 1.
 To accomplish this, we need to add one final dependency,
 [the `serde_json` crate][crates serde json] by... you guessed it, David Tolnay!
 
@@ -20,7 +20,7 @@ and then return the results as BMF JSON.
 
 <PlayGameRsRun />
 
-The BMF JSON results contain six [Measures][measures] for each benchmark:
+Each benchmark in the BMF JSON results has a single [Variant][variant] with no Parameters, and that Variant holds six [Measures][measures]. Each Measure is an exact count, so it has a single [Metric][metric], `value`:
 
 - Final Blocks: Final number of blocks allocated when the benchmark finished.
 - Final Bytes: Final number of bytes allocated when the benchmark finished.
@@ -36,5 +36,7 @@ and output the results as BMF JSON.
 
 [bmf json]: /docs/reference/bencher-metric-format/
 [measures]: /docs/explanation/benchmarking/#measure
+[variant]: /docs/explanation/benchmarking/#parameters
+[metric]: /docs/explanation/benchmarking/#metric
 
 [crates serde json]: https://crates.io/crates/serde_json

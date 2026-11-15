@@ -3,7 +3,7 @@ title: "Gungraun"
 description: "GungraunでRustコードをベンチマークする方法のステップバイステップガイド"
 heading: "GungraunでRustコードをベンチマークする方法"
 published: "2026-05-17T00:00:00Z"
-modified: "2026-06-03T00:00:00Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 4
 ---
 
@@ -181,6 +181,8 @@ macOS（x86_64/Intelチップのみ）では：`brew install valgrind`
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 `GUNGRAUN_OUTPUT_FORMAT=json`を設定すると、GungraunはサマリーをJSONとして出力し、[Bencherはその出力も読み取ります](/ja/docs/explanation/adapters/#-rust-gungraun)。その場合、`play_game::bench_play_game_group::bench_play_game`が1つのベンチマークとなり、その各ケースは独自の`@id`パラメータ（`play_0`または`play_1`）を持つバリアントになります。
 
 <CatchInCiPlot />
 
