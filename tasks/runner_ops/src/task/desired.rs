@@ -93,6 +93,9 @@ const QUIET_UNITS: [(&str, &str); 7] = [
         "/usr/sbin/logrotate /etc/logrotate.conf",
     ),
 ];
+/// Has needrestart defer a restart of each maintenance unit; `zz-` sorts it after the snippets that packages ship,
+/// any of which could replace needrestart's whole table of overrides.
+const NEEDRESTART_QUIET_PATH: &str = "/etc/needrestart/conf.d/zz-bencher-quiet.conf";
 const ABSENT: &str = "absent";
 const FRAME: &str = "desired ";
 
@@ -177,6 +180,12 @@ impl Desired {
                 Row::Vendor { unit, command },
             ]);
         }
+        rows.push(Row::File(File::root(
+            NEEDRESTART_QUIET_PATH,
+            0o644,
+            Content::Text(needrestart_quiet()),
+            None,
+        )));
         rows.extend(MASKED_UNITS.into_iter().map(Row::Masked));
         rows.extend([
             Row::Cgroup(Cgroup::Controllers),
@@ -795,6 +804,16 @@ TimeoutStartSec=infinity"
     )
 }
 
+/// Each maintenance unit by its exact name, which needrestart then defers: while a unit waits for the runner's job
+/// lock, a restart of it waits on the upgrade run that restarts it, and its next run starts the new binaries anyway.
+fn needrestart_quiet() -> String {
+    QUIET_UNITS
+        .iter()
+        .map(|(unit, _)| format!("$nrconf{{override_rc}}{{qr(^\\Q{unit}\\E$)}} = 0;"))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// `text` is the unit file's `ExecStart=` lines, which must be the one command the drop-in wraps, then any other
 /// drop-in's, after its path, of which there must be none.
 fn vendor_problem(text: &str, command: &str) -> Option<String> {
@@ -1206,9 +1225,10 @@ mod tests {
     }
 
     #[test]
-    fn host_writes_each_quiet_drop_in_and_reloads_systemd_once() {
+    fn host_writes_each_quiet_file_and_reloads_systemd_once() {
         // Kills a drop-in that takes effect only at the next reboot, a missing
-        // unit, and a drift check that `host` would try to write.
+        // unit, a drift check that `host` would try to write, and a missing
+        // needrestart file.
         let quiet = Desired(
             Desired::new(UpdateChannel::Stable, Some(day(5)), Some(minute(7)), None)
                 .0
@@ -1226,7 +1246,7 @@ mod tests {
                 .collect(),
         );
         let (writes, reloads) = quiet.writes(&quiet.check(&BTreeMap::new(), &mut no_checksum));
-        assert_eq!(writes.len(), QUIET_UNITS.len(), "{writes:#?}");
+        assert_eq!(writes.len(), QUIET_UNITS.len() + 1, "{writes:#?}");
         let written: Vec<&str> = writes
             .iter()
             .filter_map(|write| {
@@ -1245,9 +1265,82 @@ mod tests {
                 "/etc/systemd/system/mdcheck_continue.service.d/zz-bencher-quiet.conf",
                 "/etc/systemd/system/dpkg-db-backup.service.d/zz-bencher-quiet.conf",
                 "/etc/systemd/system/logrotate.service.d/zz-bencher-quiet.conf",
+                "/etc/needrestart/conf.d/zz-bencher-quiet.conf",
             ]
         );
+        // needrestart reads its configuration on each run.
         assert_eq!(reloads, ["systemctl daemon-reload"]);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn needrestart_defers_each_quiet_unit_by_its_exact_name_alone() {
+        // Kills a pattern that matches a timer or another unit, a dot that
+        // matches any character, a file that replaces needrestart's own
+        // overrides, and a missing unit. A restart of a unit that waits for the
+        // job lock waits on the upgrade run that restarts it, which never ends.
+        let dir = tempfile::tempdir().unwrap();
+        let conf = dir.path().join("zz-bencher-quiet.conf");
+        std::fs::write(&conf, needrestart_quiet()).unwrap();
+        // How needrestart loads a snippet over its defaults, and then picks a
+        // unit's first matching override, with a restart when none matches.
+        let script = r#"
+my %nrconf = (override_rc => { qr(^dbus) => 0 });
+my $fn = shift;
+eval do { local(@ARGV, $/) = $fn; <> };
+die "Error parsing $fn: $@" if $@;
+while (my $rc = <STDIN>) {
+    chomp $rc;
+    my $restart = 1;
+    foreach my $re (keys %{$nrconf{override_rc}}) {
+        next unless $rc =~ /$re/;
+        $restart = $nrconf{override_rc}->{$re};
+        last;
+    }
+    print "$rc $restart\n";
+}
+"#;
+        let mut want: BTreeMap<String, u8> = BTreeMap::from([
+            ("dbus.service".to_owned(), 0),
+            ("ssh.service".to_owned(), 1),
+        ]);
+        for (unit, _) in QUIET_UNITS {
+            let stem = unit.trim_end_matches(".service");
+            want.insert(unit.to_owned(), 0);
+            for other in [
+                format!("{stem}.timer"),
+                format!("x{unit}"),
+                format!("{unit}x"),
+                format!("{stem}xservice"),
+            ] {
+                want.insert(other, 1);
+            }
+        }
+        let mut perl = std::process::Command::new("perl")
+            .arg("-e")
+            .arg(script)
+            .arg(&conf)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        let names = want
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            .join("\n");
+        std::io::Write::write_all(&mut perl.stdin.take().unwrap(), names.as_bytes()).unwrap();
+        let output = perl.wait_with_output().unwrap();
+        assert!(output.status.success(), "{output:?}");
+        let got: BTreeMap<String, u8> = String::from_utf8(output.stdout)
+            .unwrap()
+            .lines()
+            .filter_map(|line| {
+                let (name, restart) = line.split_once(' ')?;
+                Some((name.to_owned(), restart.parse().ok()?))
+            })
+            .collect();
+        assert_eq!(got, want, "{}", needrestart_quiet());
     }
 
     #[test]
