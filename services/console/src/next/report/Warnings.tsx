@@ -56,6 +56,7 @@ const RESOURCES: Record<`${ReportWarningResource}`, string> = {
 	threshold: "Threshold",
 	adapter: "Adapter",
 	average: "Average",
+	fold: "Fold",
 };
 
 const ACTIONS: Record<`${ReportWarningAction}`, string> = {
