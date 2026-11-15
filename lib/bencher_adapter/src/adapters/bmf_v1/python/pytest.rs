@@ -15,7 +15,7 @@ use crate::{
     adapters::{
         bmf_v1::{
             finite::{Finite, finite_json},
-            leaf::{LeafResults, Variant},
+            leaf::{LeafResults, Variant, parameter_set},
         },
         util::Units,
     },
@@ -25,7 +25,8 @@ use crate::{
 /// pytest-benchmark's `--benchmark-json` report at version 1.
 ///
 /// A parametrized test's name drops its `[param]` suffix, and its `params` are the parameters,
-/// unless a value is not a scalar or there are more than 8, when the full name stays with none.
+/// unless a value is not a scalar or there are more than a variant holds, when the full name stays
+/// with none.
 pub struct AdapterPythonPytestV1;
 
 impl Adaptable for AdapterPythonPytestV1 {
@@ -147,7 +148,7 @@ fn name_and_parameters(benchmark: &Benchmark) -> (&str, ParameterSet) {
     let parameters = params
         .values()
         .all(is_scalar)
-        .then(|| serde_json::from_value(serde_json::Value::Object(params.clone())).ok())
+        .then(|| parameter_set(params.clone()))
         .flatten();
     let Some(parameters) = parameters else {
         return (fullname, ParameterSet::default());
@@ -183,7 +184,7 @@ mod test_python_pytest_v1 {
     use std::collections::BTreeSet;
 
     use bencher_json::{
-        ParameterSet,
+        MAX_PARAMETER_KEYS, ParameterSet,
         project::{
             measure::built_in::{
                 BuiltInMeasure as _,
@@ -290,12 +291,25 @@ mod test_python_pytest_v1 {
 
     /// Kills the `[param]` suffix left on the name, a parameter typed as a string, a value that is
     /// not a scalar (`None`, a list, a dict, an object pytest-benchmark writes as
-    /// `UNSERIALIZABLE[...]`), a string past 64 characters, or a ninth key kept as a parameter or
-    /// dropped with the suffix cut, a fixture's parameter dropped, a class dropped from the name,
+    /// `UNSERIALIZABLE[...]`), a string past 64 characters, or a key past the cap kept as a
+    /// parameter or dropped with the suffix cut, a fixture's parameter dropped, a class dropped from the name,
     /// and a case that repeats one already read stored over it or left uncounted.
     #[test]
     fn adapter_python_pytest_v1_names() {
-        let results = convert_v1(Adapter::PythonPytest, PARAMS);
+        // The capture's eight and nine key cases, widened to the cap and past it.
+        let results = convert_edited_v1(Adapter::PythonPytest, PARAMS, |json| {
+            for benchmark in json["benchmarks"].as_array_mut().unwrap() {
+                let width = match benchmark["name"].as_str() {
+                    Some("test_eight[1-2-3-4-5-6-7-8]") => MAX_PARAMETER_KEYS,
+                    Some("test_nine[1-2-3-4-5-6-7-8-9]") => MAX_PARAMETER_KEYS + 1,
+                    _ => continue,
+                };
+                let params = benchmark["params"].as_object_mut().unwrap();
+                for (key, value) in ('a'..='z').zip(1..).take(width).skip(params.len()) {
+                    params.insert(key.to_string(), value.into());
+                }
+            }
+        });
         let mut expected = BTreeSet::new();
         for (name, parameters) in [
             ("test_bench.py::test_plain", "{}"),
@@ -314,7 +328,7 @@ mod test_python_pytest_v1 {
             ("test_bench.py::test_nine[1-2-3-4-5-6-7-8-9]", "{}"),
             (
                 "test_bench.py::test_eight",
-                r#"{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8}"#,
+                r#"{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7,"h":8,"i":9,"j":10,"k":11,"l":12,"m":13,"n":14,"o":15,"p":16}"#,
             ),
             ("test_bench.py::test_fixture_param", r#"{"letter":"x"}"#),
             ("test_bench.py::test_fixture_param", r#"{"letter":"y"}"#),

@@ -17,7 +17,7 @@ use crate::urlencoded::{
 use crate::{
     BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, HeadUuid, JsonBenchmark, JsonBranch,
     JsonMeasure, JsonProject, JsonTestbed, JsonVariant, MAX_FILTER_SETS, MeasureUuid, ParameterSet,
-    ProjectSlug, ReportUuid, TestbedUuid,
+    ParameterSetInput, ProjectSlug, ReportUuid, TestbedUuid,
 };
 
 use super::alert::JsonPerfAlert;
@@ -155,7 +155,8 @@ impl TryFrom<JsonPerfQueryParams> for JsonPerfQuery {
             Some(
                 entries
                     .iter()
-                    .filter_map(|entry| entry.parse().ok())
+                    .filter_map(|entry| entry.parse::<ParameterSetInput>().ok())
+                    .map(Into::into)
                     .collect(),
             )
         } else {
@@ -503,6 +504,7 @@ mod tests {
         BenchmarkUuid, BranchUuid, DateTime, DateTimeMillis, HeadUuid, JsonPerfQuery,
         JsonPerfQueryParams, MAX_FILTER_SETS, MeasureUuid, MetricName, ParameterSet, TestbedUuid,
     };
+    use crate::MAX_PARAMETER_KEYS;
 
     fn query_params(parameters: String) -> JsonPerfQueryParams {
         JsonPerfQueryParams {
@@ -530,6 +532,25 @@ mod tests {
             JsonPerfQuery::try_from(query_params(parameters)).expect("Failed to read the params");
 
         assert_eq!(query.parameters.map(|p| p.len()), Some(MAX_FILTER_SETS));
+    }
+
+    // Kills an entry read without the key cap: a set past it is dropped, the way a set
+    // that fails to parse is.
+    #[test]
+    fn drops_an_entry_past_the_key_cap() {
+        let past_the_cap = (0..=MAX_PARAMETER_KEYS)
+            .map(|key| format!(r#""k{key}":{key}"#))
+            .collect::<Vec<_>>()
+            .join("%2C");
+        let parameters = format!(r#"{{{past_the_cap}}},{{"n":0}}"#);
+
+        let query =
+            JsonPerfQuery::try_from(query_params(parameters)).expect("Failed to read the params");
+
+        assert_eq!(
+            query.parameters,
+            Some(vec![r#"{"n":0}"#.parse().expect("Failed to parse")])
+        );
     }
 
     // A dead entry inside the cap still spends its place, so a live entry past the

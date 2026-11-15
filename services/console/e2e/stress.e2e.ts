@@ -28,8 +28,8 @@ import {
 import { signUp } from "./mail";
 
 // Every page at the caps the API accepts: 64-byte names (CJK and RTL among
-// them), 256-byte slash branches, 1024-byte Rust paths, 8 parameter keys of 64
-// bytes each, 1e300 and 1e-300 values, and 64 lines on one plot.
+// them), 256-byte slash branches, 1024-byte Rust paths, 16 parameter keys of
+// 64 bytes each, 1e300 and 1e-300 values, and 64 lines on one plot.
 
 const WIDTHS = [
 	{ width: 1440, height: 900 },
@@ -69,7 +69,7 @@ const hashOf = (value: string) =>
 	createHash("sha1").update(value).digest("hex");
 
 const PARAMETERS = Object.fromEntries(
-	Array.from({ length: 8 }, (_, key) => [
+	Array.from({ length: 16 }, (_, key) => [
 		fill(`k${key}_`, 64, "k"),
 		fill(`v${key}_`, 64, "v"),
 	]),

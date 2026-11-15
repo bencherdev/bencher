@@ -3,7 +3,7 @@ use std::{future::Future, pin::Pin};
 #[cfg(feature = "plus")]
 use bencher_client::types::JsonNewRunJob;
 use bencher_client::types::{
-    Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings, MeasureFilter,
+    Adapter, BenchmarkPrefix, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings, MeasureFilter,
 };
 use bencher_comment::{GitHubApi, ReportComment};
 use bencher_json::{
@@ -67,6 +67,7 @@ pub struct Run {
     iter: Iteration,
     fold: Option<JsonFold>,
     measures: Option<MeasureFilter>,
+    benchmark_prefix: Option<BenchmarkPrefix>,
     backdate: Option<DateTime>,
     allow_failure: bool,
     thresholds: Thresholds,
@@ -100,6 +101,7 @@ impl TryFrom<CliRun> for Run {
             iter,
             fold,
             measure,
+            benchmark_prefix,
             backdate,
             allow_failure,
             thresholds,
@@ -175,6 +177,7 @@ impl TryFrom<CliRun> for Run {
             iter,
             fold: fold.map(Into::into),
             measures: measure_filter(measure),
+            benchmark_prefix: benchmark_prefix.map(Into::into),
             backdate,
             allow_failure,
             thresholds: thresholds.try_into().map_err(RunError::Thresholds)?,
@@ -473,6 +476,7 @@ impl Run {
                 average: self.average,
                 fold: self.fold,
                 measures: self.measures.clone(),
+                benchmark_prefix: self.benchmark_prefix.clone(),
             }),
             context: Some(RunContext::current().into()),
             job: None,
@@ -509,6 +513,7 @@ impl Run {
                 average: self.average,
                 fold: self.fold,
                 measures: self.measures.clone(),
+                benchmark_prefix: self.benchmark_prefix.clone(),
             }),
             context: Some(RunContext::current().into()),
             job: Some(JsonNewRunJob {
@@ -1451,6 +1456,51 @@ mod tests {
             let run = Run::try_from(CliRun::try_parse_from(args).unwrap()).unwrap();
             let json_new_run = run.generate_report().await.unwrap().unwrap();
             serde_json::to_value(json_new_run).unwrap()["settings"]["measures"].clone()
+        }
+    }
+
+    mod benchmark_prefix {
+        use clap::Parser as _;
+
+        use super::super::Run;
+        use crate::parser::run::CliRun;
+
+        /// Kills: a `--benchmark-prefix` that the parse discards or trims, and a local run whose
+        /// request sends no prefix.
+        #[tokio::test]
+        async fn local_run_sends_the_benchmark_prefix() {
+            assert_eq!(
+                sent_prefix(&["--file", "Cargo.toml"]).await,
+                serde_json::json!("api ")
+            );
+        }
+
+        /// Kills: a `--benchmark-prefix` that the parse discards or trims, and a remote run whose
+        /// request sends no prefix.
+        #[cfg(feature = "plus")]
+        #[tokio::test]
+        async fn image_run_sends_the_benchmark_prefix() {
+            assert_eq!(
+                sent_prefix(&["--image", "alpine:3.18"]).await,
+                serde_json::json!("api ")
+            );
+        }
+
+        /// The benchmark prefix the request of a run with `args` sends.
+        async fn sent_prefix(args: &[&str]) -> serde_json::Value {
+            let args = [
+                "run",
+                "--project",
+                "my-project",
+                "--benchmark-prefix",
+                "api ",
+            ]
+            .iter()
+            .chain(args)
+            .copied();
+            let run = Run::try_from(CliRun::try_parse_from(args).unwrap()).unwrap();
+            let json_new_run = run.generate_report().await.unwrap().unwrap();
+            serde_json::to_value(json_new_run).unwrap()["settings"]["benchmark_prefix"].clone()
         }
     }
 }

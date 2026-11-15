@@ -1029,7 +1029,7 @@ impl InsertThreshold {
                         ThresholdDimensions::new(
                             branch_id,
                             testbed_id,
-                            parameters,
+                            parameters.map(Into::into),
                             measure_id,
                             Some(metric),
                         ),

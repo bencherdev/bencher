@@ -1,6 +1,8 @@
 use std::{collections::HashMap, fmt};
 
-use bencher_valid::{BmfVersion, DateTime, DateTimeMillis, GitHash, MetricName, Model};
+use bencher_valid::{
+    BenchmarkPrefix, BmfVersion, DateTime, DateTimeMillis, GitHash, MetricName, Model,
+};
 use ordered_float::OrderedFloat;
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -11,7 +13,7 @@ use crate::runner::job::JobUuid;
 use crate::{
     BranchNameId, JsonAlert, JsonBenchmark, JsonBoundary, JsonBranch, JsonMeasure,
     JsonMetricTriple, JsonProject, JsonPubProjectKey, JsonPubUser, JsonTestbed, MeasureNameId,
-    MetricUuid, ParameterFilter, ParameterSet, TestbedNameId, VariantUuid,
+    MetricUuid, ParameterFilterInput, ParameterSet, TestbedNameId, VariantUuid,
     urlencoded::{UrlEncodedError, from_urlencoded, to_urlencoded},
 };
 
@@ -156,7 +158,7 @@ pub struct JsonReportThresholdEntry {
     /// A variant matches when any entry in the filter is a subset of its parameters.
     /// If not set, or set to an empty list, the threshold checks every variant.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub parameters: Option<ParameterFilter>,
+    pub parameters: Option<ParameterFilterInput>,
     /// Measure UUID, slug, or name.
     /// If a measure name or slug is provided, the measure will be created if it does not exist.
     pub measure: MeasureNameId,
@@ -245,6 +247,12 @@ pub struct JsonReportSettings {
     /// If not set, or set to an empty list, every measure is kept.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub measures: Option<MeasureFilter>,
+    /// The string put in front of every benchmark name, joined with no delimiter,
+    /// so `api ` names the benchmark `GET /users` as `api GET /users`.
+    /// A benchmark whose prefixed name is too long is skipped, and the report warns of it.
+    /// A benchmark given by UUID keeps it. The prefix is ignored at BMF version 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub benchmark_prefix: Option<BenchmarkPrefix>,
 }
 
 /// The most measures a report keeps, enough for every measure one harness reports.
@@ -1278,6 +1286,27 @@ mod iteration {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::MAX_PARAMETER_KEYS;
+
+    /// Kills a report threshold that reads its filter without the input caps.
+    #[test]
+    fn threshold_entry_parameters_past_the_key_cap_error() {
+        let entries = |count: usize| {
+            let keys = (0..count)
+                .map(|key| (format!("k{key}"), serde_json::Value::from(key)))
+                .collect::<serde_json::Map<_, _>>();
+            serde_json::json!([{
+                "parameters": [keys],
+                "measure": "latency",
+                "metric": "value",
+                "model": { "test": "t_test" },
+            }])
+        };
+        serde_json::from_value::<JsonReportThresholdModels>(entries(MAX_PARAMETER_KEYS))
+            .expect("Failed to read a threshold entry at the cap");
+        serde_json::from_value::<JsonReportThresholdModels>(entries(MAX_PARAMETER_KEYS + 1))
+            .unwrap_err();
+    }
 
     #[test]
     fn from_str_valid() {

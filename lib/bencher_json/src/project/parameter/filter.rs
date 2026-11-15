@@ -6,13 +6,12 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
 #[cfg(feature = "db")]
 use super::jsonb;
-use super::{ParameterSet, ParametersError};
+use super::{ParameterSet, ParameterSetInput, ParametersError};
 
-/// The most sets one parameters filter may name.
+/// The most sets one parameters filter may name as input.
 ///
-/// Deliberately low, the same way [`MAX_PARAMETER_KEYS`](super::MAX_PARAMETER_KEYS)
-/// is: raising the cap is a release note and lowering it is a breaking change, so
-/// the asymmetry runs one way.
+/// Only [`ParameterFilterInput`] enforces it, never a read, for the same reason
+/// [`MAX_PARAMETER_KEYS`](super::MAX_PARAMETER_KEYS) is only enforced on input.
 pub const MAX_FILTER_SETS: usize = 8;
 
 /// A filter over variants: a list of parameter sets, OR across the list and
@@ -146,16 +145,7 @@ impl<'de> Deserialize<'de> for ParameterFilter {
     where
         D: Deserializer<'de>,
     {
-        // The cap bounds what was written, before duplicates collapse, so a filter
-        // that spells one set eight times is still eight sets here.
-        let sets = Vec::<ParameterSet>::deserialize(deserializer)?;
-        if sets.len() > MAX_FILTER_SETS {
-            return Err(de::Error::custom(format!(
-                "A parameters filter may carry at most {MAX_FILTER_SETS} entries, found {}",
-                sets.len()
-            )));
-        }
-        Ok(Self::new(sets))
+        Vec::<ParameterSet>::deserialize(deserializer).map(Self::new)
     }
 }
 
@@ -171,19 +161,81 @@ impl JsonSchema for ParameterFilter {
     }
 
     fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
-        use schemars::schema::{ArrayValidation, InstanceType, SchemaObject};
-
-        SchemaObject {
-            instance_type: Some(InstanceType::Array.into()),
-            array: Some(Box::new(ArrayValidation {
-                items: Some(ParameterSet::json_schema(generator).into()),
-                max_items: u32::try_from(MAX_FILTER_SETS).ok(),
-                ..Default::default()
-            })),
-            ..Default::default()
-        }
-        .into()
+        parameter_filter_schema(ParameterSet::json_schema(generator), None)
     }
+}
+
+/// A parameters filter as input, which refuses more than [`MAX_FILTER_SETS`] sets
+/// and any set past [`MAX_PARAMETER_KEYS`](super::MAX_PARAMETER_KEYS) keys.
+#[derive(Debug, Clone, Default)]
+pub struct ParameterFilterInput(ParameterFilter);
+
+impl From<ParameterFilterInput> for ParameterFilter {
+    fn from(input: ParameterFilterInput) -> Self {
+        input.0
+    }
+}
+
+impl Serialize for ParameterFilterInput {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ParameterFilterInput {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // The cap bounds what was written, before duplicates collapse, so a filter
+        // that spells one set eight times is still eight sets here.
+        let sets = Vec::<ParameterSetInput>::deserialize(deserializer)?;
+        if sets.len() > MAX_FILTER_SETS {
+            return Err(de::Error::custom(format!(
+                "A parameters filter may carry at most {MAX_FILTER_SETS} entries, found {}",
+                sets.len()
+            )));
+        }
+        Ok(Self(ParameterFilter::new(
+            sets.into_iter().map(Into::into).collect(),
+        )))
+    }
+}
+
+#[cfg(feature = "schema")]
+impl JsonSchema for ParameterFilterInput {
+    fn schema_name() -> String {
+        "ParameterFilterInput".to_owned()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        parameter_filter_schema(
+            ParameterSetInput::json_schema(generator),
+            u32::try_from(MAX_FILTER_SETS).ok(),
+        )
+    }
+}
+
+#[cfg(feature = "schema")]
+fn parameter_filter_schema(
+    set: schemars::schema::Schema,
+    max_items: Option<u32>,
+) -> schemars::schema::Schema {
+    use schemars::schema::{ArrayValidation, InstanceType, SchemaObject};
+
+    SchemaObject {
+        instance_type: Some(InstanceType::Array.into()),
+        array: Some(Box::new(ArrayValidation {
+            items: Some(set.into()),
+            max_items,
+            ..Default::default()
+        })),
+        ..Default::default()
+    }
+    .into()
 }
 
 /// The JSONB encoding is `SQLite`'s, so these impls are too.
@@ -219,8 +271,8 @@ mod db {
 
 #[cfg(test)]
 mod tests {
-    use super::{MAX_FILTER_SETS, ParameterFilter};
-    use crate::ParameterSet;
+    use super::{MAX_FILTER_SETS, ParameterFilter, ParameterFilterInput};
+    use crate::{MAX_PARAMETER_KEYS, ParameterSet};
 
     fn filter(filter: &str) -> ParameterFilter {
         filter.parse().expect("Invalid parameters filter")
@@ -374,28 +426,49 @@ mod tests {
         );
     }
 
-    /// The cap bounds what was written, before duplicates collapse.
+    /// Kills a read that enforces either cap, which breaks every client compiled
+    /// with a lower cap the day a server raises it.
     #[test]
-    fn deserialize_caps_the_set_count() {
-        let at_cap = (0..MAX_FILTER_SETS)
-            .map(|index| format!(r#"{{"k{index}":1}}"#))
-            .collect::<Vec<_>>()
-            .join(",");
-        let parsed = filter(&format!("[{at_cap}]"));
-        assert_eq!(parsed.sets().len(), MAX_FILTER_SETS);
+    fn reads_past_both_caps() {
+        let parsed = filter(&sets(MAX_FILTER_SETS + 1, MAX_PARAMETER_KEYS + 1));
+        assert_eq!(parsed.sets().len(), MAX_FILTER_SETS + 1);
+    }
 
-        let over_cap = (0..=MAX_FILTER_SETS)
-            .map(|index| format!(r#"{{"k{index}":1}}"#))
-            .collect::<Vec<_>>()
-            .join(",");
-        format!("[{over_cap}]")
-            .parse::<ParameterFilter>()
-            .expect_err("A filter past the cap is refused");
+    /// Kills an input that drops either cap or is off by one. The set cap bounds what
+    /// was written, before duplicates collapse.
+    #[test]
+    fn input_caps_the_set_count_and_the_key_count() {
+        let at_caps = input(&sets(MAX_FILTER_SETS, MAX_PARAMETER_KEYS))
+            .expect("Failed to parse a filter at both caps");
+        assert_eq!(at_caps.sets().len(), MAX_FILTER_SETS);
+
+        input(&sets(MAX_FILTER_SETS + 1, 1)).expect_err("A filter past the set cap is refused");
+        input(&sets(1, MAX_PARAMETER_KEYS + 1))
+            .expect_err("A filter with a set past the key cap is refused");
 
         // Eight spellings of one set are eight sets at the cap and one set after.
         let restated = [r#"{"size":512}"#; MAX_FILTER_SETS].join(",");
-        let collapsed = filter(&format!("[{restated}]"));
+        let collapsed = input(&format!("[{restated}]")).expect("Failed to parse restated sets");
         assert_eq!(collapsed.sets().len(), 1);
         assert_eq!(collapsed.canonical(), r#"[{"size":512}]"#);
+    }
+
+    fn input(filter: &str) -> Result<ParameterFilter, serde_json::Error> {
+        serde_json::from_str::<ParameterFilterInput>(filter).map(Into::into)
+    }
+
+    /// `count` distinct sets of `keys` keys each.
+    fn sets(count: usize, keys: usize) -> String {
+        let sets = (0..count)
+            .map(|set| {
+                let keys = (0..keys)
+                    .map(|key| format!(r#""k{key}":{set}"#))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                format!("{{{keys}}}")
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        format!("[{sets}]")
     }
 }

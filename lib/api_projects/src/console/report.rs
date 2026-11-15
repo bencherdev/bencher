@@ -13,8 +13,8 @@ use bencher_json::{
 };
 use bencher_json::{
     BranchName, BranchSlug, BranchUuid, CommitTitle, DateTime, DateTimeMillis, GitHash, HeadUuid,
-    MeasureUuid, MetricName, ParameterSet, ProjectResourceId, ReportUuid, ResourceName,
-    TestbedSlug, TestbedUuid, ThresholdUuid, VersionUuid,
+    MeasureUuid, MetricName, ParameterSet, ParameterSetInput, ProjectResourceId, ReportUuid,
+    ResourceName, TestbedSlug, TestbedUuid, ThresholdUuid, VersionUuid,
     project::{
         alert::AlertStatus,
         console::{
@@ -356,9 +356,10 @@ impl Filters {
             parameters: query_params
                 .parameters
                 .as_deref()
-                .map(str::parse)
+                .map(str::parse::<ParameterSetInput>)
                 .transpose()
-                .map_err(bad_request_error)?,
+                .map_err(bad_request_error)?
+                .map(Into::into),
         })
     }
 

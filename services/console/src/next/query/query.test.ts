@@ -152,12 +152,12 @@ describe("encodeQuery and decodeQuery", () => {
 	});
 
 	// Kills a link longer than what it reads back: values past a box's eight,
-	// sets past eight or wider than eight tags, and a set list that holds the
+	// sets past eight or wider than sixteen tags, and a set list that holds the
 	// empty set.
 	test("write only what it reads back", () => {
 		const many = Array.from({ length: 9 }, (_, n) => uuid(n + 1));
 		const wide = Object.fromEntries(
-			Array.from({ length: 9 }, (_, n) => [`k${n}`, n]),
+			Array.from({ length: 17 }, (_, n) => [`k${n}`, n]),
 		);
 		const query: ExploreQuery = {
 			...FULL,
@@ -174,6 +174,15 @@ describe("encodeQuery and decodeQuery", () => {
 		expect(encodeQuery({ ...FULL, sets: [{ a: 1 }, {}] })).not.toContain(
 			"parameters",
 		);
+	});
+
+	// Kills a key cap under the API's sixteen, which drops a set the API takes.
+	test("keep a set of sixteen tags", () => {
+		const full = Object.fromEntries(
+			Array.from({ length: 16 }, (_, n) => [`k${n}`, n]),
+		);
+		const query = { ...FULL, sets: [full] };
+		expect(roundTrip(query)).toEqual(query);
 	});
 
 	// Kills merging or dropping a repeated set; the box keeps the sets as chosen.
@@ -199,7 +208,7 @@ describe("decodeQuery", () => {
 			'parameters={"a":{"b":1}}',
 			'parameters={"":1}',
 			'parameters={"a":" padded"}',
-			`parameters={${Array.from({ length: 9 }, (_, n) => `"k${n}":${n}`).join(",")}}`,
+			`parameters={${Array.from({ length: 17 }, (_, n) => `"k${n}":${n}`).join(",")}}`,
 			'parameters={"ok":1}',
 			"metrics=",
 			"metrics=%20padded",

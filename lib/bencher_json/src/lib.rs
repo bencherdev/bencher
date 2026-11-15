@@ -2,11 +2,11 @@ use std::sync::LazyLock;
 
 pub use bencher_context::RunContext;
 pub use bencher_valid::{
-    BencherKey, BenchmarkName, BmfVersion, Boundary, BranchName, CdfBoundary, CommitTitle,
-    DateTime, DateTimeMillis, Email, GitHash, Index, IntoResourceId, IqrBoundary, Jwt, MetricName,
-    Model, ModelTest, NameId, NonEmpty, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId,
-    ResourceName, SampleSize, Sanitize, Search, Secret, Slug, Units, Url, UserKey, UserKeyHash,
-    UserName, ValidError, Window,
+    BencherKey, BenchmarkName, BenchmarkPrefix, BmfVersion, Boundary, BranchName, CdfBoundary,
+    CommitTitle, DateTime, DateTimeMillis, Email, GitHash, Index, IntoResourceId, IqrBoundary, Jwt,
+    MetricName, Model, ModelTest, NameId, NonEmpty, PercentageBoundary, ProjectKey, ProjectKeyHash,
+    ResourceId, ResourceName, SampleSize, Sanitize, Search, Secret, Slug, Units, Url, UserKey,
+    UserKeyHash, UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
@@ -100,7 +100,10 @@ pub use project::{
         MAX_METRIC_NAMES, MetricUuid,
     },
     model::{JsonModel, ModelUuid},
-    parameter::{MAX_FILTER_SETS, MAX_PARAMETER_KEYS, ParameterFilter, ParameterSet},
+    parameter::{
+        MAX_FILTER_SETS, MAX_PARAMETER_KEYS, ParameterFilter, ParameterFilterInput, ParameterSet,
+        ParameterSetInput,
+    },
     perf::{JsonPerf, JsonPerfQuery, ReportBenchmarkUuid},
     plot::{JsonNewPlot, JsonPlot, JsonPlots, PlotUuid},
     report::{

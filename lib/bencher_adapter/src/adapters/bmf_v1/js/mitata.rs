@@ -1,5 +1,5 @@
 use bencher_json::{
-    BenchmarkName, MeasureNameId, ParameterSet,
+    BenchmarkName, MeasureNameId,
     project::{
         measure::built_in::{
             BuiltInMeasure as _,
@@ -18,7 +18,7 @@ use crate::{
     Adaptable, Settings,
     adapters::bmf_v1::{
         finite::Finite,
-        leaf::{LeafResults, Variant},
+        leaf::{LeafResults, Variant, parameter_set},
     },
     results::adapter_results::AdapterResults,
 };
@@ -56,9 +56,7 @@ impl Adaptable for AdapterJsMitata {
                     .iter()
                     .map(|(key, value)| (key.clone(), scalar(value)))
                     .collect();
-                let Ok(parameters) =
-                    serde_json::from_value::<ParameterSet>(serde_json::Value::Object(args))
-                else {
+                let Some(parameters) = parameter_set(args) else {
                     results.skip_variant();
                     continue;
                 };
@@ -296,16 +294,20 @@ impl Summary {
 mod test_js_mitata {
     use std::collections::BTreeSet;
 
-    use bencher_json::project::{
-        measure::built_in::{
-            BuiltInMeasure as _,
-            default::{BranchMisses, CacheMisses, CacheReferences, Cycles, Latency},
-            iai::Instructions,
-            mitata::{
-                Branches, GcTime, Heap, L1LoadMisses, L1StoreMisses, LoadsAndStores, StallCycles,
+    use bencher_json::{
+        MAX_PARAMETER_KEYS,
+        project::{
+            measure::built_in::{
+                BuiltInMeasure as _,
+                default::{BranchMisses, CacheMisses, CacheReferences, Cycles, Latency},
+                iai::Instructions,
+                mitata::{
+                    Branches, GcTime, Heap, L1LoadMisses, L1StoreMisses, LoadsAndStores,
+                    StallCycles,
+                },
             },
+            report::Adapter,
         },
-        report::Adapter,
     };
     use pretty_assertions::assert_eq;
 
@@ -622,6 +624,23 @@ mod test_js_mitata {
             (BranchMisses::SLUG_STR, "mean"),
             1_235.607_252_472_433_9,
         );
+    }
+
+    /// Kills a run whose `args` past the key cap are kept, or skipped uncounted.
+    #[test]
+    fn adapter_js_mitata_args_past_the_key_cap() {
+        let baseline = convert_v1(Adapter::JsMitata, "js/mitata/node.json")
+            .skipped
+            .variants;
+        for (count, skipped) in [(MAX_PARAMETER_KEYS, 0), (MAX_PARAMETER_KEYS + 1, 1)] {
+            let results = convert_edited_v1(Adapter::JsMitata, "js/mitata/node.json", |json| {
+                let args = &mut json["benchmarks"][6]["runs"][0]["args"];
+                for key in args.as_object().map_or(0, serde_json::Map::len)..count {
+                    args[format!("k{key}")] = key.into();
+                }
+            });
+            assert_eq!(results.skipped.variants, baseline + skipped, "{count} keys");
+        }
     }
 
     /// Kills an `args` value that is not a scalar dropped, skipping its run, or written as

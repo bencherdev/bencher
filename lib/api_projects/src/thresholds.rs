@@ -318,7 +318,7 @@ pub async fn post_inner(
     let dimensions = ThresholdDimensions::new(
         branch_id,
         testbed_id,
-        json_threshold.parameters.clone(),
+        json_threshold.parameters.clone().map(Into::into),
         measure_id,
         json_threshold.metric.clone(),
     );

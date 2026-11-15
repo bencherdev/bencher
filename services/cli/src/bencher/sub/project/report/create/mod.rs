@@ -1,6 +1,6 @@
 use bencher_client::types::{
-    Adapter, DateTime, GitHash, JsonAverage, JsonFold, JsonNewReport, JsonReportSettings,
-    JsonUpdateStartPoint, MeasureFilter,
+    Adapter, BenchmarkPrefix, DateTime, GitHash, JsonAverage, JsonFold, JsonNewReport,
+    JsonReportSettings, JsonUpdateStartPoint, MeasureFilter,
 };
 use bencher_json::{BranchNameId, ProjectResourceId, TestbedNameId};
 
@@ -37,6 +37,7 @@ pub struct Create {
     pub average: Option<JsonAverage>,
     pub fold: Option<JsonFold>,
     pub measures: Option<MeasureFilter>,
+    pub benchmark_prefix: Option<BenchmarkPrefix>,
     pub backend: AuthBackend,
 }
 
@@ -58,6 +59,7 @@ impl TryFrom<CliReportCreate> for Create {
             average,
             fold,
             measure,
+            benchmark_prefix,
             backend,
         } = create;
         Ok(Self {
@@ -74,6 +76,7 @@ impl TryFrom<CliReportCreate> for Create {
             average: average.map(Into::into),
             fold: fold.map(Into::into),
             measures: measure_filter(measure),
+            benchmark_prefix: benchmark_prefix.map(Into::into),
             backend: backend.try_into()?,
         })
     }
@@ -93,6 +96,7 @@ impl From<Create> for JsonNewReport {
             average,
             fold,
             measures,
+            benchmark_prefix,
             ..
         } = create;
         Self {
@@ -112,6 +116,7 @@ impl From<Create> for JsonNewReport {
                 average,
                 fold,
                 measures,
+                benchmark_prefix,
             }),
         }
     }
@@ -150,6 +155,28 @@ mod tests {
             .into_iter()
             .chain((2..65).map(|n| format!("m{n}")))
             .collect::<Vec<_>>();
+        let args = measures
+            .iter()
+            .flat_map(|measure| ["--measure", measure.as_str()])
+            .collect::<Vec<_>>();
+        assert_eq!(
+            sent_settings(&args)["measures"],
+            serde_json::json!(measures)
+        );
+    }
+
+    /// Kills: a `--benchmark-prefix` that the parse discards or trims, and a report whose
+    /// request sends no prefix.
+    #[test]
+    fn report_create_sends_the_benchmark_prefix() {
+        assert_eq!(
+            sent_settings(&["--benchmark-prefix", "api "])["benchmark_prefix"],
+            serde_json::json!("api ")
+        );
+    }
+
+    /// The settings the request of a report created with `args` sends.
+    fn sent_settings(args: &[&str]) -> serde_json::Value {
         let args = [
             "create",
             "my-project",
@@ -164,17 +191,11 @@ mod tests {
             "--key",
             "bencher_run_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
         ]
-        .into_iter()
-        .chain(
-            measures
-                .iter()
-                .flat_map(|measure| ["--measure", measure.as_str()]),
-        );
+        .iter()
+        .chain(args)
+        .copied();
         let cli = CliReportCreate::try_parse_from(args).unwrap();
         let json_new_report = JsonNewReport::from(Create::try_from(cli).unwrap());
-        assert_eq!(
-            serde_json::to_value(json_new_report).unwrap()["settings"]["measures"],
-            serde_json::json!(measures)
-        );
+        serde_json::to_value(json_new_report).unwrap()["settings"].clone()
     }
 }

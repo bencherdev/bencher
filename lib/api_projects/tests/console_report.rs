@@ -13,8 +13,8 @@
 
 use bencher_api_tests::TestServer;
 use bencher_json::{
-    DateTime, DateTimeMillis, JsonReport, MeasureUuid, ModelTest, ProjectSlug, ProjectUuid,
-    ReportUuid, VersionUuid,
+    DateTime, DateTimeMillis, JsonReport, MAX_PARAMETER_KEYS, MeasureUuid, ModelTest, ProjectSlug,
+    ProjectUuid, ReportUuid, VersionUuid,
     project::{
         Visibility,
         alert::AlertStatus,
@@ -2185,6 +2185,29 @@ async fn console_report_filters_before_paging() {
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST, "{text}");
+
+    // Kills a filter read without the key cap: a filter is input, so past the cap it is refused.
+    let wide = |count: usize| {
+        let keys = (0..count)
+            .map(|key| format!("%22k{key}%22%3A{key}"))
+            .collect::<Vec<_>>()
+            .join("%2C");
+        format!("?parameters=%7B{keys}%7D")
+    };
+    for (count, expected) in [
+        (MAX_PARAMETER_KEYS, StatusCode::OK),
+        (MAX_PARAMETER_KEYS + 1, StatusCode::BAD_REQUEST),
+    ] {
+        let (status, text) = try_console_report(
+            &server,
+            &seeded.fixture.slug,
+            &seeded.subject,
+            &wide(count),
+            Some(&seeded.fixture.token),
+        )
+        .await;
+        assert_eq!(status, expected, "{count} keys: {text}");
+    }
 }
 
 // Kills: a parameters filter that matches the whole parameter set rather than a

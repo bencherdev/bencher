@@ -16,7 +16,7 @@ use crate::{
     Adaptable, Settings,
     adapters::bmf_v1::{
         finite::{Finite, finite_json},
-        leaf::{LeafResults, Variant},
+        leaf::{LeafResults, Variant, parameter_set},
         percentile::percentile_name,
     },
     results::adapter_results::AdapterResults,
@@ -84,8 +84,7 @@ impl Adaptable for AdapterCSharpDotNetV1 {
                     parameters.insert(RUNTIME.to_owned(), runtime.into());
                 }
             }
-            let Ok(parameters) = serde_json::from_value(serde_json::Value::Object(parameters))
-            else {
+            let Some(parameters) = parameter_set(parameters) else {
                 results.skip_variant();
                 continue;
             };
@@ -418,7 +417,7 @@ const MEMORY_METRICS: [&str; 4] = [
 #[cfg(test)]
 mod test_c_sharp_dot_net_v1 {
     use bencher_json::{
-        BenchmarkName, BenchmarkNameId, ParameterSet,
+        BenchmarkName, BenchmarkNameId, MAX_PARAMETER_KEYS, ParameterSet,
         project::{
             measure::built_in::{
                 BuiltInMeasure as _,
@@ -968,6 +967,26 @@ mod test_c_sharp_dot_net_v1 {
             .collect::<Vec<_>>();
         keys.sort();
         keys
+    }
+
+    /// Kills a leaf that keeps a variant past the key cap, or skips it uncounted.
+    #[test]
+    fn adapter_c_sharp_dot_net_v1_parameters_past_the_key_cap() {
+        for (count, skipped) in [(MAX_PARAMETER_KEYS, 0), (MAX_PARAMETER_KEYS + 1, 1)] {
+            let results =
+                convert_edited_v1(Adapter::CSharpDotNet, "c_sharp/dot_net/dry.json", |json| {
+                    let benchmark = &mut json["Benchmarks"][0];
+                    if let Some(benchmark) = benchmark.as_object_mut() {
+                        benchmark.remove("DisplayInfo");
+                    }
+                    benchmark["Parameters"] = (0..count)
+                        .map(|key| format!("k{key}={key}"))
+                        .collect::<Vec<_>>()
+                        .join("&")
+                        .into();
+                });
+            assert_eq!(results.skipped.variants, skipped, "{count} keys");
+        }
     }
 
     /// Kills a leaf that keeps a parameter spelled like one of its adapter keys, which then means

@@ -254,6 +254,7 @@ impl QueryJob {
             average: self.config.average,
             fold: self.config.fold,
             measures: self.config.measures.clone(),
+            benchmark_prefix: self.config.benchmark_prefix.clone(),
         }
     }
 
@@ -427,6 +428,7 @@ impl PendingInsertJob {
             iter,
             fold: settings.fold,
             measures: settings.measures.clone(),
+            benchmark_prefix: settings.benchmark_prefix.clone(),
             bmf_version: Some(bmf_version),
             allow_failure,
             backdate,

@@ -13119,6 +13119,10 @@
       "BenchmarkName": {
         "type": "string"
       },
+      "BenchmarkPrefix": {
+        "description": "The string put in front of every benchmark name a report holds, joined with no delimiter.",
+        "type": "string"
+      },
       "BenchmarkSlug": {
         "$ref": "#/components/schemas/Slug"
       },
@@ -14393,6 +14397,15 @@
               }
             ]
           },
+          "benchmark_prefix": {
+            "nullable": true,
+            "description": "The string put in front of every benchmark name at BMF version 1",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkPrefix"
+              }
+            ]
+          },
           "bmf_version": {
             "nullable": true,
             "description": "The Bencher Metric Format (BMF) version the run's results are read as",
@@ -15320,7 +15333,7 @@
             "description": "The variants to include in the plot, as a parameters filter. A variant matches when any entry in the filter is a subset of its parameters. If not set, or set to an empty list, the plot includes every variant. At most 8 entries may be specified.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/ParameterFilter"
+                "$ref": "#/components/schemas/ParameterFilterInput"
               }
             ]
           },
@@ -16076,7 +16089,7 @@
             "description": "The variants this threshold checks, as a parameters filter. A variant matches when any entry in the filter is a subset of its parameters. If not set, or set to an empty list, the threshold checks every variant.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/ParameterFilter"
+                "$ref": "#/components/schemas/ParameterFilterInput"
               }
             ]
           },
@@ -16176,7 +16189,7 @@
             "description": "The parameters of the variant. Each key maps to a JSON scalar: a string, a number, or a boolean.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/ParameterSet"
+                "$ref": "#/components/schemas/ParameterSetInput"
               }
             ]
           }
@@ -17327,7 +17340,7 @@
             "description": "The variants to include in the plot, as a parameters filter. Replaces the current filter for the plot. Set to `null` or to an empty list to include every variant again. At most 8 entries may be specified.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/ParameterFilter"
+                "$ref": "#/components/schemas/ParameterFilterInput"
               }
             ]
           },
@@ -17467,7 +17480,7 @@
             "nullable": true,
             "allOf": [
               {
-                "$ref": "#/components/schemas/ParameterFilter"
+                "$ref": "#/components/schemas/ParameterFilterInput"
               }
             ]
           },
@@ -18629,6 +18642,15 @@
               }
             ]
           },
+          "benchmark_prefix": {
+            "nullable": true,
+            "description": "The string put in front of every benchmark name, joined with no delimiter, so `api ` names the benchmark `GET /users` as `api GET /users`. A benchmark whose prefixed name is too long is skipped, and the report warns of it. A benchmark given by UUID keeps it. The prefix is ignored at BMF version 0.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BenchmarkPrefix"
+              }
+            ]
+          },
           "fold": {
             "nullable": true,
             "description": "Fold multiple results into a single result using the selected operation. This can be useful for taking the min, max, mean, or median of the benchmark results.",
@@ -18682,7 +18704,7 @@
             "description": "The variants this threshold checks, as a parameters filter. A variant matches when any entry in the filter is a subset of its parameters. If not set, or set to an empty list, the threshold checks every variant.",
             "allOf": [
               {
-                "$ref": "#/components/schemas/ParameterFilter"
+                "$ref": "#/components/schemas/ParameterFilterInput"
               }
             ]
           }
@@ -21323,8 +21345,29 @@
                 "type": "boolean"
               }
             ]
+          }
+        }
+      },
+      "ParameterFilterInput": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "number",
+                "format": "double"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
           },
-          "maxProperties": 8
+          "maxProperties": 16
         },
         "maxItems": 8
       },
@@ -21344,8 +21387,26 @@
               "type": "boolean"
             }
           ]
+        }
+      },
+      "ParameterSetInput": {
+        "type": "object",
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "number",
+              "format": "double"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
         },
-        "maxProperties": 8
+        "maxProperties": 16
       },
       "ParseOutcome": {
         "description": "How a report's results parsed.",

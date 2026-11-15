@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use bencher_json::{BmfVersion, MeasureNameId, project::report::Adapter};
+use bencher_json::{BenchmarkPrefix, BmfVersion, MeasureNameId, project::report::Adapter};
 
 use crate::{
     Adaptable as _, AdapterError, Settings,
@@ -117,6 +117,14 @@ impl AdapterResultsArray {
         }
     }
 
+    /// Put `prefix` in front of every benchmark name, and skip and count a benchmark whose
+    /// prefixed name is too long.
+    pub fn prefix_benchmarks(&mut self, prefix: &BenchmarkPrefix) {
+        for results in &mut self.inner {
+            results.prefix_benchmarks(prefix);
+        }
+    }
+
     pub fn skipped(&self) -> Skipped {
         self.inner
             .iter()
@@ -157,10 +165,10 @@ pub(crate) enum CombinedKind {
 
 #[cfg(test)]
 mod test_results_array {
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, HashSet};
 
     use bencher_json::{
-        BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet,
+        BenchmarkName, BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet,
         project::report::Adapter,
     };
 
@@ -667,6 +675,89 @@ mod test_results_array {
             names(variant(&expected, "tests::capped", "{}"), "latency")
         );
         assert_eq!(permuted.skipped.metrics, 1);
+    }
+
+    /// The prefix goes in front of a harness leaf's names and a payload's names, joined with no
+    /// delimiter. A leaf's prefixed name stays a name, and a payload's prefixed key is read as the
+    /// payload would read it: a slug while it is one, else a name. A UUID names no benchmark by
+    /// name, so it keeps.
+    ///
+    /// Kills: a prefix put after the name or joined with a delimiter, a leaf's names left
+    /// unprefixed, a leaf's prefixed name read back as a slug, a prefixed slug kept a slug once
+    /// it is not one or made a name while it is one, and a UUID turned into a name.
+    #[test]
+    fn results_array_prefixes_every_benchmark_name() {
+        const UUID: &str = "123e4567-e89b-12d3-a456-426614174000";
+
+        for adapter in [Adapter::RustBenchText, Adapter::Magic] {
+            for (prefix, name, expected) in [
+                ("api ", "bench_one", "api bench_one"),
+                ("api-", "fib", "api-fib"),
+            ] {
+                let harness = format!("test {name} ... bench:       3,161 ns/iter (+/- 975)\n");
+                let mut array = v1_array(&harness, adapter);
+                array.prefix_benchmarks(&prefix.parse().unwrap());
+                assert_eq!(
+                    only(&array).inner.into_keys().collect::<Vec<_>>(),
+                    vec![BenchmarkNameId::new_name(expected.parse().unwrap())],
+                    "{adapter} {prefix:?}"
+                );
+            }
+        }
+
+        let entry = serde_json::json!([{ "measures": { "latency": { "value": 1.0 } } }]);
+        let payload =
+            serde_json::json!({ "fib": entry, "Fib Two": entry, UUID: entry }).to_string();
+        let uuid: BenchmarkNameId = UUID.parse().unwrap();
+        for (prefix, expected) in [
+            (
+                "api-",
+                vec![
+                    BenchmarkNameId::new_slug("api-fib".parse().unwrap()),
+                    BenchmarkNameId::new_name("api-Fib Two".parse().unwrap()),
+                    uuid.clone(),
+                ],
+            ),
+            (
+                "api ",
+                vec![
+                    BenchmarkNameId::new_name("api fib".parse().unwrap()),
+                    BenchmarkNameId::new_name("api Fib Two".parse().unwrap()),
+                    uuid,
+                ],
+            ),
+        ] {
+            let mut array = v1_array(&payload, Adapter::JsonV1);
+            array.prefix_benchmarks(&prefix.parse().unwrap());
+            assert_eq!(
+                only(&array).inner.into_keys().collect::<HashSet<_>>(),
+                expected.into_iter().collect::<HashSet<_>>(),
+                "{prefix:?}"
+            );
+        }
+    }
+
+    /// A benchmark whose prefixed name passes the name limit is skipped and counted, and one that
+    /// meets it is kept whole.
+    ///
+    /// Kills: a prefixed name past the limit stored, cut, or not counted, and a limit check off
+    /// by one.
+    #[test]
+    fn results_array_skips_a_benchmark_whose_prefixed_name_is_too_long() {
+        let prefix = "p".repeat(256);
+        let fits = "f".repeat(BenchmarkName::MAX_LEN - prefix.len());
+        let too_long = "t".repeat(BenchmarkName::MAX_LEN - prefix.len() + 1);
+        let entry = serde_json::json!([{ "measures": { "latency": { "value": 1.0 } } }]);
+        let payload = serde_json::json!({ fits.clone(): entry, too_long: entry }).to_string();
+        let mut array = v1_array(&payload, Adapter::JsonV1);
+        array.prefix_benchmarks(&prefix.parse().unwrap());
+        assert_eq!(array.skipped().benchmarks, 1);
+        assert_eq!(
+            only(&array).inner.into_keys().collect::<Vec<_>>(),
+            vec![BenchmarkNameId::new_name(
+                format!("{prefix}{fits}").parse().unwrap()
+            )]
+        );
     }
 
     fn fixture(suffix: &str) -> String {

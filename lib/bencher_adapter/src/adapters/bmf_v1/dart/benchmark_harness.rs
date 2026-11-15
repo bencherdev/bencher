@@ -13,7 +13,10 @@ use bencher_json::{
 
 use crate::{
     Adaptable, Settings,
-    adapters::{bmf_v1::leaf::LeafResults, util::Units},
+    adapters::{
+        bmf_v1::leaf::{LeafResults, parameter_set},
+        util::Units,
+    },
     results::adapter_results::AdapterResults,
 };
 
@@ -82,7 +85,7 @@ const FLAVORS: [(&str, &str); 4] = [
 fn flavor_parameters(flavor: &str) -> Option<ParameterSet> {
     let mut parameters = serde_json::Map::new();
     parameters.insert("@flavor".to_owned(), flavor.into());
-    serde_json::from_value(serde_json::Value::Object(parameters)).ok()
+    parameter_set(parameters)
 }
 
 /// One emitted score.
