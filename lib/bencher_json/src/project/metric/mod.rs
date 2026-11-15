@@ -8,9 +8,11 @@ use serde::{Deserialize, Serialize};
 
 mod mean;
 mod median;
+mod results;
 
 pub use mean::Mean;
 pub use median::Median;
+pub use results::{JsonNewResults, JsonNewVariant};
 
 use crate::{
     JsonBenchmark, JsonBranch, JsonMeasure, JsonTestbed, JsonVariant, MeasureNameId, ReportUuid,

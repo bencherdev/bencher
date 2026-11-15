@@ -13,8 +13,10 @@ pub fn submit_tool(name: &'static str) -> Tool {
         name,
         "Submit benchmark results to create a run. \
          The `results` field takes the raw output of a benchmark harness as strings; \
-         the server parses them using the adapter in `settings.adapter` (defaults to `magic` auto-detection). \
+         the server parses them using the adapter in `settings.adapter` (defaults to `magic` auto-detection), \
+         at the BMF version in `bmf_version`, else at the project's BMF version. \
          Branch, testbed, and thresholds are created on the fly if they do not exist. \
+         At BMF version 1, `thresholds.models` is a list in which each threshold names its `metric`. \
          Prefer the `bencher run` CLI when benchmarks are executed from a local checkout; \
          use this tool when the results are already in hand.",
         json_schema::<JsonNewRun>(),

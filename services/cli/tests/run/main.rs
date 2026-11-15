@@ -9,6 +9,7 @@
 )]
 //! `bencher run` against a stand-in that answers as the API server and as the GitHub API, and records every request.
 
+mod bmf_version;
 mod pr_comment;
 
 use std::{
@@ -193,6 +194,19 @@ struct Scene {
     completed_name: Option<&'static str>,
     /// The warnings of the report a run creates.
     warnings: Option<serde_json::Value>,
+    /// How every read of a project answers, after `project_failures` server errors.
+    project: ProjectRead,
+    project_failures: usize,
+}
+
+/// How the stand-in answers a read of a project.
+#[derive(Clone, Copy)]
+enum ProjectRead {
+    Version(u8),
+    /// A server older than the project's `bmf_version`.
+    NoVersion,
+    NotFound,
+    Forbidden,
 }
 
 /// An answer to a list of the check runs on the head SHA.
@@ -228,6 +242,8 @@ impl Default for Scene {
             report_ok_then_fail: None,
             completed_name: None,
             warnings: None,
+            project: ProjectRead::Version(0),
+            project_failures: 0,
         }
     }
 }
@@ -391,12 +407,24 @@ fn bencher_run_in(
 }
 
 /// Run `bencher run` with `args` against the stand-in set to `scene`, with `env` and in the GitHub Actions environment if given.
-#[expect(clippy::expect_used, reason = "test helper")]
 fn bencher_run_in_scene(
+    stand_in: StandIn,
+    scene: Scene,
+    github: Option<&GitHub>,
+    env: &[(&str, &str)],
+    args: &[&str],
+) -> Run {
+    bencher_in_scene(stand_in, scene, github, env, &["run"], args)
+}
+
+/// Run the `bencher` subcommand with `args` against the stand-in set to `scene`, with `env` and in the GitHub Actions environment if given.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn bencher_in_scene(
     stand_in: StandIn,
     mut scene: Scene,
     github: Option<&GitHub>,
     env: &[(&str, &str)],
+    subcommand: &[&str],
     args: &[&str],
 ) -> Run {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind a free port");
@@ -411,7 +439,8 @@ fn bencher_run_in_scene(
     command
         .env_clear()
         .envs(env.iter().copied())
-        .args(["run", "--host", &format!("http://{addr}")])
+        .args(subcommand)
+        .args(["--host", &format!("http://{addr}")])
         .args(args);
     let github_api_url = github.and_then(|github| {
         std::fs::write(&event_path, github.event.to_string()).expect("Failed to write the event");
@@ -660,6 +689,13 @@ fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static
     {
         return (OK, report.to_string());
     }
+    if method == "GET"
+        && path
+            .strip_prefix("/v0/projects/")
+            .is_some_and(|project| !project.contains('/'))
+    {
+        return respond_project(scene);
+    }
     match (method, path) {
         ("GET", VERSION_PATH) => match version {
             VersionRead::Current => (
@@ -671,19 +707,12 @@ fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static
             },
             VersionRead::ServerError => error(SERVER_ERROR, "Internal Server Error"),
         },
-        ("GET", "/v0/projects/project") => (
-            OK,
-            json_report()
-                .get("project")
-                .map(ToString::to_string)
-                .unwrap_or_default(),
-        ),
         ("GET", REPORT_PATH) => (OK, json_report().to_string()),
         ("GET", CONSOLE_PATH) => (
             OK,
             serde_json::json!({ "url": "http://localhost:3000" }).to_string(),
         ),
-        ("POST", "/v0/run") => {
+        ("POST", "/v0/run" | "/v0/projects/project/reports") => {
             let mut report = json_report();
             if let (Some(warnings), Some(report)) = (&scene.warnings, report.as_object_mut()) {
                 report.insert("warnings".to_owned(), warnings.clone());
@@ -711,6 +740,36 @@ fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static
 const OK: &str = "200 OK";
 const CREATED: &str = "201 Created";
 const FORBIDDEN: &str = "403 Forbidden";
+
+/// A project, read once `project_failures` server errors are spent.
+fn respond_project(scene: &mut Scene) -> (&'static str, String) {
+    let error = |status, message| {
+        (
+            status,
+            serde_json::json!({ "request_id": "request", "message": message }).to_string(),
+        )
+    };
+    if scene.project_failures > 0 {
+        scene.project_failures -= 1;
+        return error("500 Internal Server Error", "Internal Server Error");
+    }
+    let mut project = json_report().get("project").cloned().unwrap_or_default();
+    let fields = project.as_object_mut();
+    match (scene.project, fields) {
+        (ProjectRead::Version(version), Some(fields)) => {
+            fields.insert("bmf_version".to_owned(), version.into());
+            (OK, project.to_string())
+        },
+        (ProjectRead::NoVersion, Some(fields)) => {
+            fields.remove("bmf_version");
+            (OK, project.to_string())
+        },
+        (ProjectRead::NotFound | ProjectRead::Version(_) | ProjectRead::NoVersion, _) => {
+            error("404 Not Found", "Not Found")
+        },
+        (ProjectRead::Forbidden, _) => error(FORBIDDEN, "Forbidden"),
+    }
+}
 
 /// The GitHub API: check runs, the pull request, and its comments.
 fn respond_github(
@@ -1628,7 +1687,10 @@ fn detach_without_a_callback_composes_a_dispatch_without_a_token() {
         .iter()
         .map(|request| (request.method.as_str(), request.path.as_str()))
         .collect();
-    assert_eq!(requests, [("GET", VERSION_PATH)]);
+    assert_eq!(
+        requests,
+        [("GET", VERSION_PATH), ("GET", "/v0/projects/project")]
+    );
     let composed: bencher_json::JsonNewCallback = serde_json::from_value(serde_json::json!({
         "url": "https://api.github.com/repos/owner/repo/dispatches",
         "headers": {

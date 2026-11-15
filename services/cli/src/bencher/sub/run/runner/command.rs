@@ -1,5 +1,6 @@
 use std::{fmt, process::Stdio};
 
+use bencher_json::BmfVersion;
 use chrono::Utc;
 use tokio::io::{AsyncBufReadExt as _, BufReader};
 
@@ -202,9 +203,9 @@ impl CommandOutput {
         }
     }
 
-    pub fn build(mut self) -> Result<Output, RunError> {
+    pub fn build(mut self, bmf_version: BmfVersion) -> Result<Output, RunError> {
         if let Some(build_command) = self.build_command {
-            let results = build_command.get_results()?;
+            let results = build_command.get_results(bmf_version)?;
             self.output.result = Some(results);
         }
         Ok(self.output)
@@ -226,8 +227,12 @@ impl CommandOutput {
         Ok(outputs)
     }
 
-    pub fn build_with_file_size(mut self, file_size: &FileSize) -> Result<Output, RunError> {
-        let results = file_size.get_results(self.build_command.as_ref())?;
+    pub fn build_with_file_size(
+        mut self,
+        file_size: &FileSize,
+        bmf_version: BmfVersion,
+    ) -> Result<Output, RunError> {
+        let results = file_size.get_results(self.build_command.as_ref(), bmf_version)?;
         self.output.result = Some(results);
         Ok(self.output)
     }
