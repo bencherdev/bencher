@@ -17,13 +17,14 @@ use bencher_schema::{
     model::{
         organization::{
             OrganizationId, QueryOrganization, invite::InsertInvite, member::QueryMember,
+            organization_role::QueryOrganizationRole,
         },
         user::{
             QueryUser, UserId,
             auth::{AuthUser, BearerToken},
         },
     },
-    schema, write_conn,
+    schema, write_conn, write_transaction,
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -35,6 +36,9 @@ use serde::Deserialize;
 use slog::Logger;
 
 use crate::invites::{check_inviter, email_invite};
+
+const LAST_LEADER: &str =
+    "An organization must keep at least one Leader. Invite another Leader first.";
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgMembersParams {
@@ -230,7 +234,7 @@ pub async fn org_member_post(
     body: TypedBody<JsonNewMember>,
 ) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    check_inviter(rqctx.context(), &auth_user).await?;
+    check_inviter(rqctx.context(), &auth_user)?;
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
@@ -397,7 +401,7 @@ pub async fn org_member_patch(
                 "Only a user session can change a member's role.",
             ));
         }
-        auth_user.check_fresh_sign_in(rqctx.context()).await?;
+        auth_user.check_fresh_sign_in(rqctx.context())?;
     }
     let json = patch_inner(
         rqctx.context(),
@@ -448,8 +452,11 @@ async fn patch_inner(
 
 /// Remove an organization member
 ///
-/// Remove a member member of an organization.
+/// Remove a member of an organization, the user themself included, to leave it.
 /// The user must have `delete_role` permissions for the organization.
+/// The organization's last Leader cannot be removed.
+/// The member's roles on the organization's projects, and the invitations they sent to it, end
+/// with the removal.
 #[endpoint {
     method = DELETE,
     path =  "/v0/organizations/{organization}/members/{user}",
@@ -479,18 +486,48 @@ async fn delete_inner(
     )?;
     let query_user = QueryUser::from_resource_id(auth_conn!(context), &path_params.user)?;
 
-    diesel::delete(
-        schema::organization_role::table
-            .filter(schema::organization_role::user_id.eq(query_user.id))
-            .filter(schema::organization_role::organization_id.eq(query_organization.id)),
-    )
-    .execute(write_conn!(context))
+    let removed = write_transaction!(context, |conn| {
+        if QueryOrganizationRole::is_last_leader(conn, query_user.id, query_organization.id)? {
+            return Ok(false);
+        }
+        diesel::delete(
+            schema::organization_role::table
+                .filter(schema::organization_role::user_id.eq(query_user.id))
+                .filter(schema::organization_role::organization_id.eq(query_organization.id)),
+        )
+        .execute(conn)?;
+        // A project role alone grants its project, so a removed member keeps none here.
+        diesel::delete(
+            schema::project_role::table
+                .filter(schema::project_role::user_id.eq(query_user.id))
+                .filter(
+                    schema::project_role::project_id.eq_any(
+                        schema::project::table
+                            .filter(schema::project::organization_id.eq(query_organization.id))
+                            .select(schema::project::id),
+                    ),
+                ),
+        )
+        .execute(conn)?;
+        // An invitation grants a role, so none the removed member sent here joins anyone.
+        diesel::delete(
+            schema::invite::table
+                .filter(schema::invite::inviter_id.eq(query_user.id))
+                .filter(schema::invite::organization_id.eq(query_organization.id)),
+        )
+        .execute(conn)
+        .map(|_deleted| true)
+    })
     .map_err(resource_conflict_err!(
         OrganizationRole,
-        (&query_user, query_organization)
+        (&query_user, &query_organization)
     ))?;
 
-    Ok(())
+    if removed {
+        Ok(())
+    } else {
+        Err(conflict_error(LAST_LEADER))
+    }
 }
 
 fn json_member(

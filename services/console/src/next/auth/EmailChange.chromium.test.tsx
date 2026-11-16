@@ -172,6 +172,25 @@ test("a refused press says why, and names a taken address", async () => {
 	}
 });
 
+// Kills a press refused outside the browser that asked read as a failure to
+// try again, or as any other refusal, and one that still offers the press.
+test("a press outside the browser that asked says where to open the link", async () => {
+	const fx = effects(ok(CHANGE), refused(403, "email_change_elsewhere"));
+	mount(fx);
+	await press().click();
+	await expect
+		.element(page.getByRole("alert"))
+		.toHaveTextContent(
+			"Open this link in the browser where you asked for the change.",
+		);
+	await expect.element(heading()).toHaveTextContent("Change email");
+	expect(terms()).toEqual([]);
+	await expect.element(openProfile()).toHaveAttribute("href", PROFILE);
+	expect(press().query()).toBeNull();
+	expect(fx.confirm).toHaveBeenCalledTimes(1);
+	expect(fx.leave).not.toHaveBeenCalled();
+});
+
 // Kills a failed press that loses the change or the press, and a failed read
 // that offers no way to read again.
 test("a press or a read that fails can be tried again", async () => {
@@ -207,6 +226,7 @@ test("each state passes axe in both themes", async () => {
 		[refused(400, "email_change_expired"), undefined],
 		[refused(400, "email_change_used"), undefined],
 		[ok(CHANGE), refused(409)],
+		[ok(CHANGE), refused(403, "email_change_elsewhere")],
 	] as const) {
 		await axeInBothThemes(async () => {
 			mount(effects(read, confirm ?? ok(CHANGE)));

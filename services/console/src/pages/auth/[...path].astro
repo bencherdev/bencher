@@ -1,0 +1,12 @@
+---
+// A path no page here serves is not found, drawn here so it passes through the middleware like
+// every page here, which the site's own not found page, served as a file, never does.
+export const prerender = false;
+
+import NotFound from "../404.astro";
+
+Astro.response.status = 404;
+Astro.response.statusText = "Not Found";
+---
+
+<NotFound />

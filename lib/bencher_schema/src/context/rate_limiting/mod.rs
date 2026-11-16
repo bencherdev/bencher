@@ -11,13 +11,13 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use bencher_json::{
     DateTime, Email, OAuthAuthorizationUuid, OAuthGrantUuid, OrganizationUuid, PlanLevel,
-    ProjectUuid, RunnerUuid, UserUuid,
+    ProjectUuid, RunnerUuid, SessionUuid, UserUuid,
     system::config::{JsonRateLimiting, JsonRateLimits},
 };
 use bencher_license::Licensor;
 #[cfg(feature = "otel")]
 use bencher_otel::AuthorizationKind;
-use bencher_rate_limiter::{RateLimiter, RateLimits};
+use bencher_rate_limiter::{RateLimiter, RateLimits, Reservation};
 use dropshot::HttpError;
 pub use http::HeaderMap;
 use slog::Logger;
@@ -34,6 +34,7 @@ use crate::{
 
 mod bandwidth;
 mod email;
+mod ip_key;
 mod project;
 mod public;
 mod remote_ip;
@@ -42,7 +43,8 @@ pub(super) mod snapshot;
 mod user;
 
 use bandwidth::BandwidthRateLimiter;
-use email::EmailKey;
+use email::{EmailKey, EmailRequesterKey};
+use ip_key::IpKey;
 use project::ProjectRateLimiter;
 use public::PublicRateLimiter;
 use runner::RunnerRateLimiter;
@@ -78,8 +80,12 @@ pub struct RateLimiting {
     bandwidth: BandwidthRateLimiter,
     /// Refusals of a known OAuth credential, with the public request limits.
     oauth_refusals: RateLimiter<OAuthCredential>,
-    /// Sign-in emails to one address.
-    email: RateLimiter<EmailKey>,
+    /// Sign-in emails to one address from one requester.
+    sign_in_email: RateLimiter<EmailRequesterKey>,
+    /// Sign-in emails to one address from every requester.
+    sign_in_email_ceiling: RateLimiter<EmailKey>,
+    /// Fresh sign-in emails one session asks for, from every requester.
+    fresh_sign_in_email_ceiling: RateLimiter<SessionUuid>,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -178,7 +184,9 @@ impl Default for RateLimiting {
             runner: RunnerRateLimiter::default(),
             bandwidth: BandwidthRateLimiter::default(),
             oauth_refusals: RateLimiter::new(public::request_limits(None)),
-            email: RateLimiter::new(email_limits(None)),
+            sign_in_email: RateLimiter::new(email_limits(None)),
+            sign_in_email_ceiling: RateLimiter::new(email_ceiling(email_limits(None))),
+            fresh_sign_in_email_ceiling: RateLimiter::new(email_ceiling(email_limits(None))),
         }
     }
 }
@@ -210,7 +218,9 @@ impl From<JsonRateLimiting> for RateLimiting {
             runner: runner.map_or_else(RunnerRateLimiter::default, Into::into),
             bandwidth: oci_bandwidth.map_or_else(BandwidthRateLimiter::default, Into::into),
             oauth_refusals: RateLimiter::new(public::request_limits(public)),
-            email: RateLimiter::new(email_limits(email)),
+            sign_in_email: RateLimiter::new(email_limits(email)),
+            sign_in_email_ceiling: RateLimiter::new(email_ceiling(email_limits(email))),
+            fresh_sign_in_email_ceiling: RateLimiter::new(email_ceiling(email_limits(email))),
         }
     }
 }
@@ -274,7 +284,17 @@ impl RateLimiting {
                 hour: usize::MAX,
                 day: usize::MAX,
             }),
-            email: RateLimiter::new(RateLimits {
+            sign_in_email: RateLimiter::new(RateLimits {
+                minute: usize::MAX,
+                hour: usize::MAX,
+                day: usize::MAX,
+            }),
+            sign_in_email_ceiling: RateLimiter::new(RateLimits {
+                minute: usize::MAX,
+                hour: usize::MAX,
+                day: usize::MAX,
+            }),
+            fresh_sign_in_email_ceiling: RateLimiter::new(RateLimits {
                 minute: usize::MAX,
                 hour: usize::MAX,
                 day: usize::MAX,
@@ -314,7 +334,9 @@ impl RateLimiting {
             + self.runner.prune()
             + self.bandwidth.prune()
             + self.oauth_refusals.prune()
-            + self.email.prune()
+            + self.sign_in_email.prune()
+            + self.sign_in_email_ceiling.prune()
+            + self.fresh_sign_in_email_ceiling.prune()
     }
 
     pub fn window(&self) -> (DateTime, DateTime) {
@@ -494,10 +516,51 @@ impl RateLimiting {
         }
     }
 
-    /// Count a sign-in email to `email`, unless the address is at its cap. At the cap, count
-    /// nothing and return how long until the address can get another.
-    pub fn sign_in_email(&self, email: &Email) -> Result<(), Duration> {
-        self.email.acquire(EmailKey::from(email))
+    /// Hold a sign-in email to `email`, asked for by `requester`, against its caps: the tight caps
+    /// on what one requester may send the address, and the day's ceiling the email is held to,
+    /// on what every requester together may send. A request with no known address counts as one
+    /// requester with every other such request. At a cap, hold nothing and return how long until
+    /// every cap that applies has room.
+    pub fn sign_in_email(
+        &self,
+        email: &Email,
+        requester: Option<IpAddr>,
+        ceiling: SignInEmailCeiling,
+    ) -> Result<SignInEmailHold, Duration> {
+        let address = EmailKey::from(email);
+        let key = EmailRequesterKey::new(address, requester);
+        let reserved = match self.sign_in_email.reserve(key) {
+            Ok(reserved) => reserved,
+            Err(wait) => {
+                let ceiling_wait = match ceiling {
+                    SignInEmailCeiling::Address => self.sign_in_email_ceiling.wait(address),
+                    SignInEmailCeiling::Session(session) => {
+                        self.fresh_sign_in_email_ceiling.wait(session)
+                    },
+                };
+                return Err(ceiling_wait.map_or(wait, |ceiling_wait| wait.max(ceiling_wait)));
+            },
+        };
+        let ceiling = match ceiling {
+            SignInEmailCeiling::Address => self
+                .sign_in_email_ceiling
+                .reserve(address)
+                .map(|reserved| CeilingHold::Address(address, reserved)),
+            SignInEmailCeiling::Session(session) => self
+                .fresh_sign_in_email_ceiling
+                .reserve(session)
+                .map(|reserved| CeilingHold::Session(session, reserved)),
+        };
+        match ceiling {
+            Ok(ceiling) => Ok(SignInEmailHold {
+                requester: (key, reserved),
+                ceiling,
+            }),
+            Err(wait) => {
+                self.sign_in_email.release(key, reserved);
+                Err(wait)
+            },
+        }
     }
 
     pub fn check_oci_bandwidth(
@@ -518,14 +581,16 @@ impl RateLimiting {
     }
 
     pub fn save(&self, db_path: &Path, log: &Logger) -> Result<(), RateLimitingPersistError> {
-        let snapshot = RateLimitingSnapshot::new(
-            self.public.snapshot(),
-            self.user.snapshot(),
-            self.project.snapshot(),
-            self.runner.snapshot(),
-            self.bandwidth.snapshot(),
-            self.email.snapshot(),
-        );
+        let snapshot = RateLimitingSnapshot {
+            public: self.public.snapshot(),
+            user: self.user.snapshot(),
+            project: self.project.snapshot(),
+            runner: self.runner.snapshot(),
+            bandwidth: self.bandwidth.snapshot(),
+            sign_in_email: self.sign_in_email.snapshot(),
+            sign_in_email_ceiling: self.sign_in_email_ceiling.snapshot(),
+            fresh_sign_in_email_ceiling: self.fresh_sign_in_email_ceiling.snapshot(),
+        };
         let snapshot_path = Self::snapshot_path(db_path)?;
         let partial_path = snapshot_path.with_extension("json.partial");
         let json = serde_json::to_string(&snapshot).map_err(RateLimitingPersistError::Serialize)?;
@@ -583,14 +648,19 @@ impl RateLimiting {
             project,
             runner,
             bandwidth,
-            email,
+            sign_in_email,
+            sign_in_email_ceiling,
+            fresh_sign_in_email_ceiling,
         } = snapshot;
         self.public.restore(public);
         self.user.restore(user);
         self.project.restore(project);
         self.runner.restore(runner);
         self.bandwidth.restore(bandwidth);
-        self.email.restore(email);
+        self.sign_in_email.restore(sign_in_email);
+        self.sign_in_email_ceiling.restore(sign_in_email_ceiling);
+        self.fresh_sign_in_email_ceiling
+            .restore(fresh_sign_in_email_ceiling);
         slog::info!(log, "Restored rate limiting state from {snapshot_path}");
         Ok(())
     }
@@ -649,6 +719,50 @@ impl RateLimiting {
     }
 }
 
+/// The day's ceiling a sign-in email is held to, on what every requester together may send.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SignInEmailCeiling {
+    /// The address's, as every sign-in email is held to but a fresh sign-in's.
+    Address,
+    /// The session's that asks, as a fresh sign-in's email is held to, since a live session of
+    /// the address's user asks for it.
+    Session(SessionUuid),
+}
+
+/// A sign-in email held against its caps, to give back should it not be sent.
+#[derive(Debug)]
+#[must_use]
+pub struct SignInEmailHold {
+    requester: (EmailRequesterKey, Reservation),
+    ceiling: CeilingHold,
+}
+
+/// A sign-in email held against the day's ceiling it is held to.
+#[derive(Debug)]
+enum CeilingHold {
+    Address(EmailKey, Reservation),
+    Session(SessionUuid, Reservation),
+}
+
+impl SignInEmailHold {
+    /// Give the email back to the caps it was held against, since it was never sent.
+    pub fn release(self, rate_limiting: &RateLimiting) {
+        let Self {
+            requester: (key, reserved),
+            ceiling,
+        } = self;
+        rate_limiting.sign_in_email.release(key, reserved);
+        match ceiling {
+            CeilingHold::Address(address, reserved) => rate_limiting
+                .sign_in_email_ceiling
+                .release(address, reserved),
+            CeilingHold::Session(session, reserved) => rate_limiting
+                .fresh_sign_in_email_ceiling
+                .release(session, reserved),
+        }
+    }
+}
+
 /// A known OAuth credential, by what it belongs to: a grant for its tokens, or a pending
 /// authorization for its code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -693,7 +807,7 @@ impl RateLimitingPruneTask {
     }
 }
 
-/// The limits on sign-in emails to one address, as configured.
+/// The limits on sign-in emails to one address from one requester, as configured.
 fn email_limits(email: Option<JsonRateLimits>) -> RateLimits {
     RateLimits {
         minute: email
@@ -708,6 +822,16 @@ fn email_limits(email: Option<JsonRateLimits>) -> RateLimits {
     }
 }
 
+/// The limit on the sign-in emails held to one day's ceiling, from every requester: twice what
+/// one requester may have sent to one address in a day.
+fn email_ceiling(limits: RateLimits) -> RateLimits {
+    RateLimits {
+        minute: usize::MAX,
+        hour: usize::MAX,
+        day: limits.day.saturating_mul(2),
+    }
+}
+
 #[cfg(feature = "otel")]
 fn interval_kind(interval: bencher_rate_limiter::Interval) -> bencher_otel::IntervalKind {
     match interval {
@@ -719,14 +843,101 @@ fn interval_kind(interval: bencher_rate_limiter::Interval) -> bencher_otel::Inte
 
 #[cfg(test)]
 mod tests {
-    use std::net::IpAddr;
+    use std::net::{IpAddr, Ipv4Addr};
+
+    use bencher_json::{Email, SessionUuid, system::config::JsonRateLimiting};
 
     use super::{
-        Arc, CancellationToken, Logger, RateLimiting, RateLimitingPruneTask, RateLimitingSnapshot,
+        Arc, CancellationToken, IpKey, Logger, RateLimiting, RateLimitingPruneTask,
+        RateLimitingSnapshot, SignInEmailCeiling, SignInEmailHold,
     };
 
     fn test_log() -> Logger {
         Logger::root(slog::Discard, slog::o!())
+    }
+
+    // Each day's ceiling, on one address and on one session, is twice the daily cap on one
+    // requester: 24 at the defaults, 100 with a day of 50, and none where no limits apply.
+    // Kills a ceiling of a fixed size, or one where no limits apply.
+    #[test]
+    fn sign_in_email_ceiling_is_twice_the_day_limit() {
+        let day_of_50: JsonRateLimiting = serde_json::from_value(serde_json::json!({
+            "email": {"minute": 50, "hour": 50, "day": 50}
+        }))
+        .unwrap();
+        for ceiling in [
+            SignInEmailCeiling::Address,
+            SignInEmailCeiling::Session(SessionUuid::new()),
+        ] {
+            assert_eq!(holds(&RateLimiting::default(), ceiling, 1, 1000).len(), 24);
+            let day_of_50 = RateLimiting::from(day_of_50);
+            assert_eq!(holds(&day_of_50, ceiling, 1, 1000).len(), 100);
+            assert_eq!(holds(&RateLimiting::max(), ceiling, 1, 1000).len(), 1000);
+        }
+    }
+
+    // Holds given back, as for sends that failed, give back the day's ceiling with each
+    // requester's share: the full ceiling, from the same requesters, holds again.
+    // Kills a hold given back to its requester's caps but not to the ceiling.
+    #[test]
+    fn released_holds_give_back_the_ceiling() {
+        for ceiling in [
+            SignInEmailCeiling::Address,
+            SignInEmailCeiling::Session(SessionUuid::new()),
+        ] {
+            let rate_limiting = RateLimiting::default();
+            let held = holds(&rate_limiting, ceiling, 1, 1000);
+            assert_eq!(held.len(), 24);
+            for hold in held {
+                hold.release(&rate_limiting);
+            }
+            assert_eq!(holds(&rate_limiting, ceiling, 1, 1000).len(), 24);
+        }
+    }
+
+    // A session's fresh sign-in emails stop at its own ceiling, from every requester together,
+    // which neither the address's ceiling nor another session's spends: with one session at its
+    // ceiling, another of the same address still has the whole of its own, and the address
+    // still has the whole of its.
+    // Kills a fresh sign-in email past its session's ceiling, one ceiling for every session or
+    // for the address, or a fresh sign-in email charged to the address's ceiling.
+    #[test]
+    fn a_sessions_ceiling_is_its_own() {
+        let rate_limiting = RateLimiting::default();
+        let session = SignInEmailCeiling::Session(SessionUuid::new());
+        assert_eq!(holds(&rate_limiting, session, 1, 1000).len(), 24);
+        assert_eq!(holds(&rate_limiting, session, 101, 1000).len(), 0);
+        let other = SignInEmailCeiling::Session(SessionUuid::new());
+        assert_eq!(holds(&rate_limiting, other, 201, 1000).len(), 24);
+        let address = SignInEmailCeiling::Address;
+        assert_eq!(holds(&rate_limiting, address, 301, 1000).len(), 24);
+    }
+
+    /// The sign-in emails to one address held to `ceiling`, from requesters counted up from
+    /// `first` that each ask until refused, a new requester at a time, until a new one is refused
+    /// at once, or until `most`.
+    fn holds(
+        rate_limiting: &RateLimiting,
+        ceiling: SignInEmailCeiling,
+        first: u32,
+        most: usize,
+    ) -> Vec<SignInEmailHold> {
+        let email: Email = "ada@example.com".parse().unwrap();
+        let mut held = Vec::new();
+        for requester in first..=u32::from(u16::MAX) {
+            let requester = IpAddr::from(Ipv4Addr::from(0x0a00_0000 + requester));
+            let before = held.len();
+            while let Ok(hold) = rate_limiting.sign_in_email(&email, Some(requester), ceiling) {
+                held.push(hold);
+                if held.len() == most {
+                    return held;
+                }
+            }
+            if held.len() == before {
+                break;
+            }
+        }
+        held
     }
 
     #[test]
@@ -751,7 +962,14 @@ mod tests {
 
         let json = std::fs::read_to_string(&snapshot_path).unwrap();
         let snapshot: RateLimitingSnapshot = serde_json::from_str(&json).unwrap();
-        assert!(snapshot.public.requests.minute.events.contains_key(&ip));
+        assert!(
+            snapshot
+                .public
+                .requests
+                .minute
+                .events
+                .contains_key(&IpKey::from(ip))
+        );
     }
 
     #[tokio::test]

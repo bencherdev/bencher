@@ -47,12 +47,42 @@ pub struct QuerySession {
 }
 
 impl QuerySession {
-    /// The session, unless it has been deleted.
+    /// The session with the row `id`, unless it has been deleted. A deleted session's row ID goes
+    /// to the next session, so `id` must come, in the same transaction, from a row that ends with
+    /// its session.
     pub fn find(conn: &mut DbConnection, id: SessionId) -> diesel::QueryResult<Option<Self>> {
         schema::session::table
             .filter(schema::session::id.eq(id))
             .first(conn)
             .optional()
+    }
+
+    /// The session with the row `id` and `uuid`, unless it has ended: a session that took its
+    /// row's ID since has another UUID.
+    pub fn find_live(
+        conn: &mut DbConnection,
+        id: SessionId,
+        uuid: SessionUuid,
+    ) -> diesel::QueryResult<Option<Self>> {
+        schema::session::table
+            .filter(schema::session::id.eq(id))
+            .filter(schema::session::uuid.eq(uuid))
+            .first(conn)
+            .optional()
+    }
+
+    /// Whether the session with the row `id` and `uuid` has not ended.
+    pub fn is_live(
+        conn: &mut DbConnection,
+        id: SessionId,
+        uuid: SessionUuid,
+    ) -> diesel::QueryResult<bool> {
+        diesel::select(diesel::dsl::exists(
+            schema::session::table
+                .filter(schema::session::id.eq(id))
+                .filter(schema::session::uuid.eq(uuid)),
+        ))
+        .get_result(conn)
     }
 
     /// The session with the token's hash and its user, whether or not it has ended.
@@ -86,10 +116,6 @@ impl QuerySession {
         now.timestamp() >= (self.last_used + RENEWAL_INTERVAL).timestamp()
     }
 
-    pub fn is_fresh(&self, now: DateTime) -> bool {
-        now.timestamp() < (self.proved + FRESH_SIGN_IN_WINDOW).timestamp()
-    }
-
     /// Record that the session's reader proved who they are at `now`, and change nothing else.
     pub fn prove(
         conn: &mut DbConnection,
@@ -111,8 +137,18 @@ impl QuerySession {
             .execute(conn)
     }
 
-    pub fn delete(conn: &mut DbConnection, id: SessionId) -> diesel::QueryResult<usize> {
-        diesel::delete(schema::session::table.filter(schema::session::id.eq(id))).execute(conn)
+    /// End the session with the row `id` and `uuid`, and no session that took its row's ID since.
+    pub fn delete(
+        conn: &mut DbConnection,
+        id: SessionId,
+        uuid: SessionUuid,
+    ) -> diesel::QueryResult<usize> {
+        diesel::delete(
+            schema::session::table
+                .filter(schema::session::id.eq(id))
+                .filter(schema::session::uuid.eq(uuid)),
+        )
+        .execute(conn)
     }
 
     /// End the session a token belongs to, if any.

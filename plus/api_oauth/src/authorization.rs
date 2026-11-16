@@ -13,7 +13,7 @@ use bencher_schema::{
         QueryUser,
         auth::{AuthCredential, AuthUser, BearerToken},
         oauth_authorization::{OAuthAnswer, QueryOAuthAuthorization},
-        session::{QuerySession, cookie::CookieCredential},
+        session::cookie::CookieCredential,
     },
     public_conn, write_transaction,
 };
@@ -236,17 +236,7 @@ async fn approver(
     };
     let auth_user = AuthUser::from_token(context, bearer_token).await?;
     let auth_time = match auth_user.credential {
-        AuthCredential::Session(session_id) => {
-            QuerySession::find(public_conn!(context), session_id)
-                .map_err(|e| {
-                    issue_error(
-                        "Failed to read the approving session",
-                        "Failed to read the session approving a request to connect:",
-                        e,
-                    )
-                })?
-                .map(|session| session.proved)
-        },
+        AuthCredential::Session(session) => Some(session.proved),
         AuthCredential::UserKey(_) => None,
         AuthCredential::ApiToken | AuthCredential::OAuthGrant { .. } => {
             #[cfg(feature = "otel")]

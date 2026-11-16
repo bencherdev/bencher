@@ -24,8 +24,9 @@ pub async fn auth_link_options(
 ///
 /// Sign in with the link from the email: at once in the browser that asked for it, and in any
 /// other only once the reader confirms the address it names. Only in the browser that asked does
-/// it pin the provider account a sign-in carries. A fresh sign-in's link proves its session again
-/// in the browser that asked for it, and in no other.
+/// it pin the provider account a sign-in carries, or take its claim, its plan, or its app's
+/// request. A fresh sign-in's link proves its session again in the browser that asked for it,
+/// and in no other.
 #[endpoint {
     method = POST,
     path = "/v0/auth/link",
@@ -71,15 +72,23 @@ pub async fn auth_link_post(
         else {
             return Ok(None);
         };
-        // Only the browser that asked ran the provider's sign-in, so a link confirmed in any other
-        // proves the address alone.
-        #[cfg(feature = "plus")]
+        // Only the browser that asked chose what the sign-in carries, so a link confirmed in any
+        // other proves the address alone: it pins no provider account, claims nothing, takes no
+        // plan, and lands on no app's request.
         let pending = if asked_here {
             pending
         } else {
             QueryPendingSignIn {
+                claim: None,
+                #[cfg(feature = "plus")]
+                plan: None,
+                #[cfg(feature = "plus")]
+                authorization: None,
+                #[cfg(feature = "plus")]
                 pin_provider: None,
+                #[cfg(feature = "plus")]
                 pin_account: None,
+                #[cfg(feature = "plus")]
                 pin_handle: None,
                 ..pending
             }

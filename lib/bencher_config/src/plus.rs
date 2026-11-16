@@ -6,14 +6,17 @@ use bencher_billing::Biller;
 use bencher_github_client::{GitHubApp, GitHubClient};
 use bencher_google_client::GoogleClient;
 use bencher_json::{
-    is_bencher_cloud,
+    PROD_BENCHER_URL, is_bencher_cloud,
     system::config::{
         JsonCloud, JsonGitHub, JsonGitHubApp, JsonGoogle, JsonPlus, JsonTurnstile, RegistryStorage,
     },
 };
 use bencher_license::Licensor;
 use bencher_oci_storage::OciStorage;
-use bencher_schema::context::{Indexer, StatsSettings, Turnstile};
+use bencher_schema::{
+    context::{Indexer, StatsSettings, Turnstile},
+    error::report_error,
+};
 use slog::{Logger, info};
 use tokio::runtime::Handle;
 use url::Url;
@@ -177,8 +180,7 @@ impl Plus {
         );
         let licensor = Licensor::bencher_cloud(&license_pem).map_err(PlusError::LicenseCloud)?;
 
-        let turnstile =
-            turnstile.map(|JsonTurnstile { secret }| Turnstile::new(secret, console_url));
+        let turnstile = cloud_turnstile(log, turnstile, console_url);
 
         Ok(Self {
             github_client,
@@ -232,12 +234,39 @@ fn github(
     ))
 }
 
+/// Bencher Cloud's Turnstile, which checks that a person starts each sign-in by email. With no
+/// config for it, or with a test secret on the production console, the server still starts, and
+/// says so as an error.
+fn cloud_turnstile(
+    log: &Logger,
+    turnstile: Option<JsonTurnstile>,
+    console_url: &Url,
+) -> Option<Turnstile> {
+    let Some(JsonTurnstile { secret }) = turnstile else {
+        report_error(log, &TurnstileOff);
+        return None;
+    };
+    let turnstile = Turnstile::new(secret, console_url);
+    if turnstile.is_test() && *console_url == *PROD_BENCHER_URL {
+        report_error(log, &TurnstileOff);
+    }
+    Some(turnstile)
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error(
+    "Turnstile checks no sign in by email on Bencher Cloud: its config (`plus.cloud.turnstile`) is missing or holds a test secret"
+)]
+struct TurnstileOff;
+
 #[cfg(test)]
 mod tests {
-    use bencher_github_client::test_server::{app_key, install_crypto_provider};
-    use bencher_json::system::config::{JsonGitHub, JsonGitHubApp};
+    use std::sync::{Arc, Mutex};
 
-    use super::{PlusError, github};
+    use bencher_github_client::test_server::{app_key, install_crypto_provider};
+    use bencher_json::system::config::{JsonGitHub, JsonGitHubApp, JsonTurnstile};
+
+    use super::{PlusError, TurnstileOff, cloud_turnstile, github};
 
     const WEBHOOK_SECRET: &str = "webhook-secret-marker";
 
@@ -266,5 +295,78 @@ mod tests {
         assert!(client.is_some());
         assert_eq!(app.unwrap().webhook_secret().as_ref(), WEBHOOK_SECRET);
         assert!(matches!(error, PlusError::GitHubApp(_)), "{error}");
+    }
+
+    // Bencher Cloud with no Turnstile config still starts, with an error at start that says so,
+    // and with one it says nothing.
+    // Kills a missing Turnstile that goes unsaid.
+    #[test]
+    fn cloud_without_turnstile_logs_an_error() {
+        let console_url = "https://bencher.dev".parse().unwrap();
+
+        let errors = Errors::default();
+        let log = slog::Logger::root(errors.clone(), slog::o!());
+        assert!(cloud_turnstile(&log, None, &console_url).is_none());
+        assert_eq!(errors.lines(), [TurnstileOff.to_string()]);
+
+        let errors = Errors::default();
+        let log = slog::Logger::root(errors.clone(), slog::o!());
+        let configured = JsonTurnstile {
+            secret: "a-turnstile-secret".parse().unwrap(),
+        };
+        assert!(cloud_turnstile(&log, Some(configured), &console_url).is_some());
+        assert_eq!(errors.lines(), Vec::<String>::new());
+    }
+
+    // Bencher Cloud with a Turnstile test secret, which lets every token through, logs the same
+    // error at start as with no Turnstile config, and the dev server, which may use one, says
+    // nothing.
+    // Kills a test secret that goes unsaid on Bencher Cloud, or said on the dev server.
+    #[test]
+    fn cloud_with_a_test_secret_logs_the_same_error() {
+        let test_secret = || JsonTurnstile {
+            secret: "1x0000000000000000000000000000000AA".parse().unwrap(),
+        };
+
+        let errors = Errors::default();
+        let log = slog::Logger::root(errors.clone(), slog::o!());
+        let cloud = "https://bencher.dev".parse().unwrap();
+        assert!(cloud_turnstile(&log, Some(test_secret()), &cloud).is_some());
+        assert_eq!(errors.lines(), [TurnstileOff.to_string()]);
+
+        let errors = Errors::default();
+        let log = slog::Logger::root(errors.clone(), slog::o!());
+        let dev = "https://dev.bencher.dev".parse().unwrap();
+        assert!(cloud_turnstile(&log, Some(test_secret()), &dev).is_some());
+        assert_eq!(errors.lines(), Vec::<String>::new());
+    }
+
+    /// Every error line logged.
+    #[derive(Clone, Default)]
+    struct Errors(Arc<Mutex<Vec<String>>>);
+
+    impl Errors {
+        fn lines(&self) -> Vec<String> {
+            self.0.lock().unwrap().clone()
+        }
+    }
+
+    impl slog::Drain for Errors {
+        type Ok = ();
+        type Err = slog::Never;
+
+        fn log(
+            &self,
+            record: &slog::Record<'_>,
+            _values: &slog::OwnedKVList,
+        ) -> Result<(), slog::Never> {
+            if record.level() == slog::Level::Error {
+                self.0
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .push(record.msg().to_string());
+            }
+            Ok(())
+        }
     }
 }

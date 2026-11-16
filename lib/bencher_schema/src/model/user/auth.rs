@@ -2,7 +2,8 @@ use std::ops::Deref;
 
 use async_trait::async_trait;
 use bencher_json::{
-    DateTime, Jwt, JwtHash, Sanitize, SessionToken, SignInRefusal, UserKey, UserKeyHash,
+    DateTime, Jwt, JwtHash, Sanitize, SessionToken, SessionUuid, SignInRefusal, UserKey,
+    UserKeyHash,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{OAuthScopes, system::payment::JsonCustomer};
@@ -21,7 +22,6 @@ use oso::{PolarValue, ToPolar};
 #[cfg(feature = "plus")]
 use crate::context::OAuthServer;
 use crate::{
-    auth_conn,
     context::{ApiContext, DbConnection, Rbac},
     error::{
         BEARER_TOKEN_FORMAT, forbidden_error, invalid_credential, issue_error, unauthorized_error,
@@ -32,7 +32,7 @@ use crate::{
         user::{
             key::{QueryUserKey, UserKeyId},
             session::{
-                QuerySession, SessionId,
+                FRESH_SIGN_IN_WINDOW, QuerySession, SessionId,
                 cookie::{CookieCredential, SessionCookie},
             },
             token::{QueryToken, TokenId},
@@ -105,11 +105,12 @@ impl AuthUser {
                     let renewal = query_session
                         .needs_renewal(now)
                         .then_some(Renewal::Session(query_session.id));
-                    (
-                        query_user,
-                        AuthCredential::Session(query_session.id),
-                        renewal,
-                    )
+                    let session = AuthSession {
+                        id: query_session.id,
+                        uuid: query_session.uuid,
+                        proved: query_session.proved,
+                    };
+                    (query_user, AuthCredential::Session(session), renewal)
                 },
             };
 
@@ -468,24 +469,15 @@ impl AuthUser {
         matches!(self.credential, AuthCredential::Session(_))
     }
 
-    /// Refuse a browser session whose reader has not proved who they are within
-    /// [`super::session::FRESH_SIGN_IN_WINDOW`], so a stolen cookie alone cannot do what this
-    /// guards.
+    /// Refuse a browser session whose reader had not proved who they are within
+    /// [`FRESH_SIGN_IN_WINDOW`], as the request's sign-in read the session, so a stolen cookie
+    /// alone cannot do what this guards.
     /// A bearer credential passes.
-    pub async fn check_fresh_sign_in(&self, context: &ApiContext) -> Result<(), HttpError> {
-        let Some(session_id) = self.session_id() else {
+    pub fn check_fresh_sign_in(&self, context: &ApiContext) -> Result<(), HttpError> {
+        let AuthCredential::Session(session) = self.credential else {
             return Ok(());
         };
-        let fresh = QuerySession::find(auth_conn!(context), session_id)
-            .map_err(|e| {
-                issue_error(
-                    "Failed to read a session",
-                    "Failed to read a session's last proof:",
-                    e,
-                )
-            })?
-            .is_some_and(|session| session.is_fresh(context.clock.now()));
-        if fresh {
+        if session.is_fresh(context.clock.now()) {
             Ok(())
         } else {
             let mut error = forbidden_error(FRESH_SIGN_IN);
@@ -496,8 +488,14 @@ impl AuthUser {
 
     /// The browser session the request authenticated with, if it presented a session cookie.
     pub fn session_id(&self) -> Option<SessionId> {
-        if let AuthCredential::Session(session_id) = self.credential {
-            Some(session_id)
+        self.session().map(|session| session.id)
+    }
+
+    /// The browser session the request authenticated with, as its sign-in read it, if it
+    /// presented a session cookie.
+    pub fn session(&self) -> Option<AuthSession> {
+        if let AuthCredential::Session(session) = self.credential {
+            Some(session)
         } else {
             None
         }
@@ -570,9 +568,13 @@ impl Sanitize for AuthUser {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[expect(
+    variant_size_differences,
+    reason = "one credential a request, and a session carries what its sign-in read"
+)]
 pub enum AuthCredential {
     /// A browser session, by its session cookie.
-    Session(SessionId),
+    Session(AuthSession),
     /// A deprecated user API token, or a user loaded internally.
     ApiToken,
     UserKey(UserKeyId),
@@ -581,6 +583,23 @@ pub enum AuthCredential {
     OAuthGrant {
         user_key_id: Option<UserKeyId>,
     },
+}
+
+/// A browser session, as the request's sign-in read it. A session's row ID passes to a later
+/// session once the session ends, so the request holds to what it read.
+#[derive(Debug, Clone, Copy)]
+pub struct AuthSession {
+    pub id: SessionId,
+    pub uuid: SessionUuid,
+    /// When the reader last proved who they are.
+    pub proved: DateTime,
+}
+
+impl AuthSession {
+    /// Whether the reader proved who they are within [`FRESH_SIGN_IN_WINDOW`] before `now`.
+    pub fn is_fresh(&self, now: DateTime) -> bool {
+        now.timestamp() < (self.proved + FRESH_SIGN_IN_WINDOW).timestamp()
+    }
 }
 
 /// A write a use of a credential leaves for after the request has read what it needs.
@@ -695,7 +714,9 @@ fn missing_credential() -> HttpError {
     ))
 }
 
-fn dead_session(console_url: &url::Url) -> HttpError {
+/// The answer to a request whose session has ended: the one refusal of a credential, which clears
+/// the session's cookie.
+pub fn dead_session(console_url: &url::Url) -> HttpError {
     let mut error = invalid_credential();
     error.headers_mut().append(
         http::header::SET_COOKIE,

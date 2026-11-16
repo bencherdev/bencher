@@ -200,7 +200,12 @@ jobs:
           CLOUDFLARE_ENV: ${{ matrix.artifact == 'bencher-console' && inputs.cloudflare-env || '' }}
           SENTRY_UPLOAD: ${{ inputs.sentry-upload }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: npm run cloudflare
+        run: |
+          # Dev's API holds Turnstile's test secret, so dev gets the test site key.
+          if [ "$CLOUDFLARE_ENV" = "dev" ]; then
+            export TURNSTILE_SITE_KEY=1x00000000000000000000BB
+          fi
+          npm run cloudflare
       - name: Verify Deploy Target
         working-directory: ./services/console
         env:

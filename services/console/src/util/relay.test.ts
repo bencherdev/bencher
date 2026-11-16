@@ -212,7 +212,7 @@ describe("relay", () => {
 	test("keeps every request on the API's own URL", async () => {
 		const { url, received } = await api();
 		const internal = await relay(
-			reader("/api//evil.example/v0/user", {
+			reader("/api/v0//evil.example/user", {
 				headers: { authorization: "Bearer k" },
 			}),
 			to(url),
@@ -221,16 +221,40 @@ describe("relay", () => {
 			reader("/api/v0/user?x=1"),
 			to(`${url}/bencher/`),
 		);
-		const bare = await relay(reader("/api"), to(url));
 
-		expect([internal.status, prefixed.status, bare.status]).toEqual([
-			200, 200, 200,
-		]);
+		expect([internal.status, prefixed.status]).toEqual([200, 200]);
 		expect(received.map((sent) => sent.url)).toEqual([
-			"//evil.example/v0/user",
+			"/v0//evil.example/user",
 			"/bencher/v0/user?x=1",
-			"/",
 		]);
+	});
+
+	// Kills a relay that sends the API any path outside `/v0/`, however the
+	// path spells it: the API's discovery documents, its OAuth pages, Bencher
+	// MCP, and the registry stay off the console's origin.
+	test("answers 404 for a path outside /v0/, and asks the API nothing", async () => {
+		const { url, received } = await api();
+		for (const path of [
+			"/api",
+			"/api/",
+			"/api/mcp",
+			"/api/oauth/authorize?client_id=x",
+			"/api/.well-known/oauth-authorization-server",
+			"/api/v2/",
+			"/api/v0",
+			"/api/v0x/user",
+			"/api/V0/user",
+			"/api/v0/../mcp",
+			"/api/v0/%2e%2e/mcp",
+			"/api/v0/%2E%2E/mcp",
+			"/api//v0/user",
+			"/api//evil.example/v0/user",
+		]) {
+			const response = await relay(reader(path, { method: "POST" }), to(url));
+			expect(response.status, path).toBe(404);
+			expect(response.headers.get("cache-control"), path).toBe("no-store");
+		}
+		expect(received).toEqual([]);
 	});
 
 	// Kills a relay that loses a status, a second `Set-Cookie`, the sign in's

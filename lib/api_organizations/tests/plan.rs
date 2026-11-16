@@ -151,6 +151,43 @@ async fn plan_patch_requires_session() {
     assert_eq!(resp.status(), StatusCode::LOCKED);
 }
 
+// Fails if plan POST accepts a user API key or a deprecated user API token, or refuses a user
+// session.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn plan_post_requires_session() {
+    use bencher_api_tests::{bearer, helpers::seed_token};
+
+    let server = TestServer::new_with_cloud_routes().await;
+    let user = server
+        .signup("Test User", "planpostsession@example.com")
+        .await;
+    let org = server.create_org(&user, "Plan Post Session Org").await;
+    let api_token = seed_token(&server, &user, "Legacy Token");
+    let key = server.create_user_key(&user, "plan-key").await;
+
+    let org_slug: &str = org.slug.as_ref();
+    let body = serde_json::json!({"checkout": "cs_test", "level": "team"});
+    let post = |credential| {
+        server
+            .client
+            .post(server.api_url(&format!("/v0/organizations/{}/plan", org_slug)))
+            .headers(credential)
+            .json(&body)
+            .send()
+    };
+    for credential in [bearer(api_token.token.as_ref()), bearer(key.as_ref())] {
+        let resp = post(credential).await.expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    // A user session passes the gate and reaches the missing biller.
+    let resp = post(server.fresh_session(&user))
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::LOCKED);
+}
+
 #[cfg(feature = "plus")]
 #[expect(clippy::expect_used, reason = "test helpers")]
 mod portal {

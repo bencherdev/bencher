@@ -170,6 +170,9 @@ pub enum SignInRefusal {
     EmailChangeExpired,
     /// The email change was already confirmed.
     EmailChangeUsed,
+    /// The email change's confirm came from no session, or from one other than the live session
+    /// that asked for the change, which alone confirms it.
+    EmailChangeElsewhere,
 }
 
 impl AsRef<str> for SignInRefusal {
@@ -193,6 +196,7 @@ impl AsRef<str> for SignInRefusal {
             Self::AskedElsewhere => "asked_elsewhere",
             Self::EmailChangeExpired => "email_change_expired",
             Self::EmailChangeUsed => "email_change_used",
+            Self::EmailChangeElsewhere => "email_change_elsewhere",
         }
     }
 }

@@ -58,6 +58,27 @@ impl QueryOrganizationRole {
         .get_result(conn)
     }
 
+    /// Whether the user is the organization's only Leader, so removing them would leave it with
+    /// none, on a connection that holds the writer for whatever the answer decides.
+    pub fn is_last_leader(
+        conn: &mut DbConnection,
+        user_id: UserId,
+        organization_id: OrganizationId,
+    ) -> diesel::QueryResult<bool> {
+        let leaders = schema::organization_role::table
+            .filter(schema::organization_role::organization_id.eq(organization_id))
+            .filter(schema::organization_role::role.eq(OrganizationRole::Leader));
+        let is_leader = diesel::select(diesel::dsl::exists(
+            leaders.filter(schema::organization_role::user_id.eq(user_id)),
+        ))
+        .get_result::<bool>(conn)?;
+        let another = diesel::select(diesel::dsl::exists(
+            leaders.filter(schema::organization_role::user_id.ne(user_id)),
+        ))
+        .get_result::<bool>(conn)?;
+        Ok(is_leader && !another)
+    }
+
     pub fn claimed_at(
         conn: &mut DbConnection,
         organization_id: OrganizationId,

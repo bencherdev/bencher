@@ -4,14 +4,17 @@ use rustls::crypto::aws_lc_rs;
 
 use bencher_config::DEFAULT_MAX_BODY_SIZE;
 use bencher_endpoint::Registrar as _;
-use bencher_json::{Email, EmailHash};
+use bencher_json::{Email, EmailHash, SessionToken, SessionTokenHash};
 use bencher_rbac::init_rbac;
 use bencher_schema::{
     ApiContext,
     context::{Database, DbConnection, Messenger, Relay},
     model::{
         organization::OrganizationId,
-        user::sign_in::{CODE_BUDGET, CodeKey},
+        user::{
+            QueryUser,
+            sign_in::{CODE_BUDGET, CodeKey},
+        },
     },
     run_migrations_with_token_key, schema,
 };
@@ -219,15 +222,11 @@ impl TestServer {
     }
 
     /// Create a new test server with any of its settings changed from the defaults.
+    /// The server is built at the call, so a caller's future never holds the options.
     #[cfg(feature = "plus")]
-    #[expect(
-        clippy::unused_async,
-        clippy::unused_async_trait_impl,
-        reason = "async for API parity"
-    )]
-    pub async fn new_with_options(options: TestServerOptions) -> Self {
+    pub fn new_with_options(options: TestServerOptions) -> std::future::Ready<Self> {
         let (database, db_path, db_file) = temp_database();
-        Self::with_database(options, database, db_path, db_file)
+        std::future::ready(Self::with_database(options, database, db_path, db_file))
     }
 
     /// Stop this server and start another on the same database file, with these settings and
@@ -530,6 +529,32 @@ impl TestServer {
             .expect("Failed to claim every organization for the writer");
     }
 
+    /// Take every role of `user`'s away in the eyes of the API's writer connection alone.
+    /// A removal counts an organization's Leaders on the writer, after a check that read them on
+    /// another connection, so this stands in for the user's own removal landing between the two.
+    /// A role the writer still deletes goes from the real table, so a caller asserts the removal's
+    /// refusal and that no role went.
+    #[expect(clippy::expect_used, reason = "test helper changing the writer's view")]
+    pub async fn remove_after_the_check(&self, user: &crate::TestUser) {
+        let user_id =
+            QueryUser::get_id(&mut self.db_conn(), user.uuid).expect("Failed to get user ID");
+        self.context()
+            .database
+            .connection
+            .lock()
+            .await
+            .batch_execute(&format!(
+                "CREATE TEMP VIEW organization_role AS
+                SELECT * FROM main.organization_role WHERE user_id != {user_id};
+                CREATE TEMP TRIGGER organization_role_delete
+                INSTEAD OF DELETE ON organization_role
+                BEGIN
+                    DELETE FROM main.organization_role WHERE id = OLD.id;
+                END;"
+            ))
+            .expect("Failed to remove the user for the writer");
+    }
+
     /// Spend the whole budget of wrong codes for `email`, now, in the eyes of the API's writer
     /// connection alone. A proof checks the budget on the writer, inside its transaction, so this
     /// stands in for wrong codes that landed after any check another connection made. It also
@@ -553,6 +578,40 @@ impl TestServer {
                 email_hash.as_ref()
             ))
             .expect("Failed to spend the budget for the writer");
+    }
+
+    /// Keep `session` as it is now in the eyes of the API's reader connections, even once its row
+    /// is gone, beside any row that then takes its ID. A request reads its session as it signs in,
+    /// so this stands in for the session ending, and another session taking its row ID, after a
+    /// request signed in with it.
+    #[expect(clippy::expect_used, reason = "test helper changing the readers' view")]
+    pub fn keep_session_for_the_readers(&self, session: &SessionToken) {
+        let mut conn = self.db_conn();
+        let id: i32 = schema::session::table
+            .filter(schema::session::token_hash.eq(SessionTokenHash::from(session)))
+            .select(schema::session::id)
+            .first(&mut conn)
+            .expect("Failed to find the session");
+        conn.batch_execute(&format!(
+            "CREATE TABLE session_as_read AS SELECT * FROM session WHERE id = {id}"
+        ))
+        .expect("Failed to keep the session");
+        let database = &self.context().database;
+        let readers = [
+            &database.public_pool,
+            &database.public_pool,
+            &database.auth_pool,
+            &database.auth_pool,
+        ]
+        .map(|pool| pool.get().expect("Failed to get a reader connection"));
+        for mut reader in readers {
+            reader
+                .batch_execute(
+                    "CREATE TEMP VIEW session AS
+                    SELECT * FROM main.session UNION ALL SELECT * FROM main.session_as_read;",
+                )
+                .expect("Failed to keep the session for a reader");
+        }
     }
 
     /// How many roles the organization of the project `slug` holds, as the database has them.

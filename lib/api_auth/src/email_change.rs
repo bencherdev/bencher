@@ -1,6 +1,6 @@
 //! An email change, read and confirmed by the secret its link carries: the console reads one to
-//! show both addresses, and a press confirms it, from any browser, since the link proves the new
-//! address.
+//! show both addresses, and a press confirms it, in the session that asked for it alone, since the
+//! link proves the new address and the session proves who asked.
 
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseOk};
 use bencher_json::{JsonEmailChange, JsonEmailChangeSecret, SignInRefusal};
@@ -8,18 +8,28 @@ use bencher_json::{JsonEmailChange, JsonEmailChangeSecret, SignInRefusal};
 use bencher_schema::model::organization::sso::QuerySso;
 use bencher_schema::{
     context::ApiContext,
-    error::{BencherResource, bad_request_error, issue_error, resource_conflict_error},
-    model::user::email_change::{Confirmation, Found, QueryEmailChange},
+    error::{
+        BencherResource, bad_request_error, forbidden_error, issue_error, resource_conflict_error,
+    },
+    model::user::{
+        auth::BearerToken,
+        email_change::{Confirmation, Found, QueryEmailChange},
+    },
     public_conn, write_transaction,
 };
-use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
+use dropshot::{HttpError, RequestContext, SharedExtractor as _, TypedBody, endpoint};
 
-use crate::sign_in::{admit, locked_refusal, refused};
+use crate::{
+    invite::session_user,
+    sign_in::{admit, locked_refusal, refused},
+};
 
 /// One message for a change that has expired, was asked for again, or never was, so none tells
 /// why.
 const EXPIRED: &str = "This email change has expired";
 const USED: &str = "This email change was already confirmed";
+const ELSEWHERE: &str =
+    "An email change is confirmed only in the browser session that asked for it";
 const TAKEN: &str = "The email is already in use";
 
 #[endpoint {
@@ -81,8 +91,8 @@ pub async fn auth_email_change_confirm_options(
 /// Confirm an email change
 ///
 /// Make the new email of the change the secret names the user's, proven now, and answer with the
-/// change. The user's deprecated API tokens are revoked, and every session of theirs ends but the
-/// one that asked for the change. No credential is needed, since the link proves the new email.
+/// change, in the browser session that asked for it and in no other. The user's deprecated API
+/// tokens are revoked, and every session of theirs ends but the one that asked for the change.
 #[endpoint {
     method = POST,
     path = "/v0/auth/email/change/confirm",
@@ -94,10 +104,18 @@ pub async fn auth_email_change_confirm_post(
 ) -> Result<ResponseOk<JsonEmailChange>, HttpError> {
     let context = rqctx.context();
     admit(&rqctx.log, context, &rqctx.request)?;
+    // A bearer credential wins over the cookie, and no bearer credential is a browser session.
+    let cookie = match BearerToken::from_request(&rqctx).await {
+        Ok(BearerToken::Session(cookie)) => Some(cookie),
+        Ok(BearerToken::Jwt(_) | BearerToken::UserKey(_)) | Err(_) => None,
+    };
+    let presented = session_user(context, cookie)
+        .await?
+        .and_then(|auth_user| auth_user.session_id());
     let JsonEmailChangeSecret { secret } = body.into_inner();
     let now = context.clock.now();
     let confirmation = write_transaction!(context, |conn| QueryEmailChange::confirm(
-        conn, &secret, now
+        conn, &secret, presented, now
     ))
     .map_err(|e| {
         issue_error(
@@ -111,6 +129,7 @@ pub async fn auth_email_change_confirm_post(
         Confirmation::Used => return Err(used()),
         Confirmation::Expired => return Err(expired()),
         Confirmation::Locked => return Err(locked_refusal(context)),
+        Confirmation::Elsewhere => return Err(elsewhere()),
         Confirmation::Taken(new_email) => {
             return Err(resource_conflict_error(
                 BencherResource::User,
@@ -147,4 +166,11 @@ fn expired() -> HttpError {
 
 fn used() -> HttpError {
     refused(bad_request_error(USED), SignInRefusal::EmailChangeUsed)
+}
+
+fn elsewhere() -> HttpError {
+    refused(
+        forbidden_error(ELSEWHERE),
+        SignInRefusal::EmailChangeElsewhere,
+    )
 }

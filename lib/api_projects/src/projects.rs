@@ -216,7 +216,7 @@ pub async fn project_delete(
     query_params: Query<ProjectDeleteQuery>,
 ) -> Result<ResponseDeleted, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    auth_user.check_fresh_sign_in(rqctx.context()).await?;
+    auth_user.check_fresh_sign_in(rqctx.context())?;
     delete_inner(
         &rqctx.log,
         rqctx.context(),

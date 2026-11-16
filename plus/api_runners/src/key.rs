@@ -37,6 +37,7 @@ pub async fn runner_key_options(
 ///
 /// ➕ Bencher Plus: Generate a new key for a runner, invalidating the old one.
 /// The user must be an admin to use this endpoint.
+/// A user session needs a sign-in within the last 10 minutes.
 /// Returns the new key which is only shown once.
 #[endpoint {
     method = POST,
@@ -48,7 +49,8 @@ pub async fn runner_key_post(
     bearer_token: BearerToken,
     path_params: Path<RunnerKeyParams>,
 ) -> Result<ResponseCreated<JsonRunnerKey>, HttpError> {
-    let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    let admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    admin_user.user().check_fresh_sign_in(rqctx.context())?;
     let json = post_inner(rqctx.context(), path_params.into_inner()).await?;
     Ok(Post::auth_response_created(json))
 }

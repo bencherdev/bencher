@@ -1,6 +1,7 @@
-//! A user's asked-for change of email: one row per user, bound to the session that asked, which
-//! its email's link names by a secret the row keeps only the hash of. It works once, for 30
-//! minutes.
+//! A user's asked-for change of email, which only the session that asked confirms.
+//!
+//! One row per user, bound to that session, which its email's link names by a secret the row
+//! keeps only the hash of. It works once, for 30 minutes.
 
 use bencher_json::{DateTime, Email, EmailChangeSecret, EmailChangeSecretHash};
 use chrono::TimeDelta;
@@ -28,7 +29,7 @@ pub const EMAIL_CHANGE_LIFETIME: TimeDelta = TimeDelta::minutes(30);
 pub struct QueryEmailChange {
     pub id: EmailChangeId,
     pub user_id: UserId,
-    /// The session that asked, which the confirm keeps, unless it has ended.
+    /// The session that asked, which alone confirms the change and is kept, unless it has ended.
     pub session_id: Option<SessionId>,
     /// The user's email when the change was asked for, the only one it replaces.
     pub email: Email,
@@ -63,14 +64,16 @@ impl QueryEmailChange {
         })
     }
 
-    /// Confirm the change the secret names, on one connection inside a write transaction.
+    /// Confirm the change the secret names, from the session the request presents, if any, on one
+    /// connection inside a write transaction.
     ///
-    /// The user's email becomes the new one, proven at `now`; their legacy tokens are revoked;
-    /// every session of theirs ends but the one that asked; and the row stays, confirmed, until it
-    /// expires. A refusal changes nothing.
+    /// Only the session that asked confirms. The user's email becomes the new one, proven at
+    /// `now`; their legacy tokens are revoked; every session of theirs ends but the one that
+    /// asked; and the row stays, confirmed, until it expires. A refusal changes nothing.
     pub fn confirm(
         conn: &mut DbConnection,
         secret: &EmailChangeSecret,
+        presented: Option<SessionId>,
         now: DateTime,
     ) -> diesel::QueryResult<Confirmation> {
         let (change, user) = match Self::find(conn, secret, now)? {
@@ -81,6 +84,12 @@ impl QueryEmailChange {
         if user.locked {
             return Ok(Confirmation::Locked);
         }
+        let Some(asking) = change
+            .session_id
+            .filter(|asking| presented == Some(*asking))
+        else {
+            return Ok(Confirmation::Elsewhere);
+        };
         let taken = diesel::select(diesel::dsl::exists(
             schema::user::table.filter(schema::user::email.eq(&change.new_email)),
         ))
@@ -100,11 +109,7 @@ impl QueryEmailChange {
             .set(schema::email_change::confirmed.eq(now))
             .execute(conn)?;
         QueryToken::revoke_all(conn, user.id, now)?;
-        if let Some(session_id) = change.session_id {
-            QuerySession::delete_all_but(conn, user.id, session_id)?;
-        } else {
-            QuerySession::delete_all(conn, user.id)?;
-        }
+        QuerySession::delete_all_but(conn, user.id, asking)?;
         let user = schema::user::table
             .filter(schema::user::id.eq(user.id))
             .first(conn)?;
@@ -139,6 +144,8 @@ pub enum Confirmation {
     Used,
     Expired,
     Locked,
+    /// The request presents no session, or one other than the live session that asked.
+    Elsewhere,
     /// Another user has the new email.
     Taken(Email),
 }
@@ -439,7 +446,7 @@ mod tests {
         let at = now + TimeDelta::minutes(5);
 
         let Confirmation::Confirmed(_change, confirmed_user) =
-            QueryEmailChange::confirm(&mut conn, &secret, at).unwrap()
+            QueryEmailChange::confirm(&mut conn, &secret, Some(asking), at).unwrap()
         else {
             panic!("The change was not confirmed");
         };
@@ -456,45 +463,45 @@ mod tests {
             Found::Confirmed
         ));
         assert!(matches!(
-            QueryEmailChange::confirm(&mut conn, &secret, at).unwrap(),
+            QueryEmailChange::confirm(&mut conn, &secret, Some(asking), at).unwrap(),
             Confirmation::Used
         ));
         assert_eq!(confirmed(&mut conn), Some(at));
     }
 
-    // Once the session that asked has ended, no session of the user is kept.
-    #[test]
-    fn confirm_after_the_asking_session_ended_ends_every_session() {
-        let mut conn = setup_test_db();
-        let (ada, grace) = seed(&mut conn);
-        let now = DateTime::TEST;
-        let asking = session(&mut conn, ada, now);
-        let _other = session(&mut conn, ada, now);
-        let graces = session(&mut conn, grace, now);
-        let (_change, secret) = ask(&mut conn, ada, Some(asking), now);
-        diesel::delete(schema::session::table.filter(schema::session::id.eq(asking)))
-            .execute(&mut conn)
-            .unwrap();
-
-        assert!(matches!(
-            QueryEmailChange::confirm(&mut conn, &secret, now).unwrap(),
-            Confirmation::Confirmed(..)
-        ));
-        assert_eq!(sessions(&mut conn), vec![graces]);
-    }
-
     // An expired change, a renewed change's earlier link, a user whose email moved since the ask, a
-    // locked user, and a new email another user took since each refuse and change nothing.
+    // locked user, a new email another user took since, and a confirm from no session, another
+    // session of the user's, another user's, or after the asking session ended each refuse and
+    // change nothing; a confirm from another session refuses as from elsewhere though the new email
+    // is taken.
     #[test]
     fn confirm_refuses_and_changes_nothing() {
         let now = DateTime::TEST;
-        for case in ["expired", "renewed", "moved", "locked", "taken"] {
+        for case in [
+            "expired",
+            "renewed",
+            "moved",
+            "locked",
+            "taken",
+            "no session",
+            "other session",
+            "another user's",
+            "asking ended",
+            "taken, elsewhere",
+        ] {
             let mut conn = setup_test_db();
             let (ada, grace) = seed(&mut conn);
             let asking = session(&mut conn, ada, now);
-            let _other = session(&mut conn, ada, now);
+            let other = session(&mut conn, ada, now);
+            let graces = session(&mut conn, grace, now);
             let (_change, secret) = ask(&mut conn, ada, Some(asking), now);
             let at = now + TimeDelta::minutes(1);
+            let presented = match case {
+                "no session" => None,
+                "other session" | "asking ended" | "taken, elsewhere" => Some(other),
+                "another user's" => Some(graces),
+                _ => Some(asking),
+            };
             match case {
                 "expired" => {
                     diesel::update(schema::email_change::table)
@@ -517,21 +524,28 @@ mod tests {
                         .execute(&mut conn)
                         .unwrap();
                 },
-                _ => {
+                "taken" | "taken, elsewhere" => {
                     diesel::update(schema::user::table.filter(schema::user::id.eq(grace)))
                         .set(schema::user::email.eq(NEW))
                         .execute(&mut conn)
                         .unwrap();
                 },
+                "asking ended" => {
+                    diesel::delete(schema::session::table.filter(schema::session::id.eq(asking)))
+                        .execute(&mut conn)
+                        .unwrap();
+                },
+                _ => {},
             }
             let before = QueryUser::get(&mut conn, ada).unwrap();
             let sessions_before = sessions(&mut conn);
 
-            let refused = QueryEmailChange::confirm(&mut conn, &secret, at).unwrap();
+            let refused = QueryEmailChange::confirm(&mut conn, &secret, presented, at).unwrap();
             let expected = match case {
                 "expired" | "renewed" | "moved" => matches!(refused, Confirmation::Expired),
                 "locked" => matches!(refused, Confirmation::Locked),
-                _ => matches!(&refused, Confirmation::Taken(email) if email.as_ref() == NEW),
+                "taken" => matches!(&refused, Confirmation::Taken(email) if email.as_ref() == NEW),
+                _ => matches!(refused, Confirmation::Elsewhere),
             };
             assert!(expected, "{case}: {refused:?}");
             let after = QueryUser::get(&mut conn, ada).unwrap();
