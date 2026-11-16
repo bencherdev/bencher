@@ -218,10 +218,14 @@ const BillingPanelSwitch = (props: {
 	);
 };
 
-const manageSubscription = (
-	<a href="https://pay.bencher.dev/p/login/5kAbJU83ieF8dTG5kk">
-		Click here to manage your subscription.
-	</a>
+// The billing portal's login, which opens the account's default portal. That portal cancels
+// and changes a plan, so only Pro links to it: an Enterprise plan ends with its contract.
+export const ManageSubscription = (props: { level: undefined | string }) => (
+	<Show when={props.level === "pro"}>
+		<a href="https://pay.bencher.dev/p/login/5kAbJU83ieF8dTG5kk">
+			Click here to manage your subscription.
+		</a>
+	</Show>
 );
 
 const CancelPlanButton = (props: {
@@ -371,24 +375,35 @@ const ResumePlanButton = (props: {
 	);
 };
 
-// Shared cancel/resume control for any Bencher Cloud metered plan.
-const PlanCancelResume = (props: {
+// Shared cancel/resume control for any Bencher Cloud metered plan. An Enterprise plan ends with
+// its contract, so its contact takes the place of the control.
+export const PlanCancelResume = (props: {
 	apiUrl: string;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
+	// Compared as text, so the generated enums stay out of this control.
+	const enterprise = () =>
+		(props.usage()?.plan?.level as string | undefined) === "enterprise";
+	const contactUs = () => (
+		<a class="button is-small" href={BENCHER_ENTERPRISE_URL}>
+			Contact us
+		</a>
+	);
 	return (
 		<Show
 			when={props.usage()?.plan?.cancel_at_period_end}
 			fallback={
-				<CancelPlanButton
-					apiUrl={props.apiUrl}
-					user={props.user}
-					organization={props.usage()?.organization}
-					level={props.usage()?.plan?.level}
-					handleRefresh={props.handleRefresh}
-				/>
+				<Show when={!enterprise()} fallback={contactUs()}>
+					<CancelPlanButton
+						apiUrl={props.apiUrl}
+						user={props.user}
+						organization={props.usage()?.organization}
+						level={props.usage()?.plan?.level}
+						handleRefresh={props.handleRefresh}
+					/>
+				</Show>
 			}
 		>
 			<p class="has-text-grey">
@@ -396,13 +411,15 @@ const PlanCancelResume = (props: {
 				{fmtDate(props.usage()?.plan?.current_period_end)}. You keep access
 				until then.
 			</p>
-			<ResumePlanButton
-				apiUrl={props.apiUrl}
-				user={props.user}
-				organization={props.usage()?.organization}
-				level={props.usage()?.plan?.level}
-				handleRefresh={props.handleRefresh}
-			/>
+			<Show when={!enterprise()} fallback={contactUs()}>
+				<ResumePlanButton
+					apiUrl={props.apiUrl}
+					user={props.user}
+					organization={props.usage()?.organization}
+					level={props.usage()?.plan?.level}
+					handleRefresh={props.handleRefresh}
+				/>
+			</Show>
 		</Show>
 	);
 };
@@ -547,7 +564,7 @@ const CloudMeteredPanel = (props: {
 			<br />
 			<PaymentMethod usage={props.usage} />
 			<br />
-			{manageSubscription}
+			<ManageSubscription level={level()} />
 			<br />
 			<br />
 			<PlanCancelResume
@@ -645,8 +662,6 @@ export const CloudSelfHostedLicensedPanel = (props: {
 			</Show>
 			<br />
 			<PaymentMethod usage={props.usage} />
-			<br />
-			{manageSubscription}
 		</div>
 	);
 };
@@ -862,8 +877,6 @@ const SelfHostedLicensedPanel = (props: {
 					View/Update License Key in Organization Settings
 				</a>
 			</h4>
-			<br />
-			{manageSubscription}
 		</div>
 	);
 };

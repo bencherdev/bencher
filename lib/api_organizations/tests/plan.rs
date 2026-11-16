@@ -1490,3 +1490,392 @@ mod self_hosted {
         assert_eq!(plan_license(&server, &org, &admin).await, attached);
     }
 }
+
+// An Enterprise plan on Bencher Cloud, which staff reach by a price swap in Stripe and end in
+// Stripe.
+#[cfg(feature = "plus")]
+#[expect(clippy::expect_used, reason = "test helpers")]
+mod enterprise {
+    use std::{collections::HashMap, sync::Arc, time::Duration};
+
+    use bencher_api_tests::{
+        TestCloud, TestOrg, TestServer, TestServerOptions, TestUser,
+        helpers::{insert_licensed_plan, insert_metered_plan, post_series, set_visibility},
+        license::{DAY, after, sign_license, stripe_cloud},
+        stripe_stub::{self as stub, NOW, StripeStub, StubObjects, deal_item, pro_item},
+    };
+    use bencher_json::{
+        Clock, DateTime, JsonPlan, PlanLevel, organization::plan::ACTIVE_SERIES_METER_NAME,
+        project::Visibility,
+    };
+    use http::StatusCode;
+    use serde_json::{Value, json};
+
+    async fn send(user: &TestUser, request: reqwest::RequestBuilder) -> (StatusCode, String) {
+        let resp = request
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        let status = resp.status();
+        (status, resp.text().await.expect("Failed to read body"))
+    }
+
+    fn plan_url(server: &TestServer, org: &TestOrg) -> String {
+        let org_slug: &str = org.slug.as_ref();
+        server.api_url(&format!("/v0/organizations/{org_slug}/plan"))
+    }
+
+    /// Schedule (`true`) or clear (`false`) the end of the organization's plan, as its console
+    /// does.
+    async fn cancel(
+        server: &TestServer,
+        org: &TestOrg,
+        user: &TestUser,
+        cancel_at_period_end: bool,
+    ) -> (StatusCode, String) {
+        let request = server
+            .client
+            .patch(plan_url(server, org))
+            .json(&json!({ "cancel_at_period_end": cancel_at_period_end }));
+        send(user, request).await
+    }
+
+    fn plan(body: &str) -> JsonPlan {
+        serde_json::from_str(body).expect("Invalid plan")
+    }
+
+    fn writes(stub: &StripeStub) -> usize {
+        stub.requests()
+            .into_iter()
+            .filter(|request| request.method == "POST")
+            .count()
+    }
+
+    fn bill(stub: &StripeStub, org: &TestOrg, status: &str, plan_item: Value) {
+        stub.set_subscription(stub::cloud_plan(
+            "sub_plan",
+            status,
+            plan_item,
+            &org.uuid.to_string(),
+        ));
+    }
+
+    // Fails if an organization can cancel or resume its Enterprise plan, active or not, if the
+    // refusal is not 403 with the Enterprise contact address, or writes to Stripe, or if a Pro
+    // plan can no longer be canceled.
+    #[tokio::test]
+    async fn an_enterprise_plan_has_no_self_serve_cancel() {
+        let stub = StripeStub::new(StubObjects::default()).await;
+        let server = TestServer::new_with_stripe(&stub).await;
+        let user = server
+            .signup("Test User", "enterprisecancel@example.com")
+            .await;
+        let org = server.create_org(&user, "Enterprise Cancel Org").await;
+        insert_metered_plan(&server, &org, "sub_plan");
+
+        for status in ["active", "past_due"] {
+            bill(&stub, &org, status, deal_item());
+            for cancel_at_period_end in [true, false] {
+                let (code, body) = cancel(&server, &org, &user, cancel_at_period_end).await;
+                assert_eq!(
+                    code,
+                    StatusCode::FORBIDDEN,
+                    "{status}, {cancel_at_period_end}: {body}"
+                );
+                assert!(body.contains("enterprise@bencher.dev"), "{body}");
+            }
+        }
+        assert_eq!(writes(&stub), 0);
+
+        bill(&stub, &org, "active", pro_item());
+        let (code, body) = cancel(&server, &org, &user, true).await;
+        assert_eq!(code, StatusCode::OK, "a Pro plan: {body}");
+        assert!(plan(&body).cancel_at_period_end);
+        let (code, body) = cancel(&server, &org, &user, false).await;
+        assert_eq!(code, StatusCode::OK, "a Pro plan: {body}");
+        assert!(!plan(&body).cancel_at_period_end);
+        assert_eq!(writes(&stub), 2);
+    }
+
+    // Fails if a Pro plan that a checkout attached does not read as Enterprise once staff swap
+    // its Pro price for a deal's Enterprise price on the same subscription, loses its bare metal
+    // item, stops posting its organization's active series, or can still be canceled by the
+    // organization.
+    #[tokio::test]
+    async fn pro_becomes_enterprise_by_a_price_swap() {
+        let stub = StripeStub::new(StubObjects {
+            subscriptions: HashMap::new(),
+            sessions: HashMap::from([(
+                "cs_upgrade".to_owned(),
+                stub::session("cs_upgrade", "sub_plan"),
+            )]),
+        })
+        .await;
+        // Inside the current period of every subscription in the stub.
+        let now = DateTime::try_from(NOW).expect("Invalid test time");
+        let server = TestServer::new_with_options(TestServerOptions {
+            cloud_routes: true,
+            cloud: Some(stripe_cloud(&stub)),
+            clock: Some(Clock::Custom(Arc::new(move || now))),
+            ..TestServerOptions::default()
+        })
+        .await;
+        let user = server.signup("Test User", "upgrade@example.com").await;
+        let org = server.create_org(&user, "Upgrade Org").await;
+        bill(&stub, &org, "trialing", pro_item());
+        let request = server
+            .client
+            .post(plan_url(&server, &org))
+            .json(&json!({ "checkout": "cs_upgrade" }));
+        let (status, body) = send(&user, request).await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        assert_eq!(plan(&body).level, PlanLevel::Pro);
+
+        let mut swapped = stub.subscription("sub_plan");
+        let items = swapped["items"]["data"]
+            .as_array_mut()
+            .expect("No subscription items");
+        let pro = items
+            .iter()
+            .position(|item| item["price"]["id"] == "price_pro")
+            .expect("No Pro item");
+        *items.get_mut(pro).expect("No Pro item") = deal_item();
+        stub.set_subscription(swapped);
+
+        let (status, body) = send(&user, server.client.get(plan_url(&server, &org))).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let swapped = plan(&body);
+        assert_eq!(swapped.level, PlanLevel::Enterprise);
+        assert!(swapped.runner_minute.is_some(), "the bare metal item stays");
+
+        let project = server.create_project(&user, &org, "Upgrade Project").await;
+        set_visibility(&server, &project, Visibility::Private);
+        let (status, body) = post_series(&server, &user, &project, 3).await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        let mut posted = None;
+        for _ in 0..100 {
+            posted = stub
+                .requests()
+                .into_iter()
+                .find(|request| request.path == "/v1/billing/meter_events");
+            if posted.is_some() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        let form = posted.expect("No active series posted").form;
+        let field = |name: &str| {
+            form.iter()
+                .find(|(key, _)| key == name)
+                .map(|(_, value)| value.as_str())
+        };
+        assert_eq!(field("event_name"), Some(ACTIVE_SERIES_METER_NAME));
+        assert_eq!(field("payload[stripe_customer_id]"), Some("cus_stub"));
+        assert_eq!(field("payload[value]"), Some("3"));
+
+        let (status, body) = cancel(&server, &org, &user, true).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+    }
+
+    fn org_url(server: &TestServer, org: &TestOrg) -> String {
+        let org_slug: &str = org.slug.as_ref();
+        server.api_url(&format!("/v0/organizations/{org_slug}"))
+    }
+
+    /// Every request that changes something in Stripe, as its method and path.
+    fn stripe_changes(stub: &StripeStub) -> Vec<(String, String)> {
+        stub.requests()
+            .into_iter()
+            .filter(|request| request.method != "GET")
+            .map(|request| (request.method, request.path))
+            .collect()
+    }
+
+    // Fails if an organization's leader, whom the plan PATCH refuses, can still end a live
+    // Enterprise plan or a live Self-Hosted deal by deleting the organization, which cancels the
+    // subscription in Stripe; if the refusal is not 403 with the Enterprise contact address; if an
+    // organization whose Enterprise plan has ended cannot be deleted; or if a Pro organization's
+    // delete no longer cancels its plan.
+    #[tokio::test]
+    async fn deleting_an_organization_never_ends_an_enterprise_contract() {
+        let stub = StripeStub::new(StubObjects::default()).await;
+        let server = TestServer::new_with_stripe(&stub).await;
+        let user = server
+            .signup("Test User", "enterprisedelete@example.com")
+            .await;
+        let org = server.create_org(&user, "Enterprise Delete Org").await;
+        insert_metered_plan(&server, &org, "sub_plan");
+
+        bill(&stub, &org, "active", deal_item());
+        let (status, body) = cancel(&server, &org, &user, true).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "the plan PATCH: {body}");
+        for live in ["active", "past_due"] {
+            bill(&stub, &org, live, deal_item());
+            let (status, body) = send(&user, server.client.delete(org_url(&server, &org))).await;
+            assert_eq!(status, StatusCode::FORBIDDEN, "{live}: {body}");
+            assert!(body.contains("enterprise@bencher.dev"), "{body}");
+        }
+        let deal = server.create_org(&user, "Self-Hosted Deal Org").await;
+        let now = server.now();
+        insert_licensed_plan(
+            &server,
+            &deal,
+            "sub_deal",
+            &sign_license(deal.uuid, 500, now, after(now, 365 * DAY)),
+        );
+        stub.set_subscription(stub::self_hosted_deal(
+            "sub_deal",
+            "active",
+            &deal.uuid.to_string(),
+        ));
+        let (status, body) = send(&user, server.client.delete(org_url(&server, &deal))).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "a Self-Hosted deal: {body}");
+        assert_eq!(stripe_changes(&stub), Vec::<(String, String)>::new());
+        let (status, body) = send(&user, server.client.get(org_url(&server, &org))).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        bill(&stub, &org, "canceled", deal_item());
+        let (status, body) = send(&user, server.client.delete(org_url(&server, &org))).await;
+        assert_eq!(status, StatusCode::NO_CONTENT, "an ended plan: {body}");
+        assert_eq!(stripe_changes(&stub), Vec::<(String, String)>::new());
+
+        let pro = server.create_org(&user, "Pro Delete Org").await;
+        insert_metered_plan(&server, &pro, "sub_pro");
+        stub.set_subscription(stub::cloud_plan(
+            "sub_pro",
+            "active",
+            pro_item(),
+            &pro.uuid.to_string(),
+        ));
+        let (status, body) = send(&user, server.client.delete(org_url(&server, &pro))).await;
+        assert_eq!(status, StatusCode::NO_CONTENT, "a Pro plan: {body}");
+        assert_eq!(
+            stripe_changes(&stub),
+            [("DELETE".to_owned(), "/v1/subscriptions/sub_pro".to_owned())]
+        );
+    }
+
+    // Fails if an organization whose plan cannot be read is deleted, or its subscription canceled,
+    // as when the subscription holds both the Pro and the Enterprise plan items in the middle of an
+    // upgrade: in doubt, the delete is refused, so it never ends an Enterprise contract.
+    #[tokio::test]
+    async fn a_delete_whose_plan_cannot_be_read_is_refused() {
+        let stub = StripeStub::new(StubObjects::default()).await;
+        let server = TestServer::new_with_stripe(&stub).await;
+        let user = server
+            .signup("Test User", "unreadabledelete@example.com")
+            .await;
+        let org = server.create_org(&user, "Unreadable Delete Org").await;
+        insert_metered_plan(&server, &org, "sub_plan");
+        stub.set_subscription(stub::subscription(
+            "sub_plan",
+            "active",
+            "charge_automatically",
+            vec![deal_item(), pro_item(), stub::bare_metal_item()],
+            json!({ "organization": org.uuid.to_string() }),
+            stub::customer(
+                &json!({ "uuid": "00000000-0000-4000-8000-000000000001" }),
+                Some(&stub::card("pm_card")),
+            ),
+            Some(stub::card("pm_card")),
+        ));
+
+        let (status, body) = send(&user, server.client.delete(org_url(&server, &org))).await;
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+        assert_eq!(stripe_changes(&stub), Vec::<(String, String)>::new());
+        let (status, body) = send(&user, server.client.get(org_url(&server, &org))).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+    }
+
+    /// The configuration that each billing portal session the stub made names, `None` for the
+    /// account's default.
+    fn portal_configurations(stub: &StripeStub) -> Vec<Option<String>> {
+        stub.requests()
+            .into_iter()
+            .filter(|request| request.path == "/v1/billing_portal/sessions")
+            .map(|request| {
+                request
+                    .form
+                    .into_iter()
+                    .find(|(key, _)| key == "configuration")
+                    .map(|(_, value)| value)
+            })
+            .collect()
+    }
+
+    async fn open_portal(
+        server: &TestServer,
+        org: &TestOrg,
+        user: &TestUser,
+    ) -> (StatusCode, String) {
+        let request = server
+            .client
+            .post(format!("{}/portal", plan_url(server, org)));
+        send(user, request).await
+    }
+
+    async fn read_plan(server: &TestServer, org: &TestOrg, user: &TestUser) -> JsonPlan {
+        let (status, body) = send(user, server.client.get(plan_url(server, org))).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        plan(&body)
+    }
+
+    // Fails if an Enterprise plan opens a billing portal on a server without an Enterprise portal
+    // configuration, through the account's default that may cancel it; if that refusal is not 403
+    // with the Enterprise contact address or makes a session at all; if the plan says it opens a
+    // portal it does not; if an Enterprise plan does not open the Enterprise configuration on a
+    // server with one; or if a Pro plan stops opening the account's default.
+    #[tokio::test]
+    async fn an_enterprise_billing_portal_opens_only_with_its_configuration() {
+        let stub = StripeStub::new(StubObjects::default()).await;
+        let without = TestServer::new_with_stripe(&stub).await;
+        let user = without
+            .signup("Test User", "enterpriseportal@example.com")
+            .await;
+        let org = without.create_org(&user, "Enterprise Portal Org").await;
+        insert_metered_plan(&without, &org, "sub_plan");
+        bill(&stub, &org, "active", deal_item());
+
+        assert!(!read_plan(&without, &org, &user).await.portal);
+        let (status, body) = open_portal(&without, &org, &user).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
+        assert!(body.contains("enterprise@bencher.dev"), "{body}");
+        assert_eq!(portal_configurations(&stub), Vec::<Option<String>>::new());
+
+        bill(&stub, &org, "active", pro_item());
+        assert!(read_plan(&without, &org, &user).await.portal);
+        let (status, body) = open_portal(&without, &org, &user).await;
+        assert_eq!(status, StatusCode::CREATED, "a Pro plan: {body}");
+        assert_eq!(portal_configurations(&stub), [None]);
+
+        let cloud = stripe_cloud(&stub);
+        let with = TestServer::new_with_options(TestServerOptions {
+            cloud_routes: true,
+            cloud: Some(TestCloud {
+                biller: cloud.biller.with_enterprise_portal(stub::ENTERPRISE_PORTAL),
+                ..cloud
+            }),
+            ..TestServerOptions::default()
+        })
+        .await;
+        let user = with
+            .signup("Test User", "enterpriseportal@example.com")
+            .await;
+        let org = with.create_org(&user, "Enterprise Portal Org").await;
+        insert_metered_plan(&with, &org, "sub_plan");
+        bill(&stub, &org, "active", deal_item());
+
+        assert!(read_plan(&with, &org, &user).await.portal);
+        let (status, body) = open_portal(&with, &org, &user).await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        assert_eq!(
+            portal_configurations(&stub),
+            [None, Some(stub::ENTERPRISE_PORTAL.to_owned())]
+        );
+    }
+}

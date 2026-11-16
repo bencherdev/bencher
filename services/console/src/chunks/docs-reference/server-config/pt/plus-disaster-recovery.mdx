@@ -2,6 +2,10 @@
 
 Esta seção especifica a configuração de recuperação de desastres.
 O Bencher suporta a replicação contínua de todas as alterações no banco de dados.
+No Bencher Self-Hosted, a recuperação de desastres exige uma licença Bencher Plus _Enterprise_ válida para pelo menos uma organização no servidor.
+O servidor da API verifica se há uma licença válida ao iniciar,
+e com esta seção e sem uma licença válida, ele se recusa a iniciar.
+Um servidor da API em execução continua replicando até reiniciar.
 
 Existem dois `scheme`s de replicação:
 - `file`: Replicar para um caminho de arquivo local

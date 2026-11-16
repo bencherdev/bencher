@@ -1,6 +1,6 @@
 ## 灾难恢复
 
-为了防止数据丢失，Bencher 提供了内置的灾难恢复解决方案。此功能需要有效的 [Bencher Plus][pricing] 许可证。
+为了防止数据丢失，Bencher 提供了内置的灾难恢复解决方案。灾难恢复需要服务器上至少一个组织拥有有效的 [Bencher Plus _Enterprise_][pricing] 许可证，配置了灾难恢复的服务器在没有有效许可证时会拒绝启动。正在运行的服务器即使在最后一个许可证过期后，也会继续复制，直到重新启动。从该许可证宽限期的第一天起，服务器每天都会记录一条错误，说明它何时将拒绝启动。
 
 支持的复制方案：
 
@@ -8,6 +8,8 @@
 - `s3`：复制到任何兼容 S3 的对象存储
 
 使用 API 服务器配置中的[ `plus.disaster_recovery` 部分][plus disaster recovery] 为您的 Bencher 自托管 API 服务器设置灾难恢复。
+
+要停止配置了灾难恢复的服务器，请只向 API 服务器进程发送停止信号（`SIGTERM` 或 `SIGINT`）。API 服务器随后会完成正在处理的请求并停止复制，复制进程（`litestream`）在退出前会同步最后的更改。如果第二个停止信号直接发送到复制进程，就会取消最后一次复制，最后的更改可能会丢失。`docker stop` 只向 API 服务器进程发送停止信号。使用 systemd 时，请在单元中设置 `KillMode=mixed`，使停止信号只到达 API 服务器进程。
 
 [pricing]: /pricing/
 [plus disaster recovery]: /zh/docs/reference/server-config/#plusdisaster_recovery

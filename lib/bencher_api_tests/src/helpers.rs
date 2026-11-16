@@ -7,7 +7,7 @@ use bencher_google_client::GoogleClient;
 use bencher_json::{
     BranchName, BranchUuid, DateTime, HeadUuid, JobStatus, JobUuid, Jwt, MetricName, MetricUuid,
     OAuthAccessToken, OAuthAuthorizationUuid, OAuthGrantUuid, OAuthRefreshToken, OAuthResource,
-    OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet, ReportUuid, ResourceName,
+    OAuthScopes, OAuthTokenHash, OrganizationUuid, ParameterSet, ReportUuid, ResourceName, SsoUuid,
     TestbedUuid, TokenUuid, UserKeyUuid, UserUuid, VariantUuid, VersionUuid,
     system::config::JsonOAuthServer,
 };
@@ -624,6 +624,72 @@ pub fn user_organizations(server: &TestServer, user: UserUuid) -> Vec<Organizati
         .select(schema::organization::uuid)
         .load(&mut server.db_conn())
         .expect("Failed to get organization roles")
+}
+
+#[expect(clippy::expect_used, reason = "test helper querying an organization")]
+fn organization_id(conn: &mut DbConnection, organization: &TestOrg) -> i32 {
+    schema::organization::table
+        .filter(schema::organization::uuid.eq(organization.uuid.to_string()))
+        .select(schema::organization::id)
+        .first(conn)
+        .expect("Failed to get organization ID")
+}
+
+/// A metered plan row for `subscription`, as an attach leaves it, written straight into the
+/// database.
+#[expect(clippy::expect_used, reason = "test helper inserting a plan")]
+pub fn insert_metered_plan(server: &TestServer, organization: &TestOrg, subscription: &str) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    diesel::insert_into(schema::plan::table)
+        .values((
+            schema::plan::organization_id.eq(organization_id(&mut conn, organization)),
+            schema::plan::metered_plan.eq(subscription),
+            schema::plan::created.eq(&now),
+            schema::plan::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert the plan");
+}
+
+/// A licensed plan row for `subscription`, a Self-Hosted deal that the organization buys on
+/// Bencher Cloud, holding `license`, as an attach leaves it, written straight into the database.
+#[expect(clippy::expect_used, reason = "test helper inserting a plan")]
+pub fn insert_licensed_plan(
+    server: &TestServer,
+    organization: &TestOrg,
+    subscription: &str,
+    license: &Jwt,
+) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    diesel::insert_into(schema::plan::table)
+        .values((
+            schema::plan::organization_id.eq(organization_id(&mut conn, organization)),
+            schema::plan::licensed_plan.eq(subscription),
+            schema::plan::license.eq(license),
+            schema::plan::created.eq(&now),
+            schema::plan::modified.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert the plan");
+}
+
+/// An SSO domain for the organization, written straight into the database, as one the API
+/// would refuse to add is.
+#[expect(clippy::expect_used, reason = "test helper inserting an SSO domain")]
+pub fn insert_sso(server: &TestServer, organization: &TestOrg, domain: &str) {
+    let mut conn = server.db_conn();
+    let now = base_timestamp();
+    diesel::insert_into(schema::sso::table)
+        .values((
+            schema::sso::uuid.eq(SsoUuid::new()),
+            schema::sso::organization_id.eq(organization_id(&mut conn, organization)),
+            schema::sso::domain.eq(domain),
+            schema::sso::created.eq(&now),
+        ))
+        .execute(&mut conn)
+        .expect("Failed to insert the SSO domain");
 }
 
 /// Insert a metric as its named rows.

@@ -135,6 +135,7 @@ async fn handle_oauth_user(
     #[cfg(feature = "plus")]
     if let OAuthProvider::Google = provider {
         QuerySso::join_all(
+            log,
             context,
             &query_user,
             #[cfg(feature = "otel")]

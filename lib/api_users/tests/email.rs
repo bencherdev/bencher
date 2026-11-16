@@ -12,9 +12,9 @@ use std::sync::{
     atomic::{AtomicI64, Ordering},
 };
 
-#[cfg(feature = "plus")]
-use bencher_api_tests::TestOrg;
 use bencher_api_tests::{LogCapture, TestServer, TestUser, helpers::seed_token};
+#[cfg(feature = "plus")]
+use bencher_api_tests::{TestOrg, helpers::insert_sso};
 use bencher_json::{
     DateTime, Email, JsonConfirm, JsonTokens, JsonUser, Jwt, TokenUuid, UserUuid,
     system::auth::JsonAuthUser,
@@ -299,6 +299,28 @@ async fn email_change_confirm_joins_sso() {
     assert_eq!(
         view_org(&server, session.as_ref(), &org).await,
         StatusCode::OK
+    );
+}
+
+// Fails if a confirmed email joins the organization with its SSO domain when that organization has
+// no valid license.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn email_change_confirm_joins_no_unlicensed_sso() {
+    let (server, capture) = server_with_log().await;
+    let admin = server
+        .signup("Admin User", "unlicensed-admin@example.com")
+        .await;
+    let org = server.create_org(&admin, "Unlicensed Sso Org").await;
+    insert_sso(&server, &org, "unlicensed.example.com");
+    let user = server.signup("Sso User", "unlicensed@example.com").await;
+    let new_email = email("sso@unlicensed.example.com");
+    let token = request_change(&server, &capture, &user.token, &user, &new_email).await;
+
+    let session = confirm_ok(&server, user.uuid, &token).await.token;
+    assert_eq!(
+        view_org(&server, session.as_ref(), &org).await,
+        StatusCode::NOT_FOUND
     );
 }
 

@@ -95,6 +95,7 @@ const TIERS: Tier[] = [
 		features: [
 			{ mark: "check", label: "Single sign-on (SSO)" },
 			{ mark: "check", label: "On-premise deployment" },
+			{ mark: "check", label: "On-premise disaster recovery" },
 			{ mark: "check", label: "Dedicated onboarding" },
 		],
 		series: [{ label: "Public Series" }, { label: "Private Series" }],

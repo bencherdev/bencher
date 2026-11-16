@@ -15,7 +15,6 @@ use bencher_schema::{
     model::{
         organization::{
             QueryOrganization,
-            license::OrganizationLicense,
             sso::{InsertSso, QuerySso},
         },
         user::{
@@ -140,9 +139,12 @@ fn get_ls_query<'q>(
 ///
 /// ➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization.
 /// The user must be an admin on the server to use this route.
+/// SSO is Enterprise: on Bencher Cloud, the organization must have an active Enterprise plan,
+/// and on Bencher Self-Hosted, a valid Bencher Plus Enterprise license.
 /// When a user authenticates with the server,
 /// the domain portion of their email will be compared against all SSO domains.
-/// If an SSO domain matches, they will be added as a Member to that Organization.
+/// If an SSO domain matches and its Organization is still Enterprise,
+/// they will be added as a Member to that Organization.
 /// SSO domains must be globally unique on the server.
 /// That is, two Organizations cannot have the same SSO domain.
 #[endpoint {
@@ -170,18 +172,12 @@ async fn post_inner(
     let query_organization =
         QueryOrganization::from_resource_id(auth_conn!(context), &path_params.organization)?;
 
-    // Either the server is Bencher Cloud or the organization must have a valid Bencher Plus license
-    let is_allowed = context.is_bencher_cloud
-        || OrganizationLicense::get_valid(
-            &context.licensor,
-            &query_organization,
-            context.clock.now(),
-        )
-        .is_some();
-    if !is_allowed {
-        return Err(payment_required_error(
-            "You must have a valid Bencher Plus Enterprise license for the organization to add SSO",
-        ));
+    if !query_organization.is_enterprise(context).await? {
+        return Err(payment_required_error(if context.is_bencher_cloud {
+            "You must have an active Bencher Cloud Enterprise plan for the organization to add SSO"
+        } else {
+            "You must have a valid Bencher Plus Enterprise license for the organization to add SSO"
+        }));
     }
 
     let insert_sso = InsertSso::from_json(query_organization.id, json_new_sso);

@@ -44,6 +44,7 @@ import {
 	manageQuery,
 	type Plan,
 	period,
+	portalOpens,
 	shortDay,
 	type Usage,
 	usageQuery,
@@ -231,6 +232,7 @@ const UsageView = (props: { usage: Usage; name: string; stored: string }) => {
 									organization={props.usage.organization}
 									card={plan().card}
 									collectionMethod={plan().collection_method}
+									portal={portalOpens(plan())}
 								/>
 							)}
 						</Show>
@@ -263,6 +265,7 @@ const UsageView = (props: { usage: Usage; name: string; stored: string }) => {
 							organization={props.usage.organization}
 							card={plan().card}
 							collectionMethod={plan().collection_method}
+							portal={portalOpens(plan())}
 						/>
 						<section class="setcard" aria-labelledby="sec-key">
 							<div class="setcard-head">
@@ -324,6 +327,18 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 		) : (
 			"-"
 		);
+	// An Enterprise plan ends with its contract, so its contact takes the place of cancel and resume.
+	const enterprise = () => props.plan.level === "enterprise";
+	const contactUs = (size?: "sm") => (
+		<a
+			class="ui-button"
+			data-variant="secondary"
+			data-size={size}
+			href={CONTACT}
+		>
+			Contact us
+		</a>
+	);
 	const used = () => props.usage.active_series ?? 0;
 	const minutes = () => props.usage.runner_minutes ?? 0;
 	const tiers = () => props.plan.tiers ?? [];
@@ -396,13 +411,15 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 					>
 						<span class="toolbar">
 							<span class="muted sm">Ends {fullDay(end())}</span>
-							<Button
-								size="sm"
-								disabled={busy()}
-								onClick={() => schedule(false)}
-							>
-								Resume plan
-							</Button>
+							<Show when={!enterprise()} fallback={contactUs("sm")}>
+								<Button
+									size="sm"
+									disabled={busy()}
+									onClick={() => schedule(false)}
+								>
+									Resume plan
+								</Button>
+							</Show>
 						</span>
 					</Show>
 				</div>
@@ -483,6 +500,7 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 				organization={props.usage.organization}
 				card={props.plan.card}
 				collectionMethod={props.plan.collection_method}
+				portal={portalOpens(props.plan)}
 			/>
 			<Show when={!props.plan.cancel_at_period_end}>
 				<section class="setcard danger" aria-labelledby="sec-danger">
@@ -495,19 +513,23 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 						<div class="danger-row">
 							<div class="grow">
 								<h3>Cancel plan</h3>
-								<p id="dz-cancel" class="muted">
-									{level()} ends with this period on {fullDay(end())}, and{" "}
-									{props.name} moves to the Free plan.
-								</p>
+								<Show when={!enterprise()}>
+									<p id="dz-cancel" class="muted">
+										{level()} ends with this period on {fullDay(end())}, and{" "}
+										{props.name} moves to the Free plan.
+									</p>
+								</Show>
 							</div>
-							<Button
-								variant="danger"
-								aria-haspopup="dialog"
-								aria-describedby="dz-cancel"
-								onClick={() => setConfirming(true)}
-							>
-								Cancel plan
-							</Button>
+							<Show when={!enterprise()} fallback={contactUs()}>
+								<Button
+									variant="danger"
+									aria-haspopup="dialog"
+									aria-describedby="dz-cancel"
+									onClick={() => setConfirming(true)}
+								>
+									Cancel plan
+								</Button>
+							</Show>
 						</div>
 					</div>
 					<Show when={confirming()}>
@@ -563,6 +585,8 @@ const Payment = (props: {
 	card?: JsonCardDetails | null | undefined;
 	/** Compared as text, so the generated enums stay out of the page. */
 	collectionMethod: string;
+	/** Whether the plan opens a billing portal. */
+	portal: boolean;
 }) => {
 	const { api } = useAccount();
 	const [opening, setOpening] = createSignal(false);
@@ -608,9 +632,11 @@ const Payment = (props: {
 						)}
 					</Show>
 					<span class="spacer" />
-					<Button disabled={opening()} onClick={update}>
-						{props.card ? "Update card" : "Manage billing"}
-					</Button>
+					<Show when={props.portal}>
+						<Button disabled={opening()} onClick={update}>
+							{props.card ? "Update card" : "Manage billing"}
+						</Button>
+					</Show>
 				</div>
 				<Show when={failure()}>
 					{(message) => (

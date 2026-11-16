@@ -17,6 +17,13 @@ export type Usage = Omit<JsonUsage, "plan"> & { plan?: Plan };
 
 export const withoutPayer = ({ customer: _, ...plan }: JsonPlan): Plan => plan;
 
+/** Whether the plan opens a billing portal, as the API says; an API that does not say opens one for Pro only. */
+export const portalOpens = (plan: Pick<Plan, "level" | "portal">): boolean => {
+	const portal: boolean | undefined = plan.portal;
+	const level: string = plan.level;
+	return portal ?? level === "pro";
+};
+
 export const usageQuery = (api: Api, organization: string) => ({
 	queryKey: ["organization", organization, "usage"],
 	queryFn: async ({ signal }: { signal: AbortSignal }): Promise<Usage> => {

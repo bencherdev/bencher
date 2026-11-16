@@ -2,7 +2,7 @@
 
 use bencher_billing::{Biller, CustomerId, HeldLicense, LicenseTerm, LicensedPlan};
 use bencher_json::{
-    DateTime, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, Priority,
+    DateTime, JsonPlan, Jwt, LicensedPlanId, MeteredPlanId, PlanLevel, PlanStatus, Priority,
     organization::plan::JsonReportLicense, project::Visibility,
 };
 use bencher_license::{LicenseClaims, LicenseError, Licensor};
@@ -552,6 +552,12 @@ impl PlanKind {
     }
 }
 
+/// Whether a Bencher Cloud plan at `level` in `status` makes its organization Enterprise: an
+/// Enterprise plan that is active or in its trial.
+pub fn is_enterprise_plan(level: PlanLevel, status: PlanStatus) -> bool {
+    level == PlanLevel::Enterprise && status.is_active()
+}
+
 #[cfg(feature = "otel")]
 impl From<&PlanKind> for bencher_otel::PlanKind {
     fn from(plan_kind: &PlanKind) -> Self {
@@ -565,10 +571,34 @@ impl From<&PlanKind> for bencher_otel::PlanKind {
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::DateTime;
+    use bencher_json::{DateTime, PlanLevel, PlanStatus};
 
-    use super::{MeteredPlan, PlanKind};
+    use super::{MeteredPlan, PlanKind, is_enterprise_plan};
     use crate::model::organization::license::OrganizationLicense;
+
+    // Fails if an Enterprise plan that is neither active nor in its trial makes its organization
+    // Enterprise, an active or trialing one does not, or a Pro plan ever does.
+    #[test]
+    fn only_a_live_enterprise_plan_is_enterprise() {
+        for status in [
+            PlanStatus::Active,
+            PlanStatus::Trialing,
+            PlanStatus::PastDue,
+            PlanStatus::Unpaid,
+            PlanStatus::Incomplete,
+            PlanStatus::IncompleteExpired,
+            PlanStatus::Canceled,
+            PlanStatus::Paused,
+        ] {
+            let live = matches!(status, PlanStatus::Active | PlanStatus::Trialing);
+            assert_eq!(
+                is_enterprise_plan(PlanLevel::Enterprise, status),
+                live,
+                "{status:?}"
+            );
+            assert!(!is_enterprise_plan(PlanLevel::Pro, status), "{status:?}");
+        }
+    }
 
     // Fails if a metered plan does not post its active series for its own customer and
     // period, or any other plan does.

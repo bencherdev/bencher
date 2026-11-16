@@ -159,6 +159,15 @@ pub fn any_valid_license(
     licensor: &Licensor,
     now: DateTime,
 ) -> Result<bool, HttpError> {
+    server_license(conn, licensor, now).map(ServerLicense::is_licensed)
+}
+
+/// What the licenses of every organization on the server say at `now`.
+pub fn server_license(
+    conn: &mut DbConnection,
+    licensor: &Licensor,
+    now: DateTime,
+) -> Result<ServerLicense, HttpError> {
     // Intentionally includes soft-deleted organizations, as a license belongs to the server
     let licenses = schema::organization::table
         .filter(schema::organization::license.is_not_null())
@@ -174,23 +183,55 @@ pub fn any_valid_license(
                 e,
             )
         })?;
-    Ok(any_valid(
+    Ok(server_license_of(
         licensor,
         licenses.iter().map(|(uuid, license)| (*uuid, license)),
         now,
     ))
 }
 
-fn any_valid<'a>(
+/// What the licenses on a server say at `now` about the server features of Bencher Plus.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ServerLicense {
+    /// At least one organization holds a license in its paid term.
+    InTerm,
+    /// Every valid license is in its grace, and the last of them expires at `expiration`.
+    InGrace { expiration: DateTime },
+    /// No organization holds a valid license.
+    Unlicensed,
+}
+
+impl ServerLicense {
+    /// Whether any organization holds a valid license, its grace included.
+    pub fn is_licensed(self) -> bool {
+        !matches!(self, Self::Unlicensed)
+    }
+}
+
+fn server_license_of<'a>(
     licensor: &Licensor,
     licenses: impl IntoIterator<Item = (OrganizationUuid, &'a Jwt)>,
     now: DateTime,
-) -> bool {
-    licenses.into_iter().any(|(organization, license)| {
+) -> ServerLicense {
+    let mut server = ServerLicense::Unlicensed;
+    let valid = licenses.into_iter().filter_map(|(organization, license)| {
         licensor
             .validate_organization(license, organization, now)
-            .is_ok()
-    })
+            .ok()
+    });
+    for claims in valid {
+        if !claims.in_grace(now) {
+            return ServerLicense::InTerm;
+        }
+        let expiration = claims.expiration();
+        if let ServerLicense::InGrace { expiration: last } = server
+            && last.timestamp() >= expiration.timestamp()
+        {
+            continue;
+        }
+        server = ServerLicense::InGrace { expiration };
+    }
+    server
 }
 
 /// What a report response says about the license: that the organization's `active_series`
@@ -441,7 +482,8 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::{
-        QueryLicensePeak, SeriesCount, any_valid, any_valid_license, raises_peak, report_license,
+        QueryLicensePeak, SeriesCount, ServerLicense, any_valid_license, raises_peak,
+        report_license, server_license_of,
     };
     use crate::{
         schema,
@@ -515,11 +557,12 @@ mod tests {
         let licensor = Licensor::self_hosted().unwrap();
         let organization = OrganizationUuid::new();
         let any = |licenses: &[(OrganizationUuid, Jwt)]| {
-            any_valid(
+            server_license_of(
                 &licensor,
                 licenses.iter().map(|(uuid, license)| (*uuid, license)),
                 now(),
             )
+            .is_licensed()
         };
 
         assert!(!any(&[]));
@@ -535,6 +578,67 @@ mod tests {
             (organization, expired(organization)),
             (other, in_grace(other)),
         ]));
+    }
+
+    // Fails if a server with a license in its paid term reads as anything else, whatever its other
+    // licenses; if a server whose every valid license is in its grace does not read as in its grace
+    // until the last of them expires; or if a server with no valid license reads as licensed.
+    #[test]
+    fn server_license_reads_the_term_the_grace_and_none() {
+        let licensor = Licensor::self_hosted().unwrap();
+        let organization = OrganizationUuid::new();
+        let other = OrganizationUuid::new();
+        let state = |licenses: &[(OrganizationUuid, Jwt)]| {
+            server_license_of(
+                &licensor,
+                licenses.iter().map(|(uuid, license)| (*uuid, license)),
+                now(),
+            )
+        };
+        let expiration = |license: &Jwt| licensor.validate(license, now()).unwrap().expiration();
+
+        assert_eq!(state(&[]), ServerLicense::Unlicensed);
+        assert_eq!(
+            state(&[
+                (organization, expired(organization)),
+                (other, foreign(other)),
+            ]),
+            ServerLicense::Unlicensed
+        );
+        assert_eq!(
+            state(&[(organization, valid(organization))]),
+            ServerLicense::InTerm
+        );
+
+        let grace = in_grace(organization);
+        assert_eq!(
+            state(&[(organization, grace.clone())]),
+            ServerLicense::InGrace {
+                expiration: expiration(&grace),
+            }
+        );
+        // Its term ended an hour ago, so its grace ends after the first license's.
+        let later = sign(
+            TEST_LICENSE_KEY,
+            other,
+            now() - Duration::days(20),
+            now() - Duration::hours(1),
+        );
+        let last = ServerLicense::InGrace {
+            expiration: expiration(&later),
+        };
+        assert_eq!(
+            state(&[(organization, grace.clone()), (other, later.clone())]),
+            last
+        );
+        assert_eq!(
+            state(&[(other, later), (organization, grace.clone())]),
+            last
+        );
+        assert_eq!(
+            state(&[(organization, grace), (other, valid(other))]),
+            ServerLicense::InTerm
+        );
     }
 
     // Fails if a count does not start its term's peak, a higher count does not raise it, or an

@@ -2,6 +2,10 @@
 
 Dieser Abschnitt spezifiziert die Konfiguration der Notfallwiederherstellung.
 Bencher unterstützt das kontinuierliche Replizieren aller Datenbankänderungen.
+Bei Bencher Self-Hosted erfordert die Notfallwiederherstellung eine gültige Bencher Plus _Enterprise_ Lizenz für mindestens eine Organisation auf dem Server.
+Der API-Server prüft beim Start, ob eine gültige Lizenz vorhanden ist,
+und mit diesem Abschnitt, aber ohne gültige Lizenz, verweigert er den Start.
+Ein laufender API-Server repliziert weiter, bis er neu startet.
 
 Es gibt zwei Replikations-`scheme`s:
 - `file`: Replikation zu einem lokalen Dateipfad

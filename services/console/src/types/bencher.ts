@@ -2608,6 +2608,11 @@ export interface JsonPlan {
 	 * (the org keeps access until `current_period_end`, then downgrades to Free).
 	 */
 	cancel_at_period_end: boolean;
+	/**
+	 * Whether the plan opens a billing portal: always for Pro, and for Enterprise only with the
+	 * server's Enterprise portal configuration, which has no cancel and no plan changes.
+	 */
+	portal?: boolean;
 	license?: JsonLicense;
 }
 
@@ -2809,7 +2814,8 @@ export interface JsonUpdatePlan {
 	 * Update the subscription's scheduled cancellation. Set to `false` to resume
 	 * a plan scheduled to cancel at period end, or `true` to schedule it to
 	 * cancel at the end of the current period. Only applies to metered
-	 * subscriptions, not licensed (Self-Hosted) plans.
+	 * subscriptions, not licensed (Self-Hosted) plans, and not to an Enterprise
+	 * plan, which ends with its contract.
 	 */
 	cancel_at_period_end: boolean;
 }

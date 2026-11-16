@@ -100,7 +100,8 @@ pub struct JsonUpdatePlan {
     /// Update the subscription's scheduled cancellation. Set to `false` to resume
     /// a plan scheduled to cancel at period end, or `true` to schedule it to
     /// cancel at the end of the current period. Only applies to metered
-    /// subscriptions, not licensed (Self-Hosted) plans.
+    /// subscriptions, not licensed (Self-Hosted) plans, and not to an Enterprise
+    /// plan, which ends with its contract.
     pub cancel_at_period_end: bool,
 }
 
@@ -137,6 +138,10 @@ pub struct JsonPlan {
     /// Whether the subscription is set to cancel at the end of the current period
     /// (the org keeps access until `current_period_end`, then downgrades to Free).
     pub cancel_at_period_end: bool,
+    /// Whether the plan opens a billing portal: always for Pro, and for Enterprise only with the
+    /// server's Enterprise portal configuration, which has no cancel and no plan changes.
+    #[serde(default)]
+    pub portal: bool,
     pub license: Option<JsonLicense>,
 }
 
