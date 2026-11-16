@@ -22,6 +22,7 @@ plus = [
     "dep:bencher_oci_storage",
     "dep:hex",
     "dep:http",
+    "dep:jsonwebtoken",
     "dep:serde_json",
     "dep:sha2",
 ]
@@ -47,6 +48,10 @@ diesel = { workspace = true, features = ["sqlite"] }
 dropshot.workspace = true
 hex = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
+jsonwebtoken = { workspace = true, optional = true, features = [
+    "use_pem",
+    "rust_crypto",
+] }
 libsqlite3-sys.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
 rustls.workspace = true

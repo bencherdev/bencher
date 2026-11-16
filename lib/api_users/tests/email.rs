@@ -285,9 +285,7 @@ async fn email_change_confirm_joins_sso() {
     let (server, capture) = server_with_log().await;
     let admin = server.signup("Admin User", "sso-admin@example.com").await;
     let org = server.create_org(&admin, "Sso Org").await;
-    server
-        .license_org(&admin, &org, bencher_json::PlanLevel::Enterprise)
-        .await;
+    server.license_org(&admin, &org).await;
     add_sso(&server, &admin, &org, "sso.example.com").await;
     let user = server.signup("Sso User", "sso@example.com").await;
     assert_eq!(

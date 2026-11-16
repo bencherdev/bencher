@@ -7,11 +7,10 @@ export const allowsPrivate = (usage: JsonUsage) => {
 	switch (usage.kind as string) {
 		case "cloud_metered":
 			return status === "active" || status === "trialing";
+		// The API reports a license only while it is valid, and a valid license
+		// takes every report, over its count or not.
 		case "self_hosted_licensed":
-			return (
-				usage.license !== undefined &&
-				(usage.metrics ?? 0) < usage.license.entitlements
-			);
+			return usage.license !== undefined;
 		default:
 			return false;
 	}

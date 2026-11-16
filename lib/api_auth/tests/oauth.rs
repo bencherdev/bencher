@@ -189,7 +189,6 @@ async fn provider_server() -> TestServer {
         TestServerOptions,
         helpers::{github_client, google_client, oauth_server},
     };
-    use bencher_json::PlanLevel;
 
     let server = TestServer::new_with_options(TestServerOptions {
         oauth: Some(oauth_server()),
@@ -201,6 +200,74 @@ async fn provider_server() -> TestServer {
     // Signing in with a provider takes an Enterprise license on a self-hosted server.
     let user = server.signup("License User", "license@example.com").await;
     let org = server.create_org(&user, "Licensed").await;
-    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server.license_org(&user, &org).await;
     server
+}
+
+// GitHub and Google sign-in on a Self-Hosted server are on while one organization on the server
+// holds a valid license, its grace included, and off with none or with only an expired one.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn provider_sign_in_needs_a_valid_license_on_the_server() {
+    use bencher_api_tests::{
+        TestServerOptions,
+        helpers::{github_client, google_client},
+        license::{DAY, TEST_LICENSE_SERIES, after, sign_license},
+    };
+    use http::StatusCode;
+
+    let server = TestServer::new_with_options(TestServerOptions {
+        github_client: Some(github_client()),
+        google_client: Some(google_client()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let statuses = async || {
+        let mut statuses = Vec::new();
+        for path in ["/v0/auth/github", "/v0/auth/google"] {
+            let resp = server
+                .client
+                .get(server.api_url(path))
+                .send()
+                .await
+                .expect("Request failed");
+            statuses.push(resp.status());
+        }
+        statuses
+    };
+    let refused = vec![StatusCode::PAYMENT_REQUIRED; 2];
+    assert_eq!(statuses().await, refused, "no license");
+
+    let user = server.signup("License User", "license@example.com").await;
+    let now = server.now();
+    let expired = server.create_org(&user, "Expired").await;
+    server.store_license(
+        &expired,
+        &sign_license(
+            expired.uuid,
+            TEST_LICENSE_SERIES,
+            after(now, -400 * DAY),
+            after(now, -31 * DAY),
+        ),
+    );
+    assert_eq!(statuses().await, refused, "only an expired license");
+
+    let in_grace = server.create_org(&user, "In Grace").await;
+    server
+        .license_org_with(
+            &user,
+            &in_grace,
+            &sign_license(
+                in_grace.uuid,
+                TEST_LICENSE_SERIES,
+                after(now, -40 * DAY),
+                after(now, -DAY),
+            ),
+        )
+        .await;
+    assert_eq!(
+        statuses().await,
+        vec![StatusCode::OK; 2],
+        "a license in its grace"
+    );
 }

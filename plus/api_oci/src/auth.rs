@@ -699,7 +699,8 @@ pub(crate) async fn check_oci_bandwidth(
 ) -> Result<OrganizationUuid, HttpError> {
     let conn = public_conn!(context);
     let organization = project.organization(conn)?;
-    let priority = organization.oci_bandwidth_priority(conn, &context.licensor)?;
+    let priority =
+        organization.oci_bandwidth_priority(conn, &context.licensor, context.clock.now())?;
     context
         .rate_limiting
         .check_oci_bandwidth(organization.uuid, priority, &organization)?;

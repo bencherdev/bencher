@@ -43,6 +43,7 @@ use crate::{actor_conn, model::user::actor::ApiActor};
 
 use super::user::QueryUser;
 
+pub mod license;
 pub mod member;
 pub mod organization_role;
 pub mod plan;
@@ -501,6 +502,7 @@ impl QueryOrganization {
         &self,
         conn: &mut DbConnection,
         licensor: &bencher_license::Licensor,
+        now: DateTime,
     ) -> Result<bencher_json::Priority, HttpError> {
         use bencher_json::Priority;
         use diesel::{BelongingToDsl as _, RunQueryDsl as _};
@@ -518,7 +520,9 @@ impl QueryOrganization {
 
         // Check organization-level license
         if let Some(license) = &self.license
-            && licensor.validate_organization(license, self.uuid).is_ok()
+            && licensor
+                .validate_organization(license, self.uuid, now)
+                .is_ok()
         {
             return Ok(Priority::Plus);
         }

@@ -22,6 +22,7 @@ import type {
 	JsonCardDetails,
 	JsonCheckout,
 	JsonLicense,
+	JsonLicensePeak,
 	JsonPlan,
 	JsonPlanPortal,
 } from "../../types/bencher";
@@ -38,6 +39,7 @@ import {
 	cardName,
 	estimate,
 	fullDay,
+	inGrace,
 	manageQuery,
 	type Plan,
 	period,
@@ -124,7 +126,13 @@ const OrgBilling = () => {
 				</Match>
 				<Match when={manage().data === false}>{null}</Match>
 				<Match when={manage().data && usage().data}>
-					{(shown) => <UsageView usage={shown()} name={name() ?? key()} />}
+					{(shown) => (
+						<UsageView
+							usage={shown()}
+							name={name() ?? key()}
+							stored={organization().data?.license ?? ""}
+						/>
+					)}
 				</Match>
 				<Match when={manage().data && unlicensed() && organization().data}>
 					{(shown) => (
@@ -199,7 +207,8 @@ const useCheckoutReturn = (organization: () => string) => {
 	return { enrollment, recorded };
 };
 
-const UsageView = (props: { usage: Usage; name: string }) => {
+/** The organization's usage; `stored` is the license key it holds, which the API reads as Free when it is not valid. */
+const UsageView = (props: { usage: Usage; name: string; stored: string }) => {
 	// Compared as text, so the generated enums stay out of the page.
 	const kind = (): string => props.usage.kind;
 	return (
@@ -234,7 +243,12 @@ const UsageView = (props: { usage: Usage; name: string }) => {
 			</Match>
 			<Match when={kind() === "self_hosted_free"}>
 				<ThisMonth usage={props.usage} />
-				<LicenseKey uuid={props.usage.organization} current="" editable />
+				<LicenseKey
+					uuid={props.usage.organization}
+					current={props.stored}
+					editable
+					invalid={props.stored !== ""}
+				/>
 			</Match>
 		</Switch>
 	);
@@ -712,39 +726,78 @@ const ThisMonth = (props: { usage: Usage }) => (
 						<small class="muted">min</small>
 					</span>
 				</Stat>
+				<Show when={props.usage.previous_peak}>
+					{(peak) => <LastTerm peak={peak()} />}
+				</Show>
 			</div>
 		</div>
 	</section>
 );
 
+/** The peak of the term before, which a renewal is trued up against. */
+const LastTerm = (props: { peak: JsonLicensePeak }) => (
+	<Stat label="Last term">
+		<span class="figure">{formatCount(props.peak.active_series)}</span>
+		<span class="muted sm">
+			{fullDay(props.peak.seen)}, term ended {fullDay(props.peak.term_end)}
+		</span>
+	</Stat>
+);
+
+/** Every license is Enterprise: its term, and on Self-Hosted its active series against its own, with the peak. */
 const License = (props: { usage: Usage; license: JsonLicense }) => (
 	<section class="setcard" aria-labelledby="sec-lic">
 		<div class="setcard-head">
 			<h2 class="seclabel" id="sec-lic">
-				{levelName(props.license.level)} License
+				Enterprise License
 			</h2>
 			<span class="spacer" />
 			<span class="muted sm">
-				{period(props.license.issued_at, props.license.expiration)}
+				{period(props.license.issued_at, props.license.term_end)}
 			</span>
 		</div>
-		<Show when={props.usage.metrics != null}>
+		{/* Bencher Cloud keeps a license for a Self-Hosted server to copy, and counts nothing for it. */}
+		<Show when={props.usage.active_series != null}>
 			<div class="setcard-body">
+				<Show when={inGrace(props.license, props.usage.end_time)}>
+					<Banner status="warning" role="status">
+						The term ended {fullDay(props.license.term_end)}. The license
+						expires {fullDay(props.license.expiration)}.
+					</Banner>
+				</Show>
 				<div class="stats">
-					<Stat label="Metrics this term">
+					<Stat label="Active series">
 						<span class="figure">
-							{formatCount(props.usage.metrics ?? 0)}
+							{formatCount(props.usage.active_series ?? 0)}
 							<small class="muted">
 								{" "}
-								of {formatCount(props.license.entitlements)}
+								of {formatCount(props.license.series)}
 							</small>
 						</span>
 						<Meter
-							used={props.usage.metrics ?? 0}
-							of={props.license.entitlements}
-							unit="metrics"
+							used={props.usage.active_series ?? 0}
+							of={props.license.series}
+							unit="active series"
 						/>
 					</Stat>
+					<Stat label="Peak">
+						<Show
+							when={props.usage.peak}
+							fallback={<span class="figure">-</span>}
+						>
+							{(peak) => (
+								<>
+									<span class="figure">
+										{formatCount(peak().active_series)}
+									</span>
+									<span class="muted sm">{fullDay(peak().seen)}</span>
+								</>
+							)}
+						</Show>
+					</Stat>
+					<Show when={props.usage.previous_peak}>
+						{(peak) => <LastTerm peak={peak()} />}
+					</Show>
 					<Stat label="Bare metal">
 						<span class="figure">
 							{formatCount(props.usage.runner_minutes ?? 0)}{" "}
@@ -763,13 +816,17 @@ const LicenseKey = (props: {
 	uuid: string;
 	current: string;
 	editable: boolean;
+	/** The key is one the API does not take as a valid license. */
+	invalid?: boolean;
 }) => {
 	const { api } = useAccount();
 	const client = useQueryClient();
 	const params = useParams();
 	const current = () => props.current;
 	const licensed = () => current() !== "";
-	const [draft, setDraft] = createSignal(current());
+	// The stored key until the reader edits it, as the organization's read may answer later.
+	const [edited, setEdited] = createSignal<string>();
+	const draft = () => edited() ?? current();
 	const [saving, setSaving] = createSignal(false);
 	const [failure, setFailure] = createSignal<string>();
 	const changed = () => draft().trim() !== "" && draft().trim() !== current();
@@ -797,6 +854,9 @@ const LicenseKey = (props: {
 				<h2 class="seclabel" id="sec-key">
 					{licensed() ? "License key" : "License"}
 				</h2>
+				<Show when={props.invalid}>
+					<span class="set-status">Not valid</span>
+				</Show>
 				<Show when={!licensed()}>
 					<span class="spacer" />
 					<a
@@ -845,7 +905,7 @@ const LicenseKey = (props: {
 								class="mono spacer"
 								value={draft()}
 								onInput={(event) => {
-									setDraft(event.currentTarget.value);
+									setEdited(event.currentTarget.value);
 									setFailure(undefined);
 								}}
 								readOnly={!props.editable}

@@ -13,6 +13,7 @@ afterEach(() => {
 	dispose?.();
 	dispose = undefined;
 	vi.restoreAllMocks();
+	vi.useRealTimers();
 	localStorage.clear();
 });
 
@@ -81,22 +82,42 @@ const FREE = {
 
 const KEY = "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJvMSJ9.c2lnbmF0dXJl";
 
+// The peak of the term before, which the server keeps through a renewal.
+const LAST_TERM = {
+	term_end: "2026-10-01T12:00:00Z",
+	active_series: 2_300,
+	seen: "2026-09-20T12:00:00Z",
+};
+
+// A year's license for 2,000 Benchmark Series, read a month into its term.
 const LICENSED = {
 	organization: "o1",
 	kind: "self_hosted_licensed",
 	license: {
 		key: KEY,
 		organization: "o1",
-		level: "enterprise",
-		entitlements: 2_000_000,
+		series: 2_000,
 		issued_at: PERIOD.start_time,
-		expiration: "2027-10-01T12:00:00Z",
+		term_end: "2027-10-01T12:00:00Z",
+		expiration: "2027-10-31T12:00:00Z",
 	},
-	start_time: PERIOD.start_time,
-	end_time: "2027-10-01T12:00:00Z",
-	metrics: 1_212_480,
+	start_time: "2026-10-02T12:00:00Z",
+	end_time: PERIOD.end_time,
+	active_series: 2_120,
+	peak: {
+		term_end: "2027-10-01T12:00:00Z",
+		active_series: 2_480,
+		seen: "2026-10-20T12:00:00Z",
+	},
+	previous_peak: LAST_TERM,
 	runner_minutes: 4_210,
 } as unknown as JsonUsage;
+
+/** The browser's clock, frozen at `time`. */
+const at = (time: string) => {
+	vi.useFakeTimers({ toFake: ["Date"] });
+	vi.setSystemTime(Date.parse(time));
+};
 
 const UNLICENSED = {
 	organization: "o1",
@@ -727,9 +748,11 @@ describe("self-hosted", () => {
 			),
 		].map((label) => label.textContent);
 
-	// Kills a license box that drops the term, the metrics against the
-	// entitlements, or the bare metal minutes, and a key box that leads with
-	// the key rather than the organization's UUID.
+	// Kills a license box that drops the term, the active series against the
+	// license's, the peak or its date, the last term's peak, its date, or its
+	// term end, or the bare metal minutes, a grace warned in the term, and a key
+	// box that leads with the key rather than the organization's UUID, or calls
+	// a valid key not valid.
 	test("a licensed install shows its license, then the UUID and its key", async () => {
 		open(LICENSED);
 		const license = region("Enterprise License");
@@ -738,15 +761,66 @@ describe("self-hosted", () => {
 			.toHaveTextContent("Oct 1, 2026 to Oct 1, 2027");
 		await expect
 			.element(
-				license.getByRole("img", { name: "1,212,480 of 2,000,000 metrics" }),
+				license.getByRole("img", { name: "2,120 of 2,000 active series" }),
 			)
 			.toBeVisible();
+		await expect.element(license).toHaveTextContent("Peak2,480");
+		await expect.element(license).toHaveTextContent("Oct 20, 2026");
+		await expect.element(license).toHaveTextContent("Last term2,300");
+		await expect
+			.element(license)
+			.toHaveTextContent("Sep 20, 2026, term ended Oct 1, 2026");
 		await expect.element(license).toHaveTextContent("4,210 min");
+		expect(license.getByRole("alert").query()).toBeNull();
+		expect(license.getByRole("status").query()).toBeNull();
 		expect(rowLabels()).toEqual(["Organization UUID", "License key"]);
 		await expect
 			.element(page.getByRole("textbox", { name: "License key" }))
 			.toHaveValue(KEY);
 		await expect.element(button("Replace key")).toBeDisabled();
+		expect(region("License key").getByText("Not valid").query()).toBeNull();
+	});
+
+	// Kills a license in its grace drawn without a warning, one that drops the
+	// end of the term or the expiration, or a grace read from the reader's clock
+	// rather than the server's.
+	test("a license in its grace by the server's time warns with the term end and the expiration", async () => {
+		at(PERIOD.end_time);
+		open({ ...LICENSED, end_time: "2027-10-10T12:00:00Z" } as JsonUsage);
+		const license = region("Enterprise License");
+		await expect
+			.element(license.getByRole("status"))
+			.toHaveTextContent(
+				"The term ended Oct 1, 2027. The license expires Oct 31, 2027.",
+			);
+	});
+
+	// Kills a grace read from the reader's clock, which the report responses
+	// from the server do not send.
+	test("a reader's clock past the term end warns of no grace the server has not reached", async () => {
+		at("2027-10-10T12:00:00Z");
+		open(LICENSED);
+		await expect
+			.element(region("Enterprise License"))
+			.toHaveTextContent("Peak2,480");
+		expect(region("Enterprise License").getByRole("status").query()).toBeNull();
+	});
+
+	// Kills a license with no count yet that shows a peak, or one with no
+	// earlier term that shows a last term.
+	test("a license with no counted report shows no peak", async () => {
+		open({
+			...LICENSED,
+			active_series: 0,
+			peak: undefined,
+			previous_peak: undefined,
+		} as unknown as JsonUsage);
+		const license = region("Enterprise License");
+		await expect
+			.element(license.getByRole("img", { name: "0 of 2,000 active series" }))
+			.toBeVisible();
+		await expect.element(license).toHaveTextContent("Peak-");
+		await expect.element(license).not.toHaveTextContent("Last term");
 	});
 
 	// Kills a replaced key sent to another organization, or a page that keeps
@@ -792,6 +866,8 @@ describe("self-hosted", () => {
 			.element(page.getByRole("textbox", { name: "License key" }))
 			.toHaveValue("");
 		await expect.element(button("Save key")).toBeDisabled();
+		expect(region("License").getByText("Not valid").query()).toBeNull();
+		await expect.element(month).not.toHaveTextContent("Last term");
 	});
 
 	// Kills a refused key that does not say why.
@@ -811,6 +887,68 @@ describe("self-hosted", () => {
 			.toHaveTextContent(
 				"Bencher did not save the license key: Invalid license",
 			);
+	});
+
+	// Kills an expired license, which the API reads as Free, left out of the key
+	// box, so the reader has no key to replace, or left without a word that it is
+	// not valid.
+	test("a Free install with an expired license offers its key for replacing", async () => {
+		open(UNLICENSED, {
+			organization: { ...ORGANIZATION, license: "old.key.jwt" },
+		});
+		await expect.element(region("This month")).toBeVisible();
+		await expect
+			.element(page.getByRole("textbox", { name: "License key" }))
+			.toHaveValue("old.key.jwt");
+		await expect.element(button("Replace key")).toBeDisabled();
+		await expect
+			.element(region("License key").getByText("Not valid"))
+			.toBeVisible();
+	});
+
+	// Kills a key box that fills itself again with the stored key once the reader clears it,
+	// as the last character of a key deleted one at a time does.
+	test("a cleared key box stays empty and offers nothing to save", async () => {
+		open(LICENSED);
+		const box = page.getByRole("textbox", { name: "License key" });
+		await expect.element(box).toHaveValue(KEY);
+		await box.fill("e");
+		await expect.element(box).toHaveValue("e");
+		await box.fill("");
+
+		await expect.element(box).toHaveValue("");
+		await expect.element(button("Replace key")).toBeDisabled();
+	});
+
+	// Kills a key box that copies the organization's key once, as it mounts, so a key
+	// that the organization's read brings after the usage never shows.
+	test("a stored key that arrives after the usage still fills the key box", async () => {
+		open(UNLICENSED, {
+			organization: null,
+			read: async (path) => {
+				if (path === "/v0/organizations/pompeii-llc") {
+					return answered({ ...ORGANIZATION, license: "old.key.jwt" });
+				}
+				return new Promise<never>(() => {});
+			},
+		});
+		await expect
+			.element(page.getByRole("textbox", { name: "License key" }))
+			.toHaveValue("old.key.jwt");
+		await expect
+			.element(region("License key").getByText("Not valid"))
+			.toBeVisible();
+	});
+
+	// Kills the last term's peak dropped once the license has expired, or one
+	// drawn for an install that never had a counted term.
+	test("a Free install shows the last term's peak when there is one", async () => {
+		open({ ...UNLICENSED, previous_peak: LAST_TERM } as unknown as JsonUsage);
+		const month = region("This month");
+		await expect.element(month).toHaveTextContent("Last term2,300");
+		await expect
+			.element(month)
+			.toHaveTextContent("Sep 20, 2026, term ended Oct 1, 2026");
 	});
 
 	// Kills a Copy that copies anything but the organization's UUID.

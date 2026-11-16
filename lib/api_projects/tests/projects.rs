@@ -1377,14 +1377,12 @@ async fn plot_component_lists_dedupe() {
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn projects_update_private_for_a_paid_org_past_its_daily_metrics_limit() {
-    use bencher_json::PlanLevel;
-
     let server = TestServer::new_with_creation_and_plus_limits(u32::MAX, u32::MAX, 0).await;
     let user = server
         .signup("Test User", "projupdprivpaid@example.com")
         .await;
     let org = server.create_org(&user, "Update Private Paid Org").await;
-    server.license_org(&user, &org, PlanLevel::Enterprise).await;
+    server.license_org(&user, &org).await;
     let project = server
         .create_project(&user, &org, "Update Private Paid Project")
         .await;
@@ -1413,7 +1411,7 @@ async fn projects_update_private_without_a_plan() {
     use bencher_api_tests::helpers::plan_project;
 
     let server = TestServer::new().await;
-    let (user, project) = plan_project(&server, "private", None).await;
+    let (user, project) = plan_project(&server, "private", false).await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server

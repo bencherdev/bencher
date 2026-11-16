@@ -332,11 +332,14 @@ async fn into_context(
     #[cfg(feature = "plus")]
     let is_bencher_cloud = bencher_json::is_bencher_cloud(&console_url) && biller.is_some();
 
+    let clock = bencher_json::Clock::System;
+
     #[cfg(feature = "plus")]
     let rate_limiting = Arc::new(RateLimiting::new(
         log,
         &mut *database.connection.lock().await,
         &licensor,
+        clock.now(),
         is_bencher_cloud,
         rate_limiting,
     ));
@@ -359,8 +362,6 @@ async fn into_context(
             log.clone(),
             shutdown.clone(),
         ));
-
-    let clock = bencher_json::Clock::System;
 
     #[cfg(feature = "plus")]
     let callbacks = new_callbacks(
