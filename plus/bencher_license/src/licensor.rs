@@ -231,7 +231,7 @@ mod tests {
         let organization = OrganizationUuid::new();
         let entitlements = 1_000.try_into().unwrap();
 
-        for plan_level in [PlanLevel::Free, PlanLevel::Team, PlanLevel::Enterprise] {
+        for plan_level in [PlanLevel::Free, PlanLevel::Enterprise] {
             licensor
                 .new_monthly_license(organization, plan_level, entitlements)
                 .unwrap_err();
@@ -247,7 +247,7 @@ mod tests {
         let organization = OrganizationUuid::new();
         let entitlements = 1_000.try_into().unwrap();
 
-        for plan_level in [PlanLevel::Free, PlanLevel::Team, PlanLevel::Enterprise] {
+        for plan_level in [PlanLevel::Free, PlanLevel::Enterprise] {
             let license = licensor
                 .new_monthly_license(organization, plan_level, entitlements)
                 .unwrap();
@@ -271,7 +271,7 @@ mod tests {
         let organization = OrganizationUuid::new();
         let entitlements = 1_000.try_into().unwrap();
 
-        for plan_level in [PlanLevel::Free, PlanLevel::Team, PlanLevel::Enterprise] {
+        for plan_level in [PlanLevel::Free, PlanLevel::Enterprise] {
             let license = licensor
                 .new_annual_license(organization, plan_level, entitlements)
                 .unwrap();

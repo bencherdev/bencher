@@ -128,8 +128,6 @@ export const planLevel = (level: undefined | PlanLevel) => {
 	switch (level) {
 		case PlanLevel.Free:
 			return "Free";
-		case PlanLevel.Team:
-			return "Team";
 		case PlanLevel.Pro:
 			return "Pro";
 		case PlanLevel.Enterprise:
@@ -139,23 +137,8 @@ export const planLevel = (level: undefined | PlanLevel) => {
 	}
 };
 
-export const planLevelPrice = (level: undefined | PlanLevel) => {
-	switch (level) {
-		case PlanLevel.Free:
-			return 0.0;
-		case PlanLevel.Team:
-		case PlanLevel.Pro:
-			return 0.01;
-		case PlanLevel.Enterprise:
-			return 0.05;
-		default:
-			return 0.0;
-	}
-};
-
 export const runnerMinutePrice = (level: undefined | PlanLevel) => {
 	switch (level) {
-		case PlanLevel.Team:
 		case PlanLevel.Pro:
 		case PlanLevel.Enterprise:
 			return 0.01666;

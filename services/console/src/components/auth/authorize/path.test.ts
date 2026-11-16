@@ -25,7 +25,7 @@ describe("signInPath", () => {
 		expect(signInPath("/auth/signup", UUID)).toBe(
 			`/auth/signup?authorization=${UUID}`,
 		);
-		for (const value of [null, "", "not-a-uuid", `${UUID}&plan=team`]) {
+		for (const value of [null, "", "not-a-uuid", `${UUID}&plan=pro`]) {
 			expect(signInPath("/auth/signup", value)).toBe("/auth/signup");
 		}
 	});
