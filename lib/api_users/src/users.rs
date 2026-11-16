@@ -10,7 +10,7 @@ use bencher_schema::{
     model::user::{
         QueryUser, UpdateUser, UserId,
         admin::AdminUser,
-        auth::{AuthUser, BearerToken},
+        auth::{AuthUser, BearerToken, dead_session},
         email_change::{InsertEmailChange, QueryEmailChange},
         same_user,
         session::QuerySession,
@@ -282,7 +282,7 @@ async fn patch_inner(
         }
     }
     if email_changed || admin_changed || locked_changed {
-        auth_user.check_fresh_sign_in(context).await?;
+        auth_user.check_fresh_sign_in(context)?;
     }
 
     let mut update_user = UpdateUser::from(json_user.clone());
@@ -311,14 +311,25 @@ async fn patch_inner(
         None
     };
 
-    let written = write_transaction!(context, |conn| write_update(
-        conn,
-        query_user.id,
-        &update_user,
-        asked.as_ref().map(|(change, _secret)| change),
-        now
-    ))
-    .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?;
+    // The session that asks for a change, which the change records, unless it has ended.
+    let asking = asked.as_ref().and(auth_user.session());
+    let written = write_transaction!(context, |conn| {
+        if let Some(session) = asking
+            && !QuerySession::is_live(conn, session.id, session.uuid)?
+        {
+            return Ok(None);
+        }
+        write_update(
+            conn,
+            query_user.id,
+            &update_user,
+            asked.as_ref().map(|(change, _secret)| change),
+            now,
+        )
+        .map(Some)
+    })
+    .map_err(resource_conflict_err!(User, (&query_user, &json_user)))?
+    .ok_or_else(|| dead_session(&context.console_url))?;
     if !written && let Some(new_email) = &update_user.email {
         return Err(taken(&query_user, new_email));
     }

@@ -159,6 +159,7 @@ fn get_ls_query<'q>(
 ///
 /// ➕ Bencher Plus: Create a new runner on the server.
 /// The user must be an admin to use this endpoint.
+/// A user session needs a sign-in within the last 10 minutes.
 /// Returns the runner key which is only shown once.
 #[endpoint {
     method = POST,
@@ -170,7 +171,8 @@ pub async fn runners_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonNewRunner>,
 ) -> Result<ResponseCreated<JsonRunnerKey>, HttpError> {
-    let _admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    let admin_user = AdminUser::from_token(rqctx.context(), bearer_token).await?;
+    admin_user.user().check_fresh_sign_in(rqctx.context())?;
     let json = post_inner(rqctx.context(), body.into_inner()).await?;
     Ok(Post::auth_response_created(json))
 }

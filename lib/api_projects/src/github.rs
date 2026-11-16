@@ -120,7 +120,7 @@ pub async fn proj_github_put(
 ) -> Result<ResponseOk<JsonLinkedRepository>, HttpError> {
     github_app(rqctx.context())?;
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    auth_user.check_fresh_sign_in(rqctx.context()).await?;
+    auth_user.check_fresh_sign_in(rqctx.context())?;
     let json = put_inner(
         rqctx.context(),
         path_params.into_inner(),

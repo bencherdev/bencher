@@ -5,7 +5,7 @@ mod rate_limiter;
 pub mod snapshot;
 
 pub use bandwidth::BandwidthLimiter;
-pub use rate_limiter::{DAY, HOUR, Interval, MINUTE, RateLimiter, RateLimits};
+pub use rate_limiter::{DAY, HOUR, Interval, MINUTE, RateLimiter, RateLimits, Reservation};
 
 use snapshot::EpochBucket;
 

@@ -64,9 +64,12 @@ async fn read_refuses_unknown_expired_and_renewed_alike_and_a_used_one_as_used()
     let expired = server.email_change_at(&ada, None, NEW, minutes_ago(30));
     let renewed = server.email_change(&grace, None, "grace@hopper.dev");
     let _renewal = server.email_change(&grace, None, "grace@hopper.dev");
-    let used = server.email_change(&alan, None, "alan@turing.dev");
+    let alans = server.session(&alan);
+    let used = server.email_change(&alan, Some(&alans), "alan@turing.dev");
     assert_eq!(
-        post(&server, CONFIRM, &used, None, SAME_ORIGIN).await.0,
+        post(&server, CONFIRM, &used, Some(&alans), SAME_ORIGIN)
+            .await
+            .0,
         StatusCode::OK
     );
 
@@ -101,9 +104,12 @@ async fn read_refuses_unknown_expired_and_renewed_alike_and_a_used_one_as_used()
 async fn used_change_reads_as_expired_once_it_expires() {
     let server = TestServer::new().await;
     let ada = server.signup("Ada", ADA).await;
-    let secret = server.email_change(&ada, Some(&server.session(&ada)), NEW);
+    let asking = server.session(&ada);
+    let secret = server.email_change(&ada, Some(&asking), NEW);
     assert_eq!(
-        post(&server, CONFIRM, &secret, None, SAME_ORIGIN).await.0,
+        post(&server, CONFIRM, &secret, Some(&asking), SAME_ORIGIN)
+            .await
+            .0,
         StatusCode::OK
     );
     diesel::update(schema::email_change::table)
@@ -112,7 +118,7 @@ async fn used_change_reads_as_expired_once_it_expires() {
         .expect("Failed to age the change");
 
     for path in [READ, CONFIRM] {
-        let (status, json) = post(&server, path, &secret, None, SAME_ORIGIN).await;
+        let (status, json) = post(&server, path, &secret, Some(&asking), SAME_ORIGIN).await;
         assert_eq!(status, StatusCode::BAD_REQUEST, "{path}: {json}");
         assert_eq!(json["error_code"], "email_change_expired", "{path}");
     }
@@ -186,41 +192,13 @@ async fn read_and_confirm_are_charged_to_the_readers_address() {
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
 
-// Confirming needs no credential and works the same wherever the link opens: signed out, in the
-// session that asked, in another session of the user, or in another user's. Each time the email
-// switches, proven, the legacy tokens are revoked, the change reads as used, every session of
-// the user ends but the one that asked, and keys stay.
-// Kills a confirm that keeps the session it opens in, ends the asking session or another user's,
-// leaves a legacy token, ends a key, or needs a credential.
-#[tokio::test]
-async fn confirm_signed_out_switches_once_and_keeps_only_the_asking_session() {
-    confirm_switches_once_and_keeps_only_the_asking_session(OpenedIn::SignedOut).await;
-}
-
+// Confirming in the session that asked for the change switches the email, proven, revokes the
+// legacy tokens, marks the change used, ends every session of the user but the asking one, leaves
+// another user's sessions and the user's keys alone, and works once.
+// Kills a confirm that ends the asking session or another user's, keeps another of the user's,
+// leaves a legacy token, ends a key, or works twice.
 #[tokio::test]
 async fn confirm_in_the_asking_session_switches_once_and_keeps_only_it() {
-    confirm_switches_once_and_keeps_only_the_asking_session(OpenedIn::Asking).await;
-}
-
-#[tokio::test]
-async fn confirm_in_another_session_switches_once_and_keeps_only_the_asking_session() {
-    confirm_switches_once_and_keeps_only_the_asking_session(OpenedIn::Other).await;
-}
-
-#[tokio::test]
-async fn confirm_in_another_users_session_switches_once_and_keeps_only_the_asking_session() {
-    confirm_switches_once_and_keeps_only_the_asking_session(OpenedIn::AnotherUser).await;
-}
-
-#[derive(Debug, Clone, Copy)]
-enum OpenedIn {
-    SignedOut,
-    Asking,
-    Other,
-    AnotherUser,
-}
-
-async fn confirm_switches_once_and_keeps_only_the_asking_session(opened_in: OpenedIn) {
     let server = TestServer::new().await;
     let ada = server.signup("Ada", ADA).await;
     let grace = server.signup("Grace", "grace@example.com").await;
@@ -230,14 +208,8 @@ async fn confirm_switches_once_and_keeps_only_the_asking_session(opened_in: Open
     let other = server.session(&ada);
     let graces = server.session(&grace);
     let secret = server.email_change(&ada, Some(&asking), NEW);
-    let cookie = match opened_in {
-        OpenedIn::SignedOut => None,
-        OpenedIn::Asking => Some(&asking),
-        OpenedIn::Other => Some(&other),
-        OpenedIn::AnotherUser => Some(&graces),
-    };
 
-    let (status, json) = post(&server, CONFIRM, &secret, cookie, SAME_ORIGIN).await;
+    let (status, json) = post(&server, CONFIRM, &secret, Some(&asking), SAME_ORIGIN).await;
     assert_eq!(status, StatusCode::OK, "{json}");
     let change: JsonEmailChange = serde_json::from_value(json).expect("Invalid change");
     assert_eq!(change.new_email.as_ref(), NEW);
@@ -250,12 +222,202 @@ async fn confirm_switches_once_and_keeps_only_the_asking_session(opened_in: Open
     assert!(session_exists(&server, &graces));
     assert_eq!(view_status(&server, &key, &ada).await, StatusCode::OK);
 
-    let (status, json) = post(&server, CONFIRM, &secret, cookie, SAME_ORIGIN).await;
+    let (status, json) = post(&server, CONFIRM, &secret, Some(&asking), SAME_ORIGIN).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(
         json.get("error_code").and_then(Value::as_str),
         Some("email_change_used")
     );
+}
+
+// Anywhere but the session that asked, a confirm gets one refusal and changes nothing: signed
+// out, in another session of the user's, in another user's session, in the asking session once
+// it has ended, and in a session of the user's when the change names none.
+// Kills a confirm that takes no credential, any session of the user's, any session at all, a
+// session that has ended, or a change that names no session.
+#[tokio::test]
+async fn confirm_signed_out_refuses_and_changes_nothing() {
+    confirm_refuses_and_changes_nothing(OpenedIn::SignedOut).await;
+}
+
+#[tokio::test]
+async fn confirm_in_another_session_refuses_and_changes_nothing() {
+    confirm_refuses_and_changes_nothing(OpenedIn::Other).await;
+}
+
+#[tokio::test]
+async fn confirm_in_another_users_session_refuses_and_changes_nothing() {
+    confirm_refuses_and_changes_nothing(OpenedIn::AnotherUser).await;
+}
+
+#[tokio::test]
+async fn confirm_in_an_ended_asking_session_refuses_and_changes_nothing() {
+    confirm_refuses_and_changes_nothing(OpenedIn::Ended).await;
+}
+
+#[tokio::test]
+async fn confirm_of_a_change_that_names_no_session_refuses_and_changes_nothing() {
+    confirm_refuses_and_changes_nothing(OpenedIn::NoAskingSession).await;
+}
+
+#[tokio::test]
+async fn confirm_with_a_key_beside_the_asking_session_refuses_and_changes_nothing() {
+    confirm_refuses_and_changes_nothing(OpenedIn::AskingWithKey).await;
+}
+
+#[derive(Debug, Clone, Copy)]
+enum OpenedIn {
+    SignedOut,
+    Other,
+    AnotherUser,
+    /// The asking session, which has ended since: past its absolute life, its row still kept.
+    Ended,
+    /// A session of the user's, for a change whose asking session is gone.
+    NoAskingSession,
+    /// The asking session's cookie beside the user's key, which wins as a bearer always does.
+    AskingWithKey,
+}
+
+async fn confirm_refuses_and_changes_nothing(opened_in: OpenedIn) {
+    let server = TestServer::new().await;
+    let ada = server.signup("Ada", ADA).await;
+    let grace = server.signup("Grace", "grace@example.com").await;
+    let api_token = seed_token(&server, &ada, "Legacy Token");
+    let other = server.session(&ada);
+    let graces = server.session(&grace);
+    // Made last, since a new session clears the ones that have ended.
+    let asking = match opened_in {
+        OpenedIn::Ended => server.session_at(&ada, days_ago(90)),
+        OpenedIn::SignedOut
+        | OpenedIn::Other
+        | OpenedIn::AnotherUser
+        | OpenedIn::NoAskingSession
+        | OpenedIn::AskingWithKey => server.session(&ada),
+    };
+    let secret = server.email_change(
+        &ada,
+        (!matches!(opened_in, OpenedIn::NoAskingSession)).then_some(&asking),
+        NEW,
+    );
+    let cookie = match opened_in {
+        OpenedIn::SignedOut => None,
+        OpenedIn::Other | OpenedIn::NoAskingSession => Some(&other),
+        OpenedIn::AnotherUser => Some(&graces),
+        OpenedIn::Ended | OpenedIn::AskingWithKey => Some(&asking),
+    };
+
+    let (status, json) = if matches!(opened_in, OpenedIn::AskingWithKey) {
+        post_with_key(&server, &secret, cookie, &ada.token).await
+    } else {
+        post(&server, CONFIRM, &secret, cookie, SAME_ORIGIN).await
+    };
+    assert_eq!(status, StatusCode::FORBIDDEN, "{opened_in:?}: {json}");
+    assert_eq!(
+        json.get("error_code").and_then(Value::as_str),
+        Some("email_change_elsewhere"),
+        "{opened_in:?}"
+    );
+    assert_eq!(email_of(&server, &ada), ADA);
+    assert_eq!(confirmed(&server, &ada), None);
+    assert_eq!(revoked(&server, api_token.uuid), None);
+    assert!(session_exists(&server, &asking));
+    assert!(session_exists(&server, &other));
+    assert!(session_exists(&server, &graces));
+}
+
+// A new email another user took is told only to the session that asked: from another session of
+// the user's, the confirm gets the one refusal, not the conflict.
+// Kills a confirm that tells whether the new email is taken before it checks the session.
+#[tokio::test]
+async fn confirm_of_a_taken_email_from_another_session_refuses_without_the_conflict() {
+    let server = TestServer::new().await;
+    let ada = server.signup("Ada", ADA).await;
+    let asking = server.session(&ada);
+    let other = server.session(&ada);
+    let secret = server.email_change(&ada, Some(&asking), NEW);
+    let _taken = server.signup("Other Ada", NEW).await;
+
+    let (status, json) = post(&server, CONFIRM, &secret, Some(&other), SAME_ORIGIN).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{json}");
+    assert_eq!(
+        json.get("error_code").and_then(Value::as_str),
+        Some("email_change_elsewhere")
+    );
+    assert_eq!(email_of(&server, &ada), ADA);
+    assert_eq!(confirmed(&server, &ada), None);
+}
+
+// Ending the asking session frees its row, which a new session may take; the change names no
+// session from then on, so the press of the session that took the freed ID gets the one refusal.
+// Kills a change that keeps naming the asking session once it has ended.
+#[tokio::test]
+async fn confirm_from_a_session_that_took_the_asking_sessions_freed_id_refuses() {
+    let server = TestServer::new().await;
+    let ada = server.signup("Ada", ADA).await;
+    let grace = server.signup("Grace", "grace@example.com").await;
+    // The newest session, so its row is the one a new session takes once it is freed.
+    let asking = server.session(&ada);
+    let secret = server.email_change(&ada, Some(&asking), NEW);
+    let asking_id = session_row(&server, &asking);
+    let resp = server
+        .client
+        .delete(server.api_url("/v0/auth/session"))
+        .header(SAME_ORIGIN.0, SAME_ORIGIN.1)
+        .header("Cookie", session_cookie(&asking))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    let graces = server.session(&grace);
+    assert_eq!(session_row(&server, &graces), asking_id);
+
+    let (status, json) = post(&server, CONFIRM, &secret, Some(&graces), SAME_ORIGIN).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{json}");
+    assert_eq!(
+        json.get("error_code").and_then(Value::as_str),
+        Some("email_change_elsewhere")
+    );
+    assert_eq!(email_of(&server, &ada), ADA);
+    assert_eq!(confirmed(&server, &ada), None);
+}
+
+// With a relay secret set, the asking session's cookie counts only through the relay: sent around
+// it, the confirm gets the one refusal and changes nothing, and through it, the confirm switches.
+// Kills a confirm that reads a cookie the relay did not carry.
+#[cfg(feature = "plus")]
+#[tokio::test]
+async fn confirm_with_the_asking_cookie_around_the_relay_refuses() {
+    const RELAY_SECRET: &str = "a-relay-secret-for-tests";
+    let server = TestServer::new_with_options(TestServerOptions {
+        relay_secret: Some(RELAY_SECRET.parse().expect("Invalid secret")),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let ada = server.signup("Ada", ADA).await;
+    let asking = server.session(&ada);
+    let secret = server.email_change(&ada, Some(&asking), NEW);
+
+    let (status, json) = post(&server, CONFIRM, &secret, Some(&asking), SAME_ORIGIN).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{json}");
+    assert_eq!(
+        json.get("error_code").and_then(Value::as_str),
+        Some("email_change_elsewhere")
+    );
+    assert_eq!(email_of(&server, &ada), ADA);
+    assert_eq!(confirmed(&server, &ada), None);
+
+    let resp = server
+        .client
+        .post(server.api_url(CONFIRM))
+        .header(SAME_ORIGIN.0, SAME_ORIGIN.1)
+        .header(RELAY_SECRET_HEADER, RELAY_SECRET)
+        .header("Cookie", session_cookie(&asking))
+        .json(&json!({"secret": secret.as_ref()}))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(email_of(&server, &ada), NEW);
 }
 
 // Confirms sent together switch the email once: one confirms and every other reads it as used.
@@ -272,6 +434,7 @@ async fn parallel_confirms_switch_once() {
             .client
             .post(server.api_url(CONFIRM))
             .header(SAME_ORIGIN.0, SAME_ORIGIN.1)
+            .header("Cookie", session_cookie(&asking))
             .json(&json!({"secret": secret.as_ref()}));
         requests.spawn(async move {
             let resp = request.send().await.expect("Request failed");
@@ -372,7 +535,7 @@ async fn confirm_of_a_taken_email_conflicts_and_changes_nothing() {
     let secret = server.email_change(&ada, Some(&asking), NEW);
     let _taken = server.signup("Other Ada", NEW).await;
 
-    let (status, json) = post(&server, CONFIRM, &secret, None, SAME_ORIGIN).await;
+    let (status, json) = post(&server, CONFIRM, &secret, Some(&asking), SAME_ORIGIN).await;
     assert_eq!(status, StatusCode::CONFLICT, "{json}");
     assert!(
         json["message"]
@@ -453,9 +616,10 @@ async fn confirm_joins_single_sign_on_and_keeps_grants_and_pins() {
         .execute(&mut server.db_conn())
         .expect("Failed to pin");
     assert!(!bencher_api_tests::helpers::user_organizations(&server, ada.uuid).contains(&org.uuid));
-    let secret = server.email_change(&ada, None, "ada@sso.example.com");
+    let asking = server.session(&ada);
+    let secret = server.email_change(&ada, Some(&asking), "ada@sso.example.com");
 
-    let (status, json) = post(&server, CONFIRM, &secret, None, SAME_ORIGIN).await;
+    let (status, json) = post(&server, CONFIRM, &secret, Some(&asking), SAME_ORIGIN).await;
     assert_eq!(status, StatusCode::OK, "{json}");
     assert!(bencher_api_tests::helpers::user_organizations(&server, ada.uuid).contains(&org.uuid));
     assert_eq!(
@@ -497,8 +661,37 @@ async fn post(
     (status, serde_json::from_str(&text).unwrap_or(Value::Null))
 }
 
+/// A confirm from the console in `session`, with `key` as its bearer too.
+async fn post_with_key(
+    server: &TestServer,
+    secret: &EmailChangeSecret,
+    session: Option<&SessionToken>,
+    key: &str,
+) -> (StatusCode, Value) {
+    let mut request = server
+        .client
+        .post(server.api_url(CONFIRM))
+        .header(SAME_ORIGIN.0, SAME_ORIGIN.1)
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(key),
+        )
+        .json(&json!({"secret": secret.as_ref()}));
+    if let Some(session) = session {
+        request = request.header("Cookie", session_cookie(session));
+    }
+    let resp = request.send().await.expect("Request failed");
+    let status = resp.status();
+    let text = resp.text().await.expect("No body");
+    (status, serde_json::from_str(&text).unwrap_or(Value::Null))
+}
+
 fn minutes_ago(minutes: i64) -> DateTime {
     DateTime::try_from(DateTime::now().timestamp() - minutes * MINUTE).expect("Invalid time")
+}
+
+fn days_ago(days: i64) -> DateTime {
+    minutes_ago(days * 24 * 60)
 }
 
 fn email_of(server: &TestServer, user: &TestUser) -> String {
@@ -532,6 +725,15 @@ fn revoked(server: &TestServer, token: TokenUuid) -> Option<i64> {
         .select(schema::token::revoked)
         .first(&mut server.db_conn())
         .expect("No token")
+}
+
+/// The ID of the session row the token names.
+fn session_row(server: &TestServer, session: &SessionToken) -> i32 {
+    schema::session::table
+        .filter(schema::session::token_hash.eq(SessionTokenHash::from(session)))
+        .select(schema::session::id)
+        .first(&mut server.db_conn())
+        .expect("No session")
 }
 
 fn session_exists(server: &TestServer, session: &SessionToken) -> bool {

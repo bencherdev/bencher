@@ -19,6 +19,8 @@ interface Relayed {
 
 const RELAY_SECRET = "Bencher-Relay-Secret";
 const RELAY_CLIENT_IP = "Bencher-Client-IP";
+/** The API's paths the relay serves, so its other paths never answer on the console's origin. */
+const RELAYED = "/v0/";
 
 const FORWARDED = [
 	"accept",
@@ -44,7 +46,7 @@ const HOP_BY_HOP = [
 	"upgrade",
 ];
 
-/** Sends the browser's request on to the API, and the API's answer back. */
+/** Sends the browser's request for one of the API's `/v0/` paths on to the API, and the API's answer back. */
 export const relay = async (
 	relayed: Relayed,
 	{
@@ -55,6 +57,11 @@ export const relay = async (
 	}: RelayConfig,
 ): Promise<Response> => {
 	const { request } = relayed;
+	const from = new URL(request.url);
+	const path = from.pathname.slice(API_PATH.length);
+	if (!path.startsWith(RELAYED)) {
+		return consoleAnswer(404, "Not found");
+	}
 	const headers = new Headers();
 	for (const name of FORWARDED) {
 		const value = request.headers.get(name);
@@ -81,18 +88,15 @@ export const relay = async (
 	};
 	let response: Response;
 	try {
-		response = await fetch(upstream(request, internalApiUrl || apiUrl), init);
+		response = await fetch(
+			upstream(path, from.search, internalApiUrl || apiUrl),
+			init,
+		);
 	} catch (error) {
 		if (!request.signal.aborted) {
 			console.error("The API did not answer the relay", error);
 		}
-		return new Response(JSON.stringify({ message: "The API did not answer" }), {
-			status: 502,
-			headers: {
-				"cache-control": "no-store",
-				"content-type": "application/json",
-			},
-		});
+		return consoleAnswer(502, "The API did not answer");
 	}
 
 	const answer = new Headers();
@@ -117,14 +121,23 @@ export const relay = async (
 	});
 };
 
-/** Where `request` goes on the API, under any path the API's URL has. */
-const upstream = (request: Request, apiUrl: string) => {
+/** Where `path` goes on the API, under any path the API's URL has. */
+const upstream = (path: string, search: string, apiUrl: string) => {
 	const url = new URL(apiUrl);
-	const from = new URL(request.url);
-	url.pathname = `${url.pathname.replace(/\/$/, "")}${from.pathname.slice(API_PATH.length)}`;
-	url.search = from.search;
+	url.pathname = `${url.pathname.replace(/\/$/, "")}${path}`;
+	url.search = search;
 	return url;
 };
+
+/** The console's own answer, which the API never saw. */
+const consoleAnswer = (status: number, message: string) =>
+	new Response(JSON.stringify({ message }), {
+		status,
+		headers: {
+			"cache-control": "no-store",
+			"content-type": "application/json",
+		},
+	});
 
 const clientAddress = (relayed: Relayed) => {
 	try {

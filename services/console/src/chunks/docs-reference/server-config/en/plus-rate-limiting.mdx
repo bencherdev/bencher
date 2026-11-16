@@ -116,16 +116,18 @@ If not specified, the listed default values will be used.
 
 #### `email`
 
-The `email` rate limiter applies per email address, to the emails that start a sign in.
+The `email` rate limiter applies per email address and requester IP address, to the emails that start a sign in, and a request with no known IP address counts as one requester.
 It contains `minute`, `hour`, and `day` limits.
+On top of them, an email address gets at most twice the `day` limit of sign in emails a day from every requester together, except the emails that sign a signed in user in again.
+Each browser session can have at most twice the `day` limit of those sent a day, from every requester together.
 The entire section is optional.
 If not specified, the listed default values will be used.
 An address at its limit gets no new email, and its earlier sign in still works.
 
 |       Name       | Example | Default | Required |                           Description                            |
 | :--------------: | :-----: | :-----: | :------: | :--------------------------------------------------------------: |
-|      minute      |    2    |    2    |    No    |       Maximum sign in emails per minute per email address.       |
-|       hour       |    6    |    6    |    No    |        Maximum sign in emails per hour per email address.        |
-|       day        |    12   |    12   |    No    |        Maximum sign in emails per day per email address.         |
+|      minute      |    2    |    2    |    No    |       Maximum sign in emails per minute per email address and requester.       |
+|       hour       |    6    |    6    |    No    |        Maximum sign in emails per hour per email address and requester.        |
+|       day        |    12   |    12   |    No    |        Maximum sign in emails per day per email address and requester.         |
 
 [unclaimed projects]: /docs/how-to/claim/#unclaimed-projects

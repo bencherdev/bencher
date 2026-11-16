@@ -245,7 +245,7 @@ pub async fn org_invite_resend_post(
     path_params: Path<OrgInviteParams>,
 ) -> Result<ResponseAccepted<JsonInvite>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    check_inviter(rqctx.context(), &auth_user).await?;
+    check_inviter(rqctx.context(), &auth_user)?;
     let json = resend_inner(
         &rqctx.log,
         rqctx.context(),
@@ -294,15 +294,12 @@ async fn resend_inner(
 
 /// Refuse a credential that may not send an invitation: one that is not a browser session, or a
 /// session that has not signed in within the last 10 minutes, since an invitation grants a role.
-pub(crate) async fn check_inviter(
-    context: &ApiContext,
-    auth_user: &AuthUser,
-) -> Result<(), HttpError> {
+pub(crate) fn check_inviter(context: &ApiContext, auth_user: &AuthUser) -> Result<(), HttpError> {
     // Checked only after authentication: an invalid credential still gets the opaque `401`.
     if !auth_user.is_session() {
         return Err(forbidden_error(ONLY_A_SESSION));
     }
-    auth_user.check_fresh_sign_in(context).await
+    auth_user.check_fresh_sign_in(context)
 }
 
 /// Email the invitation's link, which carries `secret` in its fragment, from `inviter`, and wait

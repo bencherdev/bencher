@@ -117,6 +117,10 @@ enum ChannelError {
 
     #[error("Invalid runner checksum: {0}")]
     UpdateChecksum(bencher_json::ValidError),
+
+    /// The runner's key changed, or the runner was archived, since its channel opened.
+    #[error("Runner key no longer valid")]
+    Revoked,
 }
 
 /// Handle a heartbeat timeout by reading the job and deciding the right status.
@@ -888,6 +892,19 @@ diesel::alias!(schema::job as job_ip: JobIp);
 /// Poll interval for long-polling (1 second)
 const POLL_INTERVAL: Duration = Duration::from_secs(1);
 
+/// OCI registry token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
+const OCI_RUNNER_TOKEN_TTL: u32 = 600;
+
+/// What a try at claiming a job found.
+enum Claim {
+    /// A job, claimed for this runner.
+    Job(Box<(QueryJob, JsonClaimedJob)>),
+    /// No eligible job.
+    NoJob,
+    /// The runner's key changed, or the runner was archived, since its channel opened.
+    Revoked,
+}
+
 /// Attempt to claim a pending job with tier-based concurrency limits.
 ///
 /// Priority tiers:
@@ -895,14 +912,8 @@ const POLL_INTERVAL: Duration = Duration::from_secs(1);
 /// - Free: 1 concurrent job per organization
 /// - Unclaimed: 1 concurrent job per source IP
 ///
-/// Returns `Ok(Some(job))` if a job was claimed, `Ok(None)` if no eligible jobs available.
-/// OCI registry token TTL: 10 minutes (enough for image pull, short enough to limit exposure)
-const OCI_RUNNER_TOKEN_TTL: u32 = 600;
-
-async fn try_claim_job(
-    context: &ApiContext,
-    runner_key: &RunnerAuth,
-) -> Result<Option<(QueryJob, JsonClaimedJob)>, HttpError> {
+/// Claims nothing for a runner whose key changed or that was archived since its channel opened.
+async fn try_claim_job(context: &ApiContext, runner_key: &RunnerAuth) -> Result<Claim, HttpError> {
     use schema::job::dsl::{created, id, organization_id, priority, source_ip, status};
 
     // Tier 1: Plus (priority >= 200) - no concurrency limit
@@ -955,6 +966,12 @@ async fn try_claim_job(
     let (query_job, json_spec) = {
         let conn = write_conn!(context);
 
+        if !runner_key.is_current(conn).map_err(|e| {
+            HttpError::for_internal_error(format!("Failed to check the runner's key: {e}"))
+        })? {
+            return Ok(Claim::Revoked);
+        }
+
         // Find the highest-priority eligible pending job matching this runner's specs
         let pending_job: Option<QueryJob> = schema::job::table
             .filter(status.eq(JobStatus::Pending))
@@ -968,7 +985,7 @@ async fn try_claim_job(
             })?;
 
         let Some(query_job) = pending_job else {
-            return Ok(None);
+            return Ok(Claim::NoJob);
         };
 
         // Claim the job under the same lock
@@ -989,12 +1006,12 @@ async fn try_claim_job(
 
     if let Some(json_spec) = json_spec {
         let claimed_job = build_claimed_job(context, query_job.clone(), runner_key, json_spec)?;
-        Ok(Some((query_job, claimed_job)))
+        Ok(Claim::Job(Box::new((query_job, claimed_job))))
     } else {
         // Defensive: the UPDATE matched 0 rows despite SELECT finding a pending job.
         // Under the current single-writer lock this should not happen, but we
-        // handle it gracefully by returning None (no job claimed this iteration).
-        Ok(None)
+        // handle it gracefully by claiming no job this iteration.
+        Ok(Claim::NoJob)
     }
 }
 
@@ -1324,6 +1341,22 @@ pub async fn runner_channel(
     }
 
     Ok(())
+}
+
+/// Close a channel whose runner's key changed or whose runner was archived since it opened.
+async fn close_revoked<S>(log: &slog::Logger, tx: &mut S)
+where
+    S: futures::Sink<Message> + Unpin,
+{
+    slog::info!(
+        log,
+        "Closing runner channel for a key that changed or an archived runner"
+    );
+    let close_frame = CloseFrame {
+        code: CloseCode::Policy,
+        reason: "runner key no longer valid".into(),
+    };
+    drop(tx.send(Message::Close(Some(close_frame))).await);
 }
 
 /// Outcome of waiting for a `RunnerMessage::Ready` or `RunnerMessage::Paused` message.
@@ -1894,7 +1927,8 @@ enum PollOutcome {
 /// Poll for a job, checking for WS disconnect between polls.
 ///
 /// Returns `Ok(PollOutcome::Claimed)` if claimed, `Ok(PollOutcome::Deadline)` if the deadline
-/// expired, `Ok(PollOutcome::ShuttingDown)` if the server is shutting down, or `Err` on WS disconnect.
+/// expired, `Ok(PollOutcome::ShuttingDown)` if the server is shutting down, or `Err` on WS disconnect
+/// or, having closed the channel, for a runner whose key changed or that was archived.
 async fn poll_for_job<S, R>(
     log: &slog::Logger,
     context: &ApiContext,
@@ -1941,10 +1975,12 @@ where
     loop {
         if let Some((context, runner_key)) = claimant {
             match try_claim_job(context, runner_key).await {
-                Ok(Some((query_job, claimed_job))) => {
-                    return Ok(PollOutcome::Claimed(Box::new((query_job, claimed_job))));
+                Ok(Claim::Job(claimed)) => return Ok(PollOutcome::Claimed(claimed)),
+                Ok(Claim::Revoked) => {
+                    close_revoked(log, tx).await;
+                    return Err(ChannelError::Revoked);
                 },
-                Ok(None) => {},
+                Ok(Claim::NoJob) => {},
                 Err(e) => {
                     slog::error!(log, "Error claiming job"; "error" => %e);
                     // Continue polling: transient DB errors shouldn't break the channel

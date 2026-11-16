@@ -116,16 +116,18 @@ Se não especificado, os valores padrão listados serão usados.
 
 #### `email`
 
-O limitador de taxa `email` se aplica por endereço de e-mail, aos e-mails que iniciam um login.
+O limitador de taxa `email` se aplica por endereço de e-mail e endereço IP do solicitante, aos e-mails que iniciam um login, e uma solicitação sem endereço IP conhecido conta como um único solicitante.
 Contém limites de `minute`, `hour` e `day`.
+Além disso, um endereço de e-mail recebe no máximo o dobro do limite `day` em e-mails de login por dia de todos os solicitantes juntos, exceto os e-mails que fazem login novamente de um usuário já conectado.
+Para cada sessão do navegador, são enviados no máximo o dobro do limite `day` desses e-mails por dia, de todos os solicitantes juntos.
 Toda a seção é opcional.
 Se não especificado, os valores padrão listados serão usados.
 Um endereço no seu limite não recebe um novo e-mail, e o login anterior continua funcionando.
 
 |       Nome       | Exemplo | Padrão | Obrigatório |                           Descrição                                          |
 | :--------------: | :-----: | :----: | :---------: | :--------------------------------------------------------------------------: |
-|      minute      |    2    |   2    |     Não     |         E-mails de login máximos por minuto por endereço de e-mail.          |
-|       hour       |    6    |   6    |     Não     |          E-mails de login máximos por hora por endereço de e-mail.           |
-|       day        |    12   |   12   |     Não     |           E-mails de login máximos por dia por endereço de e-mail.           |
+|      minute      |    2    |   2    |     Não     |         E-mails de login máximos por minuto por endereço de e-mail e solicitante.          |
+|       hour       |    6    |   6    |     Não     |          E-mails de login máximos por hora por endereço de e-mail e solicitante.           |
+|       day        |    12   |   12   |     Não     |           E-mails de login máximos por dia por endereço de e-mail e solicitante.           |
 
 [unclaimed projects]: /pt/docs/how-to/claim/#unclaimed-projects

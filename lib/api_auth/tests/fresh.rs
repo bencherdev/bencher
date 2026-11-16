@@ -16,7 +16,7 @@ use std::sync::{
 
 use bencher_api_tests::{
     LogCapture, TestOrg, TestProject, TestServer, TestServerOptions, TestUser,
-    github::{GitHubServer, Unscripted},
+    github::{GitHubServer, HOLD, Unscripted},
     helpers::{github_client, google_client, seed_token},
     session_cookie,
 };
@@ -67,6 +67,155 @@ async fn guarded_actions_need_a_sign_in_within_ten_minutes() {
         assert!(resp.status().is_success(), "{action:?}: {}", resp.status());
         action.assert_done(&server, &user, &org, &project);
     }
+}
+
+// The guard holds a request to the session it signed in with, as that sign-in read it: when the
+// session ends and a fresh session takes its row's ID before the guard looks, the request is
+// still refused, changing nothing.
+// Kills a guard that reads the session again by its row ID.
+#[tokio::test]
+async fn guard_holds_the_session_the_request_signed_in_with() {
+    let Harness { server, clock, .. } = Harness::new().await;
+    let user = server.signup("Ada", ADA).await;
+    let org = server.create_org(&user, "Ada Org").await;
+    let project = server.create_project(&user, &org, "Ada Project").await;
+    // The newest session, so its row is the one a new session takes once it is freed.
+    let proved = clock.now();
+    let stale = server.session_at(&user, proved);
+    clock.set(proved, WINDOW);
+    let row = session_row(&server, &stale);
+    server.keep_session_for_the_readers(&stale);
+    diesel::delete(schema::session::table.filter(schema::session::id.eq(row)))
+        .execute(&mut server.db_conn())
+        .expect("Failed to end the session");
+    let next = server.session(&user);
+    assert_eq!(session_row(&server, &next), row);
+
+    let action = Action::NewUserKey;
+    let resp = action
+        .send(&server, &user, &org, &project, &Browser::signed_in(&stale))
+        .await;
+    assert_fresh_sign_in_needed(resp, action).await;
+    action.assert_undone(&server, &user, &org, &project);
+}
+
+// A sign-in again by email records only the session its request signed in with, as its sign-in
+// read it: when that session ends and another of the user's sessions takes its row's ID before the
+// sign-in starts, nothing starts, no email goes out, and the answer is the one for a sign-in that
+// has ended.
+// Kills a fresh sign-in that records its session by the row ID alone.
+#[tokio::test]
+async fn fresh_email_records_only_the_session_that_asked() {
+    let Harness { server, log, .. } = Harness::new().await;
+    let user = server.signup("Ada", ADA).await;
+    let ended = ended_on_a_taken_row(&server, &user);
+    let emails = log.sign_in_emails().len();
+
+    let browser = Browser::signed_in(&ended);
+    let resp = send(
+        &server,
+        Method::POST,
+        "/v0/auth/fresh/email",
+        &browser,
+        None,
+    )
+    .await;
+    assert_ended(resp).await;
+    assert_eq!(pending_sign_ins(&server), 0);
+    assert_eq!(log.sign_in_emails().len(), emails);
+}
+
+// A sign-in again with a provider records only the session its request signed in with, as its
+// sign-in read it: when that session ends and another of the user's sessions takes its row's ID
+// before the sign-in starts, nothing starts, and the answer is the one for a sign-in that has
+// ended.
+// Kills a provider's fresh sign-in that records its session by the row ID alone.
+#[tokio::test]
+async fn fresh_provider_records_only_the_session_that_asked() {
+    let github = GitHubServer::start(Vec::new()).await;
+    let Harness { server, .. } = Harness::with_providers(&github.base()).await;
+    let user = server.signup("Ada", ADA).await;
+    pin(&server, &user, SignInProvider::Github, "42", "ada-gh");
+    let ended = ended_on_a_taken_row(&server, &user);
+
+    let browser = Browser::signed_in(&ended);
+    let path = "/v0/auth/fresh/providers/github/start";
+    let resp = send(&server, Method::POST, path, &browser, None).await;
+    assert_ended(resp).await;
+    assert_eq!(provider_states(&server), 0);
+}
+
+// An email change records only the session its request signed in with, as its sign-in read it:
+// when that session ends and another of the user's sessions takes its row's ID before the ask,
+// nothing is asked, and the answer is the one for a session that has ended.
+// Kills an email change that records its session by the row ID alone.
+#[tokio::test]
+async fn email_change_records_only_the_session_that_asked() {
+    let Harness { server, .. } = Harness::new().await;
+    let user = server.signup("Ada", ADA).await;
+    let org = server.create_org(&user, "Ada Org").await;
+    let project = server.create_project(&user, &org, "Ada Project").await;
+    let ended = ended_on_a_taken_row(&server, &user);
+
+    let action = Action::EmailChange;
+    let resp = action
+        .send(&server, &user, &org, &project, &Browser::signed_in(&ended))
+        .await;
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    let changes: i64 = schema::email_change::table
+        .count()
+        .get_result(&mut server.db_conn())
+        .expect("Failed to count email changes");
+    assert_eq!(changes, 0);
+    assert_eq!(email_of(&server, &user), ADA);
+}
+
+// A provider's fresh proof proves only the session that started it: when that session ends while
+// the provider answers, and another of the user's sessions takes its row's ID, the proof refuses
+// and the other session stays as it was.
+// Kills a provider's fresh proof that finds its session by the row ID alone.
+#[tokio::test]
+async fn provider_proof_proves_only_the_session_that_started_it() {
+    let script = github_account(42, "ada-gh", ADA)
+        .into_iter()
+        .enumerate()
+        .map(|(n, (status, body))| {
+            // The token exchange, held until the session has ended.
+            let hold = if n == 0 {
+                vec![(HOLD, String::new())]
+            } else {
+                Vec::new()
+            };
+            (status, hold, body)
+        })
+        .collect();
+    let github = GitHubServer::start_with_headers(script).await;
+    let Harness { server, clock, .. } = Harness::with_providers(&github.base()).await;
+    let user = server.signup("Ada", ADA).await;
+    pin(&server, &user, SignInProvider::Github, "42", "ada-gh");
+    // The newest session, so its row is the one a new session takes once it is freed.
+    let started_in = server.session(&user);
+    let row = session_row(&server, &started_in);
+    let browser = Browser::signed_in(&started_in);
+    let started = browser.start_provider(&server, "github").await;
+
+    let (resp, next) = tokio::join!(browser.finish(&server, "github", &started), async {
+        github.until_held().await;
+        diesel::delete(schema::session::table.filter(schema::session::id.eq(row)))
+            .execute(&mut server.db_conn())
+            .expect("Failed to end the session");
+        let next = server.session(&user);
+        clock.advance(MINUTE);
+        github.release();
+        next
+    });
+    assert_eq!(session_row(&server, &next), row);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(error(resp).await.0, "provider_refused");
+    assert_eq!(
+        proved_of(&server, &next).timestamp(),
+        clock.now().timestamp() - MINUTE
+    );
 }
 
 // A user key and a deprecated API token each do every guarded action they could do before, with
@@ -463,6 +612,53 @@ async fn lock_and_unlock_need_a_fresh_sign_in() {
         let resp = send(&server, Method::PATCH, &path, &browser, Some(&body)).await;
         assert_eq!(resp.status(), StatusCode::OK, "{locked}");
         assert_eq!(is_locked_of(&server, &user), locked);
+    }
+}
+
+// Adding a single sign-on domain, creating a runner, and rotating a runner's key each need a
+// fresh sign-in from a browser session, and a stale one changes nothing. A server admin's key
+// needs none, and a reader who is no server admin is refused as before, signed in just now.
+// Kills a guard missing from any of the three, and one that holds a key to the window.
+#[tokio::test]
+async fn admin_actions_need_a_fresh_sign_in() {
+    let Harness {
+        server,
+        clock,
+        admin,
+        ..
+    } = Harness::new().await;
+    let user = server.signup("Ada", ADA).await;
+    let key = Browser::jwt(&admin.token);
+    let runner = AdminAction::runner(&server, &key).await;
+    let proved = clock.now();
+    let browser = Browser::signed_in(&server.session_at(&admin, proved));
+    let not_admin = Browser::signed_in(&server.session_at(&user, proved));
+
+    for action in AdminAction::ALL {
+        let before = admin_state(&server, &runner);
+        clock.set(proved, WINDOW);
+        let resp = action.send(&server, &browser, &runner, "stale").await;
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN, "{action:?}");
+        assert_eq!(error(resp).await.0, "fresh_sign_in", "{action:?}");
+        assert_eq!(admin_state(&server, &runner), before, "{action:?}");
+
+        clock.set(proved, WINDOW - 1);
+        let resp = action.send(&server, &not_admin, &runner, "user").await;
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN, "{action:?}");
+        assert_eq!(error(resp).await.0, "", "{action:?}");
+        assert_eq!(admin_state(&server, &runner), before, "{action:?}");
+
+        let resp = action.send(&server, &browser, &runner, "fresh").await;
+        assert!(resp.status().is_success(), "{action:?}: {}", resp.status());
+        assert_ne!(admin_state(&server, &runner), before, "{action:?}");
+    }
+
+    clock.advance(HOUR);
+    for action in AdminAction::ALL {
+        let before = admin_state(&server, &runner);
+        let resp = action.send(&server, &key, &runner, "key").await;
+        assert!(resp.status().is_success(), "{action:?}: {}", resp.status());
+        assert_ne!(admin_state(&server, &runner), before, "{action:?}");
     }
 }
 
@@ -913,6 +1109,73 @@ impl Action {
     }
 }
 
+/// A server admin's action that the fresh sign-in guards, beside the five every reader has.
+#[derive(Debug, Clone, Copy)]
+enum AdminAction {
+    AddSso,
+    CreateRunner,
+    RotateRunnerKey,
+}
+
+impl AdminAction {
+    const ALL: [Self; 3] = [Self::AddSso, Self::CreateRunner, Self::RotateRunnerKey];
+
+    /// Make the runner whose key the rotation rotates, as `admin`, returning its UUID.
+    async fn runner(server: &TestServer, admin: &Browser) -> String {
+        let body = json!({"name": "Rotated"});
+        let resp = send(server, Method::POST, "/v0/runners", admin, Some(&body)).await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let json: Value = resp.json().await.expect("Invalid answer");
+        json.get("uuid")
+            .and_then(Value::as_str)
+            .expect("No runner")
+            .to_owned()
+    }
+
+    /// Send the action, with `tag` naming what it adds.
+    async fn send(
+        self,
+        server: &TestServer,
+        browser: &Browser,
+        runner: &str,
+        tag: &str,
+    ) -> reqwest::Response {
+        let (path, body) = match self {
+            // The harness licenses this organization, so it may add a domain.
+            Self::AddSso => (
+                "/v0/organizations/licensed/sso".to_owned(),
+                Some(json!({"domain": format!("{tag}.example.com")})),
+            ),
+            Self::CreateRunner => (
+                "/v0/runners".to_owned(),
+                Some(json!({"name": format!("Runner {tag}")})),
+            ),
+            Self::RotateRunnerKey => (format!("/v0/runners/{runner}/key"), None),
+        };
+        send(server, Method::POST, &path, browser, body.as_ref()).await
+    }
+}
+
+/// What the admin actions change: the domains, the runners, and the rotated runner's key.
+fn admin_state(server: &TestServer, runner: &str) -> (i64, i64, String) {
+    let mut conn = server.db_conn();
+    (
+        schema::sso::table
+            .count()
+            .get_result(&mut conn)
+            .expect("Failed to count domains"),
+        schema::runner::table
+            .count()
+            .get_result(&mut conn)
+            .expect("Failed to count runners"),
+        schema::runner::table
+            .filter(schema::runner::uuid.eq(runner))
+            .select(schema::runner::key_hash)
+            .first(&mut conn)
+            .expect("No runner"),
+    )
+}
+
 /// A browser, or a script: the session cookie it presents, the pending sign-in cookie it holds
 /// once it has one, and the bearer credential it sends, if any.
 #[derive(Clone, Default)]
@@ -1157,6 +1420,31 @@ fn proved_of(server: &TestServer, token: &SessionToken) -> DateTime {
         .select(schema::session::proved)
         .first(&mut server.db_conn())
         .expect("No such session")
+}
+
+/// A session of `user`'s that a request signed in with, whose row then ended and went to another
+/// session of the user's, signed in to now: the ended session's token, which the API's readers
+/// still find as the request's sign-in read it.
+fn ended_on_a_taken_row(server: &TestServer, user: &TestUser) -> SessionToken {
+    // The newest session, so its row is the one a new session takes once it is freed.
+    let ended = server.session(user);
+    let row = session_row(server, &ended);
+    server.keep_session_for_the_readers(&ended);
+    diesel::delete(schema::session::table.filter(schema::session::id.eq(row)))
+        .execute(&mut server.db_conn())
+        .expect("Failed to end the session");
+    let next = server.session(user);
+    assert_eq!(session_row(server, &next), row);
+    ended
+}
+
+/// The ID of the session row the token names.
+fn session_row(server: &TestServer, session: &SessionToken) -> i32 {
+    schema::session::table
+        .filter(schema::session::token_hash.eq(SessionTokenHash::from(session)))
+        .select(schema::session::id)
+        .first(&mut server.db_conn())
+        .expect("No session")
 }
 
 fn email_of(server: &TestServer, user: &TestUser) -> String {

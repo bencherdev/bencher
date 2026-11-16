@@ -81,7 +81,7 @@ pub async fn auth_invite_post(
 }
 
 /// The user of the browser session the cookie names, if the API honors it and it has not ended.
-async fn session_user(
+pub(crate) async fn session_user(
     context: &ApiContext,
     cookie: Option<CookieCredential>,
 ) -> Result<Option<AuthUser>, HttpError> {

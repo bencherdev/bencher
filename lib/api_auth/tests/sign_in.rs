@@ -368,6 +368,12 @@ async fn address_at_its_cap_keeps_its_earlier_sign_in() {
 }
 
 async fn assert_capped(resp: reqwest::Response) {
+    let wait = capped_wait(resp).await;
+    assert!((1..=65).contains(&wait), "{wait}");
+}
+
+/// The wait an answer for ada@example.com at its cap gives, which sends nothing and sets no cookie.
+async fn capped_wait(resp: reqwest::Response) -> u64 {
     assert_eq!(resp.status(), StatusCode::ACCEPTED);
     assert_eq!(set_cookies(resp.headers()), Vec::<String>::new());
     let json: serde_json::Value = resp.json().await.expect("Failed to parse");
@@ -375,8 +381,412 @@ async fn assert_capped(resp: reqwest::Response) {
         .get("wait")
         .and_then(serde_json::Value::as_u64)
         .expect("No wait");
-    assert!((1..=65).contains(&wait), "{wait}");
     assert_eq!(json, json!({"email": "ada@example.com", "wait": wait}));
+    wait
+}
+
+// The tight caps on sign-in mail count per address and requester: once one reader has spent their
+// share of an address's mail, they are capped with the wait, and another reader still gets mail
+// for it. An IPv6 reader is one requester across its /64.
+// Kills caps that count per address alone, or an IPv6 reader keyed on its whole address.
+#[tokio::test]
+async fn sign_in_mail_caps_count_per_requester() {
+    let (server, log) = test_server(TestServerOptions {
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    for (first, second, other) in [
+        ("203.0.113.7", "203.0.113.7", "203.0.113.8"),
+        ("2001:db8:1:2::1", "2001:db8:1:2::ffff", "2001:db8:1:3::1"),
+    ] {
+        for ip in [first, second] {
+            sent(&start_raw(&server, "ada@example.com", None, &relayed(ip)).await);
+        }
+        assert_capped(start_raw(&server, "ada@example.com", None, &relayed(first)).await).await;
+        assert_capped(start_raw(&server, "ada@example.com", None, &relayed(second)).await).await;
+        sent(&start_raw(&server, "ada@example.com", None, &relayed(other)).await);
+    }
+    assert_eq!(log.sign_in_emails().len(), 6);
+}
+
+// Past 24 sign-in mails in a day to one address from all its requesters, no requester gets
+// another that day, and the wait runs to when the day's first mail ages out.
+// Kills a missing ceiling, one counted per requester, and one of another size.
+#[tokio::test]
+async fn sign_in_mail_ceiling_counts_over_every_requester() {
+    let (server, log) = test_server(TestServerOptions {
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let readers: Vec<String> = (1..=13).map(|n| format!("203.0.113.{n}")).collect();
+    for reader in readers.iter().take(12) {
+        for _ in 0..2 {
+            sent(&start_raw(&server, "ada@example.com", None, &relayed_from(reader)).await);
+        }
+    }
+    // A reader with no share left waits for the longer of its own cap and the ceiling.
+    for reader in [readers.last(), readers.first()] {
+        let reader = reader.expect("No reader");
+        assert_capped_by_the_day(
+            start_raw(&server, "ada@example.com", None, &relayed_from(reader)).await,
+        )
+        .await;
+    }
+    let last = readers.last().expect("No reader");
+    sent(&start_raw(&server, "grace@example.com", None, &relayed_from(last)).await);
+    assert_eq!(log.sign_in_emails().len(), 25);
+}
+
+// A request with no known address is one requester with every other such request, so its share
+// runs out, while a reader with an address keeps their own.
+// Kills an unknown requester left uncapped, or capped with every known one.
+#[tokio::test]
+async fn requests_with_no_address_share_one_requester() {
+    let (server, _log) = test_server(TestServerOptions {
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    for _ in 0..2 {
+        sent(&start_raw(&server, "ada@example.com", None, &[SAME_ORIGIN]).await);
+    }
+    assert_capped(start_raw(&server, "ada@example.com", None, &[SAME_ORIGIN]).await).await;
+    sent(&start_raw(&server, "ada@example.com", None, &relayed("203.0.113.7")).await);
+}
+
+// A fresh sign-in asked by a live session of the address's user gets its mail past the day's
+// ceiling, from a start and from its Resend, but not past its own requester's share; the door
+// stays at the ceiling.
+// Kills a fresh sign-in or its Resend held to the ceiling, or let past its own caps.
+#[tokio::test]
+async fn fresh_sign_in_mail_skips_the_ceiling_but_not_its_own_caps() {
+    let clock = TestClock::new();
+    let (server, log) = test_server(TestServerOptions {
+        clock: Some(clock.clock()),
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let ada = server.signup("Ada", "ada@example.com").await;
+    let cookie = session_cookie(&server.session(&ada));
+    for n in 1..=12 {
+        let reader = format!("203.0.113.{n}");
+        for _ in 0..2 {
+            sent(&start_raw(&server, "ada@example.com", None, &relayed_from(&reader)).await);
+        }
+    }
+    let ada_reader = "198.51.100.7";
+    assert_capped_by_the_day(
+        start_raw(&server, "ada@example.com", None, &relayed(ada_reader)).await,
+    )
+    .await;
+
+    let fresh = [
+        SAME_ORIGIN,
+        (bencher_json::RELAY_SECRET, RELAY_SECRET),
+        (bencher_json::RELAY_CLIENT_IP, ada_reader),
+        (header::COOKIE.as_str(), &cookie),
+    ];
+    let mut pending = String::new();
+    for _ in 0..2 {
+        pending = sent(
+            &send(
+                &server,
+                Method::POST,
+                "/v0/auth/fresh/email",
+                None,
+                &fresh,
+                None,
+            )
+            .await,
+        );
+    }
+    assert_capped(
+        send(
+            &server,
+            Method::POST,
+            "/v0/auth/fresh/email",
+            None,
+            &fresh,
+            None,
+        )
+        .await,
+    )
+    .await;
+    // Its Resend, from a requester with room, skips the ceiling too.
+    clock.set(clock.now(), MINUTE);
+    let cookies = format!(
+        "{cookie}; {}={pending}",
+        PendingCookie::new(&console_url()).name()
+    );
+    let resend = [
+        SAME_ORIGIN,
+        (bencher_json::RELAY_SECRET, RELAY_SECRET),
+        (bencher_json::RELAY_CLIENT_IP, "198.51.100.8"),
+        (header::COOKIE.as_str(), &cookies),
+    ];
+    sent(
+        &send(
+            &server,
+            Method::POST,
+            "/v0/auth/fresh/email/resend",
+            None,
+            &resend,
+            None,
+        )
+        .await,
+    );
+    assert_eq!(log.sign_in_emails().len(), 27);
+}
+
+/// The day's window holds each mail for a day and at most one of its 2 hour buckets more.
+async fn assert_capped_by_the_day(resp: reqwest::Response) {
+    let wait = capped_wait(resp).await;
+    let day = DAY.unsigned_abs();
+    assert!((day..=day + 2 * 60 * 60).contains(&wait), "{wait}");
+}
+
+// Resend spends its requester's share of the address's mail, as a start does, and leaves another
+// requester theirs.
+// Kills a Resend that goes uncounted, or counted per address alone.
+#[tokio::test]
+async fn resend_counts_toward_its_requesters_share() {
+    let clock = TestClock::new();
+    let (server, _log) = test_server(TestServerOptions {
+        clock: Some(clock.clock()),
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let reader = relayed("203.0.113.7");
+    let first = sent(&start_raw(&server, "ada@example.com", None, &reader).await);
+    clock.set(clock.now(), MINUTE);
+    let resp = send_json(
+        &server,
+        "/v0/auth/email/resend",
+        Some(&first),
+        &reader,
+        &json!({}),
+    )
+    .await;
+    let second = sent(&resp);
+    clock.set(clock.now(), MINUTE);
+    assert_capped(
+        send_json(
+            &server,
+            "/v0/auth/email/resend",
+            Some(&second),
+            &reader,
+            &json!({}),
+        )
+        .await,
+    )
+    .await;
+    sent(&start_raw(&server, "ada@example.com", None, &relayed("203.0.113.8")).await);
+}
+
+// A send that fails spends none of the address's mail: past the cap's worth of failed starts and
+// a failed Resend, each still tries to send.
+// Kills a cap spent on a send that failed.
+#[tokio::test]
+async fn failed_sends_leave_the_cap_as_it_was() {
+    let (server, _log) = test_server(TestServerOptions {
+        messenger: Some(unreachable_smtp()),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    for _ in 0..3 {
+        let resp = start_raw(&server, "ada@example.com", None, &[SAME_ORIGIN]).await;
+        assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(error(resp).await.0, "email_failed");
+    }
+    let (earlier, _code) = seed_pending(&server, "ada@example.com", MINUTE);
+    let resp = resend(&server, &earlier).await;
+    assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(error(resp).await.0, "email_failed");
+}
+
+// Failed sends spend none of the day's ceiling either: past the ceiling's worth of failed starts
+// from many requesters, each still tries to send.
+// Kills a ceiling spent on a send that failed.
+#[tokio::test]
+async fn failed_sends_leave_the_ceiling_as_it_was() {
+    let (server, _log) = test_server(TestServerOptions {
+        messenger: Some(unreachable_smtp()),
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    for n in 1..=13 {
+        let reader = format!("203.0.113.{n}");
+        for _ in 0..2 {
+            let resp = start_raw(&server, "ada@example.com", None, &relayed_from(&reader)).await;
+            assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE, "{reader}");
+            assert_eq!(error(resp).await.0, "email_failed");
+        }
+    }
+}
+
+// Failed fresh sends spend none of the session's ceiling either.
+// Kills a session's ceiling spent on a send that failed.
+#[tokio::test]
+async fn failed_fresh_sends_leave_the_sessions_ceiling_as_it_was() {
+    let (server, _log) = test_server(TestServerOptions {
+        messenger: Some(unreachable_smtp()),
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let ada = server.signup("Ada", "ada@example.com").await;
+    let session = session_cookie(&server.session(&ada));
+    for n in 1..=13 {
+        let reader = format!("203.0.113.{n}");
+        for _ in 0..2 {
+            let resp = fresh_start(&server, &session, &reader).await;
+            assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE, "{reader}");
+            assert_eq!(error(resp).await.0, "email_failed");
+        }
+    }
+}
+
+// One session gets at most twice the day's cap of fresh sign-in mail in a day, from every
+// requester, its starts and its Resends together.
+// Kills fresh sign-in mail with no bound but its requesters' caps, and a Resend left out of it.
+#[tokio::test]
+async fn fresh_sign_in_mail_stops_at_the_sessions_ceiling() {
+    let clock = TestClock::new();
+    let (server, log) = test_server(TestServerOptions {
+        clock: Some(clock.clock()),
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let ada = server.signup("Ada", "ada@example.com").await;
+    let session = session_cookie(&server.session(&ada));
+    let mut pending = String::new();
+    for n in 1..=12 {
+        let reader = format!("203.0.113.{n}");
+        for _ in 0..if n == 12 { 1 } else { 2 } {
+            pending = sent(&fresh_start(&server, &session, &reader).await);
+        }
+    }
+    clock.set(clock.now(), MINUTE);
+    sent(&fresh_resend(&server, &session, &pending, "203.0.113.12").await);
+    assert_capped_by_the_day(fresh_start(&server, &session, "203.0.113.13").await).await;
+    // A requester at its own cap waits for the session's ceiling too.
+    assert_capped_by_the_day(fresh_start(&server, &session, "203.0.113.12").await).await;
+    assert_eq!(log.sign_in_emails().len(), 24);
+}
+
+// One session's fresh sign-in mail never stops another's: with one session of the user's at its
+// ceiling, another still gets mail.
+// Kills a ceiling on fresh sign-in mail kept per user or per address.
+#[tokio::test]
+async fn another_session_keeps_its_own_fresh_sign_in_mail() {
+    let (server, log) = test_server(TestServerOptions {
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let ada = server.signup("Ada", "ada@example.com").await;
+    let full = session_cookie(&server.session(&ada));
+    for n in 1..=12 {
+        let reader = format!("203.0.113.{n}");
+        for _ in 0..2 {
+            sent(&fresh_start(&server, &full, &reader).await);
+        }
+    }
+    assert_capped_by_the_day(fresh_start(&server, &full, "203.0.113.13").await).await;
+
+    let other = session_cookie(&server.session(&ada));
+    sent(&fresh_start(&server, &other, "203.0.113.13").await);
+    assert_eq!(log.sign_in_emails().len(), 25);
+}
+
+// A session's fresh sign-in mail is its own though it takes the row of a session that ended at
+// its ceiling: the session that took the freed row ID still gets mail.
+// Kills a ceiling on fresh sign-in mail kept by the session's row ID.
+#[tokio::test]
+async fn a_session_on_a_freed_row_keeps_its_own_fresh_sign_in_mail() {
+    let (server, log) = test_server(TestServerOptions {
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let ada = server.signup("Ada", "ada@example.com").await;
+    let ended = server.session(&ada);
+    let full = session_cookie(&ended);
+    for n in 1..=12 {
+        let reader = format!("203.0.113.{n}");
+        for _ in 0..2 {
+            sent(&fresh_start(&server, &full, &reader).await);
+        }
+    }
+    assert_capped_by_the_day(fresh_start(&server, &full, "203.0.113.13").await).await;
+    let ended_row = session_row(&server, &ended);
+    let sign_out = [
+        SAME_ORIGIN,
+        (bencher_json::RELAY_SECRET, RELAY_SECRET),
+        (bencher_json::RELAY_CLIENT_IP, "203.0.113.13"),
+        (header::COOKIE.as_str(), &full),
+    ];
+    let resp = send(
+        &server,
+        Method::DELETE,
+        "/v0/auth/session",
+        None,
+        &sign_out,
+        None,
+    )
+    .await;
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+    let next = server.session(&ada);
+    assert_eq!(session_row(&server, &next), ended_row);
+    sent(&fresh_start(&server, &session_cookie(&next), "203.0.113.13").await);
+    assert_eq!(log.sign_in_emails().len(), 25);
+}
+
+// Regression pin: starts sent at once cannot pass the cap, since each holds its share before
+// its send.
+#[tokio::test(flavor = "multi_thread")]
+async fn parallel_starts_stop_at_the_cap() {
+    let (server, log) = test_server(TestServerOptions {
+        relay_secret: Some(RELAY_SECRET.parse::<Secret>().expect("Invalid secret")),
+        rate_limiting: Some(RateLimiting::default()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    let mut requests = tokio::task::JoinSet::new();
+    for _ in 0..8 {
+        let request = server
+            .client
+            .post(server.api_url("/v0/auth/email"))
+            .header(SAME_ORIGIN.0, SAME_ORIGIN.1)
+            .header(bencher_json::RELAY_SECRET, RELAY_SECRET)
+            .header(bencher_json::RELAY_CLIENT_IP, "203.0.113.7")
+            .json(&json!({"email": "ada@example.com"}));
+        requests.spawn(async move {
+            let resp = request.send().await.expect("Request failed");
+            pending_cookie(resp.headers()).is_some()
+        });
+    }
+    let sent = requests.join_all().await;
+    assert_eq!(sent.iter().filter(|sent| **sent).count(), 2, "{sent:?}");
+    assert_eq!(log.sign_in_emails().len(), 2);
 }
 
 // Every endpoint charges the per-IP attempts limit, keyed on the address the relay forwards.
@@ -616,6 +1026,50 @@ async fn context_is_carried_to_the_proof() {
         user.authorization, None,
         "a request no longer pending is dropped"
     );
+}
+
+// A sign-in finished by "Sign in as", in a browser other than the one that started it, carries
+// none of the starter's choices: it claims nothing, takes no plan, and lands on no consent
+// request, for a new account and for an existing one.
+// Kills a link confirmed elsewhere that keeps the claim, the plan, or the consent request.
+#[tokio::test]
+async fn sign_in_as_carries_none_of_the_starters_choices() {
+    let (server, log) = test_server(TestServerOptions {
+        oauth: Some(oauth_server()),
+        ..TestServerOptions::default()
+    })
+    .await;
+    server.signup("Member", "member@example.com").await;
+    let authorization = seed_oauth_authorization(&server, DateTime::now());
+
+    for email in ["new@example.com", "member@example.com"] {
+        let unclaimed = unclaimed_organization(&server, email);
+        let body = json!({
+            "email": email,
+            "claim": unclaimed,
+            "plan": "pro",
+            "authorization": authorization.to_string(),
+        });
+        let resp = send_json(&server, "/v0/auth/email", None, &[SAME_ORIGIN], &body).await;
+        assert_eq!(resp.status(), StatusCode::ACCEPTED, "{email}");
+        let (_code, link) = log.sign_in();
+
+        let resp = redeem_link(&server, None, &link, true).await;
+        assert_signed_in(&server, &resp).await;
+        let JsonSignInAs { signed_in, .. } = resp.json().await.expect("Failed to parse");
+        let signed_in = signed_in.expect("Not signed in");
+        assert_eq!(signed_in.user.email.as_ref(), email);
+        assert_eq!(
+            (signed_in.plan, signed_in.authorization),
+            (None, None),
+            "{email}"
+        );
+        assert_eq!(
+            organization_roles(&server, unclaimed),
+            Vec::<String>::new(),
+            "{email}"
+        );
+    }
 }
 
 // A proof is one write: when its session cannot be written, the account is not made and the
@@ -1685,8 +2139,23 @@ fn console_url() -> url::Url {
     "http://localhost:3000".parse().expect("Invalid URL")
 }
 
+/// The pending cookie of an answer that sent its email.
+fn sent(resp: &reqwest::Response) -> String {
+    assert_eq!(resp.status(), StatusCode::ACCEPTED);
+    pending_cookie(resp.headers()).expect("No email sent")
+}
+
 /// The headers of a request from the console that the relay forwards for the reader at `ip`.
 fn relayed(ip: &'static str) -> [(&'static str, &'static str); 3] {
+    [
+        SAME_ORIGIN,
+        (bencher_json::RELAY_SECRET, RELAY_SECRET),
+        (bencher_json::RELAY_CLIENT_IP, ip),
+    ]
+}
+
+/// [`relayed`], for an address the test made.
+fn relayed_from(ip: &str) -> [(&str, &str); 3] {
     [
         SAME_ORIGIN,
         (bencher_json::RELAY_SECRET, RELAY_SECRET),
@@ -1715,6 +2184,63 @@ async fn start_raw(
         &json!({"email": email}),
     )
     .await
+}
+
+/// Ask for a fresh sign-in in the session `cookie` names, relayed for the reader at `ip`.
+async fn fresh_start(server: &TestServer, cookie: &str, ip: &str) -> reqwest::Response {
+    let headers = [
+        SAME_ORIGIN,
+        (bencher_json::RELAY_SECRET, RELAY_SECRET),
+        (bencher_json::RELAY_CLIENT_IP, ip),
+        (header::COOKIE.as_str(), cookie),
+    ];
+    send(
+        server,
+        Method::POST,
+        "/v0/auth/fresh/email",
+        None,
+        &headers,
+        None,
+    )
+    .await
+}
+
+/// Resend the fresh sign-in `pending` in the session `cookie` names, relayed for the reader at
+/// `ip`.
+async fn fresh_resend(
+    server: &TestServer,
+    cookie: &str,
+    pending: &str,
+    ip: &str,
+) -> reqwest::Response {
+    let cookies = format!(
+        "{cookie}; {}={pending}",
+        PendingCookie::new(&console_url()).name()
+    );
+    let headers = [
+        SAME_ORIGIN,
+        (bencher_json::RELAY_SECRET, RELAY_SECRET),
+        (bencher_json::RELAY_CLIENT_IP, ip),
+        (header::COOKIE.as_str(), cookies.as_str()),
+    ];
+    send(
+        server,
+        Method::POST,
+        "/v0/auth/fresh/email/resend",
+        None,
+        &headers,
+        None,
+    )
+    .await
+}
+
+/// The ID of the session row the token names.
+fn session_row(server: &TestServer, session: &SessionToken) -> i32 {
+    schema::session::table
+        .filter(schema::session::token_hash.eq(SessionTokenHash::from(session)))
+        .select(schema::session::id)
+        .first(&mut server.db_conn())
+        .expect("No session")
 }
 
 /// Start a sign-in for `email` that carries `invite`, and return its pending cookie.

@@ -3,9 +3,6 @@ export const prerender = false;
 
 import AuthPage from "../../next/astro/AuthPage.astro";
 import Frame from "../../next/auth/Frame";
-
-// Never framed, so no click on Approve can be tricked out of a user.
-Astro.response.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
 ---
 
 <AuthPage title="Connect an app">

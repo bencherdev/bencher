@@ -239,7 +239,7 @@ pub async fn proj_key_post(
             "Only a user session can create a project API key.",
         ));
     }
-    auth_user.check_fresh_sign_in(rqctx.context()).await?;
+    auth_user.check_fresh_sign_in(rqctx.context())?;
     let json = post_inner(
         rqctx.context(),
         path_params.into_inner(),

@@ -28,6 +28,10 @@ pub struct RateLimits {
     pub day: usize,
 }
 
+/// An event [`RateLimiter::reserve`] counted, by when, to give back with [`RateLimiter::release`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Reservation(SystemTime);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Interval {
     Minute,
@@ -73,10 +77,28 @@ where
         }
     }
 
-    /// Count an event for `key` only if every window has room for it.
-    /// Otherwise count nothing, and return how long until every window has room.
-    pub fn acquire(&self, key: K) -> Result<(), Duration> {
-        self.acquire_at(key, SystemTime::now())
+    /// Count an event for `key` only if every window has room for it, and return the reservation
+    /// that gives it back. Otherwise count nothing, and return how long until every window has
+    /// room.
+    pub fn reserve(&self, key: K) -> Result<Reservation, Duration> {
+        let now = SystemTime::now();
+        self.acquire_at(key, now).map(|()| Reservation(now))
+    }
+
+    /// Give back an event [`Self::reserve`] counted for `key`, from the buckets it was counted in.
+    /// A window it has aged out of has nothing to give back.
+    pub fn release(&self, key: K, reservation: Reservation) {
+        self.release_at(key, reservation, SystemTime::now());
+    }
+
+    fn release_at(&self, key: K, Reservation(counted): Reservation, now: SystemTime) {
+        // In the order every acquire locks the windows.
+        let mut minute = self.minute.events(key, now);
+        let mut hour = self.hour.events(key, now);
+        let mut day = self.day.events(key, now);
+        minute.release(self.minute.buckets.now_bucket(counted));
+        hour.release(self.hour.buckets.now_bucket(counted));
+        day.release(self.day.buckets.now_bucket(counted));
     }
 
     fn acquire_at(&self, key: K, now: SystemTime) -> Result<(), Duration> {
@@ -319,6 +341,21 @@ impl BucketedEvents {
         }
         self.buckets.push_back((now_bucket, 1));
         self.total = self.total.saturating_add(1);
+    }
+
+    /// Take one event out of `bucket`, if it still holds one.
+    fn release(&mut self, bucket: u64) {
+        let Some(index) = self.buckets.iter().position(|(held, _)| *held == bucket) else {
+            return;
+        };
+        if let Some((_, count)) = self.buckets.get_mut(index) {
+            if *count > 1 {
+                *count -= 1;
+            } else {
+                self.buckets.remove(index);
+            }
+            self.total = self.total.saturating_sub(1);
+        }
     }
 
     fn evict_oldest(&mut self) {
@@ -611,6 +648,44 @@ mod tests {
             limiter.acquire_at(1, probe),
             Err(released.duration_since(probe).unwrap())
         );
+    }
+
+    // A reservation given back leaves room for another event at once, for its own key alone.
+    #[test]
+    fn release_gives_back_the_reserved_event() {
+        let limiter = RateLimiter::new(RateLimits {
+            minute: 2,
+            hour: 100,
+            day: 1000,
+        });
+        let start = test_now();
+        for key in [1u32, 2] {
+            assert_eq!(limiter.acquire_at(key, start), Ok(()));
+            assert_eq!(limiter.acquire_at(key, start), Ok(()));
+        }
+
+        limiter.release_at(1, Reservation(start), start);
+        assert_eq!(limiter.acquire_at(1, start), Ok(()));
+        assert!(limiter.acquire_at(1, start).is_err());
+        assert!(limiter.acquire_at(2, start).is_err());
+    }
+
+    // A reservation whose bucket has aged out of a window gives back nothing there, so it never
+    // takes back an event counted since.
+    #[test]
+    fn release_of_an_aged_out_reservation_takes_back_nothing_newer() {
+        let limiter = RateLimiter::new(RateLimits {
+            minute: 1,
+            hour: 100,
+            day: 1000,
+        });
+        let start = test_now();
+        assert_eq!(limiter.acquire_at(1u32, start), Ok(()));
+        let later = start + Duration::from_mins(5);
+        assert_eq!(limiter.acquire_at(1, later), Ok(()));
+
+        limiter.release_at(1, Reservation(start), later);
+        assert!(limiter.acquire_at(1, later).is_err());
     }
 
     // A wait holds until every full window has room, and asking for it counts nothing.

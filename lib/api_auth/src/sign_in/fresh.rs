@@ -7,11 +7,13 @@ use bencher_json::{
     DateTime, Email, JsonFreshSignIn, JsonProved, JsonSignInAs, JsonSignInCode, JsonSignInEmail,
     LinkSecret, SignInRefusal,
 };
+#[cfg(feature = "plus")]
+use bencher_schema::context::SignInEmailCeiling;
 use bencher_schema::{
     context::{ApiContext, DbConnection},
     error::{forbidden_error, issue_error},
     model::user::{
-        auth::AuthUser,
+        auth::{AuthSession, AuthUser},
         session::{QuerySession, SessionId, cookie::PendingCookie},
         sign_in::QueryPendingSignIn,
     },
@@ -88,9 +90,9 @@ pub async fn auth_fresh_email_post(
     let context = rqctx.context();
     admit(log, context, &rqctx.request)?;
     let auth_user = AuthUser::new(&rqctx).await?;
-    let session_id = session_of(&auth_user)?;
+    let session = session_of(&auth_user)?;
     let email = auth_user.user.email.clone();
-    match email_fresh(log, context, &rqctx.request, email, session_id).await? {
+    match email_fresh(log, context, &rqctx.request, email, session).await? {
         Emailed::Sent(sent) => sent.answer(context),
         Emailed::Capped { email, wait } => Ok(capped(email, wait)),
     }
@@ -123,11 +125,11 @@ pub async fn auth_fresh_email_resend_post(
     let context = rqctx.context();
     admit(log, context, &rqctx.request)?;
     let auth_user = AuthUser::new(&rqctx).await?;
-    let session_id = session_of(&auth_user)?;
+    let session = session_of(&auth_user)?;
     let binding = binding(context, &rqctx.request).ok_or_else(ended)?;
     let now = context.clock.now();
     let pending =
-        QueryPendingSignIn::fresh_from_binding(public_conn!(context), &binding, session_id, now)
+        QueryPendingSignIn::fresh_from_binding(public_conn!(context), &binding, session.id, now)
             .map_err(|e| {
                 issue_error(
                     "Failed to find a sign-in",
@@ -136,7 +138,17 @@ pub async fn auth_fresh_email_resend_post(
                 )
             })?
             .ok_or_else(ended)?;
-    resend(log, context, pending, now).await
+    resend(
+        log,
+        context,
+        &rqctx.request,
+        #[cfg(feature = "plus")]
+        SignInEmailCeiling::Session(session.uuid),
+        Some(session),
+        pending,
+        now,
+    )
+    .await
 }
 
 #[endpoint {
@@ -167,7 +179,7 @@ pub async fn auth_fresh_code_post(
     let context = rqctx.context();
     admit(log, context, &rqctx.request)?;
     let auth_user = AuthUser::new(&rqctx).await?;
-    let session_id = session_of(&auth_user)?;
+    let session_id = session_of(&auth_user)?.id;
     let JsonSignInCode { code } = body.into_inner();
     let binding = binding(context, &rqctx.request).ok_or_else(ended)?;
     let now = context.clock.now();
@@ -249,8 +261,8 @@ fn prove_again(
 }
 
 /// The browser session the reader signed in to, which alone can sign in again.
-pub(crate) fn session_of(auth_user: &AuthUser) -> Result<SessionId, HttpError> {
+pub(crate) fn session_of(auth_user: &AuthUser) -> Result<AuthSession, HttpError> {
     auth_user
-        .session_id()
+        .session()
         .ok_or_else(|| forbidden_error(NOT_A_SESSION))
 }
