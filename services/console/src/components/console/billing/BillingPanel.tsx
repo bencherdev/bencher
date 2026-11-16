@@ -35,7 +35,7 @@ import {
 	runnerMinutePrice,
 	seriesTierRange,
 } from "../../../util/convert";
-import { BENCHER_CALENDLY_URL } from "../../../util/ext";
+import { BENCHER_ENTERPRISE_URL } from "../../../util/ext";
 import { httpGet, httpPatch } from "../../../util/http";
 import { NotifyKind, pageNotify } from "../../../util/notify";
 import { type InitValid, init_valid, validJwt } from "../../../util/valid";
@@ -491,10 +491,8 @@ const CloudMeteredPanel = (props: {
 				fallback={
 					<p>
 						Your usage is beyond the self-serve tiers.{" "}
-						<a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">
-							Get in touch
-						</a>{" "}
-						to set up a plan that fits.
+						<a href={BENCHER_ENTERPRISE_URL}>Get in touch</a> to set up a plan
+						that fits.
 					</p>
 				}
 			>
@@ -534,13 +532,7 @@ const CloudMeteredPanel = (props: {
 										<Show
 											when={!isContactTier(tier, level())}
 											fallback={
-												<a
-													href={BENCHER_CALENDLY_URL}
-													target="_blank"
-													rel="noreferrer"
-												>
-													Get in Touch
-												</a>
+												<a href={BENCHER_ENTERPRISE_URL}>Get in Touch</a>
 											}
 										>
 											{fmtTierPrice(tier, level())}
@@ -726,10 +718,8 @@ const SelfHostedFreePanel = (props: {
 			<h4>
 				<ol>
 					<li>
-						<a href={BENCHER_CALENDLY_URL} target="_blank" rel="noreferrer">
-							Contact us
-						</a>{" "}
-						to set up a Bencher Plus Enterprise (On-Prem) license
+						<a href={BENCHER_ENTERPRISE_URL}>Contact us</a> to set up a Bencher
+						Plus Enterprise (On-Prem) license
 					</li>
 					<li>
 						Share your "Self-Hosted Organization UUID":{" "}
@@ -747,7 +737,10 @@ const SelfHostedFreePanel = (props: {
 							</a>
 						</code>
 					</li>
-					<li>We will provision your license and send you your license key</li>
+					<li>
+						Copy your license key from your organization's Billing page on
+						Bencher Cloud
+					</li>
 					<li>
 						Back on <i>this</i> server, enter your license key below ⬇️
 					</li>

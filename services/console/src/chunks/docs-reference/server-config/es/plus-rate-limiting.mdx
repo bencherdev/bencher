@@ -2,7 +2,11 @@
 
 Esta sección especifica la limitación de tasa para el servidor API.
 Toda la sección es opcional.
-Si no se especifica, se utilizarán los valores predeterminados enumerados.
+En Bencher Self-Hosted, los límites de tasa personalizados requieren una licencia válida de Bencher Plus _Enterprise_ para al menos una organización en el servidor.
+El servidor API solo comprueba si hay una licencia válida al iniciarse,
+así que reinicie el servidor API después de agregar una licencia.
+Sin esta sección o sin una licencia válida, Bencher Self-Hosted no aplica ningún límite de tasa.
+De lo contrario, cualquier valor no especificado usa el valor predeterminado enumerado.
 
 Para evitar que se creen [proyectos `unclaimed`][unclaimed projects],
 establezca el `unclaimed_limit` en `0`.
@@ -11,7 +15,7 @@ establezca el `unclaimed_limit` en `0`.
 | :--------------------: | :----------: | :----------: | :-------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 |         window         |    86400     |    86400     |    No     |                                   Especifica la ventana de limitación de tasa en segundos. Establecido por defecto a un día.                                   |
 |    unclaimed_limit     |     255      |     255      |    No     | Controla la limitación de tasa para [proyectos `unclaimed`][unclaimed projects]. Para evitar que se creen proyectos `unclaimed`, establezca este valor en `0`. |
-|     claimed_limit      |    65536     |    65536     |    No     |                                                    Controla la limitación de tasa para proyectos `claimed`.                                                    |
+|     claimed_limit      |    65535     |    65535     |    No     |                                                    Controla la limitación de tasa para proyectos `claimed`.                                                    |
 |       plus_limit       |   1048576    |   1048576    |    No     |                                    Controla la limitación de tasa de métricas para organizaciones con un plan Bencher Plus.                                    |
 
 #### `public`
@@ -114,4 +118,4 @@ Si no se especifica, se utilizarán los valores predeterminados enumerados.
 |    free     | 10737418240  | 10737418240  |    No     | Bytes máximos por día para organizaciones gratuitas (reclamadas, sin plan de pago). Por defecto 10 GiB. |
 |    plus     | 107374182400 | 107374182400 |    No     | Bytes máximos por día para organizaciones Plus (Pro/Enterprise). Por defecto 100 GiB.      |
 
-[unclaimed projects]: /es/docs/how-to/claim/#unclaimed-projects
+[unclaimed projects]: /es/docs/how-to/claim/#proyectos-unclaimed
