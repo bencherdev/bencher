@@ -1,7 +1,8 @@
 import Button from "@bencherdev/ui/Button";
+import Icon from "@bencherdev/ui/Icon";
 import { createSignal, onCleanup } from "solid-js";
 
-/** Copies a version's whole hash, which the page shows only short; it keeps the width of either word, and says when it has copied. */
+/** Copies a version's whole hash, which the page shows only short, from right after it; it shows a check, and says when it has copied. */
 const CopyHash = (props: { hash: string }) => {
 	const [copied, setCopied] = createSignal(false);
 	let timer: ReturnType<typeof setTimeout> | undefined;
@@ -20,13 +21,11 @@ const CopyHash = (props: { hash: string }) => {
 			<Button
 				size="sm"
 				variant="ghost"
+				iconOnly
 				aria-label={`${copied() ? "Copied" : "Copy"} hash`}
 				onClick={copy}
 			>
-				<span class="rn-copyword" data-copied={copied() ? "" : undefined}>
-					<span class="rn-copyto">Copy</span>
-					<span class="rn-copied">Copied</span>
-				</span>
+				<Icon name={copied() ? "check" : "copy"} />
 			</Button>
 			<span class="sr-only" role="status">
 				{copied() ? "Copied the hash" : ""}

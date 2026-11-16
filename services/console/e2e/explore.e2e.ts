@@ -1698,7 +1698,7 @@ test("a pinned readout opens its point's commit and asks a Maintainer to link Gi
 	await page.keyboard.press("End");
 	const readout = plot(page).getByRole("status");
 	await expect(
-		readout.getByRole("link", { name: "Open commit on GitHub" }),
+		readout.getByRole("link", { name: "View commit" }),
 	).toHaveAttribute(
 		"href",
 		/^https:\/\/github\.com\/pompeii-llc\/hashbrown\/commit\/[0-9a-f]{40}$/,

@@ -761,7 +761,7 @@ test("a tile's pinned readout opens its point's commit and asks a Maintainer to 
 	await plot.click({ position: { x: box.width - 4, y: box.height / 2 } });
 	const readout = figure("Pin 1").getByRole("status");
 	await expect
-		.element(readout.getByRole("link", { name: "Open commit on GitHub" }))
+		.element(readout.getByRole("link", { name: "View commit" }))
 		.toHaveAttribute(
 			"href",
 			`https://github.com/pompeii-llc/hashbrown/commit/${"report-4".padStart(40, "c")}`,

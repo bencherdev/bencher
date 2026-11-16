@@ -7,6 +7,8 @@ interface PlotReport {
 	uuid: string;
 	version: number;
 	hash?: string;
+	/** The first line of the hash's commit message. */
+	title?: string;
 }
 
 export interface PlotMeasure {

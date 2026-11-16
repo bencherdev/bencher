@@ -386,6 +386,32 @@
 	color: var(--color-text-muted);
 }
 
+/* A commit's row, on a page and in a readout: the logo, then the title that gives way, then an ask kept whole. */
+.cm-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+.cm-row > .cm-text {
+	min-width: 0;
+}
+.cm-row .lnk {
+	font-size: inherit;
+}
+.cm-row[data-muted] {
+	color: var(--color-text-muted);
+}
+
+/* No width of its own: it takes the width the rows above set, so the readout keeps its width from point to point. */
+.pl-commit {
+	width: 0;
+	min-width: 100%;
+}
+.pl-readout.pinned .pl-commit .lnk {
+	min-height: var(--pl-target);
+}
+
 /* The focused row names its line on a line of its own, over its value, delta, and limit. */
 .pl-rrow.ui-parts.focused {
 	grid-auto-flow: row;

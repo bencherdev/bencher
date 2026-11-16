@@ -35,13 +35,25 @@ import {
 import { decodeQuery } from "../query/query";
 import { fakeApi, watchFallback } from "../reports/testing";
 import { screenBatch as runScreenBatch } from "../list/rows";
+import {
+	COMMIT_TITLE,
+	alertPill,
+	commitBootstrap,
+	commitRowCases,
+	commitTabs,
+	expectedAlertPill,
+	expectedCommit,
+	expectedTabs,
+	pillsBand,
+	shownCommit,
+	watchShift,
+} from "../runs/testing";
 import { bootstrapOf, linkedBootstrap } from "../settings/testing";
 import {
 	STRESS,
 	expectNameStartsWithText,
 	expectTakesItsBox,
 	expectTitleRow,
-	expectUncoveredBy,
 } from "../ui/testing";
 import Report from "./Report";
 
@@ -801,7 +813,7 @@ test("a viewer's title stays whole beside the Read only pill, and its alerts kee
 			return { x, y, width, height };
 		};
 		const before = box();
-		// A project with no repository: a commit control arriving with the bootstrap does move the alerts.
+		// A project with no repository or link, whose commit row leaves below the alerts when the bootstrap arrives.
 		const viewer = bootstrapOf({ edit: false });
 		const { url: _url, ...project } = viewer.project;
 		answer({ ...viewer, project });
@@ -1283,9 +1295,10 @@ test("on a phone the sub line wraps its parts whole in the two lines held for th
 	}
 });
 
-// Kills a hash Copy that copies the short hash or nothing, changes its width on
-// a press, or never says it copied.
-test("Copy beside a report's hash copies the whole hash", async () => {
+// Kills a hash Copy that copies the short hash or nothing, keeps its icon
+// after a press or shows its check for any time but 2 seconds, changes its
+// width on a press, sits apart from the hash, or never says it copied.
+test("Copy right after a report's hash copies the whole hash and shows a check for 2 seconds", async () => {
 	const writes = vi
 		.spyOn(navigator.clipboard, "writeText")
 		.mockResolvedValue(undefined);
@@ -1295,23 +1308,41 @@ test("Copy beside a report's hash copies the whole hash", async () => {
 	mount(api, impatient());
 	const copy = page.getByRole("button", { name: "Copy hash" });
 	await expect.element(copy).toBeVisible();
-	const width = copy.element().getBoundingClientRect().width;
-	await copy.click();
-	expect(writes).toHaveBeenCalledWith(`9c1f2e4${"0".repeat(33)}`);
-	const copied = page.getByRole("button", { name: "Copied hash" });
-	await expect.element(copied).toBeVisible();
-	expect(copied.element().getBoundingClientRect().width).toBe(width);
-	// Both words hold one place, so neither press moves the head.
-	const [copyWord, copiedWord] = [".rn-copyto", ".rn-copied"].map(
-		(word) =>
-			copied.element().querySelector(word)?.getBoundingClientRect() ?? null,
-	);
-	expect(copyWord?.top).toBe(copiedWord?.top);
-	expect(copyWord?.left).toBe(copiedWord?.left);
-
-	await expect
-		.element(page.getByRole("status").filter({ hasText: "Copied the hash" }))
-		.toBeInTheDocument();
+	const button = copy.element();
+	const icon = () => button.querySelector("svg")?.getAttribute("data-icon");
+	expect(icon()).toBe("copy");
+	expect(button.textContent).toBe("");
+	const hash = button.closest(".rn-copy")?.previousSibling;
+	const range = document.createRange();
+	range.selectNodeContents(hash ?? button);
+	expect(hash?.textContent).toBe("9c1f2e4");
+	expect(
+		Math.abs(
+			button.getBoundingClientRect().left - range.getBoundingClientRect().right,
+		),
+	).toBeLessThanOrEqual(0.5);
+	expectTakesItsBox(button);
+	const width = button.getBoundingClientRect().width;
+	vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+	try {
+		await copy.click();
+		expect(writes).toHaveBeenCalledWith(`9c1f2e4${"0".repeat(33)}`);
+		await expect
+			.element(page.getByRole("button", { name: "Copied hash" }))
+			.toBeVisible();
+		expect(icon()).toBe("check");
+		expect(button.getBoundingClientRect().width).toBe(width);
+		await expect
+			.element(page.getByRole("status").filter({ hasText: "Copied the hash" }))
+			.toBeInTheDocument();
+		vi.advanceTimersByTime(1_999);
+		expect(icon()).toBe("check");
+		vi.advanceTimersByTime(1);
+		expect(icon()).toBe("copy");
+		expect(button.getAttribute("aria-label")).toBe("Copy hash");
+	} finally {
+		vi.useRealTimers();
+	}
 });
 
 // Kills a title that gives its testbed less than a long branch's share of the
@@ -1342,7 +1373,7 @@ test("a long branch shares the title with its testbed, whole where it fits", asy
 			.element()
 			.querySelectorAll<HTMLElement>(".ui-trunc");
 		expect(branch?.dataset.tail).toBe("very-long-leaf");
-		if (width > 320) {
+		if (width > 320 || testbed?.dataset.cut === undefined) {
 			expect(testbed?.dataset.cut).toBeUndefined();
 		} else {
 			expect(testbed?.getBoundingClientRect().width).toBeGreaterThanOrEqual(
@@ -1365,9 +1396,8 @@ test("a long branch shares the title with its testbed, whole where it fits", asy
 const HASH = `9c1f2e4${"0".repeat(33)}`;
 const COMMITS = "https://github.com/pompeii-llc/rosti/commit";
 const CONNECTIONS = "/console/projects/hashbrown/connections";
-const COMMIT = "Open commit on GitHub";
 
-/** Mounts `report` for a project at `url`, unlinked, so the chip says when the bootstrap is in. */
+/** Mounts `report` for a project at `url`, unlinked, so Link GitHub says when the bootstrap is in. */
 const showLinked = async (report: JsonConsoleReport, url: string) => {
 	const { api } = fakeApi((path) =>
 		isReport(path)
@@ -1383,39 +1413,254 @@ const showLinked = async (report: JsonConsoleReport, url: string) => {
 		.toBeVisible();
 };
 
-// Kills a title row with no control, one that opens the commit by its short
-// hash, one with no repository to open it in, one anywhere but right after the
-// title, and a control left in the breadcrumb or the subtitle.
-test("a report's title row opens its commit right after the title, and only there", async () => {
-	const control = (within: string) =>
-		document.querySelector<HTMLAnchorElement>(
-			`${within} a[aria-label="${COMMIT}"]`,
+// Kills a row that drops the title or links it anywhere but the commit, an
+// ask in place of the title, a call to action for a reader who cannot act or
+// from a server that cannot link GitHub, a muted ask that links or keeps the
+// logo's color, no ask of an admin on a server without the GitHub App, and a
+// commit that opens in the same tab or an ask that opens another, with or
+// without a run.
+test.each(commitRowCases(HASH))(
+	"the report's commit row shows %s",
+	async (_, fields, commitTitle, shown) => {
+		for (const report of [
+			reportFixture(undefined, { run: run(), title: commitTitle } as never),
+			reportFixture(undefined, { title: commitTitle } as never),
+		]) {
+			const { api } = fakeApi((url) =>
+				isReport(url) ? { data: report } : { data: commitBootstrap(fields) },
+			);
+			mount(api, impatient());
+			await expect.element(table()).toBeVisible();
+			await expect
+				.poll(() => document.querySelector(".rp-head .ui-skeleton"))
+				.toBeNull();
+			expect(shownCommit(document.querySelector(".rp-head"))).toEqual(
+				expectedCommit(shown),
+			);
+			expect(commitTabs(document.querySelector(".rp-head"))).toEqual(
+				expectedTabs(shown),
+			);
+			dispose?.();
+			document.body.replaceChildren();
+		}
+	},
+);
+
+// Kills a commit row with no place while the report loads, a report with no
+// hash, which the API gives as null, whose row goes, either of which moves
+// the facts and everything under them as the report arrives, a null hash
+// read as a commit, a row shown before the bootstrap, and No commit as a link
+// or in the logo's color, with or without a run.
+test("a report with no hash shows No commit, held in place until the report and the bootstrap arrive", async () => {
+	for (const width of [1280, 390]) {
+		for (const withRun of [true, false]) {
+			await page.viewport(width, 844);
+			const answer = Promise.withResolvers<JsonConsoleReport>();
+			const bootstrap = Promise.withResolvers<JsonConsoleProject>();
+			const { api } = fakeApi(async (url) =>
+				isReport(url)
+					? { data: await answer.promise }
+					: { data: await bootstrap.promise },
+			);
+			mount(api, impatient());
+			const commit = () => document.querySelector(".rp-commit");
+			const facts = () =>
+				document.querySelector(".rp-sub")?.getBoundingClientRect().top;
+			await expect.poll(commit).not.toBeNull();
+			const held = facts();
+			answer.resolve(
+				reportFixture(undefined, {
+					version: { number: 24, hash: null },
+					...(withRun ? { run: run() } : {}),
+				} as never),
+			);
+			await expect.element(table()).toBeVisible();
+			expect(commit()?.querySelector(".ui-skeleton")).not.toBeNull();
+			expect(facts()).toBe(held);
+			bootstrap.resolve(commitBootstrap({ link: GitHubLinkStatus.Unlinked }));
+			await expect.element(page.getByText("No commit")).toBeVisible();
+			expect(facts()).toBe(held);
+			expect(shownCommit(commit())).toEqual({
+				logo: "github",
+				muted: true,
+				parts: [["No commit"]],
+			});
+			dispose?.();
+			document.body.replaceChildren();
+		}
+	}
+});
+
+// Kills a null hash read as a hash in the facts of a report with no run, a
+// part with no text and a Copy of nothing.
+test("the facts of a report with no run and no hash have no hash and no Copy", async () => {
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? {
+					data: reportFixture(undefined, {
+						version: { number: 24, hash: null },
+					} as never),
+				}
+			: { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	await expect.element(table()).toBeVisible();
+	const sub = document.querySelector(".rp-sub");
+	expect(sub?.querySelector(".rn-copy")).toBeNull();
+	for (const part of sub?.querySelectorAll("[data-fixed]") ?? []) {
+		expect(part.textContent?.trim()).not.toBe("");
+	}
+});
+
+/** A report with `total` alerts, its title `COMMIT_TITLE`, in a run. */
+const alerting = (total: number) => {
+	const fixture = reportFixture(undefined, {
+		run: run(),
+		title: COMMIT_TITLE,
+	} as never);
+	return {
+		...fixture,
+		counts: { ...fixture.counts, alerts: { total, active: total } },
+	};
+};
+const titleRow = () => document.querySelector(".rp-titlerow");
+
+// Kills a report with no alerts that draws no alert pill, which leaves its
+// phone's pills line an empty band above the commit row.
+test("on a phone a report with no alerts fills its pills line with 0 alerts, no empty band above its commit row", async () => {
+	await page.viewport(390, 844);
+	const { api } = fakeApi((url) =>
+		isReport(url)
+			? { data: alerting(0) }
+			: {
+					data: commitBootstrap({
+						repository: "pompeii-llc/rosti",
+						link: GitHubLinkStatus.Connected,
+					}),
+				},
+	);
+	mount(api, impatient());
+	await expect
+		.element(page.getByRole("link", { name: COMMIT_TITLE }))
+		.toBeVisible();
+	expect(alertPill(titleRow())?.text).toBe("0 alerts");
+	const band = pillsBand(titleRow());
+	expect(band?.offCenter).toBeLessThanOrEqual(0.5);
+	expect(band?.height).toBeLessThanOrEqual(44);
+	expect(Math.abs(band?.below ?? Number.POSITIVE_INFINITY)).toBeLessThanOrEqual(
+		0.5,
+	);
+});
+
+// Kills a report with no alerts that shows no alert pill, or shows it red or
+// with its dot, at any width, and a report with alerts whose pill is muted.
+test("a report with no alerts shows a muted 0 alerts, and a report with alerts a red pill with its dot", async () => {
+	for (const width of [1280, 390]) {
+		await page.viewport(width, 844);
+		for (const total of [0, 1, 3]) {
+			const { api } = fakeApi((url) =>
+				isReport(url) ? { data: alerting(total) } : { data: bootstrapOf() },
+			);
+			mount(api, impatient());
+			await expect.poll(() => alertPill(titleRow())).toBeDefined();
+			expect(alertPill(titleRow())).toEqual(expectedAlertPill(total));
+			dispose?.();
+			document.body.replaceChildren();
+		}
+	}
+});
+
+// Kills a phone's pills line that is not held while the report loads, which
+// moves the head down as its 0 alerts arrives.
+test("the head does not move as a report with no alerts arrives", async () => {
+	for (const width of [1280, 390]) {
+		await page.viewport(width, 844);
+		const answer = Promise.withResolvers<unknown>();
+		const { api } = fakeApi(async (url) =>
+			isReport(url)
+				? { data: await answer.promise }
+				: {
+						data: commitBootstrap({
+							repository: "pompeii-llc/rosti",
+							link: GitHubLinkStatus.Connected,
+						}),
+					},
 		);
-	for (const report of [
-		reportFixture(undefined, { run: run() } as never),
-		reportFixture(),
-	]) {
-		await showLinked(report, "https://github.com/pompeii-llc/rosti/");
-		expect(control(".rp-titlerow")?.getAttribute("href")).toBe(
-			`${COMMITS}/${HASH}`,
-		);
-		expect(
-			document.querySelector(".rp-titlemain > h1")?.nextElementSibling,
-		).toBe(control(".rp-titlerow"));
-		expect(control(".rp-crumb")).toBeNull();
-		expect(control(".rp-sub")).toBeNull();
+		mount(api, impatient());
+		const commit = () => document.querySelector(".rp-commit");
+		await expect.poll(() => commit()).not.toBeNull();
+		const commitTop = () => commit()?.getBoundingClientRect().top;
+		const held = commitTop();
+		expect(alertPill(titleRow())).toBeUndefined();
+		const stop = watchShift();
+		answer.resolve(alerting(0));
+		await expect
+			.element(page.getByRole("link", { name: COMMIT_TITLE }))
+			.toBeVisible();
+		expect(alertPill(titleRow())?.text).toBe("0 alerts");
+		expect(await stop()).toBe(0);
+		expect(commitTop()).toBe(held);
 		dispose?.();
 		document.body.replaceChildren();
 	}
-
-	await showLinked(reportFixture(), "https://rosti.example");
-	expect(control(".rp-head")).toBeNull();
 });
 
-// Kills a phone title row where the commit control lies over the title, a
-// title pushed out of view, a part past the screen's edge, and an alert pill
-// or Link GitHub that stays on the title's line, a long one or a short one.
-test("on a phone the title and commit control keep their line, and the pills wrap under it", async () => {
+// Kills a row anywhere but between the title row and the facts, a placeholder
+// of another height, which moves the facts when the bootstrap arrives, and a
+// GitHub icon left in the title row, the crumb, or the facts.
+test("the report's commit row sits between the title and the facts, held in place until the bootstrap arrives", async () => {
+	for (const width of [1280, 390]) {
+		await page.viewport(width, 844);
+		const bootstrap = Promise.withResolvers<JsonConsoleProject>();
+		const { api } = fakeApi(async (url) =>
+			isReport(url)
+				? {
+						data: reportFixture(undefined, {
+							run: run(),
+							title: COMMIT_TITLE,
+						} as never),
+					}
+				: { data: await bootstrap.promise },
+		);
+		mount(api, impatient());
+		await expect.element(table()).toBeVisible();
+		const commit = () => document.querySelector(".rp-commit");
+		expect(commit()?.querySelector(".ui-skeleton")).not.toBeNull();
+		const facts = () =>
+			document.querySelector(".rp-sub")?.getBoundingClientRect().top;
+		const held = facts();
+		bootstrap.resolve(
+			commitBootstrap({
+				repository: "pompeii-llc/rosti",
+				link: GitHubLinkStatus.Connected,
+			}),
+		);
+		await expect
+			.element(page.getByRole("link", { name: COMMIT_TITLE }))
+			.toHaveAttribute("href", `${COMMITS}/${HASH}`);
+		expect(facts()).toBe(held);
+		const row = commit()?.getBoundingClientRect();
+		expect(row?.top).toBeGreaterThanOrEqual(
+			document.querySelector(".rp-titlerow")?.getBoundingClientRect().bottom ??
+				Number.POSITIVE_INFINITY,
+		);
+		expect(row?.bottom).toBeLessThanOrEqual(
+			facts() ?? Number.NEGATIVE_INFINITY,
+		);
+		for (const within of [".rp-titlerow", ".rp-crumb", ".rp-sub"]) {
+			expect(
+				document.querySelector(`${within} [data-icon="github"]`),
+			).toBeNull();
+		}
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a phone title row where a title is pushed out of view, a part past
+// the screen's edge, and an alert pill that stays on the title's line, a long
+// one or a short one.
+test("on a phone the title keeps its line, and the pills wrap under it", async () => {
 	for (const [width, branch] of [
 		[320, STRESS.branch],
 		[390, STRESS.branch],
@@ -1432,80 +1677,12 @@ test("on a phone the title and commit control keep their line, and the pills wra
 			[
 				row?.querySelector("h1 .ui-trunc"),
 				row?.querySelectorAll("h1 .ui-trunc")[1],
-				row?.querySelector(`a[aria-label="${COMMIT}"]`),
 			],
-			[
-				row?.querySelector(".rp-alerts"),
-				row?.querySelector("a[href$='/connections'] .ui-button"),
-			],
+			[row?.querySelector(".rp-alerts")],
 		);
 		expect(document.documentElement.scrollWidth).toBe(width);
 		dispose?.();
 		document.body.replaceChildren();
-	}
-});
-
-// Kills a chip taller than the alert pill, a phone target smaller than a
-// finger or reaching past its line, a desktop target larger than the chip,
-// and a target over the commit control, a cut name's reveal, or a run-less
-// report's Copy, with or without a status pill beside the chip.
-test("the report's chip is as tall as the alert pill, and its touch target covers nothing", async () => {
-	for (const width of [1280, 390]) {
-		for (const status of [false, true]) {
-			for (const ran of [true, false]) {
-				await page.viewport(width, 844);
-				const report = reportFixture(undefined, {
-					...(ran ? { run: run() } : {}),
-					spec: { ...spec, name: STRESS.name },
-					...(status
-						? {
-								job: {
-									status: "running",
-									created: STARTED,
-									started: STARTED,
-								} as JsonConsoleJob,
-							}
-						: {}),
-				} as never);
-				await showLinked(
-					{ ...report, branch: { ...report.branch, name: STRESS.branch } },
-					"https://github.com/pompeii-llc/rosti",
-				);
-				const row = document.querySelector(".rp-titlerow");
-				if (status) {
-					expect(row?.querySelectorAll(".rp-titlepills > *")).toHaveLength(3);
-				}
-				const target = row?.querySelector("a[href$='/connections']");
-				const shown = (
-					target?.querySelector(".ui-button") ?? target
-				)?.getBoundingClientRect();
-				const pill = row?.querySelector(".rp-alerts")?.getBoundingClientRect();
-				const hit = target?.getBoundingClientRect();
-				expect(shown?.height).toBeLessThanOrEqual((pill?.height ?? 0) + 0.5);
-				if (width < 768) {
-					const line = row
-						?.querySelector(".rp-titlepills")
-						?.getBoundingClientRect();
-					expect(hit?.height).toBeGreaterThanOrEqual(44);
-					expect(hit?.top).toBeGreaterThanOrEqual((line?.top ?? 0) - 0.5);
-					expect(hit?.bottom).toBeLessThanOrEqual((line?.bottom ?? 0) + 0.5);
-				} else {
-					expect(hit?.height).toBeLessThanOrEqual((shown?.height ?? 0) + 0.5);
-				}
-				const buttons = [
-					...document.querySelectorAll(
-						".rp-sub button, .rp-titlerow h1 button",
-					),
-				];
-				expect(buttons.length).toBeGreaterThan(ran ? 0 : 1);
-				for (const button of buttons) {
-					expectUncoveredBy(button, target);
-				}
-				expectTakesItsBox(row?.querySelector(`a[aria-label="${COMMIT}"]`));
-				dispose?.();
-				document.body.replaceChildren();
-			}
-		}
 	}
 });
 
@@ -1533,7 +1710,7 @@ test("a running report's status pill keeps its one line beside a long branch", a
 // Kills a report page that asks a reader who may not manage the project, or
 // asks a Maintainer nothing, and a row plot whose pinned readout neither opens
 // its commit nor asks.
-test("a Maintainer's report and its row plots' pinned readouts ask to link GitHub", async () => {
+test("a Maintainer's report and its row plots' pinned readouts ask to reconnect GitHub", async () => {
 	const show = (bootstrap: JsonConsoleProject) => {
 		const { api } = fakeApi((url) =>
 			isReport(url) ? { data: threeLines() } : { data: bootstrap },
@@ -1546,12 +1723,17 @@ test("a Maintainer's report and its row plots' pinned readouts ask to link GitHu
 			link: GitHubLinkStatus.Disconnected,
 		}),
 	);
-	const chip = () =>
-		document.querySelector<HTMLAnchorElement>(
-			".rp-titlerow a[href$='/connections']",
+	const head = () => document.querySelector(".rp-head");
+	await expect
+		.poll(() => shownCommit(head()))
+		.toEqual(
+			expectedCommit({
+				parts: [
+					["View commit", `${COMMITS}/${HASH}`],
+					["Reconnect GitHub", CONNECTIONS],
+				],
+			}),
 		);
-	await expect.poll(() => chip()?.textContent).toBe("Reconnect GitHub");
-	expect(chip()?.getAttribute("href")).toBe(CONNECTIONS);
 
 	await page.getByRole("button", { name: `Expand ${LATENCY}` }).click();
 	const region = page.getByRole("region", { name: `${LATENCY}, full plot` });
@@ -1561,7 +1743,7 @@ test("a Maintainer's report and its row plots' pinned readouts ask to link GitHu
 	await userEvent.keyboard("{End}");
 	const readout = region.getByRole("status");
 	await expect
-		.element(readout.getByRole("link", { name: COMMIT }))
+		.element(readout.getByRole("link", { name: "View commit" }))
 		.toHaveAttribute("href", `${COMMITS}/9c1f2e4`);
 	await expect
 		.element(readout.getByRole("link", { name: "Reconnect GitHub" }))
@@ -1576,14 +1758,17 @@ test("a Maintainer's report and its row plots' pinned readouts ask to link GitHu
 			manage: false,
 		}),
 	);
-	// The control shows once the bootstrap is in, which is when the chip would.
-	await expect.element(page.getByRole("link", { name: COMMIT })).toBeVisible();
-	expect(chip()).toBeNull();
+	await expect
+		.poll(() => shownCommit(head()))
+		.toEqual(
+			expectedCommit({ parts: [["View commit", `${COMMITS}/${HASH}`]] }),
+		);
 });
 
-// Kills a phone pills line that runs past the screen and scrolls the page
-// sideways when Reconnect GitHub, a running status, and an alert pill share it,
-// with a few alerts or many and a short running time or a long one.
+// Kills a phone head that runs past the screen and scrolls the page sideways
+// when a running status and an alert pill share the pills' line and Reconnect
+// GitHub ends the commit row, with a few alerts or many and a short running
+// time or a long one.
 test("on a phone the report's pills wrap rather than push the page sideways", async () => {
 	const HOUR = 60 * 60 * 1_000;
 	for (const width of [320, 360]) {

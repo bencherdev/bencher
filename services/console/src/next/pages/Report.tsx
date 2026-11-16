@@ -26,9 +26,8 @@ import {
 import type { JsonConsoleReport, JsonConsoleSpec } from "../../types/bencher";
 import type { Settable } from "../alerts/status";
 import { ApiError } from "../api";
-import CommitLink from "../commit";
 import Dot from "../dot";
-import { type GitHubLinks, consoleGitHub } from "../github";
+import { consoleGitHub } from "../github";
 import { alertPath, projectPath, reportPath, runPath } from "../paths";
 import { useNarrow } from "../plot/narrow";
 import { leafOf } from "../leaf";
@@ -68,8 +67,9 @@ import {
 import { duration, shortHash } from "../reports/format";
 import Neighbor, { onMoved } from "../runs/Neighbor";
 import { reportStatus } from "../runs/status";
-import AskGitHub from "../runs/AskGitHub";
+import AlertsPill from "../runs/AlertsPill";
 import CopyHash from "../runs/CopyHash";
+import PageCommit from "../runs/PageCommit";
 import StatusPill from "../runs/StatusPill";
 import { formatCount } from "../plot/count";
 
@@ -146,6 +146,13 @@ const Report = () => {
 	const next = () => batches()[loaded().length];
 	const first = () => loaded()[0]?.data;
 	const report = () => first()?.report;
+	const commit = () => {
+		const shown = report();
+		// A version with no hash gives it as null.
+		return shown
+			? { hash: shown.version.hash ?? undefined, title: shown.title }
+			: undefined;
+	};
 	useEntityTitle("Report", () => {
 		const shown = report();
 		return (
@@ -349,7 +356,12 @@ const Report = () => {
 							readOnly={bootstrap().data?.permissions.edit === false}
 							onRunIntent={intendRun}
 						/>
-						<Title report={report()} now={now()} github={github} />
+						<Title report={report()} now={now()} />
+						<PageCommit
+							commit={commit()}
+							pending={bootstrap().isPending}
+							github={github}
+						/>
 					</div>
 					<div class="ph-actions rp-actions">
 						<Neighbor
@@ -372,8 +384,10 @@ const Report = () => {
 								<For
 									each={subtitle(
 										report(),
-										// The run's crumb names the hash when there is one.
-										report().run ? undefined : report().version.hash,
+										// The run's crumb names the hash when there is one; a version with no hash gives it as null.
+										report().run
+											? undefined
+											: (report().version.hash ?? undefined),
 										view().search ? undefined : report().total,
 										narrow(),
 									)}
@@ -394,12 +408,14 @@ const Report = () => {
 												>
 													{part.text}
 												</a>
+											) : part.kind === "hash" && part.hash ? (
+												<span data-fixed>
+													{part.text}
+													<CopyHash hash={part.hash} />
+												</span>
 											) : (
 												<span data-fixed>{part.text}</span>
 											)}
-											<Show when={part.kind === "hash" && part.hash}>
-												{(whole) => <CopyHash hash={whole()} />}
-											</Show>
 										</>
 									)}
 								</For>
@@ -615,7 +631,6 @@ const Crumb = (props: {
 const Title = (props: {
 	report: JsonConsoleReport | undefined;
 	now: number;
-	github: GitHubLinks;
 }) => (
 	<div class="rp-titlerow">
 		<div class="rp-titlemain">
@@ -638,28 +653,20 @@ const Title = (props: {
 					)}
 				</Show>
 			</Heading>
-			<Show when={props.report?.version.hash}>
-				{(hash) => <CommitLink href={props.github.commit(hash())} />}
-			</Show>
 		</div>
 		{/* On a phone, pills too wide for their line wrap rather than push the page sideways. */}
 		<div class="rp-titlepills" style={{ "flex-wrap": "wrap" }}>
-			<Show when={(props.report?.counts.alerts.total ?? 0) > 0}>
-				<span class="rp-alerts">
-					<svg class="lr-alertdot" viewBox="0 0 8 8" aria-hidden="true">
-						<circle cx="4" cy="4" r="4" />
-					</svg>
-					{plural(props.report?.counts.alerts.total ?? 0, "alert")}
-				</span>
+			<Show when={props.report}>
+				{(report) => (
+					<AlertsPill total={report().counts.alerts.total}>
+						{plural(report().counts.alerts.total, "alert")}
+					</AlertsPill>
+				)}
 			</Show>
 			<Show when={props.report?.job && props.report}>
 				{(report) => (
 					<StatusPill status={reportStatus(report(), props.now, duration)} />
 				)}
-			</Show>
-			{/* Last, so its arrival with the bootstrap moves nothing. */}
-			<Show when={props.report}>
-				<AskGitHub ask={props.github.ask?.()} />
 			</Show>
 		</div>
 	</div>

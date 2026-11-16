@@ -31,9 +31,8 @@ import type {
 	JsonConsoleRunWarnings,
 } from "../../types/bencher";
 import { type Api, ApiError } from "../api";
-import CommitLink from "../commit";
 import Dot from "../dot";
-import { type GitHubLinks, consoleGitHub } from "../github";
+import { consoleGitHub } from "../github";
 import { projectPath, reportPath, runPath } from "../paths";
 import { formatWhen } from "../plot/format";
 import { formatCount } from "../plot/count";
@@ -46,8 +45,9 @@ import { WarningRows, WarningsTable, warningsTotal } from "../report/Warnings";
 import { absoluteTime, duration } from "../reports/format";
 import { type Range, hasMore, loadMore } from "../list/rows";
 import { screenBatch } from "../list/rows";
-import AskGitHub from "../runs/AskGitHub";
+import AlertsPill from "../runs/AlertsPill";
 import CopyHash from "../runs/CopyHash";
+import PageCommit from "../runs/PageCommit";
 import { allNames, runHead } from "../runs/format";
 import Neighbor, { onMoved } from "../runs/Neighbor";
 import { isRunId, runBatchQuery } from "../runs/run";
@@ -211,7 +211,12 @@ const Run = () => {
 				<div class="pagehead rp-head">
 					<div class="ph-title">
 						<Crumb slug={slug()} />
-						<Title run={run()} now={now()} github={github} />
+						<Title run={run()} now={now()} />
+						<PageCommit
+							commit={run()}
+							pending={bootstrap().isPending}
+							github={github}
+						/>
 					</div>
 					<div class="ph-actions rp-actions">
 						<Neighbor
@@ -414,11 +419,7 @@ const Crumb = (props: { slug: string }) => (
  * The branch and the run's head, and its alerts; before they arrive, a
  * placeholder of the same line box.
  */
-const Title = (props: {
-	run: JsonConsoleRun | undefined;
-	now: number;
-	github: GitHubLinks;
-}) => (
+const Title = (props: { run: JsonConsoleRun | undefined; now: number }) => (
 	<div class="rp-titlerow">
 		<div class="rp-titlemain">
 			<Heading level={1} size="xl">
@@ -442,24 +443,16 @@ const Title = (props: {
 					)}
 				</Show>
 			</Heading>
-			<Show when={props.run?.hash}>
-				{(hash) => (
-					<>
-						<CopyHash hash={hash()} />
-						<CommitLink href={props.github.commit(hash())} />
-					</>
-				)}
-			</Show>
+			<Show when={props.run?.hash}>{(hash) => <CopyHash hash={hash()} />}</Show>
 		</div>
 		{/* On a phone, pills too wide for their line wrap rather than push the page sideways. */}
 		<div class="rp-titlepills" style={{ "flex-wrap": "wrap" }}>
-			<Show when={(props.run?.alerts.total ?? 0) > 0}>
-				<span class="rp-alerts">
-					<svg class="lr-alertdot" viewBox="0 0 8 8" aria-hidden="true">
-						<circle cx="4" cy="4" r="4" />
-					</svg>
-					{plural(props.run?.alerts.total ?? 0, "alert")}
-				</span>
+			<Show when={props.run}>
+				{(run) => (
+					<AlertsPill total={run().alerts.total}>
+						{plural(run().alerts.total, "alert")}
+					</AlertsPill>
+				)}
 			</Show>
 			<Show
 				when={
@@ -469,10 +462,6 @@ const Title = (props: {
 				}
 			>
 				{(run) => <StatusPill status={runStatus(run(), props.now, duration)} />}
-			</Show>
-			{/* Last, so its arrival with the bootstrap moves nothing. */}
-			<Show when={props.run}>
-				<AskGitHub ask={props.github.ask?.()} />
 			</Show>
 		</div>
 	</div>

@@ -1727,7 +1727,7 @@ test("a row's pinned readout opens its commit and asks a Maintainer to link GitH
 	await pinLast(region);
 	const readout = region.getByRole("status");
 	await expect
-		.element(readout.getByRole("link", { name: "Open commit on GitHub" }))
+		.element(readout.getByRole("link", { name: "View commit" }))
 		.toHaveAttribute(
 			"href",
 			`https://github.com/pompeii-llc/hashbrown/commit/9c1f2e4`,

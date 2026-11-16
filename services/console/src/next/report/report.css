@@ -80,6 +80,10 @@
 	font-size: 12px;
 	white-space: nowrap;
 }
+.rp-alerts[data-muted] {
+	border-color: var(--color-border);
+	color: var(--color-text-muted);
+}
 
 /* Placeholders hold the line boxes of what replaces them. */
 .ui-skeleton.rp-title-skel {
@@ -618,26 +622,33 @@
 	display: none;
 }
 
+/* Right after the hash, which the title row's gap would hold apart; it reaches into the space around its line, so the line keeps its height. */
 .rn-copy {
 	flex: none;
 	display: inline-flex;
+	vertical-align: middle;
+}
+.rp-titlerow .rn-copy {
+	margin-inline-start: -10px;
 }
 .rn-copy > .ui-button {
 	margin-block: -8px;
 }
-/* Both words take the place, so a press never changes the button's width. */
-.rn-copyword {
-	display: inline-grid;
+
+/* The commit row, between the title row and the facts, as tall before it arrives as after. */
+.rp-commit {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+	height: 1lh;
+	font-size: 13px;
+	color: var(--color-text-secondary);
 }
-.rn-copyword > * {
-	grid-area: 1 / 1;
-}
-.rn-copied,
-.rn-copyword[data-copied] > .rn-copyto {
-	visibility: hidden;
-}
-.rn-copyword[data-copied] > .rn-copied {
-	visibility: visible;
+.ui-skeleton.rp-commit-skel {
+	display: block;
+	width: 32ch;
+	max-width: 100%;
+	height: 1lh;
 }
 
 @media (max-width: 767px) {
@@ -668,8 +679,14 @@
 		flex: 1 1 0;
 		min-width: 8ch;
 	}
+	/* A finger's target, its glyph at its start, right after the hash. */
 	.rn-copy > .ui-button {
+		justify-content: flex-start;
 		margin-block: -14px;
+	}
+	/* A finger's line, as tall as its links. */
+	.rp-commit {
+		height: 44px;
 	}
 	.rp-actions {
 		order: 1;

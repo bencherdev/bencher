@@ -8,6 +8,20 @@ import { page, userEvent } from "vitest/browser";
 import Plot, { type PlotAlerts, type PlotProps } from "./Plot";
 import { middle, near, pixelAt, rowsOf, settle, tokenRgb } from "./pixels";
 import { returnSyncKey, takeSyncKey } from "./sync";
+import { publicGitHub } from "../commit";
+import { GitHubLinkStatus } from "../../types/bencher";
+import { type GitHubAsk, type GitHubLinks, consoleGitHub } from "../github";
+import {
+	COMMIT_TITLE,
+	LONG_COMMIT_TITLE,
+	commitBootstrap,
+	commitRowCases,
+	commitTabs,
+	expectedCommit,
+	expectedTabs,
+	shownCommit,
+	textLines,
+} from "../runs/testing";
 import { expectNameStartsWithText, shownText } from "../ui/testing";
 import { DAY, START, testData, testLine } from "./testing";
 import type { PlotData, PlotLine } from "./types";
@@ -435,66 +449,56 @@ describe("Plot", () => {
 			.toBeInTheDocument();
 	});
 
-	// Kills a readout's commit control that grows its first line on a desktop,
-	// and one that reaches past the readout or over its value rows on a phone.
-	test("a pinned readout's commit control keeps its line on a desktop and stays inside the readout on a phone", async () => {
-		const data = testData([
+	/** A row of `View commit` for every hash, at `https://github.test/commit/{hash}`, and `ask` at its end. */
+	const viewCommit = (ask?: GitHubAsk): GitHubLinks => ({
+		row: (hash) => ({
+			kind: "commit",
+			text: "View commit",
+			href: `https://github.test/commit/${hash}`,
+			ask,
+		}),
+	});
+	const RISING = () =>
+		testData([
 			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
 		]);
-		const pin = async () => {
-			await settle();
-			const { over, box } = await plotArea();
-			await page.elementLocator(over).click({
-				position: { x: box.width / 4, y: box.height / 2 },
-			});
-			await expect
-				.element(page.getByRole("button", { name: "Close the readout" }))
-				.toBeVisible();
-			return page.getByRole("status").element();
-		};
-		const lineHeight = (status: Element) =>
-			status.querySelector(".pl-when")?.getBoundingClientRect().height;
-		mount({ data, github: { commit: () => undefined } });
-		const plain = lineHeight(await pin());
-		dispose?.();
-		document.body.replaceChildren();
-		mount({
-			data,
-			github: { commit: (hash) => `https://github.test/${hash}` },
-		});
-		const status = await pin();
-		expect(
-			status.querySelector('a[aria-label="Open commit on GitHub"]'),
-		).not.toBeNull();
-		expect(lineHeight(status)).toBe(plain);
-		dispose?.();
-		document.body.replaceChildren();
 
+	// Kills a pinned readout's commit link smaller than a finger on a phone,
+	// and one that reaches past the readout or over its value rows.
+	test("a pinned readout's commit row is a finger's target on a phone and stays inside the readout", async () => {
 		await page.viewport(375, 812);
-		mount(
-			{ data, github: { commit: (hash) => `https://github.test/${hash}` } },
-			343,
-		);
-		const phone = await pin();
-		const control = phone
-			.querySelector('a[aria-label="Open commit on GitHub"]')
-			?.getBoundingClientRect();
+		mount({ data: RISING(), github: viewCommit() }, 343);
+		await settle();
+		const { over, box } = await plotArea();
+		await page.elementLocator(over).click({
+			position: { x: box.width / 4, y: box.height / 2 },
+		});
+		const status = page.getByRole("status");
+		await expect
+			.element(status.getByRole("link", { name: "View commit" }))
+			.toBeVisible();
+		const control = status
+			.getByRole("link", { name: "View commit" })
+			.element()
+			.getBoundingClientRect();
 		const card = readoutBox();
-		const row = phone.querySelector(".pl-rrow")?.getBoundingClientRect();
-		expect(control?.height).toBeGreaterThanOrEqual(44);
-		expect(control?.top).toBeGreaterThanOrEqual(card.top);
-		expect(control?.bottom).toBeLessThanOrEqual(card.bottom);
-		expect(control?.left).toBeGreaterThanOrEqual(card.left);
-		expect(control?.right).toBeLessThanOrEqual(card.right);
-		expect(control?.bottom).toBeLessThanOrEqual((row?.top ?? 0) + 0.5);
+		const row = status
+			.element()
+			.querySelector(".pl-rrow")
+			?.getBoundingClientRect();
+		expect(control.height).toBeGreaterThanOrEqual(44);
+		expect(control.top).toBeGreaterThanOrEqual(card.top);
+		expect(control.bottom).toBeLessThanOrEqual(card.bottom);
+		expect(control.left).toBeGreaterThanOrEqual(card.left);
+		expect(control.right).toBeLessThanOrEqual(card.right);
+		expect(control.top).toBeGreaterThanOrEqual((row?.bottom ?? 0) - 0.5);
 	});
 
-	// Kills a commit control that opens anything but its whole hash's commit,
-	// and one that takes the report link's place or splits it.
-	test("a pinned readout keeps its report link and opens its commit beside it", async () => {
-		const data = testData([
-			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
-		]);
+	// Kills a commit link that opens anything but its whole hash's commit, one
+	// that takes the report link's place or splits it, and a GitHub icon left
+	// beside the hash.
+	test("a pinned readout keeps its report link and opens its commit from its row", async () => {
+		const data = RISING();
 		const whole = (index: number) => `${index}`.padStart(40, "c");
 		data.reports = data.reports.map((report, index) => ({
 			...report,
@@ -503,7 +507,7 @@ describe("Plot", () => {
 		mount({
 			data,
 			reportHref: (uuid) => `/reports/${uuid}`,
-			github: { commit: (hash) => `https://github.test/commit/${hash}` },
+			github: viewCommit(),
 		});
 		await settle();
 		const { over, box } = await plotArea();
@@ -513,7 +517,7 @@ describe("Plot", () => {
 
 		const status = page.getByRole("status");
 		await expect
-			.element(status.getByRole("link", { name: "Open commit on GitHub" }))
+			.element(status.getByRole("link", { name: "View commit" }))
 			.toHaveAttribute("href", `https://github.test/commit/${whole(1)}`);
 		expect(
 			status
@@ -522,21 +526,19 @@ describe("Plot", () => {
 				.map((link) => [link.textContent, link.getAttribute("href")]),
 		).toEqual([
 			[expect.stringMatching(/ · ccccccc$/), "/reports/report-1"],
-			["", `https://github.test/commit/${whole(1)}`],
+			["View commit", `https://github.test/commit/${whole(1)}`],
 		]);
+		expect(
+			status.element().querySelector('.pl-when [data-icon="github"]'),
+		).toBeNull();
 	});
 
-	// Kills an ask in a readout that is not pinned, and a pinned readout that drops it.
-	test("only a pinned readout asks to link GitHub", async () => {
-		const data = testData([
-			testLine({ id: "rising", y: [10_000, 20_000, 30_000, 40_000, 50_000] }),
-		]);
+	// Kills a readout that hides the row while hovered, one that links it
+	// before a pin, and a pinned readout that drops its links.
+	test("a hover shows the commit row as text, and only a pinned readout links it", async () => {
 		mount({
-			data,
-			github: {
-				commit: () => undefined,
-				ask: () => ({ label: "Link GitHub", href: "/connections" }),
-			},
+			data: RISING(),
+			github: viewCommit({ label: "Link GitHub", href: "/connections" }),
 		});
 		await settle();
 		const { over, box } = await plotArea();
@@ -544,14 +546,223 @@ describe("Plot", () => {
 		const at = { position: { x: box.width / 4, y: box.height / 2 } };
 		await page.elementLocator(over).hover(at);
 		await expect.element(status).toHaveTextContent("20.00 µs");
-		expect(status.element().textContent).not.toContain("Link GitHub");
+		expect(shownCommit(status.element())).toEqual({
+			logo: "github",
+			muted: false,
+			parts: [["View commit"], ["Link GitHub"]],
+		});
+		expect(status.element().querySelector("a")).toBeNull();
 
 		await page.elementLocator(over).click(at);
 		await expect
 			.element(status.getByRole("link", { name: "Link GitHub" }))
 			.toHaveAttribute("href", "/connections");
+		expect(shownCommit(status.element())?.parts).toEqual([
+			["View commit", "https://github.test/commit/aaaaaa1"],
+			["Link GitHub", "/connections"],
+		]);
 		await page.getByRole("button", { name: "Close the readout" }).click();
 		await expect.element(status).not.toHaveTextContent("Link GitHub");
+	});
+
+	// Kills a readout row that drops the title or links it anywhere but the
+	// commit, an ask in place of the title, a call to action for a reader who
+	// cannot act or from a server that cannot link GitHub, a muted ask that
+	// links or keeps the logo's color, no ask of an admin on a server without
+	// the GitHub App, a row that links before a pin, and a commit that opens in
+	// the same tab or an ask that opens another.
+	test.each(commitRowCases("aaaaaa1"))(
+		"a readout's commit row shows %s, as text until pinned",
+		async (_, fields, title, shown) => {
+			const data = RISING();
+			data.reports = data.reports.map((report) =>
+				title === undefined ? report : { ...report, title },
+			);
+			const bootstrap = commitBootstrap(fields);
+			mount({ data, github: consoleGitHub(() => bootstrap) });
+			await settle();
+			const { over, box } = await plotArea();
+			const status = page.getByRole("status");
+			const at = { position: { x: box.width / 4, y: box.height / 2 } };
+			await page.elementLocator(over).hover(at);
+			await expect.element(status).toHaveTextContent("20.00 µs");
+			expect(shownCommit(status.element())).toEqual(
+				expectedCommit(shown, false),
+			);
+			await page.elementLocator(over).click(at);
+			await expect
+				.element(page.getByRole("button", { name: "Close the readout" }))
+				.toBeVisible();
+			expect(shownCommit(status.element())).toEqual(expectedCommit(shown));
+			expect(commitTabs(status.element())).toEqual(expectedTabs(shown));
+		},
+	);
+
+	// Kills a readout of a point with no hash that shows a commit row, which
+	// has no commit to name or open, whatever the project asks.
+	test("a readout of a point with no hash shows no commit row", async () => {
+		const data = RISING();
+		data.reports = data.reports.map(({ hash: _hash, ...report }) => report);
+		const bootstrap = commitBootstrap();
+		mount({ data, github: consoleGitHub(() => bootstrap) });
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		const at = { position: { x: box.width / 4, y: box.height / 2 } };
+		await page.elementLocator(over).hover(at);
+		await expect.element(status).toHaveTextContent("20.00 µs");
+		expect(status.element().querySelector(".cm-row")).toBeNull();
+		await page.elementLocator(over).click(at);
+		await expect
+			.element(page.getByRole("button", { name: "Close the readout" }))
+			.toBeVisible();
+		expect(status.element().querySelector(".cm-row")).toBeNull();
+	});
+
+	// Kills a title that widens the readout, so it changes width as the cursor
+	// moves, and a title that wraps rather than ends in an ellipsis.
+	test("a long title takes the readout's width and keeps it from point to point", async () => {
+		const data = RISING();
+		data.reports = data.reports.map((report, index) =>
+			index === 2 ? { ...report, title: LONG_COMMIT_TITLE } : report,
+		);
+		mount({
+			data,
+			github: publicGitHub(() => "https://github.com/pompeii-llc/rosti"),
+		});
+		await settle();
+		const { over, box } = await plotArea();
+		const status = page.getByRole("status");
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 4, y: box.height / 2 },
+		});
+		await expect.element(status).toHaveTextContent("View commit");
+		const width = readoutBox().width;
+		await page.elementLocator(over).hover({
+			position: { x: box.width / 2, y: box.height / 2 },
+		});
+		await expect.element(status).toHaveTextContent("30.00 µs");
+		expect(readoutBox().width).toBe(width);
+		const row = status.element().querySelector(".cm-row");
+		const text = row?.querySelector(".cm-text .ui-trunc > span");
+		expect(text?.scrollWidth).toBeGreaterThan(text?.clientWidth ?? 0);
+		expect(row?.getBoundingClientRect().right).toBeLessThanOrEqual(
+			readoutBox().right,
+		);
+		const line = status.element().querySelector(".pl-when");
+		expect(row?.getBoundingClientRect().height).toBeLessThanOrEqual(
+			(line?.getBoundingClientRect().height ?? 0) + 4,
+		);
+	});
+
+	// Kills an ask that reaches past a narrow readout or under its close
+	// button, hovered or pinned, and an ask that gives way to a long title.
+	test("a commit row's ask stays inside a narrow readout", async () => {
+		for (const [fields, title] of [
+			[{ link: GitHubLinkStatus.Unlinked, manage: false }, undefined],
+			[{}, undefined],
+			[
+				{
+					repository: "pompeii-llc/rosti",
+					link: GitHubLinkStatus.Disconnected,
+				},
+				LONG_COMMIT_TITLE,
+			],
+		] as const) {
+			const data = RISING();
+			data.reports = data.reports.map((report) =>
+				title === undefined ? report : { ...report, title },
+			);
+			const bootstrap = commitBootstrap(fields);
+			mount({ data, github: consoleGitHub(() => bootstrap) });
+			await settle();
+			const { over, box } = await plotArea();
+			const status = page.getByRole("status");
+			const at = { position: { x: box.width / 4, y: box.height / 2 } };
+			const inside = () => {
+				const card = readoutBox();
+				const close = status
+					.element()
+					.querySelector(".pl-close")
+					?.getBoundingClientRect();
+				const row = status.element().querySelector(".cm-row");
+				expect(row).not.toBeNull();
+				// What the reader sees: each part's box, clipped by any box around it.
+				for (const part of row?.querySelectorAll(":scope > *") ?? []) {
+					const clip = part.querySelector(".ui-trunc > span") ?? part;
+					const range = document.createRange();
+					range.selectNodeContents(part);
+					const right = Math.min(
+						range.getBoundingClientRect().right,
+						getComputedStyle(clip).overflow === "hidden"
+							? clip.getBoundingClientRect().right
+							: Number.POSITIVE_INFINITY,
+					);
+					expect(right).toBeLessThanOrEqual((close?.left ?? card.right) + 0.5);
+				}
+				const ask = row?.querySelector(".cm-ask");
+				if (ask) {
+					expect(ask.scrollWidth).toBeLessThanOrEqual(ask.clientWidth);
+					expect(textLines(ask)).toBe(1);
+				}
+			};
+			await page.elementLocator(over).hover(at);
+			await expect.element(status).toHaveTextContent("20.00 µs");
+			inside();
+			await page.elementLocator(over).click(at);
+			await expect
+				.element(page.getByRole("button", { name: "Close the readout" }))
+				.toBeVisible();
+			inside();
+			dispose?.();
+			dispose = undefined;
+			document.body.replaceChildren();
+		}
+	});
+
+	// Kills a public plot or an embed that shows a call to action or the ask of
+	// a Maintainer or an admin, which no reader of it can follow.
+	test("a public plot's readout shows the title or View commit, and never an ask", async () => {
+		const data = RISING();
+		data.reports = data.reports.map((report, index) =>
+			index === 1 ? { ...report, title: COMMIT_TITLE } : report,
+		);
+		for (const [url, shown] of [
+			[
+				"https://github.com/pompeii-llc/rosti",
+				[[COMMIT_TITLE, "https://github.com/pompeii-llc/rosti/commit/aaaaaa1"]],
+			],
+			[undefined, [[COMMIT_TITLE]]],
+		] as const) {
+			mount({ data, github: publicGitHub(() => url) });
+			await settle();
+			const { over, box } = await plotArea();
+			const status = page.getByRole("status");
+			await page.elementLocator(over).click({
+				position: { x: box.width / 4, y: box.height / 2 },
+			});
+			await expect
+				.element(page.getByRole("button", { name: "Close the readout" }))
+				.toBeVisible();
+			expect(shownCommit(status.element())?.parts).toEqual(shown);
+			expect(status.element().textContent).not.toMatch(
+				/GitHub|Maintainer|admin/,
+			);
+			await page.getByRole("button", { name: "Close the readout" }).click();
+			// A point with no title and no repository shows no row.
+			await page.elementLocator(over).click({
+				position: { x: box.width / 2, y: box.height / 2 },
+			});
+			await expect
+				.element(page.getByRole("button", { name: "Close the readout" }))
+				.toBeVisible();
+			expect(status.element().querySelector(".cm-row") === null).toBe(
+				url === undefined,
+			);
+			dispose?.();
+			dispose = undefined;
+			document.body.replaceChildren();
+		}
 	});
 
 	// Kills an unpinned readout that takes the pointer or offers a link or a button, which keeps a mouse from the points beneath it, and a pinned readout the pointer passes through, whose link no mouse can reach.
@@ -562,10 +773,7 @@ describe("Plot", () => {
 		mount({
 			data,
 			reportHref: (uuid) => `/reports/${uuid}`,
-			github: {
-				commit: (hash) => `https://github.test/commit/${hash}`,
-				ask: () => ({ label: "Link GitHub", href: "/connections" }),
-			},
+			github: viewCommit({ label: "Link GitHub", href: "/connections" }),
 		});
 		await settle();
 		const { over, box } = await plotArea();

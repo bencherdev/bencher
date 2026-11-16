@@ -8,6 +8,7 @@ import { consoleGitHub } from "./github";
 import { publicGitHub } from "./commit";
 
 const HASH = "9c1f2e4b5a6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f";
+const TITLE = "Fold the hash browns into the rosti";
 
 const bootstrapOf = (fields: {
 	repository?: string;
@@ -69,20 +70,50 @@ describe("publicGitHub", () => {
 		[" https://github.com/pompeii-llc/hashbrown", undefined],
 		[undefined, undefined],
 	])("%s names %s", (url, repository) => {
-		expect(publicGitHub(() => url).commit(HASH)).toBe(
-			repository && `https://github.com/${repository}/commit/${HASH}`,
+		expect(publicGitHub(() => url).row(HASH, undefined)).toEqual(
+			repository && {
+				kind: "commit",
+				text: "View commit",
+				href: `https://github.com/${repository}/commit/${HASH}`,
+				ask: undefined,
+			},
 		);
+	});
+
+	// Kills a public plot that drops a title, links a title it has no
+	// repository for, or shows a call to action or the ask of a Maintainer.
+	test("shows the title or View commit, and never an ask", () => {
+		const row = (url: string | undefined, title: string | undefined) =>
+			publicGitHub(() => url).row(HASH, title);
+		const repository = "https://github.com/pompeii-llc/hashbrown";
+		expect(row(repository, TITLE)).toEqual({
+			kind: "commit",
+			text: TITLE,
+			href: `https://github.com/pompeii-llc/hashbrown/commit/${HASH}`,
+			ask: undefined,
+		});
+		expect(row(undefined, TITLE)).toEqual({
+			kind: "commit",
+			text: TITLE,
+			href: undefined,
+			ask: undefined,
+		});
+		expect(row("https://hashbrown.example", undefined)).toBeUndefined();
+		expect(row(undefined, undefined)).toBeUndefined();
 	});
 });
 
 describe("consoleGitHub", () => {
+	const hrefOf = (bootstrap: JsonConsoleProject | undefined) => {
+		const row = consoleGitHub(() => bootstrap).row(HASH, undefined);
+		return row?.kind === "commit" ? row.href : undefined;
+	};
+
 	// Kills a project URL that wins over the linked repository, a link the
 	// console ignores, and a link that hides a GitHub project URL when absent.
 	test("links a hash through the linked repository, else a GitHub project URL", () => {
-		const commit = (bootstrap: JsonConsoleProject) =>
-			consoleGitHub(() => bootstrap).commit(HASH);
 		expect(
-			commit(
+			hrefOf(
 				bootstrapOf({
 					repository: "pompeii-llc/rosti",
 					url: "https://github.com/pompeii-llc/hashbrown",
@@ -90,7 +121,7 @@ describe("consoleGitHub", () => {
 			),
 		).toBe(`https://github.com/pompeii-llc/rosti/commit/${HASH}`);
 		expect(
-			commit(
+			hrefOf(
 				bootstrapOf({
 					repository: "pompeii-llc/rosti",
 					url: "https://hashbrown.example",
@@ -98,39 +129,123 @@ describe("consoleGitHub", () => {
 			),
 		).toBe(`https://github.com/pompeii-llc/rosti/commit/${HASH}`);
 		expect(
-			commit(bootstrapOf({ url: "https://github.com/pompeii-llc/hashbrown/" })),
+			hrefOf(bootstrapOf({ url: "https://github.com/pompeii-llc/hashbrown/" })),
 		).toBe(`https://github.com/pompeii-llc/hashbrown/commit/${HASH}`);
-		expect(
-			commit(bootstrapOf({ url: "https://hashbrown.example" })),
-		).toBeUndefined();
-		expect(commit(bootstrapOf({}))).toBeUndefined();
-		expect(consoleGitHub(() => undefined).commit(HASH)).toBeUndefined();
+		expect(hrefOf(bootstrapOf({ url: "https://hashbrown.example" }))).toBe(
+			undefined,
+		);
+		expect(hrefOf(bootstrapOf({}))).toBeUndefined();
+		expect(hrefOf(undefined)).toBeUndefined();
 	});
 
-	// Kills an ask for a reader who may not manage the project, one for a
-	// connected link or a server that cannot link, and the wrong words or place.
-	test("asks a Maintainer to link an unlinked project and reconnect a disconnected one", () => {
-		const ask = (bootstrap: JsonConsoleProject) =>
-			consoleGitHub(() => bootstrap).ask?.();
-		const connections = "/console/projects/hashbrown/connections";
-		expect(ask(bootstrapOf({ link: GitHubLinkStatus.Unlinked }))).toEqual({
-			label: "Link GitHub",
-			href: connections,
-		});
-		expect(ask(bootstrapOf({ link: GitHubLinkStatus.Disconnected }))).toEqual({
-			label: "Reconnect GitHub",
-			href: connections,
-		});
-		expect(
-			ask(bootstrapOf({ link: GitHubLinkStatus.Connected })),
-		).toBeUndefined();
-		expect(ask(bootstrapOf({}))).toBeUndefined();
-		for (const link of [
-			GitHubLinkStatus.Unlinked,
-			GitHubLinkStatus.Disconnected,
-		]) {
-			expect(ask(bootstrapOf({ link, manage: false }))).toBeUndefined();
-		}
-		expect(consoleGitHub(() => undefined).ask?.()).toBeUndefined();
+	const connections = "/console/projects/hashbrown/connections";
+	const COMMIT = `https://github.com/pompeii-llc/rosti/commit/${HASH}`;
+	const LINK = { label: "Link GitHub", href: connections };
+	const RECONNECT = { label: "Reconnect GitHub", href: connections };
+
+	// Kills a row that drops the title or links it nowhere, an ask for a reader
+	// who may not manage the project or for a connected link, an ask in place
+	// of a title, a muted ask for a Maintainer or a known repository, a call to
+	// action from a server that cannot link GitHub, and a server without the
+	// GitHub App that asks no admin.
+	test.each([
+		[
+			"a title, connected",
+			{ repository: "pompeii-llc/rosti", link: GitHubLinkStatus.Connected },
+			TITLE,
+			{ kind: "commit", text: TITLE, href: COMMIT, ask: undefined },
+		],
+		[
+			"a title, connected, without manage",
+			{
+				repository: "pompeii-llc/rosti",
+				link: GitHubLinkStatus.Connected,
+				manage: false,
+			},
+			TITLE,
+			{ kind: "commit", text: TITLE, href: COMMIT, ask: undefined },
+		],
+		[
+			"no title, connected",
+			{ repository: "pompeii-llc/rosti", link: GitHubLinkStatus.Connected },
+			undefined,
+			{ kind: "commit", text: "View commit", href: COMMIT, ask: undefined },
+		],
+		[
+			"unlinked, with manage",
+			{ link: GitHubLinkStatus.Unlinked },
+			undefined,
+			{ kind: "ask", ask: LINK },
+		],
+		[
+			"unlinked, a project URL, with manage",
+			{
+				url: "https://github.com/pompeii-llc/rosti",
+				link: GitHubLinkStatus.Unlinked,
+			},
+			undefined,
+			{ kind: "commit", text: "View commit", href: COMMIT, ask: LINK },
+		],
+		[
+			"a title, disconnected, with manage",
+			{ repository: "pompeii-llc/rosti", link: GitHubLinkStatus.Disconnected },
+			TITLE,
+			{ kind: "commit", text: TITLE, href: COMMIT, ask: RECONNECT },
+		],
+		[
+			"no title, disconnected, with manage",
+			{ repository: "pompeii-llc/rosti", link: GitHubLinkStatus.Disconnected },
+			undefined,
+			{ kind: "commit", text: "View commit", href: COMMIT, ask: RECONNECT },
+		],
+		[
+			"no title, disconnected, without manage",
+			{
+				repository: "pompeii-llc/rosti",
+				link: GitHubLinkStatus.Disconnected,
+				manage: false,
+			},
+			undefined,
+			{ kind: "commit", text: "View commit", href: COMMIT, ask: undefined },
+		],
+		[
+			"unlinked, no repository, without manage",
+			{ link: GitHubLinkStatus.Unlinked, manage: false },
+			undefined,
+			{ kind: "muted", text: "Ask a Maintainer to link GitHub" },
+		],
+		[
+			"a server without the GitHub App, a title",
+			{},
+			TITLE,
+			{ kind: "commit", text: TITLE, href: undefined, ask: undefined },
+		],
+		[
+			"a server without the GitHub App, a project URL",
+			{ url: "https://github.com/pompeii-llc/rosti" },
+			undefined,
+			{ kind: "commit", text: "View commit", href: COMMIT, ask: undefined },
+		],
+		[
+			"a server without the GitHub App, no title or repository",
+			{},
+			undefined,
+			{ kind: "muted", text: "Ask an admin to add the GitHub App" },
+		],
+		[
+			"a server without the GitHub App, without manage",
+			{ manage: false },
+			undefined,
+			{ kind: "muted", text: "Ask an admin to add the GitHub App" },
+		],
+	] as const)("%s", (_, fields, title, row) => {
+		expect(consoleGitHub(() => bootstrapOf(fields)).row(HASH, title)).toEqual(
+			row,
+		);
+	});
+
+	// Kills a row drawn before the console knows the project.
+	test("shows no row before the bootstrap", () => {
+		expect(consoleGitHub(() => undefined).row(HASH, TITLE)).toBeUndefined();
 	});
 });
