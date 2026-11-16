@@ -9,6 +9,8 @@ pub use stripe_shared::CustomerId;
 mod biller;
 mod error;
 mod products;
+#[cfg(test)]
+mod stripe_stub;
 
 pub use biller::{Biller, MeteredPlanBilling, PlanId};
-pub use error::BillingError;
+pub use error::{AttachError, AttachRefusal, BillingError, PlanItemError};

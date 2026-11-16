@@ -43,7 +43,8 @@ literally.workspace = true
 pretty_assertions.workspace = true
 rand.workspace = true
 rustls.workspace = true
-tokio = { workspace = true, features = ["rt", "macros"] }
+serde_json.workspace = true
+tokio = { workspace = true, features = ["rt", "macros", "net", "io-util"] }
 
 [lints]
 workspace = true

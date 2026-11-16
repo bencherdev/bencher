@@ -65,7 +65,7 @@ const BillingForm = (props: Props) => {
 		}
 	});
 
-	const checkout = (planLevel: () => PlanLevel) => (
+	const checkout = () => (
 		<Checkout
 			apiUrl={props.apiUrl}
 			params={props.params}
@@ -74,10 +74,6 @@ const BillingForm = (props: Props) => {
 			bencher_valid={props.bencher_valid}
 			user={props.user}
 			organization={props.usage()?.organization}
-			plan={planLevel}
-			entitlements={() => null}
-			organizationUuid={() => null}
-			organizationUuidValid={() => true}
 			handleRefresh={props.handleRefresh}
 		/>
 	);
@@ -103,7 +99,7 @@ const BillingForm = (props: Props) => {
 						</>
 					}
 				>
-					{checkout(() => PlanLevel.Pro)}
+					{checkout()}
 				</Show>
 			}
 		>
@@ -123,7 +119,7 @@ const BillingForm = (props: Props) => {
 					/>
 				}
 			>
-				{checkout(() => PlanLevel.Pro)}
+				{checkout()}
 			</Show>
 		</Show>
 	);
