@@ -505,8 +505,11 @@ pub(crate) struct SignedIn {
     pub invited: bool,
     /// Whether the user claimed the organization.
     pub claimed: bool,
+    /// The domain whose SSO organization the user joins once the sign-in is in, if that
+    /// organization is Enterprise: the email's for an email, Google's hosted domain, and none for
+    /// GitHub.
     #[cfg(feature = "plus")]
-    pub sso_joined: bool,
+    pub sso_domain: Option<String>,
     /// The provider the session signed in with, or none for an email.
     #[cfg(feature = "plus")]
     pub provider: Option<SignInProvider>,
@@ -568,7 +571,7 @@ fn prove(
     }
     QueryUser::verify_email(conn, user.id, email, now)?;
     #[cfg(feature = "plus")]
-    let sso_joined = QuerySso::join_all_with(conn, &user, now)?;
+    let sso_domain = Some(email.domain());
     #[cfg(feature = "plus")]
     let provider = if let Some(pin) = pending.pin()
         && pin.pin(conn, user.id, now)?
@@ -591,7 +594,7 @@ fn prove(
         invited,
         claimed,
         #[cfg(feature = "plus")]
-        sso_joined,
+        sso_domain,
         #[cfg(feature = "plus")]
         provider,
         token,
@@ -667,8 +670,8 @@ async fn finish(
 }
 
 impl SignedIn {
-    /// Notify the admins of a new account, count the sign-in, and answer with the session's
-    /// cookie.
+    /// Join the SSO organization at the sign-in's domain if it is Enterprise, notify the admins of
+    /// a new account, count the sign-in, and answer with the session's cookie.
     pub(crate) async fn finish(
         self,
         log: &Logger,
@@ -680,12 +683,20 @@ impl SignedIn {
             invited,
             claimed,
             #[cfg(feature = "plus")]
-            sso_joined,
+            sso_domain,
             #[cfg(feature = "plus")]
             provider,
             token,
             context: sign_in_context,
         } = self;
+        // After the sign-in's write transaction, since whether the organization is Enterprise may
+        // take a read from Stripe.
+        #[cfg(feature = "plus")]
+        let sso_joined = if let Some(domain) = &sso_domain {
+            join_sso(log, context, &user, domain).await
+        } else {
+            false
+        };
         #[cfg(feature = "plus")]
         let method = provider.map_or("email", SignInProvider::name);
         #[cfg(not(feature = "plus"))]
@@ -770,6 +781,24 @@ impl SignedIn {
         };
         Ok((json, session_cookie))
     }
+}
+
+/// Join the user to the SSO organization at `domain`, returning whether they joined it. The
+/// sign-in is in by then, so a join that fails is logged and sent to Sentry, and never fails it.
+#[cfg(feature = "plus")]
+async fn join_sso(log: &Logger, context: &ApiContext, user: &QueryUser, domain: &str) -> bool {
+    QuerySso::join_domain(log, context, user, domain)
+        .await
+        .unwrap_or_else(|e| {
+            let uuid = user.uuid;
+            slog::error!(
+                log,
+                "User ({uuid}) signed in without joining by SSO at domain ({domain}): {e}"
+            );
+            #[cfg(feature = "sentry")]
+            sentry::capture_error(&e);
+            false
+        })
 }
 
 /// The refusal of a locked account's proof, which has ended its pending sign-in.

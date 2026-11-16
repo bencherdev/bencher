@@ -53,6 +53,9 @@ pub struct TestServer {
     /// Receives every callback the server sends
     #[cfg(feature = "plus")]
     callback_sender: Arc<crate::RecordingSender>,
+    /// The server's logger (private - use `log()` accessor)
+    #[cfg(feature = "plus")]
+    log: slog::Logger,
 }
 
 impl TestServer {
@@ -461,6 +464,8 @@ impl TestServer {
             db_file,
             #[cfg(feature = "plus")]
             callback_sender,
+            #[cfg(feature = "plus")]
+            log: log.clone(),
         }
     }
 
@@ -647,6 +652,12 @@ impl TestServer {
     /// Get the token key for generating test tokens
     pub fn token_key(&self) -> &TokenKey {
         &self.token_key
+    }
+
+    /// Get the server's logger, for the helpers that act as the server does
+    #[cfg(feature = "plus")]
+    pub fn log(&self) -> &slog::Logger {
+        &self.log
     }
 
     /// Get the path to the temporary database file

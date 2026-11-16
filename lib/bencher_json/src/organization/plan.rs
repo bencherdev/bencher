@@ -100,7 +100,8 @@ pub struct JsonUpdatePlan {
     /// Update the subscription's scheduled cancellation. Set to `false` to resume
     /// a plan scheduled to cancel at period end, or `true` to schedule it to
     /// cancel at the end of the current period. Only applies to metered
-    /// subscriptions, not licensed (Self-Hosted) plans.
+    /// subscriptions, not licensed (Self-Hosted) plans, and not to an Enterprise
+    /// plan, which ends with its contract.
     pub cancel_at_period_end: bool,
 }
 

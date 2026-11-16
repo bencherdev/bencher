@@ -1,7 +1,10 @@
 ## Disaster Recovery
 
 To prevent data loss, Bencher offers a built-in disaster recovery solution.
-This feature requires an active [Bencher Plus][pricing] license.
+Disaster recovery requires a valid [Bencher Plus _Enterprise_][pricing] license for at least one organization on the server,
+and a server with disaster recovery configured refuses to start without one.
+A running server keeps replicating until it restarts, even after its last license expires,
+and from the first day of that license's grace period, the server logs a daily error that says when it will refuse to start.
 
 Supported replication schemes:
 
@@ -10,6 +13,12 @@ Supported replication schemes:
 
 Use [the `plus.disaster_recovery` section][plus disaster recovery] of the API server configuration
 to setup disaster recovery for your Bencher Self-Hosted API server.
+
+To stop a server with disaster recovery, send the stop signal (`SIGTERM` or `SIGINT`) to the API server process alone.
+The API server then finishes its open requests and stops the replication, which replicates the last changes before it exits.
+A second stop signal sent straight to the replication process (`litestream`) cancels that last replication, and the last changes can be lost.
+`docker stop` sends the stop signal to the API server process alone.
+With systemd, set `KillMode=mixed` in the unit, so that the stop signal reaches the API server process alone.
 
 [pricing]: /pricing/
 [plus disaster recovery]: /docs/reference/server-config/#plusdisaster_recovery

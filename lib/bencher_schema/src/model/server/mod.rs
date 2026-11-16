@@ -1,4 +1,4 @@
 mod plus;
 
 #[cfg(feature = "plus")]
-pub use plus::{QueryServer, ServerId};
+pub use plus::{DailyStats, QueryServer, ServerId};

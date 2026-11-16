@@ -23,7 +23,8 @@ use bencher_api_tests::{
     LogCapture, TestServer, TestServerOptions, TestUser,
     github::{GitHubServer, HOLD, Received, Unscripted},
     helpers::{
-        github_client, google_client, oauth_server, seed_oauth_authorization, user_organizations,
+        github_client, google_client, insert_sso, oauth_server, seed_oauth_authorization,
+        user_organizations,
     },
     session_cookie,
 };
@@ -1368,10 +1369,12 @@ async fn account_without_a_verified_email_is_refused() {
     github.received().await;
 }
 
-// A Google sign-in joins the organization whose SSO domain is its ID token's hosted domain, and
-// only that: a consumer Google account made on a company's address joins nothing, and GitHub never
-// joins.
-// Kills a Google sign-in that joins by its email's domain, and a GitHub sign-in that joins at all.
+// A Google sign-in joins the organization whose SSO domain is its ID token's hosted domain while
+// that organization is Enterprise, and only that: a consumer Google account made on a company's
+// address joins nothing, a hosted domain whose organization has no valid license joins nothing, and
+// GitHub never joins.
+// Kills a Google sign-in that joins by its email's domain or joins an organization that is not
+// Enterprise, and a GitHub sign-in that joins at all.
 #[tokio::test]
 async fn google_joins_single_sign_on_only_by_its_hosted_domain() {
     let github = GitHubServer::start(github_account(8, "bob", "bob@example.com")).await;
@@ -1383,13 +1386,20 @@ async fn google_joins_single_sign_on_only_by_its_hosted_domain() {
         ..
     } = harness(&github.base(), &google.base()).await;
     let org = server.create_org(&admin, "Example").await;
+    server.license_org(&admin, &org).await;
     sso_domain(&server, org.uuid, "example.com");
+    let unlicensed = server.create_org(&admin, "Unlicensed").await;
+    insert_sso(&server, &unlicensed, "unlicensed.example");
 
     let consumer = start(&server, "google").await;
     let workspace = start(&server, "google").await;
+    let outside = start(&server, "google").await;
     let nonce = |started: &Started| query(&started.url, "nonce").expect("No nonce");
     let mut hosted = google_claims(&nonce(&workspace), &clock, "2", "grace@example.com");
     hosted["hd"] = json!("example.com");
+    let mut hosted_outside =
+        google_claims(&nonce(&outside), &clock, "3", "linus@unlicensed.example");
+    hosted_outside["hd"] = json!("unlicensed.example");
     let google = google.script(vec![
         google_token(&google_claims(
             &nonce(&consumer),
@@ -1398,6 +1408,7 @@ async fn google_joins_single_sign_on_only_by_its_hosted_domain() {
             "ada@example.com",
         )),
         google_token(&hosted),
+        google_token(&hosted_outside),
     ]);
 
     let resp = finish(
@@ -1420,6 +1431,16 @@ async fn google_joins_single_sign_on_only_by_its_hosted_domain() {
     .await;
     let (grace, _session) = signed_in(&server, resp, SessionMethod::Google).await;
     assert!(user_organizations(&server, grace.user.uuid).contains(&org.uuid));
+    let resp = finish(
+        &server,
+        "google",
+        Some(&outside.binding),
+        &outside.state(),
+        None,
+    )
+    .await;
+    let (linus, _session) = signed_in(&server, resp, SessionMethod::Google).await;
+    assert!(!user_organizations(&server, linus.user.uuid).contains(&unlicensed.uuid));
     let (bob, _session) = sign_in(&server, "github", None).await;
     assert!(!user_organizations(&server, bob.user.uuid).contains(&org.uuid));
 

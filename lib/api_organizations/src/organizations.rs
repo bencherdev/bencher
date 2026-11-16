@@ -31,7 +31,7 @@ use bencher_schema::{
 };
 
 #[cfg(feature = "plus")]
-use crate::plan::cancel_and_remove_plan;
+use crate::plan::{cancel_and_remove_plan, refuse_enterprise_delete};
 
 pub type OrganizationsPagination = JsonPagination<OrganizationsSort>;
 
@@ -373,7 +373,9 @@ async fn patch_inner(
 /// The user must have `delete` permissions for the organization.
 /// By default, organizations are soft-deleted (along with their child projects).
 /// Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin).
-/// On Bencher Cloud, deleting an organization also immediately cancels any active subscription.
+/// On Bencher Cloud, deleting an organization also immediately cancels any active subscription,
+/// and an organization with a live Enterprise plan cannot be deleted: the plan ends with its
+/// contract.
 /// A user session needs a sign-in within the last 10 minutes.
 #[endpoint {
     method = DELETE,
@@ -446,6 +448,10 @@ async fn delete_inner(
             auth_user,
             Permission::Delete,
         )?;
+
+        // A live Enterprise plan ends with its contract, never with a delete.
+        #[cfg(feature = "plus")]
+        refuse_enterprise_delete(context, &query_organization).await?;
 
         // Cancel any active Stripe subscription and remove the plan row before deleting the
         // organization so no dangling subscription is left in Stripe.

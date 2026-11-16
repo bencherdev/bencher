@@ -324,6 +324,18 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 		) : (
 			"-"
 		);
+	// An Enterprise plan ends with its contract, so its contact takes the place of cancel and resume.
+	const enterprise = () => props.plan.level === "enterprise";
+	const contactUs = (size?: "sm") => (
+		<a
+			class="ui-button"
+			data-variant="secondary"
+			data-size={size}
+			href={CONTACT}
+		>
+			Contact us
+		</a>
+	);
 	const used = () => props.usage.active_series ?? 0;
 	const minutes = () => props.usage.runner_minutes ?? 0;
 	const tiers = () => props.plan.tiers ?? [];
@@ -396,13 +408,15 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 					>
 						<span class="toolbar">
 							<span class="muted sm">Ends {fullDay(end())}</span>
-							<Button
-								size="sm"
-								disabled={busy()}
-								onClick={() => schedule(false)}
-							>
-								Resume plan
-							</Button>
+							<Show when={!enterprise()} fallback={contactUs("sm")}>
+								<Button
+									size="sm"
+									disabled={busy()}
+									onClick={() => schedule(false)}
+								>
+									Resume plan
+								</Button>
+							</Show>
 						</span>
 					</Show>
 				</div>
@@ -495,19 +509,23 @@ const Paid = (props: { usage: Usage; plan: Plan; name: string }) => {
 						<div class="danger-row">
 							<div class="grow">
 								<h3>Cancel plan</h3>
-								<p id="dz-cancel" class="muted">
-									{level()} ends with this period on {fullDay(end())}, and{" "}
-									{props.name} moves to the Free plan.
-								</p>
+								<Show when={!enterprise()}>
+									<p id="dz-cancel" class="muted">
+										{level()} ends with this period on {fullDay(end())}, and{" "}
+										{props.name} moves to the Free plan.
+									</p>
+								</Show>
 							</div>
-							<Button
-								variant="danger"
-								aria-haspopup="dialog"
-								aria-describedby="dz-cancel"
-								onClick={() => setConfirming(true)}
-							>
-								Cancel plan
-							</Button>
+							<Show when={!enterprise()} fallback={contactUs()}>
+								<Button
+									variant="danger"
+									aria-haspopup="dialog"
+									aria-describedby="dz-cancel"
+									onClick={() => setConfirming(true)}
+								>
+									Cancel plan
+								</Button>
+							</Show>
 						</div>
 					</div>
 					<Show when={confirming()}>

@@ -1,7 +1,10 @@
 ## Recuperação de Desastres
 
 Para evitar a perda de dados, o Bencher oferece uma solução de recuperação de desastres integrada.
-Esta funcionalidade requer uma licença ativa do [Bencher Plus][pricing].
+A recuperação de desastres exige uma licença [Bencher Plus _Enterprise_][pricing] válida para pelo menos uma organização no servidor,
+e um servidor com a recuperação de desastres configurada se recusa a iniciar sem ela.
+Um servidor em execução continua replicando até reiniciar, mesmo depois que sua última licença expira,
+e a partir do primeiro dia do período de carência dessa licença, o servidor registra todos os dias um erro que informa quando ele se recusará a iniciar.
 
 Esquemas de replicação suportados:
 
@@ -10,6 +13,12 @@ Esquemas de replicação suportados:
 
 Use a seção [`plus.disaster_recovery`][plus disaster recovery] da configuração do servidor API
 para configurar a recuperação de desastres para o seu servidor API Bencher Self-Hosted.
+
+Para parar um servidor com recuperação de desastres configurada, envie o sinal de parada (`SIGTERM` ou `SIGINT`) somente ao processo do servidor API.
+O servidor API então conclui as requisições em andamento e interrompe a replicação, que replica as últimas alterações antes de encerrar.
+Um segundo sinal de parada enviado diretamente ao processo de replicação (`litestream`) cancela essa última replicação, e as últimas alterações podem ser perdidas.
+`docker stop` envia o sinal de parada somente ao processo do servidor API.
+Com o systemd, defina `KillMode=mixed` na unidade, para que o sinal de parada chegue somente ao processo do servidor API.
 
 [pricing]: /pricing/
 [plus disaster recovery]: /pt/docs/reference/server-config/#plusdisaster_recovery

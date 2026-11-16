@@ -2,6 +2,10 @@
 
 Cette section spécifie la configuration de la récupération en cas de sinistre.
 Bencher prend en charge la réplication continue de tous les changements de base de données.
+Sur Bencher Self-Hosted, la récupération en cas de sinistre nécessite une licence Bencher Plus _Enterprise_ valide pour au moins une organisation sur le serveur.
+Le serveur API vérifie la présence d'une licence valide à son démarrage,
+et avec cette section mais sans licence valide, il refuse de démarrer.
+Un serveur API en cours d'exécution continue de répliquer jusqu'à son redémarrage.
 
 Il existe deux `schéma`s de réplication :
 - `file`: Répliquer vers un chemin de fichier local

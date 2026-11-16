@@ -1,6 +1,6 @@
 ## Notfallwiederherstellung
 
-Um Datenverlust zu verhindern, bietet Bencher eine integrierte Notfallwiederherstellungslösung. Diese Funktion erfordert eine aktive [Bencher Plus][pricing] Lizenz.
+Um Datenverlust zu verhindern, bietet Bencher eine integrierte Notfallwiederherstellungslösung. Die Notfallwiederherstellung erfordert eine gültige [Bencher Plus _Enterprise_][pricing] Lizenz für mindestens eine Organisation auf dem Server, und ein Server mit konfigurierter Notfallwiederherstellung startet ohne eine solche Lizenz nicht. Ein laufender Server repliziert weiter, bis er neu startet, auch nachdem seine letzte Lizenz abgelaufen ist. Ab dem ersten Tag der Kulanzfrist dieser Lizenz protokolliert der Server täglich einen Fehler, der angibt, ab wann er den Start verweigert.
 
 Unterstützte Replikationsschemata:
 
@@ -8,6 +8,8 @@ Unterstützte Replikationsschemata:
 - `s3`: Replizieren zu einem S3-kompatiblen Blob-Speicher
 
 Verwenden Sie den [Abschnitt `plus.disaster_recovery`][plus disaster recovery] der API-Serverkonfiguration, um die Notfallwiederherstellung für Ihren Bencher Self-Hosted API-Server einzurichten.
+
+Um einen Server mit Notfallwiederherstellung zu stoppen, senden Sie das Stoppsignal (`SIGTERM` oder `SIGINT`) nur an den Prozess des API-Servers. Der API-Server schließt dann seine offenen Anfragen ab und stoppt die Replikation, die vor dem Beenden die letzten Änderungen repliziert. Ein zweites Stoppsignal direkt an den Replikationsprozess (`litestream`) bricht diese letzte Replikation ab, sodass die letzten Änderungen verloren gehen können. `docker stop` sendet das Stoppsignal nur an den Prozess des API-Servers. Setzen Sie bei systemd `KillMode=mixed` in der Unit, damit das Stoppsignal nur den Prozess des API-Servers erreicht.
 
 [pricing]: /pricing/
 [plus disaster recovery]: /de/docs/reference/server-config/#plusdisaster_recovery
