@@ -21,7 +21,9 @@ test("a signed-in reader who opens a claim link lands on the claimed project's R
 			testbed: "ubuntu-latest",
 			start_time: start.toISOString(),
 			end_time: new Date(start.getTime() + 60 * 1000).toISOString(),
-			results: [JSON.stringify({ hash: { latency: { value: 1 } } })],
+			results: [
+				JSON.stringify({ hash: [{ measures: { latency: { value: 1 } } }] }),
+			],
 			settings: { adapter: "json" },
 		},
 	});

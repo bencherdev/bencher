@@ -786,7 +786,7 @@ async fn mcp_submit_run_project_key() {
     let user = server.signup("MCP Runner", "mcp-runner@bencher.dev").await;
     let org = server.create_org(&user, "MCP Runner Org").await;
     let project = server
-        .create_project(&user, &org, "MCP Runner Project")
+        .create_v0_project(&user, &org, "MCP Runner Project")
         .await;
     let key = server.create_project_key(&user, &project, "mcp-key").await;
     let project_slug: &str = project.slug.as_ref();
@@ -889,7 +889,7 @@ async fn mcp_tools_declare_how_to_sign_in() {
                 "context": {"bencher.dev/v0/repo/name": "mcp-unclaimed"},
                 "start_time": "2025-01-01T00:00:00Z",
                 "end_time": "2025-01-01T00:01:00Z",
-                "results": ["{\"mcp_bench\": {\"latency\": {\"value\": 88.0}}}"]
+                "results": ["{\"mcp_bench\": [{\"measures\": {\"latency\": {\"value\": 88.0}}}]}"]
             })
         } else {
             every_tool

@@ -1333,7 +1333,7 @@ export interface JsonProject {
 	/** Whether the project has a linked GitHub repository, absent when the server cannot link one. */
 	github_link?: GitHubLinkStatus;
 	visibility: Visibility;
-	/** The project's default BMF version: a report that declares no `bmf_version` is read at it. */
+	/** The project's default BMF version: a report that declares no `bmf_version` is read at it. New projects start at 1. */
 	bmf_version: BmfVersion;
 	created: string;
 	modified: string;

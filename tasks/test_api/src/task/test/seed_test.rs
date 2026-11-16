@@ -13,7 +13,7 @@ pub(crate) const BENCHER_CMD: &str = "bencher";
 pub(crate) const HOST_ARG: &str = "--host";
 pub(crate) const TOKEN_ARG: &str = "--token";
 const KEY_ARG: &str = "--key";
-const ORG_SLUG: &str = "muriel-bagge";
+pub(crate) const ORG_SLUG: &str = "muriel-bagge";
 /// Muriel's personal org slug doubles as her user slug.
 #[cfg(feature = "plus")]
 pub(crate) const USER_SLUG: &str = ORG_SLUG;
@@ -237,8 +237,9 @@ impl SeedTest {
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
-        let _json: bencher_json::JsonProject =
+        let json: bencher_json::JsonProject =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
+        assert_eq!(json.bmf_version, bencher_json::BmfVersion::V1);
 
         // cargo run -- project ls --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -601,7 +602,7 @@ impl SeedTest {
         let project_key = project_key_created.key.as_ref().to_owned();
         let project_key_uuid_str = project_key_created.uuid.to_string();
 
-        // cargo run -- run --host http://localhost:6610 --key $PROJECT_KEY --project the-computer --quiet bencher mock --bmf-version 0 --seed 6
+        // cargo run -- run --host http://localhost:6610 --key $PROJECT_KEY --project the-computer --quiet bencher mock --seed 6
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
@@ -616,8 +617,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -626,9 +625,9 @@ impl SeedTest {
         let _json: bencher_json::JsonReport =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // bencher mock --bmf-version 0 --seed 6 | bencher run --host http://localhost:6610 --key $PROJECT_KEY --project the-computer --format json --quiet
+        // bencher mock --seed 6 | bencher run --host http://localhost:6610 --key $PROJECT_KEY --project the-computer --format json --quiet
         let mock_output = Command::cargo_bin(BENCHER_CMD)?
-            .args(["mock", "--bmf-version", "0", "--seed", PERFECT_SEED])
+            .args(["mock", "--seed", PERFECT_SEED])
             .current_dir(CLI_DIR)
             .output()?;
         assert!(mock_output.status.success(), "{mock_output:?}");
@@ -823,7 +822,7 @@ impl SeedTest {
                     "--format",
                     "json",
                     "--quiet",
-                    &format!("{bencher_cmd} mock --bmf-version 0 --seed {PERFECT_SEED} --measure latency --measure {MEASURE_SLUG}"),
+                    &format!("{bencher_cmd} mock --seed {PERFECT_SEED} --measure latency --measure {MEASURE_SLUG}"),
                 ])
             } else if i.rem_euclid(4) == 1 {
                 // Token + no hash + separate args
@@ -844,8 +843,6 @@ impl SeedTest {
                     "--quiet",
                     &bencher_cmd,
                     "mock",
-                    "--bmf-version",
-                    "0",
                     "--seed",
                     PERFECT_SEED,
                     "--measure",
@@ -872,7 +869,7 @@ impl SeedTest {
                     "--format",
                     "json",
                     "--quiet",
-                    &format!("{bencher_cmd} mock --bmf-version 0 --seed {PERFECT_SEED} --measure latency --measure {MEASURE_SLUG}"),
+                    &format!("{bencher_cmd} mock --seed {PERFECT_SEED} --measure latency --measure {MEASURE_SLUG}"),
                 ])
             } else {
                 // Project key + no hash + separate args
@@ -893,8 +890,6 @@ impl SeedTest {
                     "--quiet",
                     &bencher_cmd,
                     "mock",
-                    "--bmf-version",
-                    "0",
                     "--seed",
                     PERFECT_SEED,
                     "--measure",
@@ -920,7 +915,7 @@ impl SeedTest {
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock --bmf-version 0
+        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
@@ -938,6 +933,8 @@ impl SeedTest {
             TESTBED_SLUG,
             "--threshold-measure",
             MEASURE_SLUG,
+            "--threshold-metric",
+            "value",
             "--threshold-test",
             "t_test",
             "--threshold-upper-boundary",
@@ -948,8 +945,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
             "--measure",
@@ -973,7 +968,7 @@ impl SeedTest {
 
         std::thread::sleep(std::time::Duration::from_secs(1));
 
-        // cargo run -- run --host http://localhost:6610 --key $PROJECT_KEY --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock --bmf-version 0
+        // cargo run -- run --host http://localhost:6610 --key $PROJECT_KEY --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
@@ -998,8 +993,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
             "--measure",
@@ -1025,7 +1018,7 @@ impl SeedTest {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // This shouldn't generate any alerts because we reset the thresholds on the start point branch
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock --bmf-version 0
+        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
@@ -1050,8 +1043,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
             "--pow",
@@ -1075,7 +1066,7 @@ impl SeedTest {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // This should generate alerts because we are using the measure that has a thresholds set for it on the start point branch
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock --bmf-version 0
+        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-branch --branch-start-point master --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
@@ -1100,8 +1091,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
             "--measure",
@@ -1176,7 +1165,7 @@ impl SeedTest {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // Reset the feature branch
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock --bmf-version 0
+        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch master --branch-reset --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
@@ -1198,8 +1187,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1433,7 +1420,7 @@ impl SeedTest {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // Generate alerts on the master branch using already defined Thresholds
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch master --testbed base --quiet bencher mock --bmf-version 0 --pow 10
+        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch master --testbed base --quiet bencher mock --pow 10
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
@@ -1454,8 +1441,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
             "--measure",
@@ -1542,7 +1527,7 @@ impl SeedTest {
         // If the start point hash is missing, fall back to the start point branch's latest version
         // https://github.com/bencherdev/bencher/issues/450
         // https://github.com/bencherdev/bencher/issues/774
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-hash --branch-start-point master --branch-start-point-hash badbadbadbadbadbadbadbadbadbadbadbadbad1 --testbed base --quiet bencher mock --bmf-version 0
+        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --branch feature-hash --branch-start-point master --branch-start-point-hash badbadbadbadbadbadbadbadbadbadbadbadbad1 --testbed base --quiet bencher mock
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
@@ -1567,8 +1552,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1605,8 +1588,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1654,8 +1635,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1694,8 +1673,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1724,8 +1701,6 @@ impl SeedTest {
                 "--quiet",
                 &bencher_cmd,
                 "mock",
-                "--bmf-version",
-                "0",
                 "--seed",
                 PERFECT_SEED,
             ])
@@ -1781,8 +1756,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1835,8 +1808,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1866,8 +1837,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1898,8 +1867,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1930,8 +1897,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -1963,8 +1928,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -2073,8 +2036,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -2114,8 +2075,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -2205,8 +2164,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -2241,7 +2198,7 @@ impl SeedTest {
         let user_key = user_key_created.key.as_ref().to_owned();
         let user_key_uuid_str = user_key_created.uuid.to_string();
 
-        // cargo run -- run --host http://localhost:6610 --key $USER_KEY --project the-computer --quiet bencher mock --bmf-version 0 --seed 6
+        // cargo run -- run --host http://localhost:6610 --key $USER_KEY --project the-computer --quiet bencher mock --seed 6
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
             "run",
@@ -2256,8 +2213,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -2390,8 +2345,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -2453,8 +2406,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])
@@ -2866,7 +2817,7 @@ impl SeedTest {
         );
 
         // Run with --spec-reset to clear the spec
-        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --testbed base --spec-reset --quiet bencher mock --bmf-version 0
+        // cargo run -- run --host http://localhost:6610 --token $BENCHER_API_TOKEN --project the-computer --testbed base --spec-reset --quiet bencher mock
         let bencher_cmd = Command::cargo_bin(BENCHER_CMD)?
             .get_program()
             .to_string_lossy()
@@ -2888,8 +2839,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
         ])
         .current_dir(CLI_DIR);
         let assert = cmd.assert().success();
@@ -2954,8 +2903,6 @@ impl SeedTest {
                 "--quiet",
                 &bencher_cmd,
                 "mock",
-                "--bmf-version",
-                "0",
                 "--seed",
                 PERFECT_SEED,
             ])
@@ -2982,8 +2929,6 @@ impl SeedTest {
             "--quiet",
             &bencher_cmd,
             "mock",
-            "--bmf-version",
-            "0",
             "--seed",
             PERFECT_SEED,
         ])

@@ -25,7 +25,7 @@ use crate::{
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewRun {
     /// Project UUID or slug.
-    /// If the project is not provided or does not exist, it will be created.
+    /// If the project is not provided or does not exist, it will be created at BMF version 1.
     pub project: Option<ProjectResourceId>,
     /// Optional idempotency key for deduplicating run submissions.
     /// If provided, a duplicate submission with the same key within the same project

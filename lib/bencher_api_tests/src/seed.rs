@@ -1,10 +1,14 @@
 use bencher_json::{
-    Email, JsonConfirm, JsonNewOrganization, JsonNewProject, JsonNewUserKey, JsonOrganization,
-    JsonProject, JsonSignup, JsonUserKeyCreated, OrganizationSlug, OrganizationUuid, ProjectSlug,
-    ProjectUuid, ResourceName, UserKey, UserName, UserSlug, UserUuid, system::auth::JsonAuthUser,
+    BmfVersion, Email, JsonConfirm, JsonNewOrganization, JsonNewProject, JsonNewUserKey,
+    JsonOrganization, JsonProject, JsonSignup, JsonUserKeyCreated, OrganizationSlug,
+    OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName, UserKey, UserName, UserSlug,
+    UserUuid, system::auth::JsonAuthUser,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JsonProjectKeyCreated, ProjectKey};
+
+use bencher_schema::schema;
+use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
 use crate::TestServer;
 
@@ -206,6 +210,23 @@ impl TestServer {
             name: project.name,
             slug: project.slug,
         }
+    }
+
+    /// Create a new project in the given organization and set it to BMF version 0,
+    /// as a project made before version 1 became the default.
+    #[expect(clippy::expect_used, reason = "test helper for project creation")]
+    pub async fn create_v0_project(
+        &self,
+        user: &TestUser,
+        org: &TestOrg,
+        name: &str,
+    ) -> TestProject {
+        let project = self.create_project(user, org, name).await;
+        diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
+            .set(schema::project::bmf_version.eq(BmfVersion::V0))
+            .execute(&mut self.db_conn())
+            .expect("Failed to set the project to BMF version 0");
+        project
     }
 
     #[cfg(feature = "plus")]

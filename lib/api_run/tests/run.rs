@@ -11,7 +11,7 @@ use bencher_api_tests::TestServer;
 #[cfg(feature = "plus")]
 use bencher_api_tests::oci::compute_digest;
 use bencher_json::{
-    BmfVersion, HeadIdempotencyKey, JsonProjectKeyCreated, JsonReport, JsonReports,
+    BmfVersion, HeadIdempotencyKey, JsonProject, JsonProjectKeyCreated, JsonReport, JsonReports,
     project::report::{JsonReportWarning, ReportWarningAction, ReportWarningResource},
 };
 #[cfg(feature = "plus")]
@@ -32,7 +32,7 @@ async fn run_post_authenticated() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "runauth@example.com").await;
     let org = server.create_org(&user, "Run Org").await;
-    let project = server.create_project(&user, &org, "Run Project").await;
+    let project = server.create_v0_project(&user, &org, "Run Project").await;
 
     let project_slug: &str = project.slug.as_ref();
     let bmf_results = bmf_results();
@@ -69,7 +69,7 @@ async fn run_post_creates_branch_testbed() {
     let user = server.signup("Test User", "runcreate@example.com").await;
     let org = server.create_org(&user, "Run Create Org").await;
     let project = server
-        .create_project(&user, &org, "Auto Create Project")
+        .create_v0_project(&user, &org, "Auto Create Project")
         .await;
 
     let bmf_results = bmf_results();
@@ -146,7 +146,9 @@ async fn run_post_with_a_project_key_names_the_key() {
     let server = TestServer::new().await;
     let user = server.signup("Test User", "runkey@example.com").await;
     let org = server.create_org(&user, "Run Key Org").await;
-    let project = server.create_project(&user, &org, "Run Key Project").await;
+    let project = server
+        .create_v0_project(&user, &org, "Run Key Project")
+        .await;
 
     let project_slug: &str = project.slug.as_ref();
     let resp = server
@@ -190,6 +192,58 @@ async fn run_post_with_a_project_key_names_the_key() {
     assert_eq!(named, Some((key.uuid, "run-key".to_owned())));
 }
 
+// POST /v0/run - a run against a project that does not exist creates it at BMF version 1, so the
+// run's own undeclared version 1 results land: by slug unauthenticated (an unclaimed organization),
+// by slug authenticated (the user's organization), and from the run's context alone
+#[tokio::test]
+async fn run_post_creates_a_missing_project_at_bmf_version_1() {
+    let server = TestServer::new().await;
+    let user = server.signup("Test User", "runbmf1@example.com").await;
+    for (label, token, project) in [
+        ("unclaimed", None, Some("unclaimed-bmf-one")),
+        ("authenticated", Some(&user.token), Some("own-bmf-one")),
+        ("context", None, None),
+    ] {
+        let mut body = serde_json::json!({
+            "branch": "main",
+            "testbed": "localhost",
+            "start_time": "2024-01-01T00:00:00Z",
+            "end_time": "2024-01-01T00:01:00Z",
+            "results": [bmf_v1_results().to_string()],
+            "context": { "bencher.dev/v0/repo/name": "context-bmf-one" },
+        });
+        if let Some(project) = project
+            && let Some(object) = body.as_object_mut()
+        {
+            object.insert("project".to_owned(), serde_json::json!(project));
+        }
+        let mut request = server.client.post(server.api_url("/v0/run"));
+        if let Some(token) = token {
+            request = request.header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(token),
+            );
+        }
+        let resp = request.json(&body).send().await.expect("Request failed");
+        let status = resp.status();
+        let text = resp.text().await.expect("Failed to read the response");
+        assert_eq!(status, StatusCode::CREATED, "{label}: {text}");
+        let report: JsonReport = serde_json::from_str(&text).expect("Failed to parse response");
+        assert_eq!(report.bmf_version, Some(BmfVersion::V1), "{label}");
+
+        let project_slug: &str = report.project.slug.as_ref();
+        let resp = server
+            .client
+            .get(server.api_url(&format!("/v0/projects/{project_slug}")))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::OK, "{label}");
+        let stored: JsonProject = resp.json().await.expect("Failed to parse response");
+        assert_eq!(stored.bmf_version, BmfVersion::V1, "{label}");
+    }
+}
+
 // The migration that records a report's project key carries every report row through it, down and
 // back up, and each way leaves the report table's schema as the migrations before it built it.
 #[tokio::test]
@@ -203,7 +257,7 @@ async fn report_project_key_migration_round_trips_every_report() {
         .await;
     let org = server.create_org(&user, "Run Key Migration Org").await;
     let project = server
-        .create_project(&user, &org, "Run Key Migration Project")
+        .create_v0_project(&user, &org, "Run Key Migration Project")
         .await;
     post_migration_reports(&server, &user, &project).await;
 
@@ -277,7 +331,7 @@ async fn report_parse_migration_round_trips_every_report() {
         .await;
     let org = server.create_org(&user, "Run Parse Migration Org").await;
     let project = server
-        .create_project(&user, &org, "Run Parse Migration Project")
+        .create_v0_project(&user, &org, "Run Parse Migration Project")
         .await;
     post_migration_reports(&server, &user, &project).await;
     let resp = server
@@ -745,8 +799,7 @@ async fn run_post_unknown_bmf_version_is_rejected() {
 
 /// POST /v0/run - a run with no `bmf_version` is read at the project's version.
 ///
-/// The user is the server's first signup, which makes them its admin, so they can
-/// move the project to version 1. Then v1 results with no key ingest, and v0
+/// A new project is at version 1, so v1 results with no key ingest, and v0
 /// results with no key meet the contract as version 1.
 #[tokio::test]
 async fn run_post_absent_bmf_version_is_the_projects_version() {
@@ -756,7 +809,6 @@ async fn run_post_absent_bmf_version_is_the_projects_version() {
     let project = server
         .create_project(&user, &org, "Run Bmf Absent Project")
         .await;
-    set_project_bmf_version(&server, &user, &project, BmfVersion::V1).await;
 
     let project_slug: &str = project.slug.as_ref();
     let run = |results: serde_json::Value| {
@@ -827,7 +879,6 @@ async fn run_post_bmf_version_1_skips_plain_thresholds() {
     let project = server
         .create_project(&user, &org, "Run Plain Project")
         .await;
-    set_project_bmf_version(&server, &user, &project, BmfVersion::V1).await;
 
     let project_slug: &str = project.slug.as_ref();
     let model = serde_json::json!({ "test": "t_test", "upper_boundary": 0.99 });
@@ -1596,7 +1647,9 @@ async fn run_post_without_job_no_job_created() {
     let server = TestServer::new().await;
     let user = server.signup("Job User", "runjob5@example.com").await;
     let org = server.create_org(&user, "No Job Org").await;
-    let project = server.create_project(&user, &org, "No Job Project").await;
+    let project = server
+        .create_v0_project(&user, &org, "No Job Project")
+        .await;
 
     create_fallback_spec(&server, &user).await;
 
@@ -2074,7 +2127,7 @@ async fn run_post_explicit_testbed_no_job_with_fallback_spec() {
         .await;
     let org = server.create_org(&user, "Explicit NoJob FB Org").await;
     let project = server
-        .create_project(&user, &org, "Explicit NoJob FB Project")
+        .create_v0_project(&user, &org, "Explicit NoJob FB Project")
         .await;
 
     create_fallback_spec(&server, &user).await;
@@ -2119,7 +2172,7 @@ async fn run_post_no_testbed_no_job_succeeds() {
         .await;
     let org = server.create_org(&user, "Derived NoJob Org").await;
     let project = server
-        .create_project(&user, &org, "Derived NoJob Project")
+        .create_v0_project(&user, &org, "Derived NoJob Project")
         .await;
 
     // No spec, no fallback — just a plain run without --testbed and without --job
@@ -2159,7 +2212,7 @@ async fn run_post_no_testbed_no_job_with_fallback_spec_succeeds() {
         .await;
     let org = server.create_org(&user, "Derived NoJob FB Org").await;
     let project = server
-        .create_project(&user, &org, "Derived NoJob FB Project")
+        .create_v0_project(&user, &org, "Derived NoJob FB Project")
         .await;
 
     create_fallback_spec(&server, &user).await;
@@ -3013,7 +3066,7 @@ async fn run_post_idempotency_key_returns_same_report() {
     let user = server.signup("Test User", "idempotency@example.com").await;
     let org = server.create_org(&user, "Idempotency Org").await;
     let project = server
-        .create_project(&user, &org, "Idempotency Project")
+        .create_v0_project(&user, &org, "Idempotency Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();
@@ -3123,7 +3176,7 @@ async fn run_post_resets_with_one_start_point_idempotency_key_share_one_head() {
         .create_org(&user, "Start Point Idempotency Org")
         .await;
     let project = server
-        .create_project(&user, &org, "Start Point Idempotency Project")
+        .create_v0_project(&user, &org, "Start Point Idempotency Project")
         .await;
     let project_slug: &str = project.slug.as_ref();
     let run = |branch: &str, start_point: serde_json::Value| {
@@ -3194,7 +3247,7 @@ async fn run_post_different_idempotency_keys_create_different_reports() {
         .await;
     let org = server.create_org(&user, "Idempotency Diff Org").await;
     let project = server
-        .create_project(&user, &org, "Idempotency Diff Project")
+        .create_v0_project(&user, &org, "Idempotency Diff Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();
@@ -3260,7 +3313,7 @@ async fn run_post_no_idempotency_key_creates_new_reports() {
         .await;
     let org = server.create_org(&user, "No Idempotency Org").await;
     let project = server
-        .create_project(&user, &org, "No Idempotency Project")
+        .create_v0_project(&user, &org, "No Idempotency Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();

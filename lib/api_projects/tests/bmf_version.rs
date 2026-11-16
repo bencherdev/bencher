@@ -13,9 +13,9 @@
 //! fixes. Fold is refused for every v1 payload, the empty payload included.
 //!
 //! The second section is the project's `bmf_version`: the version a payload that
-//! declares none is read as. It starts at 0, a user who can edit the project moves it
-//! to 1, only a server admin moves it back, and an explicit key wins over it in either
-//! direction.
+//! declares none is read as. A new project starts at 1, a user who can edit a project
+//! at 0 moves it to 1, only a server admin moves it back, and an explicit key wins over
+//! it in either direction.
 
 use bencher_api_tests::{TestServer, TestUser, helpers::grant_project_role};
 use bencher_json::{BmfVersion, ProjectSlug};
@@ -61,14 +61,27 @@ struct Fixture {
     user: TestUser,
 }
 
+/// A fixture whose project is at version 0, as a project made before version 1 became the default.
 async fn fixture(server: &TestServer, label: &str) -> Fixture {
+    fixture_at(server, label, BmfVersion::V0).await
+}
+
+/// A fixture whose project is at the version every new project starts at, 1.
+async fn v1_fixture(server: &TestServer, label: &str) -> Fixture {
+    fixture_at(server, label, BmfVersion::V1).await
+}
+
+async fn fixture_at(server: &TestServer, label: &str, bmf_version: BmfVersion) -> Fixture {
     let user = server
         .signup("Test User", &format!("bmf{label}@example.com"))
         .await;
     let org = server.create_org(&user, &format!("Bmf Org {label}")).await;
-    let project = server
-        .create_project(&user, &org, &format!("Bmf Project {label}"))
-        .await;
+    let name = format!("Bmf Project {label}");
+    let project = if bmf_version == BmfVersion::V0 {
+        server.create_v0_project(&user, &org, &name).await
+    } else {
+        server.create_project(&user, &org, &name).await
+    };
     Fixture {
         project_slug: project.slug,
         user,
@@ -761,9 +774,9 @@ async fn set_bmf_version(server: &TestServer, fixture: &Fixture, bmf_version: Bm
     assert_eq!(status, StatusCode::OK, "PATCH bmf_version: {body}");
 }
 
-/// A new project is at version 0, in the create response and on a GET alike.
+/// A new project is at version 1, in the create response and on a GET alike.
 #[tokio::test]
-async fn project_bmf_version_defaults_to_0() {
+async fn project_bmf_version_defaults_to_1() {
     let server = TestServer::new().await;
     let user = server.signup("Bmf User", "bmfdefault@example.com").await;
     let org = server.create_org(&user, "Bmf Default Org").await;
@@ -781,7 +794,7 @@ async fn project_bmf_version_defaults_to_0() {
         .expect("Request failed");
     assert_eq!(resp.status(), StatusCode::CREATED);
     let created: serde_json::Value = resp.json().await.expect("Failed to parse the project");
-    assert_eq!(created["bmf_version"], serde_json::json!(0), "{created}");
+    assert_eq!(created["bmf_version"], serde_json::json!(1), "{created}");
 
     let slug: ProjectSlug = created["slug"]
         .as_str()
@@ -789,7 +802,7 @@ async fn project_bmf_version_defaults_to_0() {
         .parse()
         .expect("the slug is valid");
     let project = get_project(&server, &user, &slug).await;
-    assert_eq!(project["bmf_version"], serde_json::json!(0), "{project}");
+    assert_eq!(project["bmf_version"], serde_json::json!(1), "{project}");
 
     server.close().await;
 }
@@ -802,8 +815,7 @@ async fn project_bmf_version_defaults_to_0() {
 #[tokio::test]
 async fn absent_bmf_version_is_the_projects_version() {
     let server = TestServer::new().await;
-    let fixture = fixture(&server, "absentv1").await;
-    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+    let fixture = v1_fixture(&server, "absentv1").await;
     let v1 = v1_results();
     let v0 = v0_results();
 
@@ -866,9 +878,7 @@ async fn absent_bmf_version_is_the_projects_version() {
 #[tokio::test]
 async fn explicit_bmf_version_wins_over_the_projects_version() {
     let server = TestServer::new().await;
-    // The first signup is the server admin, so only this fixture can move its project.
-    let at_one = fixture(&server, "atone").await;
-    set_bmf_version(&server, &at_one, BmfVersion::V1).await;
+    let at_one = v1_fixture(&server, "atone").await;
     let at_zero = fixture(&server, "atzero").await;
     let v0 = v0_results();
     let v1 = v1_results();
@@ -931,7 +941,7 @@ async fn editor_cannot_send_bmf_version_0() {
     let user = server.signup("Other User", "bmfother@example.com").await;
     let org = server.create_org(&user, "Bmf Other Org").await;
     let project = server
-        .create_project(&user, &org, "Bmf Other Project")
+        .create_v0_project(&user, &org, "Bmf Other Project")
         .await;
 
     let (status, body) = try_patch(

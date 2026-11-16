@@ -461,7 +461,7 @@ async fn rollup_usage_agrees_with_usage() {
     let user = server.signup("Test User", "rollupusage@example.com").await;
     let org = server.create_org(&user, "Rollup Usage Org").await;
     let project = server
-        .create_project(&user, &org, "Rollup Usage Project")
+        .create_v0_project(&user, &org, "Rollup Usage Project")
         .await;
     let counted = Fixture {
         project_slug: project.slug.to_string(),
@@ -533,7 +533,7 @@ async fn fixture(server: &TestServer, label: &str) -> Fixture {
         .create_org(&user, &format!("Metric Row Org {label}"))
         .await;
     let project = server
-        .create_project(&user, &org, &format!("Metric Row Project {label}"))
+        .create_v0_project(&user, &org, &format!("Metric Row Project {label}"))
         .await;
     Fixture {
         project_slug: project.slug.to_string(),
