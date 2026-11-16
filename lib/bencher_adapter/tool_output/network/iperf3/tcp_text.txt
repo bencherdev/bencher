@@ -1,0 +1,12 @@
+Connecting to host localhost, port 5201
+[  4] local 127.0.0.1 port 44570 connected to 127.0.0.1 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  4]   0.00-1.00   sec  9.53 GBytes  81.8 Gbits/sec    0   1.37 MBytes       
+[  4]   1.00-2.00   sec  9.26 GBytes  79.5 Gbits/sec    0   1.44 MBytes       
+[  4]   2.00-3.00   sec  10.1 GBytes  86.8 Gbits/sec    0   1.44 MBytes       
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  4]   0.00-3.00   sec  29.7 GBytes  84.9 Gbits/sec    0            sender
+[  4]   0.00-3.00   sec  29.7 GBytes  84.9 Gbits/sec                  receiver
+
+iperf Done.

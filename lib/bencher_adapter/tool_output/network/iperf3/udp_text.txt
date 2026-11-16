@@ -1,0 +1,12 @@
+Connecting to host localhost, port 5201
+[  4] local 127.0.0.1 port 35639 connected to 127.0.0.1 port 5201
+[ ID] Interval           Transfer     Bitrate         Total Datagrams
+[  4]   0.00-1.00   sec  11.9 MBytes   100 Mbits/sec  382  
+[  4]   1.00-2.00   sec  11.9 MBytes   100 Mbits/sec  382  
+[  4]   2.00-3.00   sec  11.9 MBytes  99.9 Mbits/sec  381  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  4]   0.00-3.00   sec  35.8 MBytes   100 Mbits/sec  0.000 ms  0/1145 (0%)  sender
+[  4]   0.00-3.00   sec  35.8 MBytes   100 Mbits/sec  0.006 ms  0/1145 (0%)  receiver
+
+iperf Done.

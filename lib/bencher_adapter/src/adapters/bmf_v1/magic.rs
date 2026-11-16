@@ -18,6 +18,7 @@ use crate::{
                 divan::AdapterRustDivan, gungraun::AdapterRustGungraunV1, iai::AdapterRustIaiV1,
             },
             shell::hyperfine::AdapterShellHyperfineV1,
+            storage::fio::AdapterStorageFio,
         },
         json::v1::AdapterJsonV1,
     },
@@ -26,7 +27,7 @@ use crate::{
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
 /// its structured format before its text, and Divan before criterion, since criterion's text leaf
-/// also claims a run that prints both and drops Divan's tree.
+/// also claims a run that prints both and drops Divan's tree, then each harness of a domain.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -54,6 +55,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustIaiV1::parse(input, settings))
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
+            .or_else(|| AdapterStorageFio::parse(input, settings))
     }
 }
 
@@ -71,7 +73,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 31] = [
+    const LEAVES: [Adapter; 33] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -103,11 +105,13 @@ mod test_magic_v1 {
         Adapter::RustGungraunStdout,
         Adapter::ShellHyperfineV2,
         Adapter::ShellHyperfineV1,
+        Adapter::StorageFioJson,
+        Adapter::StorageFioText,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 11] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 15] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -131,6 +135,13 @@ mod test_magic_v1 {
         ("rust/bench/zero.txt", None),
         // libtest ran no benchmark, and gungraun's summary is of a schema no leaf reads.
         ("rust/gungraun/json_not_v6.txt", None),
+        // iperf3's text, which no leaf reads.
+        ("network/iperf3/tcp_text.txt", None),
+        ("network/iperf3/udp_text.txt", None),
+        // fio ran no job that did any I/O.
+        ("storage/fio/error.json", None),
+        // fio's terse output, which no leaf reads.
+        ("storage/fio/randrw_terse.txt", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -283,6 +294,10 @@ mod test_magic_v1 {
             "shell/hyperfine" => (
                 name.starts_with("v2"),
                 (Adapter::ShellHyperfineV2, Adapter::ShellHyperfineV1),
+            ),
+            "storage/fio" => (
+                extension == Some("json"),
+                (Adapter::StorageFioJson, Adapter::StorageFioText),
             ),
             _ => return None,
         };
