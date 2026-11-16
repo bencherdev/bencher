@@ -10,6 +10,7 @@ const C_SHARP_ICON = "devicon-csharp-line";
 const CPP_ICON = "devicon-cplusplus-plain";
 const DART_ICON = "devicon-dart-plain";
 const GO_ICON = "devicon-go-original-wordmark";
+const K6_ICON = "devicon-k6-plain";
 const JAVA_ICON = "devicon-java-plain";
 const JS_ICON = "devicon-javascript-plain";
 const PYTHON_ICON = "devicon-python-plain";
@@ -46,6 +47,10 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.GoBenchJson:
 		case Adapter.GoBenchText:
 			return GO_ICON;
+		case Adapter.HttpK6:
+		case Adapter.HttpK6Json:
+		case Adapter.HttpK6JsonSummary:
+			return K6_ICON;
 		case Adapter.JavaJmh:
 			return JAVA_ICON;
 		case Adapter.CSharpDotNet:
@@ -106,6 +111,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.GoBenchJson:
 		case Adapter.GoBenchText:
 			return `bencher run${host} "go test -bench"`;
+		case Adapter.HttpK6:
+		case Adapter.HttpK6Json:
+		case Adapter.HttpK6JsonSummary:
+			return `bencher run${host} --file summary.json "k6 run --quiet --new-machine-readable-summary --summary-export summary.json script.js"`;
 		case Adapter.JavaJmh:
 			return `bencher run${host} --file results.json "java -jar benchmarks.jar -rf json -rff results.json"`;
 		case Adapter.CSharpDotNet:

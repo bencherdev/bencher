@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, btree_map};
 
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BenchmarkPrefix, BmfVersion, JsonNewMetric, MeasureNameId,
@@ -21,6 +21,9 @@ use super::{
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct AdapterResults {
     pub inner: ResultsMap,
+    /// The benchmark of a harness whose output names nothing for the whole test, which takes its
+    /// name from the run's benchmark prefix once the server reads it.
+    pub nameless: Option<NamelessBenchmark>,
     /// The BMF version these results were parsed from.
     /// Fold is a v0 only operation, so this is what gates it.
     pub version: BmfVersion,
@@ -34,6 +37,14 @@ pub struct AdapterResults {
 }
 
 pub type ResultsMap = HashMap<BenchmarkNameId, BenchmarkEntries>;
+
+/// A benchmark with no name of its own, named by the run's benchmark prefix trimmed of trailing
+/// whitespace, else by its harness.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NamelessBenchmark {
+    pub harness: &'static str,
+    pub entries: BenchmarkEntries,
+}
 
 pub type MeasureUnits = HashMap<MeasureNameId, ResourceName>;
 
@@ -89,6 +100,7 @@ impl From<ResultsMap> for AdapterResults {
     fn from(inner: ResultsMap) -> Self {
         Self {
             inner,
+            nameless: None,
             version: BmfVersion::V0,
             resolved_adapter: None,
             skipped: Skipped::default(),
@@ -441,21 +453,19 @@ impl AdapterResults {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
+        self.inner.is_empty() && self.nameless.is_none()
     }
 
     /// Whether any measure of any variant holds a metric.
     pub fn has_metrics(&self) -> bool {
-        self.inner
-            .values()
+        self.entries()
             .flat_map(BenchmarkEntries::values)
             .flat_map(|metrics| metrics.inner.values())
             .any(|metric| !metric.inner.is_empty())
     }
 
     pub(crate) fn measures(&self) -> impl Iterator<Item = &MeasureNameId> {
-        self.inner
-            .values()
+        self.entries()
             .flat_map(BenchmarkEntries::values)
             .flat_map(|metrics| metrics.inner.keys())
     }
@@ -464,15 +474,13 @@ impl AdapterResults {
     where
         F: Fn(&MeasureNameId) -> bool,
     {
-        self.inner.retain(|_, entries| {
-            let held = !entries.is_empty();
-            entries.retain(|_, metrics| {
-                let held = !metrics.inner.is_empty();
-                metrics.inner.retain(|measure, _| keep(measure));
-                !held || !metrics.inner.is_empty()
-            });
-            !held || !entries.is_empty()
-        });
+        self.inner
+            .retain(|_, entries| retain_entries(entries, keep));
+        if let Some(nameless) = &mut self.nameless
+            && !retain_entries(&mut nameless.entries, keep)
+        {
+            self.nameless = None;
+        }
     }
 
     pub(crate) fn prefix_benchmarks(&mut self, prefix: &BenchmarkPrefix) {
@@ -483,6 +491,41 @@ impl AdapterResults {
                 self.skipped.benchmarks += 1;
             }
         }
+    }
+
+    /// Name the benchmark with no name of its own: `prefix` trimmed of trailing whitespace when
+    /// that leaves any, else its harness. A variant the benchmark of that name already holds is
+    /// skipped and counted.
+    pub(crate) fn name_nameless(&mut self, prefix: Option<&BenchmarkPrefix>) {
+        let Some(NamelessBenchmark { harness, entries }) = self.nameless.take() else {
+            return;
+        };
+        let name = prefix
+            .map(|prefix| prefix.as_ref().trim_end())
+            .filter(|name| !name.is_empty())
+            .unwrap_or(harness);
+        let Ok(name) = name.parse::<BenchmarkName>() else {
+            self.skipped.benchmarks += 1;
+            return;
+        };
+        let variants = self
+            .inner
+            .entry(BenchmarkNameId::new_name(name))
+            .or_default();
+        for (parameters, metrics) in entries {
+            if let btree_map::Entry::Vacant(variant) = variants.entry(parameters) {
+                variant.insert(metrics);
+            } else {
+                self.skipped.variants += 1;
+            }
+        }
+    }
+
+    /// Every benchmark's variants, the one with no name of its own included.
+    fn entries(&self) -> impl Iterator<Item = &BenchmarkEntries> {
+        self.inner
+            .values()
+            .chain(self.nameless.iter().map(|nameless| &nameless.entries))
     }
 
     /// Whether these results are a BMF v0 payload, which is what fold operates on.
@@ -512,12 +555,32 @@ impl AdapterResults {
         for metric in self
             .inner
             .values_mut()
+            .chain(
+                self.nameless
+                    .iter_mut()
+                    .map(|nameless| &mut nameless.entries),
+            )
             .flat_map(BTreeMap::values_mut)
             .flat_map(|metrics| metrics.inner.values_mut())
         {
             self.skipped.metrics += metric.truncate();
         }
     }
+}
+
+/// Keep only the measures `keep` holds to, and whether the benchmark stays: one that held variants
+/// and holds none once they are gone does not.
+fn retain_entries<F>(entries: &mut BenchmarkEntries, keep: &F) -> bool
+where
+    F: Fn(&MeasureNameId) -> bool,
+{
+    let held = !entries.is_empty();
+    entries.retain(|_, metrics| {
+        let held = !metrics.inner.is_empty();
+        metrics.inner.retain(|measure, _| keep(measure));
+        !held || !metrics.inner.is_empty()
+    });
+    !held || !entries.is_empty()
 }
 
 /// The key `benchmark` becomes with `prefix` in front, read as a payload reads a key: a slug while

@@ -39,6 +39,7 @@ const CLI_ADAPTERS = new Set([
 	"cpp_google",
 	"dart_benchmark_harness",
 	"go_bench",
+	"http_k6",
 	"java_jmh",
 	"js_benchmark",
 	"js_deno",
@@ -147,5 +148,7 @@ describe("cliAdapter", () => {
 		expect(cliAdapter(Adapter.ShellHyperfineV2)).toBe("shell_hyperfine");
 		expect(cliAdapter(Adapter.RustGungraunJson)).toBe("rust_gungraun");
 		expect(cliAdapter(Adapter.Python)).toBe("magic");
+		expect(cliAdapter(Adapter.HttpK6Json)).toBe("http_k6");
+		expect(cliAdapter(Adapter.HttpK6JsonSummary)).toBe("http_k6");
 	});
 });

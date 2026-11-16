@@ -95,6 +95,7 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
 
     AdapterResults {
         inner: results_map,
+        nameless: None,
         version: BmfVersion::V1,
         resolved_adapter: Some(Adapter::JsonV1),
         skipped,

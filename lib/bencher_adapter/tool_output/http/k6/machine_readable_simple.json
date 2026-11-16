@@ -1,0 +1,156 @@
+{
+  "config": {
+    "duration": 3.000125998,
+    "execution": "local",
+    "script": "import http from 'k6/http';\nimport { check } from 'k6';\n\nexport const options = { vus: 5, duration: '3s', summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)', 'p(99.9)', 'count'] };\n\nexport default function () {\n  const res = http.get('http://localhost:8080/fast');\n  check(res, { 'status is 200': (r) => r.status === 200 });\n}\n\nexport function handleSummary(data) {\n  return { stdout: JSON.stringify(data, null, 2) };\n}\n"
+  },
+  "metadata": {
+    "generated_at": "2026-11-15T05:14:29.906456458Z",
+    "k6_version": "2.4.0"
+  },
+  "results": {
+    "checks": {
+      "metrics": [
+        {
+          "contains": "default",
+          "name": "checks_total",
+          "type": "counter",
+          "values": {
+            "count": 165406
+          }
+        },
+        {
+          "contains": "default",
+          "name": "checks_failed",
+          "type": "rate",
+          "values": {
+            "matches": 0,
+            "rate": 0,
+            "total": 165406
+          }
+        },
+        {
+          "contains": "default",
+          "name": "checks_succeeded",
+          "type": "rate",
+          "values": {
+            "matches": 165406,
+            "rate": 1,
+            "total": 165406
+          }
+        }
+      ],
+      "results": [
+        {
+          "fails": 0,
+          "name": "status is 200",
+          "passes": 165406
+        }
+      ]
+    },
+    "metrics": [
+      {
+        "contains": "default",
+        "name": "http_reqs",
+        "type": "counter",
+        "values": {
+          "count": 165406
+        }
+      },
+      {
+        "contains": "default",
+        "name": "http_req_failed",
+        "type": "rate",
+        "values": {
+          "matches": 0,
+          "rate": 0,
+          "total": 165406
+        }
+      },
+      {
+        "contains": "time",
+        "name": "http_req_duration{expected_response:true}",
+        "type": "trend",
+        "values": {
+          "avg": 0.06075981365851334,
+          "max": 3.656861,
+          "med": 0.051139,
+          "min": 0.014513,
+          "p90": 0.086272,
+          "p95": 0.11089825
+        }
+      },
+      {
+        "contains": "time",
+        "name": "http_req_duration",
+        "type": "trend",
+        "values": {
+          "avg": 0.06075981365851334,
+          "max": 3.656861,
+          "med": 0.051139,
+          "min": 0.014513,
+          "p90": 0.086272,
+          "p95": 0.11089825
+        }
+      },
+      {
+        "contains": "default",
+        "name": "iterations",
+        "type": "counter",
+        "values": {
+          "count": 165406
+        }
+      },
+      {
+        "contains": "default",
+        "name": "vus",
+        "type": "gauge",
+        "values": {
+          "max": 5,
+          "min": 5,
+          "value": 5
+        }
+      },
+      {
+        "contains": "default",
+        "name": "vus_max",
+        "type": "gauge",
+        "values": {
+          "max": 5,
+          "min": 5,
+          "value": 5
+        }
+      },
+      {
+        "contains": "time",
+        "name": "iteration_duration",
+        "type": "trend",
+        "values": {
+          "avg": 0.0865616435558566,
+          "max": 4.114626,
+          "med": 0.073423,
+          "min": 0.027262,
+          "p90": 0.121358,
+          "p95": 0.158273
+        }
+      },
+      {
+        "contains": "data",
+        "name": "data_received",
+        "type": "counter",
+        "values": {
+          "count": 19683314
+        }
+      },
+      {
+        "contains": "data",
+        "name": "data_sent",
+        "type": "counter",
+        "values": {
+          "count": 12240044
+        }
+      }
+    ]
+  },
+  "version": "1.0.0"
+}

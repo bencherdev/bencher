@@ -101,7 +101,7 @@
 		"apiRequests": 1,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 60916,
+		"jsBytes": 60970,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"lateModules": 0
@@ -111,7 +111,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 60916,
+		"jsBytes": 60970,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"lateModules": 0
@@ -121,7 +121,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 64112,
+		"jsBytes": 64168,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"lateModules": 0
@@ -208,7 +208,7 @@
 		"apiRequests": 3,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 82050,
+		"jsBytes": 82127,
 		"deferredJsBytes": 117931,
 		"stylesheets": 1,
 		"htmlBytes": 2840,
@@ -220,7 +220,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 118680,
+		"jsBytes": 118731,
 		"deferredJsBytes": 112880,
 		"htmlBytes": 2900,
 		"inlineScriptBytes": 2560,
@@ -243,7 +243,7 @@
 		"apiRequests": 4,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 78832,
+		"jsBytes": 78883,
 		"deferredJsBytes": 112880,
 		"lateModules": 0
 	},
@@ -270,7 +270,7 @@
 		"jsBytes": 96539,
 		"deferredJsBytes": 115690,
 		"stylesheets": 1,
-		"htmlBytes": 2800,
+		"htmlBytes": 2851,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -299,9 +299,9 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 107701,
+		"jsBytes": 107754,
 		"deferredJsBytes": 112880,
-		"htmlBytes": 2850,
+		"htmlBytes": 2901,
 		"inlineScriptBytes": 2560,
 		"lateModules": 0
 	},
@@ -404,7 +404,7 @@
 		"apiRounds": 1,
 		"cls": 0,
 		"shellShift": 0,
-		"jsBytes": 65023,
+		"jsBytes": 65078,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19916,
@@ -418,7 +418,7 @@
 		"apiRounds": 1,
 		"cls": 0,
 		"shellShift": 0,
-		"jsBytes": 66151,
+		"jsBytes": 66207,
 		"deferredJsBytes": 112880,
 		"stylesheets": 1,
 		"cssBytes": 19916,
@@ -499,7 +499,7 @@
 	"metricLanding": {
 		"apiRounds": 2,
 		"apiRequests": 3,
-		"jsBytes": 119455,
+		"jsBytes": 119508,
 		"lateModules": 2
 	}
 }

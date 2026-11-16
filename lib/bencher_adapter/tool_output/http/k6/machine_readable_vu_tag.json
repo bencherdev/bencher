@@ -1,0 +1,127 @@
+{
+    "config": {
+        "duration": 2.000383772,
+        "execution": "local",
+        "script": "import { sleep } from \"k6\";\nimport { Trend } from \"k6/metrics\";\nconst t = new Trend(\"my_time\", true);\nexport const options = {\n  scenarios: { s: { executor: \"per-vu-iterations\", vus: 2, iterations: 50, maxDuration: \"2s\", gracefulStop: \"0s\" } },\n  systemTags: [\"vu\", \"iter\", \"scenario\"],\n  summaryTrendStats: [\"avg\", \"max\", \"count\"],\n  thresholds: {\n    \"dropped_iterations{vu:1}\": [\"count>=0\"],\n    \"my_time{vu:a}\": [\"max>=0\"],\n    \"iterations{vu:1}\": [\"count>=0\"],\n  },\n};\nexport default function () { t.add(5, { vu: \"a\" }); sleep(0.1); }\n"
+    },
+    "metadata": {
+        "generated_at": "2026-11-17T17:39:17.897810651Z",
+        "k6_version": "2.4.0"
+    },
+    "results": {
+        "checks": {
+            "metrics": [],
+            "results": []
+        },
+        "metrics": [
+            {
+                "contains": "default",
+                "name": "dropped_iterations",
+                "type": "counter",
+                "values": {
+                    "count": 60
+                }
+            },
+            {
+                "contains": "default",
+                "name": "vus",
+                "type": "gauge",
+                "values": {
+                    "max": 2,
+                    "min": 2,
+                    "value": 2
+                }
+            },
+            {
+                "contains": "default",
+                "name": "vus_max",
+                "type": "gauge",
+                "values": {
+                    "max": 2,
+                    "min": 2,
+                    "value": 2
+                }
+            },
+            {
+                "contains": "default",
+                "name": "iterations{vu:1}",
+                "type": "counter",
+                "values": {
+                    "count": 0
+                }
+            },
+            {
+                "contains": "default",
+                "name": "dropped_iterations{vu:1}",
+                "type": "counter",
+                "values": {
+                    "count": 30
+                }
+            },
+            {
+                "contains": "time",
+                "name": "iteration_duration",
+                "type": "trend",
+                "values": {
+                    "avg": 100.64675018421052,
+                    "max": 101.150798,
+                    "med": null,
+                    "min": null,
+                    "p90": null,
+                    "p95": null
+                }
+            },
+            {
+                "contains": "default",
+                "name": "iterations",
+                "type": "counter",
+                "values": {
+                    "count": 38
+                }
+            },
+            {
+                "contains": "data",
+                "name": "data_received",
+                "type": "counter",
+                "values": {
+                    "count": 0
+                }
+            },
+            {
+                "contains": "data",
+                "name": "data_sent",
+                "type": "counter",
+                "values": {
+                    "count": 0
+                }
+            },
+            {
+                "contains": "time",
+                "name": "my_time{vu:a}",
+                "type": "trend",
+                "values": {
+                    "avg": 5,
+                    "max": 5,
+                    "med": null,
+                    "min": null,
+                    "p90": null,
+                    "p95": null
+                }
+            },
+            {
+                "contains": "time",
+                "name": "my_time",
+                "type": "trend",
+                "values": {
+                    "avg": 5,
+                    "max": 5,
+                    "med": null,
+                    "min": null,
+                    "p90": null,
+                    "p95": null
+                }
+            }
+        ]
+    },
+    "version": "1.0.0"
+}

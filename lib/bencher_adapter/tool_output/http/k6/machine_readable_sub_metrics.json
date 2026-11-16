@@ -1,0 +1,250 @@
+{
+    "config": {
+        "duration": 0.370598914,
+        "execution": "local",
+        "script": "import http from 'k6/http';\nimport { check } from 'k6';\nimport { Rate, Trend } from 'k6/metrics';\n\nconst orderTime = new Trend('order_time', true);\nconst paid = new Rate('paid');\n\nexport const options = {\n  vus: 2,\n  iterations: 20,\n  systemTags: [\n    'proto', 'subproto', 'status', 'method', 'url', 'name', 'group', 'check', 'error',\n    'error_code', 'tls_version', 'scenario', 'service', 'expected_response',\n    'ip', 'iter', 'vu', 'ocsp_status',\n  ],\n  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'count'],\n  thresholds: {\n    'http_req_duration{status:500}': [],\n    'http_req_failed{status:500}': [],\n    'http_reqs{status:500}': [],\n    'checks{check:never runs}': [],\n    'order_time{status:500}': [],\n    'paid{status:500}': [],\n    'http_req_duration{ip:127.0.0.1}': [],\n    'http_reqs{iter:0}': [],\n    'http_reqs{vu:1}': [],\n    'http_reqs{ocsp_status:unknown}': [],\n  },\n};\n\nexport default function () {\n  const res = http.get('http://localhost:8080/fast');\n  check(res, { 'fast is 200': (r) => r.status === 200 });\n  orderTime.add(res.timings.duration);\n  paid.add(res.status === 200);\n}\n\nexport function handleSummary(data) {\n  return { stdout: JSON.stringify(data, null, 2) };\n}\n"
+    },
+    "metadata": {
+        "generated_at": "2026-11-17T03:06:13.541544611Z",
+        "k6_version": "2.4.0"
+    },
+    "results": {
+        "checks": {
+            "metrics": [
+                {
+                    "contains": "default",
+                    "name": "checks_total",
+                    "type": "counter",
+                    "values": {
+                        "count": 20
+                    }
+                },
+                {
+                    "contains": "default",
+                    "name": "checks_failed",
+                    "type": "rate",
+                    "values": {
+                        "matches": 0,
+                        "rate": 0,
+                        "total": 20
+                    }
+                },
+                {
+                    "contains": "default",
+                    "name": "checks_succeeded",
+                    "type": "rate",
+                    "values": {
+                        "matches": 20,
+                        "rate": 1,
+                        "total": 20
+                    }
+                }
+            ],
+            "results": [
+                {
+                    "fails": 0,
+                    "name": "fast is 200",
+                    "passes": 20
+                }
+            ]
+        },
+        "metrics": [
+            {
+                "contains": "time",
+                "name": "http_req_duration",
+                "type": "trend",
+                "values": {
+                    "avg": 36.88422615,
+                    "max": 41.85741,
+                    "med": 40.901664499999995,
+                    "min": 0.372035,
+                    "p90": 40.9852806,
+                    "p95": 41.22076275
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_req_failed",
+                "type": "rate",
+                "values": {
+                    "matches": 0,
+                    "rate": 0,
+                    "total": 20
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_reqs",
+                "type": "counter",
+                "values": {
+                    "count": 20
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration{expected_response:true}",
+                "type": "trend",
+                "values": {
+                    "avg": 36.88422615,
+                    "max": 41.85741,
+                    "med": 40.901664499999995,
+                    "min": 0.372035,
+                    "p90": 40.9852806,
+                    "p95": 41.22076275
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration{status:500}",
+                "type": "trend",
+                "values": {
+                    "avg": 0,
+                    "max": 0,
+                    "med": 0,
+                    "min": 0,
+                    "p90": 0,
+                    "p95": 0
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration{ip:127.0.0.1}",
+                "type": "trend",
+                "values": {
+                    "avg": 36.88422615,
+                    "max": 41.85741,
+                    "med": 40.901664499999995,
+                    "min": 0.372035,
+                    "p90": 40.9852806,
+                    "p95": 41.22076275
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_reqs{vu:1}",
+                "type": "counter",
+                "values": {
+                    "count": 0
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_reqs{iter:0}",
+                "type": "counter",
+                "values": {
+                    "count": 0
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_req_failed{status:500}",
+                "type": "rate",
+                "values": {
+                    "matches": 0,
+                    "rate": 0,
+                    "total": 0
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_reqs{status:500}",
+                "type": "counter",
+                "values": {
+                    "count": 0
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_reqs{ocsp_status:unknown}",
+                "type": "counter",
+                "values": {
+                    "count": 0
+                }
+            },
+            {
+                "contains": "time",
+                "name": "iteration_duration",
+                "type": "trend",
+                "values": {
+                    "avg": 37.031579550000004,
+                    "max": 41.958958,
+                    "med": 40.992073500000004,
+                    "min": 0.878867,
+                    "p90": 41.085238499999996,
+                    "p95": 41.353118300000006
+                }
+            },
+            {
+                "contains": "default",
+                "name": "iterations",
+                "type": "counter",
+                "values": {
+                    "count": 20
+                }
+            },
+            {
+                "contains": "data",
+                "name": "data_sent",
+                "type": "counter",
+                "values": {
+                    "count": 1480
+                }
+            },
+            {
+                "contains": "data",
+                "name": "data_received",
+                "type": "counter",
+                "values": {
+                    "count": 2260
+                }
+            },
+            {
+                "contains": "default",
+                "name": "paid",
+                "type": "rate",
+                "values": {
+                    "matches": 20,
+                    "rate": 1,
+                    "total": 20
+                }
+            },
+            {
+                "contains": "time",
+                "name": "order_time",
+                "type": "trend",
+                "values": {
+                    "avg": 36.88422615,
+                    "max": 41.85741,
+                    "med": 40.901664499999995,
+                    "min": 0.372035,
+                    "p90": 40.9852806,
+                    "p95": 41.22076275
+                }
+            },
+            {
+                "contains": "default",
+                "name": "paid{status:500}",
+                "type": "rate",
+                "values": {
+                    "matches": 0,
+                    "rate": 0,
+                    "total": 0
+                }
+            },
+            {
+                "contains": "time",
+                "name": "order_time{status:500}",
+                "type": "trend",
+                "values": {
+                    "avg": 0,
+                    "max": 0,
+                    "med": 0,
+                    "min": 0,
+                    "p90": 0,
+                    "p95": 0
+                }
+            }
+        ]
+    },
+    "version": "1.0.0"
+}

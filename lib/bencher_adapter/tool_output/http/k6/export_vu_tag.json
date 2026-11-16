@@ -1,0 +1,69 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {}
+    },
+    "metrics": {
+        "my_time": {
+            "avg": 5,
+            "max": 5,
+            "count": 40
+        },
+        "dropped_iterations": {
+            "count": 60,
+            "rate": 29.986615983728136
+        },
+        "iterations{vu:1}": {
+            "count": 0,
+            "rate": 0,
+            "thresholds": {
+                "count>=0": false
+            }
+        },
+        "data_received": {
+            "count": 0,
+            "rate": 0
+        },
+        "vus": {
+            "min": 2,
+            "max": 2,
+            "value": 2
+        },
+        "vus_max": {
+            "value": 2,
+            "min": 2,
+            "max": 2
+        },
+        "iterations": {
+            "count": 38,
+            "rate": 18.991523456361154
+        },
+        "data_sent": {
+            "count": 0,
+            "rate": 0
+        },
+        "dropped_iterations{vu:1}": {
+            "count": 30,
+            "rate": 14.993307991864068,
+            "thresholds": {
+                "count>=0": false
+            }
+        },
+        "iteration_duration": {
+            "avg": 100.6626495,
+            "max": 101.669843,
+            "count": 38
+        },
+        "my_time{vu:a}": {
+            "count": 40,
+            "avg": 5,
+            "max": 5,
+            "thresholds": {
+                "max>=0": false
+            }
+        }
+    }
+}

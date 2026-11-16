@@ -120,8 +120,17 @@ impl AdapterResultsArray {
     /// Put `prefix` in front of every benchmark name, and skip and count a benchmark whose
     /// prefixed name is too long.
     pub fn prefix_benchmarks(&mut self, prefix: &BenchmarkPrefix) {
+        self.name_benchmarks(Some(prefix));
+    }
+
+    /// [`Self::prefix_benchmarks`] when the run sets a prefix, and name each benchmark with no
+    /// name of its own by the prefix trimmed of trailing whitespace, else by its harness.
+    pub fn name_benchmarks(&mut self, prefix: Option<&BenchmarkPrefix>) {
         for results in &mut self.inner {
-            results.prefix_benchmarks(prefix);
+            if let Some(prefix) = prefix {
+                results.prefix_benchmarks(prefix);
+            }
+            results.name_nameless(prefix);
         }
     }
 
@@ -168,14 +177,14 @@ mod test_results_array {
     use std::collections::{BTreeMap, HashSet};
 
     use bencher_json::{
-        BenchmarkName, BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet,
-        project::report::Adapter,
+        BenchmarkName, BenchmarkNameId, BmfVersion, MAX_METRIC_NAMES, MeasureNameId, MetricName,
+        ParameterSet, project::report::Adapter,
     };
 
     use super::{
         AdapterResultsArray,
         adapter_metrics::{AdapterMetric, AdapterMetrics, MetricsMap, NamedMap},
-        adapter_results::ResultsMap,
+        adapter_results::{BenchmarkEntries, ResultsMap},
     };
     use crate::{
         AdapterError, AdapterResults, Settings,
@@ -758,6 +767,135 @@ mod test_results_array {
                 format!("{prefix}{fits}").parse().unwrap()
             )]
         );
+    }
+
+    const K6_EXPORT: &str = "./tool_output/http/k6/export_simple.json";
+
+    fn k6_array(input: &str) -> AdapterResultsArray {
+        v1_array(input, Adapter::HttpK6)
+    }
+
+    fn k6() -> BenchmarkNameId {
+        BenchmarkNameId::new_name("k6".parse().unwrap())
+    }
+
+    /// k6's one benchmark has no name of its own, so it takes the run's prefix trimmed of
+    /// trailing whitespace, else `k6`.
+    ///
+    /// Kills: a prefix left untrimmed, trimmed in front, or put in front of `k6`, a prefix of
+    /// whitespace that names the benchmark nothing, and `k6` kept despite a prefix.
+    #[test]
+    fn results_array_names_a_nameless_benchmark_by_the_trimmed_prefix_else_its_harness() {
+        let input = std::fs::read_to_string(K6_EXPORT).expect("Failed to read a fixture");
+        for (prefix, expected) in [
+            (None, "k6"),
+            (Some("api "), "api"),
+            (Some("api"), "api"),
+            (Some(" api\t "), " api"),
+            (Some("api-"), "api-"),
+            (Some("   "), "k6"),
+        ] {
+            let mut array = k6_array(&input);
+            let prefix = prefix.map(|prefix| prefix.parse().unwrap());
+            array.name_benchmarks(prefix.as_ref());
+            let results = only(&array);
+            assert_eq!(results.nameless, None, "{prefix:?}");
+            assert_eq!(
+                results.inner.into_keys().collect::<Vec<_>>(),
+                vec![BenchmarkNameId::new_name(expected.parse().unwrap())],
+                "{prefix:?}"
+            );
+        }
+    }
+
+    /// A leaf's named benchmarks take the prefix in front, and its nameless one takes the prefix
+    /// trimmed, once.
+    ///
+    /// Kills: the nameless benchmark named before the named ones are prefixed, which puts the
+    /// prefix in front of it twice, and named benchmarks left unprefixed beside it.
+    #[test]
+    fn results_array_prefixes_named_benchmarks_and_names_the_nameless_one_once() {
+        let input = std::fs::read_to_string(K6_EXPORT).expect("Failed to read a fixture");
+        let mut array = k6_array(&input);
+        array.inner[0].inner.insert(
+            BenchmarkNameId::new_name("GET /a".parse().unwrap()),
+            BenchmarkEntries::from([(ParameterSet::default(), AdapterMetrics::default())]),
+        );
+        array.prefix_benchmarks(&"api ".parse().unwrap());
+        assert_eq!(
+            only(&array).inner.into_keys().collect::<HashSet<_>>(),
+            HashSet::from([
+                BenchmarkNameId::new_name("api GET /a".parse().unwrap()),
+                BenchmarkNameId::new_name("api".parse().unwrap()),
+            ])
+        );
+    }
+
+    /// A nameless variant whose name and parameters a named benchmark already holds is skipped
+    /// and counted, and its other variants join that benchmark.
+    ///
+    /// Kills: a nameless variant written over the named one, or skipped uncounted, and the named
+    /// benchmark replaced whole.
+    #[test]
+    fn results_array_skips_a_nameless_variant_its_name_already_holds() {
+        let input = std::fs::read_to_string(K6_EXPORT).expect("Failed to read a fixture");
+        let mut array = k6_array(&input);
+        let nameless = array.inner[0]
+            .nameless
+            .as_ref()
+            .map_or(0, |nameless| nameless.entries.len());
+        array.inner[0].inner.insert(
+            k6(),
+            BenchmarkEntries::from([(ParameterSet::default(), AdapterMetrics::default())]),
+        );
+        array.name_benchmarks(None);
+        let results = only(&array);
+        assert_eq!(results.skipped.variants, 1);
+        let variants = &results.inner[&k6()];
+        assert_eq!(variants.len(), nameless);
+        assert_eq!(
+            variants[&ParameterSet::default()],
+            AdapterMetrics::default()
+        );
+    }
+
+    /// Before the server names it, a nameless benchmark is part of the results: it holds metrics,
+    /// lists its measures, is cut to the per measure cap, and keeps only the measures kept.
+    ///
+    /// Kills: a check for metrics, a list of measures, the cap, or the measures filter that reads
+    /// the named benchmarks only, which would record a k6 report as empty, store a metric past the
+    /// cap, or keep a measure the run dropped.
+    #[test]
+    fn results_array_reads_a_nameless_benchmark_before_it_is_named() {
+        let input = std::fs::read_to_string(K6_EXPORT).expect("Failed to read a fixture");
+        let mut json = serde_json::from_str::<serde_json::Value>(&input).unwrap();
+        for percent in 50..90 {
+            json["metrics"]["http_req_duration"][format!("p({percent}.5)").as_str()] =
+                serde_json::json!(1.0);
+        }
+        let mut array = k6_array(&json.to_string());
+        assert!(array.has_metrics());
+        assert_eq!(array.skipped().metrics, 46 - MAX_METRIC_NAMES);
+        let latency: MeasureNameId = "latency".parse().unwrap();
+        assert!(array.measures().contains(&latency));
+        array.retain_measures(|measure| *measure == latency);
+        let nameless = only(&array).nameless.expect("no nameless benchmark");
+        assert_eq!(
+            nameless
+                .entries
+                .keys()
+                .map(ParameterSet::canonical)
+                .collect::<HashSet<_>>(),
+            HashSet::from([r#"{"@responses":"expected"}"#.to_owned(), "{}".to_owned()])
+        );
+        assert_eq!(
+            nameless.entries[&ParameterSet::default()].inner[&latency]
+                .inner
+                .len(),
+            MAX_METRIC_NAMES
+        );
+        array.retain_measures(|_| false);
+        assert_eq!(only(&array).nameless, None);
     }
 
     fn fixture(suffix: &str) -> String {

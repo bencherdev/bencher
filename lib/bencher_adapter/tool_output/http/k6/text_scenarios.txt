@@ -1,0 +1,59 @@
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate>0.9' rate=100.00%
+
+    http_req_duration
+    ✓ 'p(95)<500' p(95)=50.94ms
+
+      {group:::checkout::pay}
+      ✓ 'avg<200' avg=152.12µs
+
+      {scenario:browse}
+      ✓ 'p(99)<100' p(99)=317.89µs
+
+    http_req_failed{name:fast}
+    ✓ 'rate<0.01' rate=0.00%
+
+    order_time
+    ✓ 'p(95)<300' p(95)=296.36µs
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 2471    493.036562/s
+    checks_succeeded...: 100.00% 2471 out of 2471
+    checks_failed......: 0.00%   0 out of 2471
+
+    ✓ home is 200
+    ✓ cart is 200
+    ✓ pay is 201
+    ✓ error is 500
+
+    CUSTOM
+    order_time.....................: avg=152.12µs min=50.38µs med=134.67µs max=624.71µs p(90)=247.18µs p(95)=296.36µs
+    orders_placed..................: 490    97.76929/s
+
+    HTTP
+    http_req_duration..............: avg=10.16ms  min=31.05µs med=157.88µs max=51.65ms  p(90)=50.65ms  p(95)=50.94ms 
+      { expected_response:true }...: avg=12.65ms  min=50.38µs med=170.65µs max=51.65ms  p(90)=50.76ms  p(95)=51ms    
+      { group:::checkout::pay }....: avg=152.12µs min=50.38µs med=134.67µs max=624.71µs p(90)=247.18µs p(95)=296.36µs
+      { scenario:browse }..........: avg=167.25µs min=50.99µs med=156.57µs max=738.21µs p(90)=223.58µs p(95)=244.19µs
+    http_req_failed................: 19.83% 490 out of 2471
+      { name:fast }................: 0.00%  0 out of 1001
+    http_reqs......................: 2471   493.036562/s
+
+    EXECUTION
+    iteration_duration.............: avg=16.98ms  min=86.91µs med=301.68µs max=52.59ms  p(90)=51.34ms  p(95)=51.56ms 
+    iterations.....................: 1491   297.497982/s
+    vus............................: 5      min=5           max=5 
+    vus_max........................: 25     min=25          max=25
+
+    NETWORK
+    data_received..................: 8.3 MB 1.7 MB/s
+    data_sent......................: 196 kB 39 kB/s
+
+
+

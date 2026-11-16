@@ -1,0 +1,228 @@
+{
+    "config": {
+        "duration": 5.049764523,
+        "execution": "local",
+        "script": "import http from 'k6/http';\nimport { check, group } from 'k6';\nimport { Counter, Trend } from 'k6/metrics';\n\nconst orderTime = new Trend('order_time', true);\nconst ordersPlaced = new Counter('orders_placed');\n\nexport const options = {\n  scenarios: {\n    browse: {\n      executor: 'constant-arrival-rate',\n      rate: 200,\n      timeUnit: '1s',\n      duration: '5s',\n      preAllocatedVUs: 20,\n      exec: 'browse',\n    },\n    checkout: {\n      executor: 'constant-vus',\n      vus: 5,\n      duration: '5s',\n      exec: 'checkout',\n      tags: { flow: 'checkout' },\n    },\n  },\n  thresholds: {\n    http_req_duration: ['p(95)<500'],\n    'http_req_duration{scenario:browse}': ['p(99)<100'],\n    'http_req_duration{group:::checkout::pay}': ['avg<200'],\n    'http_req_failed{name:fast}': ['rate<0.01'],\n    checks: ['rate>0.9'],\n    order_time: ['p(95)<300'],\n  },\n};\n\nexport function browse() {\n  group('home', () => {\n    const res = http.get('http://localhost:8080/fast', { tags: { name: 'fast' } });\n    check(res, { 'home is 200': (r) => r.status === 200 });\n  });\n}\n\nexport function checkout() {\n  group('checkout', () => {\n    group('cart', () => {\n      const res = http.get('http://localhost:8080/slow');\n      check(res, { 'cart is 200': (r) => r.status === 200 });\n    });\n    group('pay', () => {\n      const res = http.post('http://localhost:8080/post', 'item=1');\n      check(res, { 'pay is 201': (r) => r.status === 201 });\n      orderTime.add(res.timings.duration);\n      ordersPlaced.add(1);\n    });\n  });\n  const err = http.get('http://localhost:8080/error');\n  check(err, { 'error is 500': (r) => r.status === 500 });\n}\n"
+    },
+    "metadata": {
+        "generated_at": "2026-11-15T05:14:58.379192783Z",
+        "k6_version": "1.8.3"
+    },
+    "results": {
+        "checks": {
+            "metrics": [
+                {
+                    "contains": "default",
+                    "name": "checks_total",
+                    "type": "counter",
+                    "values": {
+                        "count": 2486
+                    }
+                },
+                {
+                    "contains": "default",
+                    "name": "checks_failed",
+                    "type": "rate",
+                    "values": {
+                        "matches": 0,
+                        "rate": 0,
+                        "total": 2486
+                    }
+                },
+                {
+                    "contains": "default",
+                    "name": "checks_succeeded",
+                    "type": "rate",
+                    "values": {
+                        "matches": 2486,
+                        "rate": 1,
+                        "total": 2486
+                    }
+                }
+            ],
+            "results": [
+                {
+                    "fails": 0,
+                    "name": "home is 200",
+                    "passes": 1001
+                },
+                {
+                    "fails": 0,
+                    "name": "cart is 200",
+                    "passes": 495
+                },
+                {
+                    "fails": 0,
+                    "name": "pay is 201",
+                    "passes": 495
+                },
+                {
+                    "fails": 0,
+                    "name": "error is 500",
+                    "passes": 495
+                }
+            ]
+        },
+        "metrics": [
+            {
+                "contains": "default",
+                "name": "http_reqs",
+                "type": "counter",
+                "values": {
+                    "count": 2486
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_req_failed",
+                "type": "rate",
+                "values": {
+                    "matches": 495,
+                    "rate": 0.19911504424778761,
+                    "total": 2486
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration{expected_response:true}",
+                "type": "trend",
+                "values": {
+                    "avg": 12.687386357609258,
+                    "max": 51.262831,
+                    "med": 0.139394,
+                    "min": 0.036986,
+                    "p90": 50.710575,
+                    "p95": 50.900275
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_req_failed{name:fast}",
+                "type": "rate",
+                "values": {
+                    "matches": 0,
+                    "rate": 0,
+                    "total": 1001
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration",
+                "type": "trend",
+                "values": {
+                    "avg": 10.178046926790035,
+                    "max": 51.262831,
+                    "med": 0.12954,
+                    "min": 0.023717,
+                    "p90": 50.638622999999995,
+                    "p95": 50.862350250000006
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration{group:::checkout::pay}",
+                "type": "trend",
+                "values": {
+                    "avg": 0.11392310101010113,
+                    "max": 0.417853,
+                    "med": 0.101646,
+                    "min": 0.036986,
+                    "p90": 0.1717246,
+                    "p95": 0.20813979999999982
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration{scenario:browse}",
+                "type": "trend",
+                "values": {
+                    "avg": 0.13724729070929076,
+                    "max": 0.300582,
+                    "med": 0.133344,
+                    "min": 0.052802,
+                    "p90": 0.174338,
+                    "p95": 0.195521
+                }
+            },
+            {
+                "contains": "default",
+                "name": "vus_max",
+                "type": "gauge",
+                "values": {
+                    "max": 25,
+                    "min": 25,
+                    "value": 25
+                }
+            },
+            {
+                "contains": "time",
+                "name": "iteration_duration",
+                "type": "trend",
+                "values": {
+                    "avg": 17.01972286831551,
+                    "max": 52.157501,
+                    "med": 0.234546,
+                    "min": 0.085031,
+                    "p90": 51.1781845,
+                    "p95": 51.32134175
+                }
+            },
+            {
+                "contains": "default",
+                "name": "vus",
+                "type": "gauge",
+                "values": {
+                    "max": 5,
+                    "min": 5,
+                    "value": 5
+                }
+            },
+            {
+                "contains": "default",
+                "name": "iterations",
+                "type": "counter",
+                "values": {
+                    "count": 1496
+                }
+            },
+            {
+                "contains": "data",
+                "name": "data_received",
+                "type": "counter",
+                "values": {
+                    "count": 8431159
+                }
+            },
+            {
+                "contains": "data",
+                "name": "data_sent",
+                "type": "counter",
+                "values": {
+                    "count": 197329
+                }
+            },
+            {
+                "contains": "time",
+                "name": "order_time",
+                "type": "trend",
+                "values": {
+                    "avg": 0.11392310101010111,
+                    "max": 0.417853,
+                    "med": 0.101646,
+                    "min": 0.036986,
+                    "p90": 0.1717246,
+                    "p95": 0.20813979999999982
+                }
+            },
+            {
+                "contains": "default",
+                "name": "orders_placed",
+                "type": "counter",
+                "values": {
+                    "count": 495
+                }
+            }
+        ]
+    },
+    "version": "1.0.0"
+}

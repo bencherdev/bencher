@@ -205,6 +205,112 @@ pub mod mitata {
     );
 }
 
+pub mod http {
+    use bencher_valid::{NANOSECONDS, PERCENTAGE};
+
+    use crate::{JsonNewMeasure, MeasureNameId};
+
+    create_measure!(Requests, "Requests", "requests", "requests");
+    create_measure!(
+        FailedRequests,
+        "Failed Requests",
+        "failed-requests",
+        "requests"
+    );
+    create_measure!(FailureRatio, "Failure Ratio", "failure-ratio", PERCENTAGE);
+    create_measure!(CheckRatio, "Check Ratio", "check-ratio", PERCENTAGE);
+    create_measure!(CheckPasses, "Check Passes", "check-passes", "checks");
+    create_measure!(CheckFailures, "Check Failures", "check-failures", "checks");
+    create_measure!(Iterations, "Iterations", "iterations", "iterations");
+    create_measure!(
+        DroppedIterations,
+        "Dropped Iterations",
+        "dropped-iterations",
+        "iterations"
+    );
+    create_measure!(
+        IterationThroughput,
+        "Iteration Throughput",
+        "iteration-throughput",
+        "iterations / second (iterations/s)"
+    );
+    create_measure!(BlockedTime, "Blocked Time", "blocked-time", NANOSECONDS);
+    create_measure!(
+        ConnectingTime,
+        "Connecting Time",
+        "connecting-time",
+        NANOSECONDS
+    );
+    create_measure!(
+        TlsHandshakingTime,
+        "TLS Handshaking Time",
+        "tls-handshaking-time",
+        NANOSECONDS
+    );
+    create_measure!(SendingTime, "Sending Time", "sending-time", NANOSECONDS);
+    create_measure!(WaitingTime, "Waiting Time", "waiting-time", NANOSECONDS);
+    create_measure!(
+        ReceivingTime,
+        "Receiving Time",
+        "receiving-time",
+        NANOSECONDS
+    );
+    create_measure!(
+        IterationTime,
+        "Iteration Time",
+        "iteration-time",
+        NANOSECONDS
+    );
+    create_measure!(GroupTime, "Group Time", "group-time", NANOSECONDS);
+
+    /// The responses with one HTTP status code, `responses-<code>`, a built-in measure for each
+    /// code the IANA HTTP Status Code Registry assigns permanently.
+    pub struct Responses;
+
+    impl Responses {
+        /// The registry's assigned codes, `(Unused)` 306 and 418 included and the expired
+        /// temporary 104 left out.
+        pub const CODES: [u16; 63] = [
+            100, 101, 102, 103, //
+            200, 201, 202, 203, 204, 205, 206, 207, 208, 226, //
+            300, 301, 302, 303, 304, 305, 306, 307, 308, //
+            400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416,
+            417, 418, 421, 422, 423, 424, 425, 426, 428, 429, 431, 451, //
+            500, 501, 502, 503, 504, 505, 506, 507, 508, 510, 511,
+        ];
+        pub const UNITS_STR: &'static str = "responses";
+
+        /// The measure's slug for `code`, built in or not.
+        pub fn slug(code: u16) -> String {
+            format!("responses-{code}")
+        }
+
+        /// The built-in measure for `code`, or `None` when the registry does not assign it.
+        pub fn name_id(code: u16) -> Option<MeasureNameId> {
+            Self::CODES
+                .contains(&code)
+                .then(|| Self::slug(code).parse().ok())
+                .flatten()
+        }
+
+        /// The built-in measure that `measure_str` names by its name or its slug, if any.
+        pub fn from_measure(measure_str: &str) -> Option<JsonNewMeasure> {
+            let code = measure_str
+                .strip_prefix("responses-")
+                .or_else(|| measure_str.strip_prefix("Responses "))?;
+            let code = code
+                .parse::<u16>()
+                .ok()
+                .filter(|number| number.to_string() == code && Self::CODES.contains(number))?;
+            Some(JsonNewMeasure {
+                name: format!("Responses {code}").parse().ok()?,
+                slug: Some(Self::slug(code).parse().ok()?),
+                units: Self::UNITS_STR.parse().ok()?,
+            })
+        }
+    }
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");
