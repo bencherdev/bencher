@@ -3,6 +3,7 @@ use std::sync::{
     atomic::{AtomicI64, Ordering},
 };
 
+use bencher_billing::{Biller, stripe_stub::StripeStub};
 use bencher_json::{
     BENCHER_URL_STR, Clock, DateTime, Entitlements, Jwt, OrganizationUuid, Secret,
     organization::usage::JsonUsage,
@@ -11,8 +12,9 @@ use bencher_license::Licensor;
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
+use rustls::crypto::aws_lc_rs;
 
-use crate::{TestOrg, TestServer, TestUser};
+use crate::{TestCloud, TestOrg, TestServer, TestUser};
 
 // Debug builds trust this key's public half for Self-Hosted licenses.
 const TEST_LICENSE_KEY: &str = include_str!("../../../plus/bencher_license/src/test/private.pem");
@@ -26,6 +28,39 @@ pub const TEST_LICENSE_SERIES: u32 = 1_000_000;
 pub const DAY: i64 = 24 * 60 * 60;
 /// The paid term of a test license, unless a test names its own.
 pub const TEST_LICENSE_TERM: i64 = 365 * DAY;
+
+/// A licensor that signs as Bencher Cloud does, with the key that debug builds trust.
+#[expect(clippy::expect_used, reason = "test helper loading a key")]
+pub fn cloud_licensor() -> Licensor {
+    let key: Secret = TEST_LICENSE_KEY.parse().expect("Invalid test license key");
+    Licensor::bencher_cloud(&key).expect("Failed to load the test license key")
+}
+
+/// A licensor that signs with a key that no build trusts, and verifies with the key that debug
+/// builds trust, as Bencher Cloud does when its private key does not match its public key.
+#[expect(clippy::expect_used, reason = "test helper loading a key")]
+pub fn foreign_licensor() -> Licensor {
+    let key: Secret = FOREIGN_LICENSE_KEY
+        .parse()
+        .expect("Invalid foreign license key");
+    Licensor::bencher_cloud(&key).expect("Failed to load the foreign license key")
+}
+
+/// Bencher Cloud, whose every Stripe request goes to `stub`, and which signs licenses with the
+/// key that debug builds trust.
+pub fn stripe_cloud(stub: &StripeStub) -> TestCloud {
+    stripe_cloud_with_licensor(stub, cloud_licensor())
+}
+
+/// [`stripe_cloud`], which signs licenses with `licensor`.
+#[expect(clippy::expect_used, reason = "test helper building a client")]
+pub fn stripe_cloud_with_licensor(stub: &StripeStub, licensor: Licensor) -> TestCloud {
+    let _provider = aws_lc_rs::default_provider().install_default();
+    TestCloud {
+        biller: Biller::for_stub(stub).expect("Failed to build the Stripe client"),
+        licensor,
+    }
+}
 
 /// `seconds` after `date_time`, which may be negative for a time before it.
 #[expect(clippy::expect_used, reason = "test helper moving a time")]

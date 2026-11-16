@@ -2,6 +2,7 @@ use bencher_json::{
     DateTime, Entitlements, Jwt, OrganizationUuid, organization::plan::JsonLicense,
 };
 use chrono::Duration;
+use jsonwebtoken::dangerous::insecure_decode_claims;
 use serde::{Deserialize, Serialize};
 
 use crate::{LicenseError, audience::Audience};
@@ -109,9 +110,24 @@ impl Claims {
         }
     }
 
+    /// The claims of `license` with nothing checked, not even its key: only for a license that
+    /// Bencher Cloud keeps in its own database, whose key may no longer verify after the signing
+    /// key changed. Never for a license that a user gives.
+    pub fn read_unverified(license: &Jwt) -> Result<Self, LicenseError> {
+        Ok(insecure_decode_claims(license.as_ref())?)
+    }
+
     /// Whether `now` is past the end of the paid term, in the grace before the expiration.
     pub fn in_grace(&self, now: DateTime) -> bool {
         self.trm <= now.timestamp()
+    }
+
+    /// Whether a license for `series` Benchmark Series, whose term ends at `term_end`, replaces
+    /// this one: its term ends later, or ends at the same time and covers another count.
+    /// A license never moves an organization back a term.
+    pub fn replaced_by(&self, series: Entitlements, term_end: DateTime) -> bool {
+        let term_end = term_end.timestamp();
+        term_end > self.trm || (term_end == self.trm && series != self.ser)
     }
 }
 

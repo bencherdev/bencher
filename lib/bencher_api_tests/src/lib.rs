@@ -50,12 +50,14 @@ pub mod oci;
 mod seed;
 
 #[cfg(feature = "plus")]
+pub use bencher_billing::stripe_stub;
+#[cfg(feature = "plus")]
 pub use bencher_callback::CallbackRequest;
 #[cfg(feature = "plus")]
 pub use callbacks::RecordingSender;
 pub use context::TestServer;
 #[cfg(feature = "plus")]
-pub use context::TestServerOptions;
+pub use context::{TestCloud, TestServerOptions};
 #[cfg(feature = "plus")]
 pub use license::TestClock;
 pub use log::LogCapture;

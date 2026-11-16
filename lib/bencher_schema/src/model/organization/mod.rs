@@ -511,9 +511,10 @@ impl QueryOrganization {
             return Ok(Priority::Unclaimed);
         }
 
-        // Check for a plan row (metered or licensed)
+        // Check for a Bencher Cloud plan row. A licensed row keeps a license for a Self-Hosted
+        // organization, and it does not make this one paid.
         if let Ok(query_plan) = plan::QueryPlan::belonging_to(self).first::<plan::QueryPlan>(conn)
-            && (query_plan.metered_plan.is_some() || query_plan.licensed_plan.is_some())
+            && query_plan.metered_plan.is_some()
         {
             return Ok(Priority::Plus);
         }

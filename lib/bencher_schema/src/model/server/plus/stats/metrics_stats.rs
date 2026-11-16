@@ -2,8 +2,7 @@ use bencher_json::system::server::{
     JsonCohort, JsonCohortAvg, JsonTopCohort, JsonTopProject, JsonTopProjects,
 };
 use diesel::{
-    BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _,
+    ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
 };
 use dropshot::HttpError;
 
@@ -129,11 +128,7 @@ fn get_metrics_by_report(
                         ),
                     ),
                 )
-                .filter(
-                    schema::plan::metered_plan
-                        .is_not_null()
-                        .or(schema::plan::licensed_plan.is_not_null()),
-                )
+                .filter(schema::plan::metered_plan.is_not_null())
                 .select(schema::metric_count_by_report::metric_count)
                 .into_boxed();
 
@@ -233,11 +228,7 @@ fn get_top_projects(
                         ),
                     ),
                 )
-                .filter(
-                    schema::plan::metered_plan
-                        .is_not_null()
-                        .or(schema::plan::licensed_plan.is_not_null()),
-                )
+                .filter(schema::plan::metered_plan.is_not_null())
                 .group_by(schema::project::id)
                 .select((
                     QueryProject::as_select(),

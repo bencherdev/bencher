@@ -1,11 +1,11 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::{AttachError, Biller, PlanId as SubscriptionPlanId};
+use bencher_billing::{AttachError, Attachment, Biller, PlanId as SubscriptionPlanId};
 use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
 use bencher_json::{
-    MeteredPlanId, NonEmpty, OrganizationResourceId, OrganizationUuid, PlanStatus,
+    LicensedPlanId, MeteredPlanId, NonEmpty, OrganizationResourceId, OrganizationUuid, PlanStatus,
     organization::plan::{
         JsonNewPlan, JsonPlan, JsonPlanPortal, JsonPlanSubscription, JsonUpdatePlan,
     },
@@ -21,7 +21,7 @@ use bencher_schema::{
     },
     model::{
         organization::{
-            QueryOrganization, UpdateOrganization,
+            QueryOrganization,
             plan::{InsertPlan, QueryPlan},
         },
         user::{
@@ -32,12 +32,13 @@ use bencher_schema::{
     schema, write_conn,
 };
 use diesel::{
-    BelongingToDsl as _, ExpressionMethods as _, OptionalExtension as _, QueryDsl as _,
-    RunQueryDsl as _,
+    BelongingToDsl as _, BoolExpressionMethods as _, ExpressionMethods as _,
+    OptionalExtension as _, QueryDsl as _, RunQueryDsl as _,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, TypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OrgPlanParams {
@@ -73,11 +74,18 @@ pub async fn org_plan_get(
     path_params: Path<OrgPlanParams>,
 ) -> Result<ResponseOk<JsonPlan>, HttpError> {
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
-    let json = get_one_inner(rqctx.context(), path_params.into_inner(), &auth_user).await?;
+    let json = get_one_inner(
+        &rqctx.log,
+        rqctx.context(),
+        path_params.into_inner(),
+        &auth_user,
+    )
+    .await?;
     Ok(Get::auth_response_ok(json))
 }
 
 async fn get_one_inner(
+    log: &Logger,
     context: &ApiContext,
     path_params: OrgPlanParams,
     auth_user: &AuthUser,
@@ -99,10 +107,7 @@ async fn get_one_inner(
 
     if let Some(json_plan) = query_plan.to_metered_plan(biller).await? {
         Ok(json_plan)
-    } else if let Some(json_plan) = query_plan
-        .to_licensed_plan(biller, &context.licensor, context.clock.now())
-        .await?
-    {
+    } else if let Some(json_plan) = query_plan.to_licensed_plan(log, context, biller).await? {
         Ok(json_plan)
     } else {
         Err(issue_error(
@@ -119,7 +124,8 @@ async fn get_one_inner(
 ///
 /// Attach a subscription to an organization: the return from a self-serve Pro checkout,
 /// which needs `manage` permission for the organization, or a subscription that only a
-/// server admin attaches.
+/// server admin attaches. A subscription for a Self-Hosted deal names the Self-Hosted
+/// organization, and Bencher Cloud signs its first license, which the plan keeps to copy.
 #[endpoint {
     method = POST,
     path =  "/v0/organizations/{organization}/plan",
@@ -250,7 +256,7 @@ async fn post_inner(
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
         .map_err(forbidden_error)?;
-    if let JsonNewPlan::Subscription(JsonPlanSubscription { subscription }) = &json_plan {
+    if let JsonNewPlan::Subscription(JsonPlanSubscription { subscription, .. }) = &json_plan {
         refuse_attached_subscription(context, subscription).await?;
     }
     let biller = context.biller()?;
@@ -258,19 +264,34 @@ async fn post_inner(
     // stale lapsed metered plan row first so the organization can subscribe again.
     prune_or_conflict_existing_plan(context, biller, &query_organization).await?;
 
-    // The attach reads the plan before it writes anything, and the row is inserted only
-    // once that read succeeds, so a subscription that does not read as a plan leaves no
-    // row behind.
-    let (metered_plan_id, json_plan) = biller
-        .attach(&json_plan, query_organization.uuid)
+    // The attach reads the plan and signs any license before it writes anything, and the row
+    // is inserted only once that succeeds, so a subscription that does not read as a plan
+    // leaves no row behind.
+    let attachment = biller
+        .attach(&json_plan, query_organization.uuid, &context.licensor)
         .await
         .map_err(|e| attach_http_error(e, query_organization.uuid))?;
-    InsertPlan::metered_plan(write_conn!(context), metered_plan_id, &query_organization)?;
-    Ok(json_plan)
+    match attachment {
+        Attachment::Metered(metered_plan_id, json_plan) => {
+            InsertPlan::metered_plan(write_conn!(context), metered_plan_id, &query_organization)?;
+            Ok(json_plan)
+        },
+        Attachment::Licensed(licensed_plan_id, license, json_plan) => {
+            InsertPlan::licensed_plan(
+                write_conn!(context),
+                licensed_plan_id,
+                license,
+                &query_organization,
+                context.clock.now(),
+            )?;
+            Ok(json_plan)
+        },
+    }
 }
 
 /// The HTTP error for an attach to `organization` that did not happen: a refusal is the
-/// request's fault, Stripe not having the id is not found, and a failed call is an issue.
+/// request's fault, Stripe not having the id is not found, and a failed call or license is an
+/// issue.
 fn attach_http_error(error: AttachError, organization: OrganizationUuid) -> HttpError {
     match error {
         AttachError::Refused(refusal) => bad_request_error(refusal),
@@ -280,19 +301,32 @@ fn attach_http_error(error: AttachError, organization: OrganizationUuid) -> Http
             &format!("Failed to attach subscription to organization ({organization})."),
             error,
         ),
+        AttachError::License(error) => issue_error(
+            "Failed to sign license",
+            &format!(
+                "Failed to sign license for subscription attached to organization ({organization})."
+            ),
+            error,
+        ),
     }
 }
 
-/// Refuse a subscription that a plan row already holds, before the attach names it for
-/// another organization in Stripe.
+/// Refuse a subscription that a plan row already holds, as a Bencher Cloud plan or as a
+/// Self-Hosted deal, before the attach names it for another organization in Stripe.
 async fn refuse_attached_subscription(
     context: &ApiContext,
     subscription: &NonEmpty,
 ) -> Result<(), HttpError> {
     let metered_plan_id: MeteredPlanId =
         subscription.as_ref().parse().map_err(bad_request_error)?;
+    let licensed_plan_id: LicensedPlanId =
+        subscription.as_ref().parse().map_err(bad_request_error)?;
     let attached = schema::plan::table
-        .filter(schema::plan::metered_plan.eq(&metered_plan_id))
+        .filter(
+            schema::plan::metered_plan
+                .eq(&metered_plan_id)
+                .or(schema::plan::licensed_plan.eq(&licensed_plan_id)),
+        )
         .first::<QueryPlan>(auth_conn!(context))
         .optional()
         .map_err(resource_not_found_err!(Plan, metered_plan_id))?;
@@ -402,12 +436,12 @@ async fn portal_inner(
 
 /// Block plan creation when the organization still has a plan that is active, trialing,
 /// or recoverable (a dunning `past_due`/`unpaid`/`incomplete`/`paused` subscription still
-/// exists in Stripe). Only a *terminal* metered subscription (canceled or
-/// incomplete-expired), or one Stripe reports as gone, leaves a stale local plan row safe
-/// to prune so the organization can subscribe again now that the daily reconciliation
-/// sweep is gone; pruning a still-live subscription would orphan it and let the org
-/// create a duplicate (double billing). Licensed (Self-Hosted) plan rows do not lapse on
-/// their own, so they always block.
+/// exists in Stripe). Only a *terminal* subscription (canceled or incomplete-expired), or
+/// one Stripe reports as gone, leaves a stale local plan row safe to prune so the
+/// organization can subscribe again now that the daily reconciliation sweep is gone;
+/// pruning a still-live subscription would orphan it and let the org create a duplicate
+/// (double billing). A Self-Hosted deal's licensed row follows the same rule, so staff can
+/// sell the next contract as a new subscription.
 async fn prune_or_conflict_existing_plan(
     context: &ApiContext,
     biller: &Biller,
@@ -419,18 +453,15 @@ async fn prune_or_conflict_existing_plan(
         return Ok(());
     };
 
-    // A licensed (Self-Hosted) plan carries no metered subscription and always blocks.
-    let Some(metered_plan_id) = &query_plan.metered_plan else {
-        return Err(plan_conflict(query_organization, query_plan));
-    };
-
-    // Resolve the live metered subscription status (`None` => Stripe reports it gone). A
-    // transient Stripe error surfaces as 503 rather than being mistaken for "gone", so we
-    // never prune a subscription that might still be live.
-    let status = biller
-        .metered_plan_status(metered_plan_id)
-        .await
-        .map_err(service_unavailable_error)?;
+    // Resolve the live subscription status (`None` => Stripe reports it gone). A transient
+    // Stripe error surfaces as 503 rather than being mistaken for "gone", so we never prune a
+    // subscription that might still be live.
+    let status = match (&query_plan.metered_plan, &query_plan.licensed_plan) {
+        (Some(metered_plan_id), _) => biller.metered_plan_status(metered_plan_id).await,
+        (None, Some(licensed_plan_id)) => biller.licensed_plan_status(licensed_plan_id).await,
+        (None, None) => return Err(plan_conflict(query_organization, query_plan.clone())),
+    }
+    .map_err(service_unavailable_error)?;
 
     if subscription_is_live(status) {
         // Still live in Stripe (active, trialing, or dunning): block, so we never orphan a
@@ -534,7 +565,7 @@ async fn delete_inner(
 
     let remote = query_params.remote.unwrap_or(true);
     // Wait to return the result of the biller delete until after the plan has been deleted locally
-    let delete_plan_result = delete_plan(context, biller, &query_organization, &query_plan, remote)
+    let delete_plan_result = delete_plan(biller, &query_organization, &query_plan, remote)
         .await
         .inspect_err(|e| {
             #[cfg(feature = "sentry")]
@@ -582,7 +613,7 @@ pub(crate) async fn cancel_and_remove_plan(
 
     // Cancel in Stripe first; propagate the error (aborting the organization deletion) if it
     // fails so we never delete the organization while its subscription is still live.
-    delete_plan(context, biller, query_organization, &query_plan, true).await?;
+    delete_plan(biller, query_organization, &query_plan, true).await?;
 
     // The subscription is canceled (or was already gone); remove the local plan row.
     diesel::delete(schema::plan::table.filter(schema::plan::id.eq(query_plan.id)))
@@ -593,7 +624,6 @@ pub(crate) async fn cancel_and_remove_plan(
 }
 
 async fn delete_plan(
-    context: &ApiContext,
     biller: &Biller,
     query_organization: &QueryOrganization,
     query_plan: &QueryPlan,
@@ -630,21 +660,6 @@ async fn delete_plan(
                     .await
                     .map_err(resource_not_found_err!(Plan, query_plan))?;
             }
-        }
-
-        if query_organization.license.is_some() {
-            let organization_query = schema::organization::table
-                .filter(schema::organization::id.eq(query_organization.id));
-            let update_organization = UpdateOrganization {
-                name: None,
-                slug: None,
-                license: Some(None),
-                modified: context.clock.now(),
-            };
-            diesel::update(organization_query)
-                .set(&update_organization)
-                .execute(write_conn!(context))
-                .map_err(resource_conflict_err!(Organization, update_organization))?;
         }
     } else {
         return Err(issue_error(
