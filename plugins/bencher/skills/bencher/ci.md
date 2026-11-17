@@ -21,7 +21,9 @@ as PR comments.
       --project my-project \
       --branch main \
       --testbed github-actions \
+      --adapter rust_criterion \
       --threshold-measure latency \
+      --threshold-metric typical \
       --threshold-test t_test \
       --threshold-upper-boundary 0.99 \
       --error-on-alert \
@@ -55,6 +57,7 @@ benchmark_pr:
           --start-point-clone-thresholds \
           --start-point-reset \
           --testbed github-actions \
+          --adapter rust_criterion \
           --error-on-alert \
           --github-actions <token> \
           "cargo bench"
@@ -100,7 +103,7 @@ submit_pr_benchmarks:
           --project my-project \
           --branch "$GITHUB_HEAD_REF" \
           --hash "$HEAD_SHA" \
-          --image my-bench:latest \
+          --image my-project:latest \
           --detach \
           --github-actions <token>
       env:
@@ -158,7 +161,9 @@ benchmark_main:
         --project my-project
         --branch main
         --testbed gitlab-ci
+        --adapter rust_criterion
         --threshold-measure latency
+        --threshold-metric typical
         --threshold-test t_test
         --threshold-upper-boundary 0.99
         --error-on-alert
@@ -187,6 +192,7 @@ benchmark_mr:
         --start-point-reset \
         --start-point-idempotency-key "$CI_PIPELINE_ID" \
         --testbed gitlab-ci \
+        --adapter rust_criterion \
         --error-on-alert \
         --quiet \
         --format html \
@@ -210,6 +216,10 @@ carrying `GITLAB_ACCESS_TOKEN`, and fails the job on an HTTP error.
 `GITLAB_ACCESS_TOKEN` is a project access token with the `api` scope, stored as a
 masked CI/CD variable scoped to the `mr-report` environment, so the job that runs
 MR code does not receive it. The built-in `CI_JOB_TOKEN` cannot post MR notes.
+
+`--threshold-metric` names the metric each threshold checks; take it from the
+adapter's threshold first metric in [local-runs.md](./local-runs.md#adapters)
+(`typical` for criterion's terminal output).
 
 ## Generic CI (Any Platform)
 
