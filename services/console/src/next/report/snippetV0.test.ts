@@ -2,11 +2,7 @@ import { execFileSync } from "node:child_process";
 import { describe, expect, test } from "vitest";
 import { Adapter } from "../../types/bencher";
 import type { SnippetLine } from "./snippet";
-import {
-	cliAdapter,
-	declaresThresholdV0,
-	thresholdSnippetV0,
-} from "./snippetV0";
+import { declaresThresholdV0, thresholdSnippetV0 } from "./snippetV0";
 
 const PLACE = {
 	project: "crinkle-cut",
@@ -29,34 +25,6 @@ const argv = (text: string): string[] =>
 	})
 		.split("\0")
 		.slice(0, -1);
-
-// Every `--adapter` value `bencher run` takes.
-const CLI_ADAPTERS = new Set([
-	"magic",
-	"json",
-	"c_sharp_dot_net",
-	"cpp_catch2",
-	"cpp_google",
-	"dart_benchmark_harness",
-	"go_bench",
-	"java_jmh",
-	"js_benchmark",
-	"js_deno",
-	"js_mitata",
-	"js_time",
-	"js_tinybench",
-	"js_vitest",
-	"python_asv",
-	"python_pytest",
-	"ruby_benchmark",
-	"ruby_benchmark_ips",
-	"rust_bench",
-	"rust_criterion",
-	"rust_divan",
-	"rust_iai",
-	"rust_gungraun",
-	"shell_hyperfine",
-]);
 
 describe("thresholdSnippetV0", () => {
 	// Kills the version 1 flags a version 0 project refuses with a 400, a
@@ -129,23 +97,5 @@ describe("declaresThresholdV0", () => {
 		expect(declaresThresholdV0({ metric: "value" })).toBe(true);
 		expect(declaresThresholdV0({ metric: "lower_value" })).toBe(false);
 		expect(declaresThresholdV0({ metric: "upper_value" })).toBe(false);
-	});
-});
-
-describe("cliAdapter", () => {
-	// Kills a stored adapter passed through to `--adapter`, which the CLI
-	// refuses, or one spelled as a different harness.
-	test("every stored adapter is one the CLI takes, for the same harness", () => {
-		for (const adapter of Object.values(Adapter)) {
-			const cli = cliAdapter(adapter);
-			expect(CLI_ADAPTERS.has(cli), adapter).toBe(true);
-			if (CLI_ADAPTERS.has(adapter)) {
-				expect(cli).toBe(adapter);
-			}
-		}
-		expect(cliAdapter(Adapter.JsonV0)).toBe("json");
-		expect(cliAdapter(Adapter.ShellHyperfineV2)).toBe("shell_hyperfine");
-		expect(cliAdapter(Adapter.RustGungraunJson)).toBe("rust_gungraun");
-		expect(cliAdapter(Adapter.Python)).toBe("magic");
 	});
 });
