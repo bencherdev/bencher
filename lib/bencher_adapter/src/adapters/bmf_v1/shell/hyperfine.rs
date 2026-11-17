@@ -1,7 +1,7 @@
 use std::{borrow::Cow, collections::BTreeMap};
 
 use bencher_json::{
-    BenchmarkName, MeasureNameId, ParameterSet,
+    BenchmarkName, MeasureNameId,
     project::{
         measure::built_in::{
             BuiltInMeasure as _,
@@ -21,7 +21,7 @@ use crate::{
     adapters::{
         bmf_v1::{
             finite::Finite,
-            leaf::{LeafResults, Variant},
+            leaf::{LeafResults, Variant, parameter_set},
             runs::statistics,
         },
         util::Units,
@@ -267,9 +267,7 @@ fn new_variant<'a>(
         results.skip_benchmark();
         return None;
     };
-    let Ok(parameters) =
-        serde_json::from_value::<ParameterSet>(serde_json::Value::Object(parameters))
-    else {
+    let Some(parameters) = parameter_set(parameters) else {
         results.skip_variant();
         return None;
     };
@@ -296,16 +294,19 @@ fn measure_of(metric: &str) -> Option<(MeasureNameId, f64)> {
 
 #[cfg(test)]
 mod test_shell_hyperfine_v1 {
-    use bencher_json::project::{
-        measure::built_in::{
-            BuiltInMeasure as _,
-            default::{
-                BranchMisses, CacheMisses, CacheReferences, CpuTime, Cycles, Latency, PeakMemory,
-                SystemTime, UserTime,
+    use bencher_json::{
+        MAX_PARAMETER_KEYS,
+        project::{
+            measure::built_in::{
+                BuiltInMeasure as _,
+                default::{
+                    BranchMisses, CacheMisses, CacheReferences, CpuTime, Cycles, Latency,
+                    PeakMemory, SystemTime, UserTime,
+                },
+                iai::Instructions,
             },
-            iai::Instructions,
+            report::Adapter,
         },
-        report::Adapter,
     };
     use pretty_assertions::assert_eq;
 
@@ -626,18 +627,18 @@ mod test_shell_hyperfine_v1 {
         );
     }
 
-    /// Kills a run with more than 8 parameters, or a value past 64 characters, stored or left
+    /// Kills a run with more than 16 parameters, or a value past 64 characters, stored or left
     /// uncounted, in either format.
     #[test]
     fn adapter_shell_hyperfine_v1_parameter_limits() {
-        let nine = (0..9)
+        let past_the_cap = (0..=MAX_PARAMETER_KEYS)
             .map(|key| (format!("p{key}"), serde_json::json!({ "value": "1" })))
             .collect::<serde_json::Map<_, _>>();
         let results = convert_edited_v1(
             Adapter::ShellHyperfineV2,
             "shell/hyperfine/v2_same_name.json",
             |json| {
-                json["results"][0]["parameters"] = nine.into();
+                json["results"][0]["parameters"] = past_the_cap.into();
                 json["results"][1]["parameters"]["ms"]["value"] = "x".repeat(65).into();
             },
         );

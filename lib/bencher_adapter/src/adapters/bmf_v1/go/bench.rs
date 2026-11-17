@@ -17,7 +17,7 @@ use crate::{
     Adaptable, Settings,
     adapters::{
         bmf_v1::{
-            leaf::{LeafResults, Variant},
+            leaf::{LeafResults, Variant, parameter_set},
             runs::insert_runs,
         },
         util::Units,
@@ -110,7 +110,7 @@ impl Runs {
             self.results.skip_benchmark();
             return;
         };
-        let Ok(parameters) = serde_json::from_value(serde_json::Value::Object(parameters)) else {
+        let Some(parameters) = parameter_set(parameters) else {
             self.results.skip_variant();
             return;
         };
@@ -721,7 +721,8 @@ mod test_go_bench_v1 {
     fn adapter_go_bench_v1_text_too_many_parameters() {
         let results = AdapterGoBenchText::parse(
             concat!(
-                "BenchmarkMany/a=1/b=2/c=3/d=4/e=5/f=6/g=7/h=8-4 \t 100 \t 10 ns/op\n",
+                "BenchmarkMany/a=1/b=2/c=3/d=4/e=5/f=6/g=7/h=8/",
+                "i=9/j=10/k=11/l=12/m=13/n=14/o=15/p=16-4 \t 100 \t 10 ns/op\n",
                 "BenchmarkFew/a=1-4 \t 100 \t 10 ns/op\n",
             ),
             Settings::new(None, BmfVersion::V1),

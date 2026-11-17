@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
 
 use bencher_json::{
-    BenchmarkName, BenchmarkNameId, BmfVersion, JsonNewMetric, MeasureNameId, ParameterSet,
-    ResourceName,
+    BenchmarkName, BenchmarkNameId, BenchmarkPrefix, BmfVersion, JsonNewMetric, MeasureNameId,
+    ParameterSet, ResourceName,
     project::{
         measure::built_in::{self, BuiltInMeasure as _},
         report::Adapter,
@@ -475,6 +475,16 @@ impl AdapterResults {
         });
     }
 
+    pub(crate) fn prefix_benchmarks(&mut self, prefix: &BenchmarkPrefix) {
+        for (benchmark, entries) in std::mem::take(&mut self.inner) {
+            if let Some(benchmark) = prefixed(prefix, benchmark) {
+                self.inner.insert(benchmark, entries);
+            } else {
+                self.skipped.benchmarks += 1;
+            }
+        }
+    }
+
     /// Whether these results are a BMF v0 payload, which is what fold operates on.
     pub(crate) fn is_foldable(&self) -> bool {
         self.version == BmfVersion::V0
@@ -508,6 +518,24 @@ impl AdapterResults {
             self.skipped.metrics += metric.truncate();
         }
     }
+}
+
+/// The key `benchmark` becomes with `prefix` in front, read as a payload reads a key: a slug while
+/// it is one, else a name, or `None` past the name limit. A UUID names no benchmark by name, so it
+/// keeps.
+fn prefixed(prefix: &BenchmarkPrefix, benchmark: BenchmarkNameId) -> Option<BenchmarkNameId> {
+    let name = match benchmark {
+        BenchmarkNameId::Uuid(_) => return Some(benchmark),
+        BenchmarkNameId::Slug(slug) => {
+            let name = format!("{prefix}{slug}");
+            if let Ok(slug) = name.parse() {
+                return Some(BenchmarkNameId::Slug(slug));
+            }
+            name
+        },
+        BenchmarkNameId::Name(name) => format!("{prefix}{name}"),
+    };
+    name.parse().ok().map(BenchmarkNameId::Name)
 }
 
 impl IaiMeasure {

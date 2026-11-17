@@ -50,7 +50,7 @@ Glossary of terms for Bencher concepts.
   A map of Parameters.
   Each key maps to a JSON scalar: a string, a number, or a boolean.
   Values are canonicalized, so `16`, `16.0`, and `1.6e1` are the same value.
-  A Parameter Set may carry at most 8 keys.
+  A Parameter Set may carry at most 16 keys.
   In a parameters filter, a Parameter Set may name only some keys,
   and it matches every Variant whose Parameters hold the same value for each key it names.
 - **Variant**:

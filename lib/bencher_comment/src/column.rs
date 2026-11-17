@@ -106,13 +106,14 @@ pub(crate) fn report_metric<'r>(
     Some((report_measure, report_metric))
 }
 
-/// `value`, `median`, and `mean` first, then name order.
+/// `value`, `median`, `mean`, and `window_mean` first, then name order.
 fn preference(name: &MetricName) -> (u8, &MetricName) {
     let rank = match name.as_ref() {
         "value" => 0,
         "median" => 1,
         "mean" => 2,
-        _ => 3,
+        "window_mean" => 3,
+        _ => 4,
     };
     (rank, name)
 }
@@ -363,6 +364,10 @@ mod tests {
                         &[metric("max", 1.0, &[]), metric("min", 2.0, &[])]
                     ),
                     report_measure(
+                        "cpu-time",
+                        &[metric("mean", 1.0, &[]), metric("window_mean", 2.0, &[])]
+                    ),
+                    report_measure(
                         "cycles",
                         &[
                             metric("lower_value", 1.0, &[]),
@@ -397,7 +402,11 @@ mod tests {
                     ),
                     report_measure(
                         "throughput",
-                        &[metric("mean", 1.0, &[]), metric("p99", 2.0, &[])]
+                        &[
+                            metric("window_max", 1.0, &[]),
+                            metric("window_mean", 2.0, &[]),
+                            metric("window_min", 3.0, &[]),
+                        ]
                     ),
                 ]
             )],
@@ -427,8 +436,9 @@ mod tests {
     }
 
     // Kills default metrics that ignore the thresholds, take them from one iteration, or add
-    // an unchecked `value`; a fallback out of the `value`, `median`, `mean`, then name order,
-    // which lands on `lower_value` for a version 0 measure; and checked metrics in name order.
+    // an unchecked `value`; a fallback out of the `value`, `median`, `mean`, `window_mean`, then
+    // name order, which lands on `lower_value` for a version 0 measure, on `window_max` for a
+    // windowed rate, or on `window_mean` beside a run's `mean`; and checked metrics in name order.
     #[test]
     fn default_metrics_are_the_checked_ones_else_one_by_preference() {
         let comment = default_metrics_comment();
@@ -438,11 +448,12 @@ mod tests {
             result_lines(&human),
             [
                 "- bench (Allocated: max",
+                "- bench (CPU Time: mean",
                 "- bench (Cycles",
                 "- bench (Instructions: median",
                 "- bench (Latency: median",
                 "- bench (Memory: value, median, mean, p99",
-                "- bench (Throughput: mean",
+                "- bench (Throughput: window_mean",
                 "- bench (Memory: value, median, mean, p99",
             ],
             "{human}"
@@ -459,8 +470,9 @@ mod tests {
         assert!(found.is_sorted(), "{first}");
         for group in [
             ">Allocated: max</a>",
+            ">CPU Time: mean</a>",
             ">Cycles</a>",
-            ">Throughput: mean</a>",
+            ">Throughput: window_mean</a>",
         ] {
             assert!(first.contains(group), "{group}: {first}");
         }

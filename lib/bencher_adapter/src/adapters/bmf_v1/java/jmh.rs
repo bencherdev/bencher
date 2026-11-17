@@ -17,7 +17,7 @@ use crate::{
     Adaptable, Settings,
     adapters::bmf_v1::{
         finite::Finite,
-        leaf::{LeafResults, Variant},
+        leaf::{LeafResults, Variant, parameter_set},
         percentile::percentile_name,
     },
     results::adapter_results::AdapterResults,
@@ -173,7 +173,7 @@ fn jmh_variant<'r>(
     if let Some(label) = label {
         parameters.insert(LABEL.to_owned(), label.into());
     }
-    let Ok(parameters) = serde_json::from_value(serde_json::Value::Object(parameters)) else {
+    let Some(parameters) = parameter_set(parameters) else {
         results.skip_variant();
         return None;
     };
@@ -807,17 +807,21 @@ mod test_java_jmh_v1 {
         assert_units(&results, &[("evictions", "#")]);
     }
 
-    /// Kills a leaf that keeps the parameters of a counter's variant past the limit of 8 keys,
+    /// Kills a leaf that keeps the parameters of a counter's variant past the limit of 16 keys,
     /// skips one uncounted, or skips the primary score's variant with it.
     #[test]
     fn adapter_java_jmh_v1_counter_past_the_parameter_limit() {
-        let results = convert_v1(Adapter::JavaJmh, "java/jmh/wide_params.json");
+        let results = convert_edited_v1(Adapter::JavaJmh, "java/jmh/wide_params.json", |json| {
+            for (key, value) in ('h'..='o').zip(8..) {
+                json[0]["params"][key.to_string()] = value.to_string().into();
+            }
+        });
         assert_eq!(results.skipped.variants, 1);
         assert_eq!(variants(&results), 1);
         assert_variant(
             &results,
             "bench.Wide.sum",
-            r#"{"@mode":"thrpt","a":"1","b":"2","c":"3","d":"4","e":"5","f":"6","g":"7"}"#,
+            r#"{"@mode":"thrpt","a":"1","b":"2","c":"3","d":"4","e":"5","f":"6","g":"7","h":"8","i":"9","j":"10","k":"11","l":"12","m":"13","n":"14","o":"15"}"#,
             &[scored(
                 Throughput::SLUG_STR,
                 [

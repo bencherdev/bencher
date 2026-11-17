@@ -64,7 +64,7 @@ const MAX_WINDOW = 2 ** 32 - 1;
 export const MAX_ENTRIES = 8;
 /** The plot query reads at most a measure's 32 metric names. */
 export const MAX_METRICS = 32;
-const MAX_PARAMETER_KEYS = 8;
+const MAX_PARAMETER_KEYS = 16;
 const MAX_NAME_BYTES = 64;
 
 // The classic perf page's names, so a classic link reads by path alone.
