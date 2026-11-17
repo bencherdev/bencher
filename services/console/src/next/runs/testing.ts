@@ -1,3 +1,4 @@
+import { expect } from "vitest";
 import {
 	Adapter,
 	GitHubLinkStatus,
@@ -416,19 +417,99 @@ export const watchShift = () => {
 
 /** A phone's pills line around its alert pill, undefined with no pill. */
 export const pillsBand = (row: Element | null | undefined) => {
+	const title = row?.querySelector(".rp-titlemain")?.getBoundingClientRect();
 	const line = row?.querySelector(".rp-titlepills")?.getBoundingClientRect();
 	const pill = row?.querySelector(".rp-alerts")?.getBoundingClientRect();
 	const bottom = row?.getBoundingClientRect().bottom;
-	if (!line || !pill || bottom === undefined) {
+	if (!title || !line || !pill || bottom === undefined) {
 		return undefined;
 	}
 	return {
+		/** How far below the title's line the pills line starts. */
+		gap: line.top - title.bottom,
 		/** How far the pill sits from the line's middle. */
 		offCenter: Math.abs(
 			(line.top + line.bottom) / 2 - (pill.top + pill.bottom) / 2,
 		),
-		height: line.height,
+		/** How much taller the line is than its pill. */
+		overPill: line.height - pill.height,
 		/** How far the row reaches below the pills line. */
 		below: bottom - line.bottom,
+	};
+};
+
+const middle = (box: DOMRect) => (box.top + box.bottom) / 2;
+
+/** The box of `element`'s first words, cut to its own box, as a reader sees them. */
+export const wordsBox = (element: Element) => {
+	const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+		acceptNode: (node) =>
+			node.textContent?.trim()
+				? NodeFilter.FILTER_ACCEPT
+				: NodeFilter.FILTER_SKIP,
+	});
+	const range = document.createRange();
+	range.selectNodeContents(walker.nextNode() ?? element);
+	const words = range.getBoundingClientRect();
+	const box = element.getBoundingClientRect();
+	const left = Math.max(words.left, box.left);
+	return new DOMRect(
+		left,
+		words.top,
+		Math.min(words.right, box.right) - left,
+		words.height,
+	);
+};
+
+/** Every 2 px from 1 px inside `from`, then 0.5 px inside `to`, so the far edge is pressed too. */
+const presses = (from: number, to: number) => {
+	const at: number[] = [];
+	for (let v = from + 1; v < to - 0.5; v += 2) {
+		at.push(v);
+	}
+	return [...at, to - 0.5];
+};
+
+/** Asserts that a press every 2 px inside `area`, and along its far edges, lands on `target`. */
+export const expectPressesLandOn = (
+	area: DOMRect,
+	target: Element | null | undefined,
+	label: string,
+) => {
+	expect(target, label).toBeTruthy();
+	expect(area.width * area.height, label).toBeGreaterThan(0);
+	for (const x of presses(area.left, area.right)) {
+		for (const y of presses(area.top, area.bottom)) {
+			const hit = document.elementFromPoint(x, y);
+			expect(
+				hit !== null && (target as Element).contains(hit),
+				`${label} at ${x}, ${y}`,
+			).toBe(true);
+		}
+	}
+};
+
+/** A page's commit row as a finger meets it: how much taller it is than its line, and each link's words' distance from the logo's middle, its target's height, and how far the target reaches below the row. */
+export const commitReach = (row: Element | null | undefined) => {
+	if (!row) {
+		return undefined;
+	}
+	const box = row.getBoundingClientRect();
+	const logo = row.querySelector('[data-icon="github"]');
+	return {
+		overLine: box.height - Number.parseFloat(getComputedStyle(row).lineHeight),
+		links: [...row.querySelectorAll(".cm-row > a")].map((link) => {
+			const target = link.getBoundingClientRect();
+			return {
+				text: link.textContent,
+				offLogo: logo
+					? Math.abs(
+							middle(wordsBox(link)) - middle(logo.getBoundingClientRect()),
+						)
+					: Number.POSITIVE_INFINITY,
+				height: target.height,
+				below: target.bottom - box.bottom,
+			};
+		}),
 	};
 };
