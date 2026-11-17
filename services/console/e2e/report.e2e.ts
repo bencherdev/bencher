@@ -210,6 +210,8 @@ test("two rows expand into two plots with their keys", async ({
 	page,
 	request,
 }) => {
+	// Tall enough to draw both rows' plots under the head.
+	await page.setViewportSize({ width: 1280, height: 800 });
 	await page.goto(reportPath(hashbrown.slug, await newestMain(request)));
 	await page.getByRole("button", { name: `Expand ${ALERTING}` }).click();
 	await page.getByRole("button", { name: `Expand ${UNCHECKED}` }).click();

@@ -13,8 +13,8 @@ import {
 	untrack,
 } from "solid-js";
 import Truncate from "@bencherdev/ui/Truncate";
-import CommitLink from "../commit";
-import type { GitHubAsk, GitHubLinks } from "../github";
+import CommitLine from "../commit";
+import type { CommitRow, GitHubLinks } from "../github";
 import {
 	type CursorEvent,
 	createPanel,
@@ -76,7 +76,7 @@ export interface PlotProps {
 	label?: string;
 	/** Links the readout to the report a point came from. */
 	reportHref?: (uuid: string) => string;
-	/** Links the readout's hash to its commit, and what a pinned readout asks of its reader. */
+	/** The readout's commit row, which only a pinned readout links. */
 	github?: GitHubLinks | undefined;
 	/** The frame to hold before the data arrives. */
 	reserve?: { lines: number; measures: number };
@@ -564,9 +564,11 @@ const Plot = (props: PlotProps) => {
 		const uuid = data()?.reports[report]?.uuid;
 		return uuid === undefined ? undefined : props.reportHref?.(uuid);
 	};
-	const commitLink = (report: number) => {
-		const hash = data()?.reports[report]?.hash;
-		return hash === undefined ? undefined : props.github?.commit(hash);
+	const commitRow = (report: number) => {
+		const each = data()?.reports[report];
+		return each?.hash === undefined
+			? undefined
+			: props.github?.row(each.hash, each.title);
 	};
 	/** The alert at the focused line's pinned point, as its readout offers it. */
 	const pinnedAlert = createMemo(() => {
@@ -798,8 +800,7 @@ const Plot = (props: PlotProps) => {
 								styles={styles()}
 								hash={data()?.reports[current().report]?.hash?.slice(0, 7)}
 								href={reportLink(current().report)}
-								commit={commitLink(current().report)}
-								ask={props.github?.ask?.()}
+								commit={commitRow(current().report)}
 								alert={pinnedAlert()}
 								onClose={closeReadout}
 							/>
@@ -944,8 +945,7 @@ interface ReadoutProps {
 	styles: ReturnType<typeof lineStyles>;
 	hash: string | undefined;
 	href: string | undefined;
-	commit: string | undefined;
-	ask: GitHubAsk | undefined;
+	commit: CommitRow | undefined;
 	/** The pinned point's alert: its page, and Dismiss or Reactivate. */
 	alert:
 		| {
@@ -1024,10 +1024,6 @@ const Readout = (props: ReadoutProps) => {
 					<Show when={props.pinned && props.href} fallback={when()}>
 						{(href) => <a href={href()}>{when()}</a>}
 					</Show>
-					<CommitLink
-						href={props.pinned ? props.commit : undefined}
-						style={READOUT_COMMIT}
-					/>
 				</span>
 				{/* Many lines or iterations scroll here, under the time and above the controls. */}
 				<div class="pl-rows" ref={rows}>
@@ -1134,6 +1130,14 @@ const Readout = (props: ReadoutProps) => {
 						</span>
 					</Show>
 				</div>
+				{/* As wide as the rows above make the readout, never wider. */}
+				<Show when={props.commit}>
+					{(row) => (
+						<div class="pl-commit">
+							<CommitLine row={row()} links={props.pinned} />
+						</div>
+					)}
+				</Show>
 				<Show when={props.alert}>
 					{(alert) => (
 						<div class="pl-ralert">
@@ -1170,15 +1174,6 @@ const Readout = (props: ReadoutProps) => {
 						</div>
 					)}
 				</Show>
-				<Show when={props.pinned && props.ask}>
-					{(ask) => (
-						<div class="pl-ralert">
-							<a class="lnk" href={ask().href}>
-								{ask().label}
-							</a>
-						</div>
-					)}
-				</Show>
 				<Show when={props.hint}>
 					<span class="pl-pin">Click to pin</span>
 				</Show>
@@ -1206,12 +1201,6 @@ const Readout = (props: ReadoutProps) => {
 			</div>
 		</>
 	);
-};
-
-/** Inside the readout: reaching into the space around the time on a desktop, and on a phone's 44 px target, growing the line to hold it. */
-const READOUT_COMMIT = {
-	"margin-block": "calc((var(--pl-target) - 44px) / 2)",
-	"vertical-align": "middle",
 };
 
 export default Plot;

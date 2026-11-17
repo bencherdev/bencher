@@ -7,7 +7,7 @@ import { Show, createSignal, onMount } from "solid-js";
 import type { JsonGitHubRepositories } from "../../types/bencher";
 import { useAccount } from "../account/context";
 import { takeGitHubReturn } from "../astro/githubReturn";
-import { connectionsPath } from "../github";
+import { connectionsPath } from "../paths";
 import { githubQuery, hold } from "../settings/Connections";
 import { failureOf } from "./Settings";
 

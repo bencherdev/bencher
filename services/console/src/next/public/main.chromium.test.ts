@@ -190,7 +190,7 @@ test("a query too long for a URL is never sent, and says so with no Retry", asyn
 	expect(perf).toEqual([]);
 });
 
-// Kills a public plot with no commit control on a pinned point, one that reads
+// Kills a public plot with no commit link on a pinned point, one that reads
 // anything but the project's URL, and an ask to link GitHub.
 test("the public plot opens a pinned point's commit through the project's URL", async () => {
 	const hash = `9c1f2e4${"0".repeat(33)}`;
@@ -232,7 +232,7 @@ test("the public plot opens a pinned point's commit through the project's URL", 
 		.getByRole("region", { name: "Plot" })
 		.getByRole("status");
 	await expect
-		.element(status.getByRole("link", { name: "Open commit on GitHub" }))
+		.element(status.getByRole("link", { name: "View commit" }))
 		.toHaveAttribute(
 			"href",
 			`https://github.com/pompeii-llc/hashbrown/commit/${hash}`,

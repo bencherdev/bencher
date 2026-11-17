@@ -1,44 +1,104 @@
 import Icon from "@bencherdev/ui/Icon";
-import { Show } from "solid-js";
-import type { GitHubLinks } from "./github";
+import Truncate from "@bencherdev/ui/Truncate";
+import { type JSX, Show } from "solid-js";
+import type { CommitRow, GitHubAsk, GitHubLinks } from "./github";
 
-/** Opens a hash's commit on GitHub, beside the hash, when the project has a repository. */
-const CommitLink = (props: {
+/** The GitHub logo, then a commit's title or View commit, an ask, or muted words, on one line; links only where `links`, as a pinned readout and a page have them. */
+const CommitLine = (props: { row: CommitRow; links: boolean }) => {
+	const askOf = (ask: GitHubAsk) => (
+		<Linked href={props.links ? ask.href : undefined} class="cm-ask">
+			{ask.label}
+		</Linked>
+	);
+	const content = (): JSX.Element => {
+		const row = props.row;
+		switch (row.kind) {
+			case "commit":
+				return (
+					<>
+						<Linked
+							href={props.links ? row.href : undefined}
+							class="cm-text"
+							away
+						>
+							<Truncate text={row.text} />
+						</Linked>
+						<Show when={row.ask}>
+							{(ask) => (
+								<>
+									<span class="cm-dot" aria-hidden="true">
+										·
+									</span>
+									{askOf(ask())}
+								</>
+							)}
+						</Show>
+					</>
+				);
+			case "ask":
+				return askOf(row.ask);
+			case "muted":
+				return (
+					<span class="cm-text">
+						<Truncate text={row.text} />
+					</span>
+				);
+		}
+	};
+	return (
+		<span
+			class="cm-row"
+			data-muted={props.row.kind === "muted" ? "" : undefined}
+		>
+			<Icon name="github" />
+			{content()}
+		</span>
+	);
+};
+
+export default CommitLine;
+
+/** A link where there is somewhere to go, else the same words as text. */
+const Linked = (props: {
 	href: string | undefined;
-	/** How it sits in its line, by default reaching into the space around it. */
-	style?: Record<string, string>;
+	class: string;
+	/** Opens in a new tab, as GitHub does. */
+	away?: boolean;
+	children: JSX.Element;
 }) => (
-	<Show when={props.href}>
+	<Show
+		when={props.href}
+		fallback={<span class={props.class}>{props.children}</span>}
+	>
 		{(href) => (
 			<a
-				class="ui-button"
-				style={props.style ?? IN_LINE}
-				data-variant="ghost"
-				data-size="sm"
-				data-icon-only
+				class={`lnk ${props.class}`}
 				href={href()}
-				target="_blank"
-				rel="noopener noreferrer"
-				aria-label="Open commit on GitHub"
+				{...(props.away
+					? { target: "_blank", rel: "noopener noreferrer" }
+					: {})}
 			>
-				<Icon name="github" />
+				{props.children}
 			</a>
 		)}
 	</Show>
 );
 
-export default CommitLink;
-
-/** A small button that reaches into the space around its line, so the line keeps its height. */
-const IN_LINE = {
-	"margin-block": "calc(8px - var(--ui-button-size) / 2)",
-	"vertical-align": "middle",
-};
-
 /** On the public plot and its embed, which read no bootstrap: the project URL alone, and no ask. */
 export const publicGitHub = (url: () => string | undefined): GitHubLinks => ({
-	commit: (hash) => commitOf(repositoryOf(url()), hash),
+	row: (hash, title) =>
+		commitRow(title, commitOf(repositoryOf(url()), hash), undefined),
 });
+
+/** The title or View commit, once there is either to show. */
+export const commitRow = (
+	title: string | undefined,
+	href: string | undefined,
+	ask: GitHubAsk | undefined,
+): CommitRow | undefined =>
+	title || href
+		? { kind: "commit", text: title || "View commit", href, ask }
+		: undefined;
 
 export const commitOf = (repository: string | undefined, hash: string) =>
 	repository && `https://github.com/${repository}/commit/${hash}`;

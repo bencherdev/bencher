@@ -223,9 +223,9 @@ test.describe("on a short screen", () => {
 	});
 });
 
-// Kills a run page with no control to its commit from the linked repository,
-// one that opens it by its short hash, a Maintainer never asked to reconnect
-// GitHub, or asked toward anywhere but Connections, and a control or chip that
+// Kills a run page whose commit row has no link to its commit from the linked
+// repository, one that opens it by its short hash, a Maintainer never asked to
+// reconnect GitHub, or asked toward anywhere but Connections, and a row that
 // fails axe in either theme.
 test("a linked run opens its commit, and a disconnected link asks its Maintainer to reconnect", async ({
 	page,
@@ -257,7 +257,7 @@ test("a linked run opens its commit, and a disconnected link asks its Maintainer
 		.first()
 		.getByRole("link", { name: seed.last_main_hash, exact: true })
 		.click();
-	const commit = page.getByRole("link", { name: "Open commit on GitHub" });
+	const commit = page.getByRole("link", { name: "View commit" });
 	await expect(commit).toHaveAttribute(
 		"href",
 		new RegExp(
@@ -265,9 +265,7 @@ test("a linked run opens its commit, and a disconnected link asks its Maintainer
 		),
 	);
 	await axeInBothThemes(page, page.url(), async () => {
-		await expect(
-			page.getByRole("link", { name: "Open commit on GitHub" }),
-		).toBeVisible();
+		await expect(page.getByRole("link", { name: "View commit" })).toBeVisible();
 		await expect(
 			page.getByRole("link", { name: "Reconnect GitHub" }),
 		).toBeVisible();

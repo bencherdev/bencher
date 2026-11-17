@@ -185,7 +185,7 @@ test("a pinned readout links to its report and its alert in the console, through
 		]);
 });
 
-// Kills a host's plot with no commit control on a pinned point, or one that
+// Kills a host's plot with no commit link on a pinned point, or one that
 // reads anything but the project's URL.
 test("a pinned point opens its commit from the project's GitHub URL, through the host", async () => {
 	const hash = `9c1f2e4${"0".repeat(33)}`;
@@ -205,7 +205,7 @@ test("a pinned point opens its commit from the project's GitHub URL, through the
 	await expect.element(area).toBeVisible();
 	const box = area.element().getBoundingClientRect();
 	await area.click({ position: { x: box.width / 2, y: box.height / 2 } });
-	const commit = page.getByRole("link", { name: "Open commit on GitHub" });
+	const commit = page.getByRole("link", { name: "View commit" });
 	await userEvent.click(commit);
 	await expect
 		.poll(() => shown.opened)

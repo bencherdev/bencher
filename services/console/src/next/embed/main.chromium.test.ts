@@ -55,7 +55,7 @@ test("the embed opens a pinned point's commit through the project's URL", async 
 	await area.click({ position: { x: box.width / 2, y: box.height / 2 } });
 	const status = page.getByRole("region", { name: "Plot" }).getByRole("status");
 	await expect
-		.element(status.getByRole("link", { name: "Open commit on GitHub" }))
+		.element(status.getByRole("link", { name: "View commit" }))
 		.toHaveAttribute(
 			"href",
 			`https://github.com/pompeii-llc/hashbrown/commit/${hash}`,

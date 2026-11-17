@@ -1,5 +1,9 @@
 export const CONSOLE_PATH = "/console";
 export const PROJECTS_PATH = `${CONSOLE_PATH}/projects`;
+
+/** A project's Connections settings, where it links GitHub. */
+export const connectionsPath = (project: string) =>
+	`${PROJECTS_PATH}/${encodeURIComponent(project)}/connections`;
 /** The account pages, under the reader's slug. */
 export const USERS_PATH = `${CONSOLE_PATH}/users`;
 

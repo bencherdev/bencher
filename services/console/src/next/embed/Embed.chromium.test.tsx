@@ -371,8 +371,9 @@ test("actions end the line and move nothing, at a phone's width too", async () =
 	}
 });
 
-// Kills an embed whose commit control reads anything but a GitHub project URL,
-// opens the commit by its short hash, or asks its reader to link GitHub.
+// Kills an embed whose commit row reads anything but a GitHub project URL,
+// opens the commit by its short hash, drops the title, or asks its reader to
+// link GitHub.
 test("a pinned point opens its commit from a GitHub project URL, with no ask", async () => {
 	const hash = `9c1f2e4${"0".repeat(33)}`;
 	const answer = {
@@ -395,7 +396,7 @@ test("a pinned point opens its commit from a GitHub project URL, with no ask", a
 	show({ answer, url: "https://github.com/pompeii-llc/hashbrown" });
 	const status = await pin();
 	await expect
-		.element(status.getByRole("link", { name: "Open commit on GitHub" }))
+		.element(status.getByRole("link", { name: "View commit" }))
 		.toHaveAttribute(
 			"href",
 			`https://github.com/pompeii-llc/hashbrown/commit/${hash}`,
@@ -404,6 +405,23 @@ test("a pinned point opens its commit from a GitHub project URL, with no ask", a
 	dispose?.();
 	document.body.replaceChildren();
 
+	const title = "Fold the hash browns into the rosti";
+	show({
+		answer: {
+			...answer,
+			reports: [{ uuid: uuid(20), version: 1, hash, title }],
+		},
+		url: "https://hashbrown.example",
+	});
+	const plain = await pin();
+	expect(plain.getByRole("link").elements()).toHaveLength(0);
+	expect(plain.element().querySelector(".cm-row")?.textContent).toBe(title);
+	dispose?.();
+	document.body.replaceChildren();
+
 	show({ answer, url: "https://hashbrown.example" });
-	expect((await pin()).getByRole("link").elements()).toHaveLength(0);
+	const none = await pin();
+	expect(none.getByRole("link").elements()).toHaveLength(0);
+	expect(none.element().querySelector(".cm-row")).toBeNull();
+	expect(none.element().textContent).not.toMatch(/GitHub|Maintainer/);
 });

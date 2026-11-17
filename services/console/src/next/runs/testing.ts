@@ -1,9 +1,12 @@
 import {
 	Adapter,
+	GitHubLinkStatus,
+	type JsonConsoleProject,
 	type JsonConsoleRun,
 	type JsonConsoleRunJobs,
 	type JsonConsoleRunReport,
 	type JsonConsoleRunSummary,
+	Visibility,
 } from "../../types/bencher";
 
 const START = Date.parse("2026-09-13T21:16:00Z");
@@ -175,3 +178,257 @@ export const cutHeaders = (table: Element) =>
 			);
 		})
 		.map((th) => th.textContent?.trim());
+
+/** A commit's title, as GitHub gives its first line. */
+export const COMMIT_TITLE = "Fold the hash browns into the rosti";
+
+/** A title longer than any box that shows it. */
+export const LONG_COMMIT_TITLE =
+	`Fold the hash browns into the rosti ${"and keep them crisp ".repeat(12)}`.trim();
+
+/** A project's bootstrap as the commit row reads it: its repository, project URL, link, and whether the reader may manage it. */
+export const commitBootstrap = (
+	fields: {
+		repository?: string;
+		url?: string;
+		link?: GitHubLinkStatus;
+		manage?: boolean;
+	} = {},
+): JsonConsoleProject => ({
+	project: {
+		uuid: "p",
+		organization: "org-uuid",
+		name: "Hashbrown",
+		slug: "hashbrown",
+		...(fields.url === undefined ? {} : { url: fields.url }),
+		...(fields.link === undefined ? {} : { github_link: fields.link }),
+		visibility: Visibility.Public,
+		bmf_version: 1,
+		created: "2026-09-01T00:00:00Z",
+		modified: "2026-09-01T00:00:00Z",
+	},
+	...(fields.repository === undefined
+		? {}
+		: { github_repository: fields.repository }),
+	organization: { uuid: "org-uuid", name: "Pompeii LLC", slug: "pompeii-llc" },
+	permissions: {
+		view: true,
+		create: true,
+		edit: true,
+		delete: true,
+		manage: fields.manage ?? true,
+	},
+	active_alerts: 0,
+	plots: 0,
+});
+
+/** What a commit row shows: each part's text, and where a link leads; muted for words that link nowhere. */
+export interface ShownCommit {
+	muted?: boolean;
+	parts: (readonly [string] | readonly [string, string])[];
+}
+
+/** Each row of the commit row's table, for a hash: the project, the title, and what the row shows. */
+export const commitRowCases = (
+	hash: string,
+): [
+	string,
+	Parameters<typeof commitBootstrap>[0],
+	string | undefined,
+	ShownCommit,
+][] => {
+	const commit = `https://github.com/pompeii-llc/rosti/commit/${hash}`;
+	const connections = "/console/projects/hashbrown/connections";
+	const repository = "pompeii-llc/rosti";
+	return [
+		[
+			"the title of a linked project's commit",
+			{ repository, link: GitHubLinkStatus.Connected, manage: false },
+			COMMIT_TITLE,
+			{ parts: [[COMMIT_TITLE, commit]] },
+		],
+		[
+			"View commit for a known repository with no title",
+			{ url: "https://github.com/pompeii-llc/rosti", manage: false },
+			undefined,
+			{ parts: [["View commit", commit]] },
+		],
+		[
+			"Link GitHub to a Maintainer of an unlinked project",
+			{ link: GitHubLinkStatus.Unlinked },
+			undefined,
+			{ parts: [["Link GitHub", connections]] },
+		],
+		[
+			"the title, then Reconnect GitHub, to a Maintainer of a disconnected project",
+			{ repository, link: GitHubLinkStatus.Disconnected },
+			COMMIT_TITLE,
+			{
+				parts: [
+					[COMMIT_TITLE, commit],
+					["Reconnect GitHub", connections],
+				],
+			},
+		],
+		[
+			"the muted ask to a reader of an unlinked project with no repository",
+			{ link: GitHubLinkStatus.Unlinked, manage: false },
+			undefined,
+			{ muted: true, parts: [["Ask a Maintainer to link GitHub"]] },
+		],
+		[
+			"the muted ask of an admin on a server without the GitHub App, a title, or a repository",
+			{},
+			undefined,
+			{ muted: true, parts: [["Ask an admin to add the GitHub App"]] },
+		],
+	];
+};
+
+/** The commit row in `root` as a reader meets it, or undefined with none: its logo, whether the logo takes the muted color, and each part's text, with where a link leads. */
+export const shownCommit = (root: ParentNode | null | undefined) => {
+	const row = root?.querySelector(".cm-row");
+	if (!row) {
+		return undefined;
+	}
+	const logo = row.firstElementChild;
+	return {
+		logo: logo?.getAttribute("data-icon"),
+		muted: logo !== null && colorOf(logo) === mutedColor(),
+		parts: [...row.querySelectorAll(":scope > .cm-text, :scope > .cm-ask")].map(
+			(part) =>
+				part.tagName === "A"
+					? [part.textContent, part.getAttribute("href")]
+					: [part.textContent],
+		),
+	};
+};
+
+/** What `shownCommit` reads for a case of `commitRowCases`, with its links as plain text where `links` is false. */
+export const expectedCommit = (shown: ShownCommit | undefined, links = true) =>
+	shown && {
+		logo: "github",
+		muted: shown.muted ?? false,
+		parts: shown.parts.map((part) => (links ? [...part] : [part[0]])),
+	};
+
+/** Each link of the commit row in `root`, by its text, with the tab it opens in: a commit opens a new tab, as GitHub does, and an ask the same tab. */
+export const commitTabs = (root: ParentNode | null | undefined) =>
+	[...(root?.querySelectorAll(".cm-row > a") ?? [])].map((link) => [
+		link.textContent,
+		link.getAttribute("target"),
+		link.getAttribute("rel"),
+	]);
+
+/** What `commitTabs` reads for a case of `commitRowCases`. */
+export const expectedTabs = (shown: ShownCommit) =>
+	shown.parts
+		.filter((part) => part.length === 2)
+		.map(([text]) =>
+			text === "Link GitHub" || text === "Reconnect GitHub"
+				? [text, null, null]
+				: [text, "_blank", "noopener noreferrer"],
+		);
+
+/** The number of lines `element`'s text takes. */
+export const textLines = (element: Element | null | undefined) => {
+	if (!element) {
+		return 0;
+	}
+	const range = document.createRange();
+	range.selectNodeContents(element);
+	return new Set(
+		[...range.getClientRects()].map((rect) => Math.round(rect.top)),
+	).size;
+};
+
+const colorOf = (element: Element) => getComputedStyle(element).color;
+
+/** The color `value` resolves to in the page's theme. */
+const resolvedColor = (value: string) => {
+	const probe = document.createElement("span");
+	probe.style.color = value;
+	document.body.append(probe);
+	const color = colorOf(probe);
+	probe.remove();
+	return color;
+};
+
+/** The muted text's color in the page's theme. */
+const mutedColor = () => resolvedColor("var(--color-text-muted)");
+
+/** A title row's alert pill as a reader sees it: whether it takes a box, its words, its dot, and its colors. */
+export const alertPill = (row: ParentNode | null | undefined) => {
+	const pill = row?.querySelector(".rp-alerts");
+	if (!pill) {
+		return undefined;
+	}
+	const style = getComputedStyle(pill);
+	const box = pill.getBoundingClientRect();
+	return {
+		shown: box.width > 0 && box.height > 0,
+		text: pill.textContent,
+		dot: pill.querySelector(".lr-alertdot") !== null,
+		color: style.color,
+		border: style.borderTopColor,
+	};
+};
+
+/** The alert pill of `total` alerts: red with a dot once there is one, else muted. */
+export const expectedAlertPill = (total: number) =>
+	total === 0
+		? {
+				shown: true,
+				text: "0 alerts",
+				dot: false,
+				color: mutedColor(),
+				border: resolvedColor("var(--color-border)"),
+			}
+		: {
+				shown: true,
+				text: total === 1 ? "1 alert" : `${total} alerts`,
+				dot: true,
+				color: resolvedColor("var(--color-text-error)"),
+				border: resolvedColor("var(--color-error)"),
+			};
+
+/** The page's layout shift from now until the returned stop, which waits 2 frames for the last of it. */
+export const watchShift = () => {
+	let shift = 0;
+	const add = (entries: PerformanceEntryList) => {
+		for (const entry of entries) {
+			shift += (entry as unknown as { value: number }).value;
+		}
+	};
+	const observer = new PerformanceObserver((list) => add(list.getEntries()));
+	observer.observe({ type: "layout-shift", buffered: false });
+	return async () => {
+		for (let frame = 0; frame < 2; frame += 1) {
+			await new Promise<void>((resolve) =>
+				requestAnimationFrame(() => setTimeout(resolve, 0)),
+			);
+		}
+		add(observer.takeRecords());
+		observer.disconnect();
+		return shift;
+	};
+};
+
+/** A phone's pills line around its alert pill, undefined with no pill. */
+export const pillsBand = (row: Element | null | undefined) => {
+	const line = row?.querySelector(".rp-titlepills")?.getBoundingClientRect();
+	const pill = row?.querySelector(".rp-alerts")?.getBoundingClientRect();
+	const bottom = row?.getBoundingClientRect().bottom;
+	if (!line || !pill || bottom === undefined) {
+		return undefined;
+	}
+	return {
+		/** How far the pill sits from the line's middle. */
+		offCenter: Math.abs(
+			(line.top + line.bottom) / 2 - (pill.top + pill.bottom) / 2,
+		),
+		height: line.height,
+		/** How far the row reaches below the pills line. */
+		below: bottom - line.bottom,
+	};
+};
