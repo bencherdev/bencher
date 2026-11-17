@@ -525,6 +525,7 @@ impl Run {
                 allow_failure: self.allow_failure.then_some(true),
                 backdate: self.backdate.map(Into::into),
                 callback: None,
+                github: None,
             }),
         }
     }

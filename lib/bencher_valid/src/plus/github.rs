@@ -68,6 +68,8 @@ macro_rules! github_id {
 
 github_id!(GitHubInstallationId);
 github_id!(GitHubRepositoryId);
+github_id!(GitHubCheckRunId);
+github_id!(GitHubIssueNumber);
 
 /// A repository's owner and name, each safe to use as one URL path segment.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]

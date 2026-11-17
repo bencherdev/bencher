@@ -1,0 +1,33 @@
+[package]
+name = "bencher_github_post"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+publish = false
+
+[features]
+default = []
+# Required due to feature unification
+# https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
+plus = [
+    "dep:bencher_comment",
+    "dep:bencher_github_client",
+    "dep:bencher_json",
+    "dep:serde",
+    "bencher_comment/plus",
+]
+
+[dependencies]
+bencher_comment = { workspace = true, optional = true }
+bencher_github_client = { workspace = true, optional = true }
+bencher_json = { workspace = true, optional = true, features = ["plus", "server"] }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]
+bencher_github_client = { workspace = true, features = ["test-base-url"] }
+serde_json.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }
+
+[lints]
+workspace = true

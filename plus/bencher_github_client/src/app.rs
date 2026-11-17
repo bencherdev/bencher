@@ -19,7 +19,7 @@ const JWT_DRIFT_SECS: i64 = 60;
 /// GitHub refuses a JWT that expires more than 10 minutes after its own clock.
 const JWT_TTL_SECS: i64 = 9 * 60;
 
-/// The GitHub App that mints the dispatch token for a linked repository.
+/// The GitHub App that mints the tokens for a linked repository.
 pub struct GitHubApp {
     client_id: NonEmpty,
     slug: GitHubAppSlug,
@@ -47,6 +47,8 @@ pub enum GitHubAppError {
     RepositoryName(ValidError),
     #[error("Failed to look up the repository's installation: {0}")]
     Installation(GitHubApiError),
+    #[error("Failed to look up the installation's page: {0}")]
+    InstallationPage(GitHubApiError),
 }
 
 impl GitHubApp {
@@ -85,6 +87,16 @@ impl GitHubApp {
         &self.webhook_secret
     }
 
+    /// The app's slug, which names its bot user `{slug}[bot]`.
+    pub fn slug(&self) -> &GitHubAppSlug {
+        &self.slug
+    }
+
+    /// The GitHub REST API that the app mints on, for the requests an installation token makes.
+    pub fn api(&self) -> &GitHubApi {
+        &self.api
+    }
+
     /// The change a webhook delivery makes, once its signature proves that the app's webhook
     /// secret signed its body. Any other event or action makes none.
     pub fn webhook(
@@ -120,7 +132,30 @@ impl GitHubApp {
             token,
             repositories,
         } = self
-            .mint_for(now, installation, repository, "write")
+            .mint_for(now, installation, repository, CONTENTS_WRITE)
+            .await?;
+        let full_name = minted_name(repository, &repositories)?;
+        Ok(GitHubInstallationToken { token, full_name })
+    }
+
+    /// Mints a token that can write the checks and the pull requests of the one repository and
+    /// nothing else.
+    pub async fn mint_post(
+        &self,
+        now: DateTime,
+        installation: GitHubInstallationId,
+        repository: GitHubRepositoryId,
+    ) -> Result<GitHubInstallationToken, GitHubAppError> {
+        let JsonMinted {
+            token,
+            repositories,
+        } = self
+            .mint_for(
+                now,
+                installation,
+                repository,
+                CHECKS_AND_PULL_REQUESTS_WRITE,
+            )
             .await?;
         let full_name = minted_name(repository, &repositories)?;
         Ok(GitHubInstallationToken { token, full_name })
@@ -137,7 +172,9 @@ impl GitHubApp {
             token,
             expires_at,
             repositories,
-        } = self.mint_for(now, installation, repository, "read").await?;
+        } = self
+            .mint_for(now, installation, repository, CONTENTS_READ)
+            .await?;
         let full_name = minted_name(repository, &repositories)?;
         Ok(GitHubReadToken {
             token,
@@ -151,7 +188,7 @@ impl GitHubApp {
         now: DateTime,
         installation: GitHubInstallationId,
         repository: GitHubRepositoryId,
-        contents: &'static str,
+        permissions: JsonMintPermissions,
     ) -> Result<T, GitHubAppError>
     where
         T: DeserializeOwned,
@@ -159,7 +196,7 @@ impl GitHubApp {
         let jwt = self.jwt(now).map_err(GitHubAppError::Sign)?;
         let mint = JsonMint {
             repository_ids: [repository],
-            permissions: JsonMintPermissions { contents },
+            permissions,
         };
         self.api
             .post(
@@ -206,6 +243,25 @@ impl GitHubApp {
             Err(GitHubApiError::NotFound) => Ok(None),
             Err(e) => Err(GitHubAppError::Installation(e)),
         }
+    }
+
+    /// The installation's page on GitHub, where its owner approves the app's permissions.
+    pub async fn installation_url(
+        &self,
+        now: DateTime,
+        installation: GitHubInstallationId,
+    ) -> Result<Url, GitHubAppError> {
+        let jwt = self.jwt(now).map_err(GitHubAppError::Sign)?;
+        let JsonInstallationPage { html_url } = self
+            .api
+            .get(
+                &["app", "installations", &installation.to_string()],
+                &[],
+                &jwt,
+            )
+            .await
+            .map_err(GitHubAppError::InstallationPage)?;
+        Ok(html_url)
     }
 
     /// Where a dispatch to the repository goes, on the same API as the mint.
@@ -302,8 +358,29 @@ struct JsonMint {
 
 #[derive(Serialize)]
 struct JsonMintPermissions {
-    contents: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    contents: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    checks: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pull_requests: Option<&'static str>,
 }
+
+const CONTENTS_WRITE: JsonMintPermissions = JsonMintPermissions {
+    contents: Some("write"),
+    checks: None,
+    pull_requests: None,
+};
+const CONTENTS_READ: JsonMintPermissions = JsonMintPermissions {
+    contents: Some("read"),
+    checks: None,
+    pull_requests: None,
+};
+const CHECKS_AND_PULL_REQUESTS_WRITE: JsonMintPermissions = JsonMintPermissions {
+    contents: None,
+    checks: Some("write"),
+    pull_requests: Some("write"),
+};
 
 #[derive(Deserialize)]
 struct JsonMinted {
@@ -328,6 +405,11 @@ struct JsonMintedRepository {
 #[derive(Deserialize)]
 struct JsonRepositoryInstallation {
     id: GitHubInstallationId,
+}
+
+#[derive(Deserialize)]
+struct JsonInstallationPage {
+    html_url: Url,
 }
 
 #[cfg(test)]
@@ -494,6 +576,86 @@ mod tests {
                 "repository_ids": [REPOSITORY_ID],
                 "permissions": { "contents": "write" },
             })
+        );
+        let jwt = request
+            .header("authorization")
+            .and_then(|authorization| authorization.strip_prefix("Bearer "))
+            .unwrap();
+        assert_eq!(verify(jwt, &public).unwrap().iss, CLIENT_ID);
+    }
+
+    // Kills a post mint that asks for contents, for any other permission or access, or for any
+    // other or more repositories, that sends anywhere else, or that refuses a token for exactly
+    // the one repository.
+    #[tokio::test]
+    async fn the_post_mint_asks_for_one_repository_with_checks_and_pull_requests_write() {
+        let (private_key, public) = key_pair();
+        let server = Server::start(vec![minted(&minted_repository(REPOSITORY_ID))]).await;
+
+        let token = app(&private_key, Some(&server))
+            .mint_post(DateTime::TEST, installation(), repository())
+            .await
+            .unwrap();
+
+        assert_eq!(token.token.as_ref(), TOKEN);
+        assert_eq!(
+            (token.full_name.owner(), token.full_name.name()),
+            ("octo-cat", format!("repo-{REPOSITORY_ID}").as_str())
+        );
+        let [request] = server.received().await.try_into().ok().unwrap();
+        assert_eq!(
+            request.request_line(),
+            format!("POST /github/app/installations/{INSTALLATION_ID}/access_tokens HTTP/1.1")
+        );
+        assert_eq!(
+            request.json(),
+            serde_json::json!({
+                "repository_ids": [REPOSITORY_ID],
+                "permissions": { "checks": "write", "pull_requests": "write" },
+            })
+        );
+        let jwt = request
+            .header("authorization")
+            .and_then(|authorization| authorization.strip_prefix("Bearer "))
+            .unwrap();
+        assert_eq!(verify(jwt, &public).unwrap().iss, CLIENT_ID);
+
+        let server = Server::start(vec![minted(&minted_repository(OTHER_REPOSITORY_ID))]).await;
+        let error = app(&private_key, Some(&server))
+            .mint_post(DateTime::TEST, installation(), repository())
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(error, GitHubAppError::Repositories { .. }),
+            "{error:?}"
+        );
+        server.received().await;
+    }
+
+    // Kills asking any other path or under any other JWT, and reading the page from anywhere but
+    // the answer's `html_url`.
+    #[tokio::test]
+    async fn the_installation_page_is_its_html_url() {
+        const PAGE: &str = "https://github.com/organizations/octo-cat/settings/installations/2048";
+        let (private_key, public) = key_pair();
+        let server = Server::start(vec![(
+            200,
+            format!(
+                r#"{{"id": {INSTALLATION_ID}, "html_url": "{PAGE}", "account": {{"login": "octo-cat", "html_url": "https://github.com/octo-cat"}}}}"#
+            ),
+        )])
+        .await;
+
+        let page = app(&private_key, Some(&server))
+            .installation_url(DateTime::TEST, installation())
+            .await
+            .unwrap();
+
+        assert_eq!(page.as_str(), PAGE);
+        let [request] = server.received().await.try_into().ok().unwrap();
+        assert_eq!(
+            request.request_line(),
+            format!("GET /github/app/installations/{INSTALLATION_ID} HTTP/1.1")
         );
         let jwt = request
             .header("authorization")

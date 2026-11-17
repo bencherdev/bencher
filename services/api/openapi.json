@@ -13171,6 +13171,10 @@
           "unknown"
         ]
       },
+      "CiId": {
+        "description": "A `--ci-id`, which names a GitHub check and its pull request comment section in place of the project's name.",
+        "type": "string"
+      },
       "Cpu": {
         "type": "integer",
         "format": "uint32",
@@ -13250,6 +13254,11 @@
           }
         ]
       },
+      "GitHubIssueNumber": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0
+      },
       "GitHubLinkStatus": {
         "type": "string",
         "enum": [
@@ -13257,6 +13266,11 @@
           "connected",
           "disconnected"
         ]
+      },
+      "GitHubRepositoryId": {
+        "type": "integer",
+        "format": "uint64",
+        "minimum": 0
       },
       "GitHubRepositoryName": {
         "type": "string"
@@ -13318,6 +13332,58 @@
           "delivered",
           "failed",
           "skipped"
+        ]
+      },
+      "JobGitHubFailure": {
+        "description": "Why a job's GitHub post failed",
+        "oneOf": [
+          {
+            "description": "The installation of the GitHub App has not approved its checks and pull requests write.",
+            "type": "string",
+            "enum": [
+              "approval"
+            ]
+          },
+          {
+            "description": "The project is no longer linked to the job's repository.",
+            "type": "string",
+            "enum": [
+              "unlinked"
+            ]
+          },
+          {
+            "description": "GitHub refused a request.",
+            "type": "string",
+            "enum": [
+              "refused"
+            ]
+          },
+          {
+            "description": "Every attempt failed.",
+            "type": "string",
+            "enum": [
+              "exhausted"
+            ]
+          }
+        ]
+      },
+      "JobGitHubState": {
+        "description": "The state of a job's GitHub post",
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "posted",
+              "failed"
+            ]
+          },
+          {
+            "description": "The check, and the comment if any, are still to be posted.",
+            "type": "string",
+            "enum": [
+              "pending"
+            ]
+          }
         ]
       },
       "JobStatus": {
@@ -14283,6 +14349,15 @@
           "created": {
             "$ref": "#/components/schemas/DateTime"
           },
+          "github": {
+            "nullable": true,
+            "description": "Present only for a job submitted with its GitHub Actions context",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonJobGitHub"
+              }
+            ]
+          },
           "modified": {
             "$ref": "#/components/schemas/DateTime"
           },
@@ -14518,6 +14593,43 @@
           "project",
           "registry",
           "timeout"
+        ]
+      },
+      "JsonJobGitHub": {
+        "description": "Bencher's post of a job's GitHub check and pull request comment",
+        "type": "object",
+        "properties": {
+          "approval_url": {
+            "nullable": true,
+            "description": "Where the owner of the GitHub App's installation approves its permissions, when the post failed for want of that approval",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
+          },
+          "failure": {
+            "nullable": true,
+            "description": "Why the post failed",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JobGitHubFailure"
+              }
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/JobGitHubState"
+          },
+          "status": {
+            "nullable": true,
+            "description": "The HTTP status of GitHub's last refusal, if GitHub refused a request",
+            "type": "integer",
+            "format": "uint16",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "state"
         ]
       },
       "JsonJobOutput": {
@@ -15090,6 +15202,60 @@
             ]
           }
         }
+      },
+      "JsonNewJobGitHub": {
+        "description": "The GitHub Actions context of a detached run on the project's linked repository.\n\nBencher creates the run's GitHub check, completes it once the job finishes, and writes the pull request comment, with a token from the Bencher Cloud GitHub App.",
+        "type": "object",
+        "properties": {
+          "ci_id": {
+            "nullable": true,
+            "description": "Names the check and the comment section in place of the project's name. Only the bytes the check's name keeps are kept.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CiId"
+              }
+            ]
+          },
+          "ci_only_on_alert": {
+            "nullable": true,
+            "description": "Only start a new comment if an alert is generated. An existing comment is always updated.",
+            "type": "boolean"
+          },
+          "ci_only_thresholds": {
+            "nullable": true,
+            "description": "Only comment if a threshold exists for the branch, testbed, and measure",
+            "type": "boolean"
+          },
+          "head_sha": {
+            "description": "The commit the check is created on: the head of the pull request, or the commit pushed",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHash"
+              }
+            ]
+          },
+          "number": {
+            "nullable": true,
+            "description": "The pull request to comment on. Without one, the run gets a check and no comment.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHubIssueNumber"
+              }
+            ]
+          },
+          "repository_id": {
+            "description": "The ID of the repository the workflow runs in, which must be the project's linked repository",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GitHubRepositoryId"
+              }
+            ]
+          }
+        },
+        "required": [
+          "head_sha",
+          "repository_id"
+        ]
       },
       "JsonNewLinkedRepository": {
         "type": "object",
@@ -15755,6 +15921,15 @@
             "nullable": true,
             "description": "Track the file size of the output files instead of parsing their contents",
             "type": "boolean"
+          },
+          "github": {
+            "nullable": true,
+            "description": "For a detached run on GitHub Actions in the project's linked repository, Bencher posts the run's check and pull request comment instead of a callback",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JsonNewJobGitHub"
+              }
+            ]
           },
           "image": {
             "description": "OCI image reference (e.g. \"alpine:3.18\", \"ghcr.io/owner/repo:v1\", \"image@sha256:abc...\")",

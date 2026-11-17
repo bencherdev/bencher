@@ -40,7 +40,7 @@ use crate::model::{
         series::count_active,
         testbed::{RunJob, RunTestbed},
     },
-    runner::{PendingInsertJob, SourceIp, check_minted_dispatch},
+    runner::{JobId, PendingInsertJob, SourceIp, check_job_github, check_minted_dispatch},
 };
 use crate::{
     actor_conn,
@@ -113,7 +113,9 @@ pub mod warning;
 
 crate::macros::typed_id::typed_id!(ReportId);
 
-#[derive(diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable)]
+#[derive(
+    Clone, diesel::Queryable, diesel::Identifiable, diesel::Associations, diesel::Selectable,
+)]
 #[diesel(table_name = report_table)]
 #[diesel(belongs_to(QueryProject, foreign_key = project_id))]
 pub struct QueryReport {
@@ -210,6 +212,13 @@ impl QueryReport {
                 new_run_job.run_job.callback.as_ref(),
             )
             .await?;
+            check_job_github(
+                context,
+                query_project,
+                new_run_job.is_claimed,
+                new_run_job.run_job.github.as_ref(),
+            )
+            .await?;
         }
 
         #[cfg(all(feature = "plus", not(feature = "otel")))]
@@ -301,6 +310,10 @@ impl QueryReport {
         // Capture whether this is a job-based run before the transaction moves pending_job.
         #[cfg(feature = "plus")]
         let is_job_run = pending_job.is_some();
+        #[cfg(feature = "plus")]
+        let posts_to_github = pending_job
+            .as_ref()
+            .is_some_and(PendingInsertJob::posts_to_github);
         #[cfg(all(feature = "plus", feature = "otel"))]
         let callback_skipped = pending_job
             .as_ref()
@@ -332,6 +345,8 @@ impl QueryReport {
 
         // Single transaction wraps version + report + job for true atomicity.
         // If any insert fails, all are rolled back.
+        #[cfg(feature = "plus")]
+        let mut inserted_job: Option<JobId> = None;
         let insert_report_uuid = write_transaction!(context, |conn| {
             // If the version was already found outside the transaction, use it.
             // Otherwise, look again under the write lock before creating one.
@@ -368,7 +383,7 @@ impl QueryReport {
             #[cfg(feature = "plus")]
             if let Some(pending_job) = pending_job {
                 let report_id = diesel::select(last_insert_rowid()).get_result::<ReportId>(conn)?;
-                pending_job.insert(conn, report_id, now)?;
+                inserted_job = Some(pending_job.insert(conn, report_id, now)?);
                 // A job's results are processed after this response, so what the report has
                 // skipped so far is stored now.
                 if !warnings.is_empty() {
@@ -392,6 +407,12 @@ impl QueryReport {
                     otel_plan_kind,
                 ));
             }
+        }
+
+        // The job's check is started once the job has committed, by a task that paces it.
+        #[cfg(feature = "plus")]
+        if posts_to_github && let Some(job_id) = inserted_job {
+            context.callbacks.start(log, job_id);
         }
 
         // Only once the report has committed, and never waiting on GitHub.

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use super::RunnerUuid;
 use super::callback::{JsonJobCallback, JsonNewCallback};
+use super::github::{JsonJobGitHub, JsonNewJobGitHub};
 use super::job_status::JobStatus;
 use crate::ProjectUuid;
 use crate::project::report::{Iteration, JsonAverage, JsonFold, MeasureFilter, ReportUuid};
@@ -47,6 +48,9 @@ pub struct JsonJob {
     /// Present only for a job submitted with a callback
     #[serde(skip_serializing_if = "Option::is_none")]
     pub callback: Option<JsonJobCallback>,
+    /// Present only for a job submitted with its GitHub Actions context
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub github: Option<JsonJobGitHub>,
     pub created: DateTime,
     pub modified: DateTime,
     /// Job output (stdout, stderr, files) from blob storage, included for terminal jobs.
@@ -102,6 +106,7 @@ struct JsonUncheckedNewRunJob {
     pub allow_failure: Option<bool>,
     pub backdate: Option<DateTime>,
     pub callback: Option<JsonNewCallback>,
+    pub github: Option<JsonNewJobGitHub>,
 }
 
 impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
@@ -122,7 +127,11 @@ impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
             allow_failure,
             backdate,
             callback,
+            github,
         } = unchecked;
+        if callback.is_some() && github.is_some() {
+            return Err(JobConfigError::CallbackAndGitHub);
+        }
         validate_collection_sizes(
             entrypoint.as_ref(),
             cmd.as_ref(),
@@ -143,6 +152,7 @@ impl TryFrom<JsonUncheckedNewRunJob> for JsonNewRunJob {
             allow_failure,
             backdate,
             callback,
+            github,
         })
     }
 }
@@ -199,6 +209,10 @@ pub struct JsonNewRunJob {
     /// a Bencher Plus plan
     #[serde(skip_serializing_if = "Option::is_none")]
     pub callback: Option<JsonNewCallback>,
+    /// For a detached run on GitHub Actions in the project's linked repository, Bencher posts the
+    /// run's check and pull request comment instead of a callback
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub github: Option<JsonNewJobGitHub>,
 }
 
 /// Default poll timeout in seconds for job claiming long-poll.
@@ -252,6 +266,8 @@ pub enum JobConfigError {
     FilePathsTooLong(usize),
     #[error("env length {0} exceeds maximum {MAX_ENV_LEN}")]
     EnvTooLong(usize),
+    #[error("a job reports through its callback or through GitHub, not both")]
+    CallbackAndGitHub,
 }
 
 fn validate_collection_sizes(

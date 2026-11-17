@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use bencher_comment::{CommentTag, GroupComment, ReportComment, Section, SectionCheck};
+use bencher_comment::{CommentTag, GroupComment, MAX_LENGTH, ReportComment, Section, SectionCheck};
 use bencher_json::{GitHash, ProjectSlug, ProjectUuid, ReportUuid};
 use octocrab::{Octocrab, models::CommentId};
 use url::Url;
@@ -12,7 +12,7 @@ use crate::{cli_eprintln_quietable, cli_println_quietable};
 
 use super::{
     super::SectionReports,
-    GitHubError, MAX_LENGTH, comment_error,
+    GitHubError, comment_error,
     external_id::{ExternalId, Kind},
     section::{SectionKey, by_check_run, by_key},
 };

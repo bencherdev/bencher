@@ -1,12 +1,9 @@
 use std::collections::{BTreeMap, btree_map::Entry};
 
-use bencher_comment::{ReportComment, SectionCheck};
+use bencher_comment::{BENCHER_REPORT, ReportComment, SectionCheck};
 use bencher_json::ProjectUuid;
 
-use super::{
-    BENCHER_REPORT,
-    external_id::{ExternalId, Kind},
-};
+use super::external_id::{ExternalId, Kind};
 
 /// The key of a section. Keys of the two kinds never collide.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

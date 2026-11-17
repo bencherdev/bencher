@@ -44,7 +44,7 @@ mod stats;
 #[cfg(feature = "plus")]
 use bencher_recaptcha::RecaptchaClient;
 #[cfg(feature = "plus")]
-pub use callbacks::Callbacks;
+pub use callbacks::{Callbacks, GitHubPosts};
 #[cfg(feature = "plus")]
 pub use commit_titles::CommitTitles;
 pub use database::{Database, DbConnection};

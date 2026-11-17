@@ -20,6 +20,7 @@ use ordered_float::OrderedFloat;
 use url::Url;
 
 mod check;
+mod check_run;
 mod column;
 mod group;
 mod tag;
@@ -28,6 +29,10 @@ use column::{ColumnGroup, DefaultMetrics};
 use group::escape;
 
 pub use check::SectionCheck;
+pub use check_run::{
+    BENCHER_REPORT, IN_PROGRESS_SUMMARY, MAX_LENGTH, branded_summary, check_run_id, check_run_name,
+    truncate_id,
+};
 pub use group::{GroupComment, Section};
 pub use tag::{CommentTag, group_tag};
 
