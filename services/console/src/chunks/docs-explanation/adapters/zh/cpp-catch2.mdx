@@ -1,9 +1,41 @@
+import CppCatch2Xml from "../cpp-catch2-xml.mdx";
 import MakeCppCatch2 from "../make-cpp-catch2.mdx";
 
 ## ➕ C++ Catch2
 
-C++ Catch2 适配器（`cpp_catch2`）期望 [Catch2](https://github.com/catchorg/Catch2) 输出。
-将收集 `latency` 度量（即 `纳秒 (ns)`）。
-`lower_value` 和 `upper_value` 分别是低于和高于均值（即 `value`）的一个标准差。
+C++ Catch2 适配器（`cpp_catch2`）接受 [Catch2](https://github.com/catchorg/Catch2) 的输出。
+Catch2 的 XML 报告器（即 `-r xml`）会被首先读取，并给出最可靠的结果，因此推荐使用它：
+
+<CppCatch2Xml />
+
+Catch2 的控制台输出也会被尽力读取：
 
 <MakeCppCatch2 />
+
+程序自身在 Catch2 表格中的输出并不总能与 Catch2 的输出区分开，
+因此它所在的基准测试会在报告的警告中计为已跳过。
+请改为打印到 `stderr`，或使用 XML 报告器。
+在宽度小于 59 列的控制台上，Catch2 会将表格标题换行，因此所有基准测试都会计为已跳过。
+
+基准测试名称由测试用例、各个 section 和基准测试组成，以斜杠分隔（即 `Case / Section / Bench`）。
+没有参数。
+`latency` 度量以纳秒（ns）为单位收集，
+包含 `mean` 和 `std_dev`，各自带有其自助法（bootstrap）区间的边界。
+XML 用置信水平命名每个区间（即 `mean_ci95_lower` 和 `mean_ci95_upper`），
+而控制台输出不注明水平（即 `mean_ci_lower` 和 `mean_ci_upper`）。
+使用 `--benchmark-no-analysis` 时，只收集 `mean`。
+
+请首先为 `mean` 指标设置阈值，使用 `--threshold-metric mean`。
+
+当基准测试失败时，Catch2 会以错误退出，此时 `bencher run` 也会失败。
+使用 `--allow-failure` 标志时，`bencher run` 会继续，但会丢弃该次迭代的输出，
+因此不会发送其任何结果。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+在 BMF 版本 0 中，只读取 Catch2 的控制台输出。
+收集 `latency` 度量（即 `nanoseconds (ns)`）。
+`lower_value` 和 `upper_value` 分别是低于和高于平均值（即 `value`）一个标准差。
+
+</details>

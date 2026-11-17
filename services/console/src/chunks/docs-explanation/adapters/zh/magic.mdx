@@ -1,10 +1,17 @@
-## 🪄 魔法 <small>（默认）</small>
+## 🪄 Magic <small>(default)</small>
 
-魔法适配器（`magic`）是所有其他适配器的超集。
+Magic 适配器（`magic`）是所有其他适配器的超集。
 因此，它是 `bencher run` 的默认适配器。
-然而，`magic` 适配器应仅用于探索。
+但是，`magic` 适配器只应用于探索。
 
-为获得最佳结果，您应该指定一个基准测试驱动适配器：
+在 BMF 版本 1 中，`magic` 适配器首先尝试 [`json` 适配器](#-json)，
+然后按下面列表的顺序尝试每个基准测试工具适配器，
+并且先读取基准测试工具的结构化输出，再读取其文本输出。
+使用的是第一个读取到任何结果的适配器，
+因此请每次 `bencher run` 只运行一个基准测试工具。
+对于 BMF 版本 1 的项目，BMF 版本 0 的载荷会被拒绝，错误信息会指明这两个版本。
+
+为获得最佳结果，您应该指定一个基准测试工具适配器：
 
 - [\{...\} JSON](#-json)
 - [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
@@ -12,14 +19,19 @@
 - [➕ C++ Google Benchmark](#-c-google)
 - [🎯 Dart benchmark_harness](#-dart-benchmark_harness)
 - [🕳 Go test -bench](#-go-bench)
-- [☕️ Java 微基准测试套件（JMH）](#%EF%B8%8F-java-jmh)
+- [☕️ Java Microbenchmark Harness (JMH)](#%EF%B8%8F-java-jmh)
 - [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
 - [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
 - [🕸 JavaScript Vitest](#-javascript-vitest)
+- [🕸 JavaScript Deno bench](#-javascript-deno)
+- [🕸 JavaScript mitata](#-javascript-mitata)
+- [🕸 JavaScript tinybench](#-javascript-tinybench)
 - [🐍 Python airspeed velocity (asv)](#-python-asv)
 - [🐍 Python pytest-benchmark](#-python-pytest)
 - [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [♦️ Ruby benchmark-ips](#%EF%B8%8F-ruby-benchmark-ips)
 - [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Divan](#-rust-divan)
 - [🦀 Rust Criterion](#-rust-criterion)
 - [🦀 Rust Iai](#-rust-iai)
 - [🦀 Rust Gungraun](#-rust-gungraun)

@@ -1,16 +1,49 @@
+import NodeJsVitestV5 from "../node-js-vitest-v5.mdx";
 import NodeJsVitest from "../node-js-vitest.mdx";
 
 ## 🕸 JavaScript Vitest
 
-The JavaScript Vitest Adapter (`js_vitest`) expects [Vitest `bench`](https://vitest.dev/api/#bench) output in JSON format (ie `--outputJson results.json`).
-This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
-Both the `latency` Measure (ie `nanoseconds (ns)`) and the `throughput` Measure (ie `operations / second (ops/sec)`) are gathered.
-For the `throughput` Measure, the `lower_value` and `upper_value` are the relative margin of error below and above the `value` respectively.
+Der JavaScript Vitest Adapter (`js_vitest`) erwartet Ausgaben von [Vitest `bench`](https://vitest.dev/api/#bench) im JSON-Format.
+Diese JSON-Ausgabe wird in einer Datei gespeichert, daher müssen Sie die Option `--file` des `bencher run` CLI verwenden, um diesen Dateipfad anzugeben.
+Verwenden Sie für Vitest 5 und neuer den JSON-Reporter (d.h. `--reporter=json --outputFile=results.json`):
+
+<NodeJsVitestV5 />
+
+Verwenden Sie für Vitest 1 bis 4 `--outputJson results.json`:
 
 <NodeJsVitest />
 
-There are two options for the `latency` Metric:
-- `mean` (default): The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
-- `median`: Only the median (ie `value`) is available. Neither `lower_value` nor `upper_value` are collected, as Vitest does not provide an interquartile range.
+Jeder Benchmark wird nach seiner Datei benannt, relativ zum gemeinsamen Verzeichnis aller Dateien in der JSON-Ausgabe,
+dann nach seinen `describe` Blöcken, seinem Test, seiner Gruppe (wenn sie nicht die Standardgruppe ist) und seiner Aufgabe, verbunden mit ` > `.
+Zum Beispiel `sub/sort.bench.ts > sorting > arrays > normal`.
+Wenn Sie nur einige Ihrer Benchmark-Dateien ausführen, kann sich dieses gemeinsame Verzeichnis ändern, wodurch die Benchmarks umbenannt werden.
+Es gibt keine Parameter.
 
-This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the `--average` option.
+Sowohl die `latency` Measure (d.h. `nanoseconds (ns)`) als auch die `throughput` Measure (d.h. `operations / second (ops/s)`) werden mit diesen Metriken erfasst:
+- `mean`, `median`, `min` und `max`
+- `p75`, `p99`, `p99_5` und `p99_9`: das 75., 99., 99,5. und 99,9. Perzentil
+- `std_dev`, `std_err`, `median_abs_dev` und `mean_abs_dev`: die Standardabweichung, der Standardfehler des Mittelwerts sowie die mediane und mittlere absolute Abweichung
+- `mean_ci95_lower`, `mean_ci95_upper` und `mean_ci95_margin`: das 95-%-Konfidenzintervall des Mittelwerts und seine Fehlermarge
+
+Für Vitest 1 bis 4 hat die `latency` Measure die Statistiken, die die JSON-Ausgabe enthält,
+und die `throughput` Measure hat ihren `mean` mit `mean_ci95_lower` und `mean_ci95_upper`.
+Legen Sie zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`.
+Wo es keinen `median` gibt, wie bei `throughput` in Vitest 1 bis 4 und bei `latency` in Vitest 1, legen Sie zuerst für den `mean` einen Schwellenwert fest.
+
+Wenn zwei Vitest-Projekte dieselbe Datei ausführen, enthält die JSON-Ausgabe von Vitest 5 diese Datei zweimal unter einem Pfad.
+Die erste Kopie wird behalten, und jede Wiederholung wird in den Warnungen des Berichts als übersprungen gezählt.
+Übergeben Sie `--project` an Vitest, um ein einzelnes Vitest-Projekt auszuführen.
+
+<details>
+<summary>BMF Version 0</summary>
+
+Nur das `--outputJson` Format von Vitest 1 bis 4 wird gelesen.
+Für die `throughput` Measure liegen `lower_value` und `upper_value` um die relative Fehlermarge unterhalb bzw. oberhalb des `value`.
+
+Es gibt zwei Optionen für die `latency` Metrik:
+- `mean` (Standard): Die `lower_value` und `upper_value` liegen eine Standardabweichung unterhalb bzw. oberhalb des Mittelwerts (d.h. `value`).
+- `median`: Nur der Median (d.h. `value`) ist verfügbar. Weder `lower_value` noch `upper_value` werden erfasst, da Vitest keinen Interquartilsabstand liefert.
+
+Dies kann im <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl mit der Option `--average` angegeben werden.
+
+</details>

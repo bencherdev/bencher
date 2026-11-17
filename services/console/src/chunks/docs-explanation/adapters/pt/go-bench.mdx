@@ -1,9 +1,39 @@
 import Go from "../go.mdx";
+import GoJson from "../go-json.mdx";
 
 ## 🕳 Go Bench
 
-O Adaptador Go Bench (`go_bench`) espera um output de [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks).
-A Medida de `latência` (ou seja, `nanosegundos (ns)`) é coletada.
-Apenas a média (ou seja, `valor`) está disponível. Não existem `valor_inferior` e `valor_superior`.
+O Adaptador Go Bench (`go_bench`) espera a saída do [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks).
 
 <Go />
+
+Sua saída JSON (ou seja, `go test -json`) também é lida, e é tentada primeiro:
+
+<GoJson />
+
+O nome do Benchmark é o pacote, um `.` e o benchmark (ou seja, `example.com/sort.BenchmarkSort`),
+sem seu sufixo `-N` e suas partes `key=value`.
+O sufixo `-N` se torna o Parâmetro `@gomaxprocs`, que é `1` quando o Go não imprime sufixo,
+e cada parte `key=value` do nome de um sub-benchmark se torna um Parâmetro com essa chave, com um valor numérico como número.
+Uma parte com a chave `@gomaxprocs` é contada como ignorada nos avisos do Relatório.
+Com `GOMAXPROCS=1`, o Go não imprime sufixo, então um nome de sub-benchmark que termina em `-N` é lido como esse `@gomaxprocs`.
+
+A Medida `latency` (ou seja, `ns/op`) é coletada em nanossegundos (ns).
+Com `-benchmem`, as Medidas `allocated` (ou seja, `B/op`) e `allocations` (ou seja, `allocs/op`) também são coletadas,
+e com `b.SetBytes`, a Medida `bytes-throughput` (ou seja, `MB/s`) em bytes por segundo.
+Cada unidade personalizada de `b.ReportMetric` é uma Medida nomeada pela unidade como o Go a imprime.
+Em uma única execução, cada valor por operação (ou seja, uma unidade que termina em `/op`) e a taxa `MB/s` é uma `mean`, e um valor em qualquer outra unidade é um `value`.
+Com `-count`, as execuções de cada Variante são combinadas em sua `mean`, `median`, `min`, `max` e `std_dev`.
+
+Com `-count`, defina primeiro um Limiar para a Métrica `median`, com `--threshold-metric median`.
+Em uma única execução, defina primeiro um Limiar para `mean`, ou para `value` em uma unidade personalizada que não termina em `/op`.
+
+<details>
+<summary>BMF versão 0</summary>
+
+Na versão 0 do BMF, apenas a saída de texto é lida, com o nome como o Go o imprime como nome do Benchmark.
+Apenas a Medida `latency` (ou seja, `nanoseconds (ns)`) é coletada.
+Apenas a média (ou seja, `value`) está disponível.
+Nem `lower_value` nem `upper_value` são coletados.
+
+</details>

@@ -2,13 +2,38 @@ import Hyperfine from "../hyperfine.mdx";
 
 ## ❯_️ Shell Hyperfine
 
-Shell Hyperfineアダプター (`shell_hyperfine`) は、[Hyperfine](https://github.com/sharkdp/hyperfine) の出力を [JSON形式（例： `--export-json results.json`）](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)で期待しています。このJSON出力はファイルに保存されるので、そのファイルパスを指定するために `bencher run` CLIの `--file` 引数を使用する必要があります。
-`latency` 測定項目では、（例：`nanoseconds (ns)`）が収集されます。
+Shell Hyperfine アダプター（`shell_hyperfine`）は、[JSON 形式（つまり `--export-json results.json`）](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)の [Hyperfine](https://github.com/sharkdp/hyperfine) の出力を想定しています。
+この JSON 出力はファイルに保存されるため、`bencher run` CLI の `--file` オプションでそのファイルパスを指定する必要があります。
+Hyperfine v1 と v2 の両方の JSON 出力がサポートされています。
 
 <Hyperfine />
 
-メトリックには2つのオプションがあります：
-- `mean`（デフォルト）：`lower_value` と `upper_value` は、それぞれ平均値（`value`）よりも1標準偏差下と上にあります。
-- `median`：`lower_value` と `upper_value` は、それぞれ `min` と `max` の値です。
+各ベンチマークは `--command-name`、それがない場合はコマンドで命名されます。
+その `--parameter-scan` または `--parameter-list` の値と `--env` の変数が、文字列としてパラメータになります。
+例えば、`--command-name sleep --parameter-list n 1,2 'sleep 0.00{n}'` は、ベンチマーク `sleep` に二つのバリアントを与え、
+そのパラメータは `{"n": "1"}` と `{"n": "2"}` です。
+`--command-name` がない場合は、`sleep 0.001` のように各値のコマンドがそれぞれ独自のベンチマークになります。
+`--env 'MODE='` のように空に設定された変数は、パラメータ `{"MODE": ""}` になります。
 
-これは、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドで `--average` オプションを使用して指定できます。
+次のメジャーが収集され、それぞれ `mean`、`median`、`min`、`max`、`std_dev` のメトリックを持ちます:
+- `latency`（つまり `nanoseconds (ns)`）: 実時間（ウォールクロック時間）
+- `user-time` と `system-time`（つまり `nanoseconds (ns)`）
+- Hyperfine v2 では `cpu-time`（つまり `nanoseconds (ns)`）と `peak-memory`（つまり `bytes (B)`）、
+  さらに `--metrics all` を指定すると、ハードウェアカウンター `cycles`、`instructions`、`cache-references`、`cache-misses`、`branch-misses`
+
+Hyperfine v1 では、`user-time` と `system-time` は `mean` のみを持ち、
+`peak-memory` はエクスポートに含まれている場合に収集されます。
+まず `median` メトリックにしきい値を設定してください（`--threshold-metric median`）。
+ただし、Hyperfine v1 の `user-time` と `system-time` では `mean` が最初です。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+`latency` メジャー（つまり `nanoseconds (ns)`）が収集されます。
+メトリックには二つのオプションがあります:
+- `mean`（デフォルト）: `lower_value` と `upper_value` は、それぞれ平均（つまり `value`）から標準偏差一つ分下と上の値です。
+- `median`: `lower_value` と `upper_value` は、それぞれ `min` と `max` の値です。
+
+これは、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドの `--average` オプションで指定できます。
+
+</details>

@@ -2,14 +2,45 @@ import Dotnet from "../dotnet.mdx";
 
 ## #️⃣ C# DotNet
 
-C# DotNet アダプター (`c_sharp_dot_net`) は、[BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) の出力を [JSON フォーマット（例 `--exporters json`）](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson) で期待しています。
-`latency` 測定値（例 `nanoseconds (ns)`）が収集されます。
-この JSON 出力はファイルに保存されるため、ファイルパスを指定するために `bencher run` CLI の `--file` 引数を使用する必要があります。
+C# DotNet アダプター（`c_sharp_dot_net`）は、[JSON 形式（つまり `--exporters json`）](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson)の [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) の出力を想定しています。
+簡易（brief）と完全（full）の両方の JSON エクスポートが読み取られます。
+この JSON 出力はファイルに保存されるため、`bencher run` CLI の `--file` オプションでそのファイルパスを指定する必要があります。
+BenchmarkDotNet はそのファイルにベンチマーククラスとその名前空間にちなんだ名前を付けるため、`Benchmarks` をクラスの完全な名前に置き換えてください。
 
 <Dotnet />
 
-メトリックには2つのオプションがあります:
-- `mean` (デフォルト): `lower_value` と `upper_value` はそれぞれ平均（`value`）より1標準偏差下と上です。
-- `median`: `lower_value` と `upper_value` はそれぞれ中央値（`value`）より1四分位範囲下と上です。
+ベンチマーク名は、引数の手前までの完全な名前（つまり `Namespace.Type.Method`）で、ネストされた型はその `+` を保持します（つまり `Namespace.Outer+Type.Method`）。
+各 `[Params]` と `[Arguments]` の値は、BenchmarkDotNet が出力するとおりの文字列としてパラメータになります。
+ジョブは `@job` パラメータになり、その値は BenchmarkDotNet のサマリーに表示されるとおりのジョブの Id です（つまり `DefaultJob` や `ShortRun`）。
+ランタイムを指定するジョブは `@runtime` パラメータを追加します。
+BenchmarkDotNet が既に読み取ったケースと同じように出力するケースは、レポートの警告でスキップとして数えられます。
 
-これは、`--average` オプションを使用して <code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドで指定できます。
+`latency` メジャーはナノ秒（ns）で収集され、BenchmarkDotNet が報告するすべての統計量を持ちます:
+`mean`、`median`、`min`、`max`、`std_dev`、`std_err`、`p25`、`p75`、`iqr`、`lower_fence`、`upper_fence`、
+パーセンタイル（つまり `p67`、`p80`、`p85`、`p90`、`p95`）、
+および水準付きの平均の区間（つまり `mean_ci99_9_lower`、`mean_ci99_9_upper`、`mean_ci99_9_margin`）です。
+メモリ診断機能（memory diagnoser）を使用すると、`allocated` メジャー（操作あたりのバイト数）と、
+`gen0-collects-per-1000-ops`、`gen1-collects-per-1000-ops`、`gen2-collects-per-1000-ops` の各メジャーも収集され、それぞれ `mean` になります。
+完全なエクスポートのその他の各指標（診断機能によるものなど）は、その ID にちなんで名付けられたメジャーになり、`value` として収集されます。
+
+`latency` では `median` メトリックに（`--threshold-metric median`）、メモリのメジャーでは `mean` に、完全なエクスポートのその他の指標では `value` に、最初にしきい値を設定してください。
+
+BenchmarkDotNet は出力内容を何もエスケープしないため、いくつかのケースは正確に読み取れません:
+`&Name=` を含む値は二つのパラメータとして読み取られ、
+長い値は BenchmarkDotNet が表示するとおりに切り詰められ（つまり `head(...)tail [len]`）、
+`, Runtime=` を含む文字列は `@runtime` として読み取られる場合があります。
+BenchmarkDotNet 0.15.2 より前では、Id のないジョブには実行のたびにランダムな Id が付くため、
+毎回新しいバリアントが始まります。`WithId` でジョブに Id を付けてください。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+BMF バージョン 0 では、ベンチマーク名は `Namespace.Method` で、`latency` メジャー（つまり `nanoseconds (ns)`）が収集されます。
+メモリ診断機能を使用すると、`allocated`、`gen0-collects`、`gen1-collects`、`gen2-collects`、`total-operations` の各メジャーも収集され、それぞれ `value` になります。
+`latency` のメトリックには二つのオプションがあります:
+- `mean`（デフォルト）: `lower_value` と `upper_value` は、それぞれ平均（つまり `value`）から標準偏差一つ分下と上の値です。
+- `median`: `lower_value` と `upper_value` は、それぞれ中央値（つまり `value`）から四分位範囲一つ分下と上の値です。
+
+これは、<code><a href="/ja/docs/explanation/bencher-run/">bencher run</a></code> CLI サブコマンドの `--average` オプションで指定できます。
+
+</details>

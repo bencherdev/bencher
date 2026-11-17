@@ -1,0 +1,6 @@
+```ruby
+Benchmark.ips do |x|
+  x.report("addition") { 1 + 2 }
+  x.json! "results.json"
+end
+```

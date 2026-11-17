@@ -1,9 +1,33 @@
 import CargoRustBench from "../cargo-rust-bench.mdx";
+import CargoRustBenchJson from "../cargo-rust-bench-json.mdx";
 
-## 🦀 러스트 벤치
+## 🦀 Rust Bench
 
-러스트 벤치 어댑터(`rust_bench`)는 [libtest 벤치](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) 출력을 기대합니다.
-`지연 시간` 측정값(즉, `나노초(ns)`)이 수집됩니다.
-`lower_value`와 `upper_value`는 각각 중앙값(즉, `value`) 아래와 위의 편차입니다.
+Rust Bench 어댑터(`rust_bench`)는 [libtest bench](https://doc.rust-lang.org/rustc/tests/index.html#benchmarks) 출력을 입력으로 받습니다.
 
 <CargoRustBench />
+
+nightly Rust에서는 libtest가 결과를 JSON(즉, `-Z unstable-options --format json`)으로도 출력할 수 있으며,
+어댑터는 텍스트 출력보다 이를 먼저 읽습니다:
+
+<CargoRustBenchJson />
+
+각 벤치마크의 이름은 테스트 이름이며, 매개변수는 없습니다.
+`latency` 측정(즉, `nanoseconds (ns)`)은 두 개의 메트릭으로 수집됩니다:
+- `median`: 반복당 시간의 중앙값
+- `range`: libtest의 `+/-` 값으로, 샘플 중 가장 빠른 것과 가장 느린 것 사이의 차이
+
+벤치마크가 반복당 바이트 수(즉, `b.bytes`)를 설정하면,
+`bytes-throughput` 측정(즉, `bytes / second (B/s)`)도 그 `median`으로 수집됩니다.
+먼저 `median` 메트릭에 임계값을 설정하세요(`--threshold-metric median`).
+
+Criterion의 `--output-format bencher` 출력은 libtest와 같은 줄을 출력하므로,
+이 어댑터가 읽으며, Criterion의 표준 편차가 `range`가 됩니다.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+텍스트 출력만 읽으며, `latency` 측정만 수집됩니다.
+`lower_value`와 `upper_value`는 각각 중앙값(즉, `value`) 아래와 위의 편차입니다.
+
+</details>

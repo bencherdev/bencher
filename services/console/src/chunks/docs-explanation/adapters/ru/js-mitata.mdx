@@ -1,0 +1,33 @@
+import MitataJson from "../mitata-json.mdx";
+import NodeJsMitata from "../node-js-mitata.mdx";
+
+## 🕸 JavaScript mitata
+
+Адаптер JavaScript mitata (`js_mitata`) ожидает вывод [mitata](https://github.com/evanwashere/mitata) в формате JSON.
+По умолчанию JSON mitata содержит каждый замер, из-за чего он может оказаться слишком большим для отправки,
+поэтому исключите замеры и отладочную информацию:
+
+<MitataJson />
+
+Больше ничего не печатайте в `stdout`, чтобы адаптер читал только JSON.
+
+<NodeJsMitata />
+
+Каждый Бенчмарк называется по имени своей группы (если она есть) и своему имени в том виде, в каком оно написано, соединенным через ` > `.
+Его `args` являются его Параметрами, поэтому `bench("fill $size", ...).args("size", [64, 128])`
+дает Бенчмарку `fill $size` два Варианта с Параметрами `{"size": 64}` и `{"size": 128}`.
+Аргумент, который не является строкой, числом или логическим значением, сохраняется как его компактный JSON-текст.
+Запуск, который выбрасывает ошибку, учитывается как пропущенный в замечаниях Отчета.
+
+Собираются следующие Измерения:
+- `latency` (то есть `nanoseconds (ns)`): `mean`, `median`, `min`, `max` и перцентили `p25`, `p75`, `p99` и `p99_9`
+- `heap` (то есть `bytes (B)`): оценка mitata для кучи, используемой за итерацию, как `mean`, `min` и `max`
+- `gc-time` (то есть `nanoseconds (ns)`): время сборки мусора, как `mean`, `min` и `max`
+- С [`@mitata/counters`](https://www.npmjs.com/package/@mitata/counters) аппаратные счетчики на итерацию, каждый как `mean`, `min` и `max`:
+  `cycles`, `instructions`, `cache-references`, `cache-misses`, `branches`, `branch-misses`, `stall-cycles`, `loads-and-stores`, `l1-load-misses` и `l1-store-misses`
+
+В первую очередь задайте Порог для Метрики `median` у `latency` с помощью `--threshold-metric median`,
+а для Метрики `mean` у каждого другого Измерения.
+
+Адаптер JavaScript mitata читает результаты только в BMF версии 1.
+Отчет для Проекта с BMF версией 0 отклоняется с ошибкой, в которой сказано, как перевести Проект на BMF версию 1.

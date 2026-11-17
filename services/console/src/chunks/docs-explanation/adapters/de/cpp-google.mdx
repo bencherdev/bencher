@@ -3,7 +3,37 @@ import MakeCppGoogle from "../make-cpp-google.mdx";
 ## ➕ C++ Google
 
 Der C++ Google Adapter (`cpp_google`) erwartet Ausgaben von [Google Benchmark](https://github.com/google/benchmark) im [JSON-Format (d.h. `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
-Die `latency` Messung (d.h. `Nanosekunden (ns)`) wird erfasst.
-Nur der Durchschnittswert (d.h. `value`) ist verfügbar. Es gibt keinen `lower_value` und keinen `upper_value`.
 
 <MakeCppGoogle />
+
+Der Name des Benchmarks ist der Laufname ohne seine Argumente.
+Die Argumente werden zu Parametern:
+Ein benanntes Argument (d.h. `size:64`) behält seinen Namen,
+ein Positionsargument ist `@arg0`, `@arg1` und so weiter nach seiner Position,
+und ein abschließendes `threads:N` Segment aus `Threads()` ist `@threads`.
+Ein benanntes Argument, das wie einer dieser Schlüssel geschrieben ist, wird in den Warnungen des Berichts als übersprungen gezählt.
+
+Die Measures `latency` (Echtzeit) und `cpu-time` werden in Nanosekunden (ns) erfasst.
+Die Raten `bytes_per_second` und `items_per_second` werden als die Measures `bytes-throughput` und `throughput` erfasst,
+und jeder Benutzerzähler als eine Measure, die nach dem Zähler benannt ist.
+Bei einem einzelnen Lauf ist jede Zeit ein `mean`, und jede Rate und jeder Zähler ist ein `value`.
+Mit Wiederholungen (d.h. `--benchmark_repetitions`) werden stattdessen die Aggregate erfasst:
+`mean`, `median`, `std_dev` und jede zeitbasierte Statistik, die mit `ComputeStatistics` hinzugefügt wurde.
+Ein prozentuales Aggregat (d.h. `cv`) wird nicht erfasst.
+Mit einem Memory Manager ist die `allocations` Measure (pro Iteration) ein `mean`,
+und `max_bytes_used`, `total_allocated_bytes` und `net_heap_growth` sind Measures in Bytes, jeweils ein `value`.
+Mit Wiederholungen hat jede Speicher-Measure den `mean`, `median`, `min`, `max` und `std_dev` ihrer Wiederholungen.
+
+BigO- und RMS-Zeilen, fehlerhafte und übersprungene Läufe sowie jeder nicht endliche Wert (d.h. `NaN` oder `Infinity`) werden ebenfalls als übersprungen gezählt.
+
+Legen Sie bei Wiederholungen zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`.
+Legen Sie bei einem einzelnen Lauf zuerst für `mean` einen Schwellenwert fest bei den Zeiten und Allokationen, und für `value` bei den Raten, Zählern und Byte-Anzahlen.
+
+<details>
+<summary>BMF Version 0</summary>
+
+In BMF Version 0 wird nur die `latency` Measure (d.h. `nanoseconds (ns)`) erfasst, mit dem Namen, wie Google Benchmark ihn schreibt, als Name des Benchmarks.
+Nur der Mittelwert (d.h. `value`) ist verfügbar.
+Weder `lower_value` noch `upper_value` werden erfasst.
+
+</details>

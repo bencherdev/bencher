@@ -1,9 +1,46 @@
 import CargoRustCriterion from "../cargo-rust-criterion.mdx";
+import CargoRustCriterionJson from "../cargo-rust-criterion-json.mdx";
 
 ## 🦀 Rust Criterion
 
-Rust Criterionアダプター (`rust_criterion`) は[Criterion](https://github.com/bheisler/criterion.rs)の出力を期待しています。
-`latency` 測定（つまり `ナノ秒 (ns)`）が収集されます。
-`lower_value` と `upper_value` は、利用可能な場合は傾き、そうでない場合は平均（つまり `value`）のそれぞれ下限と上限です。
+Rust Criterion アダプター（`rust_criterion`）は [Criterion](https://github.com/bheisler/criterion.rs) の出力を想定しています。
+最も完全な結果を得るには、[cargo-criterion](https://github.com/bheisler/cargo-criterion) の JSON メッセージ（つまり `--message-format=json`）を使用してください。
+アダプターはテキスト出力よりも先にそれを読み取ります:
+
+<CargoRustCriterionJson />
+
+Criterion のテキスト出力も読み取られます:
 
 <CargoRustCriterion />
+
+各ベンチマークは `fib 20` や `checksum/fold/1024` のような Criterion のベンチマーク ID で命名され、パラメータはありません。
+JSON メッセージからは、`latency` メジャー（つまり `nanoseconds (ns)`）が次のメトリックで収集され、
+それぞれに信頼区間の境界（つまり `mean_ci_lower` と `mean_ci_upper`）が付きます:
+- `typical`: Criterion 自身の推定値。Criterion が `slope` を計算した場合はそれ、そうでない場合は `mean`
+- `mean` と `median`、および Criterion が計算した場合は `slope`
+- `median_abs_dev`: 中央絶対偏差
+
+テキスト出力からは、`latency` メジャーが `typical` として `typical_ci_lower` および `typical_ci_upper` とともに収集されます。
+`--verbose` を指定すると、Criterion は `slope`、`mean`、`std_dev`、`median`、`median_abs_dev` の区間も出力し、
+それらは境界（つまり `mean_ci_lower` と `mean_ci_upper`）として収集されます。
+
+スループットを持つベンチマークは、そのレートを区間の境界とともに `typical` として収集します:
+バイトは `bytes-throughput` メジャー（つまり `bytes / second (B/s)`）に、
+要素は `throughput` メジャー（つまり `operations / second (ops/s)`）に収集されます。
+サイクルを数える Criterion の測定プラグインは `cycles` メジャーに書き込み、
+その他の単位は、その単位にちなんで名付けられた独自のメジャーに書き込みます。
+
+JSON メッセージの場合はまず `median` メトリックにしきい値を設定し（`--threshold-metric median`）、
+テキスト出力の場合はまず `typical` メトリックにしきい値を設定してください（`--threshold-metric typical`）。
+レートには `typical` とその境界しかないため、`bytes-throughput` と `throughput` のメジャーでは `typical` にしきい値を設定してください。
+
+[Rust Divan](/ja/docs/explanation/adapters/#-rust-divan) アダプターは Criterion のテキスト出力よりも先に試されるため、
+一回の `bencher run` で実行するベンチマークハーネスは一つだけにしてください。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+テキスト出力のみが読み取られ、`latency` メジャーのみが収集されます。
+`lower_value` と `upper_value` は、それぞれ傾き（利用可能な場合）または平均（そうでない場合）（つまり `value`）の下限と上限です。
+
+</details>

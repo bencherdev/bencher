@@ -1,9 +1,41 @@
+import CppCatch2Xml from "../cpp-catch2-xml.mdx";
 import MakeCppCatch2 from "../make-cpp-catch2.mdx";
 
 ## ➕ C++ Catch2
 
-Der C++ Catch2 Adapter (`cpp_catch2`) erwartet [Catch2](https://github.com/catchorg/Catch2)-Ausgabe.
-Die `latency` Messung (d.h. `Nanosekunden (ns)`) wird erfasst.
-Die `lower_value` und `upper_value` sind jeweils eine Standardabweichung unter und über dem Mittelwert (d.h. `value`).
+Der C++ Catch2 Adapter (`cpp_catch2`) erwartet Ausgaben von [Catch2](https://github.com/catchorg/Catch2).
+Der XML-Reporter von Catch2 (d.h. `-r xml`) wird zuerst gelesen und liefert die zuverlässigsten Ergebnisse, daher wird er empfohlen:
+
+<CppCatch2Xml />
+
+Die Konsolenausgabe von Catch2 wird ebenfalls gelesen, nach bestem Bemühen:
 
 <MakeCppCatch2 />
+
+Die eigene Ausgabe Ihres Programms innerhalb der Tabelle von Catch2 lässt sich nicht immer von der Ausgabe von Catch2 unterscheiden,
+daher wird der Benchmark, in den sie fällt, in den Warnungen des Berichts als übersprungen gezählt.
+Geben Sie stattdessen auf `stderr` aus oder verwenden Sie den XML-Reporter.
+Auf einer Konsole, die schmaler als 59 Spalten ist, bricht Catch2 den Titel der Tabelle um, sodass jeder Benchmark als übersprungen gezählt wird.
+
+Der Name des Benchmarks besteht aus dem Testfall, jedem Abschnitt und dem Benchmark, getrennt durch Schrägstriche (d.h. `Case / Section / Bench`).
+Es gibt keine Parameter.
+Die `latency` Measure wird in Nanosekunden (ns) erfasst,
+mit dem `mean` und der `std_dev`, jeweils mit den Grenzen ihres Bootstrap-Intervalls.
+Das XML benennt jedes Intervall mit seinem Konfidenzniveau (d.h. `mean_ci95_lower` und `mean_ci95_upper`),
+während die Konsolenausgabe kein Niveau angibt (d.h. `mean_ci_lower` und `mean_ci_upper`).
+Mit `--benchmark-no-analysis` wird nur der `mean` erfasst.
+
+Legen Sie zuerst für die Metrik `mean` einen Schwellenwert fest, mit `--threshold-metric mean`.
+
+Catch2 beendet sich mit einem Fehler, wenn ein Benchmark fehlschlägt, und dann schlägt auch `bencher run` fehl.
+Mit dem Flag `--allow-failure` läuft `bencher run` weiter, verwirft aber die Ausgabe dieser Iteration,
+sodass keines ihrer Ergebnisse gesendet wird.
+
+<details>
+<summary>BMF Version 0</summary>
+
+In BMF Version 0 wird nur die Konsolenausgabe von Catch2 gelesen.
+Die `latency` Measure (d.h. `nanoseconds (ns)`) wird erfasst.
+Die `lower_value` und `upper_value` liegen eine Standardabweichung unterhalb bzw. oberhalb des Mittelwerts (d.h. `value`).
+
+</details>

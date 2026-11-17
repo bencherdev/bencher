@@ -2,8 +2,35 @@ import Java from "../java.mdx";
 
 ## ☕️ Java JMH
 
-Java JMH 适配器（`java_jmh`）期望 [Java 微基准测试工具 (JMH)](https://github.com/openjdk/jmh) 的输出以 [JSON格式（即 `-rf json`）](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java) 出现
-这个 JSON 输出被保存到一个文件中，因此你必须使用 `bencher run` CLI 的 `--file` 参数来指定该文件路径。
-可以收集`延迟`和`吞吐量`度量（即`纳秒（ns）`和`每秒操作数（ops/sec）`）。`lower_value` 和 `upper_value` 分别是均值（即`value`）的下限和上限置信区间。
+Java JMH 适配器（`java_jmh`）接受 [JSON 格式（即 `-rf json`）](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java)的 [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) 输出。
+此 JSON 输出保存在文件中，因此您必须使用 `bencher run` CLI 的 `--file` 选项来指定该文件路径。
 
 <Java />
+
+基准测试名称是 JMH 为基准测试所起的名称（即 `org.example.MyBenchmark.hash`）。
+每个 `@Param` 都成为一个参数，其值为字符串，
+模式成为 `@mode` 参数（即 `thrpt`、`avgt`、`sample` 或 `ss`）。
+参数超过 8 个的变体会在报告的警告中计为已跳过。
+
+主分数收集到其模式对应的度量中：
+`thrpt` 对应 `throughput`（即 `operations / second (ops/s)`），
+`avgt`、`sample` 和 `ss` 分别对应 `latency`、`sample-time` 和 `single-shot-time`（即 `nanoseconds (ns)`）。
+其指标为带有 JMH 99.9% 区间的 `mean`（即 `mean_ci99_9_lower` 和 `mean_ci99_9_upper`），
+以及 JMH 报告的百分位数：`min`、`median`、`p90`、`p95`、`p99`、`p99_9`、`p99_99`、`p99_999`、`p99_9999` 和 `max`。
+
+与主分数单位相同的次要结果（`@AuxCounters` 操作计数器或 `@Group` 成员），
+会收集到同一个度量中的独立变体上，其标签作为 `@label` 参数。
+其他所有次要结果（例如 `-prof gc` 的结果）都是以其标签命名的度量，单位与 JMH 写出的一致。
+JMH 求和的次要结果有一个 `sum` 指标，取代 `mean` 及其区间。
+没有有限值的次要结果会被丢弃，
+标签与主分数的度量相同（即 `latency`）的次要结果会计为已跳过。
+
+请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+在 BMF 版本 0 中，可能会收集 `latency` 和 `throughput` 两个度量（即 `nanoseconds (ns)` 和 `operations / second (ops/s)`）。
+`lower_value` 和 `upper_value` 分别是平均值（即 `value`）的置信区间下限和上限。
+
+</details>

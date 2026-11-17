@@ -1,12 +1,36 @@
-Os adaptadores convertem a saída do harness de benchmark para o formato JSON do [Bencher Metric Format (BMF)][bmf].
+Os adaptadores convertem a saída de um harness de benchmark em [Bencher Metric Format (BMF) JSON][bmf].
 Os adaptadores são executados no servidor da API quando um novo relatório é recebido.
 Veja [a visão geral de benchmarking][benchmarking overview] para mais detalhes.
 Um adaptador pode ser especificado para [o subcomando CLI `bencher run`][bencher run]
 com a opção `--adapter`.
 Se nenhum adaptador for especificado, [o adaptador `magic`][magic adapter] é usado por padrão.
 
+Cada adaptador escreve seus resultados na versão do BMF do Relatório,
+que é a versão do BMF do Projeto, a menos que o Relatório declare uma.
+Um Projeto novo começa na versão 1 do BMF.
+Na versão 1 do BMF, um adaptador escreve:
+- cada estatística que o harness informa como sua própria Métrica nomeada, como `mean`, `median` ou `p99`
+- Parâmetros a partir da própria estrutura do harness, de modo que um Benchmark pode ter várias Variantes
+- cada Medida que o harness informa
+
+Para armazenar apenas algumas dessas Medidas, liste-as com a opção `--measure` da CLI `bencher run`.
+O servidor da API descarta todas as outras Medidas antes de armazenar o Relatório.
+Apenas as primeiras 64 Medidas listadas são mantidas, e o Relatório avisa sobre o restante.
+
+Cada adaptador abaixo indica a Métrica para a qual definir um Limiar primeiro.
+É a Métrica que a saída da execução e o comentário do pull request mostram para uma Medida que nenhum Limiar verifica ainda.
+Indique-a com a opção `--threshold-metric` quando [criar um Limiar][thresholds].
+As opções `--average` e `--fold` são apenas para a versão 0 do BMF.
+Na versão 1 do BMF, ambas são ignoradas com um aviso no Relatório.
+
+Os adaptadores Rust Divan, JavaScript tinybench, JavaScript Deno, JavaScript mitata e Ruby benchmark-ips leem resultados apenas na versão 1 do BMF.
+O nome de um Benchmark na versão 1 do BMF pode ser diferente do seu nome na versão 0 do BMF,
+então um Projeto que passa da versão 0 do BMF para a versão 1 do BMF pode recomeçar alguns dos seus Benchmarks do zero.
+Quando um adaptador também lê resultados na versão 0 do BMF, sua seção termina explicando como ele faz isso.
+
 [bmf]: /pt/docs/reference/bencher-metric-format/
 [benchmarking overview]: /pt/docs/explanation/benchmarking/
 [bencher run]: /pt/docs/explanation/bencher-run/
+[thresholds]: /pt/docs/explanation/thresholds/
 
 [magic adapter]: #-magic-default

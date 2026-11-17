@@ -1,10 +1,17 @@
-## 🪄 Magic <small>（デフォルト）</small>
+## 🪄 Magic <small>(default)</small>
 
-Magic アダプター（`magic`）は他のすべてのアダプターのスーパーセットです。
+Magic アダプター（`magic`）は、他のすべてのアダプターのスーパーセットです。
 そのため、`bencher run` のデフォルトアダプターになっています。
-ただし、`magic` アダプターは探索目的でのみ使用するべきです。
+ただし、`magic` アダプターは探索目的でのみ使用してください。
 
-最良の結果を得るには、ベンチマークハーネス用のアダプターを指定してください:
+BMF バージョン 1 では、`magic` アダプターはまず [`json` アダプター](#-json)を試し、
+次に下のリストの順に各ハーネスアダプターを試します。
+その際、ハーネスのテキスト出力よりも先に構造化された出力を読み取ります。
+何らかの結果を読み取れた最初のアダプターが使用されるため、
+一回の `bencher run` で実行するベンチマークハーネスは一つだけにしてください。
+BMF バージョン 1 のプロジェクトに対する BMF バージョン 0 のペイロードは、両方のバージョンを示すエラーで拒否されます。
+
+最良の結果を得るには、ベンチマークハーネスのアダプターを指定してください:
 
 - [\{...\} JSON](#-json)
 - [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
@@ -16,10 +23,15 @@ Magic アダプター（`magic`）は他のすべてのアダプターのスー�
 - [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
 - [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
 - [🕸 JavaScript Vitest](#-javascript-vitest)
+- [🕸 JavaScript Deno bench](#-javascript-deno)
+- [🕸 JavaScript mitata](#-javascript-mitata)
+- [🕸 JavaScript tinybench](#-javascript-tinybench)
 - [🐍 Python airspeed velocity (asv)](#-python-asv)
 - [🐍 Python pytest-benchmark](#-python-pytest)
 - [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [♦️ Ruby benchmark-ips](#%EF%B8%8F-ruby-benchmark-ips)
 - [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Divan](#-rust-divan)
 - [🦀 Rust Criterion](#-rust-criterion)
 - [🦀 Rust Iai](#-rust-iai)
 - [🦀 Rust Gungraun](#-rust-gungraun)

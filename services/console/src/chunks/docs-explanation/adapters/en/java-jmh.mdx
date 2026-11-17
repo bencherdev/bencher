@@ -4,7 +4,33 @@ import Java from "../java.mdx";
 
 The Java JMH Adapter (`java_jmh`) expects [Java Microbenchmark Harness (JMH)](https://github.com/openjdk/jmh) output in [JSON format (ie `-rf json`)](https://github.com/openjdk/jmh/blob/master/jmh-core/src/main/java/org/openjdk/jmh/results/format/ResultFormatType.java).
 This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
-Both `latency` and `throughput` Measures (ie `nanoseconds (ns)` and `operations / second (ops/sec)`) may be gathered.
-The `lower_value` and `upper_value` are the lower and upper confidence intervals for the mean (ie `value`) respectively.
 
 <Java />
+
+The Benchmark name is the benchmark as JMH names it (ie `org.example.MyBenchmark.hash`).
+Each `@Param` becomes a Parameter, with its value as a string,
+and the mode becomes the `@mode` Parameter (ie `thrpt`, `avgt`, `sample`, or `ss`).
+A Variant with more than 8 Parameters is counted as skipped in the Report's warnings.
+
+The primary score is gathered in the Measure of its mode:
+`throughput` (ie `operations / second (ops/s)`) for `thrpt`,
+and `latency`, `sample-time`, and `single-shot-time` (ie `nanoseconds (ns)`) for `avgt`, `sample`, and `ss` respectively.
+Its Metrics are the `mean` with JMH's 99.9% interval (ie `mean_ci99_9_lower` and `mean_ci99_9_upper`),
+and the percentiles JMH reports: `min`, `median`, `p90`, `p95`, `p99`, `p99_9`, `p99_99`, `p99_999`, `p99_9999`, and `max`.
+
+A secondary result in the primary score's unit, an `@AuxCounters` operations counter or a `@Group` member,
+is gathered in the same Measure on its own Variant, with its label as the `@label` Parameter.
+Every other secondary result, such as those of `-prof gc`, is a Measure named by its label, in its unit as JMH writes it.
+A secondary result that JMH sums has a `sum` Metric in place of the `mean` and its interval.
+A secondary result with no finite value is dropped,
+and one labeled like a Measure of the primary score (ie `latency`) is counted as skipped.
+
+Threshold the `median` Metric first, with `--threshold-metric median`.
+
+<details>
+<summary>BMF version 0</summary>
+
+At BMF version 0, both `latency` and `throughput` Measures (ie `nanoseconds (ns)` and `operations / second (ops/s)`) may be gathered.
+The `lower_value` and `upper_value` are the lower and upper confidence intervals for the mean (ie `value`) respectively.
+
+</details>

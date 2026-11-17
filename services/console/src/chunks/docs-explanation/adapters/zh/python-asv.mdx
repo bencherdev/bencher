@@ -1,9 +1,47 @@
+import AsvJson from "../asv-json.mdx";
 import Asv from "../asv.mdx";
 
 ## 🐍 Python ASV
 
-Python ASV 适配器（`python_asv`）期望 [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) 输出。
-将收集 `延迟` 测量值（即 `纳秒 (ns)`）。
-`lower_value` 和 `upper_value` 分别是中位数（即 `value`）以下和以上的四分位距。
+Python ASV 适配器（`python_asv`）接受 [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) 的输出。
+要获得最完整的结果，请使用 `bencher run` CLI 的 `--file` 选项，
+读取 `asv run` 为该提交和环境写入的结果文件：
+
+<AsvJson />
+
+该文件位于 asv 的 `results_dir`（默认为 `results`）下，
+在以机器命名的目录中，文件名以提交哈希的前 8 个字符开头。
+
+结果文件会被单独读取，格式为 asv 0.5 及更高版本写入的格式。
+请运行 `asv update` 来转换较旧版本 asv 写入的结果。
+`asv run` 打印的文本也会被读取：
 
 <Asv />
+
+每个基准测试以其点分名称命名，例如 `benchmarks.TimeSuite.time_sort`。
+参数化的基准测试对其参数的每种组合都有一个变体。
+从结果文件中，参数以位置为键，即 `@param0`、`@param1` 等。
+从文本中，参数以 asv 打印的参数名称为键。
+因此这两种格式会给同一个基准测试不同的变体：请选定一种并坚持使用。
+
+收集以下度量：
+- `latency`（即 `nanoseconds (ns)`），用于 `time_` 基准测试：从结果文件中收集 `median`、`p25`、`p75`，以及中位数的 99% 置信区间 `median_ci99_lower` 和 `median_ci99_upper`；从文本中收集 `median` 和四分位距 `iqr`
+- `memory`（即 `bytes (B)`），用于 `mem_` 基准测试：`value`
+- `peak-memory`（即 `bytes (B)`），用于 `peakmem_` 基准测试：`value`
+
+`track_` 基准测试会在报告的警告中计为已跳过，因为其单位既不在结果文件中，也不在文本中。
+对于 `latency`，请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`；
+对于 `memory` 和 `peak-memory`，请首先为 `value` 指标设置阈值。
+
+当任何基准测试失败时，`asv run` 会以非零代码退出，此时 `bencher run` 也会失败。
+使用 `bencher run` CLI 的 `--allow-failure` 标志时，运行会继续，
+但失败命令的输出不会被发送，因此报告中没有来自它的结果。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+只读取 `asv run` 打印的文本。
+收集 `latency` 度量（即 `nanoseconds (ns)`）。
+`lower_value` 和 `upper_value` 分别是低于和高于中位数（即 `value`）的四分位距。
+
+</details>

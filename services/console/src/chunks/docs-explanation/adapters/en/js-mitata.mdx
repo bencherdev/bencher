@@ -1,0 +1,33 @@
+import MitataJson from "../mitata-json.mdx";
+import NodeJsMitata from "../node-js-mitata.mdx";
+
+## 🕸 JavaScript mitata
+
+The JavaScript mitata Adapter (`js_mitata`) expects [mitata](https://github.com/evanwashere/mitata) output in JSON format.
+mitata's JSON holds every sample by default, which can make it too large to send,
+so leave out the samples and the debug information:
+
+<MitataJson />
+
+Print nothing else to `stdout`, so the JSON is all the adapter reads.
+
+<NodeJsMitata />
+
+Each Benchmark is named by its group's name (when it has one) and its name as written, joined with ` > `.
+Its `args` are its Parameters, so `bench("fill $size", ...).args("size", [64, 128])`
+gives the Benchmark `fill $size` two Variants, with the Parameters `{"size": 64}` and `{"size": 128}`.
+An argument that is not a string, a number, or a boolean is stored as its compact JSON text.
+A run that throws an error is counted as skipped in the Report's warnings.
+
+These Measures are gathered:
+- `latency` (ie `nanoseconds (ns)`): `mean`, `median`, `min`, `max`, and the `p25`, `p75`, `p99`, and `p99_9` percentiles
+- `heap` (ie `bytes (B)`): mitata's estimate of the heap used per iteration, as `mean`, `min`, and `max`
+- `gc-time` (ie `nanoseconds (ns)`): the time of a garbage collection, as `mean`, `min`, and `max`
+- With [`@mitata/counters`](https://www.npmjs.com/package/@mitata/counters), the hardware counters per iteration, each as `mean`, `min`, and `max`:
+  `cycles`, `instructions`, `cache-references`, `cache-misses`, `branches`, `branch-misses`, `stall-cycles`, `loads-and-stores`, `l1-load-misses`, and `l1-store-misses`
+
+Threshold the `median` Metric first for `latency`, with `--threshold-metric median`,
+and the `mean` Metric for every other Measure.
+
+The JavaScript mitata Adapter reads results at BMF version 1 only.
+A Report for a Project at BMF version 0 is refused with an error that says how to move the Project to BMF version 1.

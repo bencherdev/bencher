@@ -1,0 +1,22 @@
+import TinybenchJson from "../tinybench-json.mdx";
+import NodeJsTinybench from "../node-js-tinybench.mdx";
+
+## 🕸 JavaScript tinybench
+
+Der JavaScript tinybench Adapter (`js_tinybench`) erwartet Aufgaben von [tinybench](https://github.com/tinylibs/tinybench) 6 im JSON-Format.
+tinybench schreibt keine eigene Ausgabe, geben Sie seine Aufgaben also nach `await bench.run()` mit dieser einen Zeile aus:
+
+<TinybenchJson />
+
+Geben Sie nichts anderes auf `stdout` aus, damit das JSON alles ist, was der Adapter liest.
+
+<NodeJsTinybench />
+
+Jeder Benchmark wird nach dem Namen seiner Aufgabe benannt, ohne Parameter.
+Eine Aufgabe, die einen bereits gelesenen Namen wiederholt oder keine Statistiken hat, wird in den Warnungen des Berichts als übersprungen gezählt.
+Sowohl die `latency` Measure (d.h. `nanoseconds (ns)`) als auch die `throughput` Measure (d.h. `operations / second (ops/s)`) werden erfasst,
+mit denselben Metriken wie bei [Vitest 5](#-javascript-vitest).
+Legen Sie zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`.
+
+Der JavaScript tinybench Adapter liest Ergebnisse nur in BMF Version 1.
+Ein Bericht für ein Projekt in BMF Version 0 wird mit einem Fehler abgelehnt, der erklärt, wie das Projekt auf BMF Version 1 umgestellt wird.

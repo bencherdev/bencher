@@ -1,14 +1,42 @@
 import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+import CargoRustGungraunJson from "../cargo-rust-gungraun-json.mdx";
 
 ## 🦀 Rust Gungraun
 
-Rust Gungraun 어댑터(`rust_gungraun`)는 [Gungraun](https://github.com/gungraun/gungraun) 출력 형식을 기대합니다.
-`instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write`, 및 `estimated-cycles` 측정값은 기본적으로 수집됩니다. Gungraun이 생성할 수 있는 추가 Callgrind, Cachegrind 및 DHAT 메트릭도 지원됩니다.
-이러한 측정값에 대해서는 보고된 값(즉 `value`)만 제공됩니다.
-`lower_value`나 `upper_value`는 수집되지 않습니다.
-이 어댑터의 측정값은 모든 프로젝트에 기본으로 생성되지는 않습니다.
-그러나 이 어댑터를 사용하면 해당 측정값이 프로젝트에 자동으로 생성됩니다.
+Rust Gungraun 어댑터(`rust_gungraun`)는 [Gungraun](https://github.com/gungraun/gungraun) 출력을 입력으로 받습니다.
+가장 완전한 결과를 얻으려면 Gungraun이 JSON 요약(즉, `GUNGRAUN_OUTPUT_FORMAT=json`)을 출력하도록 하세요.
+어댑터는 텍스트 출력보다 이를 먼저 읽습니다.
+요약 스키마 6과 7을 읽습니다.
 
-Gungraun은 Iai-Callgrind의 개명된 후속 프로젝트입니다.
+<CargoRustGungraunJson />
+
+Gungraun의 텍스트 출력도 읽습니다:
 
 <CargoRustGungraun />
+
+JSON 요약에서는 각 벤치마크의 이름이 모듈 경로이며, 그 `id`는 `@id` 매개변수가 됩니다.
+텍스트 출력에서는 각 벤치마크의 이름이 첫 번째 줄 전체입니다.
+따라서 두 형식은 같은 벤치마크에 서로 다른 이름을 붙입니다. 하나를 골라 계속 사용하세요.
+벤치마크를 실행하는 각 도구(예: `callgrind`, `cachegrind`, `dhat`)는 `@tool` 매개변수를 가진 별도의 변형입니다.
+텍스트 출력에서 도구 헤더가 없는 섹션은 `callgrind`입니다.
+
+`instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write`, `estimated-cycles` 측정은 기본적으로 수집됩니다.
+Callgrind, Cachegrind, DHAT, Memcheck, Helgrind, DRD가 보고하는 그 밖의 모든 카운터도 각각 별도의 측정으로 수집됩니다.
+각 카운터는 정확한 개수이며 하나의 `value` 메트릭으로 수집되고, 이것이 먼저 임계값을 설정할 메트릭입니다.
+`perf` 이벤트는 샘플의 `mean` 또는 하나의 `value`로 수집되며, 그 메트릭이 먼저 임계값을 설정할 메트릭입니다.
+스키마 7에서는 각 도구의 실행 시간도 `profile-time` 측정(즉, `nanoseconds (ns)`)으로 수집됩니다.
+시스템 호출에 쓰인 시간은 출력에 그 단위가 나와 있지 않으므로 건너뜁니다.
+이 어댑터의 측정은 모든 프로젝트에 기본적으로 생성되지 않습니다.
+하지만 이 어댑터를 사용하면 이 측정들이 프로젝트에 자동으로 생성됩니다.
+
+Gungraun은 Iai-Callgrind의 이름을 바꾼 후속 프로젝트입니다.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+텍스트 출력과 스키마 6 JSON 요약을 읽습니다.
+JSON 요약에서는 각 벤치마크의 이름이 모듈 경로와 그 `id`를 `::`로 이은 것입니다.
+각 카운터는 `value`로 수집되며, `lower_value`와 `upper_value`는 모두 수집되지 않습니다.
+둘 이상의 도구가 벤치마크를 실행하면, 도구들이 공유하는 카운터는 한 도구의 값만 유지합니다.
+
+</details>

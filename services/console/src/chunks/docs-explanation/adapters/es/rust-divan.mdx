@@ -1,0 +1,30 @@
+import CargoRustDivan from "../cargo-rust-divan.mdx";
+
+## 🦀 Rust Divan
+
+El adaptador Rust Divan (`rust_divan`) espera la salida de [Divan](https://github.com/nvzqz/divan).
+
+<CargoRustDivan />
+
+Cada Benchmark se nombra por su ruta en el árbol de Divan, desde el objetivo de benchmark hasta su fila, unida con `::`.
+Por ejemplo, `shapes::generic_args::Vec<u32>::4` o `alloc::threaded_alloc::t=2`.
+Divan imprime un tipo, una constante, un argumento y un número de hilos igual que un módulo,
+así que cada uno de ellos se queda en el nombre, y no hay Parámetros.
+El nombre de un tipo viene de `std::any::type_name` de Rust, que puede cambiar entre toolchains de Rust,
+y entonces el nombre del Benchmark cambia con él.
+
+La Medida `latency` (es decir, `nanoseconds (ns)`) se recoge con las Métricas `min`, `max`, `median` y `mean`.
+Las tasas y los conteos de asignaciones de Divan se recogen cada uno como su propia Medida:
+- tasas: `bytes-throughput`, `throughput` (elementos), `chars-throughput` y `cycles-throughput`, cada una por segundo
+- asignaciones: `allocations` y `allocated`, `deallocations` y `deallocated`, `grows` y `grown`, `shrinks` y `shrunk`, y `max-allocations` y `max-allocated`, cada par un conteo y sus bytes
+
+Estas Medidas conservan los nombres de columna propios de Divan como Métricas: `fastest`, `slowest`, `median` y `mean`.
+Sus `fastest` y `slowest` son los valores en la muestra más rápida y más lenta por tiempo,
+no los valores más bajos y más altos de la Medida.
+Pon un Umbral primero a la Métrica `median`, con `--threshold-metric median`.
+
+Una línea dentro del árbol de Divan que Divan no imprimió, como la propia salida de tu benchmark, se cuenta como omitida en las advertencias del Informe.
+Imprime en `stderr` en su lugar, y ejecuta solo un arnés de benchmark por cada `bencher run`.
+
+El adaptador Rust Divan solo lee resultados en la versión 1 de BMF.
+Un Informe para un Proyecto en la versión 0 de BMF se rechaza con un error que explica cómo pasar el Proyecto a la versión 1 de BMF.

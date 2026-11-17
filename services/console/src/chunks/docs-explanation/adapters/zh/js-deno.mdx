@@ -1,0 +1,24 @@
+import DenoBench from "../deno-bench.mdx";
+
+## 🕸 JavaScript Deno
+
+JavaScript Deno 适配器（`js_deno`）接受 JSON 格式（即 `--json`）的 [`deno bench`](https://docs.deno.com/runtime/reference/cli/bench/) 输出。
+不要在基准测试文件的顶层打印任何内容，使适配器读取的只有 JSON。
+
+<DenoBench />
+
+每个基准测试的名称由以下部分用 ` > ` 连接而成：其文件（相对于 JSON 输出中所有文件的共同目录），
+然后是其分组（如果有）和名称。
+例如 `sub/deep_bench.ts > noop`。
+没有参数。
+`latency` 度量（即 `nanoseconds (ns)`）以下列指标收集：
+- `mean`、`min` 和 `max`
+- `p75`、`p99`、`p99_5` 和 `p99_9`：第 75、99、99.5 和 99.9 百分位数
+
+Deno 不报告中位数，因此请首先为 `mean` 指标设置阈值，使用 `--threshold-metric mean`。
+失败的基准测试会在报告的警告中计为已跳过。
+当两个基准测试同名时，Deno 会将两者都报告在第一个名下，因此只保留第一个结果，另一个计为已跳过。
+只读取 Deno JSON 格式的版本 1。
+
+JavaScript Deno 适配器仅读取 BMF 版本 1 的结果。
+对于 BMF 版本 0 的项目，其报告会被拒绝，错误信息会说明如何将项目迁移到 BMF 版本 1。

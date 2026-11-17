@@ -1,9 +1,46 @@
 import CargoRustCriterion from "../cargo-rust-criterion.mdx";
+import CargoRustCriterionJson from "../cargo-rust-criterion-json.mdx";
 
 ## 🦀 Rust Criterion
 
 The Rust Criterion Adapter (`rust_criterion`) expects [Criterion](https://github.com/bheisler/criterion.rs) output.
-The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
-The `lower_value` and `upper_value` are the lower and upper bounds of either the slope (if available) or the mean (if not) (ie `value`) respectively.
+For the most complete results, use [cargo-criterion](https://github.com/bheisler/cargo-criterion)'s JSON messages (ie `--message-format=json`),
+which the adapter reads before the text output:
+
+<CargoRustCriterionJson />
+
+Criterion's text output is also read:
 
 <CargoRustCriterion />
+
+Each Benchmark is named by its Criterion benchmark id, such as `fib 20` or `checksum/fold/1024`, with no Parameters.
+From the JSON messages, the `latency` Measure (ie `nanoseconds (ns)`) is gathered with these Metrics,
+each with the bounds of its confidence interval (ie `mean_ci_lower` and `mean_ci_upper`):
+- `typical`: Criterion's own estimate, the `slope` when Criterion computes one and the `mean` otherwise
+- `mean` and `median`, and the `slope` when Criterion computes one
+- `median_abs_dev`: the median absolute deviation
+
+From the text output, the `latency` Measure is gathered as `typical` with `typical_ci_lower` and `typical_ci_upper`.
+With `--verbose`, Criterion also prints the intervals of the `slope`, `mean`, `std_dev`, `median`, and `median_abs_dev`,
+which are gathered as their bounds (ie `mean_ci_lower` and `mean_ci_upper`).
+
+A benchmark with a throughput gathers its rate as `typical` with the bounds of its interval:
+bytes in the `bytes-throughput` Measure (ie `bytes / second (B/s)`),
+and elements in the `throughput` Measure (ie `operations / second (ops/s)`).
+A Criterion measurement plugin that counts cycles writes to the `cycles` Measure,
+and any other unit writes to a Measure of its own, named for its unit.
+
+Threshold the `median` Metric first for the JSON messages, with `--threshold-metric median`,
+and the `typical` Metric first for the text output, with `--threshold-metric typical`.
+A rate has only `typical` and its bounds, so threshold `typical` for the `bytes-throughput` and `throughput` Measures.
+
+The [Rust Divan](/docs/explanation/adapters/#-rust-divan) adapter is tried before Criterion's text output,
+so run only one benchmark harness per `bencher run`.
+
+<details>
+<summary>BMF version 0</summary>
+
+Only the text output is read, and only the `latency` Measure is gathered.
+The `lower_value` and `upper_value` are the lower and upper bounds of either the slope (if available) or the mean (if not) (ie `value`) respectively.
+
+</details>

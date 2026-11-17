@@ -1,9 +1,22 @@
 import NodeJsBenchmark from "../node-js-benchmark.mdx";
 
-## 🕸 JavaScript 基准测试
+## 🕸 JavaScript Benchmark
 
-JavaScript 基准测试适配器（`js_benchmark`）需要 [Benchmark.js](https://github.com/bestiejs/benchmark.js) 的输出。
-收集的是 `throughput` 测量值（即 `每秒操作数（ops/sec）`）。
-`lower_value` 和 `upper_value` 是相对于中值（即 `value`）的下方和上方的误差幅度。
+JavaScript Benchmark 适配器（`js_benchmark`）接受 [Benchmark.js](https://github.com/bestiejs/benchmark.js) 的输出。
+每个基准测试以 Benchmark.js 打印的名称命名，没有参数。
+`throughput` 度量（即 `operations / second (ops/s)`）以下列指标收集：
+- `mean`：Benchmark.js 打印的速率
+- `mean_ci95_lower` 和 `mean_ci95_upper`：95% 置信区间，根据 Benchmark.js 打印在速率旁的相对误差范围计算
+
+只运行一次的基准测试只有其 `mean`。
+请首先为 `mean` 指标设置阈值，使用 `--threshold-metric mean`。
 
 <NodeJsBenchmark />
+
+<details>
+<summary>BMF 版本 0</summary>
+
+收集 `throughput` 度量（即 `operations / second (ops/s)`）。
+`lower_value` 和 `upper_value` 分别是低于和高于中位数（即 `value`）的相对误差范围。
+
+</details>

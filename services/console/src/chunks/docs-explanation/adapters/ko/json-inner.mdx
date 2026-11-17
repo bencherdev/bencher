@@ -2,13 +2,33 @@ import BencherMock from "../bencher-mock.mdx";
 
 ## \{...\} JSON
 
-JSON 어댑터(`json`)은 [Bencher 메트릭 포맷 (BMF) JSON][bmf]을 기대합니다.
-이는 벤처와 맞춤 벤치마크 하네스를 통합하기에 완벽합니다.
-자세한 내용은 [맞춤 벤치마크 추적 방법][custom benchmarks]과
-[BMF JSON 참조][bmf]를 참조하세요.
+JSON 어댑터(`json`)는 [Bencher Metric Format (BMF) JSON][bmf]을 입력으로 받습니다.
+사용자 정의 벤치마크 하네스를 Bencher와 통합하는 데 적합합니다.
+자세한 내용은 [사용자 정의 벤치마크를 추적하는 방법][custom benchmarks]과
+[BMF JSON 레퍼런스][bmf]를 참조하세요.
 
 {props.children}
 
+`json` 어댑터는 보고서의 BMF 버전으로 페이로드를 읽으며,
+보고서가 버전을 선언하지 않는 한 이는 프로젝트의 BMF 버전입니다.
+BMF 버전 1에서는 변형의 각 측정이 이름이 있는 메트릭을 담습니다.
+어떤 프로젝트에서든 페이로드의 버전을 선언하려면 `json` 어댑터의 두 버전 중 하나를 사용하세요:
+- `json_v1`: `bencher run --adapter json_v1`은 BMF 버전 1을 선언합니다
+- `json_v0`: `bencher run --adapter json_v0`은 BMF 버전 0을 선언합니다
+
+예상한 버전으로 파싱되지 않는 페이로드는
+어떤 버전으로 파싱되었는지와 예상한 버전이 어디에서 왔는지를 밝히는 오류와 함께 거부됩니다.
+먼저 임계값을 설정할 메트릭은 측정에 있으면 `value`,
+그다음 `median`, 그다음 `mean`이며, 그 외에는 알파벳순으로 첫 번째 메트릭 이름입니다.
+이때 `mean_ci_lower` 같은 구간 경계보다 일반 통계가 먼저 옵니다.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+BMF 버전 0에서는 각 측정이 `value`와 선택 사항인 `lower_value` 및 `upper_value`를 담습니다.
+측정 안의 다른 이름은 무시됩니다.
+
+</details>
+
 [bmf]: /ko/docs/reference/bencher-metric-format/
-[bencher run]: /ko/docs/explanation/bencher-run/#benchmark-command
 [custom benchmarks]: /ko/docs/how-to/track-custom-benchmarks/

@@ -2,8 +2,38 @@ import MakeCppGoogle from "../make-cpp-google.mdx";
 
 ## ➕ C++ Google
 
-El Adaptador de Google C++ (`cpp_google`) espera salida de [Google Benchmark](https://github.com/google/benchmark) en [formato JSON (es decir, `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
-Se recopila la medida de `latencia` (es decir, `nanosegundos (ns)`).
-Solo está disponible el promedio (es decir, `value`). No hay `lower_value` ni `upper_value`.
+El adaptador C++ Google (`cpp_google`) espera la salida de [Google Benchmark](https://github.com/google/benchmark) en [formato JSON (es decir, `--benchmark_format=json`)](https://github.com/google/benchmark/blob/main/docs/user_guide.md#output-formats).
 
 <MakeCppGoogle />
+
+El nombre del Benchmark es el nombre de la ejecución sin sus argumentos.
+Los argumentos se convierten en Parámetros:
+un argumento con nombre (es decir, `size:64`) conserva su nombre,
+un argumento posicional es `@arg0`, `@arg1`, y así sucesivamente según su posición,
+y un segmento final `threads:N` de `Threads()` es `@threads`.
+Un argumento con nombre escrito como una de estas claves se cuenta como omitido en las advertencias del Informe.
+
+Las Medidas `latency` (tiempo real) y `cpu-time` se recogen en nanosegundos (ns).
+Las tasas `bytes_per_second` e `items_per_second` se recogen como las Medidas `bytes-throughput` y `throughput`,
+y cada contador de usuario como una Medida nombrada por el contador.
+En una sola ejecución, cada tiempo es una `mean`, y cada tasa y contador es un `value`.
+Con repeticiones (es decir, `--benchmark_repetitions`), se recogen en su lugar los agregados:
+`mean`, `median`, `std_dev` y cualquier estadística en tiempo añadida con `ComputeStatistics`.
+Un agregado en porcentaje (es decir, `cv`) no se recoge.
+Con un gestor de memoria, la Medida `allocations` (por iteración) es una `mean`,
+y `max_bytes_used`, `total_allocated_bytes` y `net_heap_growth` son Medidas en bytes, cada una un `value`.
+Con repeticiones, cada Medida de memoria tiene la `mean`, `median`, `min`, `max` y `std_dev` de sus repeticiones.
+
+Las filas BigO y RMS, las ejecuciones con error y omitidas, y cada valor que no es finito (es decir, `NaN` o `Infinity`) también se cuentan como omitidos.
+
+Con repeticiones, pon un Umbral primero a la Métrica `median`, con `--threshold-metric median`.
+En una sola ejecución, pon un Umbral primero a `mean` para los tiempos y las asignaciones, y a `value` para las tasas, los contadores y los conteos de bytes.
+
+<details>
+<summary>BMF versión 0</summary>
+
+En la versión 0 de BMF, solo se recoge la Medida `latency` (es decir, `nanoseconds (ns)`), con el nombre tal como lo escribe Google Benchmark como nombre del Benchmark.
+Solo la media (es decir, `value`) está disponible.
+No se recogen ni `lower_value` ni `upper_value`.
+
+</details>

@@ -1,15 +1,42 @@
 import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+import CargoRustGungraunJson from "../cargo-rust-gungraun-json.mdx";
 
 ## 🦀 Rust Gungraun
 
 The Rust Gungraun Adapter (`rust_gungraun`) expects [Gungraun](https://github.com/gungraun/gungraun) output.
+For the most complete results, have Gungraun print its JSON summaries (ie `GUNGRAUN_OUTPUT_FORMAT=json`),
+which the adapter reads before the text output.
+Summary schemas 6 and 7 are read.
+
+<CargoRustGungraunJson />
+
+Gungraun's text output is also read:
+
+<CargoRustGungraun />
+
+From the JSON summaries, each Benchmark is named by its module path, and its `id` is the `@id` Parameter.
+From the text output, each Benchmark is named by its whole first line.
+So the two formats give the same benchmark different names: pick one and keep it.
+Each tool that runs a benchmark (such as `callgrind`, `cachegrind`, or `dhat`) is its own Variant, with the `@tool` Parameter.
+A section of the text output with no tool header is `callgrind`.
+
 The `instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write`, and `estimated-cycles` Measures are gathered by default.
-Additional Callgrind, Cachegrind, and DHAT metrics that Gungraun can produce are also supported.
-Only the reported value (ie `value`) is available for these Measures.
-Neither `lower_value` nor `upper_value` are collected.
+Every other counter that Callgrind, Cachegrind, DHAT, Memcheck, Helgrind, or DRD reports is gathered as its own Measure too.
+Each counter is an exact count, gathered as a single `value` Metric, which is the Metric to threshold first.
+A `perf` event is gathered as the `mean` of its samples, or as a single `value`, and that Metric is the one to threshold first.
+Schema 7 also gathers the time of each tool's run as the `profile-time` Measure (ie `nanoseconds (ns)`).
+The time spent in system calls is skipped, since the output does not state its unit.
 The Measures for this adapter are not created by default for all projects.
 However, when you use this adapter, these Measures will be automatically created for your Project.
 
 Gungraun is the renamed successor to Iai-Callgrind.
 
-<CargoRustGungraun />
+<details>
+<summary>BMF version 0</summary>
+
+The text output and schema 6 JSON summaries are read.
+From the JSON summaries, each Benchmark is named by its module path and its `id`, joined with `::`.
+Each counter is gathered as `value`, and neither `lower_value` nor `upper_value` are collected.
+When more than one tool runs a benchmark, a counter that the tools share keeps only one tool's value.
+
+</details>

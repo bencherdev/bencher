@@ -1,9 +1,47 @@
+import AsvJson from "../asv-json.mdx";
 import Asv from "../asv.mdx";
 
 ## 🐍 Python ASV
 
-Python ASV アダプター (`python_asv`) は [airspeed velocity](https://github.com/airspeed-velocity/asv) CLI [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) の出力を想定しています。
-`latency` 測定値（つまり `ナノ秒 (ns)`）が収集されます。
-`lower_value` と `upper_value` は、それぞれ中央値（つまり `value`）の下と上の四分位範囲です。
+Python ASV アダプター（`python_asv`）は、[airspeed velocity](https://github.com/airspeed-velocity/asv) CLI の [asv run](https://asv.readthedocs.io/en/stable/commands.html#asv-run) の出力を想定しています。
+最も完全な結果を得るには、`asv run` がコミットと環境ごとに書き込む結果ファイルを、
+`bencher run` CLI の `--file` オプションで読み取ってください:
+
+<AsvJson />
+
+このファイルは asv の `results_dir`（デフォルトは `results`）の下の、
+マシンにちなんで名付けられたディレクトリにあり、その名前はコミットハッシュの最初の 8 文字で始まります。
+
+結果ファイルは単独で、asv 0.5 以降が書き込む形式で読み取られます。
+古い asv が書き込んだ結果を変換するには、`asv update` を実行してください。
+`asv run` が出力するテキストも読み取られます:
 
 <Asv />
+
+各ベンチマークは、`benchmarks.TimeSuite.time_sort` のようなドット区切りの名前で命名されます。
+パラメータ化されたベンチマークは、そのパラメータの組み合わせごとにバリアントを持ちます。
+結果ファイルからは、パラメータは `@param0`、`@param1` のように位置をキーとします。
+テキストからは、asv が出力するパラメータ名をキーとします。
+そのため、二つの形式では同じベンチマークに異なるバリアントが付きます。どちらか一方を選び、それを使い続けてください。
+
+次のメジャーが収集されます:
+- `latency`（つまり `nanoseconds (ns)`）、`time_` ベンチマークの場合: 結果ファイルからは `median`、`p25`、`p75`、および中央値の 99% 信頼区間である `median_ci99_lower` と `median_ci99_upper`。テキストからは `median` と四分位範囲である `iqr`
+- `memory`（つまり `bytes (B)`）、`mem_` ベンチマークの場合: `value`
+- `peak-memory`（つまり `bytes (B)`）、`peakmem_` ベンチマークの場合: `value`
+
+`track_` ベンチマークは、その単位が結果ファイルにもテキストにもないため、レポートの警告でスキップとして数えられます。
+`latency` では `median` メトリックに（`--threshold-metric median`）、
+`memory` と `peak-memory` では `value` メトリックに、最初にしきい値を設定してください。
+
+`asv run` はいずれかのベンチマークが失敗すると 0 以外のコードで終了し、その場合は `bencher run` も失敗します。
+`bencher run` CLI の `--allow-failure` フラグを指定すると実行は続行しますが、
+失敗したコマンドの出力は送信されないため、レポートにはそのコマンドの結果が含まれません。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+`asv run` が出力するテキストのみが読み取られます。
+`latency` メジャー（つまり `nanoseconds (ns)`）が収集されます。
+`lower_value` と `upper_value` は、それぞれ中央値（つまり `value`）から四分位範囲分下と上の値です。
+
+</details>

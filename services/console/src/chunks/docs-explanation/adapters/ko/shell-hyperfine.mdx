@@ -1,15 +1,39 @@
 import Hyperfine from "../hyperfine.mdx";
 
-## ❯_️ 셸 하이퍼파인
+## ❯_️ Shell Hyperfine
 
-셸 하이퍼파인 어댑터(`shell_hyperfine`)는 [Hyperfine](https://github.com/sharkdp/hyperfine) 출력을 [JSON 포맷(`--export-json results.json` 예시)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)으로 기대합니다.
-이 JSON 출력은 파일에 저장되므로, 파일 경로를 지정하기 위해 `bencher run` CLI `--file` 인수를 사용해야 합니다.
-`latency`(예: `나노초(ns)`) 측정값이 수집됩니다.
+Shell Hyperfine 어댑터(`shell_hyperfine`)는 [JSON 형식(즉, `--export-json results.json`)](https://github.com/sharkdp/hyperfine/tree/master/scripts#example)의 [Hyperfine](https://github.com/sharkdp/hyperfine) 출력을 입력으로 받습니다.
+이 JSON 출력은 파일로 저장되므로, `bencher run` CLI의 `--file` 옵션으로 그 파일 경로를 지정해야 합니다.
+Hyperfine v1과 v2의 JSON 출력을 모두 지원합니다.
 
 <Hyperfine />
 
-지표에는 두 가지 옵션이 있습니다:
-- `mean`(기본값): `lower_value`와 `upper_value`는 각각 평균(예: `value`)보다 한 표준편차 아래와 위입니다.
-- `median`: `lower_value`와 `upper_value`는 각각 `min` 및 `max` 값입니다.
+각 벤치마크의 이름은 `--command-name`이며, 없으면 명령입니다.
+`--parameter-scan` 또는 `--parameter-list` 값과 `--env` 변수가 문자열로 된 매개변수가 됩니다.
+예를 들어 `--command-name sleep --parameter-list n 1,2 'sleep 0.00{n}'`은 벤치마크 `sleep`에 두 개의 변형을 주며,
+그 매개변수는 `{"n": "1"}`과 `{"n": "2"}`입니다.
+`--command-name`이 없으면 `sleep 0.001`처럼 각 값의 명령이 각각 별도의 벤치마크가 됩니다.
+`--env 'MODE='`처럼 빈 값으로 설정된 변수는 매개변수 `{"MODE": ""}`가 됩니다.
 
-이는 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드에서 `--average` 옵션으로 지정할 수 있습니다.
+다음 측정이 수집되며, 각각 `mean`, `median`, `min`, `max`, `std_dev` 메트릭을 가집니다:
+- `latency`(즉, `nanoseconds (ns)`): 벽시계 시간
+- `user-time`과 `system-time`(즉, `nanoseconds (ns)`)
+- Hyperfine v2에서는 `cpu-time`(즉, `nanoseconds (ns)`)과 `peak-memory`(즉, `bytes (B)`),
+  그리고 `--metrics all`을 사용하면 하드웨어 카운터 `cycles`, `instructions`, `cache-references`, `cache-misses`, `branch-misses`
+
+Hyperfine v1에서는 `user-time`과 `system-time`이 `mean`만 가지며,
+`peak-memory`는 내보낸 파일에 들어 있을 때 수집됩니다.
+먼저 `median` 메트릭에 임계값을 설정하세요(`--threshold-metric median`).
+단, Hyperfine v1의 `user-time`과 `system-time`에서는 `mean`이 먼저입니다.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+`latency` 측정(즉, `nanoseconds (ns)`)이 수집됩니다.
+메트릭에는 두 가지 옵션이 있습니다:
+- `mean`(기본값): `lower_value`와 `upper_value`는 각각 평균(즉, `value`)보다 표준 편차 하나만큼 아래와 위의 값입니다.
+- `median`: `lower_value`와 `upper_value`는 각각 `min`과 `max` 값입니다.
+
+이는 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브커맨드의 `--average` 옵션으로 지정할 수 있습니다.
+
+</details>

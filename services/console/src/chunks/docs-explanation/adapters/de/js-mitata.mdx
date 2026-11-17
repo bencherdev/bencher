@@ -1,0 +1,33 @@
+import MitataJson from "../mitata-json.mdx";
+import NodeJsMitata from "../node-js-mitata.mdx";
+
+## 🕸 JavaScript mitata
+
+Der JavaScript mitata Adapter (`js_mitata`) erwartet Ausgaben von [mitata](https://github.com/evanwashere/mitata) im JSON-Format.
+Das JSON von mitata enthält standardmäßig jede Stichprobe, was es zu groß zum Senden machen kann,
+lassen Sie also die Stichproben und die Debug-Informationen weg:
+
+<MitataJson />
+
+Geben Sie nichts anderes auf `stdout` aus, damit das JSON alles ist, was der Adapter liest.
+
+<NodeJsMitata />
+
+Jeder Benchmark wird nach dem Namen seiner Gruppe (wenn er eine hat) und seinem Namen, wie geschrieben, benannt, verbunden mit ` > `.
+Seine `args` sind seine Parameter, sodass `bench("fill $size", ...).args("size", [64, 128])`
+dem Benchmark `fill $size` zwei Varianten gibt, mit den Parametern `{"size": 64}` und `{"size": 128}`.
+Ein Argument, das kein String, keine Zahl und kein Boolean ist, wird als sein kompakter JSON-Text gespeichert.
+Ein Lauf, der einen Fehler wirft, wird in den Warnungen des Berichts als übersprungen gezählt.
+
+Diese Measures werden erfasst:
+- `latency` (d.h. `nanoseconds (ns)`): `mean`, `median`, `min`, `max` und die Perzentile `p25`, `p75`, `p99` und `p99_9`
+- `heap` (d.h. `bytes (B)`): die Schätzung von mitata für den pro Iteration genutzten Heap, als `mean`, `min` und `max`
+- `gc-time` (d.h. `nanoseconds (ns)`): die Dauer einer Garbage Collection, als `mean`, `min` und `max`
+- Mit [`@mitata/counters`](https://www.npmjs.com/package/@mitata/counters) die Hardwarezähler pro Iteration, jeweils als `mean`, `min` und `max`:
+  `cycles`, `instructions`, `cache-references`, `cache-misses`, `branches`, `branch-misses`, `stall-cycles`, `loads-and-stores`, `l1-load-misses` und `l1-store-misses`
+
+Legen Sie für `latency` zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`,
+und für jede andere Measure für die Metrik `mean`.
+
+Der JavaScript mitata Adapter liest Ergebnisse nur in BMF Version 1.
+Ein Bericht für ein Projekt in BMF Version 0 wird mit einem Fehler abgelehnt, der erklärt, wie das Projekt auf BMF Version 1 umgestellt wird.

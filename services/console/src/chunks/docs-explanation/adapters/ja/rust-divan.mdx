@@ -1,0 +1,30 @@
+import CargoRustDivan from "../cargo-rust-divan.mdx";
+
+## 🦀 Rust Divan
+
+Rust Divan アダプター（`rust_divan`）は [Divan](https://github.com/nvzqz/divan) の出力を想定しています。
+
+<CargoRustDivan />
+
+各ベンチマークは、Divan のツリー内のパスで命名されます。これは、ベンチマークターゲットからその行までを `::` で連結したものです。
+例えば、`shapes::generic_args::Vec<u32>::4` や `alloc::threaded_alloc::t=2` です。
+Divan は型、定数、引数、スレッド数をモジュールと同じように出力するため、
+それらはすべて名前に残り、パラメータはありません。
+型の名前は Rust の `std::any::type_name` から得られ、これは Rust ツールチェーンによって変わる可能性があります。
+その場合、ベンチマークの名前もそれに合わせて変わります。
+
+`latency` メジャー（つまり `nanoseconds (ns)`）は、`min`、`max`、`median`、`mean` メトリックで収集されます。
+Divan のレートと割り当て回数は、それぞれ独自のメジャーとして収集されます:
+- レート: `bytes-throughput`、`throughput`（アイテム）、`chars-throughput`、`cycles-throughput`。いずれも毎秒の値
+- 割り当て: `allocations` と `allocated`、`deallocations` と `deallocated`、`grows` と `grown`、`shrinks` と `shrunk`、`max-allocations` と `max-allocated`。それぞれ回数とそのバイト数
+
+これらのメジャーは、Divan 自身の列名をメトリックとして保持します: `fastest`、`slowest`、`median`、`mean`。
+その `fastest` と `slowest` は、時間で最も速いサンプルと最も遅いサンプルにおける値であり、
+メジャーの最小値と最大値ではありません。
+まず `median` メトリックにしきい値を設定してください（`--threshold-metric median`）。
+
+Divan のツリー内にあって Divan が出力していない行（ベンチマーク自身の出力など）は、レポートの警告でスキップとして数えられます。
+代わりに `stderr` に出力し、一回の `bencher run` で実行するベンチマークハーネスは一つだけにしてください。
+
+Rust Divan アダプターは BMF バージョン 1 の結果のみを読み取ります。
+BMF バージョン 0 のプロジェクトのレポートは、プロジェクトを BMF バージョン 1 に移行する方法を示すエラーで拒否されます。

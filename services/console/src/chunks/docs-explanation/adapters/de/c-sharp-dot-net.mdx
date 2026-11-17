@@ -2,14 +2,45 @@ import Dotnet from "../dotnet.mdx";
 
 ## #️⃣ C# DotNet
 
-Der C# DotNet Adapter (`c_sharp_dot_net`) erwartet [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet)-Ausgabe im [JSON-Format (d.h. `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
-Die `latency`-Messung (d.h. `Nanosekunden (ns)`) wird gesammelt.
-Diese JSON-Ausgabe wird in einer Datei gespeichert, daher müssen Sie das `bencher run` CLI `--file` Argument verwenden, um diesen Dateipfad anzugeben.
+Der C# DotNet Adapter (`c_sharp_dot_net`) erwartet Ausgaben von [BenchmarkDotNet](https://github.com/dotnet/BenchmarkDotNet) im [JSON-Format (d.h. `--exporters json`)](https://benchmarkdotnet.org/articles/configs/exporters.html#sample-introexportjson).
+Sowohl der kurze als auch der vollständige JSON-Export werden gelesen.
+Diese JSON-Ausgabe wird in einer Datei gespeichert, daher müssen Sie die Option `--file` des `bencher run` CLI verwenden, um diesen Dateipfad anzugeben.
+BenchmarkDotNet benennt diese Datei nach der Benchmark-Klasse und ihrem Namespace, ersetzen Sie also `Benchmarks` durch den vollständigen Namen Ihrer Klasse.
 
 <Dotnet />
 
-Es gibt zwei Optionen für die Metrik:
-- `mean` (Standard): Die `lower_value` und `upper_value` sind eine Standardabweichung unter und über dem Mittelwert (d.h. `value`) entsprechend.
-- `median`: Die `lower_value` und `upper_value` sind einen Interquartilabstand unter und über dem Median (d.h. `value`) entsprechend.
+Der Name des Benchmarks ist der vollständige Name bis zu seinen Argumenten (d.h. `Namespace.Type.Method`), und ein verschachtelter Typ behält sein `+` (d.h. `Namespace.Outer+Type.Method`).
+Jeder `[Params]` und `[Arguments]` Wert wird zu einem Parameter, als String, wie BenchmarkDotNet ihn ausgibt.
+Der Job wird zum Parameter `@job`, mit seiner Id, wie die Zusammenfassung von BenchmarkDotNet sie zeigt (d.h. `DefaultJob` oder `ShortRun`),
+und ein Job, der seine Laufzeitumgebung nennt, fügt den Parameter `@runtime` hinzu.
+Ein Fall, den BenchmarkDotNet genauso ausgibt wie einen bereits gelesenen, wird in den Warnungen des Berichts als übersprungen gezählt.
+
+Die `latency` Measure wird in Nanosekunden (ns) erfasst, mit jeder Statistik, die BenchmarkDotNet meldet:
+`mean`, `median`, `min`, `max`, `std_dev`, `std_err`, `p25`, `p75`, `iqr`, `lower_fence`, `upper_fence`,
+den Perzentilen (d.h. `p67`, `p80`, `p85`, `p90` und `p95`)
+und dem Intervall des Mittelwerts mit seinem Niveau (d.h. `mean_ci99_9_lower`, `mean_ci99_9_upper` und `mean_ci99_9_margin`).
+Mit einem Memory Diagnoser werden auch die `allocated` Measure (Bytes pro Operation)
+und die Measures `gen0-collects-per-1000-ops`, `gen1-collects-per-1000-ops` und `gen2-collects-per-1000-ops` erfasst, jeweils als `mean`.
+Jede andere Kennzahl des vollständigen Exports, zum Beispiel die eines Diagnosers, ist eine Measure, die nach ihrer Id benannt ist, als `value`.
+
+Legen Sie für `latency` zuerst für die Metrik `median` einen Schwellenwert fest, mit `--threshold-metric median`, für die Speicher-Measures für `mean` und für die anderen Kennzahlen des vollständigen Exports für `value`.
+
+BenchmarkDotNet maskiert nichts in dem, was es ausgibt, daher werden einige Fälle ungenau gelesen:
+Ein Wert, der `&Name=` enthält, wird als zwei Parameter gelesen,
+ein langer Wert wird so gekürzt, wie BenchmarkDotNet ihn zeigt (d.h. `head(...)tail [len]`),
+und ein String, der `, Runtime=` enthält, kann als `@runtime` gelesen werden.
+Vor BenchmarkDotNet 0.15.2 erhält ein Job ohne Id bei jedem Lauf eine zufällige,
+sodass er jedes Mal neue Varianten beginnt: Geben Sie dem Job mit `WithId` eine Id.
+
+<details>
+<summary>BMF Version 0</summary>
+
+In BMF Version 0 ist der Name des Benchmarks `Namespace.Method`, und die `latency` Measure (d.h. `nanoseconds (ns)`) wird erfasst.
+Mit einem Memory Diagnoser werden auch die Measures `allocated`, `gen0-collects`, `gen1-collects`, `gen2-collects` und `total-operations` erfasst, jeweils als `value`.
+Es gibt zwei Optionen für die `latency` Metrik:
+- `mean` (Standard): Die `lower_value` und `upper_value` liegen eine Standardabweichung unterhalb bzw. oberhalb des Mittelwerts (d.h. `value`).
+- `median`: Die `lower_value` und `upper_value` liegen einen Interquartilsabstand unterhalb bzw. oberhalb des Medians (d.h. `value`).
 
 Dies kann im <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl mit der Option `--average` angegeben werden.
+
+</details>

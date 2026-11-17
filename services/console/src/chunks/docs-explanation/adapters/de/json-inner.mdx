@@ -3,12 +3,32 @@ import BencherMock from "../bencher-mock.mdx";
 ## \{...\} JSON
 
 Der JSON-Adapter (`json`) erwartet [Bencher Metric Format (BMF) JSON][bmf].
-Er ist perfekt für die Integration von benutzerdefinierten Benchmark-Harnesses mit Bencher geeignet.
-Für weitere Details siehe [wie man benutzerdefinierte Benchmarks verfolgt][custom benchmarks]
-und die [BMF JSON Referenz][bmf].
+Er eignet sich perfekt, um eigene Benchmark-Harnesses in Bencher zu integrieren.
+Weitere Details finden Sie unter [wie man eigene Benchmarks verfolgt][custom benchmarks]
+und in der [BMF JSON Referenz][bmf].
 
 {props.children}
 
+Der `json` Adapter liest die Nutzlast in der BMF-Version des Berichts,
+also in der BMF-Version des Projekts, sofern der Bericht keine eigene angibt.
+In BMF Version 1 enthält jede Measure einer Variante ihre benannten Metriken.
+Um die Version Ihrer Nutzlast in einem beliebigen Projekt anzugeben, verwenden Sie eine der beiden Versionen des `json` Adapters:
+- `json_v1`: `bencher run --adapter json_v1` gibt BMF Version 1 an
+- `json_v0`: `bencher run --adapter json_v0` gibt BMF Version 0 an
+
+Eine Nutzlast, die sich in der erwarteten Version nicht parsen lässt, wird mit einem Fehler abgelehnt,
+der nennt, als welche Version sie geparst wurde und woher die erwartete Version stammt.
+Die Metrik, für die Sie zuerst einen Schwellenwert festlegen sollten, ist `value`, wenn eine Measure sie hat,
+dann `median`, dann `mean` und andernfalls der erste Metrikname in alphabetischer Reihenfolge,
+wobei eine reine Statistik vor einer Intervallgrenze wie `mean_ci_lower` kommt.
+
+<details>
+<summary>BMF Version 0</summary>
+
+In BMF Version 0 enthält jede Measure einen `value`, mit optionalem `lower_value` und `upper_value`.
+Jeder andere Name in einer Measure wird ignoriert.
+
+</details>
+
 [bmf]: /de/docs/reference/bencher-metric-format/
-[bencher run]: /de/docs/explanation/bencher-run/#benchmark-command
 [custom benchmarks]: /de/docs/how-to/track-custom-benchmarks/

@@ -4,12 +4,33 @@ import Pytest from "../pytest.mdx";
 
 The Python Pytest Adapter (`python_pytest`) expects [pytest-benchmark](https://github.com/ionelmc/pytest-benchmark) output in [JSON format (ie `--benchmark-json results.json`)](https://pytest-benchmark.readthedocs.io/en/latest/usage.html#commandline-options).
 This JSON output is saved to a file, so you must use the `bencher run` CLI `--file` option to specify that file path.
-The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
+The JSON holds the time of every round, so a long run can exceed the API server's request body limit (4 MiB by default).
+Limit the time spent on each benchmark with `--benchmark-max-time` to keep the file small:
 
 <Pytest />
 
+Each Benchmark is named by its full name without its `[param]` suffix, such as `benchmarks.py::test_sort`,
+and the `params` of a parametrized test are its Parameters, such as `{"size": 64}`.
+When a value in `params` is not a string, a number, or a boolean, or there are more than 8,
+the Benchmark keeps its full name and has no Parameters.
+
+These Measures are gathered:
+- `latency` (ie `nanoseconds (ns)`): `mean`, `median`, `min`, `max`, `std_dev`, the `p25` and `p75` quartiles, `iqr` (the interquartile range),
+  `lower_whisker` and `upper_whisker` as pytest-benchmark computes them, and `sum`, the total time of every round
+- `throughput` (ie `operations / second (ops/s)`): `mean`, the rate pytest-benchmark reports as `ops`
+
+A benchmark of a single round has no `std_dev`.
+Threshold the `median` Metric first for `latency`, with `--threshold-metric median`,
+and the `mean` Metric for `throughput`.
+
+<details>
+<summary>BMF version 0</summary>
+
+The `latency` Measure (ie `nanoseconds (ns)`) is gathered.
 There are two options for the Metric:
 - `mean` (default):  The `lower_value` and `upper_value` are one standard deviation below and above the mean (ie `value`) respectively.
 - `median`: The `lower_value` and `upper_value` are one interquartile range below and above the median (ie `value`) respectively.
 
 This can be specified in the <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> CLI subcommand with the `--average` option.
+
+</details>

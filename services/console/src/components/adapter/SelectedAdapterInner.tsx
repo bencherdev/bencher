@@ -1,10 +1,13 @@
 import { Show } from "solid-js";
 import { adapterIcon, clearAdapter } from "./adapter";
+import { Language } from "../../i18n/ui";
 import type { Adapter } from "../../types/bencher";
-import { adapterName } from "./name";
+import { adapterDocsUrl, adapterName } from "./name";
 import { adapter } from "./util";
 
-const SelectedAdapterInner = () => {
+const SelectedAdapterInner = (props: { lang: undefined | string }) => {
+	const lang = (props.lang as Language) ?? Language.en;
+
 	return (
 		<Show when={adapter()}>
 			<div class="notification mb-4">
@@ -23,7 +26,9 @@ const SelectedAdapterInner = () => {
 						</span>
 					</div>
 					<div class="column is-narrow">
-						<div>{adapterName(adapter() as Adapter)}</div>
+						<a href={adapterDocsUrl(lang, adapter() as Adapter)}>
+							{adapterName(adapter() as Adapter)}
+						</a>
 					</div>
 				</div>
 			</div>

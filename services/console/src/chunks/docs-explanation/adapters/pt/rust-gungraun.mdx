@@ -1,14 +1,42 @@
 import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+import CargoRustGungraunJson from "../cargo-rust-gungraun-json.mdx";
 
 ## 🦀 Rust Gungraun
 
 O Adaptador Rust Gungraun (`rust_gungraun`) espera a saída do [Gungraun](https://github.com/gungraun/gungraun).
-As Métricas `instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write` e `estimated-cycles` são coletadas por padrão. Métricas adicionais do Callgrind, Cachegrind e DHAT que o Gungraun pode gerar também são suportadas.
-Apenas o valor reportado (ou seja, `value`) está disponível para essas Métricas.
-Nem `lower_value` nem `upper_value` são coletados.
-As Métricas para este adaptador não são criadas por padrão para todos os projetos.
-No entanto, quando você usar este adaptador, essas Métricas serão automaticamente criadas para o seu Projeto.
+Para os resultados mais completos, faça o Gungraun imprimir seus resumos JSON (ou seja, `GUNGRAUN_OUTPUT_FORMAT=json`),
+que o adaptador lê antes da saída de texto.
+Os esquemas de resumo 6 e 7 são lidos.
 
-Gungraun é o sucessor renomeado do Iai-Callgrind.
+<CargoRustGungraunJson />
+
+A saída de texto do Gungraun também é lida:
 
 <CargoRustGungraun />
+
+A partir dos resumos JSON, cada Benchmark é nomeado pelo seu caminho de módulo, e seu `id` é o Parâmetro `@id`.
+A partir da saída de texto, cada Benchmark é nomeado pela sua primeira linha inteira.
+Então os dois formatos dão nomes diferentes ao mesmo benchmark: escolha um e mantenha-o.
+Cada ferramenta que executa um benchmark (como `callgrind`, `cachegrind` ou `dhat`) é sua própria Variante, com o Parâmetro `@tool`.
+Uma seção da saída de texto sem cabeçalho de ferramenta é `callgrind`.
+
+As Medidas `instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write` e `estimated-cycles` são coletadas por padrão.
+Qualquer outro contador que Callgrind, Cachegrind, DHAT, Memcheck, Helgrind ou DRD informe também é coletado como sua própria Medida.
+Cada contador é uma contagem exata, coletada como uma única Métrica `value`, que é a Métrica para a qual definir um Limiar primeiro.
+Um evento `perf` é coletado como a `mean` das suas amostras, ou como um único `value`, e essa Métrica é a primeira a receber um Limiar.
+O esquema 7 também coleta o tempo da execução de cada ferramenta como a Medida `profile-time` (ou seja, `nanoseconds (ns)`).
+O tempo gasto em chamadas de sistema é ignorado, já que a saída não informa sua unidade.
+As Medidas deste adaptador não são criadas por padrão para todos os Projetos.
+No entanto, quando você usa este adaptador, estas Medidas serão criadas automaticamente para o seu Projeto.
+
+O Gungraun é o sucessor renomeado do Iai-Callgrind.
+
+<details>
+<summary>BMF versão 0</summary>
+
+A saída de texto e os resumos JSON do esquema 6 são lidos.
+A partir dos resumos JSON, cada Benchmark é nomeado pelo seu caminho de módulo e seu `id`, unidos com `::`.
+Cada contador é coletado como `value`, e nem `lower_value` nem `upper_value` são coletados.
+Quando mais de uma ferramenta executa um benchmark, um contador que as ferramentas compartilham mantém apenas o valor de uma delas.
+
+</details>

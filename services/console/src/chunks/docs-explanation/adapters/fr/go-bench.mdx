@@ -1,9 +1,39 @@
 import Go from "../go.mdx";
+import GoJson from "../go-json.mdx";
 
 ## 🕳 Go Bench
 
-L'adapteur Go Bench (`go_bench`) attend la sortie de [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks).
-La mesure de `latence` (c'est-à-dire `nanosecondes (ns)`) est recueillie.
-Seule la moyenne (c'est-à-dire `valeur`) est disponible. Il n'y a pas de `lower_value` et de `upper_value`.
+L'adaptateur Go Bench (`go_bench`) attend une sortie [go test -bench](https://pkg.go.dev/testing#hdr-Benchmarks).
 
 <Go />
+
+Sa sortie JSON (c.-à-d. `go test -json`) est aussi lue, et elle est essayée en premier :
+
+<GoJson />
+
+Le nom du Benchmark est le paquet, un `.` et le benchmark (c.-à-d. `example.com/sort.BenchmarkSort`),
+sans son suffixe `-N` ni ses parties `key=value`.
+Le suffixe `-N` devient le Paramètre `@gomaxprocs`, qui vaut `1` lorsque Go n'affiche aucun suffixe,
+et chaque partie `key=value` du nom d'un sous-benchmark devient un Paramètre de cette clé, une valeur numérique étant un nombre.
+Une partie avec la clé `@gomaxprocs` est comptée comme ignorée dans les avertissements du Rapport.
+Avec `GOMAXPROCS=1`, Go n'affiche aucun suffixe, donc un nom de sous-benchmark qui se termine lui-même par `-N` est lu comme ce `@gomaxprocs`.
+
+La Mesure `latency` (c.-à-d. `ns/op`) est recueillie en nanosecondes (ns).
+Avec `-benchmem`, les Mesures `allocated` (c.-à-d. `B/op`) et `allocations` (c.-à-d. `allocs/op`) sont aussi recueillies,
+et avec `b.SetBytes`, la Mesure `bytes-throughput` (c.-à-d. `MB/s`) en octets par seconde.
+Chaque unité personnalisée de `b.ReportMetric` est une Mesure nommée d'après l'unité telle que Go l'affiche.
+Pour une seule exécution, chaque valeur par opération (c.-à-d. une unité qui se termine par `/op`) et le taux `MB/s` sont une `mean`, et une valeur dans toute autre unité est une `value`.
+Avec `-count`, les exécutions de chaque Variante sont combinées en leurs `mean`, `median`, `min`, `max` et `std_dev`.
+
+Avec `-count`, placez d'abord un Seuil sur la Métrique `median`, avec `--threshold-metric median`.
+Pour une seule exécution, placez d'abord un Seuil sur `mean`, ou sur `value` pour une unité personnalisée qui ne se termine pas par `/op`.
+
+<details>
+<summary>BMF version 0</summary>
+
+En version 0 de BMF, seule la sortie texte est lue, avec le nom tel que Go l'affiche comme nom du Benchmark.
+Seule la Mesure `latency` (c.-à-d. `nanoseconds (ns)`) est recueillie.
+Seule la moyenne (c.-à-d. `value`) est disponible.
+Ni `lower_value` ni `upper_value` ne sont recueillies.
+
+</details>

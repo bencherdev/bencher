@@ -1,10 +1,17 @@
-## 🪄 Magic <small>(predeterminado)</small>
+## 🪄 Magic <small>(default)</small>
 
 El adaptador Magic (`magic`) es un superconjunto de todos los demás adaptadores.
 Por esa razón, es el adaptador predeterminado para `bencher run`.
 Sin embargo, el adaptador `magic` debe usarse solo para exploración.
 
-Para obtener mejores resultados, deberías especificar un adaptador de arnés de benchmarks:
+En la versión 1 de BMF, el adaptador `magic` prueba primero [el adaptador `json`](#-json),
+luego cada adaptador de arnés en el orden de la lista siguiente,
+leyendo la salida estructurada de un arnés antes que su salida de texto.
+Se usa el primer adaptador que lea algún resultado,
+así que ejecuta solo un arnés de benchmark por cada `bencher run`.
+Una carga en la versión 0 de BMF para un Proyecto en la versión 1 de BMF se rechaza con un error que nombra ambas versiones.
+
+Para obtener mejores resultados, deberías especificar un adaptador de arnés de benchmark:
 
 - [\{...\} JSON](#-json)
 - [#️⃣ C# BenchmarkDotNet](#%EF%B8%8F%E2%83%A3-c-dotnet)
@@ -16,10 +23,15 @@ Para obtener mejores resultados, deberías especificar un adaptador de arnés de
 - [🕸 JavaScript Benchmark.js](#-javascript-benchmark)
 - [🕸 JavaScript console.time/console.timeEnd](#-javascript-time)
 - [🕸 JavaScript Vitest](#-javascript-vitest)
+- [🕸 JavaScript Deno bench](#-javascript-deno)
+- [🕸 JavaScript mitata](#-javascript-mitata)
+- [🕸 JavaScript tinybench](#-javascript-tinybench)
 - [🐍 Python airspeed velocity (asv)](#-python-asv)
 - [🐍 Python pytest-benchmark](#-python-pytest)
 - [♦️ Ruby Benchmark](#%EF%B8%8F-ruby-benchmark)
+- [♦️ Ruby benchmark-ips](#%EF%B8%8F-ruby-benchmark-ips)
 - [🦀 Rust libtest bench](#-rust-bench)
+- [🦀 Rust Divan](#-rust-divan)
 - [🦀 Rust Criterion](#-rust-criterion)
 - [🦀 Rust Iai](#-rust-iai)
 - [🦀 Rust Gungraun](#-rust-gungraun)

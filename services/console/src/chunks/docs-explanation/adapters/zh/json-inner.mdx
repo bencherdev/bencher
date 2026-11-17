@@ -2,13 +2,33 @@ import BencherMock from "../bencher-mock.mdx";
 
 ## \{...\} JSON
 
-JSON 适配器（`json`）期望 [Bencher 指标格式 (BMF) JSON][bmf]。
+JSON 适配器（`json`）接受 [Bencher Metric Format (BMF) JSON][bmf]。
 它非常适合将自定义基准测试工具与 Bencher 集成。
-有关更多详细信息，请参阅[如何跟踪自定义基准测试][custom benchmarks]
-以及 [BMF JSON 参考资料][bmf]。
+更多详情请参见[如何跟踪自定义基准测试][custom benchmarks]
+和 [BMF JSON 参考][bmf]。
 
 {props.children}
 
+`json` 适配器按照报告的 BMF 版本读取载荷，
+除非报告声明了版本，否则即为项目的 BMF 版本。
+在 BMF 版本 1 中，变体的每个度量都包含其具名指标。
+要在任何项目上声明载荷的版本，请使用 `json` 适配器的两个版本之一：
+- `json_v1`：`bencher run --adapter json_v1` 声明 BMF 版本 1
+- `json_v0`：`bencher run --adapter json_v0` 声明 BMF 版本 0
+
+无法按预期版本解析的载荷会被拒绝，
+错误信息会指明它被解析成的版本以及预期版本的来源。
+应首先设置阈值的指标是：如果度量中有 `value` 则为它，
+其次是 `median`，然后是 `mean`，否则为按字母顺序排列的第一个指标名称，
+其中普通统计量排在 `mean_ci_lower` 这样的区间边界之前。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+在 BMF 版本 0 中，每个度量包含一个 `value`，以及可选的 `lower_value` 和 `upper_value`。
+度量中的任何其他名称都会被忽略。
+
+</details>
+
 [bmf]: /zh/docs/reference/bencher-metric-format/
-[bencher run]: /zh/docs/explanation/bencher-run/#benchmark-command
 [custom benchmarks]: /zh/docs/how-to/track-custom-benchmarks/

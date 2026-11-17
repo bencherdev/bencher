@@ -1,23 +1,22 @@
-### ⚖️ Dateigröße
+### ⚖️ File Size
 
 Der <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> CLI-Unterbefehl
-kann verwendet werden, um die Dateigröße (d.h. Binärgröße) Ihrer Lieferobjekte mit der Option `--file-size` zu verfolgen.
-Die Option `--file-size` erwartet einen Dateipfad zu der Datei, deren Größe gemessen wird.
-Unter der Haube gibt <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
-die Ergebnisse als[Bencher-Metrik-Format (BMF) JSON][bmf] aus.
-Es ist daher ratsam, ausdrücklich [den `json`-Adapter][json] zu verwenden.
-Für weitere Details siehe [wie man die Dateigröße verfolgt][file size].
+kann mit der Option `--file-size` verwendet werden, um die Dateigröße (d.h. die Binärgröße) Ihrer Artefakte zu verfolgen.
+Die Option `--file-size` erwartet den Pfad zu der Datei, deren Größe gemessen werden soll.
+Im Hintergrund gibt <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code>
+die Ergebnisse als [Bencher Metric Format (BMF) JSON][bmf] in der BMF-Version des Projekts aus.
+Es ist daher gute Praxis, ausdrücklich [den `json` Adapter][json] zu verwenden.
+Weitere Details finden Sie unter [wie man die Dateigröße verfolgt][file size].
 
-Die `file-size`-Messung (d.h. `Bytes (B)`) wird erfasst.
-Nur der Wert der Dateigröße (d.h. `value`) ist verfügbar.
-Weder `lower_value` noch `upper_value` werden gesammelt.
-Die `file-size`-Messung wird nicht standardmäßig für alle Projekte erstellt.
-Wenn Sie jedoch die Option `--file-size` verwenden, wird diese Messung automatisch für Ihr Projekt erstellt.
+Die `file-size` Measure (d.h. `bytes (B)`) wird als einzelne Metrik `value` erfasst,
+die die Metrik ist, für die Sie zuerst einen Schwellenwert festlegen sollten.
+Die `file-size` Measure wird nicht standardmäßig für alle Projekte erstellt.
+Wenn Sie jedoch die Option `--file-size` verwenden, wird diese Measure automatisch für Ihr Projekt erstellt.
 Die Option `--file-size` kann mehrfach verwendet werden, um mehrere Dateigrößen zu verfolgen.
 
 {props.children}
 
-[json]: #-json
+[json]: /de/docs/explanation/adapters/#-json
 
 [bmf]: /de/docs/reference/bencher-metric-format/
 [file size]: /de/docs/how-to/track-file-size/

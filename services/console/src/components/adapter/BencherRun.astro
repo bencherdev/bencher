@@ -20,6 +20,16 @@ const { isConsole } = Astro.props;
         code={adapterCommand(isConsole, Adapter.RustBench)}
     />
     <Code
+        slot="rust_divan_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.RustDivan)}
+    />
+    <Code
+        slot="rust_divan_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.RustDivan)}
+    />
+    <Code
         slot="rust_criterion_bash"
         lang="bash"
         code={adapterCommand(isConsole, Adapter.RustCriterion)}
@@ -140,6 +150,36 @@ const { isConsole } = Astro.props;
         code={adapterCommand(isConsole, Adapter.JsVitest)}
     />
     <Code
+        slot="js_deno_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.JsDeno)}
+    />
+    <Code
+        slot="js_deno_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.JsDeno)}
+    />
+    <Code
+        slot="js_mitata_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.JsMitata)}
+    />
+    <Code
+        slot="js_mitata_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.JsMitata)}
+    />
+    <Code
+        slot="js_tinybench_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.JsTinybench)}
+    />
+    <Code
+        slot="js_tinybench_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.JsTinybench)}
+    />
+    <Code
         slot="python_asv_bash"
         lang="bash"
         code={adapterCommand(isConsole, Adapter.PythonAsv)}
@@ -168,6 +208,16 @@ const { isConsole } = Astro.props;
         slot="ruby_benchmark_powershell"
         lang="powershell"
         code={adapterCommand(isConsole, Adapter.RubyBenchmark)}
+    />
+    <Code
+        slot="ruby_benchmark_ips_bash"
+        lang="bash"
+        code={adapterCommand(isConsole, Adapter.RubyBenchmarkIps)}
+    />
+    <Code
+        slot="ruby_benchmark_ips_powershell"
+        lang="powershell"
+        code={adapterCommand(isConsole, Adapter.RubyBenchmarkIps)}
     />
     <Code
         slot="shell_hyperfine_bash"

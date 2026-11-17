@@ -1,9 +1,31 @@
 import Dart from "../dart.mdx";
+import DartFlavor from "../dart-flavor.mdx";
 
 ## 🎯 Dart benchmark_harness
 
-Dart benchmark_harness 适配器（`dart_benchmark_harness`）期望的输出来自 Dart [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) 包（默认 `PrintEmitter` 行：`Name(RunTime): <微秒> us.`）。
-收集的是`延迟`度量（即`纳秒 (ns)`）。
-只提供报告值（即`值`），没有`最小值`和`最大值`。
+Dart benchmark_harness 适配器（`dart_benchmark_harness`）接受 Dart [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) 包的输出，
+即其 `PrintEmitter` 的行（即 `Name(RunTime): <microseconds> us.`）和 `PrintEmitterV2` 的行。
 
 <Dart />
+
+基准测试名称就是打印出的名称。
+使用 `dart run benchmark_harness:bench` 运行时，每种风格（flavor）的结果都带有 `@flavor` 参数（即 `jit`、`aot`、`js` 或 `wasm`）：
+
+<DartFlavor />
+
+`latency` 度量（即 `RunTime`）以纳秒（ns）为单位收集。
+从 `PerfBenchmarkBase` 中，还会收集 `cycles`（即 `CpuCycles`）和 `page-faults`（即 `MajorPageFaults`）度量。
+每一项都是基准测试每次执行（exercise）的 `mean`。
+其他单位的 `RunTime`（即来自自定义发射器）、任何其他指标项，以及重复已读取行的行，都会在报告的警告中计为已跳过。
+
+请首先为 `mean` 指标设置阈值，使用 `--threshold-metric mean`。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+在 BMF 版本 0 中，只读取 `PrintEmitter` 的行。
+收集 `latency` 度量（即 `nanoseconds (ns)`）。
+只有报告的值（即 `value`）可用。
+`lower_value` 和 `upper_value` 都不会被收集。
+
+</details>

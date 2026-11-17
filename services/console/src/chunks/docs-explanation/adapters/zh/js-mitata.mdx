@@ -1,0 +1,33 @@
+import MitataJson from "../mitata-json.mdx";
+import NodeJsMitata from "../node-js-mitata.mdx";
+
+## 🕸 JavaScript mitata
+
+JavaScript mitata 适配器（`js_mitata`）接受 JSON 格式的 [mitata](https://github.com/evanwashere/mitata) 输出。
+mitata 的 JSON 默认包含每个样本，这可能使其过大而无法发送，
+因此请省略样本和调试信息：
+
+<MitataJson />
+
+不要向 `stdout` 打印任何其他内容，使适配器读取的只有 JSON。
+
+<NodeJsMitata />
+
+每个基准测试以其分组名称（如果有）和所写的名称用 ` > ` 连接后命名。
+它的 `args` 就是它的参数，因此 `bench("fill $size", ...).args("size", [64, 128])`
+会给基准测试 `fill $size` 两个变体，其参数分别为 `{"size": 64}` 和 `{"size": 128}`。
+不是字符串、数字或布尔值的实参会存储为其紧凑的 JSON 文本。
+抛出错误的运行会在报告的警告中计为已跳过。
+
+收集以下度量：
+- `latency`（即 `nanoseconds (ns)`）：`mean`、`median`、`min`、`max`，以及 `p25`、`p75`、`p99` 和 `p99_9` 百分位数
+- `heap`（即 `bytes (B)`）：mitata 估计的每次迭代使用的堆，以 `mean`、`min` 和 `max` 表示
+- `gc-time`（即 `nanoseconds (ns)`）：垃圾回收的时间，以 `mean`、`min` 和 `max` 表示
+- 使用 [`@mitata/counters`](https://www.npmjs.com/package/@mitata/counters) 时，每次迭代的硬件计数器，各以 `mean`、`min` 和 `max` 表示：
+  `cycles`、`instructions`、`cache-references`、`cache-misses`、`branches`、`branch-misses`、`stall-cycles`、`loads-and-stores`、`l1-load-misses` 和 `l1-store-misses`
+
+对于 `latency`，请首先为 `median` 指标设置阈值，使用 `--threshold-metric median`；
+对于其他所有度量，请首先为 `mean` 指标设置阈值。
+
+JavaScript mitata 适配器仅读取 BMF 版本 1 的结果。
+对于 BMF 版本 0 的项目，其报告会被拒绝，错误信息会说明如何将项目迁移到 BMF 版本 1。

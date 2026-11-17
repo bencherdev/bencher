@@ -1,10 +1,30 @@
 import Ruby from "../ruby.mdx";
 
-## ♦️ Ruby 基准测试
+## ♦️ Ruby Benchmark
 
-Ruby 基准测试适配器（`ruby_benchmark`）期望 [Benchmark 模块](https://github.com/ruby/benchmark) 对于 `#bm`、`#bmbm`、和 `#benchmark` 方法的输出。
+Ruby Benchmark 适配器（`ruby_benchmark`）接受 `#bm`、`#bmbm` 和 `#benchmark` 方法的 [Benchmark 模块](https://github.com/ruby/benchmark) 输出。
 每个基准测试都需要一个标签。
-将收集 `latency` 测量值（即 `纳秒 (ns)`）。
-只提供报告值（即 `value`），没有 `lower_value` 和 `upper_value`。
+每个基准测试以其标签命名，没有参数。
+收集以下度量，每个都只有一个指标 `value`，即 Ruby 在该列中打印的时间。
+- `latency`（即 `nanoseconds (ns)`）：`real` 时间
+- `user-time`（即 `nanoseconds (ns)`）：`user` 时间
+- `system-time`（即 `nanoseconds (ns)`）：`system` 时间
+- `cpu-time`（即 `nanoseconds (ns)`）：`total` 时间
+
+请首先为 `value` 指标设置阈值，使用 `--threshold-metric value`。
+
+输出会被尽力读取。
+Ruby 先打印一行的标签，再运行其代码块，然后打印其时间，
+因此会打印内容的代码块会把该行拆开：该行会在报告的警告中计为已跳过，其后的行仍会被读取。
+请在基准测试内部打印到 `stderr`，以保留每一行。
 
 <Ruby />
+
+<details>
+<summary>BMF 版本 0</summary>
+
+收集 `latency` 度量（即 `nanoseconds (ns)`）。
+只有报告的值（即 `value`）可用。
+`lower_value` 和 `upper_value` 都不会被收集。
+
+</details>

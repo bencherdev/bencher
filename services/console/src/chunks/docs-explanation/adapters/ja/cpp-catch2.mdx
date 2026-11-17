@@ -1,9 +1,41 @@
+import CppCatch2Xml from "../cpp-catch2-xml.mdx";
 import MakeCppCatch2 from "../make-cpp-catch2.mdx";
 
 ## ➕ C++ Catch2
 
-C++ Catch2 アダプター（`cpp_catch2`）は [Catch2](https://github.com/catchorg/Catch2) の出力を期待しています。
-`latency` メジャー（すなわち `ナノ秒 (ns)`）が収集されます。
-`lower_value` と `upper_value` は、それぞれ平均値（すなわち `value`）よりも一つの標準偏差以下と上です。
+C++ Catch2 アダプター（`cpp_catch2`）は [Catch2](https://github.com/catchorg/Catch2) の出力を想定しています。
+Catch2 の XML レポーター（つまり `-r xml`）が最初に読み取られ、最も信頼性の高い結果が得られるため、こちらを推奨します:
+
+<CppCatch2Xml />
+
+Catch2 のコンソール出力も、ベストエフォートで読み取られます:
 
 <MakeCppCatch2 />
+
+Catch2 の表の中にあるプログラム自身の出力は、Catch2 の出力と常に区別できるとは限らないため、
+それが入り込んだベンチマークはレポートの警告でスキップとして数えられます。
+代わりに `stderr` に出力するか、XML レポーターを使用してください。
+コンソールの幅が 59 列より狭いと、Catch2 は表のタイトルを折り返すため、すべてのベンチマークがスキップとして数えられます。
+
+ベンチマーク名は、テストケース、各セクション、ベンチマークをスラッシュで区切ったものです（つまり `Case / Section / Bench`）。
+パラメータはありません。
+`latency` メジャーはナノ秒（ns）で収集され、
+`mean` と `std_dev` を持ち、それぞれにブートストラップ区間の境界が付きます。
+XML では各区間に信頼水準が付いた名前が付けられます（つまり `mean_ci95_lower` と `mean_ci95_upper`）が、
+コンソール出力には水準が記載されません（つまり `mean_ci_lower` と `mean_ci_upper`）。
+`--benchmark-no-analysis` を指定すると、`mean` のみが収集されます。
+
+まず `mean` メトリックにしきい値を設定してください（`--threshold-metric mean`）。
+
+Catch2 はベンチマークが失敗するとエラーで終了し、その場合は `bencher run` も失敗します。
+`--allow-failure` フラグを指定すると `bencher run` は続行しますが、その反復の出力は破棄されるため、
+その結果は一つも送信されません。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+BMF バージョン 0 では、Catch2 のコンソール出力のみが読み取られます。
+`latency` メジャー（つまり `nanoseconds (ns)`）が収集されます。
+`lower_value` と `upper_value` は、それぞれ平均（つまり `value`）から標準偏差一つ分下と上の値です。
+
+</details>

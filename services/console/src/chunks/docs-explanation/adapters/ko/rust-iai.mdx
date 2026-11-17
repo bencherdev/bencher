@@ -1,11 +1,29 @@
 import CargoRustIai from "../cargo-rust-iai.mdx";
+import CargoRustIaiValgrind from "../cargo-rust-iai-valgrind.mdx";
 
-## 🦀 러스트 Iai
+## 🦀 Rust Iai
 
-러스트 Iai 어댑터(`rust_iai`)는 [Iai](https://github.com/bheisler/iai) 출력을 기대합니다.
-`instructions`, `l1-accesses`, `l2-accesses`, `ram-accesses`, `estimated-cycles` 측정치가 수집됩니다.
-이러한 측정치(즉 `value`)만 사용할 수 있습니다. `lower_value`와 `upper_value` 측정치는 없습니다.
-이 어댑터에 대한 측정치는 모든 프로젝트에 대해 기본적으로 생성되지 않습니다.
-그러나 이 어댑터를 사용할 때, 이러한 측정치는 자동으로 귀하의 프로젝트에 생성될 것입니다.
+Rust Iai 어댑터(`rust_iai`)는 [Iai](https://github.com/bheisler/iai) 출력을 입력으로 받습니다.
 
 <CargoRustIai />
+
+각 벤치마크의 이름은 함수 이름이며, 매개변수는 없습니다.
+`instructions`, `l1-accesses`, `l2-accesses`, `ram-accesses`, `estimated-cycles` 측정이 수집됩니다.
+각각은 정확한 개수이며 하나의 `value` 메트릭으로 수집되고, 이것이 먼저 임계값을 설정할 메트릭입니다.
+이 어댑터의 측정은 모든 프로젝트에 기본적으로 생성되지 않습니다.
+하지만 이 어댑터를 사용하면 이 측정들이 프로젝트에 자동으로 생성됩니다.
+
+Iai 0.1.1은 Valgrind의 캐시 시뮬레이션을 켜지 않으면
+Valgrind 3.21 이상(예: Ubuntu 24.04)에서 패닉이 발생합니다.
+벤치마크 명령에 `VALGRIND_OPTS=--cache-sim=yes`를 설정하고,
+이 설정으로 처음 실행하기 전에 `target/iai`를 삭제하세요:
+
+<CargoRustIaiValgrind />
+
+<details>
+<summary>BMF 버전 0</summary>
+
+같은 다섯 개의 측정이 각각 `value`로 수집됩니다.
+`lower_value`와 `upper_value`는 모두 수집되지 않습니다.
+
+</details>

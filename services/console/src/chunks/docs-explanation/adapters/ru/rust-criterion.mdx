@@ -1,9 +1,46 @@
 import CargoRustCriterion from "../cargo-rust-criterion.mdx";
+import CargoRustCriterionJson from "../cargo-rust-criterion-json.mdx";
 
 ## 🦀 Rust Criterion
 
 Адаптер Rust Criterion (`rust_criterion`) ожидает вывод [Criterion](https://github.com/bheisler/criterion.rs).
-Измеряется `latency` (то есть `наносекунды (ns)`).
-`lower_value` и `upper_value` являются нижней и верхней границами либо наклона (если доступно), либо среднего значения (если нет) (то есть `value`) соответственно.
+Для наиболее полных результатов используйте JSON-сообщения [cargo-criterion](https://github.com/bheisler/cargo-criterion) (то есть `--message-format=json`),
+которые адаптер читает раньше текстового вывода:
+
+<CargoRustCriterionJson />
+
+Текстовый вывод Criterion также читается:
 
 <CargoRustCriterion />
+
+Каждый Бенчмарк называется по идентификатору бенчмарка Criterion, например `fib 20` или `checksum/fold/1024`, без Параметров.
+Из JSON-сообщений Измерение `latency` (то есть `nanoseconds (ns)`) собирается со следующими Метриками,
+каждая с границами своего доверительного интервала (то есть `mean_ci_lower` и `mean_ci_upper`):
+- `typical`: собственная оценка Criterion, то есть `slope`, когда Criterion его вычисляет, и `mean` в остальных случаях
+- `mean` и `median`, а также `slope`, когда Criterion его вычисляет
+- `median_abs_dev`: медианное абсолютное отклонение
+
+Из текстового вывода Измерение `latency` собирается как `typical` с `typical_ci_lower` и `typical_ci_upper`.
+С `--verbose` Criterion также печатает интервалы для `slope`, `mean`, `std_dev`, `median` и `median_abs_dev`,
+которые собираются как их границы (то есть `mean_ci_lower` и `mean_ci_upper`).
+
+Бенчмарк с пропускной способностью собирает свою скорость как `typical` с границами ее интервала:
+байты в Измерение `bytes-throughput` (то есть `bytes / second (B/s)`),
+а элементы в Измерение `throughput` (то есть `operations / second (ops/s)`).
+Плагин измерений Criterion, который считает такты, записывает в Измерение `cycles`,
+а любая другая единица записывается в собственное Измерение, названное по этой единице.
+
+Для JSON-сообщений в первую очередь задайте Порог для Метрики `median` с помощью `--threshold-metric median`,
+а для текстового вывода для Метрики `typical` с помощью `--threshold-metric typical`.
+У скорости есть только `typical` и его границы, поэтому для Измерений `bytes-throughput` и `throughput` задавайте Порог для `typical`.
+
+Адаптер [Rust Divan](/ru/docs/explanation/adapters/#-rust-divan) пробуется раньше текстового вывода Criterion,
+поэтому запускайте только одну оболочку бенчмаркинга за один `bencher run`.
+
+<details>
+<summary>BMF версия 0</summary>
+
+Читается только текстовый вывод, и собирается только Измерение `latency`.
+`lower_value` и `upper_value` являются нижней и верхней границами либо наклона (если он доступен), либо среднего (если нет) (то есть `value`) соответственно.
+
+</details>

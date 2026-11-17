@@ -1,9 +1,31 @@
 import Dart from "../dart.mdx";
+import DartFlavor from "../dart-flavor.mdx";
 
 ## 🎯 Dart benchmark_harness
 
-Dart benchmark_harness 어댑터(`dart_benchmark_harness`)는 Dart [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) 패키지의 출력(기본 `PrintEmitter` 라인: `Name(RunTime): <마이크로초> us.`)을 기대합니다.
-`지연시간(latency)` 측정값(예: `나노초(ns)`)이 수집됩니다.
-`보고된 값(reported value)`(예: `value`)만 사용 가능합니다. `하한값(lower_value)`과 `상한값(upper_value)`은 없습니다.
+Dart benchmark_harness 어댑터(`dart_benchmark_harness`)는 Dart [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) 패키지의 출력을 입력으로 받습니다.
+즉, 그 `PrintEmitter`의 줄(즉, `Name(RunTime): <microseconds> us.`)과 `PrintEmitterV2`의 줄입니다.
 
 <Dart />
+
+벤치마크 이름은 출력된 그대로의 이름입니다.
+`dart run benchmark_harness:bench`로 실행하면 각 플레이버의 결과는 `@flavor` 매개변수를 가집니다(즉, `jit`, `aot`, `js`, `wasm`):
+
+<DartFlavor />
+
+`latency` 측정(즉, `RunTime`)은 나노초(ns) 단위로 수집됩니다.
+`PerfBenchmarkBase`에서는 `cycles`(즉, `CpuCycles`)와 `page-faults`(즉, `MajorPageFaults`) 측정도 수집됩니다.
+각각은 벤치마크의 한 번의 실행(exercise)당 `mean`입니다.
+다른 단위의 `RunTime`(즉, 사용자 정의 이미터의 출력), 그 밖의 지표, 이미 읽은 줄을 반복하는 줄은 보고서의 warning에서 건너뛴 것으로 집계됩니다.
+
+먼저 `mean` 메트릭에 임계값을 설정하세요(`--threshold-metric mean`).
+
+<details>
+<summary>BMF 버전 0</summary>
+
+BMF 버전 0에서는 `PrintEmitter` 줄만 읽습니다.
+`latency` 측정(즉, `nanoseconds (ns)`)이 수집됩니다.
+보고된 값(즉, `value`)만 사용할 수 있습니다.
+`lower_value`와 `upper_value`는 모두 수집되지 않습니다.
+
+</details>

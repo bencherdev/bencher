@@ -1,0 +1,33 @@
+import MitataJson from "../mitata-json.mdx";
+import NodeJsMitata from "../node-js-mitata.mdx";
+
+## 🕸 JavaScript mitata
+
+JavaScript mitata アダプター（`js_mitata`）は、JSON 形式の [mitata](https://github.com/evanwashere/mitata) の出力を想定しています。
+mitata の JSON はデフォルトですべてのサンプルを保持するため、送信するには大きすぎる場合があります。
+そのため、サンプルとデバッグ情報を除外してください:
+
+<MitataJson />
+
+アダプターが読み取るのが JSON だけになるように、`stdout` には他に何も出力しないでください。
+
+<NodeJsMitata />
+
+各ベンチマークは、グループの名前（ある場合）と記述したとおりの名前を ` > ` で連結した名前になります。
+その `args` がパラメータになるため、`bench("fill $size", ...).args("size", [64, 128])` は、
+ベンチマーク `fill $size` に、パラメータ `{"size": 64}` と `{"size": 128}` を持つ二つのバリアントを与えます。
+文字列、数値、ブール値のいずれでもない引数は、そのコンパクトな JSON テキストとして保存されます。
+エラーを投げた実行は、レポートの警告でスキップとして数えられます。
+
+次のメジャーが収集されます:
+- `latency`（つまり `nanoseconds (ns)`）: `mean`、`median`、`min`、`max`、およびパーセンタイル `p25`、`p75`、`p99`、`p99_9`
+- `heap`（つまり `bytes (B)`）: mitata が推定する反復あたりのヒープ使用量。`mean`、`min`、`max` として
+- `gc-time`（つまり `nanoseconds (ns)`）: ガベージコレクションの時間。`mean`、`min`、`max` として
+- [`@mitata/counters`](https://www.npmjs.com/package/@mitata/counters) を使用すると、反復あたりのハードウェアカウンター。それぞれ `mean`、`min`、`max` として:
+  `cycles`、`instructions`、`cache-references`、`cache-misses`、`branches`、`branch-misses`、`stall-cycles`、`loads-and-stores`、`l1-load-misses`、`l1-store-misses`
+
+`latency` では `median` メトリックに（`--threshold-metric median`）、
+その他のすべてのメジャーでは `mean` メトリックに、最初にしきい値を設定してください。
+
+JavaScript mitata アダプターは BMF バージョン 1 の結果のみを読み取ります。
+BMF バージョン 0 のプロジェクトのレポートは、プロジェクトを BMF バージョン 1 に移行する方法を示すエラーで拒否されます。

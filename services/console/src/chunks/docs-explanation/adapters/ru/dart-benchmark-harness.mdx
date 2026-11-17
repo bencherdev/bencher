@@ -1,9 +1,31 @@
 import Dart from "../dart.mdx";
+import DartFlavor from "../dart-flavor.mdx";
 
 ## 🎯 Dart benchmark_harness
 
-Адаптер Dart benchmark_harness (`dart_benchmark_harness`) ожидает вывод пакета Dart [`benchmark_harness`](https://pub.dev/packages/benchmark_harness) (стандартные строки `PrintEmitter`: `Name(RunTime): <микросекунды> us.`).
-Собирается мера `latency` (т.е. `наносекунды (ns)`).
-Доступно только зарегистрированное значение (т.е. `value`). Нет `lower_value` и `upper_value`.
+Адаптер Dart benchmark_harness (`dart_benchmark_harness`) ожидает вывод пакета Dart [`benchmark_harness`](https://pub.dev/packages/benchmark_harness),
+то есть строки его `PrintEmitter` (то есть `Name(RunTime): <microseconds> us.`) и его `PrintEmitterV2`.
 
 <Dart />
+
+Имя Бенчмарка является именем в том виде, в каком оно напечатано.
+При запуске с `dart run benchmark_harness:bench` результаты каждого варианта сборки (flavor) получают Параметр `@flavor` (то есть `jit`, `aot`, `js` или `wasm`):
+
+<DartFlavor />
+
+Измерение `latency` (то есть `RunTime`) собирается в наносекундах (ns).
+Из `PerfBenchmarkBase` также собираются Измерения `cycles` (то есть `CpuCycles`) и `page-faults` (то есть `MajorPageFaults`).
+Каждое из них является `mean` на одно выполнение (exercise) бенчмарка.
+`RunTime` в другой единице (то есть из пользовательского эмиттера), любая другая метрика и строка, которая повторяет уже прочитанную, учитываются как пропущенные в замечаниях Отчета.
+
+В первую очередь задайте Порог для Метрики `mean` с помощью `--threshold-metric mean`.
+
+<details>
+<summary>BMF версия 0</summary>
+
+В BMF версии 0 читаются только строки `PrintEmitter`.
+Собирается Измерение `latency` (то есть `nanoseconds (ns)`).
+Доступно только сообщенное значение (то есть `value`).
+Ни `lower_value`, ни `upper_value` не собираются.
+
+</details>

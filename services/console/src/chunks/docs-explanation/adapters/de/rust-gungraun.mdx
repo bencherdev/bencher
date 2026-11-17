@@ -1,14 +1,42 @@
 import CargoRustGungraun from "../cargo-rust-gungraun.mdx";
+import CargoRustGungraunJson from "../cargo-rust-gungraun-json.mdx";
 
 ## 🦀 Rust Gungraun
 
-Der Rust-Gungraun-Adapter (`rust_gungraun`) erwartet die Ausgabe von [Gungraun](https://github.com/gungraun/gungraun).
-Die Measures `instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write` und `estimated-cycles` werden standardmäßig erfasst. Zusätzlich werden von Gungraun erzeugte Callgrind-, Cachegrind- und DHAT-Metriken unterstützt.
-Für diese Measures ist nur der gemeldete Wert (d. h. `value`) verfügbar.
-Weder `lower_value` noch `upper_value` werden erfasst.
-Die Measures für diesen Adapter werden nicht standardmäßig für alle Projekte angelegt.
-Wenn Sie diesen Adapter verwenden, werden diese Measures jedoch automatisch für Ihr Project angelegt.
+Der Rust Gungraun Adapter (`rust_gungraun`) erwartet Ausgaben von [Gungraun](https://github.com/gungraun/gungraun).
+Für die vollständigsten Ergebnisse lassen Sie Gungraun seine JSON-Zusammenfassungen ausgeben (d.h. `GUNGRAUN_OUTPUT_FORMAT=json`),
+die der Adapter vor der Textausgabe liest.
+Die Zusammenfassungsschemas 6 und 7 werden gelesen.
+
+<CargoRustGungraunJson />
+
+Die Textausgabe von Gungraun wird ebenfalls gelesen:
+
+<CargoRustGungraun />
+
+Aus den JSON-Zusammenfassungen wird jeder Benchmark nach seinem Modulpfad benannt, und seine `id` ist der Parameter `@id`.
+Aus der Textausgabe wird jeder Benchmark nach seiner gesamten ersten Zeile benannt.
+Die beiden Formate geben demselben Benchmark also unterschiedliche Namen: Wählen Sie eines und bleiben Sie dabei.
+Jedes Werkzeug, das einen Benchmark ausführt (zum Beispiel `callgrind`, `cachegrind` oder `dhat`), ist eine eigene Variante, mit dem Parameter `@tool`.
+Ein Abschnitt der Textausgabe ohne Werkzeug-Kopfzeile ist `callgrind`.
+
+Die Measures `instructions`, `l1-hits`, `l2-hits`, `ram-hits`, `total-read-write` und `estimated-cycles` werden standardmäßig erfasst.
+Jeder andere Zähler, den Callgrind, Cachegrind, DHAT, Memcheck, Helgrind oder DRD meldet, wird ebenfalls als eigene Measure erfasst.
+Jeder Zähler ist eine exakte Anzahl, erfasst als einzelne Metrik `value`, die die Metrik ist, für die Sie zuerst einen Schwellenwert festlegen sollten.
+Ein `perf` Ereignis wird als `mean` seiner Stichproben oder als einzelner `value` erfasst, und diese Metrik ist diejenige, für die Sie zuerst einen Schwellenwert festlegen sollten.
+Schema 7 erfasst außerdem die Laufzeit jedes Werkzeugs als `profile-time` Measure (d.h. `nanoseconds (ns)`).
+Die in Systemaufrufen verbrachte Zeit wird übersprungen, da die Ausgabe ihre Einheit nicht angibt.
+Die Measures für diesen Adapter werden nicht standardmäßig für alle Projekte erstellt.
+Wenn Sie jedoch diesen Adapter verwenden, werden diese Measures automatisch für Ihr Projekt erstellt.
 
 Gungraun ist der umbenannte Nachfolger von Iai-Callgrind.
 
-<CargoRustGungraun />
+<details>
+<summary>BMF Version 0</summary>
+
+Die Textausgabe und die JSON-Zusammenfassungen im Schema 6 werden gelesen.
+Aus den JSON-Zusammenfassungen wird jeder Benchmark nach seinem Modulpfad und seiner `id` benannt, verbunden mit `::`.
+Jeder Zähler wird als `value` erfasst, und weder `lower_value` noch `upper_value` werden erfasst.
+Wenn mehr als ein Werkzeug einen Benchmark ausführt, behält ein Zähler, den die Werkzeuge gemeinsam haben, nur den Wert eines Werkzeugs.
+
+</details>
