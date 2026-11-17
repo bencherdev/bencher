@@ -55,7 +55,7 @@ pub use metric_name::MetricName;
 pub use model::{
     Model,
     boundary::{Boundary, CdfBoundary, IqrBoundary, PercentageBoundary},
-    model_test::ModelTest,
+    model_test::{ModelSlot, ModelTest},
     sample_size::SampleSize,
     window::Window,
 };

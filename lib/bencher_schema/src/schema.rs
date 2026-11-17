@@ -526,6 +526,7 @@ diesel::table! {
         measure_id -> Integer,
         metric -> Nullable<Text>,
         model_id -> Nullable<Integer>,
+        changepoint_model_id -> Nullable<Integer>,
         created -> BigInt,
         modified -> BigInt,
     }

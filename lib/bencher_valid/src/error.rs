@@ -1,4 +1,4 @@
-use crate::{Boundary, ModelTest, SampleSize, Window};
+use crate::{Boundary, ModelSlot, ModelTest, SampleSize, Window};
 
 #[cfg(feature = "plus")]
 pub(crate) const REGEX_ERROR: &str = "Failed to compile regex.";
@@ -257,6 +257,12 @@ pub enum ValidError {
     Boundaries { lower: Boundary, upper: Boundary },
     #[error("Invalid model, no boundary provided")]
     NoBoundary,
+    #[error(
+        "Invalid model, the {test} test checks {checks}, so it belongs in `{belongs}`, not in `{slot}`",
+        checks = test.slot().checks(),
+        belongs = test.slot()
+    )]
+    ModelSlot { test: ModelTest, slot: ModelSlot },
     #[error("Invalid static model, includes a minimum sample size: {0}")]
     StaticMinSampleSize(SampleSize),
     #[error("Invalid static model, includes a maximum sample size: {0}")]

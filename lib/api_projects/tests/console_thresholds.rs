@@ -297,6 +297,7 @@ async fn console_threshold_with_its_model_history() {
                     "replaced": millis(20),
                 },
             ],
+            "changepoint_models": [],
             "created": millis(10),
             "modified": millis(20),
         })
@@ -318,6 +319,7 @@ async fn console_threshold_with_its_model_history() {
                 "created": millis(12),
                 "replaced": millis(30),
             }],
+            "changepoint_models": [],
             "created": millis(12),
             "modified": millis(12),
         })
