@@ -1,0 +1,18 @@
+Bencher
+Copyright 2022-present Bencher
+
+The files under plus/bencher_changepoint/ are translated to Rust from Apache
+Otava (incubating) at commit d4f62a1c38dea6053ce31d1f1fba7e53105d2e66, with
+its tests. They are licensed under the Apache License, Version 2.0
+(license/LICENSE-APACHE). The NOTICE of Apache Otava:
+
+    Apache Otava (incubating)
+    Copyright 2020-2026 The Apache Software Foundation.
+
+    This product includes software developed at
+    The Apache Software Foundation (https://www.apache.org/).
+
+plus/bencher_changepoint/tests/otava/ also holds a test series from MongoDB
+signal-processing-algorithms, commit e00eaf60dba9e22852ca39f5b46187b41eee73e5
+(https://github.com/mongodb/signal-processing-algorithms), licensed under the
+Apache License, Version 2.0.
