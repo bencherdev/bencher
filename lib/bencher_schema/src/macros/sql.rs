@@ -40,3 +40,9 @@ diesel::define_sql_function! {
     /// `SQLite` `lower(x)`: folds ASCII letters to lowercase, as the `NOCASE` collation does.
     fn lower(x: diesel::sql_types::Text) -> diesel::sql_types::Text;
 }
+
+diesel::define_sql_function! {
+    /// `SQLite` `lower(x)` of a nullable text, which is null for null.
+    #[sql_name = "lower"]
+    fn lower_nullable(x: diesel::sql_types::Nullable<diesel::sql_types::Text>) -> diesel::sql_types::Nullable<diesel::sql_types::Text>;
+}

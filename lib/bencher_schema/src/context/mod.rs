@@ -23,6 +23,8 @@ use crate::model::project::github_link::GitHubLinking;
 
 #[cfg(feature = "plus")]
 mod callbacks;
+#[cfg(feature = "plus")]
+mod commit_titles;
 mod database;
 #[cfg(feature = "plus")]
 mod heartbeat_tasks;
@@ -43,6 +45,8 @@ mod stats;
 use bencher_recaptcha::RecaptchaClient;
 #[cfg(feature = "plus")]
 pub use callbacks::Callbacks;
+#[cfg(feature = "plus")]
+pub use commit_titles::CommitTitles;
 pub use database::{Database, DbConnection};
 #[cfg(feature = "plus")]
 pub use heartbeat_tasks::HeartbeatTasks;
@@ -111,6 +115,9 @@ pub struct ApiContext {
     pub callback_key: CallbackKey,
     #[cfg(feature = "plus")]
     pub callbacks: Callbacks,
+    /// Fetches each commit's title from GitHub, for a server with the GitHub App.
+    #[cfg(feature = "plus")]
+    pub commit_titles: CommitTitles,
     /// Runner self-update URL construction and cloud channel checksum cache.
     #[cfg(feature = "plus")]
     pub runner_update: RunnerUpdate,

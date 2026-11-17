@@ -1,15 +1,15 @@
 use std::fmt;
 
 use bencher_valid::{
-    DateTime, GitHubAppSlug, GitHubInstallationId, GitHubRepositoryId, GitHubRepositoryName, Jwt,
-    NonEmpty, Secret, ValidError,
+    DateTime, GitHash, GitHubAppSlug, GitHubInstallationId, GitHubRepositoryId,
+    GitHubRepositoryName, Jwt, NonEmpty, Secret, ValidError,
 };
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use url::Url;
 
 use crate::{
-    AUTH_URL, GitHubInstallationChange, GitHubWebhookError,
+    AUTH_URL, GitHubCommitsError, GitHubInstallationChange, GitHubWebhookError,
     api::{GITHUB_API_URL, GitHubApi, GitHubApiError, JsonOwner},
     webhook,
 };
@@ -116,16 +116,52 @@ impl GitHubApp {
         installation: GitHubInstallationId,
         repository: GitHubRepositoryId,
     ) -> Result<GitHubInstallationToken, GitHubAppError> {
-        let jwt = self.jwt(now).map_err(GitHubAppError::Sign)?;
-        let mint = JsonMint {
-            repository_ids: [repository],
-            permissions: JsonMintPermissions { contents: "write" },
-        };
         let JsonMinted {
             token,
             repositories,
         } = self
-            .api
+            .mint_for(now, installation, repository, "write")
+            .await?;
+        let full_name = minted_name(repository, &repositories)?;
+        Ok(GitHubInstallationToken { token, full_name })
+    }
+
+    /// Mints a token that can read the contents of the one repository and nothing else.
+    pub async fn mint_read(
+        &self,
+        now: DateTime,
+        installation: GitHubInstallationId,
+        repository: GitHubRepositoryId,
+    ) -> Result<GitHubReadToken, GitHubAppError> {
+        let JsonMintedRead {
+            token,
+            expires_at,
+            repositories,
+        } = self.mint_for(now, installation, repository, "read").await?;
+        let full_name = minted_name(repository, &repositories)?;
+        Ok(GitHubReadToken {
+            token,
+            full_name,
+            expires_at,
+        })
+    }
+
+    async fn mint_for<T>(
+        &self,
+        now: DateTime,
+        installation: GitHubInstallationId,
+        repository: GitHubRepositoryId,
+        contents: &'static str,
+    ) -> Result<T, GitHubAppError>
+    where
+        T: DeserializeOwned,
+    {
+        let jwt = self.jwt(now).map_err(GitHubAppError::Sign)?;
+        let mint = JsonMint {
+            repository_ids: [repository],
+            permissions: JsonMintPermissions { contents },
+        };
+        self.api
             .post(
                 &[
                     "app",
@@ -137,24 +173,18 @@ impl GitHubApp {
                 &mint,
             )
             .await
-            .map_err(GitHubAppError::Mint)?;
-        if let [
-            JsonMintedRepository {
-                id,
-                owner: JsonOwner { login },
-                name,
-            },
-        ] = repositories.as_slice()
-            && *id == repository
-        {
-            let full_name =
-                GitHubRepositoryName::new(login, name).map_err(GitHubAppError::RepositoryName)?;
-            return Ok(GitHubInstallationToken { token, full_name });
-        }
-        Err(GitHubAppError::Repositories {
-            requested: repository,
-            returned: repositories.iter().map(|minted| minted.id).collect(),
-        })
+            .map_err(GitHubAppError::Mint)
+    }
+
+    /// The message of each commit, by its hash, in the repository that `token` can read: none for
+    /// a hash that names no commit there. One request asks for every hash.
+    pub async fn commit_messages(
+        &self,
+        token: &Secret,
+        full_name: &GitHubRepositoryName,
+        hashes: &[GitHash],
+    ) -> Result<Vec<(GitHash, Option<String>)>, GitHubCommitsError> {
+        crate::graphql::commit_messages(&self.api, token, full_name, hashes).await
     }
 
     /// The installation of the app that holds the repository now, if any does.
@@ -204,6 +234,28 @@ impl fmt::Debug for GitHubApp {
     }
 }
 
+/// The full name of the one repository a token was minted for, if it is the one requested.
+fn minted_name(
+    requested: GitHubRepositoryId,
+    repositories: &[JsonMintedRepository],
+) -> Result<GitHubRepositoryName, GitHubAppError> {
+    if let [
+        JsonMintedRepository {
+            id,
+            owner: JsonOwner { login },
+            name,
+        },
+    ] = repositories
+        && *id == requested
+    {
+        return GitHubRepositoryName::new(login, name).map_err(GitHubAppError::RepositoryName);
+    }
+    Err(GitHubAppError::Repositories {
+        requested,
+        returned: repositories.iter().map(|minted| minted.id).collect(),
+    })
+}
+
 /// A one-hour installation token, and the current full name of the one repository it can write.
 pub struct GitHubInstallationToken {
     pub token: Secret,
@@ -214,6 +266,23 @@ impl fmt::Debug for GitHubInstallationToken {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("GitHubInstallationToken")
             .field("full_name", &self.full_name)
+            .finish_non_exhaustive()
+    }
+}
+
+/// An installation token that can read the one repository, its current full name, and when the
+/// token expires.
+pub struct GitHubReadToken {
+    pub token: Secret,
+    pub full_name: GitHubRepositoryName,
+    pub expires_at: DateTime,
+}
+
+impl fmt::Debug for GitHubReadToken {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GitHubReadToken")
+            .field("full_name", &self.full_name)
+            .field("expires_at", &self.expires_at)
             .finish_non_exhaustive()
     }
 }
@@ -243,6 +312,13 @@ struct JsonMinted {
 }
 
 #[derive(Deserialize)]
+struct JsonMintedRead {
+    token: Secret,
+    expires_at: DateTime,
+    repositories: Vec<JsonMintedRepository>,
+}
+
+#[derive(Deserialize)]
 struct JsonMintedRepository {
     id: GitHubRepositoryId,
     owner: JsonOwner,
@@ -257,13 +333,13 @@ struct JsonRepositoryInstallation {
 #[cfg(test)]
 mod tests {
     use base64::{Engine as _, engine::general_purpose::STANDARD};
-    use bencher_valid::{DateTime, GitHubInstallationId, GitHubRepositoryId, Jwt, Secret};
+    use bencher_valid::{DateTime, GitHash, GitHubInstallationId, GitHubRepositoryId, Jwt, Secret};
     use jsonwebtoken::{Algorithm, DecodingKey, Validation};
     use serde::Deserialize;
 
-    use super::{GitHubApp, GitHubAppError, GitHubInstallationToken};
+    use super::{GitHubApp, GitHubAppError, GitHubInstallationToken, GitHubReadToken};
     use crate::{
-        GitHubApiError,
+        GitHubApiError, GitHubCommitsError,
         api::USER_AGENT,
         test_server::{Received, Server, app_key, install_crypto_provider},
     };
@@ -280,6 +356,8 @@ mod tests {
     const REPOSITORY_INACCESSIBLE: &str = "There is at least one repository that does not exist or is not accessible to the parent installation.";
     const PERMISSIONS_NOT_GRANTED: &str =
         "The permissions requested are not granted to this installation.";
+    const SECONDARY: &str =
+        "You have exceeded a secondary rate limit. Please wait a few minutes before you try again.";
 
     #[derive(Debug, Deserialize)]
     struct Claims {
@@ -424,6 +502,225 @@ mod tests {
         assert_eq!(verify(jwt, &public).unwrap().iss, CLIENT_ID);
     }
 
+    // Kills a read mint that asks for any permission but contents read, or for any other or
+    // more repositories, sends anywhere else, or reads the expiry or the name from anywhere else.
+    #[tokio::test]
+    async fn the_read_mint_asks_for_one_repository_with_contents_read() {
+        let (private_key, public) = key_pair();
+        let server = Server::start(vec![minted(&minted_repository(REPOSITORY_ID))]).await;
+
+        let token = app(&private_key, Some(&server))
+            .mint_read(DateTime::TEST, installation(), repository())
+            .await
+            .unwrap();
+
+        assert_eq!(token.token.as_ref(), TOKEN);
+        assert_eq!(token.expires_at.timestamp(), 1_720_682_580);
+        assert_eq!(
+            (token.full_name.owner(), token.full_name.name()),
+            ("octo-cat", format!("repo-{REPOSITORY_ID}").as_str())
+        );
+        let [request] = server.received().await.try_into().ok().unwrap();
+        assert_eq!(
+            request.request_line(),
+            format!("POST /github/app/installations/{INSTALLATION_ID}/access_tokens HTTP/1.1")
+        );
+        assert_eq!(
+            request.json(),
+            serde_json::json!({
+                "repository_ids": [REPOSITORY_ID],
+                "permissions": { "contents": "read" },
+            })
+        );
+        let jwt = request
+            .header("authorization")
+            .and_then(|authorization| authorization.strip_prefix("Bearer "))
+            .unwrap();
+        assert_eq!(verify(jwt, &public).unwrap().iss, CLIENT_ID);
+
+        let server = Server::start(vec![minted(&minted_repository(OTHER_REPOSITORY_ID))]).await;
+        let error = app(&private_key, Some(&server))
+            .mint_read(DateTime::TEST, installation(), repository())
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(error, GitHubAppError::Repositories { .. }),
+            "{error:?}"
+        );
+        server.received().await;
+    }
+
+    // Kills a query that asks any other path or repository, under any other token, for a hash
+    // under any other alias or in its upper case, and reading a null object, an object that is no
+    // commit, or a message from any other alias.
+    #[tokio::test]
+    async fn one_query_asks_for_every_commit_by_its_alias() {
+        let (private_key, _public) = key_pair();
+        let server = Server::start(vec![(
+            200,
+            r#"{"data": {"repository": {"c0": {"message": "First\n\nBody"}, "c1": null, "c2": {}, "c3": {"message": "Fourth"}}}}"#.to_owned(),
+        )])
+        .await;
+        let hashes: Vec<GitHash> = [
+            "0000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000003",
+            "ABCDEF0000000000000000000000000000000004",
+        ]
+        .into_iter()
+        .map(|hash| hash.parse().unwrap())
+        .collect();
+
+        let messages = app(&private_key, Some(&server))
+            .commit_messages(
+                &TOKEN.parse().unwrap(),
+                &"octo-cat/hello.world".parse().unwrap(),
+                &hashes,
+            )
+            .await
+            .unwrap();
+
+        let messages: Vec<(&str, Option<&str>)> = messages
+            .iter()
+            .map(|(hash, message)| (hash.as_ref(), message.as_deref()))
+            .collect();
+        assert_eq!(
+            messages,
+            [
+                (
+                    "0000000000000000000000000000000000000001",
+                    Some("First\n\nBody")
+                ),
+                ("0000000000000000000000000000000000000002", None),
+                ("0000000000000000000000000000000000000003", None),
+                ("ABCDEF0000000000000000000000000000000004", Some("Fourth")),
+            ]
+        );
+        let [request] = server.received().await.try_into().ok().unwrap();
+        assert_eq!(request.request_line(), "POST /github/graphql HTTP/1.1");
+        assert_eq!(
+            request.header("authorization"),
+            Some(format!("Bearer {TOKEN}").as_str())
+        );
+        let body = request.json();
+        assert_eq!(
+            body["variables"],
+            serde_json::json!({ "owner": "octo-cat", "name": "hello.world" })
+        );
+        assert_eq!(
+            body["query"],
+            "query($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { \
+             c0: object(oid: \"0000000000000000000000000000000000000001\") { ... on Commit { message } } \
+             c1: object(oid: \"0000000000000000000000000000000000000002\") { ... on Commit { message } } \
+             c2: object(oid: \"0000000000000000000000000000000000000003\") { ... on Commit { message } } \
+             c3: object(oid: \"abcdef0000000000000000000000000000000004\") { ... on Commit { message } } } }"
+        );
+    }
+
+    // Kills reading errors, alone or beside an answer, a missing repository, or a missing alias as
+    // an answer, which would store a commit as not found, and telling a rate limit apart by
+    // anything but its error type, a spent limit, a retry-after, or a secondary limit's message.
+    #[tokio::test]
+    async fn an_answer_with_errors_is_no_answer() {
+        let (private_key, _public) = key_pair();
+        let errors = |kind: &str| {
+            format!(
+                r#"{{"data": {{"repository": null}}, "errors": [{{"type": "{kind}", "message": "No"}}]}}"#
+            )
+        };
+        for (headers, body, limited) in [
+            (Vec::new(), errors("RATE_LIMITED"), Some(true)),
+            (
+                vec![
+                    ("x-ratelimit-remaining", "0".to_owned()),
+                    ("x-ratelimit-reset", "1720679000".to_owned()),
+                ],
+                errors("FORBIDDEN"),
+                Some(true),
+            ),
+            (
+                vec![("retry-after", "30".to_owned())],
+                errors("FORBIDDEN"),
+                Some(true),
+            ),
+            (
+                vec![("x-ratelimit-remaining", "10".to_owned())],
+                errors("NOT_FOUND"),
+                Some(false),
+            ),
+            (
+                Vec::new(),
+                r#"{"data": {"repository": null}}"#.to_owned(),
+                Some(false),
+            ),
+            (
+                Vec::new(),
+                r#"{"data": {"repository": {}}}"#.to_owned(),
+                Some(false),
+            ),
+            (Vec::new(), r#"{"data": null}"#.to_owned(), Some(false)),
+            (
+                Vec::new(),
+                r#"{"data": {"repository": {"c0": {"message": "Found"}}}, "errors": [{"type": "SERVICE_UNAVAILABLE"}]}"#
+                    .to_owned(),
+                Some(false),
+            ),
+            (
+                Vec::new(),
+                format!(r#"{{"data": null, "errors": [{{"message": "{SECONDARY}"}}]}}"#),
+                Some(true),
+            ),
+        ] {
+            let server = Server::start_with_headers(vec![(200, headers, body.clone())]).await;
+
+            let error = app(&private_key, Some(&server))
+                .commit_messages(
+                    &TOKEN.parse().unwrap(),
+                    &"octo-cat/repo".parse().unwrap(),
+                    &["0000000000000000000000000000000000000001".parse().unwrap()],
+                )
+                .await
+                .unwrap_err();
+
+            match (limited, &error) {
+                (Some(true), GitHubCommitsError::RateLimited(_))
+                | (Some(false), GitHubCommitsError::Unanswered(_)) => {},
+                _ => panic!("{body}: {error:?}"),
+            }
+            server.received().await;
+        }
+    }
+
+    // Kills dropping the status of a refused query, which tells a stale token, a rate limit, and
+    // an outage apart.
+    #[tokio::test]
+    async fn a_refused_query_keeps_its_status() {
+        let (private_key, _public) = key_pair();
+        for status in [401, 403, 429, 500, 502] {
+            let server = Server::start_with_headers(vec![(
+                status,
+                vec![("x-ratelimit-remaining", "0".to_owned())],
+                r#"{"message": "No"}"#.to_owned(),
+            )])
+            .await;
+
+            let error = app(&private_key, Some(&server))
+                .commit_messages(
+                    &TOKEN.parse().unwrap(),
+                    &"octo-cat/repo".parse().unwrap(),
+                    &["0000000000000000000000000000000000000001".parse().unwrap()],
+                )
+                .await
+                .unwrap_err();
+
+            let GitHubCommitsError::Api(GitHubApiError::Status(answered, _)) = &error else {
+                panic!("{status}: {error:?}");
+            };
+            assert_eq!(answered.as_u16(), status);
+            server.received().await;
+        }
+    }
+
     // Kills dropping or reordering a segment, building on any API but the app's, a URL that
     // misses the base's path, and keeping the empty segment of a base's trailing slash.
     #[test]
@@ -529,7 +826,7 @@ mod tests {
 
     // Kills folding a 404 or either known 422 into any other refusal, which would keep a dead link
     // connected or disconnect a live one, reading a 422 by its status alone or the message of
-    // any other status, and following a redirect.
+    // any other status, missing a secondary rate limit by its message, and following a redirect.
     #[tokio::test]
     async fn the_mint_tells_each_refusal_apart() {
         let (private_key, _public) = key_pair();
@@ -550,6 +847,7 @@ mod tests {
             (422, "Unprocessable".to_owned(), "422"),
             (403, message(REPOSITORY_INACCESSIBLE), "403"),
             (403, message(PERMISSIONS_NOT_GRANTED), "403"),
+            (403, message(SECONDARY), "SecondaryRateLimit"),
             (302, String::new(), "302"),
             (401, message("Bad credentials"), "401"),
             (500, message("Server Error"), "500"),
@@ -743,7 +1041,7 @@ mod tests {
         }
     }
 
-    // `Secret` prints itself in a debug build, so this kills a derived `Debug` on either type.
+    // `Secret` prints itself in a debug build, so this kills a derived `Debug` on any of the types.
     #[test]
     fn debug_hides_the_key_the_webhook_secret_and_the_token() {
         let (private_key, _public) = key_pair();
@@ -752,8 +1050,13 @@ mod tests {
             token: TOKEN.parse().unwrap(),
             full_name: "octo-cat/repo".parse().unwrap(),
         };
+        let read = GitHubReadToken {
+            token: TOKEN.parse().unwrap(),
+            full_name: "octo-cat/repo".parse().unwrap(),
+            expires_at: DateTime::TEST,
+        };
 
-        let printed = format!("{app:?} {token:?}");
+        let printed = format!("{app:?} {token:?} {read:?}");
 
         let pem_body = private_key
             .as_ref()
@@ -785,6 +1088,7 @@ mod tests {
             GitHubApiError::RepositoryInaccessible => "RepositoryInaccessible".to_owned(),
             GitHubApiError::PermissionsNotGranted => "PermissionsNotGranted".to_owned(),
             GitHubApiError::Status(status, _) => status.as_str().to_owned(),
+            GitHubApiError::SecondaryRateLimit(_) => "SecondaryRateLimit".to_owned(),
             GitHubApiError::Request(_)
             | GitHubApiError::Json(_)
             | GitHubApiError::RepositoryName(_) => panic!("{error:?}"),

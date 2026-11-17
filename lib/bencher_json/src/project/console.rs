@@ -5,8 +5,8 @@
 //! refer to them by index. Points are columns aligned to one shared x.
 
 use bencher_valid::{
-    BenchmarkName, BmfVersion, Boundary, BranchName, DateTimeMillis, GitHash, MetricName,
-    ModelTest, ResourceName, SampleSize, Window,
+    BenchmarkName, BmfVersion, Boundary, BranchName, CommitTitle, DateTimeMillis, GitHash,
+    MetricName, ModelTest, ResourceName, SampleSize, Window,
 };
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
@@ -123,6 +123,9 @@ pub struct JsonConsoleReport {
     pub branch: JsonConsoleBranch,
     pub testbed: JsonConsoleTestbed,
     pub version: JsonVersion,
+    /// The title of the version's commit, once GitHub has given it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<CommitTitle>,
     pub start_time: DateTimeMillis,
     pub end_time: DateTimeMillis,
     /// The BMF version the report's results were read at.
@@ -386,6 +389,9 @@ pub struct JsonConsolePointReport {
     pub version: VersionNumber,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hash: Option<GitHash>,
+    /// The title of the hash's commit, once GitHub has given it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<CommitTitle>,
 }
 
 /// One line's values, aligned to `points` with null where the line has no
@@ -1002,6 +1008,9 @@ pub struct JsonConsoleRun {
     pub number: VersionNumber,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hash: Option<GitHash>,
+    /// The title of the hash's commit, once GitHub has given it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub title: Option<CommitTitle>,
     pub branch: JsonConsoleBranch,
     /// When its first report started.
     pub start_time: DateTimeMillis,

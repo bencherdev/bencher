@@ -43,6 +43,8 @@ pub enum ValidError {
     UrlToUrl(crate::Url, url::ParseError),
     #[error("Failed to validate git hash: {0}")]
     GitHash(String),
+    #[error("Failed to validate commit title: {0}")]
+    CommitTitle(String),
     #[cfg(feature = "plus")]
     #[error("Failed to validate OCI image digest: {0}")]
     ImageDigest(String),

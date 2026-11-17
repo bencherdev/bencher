@@ -8,9 +8,9 @@ use std::{
 
 use bencher_endpoint::{CorsResponse, Endpoint, Get, Patch, ResponseOk};
 use bencher_json::{
-    AlertUuid, BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid,
-    MeasureUuid, MetricName, ProjectResourceId, ReportUuid, ResourceName, TestbedSlug, TestbedUuid,
-    ThresholdUuid,
+    AlertUuid, BranchName, BranchSlug, BranchUuid, CommitTitle, DateTime, DateTimeMillis, GitHash,
+    HeadUuid, MeasureUuid, MetricName, ProjectResourceId, ReportUuid, ResourceName, TestbedSlug,
+    TestbedUuid, ThresholdUuid,
     project::{
         alert::{
             AlertStatus, JsonAlertsFilter, JsonUpdateAlerts, JsonUpdatedAlerts, MAX_UPDATE_ALERTS,
@@ -37,6 +37,7 @@ use bencher_schema::{
         project::{
             ProjectId, QueryProject,
             branch::{BranchId, head::HeadId, version::VersionId},
+            commit,
             metric::MetricId,
             report::{QueryReport, ReportId},
             testbed::TestbedId,
@@ -52,7 +53,8 @@ use bencher_schema::{
 };
 use diesel::{
     BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, JoinOnDsl as _,
-    QueryDsl as _, RunQueryDsl as _, SelectableExpression, SelectableHelper as _,
+    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableExpression,
+    SelectableHelper as _,
     dsl::count_star,
     sql_types::{Bool, Integer},
     sqlite::Sqlite,
@@ -66,7 +68,7 @@ use super::{
     alert_json, before,
     perf::{BranchRow, LineDimensions, PointCheck, TestbedRow, Window, draw_line},
     report::{
-        BoundaryRow, History, HistoryRow, Line, LineKey, WindowSource, history_counterparts,
+        BoundaryRow, History, HistoryRow, Line, LineKey, WindowTitleSource, history_counterparts,
         history_points, line_json, window_holds, window_length, windows_history_rows,
     },
     thresholds::readable_project,
@@ -804,7 +806,7 @@ fn window_reports(
     groups: &[PageGroup],
     starts: &[DateTime],
 ) -> diesel::QueryResult<Vec<WindowReport>> {
-    let mut reaches: Option<Selected<WindowSource>> = None;
+    let mut reaches: Option<Selected<WindowTitleSource>> = None;
     for (group, start_time) in groups.iter().zip(starts) {
         let window = schema::report::table
             .inner_join(
@@ -820,7 +822,7 @@ fn window_reports(
             .select(schema::report::id)
             .into_boxed();
         // The window's report ids, not the head, are what SQLite should read the reports by.
-        let reach: Selected<WindowSource> = Box::new(
+        let reach: Selected<WindowTitleSource> = Box::new(
             (schema::head_version::head_id + 0)
                 .eq(group.report.head_id)
                 .and(schema::report::id.eq_any(window)),
@@ -839,6 +841,7 @@ fn window_reports(
                 .on(schema::head_version::version_id.eq(schema::report::version_id)),
         )
         .inner_join(schema::version::table.on(schema::version::id.eq(schema::report::version_id)))
+        .left_join(schema::commit::table.on(commit::of_version()))
         .filter(reaches)
         .select((
             schema::head_version::head_id,
@@ -850,6 +853,7 @@ fn window_reports(
             schema::report::created,
             schema::version::number,
             schema::version::hash,
+            schema::commit::title.nullable(),
         ))
         .load::<(
             HeadId,
@@ -861,10 +865,22 @@ fn window_reports(
             DateTime,
             VersionNumber,
             Option<GitHash>,
+            Option<CommitTitle>,
         )>(conn)?
         .into_iter()
         .map(
-            |(head_id, testbed_id, id, uuid, start_time, end_time, created, version, hash)| {
+            |(
+                head_id,
+                testbed_id,
+                id,
+                uuid,
+                start_time,
+                end_time,
+                created,
+                version,
+                hash,
+                title,
+            )| {
                 WindowReport {
                     head_id,
                     testbed_id,
@@ -876,6 +892,7 @@ fn window_reports(
                         created,
                         version,
                         hash,
+                        title,
                     },
                 }
             },

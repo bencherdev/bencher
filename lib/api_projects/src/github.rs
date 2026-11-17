@@ -4,7 +4,8 @@ use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Post, Put, ResponseAccepted, ResponseDeleted, ResponseOk,
 };
 use bencher_github_client::{
-    GitHubApp, GitHubClient, GitHubInstallationPermission, GitHubRepository, GitHubWebhookError,
+    GitHubApp, GitHubClient, GitHubInstallationChange, GitHubInstallationPermission,
+    GitHubRepository, GitHubWebhookError,
 };
 use bencher_json::{
     GitHubRepositoryName, ProjectResourceId, ResourceId,
@@ -32,6 +33,7 @@ use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, RequestContext, TypedBody, UntypedBody, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use slog::Logger;
 use url::Url;
 
 /// How long a trip to GitHub, and each grant it returns, lasts.
@@ -171,6 +173,7 @@ async fn put_inner(
         .execute(conn)
     })
     .map_err(resource_conflict_err!(LinkedRepository, query_project))?;
+    context.commit_titles.fill(query_project.id);
     link.into_json(auth_conn!(context))
 }
 
@@ -410,11 +413,18 @@ pub async fn github_webhook_post(
     rqctx: RequestContext<ApiContext>,
     body: UntypedBody,
 ) -> Result<ResponseAccepted<()>, HttpError> {
-    webhook_inner(rqctx.context(), rqctx.request.headers(), body.as_bytes()).await?;
+    webhook_inner(
+        &rqctx.log,
+        rqctx.context(),
+        rqctx.request.headers(),
+        body.as_bytes(),
+    )
+    .await?;
     Ok(Post::pub_response_accepted(()))
 }
 
 async fn webhook_inner(
+    log: &Logger,
     context: &ApiContext,
     headers: &HeaderMap,
     body: &[u8],
@@ -443,8 +453,36 @@ async fn webhook_inner(
                 )
             },
         )?;
+        fill_reconnected(log, context, &change).await;
     }
     Ok(())
+}
+
+/// Fill the commit titles of every link that a delivery may have connected. The delivery has
+/// already applied, so a failure here only logs.
+async fn fill_reconnected(log: &Logger, context: &ApiContext, change: &GitHubInstallationChange) {
+    let (GitHubInstallationChange::Added { installation, .. }
+    | GitHubInstallationChange::Unsuspended { installation, .. }) = change
+    else {
+        return;
+    };
+    let mut conn = match context.database.get_auth_conn().await {
+        Ok(conn) => conn,
+        Err(e) => {
+            slog::error!(log, "Failed to get a connection to fill commit titles"; "installation" => %installation, "error" => %e);
+            return;
+        },
+    };
+    match QueryLinkedRepository::connected_in(&mut conn, *installation) {
+        Ok(projects) => {
+            for project_id in projects {
+                context.commit_titles.fill(project_id);
+            }
+        },
+        Err(e) => {
+            slog::error!(log, "Failed to read the links to fill with commit titles"; "installation" => %installation, "error" => %e);
+        },
+    }
 }
 
 /// The app, or a refusal from a server that serves no link endpoints without one. The refusal

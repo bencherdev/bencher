@@ -12,9 +12,9 @@ use bencher_json::{
     project::console::{JsonConsoleJob, JsonConsoleSpec},
 };
 use bencher_json::{
-    BranchName, BranchSlug, BranchUuid, DateTime, DateTimeMillis, GitHash, HeadUuid, MeasureUuid,
-    MetricName, ParameterSet, ProjectResourceId, ReportUuid, ResourceName, TestbedSlug,
-    TestbedUuid, ThresholdUuid, VersionUuid,
+    BranchName, BranchSlug, BranchUuid, CommitTitle, DateTime, DateTimeMillis, GitHash, HeadUuid,
+    MeasureUuid, MetricName, ParameterSet, ProjectResourceId, ReportUuid, ResourceName,
+    TestbedSlug, TestbedUuid, ThresholdUuid, VersionUuid,
     project::{
         alert::AlertStatus,
         console::{
@@ -38,6 +38,7 @@ use bencher_schema::{
         project::{
             QueryProject,
             benchmark::BenchmarkId,
+            commit,
             measure::MeasureId,
             metric::MetricId,
             report::{QueryReport, ReportId, warning::get_reports_warnings},
@@ -52,8 +53,8 @@ use bencher_schema::{
 use diesel::OptionalExtension as _;
 use diesel::{
     BoolExpressionMethods as _, BoxableExpression, ExpressionMethods as _, JoinOnDsl as _,
-    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
-    sql_types::Bool, sqlite::Sqlite,
+    NullableExpressionMethods as _, QueryDsl as _, RunQueryDsl as _, SelectableExpression,
+    SelectableHelper as _, sql_types::Bool, sqlite::Sqlite,
 };
 use dropshot::{HttpError, Path, Query, RequestContext, endpoint};
 use schemars::JsonSchema;
@@ -153,6 +154,7 @@ async fn get_inner(
         report,
         version_uuid,
         version,
+        title,
         branch,
         testbed,
     } = identity(conn, &project, path_params.report)?;
@@ -213,6 +215,7 @@ async fn get_inner(
         branch,
         testbed,
         version,
+        title,
         start_time: report.start_time.into(),
         end_time: report.end_time.into(),
         bmf_version: report.bmf_version,
@@ -387,13 +390,19 @@ struct Identity {
     report: QueryReport,
     version_uuid: VersionUuid,
     version: JsonVersion,
+    title: Option<CommitTitle>,
     branch: JsonConsoleBranch,
     testbed: JsonConsoleTestbed,
 }
 
 type IdentityRow = (
     QueryReport,
-    (VersionUuid, VersionNumber, Option<GitHash>),
+    (
+        VersionUuid,
+        VersionNumber,
+        Option<GitHash>,
+        Option<CommitTitle>,
+    ),
     (BranchUuid, BranchName, BranchSlug, HeadUuid),
     (TestbedUuid, ResourceName, TestbedSlug),
 );
@@ -405,11 +414,12 @@ fn identity(
 ) -> Result<Identity, HttpError> {
     let (
         report,
-        (version_uuid, number, hash),
+        (version_uuid, number, hash, title),
         (branch_uuid, branch_name, branch_slug, head_uuid),
         testbed,
     ) = schema::report::table
         .inner_join(schema::version::table.on(schema::version::id.eq(schema::report::version_id)))
+        .left_join(schema::commit::table.on(commit::of_version()))
         .inner_join(schema::head::table.on(schema::head::id.eq(schema::report::head_id)))
         .inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id)))
         .inner_join(schema::testbed::table.on(schema::testbed::id.eq(schema::report::testbed_id)))
@@ -421,6 +431,7 @@ fn identity(
                 schema::version::uuid,
                 schema::version::number,
                 schema::version::hash,
+                schema::commit::title.nullable(),
             ),
             (
                 schema::branch::uuid,
@@ -441,6 +452,7 @@ fn identity(
         report,
         version_uuid,
         version: JsonVersion { number, hash },
+        title,
         branch: JsonConsoleBranch {
             uuid: branch_uuid,
             name: branch_name,
@@ -592,6 +604,7 @@ fn window_reports(
                 .on(schema::head_version::version_id.eq(schema::report::version_id)),
         )
         .inner_join(schema::version::table.on(schema::version::id.eq(schema::report::version_id)))
+        .left_join(schema::commit::table.on(commit::of_version()))
         .filter(window_holds(report, window_start))
         .order((schema::report::end_time.desc(), schema::report::id.desc()))
         .limit(i64::try_from(MAX_CONSOLE_HISTORY_REPORTS + 1).unwrap_or(i64::MAX))
@@ -603,6 +616,7 @@ fn window_reports(
             schema::report::created,
             schema::version::number,
             schema::version::hash,
+            schema::commit::title.nullable(),
         ))
         .load::<(
             ReportId,
@@ -612,10 +626,11 @@ fn window_reports(
             DateTime,
             VersionNumber,
             Option<GitHash>,
+            Option<CommitTitle>,
         )>(conn)?
         .into_iter()
         .map(
-            |(id, uuid, start_time, end_time, created, version, hash)| PointReport {
+            |(id, uuid, start_time, end_time, created, version, hash, title)| PointReport {
                 id,
                 uuid,
                 start_time,
@@ -623,6 +638,7 @@ fn window_reports(
                 created,
                 version,
                 hash,
+                title,
             },
         )
         .collect::<Vec<_>>();
@@ -633,10 +649,17 @@ fn window_reports(
 
 /// The reports a report's window holds: on its head and testbed, started inside the window,
 /// and ended by the report.
-pub(super) fn window_holds(
+pub(super) fn window_holds<QS>(
     report: &QueryReport,
     window_start: DateTime,
-) -> Box<dyn BoxableExpression<WindowSource, Sqlite, SqlType = Bool>> {
+) -> Box<dyn BoxableExpression<QS, Sqlite, SqlType = Bool>>
+where
+    schema::head_version::head_id: SelectableExpression<QS>,
+    schema::report::id: SelectableExpression<QS>,
+    schema::report::testbed_id: SelectableExpression<QS>,
+    schema::report::start_time: SelectableExpression<QS>,
+    schema::report::end_time: SelectableExpression<QS>,
+{
     let QueryReport {
         id,
         head_id,
@@ -670,6 +693,10 @@ pub(super) type WindowSource = diesel::dsl::InnerJoinQuerySource<
     schema::version::table,
     diesel::dsl::Eq<schema::version::id, schema::report::version_id>,
 >;
+
+/// A report joined as in [`WindowSource`], and to its version's commit, if it has a row.
+pub(super) type WindowTitleSource =
+    diesel::dsl::LeftJoinQuerySource<WindowSource, schema::commit::table, commit::of_version>;
 
 /// One metric of the report, once per threshold that checked it.
 type LineRow = (

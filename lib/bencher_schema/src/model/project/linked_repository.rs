@@ -77,6 +77,28 @@ impl QueryLinkedRepository {
             .optional()
     }
 
+    /// Every project with a connected link.
+    pub fn connected_projects(conn: &mut DbConnection) -> QueryResult<Vec<ProjectId>> {
+        schema::linked_repository::table
+            .filter(schema::linked_repository::status.eq(LinkedRepositoryStatus::Connected))
+            .order(schema::linked_repository::project_id)
+            .select(schema::linked_repository::project_id)
+            .load(conn)
+    }
+
+    /// Every project with a connected link through the installation.
+    pub fn connected_in(
+        conn: &mut DbConnection,
+        installation: GitHubInstallationId,
+    ) -> QueryResult<Vec<ProjectId>> {
+        schema::linked_repository::table
+            .filter(schema::linked_repository::installation_id.eq(installation))
+            .filter(schema::linked_repository::status.eq(LinkedRepositoryStatus::Connected))
+            .order(schema::linked_repository::project_id)
+            .select(schema::linked_repository::project_id)
+            .load(conn)
+    }
+
     /// Link the project, in place of any link it had.
     pub fn replace(&self, conn: &mut DbConnection) -> QueryResult<usize> {
         diesel::replace_into(schema::linked_repository::table)

@@ -50,8 +50,8 @@ use serde::Deserialize;
 
 use super::{
     AlertRow, BenchmarkRow, Counterparts, Limits, MeasureRow, ModelRow, PointReport, PointsBuilder,
-    ReportOrder, SeriesBuilder, Tables, VariantRow, alert_json, before, clamp_start, model_json,
-    unique,
+    ReportOrder, SeriesBuilder, Tables, VariantRow, alert_json, before, clamp_start, fill_titles,
+    model_json, unique,
 };
 use crate::perf::DEFAULT_REPORT_HISTORY;
 
@@ -232,7 +232,10 @@ pub(super) fn draw(
     let plot = Plot::new(&boxes, read_series, &names, rows, &counterparts);
     let models =
         plot_models(conn, &plot.model_ids()).map_err(resource_not_found_err!(Model, project))?;
-    Ok(plot.into_json(&boxes, &models, window, total))
+    let mut json = plot.into_json(&boxes, &models, window, total);
+    fill_titles(conn, project.id, &mut json.reports)
+        .map_err(resource_not_found_err!(Commit, project))?;
+    Ok(json)
 }
 
 /// One line over a window already resolved that ends at `report`, as `window` echoes it,
@@ -289,7 +292,10 @@ pub(super) fn draw_line(
     });
     let models =
         plot_models(conn, &plot.model_ids()).map_err(resource_not_found_err!(Model, project))?;
-    Ok(plot.into_json(&boxes, &models, window, 1))
+    let mut json = plot.into_json(&boxes, &models, window, 1);
+    fill_titles(conn, project.id, &mut json.reports)
+        .map_err(resource_not_found_err!(Commit, project))?;
+    Ok(json)
 }
 
 /// The dimensions of one line, already read.
@@ -928,6 +934,8 @@ fn plot_row(row: PlotRowTuple) -> PlotRow {
             created,
             version,
             hash,
+            // Read once per response, after the points name their reports.
+            title: None,
         },
         spec_id,
         head_id,

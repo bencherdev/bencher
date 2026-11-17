@@ -266,14 +266,14 @@ impl TestServer {
         let shutdown = bencher_schema::context::CancellationToken::new();
         // Callbacks go to the recording sender, never through the real client.
         let callback_sender = Arc::new(crate::RecordingSender::default());
-        let callbacks = bencher_schema::context::Callbacks::new_with_github_app(
-            Arc::clone(&database.connection),
-            database.auth_pool.clone(),
-            callback_key.clone(),
-            callback_sender.clone(),
-            shutdown.clone(),
-            clock.clone(),
-            github_app.clone(),
+        let (callbacks, commit_titles) = background_tasks(
+            &log,
+            &database,
+            &callback_key,
+            &callback_sender,
+            &shutdown,
+            &clock,
+            github_app.as_ref(),
         );
         let context = ApiContext {
             console_url: ISSUER.parse().expect("Invalid console URL"),
@@ -312,6 +312,7 @@ impl TestServer {
             heartbeat_tasks: bencher_schema::context::HeartbeatTasks::new(),
             callback_key,
             callbacks,
+            commit_titles,
             runner_update: bencher_schema::context::RunnerUpdate::new(runner_update_base_url),
             openai_apps_challenge,
             oauth,
@@ -499,12 +500,49 @@ impl TestServer {
         let callbacks = self.context().callbacks.clone();
         #[cfg(feature = "plus")]
         self.context().shutdown.cancel();
+        #[cfg(feature = "plus")]
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        #[cfg(feature = "plus")]
+        self.context().commit_titles.drain(&log).await;
         drop(self.server.close().await);
         #[cfg(feature = "plus")]
-        callbacks
-            .drain(&slog::Logger::root(slog::Discard, slog::o!()))
-            .await;
+        callbacks.drain(&log).await;
     }
+}
+
+/// The tasks a test server runs, each with the server's GitHub App if it has one: callbacks to
+/// the recording sender, and the commit title task.
+#[cfg(feature = "plus")]
+fn background_tasks(
+    log: &slog::Logger,
+    database: &Database,
+    callback_key: &bencher_callback::CallbackKey,
+    callback_sender: &Arc<crate::RecordingSender>,
+    shutdown: &bencher_schema::context::CancellationToken,
+    clock: &bencher_json::Clock,
+    github_app: Option<&Arc<bencher_github_client::GitHubApp>>,
+) -> (
+    bencher_schema::context::Callbacks,
+    bencher_schema::context::CommitTitles,
+) {
+    let callbacks = bencher_schema::context::Callbacks::new_with_github_app(
+        Arc::clone(&database.connection),
+        database.auth_pool.clone(),
+        callback_key.clone(),
+        callback_sender.clone(),
+        shutdown.clone(),
+        clock.clone(),
+        github_app.cloned(),
+    );
+    let commit_titles = bencher_schema::context::CommitTitles::spawn(
+        log.clone(),
+        Arc::clone(&database.connection),
+        database.auth_pool.clone(),
+        shutdown.clone(),
+        clock.clone(),
+        github_app.cloned(),
+    );
+    (callbacks, commit_titles)
 }
 
 /// The settings of a test server, each left at the plain test server's default when unset.

@@ -165,6 +165,9 @@ async fn shutdown(log: &Logger, server: HttpServer<ApiContext>) {
             ctx.oci_storage.close_upload_sweep(),
         )
     };
+    // The commit title task stops at the shutdown signal above, at its next wait.
+    #[cfg(feature = "plus")]
+    server.app_private().commit_titles.drain(log).await;
     if let Err(e) = server.close().await {
         error!(log, "Server close error: {e}");
     }

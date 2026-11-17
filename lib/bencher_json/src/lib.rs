@@ -2,9 +2,9 @@ use std::sync::LazyLock;
 
 pub use bencher_context::RunContext;
 pub use bencher_valid::{
-    BencherKey, BenchmarkName, BmfVersion, Boundary, BranchName, CdfBoundary, DateTime,
-    DateTimeMillis, Email, GitHash, Index, IntoResourceId, IqrBoundary, Jwt, MetricName, Model,
-    ModelTest, NameId, NonEmpty, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId,
+    BencherKey, BenchmarkName, BmfVersion, Boundary, BranchName, CdfBoundary, CommitTitle,
+    DateTime, DateTimeMillis, Email, GitHash, Index, IntoResourceId, IqrBoundary, Jwt, MetricName,
+    Model, ModelTest, NameId, NonEmpty, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId,
     ResourceName, SampleSize, Sanitize, Search, Secret, Slug, Units, Url, UserKey, UserKeyHash,
     UserName, ValidError, Window,
 };

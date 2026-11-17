@@ -8,8 +8,8 @@ mod callback;
 pub use api_gauge::{ApiGauge, RunnerStateKind};
 pub use api_histogram::{ApiHistogram, Priority};
 pub use api_meter::{
-    ApiCounter, ApiMeter, AuthMethod, AuthorizationKind, IntervalKind, JobStatusKind,
-    McpChallengeKind, McpClientStyle, OAuthAuthorizeFailureReason, OAuthConsentKind,
+    ApiCounter, ApiMeter, AuthMethod, AuthorizationKind, CommitTitlesFailureReason, IntervalKind,
+    JobStatusKind, McpChallengeKind, McpClientStyle, OAuthAuthorizeFailureReason, OAuthConsentKind,
     OAuthGrantKind, OAuthProvider, OAuthRevokeKind, OAuthTokenAuthFailureReason,
     OAuthTokenFailureReason, PauseReasonKind, PlanKind, ProjectKeyAuthFailureReason,
     UpdateChannelKind, UserKeyAuthFailureReason,
