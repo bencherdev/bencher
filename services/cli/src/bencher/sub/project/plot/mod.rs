@@ -15,6 +15,14 @@ pub enum Plot {
     Delete(delete::Delete),
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum PlotError {
+    #[error("Failed to send the plot parameters: {0}")]
+    BadParameters(serde_json::Error),
+    #[error("`--metric _` cannot be given with a metric name: `_` alone draws every metric again")]
+    MetricBesideUnderscore,
+}
+
 impl TryFrom<CliPlot> for Plot {
     type Error = CliError;
 
@@ -39,4 +47,8 @@ impl SubCmd for Plot {
             Self::Delete(delete) => delete.exec().await,
         }
     }
+}
+
+fn metric_filter(metrics: Vec<bencher_json::MetricName>) -> bencher_client::types::MetricFilter {
+    bencher_client::types::MetricFilter(metrics.into_iter().map(Into::into).collect())
 }

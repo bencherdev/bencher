@@ -1,6 +1,6 @@
 use bencher_json::{
-    BenchmarkUuid, BranchUuid, Index, MeasureUuid, PlotUuid, ProjectResourceId, ResourceName,
-    TestbedUuid, Window,
+    BenchmarkUuid, BranchUuid, Index, MeasureUuid, MetricName, ParameterSet, PlotUuid,
+    ProjectResourceId, ResourceName, TestbedUuid, Window,
 };
 use clap::{Parser, Subcommand, ValueEnum};
 
@@ -117,10 +117,22 @@ pub struct CliPlotCreate {
     #[clap(long, required = true, value_name = "BENCHMARK")]
     pub benchmarks: Vec<BenchmarkUuid>,
 
+    /// The variants to include in the plot, as a JSON object of the parameters a variant must have (ex: `{"size": 64}`).
+    /// Repeat the option to include the variants that match any of the sets.
+    /// If not set, the plot includes every variant.
+    #[clap(long, value_name = "JSON")]
+    pub parameters: Vec<ParameterSet>,
+
     /// The measures to include in the plot.
     /// At least one measure must be specified.
     #[clap(long, required = true, value_name = "MEASURE")]
     pub measures: Vec<MeasureUuid>,
+
+    /// The metrics to draw, by name.
+    /// Repeat the option to draw more than one metric.
+    /// If not set, the plot draws every metric.
+    #[clap(long, value_name = "METRIC")]
+    pub metric: Vec<MetricName>,
 
     #[clap(flatten)]
     pub backend: CliBackend,
@@ -221,11 +233,25 @@ pub struct CliPlotUpdate {
     #[clap(long, value_name = "BENCHMARK")]
     pub benchmarks: Option<Vec<BenchmarkUuid>>,
 
+    /// The variants to include in the plot, as a JSON object of the parameters a variant must have (ex: `{"size": 64}`).
+    /// Replaces the current parameters filter for the plot.
+    /// Repeat the option to include the variants that match any of the sets.
+    /// To include every variant again, use an empty object (`{}`).
+    #[clap(long, value_name = "JSON")]
+    pub parameters: Option<Vec<ParameterSet>>,
+
     /// The measures to include in the plot.
     /// Replaces the current measures for the plot.
     /// At least one measure must be specified.
     #[clap(long, value_name = "MEASURE")]
     pub measures: Option<Vec<MeasureUuid>>,
+
+    /// The metrics to draw, by name.
+    /// Replaces the current metrics for the plot.
+    /// Repeat the option to draw more than one metric.
+    /// To draw every metric again, use an underscore (`_`).
+    #[clap(long, value_name = "METRIC")]
+    pub metric: Option<Vec<ElidedOption<MetricName>>>,
 
     #[clap(flatten)]
     pub backend: CliBackend,

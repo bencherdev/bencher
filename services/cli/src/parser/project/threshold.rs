@@ -1,6 +1,6 @@
 use bencher_json::{
-    Boundary, BranchNameId, MeasureNameId, ModelUuid, ProjectResourceId, SampleSize, TestbedNameId,
-    ThresholdUuid, Window,
+    Boundary, BranchNameId, MeasureNameId, MetricName, ModelUuid, ParameterSet, ProjectResourceId,
+    SampleSize, TestbedNameId, ThresholdUuid, Window,
 };
 use clap::{ArgGroup, Parser, Subcommand, ValueEnum};
 
@@ -78,6 +78,16 @@ pub struct CliThresholdCreate {
     /// Measure name, slug, or UUID
     #[clap(long)]
     pub measure: MeasureNameId,
+
+    /// The metric to check, by name.
+    /// If not set, the threshold checks the `value` metric.
+    #[clap(long)]
+    pub metric: Option<MetricName>,
+
+    /// The variants to check, as a JSON object of the parameters a variant must have (ex: `{"size": 64}`).
+    /// If not set, the threshold checks every variant.
+    #[clap(long, value_name = "JSON")]
+    pub parameters: Option<ParameterSet>,
 
     #[clap(flatten)]
     pub model: CliModel,
