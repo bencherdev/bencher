@@ -136,6 +136,8 @@ enum JobRead {
     Callback(&'static str),
     /// A job without a callback in the given state.
     Status(&'static str),
+    /// A failed job whose output records the given error.
+    Failed(&'static str),
     NotFound,
 }
 
@@ -719,22 +721,37 @@ fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static
             }
             (CREATED, report.to_string())
         },
-        ("GET", JOB_PATH) => match job_read {
-            JobRead::Callback(state) => (
-                OK,
-                json_job(Some(serde_json::json!({ "state": state, "status": null }))).to_string(),
-            ),
-            JobRead::Status(status) => {
-                let mut json_job = json_job(None);
-                if let Some(json_job) = json_job.as_object_mut() {
-                    json_job.insert("status".to_owned(), serde_json::json!(status));
-                }
-                (OK, json_job.to_string())
-            },
-            JobRead::NotFound => not_found(),
-        },
+        ("GET", JOB_PATH) => respond_job(job_read).unwrap_or_else(not_found),
         _ => not_found(),
     }
+}
+
+fn respond_job(job_read: JobRead) -> Option<(&'static str, String)> {
+    let json_job = match job_read {
+        JobRead::Callback(state) => {
+            json_job(Some(serde_json::json!({ "state": state, "status": null })))
+        },
+        JobRead::Status(status) => {
+            let mut json_job = json_job(None);
+            if let Some(json_job) = json_job.as_object_mut() {
+                json_job.insert("status".to_owned(), serde_json::json!(status));
+            }
+            json_job
+        },
+        JobRead::Failed(error) => {
+            let mut json_job = json_job(None);
+            if let Some(json_job) = json_job.as_object_mut() {
+                json_job.insert("status".to_owned(), serde_json::json!("failed"));
+                json_job.insert(
+                    "output".to_owned(),
+                    serde_json::json!({ "results": [], "error": error }),
+                );
+            }
+            json_job
+        },
+        JobRead::NotFound => return None,
+    };
+    Some((OK, json_job.to_string()))
 }
 
 const OK: &str = "200 OK";
@@ -1997,6 +2014,29 @@ fn only_the_attach_reads_the_payload() {
         [("POST", CHECK_RUNS), ("PATCH", check.as_str())]
     );
     assert_eq!(run.body("POST", CHECK_RUNS)["head_sha"], GITHUB_SHA);
+}
+
+/// Kills: a run that reports a failed job as an unknown error when the job records why it failed.
+#[test]
+fn a_failed_job_prints_its_recorded_error() {
+    const REFUSAL: &str =
+        "Results parsed as BMF version 1, but the remote job was accepted at BMF version 0.";
+    let run = bencher_run(
+        JobRead::Failed(REFUSAL),
+        &[
+            &ATTEMPTS[..],
+            &PROJECT,
+            &["--image", "alpine:3.18", "--job-poll-interval", "1"],
+        ]
+        .concat(),
+    );
+    assert_eq!(run.output.status.code(), Some(1), "{}", run.stderr());
+    assert!(
+        run.stderr()
+            .contains(&format!("Remote job failed: {REFUSAL}")),
+        "{}",
+        run.stderr()
+    );
 }
 
 #[test]
