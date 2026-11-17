@@ -1,0 +1,20 @@
+## `--threshold-metric <METRIC>`
+
+<br />
+
+Use the specified [Metric][metric] name for a Threshold.
+At BMF version 1, a Threshold checks one Metric of its Measure, by name, such as `median`, `p99`, or `value`.
+For example, to use a Threshold for the median of the Latency Measure,
+you could write `--threshold-measure latency --threshold-metric median`.
+To choose which Metric to check first, see the Metrics that [each benchmark harness adapter][adapters] writes.
+The Metrics that a Measure's Thresholds check are its columns in [the pull request comment][github actions] and the `bencher run` output.
+
+Once any Threshold has a Metric or a parameters filter, every Threshold needs a Metric,
+and `bencher run` stops with an error that names the Threshold that is missing its Metric.
+A `--threshold-measure` with no `--threshold-metric` at all sets no Threshold:
+the run still lands, and its Report warns that the Threshold was skipped, with a hint to use `--threshold-metric`.
+At BMF version 0, `--threshold-metric` stops `bencher run` with an error before it sends anything.
+
+[metric]: /docs/explanation/benchmarking/#metric
+[adapters]: /docs/explanation/adapters/
+[github actions]: /docs/explanation/bencher-run/#--github-actions-github_token

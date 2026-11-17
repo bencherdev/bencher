@@ -6,13 +6,22 @@ Es ist möglich, mehrere Schwellenwerte mit demselben
 <code><a href="/de/docs/explanation/bencher-run/">bencher run</a></code> Aufruf zu erstellen.
 Wenn Sie mehrere Schwellenwerte angeben, müssen für jeden Schwellenwert dieselben Optionen verwendet werden.
 Um eine Option für einen spezifischen Schwellenwert zu ignorieren, verwenden Sie einen Unterstrich (`_`).
+Die Ausnahme ist `--threshold-metric`: Jeder Schwellenwert braucht seine eigene Metrik, daher kann ein Unterstrich sie nicht überspringen.
 
 Zum Beispiel, wenn Sie nur zwei Schwellenwerte verwenden möchten,
-einen für die Latenzmessung und einen für die Durchsatzmessung,
-dann möchten Sie wahrscheinlich eine Obergrenze für die Latenzmessung
-und eine Untergrenze für die Durchsatzmessung festlegen.
-Daher würden Sie `--threshold-lower-boundary _` für die Latenzmessung
-und `--threshold-upper-boundary _` für die Durchsatzmessung verwenden.
+einen für die Latency-Measure und einen für die Throughput-Measure,
+dann möchten Sie wahrscheinlich eine Obergrenze für die Latency-Measure
+und eine Untergrenze für die Throughput-Measure festlegen.
+Daher würden Sie `--threshold-lower-boundary _` für die Latency-Measure
+und `--threshold-upper-boundary _` für die Throughput-Measure verwenden.
 Sie könnten so etwas schreiben:
 
 <MultipleThresholdsCode />
+
+Eine Measure kann auch mehrere Schwellenwerte haben, die sich in der Metrik oder im Parameterfilter unterscheiden,
+zum Beispiel einen für den `median` und einen für das `p99` der Latency-Measure.
+Jeder Schwellenwert, der zu einer Variante passt, prüft sie,
+daher prüfen ein ungefilterter und ein gefilterter Schwellenwert für dieselbe Metrik beide die Varianten, auf die der Filter passt,
+und beide lösen für dieselbe Regression einen Alarm aus.
+Ein Schwellenwert, der im selben Aufruf zweimal angegeben wird, ist ein einziger Schwellenwert,
+mit dem Modell aus seinem letzten Vorkommen.

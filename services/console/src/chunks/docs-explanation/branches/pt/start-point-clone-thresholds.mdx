@@ -3,6 +3,7 @@
 <br />
 
 Clone todos os [Thresholds][thresholds] do [Ponto de Início][start point] para a opção `branch`.
+Cada Threshold clonado mantém sua Medida, sua Métrica e seu filtro de parâmetros.
 Esta flag requer que a [opção `--start-point`][start point option] esteja configurada.
 
 - Se um Threshold não existir, ele será criado a partir do Threshold do `start-point`.
@@ -10,10 +11,10 @@ Esta flag requer que a [opção `--start-point`][start point option] esteja conf
 - Se um Threshold existir e seu modelo for diferente do Threshold do `start-point`, então o modelo antigo será substituído pelo modelo do Threshold do `start-point`.
 - Se um Threshold existir e o Threshold do `start-point` não existir, então o modelo do Threshold será removido.
 
-Por exemplo, se `feature_branch` existir com seu Ponto de Início sendo o Branch `main` e `main` tiver um Threshold para o Testbed embutido `localhost` e a Medida de `latency`,
-então usar `--branch feature_branch --start-point main --start-point-clone-thresholds` criaria um novo Threshold para `feature_branch` com o Testbed `localhost` e a Medida de `latency`.
+Por exemplo, se `feature_branch` existir com seu Ponto de Início sendo o Branch `main` e `main` tiver um Threshold para o Testbed embutido `localhost`, a Medida `latency` e a Métrica `median`,
+então usar `--branch feature_branch --start-point main --start-point-clone-thresholds` criaria um novo Threshold para `feature_branch` com o Testbed `localhost`, a Medida `latency` e a Métrica `median`.
 
 [thresholds]: /pt/docs/explanation/thresholds/
 [start point]: /pt/docs/explanation/benchmarking/#start-point
 
-[start point option]: #--branch-start-point-branch
+[start point option]: #--start-point-branch

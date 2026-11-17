@@ -1,6 +1,10 @@
 ## `bencher mock`
 
 `bencher mock` CLI 子命令用于生成模拟 Bencher 指标格式（BMF）的 JSON 数据。
+除非另有指定，它会写入 [BMF 版本 1][bmf versions]：
+每个[基准][benchmark]的每个[度量][measure]都有一个[指标][metric] `value`，
+并且每个基准都有一个不带参数的变体。
+它不会读取您项目的版本，因此版本 0 的项目需要 [`--bmf-version 0`](#--bmf-version-bmf_version)。
 
 ### `--seed <SEED>`
 
@@ -10,20 +14,28 @@
 
 要生成的模拟[基准][benchmark]的数量。
 
-[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
-
 ### `--measure <MEASURE>`
 
 要为每个[基准][benchmark]使用的[度量][measure]。可以通过多次使用 `--measure` 选项来指定多个度量。默认是内置的 `latency` 度量。
 
-[measure]: /zh/docs/explanation/benchmarking/#measure
-[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+### `--parameters <PARAMETERS>`
+
+要为每个基准生成的变体的[参数][parameters]，以 JSON 对象表示（例如：`--parameters '{"size": 64}'`）。
+每组参数都会为每个基准生成一个变体，
+可以通过多次使用 `--parameters` 选项来指定多组参数。
+如果未指定，每个基准只有一个不带参数的变体。
+它接受与 `bencher run` 的 [`--threshold-parameters` 选项][threshold parameters]相同的 JSON，
+并且不能与 `--bmf-version 0` 一起使用。
+
+### `--bmf-version <BMF_VERSION>`
+
+要写入的 BMF 版本，`0` 或 `1`。
+默认值为 `1`。
+在版本 0 中，每个度量都有 `value`、`lower_value` 和 `upper_value`。
 
 ### `--pow <POW>`
 
-用于模拟[度量指标][metric]的 10 的幂。默认值为 `1`。
-
-[metric]: /zh/docs/explanation/benchmarking/#metric
+用于模拟[指标][metric]的 10 的幂。默认值为 `1`。
 
 ### `--fail`
 
@@ -36,3 +48,10 @@
 ### `--help`
 
 打印帮助信息。
+
+[bmf versions]: /zh/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /zh/docs/explanation/benchmarking/#benchmark
+[measure]: /zh/docs/explanation/benchmarking/#measure
+[metric]: /zh/docs/explanation/benchmarking/#metric
+[parameters]: /zh/docs/explanation/benchmarking/#parameters
+[threshold parameters]: /zh/docs/explanation/thresholds/#--threshold-parameters-parameters

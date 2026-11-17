@@ -20,8 +20,12 @@
 ユーザーが認証されていない場合、Project は新しい `unclaimed` Organization の下に作成されます。
 この Organization は、`bencher run` の出力にある `Claim this project` リンクから `claimed` するか、後続の `bencher run` 実行時に認証した状態で Project スラッグを使用することで取得できます。
 
+新しいプロジェクトは [Bencher Metric Format (BMF) バージョン 1][bmf versions] で開始します。
+既存のプロジェクトはその BMF バージョンを保持し、`bencher run` は毎回の実行前にそれを読み取ります。
+
 > 🐰 重要: `CI` 環境変数が `true` に設定されている場合、
 > プロジェクトを指定するか、
 > [`--ci-on-the-fly` フラグ][ci on the fly] を設定する必要があります。
 
 [ci on the fly]: #--ci-on-the-fly
+[bmf versions]: /ja/docs/reference/bencher-metric-format/#bmf-versions

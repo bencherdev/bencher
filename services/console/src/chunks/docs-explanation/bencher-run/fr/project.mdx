@@ -23,8 +23,12 @@ Si l'utilisateur n'est pas authentifié, le Projet sera créé sous une nouvelle
 Cette Organisation peut ensuite être `claimed` depuis le lien `Claim this project` de la sortie de `bencher run`
 ou en utilisant le slug du Projet tout en étant authentifié lors d'une invocation ultérieure de `bencher run`.
 
+Un nouveau Projet démarre en [version 1 du Bencher Metric Format (BMF)][bmf versions].
+Un Projet existant conserve sa version de BMF, et `bencher run` la lit avant chaque exécution.
+
 > 🐰 IMPORTANT : Si la variable d'environnement `CI` est définie sur `true`,
 > alors vous devez soit spécifier le Projet,
 > soit définir [l'option `--ci-on-the-fly`][ci on the fly].
 
 [ci on the fly]: #--ci-on-the-fly
+[bmf versions]: /fr/docs/reference/bencher-metric-format/#bmf-versions

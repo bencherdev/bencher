@@ -1,19 +1,24 @@
-## `---thresholds-reset`
+## `--thresholds-reset`
 
 <br />
 
 Reset all unspecified Thresholds for the given [Branch][branch] and [Testbed][testbed].
-If a Threshold already exists and is not specified, its current [Model][model] will be removed.
+If a Threshold already exists and is not specified, its current [Model][model] will be removed,
+whatever its [Measure][measure], [Metric][metric], or parameters filter.
 
 For example, if there were two Thresholds for the `main` Branch and `localhost` Testbed:
-- `main` Branch, `localhost` Testbed, `latency` [Measure][measure]
-- `main` Branch, `localhost` Testbed, `throughput` [Measure][measure]
+- `main` Branch, `localhost` Testbed, `latency` Measure, `median` Metric
+- `main` Branch, `localhost` Testbed, `latency` Measure, `p99` Metric
 
-If only the `latency` Measure is specified in the `bencher run` subcommand
+If only the `median` Metric of the `latency` Measure is specified in the `bencher run` subcommand
 and `--thresholds-reset` is used,
-then the `throughput` Measure would have its Model removed.
+then the `p99` Metric would have its Model removed.
+
+At BMF version 1, a `--threshold-measure` that is skipped for having no `--threshold-metric` specifies no Threshold,
+so `--thresholds-reset` still removes the Model of every Threshold that the run does not specify with a Metric.
 
 [branch]: /docs/explanation/branches/#--branch-branch
 [testbed]: /docs/explanation/testbeds/#--testbed-testbed
 [model]: /docs/explanation/benchmarking/#model
 [measure]: /docs/explanation/benchmarking/#measure
+[metric]: /docs/explanation/benchmarking/#metric

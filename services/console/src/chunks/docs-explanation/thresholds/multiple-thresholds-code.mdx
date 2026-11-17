@@ -4,11 +4,13 @@ bencher run \
 --branch main \
 --testbed localhost \
 --threshold-measure latency \
+--threshold-metric value \
 --threshold-test t_test \
 --threshold-max-sample-size 64 \
 --threshold-lower-boundary _ \
 --threshold-upper-boundary 0.99 \
 --threshold-measure throughput \
+--threshold-metric value \
 --threshold-test t_test \
 --threshold-max-sample-size 64 \
 --threshold-lower-boundary 0.99 \

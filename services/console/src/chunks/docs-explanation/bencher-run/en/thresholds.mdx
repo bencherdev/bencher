@@ -1,4 +1,6 @@
 ### `--threshold-measure <MEASURE>`
+### `--threshold-metric <METRIC>`
+### `--threshold-parameters <PARAMETERS>`
 ### `--threshold-test <TEST>`
 ### `--threshold-min-sample-size <SAMPLE_SIZE>`
 ### `--threshold-max-sample-size <SAMPLE_SIZE>`
@@ -9,5 +11,9 @@
 ### `--error-on-alert`
 
 <br />
+
+At BMF version 1, a Threshold checks one Metric of a Measure, which `--threshold-metric` names.
+A `--threshold-measure` with no `--threshold-metric` at all sets no Threshold:
+the run still lands, and its Report warns that the Threshold was skipped, with a hint to use `--threshold-metric`.
 
 See [thresholds and alerts](/docs/explanation/thresholds/) for a full overview.

@@ -1,0 +1,36 @@
+import BmfV0Example from "../bmf-v0-example.mdx";
+
+## BMF Versions
+
+Chaque Projet a une version de BMF, et un nouveau Projet démarre en version 1.
+Un Rapport est lu dans la version qu'il déclare dans son champ `bmf_version`, ou sinon dans la version de son Projet.
+La sous-commande CLI <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> lit la version du Projet et la déclare sur chaque Rapport.
+Un Projet qui n'existe pas encore est lu en version 1, puisque l'exécution le crée en version 1.
+
+Une version déclarée est un contrat.
+Des résultats qui s'analysent dans l'autre version reçoivent une `400 Bad Request`
+qui nomme les deux versions, indique d'où vient la version attendue et énumère les façons de corriger le problème.
+
+[L'adaptateur `json`][json adapter] lit le JSON dans la version du Rapport.
+Les adaptateurs `json_v0` et `json_v1` lisent chacun le JSON dans leur propre version,
+et `bencher run --adapter json_v0` ou `--adapter json_v1` déclare cette version sur n'importe quel Projet.
+
+Un utilisateur qui peut modifier un Projet le fait passer de la version 0 à la version 1,
+avec `bencher project update --bmf-version 1`, l'API ou le bouton "Move to version 1" dans les paramètres du Projet.
+Seul un administrateur du serveur peut ramener un Projet en version 0.
+
+<details>
+<summary>BMF version 0</summary>
+
+La version 0 de BMF est la version précédente, que les Projets en version 0 utilisent encore.
+Elle associe le nom de chaque Benchmark à ses Mesures, et chaque Mesure à un triplet de Métrique :
+
+<BmfV0Example />
+
+En version 0, un Benchmark n'a pas de Paramètres, il a donc une seule Variante.
+Une Mesure contient `value`, qui est obligatoire, ainsi que `lower_value` et `upper_value`, qui sont facultatifs.
+La version 0 ne lit que ces trois noms : tout autre nom dans une Mesure est ignoré, sans avertissement.
+
+</details>
+
+[json adapter]: /fr/docs/explanation/adapters/#-json

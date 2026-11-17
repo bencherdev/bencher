@@ -1,3 +1,18 @@
-### 度量指标
+### Metric
 
-度量指标是一个单点时间的性能回归测试结果。对于单个度量指标，最多可以收集三个值：`value`、`lower_value` 和 `upper_value`。所有度量指标都必须包含 `value`，而 `lower_value` 和 `upper_value` 是可选的，可以独立选择。哪些值会被收集是由[基准测试工具适配器](/zh/docs/explanation/adapters/)决定的。
+指标是一个单点时间的性能回归测试结果：
+为某个度量（Measure）收集的一个具名值，例如 `median` 或 `p99`。
+[基准测试工具适配器](/zh/docs/explanation/adapters/)会将您的基准测试工具报告的每个统计量，以该统计量的名称写为各自独立的指标。
+不是统计量的单个数值，例如指令数或构建时间，即为 `value` 指标。
+一个度量最多包含 `32` 个指标。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+在 [BMF 版本 0][bmf versions] 中，对于单个指标，最多可以收集三个值：`value`、`lower_value` 和 `upper_value`。
+所有指标都必须包含 `value`，而 `lower_value` 和 `upper_value` 是可选的，可以独立选择。
+这就是指标三元组，版本 0 的项目仍在使用它。
+
+</details>
+
+[bmf versions]: /zh/docs/reference/bencher-metric-format/#bmf-versions

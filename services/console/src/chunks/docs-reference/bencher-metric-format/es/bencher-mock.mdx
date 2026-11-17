@@ -1,6 +1,10 @@
 ## `bencher mock`
 
 El subcomando de la CLI `bencher mock` se usa para generar datos JSON simulados en el Bencher Metric Format (BMF).
+Escribe [BMF versión 1][bmf versions] a menos que se indique lo contrario:
+cada [Medida][measure] de cada [Benchmark][benchmark] tiene una [Métrica][metric], `value`,
+y cada Benchmark tiene una Variante sin Parámetros.
+No lee la versión de su Proyecto, así que un Proyecto de versión 0 necesita [`--bmf-version 0`](#--bmf-version-bmf_version).
 
 ### `--seed <SEED>`
 
@@ -11,23 +15,31 @@ Si no se especifica, se usará una semilla aleatoria.
 
 El número de [Benchmarks][benchmark] simulados a generar.
 
-[benchmark]: /es/docs/explanation/benchmarking/#benchmark
-
 ### `--measure <MEASURE>`
 
 La [Medida][measure] que se usará para cada [Benchmark][benchmark].
 Se pueden especificar varias Medidas usando la opción `--measure` varias veces.
 Por defecto se usa la Medida incorporada `latency`.
 
-[measure]: /es/docs/explanation/benchmarking/#measure
-[benchmark]: /es/docs/explanation/benchmarking/#benchmark
+### `--parameters <PARAMETERS>`
+
+Los [Parámetros][parameters] de una Variante que se generará para cada Benchmark, como un objeto JSON (ej: `--parameters '{"size": 64}'`).
+Cada conjunto de Parámetros crea una Variante de cada Benchmark,
+y se pueden especificar varios conjuntos usando la opción `--parameters` varias veces.
+Si no se especifica, cada Benchmark tiene una Variante sin Parámetros.
+Acepta el mismo JSON que [la opción `--threshold-parameters`][threshold parameters] de `bencher run`,
+y no se puede usar con `--bmf-version 0`.
+
+### `--bmf-version <BMF_VERSION>`
+
+La versión de BMF que se escribirá, `0` o `1`.
+El valor por defecto es `1`.
+En la versión 0, cada Medida tiene un `value`, un `lower_value` y un `upper_value`.
 
 ### `--pow <POW>`
 
 La potencia de 10 que se usará para las [Métricas][metric] simuladas.
 El valor por defecto es `1`.
-
-[metric]: /es/docs/explanation/benchmarking/#metric
 
 ### `--fail`
 
@@ -40,3 +52,10 @@ Fallar de forma intermitente durante la ejecución.
 ### `--help`
 
 Imprimir el mensaje de ayuda.
+
+[bmf versions]: /es/docs/reference/bencher-metric-format/#bmf-versions
+[benchmark]: /es/docs/explanation/benchmarking/#benchmark
+[measure]: /es/docs/explanation/benchmarking/#measure
+[metric]: /es/docs/explanation/benchmarking/#metric
+[parameters]: /es/docs/explanation/benchmarking/#parameters
+[threshold parameters]: /es/docs/explanation/thresholds/#--threshold-parameters-parameters

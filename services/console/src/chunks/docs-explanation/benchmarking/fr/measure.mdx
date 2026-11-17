@@ -1,10 +1,12 @@
-### Mesure
+### Measure
 Une Mesure est l'unité de mesure d'une Métrique.
 Par défaut, tous les projets démarrent avec des Mesures `Latency` et `Throughput`
 avec des unités de `nanoseconds (ns)` et `operations / second (ops/s)` respectivement.
-La Mesure est déterminée par l'[adaptateur du moteur de benchmark][adapters].
+L'[adaptateur du moteur de benchmark][adapters] écrit chaque Mesure que votre harnais de benchmark rapporte,
+et [l'option `--measure`][measure option] de `bencher run` ne conserve que les Mesures qu'elle liste.
 
 Si vous utilisez le [Bencher Metric Format (BMF)][bmf], le nom, le slug ou l'UUID peuvent être utilisés pour identifier une Mesure.
 
 [adapters]: /fr/docs/explanation/adapters/
+[measure option]: /fr/docs/explanation/bencher-run/#--measure-measure
 [bmf]: /fr/docs/reference/bencher-metric-format/

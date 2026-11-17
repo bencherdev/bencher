@@ -1,4 +1,6 @@
 ### `--threshold-measure <MEASURE>`
+### `--threshold-metric <METRIC>`
+### `--threshold-parameters <PARAMETERS>`
 ### `--threshold-test <TEST>`
 ### `--threshold-min-sample-size <SAMPLE_SIZE>`
 ### `--threshold-max-sample-size <SAMPLE_SIZE>`
@@ -9,5 +11,9 @@
 ### `--error-on-alert`
 
 <br />
+
+在 BMF 版本 1 中，阈值检查度量的一个指标，该指标由 `--threshold-metric` 指定。
+完全没有 `--threshold-metric` 的 `--threshold-measure` 不会设置阈值：
+运行仍会被记录，其报告会警告该阈值已被跳过，并提示使用 `--threshold-metric`。
 
 请参阅[阈值和警报](/zh/docs/explanation/thresholds/)以获取完整概述。

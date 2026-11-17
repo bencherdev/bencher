@@ -709,6 +709,7 @@ dependencies = [
  "criterion",
  "gungraun-runner",
  "gungraun-summary",
+ "jsonschema",
  "nom",
  "ordered-float",
  "percent-encoding",

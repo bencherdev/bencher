@@ -1,18 +1,46 @@
 import BmfExample from "../bmf-example.mdx";
 
-## ベンチャーメトリックフォーマット (BMF) JSON の例
+## Bencher Metric Format (BMF) JSON の例
 
 <BmfExample />
 
-この例では、3つの[ベンチマーク][benchmark]があります：
+BMF バージョン 1 は、各[ベンチマーク][benchmark]の名前を、ベンチマークの[バリアント][parameters]ごとに1つずつのエントリのリストに対応付けます。
+各エントリは次のものを持ちます：
 
-- `benchmark_name` というベンチマークは、2つの[メジャー][measure]があります：
-  - レイテンシー (`latency`)
-  - スループット (`throughput`)
-- `/bin/sh -c ./my_build_script.sh` というベンチマークは、1つのメジャーで[ビルド時間を追跡][track build time](`build-time`)
-- `my_binary` というベンチマークは、1つのメジャーで[ファイルサイズを追跡][track file size](`file-size`)
+- `parameters`（オプション）：バリアントの実行時の[パラメータ][parameters]。値が文字列、数値、またはブール値のオブジェクトです。
+  `parameters` のないエントリは、空のパラメータを持つバリアントで、`{}` と同じです。
+- `measures`：バリアントの各[メジャー][measure]と、それに対応する[メトリック][metric]。
+  メトリックは、`"median": 88.0` のように、名前を数値に対応付けたものです。
+
+この例では、3つのベンチマークがあります：
+
+- `benchmark_name` というベンチマークは、`size` が `64` と `size` が `512` の2つのバリアントを持ち、それぞれ2つのメジャーがあります：
+  - Latency (`latency`)：`median`、`mean`、`p99` のメトリック
+  - Throughput (`throughput`)：`mean` のメトリック
+- `/bin/sh -c ./my_build_script.sh` というベンチマークは、1つのバリアントと、[ビルド時間を追跡][track build time]する1つのメジャー (`build-time`) を持ち、`value` メトリックがあります
+- `my_binary` というベンチマークは、1つのバリアントと、[ファイルサイズを追跡][track file size]する1つのメジャー (`file-size`) を持ち、`value` メトリックがあります
+
+パラメータが等しい2つのエントリは1つのバリアントであり、そのメトリックはマージされます。
+両方のエントリが同じメジャーに対して同じメトリックを持つ場合は、後のエントリが優先されます。
+メジャーのないエントリは何も書き込みません。
+
+### Metric Names
+
+Bencher はすべてのメトリック名を同じ方法で保存しますが、メジャーのデフォルトのメトリックは名前によって選ばれます。
+そのため、各統計量には正規の名前を付けてください：
+`mean`、`median`、`min`、`max`、`std_dev`、およびパーセンタイルの `p25`、`p75`、`p90`、`p95`、`p99`、`p99_9`。
+信頼区間には、`mean_ci_lower` や `mean_ci_upper` のように、その区間が範囲を示す統計量にちなんだ名前を付け、
+わかる場合は `mean_ci95_lower` のようにその水準を追加してください。
+カウントやビルド時間のように統計量ではない単一の数値には、`value` という名前を付けてください。
+
+メジャーをチェックする[しきい値][threshold]がない場合、プルリクエストのコメントと `bencher run` の出力には、そのデフォルトのメトリックが表示されます：
+`value`、次に `median`、次に `mean`、次にアルファベット順で最初の名前です。
+信頼区間の名前は、他のすべての名前の後になります。
 
 [benchmark]: /ja/docs/explanation/benchmarking/#benchmark
+[parameters]: /ja/docs/explanation/benchmarking/#parameters
 [measure]: /ja/docs/explanation/benchmarking/#measure
+[metric]: /ja/docs/explanation/benchmarking/#metric
+[threshold]: /ja/docs/explanation/thresholds/
 [track build time]: /ja/docs/how-to/track-build-time/
 [track file size]: /ja/docs/how-to/track-file-size/

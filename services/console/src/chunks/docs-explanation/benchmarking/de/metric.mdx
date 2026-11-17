@@ -1,5 +1,17 @@
-### Metrik
-Eine Metrik ist ein einzelnes, zeitpunktbezogenes Ergebnis eines Leistungsregressionstests.
-Für eine einzelne Metrik können bis zu drei Werte gesammelt werden: `value`, `lower_value` und `upper_value`.
+### Metric
+Eine Metrik ist ein einzelnes, zeitpunktbezogenes Ergebnis eines Leistungsregressionstests:
+ein benannter Wert, der für eine Measure gesammelt wird, zum Beispiel `median` oder `p99`.
+Der [Benchmark-Harness-Adapter](/de/docs/explanation/adapters/) schreibt jede Statistik, die Ihr Benchmark-Harness meldet, als eigene Metrik unter dem Namen dieser Statistik.
+Eine einzelne Zahl, die keine Statistik ist, etwa eine Anzahl von Instruktionen oder eine Bauzeit, ist die Metrik `value`.
+Eine Measure enthält höchstens `32` Metriken.
+
+<details>
+<summary>BMF Version 0</summary>
+
+In [BMF Version 0][bmf versions] können für eine einzelne Metrik bis zu drei Werte gesammelt werden: `value`, `lower_value` und `upper_value`.
 Der `value` ist für alle Metriken erforderlich, während der `lower_value` und `upper_value` unabhängig optional sind.
-Welche Werte gesammelt werden, wird durch den [Benchmark-Harness-Adapter](/de/docs/explanation/adapters/) bestimmt.
+Dies ist das Metrik-Tripel, das Projekte mit Version 0 weiterhin verwenden.
+
+</details>
+
+[bmf versions]: /de/docs/reference/bencher-metric-format/#bmf-versions

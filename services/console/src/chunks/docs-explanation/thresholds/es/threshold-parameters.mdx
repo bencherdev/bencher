@@ -1,0 +1,23 @@
+import ThresholdsPayloadCode from "../thresholds-payload-code.mdx";
+
+## `--threshold-parameters <PARAMETERS>`
+
+<br />
+
+Utilice el filtro de parámetros especificado para un Umbral, como un objeto JSON (ej: `--threshold-parameters '{"size": 512}'`).
+El Umbral comprueba cada [Variante][variant] cuyos Parámetros contienen cada clave del objeto con el mismo valor,
+así que `{"size": 512}` coincide tanto con `{"op": "read", "size": 512}` como con `{"op": "write", "size": 512}`.
+El valor es JSON, no la forma `size=512` que muestran el comentario del pull request y la Consola.
+Si no se establece, o se establece en `{}`, el Umbral comprueba todas las Variantes.
+Para ignorar esta opción para un Umbral específico, utilice un guion bajo (`_`).
+Un Umbral con un filtro de parámetros también necesita [la opción `--threshold-metric`](#--threshold-metric-metric).
+En la versión 0 de BMF, `--threshold-parameters` detiene `bencher run` con un error antes de enviar nada.
+
+Cada opción `--threshold-parameters` contiene un conjunto de Parámetros.
+Para comprobar las Variantes que coinciden con cualquiera de varios conjuntos, use la API:
+en la versión 1 de BMF, los `thresholds` de un Informe enumeran cada Umbral con su filtro `parameters` como una lista de conjuntos.
+Por ejemplo:
+
+<ThresholdsPayloadCode />
+
+[variant]: /es/docs/explanation/benchmarking/#parameters

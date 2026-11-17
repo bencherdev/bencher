@@ -1,0 +1,35 @@
+import BmfV0Example from "../bmf-v0-example.mdx";
+
+## BMF Versions
+
+每个项目都有一个 BMF 版本，新项目从版本 1 开始。
+报告按其 `bmf_version` 字段中声明的版本读取，若未声明，则按其项目的版本读取。
+<code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令会读取项目的版本，并在每份报告中声明该版本。
+尚不存在的项目按版本 1 读取，因为运行会以版本 1 创建它。
+
+声明的版本是一份约定。
+按另一个版本解析的结果会得到 `400 Bad Request`，
+该错误会指出两个版本，说明预期版本的来源，并列出修复方法。
+
+[`json` 适配器][json adapter]按报告的版本读取 JSON。
+`json_v0` 和 `json_v1` 适配器各自按自己的版本读取 JSON，
+`bencher run --adapter json_v0` 或 `--adapter json_v1` 会在任何项目上声明该版本。
+
+可以编辑项目的用户可以通过 `bencher project update --bmf-version 1`、API 或项目设置中的 Move to version 1 按钮，将项目从版本 0 迁移到版本 1。
+只有服务器管理员可以将项目迁回版本 0。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+BMF 版本 0 是较早的版本，版本 0 的项目仍在使用它。
+它将每个基准测试名称映射到其度量，并将每个度量映射到一个指标三元组：
+
+<BmfV0Example />
+
+在版本 0 中，基准测试没有参数，因此只有一个变体。
+度量包含必需的 `value`，以及可选的 `lower_value` 和 `upper_value`。
+版本 0 只读取这三个名称：度量中的任何其他名称都会被忽略，且不会给出警告。
+
+</details>
+
+[json adapter]: /zh/docs/explanation/adapters/#-json

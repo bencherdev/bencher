@@ -1,0 +1,13 @@
+### Parameters
+매개변수(Parameters)는 `{"size": 64}`처럼 벤치마크가 실행될 때 사용된 입력입니다.
+각 키는 문자열, 숫자 또는 불리언 값에 대응하며, 하나의 벤치마크의 매개변수는 최대 `8`개의 키를 가질 수 있습니다.
+매개변수 한 세트를 가진 벤치마크가 하나의 변형(Variant)입니다.
+따라서 여러 세트의 매개변수로 실행되는 벤치마크는 세트마다 하나의 변형을 가지며,
+Bencher는 각 변형의 메트릭을 별도로 추적합니다.
+매개변수가 없는 벤치마크는 빈 매개변수를 가진 하나의 변형을 가집니다.
+
+매개변수는 [Bencher Metric Format (BMF)][bmf] 버전 1의 일부이며,
+[벤치마크 하네스 어댑터][adapters]는 가능한 경우 벤치마크 하네스에서 매개변수를 읽어옵니다.
+
+[bmf]: /ko/docs/reference/bencher-metric-format/
+[adapters]: /ko/docs/explanation/adapters/

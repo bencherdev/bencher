@@ -3,6 +3,7 @@
 <br />
 
 Clona todos los [Umbrales][thresholds] del [Punto de Inicio][start point] para la opción `branch`.
+Cada Umbral clonado conserva su Medida, su Métrica y su filtro de parámetros.
 Esta bandera requiere que se configure [la opción `--start-point`][start point option].
 
 - Si un Umbral no existe, se creará desde el Umbral del `start-point`.
@@ -10,10 +11,10 @@ Esta bandera requiere que se configure [la opción `--start-point`][start point 
 - Si un Umbral existe y su modelo es diferente al Umbral del `start-point`, entonces el modelo antiguo será reemplazado por el modelo del Umbral del `start-point`.
 - Si un Umbral existe y el Umbral del `start-point` no existe, entonces el modelo del Umbral se elimina.
 
-Por ejemplo, si `feature_branch` existe con su Punto de Inicio siendo la Rama `main` y `main` tiene un Umbral para el Banco de Pruebas incorporado `localhost` y la Medida `latency`,
-entonces usar `--branch feature_branch --start-point main --start-point-clone-thresholds` crearía un nuevo Umbral para `feature_branch` con el Banco de Pruebas `localhost` y la Medida `latency`.
+Por ejemplo, si `feature_branch` existe con su Punto de Inicio siendo la Rama `main` y `main` tiene un Umbral para el Banco de Pruebas incorporado `localhost`, la Medida `latency` y la Métrica `median`,
+entonces usar `--branch feature_branch --start-point main --start-point-clone-thresholds` crearía un nuevo Umbral para `feature_branch` con el Banco de Pruebas `localhost`, la Medida `latency` y la Métrica `median`.
 
 [thresholds]: /es/docs/explanation/thresholds/
 [start point]: /es/docs/explanation/benchmarking/#start-point
 
-[start point option]: #--branch-start-point-branch
+[start point option]: #--start-point-branch

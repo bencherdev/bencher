@@ -1,0 +1,28 @@
+```json
+{
+  "thresholds": {
+    "models": [
+      {
+        "parameters": [{ "size": 64 }, { "size": 512 }],
+        "measure": "latency",
+        "metric": "median",
+        "model": {
+          "test": "t_test",
+          "max_sample_size": 64,
+          "upper_boundary": 0.99
+        }
+      },
+      {
+        "measure": "throughput",
+        "metric": "mean",
+        "model": {
+          "test": "t_test",
+          "max_sample_size": 64,
+          "lower_boundary": 0.99
+        }
+      }
+    ],
+    "reset": true
+  }
+}
+```

@@ -2,26 +2,29 @@ import ThresholdCode from "../threshold-code.mdx";
 
 Thresholds 是你用 Bencher 捕捉性能回归的方式。
 Threshold 被分配给一个唯一的组合：
-[Branch][branch]，[Testbed][testbed] 和 [Measure][measure]。
+[Branch][branch]，[Testbed][testbed]，参数过滤器，[度量][measure] 和 [指标][metric]。
 Threshold 使用特定的 [Test][tests] 来检测性能回归。
 测试及其参数的组合称为一个模型。
 一个模型必须有一个下界，上界，或两者都有。
 
 - 下界
-  - 当较小的数值表明性能回归时，使用下界，比如在吞吐量度量中。
+  - 当较小的数值表明性能回归时，使用下界，比如在 Throughput 度量中。
 - 上界
-  - 当较大的数值表明性能回归时，使用上界，比如在延迟度量中。
+  - 当较大的数值表明性能回归时，使用上界，比如在 Latency 度量中。
 
 每个边界用于计算边界限制。
-然后每个新的 [Metric][metric] 都会与每个边界限制进行比较。
-当新的 Metric 低于下界限制或高于上界限制时，会生成警报。
+然后阈值检查的每个新指标都会与每个边界限制进行比较，
+并使用该指标在同一 [变体（Variant）][variant] 上的历史数据。
+当新的指标低于下界限制或高于上界限制时，会生成警报。
 
 当 [持续基准测试]时，即在持续集成（CI）中进行基准测试时，你会想创建阈值。
 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令，
 你已经用 [`--branch` option][branch option] 指定了一个 Branch，
 并用 [`--testbed` option][testbed option] 指定了一个 Testbed。
-所以你唯一需要指定的其他维度是测量，用 `--threshold-measure` 选项。
-然后你可以使用 `--threshold-test` 选项来指定该测量使用的测试。
+所以你需要指定的其他维度是度量，用 `--threshold-measure` 选项，
+以及要检查的该度量的指标，用 `--threshold-metric` 选项。
+若只想检查部分变体，可以用 `--threshold-parameters` 选项添加参数过滤器。
+然后你可以使用 `--threshold-test` 选项来指定该指标使用的测试。
 `--threshold-min-sample-size`，`--threshold-max-sample-size`，和 `--threshold-window` 选项
 允许你控制测试使用的数据。
 最后，`--threshold-lower-boundary` 和 `--threshold-upper-boundary` 选项
@@ -33,24 +36,36 @@ Threshold 使用特定的 [Test][tests] 来检测性能回归。
 - 如果 Threshold 存在且指定的模型不同，则为 Threshold 创建一个新模型。
 - 如果 Threshold 存在并被重置，则当前模型将从 Threshold 中移除。
 
-例如，只用一个 Student's t-test 测试为延迟度量设置 Threshold，
+例如，只用一个 [Student's t-test 测试][t-test]为 Latency 度量的 `value` 指标设置阈值，
 最大样本大小为 `64`，上界为 `0.99`，你可以写成这样：
 
 <ThresholdCode />
 
 > 🐰 在处理功能分支时，您可能想从基准 [起点][start point] Branch 复制现有的 Thresholds。
 > 可以通过 [`--start-point-clone-thresholds` flag][start point clone thresholds flag] 实现。
-注意，`--thresholds-reset` 标志仍会移除任何未明确指定的克隆阈值。
+> 注意，`--thresholds-reset` 标志仍会移除任何未明确指定的克隆阈值。
+
+<details>
+<summary>BMF 版本 0</summary>
+
+在 [BMF 版本 0][bmf versions] 中，阈值被分配给 Branch、Testbed 和度量，并检查每个基准测试的 `value` 指标。
+请使用不带 `--threshold-metric` 的 `--threshold-measure`：
+`--threshold-metric` 和 `--threshold-parameters` 会在发送任何内容之前以错误终止 `bencher run`，
+该错误会指出使用 `bencher project update --bmf-version 1` 将项目迁移到版本 1。
+
+</details>
 
 [branch]: /zh/docs/explanation/benchmarking/#branch
 [testbed]: /zh/docs/explanation/benchmarking/#testbed
 [measure]: /zh/docs/explanation/benchmarking/#measure
 [metric]: /zh/docs/explanation/benchmarking/#metric
+[variant]: /zh/docs/explanation/benchmarking/#parameters
 [continuous benchmarking]: /zh/docs/explanation/continuous-benchmarking/
 [branch option]: /zh/docs/explanation/branches/#--branch-branch
 [testbed option]: /zh/docs/explanation/testbeds/#--testbed-testbed
 [start point]: /zh/docs/explanation/benchmarking/#start-point
 [start point clone thresholds flag]: /zh/docs/explanation/branches/#--start-point-clone-thresholds
+[bmf versions]: /zh/docs/reference/bencher-metric-format/#bmf-versions
 
 [tests]: #--threshold-test-test
 [t-test]: #t-test

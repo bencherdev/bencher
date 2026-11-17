@@ -206,17 +206,19 @@ pub(crate) mod test_json {
     /// versions apart.
     #[test]
     fn adapter_json_v1_values_stay_strict() {
-        for input in [
-            r#"{"bench": [{"measures": {"latency": []}}]}"#,
-            r#"{"bench": [{"measures": {"latency": {"value": "fast"}}}]}"#,
-            r#"{"bench": [{"parameters": {}}]}"#,
-        ] {
+        for input in V1_MISSHAPEN {
             assert!(
                 AdapterJson::parse(input, version_settings(BmfVersion::V1)).is_none(),
                 "expected {input} to fail"
             );
         }
     }
+
+    const V1_MISSHAPEN: [&str; 3] = [
+        r#"{"bench": [{"measures": {"latency": []}}]}"#,
+        r#"{"bench": [{"measures": {"latency": {"value": "fast"}}}]}"#,
+        r#"{"bench": [{"parameters": {}}]}"#,
+    ];
 
     /// Every v0 fixture parses identically through the node and through the leaf.
     #[test]
@@ -385,4 +387,71 @@ pub(crate) mod test_json {
             }
         }
     }
+
+    /// The published version 1 schema states the shape the v1 leaf parses and
+    /// leaves the bounds to the leaf, so it accepts what the leaf parses, out of
+    /// bound names and parameters included, and refuses what the leaf refuses.
+    #[test]
+    fn adapter_json_v1_schema_matches_the_leaf() {
+        let validator = v1_schema();
+        let fixtures = JSON_FIXTURES.map(|suffix| {
+            let file_path = fixture_path(suffix);
+            std::fs::read_to_string(&file_path)
+                .unwrap_or_else(|e| panic!("Failed to read {file_path}: {e}"))
+        });
+        let inline = V1_MISSHAPEN.into_iter().chain([
+            "{}",
+            "[]",
+            r#"{"": {}}"#,
+            r#"{"bench": {}}"#,
+            r#"{"bench": []}"#,
+            r#"{"bench": [{"measures": {}}]}"#,
+            r#"{"bench": [{"measures": {"latency": {"value": null}}}]}"#,
+            r#"{"bench": [{"measures": {"latency": {"": 1.0}}}]}"#,
+            r#"{"bench": [{"note": "kept", "measures": {"latency": {"value": 1.0}}}]}"#,
+            r#"{"bench": [{"parameters": {"op": "read", "size": 64, "warm": true, "tag": ""}, "measures": {"latency": {"mean": 1.5, "p99": 3}}}]}"#,
+        ]);
+        for input in fixtures.iter().map(String::as_str).chain(inline) {
+            let payload = serde_json::from_str(input).unwrap();
+            assert_eq!(
+                validator.is_valid(&payload),
+                AdapterJsonV1::parse(input, Settings::default()).is_some(),
+                "{input}"
+            );
+        }
+    }
+
+    /// Parameters that are not an object of scalars skip their variant in the v1
+    /// leaf, and the schema refuses them, so a payload that validates never loses
+    /// a variant to its shape.
+    #[test]
+    fn adapter_json_v1_schema_refuses_parameters_the_leaf_skips() {
+        let validator = v1_schema();
+        for parameters in [
+            "null",
+            r#""size=64""#,
+            "[64]",
+            r#"{"size": null}"#,
+            r#"{"size": [64]}"#,
+            r#"{"size": {"mb": 64}}"#,
+        ] {
+            let input = format!(
+                r#"{{"bench": [{{"parameters": {parameters}, "measures": {{"latency": {{"value": 1.0}}}}}}]}}"#
+            );
+            let results = AdapterJsonV1::parse(&input, Settings::default())
+                .unwrap_or_else(|| panic!("expected {input} to parse"));
+            assert_eq!(results.skipped.variants, 1, "{input}");
+            let payload = serde_json::from_str(&input).unwrap();
+            assert!(!validator.is_valid(&payload), "{input}");
+        }
+    }
+
+    fn v1_schema() -> jsonschema::Validator {
+        let schema = std::fs::read_to_string(V1_SCHEMA_PATH)
+            .unwrap_or_else(|e| panic!("Failed to read {V1_SCHEMA_PATH}: {e}"));
+        let schema = serde_json::from_str(&schema).unwrap();
+        jsonschema::draft7::new(&schema).unwrap()
+    }
+
+    const V1_SCHEMA_PATH: &str = "../../services/console/public/v1/bmf.json";
 }

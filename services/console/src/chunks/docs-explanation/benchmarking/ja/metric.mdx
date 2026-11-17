@@ -1,2 +1,17 @@
-### メトリック
-メトリックは、単一の時点でのパフォーマンス回帰テストの結果を示します。1つのメトリックに対して、最大3つの値を収集することができます: `value`、`lower_value`、および `upper_value`。`value`はすべてのメトリックに必須ですが、`lower_value`と`upper_value`は独立してオプションです。どの値が収集されるかは、[ベンチマークハーネスアダプタ](/ja/docs/explanation/adapters/)によって決定されます。
+### Metric
+メトリックは、単一の時点でのパフォーマンス回帰テストの結果です。
+つまり、`median` や `p99` のように、メジャーに対して収集された1つの名前付きの値です。
+[ベンチマークハーネスアダプタ](/ja/docs/explanation/adapters/)は、ベンチマークハーネスが報告する各統計量を、その統計量の名前でそれぞれ独立したメトリックとして書き込みます。
+命令数やビルド時間のように統計量ではない単一の数値は、`value` メトリックになります。
+1つのメジャーが持てるメトリックは最大 `32` 個です。
+
+<details>
+<summary>BMF バージョン 0</summary>
+
+[BMF バージョン 0][bmf versions] では、1つのメトリックに対して最大3つの値を収集することができます: `value`、`lower_value`、および `upper_value`。
+`value`はすべてのメトリックに必須ですが、`lower_value`と`upper_value`は独立してオプションです。
+これはメトリックトリプルであり、バージョン 0 のプロジェクトで引き続き使用されています。
+
+</details>
+
+[bmf versions]: /ja/docs/reference/bencher-metric-format/#bmf-versions

@@ -2,6 +2,12 @@ Os adaptadores de [harness de benchmark integrados][adapters] convertem a saída
 Harnesses de benchmark personalizados devem emitir seus resultados como BMF JSON
 e usar [o adaptador `json`][json adapter].
 Veja [como acompanhar benchmarks personalizados][custom benchmarks] para uma visão geral completa.
+Para gerar dados BMF JSON simulados, use o subcomando CLI <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+
+O BMF tem duas versões, e cada Projeto tem uma delas.
+A versão 1 é o formato com que um novo Projeto começa, e é o formato que esta página descreve.
+A versão 0 é a versão anterior, que os Projetos na versão 0 ainda usam.
+Veja [as versões do BMF](#bmf-versions) para saber como a versão de um Relatório é escolhida e para a versão 0.
 
 [adapters]: /pt/docs/explanation/adapters/
 [json adapter]: /pt/docs/explanation/adapters/#-json

@@ -1,7 +1,7 @@
 import ShellForm from "../shell-form.mdx";
 import ExecForm from "../exec-form.mdx";
 
-## Benchmark-Befehl
+## Benchmark Command
 
 Das erste Argument von `bencher run` ist der optionale Benchmark-Befehl.
 Dies ist der Befehl, der ausgeführt wird und Ihr Benchmark-Harness aufruft.
@@ -24,7 +24,7 @@ Exec-Form:
 <ExecForm />
 
 Der Benchmark-Befehl kann mehrfach mit der Option [`--iter`][iter option] ausgeführt werden,
-und diese Ergebnisse können mit der Option [`--fold`][fold option] zu einem einzigen Ergebnis zusammengefasst werden.
+und in BMF Version 0 können diese Ergebnisse mit der Option [`--fold`][fold option] zu einem einzigen Ergebnis zusammengefasst werden.
 Wenn eine der Iterationen fehlschlägt, gilt der gesamte Befehl als fehlgeschlagen,
 es sei denn, das Flag [`--allow-failure`][allow failure flag] ist gesetzt.
 
@@ -43,7 +43,7 @@ Beide Optionen `--file` und `--file-size` können mehrfach angegeben werden, um 
   wird jede Datei als separate <code>iteration</code> des Benchmark-Befehls betrachtet.
   Beim Anzeigen werden diese Ergebnisse in separaten Tabellen dargestellt.
 
-  Wenn Sie diese Ergebnisse zu einer einzigen <code>iteration</code> zusammenfassen möchten,
+  Wenn Sie in BMF Version 0 diese Ergebnisse zu einer einzigen <code>iteration</code> zusammenfassen möchten,
   können Sie die Option <code>-&#8288;-iter</code> auf <code>1</code> setzen
   und die Option <code>-&#8288;-fold</code> auf eine der Aggregatfunktionen <code>min</code>, <code>max</code> oder <code>median</code> setzen.
   Dadurch werden die Ergebnisse zu einer einzigen <code>iteration</code> zusammengefasst
@@ -64,6 +64,6 @@ Das ermöglicht es Ihnen, die Ausgabe eines anderen Befehls in eine Datei zu spe
 [adapter option]: #--adapter-adapter
 [file option]: #--file-file
 [file size option]: #--file-size-file
-[iter option]: #--iter-iter
-[fold option]: #--fold-fold
+[iter option]: #--iter-count
+[fold option]: #--fold-aggregate_function
 [allow failure flag]: #--allow-failure

@@ -15,6 +15,28 @@ The order of precedence for identifying a [Measure][measure] is as follows:
 2. `slug` (max length `64` characters)
 3. `name` (max length `64` characters)
 
+<br />
+
+[Metrics][metric] and [Parameters][parameters] have these limits:
+
+- A Metric name is `1` to `64` characters, with no leading or trailing whitespace.
+  `value`, `lower_value`, and `upper_value` are conventional names, not special ones.
+- A Measure holds at most `32` Metric names.
+  Past `32`, `value`, `lower_value`, and `upper_value` are kept, then the other names in alphabetical order, and the rest are skipped.
+- A Variant's Parameters hold at most `8` keys.
+  A key is `1` to `64` characters, with no leading or trailing whitespace.
+  A value is a boolean, a number, or a string of at most `64` characters, which may be empty.
+- Parameters are canonicalized with [RFC 8785][rfc 8785],
+  so the order of their keys does not matter, and `16`, `16.0`, and `1.6e1` are the same value.
+
+A Benchmark, Measure, or Metric name that breaks its limits is skipped,
+as is a Variant whose Parameters break theirs,
+and the Report counts each one in its warnings.
+A Metric whose value is not a number fails the whole payload.
+
 [benchmark]: /docs/explanation/benchmarking/#benchmark
 [suppressing alerts]: /docs/explanation/thresholds/#suppressing-alerts
 [measure]: /docs/explanation/benchmarking/#measure
+[metric]: /docs/explanation/benchmarking/#metric
+[parameters]: /docs/explanation/benchmarking/#parameters
+[rfc 8785]: https://www.rfc-editor.org/rfc/rfc8785

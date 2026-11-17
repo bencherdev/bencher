@@ -15,6 +15,28 @@ El orden de precedencia para identificar una [Medida][measure] es el siguiente:
 2. `slug` (longitud máxima `64` caracteres)
 3. `name` (longitud máxima `64` caracteres)
 
+<br />
+
+Las [Métricas][metric] y los [Parámetros][parameters] tienen estos límites:
+
+- Un nombre de Métrica tiene de `1` a `64` caracteres, sin espacios en blanco al principio ni al final.
+  `value`, `lower_value` y `upper_value` son nombres convencionales, no especiales.
+- Una Medida contiene como máximo `32` nombres de Métrica.
+  Por encima de `32`, se conservan `value`, `lower_value` y `upper_value`, luego los demás nombres en orden alfabético, y el resto se omite.
+- Los Parámetros de una Variante contienen como máximo `8` claves.
+  Una clave tiene de `1` a `64` caracteres, sin espacios en blanco al principio ni al final.
+  Un valor es un booleano, un número o una cadena de como máximo `64` caracteres, que puede estar vacía.
+- Los Parámetros se canonicalizan con [RFC 8785][rfc 8785],
+  así que el orden de sus claves no importa, y `16`, `16.0` y `1.6e1` son el mismo valor.
+
+Un nombre de Benchmark, Medida o Métrica que incumple sus límites se omite,
+al igual que una Variante cuyos Parámetros incumplen los suyos,
+y el Informe cuenta cada uno en sus advertencias.
+Una Métrica cuyo valor no es un número hace fallar toda la carga útil.
+
 [benchmark]: /es/docs/explanation/benchmarking/#benchmark
 [suppressing alerts]: /es/docs/explanation/thresholds/#suppressing-alerts
 [measure]: /es/docs/explanation/benchmarking/#measure
+[metric]: /es/docs/explanation/benchmarking/#metric
+[parameters]: /es/docs/explanation/benchmarking/#parameters
+[rfc 8785]: https://www.rfc-editor.org/rfc/rfc8785

@@ -1,0 +1,13 @@
+### Parameters
+参数（Parameters）是基准测试运行时所用的输入，例如 `{"size": 64}`。
+每个键对应一个字符串、数字或布尔值，一个基准测试的参数最多包含 `8` 个键。
+带有一组参数的基准测试就是一个变体（Variant），
+因此使用多组参数运行的基准测试每组参数各有一个变体，
+Bencher 会分别跟踪每个变体的指标。
+没有参数的基准测试只有一个变体，其参数为空。
+
+参数是 [Bencher Metric Format (BMF)][bmf] 版本 1 的一部分，
+[基准测试工具适配器][adapters] 会在可能的情况下从您的基准测试工具中读取参数。
+
+[bmf]: /zh/docs/reference/bencher-metric-format/
+[adapters]: /zh/docs/explanation/adapters/

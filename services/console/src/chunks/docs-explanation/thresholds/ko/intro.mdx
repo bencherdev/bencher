@@ -1,38 +1,50 @@
 import ThresholdCode from "../threshold-code.mdx";
 
-Thresholds는 Bencher로 성능 퇴보를 포착하는 방법입니다. Threshold는 고유한 [분기][branch], [테스트베드][testbed],  및 [측정치][measure]의 조합에 할당됩니다. Threshold는 특정 [테스트][tests]를 사용하여 성능 퇴보를 감지합니다. 테스트와 그 매개변수의 조합을 모델이라고 합니다. 모델에는 하한 경계, 상한 경계 또는 둘 다를 지정해야 합니다.
+임계값은 Bencher로 성능 퇴보를 포착하는 방법입니다. 임계값은 고유한 [분기][branch], [테스트베드][testbed], 매개변수 필터, [측정][measure] 및 [메트릭][metric]의 조합에 할당됩니다. 임계값은 특정 [테스트][tests]를 사용하여 성능 퇴보를 감지합니다. 테스트와 그 매개변수의 조합을 모델이라고 합니다. 모델에는 하한 경계, 상한 경계 또는 둘 다를 지정해야 합니다.
 
 - 하한 경계
-  - Throughput Measure와 같이 작은 값이 성능 퇴보를 나타낼 경우에는 하한 경계를 사용합니다.
+  - Throughput 측정과 같이 작은 값이 성능 퇴보를 나타낼 경우에는 하한 경계를 사용합니다.
 - 상한 경계
-  - Latency Measure와 같이 큰 값이 성능 퇴보를 나타낼 경우에는 상한 경계를 사용합니다.
+  - Latency 측정과 같이 큰 값이 성능 퇴보를 나타낼 경우에는 상한 경계를 사용합니다.
 
-각 경계는 경계 제한을 계산하는 데 사용됩니다. 그런 다음 모든 새로운 [메트릭][metric]이 각 경계 제한과 비교됩니다. 새로운 메트릭이 하한 경계 제한 아래나 상한 경계 제한 위에 있을 때 경고가 생성됩니다.
+각 경계는 경계 제한을 계산하는 데 사용됩니다. 그런 다음 임계값이 검사하는 각각의 새로운 메트릭은 동일한 [변형(Variant)][variant]에 대한 해당 메트릭의 이력을 사용하여 각 경계 제한과 비교됩니다. 새로운 메트릭이 하한 경계 제한 아래나 상한 경계 제한 위에 있을 때 경고가 생성됩니다.
 
-[Continuous Benchmarking]에서는 즉 CI를 사용하여 벤치마킹할 때, Thresholds를 만들어야 합니다. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브 커맨드를 사용할 때 [그 `--branch` 옵션][branch option]을 통해 분기를, [그 `--testbed` 옵션][testbed option]을 통해 테스트베드를 이미 지정하므로, 지정해야 할 다른 차원은 `--threshold-measure` 옵션을 사용하여 측정치를 지정하는 것입니다. 그런 다음 해당 측정치에 사용할 테스트를 지정하려면 `--threshold-test` 옵션을 사용합니다. `--threshold-min-sample-size`, `--threshold-max-sample-size` 및 `--threshold-window` 옵션을 사용하면 테스트에서 사용될 데이터를 제어할 수 있습니다. 마지막으로 `--threshold-lower-boundary` 및 `--threshold-upper-boundary` 옵션을 사용하여 하한 경계와 상한 경계를 설정할 수 있습니다. 지정되지 않은 모든 모델을 제거하려면 `--thresholds-reset` 플래그를 사용할 수 있습니다.
+[Continuous Benchmarking]에서는 즉 CI를 사용하여 벤치마킹할 때, 임계값을 만들어야 합니다. <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code> CLI 서브 커맨드를 사용할 때 [그 `--branch` 옵션][branch option]을 통해 분기를, [그 `--testbed` 옵션][testbed option]을 통해 테스트베드를 이미 지정하므로, 지정해야 할 다른 차원은 `--threshold-measure` 옵션으로 지정하는 측정과, `--threshold-metric` 옵션으로 지정하는 해당 측정에서 검사할 메트릭입니다. 일부 변형만 검사하려면 `--threshold-parameters` 옵션으로 매개변수 필터를 추가합니다. 그런 다음 해당 메트릭에 사용할 테스트를 지정하려면 `--threshold-test` 옵션을 사용합니다. `--threshold-min-sample-size`, `--threshold-max-sample-size` 및 `--threshold-window` 옵션을 사용하면 테스트에서 사용될 데이터를 제어할 수 있습니다. 마지막으로 `--threshold-lower-boundary` 및 `--threshold-upper-boundary` 옵션을 사용하여 하한 경계와 상한 경계를 설정할 수 있습니다. 지정되지 않은 모든 모델을 제거하려면 `--thresholds-reset` 플래그를 사용할 수 있습니다.
 
-- Threshold가 존재하지 않으면 자동으로 생성됩니다.
-- Threshold가 존재하고 지정된 모델이 동일할 경우, 모델은 무시됩니다.
-- Threshold가 존재하고 지정된 모델이 다를 경우, Threshold에 대해 새로운 모델이 생성됩니다.
-- Threshold가 존재하고 그것이 리셋될 경우, 현재 모델이 Threshold에서 제거됩니다.
+- 임계값이 존재하지 않으면 자동으로 생성됩니다.
+- 임계값이 존재하고 지정된 모델이 동일할 경우, 모델은 무시됩니다.
+- 임계값이 존재하고 지정된 모델이 다를 경우, 임계값에 대해 새로운 모델이 생성됩니다.
+- 임계값이 존재하고 그것이 리셋될 경우, 현재 모델이 임계값에서 제거됩니다.
 
-예를 들어, [Student's t-test][t-test] 테스트를 사용하여 Latency Measure에만 Threshold를 사용하고 최대 샘플 크기를 `64`로 설정하고 상한 경계를 `0.99`로 설정하려면 다음과 같이 작성할 수 있습니다:
+예를 들어, [Student's t-test][t-test] 테스트를 사용하여 Latency 측정의 `value` 메트릭에만 임계값을 사용하고 최대 샘플 크기를 `64`로 설정하고 상한 경계를 `0.99`로 설정하려면 다음과 같이 작성할 수 있습니다:
 
 <ThresholdCode />
 
-> 🐰 기능 분기에서 작업할 때는 기본 [시작점][start point] 분기에서 기존의 Thresholds를 복사하고 싶을 수 있습니다.
+> 🐰 기능 분기에서 작업할 때는 기본 [시작점][start point] 분기에서 기존의 임계값을 복사하고 싶을 수 있습니다.
 > 이는 [그 `--start-point-clone-thresholds` 플래그][start point clone thresholds flag]를 사용하여 가능합니다.
-`--thresholds-reset` 플래그는 명시적으로 지정되지 않은 모든 복사된 Thresholds를 여전히 제거합니다.
+> `--thresholds-reset` 플래그는 명시적으로 지정되지 않은 모든 복사된 임계값을 여전히 제거합니다.
+
+<details>
+<summary>BMF 버전 0</summary>
+
+[BMF 버전 0][bmf versions]에서 임계값은 분기, 테스트베드 및 측정에 할당되며, 모든 벤치마크의 `value` 메트릭을 검사합니다.
+`--threshold-metric` 없이 `--threshold-measure`를 사용하세요.
+`--threshold-metric`과 `--threshold-parameters`는 무언가를 전송하기 전에 오류와 함께 `bencher run`을 중지시키며,
+이 오류는 프로젝트를 버전 1로 옮기기 위한 `bencher project update --bmf-version 1`을 안내합니다.
+
+</details>
 
 [branch]: /ko/docs/explanation/benchmarking/#branch
 [testbed]: /ko/docs/explanation/benchmarking/#testbed
 [measure]: /ko/docs/explanation/benchmarking/#measure
 [metric]: /ko/docs/explanation/benchmarking/#metric
+[variant]: /ko/docs/explanation/benchmarking/#parameters
 [continuous benchmarking]: /ko/docs/explanation/continuous-benchmarking/
 [branch option]: /ko/docs/explanation/branches/#--branch-branch
 [testbed option]: /ko/docs/explanation/testbeds/#--testbed-testbed
 [start point]: /ko/docs/explanation/benchmarking/#start-point
 [start point clone thresholds flag]: /ko/docs/explanation/branches/#--start-point-clone-thresholds
+[bmf versions]: /ko/docs/reference/bencher-metric-format/#bmf-versions
 
 [tests]: #--threshold-test-test
 [t-test]: #t-test

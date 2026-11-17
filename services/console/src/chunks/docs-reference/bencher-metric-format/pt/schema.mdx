@@ -1,14 +1,26 @@
 import BmfSchema from "../bmf-schema.mdx";
+import BmfV0Schema from "../bmf-v0-schema.mdx";
 
 ## Esquema JSON do Bencher Metric Format (BMF)
 
-Este é o [esquema JSON][json schema] para o Bencher Metric Format (BMF) em JSON:
+Este é o [esquema JSON][json schema] para o Bencher Metric Format (BMF) versão 1 em JSON:
 
 <BmfSchema />
 
+O esquema verifica a forma de uma carga útil.
+Os limites de nomes e Parâmetros são verificados quando o Relatório é lido.
+
 ### Versões do esquema:
 
-- Mais recente: [`https://bencher.dev/bmf.json`](https://bencher.dev/bmf.json)
-- `v0` (mais recente): [`https://bencher.dev/v0/bmf.json`](https://bencher.dev/v0/bmf.json)
+- Mais recente (`v1`): [`https://bencher.dev/bmf.json`](https://bencher.dev/bmf.json)
+- `v1`: [`https://bencher.dev/v1/bmf.json`](https://bencher.dev/v1/bmf.json)
+- `v0`: [`https://bencher.dev/v0/bmf.json`](https://bencher.dev/v0/bmf.json)
+
+<details>
+<summary>Esquema JSON do BMF versão 0</summary>
+
+<BmfV0Schema />
+
+</details>
 
 [json schema]: https://json-schema.org/draft-07/json-schema-release-notes

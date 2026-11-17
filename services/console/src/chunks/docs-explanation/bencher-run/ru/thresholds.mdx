@@ -1,4 +1,6 @@
 ### `--threshold-measure <MEASURE>`
+### `--threshold-metric <METRIC>`
+### `--threshold-parameters <PARAMETERS>`
 ### `--threshold-test <TEST>`
 ### `--threshold-min-sample-size <SAMPLE_SIZE>`
 ### `--threshold-max-sample-size <SAMPLE_SIZE>`
@@ -9,5 +11,9 @@
 ### `--error-on-alert`
 
 <br />
+
+В BMF версии 1 Порог проверяет одну Метрику Измерения, которую задает `--threshold-metric`.
+`--threshold-measure` вовсе без `--threshold-metric` не задает Порог:
+запуск все равно сохраняется, а его Отчет выдает замечание о том, что Порог пропущен, с подсказкой использовать `--threshold-metric`.
 
 Смотрите [пороги и оповещения](/ru/docs/explanation/thresholds/) для полного обзора.

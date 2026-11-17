@@ -1,0 +1,23 @@
+import ThresholdsPayloadCode from "../thresholds-payload-code.mdx";
+
+## `--threshold-parameters <PARAMETERS>`
+
+<br />
+
+以 JSON 对象的形式为阈值使用指定的参数过滤器（例如：`--threshold-parameters '{"size": 512}'`）。
+阈值会检查其参数以相同的值包含该对象中每个键的每个[变体][variant]，
+因此 `{"size": 512}` 同时匹配 `{"op": "read", "size": 512}` 和 `{"op": "write", "size": 512}`。
+该值是 JSON，而不是拉取请求评论和控制台所显示的 `size=512` 形式。
+如果未设置或设置为 `{}`，阈值会检查每个变体。
+要为特定阈值忽略此选项，请使用下划线 (`_`)。
+带有参数过滤器的阈值还需要 [`--threshold-metric` 选项](#--threshold-metric-metric)。
+在 BMF 版本 0 中，`--threshold-parameters` 会在发送任何内容之前以错误终止 `bencher run`。
+
+每个 `--threshold-parameters` 选项包含一组参数。
+要检查与多组参数中任意一组匹配的变体，请使用 API：
+在 BMF 版本 1 中，报告的 `thresholds` 会列出每个阈值及其 `parameters` 过滤器，该过滤器是一个参数组列表。
+例如：
+
+<ThresholdsPayloadCode />
+
+[variant]: /zh/docs/explanation/benchmarking/#parameters

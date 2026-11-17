@@ -29,6 +29,13 @@ pull request에서 프로젝트의 모든 작업은 이 하나의 댓글을 공�
 다음으로, 하나의 표가 보고서 열과 함께 모든 보고서의 경고를 담습니다.
 그다음 각 보고서의 결과가 접을 수 있는 블록(예: `Report 2 (microbench): 14 benchmarks, 2 alerts`)으로 이어지며,
 보고서에 경고가 있으면 이 블록은 펼쳐져 있습니다.
+결과의 각 행은 [변형(Variant)][variant]으로, 벤치마크 뒤에 그 매개변수(Parameters)가 `key=value` 쌍으로 이어집니다.
+각 측정에는 해당 임계값이 검사하는 각 메트릭의 열 그룹이 있으며,
+그렇지 않으면 기본 메트릭의 열 그룹이 있습니다. 기본 메트릭은 `value`, 그다음 `median`, 그다음 `mean`, 그다음 알파벳순으로 첫 번째 이름이며,
+`mean_ci_lower` 같은 신뢰 구간 이름은 다른 모든 이름 뒤에 옵니다.
+보고서에 warning이 있으면 결과 뒤에 접힌 `⚠️ Warnings (N)` 섹션이 이어지며, `N`은 warning의 총수입니다.
+이 섹션은 각 warning의 Resource, Action, Count를 나열하고,
+건너뛴 임계값에 대해서는 [`--threshold-metric` 옵션](/ko/docs/explanation/thresholds/#--threshold-metric-metric)을 알려주는 Hint를 표시합니다.
 각 작업은 자체 GitHub Check와 작업 요약을 유지하므로,
 GitHub Check 이름과 필수 상태 검사는 변경되지 않습니다.
 커밋이 더 이상 pull request의 헤드 커밋이 아닌 작업은 댓글을 그대로 둡니다.
@@ -41,6 +48,8 @@ GitHub 댓글에는 크기 제한이 있으므로, 댓글은 다음 형식 중 �
 3. 모든 요약 행과 경고의 총수, 경고 행은 제외
 4. 최후의 수단으로, 처음 요약 행들과 나머지를 나타내는 `and N more reports`
 
+첫 번째 형식 이후의 모든 형식에서는 warning 중 `⚠️ Warnings (N)` 줄만 남습니다.
+
 행이 하나이면 댓글은 이전과 같으며, 너무 크면 전체 보고서로 연결됩니다.
 
 다른 작업을 찾기 위해 `bencher run`은 헤드 커밋의 GitHub Check 목록을 조회하며,
@@ -52,6 +61,7 @@ GitHub 댓글에는 크기 제한이 있으므로, 댓글은 다음 형식 중 �
 공유 댓글을 작성할 때 작업이 업데이트하거나 삭제하는 댓글은 자신의 GitHub Check를 소유한 GitHub App이 게시한 댓글뿐이며,
 `GITHUB_TOKEN`을 사용하는 경우 이는 `github-actions` 봇입니다.
 
+[variant]: /ko/docs/explanation/benchmarking/#parameters
 [github token]: https://docs.github.com/ko/actions/security-guides/automatic-token-authentication
 [github token permissions]: https://docs.github.com/ko/actions/security-for-github-actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
 

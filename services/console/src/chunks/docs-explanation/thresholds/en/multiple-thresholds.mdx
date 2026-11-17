@@ -6,6 +6,7 @@ It is possible to create multiple Thresholds with the same
 <code><a href="/docs/explanation/bencher-run/">bencher run</a></code> invocation.
 When specifying multiple Thresholds, all of the same options must be used for each Threshold.
 To ignore an option for a specific Threshold, use an underscore (`_`).
+The exception is `--threshold-metric`: every Threshold needs its own Metric, so an underscore cannot skip it.
 
 For example, if you only want to use two Thresholds,
 one for the Latency Measure and one for the Throughput Measure
@@ -16,3 +17,11 @@ and `--threshold-upper-boundary _` for the Throughput Measure.
 You could write something like this:
 
 <MultipleThresholdsCode />
+
+One Measure may also have several Thresholds that differ by Metric or parameters filter,
+such as one for the `median` and one for the `p99` of the Latency Measure.
+Every Threshold that matches a Variant checks it,
+so an unfiltered Threshold and a filtered Threshold for the same Metric both check the Variants that the filter matches,
+and both generate an Alert for the same regression.
+A Threshold that is specified twice in the same invocation is one Threshold,
+with the Model from its last occurrence.

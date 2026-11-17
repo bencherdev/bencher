@@ -1,7 +1,7 @@
 import ShellForm from "../shell-form.mdx";
 import ExecForm from "../exec-form.mdx";
 
-## 基准命令
+## Benchmark Command
 
 `bencher run` 的第一个参数是可选的基准命令。
 这就是将被执行以调用你的基准测量工具（benchmark harness）的命令。
@@ -24,7 +24,7 @@ Exec 表单：
 <ExecForm />
 
 可以使用 [`--iter`][iter option] 选项多次运行基准命令，
-并可以使用 [`--fold`][fold option] 选项将这些结果合并为单个结果。
+并且在 BMF 版本 0 中可以使用 [`--fold`][fold option] 选项将这些结果合并为单个结果。
 如果任何一次迭代失败，则整个命令将被视为失败，
 除非设置了 [`--allow-failure`][allow failure flag] 标志。
 
@@ -43,7 +43,7 @@ Exec 表单：
   则每个文件都将被视为基准命令的一个单独 <code>iteration</code>。
   在显示时，这些结果会在不同的表格中展示。
 
-  如果你希望将这些结果合并为单个 <code>iteration</code>，
+  在 BMF 版本 0 中，如果你希望将这些结果合并为单个 <code>iteration</code>，
   可以将 <code>-&#8288;-iter</code> 选项设置为 <code>1</code>，
   并将 <code>-&#8288;-fold</code> 选项设置为 <code>min</code>、<code>max</code> 或 <code>median</code> 聚合函数之一。
   这会将结果折叠为单个 <code>iteration</code>，
@@ -64,6 +64,6 @@ Exec 表单：
 [adapter option]: #--adapter-adapter
 [file option]: #--file-file
 [file size option]: #--file-size-file
-[iter option]: #--iter-iter
-[fold option]: #--fold-fold
+[iter option]: #--iter-count
+[fold option]: #--fold-aggregate_function
 [allow failure flag]: #--allow-failure

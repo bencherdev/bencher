@@ -1,0 +1,20 @@
+## `--threshold-metric <METRIC>`
+
+<br />
+
+Verwenden Sie den angegebenen [Metrik][metric]-Namen für einen Schwellenwert.
+In BMF Version 1 prüft ein Schwellenwert eine Metrik seiner Measure, anhand des Namens, zum Beispiel `median`, `p99` oder `value`.
+Um beispielsweise einen Schwellenwert für den Median der Latency-Measure zu verwenden,
+könnten Sie `--threshold-measure latency --threshold-metric median` schreiben.
+Um zu entscheiden, welche Metrik Sie zuerst prüfen, sehen Sie sich die Metriken an, die [jeder Benchmark-Harness-Adapter][adapters] schreibt.
+Die Metriken, die die Schwellenwerte einer Measure prüfen, sind ihre Spalten im [Pull-Request-Kommentar][github actions] und in der Ausgabe von `bencher run`.
+
+Sobald irgendein Schwellenwert eine Metrik oder einen Parameterfilter hat, braucht jeder Schwellenwert eine Metrik,
+und `bencher run` stoppt mit einem Fehler, der den Schwellenwert nennt, dem seine Metrik fehlt.
+Ein `--threshold-measure` ganz ohne `--threshold-metric` legt keinen Schwellenwert fest:
+Der Lauf wird trotzdem gespeichert, und sein Bericht warnt, dass der Schwellenwert übersprungen wurde, mit dem Hinweis, `--threshold-metric` zu verwenden.
+In BMF Version 0 stoppt `--threshold-metric` `bencher run` mit einem Fehler, bevor etwas gesendet wird.
+
+[metric]: /de/docs/explanation/benchmarking/#metric
+[adapters]: /de/docs/explanation/adapters/
+[github actions]: /de/docs/explanation/bencher-run/#--github-actions-github_token

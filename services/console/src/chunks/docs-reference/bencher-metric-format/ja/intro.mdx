@@ -1,6 +1,12 @@
 内蔵された[ベンチマークハーネスアダプター][adapters]は、ベンチマークの出力をBencher Metric Format (BMF) JSONに変換します。
 カスタムベンチマーキングハーネスは、その結果をBMF JSONとして出力し、[`json`アダプター][json adapter]を使用すべきです。
 完全な概要については、[カスタムベンチマークの追跡方法][custom benchmarks]をご覧ください。
+モック BMF JSON データを生成するには、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> CLI サブコマンドを使用してください。
+
+BMF には2つのバージョンがあり、すべてのプロジェクトはそのどちらかを持ちます。
+バージョン 1 は新しいプロジェクトが開始時に使用するフォーマットであり、このページで説明するフォーマットです。
+バージョン 0 は以前のバージョンで、バージョン 0 のプロジェクトで引き続き使用されています。
+レポートのバージョンがどのように選ばれるか、およびバージョン 0 については、[BMF のバージョン](#bmf-versions)を参照してください。
 
 [adapters]: /ja/docs/explanation/adapters/
 [json adapter]: /ja/docs/explanation/adapters/#-json
