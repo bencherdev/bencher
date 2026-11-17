@@ -30,7 +30,6 @@ import {
 	isContactTier,
 	isFirstBillingPeriod,
 	planLevel,
-	planLevelPrice,
 	runnerMinutePrice,
 	seriesTierRange,
 	tierEstimateUsd,
@@ -403,103 +402,11 @@ const PlanCancelResume = (props: {
 	);
 };
 
-// Bencher Cloud metered plans. Pro bills on active series (its own panel); legacy Team and
-// metered Enterprise still bill on metrics.
+// Bencher Cloud metered plans: billed a flat monthly fee per active-series band, read from
+// the Stripe price tiers (`usage.plan.tiers`). Bare metal runner minutes bill separately
+// on top, except during the first-month free trial, when the base fee is waived and
+// runner minutes are included (the whole bill is $0).
 const CloudMeteredPanel = (props: {
-	apiUrl: string;
-	user: JsonAuthUser;
-	usage: Resource<null | JsonUsage>;
-	handleRefresh: () => void;
-}) => {
-	const isPro = createMemo(() => props.usage()?.plan?.level === PlanLevel.Pro);
-	return (
-		<Show
-			when={isPro()}
-			fallback={
-				<MeteredMetricsPanel
-					apiUrl={props.apiUrl}
-					user={props.user}
-					usage={props.usage}
-					handleRefresh={props.handleRefresh}
-				/>
-			}
-		>
-			<ProMeteredPanel
-				apiUrl={props.apiUrl}
-				user={props.user}
-				usage={props.usage}
-				handleRefresh={props.handleRefresh}
-			/>
-		</Show>
-	);
-};
-
-// Legacy metered metrics plans (Team and metered Enterprise): billed per metric plus bare
-// metal runner minutes.
-const MeteredMetricsPanel = (props: {
-	apiUrl: string;
-	user: JsonAuthUser;
-	usage: Resource<null | JsonUsage>;
-	handleRefresh: () => void;
-}) => {
-	const metricPrice = createMemo(() =>
-		planLevelPrice(props.usage()?.plan?.level),
-	);
-	const estMetricsCost = createMemo(
-		() => (props.usage()?.metrics ?? 0) * metricPrice(),
-	);
-	const minutePrice = createMemo(() =>
-		runnerMinutePrice(props.usage()?.plan?.level),
-	);
-	const estRunnerCost = createMemo(
-		() => (props.usage()?.runner_minutes ?? 0) * minutePrice(),
-	);
-	const estTotalCost = createMemo(() => estMetricsCost() + estRunnerCost());
-
-	return (
-		<div class="content">
-			<h2 class="title is-2">
-				{planLevel(props.usage()?.plan?.level)} Tier (Bencher Cloud Metered)
-			</h2>
-			<h3 class="subtitle is-3">
-				{fmtDate(props.usage()?.start_time)} -{" "}
-				{fmtDate(props.usage()?.end_time)}
-			</h3>
-			<h4>Cost per Metric: {fmtUsd(metricPrice())}</h4>
-			<h4>
-				Estimated Metrics Used: {props.usage()?.metrics?.toLocaleString() ?? 0}
-			</h4>
-			<h4>Estimated Metrics Cost: {fmtUsd(estMetricsCost())}</h4>
-			<br />
-			<h4>Cost per Runner Minute: {fmtUsdPrecise(minutePrice())} / min</h4>
-			<h4>
-				Estimated Runner Minutes Used:{" "}
-				{props.usage()?.runner_minutes?.toLocaleString() ?? 0}
-			</h4>
-			<h4>Estimated Runner Cost: {fmtUsd(estRunnerCost())}</h4>
-			<br />
-			<h4>Current Estimated Total: {fmtUsd(estTotalCost())}</h4>
-			<br />
-			<PaymentMethod usage={props.usage} />
-			<br />
-			{manageSubscription}
-			<br />
-			<br />
-			<PlanCancelResume
-				apiUrl={props.apiUrl}
-				user={props.user}
-				usage={props.usage}
-				handleRefresh={props.handleRefresh}
-			/>
-		</div>
-	);
-};
-
-// Pro plans: billed a flat monthly fee per active-series band, read from the Stripe price
-// tiers (`usage.plan.tiers`). Bare metal runner minutes bill separately on top, except
-// during the first-month free trial, when the base fee is waived and runner minutes are
-// included (the whole bill is $0).
-const ProMeteredPanel = (props: {
 	apiUrl: string;
 	user: JsonAuthUser;
 	usage: Resource<null | JsonUsage>;
