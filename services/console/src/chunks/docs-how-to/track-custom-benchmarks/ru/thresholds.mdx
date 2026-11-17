@@ -1,0 +1,22 @@
+import ThresholdCmdExample from "../threshold-cmd-example.mdx";
+
+## Пороги
+
+Чтобы обнаруживать регрессии производительности в ваших пользовательских бенчмарках, добавьте [Порог][threshold].
+Порог проверяет одну Метрику Измерения,
+поэтому установите [опцию `--threshold-metric`][threshold metric option]
+на имя Метрики, которую сообщает ваша пользовательская оболочка бенчмаркинга.
+Эта команда создает Порог для Метрики `value` Измерения `latency`:
+
+<ThresholdCmdExample />
+
+Чтобы проверять только некоторые из ваших [Вариантов][variant],
+также установите [опцию `--threshold-parameters`][threshold parameters option]
+на JSON-объект общих для них [Параметров][parameters].
+(например: `--threshold-parameters '{"size": 64}'`)
+
+[threshold]: /ru/docs/explanation/thresholds/
+[threshold metric option]: /ru/docs/explanation/thresholds/#--threshold-metric-metric
+[threshold parameters option]: /ru/docs/explanation/thresholds/#--threshold-parameters-parameters
+[parameters]: /ru/docs/explanation/benchmarking/#parameters
+[variant]: /ru/docs/explanation/benchmarking/#parameters

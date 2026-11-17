@@ -1,0 +1,22 @@
+import ThresholdCmdExample from "../threshold-cmd-example.mdx";
+
+## Seuils
+
+Pour détecter les régressions de performance dans vos benchmarks personnalisés, ajoutez un [Seuil][threshold].
+Un Seuil vérifie une Métrique d'une Mesure,
+définissez donc [l'option `--threshold-metric`][threshold metric option]
+sur le nom d'une Métrique que rapporte votre harnais de benchmark personnalisé.
+Cette commande crée un Seuil pour la Métrique `value` de la Mesure `latency` :
+
+<ThresholdCmdExample />
+
+Pour ne vérifier que certaines de vos [Variantes][variant],
+définissez aussi [l'option `--threshold-parameters`][threshold parameters option]
+sur un objet JSON des [Paramètres][parameters] qu'elles partagent.
+(ex : `--threshold-parameters '{"size": 64}'`)
+
+[threshold]: /fr/docs/explanation/thresholds/
+[threshold metric option]: /fr/docs/explanation/thresholds/#--threshold-metric-metric
+[threshold parameters option]: /fr/docs/explanation/thresholds/#--threshold-parameters-parameters
+[parameters]: /fr/docs/explanation/benchmarking/#parameters
+[variant]: /fr/docs/explanation/benchmarking/#parameters

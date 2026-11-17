@@ -21,7 +21,7 @@ import TargetBranchCode from "../target-branch-code.mdx";
 5. 使用 [便捷脚本][install bencher cli] 安装 Bencher CLI。
    （例如：`before_script: ...`）
 6. 使用 <code><a href="/zh/docs/explanation/bencher-run/">bencher run</a></code> CLI 子命令运行您的 `main` 分支基准测试。
-   查看 [the `bencher run` CLI 子命令][bencher run] 以获取完整概述。
+   查看 [`bencher run` CLI 子命令][bencher run] 以获取完整概述。
    （例如：`bencher run`）
 7. 将 `--project` 选项设置为项目 slug。
    查看 [`--project` 文档][project option] 以获取更多详情。
@@ -36,37 +36,41 @@ import TargetBranchCode from "../target-branch-code.mdx";
     这可能应与在 `image` 中选择的机器匹配。
     查看 [`--testbed` 文档][testbed option] 以获取更多详情。
     （例如：`--testbed debian:bullseye`）
-11. 为 `main` 分支、`debian:bullseye` 测试平台和 `latency` 测量设置阈值：
-    1. 将 `--threshold-measure` 选项设置为 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的内置 `latency` 测量。
+11. 为 `main` 分支、`debian:bullseye` 测试平台、`latency` 度量和 `value` 指标设置阈值：
+    1. 将 `--threshold-measure` 选项设置为 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的内置 `latency` 度量。
     查看 [`--threshold-measure` 文档][threshold measure option] 以获取更多详情。
     （例如：`--threshold-measure latency`）
-    2. 将 `--threshold-test` 选项设置为 Student's t-test (`t_test`)。
+    2. 将 `--threshold-metric` 选项设置为由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成的 `value` 指标。
+    对于你自己的基准测试工具，请使用[其适配器][adapters]建议首先设置阈值的指标。
+    查看 [`--threshold-metric` 文档][threshold metric option] 以获取更多详情。
+    （例如：`--threshold-metric value`）
+    3. 将 `--threshold-test` 选项设置为学生 t 检验（`t_test`）。
     查看 [`--threshold-test` 文档][threshold test option] 以获取完整概述。
     （例如：`--threshold-test t_test`）
-    3. 将 `--threshold-max-sample-size` 选项设置为最大样本大小 `64`。
+    4. 将 `--threshold-max-sample-size` 选项设置为最大样本大小 `64`。
     查看 [`--threshold-max-sample-size` 文档][threshold max sample size] 以获取更多详情。
     （例如：`--threshold-max-sample-size 64`）
-    4. 将 `--threshold-upper-boundary` 选项设置为上界 `0.99`。
+    5. 将 `--threshold-upper-boundary` 选项设置为上界 `0.99`。
     查看 [`--threshold-upper-boundary` 文档][threshold upper boundary] 以获取更多详情。
     （例如：`--threshold-upper-boundary 0.99`）
-    5. 设置 `--thresholds-reset` 标志以确保只有指定的阈值处于活动状态。
+    6. 设置 `--thresholds-reset` 标志以确保只有指定的阈值处于活动状态。
     查看 [`--thresholds-reset` 文档][thresholds reset] 以获取完整概述。
     （例如：`--thresholds-reset`）
 12. 设置 `--error-on-alert` 标志以在生成警报时使命令失败。
     查看 [`--error-on-alert` 文档][alert err] 以获取完整概述。
     （例如：`--error-on-alert`）
 13. 将 `--adapter` 选项设置为 [Bencher Metric Format JSON (`json`)][bmf]，由 <code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code> 生成。
-    查看 [benchmark harness adapters][adapter json] 以获取完整概述。
+    查看 [基准测试工具适配器][adapter json] 以获取完整概述。
     （例如：`--adapter json`）
 14. 指定基准测试命令参数。
-    查看 [benchmark command][command argument] 以获取完整概述。
+    查看 [基准测试命令][command argument] 以获取完整概述。
     （例如：`bencher mock`）
 
 [gitlab ci cd rules]: https://docs.gitlab.com/ee/ci/jobs/job_control.html#common-if-clauses-for-rules
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
 [gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
 
-[statistical continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /zh/docs/how-to/track-benchmarks/#统计连续基准测试
 [install bencher cli]: /zh/docs/how-to/install-cli/#install-cli-with-script
 [bencher run]: /zh/docs/explanation/bencher-run/
 [project option]: /zh/docs/explanation/bencher-run/#--project-project
@@ -74,8 +78,10 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [branch option]: /zh/docs/explanation/branches/#--branch-branch
 [testbed option]: /zh/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /zh/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /zh/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /zh/docs/explanation/adapters/
 [threshold test option]: /zh/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /zh/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /zh/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /zh/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /zh/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /zh/docs/explanation/thresholds/#--error-on-alert

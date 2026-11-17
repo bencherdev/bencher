@@ -6,21 +6,27 @@ import BmfExample from "../bmf-example.mdx";
 
 이 예제에서 키 `benchmark_name`은 [벤치마크][benchmark]의 이름이 됩니다.
 벤치마크는 이름, 슬러그(slug), 또는 UUID로 식별할 수 있습니다.
-`benchmark_name` 객체는 여러 [측정 항목][measure]의 이름, 슬러그, 또는 UUID를 키로 가질 수 있습니다.
-지정된 값이 이름이나 슬러그이고 해당 [측정 항목][measure]이 아직 존재하지 않으면 자동으로 생성됩니다.
-반면, 지정된 값이 UUID인 경우에는 해당 [측정 항목][measure]이 이미 존재해야 합니다.
-이 예제에서 `latency`는 내장된 Latency Measure(지연 측정)의 슬러그입니다.
-각 프로젝트는 기본적으로 Latency(즉 `latency`)와 Throughput(즉 `throughput`) Measure를 가지며,
+`benchmark_name` 키는 항목의 목록에 대응하며,
+각 항목은 `measures` 객체를 가집니다.
+`measures` 객체는 여러 [측정][measure]의 이름, 슬러그, 또는 UUID를 키로 가질 수 있습니다.
+지정된 값이 이름이나 슬러그이고 해당 측정이 아직 존재하지 않으면 자동으로 생성됩니다.
+반면, 지정된 값이 UUID인 경우에는 해당 측정이 이미 존재해야 합니다.
+이 예제에서 `latency`는 내장된 Latency 측정의 슬러그입니다.
+각 프로젝트는 기본적으로 Latency(즉 `latency`)와 Throughput(즉 `throughput`) 측정을 가지며,
 각각 `nanosecond (ns)`와 `operations / second (ops/s)` 단위로 측정됩니다.
-[측정 항목][measure] 객체는 최대 세 가지 값(`value`, `lower_value`, `upper_value`)을 가진 [지표][metric]을 포함합니다.
-`lower_value`와 `upper_value` 값은 선택 사항입니다.
+각 측정 객체는 [메트릭][metric] 이름을 그 값에 대응시킵니다.
+벤치마크 하네스가 측정에 대해 단일 결과를 보고하는 경우,
+그 메트릭의 이름을 `value`로 지정하세요.
 
-이 예제에서 `latency` [측정 항목][measure] 객체는 다음 값을 포함합니다:
+이 예제에서 `latency` 측정 객체는 `88.0`인 `value` 메트릭을 포함합니다.
 
-- `value`가 `88.0`입니다.
-- `lower_value`가 `87.42`입니다.
-- `upper_value`가 `88.88`입니다.
+항목은 `{"size": 64}`와 같은 `parameters` 객체를 가질 수도 있습니다.
+[매개변수][parameters]의 각 세트는 해당 벤치마크의 하나의 [변형][variant]이 되므로,
+하나의 벤치마크가 여러 변형을 가질 수 있습니다.
+`parameters`가 없는 항목은 매개변수가 없는 해당 벤치마크의 변형입니다.
 
 [benchmark]: /ko/docs/explanation/benchmarking/#benchmark
 [measure]: /ko/docs/explanation/benchmarking/#measure
-[metric]: /ko/docs/explanation/benchmarking/#metrics
+[metric]: /ko/docs/explanation/benchmarking/#metric
+[parameters]: /ko/docs/explanation/benchmarking/#parameters
+[variant]: /ko/docs/explanation/benchmarking/#parameters

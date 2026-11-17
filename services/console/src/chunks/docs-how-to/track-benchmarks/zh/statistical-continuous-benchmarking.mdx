@@ -40,20 +40,24 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 4. 设置`--testbed`选项为 CI 运行器测试台名称。
    查看[有关`--testbed`的文档][testbed option]以获取更多详情。
    （例如：`--testbed ci-runner`）
-5. 为`main`分支、`ci-runner`测试台和`latency`测量设置阈值：
-   1. 将`--threshold-measure`选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的内置`latency`测量。
+5. 为`main`分支、`ci-runner`测试台、`latency`度量和`value`指标设置阈值：
+   1. 将`--threshold-measure`选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的内置`latency`度量。
    查看[关于`--threshold-measure`的文档][threshold measure option]以获取更多详情。
    （例如：`--threshold-measure latency`）
-   2. 将`--threshold-test`选项设置为学生 t 检验（`t_test`）。
+   2. 将`--threshold-metric`选项设置为由<code><a href="/zh/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>生成的`value`指标。
+   对于你自己的基准测试工具，请使用[其适配器][adapters]建议首先设置阈值的指标。
+   查看[关于`--threshold-metric`的文档][threshold metric option]以获取更多详情。
+   （例如：`--threshold-metric value`）
+   3. 将`--threshold-test`选项设置为学生 t 检验（`t_test`）。
    查看[关于`--threshold-test`的文档][threshold test option]以获取完整概述。
    （例如：`--threshold-test t_test`）
-   3. 设置`--threshold-max-sample-size`选项为最大样本大小`64`。
+   4. 设置`--threshold-max-sample-size`选项为最大样本大小`64`。
    查看[关于`--threshold-max-sample-size`的文档][threshold max sample size]以获取更多详情。
    （例如：`--threshold-max-sample-size 64`）
-   4. 设置`--threshold-upper-boundary`选项为上限`0.99`。
+   5. 设置`--threshold-upper-boundary`选项为上限`0.99`。
    查看[关于`--threshold-upper-boundary`的文档][threshold upper boundary]以获取更多详情。
    （例如：`--threshold-upper-boundary 0.99`）
-   5. 设置`--thresholds-reset`标志以仅激活指定的阈值。
+   6. 设置`--thresholds-reset`标志以仅激活指定的阈值。
    查看[关于`--thresholds-reset`的文档][thresholds reset]以获取完整概述。
    （例如：`--thresholds-reset`）
 6. 设置`--error-on-alert`标志以在生成警报时让命令失败。
@@ -68,8 +72,8 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 
 第一次在 CI 中运行此命令时，
 如果`main`分支尚不存在，它将被创建。
-新的`main`将_不会_有起始点或现有数据。
-将为`main`分支、`ci-runner`测试台和`latency`测量创建一个阈值。
+新的`main`将*不会*有起始点或现有数据。
+将为`main`分支、`ci-runner`测试台、`latency`度量和`value`指标创建一个阈值。
 在后续运行中，新数据将添加到`main`分支中。
 然后将使用指定的阈值来检测性能回归。
 
@@ -78,8 +82,10 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 [branch option]: /zh/docs/explanation/branches/#--branch-branch
 [testbed option]: /zh/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /zh/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /zh/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /zh/docs/explanation/adapters/
 [threshold test option]: /zh/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /zh/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /zh/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /zh/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /zh/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /zh/docs/explanation/thresholds/#--error-on-alert
@@ -117,7 +123,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
    查看[有关`--start-point-reset`的文档][start point reset]以获取完整概述。
    （例如：`--start-point-reset`）
 5. 将`--testbed`选项设置为测试台名称。
-   查看[有关`--tested`的文档][testbed option]以获取更多详情。
+   查看[有关`--testbed`的文档][testbed option]以获取更多详情。
    （例如：`--testbed ci-runner`）
 6. 设置`--error-on-alert`标志以在生成警报时让命令失败。
    查看[关于`--error-on-alert`的文档][alert err]以获取完整概述。

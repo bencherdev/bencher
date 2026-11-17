@@ -21,13 +21,14 @@ wenn `my_binary` eine Größe von `42` Bytes hätte:
 
 In diesem Beispiel ist der Schlüssel `my_binary` der Dateiname der Binärdatei.
 Er wird als Name des [Benchmarks][benchmark] verwendet.
-Das `my_binary` Objekt enthält den Schlüssel `file-size`.
-`file-size` ist der Slug für die integrierte Dateigröße [Messung][measure].
-Die Dateigrößenmessung wird nicht standardmäßig für alle Projekte erstellt.
-Jedoch, wenn Sie die Dateigrößenmessung verwenden,
+Der Schlüssel `my_binary` verweist auf eine Liste mit einem Eintrag,
+und das `measures`-Objekt dieses Eintrags enthält den Schlüssel `file-size`.
+`file-size` ist der Slug für die integrierte File Size [Measure][measure].
+Die File Size Measure wird nicht standardmäßig für alle Projekte erstellt.
+Jedoch, wenn Sie die File Size Measure verwenden,
 wird sie automatisch für Ihr Projekt erstellt.
-Das Dateigrößenmessungsobjekt enthält eine [Metrik][metric]
-mit dem Dateigrößen-`value` in Bytes, `42.0`.
+Das File Size Measure-Objekt enthält die `value`-[Metrik][metric]
+mit der Dateigröße in Bytes, `42.0`.
 
 Die Dateigröße wird immer in ganzen Byte-Schritten angegeben.
 Das heißt, sie wird _niemals_ eine Dezimalstelle wie `42.5` haben.
@@ -39,4 +40,4 @@ verwendet es Gleitkommazahlen anstelle von Ganzzahlen.
 
 [benchmark]: /de/docs/explanation/benchmarking/#benchmark
 [measure]: /de/docs/explanation/benchmarking/#measure
-[metric]: /de/docs/explanation/benchmarking/#metrics
+[metric]: /de/docs/explanation/benchmarking/#metric

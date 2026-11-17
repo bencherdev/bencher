@@ -1,0 +1,22 @@
+import ThresholdCmdExample from "../threshold-cmd-example.mdx";
+
+## 阈值
+
+要在自定义基准测试中捕获性能回归，请添加一个[阈值][threshold]。
+阈值检查一个度量的一个指标，
+因此请将 [`--threshold-metric` 选项][threshold metric option]
+设置为你的自定义基准测试工具报告的指标名称。
+以下命令为 `latency` 度量的 `value` 指标创建一个阈值：
+
+<ThresholdCmdExample />
+
+要只检查你的部分[变体][variant]，
+还需将 [`--threshold-parameters` 选项][threshold parameters option]
+设置为这些变体共有的[参数][parameters]的 JSON 对象。
+（例如：`--threshold-parameters '{"size": 64}'`）
+
+[threshold]: /zh/docs/explanation/thresholds/
+[threshold metric option]: /zh/docs/explanation/thresholds/#--threshold-metric-metric
+[threshold parameters option]: /zh/docs/explanation/thresholds/#--threshold-parameters-parameters
+[parameters]: /zh/docs/explanation/benchmarking/#parameters
+[variant]: /zh/docs/explanation/benchmarking/#parameters

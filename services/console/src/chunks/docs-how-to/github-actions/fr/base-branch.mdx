@@ -44,22 +44,26 @@ Cette base de référence historique peut alors être utilisée pour détecter l
     (ex: `--branch main`)
 13. Réglez l'option `--testbed` sur le nom du Testbed.
     Cela devrait probablement correspondre à la machine sélectionnée dans `runs-on`.
-    Consultez [les documents `--tested`][testbed option] pour plus de détails.
+    Consultez [les documents `--testbed`][testbed option] pour plus de détails.
     (ex: `--testbed ubuntu-latest`)
-14. Définissez le seuil pour la Branche `main`, le Testbed `ubuntu-latest`, et la Mesure `latency`:
+14. Définissez le seuil pour la Branche `main`, le Testbed `ubuntu-latest`, la Mesure `latency` et la Métrique `value` :
     1. Définissez l'option `--threshold-measure` sur la Mesure intégrée `latency` générée par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
     Consultez [les documents `--threshold-measure`][threshold measure option] pour plus de détails.
     (ex: `--threshold-measure latency`)
-    2. Définissez l'option `--threshold-test` sur un test t de Student (`t_test`).
+    2. Définissez l'option `--threshold-metric` sur la Métrique `value` générée par <code><a href="/fr/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+    Avec votre propre harnais de benchmark, utilisez la Métrique sur laquelle [son adaptateur][adapters] recommande de placer un seuil en premier.
+    Consultez [les documents `--threshold-metric`][threshold metric option] pour plus de détails.
+    (ex: `--threshold-metric value`)
+    3. Définissez l'option `--threshold-test` sur un test t de Student (`t_test`).
     Consultez [les documents `--threshold-test`][threshold test option] pour un aperçu complet.
     (ex: `--threshold-test t_test`)
-    3. Définissez l'option `--threshold-max-sample-size` sur la taille maximale de l'échantillon de `64`.
+    4. Définissez l'option `--threshold-max-sample-size` sur la taille maximale de l'échantillon de `64`.
     Consultez [les documents `--threshold-max-sample-size`][threshold max sample size] pour plus de détails.
     (ex: `--threshold-max-sample-size 64`)
-    4. Définissez l'option `--threshold-upper-boundary` sur la Limite Supérieure de `0.99`.
+    5. Définissez l'option `--threshold-upper-boundary` sur la Limite Supérieure de `0.99`.
     Consultez [les documents `--threshold-upper-boundary`][threshold upper boundary] pour plus de détails.
     (ex: `--threshold-upper-boundary 0.99`)
-    5. Réglez l'indicateur `--thresholds-reset` pour que seul le seuil spécifié soit actif.
+    6. Réglez l'indicateur `--thresholds-reset` pour que seul le seuil spécifié soit actif.
     Consultez [les documents `--thresholds-reset`][thresholds reset] pour un aperçu complet.
     (ex: `--thresholds-reset`)
 15. Réglez l'indicateur `--error-on-alert` pour échouer la commande si une Alerte est générée.
@@ -83,15 +87,17 @@ Cette base de référence historique peut alors être utilisée pour détecter l
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github token]: https://docs.github.com/fr/actions/security-guides/automatic-token-authentication
 
-[statistical continuous benchmarking]: /fr/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /fr/docs/how-to/track-benchmarks/#benchmarking-continu-statistique
 [bencher run]: /fr/docs/explanation/bencher-run/
 [project option]: /fr/docs/explanation/bencher-run/#--project-project
 [key option]: /fr/docs/explanation/bencher-run/#--key-key
 [branch option]: /fr/docs/explanation/branches/#--branch-branch
 [testbed option]: /fr/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /fr/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /fr/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /fr/docs/explanation/adapters/
 [threshold test option]: /fr/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /fr/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /fr/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /fr/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /fr/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /fr/docs/explanation/thresholds/#--error-on-alert

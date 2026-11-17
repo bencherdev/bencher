@@ -42,23 +42,27 @@ import BaseBranchCode from "../base-branch-code.mdx";
     これは、`runs-on`で選択されたマシンと一致する必要があります。
     詳細については、[`--testbed` ドキュメント][testbed option]を参照してください。
     （例: `--testbed ubuntu-latest`）
-14. `main`ブランチ、`ubuntu-latest`テストベッド、`latency`測定のしきい値を設定します：
-    1. `--threshold-measure`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される組み込みの`latency`測定に設定します。
+14. `main`ブランチ、`ubuntu-latest`テストベッド、`latency`メジャー、`value`メトリックのしきい値を設定します：
+    1. `--threshold-measure`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される組み込みの`latency`メジャーに設定します。
     詳細については、[`--threshold-measure` ドキュメント][threshold measure option]を参照してください。
     （例: `--threshold-measure latency`）
-    2. `--threshold-test`オプションをスチューデントのt検定（`t_test`）に設定します。
+    2. `--threshold-metric`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される`value`メトリックに設定します。
+    独自のベンチマークハーネスでは、[そのアダプタ][adapters]が最初にしきい値を設定するよう推奨しているメトリックを使用してください。
+    詳細については、[`--threshold-metric` ドキュメント][threshold metric option]を参照してください。
+    （例: `--threshold-metric value`）
+    3. `--threshold-test`オプションをスチューデントのt検定（`t_test`）に設定します。
     詳細については、[`--threshold-test` ドキュメント][threshold test option]を参照してください。
     （例: `--threshold-test t_test`）
-    3. `--threshold-max-sample-size`オプションを最大サンプルサイズである`64`に設定します。
+    4. `--threshold-max-sample-size`オプションを最大サンプルサイズである`64`に設定します。
     詳細については、[`--threshold-max-sample-size` ドキュメント][threshold max sample size]を参照してください。
     （例: `--threshold-max-sample-size 64`）
-    4. `--threshold-upper-boundary`オプションを上限の`0.99`に設定します。
+    5. `--threshold-upper-boundary`オプションを上限の`0.99`に設定します。
     詳細については、[`--threshold-upper-boundary` ドキュメント][threshold upper boundary]を参照してください。
     （例: `--threshold-upper-boundary 0.99`）
-    5. 指定されたしきい値のみをアクティブにするために`--thresholds-reset`フラグを設定します。
+    6. 指定されたしきい値のみをアクティブにするために`--thresholds-reset`フラグを設定します。
     詳細については、[`--thresholds-reset` ドキュメント][thresholds reset]を参照してください。
     （例: `--thresholds-reset`）
-15. 警告が生成された場合にコマンドを失敗させるように`--error-on-alert`フラグを設定します。
+15. アラートが生成された場合にコマンドを失敗させるように`--error-on-alert`フラグを設定します。
     詳細については、[`--error-on-alert` ドキュメント][alert err]を参照してください。
     （例: `--error-on-alert`）
 16. <code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される[Bencher Metric Format JSON（`json`）][bmf]を`--adapter`オプションに設定します。
@@ -78,15 +82,17 @@ import BaseBranchCode from "../base-branch-code.mdx";
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github token]: https://docs.github.com/ja/actions/security-guides/automatic-token-authentication
 
-[statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#統計的連続ベンチマーク
 [bencher run]: /ja/docs/explanation/bencher-run/
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
 [key option]: /ja/docs/explanation/bencher-run/#--key-key
 [branch option]: /ja/docs/explanation/branches/#--branch-branch
 [testbed option]: /ja/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ja/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ja/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ja/docs/explanation/adapters/
 [threshold test option]: /ja/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /ja/docs/explanation/thresholds/#--error-on-alert

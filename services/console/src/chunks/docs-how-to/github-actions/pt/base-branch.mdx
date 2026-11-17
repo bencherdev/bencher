@@ -36,7 +36,7 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
 10. Configure a opção `--project` para o slug do Projeto.
     Veja [os documentos de `--project`][project option] para mais detalhes.
     (ex: `--project project-abc4567-wxyz123456789`)
-11. Configure a opção `--key` para o segredo **Repositorio** `BENCHER_API_KEY`.
+11. Configure a opção `--key` para o segredo **Repositório** `BENCHER_API_KEY`.
    Veja [os documentos de `--key`][key option] para mais detalhes.
    (ex: `--key '${{ secrets.BENCHER_API_KEY }}'`)
 12. Configure a opção `--branch` para o nome da Ramificação base.
@@ -44,22 +44,26 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
     (ex: `--branch main`)
 13. Configure a opção `--testbed` para o nome do Testbed.
     Isso deve provavelmente coincidir com a máquina selecionada em `runs-on`.
-    Veja [os documentos de `--tested`][testbed option] para mais detalhes.
+    Veja [os documentos de `--testbed`][testbed option] para mais detalhes.
     (ex: `--testbed ubuntu-latest`)
-14. Configure o Limite para a Ramificação `main`, Testbed `ubuntu-latest`, e Medida `latency`:
+14. Configure o Limiar para a Ramificação `main`, Testbed `ubuntu-latest`, Medida `latency` e Métrica `value`:
     1. Configure a opção `--threshold-measure` para a medida `latency` embutida que é gerada por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
        Veja [os documentos de `--threshold-measure`][threshold measure option] para mais detalhes.
        (ex: `--threshold-measure latency`)
-    2. Configure a opção `--threshold-test` para um teste-t de Student (`t_test`).
+    2. Configure a opção `--threshold-metric` para a Métrica `value` que é gerada por <code><a href="/pt/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+       Com seu próprio harness de benchmark, use a Métrica na qual [o adaptador dele][adapters] recomenda definir um Limiar primeiro.
+       Veja [os documentos de `--threshold-metric`][threshold metric option] para mais detalhes.
+       (ex: `--threshold-metric value`)
+    3. Configure a opção `--threshold-test` para um teste-t de Student (`t_test`).
        Veja [os documentos de `--threshold-test`][threshold test option] para uma visão geral completa.
        (ex: `--threshold-test t_test`)
-    3. Configure a opção `--threshold-max-sample-size` para o tamanho máximo da amostra de `64`.
+    4. Configure a opção `--threshold-max-sample-size` para o tamanho máximo da amostra de `64`.
        Veja [os documentos de `--threshold-max-sample-size`][threshold max sample size] para mais detalhes.
        (ex: `--threshold-max-sample-size 64`)
-    4. Configure a opção `--threshold-upper-boundary` para o Limite Superior de `0.99`.
+    5. Configure a opção `--threshold-upper-boundary` para o Limite Superior de `0.99`.
        Veja [os documentos de `--threshold-upper-boundary`][threshold upper boundary] para mais detalhes.
        (ex: `--threshold-upper-boundary 0.99`)
-    5. Defina a flag `--thresholds-reset` para que somente o Limite especificado esteja ativo.
+    6. Defina a flag `--thresholds-reset` para que somente o Limiar especificado esteja ativo.
        Veja [os documentos de `--thresholds-reset`][thresholds reset] para uma visão geral completa.
        (ex: `--thresholds-reset`)
 15. Defina a flag `--error-on-alert` para falhar o comando se um Alerta for gerado.
@@ -83,15 +87,17 @@ Essa linha de base histórica pode então ser usada para detectar regressões de
 [bencher cli github action]: https://github.com/marketplace/actions/bencher-cli
 [github token]: https://docs.github.com/pt/actions/security-guides/automatic-token-authentication
 
-[statistical continuous benchmarking]: /pt/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /pt/docs/how-to/track-benchmarks/#benchmarking-contínuo-estatístico
 [bencher run]: /pt/docs/explanation/bencher-run/
 [project option]: /pt/docs/explanation/bencher-run/#--project-project
 [key option]: /pt/docs/explanation/bencher-run/#--key-key
 [branch option]: /pt/docs/explanation/branches/#--branch-branch
 [testbed option]: /pt/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /pt/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /pt/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /pt/docs/explanation/adapters/
 [threshold test option]: /pt/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /pt/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /pt/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /pt/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /pt/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /pt/docs/explanation/thresholds/#--error-on-alert

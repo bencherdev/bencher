@@ -1,31 +1,21 @@
 import BmfMultiExample from "../bmf-multi-example.mdx";
 import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
+import RunMeasureExample from "../run-measure-example.mdx";
 
 ## Múltiples Medidas
 
 En [Bencher Metric Format (BMF) JSON][bmf]
-el objeto [Benchmark][benchmark] puede contener múltiples nombres, slugs o UUIDs de [Measure][measure] como claves.
+el objeto `measures` de una entrada de [Benchmark][benchmark] puede contener múltiples nombres, slugs o UUIDs de [Medida][measure] como claves.
 Si el valor especificado es un nombre o slug y la Medida no existe ya, se creará para ti.
 Sin embargo, si el valor especificado es un UUID, entonces la Medida debe existir ya.
-Cada objeto de Medida debe contener un [Metric][metric] con hasta tres valores:
-`value`, `lower_value`, y `upper_value`.
-Los valores `lower_value` y `upper_value` son opcionales.
+Cada objeto de Medida asocia nombres de [Métrica][metric] con sus valores.
 
 Este es un ejemplo de BMF JSON con múltiples Medidas:
 
 <BmfMultiExample />
 
-En este ejemplo, el objeto de Medida `latency` contiene los siguientes valores:
-
-- Un `value` de `88.0`
-- Un `lower_value` de `87.42`
-- Un `upper_value` de `88.88`
-
-Y el objeto de Medida `throughput` contiene los siguientes valores:
-
-- Un `value` de `5.55`
-- Un `lower_value` de `3.14`
-- Un `upper_value` de `6.30`
+En este ejemplo, el objeto de Medida `latency` contiene una Métrica `value` de `88.0`,
+y el objeto de Medida `throughput` contiene una Métrica `value` de `5.55`.
 
 Puedes usar [el subcomando CLI `bencher mock`][bencher mock]
 con [la opción `--measure`][measure option]
@@ -37,6 +27,16 @@ podemos rastrear nuestros benchmarks con múltiples Medidas con el siguiente com
 
 <RunCmdMultiExample />
 
+Si tu arnés de benchmark informa más Medidas de las que quieres rastrear,
+usa [la opción `--measure`][run measure option] de <code><a href="/es/docs/explanation/bencher-run/">bencher run</a></code>
+para conservar solo las Medidas que nombres.
+Cualquier otra Medida se descarta antes de guardarse.
+Esto es distinto de la opción `--measure` de `bencher mock`,
+que establece las Medidas que genera `bencher mock`.
+Por ejemplo, este comando genera ambas Medidas y rastrea solo `latency`:
+
+<RunMeasureExample />
+
 [bmf]: /es/docs/reference/bencher-metric-format/
 [benchmark]: /es/docs/explanation/benchmarking/#benchmark
 [measure]: /es/docs/explanation/benchmarking/#measure
@@ -44,3 +44,4 @@ podemos rastrear nuestros benchmarks con múltiples Medidas con el siguiente com
 [bencher mock]: /es/docs/reference/bencher-metric-format/#bencher-mock
 [measure option]: /es/docs/reference/bencher-metric-format/#--measure-measure
 [json adapter]: /es/docs/explanation/adapters/#-json
+[run measure option]: /es/docs/explanation/bencher-run/#--measure-measure

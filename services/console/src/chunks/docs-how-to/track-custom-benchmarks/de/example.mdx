@@ -6,20 +6,27 @@ Dies ist ein Beispiel für BMF JSON:
 
 In diesem Beispiel ist der Schlüssel `benchmark_name` der Name eines [Benchmarks][benchmark].
 Ein Benchmark kann anhand seines Namens, Slugs oder seiner UUID identifiziert werden.
-Das `benchmark_name`-Objekt kann mehrere [Measure][measure]-Namen, Slugs oder UUIDs als Schlüssel enthalten.
-Wenn der angegebene Wert ein Name oder Slug ist und das Measure noch nicht existiert, wird es für Sie erstellt.
-Ist der angegebene Wert jedoch eine UUID, muss das Measure bereits existieren.
-In diesem Beispiel ist `latency` der Slug für das eingebaute Latency-Measure.
-Jedes Projekt verfügt standardmäßig über ein Latency-Measure (d. h. `latency`) und ein Throughput-Measure (d. h. `throughput`), die jeweils in `nanosecond (ns)` bzw. `operations / second (ops/s)` gemessen werden.
-Das Measure-Objekt enthält eine [Metrik][metric] mit bis zu drei Werten: `value`, `lower_value` und `upper_value`.
-Die Werte `lower_value` und `upper_value` sind optional.
+Der Schlüssel `benchmark_name` verweist auf eine Liste von Einträgen,
+und jeder Eintrag hat ein `measures`-Objekt.
+Das `measures`-Objekt kann mehrere [Measure][measure]-Namen, Slugs oder UUIDs als Schlüssel enthalten.
+Wenn der angegebene Wert ein Name oder Slug ist und die Measure noch nicht existiert, wird sie für Sie erstellt.
+Ist der angegebene Wert jedoch eine UUID, muss die Measure bereits existieren.
+In diesem Beispiel ist `latency` der Slug für die eingebaute Latency-Measure.
+Jedes Projekt verfügt standardmäßig über eine Latency-Measure (d. h. `latency`) und eine Throughput-Measure (d. h. `throughput`),
+die jeweils in `nanosecond (ns)` bzw. `operations / second (ops/s)` gemessen werden.
+Jedes Measure-Objekt ordnet [Metrik][metric]-Namen ihren Werten zu.
+Wenn Ihr Benchmark-Harness für eine Measure ein einzelnes Ergebnis meldet,
+nennen Sie seine Metrik `value`.
 
-In diesem Beispiel enthält das `latency`-Measure-Objekt die folgenden Werte:
+In diesem Beispiel enthält das `latency`-Measure-Objekt eine `value`-Metrik von `88.0`.
 
-- Ein `value` von `88.0`
-- Ein `lower_value` von `87.42`
-- Ein `upper_value` von `88.88`
+Ein Eintrag kann auch ein `parameters`-Objekt haben, zum Beispiel `{"size": 64}`.
+Jeder Satz von [Parametern][parameters] ist eine eigene [Variante][variant] des Benchmarks,
+sodass ein Benchmark mehrere Varianten haben kann.
+Ein Eintrag ohne `parameters` ist die Variante des Benchmarks ohne Parameter.
 
 [benchmark]: /de/docs/explanation/benchmarking/#benchmark
 [measure]: /de/docs/explanation/benchmarking/#measure
-[metric]: /de/docs/explanation/benchmarking/#metrics
+[metric]: /de/docs/explanation/benchmarking/#metric
+[parameters]: /de/docs/explanation/benchmarking/#parameters
+[variant]: /de/docs/explanation/benchmarking/#parameters

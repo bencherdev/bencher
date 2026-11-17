@@ -11,7 +11,7 @@ import ExecJsonExample from "../exec-json-example.mdx";
 
 <ShellJsonExample />
 
-Обратите внимание, что имя [Бенчмарка][benchmark] — `/bin/sh -c ./my_build_script.sh`. Это потому что наша команда является только единственным аргументом, поэтому <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> по умолчанию использует форму shell для выполнения. В качестве альтернативы, если вы хотите принудительно использовать форму exec, вы можете либо предоставить несколько аргументов, либо использовать флаг `--exec`.
+Обратите внимание, что [Бенчмарк][benchmark] называется `/bin/sh -c ./my_build_script.sh`. Это потому что наша команда является только единственным аргументом, поэтому <code><a href="/ru/docs/explanation/bencher-run/">bencher run</a></code> по умолчанию использует форму shell для выполнения. В качестве альтернативы, если вы хотите принудительно использовать форму exec, вы можете либо предоставить несколько аргументов, либо использовать флаг `--exec`.
 
 <ExecExample />
 
@@ -19,7 +19,7 @@ import ExecJsonExample from "../exec-json-example.mdx";
 
 <ExecJsonExample />
 
-Теперь имя [Бенчмарка][benchmark] просто `./my_build_script.sh`. Объект `./my_build_script.sh` содержит ключ `build-time`. `build-time` является слагом для встроенной Меры Времени Сборки [Measure][measure]. Мера Времени Сборки не создается по умолчанию для всех проектов. Однако, когда вы используете Меру Времени Сборки, она будет автоматически создана для вашего проекта. Объект Меры Времени Сборки содержит [Метрику][metric] со значением времени сборки в секундах, `87.0` и `86.98` в наших примерах.
+Теперь имя [Бенчмарка][benchmark] просто `./my_build_script.sh`. Ключ `./my_build_script.sh` соответствует списку с одной записью, и объект `measures` этой записи содержит ключ `build-time`. `build-time` является slug встроенного [Измерения][measure] Build Time. Измерение Build Time не создается по умолчанию для всех проектов. Однако, когда вы используете Измерение Build Time, оно будет автоматически создано для вашего проекта. Объект Измерения Build Time содержит [Метрику][metric] `value` со временем сборки в секундах, `87.0` и `86.98` в наших примерах.
 
 Время сборки всегда будет округлено до ближайших двух десятичных знаков. То есть, оно _никогда_ не будет длинным десятичным, как `42.666666`.
 
@@ -28,4 +28,4 @@ import ExecJsonExample from "../exec-json-example.mdx";
 
 [benchmark]: /ru/docs/explanation/benchmarking/#benchmark
 [measure]: /ru/docs/explanation/benchmarking/#measure
-[metric]: /ru/docs/explanation/benchmarking/#metrics
+[metric]: /ru/docs/explanation/benchmarking/#metric

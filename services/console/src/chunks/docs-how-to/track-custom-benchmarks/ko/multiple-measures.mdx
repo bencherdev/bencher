@@ -1,29 +1,41 @@
 import BmfMultiExample from "../bmf-multi-example.mdx";
 import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
+import RunMeasureExample from "../run-measure-example.mdx";
 
 ## 여러 측정
 
-[벤처 메트릭 형식 (BMF) JSON][bmf]에서 [벤치마크][benchmark] 객체는 여러 [측정][measure] 이름, 슬러그 또는 UUID를 키로 포함할 수 있습니다. 지정된 값이 이름 또는 슬러그이고 측정이 이미 존재하지 않는 경우, 자동으로 생성됩니다. 하지만 지정된 값이 UUID인 경우, 측정이 이미 존재해야 합니다. 각 측정 객체는 최대 세 가지 값, `value`, `lower_value`, 및 `upper_value`를 포함하는 [메트릭][metric]이 필요합니다. `lower_value` 및 `upper_value` 값은 선택 사항입니다.
+[Bencher Metric Format (BMF) JSON][bmf]에서
+[벤치마크][benchmark] 항목의 `measures` 객체는 여러 [측정][measure]의 이름, 슬러그 또는 UUID를 키로 포함할 수 있습니다.
+지정된 값이 이름 또는 슬러그이고 해당 측정이 아직 존재하지 않으면 자동으로 생성됩니다.
+하지만 지정된 값이 UUID인 경우, 해당 측정이 이미 존재해야 합니다.
+각 측정 객체는 [메트릭][metric] 이름을 그 값에 대응시킵니다.
 
-다음은 여러 측정을 포함한 BMF JSON의 예제입니다:
+다음은 여러 측정을 포함한 BMF JSON의 예입니다:
 
 <BmfMultiExample />
 
-이 예제에서 `latency` 측정 객체는 다음 값을 포함합니다:
+이 예제에서 `latency` 측정 객체는 `88.0`인 `value` 메트릭을 포함하고,
+`throughput` 측정 객체는 `5.55`인 `value` 메트릭을 포함합니다.
 
-- `value`는 `88.0`
-- `lower_value`는 `87.42`
-- `upper_value`는 `88.88`
-
-그리고 `throughput` 측정 객체는 다음 값을 포함합니다:
-
-- `value`는 `5.55`
-- `lower_value`는 `3.14`
-- `upper_value`는 `6.30`
-
-당신은 [`bencher mock` CLI 서브 명령어][bencher mock]를 [ `--measure` 옵션][measure option]과 함께 사용하여 여러 측정을 포함한 모의 BMF 데이터를 생성할 수 있습니다. 우리는 이를 자체 커스텀 벤치마크 실행기용 자리표시자로 사용할 것입니다. <code><a href="/ko/docs/explanation/bencher-run/">벤처 실행</a></code> 및 [ `json` 어댑터][json adapter]를 사용하여 다음 명령어로 여러 측정을 가진 벤치마크를 추적할 수 있습니다:
+[`bencher mock` CLI 서브커맨드][bencher mock]를
+[`--measure` 옵션][measure option]과 함께 사용하여
+여러 측정을 포함한 모의 BMF 데이터를 생성할 수 있습니다.
+여기서는 이를 자체 커스텀 벤치마크 실행기의 자리표시자로 사용합니다.
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>
+및 [`json` 어댑터][json adapter]를 사용하여
+다음 명령어로 여러 측정을 가진 벤치마크를 추적할 수 있습니다:
 
 <RunCmdMultiExample />
+
+벤치마크 하네스가 추적하려는 것보다 많은 측정을 보고하는 경우,
+<code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>의 [`--measure` 옵션][run measure option]을 사용하여
+지정한 측정만 유지하세요.
+그 외의 모든 측정은 저장되기 전에 버려집니다.
+이는 `bencher mock`의 `--measure` 옵션과 다르며,
+그 옵션은 `bencher mock`이 생성하는 측정을 설정합니다.
+예를 들어, 다음 명령어는 두 측정을 모두 생성하고 `latency`만 추적합니다:
+
+<RunMeasureExample />
 
 [bmf]: /ko/docs/reference/bencher-metric-format/
 [benchmark]: /ko/docs/explanation/benchmarking/#benchmark
@@ -32,3 +44,4 @@ import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
 [bencher mock]: /ko/docs/reference/bencher-metric-format/#bencher-mock
 [measure option]: /ko/docs/reference/bencher-metric-format/#--measure-measure
 [json adapter]: /ko/docs/explanation/adapters/#-json
+[run measure option]: /ko/docs/explanation/bencher-run/#--measure-measure

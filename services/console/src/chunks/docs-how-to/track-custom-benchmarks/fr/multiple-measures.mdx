@@ -1,29 +1,31 @@
 import BmfMultiExample from "../bmf-multi-example.mdx";
 import RunCmdMultiExample from "../run-cmd-multi-example.mdx";
+import RunMeasureExample from "../run-measure-example.mdx";
 
 ## Mesures Multiples
 
-Dans le [Format de Metric Bencher (BMF) JSON][bmf], l'objet [Benchmark][benchmark] peut contenir plusieurs noms, slugs ou UUIDs de [Mesure][measure] en tant que clés. Si la valeur spécifiée est un nom ou un slug et que la Mesure n'existe pas déjà, elle sera créée pour vous. Cependant, si la valeur spécifiée est un UUID, la Mesure doit déjà exister. Chaque objet Mesure doit contenir un [Metric][metric] avec jusqu'à trois valeurs : `value`, `lower_value`, et `upper_value`. Les valeurs `lower_value` et `upper_value` sont facultatives.
+Dans le [Format de Métrique Bencher (BMF) JSON][bmf], l'objet `measures` d'une entrée de [Benchmark][benchmark] peut contenir plusieurs noms, slugs ou UUIDs de [Mesure][measure] en tant que clés. Si la valeur spécifiée est un nom ou un slug et que la Mesure n'existe pas déjà, elle sera créée pour vous. Cependant, si la valeur spécifiée est un UUID, la Mesure doit déjà exister. Chaque objet Mesure associe des noms de [Métrique][metric] à leurs valeurs.
 
 Voici un exemple de BMF JSON avec plusieurs Mesures :
 
 <BmfMultiExample />
 
-Dans cet exemple, l'objet Mesure `latency` contient les valeurs suivantes :
-
-- Une `value` de `88.0`
-- Un `lower_value` de `87.42`
-- Un `upper_value` de `88.88`
-
-Et l'objet Mesure `throughput` contient les valeurs suivantes :
-
-- Une `value` de `5.55`
-- Un `lower_value` de `3.14`
-- Un `upper_value` de `6.30`
+Dans cet exemple, l'objet Mesure `latency` contient une Métrique `value` de `88.0`,
+et l'objet Mesure `throughput` contient une Métrique `value` de `5.55`.
 
 Vous pouvez utiliser [la sous-commande CLI `bencher mock`][bencher mock] avec [l'option `--measure`][measure option] pour générer des données BMF fictives avec plusieurs Mesures. Nous l'utiliserons comme un espace réservé pour votre propre exécuteur de benchmark personnalisé. En utilisant <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code> et [l'adaptateur `json`][json adapter], nous pouvons suivre nos benchmarks avec plusieurs Mesures grâce à la commande suivante :
 
 <RunCmdMultiExample />
+
+Si votre harnais de benchmark rapporte plus de Mesures que vous ne voulez en suivre,
+utilisez [l'option `--measure`][run measure option] de <code><a href="/fr/docs/explanation/bencher-run/">bencher run</a></code>
+pour ne garder que les Mesures que vous nommez.
+Toute autre Mesure est écartée avant d'être enregistrée.
+C'est différent de l'option `--measure` de `bencher mock`,
+qui définit les Mesures que `bencher mock` génère.
+Par exemple, cette commande génère les deux Mesures et ne suit que `latency` :
+
+<RunMeasureExample />
 
 [bmf]: /fr/docs/reference/bencher-metric-format/
 [benchmark]: /fr/docs/explanation/benchmarking/#benchmark
@@ -32,3 +34,4 @@ Vous pouvez utiliser [la sous-commande CLI `bencher mock`][bencher mock] avec [l
 [bencher mock]: /fr/docs/reference/bencher-metric-format/#bencher-mock
 [measure option]: /fr/docs/reference/bencher-metric-format/#--measure-measure
 [json adapter]: /fr/docs/explanation/adapters/#-json
+[run measure option]: /fr/docs/explanation/bencher-run/#--measure-measure

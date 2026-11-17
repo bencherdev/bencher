@@ -35,20 +35,24 @@ import TargetBranchCode from "../target-branch-code.mdx";
     これは、おそらく`image`で選択したマシンと一致させる必要があります。
     詳細については、[`--testbed` ドキュメント][testbed option]をご覧ください。
     (例: `--testbed debian:bullseye`)
-11. `main`ブランチ、`debian:bullseye`テストベッド、および`latency`測定基準のための閾値を設定します。
-    1. 組み込みの`latency`測定基準、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成されるものに`--threshold-measure`オプションを設定します。
+11. `main`ブランチ、`debian:bullseye`テストベッド、`latency`メジャー、および`value`メトリックのためのしきい値を設定します。
+    1. 組み込みの`latency`メジャー、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成されるものに`--threshold-measure`オプションを設定します。
     詳細については、[`--threshold-measure` ドキュメント][threshold measure option]をご覧ください。
     (例: `--threshold-measure latency`)
-    2. スチューデントのt検定(`t_test`)に`--threshold-test`オプションを設定します。
+    2. `--threshold-metric`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される`value`メトリックに設定します。
+    独自のベンチマークハーネスでは、[そのアダプタ][adapters]が最初にしきい値を設定するよう推奨しているメトリックを使用してください。
+    詳細については、[`--threshold-metric` ドキュメント][threshold metric option]をご覧ください。
+    (例: `--threshold-metric value`)
+    3. スチューデントのt検定(`t_test`)に`--threshold-test`オプションを設定します。
     詳細については、[`--threshold-test` ドキュメント][threshold test option]をご覧ください。
     (例: `--threshold-test t_test`)
-    3. 最大サンプルサイズ`64`に`--threshold-max-sample-size`オプションを設定します。
+    4. 最大サンプルサイズ`64`に`--threshold-max-sample-size`オプションを設定します。
     詳細については、[`--threshold-max-sample-size` ドキュメント][threshold max sample size]をご覧ください。
     (例: `--threshold-max-sample-size 64`)
-    4. 上限境界`0.99`に`--threshold-upper-boundary`オプションを設定します。
+    5. 上限境界`0.99`に`--threshold-upper-boundary`オプションを設定します。
     詳細については、[`--threshold-upper-boundary` ドキュメント][threshold upper boundary]をご覧ください。
     (例: `--threshold-upper-boundary 0.99`)
-    5. 特定された閾値のみがアクティブであるように`--thresholds-reset`フラグを設定します。
+    6. 特定されたしきい値のみがアクティブであるように`--thresholds-reset`フラグを設定します。
     詳細については、[`--thresholds-reset` ドキュメント][thresholds reset]をご覧ください。
     (例: `--thresholds-reset`)
 12. アラートが生成された場合にコマンドが失敗するように`--error-on-alert`フラグを設定します。
@@ -65,7 +69,7 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [gitlab ci cd redefined variables]: https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
 [gitlab ci cd image]: https://docs.gitlab.com/ee/ci/yaml/index.html#image
 
-[statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#statistical-continuous-benchmarking
+[statistical continuous benchmarking]: /ja/docs/how-to/track-benchmarks/#統計的連続ベンチマーク
 [install bencher cli]: /ja/docs/how-to/install-cli/#install-cli-with-script
 [bencher run]: /ja/docs/explanation/bencher-run/
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
@@ -73,8 +77,10 @@ import TargetBranchCode from "../target-branch-code.mdx";
 [branch option]: /ja/docs/explanation/branches/#--branch-branch
 [testbed option]: /ja/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /ja/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ja/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ja/docs/explanation/adapters/
 [threshold test option]: /ja/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /ja/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /ja/docs/explanation/thresholds/#--error-on-alert

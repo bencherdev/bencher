@@ -56,8 +56,8 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
     (例: `bencher mock`)
 
 CIでこのコマンドを初めて実行すると、存在しないため`main`ブランチが作成されます。
-新しい`main`には、開始点、既存のデータ、またはスレッショルドがありません。
-その後の実行では、古い`main`[ヘッド][head]が置き換えられ、新しい`main`[ヘッド][head]が開始点、既存のデータ、またはスレッショルドなしで作成されます。
+新しい`main`には、開始点、既存のデータ、またはしきい値がありません。
+その後の実行では、古い`main`[ヘッド][head]が置き換えられ、新しい`main`[ヘッド][head]が開始点、既存のデータ、またはしきい値なしで作成されます。
 
 [bencher run]: /ja/docs/explanation/bencher-run/
 [project option]: /ja/docs/explanation/bencher-run/#--project-project
@@ -98,17 +98,21 @@ CIでこのコマンドを初めて実行すると、存在しないため`main`
 5. `--testbed`オプションをCIランナーテストベッドの名前に設定します。
    詳細は[ `--testbed`ドキュメント][testbed option]をご覧ください。
    (例: `--testbed ci-runner`)
-6. `feature-branch`ブランチ、`ci-runner`テストベッド、および`latency`測定値のスレッショルドを設定します：
-   1. `--threshold-measure`オプションを、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成された組み込み`latency`測定値に設定します。
+6. `feature-branch`ブランチ、`ci-runner`テストベッド、`latency`メジャー、および`value`メトリックのしきい値を設定します：
+   1. `--threshold-measure`オプションを、<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成された組み込み`latency`メジャーに設定します。
    詳細は[`--threshold-measure`ドキュメント][threshold measure option]をご覧ください。
    (例: `--threshold-measure latency`)
-   2. `--threshold-test`オプションを基本的なパーセンテージ（`percentage`）に設定します。
+   2. `--threshold-metric`オプションを<code><a href="/ja/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>によって生成される`value`メトリックに設定します。
+   独自のベンチマークハーネスでは、[そのアダプタ][adapters]が最初にしきい値を設定するよう推奨しているメトリックを使用してください。
+   詳細は[`--threshold-metric`ドキュメント][threshold metric option]をご覧ください。
+   (例: `--threshold-metric value`)
+   3. `--threshold-test`オプションを基本的なパーセンテージ（`percentage`）に設定します。
    詳細は[`--threshold-test`ドキュメント][threshold test option]をご覧ください。
    (例: `--threshold-test percentage`)
-   3. `--threshold-upper-boundary`オプションを`0.25`の上限に設定します。
+   4. `--threshold-upper-boundary`オプションを`0.25`の上限に設定します。
    詳細は[`--threshold-upper-boundary`ドキュメント][threshold upper boundary]をご覧ください。
    (例: `--threshold-upper-boundary 0.25`)
-   4. `--thresholds-reset`フラグを設定して、指定されたスレッショルドのみがアクティブになるようにします。
+   5. `--thresholds-reset`フラグを設定して、指定されたしきい値のみがアクティブになるようにします。
    詳細は[`--thresholds-reset`ドキュメント][thresholds reset]をご覧ください。
    (例: `--thresholds-reset`)
 7. アラートが生成された場合にコマンドが失敗するように`--error-on-alert`フラグを設定します。
@@ -122,11 +126,13 @@ CIでこのコマンドを初めて実行すると、存在しないため`main`
    (例: `bencher mock`)
 
 CIでこのコマンドを実行するたびに、`feature-branch`の結果が`main`の最新の結果とだけ比較されます。
-指定されたスレッショルドを使用し、パフォーマンスの低下を検出します。
+指定されたしきい値を使用し、パフォーマンスの低下を検出します。
 
 [start point]: /ja/docs/explanation/branches/#--start-point-branch
 [start point reset]: /ja/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /ja/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /ja/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /ja/docs/explanation/adapters/
 [threshold test option]: /ja/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /ja/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /ja/docs/explanation/thresholds/#--thresholds-reset

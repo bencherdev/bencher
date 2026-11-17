@@ -1,0 +1,9 @@
+```shell
+bencher run \
+--threshold-measure latency \
+--threshold-metric value \
+--threshold-test t_test \
+--threshold-upper-boundary 0.99 \
+--adapter json \
+"bencher mock"
+```

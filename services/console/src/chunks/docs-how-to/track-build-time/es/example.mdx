@@ -19,13 +19,13 @@ Si esta construcción en forma exec tomó `86.98` segundos, entonces el JSON BMF
 
 <ExecJsonExample />
 
-Ahora, el nombre del [benchmark][benchmark] es simplemente `./my_build_script.sh`. El objeto `./my_build_script.sh` contiene la clave `build-time`. `build-time` es el identificador para la Medida de Tiempo de Construcción [Measure][measure] incorporada. La Medida de Tiempo de Construcción no se crea por defecto para todos los Proyectos. Sin embargo, cuando usas la Medida de Tiempo de Construcción, será creada automáticamente para tu Proyecto. El objeto de Medida de Tiempo de Construcción contiene un [Métrica][metric] con el `valor` del tiempo de construcción en segundos, `87.0` y `86.98` en nuestros ejemplos.
+Ahora, el nombre del [benchmark][benchmark] es simplemente `./my_build_script.sh`. La clave `./my_build_script.sh` apunta a una lista con una entrada, y el objeto `measures` de esa entrada contiene la clave `build-time`. `build-time` es el identificador para la [Medida][measure] Build Time incorporada. La Medida Build Time no se crea por defecto para todos los Proyectos. Sin embargo, cuando usas la Medida Build Time, será creada automáticamente para tu Proyecto. El objeto de la Medida Build Time contiene la [Métrica][metric] `value` con el tiempo de construcción en segundos, `87.0` y `86.98` en nuestros ejemplos.
 
-El Tiempo de Construcción siempre se redondeará a los dos decimales más cercanos. Es decir, _nunca_ será un decimal largo como `42.666666`.
+El tiempo de construcción siempre se redondeará a los dos decimales más cercanos. Es decir, _nunca_ será un decimal largo como `42.666666`.
 
 [json adapter]: /es/docs/explanation/adapters/#-json
 [bencher run]: /es/docs/explanation/bencher-run/#benchmark-command
 
 [benchmark]: /es/docs/explanation/benchmarking/#benchmark
 [measure]: /es/docs/explanation/benchmarking/#measure
-[metric]: /es/docs/explanation/benchmarking/#metrics
+[metric]: /es/docs/explanation/benchmarking/#metric

@@ -1,0 +1,22 @@
+import ThresholdCmdExample from "../threshold-cmd-example.mdx";
+
+## Schwellenwerte
+
+Um Leistungsregressionen in Ihren benutzerdefinierten Benchmarks zu erkennen, fügen Sie einen [Schwellenwert][threshold] hinzu.
+Ein Schwellenwert prüft eine Metrik einer Measure,
+setzen Sie daher [die Option `--threshold-metric`][threshold metric option]
+auf den Namen einer Metrik, die Ihr benutzerdefiniertes Benchmark-Harness meldet.
+Dieser Befehl erstellt einen Schwellenwert für die `value`-Metrik der `latency`-Measure:
+
+<ThresholdCmdExample />
+
+Um nur einige Ihrer [Varianten][variant] zu prüfen,
+setzen Sie zusätzlich [die Option `--threshold-parameters`][threshold parameters option]
+auf ein JSON-Objekt der [Parameter][parameters], die sie gemeinsam haben.
+(z.B.: `--threshold-parameters '{"size": 64}'`)
+
+[threshold]: /de/docs/explanation/thresholds/
+[threshold metric option]: /de/docs/explanation/thresholds/#--threshold-metric-metric
+[threshold parameters option]: /de/docs/explanation/thresholds/#--threshold-parameters-parameters
+[parameters]: /de/docs/explanation/benchmarking/#parameters
+[variant]: /de/docs/explanation/benchmarking/#parameters

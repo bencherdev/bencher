@@ -1,0 +1,22 @@
+import ThresholdCmdExample from "../threshold-cmd-example.mdx";
+
+## 임계값
+
+커스텀 벤치마크에서 성능 회귀를 잡아내려면 [임계값][threshold]을 추가하세요.
+임계값은 측정의 메트릭 하나를 검사하므로,
+[`--threshold-metric` 옵션][threshold metric option]을
+커스텀 벤치마크 하네스가 보고하는 메트릭의 이름으로 설정하세요.
+다음 명령어는 `latency` 측정의 `value` 메트릭에 대한 임계값을 생성합니다:
+
+<ThresholdCmdExample />
+
+일부 [변형][variant]만 검사하려면,
+[`--threshold-parameters` 옵션][threshold parameters option]도
+그 변형들이 공유하는 [매개변수][parameters]의 JSON 객체로 설정하세요.
+(예: `--threshold-parameters '{"size": 64}'`)
+
+[threshold]: /ko/docs/explanation/thresholds/
+[threshold metric option]: /ko/docs/explanation/thresholds/#--threshold-metric-metric
+[threshold parameters option]: /ko/docs/explanation/thresholds/#--threshold-parameters-parameters
+[parameters]: /ko/docs/explanation/benchmarking/#parameters
+[variant]: /ko/docs/explanation/benchmarking/#parameters

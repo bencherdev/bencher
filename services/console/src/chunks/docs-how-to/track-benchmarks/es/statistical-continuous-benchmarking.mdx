@@ -5,7 +5,7 @@ import RunFeatureStatistical from "../run-feature-statistical.mdx";
 
 Retomando donde lo dejamos en los tutoriales de
 [Inicio Rápido][quickstart] y [Auto hospedado en Docker][docker self-hosted],
-agreguemos Benchmarking Continuo Estadístico a nuestro proyecto `claimed`.
+agreguemos [Benchmarking Continuo Estadístico][continuous benchmarking] a nuestro proyecto `claimed`.
 
 > 🐰 Asegúrate de haber
 > creado una clave de API de proyecto y configurarla como la variable de entorno `BENCHER_API_KEY`
@@ -41,20 +41,24 @@ Primero, necesitamos crear y mantener una línea base histórica para nuestra ra
 4. Establece la opción `--testbed` en el nombre del Testbed del runner CI.
    Consulta [la documentación de `--testbed`][testbed option] para más detalles.
    (ej: `--testbed ci-runner`)
-5. Establece el Umbral para la rama `main`, el Testbed `ci-runner` y la medida `latency`:
-   1. Establece la opción `--threshold-measure` en la medida `latency` incorporada que se genera con <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+5. Establece el Umbral para la rama `main`, el Testbed `ci-runner`, la Medida `latency` y la Métrica `value`:
+   1. Establece la opción `--threshold-measure` en la Medida `latency` incorporada que se genera con <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta [la documentación de `--threshold-measure`][threshold measure option] para más detalles.
    (ej: `--threshold-measure latency`)
-   2. Establece la opción `--threshold-test` en una prueba t de Student (`t_test`).
+   2. Establece la opción `--threshold-metric` en la Métrica `value` que se genera con <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Con tu propio arnés de benchmark, usa la Métrica en la que [su adaptador][adapters] recomienda poner un Umbral primero.
+   Consulta [la documentación de `--threshold-metric`][threshold metric option] para más detalles.
+   (ej: `--threshold-metric value`)
+   3. Establece la opción `--threshold-test` en una prueba t de Student (`t_test`).
    Consulta [la documentación de `--threshold-test`][threshold test option] para una descripción completa.
    (ej: `--threshold-test t_test`)
-   3. Establece la opción `--threshold-max-sample-size` en el tamaño máximo de muestra de `64`.
+   4. Establece la opción `--threshold-max-sample-size` en el tamaño máximo de muestra de `64`.
    Consulta [la documentación de `--threshold-max-sample-size`][threshold max sample size] para más detalles.
    (ej: `--threshold-max-sample-size 64`)
-   4. Establece la opción `--threshold-upper-boundary` en el Límite Superior de `0.99`.
+   5. Establece la opción `--threshold-upper-boundary` en el Límite Superior de `0.99`.
    Consulta la documentación de [`--threshold-upper-boundary`][threshold upper boundary] para más detalles.
    (ej: `--threshold-upper-boundary 0.99`)
-   5. Establece la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo.
+   6. Establece la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo.
    Consulta [la documentación de `--thresholds-reset`][thresholds reset] para una descripción completa.
    (ej: `--thresholds-reset`)
 6. Establece la bandera `--error-on-alert` para que el comando falle si se genera una Alerta.
@@ -70,7 +74,7 @@ Primero, necesitamos crear y mantener una línea base histórica para nuestra ra
 La primera vez que este comando se ejecuta en CI,
 creará la rama `main` si aún no existe.
 La nueva `main` _no_ tendrá un punto de inicio ni datos existentes.
-Se creará un Umbral para la rama `main`, el Testbed `ci-runner` y la medida `latency`.
+Se creará un Umbral para la rama `main`, el Testbed `ci-runner`, la Medida `latency` y la Métrica `value`.
 En ejecuciones posteriores, se agregarán nuevos datos a la rama `main`.
 El Umbral especificado luego se usará para detectar regresiones de rendimiento.
 
@@ -79,8 +83,10 @@ El Umbral especificado luego se usará para detectar regresiones de rendimiento.
 [branch option]: /es/docs/explanation/branches/#--branch-branch
 [testbed option]: /es/docs/explanation/testbeds/#--testbed-testbed
 [threshold measure option]: /es/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /es/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /es/docs/explanation/adapters/
 [threshold test option]: /es/docs/explanation/thresholds/#--threshold-test-test
-[threshold max sample size]: /es/docs/explanation/thresholds/#--threshold-max-sample-size-size
+[threshold max sample size]: /es/docs/explanation/thresholds/#--threshold-max-sample-size-sample_size
 [threshold upper boundary]: /es/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /es/docs/explanation/thresholds/#--thresholds-reset
 [alert err]: /es/docs/explanation/thresholds/#--error-on-alert
@@ -118,7 +124,7 @@ Así es como rastrearíamos el rendimiento de una nueva rama de características
    Consulta [la documentación de `--start-point-reset`][start point reset] para una descripción completa.
    (ej: `--start-point-reset`)
 5. Establece la opción `--testbed` en el nombre del Testbed.
-   Consulta [la documentación de `--tested`][testbed option] para más detalles.
+   Consulta [la documentación de `--testbed`][testbed option] para más detalles.
    (ej: `--testbed ci-runner`)
 6. Establece la bandera `--error-on-alert` para que el comando falle si se genera una Alerta.
    Consulta [la documentación de `--error-on-alert`][alert err] para una descripción completa.

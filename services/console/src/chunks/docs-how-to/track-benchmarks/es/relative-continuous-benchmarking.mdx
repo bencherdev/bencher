@@ -7,7 +7,7 @@ import RunFeatureRelative from "../run-feature-relative.mdx";
 
 Retomando desde donde lo dejamos en los tutoriales de
 [Inicio Rápido][quickstart] y [Autohospedado con Docker][docker self-hosted],
-vamos a agregar [Benchmarking Continuo][continuous benchmarking] Relativo a nuestro proyecto `Salvar a Walter White`.
+vamos a agregar [Benchmarking Continuo][continuous benchmarking] Relativo a nuestro proyecto `claimed`.
 
 > 🐰 Asegúrate de haber
 > creado una clave de API de proyecto y configurarla como la variable de entorno `BENCHER_API_KEY`
@@ -107,17 +107,21 @@ Finalmente, estamos listos para ejecutar nuestros benchmarks de `feature-branch`
 5. Configura la opción `--testbed` al nombre del banco de pruebas del corredor CI.
    Consulta [la documentación de `--testbed`][testbed option] para más detalles.
    (ej: `--testbed ci-runner`)
-6. Configura el Umbral para la rama `feature-branch`, banco de pruebas `ci-runner` y la Medida `latency`:
+6. Configura el Umbral para la rama `feature-branch`, banco de pruebas `ci-runner`, la Medida `latency` y la Métrica `value`:
    1. Configura la opción `--threshold-measure` a la Medida integrada `latency` que es generada por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
    Consulta [la documentación de `--threshold-measure`][threshold measure option] para más detalles.
    (ej: `--threshold-measure latency`)
-   2. Configura la opción `--threshold-test` a un porcentaje básico (`percentage`).
+   2. Configura la opción `--threshold-metric` a la Métrica `value` que es generada por <code><a href="/es/docs/reference/bencher-metric-format/#bencher-mock">bencher mock</a></code>.
+   Con tu propio arnés de benchmark, usa la Métrica en la que [su adaptador][adapters] recomienda poner un Umbral primero.
+   Consulta [la documentación de `--threshold-metric`][threshold metric option] para más detalles.
+   (ej: `--threshold-metric value`)
+   3. Configura la opción `--threshold-test` a un porcentaje básico (`percentage`).
    Consulta [la documentación de `--threshold-test`][threshold test option] para una visión general completa.
    (ej: `--threshold-test percentage`)
-   3. Configura la opción `--threshold-upper-boundary` al Límite Superior de `0.25`.
+   4. Configura la opción `--threshold-upper-boundary` al Límite Superior de `0.25`.
    Consulta [la documentación de `--threshold-upper-boundary`][threshold upper boundary] para más detalles.
    (ej: `--threshold-upper-boundary 0.25`)
-   4. Configura la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo.
+   5. Configura la bandera `--thresholds-reset` para que solo el Umbral especificado esté activo.
    Consulta [la documentación de `--thresholds-reset`][thresholds reset] para una visión general completa.
    (ej: `--thresholds-reset`)
 7. Configura la bandera `--error-on-alert` para que falle el comando si se genera una Alerta.
@@ -137,6 +141,8 @@ El Umbral especificado se utiliza luego para detectar regresiones de rendimiento
 [start point]: /es/docs/explanation/branches/#--start-point-branch
 [start point reset]: /es/docs/explanation/branches/#--start-point-reset
 [threshold measure option]: /es/docs/explanation/thresholds/#--threshold-measure-measure
+[threshold metric option]: /es/docs/explanation/thresholds/#--threshold-metric-metric
+[adapters]: /es/docs/explanation/adapters/
 [threshold test option]: /es/docs/explanation/thresholds/#--threshold-test-test
 [threshold upper boundary]: /es/docs/explanation/thresholds/#--threshold-upper-boundary-boundary
 [thresholds reset]: /es/docs/explanation/thresholds/#--thresholds-reset

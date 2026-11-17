@@ -4,7 +4,7 @@ import JsonExample from "../json-example.mdx";
 
 `./my_build_script.sh`에 위치한 스크립트로 `./path/to/my_binary` 경로에서 바이너리를 빌드할 경우,
 <code><a href="/ko/docs/explanation/bencher-run/">bencher run</a></code>
-및 [the `json` 어댑터][json adapter]를 사용하여 이 바이너리 파일의 크기를 추적할 수 있습니다.
+및 [`json` 어댑터][json adapter]를 사용하여 이 바이너리 파일의 크기를 추적할 수 있습니다.
 이는 [벤치마크 명령어][bencher run]가 있는 경우와 없는 경우 모두에 작동합니다.
 
 벤치마크 명령어가 있는 경우:
@@ -18,13 +18,14 @@ import JsonExample from "../json-example.mdx";
 <JsonExample />
 
 이 예제에서, 키 `my_binary`는 바이너리 파일 이름입니다.
-이는 [Benchmark][benchmark]의 이름으로 사용됩니다.
-`my_binary` 객체는 `file-size` 키를 포함합니다.
-`file-size`는 내장된 파일 크기 [Measure][measure]의 슬러그입니다.
-파일 크기 Measure는 모든 프로젝트에 대해 기본적으로 생성되지 않습니다.
-하지만, 파일 크기 Measure를 사용할 때,
-해당 Measure는 프로젝트에 자동으로 생성됩니다.
-파일 크기 Measure 객체에는 파일 크기 `value`를 바이트 단위로 담은 [Metric][metric]이 포함되어 있으며, 이 경우 `42.0`입니다.
+이는 [벤치마크][benchmark]의 이름으로 사용됩니다.
+`my_binary` 키는 항목이 하나인 목록에 대응하며,
+그 항목의 `measures` 객체는 `file-size` 키를 포함합니다.
+`file-size`는 내장된 File Size [측정][measure]의 슬러그입니다.
+File Size 측정은 모든 프로젝트에 대해 기본적으로 생성되지 않습니다.
+하지만, File Size 측정을 사용할 때,
+해당 측정은 프로젝트에 자동으로 생성됩니다.
+File Size 측정 객체에는 파일 크기를 바이트 단위로 담은 `value` [메트릭][metric]이 포함되어 있으며, 이 경우 `42.0`입니다.
 
 파일 크기는 항상 전체 바이트 단위 증가로 표시됩니다.
 즉, `42.5`와 같은 소수점 단위는 _절대_ 없습니다.
@@ -35,4 +36,4 @@ import JsonExample from "../json-example.mdx";
 
 [benchmark]: /ko/docs/explanation/benchmarking/#benchmark
 [measure]: /ko/docs/explanation/benchmarking/#measure
-[metric]: /ko/docs/explanation/benchmarking/#metrics
+[metric]: /ko/docs/explanation/benchmarking/#metric
