@@ -94,12 +94,6 @@ pub struct JsonProject {
     pub claimed: Option<DateTime>,
 }
 
-impl Display for JsonProject {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
-}
-
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]

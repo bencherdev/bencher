@@ -1,8 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Get, ResponseOk};
 use bencher_json::{
-    DateTime, JsonBoundary, JsonMetricTriple, JsonOneMetric, MetricName, MetricUuid,
-    ProjectResourceId, ReportUuid,
-    project::{alert::JsonPerfAlert, report::Iteration, threshold::JsonThresholdModel},
+    DateTime, JsonMetricTriple, JsonOneMetric, MetricName, MetricUuid, ProjectResourceId,
+    ReportUuid, project::report::Iteration,
 };
 use bencher_schema::model::spec::SpecId;
 use bencher_schema::{
@@ -17,7 +16,6 @@ use bencher_schema::{
             measure::QueryMeasure,
             metric::QueryMetric,
             testbed::QueryTestbed,
-            threshold::alert::QueryAlert,
             variant::QueryVariant,
         },
         user::actor::{ApiActor, PubProjectBearerToken},
@@ -25,14 +23,12 @@ use bencher_schema::{
     schema,
 };
 use diesel::{
-    ExpressionMethods as _, JoinOnDsl as _, NullableExpressionMethods as _, QueryDsl as _,
-    RunQueryDsl as _, SelectableHelper as _, query_dsl::methods::LoadQuery,
+    ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _, RunQueryDsl as _, SelectableHelper as _,
+    query_dsl::methods::LoadQuery,
 };
 use dropshot::{HttpError, Path, RequestContext, endpoint};
 use schemars::JsonSchema;
 use serde::Deserialize;
-
-use super::perf::PerfBoundary;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ProjMetricParams {
@@ -100,10 +96,7 @@ pub async fn get_one_inner(
 
     actor_conn!(context, api_actor, |conn| {
         metric_query(query_project.id, path_params.metric)
-            .load::<MetricQuery>(conn)
-            .and_then(|metric_queries| {
-                bare_threshold_row(metric_queries).ok_or(diesel::result::Error::NotFound)
-            })
+            .get_result::<MetricQuery>(conn)
             .map_err(resource_not_found_err!(
                 Metric,
                 (&query_project, &path_params.metric)
@@ -118,11 +111,6 @@ pub async fn get_one_inner(
 /// keeps `WHERE metric.name = 'value'`, so it can only ever answer for a point
 /// estimate, and the UUID of a bound or of any other metric is a row the view does
 /// not have. Every name is addressable here.
-///
-/// Keep these joins flat with explicit `ON` clauses instead of nesting the threshold,
-/// the model, and the alert inside the boundary join. `SQLite` cannot flatten a
-/// compound right operand of an outer join, so the nested form makes it scan the
-/// whole boundary table once per request, no matter how narrow the query is.
 fn metric_query(
     project_id: ProjectId,
     metric_uuid: MetricUuid,
@@ -150,14 +138,6 @@ fn metric_query(
         .inner_join(schema::branch::table.on(schema::branch::id.eq(schema::head::branch_id)))
         .inner_join(schema::testbed::table.on(schema::testbed::id.eq(schema::report::testbed_id)))
         .inner_join(schema::measure::table.on(schema::measure::id.eq(schema::metric::measure_id)))
-        // There may or may not be a boundary for the addressed row.
-        .left_join(schema::boundary::table.on(schema::boundary::metric_id.eq(schema::metric::id)))
-        .left_join(
-            schema::threshold::table.on(schema::threshold::id.eq(schema::boundary::threshold_id)),
-        )
-        .left_join(schema::model::table.on(schema::model::id.eq(schema::boundary::model_id)))
-        // There may or may not be an alert for any given boundary.
-        .left_join(schema::alert::table.on(schema::alert::boundary_id.eq(schema::boundary::id)))
         .filter(schema::metric::uuid.eq(metric_uuid))
         // Make sure that the project is the same for all dimensions
         .filter(schema::branch::project_id.eq(project_id))
@@ -178,78 +158,7 @@ fn metric_query(
             schema::report::end_time,
             schema::report::spec_id,
             QueryMetric::as_select(),
-            (
-                (
-                    schema::threshold::id,
-                    schema::threshold::uuid,
-                    schema::threshold::project_id,
-                    schema::threshold::branch_id,
-                    schema::threshold::testbed_id,
-                    schema::threshold::parameters,
-                    schema::threshold::measure_id,
-                    schema::threshold::metric,
-                    schema::threshold::model_id,
-                    schema::threshold::created,
-                    schema::threshold::modified,
-                ),
-                (
-                    schema::model::id,
-                    schema::model::uuid,
-                    schema::model::threshold_id,
-                    schema::model::test,
-                    schema::model::min_sample_size,
-                    schema::model::max_sample_size,
-                    schema::model::window,
-                    schema::model::lower_boundary,
-                    schema::model::upper_boundary,
-                    schema::model::created,
-                    schema::model::replaced,
-                ),
-                (
-                    schema::boundary::id,
-                    schema::boundary::uuid,
-                    schema::boundary::metric_id,
-                    schema::boundary::threshold_id,
-                    schema::boundary::model_id,
-                    schema::boundary::baseline,
-                    schema::boundary::lower_limit,
-                    schema::boundary::upper_limit,
-                ),
-                (
-                    schema::alert::id,
-                    schema::alert::uuid,
-                    schema::alert::project_id,
-                    schema::alert::report_id,
-                    schema::alert::threshold_id,
-                    schema::alert::boundary_id,
-                    schema::alert::boundary_limit,
-                    schema::alert::status,
-                    schema::alert::created,
-                    schema::alert::modified,
-                )
-                    .nullable(),
-            )
-                .nullable(),
         ))
-}
-
-/// The row the deprecated singular fields come from: the bare threshold's, if any.
-///
-/// The join repeats the metric once per threshold that checked it, and every column
-/// but the check is the same in each, so any row answers for the metric itself.
-fn bare_threshold_row(metric_queries: Vec<MetricQuery>) -> Option<MetricQuery> {
-    let mut metric_queries = metric_queries.into_iter();
-    let first = metric_queries.next()?;
-    if is_bare(&first) {
-        return Some(first);
-    }
-    Some(metric_queries.find(is_bare).unwrap_or(first))
-}
-
-fn is_bare((.., perf_boundary): &MetricQuery) -> bool {
-    perf_boundary
-        .as_ref()
-        .is_some_and(|(query_threshold, ..)| query_threshold.is_bare())
 }
 
 type MetricQuery = (
@@ -266,28 +175,7 @@ type MetricQuery = (
     DateTime,
     Option<SpecId>,
     QueryMetric,
-    Option<PerfBoundary>,
 );
-
-fn boundary_json(
-    project: &QueryProject,
-    perf_boundary: Option<PerfBoundary>,
-) -> (
-    Option<JsonThresholdModel>,
-    Option<JsonBoundary>,
-    Option<JsonPerfAlert>,
-) {
-    let Some((query_threshold, query_model, query_boundary, query_alert)) =
-        perf_boundary.filter(|(query_threshold, _, _, _)| query_threshold.is_bare())
-    else {
-        return (None, None, None);
-    };
-    let threshold =
-        Some(query_threshold.into_threshold_model_json_for_project(project, query_model));
-    let boundary = Some(query_boundary.into_json());
-    let alert = query_alert.map(QueryAlert::into_perf_json);
-    (threshold, boundary, alert)
-}
 
 /// The metric triple, for a `value` row and for nothing else.
 ///
@@ -323,7 +211,6 @@ fn metric_query_json(
         end_time,
         spec_id,
         query_metric,
-        perf_boundary,
     ): MetricQuery,
 ) -> Result<JsonOneMetric, HttpError> {
     let branch = branch.into_json_for_head(conn, project, &head, Some(version))?;
@@ -332,7 +219,6 @@ fn metric_query_json(
     let benchmark = benchmark.into_json_for_project(project);
     let measure = measure.into_json_for_project(project);
 
-    let (threshold, boundary, alert) = boundary_json(project, perf_boundary);
     let metric = metric_triple(conn, &query_metric)?;
     let QueryMetric {
         id: _,
@@ -357,8 +243,5 @@ fn metric_query_json(
         name,
         value: value.into(),
         metric,
-        threshold,
-        boundary,
-        alert,
     })
 }

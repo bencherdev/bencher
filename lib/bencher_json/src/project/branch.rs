@@ -1,4 +1,3 @@
-use std::fmt;
 use std::sync::LazyLock;
 
 use bencher_valid::{BranchName, DateTime, GitHash, NameId, ResourceId};
@@ -111,12 +110,6 @@ pub struct JsonBranch {
     pub created: DateTime,
     pub modified: DateTime,
     pub archived: Option<DateTime>,
-}
-
-impl fmt::Display for JsonBranch {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

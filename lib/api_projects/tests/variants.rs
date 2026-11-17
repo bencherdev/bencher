@@ -3779,14 +3779,10 @@ async fn metric_row(
     resp.json().await.expect("Failed to parse the metric row")
 }
 
-// The metrics endpoint's deprecated singular check is the bare threshold's, under a
-// variant that a bare threshold and a filtered one both check.
-//
-// The filtered threshold is created first on purpose: it takes the lower identifier,
-// so it is the row the outer join reaches first, and a reader that kept that row
-// would lose the bare threshold silently.
+// A row that a bare threshold and a filtered one both check resolves once on the
+// metrics endpoint, with neither check: the report lists them both.
 #[tokio::test]
-async fn metric_row_singular_check_is_the_bare_one() {
+async fn metric_row_checked_twice_answers_without_a_check() {
     let server = TestServer::new().await;
     let fixture = fixture(&server, "onemetricbare").await;
 
@@ -3858,28 +3854,12 @@ async fn metric_row_singular_check_is_the_bare_one() {
         .expect("the metric lists its boundaries")
         .clone();
     assert_eq!(boundaries.len(), 2, "two thresholds checked the row");
-    let bare_boundary = boundaries
-        .iter()
-        .find(|check| check["threshold"]["uuid"] == bare["uuid"])
-        .expect("the bare threshold checked the row");
 
     let row = metric_row(&server, &fixture, &metric_uuid).await;
-    assert_eq!(
-        row["threshold"]["uuid"], bare["uuid"],
-        "the deprecated singular threshold is the bare one"
-    );
-    assert_ne!(
-        row["threshold"]["uuid"], filtered["uuid"],
-        "and never the filtered one, whichever the join reaches first"
-    );
-    assert_eq!(
-        row["boundary"], bare_boundary["boundary"],
-        "the deprecated singular boundary is the bare one's"
-    );
-    assert!(
-        row["alert"]["uuid"].is_string(),
-        "the deprecated singular alert is the bare threshold's"
-    );
+    assert_eq!(row["uuid"], serde_json::json!(metric_uuid));
+    for key in ["threshold", "boundary", "alert"] {
+        assert_eq!(row.get(key), None, "{key}: {row}");
+    }
 }
 
 // The report and perf singular fields are the bare threshold's when the filtered
@@ -4314,76 +4294,6 @@ async fn a_threshold_naming_an_absent_metric_writes_nothing() {
         );
     }
     assert_eq!(last["alerts"], serde_json::json!([]), "and raises no alert");
-}
-
-// A row that only a named threshold checks reports no singular check on the metrics
-// endpoint either, and neither does the `value` row beside it.
-#[tokio::test]
-async fn metric_row_singular_check_is_absent_without_a_bare_threshold() {
-    let server = TestServer::new().await;
-    let fixture = fixture(&server, "onemetricnobare").await;
-
-    report(
-        &server,
-        &fixture,
-        1,
-        vec![v1(
-            "bench",
-            &[entry(
-                &serde_json::json!({}),
-                &serde_json::json!({
-                    "latency": { "value": NAMED_VALUE[0], "p99": NAMED_P99[0] }
-                }),
-            )],
-        )],
-        None,
-        None,
-        Some(1),
-    )
-    .await;
-    create_threshold(&server, &fixture, None, Some("p99")).await;
-
-    let mut last = serde_json::Value::Null;
-    for (day, (value, p99)) in NAMED_VALUE
-        .into_iter()
-        .skip(1)
-        .zip(NAMED_P99.into_iter().skip(1).chain([NAMED_P99_FINAL]))
-        .enumerate()
-    {
-        last = report(
-            &server,
-            &fixture,
-            day + 2,
-            vec![v1(
-                "bench",
-                &[entry(
-                    &serde_json::json!({}),
-                    &serde_json::json!({ "latency": { "value": value, "p99": p99 } }),
-                )],
-            )],
-            None,
-            None,
-            Some(1),
-        )
-        .await;
-    }
-
-    let measure = &last["results"][0][0]["measures"][0];
-    for metric in measure["metrics"]
-        .as_array()
-        .expect("the measure lists its metrics")
-    {
-        let uuid = metric["uuid"].as_str().expect("the metric names its uuid");
-        let row = metric_row(&server, &fixture, uuid).await;
-        assert_eq!(
-            row["threshold"],
-            serde_json::Value::Null,
-            "no bare threshold checked {name}",
-            name = metric["name"]
-        );
-        assert_eq!(row["boundary"], serde_json::Value::Null);
-        assert_eq!(row["alert"], serde_json::Value::Null);
-    }
 }
 
 /// Every threshold of a project, from the thresholds endpoint, optionally narrowed
