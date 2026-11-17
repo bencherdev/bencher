@@ -137,15 +137,10 @@ export const planLevel = (level: undefined | PlanLevel) => {
 	}
 };
 
-export const runnerMinutePrice = (level: undefined | PlanLevel) => {
-	switch (level) {
-		case PlanLevel.Pro:
-		case PlanLevel.Enterprise:
-			return 0.01666;
-		default:
-			return 0.0;
-	}
-};
+// The plan's own bare metal rate, in dollars a runner minute. The API sends it in cents.
+export const runnerMinutePrice = (
+	plan: undefined | { runner_minute?: number | null },
+) => (plan?.runner_minute ?? 0) / 100;
 
 export const fmtUsd = (usd: undefined | number) => {
 	const numberFmt = new Intl.NumberFormat("en-US", {
@@ -189,11 +184,12 @@ export const prettyPrintFloat = (float: number | undefined) => {
 	});
 };
 
-// Pro is billed on monthly-active series via a Stripe tiered price. The Console renders
-// the ladder from `usage.plan.tiers` (the billed source of truth) instead of hardcoding
-// it. A tier may carry a flat fee, a per-series fee, or both (additive). The unbounded top
-// tier (no `up_to`) is the "Get in Touch" band; its Stripe price is only a required
-// placeholder, so it is never surfaced as a self-serve rate.
+// Every metered plan is billed on monthly-active series via a Stripe tiered price. The
+// Console renders the ladder from `usage.plan.tiers` (the billed source of truth) instead
+// of hardcoding it. A tier may carry a flat fee, a per-series fee, or both (additive).
+// Pro's unbounded top tier (no `up_to`) is the "Get in Touch" band; its Stripe price is
+// only a required placeholder. An Enterprise deal's unbounded top tier is its own overage
+// price.
 //
 // The API sends JSON `null` for an absent `Option` field, while the typeshare-generated
 // type models it as optional. The runtime value of these fields is therefore `null`, not
@@ -210,10 +206,12 @@ export const tierFlatUsd = (tier: JsonPriceTier | undefined): number | null =>
 export const tierUnitUsd = (tier: JsonPriceTier | undefined): number | null =>
 	tierCentsToUsd(tier?.unit_amount);
 
-// The unbounded top tier (no `up_to`) is presented as "Get in Touch" (enterprise/sales),
+// Pro's unbounded top tier (no `up_to`) is presented as "Get in Touch" (enterprise/sales),
 // regardless of any placeholder price Stripe requires on it.
-export const isContactTier = (tier: JsonPriceTier | undefined): boolean =>
-	tier?.up_to == null;
+export const isContactTier = (
+	tier: JsonPriceTier | undefined,
+	level: undefined | PlanLevel,
+): boolean => tier?.up_to == null && level === PlanLevel.Pro;
 
 // The index in `tiers` of the band containing `series`: the first tier with no upper
 // bound or whose `up_to` is >= series. Tiers are ordered ascending by `up_to`. -1 when
@@ -244,8 +242,11 @@ export const seriesTierRange = (
 // A human label for a tier's price: "Get in Touch" for the contact tier, otherwise the
 // nonzero components joined, e.g. "$100.00 / month", "$0.05 / series", or
 // "$100.00 / month + $0.05 / series".
-export const fmtTierPrice = (tier: JsonPriceTier | undefined): string => {
-	if (isContactTier(tier)) {
+export const fmtTierPrice = (
+	tier: JsonPriceTier | undefined,
+	level: undefined | PlanLevel,
+): string => {
+	if (isContactTier(tier, level)) {
 		return "Get in Touch";
 	}
 	// Only positive components are shown: a $0.00 flat or per-series amount (an absent or
@@ -259,19 +260,60 @@ export const fmtTierPrice = (tier: JsonPriceTier | undefined): string => {
 	if (unit != null && unit > 0) {
 		parts.push(`${fmtUsd(unit)} / series`);
 	}
-	return parts.length > 0 ? parts.join(" + ") : "Get in Touch";
+	if (parts.length > 0) {
+		return parts.join(" + ");
+	}
+	return level === PlanLevel.Pro ? "Get in Touch" : "-";
 };
 
-// The estimated monthly charge (USD) for being in `tier` with `series` active series:
-// the flat fee plus the per-series fee times `series`. null for the contact tier (no
-// self-serve price). The per-series component is forward-compatible; today only the flat
-// fee is set.
-export const tierEstimateUsd = (
-	tier: JsonPriceTier | undefined,
+// The estimated monthly charge (USD) for `series` active series. A volume price charges
+// the flat fee plus the per-series fee times `series` of the band the count falls in. A
+// graduated price charges each band the count reaches its flat fee plus its per-series fee
+// for the series inside it. null without tiers, or in Pro's contact tier (no self-serve
+// price).
+export const seriesEstimateUsd = (
+	plan: {
+		level?: PlanLevel;
+		tiers?: JsonPriceTier[] | null;
+		tiers_mode?: string | null;
+	},
 	series: number,
 ): number | null => {
-	if (isContactTier(tier)) {
+	const tiers = plan.tiers;
+	if (!tiers) {
 		return null;
 	}
-	return (tierFlatUsd(tier) ?? 0) + (tierUnitUsd(tier) ?? 0) * series;
+	if (plan.tiers_mode !== "graduated") {
+		const tier = currentSeriesTier(tiers, series);
+		if (!tier || isContactTier(tier, plan.level)) {
+			return null;
+		}
+		return (tierFlatUsd(tier) ?? 0) + (tierUnitUsd(tier) ?? 0) * series;
+	}
+	return tiers.reduce((usd, tier, index) => {
+		const from = index === 0 ? 0 : (tiers[index - 1]?.up_to ?? 0);
+		if (index > 0 && series <= from) {
+			return usd;
+		}
+		const inside = Math.min(series, tier.up_to ?? series) - from;
+		return usd + (tierFlatUsd(tier) ?? 0) + (tierUnitUsd(tier) ?? 0) * inside;
+	}, 0);
+};
+
+// The estimated bill (USD) for `series` active series and `minutes` of bare metal at the
+// plan's own rate. null when the series charge has no estimate.
+export const planEstimateUsd = (
+	plan: {
+		level?: PlanLevel;
+		tiers?: JsonPriceTier[] | null;
+		tiers_mode?: string | null;
+		runner_minute?: number | null;
+	},
+	series: number,
+	minutes: number,
+): number | null => {
+	const seriesUsd = seriesEstimateUsd(plan, series);
+	return seriesUsd === null
+		? null
+		: seriesUsd + minutes * runnerMinutePrice(plan);
 };

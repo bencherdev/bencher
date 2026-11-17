@@ -1,20 +1,23 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::{Biller, PlanId as SubscriptionPlanId};
+use bencher_billing::{AttachError, Biller, PlanId as SubscriptionPlanId};
 use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
 use bencher_json::{
-    OrganizationResourceId, PlanStatus,
-    organization::plan::{JsonNewPlan, JsonPlan, JsonPlanPortal, JsonUpdatePlan},
+    MeteredPlanId, NonEmpty, OrganizationResourceId, OrganizationUuid, PlanStatus,
+    organization::plan::{
+        JsonNewPlan, JsonPlan, JsonPlanPortal, JsonPlanSubscription, JsonUpdatePlan,
+    },
 };
 use bencher_rbac::organization::Permission;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
     error::{
-        BencherResource, bad_request_error, forbidden_error, issue_error, resource_conflict_err,
-        resource_conflict_error, resource_not_found_err, service_unavailable_error,
+        BencherResource, bad_request_error, forbidden_error, issue_error, not_found_error,
+        resource_conflict_err, resource_conflict_error, resource_not_found_err,
+        service_unavailable_error,
     },
     model::{
         organization::{
@@ -112,6 +115,11 @@ async fn get_one_inner(
     }
 }
 
+/// Create an organization's plan
+///
+/// Attach a subscription to an organization: the return from a self-serve Pro checkout,
+/// which needs `manage` permission for the organization, or a subscription that only a
+/// server admin attaches.
 #[endpoint {
     method = POST,
     path =  "/v0/organizations/{organization}/plan",
@@ -226,7 +234,13 @@ async fn post_inner(
     json_plan: JsonNewPlan,
     auth_user: &AuthUser,
 ) -> Result<JsonPlan, HttpError> {
-    let biller = context.biller()?;
+    // Only a server admin attaches a subscription that staff created, checked before any
+    // Stripe call.
+    if matches!(json_plan, JsonNewPlan::Subscription(_)) && !auth_user.is_admin(&context.rbac) {
+        return Err(forbidden_error(
+            "Only a server admin can attach a subscription",
+        ));
+    }
 
     // Get the organization
     let query_organization =
@@ -236,87 +250,60 @@ async fn post_inner(
         .rbac
         .is_allowed_organization(auth_user, Permission::Manage, &query_organization)
         .map_err(forbidden_error)?;
+    if let JsonNewPlan::Subscription(JsonPlanSubscription { subscription }) = &json_plan {
+        refuse_attached_subscription(context, subscription).await?;
+    }
+    let biller = context.biller()?;
     // Block creating a plan when the organization still has an active plan; prune a
     // stale lapsed metered plan row first so the organization can subscribe again.
     prune_or_conflict_existing_plan(context, biller, &query_organization).await?;
 
-    let JsonNewPlan {
-        checkout,
-        level,
-        entitlements,
-        self_hosted,
-        remote,
-    } = json_plan;
+    // The attach reads the plan before it writes anything, and the row is inserted only
+    // once that read succeeds, so a subscription that does not read as a plan leaves no
+    // row behind.
+    let (metered_plan_id, json_plan) = biller
+        .attach(&json_plan, query_organization.uuid)
+        .await
+        .map_err(|e| attach_http_error(e, query_organization.uuid))?;
+    InsertPlan::metered_plan(write_conn!(context), metered_plan_id, &query_organization)?;
+    Ok(json_plan)
+}
 
-    if context.is_bencher_cloud && entitlements.is_some() && self_hosted.is_none() {
-        return Err(bad_request_error(
-            "Licensed plans are only available for Bencher Self-Hosted",
+/// The HTTP error for an attach to `organization` that did not happen: a refusal is the
+/// request's fault, Stripe not having the id is not found, and a failed call is an issue.
+fn attach_http_error(error: AttachError, organization: OrganizationUuid) -> HttpError {
+    match error {
+        AttachError::Refused(refusal) => bad_request_error(refusal),
+        error @ AttachError::NotFound(_) => not_found_error(error),
+        AttachError::Billing(error) => issue_error(
+            "Failed to attach subscription",
+            &format!("Failed to attach subscription to organization ({organization})."),
+            error,
+        ),
+    }
+}
+
+/// Refuse a subscription that a plan row already holds, before the attach names it for
+/// another organization in Stripe.
+async fn refuse_attached_subscription(
+    context: &ApiContext,
+    subscription: &NonEmpty,
+) -> Result<(), HttpError> {
+    let metered_plan_id: MeteredPlanId =
+        subscription.as_ref().parse().map_err(bad_request_error)?;
+    let attached = schema::plan::table
+        .filter(schema::plan::metered_plan.eq(&metered_plan_id))
+        .first::<QueryPlan>(auth_conn!(context))
+        .optional()
+        .map_err(resource_not_found_err!(Plan, metered_plan_id))?;
+    if let Some(query_plan) = attached {
+        return Err(resource_conflict_error(
+            BencherResource::Plan,
+            query_plan,
+            "Subscription is already attached to an organization",
         ));
     }
-
-    let subscription_id = if remote.unwrap_or(true) {
-        biller
-            .get_checkout_session(checkout.as_ref())
-            .await
-            .map_err(|e| {
-                issue_error(
-                    "Failed to get checkout session",
-                    &format!("Failed to get checkout session {checkout}."),
-                    e,
-                )
-            })?
-    } else {
-        checkout.as_ref().parse().map_err(|e| {
-            issue_error(
-                "Failed to parse subscription ID",
-                &format!("Failed to parse subscription ID {checkout}."),
-                e,
-            )
-        })?
-    };
-
-    if let Some(entitlements) = entitlements {
-        let licensed_plan_id = subscription_id
-            .as_ref()
-            .parse()
-            .map_err(resource_not_found_err!(Plan, subscription_id))?;
-        InsertPlan::licensed_plan(
-            write_conn!(context),
-            &context.licensor,
-            licensed_plan_id,
-            &query_organization,
-            level,
-            entitlements,
-            self_hosted,
-        )?;
-        QueryPlan::belonging_to(&query_organization)
-            .first::<QueryPlan>(auth_conn!(context))
-            .map_err(resource_not_found_err!(Plan, query_organization))?
-            .to_licensed_plan(biller, &context.licensor).await?
-            .ok_or_else(|| {
-                issue_error(
-                    "Failed to find licensed plan after creating it",
-                &format!("Failed to find licensed plan for organization ({query_organization:?}) after creating it even though plan exists."),
-                "Failed to find licensed plan after creating it"
-                )
-            })
-    } else {
-        let metered_plan_id = subscription_id
-            .as_ref()
-            .parse()
-            .map_err(resource_not_found_err!(Plan, subscription_id))?;
-        InsertPlan::metered_plan(write_conn!(context), metered_plan_id, &query_organization)?;
-        QueryPlan::belonging_to(&query_organization)
-            .first::<QueryPlan>(auth_conn!(context))
-            .map_err(resource_not_found_err!(Plan, query_organization))?
-            .to_metered_plan(biller).await?
-            .ok_or_else(|| {
-                issue_error(
-                "Failed to find metered plan after creating it",
-            &format!("Failed to find metered plan for organization ({query_organization:?}) after creating it even though plan exists."),
-          "Failed to find metered plan after creating it"
-            )})
-    }
+    Ok(())
 }
 
 #[endpoint {
@@ -674,9 +661,29 @@ async fn delete_plan(
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::PlanStatus;
+    use bencher_billing::{AttachError, AttachRefusal, BillingError};
+    use bencher_json::{OrganizationUuid, PlanStatus};
 
-    use super::subscription_is_live;
+    use super::{attach_http_error, subscription_is_live};
+
+    // Fails if an attach that Bencher refuses is not a 400, a subscription or checkout
+    // session that Stripe does not have is not a 404, or a failed Stripe call is not a 500.
+    #[test]
+    fn attach_http_error_maps_each_error() {
+        let organization = OrganizationUuid::new();
+        let status = |error| attach_http_error(error, organization).status_code.as_u16();
+        assert_eq!(
+            status(AttachError::Refused(AttachRefusal::NoBareMetal)),
+            400
+        );
+        assert_eq!(status(AttachError::NotFound("sub_missing".to_owned())), 404);
+        assert_eq!(
+            status(AttachError::Billing(BillingError::PriceNotFound(
+                "default".to_owned()
+            ))),
+            500
+        );
+    }
 
     #[test]
     fn subscription_is_live_decides() {
