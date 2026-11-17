@@ -1,8 +1,8 @@
 use bencher_json::{
-    BenchmarkName, JsonNewMetric,
+    BenchmarkName, BmfVersion, JsonNewMetric,
     project::{
         measure::built_in::{self, BuiltInMeasure as _},
-        metric::MetricResults,
+        metric::{JsonNewResults, MetricResults},
     },
 };
 
@@ -33,8 +33,8 @@ pub struct BuildCommand {
 }
 
 impl BuildCommand {
-    pub fn get_results(self) -> Result<String, RunError> {
-        let results = JsonNewMetric::results(self.to_metric_results()?);
+    pub fn get_results(self, bmf_version: BmfVersion) -> Result<String, RunError> {
+        let results = JsonNewResults::new(self.to_metric_results()?, bmf_version);
         serde_json::to_string(&results).map_err(RunError::SerializeBuildTime)
     }
 
@@ -54,10 +54,44 @@ impl BuildCommand {
 
 #[cfg(test)]
 mod tests {
+    use bencher_json::BmfVersion;
     use clap::Parser as _;
 
-    use super::super::Runner;
+    use super::super::{Runner, command::Command};
+    use super::BuildTime;
     use crate::parser::run::CliRun;
+
+    // Kills: a build time written in one shape whatever the report's version.
+    #[test]
+    fn build_time_is_written_at_the_report_s_version() {
+        let command = Command::new_exec("./build.sh".to_owned(), Vec::new());
+        for (bmf_version, results) in [
+            (
+                BmfVersion::V0,
+                serde_json::json!({
+                    "./build.sh": {
+                        "build-time": { "value": 1.5, "lower_value": null, "upper_value": null }
+                    }
+                }),
+            ),
+            (
+                BmfVersion::V1,
+                serde_json::json!({
+                    "./build.sh": [{ "measures": { "build-time": { "value": 1.5 } } }]
+                }),
+            ),
+        ] {
+            let written = BuildTime
+                .command(&command, 1.5)
+                .get_results(bmf_version)
+                .unwrap();
+            assert_eq!(
+                serde_json::from_str::<serde_json::Value>(&written).unwrap(),
+                results,
+                "{bmf_version}"
+            );
+        }
+    }
 
     #[test]
     fn build_time_benchmark_is_named_after_the_command() {

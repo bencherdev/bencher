@@ -3,12 +3,13 @@ use std::{future::Future, pin::Pin};
 #[cfg(feature = "plus")]
 use bencher_client::types::JsonNewRunJob;
 use bencher_client::types::{
-    Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings, MeasureFilter,
+    Adapter, JsonAverage, JsonFold, JsonNewRun, JsonReportSettings, JsonReportThresholds,
+    MeasureFilter,
 };
 use bencher_comment::{GitHubApi, ReportComment};
 use bencher_json::{
-    DateTime, JsonProject, JsonReport, ProjectResourceId, ProjectSlug, ReportUuid, RunContext,
-    TestbedNameId, project::report::Iteration,
+    BmfVersion, DateTime, JsonProject, JsonReport, ProjectResourceId, ProjectSlug, ReportUuid,
+    RunContext, TestbedNameId, project::report::Iteration,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JobUuid, JsonJob, JsonNewCallback, sanitize_json};
@@ -48,7 +49,7 @@ use sub_adapter::SubAdapter;
 
 use crate::bencher::SubCmd;
 
-use super::project::report::{Thresholds, measure_filter};
+use super::project::report::{DeclaredBmfVersion, Thresholds, measure_filter, project_bmf_version};
 
 #[derive(Debug)]
 #[expect(
@@ -417,21 +418,39 @@ impl Run {
     }
 
     async fn generate_report(&self) -> Result<Option<JsonNewRun>, RunError> {
-        #[cfg(feature = "plus")]
-        if let Some(job) = self.submit_job() {
-            return Ok(Some(self.generate_remote_report(job)));
-        }
-
-        self.generate_local_report().await
+        self.generate_report_at(self.bmf_version().await?).await
     }
 
-    async fn generate_local_report(&self) -> Result<Option<JsonNewRun>, RunError> {
+    /// The report, with its results and thresholds built at the version it declares.
+    async fn generate_report_at(
+        &self,
+        declared: DeclaredBmfVersion,
+    ) -> Result<Option<JsonNewRun>, RunError> {
+        let thresholds = self.thresholds.at(declared)?;
+        let bmf_version = declared.version();
+        #[cfg(feature = "plus")]
+        if let Some(job) = self.submit_job() {
+            return Ok(Some(self.generate_remote_report(
+                job,
+                bmf_version,
+                thresholds,
+            )));
+        }
+
+        self.generate_local_report(bmf_version, thresholds).await
+    }
+
+    async fn generate_local_report(
+        &self,
+        bmf_version: BmfVersion,
+        thresholds: Option<JsonReportThresholds>,
+    ) -> Result<Option<JsonNewRun>, RunError> {
         let runner = self.runner.as_ref().ok_or(RunError::NoRunner)?;
         let start_time = DateTime::now();
         let iter = self.iter.as_usize();
         let mut results = Vec::with_capacity(iter);
         for _ in 0..iter {
-            let outputs = runner.run(self.log).await?;
+            let outputs = runner.run(self.log, bmf_version).await?;
             for output in outputs {
                 if output.is_success() {
                     results.push(output.result());
@@ -469,13 +488,11 @@ impl Run {
             start_point,
             testbed: self.testbed.clone().map(Into::into),
             spec_reset: self.spec_reset(),
-            thresholds: self.thresholds.clone().into(),
+            thresholds,
             start_time: start_time.into(),
             end_time: end_time.into(),
             results,
-            // `bencher run` declares no BMF version yet, so the results are read at
-            // the project's default.
-            bmf_version: None,
+            bmf_version: Some(bmf_version.into()),
             settings: Some(JsonReportSettings {
                 adapter: Some(self.adapter),
                 average: self.average,
@@ -488,7 +505,12 @@ impl Run {
     }
 
     #[cfg(feature = "plus")]
-    fn generate_remote_report(&self, job: &SubmitJob) -> JsonNewRun {
+    fn generate_remote_report(
+        &self,
+        job: &SubmitJob,
+        bmf_version: BmfVersion,
+        thresholds: Option<JsonReportThresholds>,
+    ) -> JsonNewRun {
         let cmd = self.runner.as_ref().and_then(Runner::cmd_args);
         let file_paths = self
             .runner
@@ -507,11 +529,11 @@ impl Run {
             start_point,
             testbed: self.testbed.clone().map(Into::into),
             spec_reset: self.spec_reset(),
-            thresholds: self.thresholds.clone().into(),
+            thresholds,
             start_time: now.into(),
             end_time: now.into(),
             results: Vec::new(),
-            bmf_version: None,
+            bmf_version: Some(bmf_version.into()),
             settings: Some(JsonReportSettings {
                 adapter: Some(self.adapter),
                 average: self.average,
@@ -535,6 +557,21 @@ impl Run {
                 callback: None,
             }),
         }
+    }
+
+    /// The version an explicit JSON adapter declares, else the project's, read before the
+    /// benchmarks run. A run without a project declares version 1.
+    async fn bmf_version(&self) -> Result<DeclaredBmfVersion, RunError> {
+        if let Some(declared) = DeclaredBmfVersion::from_adapter(Some(self.adapter)) {
+            return Ok(declared);
+        }
+        let Some(project) = &self.project else {
+            return Ok(DeclaredBmfVersion::Project(BmfVersion::V1));
+        };
+        project_bmf_version(&self.backend, project)
+            .await
+            .map(DeclaredBmfVersion::Project)
+            .map_err(RunError::BmfVersion)
     }
 
     /// The new report as printed, with the callback, which can hold secrets, through `sanitize_json`.
@@ -1434,9 +1471,10 @@ mod tests {
     }
 
     mod measures {
+        use bencher_json::BmfVersion;
         use clap::Parser as _;
 
-        use super::super::Run;
+        use super::super::{DeclaredBmfVersion, Run};
         use crate::parser::run::CliRun;
 
         /// Kills: a `--measure` list that the parse discards, and a local run whose request
@@ -1475,7 +1513,11 @@ mod tests {
             .chain(args)
             .copied();
             let run = Run::try_from(CliRun::try_parse_from(args).unwrap()).unwrap();
-            let json_new_run = run.generate_report().await.unwrap().unwrap();
+            let json_new_run = run
+                .generate_report_at(DeclaredBmfVersion::Project(BmfVersion::V0))
+                .await
+                .unwrap()
+                .unwrap();
             serde_json::to_value(json_new_run).unwrap()["settings"]["measures"].clone()
         }
     }

@@ -5,7 +5,10 @@ mod delete;
 mod list;
 mod view;
 
-pub use create::{Thresholds, ThresholdsError, measure_filter};
+pub use create::{
+    BmfVersionError, DeclaredBmfVersion, Thresholds, ThresholdsError, measure_filter,
+    project_bmf_version,
+};
 
 #[derive(Debug)]
 pub enum Report {

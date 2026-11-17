@@ -7,6 +7,8 @@ impl From<CliReportAdapter> for Adapter {
         match adapter {
             CliReportAdapter::Magic => Self::Magic,
             CliReportAdapter::Json => Self::Json,
+            CliReportAdapter::JsonV0 => Self::JsonV0,
+            CliReportAdapter::JsonV1 => Self::JsonV1,
             CliReportAdapter::CSharpDotNet => Self::CSharpDotNet,
             CliReportAdapter::CppCatch2 => Self::CppCatch2,
             CliReportAdapter::CppGoogle => Self::CppGoogle,

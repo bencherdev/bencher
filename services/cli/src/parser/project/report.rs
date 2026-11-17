@@ -97,19 +97,27 @@ pub struct CliReportCreate {
     #[clap(long)]
     pub end_time: chrono::DateTime<chrono::Utc>,
 
-    /// Benchmark results
+    /// Benchmark results: harness output, or BMF for the `json` adapters.
+    ///
+    /// Read at the project's BMF version, or at the version `json_v0` or `json_v1` names.
     #[clap(long)]
     pub results: Vec<String>,
 
     /// Benchmark harness adapter
+    ///
+    /// Results are read at the project's BMF version. `json_v0` and `json_v1` read JSON at their own BMF version on any project.
     #[clap(value_enum, long)]
     pub adapter: Option<CliReportAdapter>,
 
     /// Benchmark harness suggested central tendency (ie average)
+    ///
+    /// Ignored with a warning at BMF version 1, where every average is its own metric.
     #[clap(value_enum, long)]
     pub average: Option<CliReportAverage>,
 
     /// Fold multiple results into a single result
+    ///
+    /// BMF version 0 only; ignored at version 1 with a warning.
     #[clap(value_enum, long)]
     pub fold: Option<CliReportFold>,
 
@@ -127,16 +135,22 @@ pub struct CliReportThresholds {
     /// Threshold Measure name, slug, or UUID
     /// When specifying multiple Thresholds, all of the same options must be used for each Threshold.
     /// To ignore an option for a specific Threshold, use an underscore (`_`).
+    ///
+    /// At BMF version 1, name each Threshold's metric with `--threshold-metric`. Thresholds without a metric are skipped with a warning.
     #[clap(long)]
     pub threshold_measure: Vec<MeasureNameId>,
 
     /// Threshold metric name (BMF version 1)
-    /// Any Threshold metric or parameters declare the Thresholds as BMF version 1, where every Threshold needs a metric.
+    ///
+    /// Once any Threshold has a metric or parameters, every Threshold needs a metric.
+    /// Refused at BMF version 0.
     #[clap(long, requires = "threshold_test")]
     pub threshold_metric: Vec<ElidedOption<MetricName>>,
 
     /// Threshold parameters filter, as a JSON object of the parameters a variant must have (BMF version 1)
     /// To ignore this option when specifying multiple Thresholds, use an underscore (`_`).
+    ///
+    /// Refused at BMF version 0.
     #[clap(long, requires = "threshold_test")]
     pub threshold_parameters: Vec<ElidedOption<ParameterSet>>,
 
@@ -183,6 +197,10 @@ pub enum CliReportAdapter {
     Magic,
     /// {...} JSON
     Json,
+    /// {...} JSON at BMF version 0, on any project
+    JsonV0,
+    /// {...} JSON at BMF version 1, on any project
+    JsonV1,
     /// #️⃣ C# `DotNet`
     CSharpDotNet,
     /// ➕ C++ Catch2
