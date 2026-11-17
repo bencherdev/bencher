@@ -577,12 +577,6 @@ async fn plot_create_keeps_at_most_64_plots() {
 #[tokio::test(flavor = "multi_thread")]
 async fn plot_view_migration_down_and_up_keeps_every_plot() {
     let f = fixture("plotviewmigration").await;
-    // On the way up, a version 0 project's pins without metrics are given them.
-    set_bmf_version(
-        &mut db_conn(&f.server),
-        get_project_id(&f.server, &f.project_slug),
-        1,
-    );
     // A deleted first plot leaves a gap in the IDs, so a renumbered row shows.
     let deleted = uuid_of(&f.create(&json!({})).await);
     let classic = f.create(&json!({})).await;
@@ -726,7 +720,7 @@ async fn plot_classic_metrics_migration_draws_each_classic_pin_as_before() {
     let v0 = get_project_id(&f.server, &f.project_slug);
     let v1 = get_project_id(&f.server, other.slug.as_ref());
     let mut conn = db_conn(&f.server);
-    set_bmf_version(&mut conn, v1, 1);
+    set_bmf_version(&mut conn, v0, 0);
     for (project, title, bounds, metrics) in [
         (v0, "value", (false, false), None),
         (v0, "lower", (true, false), None),

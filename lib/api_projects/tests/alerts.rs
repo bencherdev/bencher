@@ -222,7 +222,7 @@ async fn alerts_keep_the_report_that_raised_them() {
     let user = server.signup("Test User", "keepreport@example.com").await;
     let org = server.create_org(&user, "Org keepreport").await;
     let project = server
-        .create_project(&user, &org, "Project keepreport")
+        .create_v0_project(&user, &org, "Project keepreport")
         .await;
     let slug = project.slug.to_string();
     let post = async |path: String, body: serde_json::Value| {
@@ -1007,7 +1007,7 @@ async fn seed_alerting_project(server: &TestServer, label: &str) -> (TestUser, S
         .await;
     let org = server.create_org(&user, &format!("Org {label}")).await;
     let project = server
-        .create_project(&user, &org, &format!("Project {label}"))
+        .create_v0_project(&user, &org, &format!("Project {label}"))
         .await;
     let slug = project.slug.to_string();
 

@@ -2595,7 +2595,7 @@
           "projects"
         ],
         "summary": "Create a project for an organization",
-        "description": "Create a new project for an organization. The user must have `create` permissions for the organization. The new project will have a `main` branch, a `localhost` testbed, `latency` and `throughput` measures, and a threshold for both measures. ➕ Bencher Plus: The project visibility must be `public` unless the organization has a valid Bencher Plus subscription.",
+        "description": "Create a new project for an organization. The user must have `create` permissions for the organization. The new project starts at BMF version 1. ➕ Bencher Plus: The project visibility must be `public` unless the organization has a valid Bencher Plus subscription.",
         "operationId": "org_project_post",
         "parameters": [
           {
@@ -8904,7 +8904,7 @@
           "reports"
         ],
         "summary": "Create a run",
-        "description": "Create a run. The user does not need have an account yet or be authenticated. The project may or may not exist yet.",
+        "description": "Create a run. The user does not need have an account yet or be authenticated. The project may or may not exist yet. If it does not exist, it will be created at BMF version 1.",
         "operationId": "run_post",
         "requestBody": {
           "content": {
@@ -15617,7 +15617,7 @@
           },
           "project": {
             "nullable": true,
-            "description": "Project UUID or slug. If the project is not provided or does not exist, it will be created.",
+            "description": "Project UUID or slug. If the project is not provided or does not exist, it will be created at BMF version 1.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/ResourceId"
@@ -17673,7 +17673,7 @@
         "type": "object",
         "properties": {
           "bmf_version": {
-            "description": "The project's default BMF version: a report that declares no `bmf_version` is read at it.",
+            "description": "The project's default BMF version: a report that declares no `bmf_version` is read at it. New projects start at 1.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/BmfVersion"

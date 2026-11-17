@@ -20,7 +20,7 @@ async fn setup() -> (TestServer, String, String, ProjectKey) {
     let server = TestServer::new().await;
     let user = server.signup("Key User", "keyuser@example.com").await;
     let org = server.create_org(&user, "Key Org").await;
-    let project = server.create_project(&user, &org, "Key Project").await;
+    let project = server.create_v0_project(&user, &org, "Key Project").await;
 
     let project_slug: &str = project.slug.as_ref();
     let project_slug = project_slug.to_owned();

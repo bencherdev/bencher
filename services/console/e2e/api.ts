@@ -53,7 +53,7 @@ export const createProject = async (
 		seed.member.token,
 		{ name: unique("Rosti"), visibility: "public" },
 	);
-	if (version === 0) {
+	if (version === 1) {
 		return project;
 	}
 	return send<JsonProject>(
@@ -61,7 +61,7 @@ export const createProject = async (
 		"PATCH",
 		`/v0/projects/${project.slug}`,
 		seed.admin.token,
-		{ bmf_version: 1 },
+		{ bmf_version: 0 },
 	);
 };
 
@@ -77,19 +77,12 @@ export const createOwnProject = async (
 	if (!organization) {
 		throw new Error("Signing up made no organization");
 	}
-	const project = await send<JsonProject>(
+	return send<JsonProject>(
 		request,
 		"POST",
 		`/v0/organizations/${organization.slug}/projects`,
 		reader.token,
 		{ name: unique("Rosti"), visibility: "public" },
-	);
-	return send<JsonProject>(
-		request,
-		"PATCH",
-		`/v0/projects/${project.slug}`,
-		seed.admin.token,
-		{ bmf_version: 1 },
 	);
 };
 

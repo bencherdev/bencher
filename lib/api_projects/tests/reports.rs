@@ -645,7 +645,7 @@ async fn reports_list_collapses_by_default() {
         .await;
     let org = server.create_org(&user, "Report Collapse Org").await;
     let project = server
-        .create_project(&user, &org, "Report Collapse Project")
+        .create_v0_project(&user, &org, "Report Collapse Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();
@@ -689,7 +689,7 @@ async fn reports_list_expand_true_includes_full_report() {
     let user = server.signup("Test User", "reportexpand@example.com").await;
     let org = server.create_org(&user, "Report Expand Org").await;
     let project = server
-        .create_project(&user, &org, "Report Expand Project")
+        .create_v0_project(&user, &org, "Report Expand Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();
@@ -729,7 +729,7 @@ async fn reports_get_one_always_full() {
     let user = server.signup("Test User", "reportgetone@example.com").await;
     let org = server.create_org(&user, "Report GetOne Org").await;
     let project = server
-        .create_project(&user, &org, "Report GetOne Project")
+        .create_v0_project(&user, &org, "Report GetOne Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();
@@ -762,7 +762,7 @@ async fn reports_post_full_with_counts() {
     let user = server.signup("Test User", "reportpost@example.com").await;
     let org = server.create_org(&user, "Report Post Org").await;
     let project = server
-        .create_project(&user, &org, "Report Post Project")
+        .create_v0_project(&user, &org, "Report Post Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();
@@ -814,7 +814,7 @@ async fn reports_ingest_empty_variants() {
         .await;
     let org = server.create_org(&user, "Report Variant Org").await;
     let project = server
-        .create_project(&user, &org, "Report Variant Project")
+        .create_v0_project(&user, &org, "Report Variant Project")
         .await;
 
     let project_slug: &str = project.slug.as_ref();
@@ -1223,7 +1223,7 @@ async fn reports_list_filters_by_alerts_active() {
         .await;
     let org = server.create_org(&user, "Report Active Alerts Org").await;
     let project = server
-        .create_project(&user, &org, "Report Active Alerts Project")
+        .create_v0_project(&user, &org, "Report Active Alerts Project")
         .await;
     let slug = project.slug.to_string();
 
@@ -1378,7 +1378,7 @@ async fn ingest_project(server: &TestServer, label: &str) -> (String, String) {
         .create_org(&user, &format!("Ingest Org {label}"))
         .await;
     let project = server
-        .create_project(&user, &org, &format!("Ingest Project {label}"))
+        .create_v0_project(&user, &org, &format!("Ingest Project {label}"))
         .await;
     (user.token, project.slug.to_string())
 }
@@ -1851,7 +1851,7 @@ async fn reports_name_the_project_key_that_created_them() {
     let user = server.signup("Test User", "reportkey@example.com").await;
     let org = server.create_org(&user, "Report Key Org").await;
     let project = server
-        .create_project(&user, &org, "Report Key Project")
+        .create_v0_project(&user, &org, "Report Key Project")
         .await;
     let project_slug: &str = project.slug.as_ref();
     let key = create_project_key(&server, &user.token, project_slug, "ci-key").await;

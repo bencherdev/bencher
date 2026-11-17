@@ -88,7 +88,7 @@ pub struct JsonProject {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub github_link: Option<GitHubLinkStatus>,
     pub visibility: Visibility,
-    /// The project's default BMF version: a report that declares no `bmf_version` is read at it.
+    /// The project's default BMF version: a report that declares no `bmf_version` is read at it. New projects start at 1.
     pub bmf_version: BmfVersion,
     pub created: DateTime,
     pub modified: DateTime,

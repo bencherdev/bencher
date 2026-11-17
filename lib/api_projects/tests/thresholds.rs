@@ -460,7 +460,7 @@ async fn create_project_with_branch_testbed_measure(
     project_name: &str,
 ) -> String {
     let org = server.create_org(user, org_name).await;
-    let project = server.create_project(user, &org, project_name).await;
+    let project = server.create_v0_project(user, &org, project_name).await;
     let project_slug: String = AsRef::<str>::as_ref(&project.slug).to_owned();
 
     for (path, body) in [

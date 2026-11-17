@@ -115,20 +115,13 @@ const seedAtCaps = async (request: APIRequestContext) => {
 	const organization = await post<JsonOrganization>("/v0/organizations", {
 		name: fill(tag, 64, "o"),
 	});
-	const created = await post<JsonProject>(
+	const project = await post<JsonProject>(
 		`/v0/organizations/${organization.slug}/projects`,
 		{
 			name: fill(tag, 64, "p"),
 			url: `https://github.com/${"o".repeat(39)}/${"r".repeat(100)}/tree/${"b".repeat(60)}`,
 			visibility: "public",
 		},
-	);
-	const project = await send<JsonProject>(
-		request,
-		"PATCH",
-		`/v0/projects/${created.slug}`,
-		seed.admin.token,
-		{ bmf_version: 1 },
 	);
 	const slug = project.slug;
 	const at = (path: string) => `/v0/projects/${slug}/${path}`;

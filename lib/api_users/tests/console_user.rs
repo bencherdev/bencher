@@ -60,14 +60,6 @@ fn projects_by_uuid(json: &JsonConsoleUser) -> HashMap<ProjectUuid, &JsonConsole
         .collect()
 }
 
-fn set_bmf_version(server: &TestServer, project: &TestProject, version: BmfVersion) {
-    let mut conn = server.db_conn();
-    diesel::update(schema::project::table.filter(schema::project::uuid.eq(project.uuid)))
-        .set(schema::project::bmf_version.eq(version))
-        .execute(&mut conn)
-        .expect("Failed to set the project's BMF version");
-}
-
 /// A report on `branch` that ends at `end`, checked by a threshold on latency.
 async fn post_report(
     server: &TestServer,
@@ -226,7 +218,7 @@ async fn console_user_lists_the_readers_organizations_and_projects() {
     let other = server.signup("Other", "consoleuserother@example.com").await;
     let first = server.create_org(&reader, "First Org").await;
     let second = server.create_org(&reader, "Second Org").await;
-    let alpha = server.create_project(&reader, &first, "Alpha").await;
+    let alpha = server.create_v0_project(&reader, &first, "Alpha").await;
     let beta = server.create_project(&reader, &second, "Beta").await;
     let gone = server.create_project(&reader, &second, "Gone").await;
     let third = server.create_org(&reader, "Third Org").await;
@@ -243,7 +235,6 @@ async fn console_user_lists_the_readers_organizations_and_projects() {
         .await
         .expect("Request failed");
     assert!(resp.status().is_success(), "the organization deletes");
-    set_bmf_version(&server, &beta, BmfVersion::V1);
     {
         let mut conn = server.db_conn();
         diesel::update(schema::project::table.filter(schema::project::uuid.eq(gone.uuid)))

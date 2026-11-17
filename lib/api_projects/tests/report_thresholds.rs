@@ -801,20 +801,7 @@ async fn a_map_at_version_1_lands_and_skips_each_threshold() {
 #[tokio::test]
 async fn an_undeclared_version_takes_the_shape_from_the_project() {
     let server = TestServer::new().await;
-    // The first signup is the server admin, so this fixture can move its project's version.
     let fixture = fixture(&server, "inherited").await;
-    let resp = server
-        .client
-        .patch(server.api_url(&format!("/v0/projects/{}", fixture.project_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&fixture.token),
-        )
-        .json(&serde_json::json!({ "bmf_version": BmfVersion::V1 }))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK, "PATCH bmf_version");
 
     let skipped = report(
         &server,
@@ -1253,20 +1240,7 @@ async fn a_report_whose_thresholds_fit_under_the_active_cap_has_no_warnings() {
 #[tokio::test]
 async fn a_threshold_whose_metric_a_result_lacks_is_counted_as_skipped() {
     let server = TestServer::new().await;
-    // The first signup is the server admin, so this fixture can move its project's version.
     let fixture = fixture(&server, "lacks").await;
-    let resp = server
-        .client
-        .patch(server.api_url(&format!("/v0/projects/{}", fixture.project_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&fixture.token),
-        )
-        .json(&serde_json::json!({ "bmf_version": BmfVersion::V1 }))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK, "PATCH bmf_version");
 
     let bare = report(
         &server,

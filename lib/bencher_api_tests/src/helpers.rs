@@ -200,7 +200,7 @@ pub async fn plan_project(
         server.license_org(&user, &org, level).await;
     }
     let project = server
-        .create_project(&user, &org, &format!("Plan {label} Project"))
+        .create_v0_project(&user, &org, &format!("Plan {label} Project"))
         .await;
     (user, project)
 }
