@@ -33,6 +33,7 @@ import {
 	LONG_COMMIT_TITLE,
 	alertPill,
 	commitBootstrap,
+	commitReach,
 	commitRowCases,
 	commitTabs,
 	cutCells,
@@ -40,6 +41,7 @@ import {
 	expectedAlertPill,
 	expectedCommit,
 	expectedTabs,
+	expectPressesLandOn,
 	likelyReport,
 	overrun,
 	pillsBand,
@@ -48,6 +50,7 @@ import {
 	shownCommit,
 	textLines,
 	watchShift,
+	wordsBox,
 } from "../runs/testing";
 import { bootstrapOf, linkedBootstrap } from "../settings/testing";
 import {
@@ -1411,8 +1414,155 @@ test("the commit row sits between the title and the facts, held in place until t
 	}
 });
 
+// Kills a phone's commit row taller than its line in any state, which moves
+// the facts as the bootstrap arrives or holds a band of empty space, a link
+// whose words sit off the logo's line, and a link smaller than a finger or
+// whose target reaches down into the facts.
+test.each([
+	...commitRowCases(RUN_HASH).map(
+		([name, fields, commitTitle]) => [name, fields, commitTitle] as const,
+	),
+	[
+		"a long title, then Reconnect GitHub",
+		{
+			repository: "pompeii-llc/rosti",
+			link: GitHubLinkStatus.Disconnected,
+		},
+		LONG_COMMIT_TITLE,
+	] as const,
+])(
+	"on a phone the run's commit row is one line, its links a finger's target above it, with %s",
+	async (_, fields, commitTitle) => {
+		await page.viewport(390, 844);
+		const bootstrap = Promise.withResolvers<JsonConsoleProject>();
+		await showCommit(commitTitle, bootstrap.promise);
+		expect(commitRow()?.querySelector(".ui-skeleton")).not.toBeNull();
+		expect(
+			Math.abs(commitReach(commitRow())?.overLine ?? Number.POSITIVE_INFINITY),
+		).toBeLessThanOrEqual(0.5);
+		const facts = () =>
+			document.querySelector(".rp-sub")?.getBoundingClientRect().top;
+		const held = facts();
+		bootstrap.resolve(commitBootstrap(fields));
+		await expect
+			.poll(() => commitRow()?.querySelector(".cm-row"))
+			.not.toBeNull();
+		expect(facts()).toBe(held);
+		const reach = commitReach(commitRow());
+		expect(
+			Math.abs(reach?.overLine ?? Number.POSITIVE_INFINITY),
+		).toBeLessThanOrEqual(0.5);
+		for (const link of reach?.links ?? []) {
+			expect(link.offLogo, link.text ?? "").toBeLessThanOrEqual(0.5);
+			expect(link.height, link.text ?? "").toBeGreaterThanOrEqual(44);
+			expect(link.below, link.text ?? "").toBeLessThanOrEqual(0.5);
+		}
+	},
+);
+
+// Kills a phone's commit link whose target, reaching up, takes presses from
+// any of the Copy after the hash, or whose words lose presses to it, and
+// Previous and Next under the facts that lose theirs. Copy's box ends above
+// the link's, but the link takes presses up to 1 px above its own box, so the
+// last px of Copy's bottom edge is left out.
+test("on a phone a press on the commit link's words, on Copy, or on Previous and Next lands on each", async () => {
+	for (const width of [390, 320]) {
+		await page.viewport(width, 844);
+		const { api } = fakeApi(() => ({
+			data: runPageFixture([runReportFixture(0)], {
+				title: COMMIT_TITLE,
+				previous: neighbor(),
+				next: neighbor(),
+			}),
+		}));
+		mount(
+			api,
+			PATH,
+			undefined,
+			commitBootstrap({
+				repository: "pompeii-llc/rosti",
+				link: GitHubLinkStatus.Disconnected,
+			}),
+		);
+		await expect
+			.element(page.getByRole("link", { name: "Reconnect GitHub" }))
+			.toBeVisible();
+		const links = commitRow()?.querySelectorAll(".cm-row > a") ?? [];
+		expect(links).toHaveLength(2);
+		for (const link of links) {
+			expectPressesLandOn(wordsBox(link), link, link.textContent ?? "");
+		}
+		const copy = title()?.querySelector(".rn-copy .ui-button");
+		const box = copy?.getBoundingClientRect() ?? new DOMRect();
+		expect(box.bottom).toBeLessThanOrEqual(
+			links[0]?.getBoundingClientRect().top ?? Number.NEGATIVE_INFINITY,
+		);
+		// Inside its rounded corners, down to 1 px above its bottom edge.
+		const radius = Number.parseFloat(
+			getComputedStyle(copy as Element).borderTopLeftRadius,
+		);
+		expectPressesLandOn(
+			new DOMRect(
+				box.left + radius,
+				box.top,
+				box.width - 2 * radius,
+				box.height - 0.5,
+			),
+			copy,
+			"Copy hash",
+		);
+		const steps = document.querySelectorAll(".rp-actions > *");
+		expect(steps).toHaveLength(2);
+		for (const step of steps) {
+			expectPressesLandOn(wordsBox(step), step, step.textContent ?? "");
+		}
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a phone's facts that fit on one line drawn in the middle of the two
+// lines held for them, which leaves a gap above them under the commit row.
+test("on a phone the run's facts that fit on one line start at the top of their two", async () => {
+	await page.viewport(390, 844);
+	const since = Date.now();
+	const { api } = fakeApi(() => ({
+		data: runPageFixture(
+			[
+				runReportFixture(0, {
+					job: job({
+						status: "running" as JsonConsoleJob["status"],
+						started: since,
+					}),
+				}),
+			],
+			{
+				jobs: {
+					queued: 0,
+					running: 1,
+					failed: 0,
+					canceled: 0,
+					since,
+				} as JsonConsoleRunJobs,
+			},
+		),
+	}));
+	mount(api);
+	await expect.element(table()).toBeVisible();
+	const sub = document.querySelector(".rp-sub");
+	const tops = [...(sub?.children ?? [])].map(
+		(part) => part.getBoundingClientRect().top,
+	);
+	expect(new Set(tops).size).toBe(1);
+	expect(
+		Math.abs((tops[0] ?? 0) - (sub?.getBoundingClientRect().top ?? 0)),
+	).toBeLessThanOrEqual(0.5);
+});
+
 // Kills a run with no alerts that draws no alert pill, which leaves its
-// phone's pills line an empty band above the commit row.
+// phone's pills line an empty band above the commit row, a pills line
+// taller than its pill, and a pills line held apart from the title's by more
+// or less than 6 px.
 test("on a phone a run with no alerts fills its pills line with 0 alerts, no empty band above its commit row", async () => {
 	await page.viewport(390, 844);
 	await showCommit(
@@ -1428,7 +1578,12 @@ test("on a phone a run with no alerts fills its pills line with 0 alerts, no emp
 	expect(alertPill(title())?.text).toBe("0 alerts");
 	const band = pillsBand(title());
 	expect(band?.offCenter).toBeLessThanOrEqual(0.5);
-	expect(band?.height).toBeLessThanOrEqual(44);
+	expect(
+		Math.abs((band?.gap ?? Number.POSITIVE_INFINITY) - 6),
+	).toBeLessThanOrEqual(0.5);
+	expect(
+		Math.abs(band?.overPill ?? Number.POSITIVE_INFINITY),
+	).toBeLessThanOrEqual(0.5);
 	expect(Math.abs(band?.below ?? Number.POSITIVE_INFINITY)).toBeLessThanOrEqual(
 		0.5,
 	);
@@ -1491,7 +1646,7 @@ test("the head does not move as a run with no alerts arrives", async () => {
 
 // Kills a run with no hash whose row goes, which moves the facts and
 // everything under them as the run arrives, a row shown before the bootstrap,
-// and No commit as a link or in the logo's color.
+// No commit as a link or in the logo's color, and a row taller than its line.
 test("a run with no hash shows No commit, held in place until the run and the bootstrap arrive", async () => {
 	for (const width of [1280, 390]) {
 		await page.viewport(width, 844);
@@ -1519,6 +1674,9 @@ test("a run with no hash shows No commit, held in place until the run and the bo
 			muted: true,
 			parts: [["No commit"]],
 		});
+		expect(
+			Math.abs(commitReach(commitRow())?.overLine ?? Number.POSITIVE_INFINITY),
+		).toBeLessThanOrEqual(0.5);
 		dispose?.();
 		document.body.replaceChildren();
 	}
@@ -1556,9 +1714,14 @@ test("a long title keeps its row to one line, with Reconnect GitHub in view", as
 			.element(page.getByRole("link", { name: "Reconnect GitHub" }))
 			.toBeVisible();
 		const row = commitRow()?.getBoundingClientRect();
-		const [cut, ask] = [".cm-text", ".cm-ask"].map((part) =>
-			commitRow()?.querySelector(part)?.getBoundingClientRect(),
-		);
+		// On a phone their words, since there a link reaches up past its row for a finger.
+		const [cut, ask] = [".cm-text", ".cm-ask"].map((part) => {
+			const shown = commitRow()?.querySelector(part);
+			if (!shown) {
+				return undefined;
+			}
+			return width < 768 ? wordsBox(shown) : shown.getBoundingClientRect();
+		});
 		for (const part of [cut, ask]) {
 			expect(part?.top).toBeGreaterThanOrEqual((row?.top ?? 0) - 0.5);
 			expect(part?.bottom).toBeLessThanOrEqual((row?.bottom ?? 0) + 0.5);

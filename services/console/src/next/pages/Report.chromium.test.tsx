@@ -37,16 +37,20 @@ import { fakeApi, watchFallback } from "../reports/testing";
 import { screenBatch as runScreenBatch } from "../list/rows";
 import {
 	COMMIT_TITLE,
+	LONG_COMMIT_TITLE,
 	alertPill,
 	commitBootstrap,
+	commitReach,
 	commitRowCases,
 	commitTabs,
 	expectedAlertPill,
 	expectedCommit,
 	expectedTabs,
+	expectPressesLandOn,
 	pillsBand,
 	shownCommit,
 	watchShift,
+	wordsBox,
 } from "../runs/testing";
 import { bootstrapOf, linkedBootstrap } from "../settings/testing";
 import {
@@ -1449,8 +1453,8 @@ test.each(commitRowCases(HASH))(
 // Kills a commit row with no place while the report loads, a report with no
 // hash, which the API gives as null, whose row goes, either of which moves
 // the facts and everything under them as the report arrives, a null hash
-// read as a commit, a row shown before the bootstrap, and No commit as a link
-// or in the logo's color, with or without a run.
+// read as a commit, a row shown before the bootstrap, No commit as a link or
+// in the logo's color, and a row taller than its line, with or without a run.
 test("a report with no hash shows No commit, held in place until the report and the bootstrap arrive", async () => {
 	for (const width of [1280, 390]) {
 		for (const withRun of [true, false]) {
@@ -1485,6 +1489,9 @@ test("a report with no hash shows No commit, held in place until the report and 
 				muted: true,
 				parts: [["No commit"]],
 			});
+			expect(
+				Math.abs(commitReach(commit())?.overLine ?? Number.POSITIVE_INFINITY),
+			).toBeLessThanOrEqual(0.5);
 			dispose?.();
 			document.body.replaceChildren();
 		}
@@ -1525,8 +1532,152 @@ const alerting = (total: number) => {
 };
 const titleRow = () => document.querySelector(".rp-titlerow");
 
+const commitRow = () => document.querySelector(".rp-commit");
+
+// Kills a phone's commit row taller than its line in any state, which moves
+// the facts as the bootstrap arrives or holds a band of empty space, a link
+// whose words sit off the logo's line, and a link smaller than a finger or
+// whose target reaches down into the facts.
+test.each([
+	...commitRowCases(HASH).map(
+		([name, fields, commitTitle]) => [name, fields, commitTitle] as const,
+	),
+	[
+		"a long title, then Reconnect GitHub",
+		{
+			repository: "pompeii-llc/rosti",
+			link: GitHubLinkStatus.Disconnected,
+		},
+		LONG_COMMIT_TITLE,
+	] as const,
+])(
+	"on a phone the report's commit row is one line, its links a finger's target above it, with %s",
+	async (_, fields, commitTitle) => {
+		await page.viewport(390, 844);
+		const bootstrap = Promise.withResolvers<JsonConsoleProject>();
+		const { api } = fakeApi(async (url) =>
+			isReport(url)
+				? {
+						data: reportFixture(undefined, {
+							run: run(),
+							title: commitTitle,
+						} as never),
+					}
+				: { data: await bootstrap.promise },
+		);
+		mount(api, impatient());
+		await expect.element(table()).toBeVisible();
+		expect(commitRow()?.querySelector(".ui-skeleton")).not.toBeNull();
+		expect(
+			Math.abs(commitReach(commitRow())?.overLine ?? Number.POSITIVE_INFINITY),
+		).toBeLessThanOrEqual(0.5);
+		const facts = () =>
+			document.querySelector(".rp-sub")?.getBoundingClientRect().top;
+		const held = facts();
+		bootstrap.resolve(commitBootstrap(fields));
+		await expect
+			.poll(() => commitRow()?.querySelector(".cm-row"))
+			.not.toBeNull();
+		expect(facts()).toBe(held);
+		const reach = commitReach(commitRow());
+		expect(
+			Math.abs(reach?.overLine ?? Number.POSITIVE_INFINITY),
+		).toBeLessThanOrEqual(0.5);
+		for (const link of reach?.links ?? []) {
+			expect(link.offLogo, link.text ?? "").toBeLessThanOrEqual(0.5);
+			expect(link.height, link.text ?? "").toBeGreaterThanOrEqual(44);
+			expect(link.below, link.text ?? "").toBeLessThanOrEqual(0.5);
+		}
+	},
+);
+
+// Kills a phone's commit link whose words lose presses to the Copy after the
+// hash in the facts, which reaches up into the commit row, and a commit
+// link's target that takes presses from that Copy, the warnings count, or a
+// cut part's reveal.
+test("on a phone a press on the commit link's words or on each control in the facts lands on it", async () => {
+	await page.viewport(390, 844);
+	// With no run, the facts hold the hash and its Copy; in a run, a cut spec's reveal.
+	for (const fields of [
+		{ warnings: WARNINGS },
+		{
+			run: run(),
+			spec: { ...spec, name: `Standard ${"x".repeat(56)}` },
+			warnings: WARNINGS,
+		},
+	]) {
+		const { api } = fakeApi((url) =>
+			isReport(url)
+				? {
+						data: reportFixture(undefined, {
+							title: COMMIT_TITLE,
+							...fields,
+						} as never),
+					}
+				: {
+						data: commitBootstrap({
+							repository: "pompeii-llc/rosti",
+							link: GitHubLinkStatus.Connected,
+						}),
+					},
+		);
+		mount(api, impatient());
+		const titled = page.getByRole("link", { name: COMMIT_TITLE });
+		await expect.element(titled).toBeVisible();
+		const link = titled.element();
+		const words = wordsBox(link);
+		expectPressesLandOn(words, link, COMMIT_TITLE);
+		const sub = document.querySelector(".rp-sub");
+		const warnings = page.getByRole("link", { name: "4 warnings" }).element();
+		expectPressesLandOn(wordsBox(warnings), warnings, "4 warnings");
+		const copy = sub?.querySelector(".rn-copy .ui-button");
+		const reveal = sub?.querySelector("button.ui-trunc");
+		if ("run" in fields) {
+			expect(copy).toBeNull();
+			expectPressesLandOn(
+				reveal ? wordsBox(reveal) : new DOMRect(),
+				reveal,
+				"the spec's reveal",
+			);
+		} else {
+			const box = copy?.getBoundingClientRect();
+			// The Copy reaches up under the title's words, where a press could land on either.
+			expect(box?.top).toBeLessThan(words.bottom);
+			expect(box?.left).toBeLessThan(words.right);
+			expectPressesLandOn(
+				copy?.querySelector("svg")?.getBoundingClientRect() ?? new DOMRect(),
+				copy,
+				"Copy hash",
+			);
+		}
+		dispose?.();
+		document.body.replaceChildren();
+	}
+});
+
+// Kills a phone's facts that fit on one line drawn in the middle of the two
+// lines held for them, which leaves a gap above them under the commit row.
+test("on a phone the report's facts that fit on one line start at the top of their two", async () => {
+	await page.viewport(390, 844);
+	const { api } = fakeApi((url) =>
+		isReport(url) ? { data: alerting(0) } : { data: bootstrapOf() },
+	);
+	mount(api, impatient());
+	await expect.element(table()).toBeVisible();
+	const sub = document.querySelector(".rp-sub");
+	const tops = [...(sub?.children ?? [])].map(
+		(part) => part.getBoundingClientRect().top,
+	);
+	expect(new Set(tops).size).toBe(1);
+	expect(
+		Math.abs((tops[0] ?? 0) - (sub?.getBoundingClientRect().top ?? 0)),
+	).toBeLessThanOrEqual(0.5);
+});
+
 // Kills a report with no alerts that draws no alert pill, which leaves its
-// phone's pills line an empty band above the commit row.
+// phone's pills line an empty band above the commit row, a pills line
+// taller than its pill, and a pills line held apart from the title's by more
+// or less than 6 px.
 test("on a phone a report with no alerts fills its pills line with 0 alerts, no empty band above its commit row", async () => {
 	await page.viewport(390, 844);
 	const { api } = fakeApi((url) =>
@@ -1546,7 +1697,12 @@ test("on a phone a report with no alerts fills its pills line with 0 alerts, no 
 	expect(alertPill(titleRow())?.text).toBe("0 alerts");
 	const band = pillsBand(titleRow());
 	expect(band?.offCenter).toBeLessThanOrEqual(0.5);
-	expect(band?.height).toBeLessThanOrEqual(44);
+	expect(
+		Math.abs((band?.gap ?? Number.POSITIVE_INFINITY) - 6),
+	).toBeLessThanOrEqual(0.5);
+	expect(
+		Math.abs(band?.overPill ?? Number.POSITIVE_INFINITY),
+	).toBeLessThanOrEqual(0.5);
 	expect(Math.abs(band?.below ?? Number.POSITIVE_INFINITY)).toBeLessThanOrEqual(
 		0.5,
 	);

@@ -16,7 +16,7 @@
 .rp-head > .ph-sub {
 	grid-column: 1 / -1;
 }
-/* One line, where only the parts that reveal give way; a phone wraps the parts whole, in the two lines held for them. */
+/* One line, where only the parts that reveal give way; a phone wraps the parts whole, from the top of the two lines held for them. */
 .ph-sub.rp-sub {
 	display: grid;
 	justify-content: start;
@@ -657,6 +657,7 @@
 	}
 	.rp-titlerow {
 		flex-wrap: wrap;
+		row-gap: 6px;
 	}
 	.rp-titlemain,
 	.rp-titlepills {
@@ -666,12 +667,14 @@
 		gap: 10px;
 		min-width: 0;
 	}
+	/* As tall as a pill. */
 	.rp-titlepills {
-		min-height: 44px;
+		min-height: 24px;
 	}
 	.ph-sub.rp-sub {
 		display: flex;
 		flex-wrap: wrap;
+		align-content: flex-start;
 		column-gap: var(--spacing-2);
 		min-height: 2lh;
 	}
@@ -684,9 +687,11 @@
 		justify-content: flex-start;
 		margin-block: -14px;
 	}
-	/* A finger's line, as tall as its links. */
-	.rp-commit {
-		height: 44px;
+	/* A finger's target that reaches up over the gap and the pills' line, never down into the facts, its words on the logo's line, over the reach of a Copy in the facts. */
+	.rp-commit .lnk {
+		z-index: 1;
+		align-items: flex-end;
+		margin-top: calc(1lh - 44px);
 	}
 	.rp-actions {
 		order: 1;
