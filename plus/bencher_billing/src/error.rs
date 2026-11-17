@@ -51,6 +51,8 @@ pub enum BillingError {
     NoDefaultPaymentMethodInfo(PaymentMethodId),
     #[error("No unit amount for {0}")]
     NoUnitAmount(PriceId),
+    #[error("An Enterprise plan has no billing portal without an Enterprise portal configuration")]
+    NoEnterprisePortal,
 }
 
 /// Why a subscription was not attached to an organization.

@@ -12,12 +12,15 @@ import { CLASSIC_ORGANIZATION, forgetVersion } from "../memory";
 import { ORGANIZATIONS_PATH } from "../paths";
 import { consoleUserQuery } from "../queries";
 import { useQueryResult } from "../query";
+import { contractQuery } from "./contract";
 import { withOrganization } from "./data";
 import { failureOf, goneWith } from "./general";
 
 /**
  * Deleting cannot be undone, so it waits for the reader to type the slug,
- * exactly; then the reader lands on their organizations.
+ * exactly; then the reader lands on their organizations. A live Enterprise
+ * plan ends only with its contract, so it offers the Enterprise contact
+ * instead.
  */
 const DeleteOrganization = (props: {
 	organization: { uuid: string; slug: string };
@@ -29,6 +32,10 @@ const DeleteOrganization = (props: {
 	const client = useQueryClient();
 	const flush = useContext(FlushContext);
 	const user = useQueryResult(() => consoleUserQuery(api, reader().user.uuid));
+	// Until the plan answers, the delete stays, and the API's refusal says why.
+	const contract = useQueryResult(() =>
+		contractQuery(api, props.organization.uuid),
+	);
 	const projects = () =>
 		user().data?.projects.filter(
 			({ organization }) => organization === props.organization.uuid,
@@ -121,16 +128,29 @@ const DeleteOrganization = (props: {
 			</div>
 			<div class="ui-dialog-foot">
 				<Button onClick={props.onDismiss}>Cancel</Button>
-				<Button
-					variant="destructive"
-					disabled={
-						typed().trim().toLowerCase() !== props.organization.slug ||
-						deleting()
+				<Show
+					when={!contract().data}
+					fallback={
+						<a
+							class="ui-button"
+							data-variant="secondary"
+							href="mailto:enterprise@bencher.dev"
+						>
+							Contact us
+						</a>
 					}
-					onClick={remove}
 				>
-					Delete organization
-				</Button>
+					<Button
+						variant="destructive"
+						disabled={
+							typed().trim().toLowerCase() !== props.organization.slug ||
+							deleting()
+						}
+						onClick={remove}
+					>
+						Delete organization
+					</Button>
+				</Show>
 			</div>
 		</Dialog>
 	);

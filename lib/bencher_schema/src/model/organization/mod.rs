@@ -531,6 +531,33 @@ impl QueryOrganization {
         Ok(Priority::Free)
     }
 
+    /// Whether the organization is Enterprise. On Bencher Cloud, its plan is a live Enterprise
+    /// subscription, read from Stripe, and a Self-Hosted deal it buys never makes it Enterprise.
+    /// On Bencher Self-Hosted, it holds a valid license, its grace included.
+    #[cfg(feature = "plus")]
+    pub async fn is_enterprise(&self, context: &ApiContext) -> Result<bool, HttpError> {
+        if !context.is_bencher_cloud {
+            return Ok(license::OrganizationLicense::get_valid(
+                &context.licensor,
+                self,
+                context.clock.now(),
+            )
+            .is_some());
+        }
+        let biller = context.biller()?;
+        let Some(query_plan) = plan::QueryPlan::belonging_to(self)
+            .first::<plan::QueryPlan>(auth_conn!(context))
+            .optional()
+            .map_err(resource_not_found_err!(Plan, self))?
+        else {
+            return Ok(false);
+        };
+        Ok(query_plan
+            .to_metered_plan(biller)
+            .await?
+            .is_some_and(|json_plan| plan::is_enterprise_plan(json_plan.level, json_plan.status)))
+    }
+
     pub fn into_json_full(self, conn: &mut DbConnection) -> Result<JsonOrganization, HttpError> {
         #[cfg(feature = "plus")]
         let sso = self.sso(conn)?;

@@ -18,6 +18,12 @@ use thiserror as _;
 use tokio_rustls as _;
 // Needed for distroless builds
 use libsqlite3_sys as _;
+// Needed for the binary's SIGTERM to Litestream
+#[cfg(all(feature = "plus", unix))]
+use nix as _;
+// Needed for the binary's tests
+#[cfg(test)]
+use tempfile as _;
 
 use tokio::runtime::{Builder, Runtime};
 

@@ -3,7 +3,10 @@
 //!
 //! The stub holds Stripe objects fully expanded and answers a read with the fields the
 //! request did not expand collapsed to their ids, as Stripe does. It records every
-//! request, and a subscription update merges its `metadata` into the stored object.
+//! request, a subscription update merges its `metadata` and `cancel_at_period_end` into the
+//! stored object, a subscription cancel marks it canceled, and a meter event and a billing
+//! portal session are answered as Stripe makes them. A test can hold every answer back for a
+//! while, as a Stripe that stalls does.
 #![expect(
     clippy::indexing_slicing,
     clippy::unwrap_used,
@@ -13,6 +16,7 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use serde_json::{Value, json};
@@ -57,6 +61,8 @@ pub struct StubObjects {
 struct StubState {
     objects: StubObjects,
     requests: Vec<StubRequest>,
+    /// How long every answer waits before it is sent.
+    delay: Option<Duration>,
 }
 
 pub struct StripeStub {
@@ -72,6 +78,7 @@ impl StripeStub {
         let state = Arc::new(Mutex::new(StubState {
             objects,
             requests: Vec::new(),
+            delay: None,
         }));
         let mut server = JoinSet::new();
         let shared = Arc::clone(&state);
@@ -80,12 +87,15 @@ impl StripeStub {
                 let Some(request) = read_request(&mut stream).await else {
                     continue;
                 };
-                let (status, body) = {
+                let (status, body, delay) = {
                     let mut state = shared.lock().unwrap();
-                    let answer = answer(&mut state.objects, &request);
+                    let (status, body) = answer(&mut state.objects, &request);
                     state.requests.push(request);
-                    answer
+                    (status, body, state.delay)
                 };
+                if let Some(delay) = delay {
+                    tokio::time::sleep(delay).await;
+                }
                 let response = format!(
                     "HTTP/1.1 {status} {reason}\r\ncontent-type: application/json\r\ncontent-length: {length}\r\nconnection: close\r\n\r\n{body}",
                     reason = if status == 200 { "OK" } else { "Not Found" },
@@ -116,6 +126,11 @@ impl StripeStub {
     /// The subscription as the stub now holds it.
     pub fn subscription(&self, id: &str) -> Value {
         self.state.lock().unwrap().objects.subscriptions[id].clone()
+    }
+
+    /// Hold every answer back for `delay`, as a Stripe that stalls does.
+    pub fn delay(&self, delay: Duration) {
+        self.state.lock().unwrap().delay = Some(delay);
     }
 
     /// Hold `subscription` in place of the one with its id, as Stripe does after a renewal or
@@ -165,10 +180,21 @@ fn answer(objects: &mut StubObjects, request: &StubRequest) -> (u16, String) {
                     .and_then(|key| key.strip_suffix(']'))
                 {
                     subscription["metadata"][key] = json!(value);
+                } else if key == "cancel_at_period_end" {
+                    subscription["cancel_at_period_end"] = json!(value == "true");
                 }
             }
             found(&collapse_subscription(subscription.clone(), &expand, ""))
         },
+        ("DELETE", ["v1", "subscriptions", id]) => {
+            let Some(subscription) = objects.subscriptions.get_mut(*id) else {
+                return missing("subscription", id);
+            };
+            subscription["status"] = json!("canceled");
+            found(&collapse_subscription(subscription.clone(), &expand, ""))
+        },
+        ("POST", ["v1", "billing", "meter_events"]) => found(&meter_event(&request.form)),
+        ("POST", ["v1", "billing_portal", "sessions"]) => found(&portal_session(&request.form)),
         ("GET", ["v1", "checkout", "sessions", id]) => {
             let Some(session) = objects.sessions.get(*id) else {
                 return missing("checkout session", id);
@@ -210,6 +236,53 @@ fn collapse_subscription(mut subscription: Value, expand: &[String], prefix: &st
         }
     }
     subscription
+}
+
+/// The billing portal session that `form` creates, as Stripe answers it: with the configuration
+/// it names, or the account's default.
+fn portal_session(form: &[(String, String)]) -> Value {
+    let field = |name: &str| {
+        form.iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| value.clone())
+    };
+    json!({
+        "id": "bps_stub",
+        "object": "billing_portal.session",
+        "configuration": field("configuration").unwrap_or_else(|| DEFAULT_PORTAL.to_owned()),
+        "created": NOW,
+        "customer": field("customer"),
+        "livemode": false,
+        "return_url": field("return_url"),
+        "url": PORTAL_URL,
+    })
+}
+
+/// The meter event that `form` creates, as Stripe answers it.
+fn meter_event(form: &[(String, String)]) -> Value {
+    let field = |name: &str| {
+        form.iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| value.clone())
+    };
+    let payload: serde_json::Map<String, Value> = form
+        .iter()
+        .filter_map(|(key, value)| {
+            let key = key.strip_prefix("payload[")?.strip_suffix(']')?;
+            Some((key.to_owned(), json!(value)))
+        })
+        .collect();
+    json!({
+        "object": "billing.meter_event",
+        "created": NOW,
+        "event_name": field("event_name"),
+        "identifier": "mev_stub",
+        "livemode": false,
+        "payload": payload,
+        "timestamp": field("timestamp")
+            .and_then(|timestamp| timestamp.parse::<i64>().ok())
+            .unwrap_or(NOW),
+    })
 }
 
 fn collapse(field: &mut Value) {
@@ -316,6 +389,13 @@ fn decode(encoded: &str) -> String {
     String::from_utf8_lossy(&decoded).into_owned()
 }
 
+/// The account's default billing portal configuration, which a session that names none uses.
+pub const DEFAULT_PORTAL: &str = "bpc_default";
+/// The billing portal configuration for an Enterprise plan.
+pub const ENTERPRISE_PORTAL: &str = "bpc_enterprise";
+/// Where every billing portal session the stub makes leads.
+pub const PORTAL_URL: &str = "https://billing.stripe.com/p/session/stub";
+
 pub const PRO_PRODUCT: &str = "prod_pro";
 pub const ENTERPRISE_PRODUCT: &str = "prod_enterprise";
 pub const BARE_METAL_PRODUCT: &str = "prod_bare_metal";
@@ -359,6 +439,75 @@ pub fn tiered_price(id: &str, product: &str, tiers_mode: &str, tiers: &Value) ->
         "tiers_mode": tiers_mode,
         "tiers": tiers,
     })
+}
+
+/// The bare metal item at two dollars an hour, in cents per minute.
+pub fn bare_metal_item() -> Value {
+    item(&price(
+        "price_bare_metal",
+        BARE_METAL_PRODUCT,
+        "3.3333333333",
+    ))
+}
+
+/// A deal of 1,000 series for $2,500 a month, then $0.40 a series.
+pub fn deal_item() -> Value {
+    item(&tiered_price(
+        "price_deal",
+        ENTERPRISE_PRODUCT,
+        "graduated",
+        &json!([
+            { "up_to": 1_000, "flat_amount": 250_000 },
+            { "up_to": null, "unit_amount": 40 },
+        ]),
+    ))
+}
+
+pub fn pro_item() -> Value {
+    item(&tiered_price(
+        "price_pro",
+        PRO_PRODUCT,
+        "volume",
+        &json!([
+            { "up_to": 250, "flat_amount": 10_000 },
+            { "up_to": null, "flat_amount": 0 },
+        ]),
+    ))
+}
+
+/// A Bencher Cloud plan as an attach leaves it: `plan_item` and the bare metal item, charged
+/// to a card, for the organization `organization` names.
+pub fn cloud_plan(id: &str, status: &str, plan_item: Value, organization: &str) -> Value {
+    subscription(
+        id,
+        status,
+        "charge_automatically",
+        vec![plan_item, bare_metal_item()],
+        json!({ "organization": organization }),
+        customer(
+            &json!({ "uuid": "00000000-0000-4000-8000-000000000001" }),
+            Some(&card("pm_card")),
+        ),
+        Some(card("pm_card")),
+    )
+}
+
+/// A Self-Hosted deal for 500 Benchmark Series, a flat fee a year on the Enterprise product, billed
+/// by invoice to a customer that staff made in Stripe, for the organization `organization` names.
+pub fn self_hosted_deal(id: &str, status: &str, organization: &str) -> Value {
+    subscription(
+        id,
+        status,
+        "send_invoice",
+        vec![item(&price(
+            "price_self_hosted",
+            ENTERPRISE_PRODUCT,
+            "1200000",
+        ))],
+        json!({ "organization": organization, "series": "500" }),
+        customer(&json!({}), None),
+        None,
+    )
 }
 
 /// An item for `price`, in a current period from a day before [`NOW`] to a day after it.

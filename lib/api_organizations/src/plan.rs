@@ -1,11 +1,14 @@
 #![cfg(feature = "plus")]
 
-use bencher_billing::{AttachError, Attachment, Biller, PlanId as SubscriptionPlanId};
+use bencher_billing::{
+    AttachError, Attachment, Biller, BillingError, PlanId as SubscriptionPlanId,
+};
 use bencher_endpoint::{
     CorsResponse, Delete, Endpoint, Get, Patch, Post, ResponseCreated, ResponseDeleted, ResponseOk,
 };
 use bencher_json::{
-    LicensedPlanId, MeteredPlanId, NonEmpty, OrganizationResourceId, OrganizationUuid, PlanStatus,
+    LicensedPlanId, MeteredPlanId, NonEmpty, OrganizationResourceId, OrganizationUuid, PlanLevel,
+    PlanStatus,
     organization::plan::{
         JsonNewPlan, JsonPlan, JsonPlanPortal, JsonPlanSubscription, JsonUpdatePlan,
     },
@@ -158,6 +161,7 @@ pub async fn org_plan_post(
 /// Schedules or clears a cancel-at-period-end for the organization's metered
 /// subscription. Available to organization managers and requires a user session:
 /// a user API key or a deprecated user API token is refused.
+/// An Enterprise plan ends with its contract, so its cancel and resume are refused.
 #[endpoint {
     method = PATCH,
     path =  "/v0/organizations/{organization}/plan",
@@ -218,6 +222,21 @@ async fn patch_inner(
             "Only a metered plan's cancellation can be updated; this organization has no metered subscription",
         ));
     };
+    // Read before the write, so an Enterprise plan is refused before anything changes in Stripe.
+    let level = query_plan
+        .to_metered_plan(biller)
+        .await?
+        .map(|json_plan| json_plan.level)
+        .ok_or_else(|| {
+            issue_error(
+                "Failed to find subscription for plan update",
+                &format!(
+                    "Failed to find metered plan for organization ({query_organization:?}) even though plan exists ({query_plan:?})."
+                ),
+                "Failed to find subscription for plan update",
+            )
+        })?;
+    refuse_self_serve_cancel(level)?;
     biller
         .set_metered_cancel_at_period_end(metered_plan_id, json_plan.cancel_at_period_end)
         .await
@@ -425,13 +444,74 @@ async fn portal_inner(
         .new_portal_session(plan_id, return_url.as_ref())
         .await
         .map_err(|e| {
-            issue_error(
-                "Failed to create billing portal session",
-                &format!("Failed to create billing portal session for plan ({query_plan:?})."),
-                e,
-            )
+            if let BillingError::NoEnterprisePortal = e {
+                forbidden_error(
+                    "An Enterprise plan has no billing portal here. To change its billing, contact enterprise@bencher.dev",
+                )
+            } else {
+                issue_error(
+                    "Failed to create billing portal session",
+                    &format!(
+                        "Failed to create billing portal session for plan ({query_plan:?})."
+                    ),
+                    e,
+                )
+            }
         })?;
     Ok(JsonPlanPortal { url })
+}
+
+/// Refuse to delete an organization while it holds a live Enterprise plan, since the delete would
+/// cancel its subscription and so end the contract at once. A server admin ends a plan with the
+/// plan DELETE.
+pub(crate) async fn refuse_enterprise_delete(
+    context: &ApiContext,
+    query_organization: &QueryOrganization,
+) -> Result<(), HttpError> {
+    // Only Bencher Cloud has a biller and plan rows.
+    let Ok(biller) = context.biller() else {
+        return Ok(());
+    };
+    let Some(query_plan) = QueryPlan::belonging_to(query_organization)
+        .first::<QueryPlan>(auth_conn!(context))
+        .optional()
+        .map_err(resource_conflict_err!(Plan, query_organization))?
+    else {
+        return Ok(());
+    };
+    let Some(plan_id) = query_plan
+        .metered_plan
+        .clone()
+        .map(SubscriptionPlanId::from)
+        .or_else(|| {
+            query_plan
+                .licensed_plan
+                .clone()
+                .map(SubscriptionPlanId::from)
+        })
+    else {
+        return Ok(());
+    };
+    // A transient Stripe error surfaces as 503, so it never lets a contract end.
+    let plan = biller
+        .plan_level_status(plan_id)
+        .await
+        .map_err(service_unavailable_error)?;
+    if delete_ends_a_contract(plan) {
+        Err(forbidden_error(
+            "An organization with an Enterprise plan cannot be deleted while its contract runs. To end it, contact enterprise@bencher.dev",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+/// Whether deleting an organization ends a contract: its plan, by the level and status Stripe
+/// has for it (`None` when Stripe has it no longer), is Enterprise and still live.
+fn delete_ends_a_contract(plan: Option<(PlanLevel, PlanStatus)>) -> bool {
+    plan.is_some_and(|(level, status)| {
+        level == PlanLevel::Enterprise && subscription_is_live(Some(status))
+    })
 }
 
 /// Block plan creation when the organization still has a plan that is active, trialing,
@@ -674,12 +754,68 @@ async fn delete_plan(
     Ok(())
 }
 
+/// Refuse the organization's own cancel or resume of an Enterprise plan, which ends with its
+/// contract.
+fn refuse_self_serve_cancel(level: PlanLevel) -> Result<(), HttpError> {
+    if level == PlanLevel::Enterprise {
+        Err(forbidden_error(
+            "An Enterprise plan cannot be canceled or resumed here. To change it, contact enterprise@bencher.dev",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use bencher_billing::{AttachError, AttachRefusal, BillingError};
-    use bencher_json::{OrganizationUuid, PlanStatus};
+    use bencher_json::{OrganizationUuid, PlanLevel, PlanStatus};
 
-    use super::{attach_http_error, subscription_is_live};
+    use super::{
+        attach_http_error, delete_ends_a_contract, refuse_self_serve_cancel, subscription_is_live,
+    };
+
+    // Fails if deleting an organization goes ahead while its Enterprise plan is live in any status,
+    // or is refused for a Pro plan, or for an Enterprise plan that has ended or that Stripe no
+    // longer has.
+    #[test]
+    fn only_a_live_enterprise_plan_refuses_a_delete() {
+        for status in [
+            PlanStatus::Active,
+            PlanStatus::Trialing,
+            PlanStatus::PastDue,
+            PlanStatus::Unpaid,
+            PlanStatus::Incomplete,
+            PlanStatus::Paused,
+        ] {
+            assert!(delete_ends_a_contract(Some((
+                PlanLevel::Enterprise,
+                status
+            ))));
+            assert!(!delete_ends_a_contract(Some((PlanLevel::Pro, status))));
+        }
+        for status in [PlanStatus::Canceled, PlanStatus::IncompleteExpired] {
+            assert!(!delete_ends_a_contract(Some((
+                PlanLevel::Enterprise,
+                status
+            ))));
+        }
+        assert!(!delete_ends_a_contract(None));
+    }
+
+    // Fails if a cancel or resume of an Enterprise plan is not refused with 403 and the Enterprise
+    // contact address, or one of a Pro plan is.
+    #[test]
+    fn only_an_enterprise_plan_refuses_self_serve_cancel() {
+        let refusal = refuse_self_serve_cancel(PlanLevel::Enterprise).unwrap_err();
+        assert_eq!(refusal.status_code.as_u16(), 403);
+        assert!(
+            refusal.external_message.contains("enterprise@bencher.dev"),
+            "{}",
+            refusal.external_message
+        );
+        refuse_self_serve_cancel(PlanLevel::Pro).unwrap();
+    }
 
     // Fails if an attach that Bencher refuses is not a 400, a subscription or checkout
     // session that Stripe does not have is not a 404, or a failed Stripe call is not a 500.

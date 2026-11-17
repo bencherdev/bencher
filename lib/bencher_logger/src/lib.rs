@@ -1,10 +1,10 @@
 use std::{
     fmt::Display,
-    io::{self, BufWriter, Stderr, Write},
+    io::{self, BufWriter, Write},
     sync::Mutex,
 };
 
-use slog::{Drain as _, Level, LevelFilter, Logger};
+use slog::{Drain, Level, LevelFilter, Logger};
 use slog_json::Json;
 
 /// journald's default `LineMax`, newline included: a longer line splits into
@@ -16,14 +16,25 @@ const LINE_MAX: usize = 48 * 1024;
 pub const FIELD_CAP: usize = 7 * 1024;
 
 pub fn bootstrap_logger() -> Logger {
-    let drain = Mutex::new(json()).fuse();
+    let drain = Mutex::new(json(io::stderr())).fuse();
     Logger::root(drain, slog::o!())
 }
 
 pub fn server_logger(level: Level) -> Logger {
-    let drain = LevelFilter(json(), level).fuse();
-    let drain = slog_async::Async::new(drain).chan_size(1024).build().fuse();
+    let drain = slog_async::Async::new(server_drain(io::stderr(), level))
+        .chan_size(1024)
+        .build()
+        .fuse();
     Logger::root(drain, slog::o!())
+}
+
+/// The server logger's records at `level` and above, written to `io`. A record whose write fails,
+/// as one to a terminal that has hung up does, is dropped, so the server still shuts down.
+fn server_drain<W: Write + Send + 'static>(
+    io: W,
+    level: Level,
+) -> impl Drain<Ok = (), Err = slog::Never> + Send + 'static {
+    LevelFilter(json(io), level).ignore_res()
 }
 
 /// Synchronous, so no record is lost at an exit or an `exec`, and each record
@@ -46,8 +57,8 @@ pub fn capped<T: Display>(value: T) -> String {
 }
 
 /// Writes each record as one flushed JSON line; `serde_json` escapes C0 control characters, so a logged value cannot split it.
-fn json() -> Json<BufWriter<Stderr>> {
-    Json::new(BufWriter::new(io::stderr()))
+fn json<W: Write>(io: W) -> Json<BufWriter<W>> {
+    Json::new(BufWriter::new(io))
         .set_flush(true)
         .add_default_keys()
         .build()
@@ -139,6 +150,31 @@ mod tests {
         fn flush(&mut self) -> io::Result<()> {
             Ok(())
         }
+    }
+
+    /// Fails every write, as a terminal that has hung up does.
+    struct HungUp;
+
+    impl Write for HungUp {
+        fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
+            Err(io::Error::other("the terminal hung up"))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Err(io::Error::other("the terminal hung up"))
+        }
+    }
+
+    #[test]
+    fn a_failed_write_never_panics_the_server() {
+        // Fails if a log write that fails, as one to a terminal that has hung up does, panics
+        // the server, which then cannot finish the shutdown that the hangup starts.
+        // The mutex, which the logger needs to share the drain, fails only on poison.
+        let drain = Mutex::new(server_drain(HungUp, Level::Info)).fuse();
+        let log = Logger::root(drain, slog::o!());
+
+        info!(log, "After the hangup");
+        info!(log, "Still shutting down");
     }
 
     #[test]

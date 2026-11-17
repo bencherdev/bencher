@@ -1264,7 +1264,7 @@
           "organizations"
         ],
         "summary": "Delete an organization",
-        "description": "Delete an organization where the user is a member. The user must have `delete` permissions for the organization. By default, organizations are soft-deleted (along with their child projects). Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin). On Bencher Cloud, deleting an organization also immediately cancels any active subscription.",
+        "description": "Delete an organization where the user is a member. The user must have `delete` permissions for the organization. By default, organizations are soft-deleted (along with their child projects). Set the `hard` query parameter to `true` to permanently delete the organization (requires server admin). On Bencher Cloud, deleting an organization also immediately cancels any active subscription, and an organization with a live Enterprise plan cannot be deleted: the plan ends with its contract.",
         "operationId": "organization_delete",
         "parameters": [
           {
@@ -2304,7 +2304,7 @@
           "plan"
         ],
         "summary": "Update an organization's metered subscription plan.",
-        "description": "Schedules or clears a cancel-at-period-end for the organization's metered subscription. Available to organization managers and requires a user session: a user API key or a deprecated user API token is refused.",
+        "description": "Schedules or clears a cancel-at-period-end for the organization's metered subscription. Available to organization managers and requires a user session: a user API key or a deprecated user API token is refused. An Enterprise plan ends with its contract, so its cancel and resume are refused.",
         "operationId": "org_plan_patch",
         "parameters": [
           {
@@ -2797,7 +2797,7 @@
           "sso"
         ],
         "summary": "Add an SSO domain to an organization",
-        "description": "➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization. The user must be an admin on the server to use this route. When a user authenticates with the server, the domain portion of their email will be compared against all SSO domains. If an SSO domain matches, they will be added as a Member to that Organization. SSO domains must be globally unique on the server. That is, two Organizations cannot have the same SSO domain.",
+        "description": "➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization. The user must be an admin on the server to use this route. SSO is Enterprise: on Bencher Cloud, the organization must have an active Enterprise plan, and on Bencher Self-Hosted, a valid Bencher Plus Enterprise license. When a user authenticates with the server, the domain portion of their email will be compared against all SSO domains. If an SSO domain matches and its Organization is still Enterprise, they will be added as a Member to that Organization. SSO domains must be globally unique on the server. That is, two Organizations cannot have the same SSO domain.",
         "operationId": "org_sso_post",
         "parameters": [
           {
@@ -13558,6 +13558,11 @@
       "JsonBilling": {
         "type": "object",
         "properties": {
+          "enterprise_portal": {
+            "nullable": true,
+            "description": "The Stripe billing portal configuration (`bpc_...`) that an Enterprise plan opens its billing portal with, one with subscription cancel and plan changes turned off. Without it, an Enterprise plan has no billing portal.",
+            "type": "string"
+          },
           "products": {
             "$ref": "#/components/schemas/JsonProducts"
           },
@@ -17192,6 +17197,11 @@
           "organization": {
             "$ref": "#/components/schemas/OrganizationUuid"
           },
+          "portal": {
+            "description": "Whether the plan opens a billing portal: always for Pro, and for Enterprise only with the server's Enterprise portal configuration, which has no cancel and no plan changes.",
+            "default": false,
+            "type": "boolean"
+          },
           "runner_minute": {
             "nullable": true,
             "description": "The bare metal price per runner minute, in cents, from the subscription's own bare metal item. `None` when the subscription has no bare metal item, or its price has no per minute amount.",
@@ -20638,7 +20648,7 @@
         "type": "object",
         "properties": {
           "cancel_at_period_end": {
-            "description": "Update the subscription's scheduled cancellation. Set to `false` to resume a plan scheduled to cancel at period end, or `true` to schedule it to cancel at the end of the current period. Only applies to metered subscriptions, not licensed (Self-Hosted) plans.",
+            "description": "Update the subscription's scheduled cancellation. Set to `false` to resume a plan scheduled to cancel at period end, or `true` to schedule it to cancel at the end of the current period. Only applies to metered subscriptions, not licensed (Self-Hosted) plans, and not to an Enterprise plan, which ends with its contract.",
             "type": "boolean"
           }
         },

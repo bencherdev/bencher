@@ -9,6 +9,8 @@ use bencher_schema::{
     model::user::QueryUser,
 };
 use dropshot::{HttpError, RequestContext, TypedBody, endpoint};
+#[cfg(feature = "plus")]
+use slog::Logger;
 
 use super::{CLIENT_TOKEN_TTL, verify_email};
 
@@ -32,11 +34,18 @@ pub async fn auth_confirm_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonConfirm>,
 ) -> Result<ResponseOk<JsonAuthUser>, HttpError> {
-    let json = post_inner(rqctx.context(), body.into_inner()).await?;
+    let json = post_inner(
+        #[cfg(feature = "plus")]
+        &rqctx.log,
+        rqctx.context(),
+        body.into_inner(),
+    )
+    .await?;
     Ok(Post::pub_response_ok(json))
 }
 
 async fn post_inner(
+    #[cfg(feature = "plus")] log: &Logger,
     context: &ApiContext,
     json_confirm: JsonConfirm,
 ) -> Result<JsonAuthUser, HttpError> {
@@ -49,6 +58,7 @@ async fn post_inner(
 
     #[cfg(feature = "plus")]
     QuerySso::join_all(
+        log,
         context,
         &query_user,
         #[cfg(feature = "otel")]

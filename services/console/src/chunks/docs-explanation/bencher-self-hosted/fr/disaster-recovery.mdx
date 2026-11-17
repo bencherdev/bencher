@@ -1,6 +1,6 @@
 ## Récupération après sinistre
 
-Afin de prévenir la perte de données, Bencher propose une solution intégrée de récupération après sinistre. Cette fonctionnalité nécessite une licence [Bencher Plus][pricing] active.
+Afin de prévenir la perte de données, Bencher propose une solution intégrée de récupération après sinistre. La récupération après sinistre nécessite une licence [Bencher Plus _Enterprise_][pricing] valide pour au moins une organisation sur le serveur, et un serveur dont la récupération après sinistre est configurée refuse de démarrer sans elle. Un serveur en cours d'exécution continue de répliquer jusqu'à son redémarrage, même après l'expiration de sa dernière licence, et dès le premier jour de la période de grâce de cette licence, le serveur journalise chaque jour une erreur qui indique quand il refusera de démarrer.
 
 Schémas de réplication pris en charge :
 
@@ -8,6 +8,8 @@ Schémas de réplication pris en charge :
 - `s3`: Répliquer vers tout stockage d'objets compatible S3
 
 Utilisez la section [`plus.disaster_recovery`][plus disaster recovery] de la configuration du serveur API pour configurer la récupération après sinistre de votre serveur API Bencher Self-Hosted.
+
+Pour arrêter un serveur dont la récupération après sinistre est configurée, envoyez le signal d'arrêt (`SIGTERM` ou `SIGINT`) au seul processus du serveur API. Le serveur API termine alors ses requêtes en cours et arrête la réplication, qui réplique les dernières modifications avant de se terminer. Un second signal d'arrêt envoyé directement au processus de réplication (`litestream`) annule cette dernière réplication, et les dernières modifications peuvent être perdues. `docker stop` envoie le signal d'arrêt au seul processus du serveur API. Avec systemd, définissez `KillMode=mixed` dans l'unité, afin que le signal d'arrêt n'atteigne que le processus du serveur API.
 
 [pricing]: /pricing/
 [plus disaster recovery]: /fr/docs/reference/server-config/#plusdisaster_recovery

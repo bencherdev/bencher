@@ -14,6 +14,8 @@ use bencher_schema::{
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::{HttpError, Path, RequestContext, TypedBody, endpoint};
+#[cfg(feature = "plus")]
+use slog::Logger;
 
 use crate::users::UserParams;
 
@@ -54,11 +56,19 @@ pub async fn user_email_put(
     path_params: Path<UserParams>,
     body: TypedBody<JsonConfirm>,
 ) -> Result<ResponseOk<JsonAuthUser>, HttpError> {
-    let json = put_inner(rqctx.context(), path_params.into_inner(), body.into_inner()).await?;
+    let json = put_inner(
+        #[cfg(feature = "plus")]
+        &rqctx.log,
+        rqctx.context(),
+        path_params.into_inner(),
+        body.into_inner(),
+    )
+    .await?;
     Ok(Put::pub_response_ok(json))
 }
 
 async fn put_inner(
+    #[cfg(feature = "plus")] log: &Logger,
     context: &ApiContext,
     path_params: UserParams,
     json_confirm: JsonConfirm,
@@ -106,6 +116,7 @@ async fn put_inner(
 
     #[cfg(feature = "plus")]
     QuerySso::join_all(
+        log,
         context,
         &query_user,
         #[cfg(feature = "otel")]

@@ -9,7 +9,9 @@ import {
 	estimate,
 	expired,
 	inGrace,
+	type Plan,
 	period,
+	portalOpens,
 	usageQuery,
 	usd,
 } from "./billing";
@@ -236,4 +238,20 @@ test("usage keeps the plan without its payer", async () => {
 		signal: new AbortController().signal,
 	});
 	expect(usage.plan).toEqual({ level: "pro" });
+});
+
+describe("portalOpens", () => {
+	const plan = (level: string, portal?: boolean) =>
+		({ level, portal }) as unknown as Plan;
+
+	// Kills a billing portal offered for a plan the API says opens none, hidden for
+	// one it says opens, or, from an API that does not say, offered for anything
+	// but Pro.
+	test("the portal follows the API, and Pro's when it does not say", () => {
+		expect(portalOpens(plan("enterprise", true))).toBe(true);
+		expect(portalOpens(plan("enterprise", false))).toBe(false);
+		expect(portalOpens(plan("pro", false))).toBe(false);
+		expect(portalOpens(plan("pro"))).toBe(true);
+		expect(portalOpens(plan("enterprise"))).toBe(false);
+	});
 });

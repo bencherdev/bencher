@@ -2986,6 +2986,7 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.0.len(), 0);
 
+        // This should error for the Bencher Cloud admin, since the organization doesn't have an active Enterprise plan
         // cargo run -- sso create --host http://localhost:6610 --token $ADMIN_BENCHER_API_TOKEN --domain nowhere.com muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
         cmd.args([
@@ -3000,10 +3001,12 @@ impl SeedTest {
             ORG_SLUG,
         ])
         .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let json: bencher_json::JsonSso =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        let sso_uuid = json.uuid;
+        let assert = cmd.assert().failure();
+        let output = assert.get_output();
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("Status: 402 Payment Required"),
+            "{output:?}"
+        );
 
         // cargo run -- sso list --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge
         let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
@@ -3012,25 +3015,7 @@ impl SeedTest {
         let assert = cmd.assert().success();
         let json: bencher_json::JsonSsos =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(json.0.len(), 1);
-
-        // cargo run -- sso view --host http://localhost:6610 --token $BENCHER_API_TOKEN muriel-bagge [sso_uuid]
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "sso",
-            "view",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            ORG_SLUG,
-            &sso_uuid.to_string(),
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let json: bencher_json::JsonSso =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert_eq!(json.uuid, sso_uuid);
+        assert_eq!(json.0.len(), 0);
 
         Ok(())
     }

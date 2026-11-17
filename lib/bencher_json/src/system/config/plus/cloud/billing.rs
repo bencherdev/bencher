@@ -10,6 +10,11 @@ use serde::{Deserialize, Serialize};
 pub struct JsonBilling {
     pub secret_key: Secret,
     pub products: JsonProducts,
+    /// The Stripe billing portal configuration (`bpc_...`) that an Enterprise plan opens its
+    /// billing portal with, one with subscription cancel and plan changes turned off. Without it,
+    /// an Enterprise plan has no billing portal.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enterprise_portal: Option<String>,
 }
 
 impl Sanitize for JsonBilling {
@@ -93,6 +98,7 @@ mod tests {
         }"#;
         let billing: JsonBilling = serde_json::from_str(json).unwrap();
 
+        assert_eq!(billing.enterprise_portal, None);
         assert_eq!(
             serde_json::to_value(&billing.products).unwrap(),
             serde_json::json!({
@@ -101,5 +107,18 @@ mod tests {
                 "bare_metal": {"id":"bm","metered":{"default":"price_bm"}}
             })
         );
+    }
+
+    // Fails if the Enterprise billing portal configuration does not load from its key.
+    #[test]
+    fn billing_reads_the_enterprise_portal() {
+        let json = r#"{
+            "secret_key": "sk_test_key",
+            "products": {"pro": {"id":"p"}, "enterprise": {"id":"e"}, "bare_metal": {"id":"bm"}},
+            "enterprise_portal": "bpc_enterprise"
+        }"#;
+        let billing: JsonBilling = serde_json::from_str(json).unwrap();
+
+        assert_eq!(billing.enterprise_portal.as_deref(), Some("bpc_enterprise"));
     }
 }
