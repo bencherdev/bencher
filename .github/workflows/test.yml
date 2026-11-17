@@ -168,10 +168,10 @@ jobs:
           mold-version: ${{ inputs.mold-version }}
       - name: Run bencher noise (Unix)
         if: matrix.os != 'windows-2022'
-        run: cargo run -p bencher_cli -- noise --format json --quiet > noise_results_${{ matrix.os }}.json
+        run: cargo run -p bencher_cli -- noise --format json --bmf-version 0 --quiet > noise_results_${{ matrix.os }}.json
       - name: Run bencher noise (Windows)
         if: matrix.os == 'windows-2022'
-        run: cargo run -p bencher_cli -- noise --format json --quiet | Out-File -FilePath noise_results_${{ matrix.os }}.json -Encoding utf8
+        run: cargo run -p bencher_cli -- noise --format json --bmf-version 0 --quiet | Out-File -FilePath noise_results_${{ matrix.os }}.json -Encoding utf8
       - name: Upload Noise Results
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

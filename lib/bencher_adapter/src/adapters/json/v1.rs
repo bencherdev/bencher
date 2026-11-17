@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bencher_json::{
     BenchmarkNameId, BmfVersion, MeasureNameId, ParameterSet, project::report::Adapter,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::Lenient;
 use crate::{
@@ -18,7 +18,7 @@ use crate::{
 /// each carrying its parameters and its measures.
 ///
 /// A name that fails validation is skipped and counted.
-type JsonV1Results = Lenient<HashMap<BenchmarkNameId, Vec<JsonV1Entry>>>;
+type JsonV1Payload = Lenient<HashMap<BenchmarkNameId, Vec<JsonV1Entry>>>;
 
 /// One variant: what the benchmark ran with, and what it measured.
 #[derive(Debug, Deserialize)]
@@ -47,12 +47,12 @@ pub struct AdapterJsonV1;
 
 impl Adaptable for AdapterJsonV1 {
     fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
-        let results: JsonV1Results = serde_json::from_str(input).ok()?;
+        let results: JsonV1Payload = serde_json::from_str(input).ok()?;
         Some(from_wire(results))
     }
 }
 
-fn from_wire(results: JsonV1Results) -> AdapterResults {
+fn from_wire(results: JsonV1Payload) -> AdapterResults {
     let mut skipped = Skipped {
         benchmarks: results.skipped,
         ..Skipped::default()
@@ -98,6 +98,19 @@ fn from_wire(results: JsonV1Results) -> AdapterResults {
         units: MeasureUnits::new(),
     }
 }
+
+/// The BMF v1 wire shape as a producer writes it.
+pub type JsonV1Results = HashMap<BenchmarkNameId, Vec<JsonV1Variant>>;
+
+/// One variant of a benchmark as a producer writes it.
+#[derive(Debug, Clone, Serialize)]
+pub struct JsonV1Variant {
+    #[serde(skip_serializing_if = "ParameterSet::is_empty")]
+    pub parameters: ParameterSet,
+    pub measures: JsonV1Measures,
+}
+
+pub type JsonV1Measures = HashMap<MeasureNameId, NamedMap>;
 
 #[cfg(test)]
 pub(crate) mod test_json_v1 {

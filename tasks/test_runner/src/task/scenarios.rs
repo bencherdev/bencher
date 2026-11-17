@@ -1367,8 +1367,8 @@ CMD ["mock"]"#,
                         output.stderr
                     )
                 }
-                // A line of the benchmark JSON `bencher mock` prints.
-                assert_job_succeeded(output, r#""bencher::mock_0": {"#)
+                // A line of the benchmark JSON `bencher mock` prints at every BMF version.
+                assert_job_succeeded(output, r#""latency": {"#)
             },
             ..Scenario::default()
         },

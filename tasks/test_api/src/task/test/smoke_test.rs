@@ -262,7 +262,8 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
             }
 
             move_project_to_bmf_v1(&seed_test)?;
-            send_bmf_v1_report(&seed_test)
+            send_bmf_v1_report(&seed_test)?;
+            send_mock_v1_report(&seed_test)
         },
         MockSetup::SelfHosted { examples, runner } => {
             let task = TaskSeedTest {
@@ -303,7 +304,8 @@ fn test(api_url: &Url, registry_url: &Url, mock_setup: MockSetup) -> anyhow::Res
             }
 
             move_project_to_bmf_v1(&seed_test)?;
-            send_bmf_v1_report(&seed_test)
+            send_bmf_v1_report(&seed_test)?;
+            send_mock_v1_report(&seed_test)
         },
     }
 }
@@ -406,6 +408,72 @@ fn send_bmf_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
         report.counts.results == payload_counts,
         "Report on {PROJECT_SLUG} counts {:?}, not the payload's {payload_counts:?}",
         report.counts.results
+    );
+    Ok(())
+}
+
+// `bencher mock` writes BMF version 1 by default: one `value` for each benchmark's `latency`.
+fn send_mock_v1_report(seed_test: &SeedTest) -> anyhow::Result<()> {
+    let bencher_cmd = assert_cmd::Command::cargo_bin(BENCHER_CMD)?
+        .get_program()
+        .to_string_lossy()
+        .to_string();
+    let mut cmd = assert_cmd::Command::cargo_bin(BENCHER_CMD)?;
+    cmd.args([
+        "run",
+        HOST_ARG,
+        seed_test.url.as_ref(),
+        TOKEN_ARG,
+        seed_test.token.as_ref(),
+        PROJECT_ARG,
+        PROJECT_SLUG,
+        BRANCH_ARG,
+        BRANCH_SLUG,
+        TESTBED_ARG,
+        TESTBED_SLUG,
+        "--format",
+        "json",
+        "--quiet",
+        &bencher_cmd,
+        "mock",
+    ])
+    .current_dir(CLI_DIR);
+    let assert = cmd.assert().success();
+    let report: JsonReport = serde_json::from_slice(&assert.get_output().stdout)?;
+    anyhow::ensure!(
+        report.bmf_version == Some(BmfVersion::V1)
+            && report.parse_outcome == Some(ParseOutcome::Parsed)
+            && report.warnings.is_none(),
+        "Mock report on {PROJECT_SLUG} was read at BMF version {:?} with parse outcome {:?} and warnings {:?}",
+        report.bmf_version,
+        report.parse_outcome,
+        report.warnings
+    );
+    let metrics = report
+        .results
+        .iter()
+        .flatten()
+        .flatten()
+        .flat_map(|result| {
+            result.measures.iter().flat_map(move |measure| {
+                measure.metrics.iter().map(move |metric| {
+                    format!(
+                        "{} {} {} {}",
+                        result.benchmark.name,
+                        result.variant.parameters,
+                        measure.measure.slug,
+                        metric.name
+                    )
+                })
+            })
+        })
+        .collect::<BTreeSet<_>>();
+    let mock_metrics = (0..5)
+        .map(|c| format!("bencher::mock_{c} {{}} latency value"))
+        .collect::<BTreeSet<_>>();
+    anyhow::ensure!(
+        metrics == mock_metrics,
+        "Mock report on {PROJECT_SLUG} holds {metrics:#?}, not {mock_metrics:#?}"
     );
     Ok(())
 }

@@ -5,7 +5,10 @@ pub mod results;
 #[cfg(test)]
 use criterion as _;
 
-pub use adapters::json::v0::{JsonV0Measures, JsonV0Results};
+pub use adapters::json::{
+    v0::{JsonV0Measures, JsonV0Results},
+    v1::{JsonV1Measures, JsonV1Results, JsonV1Variant},
+};
 use adapters::{
     c_sharp::{AdapterCSharp, dot_net::AdapterCSharpDotNet},
     cpp::{AdapterCpp, catch2::AdapterCppCatch2, google::AdapterCppGoogle},
