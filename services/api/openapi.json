@@ -18694,7 +18694,7 @@
         ]
       },
       "JsonReportThresholdModels": {
-        "description": "The thresholds a report declares, in the shape its BMF version spells them.\n\nThe report's BMF version says which shape is expected, and the other shape is a bad request.",
+        "description": "The thresholds a report declares, in the shape its BMF version spells them.\n\nAt BMF version 0, a list is a bad request. At BMF version 1, a map names no metric, so each of its entries is skipped with a `threshold` `skip` report warning.",
         "oneOf": [
           {
             "title": "Map",
@@ -21647,7 +21647,8 @@
           "metric",
           "threshold",
           "adapter",
-          "average"
+          "average",
+          "fold"
         ]
       },
       "ResourceId": {

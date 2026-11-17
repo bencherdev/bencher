@@ -79,7 +79,8 @@ pub struct JsonReportThresholds {
 
 /// The thresholds a report declares, in the shape its BMF version spells them.
 ///
-/// The report's BMF version says which shape is expected, and the other shape is a bad request.
+/// At BMF version 0, a list is a bad request. At BMF version 1, a map names no metric, so each
+/// of its entries is skipped with a `threshold` `skip` report warning.
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
 pub enum JsonReportThresholdModels {
@@ -170,7 +171,7 @@ pub struct JsonReportThresholdEntry {
 /// The description a derived schema would have taken from the doc comment, spelled
 /// out because a hand written schema takes nothing from it.
 #[cfg(feature = "schema")]
-const MODELS_DESCRIPTION: &str = "The thresholds a report declares, in the shape its BMF version spells them.\n\nThe report's BMF version says which shape is expected, and the other shape is a bad request.";
+const MODELS_DESCRIPTION: &str = "The thresholds a report declares, in the shape its BMF version spells them.\n\nAt BMF version 0, a list is a bad request. At BMF version 1, a map names no metric, so each of its entries is skipped with a `threshold` `skip` report warning.";
 
 /// The two shapes are mutually exclusive, so they are a `oneOf` rather than the
 /// `anyOf` a derived untagged enum would emit. A client generator turns an `anyOf`
@@ -919,6 +920,7 @@ const RESOURCE_METRIC_INT: i32 = 3;
 const RESOURCE_THRESHOLD_INT: i32 = 4;
 const RESOURCE_ADAPTER_INT: i32 = 5;
 const RESOURCE_AVERAGE_INT: i32 = 6;
+const RESOURCE_FOLD_INT: i32 = 7;
 
 /// The resource a report warning counts.
 #[typeshare::typeshare]
@@ -936,6 +938,7 @@ pub enum ReportWarningResource {
     Threshold = RESOURCE_THRESHOLD_INT,
     Adapter = RESOURCE_ADAPTER_INT,
     Average = RESOURCE_AVERAGE_INT,
+    Fold = RESOURCE_FOLD_INT,
 }
 
 const ACTION_SKIP_INT: i32 = 0;
@@ -960,8 +963,8 @@ pub enum ReportWarningAction {
 mod report_warning_db {
     use super::{
         ACTION_IGNORE_INT, ACTION_SKIP_INT, RESOURCE_ADAPTER_INT, RESOURCE_AVERAGE_INT,
-        RESOURCE_BENCHMARK_INT, RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT, RESOURCE_THRESHOLD_INT,
-        RESOURCE_VARIANT_INT, ReportWarningAction, ReportWarningResource,
+        RESOURCE_BENCHMARK_INT, RESOURCE_FOLD_INT, RESOURCE_MEASURE_INT, RESOURCE_METRIC_INT,
+        RESOURCE_THRESHOLD_INT, RESOURCE_VARIANT_INT, ReportWarningAction, ReportWarningResource,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -989,6 +992,7 @@ mod report_warning_db {
                 Self::Threshold => RESOURCE_THRESHOLD_INT.to_sql(out),
                 Self::Adapter => RESOURCE_ADAPTER_INT.to_sql(out),
                 Self::Average => RESOURCE_AVERAGE_INT.to_sql(out),
+                Self::Fold => RESOURCE_FOLD_INT.to_sql(out),
             }
         }
     }
@@ -1007,6 +1011,7 @@ mod report_warning_db {
                 RESOURCE_THRESHOLD_INT => Ok(Self::Threshold),
                 RESOURCE_ADAPTER_INT => Ok(Self::Adapter),
                 RESOURCE_AVERAGE_INT => Ok(Self::Average),
+                RESOURCE_FOLD_INT => Ok(Self::Fold),
                 value => Err(Box::new(ReportWarningError::Resource(value))),
             }
         }

@@ -17,7 +17,7 @@ use url::Url;
 use crate::{
     CliError,
     bencher::backend::PubBackend,
-    cli_eprintln_quietable, cli_println, cli_println_quietable,
+    cli_eprintln, cli_eprintln_quietable, cli_println, cli_println_quietable,
     parser::run::{CliRun, CliRunOutput},
 };
 
@@ -349,9 +349,9 @@ impl Run {
             job.callback = Some(client_callback(callback)?);
         }
         let sender = run_sender(json_new_run);
-        let json_report: JsonReport = self
+        let (json_report, unread_warnings): (JsonReport, u32) = self
             .backend
-            .send_with(sender)
+            .send_with_unread(sender)
             .await
             .map_err(RunError::SendReport)?;
 
@@ -359,7 +359,13 @@ impl Run {
         if let (Some(job_uuid), Some(job)) = (json_report.job, self.submit_job()) {
             if job.detach {
                 return self
-                    .detached(json_report, job_uuid, callback.is_some(), ci_check)
+                    .detached(
+                        json_report,
+                        unread_warnings,
+                        job_uuid,
+                        callback.is_some(),
+                        ci_check,
+                    )
                     .await;
             }
             let project = ProjectResourceId::Slug(json_report.project.slug);
@@ -368,7 +374,8 @@ impl Run {
                 .await;
         }
 
-        self.display_and_check_alerts(json_report, ci_check).await
+        self.display_and_check_alerts(json_report, unread_warnings, ci_check)
+            .await
     }
 
     /// A detached run on GitHub Actions posts nothing: the check it started waits for the attach,
@@ -377,6 +384,7 @@ impl Run {
     async fn detached(
         &self,
         json_report: JsonReport,
+        unread_warnings: u32,
         job_uuid: JobUuid,
         has_callback: bool,
         ci_check: &mut Option<CiCheck>,
@@ -404,7 +412,7 @@ impl Run {
                 .await;
         }
         let console_url = self.console_url().await?;
-        self.display_report(console_url, json_report, true)
+        self.display_report(console_url, json_report, unread_warnings, true)
             .map(drop)
     }
 
@@ -643,11 +651,13 @@ impl Run {
         };
         let (err, failure) = match outcome {
             JobOutcome::Processed => {
-                let report = self
+                let (report, unread_warnings) = self
                     .fetch_report(project, report)
                     .await
                     .map_err(RunError::FetchReport)?;
-                return self.display_and_check_alerts(report, ci_check).await;
+                return self
+                    .display_and_check_alerts(report, unread_warnings, ci_check)
+                    .await;
             },
             JobOutcome::Failed => (
                 RunError::JobFailed(error("Unknown error")),
@@ -687,10 +697,12 @@ impl Run {
     async fn display_and_check_alerts(
         &self,
         json_report: JsonReport,
+        unread_warnings: u32,
         ci_check: &mut Option<CiCheck>,
     ) -> Result<(), RunError> {
         self.post_results(
             json_report,
+            unread_warnings,
             #[cfg(feature = "plus")]
             None,
             ci_check,
@@ -702,13 +714,15 @@ impl Run {
     async fn post_results(
         &self,
         json_report: JsonReport,
+        unread_warnings: u32,
         #[cfg(feature = "plus")] failure: Option<JobFailure>,
         ci_check: &mut Option<CiCheck>,
     ) -> Result<(), RunError> {
         let alerts_count = usize::try_from(json_report.counts.alerts.total).unwrap_or(usize::MAX);
         let (project, report) = (json_report.project.uuid, json_report.uuid);
         let console_url = self.console_url().await?;
-        let report_comment = self.display_report(console_url.clone(), json_report, false)?;
+        let report_comment =
+            self.display_report(console_url.clone(), json_report, unread_warnings, false)?;
         if let Some(ci) = &self.ci {
             let report = PostedReport {
                 comment: &report_comment,
@@ -758,9 +772,9 @@ impl Run {
         &self,
         project: &ProjectResourceId,
         report_uuid: ReportUuid,
-    ) -> Result<JsonReport, crate::BackendError> {
+    ) -> Result<(JsonReport, u32), crate::BackendError> {
         self.backend
-            .send_with(|client| {
+            .send_with_unread(|client| {
                 let project = project.clone();
                 async move {
                     client
@@ -783,8 +797,11 @@ impl Run {
         ci_check: &mut Option<CiCheck>,
     ) {
         match self.fetch_report(project, report_uuid).await {
-            Ok(report) => {
-                if let Err(err) = self.post_results(report, Some(failure), ci_check).await {
+            Ok((report, unread_warnings)) => {
+                if let Err(err) = self
+                    .post_results(report, unread_warnings, Some(failure), ci_check)
+                    .await
+                {
                     cli_eprintln_quietable!(self.log, "Warning: failed to display report: {err}");
                 }
             },
@@ -805,14 +822,17 @@ impl Run {
         &self,
         console_url: Url,
         json_report: JsonReport,
+        unread_warnings: u32,
         pending: bool,
     ) -> Result<ReportComment, RunError> {
-        let report_comment = self.report_comment(
-            console_url,
-            json_report,
-            pending,
-            ci::github_api_url(false).as_deref(),
-        );
+        let report_comment = self
+            .report_comment(
+                console_url,
+                json_report,
+                pending,
+                ci::github_api_url(false).as_deref(),
+            )
+            .with_unread_warnings(unread_warnings);
 
         let report_str = match self.format {
             Format::Human => report_comment.human(),
@@ -821,6 +841,12 @@ impl Run {
         };
         let newline_prefix = if self.log { "\n" } else { "" };
         cli_println!("{newline_prefix}{report_str}");
+        // The human output holds this line; the other formats keep their shape on stdout.
+        if !matches!(self.format, Format::Human)
+            && let Some(unread) = report_comment.unread_warnings_line()
+        {
+            cli_eprintln!("{unread}");
+        }
         Ok(report_comment)
     }
 

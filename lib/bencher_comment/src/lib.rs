@@ -3,9 +3,9 @@
 use std::{collections::HashSet, fmt, ops::BitOr, time::Duration};
 
 use bencher_json::{
-    AlertUuid, BenchmarkSlug, BranchSlug, JsonAlert, JsonBenchmark, JsonMeasure, JsonPerfQuery,
-    JsonReport, MeasureSlug, MetricName, ModelTest, ParameterSet, ProjectSlug, ReportUuid,
-    ResourceName, TestbedSlug, ThresholdUuid, Units,
+    AlertUuid, BenchmarkSlug, BmfVersion, BranchSlug, JsonAlert, JsonBenchmark, JsonMeasure,
+    JsonPerfQuery, JsonReport, MeasureSlug, MetricName, ModelTest, ParameterSet, ProjectSlug,
+    ReportUuid, ResourceName, TestbedSlug, ThresholdUuid, Units,
     project::{
         GitHubLinkStatus,
         alert::AlertStatus,
@@ -55,6 +55,7 @@ pub struct ReportComment {
     source: String,
     pending: bool,
     github_api: GitHubApi,
+    unread_warnings: u32,
 }
 
 pub struct SubAdapter {
@@ -83,6 +84,7 @@ impl ReportComment {
             source,
             pending: false,
             github_api: GitHubApi::default(),
+            unread_warnings: 0,
         }
     }
 
@@ -98,6 +100,14 @@ impl ReportComment {
     #[must_use]
     pub fn with_github_api(mut self, github_api: GitHubApi) -> Self {
         self.github_api = github_api;
+        self
+    }
+
+    /// The count of the warnings the report held that this build could not read, which only
+    /// the run output shows.
+    #[must_use]
+    pub fn with_unread_warnings(mut self, unread_warnings: u32) -> Self {
+        self.unread_warnings = unread_warnings;
         self
     }
 
@@ -169,7 +179,7 @@ impl ReportComment {
     }
 
     fn human_warnings(&self, text: &mut String) {
-        if self.warnings().is_empty() {
+        if self.warnings().is_empty() && self.unread_warnings == 0 {
             return;
         }
 
@@ -180,7 +190,24 @@ impl ReportComment {
                 resources = counted(warning.count, resource_noun(warning.resource)),
                 action = action_verb(warning.action),
             ));
+            if self.needs_threshold_metric(warning) {
+                text.push_str(": name the metric to check with --threshold-metric");
+            }
         }
+        if let Some(unread) = self.unread_warnings_line() {
+            text.push('\n');
+            text.push_str(&unread);
+        }
+    }
+
+    /// The run output's line for the warnings this build could not read, if the report held any.
+    pub fn unread_warnings_line(&self) -> Option<String> {
+        (self.unread_warnings > 0).then(|| {
+            format!(
+                "- {}: upgrade the CLI to read them",
+                counted(self.unread_warnings, "more warning"),
+            )
+        })
     }
 
     fn human_alerts_list(&self, text: &mut String) {
@@ -723,17 +750,33 @@ impl ReportComment {
             total = self.warnings_total(),
         ));
         html.push_str(
-            "<table><thead><tr><th>Resource</th><th>Action</th><th>Count</th></tr></thead><tbody>",
+            "<table><thead><tr><th>Resource</th><th>Action</th><th>Count</th><th>Hint</th></tr></thead><tbody>",
         );
         for warning in self.warnings() {
             html.push_str(&format!(
-                "<tr><td>{resource}</td><td>{action}</td><td>{count}</td></tr>",
+                "<tr><td>{resource}</td><td>{action}</td><td>{count}</td><td>{hint}</td></tr>",
                 resource = capitalized(resource_noun(warning.resource)),
                 action = capitalized(action_verb(warning.action)),
                 count = warning.count,
+                hint = if self.needs_threshold_metric(warning) {
+                    format!(
+                        "Use the <a href=\"https://bencher.dev/docs/explanation/thresholds/{utm}#--threshold-metric-metric\"><code>--threshold-metric</code></a> option to specify a Threshold's Metric",
+                        utm = self.utm_query(),
+                    )
+                } else {
+                    String::new()
+                },
             ));
         }
         html.push_str("</tbody></table></details>");
+    }
+
+    /// A skipped threshold's hint, only at BMF version 1, the one version where
+    /// `--threshold-metric` is accepted.
+    fn needs_threshold_metric(&self, warning: &JsonReportWarning) -> bool {
+        self.json_report.bmf_version == Some(BmfVersion::V1)
+            && warning.resource == ReportWarningResource::Threshold
+            && warning.action == ReportWarningAction::Skip
     }
 
     /// The sum of the warnings' counts.
@@ -1130,6 +1173,7 @@ fn resource_noun(resource: ReportWarningResource) -> &'static str {
         ReportWarningResource::Threshold => "threshold",
         ReportWarningResource::Adapter => "adapter",
         ReportWarningResource::Average => "average",
+        ReportWarningResource::Fold => "fold",
     }
 }
 
@@ -1421,7 +1465,8 @@ impl BoundaryLimits {
 #[cfg(test)]
 mod tests {
     use bencher_json::{
-        DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonReportCounts, JsonTestbed,
+        BmfVersion, DateTime, JsonBranch, JsonHead, JsonProject, JsonReport, JsonReportCounts,
+        JsonTestbed,
         project::{
             GitHubLinkStatus, Visibility,
             boundary::BoundaryLimit,
@@ -1455,7 +1500,7 @@ mod tests {
                 url: None,
                 github_link: None,
                 visibility,
-                bmf_version: bencher_json::BmfVersion::default(),
+                bmf_version: BmfVersion::default(),
                 created: DateTime::TEST,
                 modified: DateTime::TEST,
                 claimed: Some(DateTime::TEST),
@@ -1902,6 +1947,7 @@ mod tests {
     }
 
     fn with_warnings(mut report: JsonReport) -> JsonReport {
+        report.bmf_version = Some(BmfVersion::V1);
         report.warnings = Some(vec![
             warning(
                 ReportWarningResource::Benchmark,
@@ -1922,14 +1968,13 @@ mod tests {
         report
     }
 
-    const WARNINGS_SECTION: &str = "<details><summary>⚠️ Warnings (6)</summary><br /><table><thead><tr><th>Resource</th><th>Action</th><th>Count</th></tr></thead><tbody><tr><td>Benchmark</td><td>Skipped</td><td>3</td></tr><tr><td>Measure</td><td>Ignored</td><td>1</td></tr><tr><td>Threshold</td><td>Skipped</td><td>2</td></tr></tbody></table></details>";
-    const WARNINGS_LINES: &str =
-        "\n\nWarnings:\n- 3 benchmarks skipped\n- 1 measure ignored\n- 2 thresholds skipped";
+    const WARNINGS_SECTION: &str = r#"<details><summary>⚠️ Warnings (6)</summary><br /><table><thead><tr><th>Resource</th><th>Action</th><th>Count</th><th>Hint</th></tr></thead><tbody><tr><td>Benchmark</td><td>Skipped</td><td>3</td><td></td></tr><tr><td>Measure</td><td>Ignored</td><td>1</td><td></td></tr><tr><td>Threshold</td><td>Skipped</td><td>2</td><td>Use the <a href="https://bencher.dev/docs/explanation/thresholds/#--threshold-metric-metric"><code>--threshold-metric</code></a> option to specify a Threshold's Metric</td></tr></tbody></table></details>"#;
+    const WARNINGS_LINES: &str = "\n\nWarnings:\n- 3 benchmarks skipped\n- 1 measure ignored\n- 2 thresholds skipped: name the metric to check with --threshold-metric";
 
     // Kills warnings missing from the run output or the comment, out of their place after the
     // results and the tables, a summary that counts the rows rather than summing their counts,
-    // a plural on a count of 1 or none on others, swapped actions, and table cells without the
-    // console's capitalized labels.
+    // a plural on a count of 1 or none on others, swapped actions, table cells without the
+    // console's capitalized labels, and a skipped threshold without its hint or a Hint column.
     #[test]
     fn warnings_follow_the_results_and_the_tables() {
         let comment = report_comment_for(with_warnings(named_alert_report()));
@@ -1989,6 +2034,92 @@ mod tests {
                 .html_with_max_length(false, None, 0)
                 .contains("Warnings")
         );
+    }
+
+    // Kills a hint on every threshold warning or on every skip, rather than only on a skipped
+    // threshold.
+    #[test]
+    fn only_a_skipped_threshold_carries_the_hint() {
+        let mut report = json_report(Visibility::Public);
+        report.bmf_version = Some(BmfVersion::V1);
+        report.warnings = Some(vec![
+            warning(
+                ReportWarningResource::Benchmark,
+                ReportWarningAction::Skip,
+                1,
+            ),
+            warning(
+                ReportWarningResource::Threshold,
+                ReportWarningAction::Ignore,
+                1,
+            ),
+        ]);
+        let comment = report_comment_for(report);
+
+        let human = comment.human();
+        assert!(
+            human.ends_with("Warnings:\n- 1 benchmark skipped\n- 1 threshold ignored"),
+            "{human}"
+        );
+        let html = comment.html(false, None);
+        assert!(!html.contains("--threshold-metric"), "{html}");
+        assert_eq!(html.matches("<td></td></tr>").count(), 2, "{html}");
+    }
+
+    // Kills a hint on a skipped threshold of a report read at BMF version 0, or of one from a
+    // server that sends no version, where `--threshold-metric` is refused.
+    #[test]
+    fn the_hint_shows_only_at_bmf_version_1() {
+        for bmf_version in [Some(BmfVersion::V0), None] {
+            let mut report = with_warnings(named_alert_report());
+            report.bmf_version = bmf_version;
+            let comment = report_comment_for(report);
+
+            let human = comment.human();
+            assert!(
+                human.contains("\n\nWarnings:\n- 3 benchmarks skipped\n- 1 measure ignored\n- 2 thresholds skipped\n\nView alerts:\n"),
+                "{bmf_version:?}: {human}"
+            );
+            let html = comment.html(false, None);
+            assert!(
+                !html.contains("--threshold-metric"),
+                "{bmf_version:?}: {html}"
+            );
+            assert!(
+                html.contains("<tr><td>Threshold</td><td>Skipped</td><td>2</td><td></td></tr>"),
+                "{bmf_version:?}: {html}"
+            );
+        }
+    }
+
+    // Kills a count of unread warnings dropped from the run output, dropped when the report
+    // holds no warning it can read, printed when there is none, or shown in the comment.
+    #[test]
+    fn the_run_output_counts_the_warnings_it_cannot_read() {
+        let unread = "- 4 more warnings: upgrade the CLI to read them";
+        let comment =
+            report_comment_for(with_warnings(named_alert_report())).with_unread_warnings(4);
+        let human = comment.human();
+        assert!(
+            human.contains(&format!("{WARNINGS_LINES}\n{unread}\n\nView alerts:\n")),
+            "{human}"
+        );
+        let html = comment.html(false, None);
+        assert!(html.contains(WARNINGS_SECTION), "{html}");
+        assert!(!html.contains("more warning"), "{html}");
+
+        let comment = report_comment_for(json_report(Visibility::Public)).with_unread_warnings(1);
+        let human = comment.human();
+        assert!(
+            human.contains(
+                "No benchmarks found!\n\nWarnings:\n- 1 more warning: upgrade the CLI to read them"
+            ),
+            "{human}"
+        );
+        assert!(!comment.html(false, None).contains("Warnings"));
+
+        let comment = report_comment_for(json_report(Visibility::Public)).with_unread_warnings(0);
+        assert!(!comment.human().contains("Warnings"));
     }
 
     #[test]
@@ -2355,7 +2486,8 @@ mod tests {
         }
     }
 
-    // Bencher Cloud links keep their `utm_*` parameters.
+    // Bencher Cloud links keep their `utm_*` parameters, the docs link of a skipped threshold's
+    // hint included.
     #[cfg(feature = "plus")]
     #[test]
     fn cloud_links_keep_utm() {
@@ -2364,6 +2496,12 @@ mod tests {
             Some(GitHubLinkStatus::Unlinked),
         );
         report.results = Some(value_less_results());
+        report.bmf_version = Some(BmfVersion::V1);
+        report.warnings = Some(vec![warning(
+            ReportWarningResource::Threshold,
+            ReportWarningAction::Skip,
+            1,
+        )]);
         let comment = ReportComment::new(
             "https://bencher.dev".parse().unwrap(),
             report,
@@ -2392,6 +2530,12 @@ mod tests {
             html.contains(&format!(
                 r#"<p><a href="https://bencher.dev/console/projects/my-project/connections{utm}">🔗 Link this project to GitHub</a></p>"#
             )),
+            "{html}"
+        );
+        assert!(
+            html.contains(
+                r#"<td>Use the <a href="https://bencher.dev/docs/explanation/thresholds/?utm_medium=referral&utm_source=cli&utm_content=comment&utm_campaign=pr+comments&utm_term=my-project#--threshold-metric-metric"><code>--threshold-metric</code></a> option"#
+            ),
             "{html}"
         );
         // The run output's links carry no `utm_*` parameters.
