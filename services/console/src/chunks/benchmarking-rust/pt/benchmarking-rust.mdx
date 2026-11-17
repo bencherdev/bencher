@@ -1,8 +1,9 @@
 ## Benchmarking em Rust
 
-As três opções populares para benchmarking em Rust são:
+As quatro opções populares para benchmarking em Rust são:
 [libtest bench](/pt/learn/benchmarking/rust/libtest-bench/),
-[Criterion](/pt/learn/benchmarking/rust/criterion/), e
+[Criterion](/pt/learn/benchmarking/rust/criterion/),
+[Gungraun](/pt/learn/benchmarking/rust/gungraun/) e
 [Iai](/pt/learn/benchmarking/rust/iai/).
 
 libtest é o framework embutido de testes unitários e benchmarking do Rust.
@@ -18,7 +19,6 @@ Ele funciona tanto em versões estáveis quanto em versões `nightly` do compila
 e se tornou o padrão de facto dentro da comunidade Rust.
 O Criterion também possui muito mais recursos em comparação com o libtest bench.
 
-Uma alternativa experimental ao Criterion é o Iai, do mesmo criador do Criterion.
-No entanto, ele usa contagem de instruções em vez de tempo real:
-instruções da CPU, acessos L1, acessos L2 e acessos à RAM.
+Uma alternativa ao Criterion é o Gungraun. No entanto, ele usa contagem de instruções em vez de tempo real:
+instruções da CPU, métricas de cache como L1 Hits, RAM Hits e muitas outras...
 Isso permite benchmarking de tiro único, uma vez que essas métricas devem permanecer quase idênticas entre as execuções.

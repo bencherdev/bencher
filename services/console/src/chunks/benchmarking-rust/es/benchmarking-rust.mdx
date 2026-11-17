@@ -1,8 +1,9 @@
 ## Evaluación de rendimiento en Rust
 
-Las tres opciones populares para la evaluación de rendimiento en Rust son:
+Las cuatro opciones populares para la evaluación de rendimiento en Rust son:
 [libtest bench](/es/learn/benchmarking/rust/libtest-bench/),
-[Criterion](/es/learn/benchmarking/rust/criterion/), e
+[Criterion](/es/learn/benchmarking/rust/criterion/),
+[Gungraun](/es/learn/benchmarking/rust/gungraun/) e
 [Iai](/es/learn/benchmarking/rust/iai/).
 
 libtest es el marco de evaluación de pruebas unitarias y rendimiento integrado de Rust.
@@ -17,8 +18,7 @@ Funciona tanto en versiones del compilador Rust estable como `nightly`,
 y se ha convertido en el estándar de facto dentro de la comunidad Rust.
 Criterion también es mucho más rico en funcionalidades en comparación con libtest bench.
 
-Una alternativa experimental a Criterion es Iai, del mismo creador de Criterion.
-Sin embargo, utiliza el conteo de instrucciones en lugar del tiempo de pared:
-instrucciones de CPU, accesos a L1, accesos a L2 y accesos a RAM.
+Una alternativa a Criterion es Gungraun. Sin embargo, utiliza el conteo de instrucciones en lugar del tiempo de pared:
+instrucciones de CPU, métricas de caché como L1 Hits, RAM Hits y muchas más...
 Esto permite evaluaciones de rendimiento de una sola ejecución,
 ya que estas métricas deberían mantenerse casi idénticas entre ejecuciones.

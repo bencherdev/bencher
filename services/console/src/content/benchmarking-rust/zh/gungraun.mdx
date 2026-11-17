@@ -3,7 +3,7 @@ title: "Gungraun"
 description: "如何使用 Gungraun 对 Rust 代码进行基准测试的分步指南"
 heading: "如何使用 Gungraun 对 Rust 代码进行基准测试"
 published: "2026-05-17T00:00:00Z"
-modified: "2026-06-03T00:00:00Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 4
 ---
 
@@ -179,6 +179,8 @@ Valgrind 支持 Linux、Solaris、FreeBSD 和 macOS。
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 设置 `GUNGRAUN_OUTPUT_FORMAT=json` 后，Gungraun 会以 JSON 输出其摘要，[Bencher 也能读取该输出](/zh/docs/explanation/adapters/#-rust-gungraun)。此时 `play_game::bench_play_game_group::bench_play_game` 是一个基准测试，它的每个用例都是一个变体，带有自己的 `@id` 参数，即 `play_0` 或 `play_1`。
 
 <CatchInCiPlot />
 

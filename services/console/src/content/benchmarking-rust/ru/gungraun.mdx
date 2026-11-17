@@ -3,7 +3,7 @@ title: "Gungraun"
 description: "Пошаговое руководство по бенчмаркингу кода Rust с помощью Gungraun"
 heading: "Как выполнять бенчмаркинг кода Rust с помощью Gungraun"
 published: "2026-05-17T00:00:00Z"
-modified: "2026-06-03T00:00:00Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 4
 ---
 
@@ -181,6 +181,8 @@ Valgrind поддерживает Linux, Solaris, FreeBSD и macOS.
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 С `GUNGRAUN_OUTPUT_FORMAT=json` Gungraun выводит свою сводку в виде JSON, и [Bencher тоже читает этот вывод](/ru/docs/explanation/adapters/#-rust-gungraun). В нем `play_game::bench_play_game_group::bench_play_game` является одним бенчмарком, а каждый из его случаев является Вариантом со своим Параметром `@id`, `play_0` или `play_1`.
 
 <CatchInCiPlot />
 

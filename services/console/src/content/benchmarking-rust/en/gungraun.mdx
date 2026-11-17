@@ -3,7 +3,7 @@ title: "Gungraun"
 description: "A step-by-step guide on how to benchmark Rust code with Gungraun"
 heading: "How to benchmark Rust code with Gungraun"
 published: "2026-05-17T00:00:00Z"
-modified: "2026-06-03T00:00:00Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 4
 ---
 
@@ -181,6 +181,8 @@ That's a reduction of `99.9996%`!
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 With `GUNGRAUN_OUTPUT_FORMAT=json`, Gungraun prints its summary as JSON, and [Bencher reads that output too](/docs/explanation/adapters/#-rust-gungraun). There `play_game::bench_play_game_group::bench_play_game` is one benchmark, and each of its cases is a variant with its own `@id` parameter, `play_0` or `play_1`.
 
 <CatchInCiPlot />
 

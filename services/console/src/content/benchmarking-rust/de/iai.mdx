@@ -3,7 +3,7 @@ title: "Iai"
 description: "Eine Schritt-für-Schritt-Anleitung zum Benchmarking von Rust-Code mit Iai"
 heading: "Wie man Rust-Code mit Iai benchmarkt"
 published: "2024-02-13T06:50:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 3
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/de/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-Alle drei werden [unterstützt von Bencher](/de/docs/explanation/adapters/). Warum also Iai wählen?
+Alle vier werden [unterstützt von Bencher](/de/docs/explanation/adapters/). Warum also Iai wählen?
 Iai verwendet Anweisungszähler statt Echtzeit.
 Das macht es ideal für [dauerndes Benchmarking](/de/docs/explanation/continuous-benchmarking/), also Benchmarking in CI.
 Ich würde vorschlagen, Iai für dauerndes Benchmarking zu verwenden, besonders wenn Sie gemeinsam genutzte Runner verwenden.
@@ -66,6 +66,8 @@ Die Unterstützung von macOS ist jedoch auf x86_64-Prozessoren beschränkt, da [
 Auf Debian laufen: `sudo apt-get install valgrind`
 
 Auf macOS (x86_64/Intel-Chip only): `brew install valgrind`
+
+> 🐰 Valgrind 3.21 und neuer schalten die Cache-Simulation standardmäßig aus, und ohne sie bricht Iai mit dem Panic `no entry found for key` ab. Schalten Sie sie mit `export VALGRIND_OPTS=--cache-sim=yes` wieder ein, bevor Sie Ihre Benchmarks ausführen. Falls ein Lauf bereits mit einem Panic abgebrochen ist, löschen Sie zuerst `target/iai`.
 
 <FizzBuzzRefactor />
 

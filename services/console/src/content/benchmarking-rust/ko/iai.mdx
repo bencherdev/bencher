@@ -3,7 +3,7 @@ title: "Iai"
 description: "Rust 코드를 Iai로 벤치마킹하는 단계별 가이드"
 heading: "Rust 코드를 Iai로 벤치마킹하는 방법"
 published: "2024-02-13T06:50:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 3
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/ko/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-세 가지 모두 [Bencher가 지원](/ko/docs/explanation/adapters/)합니다. 그렇다면 왜 Iai를 선택하나요?
+네 가지 모두 [Bencher가 지원](/ko/docs/explanation/adapters/)합니다. 그렇다면 왜 Iai를 선택하나요?
 Iai는 벽시계 시간 대신 명령 수를 사용합니다.
 이는 CI에서의 [지속적인 벤치마킹](/ko/docs/explanation/continuous-benchmarking/)에 이상적입니다.
 특히 공유 실행자를 사용하는 경우에는 Iai를 사용하여 지속적인 벤치마킹을 하는 것이 좋습니다.
@@ -66,6 +66,8 @@ Valgrind는 Linux, Solaris, FreeBSD, 그리고 macOS를 지원합니다.
 Debian에서 실행: `sudo apt-get install valgrind`
 
 macOS (x86_64/Intel chip only): `brew install valgrind`
+
+> 🐰 Valgrind 3.21 이상은 기본적으로 캐시 시뮬레이션을 끄며, 캐시 시뮬레이션이 없으면 Iai는 `no entry found for key`로 패닉이 발생합니다. 벤치마크를 실행하기 전에 `export VALGRIND_OPTS=--cache-sim=yes`로 다시 켜세요. 이미 패닉이 발생한 실행이 있다면 먼저 `target/iai`를 삭제하세요.
 
 <FizzBuzzRefactor />
 

@@ -3,7 +3,7 @@ title: "pytest-benchmark"
 description: "Пошаговое руководство по тестированию производительности Python кода с помощью pytest-benchmark"
 heading: "Как тестировать производительность Python кода с pytest-benchmark"
 published: "2024-10-09T16:30:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 1
 ---
 
@@ -96,6 +96,8 @@ import BencherFooter from "../../../chunks/learn/ru/bencher-footer.mdx";
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 `pytest-benchmark` сохраняет в своих JSON-результатах каждый выполненный раунд. При `max_time` по умолчанию в одну секунду быстрые бенчмарки, как наши, записывают файл больше, чем тело запроса в 4 MiB, которое сервер Bencher API принимает по умолчанию. `--benchmark-max-time 0.02` держит файл намного ниже этого ограничения.
 
 <CatchInCiPlot />
 

@@ -9,7 +9,7 @@ Ein benutzerdefiniertes Benchmark-Harness ist eigentlich nur ein Binärprogramm,
 das alle unsere Benchmarks für uns ausführt und seine Ergebnisse meldet.
 Der Benchmark-Runner ist das, was all dies orchestriert.
 
-Wir möchten, dass unsere Ergebnisse im [Bencher-Metrik-Format (BMF) JSON][bmf json] ausgegeben werden.
+Wir möchten, dass unsere Ergebnisse im [Bencher-Metrik-Format (BMF) JSON][bmf json], Version 1, ausgegeben werden.
 Um dies zu erreichen, müssen wir eine letzte Abhängigkeit hinzufügen,
 [das `serde_json` Crate][crates serde json], genau, David Tolnay!
 
@@ -20,7 +20,7 @@ und dann die Ergebnisse als BMF JSON zurückzugeben.
 
 <PlayGameRsRun />
 
-Die BMF JSON-Ergebnisse enthalten sechs [Messungen][measures] für jeden Benchmark:
+Jeder Benchmark in den BMF JSON-Ergebnissen hat eine einzige [Variante][variant] ohne Parameter, und diese Variante enthält sechs [Measures][measures]. Jede Measure ist eine exakte Anzahl und hat daher eine einzige [Metrik][metric], `value`:
 
 - Final Blocks: Endgültige Anzahl der Blöcke, die beim Abschluss des Benchmarks zugewiesen wurden.
 - Final Bytes: Endgültige Anzahl der Bytes, die beim Abschluss des Benchmarks zugewiesen wurden.
@@ -36,5 +36,7 @@ und die Ergebnisse als BMF JSON auszugeben.
 
 [bmf json]: /de/docs/reference/bencher-metric-format/
 [measures]: /de/docs/explanation/benchmarking/#measure
+[variant]: /de/docs/explanation/benchmarking/#parameters
+[metric]: /de/docs/explanation/benchmarking/#metric
 
 [crates serde json]: https://crates.io/crates/serde_json

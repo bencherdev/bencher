@@ -8,7 +8,7 @@ import PlayGameMain from "../play-game-rs-main.mdx";
 사용자 정의 벤치마크 하네스는 우리가 작성한 모든 벤치마크를 실행하고 결과를 보고하는 바이너리일 뿐입니다.
 벤치마크 실행기는 이 모든 것을 조정하는 역할을 합니다.
 
-결과를 [Bencher Metric Format (BMF) JSON][bmf json] 형식으로 출력하고자 합니다.
+결과를 [Bencher Metric Format (BMF) JSON][bmf json] 버전 1 형식으로 출력하고자 합니다.
 이를 위해 마지막으로 하나의 종속성을 추가해야 합니다,
 다름 아닌 David Tolnay가 작성한 [serde_json 크레이트][crates serde json]입니다!
 
@@ -19,7 +19,7 @@ import PlayGameMain from "../play-game-rs-main.mdx";
 
 <PlayGameRsRun />
 
-BMF JSON 결과는 각 벤치마크에 대해 여섯 가지 [측정치][measures]를 포함합니다:
+BMF JSON 결과의 각 벤치마크는 매개변수가 없는 하나의 [변형][variant]을 가지며, 그 변형은 여섯 개의 [측정][measures]을 담고 있습니다. 각 측정은 정확한 개수이므로 하나의 [메트릭][metric]인 `value`를 가집니다:
 
 - Final Blocks: 벤치마크가 완료될 때 할당된 최종 블록 수.
 - Final Bytes: 벤치마크가 완료될 때 할당된 최종 바이트 수.
@@ -35,5 +35,7 @@ BMF JSON 결과는 각 벤치마크에 대해 여섯 가지 [측정치][measures
 
 [bmf json]: /ko/docs/reference/bencher-metric-format/
 [measures]: /ko/docs/explanation/benchmarking/#measure
+[variant]: /ko/docs/explanation/benchmarking/#parameters
+[metric]: /ko/docs/explanation/benchmarking/#metric
 
 [crates serde json]: https://crates.io/crates/serde_json

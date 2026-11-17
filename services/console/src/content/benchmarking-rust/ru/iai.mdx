@@ -3,7 +3,7 @@ title: "Iai"
 description: "Пошаговое руководство по тестированию производительности кода Rust при помощи Iai"
 heading: "Как тестировать производительность кода Rust при помощи Iai"
 published: "2024-02-13T06:50:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 3
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/ru/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-Все три поддерживаются [по Bencher](/ru/docs/explanation/adapters/). Зачем выбрать Iai?
+Все четыре [поддерживаются Bencher](/ru/docs/explanation/adapters/). Зачем выбрать Iai?
 Iai использует подсчёт инструкций вместо времени стенного часа.
 Это делает его идеальным для [непрерывного бенчмаркинга](/ru/docs/explanation/continuous-benchmarking/), то есть для бенчмаркинга в CI.
 Я бы предложил использовать Iai для непрерывного бенчмаркинга, особенно если вы используете общие исполнители.
@@ -66,6 +66,8 @@ Valgrind поддерживает Linux, Solaris, FreeBSD и macOS.
 На Debian выполните: `sudo apt-get install valgrind`
 
 На macOS (только с процессорами x86_64/Intel): `brew install valgrind`
+
+> 🐰 Valgrind 3.21 и новее по умолчанию отключают симуляцию кэша, и без нее Iai аварийно завершается (panic) с `no entry found for key`. Включите ее снова с помощью `export VALGRIND_OPTS=--cache-sim=yes` перед запуском бенчмарков. Если запуск уже завершился аварийно, сначала удалите `target/iai`.
 
 <FizzBuzzRefactor />
 

@@ -3,7 +3,7 @@ title: "Criterion"
 description: "如何用Criterion对Rust代码进行基准测试的详细步骤指南"
 heading: "如何标准Rust代码与Criterion"
 published: "2024-01-28T14:20:00Z"
-modified: "2026-04-13T06:35:55Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 2
 ---
 
@@ -46,7 +46,7 @@ import BencherFooter from "../../../chunks/learn/zh/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-三者都是[由Bencher支持的](/zh/docs/explanation/adapters/)。那么为什么要选择Criterion呢？
+四者都是[由Bencher支持的](/zh/docs/explanation/adapters/)。那么为什么要选择Criterion呢？
 Criterion是Rust社区的事实标准基准测试工具。
 我推荐使用Criterion来测试你的代码的延迟。
 也就是说，Criterion非常适合测量时钟时间。
@@ -153,6 +153,8 @@ Criterion是Rust社区的事实标准基准测试工具。
 <CatchInCi />
 
 <CatchInCiOutput />
+
+> 🐰 使用 [`cargo-criterion`](https://github.com/bheisler/cargo-criterion) 时，`cargo criterion --message-format=json` 会在典型估计值之外，以 JSON 输出均值、中位数和中位数绝对偏差，每一项都带有其置信区间，[Bencher 也能读取该输出](/zh/docs/explanation/adapters/#-rust-criterion)。
 
 <CatchInCiPlot />
 

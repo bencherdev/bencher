@@ -9,7 +9,7 @@ Un marco de benchmarks personalizado es realmente solo una aplicación binaria
 que ejecuta todos nuestros benchmarks y reporta sus resultados.
 El ejecutor de benchmarks es lo que orquesta todo eso.
 
-Queremos que nuestros resultados se impriman en [Formato de Métrica Bencher (BMF) JSON][bmf json].
+Queremos que nuestros resultados se impriman en [Formato de Métrica Bencher (BMF) JSON][bmf json], versión 1.
 Para lograr esto, necesitamos añadir una última dependencia,
 [el `serde_json` crate][crates serde json] por... adivinaste, ¡David Tolnay!
 
@@ -20,14 +20,14 @@ y luego devolver los resultados en BMF JSON.
 
 <PlayGameRsRun />
 
-Los resultados en BMF JSON contienen seis [Medidas][measures] para cada benchmark:
+Cada benchmark en los resultados BMF JSON tiene una sola [Variante][variant] sin Parámetros, y esa Variante contiene seis [Medidas][measures]. Cada Medida es un conteo exacto, así que tiene una sola [Métrica][metric], `value`:
 
-- Bloques Finales: Número final de bloques asignados cuando el benchmark terminó.
-- Bytes Finales: Número final de bytes asignados cuando el benchmark terminó.
-- Bloques Máximos: Máximo número de bloques asignados en un momento dado durante la ejecución del benchmark.
-- Bytes Máximos: Máximo número de bytes asignados en un momento dado durante la ejecución del benchmark.
-- Bloques Totales: Número total de bloques asignados durante la ejecución del benchmark.
-- Bytes Totales: Número total de bytes asignados durante la ejecución del benchmark.
+- Final Blocks: Número final de bloques asignados cuando el benchmark terminó.
+- Final Bytes: Número final de bytes asignados cuando el benchmark terminó.
+- Max Blocks: Máximo número de bloques asignados en un momento dado durante la ejecución del benchmark.
+- Max Bytes: Máximo número de bytes asignados en un momento dado durante la ejecución del benchmark.
+- Total Blocks: Número total de bloques asignados durante la ejecución del benchmark.
+- Total Bytes: Número total de bytes asignados durante la ejecución del benchmark.
 
 Finalmente, podemos crear una función `main` para ejecutar todos los benchmarks en nuestra colección `inventory`
 y imprimir los resultados en BMF JSON.
@@ -36,5 +36,7 @@ y imprimir los resultados en BMF JSON.
 
 [bmf json]: /es/docs/reference/bencher-metric-format/
 [measures]: /es/docs/explanation/benchmarking/#measure
+[variant]: /es/docs/explanation/benchmarking/#parameters
+[metric]: /es/docs/explanation/benchmarking/#metric
 
 [crates serde json]: https://crates.io/crates/serde_json

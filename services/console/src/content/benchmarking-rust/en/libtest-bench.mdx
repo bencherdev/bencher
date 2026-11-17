@@ -3,7 +3,7 @@ title: "libtest bench"
 description: "A step-by-step guide on how to benchmark Rust code with libtest bench"
 heading: "How to benchmark Rust code with libtest bench"
 published: "2023-10-18T10:28:00Z"
-modified: "2026-04-15T06:13:17Z"
+modified: "2026-11-15T07:42:49Z"
 sortOrder: 1
 ---
 
@@ -47,7 +47,7 @@ import BencherFooter from "../../../chunks/learn/en/bencher-footer.mdx";
 
 <BenchmarkingRust />
 
-All three are [supported by Bencher](/docs/explanation/adapters/). So why choose libtest bench?
+All four are [supported by Bencher](/docs/explanation/adapters/). So why choose libtest bench?
 It may be a good idea if you are trying to limit the external dependencies of your project
 and your project is already using the `nightly` toolchain.
 Outside of that, I would suggest using either Criterion or Iai depending on your use case.
@@ -163,6 +163,8 @@ And the `bench_play_game_1_000_000` benchmark is down more than 10,000x! `9,586,
 <CatchInCi />
 
 <CatchInCiRustBenchOutput />
+
+> 🐰 On `nightly`, libtest can also print its results as JSON with `cargo bench -- -Z unstable-options --format json`, and [Bencher reads that output too](/docs/explanation/adapters/#-rust-bench).
 
 <CatchInCiPlot />
 
