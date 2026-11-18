@@ -354,6 +354,7 @@ const PYTHON_ASV_INT: i32 = 81;
 const PYTHON_ASV_JSON_INT: i32 = 811;
 const PYTHON_ASV_TEXT_INT: i32 = 812;
 const PYTHON_PYTEST_INT: i32 = 82;
+const PYTHON_PYPERF_INT: i32 = 83;
 const RUBY_INT: i32 = 90;
 const RUBY_BENCHMARK_INT: i32 = 91;
 const RUBY_BENCHMARK_IPS_INT: i32 = 92;
@@ -419,6 +420,7 @@ pub enum Adapter {
     PythonAsvJson = PYTHON_ASV_JSON_INT,
     PythonAsvText = PYTHON_ASV_TEXT_INT,
     PythonPytest = PYTHON_PYTEST_INT,
+    PythonPyperf = PYTHON_PYPERF_INT,
     Ruby = RUBY_INT,
     RubyBenchmark = RUBY_BENCHMARK_INT,
     RubyBenchmarkIps = RUBY_BENCHMARK_IPS_INT,
@@ -483,6 +485,7 @@ impl Adapter {
             | Self::PythonAsvJson
             | Self::PythonAsvText
             | Self::PythonPytest
+            | Self::PythonPyperf
             | Self::RubyBenchmark
             | Self::RubyBenchmarkIps
             | Self::ShellHyperfine
@@ -562,6 +565,7 @@ impl fmt::Display for Adapter {
             Self::PythonAsvJson => write!(f, "python_asv_json"),
             Self::PythonAsvText => write!(f, "python_asv_text"),
             Self::PythonPytest => write!(f, "python_pytest"),
+            Self::PythonPyperf => write!(f, "python_pyperf"),
             Self::Ruby => write!(f, "ruby"),
             Self::RubyBenchmark => write!(f, "ruby_benchmark"),
             Self::RubyBenchmarkIps => write!(f, "ruby_benchmark_ips"),
@@ -584,11 +588,11 @@ mod adapter {
         JS_BENCHMARK_INT, JS_DENO_INT, JS_INT, JS_MITATA_INT, JS_TIME_INT, JS_TINYBENCH_INT,
         JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
         MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT, PYTHON_INT,
-        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT, RUST_BENCH_INT,
-        RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT,
-        RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
-        RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
-        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        PYTHON_PYPERF_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT,
+        RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
+        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT,
+        RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT,
+        SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -650,6 +654,7 @@ mod adapter {
                 Self::PythonAsvJson => PYTHON_ASV_JSON_INT.to_sql(out),
                 Self::PythonAsvText => PYTHON_ASV_TEXT_INT.to_sql(out),
                 Self::PythonPytest => PYTHON_PYTEST_INT.to_sql(out),
+                Self::PythonPyperf => PYTHON_PYPERF_INT.to_sql(out),
                 Self::Ruby => RUBY_INT.to_sql(out),
                 Self::RubyBenchmark => RUBY_BENCHMARK_INT.to_sql(out),
                 Self::RubyBenchmarkIps => RUBY_BENCHMARK_IPS_INT.to_sql(out),
@@ -713,6 +718,7 @@ mod adapter {
                 PYTHON_ASV_JSON_INT => Ok(Self::PythonAsvJson),
                 PYTHON_ASV_TEXT_INT => Ok(Self::PythonAsvText),
                 PYTHON_PYTEST_INT => Ok(Self::PythonPytest),
+                PYTHON_PYPERF_INT => Ok(Self::PythonPyperf),
                 RUBY_INT => Ok(Self::Ruby),
                 RUBY_BENCHMARK_INT => Ok(Self::RubyBenchmark),
                 RUBY_BENCHMARK_IPS_INT => Ok(Self::RubyBenchmarkIps),
@@ -1337,7 +1343,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 53] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1381,6 +1387,7 @@ mod tests {
         Adapter::PythonAsvJson,
         Adapter::PythonAsvText,
         Adapter::PythonPytest,
+        Adapter::PythonPyperf,
         Adapter::Ruby,
         Adapter::RubyBenchmark,
         Adapter::RubyBenchmarkIps,
@@ -1438,6 +1445,7 @@ mod tests {
             | Adapter::PythonAsvJson
             | Adapter::PythonAsvText
             | Adapter::PythonPytest
+            | Adapter::PythonPyperf
             | Adapter::Ruby
             | Adapter::RubyBenchmark
             | Adapter::RubyBenchmarkIps

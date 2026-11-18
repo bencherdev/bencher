@@ -47,6 +47,7 @@ const CLI_ADAPTERS = new Set([
 	"js_tinybench",
 	"js_vitest",
 	"python_asv",
+	"python_pyperf",
 	"python_pytest",
 	"ruby_benchmark",
 	"ruby_benchmark_ips",

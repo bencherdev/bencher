@@ -216,6 +216,8 @@ pub enum CliReportAdapter {
     PythonAsv,
     /// 🐍 Python Pytest
     PythonPytest,
+    /// 🐍 Python pyperf
+    PythonPyperf,
     /// ♦️ Ruby Benchmark
     RubyBenchmark,
     /// ♦️ Ruby benchmark-ips

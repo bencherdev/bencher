@@ -771,6 +771,7 @@ export enum Adapter {
 	PythonAsvJson = "python_asv_json",
 	PythonAsvText = "python_asv_text",
 	PythonPytest = "python_pytest",
+	PythonPyperf = "python_pyperf",
 	Ruby = "ruby",
 	RubyBenchmark = "ruby_benchmark",
 	RubyBenchmarkIps = "ruby_benchmark_ips",

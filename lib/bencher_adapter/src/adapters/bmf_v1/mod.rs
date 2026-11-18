@@ -22,6 +22,7 @@ use crate::{
             },
             python::{
                 asv::{AdapterPythonAsvJson, AdapterPythonAsvText, AdapterPythonAsvV1},
+                pyperf::AdapterPythonPyperf,
                 pytest::AdapterPythonPytestV1,
             },
             ruby::{benchmark::AdapterRubyBenchmarkV1, benchmark_ips::AdapterRubyBenchmarkIps},
@@ -114,6 +115,7 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::PythonAsvJson => AdapterPythonAsvJson::parse(input, settings),
         Adapter::PythonAsvText => AdapterPythonAsvText::parse(input, settings),
         Adapter::PythonPytest => AdapterPythonPytestV1::parse(input, settings),
+        Adapter::PythonPyperf => AdapterPythonPyperf::parse(input, settings),
         Adapter::RubyBenchmark => AdapterRubyBenchmarkV1::parse(input, settings),
         Adapter::RubyBenchmarkIps => AdapterRubyBenchmarkIps::parse(input, settings),
         Adapter::ShellHyperfine => AdapterShellHyperfineV1::parse(input, settings),
@@ -139,7 +141,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 53] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -183,6 +185,7 @@ mod test_bmf_v1 {
         Adapter::PythonAsvJson,
         Adapter::PythonAsvText,
         Adapter::PythonPytest,
+        Adapter::PythonPyperf,
         Adapter::Ruby,
         Adapter::RubyBenchmark,
         Adapter::RubyBenchmarkIps,

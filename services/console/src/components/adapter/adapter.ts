@@ -63,6 +63,7 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:
 		case Adapter.PythonPytest:
+		case Adapter.PythonPyperf:
 			return PYTHON_ICON;
 		case Adapter.RubyBenchmark:
 		case Adapter.RubyBenchmarkIps:
@@ -129,6 +130,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 			return `bencher run${host} "asv run"`;
 		case Adapter.PythonPytest:
 			return `bencher run${host} --file results.json "pytest --benchmark-json results.json benchmarks.py"`;
+		case Adapter.PythonPyperf:
+			return `bencher run${host} --file results.json "python benchmarks.py -o results.json"`;
 		case Adapter.RubyBenchmark:
 			return `bencher run${host} "ruby benchmarks.rb"`;
 		case Adapter.RubyBenchmarkIps:
