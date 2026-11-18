@@ -72,6 +72,8 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.StorageFioJson:
 		case Adapter.StorageFioText:
 			return "fio";
+		case Adapter.NetworkIperf3:
+			return "iperf3";
 	}
 };
 
@@ -139,6 +141,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.StorageFioJson:
 		case Adapter.StorageFioText:
 			return `bencher run${host} "fio --name=randread --rw=randread --bs=4k --size=64M --output-format=json"`;
+		case Adapter.NetworkIperf3:
+			return `bencher run${host} "iperf3 --client localhost --json"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 		case Adapter.Json:
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs

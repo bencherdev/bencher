@@ -85,6 +85,7 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"storage_fio",
 	"storage_fio_json",
 	"storage_fio_text",
+	"network_iperf3",
 ];
 
 const LISTED = new Set<string>(ADAPTERS);

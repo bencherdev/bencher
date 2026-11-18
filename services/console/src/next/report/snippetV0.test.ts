@@ -57,6 +57,7 @@ const CLI_ADAPTERS = new Set([
 	"rust_gungraun",
 	"shell_hyperfine",
 	"storage_fio",
+	"network_iperf3",
 ]);
 
 describe("thresholdSnippetV0", () => {

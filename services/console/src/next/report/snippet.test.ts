@@ -232,11 +232,15 @@ describe("thresholdSnippets", () => {
 			expect(boundaries(simple)).toEqual(["--threshold-upper-boundary"]);
 		});
 
-		// Kills guarding throughput against getting faster.
-		test("guards throughput from below", () => {
-			const fast = line({ threads: 1 }, { measure: "throughput" });
-			const { simple } = thresholdSnippets(PLACE, fast, [fast]);
-			expect(boundaries(simple)).toEqual(["--threshold-lower-boundary"]);
-		});
+		// Kills guarding a measure where a rise is better against rising, such as
+		// any one of these dropped from the list.
+		test.each(["throughput", "bits-throughput"])(
+			"guards %s from below",
+			(measure) => {
+				const fast = line({ threads: 1 }, { measure });
+				const { simple } = thresholdSnippets(PLACE, fast, [fast]);
+				expect(boundaries(simple)).toEqual(["--threshold-lower-boundary"]);
+			},
+		);
 	});
 });

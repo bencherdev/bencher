@@ -467,6 +467,7 @@ fn adapter_docs(adapter: Adapter) -> (&'static str, &'static str) {
         Adapter::StorageFio | Adapter::StorageFioJson | Adapter::StorageFioText => {
             ("Storage fio", "-storage-fio")
         },
+        Adapter::NetworkIperf3 => ("Network iperf3", "-network-iperf3"),
     }
 }
 

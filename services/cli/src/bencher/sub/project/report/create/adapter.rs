@@ -30,6 +30,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::RustGungraun => Self::RustGungraun,
             CliReportAdapter::ShellHyperfine => Self::ShellHyperfine,
             CliReportAdapter::StorageFio => Self::StorageFio,
+            CliReportAdapter::NetworkIperf3 => Self::NetworkIperf3,
         }
     }
 }

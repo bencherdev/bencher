@@ -366,6 +366,7 @@ const DART_BENCHMARK_HARNESS_INT: i32 = 111;
 const STORAGE_FIO_INT: i32 = 151;
 const STORAGE_FIO_JSON_INT: i32 = 1511;
 const STORAGE_FIO_TEXT_INT: i32 = 1512;
+const NETWORK_IPERF3_INT: i32 = 141;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -434,6 +435,7 @@ pub enum Adapter {
     StorageFio = STORAGE_FIO_INT,
     StorageFioJson = STORAGE_FIO_JSON_INT,
     StorageFioText = STORAGE_FIO_TEXT_INT,
+    NetworkIperf3 = NETWORK_IPERF3_INT,
 }
 
 impl Adapter {
@@ -497,7 +499,8 @@ impl Adapter {
             | Self::DartBenchmarkHarness
             | Self::StorageFio
             | Self::StorageFioJson
-            | Self::StorageFioText => self,
+            | Self::StorageFioText
+            | Self::NetworkIperf3 => self,
         }
     }
 
@@ -583,6 +586,7 @@ impl fmt::Display for Adapter {
             Self::StorageFio => write!(f, "storage_fio"),
             Self::StorageFioJson => write!(f, "storage_fio_json"),
             Self::StorageFioText => write!(f, "storage_fio_text"),
+            Self::NetworkIperf3 => write!(f, "network_iperf3"),
         }
     }
 }
@@ -595,13 +599,13 @@ mod adapter {
         GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
         JS_BENCHMARK_INT, JS_DENO_INT, JS_INT, JS_MITATA_INT, JS_TIME_INT, JS_TINYBENCH_INT,
         JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
-        MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT, PYTHON_INT,
-        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT, RUST_BENCH_INT,
-        RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT,
-        RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
-        RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
-        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT, STORAGE_FIO_INT,
-        STORAGE_FIO_JSON_INT, STORAGE_FIO_TEXT_INT,
+        MAGIC_INT, NETWORK_IPERF3_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT,
+        PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT,
+        RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
+        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT,
+        RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT,
+        SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        STORAGE_FIO_INT, STORAGE_FIO_JSON_INT, STORAGE_FIO_TEXT_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -675,6 +679,7 @@ mod adapter {
                 Self::StorageFio => STORAGE_FIO_INT.to_sql(out),
                 Self::StorageFioJson => STORAGE_FIO_JSON_INT.to_sql(out),
                 Self::StorageFioText => STORAGE_FIO_TEXT_INT.to_sql(out),
+                Self::NetworkIperf3 => NETWORK_IPERF3_INT.to_sql(out),
             }
         }
     }
@@ -741,6 +746,7 @@ mod adapter {
                 STORAGE_FIO_INT => Ok(Self::StorageFio),
                 STORAGE_FIO_JSON_INT => Ok(Self::StorageFioJson),
                 STORAGE_FIO_TEXT_INT => Ok(Self::StorageFioText),
+                NETWORK_IPERF3_INT => Ok(Self::NetworkIperf3),
                 value => Err(Box::new(AdapterError::Invalid(value))),
             }
         }
@@ -1356,7 +1362,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 55] = [
+    const ADAPTERS: [Adapter; 56] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1412,6 +1418,7 @@ mod tests {
         Adapter::StorageFio,
         Adapter::StorageFioJson,
         Adapter::StorageFioText,
+        Adapter::NetworkIperf3,
     ];
 
     // A new variant fails to compile here until it joins `ADAPTERS` above.
@@ -1471,7 +1478,8 @@ mod tests {
             | Adapter::DartBenchmarkHarness
             | Adapter::StorageFio
             | Adapter::StorageFioJson
-            | Adapter::StorageFioText => true,
+            | Adapter::StorageFioText
+            | Adapter::NetworkIperf3 => true,
         }
     }
 

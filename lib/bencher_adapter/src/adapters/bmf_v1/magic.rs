@@ -11,6 +11,7 @@ use crate::{
                 benchmark::AdapterJsBenchmarkV1, deno::AdapterJsDeno, mitata::AdapterJsMitata,
                 time::AdapterJsTimeV1, tinybench::AdapterJsTinybench, vitest::AdapterJsVitestV1,
             },
+            network::iperf3::AdapterNetworkIperf3,
             python::{asv::AdapterPythonAsvV1, pytest::AdapterPythonPytestV1},
             ruby::{benchmark::AdapterRubyBenchmarkV1, benchmark_ips::AdapterRubyBenchmarkIps},
             rust::{
@@ -56,6 +57,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
             .or_else(|| AdapterStorageFio::parse(input, settings))
+            .or_else(|| AdapterNetworkIperf3::parse(input, settings))
     }
 }
 
@@ -73,7 +75,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 33] = [
+    const LEAVES: [Adapter; 34] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -107,11 +109,12 @@ mod test_magic_v1 {
         Adapter::ShellHyperfineV1,
         Adapter::StorageFioJson,
         Adapter::StorageFioText,
+        Adapter::NetworkIperf3,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 15] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 20] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -135,9 +138,16 @@ mod test_magic_v1 {
         ("rust/bench/zero.txt", None),
         // libtest ran no benchmark, and gungraun's summary is of a schema no leaf reads.
         ("rust/gungraun/json_not_v6.txt", None),
-        // iperf3's text, which no leaf reads.
+        // iperf3's text and `--json-stream` lines, which no leaf reads.
         ("network/iperf3/tcp_text.txt", None),
         ("network/iperf3/udp_text.txt", None),
+        ("network/iperf3/tcp_json_stream.txt", None),
+        // iperf3 failed, or stopped before the end of its test.
+        ("network/iperf3/refused.json", None),
+        ("network/iperf3/server_killed_3.16.json", None),
+        ("network/iperf3/tcp_sigint.json", None),
+        // The server's report of a run, which holds no sender rate of its own.
+        ("network/iperf3/server_title_3.22.json", None),
         // fio ran no job that did any I/O.
         ("storage/fio/error.json", None),
         // fio's terse output, which no leaf reads.
@@ -268,6 +278,7 @@ mod test_magic_v1 {
             "ruby/benchmark_ips" => return Some(Adapter::RubyBenchmarkIps),
             "rust/iai" => return Some(Adapter::RustIai),
             "rust/divan" => return Some(Adapter::RustDivan),
+            "network/iperf3" => return Some(Adapter::NetworkIperf3),
             "json" => return name.starts_with("report_v1_").then_some(Adapter::JsonV1),
             "cpp/catch2" => (
                 extension == Some("xml"),

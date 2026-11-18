@@ -13080,7 +13080,8 @@
           "dart_benchmark_harness",
           "storage_fio",
           "storage_fio_json",
-          "storage_fio_text"
+          "storage_fio_text",
+          "network_iperf3"
         ]
       },
       "AlertStatus": {

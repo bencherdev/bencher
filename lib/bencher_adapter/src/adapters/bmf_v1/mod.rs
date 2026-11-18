@@ -20,6 +20,7 @@ use crate::{
                 tinybench::AdapterJsTinybench,
                 vitest::{AdapterJsVitestOutputJson, AdapterJsVitestReporter, AdapterJsVitestV1},
             },
+            network::iperf3::AdapterNetworkIperf3,
             python::{
                 asv::{AdapterPythonAsvJson, AdapterPythonAsvText, AdapterPythonAsvV1},
                 pytest::AdapterPythonPytestV1,
@@ -59,6 +60,7 @@ pub mod java;
 pub mod js;
 mod leaf;
 mod magic;
+pub mod network;
 mod percentile;
 pub mod python;
 pub mod ruby;
@@ -127,6 +129,7 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::StorageFio => AdapterStorageFio::parse(input, settings),
         Adapter::StorageFioJson => AdapterStorageFioJson::parse(input, settings),
         Adapter::StorageFioText => AdapterStorageFioText::parse(input, settings),
+        Adapter::NetworkIperf3 => AdapterNetworkIperf3::parse(input, settings),
         Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
 }
@@ -147,7 +150,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 55] = [
+    const ADAPTERS: [Adapter; 56] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -203,6 +206,7 @@ mod test_bmf_v1 {
         Adapter::StorageFio,
         Adapter::StorageFioJson,
         Adapter::StorageFioText,
+        Adapter::NetworkIperf3,
     ];
 
     const LANGUAGES: [Adapter; 10] = [
