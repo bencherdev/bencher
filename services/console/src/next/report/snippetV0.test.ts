@@ -37,6 +37,7 @@ const CLI_ADAPTERS = new Set([
 	"c_sharp_dot_net",
 	"cpp_catch2",
 	"cpp_google",
+	"cpp_nanobench",
 	"dart_benchmark_harness",
 	"go_bench",
 	"java_jmh",

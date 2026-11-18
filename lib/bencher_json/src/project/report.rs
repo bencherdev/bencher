@@ -332,6 +332,9 @@ const CPP_GOOGLE_INT: i32 = 31;
 const CPP_CATCH2_INT: i32 = 32;
 const CPP_CATCH2_XML_INT: i32 = 321;
 const CPP_CATCH2_TEXT_INT: i32 = 322;
+const CPP_NANOBENCH_INT: i32 = 33;
+const CPP_NANOBENCH_JSON_INT: i32 = 331;
+const CPP_NANOBENCH_TEXT_INT: i32 = 332;
 const GO_INT: i32 = 40;
 const GO_BENCH_INT: i32 = 41;
 const GO_BENCH_JSON_INT: i32 = 411;
@@ -397,6 +400,9 @@ pub enum Adapter {
     CppCatch2 = CPP_CATCH2_INT,
     CppCatch2Xml = CPP_CATCH2_XML_INT,
     CppCatch2Text = CPP_CATCH2_TEXT_INT,
+    CppNanobench = CPP_NANOBENCH_INT,
+    CppNanobenchJson = CPP_NANOBENCH_JSON_INT,
+    CppNanobenchText = CPP_NANOBENCH_TEXT_INT,
     Go = GO_INT,
     GoBench = GO_BENCH_INT,
     GoBenchJson = GO_BENCH_JSON_INT,
@@ -466,6 +472,9 @@ impl Adapter {
             | Self::CppCatch2
             | Self::CppCatch2Xml
             | Self::CppCatch2Text
+            | Self::CppNanobench
+            | Self::CppNanobenchJson
+            | Self::CppNanobenchText
             | Self::GoBench
             | Self::GoBenchJson
             | Self::GoBenchText
@@ -540,6 +549,9 @@ impl fmt::Display for Adapter {
             Self::CppCatch2 => write!(f, "cpp_catch2"),
             Self::CppCatch2Xml => write!(f, "cpp_catch2_xml"),
             Self::CppCatch2Text => write!(f, "cpp_catch2_text"),
+            Self::CppNanobench => write!(f, "cpp_nanobench"),
+            Self::CppNanobenchJson => write!(f, "cpp_nanobench_json"),
+            Self::CppNanobenchText => write!(f, "cpp_nanobench_text"),
             Self::Go => write!(f, "go"),
             Self::GoBench => write!(f, "go_bench"),
             Self::GoBenchJson => write!(f, "go_bench_json"),
@@ -579,16 +591,17 @@ impl fmt::Display for Adapter {
 mod adapter {
     use super::{
         Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_CATCH2_TEXT_INT,
-        CPP_CATCH2_XML_INT, CPP_GOOGLE_INT, CPP_INT, DART_BENCHMARK_HARNESS_INT, DART_INT,
-        GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
-        JS_BENCHMARK_INT, JS_DENO_INT, JS_INT, JS_MITATA_INT, JS_TIME_INT, JS_TINYBENCH_INT,
-        JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
-        MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT, PYTHON_INT,
-        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT, RUST_BENCH_INT,
-        RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT,
-        RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
-        RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
-        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        CPP_CATCH2_XML_INT, CPP_GOOGLE_INT, CPP_INT, CPP_NANOBENCH_INT, CPP_NANOBENCH_JSON_INT,
+        CPP_NANOBENCH_TEXT_INT, DART_BENCHMARK_HARNESS_INT, DART_INT, GO_BENCH_INT,
+        GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, JAVA_INT, JAVA_JMH_INT, JS_BENCHMARK_INT,
+        JS_DENO_INT, JS_INT, JS_MITATA_INT, JS_TIME_INT, JS_TINYBENCH_INT, JS_VITEST_INT,
+        JS_VITEST_V1_INT, JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT, MAGIC_INT,
+        PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT, PYTHON_INT, PYTHON_PYTEST_INT,
+        RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT, RUST_BENCH_INT, RUST_BENCH_JSON_INT,
+        RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT,
+        RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT,
+        RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT,
+        SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -628,6 +641,9 @@ mod adapter {
                 Self::CppCatch2 => CPP_CATCH2_INT.to_sql(out),
                 Self::CppCatch2Xml => CPP_CATCH2_XML_INT.to_sql(out),
                 Self::CppCatch2Text => CPP_CATCH2_TEXT_INT.to_sql(out),
+                Self::CppNanobench => CPP_NANOBENCH_INT.to_sql(out),
+                Self::CppNanobenchJson => CPP_NANOBENCH_JSON_INT.to_sql(out),
+                Self::CppNanobenchText => CPP_NANOBENCH_TEXT_INT.to_sql(out),
                 Self::Go => GO_INT.to_sql(out),
                 Self::GoBench => GO_BENCH_INT.to_sql(out),
                 Self::GoBenchJson => GO_BENCH_JSON_INT.to_sql(out),
@@ -691,6 +707,9 @@ mod adapter {
                 CPP_CATCH2_INT => Ok(Self::CppCatch2),
                 CPP_CATCH2_XML_INT => Ok(Self::CppCatch2Xml),
                 CPP_CATCH2_TEXT_INT => Ok(Self::CppCatch2Text),
+                CPP_NANOBENCH_INT => Ok(Self::CppNanobench),
+                CPP_NANOBENCH_JSON_INT => Ok(Self::CppNanobenchJson),
+                CPP_NANOBENCH_TEXT_INT => Ok(Self::CppNanobenchText),
                 GO_INT => Ok(Self::Go),
                 GO_BENCH_INT => Ok(Self::GoBench),
                 GO_BENCH_JSON_INT => Ok(Self::GoBenchJson),
@@ -1337,7 +1356,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 55] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1359,6 +1378,9 @@ mod tests {
         Adapter::CppCatch2,
         Adapter::CppCatch2Xml,
         Adapter::CppCatch2Text,
+        Adapter::CppNanobench,
+        Adapter::CppNanobenchJson,
+        Adapter::CppNanobenchText,
         Adapter::Go,
         Adapter::GoBench,
         Adapter::GoBenchJson,
@@ -1416,6 +1438,9 @@ mod tests {
             | Adapter::CppCatch2
             | Adapter::CppCatch2Xml
             | Adapter::CppCatch2Text
+            | Adapter::CppNanobench
+            | Adapter::CppNanobenchJson
+            | Adapter::CppNanobenchText
             | Adapter::Go
             | Adapter::GoBench
             | Adapter::GoBenchJson

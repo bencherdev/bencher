@@ -1,0 +1,4 @@
+"title";"name";"unit";"batch";"elapsed";"error %";"instructions";"branches";"branch misses";"total"
+"Containers";"std::set insert";"insert";1;8.1578956574977e-08;0.166808123319661;0;0;0;0.013179387
+"Containers";"std::vector push_back x1000";"insert";1000;4.32738614619212e-07;0.018851506688573;0;0;0;0.012022575
+"Containers";"noisy | name with spaces";"insert";1;1.14133111849391e-06;0.0072467104516455;0;0;0;0.012095956

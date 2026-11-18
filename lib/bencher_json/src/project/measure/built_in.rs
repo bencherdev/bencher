@@ -205,6 +205,15 @@ pub mod mitata {
     );
 }
 
+pub mod systems {
+    create_measure!(
+        ContextSwitches,
+        "Context Switches",
+        "context-switches",
+        "switches"
+    );
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");

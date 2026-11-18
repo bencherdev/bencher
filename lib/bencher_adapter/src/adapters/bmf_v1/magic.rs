@@ -3,7 +3,10 @@ use crate::{
     adapters::{
         bmf_v1::{
             c_sharp::dot_net::AdapterCSharpDotNetV1,
-            cpp::{catch2::AdapterCppCatch2V1, google::AdapterCppGoogleV1},
+            cpp::{
+                catch2::AdapterCppCatch2V1, google::AdapterCppGoogleV1,
+                nanobench::AdapterCppNanobench,
+            },
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::AdapterGoBenchV1,
             java::jmh::AdapterJavaJmhV1,
@@ -26,7 +29,7 @@ use crate::{
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
 /// its structured format before its text, and Divan before criterion, since criterion's text leaf
-/// also claims a run that prints both and drops Divan's tree.
+/// also claims a run that prints both and drops Divan's tree, then each harness added after them.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -54,6 +57,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustIaiV1::parse(input, settings))
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
+            .or_else(|| AdapterCppNanobench::parse(input, settings))
     }
 }
 
@@ -71,7 +75,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 31] = [
+    const LEAVES: [Adapter; 33] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -103,11 +107,13 @@ mod test_magic_v1 {
         Adapter::RustGungraunStdout,
         Adapter::ShellHyperfineV2,
         Adapter::ShellHyperfineV1,
+        Adapter::CppNanobenchJson,
+        Adapter::CppNanobenchText,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 11] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 22] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -131,6 +137,21 @@ mod test_magic_v1 {
         ("rust/bench/zero.txt", None),
         // libtest ran no benchmark, and gungraun's summary is of a schema no leaf reads.
         ("rust/gungraun/json_not_v6.txt", None),
+        // Several nanobench renders, one after another, which make no one JSON document.
+        ("cpp/nanobench/json_4_6_0_concatenated.txt", None),
+        // nanobench's CSV and pyperf templates, and Bitcoin Core's own CSV, which no leaf reads.
+        ("cpp/nanobench/csv.csv", None),
+        ("cpp/nanobench/pyperf_template.json", None),
+        ("cpp/nanobench/bitcoin.csv", None),
+        // Bitcoin Core's sanity check, which prints no table.
+        ("cpp/nanobench/bitcoin_sanity_stdout.txt", None),
+        // Other harnesses' tables, which no leaf reads.
+        ("js/reassure/output.md", None),
+        ("php/phpbench/baseline_stdout.txt", None),
+        ("php/phpbench/progress_json.txt", None),
+        ("python/pyperf/compare_table.txt", None),
+        ("swift/benchmark/markdown.md", None),
+        ("swift/benchmark/markdown_alpha.md", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -258,6 +279,10 @@ mod test_magic_v1 {
             "rust/iai" => return Some(Adapter::RustIai),
             "rust/divan" => return Some(Adapter::RustDivan),
             "json" => return name.starts_with("report_v1_").then_some(Adapter::JsonV1),
+            "cpp/nanobench" => (
+                extension == Some("json"),
+                (Adapter::CppNanobenchJson, Adapter::CppNanobenchText),
+            ),
             "cpp/catch2" => (
                 extension == Some("xml"),
                 (Adapter::CppCatch2Xml, Adapter::CppCatch2Text),

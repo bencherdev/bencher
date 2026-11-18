@@ -443,6 +443,9 @@ fn adapter_docs(adapter: Adapter) -> (&'static str, &'static str) {
         Adapter::CppCatch2 | Adapter::CppCatch2Xml | Adapter::CppCatch2Text => {
             ("C++ Catch2", "-c-catch2")
         },
+        Adapter::CppNanobench | Adapter::CppNanobenchJson | Adapter::CppNanobenchText => {
+            ("C++ nanobench", "-c-nanobench")
+        },
         Adapter::GoBench | Adapter::GoBenchJson | Adapter::GoBenchText => ("Go Bench", "-go-bench"),
         Adapter::JavaJmh => ("Java JMH", "%EF%B8%8F-java-jmh"),
         Adapter::CSharpDotNet => ("C# DotNet", "%EF%B8%8F%E2%83%A3-c-dotnet"),
