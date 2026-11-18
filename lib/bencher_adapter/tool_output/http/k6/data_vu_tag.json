@@ -1,0 +1,277 @@
+{
+  "state": {
+    "isStdErrTTY": false,
+    "testRunDurationMs": 2000.608811,
+    "isStdOutTTY": false
+  },
+  "metrics": {
+    "my_time": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 6,
+        "max": 7,
+        "count": 80
+      }
+    },
+    "my_gauge": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": -2,
+        "max": 5
+      }
+    },
+    "my_gauge{vu:c}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 5
+      },
+      "thresholds": {
+        "value>=0": {
+          "ok": true
+        }
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 0,
+        "rate": 0
+      }
+    },
+    "my_rate{vu:b}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "fails": 0,
+        "rate": 0,
+        "passes": 0
+      },
+      "thresholds": {
+        "rate>=0": {
+          "ok": true
+        }
+      }
+    },
+    "my_gauge{vu:a}": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 3,
+        "min": 3,
+        "max": 3
+      },
+      "thresholds": {
+        "value>=0": {
+          "ok": true
+        }
+      }
+    },
+    "iterations{vu:1}": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 0,
+        "rate": 0
+      },
+      "thresholds": {
+        "count>=0": {
+          "ok": true
+        }
+      }
+    },
+    "iteration_duration": {
+      "contains": "time",
+      "values": {
+        "count": 38,
+        "avg": 100.9643552368421,
+        "max": 101.371273
+      },
+      "type": "trend"
+    },
+    "my_time{vu:a}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 5,
+        "max": 5,
+        "count": 40
+      },
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 38,
+        "rate": 18.994218055555688
+      }
+    },
+    "my_time{iter:z}": {
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 7,
+        "max": 7,
+        "count": 40
+      }
+    },
+    "dropped_iterations{vu:1}": {
+      "contains": "default",
+      "values": {
+        "count": 30,
+        "rate": 14.995435307017647
+      },
+      "thresholds": {
+        "count>=0": {
+          "ok": true
+        }
+      },
+      "type": "counter"
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "rate": 0,
+        "count": 0
+      }
+    },
+    "my_rate": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.5,
+        "passes": 40,
+        "fails": 40
+      }
+    },
+    "my_rate{vu:e}": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 40
+      },
+      "thresholds": {
+        "rate>=0": {
+          "ok": true
+        }
+      }
+    },
+    "my_rate{vu:a}": {
+      "thresholds": {
+        "rate>=0": {
+          "ok": true
+        }
+      },
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 1,
+        "passes": 40,
+        "fails": 0
+      }
+    },
+    "my_time{vu:b}": {
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "count": 0,
+        "avg": 0,
+        "max": 0
+      }
+    },
+    "vus_max": {
+      "values": {
+        "value": 2,
+        "min": 2,
+        "max": 2
+      },
+      "type": "gauge",
+      "contains": "default"
+    },
+    "my_gauge{vu:d}": {
+      "thresholds": {
+        "value>=0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": -2,
+        "max": 0
+      }
+    },
+    "dropped_iterations": {
+      "values": {
+        "count": 60,
+        "rate": 29.990870614035295
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 2,
+        "min": 2,
+        "max": 2
+      }
+    },
+    "my_gauge{vu:b}": {
+      "thresholds": {
+        "value>=0": {
+          "ok": true
+        }
+      },
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 0,
+        "min": 0,
+        "max": 0
+      }
+    }
+  },
+  "root_group": {
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [],
+    "checks": [],
+    "name": "",
+    "path": ""
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "max",
+      "count"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  }
+}

@@ -6,6 +6,7 @@ use crate::{
             cpp::{catch2::AdapterCppCatch2V1, google::AdapterCppGoogleV1},
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::AdapterGoBenchV1,
+            http::k6::AdapterHttpK6,
             java::jmh::AdapterJavaJmhV1,
             js::{
                 benchmark::AdapterJsBenchmarkV1, deno::AdapterJsDeno, mitata::AdapterJsMitata,
@@ -26,7 +27,7 @@ use crate::{
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
 /// its structured format before its text, and Divan before criterion, since criterion's text leaf
-/// also claims a run that prints both and drops Divan's tree.
+/// also claims a run that prints both and drops Divan's tree, then each HTTP load tool.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -54,6 +55,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustIaiV1::parse(input, settings))
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
+            .or_else(|| AdapterHttpK6::parse(input, settings))
     }
 }
 
@@ -71,7 +73,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 31] = [
+    const LEAVES: [Adapter; 33] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -103,11 +105,13 @@ mod test_magic_v1 {
         Adapter::RustGungraunStdout,
         Adapter::ShellHyperfineV2,
         Adapter::ShellHyperfineV1,
+        Adapter::HttpK6Json,
+        Adapter::HttpK6JsonSummary,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 11] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 12] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -131,6 +135,8 @@ mod test_magic_v1 {
         ("rust/bench/zero.txt", None),
         // libtest ran no benchmark, and gungraun's summary is of a schema no leaf reads.
         ("rust/gungraun/json_not_v6.txt", None),
+        // k6's text summary, which k6 does not support parsing.
+        ("http/k6/text_scenarios.txt", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -263,6 +269,13 @@ mod test_magic_v1 {
                 (Adapter::CppCatch2Xml, Adapter::CppCatch2Text),
             ),
             "go/bench" => (json, (Adapter::GoBenchJson, Adapter::GoBenchText)),
+            "http/k6" => {
+                return Some(if name.starts_with("machine_readable") {
+                    Adapter::HttpK6Json
+                } else {
+                    Adapter::HttpK6JsonSummary
+                });
+            },
             "js/vitest" => (
                 name.starts_with("v5"),
                 (Adapter::JsVitestV5, Adapter::JsVitestV1),

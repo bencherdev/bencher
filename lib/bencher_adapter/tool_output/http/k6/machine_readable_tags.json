@@ -1,0 +1,190 @@
+{
+    "config": {
+        "duration": 3.085947846,
+        "execution": "local",
+        "script": "import http from 'k6/http';\nimport { check } from 'k6';\n\nexport const options = {\n  vus: 5,\n  duration: '3s',\n  tags: { testid: 'nightly' },\n  thresholds: {\n    'http_req_duration{method:GET,status:200}': [],\n    'http_req_duration{url:http://localhost:8080/slow}': [],\n    'checks{check:fast is 200}': [],\n    'http_reqs{expected_response:false}': [],\n  },\n};\n\nexport default function () {\n  const r = http.get('http://localhost:8080/fast');\n  check(r, { 'fast is 200': (x) => x.status === 200 });\n  http.get('http://localhost:8080/slow');\n  http.get('http://localhost:8080/error');\n}\n"
+    },
+    "metadata": {
+        "generated_at": "2026-11-16T21:42:47.854785695Z",
+        "k6_version": "2.4.0"
+    },
+    "results": {
+        "checks": {
+            "metrics": [
+                {
+                    "contains": "default",
+                    "name": "checks_total",
+                    "type": "counter",
+                    "values": {
+                        "count": 90
+                    }
+                },
+                {
+                    "contains": "default",
+                    "name": "checks_failed",
+                    "type": "rate",
+                    "values": {
+                        "matches": 0,
+                        "rate": 0,
+                        "total": 90
+                    }
+                },
+                {
+                    "contains": "default",
+                    "name": "checks_succeeded",
+                    "type": "rate",
+                    "values": {
+                        "matches": 90,
+                        "rate": 1,
+                        "total": 90
+                    }
+                }
+            ],
+            "results": [
+                {
+                    "fails": 0,
+                    "name": "fast is 200",
+                    "passes": 90
+                }
+            ]
+        },
+        "metrics": [
+            {
+                "contains": "time",
+                "name": "http_req_duration{expected_response:true}",
+                "type": "trend",
+                "values": {
+                    "avg": 64.93760176666669,
+                    "max": 92.763639,
+                    "med": 67.2520995,
+                    "min": 0.870419,
+                    "p90": 91.0579556,
+                    "p95": 91.86836045
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_reqs",
+                "type": "counter",
+                "values": {
+                    "count": 270
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_req_failed",
+                "type": "rate",
+                "values": {
+                    "matches": 90,
+                    "rate": 0.3333333333333333,
+                    "total": 270
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration{url:http://localhost:8080/slow}",
+                "type": "trend",
+                "values": {
+                    "avg": 91.08164734444446,
+                    "max": 92.763639,
+                    "med": 90.917039,
+                    "min": 90.65728,
+                    "p90": 91.8685589,
+                    "p95": 91.9183649
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration{method:GET,status:200}",
+                "type": "trend",
+                "values": {
+                    "avg": 64.93760176666669,
+                    "max": 92.763639,
+                    "med": 67.2520995,
+                    "min": 0.870419,
+                    "p90": 91.0579556,
+                    "p95": 91.86836045
+                }
+            },
+            {
+                "contains": "time",
+                "name": "http_req_duration",
+                "type": "trend",
+                "values": {
+                    "avg": 56.52860130370372,
+                    "max": 92.763639,
+                    "med": 40.977069,
+                    "min": 0.126445,
+                    "p90": 90.997795,
+                    "p95": 91.6855879
+                }
+            },
+            {
+                "contains": "default",
+                "name": "http_reqs{expected_response:false}",
+                "type": "counter",
+                "values": {
+                    "count": 90
+                }
+            },
+            {
+                "contains": "time",
+                "name": "iteration_duration",
+                "type": "trend",
+                "values": {
+                    "avg": 169.86501814444438,
+                    "max": 176.992767,
+                    "med": 172.99260650000002,
+                    "min": 132.467708,
+                    "p90": 174.81930369999998,
+                    "p95": 175.08608775000002
+                }
+            },
+            {
+                "contains": "default",
+                "name": "iterations",
+                "type": "counter",
+                "values": {
+                    "count": 90
+                }
+            },
+            {
+                "contains": "default",
+                "name": "vus",
+                "type": "gauge",
+                "values": {
+                    "max": 5,
+                    "min": 5,
+                    "value": 5
+                }
+            },
+            {
+                "contains": "default",
+                "name": "vus_max",
+                "type": "gauge",
+                "values": {
+                    "max": 5,
+                    "min": 5,
+                    "value": 5
+                }
+            },
+            {
+                "contains": "data",
+                "name": "data_sent",
+                "type": "counter",
+                "values": {
+                    "count": 20070
+                }
+            },
+            {
+                "contains": "data",
+                "name": "data_received",
+                "type": "counter",
+                "values": {
+                    "count": 1506960
+                }
+            }
+        ]
+    },
+    "version": "1.0.0"
+}

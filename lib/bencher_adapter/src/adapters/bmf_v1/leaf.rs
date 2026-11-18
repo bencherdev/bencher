@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use bencher_json::{
     BenchmarkName, BenchmarkNameId, BmfVersion, MeasureNameId, MetricName, ParameterSet,
     ParameterSetInput, project::report::Adapter,
@@ -5,13 +7,14 @@ use bencher_json::{
 
 use crate::results::{
     adapter_metrics::AdapterMetrics,
-    adapter_results::{AdapterResults, MeasureUnits, ResultsMap, Skipped},
+    adapter_results::{AdapterResults, MeasureUnits, NamelessBenchmark, ResultsMap, Skipped},
 };
 
 /// The results one version 1 leaf builds, counting what it skips.
 #[derive(Debug, Default)]
 pub(crate) struct LeafResults {
     inner: ResultsMap,
+    nameless: Option<NamelessBenchmark>,
     skipped: Skipped,
     units: MeasureUnits,
 }
@@ -57,6 +60,29 @@ impl LeafResults {
         })
     }
 
+    /// A variant of the benchmark the output names nothing for, which the server names by the
+    /// run's benchmark prefix, else by `harness`.
+    pub(crate) fn nameless_variant(
+        &mut self,
+        harness: &'static str,
+        parameters: ParameterSet,
+    ) -> Variant<'_> {
+        let metrics = self
+            .nameless
+            .get_or_insert_with(|| NamelessBenchmark {
+                harness,
+                entries: BTreeMap::new(),
+            })
+            .entries
+            .entry(parameters)
+            .or_default();
+        Variant {
+            metrics,
+            skipped: &mut self.skipped,
+            units: &mut self.units,
+        }
+    }
+
     pub(crate) fn skip_benchmark(&mut self) {
         self.skipped.benchmarks += 1;
     }
@@ -72,24 +98,29 @@ impl LeafResults {
     /// The results, recording `adapter` as the leaf that parsed them, or `None`
     /// when the input held no benchmark this leaf reads.
     pub(crate) fn finish(self, adapter: Adapter) -> Option<AdapterResults> {
-        (!self.inner.is_empty()).then(|| self.into_results(adapter))
+        (!self.inner.is_empty() || self.nameless.is_some()).then(|| self.into_results(adapter))
     }
 
     /// [`Self::finish`], also when the input held benchmarks or variants of this leaf's harness
     /// that it could only skip, so that their count still reaches the report.
     pub(crate) fn finish_with_skips(self, adapter: Adapter) -> Option<AdapterResults> {
-        (!self.inner.is_empty() || self.skipped.benchmarks > 0 || self.skipped.variants > 0)
+        (!self.inner.is_empty()
+            || self.nameless.is_some()
+            || self.skipped.benchmarks > 0
+            || self.skipped.variants > 0)
             .then(|| self.into_results(adapter))
     }
 
     fn into_results(self, adapter: Adapter) -> AdapterResults {
         let Self {
             inner,
+            nameless,
             skipped,
             units,
         } = self;
         AdapterResults {
             inner,
+            nameless,
             version: BmfVersion::V1,
             resolved_adapter: Some(adapter),
             skipped,

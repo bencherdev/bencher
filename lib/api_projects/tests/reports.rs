@@ -2861,6 +2861,121 @@ async fn reports_post_warns_of_a_benchmark_whose_prefixed_name_is_too_long() {
     assert_eq!(benchmarks, vec![format!("{prefix}bench_one")]);
 }
 
+// POST /v0/projects/{project}/reports - k6 names nothing for the test as a whole, so its one
+// benchmark is named by the run's benchmark prefix trimmed of trailing whitespace, else `k6`,
+// whether its harness or `magic` read it, and the measures filter applies to it
+//
+// Kills: a server that names the benchmark only when the run sets a prefix, keeps the prefix's
+// trailing space or puts it in front of `k6`, or keeps a measure the run dropped from it.
+#[tokio::test]
+async fn reports_post_names_the_k6_benchmark_by_the_trimmed_prefix_else_k6() {
+    let server = TestServer::new().await;
+    for (label, adapter, prefix, measures, benchmark) in [
+        ("k6none", "http_k6", None, None, "k6"),
+        ("k6prefix", "http_k6", Some("api "), None, "api"),
+        ("k6magic", "magic", Some("api "), None, "api"),
+        (
+            "k6measure",
+            "http_k6",
+            Some("api "),
+            Some(["latency"]),
+            "api",
+        ),
+    ] {
+        let (token, project_slug) = ingest_project(&server, label).await;
+        let mut settings = serde_json::json!({ "adapter": adapter });
+        if let Some(prefix) = prefix {
+            settings["benchmark_prefix"] = prefix.into();
+        }
+        if let Some(measures) = measures {
+            settings["measures"] = serde_json::json!(measures);
+        }
+        let report = settled_report(K6_EXPORT_SIMPLE, 1, &settings);
+        let report = post_report_body(&server, &token, &project_slug, &report).await;
+        assert_eq!(report.warnings, None, "{label}");
+        let (_, benchmarks, _, _) = stored(&server, &project_slug);
+        assert_eq!(benchmarks, vec![benchmark.to_owned()], "{label}");
+        if measures.is_some() {
+            let ingested = ingested(&server, &project_slug);
+            assert!(!ingested.is_empty(), "{label}");
+            assert!(
+                ingested
+                    .iter()
+                    .all(|(_, _, measure, _)| measure == "latency"),
+                "{label}: {ingested:?}"
+            );
+        }
+    }
+}
+
+// POST /v0/projects/{project}/reports - the k6 leaves create their new built-in measures in their
+// units, a status code IANA assigns as a built-in measure, and one it does not as a measure named
+// at run time
+//
+// Kills: a new built-in measure missing from the server's built-ins, which creates it in the
+// generic unit, and a code IANA does not assign made in the generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_k6_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "k6units").await;
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report("http_k6", &[K6_EXPORT_SUMMARY], Some(1)),
+    )
+    .await;
+    let expected = [
+        ("blocked-time", "Blocked Time", "nanoseconds (ns)"),
+        ("check-failures", "Check Failures", "checks"),
+        ("check-passes", "Check Passes", "checks"),
+        ("check-ratio", "Check Ratio", "percentage (%)"),
+        ("connecting-time", "Connecting Time", "nanoseconds (ns)"),
+        ("dropped-iterations", "Dropped Iterations", "iterations"),
+        ("failed-requests", "Failed Requests", "requests"),
+        ("failure-ratio", "Failure Ratio", "percentage (%)"),
+        ("group-time", "Group Time", "nanoseconds (ns)"),
+        (
+            "iteration-throughput",
+            "Iteration Throughput",
+            "iterations / second (iterations/s)",
+        ),
+        ("iteration-time", "Iteration Time", "nanoseconds (ns)"),
+        ("iterations", "Iterations", "iterations"),
+        ("receiving-time", "Receiving Time", "nanoseconds (ns)"),
+        ("requests", "Requests", "requests"),
+        ("responses-200", "Responses 200", "responses"),
+        ("responses-599", "responses-599", "responses"),
+        ("sending-time", "Sending Time", "nanoseconds (ns)"),
+        (
+            "tls-handshaking-time",
+            "TLS Handshaking Time",
+            "nanoseconds (ns)",
+        ),
+        ("waiting-time", "Waiting Time", "nanoseconds (ns)"),
+    ];
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any(expected.map(|(slug, _, _)| slug)))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        expected.map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
+const K6_EXPORT_SIMPLE: &str =
+    include_str!("../../bencher_adapter/tool_output/http/k6/export_simple.json");
+const K6_EXPORT_SUMMARY: &str =
+    include_str!("../../bencher_adapter/tool_output/http/k6/export_summary.json");
 const JMH_MODES: &str = include_str!("../../bencher_adapter/tool_output/java/jmh/modes.json");
 const MITATA_GC: &str = include_str!("../../bencher_adapter/tool_output/js/mitata/default_gc.json");
 const MITATA_COUNTERS: &str =

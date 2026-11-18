@@ -780,6 +780,9 @@ export enum Adapter {
 	ShellHyperfineV2 = "shell_hyperfine_v2",
 	Dart = "dart",
 	DartBenchmarkHarness = "dart_benchmark_harness",
+	HttpK6 = "http_k6",
+	HttpK6Json = "http_k6_json",
+	HttpK6JsonSummary = "http_k6_json_summary",
 }
 
 /** A report, with what a link to it shows: the report that raised an alert. */

@@ -296,7 +296,30 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::noise::IoJitter::from_str(measure_str))
         .or_else(|| built_in::noise::CpuSteal::from_str(measure_str))
         .or_else(|| built_in::noise::NoiseScore::from_str(measure_str))
+        .or_else(|| built_in_http_measure(measure_str))
         .or_else(|| built_in_gungraun_measure(measure_str))
+}
+
+/// The built-in HTTP measure a measure name or slug names, if any.
+fn built_in_http_measure(measure_str: &str) -> Option<JsonNewMeasure> {
+    built_in::http::Requests::from_str(measure_str)
+        .or_else(|| built_in::http::FailedRequests::from_str(measure_str))
+        .or_else(|| built_in::http::FailureRatio::from_str(measure_str))
+        .or_else(|| built_in::http::CheckRatio::from_str(measure_str))
+        .or_else(|| built_in::http::CheckPasses::from_str(measure_str))
+        .or_else(|| built_in::http::CheckFailures::from_str(measure_str))
+        .or_else(|| built_in::http::Iterations::from_str(measure_str))
+        .or_else(|| built_in::http::DroppedIterations::from_str(measure_str))
+        .or_else(|| built_in::http::IterationThroughput::from_str(measure_str))
+        .or_else(|| built_in::http::BlockedTime::from_str(measure_str))
+        .or_else(|| built_in::http::ConnectingTime::from_str(measure_str))
+        .or_else(|| built_in::http::TlsHandshakingTime::from_str(measure_str))
+        .or_else(|| built_in::http::SendingTime::from_str(measure_str))
+        .or_else(|| built_in::http::WaitingTime::from_str(measure_str))
+        .or_else(|| built_in::http::ReceivingTime::from_str(measure_str))
+        .or_else(|| built_in::http::IterationTime::from_str(measure_str))
+        .or_else(|| built_in::http::GroupTime::from_str(measure_str))
+        .or_else(|| built_in::http::Responses::from_measure(measure_str))
 }
 
 /// The built-in gungraun measure a measure name or slug names, if any.
