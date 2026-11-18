@@ -759,6 +759,24 @@ pub fn get_alert_status(conn: &mut SqliteConnection, alert_id: AlertId) -> Alert
         .expect("Failed to get alert status")
 }
 
+/// Get alert status and modified by id.
+pub fn get_alert_state(conn: &mut SqliteConnection, alert_id: AlertId) -> (AlertStatus, DateTime) {
+    schema::alert::table
+        .filter(schema::alert::id.eq(alert_id))
+        .select((schema::alert::status, schema::alert::modified))
+        .first(conn)
+        .expect("Failed to get alert state")
+}
+
+/// Set alert status by id, keeping its modified.
+pub fn set_alert_status(conn: &mut SqliteConnection, alert_id: AlertId, status: AlertStatus) {
+    let updated = diesel::update(schema::alert::table.filter(schema::alert::id.eq(alert_id)))
+        .set(schema::alert::status.eq(status))
+        .execute(conn)
+        .expect("Failed to set alert status");
+    assert_eq!(updated, 1, "expected exactly 1 alert row updated");
+}
+
 /// Get branch `head_id`.
 pub fn get_branch_head_id(conn: &mut SqliteConnection, branch_id: BranchId) -> Option<HeadId> {
     schema::branch::table

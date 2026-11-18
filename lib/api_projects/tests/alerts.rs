@@ -318,6 +318,127 @@ async fn alerts_keep_the_report_that_raised_them() {
     }
 }
 
+// PATCH /v0/projects/{project}/branches/{branch} - a reset replaces the branch head and silences
+// the active alerts of the old head, while a dismissed or silenced alert keeps its status and
+// when it was modified
+// Kills: a replacement that rewrites a dismissed or silenced alert.
+#[tokio::test]
+#[expect(clippy::too_many_lines, reason = "test requires extensive setup")]
+async fn alerts_a_head_reset_silences_only_active_alerts() {
+    let server = TestServer::new_at(seconds(100)).await;
+    let user = server.signup("Test User", "headreset@example.com").await;
+    let org = server.create_org(&user, "Org headreset").await;
+    let project = server
+        .create_project(&user, &org, "Project headreset")
+        .await;
+    let slug = project.slug.to_string();
+    let send = async |method: http::Method, path: String, body: serde_json::Value| {
+        let resp = server
+            .client
+            .request(method.clone(), server.api_url(&path))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&user.token),
+            )
+            .json(&body)
+            .send()
+            .await
+            .expect("Request failed");
+        let status = resp.status();
+        assert!(
+            status.is_success(),
+            "{method} {path}: {}",
+            resp.text().await.expect("Failed to read the response")
+        );
+    };
+    for (resource, body) in [
+        (
+            "branches",
+            serde_json::json!({ "name": "main", "slug": "main" }),
+        ),
+        (
+            "testbeds",
+            serde_json::json!({ "name": "localhost", "slug": "localhost" }),
+        ),
+        (
+            "measures",
+            serde_json::json!({ "name": "latency", "slug": "latency", "units": "ns" }),
+        ),
+        (
+            "thresholds",
+            serde_json::json!({
+                "branch": "main",
+                "testbed": "localhost",
+                "measure": "latency",
+                "test": "static",
+                "upper_boundary": 100.0,
+            }),
+        ),
+    ] {
+        send(
+            http::Method::POST,
+            format!("/v0/projects/{slug}/{resource}"),
+            body,
+        )
+        .await;
+    }
+    for (day, value) in [10.0, 10.0, 1000.0].into_iter().enumerate() {
+        let results = serde_json::json!({
+            "one": { "latency": { "value": value } },
+            "two": { "latency": { "value": value } },
+            "three": { "latency": { "value": value } },
+        });
+        send(
+            http::Method::POST,
+            format!("/v0/projects/{slug}/reports"),
+            serde_json::json!({
+                "branch": "main",
+                "testbed": "localhost",
+                "start_time": format!("2024-01-{:02}T00:00:00Z", day + 1),
+                "end_time": format!("2024-01-{:02}T00:01:00Z", day + 1),
+                "results": [serde_json::to_string(&results).expect("Failed to serialize results")],
+            }),
+        )
+        .await;
+    }
+    let (alerts, total) = get_alerts(&server, &user, &slug, "").await;
+    assert_eq!(total, 3, "the outliers raised three alerts");
+
+    let statuses = [
+        AlertStatus::Active,
+        AlertStatus::Dismissed,
+        AlertStatus::Silenced,
+    ];
+    {
+        let mut conn = server.db_conn();
+        for (alert, status) in alerts.iter().zip(statuses) {
+            diesel::update(schema::alert::table.filter(schema::alert::uuid.eq(alert)))
+                .set((
+                    schema::alert::status.eq(status),
+                    schema::alert::modified.eq(seconds(1)),
+                ))
+                .execute(&mut conn)
+                .expect("Failed to settle an alert");
+        }
+    }
+
+    send(
+        http::Method::PATCH,
+        format!("/v0/projects/{slug}/branches/main"),
+        serde_json::json!({ "start_point": { "reset": true } }),
+    )
+    .await;
+
+    assert_eq!(
+        alert_states(&server, &alerts),
+        vec![
+            (AlertStatus::Silenced, seconds(100)),
+            (AlertStatus::Dismissed, seconds(1)),
+            (AlertStatus::Silenced, seconds(1)),
+        ]
+    );
+}
+
 #[tokio::test]
 async fn alerts_belong_to_their_own_project() {
     let server = TestServer::new().await;
