@@ -3,7 +3,7 @@ title: "Self-Hosted GitHub App"
 description: "Create a GitHub App to allow Bencher Self-Hosted to authenticate with GitHub"
 heading: "How to Create a Self-Hosted GitHub App"
 published: "2023-08-12T16:07:00Z"
-modified: "2026-10-28T05:53:42Z"
+modified: "2026-11-18T19:27:03Z"
 sortOrder: 9
 ---
 
@@ -60,7 +60,7 @@ If the GitHub section is missing, then the server will fail any GitHub authentic
 
 ## Linked Repositories
 
-Upgrade the Bencher Self-Hosted API server and Console to `v0.6.16` or later before you change these settings.
+These settings need the Bencher Self-Hosted API server and Console at `v0.6.18` or later.
 
 For a Project to [link a GitHub repository][linked repository] for its detached runs,
 also set these for the GitHub App:
@@ -80,12 +80,22 @@ also set these for the GitHub App:
     - Enter a random secret and note it (ex: `0123456789abcdef0123456789abcdef`)
 - Permissions
   - Repository permissions
-    - Contents: `Read and write`
+    - Checks: `Read and write`
+    - Contents: `Read-only`
+    - Pull requests: `Read and write`
   - Subscribe to events
     - Leave every event unchecked
 - Note the app's slug, the last part of its public page URL (ex: `my-bencher-app` in `https://github.com/apps/my-bencher-app`)
 
 Add the slug, the private key, and the webhook secret as `app` in [the `plus.github` section of the server config](/docs/reference/server-config/#plusgithub).
+
+To update an app that an earlier version set up with Contents: `Read and write`:
+
+1. Add Checks and Pull requests before the upgrade.
+   GitHub asks the owner of each installation to approve them.
+2. Upgrade the API server and Console to `v0.6.18` or later.
+   After the upgrade, a repository whose installation has not approved the new permissions cannot be linked, and Bencher cannot post to it.
+3. Change Contents to `Read-only`, as a separate change.
 
 [linked repository]: /docs/how-to/github-actions/#pull-requests-on-bare-metal
 

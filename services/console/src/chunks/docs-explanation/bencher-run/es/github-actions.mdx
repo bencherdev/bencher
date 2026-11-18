@@ -19,7 +19,11 @@ los resultados también se agregarán a la solicitud de extracción como un come
 Todos los trabajos de un Proyecto en la solicitud de extracción comparten este único comentario, con una fila de Informe para cada trabajo.
 Esto requiere que el token tenga [el alcance `pull-requests` con permisos de `write`][github token permissions].
 Los resultados siempre se agregarán también al resumen del trabajo.
-Con [la bandera `--detach`](/es/docs/explanation/images/#--detach), la ejecución desacoplada no publica ningún comentario ni escribe el resumen del trabajo, y [la conexión con `--job`](/es/docs/explanation/images/#--job-uuid) completa la Verificación de GitHub que inició (consulte [la opción `--ci-callback-token`](#--ci-callback-token-token)).
+Con [la bandera `--detach`](/es/docs/explanation/images/#--detach), el workflow no publica nada, no escribe el resumen del trabajo y no necesita permisos para el token.
+En su lugar, `bencher run` envía la solicitud de extracción con el Job,
+y Bencher publica la Verificación de GitHub y el comentario en el [repositorio vinculado](/es/docs/how-to/github-actions/#pull-requests-en-hardware-dedicado) del Proyecto con su propia aplicación de GitHub.
+Los trabajos desacoplados de un Proyecto en una solicitud de extracción comparten un comentario de la aplicación de GitHub de Bencher,
+separado del comentario de los trabajos sin `--detach`.
 
 Con dos o más filas, el comentario muestra una tabla de resumen de cada Informe con cada uno de su Rama, su Banco de pruebas y su Adaptador que difiere entre los Informes, y su estado (`Pending`, el número de Alertas, `No Alerts` o `Failed`).
 Las filas están en el orden en que comenzaron los Informes, numeradas desde 1, como la Consola lista los Informes de una ejecución.

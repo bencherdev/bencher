@@ -3,9 +3,19 @@
 <br />
 
 Detach after submitting the Bare Metal [Job][job], without waiting for completion.
+With [the `--github-actions` option][github actions], Bencher posts the GitHub Check and the pull request comment
+to the Project's [linked repository][linked repository] when the Job finishes.
+To send any other request when the Job finishes, use [the `--callback-url` option][callback url].
 This option requires [the `--image` option][image] to be set.
-This option conflicts with [the `--job-poll-interval` option][job poll interval].
+This option conflicts with [the `--job-poll-interval` option][job poll interval]
+and [the `--error-on-alert` flag][error on alert].
+A detached run exits before its Report exists,
+and with `--github-actions`, an Alert fails the GitHub Check.
 
 [job]: /docs/explanation/bare-metal/#job
+[github actions]: /docs/explanation/bencher-run/#--github-actions-github_token
+[linked repository]: /docs/how-to/github-actions/#pull-requests-on-bare-metal
+[callback url]: #--callback-url-url
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[error on alert]: /docs/explanation/thresholds/#--error-on-alert

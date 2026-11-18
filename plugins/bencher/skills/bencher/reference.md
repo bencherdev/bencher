@@ -41,7 +41,7 @@
 | `--threshold-upper-boundary <val>` | Upper boundary value |
 | `--threshold-lower-boundary <val>` | Lower boundary value |
 | `--thresholds-reset` | Reset all unspecified thresholds |
-| `--error-on-alert` / `--err` | Exit non-zero on alert |
+| `--error-on-alert` / `--err` | Exit non-zero on alert (conflicts with `--detach`) |
 
 ### Command Execution
 
@@ -70,10 +70,8 @@
 | `--github-actions <token>` | GitHub Actions PR comments |
 | `--ci-only-thresholds` | Post only if threshold exists |
 | `--ci-only-on-alert` | Post only on alert |
-| `--ci-public-links` | Use public URLs |
 | `--ci-id <id>` | Labels the job's Report row in the PR comment, replaces the project name in the GitHub Check name |
 | `--ci-number <n>` | Issue/PR number |
-| `--ci-callback-token <token>` | Fine-grained personal access token for this one repository with only contents write, for the `repository_dispatch` a detached run sends; without it, the project's linked repository supplies the token (requires `--github-actions` and `--detach`) |
 
 ### Bare Metal (Bencher Plus)
 
@@ -86,8 +84,8 @@
 | `--env KEY=VALUE` | Environment variable (repeatable) |
 | `--job-timeout <secs>` | Maximum execution time |
 | `--job-poll-interval <secs>` | Poll interval |
-| `--detach` | Submit without waiting (conflicts with `--job-poll-interval`) |
-| `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, only for a claimed project: a callback to exactly `https://api.github.com/repos/<OWNER>/<REPO>/dispatches` with an `Authorization: Bearer <token>` header and `"event_type": "bencher_run"` in its body goes out on any plan, any other callback needs a Bencher Plus plan, and otherwise the callback is skipped; use only a URL the user provides (requires `--image` and `--detach`, conflicts with `--github-actions`) |
+| `--detach` | Submit without waiting (conflicts with `--job-poll-interval` and `--error-on-alert`) |
+| `--callback-url <url>` | `https` URL that Bencher sends one request to when the detached job finishes, only for a claimed project of an organization with a Bencher Plus plan, and otherwise the callback is skipped; use only a URL the user provides (requires `--image` and `--detach`, conflicts with `--github-actions`) |
 | `--callback-header '<NAME: VALUE>'` | Callback request header, quoted as one argument; use only headers the user provides (repeatable, requires `--callback-url`) |
 | `--callback-body '<json>'` | Callback JSON body, quoted as one argument: `{{ job.uuid }}`, `{{ job.status }}`, `{{ report.uuid }}`, `{{ project.uuid }}`, `{{ project.name }}`, and `{{ project.slug }}` are replaced anywhere inside a string, a string that is exactly `{{ report }}` becomes the whole report (once per body), and any other name in braces is refused; optional, and without it the body is the report (requires `--callback-url`) |
 | `--job <uuid>` | Wait for a submitted job, then post its results (requires `--project`; `--job-timeout` is the wait budget; refuses report options, including from `BENCHER_BRANCH`, `BENCHER_TESTBED`, `BENCHER_ADAPTER`, and `BENCHER_CMD`) |

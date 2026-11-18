@@ -3,7 +3,7 @@ title: "Aplicativo GitHub Self-Hosted"
 description: "Crie um aplicativo GitHub para permitir que o Bencher Self-Hosted autentique-se com o GitHub"
 heading: "Como Criar um Aplicativo GitHub Self-Hosted"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-10-28T05:53:42Z"
+modified: "2026-11-18T19:27:03Z"
 sortOrder: 9
 ---
 
@@ -56,7 +56,7 @@ Adicione o `client_id` e o `client_secret` à [seção `plus.github` da configur
 
 ## Repositórios vinculados
 
-Atualize o servidor API e o Console do Bencher Self-Hosted para `v0.6.16` ou posterior antes de alterar estas configurações.
+Estas configurações exigem o servidor API e o Console do Bencher Self-Hosted em `v0.6.18` ou posterior.
 
 Para que um Projeto possa [vincular um repositório GitHub][linked repository] para suas execuções desanexadas,
 defina também estas configurações para o aplicativo GitHub:
@@ -76,12 +76,22 @@ defina também estas configurações para o aplicativo GitHub:
     - Insira um segredo aleatório e anote-o (ex: `0123456789abcdef0123456789abcdef`)
 - Permissões
   - Permissões do repositório
-    - Conteúdo: `Leitura e escrita`
+    - Checks: `Leitura e escrita`
+    - Conteúdo: `Somente leitura`
+    - Pull requests: `Leitura e escrita`
   - Inscrever-se em eventos
     - Deixe todos os eventos desmarcados
 - Anote o slug do aplicativo, a última parte da URL de sua página pública (ex: `my-bencher-app` em `https://github.com/apps/my-bencher-app`)
 
 Adicione o slug, a chave privada e o segredo do webhook como `app` à [seção `plus.github` da configuração do servidor](/pt/docs/reference/server-config/#plusgithub).
+
+Para atualizar um aplicativo que uma versão anterior configurou com Conteúdo: `Leitura e escrita`:
+
+1. Adicione Checks e Pull requests antes da atualização.
+   O GitHub pede ao proprietário de cada instalação que os aprove.
+2. Atualize o servidor API e o Console para `v0.6.18` ou posterior.
+   Depois da atualização, um repositório cuja instalação não aprovou as novas permissões não pode ser vinculado, e o Bencher não pode publicar nele.
+3. Altere Conteúdo para `Somente leitura`, como uma alteração separada.
 
 [linked repository]: /pt/docs/how-to/github-actions/#pull-requests-em-hardware-dedicado
 

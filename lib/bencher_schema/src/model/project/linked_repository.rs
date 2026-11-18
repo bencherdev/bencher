@@ -20,7 +20,7 @@ use crate::{
 /// many, well under SQLite's limit on bound parameters.
 const REPOSITORY_BATCH: usize = 1024;
 
-/// The one GitHub repository a project's dispatches go to.
+/// A project's one GitHub repository, which Bencher posts a detached run's check and comment to.
 #[derive(Debug, Clone, diesel::Queryable, diesel::Selectable, diesel::Insertable)]
 #[diesel(table_name = linked_repository_table)]
 pub struct QueryLinkedRepository {
@@ -64,7 +64,7 @@ impl QueryLinkedRepository {
             .optional()
     }
 
-    /// The project's link, if it is connected and so can mint a dispatch token.
+    /// The project's link, if it is connected and so can mint an installation token.
     pub fn get_connected(
         conn: &mut DbConnection,
         project_id: ProjectId,

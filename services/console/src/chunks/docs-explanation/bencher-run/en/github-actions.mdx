@@ -19,7 +19,11 @@ then the results will also be added to the pull request as a comment.
 Every job of a Project on the pull request shares this one comment, with one Report row for each job.
 This requires the token to have [the `pull-requests` scope with `write` permissions][github token permissions].
 The results will always be added to the job summary as well.
-With [the `--detach` flag](/docs/explanation/images/#--detach), the detached run posts no comment and writes no job summary, and [the attach](/docs/explanation/images/#--job-uuid) completes the GitHub Check it started (see [the `--ci-callback-token` option](#--ci-callback-token-token)).
+With [the `--detach` flag](/docs/explanation/images/#--detach), the workflow posts nothing, writes no job summary, and needs no token permissions.
+Instead, `bencher run` sends the pull request with the Job,
+and Bencher posts the GitHub Check and the comment to the Project's [linked repository](/docs/how-to/github-actions/#pull-requests-on-bare-metal) with its own GitHub App.
+The detached jobs of a Project on a pull request share one comment from Bencher's GitHub App,
+apart from the comment of the jobs without `--detach`.
 
 With two or more rows, the comment shows a summary table of each Report with each of its Branch, Testbed, and Adapter that differs between the Reports, and its status (`Pending`, the number of Alerts, `No Alerts`, or `Failed`).
 The rows are in the order the Reports started, numbered from 1, as the Console lists the Reports of a run.

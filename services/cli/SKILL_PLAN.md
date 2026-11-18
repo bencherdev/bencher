@@ -127,7 +127,7 @@ CI integration guide covering three approaches:
 
 **GitHub Actions (native integration):**
 1. `--github-actions ${{ secrets.GITHUB_TOKEN }}` for automatic PR comments
-2. PR comment options: `--ci-only-thresholds`, `--ci-only-on-alert`, `--ci-public-links`
+2. PR comment options: `--ci-only-thresholds`, `--ci-only-on-alert`
 3. Custom PR identifiers: `--ci-id`, `--ci-number`
 4. Branch management for PRs: `--start-point main --start-point-clone-thresholds`
 5. `--ci-on-the-fly` for auto-creating projects in CI
