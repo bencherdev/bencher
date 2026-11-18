@@ -68,6 +68,8 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.ShellHyperfineV1:
 		case Adapter.ShellHyperfineV2:
 			return "Hyperfine";
+		case Adapter.WebLighthouse:
+			return "Lighthouse";
 	}
 };
 
@@ -131,6 +133,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.ShellHyperfineV1:
 		case Adapter.ShellHyperfineV2:
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
+		case Adapter.WebLighthouse:
+			return `bencher run${host} --file report.json "lighthouse http://localhost:8080/ --output json --output-path report.json"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 		case Adapter.Json:
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs

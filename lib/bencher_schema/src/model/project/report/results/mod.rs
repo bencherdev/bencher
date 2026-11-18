@@ -138,6 +138,10 @@ impl ReportResults {
                 // The adapter is right and the version is wrong, so no adapter hint.
                 AdapterError::BmfVersion { parsed, .. } => report_version.refusal(parsed),
                 AdapterError::V1Only(adapter) => report_version.v1_only(adapter),
+                // The adapter is right and the harness reports the run failed, so no adapter hint.
+                AdapterError::FailedRun { .. } => bad_request_error(format!(
+                    "Failed to convert results with adapter ({adapter} | {settings:?}): {e}"
+                )),
                 AdapterError::Valid(_) | AdapterError::BenchmarkUnits(_) | AdapterError::Convert(_) => {
                     bad_request_error(format!(
                         "Failed to convert results with adapter ({adapter} | {settings:?}): {e}\n\nAre you sure {adapter} is the right adapter?\nRead more about adapters here: https://bencher.dev/docs/explanation/adapters/"

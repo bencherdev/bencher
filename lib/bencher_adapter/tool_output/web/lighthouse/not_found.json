@@ -1,0 +1,2046 @@
+{
+  "lighthouseVersion": "13.6.0",
+  "requestedUrl": "http://localhost:8080/missing.html",
+  "mainDocumentUrl": "http://localhost:8080/missing.html",
+  "finalDisplayedUrl": "http://localhost:8080/missing.html",
+  "finalUrl": "http://localhost:8080/missing.html",
+  "fetchTime": "2026-11-19T16:06:11.978Z",
+  "gatherMode": "navigation",
+  "runtimeError": {
+    "code": "ERRORED_DOCUMENT_REQUEST",
+    "message": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+    "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+    "artifactKey": "PageLoadError"
+  },
+  "runWarnings": [
+    "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)"
+  ],
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+  "environment": {
+    "hostUserAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36",
+    "benchmarkIndex": 4437,
+    "credits": {}
+  },
+  "audits": {
+    "first-contentful-paint": {
+      "id": "first-contentful-paint",
+      "title": "First Contentful Paint",
+      "description": "First Contentful Paint marks the time at which the first text or image is painted. [Learn more about the First Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/first-contentful-paint/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "largest-contentful-paint": {
+      "id": "largest-contentful-paint",
+      "title": "Largest Contentful Paint",
+      "description": "Largest Contentful Paint marks the time at which the largest text or image is painted. [Learn more about the Largest Contentful Paint metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-largest-contentful-paint/)",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "speed-index": {
+      "id": "speed-index",
+      "title": "Speed Index",
+      "description": "Speed Index shows how quickly the contents of a page are visibly populated. [Learn more about the Speed Index metric](https://developer.chrome.com/docs/lighthouse/performance/speed-index/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "total-blocking-time": {
+      "id": "total-blocking-time",
+      "title": "Total Blocking Time",
+      "description": "Sum of all time periods between FCP and Time to Interactive, when task length exceeded 50ms, expressed in milliseconds. [Learn more about the Total Blocking Time metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-total-blocking-time/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "max-potential-fid": {
+      "id": "max-potential-fid",
+      "title": "Max Potential First Input Delay",
+      "description": "The maximum potential First Input Delay that your users could experience is the duration of the longest task. [Learn more about the Maximum Potential First Input Delay metric](https://developer.chrome.com/docs/lighthouse/performance/lighthouse-max-potential-fid/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "cumulative-layout-shift": {
+      "id": "cumulative-layout-shift",
+      "title": "Cumulative Layout Shift",
+      "description": "Cumulative Layout Shift measures the movement of visible elements within the viewport. [Learn more about the Cumulative Layout Shift metric](https://web.dev/articles/cls).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "server-response-time": {
+      "id": "server-response-time",
+      "title": "Initial server response time was short",
+      "description": "Keep the server response time for the main document short because all other requests depend on it. [Learn more about the Time to First Byte metric](https://developer.chrome.com/docs/lighthouse/performance/time-to-first-byte/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 1
+    },
+    "interactive": {
+      "id": "interactive",
+      "title": "Time to Interactive",
+      "description": "Time to Interactive is the amount of time it takes for the page to become fully interactive. [Learn more about the Time to Interactive metric](https://developer.chrome.com/docs/lighthouse/performance/interactive/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "user-timings": {
+      "id": "user-timings",
+      "title": "User Timing marks and measures",
+      "description": "Consider instrumenting your app with the User Timing API to measure your app's real-world performance during key user experiences. [Learn more about User Timing marks](https://developer.chrome.com/docs/lighthouse/performance/user-timings/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 2
+    },
+    "redirects": {
+      "id": "redirects",
+      "title": "Avoid multiple page redirects",
+      "description": "Redirects introduce additional delays before the page can be loaded. [Learn how to avoid page redirects](https://developer.chrome.com/docs/lighthouse/performance/redirects/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 2
+    },
+    "mainthread-work-breakdown": {
+      "id": "mainthread-work-breakdown",
+      "title": "Minimizes main-thread work",
+      "description": "Consider reducing the time spent parsing, compiling and executing JS. You may find delivering smaller JS payloads helps with this. [Learn how to minimize main-thread work](https://developer.chrome.com/docs/lighthouse/performance/mainthread-work-breakdown/)",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 1
+    },
+    "bootup-time": {
+      "id": "bootup-time",
+      "title": "JavaScript execution time",
+      "description": "Consider reducing the time spent parsing, compiling, and executing JS. You may find delivering smaller JS payloads helps with this. [Learn how to reduce Javascript execution time](https://developer.chrome.com/docs/lighthouse/performance/bootup-time/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 1
+    },
+    "diagnostics": {
+      "id": "diagnostics",
+      "title": "Diagnostics",
+      "description": "Collection of useful page vitals.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "network-requests": {
+      "id": "network-requests",
+      "title": "Network Requests",
+      "description": "Lists the network requests that were made during page load.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "network-rtt": {
+      "id": "network-rtt",
+      "title": "Network Round Trip Times",
+      "description": "Network round trip times (RTT) have a large impact on performance. If the RTT to an origin is high, it's an indication that servers closer to the user could improve performance. [Learn more about the Round Trip Time](https://hpbn.co/primer-on-latency-and-bandwidth/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "network-server-latency": {
+      "id": "network-server-latency",
+      "title": "Server Backend Latencies",
+      "description": "Server latencies can impact web performance. If the server latency of an origin is high, it's an indication the server is overloaded or has poor backend performance. [Learn more about server response time](https://hpbn.co/primer-on-web-performance/#analyzing-the-resource-waterfall).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "main-thread-tasks": {
+      "id": "main-thread-tasks",
+      "title": "Tasks",
+      "description": "Lists the toplevel main thread tasks that executed during page load.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "metrics": {
+      "id": "metrics",
+      "title": "Metrics",
+      "description": "Collects all available metrics.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "resource-summary": {
+      "id": "resource-summary",
+      "title": "Resources Summary",
+      "description": "Aggregates all network requests and groups them by type",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "layout-shifts": {
+      "id": "layout-shifts",
+      "title": "Avoid large layout shifts",
+      "description": "These are the largest layout shifts observed on the page. Each table item represents a single layout shift, and shows the element that shifted the most. Below each item are possible root causes that led to the layout shift. Some of these layout shifts may not be included in the CLS metric value due to [windowing](https://web.dev/articles/cls#what_is_cls). [Learn how to improve CLS](https://web.dev/articles/optimize-cls)",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 2
+    },
+    "long-tasks": {
+      "id": "long-tasks",
+      "title": "Avoid long main-thread tasks",
+      "description": "Lists the longest tasks on the main thread, useful for identifying worst contributors to input delay. [Learn how to avoid long main-thread tasks](https://web.dev/articles/optimize-long-tasks)",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 1
+    },
+    "non-composited-animations": {
+      "id": "non-composited-animations",
+      "title": "Avoid non-composited animations",
+      "description": "Animations which are not composited can be janky and increase CLS. [Learn how to avoid non-composited animations](https://developer.chrome.com/docs/lighthouse/performance/non-composited-animations/)",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 2
+    },
+    "unsized-images": {
+      "id": "unsized-images",
+      "title": "Image elements have explicit `width` and `height`",
+      "description": "Set an explicit width and height on image elements to reduce layout shifts and improve CLS. [Learn how to set image dimensions](https://web.dev/articles/optimize-cls#images_without_dimensions)",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 4
+    },
+    "script-treemap-data": {
+      "id": "script-treemap-data",
+      "title": "Script Treemap Data",
+      "description": "Used for treemap app",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1"
+    },
+    "total-byte-weight": {
+      "id": "total-byte-weight",
+      "title": "Avoids enormous network payloads",
+      "description": "Large network payloads cost users real money and are highly correlated with long load times. [Learn how to reduce payload sizes](https://developer.chrome.com/docs/lighthouse/performance/total-byte-weight/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 1
+    },
+    "unminified-css": {
+      "id": "unminified-css",
+      "title": "Minify CSS",
+      "description": "Minifying CSS files can reduce network payload sizes. [Learn how to minify CSS](https://developer.chrome.com/docs/lighthouse/performance/unminified-css/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "unminified-javascript": {
+      "id": "unminified-javascript",
+      "title": "Minify JavaScript",
+      "description": "Minifying JavaScript files can reduce payload sizes and script parse time. [Learn how to minify JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unminified-javascript/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "unused-css-rules": {
+      "id": "unused-css-rules",
+      "title": "Reduce unused CSS",
+      "description": "Reduce unused rules from stylesheets and defer CSS not used for above-the-fold content to decrease bytes consumed by network activity. [Learn how to reduce unused CSS](https://developer.chrome.com/docs/lighthouse/performance/unused-css-rules/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 1
+    },
+    "unused-javascript": {
+      "id": "unused-javascript",
+      "title": "Reduce unused JavaScript",
+      "description": "Reduce unused JavaScript and defer loading scripts until they are required to decrease bytes consumed by network activity. [Learn how to reduce unused JavaScript](https://developer.chrome.com/docs/lighthouse/performance/unused-javascript/).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 1
+    },
+    "bf-cache": {
+      "id": "bf-cache",
+      "title": "Page didn't prevent back/forward cache restoration",
+      "description": "Many navigations are performed by going back to a previous page, or forwards again. The back/forward cache (bfcache) can speed up these return navigations. [Learn more about the bfcache](https://developer.chrome.com/docs/lighthouse/performance/bf-cache/)",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 4
+    },
+    "cache-insight": {
+      "id": "cache-insight",
+      "title": "Use efficient cache lifetimes",
+      "description": "A long cache lifetime can speed up repeat visits to your page. [Learn more about caching](https://developer.chrome.com/docs/performance/insights/cache).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "cls-culprits-insight": {
+      "id": "cls-culprits-insight",
+      "title": "Layout shift culprits",
+      "description": "Layout shifts occur when elements move absent any user interaction. [Investigate the causes of layout shifts](https://developer.chrome.com/docs/performance/insights/cls-culprit), such as elements being added, removed, or their fonts changing as the page loads.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "document-latency-insight": {
+      "id": "document-latency-insight",
+      "title": "Document request latency",
+      "description": "Your first network request is the most important. [Reduce its latency](https://developer.chrome.com/docs/performance/insights/document-latency) by avoiding redirects, ensuring a fast server response, and enabling text compression.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "dom-size-insight": {
+      "id": "dom-size-insight",
+      "title": "Optimize DOM size",
+      "description": "A large DOM can increase the duration of style calculations and layout reflows, impacting page responsiveness. A large DOM will also increase memory usage. [Learn how to avoid an excessive DOM size](https://developer.chrome.com/docs/performance/insights/dom-size).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "duplicated-javascript-insight": {
+      "id": "duplicated-javascript-insight",
+      "title": "Duplicated JavaScript",
+      "description": "Remove large, [duplicate JavaScript modules](https://developer.chrome.com/docs/performance/insights/duplicated-javascript) from bundles to reduce unnecessary bytes consumed by network activity",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 2
+    },
+    "font-display-insight": {
+      "id": "font-display-insight",
+      "title": "Font display",
+      "description": "Consider setting [font-display](https://developer.chrome.com/docs/performance/insights/font-display) to swap or optional to ensure text is consistently visible. swap can be further optimized to mitigate layout shifts with [font metric overrides](https://developer.chrome.com/blog/font-fallbacks).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "forced-reflow-insight": {
+      "id": "forced-reflow-insight",
+      "title": "Forced reflow",
+      "description": "A forced reflow occurs when JavaScript queries geometric properties (such as offsetWidth) after styles have been invalidated by a change to the DOM state. This can result in poor performance. Learn more about [forced reflows](https://developer.chrome.com/docs/performance/insights/forced-reflow) and possible mitigations.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "image-delivery-insight": {
+      "id": "image-delivery-insight",
+      "title": "Improve image delivery",
+      "description": "Reducing the download time of images can improve the perceived load time of the page and LCP. [Learn more about optimizing image size](https://developer.chrome.com/docs/performance/insights/image-delivery).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "inp-breakdown-insight": {
+      "id": "inp-breakdown-insight",
+      "title": "INP breakdown",
+      "description": "Start investigating [how to improve INP](https://developer.chrome.com/docs/performance/insights/inp-breakdown) by looking at the longest subpart",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "lcp-breakdown-insight": {
+      "id": "lcp-breakdown-insight",
+      "title": "LCP breakdown",
+      "description": "Each [subpart has specific improvement strategies](https://developer.chrome.com/docs/performance/insights/lcp-breakdown). Ideally, most of the LCP time should be spent on loading the resources, not within delays.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "lcp-discovery-insight": {
+      "id": "lcp-discovery-insight",
+      "title": "LCP request discovery",
+      "description": "[Optimize LCP](https://developer.chrome.com/docs/performance/insights/lcp-discovery) by making the LCP image discoverable from the HTML immediately, and avoiding lazy-loading",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "legacy-javascript-insight": {
+      "id": "legacy-javascript-insight",
+      "title": "Legacy JavaScript",
+      "description": "Polyfills and transforms enable older browsers to use new JavaScript features. However, many aren’t necessary for modern browsers. Consider modifying your JavaScript build process to not transpile [Baseline](https://web.dev/articles/baseline-and-polyfills) features, unless you know you must support older browsers. [Learn why most sites can deploy ES6+ code without transpiling](https://developer.chrome.com/docs/performance/insights/legacy-javascript).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 2
+    },
+    "modern-http-insight": {
+      "id": "modern-http-insight",
+      "title": "Modern HTTP",
+      "description": "HTTP/2 and HTTP/3 offer many benefits over HTTP/1.1, such as multiplexing. [Learn more about using modern HTTP](https://developer.chrome.com/docs/performance/insights/modern-http).",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "network-dependency-tree-insight": {
+      "id": "network-dependency-tree-insight",
+      "title": "Network dependency tree",
+      "description": "[Avoid chaining critical requests](https://developer.chrome.com/docs/performance/insights/network-dependency-tree) by reducing the length of chains, reducing the download size of resources, or deferring the download of unnecessary resources to improve page load",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 1
+    },
+    "render-blocking-insight": {
+      "id": "render-blocking-insight",
+      "title": "Render-blocking requests",
+      "description": "Requests are blocking the page’s initial render, which may delay LCP. [Deferring or inlining](https://developer.chrome.com/docs/performance/insights/render-blocking) can move these network requests out of the critical path.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "third-parties-insight": {
+      "id": "third-parties-insight",
+      "title": "3rd parties",
+      "description": "3rd party code can significantly impact load performance. [Reduce and defer loading of 3rd party code](https://developer.chrome.com/docs/performance/insights/third-parties) to prioritize your page’s content.",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    },
+    "viewport-insight": {
+      "id": "viewport-insight",
+      "title": "Optimize viewport for mobile",
+      "description": "Tap interactions may be [delayed by up to 300 ms](https://developer.chrome.com/docs/performance/insights/viewport) if the viewport isn’t optimized for mobile",
+      "score": null,
+      "scoreDisplayMode": "error",
+      "errorMessage": "Lighthouse was unable to reliably load the page you requested. Make sure you are testing the correct URL and that the server is properly responding to all requests. (Status code: 404)",
+      "errorStack": "LighthouseError: ERRORED_DOCUMENT_REQUEST\n    at getNetworkError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:61:14)\n    at getPageLoadError (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/lib/navigation-error.js:165:24)\n    at _computeNavigationResult (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:148:7)\n    at async gatherFn (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:300:23)\n    at async Runner.gather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/runner.js:237:25)\n    at async navigationGather (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/gather/navigation-runner.js:306:21)\n    at async navigation (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/core/index.js:58:24)\n    at async runLighthouse (file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/run.js:237:30)\n    at async file:///tmp/bench/lighthouse/lh13/node_modules/lighthouse/cli/index.js:10:1",
+      "guidanceLevel": 3
+    }
+  },
+  "configSettings": {
+    "output": [
+      "json"
+    ],
+    "maxWaitForFcp": 30000,
+    "maxWaitForLoad": 45000,
+    "pauseAfterFcpMs": 1000,
+    "pauseAfterLoadMs": 1000,
+    "networkQuietThresholdMs": 1000,
+    "cpuQuietThresholdMs": 1000,
+    "formFactor": "mobile",
+    "throttling": {
+      "rttMs": 150,
+      "throughputKbps": 1638.4,
+      "requestLatencyMs": 562.5,
+      "downloadThroughputKbps": 1474.5600000000002,
+      "uploadThroughputKbps": 675,
+      "cpuSlowdownMultiplier": 4
+    },
+    "throttlingMethod": "simulate",
+    "screenEmulation": {
+      "mobile": true,
+      "width": 412,
+      "height": 823,
+      "deviceScaleFactor": 1.75,
+      "disabled": false
+    },
+    "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+    "auditMode": false,
+    "gatherMode": false,
+    "clearStorageTypes": [
+      "file_systems",
+      "shader_cache",
+      "service_workers",
+      "cache_storage"
+    ],
+    "disableStorageReset": false,
+    "debugNavigation": false,
+    "channel": "cli",
+    "usePassiveGathering": false,
+    "disableFullPageScreenshot": true,
+    "skipAboutBlank": false,
+    "blankPage": "about:blank",
+    "ignoreStatusCode": false,
+    "locale": "en-US",
+    "blockedUrlPatterns": null,
+    "additionalTraceCategories": null,
+    "extraHeaders": null,
+    "precomputedLanternData": null,
+    "onlyAudits": null,
+    "onlyCategories": [
+      "performance"
+    ],
+    "skipAudits": [
+      "screenshot-thumbnails",
+      "final-screenshot"
+    ]
+  },
+  "categories": {
+    "performance": {
+      "title": "Performance",
+      "supportedModes": [
+        "navigation",
+        "timespan",
+        "snapshot"
+      ],
+      "auditRefs": [
+        {
+          "id": "first-contentful-paint",
+          "weight": 10,
+          "group": "metrics",
+          "acronym": "FCP"
+        },
+        {
+          "id": "largest-contentful-paint",
+          "weight": 25,
+          "group": "metrics",
+          "acronym": "LCP"
+        },
+        {
+          "id": "total-blocking-time",
+          "weight": 30,
+          "group": "metrics",
+          "acronym": "TBT"
+        },
+        {
+          "id": "cumulative-layout-shift",
+          "weight": 25,
+          "group": "metrics",
+          "acronym": "CLS"
+        },
+        {
+          "id": "speed-index",
+          "weight": 10,
+          "group": "metrics",
+          "acronym": "SI"
+        },
+        {
+          "id": "cache-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "cls-culprits-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "document-latency-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "dom-size-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "duplicated-javascript-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "font-display-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "forced-reflow-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "image-delivery-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "inp-breakdown-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "lcp-breakdown-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "lcp-discovery-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "legacy-javascript-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "modern-http-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "network-dependency-tree-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "render-blocking-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "third-parties-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "viewport-insight",
+          "weight": 0,
+          "group": "insights"
+        },
+        {
+          "id": "interactive",
+          "weight": 0,
+          "group": "hidden",
+          "acronym": "TTI"
+        },
+        {
+          "id": "max-potential-fid",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "unminified-css",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "unminified-javascript",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "unused-css-rules",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "unused-javascript",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "total-byte-weight",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "user-timings",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "bootup-time",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "mainthread-work-breakdown",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "long-tasks",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "non-composited-animations",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "unsized-images",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "bf-cache",
+          "weight": 0,
+          "group": "diagnostics"
+        },
+        {
+          "id": "network-requests",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "network-rtt",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "network-server-latency",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "main-thread-tasks",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "diagnostics",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "metrics",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "script-treemap-data",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "resource-summary",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "redirects",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "server-response-time",
+          "weight": 0,
+          "group": "hidden"
+        },
+        {
+          "id": "layout-shifts",
+          "weight": 0,
+          "group": "hidden"
+        }
+      ],
+      "id": "performance",
+      "score": null
+    }
+  },
+  "categoryGroups": {
+    "metrics": {
+      "title": "Metrics"
+    },
+    "insights": {
+      "title": "Insights",
+      "description": "These insights are also available in the Chrome DevTools Performance Panel - [record a trace](https://developer.chrome.com/docs/devtools/performance/reference) to view more detailed information."
+    },
+    "diagnostics": {
+      "title": "Diagnostics",
+      "description": "More information about the performance of your application. These numbers don't [directly affect](https://developer.chrome.com/docs/lighthouse/performance/performance-scoring/) the Performance score."
+    },
+    "a11y-best-practices": {
+      "title": "Best practices",
+      "description": "These items highlight common accessibility best practices."
+    },
+    "a11y-color-contrast": {
+      "title": "Contrast",
+      "description": "These are opportunities to improve the legibility of your content."
+    },
+    "a11y-names-labels": {
+      "title": "Names and labels",
+      "description": "These are opportunities to improve the semantics of the controls in your application. This may enhance the experience for users of assistive technology, like a screen reader."
+    },
+    "a11y-navigation": {
+      "title": "Navigation",
+      "description": "These are opportunities to improve keyboard navigation in your application."
+    },
+    "a11y-aria": {
+      "title": "ARIA",
+      "description": "These are opportunities to improve the usage of ARIA in your application which may enhance the experience for users of assistive technology, like a screen reader."
+    },
+    "a11y-language": {
+      "title": "Internationalization and localization",
+      "description": "These are opportunities to improve the interpretation of your content by users in different locales."
+    },
+    "a11y-audio-video": {
+      "title": "Audio and video",
+      "description": "These are opportunities to provide alternative content for audio and video. This may improve the experience for users with hearing or vision impairments."
+    },
+    "a11y-tables-lists": {
+      "title": "Tables and lists",
+      "description": "These are opportunities to improve the experience of reading tabular or list data using assistive technology, like a screen reader."
+    },
+    "seo-mobile": {
+      "title": "Mobile Friendly",
+      "description": "Make sure your pages are mobile friendly so users don’t have to pinch or zoom in order to read the content pages. [Learn how to make pages mobile-friendly](https://developers.google.com/search/mobile-sites/)."
+    },
+    "seo-content": {
+      "title": "Content Best Practices",
+      "description": "Format your HTML in a way that enables crawlers to better understand your app’s content."
+    },
+    "seo-crawl": {
+      "title": "Crawling and Indexing",
+      "description": "To appear in search results, crawlers need access to your app."
+    },
+    "best-practices-trust-safety": {
+      "title": "Trust and Safety"
+    },
+    "best-practices-ux": {
+      "title": "User Experience"
+    },
+    "best-practices-browser-compat": {
+      "title": "Browser Compatibility"
+    },
+    "best-practices-general": {
+      "title": "General"
+    },
+    "webmcp": {
+      "title": "WebMCP",
+      "description": "Audits validating WebMCP integration."
+    },
+    "agent-accessibility": {
+      "title": "Agent Accessibility",
+      "description": "These audits highlight best practices for improving the accessibility of the website for AI agents."
+    },
+    "agent-discoverability": {
+      "title": "Agent Discoverability",
+      "description": "These audits validate that websites expose discoverable resources, documentation, and catalogs for AI agents."
+    },
+    "hidden": {
+      "title": ""
+    }
+  },
+  "stackPacks": [],
+  "timing": {
+    "entries": [
+      {
+        "startTime": 780.07,
+        "name": "lh:config",
+        "duration": 183.8,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 780.93,
+        "name": "lh:config:resolveArtifactsToDefns",
+        "duration": 14.61,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 963.99,
+        "name": "lh:runner:gather",
+        "duration": 3681.47,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 1004.59,
+        "name": "lh:driver:connect",
+        "duration": 3.85,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 1008.65,
+        "name": "lh:driver:navigate",
+        "duration": 4.32,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 1013.14,
+        "name": "lh:gather:getBenchmarkIndex",
+        "duration": 1005.8,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 2019.1,
+        "name": "lh:gather:getVersion",
+        "duration": 1,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 2020.24,
+        "name": "lh:gather:getDevicePixelRatio",
+        "duration": 1.44,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 2021.97,
+        "name": "lh:prepare:navigationMode",
+        "duration": 155.59,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 2022.54,
+        "name": "lh:gather:getVersion",
+        "duration": 0.33,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 2034.02,
+        "name": "lh:storage:clearDataForOrigin",
+        "duration": 102.73,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 2136.94,
+        "name": "lh:storage:clearBrowserCaches",
+        "duration": 38.65,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 2176.45,
+        "name": "lh:gather:prepareThrottlingAndNetwork",
+        "duration": 1.08,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 2205.55,
+        "name": "lh:driver:navigate",
+        "duration": 2374.52,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4634.25,
+        "name": "lh:computed:NetworkRecords",
+        "duration": 0.48,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4645.63,
+        "name": "lh:runner:audit",
+        "duration": 13.34,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4645.68,
+        "name": "lh:runner:auditing",
+        "duration": 12.92,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4646.1,
+        "name": "lh:audit:first-contentful-paint",
+        "duration": 0.48,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4646.68,
+        "name": "lh:audit:largest-contentful-paint",
+        "duration": 0.21,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4646.96,
+        "name": "lh:audit:speed-index",
+        "duration": 0.18,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4647.22,
+        "name": "lh:audit:total-blocking-time",
+        "duration": 0.24,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4647.62,
+        "name": "lh:audit:max-potential-fid",
+        "duration": 0.25,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4647.95,
+        "name": "lh:audit:cumulative-layout-shift",
+        "duration": 0.21,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4648.25,
+        "name": "lh:audit:server-response-time",
+        "duration": 0.3,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4648.66,
+        "name": "lh:audit:interactive",
+        "duration": 0.19,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4648.93,
+        "name": "lh:audit:user-timings",
+        "duration": 0.2,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4649.21,
+        "name": "lh:audit:redirects",
+        "duration": 0.5,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4649.96,
+        "name": "lh:audit:mainthread-work-breakdown",
+        "duration": 0.61,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4650.69,
+        "name": "lh:audit:bootup-time",
+        "duration": 0.24,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4650.94,
+        "name": "lh:audit:diagnostics",
+        "duration": 0.02,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4650.97,
+        "name": "lh:audit:network-requests",
+        "duration": 0.04,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4651.08,
+        "name": "lh:audit:network-rtt",
+        "duration": 0.22,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4651.37,
+        "name": "lh:audit:network-server-latency",
+        "duration": 0.24,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4651.62,
+        "name": "lh:audit:main-thread-tasks",
+        "duration": 0.01,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4651.64,
+        "name": "lh:audit:metrics",
+        "duration": 0.01,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4651.65,
+        "name": "lh:audit:resource-summary",
+        "duration": 0.01,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4651.76,
+        "name": "lh:audit:layout-shifts",
+        "duration": 0.2,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4652.02,
+        "name": "lh:audit:long-tasks",
+        "duration": 0.15,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4652.24,
+        "name": "lh:audit:non-composited-animations",
+        "duration": 0.2,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4652.55,
+        "name": "lh:audit:unsized-images",
+        "duration": 0.2,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4652.75,
+        "name": "lh:audit:script-treemap-data",
+        "duration": 0.01,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4652.84,
+        "name": "lh:audit:total-byte-weight",
+        "duration": 0.2,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4653.1,
+        "name": "lh:audit:unminified-css",
+        "duration": 0.14,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4653.29,
+        "name": "lh:audit:unminified-javascript",
+        "duration": 0.15,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4653.49,
+        "name": "lh:audit:unused-css-rules",
+        "duration": 0.16,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4653.71,
+        "name": "lh:audit:unused-javascript",
+        "duration": 0.14,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4653.94,
+        "name": "lh:audit:bf-cache",
+        "duration": 0.19,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4654.19,
+        "name": "lh:audit:cache-insight",
+        "duration": 0.17,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4654.5,
+        "name": "lh:audit:cls-culprits-insight",
+        "duration": 0.18,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4654.75,
+        "name": "lh:audit:document-latency-insight",
+        "duration": 0.27,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4655.11,
+        "name": "lh:audit:dom-size-insight",
+        "duration": 0.2,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4655.39,
+        "name": "lh:audit:duplicated-javascript-insight",
+        "duration": 0.19,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4655.65,
+        "name": "lh:audit:font-display-insight",
+        "duration": 0.18,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4655.91,
+        "name": "lh:audit:forced-reflow-insight",
+        "duration": 0.18,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4656.17,
+        "name": "lh:audit:image-delivery-insight",
+        "duration": 0.18,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4656.43,
+        "name": "lh:audit:inp-breakdown-insight",
+        "duration": 0.17,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4656.67,
+        "name": "lh:audit:lcp-breakdown-insight",
+        "duration": 0.17,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4656.91,
+        "name": "lh:audit:lcp-discovery-insight",
+        "duration": 0.17,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4657.16,
+        "name": "lh:audit:legacy-javascript-insight",
+        "duration": 0.19,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4657.44,
+        "name": "lh:audit:modern-http-insight",
+        "duration": 0.17,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4657.68,
+        "name": "lh:audit:network-dependency-tree-insight",
+        "duration": 0.18,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4657.93,
+        "name": "lh:audit:render-blocking-insight",
+        "duration": 0.18,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4658.18,
+        "name": "lh:audit:third-parties-insight",
+        "duration": 0.17,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4658.43,
+        "name": "lh:audit:viewport-insight",
+        "duration": 0.17,
+        "entryType": "measure"
+      },
+      {
+        "startTime": 4658.61,
+        "name": "lh:runner:generate",
+        "duration": 0.35,
+        "entryType": "measure"
+      }
+    ],
+    "total": 3694.81
+  },
+  "i18n": {
+    "rendererFormattedStrings": {
+      "calculatorLink": "See calculator.",
+      "collapseView": "Collapse view",
+      "crcInitialNavigation": "Initial Navigation",
+      "crcLongestDurationLabel": "Maximum critical path latency:",
+      "dropdownCopyJSON": "Copy JSON",
+      "dropdownDarkTheme": "Toggle Dark Theme",
+      "dropdownPrintExpanded": "Print Expanded",
+      "dropdownPrintSummary": "Print Summary",
+      "dropdownSaveGist": "Save as Gist",
+      "dropdownSaveHTML": "Save as HTML",
+      "dropdownSaveJSON": "Save as JSON",
+      "dropdownViewUnthrottledTrace": "View Unthrottled Trace",
+      "dropdownViewer": "Open in Viewer",
+      "errorLabel": "Error!",
+      "errorMissingAuditInfo": "Report error: no audit information",
+      "expandView": "Expand view",
+      "firstPartyChipLabel": "1st party",
+      "footerIssue": "File an issue",
+      "hide": "Hide",
+      "labDataTitle": "Lab Data",
+      "lsPerformanceCategoryDescription": "[Lighthouse](https://developers.google.com/web/tools/lighthouse/) analysis of the current page on an emulated mobile network. Values are estimated and may vary.",
+      "manualAuditsGroupTitle": "Additional items to manually check",
+      "notApplicableAuditsGroupTitle": "Not applicable",
+      "openInANewTabTooltip": "Open in a new tab",
+      "opportunityResourceColumnLabel": "Opportunity",
+      "opportunitySavingsColumnLabel": "Estimated Savings",
+      "passedAuditsGroupTitle": "Passed audits",
+      "runtimeAnalysisWindow": "Initial page load",
+      "runtimeAnalysisWindowSnapshot": "Point-in-time snapshot",
+      "runtimeAnalysisWindowTimespan": "User interactions timespan",
+      "runtimeCustom": "Custom throttling",
+      "runtimeDesktopEmulation": "Emulated Desktop",
+      "runtimeMobileEmulation": "Emulated Moto G Power",
+      "runtimeNoEmulation": "No emulation",
+      "runtimeSettingsArdVersion": "ARD version",
+      "runtimeSettingsAxeVersion": "Axe version",
+      "runtimeSettingsBenchmark": "Unthrottled CPU/Memory Power",
+      "runtimeSettingsCPUThrottling": "CPU throttling",
+      "runtimeSettingsDevice": "Device",
+      "runtimeSettingsNetworkThrottling": "Network throttling",
+      "runtimeSettingsScreenEmulation": "Screen emulation",
+      "runtimeSettingsUANetwork": "User agent (network)",
+      "runtimeSingleLoad": "Single page session",
+      "runtimeSingleLoadTooltip": "This data is taken from a single page session, as opposed to field data summarizing many sessions.",
+      "runtimeSlow4g": "Slow 4G throttling",
+      "runtimeUnknown": "Unknown",
+      "show": "Show",
+      "showRelevantAudits": "Show audits relevant to:",
+      "snippetCollapseButtonLabel": "Collapse snippet",
+      "snippetExpandButtonLabel": "Expand snippet",
+      "thirdPartyResourcesLabel": "Show 3rd-party resources",
+      "throttlingProvided": "Provided by environment",
+      "toplevelWarningsMessage": "There were issues affecting this run of Lighthouse:",
+      "unattributable": "Unattributable",
+      "unscoredLabel": "Unscored",
+      "unscoredTitle": "This audit does not contribute to the overall category score.",
+      "varianceDisclaimer": "Values are estimated and may vary. The [performance score is calculated](https://developer.chrome.com/docs/lighthouse/performance/performance-scoring/) directly from these metrics.",
+      "viewTraceLabel": "View Trace",
+      "viewTreemapLabel": "View Treemap",
+      "warningAuditsGroupTitle": "Passed audits but with warnings",
+      "warningHeader": "Warnings: "
+    },
+    "icuMessagePaths": {
+      "core/lib/lh-error.js | pageLoadFailedWithStatusCode": [
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "runtimeError.message"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "runWarnings[0]"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[first-contentful-paint].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[largest-contentful-paint].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[speed-index].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[total-blocking-time].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[max-potential-fid].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[cumulative-layout-shift].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[server-response-time].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits.interactive.errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[user-timings].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits.redirects.errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[mainthread-work-breakdown].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[bootup-time].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits.diagnostics.errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[network-requests].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[network-rtt].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[network-server-latency].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[main-thread-tasks].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits.metrics.errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[resource-summary].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[layout-shifts].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[long-tasks].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[non-composited-animations].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[unsized-images].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[script-treemap-data].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[total-byte-weight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[unminified-css].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[unminified-javascript].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[unused-css-rules].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[unused-javascript].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[bf-cache].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[cache-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[cls-culprits-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[document-latency-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[dom-size-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[duplicated-javascript-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[font-display-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[forced-reflow-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[image-delivery-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[inp-breakdown-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[lcp-breakdown-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[lcp-discovery-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[legacy-javascript-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[modern-http-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[network-dependency-tree-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[render-blocking-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[third-parties-insight].errorMessage"
+        },
+        {
+          "values": {
+            "errorCode": "ERRORED_DOCUMENT_REQUEST",
+            "statusCode": "404"
+          },
+          "path": "audits[viewport-insight].errorMessage"
+        }
+      ],
+      "core/lib/i18n/i18n.js | firstContentfulPaintMetric": [
+        "audits[first-contentful-paint].title"
+      ],
+      "core/audits/metrics/first-contentful-paint.js | description": [
+        "audits[first-contentful-paint].description"
+      ],
+      "core/lib/i18n/i18n.js | largestContentfulPaintMetric": [
+        "audits[largest-contentful-paint].title"
+      ],
+      "core/audits/metrics/largest-contentful-paint.js | description": [
+        "audits[largest-contentful-paint].description"
+      ],
+      "core/lib/i18n/i18n.js | speedIndexMetric": [
+        "audits[speed-index].title"
+      ],
+      "core/audits/metrics/speed-index.js | description": [
+        "audits[speed-index].description"
+      ],
+      "core/lib/i18n/i18n.js | totalBlockingTimeMetric": [
+        "audits[total-blocking-time].title"
+      ],
+      "core/audits/metrics/total-blocking-time.js | description": [
+        "audits[total-blocking-time].description"
+      ],
+      "core/lib/i18n/i18n.js | maxPotentialFIDMetric": [
+        "audits[max-potential-fid].title"
+      ],
+      "core/audits/metrics/max-potential-fid.js | description": [
+        "audits[max-potential-fid].description"
+      ],
+      "core/lib/i18n/i18n.js | cumulativeLayoutShiftMetric": [
+        "audits[cumulative-layout-shift].title"
+      ],
+      "core/audits/metrics/cumulative-layout-shift.js | description": [
+        "audits[cumulative-layout-shift].description"
+      ],
+      "core/audits/server-response-time.js | title": [
+        "audits[server-response-time].title"
+      ],
+      "core/audits/server-response-time.js | description": [
+        "audits[server-response-time].description"
+      ],
+      "core/lib/i18n/i18n.js | interactiveMetric": [
+        "audits.interactive.title"
+      ],
+      "core/audits/metrics/interactive.js | description": [
+        "audits.interactive.description"
+      ],
+      "core/audits/user-timings.js | title": [
+        "audits[user-timings].title"
+      ],
+      "core/audits/user-timings.js | description": [
+        "audits[user-timings].description"
+      ],
+      "core/audits/redirects.js | title": [
+        "audits.redirects.title"
+      ],
+      "core/audits/redirects.js | description": [
+        "audits.redirects.description"
+      ],
+      "core/audits/mainthread-work-breakdown.js | title": [
+        "audits[mainthread-work-breakdown].title"
+      ],
+      "core/audits/mainthread-work-breakdown.js | description": [
+        "audits[mainthread-work-breakdown].description"
+      ],
+      "core/audits/bootup-time.js | title": [
+        "audits[bootup-time].title"
+      ],
+      "core/audits/bootup-time.js | description": [
+        "audits[bootup-time].description"
+      ],
+      "core/audits/network-rtt.js | title": [
+        "audits[network-rtt].title"
+      ],
+      "core/audits/network-rtt.js | description": [
+        "audits[network-rtt].description"
+      ],
+      "core/audits/network-server-latency.js | title": [
+        "audits[network-server-latency].title"
+      ],
+      "core/audits/network-server-latency.js | description": [
+        "audits[network-server-latency].description"
+      ],
+      "core/audits/layout-shifts.js | title": [
+        "audits[layout-shifts].title"
+      ],
+      "core/audits/layout-shifts.js | description": [
+        "audits[layout-shifts].description"
+      ],
+      "core/audits/long-tasks.js | title": [
+        "audits[long-tasks].title"
+      ],
+      "core/audits/long-tasks.js | description": [
+        "audits[long-tasks].description"
+      ],
+      "core/audits/non-composited-animations.js | title": [
+        "audits[non-composited-animations].title"
+      ],
+      "core/audits/non-composited-animations.js | description": [
+        "audits[non-composited-animations].description"
+      ],
+      "core/audits/unsized-images.js | title": [
+        "audits[unsized-images].title"
+      ],
+      "core/audits/unsized-images.js | description": [
+        "audits[unsized-images].description"
+      ],
+      "core/audits/byte-efficiency/total-byte-weight.js | title": [
+        "audits[total-byte-weight].title"
+      ],
+      "core/audits/byte-efficiency/total-byte-weight.js | description": [
+        "audits[total-byte-weight].description"
+      ],
+      "core/audits/byte-efficiency/unminified-css.js | title": [
+        "audits[unminified-css].title"
+      ],
+      "core/audits/byte-efficiency/unminified-css.js | description": [
+        "audits[unminified-css].description"
+      ],
+      "core/audits/byte-efficiency/unminified-javascript.js | title": [
+        "audits[unminified-javascript].title"
+      ],
+      "core/audits/byte-efficiency/unminified-javascript.js | description": [
+        "audits[unminified-javascript].description"
+      ],
+      "core/audits/byte-efficiency/unused-css-rules.js | title": [
+        "audits[unused-css-rules].title"
+      ],
+      "core/audits/byte-efficiency/unused-css-rules.js | description": [
+        "audits[unused-css-rules].description"
+      ],
+      "core/audits/byte-efficiency/unused-javascript.js | title": [
+        "audits[unused-javascript].title"
+      ],
+      "core/audits/byte-efficiency/unused-javascript.js | description": [
+        "audits[unused-javascript].description"
+      ],
+      "core/audits/bf-cache.js | title": [
+        "audits[bf-cache].title"
+      ],
+      "core/audits/bf-cache.js | description": [
+        "audits[bf-cache].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/Cache.js | title": [
+        "audits[cache-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/Cache.js | description": [
+        "audits[cache-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/CLSCulprits.js | title": [
+        "audits[cls-culprits-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/CLSCulprits.js | description": [
+        "audits[cls-culprits-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/DocumentLatency.js | title": [
+        "audits[document-latency-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/DocumentLatency.js | description": [
+        "audits[document-latency-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/DOMSize.js | title": [
+        "audits[dom-size-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/DOMSize.js | description": [
+        "audits[dom-size-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/DuplicatedJavaScript.js | title": [
+        "audits[duplicated-javascript-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/DuplicatedJavaScript.js | description": [
+        "audits[duplicated-javascript-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/FontDisplay.js | title": [
+        "audits[font-display-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/FontDisplay.js | description": [
+        "audits[font-display-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/ForcedReflow.js | title": [
+        "audits[forced-reflow-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/ForcedReflow.js | description": [
+        "audits[forced-reflow-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/ImageDelivery.js | title": [
+        "audits[image-delivery-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/ImageDelivery.js | description": [
+        "audits[image-delivery-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/INPBreakdown.js | title": [
+        "audits[inp-breakdown-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/INPBreakdown.js | description": [
+        "audits[inp-breakdown-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/LCPBreakdown.js | title": [
+        "audits[lcp-breakdown-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/LCPBreakdown.js | description": [
+        "audits[lcp-breakdown-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/LCPDiscovery.js | title": [
+        "audits[lcp-discovery-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/LCPDiscovery.js | description": [
+        "audits[lcp-discovery-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/LegacyJavaScript.js | title": [
+        "audits[legacy-javascript-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/LegacyJavaScript.js | description": [
+        "audits[legacy-javascript-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/ModernHTTP.js | title": [
+        "audits[modern-http-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/ModernHTTP.js | description": [
+        "audits[modern-http-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/NetworkDependencyTree.js | title": [
+        "audits[network-dependency-tree-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/NetworkDependencyTree.js | description": [
+        "audits[network-dependency-tree-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/RenderBlocking.js | title": [
+        "audits[render-blocking-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/RenderBlocking.js | description": [
+        "audits[render-blocking-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/ThirdParties.js | title": [
+        "audits[third-parties-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/ThirdParties.js | description": [
+        "audits[third-parties-insight].description"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/Viewport.js | title": [
+        "audits[viewport-insight].title"
+      ],
+      "node_modules/@paulirish/trace_engine/models/trace/insights/Viewport.js | description": [
+        "audits[viewport-insight].description"
+      ],
+      "core/config/default-config.js | performanceCategoryTitle": [
+        "categories.performance.title"
+      ],
+      "core/config/default-config.js | metricGroupTitle": [
+        "categoryGroups.metrics.title"
+      ],
+      "core/config/default-config.js | insightsGroupTitle": [
+        "categoryGroups.insights.title"
+      ],
+      "core/config/default-config.js | insightsGroupDescription": [
+        "categoryGroups.insights.description"
+      ],
+      "core/config/default-config.js | diagnosticsGroupTitle": [
+        "categoryGroups.diagnostics.title"
+      ],
+      "core/config/default-config.js | diagnosticsGroupDescription": [
+        "categoryGroups.diagnostics.description"
+      ],
+      "core/config/default-config.js | a11yBestPracticesGroupTitle": [
+        "categoryGroups[a11y-best-practices].title"
+      ],
+      "core/config/default-config.js | a11yBestPracticesGroupDescription": [
+        "categoryGroups[a11y-best-practices].description"
+      ],
+      "core/config/default-config.js | a11yColorContrastGroupTitle": [
+        "categoryGroups[a11y-color-contrast].title"
+      ],
+      "core/config/default-config.js | a11yColorContrastGroupDescription": [
+        "categoryGroups[a11y-color-contrast].description"
+      ],
+      "core/config/default-config.js | a11yNamesLabelsGroupTitle": [
+        "categoryGroups[a11y-names-labels].title"
+      ],
+      "core/config/default-config.js | a11yNamesLabelsGroupDescription": [
+        "categoryGroups[a11y-names-labels].description"
+      ],
+      "core/config/default-config.js | a11yNavigationGroupTitle": [
+        "categoryGroups[a11y-navigation].title"
+      ],
+      "core/config/default-config.js | a11yNavigationGroupDescription": [
+        "categoryGroups[a11y-navigation].description"
+      ],
+      "core/config/default-config.js | a11yAriaGroupTitle": [
+        "categoryGroups[a11y-aria].title"
+      ],
+      "core/config/default-config.js | a11yAriaGroupDescription": [
+        "categoryGroups[a11y-aria].description"
+      ],
+      "core/config/default-config.js | a11yLanguageGroupTitle": [
+        "categoryGroups[a11y-language].title"
+      ],
+      "core/config/default-config.js | a11yLanguageGroupDescription": [
+        "categoryGroups[a11y-language].description"
+      ],
+      "core/config/default-config.js | a11yAudioVideoGroupTitle": [
+        "categoryGroups[a11y-audio-video].title"
+      ],
+      "core/config/default-config.js | a11yAudioVideoGroupDescription": [
+        "categoryGroups[a11y-audio-video].description"
+      ],
+      "core/config/default-config.js | a11yTablesListsVideoGroupTitle": [
+        "categoryGroups[a11y-tables-lists].title"
+      ],
+      "core/config/default-config.js | a11yTablesListsVideoGroupDescription": [
+        "categoryGroups[a11y-tables-lists].description"
+      ],
+      "core/config/default-config.js | seoMobileGroupTitle": [
+        "categoryGroups[seo-mobile].title"
+      ],
+      "core/config/default-config.js | seoMobileGroupDescription": [
+        "categoryGroups[seo-mobile].description"
+      ],
+      "core/config/default-config.js | seoContentGroupTitle": [
+        "categoryGroups[seo-content].title"
+      ],
+      "core/config/default-config.js | seoContentGroupDescription": [
+        "categoryGroups[seo-content].description"
+      ],
+      "core/config/default-config.js | seoCrawlingGroupTitle": [
+        "categoryGroups[seo-crawl].title"
+      ],
+      "core/config/default-config.js | seoCrawlingGroupDescription": [
+        "categoryGroups[seo-crawl].description"
+      ],
+      "core/config/default-config.js | bestPracticesTrustSafetyGroupTitle": [
+        "categoryGroups[best-practices-trust-safety].title"
+      ],
+      "core/config/default-config.js | bestPracticesUXGroupTitle": [
+        "categoryGroups[best-practices-ux].title"
+      ],
+      "core/config/default-config.js | bestPracticesBrowserCompatGroupTitle": [
+        "categoryGroups[best-practices-browser-compat].title"
+      ],
+      "core/config/default-config.js | bestPracticesGeneralGroupTitle": [
+        "categoryGroups[best-practices-general].title"
+      ],
+      "core/config/default-config.js | webmcpGroupTitle": [
+        "categoryGroups.webmcp.title"
+      ],
+      "core/config/default-config.js | webmcpGroupDescription": [
+        "categoryGroups.webmcp.description"
+      ],
+      "core/config/default-config.js | agentAccessibilityGroupTitle": [
+        "categoryGroups[agent-accessibility].title"
+      ],
+      "core/config/default-config.js | agentAccessibilityGroupDescription": [
+        "categoryGroups[agent-accessibility].description"
+      ],
+      "core/config/default-config.js | agentDiscoverabilityGroupTitle": [
+        "categoryGroups[agent-discoverability].title"
+      ],
+      "core/config/default-config.js | agentDiscoverabilityGroupDescription": [
+        "categoryGroups[agent-discoverability].description"
+      ]
+    }
+  }
+}

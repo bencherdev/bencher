@@ -363,6 +363,7 @@ const SHELL_HYPERFINE_V1_INT: i32 = 102;
 const SHELL_HYPERFINE_V2_INT: i32 = 103;
 const DART_INT: i32 = 110;
 const DART_BENCHMARK_HARNESS_INT: i32 = 111;
+const WEB_LIGHTHOUSE_INT: i32 = 161;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -428,6 +429,7 @@ pub enum Adapter {
     ShellHyperfineV2 = SHELL_HYPERFINE_V2_INT,
     Dart = DART_INT,
     DartBenchmarkHarness = DART_BENCHMARK_HARNESS_INT,
+    WebLighthouse = WEB_LIGHTHOUSE_INT,
 }
 
 impl Adapter {
@@ -488,7 +490,8 @@ impl Adapter {
             | Self::ShellHyperfine
             | Self::ShellHyperfineV1
             | Self::ShellHyperfineV2
-            | Self::DartBenchmarkHarness => self,
+            | Self::DartBenchmarkHarness
+            | Self::WebLighthouse => self,
         }
     }
 
@@ -571,6 +574,7 @@ impl fmt::Display for Adapter {
             Self::ShellHyperfineV2 => write!(f, "shell_hyperfine_v2"),
             Self::Dart => write!(f, "dart"),
             Self::DartBenchmarkHarness => write!(f, "dart_benchmark_harness"),
+            Self::WebLighthouse => write!(f, "web_lighthouse"),
         }
     }
 }
@@ -588,7 +592,7 @@ mod adapter {
         RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT,
         RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
         RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
-        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT, WEB_LIGHTHOUSE_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -659,6 +663,7 @@ mod adapter {
                 Self::ShellHyperfineV2 => SHELL_HYPERFINE_V2_INT.to_sql(out),
                 Self::Dart => DART_INT.to_sql(out),
                 Self::DartBenchmarkHarness => DART_BENCHMARK_HARNESS_INT.to_sql(out),
+                Self::WebLighthouse => WEB_LIGHTHOUSE_INT.to_sql(out),
             }
         }
     }
@@ -722,6 +727,7 @@ mod adapter {
                 SHELL_HYPERFINE_V2_INT => Ok(Self::ShellHyperfineV2),
                 DART_INT => Ok(Self::Dart),
                 DART_BENCHMARK_HARNESS_INT => Ok(Self::DartBenchmarkHarness),
+                WEB_LIGHTHOUSE_INT => Ok(Self::WebLighthouse),
                 value => Err(Box::new(AdapterError::Invalid(value))),
             }
         }
@@ -1337,7 +1343,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 53] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1390,6 +1396,7 @@ mod tests {
         Adapter::ShellHyperfineV2,
         Adapter::Dart,
         Adapter::DartBenchmarkHarness,
+        Adapter::WebLighthouse,
     ];
 
     // A new variant fails to compile here until it joins `ADAPTERS` above.
@@ -1446,7 +1453,8 @@ mod tests {
             | Adapter::ShellHyperfineV1
             | Adapter::ShellHyperfineV2
             | Adapter::Dart
-            | Adapter::DartBenchmarkHarness => true,
+            | Adapter::DartBenchmarkHarness
+            | Adapter::WebLighthouse => true,
         }
     }
 

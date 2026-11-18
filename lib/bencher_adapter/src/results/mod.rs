@@ -4,7 +4,10 @@ use bencher_json::{BenchmarkPrefix, BmfVersion, MeasureNameId, project::report::
 
 use crate::{
     Adaptable as _, AdapterError, Settings,
-    adapters::json::{v0::AdapterJsonV0, v1::AdapterJsonV1},
+    adapters::{
+        bmf_v1,
+        json::{v0::AdapterJsonV0, v1::AdapterJsonV1},
+    },
     v0_parser,
 };
 
@@ -52,6 +55,11 @@ impl AdapterResultsArray {
     fn refusal(results: &str, adapter: Adapter, expected: BmfVersion) -> AdapterError {
         if expected == BmfVersion::V0 && v0_parser(adapter).is_none() {
             return AdapterError::V1Only(adapter);
+        }
+        if expected == BmfVersion::V1
+            && let Some(failure) = bmf_v1::failure(adapter, results)
+        {
+            return failure;
         }
         let probe = if !matches!(adapter, Adapter::Json | Adapter::Magic) {
             None
@@ -202,7 +210,8 @@ mod test_results_array {
             AdapterError::Valid(_)
             | AdapterError::BenchmarkUnits(_)
             | AdapterError::Convert(_)
-            | AdapterError::V1Only(_) => {
+            | AdapterError::V1Only(_)
+            | AdapterError::FailedRun { .. } => {
                 panic!("expected the BMF version error: {error}")
             },
         }
@@ -222,6 +231,7 @@ mod test_results_array {
             (Adapter::GoBenchJson, "go/bench/json_count.txt"),
             (Adapter::JsVitestV5, "js/vitest/v5_basic.json"),
             (Adapter::PythonAsvJson, "python/asv/kinds.json"),
+            (Adapter::WebLighthouse, "web/lighthouse/perf_only.json"),
         ] {
             let results = std::fs::read_to_string(format!("./tool_output/{suffix}"))
                 .expect("Failed to read test file");

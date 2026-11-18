@@ -16,4 +16,6 @@ pub enum AdapterError {
     },
     #[error("{0} reads results at BMF version 1 only")]
     V1Only(Adapter),
+    #[error("`{adapter}` read a run that failed: {reason}")]
+    FailedRun { adapter: Adapter, reason: String },
 }

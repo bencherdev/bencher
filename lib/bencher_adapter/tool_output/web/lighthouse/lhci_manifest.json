@@ -1,0 +1,80 @@
+[
+  {
+    "url": "http://localhost:8080/",
+    "isRepresentativeRun": false,
+    "htmlPath": "/tmp/bench/lhci-out/localhost--2026_11_15_14_14_50.report.html",
+    "jsonPath": "/tmp/bench/lhci-out/localhost--2026_11_15_14_14_50.report.json",
+    "summary": {
+      "performance": 0.73,
+      "accessibility": 0.97,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 0.92
+    }
+  },
+  {
+    "url": "http://localhost:8080/",
+    "isRepresentativeRun": false,
+    "htmlPath": "/tmp/bench/lhci-out/localhost--2026_11_15_14_15_10.report.html",
+    "jsonPath": "/tmp/bench/lhci-out/localhost--2026_11_15_14_15_10.report.json",
+    "summary": {
+      "performance": 0.74,
+      "accessibility": 0.97,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 0.92
+    }
+  },
+  {
+    "url": "http://localhost:8080/about.html",
+    "isRepresentativeRun": false,
+    "htmlPath": "/tmp/bench/lhci-out/localhost-about_html-2026_11_15_14_15_20.report.html",
+    "jsonPath": "/tmp/bench/lhci-out/localhost-about_html-2026_11_15_14_15_20.report.json",
+    "summary": {
+      "performance": 1,
+      "accessibility": 0.96,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 1
+    }
+  },
+  {
+    "url": "http://localhost:8080/about.html",
+    "isRepresentativeRun": false,
+    "htmlPath": "/tmp/bench/lhci-out/localhost-about_html-2026_11_15_14_15_40.report.html",
+    "jsonPath": "/tmp/bench/lhci-out/localhost-about_html-2026_11_15_14_15_40.report.json",
+    "summary": {
+      "performance": 1,
+      "accessibility": 0.96,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 1
+    }
+  },
+  {
+    "url": "http://localhost:8080/",
+    "isRepresentativeRun": true,
+    "htmlPath": "/tmp/bench/lhci-out/localhost--2026_11_15_14_15_00.report.html",
+    "jsonPath": "/tmp/bench/lhci-out/localhost--2026_11_15_14_15_00.report.json",
+    "summary": {
+      "performance": 0.73,
+      "accessibility": 0.97,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 0.92
+    }
+  },
+  {
+    "url": "http://localhost:8080/about.html",
+    "isRepresentativeRun": true,
+    "htmlPath": "/tmp/bench/lhci-out/localhost-about_html-2026_11_15_14_15_30.report.html",
+    "jsonPath": "/tmp/bench/lhci-out/localhost-about_html-2026_11_15_14_15_30.report.json",
+    "summary": {
+      "performance": 1,
+      "accessibility": 0.96,
+      "best-practices": 0.96,
+      "seo": 1,
+      "agentic-browsing": 1
+    }
+  }
+]

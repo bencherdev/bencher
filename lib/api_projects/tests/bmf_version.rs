@@ -567,6 +567,74 @@ async fn report_version_1_only_adapter_refuses_version_0() {
     server.close().await;
 }
 
+/// A Lighthouse Result, which only a version 1 leaf reads.
+const LIGHTHOUSE: &str =
+    include_str!("../../bencher_adapter/tool_output/web/lighthouse/perf_only.json");
+/// A Lighthouse Result of a page that failed to load, with its runtime error.
+const LIGHTHOUSE_NOT_FOUND: &str =
+    include_str!("../../bencher_adapter/tool_output/web/lighthouse/not_found.json");
+
+/// Lighthouse refuses a version 0 project by name, and lands once the project is at version 1.
+///
+/// Kills: Lighthouse given a version 0 parser, or left to the generic adapter 400.
+#[tokio::test]
+async fn report_lighthouse_refuses_version_0() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "lighthousev1only").await;
+    let post = || Post {
+        results: vec![LIGHTHOUSE],
+        adapter: Some("web_lighthouse"),
+        ..Post::default()
+    };
+
+    let body = refused(&server, &fixture, post()).await;
+    assert!(
+        body.contains(
+            "`web_lighthouse` reads results at BMF version 1 only, and this project is at BMF version 0."
+        ),
+        "{body}"
+    );
+
+    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+    let landed = report(&server, &fixture, post()).await;
+    assert_eq!(iterations(&landed), 1, "{landed}");
+
+    server.close().await;
+}
+
+/// A Lighthouse Result with a runtime error gets a 400 that names the page and Lighthouse's
+/// error code with no adapter hint, under `web_lighthouse` and `magic` alike.
+///
+/// Kills: the generic 400, which dumps the result and asks whether the adapter is right.
+#[tokio::test]
+async fn report_lighthouse_runtime_error_names_its_code() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "lighthousefailed").await;
+    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+
+    for adapter in [Some("web_lighthouse"), None] {
+        let body = refused(
+            &server,
+            &fixture,
+            Post {
+                results: vec![LIGHTHOUSE_NOT_FOUND],
+                adapter,
+                ..Post::default()
+            },
+        )
+        .await;
+        assert!(
+            body.contains(
+                "`web_lighthouse` read a run that failed: Lighthouse 13.6.0 could not measure http://localhost:8080/missing.html: ERRORED_DOCUMENT_REQUEST: "
+            ),
+            "{adapter:?}: {body}"
+        );
+        assert!(!body.contains("right adapter"), "{adapter:?}: {body}");
+    }
+
+    server.close().await;
+}
+
 /// An adapter with a version 0 tree that does not claim the output keeps the generic 400
 /// at version 0, with its adapter hint.
 ///

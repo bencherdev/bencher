@@ -54,13 +54,18 @@ export const thresholdSnippets = <L extends SnippetLine>(
 	};
 };
 
-// Guard the way the project already guards this measure; with no threshold on it, throughput against falling and the rest against rising.
+// Guard the way the project already guards this measure; with no threshold on it, a measure where a rise is better against falling and the rest against rising.
 export const guardFor = (
 	line: SnippetLine,
 	lines: readonly SnippetLine[],
 ): Guard =>
 	lines.find((other) => other.measure === line.measure && other.guard)?.guard ??
-	(line.measure === "throughput" ? "lower" : "upper");
+	(RISE_IS_BETTER.has(line.measure) ? "lower" : "upper");
+
+const RISE_IS_BETTER: ReadonlySet<string> = new Set([
+	"throughput",
+	"category-score",
+]);
 
 const isSubset = (subset: ParameterSet, superset: ParameterSet) =>
 	Object.entries(subset).every(([key, value]) => superset[key] === value);

@@ -296,7 +296,25 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::noise::IoJitter::from_str(measure_str))
         .or_else(|| built_in::noise::CpuSteal::from_str(measure_str))
         .or_else(|| built_in::noise::NoiseScore::from_str(measure_str))
+        .or_else(|| built_in_web_measure(measure_str))
         .or_else(|| built_in_gungraun_measure(measure_str))
+}
+
+/// The built-in web measure a measure name or slug names, if any.
+fn built_in_web_measure(measure_str: &str) -> Option<JsonNewMeasure> {
+    built_in::web::FirstContentfulPaint::from_str(measure_str)
+        .or_else(|| built_in::web::LargestContentfulPaint::from_str(measure_str))
+        .or_else(|| built_in::web::TotalBlockingTime::from_str(measure_str))
+        .or_else(|| built_in::web::CumulativeLayoutShift::from_str(measure_str))
+        .or_else(|| built_in::web::SpeedIndex::from_str(measure_str))
+        .or_else(|| built_in::web::TimeToInteractive::from_str(measure_str))
+        .or_else(|| built_in::web::MaxPotentialFirstInputDelay::from_str(measure_str))
+        .or_else(|| built_in::web::ServerResponseTime::from_str(measure_str))
+        .or_else(|| built_in::web::TransferSize::from_str(measure_str))
+        .or_else(|| built_in::web::DomElements::from_str(measure_str))
+        .or_else(|| built_in::web::MainThreadTime::from_str(measure_str))
+        .or_else(|| built_in::web::ScriptExecutionTime::from_str(measure_str))
+        .or_else(|| built_in::web::CategoryScore::from_str(measure_str))
 }
 
 /// The built-in gungraun measure a measure name or slug names, if any.

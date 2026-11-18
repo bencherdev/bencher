@@ -82,6 +82,7 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"shell_hyperfine",
 	"shell_hyperfine_v1",
 	"shell_hyperfine_v2",
+	"web_lighthouse",
 ];
 
 const LISTED = new Set<string>(ADAPTERS);
