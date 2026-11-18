@@ -29,8 +29,19 @@ pub enum RunError {
     #[error("Failed to convert the callback for the API client")]
     ClientCallback,
     #[cfg(feature = "plus")]
-    #[error("`--detach` with `--github-actions` requires `--ci-callback-token`")]
-    DetachNeedsCallback,
+    #[error("Failed to convert the GitHub post for the API client: {0}")]
+    ClientGitHub(serde_json::Error),
+    #[cfg(feature = "plus")]
+    #[error(
+        "`--detach` with `--github-actions` needs a Bencher API server of v{POSTING_VERSION} or later to post the GitHub Check and pull request comment, and this server is v{0}. Upgrade the server, set `--ci-callback-token`, or drop `--github-actions` and send a callback with `--callback-url`, `--callback-header`, and `--callback-body`.",
+        POSTING_VERSION = super::POSTING_VERSION
+    )]
+    DetachNeedsPostingServer(String),
+    #[cfg(feature = "plus")]
+    #[error(
+        "`--detach` with `--github-actions` gets its GitHub Check and pull request comment from Bencher only on github.com. On GitHub Enterprise Server, set `--ci-callback-token`, or drop `--github-actions` and send a callback with `--callback-url`, `--callback-header`, and `--callback-body`."
+    )]
+    DetachNeedsGitHubCom,
 
     #[error("{0}")]
     Branch(#[from] super::branch::BranchError),

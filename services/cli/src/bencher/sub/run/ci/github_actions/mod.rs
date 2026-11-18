@@ -4,8 +4,9 @@ use bencher_comment::{
 };
 #[cfg(feature = "plus")]
 use bencher_json::{
-    GitHash, JsonNewCallback, ProjectUuid, ReportUuid, ResourceName, ValidError,
-    runner::CallbackError,
+    CiId, GitHash, GitHubIssueNumber, GitHubRepositoryId, JsonNewCallback, ProjectUuid, ReportUuid,
+    ResourceName, ValidError,
+    runner::{CallbackError, JsonNewJobGitHub},
 };
 use bencher_json::{JsonProject, Secret};
 use octocrab::{
@@ -158,6 +159,12 @@ pub enum GitHubError {
     #[cfg(feature = "plus")]
     #[error("GitHub head SHA is not a commit hash: {0}")]
     BadSha(ValidError),
+    #[cfg(feature = "plus")]
+    #[error("GitHub Action event repository ID is missing or invalid: {0}")]
+    BadRepositoryId(String),
+    #[cfg(feature = "plus")]
+    #[error("GitHub pull request number is invalid: {0}")]
+    BadNumber(ValidError),
     #[cfg(feature = "plus")]
     #[error("Failed to compose the GitHub `repository_dispatch` callback: {0}")]
     DispatchCallback(CallbackError),
@@ -626,8 +633,35 @@ impl GitHubActions {
         }
     }
 
+    /// The pull request context of a detached run, for the server to post its check and comment.
+    #[cfg(feature = "plus")]
+    pub fn job_github(&self, log: bool) -> Result<Option<JsonNewJobGitHub>, GitHubError> {
+        if !is_github_actions() {
+            cli_println_quietable!(
+                log,
+                "Not running as a GitHub Action. Skipping CI integration.\n{}",
+                docker_env(GITHUB_ACTIONS)
+            );
+            return Ok(None);
+        }
+        let (event_str, event) = github_event()?;
+        Ok(Some(JsonNewJobGitHub {
+            repository_id: repository_id(&event_str, &event)?,
+            head_sha: head_sha(&event, self.dispatch.as_ref())?
+                .parse()
+                .map_err(GitHubError::BadSha)?,
+            number: self
+                .issue_number(&event_str, &event)?
+                .map(GitHubIssueNumber::try_from)
+                .transpose()
+                .map_err(GitHubError::BadNumber)?,
+            ci_id: self.ci_id.clone().map(CiId::from),
+            ci_only_thresholds: self.ci_only_thresholds.then_some(true),
+            ci_only_on_alert: self.ci_only_on_alert.then_some(true),
+        }))
+    }
+
     /// The `repository_dispatch` that a detached run's callback sends, so its attach can complete the check.
-    /// Without `--ci-callback-token`, it goes without a token, which the server mints.
     #[cfg(feature = "plus")]
     pub fn dispatch_callback(
         &self,
@@ -877,6 +911,19 @@ fn repository_full_name<'e>(
         .ok_or_else(|| GitHubError::NoFullName(event_str.to_owned()))?
         .as_str()
         .ok_or_else(|| GitHubError::BadFullName(event_str.to_owned()))
+}
+
+#[cfg(feature = "plus")]
+fn repository_id(
+    event_str: &str,
+    event: &serde_json::Value,
+) -> Result<GitHubRepositoryId, GitHubError> {
+    event
+        .get("repository")
+        .and_then(|repository| repository.get("id"))
+        .and_then(serde_json::Value::as_u64)
+        .and_then(|id| GitHubRepositoryId::try_from(id).ok())
+        .ok_or_else(|| GitHubError::BadRepositoryId(event_str.to_owned()))
 }
 
 fn split_full_name(full_name: &str) -> Result<(&str, &str), GitHubError> {
@@ -1173,7 +1220,7 @@ impl DispatchPayload {
 
 /// Whether `api_url`, the `GITHUB_API_URL` that both the dispatch and the comment use, is
 /// github.com's API, which an unset one defaults to: the only API where the Bencher Cloud GitHub
-/// App links a repository and mints the token of a dispatch.
+/// App links a repository and posts the check and comment of a detached run.
 pub fn is_github_com_api(api_url: Option<&str>) -> bool {
     api_url.is_none_or(|api_url| api_url.trim_end_matches('/') == DEFAULT_GITHUB_API_URL)
 }

@@ -1,6 +1,6 @@
 use bencher_comment::{GitHubApi, ReportComment};
 #[cfg(feature = "plus")]
-use bencher_json::{JsonNewCallback, ResourceName};
+use bencher_json::{JsonNewCallback, ResourceName, runner::JsonNewJobGitHub};
 use bencher_json::{JsonProject, ProjectSlug, ProjectUuid, ReportUuid};
 use url::Url;
 
@@ -164,6 +164,16 @@ impl Ci {
                 github_actions
                     .report_submitted(handle, project, report, sub_adapter, log)
                     .await;
+            },
+        }
+    }
+
+    /// The pull request context a detached run sends, so that the server can post for it.
+    #[cfg(feature = "plus")]
+    pub fn job_github(&self, log: bool) -> Result<Option<JsonNewJobGitHub>, CiError> {
+        match self {
+            Self::GitHubActions(github_actions) => {
+                github_actions.job_github(log).map_err(Into::into)
             },
         }
     }

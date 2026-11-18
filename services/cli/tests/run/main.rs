@@ -84,6 +84,8 @@ const GROUP_WRITE: [(&str, &str); 7] = [
 ];
 const GITHUB_TOKEN: &str = "github-token-marker";
 const CALLBACK_TOKEN: &str = "callback-token-marker";
+// The ID of the repository the workflow runs in.
+const REPOSITORY_ID: u64 = 987_654;
 
 /// How the stand-in answers.
 #[derive(Clone, Copy)]
@@ -125,7 +127,7 @@ enum GitHubApi {
     StandIn,
     /// An `https` URL that refuses connections: no check starts, and a composed dispatch validates.
     Unreachable,
-    /// No `GITHUB_API_URL`, so the run uses github.com's API: only a dry run, which reaches no API.
+    /// No `GITHUB_API_URL`, so the run uses github.com's API: only a run that reaches no GitHub API.
     Unset,
 }
 
@@ -135,6 +137,8 @@ enum JobRead {
     Callback(&'static str),
     /// A job without a callback in the given state.
     Status(&'static str),
+    /// A job with the given post of its GitHub check and comment, as JSON.
+    GitHub(&'static str),
     NotFound,
 }
 
@@ -335,6 +339,31 @@ impl Run {
             .collect()
     }
 
+    /// The method and path of every request, to either API.
+    fn calls(&self) -> Vec<(&str, &str)> {
+        self.requests
+            .iter()
+            .map(|request| (request.method.as_str(), request.path.as_str()))
+            .collect()
+    }
+
+    /// The lines of stderr from the one that says the job was submitted.
+    fn stderr_from_submit(&self) -> Vec<String> {
+        self.stderr_lines()
+            .into_iter()
+            .skip_while(|line| !line.starts_with(SUBMITTED))
+            .collect()
+    }
+
+    /// The `github` of the job the run submitted.
+    #[expect(clippy::expect_used, reason = "test helper")]
+    fn sent_github(&self) -> serde_json::Value {
+        self.body("POST", "/v0/run")
+            .pointer("/job/github")
+            .cloned()
+            .expect("The run carries no `github`")
+    }
+
     #[expect(clippy::expect_used, reason = "test helper")]
     fn sent_callback(&self) -> serde_json::Value {
         self.body("POST", "/v0/run")
@@ -493,7 +522,7 @@ fn pull_request(api: GitHubApi) -> GitHub {
             "pull_request": {
                 "head": { "sha": HEAD_SHA, "repo": { "full_name": "owner/repo" } }
             },
-            "repository": { "full_name": "owner/repo" }
+            "repository": { "id": REPOSITORY_ID, "full_name": "owner/repo" }
         }),
         api,
     }
@@ -503,7 +532,24 @@ fn pull_request(api: GitHubApi) -> GitHub {
 fn push(api: GitHubApi) -> GitHub {
     GitHub {
         event_name: "push",
-        event: serde_json::json!({ "ref": "refs/heads/main", "repository": { "full_name": "owner/repo" } }),
+        event: serde_json::json!({
+            "ref": "refs/heads/main",
+            "repository": { "id": REPOSITORY_ID, "full_name": "owner/repo" }
+        }),
+        api,
+    }
+}
+
+/// Workflow 1 of a pull request from a fork: a `workflow_run` that names the pull request's head
+/// but not its number.
+fn workflow_run(api: GitHubApi) -> GitHub {
+    GitHub {
+        event_name: "workflow_run",
+        event: serde_json::json!({
+            "action": "completed",
+            "workflow_run": { "event": "pull_request", "head_sha": HEAD_SHA },
+            "repository": { "id": REPOSITORY_ID, "full_name": "owner/repo" }
+        }),
         api,
     }
 }
@@ -690,6 +736,16 @@ fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static
                 let mut json_job = json_job(None);
                 if let Some(json_job) = json_job.as_object_mut() {
                     json_job.insert("status".to_owned(), serde_json::json!(status));
+                }
+                (OK, json_job.to_string())
+            },
+            JobRead::GitHub(github) => {
+                let mut json_job = json_job(None);
+                if let (Some(json_job), Ok(github)) = (
+                    json_job.as_object_mut(),
+                    serde_json::from_str::<serde_json::Value>(github),
+                ) {
+                    json_job.insert("github".to_owned(), github);
                 }
                 (OK, json_job.to_string())
             },
@@ -1448,6 +1504,12 @@ fn detach_composes_the_repository_dispatch() {
         })
     );
     assert_token_only_in_the_run(&run);
+    // The dispatch's attach posts, so the server is not asked to, whatever its version or GitHub.
+    let sent = run.body("POST", "/v0/run");
+    assert!(sent["job"].get("github").is_none(), "{sent}");
+    // The run starts its own check, here at an API that refuses the connection.
+    let stderr = run.stderr();
+    assert!(stderr.contains("Failed to start GitHub Check"), "{stderr}");
 
     // The echo shows the composed request.
     run.assert_echo(&serde_json::from_value(callback).unwrap());
@@ -1474,16 +1536,19 @@ fn detach_on_a_push_composes_no_number() {
     );
 }
 
-/// A server before the one that mints the dispatch's token.
-const BEFORE_MINTING: VersionRead = VersionRead::Version("0.6.15");
-/// The first server that mints it.
-const MINTING: VersionRead = VersionRead::Version("0.6.16");
+/// A server before the first one that posts a detached run's check and comment.
+const BEFORE_POSTING: VersionRead = VersionRead::Version("0.6.17");
+/// The first server that posts them.
+const POSTING: VersionRead = VersionRead::Version("0.6.18");
+const POST_PENDING: &str = r#"{ "state": "pending" }"#;
+const POSTS_WHEN_FINISHED: &str = "Bencher posts the results to GitHub when the job finishes";
+const APPROVAL_URL: &str = "https://github.com/settings/installations/42";
 
 /// A detached run on GitHub Actions against a server answering its version check with `version`.
-fn detach_on(version: VersionRead, github: &GitHub, args: &[&str]) -> Run {
+fn detach_on(version: VersionRead, job_read: JobRead, github: &GitHub, args: &[&str]) -> Run {
     github_run_with(
         StandIn {
-            job_read: JobRead::Callback("pending"),
+            job_read,
             version,
             check_runs: CheckRuns::Create,
         },
@@ -1492,74 +1557,233 @@ fn detach_on(version: VersionRead, github: &GitHub, args: &[&str]) -> Run {
     )
 }
 
-// Kills a refusal that starts a check or submits the run, and composing a dispatch without a
-// token for a server that cannot mint one, or for a GitHub that is not github.com.
+/// A detached run on GitHub Actions without `--ci-callback-token`, against a server that posts.
+fn post(job_read: JobRead, github: &GitHub, args: &[&str]) -> Run {
+    detach_on(POSTING, job_read, github, args)
+}
+
+// Kills a run that sends no `github`, drops, misreads, or adds a field of it, sends
+// `--ci-public-links`, or composes the dispatch without a token alongside it.
 #[test]
-fn detach_without_a_callback_is_refused() {
-    for (version, api, what) in [
-        (
-            BEFORE_MINTING,
-            GitHubApi::Unset,
-            "a server that cannot mint",
-        ),
-        (MINTING, GitHubApi::Unreachable, "another GitHub API"),
-    ] {
-        let run = detach_on(version, &pull_request(api), &[]);
-        assert_eq!(
-            run.output.status.code(),
-            Some(1),
-            "{what}: {}",
-            run.stderr()
-        );
-        let stderr = run.stderr();
-        assert!(
-            stderr.contains("`--detach` with `--github-actions` requires `--ci-callback-token`"),
-            "{what}: {stderr}"
-        );
-        run.assert_no_marker();
-        let requests: Vec<(&str, &str)> = run
-            .requests
-            .iter()
-            .map(|request| (request.method.as_str(), request.path.as_str()))
-            .collect();
-        assert_eq!(requests, [("GET", VERSION_PATH)], "{what}");
+fn detach_asks_the_server_to_post_in_place_of_a_dispatch() {
+    let run = post(
+        JobRead::GitHub(POST_PENDING),
+        &pull_request(GitHubApi::Unset),
+        &[
+            "--ci-id",
+            "suite",
+            "--ci-only-thresholds",
+            "--ci-only-on-alert",
+            "--ci-public-links",
+        ],
+    );
+    run.assert_success();
+    run.assert_no_marker();
+    assert_eq!(
+        run.sent_github(),
+        serde_json::json!({
+            "repository_id": REPOSITORY_ID,
+            "head_sha": HEAD_SHA,
+            "number": 7,
+            "ci_id": "suite",
+            "ci_only_thresholds": true,
+            "ci_only_on_alert": true,
+        })
+    );
+    let sent = run.body("POST", "/v0/run");
+    assert!(sent["job"].get("callback").is_none(), "{sent}");
+    // The token of the workflow never leaves it.
+    for request in &run.requests {
+        assert!(!request.body.contains(GITHUB_TOKEN), "{}", request.path);
     }
 }
 
-// Kills a dispatch without `--ci-callback-token` that carries an `Authorization` header, goes to
-// any API but github.com's, or carries any other payload. A dry run starts no check and submits
-// nothing, so nothing reaches GitHub.
+// Kills a run that starts the check, resolves the project to name it, names the report in it,
+// completes it, or writes a job summary. A run at any GitHub API but github.com's is refused, so
+// no stand-in can count GitHub requests here: a check started at github.com's API with the
+// stand-in's token fails, and the run says so.
 #[test]
-fn detach_without_a_callback_composes_a_dispatch_without_a_token() {
-    let run = detach_on(MINTING, &pull_request(GitHubApi::Unset), &["--dry-run"]);
-    run.assert_success();
+fn detach_posts_nothing_to_github() {
+    for github in [pull_request(GitHubApi::Unset), push(GitHubApi::Unset)] {
+        let run = post(JobRead::GitHub(POST_PENDING), &github, &[]);
+        run.assert_success();
+        // The client reads the version again before each request to a server of another version.
+        let calls: Vec<_> = run
+            .calls()
+            .into_iter()
+            .filter(|call| *call != ("GET", VERSION_PATH))
+            .collect();
+        assert_eq!(
+            calls,
+            [
+                ("POST", "/v0/run"),
+                ("GET", JOB_PATH),
+                ("GET", CONSOLE_PATH)
+            ],
+            "{}",
+            github.event_name
+        );
+        let stderr = run.stderr();
+        assert!(!stderr.contains("GitHub Check"), "{stderr}");
+        assert_eq!(run.step_summary, None, "{}", github.event_name);
+    }
+}
 
-    let requests: Vec<(&str, &str)> = run
-        .requests
-        .iter()
-        .map(|request| (request.method.as_str(), request.path.as_str()))
-        .collect();
-    assert_eq!(requests, [("GET", VERSION_PATH)]);
-    let composed: bencher_json::JsonNewCallback = serde_json::from_value(serde_json::json!({
-        "url": "https://api.github.com/repos/owner/repo/dispatches",
-        "headers": {
-            "accept": "application/vnd.github+json",
-            "x-github-api-version": "2022-11-28",
-        },
-        "body": {
-            "event_type": "bencher_run",
-            "client_payload": {
-                "bencher": {
-                    "project": "{{ project.slug }}",
-                    "job": "{{ job.uuid }}",
-                    "ci_number": 7,
-                },
-                "github": { "sha": HEAD_SHA },
-            },
-        },
-    }))
-    .expect("The composed callback is valid");
-    run.assert_echo(&composed);
+// Kills a `github` that takes the event's number over `--ci-number`, or that takes no number
+// where only `--ci-number` names one.
+#[test]
+fn ci_number_names_the_pull_request() {
+    for github in [
+        pull_request(GitHubApi::Unset),
+        workflow_run(GitHubApi::Unset),
+    ] {
+        let run = post(
+            JobRead::GitHub(POST_PENDING),
+            &github,
+            &["--ci-number", "9"],
+        );
+        run.assert_success();
+        assert_eq!(
+            run.sent_github(),
+            serde_json::json!({
+                "repository_id": REPOSITORY_ID,
+                "head_sha": HEAD_SHA,
+                "number": 9,
+            }),
+            "{}",
+            github.event_name
+        );
+    }
+}
+
+// Kills a `github` with a number on a push, or at any commit but the one pushed.
+#[test]
+fn detach_on_a_push_sends_no_number() {
+    let run = post(JobRead::GitHub(POST_PENDING), &push(GitHubApi::Unset), &[]);
+    run.assert_success();
+    assert_eq!(
+        run.sent_github(),
+        serde_json::json!({ "repository_id": REPOSITORY_ID, "head_sha": GITHUB_SHA })
+    );
+}
+
+// Kills a refusal that starts a check or submits the run, a run sent to a server that cannot
+// post, or to a GitHub where the server cannot post, and a message that names no other way.
+#[test]
+fn detach_without_a_callback_is_refused() {
+    for (version, api, expected) in [
+        (
+            BEFORE_POSTING,
+            GitHubApi::Unset,
+            "needs a Bencher API server of v0.6.18 or later",
+        ),
+        (POSTING, GitHubApi::Unreachable, "only on github.com"),
+    ] {
+        let run = detach_on(
+            version,
+            JobRead::GitHub(POST_PENDING),
+            &pull_request(api),
+            &[],
+        );
+        let stderr = run.stderr();
+        assert_eq!(run.output.status.code(), Some(1), "{expected}: {stderr}");
+        for expected in [expected, "`--ci-callback-token`", "`--callback-url`"] {
+            assert!(stderr.contains(expected), "{expected}: {stderr}");
+        }
+        run.assert_no_marker();
+        assert_eq!(run.calls(), [("GET", VERSION_PATH)], "{expected}");
+    }
+}
+
+// Kills a run that reads no job after submit, prints nothing of a failed post, drops its reason
+// or the approval link, or fails the run for it.
+#[test]
+fn a_failed_post_is_printed_and_the_run_succeeds() {
+    for (github, expected) in [
+        (
+            r#"{ "state": "failed", "status": 422, "failure": "approval", "approval_url": "https://github.com/settings/installations/42" }"#,
+            APPROVAL_URL,
+        ),
+        (
+            r#"{ "state": "failed", "status": 403, "failure": "refused" }"#,
+            "403",
+        ),
+    ] {
+        let run = post(
+            JobRead::GitHub(github),
+            &pull_request(GitHubApi::Unset),
+            &[],
+        );
+        run.assert_success();
+        assert_eq!(run.job_reads(), 1);
+        let lines = run.stderr_from_submit();
+        let [submitted_line, notice] = lines.as_slice() else {
+            panic!("{lines:#?}");
+        };
+        assert_eq!(*submitted_line, submitted());
+        assert!(
+            notice.starts_with("Warning: Bencher failed to post the results to GitHub: ")
+                && notice.contains(expected),
+            "{lines:#?}"
+        );
+    }
+}
+
+// Kills a pending post that prints nothing or prints a failure, a failed read of the job that
+// fails the run or prints, and a notice that `--quiet` does not hold back.
+#[test]
+fn a_pending_post_says_when_it_posts() {
+    let run = post(
+        JobRead::GitHub(POST_PENDING),
+        &pull_request(GitHubApi::Unset),
+        &[],
+    );
+    run.assert_success();
+    assert_eq!(
+        run.stderr_from_submit(),
+        [submitted(), POSTS_WHEN_FINISHED.to_owned()]
+    );
+
+    let run = post(JobRead::NotFound, &pull_request(GitHubApi::Unset), &[]);
+    run.assert_success();
+    assert_eq!(run.job_reads(), 1);
+    assert_eq!(run.stderr_from_submit(), [submitted()]);
+
+    let run = post(
+        JobRead::GitHub(POST_PENDING),
+        &pull_request(GitHubApi::Unset),
+        &["--quiet"],
+    );
+    run.assert_success();
+    assert_eq!(run.stderr(), "");
+}
+
+// Kills a dry run that drops `github` from its echo, or that calls more than the version check.
+#[test]
+fn a_dry_run_echoes_the_post() {
+    let run = post(
+        JobRead::GitHub(POST_PENDING),
+        &pull_request(GitHubApi::Unset),
+        &["--dry-run"],
+    );
+    run.assert_success();
+    assert_eq!(run.calls(), [("GET", VERSION_PATH)]);
+    let stdout = run.stdout();
+    let (_, echo) = stdout.split_once(ECHO).unwrap();
+    let echo: serde_json::Value = serde_json::Deserializer::from_str(echo)
+        .into_iter()
+        .next()
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        echo["job"]["github"],
+        serde_json::json!({
+            "repository_id": REPOSITORY_ID,
+            "head_sha": HEAD_SHA,
+            "number": 7,
+        })
+    );
+    assert!(echo["job"].get("callback").is_none(), "{echo}");
 }
 
 fn attach(github: &GitHub, args: &[&str]) -> Run {

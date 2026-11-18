@@ -8,10 +8,12 @@ use super::RunError;
 
 mod callback;
 mod job_wait;
+mod post;
 
 use callback::new_callback;
 pub use callback::{CALLBACK_SKIPPED, callback_skipped, client_callback};
 pub use job_wait::{FinishedJob, JobOutcome, JobWait};
+pub use post::{client_github, post_notice};
 
 #[expect(
     clippy::expect_used,
