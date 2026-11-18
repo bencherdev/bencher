@@ -1,0 +1,14 @@
+Running 4s test @ http://localhost:8080/hang
+  1 threads and 2 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     0.00us    0.00us   0.00us    -nan%
+    Req/Sec     1.00      0.00     1.00    100.00%
+  Latency Distribution
+     50%    0.00us
+     75%    0.00us
+     90%    0.00us
+     99%    0.00us
+  4 requests in 4.01s, 236.00B read
+  Socket errors: connect 0, read 0, write 0, timeout 4
+Requests/sec:      1.00
+Transfer/sec:      58.92B

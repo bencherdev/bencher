@@ -52,6 +52,7 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"http_k6",
 	"http_k6_json",
 	"http_k6_json_summary",
+	"http_wrk",
 	"java_jmh",
 	"js_benchmark",
 	"js_deno",

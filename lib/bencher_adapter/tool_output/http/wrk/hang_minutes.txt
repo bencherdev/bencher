@@ -1,0 +1,13 @@
+Running 1m test @ http://localhost:8080/hang
+  1 threads and 2 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     0.92m    89.80us   0.92m   100.00%
+    Req/Sec     0.00      0.00     0.00    100.00%
+  Latency Distribution
+     50%    0.92m 
+     75%    0.92m 
+     90%    0.92m 
+     99%    0.92m 
+  2 requests in 1.00m, 118.00B read
+Requests/sec:      0.03
+Transfer/sec:       1.96B
