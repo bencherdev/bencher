@@ -68,6 +68,8 @@ const RISE_IS_BETTER: ReadonlySet<string> = new Set([
 	"iteration-throughput",
 	"check-ratio",
 	"check-passes",
+	"success-ratio",
+	"responses-2xx",
 ]);
 
 const isSubset = (subset: ParameterSet, superset: ParameterSet) =>

@@ -783,6 +783,9 @@ export enum Adapter {
 	HttpK6 = "http_k6",
 	HttpK6Json = "http_k6_json",
 	HttpK6JsonSummary = "http_k6_json_summary",
+	HttpOha = "http_oha",
+	HttpOhaJson = "http_oha_json",
+	HttpOhaText = "http_oha_text",
 }
 
 /** A report, with what a link to it shows: the report that raised an alert. */

@@ -1,0 +1,97 @@
+Summary:
+  Success rate:	89.00%
+  Total:	2007.3320 ms
+  Slowest:	1.1665 ms
+  Fastest:	0.0125 ms
+  Average:	0.1229 ms
+  Requests/sec:	298.9042
+
+  Total data:	1.26 KiB
+  Size/request:	2 B
+  Size/sec:	641 B
+
+Response time histogram:
+  0.013 ms [1]   |
+  0.128 ms [402] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.243 ms [70]  |■■■■■
+  0.359 ms [21]  |■
+  0.474 ms [12]  |
+  0.589 ms [4]   |
+  0.705 ms [10]  |
+  0.820 ms [6]   |
+  0.936 ms [3]   |
+  1.051 ms [2]   |
+  1.166 ms [3]   |
+
+Response time distribution:
+  10.00% in 0.0279 ms
+  25.00% in 0.0338 ms
+  50.00% in 0.0599 ms
+  75.00% in 0.1261 ms
+  90.00% in 0.2758 ms
+  95.00% in 0.5178 ms
+  99.00% in 0.9000 ms
+  99.90% in 1.1665 ms
+  99.99% in 1.1665 ms
+
+Response time histogram (2xx only):
+  0.013 ms [1]   |
+  0.128 ms [323] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.243 ms [55]  |■■■■■
+  0.359 ms [20]  |■
+  0.474 ms [9]   |
+  0.590 ms [4]   |
+  0.705 ms [9]   |
+  0.820 ms [5]   |
+  0.936 ms [0]   |
+  1.051 ms [2]   |
+  1.166 ms [1]   |
+
+Response time distribution (2xx only):
+  10.00% in 0.0286 ms
+  25.00% in 0.0346 ms
+  50.00% in 0.0601 ms
+  75.00% in 0.1260 ms
+  90.00% in 0.2758 ms
+  95.00% in 0.4568 ms
+  99.00% in 0.8051 ms
+  99.90% in 1.1665 ms
+  99.99% in 1.1665 ms
+
+Response time histogram (4xx + 5xx only):
+  0.013 ms [1]  |
+  0.126 ms [77] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.239 ms [15] |■■■■■■
+  0.352 ms [2]  |
+  0.465 ms [3]  |■
+  0.578 ms [0]  |
+  0.692 ms [1]  |
+  0.805 ms [1]  |
+  0.918 ms [3]  |■
+  1.031 ms [0]  |
+  1.144 ms [2]  |
+
+Response time distribution (4xx + 5xx only):
+  10.00% in 0.0232 ms
+  25.00% in 0.0324 ms
+  50.00% in 0.0591 ms
+  75.00% in 0.1265 ms
+  90.00% in 0.3166 ms
+  95.00% in 0.7385 ms
+  99.00% in 1.0592 ms
+  99.90% in 1.1443 ms
+  99.99% in 1.1443 ms
+
+
+Details (average, fastest, slowest):
+  DNS+dialup:	0.0885 ms, 0.0162 ms, 0.5663 ms
+  DNS-lookup:	0.0258 ms, 0.0012 ms, 0.3440 ms
+
+Status code distribution:
+  [200] 429 responses
+  [404] 54 responses
+  [500] 51 responses
+
+Error distribution:
+  [33] connection closed before message completed
+  [33] timeout

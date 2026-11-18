@@ -200,6 +200,8 @@ pub enum CliReportAdapter {
     GoBench,
     /// 🌐 HTTP k6
     HttpK6,
+    /// 🌐 HTTP oha
+    HttpOha,
     /// ☕️ Java JMH
     JavaJmh,
     /// 🕸 JavaScript Benchmark

@@ -13,7 +13,8 @@ use crate::{
             go::bench::{AdapterGoBenchJson, AdapterGoBenchText, AdapterGoBenchV1},
             http::{
                 k6::AdapterHttpK6, k6_json::AdapterHttpK6Json,
-                k6_json_summary::AdapterHttpK6JsonSummary,
+                k6_json_summary::AdapterHttpK6JsonSummary, oha::AdapterHttpOha,
+                oha_json::AdapterHttpOhaJson, oha_text::AdapterHttpOhaText,
             },
             java::jmh::AdapterJavaJmhV1,
             js::{
@@ -127,6 +128,9 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::HttpK6 => AdapterHttpK6::parse(input, settings),
         Adapter::HttpK6Json => AdapterHttpK6Json::parse(input, settings),
         Adapter::HttpK6JsonSummary => AdapterHttpK6JsonSummary::parse(input, settings),
+        Adapter::HttpOha => AdapterHttpOha::parse(input, settings),
+        Adapter::HttpOhaJson => AdapterHttpOhaJson::parse(input, settings),
+        Adapter::HttpOhaText => AdapterHttpOhaText::parse(input, settings),
         Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
 }
@@ -147,7 +151,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 55] = [
+    const ADAPTERS: [Adapter; 58] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -203,6 +207,9 @@ mod test_bmf_v1 {
         Adapter::HttpK6,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::HttpOha,
+        Adapter::HttpOhaJson,
+        Adapter::HttpOhaText,
     ];
 
     const LANGUAGES: [Adapter; 10] = [
