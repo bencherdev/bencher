@@ -855,6 +855,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bencher_changepoint"
+version = "0.6.17"
+dependencies = [
+ "rand 0.10.3",
+ "statrs",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "bencher_cimd"
 version = "0.6.17"
 dependencies = [
