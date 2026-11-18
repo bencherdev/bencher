@@ -184,12 +184,14 @@ impl QueryMeasure {
         project_id: ProjectId,
         measure: &MeasureNameId,
     ) -> diesel::QueryResult<Option<MeasureIdentity>> {
-        let measure_id = schema::measure::table
-            .filter(schema::measure::project_id.eq(project_id))
-            .filter(Self::eq_name_id(measure))
-            .select(schema::measure::id)
-            .first::<MeasureId>(conn)
-            .optional()?;
+        let measure_id = Self::find_name_id(measure, |eq_name_id| {
+            schema::measure::table
+                .filter(schema::measure::project_id.eq(project_id))
+                .filter(eq_name_id)
+                .select(schema::measure::id)
+                .first::<MeasureId>(conn)
+        })
+        .optional()?;
         if let Some(measure_id) = measure_id {
             return Ok(Some(MeasureIdentity::Existing(measure_id)));
         }

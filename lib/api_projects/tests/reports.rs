@@ -2929,3 +2929,197 @@ fn stored(server: &TestServer, project_slug: &str) -> (Vec<String>, Vec<String>,
     let series = 0;
     (measures, benchmarks, report_benchmarks, series)
 }
+
+// POST /v0/projects/{project}/reports - a testbed named by a name that is also a slug, but not its
+// slug, is that testbed: neither a new one nor a conflict, and the lists filtered by it hold it
+#[tokio::test]
+async fn reports_post_finds_a_testbed_by_its_slug_shaped_name() {
+    let name = slug_shaped_name();
+    assert_report_finds_by_slug_shaped_name(
+        "slugnametestbed",
+        "testbeds",
+        serde_json::json!({}),
+        report_naming("main", &name, "bench", "latency"),
+        "/testbed/uuid",
+        &[
+            ("reports", "testbed"),
+            ("thresholds", "testbed"),
+            ("runs", "testbed"),
+        ],
+    )
+    .await;
+}
+
+// POST /v0/projects/{project}/reports - the same for a branch, and the lists filtered by it
+#[tokio::test]
+async fn reports_post_finds_a_branch_by_its_slug_shaped_name() {
+    let name = slug_shaped_name();
+    assert_report_finds_by_slug_shaped_name(
+        "slugnamebranch",
+        "branches",
+        serde_json::json!({}),
+        report_naming(&name, "localhost", "bench", "latency"),
+        "/branch/uuid",
+        &[
+            ("reports", "branch"),
+            ("thresholds", "branch"),
+            ("runs", "branch"),
+        ],
+    )
+    .await;
+}
+
+// POST /v0/projects/{project}/reports - the same for a benchmark
+#[tokio::test]
+async fn reports_post_finds_a_benchmark_by_its_slug_shaped_name() {
+    let name = slug_shaped_name();
+    assert_report_finds_by_slug_shaped_name(
+        "slugnamebenchmark",
+        "benchmarks",
+        serde_json::json!({}),
+        report_naming("main", "localhost", &name, "latency"),
+        "/results/0/0/benchmark/uuid",
+        &[],
+    )
+    .await;
+}
+
+// POST /v0/projects/{project}/reports - the same for a measure, and the thresholds filtered by it
+#[tokio::test]
+async fn reports_post_finds_a_measure_by_its_slug_shaped_name() {
+    let name = slug_shaped_name();
+    assert_report_finds_by_slug_shaped_name(
+        "slugnamemeasure",
+        "measures",
+        serde_json::json!({ "units": "ns" }),
+        report_naming("main", "localhost", "bench", &name),
+        "/results/0/0/measures/0/measure/uuid",
+        &[("thresholds", "measure")],
+    )
+    .await;
+}
+
+// POST /v0/projects/{project}/reports - a measure kept by its slug is the measure the results name
+// by a name that is also a slug, so its metric is kept on it
+#[tokio::test]
+async fn reports_post_keeps_a_measure_named_by_its_slug_shaped_name() {
+    let results = serde_json::json!({ "bench": { slug_shaped_name(): { "value": 1.0 } } });
+    assert_report_finds_by_slug_shaped_name(
+        "slugnamekeep",
+        "measures",
+        serde_json::json!({ "units": "ns" }),
+        keeping(&results, 0, &[&other_slug()]),
+        "/results/0/0/measures/0/measure/uuid",
+        &[],
+    )
+    .await;
+}
+
+/// A name that is also a valid slug, as long as a slug can be.
+fn slug_shaped_name() -> String {
+    "a".repeat(Slug::MAX_LEN)
+}
+
+/// Another slug, which the resource named [`slug_shaped_name`] is created with.
+fn other_slug() -> String {
+    "t".repeat(Slug::MAX_LEN)
+}
+
+/// Post a report that names an existing resource by [`slug_shaped_name`], a valid slug that is
+/// not the resource's slug, and assert that the report uses that resource and creates no other,
+/// and that each list filtered by that name holds what the report made.
+async fn assert_report_finds_by_slug_shaped_name(
+    label: &str,
+    resources: &str,
+    fields: serde_json::Value,
+    report: serde_json::Value,
+    used: &str,
+    filters: &[(&str, &str)],
+) {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, label).await;
+    let mut body = fields;
+    if let Some(object) = body.as_object_mut() {
+        object.insert("name".to_owned(), slug_shaped_name().into());
+        object.insert("slug".to_owned(), other_slug().into());
+    }
+    let path = format!("/v0/projects/{project_slug}/{resources}");
+    let resp = server
+        .client
+        .post(server.api_url(&path))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&token),
+        )
+        .json(&body)
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "POST {resources}");
+    let created: serde_json::Value = resp.json().await.expect("Failed to parse the resource");
+    let listed = async || {
+        let resp = server
+            .client
+            .get(server.api_url(&path))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&token),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::OK, "GET {resources}");
+        resp.headers()
+            .get("x-total-count")
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.parse::<u64>().ok())
+            .expect("No total count")
+    };
+    let before = listed().await;
+
+    let (status, text) = try_post_ingest(&server, &token, &project_slug, &report).await;
+
+    assert_eq!(status, StatusCode::CREATED, "{text}");
+    let report: serde_json::Value =
+        serde_json::from_str(&text).expect("Failed to parse the report");
+    assert_eq!(report.pointer(used), created.get("uuid"), "{resources}");
+    assert_eq!(listed().await, before, "{resources}");
+    for (list, filter) in filters {
+        let path = match *list {
+            "runs" => format!("/v0/console/projects/{project_slug}/runs"),
+            _ => format!("/v0/projects/{project_slug}/{list}"),
+        };
+        let resp = server
+            .client
+            .get(server.api_url(&format!("{path}?{filter}={}", slug_shaped_name())))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&token),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::OK, "GET {list}?{filter}");
+        let listed: serde_json::Value = resp.json().await.expect("Failed to parse the list");
+        let items = listed
+            .as_array()
+            .or_else(|| listed.get("runs").and_then(serde_json::Value::as_array))
+            .map(Vec::len);
+        assert_eq!(items, Some(1), "GET {list}?{filter}");
+    }
+}
+
+/// A report on `branch` and `testbed` of one result, `benchmark` in `measure`, with a threshold
+/// on `measure`.
+fn report_naming(branch: &str, testbed: &str, benchmark: &str, measure: &str) -> serde_json::Value {
+    serde_json::json!({
+        "branch": branch,
+        "testbed": testbed,
+        "start_time": "2024-01-01T00:00:00Z",
+        "end_time": "2024-01-01T00:01:00Z",
+        "results": [serde_json::json!({ benchmark: { measure: { "value": 1.0 } } }).to_string()],
+        "thresholds": {
+            "models": { measure: { "test": "t_test", "upper_boundary": 0.99 } },
+        },
+    })
+}
