@@ -11,6 +11,8 @@ use serde_json as _;
 #[cfg(test)]
 use tokio as _;
 #[cfg(test)]
+use url as _;
+#[cfg(test)]
 use uuid as _;
 
 pub mod run;

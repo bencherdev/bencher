@@ -370,6 +370,7 @@ async fn into_context(
         &shutdown,
         &clock,
         github_app.clone(),
+        &console_url,
     );
 
     #[cfg(feature = "plus")]
@@ -448,6 +449,7 @@ fn new_callbacks(
     shutdown: &bencher_schema::context::CancellationToken,
     clock: &bencher_json::Clock,
     github_app: Option<Arc<bencher_github_client::GitHubApp>>,
+    console_url: &url::Url,
 ) -> Callbacks {
     // `main` installed the TLS crypto provider the client builds with.
     let callback_client = CallbackClient::new();
@@ -459,14 +461,17 @@ fn new_callbacks(
             error_chain(build_error)
         );
     }
-    Callbacks::new_with_github_app(
+    Callbacks::new_with_github_posts(
         Arc::clone(&database.connection),
         database.auth_pool.clone(),
         callback_key.clone(),
         Arc::new(callback_client),
         shutdown.clone(),
         clock.clone(),
-        github_app,
+        github_app.map(|app| bencher_schema::context::GitHubPosts {
+            app,
+            console_url: console_url.clone(),
+        }),
     )
 }
 

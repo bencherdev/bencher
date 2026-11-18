@@ -30,6 +30,12 @@ export type CardCvc = string;
 
 export type CardNumber = string;
 
+/**
+ * A `--ci-id`, which names a GitHub check and its pull request comment section in place of the
+ * project's name.
+ */
+export type CiId = string;
+
 /** The first line of a commit's message. */
 export type CommitTitle = string;
 
@@ -182,6 +188,40 @@ export interface JsonJobCallback {
 	status?: number;
 }
 
+/** The state of a job's GitHub post */
+export enum JobGitHubState {
+	/** The check, and the comment if any, are still to be posted. */
+	Pending = "pending",
+	Posted = "posted",
+	Failed = "failed",
+}
+
+/** Why a job's GitHub post failed */
+export enum JobGitHubFailure {
+	/** The installation of the GitHub App has not approved its checks and pull requests write. */
+	Approval = "approval",
+	/** The project is no longer linked to the job's repository. */
+	Unlinked = "unlinked",
+	/** GitHub refused a request. */
+	Refused = "refused",
+	/** Every attempt failed. */
+	Exhausted = "exhausted",
+}
+
+/** Bencher's post of a job's GitHub check and pull request comment */
+export interface JsonJobGitHub {
+	state: JobGitHubState;
+	/** The HTTP status of GitHub's last refusal, if GitHub refused a request */
+	status?: number;
+	/** Why the post failed */
+	failure?: JobGitHubFailure;
+	/**
+	 * Where the owner of the GitHub App's installation approves its permissions, when the post
+	 * failed for want of that approval
+	 */
+	approval_url?: Url;
+}
+
 /** Output from a single benchmark iteration. */
 export interface JsonIterationOutput {
 	/** Exit code from the benchmark command */
@@ -219,6 +259,8 @@ export interface JsonJob {
 	completed?: string;
 	/** Present only for a job submitted with a callback */
 	callback?: JsonJobCallback;
+	/** Present only for a job submitted with its GitHub Actions context */
+	github?: JsonJobGitHub;
 	created: string;
 	modified: string;
 	/** Job output (stdout, stderr, files) from blob storage, included for terminal jobs. */
@@ -1998,6 +2040,30 @@ export interface JsonNewClaim {
 	empty?: undefined;
 }
 
+/**
+ * The GitHub Actions context of a detached run on the project's linked repository.
+ * 
+ * Bencher creates the run's GitHub check, completes it once the job finishes, and writes the
+ * pull request comment, with a token from the Bencher Cloud GitHub App.
+ */
+export interface JsonNewJobGitHub {
+	/** The ID of the repository the workflow runs in, which must be the project's linked repository */
+	repository_id: number;
+	/** The commit the check is created on: the head of the pull request, or the commit pushed */
+	head_sha: GitHash;
+	/** The pull request to comment on. Without one, the run gets a check and no comment. */
+	number?: number;
+	/**
+	 * Names the check and the comment section in place of the project's name. Only the bytes the
+	 * check's name keeps are kept.
+	 */
+	ci_id?: CiId;
+	/** Only comment if a threshold exists for the branch, testbed, and measure */
+	ci_only_thresholds?: boolean;
+	/** Only start a new comment if an alert is generated. An existing comment is always updated. */
+	ci_only_on_alert?: boolean;
+}
+
 export interface JsonNewLinkedRepository {
 	/** A grant from the GitHub code exchange. */
 	grant: Jwt;
@@ -2184,6 +2250,11 @@ export interface JsonNewRunJob {
 	 * a Bencher Plus plan
 	 */
 	callback?: JsonNewCallback;
+	/**
+	 * For a detached run on GitHub Actions in the project's linked repository, Bencher posts the
+	 * run's check and pull request comment instead of a callback
+	 */
+	github?: JsonNewJobGitHub;
 }
 
 /** Create a new runner */

@@ -54,6 +54,7 @@ RUN cargo init --lib bencher_callback
 RUN cargo init --lib bencher_cimd
 RUN cargo init --lib bencher_egress
 RUN cargo init --lib bencher_github_client
+RUN cargo init --lib bencher_github_post
 RUN cargo init --lib bencher_google_client
 RUN cargo init --lib bencher_google_index
 RUN cargo init --lib bencher_license

@@ -5,33 +5,52 @@ use std::{
 
 use bencher_callback::{CallbackKey, CallbackSender};
 use bencher_github_client::GitHubApp;
-use bencher_json::Clock;
+use bencher_json::{BENCHER_URL, Clock, runner::CALLBACK_JOB_STATUSES};
 use diesel::r2d2::{ConnectionManager, Pool};
 use slog::Logger;
 use tokio::task::{self, JoinError, JoinSet};
 use tokio_util::sync::CancellationToken;
+use url::Url;
 
 use super::DbConnection;
-use crate::model::runner::{JobId, QueryJobCallback};
+use crate::model::runner::{JobId, QueryJobCallback, QueryJobGitHub};
 
 mod delivery;
 mod governor;
 
 use delivery::Delivery;
 
-/// Owns the tasks that deliver job callbacks, at most one per job, so shutdown can await every one.
+/// Owns the tasks that deliver job callbacks and post to GitHub, at most one of each kind per
+/// job, so shutdown can await every one.
 #[derive(Clone)]
 pub struct Callbacks {
     delivery: Arc<Delivery>,
     tasks: Arc<Mutex<Tasks>>,
 }
 
+/// The GitHub App that mints the token of every post, and the console that a post's comment
+/// links to.
+pub struct GitHubPosts {
+    pub app: Arc<GitHubApp>,
+    pub console_url: Url,
+}
+
 #[derive(Default)]
 struct Tasks {
     running: JoinSet<()>,
-    /// The job each live task delivers.
-    claims: HashMap<task::Id, JobId>,
+    /// The job and the kind of each live task.
+    claims: HashMap<task::Id, (JobId, Kind)>,
     closed: bool,
+}
+
+/// What a task does for its job.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Kind {
+    Callback,
+    /// Start the job's GitHub check, once the job has committed.
+    Start,
+    /// Post the job's GitHub check and comment, once the job has finished.
+    Post,
 }
 
 impl Callbacks {
@@ -46,7 +65,7 @@ impl Callbacks {
         Self::new_with_github_app(connection, reader, key, sender, shutdown, clock, None)
     }
 
-    /// With the GitHub App that mints the token of a dispatch sent without one.
+    /// With the GitHub App that mints the token of a dispatch sent without one, and of every post.
     pub fn new_with_github_app(
         connection: Arc<tokio::sync::Mutex<DbConnection>>,
         reader: Pool<ConnectionManager<DbConnection>>,
@@ -55,6 +74,23 @@ impl Callbacks {
         shutdown: CancellationToken,
         clock: Clock,
         github_app: Option<Arc<GitHubApp>>,
+    ) -> Self {
+        let github = github_app.map(|app| GitHubPosts {
+            app,
+            console_url: BENCHER_URL.clone(),
+        });
+        Self::new_with_github_posts(connection, reader, key, sender, shutdown, clock, github)
+    }
+
+    /// With the GitHub App and the console that a post's comment links to.
+    pub fn new_with_github_posts(
+        connection: Arc<tokio::sync::Mutex<DbConnection>>,
+        reader: Pool<ConnectionManager<DbConnection>>,
+        key: CallbackKey,
+        sender: Arc<dyn CallbackSender>,
+        shutdown: CancellationToken,
+        clock: Clock,
+        github: Option<GitHubPosts>,
     ) -> Self {
         // Counted at each export, on a connection only if one is free, so a busy pool skips a point.
         #[cfg(feature = "otel")]
@@ -66,64 +102,65 @@ impl Callbacks {
         }
         Self {
             delivery: Arc::new(Delivery::new(
-                connection, reader, key, sender, shutdown, clock, github_app,
+                connection, reader, key, sender, shutdown, clock, github,
             )),
             tasks: Arc::default(),
         }
     }
 
-    /// Fire a job's callback once the job's terminal status has committed, delivering it from a
-    /// task so the caller never waits on the network. The task sends only a pending callback of a
-    /// terminal job.
+    /// Fire a job's callback and its GitHub post once the job's terminal status has committed,
+    /// each from a task so the caller never waits on the network. A task sends only a pending
+    /// callback or post of a terminal job.
     pub fn fire(&self, log: &Logger, job_id: JobId) {
-        let mut tasks = self.lock();
-        while let Some(joined) = tasks.running.try_join_next_with_id() {
-            let (id, joined) = match joined {
-                Ok((id, ())) => (id, Ok(())),
-                Err(e) => (e.id(), Err(e)),
-            };
-            tasks.claims.remove(&id);
-            log_join(log, joined);
-        }
-        if tasks.closed {
-            slog::debug!(log, "Not firing a job callback during shutdown"; "job_id" => ?job_id);
-            return;
-        }
-        if tasks.claims.values().any(|claimed| *claimed == job_id) {
-            return;
-        }
-        let delivery = Arc::clone(&self.delivery);
-        let task_log = log.clone();
-        let id = tasks
-            .running
-            .spawn(async move {
-                delivery.deliver(&task_log, job_id).await;
-            })
-            .id();
-        tasks.claims.insert(id, job_id);
+        self.spawn(log, job_id, Kind::Callback);
+        self.spawn(log, job_id, Kind::Post);
     }
 
-    /// Fire every pending callback whose job is already terminal, which no process has delivered.
+    /// Start a job's GitHub check once the job has committed, from a task that paces it.
+    pub fn start(&self, log: &Logger, job_id: JobId) {
+        self.spawn(log, job_id, Kind::Start);
+    }
+
+    /// Fire every pending callback whose job is already terminal, and every pending post that a
+    /// previous process left undone.
     pub async fn fire_pending(&self, log: &Logger) {
-        let pending = QueryJobCallback::pending_on_terminal_jobs(
-            &mut *self.delivery.connection().lock().await,
-        );
-        let job_ids = match pending {
-            Ok(job_ids) => job_ids,
-            Err(e) => {
-                slog::error!(log, "Failed to query pending job callbacks: {e}");
-                return;
-            },
+        let (pending, posts) = {
+            let conn = &mut *self.delivery.connection().lock().await;
+            (
+                QueryJobCallback::pending_on_terminal_jobs(conn),
+                QueryJobGitHub::pending(conn),
+            )
         };
-        if !job_ids.is_empty() {
-            slog::info!(log, "Firing {} pending job callback(s)", job_ids.len());
+        match pending {
+            Ok(job_ids) => {
+                if !job_ids.is_empty() {
+                    slog::info!(log, "Firing {} pending job callback(s)", job_ids.len());
+                }
+                for job_id in job_ids {
+                    self.spawn(log, job_id, Kind::Callback);
+                }
+            },
+            Err(e) => slog::error!(log, "Failed to query pending job callbacks: {e}"),
         }
-        for job_id in job_ids {
-            self.fire(log, job_id);
+        match posts {
+            Ok(posts) => {
+                if !posts.is_empty() {
+                    slog::info!(log, "Firing {} pending GitHub post(s)", posts.len());
+                }
+                for (job_id, status) in posts {
+                    let kind = if CALLBACK_JOB_STATUSES.contains(&status) {
+                        Kind::Post
+                    } else {
+                        Kind::Start
+                    };
+                    self.spawn(log, job_id, kind);
+                }
+            },
+            Err(e) => slog::error!(log, "Failed to query pending GitHub posts: {e}"),
         }
     }
 
-    /// Stop firing, then wait for every delivery task; the shutdown signal cuts each one short.
+    /// Stop firing, then wait for every task; the shutdown signal cuts each one short.
     pub async fn drain(&self, log: &Logger) {
         let mut running = {
             let mut tasks = self.lock();
@@ -135,7 +172,46 @@ impl Callbacks {
         }
     }
 
-    // A fire and a drain share one lock, so no task starts once a drain has begun.
+    /// Spawn the job's task of this kind, unless one is live. A start and a post of one job each
+    /// take the job's lock, so they run one at a time.
+    fn spawn(&self, log: &Logger, job_id: JobId, kind: Kind) {
+        let mut tasks = self.lock();
+        while let Some(joined) = tasks.running.try_join_next_with_id() {
+            let (id, joined) = match joined {
+                Ok((id, ())) => (id, Ok(())),
+                Err(e) => (e.id(), Err(e)),
+            };
+            tasks.claims.remove(&id);
+            log_join(log, joined);
+        }
+        if tasks.closed {
+            slog::debug!(log, "Not firing a job task during shutdown"; "job_id" => ?job_id, "kind" => ?kind);
+            return;
+        }
+        if tasks
+            .claims
+            .values()
+            .any(|claimed| *claimed == (job_id, kind))
+        {
+            return;
+        }
+        let delivery = Arc::clone(&self.delivery);
+        let task_log = log.clone();
+        let id = tasks
+            .running
+            .spawn(async move {
+                match kind {
+                    Kind::Callback => delivery.deliver(&task_log, job_id).await,
+                    Kind::Start | Kind::Post => {
+                        delivery::advance(&delivery, &task_log, job_id, kind).await;
+                    },
+                }
+            })
+            .id();
+        tasks.claims.insert(id, (job_id, kind));
+    }
+
+    // A spawn and a drain share one lock, so no task starts once a drain has begun.
     fn lock(&self) -> std::sync::MutexGuard<'_, Tasks> {
         self.tasks.lock().unwrap_or_else(PoisonError::into_inner)
     }

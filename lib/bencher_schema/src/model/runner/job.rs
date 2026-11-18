@@ -8,7 +8,9 @@ use bencher_json::{
         github::LinkedRepositoryStatus,
         report::{Adapter, JsonReportSettings},
     },
-    runner::{GitHubDispatch, JsonIterationOutput, JsonNewCallback, job::JsonNewRunJob},
+    runner::{
+        GitHubDispatch, JsonIterationOutput, JsonNewCallback, JsonNewJobGitHub, job::JsonNewRunJob,
+    },
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -34,7 +36,10 @@ use crate::{
             linked_repository::QueryLinkedRepository,
             report::{QueryReport, ReportId, results::ReportBmfVersion, warning::ReportWarnings},
         },
-        runner::{InsertJobCallback, QueryJobCallbackView, QueryRunner, RunnerId, SourceIp},
+        runner::{
+            InsertJobCallback, InsertJobGitHub, QueryJobCallbackView, QueryJobGitHubView,
+            QueryRunner, RunnerId, SourceIp,
+        },
         spec::{QuerySpec, SpecId},
         user::{actor::ApiActor, public::PublicUser},
     },
@@ -265,6 +270,17 @@ impl QueryJob {
         report_uuid: ReportUuid,
         callback: Option<QueryJobCallbackView>,
     ) -> Result<JsonJob, HttpError> {
+        self.into_json_with_github(conn, report_uuid, callback, None)
+    }
+
+    /// With the state of the job's GitHub post, which the caller selects in the same query too.
+    pub fn into_json_with_github(
+        self,
+        conn: &mut DbConnection,
+        report_uuid: ReportUuid,
+        callback: Option<QueryJobCallbackView>,
+        github: Option<QueryJobGitHubView>,
+    ) -> Result<JsonJob, HttpError> {
         let runner_uuid = if let Some(runner_id) = self.runner_id {
             Some(QueryRunner::get(conn, runner_id)?.uuid)
         } else {
@@ -285,6 +301,7 @@ impl QueryJob {
             started: self.started,
             completed: self.completed,
             callback: callback.map(Into::into),
+            github: github.map(Into::into),
             created: self.created,
             modified: self.modified,
             output: None,
@@ -358,6 +375,7 @@ pub struct PendingInsertJob {
     timeout: Timeout,
     priority: Priority,
     callback: Option<PendingCallback>,
+    github: Option<JsonNewJobGitHub>,
 }
 
 impl PendingInsertJob {
@@ -391,6 +409,7 @@ impl PendingInsertJob {
             allow_failure,
             backdate,
             callback,
+            github,
         } = new_run_job;
 
         // 1. Validate registry and resolve image digest
@@ -456,7 +475,13 @@ impl PendingInsertJob {
             timeout,
             priority,
             callback,
+            github,
         })
+    }
+
+    /// Whether Bencher posts the job's GitHub check and comment.
+    pub fn posts_to_github(&self) -> bool {
+        self.github.is_some()
     }
 
     /// Whether the job has a callback, and if so, whether the callback was skipped.
@@ -476,7 +501,7 @@ impl PendingInsertJob {
         conn: &mut DbConnection,
         report_id: ReportId,
         now: DateTime,
-    ) -> QueryResult<()> {
+    ) -> QueryResult<JobId> {
         let Self {
             uuid,
             organization_id,
@@ -487,6 +512,7 @@ impl PendingInsertJob {
             timeout,
             priority,
             callback,
+            github,
         } = self;
         let insert_job = InsertJob::new(
             uuid,
@@ -503,16 +529,19 @@ impl PendingInsertJob {
         diesel::insert_into(schema::job::table)
             .values(&insert_job)
             .execute(conn)?;
-
-        let Some(callback) = callback else {
-            return Ok(());
-        };
         let job_id = diesel::select(last_insert_rowid()).get_result::<JobId>(conn)?;
-        match callback {
-            PendingCallback::Sealed(sealed) => InsertJobCallback::pending(job_id, sealed, now),
-            PendingCallback::Skipped => InsertJobCallback::skipped(job_id, now),
+
+        if let Some(callback) = callback {
+            match callback {
+                PendingCallback::Sealed(sealed) => InsertJobCallback::pending(job_id, sealed, now),
+                PendingCallback::Skipped => InsertJobCallback::skipped(job_id, now),
+            }
+            .insert(conn)?;
         }
-        .insert(conn)
+        if let Some(github) = github {
+            InsertJobGitHub::pending(job_id, github, now).insert(conn)?;
+        }
+        Ok(job_id)
     }
 }
 
@@ -589,6 +618,51 @@ pub async fn check_minted_dispatch(
     Ok(())
 }
 
+/// Refuse a run whose GitHub check and comment Bencher could never post, before it creates anything.
+///
+/// It makes no GitHub call, so it cannot know whether the installation has approved the app's
+/// permissions; the post finds that out.
+pub async fn check_job_github(
+    context: &ApiContext,
+    query_project: &QueryProject,
+    is_claimed: bool,
+    github: Option<&JsonNewJobGitHub>,
+) -> Result<(), HttpError> {
+    let Some(github) = github else {
+        return Ok(());
+    };
+    if context.github_app.is_none() {
+        return Err(bad_request_error(NO_APP_TO_POST));
+    }
+    let slug = &query_project.slug;
+    if !is_claimed {
+        return Err(conflict_error(format!(
+            "Project ({slug}) is not claimed, so it has no linked GitHub repository for Bencher to post this detached run's check and pull request comment to. Claim the project, then link the repository in its Settings."
+        )));
+    }
+    let link = QueryLinkedRepository::get(auth_conn!(context), query_project.id)
+        .map_err(resource_not_found_err!(LinkedRepository, query_project))?;
+    let Some(link) = link else {
+        return Err(conflict_error(format!(
+            "Project ({slug}) has no linked GitHub repository, so Bencher cannot post this detached run's check and pull request comment. Link the repository in the project's Settings."
+        )));
+    };
+    let full_name = &link.full_name;
+    if link.status == LinkedRepositoryStatus::Disconnected {
+        return Err(conflict_error(format!(
+            "The GitHub repository ({full_name}) linked to project ({slug}) is disconnected, so Bencher cannot post this detached run's check and pull request comment. Reconnect it in the project's Settings."
+        )));
+    }
+    if link.repository_id != github.repository_id {
+        return Err(conflict_error(format!(
+            "This detached run is in the GitHub repository with ID {repository}, but project ({slug}) is linked to the GitHub repository ({full_name}). Bencher posts a check and pull request comment only to the project's linked repository.",
+            repository = github.repository_id
+        )));
+    }
+    Ok(())
+}
+
+const NO_APP_TO_POST: &str = "This server has no GitHub App, so Bencher cannot post this detached run's check and pull request comment. Run without `--detach` to post them from the workflow.";
 const NO_APP_TO_MINT: &str = "This server has no GitHub App, so it cannot mint the token for this detached run's dispatch. Pass a fine-grained personal access token with contents write on the repository to `--ci-callback-token`.";
 const LINK_OR_TOKEN: &str = "Link the repository in the project's Settings, or pass a fine-grained personal access token with contents write on it to `--ci-callback-token`.";
 
@@ -1154,6 +1228,7 @@ mod tests {
                 callback: Some(
                     PendingCallback::new(&key, uuid, &plan_kind, true, &callback()).unwrap(),
                 ),
+                github: None,
             };
             conn.immediate_transaction(|conn| {
                 pending_job.insert(conn, fixture.report_id, DateTime::TEST)

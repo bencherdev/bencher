@@ -2,6 +2,7 @@
 
 mod architecture;
 mod brand;
+mod ci_id;
 mod cpu;
 mod cvc;
 mod disk;
@@ -32,13 +33,14 @@ mod year;
 
 pub use architecture::Architecture;
 pub use brand::CardBrand;
+pub use ci_id::CiId;
 pub use cpu::Cpu;
 pub use cvc::CardCvc;
 pub use disk::Disk;
 pub use entitlements::Entitlements;
 pub use github::{
-    GitHubAppSlug, GitHubInstallationId, GitHubInstallationPermission, GitHubRepositoryId,
-    GitHubRepositoryName,
+    GitHubAppSlug, GitHubCheckRunId, GitHubInstallationId, GitHubInstallationPermission,
+    GitHubIssueNumber, GitHubRepositoryId, GitHubRepositoryName,
 };
 pub use grace_period::GracePeriod;
 pub use heartbeat_timeout::HeartbeatTimeout;

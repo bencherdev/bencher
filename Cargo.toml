@@ -62,6 +62,7 @@ bencher_callback = { path = "plus/bencher_callback" }
 bencher_cimd = { path = "plus/bencher_cimd" }
 bencher_egress = { path = "plus/bencher_egress" }
 bencher_github_client = { path = "plus/bencher_github_client" }
+bencher_github_post = { path = "plus/bencher_github_post" }
 bencher_google_client = { path = "plus/bencher_google_client" }
 bencher_google_index = { path = "plus/bencher_google_index" }
 bencher_license = { path = "plus/bencher_license" }

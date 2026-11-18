@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::spec::SpecUuid;
 
 pub mod callback;
+pub mod github;
 pub mod health;
 pub mod job;
 pub mod job_status;
@@ -17,6 +18,7 @@ pub use callback::{
     CALLBACK_JOB_STATUSES, CallbackContext, CallbackError, GitHubDispatch, JobCallbackState,
     JsonJobCallback, JsonNewCallback,
 };
+pub use github::{JobGitHubFailure, JobGitHubState, JsonJobGitHub, JsonNewJobGitHub};
 pub use health::{
     HealthFindingKind, HealthState, JsonHealthFinding, JsonMdArray, JsonNvmeHealth,
     JsonNvmeHealthLog, JsonRunnerHealth, MAX_HEALTH_ITEMS,

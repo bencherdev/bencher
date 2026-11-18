@@ -12,7 +12,9 @@ plus = [
     "dep:bencher_bing_index",
     "dep:bencher_cimd",
     "dep:bencher_egress",
+    "dep:bencher_comment",
     "dep:bencher_github_client",
+    "dep:bencher_github_post",
     "dep:bencher_google_client",
     "dep:bencher_google_index",
     "dep:bencher_oci_storage",
@@ -29,6 +31,7 @@ plus = [
     "bencher_callback/plus",
     "bencher_cimd/plus",
     "bencher_egress/plus",
+    "bencher_github_post/plus",
     "bencher_json/plus",
     "bencher_license/plus",
     "bencher_otel?/plus",
@@ -48,7 +51,9 @@ bencher_callback = { workspace = true, optional = true }
 bencher_cimd = { workspace = true, optional = true }
 bencher_egress = { workspace = true, optional = true }
 bencher_boundary.workspace = true
+bencher_comment = { workspace = true, optional = true, features = ["plus"] }
 bencher_github_client = { workspace = true, optional = true }
+bencher_github_post = { workspace = true, optional = true }
 bencher_google_client = { workspace = true, optional = true }
 bencher_google_index = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
