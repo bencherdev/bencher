@@ -16,6 +16,7 @@ const PYTHON_ICON = "devicon-python-plain";
 const RUBY_ICON = "devicon-ruby-plain";
 const RUST_ICON = "devicon-rust-plain";
 const SHELL_ICON = "devicon-bash-plain";
+const STORAGE_ICON = "devicon-linux-plain";
 
 export const adapterIcon = (adapter: Adapter) => {
 	switch (adapter) {
@@ -71,6 +72,10 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.ShellHyperfineV1:
 		case Adapter.ShellHyperfineV2:
 			return SHELL_ICON;
+		case Adapter.StorageFio:
+		case Adapter.StorageFioJson:
+		case Adapter.StorageFioText:
+			return STORAGE_ICON;
 		default:
 			console.log(`Unsupported adapter: ${adapter}`);
 			return;
@@ -137,6 +142,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.ShellHyperfineV1:
 		case Adapter.ShellHyperfineV2:
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
+		case Adapter.StorageFio:
+		case Adapter.StorageFioJson:
+		case Adapter.StorageFioText:
+			return `bencher run${host} "fio --name=randread --rw=randread --bs=4k --size=64M --output-format=json"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 		case Adapter.Json:
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs

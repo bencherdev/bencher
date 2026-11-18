@@ -29,6 +29,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::RustIai => Self::RustIai,
             CliReportAdapter::RustGungraun => Self::RustGungraun,
             CliReportAdapter::ShellHyperfine => Self::ShellHyperfine,
+            CliReportAdapter::StorageFio => Self::StorageFio,
         }
     }
 }

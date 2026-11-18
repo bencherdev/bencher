@@ -235,6 +235,8 @@ pub enum CliReportAdapter {
     RustGungraun,
     /// ❯_ Shell Hyperfine
     ShellHyperfine,
+    /// 💾 Storage fio
+    StorageFio,
 }
 
 /// Suggested Central Tendency (Average)

@@ -1,0 +1,26 @@
+pct: (g=0): rw=randread, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+fio-3.43
+Starting 1 process
+
+pct: (groupid=0, jobs=1): err= 0: pid=15244: Mon Nov 16 21:38:43 2026
+  read: IOPS=41.5k, BW=162MiB/s (170MB/s)(324MiB/2001msec)
+    clat (usec): min=11, max=974, avg=23.72, stdev=12.16
+     lat (usec): min=11, max=974, avg=23.75, stdev=12.17
+    clat percentiles (usec):
+     |  50th=[   24],  99th=[   45], 100th=[  971]
+   bw (  KiB/s): min=160560, max=170376, per=100.00%, avg=165988.00, stdev=4699.81, samples=4
+   iops        : min=40140, max=42594, avg=41497.00, stdev=1174.95, samples=4
+  lat (usec)   : 20=24.07%, 50=75.23%, 100=0.54%, 250=0.10%, 500=0.04%
+  lat (usec)   : 750=0.01%, 1000=0.01%
+  cpu          : usr=2.05%, sys=20.90%, ctx=82994, majf=0, minf=7
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=82994,0,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0.00ns, window=0.00ns, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+   READ: bw=162MiB/s (170MB/s), 162MiB/s-162MiB/s (170MB/s-170MB/s), io=324MiB (340MB), run=2001-2001msec
+
+Disk stats (read/write):
+  vda: ios=78724/82, sectors=629792/928, merge=0/7, ticks=1676/4, in_queue=1680, util=77.69%

@@ -82,6 +82,9 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"shell_hyperfine",
 	"shell_hyperfine_v1",
 	"shell_hyperfine_v2",
+	"storage_fio",
+	"storage_fio_json",
+	"storage_fio_text",
 ];
 
 const LISTED = new Set<string>(ADAPTERS);

@@ -205,6 +205,48 @@ pub mod mitata {
     );
 }
 
+pub mod systems {
+    use bencher_valid::{NANOSECONDS, PERCENTAGE};
+
+    create_measure!(
+        CompletionLatency,
+        "Completion Latency",
+        "completion-latency",
+        NANOSECONDS
+    );
+    create_measure!(
+        SubmissionLatency,
+        "Submission Latency",
+        "submission-latency",
+        NANOSECONDS
+    );
+    create_measure!(
+        CpuUtilization,
+        "CPU Utilization",
+        "cpu-utilization",
+        PERCENTAGE
+    );
+    create_measure!(
+        ContextSwitches,
+        "Context Switches",
+        "context-switches",
+        "switches"
+    );
+    create_measure!(
+        MajorPageFaults,
+        "Major Page Faults",
+        "major-page-faults",
+        "faults"
+    );
+    create_measure!(
+        MinorPageFaults,
+        "Minor Page Faults",
+        "minor-page-faults",
+        "faults"
+    );
+    create_measure!(IoErrors, "I/O Errors", "io-errors", "errors");
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");

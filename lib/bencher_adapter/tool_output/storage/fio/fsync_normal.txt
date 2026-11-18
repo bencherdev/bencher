@@ -1,0 +1,40 @@
+sync: (g=0): rw=write, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+fio-3.43
+Starting 1 process
+sync: Laying out IO file (1 file / 32MiB)
+
+sync: (groupid=0, jobs=1): err= 0: pid=6192: Mon Nov 16 21:35:49 2026
+  write: IOPS=2485, BW=9942KiB/s (10.2MB/s)(19.4MiB/2002msec)
+    clat (nsec): min=651, max=204905, avg=3037.44, stdev=6110.96
+     lat (nsec): min=681, max=204955, avg=3127.78, stdev=6223.32
+    clat percentiles (nsec):
+     |  1.00th=[   740],  5.00th=[   804], 10.00th=[   852], 20.00th=[   940],
+     | 30.00th=[  1032], 40.00th=[  1096], 50.00th=[  1176], 60.00th=[  1256],
+     | 70.00th=[  1400], 80.00th=[  1800], 90.00th=[ 10304], 95.00th=[ 13888],
+     | 99.00th=[ 24704], 99.50th=[ 30592], 99.90th=[ 46336], 99.95th=[ 71168],
+     | 99.99th=[205824]
+   bw (  KiB/s): min= 9600, max=10240, per=100.00%, avg=9952.00, stdev=283.82, samples=4
+   iops        : min= 2400, max= 2560, avg=2488.00, stdev=70.96, samples=4
+  lat (nsec)   : 750=1.29%, 1000=24.36%
+  lat (usec)   : 2=55.81%, 4=3.78%, 10=4.42%, 20=8.60%, 50=1.67%
+  lat (usec)   : 100=0.04%, 250=0.04%
+  fsync/fdatasync/sync_file_range/syncfs:
+    sync (usec): min=2283, max=15275, avg=3187.26, stdev=762.14
+    sync percentiles (usec):
+     |  1.00th=[ 2343],  5.00th=[ 2409], 10.00th=[ 2474], 20.00th=[ 2540],
+     | 30.00th=[ 2638], 40.00th=[ 3195], 50.00th=[ 3326], 60.00th=[ 3392],
+     | 70.00th=[ 3458], 80.00th=[ 3523], 90.00th=[ 3752], 95.00th=[ 4146],
+     | 99.00th=[ 4490], 99.50th=[ 6718], 99.90th=[15270], 99.95th=[15270],
+     | 99.99th=[15270]
+  cpu          : usr=0.25%, sys=2.05%, ctx=1256, majf=0, minf=9
+  IO depths    : 1=112.5%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=0,4976,0,622 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0.00ns, window=0.00ns, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+  WRITE: bw=9942KiB/s (10.2MB/s), 9942KiB/s-9942KiB/s (10.2MB/s-10.2MB/s), io=19.4MiB (20.4MB), run=2002-2002msec
+
+Disk stats (read/write):
+  vda: ios=0/1901, sectors=0/89648, merge=0/796, ticks=0/2233, in_queue=3893, util=90.12%

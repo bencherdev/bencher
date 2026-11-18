@@ -56,6 +56,7 @@ const CLI_ADAPTERS = new Set([
 	"rust_iai",
 	"rust_gungraun",
 	"shell_hyperfine",
+	"storage_fio",
 ]);
 
 describe("thresholdSnippetV0", () => {

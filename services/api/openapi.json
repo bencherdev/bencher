@@ -13077,7 +13077,10 @@
           "shell_hyperfine_v1",
           "shell_hyperfine_v2",
           "dart",
-          "dart_benchmark_harness"
+          "dart_benchmark_harness",
+          "storage_fio",
+          "storage_fio_json",
+          "storage_fio_text"
         ]
       },
       "AlertStatus": {

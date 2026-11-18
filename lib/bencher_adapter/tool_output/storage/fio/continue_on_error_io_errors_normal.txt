@@ -1,0 +1,15 @@
+ioerr: (g=0): rw=randread, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+fio-3.43
+Starting 1 process
+fio: first I/O failed. If /dev/mapper/bencherr is a zoned block device, consider --zonemode=zbd
+
+ioerr: (groupid=0, jobs=1): err= 5 (file:engines/sync.c:126, func=xfer, error=Input/output error): pid=15227: Mon Nov 16 21:38:38 2026
+  cpu          : usr=46.20%, sys=53.70%, ctx=2, majf=0, minf=17
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=2897790,0,0,0 short=0,0,0,0 dropped=0,0,0,0
+     errors    : total=2897790, first_error=5/<Input/output error>
+     latency   : target=0.00ns, window=0.00ns, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):

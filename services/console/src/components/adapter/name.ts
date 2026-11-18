@@ -68,6 +68,10 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.ShellHyperfineV1:
 		case Adapter.ShellHyperfineV2:
 			return "Hyperfine";
+		case Adapter.StorageFio:
+		case Adapter.StorageFioJson:
+		case Adapter.StorageFioText:
+			return "fio";
 	}
 };
 
@@ -131,6 +135,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.ShellHyperfineV1:
 		case Adapter.ShellHyperfineV2:
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
+		case Adapter.StorageFio:
+		case Adapter.StorageFioJson:
+		case Adapter.StorageFioText:
+			return `bencher run${host} "fio --name=randread --rw=randread --bs=4k --size=64M --output-format=json"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 		case Adapter.Json:
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs

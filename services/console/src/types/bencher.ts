@@ -780,6 +780,9 @@ export enum Adapter {
 	ShellHyperfineV2 = "shell_hyperfine_v2",
 	Dart = "dart",
 	DartBenchmarkHarness = "dart_benchmark_harness",
+	StorageFio = "storage_fio",
+	StorageFioJson = "storage_fio_json",
+	StorageFioText = "storage_fio_text",
 }
 
 /** A report, with what a link to it shows: the report that raised an alert. */
