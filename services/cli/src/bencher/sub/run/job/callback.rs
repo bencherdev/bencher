@@ -39,7 +39,8 @@ pub fn client_callback(
     }
 }
 
-pub const CALLBACK_SKIPPED: &str = "callback skipped: claim this project to send a GitHub Actions dispatch or upgrade to Bencher Plus for custom callbacks";
+pub const CALLBACK_SKIPPED: &str =
+    "callback skipped: claim this project and upgrade to Bencher Plus to send callbacks";
 
 pub fn callback_skipped(json_job: &JsonJob) -> bool {
     matches!(

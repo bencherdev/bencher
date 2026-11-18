@@ -38,7 +38,7 @@ impl CallbackCredential {
         }
     }
 
-    /// A dispatch whose token is minted for a GitHub App installation spends that installation's
+    /// A request whose token is minted for a GitHub App installation spends that installation's
     /// rate limit, whatever token each attempt mints.
     pub fn installation(url: &Url, installation: u64) -> Self {
         let installation = installation.to_string();
@@ -162,8 +162,8 @@ mod tests {
         );
     }
 
-    // Kills keying a minted dispatch by anything but its host and its installation, which would
-    // pace one installation's dispatches by another's, or by every anonymous callback's.
+    // Kills keying a minted request by anything but its host and its installation, which would
+    // pace one installation's posts by another's, or by every anonymous callback's.
     #[test]
     fn a_minted_credential_is_the_host_and_the_installation() {
         const DISPATCH: &str = "https://api.github.com/repos/owner/repo/dispatches";

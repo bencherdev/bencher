@@ -4,9 +4,7 @@ use bencher_comment::{
 };
 #[cfg(feature = "plus")]
 use bencher_json::{
-    CiId, GitHash, GitHubIssueNumber, GitHubRepositoryId, JsonNewCallback, ProjectUuid, ReportUuid,
-    ResourceName, ValidError,
-    runner::{CallbackError, JsonNewJobGitHub},
+    CiId, GitHash, GitHubIssueNumber, GitHubRepositoryId, ValidError, runner::JsonNewJobGitHub,
 };
 use bencher_json::{JsonProject, Secret};
 use octocrab::{
@@ -19,8 +17,6 @@ use serde::Deserialize as _;
 
 use crate::{cli_eprintln_quietable, cli_println_quietable};
 
-#[cfg(feature = "plus")]
-use super::super::job::CALLBACK_SKIPPED;
 #[cfg(feature = "plus")]
 use super::JobFailure;
 use super::{PostedReport, SectionReports};
@@ -50,32 +46,19 @@ const PULL_REQUEST_TARGET: &str = "pull_request_target";
 const REPOSITORY_DISPATCH: &str = "repository_dispatch";
 
 const DEFAULT_GITHUB_API_URL: &str = "https://api.github.com";
-// The `repository_dispatch` that a detached run's callback sends, and that its attach reads.
-// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#create-a-repository-dispatch-event
-#[cfg(feature = "plus")]
-const DISPATCH_EVENT_TYPE: &str = "bencher_run";
-#[cfg(feature = "plus")]
-const GITHUB_API_VERSION: &str = "2022-11-28";
 
 const FULL_NAME: &str = "full_name";
 
 const FAILED_SUMMARY: &str = "<p><code>bencher run</code> failed to complete before posting results. See the CI job logs for details.</p>";
 
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "each bool is an independent CI flag"
-)]
 #[derive(Debug)]
 pub struct GitHubActions {
     pub token: Secret,
     pub ci_only_thresholds: bool,
     pub ci_only_on_alert: bool,
-    pub ci_public_links: bool,
     pub ci_id: Option<String>,
     pub ci_number: Option<u64>,
     pub ci_i_am_vulnerable_to_pwn_requests: bool,
-    #[cfg(feature = "plus")]
-    pub callback_token: Option<Secret>,
     /// What the attach took over from the `repository_dispatch` of a detached run.
     #[cfg(feature = "plus")]
     pub dispatch: Option<Dispatched>,
@@ -165,12 +148,6 @@ pub enum GitHubError {
     #[cfg(feature = "plus")]
     #[error("GitHub pull request number is invalid: {0}")]
     BadNumber(ValidError),
-    #[cfg(feature = "plus")]
-    #[error("Failed to compose the GitHub `repository_dispatch` callback: {0}")]
-    DispatchCallback(CallbackError),
-    #[cfg(feature = "plus")]
-    #[error("`--ci-id` cannot contain `{{{{ report }}}}`: the attach reads `--ci-id` as text")]
-    CiIdReport,
 }
 
 // https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
@@ -555,81 +532,21 @@ impl GitHubActions {
     /// failed to resolve the Project name and errored before posting results
     /// reports under the bare `Bencher Report` name.
     pub async fn fail_check(&self, handle: &CheckRunHandle, log: bool) {
-        self.finish_check(
-            handle.clone(),
-            CheckRunConclusion::Failure,
-            FAILED_SUMMARY,
-            None,
-            log,
-        )
-        .await;
-    }
-
-    /// Best-effort: complete a started check without results, renamed if `name` is given.
-    /// Failures are logged, never fatal.
-    async fn finish_check(
-        &self,
-        handle: CheckRunHandle,
-        conclusion: CheckRunConclusion,
-        summary: &str,
-        name: Option<String>,
-        log: bool,
-    ) {
         let CheckRunHandle { owner, repo, id } = handle;
-        let finished = async {
-            let github_client = self.github_client(log)?;
-            let checks = github_client.checks(owner, repo);
-            let update = checks
-                .update_check_run(id)
-                .output(check_run_output(branded_summary(summary)))
-                .conclusion(conclusion);
-            let update = match name {
-                Some(name) => update.name(name),
-                None => update,
-            };
-            update
-                .send()
-                .await
-                .map(drop)
-                .map_err(|e| check_error(e, GitHubError::UpdateCheck))
-        }
-        .await;
-        if let Err(err) = finished {
-            cli_eprintln_quietable!(log, "Failed to complete GitHub Check\n{err}");
-        }
-    }
-
-    /// Best-effort: a detached run names its report in its check, so other jobs list its section
-    /// while it is pending. Failures are logged, never fatal.
-    #[cfg(feature = "plus")]
-    pub async fn report_submitted(
-        &self,
-        handle: &CheckRunHandle,
-        project: ProjectUuid,
-        report: ReportUuid,
-        sub_adapter: &bencher_comment::SubAdapter,
-        log: bool,
-    ) {
-        let CheckRunHandle { owner, repo, id } = handle;
-        let external_id = ExternalId {
-            project: Some(project),
-            report: Some(report),
-            kind: Kind::new(self.ci_id.as_deref(), sub_adapter),
-        };
-        let updated = async {
+        let failed = async {
             self.github_client(log)?
                 .checks(owner, repo)
                 .update_check_run(*id)
-                // `octocrab` names the setter of `external_id` this way.
-                .external_url(external_id.to_string())
+                .output(check_run_output(branded_summary(FAILED_SUMMARY)))
+                .conclusion(CheckRunConclusion::Failure)
                 .send()
                 .await
                 .map(drop)
                 .map_err(|e| check_error(e, GitHubError::UpdateCheck))
         }
         .await;
-        if let Err(err) = updated {
-            cli_eprintln_quietable!(log, "Failed to name the report in the GitHub Check\n{err}");
+        if let Err(err) = failed {
+            cli_eprintln_quietable!(log, "Failed to complete GitHub Check\n{err}");
         }
     }
 
@@ -659,58 +576,6 @@ impl GitHubActions {
             ci_only_thresholds: self.ci_only_thresholds.then_some(true),
             ci_only_on_alert: self.ci_only_on_alert.then_some(true),
         }))
-    }
-
-    /// The `repository_dispatch` that a detached run's callback sends, so its attach can complete the check.
-    #[cfg(feature = "plus")]
-    pub fn dispatch_callback(
-        &self,
-        check: Option<&CheckRunHandle>,
-        sub_adapter: &bencher_comment::SubAdapter,
-        log: bool,
-    ) -> Result<Option<JsonNewCallback>, GitHubError> {
-        if !is_github_actions() {
-            cli_println_quietable!(
-                log,
-                "Not running as a GitHub Action. Skipping CI integration.\n{}",
-                docker_env(GITHUB_ACTIONS)
-            );
-            return Ok(None);
-        }
-        let (event_str, event) = github_event()?;
-        let full_name = repository_full_name(&event_str, &event)?;
-        let payload = self.dispatch_payload(&event_str, &event, check, sub_adapter)?;
-        let api_url = github_api_url(log).unwrap_or_else(|| DEFAULT_GITHUB_API_URL.to_owned());
-        dispatch_request(&api_url, full_name, self.callback_token.as_ref(), &payload).map(Some)
-    }
-
-    /// `--ci-id`, the pull request, the comment tag's flags, the head SHA the check was started at, and the check.
-    #[cfg(feature = "plus")]
-    fn dispatch_payload(
-        &self,
-        event_str: &str,
-        event: &serde_json::Value,
-        check: Option<&CheckRunHandle>,
-        sub_adapter: &bencher_comment::SubAdapter,
-    ) -> Result<DispatchPayload, GitHubError> {
-        let bencher_comment::SubAdapter {
-            build_time,
-            file_size,
-        } = *sub_adapter;
-        Ok(DispatchPayload {
-            bencher: BencherPayload {
-                ci_id: self.ci_id.clone(),
-                ci_number: self.issue_number(event_str, event)?,
-                build_time,
-                file_size,
-            },
-            github: GitHubPayload {
-                sha: head_sha(event, self.dispatch.as_ref())?
-                    .parse()
-                    .map_err(GitHubError::BadSha)?,
-                check: check.map(|handle| handle.id),
-            },
-        })
     }
 
     /// On a `repository_dispatch`, the attach continues the detached run whose callback sent it,
@@ -780,26 +645,6 @@ impl GitHubActions {
     #[cfg(feature = "plus")]
     pub fn adopted_check(&self) -> Option<CheckRunHandle> {
         self.dispatch.as_ref()?.check.clone()
-    }
-
-    /// Best-effort: a callback that will never fire cannot hand the detached run's check to an attach,
-    /// so the check is completed as neutral with the notice.
-    #[cfg(feature = "plus")]
-    pub async fn complete_unfired_check(
-        &self,
-        handle: CheckRunHandle,
-        project_name: &ResourceName,
-        log: bool,
-    ) {
-        let name = check_run_name(check_run_id(self.ci_id.as_deref(), Some(project_name)));
-        self.finish_check(
-            handle,
-            CheckRunConclusion::Neutral,
-            &format!("<p>{CALLBACK_SKIPPED}</p>"),
-            Some(name),
-            log,
-        )
-        .await;
     }
 
     fn github_client(&self, log: bool) -> Result<Octocrab, GitHubError> {
@@ -1147,10 +992,10 @@ struct CompletedCheck {
     app: Option<CheckApp>,
 }
 
-/// What a detached run's `repository_dispatch` carries to its attach. The composed body also
-/// names the job and the project under `bencher`, which only the workflow reads.
+/// What a `repository_dispatch` carries to its attach. The body also names the job and the
+/// project under `bencher`, which only the workflow reads.
 #[cfg(feature = "plus")]
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct DispatchPayload {
     bencher: BencherPayload,
     github: GitHubPayload,
@@ -1158,35 +1003,22 @@ struct DispatchPayload {
 
 /// The `bencher run` options that the attach takes from the detached run.
 #[cfg(feature = "plus")]
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct BencherPayload {
-    #[serde(skip_serializing_if = "Option::is_none")]
     ci_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     ci_number: Option<u64>,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     build_time: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     file_size: bool,
 }
 
-/// The head SHA the detached run started its check at, and the check.
+/// The head SHA the attach posts at, and the check it completes.
 #[cfg(feature = "plus")]
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct GitHubPayload {
     sha: GitHash,
-    #[serde(skip_serializing_if = "Option::is_none")]
     check: Option<CheckRunId>,
-}
-
-/// The composed body's `bencher` object.
-#[cfg(feature = "plus")]
-#[derive(serde::Serialize)]
-struct ComposedBencher<'a> {
-    project: &'static str,
-    job: &'static str,
-    #[serde(flatten)]
-    payload: &'a BencherPayload,
 }
 
 /// A `repository_dispatch` payload the attach reads past with a warning.
@@ -1218,52 +1050,11 @@ impl DispatchPayload {
     }
 }
 
-/// Whether `api_url`, the `GITHUB_API_URL` that both the dispatch and the comment use, is
-/// github.com's API, which an unset one defaults to: the only API where the Bencher Cloud GitHub
-/// App links a repository and posts the check and comment of a detached run.
+/// Whether `api_url`, the `GITHUB_API_URL` that the comment uses, is github.com's API, which an
+/// unset one defaults to: the only API where the Bencher Cloud GitHub App links a repository and
+/// posts the check and comment of a detached run.
 pub fn is_github_com_api(api_url: Option<&str>) -> bool {
     api_url.is_none_or(|api_url| api_url.trim_end_matches('/') == DEFAULT_GITHUB_API_URL)
-}
-
-/// The `repository_dispatch` request, validated as any other callback. Without a token, it has no
-/// `Authorization` header.
-#[cfg(feature = "plus")]
-fn dispatch_request(
-    api_url: &str,
-    full_name: &str,
-    token: Option<&Secret>,
-    payload: &DispatchPayload,
-) -> Result<JsonNewCallback, GitHubError> {
-    let url = format!(
-        "{api_url}/repos/{full_name}/dispatches",
-        api_url = api_url.trim_end_matches('/')
-    );
-    let headers = [
-        Some(("Accept", "application/vnd.github+json".to_owned())),
-        token.map(|token| ("Authorization", format!("Bearer {}", token.as_ref()))),
-        Some(("X-GitHub-Api-Version", GITHUB_API_VERSION.to_owned())),
-    ]
-    .into_iter()
-    .flatten()
-    .map(|(name, value)| (name.to_owned(), value));
-    let DispatchPayload { bencher, github } = payload;
-    let body = serde_json::json!({
-        "event_type": DISPATCH_EVENT_TYPE,
-        "client_payload": {
-            "bencher": ComposedBencher {
-                project: "{{ project.slug }}",
-                job: "{{ job.uuid }}",
-                payload: bencher,
-            },
-            "github": github,
-        },
-    });
-    // `--ci-id` is the only text in the body that can hold the report.
-    match JsonNewCallback::new(&url, headers, Some(body)) {
-        Ok(callback) if callback.sends_report() => Err(GitHubError::CiIdReport),
-        Err(CallbackError::ReportInText) => Err(GitHubError::CiIdReport),
-        composed => composed.map_err(GitHubError::DispatchCallback),
-    }
 }
 
 #[cfg(test)]
@@ -1505,218 +1296,10 @@ mod tests {
 
 #[cfg(test)]
 #[cfg(feature = "plus")]
-mod dispatch_tests {
-    use bencher_json::{
-        CallbackContext, JobStatus, JsonNewCallback, ProjectUuid, ReportUuid,
-        runner::{CallbackError, GitHubDispatch},
-    };
-    use octocrab::models::CheckRunId;
-    use serde_json::{Value, json};
-
+mod job_tests {
     use octocrab::params::checks::CheckRunConclusion;
 
-    use super::{
-        BencherPayload, CheckRunHandle, DEFAULT_GITHUB_API_URL, DispatchPayload, GitHubActions,
-        GitHubError, GitHubPayload, JobFailure, check_conclusion, dispatch_request,
-    };
-    use bencher_json::Secret;
-
-    const API_URL: &str = "https://api.github.com";
-    const FULL_NAME: &str = "owner/repo";
-    const TOKEN: &str = "github_pat_token-marker";
-    const SHA: &str = "f1e2d3c4b5a697887766554433221100ffeeddcc";
-    const JOB: &str = "8d2b6c4e-5f3a-4b1c-9e7d-0a1b2c3d4e5f";
-    const REPORT: &str = "4f6d1b2a-3c5e-4d7f-8a9b-0c1d2e3f4a5b";
-    const PROJECT: &str = "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
-
-    fn payload(ci_number: Option<u64>, check: Option<u64>, ci_id: Option<&str>) -> DispatchPayload {
-        DispatchPayload {
-            bencher: BencherPayload {
-                ci_id: ci_id.map(ToOwned::to_owned),
-                ci_number,
-                build_time: false,
-                file_size: false,
-            },
-            github: GitHubPayload {
-                sha: SHA.parse().unwrap(),
-                check: check.map(CheckRunId::from),
-            },
-        }
-    }
-
-    fn compose(payload: &DispatchPayload) -> JsonNewCallback {
-        dispatch_request(
-            API_URL,
-            FULL_NAME,
-            Some(&TOKEN.parse::<Secret>().unwrap()),
-            payload,
-        )
-        .unwrap()
-    }
-
-    /// The body the server would send.
-    fn rendered(callback: &JsonNewCallback) -> Value {
-        let context = CallbackContext {
-            project_uuid: PROJECT.parse::<ProjectUuid>().unwrap(),
-            project_name: "My Project".parse().unwrap(),
-            project_slug: "my-project".parse().unwrap(),
-            report_uuid: REPORT.parse::<ReportUuid>().unwrap(),
-            job_uuid: JOB.parse().unwrap(),
-            job_status: JobStatus::Processed,
-        };
-        serde_json::from_str(&callback.render(&context, None).unwrap()).unwrap()
-    }
-
-    #[test]
-    fn dispatch_follows_the_api_url() {
-        let callback = dispatch_request(
-            "https://github.example.com/api/v3/",
-            FULL_NAME,
-            Some(&TOKEN.parse::<Secret>().unwrap()),
-            &payload(None, None, None),
-        )
-        .unwrap();
-        assert_eq!(
-            callback.url().as_str(),
-            "https://github.example.com/api/v3/repos/owner/repo/dispatches"
-        );
-    }
-
-    /// The server sends the dispatch without Bencher Plus only when it recognizes the whole
-    /// composed request, whatever its payload, and mints the token only for one without a token.
-    /// Kills a tokenless dispatch that carries any `Authorization` header, or any other body.
-    #[test]
-    fn the_default_api_url_composes_the_bencher_run_dispatch() {
-        let token = TOKEN.parse::<Secret>().unwrap();
-        let mut flags = payload(Some(7), Some(4242), Some("suite"));
-        flags.bencher.build_time = true;
-        flags.bencher.file_size = true;
-        for dispatch in [flags, payload(None, None, None)] {
-            let with_token =
-                dispatch_request(DEFAULT_GITHUB_API_URL, FULL_NAME, Some(&token), &dispatch)
-                    .unwrap();
-            let without =
-                dispatch_request(DEFAULT_GITHUB_API_URL, FULL_NAME, None, &dispatch).unwrap();
-
-            assert_eq!(
-                with_token.github_dispatch(),
-                Some(GitHubDispatch::Bearer),
-                "{dispatch:?}"
-            );
-            assert_eq!(
-                without.github_dispatch(),
-                Some(GitHubDispatch::Minted),
-                "{dispatch:?}"
-            );
-            let mut stripped = serde_json::to_value(&with_token).unwrap();
-            stripped["headers"]
-                .as_object_mut()
-                .unwrap()
-                .remove("authorization");
-            assert_eq!(
-                serde_json::to_value(&without).unwrap(),
-                stripped,
-                "{dispatch:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn composed_payload_reads_back() {
-        let mut flags = payload(Some(7), Some(4242), Some("suite"));
-        flags.bencher.build_time = true;
-        flags.bencher.file_size = true;
-        for dispatch in [flags, payload(None, None, None)] {
-            let body = rendered(&compose(&dispatch));
-            assert_eq!(
-                DispatchPayload::from_event(&body).unwrap(),
-                dispatch,
-                "{body}"
-            );
-        }
-    }
-
-    /// The workflow reads the job and the project, and an absent option is no key at all.
-    #[test]
-    fn composed_payload_shape() {
-        let mut flags = payload(Some(7), Some(4242), Some("suite"));
-        flags.bencher.build_time = true;
-        assert_eq!(
-            rendered(&compose(&flags)),
-            json!({
-                "event_type": "bencher_run",
-                "client_payload": {
-                    "bencher": {
-                        "project": "my-project",
-                        "job": JOB,
-                        "ci_id": "suite",
-                        "ci_number": 7,
-                        "build_time": true,
-                    },
-                    "github": { "sha": SHA, "check": 4242 },
-                },
-            })
-        );
-        assert_eq!(
-            rendered(&compose(&payload(None, None, None)))["client_payload"],
-            json!({
-                "bencher": { "project": "my-project", "job": JOB },
-                "github": { "sha": SHA },
-            })
-        );
-    }
-
-    /// A `--ci-id` is a string in the body, so a placeholder anywhere in it is replaced, and one
-    /// with an unknown name fails the composition, and with it the run.
-    #[test]
-    fn a_ci_id_takes_a_placeholder_anywhere() {
-        let body = rendered(&compose(&payload(None, None, Some("suite-{{ job.uuid }}"))));
-        assert_eq!(
-            body["client_payload"]["bencher"]["ci_id"],
-            format!("suite-{JOB}")
-        );
-        let err = dispatch_request(
-            API_URL,
-            FULL_NAME,
-            Some(&TOKEN.parse::<Secret>().unwrap()),
-            &payload(None, None, Some("suite-{{ job.id }}")),
-        )
-        .unwrap_err();
-        assert!(
-            matches!(&err, GitHubError::DispatchCallback(CallbackError::UnknownPlaceholder(placeholder)) if placeholder == "{{ job.id }}"),
-            "{err}"
-        );
-    }
-
-    /// The attach reads `--ci-id` as text, so the report is refused there, whole or inside text.
-    #[test]
-    fn a_ci_id_refuses_the_report() {
-        for ci_id in ["{{ report }}", "{{report}}", "suite-{{ report }}"] {
-            let err = dispatch_request(
-                API_URL,
-                FULL_NAME,
-                Some(&TOKEN.parse::<Secret>().unwrap()),
-                &payload(None, None, Some(ci_id)),
-            )
-            .unwrap_err();
-            assert!(matches!(err, GitHubError::CiIdReport), "{ci_id}: {err}");
-            assert!(!err.to_string().contains("suite"), "{err}");
-        }
-    }
-
-    fn github_actions(ci_id: Option<&str>, ci_number: Option<u64>) -> GitHubActions {
-        GitHubActions {
-            token: "token".parse().unwrap(),
-            ci_only_thresholds: false,
-            ci_only_on_alert: false,
-            ci_public_links: false,
-            ci_id: ci_id.map(ToOwned::to_owned),
-            ci_number,
-            ci_i_am_vulnerable_to_pwn_requests: false,
-            callback_token: None,
-            dispatch: None,
-        }
-    }
+    use super::{JobFailure, check_conclusion};
 
     #[test]
     fn a_job_failure_sets_the_conclusion_whatever_the_alerts() {
@@ -1744,33 +1327,5 @@ mod dispatch_tests {
             check_conclusion(false, None),
             CheckRunConclusion::Success
         ));
-    }
-
-    #[test]
-    fn the_payload_names_the_started_check() {
-        let github_actions = github_actions(Some("suite"), Some(7));
-        // The pull request's head wins over `GITHUB_SHA`, so the environment plays no part.
-        let event = json!({ "pull_request": { "head": { "sha": SHA } } });
-        let handle = CheckRunHandle {
-            owner: "owner".to_owned(),
-            repo: "repo".to_owned(),
-            id: CheckRunId::from(4242),
-        };
-        let no_flags = bencher_comment::SubAdapter {
-            build_time: false,
-            file_size: false,
-        };
-        assert_eq!(
-            github_actions
-                .dispatch_payload("", &event, Some(&handle), &no_flags)
-                .unwrap(),
-            payload(Some(7), Some(4242), Some("suite"))
-        );
-        assert_eq!(
-            github_actions
-                .dispatch_payload("", &event, None, &no_flags)
-                .unwrap(),
-            payload(Some(7), None, Some("suite"))
-        );
     }
 }

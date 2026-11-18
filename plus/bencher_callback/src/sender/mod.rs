@@ -47,7 +47,7 @@ pub enum CallbackAttempt {
     Connection(Arc<reqwest::Error>),
     /// The address policy refused the destination, so nothing was sent.
     Blocked(CallbackBlock),
-    /// No token could be minted for a dispatch, so nothing was sent.
+    /// No token could be minted, so nothing was sent.
     Unminted,
 }
 
@@ -123,8 +123,7 @@ pub enum CallbackFailure {
     /// does not build.
     #[display("render")]
     Render,
-    /// No token could be minted for a dispatch: the server has no GitHub App, the project has no
-    /// connected linked repository, or the mint itself failed for good.
+    /// No token could be minted, and no retry can mint one.
     #[display("unminted")]
     Unminted,
 }

@@ -46,6 +46,11 @@ const REPOSITORY: u64 = 4096;
 const CODE: &str = "code-marker";
 const USER_TOKEN: &str = "user-token-marker";
 const RETURN_URL: &str = "http://localhost:3000/console/github";
+/// What the app asks of an installation, which can post a check and a comment and read titles.
+const APPROVED: &str =
+    r#"{"checks": "write", "contents": "read", "metadata": "read", "pull_requests": "write"}"#;
+/// What earlier releases asked of an installation.
+const CONTENTS_WRITE: &str = r#"{"contents": "write", "metadata": "read"}"#;
 
 struct Setup {
     server: TestServer,
@@ -82,7 +87,8 @@ async fn setup(responses: Vec<(u16, String)>) -> Setup {
 // repository. Kills a state, a grant, or a link for any other user or project; a grant that
 // outlives its ten minutes; an install page for any other app; an exchange that drops the return
 // page's redirect or the code; a listing that keeps a repository without push or grants one whose
-// installation has not approved contents write; and any credential in a log line.
+// installation has not approved checks and pull requests write, as one with only the contents
+// write of earlier releases has not; and any credential in a log line.
 #[tokio::test]
 async fn the_link_flow_links_a_pushable_approved_repository() {
     let Setup {
@@ -94,7 +100,7 @@ async fn the_link_flow_links_a_pushable_approved_repository() {
         ..
     } = setup(vec![
         exchanged(),
-        installations(&[(INSTALLATION, "write"), (8192, "read")]),
+        installations(&[(INSTALLATION, APPROVED), (8192, CONTENTS_WRITE)]),
         repositories(&[(REPOSITORY, true), (4097, false)]),
         repositories(&[(9999, true)]),
     ])
@@ -621,7 +627,7 @@ async fn a_server_without_the_app_refuses_links_and_ignores_deliveries() {
         ),
     ] {
         let response = response.send().await.expect("Request failed");
-        assert_refused(response, StatusCode::NOT_FOUND, "--ci-callback-token", &[]).await;
+        assert_refused(response, StatusCode::NOT_FOUND, "has no GitHub App", &[]).await;
     }
     let body = installation_event("deleted", INSTALLATION, None);
     let response = server
@@ -1654,13 +1660,13 @@ fn installation_url(id: u64) -> String {
     format!("https://github.com/settings/installations/{id}")
 }
 
-/// One page of installations, each with its contents access.
+/// One page of installations, each with the permissions it has granted.
 fn installations(installations: &[(u64, &str)]) -> (u16, String) {
     let installations: Vec<String> = installations
         .iter()
-        .map(|(id, contents)| {
+        .map(|(id, permissions)| {
             format!(
-                r#"{{"id": {id}, "html_url": "{}", "suspended_at": null, "permissions": {{"contents": "{contents}", "metadata": "read"}}}}"#,
+                r#"{{"id": {id}, "html_url": "{}", "suspended_at": null, "permissions": {permissions}}}"#,
                 installation_url(*id)
             )
         })
