@@ -4,6 +4,7 @@
 
 Reset all unspecified Thresholds for the given [Branch][branch] and [Testbed][testbed].
 If a Threshold already exists and is not specified, its current [Model][model] will be removed.
+A reset clears each slot of a Threshold, its Model or its changepoint model, that the subcommand does not specify.
 
 For example, if there were two Thresholds for the `main` Branch and `localhost` Testbed:
 - `main` Branch, `localhost` Testbed, `latency` [Measure][measure]

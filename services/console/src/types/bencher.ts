@@ -362,6 +362,8 @@ export interface JsonThreshold {
 	 */
 	metric?: string;
 	model?: JsonModel;
+	/** The model whose test checks a line, when the threshold has one. */
+	changepoint_model?: JsonModel;
 	created: string;
 	modified: string;
 }
@@ -1741,10 +1743,14 @@ export interface JsonConsoleThreshold {
 	 * Absent when the threshold checks the conventional `value` name.
 	 */
 	metric?: string;
-	/** Absent when the threshold has no model, and so checks nothing. */
+	/** Absent when the threshold has no model, and so checks no metric. */
 	model?: JsonConsoleThresholdModel;
 	/** Every model the threshold has had, newest first, its current model included. */
 	models: JsonConsoleThresholdModel[];
+	/** Absent when the threshold has no changepoint model, and so checks no line. */
+	changepoint_model?: JsonConsoleThresholdModel;
+	/** Every changepoint model the threshold has had, newest first, its current one included. */
+	changepoint_models: JsonConsoleThresholdModel[];
 	created: DateTimeMillis;
 	modified: DateTimeMillis;
 }
@@ -1777,8 +1783,10 @@ export interface JsonConsoleThresholdRow {
 	 * Absent when the threshold checks the conventional `value` name.
 	 */
 	metric?: string;
-	/** Absent when the threshold has no model, and so checks nothing. */
+	/** Absent when the threshold has no model, and so checks no metric. */
 	model?: JsonConsoleThresholdRowModel;
+	/** Absent when the threshold has no changepoint model, and so checks no line. */
+	changepoint_model?: JsonConsoleThresholdRowModel;
 	/** The alerts the threshold raised inside the window, whatever their status now. */
 	raised: number;
 	/** The threshold's alerts that are active now, whenever they were raised. */

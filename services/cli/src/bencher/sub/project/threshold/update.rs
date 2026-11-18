@@ -80,13 +80,17 @@ impl From<Update> for JsonUpdateThreshold {
                     window,
                     lower_boundary,
                     upper_boundary,
+                    changepoint_model: None,
                 }),
                 subtype_1: None,
             }
         } else {
             Self {
                 subtype_0: None,
-                subtype_1: Some(JsonRemoveModel { test: () }),
+                subtype_1: Some(JsonRemoveModel {
+                    test: (),
+                    changepoint_model: None,
+                }),
             }
         }
     }

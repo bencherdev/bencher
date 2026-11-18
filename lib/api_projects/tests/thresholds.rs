@@ -768,6 +768,7 @@ fn insert_threshold_past_the_ceiling(server: &TestServer, project_slug: &str) {
             measure_id,
             metric: Some("direct".parse().expect("valid metric name")),
             model_id: None,
+            changepoint_model_id: None,
             created,
             modified,
         })
@@ -807,6 +808,7 @@ fn insert_active_thresholds(server: &TestServer, project_slug: &str, count: usiz
                 measure_id: seed.measure_id,
                 metric: Some(format!("direct-{n}").parse().expect("valid metric name")),
                 model_id: None,
+                changepoint_model_id: None,
                 created: seed.created,
                 modified: seed.modified,
             })

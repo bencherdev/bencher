@@ -3,7 +3,8 @@ use bencher_endpoint::{
     TotalCount,
 };
 use bencher_json::{
-    JsonDirection, JsonPagination, JsonThresholds, ModelUuid, ProjectResourceId, ThresholdUuid,
+    JsonDirection, JsonPagination, JsonThresholds, Model, ModelSlot, ModelUuid, ProjectResourceId,
+    ThresholdUuid,
     project::threshold::{
         JsonNewThreshold, JsonRemoveModel, JsonThreshold, JsonThresholdQuery,
         JsonThresholdQueryParams, JsonUpdateModel, JsonUpdateThreshold,
@@ -24,8 +25,8 @@ use bencher_schema::{
             measure::QueryMeasure,
             testbed::QueryTestbed,
             threshold::{
-                InsertThreshold, QueryThreshold, ThresholdDimensions, ThresholdSpec,
-                model::QueryModel,
+                InsertThreshold, QueryThreshold, ThresholdDimensions, ThresholdSlots,
+                ThresholdSpec, model::QueryModel,
             },
         },
         user::{
@@ -256,6 +257,7 @@ type BoxedQuery<'q> = diesel::internal::table_macro::BoxedSelectStatement<
 /// and a threshold that names no metric checks the conventional `value` name.
 /// Every threshold that matches a metric row runs: there is no winner among them.
 /// A branch, testbed, and measure can have at most 64 thresholds with a model.
+/// The model's test must check a metric, and the changepoint model's test must check a line.
 #[endpoint {
     method = POST,
     path =  "/v0/projects/{project}/thresholds",
@@ -292,8 +294,16 @@ pub async fn post_inner(
     json_threshold: &JsonNewThreshold,
     api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
-    // Validate the new model
-    json_threshold.model.validate().map_err(bad_request_error)?;
+    // Validate the new models
+    let models = ThresholdSlots {
+        model: Some(json_threshold.model),
+        changepoint_model: json_threshold.changepoint_model,
+    };
+    for slot in ModelSlot::ALL {
+        if let Some(model) = models.get(slot) {
+            validate_slot_model(slot, model)?;
+        }
+    }
 
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed_actor_auth(
@@ -323,7 +333,7 @@ pub async fn post_inner(
         json_threshold.metric.clone(),
     );
     let threshold_id =
-        InsertThreshold::from_model(context, project_id, dimensions, json_threshold.model).await?;
+        InsertThreshold::from_models(context, project_id, dimensions, models).await?;
 
     // Get the new threshold with the new model
     auth_conn!(context, |conn| {
@@ -350,6 +360,11 @@ pub struct ProjThresholdQuery {
     /// that has since been replaced by a new model.
     /// If not specified, then the current model is used.
     pub model: Option<ModelUuid>,
+    /// View the threshold with the specified changepoint model UUID.
+    /// This can be used to view a threshold with a historical changepoint model
+    /// that has since been replaced by a new changepoint model.
+    /// If not specified, then the current changepoint model is used.
+    pub changepoint_model: Option<ModelUuid>,
 }
 
 #[endpoint {
@@ -420,7 +435,15 @@ pub async fn get_one_inner(
         let query_threshold =
             QueryThreshold::get_with_uuid(conn, &query_project, path_params.threshold)?;
 
-        if let Some(model_uuid) = query_params.model {
+        let ProjThresholdQuery {
+            model,
+            changepoint_model,
+        } = query_params;
+        let mut pinned = ThresholdSlots::default();
+        for (slot, model_uuid) in ModelSlot::ALL.into_iter().zip([model, changepoint_model]) {
+            let Some(model_uuid) = model_uuid else {
+                continue;
+            };
             let query_model = QueryModel::from_uuid(conn, query_project.id, model_uuid)?;
             if query_model.threshold_id != query_threshold.id {
                 return Err(resource_not_found_error(
@@ -432,15 +455,10 @@ pub async fn get_one_inner(
                     ),
                 ));
             }
-            query_threshold.into_json_for_model(
-                conn,
-                Some(query_model),
-                None,
-                ThresholdSpec::Testbed,
-            )
-        } else {
-            query_threshold.into_json(conn)
+            slot.admit(query_model.test).map_err(bad_request_error)?;
+            pinned.set(slot, query_model);
         }
+        query_threshold.into_json_for_models(conn, pinned, None, ThresholdSpec::Testbed)
     })
 }
 
@@ -452,6 +470,7 @@ pub async fn get_one_inner(
 /// The new model will be added to the threshold and used going forward.
 /// The old model will be replaced but still show up in the report history and alerts created when it was active.
 /// A threshold with no model can only be given one while its branch, testbed, and measure have fewer than 64 thresholds with a model.
+/// The changepoint model changes only when the update names it, and its test must check a line.
 #[endpoint {
     method = PUT,
     path =  "/v0/projects/{project}/thresholds/{threshold}",
@@ -488,14 +507,23 @@ pub async fn put_inner(
     json_threshold: JsonUpdateThreshold,
     api_actor: &ApiActor,
 ) -> Result<JsonThreshold, HttpError> {
-    // Validate the new model
-    let model = match json_threshold {
-        JsonUpdateThreshold::Model(JsonUpdateModel { model }) => {
-            model.validate().map_err(bad_request_error)?;
-            Some(model)
-        },
-        JsonUpdateThreshold::Remove(JsonRemoveModel { test: () }) => None,
+    // Validate the new models
+    let (model, changepoint_model) = match json_threshold {
+        JsonUpdateThreshold::Model(JsonUpdateModel {
+            model,
+            changepoint_model,
+        }) => (Some(model), changepoint_model),
+        JsonUpdateThreshold::Remove(JsonRemoveModel {
+            test: (),
+            changepoint_model,
+        }) => (None, changepoint_model),
     };
+    if let Some(model) = model {
+        validate_slot_model(ModelSlot::Model, model)?;
+    }
+    if let Some(Some(changepoint_model)) = changepoint_model {
+        validate_slot_model(ModelSlot::ChangepointModel, changepoint_model)?;
+    }
 
     // Verify that the user is allowed
     let query_project = QueryProject::is_allowed_actor_auth(
@@ -512,10 +540,15 @@ pub async fn put_inner(
     let query_threshold =
         QueryThreshold::get_with_uuid(auth_conn!(context), &query_project, path_params.threshold)?;
 
-    // Update the current threshold with the new model, if changed
+    // Update the current threshold with the new models, if changed
     query_threshold
         .update_model_if_changed(context, model)
         .await?;
+    if let Some(changepoint_model) = changepoint_model {
+        query_threshold
+            .update_slot_if_changed(context, ModelSlot::ChangepointModel, changepoint_model)
+            .await?;
+    }
 
     // Get the updated threshold with the new model
     auth_conn!(context, |conn| {
@@ -569,4 +602,10 @@ async fn delete_inner(
         .map_err(resource_conflict_err!(Threshold, query_threshold))?;
 
     Ok(())
+}
+
+/// Refuse a model that belongs in the other slot, then a model its own test does not allow.
+fn validate_slot_model(slot: ModelSlot, model: Model) -> Result<(), HttpError> {
+    slot.admit(model.test).map_err(bad_request_error)?;
+    model.validate().map_err(bad_request_error)
 }

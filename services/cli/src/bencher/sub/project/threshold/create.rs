@@ -73,6 +73,8 @@ impl From<Create> for JsonNewThreshold {
             window,
             lower_boundary,
             upper_boundary,
+            // The CLI sets no changepoint model until a test checks a line.
+            changepoint_model: None,
         }
     }
 }

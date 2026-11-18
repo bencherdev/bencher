@@ -44,6 +44,10 @@ pub struct JsonNewThreshold {
     pub metric: Option<MetricName>,
     #[serde(flatten)]
     pub model: Model,
+    /// The changepoint model, whose test checks a line, to check the threshold's lines with.
+    /// If not set, the threshold has no changepoint model.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub changepoint_model: Option<Model>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,6 +74,8 @@ pub struct JsonThreshold {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metric: Option<MetricName>,
     pub model: Option<JsonModel>,
+    /// The model whose test checks a line, when the threshold has one.
+    pub changepoint_model: Option<JsonModel>,
     pub created: DateTime,
     pub modified: DateTime,
 }
@@ -222,9 +228,12 @@ pub struct JsonConsoleThresholdRow {
     /// Absent when the threshold checks the conventional `value` name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metric: Option<MetricName>,
-    /// Absent when the threshold has no model, and so checks nothing.
+    /// Absent when the threshold has no model, and so checks no metric.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<JsonConsoleThresholdRowModel>,
+    /// Absent when the threshold has no changepoint model, and so checks no line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub changepoint_model: Option<JsonConsoleThresholdRowModel>,
     /// The alerts the threshold raised inside the window, whatever their status now.
     pub raised: u32,
     /// The threshold's alerts that are active now, whenever they were raised.
@@ -250,11 +259,16 @@ pub struct JsonConsoleThreshold {
     /// Absent when the threshold checks the conventional `value` name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metric: Option<MetricName>,
-    /// Absent when the threshold has no model, and so checks nothing.
+    /// Absent when the threshold has no model, and so checks no metric.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<JsonConsoleThresholdModel>,
     /// Every model the threshold has had, newest first, its current model included.
     pub models: Vec<JsonConsoleThresholdModel>,
+    /// Absent when the threshold has no changepoint model, and so checks no line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub changepoint_model: Option<JsonConsoleThresholdModel>,
+    /// Every changepoint model the threshold has had, newest first, its current one included.
+    pub changepoint_models: Vec<JsonConsoleThresholdModel>,
     pub created: DateTimeMillis,
     pub modified: DateTimeMillis,
 }
@@ -345,17 +359,29 @@ pub enum JsonUpdateThreshold {
     Remove(JsonRemoveModel),
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonUpdateModel {
     #[serde(flatten)]
     pub model: Model,
+    /// The changepoint model, whose test checks a line.
+    /// Set to `null` to remove the changepoint model.
+    /// If not set, the changepoint model does not change.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<Model>"))]
+    pub changepoint_model: Option<Option<Model>>,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonRemoveModel {
     pub test: (),
+    /// The changepoint model, whose test checks a line.
+    /// Set to `null` to remove the changepoint model.
+    /// If not set, the changepoint model does not change.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "schema", schemars(with = "Option<Model>"))]
+    pub changepoint_model: Option<Option<Model>>,
 }
 
 impl<'de> Deserialize<'de> for JsonUpdateThreshold {
@@ -369,6 +395,7 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
         const WINDOW_FIELD: &str = "window";
         const LOWER_BOUNDARY_FIELD: &str = "lower_boundary";
         const UPPER_BOUNDARY_FIELD: &str = "upper_boundary";
+        const CHANGEPOINT_MODEL_FIELD: &str = "changepoint_model";
 
         const FIELDS: &[&str] = &[
             TEST_FIELD,
@@ -377,6 +404,7 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
             WINDOW_FIELD,
             LOWER_BOUNDARY_FIELD,
             UPPER_BOUNDARY_FIELD,
+            CHANGEPOINT_MODEL_FIELD,
         ];
 
         #[derive(Deserialize)]
@@ -388,6 +416,7 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
             Window,
             LowerBoundary,
             UpperBoundary,
+            ChangepointModel,
         }
 
         struct UpdateThresholdVisitor;
@@ -409,44 +438,30 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
                 let mut window = None;
                 let mut lower_boundary = None;
                 let mut upper_boundary = None;
+                let mut changepoint_model = None;
 
                 while let Some(key) = map.next_key()? {
                     match key {
                         Field::Test => {
-                            if test.is_some() {
-                                return Err(de::Error::duplicate_field(TEST_FIELD));
-                            }
-                            test = Some(map.next_value()?);
+                            next_once(&mut map, &mut test, TEST_FIELD)?;
                         },
                         Field::MinSampleSize => {
-                            if min_sample_size.is_some() {
-                                return Err(de::Error::duplicate_field(MIN_SAMPLE_SIZE_FIELD));
-                            }
-                            min_sample_size = Some(map.next_value()?);
+                            next_once(&mut map, &mut min_sample_size, MIN_SAMPLE_SIZE_FIELD)?;
                         },
                         Field::MaxSampleSize => {
-                            if max_sample_size.is_some() {
-                                return Err(de::Error::duplicate_field(MAX_SAMPLE_SIZE_FIELD));
-                            }
-                            max_sample_size = Some(map.next_value()?);
+                            next_once(&mut map, &mut max_sample_size, MAX_SAMPLE_SIZE_FIELD)?;
                         },
                         Field::Window => {
-                            if window.is_some() {
-                                return Err(de::Error::duplicate_field(WINDOW_FIELD));
-                            }
-                            window = Some(map.next_value()?);
+                            next_once(&mut map, &mut window, WINDOW_FIELD)?;
                         },
                         Field::LowerBoundary => {
-                            if lower_boundary.is_some() {
-                                return Err(de::Error::duplicate_field(LOWER_BOUNDARY_FIELD));
-                            }
-                            lower_boundary = Some(map.next_value()?);
+                            next_once(&mut map, &mut lower_boundary, LOWER_BOUNDARY_FIELD)?;
                         },
                         Field::UpperBoundary => {
-                            if upper_boundary.is_some() {
-                                return Err(de::Error::duplicate_field(UPPER_BOUNDARY_FIELD));
-                            }
-                            upper_boundary = Some(map.next_value()?);
+                            next_once(&mut map, &mut upper_boundary, UPPER_BOUNDARY_FIELD)?;
+                        },
+                        Field::ChangepointModel => {
+                            next_once(&mut map, &mut changepoint_model, CHANGEPOINT_MODEL_FIELD)?;
                         },
                     }
                 }
@@ -461,8 +476,12 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
                             lower_boundary,
                             upper_boundary,
                         },
+                        changepoint_model,
                     })),
-                    Some(None) => Ok(Self::Value::Remove(JsonRemoveModel { test: () })),
+                    Some(None) => Ok(Self::Value::Remove(JsonRemoveModel {
+                        test: (),
+                        changepoint_model,
+                    })),
                     None => Err(de::Error::missing_field(TEST_FIELD)),
                 }
             }
@@ -470,4 +489,21 @@ impl<'de> Deserialize<'de> for JsonUpdateThreshold {
 
         deserializer.deserialize_struct("JsonUpdateThreshold", FIELDS, UpdateThresholdVisitor)
     }
+}
+
+/// Read the value of a field, refusing a field the map has already given.
+fn next_once<'de, V, T>(
+    map: &mut V,
+    field: &mut Option<T>,
+    name: &'static str,
+) -> Result<(), V::Error>
+where
+    V: de::MapAccess<'de>,
+    T: Deserialize<'de>,
+{
+    if field.is_some() {
+        return Err(de::Error::duplicate_field(name));
+    }
+    *field = Some(map.next_value()?);
+    Ok(())
 }
