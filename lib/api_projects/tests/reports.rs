@@ -2972,6 +2972,60 @@ async fn reports_post_creates_the_k6_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the wrk leaf creates its new built-in measures in their
+// units
+//
+// Kills: a new built-in measure missing from the server's built-ins, which creates it in the
+// generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_wrk_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "wrkunits").await;
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report(
+            "http_wrk",
+            &[WRK_MIXED_TIMEOUT, WRK2_SLOW_UNCORRECTED],
+            Some(1),
+        ),
+    )
+    .await;
+    let expected = [
+        ("connect-errors", "Connect Errors", "errors"),
+        ("error-responses", "Error Responses", "responses"),
+        ("read-errors", "Read Errors", "errors"),
+        ("timeouts", "Timeouts", "timeouts"),
+        (
+            "uncorrected-latency",
+            "Uncorrected Latency",
+            "nanoseconds (ns)",
+        ),
+        ("write-errors", "Write Errors", "errors"),
+    ];
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any(expected.map(|(slug, _, _)| slug)))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        expected.map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
+const WRK_MIXED_TIMEOUT: &str =
+    include_str!("../../bencher_adapter/tool_output/http/wrk/mixed_timeout.txt");
+const WRK2_SLOW_UNCORRECTED: &str =
+    include_str!("../../bencher_adapter/tool_output/http/wrk/wrk2_slow_u_latency.txt");
 const K6_EXPORT_SIMPLE: &str =
     include_str!("../../bencher_adapter/tool_output/http/k6/export_simple.json");
 const K6_EXPORT_SUMMARY: &str =

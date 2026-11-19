@@ -51,6 +51,8 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
 			return K6_ICON;
+		case Adapter.HttpWrk:
+			return SHELL_ICON;
 		case Adapter.JavaJmh:
 			return JAVA_ICON;
 		case Adapter.CSharpDotNet:
@@ -115,6 +117,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
 			return `bencher run${host} --file summary.json "k6 run --quiet --new-machine-readable-summary --summary-export summary.json script.js"`;
+		case Adapter.HttpWrk:
+			return `bencher run${host} "wrk -t2 -c10 -d30s --latency http://localhost:8080/"`;
 		case Adapter.JavaJmh:
 			return `bencher run${host} --file results.json "java -jar benchmarks.jar -rf json -rff results.json"`;
 		case Adapter.CSharpDotNet:

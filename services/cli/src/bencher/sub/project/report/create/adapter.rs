@@ -13,6 +13,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::DartBenchmarkHarness => Self::DartBenchmarkHarness,
             CliReportAdapter::GoBench => Self::GoBench,
             CliReportAdapter::HttpK6 => Self::HttpK6,
+            CliReportAdapter::HttpWrk => Self::HttpWrk,
             CliReportAdapter::JavaJmh => Self::JavaJmh,
             CliReportAdapter::JsBenchmark => Self::JsBenchmark,
             CliReportAdapter::JsDeno => Self::JsDeno,

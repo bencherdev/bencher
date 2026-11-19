@@ -1,0 +1,15 @@
+Running 6s test @ http://localhost:8080/mixed
+  2 threads and 20 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    42.30us   42.96us 381.00us   93.17%
+    Req/Sec   734.50      0.96k    2.40k    75.00%
+  Latency Distribution
+     50%   30.00us
+     75%   44.00us
+     90%   71.00us
+     99%  254.00us
+  1212 requests in 6.01s, 133.28KB read
+  Socket errors: connect 0, read 63, write 0, timeout 40
+  Non-2xx or 3xx responses: 248
+Requests/sec:    201.75
+Transfer/sec:     22.19KB

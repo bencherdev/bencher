@@ -6,7 +6,7 @@ use crate::{
             cpp::{catch2::AdapterCppCatch2V1, google::AdapterCppGoogleV1},
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::AdapterGoBenchV1,
-            http::k6::AdapterHttpK6,
+            http::{k6::AdapterHttpK6, wrk::AdapterHttpWrk},
             java::jmh::AdapterJavaJmhV1,
             js::{
                 benchmark::AdapterJsBenchmarkV1, deno::AdapterJsDeno, mitata::AdapterJsMitata,
@@ -27,7 +27,8 @@ use crate::{
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
 /// its structured format before its text, and Divan before criterion, since criterion's text leaf
-/// also claims a run that prints both and drops Divan's tree, then each HTTP load tool.
+/// also claims a run that prints both and drops Divan's tree, then each HTTP load tool. wrk comes
+/// before `console.time`, whose leaf also reads wrk2's thread calibration lines as timers.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -40,6 +41,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterGoBenchV1::parse(input, settings))
             .or_else(|| AdapterJavaJmhV1::parse(input, settings))
             .or_else(|| AdapterJsBenchmarkV1::parse(input, settings))
+            .or_else(|| AdapterHttpWrk::parse(input, settings))
             .or_else(|| AdapterJsTimeV1::parse(input, settings))
             .or_else(|| AdapterJsVitestV1::parse(input, settings))
             .or_else(|| AdapterJsDeno::parse(input, settings))
@@ -73,7 +75,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 33] = [
+    const LEAVES: [Adapter; 34] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -107,11 +109,12 @@ mod test_magic_v1 {
         Adapter::ShellHyperfineV1,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::HttpWrk,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 12] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 14] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -137,11 +140,14 @@ mod test_magic_v1 {
         ("rust/gungraun/json_not_v6.txt", None),
         // k6's text summary, which k6 does not support parsing.
         ("http/k6/text_scenarios.txt", None),
+        // autocannon's text, whose first line is wrk's.
+        ("http/autocannon/mixed_text_9_0_0.txt", None),
+        ("http/autocannon/slow_latency_codes.txt", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
     /// leaf.
-    const LATER_CLAIMANTS: [(&str, Adapter); 2] = [
+    const LATER_CLAIMANTS: [(&str, Adapter); 3] = [
         // A nightly `cargo bench` of a libtest `#[bench]` and Divan prints both, and libtest's
         // text leaf reads its line where Divan's leaf counts it.
         ("rust/bench/divan_mixed.txt", Adapter::RustDivan),
@@ -151,6 +157,9 @@ mod test_magic_v1 {
             "rust/divan/mixed_crit_divan.txt",
             Adapter::RustCriterionText,
         ),
+        // A wrk2 run of 10 s or more prints thread calibration lines, which `console.time`'s leaf
+        // reads as timers.
+        ("http/wrk/wrk2_long_latency_u.txt", Adapter::JsTime),
     ];
 
     /// Every fixture is claimed by its own leaf alone, but for the later claimants listed, and
@@ -276,6 +285,7 @@ mod test_magic_v1 {
                     Adapter::HttpK6JsonSummary
                 });
             },
+            "http/wrk" => return Some(Adapter::HttpWrk),
             "js/vitest" => (
                 name.starts_with("v5"),
                 (Adapter::JsVitestV5, Adapter::JsVitestV1),

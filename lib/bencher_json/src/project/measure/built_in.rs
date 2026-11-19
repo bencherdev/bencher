@@ -262,6 +262,22 @@ pub mod http {
         NANOSECONDS
     );
     create_measure!(GroupTime, "Group Time", "group-time", NANOSECONDS);
+    create_measure!(ConnectErrors, "Connect Errors", "connect-errors", "errors");
+    create_measure!(ReadErrors, "Read Errors", "read-errors", "errors");
+    create_measure!(WriteErrors, "Write Errors", "write-errors", "errors");
+    create_measure!(Timeouts, "Timeouts", "timeouts", "timeouts");
+    create_measure!(
+        ErrorResponses,
+        "Error Responses",
+        "error-responses",
+        "responses"
+    );
+    create_measure!(
+        UncorrectedLatency,
+        "Uncorrected Latency",
+        "uncorrected-latency",
+        NANOSECONDS
+    );
 
     /// The responses with one HTTP status code, `responses-<code>`, a built-in measure for each
     /// code the IANA HTTP Status Code Registry assigns permanently.
