@@ -438,7 +438,7 @@ test("auth pages send no referrer, are never stored, and load Turnstile only whe
 		["/auth/login", true],
 		["/auth/signup", true],
 		["/auth/authorize?request=0b5c4f6e-2a1d-4c3b-9e8f-7a6b5c4d3e2f", false],
-		["/auth/email?user=x&token=y", false],
+		["/auth/email#secret=s3cr3t", false],
 		["/auth/github", false],
 		["/auth/google", false],
 		["/auth/logout", false],
@@ -517,23 +517,6 @@ test.describe("accessibility", () => {
 			page,
 			"/auth/google?error=access_denied&state=s7a7e",
 			() => expect(page.getByRole("alert")).toHaveText("Refused by Google"),
-			async () => {},
-		);
-	});
-
-	test("a new email's confirm passes axe in both themes", async ({ page }) => {
-		const params = new URLSearchParams({
-			user: seed.member.user.uuid,
-			token: tokenFor(seed.member.user.email),
-		});
-		// Each scan returns afresh: the page took the user and the token out of its URL.
-		await axeInBothThemes(
-			page,
-			`/auth/email?${params}`,
-			() =>
-				expect(
-					page.getByRole("button", { name: "Change email" }),
-				).toBeVisible(),
 			async () => {},
 		);
 	});

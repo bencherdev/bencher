@@ -66,6 +66,7 @@ export const PAGES: Record<PageName, Page> = {
 	OrgProjects: organizationPage(() => import("./pages/OrgProjects")),
 	OrgBilling: organizationPage(() => import("./pages/OrgBilling")),
 	Organizations: lazy(() => import("./pages/Organizations")),
+	Users: lazy(() => import("./pages/Users")),
 	NewProject: organizationPage(() => import("./pages/NewProject")),
 	GitHub: lazy(() => import("./pages/GitHub")),
 	NotFound: lazy(() => import("./pages/NotFound")),
@@ -143,6 +144,7 @@ export const CONSOLE_ROUTES: RouteDefinition[] = [
 		path: ["/organizations", "/organizations/add"],
 		component: PAGES.Organizations,
 	},
+	{ path: "/server/users", component: PAGES.Users },
 ];
 
 /** An organization's bar, loaded only on its pages. */

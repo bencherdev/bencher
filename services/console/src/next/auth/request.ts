@@ -19,6 +19,8 @@ const CODES: ReadonlySet<string> = new Set<RefusalCode>([
 	"resend_waiting",
 	"locked",
 	"asked_elsewhere",
+	"email_change_expired",
+	"email_change_used",
 ]);
 
 const TRIES_LEFT = "Bencher-Tries-Left";

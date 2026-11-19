@@ -427,6 +427,37 @@ async fn admin_toggle_needs_a_fresh_sign_in() {
     }
 }
 
+// Locking a user ends every session of theirs, and unlocking lets them in again, so each needs a
+// fresh sign-in, and a stale one changes nothing.
+// Kills a lock or an unlock without the guard.
+#[tokio::test]
+async fn lock_and_unlock_need_a_fresh_sign_in() {
+    let Harness {
+        server,
+        clock,
+        admin,
+        ..
+    } = Harness::new().await;
+    let user = server.signup("Ada", ADA).await;
+    let proved = clock.now();
+    let browser = Browser::signed_in(&server.session_at(&admin, proved));
+    let path = format!("/v0/users/{}", user.uuid);
+
+    for locked in [true, false] {
+        let body = json!({"locked": locked});
+        clock.set(proved, WINDOW);
+        let resp = send(&server, Method::PATCH, &path, &browser, Some(&body)).await;
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN, "{locked}");
+        assert_eq!(error(resp).await.0, "fresh_sign_in", "{locked}");
+        assert_eq!(is_locked_of(&server, &user), !locked);
+
+        clock.set(proved, WINDOW - 1);
+        let resp = send(&server, Method::PATCH, &path, &browser, Some(&body)).await;
+        assert_eq!(resp.status(), StatusCode::OK, "{locked}");
+        assert_eq!(is_locked_of(&server, &user), locked);
+    }
+}
+
 // A fresh sign-in's wrong codes spend the same budget as a sign-in's for the address, and while
 // codes are paused the right code proves nothing, but the link still does.
 // Kills a fresh code that skips the budget, or spends none of it.
@@ -847,14 +878,15 @@ impl Action {
                     .expect("Failed to count project keys")
                     > 0
             },
-            // One's own new email waits on its confirm link, but the asking marks the user modified.
+            // One's own new email waits on its confirm link, but the asking writes the change.
             Self::EmailChange => {
-                let (created, modified) = schema::user::table
+                schema::email_change::table
+                    .inner_join(schema::user::table)
                     .filter(schema::user::uuid.eq(user.uuid))
-                    .select((schema::user::created, schema::user::modified))
-                    .first::<(i64, i64)>(&mut conn)
-                    .expect("Failed to read the user");
-                modified > created
+                    .count()
+                    .get_result::<i64>(&mut conn)
+                    .expect("Failed to count email changes")
+                    > 0
             },
             Self::DeleteProject => schema::project::table
                 .filter(schema::project::uuid.eq(project.uuid))
@@ -1130,6 +1162,14 @@ fn is_admin_of(server: &TestServer, user: &TestUser) -> bool {
     schema::user::table
         .filter(schema::user::uuid.eq(user.uuid))
         .select(schema::user::admin)
+        .first(&mut server.db_conn())
+        .expect("No such user")
+}
+
+fn is_locked_of(server: &TestServer, user: &TestUser) -> bool {
+    schema::user::table
+        .filter(schema::user::uuid.eq(user.uuid))
+        .select(schema::user::locked)
         .first(&mut server.db_conn())
         .expect("No such user")
 }

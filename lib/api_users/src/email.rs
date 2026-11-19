@@ -1,122 +1,30 @@
-use bencher_endpoint::{CorsResponse, Endpoint, Put, ResponseOk};
-use bencher_json::{DateTime, Email, JsonConfirm, JsonUser};
-#[cfg(feature = "plus")]
-use bencher_schema::model::organization::sso::QuerySso;
+//! The emails of an email change: the confirm link to the new address, and the notices to the old
+//! address and, when a server admin changes it, to the new one.
+
+use bencher_json::{Email, EmailChangeSecret};
 use bencher_schema::{
-    AUTH_TOKEN_TTL, auth_conn,
-    context::{ApiContext, Body, ButtonBody, Clipboard, Message},
+    auth_conn,
+    context::{ApiContext, Body, Button, ButtonBody, Clipboard, Message},
     error::{
-        BencherResource, forbidden_error, issue_error, resource_conflict_err,
-        resource_conflict_error, resource_not_found_err, unauthorized_error,
+        BencherResource, issue_error, resource_conflict_error, resource_not_found_err,
+        service_unavailable_error,
     },
-    model::user::{QueryUser, bump_modified, token::QueryToken},
-    public_conn, schema, write_transaction,
+    model::user::{QueryUser, email_change::EMAIL_CHANGE_LIFETIME},
+    schema,
 };
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-use dropshot::{HttpError, Path, RequestContext, TypedBody, endpoint};
+use dropshot::HttpError;
+use slog::Logger;
 
-use crate::users::UserParams;
+/// The console's page an email change's link opens, with its secret in the fragment.
+const CONFIRM_PATH: &str = "/auth/email";
+const CONFIRM_SUBJECT: &str = "Confirm Bencher Email Change";
+const ASKED_SUBJECT: &str = "Bencher Email Change Asked For";
+const CHANGED_SUBJECT: &str = "Bencher Email Changed";
+const TAKEN: &str = "The email is already in use";
 
-const SUBJECT: &str = "Confirm Bencher Email Change";
-const USER_ARG: &str = "user";
-const TOKEN_ARG: &str = "token";
-
-#[endpoint {
-    method = OPTIONS,
-    path =  "/v0/users/{user}/email",
-    tags = ["users"]
-}]
-pub async fn user_email_options(
-    _rqctx: RequestContext<ApiContext>,
-    _path_params: Path<UserParams>,
-) -> Result<CorsResponse, HttpError> {
-    Ok(Endpoint::cors(&[Put.into()]))
-}
-
-/// Confirm a new email
-///
-/// Change a user's email to the new email that a confirm link was sent to.
-/// A user who updates their own email is sent that link at the new email,
-/// and its token lasts as long as a login link's.
-/// No credential is needed, so the link works from any device.
-/// Any later update to the user ends the link, this confirm included.
-/// The response holds the user, with no credential: the browser's session is unchanged.
-/// An invalid or expired token is refused with `401 Unauthorized`;
-/// a token for another user, or one sent before the user's latest update, with `403 Forbidden`;
-/// and a new email that another user has taken since with `409 Conflict`.
-#[endpoint {
-    method = PUT,
-    path =  "/v0/users/{user}/email",
-    tags = ["users"]
-}]
-pub async fn user_email_put(
-    rqctx: RequestContext<ApiContext>,
-    path_params: Path<UserParams>,
-    body: TypedBody<JsonConfirm>,
-) -> Result<ResponseOk<JsonUser>, HttpError> {
-    let json = put_inner(rqctx.context(), path_params.into_inner(), body.into_inner()).await?;
-    Ok(Put::pub_response_ok(json))
-}
-
-async fn put_inner(
-    context: &ApiContext,
-    path_params: UserParams,
-    json_confirm: JsonConfirm,
-) -> Result<JsonUser, HttpError> {
-    let now = context.clock.now();
-    let claims = context
-        .token_key
-        .validate_email_change(&json_confirm.token, now)
-        .map_err(unauthorized_error)?;
-    let query_user = QueryUser::from_resource_id(public_conn!(context), &path_params.user)?;
-    if query_user.uuid != claims.sub {
-        return Err(forbidden_error(
-            "This link confirms a new email for another user.",
-        ));
-    }
-    query_user.check_is_locked()?;
-
-    let new_email = claims.new_email;
-    // Any write that can change the user's email or profile moves `modified`, so it ends a link.
-    let changed = write_transaction!(context, |conn| {
-        let changed = diesel::update(
-            schema::user::table
-                .filter(schema::user::id.eq(query_user.id))
-                .filter(schema::user::email.eq(&claims.email))
-                .filter(schema::user::modified.eq(claims.modified)),
-        )
-        .set((
-            schema::user::email.eq(&new_email),
-            schema::user::email_verified.eq(now),
-            bump_modified(now),
-        ))
-        .execute(conn)?;
-        if changed > 0 {
-            QueryToken::revoke_all(conn, query_user.id, now)?;
-        }
-        diesel::QueryResult::Ok(changed)
-    })
-    .map_err(resource_conflict_err!(User, (query_user.uuid, &new_email)))?;
-    if changed == 0 {
-        return Err(forbidden_error(
-            "This link is no longer valid: the user has changed since it was sent.",
-        ));
-    }
-    let query_user = QueryUser::get(public_conn!(context), query_user.id)?;
-
-    #[cfg(feature = "plus")]
-    QuerySso::join_all(
-        context,
-        &query_user,
-        #[cfg(feature = "otel")]
-        bencher_otel::AuthMethod::Email,
-    )
-    .await?;
-
-    Ok(query_user.into_json())
-}
-
-/// Refuse `new_email` for the user while another user has it.
+/// Refuse `new_email` for the user while another user has it, charged to the user's sign-in
+/// attempts.
 pub async fn check_new_email(
     context: &ApiContext,
     query_user: &QueryUser,
@@ -130,79 +38,157 @@ pub async fn check_new_email(
     .get_result::<bool>(auth_conn!(context))
     .map_err(resource_not_found_err!(User, new_email))?;
     if in_use {
-        return Err(resource_conflict_error(
-            BencherResource::User,
-            (query_user.uuid, new_email),
-            "The email is already in use",
-        ));
+        return Err(taken(query_user, new_email));
     }
     Ok(())
 }
 
-/// The email that sends `new_email` a link to confirm it as the user's email,
-/// valid while the user's `modified` is still `modified`.
-pub fn confirm_message(
+/// The refusal of a new email another user has.
+pub fn taken(query_user: &QueryUser, new_email: &Email) -> HttpError {
+    resource_conflict_error(BencherResource::User, (query_user.uuid, new_email), TAKEN)
+}
+
+/// Email the old address that a change to `new_email` was asked for, then the new address its
+/// link, which carries `secret` in its fragment, and wait until each is sent.
+///
+/// The notice goes first, so no link is ever out that its old address was not told of.
+pub async fn send_asked(
+    log: &Logger,
     context: &ApiContext,
     query_user: &QueryUser,
-    modified: DateTime,
-    new_email: Email,
-) -> Result<Message, HttpError> {
-    let token = context
-        .token_key
-        .new_email_change(
-            context.clock.now(),
-            AUTH_TOKEN_TTL,
-            query_user.uuid,
-            modified,
-            query_user.email.clone(),
-            new_email.clone(),
-        )
-        .map_err(|e| {
-            issue_error(
-                "Failed to create email change JWT",
-                &format!(
-                    "Failed to create email change JWT for user ({uuid} | {AUTH_TOKEN_TTL})",
-                    uuid = query_user.uuid
-                ),
-                e,
-            )
-        })?;
+    new_email: &Email,
+    secret: &EmailChangeSecret,
+) -> Result<(), HttpError> {
+    let minutes = EMAIL_CHANGE_LIFETIME.num_minutes();
+    let notice = notice(
+        context,
+        query_user,
+        &query_user.email,
+        ASKED_SUBJECT,
+        format!(
+            "Someone asked to change the email of your Bencher account from {old} to {new_email}. \
+             It changes only once {new_email} confirms it, in the next {minutes} minutes.",
+            old = query_user.email,
+        ),
+        "If you did not ask for this, sign in to Bencher and change your email.".into(),
+    );
+    send(log, context, notice).await?;
 
+    let mut button_url = context.console_url.join(CONFIRM_PATH).map_err(|e| {
+        issue_error(
+            "Failed to make an email change link",
+            "Failed to make an email change link:",
+            e,
+        )
+    })?;
+    button_url.set_fragment(Some(&format!("secret={}", secret.as_ref())));
     let body = Body::Button(Box::new(ButtonBody {
-        title: SUBJECT.into(),
+        title: CONFIRM_SUBJECT.into(),
         preheader: "Click the provided link to confirm your new email.".into(),
         greeting: format!("Ahoy {},", query_user.name),
         pre_body: "Someone asked to change the email of a Bencher account to this address. Please, click the button below to confirm the change.".into(),
-        button_text: "Confirm Email".into(),
-        button_url: context
-            .console_url
-            .clone()
-            .join("/auth/email")
-            .map(|mut url| {
-                url.query_pairs_mut()
-                    .append_pair(USER_ARG, &query_user.uuid.to_string())
-                    .append_pair(TOKEN_ARG, token.as_ref());
-                url.into()
-            })
-            .unwrap_or_default(),
+        button: Some(Button {
+            text: "Confirm Email".into(),
+            url: button_url.into(),
+        }),
         clipboard: Some(Clipboard {
             text: "New Email".into(),
             target: new_email.to_string(),
         }),
-        post_body: "If you did not ask for this, you can ignore this email.".into(),
+        post_body: format!(
+            "The button works once, in the next {minutes} minutes. If you did not ask for this, you can ignore this email."
+        ),
         closing: "See you soon,".into(),
         signature: "The Bencher Team".into(),
-        settings_url: context
-            .console_url
-            .clone()
-            .join("/help")
-            .map(Into::into)
-            .unwrap_or_default(),
+        settings_url: settings_url(context),
     }));
-    Ok(Message {
+    let link = Message {
         to_name: Some(query_user.name.clone().into()),
-        to_email: new_email.into(),
-        subject: Some(SUBJECT.into()),
+        to_email: new_email.to_string(),
+        subject: Some(CONFIRM_SUBJECT.into()),
         body: Some(body),
-    })
+    };
+    send(log, context, link).await
+}
+
+/// Email both addresses that a server admin changed the user's email from `old_email` to the
+/// user's email, and wait until each is sent.
+pub async fn send_changed(
+    log: &Logger,
+    context: &ApiContext,
+    query_user: &QueryUser,
+    old_email: &Email,
+) -> Result<(), HttpError> {
+    let new_email = &query_user.email;
+    let to_old = notice(
+        context,
+        query_user,
+        old_email,
+        CHANGED_SUBJECT,
+        format!(
+            "A server admin changed the email of your Bencher account from {old_email} to {new_email}. Every session of the account has ended, and its legacy API tokens are revoked."
+        ),
+        "If you did not expect this, contact the admin of your Bencher server.".into(),
+    );
+    send(log, context, to_old).await?;
+    let to_new = notice(
+        context,
+        query_user,
+        new_email,
+        CHANGED_SUBJECT,
+        format!(
+            "A server admin changed the email of a Bencher account from {old_email} to this address."
+        ),
+        "Sign in to Bencher with this address from now on.".into(),
+    );
+    send(log, context, to_new).await
+}
+
+/// A notice to `to_email` about the user's email, with no button.
+fn notice(
+    context: &ApiContext,
+    query_user: &QueryUser,
+    to_email: &Email,
+    subject: &str,
+    pre_body: String,
+    post_body: String,
+) -> Message {
+    let body = Body::Button(Box::new(ButtonBody {
+        title: subject.into(),
+        preheader: pre_body.clone(),
+        greeting: format!("Ahoy {},", query_user.name),
+        pre_body,
+        button: None,
+        clipboard: None,
+        post_body,
+        closing: "See you soon,".into(),
+        signature: "The Bencher Team".into(),
+        settings_url: settings_url(context),
+    }));
+    Message {
+        to_name: Some(query_user.name.clone().into()),
+        to_email: to_email.to_string(),
+        subject: Some(subject.into()),
+        body: Some(body),
+    }
+}
+
+async fn send(log: &Logger, context: &ApiContext, message: Message) -> Result<(), HttpError> {
+    context
+        .messenger
+        .send_and_wait(log, message)
+        .await
+        .map_err(|e| {
+            slog::error!(log, "Failed to send an email change email: {e}");
+            service_unavailable_error(format!("Failed to send the email change email: {e}"))
+        })
+}
+
+fn settings_url(context: &ApiContext) -> String {
+    context
+        .console_url
+        .clone()
+        .join("/help")
+        .map(Into::into)
+        .unwrap_or_default()
 }

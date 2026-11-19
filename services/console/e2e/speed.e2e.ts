@@ -922,6 +922,26 @@ test("a cold load of an organization's Projects holds the speed ceilings", async
 	holds(cost, ceilings.organizationProjectsColdLoad);
 });
 
+test.describe("as a server admin", () => {
+	test.use({ storageState: signedIn(seed.admin) });
+
+	// Kills a Users page that reads more than its one list, chains it after
+	// another answer, or shifts as it arrives.
+	test("a cold load of Users holds the speed ceilings", async ({ page }) => {
+		const cost = await accountColdLoad(
+			page,
+			"/console/server/users",
+			[firstPage(`${RELAY}/v0/users?`)],
+			() =>
+				expect(
+					page.getByRole("table", { name: "Users" }).getByRole("row").nth(1),
+				).toBeVisible(),
+		);
+		report("users cold load", cost);
+		holds(cost, ceilings.usersColdLoad);
+	});
+});
+
 // Kills an Organizations list that waits on more than the reader's bootstrap,
 // chains a second round, or shifts as it arrives.
 test("a cold load of Organizations holds the speed ceilings", async ({

@@ -116,7 +116,12 @@ export const sessionCookie = (session: string) => ({
 
 /** What the console keeps of a reader in the browser: who they are, and nothing that signs in. */
 export const hintOf = ({ user }: Pick<Reader, "user">) =>
-	JSON.stringify({ uuid: user.uuid, slug: user.slug, name: user.name });
+	JSON.stringify({
+		uuid: user.uuid,
+		slug: user.slug,
+		name: user.name,
+		...(user.admin ? { admin: true } : {}),
+	});
 
 /** A browser signed in as `reader`, with its session cookie and its hint, plus any other entries. */
 export const signedIn = (

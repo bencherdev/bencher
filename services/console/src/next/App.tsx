@@ -1,7 +1,6 @@
 import { Router } from "@solidjs/router";
 import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { Match, Suspense, Switch, createSignal } from "solid-js";
-import type { JsonUser } from "../types/bencher";
 import { AccountContext } from "./account/context";
 import AccountLayout from "./account/Layout";
 import { accountPage } from "./account/paths";
@@ -9,7 +8,7 @@ import type { Api } from "./api";
 import { FlushContext } from "./flush";
 import Layout from "./Layout";
 import { CONSOLE_PATH, organizationOf } from "./paths";
-import { type Reader, rememberReader } from "./reader";
+import { type Reader, type ReaderOf, readerOf, rememberReader } from "./reader";
 import { CONSOLE_ROUTES, OrganizationLayout, PROJECTS_ROUTE } from "./routes";
 
 const App = (props: {
@@ -23,8 +22,8 @@ const App = (props: {
 	host: string;
 }) => {
 	const [reader, setReader] = createSignal(props.reader);
-	const keepUser = ({ uuid, slug, name }: JsonUser) => {
-		const next = { uuid, slug, name };
+	const keepUser = (user: ReaderOf) => {
+		const next = readerOf(user);
 		setReader(next);
 		rememberReader(localStorage, next);
 	};
