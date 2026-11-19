@@ -205,6 +205,74 @@ pub mod mitata {
     );
 }
 
+pub mod web {
+    use bencher_valid::{BYTES, NANOSECONDS, PERCENTAGE};
+
+    create_measure!(
+        FirstContentfulPaint,
+        "First Contentful Paint",
+        "first-contentful-paint",
+        NANOSECONDS
+    );
+    create_measure!(
+        LargestContentfulPaint,
+        "Largest Contentful Paint",
+        "largest-contentful-paint",
+        NANOSECONDS
+    );
+    create_measure!(
+        TotalBlockingTime,
+        "Total Blocking Time",
+        "total-blocking-time",
+        NANOSECONDS
+    );
+    create_measure!(
+        CumulativeLayoutShift,
+        "Cumulative Layout Shift",
+        "cumulative-layout-shift",
+        "layout shift score"
+    );
+    create_measure!(SpeedIndex, "Speed Index", "speed-index", NANOSECONDS);
+    create_measure!(
+        TimeToInteractive,
+        "Time to Interactive",
+        "time-to-interactive",
+        NANOSECONDS
+    );
+    create_measure!(
+        MaxPotentialFirstInputDelay,
+        "Max Potential First Input Delay",
+        "max-potential-first-input-delay",
+        NANOSECONDS
+    );
+    create_measure!(
+        ServerResponseTime,
+        "Server Response Time",
+        "server-response-time",
+        NANOSECONDS
+    );
+    create_measure!(TransferSize, "Transfer Size", "transfer-size", BYTES);
+    create_measure!(DomElements, "DOM Elements", "dom-elements", "elements");
+    create_measure!(
+        MainThreadTime,
+        "Main-Thread Time",
+        "main-thread-time",
+        NANOSECONDS
+    );
+    create_measure!(
+        ScriptExecutionTime,
+        "Script Execution Time",
+        "script-execution-time",
+        NANOSECONDS
+    );
+    create_measure!(
+        CategoryScore,
+        "Category Score",
+        "category-score",
+        PERCENTAGE
+    );
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");

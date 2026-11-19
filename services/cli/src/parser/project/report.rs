@@ -235,6 +235,8 @@ pub enum CliReportAdapter {
     RustGungraun,
     /// ❯_ Shell Hyperfine
     ShellHyperfine,
+    /// 🌐 Web Lighthouse
+    WebLighthouse,
 }
 
 /// Suggested Central Tendency (Average)

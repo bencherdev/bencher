@@ -18,6 +18,7 @@ use crate::{
                 divan::AdapterRustDivan, gungraun::AdapterRustGungraunV1, iai::AdapterRustIaiV1,
             },
             shell::hyperfine::AdapterShellHyperfineV1,
+            web::lighthouse::AdapterWebLighthouse,
         },
         json::v1::AdapterJsonV1,
     },
@@ -26,7 +27,7 @@ use crate::{
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
 /// its structured format before its text, and Divan before criterion, since criterion's text leaf
-/// also claims a run that prints both and drops Divan's tree.
+/// also claims a run that prints both and drops Divan's tree, then Lighthouse.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -54,6 +55,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustIaiV1::parse(input, settings))
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
+            .or_else(|| AdapterWebLighthouse::parse(input, settings))
     }
 }
 
@@ -71,7 +73,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 31] = [
+    const LEAVES: [Adapter; 32] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -103,11 +105,12 @@ mod test_magic_v1 {
         Adapter::RustGungraunStdout,
         Adapter::ShellHyperfineV2,
         Adapter::ShellHyperfineV1,
+        Adapter::WebLighthouse,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 11] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 17] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -131,6 +134,15 @@ mod test_magic_v1 {
         ("rust/bench/zero.txt", None),
         // libtest ran no benchmark, and gungraun's summary is of a schema no leaf reads.
         ("rust/gungraun/json_not_v6.txt", None),
+        // Lighthouse could not load the page, which gives the adapter's 400 with its error code.
+        ("web/lighthouse/not_found.json", None),
+        // A user flow, and the timespan and snapshot results of its steps.
+        ("web/lighthouse/flow.json", None),
+        ("web/lighthouse/timespan.json", None),
+        ("web/lighthouse/snapshot.json", None),
+        // Lighthouse CI's manifest, and Lighthouse's CSV, which holds no numeric values.
+        ("web/lighthouse/lhci_manifest.json", None),
+        ("web/lighthouse/report.csv", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -257,6 +269,7 @@ mod test_magic_v1 {
             "ruby/benchmark_ips" => return Some(Adapter::RubyBenchmarkIps),
             "rust/iai" => return Some(Adapter::RustIai),
             "rust/divan" => return Some(Adapter::RustDivan),
+            "web/lighthouse" => return Some(Adapter::WebLighthouse),
             "json" => return name.starts_with("report_v1_").then_some(Adapter::JsonV1),
             "cpp/catch2" => (
                 extension == Some("xml"),

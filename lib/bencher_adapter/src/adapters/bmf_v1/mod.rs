@@ -1,7 +1,7 @@
 use bencher_json::project::report::Adapter;
 
 use crate::{
-    Adaptable as _, Settings,
+    Adaptable as _, AdapterError, Settings,
     adapters::{
         bmf_v1::{
             c_sharp::dot_net::AdapterCSharpDotNetV1,
@@ -39,6 +39,7 @@ use crate::{
             shell::hyperfine::{
                 AdapterShellHyperfine1, AdapterShellHyperfine2, AdapterShellHyperfineV1,
             },
+            web::lighthouse::AdapterWebLighthouse,
         },
         json::v1::AdapterJsonV1,
     },
@@ -61,6 +62,7 @@ pub mod ruby;
 mod runs;
 pub mod rust;
 pub mod shell;
+pub mod web;
 
 use magic::AdapterMagicV1;
 
@@ -119,8 +121,21 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::ShellHyperfine => AdapterShellHyperfineV1::parse(input, settings),
         Adapter::ShellHyperfineV1 => AdapterShellHyperfine1::parse(input, settings),
         Adapter::ShellHyperfineV2 => AdapterShellHyperfine2::parse(input, settings),
+        Adapter::WebLighthouse => AdapterWebLighthouse::parse(input, settings),
         Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
+}
+
+/// The error for output that `adapter` refused because its harness reports the run as failed,
+/// which names the harness's own reason.
+pub(crate) fn failure(adapter: Adapter, input: &str) -> Option<AdapterError> {
+    matches!(adapter, Adapter::Magic | Adapter::WebLighthouse)
+        .then(|| AdapterWebLighthouse::failure(input))
+        .flatten()
+        .map(|reason| AdapterError::FailedRun {
+            adapter: Adapter::WebLighthouse,
+            reason,
+        })
 }
 
 #[cfg(test)]
@@ -139,7 +154,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 53] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -192,6 +207,7 @@ mod test_bmf_v1 {
         Adapter::ShellHyperfineV2,
         Adapter::Dart,
         Adapter::DartBenchmarkHarness,
+        Adapter::WebLighthouse,
     ];
 
     const LANGUAGES: [Adapter; 10] = [
