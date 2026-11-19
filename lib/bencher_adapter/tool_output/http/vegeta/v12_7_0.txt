@@ -1,0 +1,9 @@
+Requests      [total, rate, throughput]  40, 41.03, 30.28
+Duration      [total, attack, wait]      990.845771ms, 974.919238ms, 15.926533ms
+Latencies     [mean, 50, 95, 99, max]    10.657208ms, 511.057µs, 40.991858ms, 41.87889ms, 41.87889ms
+Bytes In      [total, mean]              60, 1.50
+Bytes Out     [total, mean]              0, 0.00
+Success       [ratio]                    75.00%
+Status Codes  [code:count]               101:10  200:10  302:10  304:10  
+Error Set:
+101 Switching Protocols
