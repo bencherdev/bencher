@@ -24,7 +24,7 @@
 	},
 	"tabSwitch": {
 		"apiRequests": 0,
-		"jsBytes": 17638,
+		"jsBytes": 17694,
 		"scriptRounds": 1
 	},
 	"runsColdLoad": {
@@ -172,7 +172,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 76761,
+		"jsBytes": 76819,
 		"deferredJsBytes": 117952,
 		"stylesheets": 1,
 		"htmlBytes": 2861,
@@ -188,7 +188,7 @@
 	"plotsTabSwitch": {
 		"apiRequests": 1,
 		"apiRounds": 1,
-		"jsBytes": 64428,
+		"jsBytes": 64485,
 		"scriptRounds": 1
 	},
 	"thresholdsColdLoad": {
@@ -267,7 +267,7 @@
 		"apiRequests": 2,
 		"apiRounds": 1,
 		"cls": 0.00025,
-		"jsBytes": 96539,
+		"jsBytes": 96595,
 		"deferredJsBytes": 115690,
 		"stylesheets": 1,
 		"htmlBytes": 2851,
@@ -307,10 +307,10 @@
 	},
 	"publicColdLoad": {
 		"cls": 0,
-		"jsBytes": 78534,
+		"jsBytes": 78585,
 		"deferredJsBytes": 112880,
 		"cssBytes": 13138,
-		"htmlBytes": 2980,
+		"htmlBytes": 3033,
 		"inlineScriptBytes": 700
 	},
 	"embedColdLoad": {
