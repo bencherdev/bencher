@@ -13064,6 +13064,7 @@
           "js_deno",
           "js_mitata",
           "js_tinybench",
+          "js_reassure",
           "python",
           "python_asv",
           "python_asv_json",

@@ -205,6 +205,10 @@ pub mod mitata {
     );
 }
 
+pub mod reassure {
+    create_measure!(Renders, "Renders", "renders", "renders");
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");

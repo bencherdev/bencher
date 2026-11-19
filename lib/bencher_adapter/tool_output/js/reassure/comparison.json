@@ -1,0 +1,352 @@
+{
+  "metadata": {
+    "current": {
+      "creationDate": "2026-11-15T05:13:15.107Z"
+    },
+    "baseline": {
+      "creationDate": "2026-11-15T05:13:12.987Z"
+    }
+  },
+  "errors": [],
+  "warnings": [],
+  "significant": [
+    {
+      "name": "async function",
+      "type": "async function",
+      "baseline": {
+        "name": "async function",
+        "type": "async function",
+        "runs": 5,
+        "meanDuration": 0.0003945999999814376,
+        "stdevDuration": 0.00006119068555482188,
+        "durations": [
+          0.0005009999999856518,
+          0.00038999999992483936,
+          0.0003699999999753345,
+          0.00035100000013699173,
+          0.0003609999998843705
+        ],
+        "warmupDurations": [
+          0.006971000000021377
+        ],
+        "outlierDurations": [],
+        "meanCount": 1,
+        "stdevCount": 0,
+        "counts": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "current": {
+        "name": "async function",
+        "type": "async function",
+        "runs": 5,
+        "meanDuration": 0.0005549999999402644,
+        "stdevDuration": 0.0001127851941076109,
+        "durations": [
+          0.0006120000000464643,
+          0.0003609999998843705,
+          0.0006300000000010186,
+          0.000550999999859414,
+          0.0006209999999100546
+        ],
+        "warmupDurations": [
+          0.00842200000010962
+        ],
+        "outlierDurations": [],
+        "meanCount": 1,
+        "stdevCount": 0,
+        "counts": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "stability": {
+        "current": 0.20321656598153182,
+        "baseline": 0.15507016106867805
+      },
+      "durationDiff": 0.00016039999995882682,
+      "relativeDurationDiff": 0.40648758227666554,
+      "isDurationDiffSignificant": true,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    }
+  ],
+  "meaningless": [
+    {
+      "name": "fib function",
+      "type": "function",
+      "baseline": {
+        "name": "fib function",
+        "type": "function",
+        "runs": 10,
+        "meanDuration": 0.17714410000003228,
+        "stdevDuration": 0.05098842485951747,
+        "durations": [
+          0.31570099999999,
+          0.1557719999998426,
+          0.15997700000002624,
+          0.17741700000010496,
+          0.1746010000001661,
+          0.18648899999993773,
+          0.1693830000001526,
+          0.14228000000002794,
+          0.14411500000005617,
+          0.14570600000001832
+        ],
+        "warmupDurations": [
+          0.36906199999998535
+        ],
+        "outlierDurations": [],
+        "meanCount": 1,
+        "stdevCount": 0,
+        "counts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "current": {
+        "name": "fib function",
+        "type": "function",
+        "runs": 10,
+        "meanDuration": 0.15651690000004237,
+        "stdevDuration": 0.008786269546521468,
+        "durations": [
+          0.15105500000004213,
+          0.15751499999987573,
+          0.14221000000020467,
+          0.15472999999997228,
+          0.15066300000012234,
+          0.1713560000000598,
+          0.16591700000003584,
+          0.16232200000013108,
+          0.1486609999999473,
+          0.16074000000003252
+        ],
+        "warmupDurations": [
+          0.2236480000001393
+        ],
+        "outlierDurations": [],
+        "meanCount": 1,
+        "stdevCount": 0,
+        "counts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "stability": {
+        "current": 0.05613623542581721,
+        "baseline": 0.28783586277786377
+      },
+      "durationDiff": -0.02062719999998991,
+      "relativeDurationDiff": -0.11644305398817206,
+      "isDurationDiffSignificant": false,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    },
+    {
+      "name": "List 100",
+      "type": "render",
+      "baseline": {
+        "name": "List 100",
+        "type": "render",
+        "runs": 10,
+        "meanDuration": 2.254485800000384,
+        "stdevDuration": 0.4195426564632925,
+        "durations": [
+          2.18262000000027,
+          1.9283560000005764,
+          2.0600660000002335,
+          3.2719270000013694,
+          1.9604309999983798,
+          2.2618480000010095,
+          2.080462000000807,
+          2.0049420000013924,
+          2.0972069999993437,
+          2.69699900000046
+        ],
+        "warmupDurations": [
+          5.970859999998709
+        ],
+        "outlierDurations": [],
+        "meanCount": 1,
+        "stdevCount": 0,
+        "counts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": []
+        }
+      },
+      "current": {
+        "name": "List 100",
+        "type": "render",
+        "runs": 10,
+        "meanDuration": 2.285412900000426,
+        "stdevDuration": 0.1952009311324707,
+        "durations": [
+          2.202275000001009,
+          2.149655000000621,
+          2.3763290000006236,
+          2.594975999999747,
+          2.3841650000001664,
+          2.1546790000011242,
+          2.5925550000006297,
+          2.0357939999987593,
+          2.116452000001118,
+          2.2472490000004655
+        ],
+        "warmupDurations": [
+          6.089614999999867
+        ],
+        "outlierDurations": [],
+        "meanCount": 1,
+        "stdevCount": 0,
+        "counts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": []
+        }
+      },
+      "stability": {
+        "current": 0.08541166943287766,
+        "baseline": 0.18609239253723445
+      },
+      "durationDiff": 0.030927100000042174,
+      "relativeDurationDiff": 0.013718028297200589,
+      "isDurationDiffSignificant": false,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    },
+    {
+      "name": "List with scenario",
+      "type": "render",
+      "baseline": {
+        "name": "List with scenario",
+        "type": "render",
+        "runs": 5,
+        "meanDuration": 1.8151824000010948,
+        "stdevDuration": 0.176097317190848,
+        "durations": [
+          1.7650180000043747,
+          2.017311999999947,
+          1.935138999998344,
+          1.8002750000007381,
+          1.5581680000020697
+        ],
+        "warmupDurations": [
+          2.3839879999979985
+        ],
+        "outlierDurations": [],
+        "meanCount": 3,
+        "stdevCount": 0,
+        "counts": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": []
+        }
+      },
+      "current": {
+        "name": "List with scenario",
+        "type": "render",
+        "runs": 5,
+        "meanDuration": 1.7833470000000944,
+        "stdevDuration": 0.15332534176491142,
+        "durations": [
+          1.848899000000074,
+          1.9915859999989607,
+          1.590545000001157,
+          1.7972670000010567,
+          1.6884379999992234
+        ],
+        "warmupDurations": [
+          1.905411999999842
+        ],
+        "outlierDurations": [],
+        "meanCount": 3,
+        "stdevCount": 0,
+        "counts": [
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "issues": {
+          "initialUpdateCount": 0,
+          "redundantUpdates": []
+        }
+      },
+      "stability": {
+        "current": 0.08597616827510479,
+        "baseline": 0.09701356579412725
+      },
+      "durationDiff": -0.03183540000100038,
+      "relativeDurationDiff": -0.017538402752792875,
+      "isDurationDiffSignificant": false,
+      "countDiff": 0,
+      "relativeCountDiff": 0
+    }
+  ],
+  "countChanged": [],
+  "renderIssues": [],
+  "added": [],
+  "removed": [],
+  "stability": {
+    "current": {
+      "weightedAverage": 0.08458105872504644
+    },
+    "baseline": {
+      "weightedAverage": 0.15226232308084298
+    }
+  }
+}

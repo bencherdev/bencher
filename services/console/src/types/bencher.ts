@@ -766,6 +766,7 @@ export enum Adapter {
 	JsDeno = "js_deno",
 	JsMitata = "js_mitata",
 	JsTinybench = "js_tinybench",
+	JsReassure = "js_reassure",
 	Python = "python",
 	PythonAsv = "python_asv",
 	PythonAsvJson = "python_asv_json",

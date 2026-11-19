@@ -349,6 +349,7 @@ const JS_VITEST_V5_INT: i32 = 732;
 const JS_DENO_INT: i32 = 74;
 const JS_MITATA_INT: i32 = 75;
 const JS_TINYBENCH_INT: i32 = 76;
+const JS_REASSURE_INT: i32 = 77;
 const PYTHON_INT: i32 = 80;
 const PYTHON_ASV_INT: i32 = 81;
 const PYTHON_ASV_JSON_INT: i32 = 811;
@@ -414,6 +415,7 @@ pub enum Adapter {
     JsDeno = JS_DENO_INT,
     JsMitata = JS_MITATA_INT,
     JsTinybench = JS_TINYBENCH_INT,
+    JsReassure = JS_REASSURE_INT,
     Python = PYTHON_INT,
     PythonAsv = PYTHON_ASV_INT,
     PythonAsvJson = PYTHON_ASV_JSON_INT,
@@ -479,6 +481,7 @@ impl Adapter {
             | Self::JsDeno
             | Self::JsMitata
             | Self::JsTinybench
+            | Self::JsReassure
             | Self::PythonAsv
             | Self::PythonAsvJson
             | Self::PythonAsvText
@@ -557,6 +560,7 @@ impl fmt::Display for Adapter {
             Self::JsDeno => write!(f, "js_deno"),
             Self::JsMitata => write!(f, "js_mitata"),
             Self::JsTinybench => write!(f, "js_tinybench"),
+            Self::JsReassure => write!(f, "js_reassure"),
             Self::Python => write!(f, "python"),
             Self::PythonAsv => write!(f, "python_asv"),
             Self::PythonAsvJson => write!(f, "python_asv_json"),
@@ -581,14 +585,14 @@ mod adapter {
         Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_CATCH2_TEXT_INT,
         CPP_CATCH2_XML_INT, CPP_GOOGLE_INT, CPP_INT, DART_BENCHMARK_HARNESS_INT, DART_INT,
         GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
-        JS_BENCHMARK_INT, JS_DENO_INT, JS_INT, JS_MITATA_INT, JS_TIME_INT, JS_TINYBENCH_INT,
-        JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
-        MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT, PYTHON_INT,
-        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT, RUST_BENCH_INT,
-        RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT,
-        RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
-        RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
-        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        JS_BENCHMARK_INT, JS_DENO_INT, JS_INT, JS_MITATA_INT, JS_REASSURE_INT, JS_TIME_INT,
+        JS_TINYBENCH_INT, JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT,
+        JSON_V1_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT,
+        PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT,
+        RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
+        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT,
+        RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT,
+        SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -645,6 +649,7 @@ mod adapter {
                 Self::JsDeno => JS_DENO_INT.to_sql(out),
                 Self::JsMitata => JS_MITATA_INT.to_sql(out),
                 Self::JsTinybench => JS_TINYBENCH_INT.to_sql(out),
+                Self::JsReassure => JS_REASSURE_INT.to_sql(out),
                 Self::Python => PYTHON_INT.to_sql(out),
                 Self::PythonAsv => PYTHON_ASV_INT.to_sql(out),
                 Self::PythonAsvJson => PYTHON_ASV_JSON_INT.to_sql(out),
@@ -708,6 +713,7 @@ mod adapter {
                 JS_DENO_INT => Ok(Self::JsDeno),
                 JS_MITATA_INT => Ok(Self::JsMitata),
                 JS_TINYBENCH_INT => Ok(Self::JsTinybench),
+                JS_REASSURE_INT => Ok(Self::JsReassure),
                 PYTHON_INT => Ok(Self::Python),
                 PYTHON_ASV_INT => Ok(Self::PythonAsv),
                 PYTHON_ASV_JSON_INT => Ok(Self::PythonAsvJson),
@@ -1337,7 +1343,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 53] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1376,6 +1382,7 @@ mod tests {
         Adapter::JsDeno,
         Adapter::JsMitata,
         Adapter::JsTinybench,
+        Adapter::JsReassure,
         Adapter::Python,
         Adapter::PythonAsv,
         Adapter::PythonAsvJson,
@@ -1433,6 +1440,7 @@ mod tests {
             | Adapter::JsDeno
             | Adapter::JsMitata
             | Adapter::JsTinybench
+            | Adapter::JsReassure
             | Adapter::Python
             | Adapter::PythonAsv
             | Adapter::PythonAsvJson

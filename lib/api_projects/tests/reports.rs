@@ -2804,6 +2804,41 @@ async fn reports_post_creates_the_mitata_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the Reassure leaf creates `renders` in its unit
+//
+// Kills: `renders` missing from the server's built-ins, which creates it in the generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_reassure_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "reassure").await;
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report("js_reassure", &[REASSURE_CURRENT], Some(1)),
+    )
+    .await;
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq("renders"))
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        [("renders", "Renders", "renders")].map(|(slug, name, units)| (
+            slug.to_owned(),
+            name.to_owned(),
+            units.to_owned()
+        ))
+    );
+}
+
 // POST /v0/projects/{project}/reports - the benchmark prefix goes in front of every name at
 // version 1, whether a harness leaf, the user's own BMF JSON, or `magic` parsed it, and a version
 // 0 report ignores it
@@ -2865,6 +2900,8 @@ const JMH_MODES: &str = include_str!("../../bencher_adapter/tool_output/java/jmh
 const MITATA_GC: &str = include_str!("../../bencher_adapter/tool_output/js/mitata/default_gc.json");
 const MITATA_COUNTERS: &str =
     include_str!("../../bencher_adapter/tool_output/js/mitata/counters.json");
+const REASSURE_CURRENT: &str =
+    include_str!("../../bencher_adapter/tool_output/js/reassure/current.perf");
 const HYPERFINE_COUNTERS: &str =
     include_str!("../../bencher_adapter/tool_output/shell/hyperfine/v2_counters.json");
 const ASV_PARAMS: &str = include_str!("../../bencher_adapter/tool_output/python/asv/params.txt");

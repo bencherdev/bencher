@@ -567,6 +567,38 @@ async fn report_version_1_only_adapter_refuses_version_0() {
     server.close().await;
 }
 
+/// Reassure's `.perf` file, which only a version 1 leaf reads.
+const REASSURE_CURRENT: &str =
+    include_str!("../../bencher_adapter/tool_output/js/reassure/current.perf");
+
+/// Reassure refuses a version 0 project by name, and lands once the project is at version 1.
+///
+/// Kills: Reassure given a version 0 parser, or left to the generic adapter 400.
+#[tokio::test]
+async fn report_reassure_refuses_version_0() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "reassurev1only").await;
+    let post = || Post {
+        results: vec![REASSURE_CURRENT],
+        adapter: Some("js_reassure"),
+        ..Post::default()
+    };
+
+    let body = refused(&server, &fixture, post()).await;
+    assert!(
+        body.contains(
+            "`js_reassure` reads results at BMF version 1 only, and this project is at BMF version 0."
+        ),
+        "{body}"
+    );
+
+    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+    let landed = report(&server, &fixture, post()).await;
+    assert_eq!(iterations(&landed), 1, "{landed}");
+
+    server.close().await;
+}
+
 /// An adapter with a version 0 tree that does not claim the output keeps the generic 400
 /// at version 0, with its adapter hint.
 ///

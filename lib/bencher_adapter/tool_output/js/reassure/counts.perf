@@ -1,0 +1,2 @@
+{"metadata":{"creationDate":"2026-11-19T20:58:54.531Z"}}
+{"name":"Counter varying clicks","type":"render","runs":6,"meanDuration":0.3026238333333519,"stdevDuration":0.10177252674167139,"durations":[0.37288999999987027,0.2275449999999637,0.4631960000003801,0.29334199999971133,0.1813400000000911,0.2774300000000949],"warmupDurations":[2.367595000000165],"outlierDurations":[],"meanCount":2,"stdevCount":0.8944271909999159,"counts":[3,1,2,3,1,2],"issues":{"initialUpdateCount":0,"redundantUpdates":[]}}
