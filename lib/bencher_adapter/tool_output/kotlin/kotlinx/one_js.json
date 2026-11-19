@@ -1,0 +1,88 @@
+[
+  {
+    "benchmark" : "test.DefaultBenchmark.sum",
+    "mode" : "thrpt",
+    "compilationMode": "Production",
+    "configurationName" : "one",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 1,
+    "measurementTime" : "200 ms",
+    "params" : {
+          
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 26002976.579184234,
+       "scoreError": 0,
+       "scoreConfidence" : [
+          26002976.579184234,
+          26002976.579184234
+       ],
+       "scorePercentiles" : {
+          "0.00" : 26002976.579184234,
+          "25.00" : 26002976.579184234,
+          "50.00" : 26002976.579184234,
+          "75.00" : 26002976.579184234,
+          "90.00" : 26002976.579184234,
+          "99.00" : 26002976.579184234,
+          "99.90" : 26002976.579184234,
+          "99.99" : 26002976.579184234,
+          "100.00" : 26002976.579184234
+       },
+       "scoreUnit" : "ops/sec",
+       "rawData" : [
+           [
+             26002976.579184234
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.nested.DefaultBenchmark.sum",
+    "mode" : "avgt",
+    "compilationMode": "Production",
+    "configurationName" : "one",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 1,
+    "measurementTime" : "200 ms",
+    "params" : {
+          
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 0.02223603695866469,
+       "scoreError": 0,
+       "scoreConfidence" : [
+          0.02223603695866469,
+          0.02223603695866469
+       ],
+       "scorePercentiles" : {
+          "0.00" : 0.02223603695866469,
+          "25.00" : 0.02223603695866469,
+          "50.00" : 0.02223603695866469,
+          "75.00" : 0.02223603695866469,
+          "90.00" : 0.02223603695866469,
+          "99.00" : 0.02223603695866469,
+          "99.90" : 0.02223603695866469,
+          "99.99" : 0.02223603695866469,
+          "100.00" : 0.02223603695866469
+       },
+       "scoreUnit" : "us/op",
+       "rawData" : [
+           [
+             0.02223603695866469
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  }
+]

@@ -1,0 +1,137 @@
+[
+  {
+    "benchmark" : "test.DefaultBenchmark.mathBenchmark",
+    "mode" : "avgt",
+    "compilationMode": "Release",
+    "configurationName" : "avgtSec",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 1.3282799686655184E-8,
+       "scoreError": 2.872028638434934E-10,
+       "scoreConfidence" : [
+          1.299559682281169E-8,
+          1.3570002550498677E-8
+       ],
+       "scorePercentiles" : {
+          "0.00" : 1.2993358352088186E-8,
+          "25.00" : 1.2993358352088186E-8,
+          "50.00" : 1.3387736802330415E-8,
+          "75.00" : 1.3467303905546946E-8,
+          "90.00" : 1.3467303905546946E-8,
+          "99.00" : 1.3467303905546946E-8,
+          "99.90" : 1.3467303905546946E-8,
+          "99.99" : 1.3467303905546946E-8,
+          "100.00" : 1.3467303905546946E-8
+       },
+       "scoreUnit" : "sec/op",
+       "rawData" : [
+           [
+             1.2993358352088186E-8,
+             1.3387736802330415E-8,
+             1.3467303905546946E-8
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.DefaultBenchmark.sum",
+    "mode" : "avgt",
+    "compilationMode": "Release",
+    "configurationName" : "avgtSec",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 3.798571407495034E-8,
+       "scoreError": 1.6541272022055355E-9,
+       "scoreConfidence" : [
+          3.63315868727448E-8,
+          3.963984127715588E-8
+       ],
+       "scorePercentiles" : {
+          "0.00" : 3.67597998623903E-8,
+          "25.00" : 3.67597998623903E-8,
+          "50.00" : 3.759389890113427E-8,
+          "75.00" : 3.960344346132644E-8,
+          "90.00" : 3.960344346132644E-8,
+          "99.00" : 3.960344346132644E-8,
+          "99.90" : 3.960344346132644E-8,
+          "99.99" : 3.960344346132644E-8,
+          "100.00" : 3.960344346132644E-8
+       },
+       "scoreUnit" : "sec/op",
+       "rawData" : [
+           [
+             3.960344346132644E-8,
+             3.67597998623903E-8,
+             3.759389890113427E-8
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.nested.DefaultBenchmark.sum",
+    "mode" : "avgt",
+    "compilationMode": "Release",
+    "configurationName" : "avgtSec",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 2.6275563151448224E-7,
+       "scoreError": 1.216156115057132E-8,
+       "scoreConfidence" : [
+          2.5059407036391094E-7,
+          2.7491719266505354E-7
+       ],
+       "scorePercentiles" : {
+          "0.00" : 2.505833075876394E-7,
+          "25.00" : 2.505833075876394E-7,
+          "50.00" : 2.6674956122764235E-7,
+          "75.00" : 2.709340257281649E-7,
+          "90.00" : 2.709340257281649E-7,
+          "99.00" : 2.709340257281649E-7,
+          "99.90" : 2.709340257281649E-7,
+          "99.99" : 2.709340257281649E-7,
+          "100.00" : 2.709340257281649E-7
+       },
+       "scoreUnit" : "sec/op",
+       "rawData" : [
+           [
+             2.505833075876394E-7,
+             2.709340257281649E-7,
+             2.6674956122764235E-7
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  }
+]

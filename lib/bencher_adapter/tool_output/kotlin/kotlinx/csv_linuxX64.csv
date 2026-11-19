@@ -1,0 +1,4 @@
+"Benchmark","Mode","Threads","Samples","Score","Score Error (99.9%)","Unit"
+"test.DefaultBenchmark.mathBenchmark","thrpt",1,3,77772376.077616,2927125.305093,"ops/sec"
+"test.DefaultBenchmark.sum","thrpt",1,3,24981179.185272,3542319.283015,"ops/sec"
+"test.nested.DefaultBenchmark.sum","avgt",1,3,0.265029,0.004013,"us/op"

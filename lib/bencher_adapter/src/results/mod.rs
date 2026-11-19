@@ -4,7 +4,10 @@ use bencher_json::{BenchmarkPrefix, BmfVersion, MeasureNameId, project::report::
 
 use crate::{
     Adaptable as _, AdapterError, Settings,
-    adapters::json::{v0::AdapterJsonV0, v1::AdapterJsonV1},
+    adapters::{
+        bmf_v1,
+        json::{v0::AdapterJsonV0, v1::AdapterJsonV1},
+    },
     v0_parser,
 };
 
@@ -52,6 +55,11 @@ impl AdapterResultsArray {
     fn refusal(results: &str, adapter: Adapter, expected: BmfVersion) -> AdapterError {
         if expected == BmfVersion::V0 && v0_parser(adapter).is_none() {
             return AdapterError::V1Only(adapter);
+        }
+        if expected == BmfVersion::V1
+            && let Some(refusal) = bmf_v1::refusal(adapter, results)
+        {
+            return refusal;
         }
         let probe = if !matches!(adapter, Adapter::Json | Adapter::Magic) {
             None
@@ -180,6 +188,7 @@ mod test_results_array {
     use crate::{
         AdapterError, AdapterResults, Settings,
         adapters::json::v1::test_json_v1::{named, names, variant},
+        error::JmhLookalike,
     };
 
     const V0: &str = r#"{"bench": {"latency": {"value": 10.0}}}"#;
@@ -202,7 +211,8 @@ mod test_results_array {
             AdapterError::Valid(_)
             | AdapterError::BenchmarkUnits(_)
             | AdapterError::Convert(_)
-            | AdapterError::V1Only(_) => {
+            | AdapterError::V1Only(_)
+            | AdapterError::JmhLookalike(_) => {
                 panic!("expected the BMF version error: {error}")
             },
         }
@@ -222,6 +232,10 @@ mod test_results_array {
             (Adapter::GoBenchJson, "go/bench/json_count.txt"),
             (Adapter::JsVitestV5, "js/vitest/v5_basic.json"),
             (Adapter::PythonAsvJson, "python/asv/kinds.json"),
+            (
+                Adapter::KotlinKotlinx,
+                "kotlin/kotlinx/params_linuxX64.json",
+            ),
         ] {
             let results = std::fs::read_to_string(format!("./tool_output/{suffix}"))
                 .expect("Failed to read test file");
@@ -253,6 +267,51 @@ mod test_results_array {
             assert!(
                 matches!(error, AdapterError::Convert(_)),
                 "expected the convert error for {adapter} at version {bmf_version}: {error}"
+            );
+        }
+    }
+
+    /// A JMH-shaped report with no `jmhVersion` is refused at version 1 with its writer named,
+    /// under `java_jmh` and the nodes that try it, and under no other adapter or version.
+    ///
+    /// Kills: the named refusal under `java_jmh` alone, under every adapter, or at version 0,
+    /// whose tree reads as it always has.
+    #[test]
+    fn results_array_java_jmh_names_a_lookalike() {
+        let read = |suffix: &str| {
+            std::fs::read_to_string(format!("./tool_output/{suffix}"))
+                .expect("Failed to read test file")
+        };
+        let kotlinx = read("kotlin/kotlinx/params_linuxX64.json");
+        let swift = read("swift/benchmark/jmh_insert.json");
+        for (results, adapter, expected) in [
+            (&kotlinx, Adapter::JavaJmh, JmhLookalike::Kotlinx),
+            (&swift, Adapter::JavaJmh, JmhLookalike::SwiftBenchmark),
+            (&swift, Adapter::Java, JmhLookalike::SwiftBenchmark),
+            (&swift, Adapter::Magic, JmhLookalike::SwiftBenchmark),
+        ] {
+            let error = new_at(results, adapter, BmfVersion::V1);
+            assert!(
+                matches!(error, AdapterError::JmhLookalike(writer) if writer == expected),
+                "{adapter}: {error}"
+            );
+        }
+        for (results, adapter, bmf_version) in [
+            (&kotlinx, Adapter::JavaJmh, BmfVersion::V0),
+            (&swift, Adapter::JavaJmh, BmfVersion::V0),
+            (&swift, Adapter::Magic, BmfVersion::V0),
+            (&swift, Adapter::Rust, BmfVersion::V1),
+            (&swift, Adapter::CSharpDotNet, BmfVersion::V1),
+        ] {
+            let refused = AdapterResultsArray::new(
+                &[results.as_str()],
+                adapter,
+                Settings::new(None, bmf_version),
+            )
+            .err();
+            assert!(
+                !matches!(refused, Some(AdapterError::JmhLookalike(_))),
+                "{adapter} at version {bmf_version}"
             );
         }
     }

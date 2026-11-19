@@ -54,6 +54,8 @@ export const adapterName = (adapter: Adapter): string => {
 			return "mitata";
 		case Adapter.JsTinybench:
 			return "tinybench";
+		case Adapter.KotlinKotlinx:
+			return "kotlinx-benchmark";
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:
@@ -117,6 +119,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.JsMitata:
 		case Adapter.JsTinybench:
 			return `bencher run${host} "node bench.mjs"`;
+		case Adapter.KotlinKotlinx:
+			return `bencher run${host} --file results.json "rm -rf build/reports/benchmarks && ./gradlew jsBenchmark && cp build/reports/benchmarks/main/*/js.json results.json"`;
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:

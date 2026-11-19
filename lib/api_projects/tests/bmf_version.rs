@@ -567,6 +567,87 @@ async fn report_version_1_only_adapter_refuses_version_0() {
     server.close().await;
 }
 
+/// kotlinx-benchmark's report for a Native target, which only a version 1 leaf reads.
+const KOTLINX: &str =
+    include_str!("../../bencher_adapter/tool_output/kotlin/kotlinx/params_linuxX64.json");
+/// Swift package-benchmark's JMH export, which no leaf reads.
+const SWIFT_JMH: &str =
+    include_str!("../../bencher_adapter/tool_output/swift/benchmark/jmh_insert.json");
+
+/// kotlinx-benchmark refuses a version 0 project by name, and lands once the project is at
+/// version 1.
+///
+/// Kills: kotlinx-benchmark given a version 0 parser, or left to the generic adapter 400.
+#[tokio::test]
+async fn report_kotlinx_refuses_version_0() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "kotlinxv1only").await;
+    let post = || Post {
+        results: vec![KOTLINX],
+        adapter: Some("kotlin_kotlinx"),
+        ..Post::default()
+    };
+
+    let body = refused(&server, &fixture, post()).await;
+    assert!(
+        body.contains(
+            "`kotlin_kotlinx` reads results at BMF version 1 only, and this project is at BMF version 0."
+        ),
+        "{body}"
+    );
+
+    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+    let landed = report(&server, &fixture, post()).await;
+    assert_eq!(iterations(&landed), 1, "{landed}");
+
+    server.close().await;
+}
+
+/// `java_jmh` refuses a JMH-shaped report that no benchmark of it names its JMH version with a
+/// 400 that names the adapter or format that reads it and no adapter hint, under `java_jmh` and
+/// `magic` alike.
+///
+/// Kills: the generic 400, which dumps the results and asks whether the adapter is right.
+#[tokio::test]
+async fn report_java_jmh_names_the_reader_of_a_lookalike() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "jmhlookalike").await;
+    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+
+    for (results, adapter, expected) in [
+        (
+            KOTLINX,
+            Some("java_jmh"),
+            "`java_jmh` reads JMH 1.19 or later, and these results are a kotlinx-benchmark report: read it with `kotlin_kotlinx`",
+        ),
+        (
+            SWIFT_JMH,
+            Some("java_jmh"),
+            "`java_jmh` reads JMH 1.19 or later, and these results are a Swift package-benchmark JMH export: run the benchmarks with `--format influx` and read that with `swift_benchmark`",
+        ),
+        (
+            SWIFT_JMH,
+            None,
+            "these results are a Swift package-benchmark JMH export",
+        ),
+    ] {
+        let body = refused(
+            &server,
+            &fixture,
+            Post {
+                results: vec![results],
+                adapter,
+                ..Post::default()
+            },
+        )
+        .await;
+        assert!(body.contains(expected), "{adapter:?}: {body}");
+        assert!(!body.contains("right adapter"), "{adapter:?}: {body}");
+    }
+
+    server.close().await;
+}
+
 /// An adapter with a version 0 tree that does not claim the output keeps the generic 400
 /// at version 0, with its adapter hint.
 ///

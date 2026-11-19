@@ -1,0 +1,378 @@
+[
+  {
+    "benchmark" : "test.ParamBenchmark.mathBenchmark",
+    "mode" : "thrpt",
+    "compilationMode": "Production",
+    "configurationName" : "params",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          "data" : "1",
+          "value" : "2",
+          "text" : "a \"string\" with quotes"
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 61360.11676451003,
+       "scoreError": 3090.5306811056616,
+       "scoreConfidence" : [
+          58269.58608340437,
+          64450.64744561569
+       ],
+       "scorePercentiles" : {
+          "0.00" : 58601.19024856373,
+          "25.00" : 58601.19024856373,
+          "50.00" : 61416.6472875171,
+          "75.00" : 64062.51275744925,
+          "90.00" : 64062.51275744925,
+          "99.00" : 64062.51275744925,
+          "99.90" : 64062.51275744925,
+          "99.99" : 64062.51275744925,
+          "100.00" : 64062.51275744925
+       },
+       "scoreUnit" : "ops/ms",
+       "rawData" : [
+           [
+             64062.51275744925,
+             61416.6472875171,
+             58601.19024856373
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.ParamBenchmark.mathBenchmark",
+    "mode" : "thrpt",
+    "compilationMode": "Production",
+    "configurationName" : "params",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          "data" : "8",
+          "value" : "2",
+          "text" : "a \"string\" with quotes"
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 43753.94216437531,
+       "scoreError": 1301.6248394400902,
+       "scoreConfidence" : [
+          42452.31732493522,
+          45055.5670038154
+       ],
+       "scorePercentiles" : {
+          "0.00" : 42703.44683783479,
+          "25.00" : 42703.44683783479,
+          "50.00" : 43575.337273610356,
+          "75.00" : 44983.04238168079,
+          "90.00" : 44983.04238168079,
+          "99.00" : 44983.04238168079,
+          "99.90" : 44983.04238168079,
+          "99.99" : 44983.04238168079,
+          "100.00" : 44983.04238168079
+       },
+       "scoreUnit" : "ops/ms",
+       "rawData" : [
+           [
+             43575.337273610356,
+             44983.04238168079,
+             42703.44683783479
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.ParamBenchmark.mathBenchmark",
+    "mode" : "thrpt",
+    "compilationMode": "Production",
+    "configurationName" : "params",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          "data" : "1",
+          "value" : "2",
+          "text" : "plain"
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 64656.17527986758,
+       "scoreError": 4028.2355506912004,
+       "scoreConfidence" : [
+          60627.93972917638,
+          68684.41083055879
+       ],
+       "scorePercentiles" : {
+          "0.00" : 61295.763668684194,
+          "25.00" : 61295.763668684194,
+          "50.00" : 64286.37121472404,
+          "75.00" : 68386.39095619453,
+          "90.00" : 68386.39095619453,
+          "99.00" : 68386.39095619453,
+          "99.90" : 68386.39095619453,
+          "99.99" : 68386.39095619453,
+          "100.00" : 68386.39095619453
+       },
+       "scoreUnit" : "ops/ms",
+       "rawData" : [
+           [
+             64286.37121472404,
+             61295.763668684194,
+             68386.39095619453
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.ParamBenchmark.mathBenchmark",
+    "mode" : "thrpt",
+    "compilationMode": "Production",
+    "configurationName" : "params",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          "data" : "8",
+          "value" : "2",
+          "text" : "plain"
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 43015.236617790615,
+       "scoreError": 1332.0686472486245,
+       "scoreConfidence" : [
+          41683.16797054199,
+          44347.30526503924
+       ],
+       "scorePercentiles" : {
+          "0.00" : 41999.71676267353,
+          "25.00" : 41999.71676267353,
+          "50.00" : 42740.55320693573,
+          "75.00" : 44305.43988376259,
+          "90.00" : 44305.43988376259,
+          "99.00" : 44305.43988376259,
+          "99.90" : 44305.43988376259,
+          "99.99" : 44305.43988376259,
+          "100.00" : 44305.43988376259
+       },
+       "scoreUnit" : "ops/ms",
+       "rawData" : [
+           [
+             42740.55320693573,
+             41999.71676267353,
+             44305.43988376259
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.ParamBenchmark.textLength",
+    "mode" : "thrpt",
+    "compilationMode": "Production",
+    "configurationName" : "params",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          "data" : "1",
+          "value" : "2",
+          "text" : "a \"string\" with quotes"
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 104386.52064679789,
+       "scoreError": 4651.554560072628,
+       "scoreConfidence" : [
+          99734.96608672525,
+          109038.07520687052
+       ],
+       "scorePercentiles" : {
+          "0.00" : 99663.43366813048,
+          "25.00" : 99663.43366813048,
+          "50.00" : 106340.42267628854,
+          "75.00" : 107155.7055959746,
+          "90.00" : 107155.7055959746,
+          "99.00" : 107155.7055959746,
+          "99.90" : 107155.7055959746,
+          "99.99" : 107155.7055959746,
+          "100.00" : 107155.7055959746
+       },
+       "scoreUnit" : "ops/ms",
+       "rawData" : [
+           [
+             106340.42267628854,
+             107155.7055959746,
+             99663.43366813048
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.ParamBenchmark.textLength",
+    "mode" : "thrpt",
+    "compilationMode": "Production",
+    "configurationName" : "params",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          "data" : "8",
+          "value" : "2",
+          "text" : "a \"string\" with quotes"
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 101639.57213861309,
+       "scoreError": 1125.7368157044907,
+       "scoreConfidence" : [
+          100513.8353229086,
+          102765.30895431757
+       ],
+       "scorePercentiles" : {
+          "0.00" : 100610.93869961934,
+          "25.00" : 100610.93869961934,
+          "50.00" : 101711.07092706443,
+          "75.00" : 102596.70678915546,
+          "90.00" : 102596.70678915546,
+          "99.00" : 102596.70678915546,
+          "99.90" : 102596.70678915546,
+          "99.99" : 102596.70678915546,
+          "100.00" : 102596.70678915546
+       },
+       "scoreUnit" : "ops/ms",
+       "rawData" : [
+           [
+             102596.70678915546,
+             101711.07092706443,
+             100610.93869961934
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.ParamBenchmark.textLength",
+    "mode" : "thrpt",
+    "compilationMode": "Production",
+    "configurationName" : "params",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          "data" : "1",
+          "value" : "2",
+          "text" : "plain"
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 89590.58671040321,
+       "scoreError": 86.82330970941287,
+       "scoreConfidence" : [
+          89503.76340069379,
+          89677.41002011263
+       ],
+       "scorePercentiles" : {
+          "0.00" : 89504.78891310055,
+          "25.00" : 89504.78891310055,
+          "50.00" : 89614.35742461757,
+          "75.00" : 89652.61379349147,
+          "90.00" : 89652.61379349147,
+          "99.00" : 89652.61379349147,
+          "99.90" : 89652.61379349147,
+          "99.99" : 89652.61379349147,
+          "100.00" : 89652.61379349147
+       },
+       "scoreUnit" : "ops/ms",
+       "rawData" : [
+           [
+             89504.78891310055,
+             89652.61379349147,
+             89614.35742461757
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.ParamBenchmark.textLength",
+    "mode" : "thrpt",
+    "compilationMode": "Production",
+    "configurationName" : "params",
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 3,
+    "measurementTime" : "200 ms",
+    "params" : {
+          "data" : "8",
+          "value" : "2",
+          "text" : "plain"
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 89689.66015085432,
+       "scoreError": 2905.792629269006,
+       "scoreConfidence" : [
+          86783.86752158531,
+          92595.45278012333
+       ],
+       "scorePercentiles" : {
+          "0.00" : 87546.00331825754,
+          "25.00" : 87546.00331825754,
+          "50.00" : 88987.39987970101,
+          "75.00" : 92535.57725460445,
+          "90.00" : 92535.57725460445,
+          "99.00" : 92535.57725460445,
+          "99.90" : 92535.57725460445,
+          "99.99" : 92535.57725460445,
+          "100.00" : 92535.57725460445
+       },
+       "scoreUnit" : "ops/ms",
+       "rawData" : [
+           [
+             92535.57725460445,
+             87546.00331825754,
+             88987.39987970101
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  }
+]
