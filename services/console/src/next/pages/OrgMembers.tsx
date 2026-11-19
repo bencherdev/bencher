@@ -10,18 +10,27 @@ import Truncate from "@bencherdev/ui/Truncate";
 import { useParams } from "@solidjs/router";
 import { useQueryClient } from "@tanstack/solid-query";
 import { For, Match, Show, Switch, createSignal } from "solid-js";
-import type { JsonMember, JsonOrganization } from "../../types/bencher";
+import type {
+	JsonInvite,
+	JsonMember,
+	JsonOrganization,
+} from "../../types/bencher";
 import { useAccount } from "../account/context";
 import {
 	type Roles,
 	added,
+	expires,
 	invite,
+	invitesQuery,
 	memberCount,
 	memberList,
 	removeMember,
+	resendInvite,
+	revokeInvite,
 	rolesQuery,
 	sendable,
 } from "../organization/members";
+import { formatCount } from "../plot/count";
 import type { Paged } from "../list/paged";
 import { MoreRows, Spacer } from "../list/TableRows";
 import { GAP, useKeptRows } from "../list/kept";
@@ -45,6 +54,8 @@ const OrgMembers = () => {
 	const organization = useQueryResult(() => organizationQuery(api, key()));
 	const members = memberList(api, key);
 	const roles = useQueryResult(() => rolesQuery(api, key()));
+	// Read beside the permissions, in the page's one round; only a reader who may invite sees them.
+	const invites = useQueryResult(() => invitesQuery(api, key()));
 	// Only read: an organization the reader has seen names the rail at once.
 	const bootstrap = useQueryResult(() => ({
 		...consoleUserQuery(api, reader().uuid),
@@ -52,11 +63,16 @@ const OrgMembers = () => {
 	}));
 	const name = () =>
 		organization().data?.name ?? organizationIn(bootstrap().data, key())?.name;
-	// Single sign-on is only on the organization itself, so nothing draws before it.
+	// Single sign-on is only on the organization itself, so nothing draws before it; and for a
+	// reader who may invite, the pending invites draw above the members, so nothing draws before
+	// they are in or refused.
 	const ready = () => {
 		const shown = organization().data;
 		const may = roles().data;
-		return shown && members.first().data && may
+		return shown &&
+			members.first().data &&
+			may &&
+			!(may.invite && invites().isPending)
 			? { organization: shown, roles: may }
 			: undefined;
 	};
@@ -64,6 +80,25 @@ const OrgMembers = () => {
 	const [failure, setFailure] = createSignal("");
 	const [target, setTarget] = createSignal<JsonMember>();
 	let heading: HTMLHeadingElement | undefined;
+
+	/** Make `change` to an invitation and say `done`, or why not, then list the invitations again. */
+	const changeInvite = async (
+		change: () => Promise<unknown>,
+		done: string,
+		refused: string,
+	) => {
+		setNote("");
+		setFailure("");
+		try {
+			await change();
+			setNote(done);
+		} catch (error) {
+			setFailure(failureOf(error, refused));
+		}
+		client.invalidateQueries({
+			queryKey: invitesQuery(api, key()).queryKey,
+		});
+	};
 
 	const remove = async (member: JsonMember) => {
 		setNote("");
@@ -156,11 +191,34 @@ const OrgMembers = () => {
 						<Show when={shown().roles.invite}>
 							<Invite
 								organization={key()}
-								onSent={() => {
+								onSent={(to) => {
 									setFailure("");
-									setNote("Invitation sent");
+									setNote(`Invitation sent to ${to}`);
+									client.invalidateQueries({
+										queryKey: invitesQuery(api, key()).queryKey,
+									});
 								}}
 							/>
+							<Show when={invites().data?.total}>
+								<PendingInvites
+									invites={invites().data?.invites ?? []}
+									total={invites().data?.total ?? 0}
+									onResend={(pending) =>
+										changeInvite(
+											() => resendInvite(api, key(), pending.uuid),
+											`Invitation sent to ${pending.email}`,
+											"Bencher did not send the invitation",
+										)
+									}
+									onRevoke={(pending) =>
+										changeInvite(
+											() => revokeInvite(api, key(), pending.uuid),
+											`Invitation to ${pending.email} revoked`,
+											"Not revoked",
+										)
+									}
+								/>
+							</Show>
 						</Show>
 						<MemberTable
 							members={members}
@@ -218,7 +276,10 @@ const OrgMembers = () => {
 
 export default OrgMembers;
 
-const Invite = (props: { organization: string; onSent: () => void }) => {
+const Invite = (props: {
+	organization: string;
+	onSent: (email: string) => void;
+}) => {
 	const { api } = useAccount();
 	const [email, setEmail] = createSignal("");
 	const [sending, setSending] = createSignal(false);
@@ -231,7 +292,7 @@ const Invite = (props: { organization: string; onSent: () => void }) => {
 		try {
 			await invite(api, props.organization, to);
 			setEmail("");
-			props.onSent();
+			props.onSent(to);
 			// Send invite disables itself once the field is empty.
 			input?.focus();
 		} catch (error) {
@@ -292,6 +353,101 @@ const Invite = (props: { organization: string; onSent: () => void }) => {
 				</Show>
 			</div>
 		</form>
+	);
+};
+
+/** Each invitation not yet accepted, with who sent it and when it stops working, to send again or end. */
+const PendingInvites = (props: {
+	invites: JsonInvite[];
+	total: number;
+	onResend: (pending: JsonInvite) => Promise<void>;
+	onRevoke: (pending: JsonInvite) => Promise<void>;
+}) => {
+	const [busy, setBusy] = createSignal(false);
+	const act = (change: () => Promise<void>) => {
+		setBusy(true);
+		change().finally(() => setBusy(false));
+	};
+	return (
+		<section class="setcard" aria-labelledby="sec-pending">
+			<div class="setcard-head">
+				<div class="toolbar">
+					<h2 class="seclabel" id="sec-pending">
+						Pending invites
+					</h2>
+					<span class="muted sm">{formatCount(props.total)}</span>
+				</div>
+			</div>
+			<Table fold={369} aria-label="Pending invites">
+				<thead>
+					<tr>
+						<th scope="col">Email</th>
+						<th scope="col">Invited by</th>
+						<th scope="col">Expires</th>
+						<th scope="col">
+							<span class="sr-only">Actions</span>
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+					<For each={props.invites}>
+						{(pending) => {
+							const expiry = expires(pending.expiration, Date.now());
+							return (
+								<tr>
+									<td data-fold="l1" class="wide ui-table-name">
+										<span class="ui-parts">
+											<b>
+												<Truncate text={pending.email} reveal />
+											</b>
+										</span>
+									</td>
+									<td data-fold="l2" class="muted ui-table-name">
+										<span class="ui-parts">
+											<span class="ui-fold-label">Invited by </span>
+											<Truncate text={pending.inviter.name} reveal />
+										</span>
+									</td>
+									<td data-fold="n2">
+										<Show
+											when={expiry.expired}
+											fallback={
+												<>
+													<span class="ui-fold-label">Expires </span>
+													{expiry.text}
+												</>
+											}
+										>
+											<span class="faint">{expiry.text}</span>
+										</Show>
+									</td>
+									<td data-fold="act" class="act two">
+										<button
+											type="button"
+											class="lnk"
+											disabled={busy()}
+											aria-label={`Resend the invitation to ${pending.email}`}
+											onClick={() => act(() => props.onResend(pending))}
+										>
+											Resend
+										</button>
+										<button
+											type="button"
+											class="lnk danger"
+											disabled={busy()}
+											aria-label={`Revoke the invitation to ${pending.email}`}
+											onClick={() => act(() => props.onRevoke(pending))}
+										>
+											Revoke
+										</button>
+									</td>
+								</tr>
+							);
+						}}
+					</For>
+				</tbody>
+			</Table>
+		</section>
 	);
 };
 

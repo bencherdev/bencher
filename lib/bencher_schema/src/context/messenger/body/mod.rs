@@ -4,7 +4,7 @@ mod runner_status;
 mod server_stats;
 mod sign_in;
 
-pub use button::ButtonBody;
+pub use button::{ButtonBody, Clipboard};
 pub use new_user::NewUserBody;
 #[cfg(feature = "plus")]
 pub use runner_status::RunnerStatusBody;

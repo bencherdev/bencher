@@ -9,6 +9,8 @@ import AuthReturn from "./AuthReturn.astro";
 import { takeAuthReturn } from "./authReturn";
 import GitHubReturn from "./GitHubReturn.astro";
 import { takeGitHubReturn } from "./githubReturn";
+import InviteReturn from "./InviteReturn.astro";
+import { takeInvite } from "./inviteReturn";
 import Landing from "./Landing.astro";
 import NextHead from "./NextHead.astro";
 import Shortcut from "./Shortcut.astro";
@@ -248,6 +250,51 @@ describe("AuthReturn", () => {
 			expect(replaced).toEqual([new URL(url).pathname]);
 			expect(takeAuthReturn(memory)).toEqual({ ...none, ...kept });
 			expect(takeAuthReturn(memory)).toEqual(none);
+		}
+	});
+});
+
+describe("InviteReturn", () => {
+	/** The door's first script, run on a page at `url`. */
+	const land = async (url: string) => {
+		const page = new Window().document;
+		page.body.innerHTML = await container.renderToString(InviteReturn);
+		const source = page.querySelector("script")?.textContent ?? "";
+		const { pathname, search, hash } = new URL(url);
+		const replaced: string[] = [];
+		const memory = {};
+		new Function("window", "location", "history", source)(
+			memory,
+			{ pathname, search, hash },
+			{
+				state: null,
+				replaceState: (_state: unknown, _title: string, to: string) =>
+					replaced.push(to),
+			},
+		);
+		return { replaced, memory };
+	};
+
+	// Kills an invitation's secret left in the address for history, a report,
+	// or a later script to read; a door that drops what the rest of its address
+	// carries; one that drops the secret, or keeps it once taken; and one that
+	// rewrites an address that carries no invitation.
+	test("an invitation's secret leaves the address at once, for the page alone", async () => {
+		const { replaced, memory } = await land(
+			"https://bencher.dev/auth/login?claim=c1a1d&back=Lw#invite=s3cr3t",
+		);
+		expect(replaced).toEqual(["/auth/login?claim=c1a1d&back=Lw"]);
+		expect(takeInvite(memory)).toBe("s3cr3t");
+		expect(takeInvite(memory)).toBeUndefined();
+
+		for (const url of [
+			"https://bencher.dev/auth/login",
+			"https://bencher.dev/auth/login?invite=a.b.c",
+			"https://bencher.dev/auth/login#top",
+		]) {
+			const { replaced, memory } = await land(url);
+			expect(replaced, url).toEqual([]);
+			expect(takeInvite(memory), url).toBeUndefined();
 		}
 	});
 });

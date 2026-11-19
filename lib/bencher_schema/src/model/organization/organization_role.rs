@@ -1,16 +1,14 @@
 use bencher_json::{
-    DateTime, Jwt, OrganizationUuid,
+    DateTime,
     organization::{OrganizationPermission, member::OrganizationRole},
 };
-use bencher_token::TokenKey;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
 
-use super::{OrganizationId, QueryOrganization};
+use super::OrganizationId;
 use crate::{
     context::DbConnection,
-    error::unauthorized_error,
-    model::user::{QueryUser, UserId},
+    model::user::UserId,
     resource_conflict_err, resource_not_found_err,
     schema::{self, organization_role as organization_role_table},
 };
@@ -84,53 +82,12 @@ pub struct InsertOrganizationRole {
 }
 
 impl InsertOrganizationRole {
-    pub fn from_jwt(
-        conn: &mut DbConnection,
-        token_key: &TokenKey,
-        invite: &Jwt,
-        user_id: UserId,
-    ) -> Result<Self, HttpError> {
-        let (organization_uuid, role) = Self::validate_invite(conn, token_key, invite, user_id)?;
-        let timestamp = DateTime::now();
-        Ok(Self {
-            user_id,
-            organization_id: QueryOrganization::get_id(conn, organization_uuid)?,
-            role,
-            created: timestamp,
-            modified: timestamp,
-        })
-    }
-
     pub fn insert(&self, conn: &mut DbConnection) -> Result<(), HttpError> {
         diesel::insert_into(schema::organization_role::table)
             .values(self)
             .execute(conn)
             .map(|_inserted| ())
             .map_err(resource_conflict_err!(OrganizationRole, self))
-    }
-
-    /// The organization and role an invite offers, once it is valid and its email is the user's.
-    pub fn validate_invite(
-        conn: &mut DbConnection,
-        token_key: &TokenKey,
-        invite: &Jwt,
-        user_id: UserId,
-    ) -> Result<(OrganizationUuid, OrganizationRole), HttpError> {
-        // Validate the invite JWT
-        let claims = token_key
-            .validate_invite(invite)
-            .map_err(unauthorized_error)?;
-
-        let email = claims.email();
-        // Make sure the email in the invite is the same as the email associated with the user
-        let email_user_id = QueryUser::get_id_from_email(conn, email)?;
-        if user_id != email_user_id {
-            return Err(unauthorized_error(format!(
-                "Invitation email ({email}) is connected to user {email_user_id} which doesn't match {user_id}"
-            )));
-        }
-
-        Ok((claims.org.uuid, claims.org.role))
     }
 }
 

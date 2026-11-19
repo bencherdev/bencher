@@ -1,14 +1,18 @@
 use bencher_json::{
-    DateTime, Email, JsonConfirm, JsonNewOrganization, JsonNewProject, JsonNewUserKey,
-    JsonOrganization, JsonProject, JsonSignup, JsonUserKeyCreated, OrganizationSlug,
-    OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName, SessionMethod, SessionToken, UserKey,
-    UserName, UserSlug, UserUuid, system::auth::JsonAuthUser,
+    DateTime, Email, InviteSecret, JsonConfirm, JsonNewOrganization, JsonNewProject,
+    JsonNewUserKey, JsonOrganization, JsonProject, JsonSignup, JsonUserKeyCreated,
+    OrganizationSlug, OrganizationUuid, ProjectSlug, ProjectUuid, ResourceName, SessionMethod,
+    SessionToken, UserKey, UserName, UserSlug, UserUuid, organization::member::OrganizationRole,
+    system::auth::JsonAuthUser,
 };
 #[cfg(feature = "plus")]
 use bencher_json::{JsonProjectKeyCreated, ProjectKey};
-use bencher_schema::model::user::{
-    QueryUser,
-    session::{InsertSession, cookie::SessionCookie},
+use bencher_schema::model::{
+    organization::{QueryOrganization, invite::InsertInvite},
+    user::{
+        QueryUser,
+        session::{InsertSession, cookie::SessionCookie},
+    },
 };
 use reqwest::header::{COOKIE, HeaderMap, HeaderValue};
 
@@ -170,6 +174,37 @@ impl TestServer {
             .insert(&mut conn, now)
             .expect("Failed to insert session");
         token
+    }
+
+    /// Invite `email` to the organization from `inviter` now, as an invitation makes its row, and
+    /// return the secret its link carries.
+    pub fn invite(&self, inviter: &TestUser, org: &TestOrg, email: &str) -> InviteSecret {
+        self.invite_at(inviter, org, email, self.context().clock.now())
+    }
+
+    /// [`Self::invite`] at `now`.
+    #[expect(clippy::expect_used, reason = "test helper inserting an invitation")]
+    pub fn invite_at(
+        &self,
+        inviter: &TestUser,
+        org: &TestOrg,
+        email: &str,
+        now: DateTime,
+    ) -> InviteSecret {
+        let mut conn = self.db_conn();
+        let organization_id =
+            QueryOrganization::get_id(&mut conn, org.uuid).expect("Failed to get organization ID");
+        let inviter_id = QueryUser::get_id(&mut conn, inviter.uuid).expect("Failed to get user ID");
+        let (_invite, secret) = InsertInvite::invite(
+            &mut conn,
+            organization_id,
+            email.parse().expect("Invalid email"),
+            OrganizationRole::Leader,
+            inviter_id,
+            now,
+        )
+        .expect("Failed to invite");
+        secret
     }
 
     /// Create a new organization for the given user

@@ -4,9 +4,11 @@ import type { Provider } from "./Door";
 /** Which door a sign-in began at, whose heading it keeps. */
 export type Door = "login" | "signup";
 
-/** What a sign-in carries to its proof, from the door's address. */
+/**
+ * What a sign-in carries to its proof, from the door's address, which a tab
+ * may keep: an invitation's secret never rides here.
+ */
 export interface Carry {
-	invite?: string;
 	claim?: string;
 	plan?: string;
 	authorization?: string;
@@ -50,7 +52,7 @@ export const pendingOf = (
 const PENDING_KEY = "BENCHER_PENDING_SIGN_IN";
 const PREFILL_KEY = "BENCHER_DOOR_EMAIL";
 const STARTED_KEY = "BENCHER_PROVIDER_SIGN_IN";
-const CARRIED = ["invite", "claim", "plan", "authorization"] as const;
+const CARRIED = ["claim", "plan", "authorization"] as const;
 
 type Store = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 

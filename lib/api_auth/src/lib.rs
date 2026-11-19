@@ -20,8 +20,9 @@ use schemars as _;
 #[cfg(not(feature = "plus"))]
 use serde as _;
 
-mod accept;
+mod claim;
 mod confirm;
+mod invite;
 mod login;
 pub mod oci;
 mod provider;
@@ -51,12 +52,10 @@ impl bencher_endpoint::Registrar for Api {
             api_description.register(signup::auth_signup_options)?;
             api_description.register(login::auth_login_options)?;
             api_description.register(confirm::auth_confirm_options)?;
-            api_description.register(accept::auth_accept_options)?;
         }
         api_description.register(signup::auth_signup_post)?;
         api_description.register(login::auth_login_post)?;
         api_description.register(confirm::auth_confirm_post)?;
-        api_description.register(accept::auth_accept_post)?;
 
         // Session
         if http_options {
@@ -77,6 +76,20 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(sign_in::email::auth_email_resend_post)?;
         api_description.register(sign_in::code::auth_code_post)?;
         api_description.register(sign_in::link::auth_link_post)?;
+
+        // Invitations
+        if http_options {
+            api_description.register(invite::auth_invite_options)?;
+            api_description.register(invite::auth_invite_accept_options)?;
+        }
+        api_description.register(invite::auth_invite_post)?;
+        api_description.register(invite::auth_invite_accept_post)?;
+
+        // Claims
+        if http_options {
+            api_description.register(claim::auth_claim_options)?;
+        }
+        api_description.register(claim::auth_claim_get)?;
 
         // Sign in again
         if http_options {

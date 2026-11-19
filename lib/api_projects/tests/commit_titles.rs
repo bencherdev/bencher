@@ -291,16 +291,14 @@ async fn a_new_link_and_a_reconnect_fill_their_project_at_once() {
             "octo-cat/repo".parse().expect("Invalid name"),
         )
         .expect("Failed to create a grant");
+    // A link needs a fresh sign-in, so it comes from the console in a session signed in to now.
     let response = server
         .client
         .request(
             Method::PUT,
             server.api_url(&format!("/v0/projects/{slug}/github")),
         )
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({ "grant": grant }))
         .send()
         .await

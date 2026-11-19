@@ -1,7 +1,7 @@
 use bencher_endpoint::{CorsResponse, Endpoint, Post, ResponseAccepted};
 use bencher_json::{JsonSignup, system::auth::JsonAuthAck};
 use bencher_schema::{
-    context::{ApiContext, Body, ButtonBody, Message},
+    context::{ApiContext, Body, ButtonBody, Clipboard, Message},
     error::{forbidden_error, issue_error},
     model::user::InsertUser,
     public_conn, write_conn,
@@ -29,17 +29,22 @@ pub async fn auth_signup_options(
     tags = ["auth"]
 }]
 /// When a user signs up, a new personal organization is automatically created.
-/// Except when a user signs up with an invitation, then the user is just added to the inviting organization.
+/// A sign up that carries an invitation is refused: invitations are accepted in the console.
 pub async fn auth_signup_post(
     rqctx: RequestContext<ApiContext>,
     body: TypedBody<JsonSignup>,
 ) -> Result<ResponseAccepted<JsonAuthAck>, HttpError> {
+    let json_signup = body.into_inner();
+    // Invitations are accepted only through the sign-in that proves the address.
+    if json_signup.invite.is_some() {
+        return Err(crate::invite::invalid_invite());
+    }
     let json = post_inner(
         &rqctx.log,
         rqctx.context(),
         #[cfg(feature = "plus")]
         rqctx.request.headers(),
-        body.into_inner(),
+        json_signup,
     )
     .await?;
     Ok(Post::pub_response_accepted(json))
@@ -66,9 +71,7 @@ async fn post_inner(
     )
     .await?;
 
-    let invited = json_signup.invite.is_some();
-    let insert_user =
-        InsertUser::from_json(write_conn!(context), &context.token_key, &json_signup)?;
+    let insert_user = InsertUser::from_json(write_conn!(context), &json_signup)?;
     #[cfg(feature = "plus")]
     insert_user.rate_limit_auth(context)?;
 
@@ -112,8 +115,10 @@ async fn post_inner(
                 url.into()
             })
             .unwrap_or_default(),
-        clipboard_text: "Confirmation Token".into(),
-        clipboard_target: token,
+        clipboard: Some(Clipboard {
+            text: "Confirmation Token".into(),
+            target: token,
+        }),
         #[cfg(feature = "plus")]
         post_body: authorization
             .map(|_| super::CONNECT_NOTICE.to_owned())
@@ -147,7 +152,7 @@ async fn post_inner(
         public_conn!(context),
         &context.messenger,
         &context.console_url,
-        invited,
+        false,
         "email",
     )?;
 
