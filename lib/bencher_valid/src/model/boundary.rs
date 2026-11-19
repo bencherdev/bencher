@@ -265,7 +265,7 @@ pub fn is_valid_boundary(boundary: f64) -> bool {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_percentage_boundary(boundary: f64) -> bool {
-    boundary >= 0.0
+    boundary.is_finite() && boundary >= 0.0
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -279,14 +279,17 @@ pub fn is_valid_cdf_boundary(boundary: f64) -> bool {
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub fn is_valid_iqr_boundary(boundary: f64) -> bool {
-    boundary >= 0.0
+    boundary.is_finite() && boundary >= 0.0
 }
 
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use super::{Boundary, is_valid_boundary};
+    use super::{
+        Boundary, IqrBoundary, PercentageBoundary, is_valid_boundary, is_valid_iqr_boundary,
+        is_valid_percentage_boundary,
+    };
 
     #[test]
     fn boundary() {
@@ -313,5 +316,29 @@ mod tests {
         serde_json::from_str::<Boundary>(&f64::INFINITY.to_string()).unwrap_err();
         serde_json::from_str::<Boundary>(&f64::NEG_INFINITY.to_string()).unwrap_err();
         serde_json::from_str::<Boundary>(&f64::NAN.to_string()).unwrap_err();
+    }
+
+    #[test]
+    fn percentage_boundary_rejects_non_finite() {
+        assert_eq!(true, is_valid_percentage_boundary(0.0));
+        assert_eq!(true, is_valid_percentage_boundary(5.0));
+
+        assert_eq!(false, is_valid_percentage_boundary(f64::INFINITY));
+        assert_eq!(false, is_valid_percentage_boundary(f64::NEG_INFINITY));
+        assert_eq!(false, is_valid_percentage_boundary(f64::NAN));
+        assert!(PercentageBoundary::try_from(f64::INFINITY).is_err());
+        assert!(PercentageBoundary::try_from(f64::NAN).is_err());
+    }
+
+    #[test]
+    fn iqr_boundary_rejects_non_finite() {
+        assert_eq!(true, is_valid_iqr_boundary(0.0));
+        assert_eq!(true, is_valid_iqr_boundary(2.0));
+
+        assert_eq!(false, is_valid_iqr_boundary(f64::INFINITY));
+        assert_eq!(false, is_valid_iqr_boundary(f64::NEG_INFINITY));
+        assert_eq!(false, is_valid_iqr_boundary(f64::NAN));
+        assert!(IqrBoundary::try_from(f64::INFINITY).is_err());
+        assert!(IqrBoundary::try_from(f64::NAN).is_err());
     }
 }
