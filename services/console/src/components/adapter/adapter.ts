@@ -58,6 +58,7 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.JsDeno:
 		case Adapter.JsMitata:
 		case Adapter.JsTinybench:
+		case Adapter.JsReassure:
 			return JS_ICON;
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
@@ -123,6 +124,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.JsMitata:
 		case Adapter.JsTinybench:
 			return `bencher run${host} "node bench.mjs"`;
+		case Adapter.JsReassure:
+			return `bencher run${host} --file .reassure/current.perf "npx reassure"`;
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:

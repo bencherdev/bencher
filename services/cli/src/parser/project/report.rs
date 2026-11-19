@@ -210,6 +210,8 @@ pub enum CliReportAdapter {
     JsTime,
     /// 🕸 JavaScript tinybench
     JsTinybench,
+    /// 🕸 JavaScript Reassure
+    JsReassure,
     /// 🕸 JavaScript Vitest
     JsVitest,
     /// 🐍 Python ASV

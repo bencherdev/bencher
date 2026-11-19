@@ -54,6 +54,8 @@ export const adapterName = (adapter: Adapter): string => {
 			return "mitata";
 		case Adapter.JsTinybench:
 			return "tinybench";
+		case Adapter.JsReassure:
+			return "Reassure";
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:
@@ -117,6 +119,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.JsMitata:
 		case Adapter.JsTinybench:
 			return `bencher run${host} "node bench.mjs"`;
+		case Adapter.JsReassure:
+			return `bencher run${host} --file .reassure/current.perf "npx reassure"`;
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:

@@ -454,6 +454,7 @@ fn adapter_docs(adapter: Adapter) -> (&'static str, &'static str) {
         Adapter::JsDeno => ("JavaScript Deno", "-javascript-deno"),
         Adapter::JsMitata => ("JavaScript mitata", "-javascript-mitata"),
         Adapter::JsTinybench => ("JavaScript tinybench", "-javascript-tinybench"),
+        Adapter::JsReassure => ("JavaScript Reassure", "-javascript-reassure"),
         Adapter::PythonAsv | Adapter::PythonAsvJson | Adapter::PythonAsvText => {
             ("Python ASV", "-python-asv")
         },

@@ -18,6 +18,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::JsMitata => Self::JsMitata,
             CliReportAdapter::JsTime => Self::JsTime,
             CliReportAdapter::JsTinybench => Self::JsTinybench,
+            CliReportAdapter::JsReassure => Self::JsReassure,
             CliReportAdapter::JsVitest => Self::JsVitest,
             CliReportAdapter::PythonAsv => Self::PythonAsv,
             CliReportAdapter::PythonPytest => Self::PythonPytest,

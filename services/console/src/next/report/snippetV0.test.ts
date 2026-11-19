@@ -43,6 +43,7 @@ const CLI_ADAPTERS = new Set([
 	"js_benchmark",
 	"js_deno",
 	"js_mitata",
+	"js_reassure",
 	"js_time",
 	"js_tinybench",
 	"js_vitest",

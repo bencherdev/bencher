@@ -9,7 +9,8 @@ use crate::{
             java::jmh::AdapterJavaJmhV1,
             js::{
                 benchmark::AdapterJsBenchmarkV1, deno::AdapterJsDeno, mitata::AdapterJsMitata,
-                time::AdapterJsTimeV1, tinybench::AdapterJsTinybench, vitest::AdapterJsVitestV1,
+                reassure::AdapterJsReassure, time::AdapterJsTimeV1, tinybench::AdapterJsTinybench,
+                vitest::AdapterJsVitestV1,
             },
             python::{asv::AdapterPythonAsvV1, pytest::AdapterPythonPytestV1},
             ruby::{benchmark::AdapterRubyBenchmarkV1, benchmark_ips::AdapterRubyBenchmarkIps},
@@ -26,7 +27,7 @@ use crate::{
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
 /// its structured format before its text, and Divan before criterion, since criterion's text leaf
-/// also claims a run that prints both and drops Divan's tree.
+/// also claims a run that prints both and drops Divan's tree, then each harness added after them.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -54,6 +55,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustIaiV1::parse(input, settings))
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
+            .or_else(|| AdapterJsReassure::parse(input, settings))
     }
 }
 
@@ -71,7 +73,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 31] = [
+    const LEAVES: [Adapter; 32] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -103,11 +105,12 @@ mod test_magic_v1 {
         Adapter::RustGungraunStdout,
         Adapter::ShellHyperfineV2,
         Adapter::ShellHyperfineV1,
+        Adapter::JsReassure,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 11] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 15] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -131,6 +134,11 @@ mod test_magic_v1 {
         ("rust/bench/zero.txt", None),
         // libtest ran no benchmark, and gungraun's summary is of a schema no leaf reads.
         ("rust/gungraun/json_not_v6.txt", None),
+        // Reassure's comparison of two runs, and what its command prints.
+        ("js/reassure/comparison.json", None),
+        ("js/reassure/comparison.md", None),
+        ("js/reassure/reassure_fail_stdout.txt", None),
+        ("js/reassure/stdout_current.txt", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -250,6 +258,7 @@ mod test_magic_v1 {
             "js/benchmark" => return Some(Adapter::JsBenchmark),
             "js/deno" => return Some(Adapter::JsDeno),
             "js/mitata" => return Some(Adapter::JsMitata),
+            "js/reassure" => return Some(Adapter::JsReassure),
             "js/time" => return Some(Adapter::JsTime),
             "js/tinybench" => return Some(Adapter::JsTinybench),
             "python/pytest" => return Some(Adapter::PythonPytest),
