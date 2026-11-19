@@ -206,7 +206,7 @@ pub mod mitata {
 }
 
 pub mod systems {
-    use bencher_valid::{NANOSECONDS, PERCENTAGE};
+    use bencher_valid::{BYTES, NANOSECONDS, PERCENTAGE};
 
     create_measure!(
         CompletionLatency,
@@ -245,6 +245,35 @@ pub mod systems {
         "faults"
     );
     create_measure!(IoErrors, "I/O Errors", "io-errors", "errors");
+    create_measure!(
+        BitsThroughput,
+        "Bits Throughput",
+        "bits-throughput",
+        "bits / second (b/s)"
+    );
+    create_measure!(
+        RoundTripTime,
+        "Round-Trip Time",
+        "round-trip-time",
+        NANOSECONDS
+    );
+    create_measure!(Retransmits, "Retransmits", "retransmits", "retransmits");
+    create_measure!(PacketJitter, "Packet Jitter", "packet-jitter", NANOSECONDS);
+    create_measure!(LostPackets, "Lost Packets", "lost-packets", "packets");
+    create_measure!(PacketLoss, "Packet Loss", "packet-loss", PERCENTAGE);
+    create_measure!(
+        OutOfOrderPackets,
+        "Out-of-Order Packets",
+        "out-of-order-packets",
+        "packets"
+    );
+    create_measure!(
+        CongestionWindow,
+        "Congestion Window",
+        "congestion-window",
+        BYTES
+    );
+    create_measure!(SendWindow, "Send Window", "send-window", BYTES);
 }
 
 pub mod iai {

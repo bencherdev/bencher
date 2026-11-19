@@ -783,6 +783,7 @@ export enum Adapter {
 	StorageFio = "storage_fio",
 	StorageFioJson = "storage_fio_json",
 	StorageFioText = "storage_fio_text",
+	NetworkIperf3 = "network_iperf3",
 }
 
 /** A report, with what a link to it shows: the report that raised an alert. */

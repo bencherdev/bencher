@@ -2865,6 +2865,63 @@ async fn reports_post_creates_the_fio_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the iperf3 leaf creates its new built-in measures in their
+// units
+//
+// Kills: a new built-in measure missing from the server's built-ins, which creates it in the
+// generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_iperf3_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "iperf3").await;
+    for results in [IPERF3_TCP, IPERF3_UDP_REVERSE] {
+        post_report_body(
+            &server,
+            &token,
+            &project_slug,
+            &parse_report("network_iperf3", &[results], Some(1)),
+        )
+        .await;
+    }
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any([
+            "bits-throughput",
+            "congestion-window",
+            "lost-packets",
+            "out-of-order-packets",
+            "packet-jitter",
+            "packet-loss",
+            "retransmits",
+            "round-trip-time",
+            "send-window",
+        ]))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        [
+            ("bits-throughput", "Bits Throughput", "bits / second (b/s)"),
+            ("congestion-window", "Congestion Window", "bytes (B)"),
+            ("lost-packets", "Lost Packets", "packets"),
+            ("out-of-order-packets", "Out-of-Order Packets", "packets"),
+            ("packet-jitter", "Packet Jitter", "nanoseconds (ns)"),
+            ("packet-loss", "Packet Loss", "percentage (%)"),
+            ("retransmits", "Retransmits", "retransmits"),
+            ("round-trip-time", "Round-Trip Time", "nanoseconds (ns)"),
+            ("send-window", "Send Window", "bytes (B)"),
+        ]
+        .map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
 // POST /v0/projects/{project}/reports - the benchmark prefix goes in front of every name at
 // version 1, whether a harness leaf, the user's own BMF JSON, or `magic` parsed it, and a version
 // 0 report ignores it
@@ -2929,6 +2986,9 @@ const FIO_SLAT: &str =
 const FIO_IO_ERRORS: &str = include_str!(
     "../../bencher_adapter/tool_output/storage/fio/continue_on_error_io_errors_normal.txt"
 );
+const IPERF3_TCP: &str = include_str!("../../bencher_adapter/tool_output/network/iperf3/tcp.json");
+const IPERF3_UDP_REVERSE: &str =
+    include_str!("../../bencher_adapter/tool_output/network/iperf3/udp_loss_reverse.json");
 const MITATA_COUNTERS: &str =
     include_str!("../../bencher_adapter/tool_output/js/mitata/counters.json");
 const HYPERFINE_COUNTERS: &str =

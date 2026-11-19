@@ -598,6 +598,37 @@ async fn report_fio_refuses_version_0() {
     server.close().await;
 }
 
+/// iperf3's JSON, which only a version 1 leaf reads.
+const IPERF3_JSON: &str = include_str!("../../bencher_adapter/tool_output/network/iperf3/tcp.json");
+
+/// iperf3 refuses a version 0 project by name, and lands once the project is at version 1.
+///
+/// Kills: iperf3 given a version 0 parser, or left to the generic adapter 400.
+#[tokio::test]
+async fn report_iperf3_refuses_version_0() {
+    let server = TestServer::new().await;
+    let fixture = fixture(&server, "iperf3v1only").await;
+    let post = || Post {
+        results: vec![IPERF3_JSON],
+        adapter: Some("network_iperf3"),
+        ..Post::default()
+    };
+
+    let body = refused(&server, &fixture, post()).await;
+    assert!(
+        body.contains(
+            "`network_iperf3` reads results at BMF version 1 only, and this project is at BMF version 0."
+        ),
+        "{body}"
+    );
+
+    set_bmf_version(&server, &fixture, BmfVersion::V1).await;
+    let landed = report(&server, &fixture, post()).await;
+    assert_eq!(iterations(&landed), 1, "{landed}");
+
+    server.close().await;
+}
+
 /// An adapter with a version 0 tree that does not claim the output keeps the generic 400
 /// at version 0, with its adapter hint.
 ///

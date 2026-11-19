@@ -223,6 +223,7 @@ mod test_results_array {
             (Adapter::JsVitestV5, "js/vitest/v5_basic.json"),
             (Adapter::PythonAsvJson, "python/asv/kinds.json"),
             (Adapter::StorageFio, "storage/fio/randread.json"),
+            (Adapter::NetworkIperf3, "network/iperf3/tcp.json"),
         ] {
             let results = std::fs::read_to_string(format!("./tool_output/{suffix}"))
                 .expect("Failed to read test file");

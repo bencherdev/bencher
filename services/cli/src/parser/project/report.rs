@@ -237,6 +237,8 @@ pub enum CliReportAdapter {
     ShellHyperfine,
     /// 💾 Storage fio
     StorageFio,
+    /// 🌐 Network iperf3
+    NetworkIperf3,
 }
 
 /// Suggested Central Tendency (Average)
