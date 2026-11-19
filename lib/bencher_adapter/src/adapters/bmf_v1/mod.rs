@@ -8,6 +8,8 @@ use crate::{
             cpp::{
                 catch2::AdapterCppCatch2V1, catch2_text::AdapterCppCatch2Text,
                 catch2_xml::AdapterCppCatch2Xml, google::AdapterCppGoogleV1,
+                nanobench::AdapterCppNanobench, nanobench_json::AdapterCppNanobenchJson,
+                nanobench_text::AdapterCppNanobenchText,
             },
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::{AdapterGoBenchJson, AdapterGoBenchText, AdapterGoBenchV1},
@@ -96,6 +98,9 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::CppCatch2 => AdapterCppCatch2V1::parse(input, settings),
         Adapter::CppCatch2Xml => AdapterCppCatch2Xml::parse(input, settings),
         Adapter::CppCatch2Text => AdapterCppCatch2Text::parse(input, settings),
+        Adapter::CppNanobench => AdapterCppNanobench::parse(input, settings),
+        Adapter::CppNanobenchJson => AdapterCppNanobenchJson::parse(input, settings),
+        Adapter::CppNanobenchText => AdapterCppNanobenchText::parse(input, settings),
         Adapter::GoBench => AdapterGoBenchV1::parse(input, settings),
         Adapter::GoBenchJson => AdapterGoBenchJson::parse(input, settings),
         Adapter::GoBenchText => AdapterGoBenchText::parse(input, settings),
@@ -139,7 +144,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 55] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -161,6 +166,9 @@ mod test_bmf_v1 {
         Adapter::CppCatch2,
         Adapter::CppCatch2Xml,
         Adapter::CppCatch2Text,
+        Adapter::CppNanobench,
+        Adapter::CppNanobenchJson,
+        Adapter::CppNanobenchText,
         Adapter::Go,
         Adapter::GoBench,
         Adapter::GoBenchJson,

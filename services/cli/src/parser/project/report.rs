@@ -194,6 +194,8 @@ pub enum CliReportAdapter {
     CppCatch2,
     /// ➕ C++ Google
     CppGoogle,
+    /// ➕ C++ nanobench
+    CppNanobench,
     /// 🎯 Dart `benchmark_harness`
     DartBenchmarkHarness,
     /// 🕳 Go Bench

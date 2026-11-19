@@ -39,6 +39,9 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.CppCatch2:
 		case Adapter.CppCatch2Xml:
 		case Adapter.CppCatch2Text:
+		case Adapter.CppNanobench:
+		case Adapter.CppNanobenchJson:
+		case Adapter.CppNanobenchText:
 			return CPP_ICON;
 		case Adapter.DartBenchmarkHarness:
 			return DART_ICON;
@@ -100,6 +103,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.CppCatch2Xml:
 		case Adapter.CppCatch2Text:
 			return `bencher run${host} "make benchmarks"`;
+		case Adapter.CppNanobench:
+		case Adapter.CppNanobenchJson:
+		case Adapter.CppNanobenchText:
+			return `bencher run${host} "./benchmarks"`;
 		case Adapter.DartBenchmarkHarness:
 			return `bencher run${host} --adapter dart_benchmark_harness "dart run benchmark/benchmark.dart"`;
 		case Adapter.GoBench:

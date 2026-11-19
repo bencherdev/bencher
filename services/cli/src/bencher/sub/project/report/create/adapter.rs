@@ -10,6 +10,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::CSharpDotNet => Self::CSharpDotNet,
             CliReportAdapter::CppCatch2 => Self::CppCatch2,
             CliReportAdapter::CppGoogle => Self::CppGoogle,
+            CliReportAdapter::CppNanobench => Self::CppNanobench,
             CliReportAdapter::DartBenchmarkHarness => Self::DartBenchmarkHarness,
             CliReportAdapter::GoBench => Self::GoBench,
             CliReportAdapter::JavaJmh => Self::JavaJmh,

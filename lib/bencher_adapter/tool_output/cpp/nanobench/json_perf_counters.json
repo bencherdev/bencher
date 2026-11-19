@@ -1,0 +1,418 @@
+{
+    "results": [
+        {
+            "title": "Containers",
+            "name": "std::set insert",
+            "unit": "insert",
+            "batch": 1,
+            "complexityN": -1,
+            "epochs": 11,
+            "clockResolution": 2e-08,
+            "clockResolutionMultiple": 1000,
+            "maxEpochTime": 0.1,
+            "minEpochTime": 0.001,
+            "minEpochIterations": 1,
+            "epochIterations": 0,
+            "warmup": 10,
+            "relative": 1,
+            "median(elapsed)": 7.82883446549875e-08,
+            "medianAbsolutePercentError(elapsed)": 0.194764224059794,
+            "median(instructions)": 562.307551766139,
+            "medianAbsolutePercentError(instructions)": 0.0170408577121809,
+            "median(cpucycles)": 334.346323441783,
+            "median(contextswitches)": 0,
+            "median(pagefaults)": 0.0117297698589458,
+            "median(branchinstructions)": 104.299160914873,
+            "median(branchmisses)": 0.609576837416481,
+            "totalTime": 0.013886966,
+            "measurements": [
+                {
+                    "iterations": 21785,
+                    "elapsed": 7.26984622446638e-08,
+                    "pagefaults": 0.0117512049575396,
+                    "cpucycles": 308.274500803305,
+                    "contextswitches": 0,
+                    "instructions": 524.794767041542,
+                    "branchinstructions": 99.6154693596511,
+                    "branchmisses": 0.576773008951113
+                },
+                {
+                    "iterations": 14144,
+                    "elapsed": 6.128125e-08,
+                    "pagefaults": 0.0117364253393665,
+                    "cpucycles": 254.648684954751,
+                    "contextswitches": 0,
+                    "instructions": 540.056136877828,
+                    "branchinstructions": 101.522624434389,
+                    "branchmisses": 0.579326923076923
+                },
+                {
+                    "iterations": 16782,
+                    "elapsed": 7.82883446549875e-08,
+                    "pagefaults": 0.0116791800738887,
+                    "cpucycles": 334.346323441783,
+                    "contextswitches": 0,
+                    "instructions": 547.054165176975,
+                    "branchinstructions": 102.39792634966,
+                    "branchmisses": 0.560779406506972
+                },
+                {
+                    "iterations": 14716,
+                    "elapsed": 7.33628703452025e-08,
+                    "pagefaults": 0.0117559119325904,
+                    "cpucycles": 294.777860831748,
+                    "contextswitches": 0,
+                    "instructions": 555.153302527861,
+                    "branchinstructions": 103.412612122859,
+                    "branchmisses": 0.640867083446589
+                },
+                {
+                    "iterations": 16639,
+                    "elapsed": 1.02535789410421e-07,
+                    "pagefaults": 0.0117194542941283,
+                    "cpucycles": 442.535729310656,
+                    "contextswitches": 0,
+                    "instructions": 556.064667347797,
+                    "branchinstructions": 103.52485125308,
+                    "branchmisses": 0.592884187751668
+                },
+                {
+                    "iterations": 14778,
+                    "elapsed": 6.55261875761267e-08,
+                    "pagefaults": 0.0117065908783327,
+                    "cpucycles": 273.140411422385,
+                    "contextswitches": 0,
+                    "instructions": 562.307551766139,
+                    "branchinstructions": 104.299160914873,
+                    "branchmisses": 0.610975774800379
+                },
+                {
+                    "iterations": 14132,
+                    "elapsed": 9.79260543447495e-08,
+                    "pagefaults": 0.0117463911689782,
+                    "cpucycles": 423.864845740164,
+                    "contextswitches": 0,
+                    "instructions": 564.063402207755,
+                    "branchinstructions": 104.524483441834,
+                    "branchmisses": 0.608264930653835
+                },
+                {
+                    "iterations": 14633,
+                    "elapsed": 9.72398687897219e-08,
+                    "pagefaults": 0.0116859153967061,
+                    "cpucycles": 418.684001913483,
+                    "contextswitches": 0,
+                    "instructions": 568.239458757603,
+                    "branchinstructions": 105.045786919975,
+                    "branchmisses": 0.624478917515205
+                },
+                {
+                    "iterations": 13470,
+                    "elapsed": 9.85958426132146e-08,
+                    "pagefaults": 0.0117297698589458,
+                    "cpucycles": 426.481662954714,
+                    "contextswitches": 0,
+                    "instructions": 572.064439495174,
+                    "branchinstructions": 105.524721603563,
+                    "branchmisses": 0.609576837416481
+                },
+                {
+                    "iterations": 12437,
+                    "elapsed": 6.89723405966069e-08,
+                    "pagefaults": 0.0117391653935837,
+                    "cpucycles": 290.846425986974,
+                    "contextswitches": 0,
+                    "instructions": 572.111200450269,
+                    "branchinstructions": 105.535498914529,
+                    "branchmisses": 0.675725657312857
+                },
+                {
+                    "iterations": 14282,
+                    "elapsed": 9.63372776922e-08,
+                    "pagefaults": 0.0116930401904495,
+                    "cpucycles": 403.466811370956,
+                    "contextswitches": 0,
+                    "instructions": 572.055874527377,
+                    "branchinstructions": 105.522615880129,
+                    "branchmisses": 0.668043691359753
+                }
+            ]
+        },
+        {
+            "title": "Containers",
+            "name": "std::vector push_back x1000",
+            "unit": "insert",
+            "batch": 1000,
+            "complexityN": -1,
+            "epochs": 11,
+            "clockResolution": 2e-08,
+            "clockResolutionMultiple": 1000,
+            "maxEpochTime": 0.1,
+            "minEpochTime": 0.001,
+            "minEpochIterations": 1,
+            "epochIterations": 0,
+            "warmup": 10,
+            "relative": 1,
+            "median(elapsed)": 4.37372590108969e-07,
+            "medianAbsolutePercentError(elapsed)": 0.0289873201706686,
+            "median(instructions)": 10004.0027418723,
+            "medianAbsolutePercentError(instructions)": 3.50341095544846e-08,
+            "median(cpucycles)": 1951.86750405186,
+            "median(contextswitches)": 0,
+            "median(pagefaults)": 0,
+            "median(branchinstructions)": 2663.00039169604,
+            "median(branchmisses)": 4.36680560818492,
+            "totalTime": 0.011889739,
+            "measurements": [
+                {
+                    "iterations": 2386,
+                    "elapsed": 4.37372590108969e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 2016.53981559095,
+                    "contextswitches": 0,
+                    "instructions": 10004.0025146689,
+                    "branchinstructions": 2663,
+                    "branchmisses": 4.13118189438391
+                },
+                {
+                    "iterations": 2351,
+                    "elapsed": 4.75204168438962e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 2184.52233092301,
+                    "contextswitches": 0,
+                    "instructions": 10004.1237771161,
+                    "branchinstructions": 2663.02764780944,
+                    "branchmisses": 4.28796256911952
+                },
+                {
+                    "iterations": 2509,
+                    "elapsed": 5.16587086488641e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 2389.96851335193,
+                    "contextswitches": 0,
+                    "instructions": 10004.002391391,
+                    "branchinstructions": 2663,
+                    "branchmisses": 4.72259864487844
+                },
+                {
+                    "iterations": 2203,
+                    "elapsed": 4.39181116659101e-07,
+                    "pagefaults": 0.000453926463912846,
+                    "cpucycles": 2025.91783931003,
+                    "contextswitches": 0,
+                    "instructions": 10004.2555605992,
+                    "branchinstructions": 2663.05492510213,
+                    "branchmisses": 5.13935542442124
+                },
+                {
+                    "iterations": 2553,
+                    "elapsed": 4.32696827262045e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 1930.9616137877,
+                    "contextswitches": 0,
+                    "instructions": 10004.0027418723,
+                    "branchinstructions": 2663.00039169604,
+                    "branchmisses": 5.05718762240501
+                },
+                {
+                    "iterations": 2499,
+                    "elapsed": 4.12983193277311e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 1834.4593837535,
+                    "contextswitches": 0,
+                    "instructions": 10004.1712685074,
+                    "branchinstructions": 2663.03721488595,
+                    "branchmisses": 4.55102040816327
+                },
+                {
+                    "iterations": 2376,
+                    "elapsed": 4.10925925925926e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 1887.92171717172,
+                    "contextswitches": 0,
+                    "instructions": 10004.0025252525,
+                    "branchinstructions": 2663,
+                    "branchmisses": 4.27272727272727
+                },
+                {
+                    "iterations": 2582,
+                    "elapsed": 4.0861347792409e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 1876.05151045701,
+                    "contextswitches": 0,
+                    "instructions": 10004.0027110767,
+                    "branchinstructions": 2663.00038729667,
+                    "branchmisses": 4.00774593338497
+                },
+                {
+                    "iterations": 2468,
+                    "elapsed": 4.34114667747164e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 1951.86750405186,
+                    "contextswitches": 0,
+                    "instructions": 10004.0024311183,
+                    "branchinstructions": 2663,
+                    "branchmisses": 4.30591572123177
+                },
+                {
+                    "iterations": 2331,
+                    "elapsed": 4.44930072930073e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 1943.58601458601,
+                    "contextswitches": 0,
+                    "instructions": 10004.1956241956,
+                    "branchinstructions": 2663.0429000429,
+                    "branchmisses": 5.08451308451308
+                },
+                {
+                    "iterations": 2639,
+                    "elapsed": 4.50429329291398e-07,
+                    "pagefaults": 0,
+                    "cpucycles": 1988.19287608943,
+                    "contextswitches": 0,
+                    "instructions": 10004.0034103827,
+                    "branchinstructions": 2663.00113679424,
+                    "branchmisses": 4.36680560818492
+                }
+            ]
+        },
+        {
+            "title": "Containers",
+            "name": "noisy | name with spaces",
+            "unit": "insert",
+            "batch": 1,
+            "complexityN": 100,
+            "epochs": 11,
+            "clockResolution": 2e-08,
+            "clockResolutionMultiple": 1000,
+            "maxEpochTime": 0.1,
+            "minEpochTime": 0.001,
+            "minEpochIterations": 1,
+            "epochIterations": 0,
+            "warmup": 10,
+            "relative": 1,
+            "median(elapsed)": 1.14854128440367e-06,
+            "medianAbsolutePercentError(elapsed)": 0.00653088468564063,
+            "median(instructions)": 13065.5096262741,
+            "medianAbsolutePercentError(instructions)": 9.08743777848933e-08,
+            "median(cpucycles)": 5221.70651013874,
+            "median(contextswitches)": 0,
+            "median(pagefaults)": 0,
+            "median(branchinstructions)": 1052.50169875425,
+            "median(branchmisses)": 3.07557502738226,
+            "totalTime": 0.012006967,
+            "measurements": [
+                {
+                    "iterations": 913,
+                    "elapsed": 1.21081708652793e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5573.96823658269,
+                    "contextswitches": 0,
+                    "instructions": 13065.5104052574,
+                    "branchinstructions": 1052.50273822563,
+                    "branchmisses": 3.07557502738226
+                },
+                {
+                    "iterations": 849,
+                    "elapsed": 1.14529328621908e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5216.91519434629,
+                    "contextswitches": 0,
+                    "instructions": 13065.5111896349,
+                    "branchinstructions": 1052.50294464075,
+                    "branchmisses": 3.05064782096584
+                },
+                {
+                    "iterations": 971,
+                    "elapsed": 1.19075592173017e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5218.24201853759,
+                    "contextswitches": 0,
+                    "instructions": 13065.5108135942,
+                    "branchinstructions": 1052.50360453141,
+                    "branchmisses": 3.09783728115345
+                },
+                {
+                    "iterations": 888,
+                    "elapsed": 1.14108896396396e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5197.37612612613,
+                    "contextswitches": 0,
+                    "instructions": 13065.5067567568,
+                    "branchinstructions": 1052.50112612613,
+                    "branchmisses": 3.01463963963964
+                },
+                {
+                    "iterations": 1019,
+                    "elapsed": 1.17839156035329e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5297.38959764475,
+                    "contextswitches": 0,
+                    "instructions": 13065.5083415113,
+                    "branchinstructions": 1052.5014720314,
+                    "branchmisses": 3.15603532875368
+                },
+                {
+                    "iterations": 981,
+                    "elapsed": 1.14854128440367e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5273.8501529052,
+                    "contextswitches": 0,
+                    "instructions": 13065.5086646279,
+                    "branchinstructions": 1052.50152905199,
+                    "branchmisses": 3.08664627930683
+                },
+                {
+                    "iterations": 919,
+                    "elapsed": 1.15048095756257e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5209.45593035909,
+                    "contextswitches": 0,
+                    "instructions": 13065.5103373232,
+                    "branchinstructions": 1052.5027203482,
+                    "branchmisses": 3.05005440696409
+                },
+                {
+                    "iterations": 988,
+                    "elapsed": 1.13406882591093e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5202.81578947368,
+                    "contextswitches": 0,
+                    "instructions": 13065.5060728745,
+                    "branchinstructions": 1052.50101214575,
+                    "branchmisses": 3.01821862348178
+                },
+                {
+                    "iterations": 937,
+                    "elapsed": 1.16957524012807e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5221.70651013874,
+                    "contextswitches": 0,
+                    "instructions": 13065.5101387407,
+                    "branchinstructions": 1052.50266808965,
+                    "branchmisses": 3.06189967982924
+                },
+                {
+                    "iterations": 883,
+                    "elapsed": 1.14795809739524e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5268.75877689694,
+                    "contextswitches": 0,
+                    "instructions": 13065.5096262741,
+                    "branchinstructions": 1052.50169875425,
+                    "branchmisses": 3.09286523216308
+                },
+                {
+                    "iterations": 1002,
+                    "elapsed": 1.1425499001996e-06,
+                    "pagefaults": 0,
+                    "cpucycles": 5267.29441117765,
+                    "contextswitches": 0,
+                    "instructions": 13065.505988024,
+                    "branchinstructions": 1052.50099800399,
+                    "branchmisses": 3.07984031936128
+                }
+            ]
+        }
+    ]
+}

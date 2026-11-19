@@ -1,0 +1,42 @@
+{
+    "results": [
+        {
+            "title": "benchmark",
+            "name": "Base58Encode",
+            "unit": "byte",
+            "batch": 32,
+            "complexityN": -1,
+            "epochs": 1,
+            "clockResolution": 2e-08,
+            "clockResolutionMultiple": 1000,
+            "maxEpochTime": 0.1,
+            "minEpochTime": 0.01,
+            "minEpochIterations": 1,
+            "epochIterations": 1,
+            "warmup": 0,
+            "relative": 0,
+            "median(elapsed)": 9.034e-06,
+            "medianAbsolutePercentError(elapsed)": 0,
+            "median(instructions)": 17014,
+            "medianAbsolutePercentError(instructions)": 0,
+            "median(cpucycles)": 19357,
+            "median(contextswitches)": 0,
+            "median(pagefaults)": 1,
+            "median(branchinstructions)": 1868,
+            "median(branchmisses)": 94,
+            "totalTime": 9.034e-06,
+            "measurements": [
+                {
+                    "iterations": 1,
+                    "elapsed": 9.034e-06,
+                    "pagefaults": 1,
+                    "cpucycles": 19357,
+                    "contextswitches": 0,
+                    "instructions": 17014,
+                    "branchinstructions": 1868,
+                    "branchmisses": 94
+                }
+            ]
+        }
+    ]
+}
