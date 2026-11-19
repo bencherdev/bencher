@@ -99,6 +99,11 @@ async fn blob_upload_start_claim_of_an_organization_claimed_meanwhile_conflicts(
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     assert!(body.contains("DENIED"), "{body}");
     assert!(body.contains("has already been claimed"), "{body}");
+    assert_eq!(
+        server.project_organization_roles(slug),
+        0,
+        "the refused claim wrote a role"
+    );
 }
 
 // POST /v2/{name}/blobs/uploads - Start upload with no Bearer token → 401

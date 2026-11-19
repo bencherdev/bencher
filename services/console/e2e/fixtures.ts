@@ -11,6 +11,8 @@ import {
 	type Request,
 } from "@playwright/test";
 import type { JsonUser } from "../src/types/bencher";
+import { whileBusy } from "./busy";
+import { strayToApi } from "./origin";
 
 interface SeedProject {
 	uuid: string;
@@ -178,9 +180,12 @@ const setProved = (session: string, seconds: number) => {
 	const db = new DatabaseSync(seed.db);
 	try {
 		db.exec("PRAGMA busy_timeout = 10000");
-		db.prepare("UPDATE session SET proved = ? WHERE token_hash = ?").run(
-			Math.floor(Date.now() / 1_000) - seconds,
-			createHash("sha256").update(session).digest("hex"),
+		const prove = db.prepare(
+			"UPDATE session SET proved = ? WHERE token_hash = ?",
+		);
+		const tokenHash = createHash("sha256").update(session).digest("hex");
+		whileBusy(() =>
+			prove.run(Math.floor(Date.now() / 1_000) - seconds, tokenHash),
 		);
 	} finally {
 		db.close();
@@ -359,7 +364,7 @@ const watchOrigin = (context: BrowserContext, strays: string[]) => {
 	context.on("request", (request) => {
 		const url = new URL(request.url());
 		if (url.origin === API_ORIGIN) {
-			if (!(isTopNavigation(request) && url.pathname.startsWith("/oauth/"))) {
+			if (strayToApi(url, isTopNavigation(request))) {
 				strays.push(request.url());
 			}
 			return;

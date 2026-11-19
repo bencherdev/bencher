@@ -4,16 +4,20 @@ use rustls::crypto::aws_lc_rs;
 
 use bencher_config::DEFAULT_MAX_BODY_SIZE;
 use bencher_endpoint::Registrar as _;
+use bencher_json::{Email, EmailHash};
 use bencher_rbac::init_rbac;
 use bencher_schema::{
     ApiContext,
     context::{Database, DbConnection, Messenger, Relay},
-    model::user::sign_in::CodeKey,
-    run_migrations,
+    model::{
+        organization::OrganizationId,
+        user::sign_in::{CODE_BUDGET, CodeKey},
+    },
+    run_migrations, schema,
 };
 use bencher_token::{DEFAULT_SECRET_KEY, TokenKey};
 use diesel::{
-    Connection as _,
+    Connection as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
     connection::SimpleConnection as _,
     r2d2::{ConnectionManager, CustomizeConnection, Pool},
 };
@@ -466,6 +470,8 @@ impl TestServer {
     /// Make every organization claimed in the eyes of the API's writer connection alone.
     /// A claim counts the organization's roles on the writer, after a check that read them on
     /// another connection, so this stands in for someone else's claim landing between the two.
+    /// A role the writer still writes lands in the real table, so a caller asserts the claim's own
+    /// refusal and, with [`Self::project_organization_roles`], that no role landed.
     #[expect(clippy::expect_used, reason = "test helper changing the writer's view")]
     pub async fn claim_after_the_check(&self) {
         self.context()
@@ -477,9 +483,58 @@ impl TestServer {
                 "CREATE TEMP VIEW organization_role AS
                 SELECT 0 AS id, 0 AS user_id, id AS organization_id, 'leader' AS role,
                     0 AS created, 0 AS modified
-                FROM main.organization",
+                FROM main.organization;
+                CREATE TEMP TRIGGER organization_role_insert
+                INSTEAD OF INSERT ON organization_role
+                BEGIN
+                    INSERT INTO main.organization_role
+                        (user_id, organization_id, role, created, modified)
+                    VALUES
+                        (NEW.user_id, NEW.organization_id, NEW.role, NEW.created, NEW.modified);
+                END;",
             )
             .expect("Failed to claim every organization for the writer");
+    }
+
+    /// Spend the whole budget of wrong codes for `email`, now, in the eyes of the API's writer
+    /// connection alone. A proof checks the budget on the writer, inside its transaction, so this
+    /// stands in for wrong codes that landed after any check another connection made. It also
+    /// turns a wrong code's write of the budget on the writer into an error.
+    #[expect(clippy::expect_used, reason = "test helper changing the writer's view")]
+    pub async fn spend_code_budget_on_the_writer(&self, email: &str) {
+        let email: Email = email.parse().expect("Invalid email");
+        let email_hash = EmailHash::from(&email);
+        let now = self.context().clock.now().timestamp();
+        self.context()
+            .database
+            .connection
+            .lock()
+            .await
+            .batch_execute(&format!(
+                "CREATE TEMP VIEW wrong_code AS
+                WITH RECURSIVE spent(id) AS (
+                    SELECT 1 UNION ALL SELECT id + 1 FROM spent WHERE id < {CODE_BUDGET}
+                )
+                SELECT id, '{}' AS email_hash, {now} AS created FROM spent",
+                email_hash.as_ref()
+            ))
+            .expect("Failed to spend the budget for the writer");
+    }
+
+    /// How many roles the organization of the project `slug` holds, as the database has them.
+    #[expect(clippy::expect_used, reason = "test helper reading roles")]
+    pub fn project_organization_roles(&self, slug: &str) -> i64 {
+        let mut conn = self.db_conn();
+        let organization_id: OrganizationId = schema::project::table
+            .filter(schema::project::slug.eq(slug))
+            .select(schema::project::organization_id)
+            .first(&mut conn)
+            .expect("Failed to find the project");
+        schema::organization_role::table
+            .filter(schema::organization_role::organization_id.eq(organization_id))
+            .count()
+            .get_result(&mut conn)
+            .expect("Failed to count the roles")
     }
 
     /// Get the token key for generating test tokens

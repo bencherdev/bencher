@@ -353,6 +353,8 @@ mod tests {
     const ELSEWHERE: &str = "https://elsewhere.example/repositories/4096/installation";
     const TOKEN: &str = "installation-token-marker";
     const WEBHOOK_SECRET: &str = "webhook-secret-marker";
+    /// A state in the shape of a JWT, which the install page carries as it is.
+    const STATE: &str = "aGVhZGVy.cGF5bG9hZA.c2lnbmF0dXJl";
     const REPOSITORY_INACCESSIBLE: &str = "There is at least one repository that does not exist or is not accessible to the parent installation.";
     const PERMISSIONS_NOT_GRANTED: &str =
         "The permissions requested are not granted to this installation.";
@@ -752,7 +754,7 @@ mod tests {
     #[test]
     fn the_install_url_carries_the_state() {
         let (private_key, _public) = key_pair();
-        let state = Jwt::test_token();
+        let state: Jwt = STATE.parse().unwrap();
 
         let url = app(&private_key, None).install_url(&state);
 

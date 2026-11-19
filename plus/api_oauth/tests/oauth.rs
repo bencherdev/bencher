@@ -100,7 +100,7 @@ async fn approve_with_a_session() {
     );
     assert_eq!(authorization.expiration.timestamp(), NOW + 30 * 60);
 
-    let resp = harness.answer(uuid, true, Some(&user.token)).await;
+    let resp = harness.answer_in_session(uuid, true, &user).await;
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(header(&resp, "cache-control"), "no-store");
     assert_eq!(header(&resp, "access-control-allow-origin"), "*");
@@ -247,7 +247,7 @@ async fn loopback_redirect_uri_on_any_port() {
             resp.json().await.expect("Invalid authorization");
         assert!(authorization.redirect.loopback, "{redirect_uri}");
 
-        let resp = harness.answer(uuid, true, Some(&user.token)).await;
+        let resp = harness.answer_in_session(uuid, true, &user).await;
         let url = redirect_url(resp).await;
         assert!(
             url.as_str().starts_with(&format!("{redirect_uri}?code=")),
@@ -280,7 +280,7 @@ async fn registered_query_is_kept() {
             .authorize(&request_with(&[("redirect_uri", Some(redirect_uri))]))
             .await,
     );
-    let url = redirect_url(harness.answer(uuid, true, Some(&user.token)).await).await;
+    let url = redirect_url(harness.answer_in_session(uuid, true, &user).await).await;
     assert!(
         url.as_str().starts_with(&format!("{redirect_uri}&code=")),
         "{url}"
@@ -402,11 +402,11 @@ async fn request_is_answered_once() {
     let user = harness.server.signup("Once", "once@example.com").await;
 
     let uuid = consent_request(&harness.authorize(&request()).await);
-    let resp = harness.answer(uuid, true, Some(&user.token)).await;
+    let resp = harness.answer_in_session(uuid, true, &user).await;
     assert_eq!(resp.status(), StatusCode::OK);
     let code_hash = harness.authorization(uuid).code_hash;
     assert_eq!(
-        harness.answer(uuid, true, Some(&user.token)).await.status(),
+        harness.answer_in_session(uuid, true, &user).await.status(),
         StatusCode::CONFLICT
     );
     assert_eq!(
@@ -422,7 +422,7 @@ async fn request_is_answered_once() {
         StatusCode::OK
     );
     assert_eq!(
-        harness.answer(uuid, true, Some(&user.token)).await.status(),
+        harness.answer_in_session(uuid, true, &user).await.status(),
         StatusCode::NOT_FOUND
     );
     assert_eq!(
@@ -442,7 +442,7 @@ async fn expired_request_is_gone() {
     harness.advance(1);
     assert_eq!(harness.view(uuid).await.status(), StatusCode::NOT_FOUND);
     assert_eq!(
-        harness.answer(uuid, true, Some(&user.token)).await.status(),
+        harness.answer_in_session(uuid, true, &user).await.status(),
         StatusCode::NOT_FOUND
     );
     assert_eq!(
@@ -457,10 +457,7 @@ async fn expired_request_is_gone() {
 
     // An approved request lasts only as long as its code.
     assert_eq!(
-        harness
-            .answer(fresh, true, Some(&user.token))
-            .await
-            .status(),
+        harness.answer_in_session(fresh, true, &user).await.status(),
         StatusCode::OK
     );
     harness.advance(5 * 60 - 1);
@@ -518,15 +515,17 @@ async fn approve_needs_a_user_credential() {
         .set(schema::user::locked.eq(true))
         .execute(&mut harness.server.db_conn())
         .expect("Failed to lock the user");
-    for (bearer, status) in [
-        (user.token.as_str(), StatusCode::UNAUTHORIZED),
-        (key.as_ref(), StatusCode::UNAUTHORIZED),
-    ] {
-        assert_eq!(
-            harness.answer(uuid, true, Some(bearer)).await.status(),
-            status
-        );
-    }
+    assert_eq!(
+        harness.answer_in_session(uuid, true, &user).await.status(),
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        harness
+            .answer(uuid, true, Some(key.as_ref()))
+            .await
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
     assert!(!harness.authorization(uuid).is_answered());
 }
 
@@ -841,17 +840,14 @@ async fn pasted_key_is_charged_as_a_sign_in_attempt() {
     );
     assert_eq!(
         harness
-            .answer(second, true, Some(&user.token))
+            .answer_in_session(second, true, &user)
             .await
             .status(),
         StatusCode::OK
     );
     let third = consent_request(&harness.authorize(&request()).await);
     assert_eq!(
-        harness
-            .answer(third, true, Some(&user.token))
-            .await
-            .status(),
+        harness.answer_in_session(third, true, &user).await.status(),
         StatusCode::OK
     );
 
@@ -1106,7 +1102,7 @@ async fn advertised_flow_calls_a_tool() {
         .await
         .expect("Request failed");
     let uuid = consent_request(&resp);
-    let url = redirect_url(harness.answer(uuid, true, Some(&user.token)).await).await;
+    let url = redirect_url(harness.answer_in_session(uuid, true, &user).await).await;
     let code = param(&query(&url), "code").to_owned();
 
     let tokens = token_body(harness.post_form(&token, &exchange(&code), None).await).await;
@@ -1162,7 +1158,7 @@ async fn code_needs_its_verifier() {
         .server
         .signup("Verifier", "verifier@example.com")
         .await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
 
     let resp = harness
         .token(&exchange_with(
@@ -1179,7 +1175,7 @@ async fn code_needs_its_verifier() {
 async fn reused_code_revokes_its_grant() {
     let harness = Harness::new().await;
     let user = harness.server.signup("Reuse", "reuse@example.com").await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     let tokens = token_body(harness.token(&exchange(&code)).await).await;
     let access_token = string(&tokens, "access_token");
     let refresh_token = string(&tokens, "refresh_token");
@@ -1204,7 +1200,7 @@ async fn reused_code_revokes_its_grant() {
 async fn code_is_bound_to_its_request() {
     let harness = Harness::new().await;
     let user = harness.server.signup("Bound", "bound@example.com").await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     for changes in [
         [("client_id", Some(LOOPBACK_CLIENT_ID))],
         [(
@@ -1230,7 +1226,7 @@ async fn code_is_bound_to_its_request() {
     )
     .await;
 
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     harness.advance(5 * 60);
     let resp = harness.token(&exchange(&code)).await;
     assert_oauth_error(resp, StatusCode::BAD_REQUEST, "invalid_grant").await;
@@ -1246,7 +1242,7 @@ async fn loopback_redirect_uri_is_compared_as_sent() {
         .await;
     let redirect_uri = "http://localhost:53682/callback";
     let code = harness
-        .code(&loopback_request(redirect_uri), &user.token)
+        .code_in_session(&loopback_request(redirect_uri), &user)
         .await;
     for other in [
         "http://localhost:53683/callback",
@@ -1266,7 +1262,7 @@ async fn refresh_token_only_when_registered() {
     let user = harness.server.signup("Once", "once@example.com").await;
     let redirect_uri = "http://127.0.0.1:5/callback";
     let code = harness
-        .code(&loopback_request(redirect_uri), &user.token)
+        .code_in_session(&loopback_request(redirect_uri), &user)
         .await;
     let tokens = token_body(harness.token(&loopback_exchange(&code, redirect_uri)).await).await;
     assert!(tokens.get("refresh_token").is_none(), "{tokens}");
@@ -1286,7 +1282,7 @@ async fn token_resource_must_be_served() {
         .server
         .signup("Resource", "resource@example.com")
         .await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     for resource in ["https://evil.example/mcp", "not a url"] {
         let resp = harness
             .token(&exchange_with(&code, &[("resource", Some(resource))]))
@@ -1327,7 +1323,7 @@ async fn token_resource_must_be_served() {
         .token(&refresh(&string(&tokens, "refresh_token")))
         .await;
     assert_oauth_error(resp, StatusCode::BAD_REQUEST, "invalid_grant").await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     diesel::update(schema::oauth_authorization::table)
         .set(schema::oauth_authorization::resource.eq(unserved))
         .execute(&mut harness.server.db_conn())
@@ -1429,7 +1425,7 @@ async fn exchange_needs_a_live_approver() {
     assert_eq!(harness.grants(), 0);
 
     let other = harness.server.signup("Locked", "locked@example.com").await;
-    let code = harness.code(&request(), &other.token).await;
+    let code = harness.code_in_session(&request(), &other).await;
     diesel::update(schema::user::table.filter(schema::user::uuid.eq(&other.uuid)))
         .set(schema::user::locked.eq(true))
         .execute(&mut harness.server.db_conn())
@@ -1533,7 +1529,7 @@ async fn refresh_scope_is_within_the_grant() {
         ("projects:write", "projects:read", None),
     ] {
         let code = harness
-            .code(&request_with(&[("scope", Some(granted))]), &user.token)
+            .code_in_session(&request_with(&[("scope", Some(granted))]), &user)
             .await;
         let tokens = token_body(harness.token(&exchange(&code)).await).await;
         assert_eq!(tokens["scope"], granted);
@@ -1562,7 +1558,7 @@ async fn client_credentials_are_refused() {
         .server
         .signup("Credentials", "credentials@example.com")
         .await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     for (changes, authorization) in [
         (
             vec![("client_assertion", Some("eyJhbGciOiJSUzI1NiJ9.e30.c2ln"))],
@@ -1615,7 +1611,7 @@ async fn client_credentials_are_refused() {
 async fn token_errors_are_oauth_errors() {
     let harness = Harness::new().await;
     let user = harness.server.signup("Errors", "errors@example.com").await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
 
     let mut repeated = exchange(&code);
     repeated.push(("code_verifier".to_owned(), OTHER_VERIFIER.to_owned()));
@@ -1761,7 +1757,7 @@ async fn token_and_revoke_ignore_the_session_cookie() {
     }
     project_slugs(harness.list_projects(user.uuid, &access_token).await).await;
 
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     let resp = harness
         .post_form_with_cookie("/oauth/token", &exchange(&code), Some(&cookie))
         .await;
@@ -1789,7 +1785,7 @@ async fn token_and_revoke_ignore_the_session_cookie() {
 async fn token_requests_are_charged_to_the_user() {
     let harness = Harness::with_rate_limiting(json!({"user": {"requests": {"minute": 2}}})).await;
     let user = harness.server.signup("Busy", "busy@example.com").await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     let tokens = token_body(harness.token(&exchange(&code)).await).await;
     let refresh_token = string(&tokens, "refresh_token");
     let resp = harness.token(&refresh(&refresh_token)).await;
@@ -1820,8 +1816,8 @@ async fn token_requests_are_charged_to_the_user() {
     assert!(harness.grant().revoked.is_none());
 
     let other = harness.server.signup("Other", "other@example.com").await;
-    let code = harness.code(&request(), &other.token).await;
-    harness.code(&request(), &other.token).await;
+    let code = harness.code_in_session(&request(), &other).await;
+    harness.code_in_session(&request(), &other).await;
     let resp = harness.token(&exchange(&code)).await;
     assert_oauth_error(
         resp,
@@ -1965,7 +1961,7 @@ async fn wrong_verifiers_are_throttled_per_code() {
         .server
         .signup("Guessed", "guessed@example.com")
         .await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     let guess = exchange_with(&code, &[("code_verifier", Some(OTHER_VERIFIER))]);
     for _ in 0..2 {
         let resp = harness.token(&guess).await;
@@ -2030,7 +2026,7 @@ async fn unlisted_client_is_disconnected() {
         .signup("Unlisted", "unlisted@example.com")
         .await;
     let (access_token, refresh_token) = harness.tokens(&user).await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     let unlisted = "https://unlisted.example/oauth/client.json";
     diesel::update(schema::oauth_grant::table)
         .set(schema::oauth_grant::client_id.eq(unlisted))
@@ -2069,7 +2065,7 @@ async fn vanished_credentials_are_not_charged_per_address() {
     let user = harness.server.signup("Gone", "gone@example.com").await;
     let (_, refresh_token) = harness.tokens(&user).await;
     let (access_token, _) = harness.tokens(&user).await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     let unknown = OAuthCode::generate();
     let resp = harness.token(&exchange(unknown.as_ref())).await;
     assert_oauth_error(resp, StatusCode::BAD_REQUEST, "invalid_grant").await;
@@ -2175,7 +2171,7 @@ async fn refusals_never_take_the_writer() {
     assert_eq!(resp.status(), StatusCode::OK);
     let user = harness.server.signup("Live", "live@example.com").await;
     let (live_access, live_refresh) = harness.tokens(&user).await;
-    let code = harness.code(&request(), &user.token).await;
+    let code = harness.code_in_session(&request(), &user).await;
     let user = harness.server.signup("Busy", "busy@example.com").await;
     let (_, mut throttled) = harness.tokens(&user).await;
     for _ in 0..4 {
@@ -2511,6 +2507,28 @@ impl Harness {
             .expect("Request failed")
     }
 
+    /// Answer `uuid` from the console, in a session the user signed in to now.
+    #[expect(clippy::expect_used, reason = "test helper")]
+    async fn answer_in_session(
+        &self,
+        uuid: OAuthAuthorizationUuid,
+        approve: bool,
+        user: &TestUser,
+    ) -> reqwest::Response {
+        self.with_address(
+            self.client
+                .post(
+                    self.server
+                        .api_url(&format!("/v0/oauth/authorizations/{uuid}")),
+                )
+                .headers(self.server.fresh_session(user))
+                .json(&json!({ "approve": approve })),
+        )
+        .send()
+        .await
+        .expect("Request failed")
+    }
+
     #[expect(clippy::expect_used, reason = "test helper")]
     fn authorization(&self, uuid: OAuthAuthorizationUuid) -> QueryOAuthAuthorization {
         QueryOAuthAuthorization::from_uuid(&mut self.server.db_conn(), uuid)
@@ -2601,9 +2619,16 @@ impl Harness {
         param(&query(&url), "code").to_owned()
     }
 
+    /// An authorization code for `request`, approved from a session the user signed in to now.
+    async fn code_in_session(&self, request: &[(String, String)], user: &TestUser) -> String {
+        let uuid = consent_request(&self.authorize(request).await);
+        let url = redirect_url(self.answer_in_session(uuid, true, user).await).await;
+        param(&query(&url), "code").to_owned()
+    }
+
     /// The access and refresh tokens of a grant the user approved.
     async fn tokens(&self, user: &TestUser) -> (String, String) {
-        let code = self.code(&request(), &user.token).await;
+        let code = self.code_in_session(&request(), user).await;
         let tokens = token_body(self.token(&exchange(&code)).await).await;
         (
             string(&tokens, "access_token"),
@@ -2714,10 +2739,7 @@ impl Harness {
         self.server
             .client
             .get(self.server.api_url(&format!("/v0/users/{user_slug}")))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&user.token),
-            )
+            .headers(self.server.fresh_session(user))
             .send()
             .await
             .expect("Request failed")
@@ -2734,10 +2756,7 @@ impl Harness {
                 self.server
                     .api_url(&format!("/v0/users/{user_slug}/keys/{key}")),
             )
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&user.token),
-            )
+            .headers(self.server.fresh_session(user))
             .send()
             .await
             .expect("Failed to revoke a user key");

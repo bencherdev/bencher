@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/solid-query";
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
@@ -9,6 +10,7 @@ import {
 } from "../../types/bencher";
 import { ApiError } from "../api";
 import { axeInBothThemes } from "../axe/testing";
+import { createQueryClient } from "../cache";
 import { screenBatch } from "../list/rows";
 import {
 	type Roles,
@@ -89,6 +91,7 @@ const open = ({
 	invites = { invites: [], total: 0 },
 	answer = async () => undefined,
 	read = () => new Promise<never>(() => {}),
+	client,
 }: {
 	organization?: JsonOrganization | null;
 	/** The first page the cache holds, or none. */
@@ -98,6 +101,8 @@ const open = ({
 	invites?: { invites: JsonInvite[]; total: number } | null;
 	answer?: Parameters<typeof fakeApi>[0];
 	read?: (path: string) => Promise<never>;
+	/** The cache, with the retries of the console's own when given. */
+	client?: QueryClient;
 } = {}) => {
 	const reads: string[] = [];
 	const { api, sent } = fakeApi(answer, (path) => {
@@ -124,6 +129,7 @@ const open = ({
 		path: `/organizations/${key}/members`,
 		organization,
 		cached,
+		...(client ? { client } : {}),
 	});
 	dispose = mounted.dispose;
 	return { ...mounted, sent, reads };
@@ -425,6 +431,26 @@ describe("pending invites", () => {
 			.poll(() => reads.filter((path) => path.includes("/invites")).length)
 			.toBe(1);
 		await expect.element(table()).toBeVisible();
+		expect(card().query()).toBeNull();
+		expect(page.getByRole("alert").query()).toBeNull();
+	});
+
+	// The card is optional, so a server error on the pending invites is not
+	// retried, as a page's own reads are, and holds nothing up.
+	// Kills a pending invites read retried before the members draw.
+	test("a server error on the pending invites draws the members after one read", async () => {
+		const { reads } = open({
+			invites: null,
+			client: createQueryClient(),
+			read: async (path) => {
+				if (new URL(path, "http://api.test").pathname.endsWith("/invites")) {
+					throw new ApiError(500, "server", "{}");
+				}
+				return new Promise<never>(() => {});
+			},
+		});
+		await expect.element(table()).toBeVisible();
+		expect(reads.filter((path) => path.includes("/invites"))).toHaveLength(1);
 		expect(card().query()).toBeNull();
 		expect(page.getByRole("alert").query()).toBeNull();
 	});

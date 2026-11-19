@@ -1,12 +1,7 @@
-use bencher_json::{
-    DEV_BENCHER_API_URL, DEV_BENCHER_REGISTRY_URL, Jwt, LOCALHOST_BENCHER_API_URL, Url,
-};
+use bencher_json::{DEV_BENCHER_API_URL, DEV_BENCHER_REGISTRY_URL, LOCALHOST_BENCHER_API_URL, Url};
 use clap::Parser as _;
 
-use crate::{
-    parser::{TaskSub, TaskTask},
-    task::test::smoke_test::{DEV_ADMIN_BENCHER_API_TOKEN, DEV_BENCHER_API_TOKEN},
-};
+use crate::parser::{TaskSub, TaskTask};
 
 #[cfg(feature = "plus")]
 mod plus;
@@ -30,7 +25,7 @@ pub enum Sub {
     #[cfg(feature = "plus")]
     Oci(Oci),
     #[cfg(feature = "plus")]
-    Runner(RunnerTest),
+    Runner(Box<RunnerTest>),
 }
 
 impl TryFrom<TaskTask> for Task {
@@ -54,7 +49,7 @@ impl TryFrom<TaskSub> for Sub {
             #[cfg(feature = "plus")]
             TaskSub::Oci(oci) => Self::Oci(oci.try_into()?),
             #[cfg(feature = "plus")]
-            TaskSub::Runner(runner) => Self::Runner(runner.try_into()?),
+            TaskSub::Runner(runner) => Self::Runner(Box::new(runner.try_into()?)),
         })
     }
 }
@@ -72,7 +67,7 @@ impl Task {
 impl Sub {
     pub fn exec(&self) -> anyhow::Result<()> {
         match self {
-            Self::SeedTest(seed_test) => seed_test.exec(),
+            Self::SeedTest(seed_test) => seed_test.exec().map(|_readers| ()),
             Self::Examples(examples) => examples.exec(),
             Self::SmokeTest(smoke_test) => smoke_test.exec(),
             #[cfg(feature = "plus")]
@@ -93,26 +88,6 @@ fn is_dev(url: Option<&Url>) -> bool {
 
 fn unwrap_url(url: Option<Url>) -> Url {
     url.unwrap_or_else(|| LOCALHOST_BENCHER_API_URL.clone().into())
-}
-
-fn unwrap_admin_token(admin_token: Option<Jwt>, is_dev: bool) -> Jwt {
-    admin_token.unwrap_or_else(|| {
-        if is_dev {
-            DEV_ADMIN_BENCHER_API_TOKEN.clone()
-        } else {
-            Jwt::test_admin_token()
-        }
-    })
-}
-
-fn unwrap_user_token(user_token: Option<Jwt>, is_dev: bool) -> Jwt {
-    user_token.unwrap_or_else(|| {
-        if is_dev {
-            DEV_BENCHER_API_TOKEN.clone()
-        } else {
-            Jwt::test_token()
-        }
-    })
 }
 
 #[cfg(test)]

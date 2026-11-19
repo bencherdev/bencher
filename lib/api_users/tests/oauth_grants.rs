@@ -10,7 +10,7 @@
 use std::sync::Arc;
 
 use bencher_api_tests::{
-    LogCapture, TestServer, TestServerOptions, TestUser,
+    LogCapture, TestServer, TestServerOptions, TestUser, bearer,
     helpers::{TestOAuthGrant, oauth_resource, oauth_server, seed_oauth_grant, seed_token},
 };
 use bencher_json::{
@@ -19,7 +19,7 @@ use bencher_json::{
 };
 use bencher_schema::schema;
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
-use http::{Method, StatusCode};
+use http::{HeaderMap, Method, StatusCode};
 use serde_json::{Value, json};
 
 /// The time every test server here is frozen at.
@@ -41,7 +41,7 @@ async fn oauth_grants_list_active() {
         &server,
         Method::DELETE,
         &format!("/v0/users/{}/keys/{dead_key}", user.slug),
-        &user.token,
+        server.fresh_session(&user),
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
@@ -73,7 +73,7 @@ async fn oauth_grants_list_active() {
         &server,
         Method::GET,
         &format!("/v0/users/{}/oauth/grants", user.slug),
-        &user.token,
+        server.fresh_session(&user),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -97,7 +97,7 @@ async fn oauth_grants_list_active() {
         &server,
         Method::GET,
         &format!("/v0/users/{}/oauth/grants?per_page=1&page=2", user.slug),
-        &user.token,
+        server.fresh_session(&user),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -113,8 +113,13 @@ async fn oauth_grants_list_active() {
         (&revoked, StatusCode::NOT_FOUND),
         (&expired, StatusCode::NOT_FOUND),
     ] {
-        let (status, ..) =
-            request(&server, Method::GET, &grant_path(&user, grant), &user.token).await;
+        let (status, ..) = request(
+            &server,
+            Method::GET,
+            &grant_path(&user, grant),
+            server.fresh_session(&user),
+        )
+        .await;
         assert_eq!(status, expected);
     }
 }
@@ -133,14 +138,20 @@ async fn oauth_grant_delete_revokes() {
         &server,
         Method::DELETE,
         &grant_path(&user, &grant),
-        &user.token,
+        server.fresh_session(&user),
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 
     assert_eq!(mcp_status(&server, &grant).await, StatusCode::UNAUTHORIZED);
     for method in [Method::GET, Method::DELETE] {
-        let (status, ..) = request(&server, method, &grant_path(&user, &grant), &user.token).await;
+        let (status, ..) = request(
+            &server,
+            method,
+            &grant_path(&user, &grant),
+            server.fresh_session(&user),
+        )
+        .await;
         assert_eq!(status, StatusCode::NOT_FOUND);
     }
 }
@@ -161,7 +172,7 @@ async fn oauth_grant_delete_other_user_forbidden() {
         &server,
         Method::DELETE,
         &grant_path(&user, &grant),
-        &other.token,
+        server.fresh_session(&other),
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
@@ -181,25 +192,25 @@ async fn oauth_grants_need_a_session() {
     let grant = grant(&server, &user, None);
     let list = format!("/v0/users/{}/oauth/grants", user.slug);
 
-    for bearer in [key.as_ref(), legacy.as_ref()] {
+    for bearer_token in [key.as_ref(), legacy.as_ref()] {
         for (method, path) in [
             (Method::GET, list.clone()),
             (Method::GET, grant_path(&user, &grant)),
             (Method::DELETE, grant_path(&user, &grant)),
         ] {
-            let (status, ..) = request(&server, method, &path, bearer).await;
+            let (status, ..) = request(&server, method, &path, bearer(bearer_token)).await;
             assert_eq!(status, StatusCode::FORBIDDEN);
         }
     }
     assert_eq!(mcp_status(&server, &grant).await, StatusCode::OK);
 
-    let (status, ..) = request(&server, Method::GET, &list, &user.token).await;
+    let (status, ..) = request(&server, Method::GET, &list, server.fresh_session(&user)).await;
     assert_eq!(status, StatusCode::OK);
     let (status, ..) = request(
         &server,
         Method::DELETE,
         &grant_path(&user, &grant),
-        &user.token,
+        server.fresh_session(&user),
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
@@ -223,7 +234,7 @@ async fn oauth_grants_not_found_without_oauth() {
         (Method::GET, grant_path(&user, &grant)),
         (Method::DELETE, grant_path(&user, &grant)),
     ] {
-        let (status, ..) = request(&server, method, &path, &user.token).await;
+        let (status, ..) = request(&server, method, &path, server.fresh_session(&user)).await;
         assert_eq!(status, StatusCode::NOT_FOUND);
     }
 }
@@ -257,7 +268,7 @@ async fn oauth_tokens_at_rest_are_unauthorized_and_never_quoted() {
             &server,
             Method::GET,
             &format!("/v0/users/{}", user.slug),
-            token,
+            bearer(token),
         )
         .await;
         assert_eq!(status, StatusCode::UNAUTHORIZED);
@@ -321,21 +332,18 @@ async fn create_user_key(
     (key.uuid, key.key)
 }
 
-/// Send a request with `bearer`, returning its status, its `X-Total-Count`, and its JSON body.
+/// Send a request with `credential`, returning its status, its `X-Total-Count`, and its JSON body.
 #[expect(clippy::expect_used, reason = "test helper")]
 async fn request(
     server: &TestServer,
     method: Method,
     path: &str,
-    bearer: &str,
+    credential: HeaderMap,
 ) -> (StatusCode, Option<String>, Value) {
     let resp = server
         .client
         .request(method, server.api_url(path))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(bearer),
-        )
+        .headers(credential)
         .send()
         .await
         .expect("Request failed");

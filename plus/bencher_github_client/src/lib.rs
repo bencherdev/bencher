@@ -279,7 +279,7 @@ mod tests {
 
     use aws_lc_rs::digest::{SHA256, digest};
     use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
-    use bencher_valid::{GitHubInstallationId, GitHubRepositoryId, Jwt, PkceVerifier};
+    use bencher_valid::{GitHubInstallationId, GitHubRepositoryId, PkceVerifier};
     use url::Url;
 
     use super::{GitHubClient, GitHubClientError, GitHubInstallationPermission, GitHubRepository};
@@ -353,8 +353,10 @@ mod tests {
             &verifier,
             SIGN_IN_URL.parse().unwrap(),
         );
-        let repositories =
-            client.auth_url_with_redirect(Jwt::test_token(), REDIRECT_URL.parse().unwrap());
+        let repositories = client.auth_url_with_redirect(
+            "aGVhZGVy.cGF5bG9hZA.c2lnbmF0dXJl".parse().unwrap(),
+            REDIRECT_URL.parse().unwrap(),
+        );
 
         assert_eq!(
             query(&sign_in, "code_challenge"),

@@ -123,7 +123,7 @@ async fn old_session_jwt_does_not_pass() {
     let user = server.signup("Ada", ADA).await;
     let org = server.create_org(&user, "Ada Org").await;
     let project = server.create_project(&user, &org, "Ada Project").await;
-    let jwt = Browser::jwt(&user.token);
+    let jwt = Browser::jwt(server.session_jwt(&user).as_ref());
 
     for action in Action::ALL {
         let resp = action.send(&server, &user, &org, &project, &jwt).await;
@@ -397,8 +397,9 @@ async fn admin_changes_another_users_email_only_when_fresh() {
 }
 
 // Making a user a server admin, or not, gives or takes the power to do every guarded action, so
-// it needs a fresh sign-in, and a stale one changes nothing.
-// Kills an admin toggle without the guard.
+// it needs a fresh sign-in, and a stale one changes nothing. The value the user already holds
+// changes nothing, so it needs none.
+// Kills an admin toggle without the guard, and a guard on an unchanged value.
 #[tokio::test]
 async fn admin_toggle_needs_a_fresh_sign_in() {
     let Harness {
@@ -423,6 +424,11 @@ async fn admin_toggle_needs_a_fresh_sign_in() {
         clock.set(proved, WINDOW - 1);
         let resp = send(&server, Method::PATCH, &path, &browser, Some(&body)).await;
         assert_eq!(resp.status(), StatusCode::OK, "{is_admin}");
+        assert_eq!(is_admin_of(&server, &user), is_admin);
+
+        clock.set(proved, WINDOW);
+        let resp = send(&server, Method::PATCH, &path, &browser, Some(&body)).await;
+        assert_eq!(resp.status(), StatusCode::OK, "unchanged {is_admin}");
         assert_eq!(is_admin_of(&server, &user), is_admin);
     }
 }
@@ -681,6 +687,7 @@ async fn fresh_endpoints_need_the_console_origin_and_a_session() {
     let Harness { server, log, .. } = Harness::with_providers(&github.base()).await;
     let user = server.signup("Ada", ADA).await;
     let key = server.create_user_key(&user, "ada-key").await;
+    let session_jwt = server.session_jwt(&user);
     let browser = Browser::signed_in(&server.session(&user));
     let emails = log.sign_in_emails().len();
     let posts = [
@@ -707,7 +714,7 @@ async fn fresh_endpoints_need_the_console_origin_and_a_session() {
         for (bearer, status) in [
             (Browser::default(), StatusCode::UNAUTHORIZED),
             (Browser::bearer(&key), StatusCode::FORBIDDEN),
-            (Browser::jwt(&user.token), StatusCode::FORBIDDEN),
+            (Browser::jwt(session_jwt.as_ref()), StatusCode::FORBIDDEN),
         ] {
             let resp = send(&server, Method::POST, path, &bearer, Some(&body)).await;
             assert_eq!(resp.status(), status, "{path}");
@@ -716,7 +723,7 @@ async fn fresh_endpoints_need_the_console_origin_and_a_session() {
     for (bearer, status) in [
         (Browser::default(), StatusCode::UNAUTHORIZED),
         (Browser::bearer(&key), StatusCode::FORBIDDEN),
-        (Browser::jwt(&user.token), StatusCode::FORBIDDEN),
+        (Browser::jwt(session_jwt.as_ref()), StatusCode::FORBIDDEN),
     ] {
         let resp = send(&server, Method::GET, "/v0/auth/fresh", &bearer, None).await;
         assert_eq!(resp.status(), status);

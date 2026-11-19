@@ -397,10 +397,7 @@ async fn oauth_bound_key_revoked() {
     let resp = server
         .client
         .delete(server.api_url(&format!("/v0/users/{user_slug}/keys/{key}")))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .send()
         .await
         .expect("Failed to revoke the user key");

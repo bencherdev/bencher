@@ -5,6 +5,18 @@ import { THEME_KEY, expect } from "./fixtures";
 
 type AxePage = ConstructorParameters<typeof AxeBuilder>[0]["page"];
 
+/** Whether going from `current` to `path` changes nothing but the fragment. */
+const onlyTheFragmentDiffers = (current: string, path: string) => {
+	const from = new URL(current);
+	const to = new URL(path, current);
+	return (
+		to.hash !== "" &&
+		from.origin === to.origin &&
+		from.pathname === to.pathname &&
+		from.search === to.search
+	);
+};
+
 /** A phone, where a page folds its controls and may name them differently. */
 const PHONE = { width: 390, height: 844 };
 
@@ -41,6 +53,11 @@ export const axeInBothThemes = async (
 			[THEME_KEY, theme] as const,
 		);
 		if (arrive) {
+			// Going from a page to its own path with only another fragment loads no page, and a
+			// page that reloads on that change would navigate under this one.
+			if (onlyTheFragmentDiffers(page.url(), path)) {
+				await page.goto("about:blank");
+			}
 			await page.goto(path);
 			await arrive();
 		} else {

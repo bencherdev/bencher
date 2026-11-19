@@ -9,7 +9,7 @@
 //! endpoint, discovery, and when a user's email counts as verified.
 
 use bencher_api_tests::{
-    TestServer, TestServerOptions, TestUser,
+    LogCapture, TestServer, TestServerOptions, TestUser,
     helpers::{OAUTH_ISSUER, OAUTH_SIGNING_KEY},
     session_cookie,
 };
@@ -60,7 +60,9 @@ async fn userinfo_names_the_user_by_uuid() {
     let harness = Harness::new(SigningKey::Configured).await;
     let user = harness.server.signup("Info", "info@example.com").await;
 
-    let tokens = harness.tokens("openid email profile", &user.token).await;
+    let tokens = harness
+        .tokens_in_session("openid email profile", &user)
+        .await;
     let access_token = string(&tokens, "access_token");
     let info = harness.userinfo_ok(&access_token).await;
     assert_eq!(
@@ -86,7 +88,7 @@ async fn userinfo_names_the_user_by_uuid() {
     assert_eq!(resp.status(), StatusCode::OK);
     assert_eq!(resp.json::<Value>().await.expect("Invalid user info"), info);
 
-    let tokens = harness.tokens("openid", &user.token).await;
+    let tokens = harness.tokens_in_session("openid", &user).await;
     let info = harness.userinfo_ok(&string(&tokens, "access_token")).await;
     assert_eq!(info, json!({ "sub": user.uuid }));
 }
@@ -98,7 +100,7 @@ async fn email_verified_follows_proof_of_the_address() {
     let harness = Harness::new(SigningKey::Configured).await;
     let admin = harness.server.signup("Admin", "admin@example.com").await;
     let user = harness.server.signup("Mover", "mover@example.com").await;
-    let tokens = harness.tokens("openid email", &user.token).await;
+    let tokens = harness.tokens_in_session("openid email", &user).await;
     let access_token = string(&tokens, "access_token");
 
     let resp = harness
@@ -115,20 +117,10 @@ async fn email_verified_follows_proof_of_the_address() {
     assert_eq!(info.get("email"), Some(&json!("moved@example.com")));
     assert_eq!(info.get("email_verified"), Some(&json!(false)));
 
-    let token = harness
+    harness
         .server
-        .token_key()
-        .new_auth("moved@example.com".parse().expect("Invalid email"), 60)
-        .expect("Failed to mint an auth token");
-    let resp = harness
-        .server
-        .client
-        .post(harness.server.api_url("/v0/auth/confirm"))
-        .json(&json!({ "token": token }))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
+        .sign_in_by_email("moved@example.com", &harness.log)
+        .await;
     let info = harness.userinfo_ok(&access_token).await;
     assert_eq!(info.get("email_verified"), Some(&json!(true)));
 }
@@ -146,14 +138,14 @@ async fn consent_verifies_the_email_only_with_a_session() {
     harness.unverify(&user);
     let request = harness.request("projects:read").await;
     assert_eq!(
-        harness.answer(&request, &user.token).await.status(),
+        harness.answer_in_session(&request, &user).await.status(),
         StatusCode::OK
     );
     assert!(harness.email_verified(&user).is_some());
 
     harness.unverify(&user);
     assert_eq!(
-        harness.answer(&request, &user.token).await.status(),
+        harness.answer_in_session(&request, &user).await.status(),
         StatusCode::CONFLICT
     );
     assert_eq!(
@@ -173,7 +165,9 @@ async fn consent_verifies_the_email_only_with_a_session() {
 async fn userinfo_needs_an_access_token_with_openid() {
     let harness = Harness::new(SigningKey::Configured).await;
     let user = harness.server.signup("Scoped", "scoped@example.com").await;
-    let tokens = harness.tokens("projects:read email", &user.token).await;
+    let tokens = harness
+        .tokens_in_session("projects:read email", &user)
+        .await;
 
     let resp = harness
         .userinfo(Some(&string(&tokens, "access_token")))
@@ -188,7 +182,7 @@ async fn userinfo_needs_an_access_token_with_openid() {
         "WWW-Authenticate"
     );
 
-    let tokens = harness.tokens("openid", &user.token).await;
+    let tokens = harness.tokens_in_session("openid", &user).await;
     for token in [
         Some(string(&tokens, "refresh_token")),
         Some("bencher_oauth_000000000000000000000000000000".to_owned()),
@@ -212,7 +206,7 @@ async fn userinfo_needs_an_access_token_with_openid() {
 async fn id_token_verifies_against_the_advertised_key_set() {
     let harness = Harness::new(SigningKey::Configured).await;
     let user = harness.server.signup("Signer", "signer@example.com").await;
-    let code = harness.code("openid email", &user.token).await;
+    let code = harness.code_in_session("openid email", &user).await;
     harness.advance(60);
     let tokens = harness.exchange(&code).await;
     let id_token = string(&tokens, "id_token");
@@ -243,15 +237,11 @@ async fn id_token_verifies_against_the_advertised_key_set() {
     assert_eq!(claims.get("email"), Some(&json!(user.email)));
     assert_eq!(claims.get("email_verified"), Some(&json!(true)));
     assert_eq!(claims.get("name"), None, "profile was not granted");
-    assert_eq!(
-        integer(&claims, "auth_time"),
-        harness.signed_in(&user),
-        "signed in at"
-    );
+    assert_eq!(integer(&claims, "auth_time"), NOW, "signed in at");
     assert_eq!(integer(&claims, "iat"), NOW + 60, "exchanged at");
     assert_eq!(integer(&claims, "exp"), NOW + 60 + 10 * 60);
 
-    let tokens = harness.tokens("projects:read", &user.token).await;
+    let tokens = harness.tokens_in_session("projects:read", &user).await;
     assert_eq!(tokens.get("id_token"), None);
 }
 
@@ -365,7 +355,7 @@ async fn openid_connect_needs_a_signing_key() {
         .server
         .signup("Keyless", "keyless@example.com")
         .await;
-    let tokens = harness.tokens("openid email", &user.token).await;
+    let tokens = harness.tokens_in_session("openid email", &user).await;
     assert_eq!(tokens.get("scope"), Some(&json!("projects:read")));
     assert_eq!(tokens.get("id_token"), None);
     let resp = harness
@@ -431,7 +421,7 @@ async fn openid_connect_with_a_signing_key() {
         Some(&json!(["RS256"]))
     );
     let user = harness.server.signup("Keyed", "keyed@example.com").await;
-    let tokens = harness.tokens("openid", &user.token).await;
+    let tokens = harness.tokens_in_session("openid", &user).await;
     assert_eq!(
         tokens.get("scope"),
         Some(&json!("openid projects:read")),
@@ -467,7 +457,7 @@ async fn userinfo_is_charged_to_its_user() {
             .server
             .signup(name, &format!("{}@example.com", name.to_lowercase()))
             .await;
-        let tokens = harness.tokens("openid", &user.token).await;
+        let tokens = harness.tokens_in_session("openid", &user).await;
         let refresh_token = string(&tokens, "refresh_token");
         for _ in 0..refused {
             let resp = harness.userinfo(Some(&refresh_token)).await;
@@ -540,6 +530,8 @@ struct Harness {
     /// A client that does not follow redirects, so every `Location` can be read.
     client: reqwest::Client,
     now: Arc<AtomicI64>,
+    /// Every line the server logs, its emails among them.
+    log: LogCapture,
 }
 
 impl Harness {
@@ -571,12 +563,14 @@ impl Harness {
         let json: JsonOAuthServer = serde_json::from_value(config).expect("Invalid OAuth config");
         let now = Arc::new(AtomicI64::new(NOW));
         let clock_now = Arc::clone(&now);
+        let log = LogCapture::default();
         let server = TestServer::new_with_options(TestServerOptions {
             clock: Some(Clock::Custom(Arc::new(move || {
                 DateTime::try_from(clock_now.load(Ordering::SeqCst)).expect("Invalid time")
             }))),
             rate_limiting,
             oauth: Some(OAuthServer::try_from(json).expect("Invalid OAuth server")),
+            log: Some(log.logger()),
             ..TestServerOptions::default()
         })
         .await;
@@ -588,6 +582,7 @@ impl Harness {
             server,
             client,
             now,
+            log,
         }
     }
 
@@ -647,6 +642,38 @@ impl Harness {
         param(&self.answer_url(&request, bearer).await, "code")
     }
 
+    /// Approve `request` from the console, in a session the user signed in to now.
+    #[expect(clippy::expect_used, reason = "test helper")]
+    async fn answer_in_session(&self, request: &str, user: &TestUser) -> reqwest::Response {
+        self.client
+            .post(
+                self.server
+                    .api_url(&format!("/v0/oauth/authorizations/{request}")),
+            )
+            .headers(self.server.fresh_session(user))
+            .json(&json!({ "approve": true }))
+            .send()
+            .await
+            .expect("Request failed")
+    }
+
+    /// An authorization code for `scope`, approved from a session the user signed in to now.
+    #[expect(clippy::expect_used, reason = "test helper")]
+    async fn code_in_session(&self, scope: &str, user: &TestUser) -> String {
+        let request = self.request(scope).await;
+        let resp = self.answer_in_session(&request, user).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let answer: Value = resp.json().await.expect("Invalid answer");
+        let url = Url::parse(&string(&answer, "url")).expect("Invalid answer URL");
+        param(&url, "code")
+    }
+
+    /// The token response for a grant of `scope` the user approved from a session.
+    async fn tokens_in_session(&self, scope: &str, user: &TestUser) -> Value {
+        let code = self.code_in_session(scope, user).await;
+        self.exchange(&code).await
+    }
+
     /// Where approving `request` with `bearer` sends the browser.
     #[expect(clippy::expect_used, reason = "test helper")]
     async fn answer_url(&self, request: &str, bearer: &str) -> Url {
@@ -675,20 +702,9 @@ impl Harness {
         .expect("Failed to sign a session")
     }
 
-    /// When the user signed in to the session they signed up with.
-    #[expect(clippy::expect_used, reason = "test helper")]
-    fn signed_in(&self, user: &TestUser) -> i64 {
-        let session = user.token.parse().expect("Invalid session");
-        self.server
-            .token_key()
-            .validate_client(&session)
-            .expect("Invalid session")
-            .iat
-    }
-
-    /// The token response for a grant of `scope` the user approved with a session.
-    async fn tokens(&self, scope: &str, session: &str) -> Value {
-        let code = self.code(scope, session).await;
+    /// The token response for a grant of `scope` the user approved with `bearer`.
+    async fn tokens(&self, scope: &str, bearer: &str) -> Value {
+        let code = self.code(scope, bearer).await;
         self.exchange(&code).await
     }
 
