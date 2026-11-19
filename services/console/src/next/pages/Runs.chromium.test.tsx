@@ -70,7 +70,7 @@ const mount = (api: Api, client: QueryClient, path = PATH) => {
 };
 
 /** The production cache, which does not retry an API that refused. */
-const client = () => createQueryClient(() => {});
+const client = () => createQueryClient();
 
 /** The production cache, but a server error fails at once. */
 const impatient = () => {

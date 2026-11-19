@@ -1,23 +1,18 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import type { APIRequestContext, Page } from "@playwright/test";
-import type {
-	JsonAuthUser,
-	JsonOAuthGrant,
-	JsonUserKeyCreated,
-} from "../src/types/bencher";
+import type { JsonOAuthGrant, JsonUserKeyCreated } from "../src/types/bencher";
 import { unique } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, seed, signedIn, test, RELAY } from "./fixtures";
+import { expect, type Reader, seed, signedIn, test, RELAY } from "./fixtures";
+import { inSession, signUp } from "./session";
 
 // The app the harness configures, which calls itself ChatGPT.
 const CLIENT_ID = "https://client.example/oauth/client.json";
 const CALLBACK = "https://client.example/callback";
 
-const appsPath = (user: JsonAuthUser) =>
-	`/console/users/${user.user.slug}/apps`;
-const grantsUrl = (user: JsonAuthUser) =>
-	`${RELAY}/v0/users/${user.user.slug}/oauth/grants`;
+const appsPath = (user: Reader) => `/console/users/${user.user.slug}/apps`;
+const grantsPath = (user: Reader) => `/v0/users/${user.user.slug}/oauth/grants`;
+const grantsUrl = (user: Reader) => `${RELAY}${grantsPath(user)}`;
 
 // Each test that connects an app does so for a user of its own, since every
 // app the harness connects looks the same.
@@ -28,8 +23,8 @@ test.describe("connected apps", () => {
 		newContext,
 		request,
 	}) => {
-		const user = await signUp(request);
-		await connectApp(request, user, user.token);
+		const user = await signUp();
+		await connectApp(request, user);
 		const page = await (
 			await newContext({
 				storageState: signedIn(user),
@@ -76,8 +71,8 @@ test.describe("the new console's Connected Apps", () => {
 		newContext,
 		request,
 	}) => {
-		const user = await signUp(request);
-		const grant = await connectApp(request, user, user.token);
+		const user = await signUp();
+		const grant = await connectApp(request, user);
 		const page = await (
 			await newContext({ storageState: signedIn(user) })
 		).newPage();
@@ -139,15 +134,15 @@ test.describe("the new console's Connected Apps", () => {
 		newContext,
 		request,
 	}) => {
-		const user = await signUp(request);
+		const user = await signUp();
 		const name = unique("laptop");
-		const key = await post<JsonUserKeyCreated>(
-			request,
+		const key = await inSession<JsonUserKeyCreated>(
+			user,
+			"POST",
 			`/v0/users/${user.user.slug}/keys`,
-			user.token,
 			{ name },
 		);
-		await connectApp(request, user, key.key);
+		await connectApp(request, user, key.data.key);
 		const page = await (
 			await newContext({ storageState: signedIn(user) })
 		).newPage();
@@ -217,27 +212,13 @@ test.describe("the new console's Connected Apps", () => {
 		});
 	});
 
-	test.describe("signed in with a user key", () => {
-		test.use({ storageState: signedIn(seed.outsider) });
-
-		// Kills a page that offers a key what only a signed in session may
-		// manage, or offers a Retry that can never work.
-		test("connected apps need a session", async ({ page }) => {
-			await page.goto(appsPath(seed.outsider));
-			await expect(
-				page.getByText("Not available with an API key"),
-			).toBeVisible();
-			await expect(page.getByRole("button", { name: "Retry" })).toHaveCount(0);
-		});
-	});
-
 	// Kills contrast, names, and roles that fail axe in either theme.
 	test("the page passes axe in both themes", async ({
 		newContext,
 		request,
 	}) => {
-		const user = await signUp(request);
-		await connectApp(request, user, user.token);
+		const user = await signUp();
+		await connectApp(request, user);
 		const page = await (
 			await newContext({ storageState: signedIn(user) })
 		).newPage();
@@ -249,39 +230,14 @@ test.describe("the new console's Connected Apps", () => {
 	});
 });
 
-/** A new user, signed in as the console stores them. */
-const signUp = async (request: APIRequestContext): Promise<JsonAuthUser> => {
-	const email = `${randomUUID().slice(0, 8)}@nowhere.com`;
-	const signup = await request.post(`${seed.api_url}/v0/auth/signup`, {
-		data: { name: "Le Quack", email, i_agree: true },
-	});
-	expect(signup.status()).toBe(202);
-	let token: undefined | string;
-	await expect
-		.poll(() => {
-			token = confirmTokens().find((jwt) => subject(jwt) === email);
-			return token;
-		})
-		.toBeDefined();
-	return post<JsonAuthUser>(request, "/v0/auth/confirm", "", { token });
-};
-
-/** Every login or signup token the API emailed, read from its log. */
-const confirmTokens = () =>
-	[
-		...readFileSync(seed.api_log, "utf8").matchAll(
-			/\/auth\/confirm\?[^\s"\\]*token=([\w-]+\.[\w-]+\.[\w-]+)/g,
-		),
-	].map((match) => match[1] ?? "");
-
-const subject = (jwt: string) =>
-	JSON.parse(Buffer.from(jwt.split(".")[1] ?? "", "base64url").toString()).sub;
-
-/** Connect the app for a user with no other app, approving with `bearer`. */
+/**
+ * Connect the app for a user with no other app, approving in their session
+ * as their browser does, or with `key`, a user key of theirs.
+ */
 const connectApp = async (
 	request: APIRequestContext,
-	user: JsonAuthUser,
-	bearer: string,
+	user: Reader,
+	key?: string,
 ) => {
 	const verifier = randomBytes(32).toString("base64url");
 	const authorize = await request.get(
@@ -300,12 +256,14 @@ const connectApp = async (
 	const uuid = new URL(authorize.headers().location ?? "").searchParams.get(
 		"request",
 	);
-	const answer = await post<{ url: string }>(
-		request,
-		`/v0/oauth/authorizations/${uuid}`,
-		bearer,
-		{ approve: true },
-	);
+	const decision = `/v0/oauth/authorizations/${uuid}`;
+	const answer = key
+		? await post<{ url: string }>(request, decision, key, { approve: true })
+		: (
+				await inSession<{ url: string }>(user, "POST", decision, {
+					approve: true,
+				})
+			).data;
 	const token = await request.post(`${seed.api_url}/oauth/token`, {
 		form: {
 			grant_type: "authorization_code",
@@ -316,11 +274,13 @@ const connectApp = async (
 		},
 	});
 	expect(token.status()).toBe(200);
-	const grants = await request.get(grantsUrl(user), {
-		headers: { Authorization: `Bearer ${user.token}` },
-	});
-	expect(grants.status()).toBe(200);
-	const [grant] = (await grants.json()) as JsonOAuthGrant[];
+	const grants = await inSession<JsonOAuthGrant[]>(
+		user,
+		"GET",
+		grantsPath(user),
+	);
+	expect(grants.status).toBe(200);
+	const [grant] = grants.data;
 	expect(grant).toBeDefined();
 	return grant as JsonOAuthGrant;
 };

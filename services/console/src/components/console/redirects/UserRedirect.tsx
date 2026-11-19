@@ -6,11 +6,11 @@ const UserRedirect = (props: { path?: string }) => {
 	const user = authUser();
 
 	const path = createMemo(
-		() => `/console/users/${user?.user?.slug}/${props.path ?? ""}`,
+		() => `/console/users/${user?.slug}/${props.path ?? ""}`,
 	);
 
 	return (
-		<Show when={authUser()?.token}>
+		<Show when={authUser()}>
 			<Redirect path={path()} />
 		</Show>
 	);

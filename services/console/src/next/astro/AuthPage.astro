@@ -1,0 +1,28 @@
+---
+import Head from "../Head.astro";
+import "../auth/page.css";
+
+interface Props {
+	title: string;
+}
+
+const { title } = Astro.props;
+
+// Every auth page, in the frame: Bencher's own scripts alone, and Turnstile
+// only where a page asks for it.
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>{title} | Bencher</title>
+		<link rel="icon" href="/favicon.svg" sizes="any" type="image/svg+xml" />
+		<slot name="head" />
+		<Head />
+	</head>
+	<body>
+		<slot />
+	</body>
+</html>

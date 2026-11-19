@@ -1,5 +1,6 @@
 import type { Route } from "@playwright/test";
 import {
+	SHELL_KEY,
 	crumb,
 	expect,
 	consolePath,
@@ -169,5 +170,64 @@ test.describe("signed in", () => {
 		const alerts = tabRow(page).getByRole("link", { name: "Alerts 1 active" });
 		await expect(alerts).toBeVisible();
 		await expect(alerts.getByText("1", { exact: true })).toBeVisible();
+	});
+
+	// Kills a first paint of the shell before it is filled, which then moves as
+	// the names and the count arrive: here the document stalls right before the
+	// script that fills it, as a slow parse or network can.
+	test("a returning reader's first paint is the filled shell, however late its filling script arrives", async ({
+		page,
+	}) => {
+		const path = consolePath(hashbrown.slug, "runs");
+		await page.goto(path);
+		await expect(
+			tabRow(page).getByRole("link", { name: "Alerts 1 active" }),
+		).toBeVisible();
+		await expect
+			.poll(() => page.evaluate((key) => localStorage.getItem(key), SHELL_KEY))
+			.not.toBeNull();
+
+		await page.route(
+			(url) => url.pathname === path,
+			async (route) => {
+				const response = await route.fetch();
+				const html = await response.text();
+				const fill = html.lastIndexOf("<script", html.indexOf(SHELL_KEY));
+				await route.fulfill({
+					response,
+					body: `${html.slice(0, fill)}<script src="/stall.js"></script>${html.slice(fill)}`,
+				});
+			},
+		);
+		await page.route("**/stall.js", async (route) => {
+			await new Promise((resolve) => setTimeout(resolve, 1_000));
+			await route.fulfill({ contentType: "text/javascript", body: "" });
+		});
+		await page.addInitScript((organization) => {
+			new MutationObserver((_, observer) => {
+				const org = document.querySelector('[data-shell="org"]');
+				if (org?.textContent === organization) {
+					(window as Window & { filledAt?: number }).filledAt =
+						performance.now();
+					observer.disconnect();
+				}
+			}).observe(document, { childList: true, subtree: true });
+		}, seed.organization.name);
+		await page.reload();
+
+		await expect(
+			crumb(page, `${seed.organization.name} / ${hashbrown.name}`),
+		).toBeVisible();
+		const firstPaint = () =>
+			page.evaluate(
+				() =>
+					performance.getEntriesByName("first-contentful-paint")[0]?.startTime,
+			);
+		await expect.poll(firstPaint).toBeDefined();
+		const filledAt = await page.evaluate(
+			() => (window as Window & { filledAt?: number }).filledAt,
+		);
+		expect(filledAt).toBeDefined();
+		expect(await firstPaint()).toBeGreaterThan(filledAt ?? Number.NaN);
 	});
 });

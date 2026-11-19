@@ -6,7 +6,6 @@ import { render } from "solid-js/web";
 import { afterEach, expect, test } from "vitest";
 import { commands, page, userEvent } from "vitest/browser";
 import type {
-	JsonAuthUser,
 	JsonConsoleUser,
 	JsonConsoleUserProject,
 } from "../../types/bencher";
@@ -235,7 +234,7 @@ test("an organization's crumb opens the switcher on the reader's projects", asyn
 				<AccountContext.Provider
 					value={{
 						api,
-						reader: () => ({}) as JsonAuthUser,
+						reader: () => ({ uuid: "", slug: "", name: "" }),
 						keepUser: () => {},
 						signOut: () => {},
 					}}

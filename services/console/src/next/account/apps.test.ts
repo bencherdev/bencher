@@ -2,28 +2,21 @@ import { describe, expect, test } from "vitest";
 import { ApiError } from "../api";
 import { lastRefreshed, refusalOf } from "./apps";
 
-const SESSION = "eyJhbGciOiJIUzI1NiJ9.e30.signature";
-const KEY = `bencher_user_${"a".repeat(30)}`;
-
 describe("refusalOf", () => {
-	// Kills a server without OAuth shown as a failure to retry, a reader signed
-	// in with a key told they lack access, and a failure worth retrying taken
-	// for a refusal.
+	// Kills a server without OAuth shown as a failure to retry, and a failure
+	// worth retrying taken for a refusal.
 	test("names why the API will not list the apps", () => {
 		const refused = (status: number, kind: ApiError["kind"]) =>
 			new ApiError(status, kind, "{}");
-		expect(refusalOf(refused(404, "not_found"), SESSION)).toBe(
+		expect(refusalOf(refused(404, "not_found"))).toBe(
 			"Not available on this server",
 		);
-		expect(refusalOf(refused(403, "forbidden"), KEY)).toBe(
-			"Not available with an API key",
-		);
-		expect(refusalOf(refused(403, "forbidden"), SESSION)).toBe("No access");
-		expect(refusalOf(refused(500, "server"), SESSION)).toBeUndefined();
+		expect(refusalOf(refused(403, "forbidden"))).toBe("No access");
+		expect(refusalOf(refused(500, "server"))).toBeUndefined();
 		expect(
-			refusalOf(new ApiError(undefined, "network", "offline"), SESSION),
+			refusalOf(new ApiError(undefined, "network", "offline")),
 		).toBeUndefined();
-		expect(refusalOf(new Error("boom"), SESSION)).toBeUndefined();
+		expect(refusalOf(new Error("boom"))).toBeUndefined();
 	});
 });
 

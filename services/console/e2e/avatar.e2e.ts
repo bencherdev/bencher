@@ -1,8 +1,10 @@
 import type { Page } from "@playwright/test";
+import { createMember } from "./api";
 import {
 	ORGANIZATION_KEY,
+	READER_KEY,
+	SESSION_COOKIE,
 	SHELL_KEY,
-	USER_KEY,
 	VERSION_KEY,
 	expect,
 	consolePath,
@@ -12,6 +14,7 @@ import {
 	tabRow,
 	test,
 } from "./fixtures";
+import { inSession } from "./session";
 
 const { hashbrown, iterations } = seed.projects;
 const RUNS = consolePath(hashbrown.slug, "runs");
@@ -33,18 +36,25 @@ const openMenu = async (page: Page) => {
 	await expect(menu(page)).toBeVisible();
 };
 
-// Kills a Sign out that keeps the reader, their organization, their names,
-// their landing, or their cache in this browser, or sends the next reader to
-// this one's page.
-test("Sign out forgets the reader and all this browser remembers for them, then asks for a sign in", async ({
-	page,
+// Kills a Sign out that leaves the session alive or its cookie in the
+// browser, keeps the reader, their organization, their names, their landing,
+// or their cache in this browser, or sends the next reader to this one's page.
+test("Sign out ends the session and forgets all this browser remembers for the reader, then asks for a sign in", async ({
+	newContext,
+	request,
 }) => {
+	// A reader of the test's own: signing out ends the session for every page that shares it.
+	const reader = await createMember(request, seed.organization);
+	const context = await newContext({ storageState: signedIn(reader) });
+	const page = await context.newPage();
 	await page.goto(RUNS);
 	await page.evaluate(
 		(key) => localStorage.setItem(key, JSON.stringify({ slug: "x" })),
 		ORGANIZATION_KEY,
 	);
-	await expect.poll(() => persistedQueries(page)).toBeGreaterThan(0);
+	await expect
+		.poll(() => persistedQueries(page, reader.user.uuid))
+		.toBeGreaterThan(0);
 	await expect
 		.poll(() =>
 			page.evaluate(
@@ -63,10 +73,14 @@ test("Sign out forgets the reader and all this browser remembers for them, then 
 	expect(
 		await page.evaluate(
 			(keys) => keys.filter((key) => localStorage.getItem(key) !== null),
-			[USER_KEY, ORGANIZATION_KEY, SHELL_KEY, VERSION_KEY],
+			[READER_KEY, ORGANIZATION_KEY, SHELL_KEY, VERSION_KEY],
 		),
 	).toEqual([]);
-	await expect.poll(() => persistedQueries(page)).toBe(0);
+	await expect.poll(() => persistedQueries(page, reader.user.uuid)).toBe(0);
+	expect(
+		(await context.cookies()).filter(({ name }) => name === SESSION_COOKIE),
+	).toEqual([]);
+	expect((await inSession(reader, "GET", "/v0/auth/session")).status).toBe(401);
 });
 
 test.describe("on a phone", () => {

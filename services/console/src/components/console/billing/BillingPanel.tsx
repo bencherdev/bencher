@@ -12,12 +12,12 @@ import {
 } from "solid-js";
 import billingConfig, { Host } from "../../../config/organization/billing";
 import {
-	type JsonAuthUser,
 	type JsonUsage,
 	type Jwt,
 	PlanLevel,
 	UsageKind,
 } from "../../../types/bencher";
+import type { Reader } from "../../../next/reader";
 import { authUser } from "../../../util/auth";
 import { useSearchParams } from "../../../util/url";
 import {
@@ -74,19 +74,19 @@ const BillingPanel = (props: Props) => {
 		return {
 			params: props.params,
 			bencher_valid: bencher_valid(),
-			token: user?.token,
+			reader: user,
 		};
 	});
 	const fetchPlan = async (fetcher: {
 		params: Params;
 		bencher_valid: InitValid;
-		token: string;
+		reader: undefined | Reader;
 	}) => {
-		if (!fetcher.bencher_valid || !validJwt(fetcher.token)) {
+		if (!fetcher.bencher_valid || !fetcher.reader) {
 			return null;
 		}
 		const path = `/v0/organizations/${fetcher.params.organization}/usage`;
-		return await httpGet(path, fetcher.token)
+		return await httpGet(path)
 			.then((resp) => {
 				// console.log(resp.data);
 				return resp?.data;
@@ -141,7 +141,7 @@ const BillingPanelSwitch = (props: {
 	params: Params;
 	onboard: boolean;
 	bencher_valid: Resource<InitValid>;
-	user: JsonAuthUser;
+	user: undefined | Reader;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
@@ -218,7 +218,7 @@ const manageSubscription = (
 );
 
 const CancelPlanButton = (props: {
-	user: JsonAuthUser;
+	user: undefined | Reader;
 	organization: undefined | string;
 	handleRefresh: () => void;
 }) => {
@@ -226,13 +226,12 @@ const CancelPlanButton = (props: {
 	const [canceling, setCanceling] = createSignal(false);
 
 	const sendCancel = () => {
-		const token = props.user?.token;
 		const organization = props.organization;
-		if (!validJwt(token) || !organization) {
+		if (!props.user || !organization) {
 			return;
 		}
 		setCanceling(true);
-		httpPatch(`/v0/organizations/${organization}/plan`, token, {
+		httpPatch(`/v0/organizations/${organization}/plan`, {
 			cancel_at_period_end: true,
 		})
 			.then((_resp) => {
@@ -310,20 +309,19 @@ const CancelPlanButton = (props: {
 };
 
 const ResumePlanButton = (props: {
-	user: JsonAuthUser;
+	user: undefined | Reader;
 	organization: undefined | string;
 	handleRefresh: () => void;
 }) => {
 	const [resuming, setResuming] = createSignal(false);
 
 	const sendResume = () => {
-		const token = props.user?.token;
 		const organization = props.organization;
-		if (!validJwt(token) || !organization) {
+		if (!props.user || !organization) {
 			return;
 		}
 		setResuming(true);
-		httpPatch(`/v0/organizations/${organization}/plan`, token, {
+		httpPatch(`/v0/organizations/${organization}/plan`, {
 			cancel_at_period_end: false,
 		})
 			.then((_resp) => {
@@ -362,7 +360,7 @@ const ResumePlanButton = (props: {
 
 // Shared cancel/resume control for any Bencher Cloud metered plan.
 const PlanCancelResume = (props: {
-	user: JsonAuthUser;
+	user: undefined | Reader;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
@@ -394,7 +392,7 @@ const PlanCancelResume = (props: {
 // Bencher Cloud metered plans. Pro bills on active series (its own panel); legacy Team and
 // metered Enterprise still bill on metrics.
 const CloudMeteredPanel = (props: {
-	user: JsonAuthUser;
+	user: undefined | Reader;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
@@ -422,7 +420,7 @@ const CloudMeteredPanel = (props: {
 // Legacy metered metrics plans (Team and metered Enterprise): billed per metric plus bare
 // metal runner minutes.
 const MeteredMetricsPanel = (props: {
-	user: JsonAuthUser;
+	user: undefined | Reader;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
@@ -483,7 +481,7 @@ const MeteredMetricsPanel = (props: {
 // during the first-month free trial, when the base fee is waived and runner minutes are
 // included (the whole bill is $0).
 const ProMeteredPanel = (props: {
-	user: JsonAuthUser;
+	user: undefined | Reader;
 	usage: Resource<null | JsonUsage>;
 	handleRefresh: () => void;
 }) => {
@@ -724,8 +722,7 @@ const SelfHostedFreePanel = (props: {
 		if (!props.bencher_valid()) {
 			return;
 		}
-		const token = authUser()?.token;
-		if (!validJwt(token)) {
+		if (!authUser()) {
 			return;
 		}
 		if (!isSendable()) {
@@ -736,7 +733,7 @@ const SelfHostedFreePanel = (props: {
 			license: license()?.trim(),
 		};
 		const path = `/v0/organizations/${props.params.organization}`;
-		httpPatch(path, token, data)
+		httpPatch(path, data)
 			.then((_resp) => {
 				setSubmitting(false);
 				props.refetch();

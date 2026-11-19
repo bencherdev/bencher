@@ -29,7 +29,7 @@ use bencher_egress::{EgressClient, EgressPolicy, EgressTimeouts, Lookup};
 use bencher_json::{
     Clock, DateTime, JsonOAuthAuthorization, JsonOAuthRedirect, JsonUserKeyCreated,
     OAuthAccessToken, OAuthAuthorizationUuid, OAuthCode, OAuthCodeHash, OAuthRefreshToken,
-    OAuthScope, OAuthTokenHash, UserKey, UserKeyUuid,
+    OAuthScope, OAuthTokenHash, Secret, SessionToken, UserKey, UserKeyUuid,
     system::config::{JsonOAuthServer, JsonRateLimiting},
 };
 use bencher_schema::{
@@ -69,6 +69,10 @@ const STATE: &str = "af0ifjsldkj";
 /// The code verifier `CHALLENGE` was made from (RFC 7636, appendix B).
 const VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
 const OTHER_VERIFIER: &str = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXl";
+const SEC_FETCH_SITE: &str = "Sec-Fetch-Site";
+/// What a browser sends with a request from the console's own pages.
+const SAME_ORIGIN: (&str, &str) = (SEC_FETCH_SITE, "same-origin");
+const SHARED_SECRET: &str = "the relay secret";
 
 #[tokio::test]
 async fn approve_with_a_session() {
@@ -537,6 +541,165 @@ async fn approve_refuses_an_api_token() {
     assert!(!harness.authorization(uuid).is_answered());
 }
 
+// Kills a consent page that cannot approve with the session its reader signed in with, and an
+// approval with a session cookie sent from another origin, or from no origin at all.
+#[tokio::test]
+async fn approve_with_the_session_cookie() {
+    let harness = Harness::new().await;
+    let user = harness.server.signup("Cookie", "cookie@example.com").await;
+    let cookie = session_cookie(&harness.server.session(&user));
+
+    for origin in [None, Some("cross-site"), Some("same-site")] {
+        let uuid = consent_request(&harness.authorize(&request()).await);
+        let mut headers = vec![(COOKIE.as_str(), cookie.as_str())];
+        if let Some(origin) = origin {
+            headers.push((SEC_FETCH_SITE, origin));
+        }
+        let resp = harness
+            .decide(uuid, &json!({ "approve": true }), &headers)
+            .await;
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN, "{origin:?}");
+        assert!(!harness.authorization(uuid).is_answered(), "{origin:?}");
+    }
+
+    let uuid = consent_request(&harness.authorize(&request()).await);
+    let resp = harness
+        .decide(
+            uuid,
+            &json!({ "approve": true }),
+            &[(COOKIE.as_str(), &cookie), SAME_ORIGIN],
+        )
+        .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let code: OAuthCode = param(&query(&redirect_url(resp).await), "code")
+        .parse()
+        .expect("Invalid code");
+    let authorization = harness.authorization(uuid);
+    assert_eq!(authorization.user_id, Some(harness.user_id(&user)));
+    assert_eq!(authorization.user_key_id, None);
+    assert_eq!(authorization.code_hash, Some(OAuthCodeHash::from(&code)));
+}
+
+// Kills an approval by a session that has ended, never was, or is a locked user's, and one by a
+// cookie the API does not honor because it did not come through the relay.
+#[tokio::test]
+async fn a_dead_or_unrelayed_session_cookie_cannot_approve() {
+    let harness = Harness::new().await;
+    let user = harness.server.signup("Locked", "locked@example.com").await;
+    let locked = session_cookie(&harness.server.session(&user));
+    diesel::update(schema::user::table.filter(schema::user::uuid.eq(&user.uuid)))
+        .set(schema::user::locked.eq(true))
+        .execute(&mut harness.server.db_conn())
+        .expect("Failed to lock the user");
+    let unknown = session_cookie(&SessionToken::generate().expect("Failed to make a token"));
+
+    for cookie in [&locked, &unknown] {
+        let uuid = consent_request(&harness.authorize(&request()).await);
+        let resp = harness
+            .decide(
+                uuid,
+                &json!({ "approve": true }),
+                &[(COOKIE.as_str(), cookie), SAME_ORIGIN],
+            )
+            .await;
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        assert!(
+            header(&resp, "set-cookie").contains("Max-Age=0"),
+            "a dead session is cleared"
+        );
+        assert!(!harness.authorization(uuid).is_answered());
+    }
+
+    let relayed = Harness::with_relay_secret(SHARED_SECRET).await;
+    let user = relayed
+        .server
+        .signup("Relayed", "relayed@example.com")
+        .await;
+    let cookie = session_cookie(&relayed.server.session(&user));
+    for (secret, status) in [
+        (None, StatusCode::UNAUTHORIZED),
+        (Some("not the secret"), StatusCode::UNAUTHORIZED),
+        (Some(SHARED_SECRET), StatusCode::OK),
+    ] {
+        let uuid = consent_request(&relayed.authorize(&request()).await);
+        let mut headers = vec![(COOKIE.as_str(), cookie.as_str()), SAME_ORIGIN];
+        if let Some(secret) = secret {
+            headers.push((bencher_json::RELAY_SECRET, secret));
+        }
+        let resp = relayed
+            .decide(uuid, &json!({ "approve": true }), &headers)
+            .await;
+        assert_eq!(resp.status(), status, "{secret:?}");
+        assert_eq!(
+            relayed.authorization(uuid).is_answered(),
+            status == StatusCode::OK
+        );
+    }
+}
+
+// The relay passes on no `Authorization` header, so a pasted key rides in the decision itself.
+// Kills a pasted key that is ignored or loses to the session cookie beside it, one quoted back,
+// and an unknown key, a project key, or anything else that approves.
+#[tokio::test]
+async fn approve_with_a_user_key_in_the_decision() {
+    let harness = Harness::new().await;
+    let user = harness.server.signup("Pasted", "pasted@example.com").await;
+    let other = harness
+        .server
+        .signup("Signed In", "signed-in@example.com")
+        .await;
+    let (key_uuid, key) = harness.create_user_key(&user).await;
+    let cookie = session_cookie(&harness.server.session(&other));
+
+    let uuid = consent_request(&harness.authorize(&request()).await);
+    let resp = harness
+        .decide(
+            uuid,
+            &json!({ "approve": true, "key": key.as_ref() }),
+            &[(COOKIE.as_str(), &cookie), SAME_ORIGIN],
+        )
+        .await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    let authorization = harness.authorization(uuid);
+    assert_eq!(authorization.user_id, Some(harness.user_id(&user)));
+    assert_eq!(
+        authorization.user_key_id,
+        Some(harness.user_key_id(key_uuid))
+    );
+
+    let org = harness.server.create_org(&user, "Pasted Keys").await;
+    let project = harness
+        .server
+        .create_project(&user, &org, "Pasted Keys")
+        .await;
+    let project_key = harness
+        .server
+        .create_project_key(&user, &project, "Run Key")
+        .await;
+    for (pasted, status) in [
+        (
+            "bencher_user_aB3xY9mN2pQ7rS4tU8vW1zK5jL0fGh",
+            StatusCode::UNAUTHORIZED,
+        ),
+        (project_key.key.as_ref(), StatusCode::BAD_REQUEST),
+        ("bencher_user_malformed", StatusCode::BAD_REQUEST),
+        ("garbage", StatusCode::BAD_REQUEST),
+    ] {
+        let uuid = consent_request(&harness.authorize(&request()).await);
+        let resp = harness
+            .decide(
+                uuid,
+                &json!({ "approve": true, "key": pasted }),
+                &[(COOKIE.as_str(), &cookie), SAME_ORIGIN],
+            )
+            .await;
+        assert_eq!(resp.status(), status, "{pasted}");
+        let body = resp.text().await.expect("Invalid body");
+        assert!(!body.contains(pasted), "{body}");
+        assert!(!harness.authorization(uuid).is_answered(), "{pasted}");
+    }
+}
+
 // A request approved with a pasted user key is bound to that key, so its grant dies with it.
 #[tokio::test]
 async fn approve_with_a_user_key_binds_the_key() {
@@ -663,6 +826,22 @@ async fn pasted_key_is_charged_as_a_sign_in_attempt() {
             .status(),
         StatusCode::OK
     );
+
+    // The console sends a pasted key in the decision itself, which is charged the same.
+    let harness = Harness::rate_limited(config(), None, one_attempt()).await;
+    let user = harness.server.signup("Pasted", "pasted@example.com").await;
+    let (_, key) = harness.create_user_key(&user).await;
+    let first = consent_request(&harness.authorize(&request()).await);
+    let second = consent_request(&harness.authorize(&request()).await);
+    for (uuid, status) in [
+        (first, StatusCode::OK),
+        (second, StatusCode::TOO_MANY_REQUESTS),
+    ] {
+        let resp = harness
+            .decide(uuid, &json!({ "approve": true, "key": key.as_ref() }), &[])
+            .await;
+        assert_eq!(resp.status(), status);
+    }
 }
 
 // A metadata document fetch is charged as a sign in attempt, and a configured document is not.
@@ -2175,8 +2354,28 @@ impl Harness {
         harness
     }
 
+    /// A server that honors a session cookie only from a relay that sends `secret`.
     #[expect(clippy::expect_used, reason = "test helper")]
+    async fn with_relay_secret(secret: &str) -> Self {
+        let json: JsonOAuthServer = serde_json::from_value(config()).expect("Invalid OAuth config");
+        Box::pin(Self::with_options(
+            OAuthServer::try_from(json).expect("Invalid OAuth server"),
+            None,
+            Some(secret.parse().expect("Invalid secret")),
+        ))
+        .await
+    }
+
     async fn with_oauth(oauth: OAuthServer, rate_limiting: Option<RateLimiting>) -> Self {
+        Box::pin(Self::with_options(oauth, rate_limiting, None)).await
+    }
+
+    #[expect(clippy::expect_used, reason = "test helper")]
+    async fn with_options(
+        oauth: OAuthServer,
+        rate_limiting: Option<RateLimiting>,
+        relay_secret: Option<Secret>,
+    ) -> Self {
         let now = Arc::new(AtomicI64::new(NOW));
         let clock_now = Arc::clone(&now);
         let server = TestServer::new_with_options(TestServerOptions {
@@ -2185,6 +2384,7 @@ impl Harness {
             }))),
             rate_limiting,
             oauth: Some(oauth),
+            relay_secret,
             ..TestServerOptions::default()
         })
         .await;
@@ -2231,6 +2431,30 @@ impl Harness {
         .send()
         .await
         .expect("Request failed")
+    }
+
+    /// Answer `uuid` with the decision `body`, sending `headers` and no bearer.
+    #[expect(clippy::expect_used, reason = "test helper")]
+    async fn decide(
+        &self,
+        uuid: OAuthAuthorizationUuid,
+        body: &Value,
+        headers: &[(&str, &str)],
+    ) -> reqwest::Response {
+        let mut request = self
+            .client
+            .post(
+                self.server
+                    .api_url(&format!("/v0/oauth/authorizations/{uuid}")),
+            )
+            .json(body);
+        for (name, value) in headers {
+            request = request.header(*name, *value);
+        }
+        self.with_address(request)
+            .send()
+            .await
+            .expect("Request failed")
     }
 
     #[expect(clippy::expect_used, reason = "test helper")]

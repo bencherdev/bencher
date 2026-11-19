@@ -18,7 +18,7 @@ const OrganizationLayout = (props: { children?: JSX.Element }) => {
 	const organization = useQueryResult(() => organizationQuery(api, key()));
 	// Only read: the switcher asks for it on intent.
 	const bootstrap = useQueryResult(() => ({
-		...consoleUserQuery(api, reader().user.uuid),
+		...consoleUserQuery(api, reader().uuid),
 		enabled: false,
 	}));
 	const known = () =>
@@ -33,8 +33,8 @@ const OrganizationLayout = (props: { children?: JSX.Element }) => {
 			<Shell
 				org
 				organization={known()}
-				reader={reader().user.uuid}
-				user={reader().user}
+				reader={reader().uuid}
+				user={reader()}
 				signOut={signOut}
 			/>
 			<Announcer path={location.pathname} title={title()} />

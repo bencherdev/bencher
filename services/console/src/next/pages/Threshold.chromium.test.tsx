@@ -81,7 +81,7 @@ const mount = (
 };
 
 /** A client without the project's bootstrap, which the page waits for. */
-const bare = () => createQueryClient(() => {});
+const bare = () => createQueryClient();
 
 /** A client holding the project's bootstrap, on `version`. */
 const client = (version = 1) => {

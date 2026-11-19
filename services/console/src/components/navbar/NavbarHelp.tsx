@@ -7,9 +7,7 @@ const NavbarHelp = () => {
 	return (
 		<a
 			class="button"
-			href={`/console/users/${
-				user?.user?.slug
-			}/help/?${BACK_PARAM}=${encodePath()}`}
+			href={`/console/users/${user?.slug}/help/?${BACK_PARAM}=${encodePath()}`}
 		>
 			<span class="icon has-text-primary">
 				<i class="fas fa-life-ring" />

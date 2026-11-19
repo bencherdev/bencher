@@ -27,7 +27,7 @@ test("a signed-in reader who opens a claim link lands on the claimed project's R
 	});
 	expect(run.status(), await run.text()).toBe(201);
 	const { project } = (await run.json()) as JsonReport;
-	const reader = await createReader(request);
+	const reader = await createReader();
 	const page = await (
 		await newContext({ storageState: signedIn(reader) })
 	).newPage();
@@ -50,7 +50,7 @@ test("a signed-in reader who opens a claim link lands on the claimed project's R
 	// Only a member reads an organization.
 	const claimed = await request.get(
 		`${seed.api_url}/v0/organizations/${project.organization}`,
-		{ headers: { Authorization: `Bearer ${reader.token}` } },
+		{ headers: { Authorization: `Bearer ${reader.key}` } },
 	);
 	expect(claimed.status()).toBe(200);
 });

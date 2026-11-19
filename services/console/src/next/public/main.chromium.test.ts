@@ -4,7 +4,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { page } from "vitest/browser";
 import { perf } from "../mcp/testing";
 import { decodeQuery, encodeQuery } from "../query/query";
-import { USER_KEY } from "../reader";
+import { READER_KEY } from "../reader";
 import { boot } from "./main";
 
 const uuid = (n: number) =>
@@ -40,7 +40,7 @@ const refusedInOrder = () => {
 				setTimeout(refuseProject, 50);
 				return refusal();
 			}
-			if (new Headers(init?.headers).has("Authorization")) {
+			if (init?.credentials === "same-origin") {
 				return new Promise<never>(() => {});
 			}
 			await projectRefused;
@@ -79,12 +79,8 @@ test("a plot refused before its project shows no error, then locks", async () =>
 // follows the refusal.
 test("a plot refused before its project shows no error while the reader is checked", async () => {
 	localStorage.setItem(
-		USER_KEY,
-		JSON.stringify({
-			token: "tok",
-			user: { uuid: "u", slug: "muriel-bagge" },
-			expiration: "2999-01-01T00:00:00Z",
-		}),
+		READER_KEY,
+		JSON.stringify({ uuid: "u", slug: "muriel-bagge", name: "Muriel Bagge" }),
 	);
 	const { mount, alerts } = refusedInOrder();
 
@@ -99,19 +95,15 @@ test("a plot refused before its project shows no error while the reader is check
 // wait on: the member's refused query would never say so.
 test("a member's refused query says so once the member's read of the project answers", async () => {
 	localStorage.setItem(
-		USER_KEY,
-		JSON.stringify({
-			token: "tok",
-			user: { uuid: "u", slug: "muriel-bagge" },
-			expiration: "2999-01-01T00:00:00Z",
-		}),
+		READER_KEY,
+		JSON.stringify({ uuid: "u", slug: "muriel-bagge", name: "Muriel Bagge" }),
 	);
 	const answer = (status: number, body: unknown) =>
 		new Response(JSON.stringify(body), { status });
 	vi.stubGlobal(
 		"fetch",
 		vi.fn(async (input: string, init?: RequestInit) => {
-			const member = new Headers(init?.headers).has("Authorization");
+			const member = init?.credentials === "same-origin";
 			if (new URL(input, location.href).pathname.endsWith("/perf")) {
 				return member
 					? answer(400, { message: "Bad Request" })
@@ -234,4 +226,56 @@ test("the public plot opens a pinned point's commit through the project's URL", 
 			`https://github.com/pompeii-llc/hashbrown/commit/${hash}`,
 		);
 	expect(status.element().textContent).not.toContain("GitHub");
+});
+
+// Kills a hint kept for a session the API has ended, which hides Sign in on
+// every project the reader cannot read, and a session asked after for a
+// reader the project let in.
+test("a reader refused a project asks whether their session ended, and forgets it when it has", async () => {
+	for (const [session, kept] of [
+		[401, false],
+		[200, true],
+	] as const) {
+		localStorage.setItem(
+			READER_KEY,
+			JSON.stringify({ uuid: uuid(9), slug: "muriel", name: "Muriel" }),
+		);
+		document.documentElement.setAttribute("data-reader", "");
+		const asked: string[] = [];
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async (input: string) => {
+				const { pathname } = new URL(input, location.href);
+				asked.push(pathname);
+				return pathname.endsWith("/auth/session")
+					? new Response("{}", { status: session })
+					: new Response('{"message":"Not Found"}', { status: 404 });
+			}),
+		);
+		const mount = document.createElement("div");
+		mount.className = "console";
+		mount.dataset.slug = "hashbrown";
+		document.body.append(mount);
+		boot(mount);
+
+		await expect
+			.element(
+				page.getByRole("heading", { level: 1, name: "Private or not found" }),
+			)
+			.toBeVisible();
+		await expect
+			.poll(() => asked)
+			.toEqual([
+				"/api/v0/projects/hashbrown",
+				"/api/v0/projects/hashbrown",
+				"/api/v0/auth/session",
+			]);
+		await expect
+			.poll(() => localStorage.getItem(READER_KEY) !== null)
+			.toBe(kept);
+		expect(document.documentElement.hasAttribute("data-reader")).toBe(kept);
+		document.documentElement.removeAttribute("data-reader");
+		localStorage.clear();
+		document.body.replaceChildren();
+	}
 });

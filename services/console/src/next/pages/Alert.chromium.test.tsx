@@ -76,7 +76,7 @@ const answers =
 				: new Promise<never>(() => {});
 
 const newClient = () => {
-	const client = createQueryClient(() => {});
+	const client = createQueryClient();
 	client.setDefaultOptions({
 		queries: { ...client.getDefaultOptions().queries, retry: false },
 	});

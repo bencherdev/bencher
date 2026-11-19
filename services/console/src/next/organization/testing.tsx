@@ -4,13 +4,10 @@ import { MemoryRouter, Route, createMemoryHistory } from "@solidjs/router";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { type JSX, Suspense } from "solid-js";
 import { render } from "solid-js/web";
-import type {
-	JsonAuthUser,
-	JsonConsoleUser,
-	JsonOrganization,
-} from "../../types/bencher";
+import type { JsonConsoleUser, JsonOrganization } from "../../types/bencher";
 import { AccountContext } from "../account/context";
 import type { Api } from "../api";
+import type { Reader } from "../reader";
 import { FlushContext } from "../flush";
 import { consoleUserQuery } from "../queries";
 import { type Allowed, allowedQuery, organizationQuery } from "./data";
@@ -23,17 +20,11 @@ export const ORGANIZATION: JsonOrganization = {
 	modified: "2026-09-01T00:00:00Z",
 };
 
-const READER = {
-	user: {
-		uuid: "u",
-		name: "Muriel Bagge",
-		slug: "muriel-bagge",
-		email: "muriel@nowhere.example",
-		admin: false,
-		locked: false,
-	},
-	token: "tok",
-} as JsonAuthUser;
+const READER: Reader = {
+	uuid: "u",
+	name: "Muriel Bagge",
+	slug: "muriel-bagge",
+};
 
 /** The reader's bootstrap: Pompeii LLC with Gizmo and Windmill, and Bagge Diner with Cathode. */
 export const BOOTSTRAP: JsonConsoleUser = {

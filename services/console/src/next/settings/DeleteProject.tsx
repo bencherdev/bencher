@@ -31,7 +31,7 @@ const DeleteProject = (props: {
 	const client = useQueryClient();
 	const flush = useContext(FlushContext);
 	const navigate = useNavigate();
-	const reader = useContext(AccountContext)?.reader().user.uuid;
+	const reader = useContext(AccountContext)?.reader().uuid;
 	const [typed, setTyped] = createSignal("");
 	const matches = () => typed().trim().toLowerCase() === props.project.slug;
 	const [deleting, setDeleting] = createSignal(false);

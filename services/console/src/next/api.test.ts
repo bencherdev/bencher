@@ -9,22 +9,42 @@ const respond =
 	};
 let calls: { url: string; init: RequestInit | undefined }[] = [];
 
-const api = (fetch: typeof globalThis.fetch) =>
-	createApi({ token: "tok", fetch });
+const api = (fetch: typeof globalThis.fetch, onUnauthorized = () => {}) =>
+	createApi({ fetch, onUnauthorized });
 
 describe("createApi", () => {
-	// Kills a request sent anywhere but the console's own relay, or without the
-	// reader's token.
-	test("sends the bearer token to the relay", async () => {
+	// Kills a request sent anywhere but the console's own relay, and one that
+	// carries a credential of its own: the session cookie travels by itself.
+	test("reads through the relay with no Authorization", async () => {
 		calls = [];
 		const { data } = await api(respond(200, { name: "Hashbrown" })).get<{
 			name: string;
 		}>("/v0/projects/hashbrown");
 		expect(data).toEqual({ name: "Hashbrown" });
 		expect(calls[0]?.url).toBe("/api/v0/projects/hashbrown");
-		expect(new Headers(calls[0]?.init?.headers).get("authorization")).toBe(
-			"Bearer tok",
+		expect(new Headers(calls[0]?.init?.headers).has("authorization")).toBe(
+			false,
 		);
+	});
+
+	// Kills a refused session that leaves the reader where nothing loads, read
+	// or change, and anything else that sends them to sign in.
+	test("a 401 to a read or a change, and nothing else, ends the session", async () => {
+		const ended = (status: number, change: boolean) => {
+			let count = 0;
+			const client = api(respond(status, { message: "no" }), () => {
+				count += 1;
+			});
+			return (change ? client.send("PATCH", "/v0/x", {}) : client.get("/v0/x"))
+				.catch(() => undefined)
+				.then(() => count);
+		};
+		expect(await ended(401, false)).toBe(1);
+		expect(await ended(401, true)).toBe(1);
+		for (const status of [400, 403, 404, 429, 500]) {
+			expect(await ended(status, false), String(status)).toBe(0);
+			expect(await ended(status, true), String(status)).toBe(0);
+		}
 	});
 
 	// Kills errors that lose what went wrong, which decides retry and sign in.
@@ -51,50 +71,6 @@ describe("createApi", () => {
 		]);
 	});
 
-	// Kills a badly signed or expired token left signed in because the API
-	// answers it with a 400, and every other 400 sending the reader to sign in.
-	test("a 400 for a token the API cannot validate reads as refused", async () => {
-		const refused = await api(
-			respond(400, {
-				request_id: "x",
-				message:
-					"Failed to validate JSON Web Token: InvalidSignature\nExpected format is `Authorization: Bearer <bencher.api.token>`.",
-			}),
-		)
-			.get("/v0/x")
-			.catch((error: ApiError) => error);
-		expect((refused as ApiError).kind).toBe("unauthorized");
-
-		const other = await api(
-			respond(400, { message: "bad parameter in URL path" }),
-		)
-			.get("/v0/x")
-			.catch((error: ApiError) => error);
-		expect((other as ApiError).kind).toBe("client");
-
-		const unreadable = await api(
-			async () => new Response("<html>", { status: 400 }),
-		)
-			.get("/v0/x")
-			.catch((error: ApiError) => error);
-		expect((unreadable as ApiError).kind).toBe("client");
-	});
-
-	// Kills a session that runs past its end with every request refused.
-	test("an ended session sends nothing and reads as refused", async () => {
-		calls = [];
-		const error = await createApi({
-			token: "tok",
-			expiration: 1_000,
-			now: () => 1_000,
-			fetch: respond(200, {}),
-		})
-			.get("/v0/x")
-			.catch((error: ApiError) => error);
-		expect((error as ApiError).kind).toBe("unauthorized");
-		expect(calls).toEqual([]);
-	});
-
 	// Kills a lost connection reported as an answer from the API.
 	test("names a request that never reached the API", async () => {
 		const error = await api(async () => {
@@ -117,8 +93,8 @@ describe("createApi", () => {
 		expect(error).toBe(abort);
 	});
 
-	// Kills a change sent without its body, its method, or the reader's token.
-	test("sends a change as JSON with the bearer token", async () => {
+	// Kills a change sent without its body or its method, or with a credential.
+	test("sends a change as JSON with no Authorization", async () => {
 		calls = [];
 		const { data } = await api(respond(200, { name: "Hash Browns" })).send<{
 			name: string;
@@ -129,7 +105,7 @@ describe("createApi", () => {
 		expect(call?.init?.method).toBe("PATCH");
 		expect(call?.init?.body).toBe('{"name":"Hash Browns"}');
 		const headers = new Headers(call?.init?.headers);
-		expect(headers.get("authorization")).toBe("Bearer tok");
+		expect(headers.has("authorization")).toBe(false);
 		expect(headers.get("content-type")).toBe("application/json");
 	});
 

@@ -292,7 +292,7 @@ test("a running run holds alerting lines that land behind Show", async ({
 const unarchive = (request: APIRequestContext, slug: string) =>
 	request.fetch(`${seed.api_url}/v0/projects/${slug}/branches/main`, {
 		method: "PATCH",
-		headers: { Authorization: `Bearer ${seed.member.token}` },
+		headers: { Authorization: `Bearer ${seed.member.key}` },
 		data: { archived: false },
 	});
 

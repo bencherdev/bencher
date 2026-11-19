@@ -22,7 +22,6 @@ import bencher_valid_init, {
 	is_valid_window,
 } from "bencher_valid";
 import bencher_valid_wasm from "bencher_valid/bencher_valid_bg.wasm?url";
-import type { JsonAuthUser } from "../types/bencher";
 
 export const DEBOUNCE_DELAY = 10;
 
@@ -111,13 +110,6 @@ export const jwtOptionalInvalid = (
 
 export const validOptionUrl = (url: undefined | null | string): boolean =>
 	validOptionString(url, (i) => i.length === 0 || is_valid_web_url(i));
-
-export const validUser = (user: JsonAuthUser): boolean =>
-	validUuid(user.user.uuid) &&
-	validUserName(user.user.name) &&
-	validSlug(user.user.slug) &&
-	validEmail(user.user.email) &&
-	validJwt(user.token);
 
 export const validateNumber = (
 	input: string,

@@ -62,10 +62,6 @@ export const relay = async (
 			headers.set(name, value);
 		}
 	}
-	const authorization = request.headers.get("authorization");
-	if (authorization && /^bearer /i.test(authorization)) {
-		headers.set("authorization", authorization);
-	}
 	if (secret) {
 		headers.set(RELAY_SECRET, secret);
 		const address = clientAddress(relayed);

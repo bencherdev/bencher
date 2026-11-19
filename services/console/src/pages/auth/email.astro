@@ -1,14 +1,17 @@
 ---
 export const prerender = false;
 
-import AuthLayout from "../../layouts/auth/AuthLayout.astro";
-import ConfirmEmail from "../../components/auth/ConfirmEmail";
-
-// Using `meta.env` requires `prerender = false`
-const title = "Confirm your new email";
-const description = "Confirm the new email for your Bencher account.";
+import AuthPage from "../../next/astro/AuthPage.astro";
+import AuthReturn from "../../next/astro/AuthReturn.astro";
+import Frame from "../../next/auth/Frame";
 ---
 
-<AuthLayout title={title} description={description}>
-  <ConfirmEmail client:only="solid-js" />
-</AuthLayout>
+<AuthPage title="Confirm your new email">
+	<AuthReturn slot="head" />
+	<div id="auth" class="console">
+		<Frame />
+	</div>
+	<script>
+		import "../../next/auth/emailPage";
+	</script>
+</AuthPage>

@@ -51,7 +51,7 @@ const alertOf = async (
 	request: APIRequestContext,
 	slug: string,
 	benchmark: string,
-	token = seed.member.token,
+	token = seed.member.key,
 ) => {
 	const response = await request.get(
 		`${seed.api_url}/v0/projects/${slug}/alerts?per_page=255`,
@@ -480,7 +480,7 @@ test.describe("signed in", () => {
 			`${seed.api_url}/v0/projects/${project.slug}`,
 			{
 				method: "PATCH",
-				headers: { Authorization: `Bearer ${seed.admin.token}` },
+				headers: { Authorization: `Bearer ${seed.admin.key}` },
 				data: { bmf_version: 0 },
 			},
 		);

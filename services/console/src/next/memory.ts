@@ -78,7 +78,10 @@ export const CLASSIC_ORGANIZATION = "BENCHER_ORGANIZATION";
 
 /** Forget the reader and all this browser remembers for them, for whoever signs in next. */
 export const forgetReader = (storage: Pick<Storage, "removeItem">) => {
+	// The hint (`READER_KEY`), and the user and session token stored before the cookie, by
+	// value: an import of either key would load the reader's module with every page's memory.
 	for (const key of [
+		"BENCHER_READER",
 		"BENCHER_USER",
 		CLASSIC_ORGANIZATION,
 		SHELL_KEY,

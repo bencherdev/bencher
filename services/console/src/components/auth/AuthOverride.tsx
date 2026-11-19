@@ -7,7 +7,7 @@ export interface Props {
 }
 
 const AuthOverride = (props: Props) => {
-	if (authUser()?.token) {
+	if (authUser()) {
 		const element = document.getElementById(props.elementId);
 		const children = props.children as DOMElement;
 		if (element && children) {

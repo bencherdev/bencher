@@ -36,7 +36,7 @@ bencher_callback = { workspace = true, optional = true }
 bencher_config.workspace = true
 bencher_endpoint.workspace = true
 bencher_github_client = { workspace = true, optional = true, features = ["test-base-url"] }
-bencher_google_client = { workspace = true, optional = true }
+bencher_google_client = { workspace = true, optional = true, features = ["test-base-url"] }
 bencher_json = { workspace = true, features = ["server", "schema", "db", "test-clock"] }
 bencher_license = { workspace = true, optional = true }
 bencher_oci_storage = { workspace = true, optional = true, features = ["test-clock"] }

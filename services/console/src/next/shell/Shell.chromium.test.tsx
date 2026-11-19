@@ -29,7 +29,6 @@ const mount = (tab: Tab = "runs", dsn = "https://key@sentry.example/1") => {
 				user={{
 					name: "Muriel Bagge",
 					slug: "muriel-bagge",
-					email: "muriel@nowhere.example",
 				}}
 			/>
 		),
@@ -393,7 +392,6 @@ describe("an account page", () => {
 					user={{
 						name: "Muriel Bagge",
 						slug: "muriel-bagge",
-						email: "muriel@nowhere.example",
 					}}
 				/>
 			),
@@ -448,7 +446,6 @@ describe("an organization page", () => {
 					user={{
 						name: "Muriel Bagge",
 						slug: "muriel-bagge",
-						email: "muriel@nowhere.example",
 					}}
 				/>
 			),
@@ -530,8 +527,8 @@ test("a build with no Sentry DSN draws no Feedback control", async () => {
 
 // Kills a control that opens nothing, a dialog that loads but never shows, a
 // button that does not report the dialog open, and a dialog that does not know
-// the project or the reader.
-test("Feedback opens the dialog, which names the project and the reader", async () => {
+// the project.
+test("Feedback opens the dialog, which names the project", async () => {
 	await page.viewport(1280, 800);
 	mount();
 	const control = page.getByRole("button", { name: "Feedback", exact: true });
@@ -544,9 +541,6 @@ test("Feedback opens the dialog, which names the project and the reader", async 
 	await expect.element(control).toHaveAttribute("aria-expanded", "true");
 	await expect
 		.element(page.getByRole("checkbox", { name: /Pompeii LLC \/ Hashbrown/ }))
-		.toBeVisible();
-	await expect
-		.element(page.getByRole("checkbox", { name: /muriel@nowhere\.example/ }))
 		.toBeVisible();
 	await page.getByRole("button", { name: "Cancel" }).click();
 	await expect.element(dialog).not.toBeInTheDocument();

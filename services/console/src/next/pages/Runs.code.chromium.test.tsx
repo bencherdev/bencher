@@ -27,7 +27,7 @@ const mount = (api: Api) => {
 	document.body.append(root);
 	dispose = render(
 		() => (
-			<QueryClientProvider client={createQueryClient(() => {})}>
+			<QueryClientProvider client={createQueryClient()}>
 				<MemoryRouter
 					history={history}
 					root={(props) => (

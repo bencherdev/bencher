@@ -1,13 +1,15 @@
 ---
-export const prerender = true;
+export const prerender = false;
 
-import AuthLayout from "../../layouts/auth/AuthLayout.astro";
-import Logout from "../../components/auth/Logout";
-
-const title = "Logout";
-const description = "Logout from your Bencher account";
+import AuthPage from "../../next/astro/AuthPage.astro";
+import Frame from "../../next/auth/Frame";
 ---
 
-<AuthLayout title={title} description={description}>
-  <Logout client:only="solid-js" />
-</AuthLayout>
+<AuthPage title="Sign out">
+	<div id="auth" class="console">
+		<Frame />
+	</div>
+	<script>
+		import "../../next/auth/logoutPage";
+	</script>
+</AuthPage>

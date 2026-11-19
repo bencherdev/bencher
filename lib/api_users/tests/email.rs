@@ -15,11 +15,8 @@ use std::sync::{
 #[cfg(feature = "plus")]
 use bencher_api_tests::TestOrg;
 use bencher_api_tests::{LogCapture, TestServer, TestUser, helpers::seed_token};
-use bencher_json::{
-    DateTime, Email, JsonConfirm, JsonTokens, JsonUser, Jwt, TokenUuid, UserUuid,
-    system::auth::JsonAuthUser,
-};
-use bencher_schema::{AUTH_TOKEN_TTL, schema};
+use bencher_json::{DateTime, Email, JsonConfirm, JsonTokens, JsonUser, Jwt, TokenUuid, UserUuid};
+use bencher_schema::{AUTH_TOKEN_TTL, CLIENT_TOKEN_TTL, schema};
 use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use http::StatusCode;
 
@@ -61,8 +58,8 @@ async fn email_change_waits_for_confirm() {
     assert_eq!(stored_email_verified(&server, &user), verified);
 }
 
-// Fails if confirming does not switch the email, keeps the user's legacy API tokens,
-// answers with a session that is not for the new email, or leaves the new email unproven.
+// Fails if confirming does not switch the email, keeps the user's legacy API tokens, answers
+// with a credential the page's script could read, or leaves the new email unproven.
 #[tokio::test]
 async fn email_change_confirm() {
     let (server, capture) = server_with_log().await;
@@ -78,12 +75,17 @@ async fn email_change_confirm() {
 
     let (status, body) = confirm(&server, user.uuid, &token).await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    let auth_user: JsonAuthUser = serde_json::from_str(&body).expect("Failed to parse auth user");
-    assert_eq!(auth_user.user.email, new_email);
+    let answer: serde_json::Value = serde_json::from_str(&body).expect("Failed to parse answer");
+    assert_eq!(answer.get("token"), None, "{body}");
+    let confirmed: JsonUser = serde_json::from_value(answer).expect("Failed to parse user");
+    assert_eq!(confirmed.email, new_email);
 
-    let session = auth_user.token.to_string();
-    assert_eq!(view_user(&server, &session, &user).await.email, new_email);
-    assert!(is_revoked(&server, &session, &user, api_token.uuid).await);
+    let session = client_token(&server, &new_email);
+    assert_eq!(
+        view_user(&server, session.as_ref(), &user).await.email,
+        new_email
+    );
+    assert!(is_revoked(&server, session.as_ref(), &user, api_token.uuid).await);
     assert!(stored_email_verified(&server, &user).is_some());
 }
 
@@ -199,14 +201,15 @@ async fn email_change_confirm_superseded() {
     let first_token = request_change(&server, &capture, &user.token, &user, &first).await;
     let second_token = request_change(&server, &capture, &user.token, &user, &second).await;
 
-    let (status, body) = confirm(&server, user.uuid, &second_token).await;
-    assert_eq!(status, StatusCode::OK, "{body}");
-    let auth_user: JsonAuthUser = serde_json::from_str(&body).expect("Failed to parse auth user");
+    confirm_ok(&server, user.uuid, &second_token).await;
 
     let (status, body) = confirm(&server, user.uuid, &first_token).await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
-    let session = auth_user.token.to_string();
-    assert_eq!(view_user(&server, &session, &user).await.email, second);
+    let session = client_token(&server, &second);
+    assert_eq!(
+        view_user(&server, session.as_ref(), &user).await.email,
+        second
+    );
 }
 
 // Fails if a link changes a user whose email is no longer the one it was sent for,
@@ -238,9 +241,11 @@ async fn email_change_confirm_round_trip() {
     let user = server.signup("Round User", "round@example.com").await;
     let new_email = email("round-new@example.com");
     let first_token = request_change(&server, &capture, &user.token, &user, &new_email).await;
-    let session = confirm_ok(&server, user.uuid, &first_token).await.token;
+    confirm_ok(&server, user.uuid, &first_token).await;
+    let session = client_token(&server, &new_email);
     let back_token = request_change(&server, &capture, session.as_ref(), &user, &user.email).await;
-    let session = confirm_ok(&server, user.uuid, &back_token).await.token;
+    confirm_ok(&server, user.uuid, &back_token).await;
+    let session = client_token(&server, &user.email);
     let api_token = seed_token(&server, &user, "Legacy Token");
 
     let (status, body) = confirm(&server, user.uuid, &first_token).await;
@@ -297,7 +302,8 @@ async fn email_change_confirm_joins_sso() {
     let new_email = email("sso@sso.example.com");
     let token = request_change(&server, &capture, &user.token, &user, &new_email).await;
 
-    let session = confirm_ok(&server, user.uuid, &token).await.token;
+    confirm_ok(&server, user.uuid, &token).await;
+    let session = client_token(&server, &new_email);
     assert_eq!(
         view_org(&server, session.as_ref(), &org).await,
         StatusCode::OK
@@ -516,10 +522,19 @@ async fn confirm(server: &TestServer, user: UserUuid, token: &Jwt) -> (StatusCod
     (status, resp.text().await.expect("Failed to read response"))
 }
 
-async fn confirm_ok(server: &TestServer, user: UserUuid, token: &Jwt) -> JsonAuthUser {
+async fn confirm_ok(server: &TestServer, user: UserUuid, token: &Jwt) -> JsonUser {
     let (status, body) = confirm(server, user, token).await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    serde_json::from_str(&body).expect("Failed to parse auth user")
+    serde_json::from_str(&body).expect("Failed to parse user")
+}
+
+/// A token for `email` such as the user holds once signed in at that email, since the confirm
+/// answers with none.
+fn client_token(server: &TestServer, email: &Email) -> Jwt {
+    server
+        .token_key()
+        .new_client(email.clone(), CLIENT_TOKEN_TTL)
+        .expect("Failed to mint client token")
 }
 
 /// Patch the user with `bearer` and return the user it answers with.
