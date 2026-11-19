@@ -153,3 +153,78 @@ async fn sign_up_takes_a_login_with_an_underscore() {
     assert_eq!(oauth_user.user.user.name.as_ref(), login);
     assert_eq!(oauth_user.user.user.slug, slug);
 }
+
+// Sign-in on GitHub Enterprise Server. Kills a sign-in there without an Enterprise license, an
+// authorize page, a code exchange, or a user read that goes to github.com's layout or misses the
+// root's path, and an email to the admins that links the new user's profile anywhere else.
+#[tokio::test]
+async fn sign_in_on_github_enterprise_server_needs_a_license_and_stays_on_its_root() {
+    let github = GitHubServer::start(vec![
+        exchanged(),
+        signed_in_user("octo-cat"),
+        primary_email("octo-cat@example.com"),
+    ])
+    .await;
+    let root = github.base();
+    let log = LogCapture::default();
+    let server =
+        TestServer::new_with_github_enterprise(root.clone(), Clock::System, log.logger()).await;
+    let start = || server.client.get(server.api_url("/v0/auth/github")).send();
+
+    let refused = start().await.expect("Request failed");
+    assert_eq!(refused.status().as_u16(), 402);
+
+    let admin = server.signup("Admin User", "admin@example.com").await;
+    let org = server.create_org(&admin, "Licensed Org").await;
+    server
+        .license_org(&admin, &org, PlanLevel::Enterprise)
+        .await;
+    let authorize: JsonOAuthUrl = start()
+        .await
+        .expect("Request failed")
+        .json()
+        .await
+        .expect("Failed to parse the URL");
+    let state = authorize
+        .url
+        .query_pairs()
+        .find_map(|(k, v)| (k == "state").then(|| v.into_owned()))
+        .expect("No state");
+    let response = server
+        .client
+        .post(server.api_url("/v0/auth/github"))
+        .json(&serde_json::json!({ "code": CODE, "state": state }))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(
+        authorize.url.as_str().split('?').next(),
+        Some(format!("{root}/login/oauth/authorize").as_str())
+    );
+    assert!(
+        response.status().is_success(),
+        "{}",
+        response.text().await.unwrap_or_default()
+    );
+    let received = github.received().await;
+    let lines: Vec<&str> = received.iter().map(Received::request_line).collect();
+    assert_eq!(
+        lines,
+        [
+            "POST /github/login/oauth/access_token HTTP/1.1",
+            "GET /github/api/v3/user HTTP/1.1",
+            "GET /github/api/v3/user/emails HTTP/1.1",
+        ]
+    );
+    // The server logs the email in place of sending it, the profile in its debug form.
+    let profile = format!(r#"path: "{}/octo-cat""#, root.path().trim_end_matches('/'));
+    let lines = log.lines();
+    assert!(
+        lines.iter().any(|line| line.starts_with("Sending message")
+            && line.contains("NewUser")
+            && line.contains("github: Some(Url")
+            && line.contains(&profile)),
+        "{profile} not in {lines:?}"
+    );
+}

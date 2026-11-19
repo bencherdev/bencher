@@ -3,7 +3,7 @@ title: "Aplicación GitHub Autoalojada"
 description: "Crea una aplicación GitHub para permitir que Bencher Autoalojado se autentique con GitHub"
 heading: "Cómo Crear una Aplicación GitHub Autoalojada"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-11-18T19:27:03Z"
+modified: "2026-11-19T03:00:00Z"
 sortOrder: 9
 ---
 
@@ -92,6 +92,19 @@ Para actualizar una aplicación que una versión anterior configuró con Conteni
 2. Actualiza el servidor API y la Consola a `v0.6.18` o posterior.
    Después de la actualización, un repositorio cuya instalación no haya aprobado los nuevos permisos no se puede vincular, y Bencher no puede publicar en él.
 3. Cambia Contenido a `Solo lectura`, como un cambio aparte.
+
+## GitHub Enterprise Server
+
+Para usar GitHub Enterprise Server en lugar de github.com, registra la aplicación de GitHub en tu GitHub Enterprise Server con la configuración anterior.
+Luego establece `server_url` en [la sección `plus.github` de la configuración del servidor](/es/docs/reference/server-config/#plusgithub) a su raíz web (ej: `https://github.example.com`).
+Bencher lo usa entonces para iniciar sesión, los repositorios vinculados, los títulos de los commits y los GitHub Checks y comentarios de pull request de las ejecuciones desacopladas.
+El slug de la aplicación es la última parte de la URL de su página pública (ej: `my-bencher-app` en `https://github.example.com/github-apps/my-bencher-app`).
+
+Esto necesita el servidor de API de Bencher Self-Hosted en `v0.6.18` o posterior,
+y una licencia válida de Bencher Plus Enterprise para al menos una organización en el servidor.
+Sin la licencia, Bencher rechaza el inicio de sesión con GitHub, la vinculación y las ejecuciones desacopladas en GitHub Actions, y no obtiene títulos de commits.
+Bencher publica para una ejecución desacoplada solo cuando su workflow se ejecuta en el mismo GitHub Enterprise Server:
+rechaza una ejecución cuyo `GITHUB_API_URL` es la API de cualquier otro GitHub.
 
 [linked repository]: /es/docs/how-to/github-actions/#pull-requests-en-hardware-dedicado
 

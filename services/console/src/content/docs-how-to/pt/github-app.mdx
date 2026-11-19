@@ -3,7 +3,7 @@ title: "Aplicativo GitHub Self-Hosted"
 description: "Crie um aplicativo GitHub para permitir que o Bencher Self-Hosted autentique-se com o GitHub"
 heading: "Como Criar um Aplicativo GitHub Self-Hosted"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-11-18T19:27:03Z"
+modified: "2026-11-19T03:00:00Z"
 sortOrder: 9
 ---
 
@@ -92,6 +92,19 @@ Para atualizar um aplicativo que uma versão anterior configurou com Conteúdo: 
 2. Atualize o servidor API e o Console para `v0.6.18` ou posterior.
    Depois da atualização, um repositório cuja instalação não aprovou as novas permissões não pode ser vinculado, e o Bencher não pode publicar nele.
 3. Altere Conteúdo para `Somente leitura`, como uma alteração separada.
+
+## GitHub Enterprise Server
+
+Para usar o GitHub Enterprise Server no lugar do github.com, registre o aplicativo GitHub no seu GitHub Enterprise Server com as configurações acima.
+Depois defina `server_url` na [seção `plus.github` da configuração do servidor](/pt/docs/reference/server-config/#plusgithub) como sua raiz web (ex: `https://github.example.com`).
+O Bencher então o usa para o login, os repositórios vinculados, os títulos dos commits e os GitHub Checks e comentários de pull request das execuções desanexadas.
+O slug do aplicativo é a última parte da URL de sua página pública (ex: `my-bencher-app` em `https://github.example.com/github-apps/my-bencher-app`).
+
+Isso requer o servidor de API do Bencher Self-Hosted na `v0.6.18` ou posterior,
+e uma licença válida do Bencher Plus Enterprise para pelo menos uma organização no servidor.
+Sem a licença, o Bencher recusa o login com GitHub, a vinculação e as execuções desanexadas no GitHub Actions, e não busca títulos de commits.
+O Bencher publica para uma execução desanexada somente quando seu workflow roda no mesmo GitHub Enterprise Server:
+ele recusa uma execução cujo `GITHUB_API_URL` é a API de qualquer outro GitHub.
 
 [linked repository]: /pt/docs/how-to/github-actions/#pull-requests-em-hardware-dedicado
 

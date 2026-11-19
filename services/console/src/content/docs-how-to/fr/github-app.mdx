@@ -3,7 +3,7 @@ title: "Application GitHub Auto-Hébergée"
 description: "Créez une application GitHub pour permettre à Bencher Auto-Hébergé de s'authentifier avec GitHub"
 heading: "Comment créer une application GitHub Auto-Hébergée"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-11-18T19:27:03Z"
+modified: "2026-11-19T03:00:00Z"
 sortOrder: 9
 ---
 
@@ -92,6 +92,19 @@ Pour mettre à jour une application qu'une version antérieure a configurée ave
 2. Mettez à jour le serveur API et la Console vers `v0.6.18` ou une version ultérieure.
    Après la mise à jour, un dépôt dont l'installation n'a pas approuvé les nouvelles permissions ne peut pas être lié, et Bencher ne peut rien y publier.
 3. Passez Contenu à `Lecture seule`, dans une modification séparée.
+
+## GitHub Enterprise Server
+
+Pour utiliser GitHub Enterprise Server à la place de github.com, enregistrez l'application GitHub sur votre GitHub Enterprise Server avec les paramètres ci-dessus.
+Puis définissez `server_url` dans [la section `plus.github` de la config du serveur](/fr/docs/reference/server-config/#plusgithub) sur sa racine web (ex : `https://github.example.com`).
+Bencher l'utilise alors pour la connexion, les dépôts liés, les titres des commits, ainsi que les GitHub Checks et les commentaires de pull request des exécutions détachées.
+Le slug de l'application est la dernière partie de l'URL de sa page publique (ex : `my-bencher-app` dans `https://github.example.com/github-apps/my-bencher-app`).
+
+Cela nécessite le serveur API Bencher Self-Hosted en `v0.6.18` ou ultérieure,
+et une licence Bencher Plus Enterprise valide pour au moins une organisation sur le serveur.
+Sans la licence, Bencher refuse la connexion avec GitHub, la liaison et les exécutions détachées sur GitHub Actions, et ne récupère aucun titre de commit.
+Bencher publie pour une exécution détachée seulement quand son workflow s'exécute sur le même GitHub Enterprise Server :
+il refuse une exécution dont le `GITHUB_API_URL` est l'API de tout autre GitHub.
 
 [linked repository]: /fr/docs/how-to/github-actions/#pull-requests-sur-matériel-dédié
 

@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 use bencher_json::{
     BenchmarkUuid, BranchUuid, Clock, DateTime, GitHubInstallationId, GitHubInstallationPermission,
-    GitHubRepositoryId, Jwt, MeasureUuid, ReportUuid, TestbedUuid,
+    GitHubRepositoryId, Jwt, MeasureUuid, PlanLevel, ReportUuid, TestbedUuid,
     project::{
         GitHubLinkStatus, Visibility,
         github::{
@@ -215,6 +215,267 @@ async fn the_link_flow_links_a_pushable_approved_repository() {
         );
     }
     assert_no_credential(&log, &[&state, grant.as_ref()]);
+}
+
+/// A server whose GitHub App is on a GitHub Enterprise Server at the fake's root, whose GitHub
+/// answers with `responses` in turn.
+async fn setup_enterprise(responses: Vec<(u16, String)>) -> Setup {
+    let github = GitHubServer::start(responses).await;
+    let log = LogCapture::default();
+    let clock = Clock::Custom(Arc::new(|| at(NOW)));
+    let server = TestServer::new_with_github_enterprise(github.base(), clock, log.logger()).await;
+    server.signup("Admin User", "admin@example.com").await;
+    let leader = server.signup("Leader User", "leader@example.com").await;
+    let org = server.create_org(&leader, "GitHub Org").await;
+    let project = server.create_project(&leader, &org, "GitHub Project").await;
+    Setup {
+        server,
+        log,
+        github,
+        leader,
+        org,
+        project,
+    }
+}
+
+// The link flow on GitHub Enterprise Server, licensed. Kills an authorize page, an install page,
+// an exchange, or a listing that goes to github.com's layout or misses the root's path, and a
+// project URL on github.com for a repository on GitHub Enterprise Server.
+#[tokio::test]
+async fn the_link_flow_on_github_enterprise_server_stays_on_its_root() {
+    let Setup {
+        server,
+        github,
+        leader,
+        org,
+        project,
+        ..
+    } = setup_enterprise(vec![
+        exchanged(),
+        installations(&[(INSTALLATION, APPROVED)]),
+        repositories(&[(REPOSITORY, true)]),
+    ])
+    .await;
+    let root = github.base();
+    server
+        .license_org(&leader, &org, PlanLevel::Enterprise)
+        .await;
+
+    let urls: JsonGitHubLinkUrls = ok(request(
+        &server,
+        Method::GET,
+        &github_path(&project, "/urls"),
+        &leader,
+    ))
+    .await;
+    let state = query(&urls.authorize, "state");
+    let exchange: JsonGitHubRepositories = ok(exchange_request(&server, &leader, &state)).await;
+    let grant = exchange
+        .repositories
+        .first()
+        .and_then(|repository| repository.grant.clone())
+        .expect("No grant");
+    ok::<JsonLinkedRepository>(link_request(&server, &project, &leader, &grant)).await;
+
+    assert_eq!(
+        urls.authorize.as_str().split('?').next(),
+        Some(format!("{root}/login/oauth/authorize").as_str())
+    );
+    assert_eq!(
+        urls.install.as_str(),
+        format!("{root}/github-apps/{GITHUB_APP_SLUG}/installations/new?state={state}")
+    );
+    assert_eq!(
+        url_and_modified(&server, &project).0,
+        Some(format!("{root}/octo-cat/repo-{REPOSITORY}"))
+    );
+    assert_eq!(
+        console(&server, &project, &leader)
+            .await
+            .get("github_repository_url"),
+        Some(&serde_json::json!(format!(
+            "{root}/octo-cat/repo-{REPOSITORY}"
+        )))
+    );
+    let received = github.received().await;
+    let lines: Vec<&str> = received.iter().map(Received::request_line).collect();
+    assert_eq!(
+        lines,
+        [
+            "POST /github/login/oauth/access_token HTTP/1.1",
+            "GET /github/api/v3/user/installations?per_page=100&page=1 HTTP/1.1",
+            "GET /github/api/v3/user/installations/2048/repositories?per_page=100&page=1 HTTP/1.1",
+        ]
+    );
+}
+
+// Kills a link endpoint on GitHub Enterprise Server that answers without an Enterprise license on
+// some organization of the server, or that still refuses once one has it, while the webhook,
+// which only records GitHub's word, takes a delivery either way.
+#[tokio::test]
+async fn github_enterprise_server_link_endpoints_need_an_enterprise_license() {
+    let Setup {
+        server,
+        leader,
+        project,
+        ..
+    } = setup_enterprise(Vec::new()).await;
+    insert_link(&server, &project, &leader);
+
+    for response in [
+        request(&server, Method::GET, &github_path(&project, ""), &leader),
+        request(
+            &server,
+            Method::GET,
+            &github_path(&project, "/urls"),
+            &leader,
+        ),
+        link_request(
+            &server,
+            &project,
+            &leader,
+            &grant(
+                &server,
+                &leader,
+                &project,
+                at(NOW),
+                INSTALLATION,
+                REPOSITORY,
+            ),
+        ),
+        exchange_request(
+            &server,
+            &leader,
+            &state(&server, &leader, &project, at(NOW)),
+        ),
+    ] {
+        let response = response.send().await.expect("Request failed");
+        assert_refused(
+            response,
+            StatusCode::PAYMENT_REQUIRED,
+            "Enterprise license",
+            &[],
+        )
+        .await;
+    }
+    assert!(stored(&server, &project).is_some());
+    let body = installation_event("suspend", INSTALLATION, None);
+    let response = server
+        .github_webhook("installation", Some(&github_signature(&body)), &body)
+        .await;
+    assert_eq!(response.status(), StatusCode::ACCEPTED);
+
+    let other = server.create_org(&leader, "Licensed Org").await;
+    server
+        .license_org(&leader, &other, PlanLevel::Enterprise)
+        .await;
+    let linked: JsonProjectGitHub = ok(request(
+        &server,
+        Method::GET,
+        &github_path(&project, ""),
+        &leader,
+    ))
+    .await;
+    assert!(linked.linked_repository.is_some());
+}
+
+// Unlinking only removes Bencher's own row, so this kills an unlink on GitHub Enterprise Server
+// that needs an Enterprise license, which would trap a link once a license lapses.
+#[tokio::test]
+async fn unlinking_on_github_enterprise_server_needs_no_license() {
+    let Setup {
+        server,
+        leader,
+        project,
+        ..
+    } = setup_enterprise(Vec::new()).await;
+    insert_link(&server, &project, &leader);
+
+    let response = request(&server, Method::DELETE, &github_path(&project, ""), &leader)
+        .send()
+        .await
+        .expect("Request failed");
+
+    let status = response.status();
+    assert!(
+        status.is_success(),
+        "{status}: {}",
+        response.text().await.unwrap_or_default()
+    );
+    assert!(stored(&server, &project).is_none());
+}
+
+// Kills a link endpoint on GitHub Enterprise Server that reads the license before it
+// authenticates the caller, which tells a caller with no valid token where the server's GitHub is.
+#[tokio::test]
+async fn github_enterprise_server_link_endpoints_authenticate_first() {
+    let Setup {
+        server,
+        github,
+        leader,
+        project,
+        ..
+    } = setup_enterprise(Vec::new()).await;
+    let root = github.base().to_string();
+    let forged = forged(&leader);
+    let anonymous = |method: Method, path: &str| {
+        server.client.request(method, server.api_url(path)).header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&forged),
+        )
+    };
+
+    for response in [
+        anonymous(Method::GET, &github_path(&project, "")),
+        anonymous(Method::DELETE, &github_path(&project, "")),
+        anonymous(Method::GET, &github_path(&project, "/urls")),
+        anonymous(Method::PUT, &github_path(&project, "")).json(&serde_json::json!({
+            "grant": grant(&server, &leader, &project, at(NOW), INSTALLATION, REPOSITORY),
+        })),
+        anonymous(Method::POST, "/v0/github/exchange").json(&serde_json::json!({
+            "code": CODE,
+            "state": state(&server, &leader, &project, at(NOW)),
+        })),
+    ] {
+        let response = response.send().await.expect("Request failed");
+        let status = response.status();
+        let text = response.text().await.expect("Failed to read the body");
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{text}");
+        assert!(text.contains("Failed to validate JSON Web Token"), "{text}");
+        assert!(!text.contains(root.trim_end_matches('/')), "{text}");
+    }
+}
+
+// Kills a server on GitHub Enterprise Server without an Enterprise license that still offers to
+// link a project, on any path that serves the project, and one with the license that does not.
+#[tokio::test]
+async fn github_enterprise_server_without_a_license_serves_no_link_status() {
+    let Setup {
+        server,
+        leader,
+        org,
+        project,
+        ..
+    } = setup_enterprise(Vec::new()).await;
+    let report = report(&server, &project);
+
+    let unlicensed = views(&server, &org, &project, report, &leader).await;
+    server
+        .license_org(&leader, &org, PlanLevel::Enterprise)
+        .await;
+
+    for (path, json) in unlicensed.projects() {
+        assert!(json.get("github_link").is_none(), "{path}: {json}");
+    }
+    assert_link_status(
+        &server,
+        &org,
+        &project,
+        report,
+        &leader,
+        GitHubLinkStatus::Unlinked,
+    )
+    .await;
 }
 
 // Kills an exchange that lets one user spend another user's state. The fake GitHub answers
@@ -588,7 +849,8 @@ async fn a_put_refuses_a_grant_for_another_project_user_or_time() {
 }
 
 // Kills a server without the app that serves any link endpoint, refuses without naming the token
-// that still works, or writes a delivery it cannot verify.
+// that still works, or writes a delivery it cannot verify. The forged token kills a link endpoint
+// that authenticates the caller before it looks for the app.
 #[tokio::test]
 async fn a_server_without_the_app_refuses_links_and_ignores_deliveries() {
     let server = TestServer::new().await;
@@ -597,35 +859,35 @@ async fn a_server_without_the_app_refuses_links_and_ignores_deliveries() {
     let org = server.create_org(&leader, "GitHub Org").await;
     let project = server.create_project(&leader, &org, "GitHub Project").await;
     insert_link(&server, &project, &leader);
+    let forger = TestUser {
+        uuid: leader.uuid,
+        name: leader.name.clone(),
+        slug: leader.slug.clone(),
+        email: leader.email.clone(),
+        token: forged(&leader).into(),
+    };
 
-    for response in [
-        request(&server, Method::GET, &github_path(&project, ""), &leader),
-        request(&server, Method::DELETE, &github_path(&project, ""), &leader),
-        request(
-            &server,
-            Method::GET,
-            &github_path(&project, "/urls"),
-            &leader,
-        ),
-        link_request(
-            &server,
-            &project,
-            &leader,
-            &grant(
+    for response in [&leader, &forger].into_iter().flat_map(|user| {
+        [
+            request(&server, Method::GET, &github_path(&project, ""), user),
+            request(&server, Method::DELETE, &github_path(&project, ""), user),
+            request(&server, Method::GET, &github_path(&project, "/urls"), user),
+            link_request(
                 &server,
-                &leader,
                 &project,
-                at(NOW),
-                INSTALLATION,
-                REPOSITORY,
+                user,
+                &grant(
+                    &server,
+                    &leader,
+                    &project,
+                    at(NOW),
+                    INSTALLATION,
+                    REPOSITORY,
+                ),
             ),
-        ),
-        exchange_request(
-            &server,
-            &leader,
-            &state(&server, &leader, &project, at(NOW)),
-        ),
-    ] {
+            exchange_request(&server, user, &state(&server, &leader, &project, at(NOW))),
+        ]
+    }) {
         let response = response.send().await.expect("Request failed");
         assert_refused(response, StatusCode::NOT_FOUND, "has no GitHub App", &[]).await;
     }
@@ -655,11 +917,13 @@ async fn a_server_without_the_app_serves_no_link_status() {
     for (path, json) in views.projects() {
         assert!(json.get("github_link").is_none(), "{path}: {json}");
     }
-    assert!(
-        views.console.get("github_repository").is_none(),
-        "{}",
-        views.console
-    );
+    for field in ["github_repository", "github_repository_url"] {
+        assert!(
+            views.console.get(field).is_none(),
+            "{field}: {}",
+            views.console
+        );
+    }
 }
 
 // Kills a status that ignores the link, calls no link unlinked, or reads a disconnected link as
@@ -897,6 +1161,12 @@ async fn the_bootstrap_names_the_repository_to_every_reader() {
         assert_eq!(
             json.get("github_repository").and_then(|name| name.as_str()),
             Some(full_name.as_str()),
+            "{json}"
+        );
+        assert_eq!(
+            json.get("github_repository_url")
+                .and_then(|url| url.as_str()),
+            Some(format!("https://github.com/{full_name}").as_str()),
             "{json}"
         );
     }
@@ -1367,6 +1637,21 @@ fn request(
         bencher_json::AUTHORIZATION,
         bencher_json::bearer_header(&user.token),
     )
+}
+
+/// The user's token with a broken signature: it parses, and it never authenticates.
+fn forged(user: &TestUser) -> Jwt {
+    let token: &str = user.token.as_ref();
+    let (signed, signature) = token.rsplit_once('.').expect("No signature");
+    let mut signature = signature.chars();
+    let first = if signature.next() == Some('A') {
+        'B'
+    } else {
+        'A'
+    };
+    format!("{signed}.{first}{}", signature.as_str())
+        .parse()
+        .expect("Invalid token")
 }
 
 fn link_request(

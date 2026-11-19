@@ -1,14 +1,21 @@
 #[cfg(feature = "plus")]
 use bencher_github_client::GitHubApp;
-#[cfg(feature = "plus")]
-use bencher_json::GitHubRepositoryName;
 use bencher_json::project::GitHubLinkStatus;
+#[cfg(feature = "plus")]
+use bencher_json::{DateTime, GitHubRepositoryName};
+#[cfg(feature = "plus")]
+use bencher_license::Licensor;
 use dropshot::HttpError;
 
 use super::ProjectId;
 use crate::context::DbConnection;
 #[cfg(feature = "plus")]
-use crate::{error::issue_error, model::project::linked_repository::QueryLinkedRepository};
+use crate::{
+    error::issue_error,
+    model::{
+        organization::license::any_valid_license, project::linked_repository::QueryLinkedRepository,
+    },
+};
 
 /// Whether the server can link a project to a GitHub repository, which takes the GitHub App.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,12 +27,24 @@ pub enum GitHubLinking {
 
 #[cfg(feature = "plus")]
 impl GitHubLinking {
-    pub fn new(github_app: Option<&GitHubApp>) -> Self {
-        if github_app.is_some() {
-            Self::Available
-        } else {
-            Self::Unavailable
-        }
+    /// Available with the app, unless the app is on a GitHub Enterprise Server and no organization
+    /// on the server holds a valid license at `now`.
+    pub fn get(
+        conn: &mut DbConnection,
+        github_app: Option<&GitHubApp>,
+        licensor: &Licensor,
+        now: DateTime,
+    ) -> Result<Self, HttpError> {
+        let Some(github_app) = github_app else {
+            return Ok(Self::Unavailable);
+        };
+        Ok(
+            if github_app.host().is_github_com() || any_valid_license(conn, licensor, now)? {
+                Self::Available
+            } else {
+                Self::Unavailable
+            },
+        )
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{sync::LazyLock, time::Duration};
+use std::time::Duration;
 
 use bencher_valid::{
     GitHubInstallationId, GitHubInstallationPermission, GitHubRepositoryId, GitHubRepositoryName,
@@ -16,15 +16,7 @@ use serde::{
 };
 use url::Url;
 
-#[expect(
-    clippy::expect_used,
-    reason = "constant URL literal, infallible at runtime"
-)]
-pub(crate) static GITHUB_API_URL: LazyLock<Url> = LazyLock::new(|| {
-    "https://api.github.com"
-        .parse()
-        .expect("Invalid GitHub API URL")
-});
+use crate::GitHubHost;
 
 pub(crate) const USER_AGENT: &str = concat!("Bencher/", env!("CARGO_PKG_VERSION"));
 /// GitHub's largest page.
@@ -46,6 +38,7 @@ const RATE_LIMIT_HEADERS: [&str; 3] = ["retry-after", "x-ratelimit-remaining", "
 pub struct GitHubApi {
     http: reqwest::Client,
     base: Url,
+    graphql: Url,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -71,7 +64,17 @@ pub enum GitHubApiError {
 }
 
 impl GitHubApi {
+    /// The REST API at `base`, with GraphQL under it, as on github.com.
     pub(crate) fn new(base: Url) -> Result<Self, reqwest::Error> {
+        let graphql = join_path(&base, &["graphql"]);
+        Self::new_with_graphql(base, graphql)
+    }
+
+    pub(crate) fn for_host(host: &GitHubHost) -> Result<Self, reqwest::Error> {
+        Self::new_with_graphql(host.api(), host.graphql())
+    }
+
+    fn new_with_graphql(base: Url, graphql: Url) -> Result<Self, reqwest::Error> {
         let headers = HeaderMap::from_iter([
             (
                 ACCEPT,
@@ -90,7 +93,11 @@ impl GitHubApi {
             .connect_timeout(CONNECT_TIMEOUT)
             .timeout(TIMEOUT)
             .build()?;
-        Ok(Self { http, base })
+        Ok(Self {
+            http,
+            base,
+            graphql,
+        })
     }
 
     /// Every repository the user can push to, in every installation of the app the user can see
@@ -226,11 +233,10 @@ impl GitHubApi {
         .await
     }
 
-    /// POST `path`, and with its answer, the rate-limit headers that it carries whatever its
-    /// status, since a GraphQL answer says that the rate limit is spent with a 200.
-    pub(crate) async fn post_counted<B, T>(
+    /// POST a GraphQL query, and with its answer, the rate-limit headers that it carries whatever
+    /// its status, since a GraphQL answer says that the rate limit is spent with a 200.
+    pub(crate) async fn post_graphql<B, T>(
         &self,
-        path: &[&str],
         bearer: &str,
         body: &B,
     ) -> Result<(T, HeaderMap), GitHubApiError>
@@ -240,7 +246,7 @@ impl GitHubApi {
     {
         let response = self
             .http
-            .post(self.url(path))
+            .post(self.graphql.clone())
             .bearer_auth(bearer)
             .json(body)
             .send()

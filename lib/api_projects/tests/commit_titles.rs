@@ -41,6 +41,8 @@ const REPOSITORY: u64 = 4096;
 const TOKEN: &str = "read-token-marker";
 const MINT: &str = "POST /github/app/installations/2048/access_tokens HTTP/1.1";
 const GRAPHQL: &str = "POST /github/graphql HTTP/1.1";
+const SKIPPED: &str =
+    "Commit titles skipped: a GitHub Enterprise Server needs a Bencher Plus Enterprise license";
 
 fn at(timestamp: i64) -> DateTime {
     DateTime::try_from(timestamp).expect("Invalid timestamp")
@@ -65,6 +67,28 @@ async fn setup(answers: Vec<Answer>) -> Setup {
         TestServer::new_with_github(github.base(), clock, LogCapture::default().logger()).await;
     let user = server.signup("Titles User", "titles@example.com").await;
     let org = server.create_org(&user, "Titles Org").await;
+    let project = server.create_project(&user, &org, "Titles Project").await;
+    Setup {
+        server,
+        github,
+        user,
+        project,
+    }
+}
+
+/// A server whose GitHub App is on a GitHub Enterprise Server at the fake's root, with an
+/// Enterprise license on the project's organization if `licensed`.
+async fn setup_enterprise(answers: Vec<Answer>, licensed: bool, log: &LogCapture) -> Setup {
+    let github = GitHubServer::start_with_headers(answers).await;
+    let clock = Clock::Custom(Arc::new(|| at(NOW)));
+    let server = TestServer::new_with_github_enterprise(github.base(), clock, log.logger()).await;
+    let user = server.signup("Titles User", "titles@example.com").await;
+    let org = server.create_org(&user, "Titles Org").await;
+    if licensed {
+        server
+            .license_org(&user, &org, bencher_json::PlanLevel::Enterprise)
+            .await;
+    }
     let project = server.create_project(&user, &org, "Titles Project").await;
     Setup {
         server,
@@ -247,6 +271,89 @@ async fn a_report_with_a_new_hash_stores_its_title_without_waiting() {
     );
     assert_eq!(request_lines(&github.received().await), [MINT, GRAPHQL]);
     server.close().await;
+}
+
+// Kills a mint or a GraphQL query on GitHub Enterprise Server that goes to github.com's layout,
+// GraphQL sent under the REST API, and a licensed server that fetches no title.
+#[tokio::test]
+async fn a_title_on_github_enterprise_server_comes_from_its_graphql() {
+    let log = LogCapture::default();
+    let Setup {
+        server,
+        github,
+        user,
+        project,
+    } = setup_enterprise(vec![minted(), commit("Speed up the parser")], true, &log).await;
+    server.link_repository(&project, &user, INSTALLATION, REPOSITORY, "octo-cat/repo");
+
+    post(
+        &server,
+        &project.slug,
+        &user.token,
+        &hash(1),
+        NOW - DAY,
+        1.0,
+    )
+    .await;
+
+    assert_eq!(
+        stored(&server, &hash(1)).await.as_deref(),
+        Some("Speed up the parser")
+    );
+    assert_eq!(
+        request_lines(&github.received().await),
+        [
+            "POST /github/api/v3/app/installations/2048/access_tokens HTTP/1.1",
+            "POST /github/api/graphql HTTP/1.1",
+        ]
+    );
+    server.close().await;
+}
+
+// The fake GitHub answers nothing, so a fetch would log a failed mint. Kills a sweep or a fetch
+// on GitHub Enterprise Server without an Enterprise license, and one that skips without saying why.
+#[tokio::test]
+async fn without_an_enterprise_license_github_enterprise_server_gets_no_title() {
+    let log = LogCapture::default();
+    let Setup {
+        server,
+        github: _github,
+        user,
+        project,
+    } = setup_enterprise(Vec::new(), false, &log).await;
+    server.link_repository(&project, &user, INSTALLATION, REPOSITORY, "octo-cat/repo");
+
+    post(
+        &server,
+        &project.slug,
+        &user.token,
+        &hash(1),
+        NOW - DAY,
+        1.0,
+    )
+    .await;
+
+    let skipped = || {
+        log.lines()
+            .iter()
+            .filter(|line| line.starts_with(SKIPPED))
+            .count()
+    };
+    for _ in 0..200 {
+        if skipped() >= 2 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    assert_eq!(rows(&server), 0);
+    server.close().await;
+    // One for the sweep at start, one for the report's hash.
+    assert_eq!(skipped(), 2, "{:?}", log.lines());
+    let lines = log.lines();
+    assert!(
+        !lines.iter().any(|line| line.contains("Failed to mint")),
+        "{lines:?}"
+    );
 }
 
 // Kills a link, a repository added back, or an unsuspended installation that leaves its project's

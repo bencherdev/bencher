@@ -77,8 +77,12 @@ pub async fn proj_github_get(
     bearer_token: BearerToken,
     path_params: Path<ProjGitHubParams>,
 ) -> Result<ResponseOk<JsonProjectGitHub>, HttpError> {
-    github_app(rqctx.context())?;
+    let github_app = github_app(rqctx.context())?;
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    rqctx
+        .context()
+        .check_github_license(github_app.host())
+        .await?;
     let json = get_inner(rqctx.context(), path_params.into_inner(), &auth_user)
         .await
         .map_err(with_token_hint)?;
@@ -118,10 +122,15 @@ pub async fn proj_github_put(
     path_params: Path<ProjGitHubParams>,
     body: TypedBody<JsonNewLinkedRepository>,
 ) -> Result<ResponseOk<JsonLinkedRepository>, HttpError> {
-    github_app(rqctx.context())?;
+    let github_app = github_app(rqctx.context())?;
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    rqctx
+        .context()
+        .check_github_license(github_app.host())
+        .await?;
     let json = put_inner(
         rqctx.context(),
+        github_app,
         path_params.into_inner(),
         body.into_inner(),
         &auth_user,
@@ -133,6 +142,7 @@ pub async fn proj_github_put(
 
 async fn put_inner(
     context: &ApiContext,
+    github_app: &GitHubApp,
     path_params: ProjGitHubParams,
     json_link: JsonNewLinkedRepository,
     auth_user: &AuthUser,
@@ -151,7 +161,7 @@ async fn put_inner(
         return Err(forbidden_error("This GitHub grant is for another user."));
     }
 
-    let repository_url = repository_url(&grant.full_name)?;
+    let repository_url = repository_url(github_app, &grant.full_name);
     let link = QueryLinkedRepository::connected(
         query_project.id,
         grant.installation,
@@ -192,6 +202,7 @@ pub async fn proj_github_delete(
     bearer_token: BearerToken,
     path_params: Path<ProjGitHubParams>,
 ) -> Result<ResponseDeleted, HttpError> {
+    // Unlinking only removes Bencher's own row, so a lapsed license never traps a link.
     github_app(rqctx.context())?;
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
     delete_inner(rqctx.context(), path_params.into_inner(), &auth_user)
@@ -241,6 +252,10 @@ pub async fn proj_github_urls_get(
 ) -> Result<ResponseOk<JsonGitHubLinkUrls>, HttpError> {
     let (github_client, github_app) = github(rqctx.context())?;
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    rqctx
+        .context()
+        .check_github_license(github_app.host())
+        .await?;
     let json = urls_inner(
         rqctx.context(),
         github_client,
@@ -313,8 +328,12 @@ pub async fn github_exchange_post(
     bearer_token: BearerToken,
     body: TypedBody<JsonOAuth>,
 ) -> Result<ResponseOk<JsonGitHubRepositories>, HttpError> {
-    let (github_client, _github_app) = github(rqctx.context())?;
+    let (github_client, github_app) = github(rqctx.context())?;
     let auth_user = AuthUser::from_token(rqctx.context(), bearer_token).await?;
+    rqctx
+        .context()
+        .check_github_license(github_app.host())
+        .await?;
     let json = exchange_inner(
         rqctx.context(),
         github_client,
@@ -520,16 +539,8 @@ async fn is_allowed(
     )
 }
 
-fn repository_url(full_name: &GitHubRepositoryName) -> Result<bencher_json::Url, HttpError> {
-    format!("https://github.com/{full_name}")
-        .parse()
-        .map_err(|e| {
-            issue_error(
-                "Failed to build a GitHub repository URL",
-                &format!("Failed to build the GitHub URL of repository ({full_name})."),
-                e,
-            )
-        })
+fn repository_url(github_app: &GitHubApp, full_name: &GitHubRepositoryName) -> bencher_json::Url {
+    github_app.host().repository(full_name).into()
 }
 
 fn return_url(context: &ApiContext) -> Result<Url, HttpError> {

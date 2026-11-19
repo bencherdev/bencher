@@ -14030,7 +14030,7 @@
         "properties": {
           "app": {
             "nullable": true,
-            "description": "The GitHub App that mints the dispatch token for a linked repository.",
+            "description": "The GitHub App that links a repository and posts to it.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/JsonGitHubApp"
@@ -14042,6 +14042,15 @@
           },
           "client_secret": {
             "$ref": "#/components/schemas/Secret"
+          },
+          "server_url": {
+            "nullable": true,
+            "description": "The web root of the GitHub instance, as GitHub Actions names it in `GITHUB_SERVER_URL`: `https://github.com` by default, or a GitHub Enterprise Server such as `https://github.example.com`, which needs a Bencher Plus Enterprise license.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
           }
         },
         "required": [
@@ -14061,7 +14070,7 @@
             ]
           },
           "slug": {
-            "description": "The app's name in its GitHub URLs, as in `https://github.com/apps/{slug}`.",
+            "description": "The app's name in its GitHub URLs, as in `https://github.com/apps/{slug}`, or `{server_url}/github-apps/{slug}` on GitHub Enterprise Server.",
             "allOf": [
               {
                 "$ref": "#/components/schemas/GitHubAppSlug"
@@ -15204,9 +15213,18 @@
         }
       },
       "JsonNewJobGitHub": {
-        "description": "The GitHub Actions context of a detached run on the project's linked repository.\n\nBencher creates the run's GitHub check, completes it once the job finishes, and writes the pull request comment, with a token from the Bencher Cloud GitHub App.",
+        "description": "The GitHub Actions context of a detached run on the project's linked repository.\n\nBencher creates the run's GitHub check, completes it once the job finishes, and writes the pull request comment, with a token from the server's GitHub App.",
         "type": "object",
         "properties": {
+          "api_url": {
+            "nullable": true,
+            "description": "The GitHub API the workflow runs on, as GitHub Actions names it in `GITHUB_API_URL`, which must be the API of the server's GitHub App. Without one, github.com's API.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Url"
+              }
+            ]
+          },
           "ci_id": {
             "nullable": true,
             "description": "Names the check and the comment section in place of the project's name. Only the bytes the check's name keeps are kept.",

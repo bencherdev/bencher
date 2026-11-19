@@ -3,7 +3,7 @@ title: "Selbst gehostete GitHub App"
 description: "Erstellen Sie eine GitHub App, um Bencher Self-Hosted die Authentifizierung mit GitHub zu ermöglichen"
 heading: "So erstellen Sie eine selbst gehostete GitHub App"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-11-18T19:27:03Z"
+modified: "2026-11-19T03:00:00Z"
 sortOrder: 9
 ---
 
@@ -92,6 +92,19 @@ So aktualisieren Sie eine App, die eine frühere Version mit Inhalte: `Lesen und
 2. Aktualisieren Sie den API-Server und die Console auf `v0.6.18` oder neuer.
    Nach dem Upgrade kann ein Repository, dessen Installation die neuen Berechtigungen nicht genehmigt hat, nicht verknüpft werden, und Bencher kann darin nichts veröffentlichen.
 3. Ändern Sie Inhalte auf `Nur lesen`, als separate Änderung.
+
+## GitHub Enterprise Server
+
+Um GitHub Enterprise Server anstelle von github.com zu verwenden, registrieren Sie die GitHub App mit den obigen Einstellungen auf Ihrem GitHub Enterprise Server.
+Setzen Sie dann `server_url` im [Abschnitt `plus.github` der Serverkonfiguration](/de/docs/reference/server-config/#plusgithub) auf dessen Web-Stamm-URL (z. B. `https://github.example.com`).
+Bencher verwendet ihn dann für die Anmeldung, verknüpfte Repositorys, Commit-Titel sowie die GitHub Checks und Pull-Request-Kommentare von abgekoppelten Läufen.
+Der Slug der App ist der letzte Teil der URL ihrer öffentlichen Seite (z. B. `my-bencher-app` in `https://github.example.com/github-apps/my-bencher-app`).
+
+Dafür benötigen Sie den Bencher Self-Hosted API-Server in Version `v0.6.18` oder neuer
+und eine gültige Bencher Plus Enterprise-Lizenz für mindestens eine Organisation auf dem Server.
+Ohne die Lizenz verweigert Bencher die Anmeldung mit GitHub, das Verknüpfen und abgekoppelte Läufe auf GitHub Actions und ruft keine Commit-Titel ab.
+Bencher veröffentlicht für einen abgekoppelten Lauf nur, wenn dessen Workflow auf demselben GitHub Enterprise Server läuft:
+Einen Lauf, dessen `GITHUB_API_URL` die API eines anderen GitHub ist, verweigert Bencher.
 
 [linked repository]: /de/docs/how-to/github-actions/#pull-requests-auf-dedizierter-hardware
 

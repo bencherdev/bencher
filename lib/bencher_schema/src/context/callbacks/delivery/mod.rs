@@ -14,6 +14,7 @@ use bencher_json::{
     project::github::LinkedRepositoryReason,
     runner::{CALLBACK_JOB_STATUSES, JobCallbackState},
 };
+use bencher_license::Licensor;
 use dashmap::DashMap;
 #[cfg(feature = "sentry")]
 use dashmap::Entry;
@@ -72,7 +73,7 @@ pub(super) struct Delivery {
     shutdown: CancellationToken,
     clock: Clock,
     /// Mints the token of every post.
-    github_app: Option<Arc<GitHubApp>>,
+    github: Option<PostApp>,
     /// Where a post's comment links to.
     console_url: Url,
     report_builds: Semaphore,
@@ -152,9 +153,13 @@ impl Delivery {
         clock: Clock,
         github: Option<GitHubPosts>,
     ) -> Self {
-        let (github_app, console_url) = github.map_or_else(
+        let (github, console_url) = github.map_or_else(
             || (None, BENCHER_URL.clone()),
-            |GitHubPosts { app, console_url }| (Some(app), console_url),
+            |GitHubPosts {
+                 app,
+                 console_url,
+                 licensor,
+             }| (Some(PostApp { app, licensor }), console_url),
         );
         Self {
             connection,
@@ -163,7 +168,7 @@ impl Delivery {
             sender,
             shutdown,
             clock,
-            github_app,
+            github,
             console_url,
             report_builds: Semaphore::new(REPORT_BUILDS),
             governor: Governor::default(),
@@ -340,13 +345,32 @@ impl Delivery {
         else {
             return Err(Unprepared::Shutdown);
         };
-        let github = GitHubLinking::new(self.github_app.as_deref());
+        let github = self
+            .github
+            .as_ref()
+            .map_or(Ok(GitHubLinking::Unavailable), |github| {
+                GitHubLinking::get(
+                    &mut conn,
+                    Some(&github.app),
+                    &github.licensor,
+                    self.clock.now(),
+                )
+            })
+            .map_err(|e| {
+                slog::error!(log, "Failed to read a job's report"; "job" => %job_uuid, "error" => %e);
+                Unprepared::Report
+            })?;
         report
             .into_json(log, &mut conn, ReportMode::Full, github)
             .map_err(|e| {
                 slog::error!(log, "Failed to read a job's report"; "job" => %job_uuid, "error" => %e);
                 Unprepared::Report
             })
+    }
+
+    /// The app that mints the token of every post.
+    fn github_app(&self) -> Option<&Arc<GitHubApp>> {
+        self.github.as_ref().map(|github| &github.app)
     }
 
     /// A read connection, however long the pool stays busy: giving up would leave the callback
@@ -569,6 +593,13 @@ impl Delivery {
             });
         }
     }
+}
+
+/// The GitHub App that mints the token of every post, and the licensor that reads whether the
+/// server may post to a GitHub Enterprise Server.
+struct PostApp {
+    app: Arc<GitHubApp>,
+    licensor: Licensor,
 }
 
 /// Where an attempt went, and how far it got.

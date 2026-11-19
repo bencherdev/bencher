@@ -74,7 +74,10 @@ pub async fn query(
         query.metrics.as_deref().unwrap_or_default(),
         None,
     );
-    let project = project.into_json(actor_conn!(context, api_actor), context.github_linking())?;
+    let project = actor_conn!(context, api_actor, |conn| {
+        let github = context.github_linking(conn)?;
+        project.into_json(conn, github)?
+    });
     json_result(&QueryPerfOutput {
         project,
         url: url.into(),

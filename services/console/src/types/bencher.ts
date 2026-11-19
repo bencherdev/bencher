@@ -1385,6 +1385,8 @@ export interface JsonConsoleProject {
 	project: JsonProject;
 	/** The full name of the project's linked GitHub repository, connected or disconnected. */
 	github_repository?: string;
+	/** The web page of the project's linked GitHub repository, on the server's GitHub. */
+	github_repository_url?: Url;
 	organization: JsonConsoleOrganization;
 	/** What the signed in reader may do with the project. */
 	permissions: JsonConsolePermissions;
@@ -2047,9 +2049,14 @@ export interface JsonNewClaim {
  * The GitHub Actions context of a detached run on the project's linked repository.
  * 
  * Bencher creates the run's GitHub check, completes it once the job finishes, and writes the
- * pull request comment, with a token from the Bencher Cloud GitHub App.
+ * pull request comment, with a token from the server's GitHub App.
  */
 export interface JsonNewJobGitHub {
+	/**
+	 * The GitHub API the workflow runs on, as GitHub Actions names it in `GITHUB_API_URL`, which
+	 * must be the API of the server's GitHub App. Without one, github.com's API.
+	 */
+	api_url?: Url;
 	/** The ID of the repository the workflow runs in, which must be the project's linked repository */
 	repository_id: number;
 	/** The commit the check is created on: the head of the pull request, or the commit pushed */

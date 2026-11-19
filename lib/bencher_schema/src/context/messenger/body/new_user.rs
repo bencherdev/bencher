@@ -1,9 +1,6 @@
 use slog::Logger;
 use url::Url;
 
-#[cfg(feature = "plus")]
-use crate::context::messenger::GITHUB_OAUTH2;
-
 use super::FmtBody;
 
 #[derive(Debug)]
@@ -14,6 +11,8 @@ pub struct NewUserBody {
     pub email: String,
     pub invited: bool,
     pub method: String,
+    /// The user's profile on the server's GitHub, for a user who signed up with GitHub.
+    pub github: Option<Url>,
 }
 
 impl FmtBody for NewUserBody {
@@ -25,6 +24,7 @@ impl FmtBody for NewUserBody {
             email,
             invited,
             method,
+            github: _,
         } = self;
         format!(
             "Ahoy {admin},
@@ -47,15 +47,12 @@ impl FmtBody for NewUserBody {
             email,
             invited,
             method,
+            github,
         } = self;
-        #[cfg(feature = "plus")]
-        let github_link = (method == GITHUB_OAUTH2)
-            .then_some(format!(
-                r#"<a href="https://github.com/{name}">View {name} on GitHub</a><br/>"#
-            ))
+        let github_link = github
+            .as_ref()
+            .map(|github| format!(r#"<a href="{github}">View {name} on GitHub</a><br/>"#))
             .unwrap_or_default();
-        #[cfg(not(feature = "plus"))]
-        let github_link = String::new();
         format!(
             "<!doctype html>
 <html>
@@ -89,5 +86,42 @@ fn invited_or_joined(invited: bool) -> &'static str {
         "was invited to"
     } else {
         "has joined"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use slog::{Logger, o};
+
+    use super::{FmtBody as _, NewUserBody};
+
+    fn body(github: Option<&str>) -> NewUserBody {
+        NewUserBody {
+            admin: "Admin User".to_owned(),
+            console_url: "https://bencher.example.com".parse().unwrap(),
+            name: "octo-cat".to_owned(),
+            email: "octo-cat@example.com".to_owned(),
+            invited: false,
+            method: "GitHub OAuth2".to_owned(),
+            github: github.map(|github| github.parse().unwrap()),
+        }
+    }
+
+    // Kills a link to github.com for a user of a GitHub Enterprise Server, and a link for a user
+    // with no GitHub profile.
+    #[test]
+    fn the_github_link_goes_to_the_user_profile() {
+        let log = Logger::root(slog::Discard, o!());
+        let enterprise = body(Some("https://github.example.com/octo-cat")).html(&log);
+        let without = body(None).html(&log);
+
+        assert!(
+            enterprise.contains(
+                r#"<a href="https://github.example.com/octo-cat">View octo-cat on GitHub</a>"#
+            ),
+            "{enterprise}"
+        );
+        assert!(!enterprise.contains("https://github.com/"), "{enterprise}");
+        assert!(!without.contains("on GitHub"), "{without}");
     }
 }

@@ -15,11 +15,15 @@ const EXHAUSTED_INT: i32 = 3;
 /// The GitHub Actions context of a detached run on the project's linked repository.
 ///
 /// Bencher creates the run's GitHub check, completes it once the job finishes, and writes the
-/// pull request comment, with a token from the Bencher Cloud GitHub App.
+/// pull request comment, with a token from the server's GitHub App.
 #[typeshare::typeshare]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct JsonNewJobGitHub {
+    /// The GitHub API the workflow runs on, as GitHub Actions names it in `GITHUB_API_URL`, which
+    /// must be the API of the server's GitHub App. Without one, github.com's API.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_url: Option<Url>,
     /// The ID of the repository the workflow runs in, which must be the project's linked repository
     pub repository_id: GitHubRepositoryId,
     /// The commit the check is created on: the head of the pull request, or the commit pushed

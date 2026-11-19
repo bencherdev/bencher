@@ -127,10 +127,16 @@ async fn get_inner(
             name: query_organization.name.clone(),
             slug: query_organization.slug.clone(),
         };
-        let github_link = GitHubLink::get(conn, context.github_linking(), query_project.id)?;
+        let github_linking = context.github_linking(conn)?;
+        let github_link = GitHubLink::get(conn, github_linking, query_project.id)?;
         Ok(JsonConsoleProject {
             #[cfg(feature = "plus")]
             github_repository: github_link.full_name().cloned(),
+            #[cfg(feature = "plus")]
+            github_repository_url: github_link
+                .full_name()
+                .zip(context.github_app.as_deref())
+                .map(|(full_name, github_app)| github_app.host().repository(full_name).into()),
             project: query_project.into_json_with_github_link(
                 conn,
                 &query_organization,

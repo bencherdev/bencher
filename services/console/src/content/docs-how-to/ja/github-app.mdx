@@ -3,7 +3,7 @@ title: "自己ホスト型 GitHub アプリ"
 description: "Bencher 自己ホスト型が GitHub で認証するための GitHub アプリを作成します"
 heading: "自己ホスト型 GitHub アプリの作成方法"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-11-18T19:27:03Z"
+modified: "2026-11-19T03:00:00Z"
 sortOrder: 9
 ---
 
@@ -91,6 +91,19 @@ Bencher Self-Hostedを利用するには、[ベンチャー プラス エンタ�
 2. API サーバーとコンソールを `v0.6.18` 以降にアップグレードします。
    アップグレード後、インストールが新しい権限を承認していないリポジトリはリンクできず、Bencher はそこに投稿できません。
 3. 別の変更として、コンテンツを `読み取り専用` に変更します。
+
+## GitHub Enterprise Server
+
+github.com の代わりに GitHub Enterprise Server を使うには、上記の設定で GitHub Enterprise Server に GitHub アプリを登録します。
+次に、[サーバー設定の `plus.github` セクション](/ja/docs/reference/server-config/#plusgithub)の `server_url` に、その Web ルートを設定します（例：`https://github.example.com`）。
+すると Bencher は、サインイン、リンクされたリポジトリ、コミットのタイトル、デタッチされた実行の GitHub Check とプルリクエストのコメントにそれを使います。
+アプリの slug は、その公開ページの URL の最後の部分です（例：`https://github.example.com/github-apps/my-bencher-app` の `my-bencher-app`）。
+
+これには、`v0.6.18` 以降の Bencher Self-Hosted API サーバーと、
+サーバー上の少なくとも 1 つの組織に対する有効な Bencher Plus Enterprise ライセンスが必要です。
+ライセンスがない場合、Bencher は GitHub でのサインイン、リンク、GitHub Actions でのデタッチされた実行を拒否し、コミットのタイトルを取得しません。
+Bencher がデタッチされた実行の結果を投稿するのは、そのワークフローが同じ GitHub Enterprise Server で実行される場合だけです。
+`GITHUB_API_URL` が他の GitHub の API である実行は拒否します。
 
 [linked repository]: /ja/docs/how-to/github-actions/#ベアメタル上のプルリクエスト
 

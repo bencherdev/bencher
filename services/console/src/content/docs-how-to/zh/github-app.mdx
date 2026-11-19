@@ -3,7 +3,7 @@ title: "自托管的GitHub应用"
 description: "创建一个GitHub应用，使Bencher自托管能进行GitHub身份验证"
 heading: "如何创建一个自托管的GitHub应用"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-11-18T19:27:03Z"
+modified: "2026-11-19T03:00:00Z"
 sortOrder: 9
 ---
 
@@ -90,6 +90,19 @@ sortOrder: 9
 2. 将 API 服务器和控制台升级到 `v0.6.18` 或更高版本。
    升级之后，安装尚未批准新权限的仓库无法关联，Bencher 也无法向其发布。
 3. 将内容更改为 `只读`，作为一次单独的更改。
+
+## GitHub Enterprise Server
+
+要使用 GitHub Enterprise Server 代替 github.com，请使用上述设置在您的 GitHub Enterprise Server 上注册 GitHub App。
+然后在[服务器配置的 `plus.github` 部分](/zh/docs/reference/server-config/#plusgithub)中将 `server_url` 设置为其 Web 根地址（例如：`https://github.example.com`）。
+之后 Bencher 会将其用于登录、关联的仓库、提交标题，以及分离运行的 GitHub Check 和 pull request 评论。
+应用的 slug 是其公开页面 URL 的最后一部分（例如：`https://github.example.com/github-apps/my-bencher-app` 中的 `my-bencher-app`）。
+
+这需要 `v0.6.18` 或更高版本的 Bencher Self-Hosted API 服务器，
+以及服务器上至少一个组织的有效 Bencher Plus Enterprise 许可证。
+没有许可证时，Bencher 会拒绝使用 GitHub 登录、关联以及 GitHub Actions 上的分离运行，并且不获取提交标题。
+只有当分离运行的工作流在同一个 GitHub Enterprise Server 上运行时，Bencher 才会为其发布结果：
+`GITHUB_API_URL` 为其他 GitHub 的 API 的运行会被拒绝。
 
 [linked repository]: /zh/docs/how-to/github-actions/#裸机上的-pull-requests
 

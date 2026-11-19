@@ -157,11 +157,10 @@ pub async fn get_ls_inner(
         ReportMode::Collapsed
     };
     // Every report is the project's, so one read of its link serves them all.
-    let github_link = GitHubLink::get(
-        actor_conn!(context, api_actor),
-        context.github_linking(),
-        query_project.id,
-    )?;
+    let github_link = actor_conn!(context, api_actor, |conn| {
+        let github = context.github_linking(conn)?;
+        GitHubLink::get(conn, github, query_project.id)?
+    });
     // Drop connection lock before iterating
     let json_reports = reports
         .into_iter()
@@ -456,14 +455,15 @@ pub async fn get_one_inner(
     )?;
 
     actor_conn!(context, api_actor, |conn| {
-        QueryReport::belonging_to(&query_project)
+        let query_report = QueryReport::belonging_to(&query_project)
             .filter(schema::report::uuid.eq(path_params.report.to_string()))
             .first::<QueryReport>(conn)
             .map_err(resource_not_found_err!(
                 Report,
                 (&query_project, path_params.report)
-            ))?
-            .into_json(log, conn, ReportMode::Full, context.github_linking())
+            ))?;
+        let github = context.github_linking(conn)?;
+        query_report.into_json(log, conn, ReportMode::Full, github)
     })
 }
 

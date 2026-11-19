@@ -3,7 +3,7 @@ title: "Самостоятельно Размещенное Приложение
 description: "Создайте приложение GitHub для аутентификации Self-Hosted версии Bencher с GitHub"
 heading: "Как создать самостоятельно размещенное приложение GitHub"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-11-18T19:27:03Z"
+modified: "2026-11-19T03:00:00Z"
 sortOrder: 9
 ---
 
@@ -92,6 +92,19 @@ sortOrder: 9
 2. Обновите API-сервер и консоль до `v0.6.18` или новее.
    После обновления репозиторий, установка которого не одобрила новые разрешения, нельзя связать, и Bencher не может публиковать в нем.
 3. Измените Содержимое на `Только чтение` отдельным изменением.
+
+## GitHub Enterprise Server
+
+Чтобы использовать GitHub Enterprise Server вместо github.com, зарегистрируйте приложение GitHub на вашем GitHub Enterprise Server с настройками выше.
+Затем укажите в `server_url` в [разделе `plus.github` конфигурации сервера](/ru/docs/reference/server-config/#plusgithub) его корневой веб-адрес (например: `https://github.example.com`).
+Тогда Bencher использует его для входа, связанных репозиториев, заголовков коммитов, а также GitHub Checks и комментариев к pull request для отсоединённых запусков.
+Slug приложения является последней частью URL его публичной страницы (например: `my-bencher-app` в `https://github.example.com/github-apps/my-bencher-app`).
+
+Для этого нужен API-сервер Bencher Self-Hosted версии `v0.6.18` или новее
+и действующая лицензия Bencher Plus Enterprise хотя бы для одной организации на сервере.
+Без лицензии Bencher отклоняет вход через GitHub, связывание и отсоединённые запуски в GitHub Actions и не получает заголовки коммитов.
+Bencher публикует результаты отсоединённого запуска, только когда его workflow выполняется на том же GitHub Enterprise Server:
+запуск, у которого `GITHUB_API_URL` указывает на API другого GitHub, отклоняется.
 
 [linked repository]: /ru/docs/how-to/github-actions/#pull-requests-на-выделенном-оборудовании
 

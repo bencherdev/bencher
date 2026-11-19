@@ -196,8 +196,12 @@ pub async fn get_inner(
     )
     .await?;
 
+    let project = actor_conn!(context, api_actor, |conn| {
+        let github = context.github_linking(conn)?;
+        project.into_json(conn, github)?
+    });
     Ok(JsonPerf {
-        project: project.into_json(actor_conn!(context, api_actor), context.github_linking())?,
+        project,
         start_time,
         end_time,
         results,

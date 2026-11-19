@@ -13,13 +13,12 @@ use bencher_oci_storage::OciStorage;
 use std::sync::Arc;
 
 use bencher_token::TokenKey;
-#[cfg(feature = "plus")]
 use dropshot::HttpError;
 use url::Url;
 
-#[cfg(feature = "plus")]
-use crate::model::project::QueryProject;
 use crate::model::project::github_link::GitHubLinking;
+#[cfg(feature = "plus")]
+use crate::model::{organization::license::any_valid_license, project::QueryProject};
 
 #[cfg(feature = "plus")]
 mod callbacks;
@@ -215,13 +214,36 @@ macro_rules! write_transaction {
 
 impl ApiContext {
     #[cfg(feature = "plus")]
-    pub fn github_linking(&self) -> GitHubLinking {
-        GitHubLinking::new(self.github_app.as_deref())
+    pub fn github_linking(&self, conn: &mut DbConnection) -> Result<GitHubLinking, HttpError> {
+        GitHubLinking::get(
+            conn,
+            self.github_app.as_deref(),
+            &self.licensor,
+            self.clock.now(),
+        )
     }
 
     #[cfg(not(feature = "plus"))]
-    pub fn github_linking(&self) -> GitHubLinking {
-        GitHubLinking::Unavailable
+    pub fn github_linking(&self, _conn: &mut DbConnection) -> Result<GitHubLinking, HttpError> {
+        Ok(GitHubLinking::Unavailable)
+    }
+
+    /// Refuse a GitHub feature on a GitHub Enterprise Server while no organization on the server
+    /// holds a valid license (402).
+    #[cfg(feature = "plus")]
+    pub async fn check_github_license(
+        &self,
+        host: &bencher_github_client::GitHubHost,
+    ) -> Result<(), HttpError> {
+        if host.is_github_com()
+            || any_valid_license(public_conn!(self), &self.licensor, self.clock.now())?
+        {
+            Ok(())
+        } else {
+            Err(crate::error::payment_required_error(format!(
+                "This server's GitHub is the GitHub Enterprise Server at ({host}), which needs a valid Bencher Plus Enterprise license for at least one organization on the server."
+            )))
+        }
     }
 
     #[cfg(feature = "plus")]

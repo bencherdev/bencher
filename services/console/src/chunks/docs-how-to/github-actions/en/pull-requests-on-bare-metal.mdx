@@ -38,6 +38,7 @@ and posts the GitHub Check and the pull request comment with it.
 If the GitHub card shows `Disconnected`, click `Install on GitHub` and give the app access to the repository again,
 or unsuspend its installation, and the link reconnects.
 For Bencher Self-Hosted, the server needs [its own GitHub App][github app] and version `v0.6.18` or later.
+With a Bencher Plus Enterprise license, a Bencher Self-Hosted server can use [GitHub Enterprise Server][github enterprise server] in place of github.com.
 
 > 🐰 Anyone with the Project's API key can make Bencher post a GitHub Check or a pull request comment
 > to the linked repository, on any commit or pull request in it.
@@ -144,6 +145,7 @@ it gets a second comment for them, from the GitHub Actions bot.
 
 [bare metal]: /docs/explanation/bare-metal/
 [github app]: /docs/how-to/github-app/
+[github enterprise server]: /docs/how-to/github-app/#github-enterprise-server
 [pricing]: /pricing
 [bencher run]: /docs/explanation/bencher-run/
 [project option]: /docs/explanation/bencher-run/#--project-project

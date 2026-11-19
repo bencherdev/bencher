@@ -5,7 +5,8 @@ use std::{
 
 use bencher_callback::{CallbackKey, CallbackSender};
 use bencher_github_client::GitHubApp;
-use bencher_json::{BENCHER_URL, Clock, runner::CALLBACK_JOB_STATUSES};
+use bencher_json::{Clock, runner::CALLBACK_JOB_STATUSES};
+use bencher_license::Licensor;
 use diesel::r2d2::{ConnectionManager, Pool};
 use slog::Logger;
 use tokio::task::{self, JoinError, JoinSet};
@@ -28,11 +29,12 @@ pub struct Callbacks {
     tasks: Arc<Mutex<Tasks>>,
 }
 
-/// The GitHub App that mints the token of every post, and the console that a post's comment
-/// links to.
+/// The GitHub App that mints the token of every post, the console that a post's comment links
+/// to, and the licensor that reads whether the server may post to a GitHub Enterprise Server.
 pub struct GitHubPosts {
     pub app: Arc<GitHubApp>,
     pub console_url: Url,
+    pub licensor: Licensor,
 }
 
 #[derive(Default)]
@@ -62,24 +64,7 @@ impl Callbacks {
         shutdown: CancellationToken,
         clock: Clock,
     ) -> Self {
-        Self::new_with_github_app(connection, reader, key, sender, shutdown, clock, None)
-    }
-
-    /// With the GitHub App that mints the token of every post.
-    pub fn new_with_github_app(
-        connection: Arc<tokio::sync::Mutex<DbConnection>>,
-        reader: Pool<ConnectionManager<DbConnection>>,
-        key: CallbackKey,
-        sender: Arc<dyn CallbackSender>,
-        shutdown: CancellationToken,
-        clock: Clock,
-        github_app: Option<Arc<GitHubApp>>,
-    ) -> Self {
-        let github = github_app.map(|app| GitHubPosts {
-            app,
-            console_url: BENCHER_URL.clone(),
-        });
-        Self::new_with_github_posts(connection, reader, key, sender, shutdown, clock, github)
+        Self::new_with_github_posts(connection, reader, key, sender, shutdown, clock, None)
     }
 
     /// With the GitHub App and the console that a post's comment links to.
