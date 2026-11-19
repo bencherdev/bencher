@@ -119,10 +119,7 @@ async fn plan_patch_requires_session() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({"name": "plan-key"}))
         .send()
         .await
@@ -259,10 +256,7 @@ mod portal {
         let resp = server
             .client
             .post(server.api_url(&format!("/v0/users/{user_slug}/keys")))
-            .header(
-                bencher_json::AUTHORIZATION,
-                bencher_json::bearer_header(&user.token),
-            )
+            .headers(server.fresh_session(&user))
             .json(&serde_json::json!({"name": "portal-key"}))
             .send()
             .await

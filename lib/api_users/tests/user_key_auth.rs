@@ -15,7 +15,7 @@
 //! leaked key cannot outlive its own revocation or tamper with the user's keys.
 
 use bencher_api_tests::{
-    TestServer,
+    TestServer, TestUser,
     helpers::{TestToken, seed_token},
     session_cookie,
 };
@@ -25,14 +25,12 @@ use bencher_json::{
 };
 use http::StatusCode;
 
-async fn mint_key(server: &TestServer, user_slug: &str, token: &str, name: &str) -> UserKey {
+/// Mint a key for `user` in a session they signed in to now.
+async fn mint_key(server: &TestServer, user: &TestUser, name: &str) -> UserKey {
     let resp = server
         .client
-        .post(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(token),
-        )
+        .post(server.api_url(&format!("/v0/users/{}/keys", user.slug)))
+        .headers(server.fresh_session(user))
         .json(&serde_json::json!({"name": name}))
         .send()
         .await
@@ -47,7 +45,7 @@ async fn setup() -> (TestServer, String, String, UserKey) {
     let user = server.signup("Key User", "userkey-setup@example.com").await;
     let user_slug_ref: &str = user.slug.as_ref();
     let user_slug: String = user_slug_ref.to_owned();
-    let key = mint_key(&server, &user_slug, &user.token, "primary-key").await;
+    let key = mint_key(&server, &user, "primary-key").await;
     (server, user_slug, user.token, key)
 }
 
@@ -402,7 +400,7 @@ async fn second_revoke_returns_conflict() {
 // Fails if key POST accepts a deprecated user API token as a user session.
 #[tokio::test]
 async fn api_token_cannot_mint_user_key() {
-    let (server, user_slug, token, _key, api_token) = setup_api_token().await;
+    let (server, user_slug, token, _key, api_token, _user) = setup_api_token().await;
 
     let resp = server
         .client
@@ -436,8 +434,8 @@ async fn api_token_cannot_mint_user_key() {
 // Fails if key list accepts a user API key or a deprecated user API token.
 #[tokio::test]
 async fn list_user_keys_requires_session() {
-    let (server, user_slug, token, key, api_token) = setup_api_token().await;
-    let _sibling = mint_key(&server, &user_slug, &token, "sibling-key").await;
+    let (server, user_slug, token, key, api_token, user) = setup_api_token().await;
+    let _sibling = mint_key(&server, &user, "sibling-key").await;
 
     let resp = server
         .client
@@ -477,7 +475,7 @@ async fn list_user_keys_requires_session() {
 // Fails if key view accepts a user API key, even on itself, or a deprecated user API token.
 #[tokio::test]
 async fn view_user_key_requires_session() {
-    let (server, user_slug, token, key, api_token) = setup_api_token().await;
+    let (server, user_slug, token, key, api_token, _user) = setup_api_token().await;
     let key_uuid = only_key_uuid(&server, &user_slug, &token).await;
 
     for bearer in [key.as_ref(), api_token.token.as_ref()] {
@@ -498,7 +496,7 @@ async fn view_user_key_requires_session() {
 // Fails if key PATCH accepts a user API key, even on itself, or a deprecated user API token.
 #[tokio::test]
 async fn rename_user_key_requires_session() {
-    let (server, user_slug, token, key, api_token) = setup_api_token().await;
+    let (server, user_slug, token, key, api_token, _user) = setup_api_token().await;
     let key_uuid = only_key_uuid(&server, &user_slug, &token).await;
 
     for bearer in [key.as_ref(), api_token.token.as_ref()] {
@@ -536,7 +534,7 @@ async fn rename_user_key_requires_session() {
 // Fails if key DELETE accepts a user API key, even on itself, or a deprecated user API token.
 #[tokio::test]
 async fn revoke_user_key_requires_session() {
-    let (server, user_slug, token, key, api_token) = setup_api_token().await;
+    let (server, user_slug, token, key, api_token, _user) = setup_api_token().await;
     let key_uuid = only_key_uuid(&server, &user_slug, &token).await;
 
     for bearer in [key.as_ref(), api_token.token.as_ref()] {
@@ -567,16 +565,17 @@ async fn revoke_user_key_requires_session() {
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
-async fn setup_api_token() -> (TestServer, String, String, UserKey, TestToken) {
+async fn setup_api_token() -> (TestServer, String, String, UserKey, TestToken, TestUser) {
     let server = TestServer::new().await;
     let user = server
         .signup("Token User", "apitoken-setup@example.com")
         .await;
     let user_slug_ref: &str = user.slug.as_ref();
     let user_slug: String = user_slug_ref.to_owned();
-    let key = mint_key(&server, &user_slug, &user.token, "primary-key").await;
+    let key = mint_key(&server, &user, "primary-key").await;
     let api_token = seed_token(&server, &user, "legacy-token");
-    (server, user_slug, user.token, key, api_token)
+    let token = user.token.clone();
+    (server, user_slug, token, key, api_token, user)
 }
 
 async fn only_key_uuid(server: &TestServer, user_slug: &str, token: &str) -> UserKeyUuid {
@@ -632,10 +631,7 @@ async fn user_a_cannot_create_user_b_key() {
     let resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/keys", user_b_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user_a.token),
-        )
+        .headers(server.fresh_session(&user_a))
         .json(&serde_json::json!({"name": "stolen"}))
         .send()
         .await
@@ -672,10 +668,9 @@ async fn admin_can_list_user_b_keys() {
 async fn distinct_keys_have_distinct_hashes() {
     let server = TestServer::new().await;
     let user = server.signup("Hash User", "hashuser@example.com").await;
-    let user_slug: &str = user.slug.as_ref();
 
-    let k1 = mint_key(&server, user_slug, &user.token, "one").await;
-    let k2 = mint_key(&server, user_slug, &user.token, "two").await;
+    let k1 = mint_key(&server, &user, "one").await;
+    let k2 = mint_key(&server, &user, "two").await;
     assert_ne!(k1.as_ref(), k2.as_ref(), "generated keys must be unique");
 
     // Both should authenticate independently.
@@ -779,10 +774,7 @@ async fn expired_user_key_rejected() {
     let create_resp = server
         .client
         .post(server.api_url(&format!("/v0/users/{}/keys", user_slug)))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(&user.token),
-        )
+        .headers(server.fresh_session(&user))
         .json(&serde_json::json!({"name": "expiring-key", "ttl": 60}))
         .send()
         .await
@@ -842,7 +834,7 @@ async fn locked_user_key_rejected() {
     let user_slug: &str = user.slug.as_ref();
 
     // Mint a key while the user is still active.
-    let key = mint_key(&server, user_slug, &user.token, "lockable-key").await;
+    let key = mint_key(&server, &user, "lockable-key").await;
 
     // Sanity: pre-lock, the key authenticates.
     let pre_resp = server
@@ -900,7 +892,7 @@ async fn user_keys_sort_created() {
     let user = server.signup("Sort User", "userkey-sort@example.com").await;
     let user_slug: &str = user.slug.as_ref();
     for name in ["charlie", "alpha", "bravo"] {
-        mint_key(&server, user_slug, &user.token, name).await;
+        mint_key(&server, &user, name).await;
     }
 
     let names = |query: &'static str| {

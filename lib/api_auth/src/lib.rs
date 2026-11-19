@@ -78,15 +78,29 @@ impl bencher_endpoint::Registrar for Api {
         api_description.register(sign_in::code::auth_code_post)?;
         api_description.register(sign_in::link::auth_link_post)?;
 
+        // Sign in again
+        if http_options {
+            api_description.register(sign_in::fresh::auth_fresh_options)?;
+            api_description.register(sign_in::fresh::auth_fresh_email_options)?;
+            api_description.register(sign_in::fresh::auth_fresh_email_resend_options)?;
+            api_description.register(sign_in::fresh::auth_fresh_code_options)?;
+        }
+        api_description.register(sign_in::fresh::auth_fresh_get)?;
+        api_description.register(sign_in::fresh::auth_fresh_email_post)?;
+        api_description.register(sign_in::fresh::auth_fresh_email_resend_post)?;
+        api_description.register(sign_in::fresh::auth_fresh_code_post)?;
+
         #[cfg(feature = "plus")]
         {
             // Sign in with GitHub or Google
             if http_options {
                 api_description.register(provider::auth_provider_start_options)?;
                 api_description.register(provider::auth_provider_finish_options)?;
+                api_description.register(provider::auth_fresh_provider_start_options)?;
             }
             api_description.register(provider::auth_provider_start_post)?;
             api_description.register(provider::auth_provider_finish_post)?;
+            api_description.register(provider::auth_fresh_provider_start_post)?;
 
             // OCI token endpoint
             if http_options {

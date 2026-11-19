@@ -12,9 +12,11 @@ use std::os::unix::process::CommandExt as _;
 use super::unwrap_user_legacy_token;
 use crate::parser::TaskRunner;
 use crate::task::test::seed_test::{
-    BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL, USER_SLUG,
+    ADMIN_EMAIL, BENCHER_CMD, CLI_DIR, HOST_ARG, PROJECT_SLUG, TOKEN_ARG, USER_EMAIL, USER_SLUG,
 };
-use crate::task::{is_dev, unwrap_admin_token, unwrap_url, unwrap_user_token};
+use crate::task::{
+    is_dev, session::BrowserSession, unwrap_admin_token, unwrap_url, unwrap_user_token,
+};
 
 const KEY_ARG: &str = "--key";
 const DOCKER_IMAGE: &str = "ghcr.io/bencherdev/bencher:latest";
@@ -45,6 +47,7 @@ pub struct RunnerTest {
     token: Jwt,
     legacy_token: Jwt,
     with_daemon: bool,
+    api_log: Option<std::path::PathBuf>,
 }
 
 impl TryFrom<TaskRunner> for RunnerTest {
@@ -57,6 +60,7 @@ impl TryFrom<TaskRunner> for RunnerTest {
             username,
             token,
             with_daemon,
+            api_log,
         } = runner;
 
         let is_dev = is_dev(url.as_ref());
@@ -74,11 +78,16 @@ impl TryFrom<TaskRunner> for RunnerTest {
             token,
             legacy_token,
             with_daemon,
+            api_log,
         })
     }
 }
 
 impl RunnerTest {
+    fn api_log(&self) -> Option<&std::path::Path> {
+        self.api_log.as_deref()
+    }
+
     pub fn exec(&self) -> anyhow::Result<()> {
         if self.with_daemon {
             self.exec_with_daemon()
@@ -101,8 +110,8 @@ impl RunnerTest {
                 spec,
             )?;
             run_image_project_runner_test(&self.url, &self.token, spec)?;
-            run_user_key_runner_test(&self.url, &self.username, &self.token, spec)?;
-            run_project_key_runner_test(&self.url, &self.admin_token, spec)
+            run_user_key_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)?;
+            run_project_key_runner_test(&self.url, &self.admin_token, self.api_log(), spec)
         }
     }
 
@@ -289,14 +298,14 @@ impl RunnerTest {
 
         // Run a test using a user key for authentication
         let user_key_result = if detach_failed_result.is_ok() {
-            run_user_key_runner_test(&self.url, &self.username, &self.token, spec)
+            run_user_key_runner_test(&self.url, &self.username, &self.token, self.api_log(), spec)
         } else {
             Ok(())
         };
 
         // Run a test using a project key for authentication
         let project_key_result = if user_key_result.is_ok() {
-            run_project_key_runner_test(&self.url, &self.admin_token, spec)
+            run_project_key_runner_test(&self.url, &self.admin_token, self.api_log(), spec)
         } else {
             Ok(())
         };
@@ -1195,35 +1204,46 @@ fn wait_for_settled_callback(
 /// username and the key as password (the same `email:credential` shape as an
 /// API token login), pushes the image, and submits a job via `bencher run --key`.
 #[expect(clippy::panic_in_result_fn, reason = "test harness")]
-fn run_user_key_runner_test(url: &Url, email: &str, token: &Jwt, spec: &str) -> anyhow::Result<()> {
+fn run_user_key_runner_test(
+    url: &Url,
+    email: &str,
+    token: &Jwt,
+    api_log: Option<&std::path::Path>,
+    spec: &str,
+) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running user key runner smoke test against: {host}");
 
     // Step 1: Create a user key
     println!("Step 1: Creating user key...");
-    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    cmd.args([
-        "user",
-        "key",
-        "create",
-        HOST_ARG,
-        host,
-        TOKEN_ARG,
-        token.as_ref(),
-        "--name",
-        "runner-test-user-key",
-        USER_SLUG,
-    ])
-    .current_dir(CLI_DIR);
-    let output = cmd.output()?;
-    anyhow::ensure!(
-        output.status.success(),
-        "Failed to create user key:\nstdout: {}\nstderr: {}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let user_key_created: JsonUserKeyCreated = serde_json::from_slice(&output.stdout)?;
+    let user_key_created: JsonUserKeyCreated = if let Some(api_log) = api_log {
+        BrowserSession::sign_in(url, email, api_log)?
+            .create_user_key(USER_SLUG, "runner-test-user-key")?
+    } else {
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "user",
+            "key",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            token.as_ref(),
+            "--name",
+            "runner-test-user-key",
+            USER_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let output = cmd.output()?;
+        anyhow::ensure!(
+            output.status.success(),
+            "Failed to create user key:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        serde_json::from_slice(&output.stdout)?
+    };
     let user_key = user_key_created.key;
 
     // Step 2: Docker login with the user's email as username and the user key as password
@@ -1307,35 +1327,45 @@ fn run_user_key_runner_test(url: &Url, email: &str, token: &Jwt, spec: &str) -> 
     clippy::too_many_lines,
     reason = "test harness"
 )]
-fn run_project_key_runner_test(url: &Url, admin_token: &Jwt, spec: &str) -> anyhow::Result<()> {
+fn run_project_key_runner_test(
+    url: &Url,
+    admin_token: &Jwt,
+    api_log: Option<&std::path::Path>,
+    spec: &str,
+) -> anyhow::Result<()> {
     let host = url.as_ref();
 
     println!("Running project key runner smoke test against: {host}");
 
     // Step 1: Create a project key
     println!("Step 1: Creating project key...");
-    let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-    cmd.args([
-        "project",
-        "key",
-        "create",
-        HOST_ARG,
-        host,
-        TOKEN_ARG,
-        admin_token.as_ref(),
-        "--name",
-        "runner-test-key",
-        PROJECT_SLUG,
-    ])
-    .current_dir(CLI_DIR);
-    let output = cmd.output()?;
-    anyhow::ensure!(
-        output.status.success(),
-        "Failed to create project key:\nstdout: {}\nstderr: {}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let project_key_created: JsonProjectKeyCreated = serde_json::from_slice(&output.stdout)?;
+    let project_key_created: JsonProjectKeyCreated = if let Some(api_log) = api_log {
+        BrowserSession::sign_in(url, ADMIN_EMAIL, api_log)?
+            .create_project_key(PROJECT_SLUG, "runner-test-key")?
+    } else {
+        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+        cmd.args([
+            "project",
+            "key",
+            "create",
+            HOST_ARG,
+            host,
+            TOKEN_ARG,
+            admin_token.as_ref(),
+            "--name",
+            "runner-test-key",
+            PROJECT_SLUG,
+        ])
+        .current_dir(CLI_DIR);
+        let output = cmd.output()?;
+        anyhow::ensure!(
+            output.status.success(),
+            "Failed to create project key:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        serde_json::from_slice(&output.stdout)?
+    };
     let project_key = project_key_created.key;
 
     // Step 2: Docker login with project slug as username and project key as password

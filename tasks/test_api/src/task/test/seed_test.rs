@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{path::PathBuf, process::Command};
 
 use assert_cmd::{assert::OutputAssertExt as _, cargo::CommandCargoExt as _};
 use bencher_json::{Jwt, Url};
@@ -6,7 +6,7 @@ use pretty_assertions::assert_eq;
 
 use crate::{
     parser::TaskSeedTest,
-    task::{is_dev, unwrap_admin_token, unwrap_url, unwrap_user_token},
+    task::{is_dev, session::BrowserSession, unwrap_admin_token, unwrap_url, unwrap_user_token},
 };
 
 pub(crate) const BENCHER_CMD: &str = "bencher";
@@ -55,6 +55,7 @@ pub struct SeedTest {
     pub token: Jwt,
     pub is_bencher_cloud: bool,
     pub no_git: bool,
+    pub api_log: Option<PathBuf>,
 }
 
 impl TryFrom<TaskSeedTest> for SeedTest {
@@ -67,6 +68,7 @@ impl TryFrom<TaskSeedTest> for SeedTest {
             token,
             is_bencher_cloud,
             no_git,
+            api_log,
         } = test;
 
         let is_dev = is_dev(url.as_ref());
@@ -80,8 +82,27 @@ impl TryFrom<TaskSeedTest> for SeedTest {
             token,
             is_bencher_cloud,
             no_git,
+            api_log,
         })
     }
+}
+
+/// Make a key with the test token, and where the server refuses it for want of a fresh sign-in,
+/// say how to give the seed one.
+fn key_by_token(cmd: &mut Command) -> anyhow::Result<Vec<u8>> {
+    let output = cmd.output()?;
+    if output.status.success() {
+        return Ok(output.stdout);
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if stderr.contains("fresh_sign_in") {
+        anyhow::bail!(
+            "This server makes a key only for a browser session signed in within the last 10 \
+             minutes. Run the API with its output in a file, and pass that file to `--api-log`, \
+             so the seed signs in by the emailed code.\n{stderr}"
+        );
+    }
+    anyhow::bail!("Failed to create a key:\n{stderr}")
 }
 
 impl SeedTest {
@@ -580,24 +601,30 @@ impl SeedTest {
         let _json: bencher_json::JsonMeasure =
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
 
-        // cargo run -- project key create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name seed-test-key the-computer
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "project",
-            "key",
-            "create",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            "--name",
-            PROJECT_KEY_NAME,
-            PROJECT_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
+        // A new key needs a browser session signed in within the last 10 minutes: one signed in
+        // by the emailed code where the API's log is at hand, else the test token's session.
         let project_key_created: bencher_json::JsonProjectKeyCreated =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            if let Some(api_log) = &self.api_log {
+                BrowserSession::sign_in(&self.url, USER_EMAIL, api_log)?
+                    .create_project_key(PROJECT_SLUG, PROJECT_KEY_NAME)?
+            } else {
+                // cargo run -- project key create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name seed-test-key the-computer
+                let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+                cmd.args([
+                    "project",
+                    "key",
+                    "create",
+                    HOST_ARG,
+                    host,
+                    TOKEN_ARG,
+                    token,
+                    "--name",
+                    PROJECT_KEY_NAME,
+                    PROJECT_SLUG,
+                ])
+                .current_dir(CLI_DIR);
+                serde_json::from_slice(&key_by_token(&mut cmd)?)?
+            };
         let project_key = project_key_created.key.as_ref().to_owned();
         let project_key_uuid_str = project_key_created.uuid.to_string();
 
@@ -2174,24 +2201,28 @@ impl SeedTest {
 
         // ========== User Key CRUD Lifecycle ==========
 
-        // cargo run -- user key create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name seed-test-user-key muriel-bagge
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "user",
-            "key",
-            "create",
-            HOST_ARG,
-            host,
-            TOKEN_ARG,
-            token,
-            "--name",
-            USER_KEY_NAME,
-            ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
         let user_key_created: bencher_json::JsonUserKeyCreated =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
+            if let Some(api_log) = &self.api_log {
+                BrowserSession::sign_in(&self.url, USER_EMAIL, api_log)?
+                    .create_user_key(ORG_SLUG, USER_KEY_NAME)?
+            } else {
+                // cargo run -- user key create --host http://localhost:6610 --token $BENCHER_API_TOKEN --name seed-test-user-key muriel-bagge
+                let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
+                cmd.args([
+                    "user",
+                    "key",
+                    "create",
+                    HOST_ARG,
+                    host,
+                    TOKEN_ARG,
+                    token,
+                    "--name",
+                    USER_KEY_NAME,
+                    ORG_SLUG,
+                ])
+                .current_dir(CLI_DIR);
+                serde_json::from_slice(&key_by_token(&mut cmd)?)?
+            };
         let user_key = user_key_created.key.as_ref().to_owned();
         let user_key_uuid_str = user_key_created.uuid.to_string();
 

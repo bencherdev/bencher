@@ -10,6 +10,7 @@ use crate::{
 
 #[cfg(feature = "plus")]
 mod plus;
+mod session;
 mod test;
 
 #[cfg(feature = "plus")]

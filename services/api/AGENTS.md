@@ -28,10 +28,10 @@ Running the seed tests:
 
 1. Stop the API server if it's running.
 2. Delete the existing database at `services/api/data/bencher.db` if it exists.
-3. Run the API server from `services/api` in one terminal.
-4. In another terminal:
-  - Bencher Cloud: `cargo test-api seed --is-bencher-cloud`
-  - Bencher Self-Hosted: `cargo test-api seed`
+3. Run the API server from `services/api` in one terminal, with its output in a file: `cargo run > data/api.log 2>&1`.
+4. In another terminal, pass that file as `--api-log`, since a new key needs a browser session signed in within the last 10 minutes and the seed signs in by the code the API writes to its log:
+  - Bencher Cloud: `cargo test-api seed --is-bencher-cloud --api-log services/api/data/api.log`
+  - Bencher Self-Hosted: `cargo test-api seed --api-log services/api/data/api.log`
   - If running in a separate `jj` workspace (no `.git` directory), add `--no-git`. The anonymous report tests derive the project name from the git repo; without git they fall back to `"Project"` instead of `"bencher"`, and the `--no-git` flag adjusts assertions accordingly.
 
 ## Generate Types
