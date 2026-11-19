@@ -4,9 +4,11 @@ import {
 	forgetPending,
 	keepPending,
 	keepPrefill,
+	keepStarted,
 	pendingOf,
 	readPending,
 	takePrefill,
+	takeStarted,
 } from "./pending";
 
 const memory = (entries: Record<string, string> = {}) => ({
@@ -68,6 +70,40 @@ describe("the pending sign-in", () => {
 			carry: {},
 			cappedUntil: PENDING.cappedUntil,
 		});
+	});
+});
+
+describe("a provider's pending sign-in", () => {
+	// Kills a tab that loses the provider account its proof pins, and one that
+	// takes a broken one for an account.
+	test("keeps the account that its proof pins", () => {
+		const storage = memory();
+		const who = { provider: "google" as const, handle: "ada@example.com" };
+		keepPending(storage, { ...PENDING, who });
+		expect(readPending(storage)).toEqual({ ...PENDING, who });
+		for (const broken of [
+			{ provider: "gitlab", handle: "ada" },
+			{ provider: "github", handle: "" },
+			{ provider: "github" },
+			"ada",
+		]) {
+			const kept = memory({
+				BENCHER_PENDING_SIGN_IN: JSON.stringify({ ...PENDING, who: broken }),
+			});
+			expect(readPending(kept), JSON.stringify(broken)).toEqual(PENDING);
+		}
+	});
+
+	// Kills a return from the provider that loses the door it began at or what
+	// it carries, and one that finds them again on a later return.
+	test("returns to the door it began at once", () => {
+		const storage = memory();
+		keepStarted(storage, { door: "signup", carry: PENDING.carry });
+		expect(takeStarted(storage)).toEqual({
+			door: "signup",
+			carry: PENDING.carry,
+		});
+		expect(takeStarted(storage)).toEqual({ door: "login", carry: {} });
 	});
 });
 

@@ -1,6 +1,6 @@
 use aws_lc_rs::hmac;
 pub use bencher_github_client::test_server::{
-    Answer, HOLD, NO_ANSWER, Received, Server as GitHubServer,
+    Answer, HOLD, NO_ANSWER, Received, Server as GitHubServer, Unscripted,
 };
 use bencher_github_client::{
     GitHubApp,

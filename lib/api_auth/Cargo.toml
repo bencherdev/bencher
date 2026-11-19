@@ -10,11 +10,14 @@ publish = false
 default = []
 plus = [
     "dep:base64",
+    "dep:bencher_github_client",
+    "dep:bencher_google_client",
     "dep:bencher_rbac",
     "dep:bencher_token",
     "dep:chrono",
     "dep:serde_json",
     "dep:serde_urlencoded",
+    "dep:thiserror",
     "bencher_endpoint/plus",
     "bencher_json/plus",
     "bencher_otel?/plus",
@@ -27,6 +30,8 @@ otel = ["dep:bencher_otel", "bencher_schema/otel"]
 [dependencies]
 base64 = { workspace = true, optional = true }
 bencher_endpoint.workspace = true
+bencher_github_client = { workspace = true, optional = true }
+bencher_google_client = { workspace = true, optional = true }
 bencher_json = { workspace = true, features = ["server", "schema", "db"] }
 bencher_otel = { workspace = true, optional = true }
 bencher_rbac = { workspace = true, optional = true }
@@ -41,6 +46,7 @@ serde.workspace = true
 serde_json = { workspace = true, optional = true }
 serde_urlencoded = { workspace = true, optional = true }
 slog.workspace = true
+thiserror = { workspace = true, optional = true }
 url.workspace = true
 
 [dev-dependencies]

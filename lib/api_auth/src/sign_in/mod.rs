@@ -1,12 +1,12 @@
 //! Sign in by email: one pending sign-in per browser, proven once by its code or its link.
 
 use bencher_endpoint::{Post, ResponseAccepted};
-#[cfg(feature = "plus")]
-use bencher_json::NonEmpty;
 use bencher_json::{
-    BindingSecret, DateTime, Email, JsonSignInEmail, JsonSignedIn, SessionMethod, SessionToken,
-    SignInRefusal, UserName,
+    BindingSecret, DateTime, Email, JsonSignInEmail, JsonSignedIn, Jwt, OrganizationUuid,
+    SessionMethod, SessionToken, SignInRefusal, UserName,
 };
+#[cfg(feature = "plus")]
+use bencher_json::{NonEmpty, SignInProvider};
 #[cfg(feature = "plus")]
 use bencher_schema::model::organization::sso::QuerySso;
 use bencher_schema::{
@@ -46,7 +46,11 @@ const LOCKED_SELF_HOSTED: &str =
 
 /// Admit a request to a sign-in endpoint: from the console's own origin, and charged to the
 /// reader's address.
-fn admit(log: &Logger, context: &ApiContext, request: &RequestInfo) -> Result<(), HttpError> {
+pub(crate) fn admit(
+    log: &Logger,
+    context: &ApiContext,
+    request: &RequestInfo,
+) -> Result<(), HttpError> {
     check_same_origin(context, request)?;
     #[cfg(feature = "plus")]
     charge_attempt(context, context.remote_ip(log, request.headers()))?;
@@ -115,7 +119,7 @@ fn charge_attempt(
 }
 
 /// The error, with the refusal as its code.
-fn refused(mut error: HttpError, refusal: SignInRefusal) -> HttpError {
+pub(crate) fn refused(mut error: HttpError, refusal: SignInRefusal) -> HttpError {
     error.error_code = Some(refusal.as_ref().to_owned());
     error
 }
@@ -127,6 +131,38 @@ fn binding(context: &ApiContext, request: &RequestInfo) -> Option<BindingSecret>
 
 fn ended() -> HttpError {
     refused(unauthorized_error(ENDED), SignInRefusal::SignInEnded)
+}
+
+/// Start a sign-in by email for `email`, carrying `sign_in_context`, under the address's cap, in
+/// place of the one the browser holds once its email went out.
+pub(crate) async fn email_sign_in(
+    log: &Logger,
+    context: &ApiContext,
+    request: &RequestInfo,
+    email: Email,
+    sign_in_context: SignInContext,
+) -> Result<Emailed, HttpError> {
+    if let Some(wait) = at_cap(context, &email) {
+        return Ok(Emailed::Capped { email, wait });
+    }
+    let sent = Start::insert(context, email, sign_in_context, context.clock.now())
+        .await?
+        .send(log, context)
+        .await?;
+    if let Some(earlier) = binding(context, request) {
+        end_replaced(context, |conn| {
+            QueryPendingSignIn::end_binding(conn, &earlier)
+        })
+        .await;
+    }
+    Ok(Emailed::Sent(sent))
+}
+
+/// What starting a sign-in by email did: emailed the address, or found it at its cap, `wait`
+/// seconds from having room.
+pub(crate) enum Emailed {
+    Sent(Sent),
+    Capped { email: Email, wait: u32 },
 }
 
 /// Count an email to `email`, unless the address is at its cap: then the seconds until it is not.
@@ -223,7 +259,7 @@ impl Start {
 }
 
 /// A pending sign-in whose email went out.
-struct Sent {
+pub(crate) struct Sent {
     email: Email,
     binding: BindingSecret,
 }
@@ -236,24 +272,33 @@ impl Sent {
 
     /// Answer with the cookie that binds it to this browser.
     fn answer(self, context: &ApiContext) -> Result<ResponseAccepted<JsonSignInEmail>, HttpError> {
-        let Self { email, binding } = self;
-        let cookie = PendingCookie::new(&context.console_url)
-            .set(&binding)
+        let cookie = self.cookie(context)?;
+        let mut response = Post::pub_response_accepted(JsonSignInEmail {
+            email: self.email,
+            resend_after: resend_after(),
+            wait: None,
+        });
+        response.headers_mut().append(SET_COOKIE, cookie);
+        Ok(response)
+    }
+
+    /// The cookie that binds it to this browser.
+    pub(crate) fn cookie(&self, context: &ApiContext) -> Result<HeaderValue, HttpError> {
+        PendingCookie::new(&context.console_url)
+            .set(&self.binding)
             .map_err(|e| {
                 issue_error(
                     "Failed to set the pending sign-in cookie",
                     "Failed to set the pending sign-in cookie:",
                     e,
                 )
-            })?;
-        let mut response = Post::pub_response_accepted(JsonSignInEmail {
-            email,
-            resend_after: u32::try_from(RESEND_WAIT.num_seconds()).ok(),
-            wait: None,
-        });
-        response.headers_mut().append(SET_COOKIE, cookie);
-        Ok(response)
+            })
     }
+}
+
+/// The seconds from a new email until its Resend opens.
+pub(crate) fn resend_after() -> Option<u32> {
+    u32::try_from(RESEND_WAIT.num_seconds()).ok()
 }
 
 /// End the pending sign-in a new one replaces, in one write transaction, once the new one's email
@@ -297,7 +342,7 @@ fn support_url(context: &ApiContext) -> Option<url::Url> {
     None
 }
 
-/// What the browser presents at a proof: its device, and any session it is signed in to.
+/// What the browser presents at a sign-in: its device, and any session it is signed in to.
 pub(crate) struct Presented<'a> {
     pub user_agent: Option<&'a str>,
     pub session: Option<SessionToken>,
@@ -326,22 +371,25 @@ enum Proof {
     Locked,
 }
 
-struct SignedIn {
-    user: QueryUser,
-    /// The account, if the proof made it.
-    new: Option<InsertUser>,
+pub(crate) struct SignedIn {
+    pub user: QueryUser,
+    /// The account, if the sign-in made it.
+    pub new: Option<InsertUser>,
     /// Whether the user joined the invite's organization.
-    invited: bool,
+    pub invited: bool,
     /// Whether the user claimed the organization.
-    claimed: bool,
+    pub claimed: bool,
     #[cfg(feature = "plus")]
-    sso_joined: bool,
-    token: SessionToken,
-    context: SignInContext,
+    pub sso_joined: bool,
+    /// The provider the session signed in with, or none for an email.
+    #[cfg(feature = "plus")]
+    pub provider: Option<SignInProvider>,
+    pub token: SessionToken,
+    pub context: SignInContext,
 }
 
 /// An error inside a sign-in's write transaction, which rolls the whole sign-in back.
-enum TxError {
+pub(crate) enum TxError {
     Db(diesel::result::Error),
     Http(HttpError),
 }
@@ -359,7 +407,7 @@ impl From<HttpError> for TxError {
 }
 
 impl TxError {
-    fn into_http(self) -> HttpError {
+    pub(crate) fn into_http(self) -> HttpError {
         match self {
             Self::Db(e) => issue_error("Failed to sign in", "Failed to sign in:", e),
             Self::Http(e) => e,
@@ -389,19 +437,36 @@ fn prove(
             InsertUser::sign_up(conn, UserName::from_email(email), None, email.clone())?;
         (user, Some(insert_user))
     };
-    let (invited, claimed) = join(conn, context, pending, &user, now)?;
+    let (invited, claimed) = join(
+        conn,
+        context,
+        pending.invite.as_ref(),
+        pending.claim,
+        &user,
+        now,
+    )?;
     if new.is_some() && !invited && !claimed {
         InsertUser::personal_organization(conn, &user)?;
     }
     QueryUser::verify_email(conn, user.id, email, now)?;
     #[cfg(feature = "plus")]
     let sso_joined = QuerySso::join_all_with(conn, &user, now)?;
-    if let Some(token) = &presented.session {
-        QuerySession::delete_by_token(conn, token)?;
-    }
-    let (session, token) =
-        InsertSession::new(user.id, SessionMethod::Email, presented.user_agent, now)?;
-    session.insert(conn, now)?;
+    #[cfg(feature = "plus")]
+    let provider = if let Some(pin) = pending.pin()
+        && pin.pin(conn, user.id, now)?
+    {
+        Some(pin.provider)
+    } else {
+        None
+    };
+    let token = begin_session(
+        conn,
+        &user,
+        presented,
+        #[cfg(feature = "plus")]
+        provider,
+        now,
+    )?;
     Ok(Proof::SignedIn(Box::new(SignedIn {
         user,
         new,
@@ -409,27 +474,51 @@ fn prove(
         claimed,
         #[cfg(feature = "plus")]
         sso_joined,
+        #[cfg(feature = "plus")]
+        provider,
         token,
         context: pending.context(),
     })))
+}
+
+/// Begin the user's session, signed in by `provider` or else by email, in place of any the browser
+/// presented.
+pub(crate) fn begin_session(
+    conn: &mut DbConnection,
+    user: &QueryUser,
+    presented: &Presented<'_>,
+    #[cfg(feature = "plus")] provider: Option<SignInProvider>,
+    now: DateTime,
+) -> Result<SessionToken, TxError> {
+    if let Some(token) = &presented.session {
+        QuerySession::delete_by_token(conn, token)?;
+    }
+    #[cfg(feature = "plus")]
+    let method = provider.map_or(SessionMethod::Email, Into::into);
+    #[cfg(not(feature = "plus"))]
+    let method = SessionMethod::Email;
+    let (session, token) = InsertSession::new(user.id, method, presented.user_agent, now)?;
+    session.insert(conn, now)?;
+    Ok(token)
 }
 
 /// Join the organization the sign-in's invite or claim names, unless that no longer applies:
 /// the organization is gone, the user already belongs to it, or someone else claimed it.
 /// An invite, applied or not, keeps the claim from being considered.
 /// Returns whether the user joined by the invite, and whether by the claim.
-fn join(
+pub(crate) fn join(
     conn: &mut DbConnection,
     context: &ApiContext,
-    pending: &QueryPendingSignIn,
+    invite: Option<&Jwt>,
+    claim: Option<OrganizationUuid>,
     user: &QueryUser,
     now: DateTime,
 ) -> Result<(bool, bool), TxError> {
-    if let Some(invite) = &pending.invite {
+    if let Some(invite) = invite {
         let invited = user.accept_invite_with(conn, &context.token_key, invite, now)?;
         return Ok((invited == Invited::Joined, false));
     }
-    if let Some(claim) = pending.claim
+    if let Some(claim) = claim
         && let Some(organization) = QueryOrganization::find(conn, claim)?
     {
         let claimed = organization.claim_with(conn, user.id, now)?.is_some();
@@ -438,106 +527,143 @@ fn join(
     Ok((false, false))
 }
 
-/// Finish a proven sign-in: notify the admins of a new account, and answer with the session's
-/// cookie in place of the pending one.
+/// Finish a proof: answer with the session's cookie in place of the pending one, or refuse a locked
+/// account.
 async fn finish(
     log: &Logger,
     context: &ApiContext,
     proof: Proof,
 ) -> Result<(JsonSignedIn, [HeaderValue; 2]), HttpError> {
-    let SignedIn {
-        user,
-        new,
-        invited,
-        claimed,
-        #[cfg(feature = "plus")]
-        sso_joined,
-        token,
-        context: sign_in_context,
-    } = match proof {
+    let signed_in = match proof {
         Proof::SignedIn(signed_in) => *signed_in,
         Proof::Locked => return Err(locked(context)),
     };
+    let (json, session_cookie) = signed_in.finish(log, context).await?;
+    let pending_cookie = PendingCookie::new(&context.console_url).clear();
+    Ok((json, [session_cookie, pending_cookie]))
+}
 
-    if let Some(insert_user) = &new {
-        let notices = insert_user.admin_notices(
-            public_conn!(context),
-            &context.console_url,
+impl SignedIn {
+    /// Notify the admins of a new account, count the sign-in, and answer with the session's
+    /// cookie.
+    pub(crate) async fn finish(
+        self,
+        log: &Logger,
+        context: &ApiContext,
+    ) -> Result<(JsonSignedIn, HeaderValue), HttpError> {
+        let Self {
+            user,
+            new,
             invited,
-            "email",
-        )?;
-        for notice in notices {
-            if let Err(e) = context.messenger.send_and_wait(log, notice).await {
-                slog::error!(log, "Failed to notify an admin of a new user: {e}");
+            claimed,
+            #[cfg(feature = "plus")]
+            sso_joined,
+            #[cfg(feature = "plus")]
+            provider,
+            token,
+            context: sign_in_context,
+        } = self;
+        #[cfg(feature = "plus")]
+        let method = provider.map_or("email", SignInProvider::name);
+        #[cfg(not(feature = "plus"))]
+        let method = "email";
+
+        if let Some(insert_user) = &new {
+            let notices = insert_user.admin_notices(
+                public_conn!(context),
+                &context.console_url,
+                invited,
+                method,
+            )?;
+            for notice in notices {
+                if let Err(e) = context.messenger.send_and_wait(log, notice).await {
+                    slog::error!(log, "Failed to notify an admin of a new user: {e}");
+                }
             }
         }
-    }
 
-    #[cfg(feature = "otel")]
-    {
-        let auth_method = bencher_otel::AuthMethod::Email;
-        bencher_otel::ApiMeter::increment(if new.is_some() {
-            bencher_otel::ApiCounter::UserSignup(auth_method)
-        } else {
-            bencher_otel::ApiCounter::UserLogin(auth_method)
-        });
-        if invited && new.is_none() {
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(Some(
-                auth_method,
-            )));
+        #[cfg(feature = "otel")]
+        {
+            #[cfg(feature = "plus")]
+            let auth_method = provider.map_or(bencher_otel::AuthMethod::Email, |provider| {
+                bencher_otel::AuthMethod::OAuth(match provider {
+                    SignInProvider::Github => bencher_otel::OAuthProvider::GitHub,
+                    SignInProvider::Google => bencher_otel::OAuthProvider::Google,
+                })
+            });
+            #[cfg(not(feature = "plus"))]
+            let auth_method = bencher_otel::AuthMethod::Email;
+            bencher_otel::ApiMeter::increment(if new.is_some() {
+                bencher_otel::ApiCounter::UserSignup(auth_method)
+            } else {
+                bencher_otel::ApiCounter::UserLogin(auth_method)
+            });
+            if invited && new.is_none() {
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserAccept(Some(
+                    auth_method,
+                )));
+            }
+            if claimed {
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
+            }
+            #[cfg(feature = "plus")]
+            if sso_joined {
+                bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserSsoJoin(
+                    auth_method,
+                ));
+            }
         }
-        if claimed {
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserClaim);
-        }
-        #[cfg(feature = "plus")]
-        if sso_joined {
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserSsoJoin(auth_method));
-        }
-    }
-    #[cfg(not(feature = "otel"))]
-    let _ = claimed;
-    #[cfg(all(feature = "plus", not(feature = "otel")))]
-    let _ = sso_joined;
+        #[cfg(not(feature = "otel"))]
+        let _ = claimed;
+        #[cfg(all(feature = "plus", not(feature = "otel")))]
+        let _ = sso_joined;
 
-    let session_cookie = SessionCookie::new(&context.console_url)
-        .set(&token)
-        .map_err(|e| {
-            issue_error(
-                "Failed to set the session cookie",
-                "Failed to set the session cookie:",
-                e,
-            )
-        })?;
-    let pending_cookie = PendingCookie::new(&context.console_url).clear();
-    let SignInContext {
-        invite: _,
-        claim: _,
-        #[cfg(feature = "plus")]
-        plan,
-        #[cfg(feature = "plus")]
-        authorization,
-    } = sign_in_context;
-    let json = JsonSignedIn {
-        user: user.into_json(),
-        new: new.is_some(),
-        #[cfg(feature = "plus")]
-        plan,
-        #[cfg(feature = "plus")]
-        authorization,
-    };
-    Ok((json, [session_cookie, pending_cookie]))
+        let session_cookie = SessionCookie::new(&context.console_url)
+            .set(&token)
+            .map_err(|e| {
+                issue_error(
+                    "Failed to set the session cookie",
+                    "Failed to set the session cookie:",
+                    e,
+                )
+            })?;
+        let SignInContext {
+            invite: _,
+            claim: _,
+            #[cfg(feature = "plus")]
+            plan,
+            #[cfg(feature = "plus")]
+            authorization,
+            #[cfg(feature = "plus")]
+                pin: _,
+        } = sign_in_context;
+        let json = JsonSignedIn {
+            user: user.into_json(),
+            new: new.is_some(),
+            #[cfg(feature = "plus")]
+            plan,
+            #[cfg(feature = "plus")]
+            authorization,
+        };
+        Ok((json, session_cookie))
+    }
 }
 
 /// The refusal of a locked account's proof, which has ended its pending sign-in.
 fn locked(context: &ApiContext) -> HttpError {
+    let mut error = locked_refusal(context);
+    error
+        .headers_mut()
+        .append(SET_COOKIE, PendingCookie::new(&context.console_url).clear());
+    error
+}
+
+/// The refusal of a sign-in to a locked account.
+pub(crate) fn locked_refusal(context: &ApiContext) -> HttpError {
     let message = if support_url(context).is_some() {
         LOCKED_CLOUD
     } else {
         LOCKED_SELF_HOSTED
     };
-    let mut error = refused(forbidden_error(message), SignInRefusal::Locked);
-    error
-        .headers_mut()
-        .append(SET_COOKIE, PendingCookie::new(&context.console_url).clear());
-    error
+    refused(forbidden_error(message), SignInRefusal::Locked)
 }

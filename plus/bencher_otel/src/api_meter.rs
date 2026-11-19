@@ -1098,6 +1098,7 @@ pub enum SignInRefusalReason {
     CodesPaused,
     TurnstileFailed,
     AddressCapped,
+    ProviderRefused,
 }
 
 impl fmt::Display for SignInRefusalReason {
@@ -1107,6 +1108,7 @@ impl fmt::Display for SignInRefusalReason {
             Self::CodesPaused => write!(f, "codes_paused"),
             Self::TurnstileFailed => write!(f, "turnstile_failed"),
             Self::AddressCapped => write!(f, "address_capped"),
+            Self::ProviderRefused => write!(f, "provider_refused"),
         }
     }
 }

@@ -16,7 +16,7 @@ import {
 	test,
 	RELAY,
 } from "./fixtures";
-import { finishGitHub, startGitHub } from "./github";
+import { GITHUB_FINISH, finishGitHub, startGitHub } from "./github";
 import { inSession, signUp } from "./session";
 
 // The app the harness configures: it calls itself ChatGPT, but it is served from
@@ -584,10 +584,7 @@ test.describe("signed out", () => {
 			`/auth/login?authorization=${uuid}`,
 		);
 
-		expect(started).toHaveLength(1);
-		expect(new URL(started[0] ?? "").searchParams.get("authorization")).toBe(
-			uuid,
-		);
+		expect(started).toEqual([{ authorization: uuid }]);
 		expect(logged.filter((text) => text.includes("github.example"))).toEqual(
 			[],
 		);
@@ -623,35 +620,28 @@ test.describe("signed out", () => {
 		expect(await keptReturn(page)).toBeNull();
 	});
 
-	// Kills a provider callback that signs in a browser that did not start the
-	// sign in, or drops the request once asked.
-	test("a provider callback from another browser asks before signing in", async ({
-		page,
-	}) => {
+	// Kills a refused provider sign-in that signs anything in, says nothing, or
+	// sends the reader back to sign in without the request.
+	test("a refused provider sign in keeps the request", async ({ page }) => {
 		const { uuid } = await connect(page);
-		await finishGitHub(page, randomUUID(), uuid);
+		const { state } = await startGitHub(
+			page,
+			`/auth/login?authorization=${uuid}`,
+		);
+		await page.route(GITHUB_FINISH, (route) =>
+			route.fulfill({
+				status: 401,
+				json: { error_code: "provider_refused", message: "The sign-in failed" },
+			}),
+		);
+		await page.goto(
+			`/auth/github?${new URLSearchParams({ code: "code", state })}`,
+		);
 
-		const signIn = page.getByRole("button", { name: "Continue with GitHub" });
-		await expect(signIn).toBeVisible();
+		await expect(page.getByRole("alert")).toHaveText("Sign-in failed");
 		expect(await hint(page)).toBeNull();
-		await signIn.click();
-		await expect(page).toHaveURL(`${CONSENT}?request=${uuid}`);
-		await expect(approve(page)).toBeVisible();
-	});
-
-	// Kills a provider callback that signs in a tab whose own provider sign in was
-	// abandoned, whatever state the callback carries.
-	test("an abandoned provider sign in asks before another callback", async ({
-		page,
-	}) => {
-		const { uuid } = await connect(page);
-		await startGitHub(page, `/auth/login?authorization=${uuid}`);
-		await finishGitHub(page, randomUUID(), uuid);
-
-		await expect(
-			page.getByRole("button", { name: "Continue with GitHub" }),
-		).toBeVisible();
-		expect(await hint(page)).toBeNull();
+		await page.getByRole("link", { name: "Back to sign in" }).click();
+		await expect(page).toHaveURL(`/auth/login?authorization=${uuid}`);
 	});
 });
 
