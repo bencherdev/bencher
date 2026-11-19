@@ -6,8 +6,8 @@
 )]
 //! Integration tests for OCI base endpoint (/v2/).
 
-use bencher_api_tests::TestServer;
 use bencher_api_tests::oci::{compute_digest, create_oci_manifest};
+use bencher_api_tests::{TestServer, session_cookie};
 use bencher_json::RunnerUuid;
 use bencher_token::OciAction;
 use http::StatusCode;
@@ -20,6 +20,25 @@ async fn oci_base_unauthenticated() {
     let resp = server
         .client
         .get(server.api_url("/v2/"))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    assert!(resp.headers().contains_key("www-authenticate"));
+}
+
+// GET /v2/ - only a session cookie → 401: the registry takes bearer credentials alone
+#[tokio::test]
+async fn oci_base_ignores_session_cookie() {
+    let server = TestServer::new().await;
+    let user = server.signup("OCI Cookie", "ocicookie@example.com").await;
+    let session = server.session(&user);
+
+    let resp = server
+        .client
+        .get(server.api_url("/v2/"))
+        .header(http::header::COOKIE, session_cookie(&session))
         .send()
         .await
         .expect("Request failed");

@@ -43,7 +43,7 @@ async fn config_get_requires_auth() {
         .expect("Request failed");
 
     // Should require authentication
-    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 }
 
 // GET /v0/server/config - admin can view config, with its secrets redacted
@@ -72,7 +72,7 @@ async fn config_get_as_admin() {
 }
 
 // Kills a config served with the key that signs ID tokens, which would let any admin credential
-// forge them.
+// forge them, or with the relay secret, which would let it forge any reader's address.
 #[cfg(feature = "plus")]
 #[tokio::test]
 async fn config_get_redacts_the_signing_key() {
@@ -81,7 +81,11 @@ async fn config_get_redacts_the_signing_key() {
         &path,
         serde_json::json!({
             "console": {"url": "http://localhost:3000"},
-            "security": {"issuer": "http://localhost:3000/", "secret_key": "not-the-default-secret-key"},
+            "security": {
+                "issuer": "http://localhost:3000/",
+                "secret_key": "not-the-default-secret-key",
+                "relay_secret": "not-a-relay-secret",
+            },
             "server": {"bind_address": "127.0.0.1:61016", "request_body_max_bytes": 1 << 22},
             "logging": {"name": "Bencher API", "log": {"stderr_terminal": {"level": "info"}}},
             "database": {"file": "data/bencher.db"},
@@ -121,6 +125,7 @@ async fn config_get_redacts_the_signing_key() {
     assert_eq!(resp.status(), StatusCode::OK);
     let config: serde_json::Value = resp.json().await.expect("Failed to parse response");
     assert_eq!(config["security"]["secret_key"], REDACTED);
+    assert_eq!(config["security"]["relay_secret"], REDACTED);
     assert_eq!(config["plus"]["oauth"]["signing_key"], REDACTED);
 }
 

@@ -1,5 +1,5 @@
 use bencher_schema::{
-    context::{ApiContext, OAuthCredential, OAuthServer, RateLimiting},
+    context::{ApiContext, OAuthCredential, OAuthServer},
     error::issue_error,
     model::user::oauth::OAuthGrantFailure,
 };
@@ -137,7 +137,10 @@ pub(crate) fn charge_refusal(
 
 /// Charge an anonymous request to its address, refusing it once the address is over its limit.
 pub(crate) fn charge_address(rqctx: &RequestContext<ApiContext>) -> Result<(), TokenError> {
-    if let Some(remote_ip) = RateLimiting::remote_ip(&rqctx.log, rqctx.request.headers()) {
+    if let Some(remote_ip) = rqctx
+        .context()
+        .remote_ip(&rqctx.log, rqctx.request.headers())
+    {
         rqctx
             .context()
             .rate_limiting

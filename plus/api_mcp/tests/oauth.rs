@@ -12,6 +12,7 @@ use std::sync::Arc;
 use bencher_api_tests::{
     TestProject, TestServer, TestServerOptions, TestUser,
     helpers::{TestOAuthGrant, oauth_resource, oauth_server, seed_oauth_grant},
+    session_cookie,
 };
 use bencher_json::{
     Clock, DateTime, JsonUserKeyCreated, OAuthAccessToken, OAuthResource, UserKeyUuid,
@@ -28,8 +29,8 @@ use http::StatusCode;
 use reqwest::{
     Url,
     header::{
-        ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, HOST, HeaderMap, HeaderName,
-        USER_AGENT, WWW_AUTHENTICATE,
+        ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_EXPOSE_HEADERS, COOKIE, HOST, HeaderMap,
+        HeaderName, USER_AGENT, WWW_AUTHENTICATE,
     },
 };
 use serde_json::{Value, json};
@@ -818,6 +819,36 @@ async fn oauth_anonymous_over_limit_signs_in() {
         );
     }
     tool_content(from_ip(&server, Some(&user.token), &view_project).await).await;
+}
+
+// The MCP server takes bearer credentials alone, with OAuth configured or not: a valid session
+// cookie leaves its caller anonymous.
+#[tokio::test]
+async fn session_cookie_is_anonymous() {
+    for oauth in [Some(oauth_server()), None] {
+        let server = server_with(oauth).await;
+        let user = server.signup("MCP Cookie", "mcp-cookie@example.com").await;
+        let org = server.create_org(&user, "MCP Cookie Org").await;
+        let private = server
+            .create_project(&user, &org, "MCP Cookie Project")
+            .await;
+        make_private(&server, &private);
+        let session = server.session(&user);
+        let view = tool_call("view_project", &json!({"project": private.slug}));
+
+        let anonymous = answer(post(&server, None, &view).await).await;
+        let cookie = answer(
+            send(
+                mcp_request(&server, None, &view)
+                    .header(COOKIE, session_cookie(&session))
+                    .header("Sec-Fetch-Site", "same-origin"),
+            )
+            .await,
+        )
+        .await;
+        assert_eq!(cookie, anonymous);
+        tool_content(post(&server, Some(&user.token), &view).await).await;
+    }
 }
 
 async fn server_with(oauth: Option<OAuthServer>) -> TestServer {
