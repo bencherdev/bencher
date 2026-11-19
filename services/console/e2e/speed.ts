@@ -1,5 +1,6 @@
 import { gzipSync } from "node:zlib";
 import type { Page } from "@playwright/test";
+import { expect } from "./fixtures";
 
 /** What a load or a navigation cost, as the speed ceilings measure it. */
 export interface Cost {
@@ -34,7 +35,11 @@ export interface Cost {
 	stylesheets: number;
 	/** Those stylesheets, gzipped at level 9. */
 	cssBytes: number;
-	/** The HTML document as the server sent it, gzipped at level 9. */
+	/**
+	 * The HTML document as the server sent it, gzipped at level 9, less the
+	 * Sentry tags this build's server writes and with one API origin, so it
+	 * counts what production ships and holds from request to request.
+	 */
 	htmlBytes: number;
 	/**
 	 * Every inline script in that document, uncompressed: what the browser
@@ -178,10 +183,15 @@ export const measure = async (
 	);
 
 	// What the server sent, before any script added links of its own.
-	const served = await (
-		await page.request.get(new URL(opened, page.url()).href)
-	).body();
-	const html = served.toString("utf8");
+	const documentUrl = new URL(opened, page.url()).href;
+	const served = async () =>
+		(await (await page.request.get(documentUrl)).body()).toString("utf8");
+	const html = await served();
+	const shipped = shippedHtml(html, apiUrl);
+	expect(
+		shippedHtml(await served(), apiUrl),
+		"the document changes from request to request",
+	).toBe(shipped);
 	const inlineScripts = [
 		...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g),
 	].map(([, body]) => body ?? "");
@@ -218,7 +228,7 @@ export const measure = async (
 		deferredJsBytes: await gzipped(deferred.map((script) => script.url)),
 		stylesheets: new Set(timing.styles).size,
 		cssBytes: await gzipped(timing.styles),
-		htmlBytes: gzipSync(served, { level: 9 }).length,
+		htmlBytes: gzipSync(shipped, { level: 9 }).length,
 		inlineScriptBytes: inlineScripts.reduce(
 			(bytes, body) => bytes + Buffer.byteLength(body),
 			0,
@@ -229,6 +239,14 @@ export const measure = async (
 		scriptRounds: rounds(critical),
 	};
 };
+
+const shippedHtml = (html: string, apiUrl: string) =>
+	html
+		.replace(
+			/<meta name="(?:sentry-trace|baggage|sentry-route-name)"[^>]*>/g,
+			"",
+		)
+		.replaceAll(apiUrl, "https://api.bencher.dev");
 
 const rounds = (requests: { start: number; end: number }[]) => {
 	const sorted = [...requests].sort((a, b) => a.start - b.start);
