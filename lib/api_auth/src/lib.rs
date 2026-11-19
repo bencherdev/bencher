@@ -12,33 +12,18 @@ use serde_json as _;
 #[cfg(test)]
 use tokio as _;
 
-#[cfg(feature = "plus")]
-use bencher_json::NonEmpty;
-use bencher_schema::{AUTH_TOKEN_TTL, CLIENT_TOKEN_TTL, model::user::QueryUser};
 #[cfg(not(feature = "plus"))]
 use schemars as _;
 #[cfg(not(feature = "plus"))]
 use serde as _;
 
 mod claim;
-mod confirm;
 mod email_change;
 mod invite;
-mod login;
 pub mod oci;
 mod provider;
 mod session;
 mod sign_in;
-mod signup;
-
-#[cfg(feature = "plus")]
-const PLAN_ARG: &str = "plan";
-const TOKEN_ARG: &str = "token";
-#[cfg(feature = "plus")]
-const AUTHORIZATION_ARG: &str = "authorization";
-/// Told in a sign-in email that returns to an app's request to connect, never naming the app.
-#[cfg(feature = "plus")]
-const CONNECT_NOTICE: &str = "An app asked to connect to your Bencher account. If you did not start this, ignore this email.";
 
 pub struct Api;
 
@@ -48,16 +33,6 @@ impl bencher_endpoint::Registrar for Api {
         http_options: bool,
         #[cfg(feature = "plus")] _is_bencher_cloud: bool,
     ) -> Result<(), dropshot::ApiDescriptionRegisterError> {
-        // Auth
-        if http_options {
-            api_description.register(signup::auth_signup_options)?;
-            api_description.register(login::auth_login_options)?;
-            api_description.register(confirm::auth_confirm_options)?;
-        }
-        api_description.register(signup::auth_signup_post)?;
-        api_description.register(login::auth_login_post)?;
-        api_description.register(confirm::auth_confirm_post)?;
-
         // Session
         if http_options {
             api_description.register(session::auth_session_options)?;
@@ -136,35 +111,6 @@ impl bencher_endpoint::Registrar for Api {
     }
 }
 
-#[cfg(feature = "plus")]
-async fn verify_recaptcha(
-    log: &slog::Logger,
-    context: &bencher_schema::ApiContext,
-    headers: &bencher_schema::HeaderMap,
-    recaptcha_token: Option<&NonEmpty>,
-    recaptcha_action: bencher_json::RecaptchaAction,
-) -> Result<(), dropshot::HttpError> {
-    // If the recaptcha client is not configured, skip token verification
-    let Some(recaptcha_client) = &context.recaptcha_client else {
-        return Ok(());
-    };
-
-    // todo(epompeii): Add a way to signup with the CLI again
-    let Some(recaptcha_token) = recaptcha_token.cloned() else {
-        return Err(bencher_schema::error::forbidden_error(
-            "Missing reCAPTCHA token",
-        ));
-    };
-
-    let remote_ip = context.remote_ip(log, headers);
-    slog::info!(log, "Verifying reCAPTCHA from remote IP address"; "remote_ip" => ?remote_ip);
-
-    recaptcha_client
-        .verify(log, recaptcha_token, recaptcha_action, remote_ip)
-        .await
-        .map_err(|_error| bencher_schema::error::forbidden_error("reCAPTCHA verification failed"))
-}
-
 /// The app's request to connect a sign-in returns to, dropped unless apps can connect and it
 /// still waits for an answer.
 #[cfg(feature = "plus")]
@@ -193,29 +139,4 @@ async fn pending_authorization(
         )
     })?;
     Ok(pending.then_some(uuid))
-}
-
-/// Record that the user proved they hold `email`.
-async fn verify_email(
-    context: &bencher_schema::ApiContext,
-    query_user: &QueryUser,
-    email: &bencher_json::Email,
-) -> Result<(), dropshot::HttpError> {
-    QueryUser::verify_email(
-        bencher_schema::write_conn!(context),
-        query_user.id,
-        email,
-        context.clock.now(),
-    )
-    .map(|_updated| ())
-    .map_err(|e| {
-        bencher_schema::error::issue_error(
-            "Failed to record a verified email",
-            &format!(
-                "Failed to record a verified email for user ({})",
-                query_user.uuid
-            ),
-            e,
-        )
-    })
 }

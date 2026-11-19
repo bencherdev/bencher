@@ -1,11 +1,11 @@
 /**
  * Where an auth page's first script keeps what its address carried: a link's
- * secret, an old link's token, and a provider's code and state. The page's
- * memory holds them, never its address.
+ * secret, and a provider's code and state. The page's memory holds them, never
+ * its address.
  */
 export const AUTH_RETURN_KEY = "BENCHER_AUTH_RETURN";
 
-const FIELDS = ["secret", "token", "code", "state"] as const;
+const FIELDS = ["secret", "code", "state"] as const;
 
 type AuthReturn = Record<(typeof FIELDS)[number], string | undefined>;
 

@@ -22,7 +22,7 @@ use std::{
 };
 
 use bencher_json::{
-    Clock, DateTime, JsonUserKeyCreated,
+    Clock, DateTime, JsonUserKeyCreated, SessionToken,
     system::config::{JsonOAuthServer, JsonRateLimiting},
 };
 use bencher_schema::{
@@ -34,7 +34,7 @@ use http::{
     Method, StatusCode,
     header::{COOKIE, LOCATION},
 };
-use jsonwebtoken::{Algorithm, DecodingKey, Header, Validation, jwk::JwkSet};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, jwk::JwkSet};
 use serde_json::{Value, json};
 use url::{Url, form_urlencoded};
 
@@ -253,69 +253,43 @@ async fn max_age_needs_a_recent_sign_in() {
         .server
         .signup("Stale", "stale-session@example.com")
         .await;
-    let stale = harness.session(&user, NOW - 29 * 24 * 60 * 60);
+    let stale = harness
+        .server
+        .session_at(&user, at(NOW - 29 * 24 * 60 * 60));
     let key = harness.create_user_key(&user).await;
-    for bearer in [stale.as_str(), key.as_str()] {
-        let request = harness.request_with("openid", &[("max_age", "0")]).await;
-        let url = harness.answer_url(&request, bearer).await;
+
+    let request = harness.request_with("openid", &[("max_age", "0")]).await;
+    let by_session = harness.session_answer_url(&request, &stale).await;
+    let request = harness.request_with("openid", &[("max_age", "0")]).await;
+    let by_key = harness.answer_url(&request, &key).await;
+    for url in [by_session, by_key] {
         assert_eq!(param(&url, "error"), "login_required", "{url}");
         assert!(url.query_pairs().all(|(name, _)| name != "code"), "{url}");
     }
 }
 
-// Kills an ID token whose `auth_time` is not when its user signed in: the approving session's
-// sign in, which meets `max_age`, and none for a user key, which proves no sign in.
-#[tokio::test]
-async fn auth_time_is_when_the_session_signed_in() {
-    let harness = Harness::new(SigningKey::Configured).await;
-    let user = harness.server.signup("Fresh", "fresh@example.com").await;
-    let signed_in = NOW - 60;
-    let session = harness.session(&user, signed_in);
-    let request = harness.request_with("openid", &[("max_age", "3600")]).await;
-    let url = harness.answer_url(&request, &session).await;
-    let tokens = harness.exchange(&param(&url, "code")).await;
-    assert_eq!(integer(&id_token_claims(&tokens), "auth_time"), signed_in);
-
-    let key = harness.create_user_key(&user).await;
-    let tokens = harness.tokens("openid", &key).await;
-    assert_eq!(id_token_claims(&tokens).get("auth_time"), None);
-}
-
 // Kills an ID token approved by the session cookie whose `auth_time` is not when that session
-// last proved who its reader is: neither when it began nor when it was last used.
+// last proved who its reader is, neither when it began nor when it was last used, and one
+// approved by a user key that has any, since a key proves no sign in.
 #[tokio::test]
-async fn auth_time_is_when_the_cookie_session_last_proved() {
+async fn auth_time_is_when_the_session_last_proved() {
     let harness = Harness::new(SigningKey::Configured).await;
     let user = harness.server.signup("Proved", "proved@example.com").await;
-    let began = NOW - 2 * 60 * 60;
-    let session = harness
-        .server
-        .session_at(&user, DateTime::try_from(began).expect("Invalid time"));
+    let session = harness.server.session_at(&user, at(NOW - 2 * 60 * 60));
     let proved = NOW - 60;
     diesel::update(schema::session::table)
-        .set(schema::session::proved.eq(DateTime::try_from(proved).expect("Invalid time")))
+        .set(schema::session::proved.eq(at(proved)))
         .execute(&mut harness.server.db_conn())
         .expect("Failed to prove the session");
 
     let request = harness.request_with("openid", &[("max_age", "600")]).await;
-    let resp = harness
-        .client
-        .post(
-            harness
-                .server
-                .api_url(&format!("/v0/oauth/authorizations/{request}")),
-        )
-        .header(COOKIE, session_cookie(&session))
-        .header("Sec-Fetch-Site", "same-origin")
-        .json(&json!({ "approve": true }))
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::OK);
-    let answer: Value = resp.json().await.expect("Invalid answer");
-    let url = Url::parse(&string(&answer, "url")).expect("Invalid answer URL");
+    let url = harness.session_answer_url(&request, &session).await;
     let tokens = harness.exchange(&param(&url, "code")).await;
     assert_eq!(integer(&id_token_claims(&tokens), "auth_time"), proved);
+
+    let key = harness.create_user_key(&user).await;
+    let tokens = harness.tokens("openid", &key).await;
+    assert_eq!(id_token_claims(&tokens).get("auth_time"), None);
 }
 
 // Kills advertising or granting OpenID Connect without a key to sign ID tokens with.
@@ -683,23 +657,24 @@ impl Harness {
         Url::parse(&string(&answer, "url")).expect("Invalid answer URL")
     }
 
-    /// A session for the user, as if they signed in at `signed_in`.
+    /// Where approving `request` from the console in `session` sends the browser.
     #[expect(clippy::expect_used, reason = "test helper")]
-    fn session(&self, user: &TestUser, signed_in: i64) -> String {
-        let token_key = self.server.token_key();
-        jsonwebtoken::encode(
-            &Header::default(),
-            &json!({
-                "aud": "client",
-                // Checked against the wall clock, unlike every other time here.
-                "exp": jsonwebtoken::get_current_timestamp() + 24 * 60 * 60,
-                "iat": signed_in,
-                "iss": token_key.issuer,
-                "sub": user.email,
-            }),
-            &token_key.encoding,
-        )
-        .expect("Failed to sign a session")
+    async fn session_answer_url(&self, request: &str, session: &SessionToken) -> Url {
+        let resp = self
+            .client
+            .post(
+                self.server
+                    .api_url(&format!("/v0/oauth/authorizations/{request}")),
+            )
+            .header(COOKIE, session_cookie(session))
+            .header("Sec-Fetch-Site", "same-origin")
+            .json(&json!({ "approve": true }))
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), StatusCode::OK);
+        let answer: Value = resp.json().await.expect("Invalid answer");
+        Url::parse(&string(&answer, "url")).expect("Invalid answer URL")
     }
 
     /// The token response for a grant of `scope` the user approved with `bearer`.
@@ -849,4 +824,9 @@ fn integer(value: &Value, name: &str) -> i64 {
         .get(name)
         .and_then(Value::as_i64)
         .expect("Missing integer")
+}
+
+#[expect(clippy::expect_used, reason = "test helper")]
+fn at(timestamp: i64) -> DateTime {
+    DateTime::try_from(timestamp).expect("Invalid time")
 }

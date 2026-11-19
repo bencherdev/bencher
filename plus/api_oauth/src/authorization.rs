@@ -210,7 +210,7 @@ fn redirect(
 
 /// The user approving a request, and when they last proved who they are: a user API key pasted in
 /// the decision or sent as a bearer, which proves no sign in and is charged as an attempt to sign
-/// in from the caller's address; a session JWT; or else the session cookie.
+/// in from the caller's address, or else the session cookie.
 /// No credential is ever quoted back.
 async fn approver(
     rqctx: &RequestContext<ApiContext>,
@@ -234,18 +234,9 @@ async fn approver(
             "Approving a request to connect requires a session or a user API key",
         ));
     };
-    let jwt_auth_time = if let BearerToken::Jwt(jwt) = &bearer_token {
-        context
-            .token_key
-            .validate_client(jwt)
-            .ok()
-            .map(|claims| claims.issued_at())
-    } else {
-        None
-    };
     let auth_user = AuthUser::from_token(context, bearer_token).await?;
     let auth_time = match auth_user.credential {
-        AuthCredential::Session(Some(session_id)) => {
+        AuthCredential::Session(session_id) => {
             QuerySession::find(public_conn!(context), session_id)
                 .map_err(|e| {
                     issue_error(
@@ -256,7 +247,7 @@ async fn approver(
                 })?
                 .map(|session| session.proved)
         },
-        AuthCredential::Session(None) | AuthCredential::UserKey(_) => jwt_auth_time,
+        AuthCredential::UserKey(_) => None,
         AuthCredential::ApiToken | AuthCredential::OAuthGrant { .. } => {
             #[cfg(feature = "otel")]
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OAuthConsentBlocked);

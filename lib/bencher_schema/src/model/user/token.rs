@@ -1,6 +1,4 @@
-use bencher_json::{
-    DateTime, JsonToken, JwtHash, ResourceName, TokenUuid, user::token::JsonUpdateToken,
-};
+use bencher_json::{DateTime, JsonToken, JwtHash, ResourceName, TokenUuid};
 use chrono::TimeDelta;
 use diesel::{BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 use dropshot::HttpError;
@@ -10,7 +8,6 @@ use crate::{
     error::{BencherResource, assert_parentage, resource_not_found_err},
     macros::fn_get::{fn_get, fn_get_id, fn_get_uuid},
     schema,
-    schema::token as token_table,
 };
 
 use super::{QueryUser, UserId};
@@ -118,11 +115,6 @@ impl QueryToken {
         .execute(conn)
     }
 
-    pub fn into_json(self, conn: &mut DbConnection) -> Result<JsonToken, HttpError> {
-        let query_user = QueryUser::get(conn, self.user_id)?;
-        Ok(self.into_json_for_user(&query_user))
-    }
-
     pub fn into_json_for_user(self, query_user: &QueryUser) -> JsonToken {
         let Self {
             id: _,
@@ -149,19 +141,6 @@ impl QueryToken {
             expiration,
             revoked,
         }
-    }
-}
-
-#[derive(Debug, Clone, diesel::AsChangeset)]
-#[diesel(table_name = token_table)]
-pub struct UpdateToken {
-    pub name: Option<ResourceName>,
-}
-
-impl From<JsonUpdateToken> for UpdateToken {
-    fn from(update: JsonUpdateToken) -> Self {
-        let JsonUpdateToken { name } = update;
-        Self { name }
     }
 }
 

@@ -544,9 +544,10 @@ fn send(
 mod tests {
     use std::{
         fs,
-        io::{BufRead as _, BufReader, Read as _, Write as _},
+        io::{BufRead as _, BufReader, ErrorKind, Read as _, Write as _},
         net::{TcpListener, TcpStream},
         thread,
+        time::{Duration, Instant},
     };
 
     use bencher_json::Url;
@@ -555,12 +556,16 @@ mod tests {
 
     /// The answer to a sign-in start for an address at its cap, which sends no email.
     const CAPPED: &str = r#"{"email":"courage@nowhere.com","wait":40}"#;
+    /// How long the API waits for a connection or a request before it fails the test, so a client
+    /// that sends fewer requests than it answers fails instead of hanging.
+    const WAIT: Duration = Duration::from_secs(10);
 
     /// Answer the requests to an API at the URL `client` gets, each in turn with the next status
     /// and JSON body of `answers`, and return what `client` returns. The client may send each
     /// request on the connection it kept from the last or on a new one.
     fn with_api<T>(answers: &[(u16, &str)], client: impl FnOnce(&Url) -> T) -> T {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap())
             .parse()
             .unwrap();
@@ -569,8 +574,8 @@ mod tests {
                 let mut connection = None;
                 for (status, body) in answers {
                     loop {
-                        let stream = connection
-                            .get_or_insert_with(|| BufReader::new(listener.accept().unwrap().0));
+                        let stream =
+                            connection.get_or_insert_with(|| BufReader::new(accept(&listener)));
                         if read_request(stream) {
                             break;
                         }
@@ -588,6 +593,26 @@ mod tests {
             });
             client(&url)
         })
+    }
+
+    /// The next connection to `listener`, which reads in blocking mode for at most [`WAIT`],
+    /// failing the test once none has come for [`WAIT`].
+    fn accept(listener: &TcpListener) -> TcpStream {
+        let deadline = Instant::now() + WAIT;
+        loop {
+            match listener.accept() {
+                Ok((stream, _)) => {
+                    stream.set_nonblocking(false).unwrap();
+                    stream.set_read_timeout(Some(WAIT)).unwrap();
+                    return stream;
+                },
+                Err(error) => {
+                    assert_eq!(error.kind(), ErrorKind::WouldBlock, "{error}");
+                    assert!(Instant::now() < deadline, "No request came in {WAIT:?}");
+                    thread::sleep(Duration::from_millis(10));
+                },
+            }
+        }
     }
 
     /// Read the next request off `stream`, its body whole, or return false if the client closed it

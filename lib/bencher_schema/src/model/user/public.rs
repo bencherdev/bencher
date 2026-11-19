@@ -1,10 +1,6 @@
 use std::net::IpAddr;
 
-use async_trait::async_trait;
-use dropshot::{
-    ApiEndpointBodyContentType, ExtensionMode, ExtractorMetadata, HttpError, RequestContext,
-    ServerContext, SharedExtractor,
-};
+use dropshot::HttpError;
 use slog::Logger;
 
 use crate::{
@@ -22,19 +18,6 @@ pub enum PublicUser {
 }
 
 impl PublicUser {
-    // This is required due to a limitation in `dropshot` where only four extractors are allowed.
-    pub async fn new(rqctx: &RequestContext<ApiContext>) -> Result<Self, HttpError> {
-        let pub_bearer_token = PubBearerToken::from_request(rqctx).await?;
-        Self::from_token(
-            &rqctx.log,
-            rqctx.context(),
-            #[cfg(feature = "plus")]
-            rqctx.request.headers(),
-            pub_bearer_token,
-        )
-        .await
-    }
-
     pub async fn from_token(
         log: &Logger,
         context: &ApiContext,
@@ -95,21 +78,5 @@ pub struct PubBearerToken(Option<BearerToken>);
 impl From<Option<BearerToken>> for PubBearerToken {
     fn from(token: Option<BearerToken>) -> Self {
         Self(token)
-    }
-}
-
-#[async_trait]
-impl SharedExtractor for PubBearerToken {
-    async fn from_request<Context: ServerContext>(
-        rqctx: &RequestContext<Context>,
-    ) -> Result<Self, HttpError> {
-        Ok(Self(BearerToken::from_request(rqctx).await.ok()))
-    }
-
-    fn metadata(_body_content_type: ApiEndpointBodyContentType) -> ExtractorMetadata {
-        ExtractorMetadata {
-            extension_mode: ExtensionMode::None,
-            parameters: Vec::new(),
-        }
     }
 }

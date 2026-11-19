@@ -441,8 +441,9 @@ const groups = (
 			["Sign in", "/auth/login"],
 			["Sign up, invited at the caps", `/auth/signup#invite=${s.invited}`],
 			[
-				"Check your inbox, an old link at the caps",
-				`/auth/confirm?${new URLSearchParams({ token: shapedJwt(s.reader.user.email) })}`,
+				"Check your inbox at the caps",
+				"/auth/login",
+				(page) => askForCode(page, s.reader.user.email),
 			],
 			["Change email, expired", `/auth/email#secret=${"A".repeat(43)}`],
 			["Connect an app, gone", `/auth/authorize?request=${randomUUID()}`],
@@ -450,12 +451,14 @@ const groups = (
 	};
 };
 
-/** Shaped as a token for `email`, which the page reads and the API would refuse. */
-const shapedJwt = (email: string) =>
-	[{ alg: "HS256", typ: "JWT" }, { sub: email }]
-		.map((part) => Buffer.from(JSON.stringify(part)).toString("base64url"))
-		.concat("c2ln")
-		.join(".");
+/** Ask the door on `page` to email `email` a code, as far as Check your inbox. */
+const askForCode = async (page: Page, email: string) => {
+	await page.getByRole("textbox", { name: "Email" }).fill(email);
+	await page.getByRole("button", { name: "Continue with email" }).click();
+	await expect(
+		page.getByRole("heading", { level: 1, name: "Check your inbox" }),
+	).toBeVisible();
+};
 
 const openRun = async (page: Page) => {
 	const toggle = page

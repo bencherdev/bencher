@@ -47,6 +47,7 @@ diesel = { workspace = true, features = ["sqlite"] }
 dropshot.workspace = true
 hex = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
+jsonwebtoken.workspace = true
 libsqlite3-sys.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls-no-provider"] }
 rustls.workspace = true

@@ -2789,44 +2789,6 @@ impl SeedTest {
             serde_json::from_slice(&assert.get_output().stdout).unwrap();
         assert_eq!(json.0.len(), 0);
 
-        // User API token creation is deprecated and must always fail with a 403
-        // pointing at user API keys. The full token lifecycle (list/view/update/revoke)
-        // is covered by the `api_users` integration tests with DB-seeded tokens;
-        // the user key lifecycle is exercised above.
-        // cargo run -- token create --host http://localhost:6610 --key $BENCHER_API_KEY --name "seed-deprecated" muriel-bagge
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args([
-            "token",
-            "create",
-            HOST_ARG,
-            host,
-            KEY_ARG,
-            key,
-            "--name",
-            "seed-deprecated",
-            ORG_SLUG,
-        ])
-        .current_dir(CLI_DIR);
-        let assert = cmd.assert().failure();
-        let output = assert.get_output();
-        assert!(
-            String::from_utf8_lossy(&output.stderr).contains("Status: 403 Forbidden"),
-            "deprecated token creation should 403: {output:?}"
-        );
-
-        // Existing tokens can still be listed; this user never got one.
-        // cargo run -- token list --host http://localhost:6610 --key $BENCHER_API_KEY muriel-bagge
-        let mut cmd = Command::cargo_bin(BENCHER_CMD)?;
-        cmd.args(["token", "list", HOST_ARG, host, KEY_ARG, key, ORG_SLUG])
-            .current_dir(CLI_DIR);
-        let assert = cmd.assert().success();
-        let tokens: bencher_json::JsonTokens =
-            serde_json::from_slice(&assert.get_output().stdout).unwrap();
-        assert!(
-            tokens.0.is_empty(),
-            "no tokens should exist after blocked creation: {tokens:?}"
-        );
-
         Ok(())
     }
 }

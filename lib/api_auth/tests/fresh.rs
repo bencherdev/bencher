@@ -27,6 +27,7 @@ use bencher_json::{
 };
 use bencher_schema::{
     context::RateLimiting,
+    error::INVALID_CREDENTIAL,
     model::user::session::cookie::{PendingCookie, ProviderCookie, SessionCookie},
     schema,
 };
@@ -114,20 +115,21 @@ async fn bearer_credentials_need_no_fresh_sign_in() {
     }
 }
 
-// A session JWT from the old sign-in holds no proof time, so it does no guarded action, however
-// new it is.
-// Kills a guard that lets a session without a session row pass.
+// A session JWT from the old sign-in is no credential at all, so each guarded action refuses it
+// with the one 401, however new it is.
+// Kills a session JWT taken as a session, which a guard would then hold to its window.
 #[tokio::test]
-async fn old_session_jwt_does_not_pass() {
+async fn old_session_jwt_is_refused() {
     let Harness { server, .. } = Harness::new().await;
     let user = server.signup("Ada", ADA).await;
     let org = server.create_org(&user, "Ada Org").await;
     let project = server.create_project(&user, &org, "Ada Project").await;
-    let jwt = Browser::jwt(server.session_jwt(&user).as_ref());
+    let jwt = Browser::jwt(server.old_session_jwt(&user).as_ref());
 
     for action in Action::ALL {
         let resp = action.send(&server, &user, &org, &project, &jwt).await;
-        assert_fresh_sign_in_needed(resp, action).await;
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED, "{action:?}");
+        assert_eq!(error(resp).await.1, INVALID_CREDENTIAL, "{action:?}");
         action.assert_undone(&server, &user, &org, &project);
     }
 }
@@ -679,7 +681,7 @@ async fn provider_refuses_a_locked_reader() {
 
 // Every fresh sign-in endpoint needs the console's origin and a browser session: a request from
 // another site is refused before anything, and so is one with no credential, a user key, or a
-// session JWT from the old sign-in.
+// session JWT from the old sign-in, which is no credential at all.
 // Kills a fresh endpoint without the same-origin check, or one that takes a bearer credential.
 #[tokio::test]
 async fn fresh_endpoints_need_the_console_origin_and_a_session() {
@@ -687,7 +689,7 @@ async fn fresh_endpoints_need_the_console_origin_and_a_session() {
     let Harness { server, log, .. } = Harness::with_providers(&github.base()).await;
     let user = server.signup("Ada", ADA).await;
     let key = server.create_user_key(&user, "ada-key").await;
-    let session_jwt = server.session_jwt(&user);
+    let session_jwt = server.old_session_jwt(&user);
     let browser = Browser::signed_in(&server.session(&user));
     let emails = log.sign_in_emails().len();
     let posts = [
@@ -714,7 +716,7 @@ async fn fresh_endpoints_need_the_console_origin_and_a_session() {
         for (bearer, status) in [
             (Browser::default(), StatusCode::UNAUTHORIZED),
             (Browser::bearer(&key), StatusCode::FORBIDDEN),
-            (Browser::jwt(session_jwt.as_ref()), StatusCode::FORBIDDEN),
+            (Browser::jwt(session_jwt.as_ref()), StatusCode::UNAUTHORIZED),
         ] {
             let resp = send(&server, Method::POST, path, &bearer, Some(&body)).await;
             assert_eq!(resp.status(), status, "{path}");
@@ -723,7 +725,7 @@ async fn fresh_endpoints_need_the_console_origin_and_a_session() {
     for (bearer, status) in [
         (Browser::default(), StatusCode::UNAUTHORIZED),
         (Browser::bearer(&key), StatusCode::FORBIDDEN),
-        (Browser::jwt(session_jwt.as_ref()), StatusCode::FORBIDDEN),
+        (Browser::jwt(session_jwt.as_ref()), StatusCode::UNAUTHORIZED),
     ] {
         let resp = send(&server, Method::GET, "/v0/auth/fresh", &bearer, None).await;
         assert_eq!(resp.status(), status);

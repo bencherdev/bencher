@@ -697,8 +697,8 @@ async fn oci_token_user_key_malformed() {
 }
 
 // Kills a registry token minted for a legacy token that is revoked, past its row's expiration,
-// held by a locked user, or with no row, whatever its signature, by GET or by POST, or a live
-// one whose use goes unrecorded.
+// held by a locked user, or with no row, whatever its signature, or for the old sign-in's session
+// JWT, by GET or by POST, or a live one whose use goes unrecorded.
 #[tokio::test]
 async fn oci_token_dead_legacy_tokens() {
     let server = TestServer::new().await;
@@ -760,12 +760,14 @@ async fn oci_token_dead_legacy_tokens() {
         .token_key()
         .new_api_key(user.email.clone(), u32::MAX - 2)
         .expect("Failed to mint a token");
+    let old_session = server.old_session_jwt(&user);
 
     for (case, owner, token) in [
         ("revoked", &user, &revoked.token),
         ("expired", &user, &expired),
         ("locked", &locked, &locked_token),
         ("rowless", &user, &rowless),
+        ("old session", &user, &old_session),
     ] {
         assert_eq!(
             oci_token_status(&server, &scope, owner, token).await,

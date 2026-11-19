@@ -587,7 +587,9 @@ async fn get_session_never_carries_the_session_token() {
     assert!(!row_text.contains(token.as_ref()), "{row_text}");
 }
 
-// Reading the session needs a browser session, not a bearer credential.
+// Reading the session needs a browser session: a bearer credential is no session, and a session
+// JWT from the old sign-in is no credential at all.
+// Kills a session read by a bearer credential, or by the old sign-in's session JWT.
 #[tokio::test]
 async fn get_session_needs_a_session_cookie() {
     let server = TestServer::new().await;
@@ -595,17 +597,26 @@ async fn get_session_needs_a_session_cookie() {
         .signup("Bearer Reader", "bearer-reader@example.com")
         .await;
 
-    let resp = server
-        .client
-        .get(server.api_url("/v0/auth/session"))
-        .header(
-            bencher_json::AUTHORIZATION,
-            bencher_json::bearer_header(server.session_jwt(&user)),
-        )
-        .send()
-        .await
-        .expect("Request failed");
-    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    for (credential, bearer, status) in [
+        ("user key", user.token.clone(), StatusCode::FORBIDDEN),
+        (
+            "old session",
+            server.old_session_jwt(&user).into(),
+            StatusCode::UNAUTHORIZED,
+        ),
+    ] {
+        let resp = server
+            .client
+            .get(server.api_url("/v0/auth/session"))
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(bearer),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert_eq!(resp.status(), status, "{credential}");
+    }
 }
 
 // Ending the session deletes it and clears the cookie, from the console's own origin only.
