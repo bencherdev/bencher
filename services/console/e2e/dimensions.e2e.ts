@@ -2,7 +2,15 @@ import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import type { JsonBranch, JsonProject } from "../src/types/bencher";
 import { createProject } from "./api";
 import { axeInBothThemes } from "./axe";
-import { expect, consolePath, seed, settle, signedIn, test } from "./fixtures";
+import {
+	expect,
+	consolePath,
+	seed,
+	settle,
+	signedIn,
+	test,
+	RELAY,
+} from "./fixtures";
 
 const { hashbrown } = seed.projects;
 
@@ -370,7 +378,7 @@ test.describe("Dimensions, as the project's Maintainer", () => {
 	}) => {
 		const project = await dimensionsProject(request);
 		await page.route(
-			`${seed.api_url}/v0/projects/${project.slug}/branches/*`,
+			`${RELAY}/v0/projects/${project.slug}/branches/*`,
 			async (route) => {
 				if (route.request().method() === "PATCH") {
 					await route.fulfill({ status: 500, body: "{}" });

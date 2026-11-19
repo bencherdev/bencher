@@ -37,11 +37,7 @@ import { AUTHORIZATION_PARAM, requestUuid, signInPath } from "./authorize/path";
 import { signedInPath } from "./back";
 import { takeSignIn } from "./signIn";
 
-export interface Props {
-	apiUrl: string;
-}
-
-const ConfirmForm = (props: Props) => {
+const ConfirmForm = () => {
 	const [bencher_valid] = createResource(init_valid);
 	const [_recaptcha] = createResource(loadRecaptcha);
 
@@ -93,7 +89,7 @@ const ConfirmForm = (props: Props) => {
 		const authToken: JsonConfirm = {
 			token: token(),
 		};
-		httpPost(props.apiUrl, "/v0/auth/confirm", null, authToken)
+		httpPost("/v0/auth/confirm", null, authToken)
 			.then((resp) => {
 				setSubmitting(false);
 				const user: JsonAuthUser = resp.data;
@@ -151,7 +147,7 @@ const ConfirmForm = (props: Props) => {
 			login.recaptcha_token = recaptcha_token;
 		}
 
-		httpPost(props.apiUrl, "/v0/auth/login", null, login)
+		httpPost("/v0/auth/login", null, login)
 			.then((_resp) => {
 				setSubmitting(false);
 				navigateNotify(

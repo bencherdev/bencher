@@ -1,4 +1,4 @@
-import { expect, consolePath, seed, signedIn, test } from "./fixtures";
+import { expect, consolePath, seed, signedIn, test, RELAY } from "./fixtures";
 
 // The member's projects change as other tests run; the admin's do not.
 test.use({ storageState: signedIn(seed.admin) });
@@ -19,7 +19,7 @@ test("/console lands a reader with no version memory on the newest project", asy
 		}
 	});
 	page.on("request", (request) => {
-		if (!landed && request.url().startsWith(seed.api_url)) {
+		if (!landed && request.url().startsWith(RELAY)) {
 			requests.push(`${request.method()} ${new URL(request.url()).pathname}`);
 		}
 	});
@@ -27,5 +27,7 @@ test("/console lands a reader with no version memory on the newest project", asy
 	await page.goto("/console");
 	await expect(page).toHaveURL(consolePath(seed.admin_newest.slug));
 
-	expect(requests).toEqual([`GET /v0/console/users/${seed.admin.user.uuid}`]);
+	expect(requests).toEqual([
+		`GET /api/v0/console/users/${seed.admin.user.uuid}`,
+	]);
 });

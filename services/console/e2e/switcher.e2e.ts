@@ -8,11 +8,12 @@ import {
 	signedIn,
 	tabRow,
 	test,
+	RELAY,
 } from "./fixtures";
 
 const { hashbrown, iterations, version_zero, empty } = seed.projects;
 const RUNS = consolePath(hashbrown.slug, "runs");
-const BOOTSTRAP = `${seed.api_url}/v0/console/users/${seed.member.user.uuid}`;
+const BOOTSTRAP = `${RELAY}/v0/console/users/${seed.member.user.uuid}`;
 
 test.use({ storageState: signedIn(seed.member) });
 
@@ -147,7 +148,7 @@ test("a returning reader's switcher opens from the cache", async ({ page }) => {
 	await page.reload();
 	await settle(page);
 
-	await page.route(`${seed.api_url}/**`, () => {});
+	await page.route(`${RELAY}/**`, () => {});
 	await crumb(page).click();
 
 	await expect(option(page, hashbrown.name)).toBeVisible();

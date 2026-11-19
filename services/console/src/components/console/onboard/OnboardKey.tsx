@@ -27,11 +27,7 @@ import CopyButton from "./CopyButton";
 import OnboardSteps from "./OnboardSteps";
 import { OnboardStep } from "./OnboardStepsInner";
 
-export interface Props {
-	apiUrl: string;
-}
-
-const OnboardKey = (props: Props) => {
+const OnboardKey = () => {
 	const [bencher_valid] = createResource(init_valid);
 	const user = authUser();
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -73,7 +69,7 @@ const OnboardKey = (props: Props) => {
 			return;
 		}
 		const path = "/v0/organizations";
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -119,7 +115,7 @@ const OnboardKey = (props: Props) => {
 			return;
 		}
 		const path = `/v0/organizations/${fetcher.organization?.slug}/projects`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -164,7 +160,7 @@ const OnboardKey = (props: Props) => {
 		const path = `/v0/projects/${
 			fetcher.project?.slug
 		}/keys?name=${encodeURIComponent(keyName())}`;
-		return await httpGet(props.apiUrl, path, fetcher.token)
+		return await httpGet(path, fetcher.token)
 			.then((resp) => {
 				return resp?.data;
 			})
@@ -210,7 +206,7 @@ const OnboardKey = (props: Props) => {
 		const data: JsonNewProjectKey = {
 			name: keyName(),
 		};
-		return await httpPost(props.apiUrl, path, fetcher.token, data)
+		return await httpPost(path, fetcher.token, data)
 			.then((resp) => {
 				const created = resp?.data as JsonProjectKeyCreated;
 				if (created?.key) {

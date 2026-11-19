@@ -10,12 +10,12 @@ export class Refusal extends Error {
 	}
 }
 
-/** Reads the API at `apiUrl`, as `token`'s reader or as no one; a failure is a `Refusal`. */
+/** Reads the API through the relay, as `token`'s reader or as no one; a failure is a `Refusal`. */
 export const reads =
-	(apiUrl: string, token?: string) =>
+	(token?: string) =>
 	async <T,>(path: string): Promise<T> => {
-		const target = `${apiUrl}${path}`;
-		// An edge's refusal carries no CORS headers, so the page would read it as no network.
+		const target = `/api${path}`;
+		// A request past what every hop passes on would be refused, so it is never sent.
 		if (target.length > MAX_URL_LENGTH) {
 			throw new Refusal(URI_TOO_LONG);
 		}
@@ -28,6 +28,8 @@ export const reads =
 			throw new Refusal(undefined);
 		}
 		if (!response.ok) {
+			// An unread `no-store` body holds its connection.
+			await response.text().catch(() => {});
 			throw new Refusal(response.status);
 		}
 		return response.json();

@@ -1,6 +1,7 @@
 pub mod container;
 pub mod down;
 pub mod logs;
+pub mod network;
 pub mod up;
 
 use container::Container;
@@ -37,6 +38,21 @@ pub enum DockerError {
     },
     #[error("Failed to start Docker container (`{container}`): {err}")]
     StartContainer {
+        container: Container,
+        err: bollard::errors::Error,
+    },
+    #[error("Failed to create Docker network (`{network}`): {0}", network = network::NETWORK)]
+    CreateNetwork(bollard::errors::Error),
+    #[error("Failed to remove Docker network (`{network}`): {0}", network = network::NETWORK)]
+    RemoveNetwork(bollard::errors::Error),
+    #[error(
+        "A Docker network named `{network}` already exists, and `bencher up` did not create it: it has no `{label}` label.\nRemove or rename that network, then run `bencher up` again.",
+        network = network::NETWORK,
+        label = network::NETWORK_LABEL
+    )]
+    ForeignNetwork,
+    #[error("Failed to connect Docker container (`{container}`) to network (`{network}`): {err}", network = network::NETWORK)]
+    ConnectNetwork {
         container: Container,
         err: bollard::errors::Error,
     },

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import type { JsonOAuthUser } from "../src/types/bencher";
-import { expect, seed } from "./fixtures";
+import { expect, seed, RELAY } from "./fixtures";
 
 const CORS = { "Access-Control-Allow-Origin": "*" };
-const GITHUB = `${seed.api_url}/v0/auth/github`;
+const GITHUB = `${RELAY}/v0/auth/github`;
 
 /** Start a GitHub sign in from the login page at `login`, as far as GitHub, which the browser never really reaches. */
 export const startGitHub = async (page: Page, login: string) => {

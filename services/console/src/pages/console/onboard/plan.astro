@@ -1,7 +1,6 @@
 ---
 export const prerender = false;
 
-import { BENCHER_API_URL } from "astro:env/server";
 import { IS_BENCHER_CLOUD } from "astro:env/client";
 
 import BaseLayout from "../../../layouts/BaseLayout.astro";
@@ -26,7 +25,7 @@ const autoActivatePro = Astro.url.searchParams.get("plan") === PlanLevel.Pro;
 >
   <div slot="navbar" />
 
-  <OnboardPlan client:only="solid-js" apiUrl={BENCHER_API_URL} isBencherCloud={IS_BENCHER_CLOUD}>
+  <OnboardPlan client:only="solid-js" isBencherCloud={IS_BENCHER_CLOUD}>
     <div slot="fallback">
       <OnboardStepsFallback step={OnboardStep.PLAN} />
       <section class="section">

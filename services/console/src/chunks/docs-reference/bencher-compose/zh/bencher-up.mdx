@@ -16,9 +16,15 @@ import Help from "./cli/help.mdx";
 创建并启动 Bencher 自托管容器。
 这类似于运行 [`docker compose up`][docker compose up]。
 
+两个容器都会加入名为 `bencher` 的 Docker 网络，`bencher up` 会创建该网络，若之前的运行遗留了一个则会复用。
+遇到并非由它创建的 `bencher` 网络时，它会报错停止；`bencher up console` 会连接一个正在运行但尚未加入该网络的 `bencher_api` 容器。
+当控制台服务器的 `BENCHER_API_URL` 未设置或指向回环地址（例如 `localhost`）时，控制台服务器会在该网络中中继到 API 服务器的容器：除非你使用 [`--console-env` 选项][console env] 设置，否则其 `INTERNAL_API_URL` 为 `http://bencher_api:6610`。
+否则会中继到 `BENCHER_API_URL`。
+
 <BencherUpCmd />
 
 [docker compose up]: https://docs.docker.com/reference/cli/docker/compose/up/
+[console env]: #--console-env-key_value
 
 <UpService />
 

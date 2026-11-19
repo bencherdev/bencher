@@ -8,6 +8,8 @@ import Help from "./cli/help.mdx";
 если `bencher up` был выполнен с [флагом `--detach`][detach flag].
 Это похоже на выполнение команды [`docker compose down`][docker compose down].
 
+Когда в сети `bencher` не остаётся контейнеров, она тоже удаляется.
+
 <BencherDownCmd />
 
 [docker compose down]: https://docs.docker.com/reference/cli/docker/compose/down/

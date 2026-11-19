@@ -25,7 +25,7 @@ test("the embed opens a pinned point's commit through the project's URL", async 
 		"fetch",
 		vi.fn(async (input: string) =>
 			Response.json(
-				new URL(input).pathname.endsWith("/perf")
+				new URL(input, location.href).pathname.endsWith("/perf")
 					? {
 							...answer,
 							reports: answer.reports.map((report) => ({ ...report, hash })),
@@ -41,7 +41,6 @@ test("the embed opens a pinned point's commit through the project's URL", async 
 	);
 	history.replaceState(null, "", `${location.pathname}${DRAWABLE}`);
 	const mount = document.createElement("div");
-	mount.dataset.apiUrl = "http://api.test";
 	mount.dataset.slug = "hashbrown";
 	document.body.append(mount);
 	boot(mount);

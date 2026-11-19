@@ -10,6 +10,7 @@ import {
 	signedOut,
 	tabRow,
 	test,
+	RELAY,
 } from "./fixtures";
 import { listPlots } from "./api";
 import { explore, twoLines } from "./explore";
@@ -65,7 +66,7 @@ test("a cold load holds the speed ceilings", async ({ page }) => {
 	await observeLayoutShift(page);
 	// An API slower than the first paint, so data never seen always arrives
 	// after it and the shift it causes is the same on every run.
-	await page.route(`${seed.api_url}/**`, async (route) => {
+	await page.route(`${RELAY}/**`, async (route) => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
@@ -75,7 +76,7 @@ test("a cold load holds the speed ceilings", async ({ page }) => {
 	).toBeVisible();
 	await ready(page);
 
-	const cost = await measure(page, seed.api_url);
+	const cost = await measure(page, RELAY);
 	report("cold load", cost);
 	const ceiling = ceilings.coldLoad;
 	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
@@ -105,7 +106,7 @@ test("a warm reload holds the speed ceilings", async ({ page }) => {
 	await page.reload();
 	await ready(page);
 
-	const cost = await measure(page, seed.api_url);
+	const cost = await measure(page, RELAY);
 	report("warm reload", cost);
 	const ceiling = ceilings.warmReload;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -133,7 +134,7 @@ test("a tab switch holds the speed ceilings", async ({ page }) => {
 	).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("tab switch", cost);
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceilings.tabSwitch.apiRequests);
 	expect(cost.jsBytes).toBeLessThanOrEqual(ceilings.tabSwitch.jsBytes);
@@ -187,14 +188,14 @@ test("a cold load of Runs at the project root holds its speed ceilings", async (
 	page,
 }) => {
 	await observeLayoutShift(page);
-	await page.route(`${seed.api_url}/**`, async (route) => {
+	await page.route(`${RELAY}/**`, async (route) => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
 	await page.goto(PROJECT);
 	await runsReady(page);
 
-	const cost = await measure(page, seed.api_url);
+	const cost = await measure(page, RELAY);
 	report("runs cold load", cost);
 	const ceiling = ceilings.runsColdLoad;
 	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
@@ -231,11 +232,11 @@ test.describe("a returning reader", () => {
 		page.on("request", (request) => {
 			if (request.url() === new URL(PROJECT, seed.console_url).href) {
 				landed = true;
-			} else if (!landed && request.url().startsWith(seed.api_url)) {
+			} else if (!landed && request.url().startsWith(RELAY)) {
 				apiRequestsBeforeLanding += 1;
 			}
 		});
-		await page.route(`${seed.api_url}/**`, async (route) => {
+		await page.route(`${RELAY}/**`, async (route) => {
 			await new Promise((resolve) => setTimeout(resolve, 500));
 			await route.continue();
 		});
@@ -244,7 +245,7 @@ test.describe("a returning reader", () => {
 		await runsReady(page);
 
 		const cost = {
-			...(await measure(page, seed.api_url)),
+			...(await measure(page, RELAY)),
 			apiRequestsBeforeLanding,
 		};
 		report("landing cold load", cost);
@@ -282,7 +283,7 @@ test("a tab switch into Runs holds its speed ceilings", async ({ page }) => {
 	await tabRow(page).getByRole("link", { name: "Runs" }).click();
 	await runsReady(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("runs tab switch", cost);
 	const ceiling = ceilings.runsTabSwitch;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -307,7 +308,7 @@ test("a move from Runs to a run holds its speed ceilings", async ({ page }) => {
 	await expect(runReports(page).getByRole("link").first()).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("run move", cost);
 	const ceiling = ceilings.runMove;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -343,7 +344,7 @@ test("expanding a run on the Runs list holds its speed ceilings", async ({
 	await expect(newestReport(page)).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("run expand", cost);
 	const ceiling = ceilings.runExpand;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -368,7 +369,7 @@ test("expanding a run the pointer arrived on first holds its speed ceilings", as
 	await expect(newestReport(page)).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("run expand prefetched", cost);
 	const ceiling = ceilings.runExpandPrefetched;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -393,7 +394,7 @@ for (const [width, viewport] of [
 			await page.goto(RUNS);
 			await runsReady(page);
 			await page.route(
-				`${seed.api_url}/v0/console/projects/${hashbrown.slug}/runs/*`,
+				`${RELAY}/v0/console/projects/${hashbrown.slug}/runs/*`,
 				async (route) => {
 					await new Promise((resolve) => setTimeout(resolve, 1_000));
 					await route.continue();
@@ -404,7 +405,7 @@ for (const [width, viewport] of [
 			await expect(newestReport(page)).toBeVisible();
 			await settle(page);
 
-			const cost = await measure(page, seed.api_url);
+			const cost = await measure(page, RELAY);
 			report(`run expand ${width}`, cost);
 			expect(cost.cls).toBeLessThanOrEqual(ceilings.runExpand.cls);
 		});
@@ -425,7 +426,7 @@ test("opening Feedback holds its speed ceilings", async ({ page }) => {
 	).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("feedback open", cost);
 	const ceiling = ceilings.feedbackOpen;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -449,7 +450,7 @@ test("opening the switcher holds its speed ceilings", async ({ page }) => {
 	).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("switcher open", cost);
 	const ceiling = ceilings.switcherOpen;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -484,7 +485,7 @@ test("a move from a run to a report holds its speed ceilings", async ({
 	).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("report move", cost);
 	const ceiling = ceilings.reportMove;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -514,7 +515,7 @@ test("a move from a run to the run before it holds its speed ceilings", async ({
 	await expect(runReports(page).getByRole("link").first()).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("run to run move", cost);
 	const ceiling = ceilings.runToRunMove;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -543,7 +544,7 @@ test("a move from a report to its run holds its speed ceilings", async ({
 	await expect(runReports(page).getByRole("link").first()).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("report to run move", cost);
 	const ceiling = ceilings.reportToRunMove;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -561,7 +562,7 @@ const coldLoad = async (
 	delay: (url: string) => number = () => 500,
 ): Promise<Cost> => {
 	await observeLayoutShift(page);
-	await page.route(`${seed.api_url}/**`, async (route) => {
+	await page.route(`${RELAY}/**`, async (route) => {
 		await new Promise((resolve) =>
 			setTimeout(resolve, delay(route.request().url())),
 		);
@@ -570,7 +571,7 @@ const coldLoad = async (
 	await page.goto(path);
 	await shown();
 	await ready(page);
-	return measure(page, seed.api_url);
+	return measure(page, RELAY);
 };
 
 /** A metric of the seed's newest report, through the API. */
@@ -649,7 +650,7 @@ const accountColdLoad = async (
 	answer: (route: Route) => Promise<void> = (route) => route.continue(),
 ) => {
 	await observeLayoutShift(page);
-	await page.route(`${seed.api_url}/**`, async (route) => {
+	await page.route(`${RELAY}/**`, async (route) => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await answer(route);
 	});
@@ -659,7 +660,7 @@ const accountColdLoad = async (
 	await answered;
 	await loadedAndIdle(page);
 	await settle(page);
-	return measure(page, seed.api_url, 0, path);
+	return measure(page, RELAY, 0, path);
 };
 
 const holds = (cost: Cost, ceiling: Partial<Record<keyof Cost, number>>) => {
@@ -668,7 +669,7 @@ const holds = (cost: Cost, ceiling: Partial<Record<keyof Cost, number>>) => {
 	}
 };
 
-const USER = `${seed.api_url}/v0/users/${seed.member.user.slug}`;
+const USER = `${RELAY}/v0/users/${seed.member.user.slug}`;
 
 /** A list's first page, whatever page size the screen asks for. */
 const firstPage = (list: string, after = "") =>
@@ -781,11 +782,11 @@ test("a cold load of an organization's General holds the speed ceilings", async 
 	page,
 }) => {
 	await observeLayoutShift(page);
-	await page.route(`${seed.api_url}/**`, async (route) => {
+	await page.route(`${RELAY}/**`, async (route) => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
-	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
+	const organization = `${RELAY}/v0/organizations/${seed.organization.slug}`;
 	const answered = Promise.all([
 		page.waitForResponse(organization),
 		page.waitForResponse(`${organization}/allowed/edit`),
@@ -799,7 +800,7 @@ test("a cold load of an organization's General holds the speed ceilings", async 
 	await loadedAndIdle(page);
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url);
+	const cost = await measure(page, RELAY);
 	report("organization general cold load", cost);
 	const ceiling = ceilings.organizationGeneralColdLoad;
 	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
@@ -824,11 +825,11 @@ test("a cold load of an organization's Members holds the speed ceilings", async 
 	page,
 }) => {
 	await observeLayoutShift(page);
-	await page.route(`${seed.api_url}/**`, async (route) => {
+	await page.route(`${RELAY}/**`, async (route) => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
-	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
+	const organization = `${RELAY}/v0/organizations/${seed.organization.slug}`;
 	const answered = Promise.all([
 		page.waitForResponse(organization),
 		page.waitForResponse(firstPage(`${organization}/members?`)),
@@ -845,7 +846,7 @@ test("a cold load of an organization's Members holds the speed ceilings", async 
 	await loadedAndIdle(page);
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url);
+	const cost = await measure(page, RELAY);
 	report("organization members cold load", cost);
 	holds(cost, ceilings.organizationMembersColdLoad);
 });
@@ -860,8 +861,8 @@ test("a cold load of an organization's Projects holds the speed ceilings", async
 		page,
 		`/console/organizations/${seed.organization.slug}/projects`,
 		[
-			`${seed.api_url}/v0/organizations/${seed.organization.slug}`,
-			`${seed.api_url}/v0/console/users/${seed.member.user.uuid}`,
+			`${RELAY}/v0/organizations/${seed.organization.slug}`,
+			`${RELAY}/v0/console/users/${seed.member.user.uuid}`,
 		],
 		() =>
 			expect(
@@ -880,7 +881,7 @@ test("a cold load of Organizations holds the speed ceilings", async ({
 	page,
 }) => {
 	await observeLayoutShift(page);
-	await page.route(`${seed.api_url}/**`, async (route) => {
+	await page.route(`${RELAY}/**`, async (route) => {
 		await new Promise((resolve) => setTimeout(resolve, 500));
 		await route.continue();
 	});
@@ -893,7 +894,7 @@ test("a cold load of Organizations holds the speed ceilings", async ({
 	await loadedAndIdle(page);
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url);
+	const cost = await measure(page, RELAY);
 	report("organizations cold load", cost);
 	const ceiling = ceilings.organizationsColdLoad;
 	expect(cost.apiAnswersBeforePaint).toBeLessThanOrEqual(
@@ -918,14 +919,14 @@ test("a cold load of Organizations holds the speed ceilings", async ({
 test("a cold load of New project holds the speed ceilings", async ({
 	page,
 }) => {
-	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
+	const organization = `${RELAY}/v0/organizations/${seed.organization.slug}`;
 	const cost = await accountColdLoad(
 		page,
 		`/console/organizations/${seed.organization.slug}/projects/add`,
 		[
 			organization,
 			`${organization}/usage`,
-			`${seed.api_url}/v0/console/users/${seed.member.user.uuid}`,
+			`${RELAY}/v0/console/users/${seed.member.user.uuid}`,
 		],
 		() => expect(page.getByRole("radio", { name: "Private" })).toBeEnabled(),
 	);
@@ -939,7 +940,7 @@ test("a cold load of New project holds the speed ceilings", async ({
 test("a cold load of an organization's Billing holds the speed ceilings", async ({
 	page,
 }) => {
-	const organization = `${seed.api_url}/v0/organizations/${seed.organization.slug}`;
+	const organization = `${RELAY}/v0/organizations/${seed.organization.slug}`;
 	const cost = await accountColdLoad(
 		page,
 		`/console/organizations/${seed.organization.slug}/billing`,
@@ -1001,8 +1002,8 @@ test("a cold load of Connections holds the speed ceilings", async ({
 test("a cold load of the GitHub return page holds the speed ceilings", async ({
 	page,
 }) => {
-	const exchange = `${seed.api_url}/v0/github/exchange`;
-	const link = `${seed.api_url}/v0/projects/${hashbrown.slug}/github`;
+	const exchange = `${RELAY}/v0/github/exchange`;
+	const link = `${RELAY}/v0/projects/${hashbrown.slug}/github`;
 	const cors = { "Access-Control-Allow-Origin": "*" };
 	const state = `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify({ project: hashbrown.uuid })).toString("base64url")}.c2ln`;
 	const cost = await accountColdLoad(
@@ -1123,7 +1124,7 @@ test("moving from General to Keys holds the speed ceilings", async ({
 	await expect(page.getByRole("table", { name: "Active keys" })).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("settings section switch", cost);
 	expect(cost.apiRequests).toBeLessThanOrEqual(
 		ceilings.settingsSectionSwitch.apiRequests,
@@ -1530,7 +1531,7 @@ test("an Explore box edit makes one request", async ({ page, request }) => {
 	await expect(page.getByRole("figure")).toHaveAccessibleName("8 lines");
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("explore box edit", cost);
 	expect(cost.apiRequests).toBeLessThanOrEqual(
 		ceilings.exploreBoxEdit.apiRequests,
@@ -1563,7 +1564,7 @@ test("a move from blank Explore to an Explore link holds its speed ceilings", as
 	await alertDrawn(page);
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("explore link move", cost);
 	const ceiling = ceilings.exploreLinkMove;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -1621,7 +1622,7 @@ test("an Explore key toggle fits in a frame", async ({ page, request }) => {
 	// The plot redraws in place rather than building itself again.
 	expect(times.kept).toBe(true);
 	expect(median).toBeLessThanOrEqual(ceilings.exploreKeyToggle.ms);
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	expect(cost.apiRequests).toBe(0);
 });
 
@@ -1644,7 +1645,7 @@ test("a tab switch into Thresholds holds its speed ceilings", async ({
 	).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("thresholds tab switch", cost);
 	const ceiling = ceilings.thresholdsTabSwitch;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -1666,7 +1667,7 @@ test("a tab switch into Plots holds its speed ceilings", async ({ page }) => {
 	await alertingTileShown(page);
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("plots tab switch", cost);
 	const ceiling = ceilings.plotsTabSwitch;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -2037,7 +2038,7 @@ test("a move from Alerts to an alert holds its speed ceilings", async ({
 	).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("alert move", cost);
 	const ceiling = ceilings.alertMove;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -2069,7 +2070,7 @@ test("a status switch on Alerts asks once", async ({ page }) => {
 	).toBeVisible();
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("alerts status switch", cost);
 	const ceiling = ceilings.alertsViewSwitch;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -2092,7 +2093,7 @@ test("a Clear on Runs asks once", async ({ page }) => {
 	await expect(page.getByRole("heading", { level: 1 })).toHaveText("15 runs");
 	await settle(page);
 
-	const cost = await measure(page, seed.api_url, since);
+	const cost = await measure(page, RELAY, since);
 	report("runs clear", cost);
 	const ceiling = ceilings.runsClear;
 	expect(cost.apiRequests).toBeLessThanOrEqual(ceiling.apiRequests);
@@ -2127,7 +2128,7 @@ for (const [width, viewport] of [
 		}) => {
 			const { project, search } = await twoRecentLines(request);
 			await observeLayoutShift(page);
-			await page.route(`${seed.api_url}/**`, async (route) => {
+			await page.route(`${RELAY}/**`, async (route) => {
 				await new Promise((resolve) => setTimeout(resolve, 500));
 				await route.continue();
 			});
@@ -2135,7 +2136,7 @@ for (const [width, viewport] of [
 			await twoLinesDrawn(page);
 			await loadedAndIdle(page);
 			await settle(page);
-			const cost = await measure(page, seed.api_url);
+			const cost = await measure(page, RELAY);
 			// What the first paint waited on: the stylesheet, and nothing else.
 			const blocking = await page.evaluate(() =>
 				(
@@ -2196,7 +2197,7 @@ for (const [width, viewport] of [
 		}) => {
 			const { project, search } = await twoRecentLines(request);
 			await observeLayoutShift(page);
-			await page.route(`${seed.api_url}/**`, async (route) => {
+			await page.route(`${RELAY}/**`, async (route) => {
 				await new Promise((resolve) => setTimeout(resolve, 500));
 				await route.continue();
 			});
@@ -2207,7 +2208,7 @@ for (const [width, viewport] of [
 			).toBeVisible();
 			await loadedAndIdle(page);
 			await settle(page);
-			const cost = await measure(page, seed.api_url);
+			const cost = await measure(page, RELAY);
 			const blocking = await page.evaluate(() =>
 				(
 					performance.getEntriesByType(
@@ -2248,7 +2249,7 @@ test("a cold load of a classic help page holds its byte ceilings", async ({
 	await loadedAndIdle(page);
 	await settle(page, 600);
 
-	const cost = await measure(page, seed.api_url);
+	const cost = await measure(page, RELAY);
 	report("classic help cold load", cost);
 	const ceiling = ceilings.classicHelpColdLoad;
 	// An island imports its code once it runs, before or after the load event.

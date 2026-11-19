@@ -24,6 +24,7 @@ import {
 	signedIn,
 	signedOut,
 	test,
+	RELAY,
 } from "./fixtures";
 import { signUp } from "./mail";
 
@@ -599,7 +600,7 @@ for (const viewport of WIDTHS) {
 /** Two legacy tokens with 64-byte names, since no API makes one any more. */
 const legacyTokens = (context: BrowserContext, reader: JsonAuthUser) =>
 	context.route(
-		`${seed.api_url}/v0/users/${reader.user.slug}/tokens?*`,
+		`${RELAY}/v0/users/${reader.user.slug}/tokens?*`,
 		async (route) => {
 			if (route.request().method() !== "GET") {
 				return route.fallback();
@@ -626,7 +627,7 @@ const legacyTokens = (context: BrowserContext, reader: JsonAuthUser) =>
 
 /** A disconnected repository at GitHub's longest owner and name; the test server has no GitHub App to link one. */
 const linkedRepository = (context: BrowserContext, s: Seeded) =>
-	context.route(`${seed.api_url}/v0/projects/${s.slug}/github`, (route) =>
+	context.route(`${RELAY}/v0/projects/${s.slug}/github`, (route) =>
 		route.request().method() === "GET"
 			? route.fulfill({
 					headers: { "Access-Control-Allow-Origin": "*" },

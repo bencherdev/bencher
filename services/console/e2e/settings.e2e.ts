@@ -10,6 +10,7 @@ import {
 	settle,
 	signedIn,
 	test,
+	RELAY,
 } from "./fixtures";
 
 const { hashbrown } = seed.projects;
@@ -67,7 +68,7 @@ test.describe("General, as the project's Maintainer", () => {
 		const release = await hold(
 			page,
 			"PATCH",
-			`${seed.api_url}/v0/projects/${project.slug}`,
+			`${RELAY}/v0/projects/${project.slug}`,
 		);
 		await page.getByRole("textbox", { name: "Name" }).fill(renamed);
 		await save(page).click();
