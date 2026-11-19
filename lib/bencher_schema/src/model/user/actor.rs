@@ -10,7 +10,7 @@ use slog::Logger;
 
 use crate::{
     ApiContext, auth_conn,
-    error::{issue_error, unauthorized_error},
+    error::{invalid_credential, issue_error},
     model::{
         project::{
             ProjectId,
@@ -25,8 +25,6 @@ use super::{
     public::{PubBearerToken, PublicUser},
     session::cookie::CookieCredential,
 };
-
-const INVALID_PROJECT_KEY: &str = "Invalid project key";
 
 #[derive(Clone)]
 pub enum ApiActor {
@@ -45,7 +43,7 @@ impl ProjectKeyActor {
         if project_id == self.project_id {
             Ok(())
         } else {
-            Err(unauthorized_error(INVALID_PROJECT_KEY))
+            Err(invalid_credential())
         }
     }
 }
@@ -63,7 +61,7 @@ pub struct PubProjectBearerToken(Option<ActorCredential>);
 impl PubProjectBearerToken {
     /// The request's bearer credential alone, never its session cookie.
     pub fn bearer_only(headers: &HeaderMap) -> Self {
-        Self(bearer(headers).map(ActorCredential::Bearer))
+        Self(bearer(headers))
     }
 }
 
@@ -146,10 +144,11 @@ impl ApiActor {
                 if raw.starts_with(ProjectKey::PREFIX) {
                     return Self::authenticate_project_key(log, context, &raw).await;
                 }
-                let bearer_token = BearerToken::from_raw(&raw)
-                    .map_err(|_err| unauthorized_error("Invalid authorization token"))?;
+                let bearer_token =
+                    BearerToken::from_raw(&raw).map_err(|_err| invalid_credential())?;
                 Some(bearer_token)
             },
+            Some(ActorCredential::Malformed) => return Err(invalid_credential()),
             Some(ActorCredential::Session(cookie)) => Some(BearerToken::Session(cookie)),
             None => None,
         };
@@ -175,7 +174,7 @@ impl ApiActor {
             bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(
                 bencher_otel::ProjectKeyAuthFailureReason::Invalid,
             ));
-            unauthorized_error(INVALID_PROJECT_KEY)
+            invalid_credential()
         })?;
         let key_hash = ProjectKeyHash::from(&key);
 
@@ -189,13 +188,13 @@ impl ApiActor {
                     err,
                 );
             })
-            .map_err(|_err| unauthorized_error(INVALID_PROJECT_KEY))?
+            .map_err(|_err| invalid_credential())?
             .ok_or_else(|| {
                 #[cfg(feature = "otel")]
                 bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::ProjectKeyAuthFailed(
                     bencher_otel::ProjectKeyAuthFailureReason::NotFound,
                 ));
-                unauthorized_error(INVALID_PROJECT_KEY)
+                invalid_credential()
             })?;
 
         slog::info!(
@@ -214,13 +213,20 @@ impl ApiActor {
 
 enum ActorCredential {
     Bearer(String),
+    /// An `Authorization` header that holds no bearer credential.
+    Malformed,
     Session(CookieCredential),
 }
 
-fn bearer(headers: &HeaderMap) -> Option<String> {
-    headers
-        .get(bencher_json::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok())
-        .and_then(bencher_json::strip_bearer_token)
-        .map(String::from)
+fn bearer(headers: &HeaderMap) -> Option<ActorCredential> {
+    let authorization = headers.get(bencher_json::AUTHORIZATION)?;
+    Some(
+        authorization
+            .to_str()
+            .ok()
+            .and_then(bencher_json::strip_bearer_token)
+            .map_or(ActorCredential::Malformed, |raw| {
+                ActorCredential::Bearer(raw.to_owned())
+            }),
+    )
 }

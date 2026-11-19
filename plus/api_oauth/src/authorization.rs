@@ -5,7 +5,10 @@ use bencher_json::{
 };
 use bencher_schema::{
     context::{ApiContext, OAuthServer},
-    error::{conflict_error, forbidden_error, issue_error, not_found_error, unauthorized_error},
+    error::{
+        conflict_error, forbidden_error, invalid_credential, issue_error, not_found_error,
+        unauthorized_error,
+    },
     model::user::{
         QueryUser,
         auth::{AuthCredential, AuthUser, BearerToken},
@@ -27,7 +30,6 @@ use crate::{
 
 const NOT_FOUND: &str = "No such request to connect, or it expired";
 const ANSWERED: &str = "This request to connect has already been answered";
-const INVALID_CREDENTIAL: &str = "Invalid session or user API key";
 
 #[derive(Deserialize, JsonSchema)]
 pub struct OAuthAuthorizationParams {
@@ -284,7 +286,7 @@ fn bearer(rqctx: &RequestContext<ApiContext>, token: &str) -> Result<BearerToken
     } else {
         token.parse::<Jwt>().map(BearerToken::Jwt)
     }
-    .map_err(|_err| unauthorized_error(INVALID_CREDENTIAL))
+    .map_err(|_err| invalid_credential())
 }
 
 /// Charge a pasted key as an attempt to sign in from the caller's address.

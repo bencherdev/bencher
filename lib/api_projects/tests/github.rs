@@ -1548,7 +1548,7 @@ fn state(server: &TestServer, user: &TestUser, project: &TestProject, issued: Da
         .token_key()
         .new_github_state(issued, 10 * 60, user.uuid, project.uuid)
         .expect("Failed to create a state")
-        .to_string()
+        .into()
 }
 
 /// A grant that `user` got for `project` at `issued`, for a repository in an installation.

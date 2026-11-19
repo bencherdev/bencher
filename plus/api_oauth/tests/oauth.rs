@@ -34,6 +34,7 @@ use bencher_json::{
 };
 use bencher_schema::{
     context::{DbConnection, OAuthServer, RateLimiting},
+    error::INVALID_CREDENTIAL,
     model::user::{
         UserId,
         key::UserKeyId,
@@ -506,6 +507,9 @@ async fn approve_needs_a_user_credential() {
         let body = resp.text().await.expect("Invalid body");
         assert!(!body.contains(malformed_key), "{body}");
         assert!(!body.contains("Malformed"), "{body}");
+        if bearer.is_some() {
+            assert!(body.contains(INVALID_CREDENTIAL), "{body}");
+        }
     }
     assert!(!harness.authorization(uuid).is_answered());
 
@@ -515,7 +519,7 @@ async fn approve_needs_a_user_credential() {
         .execute(&mut harness.server.db_conn())
         .expect("Failed to lock the user");
     for (bearer, status) in [
-        (user.token.as_str(), StatusCode::FORBIDDEN),
+        (user.token.as_str(), StatusCode::UNAUTHORIZED),
         (key.as_ref(), StatusCode::UNAUTHORIZED),
     ] {
         assert_eq!(
