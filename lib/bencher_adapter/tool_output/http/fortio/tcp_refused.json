@@ -1,0 +1,116 @@
+{
+  "RunType": "TCP",
+  "Labels": "tcp://localhost:9 , localhost",
+  "StartTime": "2026-11-19T23:21:55.76007196Z",
+  "RequestedQPS": "200",
+  "RequestedDuration": "3s",
+  "ActualQPS": 199.98151404214448,
+  "ActualDuration": 3000277315,
+  "NumThreads": 10,
+  "Version": "1.76.0",
+  "DurationHistogram": {
+    "Count": 600,
+    "Min": 0.000015524,
+    "Max": 0.00195128,
+    "Sum": 0.08615302200000001,
+    "Avg": 0.00014358837,
+    "StdDev": 0.0001818726736446676,
+    "Data": [
+      {
+        "Start": 0.000015524,
+        "End": 0.001,
+        "Percent": 98.83333333333333,
+        "Count": 593
+      },
+      {
+        "Start": 0.001,
+        "End": 0.00195128,
+        "Percent": 100,
+        "Count": 7
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0005127508986486487
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0007621958310810811
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0009118627905405406
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.0011358971428571461
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.0018697417142857192
+      }
+    ]
+  },
+  "ErrorsDurationHistogram": {
+    "Count": 600,
+    "Min": 0.000015524,
+    "Max": 0.00195128,
+    "Sum": 0.08615302200000001,
+    "Avg": 0.00014358837,
+    "StdDev": 0.0001818726736446676,
+    "Data": [
+      {
+        "Start": 0.000015524,
+        "End": 0.001,
+        "Percent": 98.83333333333333,
+        "Count": 593
+      },
+      {
+        "Start": 0.001,
+        "End": 0.00195128,
+        "Percent": 100,
+        "Count": 7
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0005127508986486487
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0007621958310810811
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0009118627905405406
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.0011358971428571461
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.0018697417142857192
+      }
+    ]
+  },
+  "Exactly": 0,
+  "Jitter": false,
+  "Uniform": false,
+  "NoCatchUp": false,
+  "RunID": 0,
+  "AccessLoggerInfo": "",
+  "ID": "2026-11-19-232155_tcp_localhost_9_localhost",
+  "Destination": "tcp://localhost:9",
+  "Payload": null,
+  "UnixDomainSocket": "",
+  "ReqTimeout": 0,
+  "RetCodes": {
+    "dial tcp 127.0.0.1:9: connect: connection refused": 600
+  },
+  "SocketCount": 610,
+  "BytesSent": 0,
+  "BytesReceived": 0
+}

@@ -1,0 +1,74 @@
+{
+  "RunType": "UDP",
+  "Labels": "udp://localhost:8076 , localhost",
+  "StartTime": "2026-11-19T23:21:40.668378165Z",
+  "RequestedQPS": "200",
+  "RequestedDuration": "3s",
+  "ActualQPS": 199.97589217295362,
+  "ActualDuration": 3000361661,
+  "NumThreads": 10,
+  "Version": "1.76.0",
+  "DurationHistogram": {
+    "Count": 600,
+    "Min": 0.000012168,
+    "Max": 0.000825894,
+    "Sum": 0.065133522,
+    "Avg": 0.00010855587,
+    "StdDev": 0.00009597892289471564,
+    "Data": [
+      {
+        "Start": 0.000012168,
+        "End": 0.000825894,
+        "Percent": 100,
+        "Count": 600
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0004183517629382304
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0006221228814691152
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0007443855525876461
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.0008177431552587646
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.0008250789155258765
+      }
+    ]
+  },
+  "ErrorsDurationHistogram": {
+    "Count": 0,
+    "Min": 0,
+    "Max": 0,
+    "Sum": 0,
+    "Avg": 0,
+    "StdDev": 0,
+    "Data": null
+  },
+  "Exactly": 0,
+  "Jitter": false,
+  "Uniform": false,
+  "NoCatchUp": false,
+  "RunID": 0,
+  "AccessLoggerInfo": "",
+  "ID": "2026-11-19-232140_udp_localhost_8076_localhost",
+  "Destination": "udp://localhost:8076",
+  "Payload": null,
+  "ReqTimeout": 0,
+  "RetCodes": {
+    "OK": 600
+  },
+  "SocketCount": 10,
+  "BytesSent": 14640,
+  "BytesReceived": 14640
+}

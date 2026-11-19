@@ -1,0 +1,76 @@
+{
+  "RunType": "GRPC Health for '' PayloadLength=3",
+  "Labels": "localhost:8079 , localhost",
+  "StartTime": "2026-11-20T04:33:55.143807672Z",
+  "RequestedQPS": "200",
+  "RequestedDuration": "3s",
+  "ActualQPS": 199.92817953349527,
+  "ActualDuration": 3001077694,
+  "NumThreads": 10,
+  "Version": "1.76.0",
+  "DurationHistogram": {
+    "Count": 600,
+    "Min": 0.000089779,
+    "Max": 0.000899557,
+    "Sum": 0.15316302199999998,
+    "Avg": 0.0002552717033333333,
+    "StdDev": 0.00009984688531534337,
+    "Data": [
+      {
+        "Start": 0.000089779,
+        "End": 0.000899557,
+        "Percent": 100,
+        "Count": 600
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0004939920584307179
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.000696774529215359
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0008184440116861436
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.0008914457011686144
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.0008987458701168615
+      }
+    ]
+  },
+  "ErrorsDurationHistogram": {
+    "Count": 0,
+    "Min": 0,
+    "Max": 0,
+    "Sum": 0,
+    "Avg": 0,
+    "StdDev": 0,
+    "Data": null
+  },
+  "Exactly": 0,
+  "Jitter": false,
+  "Uniform": false,
+  "NoCatchUp": false,
+  "RunID": 0,
+  "AccessLoggerInfo": "",
+  "ID": "2026-11-20-043355_localhost_8079_localhost",
+  "RetCodes": {
+    "SERVING": 600
+  },
+  "Destination": "localhost:8079",
+  "Streams": 1,
+  "Ping": false,
+  "Metadata": {
+    "user-agent": [
+      "fortio.org/fortio-1.76.0"
+    ]
+  }
+}

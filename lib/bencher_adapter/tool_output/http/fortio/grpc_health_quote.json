@@ -1,0 +1,117 @@
+{
+  "RunType": "GRPC Health for 'it's'",
+  "Labels": "localhost:8079 , localhost",
+  "StartTime": "2026-11-20T04:40:03.745214054Z",
+  "RequestedQPS": "200",
+  "RequestedDuration": "3s",
+  "ActualQPS": 199.95398818787012,
+  "ActualDuration": 3000690336,
+  "NumThreads": 10,
+  "Version": "1.76.0",
+  "DurationHistogram": {
+    "Count": 600,
+    "Min": 0.000073464,
+    "Max": 0.001357773,
+    "Sum": 0.19591855699999997,
+    "Avg": 0.0003265309283333333,
+    "StdDev": 0.00017336420481600735,
+    "Data": [
+      {
+        "Start": 0.000073464,
+        "End": 0.001,
+        "Percent": 98.33333333333333,
+        "Count": 590
+      },
+      {
+        "Start": 0.001,
+        "End": 0.001357773,
+        "Percent": 100,
+        "Count": 10
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0005438107979626487
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0007797707300509338
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.000921346689303905
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.0011431092000000007
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.0013363066200000014
+      }
+    ]
+  },
+  "ErrorsDurationHistogram": {
+    "Count": 600,
+    "Min": 0.000073464,
+    "Max": 0.001357773,
+    "Sum": 0.19591855699999997,
+    "Avg": 0.0003265309283333333,
+    "StdDev": 0.00017336420481600735,
+    "Data": [
+      {
+        "Start": 0.000073464,
+        "End": 0.001,
+        "Percent": 98.33333333333333,
+        "Count": 590
+      },
+      {
+        "Start": 0.001,
+        "End": 0.001357773,
+        "Percent": 100,
+        "Count": 10
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0005438107979626487
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0007797707300509338
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.000921346689303905
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.0011431092000000007
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.0013363066200000014
+      }
+    ]
+  },
+  "Exactly": 0,
+  "Jitter": false,
+  "Uniform": false,
+  "NoCatchUp": false,
+  "RunID": 0,
+  "AccessLoggerInfo": "",
+  "ID": "2026-11-20-044003_localhost_8079_localhost",
+  "RetCodes": {
+    "ERROR": 600
+  },
+  "Destination": "localhost:8079",
+  "Streams": 1,
+  "Ping": false,
+  "Metadata": {
+    "user-agent": [
+      "fortio.org/fortio-1.76.0"
+    ]
+  }
+}

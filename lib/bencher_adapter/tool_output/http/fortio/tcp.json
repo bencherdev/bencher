@@ -1,0 +1,75 @@
+{
+  "RunType": "TCP",
+  "Labels": "tcp://localhost:8077 , localhost",
+  "StartTime": "2026-11-15T13:53:40.337871459Z",
+  "RequestedQPS": "200",
+  "RequestedDuration": "3s",
+  "ActualQPS": 199.9417865489627,
+  "ActualDuration": 3000873456,
+  "NumThreads": 10,
+  "Version": "1.76.0",
+  "DurationHistogram": {
+    "Count": 600,
+    "Min": 0.000014472,
+    "Max": 0.000275808,
+    "Sum": 0.071008891,
+    "Avg": 0.00011834815166666668,
+    "StdDev": 0.000044084680649049316,
+    "Data": [
+      {
+        "Start": 0.000014472,
+        "End": 0.000275808,
+        "Percent": 100,
+        "Count": 600
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.00014492185642737897
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.00021036492821368947
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0002496307712854758
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.00027319027712854757
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.00027554622771285475
+      }
+    ]
+  },
+  "ErrorsDurationHistogram": {
+    "Count": 0,
+    "Min": 0,
+    "Max": 0,
+    "Sum": 0,
+    "Avg": 0,
+    "StdDev": 0,
+    "Data": null
+  },
+  "Exactly": 0,
+  "Jitter": false,
+  "Uniform": false,
+  "NoCatchUp": false,
+  "RunID": 0,
+  "AccessLoggerInfo": "",
+  "ID": "2026-11-15-135340_tcp_localhost_8077_localhost",
+  "Destination": "tcp://localhost:8077",
+  "Payload": null,
+  "UnixDomainSocket": "",
+  "ReqTimeout": 0,
+  "RetCodes": {
+    "OK": 600
+  },
+  "SocketCount": 10,
+  "BytesSent": 14640,
+  "BytesReceived": 14640
+}

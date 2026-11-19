@@ -644,7 +644,7 @@ impl Column {
 
 /// `value` times `factor`, in decimal arithmetic on the shortest text that reads back as `value`,
 /// so a fraction such as `0.29` is `29`, not `28.999999999999996`.
-fn scale(value: f64, factor: u32) -> f64 {
+pub(super) fn scale(value: f64, factor: u32) -> f64 {
     value
         .to_string()
         .parse::<Decimal>()

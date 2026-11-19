@@ -1,0 +1,100 @@
+{
+  "RunType": "GRPC Ping Delay=1ms PayloadLength=3",
+  "Labels": "localhost:18079 , localhost",
+  "StartTime": "2026-11-20T05:07:51.637610099Z",
+  "RequestedQPS": "200",
+  "RequestedDuration": "2s",
+  "ActualQPS": 199.65725448077913,
+  "ActualDuration": 2003433339,
+  "NumThreads": 10,
+  "Version": "1.76.0",
+  "DurationHistogram": {
+    "Count": 400,
+    "Min": 0.001298056,
+    "Max": 0.005112063,
+    "Sum": 0.8183503799999998,
+    "Avg": 0.0020458759499999996,
+    "StdDev": 0.0006420974941462736,
+    "Data": [
+      {
+        "Start": 0.001298056,
+        "End": 0.002,
+        "Percent": 64.25,
+        "Count": 257
+      },
+      {
+        "Start": 0.002,
+        "End": 0.003,
+        "Percent": 93.25,
+        "Count": 116
+      },
+      {
+        "Start": 0.003,
+        "End": 0.004,
+        "Percent": 96.75,
+        "Count": 14
+      },
+      {
+        "Start": 0.004,
+        "End": 0.005,
+        "Percent": 99.75,
+        "Count": 12
+      },
+      {
+        "Start": 0.005,
+        "End": 0.005112063,
+        "Percent": 100,
+        "Count": 1
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.00184370778125
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0023706896551724138
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0028879310344827585
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.00475
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.0050672378000000025
+      }
+    ]
+  },
+  "ErrorsDurationHistogram": {
+    "Count": 0,
+    "Min": 0,
+    "Max": 0,
+    "Sum": 0,
+    "Avg": 0,
+    "StdDev": 0,
+    "Data": null
+  },
+  "Exactly": 0,
+  "Jitter": false,
+  "Uniform": false,
+  "NoCatchUp": false,
+  "RunID": 0,
+  "AccessLoggerInfo": "",
+  "ID": "2026-11-20-050751_localhost_18079_localhost",
+  "RetCodes": {
+    "SERVING": 400
+  },
+  "Destination": "localhost:18079",
+  "Streams": 1,
+  "Ping": true,
+  "Metadata": {
+    "user-agent": [
+      "fortio.org/fortio-1.76.0"
+    ]
+  }
+}
