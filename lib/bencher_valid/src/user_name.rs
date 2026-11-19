@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Slug, ValidError, is_valid_len};
+use crate::{Email, Slug, ValidError, is_valid_len};
 
 /// A letter (`\p{L}`), a mark (`\p{M}`), and a number (`\p{N}`) of any script.
 const NAME_CATEGORIES: GeneralCategoryGroup = GeneralCategoryGroup::Letter
@@ -69,6 +69,30 @@ impl From<UserName> for String {
 
 impl UserName {
     pub const MAX_LEN: usize = crate::MAX_LEN;
+    /// The name of an account whose address gives no name.
+    const FALLBACK: &str = "User";
+
+    /// A name from the local part of `email`, cut to the characters a name allows, or the fallback
+    /// when no letter or number is left.
+    pub fn from_email(email: &Email) -> Self {
+        let mut name = String::new();
+        for name_char in email
+            .local_part()
+            .chars()
+            .filter(|c| is_valid_user_name_char(*c))
+        {
+            if name.len().saturating_add(name_char.len_utf8()) > Self::MAX_LEN {
+                break;
+            }
+            name.push(name_char);
+        }
+        let name = name.trim();
+        name.chars()
+            .any(char::is_alphanumeric)
+            .then(|| name.parse().ok())
+            .flatten()
+            .unwrap_or_else(|| Self(Self::FALLBACK.to_owned()))
+    }
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -138,6 +162,25 @@ mod tests {
             "Muriel\tBagge",
         ] {
             assert_eq!(false, is_valid_user_name(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn user_name_from_email() {
+        use super::UserName;
+
+        for (email, name) in [
+            ("ada@example.com", "ada"),
+            ("Ada.Lovelace@example.com", "ada.lovelace"),
+            ("o'brien-smith@example.com", "o'brien-smith"),
+            ("ada+bencher_dev@example.com", "adabencher_dev"),
+            ("ada_lovelace@example.com", "ada_lovelace"),
+            ("zoë@example.com", "zoë"),
+            ("+@example.com", "User"),
+            ("___@example.com", "User"),
+        ] {
+            let email = email.parse().unwrap();
+            assert_eq!(UserName::from_email(&email).as_ref(), name, "{email}");
         }
     }
 

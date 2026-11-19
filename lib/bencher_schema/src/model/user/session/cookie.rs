@@ -1,16 +1,18 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use bencher_json::SessionToken;
+use bencher_json::{BindingSecret, SessionToken};
 use dropshot::RequestInfo;
 use http::{HeaderMap, HeaderName, HeaderValue, Method, header, header::InvalidHeaderValue};
 use url::{Host, Url};
 
-use crate::context::Relay;
+use crate::{context::Relay, model::user::sign_in::PENDING_SIGN_IN_LIFETIME};
 
 use super::SESSION_LIFETIME;
 
 const HOST_NAME: &str = "__Host-bencher_session";
 const PLAIN_NAME: &str = "bencher_session";
+const PENDING_HOST_NAME: &str = "__Host-bencher_pending";
+const PENDING_PLAIN_NAME: &str = "bencher_pending";
 const HOST_ATTRIBUTES: &str = "HttpOnly; Secure; SameSite=Strict; Path=/";
 const PLAIN_ATTRIBUTES: &str = "HttpOnly; SameSite=Strict; Path=/";
 const SEC_FETCH_SITE: HeaderName = HeaderName::from_static("sec-fetch-site");
@@ -97,21 +99,8 @@ impl CookieCredential {
     }
 
     pub fn from_headers(method: &Method, headers: &HeaderMap) -> Option<Self> {
-        let mut host = None;
-        let mut plain = None;
-        for (name, value) in headers
-            .get_all(header::COOKIE)
-            .iter()
-            .filter_map(|value| value.to_str().ok())
-            .flat_map(|cookies| cookies.split(';'))
-            .filter_map(|cookie| cookie.trim().split_once('='))
-        {
-            if name == HOST_NAME && host.is_none() {
-                host = Some(value.to_owned());
-            } else if name == PLAIN_NAME && plain.is_none() {
-                plain = Some(value.to_owned());
-            }
-        }
+        let host = first_cookie(headers, HOST_NAME);
+        let plain = first_cookie(headers, PLAIN_NAME);
         (host.is_some() || plain.is_some()).then(|| {
             let mut origin_headers = HeaderMap::new();
             for name in [SEC_FETCH_SITE, header::ORIGIN] {
@@ -146,6 +135,67 @@ impl CookieCredential {
     }
 }
 
+/// The pending sign-in cookie, which binds a pending sign-in to the browser that started it, in the
+/// same form as the session cookie.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PendingCookie(SessionCookie);
+
+impl PendingCookie {
+    pub fn new(console_url: &Url) -> Self {
+        Self(SessionCookie::new(console_url))
+    }
+
+    pub fn name(self) -> &'static str {
+        match self.0 {
+            SessionCookie::Host => PENDING_HOST_NAME,
+            SessionCookie::Plain => PENDING_PLAIN_NAME,
+        }
+    }
+
+    /// The `Set-Cookie` value that keeps the binding secret for the pending sign-in's whole life.
+    pub fn set(self, binding: &BindingSecret) -> Result<HeaderValue, InvalidHeaderValue> {
+        HeaderValue::try_from(format!(
+            "{name}={binding}; {attributes}; Max-Age={max_age}",
+            name = self.name(),
+            binding = binding.as_ref(),
+            attributes = self.0.attributes(),
+            max_age = PENDING_SIGN_IN_LIFETIME.num_seconds(),
+        ))
+    }
+
+    /// The `Set-Cookie` value that clears the cookie.
+    pub fn clear(self) -> HeaderValue {
+        match self.0 {
+            SessionCookie::Host => HeaderValue::from_static(
+                "__Host-bencher_pending=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0",
+            ),
+            SessionCookie::Plain => HeaderValue::from_static(
+                "bencher_pending=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0",
+            ),
+        }
+    }
+
+    /// The binding secret the request's pending cookie carries, if the API honors it: only in this
+    /// form, and, once a relay secret is set, only from the relay.
+    pub fn binding(self, headers: &HeaderMap, relay: &Relay) -> Option<BindingSecret> {
+        if !relay.honors_cookie(headers.get(bencher_json::RELAY_SECRET)) {
+            return None;
+        }
+        first_cookie(headers, self.name())?.parse().ok()
+    }
+}
+
+/// The value of the request's first cookie named `name`.
+fn first_cookie(headers: &HeaderMap, name: &str) -> Option<String> {
+    headers
+        .get_all(header::COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .flat_map(|cookies| cookies.split(';'))
+        .filter_map(|cookie| cookie.trim().split_once('='))
+        .find_map(|(cookie_name, value)| (cookie_name == name).then(|| value.to_owned()))
+}
+
 /// Whether a request may act for the console's reader.
 ///
 /// One that changes state (POST, PUT, PATCH, or DELETE) must come from the console's own origin:
@@ -169,12 +219,12 @@ pub fn passes_same_origin_check(method: &Method, headers: &HeaderMap, console_ur
 
 #[cfg(test)]
 mod tests {
-    use bencher_json::SessionToken;
+    use bencher_json::{BindingSecret, Secret, SessionToken};
     use http::{HeaderMap, HeaderValue, Method, header};
     use pretty_assertions::assert_eq;
     use url::Url;
 
-    use super::{CookieCredential, SessionCookie, passes_same_origin_check};
+    use super::{CookieCredential, PendingCookie, SessionCookie, passes_same_origin_check};
     use crate::context::Relay;
 
     const TOKEN: &str = "-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_v7-_s";
@@ -203,6 +253,72 @@ mod tests {
             assert_eq!(cookie.set(&token).unwrap(), set.as_str(), "{console_url}");
             assert_eq!(cookie.clear(), clear, "{console_url}");
         }
+    }
+
+    // The pending cookie keeps every property of the session cookie, for the pending sign-in's
+    // 30 minutes.
+    #[test]
+    fn pending_cookie_takes_the_session_cookie_form() {
+        let binding: BindingSecret = TOKEN.parse().unwrap();
+        for (console_url, set, clear) in [
+            (
+                "https://bencher.dev",
+                format!(
+                    "__Host-bencher_pending={TOKEN}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=1800"
+                ),
+                "__Host-bencher_pending=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0",
+            ),
+            (
+                "http://localhost:3000",
+                format!(
+                    "__Host-bencher_pending={TOKEN}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=1800"
+                ),
+                "__Host-bencher_pending=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0",
+            ),
+            (
+                "http://bencher.internal",
+                format!("bencher_pending={TOKEN}; HttpOnly; SameSite=Strict; Path=/; Max-Age=1800"),
+                "bencher_pending=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0",
+            ),
+        ] {
+            let cookie = PendingCookie::new(&console_url.parse().unwrap());
+            assert_eq!(cookie.set(&binding).unwrap(), set.as_str(), "{console_url}");
+            assert_eq!(cookie.clear(), clear, "{console_url}");
+        }
+    }
+
+    // Only the console's form of the pending cookie is read, and only from the relay once a relay
+    // secret is set.
+    #[test]
+    fn pending_cookie_binding_is_honored_like_the_session_cookie() {
+        let secure = PendingCookie::new(&"https://bencher.dev".parse().unwrap());
+        let plain = PendingCookie::new(&"http://bencher.internal".parse().unwrap());
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::COOKIE,
+            HeaderValue::from_str(&format!(
+                "__Host-bencher_session={TOKEN}; bencher_pending={TOKEN}"
+            ))
+            .unwrap(),
+        );
+        let no_relay = Relay::new(None);
+        assert!(secure.binding(&headers, &no_relay).is_none());
+        assert_eq!(plain.binding(&headers, &no_relay).unwrap().as_ref(), TOKEN);
+
+        let secret: Secret = "a-relay-secret".parse().unwrap();
+        let relay = Relay::new(Some(&secret));
+        assert!(plain.binding(&headers, &relay).is_none());
+        headers.insert(
+            bencher_json::RELAY_SECRET,
+            HeaderValue::from_static("a-relay-secret"),
+        );
+        assert_eq!(plain.binding(&headers, &relay).unwrap().as_ref(), TOKEN);
+
+        headers.insert(
+            header::COOKIE,
+            HeaderValue::from_static("bencher_pending=not-a-binding-secret"),
+        );
+        assert!(plain.binding(&headers, &relay).is_none());
     }
 
     // Every write is refused from another site, with or without a session cookie,

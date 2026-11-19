@@ -1,6 +1,9 @@
 #![cfg(feature = "plus")]
 
-use bencher_json::{DateTime, JsonNewSso, JsonSso, NonEmpty, OrganizationUuid, SsoUuid};
+use bencher_json::{
+    DateTime, JsonNewSso, JsonSso, NonEmpty, OrganizationUuid, SsoUuid,
+    organization::member::OrganizationRole,
+};
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, JoinOnDsl as _, QueryDsl as _,
     RunQueryDsl as _,
@@ -13,10 +16,12 @@ use crate::{
     error::issue_error,
     macros::fn_get::fn_from_uuid,
     model::{
-        organization::{OrganizationId, QueryOrganization},
+        organization::{
+            OrganizationId, QueryOrganization, organization_role::InsertOrganizationRole,
+        },
         user::QueryUser,
     },
-    resource_not_found_err,
+    resource_conflict_err, resource_not_found_err,
     schema::{self, sso as sso_table},
 };
 
@@ -43,6 +48,45 @@ impl QuerySso {
         query_user: &QueryUser,
         #[cfg(feature = "otel")] auth_method: bencher_otel::AuthMethod,
     ) -> Result<(), HttpError> {
+        if let Some(organization_uuid) = Self::unjoined(auth_conn!(context), query_user)? {
+            QueryOrganization::join(context, organization_uuid, query_user).await?;
+
+            #[cfg(feature = "otel")]
+            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserSsoJoin(auth_method));
+        }
+
+        Ok(())
+    }
+
+    /// [`Self::join_all`] on one connection, inside a write transaction, returning whether the
+    /// user joined an organization.
+    pub fn join_all_with(
+        conn: &mut DbConnection,
+        query_user: &QueryUser,
+        now: DateTime,
+    ) -> Result<bool, HttpError> {
+        let Some(organization_uuid) = Self::unjoined(conn, query_user)? else {
+            return Ok(false);
+        };
+        let insert_org_role = InsertOrganizationRole {
+            user_id: query_user.id,
+            organization_id: QueryOrganization::get_id(conn, organization_uuid)?,
+            role: OrganizationRole::Leader,
+            created: now,
+            modified: now,
+        };
+        diesel::insert_into(schema::organization_role::table)
+            .values(&insert_org_role)
+            .execute(conn)
+            .map_err(resource_conflict_err!(OrganizationRole, insert_org_role))?;
+        Ok(true)
+    }
+
+    /// The organization whose SSO domain is the user's email domain, unless they are a member.
+    fn unjoined(
+        conn: &mut DbConnection,
+        query_user: &QueryUser,
+    ) -> Result<Option<OrganizationUuid>, HttpError> {
         let email_domain = query_user.email.domain();
 
         // Get all organizations IDs that match the domain of the user's email, where they are not already a member
@@ -57,7 +101,7 @@ impl QuerySso {
             )
             .filter(schema::organization_role::id.is_null())
             .select(schema::organization::uuid)
-            .load::<OrganizationUuid>(auth_conn!(context))
+            .load::<OrganizationUuid>(conn)
             .map_err(resource_not_found_err!(Sso, &email_domain))?;
 
         if organization_uuids.len() > 1 {
@@ -71,14 +115,7 @@ impl QuerySso {
             ));
         }
 
-        if let Some(organization_uuid) = organization_uuids.first().copied() {
-            QueryOrganization::join(context, organization_uuid, query_user).await?;
-
-            #[cfg(feature = "otel")]
-            bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::UserSsoJoin(auth_method));
-        }
-
-        Ok(())
+        Ok(organization_uuids.first().copied())
     }
 
     pub fn into_json(self) -> JsonSso {

@@ -2,11 +2,12 @@ use std::sync::LazyLock;
 
 pub use bencher_context::RunContext;
 pub use bencher_valid::{
-    BencherKey, BenchmarkName, BmfVersion, Boundary, BranchName, CdfBoundary, CommitTitle,
-    DateTime, DateTimeMillis, Email, GitHash, Index, IntoResourceId, IqrBoundary, Jwt, MetricName,
-    Model, ModelTest, NameId, NonEmpty, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId,
-    ResourceName, SampleSize, Sanitize, Search, Secret, SessionToken, SessionTokenHash, Slug,
-    Units, Url, UserKey, UserKeyHash, UserName, ValidError, Window,
+    BencherKey, BenchmarkName, BindingSecret, BindingSecretHash, BmfVersion, Boundary, BranchName,
+    CdfBoundary, CommitTitle, DateTime, DateTimeMillis, Email, EmailHash, GitHash, Index,
+    IntoResourceId, IqrBoundary, Jwt, LinkSecret, LinkSecretHash, MetricName, Model, ModelTest,
+    NameId, NonEmpty, PercentageBoundary, ProjectKey, ProjectKeyHash, ResourceId, ResourceName,
+    SampleSize, Sanitize, Search, Secret, SessionToken, SessionTokenHash, SignInCode,
+    SignInCodeHash, Slug, Units, Url, UserKey, UserKeyHash, UserName, ValidError, Window,
 };
 #[cfg(feature = "plus")]
 pub use bencher_valid::{
@@ -151,6 +152,10 @@ pub use user::{
         UserKeyUuid,
     },
     session::{JsonSession, SessionMethod, SessionUuid},
+    sign_in::{
+        JsonEmailResend, JsonEmailSignIn, JsonSignInAs, JsonSignInCode, JsonSignInEmail,
+        JsonSignInLink, JsonSignedIn, PendingSignInUuid, SignInRefusal, TRIES_LEFT,
+    },
     token::{JsonNewToken, JsonToken, JsonTokens, TokenUuid},
 };
 

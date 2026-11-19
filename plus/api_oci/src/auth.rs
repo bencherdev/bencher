@@ -15,6 +15,7 @@ use bencher_json::{Jwt, OrganizationUuid, ProjectResourceId, ResourceName};
 use bencher_rbac::project::Permission;
 use bencher_schema::{
     context::ApiContext,
+    error::is_conflict,
     model::{
         organization::QueryOrganization,
         project::QueryProject,
@@ -474,6 +475,14 @@ async fn handle_unclaimed_project(
                     "user" => %auth_user.user.uuid,
                     "error" => %e
                 );
+                // Someone else claimed it since its check.
+                if is_conflict(&e) {
+                    return HttpError::for_client_error(
+                        None,
+                        ClientErrorStatusCode::CONFLICT,
+                        oci_error_body(OCI_ERROR_DENIED, &e.external_message),
+                    );
+                }
                 HttpError::for_internal_error(format!(
                     "Failed to claim organization: {e}. Push rejected to prevent security issues."
                 ))

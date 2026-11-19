@@ -97,6 +97,18 @@ impl QuerySession {
         diesel::delete(schema::session::table.filter(schema::session::id.eq(id))).execute(conn)
     }
 
+    /// End the session a token belongs to, if any.
+    pub fn delete_by_token(
+        conn: &mut DbConnection,
+        token: &SessionToken,
+    ) -> diesel::QueryResult<usize> {
+        diesel::delete(
+            schema::session::table
+                .filter(schema::session::token_hash.eq(SessionTokenHash::from(token))),
+        )
+        .execute(conn)
+    }
+
     pub fn delete_all(conn: &mut DbConnection, user_id: UserId) -> diesel::QueryResult<usize> {
         diesel::delete(schema::session::table.filter(schema::session::user_id.eq(user_id)))
             .execute(conn)

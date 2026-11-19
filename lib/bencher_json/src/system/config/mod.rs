@@ -24,11 +24,12 @@ pub use plus::{
         index::{JsonBingIndex, JsonGoogleIndex, JsonIndex},
         otel::{JsonOtel, OtelProtocol},
         recaptcha::JsonRecaptcha,
+        turnstile::JsonTurnstile,
     },
     disaster_recovery::{JsonCheckpoint, JsonDisasterRecovery, JsonReplica},
     rate_limiting::{
         JsonOciBandwidth, JsonProjectRateLimiter, JsonPublicRateLimiter, JsonRateLimiting,
-        JsonRunnerRateLimiter, JsonUserRateLimiter,
+        JsonRateLimits, JsonRunnerRateLimiter, JsonUserRateLimiter,
     },
     registry::{
         DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, MAX_CHUNK_SIZE,
