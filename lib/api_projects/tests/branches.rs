@@ -658,3 +658,82 @@ async fn branches_reset_reusing_a_head_skips_the_head_rate_limit() {
         assert_eq!(status, expected, "{key}");
     }
 }
+
+// POST /v0/projects/{project}/branches - a start point named by a name that is also a valid slug,
+// though not its slug, is that branch
+#[tokio::test]
+async fn branches_create_with_a_start_point_by_its_slug_shaped_name() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "branchstartslugname@example.com")
+        .await;
+    let org = server.create_org(&user, "Branch Start Slug Name Org").await;
+    let project = server
+        .create_project(&user, &org, "Branch Start Slug Name Project")
+        .await;
+    let path = format!("/v0/projects/{}/branches", project.slug);
+    let (name, slug) = slug_shaped_name_and_slug();
+    let source = serde_json::json!({ "name": name, "slug": slug });
+    let status = send_branch_json(&server, &user, http::Method::POST, &path, &source).await;
+    assert_eq!(status, StatusCode::CREATED);
+    let mut conn = server.db_conn();
+    let source_versions = seed_versions(&mut conn, &slug, 3);
+
+    let feature = serde_json::json!({
+        "name": "feature",
+        "slug": "feature",
+        "start_point": { "branch": name }
+    });
+    let status = send_branch_json(&server, &user, http::Method::POST, &path, &feature).await;
+
+    assert_eq!(status, StatusCode::CREATED);
+    let head_id = branch_head_id(&mut conn, "feature").expect("Branch has no head");
+    assert_eq!(head_version_ids(&mut conn, head_id), source_versions);
+}
+
+// PATCH /v0/projects/{project}/branches/{branch} - the same for a start point moved to another
+// branch
+#[tokio::test]
+async fn branches_update_start_point_by_its_slug_shaped_name() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "branchresetslugname@example.com")
+        .await;
+    let org = server.create_org(&user, "Branch Reset Slug Name Org").await;
+    let project = server
+        .create_project(&user, &org, "Branch Reset Slug Name Project")
+        .await;
+    let path = format!("/v0/projects/{}/branches", project.slug);
+    let (name, slug) = slug_shaped_name_and_slug();
+    for body in [
+        serde_json::json!({ "name": name, "slug": slug }),
+        serde_json::json!({ "name": "feature", "slug": "feature" }),
+    ] {
+        let status = send_branch_json(&server, &user, http::Method::POST, &path, &body).await;
+        assert_eq!(status, StatusCode::CREATED);
+    }
+    let mut conn = server.db_conn();
+    let source_versions = seed_versions(&mut conn, &slug, 3);
+
+    let reset = serde_json::json!({ "start_point": { "branch": name, "reset": true } });
+    let status = send_branch_json(
+        &server,
+        &user,
+        http::Method::PATCH,
+        &format!("{path}/feature"),
+        &reset,
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK);
+    let head_id = branch_head_id(&mut conn, "feature").expect("Branch has no head");
+    assert_eq!(head_version_ids(&mut conn, head_id), source_versions);
+}
+
+/// A branch name that is also a valid slug, and the other slug its branch is created with.
+fn slug_shaped_name_and_slug() -> (String, String) {
+    (
+        "a".repeat(bencher_json::Slug::MAX_LEN),
+        "t".repeat(bencher_json::Slug::MAX_LEN),
+    )
+}

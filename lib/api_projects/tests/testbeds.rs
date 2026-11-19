@@ -1,6 +1,7 @@
 #![expect(
     unused_crate_dependencies,
     clippy::decimal_literal_representation,
+    clippy::expect_used,
     clippy::similar_names,
     clippy::tests_outside_test_module,
     clippy::too_many_lines,
@@ -732,4 +733,314 @@ async fn non_member_create_testbed_on_private_project_returns_404() {
         "Expected info-hiding wording in body, got: {}",
         resp_body
     );
+}
+
+// GET /v0/projects/{project}/testbeds/{testbed} - a path is a UUID or a slug, never a name, even
+// a name that is also a valid slug
+#[tokio::test]
+async fn testbeds_get_by_slug_shaped_name_is_not_found() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "testbedslugname@example.com")
+        .await;
+    let org = server.create_org(&user, "Testbed Slug Name Org").await;
+    let project = server
+        .create_project(&user, &org, "Testbed Slug Name Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let name = "a".repeat(bencher_json::Slug::MAX_LEN);
+    let slug = "t".repeat(bencher_json::Slug::MAX_LEN);
+    create_testbed(&server, &user.token, project_slug, &name, &slug).await;
+
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/testbeds/{name}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+// A slug names the testbed with that slug over another testbed with that name, wherever a testbed
+// is named: its own path, a report, and the filters of the reports, thresholds, and runs
+#[tokio::test]
+async fn testbeds_slug_wins_over_name() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "testbedslugwins@example.com")
+        .await;
+    let org = server.create_org(&user, "Testbed Slug Wins Org").await;
+    let project = server
+        .create_project(&user, &org, "Testbed Slug Wins Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    create_testbed(&server, &user.token, project_slug, "shared", "named").await;
+    let by_slug = create_testbed(&server, &user.token, project_slug, "Slugged", "shared").await;
+    post_report_on(&server, &user.token, project_slug, "named", 0).await;
+
+    let found = get_testbed(&server, &user.token, project_slug, "shared").await;
+    assert_eq!(found.uuid, by_slug.uuid, "GET");
+    let report = post_report_on(&server, &user.token, project_slug, "shared", 1).await;
+    assert_eq!(report.testbed.uuid, by_slug.uuid, "POST report");
+    for path in ["reports", "thresholds", "runs"] {
+        let listed =
+            listed_testbeds(&server, &user.token, project_slug, path, "testbed=shared").await;
+        assert_eq!(listed, ["Slugged"], "{path}");
+    }
+}
+
+// GET /v0/projects/{project}/reports, thresholds, and console runs - a testbed of another project
+// that holds the slug does not stop the filter from finding this project's testbed by that name
+#[tokio::test]
+async fn testbeds_filter_by_name_ignores_another_projects_slug() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "testbedslugproject@example.com")
+        .await;
+    let org = server.create_org(&user, "Testbed Slug Project Org").await;
+    let ours = server
+        .create_project(&user, &org, "Testbed Slug Ours Project")
+        .await;
+    let theirs = server
+        .create_project(&user, &org, "Testbed Slug Theirs Project")
+        .await;
+    let ours_slug: &str = ours.slug.as_ref();
+    create_testbed(&server, &user.token, ours_slug, "shared", "named").await;
+    create_testbed(
+        &server,
+        &user.token,
+        theirs.slug.as_ref(),
+        "Theirs",
+        "shared",
+    )
+    .await;
+    post_report_on(&server, &user.token, ours_slug, "named", 0).await;
+
+    for path in ["reports", "thresholds", "runs"] {
+        let listed = listed_testbeds(&server, &user.token, ours_slug, path, "testbed=shared").await;
+        assert_eq!(listed, ["shared"], "{path}");
+    }
+}
+
+// An archived testbed that holds the slug still wins over a live testbed with that name: the lists
+// filtered by the slug hide both, the archived lists show the slug owner's rows, and a report on
+// the slug brings the slug owner back
+#[tokio::test]
+async fn testbeds_archived_slug_wins_over_name() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "testbedarchivedslug@example.com")
+        .await;
+    let org = server.create_org(&user, "Testbed Archived Slug Org").await;
+    let project = server
+        .create_project(&user, &org, "Testbed Archived Slug Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    create_testbed(&server, &user.token, project_slug, "shared", "named").await;
+    let by_slug = create_testbed(&server, &user.token, project_slug, "Slugged", "shared").await;
+    post_report_on(&server, &user.token, project_slug, "named", 0).await;
+    post_report_on(&server, &user.token, project_slug, "shared", 1).await;
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project_slug}/testbeds/shared")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "archived": true }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "PATCH archived");
+
+    for path in ["reports", "thresholds", "runs"] {
+        let listed =
+            listed_testbeds(&server, &user.token, project_slug, path, "testbed=shared").await;
+        assert!(listed.is_empty(), "{path}: {listed:?}");
+    }
+    for path in ["reports", "thresholds"] {
+        let query = "testbed=shared&archived=true";
+        let listed = listed_testbeds(&server, &user.token, project_slug, path, query).await;
+        assert_eq!(listed, ["Slugged"], "{path}?archived=true");
+    }
+
+    let report = post_report_on(&server, &user.token, project_slug, "shared", 2).await;
+    assert_eq!(report.testbed.uuid, by_slug.uuid, "POST report");
+    assert_eq!(report.testbed.archived, None, "POST report");
+}
+
+// An archived testbed found by its name stays hidden: the lists filtered by the name are empty, the
+// archived lists show it, and a report on the name brings it back
+#[tokio::test]
+async fn testbeds_archived_name_owner_is_hidden_then_found() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "testbedarchivedname@example.com")
+        .await;
+    let org = server.create_org(&user, "Testbed Archived Name Org").await;
+    let project = server
+        .create_project(&user, &org, "Testbed Archived Name Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let by_name = create_testbed(&server, &user.token, project_slug, "shared", "named").await;
+    post_report_on(&server, &user.token, project_slug, "named", 0).await;
+    let resp = server
+        .client
+        .patch(server.api_url(&format!("/v0/projects/{project_slug}/testbeds/named")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(&user.token),
+        )
+        .json(&serde_json::json!({ "archived": true }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "PATCH archived");
+
+    for path in ["reports", "thresholds"] {
+        let listed =
+            listed_testbeds(&server, &user.token, project_slug, path, "testbed=shared").await;
+        assert!(listed.is_empty(), "{path}: {listed:?}");
+        let query = "testbed=shared&archived=true";
+        let listed = listed_testbeds(&server, &user.token, project_slug, path, query).await;
+        assert_eq!(listed, ["shared"], "{path}?archived=true");
+    }
+
+    let report = post_report_on(&server, &user.token, project_slug, "shared", 1).await;
+    assert_eq!(report.testbed.uuid, by_name.uuid, "POST report");
+    assert_eq!(report.testbed.archived, None, "POST report");
+}
+
+async fn create_testbed(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    name: &str,
+    slug: &str,
+) -> JsonTestbed {
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/testbeds")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .json(&serde_json::json!({ "name": name, "slug": slug }))
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::CREATED, "POST testbed {name}");
+    resp.json().await.expect("Failed to parse response")
+}
+
+/// The testbed at `testbed`, which must be found.
+async fn get_testbed(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    testbed: &str,
+) -> JsonTestbed {
+    let resp = server
+        .client
+        .get(server.api_url(&format!("/v0/projects/{project_slug}/testbeds/{testbed}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    assert_eq!(resp.status(), StatusCode::OK, "GET testbed {testbed}");
+    resp.json().await.expect("Failed to parse response")
+}
+
+/// A report on `testbed` that starts `minute` minutes into the day, with a threshold on its measure.
+async fn post_report_on(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    testbed: &str,
+    minute: u32,
+) -> bencher_json::JsonReport {
+    let resp = server
+        .client
+        .post(server.api_url(&format!("/v0/projects/{project_slug}/reports")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .json(&serde_json::json!({
+            "branch": "main",
+            "testbed": testbed,
+            "start_time": format!("2024-01-01T00:{minute:02}:00Z"),
+            "end_time": format!("2024-01-01T00:{minute:02}:30Z"),
+            "results": ["{\"bench\": {\"latency\": {\"value\": 1.0}}}"],
+            "thresholds": {
+                "models": { "latency": { "test": "t_test", "upper_boundary": 0.99 } },
+            },
+        }))
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let text = resp.text().await.expect("Failed to read the response");
+    assert_eq!(
+        status,
+        StatusCode::CREATED,
+        "POST report on {testbed}: {text}"
+    );
+    serde_json::from_str(&text).expect("Failed to parse the report")
+}
+
+/// The testbed names of what a project's list at `path` holds with `query`: the testbed of each
+/// report, threshold, or run.
+async fn listed_testbeds(
+    server: &TestServer,
+    token: &str,
+    project_slug: &str,
+    path: &str,
+    query: &str,
+) -> Vec<String> {
+    let (list, pointer) = match path {
+        "reports" | "thresholds" => (
+            format!("/v0/projects/{project_slug}/{path}"),
+            "/testbed/name",
+        ),
+        _ => (
+            format!("/v0/console/projects/{project_slug}/{path}"),
+            "/testbeds/0",
+        ),
+    };
+    let resp = server
+        .client
+        .get(server.api_url(&format!("{list}?{query}")))
+        .header(
+            bencher_json::AUTHORIZATION,
+            bencher_json::bearer_header(token),
+        )
+        .send()
+        .await
+        .expect("Request failed");
+    let status = resp.status();
+    let text = resp.text().await.expect("Failed to read the response");
+    assert_eq!(status, StatusCode::OK, "GET {path}?{query}: {text}");
+    let listed: serde_json::Value = serde_json::from_str(&text).expect("Failed to parse the list");
+    let items = listed
+        .as_array()
+        .or_else(|| listed.get("runs").and_then(serde_json::Value::as_array))
+        .expect("Not a list");
+    items
+        .iter()
+        .map(|item| {
+            item.pointer(pointer)
+                .and_then(serde_json::Value::as_str)
+                .expect("No testbed")
+                .to_owned()
+        })
+        .collect()
 }

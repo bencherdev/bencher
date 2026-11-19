@@ -214,10 +214,10 @@ fn get_ls_query<'q>(
             .into_boxed();
 
     if let Some(branch) = query_params.branch.as_ref() {
-        filter_branch_name_id!(query, branch);
+        filter_branch_name_id!(query, branch, query_project.id);
     }
     if let Some(testbed) = query_params.testbed.as_ref() {
-        filter_testbed_name_id!(query, testbed);
+        filter_testbed_name_id!(query, testbed, query_project.id);
     }
     if let Some(adapter) = query_params.adapter {
         query = query.filter(schema::report::adapter.eq_any(adapter.listed_from()));

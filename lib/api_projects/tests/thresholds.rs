@@ -1514,3 +1514,54 @@ async fn model_ceiling_skips_a_start_point_clone_update_past_it() {
         "the copy keeps its model"
     );
 }
+
+// POST /v0/projects/{project}/thresholds - a branch, testbed, and measure named by a name that is
+// also a valid slug, though not its slug, are those rows
+#[tokio::test]
+async fn create_threshold_by_slug_shaped_names() {
+    let server = TestServer::new().await;
+    let user = server
+        .signup("Test User", "thresholdslugname@example.com")
+        .await;
+    let org = server.create_org(&user, "Threshold Slug Name Org").await;
+    let project = server
+        .create_project(&user, &org, "Threshold Slug Name Project")
+        .await;
+    let project_slug: &str = project.slug.as_ref();
+    let name = "a".repeat(bencher_json::Slug::MAX_LEN);
+    let slug = "t".repeat(bencher_json::Slug::MAX_LEN);
+    let mut created = Vec::new();
+    for (resources, units) in [
+        ("branches", None),
+        ("testbeds", None),
+        ("measures", Some("ns")),
+    ] {
+        let mut body = serde_json::json!({ "name": name, "slug": slug });
+        if let (Some(units), Some(object)) = (units, body.as_object_mut()) {
+            object.insert("units".to_owned(), units.into());
+        }
+        let path = format!("/v0/projects/{project_slug}/{resources}");
+        let (status, text) = send_json(&server, &user, Method::POST, &path, &body).await;
+        assert_eq!(status, StatusCode::CREATED, "{resources}: {text}");
+        let resource: serde_json::Value =
+            serde_json::from_str(&text).expect("Failed to parse the resource");
+        created.push(resource.get("uuid").cloned());
+    }
+
+    let body = serde_json::json!({
+        "branch": name,
+        "testbed": name,
+        "measure": name,
+        "test": "percentage",
+        "upper_boundary": 0.05,
+    });
+    let path = format!("/v0/projects/{project_slug}/thresholds");
+    let (status, text) = send_json(&server, &user, Method::POST, &path, &body).await;
+
+    assert_eq!(status, StatusCode::CREATED, "{text}");
+    let threshold: serde_json::Value =
+        serde_json::from_str(&text).expect("Failed to parse the threshold");
+    let used = ["/branch/uuid", "/testbed/uuid", "/measure/uuid"]
+        .map(|pointer| threshold.pointer(pointer).cloned());
+    assert_eq!(used.to_vec(), created);
+}
