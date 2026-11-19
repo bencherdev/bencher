@@ -9,6 +9,14 @@ use tokio::time::error::Elapsed;
 use url::Url;
 
 const SITEVERIFY_URL: &str = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+/// Cloudflare's published test secrets, for which every check answers [`TEST_HOSTNAME`].
+// https://developers.cloudflare.com/turnstile/troubleshooting/testing/
+const TEST_SECRETS: [&str; 3] = [
+    "1x0000000000000000000000000000000AA",
+    "2x0000000000000000000000000000000AA",
+    "3x0000000000000000000000000000000AA",
+];
+const TEST_HOSTNAME: &str = "example.com";
 /// How long a check waits for Cloudflare before it refuses.
 const TIMEOUT: Duration = Duration::from_secs(10);
 
@@ -16,7 +24,8 @@ const TIMEOUT: Duration = Duration::from_secs(10);
 /// a widget on the console issued, and refuses whenever it cannot.
 pub struct Turnstile {
     secret: Secret,
-    /// The console's host, where every token must come from.
+    /// Where every token must come from: the console's host, or Cloudflare's test host for a test
+    /// secret.
     hostname: String,
     site_verify: Arc<dyn SiteVerify>,
 }
@@ -56,11 +65,22 @@ impl Turnstile {
         console_url: &Url,
         site_verify: Arc<dyn SiteVerify>,
     ) -> Self {
+        let hostname = if is_test_secret(&secret) {
+            TEST_HOSTNAME
+        } else {
+            console_url.host_str().unwrap_or_default()
+        }
+        .to_owned();
         Self {
             secret,
-            hostname: console_url.host_str().unwrap_or_default().to_owned(),
+            hostname,
             site_verify,
         }
+    }
+
+    /// Whether its secret is one of Cloudflare's test secrets, which check nothing about the reader.
+    pub fn is_test(&self) -> bool {
+        is_test_secret(&self.secret)
     }
 
     /// Verify the token from the reader at `remote_ip`: it must be present, Cloudflare must
@@ -106,6 +126,10 @@ impl Turnstile {
         }
         Ok(())
     }
+}
+
+fn is_test_secret(secret: &Secret) -> bool {
+    TEST_SECRETS.contains(&secret.as_ref())
 }
 
 /// Cloudflare's siteverify endpoint, or a stand-in for it.
@@ -275,6 +299,43 @@ mod tests {
                 "{answer}"
             );
         }
+    }
+
+    // Cloudflare answers every check against one of its test secrets for `example.com`, so a
+    // test secret passes that host and refuses any other, the console's own included; any other
+    // secret still refuses `example.com`.
+    // Kills a test secret held to the console's host, a test secret that passes any host, and
+    // `example.com` taken from a real secret.
+    #[tokio::test]
+    async fn a_test_secret_passes_cloudflares_test_host_alone() {
+        let console_url: Url = "https://bencher.dev".parse().unwrap();
+        let with = |secret: &str, answer: &'static str| {
+            Turnstile::with_site_verify(secret.parse().unwrap(), &console_url, body(answer))
+        };
+        let example = r#"{"success":true,"hostname":"example.com"}"#;
+        for secret in [
+            "1x0000000000000000000000000000000AA",
+            "2x0000000000000000000000000000000AA",
+            "3x0000000000000000000000000000000AA",
+        ] {
+            verify(&with(secret, example)).await.unwrap();
+            for answer in [
+                r#"{"success":true,"hostname":"bencher.dev"}"#,
+                r#"{"success":true,"hostname":"evil.example"}"#,
+            ] {
+                assert!(
+                    matches!(
+                        verify(&with(secret, answer)).await,
+                        Err(TurnstileError::Hostname { .. })
+                    ),
+                    "{secret} {answer}"
+                );
+            }
+        }
+        assert!(matches!(
+            verify(&with("turnstile-secret", example)).await,
+            Err(TurnstileError::Hostname { .. })
+        ));
     }
 
     #[tokio::test]

@@ -1,12 +1,10 @@
-use std::net::IpAddr;
-
-use bencher_json::{OrganizationUuid, ProjectUuid, RunnerUuid, UserUuid};
+use bencher_json::{OrganizationUuid, ProjectUuid, RunnerUuid, SessionUuid, UserUuid};
 use bencher_rate_limiter::snapshot::{
     BandwidthSnapshot, RateLimiterSnapshot as GenericRateLimiterSnapshot,
 };
 use serde::{Deserialize, Serialize};
 
-use super::EmailKey;
+use super::{EmailKey, EmailRequesterKey, IpKey};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct RateLimitingSnapshot {
@@ -17,34 +15,20 @@ pub(super) struct RateLimitingSnapshot {
     pub bandwidth: BandwidthSnapshot<OrganizationUuid>,
     /// Missing from a snapshot saved before the limit existed.
     #[serde(default)]
-    pub email: GenericRateLimiterSnapshot<EmailKey>,
-}
-
-impl RateLimitingSnapshot {
-    pub fn new(
-        public: PublicRateLimiterSnapshot,
-        user: UserRateLimiterSnapshot,
-        project: ProjectRateLimiterSnapshot,
-        runner: RunnerRateLimiterSnapshot,
-        bandwidth: BandwidthSnapshot<OrganizationUuid>,
-        email: GenericRateLimiterSnapshot<EmailKey>,
-    ) -> Self {
-        Self {
-            public,
-            user,
-            project,
-            runner,
-            bandwidth,
-            email,
-        }
-    }
+    pub sign_in_email: GenericRateLimiterSnapshot<EmailRequesterKey>,
+    /// Missing from a snapshot saved before the limit existed.
+    #[serde(default)]
+    pub sign_in_email_ceiling: GenericRateLimiterSnapshot<EmailKey>,
+    /// Missing from a snapshot saved before the limit existed.
+    #[serde(default)]
+    pub fresh_sign_in_email_ceiling: GenericRateLimiterSnapshot<SessionUuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct PublicRateLimiterSnapshot {
-    pub requests: GenericRateLimiterSnapshot<IpAddr>,
-    pub attempts: GenericRateLimiterSnapshot<IpAddr>,
-    pub runs: GenericRateLimiterSnapshot<IpAddr>,
+    pub requests: GenericRateLimiterSnapshot<IpKey>,
+    pub attempts: GenericRateLimiterSnapshot<IpKey>,
+    pub runs: GenericRateLimiterSnapshot<IpKey>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -70,11 +54,12 @@ pub(super) struct RunnerRateLimiterSnapshot {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, hash::Hash, time::SystemTime};
+    use std::{collections::HashMap, hash::Hash, net::IpAddr, time::SystemTime};
 
     use bencher_rate_limiter::snapshot::WindowSnapshot;
 
     use super::*;
+    use crate::context::SignInEmailCeiling;
 
     fn empty_window_snapshot<K: Eq + Hash>() -> WindowSnapshot<K> {
         WindowSnapshot {
@@ -99,7 +84,7 @@ mod tests {
                 .as_secs(),
             60,
         );
-        let ip: IpAddr = "192.168.1.1".parse().unwrap();
+        let ip = IpKey::from("192.168.1.1".parse::<IpAddr>().unwrap());
 
         let snapshot = RateLimitingSnapshot {
             public: PublicRateLimiterSnapshot {
@@ -131,7 +116,9 @@ mod tests {
             bandwidth: BandwidthSnapshot {
                 events: HashMap::new(),
             },
-            email: empty_limiter_snapshot(),
+            sign_in_email: empty_limiter_snapshot(),
+            sign_in_email_ceiling: empty_limiter_snapshot(),
+            fresh_sign_in_email_ceiling: empty_limiter_snapshot(),
         };
 
         let json = serde_json::to_string(&snapshot).unwrap();
@@ -169,7 +156,13 @@ mod tests {
         limiter2.save(&db_path, &log).unwrap();
         let json = std::fs::read_to_string(&snapshot_path).unwrap();
         let snap: RateLimitingSnapshot = serde_json::from_str(&json).unwrap();
-        assert!(snap.public.requests.minute.events.contains_key(&ip));
+        assert!(
+            snap.public
+                .requests
+                .minute
+                .events
+                .contains_key(&IpKey::from(ip))
+        );
     }
 
     #[test]
@@ -186,7 +179,7 @@ mod tests {
             .unwrap()
             .as_secs();
         let old_secs = now_secs - 7200;
-        let ip: IpAddr = "10.0.0.1".parse().unwrap();
+        let ip = IpKey::from("10.0.0.1".parse::<IpAddr>().unwrap());
 
         let snapshot = RateLimitingSnapshot {
             public: PublicRateLimiterSnapshot {
@@ -226,7 +219,9 @@ mod tests {
             bandwidth: BandwidthSnapshot {
                 events: HashMap::new(),
             },
-            email: empty_limiter_snapshot(),
+            sign_in_email: empty_limiter_snapshot(),
+            sign_in_email_ceiling: empty_limiter_snapshot(),
+            fresh_sign_in_email_ceiling: empty_limiter_snapshot(),
         };
         let json = serde_json::to_string(&snapshot).unwrap();
         std::fs::write(&snapshot_path, json).unwrap();
@@ -263,6 +258,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::too_many_lines, reason = "one snapshot of every limit")]
     fn load_drops_window_sized_buckets() {
         use crate::context::RateLimiting;
 
@@ -282,12 +278,13 @@ mod tests {
         let organization = OrganizationUuid::from(uuid::Uuid::nil());
         let address: bencher_json::Email = "ada@example.com".parse().unwrap();
         let email = EmailKey::from(&address);
+        let session = SessionUuid::from(uuid::Uuid::nil());
 
         let snapshot = RateLimitingSnapshot {
             public: PublicRateLimiterSnapshot {
-                requests: window_sized_limiter_snapshot(ip, now_secs),
-                attempts: window_sized_limiter_snapshot(ip, now_secs),
-                runs: window_sized_limiter_snapshot(ip, now_secs),
+                requests: window_sized_limiter_snapshot(IpKey::from(ip), now_secs),
+                attempts: window_sized_limiter_snapshot(IpKey::from(ip), now_secs),
+                runs: window_sized_limiter_snapshot(IpKey::from(ip), now_secs),
             },
             user: UserRateLimiterSnapshot {
                 requests: window_sized_limiter_snapshot(user, now_secs),
@@ -316,7 +313,12 @@ mod tests {
                     )],
                 )]),
             },
-            email: window_sized_limiter_snapshot(email, now_secs),
+            sign_in_email: window_sized_limiter_snapshot(
+                EmailRequesterKey::new(email, Some(ip)),
+                now_secs,
+            ),
+            sign_in_email_ceiling: window_sized_limiter_snapshot(email, now_secs),
+            fresh_sign_in_email_ceiling: window_sized_limiter_snapshot(session, now_secs),
         };
         std::fs::write(&snapshot_path, serde_json::to_string(&snapshot).unwrap()).unwrap();
 
@@ -348,7 +350,9 @@ mod tests {
             bandwidth: BandwidthSnapshot {
                 events: HashMap::new(),
             },
-            email: empty_limiter_snapshot(),
+            sign_in_email: empty_limiter_snapshot(),
+            sign_in_email_ceiling: empty_limiter_snapshot(),
+            fresh_sign_in_email_ceiling: empty_limiter_snapshot(),
         };
         let saved: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&snapshot_path).unwrap()).unwrap();
@@ -366,7 +370,12 @@ mod tests {
         limiter.project_request(project).unwrap();
         limiter.project_run(project).unwrap();
         limiter.runner_request(runner).unwrap();
-        limiter.sign_in_email(&address).unwrap();
+        let _held = limiter
+            .sign_in_email(&address, Some(ip), SignInEmailCeiling::Address)
+            .unwrap();
+        let _fresh = limiter
+            .sign_in_email(&address, None, SignInEmailCeiling::Session(session))
+            .unwrap();
     }
 
     // The snapshot keeps an address at its cap, keyed so that the file holds no address.
@@ -380,32 +389,74 @@ mod tests {
         let address: bencher_json::Email = "ada.lovelace@example.com".parse().unwrap();
 
         let limiter = RateLimiting::default();
-        limiter.sign_in_email(&address).unwrap();
-        limiter.sign_in_email(&address).unwrap();
-        limiter.sign_in_email(&address).unwrap_err();
+        let send = |limiter: &RateLimiting, address: &bencher_json::Email| {
+            limiter.sign_in_email(address, None, SignInEmailCeiling::Address)
+        };
+        let _first = send(&limiter, &address).unwrap();
+        let _second = send(&limiter, &address).unwrap();
+        send(&limiter, &address).unwrap_err();
         limiter.save(&db_path, &log).unwrap();
 
         let json = std::fs::read_to_string(dir.path().join("rate_limiting.json")).unwrap();
         assert!(!json.contains("ada.lovelace"), "{json}");
         assert!(!json.contains("example.com"), "{json}");
         let snapshot: serde_json::Value = serde_json::from_str(&json).unwrap();
-        let keys = snapshot["email"]["minute"]["events"]
-            .as_object()
-            .unwrap()
-            .keys()
-            .cloned()
-            .collect::<Vec<_>>();
         let sha256 = {
             use sha2::Digest as _;
             hex::encode(sha2::Sha256::digest(b"ada.lovelace@example.com"))
         };
-        assert_eq!(keys, [sha256]);
+        for limit in ["sign_in_email", "sign_in_email_ceiling"] {
+            let keys = snapshot[limit]["day"]["events"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .cloned()
+                .collect::<Vec<_>>();
+            assert_eq!(keys, std::slice::from_ref(&sha256), "{limit}");
+        }
 
         let restored = RateLimiting::default();
         restored.load(&db_path, &log).unwrap();
-        restored.sign_in_email(&address).unwrap_err();
+        send(&restored, &address).unwrap_err();
         let other: bencher_json::Email = "grace@example.com".parse().unwrap();
-        restored.sign_in_email(&other).unwrap();
+        let _other = send(&restored, &other).unwrap();
+    }
+
+    // The snapshot keeps a session at its ceiling on fresh sign-in emails, and no other session.
+    #[test]
+    fn session_ceiling_survives_a_restart() {
+        use crate::context::RateLimiting;
+
+        let dir = tempfile::tempdir().unwrap();
+        let db_path = dir.path().join("bencher.db");
+        let log = slog::Logger::root(slog::Discard, slog::o!());
+        let address: bencher_json::Email = "ada@example.com".parse().unwrap();
+        let session = SignInEmailCeiling::Session(SessionUuid::new());
+
+        let limiter = RateLimiting::default();
+        for n in 1..=12 {
+            for _ in 0..2 {
+                let requester = IpAddr::from([10, 0, 0, n]);
+                let _held = limiter
+                    .sign_in_email(&address, Some(requester), session)
+                    .unwrap();
+            }
+        }
+        let requester = IpAddr::from([10, 0, 0, 13]);
+        limiter
+            .sign_in_email(&address, Some(requester), session)
+            .unwrap_err();
+        limiter.save(&db_path, &log).unwrap();
+
+        let restored = RateLimiting::default();
+        restored.load(&db_path, &log).unwrap();
+        restored
+            .sign_in_email(&address, Some(requester), session)
+            .unwrap_err();
+        let other = SignInEmailCeiling::Session(SessionUuid::new());
+        let _other = restored
+            .sign_in_email(&address, Some(requester), other)
+            .unwrap();
     }
 
     // A snapshot saved before the per-address limit existed still loads.
@@ -424,7 +475,13 @@ mod tests {
         let snapshot_path = dir.path().join("rate_limiting.json");
         let mut json: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&snapshot_path).unwrap()).unwrap();
-        json.as_object_mut().unwrap().remove("email").unwrap();
+        for limit in [
+            "sign_in_email",
+            "sign_in_email_ceiling",
+            "fresh_sign_in_email_ceiling",
+        ] {
+            json.as_object_mut().unwrap().remove(limit).unwrap();
+        }
         std::fs::write(&snapshot_path, json.to_string()).unwrap();
 
         let restored = RateLimiting::default();
@@ -432,7 +489,13 @@ mod tests {
         restored.save(&db_path, &log).unwrap();
         let snap: RateLimitingSnapshot =
             serde_json::from_str(&std::fs::read_to_string(&snapshot_path).unwrap()).unwrap();
-        assert!(snap.public.requests.minute.events.contains_key(&ip));
+        assert!(
+            snap.public
+                .requests
+                .minute
+                .events
+                .contains_key(&IpKey::from(ip))
+        );
     }
 
     #[test]

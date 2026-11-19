@@ -12,6 +12,9 @@ use super::body::FmtBody as _;
 pub const DEFAULT_SMTP_PORT: u16 = 587;
 /// How long a send waits on the SMTP server, its connection included, before it gives up.
 const SEND_TIMEOUT: Duration = Duration::from_secs(30);
+/// How long a send waits for another to finish with the shared connection before it gives up,
+/// before its own [`SEND_TIMEOUT`] starts.
+const CONNECTION_WAIT: Duration = Duration::from_secs(30);
 
 #[derive(Debug, Clone)]
 pub struct Email {
@@ -80,7 +83,8 @@ impl Email {
         });
     }
 
-    /// Send the message and wait until it is sent, for at most [`SEND_TIMEOUT`].
+    /// Send the message and wait until it is sent: for the shared connection for at most
+    /// [`CONNECTION_WAIT`], then for the send itself for at most [`SEND_TIMEOUT`].
     /// Its one log line comes before the send and names only its addresses, so nothing logged
     /// depends on how the send went; the caller answers for a failure.
     pub async fn send_and_wait(
@@ -95,11 +99,12 @@ impl Email {
             to_email = &message.to_email
         );
         let message_builder = self.message_builder(log, message);
-        let sent = tokio::time::timeout(SEND_TIMEOUT, async {
-            self.client.lock().await.send(log, message_builder).await
-        })
-        .await
-        .unwrap_or_else(|_elapsed| Err(mail_send::Error::Timeout));
+        let sent = match tokio::time::timeout(CONNECTION_WAIT, self.client.lock()).await {
+            Ok(mut client) => tokio::time::timeout(SEND_TIMEOUT, client.send(log, message_builder))
+                .await
+                .unwrap_or_else(|_elapsed| Err(mail_send::Error::Timeout)),
+            Err(_elapsed) => Err(mail_send::Error::Timeout),
+        };
         #[cfg(feature = "otel")]
         bencher_otel::ApiMeter::increment(if sent.is_ok() {
             bencher_otel::ApiCounter::EmailSend
@@ -223,10 +228,10 @@ impl Client {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    use std::{sync::Arc, time::Duration};
 
     use bencher_json::system::config::JsonSmtp;
-    use futures_concurrency::future::Race as _;
+    use futures_concurrency::future::{Join as _, Race as _};
     use tokio::{
         io::{AsyncBufReadExt as _, AsyncWriteExt as _, BufReader},
         net::{TcpListener, TcpStream},
@@ -242,7 +247,7 @@ mod tests {
         server::TlsStream,
     };
 
-    use super::{ClientBuilder, Email, SEND_TIMEOUT};
+    use super::{CONNECTION_WAIT, ClientBuilder, Email, SEND_TIMEOUT};
     use crate::context::{Body, Button, ButtonBody, Message, Messenger};
 
     /// A self-signed certificate for 127.0.0.1, for these tests alone, made with
@@ -256,6 +261,9 @@ mod tests {
     const REFUSED: &str = "ada@refused.example";
     /// The test server never answers for this recipient.
     const STALLED: &str = "ada@stalled.example";
+    /// The test server takes [`SLOW_REPLY`] to take this recipient.
+    const SLOW: &str = "ada@slow.example";
+    const SLOW_REPLY: Duration = Duration::from_secs(3);
     const DELIVERED: &str = "grace@example.com";
 
     // A refused recipient leaves its connection inside an open transaction, so the next email
@@ -487,6 +495,67 @@ mod tests {
         assert!(started.elapsed() <= SEND_TIMEOUT, "{:?}", started.elapsed());
     }
 
+    // A send waits for the shared connection apart from its own timeout: one that waits behind a
+    // slow holder of the connection, then takes a few seconds to send, still sends.
+    // Kills a timeout that counts the wait for the connection.
+    #[tokio::test(start_paused = true)]
+    async fn a_slow_holder_leaves_the_next_send_its_own_timeout() {
+        const HELD: Duration = Duration::from_secs(28);
+        let (server, mut seen) = SmtpServer::bind().await;
+        let email = server.email();
+        let log = discard();
+        let held = Arc::clone(&email.client).lock_owned().await;
+        let release = async {
+            // The send now waits for the connection.
+            tokio::task::yield_now().await;
+            tokio::time::advance(HELD).await;
+            drop(held);
+            // The exchange with the server runs in real time.
+            tokio::time::resume();
+        };
+        let sends = async {
+            let (sent, ()) = (email.send_and_wait(&log, message(SLOW)), release)
+                .join()
+                .await;
+            Some(sent)
+        };
+        let sent = (
+            async {
+                server.serve().await;
+                None
+            },
+            sends,
+        )
+            .race()
+            .await;
+        drop(server);
+
+        assert!(matches!(sent, Some(Ok(()))), "{sent:?}");
+        assert_eq!(seen.recv().await, Some(Seen::Delivered(SLOW.to_owned())));
+    }
+
+    // A send that never gets the shared connection gives up, in a bounded time of its own.
+    #[tokio::test(start_paused = true)]
+    async fn the_wait_for_the_connection_is_bounded() {
+        let (server, _seen) = SmtpServer::bind().await;
+        let email = server.email();
+        let _held = Arc::clone(&email.client).lock_owned().await;
+
+        let started = Instant::now();
+        let sent = tokio::time::timeout(
+            SEND_TIMEOUT * 4,
+            email.send_and_wait(&discard(), message(DELIVERED)),
+        )
+        .await
+        .expect("The wait for the connection has no bound");
+        assert!(matches!(sent, Err(mail_send::Error::Timeout)), "{sent:?}");
+        assert!(
+            started.elapsed() <= CONNECTION_WAIT,
+            "{:?}",
+            started.elapsed()
+        );
+    }
+
     /// A listener the test accepts a connection on and never answers.
     async fn silent_server() -> (u16, TcpListener) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -589,6 +658,9 @@ mod tests {
                         self.seen.send(Seen::Stalled(to.to_owned())).await.unwrap();
                         None
                     } else if let Some(recipients) = &mut transaction {
+                        if to == SLOW {
+                            tokio::time::sleep(SLOW_REPLY).await;
+                        }
                         recipients.push(to.to_owned());
                         Some("250 2.1.5 Ok")
                     } else {

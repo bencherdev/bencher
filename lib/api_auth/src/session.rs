@@ -3,10 +3,10 @@ use bencher_json::JsonSession;
 use bencher_schema::{
     auth_conn,
     context::ApiContext,
-    error::{forbidden_error, invalid_credential, issue_error},
+    error::{forbidden_error, issue_error},
     model::user::{
-        auth::{AuthUser, BearerToken},
-        session::{QuerySession, SessionId, cookie::SessionCookie},
+        auth::{AuthSession, AuthUser, BearerToken, dead_session},
+        session::{QuerySession, cookie::SessionCookie},
     },
     write_conn,
 };
@@ -40,10 +40,10 @@ pub async fn auth_session_get(
 ) -> Result<ResponseOk<JsonSession>, HttpError> {
     let context = rqctx.context();
     let auth_user = AuthUser::from_token(context, bearer_token).await?;
-    let session_id = session_id(&auth_user)?;
-    let query_session = QuerySession::find(auth_conn!(context), session_id)
+    let session = session_of(&auth_user)?;
+    let query_session = QuerySession::find_live(auth_conn!(context), session.id, session.uuid)
         .map_err(|e| issue_error("Failed to view a session", "Failed to view a session:", e))?
-        .ok_or_else(invalid_credential)?;
+        .ok_or_else(|| dead_session(&context.console_url))?;
     let json = query_session.into_json(auth_user.user.into_json());
     Ok(Get::auth_response_ok(json))
 }
@@ -62,8 +62,8 @@ pub async fn auth_session_delete(
 ) -> Result<ResponseDeleted, HttpError> {
     let context = rqctx.context();
     let auth_user = AuthUser::from_token(context, bearer_token).await?;
-    let session_id = session_id(&auth_user)?;
-    QuerySession::delete(write_conn!(context), session_id)
+    let session = session_of(&auth_user)?;
+    QuerySession::delete(write_conn!(context), session.id, session.uuid)
         .map_err(|e| issue_error("Failed to end a session", "Failed to end a session:", e))?;
     let mut response = Delete::auth_response_deleted();
     response
@@ -72,8 +72,8 @@ pub async fn auth_session_delete(
     Ok(response)
 }
 
-fn session_id(auth_user: &AuthUser) -> Result<SessionId, HttpError> {
+fn session_of(auth_user: &AuthUser) -> Result<AuthSession, HttpError> {
     auth_user
-        .session_id()
+        .session()
         .ok_or_else(|| forbidden_error(NOT_A_SESSION))
 }

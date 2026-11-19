@@ -442,6 +442,16 @@ where
     cors_headers(http_error)
 }
 
+/// Log an error the server keeps running through, and send it to Sentry.
+pub fn report_error<E>(log: &slog::Logger, error: &E)
+where
+    E: std::error::Error,
+{
+    slog::error!(log, "{error}");
+    #[cfg(feature = "sentry")]
+    sentry::capture_error(error);
+}
+
 fn cors_headers(mut http_error: HttpError) -> HttpError {
     for (header, value) in [
         ("access-control-allow-origin", ALL_ORIGIN),

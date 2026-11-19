@@ -661,6 +661,120 @@ async fn delete_session_ends_it() {
     );
 }
 
+// Reading the session answers only the session the request signed in with, as its sign-in read
+// it: when that session ends and another user's takes its row's ID before the read, the answer is
+// never the other session's.
+// Kills a read of the session by its row ID alone.
+#[tokio::test]
+async fn get_session_never_answers_another_session() {
+    let clock = TestClock::new();
+    let server = server_with_clock(&clock).await;
+    let ada = server.signup("Ada", "ada-taken-row@example.com").await;
+    let grace = server.signup("Grace", "grace-taken-row@example.com").await;
+    let created = clock.now();
+    let (ended, _graces) = ended_on_a_taken_row(&server, &ada, || {
+        clock.set(created, HOUR);
+        server.session_at(&grace, clock.now())
+    });
+
+    let resp = get(&server, "/v0/auth/session", Some(&ended), &[]).await;
+    if resp.status() == StatusCode::OK {
+        let session: JsonSession = resp.json().await.expect("Failed to parse the session");
+        assert_eq!(session.user.uuid, ada.uuid);
+        assert_eq!(session.created.timestamp(), created.timestamp());
+    } else {
+        assert_dead(&resp);
+    }
+}
+
+// Reading the session, when the session the request signed in with ends and another user's takes
+// its row's ID between the sign-in and the read, answers as an ended session does and clears the
+// cookie.
+// Kills a read that answers a session it no longer finds with a bare invalid credential.
+#[tokio::test]
+async fn get_session_answers_a_taken_row_as_ended() {
+    let clock = TestClock::new();
+    let server = server_with_clock(&clock).await;
+    let ada = server.signup("Ada", "ada-taken-row@example.com").await;
+    let grace = server.signup("Grace", "grace-taken-row@example.com").await;
+    let start = clock.now();
+    let ended = server.session_at(&ada, start);
+    let graces = server.session_at(&grace, start);
+    let row = session_row(&server, &ended);
+    take_the_row_on_renewal(&server, &row, &session_row(&server, &graces)).await;
+    clock.set(start, 2 * HOUR);
+
+    assert_dead(&get(&server, "/v0/auth/session", Some(&ended), &[]).await);
+    assert_eq!(session_row(&server, &graces).id, row.id);
+}
+
+// Ending the session ends only the session the request signed in with, as its sign-in read it:
+// when that session ends and another user's takes its row's ID before the end, the other session
+// lives on.
+// Kills an end of the session by its row ID alone.
+#[tokio::test]
+async fn delete_session_never_ends_another_session() {
+    let server = TestServer::new().await;
+    let ada = server.signup("Ada", "ada-taken-row@example.com").await;
+    let grace = server.signup("Grace", "grace-taken-row@example.com").await;
+    let (ended, graces) = ended_on_a_taken_row(&server, &ada, || server.session(&grace));
+
+    let resp = delete_session(&server, &ended, &[same_origin()]).await;
+    assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    assert_eq!(
+        get(&server, "/v0/auth/session", Some(&graces), &[])
+            .await
+            .status(),
+        StatusCode::OK
+    );
+}
+
+/// A session of `user`'s that a request signed in with, whose row then ended and went to the
+/// session `next` makes: the ended session's token, which the API's readers still find as the
+/// request's sign-in read it, and the token of the session that took its row.
+fn ended_on_a_taken_row<F>(
+    server: &TestServer,
+    user: &TestUser,
+    next: F,
+) -> (SessionToken, SessionToken)
+where
+    F: FnOnce() -> SessionToken,
+{
+    // The newest session, so its row is the one a new session takes once it is freed.
+    let ended = server.session(user);
+    let row = session_row(server, &ended).id;
+    server.keep_session_for_the_readers(&ended);
+    diesel::delete(schema::session::table.filter(schema::session::id.eq(row)))
+        .execute(&mut server.db_conn())
+        .expect("Failed to end the session");
+    let next = next();
+    assert_eq!(session_row(server, &next).id, row);
+    (ended, next)
+}
+
+/// Have the writer end `ended` as it renews it, and move `next` onto its row's ID: the renewal a
+/// sign-in leaves for the writer runs between the sign-in and the request's own read of its
+/// session, so the session ends and another takes its row in between.
+async fn take_the_row_on_renewal(server: &TestServer, ended: &QuerySession, next: &QuerySession) {
+    server
+        .context()
+        .database
+        .connection
+        .lock()
+        .await
+        .batch_execute(&format!(
+            "CREATE TEMP TRIGGER take_the_row AFTER UPDATE OF last_used ON main.session
+            WHEN OLD.uuid = '{ended}'
+            BEGIN
+                DELETE FROM session WHERE id = OLD.id;
+                UPDATE session SET id = OLD.id WHERE uuid = '{next}';
+            END;",
+            ended = ended.uuid,
+            next = next.uuid,
+        ))
+        .expect("Failed to take the row on renewal");
+}
+
 struct TestClock(Arc<AtomicI64>);
 
 impl TestClock {

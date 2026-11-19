@@ -4,6 +4,8 @@
 如果您在它前面有一个代理服务器来处理 HTTPS，这样可以很好地工作。
 如果您需要一个独立的 Console 服务器自行处理 HTTPS，
 那么您需要提供一个 SSL 密钥和证书。
+请在 HTTPS 之后运行 Console。
+通过普通 HTTP 提供的 Console，其会话 Cookie 获得的保护比通过 HTTPS 提供的更弱。
 
 您可以使用以下环境变量配置 HTTPS：
   - `SERVER_KEY_PATH`: 您的 TLS 密钥的文件路径。

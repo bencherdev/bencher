@@ -1546,7 +1546,7 @@
           "members"
         ],
         "summary": "Remove an organization member",
-        "description": "Remove a member member of an organization. The user must have `delete_role` permissions for the organization.",
+        "description": "Remove a member of an organization, the user themself included, to leave it. The user must have `delete_role` permissions for the organization. The organization's last Leader cannot be removed. The member's roles on the organization's projects, and the invitations they sent to it, end with the removal.",
         "operationId": "org_member_delete",
         "parameters": [
           {
@@ -1791,6 +1791,8 @@
           "organizations",
           "plan"
         ],
+        "summary": "Create an organization's plan",
+        "description": "Subscribe the organization to a plan from its completed checkout. Available to organization managers and requires a user session: a user API key or a deprecated user API token is refused.",
         "operationId": "org_plan_post",
         "parameters": [
           {
@@ -2444,7 +2446,7 @@
           "sso"
         ],
         "summary": "Add an SSO domain to an organization",
-        "description": "➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization. The user must be an admin on the server to use this route. When a user proves an email address by an email code or link, the domain portion of that email will be compared against all SSO domains. When a user signs in with a Google Workspace account, the account's hosted domain will be compared instead; GitHub sign-ins are never compared. If an SSO domain matches, they will be added as a Member to that Organization. SSO domains must be globally unique on the server. That is, two Organizations cannot have the same SSO domain.",
+        "description": "➕ Bencher Plus: Add a single sign-on (SSO) domain to an organization. The user must be an admin on the server to use this route. When a user proves an email address by an email code or link, the domain portion of that email will be compared against all SSO domains. When a user signs in with a Google Workspace account, the account's hosted domain will be compared instead; GitHub sign-ins are never compared. If an SSO domain matches, they will be added as a Member to that Organization. Membership by SSO follows the email domain, so a removed member whose email is at the domain joins again at their next email sign-in: to remove such a user for good, end their mailbox at the domain. SSO domains must be globally unique on the server. That is, two Organizations cannot have the same SSO domain. A user session needs a sign-in within the last 10 minutes.",
         "operationId": "org_sso_post",
         "parameters": [
           {
@@ -8755,7 +8757,7 @@
           "runners"
         ],
         "summary": "Create a runner",
-        "description": "➕ Bencher Plus: Create a new runner on the server. The user must be an admin to use this endpoint. Returns the runner key which is only shown once.",
+        "description": "➕ Bencher Plus: Create a new runner on the server. The user must be an admin to use this endpoint. A user session needs a sign-in within the last 10 minutes. Returns the runner key which is only shown once.",
         "operationId": "runners_post",
         "requestBody": {
           "content": {
@@ -9023,7 +9025,7 @@
           "runners"
         ],
         "summary": "Rotate runner key",
-        "description": "➕ Bencher Plus: Generate a new key for a runner, invalidating the old one. The user must be an admin to use this endpoint. Returns the new key which is only shown once.",
+        "description": "➕ Bencher Plus: Generate a new key for a runner, invalidating the old one. The user must be an admin to use this endpoint. A user session needs a sign-in within the last 10 minutes. Returns the new key which is only shown once.",
         "operationId": "runner_key_post",
         "parameters": [
           {

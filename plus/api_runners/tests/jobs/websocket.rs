@@ -1823,6 +1823,119 @@ async fn channel_key_rotation_invalidates_old_key() {
     ws.close(None).await.expect("Failed to close WebSocket");
 }
 
+/// A channel claims nothing once its runner's key is rotated: at its next Ready it closes, and
+/// the job waits for a channel opened with the current key.
+#[tokio::test]
+async fn channel_claims_nothing_once_its_key_rotates() {
+    channel_claims_nothing_after(Revoke::RotateKey).await;
+}
+
+/// A channel claims nothing once its runner is archived: at its next Ready it closes, and the
+/// job waits.
+#[tokio::test]
+async fn channel_claims_nothing_once_its_runner_is_archived() {
+    channel_claims_nothing_after(Revoke::Archive).await;
+}
+
+/// What an admin does to a runner's open channel.
+#[derive(Clone, Copy)]
+enum Revoke {
+    RotateKey,
+    Archive,
+}
+
+impl Revoke {
+    /// Do it as `admin`, with their user API key: the runner's new key, if it gets one.
+    #[expect(clippy::expect_used, reason = "test helper")]
+    async fn apply(
+        self,
+        server: &TestServer,
+        admin: &TestUser,
+        runner: RunnerUuid,
+    ) -> Option<JsonRunnerKey> {
+        let request = match self {
+            Self::RotateKey => server
+                .client
+                .post(server.api_url(&format!("/v0/runners/{runner}/key"))),
+            Self::Archive => server
+                .client
+                .patch(server.api_url(&format!("/v0/runners/{runner}")))
+                .json(&serde_json::json!({"archived": true})),
+        };
+        let resp = request
+            .header(
+                bencher_json::AUTHORIZATION,
+                bencher_json::bearer_header(&admin.token),
+            )
+            .send()
+            .await
+            .expect("Request failed");
+        assert!(resp.status().is_success(), "{}", resp.status());
+        match self {
+            Self::RotateKey => Some(resp.json().await.expect("Failed to parse response")),
+            Self::Archive => None,
+        }
+    }
+}
+
+async fn channel_claims_nothing_after(revoke: Revoke) {
+    let server = TestServer::new().await;
+    let admin = server.signup("Admin", "ws-revoke@example.com").await;
+    let org = server.create_org(&admin, "Ws revoke").await;
+    let project = server.create_project(&admin, &org, "Ws revoke proj").await;
+    let runner = create_runner(&server, &admin.token, "Runner revoke").await;
+    let (_, spec_id) = insert_test_spec(&server);
+    associate_runner_spec(&server, get_runner_id(&server, runner.uuid), spec_id);
+
+    let mut ws = connect_channel(&server, runner.uuid, runner.key.as_ref()).await;
+    send_msg(&mut ws, &ready_for_a_second()).await;
+    let idle = recv_msg(&mut ws).await;
+    assert!(matches!(idle, ServerMessage::NoJob), "{idle:?}");
+
+    let rotated = revoke.apply(&server, &admin, runner.uuid).await;
+    let project_id = get_project_id(&server, project.slug.as_ref());
+    let report_id = create_test_report(&server, project_id);
+    let job_uuid = insert_test_job(&server, report_id, spec_id);
+
+    send_msg(&mut ws, &ready_for_a_second()).await;
+    assert_closed_for_policy(&mut ws).await;
+    assert_eq!(
+        get_job_status(&server, job_uuid),
+        JobStatus::Pending,
+        "The job waits for a runner"
+    );
+
+    if let Some(rotated) = rotated {
+        let mut ws = connect_channel(&server, runner.uuid, rotated.key.as_ref()).await;
+        send_msg(&mut ws, &ready_for_a_second()).await;
+        let claimed = recv_msg(&mut ws).await;
+        assert!(
+            matches!(&claimed, ServerMessage::Job(job) if job.uuid == job_uuid),
+            "{claimed:?}"
+        );
+    }
+}
+
+/// A Ready that polls for a second.
+#[expect(clippy::expect_used, reason = "test helper")]
+fn ready_for_a_second() -> RunnerMessage {
+    RunnerMessage::Ready(JsonReady::new(
+        Some(PollTimeout::try_from(1).expect("Invalid poll timeout")),
+        Some(runner_metadata()),
+    ))
+}
+
+/// The channel's next message closes it as a policy refusal, within 10 seconds.
+#[expect(clippy::panic, reason = "test helper")]
+async fn assert_closed_for_policy(ws: &mut WsStream) {
+    match tokio::time::timeout(std::time::Duration::from_secs(10), ws.next()).await {
+        Ok(Some(Ok(Message::Close(Some(frame))))) => {
+            assert_eq!(frame.code, CloseCode::Policy, "{frame:?}");
+        },
+        other => panic!("Expected the channel to close, got: {other:?}"),
+    }
+}
+
 // =============================================================================
 // Bug Fix 1: handle_running returns Cancel on concurrent cancellation
 // =============================================================================

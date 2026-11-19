@@ -187,3 +187,27 @@ test("a server report leaves out the consent request", () => {
 		CONSENT_REQUEST,
 	);
 });
+
+const DOOR_URL = `https://bencher.dev/auth/login?authorization=${CONSENT_REQUEST}`;
+
+// Kills a report of the door that keeps the consent request a sign in carries
+// to it, in what the browser's filters send or the server's SDK collects.
+test("a report of the door leaves out the consent request it carries", () => {
+	const report = {
+		transaction: `GET ${DOOR_URL}`,
+		request: {
+			url: DOOR_URL,
+			query_string: `authorization=${CONSENT_REQUEST}`,
+		},
+		breadcrumbs: [{ category: "navigation", data: { to: DOOR_URL } }],
+	};
+	expect(JSON.stringify(scrubUrls(report))).not.toContain(CONSENT_REQUEST);
+	const client = {
+		getDataCollectionOptions: () => dataCollection,
+	} as unknown as Parameters<typeof filterCollectedUrl>[1];
+	const collected = filterCollectedUrl(DOOR_URL, client) ?? "";
+	expect(collected).toMatch(
+		/^https:\/\/bencher\.dev\/auth\/login\?authorization=/,
+	);
+	expect(collected).not.toContain(CONSENT_REQUEST);
+});

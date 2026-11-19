@@ -142,3 +142,24 @@ test("per-IP limits see the reader's address, and only through a relay with the 
 	expect(unshared.status()).toBe(200);
 	expect(await remoteIp(unshared.headers()["x-request-id"])).toBeUndefined();
 });
+
+// Kills a relay that serves the API's paths outside `/v0/` on the console's
+// origin: its discovery documents, its OAuth pages, Bencher MCP, and the
+// registry, each answered by the console with no request to the API.
+test("serves the API's /v0/ paths alone", async ({ request }) => {
+	for (const path of [
+		"/api/.well-known/oauth-authorization-server",
+		"/api/oauth/authorize",
+		"/api/mcp",
+		"/api/v2/",
+		"/api/v0",
+		"/api/v0x/server/version",
+	]) {
+		const answer = await request.get(path, { maxRedirects: 0 });
+		expect(answer.status(), path).toBe(404);
+		expect(answer.headers()["x-request-id"], path).toBeUndefined();
+	}
+	const version = await request.get("/api/v0/server/version");
+	expect(version.status()).toBe(200);
+	expect(version.headers()["x-request-id"]).toBeDefined();
+});

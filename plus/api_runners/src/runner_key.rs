@@ -1,7 +1,7 @@
 use bencher_json::{RunnerKey, RunnerKeyHash, RunnerResourceId};
 use bencher_schema::{
     auth_conn,
-    context::ApiContext,
+    context::{ApiContext, DbConnection},
     error::{invalid_credential, resource_not_found_err, unauthorized_error},
     model::runner::{QueryRunner, RunnerId},
     schema,
@@ -14,6 +14,8 @@ use dropshot::{HttpError, RequestContext};
 pub struct RunnerAuth {
     pub runner_id: RunnerId,
     pub runner_uuid: bencher_json::RunnerUuid,
+    /// The hash of the key the runner presented.
+    pub key_hash: RunnerKeyHash,
 }
 
 impl RunnerAuth {
@@ -70,6 +72,18 @@ impl RunnerAuth {
         Ok(Self {
             runner_id: runner.id,
             runner_uuid: runner.uuid,
+            key_hash,
         })
+    }
+
+    /// Whether the runner still holds the key it presented and is not archived.
+    pub fn is_current(&self, conn: &mut DbConnection) -> diesel::QueryResult<bool> {
+        diesel::select(diesel::dsl::exists(
+            schema::runner::table
+                .filter(schema::runner::id.eq(self.runner_id))
+                .filter(schema::runner::key_hash.eq(&self.key_hash))
+                .filter(schema::runner::archived.is_null()),
+        ))
+        .get_result(conn)
     }
 }

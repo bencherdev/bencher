@@ -15,7 +15,15 @@ export const dataCollection: NonNullable<BrowserOptions["dataCollection"]> = {
 	httpHeaders: { request: { deny: PII }, response: { deny: PII } },
 	httpBodies: [],
 	urlQueryParams: {
-		deny: [...PII, "code", "state", "token", "invite", "request"],
+		deny: [
+			...PII,
+			"code",
+			"state",
+			"token",
+			"invite",
+			"request",
+			"authorization",
+		],
 	},
 	graphQL: { document: true, variables: true },
 	genAI: { inputs: false, outputs: false },
@@ -26,10 +34,11 @@ export const dataCollection: NonNullable<BrowserOptions["dataCollection"]> = {
 };
 
 // The values a sign-in's, a provider's, or a consent request's URL carries,
-// in a URL or a bare query, and a sign-in link's fragment. Here, so only the
-// SDK's chunk loads them.
+// the consent request a sign-in carries to it included, in a URL or a bare
+// query, and a sign-in link's fragment. Here, so only the SDK's chunk loads
+// them.
 const QUERY_SECRET =
-	/((?:^|[?&])(?:code|state|token|invite|request)=)[^&#\s"'<>]+/gi;
+	/((?:^|[?&])(?:code|state|token|invite|request|authorization)=)[^&#\s"'<>]+/gi;
 const FRAGMENT = /(\/[^\s"'<>#]*)#[^\s"'<>]+/g;
 
 /** Filter codes, states, tokens, invites, consent requests, and fragments out of every URL in a value, at any depth. */
@@ -70,6 +79,8 @@ export const browserOptions = (
 	const replay = replays(pathname, noReplay);
 	return {
 		tracesSampleRate: 1,
+		// One transaction a page, so `beforeSendTransaction` scrubs every span: streamed spans skip it.
+		traceLifecycle: "static",
 		integrations: [
 			integrations.tracing(),
 			...(replay ? [integrations.replay()] : []),

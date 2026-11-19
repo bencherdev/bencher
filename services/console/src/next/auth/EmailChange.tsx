@@ -27,7 +27,7 @@ export const emailChangeEffects = (
 	leave,
 });
 
-type Ended = "expired" | "used" | "taken" | "locked";
+type Ended = "expired" | "used" | "taken" | "locked" | "elsewhere";
 
 type State =
 	| { kind: "reading" }
@@ -40,6 +40,7 @@ const BANNERS: Record<Ended, string> = {
 	used: "Already used",
 	taken: "Address taken",
 	locked: "This account is locked",
+	elsewhere: "Open this link in the browser where you asked for the change.",
 };
 
 /** Why the API refused the link, if it said. */
@@ -51,6 +52,8 @@ const endedBy = ({ status, code }: Refused): Ended | undefined => {
 			return "used";
 		case "locked":
 			return "locked";
+		case "email_change_elsewhere":
+			return "elsewhere";
 		default:
 			return status === 409 ? "taken" : undefined;
 	}
@@ -77,7 +80,8 @@ const EmailChange = (props: {
 		return now.kind === "expired" ||
 			now.kind === "used" ||
 			now.kind === "taken" ||
-			now.kind === "locked"
+			now.kind === "locked" ||
+			now.kind === "elsewhere"
 			? now
 			: undefined;
 	};
