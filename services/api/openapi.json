@@ -13069,6 +13069,7 @@
           "python_asv_json",
           "python_asv_text",
           "python_pytest",
+          "python_pyperf",
           "ruby",
           "ruby_benchmark",
           "ruby_benchmark_ips",
