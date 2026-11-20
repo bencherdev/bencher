@@ -7535,7 +7535,7 @@
           {
             "in": "query",
             "name": "adapter",
-            "description": "Filter by adapter, as reports list it: a language adapter such as `rust` is listed as `magic`.",
+            "description": "Filter by adapter, as reports list it.",
             "schema": {
               "$ref": "#/components/schemas/Adapter"
             }
