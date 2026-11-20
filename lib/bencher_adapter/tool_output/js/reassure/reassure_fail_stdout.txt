@@ -1,0 +1,55 @@
+
+❇️  Running performance tests:
+ - Current: (unknown) - 2026-11-15 07:00:18Z
+
+FAIL ./Fail.perf-test.js
+  ✓ passes (3 ms)
+  ✕ throws (1 ms)
+  ✕ slow (206 ms)
+
+  ● throws
+
+    boom
+
+      1 | const { measureFunction } = require('reassure');
+      2 | test('passes', async () => { await measureFunction(() => 1 + 1, { runs: 3 }); });
+    > 3 | test('throws', async () => { await measureFunction(() => { throw new Error('boom'); }, { runs: 3 }); });
+        |                                                                  ^
+      4 | test('slow', async () => { await measureFunction(() => { const t = Date.now(); while (Date.now() - t < 50) {} }, { runs: 3 }); }, 100);
+      5 |
+
+      at measureFunction.runs (Fail.perf-test.js:3:66)
+      at fn (node_modules/@callstack/reassure-measure/src/measure-function.tsx:37:5)
+      at measureFunction (node_modules/@callstack/reassure-measure/src/measure-function.tsx:16:17)
+      at Object.<anonymous> (Fail.perf-test.js:3:30)
+
+  ● slow
+
+    thrown: "Exceeded timeout of 100 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+      at _getError (node_modules/jest-circus/build/jestAdapterInit.js:1985:12)
+          at Array.map (<anonymous>)
+
+    Cause:
+        thrown: "Exceeded timeout of 100 ms for a test.
+        Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+          2 | test('passes', async () => { await measureFunction(() => 1 + 1, { runs: 3 }); });
+          3 | test('throws', async () => { await measureFunction(() => { throw new Error('boom'); }, { runs: 3 }); });
+        > 4 | test('slow', async () => { await measureFunction(() => { const t = Date.now(); while (Date.now() - t < 50) {} }, { runs: 3 }); }, 100);
+            | ^
+          5 |
+
+          at Object.test (Fail.perf-test.js:4:1)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 1 passed, 3 total
+Snapshots:   0 total
+Time:        0.745 s
+Ran all test suites.
+
+❌  Test runner (/tmp/bench/fail/node_modules/jest/bin/jest.js) exited with error code 1
+(node:2197) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+exit 1

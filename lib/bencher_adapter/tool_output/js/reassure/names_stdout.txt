@@ -1,0 +1,20 @@
+
+❇️  Running performance tests:
+ - Current: (unknown) - 2026-11-19 20:40:46Z
+
+PASS names/A.perf-test.js
+PASS names/B.perf-test.js
+
+Test Suites: 2 passed, 2 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.806 s
+Ran all test suites.
+
+✅  Written Current performance measurements to .reassure/current.perf
+🔗 /tmp/bench/.reassure/current.perf
+
+Baseline performance file does not exist, run 'reassure --baseline' on your baseline code branch to create it.
+
+(node:2050046) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)

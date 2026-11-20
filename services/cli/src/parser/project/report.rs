@@ -235,6 +235,8 @@ pub enum CliReportAdapter {
     RustGungraun,
     /// ❯_ Shell Hyperfine
     ShellHyperfine,
+    /// 🐦 Swift package-benchmark
+    SwiftBenchmark,
 }
 
 /// Suggested Central Tendency (Average)

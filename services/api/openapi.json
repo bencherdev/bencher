@@ -13077,7 +13077,10 @@
           "shell_hyperfine_v1",
           "shell_hyperfine_v2",
           "dart",
-          "dart_benchmark_harness"
+          "dart_benchmark_harness",
+          "swift_benchmark",
+          "swift_benchmark_influx",
+          "swift_benchmark_text"
         ]
       },
       "AlertStatus": {

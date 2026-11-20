@@ -1,0 +1,54 @@
+
+❇️  Running performance tests:
+ - Current: (unknown) - 2026-11-15 05:13:15Z
+
+PASS ./List.perf-test.js
+  ✓ List 100 (392 ms)
+  ✓ List with scenario (229 ms)
+  ✓ fib function (2 ms)
+  ✓ async function (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        1.266 s, estimated 2 s
+Ran all test suites.
+
+✅  Written Current performance measurements to .reassure/current.perf
+🔗 /tmp/bench/reassure/.reassure/current.perf
+
+❇️  Performance comparison results:
+ - Current: (unknown) - 2026-11-15 05:13:15Z
+ - Baseline: (unknown) - 2026-11-15 05:13:12Z
+
+➡️  Significant changes to duration
+ - async function [async function]: 0.0 ms → 0.0 ms (+0.0 ms, +40.6%) 🔴🔴 | 1 → 1  | stability 15.5% → 20.3%
+
+➡️  Meaningless changes to duration
+ - fib function [function]: 0.2 ms → 0.2 ms (-0.0 ms, -11.6%)  | 1 → 1  | stability 28.8% → 5.6%
+ - List 100 [render]: 2.3 ms → 2.3 ms (+0.0 ms, +1.4%)  | 1 → 1  | stability 18.6% → 8.5%
+ - List with scenario [render]: 1.8 ms → 1.8 ms (-0.0 ms, -1.8%)  | 3 → 3  | stability 9.7% → 8.6%
+
+➡️  Render count changes
+ - (none)
+
+➡️  Render issues
+ - (none)
+
+➡️  Added scenarios
+ - (none)
+
+➡️  Removed scenarios
+ - (none)
+
+➡️  Stability
+ - Weighted Average: 15.2% => 8.5%
+
+(node:27670) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✅  Written JSON output file .reassure/output.json
+🔗 /tmp/bench/reassure/.reassure/output.json
+
+✅  Written output markdown output file .reassure/output.md
+🔗 /tmp/bench/reassure/.reassure/output.md
+

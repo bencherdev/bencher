@@ -2618,6 +2618,82 @@ async fn reports_post_creates_the_dart_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the Swift package-benchmark leaves create their new
+// built-in measures in their units, and a custom metric's measure in the harness's count unit
+//
+// The harness measures running threads and context switches only on macOS, so a Linux capture's
+// peak threads and retains are renamed to stand in for them.
+//
+// Kills: a new built-in measure missing from the server's built-ins, which creates it in the
+// generic unit, and a custom metric's measure created without its unit.
+#[tokio::test]
+async fn reports_post_creates_the_swift_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "swift").await;
+    let macos = SWIFT_INFLUX
+        .replace(",Threads(peak),", ",Threads(running),")
+        .replace(",Retains,", ",Contextswitches,");
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report(
+            "swift_benchmark",
+            &[SWIFT_INFLUX, SWIFT_INFLUX_JEMALLOC, &macos],
+            Some(1),
+        ),
+    )
+    .await;
+    let project_id = get_project_id(&server, &project_slug);
+    let expected = [
+        (
+            "allocated-resident-memory",
+            "Allocated Resident Memory",
+            "bytes (B)",
+        ),
+        ("cachehits", "CacheHits", "#"),
+        ("context-switches", "Context Switches", "switches"),
+        ("large-allocations", "Large Allocations", "allocations"),
+        (
+            "leaked-resident-memory",
+            "Leaked Resident Memory",
+            "bytes (B)",
+        ),
+        ("logical-io", "Logical I/O", "bytes (B)"),
+        ("object-allocations", "Object Allocations", "objects"),
+        ("peak-memory-delta", "Peak Memory Delta", "bytes (B)"),
+        ("peak-threads", "Peak Threads", "threads"),
+        ("peak-virtual-memory", "Peak Virtual Memory", "bytes (B)"),
+        ("physical-io", "Physical I/O", "bytes (B)"),
+        ("releases", "Releases", "releases"),
+        ("retains", "Retains", "retains"),
+        ("running-threads", "Running Threads", "threads"),
+        ("small-allocations", "Small Allocations", "allocations"),
+        ("unfreed-allocations", "Unfreed Allocations", "allocations"),
+        ("unfreed-bytes", "Unfreed Bytes", "bytes (B)"),
+        (
+            "unreleased-references",
+            "Unreleased References",
+            "references",
+        ),
+    ];
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any(expected.map(|(slug, _, _)| slug)))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        expected.map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
 // POST /v0/projects/{project}/reports - the Divan leaf creates its new built-in measures in their
 // units
 //
@@ -2868,6 +2944,10 @@ const MITATA_COUNTERS: &str =
 const HYPERFINE_COUNTERS: &str =
     include_str!("../../bencher_adapter/tool_output/shell/hyperfine/v2_counters.json");
 const ASV_PARAMS: &str = include_str!("../../bencher_adapter/tool_output/python/asv/params.txt");
+const SWIFT_INFLUX: &str =
+    include_str!("../../bencher_adapter/tool_output/swift/benchmark/influx.csv");
+const SWIFT_INFLUX_JEMALLOC: &str =
+    include_str!("../../bencher_adapter/tool_output/swift/benchmark/influx_swift62_jemalloc.csv");
 const DART_EMITTERS: &str =
     include_str!("../../bencher_adapter/tool_output/dart/benchmark_harness/emitters.txt");
 const JMH_LONG_PARAM_ONLY: &str =

@@ -1,0 +1,79 @@
+[
+  {
+    "extra" : "80th percentile: 925\n95th percentile: 906",
+    "unit" : "#",
+    "value" : 901,
+    "name" : "Custom metrics - CacheHits"
+  },
+  {
+    "unit" : "#",
+    "value" : 635,
+    "name" : "Fixed ms - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 13\n95th percentile: 8",
+    "unit" : "M",
+    "value" : 7,
+    "name" : "Insert (count: 1, kind: array) - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 9011\n95th percentile: 5849",
+    "unit" : "K",
+    "value" : 5001,
+    "name" : "Insert (count: 1, kind: set) - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 367\n95th percentile: 257",
+    "unit" : "K",
+    "value" : 230,
+    "name" : "Insert (count: 4096, kind: array) - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 11\n95th percentile: 10",
+    "unit" : "K",
+    "value" : 8,
+    "name" : "Insert (count: 4096, kind: set) - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 3559\n95th percentile: 3437",
+    "unit" : "K",
+    "value" : 3437,
+    "name" : "Insert (count: 64, kind: array) - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 653\n95th percentile: 465",
+    "unit" : "K",
+    "value" : 438,
+    "name" : "Insert (count: 64, kind: set) - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 14\n95th percentile: 11",
+    "unit" : "M",
+    "value" : 2,
+    "name" : "Name, with \"quotes\" - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 117\n95th percentile: 72",
+    "unit" : "K",
+    "value" : 61,
+    "name" : "Scaled kilo - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 1446\n95th percentile: 1265",
+    "unit" : "K",
+    "value" : 925,
+    "name" : "Sum array - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 6623\n95th percentile: 6214",
+    "unit" : "K",
+    "value" : 4526,
+    "name" : "All metrics - Throughput (# \/ s)"
+  },
+  {
+    "extra" : "80th percentile: 1407\n95th percentile: 1162",
+    "unit" : "K",
+    "value" : 1019,
+    "name" : "Sum array - Throughput (# \/ s)"
+  }
+]

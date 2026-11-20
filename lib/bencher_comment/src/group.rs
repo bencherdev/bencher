@@ -464,6 +464,9 @@ fn adapter_docs(adapter: Adapter) -> (&'static str, &'static str) {
             ("Shell Hyperfine", "_%EF%B8%8F-shell-hyperfine")
         },
         Adapter::DartBenchmarkHarness => ("Dart benchmark_harness", "-dart-benchmark_harness"),
+        Adapter::SwiftBenchmark | Adapter::SwiftBenchmarkInflux | Adapter::SwiftBenchmarkText => {
+            ("Swift package-benchmark", "-swift-package-benchmark")
+        },
     }
 }
 

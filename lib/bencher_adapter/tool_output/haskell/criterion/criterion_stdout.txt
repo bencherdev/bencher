@@ -1,0 +1,34 @@
+benchmarking fib/10
+time                 56.81 ns   (54.58 ns .. 59.44 ns)
+                     0.992 R²   (0.989 R² .. 0.997 R²)
+mean                 58.51 ns   (56.44 ns .. 59.75 ns)
+std dev              4.069 ns   (2.834 ns .. 5.732 ns)
+variance introduced by outliers: 82% (severely inflated)
+
+benchmarking fib/20
+time                 122.9 ns   (120.9 ns .. 124.9 ns)
+                     0.999 R²   (0.998 R² .. 1.000 R²)
+mean                 124.1 ns   (122.5 ns .. 125.0 ns)
+std dev              3.101 ns   (1.936 ns .. 5.097 ns)
+variance introduced by outliers: 35% (moderately inflated)
+
+benchmarking fib/with space
+time                 186.2 ns   (181.1 ns .. 192.5 ns)
+                     0.992 R²   (0.988 R² .. 0.995 R²)
+mean                 192.9 ns   (186.8 ns .. 199.6 ns)
+std dev              16.57 ns   (14.12 ns .. 20.12 ns)
+variance introduced by outliers: 86% (severely inflated)
+
+benchmarking list/sum/1000
+time                 882.5 ns   (879.0 ns .. 886.2 ns)
+                     1.000 R²   (1.000 R² .. 1.000 R²)
+mean                 883.9 ns   (880.6 ns .. 887.8 ns)
+std dev              8.833 ns   (7.184 ns .. 10.77 ns)
+
+benchmarking list/replicate
+time                 257.7 ns   (251.0 ns .. 264.3 ns)
+                     0.994 R²   (0.991 R² .. 0.997 R²)
+mean                 262.5 ns   (254.7 ns .. 273.0 ns)
+std dev              21.08 ns   (16.74 ns .. 25.69 ns)
+variance introduced by outliers: 84% (severely inflated)
+

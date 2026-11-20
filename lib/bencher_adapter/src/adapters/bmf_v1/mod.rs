@@ -39,6 +39,10 @@ use crate::{
             shell::hyperfine::{
                 AdapterShellHyperfine1, AdapterShellHyperfine2, AdapterShellHyperfineV1,
             },
+            swift::{
+                benchmark::AdapterSwiftBenchmark, benchmark_influx::AdapterSwiftBenchmarkInflux,
+                benchmark_text::AdapterSwiftBenchmarkText,
+            },
         },
         json::v1::AdapterJsonV1,
     },
@@ -61,6 +65,7 @@ pub mod ruby;
 mod runs;
 pub mod rust;
 pub mod shell;
+pub mod swift;
 
 use magic::AdapterMagicV1;
 
@@ -119,6 +124,9 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::ShellHyperfine => AdapterShellHyperfineV1::parse(input, settings),
         Adapter::ShellHyperfineV1 => AdapterShellHyperfine1::parse(input, settings),
         Adapter::ShellHyperfineV2 => AdapterShellHyperfine2::parse(input, settings),
+        Adapter::SwiftBenchmark => AdapterSwiftBenchmark::parse(input, settings),
+        Adapter::SwiftBenchmarkInflux => AdapterSwiftBenchmarkInflux::parse(input, settings),
+        Adapter::SwiftBenchmarkText => AdapterSwiftBenchmarkText::parse(input, settings),
         Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
 }
@@ -139,7 +147,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 55] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -192,6 +200,9 @@ mod test_bmf_v1 {
         Adapter::ShellHyperfineV2,
         Adapter::Dart,
         Adapter::DartBenchmarkHarness,
+        Adapter::SwiftBenchmark,
+        Adapter::SwiftBenchmarkInflux,
+        Adapter::SwiftBenchmarkText,
     ];
 
     const LANGUAGES: [Adapter; 10] = [

@@ -1,0 +1,19 @@
+fib_10
+======
+
+Mean +- std dev: [single] 149 ns +- 11 ns -> [rigorous] 143 ns +- 7 ns: 1.04x faster
+ERROR when testing if values are significant
+
+fib 20
+======
+
+Mean +- std dev: [single] 284 ns +- 18 ns -> [rigorous] 297 ns +- 28 ns: 1.04x slower
+ERROR when testing if values are significant
+
+sort_list
+=========
+
+Mean +- std dev: [single] 2.57 us +- 0.06 us -> [rigorous] 2.45 us +- 0.22 us: 1.05x faster
+ERROR when testing if values are significant
+
+Geometric mean: 1.01x faster

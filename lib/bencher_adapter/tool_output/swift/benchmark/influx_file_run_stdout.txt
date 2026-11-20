@@ -1,0 +1,8 @@
+[33mWarning: running with the Swift runtime interposer on Linux to avoid the Swift 6.3 runtime hook crash. See https://github.com/ordo-one/benchmark/issues/349[0m
+intentional failure for the fixture
+
+Warning: benchmark `All metrics` requests metric(s) Memory leaked (resident), Memory (allocated resident) that the active malloc backend does not produce; they will be omitted.
+Writing to /tmp/bench/out/direct/Current_run.influx.csv
+The following benchmarks failed: 
+
+Alpha/Failing

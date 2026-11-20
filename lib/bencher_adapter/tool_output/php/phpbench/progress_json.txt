@@ -1,0 +1,11 @@
+{"benchmark":"HashBench","subject":"benchMd5","variant":"","iteration":0,"time_net":97,"time_revs":1000,"time_avg":0.097,"mem_peak":661944,"mem_real":2097152,"mem_final":502416}
+{"benchmark":"HashBench","subject":"benchMd5","variant":"","iteration":1,"time_net":94,"time_revs":1000,"time_avg":0.094,"mem_peak":661944,"mem_real":2097152,"mem_final":502416}
+{"benchmark":"HashBench","subject":"benchMd5","variant":"","iteration":2,"time_net":90,"time_revs":1000,"time_avg":0.09,"mem_peak":661944,"mem_real":2097152,"mem_final":502416}
+{"benchmark":"HashBench","subject":"benchMd5","variant":"","iteration":3,"time_net":102,"time_revs":1000,"time_avg":0.102,"mem_peak":661944,"mem_real":2097152,"mem_final":502416}
+{"benchmark":"HashBench","subject":"benchMd5","variant":"","iteration":4,"time_net":105,"time_revs":1000,"time_avg":0.105,"mem_peak":661944,"mem_real":2097152,"mem_final":502416}
++-----------+----------+-----+------+-----+-----------+---------+--------+
+| benchmark | subject  | set | revs | its | mem_peak  | mode    | rstdev |
++-----------+----------+-----+------+-----+-----------+---------+--------+
+| HashBench | benchMd5 |     | 1000 | 5   | 661.944kb | 0.096μs | ±5.52% |
++-----------+----------+-----+------+-----+-----------+---------+--------+
+

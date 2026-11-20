@@ -82,6 +82,9 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"shell_hyperfine",
 	"shell_hyperfine_v1",
 	"shell_hyperfine_v2",
+	"swift_benchmark",
+	"swift_benchmark_influx",
+	"swift_benchmark_text",
 ];
 
 const LISTED = new Set<string>(ADAPTERS);

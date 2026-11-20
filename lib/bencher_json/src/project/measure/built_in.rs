@@ -205,6 +205,15 @@ pub mod mitata {
     );
 }
 
+pub mod systems {
+    create_measure!(
+        ContextSwitches,
+        "Context Switches",
+        "context-switches",
+        "switches"
+    );
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");
@@ -402,5 +411,76 @@ pub mod gungraun {
         "DRD Suppressed Contexts",
         "drd-suppressed-contexts",
         "suppressed contexts"
+    );
+}
+
+pub mod swift {
+    use bencher_valid::BYTES;
+
+    create_measure!(
+        PeakMemoryDelta,
+        "Peak Memory Delta",
+        "peak-memory-delta",
+        BYTES
+    );
+    create_measure!(
+        PeakVirtualMemory,
+        "Peak Virtual Memory",
+        "peak-virtual-memory",
+        BYTES
+    );
+    create_measure!(
+        SmallAllocations,
+        "Small Allocations",
+        "small-allocations",
+        "allocations"
+    );
+    create_measure!(
+        LargeAllocations,
+        "Large Allocations",
+        "large-allocations",
+        "allocations"
+    );
+    create_measure!(
+        UnfreedAllocations,
+        "Unfreed Allocations",
+        "unfreed-allocations",
+        "allocations"
+    );
+    create_measure!(UnfreedBytes, "Unfreed Bytes", "unfreed-bytes", BYTES);
+    create_measure!(
+        LeakedResidentMemory,
+        "Leaked Resident Memory",
+        "leaked-resident-memory",
+        BYTES
+    );
+    create_measure!(
+        AllocatedResidentMemory,
+        "Allocated Resident Memory",
+        "allocated-resident-memory",
+        BYTES
+    );
+    create_measure!(LogicalIo, "Logical I/O", "logical-io", BYTES);
+    create_measure!(PhysicalIo, "Physical I/O", "physical-io", BYTES);
+    create_measure!(PeakThreads, "Peak Threads", "peak-threads", "threads");
+    create_measure!(
+        RunningThreads,
+        "Running Threads",
+        "running-threads",
+        "threads"
+    );
+    create_measure!(
+        ObjectAllocations,
+        "Object Allocations",
+        "object-allocations",
+        "objects"
+    );
+    create_measure!(Retains, "Retains", "retains", "retains");
+    create_measure!(Releases, "Releases", "releases", "releases");
+    create_measure!(
+        UnreleasedReferences,
+        "Unreleased References",
+        "unreleased-references",
+        "references"
     );
 }

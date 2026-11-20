@@ -1,0 +1,13 @@
+benchmarking fib/10
+time                 53.93 ns   (52.94 ns .. 54.97 ns)
+                     0.997 R²   (0.996 R² .. 0.999 R²)
+mean                 54.86 ns   (53.57 ns .. 56.23 ns)
+std dev              2.907 ns   (2.099 ns .. 3.802 ns)
+allocated:           1.000 R²   (1.000 R² .. 1.000 R²)
+  iters              480.000    (479.999 .. 480.001)
+  y                  3069.710   (2864.774 .. 3292.259)
+cpuTime:             0.997 R²   (0.996 R² .. 0.999 R²)
+  iters              5.399e-8   (5.309e-8 .. 5.503e-8)
+  y                  -6.133e-5  (-1.025e-4 .. -1.991e-5)
+variance introduced by outliers: 72% (severely inflated)
+
