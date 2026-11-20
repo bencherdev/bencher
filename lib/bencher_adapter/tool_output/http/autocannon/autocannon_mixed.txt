@@ -1,0 +1,26 @@
+Running 3s test @ http://localhost:8080/mixed
+10 connections
+
+(node:19947) TimeoutNegativeWarning: -1 is a negative number.
+Timeout duration was set to 1.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+┌─────────┬──────┬──────┬───────┬──────┬─────────┬─────────┬──────┐
+│ Stat    │ 2.5% │ 50%  │ 97.5% │ 99%  │ Avg     │ Stdev   │ Max  │
+├─────────┼──────┼──────┼───────┼──────┼─────────┼─────────┼──────┤
+│ Latency │ 0 ms │ 0 ms │ 1 ms  │ 5 ms │ 0.12 ms │ 0.61 ms │ 5 ms │
+└─────────┴──────┴──────┴───────┴──────┴─────────┴─────────┴──────┘
+┌───────────┬─────────┬─────────┬─────────┬─────────┬─────────┬────────┬─────────┐
+│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg     │ Stdev  │ Min     │
+├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼────────┼─────────┤
+│ Req/Sec   │ 148     │ 148     │ 203     │ 217     │ 189.34  │ 29.79  │ 148     │
+├───────────┼─────────┼─────────┼─────────┼─────────┼─────────┼────────┼─────────┤
+│ Bytes/Sec │ 16.5 kB │ 16.5 kB │ 22.6 kB │ 24.1 kB │ 21.1 kB │ 3.3 kB │ 16.5 kB │
+└───────────┴─────────┴─────────┴─────────┴─────────┴─────────┴────────┴─────────┘
+
+Req/Bytes counts sampled once per second.
+# of samples: 3
+
+432 2xx responses, 136 non 2xx responses
+632 requests in 3.01s, 63.3 kB read
+20 errors (20 timeouts)
