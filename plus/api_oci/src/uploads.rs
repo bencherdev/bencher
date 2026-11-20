@@ -17,8 +17,9 @@
 //! 2. Upload chunks: `PATCH /v2/{name}/blobs/uploads/{session_id}` (repeated)
 //! 3. Complete: `PUT /v2/{name}/blobs/uploads/{session_id}?digest=sha256:...`
 //!
-//! Each chunk is stored on upload, so memory usage is bounded by the chunk size
-//! rather than the total blob size. Clients can use any chunk size they prefer.
+//! Each request body streams into a multipart upload in parts as it arrives, so
+//! memory is bounded by the server's part buffers rather than the blob size, and
+//! each request commits once, at its end. Clients can use any chunk size they prefer.
 //!
 //! # Authentication
 //!
@@ -36,12 +37,14 @@ use crate::error::storage_error;
 use crate::response::{DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers};
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Patch, Put};
 use bencher_json::ProjectResourceId;
-use bencher_oci_storage::{Digest, PhaseOutcome, UploadId, UploadPhase, UploadPhaseTimer};
+use bencher_oci_storage::{
+    Digest, OciStorageError, PhaseOutcome, UploadId, UploadPhase, UploadPhaseTimer,
+    UploadWriteError,
+};
 use bencher_schema::context::ApiContext;
 use dropshot::{
     Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, StreamingBody, endpoint,
 };
-use futures::TryStreamExt as _;
 use http::Response;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -88,55 +91,6 @@ fn format_upload_range(size: u64) -> String {
     }
 }
 
-/// Stream request body chunks to OCI storage.
-///
-/// Buffers small network frames (typically 8-64 KB) into `chunk_size` batches
-/// before storing. Without this, each frame becomes a separate object, creating
-/// thousands of objects per layer and making both upload and completion slow.
-///
-/// Returns the cumulative upload session size (not just the bytes received in
-/// this call).
-pub(crate) async fn stream_to_storage(
-    body: StreamingBody,
-    storage: &bencher_oci_storage::OciStorage,
-    upload_id: &UploadId,
-    current_size: u64,
-) -> Result<u64, UploadError> {
-    let chunk_size = storage.chunk_size();
-    let (buffer, new_size) = body
-        .into_stream()
-        .map_err(UploadError::Body)
-        .try_fold(
-            (Vec::with_capacity(chunk_size), current_size),
-            |(mut buffer, mut new_size), data| async move {
-                if data.is_empty() {
-                    return Ok((buffer, new_size));
-                }
-                buffer.extend_from_slice(&data);
-
-                if buffer.len() >= chunk_size {
-                    let chunk = std::mem::replace(&mut buffer, Vec::with_capacity(chunk_size));
-                    new_size = storage
-                        .append_upload(upload_id, chunk.into())
-                        .await
-                        .map_err(storage_error)?;
-                }
-                Ok((buffer, new_size))
-            },
-        )
-        .await?;
-
-    // Flush any remaining buffered data
-    if buffer.is_empty() {
-        Ok(new_size)
-    } else {
-        Ok(storage
-            .append_upload(upload_id, buffer.into())
-            .await
-            .map_err(storage_error)?)
-    }
-}
-
 /// A failed upload request, with a failure of its request body kept apart.
 pub(crate) enum UploadError {
     /// The request body failed part way, as it does when the client goes away.
@@ -154,6 +108,15 @@ impl From<UploadError> for HttpError {
     fn from(error: UploadError) -> Self {
         match error {
             UploadError::Body(error) | UploadError::Request(error) => error,
+        }
+    }
+}
+
+impl From<UploadWriteError<HttpError>> for UploadError {
+    fn from(error: UploadWriteError<HttpError>) -> Self {
+        match error {
+            UploadWriteError::Body(error) => Self::Body(error),
+            UploadWriteError::Storage(error) => Self::Request(storage_error(error)),
         }
     }
 }
@@ -209,17 +172,12 @@ pub async fn oci_upload_status(
     // Get storage
     let storage = context.oci_storage();
 
-    // Validate upload belongs to this repository
-    storage
-        .validate_upload_repository(&upload_id, &project_uuid)
-        .await
-        .map_err(storage_error)?;
-
-    // Get current upload size
+    // Load the upload, which must belong to this repository
     let size = storage
-        .get_upload_size(&upload_id)
+        .upload_session(&upload_id, &project_uuid)
         .await
-        .map_err(storage_error)?;
+        .map_err(storage_error)?
+        .offset();
 
     // Build 204 No Content response with Range header (OCI spec)
     let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
@@ -241,8 +199,8 @@ pub async fn oci_upload_status(
 /// Upload a chunk of data
 ///
 /// Appends a chunk of data to an in-progress upload session. This is the recommended
-/// approach for large blobs, as each chunk is stored immediately rather than buffering
-/// the entire blob in memory.
+/// approach for large blobs, as the chunk streams into storage as it arrives rather
+/// than buffering the entire blob in memory.
 ///
 /// Clients can call this endpoint multiple times to upload a blob in pieces, then
 /// call `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` to complete the upload.
@@ -293,17 +251,12 @@ async fn upload_chunk(
     // Get storage
     let storage = context.oci_storage();
 
-    // Validate upload belongs to this repository
-    storage
-        .validate_upload_repository(&upload_id, &project_uuid)
+    // Load the upload, which must belong to this repository, for its committed size
+    let session = storage
+        .upload_session(&upload_id, &project_uuid)
         .await
         .map_err(storage_error)?;
-
-    // Get current upload size for Content-Range validation
-    let current_size = storage
-        .get_upload_size(&upload_id)
-        .await
-        .map_err(storage_error)?;
+    let current_size = session.offset();
 
     // Parse Content-Range header upfront (before streaming) if present
     // Content-Range format can be:
@@ -368,33 +321,35 @@ async fn upload_chunk(
     };
 
     // Stream body to storage (storage enforces max_body_size incrementally)
-    let new_size = stream_to_storage(body, storage, &upload_id, current_size).await?;
+    let appended = storage
+        .append_upload_body(session, body.into_stream())
+        .await?;
+    let new_size = appended.offset;
 
     // Record bandwidth usage for this chunk
-    record_oci_bandwidth(context, org_uuid, new_size - current_size);
+    record_oci_bandwidth(context, org_uuid, appended.received);
 
     // Post-stream validation: verify bytes received matches Content-Range expected length.
     // Note: Data has already been appended to the upload session at this point.
     // This is intentional — the Range header in the 416 response reflects the
     // actual upload state, allowing the client to resume from the correct offset.
     // This matches spec-compliant registries (Zot, olareg) per OCI distribution-spec.
-    if let Some(expected) = expected_len {
-        let bytes_received = new_size - current_size;
-        if bytes_received != expected {
-            // Data is in the upload session but length doesn't match Content-Range
-            let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
-            let response = oci_cors_headers(
-                Response::builder()
-                    .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
-                    .header(http::header::LOCATION, location)
-                    .header(http::header::RANGE, format_upload_range(new_size))
-                    .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
-                &[http::Method::PATCH],
-            )
-            .body(Body::empty())
-            .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
-            return Ok(response);
-        }
+    // A chunk that lost the commit to another request is not in the upload, and the
+    // Range header gives the size the other request committed.
+    let length_mismatch = expected_len.is_some_and(|expected| appended.received != expected);
+    if !appended.committed || length_mismatch {
+        let location = format!("/v2/{repository_name}/blobs/uploads/{upload_id}");
+        let response = oci_cors_headers(
+            Response::builder()
+                .status(http::StatusCode::RANGE_NOT_SATISFIABLE)
+                .header(http::header::LOCATION, location)
+                .header(http::header::RANGE, format_upload_range(new_size))
+                .header(DOCKER_UPLOAD_UUID, upload_id.to_string()),
+            &[http::Method::PATCH],
+        )
+        .body(Body::empty())
+        .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
+        return Ok(response);
     }
 
     // Build 202 Accepted response
@@ -465,41 +420,37 @@ async fn upload_complete(
     // Get storage
     let storage = context.oci_storage();
 
-    // Validate upload belongs to this repository
-    storage
-        .validate_upload_repository(&upload_id, &project_uuid)
+    // Load the upload, which must belong to this repository
+    let session = storage
+        .upload_session(&upload_id, &project_uuid)
         .await
         .map_err(storage_error)?;
 
     // Stream optional final data to storage and complete with digest verification.
-    // On error, cancel the upload session to avoid orphaned state.
-    let current_size = storage
-        .get_upload_size(&upload_id)
+    // On error, cancel the upload session to avoid orphaned state: a session
+    // past its digest check is left for a retry to finish, and a session whose
+    // body stalled is left for the client to send the same request again.
+    let completed = match storage
+        .complete_upload_body(session, &expected_digest, body.into_stream())
         .await
-        .map_err(storage_error)?;
-    let result = async {
-        let final_size = stream_to_storage(body, storage, &upload_id, current_size).await?;
-        let digest = storage
-            .complete_upload(&upload_id, &expected_digest)
-            .await
-            .map_err(storage_error)?;
-        Ok::<(Digest, u64), UploadError>((digest, final_size))
-    }
-    .await;
-
-    let (actual_digest, final_size) = match result {
-        Ok(result) => result,
+    {
+        Ok(completed) => completed,
         Err(e) => {
             // Best-effort cleanup of the orphaned upload session
-            if let Err(cancel_err) = storage.cancel_upload(&upload_id).await {
+            if !matches!(
+                e,
+                UploadWriteError::Storage(OciStorageError::PartStalled(_))
+            ) && let Err(cancel_err) = storage.cancel_upload(&upload_id).await
+            {
                 slog::info!(rqctx.log, "Failed to cancel upload session on error"; "upload_id" => %upload_id, "error" => %cancel_err);
             }
-            return Err(e);
+            return Err(e.into());
         },
     };
+    let actual_digest: Digest = completed.digest;
 
     // Record bandwidth usage for the final chunk
-    record_oci_bandwidth(context, org_uuid, final_size - current_size);
+    record_oci_bandwidth(context, org_uuid, completed.received);
 
     // Record metric
     #[cfg(feature = "otel")]

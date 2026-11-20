@@ -896,3 +896,275 @@ async fn s3_part_copy_of_a_source_deleted_mid_flight() {
         .await
         .expect("Failed to delete the copy");
 }
+
+// ==================== Multipart uploads on R2 ====================
+//
+// Each case pins one rule that streamed uploads rely on.
+
+/// The smallest part S3 allows but the last.
+const MIN_PART: usize = 5 * 1024 * 1024;
+
+fn md5_hex(data: &[u8]) -> String {
+    use md5::Digest as _;
+    hex::encode(md5::Md5::digest(data))
+}
+
+/// The `ETag` S3 gives a multipart object of `parts`, quotes and all.
+fn multipart_e_tag(parts: &[&[u8]]) -> String {
+    use md5::Digest as _;
+    let mut digests = Vec::new();
+    for part in parts {
+        digests.extend_from_slice(&md5::Md5::digest(part));
+    }
+    format!("\"{}-{}\"", md5_hex(&digests), parts.len())
+}
+
+/// Each part's `ETag` is the MD5 of its bytes, and part sizes are checked only at
+/// completion: every part but the last must be one size, and the last no larger.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires a scratch S3 bucket and credentials"]
+async fn s3_part_sizes_are_checked_at_completion() {
+    use object_store::multipart::MultipartStore as _;
+
+    let Some(path) = run_path() else {
+        return;
+    };
+    let s3 = raw_store();
+    let key = Path::from(format!("{path}/multipart/uneven"));
+    let upload_id = s3
+        .create_multipart(&key)
+        .await
+        .expect("Failed to open an upload");
+    let mut parts = Vec::new();
+    for (index, length) in [MIN_PART, MIN_PART + 1, 1024].into_iter().enumerate() {
+        let data = varied_bytes(length);
+        let part = s3
+            .put_part(&key, &upload_id, index, data.clone().into())
+            .await
+            .expect("A part of any size is taken until completion");
+        assert_eq!(part.content_id.trim_matches('"'), md5_hex(&data));
+        parts.push(part);
+    }
+
+    s3.complete_multipart(&key, &upload_id, parts)
+        .await
+        .expect_err("Parts of two sizes before the last fail the completion");
+    s3.abort_multipart(&key, &upload_id)
+        .await
+        .expect("Failed to abort the upload");
+}
+
+/// A part uploaded again replaces the first, and only its `ETag` completes; a
+/// part left out of the completion vanishes; the object's `ETag` is the multipart
+/// `ETag` of its parts; a retried completion is 404 `NoSuchUpload`; and an abort
+/// answers in every state and never deletes a completed object.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires a scratch S3 bucket and credentials"]
+async fn s3_multipart_completion_rules() {
+    use object_store::multipart::MultipartStore as _;
+
+    let Some(path) = run_path() else {
+        return;
+    };
+    let s3 = raw_store();
+    let key = Path::from(format!("{path}/multipart/replaced"));
+    let upload_id = s3
+        .create_multipart(&key)
+        .await
+        .expect("Failed to open an upload");
+    let first = varied_bytes(MIN_PART);
+    let newest: Bytes = first
+        .iter()
+        .map(|byte| byte ^ 0xff)
+        .collect::<Vec<u8>>()
+        .into();
+    let replaced = s3
+        .put_part(&key, &upload_id, 0, first.into())
+        .await
+        .expect("Failed to upload a part");
+    let part = s3
+        .put_part(&key, &upload_id, 0, newest.clone().into())
+        .await
+        .expect("Failed to upload the part again");
+    s3.put_part(&key, &upload_id, 1, varied_bytes(1024).into())
+        .await
+        .expect("Failed to upload a part to leave out");
+
+    s3.complete_multipart(&key, &upload_id, vec![replaced])
+        .await
+        .expect_err("A replaced part's ETag does not complete");
+    let completed = s3
+        .complete_multipart(&key, &upload_id, vec![part.clone()])
+        .await
+        .expect("The newest ETag completes");
+    assert_eq!(completed.e_tag, Some(multipart_e_tag(&[&newest])));
+    let stored = s3
+        .get(&key)
+        .await
+        .expect("Failed to get the object")
+        .bytes()
+        .await
+        .expect("Failed to read the object");
+    assert!(stored == newest, "the object holds the newest part alone");
+
+    let retried = s3
+        .complete_multipart(&key, &upload_id, vec![part])
+        .await
+        .expect_err("A completion of a completed upload fails");
+    assert!(
+        matches!(retried, object_store::Error::NotFound { .. })
+            && retried.to_string().contains("NoSuchUpload"),
+        "{retried}"
+    );
+
+    s3.abort_multipart(&key, &upload_id)
+        .await
+        .expect("An abort of a completed upload answers");
+    s3.head(&key)
+        .await
+        .expect("An abort never deletes a completed object");
+    let open = s3
+        .create_multipart(&key)
+        .await
+        .expect("Failed to open an upload");
+    for _ in 0..2 {
+        s3.abort_multipart(&key, &open)
+            .await
+            .expect("An abort answers an open upload, and an aborted one");
+    }
+    s3.delete(&key).await.expect("Failed to delete the object");
+}
+
+/// Of two create-only puts of one key, exactly one wins.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires a scratch S3 bucket and credentials"]
+async fn s3_create_only_put_has_one_winner() {
+    use object_store::{ObjectStore as _, PutMode, PutOptions};
+
+    let Some(path) = run_path() else {
+        return;
+    };
+    let s3 = raw_store();
+    let key = Path::from(format!("{path}/create-only"));
+
+    let (one, other) = tokio::join!(
+        s3.put_opts(&key, "one".into(), PutOptions::from(PutMode::Create)),
+        s3.put_opts(&key, "other".into(), PutOptions::from(PutMode::Create)),
+    );
+
+    assert_ne!(one.is_ok(), other.is_ok(), "{one:?} {other:?}");
+    let lost = one.err().or(other.err()).expect("One put loses");
+    assert!(
+        matches!(lost, object_store::Error::AlreadyExists { .. }),
+        "{lost}"
+    );
+    s3.delete(&key).await.expect("Failed to delete the object");
+}
+
+/// A `CopyObject` writes the bytes again: the copy of a multipart object has the
+/// `ETag` of one whole object.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires a scratch S3 bucket and credentials"]
+async fn s3_copy_object_writes_the_bytes_again() {
+    let Some(path) = run_path() else {
+        return;
+    };
+    let s3 = raw_store();
+    let source = Path::from(format!("{path}/copy-object/source"));
+    let destination = Path::from(format!("{path}/copy-object/destination"));
+    let data = varied_bytes(2 * MIN_PART);
+    let mut write = object_store::WriteMultipart::new_with_chunk_size(
+        s3.put_multipart(&source)
+            .await
+            .expect("Failed to open the source"),
+        MIN_PART,
+    );
+    write.write(&data);
+    write.finish().await.expect("Failed to write the source");
+
+    s3.copy(&source, &destination)
+        .await
+        .expect("Failed to copy the object");
+
+    let meta = s3
+        .head(&destination)
+        .await
+        .expect("Failed to head the copy");
+    assert_eq!(
+        meta.e_tag.as_deref().map(|e_tag| e_tag.trim_matches('"')),
+        Some(md5_hex(&data).as_str())
+    );
+    for key in [&source, &destination] {
+        s3.delete(key).await.expect("Failed to delete an object");
+    }
+}
+
+/// An object built by part copies of a multipart object's own part ranges has
+/// that object's `ETag`, so a promoted blob's `ETag` equals its staging object's.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires a scratch S3 bucket and credentials"]
+async fn s3_part_copies_of_the_staging_ranges_keep_its_etag() {
+    use object_store::multipart::{MultipartStore as _, PartId};
+
+    let Some(path) = run_path() else {
+        return;
+    };
+    let s3 = raw_store();
+    let client = reqwest::Client::new();
+    let staging = Path::from(format!("{path}/part-copy-etag/staging"));
+    let promoted = Path::from(format!("{path}/part-copy-etag/promoted"));
+    let data = varied_bytes(2 * MIN_PART + 1024);
+    let ranges = [
+        0..MIN_PART,
+        MIN_PART..2 * MIN_PART,
+        2 * MIN_PART..data.len(),
+    ];
+
+    let upload_id = s3
+        .create_multipart(&staging)
+        .await
+        .expect("Failed to open the staging upload");
+    let mut parts = Vec::new();
+    for (index, range) in ranges.iter().enumerate() {
+        parts.push(
+            s3.put_part(
+                &staging,
+                &upload_id,
+                index,
+                data.slice(range.clone()).into(),
+            )
+            .await
+            .expect("Failed to upload a part"),
+        );
+    }
+    let staged = s3
+        .complete_multipart(&staging, &upload_id, parts)
+        .await
+        .expect("Failed to complete the staging upload");
+
+    let upload_id = s3
+        .create_multipart(&promoted)
+        .await
+        .expect("Failed to open the promoted upload");
+    let mut copies = Vec::new();
+    for (number, range) in (1..).zip(&ranges) {
+        let headers = copy_headers(
+            &staging,
+            &format!("bytes={}-{}", range.start, range.end - 1),
+        );
+        let (status, body) = part_copy(&client, &s3, &promoted, &upload_id, number, &headers).await;
+        assert_eq!(status, 200, "{body}");
+        copies.push(PartId {
+            content_id: copied_e_tag(&body),
+        });
+    }
+    let completed = s3
+        .complete_multipart(&promoted, &upload_id, copies)
+        .await
+        .expect("Failed to complete the promoted upload");
+
+    assert_eq!(completed.e_tag, staged.e_tag);
+    for key in [&staging, &promoted] {
+        s3.delete(key).await.expect("Failed to delete an object");
+    }
+}

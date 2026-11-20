@@ -20,10 +20,12 @@ There are two storage `scheme`s:
     - `region`: (Optional) Bucket region. Required for AWS. Defaults to `auto`, which S3 compatible stores expect.
     - `access_key_id`: S3 access key
     - `secret_access_key`: S3 secret access key
-    - `chunk_size`: (Optional) Minimum chunk size in bytes for buffering upload data before storing. Defaults to 5 MB.
-      HTTP request bodies arrive as small network frames (typically 8 to 64 KB). Without batching, each frame becomes a separate object, creating thousands of objects per layer. This value also matches the S3 multipart upload minimum part size.
+    - `chunk_size`: (Optional) Part size in bytes for blob uploads, from 5 MiB to 5 GiB. Defaults to 16 MiB (16,777,216 bytes).
+      An upload streams into a multipart upload in parts of this size, and an upload session keeps the part size it started with.
 
-Set a bucket lifecycle rule that aborts incomplete multipart uploads. A crash part way through completing a blob upload leaves one behind, and the server does not abort it.
+Blob uploads need three things of an S3 compatible store: the ETag of each uploaded part is the MD5 of that part, a completed multipart upload has the standard multipart ETag, and a presigned `UploadPartCopy` works. Cloudflare R2 does all three.
+
+The server aborts a multipart upload when the request that opened it fails, and the multipart uploads that an abandoned upload session saved when it sweeps stale uploads. Also set a bucket lifecycle rule that aborts incomplete multipart uploads: a crash can still leave an upload that only this rule removes.
 
 If you previously configured a `path` that began or ended with a slash, move the existing objects to the normalized prefix before upgrading. A `path` of `registry/` stored keys under `registry//<project>/...` and now stores them under `registry/<project>/...`. Each segment of `path` is also percent-encoded in the stored key wherever it holds an ASCII control character, a non-ASCII character, or one of `\` `{` `^` `}` `%` `` ` `` `]` `"` `>` `[` `~` `<` `#` `|` `*` `?`, and a segment that is exactly `.` or `..` is stored as `%2E` or `%2E%2E`. Every other character, including spaces, `+`, `=`, `@`, and `:`, is stored as is, so `team#1` becomes `team%231` while `team+1` stays `team+1`. Data stored under a prefix that is now encoded needs the same move. Before moving any data, list the keys actually stored in the bucket and compare them with the new prefix.
 
@@ -34,3 +36,4 @@ If you previously configured a `path` that began or ended with a slash, move the
 | storage.scheme |                  "s3"                  |           ---           |   Yes    | Specifies the storage scheme. For all other `storage` keys, see the list above.    |
 | upload_timeout |                  3600                  |          3600           |    No    | Upload session timeout in seconds. Stale uploads are cleaned up when new uploads start. |
 | max_body_size  |               1073741824               |       1073741824        |    No    | Maximum body size in bytes for blob and manifest uploads. Requests exceeding this limit are rejected with 413 Payload Too Large. Defaults to 1 GiB. |
+| max_upload_memory |               536870912                |  536870912   |    No     | Memory in bytes for upload part buffers, shared by all requests. An upload that finds no free buffer waits for one. A value below one part is raised to one part. A request whose part does not fill within 5 minutes of taking its buffer fails, and its client resends it. Defaults to 512 MiB. |

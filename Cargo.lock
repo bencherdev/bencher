@@ -1151,7 +1151,6 @@ dependencies = [
  "bencher_json",
  "bencher_otel",
  "bytes",
- "chrono",
  "futures",
  "hex",
  "http",

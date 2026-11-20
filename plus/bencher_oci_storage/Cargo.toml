@@ -16,7 +16,6 @@ plus = [
     "dep:bencher_json",
     "bencher_otel?/plus",
     "dep:bytes",
-    "dep:chrono",
     "dep:futures",
     "dep:hex",
     "dep:http",
@@ -48,7 +47,6 @@ sentry = { workspace = true, optional = true }
 # External dependencies
 async-trait = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
-chrono = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 http = { workspace = true, optional = true }

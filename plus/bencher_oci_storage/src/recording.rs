@@ -7,10 +7,11 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use bytes::Bytes;
 use futures::stream::BoxStream;
+use object_store::multipart::{MultipartStore, PartId};
 use object_store::{
-    CopyOptions, GetOptions, GetResult, ListResult, MultipartUpload, ObjectMeta, ObjectStore,
-    PutMultipartOptions, PutOptions, PutPayload, PutResult, RenameOptions, Result, UploadPart,
-    path::Path,
+    CopyOptions, GetOptions, GetResult, ListResult, MultipartId, MultipartUpload, ObjectMeta,
+    ObjectStore, PutMultipartOptions, PutOptions, PutPayload, PutResult, RenameOptions, Result,
+    UploadPart, path::Path,
 };
 
 use crate::metrics::{self, StorageOperation};
@@ -125,6 +126,76 @@ impl ObjectStore for RecordingStore {
         metrics::time(
             StorageOperation::Rename,
             self.inner.rename_opts(from, to, options),
+        )
+        .await
+    }
+}
+
+/// The multipart store the registry stages uploads in, which records each call it forwards.
+pub(crate) struct RecordingMultipart {
+    inner: Arc<dyn MultipartStore>,
+}
+
+impl RecordingMultipart {
+    pub(crate) fn new(inner: Arc<dyn MultipartStore>) -> Self {
+        Self { inner }
+    }
+}
+
+#[async_trait]
+#[deny(clippy::missing_trait_methods)]
+impl MultipartStore for RecordingMultipart {
+    async fn create_multipart(&self, path: &Path) -> Result<MultipartId> {
+        metrics::time(
+            StorageOperation::CreateMultipart,
+            self.inner.create_multipart(path),
+        )
+        .await
+    }
+
+    async fn create_multipart_opts(
+        &self,
+        path: &Path,
+        opts: PutMultipartOptions,
+    ) -> Result<MultipartId> {
+        metrics::time(
+            StorageOperation::CreateMultipart,
+            self.inner.create_multipart_opts(path, opts),
+        )
+        .await
+    }
+
+    async fn put_part(
+        &self,
+        path: &Path,
+        id: &MultipartId,
+        part_idx: usize,
+        data: PutPayload,
+    ) -> Result<PartId> {
+        metrics::time(
+            StorageOperation::PutPart,
+            self.inner.put_part(path, id, part_idx, data),
+        )
+        .await
+    }
+
+    async fn complete_multipart(
+        &self,
+        path: &Path,
+        id: &MultipartId,
+        parts: Vec<PartId>,
+    ) -> Result<PutResult> {
+        metrics::time(
+            StorageOperation::Complete,
+            self.inner.complete_multipart(path, id, parts),
+        )
+        .await
+    }
+
+    async fn abort_multipart(&self, path: &Path, id: &MultipartId) -> Result<()> {
+        metrics::time(
+            StorageOperation::Abort,
+            self.inner.abort_multipart(path, id),
         )
         .await
     }

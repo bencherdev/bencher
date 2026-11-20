@@ -11,22 +11,23 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::task::{Context, Poll};
 use std::time::Duration;
 
+use std::convert::Infallible;
+
 use bencher_json::{
     Clock, ProjectUuid, Secret,
     system::config::{
-        DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_UPLOAD_TIMEOUT_SECS, MAX_CHUNK_SIZE,
-        RegistryStorage,
+        DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_MAX_UPLOAD_MEMORY,
+        DEFAULT_UPLOAD_TIMEOUT_SECS, MAX_CHUNK_SIZE, MIN_CHUNK_SIZE, RegistryStorage,
     },
 };
 use bytes::Bytes;
-use chrono::Utc;
 use futures::stream::{self, BoxStream, StreamExt as _, TryStreamExt as _};
 use hyper::body::Frame;
+use object_store::multipart::MultipartStore;
 use object_store::{
-    ClientOptions, ObjectMeta, ObjectStore, ObjectStoreExt as _, WriteMultipart, aws::AmazonS3,
-    path::Path,
+    ClientOptions, ObjectMeta, ObjectStore, ObjectStoreExt as _, aws::AmazonS3, path::Path,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
 use slog::Logger;
 use sync_wrapper::SyncWrapper;
@@ -34,21 +35,28 @@ use thiserror::Error;
 use tokio::runtime::Handle;
 use tokio::task::{JoinError, JoinSet};
 
-use crate::metrics::{self, FinalizeOutcome, SweepAction};
+use crate::buffers::BufferPool;
+use crate::file_multipart::FileMultipart;
+use crate::metrics::{self, SweepAction};
 use crate::part_copy::PartCopy;
-use crate::recording::RecordingStore;
+use crate::recording::{RecordingMultipart, RecordingStore};
 use crate::s3_error;
 use crate::types::{Digest, UploadId};
+
+mod session;
+mod upload;
+#[cfg(test)]
+mod upload_tests;
+
+pub use session::UploadSession;
+use session::{GENERATION_DIGITS, HashState, Phase, Progress, SessionState};
+use upload::Uploads;
+pub use upload::{Appended, Completed, UploadWriteError};
 
 /// Maximum concurrency for parallel object store operations.
 /// Clamped to available CPU parallelism, with this upper bound to prevent
 /// excessive resource usage.
 pub const MAX_CONCURRENCY: usize = 64;
-
-/// Completion waits until fewer than this many parts are in flight before adding
-/// each chunk, so it holds about this many parts plus the part being filled and
-/// the chunk just read.
-const MAX_UPLOAD_CONCURRENCY: usize = 4;
 
 /// Most parts an S3 multipart upload can have.
 pub(crate) const MAX_PARTS: u64 = 10_000;
@@ -60,8 +68,8 @@ const MOUNT_PART_SIZE: NonZeroU64 = match NonZeroU64::new(16 * 1024 * 1024) {
 };
 
 /// Longest an S3-compatible store may go without sending a byte, which reqwest
-/// also applies from sending a request to its response headers, so four 5 MiB
-/// parts uploading at once need only about 70 KB/s to finish inside it.
+/// also applies from sending a request to its response headers, so four parts of
+/// the default 16 MiB uploading at once need only about 224 KB/s to finish inside it.
 const READ_TIMEOUT: Duration = Duration::from_mins(5);
 
 /// Directory holding registry data, created beside the database file.
@@ -70,8 +78,17 @@ const REGISTRY_DIR: &str = "registry";
 /// Key prefix for the in-progress upload staging area.
 const UPLOADS_PREFIX: &str = "_uploads";
 
-/// Key prefix for an upload session's chunk objects.
-const CHUNKS_PREFIX: &str = "chunks";
+/// An upload session's staging object, the multipart upload its parts go to
+const DATA: &str = "data";
+
+/// Key prefix for an upload session's state generations
+const STATES: &str = "states";
+
+/// Key prefix for an upload session's tails, by offset
+const TAIL: &str = "tail";
+
+/// The state object of an upload session in the old layout, which only the sweep reads
+const OLD_STATE: &str = "state.json";
 
 /// Region used when none is configured. S3-compatible stores expect this.
 const DEFAULT_REGION: &str = "auto";
@@ -79,6 +96,8 @@ const DEFAULT_REGION: &str = "auto";
 /// OCI storage backed by a local directory or an S3-compatible bucket
 pub struct OciStorage {
     store: Arc<RecordingStore>,
+    /// The multipart uploads that upload sessions stream into
+    multipart: Arc<RecordingMultipart>,
     /// The S3 backend's server-side part copy, which the object store trait hides
     part_copy: Option<PartCopy>,
     /// Key prefix within the store, if configured
@@ -87,9 +106,11 @@ pub struct OciStorage {
     upload_timeout: u64,
     /// Maximum body size in bytes for uploads
     max_body_size: u64,
-    /// Minimum chunk size in bytes for buffering upload data before storing.
+    /// The part size in bytes that new upload sessions take.
     /// See [`bencher_json::system::config::DEFAULT_CHUNK_SIZE`].
     chunk_size: usize,
+    /// Memory for upload part buffers, shared by every request
+    buffers: BufferPool,
     /// Logger for error/warning reporting
     log: Logger,
     /// Concurrency limit for parallel referrer and tag fetches
@@ -132,6 +153,12 @@ pub enum OciStorageError {
 
     #[error("Size exceeded: {size} bytes exceeds maximum {max} bytes")]
     SizeExceeded { size: u64, max: u64 },
+
+    #[error("ETag mismatch: {0}")]
+    EtagMismatch(String),
+
+    #[error("An upload part did not fill within {} seconds", .0.as_secs())]
+    PartStalled(Duration),
 }
 
 impl OciStorageError {
@@ -145,7 +172,8 @@ impl OciStorageError {
             | Self::InvalidContent(_)
             | Self::BlobUploadInvalidContent(_) => http::StatusCode::BAD_REQUEST,
             Self::SizeExceeded { .. } => http::StatusCode::PAYLOAD_TOO_LARGE,
-            Self::Storage(_) | Self::Config(_) | Self::Json(_) => {
+            Self::PartStalled(_) => http::StatusCode::REQUEST_TIMEOUT,
+            Self::Storage(_) | Self::Config(_) | Self::Json(_) | Self::EtagMismatch(_) => {
                 http::StatusCode::INTERNAL_SERVER_ERROR
             },
         }
@@ -167,11 +195,37 @@ impl OciStorage {
         max_body_size: Option<u64>,
         clock: Option<Clock>,
     ) -> Result<Self, OciStorageError> {
-        let (store, part_copy, prefix, chunk_size) =
+        Self::try_from_config_with_upload_memory(
+            log,
+            storage,
+            database_path,
+            upload_timeout,
+            max_body_size,
+            None,
+            clock,
+        )
+    }
+
+    /// Creates a new OCI storage instance from configuration, with
+    /// `max_upload_memory` bytes for upload part buffers.
+    /// Pass `None` to use the default (512 MiB).
+    pub fn try_from_config_with_upload_memory(
+        log: Logger,
+        storage: Option<RegistryStorage>,
+        database_path: &FilePath,
+        upload_timeout: Option<u64>,
+        max_body_size: Option<u64>,
+        max_upload_memory: Option<u64>,
+        clock: Option<Clock>,
+    ) -> Result<Self, OciStorageError> {
+        let (store, multipart, part_copy, prefix, chunk_size) =
             match storage.unwrap_or(RegistryStorage::File { path: None }) {
                 RegistryStorage::File { path } => {
                     let dir = path.unwrap_or_else(|| registry_dir(database_path));
-                    (file_store(&dir)?, None, None, None)
+                    let store = file_store(&dir)?;
+                    let multipart: Arc<dyn MultipartStore> =
+                        Arc::new(FileMultipart::new(Arc::clone(&store)));
+                    (store, multipart, None, None, None)
                 },
                 RegistryStorage::S3 {
                     bucket,
@@ -192,8 +246,15 @@ impl OciStorage {
                         options.clone(),
                     )?;
                     let part_copy = PartCopy::new(s3.clone(), bucket, &options, log.clone())?;
+                    let multipart: Arc<dyn MultipartStore> = Arc::new(s3.clone());
                     let store: Arc<dyn ObjectStore> = Arc::new(s3);
-                    (store, Some(part_copy), path.map(Path::from), chunk_size)
+                    (
+                        store,
+                        multipart,
+                        Some(part_copy),
+                        path.map(Path::from),
+                        chunk_size,
+                    )
                 },
             };
 
@@ -202,15 +263,21 @@ impl OciStorage {
             .clamp(1, MAX_CONCURRENCY);
         let chunk_size = chunk_size
             .unwrap_or(DEFAULT_CHUNK_SIZE)
-            .clamp(DEFAULT_CHUNK_SIZE, MAX_CHUNK_SIZE) as usize;
+            .clamp(MIN_CHUNK_SIZE, MAX_CHUNK_SIZE) as usize;
+        let max_body_size = max_body_size.unwrap_or(DEFAULT_MAX_BODY_SIZE);
 
         let storage = Self {
             store: Arc::new(RecordingStore::new(store)),
+            multipart: Arc::new(RecordingMultipart::new(multipart)),
             part_copy,
             prefix,
             upload_timeout: upload_timeout.unwrap_or(DEFAULT_UPLOAD_TIMEOUT_SECS),
-            max_body_size: max_body_size.unwrap_or(DEFAULT_MAX_BODY_SIZE),
+            max_body_size,
             chunk_size,
+            buffers: BufferPool::new(
+                max_upload_memory.unwrap_or(DEFAULT_MAX_UPLOAD_MEMORY),
+                part_size(chunk_size, max_body_size) as u64,
+            ),
             log,
             concurrency,
             sweep: Mutex::default(),
@@ -234,7 +301,7 @@ impl OciStorage {
         self.max_body_size
     }
 
-    /// Returns the configured chunk size for buffering upload data before storing.
+    /// Returns the configured part size that new upload sessions take.
     /// See [`bencher_json::system::config::DEFAULT_CHUNK_SIZE`].
     pub fn chunk_size(&self) -> usize {
         self.chunk_size
@@ -267,36 +334,32 @@ impl OciStorage {
         self.uploads_prefix().join(upload_id.to_string())
     }
 
-    /// Returns the key for upload state metadata
-    fn upload_state_key(&self, upload_id: &UploadId) -> Path {
-        upload_state_key(&self.upload_prefix(upload_id))
+    /// Returns the key of a session's staging object
+    fn upload_data_key(&self, upload_id: &UploadId) -> Path {
+        self.upload_prefix(upload_id).join(DATA)
     }
 
-    /// Returns the key prefix for upload chunks
-    ///
-    /// Each append stores its own chunk object so appends stay O(1) and
-    /// concurrent appends never contend over shared state.
-    fn upload_chunks_prefix(&self, upload_id: &UploadId) -> Path {
-        self.upload_prefix(upload_id).join(CHUNKS_PREFIX)
+    /// Returns the key prefix of a session's state generations
+    fn upload_states_prefix(&self, upload_id: &UploadId) -> Path {
+        self.upload_prefix(upload_id).join(STATES)
     }
 
-    /// Returns a unique key for a new upload chunk
-    ///
-    /// The nanosecond timestamp sorts chunks into creation order when listed,
-    /// and the UUID keeps concurrent appends from colliding.
-    fn new_chunk_key(&self, upload_id: &UploadId) -> Path {
-        let timestamp = Utc::now().timestamp_nanos_opt().unwrap_or(0);
-        let uuid = uuid::Uuid::new_v4();
-        self.upload_chunks_prefix(upload_id)
-            .join(format!("{timestamp:020}_{uuid}"))
+    /// Returns the key of the tail a session commits at `offset`
+    fn upload_tail_key(&self, upload_id: &UploadId, offset: u64) -> Path {
+        self.upload_prefix(upload_id)
+            .join(TAIL)
+            .join(offset.to_string())
+    }
+
+    /// Returns the key of one generation of a session's state.
+    fn upload_state_generation_key(&self, upload_id: &UploadId, generation: u64) -> Path {
+        self.upload_states_prefix(upload_id)
+            .join(format!("{generation:0GENERATION_DIGITS$}"))
     }
 
     /// Returns the key for a blob
     fn blob_key(&self, repository: &ProjectUuid, digest: &Digest) -> Path {
-        self.repository_prefix(repository)
-            .join("blobs")
-            .join(digest.algorithm())
-            .join(digest.hex_hash())
+        blob_key(&self.root(), repository, digest)
     }
 
     /// Returns the key for a manifest by digest
@@ -404,23 +467,23 @@ impl OciStorage {
         self.spawn_stale_upload_cleanup();
 
         let upload_id = UploadId::new();
-        let state = UploadState {
-            repository: repository.to_string(),
+        let state = SessionState {
+            repository: *repository,
             created_at: self.clock.timestamp(),
+            part_size: part_size(self.chunk_size, self.max_body_size) as u64,
+            upload: None,
+            phase: Phase::Open(Progress {
+                offset: 0,
+                parts: Vec::new(),
+                hash: HashState::of(&Sha256::new()),
+                tail: None,
+            }),
         };
-        let data = serde_json::to_vec(&state).map_err(|e| OciStorageError::Json(e.to_string()))?;
-        self.store
-            .put(&self.upload_state_key(&upload_id), data.into())
-            .await
-            .map_err(|e| storage_error(&e))?;
-
+        self.uploads().create(&upload_id, state).await?;
         Ok(upload_id)
     }
 
-    /// Appends data to an in-progress upload
-    ///
-    /// Each append is stored as its own chunk object, so concurrent appends
-    /// create independent objects rather than modifying shared state.
+    /// Appends data to an in-progress upload, and commits it.
     ///
     /// Returns the cumulative size of the upload session.
     pub async fn append_upload(
@@ -428,139 +491,44 @@ impl OciStorage {
         upload_id: &UploadId,
         data: Bytes,
     ) -> Result<u64, OciStorageError> {
-        // Verify the upload exists
-        let _state = self.load_upload_state(upload_id).await?;
-
-        // Calculate the projected total size before storing the chunk
-        let buffered = self.chunks_size(upload_id).await?;
-        let projected_total = buffered + data.len() as u64;
-        if projected_total > self.max_body_size {
-            return Err(OciStorageError::SizeExceeded {
-                size: projected_total,
-                max: self.max_body_size,
-            });
-        }
-
-        self.store
-            .put(&self.new_chunk_key(upload_id), data.into())
+        let session = self.uploads().load(upload_id).await?;
+        let appended = self
+            .append_upload_body(session, stream::iter([Ok::<_, Infallible>(data)]))
             .await
-            .map_err(|e| storage_error(&e))?;
-
-        Ok(projected_total)
+            .map_err(storage_only)?;
+        if appended.committed {
+            Ok(appended.offset)
+        } else {
+            Err(OciStorageError::Storage(format!(
+                "Another request appended to upload {upload_id} first"
+            )))
+        }
     }
 
     /// Gets the current size of an in-progress upload
     pub async fn get_upload_size(&self, upload_id: &UploadId) -> Result<u64, OciStorageError> {
-        let _state = self.load_upload_state(upload_id).await?;
-        self.chunks_size(upload_id).await
+        Ok(self.uploads().load(upload_id).await?.offset())
     }
 
     /// Completes an upload and stores the blob
     ///
-    /// Streams the stored chunks in key order straight into a multipart upload on
-    /// the final blob key, hashing as it goes. A digest mismatch or any streaming
-    /// error aborts the multipart upload, so no blob is left behind.
+    /// The bytes already stream into a multipart upload as they arrive, so the
+    /// finish completes it and moves it to the blob's key, reading no byte back.
+    /// A digest mismatch aborts the upload, so no blob is left behind.
     pub async fn complete_upload(
         &self,
         upload_id: &UploadId,
         expected_digest: &Digest,
     ) -> Result<Digest, OciStorageError> {
-        let completed = self.finalize_upload(upload_id, expected_digest).await;
-        if let Ok((_digest, size)) = &completed {
-            metrics::blob_upload(*size);
-        }
-        metrics::finalize(finalize_outcome(&completed));
-        completed.map(|(digest, _size)| digest)
-    }
-
-    /// Completes an upload, returning the blob's digest and size.
-    async fn finalize_upload(
-        &self,
-        upload_id: &UploadId,
-        expected_digest: &Digest,
-    ) -> Result<(Digest, u64), OciStorageError> {
-        let state = self.load_upload_state(upload_id).await?;
-        let repository: ProjectUuid = state.repository.parse().map_err(|_e| {
-            OciStorageError::InvalidContent(format!(
-                "Invalid project UUID in upload state: {}",
-                state.repository
-            ))
-        })?;
-
-        let chunks = self.list_chunks(upload_id).await?;
-        if chunks.is_empty() {
-            self.cleanup_upload(upload_id).await;
-            return Err(OciStorageError::BlobUploadInvalidContent(
-                "Cannot complete upload with no data".to_owned(),
-            ));
-        }
-
-        let blob_key = self.blob_key(&repository, expected_digest);
-        let upload = self
-            .store
-            .put_multipart(&blob_key)
-            .await
-            .map_err(|e| storage_error(&e))?;
-        let mut write = WriteMultipart::new_with_chunk_size(
-            upload,
-            part_size(self.chunk_size, self.max_body_size),
-        );
-
-        let (actual_digest, size) = match self.write_chunks(&mut write, &chunks).await {
-            Ok(written) => written,
-            Err(error) => {
-                self.abort_multipart(write).await;
-                return Err(error);
-            },
-        };
-
-        if actual_digest.as_str() != expected_digest.as_str() {
-            self.abort_multipart(write).await;
-            self.cleanup_upload(upload_id).await;
-            return Err(OciStorageError::DigestMismatch {
-                expected: expected_digest.to_string(),
-                actual: actual_digest.to_string(),
-            });
-        }
-
-        write.finish().await.map_err(|e| storage_error(&e))?;
-        self.cleanup_upload(upload_id).await;
-
-        Ok((actual_digest, size))
-    }
-
-    /// Streams every chunk into the multipart upload, returning the content digest and size.
-    async fn write_chunks(
-        &self,
-        write: &mut WriteMultipart,
-        chunks: &[Path],
-    ) -> Result<(Digest, u64), OciStorageError> {
-        let mut hasher = Sha256::new();
-        let mut size = 0;
-        for chunk_key in chunks {
-            let chunk = self.read(chunk_key).await?;
-            hasher.update(&chunk);
-            size += chunk.len() as u64;
-            write
-                .wait_for_capacity(MAX_UPLOAD_CONCURRENCY)
-                .await
-                .map_err(|e| storage_error(&e))?;
-            write.put(chunk);
-        }
-        let digest = Digest::sha256(&hex::encode(hasher.finalize()))
-            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
-        Ok((digest, size))
-    }
-
-    /// Aborts a multipart upload, reporting but not surfacing any failure.
-    async fn abort_multipart(&self, write: WriteMultipart) {
-        if let Err(e) = write.abort().await {
-            report_cleanup_error(
-                &self.log,
-                "complete_upload: abort multipart",
-                &storage_error(&e),
-            );
-        }
+        let session = self.uploads().load(upload_id).await?;
+        self.complete_upload_body(
+            session,
+            expected_digest,
+            stream::empty::<Result<Bytes, Infallible>>(),
+        )
+        .await
+        .map(|completed| completed.digest)
+        .map_err(storage_only)
     }
 
     /// Validates that the upload session belongs to the expected repository
@@ -569,64 +537,57 @@ impl OciStorage {
         upload_id: &UploadId,
         expected_repository: &ProjectUuid,
     ) -> Result<(), OciStorageError> {
-        let state = self.load_upload_state(upload_id).await?;
-        if state.repository == expected_repository.to_string() {
-            Ok(())
-        } else {
-            Err(OciStorageError::UploadNotFound(upload_id.to_string()))
-        }
+        self.upload_session(upload_id, expected_repository)
+            .await
+            .map(|_session| ())
     }
 
-    /// Cancels an in-progress upload
-    pub async fn cancel_upload(&self, upload_id: &UploadId) -> Result<(), OciStorageError> {
-        let _state = self.load_upload_state(upload_id).await?;
-        self.cleanup_upload(upload_id).await;
-        Ok(())
-    }
-
-    /// Loads upload state
-    async fn load_upload_state(
+    /// Loads a session for a request that names `repository`.
+    pub async fn upload_session(
         &self,
         upload_id: &UploadId,
-    ) -> Result<UploadState, OciStorageError> {
-        let data = self
-            .get_bytes(
-                &self.upload_state_key(upload_id),
-                OciStorageError::UploadNotFound(upload_id.to_string()),
-            )
-            .await?;
-        serde_json::from_slice(&data).map_err(|e| OciStorageError::Json(e.to_string()))
+        repository: &ProjectUuid,
+    ) -> Result<UploadSession, OciStorageError> {
+        self.uploads().session(upload_id, repository).await
     }
 
-    /// Lists the chunks of an upload in key order, which is creation order.
-    async fn list_chunks(&self, upload_id: &UploadId) -> Result<Vec<Path>, OciStorageError> {
-        let mut chunks = self
-            .list_prefix(&self.upload_chunks_prefix(upload_id))
-            .await?;
-        chunks.sort_by(|a, b| a.location.cmp(&b.location));
-        Ok(chunks.into_iter().map(|meta| meta.location).collect())
+    /// Appends a request body to a session, and commits it once, at its end.
+    pub async fn append_upload_body<S, E>(
+        &self,
+        session: UploadSession,
+        body: S,
+    ) -> Result<Appended, UploadWriteError<E>>
+    where
+        S: futures::Stream<Item = Result<Bytes, E>>,
+    {
+        self.uploads().append(session, body).await
     }
 
-    /// Total size of the chunks stored for an upload.
-    async fn chunks_size(&self, upload_id: &UploadId) -> Result<u64, OciStorageError> {
-        let chunks = self
-            .list_prefix(&self.upload_chunks_prefix(upload_id))
-            .await?;
-        Ok(chunks.iter().map(|meta| meta.size).sum())
-    }
-
-    /// Deletes every object belonging to an upload
+    /// Finishes a session as the blob `digest`, after it appends a final request body.
     ///
-    /// Chunks go first so that the state object, which drives stale upload
-    /// discovery, survives a crash part way through.
-    async fn cleanup_upload(&self, upload_id: &UploadId) {
-        let prefix = self.upload_prefix(upload_id);
-        match self.list_prefix(&prefix).await {
-            Ok(objects) => {
-                delete_upload_objects(&self.log, &self.store, &prefix, objects).await;
-            },
-            Err(e) => report_cleanup_error(&self.log, "cleanup_upload: list", &e),
-        }
+    /// A session that an earlier request left past its digest check resumes where
+    /// it stopped, and takes no more bytes.
+    pub async fn complete_upload_body<S, E>(
+        &self,
+        session: UploadSession,
+        digest: &Digest,
+        body: S,
+    ) -> Result<Completed, UploadWriteError<E>>
+    where
+        S: futures::Stream<Item = Result<Bytes, E>>,
+    {
+        self.uploads().complete(session, digest, body).await
+    }
+
+    /// Cancels a session, by its newest state: one that is still open is aborted
+    /// and removed, while one past its digest check is left for a retry to
+    /// finish, or for the sweep.
+    pub async fn cancel_upload(&self, upload_id: &UploadId) -> Result<(), OciStorageError> {
+        self.uploads().cancel(upload_id).await
+    }
+
+    fn uploads(&self) -> Uploads<'_> {
+        Uploads::new(self)
     }
 
     /// Spawns a background task to clean up all stale uploads that have exceeded the timeout.
@@ -648,14 +609,9 @@ impl OciStorage {
         }
         sweep.last = now;
 
-        let store = Arc::clone(&self.store);
-        let uploads_prefix = self.uploads_prefix();
-        let upload_timeout = self.upload_timeout;
-        let log = self.log.clone();
-        let clock = self.clock.clone();
-
+        let sweeper = self.sweeper();
         sweep.tasks.spawn(async move {
-            cleanup_stale_uploads(&log, &store, &uploads_prefix, upload_timeout, &clock).await;
+            sweeper.sweep().await;
         });
     }
 
@@ -669,6 +625,18 @@ impl OciStorage {
     // A spawn and a close share one lock, so no sweep starts once shutdown has taken them.
     fn lock_sweep(&self) -> MutexGuard<'_, Sweep> {
         self.sweep.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// What a sweep, or the removal of one session, needs
+    fn sweeper(&self) -> Sweeper {
+        Sweeper {
+            log: self.log.clone(),
+            store: Arc::clone(&self.store),
+            multipart: Arc::clone(&self.multipart),
+            root: self.root(),
+            upload_timeout: self.upload_timeout,
+            clock: self.clock.clone(),
+        }
     }
 
     // ==================== Blob Operations ====================
@@ -1136,15 +1104,6 @@ pub struct ListTagsResult {
     pub has_more: bool,
 }
 
-/// Upload session state, stored alongside the session's chunks
-#[derive(Debug, Serialize, Deserialize)]
-struct UploadState {
-    /// Repository name
-    repository: String,
-    /// Unix timestamp when the upload was created
-    created_at: i64,
-}
-
 /// Reports a failed cleanup, whose error never holds an answer's raw body.
 pub(crate) fn report_cleanup_error(log: &Logger, context: &str, error: &OciStorageError) {
     slog::warn!(log, "OCI cleanup error"; "context" => context, "error" => %error);
@@ -1160,18 +1119,6 @@ fn report_sweep_join(log: &Logger, joined: Result<(), JoinError>) {
         && !e.is_cancelled()
     {
         slog::error!(log, "Stale upload sweep failed: {e}");
-    }
-}
-
-/// How a finalize ended, for its count.
-fn finalize_outcome<T>(completed: &Result<T, OciStorageError>) -> FinalizeOutcome {
-    let Err(error) = completed else {
-        return FinalizeOutcome::Ok;
-    };
-    if matches!(error, OciStorageError::DigestMismatch { .. }) {
-        FinalizeOutcome::DigestMismatch
-    } else {
-        FinalizeOutcome::Error
     }
 }
 
@@ -1258,119 +1205,238 @@ pub(crate) fn storage_error(error: &object_store::Error) -> OciStorageError {
     OciStorageError::Storage(s3_error::redact(error))
 }
 
-/// The state key for an upload session prefix
-fn upload_state_key(upload_prefix: &Path) -> Path {
-    upload_prefix.clone().join("state.json")
+/// The key of a blob under `root`
+fn blob_key(root: &Path, repository: &ProjectUuid, digest: &Digest) -> Path {
+    root.clone()
+        .join(repository.to_string())
+        .join("blobs")
+        .join(digest.algorithm())
+        .join(digest.hex_hash())
 }
 
-/// Deletes an upload session's objects, leaving the state object for last so a
-/// crash part way through still leaves the session discoverable.
-///
-/// Returns whether it removed the session: it listed objects, and each is now gone.
-async fn delete_upload_objects(
-    log: &Logger,
-    store: &RecordingStore,
-    upload_prefix: &Path,
-    objects: Vec<ObjectMeta>,
-) -> bool {
-    let mut removed = !objects.is_empty();
-    let state_key = upload_state_key(upload_prefix);
-    let (state, rest): (Vec<_>, Vec<_>) = objects
-        .into_iter()
-        .map(|meta| meta.location)
-        .partition(|key| *key == state_key);
-
-    for key in rest.into_iter().chain(state) {
-        if let Err(e) = store.delete(&key).await
-            && !is_not_found(&e)
-        {
-            report_cleanup_error(log, "cleanup_upload: delete", &storage_error(&e));
-            removed = false;
-        }
+/// The storage failure of a call whose body cannot fail.
+fn storage_only(error: UploadWriteError<Infallible>) -> OciStorageError {
+    match error {
+        UploadWriteError::Body(never) => match never {},
+        UploadWriteError::Storage(error) => error,
     }
-    removed
 }
 
-/// Cleans up every upload session that has outlived the timeout.
-pub(crate) async fn cleanup_stale_uploads(
-    log: &Logger,
-    store: &RecordingStore,
-    uploads_prefix: &Path,
+/// The stale upload sweep, and the removal of one session, apart from the storage
+/// that starts them, so a sweep can run as its own task.
+pub(crate) struct Sweeper {
+    log: Logger,
+    store: Arc<RecordingStore>,
+    multipart: Arc<RecordingMultipart>,
+    root: Path,
     upload_timeout: u64,
-    clock: &Clock,
-) {
-    let listed = match store.list_with_delimiter(Some(uploads_prefix)).await {
-        Ok(listed) => listed,
-        Err(e) => {
-            report_cleanup_error(log, "stale_upload: list prefixes", &storage_error(&e));
-            return;
-        },
-    };
+    clock: Clock,
+}
 
-    // `now` pairs with `created_at` in the application time domain, `os_now`
-    // with object `last_modified` in the OS wall-clock domain.
-    let (now, os_now) = clock.timestamps();
-    let timeout_secs = i64::try_from(upload_timeout).unwrap_or(i64::MAX);
-
-    for upload_prefix in listed.common_prefixes {
-        let Some(upload_id) = upload_prefix.filename() else {
-            continue;
-        };
-        if upload_id.parse::<UploadId>().is_err() {
-            report_cleanup_error(
-                log,
-                "stale_upload: parse upload ID",
-                &OciStorageError::InvalidContent(format!("Invalid upload ID: {upload_id}")),
-            );
-            continue;
-        }
-
-        let objects = match store
-            .list(Some(&upload_prefix))
-            .try_collect::<Vec<_>>()
-            .await
-        {
-            Ok(objects) => objects,
+impl Sweeper {
+    /// Removes every upload session that has outlived the timeout, in any phase.
+    ///
+    /// The sweep never finishes an upload: it aborts the uploads that a session's
+    /// newest state saved, which never touches a completed object, and deletes the
+    /// rest. A session in the old layout has no uploads to abort.
+    pub(crate) async fn sweep(&self) {
+        let uploads_prefix = self.root.clone().join(UPLOADS_PREFIX);
+        let listed = match self.store.list_with_delimiter(Some(&uploads_prefix)).await {
+            Ok(listed) => listed,
             Err(e) => {
-                report_cleanup_error(log, "stale_upload: list objects", &storage_error(&e));
-                continue;
+                report_cleanup_error(&self.log, "stale_upload: list prefixes", &storage_error(&e));
+                return;
             },
         };
 
-        if is_stale(store, &upload_prefix, &objects, now, os_now, timeout_secs).await
-            && delete_upload_objects(log, store, &upload_prefix, objects).await
-        {
-            metrics::upload_sweep(SweepAction::Deleted);
+        // `now` pairs with `created_at` in the application time domain, `os_now`
+        // with object `last_modified` in the OS wall-clock domain.
+        let (now, os_now) = self.clock.timestamps();
+        let timeout_secs = i64::try_from(self.upload_timeout).unwrap_or(i64::MAX);
+
+        for upload_prefix in listed.common_prefixes {
+            let Some(upload_id) = upload_prefix.filename() else {
+                continue;
+            };
+            if upload_id.parse::<UploadId>().is_err() {
+                report_cleanup_error(
+                    &self.log,
+                    "stale_upload: parse upload ID",
+                    &OciStorageError::InvalidContent(format!("Invalid upload ID: {upload_id}")),
+                );
+                continue;
+            }
+
+            let objects = match self
+                .store
+                .list(Some(&upload_prefix))
+                .try_collect::<Vec<_>>()
+                .await
+            {
+                Ok(objects) => objects,
+                Err(e) => {
+                    report_cleanup_error(
+                        &self.log,
+                        "stale_upload: list objects",
+                        &storage_error(&e),
+                    );
+                    continue;
+                },
+            };
+
+            let state = match newest_state_key(&upload_prefix, &objects) {
+                Some(key) => self.read(&key).await,
+                None => None,
+            };
+            let created_at = state
+                .as_deref()
+                .and_then(|data| serde_json::from_slice::<Created>(data).ok())
+                .map(|created| created.created_at);
+            if !is_stale(created_at, &objects, now, os_now, timeout_secs) {
+                continue;
+            }
+            let session = state
+                .as_deref()
+                .and_then(|data| serde_json::from_slice::<SessionState>(data).ok());
+            let aborted = self.abort(&upload_prefix, session.as_ref()).await;
+            for _ in 0..aborted {
+                metrics::upload_sweep(SweepAction::Aborted);
+            }
+            if self.delete(&upload_prefix, objects).await {
+                metrics::upload_sweep(SweepAction::Deleted);
+            }
         }
     }
+
+    /// Aborts a session's uploads by the IDs its state saved, then deletes its
+    /// objects, its states last.
+    async fn remove(&self, upload_prefix: &Path, state: Option<&SessionState>) {
+        self.abort(upload_prefix, state).await;
+        match self
+            .store
+            .list(Some(upload_prefix))
+            .try_collect::<Vec<_>>()
+            .await
+        {
+            Ok(objects) => {
+                self.delete(upload_prefix, objects).await;
+            },
+            Err(e) => {
+                report_cleanup_error(&self.log, "cleanup_upload: list", &storage_error(&e));
+            },
+        }
+    }
+
+    /// Aborts the staging upload, and on S3 the destination upload, that a state
+    /// saved, and returns how many aborted.
+    async fn abort(&self, upload_prefix: &Path, state: Option<&SessionState>) -> u32 {
+        let Some(state) = state else {
+            return 0;
+        };
+        let mut uploads = Vec::new();
+        if let Some(upload) = &state.upload {
+            uploads.push((upload_prefix.clone().join(DATA), upload));
+        }
+        if let Phase::Promoting(promotion) = &state.phase
+            && let Some(destination) = &promotion.destination
+            && let Ok(digest) = promotion.finished.digest.parse::<Digest>()
+        {
+            uploads.push((
+                blob_key(&self.root, &state.repository, &digest),
+                destination,
+            ));
+        }
+        let mut aborted = 0;
+        for (key, upload) in uploads {
+            match self.multipart.abort_multipart(&key, upload).await {
+                Ok(()) => aborted += 1,
+                Err(e) => {
+                    report_cleanup_error(&self.log, "cleanup_upload: abort", &storage_error(&e));
+                },
+            }
+        }
+        aborted
+    }
+
+    /// Deletes a session's objects in 2 batches: every object but its states, then
+    /// its states. The states stay while any other object does, so a sweep that
+    /// finds what a crash left still reads a state that names the session's
+    /// uploads. A batch gives its deletes no order, so a crash inside the states
+    /// batch can leave any of them, the newest included.
+    ///
+    /// Returns whether it removed the session: it listed objects, and each is now gone.
+    async fn delete(&self, upload_prefix: &Path, objects: Vec<ObjectMeta>) -> bool {
+        let listed = !objects.is_empty();
+        let states_prefix = upload_prefix.clone().join(STATES);
+        let old_state = upload_prefix.clone().join(OLD_STATE);
+        let (mut states, rest): (Vec<_>, Vec<_>) = objects
+            .into_iter()
+            .map(|meta| meta.location)
+            .partition(|key| key.prefix_matches(&states_prefix) || *key == old_state);
+        states.sort();
+
+        listed && self.delete_batch(rest).await && self.delete_batch(states).await
+    }
+
+    /// Deletes keys together, as one request where the store allows, and returns
+    /// whether each is now gone.
+    async fn delete_batch(&self, keys: Vec<Path>) -> bool {
+        let failures: Vec<object_store::Error> = self
+            .store
+            .delete_stream(stream::iter(keys.into_iter().map(Ok)).boxed())
+            .filter_map(|deleted| async move { deleted.err().filter(|e| !is_not_found(e)) })
+            .collect()
+            .await;
+        for e in &failures {
+            report_cleanup_error(&self.log, "cleanup_upload: delete", &storage_error(e));
+        }
+        failures.is_empty()
+    }
+
+    async fn read(&self, key: &Path) -> Option<Bytes> {
+        self.store.get(key).await.ok()?.bytes().await.ok()
+    }
+}
+
+/// The creation time of any session's state, in the old layout or the new.
+#[derive(Deserialize)]
+struct Created {
+    created_at: i64,
+}
+
+/// The key of a session's newest state, in the new layout or the old.
+fn newest_state_key(upload_prefix: &Path, objects: &[ObjectMeta]) -> Option<Path> {
+    let states_prefix = upload_prefix.clone().join(STATES);
+    let old_state = upload_prefix.clone().join(OLD_STATE);
+    objects
+        .iter()
+        .map(|meta| &meta.location)
+        .filter(|key| key.prefix_matches(&states_prefix))
+        .filter_map(|key| Some((session::generation(key)?, key)))
+        .max_by_key(|(generation, _key)| *generation)
+        .map(|(_generation, key)| key.clone())
+        .or_else(|| {
+            objects
+                .iter()
+                .any(|meta| meta.location == old_state)
+                .then_some(old_state)
+        })
 }
 
 /// Whether an upload session has outlived the timeout.
 ///
-/// Prefers the session's recorded creation time. When the state object is
-/// missing or unreadable, falls back to the newest object under the prefix, so
-/// a session whose state has not been written yet is not deleted out from under
-/// an in-flight upload.
-async fn is_stale(
-    store: &RecordingStore,
-    upload_prefix: &Path,
+/// Prefers the session's recorded creation time. When no state is readable,
+/// falls back to the newest object under the prefix, so a session whose state
+/// has not been written yet is not deleted out from under an in-flight upload.
+fn is_stale(
+    created_at: Option<i64>,
     objects: &[ObjectMeta],
     now: i64,
     os_now: i64,
     timeout_secs: i64,
 ) -> bool {
-    let state_key = upload_state_key(upload_prefix);
-    let state = match store.get(&state_key).await {
-        Ok(result) => result
-            .bytes()
-            .await
-            .ok()
-            .and_then(|data| serde_json::from_slice::<UploadState>(&data).ok()),
-        Err(_e) => None,
-    };
-
-    if let Some(state) = state {
-        return now.saturating_sub(state.created_at) > timeout_secs;
+    if let Some(created_at) = created_at {
+        return now.saturating_sub(created_at) > timeout_secs;
     }
 
     // No objects at all under this prefix, so nothing is in flight
@@ -1394,14 +1460,15 @@ mod tests {
     use bencher_json::DateTime;
     use bytes::Bytes;
     use futures::TryStreamExt as _;
-    use object_store::multipart::PartId;
+    use object_store::multipart::{MultipartStore, PartId};
     use object_store::{ObjectStore, ObjectStoreExt as _, memory::InMemory, path::Path};
     use slog::Logger;
 
     use super::{
-        Clock, DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, Digest, ListTagsResult, MAX_CHUNK_SIZE,
-        MAX_PARTS, OciStorage, OciStorageError, ProjectUuid, READ_TIMEOUT, RecordingStore,
-        RegistryStorage, Sweep, UploadId, cleanup_stale_uploads, part_size,
+        BufferPool, Clock, DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, DEFAULT_MAX_UPLOAD_MEMORY,
+        Digest, ListTagsResult, MAX_CHUNK_SIZE, MAX_PARTS, MIN_CHUNK_SIZE, OciStorage,
+        OciStorageError, ProjectUuid, READ_TIMEOUT, RecordingMultipart, RecordingStore,
+        RegistryStorage, Sweep, UploadId, part_size,
     };
     use crate::mock_s3::{self, Request, Response};
     use crate::part_copy::{Completion, PartCopy};
@@ -1435,14 +1502,20 @@ mod tests {
     }
 
     /// Storage over an arbitrary object store, for key layout and behavior tests.
-    fn storage(store: Arc<dyn ObjectStore>, prefix: Option<&str>) -> OciStorage {
+    fn storage(
+        store: Arc<dyn ObjectStore>,
+        multipart: Arc<dyn MultipartStore>,
+        prefix: Option<&str>,
+    ) -> OciStorage {
         OciStorage {
             store: Arc::new(RecordingStore::new(store)),
+            multipart: Arc::new(RecordingMultipart::new(multipart)),
             part_copy: None,
             prefix: prefix.map(Path::from),
             upload_timeout: 3600,
             max_body_size: DEFAULT_MAX_BODY_SIZE,
             chunk_size: default_chunk_size(),
+            buffers: BufferPool::new(DEFAULT_MAX_UPLOAD_MEMORY, DEFAULT_CHUNK_SIZE),
             log: log(),
             concurrency: 4,
             sweep: Mutex::new(Sweep {
@@ -1454,7 +1527,23 @@ mod tests {
     }
 
     fn in_memory(prefix: Option<&str>) -> OciStorage {
-        storage(Arc::new(InMemory::new()), prefix)
+        let store = Arc::new(InMemory::new());
+        storage(store.clone(), store, prefix)
+    }
+
+    /// Makes an upload session look older than any upload timeout.
+    async fn backdate(storage: &OciStorage, upload_id: &UploadId) {
+        let session = storage.uploads().load(upload_id).await.unwrap();
+        let mut state = session.state().clone();
+        state.created_at = 0;
+        storage
+            .store
+            .put(
+                &storage.upload_state_generation_key(upload_id, session.generation()),
+                serde_json::to_vec(&state).unwrap().into(),
+            )
+            .await
+            .unwrap();
     }
 
     /// Storage over a local directory, returning the temporary root alongside it.
@@ -1526,12 +1615,16 @@ mod tests {
             format!("{PROJECT}/referrers/sha256/{SUBJECT_SHA256}/sha256-{EMPTY_SHA256}")
         );
         assert_eq!(
-            storage.upload_state_key(&upload_id).as_ref(),
-            "_uploads/3f8d9c1e-0000-4000-8000-000000000abc/state.json"
+            storage.upload_data_key(&upload_id).as_ref(),
+            "_uploads/3f8d9c1e-0000-4000-8000-000000000abc/data"
         );
         assert_eq!(
-            storage.upload_chunks_prefix(&upload_id).as_ref(),
-            "_uploads/3f8d9c1e-0000-4000-8000-000000000abc/chunks"
+            storage.upload_state_generation_key(&upload_id, 7).as_ref(),
+            "_uploads/3f8d9c1e-0000-4000-8000-000000000abc/states/00000000000000000007"
+        );
+        assert_eq!(
+            storage.upload_tail_key(&upload_id, 1234).as_ref(),
+            "_uploads/3f8d9c1e-0000-4000-8000-000000000abc/tail/1234"
         );
         assert_eq!(
             storage
@@ -1576,12 +1669,16 @@ mod tests {
             format!("registry/{PROJECT}/referrers/sha256/{SUBJECT_SHA256}/sha256-{EMPTY_SHA256}")
         );
         assert_eq!(
-            storage.upload_state_key(&upload_id).as_ref(),
-            "registry/_uploads/3f8d9c1e-0000-4000-8000-000000000abc/state.json"
+            storage.upload_data_key(&upload_id).as_ref(),
+            "registry/_uploads/3f8d9c1e-0000-4000-8000-000000000abc/data"
         );
         assert_eq!(
-            storage.upload_chunks_prefix(&upload_id).as_ref(),
-            "registry/_uploads/3f8d9c1e-0000-4000-8000-000000000abc/chunks"
+            storage.upload_state_generation_key(&upload_id, 7).as_ref(),
+            "registry/_uploads/3f8d9c1e-0000-4000-8000-000000000abc/states/00000000000000000007"
+        );
+        assert_eq!(
+            storage.upload_tail_key(&upload_id, 1234).as_ref(),
+            "registry/_uploads/3f8d9c1e-0000-4000-8000-000000000abc/tail/1234"
         );
         assert_eq!(
             storage
@@ -1644,37 +1741,21 @@ mod tests {
                 "job output key for {raw}"
             );
             assert_eq!(
-                storage.upload_state_key(&upload_id).as_ref(),
-                format!("{encoded}/_uploads/{UPLOAD}/state.json"),
+                storage.upload_data_key(&upload_id).as_ref(),
+                format!("{encoded}/_uploads/{UPLOAD}/data"),
+                "upload data key for {raw}"
+            );
+            assert_eq!(
+                storage.upload_state_generation_key(&upload_id, 7).as_ref(),
+                format!("{encoded}/_uploads/{UPLOAD}/states/00000000000000000007"),
                 "upload state key for {raw}"
             );
             assert_eq!(
-                storage.upload_chunks_prefix(&upload_id).as_ref(),
-                format!("{encoded}/_uploads/{UPLOAD}/chunks"),
-                "upload chunks prefix for {raw}"
-            );
-            assert!(
-                storage
-                    .new_chunk_key(&upload_id)
-                    .as_ref()
-                    .starts_with(&format!("{encoded}/_uploads/{UPLOAD}/chunks/")),
-                "chunk key sits under the chunks prefix for {raw}"
+                storage.upload_tail_key(&upload_id, 1234).as_ref(),
+                format!("{encoded}/_uploads/{UPLOAD}/tail/1234"),
+                "upload tail key for {raw}"
             );
         }
-    }
-
-    #[test]
-    fn chunk_keys_sit_under_the_chunk_prefix_and_sort_by_creation() {
-        let storage = in_memory(None);
-        let upload_id = UploadId::new();
-        let prefix = format!("{}/", storage.upload_chunks_prefix(&upload_id));
-
-        let first = storage.new_chunk_key(&upload_id);
-        let second = storage.new_chunk_key(&upload_id);
-        assert!(first.as_ref().starts_with(&prefix), "{first}");
-        assert!(second.as_ref().starts_with(&prefix), "{second}");
-        // The zero-padded nanosecond timestamp orders chunks lexicographically
-        assert!(first < second);
     }
 
     #[test]
@@ -1795,7 +1876,7 @@ mod tests {
             11
         );
 
-        // The session's objects are gone, chunks included, leaving only the blob
+        // The session's objects are gone, tails and states included, leaving only the blob
         storage.get_upload_size(&upload_id).await.unwrap_err();
         let remaining: Vec<Path> = storage
             .store
@@ -1818,7 +1899,7 @@ mod tests {
     }
 
     /// The encoded-prefix bug is only visible end to end: writes and reads must
-    /// agree on the key, or completing an upload finds no chunks.
+    /// agree on the key, or completing an upload finds no session.
     #[tokio::test]
     async fn upload_round_trip_with_an_encoded_prefix() {
         upload_round_trip(&in_memory(Some("r\u{e9}gistry/team#1"))).await;
@@ -1863,7 +1944,7 @@ mod tests {
         digest_mismatch_leaves_no_blob(&storage).await;
     }
 
-    /// Completion streams chunks into a multipart upload, so the reassembled
+    /// Appends stream into a multipart upload, so the reassembled
     /// blob must be byte exact across several parts with a non-aligned tail.
     #[tokio::test]
     async fn complete_upload_spans_multipart_boundaries() {
@@ -1961,28 +2042,9 @@ mod tests {
             .await
             .unwrap();
 
-        // Backdate the session past the timeout
-        let state = super::UploadState {
-            repository: PROJECT.to_owned(),
-            created_at: 0,
-        };
-        storage
-            .store
-            .put(
-                &storage.upload_state_key(&upload_id),
-                serde_json::to_vec(&state).unwrap().into(),
-            )
-            .await
-            .unwrap();
+        backdate(&storage, &upload_id).await;
 
-        cleanup_stale_uploads(
-            &log(),
-            &storage.store,
-            &storage.uploads_prefix(),
-            3600,
-            &clock(),
-        )
-        .await;
+        storage.sweeper().sweep().await;
 
         storage.get_upload_size(&upload_id).await.unwrap_err();
         assert_eq!(
@@ -2003,14 +2065,7 @@ mod tests {
             .await
             .unwrap();
 
-        cleanup_stale_uploads(
-            &log(),
-            &storage.store,
-            &storage.uploads_prefix(),
-            3600,
-            &clock(),
-        )
-        .await;
+        storage.sweeper().sweep().await;
 
         assert_eq!(storage.get_upload_size(&upload_id).await.unwrap(), 10);
     }
@@ -2027,17 +2082,7 @@ mod tests {
             .append_upload(&upload_id, Bytes::from_static(b"left by a crash"))
             .await
             .unwrap();
-        let state = super::UploadState {
-            repository: PROJECT.to_owned(),
-            created_at: 0,
-        };
-        earlier
-            .put(
-                &earlier.upload_state_key(&upload_id),
-                serde_json::to_vec(&state).unwrap().into(),
-            )
-            .await
-            .unwrap();
+        backdate(&earlier, &upload_id).await;
 
         let storage =
             OciStorage::try_from_config(log(), None, &db_path, None, None, Some(clock())).unwrap();
@@ -2481,7 +2526,7 @@ mod tests {
             "the default body limit fits at the chunk size"
         );
 
-        let max_body_size = 100 * 1024 * 1024 * 1024;
+        let max_body_size = 1024 * 1024 * 1024 * 1024;
         let size = u64::try_from(part_size(chunk_size, max_body_size)).unwrap();
         assert!(
             max_body_size.div_ceil(size) <= MAX_PARTS,
@@ -2658,7 +2703,11 @@ mod tests {
 
         let default = default_chunk_size();
         assert_eq!(build(None), default);
-        assert_eq!(build(Some(1)), default, "below the floor");
+        assert_eq!(
+            build(Some(1)),
+            usize::try_from(MIN_CHUNK_SIZE).unwrap(),
+            "below the floor"
+        );
         assert_eq!(build(Some(10 * 1024 * 1024)), 10 * 1024 * 1024);
         assert_eq!(
             build(Some(u64::MAX)),
@@ -2798,6 +2847,7 @@ mod tests {
                 mib_parts(),
             )
             .await
+            .map_err(OciStorageError::from)
     }
 
     fn part_copies(log: &mock_s3::Log) -> Vec<Request> {

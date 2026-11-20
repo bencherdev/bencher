@@ -37,6 +37,8 @@ pub enum ApiHistogram {
     OciBlobPullBytes(OciPullOutcome),
     /// Time a blob GET took, from its handler's start to its body's end or drop.
     OciBlobPullDuration(OciPullOutcome),
+    /// Time an upload waited for a part buffer.
+    OciUploadBufferWait,
 }
 
 impl ApiHistogram {
@@ -55,6 +57,7 @@ impl ApiHistogram {
             Self::OciBlobUploadBytes => "oci.blob.upload.bytes",
             Self::OciBlobPullBytes(_) => "oci.blob.pull.bytes",
             Self::OciBlobPullDuration(_) => "oci.blob.pull.duration",
+            Self::OciUploadBufferWait => "oci.upload.buffer.wait",
         }
     }
 
@@ -89,6 +92,7 @@ impl ApiHistogram {
             Self::OciBlobPullDuration(_) => {
                 "Time a blob GET took, from its handler's start to its body's end or drop"
             },
+            Self::OciUploadBufferWait => "Time an upload waited for a part buffer",
         }
     }
 
@@ -103,7 +107,8 @@ impl ApiHistogram {
             | Self::CallbackFinishDuration(_)
             | Self::OciStorageRequestDuration(_, _)
             | Self::OciUploadPhaseDuration(_, _)
-            | Self::OciBlobPullDuration(_) => "s",
+            | Self::OciBlobPullDuration(_)
+            | Self::OciUploadBufferWait => "s",
             Self::CallbackFinishAttempts(_) => "{attempt}",
             Self::OciBlobUploadBytes | Self::OciBlobPullBytes(_) => "By",
         }
@@ -117,7 +122,8 @@ impl ApiHistogram {
             Self::ReportCreateDuration
             | Self::ReportProcessDuration
             | Self::ReportWriteDuration
-            | Self::OciBlobUploadBytes => Vec::new(),
+            | Self::OciBlobUploadBytes
+            | Self::OciUploadBufferWait => Vec::new(),
             Self::CallbackFinishDuration(finish) | Self::CallbackFinishAttempts(finish) => {
                 finish_attributes(finish)
             },
@@ -147,7 +153,8 @@ impl ApiHistogram {
             Self::CallbackFinishAttempts(_) => Some(&[0.0, 1.0, 2.0, 3.0]),
             Self::OciStorageRequestDuration(_, _)
             | Self::OciUploadPhaseDuration(_, _)
-            | Self::OciBlobPullDuration(_) => Some(SECONDS_BOUNDARIES),
+            | Self::OciBlobPullDuration(_)
+            | Self::OciUploadBufferWait => Some(SECONDS_BOUNDARIES),
             Self::OciBlobUploadBytes | Self::OciBlobPullBytes(_) => Some(BYTES_BOUNDARIES),
         }
     }

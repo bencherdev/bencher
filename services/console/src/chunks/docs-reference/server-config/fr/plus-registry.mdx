@@ -20,10 +20,12 @@ Il existe deux `scheme`s de stockage :
     - `region` : (Optionnel) Région du bucket. Requis pour AWS. Par défaut `auto`, ce qu'attendent les stockages compatibles S3.
     - `access_key_id` : Clé d'accès S3
     - `secret_access_key` : Clé d'accès secret S3
-    - `chunk_size` : (Optionnel) Taille minimale de fragment en octets pour la mise en tampon des données d'upload avant le stockage. Par défaut : 5 Mo.
-      Les corps de requête HTTP arrivent sous forme de petites trames réseau (typiquement 8 à 64 Ko). Sans mise en tampon, chaque trame devient un objet séparé, créant des milliers d'objets par couche. Cette valeur correspond également à la taille minimale de partie pour les uploads multipart S3.
+    - `chunk_size` : (Optionnel) Taille de partie en octets pour les uploads de blobs, de 5 Mio à 5 Gio. Par défaut : 16 Mio (16 777 216 octets).
+      Un upload est transmis en flux vers un upload multipart en parties de cette taille, et une session d'upload conserve la taille de partie avec laquelle elle a commencé.
 
-Définissez une règle de cycle de vie du bucket qui interrompt les uploads multipart incomplets. Un crash au milieu de la finalisation d'un upload de blob en laisse un, et le serveur ne l'interrompt pas.
+Les uploads de blobs exigent trois choses d'un stockage compatible S3 : l'ETag de chaque partie envoyée est le MD5 de cette partie, un upload multipart terminé a l'ETag multipart standard, et un `UploadPartCopy` présigné fonctionne. Cloudflare R2 remplit les trois.
+
+Le serveur interrompt un upload multipart lorsque la requête qui l'a ouvert échoue, et les uploads multipart qu'une session d'upload abandonnée a enregistrés lorsqu'il nettoie les uploads périmés. Définissez aussi une règle de cycle de vie du bucket qui interrompt les uploads multipart incomplets : un crash peut encore laisser un upload que seule cette règle supprime.
 
 Si vous aviez configuré un `path` commençant ou se terminant par une barre oblique, déplacez les objets existants vers le préfixe normalisé avant la mise à niveau. Un `path` de `registry/` stockait les clés sous `registry//<project>/...` et les stocke désormais sous `registry/<project>/...`. Chaque segment de `path` est également encodé en pourcentage dans la clé stockée lorsqu'il contient un caractère de contrôle ASCII, un caractère non ASCII ou l'un de `\` `{` `^` `}` `%` `` ` `` `]` `"` `>` `[` `~` `<` `#` `|` `*` `?`, et un segment qui vaut exactement `.` ou `..` est stocké sous la forme `%2E` ou `%2E%2E`. Tous les autres caractères, y compris les espaces, `+`, `=`, `@` et `:`, sont stockés tels quels, de sorte que `team#1` devient `team%231` tandis que `team+1` reste `team+1`. Les données stockées sous un préfixe désormais encodé nécessitent le même déplacement. Avant de déplacer des données, listez les clés réellement stockées dans le bucket et comparez-les au nouveau préfixe.
 
@@ -34,3 +36,4 @@ Si vous aviez configuré un `path` commençant ou se terminant par une barre obl
 | storage.scheme |                 "s3"                   |    ---     |  Oui   | Spécifie le `scheme` de stockage. Pour toutes les autres clés `storage`, voir la liste ci-dessus. |
 | upload_timeout |                  3600                  |    3600    |  Non   | Délai d'expiration de la session d'upload en secondes. Les uploads obsolètes sont nettoyés au démarrage de nouveaux uploads. |
 | max_body_size  |               1073741824               | 1073741824 |  Non   | Taille maximale du corps en octets pour les uploads de blobs et manifestes. Les requêtes dépassant cette limite sont rejetées avec 413 Payload Too Large. Par défaut : 1 Gio. |
+| max_upload_memory |               536870912                |  536870912   |    Non     | Mémoire en octets pour les tampons de parties des uploads, partagée par toutes les requêtes. Un upload qui ne trouve pas de tampon libre en attend un. Une valeur inférieure à une partie est relevée à une partie. Une requête dont la partie ne se remplit pas dans les 5 minutes qui suivent la prise de son tampon échoue, et son client la renvoie. Par défaut : 512 Mio. |

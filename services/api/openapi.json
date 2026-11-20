@@ -12356,7 +12356,7 @@
           "oci"
         ],
         "summary": "Monolithic upload (PUT to /v2/{name}/blobs/uploads?digest=...)",
-        "description": "Uploads a complete blob in a single request. The request body is streamed to storage incrementally, so memory usage is bounded by the network chunk size rather than the total blob size.\n\n# Authentication\n\nAuthentication is optional for unclaimed projects. If the project's organization is claimed, valid authentication with Create permission is required. If the project doesn't exist and a slug is used, the project will be created automatically.",
+        "description": "Uploads a complete blob in a single request. The request body is streamed to storage incrementally, so memory usage is bounded by the server's part buffers rather than the total blob size.\n\n# Authentication\n\nAuthentication is optional for unclaimed projects. If the project's organization is claimed, valid authentication with Create permission is required. If the project doesn't exist and a slug is used, the project will be created automatically.",
         "operationId": "oci_upload_monolithic",
         "parameters": [
           {
@@ -12704,7 +12704,7 @@
           "oci"
         ],
         "summary": "Upload a chunk of data",
-        "description": "Appends a chunk of data to an in-progress upload session. This is the recommended approach for large blobs, as each chunk is stored immediately rather than buffering the entire blob in memory.\n\nClients can call this endpoint multiple times to upload a blob in pieces, then call `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` to complete the upload.\n\nThe `Content-Range` header is optional but recommended - if provided, the server validates that the chunk starts at the expected offset.",
+        "description": "Appends a chunk of data to an in-progress upload session. This is the recommended approach for large blobs, as the chunk streams into storage as it arrives rather than buffering the entire blob in memory.\n\nClients can call this endpoint multiple times to upload a blob in pieces, then call `PUT /v2/{name}/blobs/uploads/{session_id}?digest=...` to complete the upload.\n\nThe `Content-Range` header is optional but recommended - if provided, the server validates that the chunk starts at the expected offset.",
         "operationId": "oci_upload_chunk",
         "parameters": [
           {
@@ -18176,6 +18176,13 @@
             "format": "uint64",
             "minimum": 0
           },
+          "max_upload_memory": {
+            "description": "Memory in bytes for upload part buffers, shared by all requests. An upload that finds no free buffer waits for one. A value below one part is raised to one part. A request whose part does not fill within 5 minutes of taking its buffer fails, and its client resends it. Defaults to 512 MiB (536,870,912 bytes). See [`DEFAULT_MAX_UPLOAD_MEMORY`].",
+            "default": 536870912,
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0
+          },
           "storage": {
             "nullable": true,
             "description": "Storage configuration for the container registry. Defaults to local filesystem storage if not provided.",
@@ -21566,7 +21573,7 @@
               },
               "chunk_size": {
                 "nullable": true,
-                "description": "Minimum chunk size in bytes for buffering upload data before storing. Valid range: 5 MB to 5 GB. Defaults to 5 MB (5,242,880 bytes). See [`DEFAULT_CHUNK_SIZE`] and [`MAX_CHUNK_SIZE`].",
+                "description": "Part size in bytes for blob uploads, which stream into multipart uploads. Valid range: 5 MiB to 5 GiB. Defaults to 16 MiB (16,777,216 bytes). See [`DEFAULT_CHUNK_SIZE`], [`MIN_CHUNK_SIZE`], and [`MAX_CHUNK_SIZE`].",
                 "type": "integer",
                 "format": "uint64",
                 "minimum": 0

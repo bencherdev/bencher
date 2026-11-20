@@ -4,6 +4,7 @@
 //! the signature does not cover what was sent, or when it leaves a copy header
 //! unsigned. Its refusal echoes the access key ID and the host, as R2's does.
 
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fmt::Write as _;
 use std::sync::{Arc, Mutex};
 
@@ -19,6 +20,9 @@ pub(crate) const ACCESS_KEY_ID: &str = "AKIAMOCKKEYID0123456";
 pub(crate) const SECRET_ACCESS_KEY: &str = "mock-secret-access-key";
 pub(crate) const BUCKET: &str = "my-bucket";
 pub(crate) const UPLOAD_ID: &str = "mock-upload-id";
+
+/// The smallest part S3 takes before the last one of an upload
+const MIN_PART: usize = 5 * 1024 * 1024;
 
 /// The query encoding that `SigV4` canonicalizes with.
 const QUERY_ENCODE_SET: AsciiSet = NON_ALPHANUMERIC
@@ -496,4 +500,360 @@ pub(crate) fn bucket(request: &Request, objects: &[(String, u64)]) -> Response {
         };
     }
     Response::error(400, "UnexpectedRequest")
+}
+
+/// A bucket that keeps what it is sent, and answers as R2 does: part `ETag`s are
+/// MD5s, a completion takes only the newest `ETag` of each part and answers a
+/// retry with 404 `NoSuchUpload`, an abort answers 204 in every state, and a
+/// create-only put has one winner.
+#[derive(Debug, Default, Clone)]
+pub(crate) struct Bucket(Arc<Mutex<BucketState>>);
+
+#[derive(Debug, Default)]
+struct BucketState {
+    objects: BTreeMap<String, Object>,
+    uploads: HashMap<String, BTreeMap<u64, Vec<u8>>>,
+    next_upload: u64,
+}
+
+#[derive(Debug, Clone)]
+struct Object {
+    data: Vec<u8>,
+    /// Quoted, as S3 sends it
+    e_tag: String,
+}
+
+impl Object {
+    fn put(data: Vec<u8>) -> Self {
+        Self {
+            e_tag: format!("\"{}\"", hex::encode(Md5::digest(&data))),
+            data,
+        }
+    }
+
+    fn answer(&self, head: bool) -> Response {
+        let response = Response::new(200)
+            .header("content-length", &self.data.len().to_string())
+            .header("last-modified", "Fri, 20 Nov 2026 00:00:00 GMT")
+            .header("etag", &self.e_tag);
+        if head {
+            response
+        } else {
+            Response {
+                body: self.data.clone(),
+                ..response
+            }
+        }
+    }
+}
+
+impl Bucket {
+    /// The bytes at `key`, if any.
+    pub(crate) fn object(&self, key: &str) -> Option<Vec<u8>> {
+        self.state()
+            .objects
+            .get(key)
+            .map(|object| object.data.clone())
+    }
+
+    /// Every key under `prefix`.
+    pub(crate) fn keys(&self, prefix: &str) -> Vec<String> {
+        self.state()
+            .objects
+            .keys()
+            .filter(|key| key.starts_with(prefix))
+            .cloned()
+            .collect()
+    }
+
+    pub(crate) fn put(&self, key: &str, data: Vec<u8>) {
+        self.state()
+            .objects
+            .insert(key.to_owned(), Object::put(data));
+    }
+
+    /// Ends an upload, as the bucket's own expiry would.
+    pub(crate) fn drop_upload(&self, upload_id: &str) {
+        self.state().uploads.remove(upload_id);
+    }
+
+    /// Opens an upload, as another request would.
+    pub(crate) fn open_upload(&self) -> String {
+        let mut state = self.state();
+        state.next_upload += 1;
+        let upload_id = format!("upload-{}", state.next_upload);
+        state.uploads.insert(upload_id.clone(), BTreeMap::new());
+        upload_id
+    }
+
+    /// The `ETag` of the object at `key`, quoted.
+    pub(crate) fn e_tag(&self, key: &str) -> Option<String> {
+        self.state()
+            .objects
+            .get(key)
+            .map(|object| object.e_tag.clone())
+    }
+
+    /// The uploads still open.
+    pub(crate) fn open_uploads(&self) -> Vec<String> {
+        let mut uploads: Vec<String> = self.state().uploads.keys().cloned().collect();
+        uploads.sort();
+        uploads
+    }
+
+    pub(crate) fn answer(&self, request: &Request) -> Response {
+        let mut state = self.state();
+        if request.is_list() {
+            return state.list(request);
+        }
+        if request.method == "POST" && request.query("delete").is_some() {
+            return state.delete_many(&request.body);
+        }
+        if request.is_create_multipart() {
+            drop(state);
+            let upload_id = self.open_upload();
+            return Response::xml(
+                200,
+                &format!(
+                    "<InitiateMultipartUploadResult><Bucket>{BUCKET}</Bucket><Key>{}</Key><UploadId>{upload_id}</UploadId></InitiateMultipartUploadResult>",
+                    request.key()
+                ),
+            );
+        }
+        if let Some(upload_id) = request.query("uploadId") {
+            return state.upload_call(request, &upload_id);
+        }
+        if request.is_copy_object() {
+            let Some(object) = state.source(request).cloned() else {
+                return Response::error(404, "NoSuchKey");
+            };
+            state.objects.insert(request.key(), object);
+            return Response::xml(
+                200,
+                "<CopyObjectResult><LastModified>2026-11-20T00:00:00.000Z</LastModified><ETag>\"0\"</ETag></CopyObjectResult>",
+            );
+        }
+        let key = request.key();
+        match request.method.as_str() {
+            "PUT" => {
+                if request.header("if-none-match") == Some("*") && state.objects.contains_key(&key)
+                {
+                    return Response::error(412, "PreconditionFailed");
+                }
+                let object = Object::put(request.body.clone());
+                let response = Response::new(200).header("etag", &object.e_tag);
+                state.objects.insert(key, object);
+                response
+            },
+            "GET" => state.objects.get(&key).map_or_else(
+                || Response::error(404, "NoSuchKey"),
+                |object| object.answer(false),
+            ),
+            "HEAD" => state
+                .objects
+                .get(&key)
+                .map_or_else(|| Response::new(404), |object| object.answer(true)),
+            "DELETE" => {
+                state.objects.remove(&key);
+                Response::new(204)
+            },
+            _ => Response::error(400, "UnexpectedRequest"),
+        }
+    }
+
+    fn state(&self) -> std::sync::MutexGuard<'_, BucketState> {
+        self.0.lock().unwrap()
+    }
+}
+
+impl BucketState {
+    fn list(&self, request: &Request) -> Response {
+        let prefix = request.query("prefix").unwrap_or_default();
+        let delimiter = request.query("delimiter");
+        let mut contents = String::new();
+        let mut prefixes = BTreeSet::new();
+        for (key, object) in self.objects.range(prefix.clone()..) {
+            let Some(rest) = key.strip_prefix(&prefix) else {
+                break;
+            };
+            if let Some(delimiter) = &delimiter
+                && let Some((common, _rest)) = rest.split_once(delimiter.as_str())
+            {
+                prefixes.insert(format!("{prefix}{common}{delimiter}"));
+                continue;
+            }
+            write!(
+                contents,
+                "<Contents><Key>{key}</Key><LastModified>2026-11-20T00:00:00.000Z</LastModified><ETag>{}</ETag><Size>{}</Size></Contents>",
+                object.e_tag.replace('"', "&quot;"),
+                object.data.len()
+            )
+            .unwrap();
+        }
+        for prefix in prefixes {
+            write!(
+                contents,
+                "<CommonPrefixes><Prefix>{prefix}</Prefix></CommonPrefixes>"
+            )
+            .unwrap();
+        }
+        Response::xml(
+            200,
+            &format!(
+                "<ListBucketResult><IsTruncated>false</IsTruncated>{contents}</ListBucketResult>"
+            ),
+        )
+    }
+
+    fn delete_many(&mut self, body: &[u8]) -> Response {
+        let body = String::from_utf8_lossy(body);
+        let mut deleted = String::new();
+        for key in body
+            .split("<Key>")
+            .skip(1)
+            .filter_map(|rest| rest.split_once("</Key>").map(|(key, _after)| key))
+        {
+            self.objects.remove(key);
+            write!(deleted, "<Deleted><Key>{key}</Key></Deleted>").unwrap();
+        }
+        Response::xml(200, &format!("<DeleteResult>{deleted}</DeleteResult>"))
+    }
+
+    /// The object a copy names in its `x-amz-copy-source`.
+    fn source(&self, request: &Request) -> Option<&Object> {
+        let source = request.header("x-amz-copy-source")?;
+        let key = source.strip_prefix(&format!("{BUCKET}/"))?;
+        let key = percent_decode_str(key).decode_utf8().ok()?;
+        self.objects.get(key.as_ref())
+    }
+
+    fn upload_call(&mut self, request: &Request, upload_id: &str) -> Response {
+        if request.is_abort() {
+            self.uploads.remove(upload_id);
+            return Response::new(204);
+        }
+        if !self.uploads.contains_key(upload_id) {
+            return Response::error(404, "NoSuchUpload");
+        }
+        if request.is_complete() {
+            return self.complete(request, upload_id);
+        }
+        let Some(number) = request.part_number() else {
+            return Response::error(400, "UnexpectedRequest");
+        };
+        let data = if request.is_part_copy() {
+            let Some(source) = self.source(request) else {
+                return Response::error(404, "NoSuchKey");
+            };
+            let Some((first, last)) = request
+                .header("x-amz-copy-source-range")
+                .and_then(|range| range.strip_prefix("bytes="))
+                .and_then(|range| range.split_once('-'))
+                .and_then(|(first, last)| {
+                    Some((first.parse::<usize>().ok()?, last.parse::<usize>().ok()?))
+                })
+            else {
+                return Response::error(400, "InvalidArgument");
+            };
+            if first >= source.data.len() {
+                return Response::error(416, "InvalidRange");
+            }
+            source.data[first..=last.min(source.data.len() - 1)].to_vec()
+        } else {
+            request.body.clone()
+        };
+        let part = Object::put(data);
+        let response = if request.is_part_copy() {
+            Response::xml(
+                200,
+                &format!(
+                    "<CopyPartResult><LastModified>2026-11-20T00:00:00.000Z</LastModified><ETag>{}</ETag></CopyPartResult>",
+                    part.e_tag.replace('"', "&quot;")
+                ),
+            )
+        } else {
+            Response::new(200).header("etag", &part.e_tag)
+        };
+        if let Some(parts) = self.uploads.get_mut(upload_id) {
+            parts.insert(number, part.data);
+        }
+        response
+    }
+
+    /// Completes an upload with the parts its body lists, each by its newest
+    /// `ETag`, and refuses what R2 refuses: no parts, parts out of order, a part
+    /// before the last under 5 MiB, and parts before the last of more than one
+    /// size, or a last part larger than them.
+    fn complete(&mut self, request: &Request, upload_id: &str) -> Response {
+        let Some(parts) = self.uploads.get(upload_id) else {
+            return Response::error(404, "NoSuchUpload");
+        };
+        let body = String::from_utf8_lossy(&request.body).replace("&quot;", "\"");
+        let element = |part: &str, name: &str| {
+            part.split_once(&format!("<{name}>"))
+                .and_then(|(_before, rest)| rest.split_once(&format!("</{name}>")))
+                .map(|(value, _after)| value.to_owned())
+        };
+        let mut listed = Vec::new();
+        for part in body.split("<Part>").skip(1) {
+            let number = element(part, "PartNumber").and_then(|number| number.parse::<u64>().ok());
+            let (Some(number), Some(e_tag)) = (number, element(part, "ETag")) else {
+                return Response::error(400, "MalformedXML");
+            };
+            listed.push((number, e_tag));
+        }
+        if listed.is_empty() {
+            return Response::error(400, "MalformedXML");
+        }
+        if !listed
+            .windows(2)
+            .all(|pair| matches!(pair, [first, second] if first.0 < second.0))
+        {
+            return Response::error(400, "InvalidPartOrder");
+        }
+        let mut stored = Vec::new();
+        for (number, e_tag) in &listed {
+            let Some(part) = parts.get(number) else {
+                return Response::error(400, "InvalidPart");
+            };
+            if hex::encode(Md5::digest(part)) != e_tag.trim_matches('"') {
+                return Response::error(400, "InvalidPart");
+            }
+            stored.push(part);
+        }
+        if let Some((last, before)) = stored.split_last()
+            && let Some(first) = before.first()
+        {
+            if before.iter().any(|part| part.len() < MIN_PART) {
+                return Response::error(400, "EntityTooSmall");
+            }
+            if before.iter().any(|part| part.len() != first.len()) || last.len() > first.len() {
+                return Response::error(400, "InvalidPart");
+            }
+        }
+        let mut data = Vec::new();
+        let mut digests = Vec::new();
+        for part in &stored {
+            data.extend_from_slice(part);
+            digests.extend_from_slice(&Md5::digest(part));
+        }
+        let object = Object {
+            e_tag: format!(
+                "\"{}-{}\"",
+                hex::encode(Md5::digest(&digests)),
+                stored.len()
+            ),
+            data,
+        };
+        let e_tag = object.e_tag.replace('"', "&quot;");
+        self.uploads.remove(upload_id);
+        self.objects.insert(request.key(), object);
+        Response::xml(
+            200,
+            &format!(
+                "<CompleteMultipartUploadResult><Bucket>{BUCKET}</Bucket><Key>{}</Key><ETag>{e_tag}</ETag></CompleteMultipartUploadResult>",
+                request.key()
+            ),
+        )
+    }
 }

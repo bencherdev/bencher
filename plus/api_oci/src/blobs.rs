@@ -402,7 +402,7 @@ pub async fn oci_upload_start(
 /// Monolithic upload (PUT to /v2/{name}/blobs/uploads?digest=...)
 ///
 /// Uploads a complete blob in a single request. The request body is streamed
-/// to storage incrementally, so memory usage is bounded by the network chunk size
+/// to storage incrementally, so memory usage is bounded by the server's part buffers
 /// rather than the total blob size.
 ///
 /// # Authentication
@@ -466,31 +466,29 @@ async fn upload_monolithic(
         .start_upload(&project_uuid)
         .await
         .map_err(storage_error)?;
+    let session = storage
+        .upload_session(&upload_id, &project_uuid)
+        .await
+        .map_err(storage_error)?;
 
     // Stream body to storage (storage enforces max_body_size incrementally)
-    let result = async {
-        let final_size = crate::uploads::stream_to_storage(body, storage, &upload_id, 0).await?;
-        let digest = storage
-            .complete_upload(&upload_id, &expected_digest)
-            .await
-            .map_err(storage_error)?;
-        Ok::<(Digest, u64), UploadError>((digest, final_size))
-    }
-    .await;
-
-    let (actual_digest, final_size) = match result {
-        Ok(result) => result,
+    let completed = match storage
+        .complete_upload_body(session, &expected_digest, body.into_stream())
+        .await
+    {
+        Ok(completed) => completed,
         Err(e) => {
             // Best-effort cleanup of the orphaned upload session
             if let Err(cancel_err) = storage.cancel_upload(&upload_id).await {
                 slog::info!(rqctx.log, "Failed to cancel upload session on error"; "upload_id" => %upload_id, "error" => %cancel_err);
             }
-            return Err(e);
+            return Err(UploadError::from(e));
         },
     };
+    let actual_digest: Digest = completed.digest;
 
     // Record bandwidth usage
-    record_oci_bandwidth(context, org_uuid, final_size);
+    record_oci_bandwidth(context, org_uuid, completed.received);
 
     // Record metric
     #[cfg(feature = "otel")]
