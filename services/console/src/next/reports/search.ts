@@ -61,6 +61,7 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"json",
 	"json_v0",
 	"json_v1",
+	"kotlin_kotlinx",
 	"magic",
 	"python_asv",
 	"python_asv_json",

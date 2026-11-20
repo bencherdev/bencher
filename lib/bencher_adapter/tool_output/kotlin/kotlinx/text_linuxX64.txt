@@ -1,0 +1,4 @@
+Benchmark                        Mode  Cnt         Score         Error    Units
+DefaultBenchmark.mathBenchmark  thrpt    3  74176853.561 ±  898563.595  ops/sec
+DefaultBenchmark.sum            thrpt    3  26258996.230 ± 1003142.390  ops/sec
+nested.DefaultBenchmark.sum      avgt    3         0.247 ±       0.006    us/op

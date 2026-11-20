@@ -1,7 +1,7 @@
 use bencher_json::project::report::Adapter;
 
 use crate::{
-    Adaptable as _, Settings,
+    Adaptable as _, AdapterError, Settings,
     adapters::{
         bmf_v1::{
             c_sharp::dot_net::AdapterCSharpDotNetV1,
@@ -20,6 +20,7 @@ use crate::{
                 tinybench::AdapterJsTinybench,
                 vitest::{AdapterJsVitestOutputJson, AdapterJsVitestReporter, AdapterJsVitestV1},
             },
+            kotlin::kotlinx::AdapterKotlinKotlinx,
             python::{
                 asv::{AdapterPythonAsvJson, AdapterPythonAsvText, AdapterPythonAsvV1},
                 pytest::AdapterPythonPytestV1,
@@ -53,6 +54,7 @@ mod finite;
 pub mod go;
 pub mod java;
 pub mod js;
+pub mod kotlin;
 mod leaf;
 mod magic;
 mod percentile;
@@ -110,6 +112,7 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::JsMitata => AdapterJsMitata::parse(input, settings),
         Adapter::JsTinybench => AdapterJsTinybench::parse(input, settings),
         Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarnessV1::parse(input, settings),
+        Adapter::KotlinKotlinx => AdapterKotlinKotlinx::parse(input, settings),
         Adapter::PythonAsv => AdapterPythonAsvV1::parse(input, settings),
         Adapter::PythonAsvJson => AdapterPythonAsvJson::parse(input, settings),
         Adapter::PythonAsvText => AdapterPythonAsvText::parse(input, settings),
@@ -121,6 +124,16 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::ShellHyperfineV2 => AdapterShellHyperfine2::parse(input, settings),
         Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
+}
+
+/// The error for a JMH-shaped report that `adapter` refused because another harness or a JMH
+/// before 1.19 wrote it, which names that writer and how to read its results, under `java_jmh`
+/// and the nodes that try it.
+pub(crate) fn refusal(adapter: Adapter, input: &str) -> Option<AdapterError> {
+    matches!(adapter, Adapter::Magic | Adapter::Java | Adapter::JavaJmh)
+        .then(|| AdapterJavaJmhV1::lookalike(input))
+        .flatten()
+        .map(AdapterError::JmhLookalike)
 }
 
 #[cfg(test)]
@@ -139,7 +152,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 53] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -192,6 +205,7 @@ mod test_bmf_v1 {
         Adapter::ShellHyperfineV2,
         Adapter::Dart,
         Adapter::DartBenchmarkHarness,
+        Adapter::KotlinKotlinx,
     ];
 
     const LANGUAGES: [Adapter; 10] = [

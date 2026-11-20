@@ -1,0 +1,90 @@
+[
+  {
+    "benchmark" : "test.DefaultBenchmark.sum",
+    "mode" : "thrpt",
+    "compilationMode": "Release",
+    "configurationName" : "one",
+    "threads" : 1,
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 1,
+    "measurementTime" : "200 ms",
+    "params" : {
+          
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 2.4507395737745438E7,
+       "scoreError": 0.0,
+       "scoreConfidence" : [
+          2.4507395737745438E7,
+          2.4507395737745438E7
+       ],
+       "scorePercentiles" : {
+          "0.00" : 2.4507395737745438E7,
+          "25.00" : 2.4507395737745438E7,
+          "50.00" : 2.4507395737745438E7,
+          "75.00" : 2.4507395737745438E7,
+          "90.00" : 2.4507395737745438E7,
+          "99.00" : 2.4507395737745438E7,
+          "99.90" : 2.4507395737745438E7,
+          "99.99" : 2.4507395737745438E7,
+          "100.00" : 2.4507395737745438E7
+       },
+       "scoreUnit" : "ops/sec",
+       "rawData" : [
+           [
+             2.4507395737745438E7
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  },
+  {
+    "benchmark" : "test.nested.DefaultBenchmark.sum",
+    "mode" : "avgt",
+    "compilationMode": "Release",
+    "configurationName" : "one",
+    "threads" : 1,
+    "warmupIterations" : 1,
+    "warmupTime" : "200 ms",
+    "measurementIterations" : 1,
+    "measurementTime" : "200 ms",
+    "params" : {
+          
+    },
+    "advanced" : {
+          
+    },
+    "primaryMetric" : {
+       "score": 0.27906798103075525,
+       "scoreError": 0.0,
+       "scoreConfidence" : [
+          0.27906798103075525,
+          0.27906798103075525
+       ],
+       "scorePercentiles" : {
+          "0.00" : 0.27906798103075525,
+          "25.00" : 0.27906798103075525,
+          "50.00" : 0.27906798103075525,
+          "75.00" : 0.27906798103075525,
+          "90.00" : 0.27906798103075525,
+          "99.00" : 0.27906798103075525,
+          "99.90" : 0.27906798103075525,
+          "99.99" : 0.27906798103075525,
+          "100.00" : 0.27906798103075525
+       },
+       "scoreUnit" : "us/op",
+       "rawData" : [
+           [
+             0.27906798103075525
+           ]
+       ]
+    },
+    "secondaryMetrics" : {
+    }
+  }
+]

@@ -212,6 +212,8 @@ pub enum CliReportAdapter {
     JsTinybench,
     /// 🕸 JavaScript Vitest
     JsVitest,
+    /// 🟣 Kotlin kotlinx-benchmark
+    KotlinKotlinx,
     /// 🐍 Python ASV
     PythonAsv,
     /// 🐍 Python Pytest

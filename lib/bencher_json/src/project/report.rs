@@ -363,6 +363,7 @@ const SHELL_HYPERFINE_V1_INT: i32 = 102;
 const SHELL_HYPERFINE_V2_INT: i32 = 103;
 const DART_INT: i32 = 110;
 const DART_BENCHMARK_HARNESS_INT: i32 = 111;
+const KOTLIN_KOTLINX_INT: i32 = 171;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -428,6 +429,7 @@ pub enum Adapter {
     ShellHyperfineV2 = SHELL_HYPERFINE_V2_INT,
     Dart = DART_INT,
     DartBenchmarkHarness = DART_BENCHMARK_HARNESS_INT,
+    KotlinKotlinx = KOTLIN_KOTLINX_INT,
 }
 
 impl Adapter {
@@ -488,7 +490,8 @@ impl Adapter {
             | Self::ShellHyperfine
             | Self::ShellHyperfineV1
             | Self::ShellHyperfineV2
-            | Self::DartBenchmarkHarness => self,
+            | Self::DartBenchmarkHarness
+            | Self::KotlinKotlinx => self,
         }
     }
 
@@ -571,6 +574,7 @@ impl fmt::Display for Adapter {
             Self::ShellHyperfineV2 => write!(f, "shell_hyperfine_v2"),
             Self::Dart => write!(f, "dart"),
             Self::DartBenchmarkHarness => write!(f, "dart_benchmark_harness"),
+            Self::KotlinKotlinx => write!(f, "kotlin_kotlinx"),
         }
     }
 }
@@ -583,12 +587,12 @@ mod adapter {
         GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, JAVA_INT, JAVA_JMH_INT,
         JS_BENCHMARK_INT, JS_DENO_INT, JS_INT, JS_MITATA_INT, JS_TIME_INT, JS_TINYBENCH_INT,
         JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT,
-        MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT, PYTHON_INT,
-        PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT, RUST_BENCH_INT,
-        RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT,
-        RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
-        RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
-        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        KOTLIN_KOTLINX_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT,
+        PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT,
+        RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
+        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT,
+        RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT,
+        SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -659,6 +663,7 @@ mod adapter {
                 Self::ShellHyperfineV2 => SHELL_HYPERFINE_V2_INT.to_sql(out),
                 Self::Dart => DART_INT.to_sql(out),
                 Self::DartBenchmarkHarness => DART_BENCHMARK_HARNESS_INT.to_sql(out),
+                Self::KotlinKotlinx => KOTLIN_KOTLINX_INT.to_sql(out),
             }
         }
     }
@@ -722,6 +727,7 @@ mod adapter {
                 SHELL_HYPERFINE_V2_INT => Ok(Self::ShellHyperfineV2),
                 DART_INT => Ok(Self::Dart),
                 DART_BENCHMARK_HARNESS_INT => Ok(Self::DartBenchmarkHarness),
+                KOTLIN_KOTLINX_INT => Ok(Self::KotlinKotlinx),
                 value => Err(Box::new(AdapterError::Invalid(value))),
             }
         }
@@ -1337,7 +1343,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 53] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1390,6 +1396,7 @@ mod tests {
         Adapter::ShellHyperfineV2,
         Adapter::Dart,
         Adapter::DartBenchmarkHarness,
+        Adapter::KotlinKotlinx,
     ];
 
     // A new variant fails to compile here until it joins `ADAPTERS` above.
@@ -1446,7 +1453,8 @@ mod tests {
             | Adapter::ShellHyperfineV1
             | Adapter::ShellHyperfineV2
             | Adapter::Dart
-            | Adapter::DartBenchmarkHarness => true,
+            | Adapter::DartBenchmarkHarness
+            | Adapter::KotlinKotlinx => true,
         }
     }
 

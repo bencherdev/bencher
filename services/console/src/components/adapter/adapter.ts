@@ -12,6 +12,7 @@ const DART_ICON = "devicon-dart-plain";
 const GO_ICON = "devicon-go-original-wordmark";
 const JAVA_ICON = "devicon-java-plain";
 const JS_ICON = "devicon-javascript-plain";
+const KOTLIN_ICON = "devicon-kotlin-plain";
 const PYTHON_ICON = "devicon-python-plain";
 const RUBY_ICON = "devicon-ruby-plain";
 const RUST_ICON = "devicon-rust-plain";
@@ -59,6 +60,8 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.JsMitata:
 		case Adapter.JsTinybench:
 			return JS_ICON;
+		case Adapter.KotlinKotlinx:
+			return KOTLIN_ICON;
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:
@@ -123,6 +126,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.JsMitata:
 		case Adapter.JsTinybench:
 			return `bencher run${host} "node bench.mjs"`;
+		case Adapter.KotlinKotlinx:
+			return `bencher run${host} --file results.json "rm -rf build/reports/benchmarks && ./gradlew jsBenchmark && cp build/reports/benchmarks/main/*/js.json results.json"`;
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:

@@ -11,15 +11,16 @@ use bencher_json::{
         report::Adapter,
     },
 };
-use serde::Deserialize;
+use serde::{Deserialize, de::IgnoredAny};
 
 use crate::{
     Adaptable, Settings,
     adapters::bmf_v1::{
-        finite::Finite,
+        finite::{Finite, finite_json},
         leaf::{LeafResults, Variant, parameter_set},
         percentile::percentile_name,
     },
+    error::JmhLookalike,
     results::adapter_results::AdapterResults,
 };
 
@@ -30,11 +31,21 @@ use crate::{
 /// `@label`, and each other secondary result in a measure of its own label and unit. Adapter keys
 /// start with `@`, following JSON-LD's convention for keywords, and a parameter spelled like one
 /// is skipped.
+///
+/// Every benchmark must name its `jmhVersion`, which JMH writes since 1.19, so the JMH-shaped
+/// reports of other harnesses are refused, and [`AdapterJavaJmhV1::lookalike`] names their writer
+/// for the 400.
 pub struct AdapterJavaJmhV1;
 
 impl Adaptable for AdapterJavaJmhV1 {
     fn parse(input: &str, _settings: Settings) -> Option<AdapterResults> {
         let benchmarks = serde_json::from_str::<Vec<Benchmark>>(input).ok()?;
+        if benchmarks
+            .iter()
+            .any(|benchmark| benchmark.jmh_version.is_none())
+        {
+            return None;
+        }
         let mut results = LeafResults::default();
         for benchmark in benchmarks {
             let Benchmark {
@@ -43,6 +54,7 @@ impl Adaptable for AdapterJavaJmhV1 {
                 mut params,
                 primary_metric,
                 secondary_metrics,
+                ..
             } = benchmark;
             let (Some((measure, factor)), Ok(benchmark_name)) = (
                 primary_measure(&mode, &primary_metric.score_unit),
@@ -96,6 +108,51 @@ impl Adaptable for AdapterJavaJmhV1 {
         results.finish_with_skips(Adapter::JavaJmh)
     }
 }
+
+impl AdapterJavaJmhV1 {
+    /// The writer of a JMH-shaped report in which no benchmark names its `jmhVersion`, when every
+    /// benchmark tells the same writer: kotlinx-benchmark writes neither `jmhVersion` nor `forks`
+    /// (`BenchmarkReportFormatter.kt:168-207`, v0.5.0), Swift package-benchmark writes `forks` and
+    /// its own throughput unit (`BenchmarkTool+Export+JMHFormatter.swift:57`, `:97`, v1.38.1),
+    /// and JMH before 1.19 writes `forks` and its own units (`JSONResultFormat.java`, 1.18).
+    pub(crate) fn lookalike(input: &str) -> Option<JmhLookalike> {
+        let benchmarks = serde_json::from_str::<Vec<Lookalike>>(&finite_json(input)).ok()?;
+        let mut writers = benchmarks.iter().map(Lookalike::writer);
+        let writer = writers.next()??;
+        writers.all(|other| other == Some(writer)).then_some(writer)
+    }
+}
+
+/// The keys that tell the writers of JMH-shaped reports apart.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Lookalike {
+    jmh_version: Option<IgnoredAny>,
+    forks: Option<IgnoredAny>,
+    primary_metric: LookalikeMetric,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LookalikeMetric {
+    score_unit: String,
+}
+
+impl Lookalike {
+    fn writer(&self) -> Option<JmhLookalike> {
+        if self.jmh_version.is_some() {
+            None
+        } else if self.forks.is_none() {
+            Some(JmhLookalike::Kotlinx)
+        } else if self.primary_metric.score_unit == SWIFT_THROUGHPUT_UNIT {
+            Some(JmhLookalike::SwiftBenchmark)
+        } else {
+            Some(JmhLookalike::JmhBefore119)
+        }
+    }
+}
+
+const SWIFT_THROUGHPUT_UNIT: &str = "# / s";
 
 const SAMPLE: &str = "sample";
 const MODE: &str = "@mode";
@@ -183,6 +240,7 @@ fn jmh_variant<'r>(
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Benchmark {
+    jmh_version: Option<IgnoredAny>,
     #[serde(rename = "benchmark")]
     name: String,
     mode: String,
@@ -309,12 +367,17 @@ mod test_java_jmh_v1 {
     };
     use pretty_assertions::assert_eq;
 
+    use super::AdapterJavaJmhV1;
     use crate::{
         Adaptable as _, Settings,
-        adapters::bmf_v1::test_util::{
-            Expected, assert_ignores_average, assert_units, assert_variant, convert_edited_v1,
-            convert_v1, variants,
+        adapters::bmf_v1::{
+            kotlin::kotlinx::test_kotlin_kotlinx::not_finite,
+            test_util::{
+                Expected, assert_ignores_average, assert_units, assert_value, assert_variant,
+                convert_edited_v1, convert_v1, variants,
+            },
         },
+        error::JmhLookalike,
         results::adapter_results::{AdapterResults, Skipped},
     };
 
@@ -968,7 +1031,7 @@ mod test_java_jmh_v1 {
     /// reserves `@label` only on the variants that set it.
     #[test]
     fn adapter_java_jmh_v1_adapter_keys() {
-        let input = r#"[{"benchmark": "bench.Named.run", "mode": "avgt", "params": {"@label": "theirs", "@mode": "fast", "counter": "mine", "label": "x", "mode": "slow"}, "primaryMetric": {"score": 2.0, "scoreError": 0.5, "scoreConfidence": [1.5, 2.5], "scorePercentiles": {}, "scoreUnit": "ns/op"}, "secondaryMetrics": {"hits": {"score": 3.0, "scoreError": 0.5, "scoreConfidence": [2.5, 3.5], "scorePercentiles": {}, "scoreUnit": "ns/op"}}}]"#;
+        let input = r#"[{"jmhVersion": "1.37", "benchmark": "bench.Named.run", "mode": "avgt", "params": {"@label": "theirs", "@mode": "fast", "counter": "mine", "label": "x", "mode": "slow"}, "primaryMetric": {"score": 2.0, "scoreError": 0.5, "scoreConfidence": [1.5, 2.5], "scorePercentiles": {}, "scoreUnit": "ns/op"}, "secondaryMetrics": {"hits": {"score": 3.0, "scoreError": 0.5, "scoreConfidence": [2.5, 3.5], "scorePercentiles": {}, "scoreUnit": "ns/op"}}}]"#;
         let results = Adapter::JavaJmh
             .convert(input, Settings::new(None, BmfVersion::V1))
             .expect("expected the leaf to parse the payload");
@@ -1388,7 +1451,7 @@ mod test_java_jmh_v1 {
             &[(measure, metrics)],
         );
 
-        let infinite = r#"[{"benchmark": "bench.Infinite.run", "mode": "thrpt", "primaryMetric": {"score": "+INF", "scoreError": "NaN", "scoreConfidence": ["-INF", "+INF"], "scorePercentiles": {"0.0": 2.0, "100.0": "+INF"}, "scoreUnit": "ops/s"}, "secondaryMetrics": {}}]"#;
+        let infinite = r#"[{"jmhVersion": "1.37", "benchmark": "bench.Infinite.run", "mode": "thrpt", "primaryMetric": {"score": "+INF", "scoreError": "NaN", "scoreConfidence": ["-INF", "+INF"], "scorePercentiles": {"0.0": 2.0, "100.0": "+INF"}, "scoreUnit": "ops/s"}, "secondaryMetrics": {}}]"#;
         let results = Adapter::JavaJmh
             .convert(infinite, Settings::new(None, BmfVersion::V1))
             .expect("expected the leaf to parse the payload");
@@ -1503,5 +1566,119 @@ mod test_java_jmh_v1 {
         ] {
             assert_ignores_average(Adapter::JavaJmh, suffix);
         }
+    }
+
+    /// Kills a leaf that claims a JMH-shaped report with no `jmhVersion`, from kotlinx-benchmark,
+    /// Swift package-benchmark, or JMH before 1.19, requires `forks` instead, which Swift writes,
+    /// checks the first benchmark only, or refuses kotlinx-benchmark's JVM report, which is JMH's.
+    #[test]
+    fn adapter_java_jmh_v1_requires_jmh_version() {
+        for suffix in [
+            "kotlin/kotlinx/params_linuxX64.json",
+            "kotlin/kotlinx/one_js.json",
+            "swift/benchmark/jmh_insert.json",
+        ] {
+            assert_eq!(read(&fixture(suffix)), None, "{suffix}");
+        }
+        assert_eq!(read(&before_1_19()), None);
+        let last = edited("java/jmh/modes.json", |json| {
+            json[3]
+                .as_object_mut()
+                .expect("Failed to read a benchmark")
+                .remove("jmhVersion");
+        });
+        assert_eq!(read(&last), None);
+
+        let results = convert_v1(Adapter::JavaJmh, "java/jmh/kotlinx_params_jvm.json");
+        assert!(results.skipped.is_empty(), "{:?}", results.skipped);
+        assert_eq!(variants(&results), 8);
+        assert_value(
+            &results,
+            (
+                "test.ParamBenchmark.mathBenchmark",
+                r#"{"@mode":"thrpt","data":"1","text":"a \"string\" with quotes","value":"2"}"#,
+            ),
+            (Throughput::SLUG_STR, "mean_ci99_9_lower"),
+            29_860_455.442_983_627,
+        );
+    }
+
+    /// Kills a writer told by the first benchmark alone, a kotlinx-benchmark report told by
+    /// `configurationName`, which kotlinx writes only since 0.4.17, a kotlinx report with a value
+    /// that is not finite read as it is, a Swift export taken for JMH before 1.19, and a writer
+    /// named for a report that JMH 1.19 or later wrote.
+    #[test]
+    fn adapter_java_jmh_v1_lookalike() {
+        let older_kotlinx = edited("kotlin/kotlinx/params_linuxX64.json", |json| {
+            for benchmark in json.as_array_mut().expect("Failed to read the benchmarks") {
+                benchmark
+                    .as_object_mut()
+                    .expect("Failed to read a benchmark")
+                    .remove("configurationName");
+            }
+        });
+        let mixed = edited("kotlin/kotlinx/params_linuxX64.json", |json| {
+            json[7]["jmhVersion"] = "1.37".into();
+        });
+        for (input, expected) in [
+            (
+                fixture("kotlin/kotlinx/params_linuxX64.json"),
+                Some(JmhLookalike::Kotlinx),
+            ),
+            (older_kotlinx, Some(JmhLookalike::Kotlinx)),
+            (not_finite(), Some(JmhLookalike::Kotlinx)),
+            (
+                fixture("swift/benchmark/jmh_insert.json"),
+                Some(JmhLookalike::SwiftBenchmark),
+            ),
+            (before_1_19(), Some(JmhLookalike::JmhBefore119)),
+            (fixture("java/jmh/kotlinx_params_jvm.json"), None),
+            (fixture("java/jmh/modes.json"), None),
+            (mixed, None),
+        ] {
+            assert_eq!(
+                AdapterJavaJmhV1::lookalike(&input),
+                expected,
+                "{expected:?}"
+            );
+        }
+    }
+
+    /// The fixture at `./tool_output/<suffix>` after `edit`, as JSON text.
+    fn edited<F: FnOnce(&mut serde_json::Value)>(suffix: &str, edit: F) -> String {
+        let input = std::fs::read_to_string(format!("./tool_output/{suffix}"))
+            .expect("Failed to read a fixture");
+        let mut json =
+            serde_json::from_str::<serde_json::Value>(&input).expect("Failed to parse a fixture");
+        edit(&mut json);
+        json.to_string()
+    }
+
+    /// A real JMH report as JMH before 1.19 writes it, without the keys 1.19 added and `vmName`,
+    /// which 1.21 added (`JSONResultFormat.java` at 1.18, 1.19, and 1.21; commit `f5bd0773` for
+    /// 1.19).
+    fn before_1_19() -> String {
+        edited("java/jmh/throughput.json", |json| {
+            let benchmark = json[0].as_object_mut().expect("Failed to read a benchmark");
+            for key in [
+                "jmhVersion",
+                "jvm",
+                "jvmArgs",
+                "jdkVersion",
+                "vmName",
+                "vmVersion",
+            ] {
+                assert!(benchmark.remove(key).is_some(), "no {key}");
+            }
+        })
+    }
+
+    fn read(input: &str) -> Option<AdapterResults> {
+        Adapter::JavaJmh.convert(input, Settings::new(None, BmfVersion::V1))
+    }
+
+    fn fixture(suffix: &str) -> String {
+        std::fs::read_to_string(format!("./tool_output/{suffix}"))
+            .expect("Failed to read a fixture")
     }
 }
