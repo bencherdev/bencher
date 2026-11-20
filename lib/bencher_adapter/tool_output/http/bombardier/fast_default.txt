@@ -1,0 +1,16 @@
+Bombarding http://localhost:8080/fast for 3s using 10 connection(s)
+ 00m02s 00m01s 00m01s 00m01s 00m01s 00m01s 3s
+Done!
+Statistics        Avg      Stdev        Max
+  Reqs/sec    171492.83    5582.67  183975.05
+  Latency       56.75us     8.85us     1.18ms
+  Latency Distribution
+     50%    51.00us
+     75%    66.00us
+     90%    83.00us
+     95%    97.00us
+     99%   215.00us
+  HTTP codes:
+    1xx - 0, 2xx - 514460, 3xx - 0, 4xx - 0, 5xx - 0
+    others - 0
+  Throughput:    30.26MB/s
