@@ -283,6 +283,7 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::mitata::LoadsAndStores::from_str(measure_str))
         .or_else(|| built_in::mitata::L1LoadMisses::from_str(measure_str))
         .or_else(|| built_in::mitata::L1StoreMisses::from_str(measure_str))
+        .or_else(|| built_in::systems::ContextSwitches::from_str(measure_str))
         .or_else(|| built_in::json::BuildTime::from_str(measure_str))
         .or_else(|| built_in::json::FileSize::from_str(measure_str))
         .or_else(|| built_in::iai::Instructions::from_str(measure_str))
@@ -297,6 +298,27 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::noise::CpuSteal::from_str(measure_str))
         .or_else(|| built_in::noise::NoiseScore::from_str(measure_str))
         .or_else(|| built_in_gungraun_measure(measure_str))
+        .or_else(|| built_in_swift_measure(measure_str))
+}
+
+/// The built-in Swift package-benchmark measure a measure name or slug names, if any.
+fn built_in_swift_measure(measure_str: &str) -> Option<JsonNewMeasure> {
+    built_in::swift::PeakMemoryDelta::from_str(measure_str)
+        .or_else(|| built_in::swift::PeakVirtualMemory::from_str(measure_str))
+        .or_else(|| built_in::swift::SmallAllocations::from_str(measure_str))
+        .or_else(|| built_in::swift::LargeAllocations::from_str(measure_str))
+        .or_else(|| built_in::swift::UnfreedAllocations::from_str(measure_str))
+        .or_else(|| built_in::swift::UnfreedBytes::from_str(measure_str))
+        .or_else(|| built_in::swift::LeakedResidentMemory::from_str(measure_str))
+        .or_else(|| built_in::swift::AllocatedResidentMemory::from_str(measure_str))
+        .or_else(|| built_in::swift::LogicalIo::from_str(measure_str))
+        .or_else(|| built_in::swift::PhysicalIo::from_str(measure_str))
+        .or_else(|| built_in::swift::PeakThreads::from_str(measure_str))
+        .or_else(|| built_in::swift::RunningThreads::from_str(measure_str))
+        .or_else(|| built_in::swift::ObjectAllocations::from_str(measure_str))
+        .or_else(|| built_in::swift::Retains::from_str(measure_str))
+        .or_else(|| built_in::swift::Releases::from_str(measure_str))
+        .or_else(|| built_in::swift::UnreleasedReferences::from_str(measure_str))
 }
 
 /// The built-in gungraun measure a measure name or slug names, if any.

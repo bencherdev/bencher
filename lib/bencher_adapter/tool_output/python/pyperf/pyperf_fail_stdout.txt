@@ -1,0 +1,65 @@
+...........
+WARNING: the benchmark result may be unstable
+* Not enough samples to get a stable result (95% certainty of less than 1% variation)
+
+Try to rerun the benchmark with more runs, values and/or loops.
+Run 'python -m pyperf system tune' command to reduce the system jitter.
+Use pyperf stats, pyperf dump and pyperf hist to analyze results.
+Use --quiet option to hide these warnings.
+
+ok: Mean +- std dev: 83.6 ns +- 1.7 ns
+Traceback (most recent call last):
+  File "/tmp/bench/fail/bench_fail.py", line 6, in <module>
+    runner.bench_func('boom', boom)
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_runner.py", line 562, in bench_func
+    result = self._main(task)
+             ^^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_runner.py", line 478, in _main
+    bench = self._worker(task)
+            ^^^^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_runner.py", line 452, in _worker
+    run = task.create_run()
+          ^^^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_worker.py", line 301, in create_run
+    self.compute()
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_worker.py", line 365, in compute
+    WorkerTask.compute(self)
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_worker.py", line 288, in compute
+    self.calibrate_loops()
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_worker.py", line 251, in calibrate_loops
+    self._compute_values(self.warmups, nvalue,
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_worker.py", line 80, in _compute_values
+    raw_value = task_func(self, self.loops)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_runner.py", line 555, in task_func
+    local_func()
+  File "/tmp/bench/fail/bench_fail.py", line 3, in boom
+    def boom(): raise ValueError("boom")
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: boom
+Traceback (most recent call last):
+  File "/tmp/bench/fail/bench_fail.py", line 6, in <module>
+    runner.bench_func('boom', boom)
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_runner.py", line 562, in bench_func
+    result = self._main(task)
+             ^^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_runner.py", line 485, in _main
+    bench = self._manager()
+            ^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_runner.py", line 698, in _manager
+    bench = Manager(self).create_bench()
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_manager.py", line 243, in create_bench
+    worker_bench, run = self.create_worker_bench()
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_manager.py", line 142, in create_worker_bench
+    suite = self.create_suite()
+            ^^^^^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_manager.py", line 132, in create_suite
+    suite = self.spawn_worker(self.calibrate_loops, 0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/bench/fail/venv/lib/python3.12/site-packages/pyperf/_manager.py", line 118, in spawn_worker
+    raise RuntimeError("%s failed with exit code %s"
+RuntimeError: /tmp/bench/fail/venv/bin/python failed with exit code 1
+exit 1
+-rw-rw-r-- 1 localhost localhost 4492 Nov 15 07:00 pyperf_fail.json

@@ -1,0 +1,2 @@
+Running with -sanity-check option, output is being suppressed as benchmark results will be useless.
+Created "/tmp/bench/out/bitcoin_sanity.json"

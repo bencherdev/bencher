@@ -780,6 +780,9 @@ export enum Adapter {
 	ShellHyperfineV2 = "shell_hyperfine_v2",
 	Dart = "dart",
 	DartBenchmarkHarness = "dart_benchmark_harness",
+	SwiftBenchmark = "swift_benchmark",
+	SwiftBenchmarkInflux = "swift_benchmark_influx",
+	SwiftBenchmarkText = "swift_benchmark_text",
 }
 
 /** A report, with what a link to it shows: the report that raised an alert. */

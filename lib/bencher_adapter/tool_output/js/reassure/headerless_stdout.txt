@@ -1,0 +1,14 @@
+❌ Measure code is running under incorrect Node.js configuration.
+Performance test code should be run in Jest with certain Node.js flags to increase measurements stability.
+Make sure you use the Reassure CLI and run it using "reassure" command.
+PASS headerless/List.perf-test.js
+  ✓ List 100 (39 ms)
+  ✓ List with scenario (26 ms)
+  ✓ fib function (1 ms)
+  ✓ async function (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        0.616 s
+Ran all test suites.

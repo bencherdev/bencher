@@ -1,0 +1,451 @@
+[
+  {
+    "unit" : "ns",
+    "value" : 681,
+    "extra" : "80th percentile: 501\n95th percentile: 512",
+    "name" : "Custom metrics - Time (wall clock)"
+  },
+  {
+    "unit" : "#",
+    "value" : 12,
+    "extra" : "80th percentile: 10\n95th percentile: 12",
+    "name" : "Custom metrics - QueueDepth"
+  },
+  {
+    "unit" : "ms",
+    "value" : 2,
+    "name" : "Fixed ms - Time (wall clock)"
+  },
+  {
+    "unit" : "ms",
+    "value" : 0,
+    "name" : "Fixed ms - Time (total CPU)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 151,
+    "extra" : "80th percentile: 80\n95th percentile: 130",
+    "name" : "Insert (count: 1, kind: array) - Time (wall clock)"
+  },
+  {
+    "unit" : "#",
+    "value" : 1,
+    "name" : "Insert (count: 1, kind: array) - Malloc (total)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 180,
+    "extra" : "80th percentile: 100\n95th percentile: 160",
+    "name" : "Insert (count: 1, kind: set) - Time (wall clock)"
+  },
+  {
+    "unit" : "#",
+    "value" : 1,
+    "name" : "Insert (count: 1, kind: set) - Malloc (total)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 2945,
+    "extra" : "80th percentile: 2705\n95th percentile: 2735",
+    "name" : "Insert (count: 4096, kind: array) - Time (wall clock)"
+  },
+  {
+    "unit" : "#",
+    "value" : 13,
+    "name" : "Insert (count: 4096, kind: array) - Malloc (total)"
+  },
+  {
+    "unit" : "μs",
+    "value" : 117,
+    "extra" : "80th percentile: 94\n95th percentile: 100",
+    "name" : "Insert (count: 4096, kind: set) - Time (wall clock)"
+  },
+  {
+    "unit" : "#",
+    "value" : 13,
+    "name" : "Insert (count: 4096, kind: set) - Malloc (total)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 571,
+    "extra" : "80th percentile: 290\n95th percentile: 500",
+    "name" : "Insert (count: 64, kind: array) - Time (wall clock)"
+  },
+  {
+    "unit" : "#",
+    "value" : 7,
+    "name" : "Insert (count: 64, kind: array) - Malloc (total)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 2275,
+    "extra" : "80th percentile: 1633\n95th percentile: 1643",
+    "name" : "Insert (count: 64, kind: set) - Time (wall clock)"
+  },
+  {
+    "unit" : "#",
+    "value" : 7,
+    "name" : "Insert (count: 64, kind: set) - Malloc (total)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 90,
+    "name" : "Name, with \"quotes\" - Time (wall clock)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 16,
+    "extra" : "80th percentile: 8\n95th percentile: 13",
+    "name" : "Scaled kilo - Time (wall clock)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 981,
+    "extra" : "80th percentile: 711\n95th percentile: 892",
+    "name" : "Sum array - Time (wall clock)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 0,
+    "name" : "Sum array - Time (total CPU)"
+  },
+  {
+    "unit" : "M",
+    "value" : 25,
+    "name" : "Sum array - Memory (resident peak)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "Sum array - Malloc \/ free Δ (bytes)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "Sum array - Malloc \/ free Δ"
+  },
+  {
+    "unit" : "#",
+    "value" : 17,
+    "name" : "Sum array - Malloc (total)"
+  },
+  {
+    "unit" : "K",
+    "value" : 43,
+    "name" : "Sum array - Malloc (bytes total)"
+  },
+  {
+    "unit" : "#",
+    "value" : 17,
+    "name" : "Sum array - Free (total)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 6071,
+    "extra" : "80th percentile: 3725\n95th percentile: 5519",
+    "name" : "Wall only - Time (wall clock)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 231,
+    "extra" : "80th percentile: 160\n95th percentile: 170",
+    "name" : "All metrics - Time (wall clock)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 0,
+    "name" : "All metrics - Time (user CPU)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 0,
+    "name" : "All metrics - Time (total CPU)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 0,
+    "name" : "All metrics - Time (system CPU)"
+  },
+  {
+    "unit" : "#",
+    "value" : 5,
+    "name" : "All metrics - Threads (peak)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "All metrics - Syscalls (write)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "All metrics - Syscalls (read)"
+  },
+  {
+    "unit" : "#",
+    "value" : 2,
+    "name" : "All metrics - Retains"
+  },
+  {
+    "unit" : "#",
+    "value" : 34,
+    "name" : "All metrics - Releases"
+  },
+  {
+    "unit" : "#",
+    "value" : 5,
+    "name" : "All metrics - Object allocs"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "All metrics - Memory Δ (resident peak)"
+  },
+  {
+    "unit" : "M",
+    "value" : 326,
+    "name" : "All metrics - Memory (virtual peak)"
+  },
+  {
+    "unit" : "M",
+    "value" : 29,
+    "name" : "All metrics - Memory (resident peak)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "All metrics - Malloc \/ free Δ (bytes)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "All metrics - Malloc \/ free Δ"
+  },
+  {
+    "unit" : "#",
+    "value" : 17,
+    "name" : "All metrics - Malloc (total)"
+  },
+  {
+    "unit" : "#",
+    "value" : 17,
+    "name" : "All metrics - Malloc (small)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "All metrics - Malloc (large)"
+  },
+  {
+    "unit" : "K",
+    "value" : 36,
+    "name" : "All metrics - Malloc (bytes total)"
+  },
+  {
+    "unit" : "#",
+    "value" : 17,
+    "name" : "All metrics - Free (total)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "All metrics - Bytes (write physical)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "All metrics - Bytes (write logical)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "All metrics - Bytes (read physical)"
+  },
+  {
+    "unit" : "#",
+    "value" : 5,
+    "name" : "All metrics - Bytes (read logical)"
+  },
+  {
+    "unit" : "#",
+    "value" : 27,
+    "name" : "All metrics - (Alloc + Retain) - Release Δ"
+  },
+  {
+    "unit" : "μs",
+    "value" : 10789,
+    "extra" : "80th percentile: 10535\n95th percentile: 10682",
+    "name" : "File write - Time (wall clock)"
+  },
+  {
+    "unit" : "μs",
+    "value" : 10000,
+    "name" : "File write - Time (system CPU)"
+  },
+  {
+    "unit" : "#",
+    "value" : 5,
+    "name" : "File write - Threads (peak)"
+  },
+  {
+    "unit" : "#",
+    "value" : 1,
+    "name" : "File write - Syscalls (write)"
+  },
+  {
+    "unit" : "#",
+    "value" : 3,
+    "name" : "File write - Syscalls (read)"
+  },
+  {
+    "unit" : "K",
+    "value" : 66,
+    "name" : "File write - Bytes (write physical)"
+  },
+  {
+    "unit" : "K",
+    "value" : 66,
+    "name" : "File write - Bytes (write logical)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "File write - Bytes (read physical)"
+  },
+  {
+    "unit" : "K",
+    "value" : 66,
+    "name" : "File write - Bytes (read logical)"
+  },
+  {
+    "unit" : "#",
+    "value" : 765,
+    "name" : "Linked list - Retains"
+  },
+  {
+    "unit" : "#",
+    "value" : 1059,
+    "name" : "Linked list - Releases"
+  },
+  {
+    "unit" : "#",
+    "value" : 260,
+    "name" : "Linked list - Object allocs"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "Linked list - Memory Δ (resident peak)"
+  },
+  {
+    "unit" : "M",
+    "value" : 324,
+    "name" : "Linked list - Memory (virtual peak)"
+  },
+  {
+    "unit" : "M",
+    "value" : 26,
+    "name" : "Linked list - Memory (resident peak)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "Linked list - Malloc \/ free Δ (bytes)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "Linked list - Malloc \/ free Δ"
+  },
+  {
+    "unit" : "#",
+    "value" : 272,
+    "name" : "Linked list - Malloc (total)"
+  },
+  {
+    "unit" : "#",
+    "value" : 272,
+    "name" : "Linked list - Malloc (small)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "Linked list - Malloc (large)"
+  },
+  {
+    "unit" : "K",
+    "value" : 43,
+    "name" : "Linked list - Malloc (bytes total)"
+  },
+  {
+    "unit" : "#",
+    "value" : 272,
+    "name" : "Linked list - Free (total)"
+  },
+  {
+    "unit" : "#",
+    "value" : 34,
+    "name" : "Linked list - (Alloc + Retain) - Release Δ"
+  },
+  {
+    "unit" : "ms",
+    "value" : 20,
+    "name" : "Sleep 20ms - Time (wall clock)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 0,
+    "name" : "Sleep 20ms - Time (user CPU)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 0,
+    "name" : "Sleep 20ms - Time (total CPU)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 0,
+    "name" : "Sleep 20ms - Time (system CPU)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 1002,
+    "extra" : "80th percentile: 711\n95th percentile: 902",
+    "name" : "Sum array - Time (wall clock)"
+  },
+  {
+    "unit" : "ns",
+    "value" : 0,
+    "name" : "Sum array - Time (total CPU)"
+  },
+  {
+    "unit" : "M",
+    "value" : 25,
+    "name" : "Sum array - Memory (resident peak)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "Sum array - Malloc \/ free Δ (bytes)"
+  },
+  {
+    "unit" : "#",
+    "value" : 0,
+    "name" : "Sum array - Malloc \/ free Δ"
+  },
+  {
+    "unit" : "#",
+    "value" : 17,
+    "name" : "Sum array - Malloc (total)"
+  },
+  {
+    "unit" : "K",
+    "value" : 43,
+    "name" : "Sum array - Malloc (bytes total)"
+  },
+  {
+    "unit" : "#",
+    "value" : 17,
+    "name" : "Sum array - Free (total)"
+  }
+]

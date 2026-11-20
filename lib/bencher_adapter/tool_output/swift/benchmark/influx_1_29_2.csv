@@ -1,0 +1,79 @@
+#datatype tag,tag,tag,tag,tag,tag,tag,tag,tag,double,double,long,long,dateTime
+measurement,hostName,processoryType,processors,memory,kernelVersion,metric,unit,test,value,test_average,iterations,warmup_iterations,time
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 1),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 1),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 1),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 1),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 1),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 1),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 1),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),M,Insert (count: 1),20408163,14824426.57142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),M,Insert (count: 1),16670719,14824426.57142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),M,Insert (count: 1),16670719,14824426.57142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),M,Insert (count: 1),16670719,14824426.57142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),M,Insert (count: 1),16670719,14824426.57142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),M,Insert (count: 1),16400383,14824426.57142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),M,Insert (count: 1),279564,14824426.57142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 1),49,561.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 1),60,561.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 1),60,561.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 1),60,561.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 1),60,561.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 1),61,561.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 1),3577,561.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 64),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 64),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 64),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 64),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 64),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 64),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Insert (count: 64),0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Insert (count: 64),3333333,2451341.285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Insert (count: 64),3022847,2451341.285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Insert (count: 64),2932735,2451341.285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Insert (count: 64),2779135,2451341.285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Insert (count: 64),2697215,2451341.285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Insert (count: 64),2320383,2451341.285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Insert (count: 64),73741,2451341.285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 64),300,2242.1428571428573,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 64),331,2242.1428571428573,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 64),341,2242.1428571428573,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 64),360,2242.1428571428573,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 64),371,2242.1428571428573,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 64),431,2242.1428571428573,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Insert (count: 64),13561,2242.1428571428573,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Sum array,0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Sum array,0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Sum array,0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Sum array,0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Sum array,0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Sum array,0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Malloc(total),,Sum array,0,0.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Memory(residentpeak),M,Sum array,23461888,23461888.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Memory(residentpeak),M,Sum array,23461888,23461888.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Memory(residentpeak),M,Sum array,23461888,23461888.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Memory(residentpeak),M,Sum array,23461888,23461888.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Memory(residentpeak),M,Sum array,23461888,23461888.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Memory(residentpeak),M,Sum array,23461888,23461888.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Memory(residentpeak),M,Sum array,23461888,23461888.0,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Sum array,1538462,1109833.857142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Sum array,1490943,1109833.857142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Sum array,1488895,1109833.857142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Sum array,1174527,1109833.857142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Sum array,1097727,1109833.857142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Sum array,969215,1109833.857142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Throughput(#/s),K,Sum array,9068,1109833.857142857,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(totalCPU),ns,Sum array,0,1428571.4285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(totalCPU),ns,Sum array,0,1428571.4285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(totalCPU),ns,Sum array,0,1428571.4285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(totalCPU),ns,Sum array,0,1428571.4285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(totalCPU),ns,Sum array,0,1428571.4285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(totalCPU),ns,Sum array,0,1428571.4285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(totalCPU),ns,Sum array,10000000,1428571.4285714286,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Sum array,650,16438.571428571428,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Sum array,671,16438.571428571428,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Sum array,672,16438.571428571428,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Sum array,852,16438.571428571428,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Sum array,911,16438.571428571428,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Sum array,1032,16438.571428571428,10000,1,2026-11-20T16:00:06Z
+Alpha,localhost,x86_64,16,15,#100-Ubuntu-SMP-PREEMPT_DYNAMIC-Thu-Jan--1-00:00:00-UTC-2026,Time(wallclock),ns,Sum array,110282,16438.571428571428,10000,1,2026-11-20T16:00:06Z

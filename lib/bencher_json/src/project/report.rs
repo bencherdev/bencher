@@ -363,6 +363,9 @@ const SHELL_HYPERFINE_V1_INT: i32 = 102;
 const SHELL_HYPERFINE_V2_INT: i32 = 103;
 const DART_INT: i32 = 110;
 const DART_BENCHMARK_HARNESS_INT: i32 = 111;
+const SWIFT_BENCHMARK_INT: i32 = 191;
+const SWIFT_BENCHMARK_INFLUX_INT: i32 = 1911;
+const SWIFT_BENCHMARK_TEXT_INT: i32 = 1912;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -428,6 +431,9 @@ pub enum Adapter {
     ShellHyperfineV2 = SHELL_HYPERFINE_V2_INT,
     Dart = DART_INT,
     DartBenchmarkHarness = DART_BENCHMARK_HARNESS_INT,
+    SwiftBenchmark = SWIFT_BENCHMARK_INT,
+    SwiftBenchmarkInflux = SWIFT_BENCHMARK_INFLUX_INT,
+    SwiftBenchmarkText = SWIFT_BENCHMARK_TEXT_INT,
 }
 
 impl Adapter {
@@ -488,7 +494,10 @@ impl Adapter {
             | Self::ShellHyperfine
             | Self::ShellHyperfineV1
             | Self::ShellHyperfineV2
-            | Self::DartBenchmarkHarness => self,
+            | Self::DartBenchmarkHarness
+            | Self::SwiftBenchmark
+            | Self::SwiftBenchmarkInflux
+            | Self::SwiftBenchmarkText => self,
         }
     }
 
@@ -571,6 +580,9 @@ impl fmt::Display for Adapter {
             Self::ShellHyperfineV2 => write!(f, "shell_hyperfine_v2"),
             Self::Dart => write!(f, "dart"),
             Self::DartBenchmarkHarness => write!(f, "dart_benchmark_harness"),
+            Self::SwiftBenchmark => write!(f, "swift_benchmark"),
+            Self::SwiftBenchmarkInflux => write!(f, "swift_benchmark_influx"),
+            Self::SwiftBenchmarkText => write!(f, "swift_benchmark_text"),
         }
     }
 }
@@ -588,7 +600,8 @@ mod adapter {
         RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT,
         RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT,
         RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT,
-        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT, SWIFT_BENCHMARK_INFLUX_INT,
+        SWIFT_BENCHMARK_INT, SWIFT_BENCHMARK_TEXT_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -659,6 +672,9 @@ mod adapter {
                 Self::ShellHyperfineV2 => SHELL_HYPERFINE_V2_INT.to_sql(out),
                 Self::Dart => DART_INT.to_sql(out),
                 Self::DartBenchmarkHarness => DART_BENCHMARK_HARNESS_INT.to_sql(out),
+                Self::SwiftBenchmark => SWIFT_BENCHMARK_INT.to_sql(out),
+                Self::SwiftBenchmarkInflux => SWIFT_BENCHMARK_INFLUX_INT.to_sql(out),
+                Self::SwiftBenchmarkText => SWIFT_BENCHMARK_TEXT_INT.to_sql(out),
             }
         }
     }
@@ -722,6 +738,9 @@ mod adapter {
                 SHELL_HYPERFINE_V2_INT => Ok(Self::ShellHyperfineV2),
                 DART_INT => Ok(Self::Dart),
                 DART_BENCHMARK_HARNESS_INT => Ok(Self::DartBenchmarkHarness),
+                SWIFT_BENCHMARK_INT => Ok(Self::SwiftBenchmark),
+                SWIFT_BENCHMARK_INFLUX_INT => Ok(Self::SwiftBenchmarkInflux),
+                SWIFT_BENCHMARK_TEXT_INT => Ok(Self::SwiftBenchmarkText),
                 value => Err(Box::new(AdapterError::Invalid(value))),
             }
         }
@@ -1337,7 +1356,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 55] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1390,6 +1409,9 @@ mod tests {
         Adapter::ShellHyperfineV2,
         Adapter::Dart,
         Adapter::DartBenchmarkHarness,
+        Adapter::SwiftBenchmark,
+        Adapter::SwiftBenchmarkInflux,
+        Adapter::SwiftBenchmarkText,
     ];
 
     // A new variant fails to compile here until it joins `ADAPTERS` above.
@@ -1446,7 +1468,10 @@ mod tests {
             | Adapter::ShellHyperfineV1
             | Adapter::ShellHyperfineV2
             | Adapter::Dart
-            | Adapter::DartBenchmarkHarness => true,
+            | Adapter::DartBenchmarkHarness
+            | Adapter::SwiftBenchmark
+            | Adapter::SwiftBenchmarkInflux
+            | Adapter::SwiftBenchmarkText => true,
         }
     }
 

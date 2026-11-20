@@ -1,0 +1,38 @@
+fib_10
+------
+
+WARNING: the benchmark result may be unstable
+* Not enough samples to get a stable result (95% certainty of less than 1% variation)
+
+Try to rerun the benchmark with more runs, values and/or loops.
+Run 'python -m pyperf system tune' command to reduce the system jitter.
+Use pyperf stats, pyperf dump and pyperf hist to analyze results.
+Use --quiet option to hide these warnings.
+
+Mean +- std dev: 134 ns +- 4 ns
+
+fib 20
+------
+
+WARNING: the benchmark result may be unstable
+* Not enough samples to get a stable result (95% certainty of less than 1% variation)
+
+Try to rerun the benchmark with more runs, values and/or loops.
+Run 'python -m pyperf system tune' command to reduce the system jitter.
+Use pyperf stats, pyperf dump and pyperf hist to analyze results.
+Use --quiet option to hide these warnings.
+
+Mean +- std dev: 300 ns +- 16 ns
+
+sort_list
+---------
+
+WARNING: the benchmark result may be unstable
+* Not enough samples to get a stable result (95% certainty of less than 1% variation)
+
+Try to rerun the benchmark with more runs, values and/or loops.
+Run 'python -m pyperf system tune' command to reduce the system jitter.
+Use pyperf stats, pyperf dump and pyperf hist to analyze results.
+Use --quiet option to hide these warnings.
+
+Mean +- std dev: 2.49 us +- 0.12 us

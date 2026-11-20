@@ -18,6 +18,7 @@ use crate::{
                 divan::AdapterRustDivan, gungraun::AdapterRustGungraunV1, iai::AdapterRustIaiV1,
             },
             shell::hyperfine::AdapterShellHyperfineV1,
+            swift::benchmark::AdapterSwiftBenchmark,
         },
         json::v1::AdapterJsonV1,
     },
@@ -26,7 +27,7 @@ use crate::{
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
 /// its structured format before its text, and Divan before criterion, since criterion's text leaf
-/// also claims a run that prints both and drops Divan's tree.
+/// also claims a run that prints both and drops Divan's tree, then each harness added after them.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -54,6 +55,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustIaiV1::parse(input, settings))
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
+            .or_else(|| AdapterSwiftBenchmark::parse(input, settings))
     }
 }
 
@@ -71,7 +73,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 31] = [
+    const LEAVES: [Adapter; 33] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -103,11 +105,13 @@ mod test_magic_v1 {
         Adapter::RustGungraunStdout,
         Adapter::ShellHyperfineV2,
         Adapter::ShellHyperfineV1,
+        Adapter::SwiftBenchmarkInflux,
+        Adapter::SwiftBenchmarkText,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 11] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 56] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -131,6 +135,57 @@ mod test_magic_v1 {
         ("rust/bench/zero.txt", None),
         // libtest ran no benchmark, and gungraun's summary is of a schema no leaf reads.
         ("rust/gungraun/json_not_v6.txt", None),
+        // Swift package-benchmark ran no benchmark, or every one failed.
+        ("swift/benchmark/influx_only_failing.csv", None),
+        // Influx from Swift package-benchmark before 1.29.3, which writes no percentile.
+        ("swift/benchmark/influx_1_29_2.csv", None),
+        // Swift package-benchmark's stdout when it writes its export to a file.
+        ("swift/benchmark/influx_file_run_stdout.txt", None),
+        ("swift/benchmark/influx_only_failing_stdout.txt", None),
+        // Swift package-benchmark's tables grouped by metric, and its markdown and JSON exports,
+        // which no leaf reads.
+        ("swift/benchmark/text_grouping_metric.txt", None),
+        ("swift/benchmark/markdown.md", None),
+        ("swift/benchmark/markdown_alpha.md", None),
+        ("swift/benchmark/json_bigger_is_better.json", None),
+        ("swift/benchmark/json_smaller_is_better.json", None),
+        // Other microbenchmark harnesses' text, tables, and CSV.
+        ("cpp/nanobench/bitcoin.csv", None),
+        ("cpp/nanobench/bitcoin_all_stdout.md", None),
+        ("cpp/nanobench/bitcoin_sanity_stdout.txt", None),
+        ("cpp/nanobench/bitcoin_stdout.md", None),
+        ("cpp/nanobench/csv.csv", None),
+        ("cpp/nanobench/table.md", None),
+        ("cpp/nanobench/table_4_6_0.md", None),
+        ("haskell/criterion/criterion.csv", None),
+        ("haskell/criterion/criterion_default_stdout.txt", None),
+        ("haskell/criterion/criterion_regress_stdout.txt", None),
+        ("haskell/criterion/criterion_rts_stdout.txt", None),
+        ("haskell/criterion/criterion_stdout.txt", None),
+        ("js/reassure/comparison.md", None),
+        ("js/reassure/counts_stdout.txt", None),
+        ("js/reassure/headerless_stdout.txt", None),
+        ("js/reassure/long_only_stdout.txt", None),
+        ("js/reassure/long_stdout.txt", None),
+        ("js/reassure/names_stdout.txt", None),
+        ("js/reassure/output.md", None),
+        ("js/reassure/reassure_fail_stdout.txt", None),
+        ("js/reassure/stdout_current.txt", None),
+        ("js/reassure/v0_9_0_stdout.txt", None),
+        ("kotlin/kotlinx/csv_linuxX64.csv", None),
+        ("kotlin/kotlinx/text_js.txt", None),
+        ("kotlin/kotlinx/text_linuxX64.txt", None),
+        ("php/phpbench/baseline_stdout.txt", None),
+        ("php/phpbench/fail_stdout.txt", None),
+        ("php/phpbench/kde_tie.txt", None),
+        ("php/phpbench/progress_json.txt", None),
+        ("python/pyperf/compare.txt", None),
+        ("python/pyperf/compare_table.txt", None),
+        ("python/pyperf/pyperf_fail_stdout.txt", None),
+        ("python/pyperf/show_suite.txt", None),
+        ("python/pyperf/stats_suite.txt", None),
+        ("python/pyperf/stdout_command.txt", None),
+        ("python/pyperf/stdout_fast.txt", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -283,6 +338,10 @@ mod test_magic_v1 {
             "shell/hyperfine" => (
                 name.starts_with("v2"),
                 (Adapter::ShellHyperfineV2, Adapter::ShellHyperfineV1),
+            ),
+            "swift/benchmark" => (
+                name.starts_with("influx"),
+                (Adapter::SwiftBenchmarkInflux, Adapter::SwiftBenchmarkText),
             ),
             _ => return None,
         };

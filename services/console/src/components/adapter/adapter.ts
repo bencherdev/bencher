@@ -16,6 +16,7 @@ const PYTHON_ICON = "devicon-python-plain";
 const RUBY_ICON = "devicon-ruby-plain";
 const RUST_ICON = "devicon-rust-plain";
 const SHELL_ICON = "devicon-bash-plain";
+const SWIFT_ICON = "devicon-swift-plain";
 
 export const adapterIcon = (adapter: Adapter) => {
 	switch (adapter) {
@@ -71,6 +72,10 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.ShellHyperfineV1:
 		case Adapter.ShellHyperfineV2:
 			return SHELL_ICON;
+		case Adapter.SwiftBenchmark:
+		case Adapter.SwiftBenchmarkInflux:
+		case Adapter.SwiftBenchmarkText:
+			return SWIFT_ICON;
 		default:
 			console.log(`Unsupported adapter: ${adapter}`);
 			return;
@@ -137,6 +142,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.ShellHyperfineV1:
 		case Adapter.ShellHyperfineV2:
 			return `bencher run${host} --file results.json "hyperfine --export-json results.json 'sleep 0.1'"`;
+		case Adapter.SwiftBenchmark:
+		case Adapter.SwiftBenchmarkInflux:
+		case Adapter.SwiftBenchmarkText:
+			return `bencher run${host} "swift package benchmark --format influx --path stdout"`;
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
 		case Adapter.Json:
 		// biome-ignore lint/complexity/noUselessSwitchCase: code as docs
