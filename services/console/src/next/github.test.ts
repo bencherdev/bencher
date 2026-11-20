@@ -12,6 +12,8 @@ const TITLE = "Fold the hash browns into the rosti";
 
 const bootstrapOf = (fields: {
 	repository?: string;
+	/** The repository's web page on the server's GitHub, else on github.com. */
+	repositoryUrl?: string;
 	url?: string;
 	link?: GitHubLinkStatus;
 	manage?: boolean;
@@ -30,7 +32,11 @@ const bootstrapOf = (fields: {
 	},
 	...(fields.repository === undefined
 		? {}
-		: { github_repository: fields.repository }),
+		: {
+				github_repository: fields.repository,
+				github_repository_url:
+					fields.repositoryUrl ?? `https://github.com/${fields.repository}`,
+			}),
 	organization: { uuid: "o", name: "Pompeii LLC", slug: "pompeii-llc" },
 	permissions: {
 		view: true,
@@ -136,6 +142,20 @@ describe("consoleGitHub", () => {
 		);
 		expect(hrefOf(bootstrapOf({}))).toBeUndefined();
 		expect(hrefOf(undefined)).toBeUndefined();
+	});
+
+	// Kills a commit link built on github.com, or from the repository's name,
+	// for a repository on the server's GitHub Enterprise Server.
+	test("links a hash on the server's own GitHub", () => {
+		expect(
+			hrefOf(
+				bootstrapOf({
+					repository: "pompeii-llc/rosti",
+					repositoryUrl: "https://github.example.com/pompeii-llc/rosti",
+					url: "https://github.com/pompeii-llc/hashbrown",
+				}),
+			),
+		).toBe(`https://github.example.com/pompeii-llc/rosti/commit/${HASH}`);
 	});
 
 	const connections = "/console/projects/hashbrown/connections";

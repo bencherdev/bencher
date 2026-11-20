@@ -233,7 +233,6 @@ impl Run {
             mismatch
                 .as_ref()
                 .map_or(crate::CLI_VERSION, |mismatch| mismatch.api_version.as_str()),
-            ci::github_api_url(false).as_deref(),
         )?;
         #[cfg(feature = "plus")]
         let server_posts = self.server_posts();
@@ -266,18 +265,12 @@ impl Run {
         self.run_and_report(ci_check).await
     }
 
-    /// The server posts a run's check and comment with its GitHub App, which it does only for
-    /// github.com, and only from the release that posts.
+    /// The server posts a run's check and comment with its GitHub App, from the release that
+    /// posts, and refuses a run on any GitHub but its own.
     #[cfg(feature = "plus")]
-    fn check_server_posts(
-        &self,
-        server_version: &str,
-        github_api_url: Option<&str>,
-    ) -> Result<(), RunError> {
+    fn check_server_posts(&self, server_version: &str) -> Result<(), RunError> {
         if !self.server_posts() {
             Ok(())
-        } else if !ci::is_github_com_api(github_api_url) {
-            Err(RunError::DetachNeedsGitHubCom)
         } else if !posts_detached_runs(server_version) {
             Err(RunError::DetachNeedsPostingServer(
                 server_version.to_owned(),
@@ -887,7 +880,8 @@ enum Reporter {
     Server,
 }
 
-/// The first server version that posts the check and comment of a detached run.
+/// The first server version that posts the check and comment of a detached run, and refuses one
+/// on a GitHub that is not its own.
 #[cfg(feature = "plus")]
 const POSTING_VERSION: semver::Version = semver::Version::new(0, 6, 18);
 
@@ -1199,65 +1193,30 @@ mod tests {
                 .unwrap()
         }
 
-        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-        enum Refused {
-            No,
-            Version,
-            GitHubCom,
-        }
-
         // Kills a refusal before the server's version is known, a gate on any version but the
-        // first that posts or on any API but github.com's, a prefix match on github.com's API URL,
-        // a gate on a run that waits, and a refusal for the wrong cause.
+        // first that posts, a gate on a run that waits, and a refusal for the wrong cause.
         #[test]
         fn a_detached_run_needs_a_server_that_posts() {
-            const GITHUB_COM: Option<&str> = Some("https://api.github.com");
-            const GHES: Option<&str> = Some("https://github.example.com/api/v3");
             let detached = run(&["--detach", "--github-actions", "token"]);
             let waiting = run(&["--github-actions", "token"]);
-            for (run, version, api_url, refused) in [
-                (&detached, "0.6.17", None, Refused::Version),
-                (&detached, "0.6.18-rc.1", None, Refused::Version),
-                (&detached, "not-a-version", None, Refused::Version),
-                (&detached, "0.6.18", None, Refused::No),
-                (&detached, "0.6.19", None, Refused::No),
-                (&detached, "0.7.0", None, Refused::No),
-                (&detached, "0.6.18", GITHUB_COM, Refused::No),
-                (
-                    &detached,
-                    "0.6.18",
-                    Some("https://api.github.com/"),
-                    Refused::No,
-                ),
-                (&detached, "0.6.18", GHES, Refused::GitHubCom),
-                (
-                    &detached,
-                    "0.6.18",
-                    Some("https://api.github.com/api/v3"),
-                    Refused::GitHubCom,
-                ),
-                (
-                    &detached,
-                    "0.6.18",
-                    Some("http://api.github.com"),
-                    Refused::GitHubCom,
-                ),
-                (&detached, "0.6.18", Some(""), Refused::GitHubCom),
-                (&detached, "0.6.17", GITHUB_COM, Refused::Version),
-                (&detached, "0.6.17", GHES, Refused::GitHubCom),
-                (&waiting, "0.6.15", GHES, Refused::No),
+            for (run, version, refused) in [
+                (&detached, "0.6.17", true),
+                (&detached, "0.6.18-rc.1", true),
+                (&detached, "not-a-version", true),
+                (&detached, "0.6.18", false),
+                (&detached, "0.6.19", false),
+                (&detached, "0.7.0", false),
+                (&waiting, "0.6.15", false),
             ] {
-                let checked = run.check_server_posts(version, api_url);
-                let got = match &checked {
-                    Ok(()) => Refused::No,
+                let checked = run.check_server_posts(version);
+                match &checked {
+                    Ok(()) => assert!(!refused, "{version}"),
                     Err(RunError::DetachNeedsPostingServer(server)) => {
+                        assert!(refused, "{version}");
                         assert_eq!(server, version);
-                        Refused::Version
                     },
-                    Err(RunError::DetachNeedsGitHubCom) => Refused::GitHubCom,
-                    Err(err) => panic!("{version} {api_url:?}: {err}"),
-                };
-                assert_eq!(got, refused, "{version} {api_url:?}: {checked:?}");
+                    Err(err) => panic!("{version}: {err}"),
+                }
             }
         }
     }

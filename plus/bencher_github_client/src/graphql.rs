@@ -36,7 +36,7 @@ pub(crate) async fn commit_messages(
         },
     };
     let (JsonGraphQlAnswer { data, errors }, headers) = api
-        .post_counted::<_, JsonGraphQlAnswer>(&["graphql"], token.as_ref(), &request)
+        .post_graphql::<_, JsonGraphQlAnswer>(token.as_ref(), &request)
         .await
         .map_err(GitHubCommitsError::Api)?;
     if !errors.is_empty() {

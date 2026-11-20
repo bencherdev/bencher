@@ -82,15 +82,16 @@ pub async fn get_one_inner(
     api_actor: &ApiActor,
 ) -> Result<JsonProject, HttpError> {
     actor_conn!(context, api_actor, |conn| {
-        QueryProject::is_allowed_actor_pub(
+        let query_project = QueryProject::is_allowed_actor_pub(
             conn,
             &context.rbac,
             #[cfg(feature = "plus")]
             &context.rate_limiting,
             &path_params.project,
             api_actor,
-        )?
-        .into_json(conn, context.github_linking())
+        )?;
+        let github = context.github_linking(conn)?;
+        query_project.into_json(conn, github)
     })
 }
 
@@ -194,7 +195,10 @@ async fn patch_inner(
         context.update_index(log, &new_query_project).await;
     }
 
-    new_query_project.into_json(auth_conn!(context), context.github_linking())
+    auth_conn!(context, |conn| {
+        let github = context.github_linking(conn)?;
+        new_query_project.into_json(conn, github)
+    })
 }
 
 /// Delete a project

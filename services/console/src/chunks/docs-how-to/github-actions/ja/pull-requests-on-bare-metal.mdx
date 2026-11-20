@@ -33,6 +33,7 @@ BencherのGitHub Appには、リポジトリのチェックとプルリクエス
 Bencherはリンクされたリポジトリ用のトークンを作成し、そのトークンでGitHubチェックとプルリクエストのコメントを投稿します。
 GitHubカードに`Disconnected`と表示されている場合は、`Install on GitHub`をクリックしてリポジトリへのアクセスをアプリに再び許可するか、アプリのインストールの一時停止を解除すると、リンクが再接続されます。
 Bencher Self-Hostedの場合、サーバーには[独自のGitHub App][github app]と`v0.6.18`以降のバージョンが必要です。
+Bencher Plus Enterprise ライセンスがあれば、Bencher Self-Hosted サーバーは github.com の代わりに [GitHub Enterprise Server][github enterprise server] を使えます。
 
 > 🐰 プロジェクトのAPIキーを持つ人は誰でも、リンクされたリポジトリのどのコミットやプルリクエストにも、
 > BencherにGitHubチェックやプルリクエストのコメントを投稿させることができます。
@@ -129,6 +130,7 @@ Jobは承認用のリンクとともに失敗を記録し、`bencher run`は終�
 
 [bare metal]: /ja/docs/explanation/bare-metal/
 [github app]: /ja/docs/how-to/github-app/
+[github enterprise server]: /ja/docs/how-to/github-app/#github-enterprise-server
 [pricing]: /pricing
 [bencher run]: /ja/docs/explanation/bencher-run/
 [project option]: /ja/docs/explanation/bencher-run/#--project-project

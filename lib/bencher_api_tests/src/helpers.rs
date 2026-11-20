@@ -345,6 +345,16 @@ pub fn github_client() -> GitHubClient {
     )
 }
 
+/// A GitHub client with the test app's credentials, on `host`.
+#[expect(clippy::expect_used, reason = "test helper parsing fixed credentials")]
+pub fn github_client_on(host: &bencher_github_client::GitHubHost) -> GitHubClient {
+    GitHubClient::new_with_host(
+        GITHUB_CLIENT_ID.parse().expect("Invalid client ID"),
+        GITHUB_CLIENT_SECRET.parse().expect("Invalid client secret"),
+        host,
+    )
+}
+
 /// A Google sign-in client with test credentials: it builds sign-in URLs, never calling Google.
 #[expect(clippy::expect_used, reason = "test helper parsing fixed credentials")]
 pub fn google_client() -> GoogleClient {

@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use url::Url;
 
 use crate::{
-    AUTH_URL, GitHubCommitsError, GitHubInstallationChange, GitHubWebhookError,
-    api::{GITHUB_API_URL, GitHubApi, GitHubApiError, JsonOwner},
+    GitHubCommitsError, GitHubHost, GitHubInstallationChange, GitHubWebhookError,
+    api::{GitHubApi, GitHubApiError, JsonOwner},
     webhook,
 };
 
@@ -25,6 +25,7 @@ pub struct GitHubApp {
     slug: GitHubAppSlug,
     key: EncodingKey,
     webhook_secret: Secret,
+    host: GitHubHost,
     api: GitHubApi,
 }
 
@@ -59,14 +60,32 @@ impl GitHubApp {
         private_key: &Secret,
         webhook_secret: Secret,
     ) -> Result<Self, GitHubAppError> {
+        Self::new_with_host(
+            client_id,
+            slug,
+            private_key,
+            webhook_secret,
+            GitHubHost::default(),
+        )
+    }
+
+    /// The app registered on `host` in place of github.com.
+    pub fn new_with_host(
+        client_id: NonEmpty,
+        slug: GitHubAppSlug,
+        private_key: &Secret,
+        webhook_secret: Secret,
+        host: GitHubHost,
+    ) -> Result<Self, GitHubAppError> {
         let key = EncodingKey::from_rsa_pem(private_key.as_ref().as_bytes())
             .map_err(GitHubAppError::Key)?;
-        let api = GitHubApi::new(GITHUB_API_URL.clone()).map_err(GitHubAppError::Reqwest)?;
+        let api = GitHubApi::for_host(&host).map_err(GitHubAppError::Reqwest)?;
         let app = Self {
             client_id,
             slug,
             key,
             webhook_secret,
+            host,
             api,
         };
         // jsonwebtoken reads an RSA key only when it signs, so a key that cannot sign fails here.
@@ -74,7 +93,7 @@ impl GitHubApp {
         Ok(app)
     }
 
-    /// Sends every mint to `base` instead of GitHub.
+    /// Sends every request to `base` instead of GitHub, as github.com lays its API out.
     #[cfg(any(test, feature = "test-base-url"))]
     pub fn with_base_url(self, base: Url) -> Result<Self, GitHubAppError> {
         Ok(Self {
@@ -90,6 +109,11 @@ impl GitHubApp {
     /// The app's slug, which names its bot user `{slug}[bot]`.
     pub fn slug(&self) -> &GitHubAppSlug {
         &self.slug
+    }
+
+    /// The GitHub instance the app is registered on.
+    pub fn host(&self) -> &GitHubHost {
+        &self.host
     }
 
     /// The GitHub REST API that the app mints on, for the requests an installation token makes.
@@ -110,13 +134,7 @@ impl GitHubApp {
 
     /// Where a user installs the app, with `state` to carry back to the app's first callback URL.
     pub fn install_url(&self, state: &Jwt) -> Url {
-        // GitHub serves the install page on the authorize page's origin.
-        let mut url = AUTH_URL.url().clone();
-        if let Ok(mut segments) = url.path_segments_mut() {
-            segments
-                .clear()
-                .extend(["apps", self.slug.as_ref(), "installations", "new"]);
-        }
+        let mut url = self.host.install(&self.slug);
         url.query_pairs_mut().append_pair("state", state.as_ref());
         url
     }
@@ -263,6 +281,7 @@ impl fmt::Debug for GitHubApp {
         f.debug_struct("GitHubApp")
             .field("client_id", &self.client_id)
             .field("slug", &self.slug)
+            .field("host", &self.host)
             .finish_non_exhaustive()
     }
 }
@@ -393,7 +412,7 @@ mod tests {
 
     use super::{GitHubApp, GitHubAppError, GitHubInstallationToken, GitHubReadToken};
     use crate::{
-        GitHubApiError, GitHubCommitsError,
+        GitHubApiError, GitHubCommitsError, GitHubHost,
         api::USER_AGENT,
         test_server::{Received, Server, app_key, install_crypto_provider},
     };
@@ -440,6 +459,19 @@ mod tests {
         } else {
             app
         }
+    }
+
+    /// The app on a GitHub Enterprise Server whose root is the fake GitHub's base.
+    fn enterprise_app(private_key: &Secret, server: &Server) -> GitHubApp {
+        install_crypto_provider();
+        GitHubApp::new_with_host(
+            CLIENT_ID.parse().unwrap(),
+            SLUG.parse().unwrap(),
+            private_key,
+            WEBHOOK_SECRET.parse().unwrap(),
+            GitHubHost::new(server.base()),
+        )
+        .unwrap()
     }
 
     fn installation() -> GitHubInstallationId {
@@ -1164,5 +1196,56 @@ mod tests {
             | GitHubApiError::Json(_)
             | GitHubApiError::RepositoryName(_) => panic!("{error:?}"),
         }
+    }
+
+    // Kills a mint, a lookup, a GraphQL query, or an install page that stays on github.com or
+    // misses the root's path on GitHub Enterprise Server, and GraphQL sent under the REST API.
+    #[tokio::test]
+    async fn the_app_on_github_enterprise_server_stays_on_its_root() {
+        let (private_key, _public) = key_pair();
+        let server = Server::start(vec![
+            minted(&minted_repository(REPOSITORY_ID)),
+            (200, installation_body(OTHER_INSTALLATION_ID)),
+            (
+                200,
+                r#"{"data": {"repository": {"c0": {"message": "First"}}}}"#.to_owned(),
+            ),
+        ])
+        .await;
+        let app = enterprise_app(&private_key, &server);
+
+        let install = app.install_url(&Jwt::test_token());
+        app.mint_post(DateTime::TEST, installation(), repository())
+            .await
+            .unwrap();
+        app.repository_installation(DateTime::TEST, &"octo-cat/repo".parse().unwrap())
+            .await
+            .unwrap();
+        app.commit_messages(
+            &TOKEN.parse().unwrap(),
+            &"octo-cat/repo".parse().unwrap(),
+            &["0000000000000000000000000000000000000001".parse().unwrap()],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            install.as_str().split('?').next(),
+            Some(format!("{}/github-apps/{SLUG}/installations/new", server.base()).as_str())
+        );
+        assert!(!app.host().is_github_com());
+        let received = server.received().await;
+        let lines: Vec<&str> = received.iter().map(Received::request_line).collect();
+        assert_eq!(
+            lines,
+            [
+                format!(
+                    "POST /github/api/v3/app/installations/{INSTALLATION_ID}/access_tokens HTTP/1.1"
+                )
+                .as_str(),
+                "GET /github/api/v3/repos/octo-cat/repo/installation HTTP/1.1",
+                "POST /github/api/graphql HTTP/1.1",
+            ]
+        );
     }
 }

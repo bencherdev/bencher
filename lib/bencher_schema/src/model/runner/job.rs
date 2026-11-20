@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use bencher_callback::{CallbackKey, SealedRequest};
+use bencher_github_client::GitHubHost;
 use bencher_json::{
     BmfVersion, DateTime, ImageDigest, JobStatus, JobUuid, JsonJob, JsonJobConfig, Priority,
     ReportUuid, Timeout,
@@ -601,9 +602,24 @@ pub async fn check_job_github(
     let Some(github) = github else {
         return Ok(());
     };
-    if context.github_app.is_none() {
+    let Some(app) = context.github_app.as_deref() else {
         return Err(bad_request_error(NO_APP_TO_POST));
+    };
+    let host = app.host();
+    let api_url = github
+        .api_url
+        .clone()
+        .map(url::Url::try_from)
+        .transpose()
+        .map_err(|e| bad_request_error(format!("Invalid GitHub API URL: {e}")))?
+        .unwrap_or_else(|| GitHubHost::default().api());
+    if !host.is_api(&api_url) {
+        return Err(conflict_error(format!(
+            "This detached run is on the GitHub API at ({}), but this Bencher server posts only to the GitHub at ({host}), so Bencher cannot post this detached run's check and pull request comment. Run it against a Bencher server for that GitHub, or run without `--detach` to post them from the workflow.",
+            api_url.as_str().trim_end_matches('/')
+        )));
     }
+    context.check_github_license(host).await?;
     let slug = &query_project.slug;
     if !is_claimed {
         return Err(conflict_error(format!(

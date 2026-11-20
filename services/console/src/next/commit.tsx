@@ -87,7 +87,7 @@ const Linked = (props: {
 /** On the public plot and its embed, which read no bootstrap: the project URL alone, and no ask. */
 export const publicGitHub = (url: () => string | undefined): GitHubLinks => ({
 	row: (hash, title) =>
-		commitRow(title, commitOf(repositoryOf(url()), hash), undefined),
+		commitRow(title, commitOf(repositoryUrlOf(url()), hash), undefined),
 });
 
 /** The title or View commit, once there is either to show. */
@@ -100,17 +100,17 @@ export const commitRow = (
 		? { kind: "commit", text: title || "View commit", href, ask }
 		: undefined;
 
-export const commitOf = (repository: string | undefined, hash: string) =>
-	repository && `https://github.com/${repository}/commit/${hash}`;
+export const commitOf = (repositoryUrl: string | undefined, hash: string) =>
+	repositoryUrl && `${repositoryUrl}/commit/${hash}`;
 
 const REPOSITORY_URL =
 	/^https:\/\/github\.com\/([A-Za-z0-9-]+\/[A-Za-z0-9._-]+)\/?$/;
 
-/** The `owner/repo` of a URL in the one shape `https://github.com/{owner}/{repo}`, with an optional trailing slash. */
-export const repositoryOf = (url: string | undefined) => {
+/** The repository page of a URL in the one shape `https://github.com/{owner}/{repo}`, with an optional trailing slash. */
+export const repositoryUrlOf = (url: string | undefined) => {
 	const repository = url?.match(REPOSITORY_URL)?.[1];
 	const name = repository?.split("/")[1];
 	return name && name !== "." && name !== ".." && !name.endsWith(".git")
-		? repository
+		? `https://github.com/${repository}`
 		: undefined;
 };

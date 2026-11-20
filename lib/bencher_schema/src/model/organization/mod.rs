@@ -43,6 +43,7 @@ use crate::{actor_conn, model::user::actor::ApiActor};
 
 use super::user::QueryUser;
 
+pub mod license;
 pub mod member;
 pub mod organization_role;
 pub mod plan;

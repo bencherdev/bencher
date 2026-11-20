@@ -125,10 +125,10 @@ struct GitHub {
 enum GitHubApi {
     /// The stand-in, over `http`, which records every GitHub request.
     StandIn,
-    /// An `https` URL that refuses connections: no check starts, and a composed dispatch validates.
-    Unreachable,
     /// No `GITHUB_API_URL`, so the run uses github.com's API: only a run that reaches no GitHub API.
     Unset,
+    /// A GitHub Enterprise Server's API, which no run reaches: only a run that reaches no GitHub API.
+    Enterprise,
 }
 
 /// How the stand-in answers a read of the job.
@@ -438,8 +438,8 @@ fn bencher_run_in_scene(
             .env("GITHUB_STEP_SUMMARY", &summary_path);
         let api_url = match github.api {
             GitHubApi::StandIn => Some(format!("http://{addr}")),
-            GitHubApi::Unreachable => Some(format!("https://127.0.0.1:{}", refused_port())),
             GitHubApi::Unset => None,
+            GitHubApi::Enterprise => Some(ENTERPRISE_API_URL.to_owned()),
         };
         if let Some(api_url) = api_url {
             command.env("GITHUB_API_URL", api_url);
@@ -465,14 +465,6 @@ fn bencher_run_in_scene(
             step_summary,
         }
     })
-}
-
-#[expect(clippy::expect_used, reason = "test helper")]
-fn refused_port() -> u16 {
-    TcpListener::bind("127.0.0.1:0")
-        .and_then(|listener| listener.local_addr())
-        .expect("Failed to bind a free port")
-        .port()
 }
 
 /// A run of `--project project` on GitHub Actions against the stand-in, one attempt per request.
@@ -1423,6 +1415,8 @@ const POSTING: VersionRead = VersionRead::Version("0.6.18");
 const POST_PENDING: &str = r#"{ "state": "pending" }"#;
 const POSTS_WHEN_FINISHED: &str = "Bencher posts the results to GitHub when the job finishes";
 const APPROVAL_URL: &str = "https://github.com/settings/installations/42";
+const GITHUB_COM_API_URL: &str = "https://api.github.com";
+const ENTERPRISE_API_URL: &str = "https://github.example.com/api/v3";
 
 /// A detached run on GitHub Actions against a server answering its version check with `version`.
 fn detach_on(version: VersionRead, job_read: JobRead, github: &GitHub, args: &[&str]) -> Run {
@@ -1462,6 +1456,7 @@ fn detach_asks_the_server_to_post_in_place_of_a_dispatch() {
     assert_eq!(
         run.sent_github(),
         serde_json::json!({
+            "api_url": GITHUB_COM_API_URL,
             "repository_id": REPOSITORY_ID,
             "head_sha": HEAD_SHA,
             "number": 7,
@@ -1479,12 +1474,11 @@ fn detach_asks_the_server_to_post_in_place_of_a_dispatch() {
 }
 
 // Kills a run that starts the check, resolves the project to name it, names the report in it,
-// completes it, or writes a job summary. A run at any GitHub API but github.com's is refused, so
-// no stand-in can count GitHub requests here: a check started at github.com's API with the
-// stand-in's token fails, and the run says so.
+// completes it, or writes a job summary. The stand-in is the run's GitHub API too, so every
+// GitHub request is one of its calls.
 #[test]
 fn detach_posts_nothing_to_github() {
-    for github in [pull_request(GitHubApi::Unset), push(GitHubApi::Unset)] {
+    for github in [pull_request(GitHubApi::StandIn), push(GitHubApi::StandIn)] {
         let run = post(JobRead::GitHub(POST_PENDING), &github, &[]);
         run.assert_success();
         // The client reads the version again before each request to a server of another version.
@@ -1526,6 +1520,7 @@ fn ci_number_names_the_pull_request() {
         assert_eq!(
             run.sent_github(),
             serde_json::json!({
+                "api_url": GITHUB_COM_API_URL,
                 "repository_id": REPOSITORY_ID,
                 "head_sha": HEAD_SHA,
                 "number": 9,
@@ -1543,8 +1538,28 @@ fn detach_on_a_push_sends_no_number() {
     run.assert_success();
     assert_eq!(
         run.sent_github(),
-        serde_json::json!({ "repository_id": REPOSITORY_ID, "head_sha": GITHUB_SHA })
+        serde_json::json!({
+            "api_url": GITHUB_COM_API_URL,
+            "repository_id": REPOSITORY_ID,
+            "head_sha": GITHUB_SHA,
+        })
     );
+}
+
+// The server decides whether it posts to the run's GitHub, so this kills a run on GitHub
+// Enterprise Server that is refused before submit, that starts a check, or that sends any API URL
+// but the one GitHub Actions names.
+#[test]
+fn detach_on_github_enterprise_server_sends_its_api_url() {
+    let run = post(
+        JobRead::GitHub(POST_PENDING),
+        &pull_request(GitHubApi::Enterprise),
+        &[],
+    );
+    run.assert_success();
+    assert_eq!(run.sent_github()["api_url"], ENTERPRISE_API_URL);
+    let stderr = run.stderr();
+    assert!(!stderr.contains("GitHub Check"), "{stderr}");
 }
 
 // Kills a `github` read outside of GitHub Actions, where no event names the pull request.
@@ -1570,8 +1585,8 @@ fn detach_outside_of_github_actions_sends_no_github() {
     assert!(sent["job"].get("github").is_none(), "{sent}");
 }
 
-// Kills a refusal that starts a check or submits the run, a run sent to a server that cannot
-// post, or to a GitHub where the server cannot post, and a message that names no other way.
+// Kills a refusal that starts a check or submits the run, a run on github.com or on GitHub
+// Enterprise Server sent to a server that cannot post it, and a message that names no other way.
 #[test]
 fn detach_without_a_callback_is_refused() {
     for (version, api, expected) in [
@@ -1580,7 +1595,11 @@ fn detach_without_a_callback_is_refused() {
             GitHubApi::Unset,
             "needs a Bencher API server of v0.6.18 or later",
         ),
-        (POSTING, GitHubApi::Unreachable, "only on github.com"),
+        (
+            BEFORE_POSTING,
+            GitHubApi::Enterprise,
+            "needs a Bencher API server of v0.6.18 or later",
+        ),
     ] {
         let run = detach_on(
             version,
@@ -1681,6 +1700,7 @@ fn a_dry_run_echoes_the_post() {
     assert_eq!(
         echo["job"]["github"],
         serde_json::json!({
+            "api_url": GITHUB_COM_API_URL,
             "repository_id": REPOSITORY_ID,
             "head_sha": HEAD_SHA,
             "number": 7,

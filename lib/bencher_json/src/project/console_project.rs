@@ -1,8 +1,8 @@
 //! What the console's shell shows for a project, served in one request.
 
-#[cfg(feature = "plus")]
-use bencher_valid::GitHubRepositoryName;
 use bencher_valid::ResourceName;
+#[cfg(feature = "plus")]
+use bencher_valid::{GitHubRepositoryName, Url};
 #[cfg(feature = "schema")]
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -18,6 +18,10 @@ pub struct JsonConsoleProject {
     #[cfg(feature = "plus")]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub github_repository: Option<GitHubRepositoryName>,
+    /// The web page of the project's linked GitHub repository, on the server's GitHub.
+    #[cfg(feature = "plus")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub github_repository_url: Option<Url>,
     pub organization: JsonConsoleOrganization,
     /// What the signed in reader may do with the project.
     pub permissions: JsonConsolePermissions,

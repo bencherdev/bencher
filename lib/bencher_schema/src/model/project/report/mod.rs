@@ -190,12 +190,10 @@ impl QueryReport {
         if let Some(existing) =
             Self::check_idempotency(actor_conn!(context, api_actor), project_id, idempotency_key)?
         {
-            return existing.into_json(
-                log,
-                actor_conn!(context, api_actor),
-                ReportMode::Full,
-                context.github_linking(),
-            );
+            return actor_conn!(context, api_actor, |conn| {
+                let github = context.github_linking(conn)?;
+                existing.into_json(log, conn, ReportMode::Full, github)
+            });
         }
 
         // Checked before the report creates anything, so a refused payload leaves nothing behind.
@@ -522,12 +520,10 @@ impl QueryReport {
             );
         }
 
-        self.into_json(
-            log,
-            actor_conn!(context, api_actor),
-            ReportMode::Full,
-            context.github_linking(),
-        )
+        actor_conn!(context, api_actor, |conn| {
+            let github = context.github_linking(conn)?;
+            self.into_json(log, conn, ReportMode::Full, github)
+        })
     }
 
     pub fn into_json(

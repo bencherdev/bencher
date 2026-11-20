@@ -148,6 +148,9 @@ pub enum GitHubError {
     #[cfg(feature = "plus")]
     #[error("GitHub pull request number is invalid: {0}")]
     BadNumber(ValidError),
+    #[cfg(feature = "plus")]
+    #[error("GitHub API URL (`GITHUB_API_URL`) is invalid: {0}")]
+    BadApiUrl(ValidError),
 }
 
 // https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#setting-the-github_token-permissions-for-a-specific-job
@@ -563,6 +566,13 @@ impl GitHubActions {
         }
         let (event_str, event) = github_event()?;
         Ok(Some(JsonNewJobGitHub {
+            api_url: Some(
+                github_api_url(log)
+                    .as_deref()
+                    .unwrap_or(DEFAULT_GITHUB_API_URL)
+                    .parse()
+                    .map_err(GitHubError::BadApiUrl)?,
+            ),
             repository_id: repository_id(&event_str, &event)?,
             head_sha: head_sha(&event, self.dispatch.as_ref())?
                 .parse()
@@ -1051,8 +1061,7 @@ impl DispatchPayload {
 }
 
 /// Whether `api_url`, the `GITHUB_API_URL` that the comment uses, is github.com's API, which an
-/// unset one defaults to: the only API where the Bencher Cloud GitHub App links a repository and
-/// posts the check and comment of a detached run.
+/// unset one defaults to: the only API where the Bencher Cloud GitHub App links a repository.
 pub fn is_github_com_api(api_url: Option<&str>) -> bool {
     api_url.is_none_or(|api_url| api_url.trim_end_matches('/') == DEFAULT_GITHUB_API_URL)
 }

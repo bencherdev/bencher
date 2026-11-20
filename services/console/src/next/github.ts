@@ -1,8 +1,8 @@
 import type { GitHubLinkStatus, JsonConsoleProject } from "../types/bencher";
-import { commitOf, commitRow, repositoryOf } from "./commit";
+import { commitOf, commitRow, repositoryUrlOf } from "./commit";
 import { connectionsPath } from "./paths";
 
-/** In the console: the linked repository, else a GitHub project URL; the ask for a Maintainer; for a reader who cannot link, the ask of a Maintainer; and on a server without the GitHub App, the ask of an admin. */
+/** In the console: the linked repository on the server's GitHub, else a github.com project URL; the ask for a Maintainer; for a reader who cannot link, the ask of a Maintainer; and on a server without the GitHub App, the ask of an admin. */
 export const consoleGitHub = (
 	bootstrap: () => JsonConsoleProject | undefined,
 ): GitHubLinks => ({
@@ -18,7 +18,7 @@ export const consoleGitHub = (
 				? { label, href: connectionsPath(project.project.slug) }
 				: undefined;
 		const href = commitOf(
-			project.github_repository ?? repositoryOf(project.project.url),
+			project.github_repository_url ?? repositoryUrlOf(project.project.url),
 			hash,
 		);
 		const row = commitRow(title, href, ask);
