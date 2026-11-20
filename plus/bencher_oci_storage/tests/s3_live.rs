@@ -413,7 +413,7 @@ async fn stale_upload_cleanup(
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     // A fresh instance over the same prefix with a zero timeout treats every
-    // existing session as stale, and its first `start_upload` sweeps them.
+    // existing session as stale, and sweeps them once it is built.
     let sweeper = build_storage(path, 0);
     let sweeper_upload = sweeper
         .start_upload(project)

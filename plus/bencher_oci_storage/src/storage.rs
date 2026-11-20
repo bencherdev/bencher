@@ -29,8 +29,11 @@ use sha2::{Digest as _, Sha256};
 use slog::Logger;
 use sync_wrapper::SyncWrapper;
 use thiserror::Error;
+use tokio::runtime::Handle;
 use tokio::task::{JoinError, JoinSet};
 
+use crate::metrics::{self, FinalizeOutcome, SweepAction};
+use crate::recording::RecordingStore;
 use crate::types::{Digest, UploadId};
 
 /// Maximum concurrency for parallel object store operations.
@@ -65,7 +68,7 @@ const DEFAULT_REGION: &str = "auto";
 
 /// OCI storage backed by a local directory or an S3-compatible bucket
 pub struct OciStorage {
-    store: Arc<dyn ObjectStore>,
+    store: Arc<RecordingStore>,
     /// Key prefix within the store, if configured
     prefix: Option<Path>,
     /// Upload timeout in seconds for stale upload cleanup
@@ -180,8 +183,8 @@ impl OciStorage {
             .unwrap_or(DEFAULT_CHUNK_SIZE)
             .clamp(DEFAULT_CHUNK_SIZE, MAX_CHUNK_SIZE) as usize;
 
-        Ok(Self {
-            store,
+        let storage = Self {
+            store: Arc::new(RecordingStore::new(store)),
             prefix,
             upload_timeout: upload_timeout.unwrap_or(DEFAULT_UPLOAD_TIMEOUT_SECS),
             max_body_size: max_body_size.unwrap_or(DEFAULT_MAX_BODY_SIZE),
@@ -190,7 +193,13 @@ impl OciStorage {
             concurrency,
             sweep: Mutex::default(),
             clock: clock.unwrap_or(Clock::System),
-        })
+        };
+        // An idle registry still sweeps once at startup. Built outside a runtime,
+        // the storage sweeps first at its first upload instead.
+        if Handle::try_current().is_ok() {
+            storage.spawn_stale_upload_cleanup();
+        }
+        Ok(storage)
     }
 
     /// Returns a view type for job output storage operations.
@@ -437,6 +446,20 @@ impl OciStorage {
         upload_id: &UploadId,
         expected_digest: &Digest,
     ) -> Result<Digest, OciStorageError> {
+        let completed = self.finalize_upload(upload_id, expected_digest).await;
+        if let Ok((_digest, size)) = &completed {
+            metrics::blob_upload(*size);
+        }
+        metrics::finalize(finalize_outcome(&completed));
+        completed.map(|(digest, _size)| digest)
+    }
+
+    /// Completes an upload, returning the blob's digest and size.
+    async fn finalize_upload(
+        &self,
+        upload_id: &UploadId,
+        expected_digest: &Digest,
+    ) -> Result<(Digest, u64), OciStorageError> {
         let state = self.load_upload_state(upload_id).await?;
         let repository: ProjectUuid = state.repository.parse().map_err(|_e| {
             OciStorageError::InvalidContent(format!(
@@ -464,8 +487,8 @@ impl OciStorage {
             part_size(self.chunk_size, self.max_body_size),
         );
 
-        let actual_digest = match self.write_chunks(&mut write, &chunks).await {
-            Ok(digest) => digest,
+        let (actual_digest, size) = match self.write_chunks(&mut write, &chunks).await {
+            Ok(written) => written,
             Err(error) => {
                 self.abort_multipart(write).await;
                 return Err(error);
@@ -487,27 +510,30 @@ impl OciStorage {
             .map_err(|e| OciStorageError::Storage(e.to_string()))?;
         self.cleanup_upload(upload_id).await;
 
-        Ok(actual_digest)
+        Ok((actual_digest, size))
     }
 
-    /// Streams every chunk into the multipart upload, returning the content digest.
+    /// Streams every chunk into the multipart upload, returning the content digest and size.
     async fn write_chunks(
         &self,
         write: &mut WriteMultipart,
         chunks: &[Path],
-    ) -> Result<Digest, OciStorageError> {
+    ) -> Result<(Digest, u64), OciStorageError> {
         let mut hasher = Sha256::new();
+        let mut size = 0;
         for chunk_key in chunks {
             let chunk = self.read(chunk_key).await?;
             hasher.update(&chunk);
+            size += chunk.len() as u64;
             write
                 .wait_for_capacity(MAX_UPLOAD_CONCURRENCY)
                 .await
                 .map_err(|e| OciStorageError::Storage(e.to_string()))?;
             write.put(chunk);
         }
-        Digest::sha256(&hex::encode(hasher.finalize()))
-            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))
+        let digest = Digest::sha256(&hex::encode(hasher.finalize()))
+            .map_err(|e| OciStorageError::InvalidContent(e.to_string()))?;
+        Ok((digest, size))
     }
 
     /// Aborts a multipart upload, reporting but not surfacing any failure.
@@ -576,7 +602,9 @@ impl OciStorage {
     async fn cleanup_upload(&self, upload_id: &UploadId) {
         let prefix = self.upload_prefix(upload_id);
         match self.list_prefix(&prefix).await {
-            Ok(objects) => delete_upload_objects(&self.log, &self.store, &prefix, objects).await,
+            Ok(objects) => {
+                delete_upload_objects(&self.log, &self.store, &prefix, objects).await;
+            },
             Err(e) => report_cleanup_error(&self.log, "cleanup_upload: list", &e),
         }
     }
@@ -1076,6 +1104,18 @@ fn report_sweep_join(log: &Logger, joined: Result<(), JoinError>) {
     }
 }
 
+/// How a finalize ended, for its count.
+fn finalize_outcome<T>(completed: &Result<T, OciStorageError>) -> FinalizeOutcome {
+    let Err(error) = completed else {
+        return FinalizeOutcome::Ok;
+    };
+    if matches!(error, OciStorageError::DigestMismatch { .. }) {
+        FinalizeOutcome::DigestMismatch
+    } else {
+        FinalizeOutcome::Error
+    }
+}
+
 /// The multipart part size: at least `chunk_size`, and large enough that the
 /// largest allowed body fits in [`MAX_PARTS`] parts.
 fn part_size(chunk_size: usize, max_body_size: u64) -> usize {
@@ -1160,12 +1200,15 @@ fn upload_state_key(upload_prefix: &Path) -> Path {
 
 /// Deletes an upload session's objects, leaving the state object for last so a
 /// crash part way through still leaves the session discoverable.
+///
+/// Returns whether it removed the session: it listed objects, and each is now gone.
 async fn delete_upload_objects(
     log: &Logger,
-    store: &Arc<dyn ObjectStore>,
+    store: &RecordingStore,
     upload_prefix: &Path,
     objects: Vec<ObjectMeta>,
-) {
+) -> bool {
+    let mut removed = !objects.is_empty();
     let state_key = upload_state_key(upload_prefix);
     let (state, rest): (Vec<_>, Vec<_>) = objects
         .into_iter()
@@ -1177,14 +1220,16 @@ async fn delete_upload_objects(
             && !is_not_found(&e)
         {
             report_cleanup_error(log, "cleanup_upload: delete", &e);
+            removed = false;
         }
     }
+    removed
 }
 
 /// Cleans up every upload session that has outlived the timeout.
 pub(crate) async fn cleanup_stale_uploads(
     log: &Logger,
-    store: &Arc<dyn ObjectStore>,
+    store: &RecordingStore,
     uploads_prefix: &Path,
     upload_timeout: u64,
     clock: &Clock,
@@ -1224,8 +1269,10 @@ pub(crate) async fn cleanup_stale_uploads(
             },
         };
 
-        if is_stale(store, &upload_prefix, &objects, now, os_now, timeout_secs).await {
-            delete_upload_objects(log, store, &upload_prefix, objects).await;
+        if is_stale(store, &upload_prefix, &objects, now, os_now, timeout_secs).await
+            && delete_upload_objects(log, store, &upload_prefix, objects).await
+        {
+            metrics::upload_sweep(SweepAction::Deleted);
         }
     }
 }
@@ -1237,7 +1284,7 @@ pub(crate) async fn cleanup_stale_uploads(
 /// a session whose state has not been written yet is not deleted out from under
 /// an in-flight upload.
 async fn is_stale(
-    store: &Arc<dyn ObjectStore>,
+    store: &RecordingStore,
     upload_prefix: &Path,
     objects: &[ObjectMeta],
     now: i64,
@@ -1282,8 +1329,8 @@ mod tests {
 
     use super::{
         Clock, DEFAULT_CHUNK_SIZE, DEFAULT_MAX_BODY_SIZE, Digest, ListTagsResult, MAX_CHUNK_SIZE,
-        MAX_PARTS, OciStorage, OciStorageError, ProjectUuid, READ_TIMEOUT, RegistryStorage, Sweep,
-        UploadId, cleanup_stale_uploads, part_size,
+        MAX_PARTS, OciStorage, OciStorageError, ProjectUuid, READ_TIMEOUT, RecordingStore,
+        RegistryStorage, Sweep, UploadId, cleanup_stale_uploads, part_size,
     };
 
     /// The clamped default chunk size, as `OciStorage` holds it.
@@ -1317,7 +1364,7 @@ mod tests {
     /// Storage over an arbitrary object store, for key layout and behavior tests.
     fn storage(store: Arc<dyn ObjectStore>, prefix: Option<&str>) -> OciStorage {
         OciStorage {
-            store,
+            store: Arc::new(RecordingStore::new(store)),
             prefix: prefix.map(Path::from),
             upload_timeout: 3600,
             max_body_size: DEFAULT_MAX_BODY_SIZE,
@@ -1892,6 +1939,47 @@ mod tests {
         .await;
 
         assert_eq!(storage.get_upload_size(&upload_id).await.unwrap(), 10);
+    }
+
+    #[tokio::test]
+    async fn a_stale_session_is_swept_when_the_storage_is_built() {
+        let tmp = tempfile::tempdir().unwrap();
+        let db_path = tmp.path().join("bencher.db");
+        let earlier =
+            OciStorage::try_from_config(log(), None, &db_path, None, None, Some(clock())).unwrap();
+        earlier.close_upload_sweep().stop(&log()).await;
+        let upload_id = earlier.start_upload(&project()).await.unwrap();
+        earlier
+            .append_upload(&upload_id, Bytes::from_static(b"left by a crash"))
+            .await
+            .unwrap();
+        let state = super::UploadState {
+            repository: PROJECT.to_owned(),
+            created_at: 0,
+        };
+        earlier
+            .put(
+                &earlier.upload_state_key(&upload_id),
+                serde_json::to_vec(&state).unwrap().into(),
+            )
+            .await
+            .unwrap();
+
+        let storage =
+            OciStorage::try_from_config(log(), None, &db_path, None, None, Some(clock())).unwrap();
+        let mut sweep = storage.close_upload_sweep();
+        while let Some(joined) = sweep.0.join_next().await {
+            joined.unwrap();
+        }
+
+        assert_eq!(
+            storage
+                .list_prefix(&storage.upload_prefix(&upload_id))
+                .await
+                .unwrap(),
+            Vec::new(),
+            "the stale session is gone"
+        );
     }
 
     #[tokio::test]

@@ -12,7 +12,9 @@ test-clock = ["bencher_json?/test-clock"]
 # Required due to feature unification
 # https://doc.rust-lang.org/cargo/reference/features.html#feature-unification
 plus = [
+    "dep:async-trait",
     "dep:bencher_json",
+    "bencher_otel?/plus",
     "dep:bytes",
     "dep:chrono",
     "dep:futures",
@@ -30,15 +32,17 @@ plus = [
     "dep:uuid",
 ]
 sentry = ["dep:sentry"]
-otel = []
+otel = ["dep:bencher_otel"]
 
 [dependencies]
 # Bencher internal crates
 bencher_json = { workspace = true, optional = true, features = ["server", "plus"] }
+bencher_otel = { workspace = true, optional = true }
 
 sentry = { workspace = true, optional = true }
 
 # External dependencies
+async-trait = { workspace = true, optional = true }
 bytes = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }

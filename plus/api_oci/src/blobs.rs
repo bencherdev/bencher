@@ -23,14 +23,20 @@
 //!
 //! See the `uploads` module for chunked upload endpoints.
 
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use std::time::Instant;
+
 use bencher_endpoint::{CorsResponse, Delete, Endpoint, Get, Post, Put};
 use bencher_json::ProjectResourceId;
-use bencher_oci_storage::{Digest, OciError};
+use bencher_oci_storage::{BlobBody, Digest, OciError, PullTimer, UploadPhase, UploadPhaseTimer};
 use bencher_schema::context::ApiContext;
+use bytes::Bytes;
 use dropshot::{
     Body, ClientErrorStatusCode, HttpError, Path, Query, RequestContext, StreamingBody, endpoint,
 };
 use http::Response;
+use hyper::body::{Frame, SizeHint};
 use schemars::JsonSchema;
 use serde::Deserialize;
 
@@ -45,6 +51,7 @@ use crate::error::storage_error;
 use crate::response::{
     APPLICATION_OCTET_STREAM, DOCKER_CONTENT_DIGEST, DOCKER_UPLOAD_UUID, oci_cors_headers,
 };
+use crate::uploads::{UploadError, finish_phase};
 
 /// Path parameters for blob/upload-start endpoints
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -157,6 +164,7 @@ pub async fn oci_blob_get(
     rqctx: RequestContext<ApiContext>,
     path: Path<BlobPath>,
 ) -> Result<Response<Body>, HttpError> {
+    let start = Instant::now();
     let context = rqctx.context();
     let path = path.into_inner();
 
@@ -194,6 +202,7 @@ pub async fn oci_blob_get(
     // Record metric
     #[cfg(feature = "otel")]
     bencher_otel::ApiMeter::increment(bencher_otel::ApiCounter::OciBlobPull);
+    let pull = PullTimer::new(start, size);
 
     // Build response with OCI-compliant headers and streaming body
     let response = oci_cors_headers(
@@ -204,7 +213,10 @@ pub async fn oci_blob_get(
             .header(DOCKER_CONTENT_DIGEST, digest.to_string()),
         &[http::Method::GET],
     )
-    .body(Body::wrap(blob_body))
+    .body(Body::wrap(PullBody {
+        body: blob_body,
+        pull,
+    }))
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
@@ -410,9 +422,20 @@ pub async fn oci_upload_monolithic(
     query: Query<MonolithicUploadQuery>,
     body: StreamingBody,
 ) -> Result<Response<Body>, HttpError> {
+    let phase = UploadPhaseTimer::new(UploadPhase::Finalize);
+    finish_phase(
+        phase,
+        upload_monolithic(&rqctx, path.into_inner(), query.into_inner(), body).await,
+    )
+}
+
+async fn upload_monolithic(
+    rqctx: &RequestContext<ApiContext>,
+    path: BlobPath,
+    query: MonolithicUploadQuery,
+    body: StreamingBody,
+) -> Result<Response<Body>, UploadError> {
     let context = rqctx.context();
-    let path = path.into_inner();
-    let query = query.into_inner();
 
     // PUT with digest query param is only valid when ref is "uploads"
     if path.reference != UPLOADS_REF {
@@ -420,11 +443,12 @@ pub async fn oci_upload_monolithic(
             None,
             ClientErrorStatusCode::METHOD_NOT_ALLOWED,
             "PUT only supported for uploads endpoint".to_owned(),
-        ));
+        )
+        .into());
     }
 
     // Validate push access and get or create the project
-    let push_access = validate_push_access(&rqctx.log, &rqctx, &path.name).await?;
+    let push_access = validate_push_access(&rqctx.log, rqctx, &path.name).await?;
     let project_slug = &push_access.project.slug;
     let project_uuid = push_access.project.uuid;
 
@@ -450,7 +474,7 @@ pub async fn oci_upload_monolithic(
             .complete_upload(&upload_id, &expected_digest)
             .await
             .map_err(storage_error)?;
-        Ok::<(Digest, u64), HttpError>((digest, final_size))
+        Ok::<(Digest, u64), UploadError>((digest, final_size))
     }
     .await;
 
@@ -485,4 +509,36 @@ pub async fn oci_upload_monolithic(
     .map_err(|e| HttpError::for_internal_error(format!("Failed to build response: {e}")))?;
 
     Ok(response)
+}
+
+/// A blob GET body that records its pull when it is dropped.
+struct PullBody {
+    body: BlobBody,
+    pull: PullTimer,
+}
+
+impl hyper::body::Body for PullBody {
+    type Data = Bytes;
+    type Error = <BlobBody as hyper::body::Body>::Error;
+
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Bytes>, Self::Error>>> {
+        let polled = Pin::new(&mut self.body).poll_frame(cx);
+        if let Poll::Ready(Some(Ok(frame))) = &polled
+            && let Some(data) = frame.data_ref()
+        {
+            self.pull.sent(data.len());
+        }
+        polled
+    }
+
+    fn is_end_stream(&self) -> bool {
+        self.body.is_end_stream()
+    }
+
+    fn size_hint(&self) -> SizeHint {
+        self.body.size_hint()
+    }
 }
