@@ -1,0 +1,4 @@
+Bombarding http://localhost:8080/fast for 2s using 10 connection(s)
+ 00m01s 2s
+Done!
+{"spec":{"numberOfConnections":10,"testType":"timed","testDurationSeconds":2,"method":"GET","url":"http://localhost:8080/fast","body":"","stream":false,"timeoutSeconds":2,"client":"fasthttp"},"result":{"bytesRead":38610026,"bytesWritten":21413964,"timeTakenSeconds":1.999938816,"req1xx":0,"req2xx":324454,"req3xx":0,"req4xx":0,"req5xx":0,"others":0,"latency":{"mean":60.06224302982857,"stddev":9.410224762376489,"max":2048,"percentiles":{"50":55,"75":70,"90":89,"95":102,"99":200}},"rps":{"mean":162235.81584513263,"stddev":6431.007205691901,"max":180226.81890018558,"percentiles":{"50":161532.452393,"75":167398.083292,"90":170041.931510,"95":171834.434670,"99":175504.579415}}}}

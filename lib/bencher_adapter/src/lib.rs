@@ -121,7 +121,8 @@ pub(crate) fn v0_parser(adapter: Adapter) -> Option<V0Parser> {
         | Adapter::RubyBenchmarkIps
         | Adapter::HttpK6
         | Adapter::HttpK6Json
-        | Adapter::HttpK6JsonSummary => return None,
+        | Adapter::HttpK6JsonSummary
+        | Adapter::HttpBombardier => return None,
         Adapter::RustIai => AdapterRustIai::parse,
         Adapter::RustGungraun => AdapterRustGungraun::parse,
         Adapter::RustGungraunStdout => AdapterRustGungraunStdout::parse,
