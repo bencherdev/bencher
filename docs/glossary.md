@@ -130,5 +130,5 @@ Glossary of terms for Bencher concepts.
 - **Attach**:
   `bencher run --job`, which waits for a submitted Job and posts its results as the submitting Run would have.
 - **Linked Repository**:
-  The one GitHub repository a Project's dispatches go to, linked in the Project's Settings by a user with push access to it.
-  Bencher mints the dispatch token for it.
+  The one GitHub repository of a Project, linked in the Project's Settings by a user with push access to it.
+  Bencher posts the GitHub Check and pull request comment of a detached Run to it, with a token it mints from its GitHub App.

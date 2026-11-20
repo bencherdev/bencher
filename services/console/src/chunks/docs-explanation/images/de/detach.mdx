@@ -3,9 +3,19 @@
 <br />
 
 Löst nach dem Einreichen des [Jobs auf dedizierter Hardware][job] ab, ohne auf dessen Abschluss zu warten.
+Mit [der Option `--github-actions`][github actions] veröffentlicht Bencher die GitHub-Prüfung und den Kommentar in der Pull-Anfrage
+im [verknüpften Repository][linked repository] des Projekts, wenn der Job beendet ist.
+Um eine beliebige andere Anfrage zu senden, wenn der Job beendet ist, verwenden Sie [die Option `--callback-url`][callback url].
 Diese Option erfordert, dass [die Option `--image`][image] gesetzt ist.
-Diese Option steht in Konflikt mit [der Option `--job-poll-interval`][job poll interval].
+Diese Option steht in Konflikt mit [der Option `--job-poll-interval`][job poll interval]
+und [dem Flag `--error-on-alert`][error on alert].
+Ein abgelöster Lauf endet, bevor sein Bericht existiert,
+und mit `--github-actions` lässt ein Alarm die GitHub-Prüfung fehlschlagen.
 
 [job]: /de/docs/explanation/bare-metal/#job
+[github actions]: /de/docs/explanation/bencher-run/#--github-actions-github_token
+[linked repository]: /de/docs/how-to/github-actions/#pull-requests-auf-dedizierter-hardware
+[callback url]: #--callback-url-url
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[error on alert]: /de/docs/explanation/thresholds/#--error-on-alert

@@ -4,6 +4,8 @@
 
 警告が生成された場合にエラーを発生させるオプションです。
 新しい[メトリック][metric]が下限界値を下回るか、上限界値を超えた場合に警告が生成されます。
+デタッチした実行はレポートが存在する前に終了するため、このフラグは[`--detach`フラグ][detach]と競合します。
+[`--github-actions`オプション][github actions]を指定した場合、デタッチした実行の警告は代わりにそのGitHubチェックを失敗させます。
 
 ### 警告の抑制
 特定のベンチマークに対する警告を抑制したい場合があります。
@@ -22,3 +24,5 @@
 サフィックスを削除して元のベンチマーク名に戻すと、以前の状態から再開できます。
 
 [metric]: /ja/docs/explanation/benchmarking/#metric
+[detach]: /ja/docs/explanation/images/#--detach
+[github actions]: /ja/docs/explanation/bencher-run/#--github-actions-github_token

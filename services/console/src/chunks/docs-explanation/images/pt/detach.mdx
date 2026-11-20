@@ -3,9 +3,19 @@
 <br />
 
 Desanexa após enviar o [Job em hardware dedicado][job], sem aguardar a sua conclusão.
+Com [a opção `--github-actions`][github actions], o Bencher publica a Verificação do GitHub e o comentário no pull request
+no [repositório vinculado][linked repository] do Projeto quando o Job termina.
+Para enviar qualquer outra requisição quando o Job terminar, use [a opção `--callback-url`][callback url].
 Esta opção requer que [a opção `--image`][image] esteja definida.
-Esta opção entra em conflito com [a opção `--job-poll-interval`][job poll interval].
+Esta opção entra em conflito com [a opção `--job-poll-interval`][job poll interval]
+e [a flag `--error-on-alert`][error on alert].
+Uma execução desanexada termina antes de seu Relatório existir,
+e com `--github-actions`, um Alerta faz a Verificação do GitHub falhar.
 
 [job]: /pt/docs/explanation/bare-metal/#job
+[github actions]: /pt/docs/explanation/bencher-run/#--github-actions-github_token
+[linked repository]: /pt/docs/how-to/github-actions/#pull-requests-em-hardware-dedicado
+[callback url]: #--callback-url-url
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[error on alert]: /pt/docs/explanation/thresholds/#--error-on-alert

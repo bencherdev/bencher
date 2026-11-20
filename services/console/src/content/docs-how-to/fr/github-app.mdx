@@ -3,7 +3,7 @@ title: "Application GitHub Auto-Hébergée"
 description: "Créez une application GitHub pour permettre à Bencher Auto-Hébergé de s'authentifier avec GitHub"
 heading: "Comment créer une application GitHub Auto-Hébergée"
 published: "2023-10-27T08:40:00Z"
-modified: "2026-10-28T05:53:42Z"
+modified: "2026-11-18T19:27:03Z"
 sortOrder: 9
 ---
 
@@ -56,7 +56,7 @@ Ajoutez le `client_id` et le `client_secret` à [la section `plus.github` de la 
 
 ## Dépôts liés
 
-Mettez à jour le serveur API et la Console Bencher Auto-Hébergé vers `v0.6.16` ou une version ultérieure avant de modifier ces paramètres.
+Ces paramètres nécessitent le serveur API et la Console Bencher Auto-Hébergé en `v0.6.18` ou une version ultérieure.
 
 Pour qu'un Projet puisse [lier un dépôt GitHub][linked repository] pour ses exécutions détachées,
 réglez aussi ces paramètres pour l'application GitHub :
@@ -76,12 +76,22 @@ réglez aussi ces paramètres pour l'application GitHub :
     - Saisissez un secret aléatoire et notez-le (ex : `0123456789abcdef0123456789abcdef`)
 - Permissions
   - Permissions du dépôt
-    - Contenu : `Lecture et écriture`
+    - Checks : `Lecture et écriture`
+    - Contenu : `Lecture seule`
+    - Pull requests : `Lecture et écriture`
   - S'abonner aux événements
     - Laissez chaque événement décoché
 - Notez le slug de l'application, la dernière partie de l'URL de sa page publique (ex : `my-bencher-app` dans `https://github.com/apps/my-bencher-app`)
 
 Ajoutez le slug, la clé privée et le secret du webhook en tant que `app` à [la section `plus.github` de la config du serveur](/fr/docs/reference/server-config/#plusgithub).
+
+Pour mettre à jour une application qu'une version antérieure a configurée avec Contenu : `Lecture et écriture` :
+
+1. Ajoutez Checks et Pull requests avant la mise à jour.
+   GitHub demande au propriétaire de chaque installation de les approuver.
+2. Mettez à jour le serveur API et la Console vers `v0.6.18` ou une version ultérieure.
+   Après la mise à jour, un dépôt dont l'installation n'a pas approuvé les nouvelles permissions ne peut pas être lié, et Bencher ne peut rien y publier.
+3. Passez Contenu à `Lecture seule`, dans une modification séparée.
 
 [linked repository]: /fr/docs/how-to/github-actions/#pull-requests-sur-matériel-dédié
 

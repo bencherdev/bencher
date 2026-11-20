@@ -3,9 +3,16 @@
 <br />
 
 [ベアメタルJob][job]を送信した後、完了を待たずにデタッチします。
+[`--github-actions`オプション][github actions]を指定すると、Jobが終了したときに、Bencherがプロジェクトの[リンクされたリポジトリ][linked repository]にGitHubチェックとプルリクエストのコメントを投稿します。
+Jobが終了したときにほかのリクエストを送信するには、[`--callback-url`オプション][callback url]を使用します。
 このオプションは、[`--image`オプション][image]が設定されている必要があります。
-このオプションは、[`--job-poll-interval`オプション][job poll interval]と競合します。
+このオプションは、[`--job-poll-interval`オプション][job poll interval]および[`--error-on-alert`フラグ][error on alert]と競合します。
+デタッチした実行はレポートが存在する前に終了し、`--github-actions`を指定した場合はアラートによってGitHubチェックが失敗します。
 
 [job]: /ja/docs/explanation/bare-metal/#job
+[github actions]: /ja/docs/explanation/bencher-run/#--github-actions-github_token
+[linked repository]: /ja/docs/how-to/github-actions/#ベアメタル上のプルリクエスト
+[callback url]: #--callback-url-url
 [image]: #--image-image
 [job poll interval]: #--job-poll-interval-seconds
+[error on alert]: /ja/docs/explanation/thresholds/#--error-on-alert

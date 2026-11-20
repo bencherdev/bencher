@@ -4,6 +4,8 @@
 
 Optionale Fehlerausgabe, wenn ein Alert erzeugt wird.
 Ein Alert wird erzeugt, wenn eine neue [Metrik][metric] unter ein Untergrenzlimit oder über ein Obergrenzlimit fällt.
+Dieses Flag steht in Konflikt mit [dem Flag `--detach`][detach], weil ein abgelöster Lauf endet, bevor sein Bericht existiert.
+Mit [der Option `--github-actions`][github actions] lässt ein Alert in einem abgelösten Lauf stattdessen seine GitHub-Prüfung fehlschlagen.
 
 ### Unterdrücken von Alerts
 Manchmal kann es nützlich sein, Alerts für einen bestimmten Benchmark zu unterdrücken.
@@ -23,3 +25,5 @@ Wenn Sie das Suffix entfernen und zum ursprünglichen Benchmark-Namen zurückkeh
 werden die Dinge genau dort fortgesetzt, wo Sie aufgehört haben.
 
 [metric]: /de/docs/explanation/benchmarking/#metric
+[detach]: /de/docs/explanation/images/#--detach
+[github actions]: /de/docs/explanation/bencher-run/#--github-actions-github_token

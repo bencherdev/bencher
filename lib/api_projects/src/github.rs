@@ -64,7 +64,8 @@ pub async fn proj_github_options(
 
 /// View a project's linked repository
 ///
-/// View the GitHub repository a project's dispatches go to, if it has one.
+/// View the GitHub repository that Bencher posts a detached run's check and comment to,
+/// if the project has one.
 /// The user must have `manage` permissions for the project.
 #[endpoint {
     method = GET,

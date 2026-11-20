@@ -4,6 +4,8 @@
 
 Opcionalmente, error cuando se genera una Alerta.
 Se genera una Alerta cuando un nuevo [Métrica][metric] está por debajo de un Límite Inferior o por encima de un Límite Superior.
+Esta bandera entra en conflicto con [la bandera `--detach`][detach], porque una ejecución desacoplada termina antes de que exista su Informe.
+Con [la opción `--github-actions`][github actions], una Alerta en una ejecución desacoplada hace fallar su Verificación de GitHub en su lugar.
 
 ### Supresión de Alertas
 A veces puede ser útil suprimir Alertas para un Benchmark en particular.
@@ -23,3 +25,5 @@ Si elimina el sufijo y vuelve al nombre original del Benchmark,
 las cosas continuarán justo donde las dejó.
 
 [metric]: /es/docs/explanation/benchmarking/#metric
+[detach]: /es/docs/explanation/images/#--detach
+[github actions]: /es/docs/explanation/bencher-run/#--github-actions-github_token

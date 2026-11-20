@@ -19,7 +19,11 @@ os resultados também serão adicionados ao pull request como um comentário.
 Todos os trabalhos de um Projeto no pull request compartilham este único comentário, com uma linha de Relatório para cada trabalho.
 Isso requer que o token tenha [o escopo de `pull-requests` com permissões de `write`][github token permissions].
 Os resultados também serão sempre adicionados ao resumo do trabalho.
-Com [a flag `--detach`](/pt/docs/explanation/images/#--detach), a execução desanexada não publica nenhum comentário nem escreve o resumo do trabalho, e [a conexão com `--job`](/pt/docs/explanation/images/#--job-uuid) conclui a Verificação do GitHub que ela iniciou (veja [a opção `--ci-callback-token`](#--ci-callback-token-token)).
+Com [a flag `--detach`](/pt/docs/explanation/images/#--detach), o workflow não publica nada, não escreve o resumo do trabalho e não precisa de permissões para o token.
+Em vez disso, o `bencher run` envia o pull request com o Job,
+e o Bencher publica a Verificação do GitHub e o comentário no [repositório vinculado](/pt/docs/how-to/github-actions/#pull-requests-em-hardware-dedicado) do Projeto com o seu próprio aplicativo GitHub.
+Os trabalhos desanexados de um Projeto em um pull request compartilham um comentário do aplicativo GitHub do Bencher,
+separado do comentário dos trabalhos sem `--detach`.
 
 Com duas ou mais linhas, o comentário mostra uma tabela de resumo de cada Relatório com cada um de seu Branch, Ambiente de Teste e Adaptador que difere entre os Relatórios, e seu status (`Pending`, o número de Alertas, `No Alerts` ou `Failed`).
 As linhas estão na ordem em que os Relatórios começaram, numeradas a partir de 1, como o Console lista os Relatórios de uma execução.

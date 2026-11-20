@@ -19,7 +19,11 @@ dann werden die Ergebnisse auch als Kommentar zur Pull-Anfrage hinzugefügt.
 Alle Jobs eines Projekts in der Pull-Anfrage teilen sich diesen einen Kommentar, mit einer Berichtszeile für jeden Job.
 Dies erfordert, dass das Token [den `pull-requests` Bereich mit `write` Berechtigungen][github token permissions] hat.
 Die Ergebnisse werden außerdem immer zur Zusammenfassung des Jobs hinzugefügt.
-Mit [dem Flag `--detach`](/de/docs/explanation/images/#--detach) veröffentlicht der abgelöste Lauf keinen Kommentar und schreibt keine Zusammenfassung des Jobs, und [die Verbindung mit `--job`](/de/docs/explanation/images/#--job-uuid) schließt die GitHub-Prüfung ab, die er gestartet hat (siehe [die Option `--ci-callback-token`](#--ci-callback-token-token)).
+Mit [dem Flag `--detach`](/de/docs/explanation/images/#--detach) veröffentlicht der Workflow nichts, schreibt keine Zusammenfassung des Jobs und benötigt keine Berechtigungen für das Token.
+Stattdessen sendet `bencher run` die Pull-Anfrage mit dem Job,
+und Bencher veröffentlicht die GitHub-Prüfung und den Kommentar mit seiner eigenen GitHub App im [verknüpften Repository](/de/docs/how-to/github-actions/#pull-requests-auf-dedizierter-hardware) des Projekts.
+Die abgelösten Jobs eines Projekts in einer Pull-Anfrage teilen sich einen Kommentar von der GitHub App von Bencher,
+getrennt vom Kommentar der Jobs ohne `--detach`.
 
 Bei zwei oder mehr Zeilen zeigt der Kommentar eine Übersichtstabelle mit jedem Bericht, jedem seiner Werte für Branch, Testbed und Adapter, die sich zwischen den Berichten unterscheiden, und seinem Status (`Pending`, die Anzahl der Alerts, `No Alerts` oder `Failed`).
 Die Zeilen stehen in der Reihenfolge, in der die Berichte gestartet wurden, nummeriert ab 1, so wie die Console die Berichte eines Laufs auflistet.
