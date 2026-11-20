@@ -1,0 +1,45 @@
+
+Summary:
+  Count:	2000
+  Total:	10.07 s
+  Slowest:	1.56 ms
+  Fastest:	0.04 ms
+  Average:	48.17 ms
+  Requests/sec:	198.66
+
+Response time histogram:
+  0.039 [1]   |
+  0.191 [997] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.344 [296] |∎∎∎∎∎∎∎∎∎∎∎∎
+  0.496 [81]  |∎∎∎
+  0.649 [7]   |
+  0.801 [1]   |
+  0.954 [0]   |
+  1.107 [0]   |
+  1.259 [2]   |
+  1.412 [2]   |
+  1.564 [4]   |
+
+Latency distribution:
+  10 % in 0.08 ms 
+  25 % in 0.10 ms 
+  50 % in 0.13 ms 
+  75 % in 0.21 ms 
+  90 % in 0.31 ms 
+  95 % in 0.37 ms 
+  99 % in 0.56 ms 
+
+Status code distribution:
+  [OK]                  1391 responses   
+  [NotFound]            192 responses    
+  [Internal]            200 responses    
+  [ResourceExhausted]   121 responses    
+  [DeadlineExceeded]    96 responses     
+
+Error distribution:
+  [192]   rpc error: code = NotFound desc = not found                                                         
+  [200]   rpc error: code = Internal desc = internal                                                          
+  [121]   rpc error: code = ResourceExhausted desc = exhausted                                                
+  [88]    rpc error: code = DeadlineExceeded desc = context deadline exceeded                                 
+  [8]     rpc error: code = DeadlineExceeded desc = stream terminated by RST_STREAM with error code: CANCEL   
+

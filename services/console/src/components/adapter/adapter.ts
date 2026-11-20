@@ -47,6 +47,10 @@ export const adapterIcon = (adapter: Adapter) => {
 		case Adapter.GoBenchJson:
 		case Adapter.GoBenchText:
 			return GO_ICON;
+		case Adapter.GrpcGhz:
+		case Adapter.GrpcGhzJson:
+		case Adapter.GrpcGhzText:
+			return SHELL_ICON;
 		case Adapter.HttpK6:
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
@@ -111,6 +115,10 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.GoBenchJson:
 		case Adapter.GoBenchText:
 			return `bencher run${host} "go test -bench"`;
+		case Adapter.GrpcGhz:
+		case Adapter.GrpcGhzJson:
+		case Adapter.GrpcGhzText:
+			return `bencher run${host} "ghz --insecure --call helloworld.Greeter.SayHello -n 2000 -O json localhost:50051"`;
 		case Adapter.HttpK6:
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:

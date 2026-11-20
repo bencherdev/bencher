@@ -1,0 +1,118 @@
+
+Summary:
+  Name:		a
+  Count:	500
+  Total:	52.53 ms
+  Slowest:	3.75 ms
+  Fastest:	0.05 ms
+  Average:	0.68 ms
+  Requests/sec:	9518.70
+
+Response time histogram:
+  0.051 [1]   |
+  0.422 [258] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.792 [119] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  1.162 [42]  |∎∎∎∎∎∎∎
+  1.533 [23]  |∎∎∎∎
+  1.903 [24]  |∎∎∎∎
+  2.273 [14]  |∎∎
+  2.644 [4]   |∎
+  3.014 [1]   |
+  3.384 [6]   |∎
+  3.754 [8]   |∎
+
+Latency distribution:
+  10 % in 0.17 ms 
+  25 % in 0.25 ms 
+  50 % in 0.41 ms 
+  75 % in 0.77 ms 
+  90 % in 1.71 ms 
+  95 % in 2.08 ms 
+  99 % in 3.55 ms 
+
+Status code distribution:
+  [OK]   500 responses   
+
+
+
+Summary:
+  Name:		b
+  Count:	500
+  Total:	3.02 s
+  Slowest:	3.68 ms
+  Fastest:	0.03 ms
+  Average:	52.27 ms
+  Requests/sec:	165.37
+
+Response time histogram:
+  0.033 [1]   |
+  0.398 [310] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.763 [12]  |∎∎
+  1.127 [9]   |∎
+  1.492 [3]   |
+  1.857 [2]   |
+  2.222 [1]   |
+  2.587 [1]   |
+  2.952 [1]   |
+  3.317 [1]   |
+  3.682 [2]   |
+
+Latency distribution:
+  10 % in 0.08 ms 
+  25 % in 0.10 ms 
+  50 % in 0.15 ms 
+  75 % in 0.26 ms 
+  90 % in 0.38 ms 
+  95 % in 0.84 ms 
+  99 % in 2.61 ms 
+
+Status code distribution:
+  [DeadlineExceeded]    26 responses    
+  [OK]                  343 responses   
+  [Internal]            38 responses    
+  [NotFound]            61 responses    
+  [ResourceExhausted]   32 responses    
+
+Error distribution:
+  [38]   rpc error: code = Internal desc = internal                                                          
+  [61]   rpc error: code = NotFound desc = not found                                                         
+  [32]   rpc error: code = ResourceExhausted desc = exhausted                                                
+  [23]   rpc error: code = DeadlineExceeded desc = context deadline exceeded                                 
+  [3]    rpc error: code = DeadlineExceeded desc = stream terminated by RST_STREAM with error code: CANCEL   
+
+
+Summary:
+  Name:		a
+  Count:	300
+  Total:	20.47 ms
+  Slowest:	1.31 ms
+  Fastest:	0.07 ms
+  Average:	0.29 ms
+  Requests/sec:	14658.68
+
+Response time histogram:
+  0.074 [1]   |
+  0.198 [103] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.321 [101] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.445 [58]  |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.568 [18]  |∎∎∎∎∎∎∎
+  0.691 [7]   |∎∎∎
+  0.815 [4]   |∎∎
+  0.938 [5]   |∎∎
+  1.062 [1]   |
+  1.185 [1]   |
+  1.308 [1]   |
+
+Latency distribution:
+  10 % in 0.14 ms 
+  25 % in 0.18 ms 
+  50 % in 0.24 ms 
+  75 % in 0.35 ms 
+  90 % in 0.49 ms 
+  95 % in 0.60 ms 
+  99 % in 0.93 ms 
+
+Status code distribution:
+  [OK]   300 responses   
+
+

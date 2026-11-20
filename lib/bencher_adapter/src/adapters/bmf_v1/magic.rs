@@ -6,6 +6,7 @@ use crate::{
             cpp::{catch2::AdapterCppCatch2V1, google::AdapterCppGoogleV1},
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::AdapterGoBenchV1,
+            grpc::ghz::AdapterGrpcGhz,
             http::k6::AdapterHttpK6,
             java::jmh::AdapterJavaJmhV1,
             js::{
@@ -27,7 +28,7 @@ use crate::{
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
 /// its structured format before its text, and Divan before criterion, since criterion's text leaf
-/// also claims a run that prints both and drops Divan's tree, then each HTTP load tool.
+/// also claims a run that prints both and drops Divan's tree, then each HTTP load tool, then ghz.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -56,6 +57,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
             .or_else(|| AdapterHttpK6::parse(input, settings))
+            .or_else(|| AdapterGrpcGhz::parse(input, settings))
     }
 }
 
@@ -73,7 +75,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 33] = [
+    const LEAVES: [Adapter; 35] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -107,11 +109,13 @@ mod test_magic_v1 {
         Adapter::ShellHyperfineV1,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::GrpcGhzJson,
+        Adapter::GrpcGhzText,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 12] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 43] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -137,6 +141,39 @@ mod test_magic_v1 {
         ("rust/gungraun/json_not_v6.txt", None),
         // k6's text summary, which k6 does not support parsing.
         ("http/k6/text_scenarios.txt", None),
+        // ghz's other outputs: InfluxDB line protocol, Prometheus text, and CSV.
+        ("grpc/ghz/ok_csv_head.txt", None),
+        ("grpc/ghz/ok_influx_summary.txt", None),
+        ("grpc/ghz/ok_prometheus.txt", None),
+        // oha's and hey's text, which also opens with `Summary:`.
+        ("http/oha/codes_1xx_3xx.txt", None),
+        ("http/oha/codes_599_999.txt", None),
+        ("http/oha/concat.txt", None),
+        ("http/oha/drop.txt", None),
+        ("http/oha/drop_1_8_0.txt", None),
+        ("http/oha/fast.txt", None),
+        ("http/oha/fast_breakdown.txt", None),
+        ("http/oha/fast_nanoseconds.txt", None),
+        ("http/oha/hang_hours.txt", None),
+        ("http/oha/hang_minutes.txt", None),
+        ("http/oha/hang_ten_minutes_1_12_0.txt", None),
+        ("http/oha/hang_ten_seconds_1_12_0.txt", None),
+        ("http/oha/mixed_breakdown_1_12_0.txt", None),
+        ("http/oha/mixed_breakdown_1_8_0.txt", None),
+        ("http/oha/mixed_seconds.txt", None),
+        ("http/oha/mixed_timeout_breakdown.txt", None),
+        ("http/hey/concat.txt", None),
+        ("http/hey/drop.txt", None),
+        ("http/hey/duration_rate.txt", None),
+        ("http/hey/error.txt", None),
+        ("http/hey/fast.txt", None),
+        ("http/hey/h2_tls_unverified.txt", None),
+        ("http/hey/hey_mixed.txt", None),
+        ("http/hey/long_mixed.txt", None),
+        ("http/hey/mixed_timeout.txt", None),
+        ("http/hey/post.txt", None),
+        ("http/hey/refused.txt", None),
+        ("http/hey/slow.txt", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -269,6 +306,10 @@ mod test_magic_v1 {
                 (Adapter::CppCatch2Xml, Adapter::CppCatch2Text),
             ),
             "go/bench" => (json, (Adapter::GoBenchJson, Adapter::GoBenchText)),
+            "grpc/ghz" => (
+                extension == Some("json"),
+                (Adapter::GrpcGhzJson, Adapter::GrpcGhzText),
+            ),
             "http/k6" => {
                 return Some(if name.starts_with("machine_readable") {
                     Adapter::HttpK6Json

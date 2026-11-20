@@ -311,6 +311,108 @@ pub mod http {
     }
 }
 
+/// The calls that ended with each status code gRPC registers, named as the gRPC spec names the
+/// code, in kebab case.
+pub mod grpc {
+    create_measure!(StatusOk, "gRPC Status OK", "grpc-status-ok", "responses");
+    create_measure!(
+        StatusCancelled,
+        "gRPC Status Cancelled",
+        "grpc-status-cancelled",
+        "responses"
+    );
+    create_measure!(
+        StatusUnknown,
+        "gRPC Status Unknown",
+        "grpc-status-unknown",
+        "responses"
+    );
+    create_measure!(
+        StatusInvalidArgument,
+        "gRPC Status Invalid Argument",
+        "grpc-status-invalid-argument",
+        "responses"
+    );
+    create_measure!(
+        StatusDeadlineExceeded,
+        "gRPC Status Deadline Exceeded",
+        "grpc-status-deadline-exceeded",
+        "responses"
+    );
+    create_measure!(
+        StatusNotFound,
+        "gRPC Status Not Found",
+        "grpc-status-not-found",
+        "responses"
+    );
+    create_measure!(
+        StatusAlreadyExists,
+        "gRPC Status Already Exists",
+        "grpc-status-already-exists",
+        "responses"
+    );
+    create_measure!(
+        StatusPermissionDenied,
+        "gRPC Status Permission Denied",
+        "grpc-status-permission-denied",
+        "responses"
+    );
+    create_measure!(
+        StatusResourceExhausted,
+        "gRPC Status Resource Exhausted",
+        "grpc-status-resource-exhausted",
+        "responses"
+    );
+    create_measure!(
+        StatusFailedPrecondition,
+        "gRPC Status Failed Precondition",
+        "grpc-status-failed-precondition",
+        "responses"
+    );
+    create_measure!(
+        StatusAborted,
+        "gRPC Status Aborted",
+        "grpc-status-aborted",
+        "responses"
+    );
+    create_measure!(
+        StatusOutOfRange,
+        "gRPC Status Out of Range",
+        "grpc-status-out-of-range",
+        "responses"
+    );
+    create_measure!(
+        StatusUnimplemented,
+        "gRPC Status Unimplemented",
+        "grpc-status-unimplemented",
+        "responses"
+    );
+    create_measure!(
+        StatusInternal,
+        "gRPC Status Internal",
+        "grpc-status-internal",
+        "responses"
+    );
+    create_measure!(
+        StatusUnavailable,
+        "gRPC Status Unavailable",
+        "grpc-status-unavailable",
+        "responses"
+    );
+    create_measure!(
+        StatusDataLoss,
+        "gRPC Status Data Loss",
+        "grpc-status-data-loss",
+        "responses"
+    );
+    create_measure!(
+        StatusUnauthenticated,
+        "gRPC Status Unauthenticated",
+        "grpc-status-unauthenticated",
+        "responses"
+    );
+}
+
 pub mod iai {
     create_measure!(Instructions, "Instructions", "instructions", "instructions");
     create_measure!(L1Accesses, "L1 Accesses", "l1-accesses", "accesses");

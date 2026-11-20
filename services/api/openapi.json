@@ -13080,7 +13080,10 @@
           "dart_benchmark_harness",
           "http_k6",
           "http_k6_json",
-          "http_k6_json_summary"
+          "http_k6_json_summary",
+          "grpc_ghz",
+          "grpc_ghz_json",
+          "grpc_ghz_text"
         ]
       },
       "AlertStatus": {

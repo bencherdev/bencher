@@ -783,6 +783,9 @@ export enum Adapter {
 	HttpK6 = "http_k6",
 	HttpK6Json = "http_k6_json",
 	HttpK6JsonSummary = "http_k6_json_summary",
+	GrpcGhz = "grpc_ghz",
+	GrpcGhzJson = "grpc_ghz_json",
+	GrpcGhzText = "grpc_ghz_text",
 }
 
 /** A report, with what a link to it shows: the report that raised an alert. */

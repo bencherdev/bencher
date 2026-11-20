@@ -1,0 +1,15 @@
+
+Summary:
+  Count:	0
+  Total:	9.66 ms
+  Slowest:	0 ns
+  Fastest:	0 ns
+  Average:	0 ns
+  Requests/sec:	0.00
+
+Response time histogram:
+
+Latency distribution:
+
+
+
