@@ -40,6 +40,7 @@ const CLI_ADAPTERS = new Set([
 	"dart_benchmark_harness",
 	"go_bench",
 	"http_k6",
+	"http_vegeta",
 	"java_jmh",
 	"js_benchmark",
 	"js_deno",
@@ -150,5 +151,7 @@ describe("cliAdapter", () => {
 		expect(cliAdapter(Adapter.Python)).toBe("magic");
 		expect(cliAdapter(Adapter.HttpK6Json)).toBe("http_k6");
 		expect(cliAdapter(Adapter.HttpK6JsonSummary)).toBe("http_k6");
+		expect(cliAdapter(Adapter.HttpVegetaJson)).toBe("http_vegeta");
+		expect(cliAdapter(Adapter.HttpVegetaText)).toBe("http_vegeta");
 	});
 });

@@ -1,0 +1,12 @@
+Requests      [total, rate, throughput]         800, 200.23, 118.37
+Duration      [total, attack, wait]             4.95s, 3.995s, 954.999ms
+Latencies     [min, mean, 50, 90, 95, 99, max]  60.834µs, 56.442ms, 143.701µs, 366.847µs, 960.142ms, 1.001s, 1.001s
+Bytes In      [total, mean]                     1758, 2.20
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           73.25%
+Status Codes  [code:count]                      0:47  200:586  404:79  500:88  
+Error Set:
+404 Not Found
+500 Internal Server Error
+Get "http://localhost:8080/mixed": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+Get "http://localhost:8080/mixed": EOF

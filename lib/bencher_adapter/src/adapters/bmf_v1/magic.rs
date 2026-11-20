@@ -6,7 +6,7 @@ use crate::{
             cpp::{catch2::AdapterCppCatch2V1, google::AdapterCppGoogleV1},
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::AdapterGoBenchV1,
-            http::k6::AdapterHttpK6,
+            http::{k6::AdapterHttpK6, vegeta::AdapterHttpVegeta},
             java::jmh::AdapterJavaJmhV1,
             js::{
                 benchmark::AdapterJsBenchmarkV1, deno::AdapterJsDeno, mitata::AdapterJsMitata,
@@ -56,6 +56,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
             .or_else(|| AdapterHttpK6::parse(input, settings))
+            .or_else(|| AdapterHttpVegeta::parse(input, settings))
     }
 }
 
@@ -73,7 +74,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 33] = [
+    const LEAVES: [Adapter; 35] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -107,11 +108,13 @@ mod test_magic_v1 {
         Adapter::ShellHyperfineV1,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::HttpVegetaJson,
+        Adapter::HttpVegetaText,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 12] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 19] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -137,6 +140,16 @@ mod test_magic_v1 {
         ("rust/gungraun/json_not_v6.txt", None),
         // k6's text summary, which k6 does not support parsing.
         ("http/k6/text_scenarios.txt", None),
+        // Vegeta's histogram report, which holds only bucket counts.
+        ("http/vegeta/mixed_hist.txt", None),
+        // Vegeta's `-every` reports, to a file and to a terminal.
+        ("http/vegeta/every_output.json", None),
+        ("http/vegeta/every_output.txt", None),
+        ("http/vegeta/every.json", None),
+        ("http/vegeta/every.txt", None),
+        // Vegeta before 12.8.0, with no `min` or `90` latency and its rows padded otherwise.
+        ("http/vegeta/v12_7_0.json", None),
+        ("http/vegeta/v12_7_0.txt", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -276,6 +289,10 @@ mod test_magic_v1 {
                     Adapter::HttpK6JsonSummary
                 });
             },
+            "http/vegeta" => (
+                extension == Some("json"),
+                (Adapter::HttpVegetaJson, Adapter::HttpVegetaText),
+            ),
             "js/vitest" => (
                 name.starts_with("v5"),
                 (Adapter::JsVitestV5, Adapter::JsVitestV1),

@@ -1,0 +1,32 @@
+[2J[0;0HRequests      [total, rate, throughput]         99, 97.08, 97.05
+Duration      [total, attack, wait]             1.02s, 1.02s, 348.638µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  154.138µs, 31.445ms, 40.848ms, 40.9ms, 40.921ms, 41.138ms, 41.142ms
+Bytes In      [total, mean]                     297, 3.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           100.00%
+Status Codes  [code:count]                      200:99  
+Error Set:
+[2J[0;0HRequests      [total, rate, throughput]         199, 98.49, 98.48
+Duration      [total, attack, wait]             2.021s, 2.021s, 157.273µs
+Latencies     [min, mean, 50, 90, 95, 99, max]  144.134µs, 32.118ms, 40.846ms, 40.902ms, 40.942ms, 41.872ms, 41.885ms
+Bytes In      [total, mean]                     597, 3.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           100.00%
+Status Codes  [code:count]                      200:199  
+Error Set:
+[2J[0;0HRequests      [total, rate, throughput]         299, 100.32, 98.97
+Duration      [total, attack, wait]             3.021s, 2.98s, 40.872ms
+Latencies     [min, mean, 50, 90, 95, 99, max]  144.134µs, 32.47ms, 40.849ms, 40.9ms, 40.935ms, 41.868ms, 41.885ms
+Bytes In      [total, mean]                     897, 3.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           100.00%
+Status Codes  [code:count]                      200:299  
+Error Set:
+Requests      [total, rate, throughput]         300, 100.32, 98.97
+Duration      [total, attack, wait]             3.031s, 2.99s, 40.85ms
+Latencies     [min, mean, 50, 90, 95, 99, max]  144.134µs, 32.498ms, 40.85ms, 40.9ms, 40.934ms, 41.868ms, 41.885ms
+Bytes In      [total, mean]                     900, 3.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           100.00%
+Status Codes  [code:count]                      200:300  
+Error Set:
