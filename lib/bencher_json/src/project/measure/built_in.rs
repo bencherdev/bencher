@@ -206,7 +206,7 @@ pub mod mitata {
 }
 
 pub mod http {
-    use bencher_valid::{NANOSECONDS, PERCENTAGE};
+    use bencher_valid::{BYTES, NANOSECONDS, PERCENTAGE};
 
     use crate::{JsonNewMeasure, MeasureNameId};
 
@@ -262,6 +262,29 @@ pub mod http {
         NANOSECONDS
     );
     create_measure!(GroupTime, "Group Time", "group-time", NANOSECONDS);
+    create_measure!(
+        DnsLookupTime,
+        "DNS Lookup Time",
+        "dns-lookup-time",
+        NANOSECONDS
+    );
+    create_measure!(
+        DnsDialupTime,
+        "DNS Dialup Time",
+        "dns-dialup-time",
+        NANOSECONDS
+    );
+    create_measure!(
+        SizePerRequest,
+        "Size per Request",
+        "size-per-request",
+        BYTES
+    );
+    create_measure!(Responses1xx, "Responses 1xx", "responses-1xx", "responses");
+    create_measure!(Responses2xx, "Responses 2xx", "responses-2xx", "responses");
+    create_measure!(Responses3xx, "Responses 3xx", "responses-3xx", "responses");
+    create_measure!(Responses4xx, "Responses 4xx", "responses-4xx", "responses");
+    create_measure!(Responses5xx, "Responses 5xx", "responses-5xx", "responses");
 
     /// The responses with one HTTP status code, `responses-<code>`, a built-in measure for each
     /// code the IANA HTTP Status Code Registry assigns permanently.
