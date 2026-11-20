@@ -319,6 +319,7 @@ fn built_in_http_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::http::ReceivingTime::from_str(measure_str))
         .or_else(|| built_in::http::IterationTime::from_str(measure_str))
         .or_else(|| built_in::http::GroupTime::from_str(measure_str))
+        .or_else(|| built_in::http::SizePerRequest::from_str(measure_str))
         .or_else(|| built_in::http::Responses::from_measure(measure_str))
 }
 

@@ -1,0 +1,36 @@
+[2026-11-15 13:47:37,065] localhost/INFO/locust.main: Starting Locust 2.47.0
+[2026-11-15 13:47:37,065] localhost/INFO/locust.main: Run time limit set to 10 seconds
+[2026-11-15 13:47:37,066] localhost/INFO/locust.runners: Ramping to 10 users at a rate of 10.00 per second
+[2026-11-15 13:47:37,067] localhost/INFO/locust.runners: All users spawned: {"Api": 10} (10 total users)
+[2026-11-15 13:47:46,965] localhost/INFO/locust.main: --run-time limit reached, shutting down
+[2026-11-15 13:47:46,978] localhost/INFO/locust.main: Shutting down (exit code 1)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+GET      /fast                                                                           2359     0(0.00%) |      0       0      16      0 |  238.03        0.00
+GET      /fast?id=[id]                                                                    484     0(0.00%) |      0       0       2      0 |   48.84        0.00
+GET      /mixed                                                                           950  286(30.11%) |     46       0    1001      0 |   95.86       28.86
+POST     /post                                                                            484     0(0.00%) |      0       0       2      0 |   48.84        0.00
+GET      /slow                                                                            948     0(0.00%) |     51      50      64     51 |   95.65        0.00
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                      5225   286(5.47%) |     18       0    1001      1 |  527.21       28.86
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+GET      /fast                                                                                   0      1      1      1      1      1      2      2     12     17     17   2359
+GET      /fast?id=[id]                                                                           0      1      1      1      1      1      1      2      3      3      3    484
+GET      /mixed                                                                                  0      1      1      1      1      2   1000   1000   1000   1000   1000    950
+POST     /post                                                                                   0      1      1      1      1      1      1      2      3      3      3    484
+GET      /slow                                                                                  51     51     52     52     52     52     53     54     64     64     64    948
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                              1      1      1      2     51     52     52     54   1000   1000   1000   5225
+
+Error report
+# occurrences      Error                                                                                               
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+53                 GET /mixed: RemoteDisconnected('Remote end closed connection without response')                     
+93                 GET /mixed: HTTPError('404 Client Error: Not Found for url: /mixed')                                
+96                 GET /mixed: HTTPError('500 Server Error: Internal Server Error for url: /mixed')                    
+44                 GET /mixed: ReadTimeout(ReadTimeoutError("HTTPConnectionPool(host='localhost', port=8080): Read timed out. (read timeout=1)"))
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+

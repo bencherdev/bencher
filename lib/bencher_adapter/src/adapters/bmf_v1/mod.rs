@@ -13,7 +13,8 @@ use crate::{
             go::bench::{AdapterGoBenchJson, AdapterGoBenchText, AdapterGoBenchV1},
             http::{
                 k6::AdapterHttpK6, k6_json::AdapterHttpK6Json,
-                k6_json_summary::AdapterHttpK6JsonSummary,
+                k6_json_summary::AdapterHttpK6JsonSummary, locust::AdapterHttpLocust,
+                locust_csv::AdapterHttpLocustCsv, locust_json::AdapterHttpLocustJson,
             },
             java::jmh::AdapterJavaJmhV1,
             js::{
@@ -127,6 +128,9 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::HttpK6 => AdapterHttpK6::parse(input, settings),
         Adapter::HttpK6Json => AdapterHttpK6Json::parse(input, settings),
         Adapter::HttpK6JsonSummary => AdapterHttpK6JsonSummary::parse(input, settings),
+        Adapter::HttpLocust => AdapterHttpLocust::parse(input, settings),
+        Adapter::HttpLocustCsv => AdapterHttpLocustCsv::parse(input, settings),
+        Adapter::HttpLocustJson => AdapterHttpLocustJson::parse(input, settings),
         Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
 }
@@ -147,7 +151,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 55] = [
+    const ADAPTERS: [Adapter; 58] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -203,6 +207,9 @@ mod test_bmf_v1 {
         Adapter::HttpK6,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::HttpLocust,
+        Adapter::HttpLocustCsv,
+        Adapter::HttpLocustJson,
     ];
 
     const LANGUAGES: [Adapter; 10] = [
