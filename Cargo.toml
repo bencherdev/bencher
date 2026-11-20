@@ -131,6 +131,7 @@ libc = "0.2"
 libsqlite3-sys = { version = "0.38.2", features = ["bundled"] }
 literally = "0.1"
 mail-send = { version = "0.6", default-features = false, features = ["builder", "aws_lc_rs", "tls12"] }
+md-5 = "0.11"
 minijinja = "3.0"
 newline-converter = "0.3"
 nix = { version = "0.31", default-features = false }

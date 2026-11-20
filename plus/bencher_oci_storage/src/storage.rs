@@ -4,6 +4,7 @@
 //! local filesystem directory or any S3-compatible bucket. Keys are identical
 //! across both backends, so the same registry data can be moved between them.
 
+use std::num::NonZeroU64;
 use std::path::{Path as FilePath, PathBuf};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -22,7 +23,8 @@ use chrono::Utc;
 use futures::stream::{self, BoxStream, StreamExt as _, TryStreamExt as _};
 use hyper::body::Frame;
 use object_store::{
-    ClientOptions, ObjectMeta, ObjectStore, ObjectStoreExt as _, WriteMultipart, path::Path,
+    ClientOptions, ObjectMeta, ObjectStore, ObjectStoreExt as _, WriteMultipart, aws::AmazonS3,
+    path::Path,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
@@ -33,7 +35,9 @@ use tokio::runtime::Handle;
 use tokio::task::{JoinError, JoinSet};
 
 use crate::metrics::{self, FinalizeOutcome, SweepAction};
+use crate::part_copy::PartCopy;
 use crate::recording::RecordingStore;
+use crate::s3_error;
 use crate::types::{Digest, UploadId};
 
 /// Maximum concurrency for parallel object store operations.
@@ -47,7 +51,13 @@ pub const MAX_CONCURRENCY: usize = 64;
 const MAX_UPLOAD_CONCURRENCY: usize = 4;
 
 /// Most parts an S3 multipart upload can have.
-const MAX_PARTS: u64 = 10_000;
+pub(crate) const MAX_PARTS: u64 = 10_000;
+
+/// The part a mount copies by on S3. A blob of one part or less copies whole.
+const MOUNT_PART_SIZE: NonZeroU64 = match NonZeroU64::new(16 * 1024 * 1024) {
+    Some(part_size) => part_size,
+    None => panic!("the mount part size is zero"),
+};
 
 /// Longest an S3-compatible store may go without sending a byte, which reqwest
 /// also applies from sending a request to its response headers, so four 5 MiB
@@ -69,6 +79,8 @@ const DEFAULT_REGION: &str = "auto";
 /// OCI storage backed by a local directory or an S3-compatible bucket
 pub struct OciStorage {
     store: Arc<RecordingStore>,
+    /// The S3 backend's server-side part copy, which the object store trait hides
+    part_copy: Option<PartCopy>,
     /// Key prefix within the store, if configured
     prefix: Option<Path>,
     /// Upload timeout in seconds for stale upload cleanup
@@ -155,26 +167,35 @@ impl OciStorage {
         max_body_size: Option<u64>,
         clock: Option<Clock>,
     ) -> Result<Self, OciStorageError> {
-        let (store, prefix, chunk_size) = match storage
-            .unwrap_or(RegistryStorage::File { path: None })
-        {
-            RegistryStorage::File { path } => {
-                let dir = path.unwrap_or_else(|| registry_dir(database_path));
-                (file_store(&dir)?, None, None)
-            },
-            RegistryStorage::S3 {
-                bucket,
-                path,
-                endpoint,
-                region,
-                access_key_id,
-                secret_access_key,
-                chunk_size,
-            } => {
-                let store = s3_store(bucket, endpoint, region, access_key_id, &secret_access_key)?;
-                (store, path.map(Path::from), chunk_size)
-            },
-        };
+        let (store, part_copy, prefix, chunk_size) =
+            match storage.unwrap_or(RegistryStorage::File { path: None }) {
+                RegistryStorage::File { path } => {
+                    let dir = path.unwrap_or_else(|| registry_dir(database_path));
+                    (file_store(&dir)?, None, None, None)
+                },
+                RegistryStorage::S3 {
+                    bucket,
+                    path,
+                    endpoint,
+                    region,
+                    access_key_id,
+                    secret_access_key,
+                    chunk_size,
+                } => {
+                    let options = s3_client_options(endpoint.as_deref());
+                    let s3 = s3_store(
+                        bucket.clone(),
+                        endpoint,
+                        region,
+                        access_key_id,
+                        &secret_access_key,
+                        options.clone(),
+                    )?;
+                    let part_copy = PartCopy::new(s3.clone(), bucket, &options, log.clone())?;
+                    let store: Arc<dyn ObjectStore> = Arc::new(s3);
+                    (store, Some(part_copy), path.map(Path::from), chunk_size)
+                },
+            };
 
         let concurrency = std::thread::available_parallelism()
             .map_or(1, std::num::NonZeroUsize::get)
@@ -185,6 +206,7 @@ impl OciStorage {
 
         let storage = Self {
             store: Arc::new(RecordingStore::new(store)),
+            part_copy,
             prefix,
             upload_timeout: upload_timeout.unwrap_or(DEFAULT_UPLOAD_TIMEOUT_SECS),
             max_body_size: max_body_size.unwrap_or(DEFAULT_MAX_BODY_SIZE),
@@ -340,10 +362,7 @@ impl OciStorage {
             .get(key)
             .await
             .map_err(|e| map_error(&e, not_found))?;
-        result
-            .bytes()
-            .await
-            .map_err(|e| OciStorageError::Storage(e.to_string()))
+        result.bytes().await.map_err(|e| storage_error(&e))
     }
 
     /// Reads an object in full, without classifying a missing object.
@@ -360,7 +379,7 @@ impl OciStorage {
         match self.store.delete(key).await {
             Ok(()) => Ok(()),
             Err(e) if is_not_found(&e) => Ok(()),
-            Err(e) => Err(OciStorageError::Storage(e.to_string())),
+            Err(e) => Err(storage_error(&e)),
         }
     }
 
@@ -370,7 +389,7 @@ impl OciStorage {
             .list(Some(prefix))
             .try_collect()
             .await
-            .map_err(|e| OciStorageError::Storage(e.to_string()))
+            .map_err(|e| storage_error(&e))
     }
 
     // ==================== Upload Operations ====================
@@ -393,7 +412,7 @@ impl OciStorage {
         self.store
             .put(&self.upload_state_key(&upload_id), data.into())
             .await
-            .map_err(|e| OciStorageError::Storage(e.to_string()))?;
+            .map_err(|e| storage_error(&e))?;
 
         Ok(upload_id)
     }
@@ -425,7 +444,7 @@ impl OciStorage {
         self.store
             .put(&self.new_chunk_key(upload_id), data.into())
             .await
-            .map_err(|e| OciStorageError::Storage(e.to_string()))?;
+            .map_err(|e| storage_error(&e))?;
 
         Ok(projected_total)
     }
@@ -481,7 +500,7 @@ impl OciStorage {
             .store
             .put_multipart(&blob_key)
             .await
-            .map_err(|e| OciStorageError::Storage(e.to_string()))?;
+            .map_err(|e| storage_error(&e))?;
         let mut write = WriteMultipart::new_with_chunk_size(
             upload,
             part_size(self.chunk_size, self.max_body_size),
@@ -504,10 +523,7 @@ impl OciStorage {
             });
         }
 
-        write
-            .finish()
-            .await
-            .map_err(|e| OciStorageError::Storage(e.to_string()))?;
+        write.finish().await.map_err(|e| storage_error(&e))?;
         self.cleanup_upload(upload_id).await;
 
         Ok((actual_digest, size))
@@ -528,7 +544,7 @@ impl OciStorage {
             write
                 .wait_for_capacity(MAX_UPLOAD_CONCURRENCY)
                 .await
-                .map_err(|e| OciStorageError::Storage(e.to_string()))?;
+                .map_err(|e| storage_error(&e))?;
             write.put(chunk);
         }
         let digest = Digest::sha256(&hex::encode(hasher.finalize()))
@@ -539,7 +555,11 @@ impl OciStorage {
     /// Aborts a multipart upload, reporting but not surfacing any failure.
     async fn abort_multipart(&self, write: WriteMultipart) {
         if let Err(e) = write.abort().await {
-            report_cleanup_error(&self.log, "complete_upload: abort multipart", &e);
+            report_cleanup_error(
+                &self.log,
+                "complete_upload: abort multipart",
+                &storage_error(&e),
+            );
         }
     }
 
@@ -729,7 +749,9 @@ impl OciStorage {
     /// Mounts a blob from another repository (cross-repo blob mount)
     ///
     /// Copies directly and handles not-found, avoiding a TOCTOU race
-    /// between checking existence and copying.
+    /// between checking existence and copying. On S3, a blob larger than one
+    /// part copies by parts in parallel, where one `CopyObject` would rewrite
+    /// every byte in turn.
     pub async fn mount_blob(
         &self,
         from_repository: &ProjectUuid,
@@ -738,11 +760,53 @@ impl OciStorage {
     ) -> Result<bool, OciStorageError> {
         let source = self.blob_key(from_repository, digest);
         let destination = self.blob_key(to_repository, digest);
+        if let Some(part_copy) = &self.part_copy {
+            let size = match self.store.head(&source).await {
+                Ok(meta) => meta.size,
+                Err(e) if is_not_found(&e) => return Ok(false),
+                Err(e) => return Err(storage_error(&e)),
+            };
+            if size > MOUNT_PART_SIZE.get() {
+                self.mount_by_parts(part_copy, &source, &destination, size)
+                    .await
+                    .inspect_err(|error| {
+                        slog::warn!(self.log, "OCI mount by parts failed"; "error" => %error);
+                    })?;
+                return Ok(true);
+            }
+        }
         match self.store.copy(&source, &destination).await {
             Ok(()) => Ok(true),
             Err(e) if is_not_found(&e) => Ok(false),
-            Err(e) => Err(OciStorageError::Storage(e.to_string())),
+            Err(e) => Err(storage_error(&e)),
         }
+    }
+
+    /// Copies a blob by parts, and aborts the copy's upload when any step fails.
+    async fn mount_by_parts(
+        &self,
+        part_copy: &PartCopy,
+        source: &Path,
+        destination: &Path,
+        size: u64,
+    ) -> Result<(), OciStorageError> {
+        let upload_id = part_copy.open(destination).await?;
+        let copied = async {
+            let parts = part_copy
+                .copy_parts(source, destination, &upload_id, size, MOUNT_PART_SIZE)
+                .await?;
+            part_copy
+                .complete(destination, &upload_id, parts, size)
+                .await
+        }
+        .await;
+        if let Err(error) = copied {
+            if let Err(abort) = part_copy.abort(destination, &upload_id).await {
+                report_cleanup_error(&self.log, "mount_blob: abort part copy", &abort);
+            }
+            return Err(error);
+        }
+        Ok(())
     }
 
     // ==================== Manifest Operations ====================
@@ -841,10 +905,7 @@ impl OciStorage {
             },
             None => self.store.list(Some(&prefix)),
         };
-        let objects: Vec<ObjectMeta> = listed
-            .try_collect()
-            .await
-            .map_err(|e| OciStorageError::Storage(e.to_string()))?;
+        let objects: Vec<ObjectMeta> = listed.try_collect().await.map_err(|e| storage_error(&e))?;
 
         let mut tags: Vec<String> = objects
             .iter()
@@ -979,16 +1040,13 @@ impl OciStorage {
         let key = self.job_output_key(project, job);
         match self.store.get(&key).await {
             Ok(result) => {
-                let data = result
-                    .bytes()
-                    .await
-                    .map_err(|e| OciStorageError::Storage(e.to_string()))?;
+                let data = result.bytes().await.map_err(|e| storage_error(&e))?;
                 serde_json::from_slice(&data)
                     .map(Some)
                     .map_err(|e| OciStorageError::Json(e.to_string()))
             },
             Err(e) if is_not_found(&e) => Ok(None),
-            Err(e) => Err(OciStorageError::Storage(e.to_string())),
+            Err(e) => Err(storage_error(&e)),
         }
     }
 
@@ -1000,7 +1058,7 @@ impl OciStorage {
             .put(key, data.into())
             .await
             .map(|_result| ())
-            .map_err(|e| OciStorageError::Storage(e.to_string()))
+            .map_err(|e| storage_error(&e))
     }
 
     /// Reports whether an object exists.
@@ -1008,7 +1066,7 @@ impl OciStorage {
         match self.store.head(key).await {
             Ok(_meta) => Ok(true),
             Err(e) if is_not_found(&e) => Ok(false),
-            Err(e) => Err(OciStorageError::Storage(e.to_string())),
+            Err(e) => Err(storage_error(&e)),
         }
     }
 }
@@ -1018,6 +1076,9 @@ impl OciStorage {
 /// The object store hands back a `Send` but not `Sync` stream, while the HTTP
 /// body must be both. Polling only ever needs `&mut`, which is exactly what
 /// [`SyncWrapper`] makes safe.
+///
+/// A stream that fails part way asks the store again for the rest, so its error
+/// can hold an answer's body: the error the server sees holds only its text, redacted.
 pub struct BlobBody {
     stream: SyncWrapper<BoxStream<'static, object_store::Result<Bytes>>>,
     size: u64,
@@ -1033,10 +1094,7 @@ impl hyper::body::Body for BlobBody {
     ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
         match self.stream.get_mut().as_mut().poll_next(cx) {
             Poll::Ready(Some(Ok(bytes))) => Poll::Ready(Some(Ok(Frame::data(bytes)))),
-            Poll::Ready(Some(Err(e))) => {
-                let boxed: Box<dyn std::error::Error + Send + Sync> = Box::new(e);
-                Poll::Ready(Some(Err(boxed)))
-            },
+            Poll::Ready(Some(Err(e))) => Poll::Ready(Some(Err(s3_error::redact(&e).into()))),
             Poll::Ready(None) => Poll::Ready(None),
             Poll::Pending => Poll::Pending,
         }
@@ -1087,7 +1145,8 @@ struct UploadState {
     created_at: i64,
 }
 
-pub(crate) fn report_cleanup_error(log: &Logger, context: &str, error: &impl std::fmt::Display) {
+/// Reports a failed cleanup, whose error never holds an answer's raw body.
+pub(crate) fn report_cleanup_error(log: &Logger, context: &str, error: &OciStorageError) {
     slog::warn!(log, "OCI cleanup error"; "context" => context, "error" => %error);
     #[cfg(feature = "sentry")]
     sentry::capture_message(
@@ -1149,6 +1208,14 @@ fn file_store(dir: &FilePath) -> Result<Arc<dyn ObjectStore>, OciStorageError> {
     Ok(Arc::new(store))
 }
 
+/// The HTTP client options that the S3 store and its part copy share.
+fn s3_client_options(endpoint: Option<&str>) -> ClientOptions {
+    ClientOptions::new()
+        .with_timeout_disabled()
+        .with_read_timeout(READ_TIMEOUT)
+        .with_allow_http(endpoint.is_some_and(|endpoint| endpoint.starts_with("http://")))
+}
+
 /// Builds an S3-compatible store.
 fn s3_store(
     bucket: String,
@@ -1156,11 +1223,8 @@ fn s3_store(
     region: Option<String>,
     access_key_id: String,
     secret_access_key: &Secret,
-) -> Result<Arc<dyn ObjectStore>, OciStorageError> {
-    // Set first: `with_allow_http` below writes into these options.
-    let client_options = ClientOptions::new()
-        .with_timeout_disabled()
-        .with_read_timeout(READ_TIMEOUT);
+    client_options: ClientOptions,
+) -> Result<AmazonS3, OciStorageError> {
     let mut builder = object_store::aws::AmazonS3Builder::new()
         .with_client_options(client_options)
         .with_bucket_name(bucket)
@@ -1168,15 +1232,11 @@ fn s3_store(
         .with_secret_access_key(secret_access_key.as_ref())
         .with_region(region.unwrap_or_else(|| DEFAULT_REGION.to_owned()));
     if let Some(endpoint) = endpoint {
-        if endpoint.starts_with("http://") {
-            builder = builder.with_allow_http(true);
-        }
         builder = builder.with_endpoint(endpoint);
     }
-    let store = builder
+    builder
         .build()
-        .map_err(|e| OciStorageError::Config(e.to_string()))?;
-    Ok(Arc::new(store))
+        .map_err(|e| OciStorageError::Config(e.to_string()))
 }
 
 /// Whether an object store error reports a missing object.
@@ -1189,8 +1249,13 @@ fn map_error(error: &object_store::Error, not_found: OciStorageError) -> OciStor
     if is_not_found(error) {
         not_found
     } else {
-        OciStorageError::Storage(error.to_string())
+        storage_error(error)
     }
+}
+
+/// A storage error from an object store error, with any answer's body redacted.
+pub(crate) fn storage_error(error: &object_store::Error) -> OciStorageError {
+    OciStorageError::Storage(s3_error::redact(error))
 }
 
 /// The state key for an upload session prefix
@@ -1219,7 +1284,7 @@ async fn delete_upload_objects(
         if let Err(e) = store.delete(&key).await
             && !is_not_found(&e)
         {
-            report_cleanup_error(log, "cleanup_upload: delete", &e);
+            report_cleanup_error(log, "cleanup_upload: delete", &storage_error(&e));
             removed = false;
         }
     }
@@ -1234,9 +1299,12 @@ pub(crate) async fn cleanup_stale_uploads(
     upload_timeout: u64,
     clock: &Clock,
 ) {
-    let Ok(listed) = store.list_with_delimiter(Some(uploads_prefix)).await else {
-        report_cleanup_error(log, "stale_upload: list prefixes", &"list request failed");
-        return;
+    let listed = match store.list_with_delimiter(Some(uploads_prefix)).await {
+        Ok(listed) => listed,
+        Err(e) => {
+            report_cleanup_error(log, "stale_upload: list prefixes", &storage_error(&e));
+            return;
+        },
     };
 
     // `now` pairs with `created_at` in the application time domain, `os_now`
@@ -1252,7 +1320,7 @@ pub(crate) async fn cleanup_stale_uploads(
             report_cleanup_error(
                 log,
                 "stale_upload: parse upload ID",
-                &format!("Invalid upload ID: {upload_id}"),
+                &OciStorageError::InvalidContent(format!("Invalid upload ID: {upload_id}")),
             );
             continue;
         }
@@ -1264,7 +1332,7 @@ pub(crate) async fn cleanup_stale_uploads(
         {
             Ok(objects) => objects,
             Err(e) => {
-                report_cleanup_error(log, "stale_upload: list objects", &e);
+                report_cleanup_error(log, "stale_upload: list objects", &storage_error(&e));
                 continue;
             },
         };
@@ -1318,12 +1386,15 @@ async fn is_stale(
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU64;
+    use std::sync::atomic::{AtomicU32, Ordering};
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
 
     use bencher_json::DateTime;
     use bytes::Bytes;
     use futures::TryStreamExt as _;
+    use object_store::multipart::PartId;
     use object_store::{ObjectStore, ObjectStoreExt as _, memory::InMemory, path::Path};
     use slog::Logger;
 
@@ -1332,6 +1403,8 @@ mod tests {
         MAX_PARTS, OciStorage, OciStorageError, ProjectUuid, READ_TIMEOUT, RecordingStore,
         RegistryStorage, Sweep, UploadId, cleanup_stale_uploads, part_size,
     };
+    use crate::mock_s3::{self, Request, Response};
+    use crate::part_copy::{Completion, PartCopy};
 
     /// The clamped default chunk size, as `OciStorage` holds it.
     fn default_chunk_size() -> usize {
@@ -1365,6 +1438,7 @@ mod tests {
     fn storage(store: Arc<dyn ObjectStore>, prefix: Option<&str>) -> OciStorage {
         OciStorage {
             store: Arc::new(RecordingStore::new(store)),
+            part_copy: None,
             prefix: prefix.map(Path::from),
             upload_timeout: 3600,
             max_body_size: DEFAULT_MAX_BODY_SIZE,
@@ -2441,12 +2515,12 @@ mod tests {
         let storage = OciStorage::try_from_config(
             log(),
             Some(RegistryStorage::S3 {
-                bucket: "my-bucket".to_owned(),
+                bucket: mock_s3::BUCKET.to_owned(),
                 path: None,
                 endpoint: Some(format!("http://{}", listener.local_addr().unwrap())),
                 region: None,
-                access_key_id: "key".to_owned(),
-                secret_access_key: "secret".parse().unwrap(),
+                access_key_id: mock_s3::ACCESS_KEY_ID.to_owned(),
+                secret_access_key: mock_s3::SECRET_ACCESS_KEY.parse().unwrap(),
                 chunk_size: None,
             }),
             &tmp.path().join("bencher.db"),
@@ -2620,5 +2694,714 @@ mod tests {
         );
         // The S3 backend never touches the local filesystem
         assert!(!tmp.path().join("registry").exists());
+    }
+
+    // ==================== S3 part copy ====================
+
+    const MIB: u64 = 1024 * 1024;
+    /// The part a mount copies by
+    const PART: u64 = 16 * MIB;
+
+    /// S3 storage against the mock store, which answers each request with `answer`.
+    async fn s3_answering<A, F>(
+        answer: A,
+    ) -> (
+        tokio::task::JoinSet<()>,
+        tempfile::TempDir,
+        OciStorage,
+        mock_s3::Log,
+    )
+    where
+        A: Fn(Request) -> F + Clone + Send + Sync + 'static,
+        F: Future<Output = Response> + Send + 'static,
+    {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut tasks = tokio::task::JoinSet::new();
+        let (tmp, storage) = mock_s3(&listener, &mut tasks);
+        let log = mock_s3::Log::default();
+        tasks.spawn(mock_s3::serve(listener, log.clone(), answer));
+        (tasks, tmp, storage, log)
+    }
+
+    /// S3 storage against a mock bucket that holds `objects`, by key and size.
+    async fn s3_bucket(
+        objects: Vec<(String, u64)>,
+    ) -> (
+        tokio::task::JoinSet<()>,
+        tempfile::TempDir,
+        OciStorage,
+        mock_s3::Log,
+    ) {
+        s3_answering(move |request| {
+            let response = mock_s3::bucket(&request, &objects);
+            async move { response }
+        })
+        .await
+    }
+
+    /// S3 storage against a mock bucket that answers each part copy with
+    /// `refuse` until it returns `None`, and counts the part copies.
+    async fn s3_refusing<R>(
+        refuse: R,
+    ) -> (
+        tokio::task::JoinSet<()>,
+        tempfile::TempDir,
+        OciStorage,
+        mock_s3::Log,
+    )
+    where
+        R: Fn(u32, &Request) -> Option<Response> + Send + Sync + 'static,
+    {
+        let attempts = Arc::new(AtomicU32::new(0));
+        let refuse = Arc::new(refuse);
+        s3_answering(move |request| {
+            let response = if request.is_part_copy() {
+                let attempt = attempts.fetch_add(1, Ordering::SeqCst) + 1;
+                refuse(attempt, &request)
+            } else {
+                None
+            }
+            .unwrap_or_else(|| mock_s3::bucket(&request, &[]));
+            async move { response }
+        })
+        .await
+    }
+
+    fn part_copy(storage: &OciStorage) -> &PartCopy {
+        storage.part_copy.as_ref().unwrap()
+    }
+
+    fn mib_parts() -> NonZeroU64 {
+        NonZeroU64::new(MIB).unwrap()
+    }
+
+    fn upload_id() -> String {
+        mock_s3::UPLOAD_ID.to_owned()
+    }
+
+    fn copy_source() -> Path {
+        Path::from("source/blob")
+    }
+
+    fn copy_destination() -> Path {
+        Path::from("destination/blob")
+    }
+
+    /// Copies one part of `MIB` bytes from the copy source to the copy destination.
+    async fn copy_one_part(storage: &OciStorage) -> Result<Vec<PartId>, OciStorageError> {
+        part_copy(storage)
+            .copy_parts(
+                &copy_source(),
+                &copy_destination(),
+                &upload_id(),
+                MIB,
+                mib_parts(),
+            )
+            .await
+    }
+
+    fn part_copies(log: &mock_s3::Log) -> Vec<Request> {
+        log.requests()
+            .into_iter()
+            .filter(Request::is_part_copy)
+            .collect()
+    }
+
+    /// Like R2, the mock refuses a part copy whose signature leaves out a copy
+    /// header, or covers a value other than the one sent. The first part
+    /// finishes last, so the parts come back out of order.
+    #[tokio::test]
+    async fn a_part_copy_signs_both_copy_headers_with_the_values_it_sends() {
+        let (_tasks, _tmp, storage, log) = s3_answering(|request| {
+            let response = mock_s3::bucket(&request, &[]);
+            let first = request.part_number() == Some(1);
+            async move {
+                if first {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+                response
+            }
+        })
+        .await;
+
+        let parts = part_copy(&storage)
+            .copy_parts(
+                &copy_source(),
+                &copy_destination(),
+                &upload_id(),
+                2 * MIB + 1,
+                mib_parts(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(
+            parts
+                .iter()
+                .map(|part| part.content_id.clone())
+                .collect::<Vec<_>>(),
+            [
+                mock_s3::part_e_tag(1),
+                mock_s3::part_e_tag(2),
+                mock_s3::part_e_tag(3)
+            ],
+            "the parts come back in order"
+        );
+        let copies = part_copies(&log);
+        let mut sent: Vec<(u64, String, String)> = copies
+            .iter()
+            .map(|request| {
+                (
+                    request.part_number().unwrap(),
+                    request.header("x-amz-copy-source").unwrap().to_owned(),
+                    request
+                        .header("x-amz-copy-source-range")
+                        .unwrap()
+                        .to_owned(),
+                )
+            })
+            .collect();
+        sent.sort();
+        let source = format!("{}/source/blob", mock_s3::BUCKET);
+        assert_eq!(
+            sent,
+            [
+                (1, source.clone(), "bytes=0-1048575".to_owned()),
+                (2, source.clone(), "bytes=1048576-2097151".to_owned()),
+                (3, source, "bytes=2097152-2097152".to_owned()),
+            ]
+        );
+        for request in &copies {
+            assert_eq!(request.method, "PUT");
+            assert_eq!(request.key(), "destination/blob");
+            assert_eq!(
+                request.query("uploadId").as_deref(),
+                Some(mock_s3::UPLOAD_ID)
+            );
+            assert_eq!(
+                request.query("X-Amz-SignedHeaders").as_deref(),
+                Some("host;x-amz-copy-source;x-amz-copy-source-range"),
+                "both copy headers are signed"
+            );
+        }
+        assert!(
+            log.answers()
+                .iter()
+                .all(|(_request, status)| *status == 200),
+            "the store took every signature"
+        );
+    }
+
+    /// A copy source names its key as `object_store` writes it in a request path,
+    /// so a part copy and a `CopyObject` name the same source.
+    #[tokio::test]
+    async fn a_copy_source_under_an_encoded_prefix_is_encoded_as_a_request_path() {
+        const PREFIX: &str = "r\u{e9}gistry/team#1";
+        let repository = project();
+        let other: ProjectUuid = OTHER_PROJECT.parse().unwrap();
+        let large = digest(EMPTY_SHA256);
+        let small = digest(SUBJECT_SHA256);
+        let keys = in_memory(Some(PREFIX));
+        let (_tasks, _tmp, mut storage, log) = s3_bucket(vec![
+            (keys.blob_key(&repository, &large).to_string(), PART + 1),
+            (keys.blob_key(&repository, &small).to_string(), PART),
+        ])
+        .await;
+        storage.prefix = Some(Path::from(PREFIX));
+
+        assert!(
+            storage
+                .mount_blob(&repository, &other, &large)
+                .await
+                .unwrap()
+        );
+        assert!(
+            storage
+                .mount_blob(&repository, &other, &small)
+                .await
+                .unwrap()
+        );
+
+        let sources: Vec<String> = log
+            .requests()
+            .iter()
+            .filter_map(|request| request.header("x-amz-copy-source").map(ToOwned::to_owned))
+            .collect();
+        let source = |hex: &str| {
+            format!(
+                "{}/r%25C3%25A9gistry/team%25231/{PROJECT}/blobs/sha256/{hex}",
+                mock_s3::BUCKET
+            )
+        };
+        assert_eq!(
+            sources,
+            [
+                source(EMPTY_SHA256),
+                source(EMPTY_SHA256),
+                source(SUBJECT_SHA256)
+            ],
+            "two part copies, then one CopyObject"
+        );
+    }
+
+    /// S3 can answer a copy with a 200 whose body is an `<Error>`.
+    #[tokio::test]
+    async fn a_part_copy_answered_with_an_error_body_retries() {
+        let (_tasks, _tmp, storage, log) = s3_refusing(|attempt, _request| {
+            (attempt == 1).then(|| Response::error(200, "InternalError"))
+        })
+        .await;
+
+        let parts = copy_one_part(&storage).await.unwrap();
+
+        assert_eq!(parts.len(), 1);
+        assert_eq!(part_copies(&log).len(), 2, "one retry");
+    }
+
+    #[tokio::test]
+    async fn a_part_copy_fails_after_its_last_attempt() {
+        let (_tasks, _tmp, storage, log) =
+            s3_refusing(|_attempt, _request| Some(Response::error(200, "InternalError"))).await;
+
+        let error = copy_one_part(&storage).await.unwrap_err();
+
+        assert!(error.to_string().contains("InternalError"), "{error}");
+        assert_eq!(part_copies(&log).len(), 4, "four attempts");
+    }
+
+    #[tokio::test]
+    async fn a_part_copy_retries_a_busy_or_failing_store() {
+        let (_tasks, _tmp, storage, log) = s3_refusing(|attempt, _request| match attempt {
+            1 => Some(Response::error(503, "SlowDown")),
+            2 => Some(Response::error(429, "TooManyRequests")),
+            3 => Some(Response::error(500, "InternalError")),
+            _ => None,
+        })
+        .await;
+
+        copy_one_part(&storage).await.unwrap();
+
+        assert_eq!(part_copies(&log).len(), 4, "the last attempt succeeds");
+    }
+
+    #[tokio::test]
+    async fn a_part_copy_retries_a_dropped_connection() {
+        let (_tasks, _tmp, storage, log) =
+            s3_refusing(|attempt, _request| (attempt == 1).then(Response::hang_up)).await;
+
+        copy_one_part(&storage).await.unwrap();
+
+        assert_eq!(part_copies(&log).len(), 2, "one retry");
+    }
+
+    /// A part copy's URL holds the access key ID and a signature, so a failure to
+    /// reach the store names no URL.
+    #[tokio::test]
+    async fn a_part_copy_that_cannot_reach_the_store_names_no_signed_url() {
+        let (_tasks, _tmp, storage, _log) =
+            s3_refusing(|_attempt, _request| Some(Response::hang_up())).await;
+
+        let error = copy_one_part(&storage).await.unwrap_err();
+
+        let OciStorageError::Storage(text) = &error else {
+            panic!("{error:?}");
+        };
+        assert!(text.contains("connection"), "{text}");
+        for text in [text.clone(), error.to_string()] {
+            for secret in [
+                "X-Amz-Credential",
+                "X-Amz-Signature",
+                mock_s3::ACCESS_KEY_ID,
+            ] {
+                assert!(!text.contains(secret), "{text} holds {secret}");
+            }
+        }
+    }
+
+    /// Every attempt signs its own URL, so an expired one is signed again.
+    #[tokio::test]
+    async fn a_part_copy_answered_with_expired_request_retries() {
+        let (_tasks, _tmp, storage, log) = s3_refusing(|attempt, _request| {
+            (attempt == 1).then(|| Response::error(403, "ExpiredRequest"))
+        })
+        .await;
+
+        copy_one_part(&storage).await.unwrap();
+
+        let statuses: Vec<u16> = log
+            .answers()
+            .iter()
+            .filter(|(request, _status)| request.is_part_copy())
+            .map(|(_request, status)| *status)
+            .collect();
+        assert_eq!(statuses, [403, 200], "the signed retry is taken");
+    }
+
+    #[tokio::test]
+    async fn a_refused_part_copy_signature_fails_at_once() {
+        let (_tasks, _tmp, storage, log) =
+            s3_refusing(|_attempt, request| Some(mock_s3::signature_does_not_match(request))).await;
+
+        let error = copy_one_part(&storage).await.unwrap_err();
+
+        assert_eq!(part_copies(&log).len(), 1, "no retry");
+        let text = error.to_string();
+        assert!(text.contains("SignatureDoesNotMatch"), "{text}");
+        assert!(text.contains(mock_s3::SIGNATURE_MESSAGE), "{text}");
+        let host = part_copies(&log)[0].header("host").unwrap().to_owned();
+        for echoed in [
+            mock_s3::ACCESS_KEY_ID.to_owned(),
+            host.clone(),
+            mock_s3::hex_bytes(mock_s3::ACCESS_KEY_ID),
+            mock_s3::hex_bytes(&host),
+        ] {
+            assert!(!text.contains(&echoed), "{text} holds {echoed}");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_failed_part_copy_aborts_nothing() {
+        let (_tasks, _tmp, storage, log) =
+            s3_refusing(|_attempt, _request| Some(Response::error(403, "AccessDenied"))).await;
+
+        copy_one_part(&storage).await.unwrap_err();
+
+        assert!(
+            !log.requests().iter().any(Request::is_abort),
+            "aborting is the caller's call"
+        );
+    }
+
+    /// A mount stops starting parts once one fails, lets the copies in flight
+    /// finish, and only then aborts its upload.
+    #[tokio::test]
+    async fn a_failed_mount_aborts_after_the_copies_in_flight_finish() {
+        let repository = project();
+        let other: ProjectUuid = OTHER_PROJECT.parse().unwrap();
+        let blob = digest(EMPTY_SHA256);
+        let objects = vec![(
+            in_memory(None).blob_key(&repository, &blob).to_string(),
+            17 * PART,
+        )];
+        let (_tasks, _tmp, storage, log) = s3_answering(move |request| {
+            let first = request.part_number() == Some(1);
+            let response = if request.is_part_copy() && first {
+                Response::error(403, "AccessDenied")
+            } else {
+                mock_s3::bucket(&request, &objects)
+            };
+            let slow = request.is_part_copy() && !first;
+            async move {
+                if slow {
+                    tokio::time::sleep(Duration::from_millis(200)).await;
+                }
+                response
+            }
+        })
+        .await;
+
+        storage
+            .mount_blob(&repository, &other, &blob)
+            .await
+            .unwrap_err();
+
+        let answers = log.answers();
+        let mut copied: Vec<u64> = answers
+            .iter()
+            .filter(|(request, _status)| request.is_part_copy())
+            .map(|(request, _status)| request.part_number().unwrap())
+            .collect();
+        copied.sort_unstable();
+        assert_eq!(
+            copied,
+            (1..=16).collect::<Vec<_>>(),
+            "no part starts once one fails"
+        );
+        let last_copy = answers
+            .iter()
+            .rposition(|(request, _status)| request.is_part_copy())
+            .unwrap();
+        let abort = answers
+            .iter()
+            .position(|(request, _status)| request.is_abort())
+            .expect("the mount aborts its upload");
+        assert!(
+            last_copy < abort,
+            "the abort waits for the copies in flight"
+        );
+        assert!(
+            !answers
+                .iter()
+                .any(|(request, _status)| request.is_complete()),
+            "nothing completes"
+        );
+    }
+
+    fn two_parts() -> Vec<PartId> {
+        [1, 2]
+            .map(|number| PartId {
+                content_id: mock_s3::part_e_tag(number),
+            })
+            .to_vec()
+    }
+
+    /// The multipart `ETag` of parts `"part 1"` and `"part 2"`, worked out apart from this code.
+    const TWO_PARTS_E_TAG: &str = "\"cd8e045aced0cb4620c8dfe11dffb901-2\"";
+
+    #[tokio::test]
+    async fn a_completion_matches_the_multipart_etag_of_its_parts() {
+        let (_tasks, _tmp, storage, _log) = s3_bucket(Vec::new()).await;
+
+        let completion = part_copy(&storage)
+            .complete(&copy_destination(), &upload_id(), two_parts(), 2 * MIB)
+            .await
+            .unwrap();
+
+        assert!(
+            matches!(&completion, Completion::Completed { e_tag } if e_tag == TWO_PARTS_E_TAG),
+            "{completion:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_completion_whose_etag_does_not_match_its_parts_fails() {
+        let (_tasks, _tmp, storage, _log) = s3_answering(|request| {
+            let response = if request.is_complete() {
+                Response::xml(
+                    200,
+                    "<CompleteMultipartUploadResult><ETag>\"cd8e045aced0cb4620c8dfe11dffb902-2\"</ETag></CompleteMultipartUploadResult>",
+                )
+            } else {
+                mock_s3::bucket(&request, &[])
+            };
+            async move { response }
+        })
+        .await;
+
+        part_copy(&storage)
+            .complete(&copy_destination(), &upload_id(), two_parts(), 2 * MIB)
+            .await
+            .unwrap_err();
+    }
+
+    /// S3 storage whose completion answers `NoSuchUpload`, over a destination of `size` bytes.
+    async fn s3_completed_before(
+        code: &'static str,
+        size: u64,
+    ) -> (
+        tokio::task::JoinSet<()>,
+        tempfile::TempDir,
+        OciStorage,
+        mock_s3::Log,
+    ) {
+        let objects = vec![(copy_destination().to_string(), size)];
+        s3_answering(move |request| {
+            let response = if request.is_complete() {
+                Response::error(404, code)
+            } else {
+                mock_s3::bucket(&request, &objects)
+            };
+            async move { response }
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn a_completion_lost_to_a_retry_finds_the_object_by_its_size() {
+        let (_tasks, _tmp, storage, _log) = s3_completed_before("NoSuchUpload", 2 * MIB).await;
+
+        let completion = part_copy(&storage)
+            .complete(&copy_destination(), &upload_id(), two_parts(), 2 * MIB)
+            .await
+            .unwrap();
+
+        assert!(matches!(completion, Completion::Found), "{completion:?}");
+    }
+
+    #[tokio::test]
+    async fn a_completion_lost_to_a_retry_fails_on_another_size() {
+        let (_tasks, _tmp, storage, _log) = s3_completed_before("NoSuchUpload", 2 * MIB - 1).await;
+
+        part_copy(&storage)
+            .complete(&copy_destination(), &upload_id(), two_parts(), 2 * MIB)
+            .await
+            .unwrap_err();
+    }
+
+    #[tokio::test]
+    async fn a_completion_missing_for_another_reason_fails() {
+        let (_tasks, _tmp, storage, _log) = s3_completed_before("NoSuchKey", 2 * MIB).await;
+
+        part_copy(&storage)
+            .complete(&copy_destination(), &upload_id(), two_parts(), 2 * MIB)
+            .await
+            .unwrap_err();
+    }
+
+    /// The text of a storage error reaches the server's log, so it holds no more
+    /// of a failing answer's body than its `Code` and `Message`.
+    #[tokio::test]
+    async fn a_storage_error_holds_only_the_code_and_message_of_the_answer() {
+        let (_tasks, _tmp, storage, log) = s3_answering(|request| {
+            let response = if request.is_list() {
+                mock_s3::bucket(&request, &[])
+            } else {
+                mock_s3::signature_does_not_match(&request)
+            };
+            async move { response }
+        })
+        .await;
+
+        let error = storage
+            .get_blob(&project(), &digest(EMPTY_SHA256))
+            .await
+            .unwrap_err();
+
+        let text = error.to_string();
+        assert!(text.contains("SignatureDoesNotMatch"), "{text}");
+        assert!(text.contains(mock_s3::SIGNATURE_MESSAGE), "{text}");
+        let host = log.requests()[0].header("host").unwrap().to_owned();
+        for echoed in [
+            mock_s3::ACCESS_KEY_ID.to_owned(),
+            mock_s3::hex_bytes(mock_s3::ACCESS_KEY_ID),
+            mock_s3::hex_bytes(&host),
+            format!("host:{host}"),
+        ] {
+            assert!(!text.contains(&echoed), "{text} holds {echoed}");
+        }
+    }
+
+    /// A blob stream that fails part way asks again for the rest, and when that
+    /// answer fails, its error reaches the server with only its `Code` and `Message`.
+    #[tokio::test]
+    async fn a_failed_blob_stream_holds_only_the_code_and_message_of_the_answer() {
+        use http_body_util::BodyExt as _;
+
+        let gets = Arc::new(AtomicU32::new(0));
+        let (_tasks, _tmp, storage, log) = s3_answering(move |request| {
+            let response = if request.method == "GET" && !request.is_list() {
+                if gets.fetch_add(1, Ordering::SeqCst) == 0 {
+                    Response::cut_short(SLOW_FRAME.len() * 2, SLOW_FRAME)
+                } else {
+                    mock_s3::signature_does_not_match(&request)
+                }
+            } else {
+                mock_s3::bucket(&request, &[])
+            };
+            async move { response }
+        })
+        .await;
+
+        let (body, _size) = storage
+            .get_blob_stream(&project(), &digest(EMPTY_SHA256))
+            .await
+            .unwrap();
+        let error = body.collect().await.unwrap_err();
+
+        assert_eq!(log.requests().len(), 2, "the stream asked again");
+        let text = error.to_string();
+        assert!(text.contains("SignatureDoesNotMatch"), "{text}");
+        let host = log.requests()[1].header("host").unwrap().to_owned();
+        for echoed in [
+            mock_s3::ACCESS_KEY_ID.to_owned(),
+            mock_s3::hex_bytes(mock_s3::ACCESS_KEY_ID),
+            mock_s3::hex_bytes(&host),
+            format!("host:{host}"),
+        ] {
+            assert!(!text.contains(&echoed), "{text} holds {echoed}");
+        }
+    }
+
+    /// The kinds of the requests a mount sent, after the startup sweep.
+    fn mount_requests(log: &mock_s3::Log) -> Vec<String> {
+        log.requests()
+            .iter()
+            .map(|request| {
+                if request.is_part_copy() {
+                    format!(
+                        "part copy {}",
+                        request.header("x-amz-copy-source-range").unwrap()
+                    )
+                } else if request.is_copy_object() {
+                    "copy object".to_owned()
+                } else if request.is_create_multipart() {
+                    "create multipart".to_owned()
+                } else if request.is_complete() {
+                    "complete".to_owned()
+                } else {
+                    request.method.clone()
+                }
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn an_s3_mount_above_one_part_copies_by_parts() {
+        let repository = project();
+        let other: ProjectUuid = OTHER_PROJECT.parse().unwrap();
+        let blob = digest(EMPTY_SHA256);
+        let source = in_memory(None).blob_key(&repository, &blob);
+        let (_tasks, _tmp, storage, log) = s3_bucket(vec![(source.to_string(), PART + 1)]).await;
+
+        assert!(
+            storage
+                .mount_blob(&repository, &other, &blob)
+                .await
+                .unwrap()
+        );
+
+        let mut requests = mount_requests(&log);
+        requests[2..4].sort();
+        assert_eq!(
+            requests,
+            [
+                "HEAD",
+                "create multipart",
+                "part copy bytes=0-16777215",
+                "part copy bytes=16777216-16777216",
+                "complete",
+            ]
+        );
+        let destination = in_memory(None).blob_key(&other, &blob).to_string();
+        assert!(
+            log.requests()
+                .iter()
+                .skip(1)
+                .all(|request| request.key() == destination),
+            "the upload is at the mounted key"
+        );
+    }
+
+    #[tokio::test]
+    async fn an_s3_mount_of_one_part_copies_the_object() {
+        let repository = project();
+        let other: ProjectUuid = OTHER_PROJECT.parse().unwrap();
+        let blob = digest(EMPTY_SHA256);
+        let source = in_memory(None).blob_key(&repository, &blob);
+        let (_tasks, _tmp, storage, log) = s3_bucket(vec![(source.to_string(), PART)]).await;
+
+        assert!(
+            storage
+                .mount_blob(&repository, &other, &blob)
+                .await
+                .unwrap()
+        );
+
+        assert_eq!(mount_requests(&log), ["HEAD", "copy object"]);
+    }
+
+    #[tokio::test]
+    async fn an_s3_mount_of_a_missing_blob_reports_no_mount() {
+        let (_tasks, _tmp, storage, log) = s3_bucket(Vec::new()).await;
+        let other: ProjectUuid = OTHER_PROJECT.parse().unwrap();
+
+        assert!(
+            !storage
+                .mount_blob(&project(), &other, &digest(EMPTY_SHA256))
+                .await
+                .unwrap()
+        );
+
+        assert_eq!(mount_requests(&log), ["HEAD"]);
     }
 }

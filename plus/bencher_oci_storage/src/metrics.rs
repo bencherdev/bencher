@@ -1,8 +1,13 @@
 //! What the registry measures, sent to the server's meter with `otel` and nowhere without it.
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
+
+use http::StatusCode;
+use object_store::client::{HttpError, HttpErrorKind};
 
 pub(crate) use meter::{blob_upload, finalize, time_stream, upload_sweep};
+
+use crate::s3_error::{Answer, S3Error};
 
 /// Times one storage call to its answer.
 ///
@@ -13,8 +18,17 @@ where
 {
     let start = Instant::now();
     let result = call.await;
-    meter::storage_call(operation, &result, start.elapsed());
+    let outcome = match &result {
+        Ok(_) => StorageOutcome::Ok,
+        Err(error) => StorageOutcome::of(error),
+    };
+    record(operation, outcome, start.elapsed());
     result
+}
+
+/// Records one storage call that its caller timed and judged.
+pub(crate) fn record(operation: StorageOperation, outcome: StorageOutcome, duration: Duration) {
+    meter::storage_call(operation, outcome, duration);
 }
 
 /// Times an upload request, and records it once: at [`UploadPhaseTimer::finish`], or when dropped.
@@ -97,11 +111,144 @@ pub(crate) enum StorageOperation {
     Complete,
     Abort,
     Copy,
+    /// One attempt at an `UploadPartCopy`
+    PartCopy,
     Rename,
     Get,
     Head,
     Delete,
     List,
+}
+
+/// How a storage call answered.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum StorageOutcome {
+    Ok,
+    /// The object is missing, the normal answer to a probe.
+    NotFound,
+    /// A condition on the call did not hold, as when a create-only put loses.
+    Precondition,
+    Error(
+        #[cfg_attr(
+            not(feature = "otel"),
+            expect(dead_code, reason = "only the server's meter reads a code")
+        )]
+        StorageErrorCode,
+    ),
+}
+
+impl StorageOutcome {
+    fn of(error: &object_store::Error) -> Self {
+        if matches!(error, object_store::Error::NotFound { .. }) {
+            Self::NotFound
+        } else if matches!(
+            error,
+            object_store::Error::Precondition { .. }
+                | object_store::Error::AlreadyExists { .. }
+                | object_store::Error::NotModified { .. }
+        ) {
+            Self::Precondition
+        } else {
+            Self::Error(StorageErrorCode::of(error))
+        }
+    }
+}
+
+/// Why a storage call failed, from a small fixed set that never carries the error's text.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum StorageErrorCode {
+    /// HTTP 404 on a call that does not report a missing object as such, like a list.
+    NotFound,
+    /// HTTP 416
+    RangeNotSatisfiable,
+    /// HTTP 429
+    TooManyRequests,
+    /// Any other HTTP 4xx
+    ClientError,
+    /// Any HTTP 5xx
+    ServerError,
+    /// The store did not answer in time.
+    Timeout,
+    /// The store could not be reached.
+    Connect,
+    SignatureDoesNotMatch,
+    ExpiredRequest,
+    AccessDenied,
+    NoSuchKey,
+    NoSuchUpload,
+    InvalidRange,
+    SlowDown,
+    InternalError,
+    Other,
+}
+
+impl StorageErrorCode {
+    /// Walks the error's sources for the failing answer or transport failure beneath it.
+    fn of(error: &object_store::Error) -> Self {
+        let error: &(dyn std::error::Error + 'static) = error;
+        std::iter::successors(Some(error), |error| error.source())
+            .find_map(Self::of_source)
+            .unwrap_or(Self::Other)
+    }
+
+    fn of_source(error: &(dyn std::error::Error + 'static)) -> Option<Self> {
+        if let Some(error) = error.downcast_ref::<HttpError>() {
+            return Self::of_transport(error.kind());
+        }
+        let message = error.to_string();
+        let answer = Answer::of_message(&message)?;
+        Some(Self::of_answer(
+            answer.status,
+            S3Error::parse(answer.body.as_bytes()).as_ref(),
+        ))
+    }
+
+    /// A failure to reach the store, or `None` for one that names no cause.
+    pub(crate) fn of_transport(kind: HttpErrorKind) -> Option<Self> {
+        if kind == HttpErrorKind::Timeout {
+            Some(Self::Timeout)
+        } else if kind == HttpErrorKind::Connect {
+            Some(Self::Connect)
+        } else {
+            None
+        }
+    }
+
+    /// A failing answer, by the S3 `Code` in its body when that code is a label,
+    /// and by its status otherwise.
+    pub(crate) fn of_answer(status: Option<StatusCode>, error: Option<&S3Error>) -> Self {
+        error
+            .and_then(S3Error::code)
+            .and_then(Self::of_s3_code)
+            .or_else(|| status.map(Self::of_status))
+            .unwrap_or(Self::Other)
+    }
+
+    /// Only these S3 codes become labels.
+    fn of_s3_code(code: &str) -> Option<Self> {
+        match code {
+            "SignatureDoesNotMatch" => Some(Self::SignatureDoesNotMatch),
+            "ExpiredRequest" => Some(Self::ExpiredRequest),
+            "AccessDenied" => Some(Self::AccessDenied),
+            "NoSuchKey" => Some(Self::NoSuchKey),
+            "NoSuchUpload" => Some(Self::NoSuchUpload),
+            "InvalidRange" => Some(Self::InvalidRange),
+            "SlowDown" => Some(Self::SlowDown),
+            "InternalError" => Some(Self::InternalError),
+            _ => None,
+        }
+    }
+
+    fn of_status(status: StatusCode) -> Self {
+        match status.as_u16() {
+            404 => Self::NotFound,
+            416 => Self::RangeNotSatisfiable,
+            429 => Self::TooManyRequests,
+            400..=499 => Self::ClientError,
+            500..=599 => Self::ServerError,
+            _ => Self::Other,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -150,22 +297,24 @@ mod meter {
 
     use bencher_otel::{ApiCounter, ApiHistogram, ApiMeter};
     use futures::stream::{BoxStream, Stream, StreamExt as _};
-    use object_store::client::{HttpError, HttpErrorKind};
 
     use super::{
-        FinalizeOutcome, PhaseOutcome, PullOutcome, StorageOperation, SweepAction, UploadPhase,
+        FinalizeOutcome, PhaseOutcome, PullOutcome, StorageErrorCode, StorageOperation,
+        StorageOutcome, SweepAction, UploadPhase,
     };
 
-    pub(super) fn storage_call<T>(
+    pub(super) fn storage_call(
         operation: StorageOperation,
-        result: &object_store::Result<T>,
+        outcome: StorageOutcome,
         duration: Duration,
     ) {
-        let outcome = match result {
-            Ok(_) => StorageOutcome::Ok,
-            Err(error) => StorageOutcome::of(error),
-        };
-        record_storage_call(operation, outcome, duration);
+        ApiMeter::record(
+            ApiHistogram::OciStorageRequestDuration(operation.into(), outcome.into()),
+            duration.as_secs_f64(),
+        );
+        if let StorageOutcome::Error(code) = outcome {
+            ApiMeter::increment(ApiCounter::OciStorageError(operation.into(), code.into()));
+        }
     }
 
     /// Times one storage call that answers with a stream, to the stream's end or drop.
@@ -214,20 +363,6 @@ mod meter {
         ApiMeter::increment(ApiCounter::OciUploadSweep(action.into()));
     }
 
-    fn record_storage_call(
-        operation: StorageOperation,
-        outcome: StorageOutcome,
-        duration: Duration,
-    ) {
-        ApiMeter::record(
-            ApiHistogram::OciStorageRequestDuration(operation.into(), outcome.into()),
-            duration.as_secs_f64(),
-        );
-        if let StorageOutcome::Error(code) = outcome {
-            ApiMeter::increment(ApiCounter::OciStorageError(operation.into(), code.into()));
-        }
-    }
-
     /// A stream from a storage call, which records the call once, at the stream's end or drop.
     struct TimedStream<T> {
         stream: BoxStream<'static, object_store::Result<T>>,
@@ -268,102 +403,9 @@ mod meter {
 
     impl Drop for StreamCall {
         fn drop(&mut self) {
-            record_storage_call(self.operation, self.outcome, self.start.elapsed());
+            storage_call(self.operation, self.outcome, self.start.elapsed());
         }
     }
-
-    /// How a storage call answered.
-    #[derive(Debug, Clone, Copy)]
-    enum StorageOutcome {
-        Ok,
-        /// The object is missing, the normal answer to a probe.
-        NotFound,
-        /// A condition on the call did not hold, as when a create-only put loses.
-        Precondition,
-        Error(StorageErrorCode),
-    }
-
-    impl StorageOutcome {
-        fn of(error: &object_store::Error) -> Self {
-            if matches!(error, object_store::Error::NotFound { .. }) {
-                Self::NotFound
-            } else if matches!(
-                error,
-                object_store::Error::Precondition { .. }
-                    | object_store::Error::AlreadyExists { .. }
-                    | object_store::Error::NotModified { .. }
-            ) {
-                Self::Precondition
-            } else {
-                Self::Error(StorageErrorCode::of(error))
-            }
-        }
-    }
-
-    /// Why a storage call failed, from a small fixed set that never carries the error's text.
-    #[derive(Debug, Clone, Copy)]
-    enum StorageErrorCode {
-        /// HTTP 404 on a call that does not report a missing object as such, like a list.
-        NotFound,
-        /// HTTP 416
-        RangeNotSatisfiable,
-        /// HTTP 429
-        TooManyRequests,
-        /// Any other HTTP 4xx
-        ClientError,
-        /// Any HTTP 5xx
-        ServerError,
-        /// The store did not answer in time.
-        Timeout,
-        /// The store could not be reached.
-        Connect,
-        Other,
-    }
-
-    impl StorageErrorCode {
-        /// Walks the error's sources for the HTTP status or transport failure beneath it.
-        fn of(error: &object_store::Error) -> Self {
-            let error: &(dyn std::error::Error + 'static) = error;
-            std::iter::successors(Some(error), |error| error.source())
-                .find_map(Self::of_source)
-                .unwrap_or(Self::Other)
-        }
-
-        /// `object_store` keeps its request error type private, so a status is read
-        /// from that error's own message, the one form it exposes.
-        fn of_source(error: &(dyn std::error::Error + 'static)) -> Option<Self> {
-            if let Some(error) = error.downcast_ref::<HttpError>() {
-                return if error.kind() == HttpErrorKind::Timeout {
-                    Some(Self::Timeout)
-                } else if error.kind() == HttpErrorKind::Connect {
-                    Some(Self::Connect)
-                } else {
-                    None
-                };
-            }
-            let message = error.to_string();
-            let status = message
-                .strip_prefix(STATUS_MESSAGE)?
-                .get(..3)?
-                .parse()
-                .ok()?;
-            Some(Self::from_status(status))
-        }
-
-        fn from_status(status: u16) -> Self {
-            match status {
-                404 => Self::NotFound,
-                416 => Self::RangeNotSatisfiable,
-                429 => Self::TooManyRequests,
-                400..=499 => Self::ClientError,
-                500..=599 => Self::ServerError,
-                _ => Self::Other,
-            }
-        }
-    }
-
-    /// How `object_store` 0.14 opens the message of a request answered with a failing status.
-    const STATUS_MESSAGE: &str = "Server returned non-2xx status code: ";
 
     impl From<StorageOperation> for bencher_otel::OciStorageOperation {
         fn from(operation: StorageOperation) -> Self {
@@ -374,6 +416,7 @@ mod meter {
                 StorageOperation::Complete => Self::Complete,
                 StorageOperation::Abort => Self::Abort,
                 StorageOperation::Copy => Self::Copy,
+                StorageOperation::PartCopy => Self::PartCopy,
                 StorageOperation::Rename => Self::Rename,
                 StorageOperation::Get => Self::Get,
                 StorageOperation::Head => Self::Head,
@@ -404,6 +447,14 @@ mod meter {
                 StorageErrorCode::ServerError => Self::ServerError,
                 StorageErrorCode::Timeout => Self::Timeout,
                 StorageErrorCode::Connect => Self::Connect,
+                StorageErrorCode::SignatureDoesNotMatch => Self::SignatureDoesNotMatch,
+                StorageErrorCode::ExpiredRequest => Self::ExpiredRequest,
+                StorageErrorCode::AccessDenied => Self::AccessDenied,
+                StorageErrorCode::NoSuchKey => Self::NoSuchKey,
+                StorageErrorCode::NoSuchUpload => Self::NoSuchUpload,
+                StorageErrorCode::InvalidRange => Self::InvalidRange,
+                StorageErrorCode::SlowDown => Self::SlowDown,
+                StorageErrorCode::InternalError => Self::InternalError,
                 StorageErrorCode::Other => Self::Other,
             }
         }
@@ -464,12 +515,13 @@ mod meter {
     use futures::stream::BoxStream;
 
     use super::{
-        FinalizeOutcome, PhaseOutcome, PullOutcome, StorageOperation, SweepAction, UploadPhase,
+        FinalizeOutcome, PhaseOutcome, PullOutcome, StorageOperation, StorageOutcome, SweepAction,
+        UploadPhase,
     };
 
-    pub(super) fn storage_call<T>(
+    pub(super) fn storage_call(
         _operation: StorageOperation,
-        _result: &object_store::Result<T>,
+        _outcome: StorageOutcome,
         _duration: Duration,
     ) {
     }

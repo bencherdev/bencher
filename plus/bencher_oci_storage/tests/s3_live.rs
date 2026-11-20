@@ -506,3 +506,393 @@ fn raw_store() -> object_store::aws::AmazonS3 {
     }
     builder.build().expect("Failed to build the raw S3 client")
 }
+
+// ==================== UploadPartCopy on R2 ====================
+//
+// Each case pins one behavior the registry's part copy relies on.
+
+/// Signed URLs for these cases expire after this, as the registry's do.
+const SIGNED_URL_EXPIRY: std::time::Duration = std::time::Duration::from_mins(15);
+
+/// `object_store`'s encoding of an S3 key in a request path.
+const PATH_ENCODE_SET: percent_encoding::AsciiSet = percent_encoding::NON_ALPHANUMERIC
+    .remove(b'-')
+    .remove(b'.')
+    .remove(b'_')
+    .remove(b'~')
+    .remove(b'/');
+
+/// Presigns an `UploadPartCopy` of part `number`, with `signed` copy headers.
+async fn sign_part_copy(
+    s3: &object_store::aws::AmazonS3,
+    destination: &Path,
+    upload_id: &str,
+    number: usize,
+    signed: &[(&'static str, String)],
+    expires_in: std::time::Duration,
+) -> object_store::signer::Url {
+    use object_store::signer::{HeaderName, HeaderValue, Method, SignedUrlOptions, Signer as _};
+
+    let mut options = SignedUrlOptions::default().with_query([
+        ("partNumber", number.to_string()),
+        ("uploadId", upload_id.to_owned()),
+    ]);
+    for (name, value) in signed {
+        options = options.with_signed_header(
+            HeaderName::from_static(name),
+            HeaderValue::from_str(value).expect("Invalid header value"),
+        );
+    }
+    s3.signed_url_opts(Method::PUT, destination, expires_in, &options)
+        .await
+        .expect("Failed to sign a part copy")
+}
+
+/// Sends a presigned `UploadPartCopy` with `sent` copy headers, and returns its status and body.
+async fn send_part_copy(
+    client: &reqwest::Client,
+    url: &object_store::signer::Url,
+    sent: &[(&'static str, String)],
+) -> (u16, String) {
+    let mut request = client.put(url.as_str());
+    for (name, value) in sent {
+        request = request.header(*name, value);
+    }
+    let response = request.send().await.expect("Failed to send a part copy");
+    let status = response.status().as_u16();
+    let body = response.text().await.expect("Failed to read a part copy");
+    (status, body)
+}
+
+/// A part copy signed with the copy headers it sends.
+async fn part_copy(
+    client: &reqwest::Client,
+    s3: &object_store::aws::AmazonS3,
+    destination: &Path,
+    upload_id: &str,
+    number: usize,
+    headers: &[(&'static str, String)],
+) -> (u16, String) {
+    let url = sign_part_copy(
+        s3,
+        destination,
+        upload_id,
+        number,
+        headers,
+        SIGNED_URL_EXPIRY,
+    )
+    .await;
+    send_part_copy(client, &url, headers).await
+}
+
+/// The copy headers for `range` of `source`.
+fn copy_headers(source: &Path, range: &str) -> Vec<(&'static str, String)> {
+    let bucket = std::env::var(BUCKET).expect("Bucket is set");
+    let key = percent_encoding::utf8_percent_encode(source.as_ref(), &PATH_ENCODE_SET);
+    vec![
+        ("x-amz-copy-source", format!("{bucket}/{key}")),
+        ("x-amz-copy-source-range", range.to_owned()),
+    ]
+}
+
+/// The `ETag` in a `CopyPartResult` body, which must not be an `<Error>`.
+fn copied_e_tag(body: &str) -> String {
+    assert!(body.contains("<CopyPartResult"), "{body}");
+    assert!(!body.contains("<Error>"), "{body}");
+    body.split_once("<ETag>")
+        .and_then(|(_before, rest)| rest.split_once("</ETag>"))
+        .map(|(e_tag, _after)| e_tag.replace("&quot;", "\""))
+        .expect("A part copy answers with an ETag")
+}
+
+/// `len` bytes in a cycle of a prime length, so no range boundary lines up
+/// with the cycle and a misplaced range shows.
+fn varied_bytes(len: usize) -> Bytes {
+    (0..251).cycle().take(len).collect::<Vec<u8>>().into()
+}
+
+/// A presigned `UploadPartCopy` works only with both copy headers signed, as they
+/// were sent, before it expires; and a mount above one part copies by parts.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires a scratch S3 bucket and credentials"]
+async fn s3_presigned_part_copy() {
+    use object_store::multipart::{MultipartStore as _, PartId};
+
+    let Some(path) = run_path() else {
+        return;
+    };
+    let s3 = raw_store();
+    let client = reqwest::Client::new();
+    let source = Path::from(format!("{path}/part-copy/source"));
+    let destination = Path::from(format!("{path}/part-copy/destination"));
+    let data = varied_bytes(4096);
+    s3.put(&source, data.clone().into())
+        .await
+        .expect("Failed to put the source");
+    let upload_id = s3
+        .create_multipart(&destination)
+        .await
+        .expect("Failed to open the destination");
+    let headers = copy_headers(&source, "bytes=0-4095");
+
+    let unsigned = sign_part_copy(&s3, &destination, &upload_id, 1, &[], SIGNED_URL_EXPIRY).await;
+    let (status, body) = send_part_copy(&client, &unsigned, &headers).await;
+    assert_eq!(status, 403, "unsigned copy headers: {body}");
+    assert!(
+        body.contains("<Code>SignatureDoesNotMatch</Code>"),
+        "{body}"
+    );
+
+    let signed = sign_part_copy(
+        &s3,
+        &destination,
+        &upload_id,
+        1,
+        &headers,
+        SIGNED_URL_EXPIRY,
+    )
+    .await;
+    let (status, body) =
+        send_part_copy(&client, &signed, &copy_headers(&source, "bytes=0-2047")).await;
+    assert_eq!(status, 403, "an altered copy header: {body}");
+    assert!(
+        body.contains("<Code>SignatureDoesNotMatch</Code>"),
+        "{body}"
+    );
+
+    let expiring = sign_part_copy(
+        &s3,
+        &destination,
+        &upload_id,
+        1,
+        &headers,
+        std::time::Duration::from_secs(1),
+    )
+    .await;
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    let (status, body) = send_part_copy(&client, &expiring, &headers).await;
+    assert_eq!(status, 403, "an expired URL: {body}");
+    assert!(body.contains("<Code>ExpiredRequest</Code>"), "{body}");
+
+    let (status, body) = part_copy(&client, &s3, &destination, &upload_id, 1, &headers).await;
+    assert_eq!(status, 200, "{body}");
+    let part = PartId {
+        content_id: copied_e_tag(&body),
+    };
+    s3.complete_multipart(&destination, &upload_id, vec![part])
+        .await
+        .expect("Failed to complete the copy");
+    let copied = s3
+        .get(&destination)
+        .await
+        .expect("Failed to get the copy")
+        .bytes()
+        .await
+        .expect("Failed to read the copy");
+    assert_eq!(copied, data, "the copy holds the source's bytes");
+    for key in [&source, &destination] {
+        s3.delete(key)
+            .await
+            .expect("Failed to delete a copy object");
+    }
+
+    mount_above_one_part(&path).await;
+}
+
+/// A mount of a blob above one part copies it by presigned parts.
+async fn mount_above_one_part(path: &str) {
+    let storage = build_storage(path, 3600);
+    let project = PROJECT.parse().expect("Invalid project UUID");
+    let other = OTHER_PROJECT.parse().expect("Invalid project UUID");
+    let blob = varied_bytes(16 * 1024 * 1024 + 1024);
+    let upload = storage
+        .start_upload(&project)
+        .await
+        .expect("Failed to start upload");
+    storage
+        .append_upload(&upload, blob.clone())
+        .await
+        .expect("Failed to append upload");
+    let digest = storage
+        .complete_upload(&upload, &Digest::from_sha256_bytes(&blob))
+        .await
+        .expect("Failed to complete upload");
+    assert!(
+        storage
+            .mount_blob(&project, &other, &digest)
+            .await
+            .expect("Failed to mount blob"),
+        "the mount succeeds"
+    );
+    let (mounted, _size) = storage
+        .get_blob(&other, &digest)
+        .await
+        .expect("Failed to get the mounted blob");
+    assert!(mounted == blob, "the mounted blob holds the source's bytes");
+
+    for repository in [&project, &other] {
+        storage
+            .delete_blob(repository, &digest)
+            .await
+            .expect("Failed to delete blob");
+    }
+}
+
+/// A copy range that ends past the source is clamped to a short part, and one
+/// that starts past it is 416 `InvalidRange`.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires a scratch S3 bucket and credentials"]
+async fn s3_part_copy_range_past_the_source() {
+    use object_store::multipart::{MultipartStore as _, PartId};
+
+    let Some(path) = run_path() else {
+        return;
+    };
+    let s3 = raw_store();
+    let client = reqwest::Client::new();
+    let source = Path::from(format!("{path}/part-copy-range/source"));
+    let destination = Path::from(format!("{path}/part-copy-range/destination"));
+    let data = varied_bytes(1024);
+    s3.put(&source, data.clone().into())
+        .await
+        .expect("Failed to put the source");
+    let upload_id = s3
+        .create_multipart(&destination)
+        .await
+        .expect("Failed to open the destination");
+
+    let (status, body) = part_copy(
+        &client,
+        &s3,
+        &destination,
+        &upload_id,
+        1,
+        &copy_headers(&source, "bytes=4096-8191"),
+    )
+    .await;
+    assert_eq!(status, 416, "{body}");
+    assert!(body.contains("<Code>InvalidRange</Code>"), "{body}");
+
+    let (status, body) = part_copy(
+        &client,
+        &s3,
+        &destination,
+        &upload_id,
+        1,
+        &copy_headers(&source, "bytes=512-2047"),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let part = PartId {
+        content_id: copied_e_tag(&body),
+    };
+    s3.complete_multipart(&destination, &upload_id, vec![part])
+        .await
+        .expect("Failed to complete the copy");
+    let copied = s3
+        .get(&destination)
+        .await
+        .expect("Failed to get the copy")
+        .bytes()
+        .await
+        .expect("Failed to read the copy");
+    assert_eq!(
+        copied,
+        data.slice(512..),
+        "the part is clamped to the source"
+    );
+
+    for key in [&source, &destination] {
+        s3.delete(key)
+            .await
+            .expect("Failed to delete a copy object");
+    }
+}
+
+/// A copy whose source is deleted while its parts copy still completes, from a
+/// snapshot of the source.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "requires a scratch S3 bucket and credentials"]
+async fn s3_part_copy_of_a_source_deleted_mid_flight() {
+    use object_store::multipart::{MultipartStore as _, PartId};
+    use object_store::signer::{Method, Signer as _};
+
+    const PART: usize = 16 * 1024 * 1024;
+    const PARTS: usize = 8;
+
+    let Some(path) = run_path() else {
+        return;
+    };
+    let s3 = raw_store();
+    let source = Path::from(format!("{path}/part-copy-deleted/source"));
+    let destination = Path::from(format!("{path}/part-copy-deleted/destination"));
+    let data = varied_bytes(PART * PARTS);
+    let mut write = object_store::WriteMultipart::new_with_chunk_size(
+        s3.put_multipart(&source)
+            .await
+            .expect("Failed to open the source"),
+        PART,
+    );
+    write.write(&data);
+    write.finish().await.expect("Failed to write the source");
+    let upload_id = s3
+        .create_multipart(&destination)
+        .await
+        .expect("Failed to open the destination");
+
+    // One client, warmed by a first request, so every copy reaches the store
+    // before the delete does
+    let client = reqwest::Client::new();
+    let head = s3
+        .signed_url(Method::HEAD, &source, SIGNED_URL_EXPIRY)
+        .await
+        .expect("Failed to sign a HEAD of the source");
+    let warmed = client
+        .head(head.as_str())
+        .send()
+        .await
+        .expect("Failed to HEAD the source");
+    assert_eq!(warmed.status().as_u16(), 200, "the source is there");
+
+    let copies = futures::future::join_all((1..=PARTS).map(|number| {
+        let first = (number - 1) * PART;
+        let headers = copy_headers(&source, &format!("bytes={first}-{}", first + PART - 1));
+        let client = &client;
+        let s3 = &s3;
+        let destination = &destination;
+        let upload_id = &upload_id;
+        async move { part_copy(client, s3, destination, upload_id, number, &headers).await }
+    }));
+    let delete = async {
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        s3.delete(&source)
+            .await
+            .expect("Failed to delete the source");
+    };
+    let (answers, ()) = tokio::join!(copies, delete);
+
+    let parts = answers
+        .iter()
+        .map(|(status, body)| {
+            assert_eq!(*status, 200, "{body}");
+            PartId {
+                content_id: copied_e_tag(body),
+            }
+        })
+        .collect();
+    s3.complete_multipart(&destination, &upload_id, parts)
+        .await
+        .expect("Failed to complete the copy");
+    let copy = s3
+        .get(&destination)
+        .await
+        .expect("Failed to get the copy")
+        .bytes()
+        .await
+        .expect("Failed to read the copy");
+    assert!(copy == data, "the copy holds the deleted source's bytes");
+
+    s3.delete(&destination)
+        .await
+        .expect("Failed to delete the copy");
+}
