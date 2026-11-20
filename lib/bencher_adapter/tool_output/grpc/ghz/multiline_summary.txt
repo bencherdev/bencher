@@ -1,0 +1,21 @@
+
+Summary:
+  Count:	20
+  Total:	3.96 ms
+  Slowest:	0 ns
+  Fastest:	0 ns
+  Average:	0.22 ms
+  Requests/sec:	5056.62
+
+Response time histogram:
+
+Latency distribution:
+
+Status code distribution:
+  [Internal]   20 responses   
+
+Error distribution:
+  [20]   rpc error: code = Internal desc = panic: boom
+goroutine 1 [running]:
+main.main()   
+

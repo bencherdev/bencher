@@ -1,0 +1,36 @@
+
+Summary:
+  Name:		greeter ok
+  Count:	2000
+  Total:	140.80 ms
+  Slowest:	1.56 ms
+  Fastest:	0.06 ms
+  Average:	0.31 ms
+  Requests/sec:	14204.54
+
+Response time histogram:
+  0.063 [1]   |
+  0.212 [646] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.361 [727] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.511 [462] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.660 [114] |∎∎∎∎∎∎
+  0.810 [28]  |∎∎
+  0.959 [15]  |∎
+  1.108 [1]   |
+  1.258 [1]   |
+  1.407 [2]   |
+  1.556 [3]   |
+
+Latency distribution:
+  10 % in 0.14 ms 
+  25 % in 0.19 ms 
+  50 % in 0.28 ms 
+  75 % in 0.39 ms 
+  90 % in 0.49 ms 
+  95 % in 0.58 ms 
+  99 % in 0.82 ms 
+
+Status code distribution:
+  [OK]   2000 responses   
+
+

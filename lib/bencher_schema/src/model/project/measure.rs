@@ -297,6 +297,7 @@ fn built_in_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::noise::CpuSteal::from_str(measure_str))
         .or_else(|| built_in::noise::NoiseScore::from_str(measure_str))
         .or_else(|| built_in_http_measure(measure_str))
+        .or_else(|| built_in_grpc_measure(measure_str))
         .or_else(|| built_in_gungraun_measure(measure_str))
 }
 
@@ -320,6 +321,27 @@ fn built_in_http_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::http::IterationTime::from_str(measure_str))
         .or_else(|| built_in::http::GroupTime::from_str(measure_str))
         .or_else(|| built_in::http::Responses::from_measure(measure_str))
+}
+
+/// The built-in gRPC measure a measure name or slug names, if any.
+fn built_in_grpc_measure(measure_str: &str) -> Option<JsonNewMeasure> {
+    built_in::grpc::StatusOk::from_str(measure_str)
+        .or_else(|| built_in::grpc::StatusCancelled::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusUnknown::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusInvalidArgument::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusDeadlineExceeded::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusNotFound::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusAlreadyExists::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusPermissionDenied::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusResourceExhausted::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusFailedPrecondition::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusAborted::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusOutOfRange::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusUnimplemented::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusInternal::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusUnavailable::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusDataLoss::from_str(measure_str))
+        .or_else(|| built_in::grpc::StatusUnauthenticated::from_str(measure_str))
 }
 
 /// The built-in gungraun measure a measure name or slug names, if any.

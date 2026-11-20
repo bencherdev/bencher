@@ -2972,6 +2972,113 @@ async fn reports_post_creates_the_k6_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the ghz leaves create a built-in measure for each status
+// code gRPC registers in its unit, and one for a code it does not register named at run time
+//
+// Kills: a gRPC status measure missing from the server's built-ins, which creates it in the
+// generic unit under its slug as its name, and an unregistered code made in the generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_ghz_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "ghzunits").await;
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report("grpc_ghz", &[GHZ_CODES], Some(1)),
+    )
+    .await;
+    let expected = [
+        ("grpc-status-17", "grpc-status-17", "responses"),
+        ("grpc-status-aborted", "gRPC Status Aborted", "responses"),
+        (
+            "grpc-status-already-exists",
+            "gRPC Status Already Exists",
+            "responses",
+        ),
+        (
+            "grpc-status-cancelled",
+            "gRPC Status Cancelled",
+            "responses",
+        ),
+        (
+            "grpc-status-data-loss",
+            "gRPC Status Data Loss",
+            "responses",
+        ),
+        (
+            "grpc-status-deadline-exceeded",
+            "gRPC Status Deadline Exceeded",
+            "responses",
+        ),
+        (
+            "grpc-status-failed-precondition",
+            "gRPC Status Failed Precondition",
+            "responses",
+        ),
+        ("grpc-status-internal", "gRPC Status Internal", "responses"),
+        (
+            "grpc-status-invalid-argument",
+            "gRPC Status Invalid Argument",
+            "responses",
+        ),
+        (
+            "grpc-status-not-found",
+            "gRPC Status Not Found",
+            "responses",
+        ),
+        ("grpc-status-ok", "gRPC Status OK", "responses"),
+        (
+            "grpc-status-out-of-range",
+            "gRPC Status Out of Range",
+            "responses",
+        ),
+        (
+            "grpc-status-permission-denied",
+            "gRPC Status Permission Denied",
+            "responses",
+        ),
+        (
+            "grpc-status-resource-exhausted",
+            "gRPC Status Resource Exhausted",
+            "responses",
+        ),
+        (
+            "grpc-status-unauthenticated",
+            "gRPC Status Unauthenticated",
+            "responses",
+        ),
+        (
+            "grpc-status-unavailable",
+            "gRPC Status Unavailable",
+            "responses",
+        ),
+        (
+            "grpc-status-unimplemented",
+            "gRPC Status Unimplemented",
+            "responses",
+        ),
+        ("grpc-status-unknown", "gRPC Status Unknown", "responses"),
+    ];
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any(expected.map(|(slug, _, _)| slug)))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        expected.map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
+const GHZ_CODES: &str = include_str!("../../bencher_adapter/tool_output/grpc/ghz/codes.json");
 const K6_EXPORT_SIMPLE: &str =
     include_str!("../../bencher_adapter/tool_output/http/k6/export_simple.json");
 const K6_EXPORT_SUMMARY: &str =

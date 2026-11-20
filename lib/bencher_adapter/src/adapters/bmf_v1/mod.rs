@@ -11,6 +11,9 @@ use crate::{
             },
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::{AdapterGoBenchJson, AdapterGoBenchText, AdapterGoBenchV1},
+            grpc::{
+                ghz::AdapterGrpcGhz, ghz_json::AdapterGrpcGhzJson, ghz_text::AdapterGrpcGhzText,
+            },
             http::{
                 k6::AdapterHttpK6, k6_json::AdapterHttpK6Json,
                 k6_json_summary::AdapterHttpK6JsonSummary,
@@ -55,6 +58,7 @@ pub mod cpp;
 pub mod dart;
 mod finite;
 pub mod go;
+pub mod grpc;
 pub mod http;
 pub mod java;
 pub mod js;
@@ -127,6 +131,9 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::HttpK6 => AdapterHttpK6::parse(input, settings),
         Adapter::HttpK6Json => AdapterHttpK6Json::parse(input, settings),
         Adapter::HttpK6JsonSummary => AdapterHttpK6JsonSummary::parse(input, settings),
+        Adapter::GrpcGhz => AdapterGrpcGhz::parse(input, settings),
+        Adapter::GrpcGhzJson => AdapterGrpcGhzJson::parse(input, settings),
+        Adapter::GrpcGhzText => AdapterGrpcGhzText::parse(input, settings),
         Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
 }
@@ -147,7 +154,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 55] = [
+    const ADAPTERS: [Adapter; 58] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -203,6 +210,9 @@ mod test_bmf_v1 {
         Adapter::HttpK6,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::GrpcGhz,
+        Adapter::GrpcGhzJson,
+        Adapter::GrpcGhzText,
     ];
 
     const LANGUAGES: [Adapter; 10] = [

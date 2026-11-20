@@ -1,0 +1,80 @@
+
+Summary:
+  Count:	500
+  Total:	12.02 ms
+  Slowest:	1.86 ms
+  Fastest:	0.06 ms
+  Average:	0.20 ms
+  Requests/sec:	41584.98
+
+Response time histogram:
+  0.058 [1]	|
+  0.239 [406]	|∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.419 [50]	|∎∎∎∎∎
+  0.600 [23]	|∎∎
+  0.780 [10]	|∎
+  0.961 [3]	|
+  1.141 [5]	|
+  1.321 [1]	|
+  1.502 [0]	|
+  1.682 [0]	|
+  1.863 [1]	|
+
+Latency distribution:
+  10 % in 0.10 ms 
+  25 % in 0.12 ms 
+  50 % in 0.14 ms 
+  75 % in 0.21 ms 
+  90 % in 0.39 ms 
+  95 % in 0.52 ms 
+  99 % in 1.09 ms 
+
+Status code distribution:
+  [OK]   500 responses   
+
+
+
+Summary:
+  Count:	500
+  Total:	4.01 s
+  Slowest:	1.48 ms
+  Fastest:	0.04 ms
+  Average:	70.16 ms
+  Requests/sec:	124.71
+
+Response time histogram:
+  0.042 [1]	|
+  0.186 [266]	|∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.330 [39]	|∎∎∎∎∎∎
+  0.474 [17]	|∎∎∎
+  0.618 [5]	|∎
+  0.762 [0]	|
+  0.907 [0]	|
+  1.051 [0]	|
+  1.195 [0]	|
+  1.339 [1]	|
+  1.483 [6]	|∎
+
+Latency distribution:
+  10 % in 0.06 ms 
+  25 % in 0.09 ms 
+  50 % in 0.12 ms 
+  75 % in 0.17 ms 
+  90 % in 0.30 ms 
+  95 % in 0.39 ms 
+  99 % in 1.44 ms 
+
+Status code distribution:
+  [ResourceExhausted]   30 responses    
+  [Internal]            52 responses    
+  [NotFound]            48 responses    
+  [DeadlineExceeded]    35 responses    
+  [OK]                  335 responses   
+
+Error distribution:
+  [52]   rpc error: code = Internal desc = internal                                                          
+  [48]   rpc error: code = NotFound desc = not found                                                         
+  [34]   rpc error: code = DeadlineExceeded desc = context deadline exceeded                                 
+  [1]    rpc error: code = DeadlineExceeded desc = stream terminated by RST_STREAM with error code: CANCEL   
+  [30]   rpc error: code = ResourceExhausted desc = exhausted                                                
+

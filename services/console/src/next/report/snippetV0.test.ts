@@ -39,6 +39,7 @@ const CLI_ADAPTERS = new Set([
 	"cpp_google",
 	"dart_benchmark_harness",
 	"go_bench",
+	"grpc_ghz",
 	"http_k6",
 	"java_jmh",
 	"js_benchmark",
@@ -150,5 +151,7 @@ describe("cliAdapter", () => {
 		expect(cliAdapter(Adapter.Python)).toBe("magic");
 		expect(cliAdapter(Adapter.HttpK6Json)).toBe("http_k6");
 		expect(cliAdapter(Adapter.HttpK6JsonSummary)).toBe("http_k6");
+		expect(cliAdapter(Adapter.GrpcGhzJson)).toBe("grpc_ghz");
+		expect(cliAdapter(Adapter.GrpcGhzText)).toBe("grpc_ghz");
 	});
 });
