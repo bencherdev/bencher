@@ -366,6 +366,9 @@ const DART_BENCHMARK_HARNESS_INT: i32 = 111;
 const HTTP_K6_INT: i32 = 121;
 const HTTP_K6_JSON_INT: i32 = 1211;
 const HTTP_K6_JSON_SUMMARY_INT: i32 = 1212;
+const HTTP_OHA_INT: i32 = 123;
+const HTTP_OHA_JSON_INT: i32 = 1231;
+const HTTP_OHA_TEXT_INT: i32 = 1232;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -434,6 +437,9 @@ pub enum Adapter {
     HttpK6 = HTTP_K6_INT,
     HttpK6Json = HTTP_K6_JSON_INT,
     HttpK6JsonSummary = HTTP_K6_JSON_SUMMARY_INT,
+    HttpOha = HTTP_OHA_INT,
+    HttpOhaJson = HTTP_OHA_JSON_INT,
+    HttpOhaText = HTTP_OHA_TEXT_INT,
 }
 
 impl Adapter {
@@ -497,7 +503,10 @@ impl Adapter {
             | Self::DartBenchmarkHarness
             | Self::HttpK6
             | Self::HttpK6Json
-            | Self::HttpK6JsonSummary => self,
+            | Self::HttpK6JsonSummary
+            | Self::HttpOha
+            | Self::HttpOhaJson
+            | Self::HttpOhaText => self,
         }
     }
 
@@ -583,6 +592,9 @@ impl fmt::Display for Adapter {
             Self::HttpK6 => write!(f, "http_k6"),
             Self::HttpK6Json => write!(f, "http_k6_json"),
             Self::HttpK6JsonSummary => write!(f, "http_k6_json_summary"),
+            Self::HttpOha => write!(f, "http_oha"),
+            Self::HttpOhaJson => write!(f, "http_oha_json"),
+            Self::HttpOhaText => write!(f, "http_oha_text"),
         }
     }
 }
@@ -593,15 +605,15 @@ mod adapter {
         Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_CATCH2_TEXT_INT,
         CPP_CATCH2_XML_INT, CPP_GOOGLE_INT, CPP_INT, DART_BENCHMARK_HARNESS_INT, DART_INT,
         GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, HTTP_K6_INT, HTTP_K6_JSON_INT,
-        HTTP_K6_JSON_SUMMARY_INT, JAVA_INT, JAVA_JMH_INT, JS_BENCHMARK_INT, JS_DENO_INT, JS_INT,
-        JS_MITATA_INT, JS_TIME_INT, JS_TINYBENCH_INT, JS_VITEST_INT, JS_VITEST_V1_INT,
-        JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT, MAGIC_INT, PYTHON_ASV_INT,
-        PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT, PYTHON_INT, PYTHON_PYTEST_INT,
-        RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT, RUST_BENCH_INT, RUST_BENCH_JSON_INT,
-        RUST_BENCH_TEXT_INT, RUST_CRITERION_INT, RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT,
-        RUST_DIVAN_INT, RUST_GUNGRAUN_INT, RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT,
-        RUST_IAI_INT, RUST_INT, SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT,
-        SHELL_HYPERFINE_V2_INT, SHELL_INT,
+        HTTP_K6_JSON_SUMMARY_INT, HTTP_OHA_INT, HTTP_OHA_JSON_INT, HTTP_OHA_TEXT_INT, JAVA_INT,
+        JAVA_JMH_INT, JS_BENCHMARK_INT, JS_DENO_INT, JS_INT, JS_MITATA_INT, JS_TIME_INT,
+        JS_TINYBENCH_INT, JS_VITEST_INT, JS_VITEST_V1_INT, JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT,
+        JSON_V1_INT, MAGIC_INT, PYTHON_ASV_INT, PYTHON_ASV_JSON_INT, PYTHON_ASV_TEXT_INT,
+        PYTHON_INT, PYTHON_PYTEST_INT, RUBY_BENCHMARK_INT, RUBY_BENCHMARK_IPS_INT, RUBY_INT,
+        RUST_BENCH_INT, RUST_BENCH_JSON_INT, RUST_BENCH_TEXT_INT, RUST_CRITERION_INT,
+        RUST_CRITERION_JSON_INT, RUST_CRITERION_TEXT_INT, RUST_DIVAN_INT, RUST_GUNGRAUN_INT,
+        RUST_GUNGRAUN_JSON_INT, RUST_GUNGRAUN_STDOUT_INT, RUST_IAI_INT, RUST_INT,
+        SHELL_HYPERFINE_INT, SHELL_HYPERFINE_V1_INT, SHELL_HYPERFINE_V2_INT, SHELL_INT,
     };
 
     #[derive(Debug, thiserror::Error)]
@@ -675,6 +687,9 @@ mod adapter {
                 Self::HttpK6 => HTTP_K6_INT.to_sql(out),
                 Self::HttpK6Json => HTTP_K6_JSON_INT.to_sql(out),
                 Self::HttpK6JsonSummary => HTTP_K6_JSON_SUMMARY_INT.to_sql(out),
+                Self::HttpOha => HTTP_OHA_INT.to_sql(out),
+                Self::HttpOhaJson => HTTP_OHA_JSON_INT.to_sql(out),
+                Self::HttpOhaText => HTTP_OHA_TEXT_INT.to_sql(out),
             }
         }
     }
@@ -741,6 +756,9 @@ mod adapter {
                 HTTP_K6_INT => Ok(Self::HttpK6),
                 HTTP_K6_JSON_INT => Ok(Self::HttpK6Json),
                 HTTP_K6_JSON_SUMMARY_INT => Ok(Self::HttpK6JsonSummary),
+                HTTP_OHA_INT => Ok(Self::HttpOha),
+                HTTP_OHA_JSON_INT => Ok(Self::HttpOhaJson),
+                HTTP_OHA_TEXT_INT => Ok(Self::HttpOhaText),
                 value => Err(Box::new(AdapterError::Invalid(value))),
             }
         }
@@ -1356,7 +1374,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 55] = [
+    const ADAPTERS: [Adapter; 58] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1412,6 +1430,9 @@ mod tests {
         Adapter::HttpK6,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::HttpOha,
+        Adapter::HttpOhaJson,
+        Adapter::HttpOhaText,
     ];
 
     // A new variant fails to compile here until it joins `ADAPTERS` above.
@@ -1471,7 +1492,10 @@ mod tests {
             | Adapter::DartBenchmarkHarness
             | Adapter::HttpK6
             | Adapter::HttpK6Json
-            | Adapter::HttpK6JsonSummary => true,
+            | Adapter::HttpK6JsonSummary
+            | Adapter::HttpOha
+            | Adapter::HttpOhaJson
+            | Adapter::HttpOhaText => true,
         }
     }
 

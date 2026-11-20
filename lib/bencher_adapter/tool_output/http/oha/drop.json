@@ -1,0 +1,91 @@
+{
+  "summary": {
+    "successRate": 0.0,
+    "total": 0.02931618,
+    "slowest": null,
+    "fastest": null,
+    "average": null,
+    "requestsPerSec": 68221.71237862504,
+    "totalData": 0,
+    "sizePerRequest": null,
+    "sizePerSec": 0.0
+  },
+  "metrics": {
+    "success_rate": 0.0,
+    "requests_per_sec": 68221.71237862504,
+    "latency_ms": {
+      "min": null,
+      "mean": null,
+      "p50": null,
+      "p95": null,
+      "p99": null,
+      "max": null
+    }
+  },
+  "responseTimeHistogram": {
+    "NaN": 0
+  },
+  "latencyPercentiles": {
+    "p10": null,
+    "p25": null,
+    "p50": null,
+    "p75": null,
+    "p90": null,
+    "p95": null,
+    "p99": null,
+    "p99.9": null,
+    "p99.99": null
+  },
+  "firstByteHistogram": {
+    "NaN": 0
+  },
+  "firstBytePercentiles": {
+    "p10": null,
+    "p25": null,
+    "p50": null,
+    "p75": null,
+    "p90": null,
+    "p95": null,
+    "p99": null,
+    "p99.9": null,
+    "p99.99": null
+  },
+  "rps": {
+    "mean": null,
+    "stddev": null,
+    "max": null,
+    "min": null,
+    "percentiles": {
+      "p10": null,
+      "p25": null,
+      "p50": null,
+      "p75": null,
+      "p90": null,
+      "p95": null,
+      "p99": null,
+      "p99.9": null,
+      "p99.99": null
+    }
+  },
+  "details": {
+    "DNSDialup": {
+      "average": null,
+      "fastest": null,
+      "slowest": null
+    },
+    "DNSLookup": {
+      "average": null,
+      "fastest": null,
+      "slowest": null
+    },
+    "firstByte": {
+      "average": null,
+      "fastest": null,
+      "slowest": null
+    }
+  },
+  "statusCodeDistribution": {},
+  "errorDistribution": {
+    "connection closed before message completed": 2000
+  }
+}

@@ -13080,7 +13080,10 @@
           "dart_benchmark_harness",
           "http_k6",
           "http_k6_json",
-          "http_k6_json_summary"
+          "http_k6_json_summary",
+          "http_oha",
+          "http_oha_json",
+          "http_oha_text"
         ]
       },
       "AlertStatus": {

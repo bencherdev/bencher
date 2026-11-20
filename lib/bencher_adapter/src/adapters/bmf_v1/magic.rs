@@ -6,7 +6,7 @@ use crate::{
             cpp::{catch2::AdapterCppCatch2V1, google::AdapterCppGoogleV1},
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::AdapterGoBenchV1,
-            http::k6::AdapterHttpK6,
+            http::{k6::AdapterHttpK6, oha::AdapterHttpOha},
             java::jmh::AdapterJavaJmhV1,
             js::{
                 benchmark::AdapterJsBenchmarkV1, deno::AdapterJsDeno, mitata::AdapterJsMitata,
@@ -56,6 +56,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
             .or_else(|| AdapterHttpK6::parse(input, settings))
+            .or_else(|| AdapterHttpOha::parse(input, settings))
     }
 }
 
@@ -73,7 +74,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 33] = [
+    const LEAVES: [Adapter; 35] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -107,11 +108,13 @@ mod test_magic_v1 {
         Adapter::ShellHyperfineV1,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::HttpOhaJson,
+        Adapter::HttpOhaText,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 12] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 33] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -137,6 +140,28 @@ mod test_magic_v1 {
         ("rust/gungraun/json_not_v6.txt", None),
         // k6's text summary, which k6 does not support parsing.
         ("http/k6/text_scenarios.txt", None),
+        // hey's and ghz's text, whose first line is oha's.
+        ("http/hey/concat.txt", None),
+        ("http/hey/drop.txt", None),
+        ("http/hey/duration_rate.txt", None),
+        ("http/hey/error.txt", None),
+        ("http/hey/fast.txt", None),
+        ("http/hey/h2_tls_unverified.txt", None),
+        ("http/hey/hey_mixed.txt", None),
+        ("http/hey/long_mixed.txt", None),
+        ("http/hey/mixed_timeout.txt", None),
+        ("http/hey/post.txt", None),
+        ("http/hey/refused.txt", None),
+        ("http/hey/slow.txt", None),
+        ("http/ghz/concat_summary.txt", None),
+        ("http/ghz/ghz.txt", None),
+        ("http/ghz/mixed_timeout_summary.txt", None),
+        ("http/ghz/name_summary.txt", None),
+        ("http/ghz/ok_influx_summary.txt", None),
+        ("http/ghz/ok_summary.txt", None),
+        ("http/ghz/refused_summary.txt", None),
+        ("http/ghz/server_restart_summary.txt", None),
+        ("http/ghz/unavailable_summary.txt", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -276,6 +301,10 @@ mod test_magic_v1 {
                     Adapter::HttpK6JsonSummary
                 });
             },
+            "http/oha" => (
+                extension == Some("json"),
+                (Adapter::HttpOhaJson, Adapter::HttpOhaText),
+            ),
             "js/vitest" => (
                 name.starts_with("v5"),
                 (Adapter::JsVitestV5, Adapter::JsVitestV1),
