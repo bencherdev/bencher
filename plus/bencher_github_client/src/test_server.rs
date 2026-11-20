@@ -24,8 +24,6 @@ use tokio::{
 };
 use url::Url;
 
-use crate::api::TIMEOUT;
-
 /// A loopback server that answers each request with the next scripted status and JSON body.
 pub struct Server {
     base: Url,
@@ -43,8 +41,6 @@ pub struct Received {
 /// A scripted answer: its status, its headers, and its JSON body.
 pub type Answer = (u16, Vec<(&'static str, String)>, String);
 
-/// A scripted status that reads the request and answers nothing until the client has timed out.
-pub const NO_ANSWER: u16 = 0;
 /// A scripted header, never sent, that holds its answer from the moment its request arrives until
 /// the test calls `release`.
 pub const HOLD: &str = "x-test-hold";
@@ -81,10 +77,6 @@ impl Server {
                     headers.retain(|(name, _)| *name != HOLD);
                     task_held.notify_one();
                     task_release.notified().await;
-                }
-                if status == NO_ANSWER {
-                    tokio::time::sleep(TIMEOUT + Duration::from_secs(1)).await;
-                    continue;
                 }
                 if (300..400).contains(&status)
                     && !headers.iter().any(|(name, _)| *name == "location")

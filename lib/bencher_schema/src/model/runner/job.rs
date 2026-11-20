@@ -8,9 +8,7 @@ use bencher_json::{
         github::LinkedRepositoryStatus,
         report::{Adapter, JsonReportSettings},
     },
-    runner::{
-        GitHubDispatch, JsonIterationOutput, JsonNewCallback, JsonNewJobGitHub, job::JsonNewRunJob,
-    },
+    runner::{JsonIterationOutput, JsonNewCallback, JsonNewJobGitHub, job::JsonNewRunJob},
 };
 use diesel::{
     BoolExpressionMethods as _, ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _,
@@ -545,8 +543,7 @@ impl PendingInsertJob {
     }
 }
 
-/// A run's callback: sealed to its job for a claimed project, on a paid plan or as the GitHub Actions
-/// dispatch `bencher run` composes, and skipped otherwise.
+/// A run's callback: sealed to its job for a claimed project on a paid plan, and skipped otherwise.
 enum PendingCallback {
     Sealed(SealedRequest),
     Skipped,
@@ -560,7 +557,7 @@ impl PendingCallback {
         is_claimed: bool,
         callback: &JsonNewCallback,
     ) -> Result<Self, HttpError> {
-        if is_claimed && (plan_kind.is_paid() || callback.is_bencher_run_dispatch()) {
+        if is_claimed && plan_kind.is_paid() {
             let plaintext = serde_json::to_vec(callback).map_err(|e| {
                 issue_error(
                     "Failed to serialize job callback",
@@ -581,41 +578,14 @@ impl PendingCallback {
     }
 }
 
-/// Refuse a run whose dispatch has no token of its own and could never get one minted.
-///
-/// That dispatch goes out only with a token that the server's GitHub App mints for the project's
-/// connected linked repository, so the refusal comes before the run creates anything or starts a
-/// check that only the dispatch can complete. An unclaimed project's callback is skipped instead.
-pub async fn check_minted_dispatch(
-    context: &ApiContext,
-    query_project: &QueryProject,
-    is_claimed: bool,
-    callback: Option<&JsonNewCallback>,
-) -> Result<(), HttpError> {
-    if !is_claimed
-        || callback.and_then(JsonNewCallback::github_dispatch) != Some(GitHubDispatch::Minted)
-    {
-        return Ok(());
+/// Refuse the dispatch with no token that an older `bencher run` sends for a detached run, which
+/// Bencher no longer mints a token for, before the run creates anything.
+pub fn check_tokenless_dispatch(callback: Option<&JsonNewCallback>) -> Result<(), HttpError> {
+    if callback.is_some_and(JsonNewCallback::is_tokenless_dispatch) {
+        Err(bad_request_error(TOKENLESS_DISPATCH))
+    } else {
+        Ok(())
     }
-    if context.github_app.is_none() {
-        return Err(bad_request_error(NO_APP_TO_MINT));
-    }
-    let link = QueryLinkedRepository::get(auth_conn!(context), query_project.id)
-        .map_err(resource_not_found_err!(LinkedRepository, query_project))?;
-    let Some(link) = link else {
-        return Err(conflict_error(format!(
-            "Project ({slug}) has no linked GitHub repository, so Bencher cannot mint the token for this detached run's dispatch. {LINK_OR_TOKEN}",
-            slug = query_project.slug
-        )));
-    };
-    if link.status == LinkedRepositoryStatus::Disconnected {
-        return Err(conflict_error(format!(
-            "The GitHub repository ({full_name}) linked to project ({slug}) is disconnected, so Bencher cannot mint the token for this detached run's dispatch. {LINK_OR_TOKEN}",
-            full_name = link.full_name,
-            slug = query_project.slug
-        )));
-    }
-    Ok(())
 }
 
 /// Refuse a run whose GitHub check and comment Bencher could never post, before it creates anything.
@@ -663,8 +633,7 @@ pub async fn check_job_github(
 }
 
 const NO_APP_TO_POST: &str = "This server has no GitHub App, so Bencher cannot post this detached run's check and pull request comment. Run without `--detach` to post them from the workflow.";
-const NO_APP_TO_MINT: &str = "This server has no GitHub App, so it cannot mint the token for this detached run's dispatch. Pass a fine-grained personal access token with contents write on the repository to `--ci-callback-token`.";
-const LINK_OR_TOKEN: &str = "Link the repository in the project's Settings, or pass a fine-grained personal access token with contents write on it to `--ci-callback-token`.";
+const TOKENLESS_DISPATCH: &str = "This detached run's callback is the GitHub Actions dispatch with no token that `bencher run` v0.6.16 and v0.6.17 send, and Bencher no longer sends it. Upgrade the Bencher CLI: a newer release asks Bencher to post the GitHub Check and pull request comment instead.";
 
 async fn resolve_digest(
     image: &bencher_json::ImageReference,
@@ -1052,32 +1021,22 @@ mod tests {
         .unwrap()
     }
 
-    /// The GitHub Actions dispatch `bencher run` composes, but with `authorization` and `event_type`.
-    fn dispatch(authorization: &str, event_type: &str) -> JsonNewCallback {
-        dispatch_with(Some(authorization), event_type)
-    }
-
-    fn dispatch_with(authorization: Option<&str>, event_type: &str) -> JsonNewCallback {
+    /// The GitHub Actions dispatch that `bencher run` composed with `--ci-callback-token`.
+    fn bencher_run_dispatch() -> JsonNewCallback {
         JsonNewCallback::new(
             "https://api.github.com/repos/owner/repo/dispatches",
             [
-                Some(("Accept", "application/vnd.github+json")),
-                authorization.map(|authorization| ("Authorization", authorization)),
-                Some(("X-GitHub-Api-Version", "2022-11-28")),
+                ("Accept", "application/vnd.github+json"),
+                ("Authorization", "Bearer token"),
+                ("X-GitHub-Api-Version", "2022-11-28"),
             ]
-            .into_iter()
-            .flatten()
             .map(|(name, value)| (name.to_owned(), value.to_owned())),
             Some(serde_json::json!({
-                "event_type": event_type,
+                "event_type": "bencher_run",
                 "client_payload": { "bencher": { "job": "{{ job.uuid }}" } },
             })),
         )
         .unwrap()
-    }
-
-    fn bencher_run_dispatch() -> JsonNewCallback {
-        dispatch("Bearer token", "bencher_run")
     }
 
     fn unpaid_plans() -> [PlanKind; 2] {
@@ -1098,61 +1057,32 @@ mod tests {
             licensed_plan(PlanLevel::Team),
             licensed_plan(PlanLevel::Enterprise),
         ] {
-            let PendingCallback::Sealed(sealed) =
-                PendingCallback::new(&key, job, &plan_kind, true, &callback()).unwrap()
-            else {
-                panic!("a paid plan seals its callback");
-            };
-            assert_eq!(
-                key.open(job, &sealed).unwrap(),
-                serde_json::to_vec(&callback()).unwrap(),
-                "the sealed plaintext is the request as JSON"
-            );
-            assert!(
-                key.open(JobUuid::new(), &sealed).is_err(),
-                "the seal binds the job"
-            );
-        }
-    }
-
-    // Kills a gate that admits only the dispatch with a token, so a tokenless one on a free
-    // plan would be skipped.
-    #[test]
-    fn an_unpaid_plan_seals_the_bencher_run_dispatch() {
-        let key = callback_key();
-        let job = JobUuid::new();
-        for dispatch in [bencher_run_dispatch(), dispatch_with(None, "bencher_run")] {
-            for plan_kind in unpaid_plans() {
+            for callback in [callback(), bencher_run_dispatch()] {
                 let PendingCallback::Sealed(sealed) =
-                    PendingCallback::new(&key, job, &plan_kind, true, &dispatch).unwrap()
+                    PendingCallback::new(&key, job, &plan_kind, true, &callback).unwrap()
                 else {
-                    panic!("a claimed project seals the bencher_run dispatch on any plan");
+                    panic!("a paid plan seals its callback");
                 };
                 assert_eq!(
                     key.open(job, &sealed).unwrap(),
-                    serde_json::to_vec(&dispatch).unwrap()
+                    serde_json::to_vec(&callback).unwrap(),
+                    "the sealed plaintext is the request as JSON"
+                );
+                assert!(
+                    key.open(JobUuid::new(), &sealed).is_err(),
+                    "the seal binds the job"
                 );
             }
         }
     }
 
+    // Kills a gate that still lets the GitHub Actions dispatch through without a paid plan.
     #[test]
-    fn an_unpaid_plan_skips_any_other_callback() {
+    fn an_unpaid_plan_skips_every_callback() {
         for plan_kind in unpaid_plans() {
             for (callback, what) in [
                 (callback(), "another URL"),
-                (
-                    dispatch("Basic dXNlcjpwYXNz", "bencher_run"),
-                    "a dispatch without a bearer token",
-                ),
-                (
-                    dispatch("Bearer token", "deploy"),
-                    "a dispatch of another event",
-                ),
-                (
-                    dispatch_with(None, "deploy"),
-                    "a dispatch without a token of another event",
-                ),
+                (bencher_run_dispatch(), "the bencher_run dispatch"),
             ] {
                 let pending = PendingCallback::new(
                     &callback_key(),
@@ -1168,7 +1098,7 @@ mod tests {
     }
 
     #[test]
-    fn an_unclaimed_project_skips_even_the_bencher_run_dispatch() {
+    fn an_unclaimed_project_skips_every_callback() {
         for plan_kind in [
             PlanKind::None,
             licensed_plan(PlanLevel::Free),

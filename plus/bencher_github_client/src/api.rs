@@ -29,7 +29,7 @@ pub(crate) static GITHUB_API_URL: LazyLock<Url> = LazyLock::new(|| {
 pub(crate) const USER_AGENT: &str = concat!("Bencher/", env!("CARGO_PKG_VERSION"));
 /// GitHub's largest page.
 const PER_PAGE: usize = 100;
-pub(crate) const TIMEOUT: Duration = Duration::from_secs(10);
+const TIMEOUT: Duration = Duration::from_secs(10);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 /// From GitHub's 422 for a repository outside the installation.
 const REPOSITORY_INACCESSIBLE: &str = "not accessible to the parent installation";
@@ -107,16 +107,12 @@ impl GitHubApi {
             id: installation,
             html_url: installation_url,
             suspended_at: _,
-            permissions: JsonInstallationPermissions { contents },
+            permissions,
         } in installations
             .into_iter()
             .filter(|installation| installation.suspended_at.is_none())
         {
-            let permission = if contents == Some(JsonAccess::Write) {
-                GitHubInstallationPermission::Granted
-            } else {
-                GitHubInstallationPermission::ApprovalRequired
-            };
+            let permission = permissions.permission();
             let repositories: Vec<JsonRepository> = self
                 .every_page(
                     &[
@@ -279,6 +275,11 @@ impl GitHubApi {
         Ok(items)
     }
 
+    /// Where every request goes, on one host.
+    pub fn base(&self) -> &Url {
+        &self.base
+    }
+
     pub(crate) fn url(&self, path: &[&str]) -> Url {
         join_path(&self.base, path)
     }
@@ -403,12 +404,35 @@ struct JsonInstallation {
 /// What the installation has granted the app.
 #[derive(Deserialize)]
 struct JsonInstallationPermissions {
+    checks: Option<JsonAccess>,
+    pull_requests: Option<JsonAccess>,
     contents: Option<JsonAccess>,
+}
+
+impl JsonInstallationPermissions {
+    /// The app posts a check and a comment, and reads commit titles.
+    fn permission(&self) -> GitHubInstallationPermission {
+        let Self {
+            checks,
+            pull_requests,
+            contents,
+        } = self;
+        let write = Some(JsonAccess::Write);
+        if *checks == write
+            && *pull_requests == write
+            && matches!(contents, Some(JsonAccess::Read | JsonAccess::Write))
+        {
+            GitHubInstallationPermission::Granted
+        } else {
+            GitHubInstallationPermission::ApprovalRequired
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum JsonAccess {
+    Read,
     Write,
     #[serde(other)]
     Other,
@@ -439,11 +463,14 @@ mod tests {
     use oauth2::AccessToken;
 
     use super::{
-        GitHubApi, GitHubApiError, GitHubInstallationPermission, GitHubRepository, PER_PAGE,
+        GitHubApi, GitHubApiError, GitHubInstallationPermission, GitHubRepository,
+        JsonInstallationPermissions, PER_PAGE,
     };
     use crate::test_server::{Received, Server};
 
     const USER_TOKEN: &str = "user-token-marker";
+    const APPROVED: &str =
+        r#"{"checks": "write", "contents": "read", "metadata": "read", "pull_requests": "write"}"#;
 
     fn installation(id: u64, suspended_at: &str, permissions: &str) -> String {
         format!(
@@ -488,10 +515,9 @@ mod tests {
     }
 
     // Kills dropping the push filter or the suspended filter, attaching the wrong installation or
-    // the wrong installation's page,
-    // stopping before a full page's successor or after a short page, granting contents write to
-    // an installation with any other access, parsing the name of a repository without push, and
-    // building a URL that misses the base's path.
+    // the wrong installation's page, stopping before a full page's successor or after a short
+    // page, reading any installation's approval wrongly, parsing the name of a repository without
+    // push, and building a URL that misses the base's path.
     #[tokio::test]
     async fn lists_only_repositories_with_push_on_every_page() {
         // Repository 1 through 100 fill the first page, and every third one is read only.
@@ -501,13 +527,9 @@ mod tests {
             page(
                 "installations",
                 &[
-                    installation(11, "null", r#"{"contents": "write", "metadata": "read"}"#),
-                    installation(
-                        33,
-                        r#""2024-07-11T06:23:00Z""#,
-                        r#"{"contents": "write", "metadata": "read"}"#,
-                    ),
-                    installation(22, "null", r#"{"contents": "read", "metadata": "read"}"#),
+                    installation(11, "null", APPROVED),
+                    installation(33, r#""2024-07-11T06:23:00Z""#, APPROVED),
+                    installation(22, "null", r#"{"contents": "write", "metadata": "read"}"#),
                     installation(44, "null", r#"{"metadata": "read"}"#),
                     installation(55, "null", r#"{"contents": "admin", "metadata": "read"}"#),
                 ],
@@ -565,15 +587,58 @@ mod tests {
         }
     }
 
+    // Each row differs from what the app asks in one respect. Kills an approval that skips checks
+    // write, pull requests write, or contents read, that takes read for either write, that refuses
+    // the contents write an installation keeps until it gives it up, or that takes the contents
+    // write that earlier releases asked for alone.
+    #[test]
+    fn an_installation_approves_checks_and_pull_requests_write_with_contents_read() {
+        for (permissions, expected) in [
+            (APPROVED, GitHubInstallationPermission::Granted),
+            (
+                r#"{"checks": "write", "contents": "write", "pull_requests": "write"}"#,
+                GitHubInstallationPermission::Granted,
+            ),
+            (
+                r#"{"checks": "write", "pull_requests": "write"}"#,
+                GitHubInstallationPermission::ApprovalRequired,
+            ),
+            (
+                r#"{"checks": "write", "contents": "none", "pull_requests": "write"}"#,
+                GitHubInstallationPermission::ApprovalRequired,
+            ),
+            (
+                r#"{"contents": "read", "pull_requests": "write"}"#,
+                GitHubInstallationPermission::ApprovalRequired,
+            ),
+            (
+                r#"{"checks": "read", "contents": "read", "pull_requests": "write"}"#,
+                GitHubInstallationPermission::ApprovalRequired,
+            ),
+            (
+                r#"{"checks": "write", "contents": "read"}"#,
+                GitHubInstallationPermission::ApprovalRequired,
+            ),
+            (
+                r#"{"checks": "write", "contents": "read", "pull_requests": "read"}"#,
+                GitHubInstallationPermission::ApprovalRequired,
+            ),
+            (
+                r#"{"contents": "write", "metadata": "read"}"#,
+                GitHubInstallationPermission::ApprovalRequired,
+            ),
+        ] {
+            let parsed: JsonInstallationPermissions = serde_json::from_str(permissions).unwrap();
+            assert_eq!(parsed.permission(), expected, "{permissions}");
+        }
+    }
+
     // Kills skipping, or passing through, a pushable repository whose name is not two path
     // segments.
     #[tokio::test]
     async fn a_repository_name_that_does_not_parse_fails_the_listing() {
         let server = Server::start(vec![
-            page(
-                "installations",
-                &[installation(11, "null", r#"{"contents": "write"}"#)],
-            ),
+            page("installations", &[installation(11, "null", APPROVED)]),
             page(
                 "repositories",
                 &[repository(1, true), named_repository(2, "..", true)],

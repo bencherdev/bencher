@@ -361,7 +361,7 @@ mod tests {
             exchanged(),
             (
                 200,
-                r#"{"total_count": 1, "installations": [{"id": 11, "html_url": "https://github.com/settings/installations/11", "suspended_at": null, "permissions": {"contents": "write"}}]}"#
+                r#"{"total_count": 1, "installations": [{"id": 11, "html_url": "https://github.com/settings/installations/11", "suspended_at": null, "permissions": {"checks": "write", "contents": "read", "pull_requests": "write"}}]}"#
                     .to_owned(),
             ),
             (

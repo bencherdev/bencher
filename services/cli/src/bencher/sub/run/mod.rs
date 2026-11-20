@@ -207,7 +207,7 @@ impl Run {
         let mut ci_check = None;
 
         let result = self.check_and_run(&mut ci_check).await;
-        // Every path that posts results, or hands the check to a callback, consumes the handle,
+        // Every path that posts results consumes the handle,
         // so an unconsumed handle means the check was never completed.
         // Best-effort: mark it as failed rather than leave it in progress forever.
         // Today only error paths leave the handle unconsumed. Any future path
@@ -287,12 +287,10 @@ impl Run {
         }
     }
 
-    /// A detached run on GitHub Actions without `--ci-callback-token` gets its check and comment
-    /// from the server.
+    /// A detached run on GitHub Actions gets its check and comment from the server.
     #[cfg(feature = "plus")]
     fn server_posts(&self) -> bool {
-        self.ci.as_ref().is_some_and(|ci| !ci.has_callback_token())
-            && self.submit_job().is_some_and(|job| job.detach)
+        self.ci.is_some() && self.submit_job().is_some_and(|job| job.detach)
     }
 
     /// Best-effort: look up the Project, which the CI check names.
@@ -330,12 +328,8 @@ impl Run {
             return self.wait_for_job(project, *uuid, *wait, ci_check).await;
         }
 
-        // The one callback the run sends, prints, and reads back:
-        // the `--callback-*` flags, else the `repository_dispatch` a detached GitHub Actions run composes.
         #[cfg(feature = "plus")]
-        let composed = self.dispatch_callback(ci_check.as_ref())?;
-        #[cfg(feature = "plus")]
-        let callback = self.callback().or(composed.as_ref());
+        let callback = self.callback();
         #[cfg(feature = "plus")]
         let github = self.job_github()?;
 
@@ -382,9 +376,7 @@ impl Run {
                 let reporter = callback
                     .map(|_| Reporter::Callback)
                     .or(github.map(|_| Reporter::Server));
-                return self
-                    .detached(json_report, job_uuid, reporter, ci_check)
-                    .await;
+                return self.detached(json_report, job_uuid, reporter).await;
             }
             let project = ProjectResourceId::Slug(json_report.project.slug);
             return self
@@ -395,45 +387,19 @@ impl Run {
         self.display_and_check_alerts(json_report, ci_check).await
     }
 
-    /// A detached run on GitHub Actions posts nothing: the check it started waits for the attach,
-    /// unless the one read after submit shows that the callback will never fire, and the server
-    /// posts the check of a run that starts none.
+    /// A detached run posts nothing: it reads the job once to say how its results will be reported.
     #[cfg(feature = "plus")]
     async fn detached(
         &self,
         json_report: JsonReport,
         job_uuid: JobUuid,
         reporter: Option<Reporter>,
-        ci_check: &mut Option<CiCheck>,
     ) -> Result<(), RunError> {
         cli_eprintln_quietable!(self.log, "Remote job submitted successfully: {job_uuid}");
-        if let (Some(ci), Some(check)) = (&self.ci, ci_check.as_ref()) {
-            ci.report_submitted(
-                check,
-                json_report.project.uuid,
-                json_report.uuid,
-                &self.sub_adapter.into(),
-                self.log,
-            )
-            .await;
-        }
-        let skipped = match reporter {
-            Some(Reporter::Callback) => {
-                self.callback_notice(&json_report, job_uuid, ci_check.as_ref())
-                    .await
-            },
-            Some(Reporter::Server) => {
-                self.print_post_state(&json_report, job_uuid).await;
-                false
-            },
-            None => false,
-        };
-        if let Some(ci) = &self.ci
-            && let Some(check) = ci_check.take()
-            && skipped
-        {
-            ci.complete_unfired(check, &json_report.project.name, self.log)
-                .await;
+        match reporter {
+            Some(Reporter::Callback) => self.callback_notice(&json_report, job_uuid).await,
+            Some(Reporter::Server) => self.print_post_state(&json_report, job_uuid).await,
+            None => {},
         }
         let console_url = self.console_url().await?;
         self.display_report(console_url, json_report, true)
@@ -606,23 +572,6 @@ impl Run {
         self.submit_job()?.callback.as_deref()
     }
 
-    /// The `repository_dispatch` a detached run composes with `--ci-callback-token`.
-    #[cfg(feature = "plus")]
-    fn dispatch_callback(
-        &self,
-        ci_check: Option<&CiCheck>,
-    ) -> Result<Option<JsonNewCallback>, RunError> {
-        if let (Some(ci), Some(job)) = (&self.ci, self.submit_job())
-            && job.detach
-            && ci.has_callback_token()
-        {
-            ci.dispatch_callback(ci_check, &self.sub_adapter.into(), self.log)
-                .map_err(RunError::Ci)
-        } else {
-            Ok(None)
-        }
-    }
-
     /// The pull request context the server posts a detached run's check and comment for.
     #[cfg(feature = "plus")]
     fn job_github(&self) -> Result<Option<JsonNewJobGitHub>, RunError> {
@@ -636,30 +585,15 @@ impl Run {
     }
 
     /// Read the detached job once, and say so if the server skipped its callback.
-    /// The job was submitted either way, so a failed read prints no notice, only a warning for a started check.
+    /// The job was submitted either way, so a failed read prints nothing.
     #[cfg(feature = "plus")]
-    async fn callback_notice(
-        &self,
-        json_report: &JsonReport,
-        job_uuid: JobUuid,
-        ci_check: Option<&CiCheck>,
-    ) -> bool {
+    async fn callback_notice(&self, json_report: &JsonReport, job_uuid: JobUuid) {
         let project = ProjectResourceId::Slug(json_report.project.slug.clone());
-        let Ok(json_job) = self.get_job(&project, job_uuid).await else {
-            // The callback is most likely pending, and its attach completes the check.
-            if ci_check.is_some() {
-                cli_eprintln_quietable!(
-                    self.log,
-                    "Warning: failed to read the callback state, so the GitHub Check stays in progress until the callback's receiver completes it"
-                );
-            }
-            return false;
-        };
-        let skipped = callback_skipped(&json_job);
-        if skipped {
+        if let Ok(json_job) = self.get_job(&project, job_uuid).await
+            && callback_skipped(&json_job)
+        {
             cli_eprintln_quietable!(self.log, "{CALLBACK_SKIPPED}");
         }
-        skipped
     }
 
     /// Read the detached job once, and say how the server's post of its check and comment stands.
@@ -948,7 +882,6 @@ impl SectionReports for Run {
 #[cfg(feature = "plus")]
 #[derive(Debug, Clone, Copy)]
 enum Reporter {
-    /// The callback, which for a dispatch starts the attach.
     Callback,
     /// The server, which posts the check and comment.
     Server,
@@ -1275,19 +1208,12 @@ mod tests {
 
         // Kills a refusal before the server's version is known, a gate on any version but the
         // first that posts or on any API but github.com's, a prefix match on github.com's API URL,
-        // a gate on a run with a token or a run that waits, and a refusal for the wrong cause.
+        // a gate on a run that waits, and a refusal for the wrong cause.
         #[test]
-        fn a_detached_run_without_a_token_needs_a_server_that_posts() {
+        fn a_detached_run_needs_a_server_that_posts() {
             const GITHUB_COM: Option<&str> = Some("https://api.github.com");
             const GHES: Option<&str> = Some("https://github.example.com/api/v3");
             let detached = run(&["--detach", "--github-actions", "token"]);
-            let with_token = run(&[
-                "--detach",
-                "--github-actions",
-                "token",
-                "--ci-callback-token",
-                "callback-token",
-            ]);
             let waiting = run(&["--github-actions", "token"]);
             for (run, version, api_url, refused) in [
                 (&detached, "0.6.17", None, Refused::Version),
@@ -1319,8 +1245,6 @@ mod tests {
                 (&detached, "0.6.18", Some(""), Refused::GitHubCom),
                 (&detached, "0.6.17", GITHUB_COM, Refused::Version),
                 (&detached, "0.6.17", GHES, Refused::GitHubCom),
-                (&with_token, "0.6.15", None, Refused::No),
-                (&with_token, "0.6.18", GHES, Refused::No),
                 (&waiting, "0.6.15", GHES, Refused::No),
             ] {
                 let checked = run.check_server_posts(version, api_url);

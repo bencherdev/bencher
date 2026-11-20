@@ -42,7 +42,8 @@ const CALLBACK: [&str; 6] = [
     "X-Key: key-marker",
 ];
 const ECHO: &str = "Bencher New Report:\n";
-const SKIPPED: &str = "callback skipped: claim this project to send a GitHub Actions dispatch or upgrade to Bencher Plus for custom callbacks";
+const SKIPPED: &str =
+    "callback skipped: claim this project and upgrade to Bencher Plus to send callbacks";
 const SUBMITTED: &str = "Remote job submitted successfully";
 const JOB_PATH: &str = "/v0/projects/project/jobs/8d2b6c4e-5f3a-4b1c-9e7d-0a1b2c3d4e5f";
 const REPORT_PATH: &str = "/v0/projects/project/reports/4f6d1b2a-3c5e-4d7f-8a9b-0c1d2e3f4a5b";
@@ -83,7 +84,6 @@ const GROUP_WRITE: [(&str, &str); 7] = [
     ("GET", CHECK_LIST),
 ];
 const GITHUB_TOKEN: &str = "github-token-marker";
-const CALLBACK_TOKEN: &str = "callback-token-marker";
 // The ID of the repository the workflow runs in.
 const REPOSITORY_ID: u64 = 987_654;
 
@@ -146,7 +146,6 @@ struct Request {
     method: String,
     path: String,
     query: String,
-    headers: Vec<(String, String)>,
     body: String,
 }
 
@@ -238,8 +237,6 @@ struct Run {
     requests: Vec<Request>,
     /// The pull request's state after the run.
     scene: Scene,
-    /// The GitHub API URL the run was given.
-    github_api_url: Option<String>,
     /// What the run wrote to `GITHUB_STEP_SUMMARY`.
     step_summary: Option<String>,
 }
@@ -306,7 +303,7 @@ impl Run {
             .expect("The echo has no callback");
         assert_eq!(printed, bencher_json::sanitize_json(callback), "{stdout}");
         for printed in [before, &echo.to_string(), rest, &self.stderr()] {
-            for marker in MARKERS.iter().chain(&[GITHUB_TOKEN, CALLBACK_TOKEN]) {
+            for marker in MARKERS.iter().chain(&[GITHUB_TOKEN]) {
                 assert!(!printed.contains(marker), "{marker} in {printed}");
             }
         }
@@ -362,14 +359,6 @@ impl Run {
             .pointer("/job/github")
             .cloned()
             .expect("The run carries no `github`")
-    }
-
-    #[expect(clippy::expect_used, reason = "test helper")]
-    fn sent_callback(&self) -> serde_json::Value {
-        self.body("POST", "/v0/run")
-            .pointer("/job/callback")
-            .cloned()
-            .expect("The run carries no callback")
     }
 }
 
@@ -439,7 +428,7 @@ fn bencher_run_in_scene(
         .envs(env.iter().copied())
         .args(["run", "--host", &format!("http://{addr}")])
         .args(args);
-    let github_api_url = github.and_then(|github| {
+    if let Some(github) = github {
         std::fs::write(&event_path, github.event.to_string()).expect("Failed to write the event");
         command
             .env("GITHUB_ACTIONS", "true")
@@ -448,13 +437,14 @@ fn bencher_run_in_scene(
             .env("GITHUB_SHA", GITHUB_SHA)
             .env("GITHUB_STEP_SUMMARY", &summary_path);
         let api_url = match github.api {
-            GitHubApi::StandIn => format!("http://{addr}"),
-            GitHubApi::Unreachable => format!("https://127.0.0.1:{}", refused_port()),
-            GitHubApi::Unset => return None,
+            GitHubApi::StandIn => Some(format!("http://{addr}")),
+            GitHubApi::Unreachable => Some(format!("https://127.0.0.1:{}", refused_port())),
+            GitHubApi::Unset => None,
         };
-        command.env("GITHUB_API_URL", &api_url);
-        Some(api_url)
-    });
+        if let Some(api_url) = api_url {
+            command.env("GITHUB_API_URL", api_url);
+        }
+    }
     thread::scope(|scope| {
         let server = scope.spawn(move || {
             let requests = serve(&listener, stand_in, &mut scene);
@@ -472,7 +462,6 @@ fn bencher_run_in_scene(
             output: output.expect("Failed to run `bencher`"),
             requests,
             scene,
-            github_api_url,
             step_summary,
         }
     })
@@ -618,7 +607,6 @@ fn read_request(stream: &TcpStream) -> Option<Request> {
     let (path, query) = target.split_once('?').unwrap_or((target, ""));
     let path = format!("/{}", path.trim_start_matches('/'));
     let mut content_length = 0;
-    let mut headers = Vec::new();
     loop {
         let mut header = String::new();
         reader.read_line(&mut header).ok()?;
@@ -626,12 +614,10 @@ fn read_request(stream: &TcpStream) -> Option<Request> {
         if header.is_empty() {
             break;
         }
-        if let Some((name, value)) = header.split_once(':') {
-            let (name, value) = (name.to_ascii_lowercase(), value.trim().to_owned());
-            if name == "content-length" {
-                content_length = value.parse().ok()?;
-            }
-            headers.push((name, value));
+        if let Some((name, value)) = header.split_once(':')
+            && name.eq_ignore_ascii_case("content-length")
+        {
+            content_length = value.trim().parse().ok()?;
         }
     }
     let mut body = vec![0; content_length];
@@ -640,7 +626,6 @@ fn read_request(stream: &TcpStream) -> Option<Request> {
         method,
         path,
         query: query.to_owned(),
-        headers,
         body: String::from_utf8(body).ok()?,
     })
 }
@@ -652,6 +637,7 @@ fn stop(addr: SocketAddr) {
         .expect("Failed to stop the stand-in server");
 }
 
+#[expect(clippy::expect_used, reason = "test helper")]
 fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static str, String) {
     const OK: &str = "200 OK";
     const CREATED: &str = "201 Created";
@@ -741,10 +727,9 @@ fn respond(request: &Request, stand_in: StandIn, scene: &mut Scene) -> (&'static
             },
             JobRead::GitHub(github) => {
                 let mut json_job = json_job(None);
-                if let (Some(json_job), Ok(github)) = (
-                    json_job.as_object_mut(),
-                    serde_json::from_str::<serde_json::Value>(github),
-                ) {
+                let github: serde_json::Value =
+                    serde_json::from_str(github).expect("The job's `github` must be JSON");
+                if let Some(json_job) = json_job.as_object_mut() {
                     json_job.insert("github".to_owned(), github);
                 }
                 (OK, json_job.to_string())
@@ -1301,6 +1286,29 @@ fn invalid_callback_sends_nothing() {
     }
 }
 
+// A workflow that still passes the removed flag. Kills a run that takes the flag and its token as
+// the benchmark command, which would send the token in the job, and one that sends anything.
+#[test]
+fn a_removed_ci_callback_token_is_refused_before_any_request() {
+    const TOKEN: &str = "callback-token-marker";
+    let run = detach_on(
+        POSTING,
+        JobRead::GitHub(POST_PENDING),
+        &pull_request(GitHubApi::Unset),
+        &["--ci-callback-token", TOKEN],
+    );
+    let stderr = run.stderr();
+    assert_eq!(run.output.status.code(), Some(1), "{stderr}");
+    assert!(
+        stderr.contains("`--ci-callback-token` is removed"),
+        "{stderr}"
+    );
+    assert!(run.requests.is_empty(), "{:?}", run.calls());
+    for output in [stderr, run.stdout()] {
+        assert!(!output.contains(TOKEN), "{output}");
+    }
+}
+
 #[test]
 fn usage_errors_print_no_secret() {
     for args in [
@@ -1408,134 +1416,6 @@ fn an_attach_ignores_the_start_point_idempotency_key_variable() {
     assert_eq!(run.job_reads(), 1);
 }
 
-/// The `client_payload` the server would send, rendered through the same code it uses.
-#[expect(clippy::expect_used, reason = "test helper")]
-fn rendered_payload(callback: &serde_json::Value) -> serde_json::Value {
-    let callback: bencher_json::JsonNewCallback =
-        serde_json::from_value(callback.clone()).expect("The composed callback must validate");
-    let context = bencher_json::CallbackContext {
-        project_uuid: UUID.parse().expect("project"),
-        project_name: "Project".parse().expect("name"),
-        project_slug: "project".parse().expect("slug"),
-        report_uuid: UUID.parse().expect("report"),
-        job_uuid: JOB.parse().expect("job"),
-        job_status: bencher_json::JobStatus::Processed,
-    };
-    let body = callback.render(&context, None).expect("render");
-    let body: serde_json::Value =
-        serde_json::from_str(&body).expect("The rendered body must be JSON");
-    assert_eq!(
-        body.get("event_type"),
-        Some(&serde_json::json!("bencher_run")),
-        "{body}"
-    );
-    body.get("client_payload")
-        .cloned()
-        .expect("The body has no client_payload")
-}
-
-fn assert_token_only_in_the_run(run: &Run) {
-    for request in &run.requests {
-        let sent_in_the_run = request.method == "POST" && request.path == "/v0/run";
-        for (name, value) in &request.headers {
-            assert!(
-                !value.contains(CALLBACK_TOKEN),
-                "{name} of {} {}",
-                request.method,
-                request.path
-            );
-        }
-        assert_eq!(
-            request.body.contains(CALLBACK_TOKEN),
-            sent_in_the_run,
-            "{} {}",
-            request.method,
-            request.path
-        );
-    }
-}
-
-#[test]
-fn detach_composes_the_repository_dispatch() {
-    let args = [
-        &DETACH[..],
-        &[
-            "--ci-callback-token",
-            CALLBACK_TOKEN,
-            "--ci-id",
-            "suite",
-            "--build-time",
-        ],
-    ]
-    .concat();
-    let run = github_run(
-        JobRead::Callback("pending"),
-        &pull_request(GitHubApi::Unreachable),
-        &args,
-    );
-    run.assert_success();
-
-    let api_url = run.github_api_url.clone().unwrap();
-    let callback = run.sent_callback();
-    assert_eq!(
-        callback["url"],
-        format!("{api_url}/repos/owner/repo/dispatches")
-    );
-    assert_eq!(
-        callback["headers"],
-        serde_json::json!({
-            "accept": "application/vnd.github+json",
-            "authorization": format!("Bearer {CALLBACK_TOKEN}"),
-            "x-github-api-version": "2022-11-28",
-        })
-    );
-    // The check could not start, so the payload names none.
-    assert_eq!(
-        rendered_payload(&callback),
-        serde_json::json!({
-            "bencher": {
-                "project": "project",
-                "job": JOB,
-                "ci_id": "suite",
-                "ci_number": 7,
-                "build_time": true,
-            },
-            "github": { "sha": HEAD_SHA },
-        })
-    );
-    assert_token_only_in_the_run(&run);
-    // The dispatch's attach posts, so the server is not asked to, whatever its version or GitHub.
-    let sent = run.body("POST", "/v0/run");
-    assert!(sent["job"].get("github").is_none(), "{sent}");
-    // The run starts its own check, here at an API that refuses the connection.
-    let stderr = run.stderr();
-    assert!(stderr.contains("Failed to start GitHub Check"), "{stderr}");
-
-    // The echo shows the composed request.
-    run.assert_echo(&serde_json::from_value(callback).unwrap());
-    // The one read after submit follows the composed callback.
-    assert_eq!(run.job_reads(), 1);
-    assert_eq!(run.step_summary, None);
-}
-
-#[test]
-fn detach_on_a_push_composes_no_number() {
-    let args = [&DETACH[..], &["--ci-callback-token", CALLBACK_TOKEN]].concat();
-    let run = github_run(
-        JobRead::Callback("pending"),
-        &push(GitHubApi::Unreachable),
-        &args,
-    );
-    run.assert_success();
-    assert_eq!(
-        rendered_payload(&run.sent_callback()),
-        serde_json::json!({
-            "bencher": { "project": "project", "job": JOB },
-            "github": { "sha": GITHUB_SHA },
-        })
-    );
-}
-
 /// A server before the first one that posts a detached run's check and comment.
 const BEFORE_POSTING: VersionRead = VersionRead::Version("0.6.17");
 /// The first server that posts them.
@@ -1557,7 +1437,7 @@ fn detach_on(version: VersionRead, job_read: JobRead, github: &GitHub, args: &[&
     )
 }
 
-/// A detached run on GitHub Actions without `--ci-callback-token`, against a server that posts.
+/// A detached run on GitHub Actions, against a server that posts.
 fn post(job_read: JobRead, github: &GitHub, args: &[&str]) -> Run {
     detach_on(POSTING, job_read, github, args)
 }
@@ -1667,6 +1547,29 @@ fn detach_on_a_push_sends_no_number() {
     );
 }
 
+// Kills a `github` read outside of GitHub Actions, where no event names the pull request.
+#[test]
+fn detach_outside_of_github_actions_sends_no_github() {
+    let run = bencher_run_with(
+        StandIn {
+            job_read: JobRead::GitHub(POST_PENDING),
+            version: POSTING,
+            check_runs: CheckRuns::Create,
+        },
+        None,
+        &[
+            &ATTEMPTS[..],
+            &PROJECT,
+            &DETACH,
+            &["--github-actions", GITHUB_TOKEN],
+        ]
+        .concat(),
+    );
+    run.assert_success();
+    let sent = run.body("POST", "/v0/run");
+    assert!(sent["job"].get("github").is_none(), "{sent}");
+}
+
 // Kills a refusal that starts a check or submits the run, a run sent to a server that cannot
 // post, or to a GitHub where the server cannot post, and a message that names no other way.
 #[test]
@@ -1687,7 +1590,7 @@ fn detach_without_a_callback_is_refused() {
         );
         let stderr = run.stderr();
         assert_eq!(run.output.status.code(), Some(1), "{expected}: {stderr}");
-        for expected in [expected, "`--ci-callback-token`", "`--callback-url`"] {
+        for expected in [expected, "`--callback-url`"] {
             assert!(stderr.contains(expected), "{expected}: {stderr}");
         }
         run.assert_no_marker();
@@ -2030,29 +1933,6 @@ fn attach_on_another_event_reads_no_payload() {
 }
 
 #[test]
-fn callback_token_outside_github_actions_composes_nothing() {
-    let run = detach(
-        JobRead::Callback("pending"),
-        &[
-            "--github-actions",
-            GITHUB_TOKEN,
-            "--ci-callback-token",
-            CALLBACK_TOKEN,
-        ],
-    );
-    run.assert_success();
-    run.assert_no_marker();
-    assert!(
-        run.stdout().contains("Not running as a GitHub Action"),
-        "{}",
-        run.stdout()
-    );
-    let sent = run.body("POST", "/v0/run");
-    assert!(sent["job"].get("callback").is_none(), "{sent}");
-    assert_eq!(run.job_reads(), 0);
-}
-
-#[test]
 fn only_the_attach_reads_the_payload() {
     // A run that a `repository_dispatch` happens to trigger starts its own check.
     let check = format!("{CHECK_RUNS}/{NEW_CHECK}");
@@ -2155,30 +2035,4 @@ fn attached_run_fails_its_check_when_the_job_fails() {
         run.github()
     );
     assert_eq!(run.body("PATCH", &check)["conclusion"], "failure");
-}
-
-#[test]
-fn composition_failure_fails_the_check_and_submits_nothing() {
-    // The stand-in's GitHub API is `http`, so the composed dispatch URL is refused.
-    let run = github_run(
-        JobRead::Callback("pending"),
-        &pull_request(GitHubApi::StandIn),
-        &[&DETACH[..], &["--ci-callback-token", CALLBACK_TOKEN]].concat(),
-    );
-    assert_eq!(run.output.status.code(), Some(1), "{}", run.stderr());
-    let stderr = run.stderr();
-    assert!(
-        stderr.contains("Failed to compose the GitHub `repository_dispatch` callback")
-            && stderr.contains("https"),
-        "{stderr}"
-    );
-    assert!(run.requests_to("POST", "/v0/run").is_empty());
-    assert_eq!(run.job_reads(), 0);
-    let check = format!("{CHECK_RUNS}/{NEW_CHECK}");
-    assert_eq!(
-        run.github(),
-        [("POST", CHECK_RUNS), ("PATCH", check.as_str())]
-    );
-    assert_eq!(run.body("PATCH", &check)["conclusion"], "failure");
-    run.assert_no_marker();
 }

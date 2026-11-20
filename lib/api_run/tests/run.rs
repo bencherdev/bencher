@@ -3231,7 +3231,7 @@ fn marked_callback() -> serde_json::Value {
     })
 }
 
-/// The GitHub Actions dispatch `bencher run` composes, which a claimed project sends on any plan.
+/// The GitHub Actions dispatch that `bencher run` composed with `--ci-callback-token`.
 #[cfg(feature = "plus")]
 fn bencher_run_dispatch() -> serde_json::Value {
     serde_json::json!({
@@ -3523,11 +3523,11 @@ async fn get_public_job(
     resp.json().await.expect("Failed to parse the job")
 }
 
-// POST /v0/run with the GitHub Actions dispatch `bencher run` composes, for a claimed project
-// without a plan, seals it to the job
+// POST /v0/run with the GitHub Actions dispatch, for a claimed project without a plan, skips it as
+// any other callback is skipped
 #[cfg(feature = "plus")]
 #[tokio::test]
-async fn run_post_with_job_callback_sends_the_dispatch_for_a_free_claimed_project() {
+async fn run_post_with_job_callback_skips_the_dispatch_for_a_free_claimed_project() {
     let server = TestServer::new().await;
     let user = server
         .signup("Job User", "runjob_cb_dispatch@example.com")
@@ -3551,13 +3551,13 @@ async fn run_post_with_job_callback_sends_the_dispatch_for_a_free_claimed_projec
     let job = get_public_job(&server, project_slug, job_uuid).await;
     assert_eq!(
         serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
-        serde_json::json!({ "state": "pending", "status": null }),
-        "a claimed project sends the dispatch without a plan"
+        serde_json::json!({ "state": "skipped", "status": null }),
+        "a claimed project skips the dispatch without a plan"
     );
     let stored = stored_callback(&server, job_uuid);
     assert!(
-        stored.request.is_some(),
-        "a pending callback holds its sealed request"
+        stored.request.is_none(),
+        "nothing is sealed for a skipped callback"
     );
 }
 
@@ -3593,11 +3593,10 @@ async fn run_post_with_job_callback_is_skipped_for_an_unclaimed_project() {
 }
 
 // POST /v0/run by an authenticated user on a project created without authentication claims its
-// organization, and that run is claimed: its callback goes through as a claimed project's, and its
-// job runs at Free priority with the Free timeout
+// organization, and that run is claimed: its job runs at Free priority with the Free timeout
 #[cfg(feature = "plus")]
 #[tokio::test]
-async fn run_post_that_claims_its_project_sends_the_dispatch() {
+async fn run_post_that_claims_its_project_runs_as_claimed() {
     use bencher_schema::schema;
     use diesel::{ExpressionMethods as _, QueryDsl as _, RunQueryDsl as _};
 
@@ -3610,21 +3609,11 @@ async fn run_post_that_claims_its_project_sends_the_dispatch() {
     let project_slug = "callback-claiming-project";
     post_unclaimed_job_run(&server, project_slug, digest_job(project_slug, None)).await;
 
-    let (status, body) = post_job_run(
-        &server,
-        &user,
-        project_slug,
-        digest_job(project_slug, Some(bencher_run_dispatch())),
-    )
-    .await;
+    let (status, body) =
+        post_job_run(&server, &user, project_slug, digest_job(project_slug, None)).await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let job_uuid = run_job(&body);
     let job = get_public_job(&server, project_slug, job_uuid).await;
-    assert_eq!(
-        serde_json::to_value(job.callback).expect("Failed to serialize the callback"),
-        serde_json::json!({ "state": "pending", "status": null }),
-        "the run that claims the project sends the dispatch"
-    );
     assert_eq!(
         job.timeout,
         bencher_json::Timeout::FREE_MAX,

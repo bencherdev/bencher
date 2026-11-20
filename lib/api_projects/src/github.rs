@@ -40,7 +40,7 @@ use url::Url;
 const GITHUB_TTL: u32 = 10 * 60;
 /// The console's GitHub return page, which is also the app's first callback URL.
 const GITHUB_RETURN_PATH: &str = "/console/github";
-const NO_APP: &str = "This server has no GitHub App, so a project cannot link a GitHub repository. Pass a token with contents write to `--ci-callback-token` instead.";
+const NO_APP: &str = "This server has no GitHub App, so a project cannot link a GitHub repository.";
 const SIGNATURE_HEADER: &str = "x-hub-signature-256";
 const EVENT_HEADER: &str = "x-github-event";
 
@@ -299,8 +299,8 @@ pub async fn github_exchange_options(
 ///
 /// Exchange the code that GitHub sent back with a link state for every repository the user can
 /// push to, in every installation of the app the user can see.
-/// Each repository whose installation has granted the app contents write comes with a grant
-/// to link it, which lasts ten minutes.
+/// Each repository whose installation has granted the app checks write, pull requests write, and
+/// contents read comes with a grant to link it, which lasts ten minutes.
 /// The state must be from this user, and the user must have `manage` permissions for its project.
 #[endpoint {
     method = POST,

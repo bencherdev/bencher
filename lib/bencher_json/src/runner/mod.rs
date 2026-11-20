@@ -15,8 +15,8 @@ pub mod update;
 pub mod websocket;
 
 pub use callback::{
-    CALLBACK_JOB_STATUSES, CallbackContext, CallbackError, GitHubDispatch, JobCallbackState,
-    JsonJobCallback, JsonNewCallback,
+    CALLBACK_JOB_STATUSES, CallbackContext, CallbackError, JobCallbackState, JsonJobCallback,
+    JsonNewCallback,
 };
 pub use github::{JobGitHubFailure, JobGitHubState, JsonJobGitHub, JsonNewJobGitHub};
 pub use health::{

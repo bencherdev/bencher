@@ -1,7 +1,5 @@
 use aws_lc_rs::hmac;
-pub use bencher_github_client::test_server::{
-    Answer, HOLD, NO_ANSWER, Received, Server as GitHubServer,
-};
+pub use bencher_github_client::test_server::{Answer, HOLD, Received, Server as GitHubServer};
 use bencher_github_client::{
     GitHubApp,
     test_server::{app_key, install_crypto_provider},

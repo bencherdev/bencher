@@ -21,8 +21,8 @@ use slog::Logger;
 use tokio::time::Instant;
 
 use super::{
-    super::Kind, Claim, Delivery, MAX_ATTEMPTS, Mint, NoToken, NoTokenCause, Stage, Unprepared,
-    Verdict, answered, millis, response_status, verdict, wait_before,
+    super::Kind, Claim, Delivery, MAX_ATTEMPTS, NoToken, NoTokenCause, Stage, Unprepared, Verdict,
+    answered, millis, response_status, verdict, wait_before,
 };
 use crate::{
     model::{
@@ -676,7 +676,7 @@ impl Poster<'_> {
         let minted = self
             .0
             .shutdown
-            .run_until_cancelled(self.0.mint(log, &post.claim, app, link, Mint::Post))
+            .run_until_cancelled(self.0.mint(log, &post.claim, app, link))
             .await?;
         let NoToken {
             attempt,
@@ -1050,10 +1050,7 @@ fn sub_adapter(config: &JsonJobConfig) -> SubAdapter {
 
 /// A post spends its installation's rate limit, whatever token each attempt mints.
 fn credential(app: &GitHubApp, link: &QueryLinkedRepository) -> CallbackCredential {
-    CallbackCredential::installation(
-        &app.dispatch_url(&link.full_name),
-        link.installation_id.into(),
-    )
+    CallbackCredential::installation(app.api().base(), link.installation_id.into())
 }
 
 /// One line per GitHub request: where it got to, and never the token.

@@ -183,7 +183,7 @@ test.each([
 // Link repository the API would refuse, and the API's message swallowed.
 test("a server with no app shows the API's message and no action", async () => {
 	const message =
-		"This server has no GitHub App, so a project cannot link a GitHub repository. Pass a token with contents write to `--ci-callback-token` instead.";
+		"This server has no GitHub App, so a project cannot link a GitHub repository.";
 	const { api } = fakeApi(undefined, async () => {
 		throw new ApiError(404, "not_found", JSON.stringify({ message }));
 	});
