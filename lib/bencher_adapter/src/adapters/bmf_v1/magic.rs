@@ -11,6 +11,7 @@ use crate::{
                 benchmark::AdapterJsBenchmarkV1, deno::AdapterJsDeno, mitata::AdapterJsMitata,
                 time::AdapterJsTimeV1, tinybench::AdapterJsTinybench, vitest::AdapterJsVitestV1,
             },
+            php::phpbench::AdapterPhpPhpbench,
             python::{asv::AdapterPythonAsvV1, pytest::AdapterPythonPytestV1},
             ruby::{benchmark::AdapterRubyBenchmarkV1, benchmark_ips::AdapterRubyBenchmarkIps},
             rust::{
@@ -26,7 +27,7 @@ use crate::{
 
 /// The version 1 `magic`: BMF, then each harness in the version 0 `magic`'s order, each through
 /// its structured format before its text, and Divan before criterion, since criterion's text leaf
-/// also claims a run that prints both and drops Divan's tree.
+/// also claims a run that prints both and drops Divan's tree, then each harness added after them.
 pub struct AdapterMagicV1;
 
 impl Adaptable for AdapterMagicV1 {
@@ -54,6 +55,7 @@ impl Adaptable for AdapterMagicV1 {
             .or_else(|| AdapterRustIaiV1::parse(input, settings))
             .or_else(|| AdapterRustGungraunV1::parse(input, settings))
             .or_else(|| AdapterShellHyperfineV1::parse(input, settings))
+            .or_else(|| AdapterPhpPhpbench::parse(input, settings))
     }
 }
 
@@ -71,7 +73,7 @@ mod test_magic_v1 {
 
     const FIXTURES: &str = "./tool_output";
 
-    const LEAVES: [Adapter; 31] = [
+    const LEAVES: [Adapter; 32] = [
         Adapter::JsonV1,
         Adapter::CSharpDotNet,
         Adapter::CppCatch2Xml,
@@ -103,11 +105,12 @@ mod test_magic_v1 {
         Adapter::RustGungraunStdout,
         Adapter::ShellHyperfineV2,
         Adapter::ShellHyperfineV1,
+        Adapter::PhpPhpbench,
     ];
 
     /// The fixtures the directory and name rules do not decide, each with the leaf that owns it,
     /// or `None` when no leaf may claim it.
-    const EXCEPTIONS: [(&str, Option<Adapter>); 11] = [
+    const EXCEPTIONS: [(&str, Option<Adapter>); 16] = [
         // criterion's `--output-format bencher` prints libtest's bench lines.
         (
             "rust/criterion/bencher_format.txt",
@@ -131,6 +134,13 @@ mod test_magic_v1 {
         ("rust/bench/zero.txt", None),
         // libtest ran no benchmark, and gungraun's summary is of a schema no leaf reads.
         ("rust/gungraun/json_not_v6.txt", None),
+        // PHPBench's JSON renderer, its JSON progress lines, and what its command prints.
+        ("php/phpbench/aggregate.json", None),
+        ("php/phpbench/baseline_stdout.txt", None),
+        ("php/phpbench/fail_stdout.txt", None),
+        ("php/phpbench/progress_json.txt", None),
+        // PHPBench 0.x, which the leaf refuses.
+        ("php/phpbench/v0_17_1.xml", None),
     ];
 
     /// The fixtures that a second leaf also claims, one `magic` tries after the owner, with that
@@ -252,6 +262,7 @@ mod test_magic_v1 {
             "js/mitata" => return Some(Adapter::JsMitata),
             "js/time" => return Some(Adapter::JsTime),
             "js/tinybench" => return Some(Adapter::JsTinybench),
+            "php/phpbench" => return Some(Adapter::PhpPhpbench),
             "python/pytest" => return Some(Adapter::PythonPytest),
             "ruby/benchmark" => return Some(Adapter::RubyBenchmark),
             "ruby/benchmark_ips" => return Some(Adapter::RubyBenchmarkIps),

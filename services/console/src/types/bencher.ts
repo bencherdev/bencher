@@ -780,6 +780,7 @@ export enum Adapter {
 	ShellHyperfineV2 = "shell_hyperfine_v2",
 	Dart = "dart",
 	DartBenchmarkHarness = "dart_benchmark_harness",
+	PhpPhpbench = "php_phpbench",
 }
 
 /** A report, with what a link to it shows: the report that raised an alert. */

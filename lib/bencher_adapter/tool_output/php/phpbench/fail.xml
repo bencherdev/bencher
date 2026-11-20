@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<phpbench xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.7.0">
+  <suite tag="" context="" date="2026-11-15T14:03:32+00:00" config-path="/tmp/bench/phpbench.json" uuid="13528fbf7537995ad89ca573f720a7f5caea55a7">
+    <env>
+      <uname>
+        <value name="os" type="string">Linux</value>
+        <value name="host" type="string">localhost</value>
+        <value name="release" type="string">6.8.0-142-generic</value>
+        <value name="version" type="string">#1-Ubuntu SMP PREEMPT_DYNAMIC</value>
+        <value name="machine" type="string">x86_64</value>
+      </uname>
+      <php>
+        <value name="xdebug" type="boolean"></value>
+        <value name="version" type="string">8.3.6</value>
+        <value name="ini" type="string">/etc/php/8.3/cli/php.ini</value>
+        <value name="extensions" type="string">Core, date, libxml, openssl, pcre, zlib, filter, hash, json, pcntl, random, Reflection, SPL, session, standard, sodium, PDO, xml, calendar, ctype, curl, dom, mbstring, FFI, fileinfo, ftp, gettext, iconv, intl, exif, Phar, posix, readline, shmop, SimpleXML, sockets, sysvmsg, sysvsem, sysvshm, tokenizer, xmlreader, xmlwriter, xsl, zip, Zend OPcache</value>
+      </php>
+      <opcache>
+        <value name="extension_loaded" type="boolean">1</value>
+        <value name="enabled" type="boolean"></value>
+      </opcache>
+      <unix-sysload>
+        <value name="l1" type="double">1.244140625</value>
+        <value name="l5" type="double">1.3134765625</value>
+        <value name="l15" type="double">0.828125</value>
+      </unix-sysload>
+      <sampler>
+        <value name="nothing" type="double">0.0050067901611328</value>
+        <value name="md5" type="double">0.092983245849609</value>
+        <value name="file_rw" type="double">0.3349781036377</value>
+      </sampler>
+    </env>
+    <benchmark class="\FailBench">
+      <subject name="benchOk">
+        <executor name="remote">
+          <parameter name="php_config" type="collection"/>
+          <parameter name="safe_parameters" value="1" type="boolean"/>
+          <parameter name="executor" value="remote" type="string"/>
+        </executor>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="100" warmup="0" retry-threshold="">
+          <parameter-set name=""/>
+          <iteration time-net="12" time-revs="100" time-avg="0.12" mem-peak="661912" mem-real="2097152" mem-final="491736" comp-z-value="1.2247448713916" comp-deviation="9.0909090909091"/>
+          <iteration time-net="11" time-revs="100" time-avg="0.11" mem-peak="661912" mem-real="2097152" mem-final="491736" comp-z-value="1.6996749443881E-15" comp-deviation="1.2616170734377E-14"/>
+          <iteration time-net="10" time-revs="100" time-avg="0.1" mem-peak="661912" mem-real="2097152" mem-final="491736" comp-z-value="-1.2247448713916" comp-deviation="-9.0909090909091"/>
+          <stats max="0.12" mean="0.11" min="0.1" mode="0.11" rstdev="7.4226961902521" stdev="0.0081649658092773" sum="0.33" variance="6.6666666666667E-5"/>
+        </variant>
+      </subject>
+      <subject name="benchThrows">
+        <executor name="remote">
+          <parameter name="php_config" type="collection"/>
+          <parameter name="safe_parameters" value="1" type="boolean"/>
+          <parameter name="executor" value="remote" type="string"/>
+        </executor>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="100" warmup="0" retry-threshold="">
+          <parameter-set name=""/>
+          <errors>
+            <error exception-class="PhpBench\Executor\Exception\ExecutionError" code="0" file="/tmp/bench/vendor/phpbench/phpbench/lib/Executor/Benchmark/TemplateExecutor.php" line="53">Benchmarking script exited with code 255
+
+PHP Fatal error:  Uncaught RuntimeException: I failed! in /tmp/bench/fail/FailBench.php:16
+Stack trace:
+#0 /tmp/PhpBenchpdpJ9S(62): FailBench-&gt;benchThrows()
+#1 {main}
+  thrown in /tmp/bench/fail/FailBench.php on line 16
+</error>
+          </errors>
+        </variant>
+      </subject>
+      <subject name="benchAssertFails">
+        <executor name="remote">
+          <parameter name="php_config" type="collection"/>
+          <parameter name="safe_parameters" value="1" type="boolean"/>
+          <parameter name="executor" value="remote" type="string"/>
+        </executor>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="100" warmup="0" retry-threshold="">
+          <parameter-set name=""/>
+          <failures>
+            <failure>&lt;fg=#b58900&gt;&lt;fg=#859900&gt;mode(variant[time][avg])&lt;/&gt; &lt; 1.0E-6 &lt;fg=#93a1a1&gt;microseconds&lt;/&gt;&lt;/&gt;
+= &lt;fg=#b58900&gt;57.112739726028 &lt; 1.0E-6 &lt;fg=#93a1a1&gt;microseconds&lt;/&gt;&lt;/&gt;
+= &lt;fg=#dc322f&gt;false&lt;/&gt;</failure>
+          </failures>
+          <iteration time-net="5779" time-revs="100" time-avg="57.79" mem-peak="661944" mem-real="2097152" mem-final="491752" comp-z-value="1.2927419722762" comp-deviation="0.95498748034706"/>
+          <iteration time-net="5676" time-revs="100" time-avg="56.76" mem-peak="661944" mem-real="2097152" mem-final="491752" comp-z-value="-1.1429730852442" comp-deviation="-0.84434868689222"/>
+          <iteration time-net="5718" time-revs="100" time-avg="57.18" mem-peak="661944" mem-real="2097152" mem-final="491752" comp-z-value="-0.149768887032" comp-deviation="-0.11063879345484"/>
+          <stats max="57.79" mean="57.243333333333" min="56.76" mode="57.112739726028" rstdev="0.7387301571601" stdev="0.42287376629702" sum="171.73" variance="0.17882222222222"/>
+        </variant>
+      </subject>
+    </benchmark>
+    <result key="time" class="PhpBench\Model\Result\TimeResult"/>
+    <result key="mem" class="PhpBench\Model\Result\MemoryResult"/>
+    <result key="comp" class="PhpBench\Model\Result\ComputedResult"/>
+  </suite>
+</phpbench>

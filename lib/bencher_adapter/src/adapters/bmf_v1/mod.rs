@@ -20,6 +20,7 @@ use crate::{
                 tinybench::AdapterJsTinybench,
                 vitest::{AdapterJsVitestOutputJson, AdapterJsVitestReporter, AdapterJsVitestV1},
             },
+            php::phpbench::AdapterPhpPhpbench,
             python::{
                 asv::{AdapterPythonAsvJson, AdapterPythonAsvText, AdapterPythonAsvV1},
                 pytest::AdapterPythonPytestV1,
@@ -56,6 +57,7 @@ pub mod js;
 mod leaf;
 mod magic;
 mod percentile;
+pub mod php;
 pub mod python;
 pub mod ruby;
 mod runs;
@@ -110,6 +112,7 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::JsMitata => AdapterJsMitata::parse(input, settings),
         Adapter::JsTinybench => AdapterJsTinybench::parse(input, settings),
         Adapter::DartBenchmarkHarness => AdapterDartBenchmarkHarnessV1::parse(input, settings),
+        Adapter::PhpPhpbench => AdapterPhpPhpbench::parse(input, settings),
         Adapter::PythonAsv => AdapterPythonAsvV1::parse(input, settings),
         Adapter::PythonAsvJson => AdapterPythonAsvJson::parse(input, settings),
         Adapter::PythonAsvText => AdapterPythonAsvText::parse(input, settings),
@@ -139,7 +142,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 52] = [
+    const ADAPTERS: [Adapter; 53] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -192,6 +195,7 @@ mod test_bmf_v1 {
         Adapter::ShellHyperfineV2,
         Adapter::Dart,
         Adapter::DartBenchmarkHarness,
+        Adapter::PhpPhpbench,
     ];
 
     const LANGUAGES: [Adapter; 10] = [

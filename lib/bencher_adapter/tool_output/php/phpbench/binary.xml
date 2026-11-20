@@ -1,0 +1,161 @@
+<?xml version="1.0"?>
+<phpbench xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.7.0">
+  <suite tag="" context="" date="2026-11-20T05:12:55+00:00" config-path="/tmp/bench/phpbench_binary.json" uuid="135290023563a99baa8e89a8ad0b0c63ef67deec">
+    <env>
+      <uname>
+        <value name="os" type="string">Linux</value>
+        <value name="host" type="string">localhost</value>
+        <value name="release" type="string">6.8.0-142-generic</value>
+        <value name="version" type="string">#1-Ubuntu SMP PREEMPT_DYNAMIC</value>
+        <value name="machine" type="string">x86_64</value>
+      </uname>
+      <php>
+        <value name="xdebug" type="boolean"></value>
+        <value name="version" type="string">8.3.37</value>
+        <value name="ini" type="boolean"></value>
+        <value name="extensions" type="string">Core, date, libxml, openssl, pcre, sqlite3, zlib, ctype, curl, dom, fileinfo, filter, hash, iconv, json, mbstring, SPL, session, PDO, pdo_sqlite, standard, posix, random, readline, Reflection, Phar, SimpleXML, tokenizer, xml, xmlreader, xmlwriter, mysqlnd, sodium, Zend OPcache</value>
+      </php>
+      <opcache>
+        <value name="extension_loaded" type="boolean">1</value>
+        <value name="enabled" type="boolean"></value>
+      </opcache>
+      <unix-sysload>
+        <value name="l1" type="double">14.87109375</value>
+        <value name="l5" type="double">11.26416015625</value>
+        <value name="l15" type="double">8.822265625</value>
+      </unix-sysload>
+      <sampler>
+        <value name="nothing" type="double">0.0059604644775391</value>
+        <value name="md5" type="double">0.10299682617188</value>
+        <value name="file_rw" type="double">0.46515464782715</value>
+      </sampler>
+    </env>
+    <benchmark class="\App\Bench\ParamsBench">
+      <subject name="benchShapes">
+        <executor name="remote">
+          <parameter name="php_config" type="collection"/>
+          <parameter name="safe_parameters" value="1" type="boolean"/>
+          <parameter name="executor" value="remote" type="string"/>
+        </executor>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="10" warmup="0" retry-threshold="">
+          <parameter-set name="binary">
+            <parameter name="blob" type="binary"><![CDATA[//4A]]></parameter>
+            <parameter name="n" value="1" type="integer"/>
+          </parameter-set>
+          <iteration time-net="5" time-revs="10" time-avg="0.5" mem-peak="663160" mem-real="2097152" mem-final="511968" comp-z-value="0" comp-deviation="0"/>
+          <iteration time-net="5" time-revs="10" time-avg="0.5" mem-peak="663160" mem-real="2097152" mem-final="511968" comp-z-value="0" comp-deviation="0"/>
+          <stats max="0.5" mean="0.5" min="0.5" mode="0.5" rstdev="0" stdev="0" sum="1" variance="0"/>
+        </variant>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="10" warmup="0" retry-threshold="">
+          <parameter-set name="object">
+            <parameter name="object" type="serialized"><![CDATA[TzoxMToiQXJyYXlPYmplY3QiOjQ6e2k6MDtpOjA7aToxO2E6Mjp7aTowO2k6MTtpOjE7aToyO31pOjI7YTowOnt9aTozO047fQ==]]></parameter>
+            <parameter name="n" value="2" type="integer"/>
+          </parameter-set>
+          <iteration time-net="8" time-revs="10" time-avg="0.8" mem-peak="663736" mem-real="2097152" mem-final="513096" comp-z-value="1" comp-deviation="6.6666666666667"/>
+          <iteration time-net="7" time-revs="10" time-avg="0.7" mem-peak="663736" mem-real="2097152" mem-final="513096" comp-z-value="-1" comp-deviation="-6.6666666666667"/>
+          <stats max="0.8" mean="0.75" min="0.7" mode="0.74990215264189" rstdev="6.6666666666667" stdev="0.05" sum="1.5" variance="0.0025"/>
+        </variant>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="10" warmup="0" retry-threshold="">
+          <parameter-set name="map">
+            <parameter name="map" type="collection">
+              <parameter name="b" value="1" type="integer"/>
+              <parameter name="a" type="collection">
+                <parameter name="0" value="1" type="boolean"/>
+                <parameter name="1" xsi:nil="true"/>
+                <parameter name="2" value="x" type="string"/>
+                <parameter name="3" value="1.5" type="double"/>
+                <parameter name="4" value="-0.25" type="double"/>
+              </parameter>
+            </parameter>
+            <parameter name="sparse" type="collection">
+              <parameter name="2" value="two" type="string"/>
+              <parameter name="5" value="five" type="string"/>
+            </parameter>
+            <parameter name="empty" type="collection"/>
+            <parameter name="n" value="3" type="integer"/>
+          </parameter-set>
+          <iteration time-net="12" time-revs="10" time-avg="1.2" mem-peak="663896" mem-real="2097152" mem-final="513872" comp-z-value="-1" comp-deviation="-4"/>
+          <iteration time-net="13" time-revs="10" time-avg="1.3" mem-peak="663896" mem-real="2097152" mem-final="513872" comp-z-value="1" comp-deviation="4"/>
+          <stats max="1.3" mean="1.25" min="1.2" mode="1.2499021526419" rstdev="4" stdev="0.05" sum="2.5" variance="0.0025"/>
+        </variant>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="10" warmup="0" retry-threshold="">
+          <parameter-set name="infinite">
+            <parameter name="ratio" value="INF" type="double"/>
+            <parameter name="n" value="4" type="integer"/>
+          </parameter-set>
+          <iteration time-net="7" time-revs="10" time-avg="0.7" mem-peak="663144" mem-real="2097152" mem-final="511912" comp-z-value="0" comp-deviation="0"/>
+          <iteration time-net="7" time-revs="10" time-avg="0.7" mem-peak="663144" mem-real="2097152" mem-final="511912" comp-z-value="0" comp-deviation="0"/>
+          <stats max="0.7" mean="0.7" min="0.7" mode="0.7" rstdev="0" stdev="0" sum="1.4" variance="0"/>
+        </variant>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="10" warmup="0" retry-threshold="">
+          <parameter-set name="nil">
+            <parameter name="nothing" xsi:nil="true"/>
+            <parameter name="n" value="5" type="integer"/>
+          </parameter-set>
+          <iteration time-net="5" time-revs="10" time-avg="0.5" mem-peak="663144" mem-real="2097152" mem-final="511912" comp-z-value="1" comp-deviation="11.111111111111"/>
+          <iteration time-net="4" time-revs="10" time-avg="0.4" mem-peak="663144" mem-real="2097152" mem-final="511912" comp-z-value="-1" comp-deviation="-11.111111111111"/>
+          <stats max="0.5" mean="0.45" min="0.4" mode="0.45009784735812" rstdev="11.111111111111" stdev="0.05" sum="0.9" variance="0.0025"/>
+        </variant>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="10" warmup="0" retry-threshold="">
+          <parameter-set name="nil_again">
+            <parameter name="nothing" xsi:nil="true"/>
+            <parameter name="n" value="5" type="integer"/>
+          </parameter-set>
+          <iteration time-net="5" time-revs="10" time-avg="0.5" mem-peak="663144" mem-real="2097152" mem-final="511912" comp-z-value="0" comp-deviation="0"/>
+          <iteration time-net="5" time-revs="10" time-avg="0.5" mem-peak="663144" mem-real="2097152" mem-final="511912" comp-z-value="0" comp-deviation="0"/>
+          <stats max="0.5" mean="0.5" min="0.5" mode="0.5" rstdev="0" stdev="0" sum="1" variance="0"/>
+        </variant>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="10" warmup="0" retry-threshold="">
+          <parameter-set name="keys">
+            <parameter name="k01" value="1" type="integer"/>
+            <parameter name="k02" value="2" type="integer"/>
+            <parameter name="k03" value="3" type="integer"/>
+            <parameter name="k04" value="4" type="integer"/>
+            <parameter name="k05" value="5" type="integer"/>
+            <parameter name="k06" value="6" type="integer"/>
+            <parameter name="k07" value="7" type="integer"/>
+            <parameter name="k08" value="8" type="integer"/>
+            <parameter name="k09" value="9" type="integer"/>
+            <parameter name="k10" value="10" type="integer"/>
+            <parameter name="k11" value="11" type="integer"/>
+            <parameter name="k12" value="12" type="integer"/>
+            <parameter name="k13" value="13" type="integer"/>
+            <parameter name="k14" value="14" type="integer"/>
+            <parameter name="k15" value="15" type="integer"/>
+            <parameter name="k16" value="16" type="integer"/>
+            <parameter name="k17" value="17" type="integer"/>
+          </parameter-set>
+          <iteration time-net="10" time-revs="10" time-avg="1" mem-peak="665608" mem-real="2097152" mem-final="515336" comp-z-value="0" comp-deviation="0"/>
+          <iteration time-net="10" time-revs="10" time-avg="1" mem-peak="665608" mem-real="2097152" mem-final="515336" comp-z-value="0" comp-deviation="0"/>
+          <stats max="1" mean="1" min="1" mode="1" rstdev="0" stdev="0" sum="2" variance="0"/>
+        </variant>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="10" warmup="0" retry-threshold="">
+          <parameter-set name="sixteen">
+            <parameter name="k01" value="1" type="integer"/>
+            <parameter name="k02" value="2" type="integer"/>
+            <parameter name="k03" value="3" type="integer"/>
+            <parameter name="k04" value="4" type="integer"/>
+            <parameter name="k05" value="5" type="integer"/>
+            <parameter name="k06" value="6" type="integer"/>
+            <parameter name="k07" value="7" type="integer"/>
+            <parameter name="k08" value="8" type="integer"/>
+            <parameter name="k09" value="9" type="integer"/>
+            <parameter name="k10" value="10" type="integer"/>
+            <parameter name="k11" value="11" type="integer"/>
+            <parameter name="k12" value="12" type="integer"/>
+            <parameter name="k13" value="13" type="integer"/>
+            <parameter name="k14" value="14" type="integer"/>
+            <parameter name="k15" value="15" type="integer"/>
+            <parameter name="k16" value="16" type="integer"/>
+          </parameter-set>
+          <iteration time-net="9" time-revs="10" time-avg="0.9" mem-peak="664904" mem-real="2097152" mem-final="513992" comp-z-value="1" comp-deviation="5.8823529411765"/>
+          <iteration time-net="8" time-revs="10" time-avg="0.8" mem-peak="664904" mem-real="2097152" mem-final="513992" comp-z-value="-1" comp-deviation="-5.8823529411765"/>
+          <stats max="0.9" mean="0.85" min="0.8" mode="0.84990215264189" rstdev="5.8823529411765" stdev="0.05" sum="1.7" variance="0.0025"/>
+        </variant>
+      </subject>
+    </benchmark>
+    <result key="time" class="PhpBench\Model\Result\TimeResult"/>
+    <result key="mem" class="PhpBench\Model\Result\MemoryResult"/>
+    <result key="comp" class="PhpBench\Model\Result\ComputedResult"/>
+  </suite>
+</phpbench>

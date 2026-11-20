@@ -155,7 +155,7 @@ impl Level {
     }
 }
 
-fn attribute(element: &BytesStart<'_>, name: &str) -> Option<String> {
+pub(crate) fn attribute(element: &BytesStart<'_>, name: &str) -> Option<String> {
     element
         .try_get_attribute(name)
         .ok()??

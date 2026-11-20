@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<phpbench xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="@git_tag@">
+  <suite tag="" context="" date="2026-11-20T05:10:11+00:00" config-path="/tmp/bench/phpbench.json" uuid="1352900547e2ec35b496c5fa7be7c084e9870448">
+    <env>
+      <uname os="Linux" host="localhost" release="6.8.0-142-generic" version="#1-Ubuntu SMP PREEMPT_DYNAMIC" machine="x86_64"/>
+      <php xdebug="" version="7.4.33" ini="" extensions="Core, date, libxml, openssl, pcre, sqlite3, zlib, ctype, curl, dom, fileinfo, filter, ftp, hash, iconv, json, mbstring, SPL, PDO, pdo_sqlite, session, posix, readline, Reflection, standard, SimpleXML, Phar, tokenizer, xml, xmlreader, xmlwriter, mysqlnd, sodium"/>
+      <opcache extension_loaded=""/>
+      <unix-sysload l1="7.73" l5="8.44" l15="7.6"/>
+      <baseline nothing="0.0059604644775391" md5="0.09608268737793" file_rw="0.45204162597656"/>
+    </env>
+    <benchmark class="\HashBench">
+      <subject name="benchMd5">
+        <executor name="microtime">
+          <parameter name="php_config" type="collection"/>
+          <parameter name="executor" value="microtime"/>
+        </executor>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="100" warmup="0" retry-threshold="">
+          <parameter-set name="small">
+            <parameter name="size" value="10"/>
+          </parameter-set>
+          <iteration time-net="14" mem-peak="893864" mem-real="2097152" mem-final="832360" comp-z-value="0.26726124191242" comp-deviation="2.4390243902439"/>
+          <iteration time-net="12" mem-peak="893864" mem-real="2097152" mem-final="832360" comp-z-value="-1.3363062095621" comp-deviation="-12.19512195122"/>
+          <iteration time-net="15" mem-peak="893864" mem-real="2097152" mem-final="832360" comp-z-value="1.0690449676497" comp-deviation="9.7560975609756"/>
+          <stats max="0.15" mean="0.13666666666667" min="0.12" mode="0.14207436399217" rstdev="9.1259936262779" stdev="0.012472191289246" sum="0.41" variance="0.00015555555555556"/>
+        </variant>
+      </subject>
+    </benchmark>
+    <result key="time" class="PhpBench\Model\Result\TimeResult"/>
+    <result key="mem" class="PhpBench\Model\Result\MemoryResult"/>
+    <result key="comp" class="PhpBench\Model\Result\ComputedResult"/>
+  </suite>
+</phpbench>

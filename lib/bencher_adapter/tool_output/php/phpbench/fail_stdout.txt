@@ -1,0 +1,34 @@
+PHPBench (1.7.0) running benchmarks... #standwithukraine
+with configuration file: /tmp/bench/phpbench.json
+with PHP version 8.3.6, xdebug ❌, opcache ❌
+
+\FailBench
+
+[0G    benchOk.................................I0 [0G    benchOk.................................I1 [0G    benchOk.................................I2 - Mo0.110μs (±7.42%)
+[0G    benchThrows.............................I0 [0G    benchThrows                   ERROR
+[0G    benchAssertFails........................I0 [0G    benchAssertFails........................I1 [0G    benchAssertFails........................I2 ✘ Mo57.113μs (±0.74%)
+
+
+1 subjects encountered errors:
+
+\FailBench::benchThrows
+
+    Benchmarking script exited with code 255
+    
+    PHP Fatal error:  Uncaught RuntimeException: I failed! in /tmp/bench/fail/FailBench.php:16
+    Stack trace:
+    #0 /tmp/PhpBenchpdpJ9S(62): FailBench->benchThrows()
+    #1 {main}
+      thrown in /tmp/bench/fail/FailBench.php on line 16
+    
+
+1 variants failed:
+
+  ✘ \FailBench::benchAssertFails # 
+
+    1) mode(variant[time][avg]) < 1.0E-6 microseconds
+       = 57.112739726028 < 1.0E-6 microseconds
+       = false
+
+Subjects: 3, Assertions: 1, Failures: 1, Errors: 1
+Dumped result to /tmp/bench/pb/fail.xml

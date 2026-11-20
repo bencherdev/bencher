@@ -54,6 +54,8 @@ export const adapterName = (adapter: Adapter): string => {
 			return "mitata";
 		case Adapter.JsTinybench:
 			return "tinybench";
+		case Adapter.PhpPhpbench:
+			return "PHPBench";
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:
@@ -117,6 +119,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.JsMitata:
 		case Adapter.JsTinybench:
 			return `bencher run${host} "node bench.mjs"`;
+		case Adapter.PhpPhpbench:
+			return `bencher run${host} --file results.xml "vendor/bin/phpbench run --dump-file=results.xml"`;
 		case Adapter.PythonAsv:
 		case Adapter.PythonAsvJson:
 		case Adapter.PythonAsvText:

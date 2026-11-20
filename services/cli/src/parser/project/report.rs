@@ -212,6 +212,8 @@ pub enum CliReportAdapter {
     JsTinybench,
     /// 🕸 JavaScript Vitest
     JsVitest,
+    /// 🐘 PHP `PHPBench`
+    PhpPhpbench,
     /// 🐍 Python ASV
     PythonAsv,
     /// 🐍 Python Pytest
