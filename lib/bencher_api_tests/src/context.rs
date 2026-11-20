@@ -17,7 +17,7 @@ use diesel::{
     r2d2::{ConnectionManager, CustomizeConnection, Pool},
 };
 use dropshot::{ApiDescription, ConfigDropshot, ConfigLogging, ConfigLoggingLevel, HttpServer};
-use tempfile::NamedTempFile;
+use tempfile::TempDir;
 use tokio::sync::Mutex;
 
 const ISSUER: &str = "http://localhost:3000";
@@ -40,8 +40,8 @@ pub struct TestServer {
     token_key: TokenKey,
     /// Database path for test setup (private - use `db_conn()` accessor)
     db_path: String,
-    /// Keep the temp file alive for the duration of the test
-    db_file: NamedTempFile,
+    /// Holds the database and, beside it, the registry: dropping it removes both
+    _db_dir: TempDir,
     /// Receives every callback the server sends
     #[cfg(feature = "plus")]
     callback_sender: Arc<crate::RecordingSender>,
@@ -235,9 +235,7 @@ impl TestServer {
         // Create logger early so it can be used for OCI storage
         let log = log.unwrap_or_else(stderr_logger);
 
-        // Create a temporary database file
-        let db_file = NamedTempFile::new().expect("Failed to create temp db file");
-        let db_path = db_file.path().to_str().expect("Invalid db path").to_owned();
+        let (db_dir, db_path) = temp_database();
 
         // Establish connection and run migrations
         let mut conn =
@@ -324,7 +322,7 @@ impl TestServer {
             &log,
             token_key,
             db_path,
-            db_file,
+            db_dir,
             callback_sender,
             cloud_routes,
         )
@@ -348,9 +346,7 @@ impl TestServer {
     ) -> Self {
         let log = log.unwrap_or_else(stderr_logger);
 
-        // Create a temporary database file
-        let db_file = NamedTempFile::new().expect("Failed to create temp db file");
-        let db_path = db_file.path().to_str().expect("Invalid db path").to_owned();
+        let (db_dir, db_path) = temp_database();
 
         // Establish connection and run migrations
         let mut conn =
@@ -385,7 +381,7 @@ impl TestServer {
             clock: bencher_json::Clock::System,
         };
 
-        Self::start_server(context, &log, token_key, db_path, db_file)
+        Self::start_server(context, &log, token_key, db_path, db_dir)
     }
 
     #[expect(clippy::expect_used, reason = "test server startup with fallible init")]
@@ -394,7 +390,7 @@ impl TestServer {
         log: &slog::Logger,
         token_key: TokenKey,
         db_path: String,
-        db_file: NamedTempFile,
+        db_dir: TempDir,
         #[cfg(feature = "plus")] callback_sender: Arc<crate::RecordingSender>,
         #[cfg(feature = "plus")] cloud_routes: bool,
     ) -> Self {
@@ -442,7 +438,7 @@ impl TestServer {
             url,
             token_key,
             db_path,
-            db_file,
+            _db_dir: db_dir,
             #[cfg(feature = "plus")]
             callback_sender,
         }
@@ -467,7 +463,7 @@ impl TestServer {
 
     /// Get the path to the temporary database file
     pub fn db_path(&self) -> &std::path::Path {
-        self.db_file.path()
+        std::path::Path::new(&self.db_path)
     }
 
     /// Get the base URL for API requests
@@ -508,6 +504,21 @@ impl TestServer {
         #[cfg(feature = "plus")]
         callbacks.drain(&log).await;
     }
+}
+
+/// A temporary directory of a test server's own, and the path of its database in it.
+///
+/// The file registry sits beside the database, so no two test servers share one.
+#[expect(clippy::expect_used, reason = "test server setup with fallible init")]
+fn temp_database() -> (TempDir, String) {
+    let db_dir = tempfile::tempdir().expect("Failed to create temp db dir");
+    let db_path = db_dir
+        .path()
+        .join("bencher.db")
+        .to_str()
+        .expect("Invalid db path")
+        .to_owned();
+    (db_dir, db_path)
 }
 
 /// The tasks a test server runs, each with the server's GitHub App if it has one: callbacks to
