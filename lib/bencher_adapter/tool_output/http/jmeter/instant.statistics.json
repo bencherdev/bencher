@@ -1,0 +1,34 @@
+{
+  "debug" : {
+    "transaction" : "debug",
+    "sampleCount" : 1,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 0.0,
+    "medianResTime" : 0.0,
+    "minResTime" : 0.0,
+    "maxResTime" : 0.0,
+    "pct1ResTime" : 0.0,
+    "pct2ResTime" : 0.0,
+    "pct3ResTime" : 0.0,
+    "throughput" : "Infinity",
+    "receivedKBytesPerSec" : "NaN",
+    "sentKBytesPerSec" : "NaN"
+  },
+  "Total" : {
+    "transaction" : "Total",
+    "sampleCount" : 1,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 0.0,
+    "medianResTime" : 0.0,
+    "minResTime" : 0.0,
+    "maxResTime" : 0.0,
+    "pct1ResTime" : 0.0,
+    "pct2ResTime" : 0.0,
+    "pct3ResTime" : 0.0,
+    "throughput" : "Infinity",
+    "receivedKBytesPerSec" : "NaN",
+    "sentKBytesPerSec" : "NaN"
+  }
+}
