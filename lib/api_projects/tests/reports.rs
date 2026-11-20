@@ -2064,6 +2064,48 @@ async fn reports_post_records_the_parse() {
     }
 }
 
+// POST /v0/projects/{project}/reports - a version 1 report that names a language adapter reads as
+// `magic`: it records `magic` and the leaf that claimed its results
+//
+// Kills: a language adapter refused at version 1, or stored as itself rather than as `magic`.
+#[tokio::test]
+async fn reports_post_reads_a_language_adapter_as_magic_at_v1() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "language").await;
+    let project_id = get_project_id(&server, &project_slug);
+    for adapter in [
+        "rust", "cpp", "go", "java", "c_sharp", "js", "python", "ruby", "shell", "dart",
+    ] {
+        let report = post_report_body(
+            &server,
+            &token,
+            &project_slug,
+            &parse_report(adapter, &[BMF_V1], Some(1)),
+        )
+        .await;
+        assert_eq!(report.adapter, Adapter::Magic, "{adapter}");
+        let stored: (Adapter, Option<Adapter>, Option<ParseOutcome>) = schema::report::table
+            .filter(schema::report::project_id.eq(project_id))
+            .order(schema::report::id.desc())
+            .select((
+                schema::report::adapter,
+                schema::report::resolved_adapter,
+                schema::report::parse_outcome,
+            ))
+            .first(&mut server.db_conn())
+            .expect("Failed to read the report");
+        assert_eq!(
+            stored,
+            (
+                Adapter::Magic,
+                Some(Adapter::JsonV1),
+                Some(ParseOutcome::Parsed)
+            ),
+            "{adapter}"
+        );
+    }
+}
+
 // POST /v0/projects/{project}/reports - results that fail to parse are refused as they always
 // were, and the report they leave behind records the failure
 //
