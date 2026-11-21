@@ -1,0 +1,19 @@
+
+Summary:
+  Count:	200
+  Total:	13.20 ms
+  Slowest:	0 ns
+  Fastest:	0 ns
+  Average:	0.05 ms
+  Requests/sec:	15152.56
+
+Response time histogram:
+
+Latency distribution:
+
+Status code distribution:
+  [Unavailable]   200 responses   
+
+Error distribution:
+  [200]   rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:9: connect: connection refused"   
+

@@ -1,0 +1,55 @@
+196 requests done.
+458 requests done.
+592 requests done.
+741 requests done.
+1079 requests done.
+1253 requests done.
+1434 requests done.
+1534 requests done.
+1690 requests done.
+1790 requests done.
+1902 requests done.
+1991 requests done.
+1997 requests done.
+1998 requests done.
+All requests done.
+
+Summary:
+  Total:	14.0338 secs
+  Slowest:	0.0041 secs
+  Fastest:	0.0000 secs
+  Average:	0.0001 secs
+  Requests/sec:	134.5320
+  Total data:	4449 bytes
+  Size/request:	2 bytes
+
+Status code distribution:
+  [200]	1483 responses
+  [404]	184 responses
+  [500]	221 responses
+
+Response time histogram:
+  0.000 [1]	|
+  0.000 [1801]	|∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.001 [59]	|∎
+  0.001 [15]	|
+  0.002 [5]	|
+  0.002 [2]	|
+  0.002 [2]	|
+  0.003 [1]	|
+  0.003 [1]	|
+  0.004 [0]	|
+  0.004 [1]	|
+
+Latency distribution:
+  10% in 0.0000 secs
+  25% in 0.0000 secs
+  50% in 0.0001 secs
+  75% in 0.0001 secs
+  90% in 0.0003 secs
+  95% in 0.0004 secs
+  99% in 0.0010 secs
+
+Error distribution:
+  [100]	Get "http://localhost:18128/mixed": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+  [12]	Get "http://localhost:18128/mixed": EOF

@@ -1,0 +1,50 @@
+
+Summary:
+  Total:	18.0335 secs
+  Slowest:	0.0028 secs
+  Fastest:	0.0000 secs
+  Average:	0.0001 secs
+  Requests/sec:	110.9044
+  
+  Total data:	4296 bytes
+  Size/request:	2 bytes
+
+Response time histogram:
+  0.000 [1]	|
+  0.000 [1767]	|■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.001 [80]	|■■
+  0.001 [9]	|
+  0.001 [3]	|
+  0.001 [3]	|
+  0.002 [5]	|
+  0.002 [2]	|
+  0.002 [2]	|
+  0.003 [0]	|
+  0.003 [3]	|
+
+
+Latency distribution:
+  10% in 0.0000 secs
+  25% in 0.0000 secs
+  50% in 0.0001 secs
+  75% in 0.0001 secs
+  90% in 0.0002 secs
+  95% in 0.0003 secs
+  99% in 0.0009 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:	0.0000 secs, 0.0000 secs, 0.0028 secs
+  DNS-lookup:	0.0000 secs, 0.0000 secs, 0.0006 secs
+  req write:	0.0000 secs, 0.0000 secs, 0.0011 secs
+  resp wait:	0.0001 secs, 0.0000 secs, 0.0028 secs
+  resp read:	0.0000 secs, 0.0000 secs, 0.0006 secs
+
+Status code distribution:
+  [200]	1432 responses
+  [404]	221 responses
+  [500]	222 responses
+
+Error distribution:
+  [13]	Get "http://localhost:18128/mixed": EOF
+  [112]	Get "http://localhost:18128/mixed": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+

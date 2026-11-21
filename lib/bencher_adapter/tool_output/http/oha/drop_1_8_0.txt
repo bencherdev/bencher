@@ -1,0 +1,45 @@
+Summary:
+  Success rate:	0.00%
+  Total:	0.0366 secs
+  Slowest:	-inf secs
+  Fastest:	inf secs
+  Average:	NaN secs
+  Requests/sec:	54700.3655
+
+  Total data:	0 B
+  Size/request:	NaN
+  Size/sec:	0 B
+
+Response time histogram:
+    NaN [0] |
+    NaN [0] |
+    NaN [0] |
+    NaN [0] |
+    NaN [0] |
+    NaN [0] |
+    NaN [0] |
+    NaN [0] |
+    NaN [0] |
+    NaN [0] |
+    NaN [0] |
+
+Response time distribution:
+  10.00% in NaN secs
+  25.00% in NaN secs
+  50.00% in NaN secs
+  75.00% in NaN secs
+  90.00% in NaN secs
+  95.00% in NaN secs
+  99.00% in NaN secs
+  99.90% in NaN secs
+  99.99% in NaN secs
+
+
+Details (average, fastest, slowest):
+  DNS+dialup:	NaN secs, inf secs, -inf secs
+  DNS-lookup:	NaN secs, inf secs, -inf secs
+
+Status code distribution:
+
+Error distribution:
+  [2000] connection closed before message completed

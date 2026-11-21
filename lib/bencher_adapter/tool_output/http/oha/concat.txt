@@ -1,0 +1,88 @@
+Summary:
+  Success rate:	100.00%
+  Total:	3762.8020 us
+  Slowest:	502.0470 us
+  Fastest:	16.3660 us
+  Average:	52.2981 us
+  Requests/sec:	132879.6998
+
+  Total data:	1.46 KiB
+  Size/request:	3 B
+  Size/sec:	389.30 KiB
+
+Response time histogram:
+   16.366 us [1]   |
+   64.934 us [418] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  113.502 us [64]  |■■■■
+  162.070 us [5]   |
+  210.638 us [5]   |
+  259.207 us [3]   |
+  307.775 us [1]   |
+  356.343 us [1]   |
+  404.911 us [1]   |
+  453.479 us [0]   |
+  502.047 us [1]   |
+
+Response time distribution:
+  10.00% in 27.3520 us
+  25.00% in 35.2150 us
+  50.00% in 44.6780 us
+  75.00% in 56.3360 us
+  90.00% in 72.5420 us
+  95.00% in 93.2040 us
+  99.00% in 247.3530 us
+  99.90% in 502.0470 us
+  99.99% in 502.0470 us
+
+
+Details (average, fastest, slowest):
+  DNS+dialup:	158.2080 us, 74.1350 us, 322.1490 us
+  DNS-lookup:	51.3596 us, 23.9770 us, 80.8860 us
+  First byte:	52.1678 us, 16.3060 us, 501.7870 us
+
+Status code distribution:
+  [200] 500 responses
+Summary:
+  Success rate:	100.00%
+  Total:	4579.8970 us
+  Slowest:	543.9020 us
+  Fastest:	18.2590 us
+  Average:	70.4905 us
+  Requests/sec:	109172.7609
+
+  Total data:	2.93 KiB
+  Size/request:	6 B
+  Size/sec:	639.68 KiB
+
+Response time histogram:
+   18.259 us [1]   |
+   70.823 us [375] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  123.388 us [79]  |■■■■■■
+  175.952 us [15]  |■
+  228.516 us [8]   |
+  281.081 us [7]   |
+  333.645 us [5]   |
+  386.209 us [4]   |
+  438.773 us [2]   |
+  491.338 us [2]   |
+  543.902 us [2]   |
+
+Response time distribution:
+  10.00% in 31.3780 us
+  25.00% in 37.6380 us
+  50.00% in 50.1880 us
+  75.00% in 70.7600 us
+  90.00% in 115.1100 us
+  95.00% in 197.5560 us
+  99.00% in 427.2210 us
+  99.90% in 543.9020 us
+  99.99% in 543.9020 us
+
+
+Details (average, fastest, slowest):
+  DNS+dialup:	120.1489 us, 49.9070 us, 170.1240 us
+  DNS-lookup:	41.9960 us, 19.9710 us, 61.9860 us
+  First byte:	70.3547 us, 18.1880 us, 543.6120 us
+
+Status code distribution:
+  [500] 500 responses
