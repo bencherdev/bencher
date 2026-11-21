@@ -366,6 +366,9 @@ const DART_BENCHMARK_HARNESS_INT: i32 = 111;
 const HTTP_K6_INT: i32 = 121;
 const HTTP_K6_JSON_INT: i32 = 1211;
 const HTTP_K6_JSON_SUMMARY_INT: i32 = 1212;
+const GRPC_GHZ_INT: i32 = 131;
+const GRPC_GHZ_JSON_INT: i32 = 1311;
+const GRPC_GHZ_TEXT_INT: i32 = 1312;
 
 #[typeshare::typeshare]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -434,6 +437,9 @@ pub enum Adapter {
     HttpK6 = HTTP_K6_INT,
     HttpK6Json = HTTP_K6_JSON_INT,
     HttpK6JsonSummary = HTTP_K6_JSON_SUMMARY_INT,
+    GrpcGhz = GRPC_GHZ_INT,
+    GrpcGhzJson = GRPC_GHZ_JSON_INT,
+    GrpcGhzText = GRPC_GHZ_TEXT_INT,
 }
 
 impl Adapter {
@@ -497,7 +503,10 @@ impl Adapter {
             | Self::DartBenchmarkHarness
             | Self::HttpK6
             | Self::HttpK6Json
-            | Self::HttpK6JsonSummary => self,
+            | Self::HttpK6JsonSummary
+            | Self::GrpcGhz
+            | Self::GrpcGhzJson
+            | Self::GrpcGhzText => self,
         }
     }
 
@@ -583,6 +592,9 @@ impl fmt::Display for Adapter {
             Self::HttpK6 => write!(f, "http_k6"),
             Self::HttpK6Json => write!(f, "http_k6_json"),
             Self::HttpK6JsonSummary => write!(f, "http_k6_json_summary"),
+            Self::GrpcGhz => write!(f, "grpc_ghz"),
+            Self::GrpcGhzJson => write!(f, "grpc_ghz_json"),
+            Self::GrpcGhzText => write!(f, "grpc_ghz_text"),
         }
     }
 }
@@ -592,7 +604,8 @@ mod adapter {
     use super::{
         Adapter, C_SHARP_DOT_NET_INT, C_SHARP_INT, CPP_CATCH2_INT, CPP_CATCH2_TEXT_INT,
         CPP_CATCH2_XML_INT, CPP_GOOGLE_INT, CPP_INT, DART_BENCHMARK_HARNESS_INT, DART_INT,
-        GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, HTTP_K6_INT, HTTP_K6_JSON_INT,
+        GO_BENCH_INT, GO_BENCH_JSON_INT, GO_BENCH_TEXT_INT, GO_INT, GRPC_GHZ_INT,
+        GRPC_GHZ_JSON_INT, GRPC_GHZ_TEXT_INT, HTTP_K6_INT, HTTP_K6_JSON_INT,
         HTTP_K6_JSON_SUMMARY_INT, JAVA_INT, JAVA_JMH_INT, JS_BENCHMARK_INT, JS_DENO_INT, JS_INT,
         JS_MITATA_INT, JS_TIME_INT, JS_TINYBENCH_INT, JS_VITEST_INT, JS_VITEST_V1_INT,
         JS_VITEST_V5_INT, JSON_INT, JSON_V0_INT, JSON_V1_INT, MAGIC_INT, PYTHON_ASV_INT,
@@ -675,6 +688,9 @@ mod adapter {
                 Self::HttpK6 => HTTP_K6_INT.to_sql(out),
                 Self::HttpK6Json => HTTP_K6_JSON_INT.to_sql(out),
                 Self::HttpK6JsonSummary => HTTP_K6_JSON_SUMMARY_INT.to_sql(out),
+                Self::GrpcGhz => GRPC_GHZ_INT.to_sql(out),
+                Self::GrpcGhzJson => GRPC_GHZ_JSON_INT.to_sql(out),
+                Self::GrpcGhzText => GRPC_GHZ_TEXT_INT.to_sql(out),
             }
         }
     }
@@ -741,6 +757,9 @@ mod adapter {
                 HTTP_K6_INT => Ok(Self::HttpK6),
                 HTTP_K6_JSON_INT => Ok(Self::HttpK6Json),
                 HTTP_K6_JSON_SUMMARY_INT => Ok(Self::HttpK6JsonSummary),
+                GRPC_GHZ_INT => Ok(Self::GrpcGhz),
+                GRPC_GHZ_JSON_INT => Ok(Self::GrpcGhzJson),
+                GRPC_GHZ_TEXT_INT => Ok(Self::GrpcGhzText),
                 value => Err(Box::new(AdapterError::Invalid(value))),
             }
         }
@@ -1356,7 +1375,7 @@ mod tests {
         assert_eq!(Iteration(7).to_string(), "7");
     }
 
-    const ADAPTERS: [Adapter; 55] = [
+    const ADAPTERS: [Adapter; 58] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -1412,6 +1431,9 @@ mod tests {
         Adapter::HttpK6,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::GrpcGhz,
+        Adapter::GrpcGhzJson,
+        Adapter::GrpcGhzText,
     ];
 
     // A new variant fails to compile here until it joins `ADAPTERS` above.
@@ -1471,7 +1493,10 @@ mod tests {
             | Adapter::DartBenchmarkHarness
             | Adapter::HttpK6
             | Adapter::HttpK6Json
-            | Adapter::HttpK6JsonSummary => true,
+            | Adapter::HttpK6JsonSummary
+            | Adapter::GrpcGhz
+            | Adapter::GrpcGhzJson
+            | Adapter::GrpcGhzText => true,
         }
     }
 

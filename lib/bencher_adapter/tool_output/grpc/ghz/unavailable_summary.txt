@@ -1,0 +1,19 @@
+
+Summary:
+  Count:	2000
+  Total:	127.10 ms
+  Slowest:	0 ns
+  Fastest:	0 ns
+  Average:	0.27 ms
+  Requests/sec:	15736.19
+
+Response time histogram:
+
+Latency distribution:
+
+Status code distribution:
+  [Unavailable]   2000 responses   
+
+Error distribution:
+  [2000]   rpc error: code = Unavailable desc = unavailable   
+

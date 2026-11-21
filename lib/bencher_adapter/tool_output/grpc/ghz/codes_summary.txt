@@ -1,0 +1,70 @@
+
+Summary:
+  Count:	180
+  Total:	39.08 ms
+  Slowest:	2.43 ms
+  Fastest:	0.06 ms
+  Average:	0.12 ms
+  Requests/sec:	4605.74
+
+Response time histogram:
+  0.062 [1] |∎∎∎∎∎∎
+  0.299 [7] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.536 [0] |
+  0.773 [1] |∎∎∎∎∎∎
+  1.011 [0] |
+  1.248 [0] |
+  1.485 [0] |
+  1.723 [0] |
+  1.960 [0] |
+  2.197 [0] |
+  2.434 [1] |∎∎∎∎∎∎
+
+Latency distribution:
+  10 % in 0.06 ms 
+  25 % in 0.07 ms 
+  50 % in 0.09 ms 
+  75 % in 0.12 ms 
+  90 % in 0.57 ms 
+  95 % in 2.43 ms 
+  99 % in 2.43 ms 
+
+Status code distribution:
+  [DeadlineExceeded]     10 responses   
+  [PermissionDenied]     10 responses   
+  [ResourceExhausted]    10 responses   
+  [Unavailable]          10 responses   
+  [Aborted]              10 responses   
+  [OutOfRange]           10 responses   
+  [Internal]             10 responses   
+  [DataLoss]             10 responses   
+  [Canceled]             10 responses   
+  [InvalidArgument]      10 responses   
+  [NotFound]             10 responses   
+  [FailedPrecondition]   10 responses   
+  [Code(17)]             10 responses   
+  [Unauthenticated]      10 responses   
+  [OK]                   10 responses   
+  [Unknown]              10 responses   
+  [AlreadyExists]        10 responses   
+  [Unimplemented]        10 responses   
+
+Error distribution:
+  [10]   rpc error: code = NotFound desc = code             
+  [10]   rpc error: code = Unimplemented desc = code        
+  [10]   rpc error: code = DataLoss desc = code             
+  [10]   rpc error: code = Canceled desc = code             
+  [10]   rpc error: code = Unknown desc = code              
+  [10]   rpc error: code = ResourceExhausted desc = code    
+  [10]   rpc error: code = FailedPrecondition desc = code   
+  [10]   rpc error: code = Unauthenticated desc = code      
+  [10]   rpc error: code = Code(17) desc = code             
+  [10]   rpc error: code = InvalidArgument desc = code      
+  [10]   rpc error: code = DeadlineExceeded desc = code     
+  [10]   rpc error: code = AlreadyExists desc = code        
+  [10]   rpc error: code = Aborted desc = code              
+  [10]   rpc error: code = OutOfRange desc = code           
+  [10]   rpc error: code = Unavailable desc = code          
+  [10]   rpc error: code = PermissionDenied desc = code     
+  [10]   rpc error: code = Internal desc = code             
+

@@ -240,6 +240,7 @@ describe("thresholdSnippets", () => {
 			"iteration-throughput",
 			"check-ratio",
 			"check-passes",
+			"grpc-status-ok",
 		])("guards %s from below", (measure) => {
 			const fast = line({ threads: 1 }, { measure });
 			const { simple } = thresholdSnippets(PLACE, fast, [fast]);

@@ -1,0 +1,92 @@
+Summary:
+  Success rate:	100.00%
+  Total:	1984.7230 us
+  Slowest:	311.2660 us
+  Fastest:	13.9810 us
+  Average:	55.4657 us
+  Requests/sec:	100769.7296
+
+  Total data:	600 B
+  Size/request:	3 B
+  Size/sec:	295.22 KiB
+
+Response time histogram:
+   13.981 us [1]   |
+   43.709 us [103] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+   73.438 us [71]  |■■■■■■■■■■■■■■■■■■■■■■
+  103.166 us [7]   |■■
+  132.895 us [6]   |■
+  162.624 us [3]   |
+  192.352 us [3]   |
+  222.081 us [3]   |
+  251.809 us [1]   |
+  281.537 us [0]   |
+  311.266 us [2]   |
+
+Response time distribution:
+  10.00% in 26.1390 us
+  25.00% in 33.4710 us
+  50.00% in 42.9660 us
+  75.00% in 58.6100 us
+  90.00% in 93.8950 us
+  95.00% in 158.2530 us
+  99.00% in 306.5100 us
+  99.90% in 311.2660 us
+  99.99% in 311.2660 us
+
+Response time histogram (2xx only):
+   13.981 us [1]   |
+   43.709 us [103] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+   73.438 us [71]  |■■■■■■■■■■■■■■■■■■■■■■
+  103.166 us [7]   |■■
+  132.895 us [6]   |■
+  162.624 us [3]   |
+  192.352 us [3]   |
+  222.081 us [3]   |
+  251.809 us [1]   |
+  281.537 us [0]   |
+  311.266 us [2]   |
+
+Response time distribution (2xx only):
+  10.00% in 26.1390 us
+  25.00% in 33.4710 us
+  50.00% in 42.9660 us
+  75.00% in 58.6100 us
+  90.00% in 93.8950 us
+  95.00% in 158.2530 us
+  99.00% in 306.5100 us
+  99.90% in 311.2660 us
+  99.99% in 311.2660 us
+
+Response time histogram (4xx + 5xx only):
+    NaN us [0] |
+    NaN us [0] |
+    NaN us [0] |
+    NaN us [0] |
+    NaN us [0] |
+    NaN us [0] |
+    NaN us [0] |
+    NaN us [0] |
+    NaN us [0] |
+    NaN us [0] |
+    NaN us [0] |
+
+Response time distribution (4xx + 5xx only):
+  10.00% in NaN us
+  25.00% in NaN us
+  50.00% in NaN us
+  75.00% in NaN us
+  90.00% in NaN us
+  95.00% in NaN us
+  99.00% in NaN us
+  99.90% in NaN us
+  99.99% in NaN us
+
+
+Details (average, fastest, slowest):
+  DNS+dialup:	102.0001 us, 59.8410 us, 194.3670 us
+  DNS-lookup:	31.8057 us, 20.8720 us, 53.4310 us
+  First byte:	55.3029 us, 13.9210 us, 310.5360 us
+
+Status code distribution:
+  [200] 200 responses
