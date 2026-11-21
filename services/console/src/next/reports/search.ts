@@ -62,6 +62,7 @@ export const ADAPTERS: readonly AdapterName[] = [
 	"json_v0",
 	"json_v1",
 	"magic",
+	"php_phpbench",
 	"python_asv",
 	"python_asv_json",
 	"python_asv_text",

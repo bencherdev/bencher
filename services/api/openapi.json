@@ -13077,7 +13077,8 @@
           "shell_hyperfine_v1",
           "shell_hyperfine_v2",
           "dart",
-          "dart_benchmark_harness"
+          "dart_benchmark_harness",
+          "php_phpbench"
         ]
       },
       "AlertStatus": {

@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<phpbench xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.7.0">
+  <suite tag="" context="" date="2026-11-15T14:03:34+00:00" config-path="/tmp/bench/phpbench.json" uuid="13528fb610596f5eda3529caf884c7fe31d270d1">
+    <env>
+      <uname>
+        <value name="os" type="string">Linux</value>
+        <value name="host" type="string">localhost</value>
+        <value name="release" type="string">6.8.0-142-generic</value>
+        <value name="version" type="string">#1-Ubuntu SMP PREEMPT_DYNAMIC</value>
+        <value name="machine" type="string">x86_64</value>
+      </uname>
+      <php>
+        <value name="xdebug" type="boolean"></value>
+        <value name="version" type="string">8.3.6</value>
+        <value name="ini" type="string">/etc/php/8.3/cli/php.ini</value>
+        <value name="extensions" type="string">Core, date, libxml, openssl, pcre, zlib, filter, hash, json, pcntl, random, Reflection, SPL, session, standard, sodium, PDO, xml, calendar, ctype, curl, dom, mbstring, FFI, fileinfo, ftp, gettext, iconv, intl, exif, Phar, posix, readline, shmop, SimpleXML, sockets, sysvmsg, sysvsem, sysvshm, tokenizer, xmlreader, xmlwriter, xsl, zip, Zend OPcache</value>
+      </php>
+      <opcache>
+        <value name="extension_loaded" type="boolean">1</value>
+        <value name="enabled" type="boolean"></value>
+      </opcache>
+      <unix-sysload>
+        <value name="l1" type="double">1.244140625</value>
+        <value name="l5" type="double">1.3134765625</value>
+        <value name="l15" type="double">0.828125</value>
+      </unix-sysload>
+      <sampler>
+        <value name="nothing" type="double">0.0059604644775391</value>
+        <value name="md5" type="double">0.10204315185547</value>
+        <value name="file_rw" type="double">0.42414665222168</value>
+      </sampler>
+    </env>
+    <benchmark class="\HashBench">
+      <subject name="benchMd5">
+        <executor name="remote">
+          <parameter name="php_config" type="collection"/>
+          <parameter name="safe_parameters" value="1" type="boolean"/>
+          <parameter name="executor" value="remote" type="string"/>
+        </executor>
+        <group name="hash"/>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="time" revs="1000" warmup="1" retry-threshold="">
+          <parameter-set name=""/>
+          <iteration time-net="96" time-revs="1000" time-avg="0.096" mem-peak="661944" mem-real="2097152" mem-final="502416" comp-z-value="0.61885274775528" comp-deviation="1.2658227848101"/>
+          <iteration time-net="92" time-revs="1000" time-avg="0.092" mem-peak="661944" mem-real="2097152" mem-final="502416" comp-z-value="-1.4439897447623" comp-deviation="-2.9535864978903"/>
+          <iteration time-net="93" time-revs="1000" time-avg="0.093" mem-peak="661944" mem-real="2097152" mem-final="502416" comp-z-value="-0.92827912163291" comp-deviation="-1.8987341772152"/>
+          <iteration time-net="96" time-revs="1000" time-avg="0.096" mem-peak="661944" mem-real="2097152" mem-final="502416" comp-z-value="0.61885274775528" comp-deviation="1.2658227848101"/>
+          <iteration time-net="97" time-revs="1000" time-avg="0.097" mem-peak="661944" mem-real="2097152" mem-final="502416" comp-z-value="1.1345633708847" comp-deviation="2.3206751054852"/>
+          <stats max="0.097" mean="0.0948" min="0.092" mode="0.096090019569471" rstdev="2.0454345389942" stdev="0.0019390719429665" sum="0.474" variance="3.76E-6"/>
+          <baseline-stats max="0.16" mean="0.115" min="0.1" mode="0.10375733855186" rstdev="19.920446696732" stdev="0.022908513701242" sum="0.575" variance="0.0005248"/>
+        </variant>
+      </subject>
+    </benchmark>
+    <result key="time" class="PhpBench\Model\Result\TimeResult"/>
+    <result key="mem" class="PhpBench\Model\Result\MemoryResult"/>
+    <result key="comp" class="PhpBench\Model\Result\ComputedResult"/>
+  </suite>
+</phpbench>

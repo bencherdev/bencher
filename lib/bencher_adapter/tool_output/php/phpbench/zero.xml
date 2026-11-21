@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<phpbench xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.7.0">
+  <suite tag="" context="" date="2026-11-20T05:24:13+00:00" config-path="/tmp/bench/phpbench.json" uuid="1352900e62dbdc05e1505572f18013ca5d01f976">
+    <env>
+      <uname>
+        <value name="os" type="string">Linux</value>
+        <value name="host" type="string">localhost</value>
+        <value name="release" type="string">6.8.0-142-generic</value>
+        <value name="version" type="string">#1-Ubuntu SMP PREEMPT_DYNAMIC</value>
+        <value name="machine" type="string">x86_64</value>
+      </uname>
+      <php>
+        <value name="xdebug" type="boolean"></value>
+        <value name="version" type="string">8.3.37</value>
+        <value name="ini" type="boolean"></value>
+        <value name="extensions" type="string">Core, date, libxml, openssl, pcre, sqlite3, zlib, ctype, curl, dom, fileinfo, filter, hash, iconv, json, mbstring, SPL, session, PDO, pdo_sqlite, standard, posix, random, readline, Reflection, Phar, SimpleXML, tokenizer, xml, xmlreader, xmlwriter, mysqlnd, sodium, Zend OPcache</value>
+      </php>
+      <opcache>
+        <value name="extension_loaded" type="boolean">1</value>
+        <value name="enabled" type="boolean"></value>
+      </opcache>
+      <unix-sysload>
+        <value name="l1" type="double">26.28076171875</value>
+        <value name="l5" type="double">20.0380859375</value>
+        <value name="l15" type="double">14.51513671875</value>
+      </unix-sysload>
+      <sampler>
+        <value name="nothing" type="double">0.0078678131103516</value>
+        <value name="md5" type="double">0.097990036010742</value>
+        <value name="file_rw" type="double">0.48589706420898</value>
+      </sampler>
+    </env>
+    <benchmark class="\App\Bench\ZeroBench">
+      <subject name="benchNothing">
+        <executor name="remote">
+          <parameter name="php_config" type="collection"/>
+          <parameter name="safe_parameters" value="1" type="boolean"/>
+          <parameter name="executor" value="remote" type="string"/>
+        </executor>
+        <variant sleep="0" output-time-unit="microseconds" output-time-precision="" output-mode="throughput" revs="1" warmup="0" retry-threshold="">
+          <parameter-set name=""/>
+          <iteration time-net="1" time-revs="1" time-avg="1" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="1.5689290811055" comp-deviation="400"/>
+          <iteration time-net="1" time-revs="1" time-avg="1" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="1.5689290811055" comp-deviation="400"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="2" time-revs="1" time-avg="2" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="3.5300904324873" comp-deviation="900"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <iteration time-net="0" time-revs="1" time-avg="0" mem-peak="662728" mem-real="2097152" mem-final="502704" comp-z-value="-0.39223227027637" comp-deviation="-100"/>
+          <stats max="2" mean="0.2" min="0" mode="0" rstdev="254.95097567964" stdev="0.50990195135928" sum="4" variance="0.26"/>
+        </variant>
+      </subject>
+    </benchmark>
+    <result key="time" class="PhpBench\Model\Result\TimeResult"/>
+    <result key="mem" class="PhpBench\Model\Result\MemoryResult"/>
+    <result key="comp" class="PhpBench\Model\Result\ComputedResult"/>
+  </suite>
+</phpbench>
