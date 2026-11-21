@@ -231,6 +231,7 @@ mod test_results_array {
             (Adapter::GoBenchJson, "go/bench/json_count.txt"),
             (Adapter::JsVitestV5, "js/vitest/v5_basic.json"),
             (Adapter::PythonAsvJson, "python/asv/kinds.json"),
+            (Adapter::HttpFortio, "http/fortio/fast.json"),
         ] {
             let results = std::fs::read_to_string(format!("./tool_output/{suffix}"))
                 .expect("Failed to read test file");

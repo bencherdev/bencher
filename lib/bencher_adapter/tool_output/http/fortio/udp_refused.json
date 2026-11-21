@@ -1,0 +1,151 @@
+{
+  "RunType": "UDP",
+  "Labels": "udp://localhost:9 , localhost",
+  "StartTime": "2026-11-19T23:21:52.739304697Z",
+  "RequestedQPS": "200",
+  "RequestedDuration": "3s",
+  "ActualQPS": 199.92028318652135,
+  "ActualDuration": 3001196229,
+  "NumThreads": 10,
+  "Version": "1.76.0",
+  "DurationHistogram": {
+    "Count": 600,
+    "Min": 0.000008062,
+    "Max": 0.010778753,
+    "Sum": 0.161598569,
+    "Avg": 0.00026933094833333333,
+    "StdDev": 0.0013921626023580445,
+    "Data": [
+      {
+        "Start": 0.000008062,
+        "End": 0.001,
+        "Percent": 97.5,
+        "Count": 585
+      },
+      {
+        "Start": 0.002,
+        "End": 0.003,
+        "Percent": 97.66666666666667,
+        "Count": 1
+      },
+      {
+        "Start": 0.008,
+        "End": 0.009000000000000001,
+        "Percent": 99.16666666666667,
+        "Count": 9
+      },
+      {
+        "Start": 0.009000000000000001,
+        "End": 0.01,
+        "Percent": 99.33333333333333,
+        "Count": 1
+      },
+      {
+        "Start": 0.01,
+        "End": 0.010778753,
+        "Percent": 100,
+        "Count": 4
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0005159206678082192
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0007706992636986301
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0009235664212328766
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.008888888888888887
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.010661940050000008
+      }
+    ]
+  },
+  "ErrorsDurationHistogram": {
+    "Count": 600,
+    "Min": 0.000008062,
+    "Max": 0.010778753,
+    "Sum": 0.161598569,
+    "Avg": 0.00026933094833333333,
+    "StdDev": 0.0013921626023580445,
+    "Data": [
+      {
+        "Start": 0.000008062,
+        "End": 0.001,
+        "Percent": 97.5,
+        "Count": 585
+      },
+      {
+        "Start": 0.002,
+        "End": 0.003,
+        "Percent": 97.66666666666667,
+        "Count": 1
+      },
+      {
+        "Start": 0.008,
+        "End": 0.009000000000000001,
+        "Percent": 99.16666666666667,
+        "Count": 9
+      },
+      {
+        "Start": 0.009000000000000001,
+        "End": 0.01,
+        "Percent": 99.33333333333333,
+        "Count": 1
+      },
+      {
+        "Start": 0.01,
+        "End": 0.010778753,
+        "Percent": 100,
+        "Count": 4
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0005159206678082192
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0007706992636986301
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0009235664212328766
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.008888888888888887
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.010661940050000008
+      }
+    ]
+  },
+  "Exactly": 0,
+  "Jitter": false,
+  "Uniform": false,
+  "NoCatchUp": false,
+  "RunID": 0,
+  "AccessLoggerInfo": "",
+  "ID": "2026-11-19-232152_udp_localhost_9_localhost",
+  "Destination": "udp://localhost:9",
+  "Payload": null,
+  "ReqTimeout": 0,
+  "RetCodes": {
+    "short read": 600
+  },
+  "SocketCount": 610,
+  "BytesSent": 14640,
+  "BytesReceived": 0
+}

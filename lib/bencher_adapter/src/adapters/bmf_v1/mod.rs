@@ -12,7 +12,7 @@ use crate::{
             dart::benchmark_harness::AdapterDartBenchmarkHarnessV1,
             go::bench::{AdapterGoBenchJson, AdapterGoBenchText, AdapterGoBenchV1},
             http::{
-                k6::AdapterHttpK6, k6_json::AdapterHttpK6Json,
+                fortio::AdapterHttpFortio, k6::AdapterHttpK6, k6_json::AdapterHttpK6Json,
                 k6_json_summary::AdapterHttpK6JsonSummary,
             },
             java::jmh::AdapterJavaJmhV1,
@@ -127,6 +127,7 @@ pub(crate) fn convert(adapter: Adapter, input: &str, settings: Settings) -> Opti
         Adapter::HttpK6 => AdapterHttpK6::parse(input, settings),
         Adapter::HttpK6Json => AdapterHttpK6Json::parse(input, settings),
         Adapter::HttpK6JsonSummary => AdapterHttpK6JsonSummary::parse(input, settings),
+        Adapter::HttpFortio => AdapterHttpFortio::parse(input, settings),
         Adapter::JsonV0 => convert_v0(adapter, input, settings),
     }
 }
@@ -147,7 +148,7 @@ mod test_bmf_v1 {
         convert_v0,
     };
 
-    const ADAPTERS: [Adapter; 55] = [
+    const ADAPTERS: [Adapter; 56] = [
         Adapter::Magic,
         Adapter::Json,
         Adapter::JsonV0,
@@ -203,6 +204,7 @@ mod test_bmf_v1 {
         Adapter::HttpK6,
         Adapter::HttpK6Json,
         Adapter::HttpK6JsonSummary,
+        Adapter::HttpFortio,
     ];
 
     const LANGUAGES: [Adapter; 10] = [

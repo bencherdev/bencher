@@ -36,6 +36,8 @@ export const adapterName = (adapter: Adapter): string => {
 		case Adapter.GoBenchJson:
 		case Adapter.GoBenchText:
 			return "go test -bench";
+		case Adapter.HttpFortio:
+			return "Fortio";
 		case Adapter.HttpK6:
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:
@@ -104,6 +106,8 @@ export const adapterCommand = (isConsole: boolean, adapter: null | Adapter) => {
 		case Adapter.GoBenchJson:
 		case Adapter.GoBenchText:
 			return `bencher run${host} "go test -bench"`;
+		case Adapter.HttpFortio:
+			return `bencher run${host} "fortio load -json - -allow-initial-errors -t 30s http://localhost:8080/"`;
 		case Adapter.HttpK6:
 		case Adapter.HttpK6Json:
 		case Adapter.HttpK6JsonSummary:

@@ -1,0 +1,165 @@
+{
+  "RunType": "GRPC Health for 'a' PayloadLength=5' PayloadLength=3",
+  "Labels": "localhost:18079 , localhost",
+  "StartTime": "2026-11-20T05:07:43.575742428Z",
+  "RequestedQPS": "200",
+  "RequestedDuration": "2s",
+  "ActualQPS": 199.85962040136667,
+  "ActualDuration": 2001404782,
+  "NumThreads": 10,
+  "Version": "1.76.0",
+  "DurationHistogram": {
+    "Count": 400,
+    "Min": 0.00005831,
+    "Max": 0.010054025,
+    "Sum": 0.2890953720000001,
+    "Avg": 0.0007227384300000001,
+    "StdDev": 0.0008333063035479989,
+    "Data": [
+      {
+        "Start": 0.00005831,
+        "End": 0.001,
+        "Percent": 83.75,
+        "Count": 335
+      },
+      {
+        "Start": 0.001,
+        "End": 0.002,
+        "Percent": 95.25,
+        "Count": 46
+      },
+      {
+        "Start": 0.002,
+        "End": 0.003,
+        "Percent": 98.25,
+        "Count": 12
+      },
+      {
+        "Start": 0.003,
+        "End": 0.004,
+        "Percent": 99.5,
+        "Count": 5
+      },
+      {
+        "Start": 0.009000000000000001,
+        "End": 0.01,
+        "Percent": 99.75,
+        "Count": 1
+      },
+      {
+        "Start": 0.01,
+        "End": 0.010054025,
+        "Percent": 100,
+        "Count": 1
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0006193767964071856
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0009013199101796408
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0015434782608695651
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.0036
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.010032415000000001
+      }
+    ]
+  },
+  "ErrorsDurationHistogram": {
+    "Count": 400,
+    "Min": 0.00005831,
+    "Max": 0.010054025,
+    "Sum": 0.2890953720000001,
+    "Avg": 0.0007227384300000001,
+    "StdDev": 0.0008333063035479989,
+    "Data": [
+      {
+        "Start": 0.00005831,
+        "End": 0.001,
+        "Percent": 83.75,
+        "Count": 335
+      },
+      {
+        "Start": 0.001,
+        "End": 0.002,
+        "Percent": 95.25,
+        "Count": 46
+      },
+      {
+        "Start": 0.002,
+        "End": 0.003,
+        "Percent": 98.25,
+        "Count": 12
+      },
+      {
+        "Start": 0.003,
+        "End": 0.004,
+        "Percent": 99.5,
+        "Count": 5
+      },
+      {
+        "Start": 0.009000000000000001,
+        "End": 0.01,
+        "Percent": 99.75,
+        "Count": 1
+      },
+      {
+        "Start": 0.01,
+        "End": 0.010054025,
+        "Percent": 100,
+        "Count": 1
+      }
+    ],
+    "Percentiles": [
+      {
+        "Percentile": 50,
+        "Value": 0.0006193767964071856
+      },
+      {
+        "Percentile": 75,
+        "Value": 0.0009013199101796408
+      },
+      {
+        "Percentile": 90,
+        "Value": 0.0015434782608695651
+      },
+      {
+        "Percentile": 99,
+        "Value": 0.0036
+      },
+      {
+        "Percentile": 99.9,
+        "Value": 0.010032415000000001
+      }
+    ]
+  },
+  "Exactly": 0,
+  "Jitter": false,
+  "Uniform": false,
+  "NoCatchUp": false,
+  "RunID": 0,
+  "AccessLoggerInfo": "",
+  "ID": "2026-11-20-050743_localhost_18079_localhost",
+  "RetCodes": {
+    "ERROR": 400
+  },
+  "Destination": "localhost:18079",
+  "Streams": 1,
+  "Ping": false,
+  "Metadata": {
+    "user-agent": [
+      "fortio.org/fortio-1.76.0"
+    ]
+  }
+}

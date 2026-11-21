@@ -1,0 +1,54 @@
+{"ts":1794750587.087201,"level":"info","r":1,"file":"scli.go","line":124,"msg":"Starting","command":"Φορτίο","version":"1.76.0 h1:CSeuqtbKDwX34cTsjcV0VDYjCCJeQ/sYTPDtIakFmrs= go1.27.4 amd64 linux","go-max-procs":16}
+Fortio 1.76.0 running at 500 queries per second, 16->16 procs, for 3s: http://localhost:8080/fast
+{"ts":1794750587.087587,"level":"info","r":1,"file":"httprunner.go","line":121,"msg":"Starting http test","run":0,"url":"http://localhost:8080/fast","threads":10,"qps":"500.0","warmup":"parallel","conn-reuse":""}
+Starting at 500 qps with 10 thread(s) [gomax 16] for 3s : 150 calls each (total 1500)
+{"ts":1794750590.090444,"level":"info","r":53,"file":"periodic.go","line":896,"msg":"T000 ended after 3.000590516s : 150 calls. qps=49.99016000355845"}
+{"ts":1794750590.090420,"level":"info","r":54,"file":"periodic.go","line":896,"msg":"T001 ended after 3.00056084s : 150 calls. qps=49.99065441379286"}
+{"ts":1794750590.090463,"level":"info","r":59,"file":"periodic.go","line":896,"msg":"T006 ended after 3.000581212s : 150 calls. qps=49.99031500967753"}
+{"ts":1794750590.090496,"level":"info","r":62,"file":"periodic.go","line":896,"msg":"T009 ended after 3.000628334s : 150 calls. qps=49.9895299595608"}
+{"ts":1794750590.090776,"level":"info","r":55,"file":"periodic.go","line":896,"msg":"T002 ended after 3.000677018s : 150 calls. qps=49.98871891249976"}
+{"ts":1794750590.090766,"level":"info","r":60,"file":"periodic.go","line":896,"msg":"T007 ended after 3.000680314s : 150 calls. qps=49.988664004012264"}
+{"ts":1794750590.090774,"level":"info","r":58,"file":"periodic.go","line":896,"msg":"T005 ended after 3.00068457s : 150 calls. qps=49.98859310293984"}
+{"ts":1794750590.090504,"level":"info","r":56,"file":"periodic.go","line":896,"msg":"T003 ended after 3.000613091s : 150 calls. qps=49.98978390446541"}
+{"ts":1794750590.090509,"level":"info","r":61,"file":"periodic.go","line":896,"msg":"T008 ended after 3.000643016s : 150 calls. qps=49.98928536322762"}
+{"ts":1794750590.090521,"level":"info","r":57,"file":"periodic.go","line":896,"msg":"T004 ended after 3.00067761s : 150 calls. qps=49.988709050286815"}
+Ended after 3.001318991s : 1500 calls. qps=499.78
+{"ts":1794750590.091436,"level":"info","r":1,"file":"periodic.go","line":598,"msg":"Run ended","run":0,"elapsed":3001318991,"calls":1500,"qps":499.7802647762608}
+Sleep times : count 1490 avg 0.019363662 +/- 0.0003374 min 0.018171291 max 0.020013893 sum 28.851857
+Aggregated Function Time : count 1500 avg 0.00016167154 +/- 0.0001388 min 2.2454e-05 max 0.000956192 sum 0.242507307
+# range, mid point, percentile, count
+>= 2.2454e-05 <= 0.000956192 , 0.000489323 , 100.00, 1500
+# target 50% 0.000489012
+# target 75% 0.000722602
+# target 90% 0.000862756
+# target 99% 0.000946848
+# target 99.9% 0.000955258
+Error cases : no data
+# Socket and IP used for each connection:
+[0]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 0.000228889 +/- 0 min 0.000228889 max 0.000228889 sum 0.000228889
+[1]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 0.000117971 +/- 0 min 0.000117971 max 0.000117971 sum 0.000117971
+[2]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 0.000191102 +/- 0 min 0.000191102 max 0.000191102 sum 0.000191102
+[3]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 8.2017e-05 +/- 0 min 8.2017e-05 max 8.2017e-05 sum 8.2017e-05
+[4]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 0.000117138 +/- 0 min 0.000117138 max 0.000117138 sum 0.000117138
+[5]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 0.000134686 +/- 0 min 0.000134686 max 0.000134686 sum 0.000134686
+[6]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 9.5126e-05 +/- 0 min 9.5126e-05 max 9.5126e-05 sum 9.5126e-05
+[7]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 5.1329e-05 +/- 0 min 5.1329e-05 max 5.1329e-05 sum 5.1329e-05
+[8]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 0.000118922 +/- 0 min 0.000118922 max 0.000118922 sum 0.000118922
+[9]   1 socket used, resolved to 127.0.0.1:8080, connection timing : count 1 avg 0.000276834 +/- 0 min 0.000276834 max 0.000276834 sum 0.000276834
+Connection time histogram (s) : count 10 avg 0.0001414014 +/- 6.628e-05 min 5.1329e-05 max 0.000276834 sum 0.001414014
+# range, mid point, percentile, count
+>= 5.1329e-05 <= 0.000276834 , 0.000164082 , 100.00, 10
+# target 50% 0.000151553
+# target 75% 0.000214194
+# target 90% 0.000251778
+# target 99% 0.000274328
+# target 99.9% 0.000276583
+Sockets used: 10 (for perfect keepalive, would be 10)
+Uniform: false, Jitter: false, Catchup allowed: true
+IP addresses distribution:
+127.0.0.1:8080: 10
+Code 200 : 1500 (100.0 %)
+Response Header Sizes : count 1500 avg 116 +/- 0 min 116 max 116 sum 174000
+Response Body/Total Sizes : count 1500 avg 119 +/- 0 min 119 max 119 sum 178500
+All done 1500 calls (plus 10 warmup) 0.162 ms avg, 499.8 qps
+Successfully wrote 3478 bytes of Json data to stdout
