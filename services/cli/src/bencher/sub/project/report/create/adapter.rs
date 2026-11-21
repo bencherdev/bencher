@@ -12,6 +12,7 @@ impl From<CliReportAdapter> for Adapter {
             CliReportAdapter::CppGoogle => Self::CppGoogle,
             CliReportAdapter::DartBenchmarkHarness => Self::DartBenchmarkHarness,
             CliReportAdapter::GoBench => Self::GoBench,
+            CliReportAdapter::HttpArtillery => Self::HttpArtillery,
             CliReportAdapter::HttpK6 => Self::HttpK6,
             CliReportAdapter::JavaJmh => Self::JavaJmh,
             CliReportAdapter::JsBenchmark => Self::JsBenchmark,

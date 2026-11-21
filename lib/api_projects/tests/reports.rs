@@ -2972,6 +2972,60 @@ async fn reports_post_creates_the_k6_measures_in_their_units() {
     );
 }
 
+// POST /v0/projects/{project}/reports - the Artillery leaf creates its new built-in measures in
+// their units, and a measure per error code named at run time
+//
+// Kills: a new built-in measure missing from the server's built-ins, which creates it in the
+// generic unit, and an error code's measure made in the generic unit.
+#[tokio::test]
+async fn reports_post_creates_the_artillery_measures_in_their_units() {
+    let server = TestServer::new().await;
+    let (token, project_slug) = ingest_project(&server, "artilleryunits").await;
+    post_report_body(
+        &server,
+        &token,
+        &project_slug,
+        &parse_report(
+            "http_artillery",
+            &[ARTILLERY_CODES, ARTILLERY_EXTENDED_TLS],
+            Some(1),
+        ),
+    )
+    .await;
+    let expected = [
+        ("connect-errors", "Connect Errors", "errors"),
+        ("dns-lookup-time", "DNS Lookup Time", "nanoseconds (ns)"),
+        ("errors-etimedout", "errors-etimedout", "errors"),
+        ("failed-iterations", "Failed Iterations", "iterations"),
+        ("request-time", "Request Time", "nanoseconds (ns)"),
+        ("responses-2xx", "Responses 2xx", "responses"),
+        ("responses-3xx", "Responses 3xx", "responses"),
+        ("responses-4xx", "Responses 4xx", "responses"),
+        ("responses-5xx", "Responses 5xx", "responses"),
+        ("timeouts", "Timeouts", "timeouts"),
+    ];
+    let project_id = get_project_id(&server, &project_slug);
+    let measures = schema::measure::table
+        .filter(schema::measure::project_id.eq(project_id))
+        .filter(schema::measure::slug.eq_any(expected.map(|(slug, _, _)| slug)))
+        .order(schema::measure::slug)
+        .select((
+            schema::measure::slug,
+            schema::measure::name,
+            schema::measure::units,
+        ))
+        .load::<(String, String, String)>(&mut server.db_conn())
+        .expect("Failed to load the measures");
+    assert_eq!(
+        measures,
+        expected.map(|(slug, name, units)| (slug.to_owned(), name.to_owned(), units.to_owned()))
+    );
+}
+
+const ARTILLERY_CODES: &str =
+    include_str!("../../bencher_adapter/tool_output/http/artillery/codes.json");
+const ARTILLERY_EXTENDED_TLS: &str =
+    include_str!("../../bencher_adapter/tool_output/http/artillery/extended_tls.json");
 const K6_EXPORT_SIMPLE: &str =
     include_str!("../../bencher_adapter/tool_output/http/k6/export_simple.json");
 const K6_EXPORT_SUMMARY: &str =

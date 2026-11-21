@@ -319,6 +319,16 @@ fn built_in_http_measure(measure_str: &str) -> Option<JsonNewMeasure> {
         .or_else(|| built_in::http::ReceivingTime::from_str(measure_str))
         .or_else(|| built_in::http::IterationTime::from_str(measure_str))
         .or_else(|| built_in::http::GroupTime::from_str(measure_str))
+        .or_else(|| built_in::http::ConnectErrors::from_str(measure_str))
+        .or_else(|| built_in::http::Timeouts::from_str(measure_str))
+        .or_else(|| built_in::http::Responses1xx::from_str(measure_str))
+        .or_else(|| built_in::http::Responses2xx::from_str(measure_str))
+        .or_else(|| built_in::http::Responses3xx::from_str(measure_str))
+        .or_else(|| built_in::http::Responses4xx::from_str(measure_str))
+        .or_else(|| built_in::http::Responses5xx::from_str(measure_str))
+        .or_else(|| built_in::http::FailedIterations::from_str(measure_str))
+        .or_else(|| built_in::http::DnsLookupTime::from_str(measure_str))
+        .or_else(|| built_in::http::RequestTime::from_str(measure_str))
         .or_else(|| built_in::http::Responses::from_measure(measure_str))
 }
 
